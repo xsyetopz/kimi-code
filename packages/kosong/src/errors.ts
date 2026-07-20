@@ -148,6 +148,14 @@ export function isRetryableGenerateError(error: unknown): boolean {
     return true;
   }
   if (error instanceof APIStatusError) {
+    // Some inference backends (observed with Synthetic-hosted HuggingFace models)
+    // return HTTP 400 with an empty body when they transiently fail to route the
+    // request. The message carries no actionable detail, so retrying is the only
+    // reasonable recovery. Keep this narrow: status 400 and a literal "(no body)".
+    if (error.statusCode === 400 && /\(no body\)/i.test(error.message)) {
+      return true;
+    }
+
     // Transient statuses worth retrying: 408 (request timeout), 409
     // (lock/conflict timeout), 429 (rate limit), 5xx (server errors) and 529
     // (provider overloaded — the "engine is currently overloaded" case).

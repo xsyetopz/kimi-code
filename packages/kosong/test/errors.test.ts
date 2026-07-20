@@ -146,6 +146,17 @@ describe('isRetryableGenerateError', () => {
     expect(isRetryableGenerateError(new APIStatusError(statusCode, 'non-retryable'))).toBe(false);
   });
 
+  it('retries an HTTP 400 from an inference backend with an empty body', () => {
+    // Synthetic-hosted models occasionally emit "400 status code (no body)" when
+    // the upstream routing fails transiently. Without this carve-out the loop
+    // would pause forever on an un-actionable request.
+    expect(
+      isRetryableGenerateError(
+        new APIStatusError(400, 'Error from inference backend: 400 status code (no body)'),
+      ),
+    ).toBe(true);
+  });
+
   it('propagates retryAfterMs through normalizeAPIStatusError onto the typed error', () => {
     const rateLimited = normalizeAPIStatusError(429, 'rate limited', 'req-1', 12_500);
     expect(rateLimited).toBeInstanceOf(APIProviderRateLimitError);
