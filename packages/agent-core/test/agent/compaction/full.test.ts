@@ -29,7 +29,7 @@ import { HookEngine, type HookEngineTriggerArgs } from '../../../src/session/hoo
 import { estimateTokens, estimateTokensForMessages } from '../../../src/utils/tokens';
 import { recordingTelemetry, type TelemetryRecord } from '../../fixtures/telemetry';
 import type { TestAgentContext, TestAgentOptions } from '../harness/agent';
-import { testAgent } from '../harness/agent';
+import { emptyConfig, testAgent } from '../harness/agent';
 
 type GenerateFn = NonNullable<AgentOptions['generate']>;
 
@@ -2017,6 +2017,86 @@ describe('FullCompaction', () => {
       throw new APIStatusError(413, 'Request Entity Too Large', 'req-small-413');
     };
     const ctx = testAgent({ generate });
+    ctx.configure({
+      provider: CATALOGUED_PROVIDER,
+      modelCapabilities: {
+        ...CATALOGUED_MODEL_CAPABILITIES,
+        max_context_tokens: 200_000,
+      },
+    });
+    ctx.appendExchange(1, 'old user one', 'old assistant one', 20);
+    ctx.newEvents();
+
+    await ctx.rpc.prompt({ input: [{ type: 'text', text: 'small prompt' }] });
+    const events = await ctx.untilTurnEnd();
+
+    expect(eventIndex(events, 'compaction.started')).toBe(-1);
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        event: 'turn.ended',
+        args: expect.objectContaining({ turnId: 0, reason: 'failed' }),
+      }),
+    );
+  });
+
+  it('recovers from 400 (no body) when estimated request is over effective max', async () => {
+    let callCount = 0;
+    const generate: GenerateFn = async (_provider, _system, _tools, _history, callbacks) => {
+      callCount += 1;
+      if (callCount === 1) {
+        throw new APIStatusError(400, 'Error from inference backend: 400 status code (no body)');
+      }
+      if (callCount === 2) {
+        return textResult('400 no-body compacted summary.');
+      }
+      await callbacks?.onMessagePart?.({
+        type: 'text',
+        text: 'Recovered after 400 no-body compaction.',
+      });
+      return textResult('Recovered after 400 no-body compaction.');
+    };
+    const ctx = testAgent({
+      generate,
+      initialConfig: { ...emptyConfig(), loopControl: { maxRetriesPerStep: 1 } },
+    });
+    ctx.configure({
+      provider: CATALOGUED_PROVIDER,
+      modelCapabilities: {
+        ...CATALOGUED_MODEL_CAPABILITIES,
+        max_context_tokens: 200_000,
+      },
+    });
+    ctx.appendExchange(1, 'old user one', `old assistant one ${'x'.repeat(600_000)}`, 150_000);
+    ctx.newEvents();
+
+    await ctx.rpc.prompt({ input: [{ type: 'text', text: 'Retry after 400 no-body' }] });
+    const events = await ctx.untilTurnEnd();
+
+    expect(callCount).toBe(3);
+    expect(ctx.agent.fullCompaction.getEffectiveMaxContextTokens()).toBeLessThan(200_000);
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        event: 'compaction.started',
+        args: { trigger: 'auto' },
+      }),
+    );
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        event: 'turn.ended',
+        args: { turnId: 0, reason: 'completed' },
+      }),
+    );
+    await ctx.expectResumeMatches();
+  });
+
+  it('does not compact 400 (no body) when estimated request is small', async () => {
+    const generate: GenerateFn = async () => {
+      throw new APIStatusError(400, 'Error from inference backend: 400 status code (no body)');
+    };
+    const ctx = testAgent({
+      generate,
+      initialConfig: { ...emptyConfig(), loopControl: { maxRetriesPerStep: 1 } },
+    });
     ctx.configure({
       provider: CATALOGUED_PROVIDER,
       modelCapabilities: {

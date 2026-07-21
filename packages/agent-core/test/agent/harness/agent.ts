@@ -1048,7 +1048,7 @@ function configStateSnapshot(agent: Agent): ResumeStateSnapshot['config'] {
   };
 }
 
-function emptyConfig(): KimiConfig {
+export function emptyConfig(): KimiConfig {
   return configWithProvider({ providers: {} }, MOCK_PROVIDER, undefined);
 }
 

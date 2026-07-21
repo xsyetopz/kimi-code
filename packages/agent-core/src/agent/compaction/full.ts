@@ -142,7 +142,29 @@ export class FullCompaction {
     estimatedRequestTokens = this.estimateCurrentRequestTokens(),
   ): boolean {
     if (error instanceof APIContextOverflowError) return true;
-    if (!(error instanceof APIStatusError) || error.statusCode !== 413) return false;
+    if (!(error instanceof APIStatusError)) return false;
+
+    // Synthetic-hosted inference backends occasionally return HTTP 400 with an
+    // empty body when the request is too large for their routing layer, even
+    // though the rejection carries no context-overflow wording. When the
+    // estimated request is already near the model's effective context window,
+    // treat this as an overflow error so compaction can shrink the payload
+    // instead of burning the full retry budget on an unrecoverable request.
+    if (
+      error.statusCode === 400 &&
+      /\(no body\)/i.test(error.message) &&
+      estimatedRequestTokens > 0
+    ) {
+      const effectiveMax = this.getEffectiveMaxContextTokens();
+      if (
+        effectiveMax > 0 &&
+        estimatedRequestTokens >= effectiveMax * OVERFLOW_STATUS_RECOVERY_RATIO
+      ) {
+        return true;
+      }
+    }
+
+    if (error.statusCode !== 413) return false;
     const effectiveMax = this.getEffectiveMaxContextTokens();
     return (
       effectiveMax > 0 && estimatedRequestTokens >= effectiveMax * OVERFLOW_STATUS_RECOVERY_RATIO

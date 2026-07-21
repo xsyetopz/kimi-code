@@ -146,15 +146,17 @@ describe('isRetryableGenerateError', () => {
     expect(isRetryableGenerateError(new APIStatusError(statusCode, 'non-retryable'))).toBe(false);
   });
 
-  it('retries an HTTP 400 from an inference backend with an empty body', () => {
-    // Synthetic-hosted models occasionally emit "400 status code (no body)" when
-    // the upstream routing fails transiently. Without this carve-out the loop
-    // would pause forever on an un-actionable request.
+  it('does not retry an HTTP 400 from an inference backend with an empty body', () => {
+    // Synthetic-hosted models sometimes emit "400 status code (no body)". With
+    // no actionable body the loop cannot tell whether the failure is transient,
+    // and large requests often hit this as a deterministic routing-layer
+    // rejection. Failing fast lets context compaction recover the turn instead of
+    // retrying the same payload until the budget is exhausted.
     expect(
       isRetryableGenerateError(
         new APIStatusError(400, 'Error from inference backend: 400 status code (no body)'),
       ),
-    ).toBe(true);
+    ).toBe(false);
   });
 
   it('propagates retryAfterMs through normalizeAPIStatusError onto the typed error', () => {
