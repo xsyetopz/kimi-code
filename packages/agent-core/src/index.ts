@@ -4,7 +4,9 @@ export * from "./rpc";
 export * from "./config";
 export * from "./flags";
 export * from "./session/export";
-export * from "./telemetry";
+// The telemetry module was deleted in the v1→v2 cutover. Downstream consumers
+// still import noop client stubs — keep those symbols alive.
+export { noopTelemetryClient, withTelemetryContext } from "./telemetry-stubs";
 export * from "./errors";
 export * from "./plugin";
 export {
