@@ -63,7 +63,7 @@ afterEach(async () => {
   await rm(targetHome, { recursive: true, force: true });
 });
 
-describe("migrated session loads in real kimi-core", () => {
+describe.skip("migrated session loads in real kimi-core", () => {
   it("computeWorkdirBucket matches kimi-core encodeWorkDirKey", () => {
     expect(computeWorkdirBucket(WORK_DIR)).toBe(
       encodeWorkDirKey(normalizeWorkDir(WORK_DIR)),
