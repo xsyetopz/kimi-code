@@ -1,12 +1,4 @@
-export { SessionStore } from "#/session/store/session-store";
-export type {
-  CreateSessionRecordInput,
-  ForkSessionRecordInput,
-  SessionStoreOptions,
-} from "#/session/store/session-store";
-export { sessionIndexPath } from "#/session/store/session-index";
-export {
-  encodeWorkDirKey,
-  normalizeWorkDir,
-  workspaceRootKey,
-} from "#/session/store/workdir-key";
+import { createHash } from 'node:crypto';
+export function encodeWorkDirKey(workDir: string): string {
+  return createHash('sha256').update(workDir).digest('hex').slice(0, 16);
+}

@@ -1,5 +1,39 @@
-// Barrel re-export so #/errors resolves to a single .ts file (the first
-// entry in the package imports map). vitest does not resolve cleanly through
-// the directory fallback; this thin barrel keeps the alias working uniformly
-// across node, tsc, and vitest. Real module lives under ./errors.
-export * from "./errors/index";
+export const ErrorCodes = {
+  SESSION_NOT_FOUND: "SESSION_NOT_FOUND",
+  AGENT_NOT_FOUND: "AGENT_NOT_FOUND",
+  SESSION_UNDO_UNAVAILABLE: "SESSION_UNDO_UNAVAILABLE",
+  REQUEST_INVALID: "REQUEST_INVALID",
+  NOT_IMPLEMENTED: "NOT_IMPLEMENTED",
+  PROMPT_NOT_FOUND: "PROMPT_NOT_FOUND",
+  FS_PATH_NOT_FOUND: "FS_PATH_NOT_FOUND",
+  SESSION_BUSY: "SESSION_BUSY",
+  PROMPT_ALREADY_COMPLETED: "PROMPT_ALREADY_COMPLETED",
+  GOAL_ALREADY_EXISTS: "GOAL_ALREADY_EXISTS",
+  GOAL_NOT_FOUND: "GOAL_NOT_FOUND",
+  GOAL_STATUS_INVALID: "GOAL_STATUS_INVALID",
+  GOAL_NOT_RESUMABLE: "GOAL_NOT_RESUMABLE",
+  GOAL_OBJECTIVE_EMPTY: "GOAL_OBJECTIVE_EMPTY",
+  GOAL_OBJECTIVE_TOO_LONG: "GOAL_OBJECTIVE_TOO_LONG",
+  GOAL_UNSUPPORTED_AGENT: "GOAL_UNSUPPORTED_AGENT",
+  OS_FS_NOT_FOUND: "OS_FS_NOT_FOUND",
+  OS_FS_NOT_DIRECTORY: "OS_FS_NOT_DIRECTORY",
+  OS_FS_IS_DIRECTORY: "OS_FS_IS_DIRECTORY",
+  OS_FS_ALREADY_EXISTS: "OS_FS_ALREADY_EXISTS",
+  OS_FS_PERMISSION_DENIED: "OS_FS_PERMISSION_DENIED",
+  RECORDS_WRITE_FAILED: "RECORDS_WRITE_FAILED",
+  INTERNAL_ERROR: "INTERNAL_ERROR",
+  VALIDATION_FAILED: "VALIDATION_FAILED",
+} as const;
+export type ErrorCode = (typeof ErrorCodes)[keyof typeof ErrorCodes];
+export type KimiErrorCode = ErrorCode;
+
+export class KimiError extends Error {
+  constructor(
+    readonly code: ErrorCode,
+    message: string,
+    readonly details?: Record<string, unknown>,
+  ) {
+    super(message);
+    this.name = "KimiError";
+  }
+}
