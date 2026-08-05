@@ -2,13 +2,11 @@ export * from "./agent";
 export * from "./session";
 export * from "./rpc";
 export * from "./config";
-export * from "./flags";
 export * from "./session/export";
 // The telemetry module was deleted in the v1→v2 cutover. Downstream consumers
 // still import noop client stubs — keep those symbols alive.
 export { noopTelemetryClient, withTelemetryContext } from "./telemetry-stubs";
 export * from "./errors";
-export * from "./plugin";
 export {
   isAgentReplayUserTurnRecord,
   limitAgentReplayByTurns,
@@ -139,7 +137,6 @@ export type { UsageRecordScope } from "./agent/usage";
 export type { ToolStoreUpdate } from "./tools/store";
 
 // ─── Dependency injection container ────────────────────────────────────────
-export * from "./di";
 
 // ─── Base — Event<T> / Emitter<T> ──────────────────────────────────────────
 // NOTE: only `Emitter` is re-exported from the top-level barrel — the new
@@ -150,7 +147,6 @@ export * from "./di";
 // `exports`). This keeps the existing top-level `Event` semantics stable for
 // consumers like `services/src/event/event.ts` while letting new code reach
 // for the emitter type without naming clashes.
-export { Emitter } from "./base/common/event";
 
 // ─── In-process services (merged from @moonshot-ai/services) ─────────────────
 // Re-exports the `IXxxService` contracts, default `XxxService` implementations,
@@ -162,4 +158,3 @@ export { Emitter } from "./base/common/event";
 // `QuestionResult` are intentionally NOT re-exported here — they are the
 // canonical protocol shapes already exported via `./rpc` (`rpc/sdk-api.ts`),
 // and re-exporting them again would collide (TS2308).
-export * from "./services";
