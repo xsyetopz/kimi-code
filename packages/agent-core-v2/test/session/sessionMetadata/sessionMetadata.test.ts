@@ -5,7 +5,6 @@ import { DisposableStore } from "#/_base/di/lifecycle";
 import { ServiceCollection } from "#/_base/di/serviceCollection";
 import { TestInstantiationService } from "#/_base/di/test";
 import { ILogService } from "#/_base/log/log";
-import { ISessionIndexMirror } from "#/app/sessionIndex/sessionIndex";
 import {
   ISessionContext,
   makeSessionContext,
@@ -19,7 +18,6 @@ import { IFileSystemStorageService } from "#/persistence/interface/storage";
 import { IAtomicDocumentStore } from "#/persistence/interface/atomicDocumentStore";
 import { InMemoryStorageService } from "#/persistence/backends/memory/inMemoryStorageService";
 
-import { stubSessionIndexMirror } from "../../app/sessionIndex/stubs";
 import { stubLog } from "../../_base/log/stubs";
 
 const META_SCOPE = "sessions/wd_test/s1/session-meta";
@@ -49,15 +47,12 @@ function makeContext(): ISessionContext {
 describe("SessionMetadata", () => {
   let disposables: DisposableStore;
   let ix: TestInstantiationService;
-  let mirror: ReturnType<typeof stubSessionIndexMirror>;
 
   beforeEach(() => {
     disposables = new DisposableStore();
     ix = disposables.add(new TestInstantiationService());
-    mirror = stubSessionIndexMirror();
     ix.stub(ILogService, stubLog());
     ix.stub(ISessionContext, makeContext());
-    ix.stub(ISessionIndexMirror, mirror);
     ix.set(ISessionStateService, new SyncDescriptor(SessionStateService));
     ix.set(
       IFileSystemStorageService,
@@ -100,31 +95,6 @@ describe("SessionMetadata", () => {
     await meta.setTitle("t");
     await meta.setArchived(true);
     expect(await meta.read()).toMatchObject({ title: "t", archived: true });
-  });
-
-  it("mirrors a boolean archived to the read model even when the loaded document lacks the field", async () => {
-    // A state.json written before `archived` existed: normalizeSessionMeta
-    // keeps the field undefined, and a naive mirror would drop the key from
-    // the cached JSON entirely (failing the read-model contract on reads).
-    const store = ix.get(IAtomicDocumentStore);
-    await store.set(META_SCOPE, "state.json", {
-      id: "s1",
-      version: 2,
-      createdAt: 1700000000000,
-      updatedAt: 1700000000000,
-      agents: {},
-      custom: {},
-    });
-
-    const meta = ix.get(ISessionMetadata);
-    await meta.ready;
-    // A resume loads silently; only mutations reach the mirror.
-    expect(mirror.recorded).toEqual([]);
-
-    await meta.update({ title: "x" });
-
-    expect(mirror.recorded).toHaveLength(1);
-    expect(mirror.recorded[0]).toMatchObject({ id: "s1", archived: false });
   });
 
   it("persists across instances", async () => {

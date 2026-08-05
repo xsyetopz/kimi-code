@@ -5,12 +5,11 @@
  * query facade over the set of persisted sessions (open or closed). It serves
  * recency-ordered pages, point lookups, and counts (`SessionSummary` data or
  * numbers — never filesystem paths or live handles). Writes (create /
- * archive) live in `sessionLifecycle` / `session`; the index is a read model.
- * Backends are deployment-specific (local filesystem today; database / query
- * store on a server). `remove` is the one write: it evicts a deleted
- * session's derived/cached state so `get` stops answering for the id — the
- * authoritative record (the session directory) is deleted by the caller
- * (`sessionLifecycle.delete`).
+ * archive) live in `sessionLifecycle` / `session`. Backends are
+ * deployment-specific (local filesystem today; database on a server).
+ * `remove` is the one write: it evicts a deleted session's derived/cached
+ * state so `get` stops answering for the id — the authoritative record (the
+ * session directory) is deleted by the caller (`sessionLifecycle.delete`).
  *
  * Listings follow a canonical order — `updatedAt` descending, `id`
  * descending as the tie-break — and page with keyset cursors: `before` /
@@ -18,17 +17,10 @@
  * it; `Page.nextCursor` carries the id to pass as `before` for the next
  * older page. An unknown cursor id yields an empty, terminal page.
  *
- * Lifecycle (flag `persistence_minidb_readmodel`): the read model has an
- * explicit `prepare()` — `uninitialized → preparing → ready`, or `degraded`
- * when it must fall back to the authoritative store. `prepare()` is called
- * once by the composition root; read paths kick it lazily (single-flight)
- * when a host never did. `status()` exposes the state machine, the published
- * generation, and the cumulative degraded count.
- *
- * `ISessionIndexMirror` is the write side of the read model: `SessionMetadata`
- * records fresh summaries into a bounded, coalescing queue after the
- * authoritative document is durable, so user mutations never wait on the
- * derived store. Bound at App scope.
+ * There is no derived read model: reads are served straight from the
+ * authoritative session directories. `prepare()` / `status()` are kept for
+ * composition-root compatibility (`prepare()` is a no-op, `status()` always
+ * reports `uninitialized`).
  */
 
 import {
@@ -87,11 +79,8 @@ export type SessionIndexState =
 
 export interface SessionIndexStatus {
   readonly state: SessionIndexState;
-  /** Published read-model generation; absent until the first projection. */
   readonly generation?: number;
-  /** Why the index last entered `degraded` (authoritative fallback). */
   readonly reason?: string;
-  /** How many times the index entered `degraded` in this process. */
   readonly degradedCount: number;
 }
 
@@ -99,44 +88,25 @@ export interface ISessionIndex {
   readonly _serviceBrand: undefined;
 
   /**
-   * Open the read model and make it servable: open the query store, create
-   * the schema, restore the published generation (running the initial
-   * projection when none exists), and start background reconciliation.
-   * Single-flight; a no-op when the read-model flag is off.
+   * Lifecycle hook kept for composition roots that warm up services before
+   * serving traffic. Reads need no preparation, so this simply returns the
+   * current `status()`.
    */
   prepare(options?: { deadlineMs?: number }): Promise<SessionIndexStatus>;
   status(): SessionIndexStatus;
   get(id: string): Promise<SessionSummary | undefined>;
   /** Recency-ordered keyset page over the persisted session set. */
   listRecent(query: SessionListQuery): Promise<Page<SessionSummary>>;
-  /** Materialized count over the given workspace-id set. */
+  /** Count over the given workspace-id set. */
   count(query: SessionCountQuery): Promise<number>;
   /**
-   * The one write: evict a deleted session's derived/cached state so `get`
-   * stops answering for the id — the authoritative record (the session
-   * directory) is deleted by the caller (`sessionLifecycle.delete`).
+   * Evict a deleted session's derived/cached state so `get` stops answering
+   * for the id — the authoritative record (the session directory) is deleted
+   * by the caller (`sessionLifecycle.delete`). The filesystem backend keeps
+   * no derived state, so this is a no-op there.
    */
   remove(id: string): Promise<void>;
 }
 
 export const ISessionIndex: ServiceIdentifier<ISessionIndex> =
   createDecorator<ISessionIndex>("sessionIndex");
-
-export interface ISessionIndexMirror {
-  readonly _serviceBrand: undefined;
-
-  /**
-   * Enqueue the latest summary of a session for mirroring into the read
-   * model. Synchronous, bounded, and coalescing (only the newest summary per
-   * session is kept); never throws — failures stay dirty and are healed by
-   * reconciliation.
-   */
-  record(summary: SessionSummary): void;
-  /** Summaries accepted but not yet flushed (read-your-writes window). */
-  pending(): readonly SessionSummary[];
-  /** Flush everything currently queued; resolves with the queue empty. */
-  drain(): Promise<void>;
-}
-
-export const ISessionIndexMirror: ServiceIdentifier<ISessionIndexMirror> =
-  createDecorator<ISessionIndexMirror>("sessionIndexMirror");

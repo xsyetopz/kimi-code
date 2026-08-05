@@ -28,7 +28,6 @@ import { runUpdatePreflight } from "./cli/update/preflight";
 import { createKimiCodeHostIdentity, getVersion } from "./cli/version";
 import { PROCESS_NAME } from "./constant/app";
 import { cleanupStaleNativeCacheForCurrent } from "./native/native-assets";
-import { installMinidbTextBuildWorker } from "./native/minidb-worker";
 import { installNativeModuleHook } from "./native/module-hook";
 import { runNativeAssetSmokeIfRequested } from "./native/smoke";
 
@@ -122,16 +121,6 @@ export function main(): void {
   // invalid proxy URL is reported and ignored rather than aborting startup.
   installGlobalProxyDispatcher();
   installNativeModuleHook();
-  // Best-effort SEA worker installation. Diagnostics are trace-only and avoid
-  // exposing the user's cache path; failure keeps MiniDb's bounded inline mode.
-  const workerInstall = installMinidbTextBuildWorker();
-  startupTrace(
-    workerInstall.status === "installed"
-      ? `minidb-worker:installed basename=${workerInstall.basename} sha256=${workerInstall.assetSha256}`
-      : workerInstall.status === "failed"
-        ? `minidb-worker:failed code=${workerInstall.errorCode} sha256=${workerInstall.assetSha256 ?? "unknown"}`
-        : `minidb-worker:${workerInstall.status}`,
-  );
   if (runNativeAssetSmokeIfRequested()) return;
 
   // Start the background cleanup of stale native cache. Fire-and-forget; must not block startup or throw.

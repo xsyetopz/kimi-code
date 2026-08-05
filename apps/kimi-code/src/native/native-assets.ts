@@ -23,7 +23,6 @@ import { join as joinPosix } from "pathe";
 
 import { KIMI_BUILD_INFO } from "#/cli/build-info";
 import {
-  MINIDB_TEXT_BUILD_WORKER_ASSET,
   NATIVE_ASSET_MANIFEST_VERSION as MANIFEST_VERSION,
   buildManifestKey,
 } from "../../scripts/native/manifest.mjs";
@@ -497,12 +496,6 @@ export function getNativeRuntimeFile(
   return cacheRoot === null
     ? null
     : resolveAssetPath(cacheRoot, file.relativePath);
-}
-
-export function getMinidbTextBuildWorkerFile(
-  options: NativeAssetOptions = {},
-): string | null {
-  return getNativeRuntimeFile(MINIDB_TEXT_BUILD_WORKER_ASSET.key, options);
 }
 
 export function getNativePackageRoot(

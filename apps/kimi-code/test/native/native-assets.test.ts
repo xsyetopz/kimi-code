@@ -9,22 +9,17 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
-import {
-  getTextBuildWorkerRuntimeState,
-  resetTextBuildWorkerRuntime,
-} from "@moonshot-ai/minidb/worker-runtime";
+import { describe, expect, it } from "vitest";
 
 import {
   getEmbeddedNativeAssetManifest,
-  getMinidbTextBuildWorkerFile,
   getNativeCacheBase,
   getNativePackageRoot,
+  getNativeRuntimeFile,
   NATIVE_ASSET_MANIFEST_VERSION,
   type NativeAssetManifest,
   type NativeAssetSource,
 } from "#/native/native-assets";
-import { installMinidbTextBuildWorker } from "#/native/minidb-worker";
 import { loadNativePackage } from "#/native/native-require";
 
 function sha256(bytes: Buffer | string): string {
@@ -33,7 +28,7 @@ function sha256(bytes: Buffer | string): string {
 
 function fakeManifest(
   files: Record<string, string>,
-  workerContent?: string,
+  runtimeFileContent?: string,
 ): {
   manifest: NativeAssetManifest;
   source: NativeAssetSource;
@@ -47,7 +42,7 @@ function fakeManifest(
     };
   });
   const manifestKey = "native/test-target/manifest.json";
-  const workerAssetKey = "native/test-target/runtime/minidb-text-build-worker";
+  const runtimeAssetKey = "native/test-target/runtime/fake-runtime-file";
   const manifest: NativeAssetManifest = {
     version: NATIVE_ASSET_MANIFEST_VERSION,
     target: "test-target",
@@ -59,14 +54,14 @@ function fakeManifest(
       },
     ],
     runtimeFiles:
-      workerContent === undefined
+      runtimeFileContent === undefined
         ? []
         : [
             {
-              key: "minidb-text-build-worker",
-              assetKey: workerAssetKey,
-              relativePath: "runtime/minidb/text-build-worker.mjs",
-              sha256: sha256(workerContent),
+              key: "fake-runtime-file",
+              assetKey: runtimeAssetKey,
+              relativePath: "runtime/fake-runtime-file.mjs",
+              sha256: sha256(runtimeFileContent),
               mode: 0o644,
             },
           ],
@@ -77,9 +72,9 @@ function fakeManifest(
       ([relativePath, content]) =>
         [`native/test-target/${relativePath}`, Buffer.from(content)] as const,
     ),
-    ...(workerContent === undefined
+    ...(runtimeFileContent === undefined
       ? []
-      : [[workerAssetKey, Buffer.from(workerContent)] as const]),
+      : [[runtimeAssetKey, Buffer.from(runtimeFileContent)] as const]),
   ]);
   return {
     manifest,
@@ -105,10 +100,6 @@ function sourceForManifest(manifest: unknown): NativeAssetSource {
     },
   };
 }
-
-afterEach(() => {
-  resetTextBuildWorkerRuntime();
-});
 
 describe("native assets", () => {
   it("uses KIMI_CODE_CACHE_DIR as the native cache base when present", () => {
@@ -190,16 +181,16 @@ describe("native assets", () => {
     }
   });
 
-  it("extracts, reuses, and repairs the runtime worker in the unified cache tree", () => {
-    const dir = mkdtempSync(join(tmpdir(), "kimi-native-worker-"));
+  it("extracts, reuses, and repairs runtime files in the unified cache tree", () => {
+    const dir = mkdtempSync(join(tmpdir(), "kimi-native-runtime-"));
     try {
-      const worker = "export const worker = true;\n";
+      const runtime = "export const runtime = true;\n";
       const { manifest, source } = fakeManifest(
         { "node_modules/fake-native/package.json": '{"main":"index.js"}' },
-        worker,
+        runtime,
       );
       const options = { cacheBase: dir, manifest, source, version: "test" };
-      const first = getMinidbTextBuildWorkerFile(options);
+      const first = getNativeRuntimeFile("fake-runtime-file", options);
       const packageRoot = getNativePackageRoot("fake-native", options);
       expect(first).toBe(
         join(
@@ -209,63 +200,17 @@ describe("native assets", () => {
           "test-target",
           sha256(JSON.stringify(manifest)),
           "runtime",
-          "minidb",
-          "text-build-worker.mjs",
+          "fake-runtime-file.mjs",
         ),
       );
       expect(
         packageRoot?.startsWith(join(dir, "native", "test", "test-target")),
       ).toBe(true);
-      expect(getMinidbTextBuildWorkerFile(options)).toBe(first);
+      expect(getNativeRuntimeFile("fake-runtime-file", options)).toBe(first);
 
       writeFileSync(first!, "corrupt");
-      expect(getMinidbTextBuildWorkerFile(options)).toBe(first);
-      expect(readFileSync(first!, "utf-8")).toBe(worker);
-
-      const installed = installMinidbTextBuildWorker(options);
-      expect(installed).toMatchObject({
-        status: "installed",
-        assetSha256: sha256(worker),
-      });
-      expect(getTextBuildWorkerRuntimeState()).toMatchObject({
-        configured: true,
-        entry: { kind: "packaged", path: first },
-      });
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
-  });
-
-  it("reports missing and corrupt runtime worker assets without configuring MiniDb", () => {
-    const dir = mkdtempSync(join(tmpdir(), "kimi-native-worker-fail-"));
-    try {
-      const missing = fakeManifest({});
-      expect(
-        installMinidbTextBuildWorker({
-          cacheBase: dir,
-          manifest: missing.manifest,
-          source: missing.source,
-          version: "test",
-        }),
-      ).toEqual({ status: "asset-missing" });
-
-      const corrupt = fakeManifest({}, "worker");
-      const corruptSource: NativeAssetSource = {
-        getAssetKeys: () => corrupt.source.getAssetKeys(),
-        getRawAsset: (key) =>
-          key.endsWith("/runtime/minidb-text-build-worker")
-            ? Buffer.from("wrong")
-            : corrupt.source.getRawAsset(key),
-      };
-      expect(
-        installMinidbTextBuildWorker({
-          cacheBase: dir,
-          manifest: corrupt.manifest,
-          source: corruptSource,
-          version: "test",
-        }),
-      ).toMatchObject({ status: "failed", errorCode: "Error" });
-      expect(getTextBuildWorkerRuntimeState()).toEqual({ configured: false });
+      expect(getNativeRuntimeFile("fake-runtime-file", options)).toBe(first);
+      expect(readFileSync(first!, "utf-8")).toBe(runtime);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -316,27 +261,33 @@ describe("native assets", () => {
 
   it("rejects unsafe paths, invalid file metadata, and duplicate manifest keys", () => {
     const valid = fakeManifest({}, "worker").manifest;
-    const worker = valid.runtimeFiles[0]!;
+    const runtimeFile = valid.runtimeFiles[0]!;
     const invalidRuntimeFiles: Array<{
       file: Record<string, unknown>;
       error: RegExp;
     }> = [
       {
-        file: { ...worker, relativePath: "/tmp/worker.mjs" },
+        file: { ...runtimeFile, relativePath: "/tmp/worker.mjs" },
         error: /safe relative path/,
       },
       {
-        file: { ...worker, relativePath: "../worker.mjs" },
+        file: { ...runtimeFile, relativePath: "../worker.mjs" },
         error: /safe relative path/,
       },
       {
-        file: { ...worker, relativePath: "runtime\\..\\worker.mjs" },
+        file: { ...runtimeFile, relativePath: "runtime\\..\\worker.mjs" },
         error: /safe relative path/,
       },
-      { file: { ...worker, sha256: "not-a-sha" }, error: /64 lowercase hex/ },
-      { file: { ...worker, mode: 0o1000 }, error: /mode must be an integer/ },
       {
-        file: { ...worker, assetKey: 42 },
+        file: { ...runtimeFile, sha256: "not-a-sha" },
+        error: /64 lowercase hex/,
+      },
+      {
+        file: { ...runtimeFile, mode: 0o1000 },
+        error: /mode must be an integer/,
+      },
+      {
+        file: { ...runtimeFile, assetKey: 42 },
         error: /assetKey must be a non-empty string/,
       },
     ];
@@ -374,9 +325,9 @@ describe("native assets", () => {
         sourceForManifest({
           ...valid,
           runtimeFiles: [
-            worker,
+            runtimeFile,
             {
-              ...worker,
+              ...runtimeFile,
               assetKey: "native/test-target/runtime/other",
               relativePath: "runtime/other.mjs",
             },
@@ -391,9 +342,9 @@ describe("native assets", () => {
         sourceForManifest({
           ...valid,
           runtimeFiles: [
-            worker,
+            runtimeFile,
             {
-              ...worker,
+              ...runtimeFile,
               key: "other",
               relativePath: "runtime/other.mjs",
             },

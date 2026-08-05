@@ -1,8 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { builtinModules } from "node:module";
-import { resolve } from "node:path";
 
-import { nativeIntermediatesDir, nativeJsBundlePath } from "./paths.mjs";
+import { nativeJsBundlePath } from "./paths.mjs";
 
 const builtins = new Set([
   ...builtinModules,
@@ -84,13 +83,7 @@ function checkBundle(bundlePath, { worker = false } = {}) {
   return errors;
 }
 
-const bundles = [
-  { path: nativeJsBundlePath(), worker: false },
-  {
-    path: resolve(nativeIntermediatesDir(), "text-build-worker.mjs"),
-    worker: true,
-  },
-];
+const bundles = [{ path: nativeJsBundlePath(), worker: false }];
 let failed = false;
 for (const bundle of bundles) {
   const errors = checkBundle(bundle.path, { worker: bundle.worker });

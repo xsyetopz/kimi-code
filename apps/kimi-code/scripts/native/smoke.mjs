@@ -98,11 +98,6 @@ try {
     `Native asset smoke passed: ${target}`,
     "native asset smoke",
   );
-  assertIncludes(
-    nativeAssetOutput,
-    "MiniDb worker build passed",
-    "MiniDb worker smoke",
-  );
 } finally {
   await rm(smokeHome, { recursive: true, force: true });
 }

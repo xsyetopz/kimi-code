@@ -23,16 +23,6 @@ export async function runBundleStep() {
     "--config",
     "tsdown.native.config.ts",
   ]);
-  // Bundle the minidb text-build worker into one self-contained ESM file so
-  // it can ride the SEA blob as an asset (02-sea-blob.mjs) and be spawned
-  // from disk at runtime — bundled binaries otherwise lack the worker entry
-  // and heavy text-index builds degrade to the inline main-thread core.
-  // Runs after the main bundle with clean:false so both verified files remain.
-  await run(process.execPath, [
-    tsdownCliPath,
-    "--config",
-    "tsdown.worker.config.ts",
-  ]);
   await run(process.execPath, [checkBundlePath]);
 }
 

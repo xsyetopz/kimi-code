@@ -96,7 +96,6 @@ export type {
 
 export * from "#/app/sessionIndex/sessionIndex";
 export * from "#/app/sessionIndex/sessionIndexService";
-export * from "#/app/sessionIndex/sessionIndexMirrorService";
 export * from "#/session/sessionMetadata/sessionMetadata";
 export * from "#/session/sessionMetadata/sessionMetadataService";
 export * from "#/session/sessionActivity/sessionActivity";
@@ -443,8 +442,6 @@ export * from "#/persistence/backends/node-fs/appendLogStore";
 export * from "#/persistence/backends/node-fs/atomicDocumentStore";
 export * from "#/persistence/backends/node-fs/blobStoreService";
 export * from "#/persistence/backends/node-fs/projectLocalConfigService";
-import "#/persistence/backends/minidb/flag";
-export * from "#/persistence/backends/minidb/miniDbQueryStore";
 export * from "#/persistence/backends/memory/inMemoryStorageService";
 export * from "#/agent/tools/web-search/web-search";
 import "#/agent/tools/web-search/webSearchTool";

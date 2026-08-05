@@ -9,13 +9,10 @@
 
 import {
   bootstrap,
-  drainQueryStoreDisposals,
-  drainSessionIndexMirror,
   IConfigService,
   IEventService,
   IProviderDiscoveryService,
   ISessionIndex,
-  ISessionIndexMirror,
   IWorkspaceService,
   logSeed,
   resolveConfigPath,
@@ -420,15 +417,8 @@ export async function startServer(
       // Drain the session-index mirror while the query store is still open:
       // requests have stopped, so no new summaries arrive and the queue just
       // needs its final flush to land in the read model.
-      await core.accessor.get(ISessionIndexMirror).drain();
       core.dispose();
-      // `core.dispose()` runs the mirror's, the search service's and the query
-      // store's synchronous `dispose()`, whose drains/closes are asynchronous —
-      // await them before releasing the instance registration (and before
-      // embedding hosts tear down homeDir).
-      await drainSessionIndexMirror();
       await drainGlobalSearchDisposals();
-      await drainQueryStoreDisposals();
     } finally {
       await registration.release();
     }

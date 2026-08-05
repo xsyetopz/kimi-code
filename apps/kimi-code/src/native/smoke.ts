@@ -1,12 +1,8 @@
-import { mkdtempSync, mkdirSync, rmSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 
-import { MiniDb } from "@moonshot-ai/minidb";
-
 import {
   getEmbeddedNativeAssetManifest,
-  getNativeCacheBase,
   getNativePackageRoot,
 } from "./native-assets";
 
@@ -48,49 +44,6 @@ function smokePiTuiNativeLoad(): void {
   }
 }
 
-async function smokeMinidbWorker(): Promise<void> {
-  const cacheBase = getNativeCacheBase();
-  mkdirSync(cacheBase, { recursive: true });
-  const dir = mkdtempSync(join(cacheBase, "sea-minidb-smoke-"));
-  let db: MiniDb<Record<string, unknown>> | null = null;
-  try {
-    db = await MiniDb.open<Record<string, unknown>>({
-      dir,
-      valueCodec: "json",
-    });
-    const total = 4_200;
-    for (let base = 0; base < total; base += 500) {
-      await db.batch(
-        Array.from({ length: Math.min(500, total - base) }, (_, offset) => {
-          const id = base + offset;
-          return {
-            op: "set" as const,
-            key: `doc-${id}`,
-            value: { text: `sea worker searchable document ${id}` },
-          };
-        }),
-      );
-    }
-    await db.createTextIndex("smoke", { fields: ["text"] });
-    if (db.stats.textWorkerBuilds < 1) {
-      throw new Error(`MiniDb worker did not run: ${JSON.stringify(db.stats)}`);
-    }
-    if (db.stats.textWorkerFallbacks !== 0) {
-      throw new Error(
-        `MiniDb worker unexpectedly fell back: ${db.stats.lastTextWorkerFallback ?? "unknown"}`,
-      );
-    }
-    if (!db.search("smoke", "searchable").some((hit) => hit.key === "doc-0")) {
-      throw new Error(
-        "MiniDb worker-built text index returned an incorrect search result",
-      );
-    }
-  } finally {
-    await db?.close().catch(() => {});
-    rmSync(dir, { recursive: true, force: true });
-  }
-}
-
 async function runSmoke(): Promise<void> {
   const manifest = getEmbeddedNativeAssetManifest();
   if (manifest === null)
@@ -101,10 +54,7 @@ async function runSmoke(): Promise<void> {
     }
   }
   smokePiTuiNativeLoad();
-  await smokeMinidbWorker();
-  process.stdout.write(
-    `Native asset smoke passed: ${manifest.target}; MiniDb worker build passed\n`,
-  );
+  process.stdout.write(`Native asset smoke passed: ${manifest.target}\n`);
 }
 
 export function runNativeAssetSmokeIfRequested(): boolean {
