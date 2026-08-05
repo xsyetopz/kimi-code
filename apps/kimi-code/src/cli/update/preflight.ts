@@ -1,7 +1,6 @@
 import { spawn } from "node:child_process";
 
 import { log, type Logger } from "@moonshot-ai/kimi-code-sdk";
-import type { TelemetryProperties } from "@moonshot-ai/kimi-telemetry";
 
 import {
   KIMI_CODE_OFFICIAL_INSTALL_URL,
@@ -29,8 +28,6 @@ import {
   decidePassiveUpdateTarget,
   isRolloutBypassedByExperimentalEnv,
   resolveUpdateDeviceId,
-  rolloutBucket,
-  rolloutDelayForBucket,
   type PassiveUpdateDecision,
 } from "./rollout";
 import { detectInstallSource } from "./source";
@@ -50,7 +47,6 @@ export interface RunUpdatePreflightOptions {
   readonly stdout?: { write(chunk: string): boolean };
   readonly stderr?: { write(chunk: string): boolean };
   readonly isTTY?: boolean;
-  readonly track?: (event: string, properties?: TelemetryProperties) => void;
   readonly logger?: UpdateLogger;
 }
 
@@ -217,32 +213,6 @@ function refreshInBackground(): void {
   void refreshUpdateCache().catch(() => {});
 }
 
-/** Telemetry properties describing where this device sits in the rollout. */
-interface RolloutTelemetry {
-  readonly rollout_bucket: number;
-  readonly rollout_delay_seconds: number;
-  readonly rollout_from_manifest: boolean;
-  readonly rollout_bypassed: boolean;
-}
-
-function rolloutTelemetryFor(
-  deviceId: string,
-  targetVersion: string,
-  manifest: UpdateManifest | null,
-  bypassRollout: boolean,
-): RolloutTelemetry {
-  const bucket = rolloutBucket(deviceId, targetVersion);
-  return {
-    rollout_bucket: bucket,
-    rollout_delay_seconds:
-      manifest === null || bypassRollout
-        ? 0
-        : rolloutDelayForBucket(manifest.rollout, bucket),
-    rollout_from_manifest: manifest !== null,
-    rollout_bypassed: bypassRollout,
-  };
-}
-
 type RolloutCheckPhase =
   | "startup-cache"
   | "background-refresh"
@@ -278,7 +248,6 @@ function refreshAndMaybeInstallInBackground(
   isInteractive: boolean,
   installState: UpdateInstallState,
   platform: NodeJS.Platform,
-  track: RunUpdatePreflightOptions["track"],
   logger: UpdateLogger,
 ): void {
   void (async () => {
@@ -310,7 +279,6 @@ function refreshAndMaybeInstallInBackground(
       target,
       source,
       platform,
-      track,
       logger,
       rolloutTelemetryFor(
         deviceId,
@@ -406,7 +374,6 @@ async function showPendingBackgroundInstallNotice(
   state: UpdateInstallState,
   currentVersion: string,
   stdout: { write(chunk: string): boolean },
-  track: RunUpdatePreflightOptions["track"],
   logger: UpdateLogger,
 ): Promise<UpdateInstallState> {
   const success = state.lastSuccess;
@@ -416,10 +383,6 @@ async function showPendingBackgroundInstallNotice(
     success.version === currentVersion
   ) {
     stdout.write(renderBackgroundInstallSuccessNotice(success.version));
-    trackUpdateEvent(track, "update_success_notice_shown", {
-      version: success.version,
-      inferred_from_active: false,
-    });
     logUpdateInfo(logger, "background update success notice shown", {
       version: success.version,
       inferredFromActive: false,
@@ -449,10 +412,6 @@ async function showPendingBackgroundInstallNotice(
 
   const notifiedAt = nowIso();
   stdout.write(renderBackgroundInstallSuccessNotice(active.version));
-  trackUpdateEvent(track, "update_success_notice_shown", {
-    version: active.version,
-    inferred_from_active: true,
-  });
   logUpdateInfo(logger, "background update success notice shown", {
     version: active.version,
     inferredFromActive: true,
@@ -494,35 +453,6 @@ async function shouldAutoInstallUpdates(): Promise<boolean> {
     return config.upgrade.autoInstall;
   } catch {
     return true;
-  }
-}
-
-function trackUpdatePrompted(
-  track: RunUpdatePreflightOptions["track"],
-  currentVersion: string,
-  target: UpdateTarget,
-  source: InstallSource,
-  decision: UpdateDecision,
-  rolloutTelemetry: RolloutTelemetry,
-): void {
-  trackUpdateEvent(track, "update_prompted", {
-    current_version: currentVersion,
-    target_version: target.version,
-    source,
-    decision,
-    ...rolloutTelemetry,
-  });
-}
-
-function trackUpdateEvent(
-  track: RunUpdatePreflightOptions["track"],
-  event: string,
-  properties: TelemetryProperties,
-): void {
-  try {
-    track?.(event, properties);
-  } catch {
-    // Telemetry must never affect update prompting.
   }
 }
 
@@ -599,9 +529,7 @@ async function startBackgroundInstall(
   target: UpdateTarget,
   source: InstallSource,
   platform: NodeJS.Platform,
-  track: RunUpdatePreflightOptions["track"],
   logger: UpdateLogger,
-  rolloutTelemetry: RolloutTelemetry,
 ): Promise<void> {
   const lock = await tryAcquireUpdateInstallLock({ version: target.version });
   if (lock === null) return;
@@ -625,12 +553,6 @@ async function startBackgroundInstall(
       },
     };
     await writeUpdateInstallState(startedState);
-    trackUpdateEvent(track, "update_background_install_started", {
-      current_version: currentVersion,
-      target_version: target.version,
-      source,
-      ...rolloutTelemetry,
-    });
     logUpdateInfo(logger, "background update install started", {
       currentVersion,
       targetVersion: target.version,
@@ -667,21 +589,12 @@ async function startBackgroundInstall(
           };
       void writeUpdateInstallState(nextState).catch(() => {});
       if (succeeded) {
-        trackUpdateEvent(track, "update_background_install_succeeded", {
-          target_version: target.version,
-          source,
-        });
         logUpdateInfo(logger, "background update install succeeded", {
           targetVersion: target.version,
           source,
         });
         return;
       }
-      trackUpdateEvent(track, "update_background_install_failed", {
-        target_version: target.version,
-        source,
-        attempts,
-      });
       logUpdateWarn(logger, "background update install failed", {
         targetVersion: target.version,
         source,
@@ -716,9 +629,7 @@ async function tryStartAutomaticBackgroundInstall(
   target: UpdateTarget,
   source: InstallSource,
   platform: NodeJS.Platform,
-  track: RunUpdatePreflightOptions["track"],
   logger: UpdateLogger,
-  rolloutTelemetry: RolloutTelemetry,
 ): Promise<boolean> {
   const sourceCanAutoInstall = canAutoInstall(source, platform);
   const autoInstallUpdates = sourceCanAutoInstall
@@ -738,9 +649,7 @@ async function tryStartAutomaticBackgroundInstall(
       target,
       source,
       platform,
-      track,
       logger,
-      rolloutTelemetry,
     ).catch(() => {});
   }
   return true;
@@ -782,7 +691,6 @@ export async function runUpdatePreflight(
         installState,
         currentVersion,
         stdout,
-        options.track,
         logger,
       );
     }
@@ -813,7 +721,6 @@ export async function runUpdatePreflight(
         isInteractive,
         installState,
         platform,
-        options.track,
         logger,
       );
       return "continue";
@@ -841,14 +748,7 @@ export async function runUpdatePreflight(
         target,
         source,
         platform,
-        options.track,
         logger,
-        rolloutTelemetryFor(
-          deviceId,
-          target.version,
-          cachedManifest,
-          bypassRollout,
-        ),
       )
     ) {
       refreshInBackground();
@@ -864,12 +764,6 @@ export async function runUpdatePreflight(
     );
     const userVisibleTarget = userVisibleUpdate.target;
     if (userVisibleTarget === null) return "continue";
-    const userVisibleRollout = rolloutTelemetryFor(
-      deviceId,
-      userVisibleTarget.version,
-      userVisibleUpdate.manifest,
-      bypassRollout,
-    );
     if (
       await tryStartAutomaticBackgroundInstall(
         installState,
@@ -877,9 +771,7 @@ export async function runUpdatePreflight(
         userVisibleTarget,
         source,
         platform,
-        options.track,
         logger,
-        userVisibleRollout,
       )
     ) {
       return "continue";
@@ -889,14 +781,6 @@ export async function runUpdatePreflight(
       source,
       userVisibleTarget.version,
       platform,
-    );
-    trackUpdatePrompted(
-      options.track,
-      currentVersion,
-      userVisibleTarget,
-      source,
-      decision,
-      userVisibleRollout,
     );
 
     if (decision === "manual-command") {

@@ -1,7 +1,7 @@
 /**
  * Scenario: print-mode session startup and resume routing.
  * Responsibilities: CLI options are translated into the SDK session contract and output is rendered.
- * Wiring: the SDK/telemetry/process boundaries are mocked; the print driver is real.
+ * Wiring: the SDK/process boundaries are mocked; the print driver is real.
  * Run: pnpm -C apps/kimi-code exec vitest run test/cli/run-prompt.test.ts
  */
 
@@ -9,13 +9,10 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import type { createKimiDeviceId as createKimiDeviceIdFn } from "@moonshot-ai/kimi-code-oauth";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { runPrompt } from "#/cli/run-prompt";
 import { PROMPT_CLEANUP_TIMEOUT_MS } from "#/constant/app";
-
-type CreateKimiDeviceId = typeof createKimiDeviceIdFn;
 
 const mocks = vi.hoisted(() => {
   const eventHandlers = new Set<(event: any) => void>();
@@ -100,8 +97,6 @@ const mocks = vi.hoisted(() => {
       { id: "ses_previous", workDir: process.cwd() },
     ]),
     harnessClose: vi.fn(),
-    harnessTrack: vi.fn(),
-    harnessGetCachedAccessToken: vi.fn(),
     runV2Print: vi.fn(
       async (
         opts: { readonly outputFormat?: string },
@@ -140,18 +135,9 @@ const mocks = vi.hoisted(() => {
         stderr.write("To resume this session: kimi -r ses_prompt\n");
       },
     ),
-    initializeTelemetry: vi.fn(),
-    setCrashPhase: vi.fn(),
-    shutdownTelemetry: vi.fn(),
-    telemetryTrack: vi.fn(),
-    setTelemetryContext: vi.fn(),
-    lifecycleTrack: vi.fn(),
-    withTelemetryContext: vi.fn(() => ({ track: vi.fn() })),
-    createKimiDeviceId: vi.fn<CreateKimiDeviceId>(() => "device-1"),
     resolveKimiHome: vi.fn(
       (homeDir?: string) => homeDir ?? "/tmp/kimi-code-test-home",
     ),
-    harnessCreatesDeviceIdOnConstruction: false,
   };
 });
 
@@ -164,13 +150,9 @@ vi.mock("@moonshot-ai/kimi-code-sdk", async (importOriginal) => {
     createKimiHarness: (...args: unknown[]) => {
       const options = args[0] as { readonly homeDir?: string } | undefined;
       const homeDir = options?.homeDir ?? "/tmp/kimi-code-test-home";
-      if (mocks.harnessCreatesDeviceIdOnConstruction) {
-        mocks.createKimiDeviceId(homeDir);
-      }
       mocks.kimiHarnessConstructor(...args);
       return {
         homeDir,
-        auth: { getCachedAccessToken: mocks.harnessGetCachedAccessToken },
         ensureConfigFile: mocks.harnessEnsureConfigFile,
         getConfig: mocks.harnessGetConfig,
         getConfigDiagnostics: mocks.harnessGetConfigDiagnostics,
@@ -179,31 +161,10 @@ vi.mock("@moonshot-ai/kimi-code-sdk", async (importOriginal) => {
         resumeSession: mocks.harnessResumeSession,
         listSessions: mocks.harnessListSessions,
         close: mocks.harnessClose,
-        track: mocks.harnessTrack,
       };
     },
   };
 });
-
-vi.mock("@moonshot-ai/kimi-code-oauth", async () => {
-  const actual = await vi.importActual<
-    typeof import("@moonshot-ai/kimi-code-oauth")
-  >("@moonshot-ai/kimi-code-oauth");
-  return {
-    ...actual,
-    createKimiDeviceId: mocks.createKimiDeviceId,
-    KIMI_CODE_PROVIDER_NAME: "kimi-code",
-  };
-});
-
-vi.mock("@moonshot-ai/kimi-telemetry", () => ({
-  initializeTelemetry: mocks.initializeTelemetry,
-  setCrashPhase: mocks.setCrashPhase,
-  shutdownTelemetry: mocks.shutdownTelemetry,
-  track: mocks.telemetryTrack,
-  setTelemetryContext: mocks.setTelemetryContext,
-  withTelemetryContext: mocks.withTelemetryContext,
-}));
 
 // The experimental v2 engine is loaded via a dynamic import from run-prompt.ts
 // when KIMI_CODE_EXPERIMENTAL_FLAG is set. Mock the native v2 runner so tests
@@ -290,11 +251,9 @@ describe("runPrompt", () => {
     vi.clearAllMocks();
     vi.unstubAllEnvs();
     mocks.eventHandlers.clear();
-    mocks.createKimiDeviceId.mockImplementation(() => "device-1");
     mocks.resolveKimiHome.mockImplementation(
       (homeDir?: string) => homeDir ?? "/tmp/kimi-code-test-home",
     );
-    mocks.harnessCreatesDeviceIdOnConstruction = false;
   });
 
   it("creates a fresh auto-permission session and streams assistant output to stdout", async () => {
@@ -326,10 +285,6 @@ describe("runPrompt", () => {
     expect(mocks.session.prompt).toHaveBeenCalledWith("say hello");
     expect(stdout.text()).toBe("• hello world\n\n");
     expect(stderr.text()).toBe("To resume this session: kimi -r ses_prompt\n");
-    expect(mocks.initializeTelemetry).toHaveBeenCalledWith(
-      expect.objectContaining({ sessionId: "ses_prompt" }),
-    );
-    expect(mocks.shutdownTelemetry).toHaveBeenCalled();
     expect(mocks.harnessClose).toHaveBeenCalled();
   });
 
@@ -481,9 +436,6 @@ describe("runPrompt", () => {
       additionalDirs: undefined,
       drainAgentTasksOnStop: true,
     });
-    expect(mocks.initializeTelemetry).toHaveBeenCalledWith(
-      expect.objectContaining({ model: "kimi-code/k2.5" }),
-    );
   });
 
   it("passes the CLI additional directory when creating a fresh prompt session", async () => {
@@ -503,37 +455,6 @@ describe("runPrompt", () => {
       additionalDirs: ["../shared", "/tmp/extra"],
       drainAgentTasksOnStop: true,
     });
-  });
-
-  it("tracks first launch in prompt mode before harness construction can create the device id", async () => {
-    mocks.harnessCreatesDeviceIdOnConstruction = true;
-    const createdHomes = new Set<string>();
-    mocks.createKimiDeviceId.mockImplementation((homeDir, options) => {
-      const deviceId = `device-for-${homeDir}`;
-      if (!createdHomes.has(homeDir)) {
-        createdHomes.add(homeDir);
-        options?.onFirstLaunch?.(deviceId);
-      }
-      return deviceId;
-    });
-
-    await runPrompt(opts(), "1.2.3-test", {
-      stdout: { write: vi.fn(() => true) },
-      stderr: { write: vi.fn(() => true) },
-    });
-
-    expect(mocks.createKimiDeviceId).toHaveBeenNthCalledWith(
-      1,
-      "/tmp/kimi-code-test-home",
-      expect.objectContaining({ onFirstLaunch: expect.any(Function) }),
-    );
-    expect(mocks.createKimiDeviceId.mock.invocationCallOrder[0]).toBeLessThan(
-      mocks.kimiHarnessConstructor.mock.invocationCallOrder[0]!,
-    );
-    expect(mocks.kimiHarnessConstructor).toHaveBeenCalledWith(
-      expect.objectContaining({ homeDir: "/tmp/kimi-code-test-home" }),
-    );
-    expect(mocks.harnessTrack).toHaveBeenCalledWith("first_launch");
   });
 
   it("formats thinking and assistant output as transcript blocks", async () => {
@@ -870,9 +791,6 @@ describe("runPrompt", () => {
       id: "ses_existing",
     });
     expect(mocks.session.setModel).toHaveBeenCalledWith("kimi-code/k2.5");
-    expect(mocks.initializeTelemetry).toHaveBeenCalledWith(
-      expect.objectContaining({ model: "kimi-code/k2.5" }),
-    );
   });
 
   it("writes stream-json output as assistant JSONL with resume meta without transcript bullets", async () => {
@@ -1206,9 +1124,6 @@ describe("runPrompt", () => {
       id: "ses_existing",
     });
     expect(mocks.harnessCreateSession).not.toHaveBeenCalled();
-    expect(mocks.initializeTelemetry).toHaveBeenCalledWith(
-      expect.objectContaining({ model: "saved-model" }),
-    );
     expect(mocks.session.setPermission).toHaveBeenNthCalledWith(1, "auto");
     expect(mocks.session.setPermission).toHaveBeenNthCalledWith(2, "manual");
   });
@@ -1281,9 +1196,6 @@ describe("runPrompt", () => {
       id: "ses_previous",
     });
     expect(mocks.harnessCreateSession).not.toHaveBeenCalled();
-    expect(mocks.initializeTelemetry).toHaveBeenCalledWith(
-      expect.objectContaining({ model: "saved-model" }),
-    );
   });
 
   it("restores resumed session permission even when the turn fails", async () => {
@@ -1357,7 +1269,6 @@ describe("runPrompt", () => {
     expect(
       mocks.session.setPermission.mock.invocationCallOrder[1],
     ).toBeLessThan(processMock.exit.mock.invocationCallOrder[0]!);
-    expect(mocks.shutdownTelemetry).toHaveBeenCalled();
     expect(mocks.harnessClose).toHaveBeenCalled();
     expect(processMock.exit).toHaveBeenCalledWith(130);
 
@@ -1406,7 +1317,6 @@ describe("runPrompt", () => {
 
     await processMock.listener(signal)?.();
 
-    expect(mocks.shutdownTelemetry).toHaveBeenCalled();
     expect(mocks.harnessClose).toHaveBeenCalled();
     expect(processMock.exit).toHaveBeenCalledWith(exitCode);
 
@@ -1540,7 +1450,6 @@ describe("runPrompt", () => {
       }),
     ).rejects.toThrow("provider.error: model failed");
 
-    expect(mocks.shutdownTelemetry).toHaveBeenCalled();
     expect(mocks.harnessClose).toHaveBeenCalled();
   });
 
@@ -1577,7 +1486,6 @@ describe("runPrompt", () => {
       }),
     ).rejects.toThrow("Provider safety policy blocked the response.");
 
-    expect(mocks.shutdownTelemetry).toHaveBeenCalled();
     expect(mocks.harnessClose).toHaveBeenCalled();
   });
 

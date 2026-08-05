@@ -14,29 +14,13 @@ const FLAKE_NIX = join(ROOT, "flake.nix");
 const START_PKG = "@moonshot-ai/kimi-code";
 
 /**
- * Parse pnpm-workspace.yaml to get workspace directory globs.
+ * Parse the root package.json `workspaces` array to get workspace directory
+ * globs (bun workspaces).
  */
 function getWorkspaceGlobs() {
-  const yamlPath = join(ROOT, "pnpm-workspace.yaml");
-  const content = readFileSync(yamlPath, "utf8");
-  const lines = content.split("\n");
-  const globs = [];
-  let inPackages = false;
-  for (const line of lines) {
-    if (line.startsWith("packages:")) {
-      inPackages = true;
-      continue;
-    }
-    if (inPackages) {
-      const match = line.match(/^\s+-\s+(.+)$/);
-      if (match) {
-        globs.push(match[1]);
-      } else if (line.trim() !== "" && !line.startsWith(" ")) {
-        break;
-      }
-    }
-  }
-  return globs;
+  const pkgPath = join(ROOT, "package.json");
+  const pkg = JSON.parse(readFileSync(pkgPath, "utf8"));
+  return Array.isArray(pkg.workspaces) ? pkg.workspaces : [];
 }
 
 /**

@@ -1,6 +1,5 @@
 import { execSync } from "node:child_process";
 
-import type { createKimiDeviceId as createKimiDeviceIdFn } from "@moonshot-ai/kimi-code-oauth";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { runShell } from "#/cli/run-shell";
@@ -10,8 +9,6 @@ import {
   ExitCalled,
   mockProcessExit,
 } from "../helpers/process";
-
-type CreateKimiDeviceId = typeof createKimiDeviceIdFn;
 
 const mocks = vi.hoisted(() => {
   type TuiConfigFallback = {
@@ -29,8 +26,6 @@ const mocks = vi.hoisted(() => {
     }
   }
 
-  const lifecycleTrack = vi.fn();
-
   return {
     loadTuiConfig: vi.fn(),
     detectTerminalTheme: vi.fn(),
@@ -45,30 +40,16 @@ const mocks = vi.hoisted(() => {
     harnessGetConfigDiagnostics: vi.fn(async () => ({
       warnings: [] as readonly string[],
     })),
-    harnessGetCachedAccessToken: vi.fn(),
     harnessClose: vi.fn(),
     detectPendingMigration: vi.fn<() => Promise<unknown>>(async () => null),
-    harnessTrack: vi.fn(),
     kimiTuiConstructor: vi.fn(),
     tuiStart: vi.fn(),
-    tuiGetStartupMcpMs: vi.fn(async () => 0),
     tuiGetCurrentSessionId: vi.fn(() => ""),
     tuiHasSessionContent: vi.fn(() => false),
-    createKimiDeviceId: vi.fn<CreateKimiDeviceId>(() => "device-1"),
-    initializeTelemetry: vi.fn(),
-    setCrashPhase: vi.fn(),
-    shutdownTelemetry: vi.fn(),
-    telemetryTrack: vi.fn(),
-    setTelemetryContext: vi.fn(),
-    lifecycleTrack,
-    withTelemetryContext: vi.fn(() => ({
-      track: lifecycleTrack,
-    })),
     resolveKimiHome: vi.fn(
       (homeDir?: string) => homeDir ?? "/tmp/kimi-code-test-home",
     ),
     flushDiagnosticLogsSync: vi.fn(),
-    harnessCreatesDeviceIdOnConstruction: false,
     execSync: vi.fn(),
     TuiConfigParseError,
   };
@@ -82,14 +63,10 @@ vi.mock("@moonshot-ai/kimi-code-sdk", async (importOriginal) => {
     const homeDir = options?.homeDir ?? "/tmp/kimi-code-test-home";
     return {
       homeDir,
-      auth: {
-        getCachedAccessToken: mocks.harnessGetCachedAccessToken,
-      },
       ensureConfigFile: mocks.harnessEnsureConfigFile,
       getConfig: mocks.harnessGetConfig,
       getConfigDiagnostics: mocks.harnessGetConfigDiagnostics,
       close: mocks.harnessClose,
-      track: mocks.harnessTrack,
     };
   };
   return {
@@ -97,11 +74,6 @@ vi.mock("@moonshot-ai/kimi-code-sdk", async (importOriginal) => {
     resolveKimiHome: mocks.resolveKimiHome,
     flushDiagnosticLogsSync: mocks.flushDiagnosticLogsSync,
     createKimiHarness: (...args: unknown[]) => {
-      const options = args[0] as { readonly homeDir?: string } | undefined;
-      const homeDir = options?.homeDir ?? "/tmp/kimi-code-test-home";
-      if (mocks.harnessCreatesDeviceIdOnConstruction) {
-        mocks.createKimiDeviceId(homeDir);
-      }
       mocks.kimiHarnessConstructor(...args);
       return makeHarnessStub(args);
     },
@@ -111,26 +83,6 @@ vi.mock("@moonshot-ai/kimi-code-sdk", async (importOriginal) => {
     },
   };
 });
-
-vi.mock("@moonshot-ai/kimi-code-oauth", async () => {
-  const actual = await vi.importActual<
-    typeof import("@moonshot-ai/kimi-code-oauth")
-  >("@moonshot-ai/kimi-code-oauth");
-  return {
-    ...actual,
-    createKimiDeviceId: mocks.createKimiDeviceId,
-    KIMI_CODE_PROVIDER_NAME: "kimi-code",
-  };
-});
-
-vi.mock("@moonshot-ai/kimi-telemetry", () => ({
-  initializeTelemetry: mocks.initializeTelemetry,
-  setCrashPhase: mocks.setCrashPhase,
-  shutdownTelemetry: mocks.shutdownTelemetry,
-  track: mocks.telemetryTrack,
-  setTelemetryContext: mocks.setTelemetryContext,
-  withTelemetryContext: mocks.withTelemetryContext,
-}));
 
 vi.mock("../../src/tui/config", () => ({
   loadTuiConfig: mocks.loadTuiConfig,
@@ -146,7 +98,6 @@ vi.mock("../../src/tui/index", () => ({
     }
 
     start = mocks.tuiStart;
-    getStartupMcpMs = mocks.tuiGetStartupMcpMs;
     getCurrentSessionId = mocks.tuiGetCurrentSessionId;
     hasSessionContent = mocks.tuiHasSessionContent;
   },
@@ -172,14 +123,11 @@ describe("runShell", () => {
       defaultModel: "k2",
       telemetry: true,
     });
-    mocks.tuiGetStartupMcpMs.mockResolvedValue(0);
     mocks.tuiGetCurrentSessionId.mockReturnValue("");
     mocks.tuiHasSessionContent.mockReturnValue(false);
-    mocks.createKimiDeviceId.mockImplementation(() => "device-1");
     mocks.resolveKimiHome.mockImplementation(
       (homeDir?: string) => homeDir ?? "/tmp/kimi-code-test-home",
     );
-    mocks.harnessCreatesDeviceIdOnConstruction = false;
   });
 
   const minimalCliOptions = {
@@ -256,7 +204,6 @@ describe("runShell", () => {
       notifications: { enabled: true, condition: "unfocused" },
     });
     mocks.tuiStart.mockResolvedValue(undefined);
-    mocks.tuiGetStartupMcpMs.mockResolvedValue(47);
     mocks.tuiGetCurrentSessionId.mockReturnValue("ses-startup");
 
     const cliOptions = {
@@ -298,22 +245,6 @@ describe("runShell", () => {
       stdio: ["inherit", "ignore", "ignore"],
     });
     expect(mocks.kimiTuiConstructor).toHaveBeenCalledTimes(1);
-    expect(mocks.createKimiDeviceId).toHaveBeenCalledWith(
-      "/tmp/kimi-code-test-home",
-      expect.any(Object),
-    );
-    expect(mocks.initializeTelemetry).toHaveBeenCalledWith({
-      homeDir: "/tmp/kimi-code-test-home",
-      deviceId: "device-1",
-      enabled: true,
-      appName: "kimi-code-cli",
-      version: "1.2.3-test",
-      uiMode: "shell",
-      model: "k2",
-      sessionId: undefined,
-      getAccessToken: expect.any(Function),
-    });
-    expect(mocks.setCrashPhase).toHaveBeenCalledWith("runtime");
 
     const [, harness, startupInput] = mocks.kimiTuiConstructor.mock.calls[0]!;
     expect(harness).toBeTypeOf("object");
@@ -329,15 +260,6 @@ describe("runShell", () => {
       workDir: process.cwd(),
     });
     expect(mocks.tuiStart).toHaveBeenCalledOnce();
-    expect(mocks.withTelemetryContext).toHaveBeenCalledWith({
-      sessionId: "ses-startup",
-    });
-    expect(mocks.lifecycleTrack).toHaveBeenCalledWith("startup_perf", {
-      duration_ms: expect.any(Number),
-      config_ms: expect.any(Number),
-      init_ms: expect.any(Number),
-      mcp_ms: 47,
-    });
   });
 
   it("resolves the --agent profile into the TUI startup input", async () => {
@@ -397,195 +319,6 @@ describe("runShell", () => {
     expect(mocks.kimiHarnessConstructor).toHaveBeenCalledWith(
       expect.objectContaining({ skillDirs: ["/skills"] }),
     );
-  });
-
-  it("tracks first launch when device id creation reports first launch", async () => {
-    mocks.loadTuiConfig.mockResolvedValue({
-      theme: "dark",
-      editorCommand: null,
-      notifications: { enabled: true, condition: "unfocused" },
-    });
-    mocks.tuiStart.mockResolvedValue(undefined);
-    mocks.createKimiDeviceId.mockImplementationOnce((homeDir, options) => {
-      const deviceId = `device-for-${homeDir}`;
-      options?.onFirstLaunch?.(deviceId);
-      return deviceId;
-    });
-
-    await runShell(
-      {
-        session: undefined,
-        continue: false,
-        yolo: false,
-        auto: false,
-        plan: false,
-        model: undefined,
-        outputFormat: undefined,
-        prompt: undefined,
-        skillsDirs: [],
-        agent: undefined,
-        agentFiles: [],
-      },
-      "1.2.3-test",
-    );
-
-    expect(mocks.createKimiDeviceId).toHaveBeenCalledWith(
-      "/tmp/kimi-code-test-home",
-      expect.objectContaining({ onFirstLaunch: expect.any(Function) }),
-    );
-    expect(mocks.harnessTrack).toHaveBeenCalledWith("first_launch");
-  });
-
-  it("registers first launch before harness construction can create the device id", async () => {
-    mocks.loadTuiConfig.mockResolvedValue({
-      theme: "dark",
-      editorCommand: null,
-      notifications: { enabled: true, condition: "unfocused" },
-    });
-    mocks.tuiStart.mockResolvedValue(undefined);
-    mocks.harnessCreatesDeviceIdOnConstruction = true;
-    const createdHomes = new Set<string>();
-    mocks.createKimiDeviceId.mockImplementation((homeDir, options) => {
-      const deviceId = `device-for-${homeDir}`;
-      if (!createdHomes.has(homeDir)) {
-        createdHomes.add(homeDir);
-        options?.onFirstLaunch?.(deviceId);
-      }
-      return deviceId;
-    });
-
-    await runShell(
-      {
-        session: undefined,
-        continue: false,
-        yolo: false,
-        auto: false,
-        plan: false,
-        model: undefined,
-        outputFormat: undefined,
-        prompt: undefined,
-        skillsDirs: [],
-        agent: undefined,
-        agentFiles: [],
-      },
-      "1.2.3-test",
-    );
-
-    expect(mocks.createKimiDeviceId).toHaveBeenNthCalledWith(
-      1,
-      "/tmp/kimi-code-test-home",
-      expect.objectContaining({ onFirstLaunch: expect.any(Function) }),
-    );
-    expect(mocks.createKimiDeviceId.mock.invocationCallOrder[0]).toBeLessThan(
-      mocks.kimiHarnessConstructor.mock.invocationCallOrder[0]!,
-    );
-    expect(mocks.kimiHarnessConstructor).toHaveBeenCalledWith(
-      expect.objectContaining({ homeDir: "/tmp/kimi-code-test-home" }),
-    );
-    expect(mocks.harnessTrack).toHaveBeenCalledWith("first_launch");
-  });
-
-  it("binds startup_perf to the session captured before MCP metrics resolve", async () => {
-    mocks.loadTuiConfig.mockResolvedValue({
-      theme: "dark",
-      editorCommand: null,
-      notifications: { enabled: true, condition: "unfocused" },
-    });
-    mocks.tuiStart.mockResolvedValue(undefined);
-    let currentSessionId = "ses-startup";
-    mocks.tuiGetCurrentSessionId.mockImplementation(() => currentSessionId);
-    mocks.tuiGetStartupMcpMs.mockImplementation(async () => {
-      currentSessionId = "ses-later";
-      return 47;
-    });
-
-    await runShell(
-      {
-        session: undefined,
-        continue: false,
-        yolo: false,
-        auto: false,
-        plan: false,
-        model: undefined,
-        outputFormat: undefined,
-        prompt: undefined,
-        skillsDirs: [],
-        agent: undefined,
-        agentFiles: [],
-      },
-      "1.2.3-test",
-    );
-
-    expect(mocks.withTelemetryContext).toHaveBeenCalledWith({
-      sessionId: "ses-startup",
-    });
-    expect(mocks.withTelemetryContext).not.toHaveBeenCalledWith({
-      sessionId: "ses-later",
-    });
-    expect(mocks.lifecycleTrack).toHaveBeenCalledWith("startup_perf", {
-      duration_ms: expect.any(Number),
-      config_ms: expect.any(Number),
-      init_ms: expect.any(Number),
-      mcp_ms: 47,
-    });
-  });
-
-  it("bridges OAuth refresh outcomes to telemetry", async () => {
-    mocks.loadTuiConfig.mockResolvedValue({
-      theme: "dark",
-      editorCommand: null,
-      notifications: { enabled: true, condition: "unfocused" },
-    });
-    mocks.tuiStart.mockResolvedValue(undefined);
-
-    await runShell(
-      {
-        session: undefined,
-        continue: false,
-        yolo: false,
-        auto: false,
-        plan: false,
-        model: undefined,
-        outputFormat: undefined,
-        prompt: undefined,
-        skillsDirs: [],
-        agent: undefined,
-        agentFiles: [],
-      },
-      "1.2.3-test",
-    );
-
-    const [harnessOptions] = mocks.kimiHarnessConstructor.mock.calls[0] as [
-      {
-        readonly onOAuthRefresh: (
-          outcome:
-            | { readonly success: true }
-            | {
-                readonly success: false;
-                readonly reason: "unauthorized" | "network_or_other";
-              },
-        ) => void;
-      },
-    ];
-
-    harnessOptions.onOAuthRefresh({ success: true });
-    harnessOptions.onOAuthRefresh({ success: false, reason: "unauthorized" });
-    harnessOptions.onOAuthRefresh({
-      success: false,
-      reason: "network_or_other",
-    });
-
-    expect(mocks.telemetryTrack).toHaveBeenCalledWith("oauth_refresh", {
-      outcome: "success",
-    });
-    expect(mocks.telemetryTrack).toHaveBeenCalledWith("oauth_refresh", {
-      outcome: "error",
-      reason: "unauthorized",
-    });
-    expect(mocks.telemetryTrack).toHaveBeenCalledWith("oauth_refresh", {
-      outcome: "error",
-      reason: "network_or_other",
-    });
   });
 
   it("detects auto theme and forwards config parse warnings as startup notice", async () => {
@@ -792,15 +525,10 @@ describe("runShell", () => {
       ),
     ).rejects.toThrow("boom");
 
-    expect(mocks.setCrashPhase).toHaveBeenCalledWith("shutdown");
-    expect(mocks.harnessTrack).toHaveBeenCalledWith("exit", {
-      duration_ms: expect.any(Number),
-    });
-    expect(mocks.shutdownTelemetry).toHaveBeenCalledOnce();
     expect(mocks.harnessClose).toHaveBeenCalledOnce();
   });
 
-  it("tracks exit and prints resume instructions from the TUI exit handler", async () => {
+  it("prints resume instructions from the TUI exit handler", async () => {
     mocks.loadTuiConfig.mockResolvedValue({
       theme: "dark",
       editorCommand: null,
@@ -832,26 +560,11 @@ describe("runShell", () => {
         "1.2.3-test",
       );
       const [tui] = mocks.kimiTuiConstructor.mock.calls[0]!;
-      mocks.harnessTrack.mockClear();
-      mocks.lifecycleTrack.mockClear();
-      mocks.withTelemetryContext.mockClear();
 
       await expect(
         (tui as { onExit: () => Promise<void> }).onExit(),
       ).rejects.toBeInstanceOf(ExitCalled);
 
-      expect(mocks.setCrashPhase).toHaveBeenCalledWith("shutdown");
-      expect(mocks.withTelemetryContext).toHaveBeenCalledWith({
-        sessionId: "ses-1",
-      });
-      expect(mocks.lifecycleTrack).toHaveBeenCalledWith("exit", {
-        duration_ms: expect.any(Number),
-      });
-      expect(mocks.harnessTrack).not.toHaveBeenCalledWith(
-        "exit",
-        expect.anything(),
-      );
-      expect(mocks.shutdownTelemetry).toHaveBeenCalledOnce();
       expect(stdout.text()).toBe(" Bye!\n");
       expect(stderr.text()).toContain(" To resume this session: kimi -r ses-1");
     } finally {

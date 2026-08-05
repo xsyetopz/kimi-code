@@ -138,7 +138,6 @@ vi.mock("@moonshot-ai/kimi-code-sdk", async (importOriginal) => {
     ...actual,
     createKimiHarness: () => ({
       homeDir: "/tmp/kimi-goal-home",
-      auth: { getCachedAccessToken: vi.fn() },
       ensureConfigFile: vi.fn(),
       getConfig: vi.fn(async () => ({
         providers: {},
@@ -153,19 +152,9 @@ vi.mock("@moonshot-ai/kimi-code-sdk", async (importOriginal) => {
       resumeSession: vi.fn(async () => mocks.session),
       listSessions: vi.fn(async () => mocks.sessions),
       close: vi.fn(),
-      track: vi.fn(),
     }),
   };
 });
-
-vi.mock("@moonshot-ai/kimi-telemetry", () => ({
-  initializeTelemetry: vi.fn(),
-  setCrashPhase: vi.fn(),
-  shutdownTelemetry: vi.fn(),
-  track: vi.fn(),
-  setTelemetryContext: vi.fn(),
-  withTelemetryContext: vi.fn(() => ({ track: vi.fn() })),
-}));
 
 function opts(overrides: Partial<Parameters<typeof runPrompt>[0]> = {}) {
   return {

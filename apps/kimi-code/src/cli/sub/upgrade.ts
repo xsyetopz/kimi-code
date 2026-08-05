@@ -1,8 +1,4 @@
 import { log, type Logger } from "@moonshot-ai/kimi-code-sdk";
-import {
-  track as trackTelemetry,
-  type TelemetryProperties,
-} from "@moonshot-ai/kimi-telemetry";
 
 import { refreshUpdateCache } from "#/cli/update/refresh";
 import { selectUpdateTarget } from "#/cli/update/select";
@@ -29,7 +25,6 @@ interface WritableLike {
   write(chunk: string): boolean;
 }
 
-type UpgradeTrack = (event: string, properties?: TelemetryProperties) => void;
 type UpgradeLogger = Pick<Logger, "info" | "warn">;
 
 export interface UpgradeDeps {
@@ -47,7 +42,6 @@ export interface UpgradeDeps {
   readonly stdout: WritableLike;
   readonly stderr: WritableLike;
   readonly isInteractive: boolean;
-  readonly track: UpgradeTrack;
   readonly logger: UpgradeLogger;
 }
 
@@ -62,11 +56,6 @@ export async function handleUpgrade(
     cache = await deps.refreshUpdateCache();
   } catch (error) {
     const reason = formatErrorMessage(error);
-    trackUpgradeEvent(deps.track, "upgrade_command_failed", {
-      current_version: currentVersion,
-      stage: "refresh",
-      reason,
-    });
     logUpgradeWarn(deps.logger, "manual upgrade check failed", {
       currentVersion,
       error,
@@ -77,9 +66,6 @@ export async function handleUpgrade(
 
   const target = selectUpdateTarget(currentVersion, cache.latest);
   if (target === null) {
-    trackUpgradeEvent(deps.track, "upgrade_command_no_update", {
-      current_version: currentVersion,
-    });
     logUpgradeInfo(deps.logger, "manual upgrade no update", {
       currentVersion,
     });
@@ -98,11 +84,6 @@ export async function handleUpgrade(
     deps.platform,
   );
   if (!canAutoInstall(source, deps.platform) || !deps.isInteractive) {
-    trackUpgradeEvent(deps.track, "upgrade_command_manual_command", {
-      current_version: currentVersion,
-      target_version: target.version,
-      source,
-    });
     logUpgradeInfo(deps.logger, "manual upgrade command shown", {
       currentVersion,
       targetVersion: target.version,
@@ -114,11 +95,6 @@ export async function handleUpgrade(
     return 0;
   }
 
-  trackUpgradeEvent(deps.track, "upgrade_command_prompted", {
-    current_version: currentVersion,
-    target_version: target.version,
-    source,
-  });
   logUpgradeInfo(deps.logger, "manual upgrade prompted", {
     currentVersion,
     targetVersion: target.version,
@@ -131,11 +107,6 @@ export async function handleUpgrade(
     installSource: source,
   });
   if (choice === "skip") {
-    trackUpgradeEvent(deps.track, "upgrade_command_skipped", {
-      current_version: currentVersion,
-      target_version: target.version,
-      source,
-    });
     logUpgradeInfo(deps.logger, "manual upgrade skipped", {
       currentVersion,
       targetVersion: target.version,
@@ -145,17 +116,7 @@ export async function handleUpgrade(
   }
 
   try {
-    trackUpgradeEvent(deps.track, "upgrade_command_install_selected", {
-      current_version: currentVersion,
-      target_version: target.version,
-      source,
-    });
     await deps.installUpdate(source, target.version, deps.platform);
-    trackUpgradeEvent(deps.track, "upgrade_command_succeeded", {
-      current_version: currentVersion,
-      target_version: target.version,
-      source,
-    });
     logUpgradeInfo(deps.logger, "manual upgrade install succeeded", {
       currentVersion,
       targetVersion: target.version,
@@ -164,13 +125,6 @@ export async function handleUpgrade(
     deps.stdout.write(renderInstallSuccessMessage(target));
     return 0;
   } catch (error) {
-    trackUpgradeEvent(deps.track, "upgrade_command_failed", {
-      current_version: currentVersion,
-      target_version: target.version,
-      source,
-      stage: "install",
-      reason: formatErrorMessage(error),
-    });
     logUpgradeWarn(deps.logger, "manual upgrade install failed", {
       currentVersion,
       targetVersion: target.version,
@@ -201,7 +155,6 @@ function createDefaultUpgradeDeps(
     stderr: overrides.stderr ?? process.stderr,
     isInteractive:
       overrides.isInteractive ?? (process.stdin.isTTY && process.stdout.isTTY),
-    track: overrides.track ?? trackTelemetry,
     logger: overrides.logger ?? log,
   };
 }
@@ -212,18 +165,6 @@ function formatDisplayVersion(version: string): string {
 
 function formatErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
-}
-
-function trackUpgradeEvent(
-  track: UpgradeTrack,
-  event: string,
-  properties: TelemetryProperties,
-): void {
-  try {
-    track(event, properties);
-  } catch {
-    // Telemetry must never affect upgrade flow.
-  }
 }
 
 function logUpgradeInfo(

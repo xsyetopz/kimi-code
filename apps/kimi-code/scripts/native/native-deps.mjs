@@ -3,7 +3,8 @@
  *
  * Each entry describes one native-bearing npm package: how to resolve its
  * install root, what to collect (JS only / native binary only / both), and
- * which other registered dep it nests under (for `pnpm`-style nested resolves).
+ * which other registered dep it nests under (for isolated-installer-style
+ * nested resolves).
  *
  * Adding a new native package = appending one object here. No edits to
  * NATIVE_TARGETS table or resolvePackageRoot if/else chain.
@@ -52,7 +53,8 @@ export function isSupportedTarget(target) {
  *           — npm package name (may depend on target)
  * @property {'js-only'|'native-files'|'js-and-native-file'|'native-file-only'|'virtual'} collect
  * @property {string|null} parent
- *           — id of another registered dep this nests under (for pnpm),
+ *           — id of another registered dep this nests under (for isolated
+ *           installers like bun's isolated linker),
  *           or null for top-level (resolvable from app root)
  * @property {(target: string) => string[]} [nativeFileRelatives]
  *           — explicit list of .node files relative to package root

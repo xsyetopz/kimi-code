@@ -8,27 +8,16 @@
 import { createInterface } from "node:readline/promises";
 
 import {
-  setTelemetryContext,
-  shutdownTelemetry,
-  track,
-  withTelemetryContext,
-} from "@moonshot-ai/kimi-telemetry";
-import {
   createKimiHarness,
+  resolveKimiHome,
   type ExportSessionInput,
   type ExportSessionResult,
   type KimiHarness,
   type SessionSummary,
   type ShellEnvironment,
-  type TelemetryClient,
 } from "@moonshot-ai/kimi-code-sdk";
 import type { Command } from "commander";
 
-import { CLI_SHUTDOWN_TIMEOUT_MS, CLI_UI_MODE } from "#/constant/app";
-import {
-  createCliTelemetryBootstrap,
-  initializeCliTelemetry,
-} from "#/cli/telemetry";
 import { detectInstallSource } from "#/cli/update/source";
 import { createKimiCodeHostIdentity } from "#/cli/version";
 import { detectShellEnvironment } from "#/utils/process/shell-env";
@@ -155,51 +144,13 @@ function createDefaultExportDeps(
   overrides: Partial<ExportDeps> = {},
 ): ExportDeps {
   let harness: KimiHarness | undefined;
-  let telemetryBootstrap:
-    | ReturnType<typeof createCliTelemetryBootstrap>
-    | undefined;
-  let telemetryInitialized = false;
-  let telemetryShutdown = false;
   const identity = createKimiCodeHostIdentity();
-  const telemetryClient: TelemetryClient = {
-    track,
-    withContext: withTelemetryContext,
-    setContext: setTelemetryContext,
-  };
-  const getTelemetryBootstrap = (): ReturnType<
-    typeof createCliTelemetryBootstrap
-  > => {
-    telemetryBootstrap ??= createCliTelemetryBootstrap();
-    return telemetryBootstrap;
-  };
   const getHarness = (): KimiHarness => {
-    const currentTelemetryBootstrap = getTelemetryBootstrap();
     harness ??= createKimiHarness({
-      homeDir: currentTelemetryBootstrap.homeDir,
+      homeDir: resolveKimiHome(),
       identity,
-      telemetry: telemetryClient,
     });
     return harness;
-  };
-  const initializeDefaultTelemetry = async (): Promise<void> => {
-    if (telemetryInitialized) return;
-    const currentTelemetryBootstrap = getTelemetryBootstrap();
-    const currentHarness = getHarness();
-    await currentHarness.ensureConfigFile();
-    const config = await currentHarness.getConfig();
-    initializeCliTelemetry({
-      harness: currentHarness,
-      bootstrap: currentTelemetryBootstrap,
-      config,
-      version: identity.version,
-      uiMode: CLI_UI_MODE,
-    });
-    telemetryInitialized = true;
-  };
-  const shutdownDefaultTelemetry = async (): Promise<void> => {
-    if (!telemetryInitialized || telemetryShutdown) return;
-    telemetryShutdown = true;
-    await shutdownTelemetry({ timeoutMs: CLI_SHUTDOWN_TIMEOUT_MS });
   };
   return {
     listSessions:
@@ -210,14 +161,7 @@ function createDefaultExportDeps(
         })),
     exportSession:
       overrides.exportSession ??
-      (async (input: ExportSessionInput) => {
-        await initializeDefaultTelemetry();
-        try {
-          return await getHarness().exportSession(input);
-        } finally {
-          await shutdownDefaultTelemetry();
-        }
-      }),
+      (async (input: ExportSessionInput) => getHarness().exportSession(input)),
     version: overrides.version ?? identity.version,
     getInstallSource:
       overrides.getInstallSource ?? (() => detectInstallSource()),

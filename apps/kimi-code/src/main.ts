@@ -12,15 +12,7 @@ import {
   log,
   resolveGlobalLogPath,
   resolveKimiHome,
-  type TelemetryClient,
 } from "@moonshot-ai/kimi-code-sdk";
-import {
-  installCrashHandlers,
-  setTelemetryContext,
-  shutdownTelemetry,
-  track,
-  withTelemetryContext,
-} from "@moonshot-ai/kimi-telemetry";
 
 import { createProgram } from "./cli/commands";
 import { finalizeHeadlessRun } from "./cli/headless-exit";
@@ -32,17 +24,9 @@ import { runShell } from "./cli/run-shell";
 import { formatStartupError } from "./cli/startup-error";
 import { runPluginNodeEntry } from "./cli/sub/plugin-run-node";
 import { handleUpgrade } from "./cli/sub/upgrade";
-import {
-  createCliTelemetryBootstrap,
-  initializeCliTelemetry,
-} from "./cli/telemetry";
 import { runUpdatePreflight } from "./cli/update/preflight";
 import { createKimiCodeHostIdentity, getVersion } from "./cli/version";
-import {
-  CLI_SHUTDOWN_TIMEOUT_MS,
-  CLI_UI_MODE,
-  PROCESS_NAME,
-} from "./constant/app";
+import { PROCESS_NAME } from "./constant/app";
 import { cleanupStaleNativeCacheForCurrent } from "./native/native-assets";
 import { installMinidbTextBuildWorker } from "./native/minidb-worker";
 import { installNativeModuleHook } from "./native/module-hook";
@@ -79,7 +63,7 @@ export async function handleMainCommand(
   startupTrace("preflight:begin");
   const preflightResult = await runUpdatePreflight(
     version,
-    validated.uiMode === "print" ? { track, isTTY: false } : { track },
+    validated.uiMode === "print" ? { isTTY: false } : {},
   );
   startupTrace("preflight:end");
   if (preflightResult === "exit") {
@@ -102,33 +86,15 @@ async function handleMigrateCommand(version: string): Promise<void> {
 }
 
 export async function handleUpgradeCommand(version: string): Promise<void> {
-  const telemetryBootstrap = createCliTelemetryBootstrap();
-  const telemetryClient: TelemetryClient = {
-    track,
-    withContext: withTelemetryContext,
-    setContext: setTelemetryContext,
-  };
   const harness = createKimiHarness({
-    homeDir: telemetryBootstrap.homeDir,
+    homeDir: resolveKimiHome(),
     identity: createKimiCodeHostIdentity(version),
-    telemetry: telemetryClient,
   });
   let exitCode = 1;
   try {
     await harness.ensureConfigFile();
-    const config = await harness.getConfig();
-    initializeCliTelemetry({
-      harness,
-      bootstrap: telemetryBootstrap,
-      config,
-      version,
-      uiMode: CLI_UI_MODE,
-    });
-    exitCode = await handleUpgrade(version, { track, logger: log });
+    exitCode = await handleUpgrade(version, { logger: log });
   } finally {
-    await shutdownTelemetry({ timeoutMs: CLI_SHUTDOWN_TIMEOUT_MS }).catch(
-      () => {},
-    );
     await harness.close().catch(() => {});
   }
   process.exit(exitCode);
@@ -151,7 +117,6 @@ const MIGRATE_CLI_OPTIONS: CLIOptions = {
 
 export function main(): void {
   process.title = PROCESS_NAME;
-  installCrashHandlers();
   // Route all outbound fetch through HTTP_PROXY/HTTPS_PROXY (honoring NO_PROXY)
   // before any client is constructed. No-op when no proxy variable is set; an
   // invalid proxy URL is reported and ignored rather than aborting startup.

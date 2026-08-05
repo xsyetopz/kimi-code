@@ -290,7 +290,7 @@ function requiredValue(args, index, flag) {
 
 function printHelp() {
   process.stdout.write(
-    `Usage: pnpm run build:plugin-marketplace [-- --out-dir <dir>]\n`,
+    `Usage: bun run build:plugin-marketplace [-- --out-dir <dir>]\n`,
   );
   process.stdout.write(`\n`);
   process.stdout.write(`Build CDN-ready plugin marketplace artifacts.\n`);

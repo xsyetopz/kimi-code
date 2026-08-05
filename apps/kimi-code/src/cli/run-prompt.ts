@@ -1,25 +1,15 @@
-import {
-  setCrashPhase,
-  setTelemetryContext,
-  shutdownTelemetry,
-  track,
-  withTelemetryContext,
-} from "@moonshot-ai/kimi-telemetry";
 import chalk from "chalk";
 import {
   createKimiHarness,
   log,
+  resolveKimiHome,
   type Event,
   type GoalSnapshot,
   type SessionStatus,
-  type TelemetryClient,
 } from "@moonshot-ai/kimi-code-sdk";
 import { resolve } from "pathe";
 
-import {
-  CLI_SHUTDOWN_TIMEOUT_MS,
-  PROMPT_CLEANUP_TIMEOUT_MS,
-} from "#/constant/app";
+import { PROMPT_CLEANUP_TIMEOUT_MS } from "#/constant/app";
 
 import { resolveAgentProfileSelection } from "./agent-selection";
 import { isKimiV2Enabled } from "./experimental-v2";
@@ -38,10 +28,6 @@ import {
   PromptTranscriptWriter,
   writeResumeHint,
 } from "./prompt-render";
-import {
-  createCliTelemetryBootstrap,
-  initializeCliTelemetry,
-} from "./telemetry";
 import { createKimiCodeHostIdentity } from "./version";
 
 /**
@@ -123,31 +109,16 @@ export async function runPrompt(
     return;
   }
 
-  const startedAt = Date.now();
   const stdout = io.stdout ?? process.stdout;
   const stderr = io.stderr ?? process.stderr;
   const promptProcess = io.process ?? process;
   const outputFormat = resolveOutputFormat(opts);
   const workDir = process.cwd();
-  const telemetryBootstrap = createCliTelemetryBootstrap();
-  const telemetryClient: TelemetryClient = {
-    track,
-    withContext: withTelemetryContext,
-    setContext: setTelemetryContext,
-  };
   const harness = await createPromptHarness({
-    homeDir: telemetryBootstrap.homeDir,
+    homeDir: resolveKimiHome(),
     identity: createKimiCodeHostIdentity(version),
     uiMode: PROMPT_UI_MODE,
     skillDirs: opts.skillsDirs,
-    telemetry: telemetryClient,
-    onOAuthRefresh: (outcome) => {
-      if (outcome.success) {
-        track("oauth_refresh", { outcome: "success" });
-        return;
-      }
-      track("oauth_refresh", { outcome: "error", reason: outcome.reason });
-    },
     sessionStartedProperties: { yolo: false, plan: false, afk: true },
   });
   log.info("kimi-code starting", {
@@ -163,11 +134,9 @@ export async function runPrompt(
   const cleanupPromptRun = async (): Promise<void> => {
     const pending = (cleanupPromise ??= (async () => {
       removeTerminationCleanup?.();
-      setCrashPhase("shutdown");
       try {
         await restorePromptSessionPermission();
       } finally {
-        await shutdownTelemetry({ timeoutMs: CLI_SHUTDOWN_TIMEOUT_MS });
         await harness.close();
       }
     })());
@@ -189,7 +158,7 @@ export async function runPrompt(
     for (const warning of (await harness.getConfigDiagnostics()).warnings) {
       stderr.write(`Warning: ${warning}\n`);
     }
-    const { session, restorePermission, telemetryModel, goalModel } =
+    const { session, restorePermission, goalModel } =
       await resolvePromptSession(
         harness,
         opts,
@@ -201,17 +170,6 @@ export async function runPrompt(
         },
       );
     restorePromptSessionPermission = restorePermission;
-
-    initializeCliTelemetry({
-      harness,
-      bootstrap: telemetryBootstrap,
-      config,
-      version,
-      uiMode: PROMPT_UI_MODE,
-      model: telemetryModel,
-      sessionId: session.id,
-    });
-    setCrashPhase("runtime");
 
     // Headless goal mode: `kimi -p "/goal <objective>"`. The goal driver keeps
     // the turn-run alive across continuation turns, so the normal prompt-turn
@@ -237,10 +195,6 @@ export async function runPrompt(
       );
     }
     writeResumeHint(session.id, outputFormat, stdout, stderr);
-
-    withTelemetryContext({ sessionId: session.id }).track("exit", {
-      duration_ms: Date.now() - startedAt,
-    });
   } finally {
     await cleanupPromptRun();
   }
@@ -308,7 +262,6 @@ interface ResolvedPromptSession {
   readonly session: PromptSession;
   readonly resumed: boolean;
   readonly restorePermission: () => Promise<void>;
-  readonly telemetryModel?: string;
   readonly goalModel?: string;
 }
 
@@ -361,7 +314,6 @@ async function resolvePromptSession(
       session,
       resumed: true,
       restorePermission,
-      telemetryModel: configuredModel(opts.model, status.model, defaultModel),
       goalModel: configuredModel(opts.model, status.model),
     };
   }
@@ -388,7 +340,6 @@ async function resolvePromptSession(
         session,
         resumed: true,
         restorePermission,
-        telemetryModel: configuredModel(opts.model, status.model, defaultModel),
         goalModel: configuredModel(opts.model, status.model),
       };
     }
@@ -413,7 +364,6 @@ async function resolvePromptSession(
     session,
     resumed: false,
     restorePermission: async () => {},
-    telemetryModel: model,
     goalModel: model,
   };
 }

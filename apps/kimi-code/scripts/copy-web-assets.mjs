@@ -15,7 +15,7 @@ async function assertBuiltWeb() {
     }
   } catch {
     throw new Error(
-      `Kimi web build output was not found at ${source}. Run \`pnpm --filter @moonshot-ai/kimi-web run build\` first.`,
+      `Kimi web build output was not found at ${source}. Run \`bun run --cwd apps/kimi-web build\` first.`,
     );
   }
 }

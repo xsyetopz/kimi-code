@@ -110,7 +110,7 @@ async function collectAssetRoot({
 
 export async function collectWebAssets({ appRoot, target }) {
   const buildCommand =
-    "pnpm --filter @moonshot-ai/kimi-web run build && pnpm --filter @moonshot-ai/kimi-code run build";
+    "bun run --cwd apps/kimi-web build && bun run --cwd apps/kimi-code build";
   return collectAssetRoot({
     appRoot,
     target,

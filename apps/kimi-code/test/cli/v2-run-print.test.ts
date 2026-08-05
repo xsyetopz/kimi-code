@@ -68,15 +68,6 @@ vi.mock("@moonshot-ai/kimi-code-sdk", async (importOriginal) => {
   };
 });
 
-vi.mock("@moonshot-ai/kimi-telemetry", () => ({
-  initializeTelemetry: vi.fn(),
-  setCrashPhase: vi.fn(),
-  shutdownTelemetry: vi.fn(),
-  track: vi.fn(),
-  setTelemetryContext: vi.fn(),
-  withTelemetryContext: vi.fn(() => ({ track: vi.fn() })),
-}));
-
 interface FakeScope {
   readonly id: string;
   readonly accessor: { readonly get: (token: unknown) => unknown };

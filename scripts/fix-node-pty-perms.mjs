@@ -3,11 +3,10 @@
  * Restore the executable bit on node-pty's `spawn-helper` prebuilt binaries.
  *
  * Why: on macOS/Linux node-pty launches the shell through a tiny `spawn-helper`
- * executable shipped under `prebuilds/<platform-arch>/`. pnpm's content-
- * addressable store does not preserve the +x mode on these non-bin prebuild
- * assets, so after `pnpm install` the helper lands as 0644 and any PTY spawn
- * fails with "posix_spawnp failed". npm/yarn (and the published tarball) keep
- * the bit, so this is a pnpm-dev-only fixup.
+ * executable shipped under `prebuilds/<platform-arch>/`. Bun's isolated
+ * install store does not always preserve the +x mode on these non-bin
+ * prebuild assets, so after `bun install` the helper may land as 0644 and any
+ * PTY spawn fails with "posix_spawnp failed". This is a dev-only fixup.
  *
  * Idempotent and never fails the install: any error is logged and ignored.
  */

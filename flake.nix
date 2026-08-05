@@ -62,7 +62,6 @@
       # pnpmConfigHook (dependencies for that workspace won't be fetched).
       # -------------------------------------------------------------------
       workspacePaths = [
-        ./packages/acp-adapter
         ./packages/acp-server
         ./packages/agent-core
         ./packages/agent-core-v2
@@ -76,11 +75,9 @@
         ./packages/oauth
         ./packages/pi-tui
         ./packages/protocol
-        ./packages/telemetry
         ./packages/transcript
         ./packages/tree-sitter-bash
         ./apps/kimi-code
-        ./apps/vscode
         ./apps/kimi-inspect
         ./apps/kimi-web
         ./apps/vis
@@ -90,7 +87,6 @@
       ];
 
       workspaceNames = [
-        "@moonshot-ai/acp-adapter"
         "@moonshot-ai/acp-server"
         "@moonshot-ai/agent-core"
         "@moonshot-ai/agent-core-v2"
@@ -104,7 +100,6 @@
         "@moonshot-ai/klient"
         "@moonshot-ai/pi-tui"
         "@moonshot-ai/protocol"
-        "@moonshot-ai/kimi-telemetry"
         "@moonshot-ai/transcript"
         "@moonshot-ai/tree-sitter-bash"
         "@moonshot-ai/kimi-code"

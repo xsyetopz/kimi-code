@@ -10,7 +10,8 @@
 
 import type { Command } from "commander";
 
-import { createCliTelemetryBootstrap } from "#/cli/telemetry";
+import { resolveKimiHome } from "@moonshot-ai/kimi-code-sdk";
+
 import { openUrl } from "#/utils/open-url";
 
 interface WritableLike {
@@ -141,8 +142,7 @@ export function registerVisCommand(
 
 function createDefaultVisDeps(overrides: Partial<VisDeps> = {}): VisDeps {
   return {
-    getHomeDir:
-      overrides.getHomeDir ?? (() => createCliTelemetryBootstrap().homeDir),
+    getHomeDir: overrides.getHomeDir ?? (() => resolveKimiHome()),
     startVisServer:
       overrides.startVisServer ??
       (async (opts) => {

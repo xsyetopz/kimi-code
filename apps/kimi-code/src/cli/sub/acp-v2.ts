@@ -3,9 +3,8 @@
  *
  * Starts the Agent Client Protocol (ACP) server backed directly by the
  * DI × Scope agent engine (`agent-core-v2`) over stdio, so ACP-compatible
- * clients can drive a kimi-code session on the new engine. This is the v2
- * counterpart to `kimi acp` (which runs the legacy `@moonshot-ai/acp-adapter`
- * over the SDK harness).
+ * clients can drive a kimi-code session. This is the sole ACP entry point
+ * (the legacy v1 `kimi acp` / `@moonshot-ai/acp-adapter` path was removed).
  *
  * Wire-up mirrors `kimi acp` for the parts that are host-independent:
  *  - `--login` pivots into the shared device-code login flow (the entry point
