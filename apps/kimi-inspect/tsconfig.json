@@ -6,7 +6,7 @@
   // via cross-module `declare module` augmentation, and those collapse to
   // `never` when the augmenting files are not in the program. Only the
   // environment (DOM + vite client types) differs.
-  "extends": "../../tsconfig.json",
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "types": ["node", "vite/client"],

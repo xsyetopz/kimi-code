@@ -7,18 +7,14 @@
     "allowUnreachableCode": false,
     "allowUnusedLabels": false,
     "checkJs": false,
-    "composite": true,
+    "composite": false,
     "declaration": true,
     "declarationMap": true,
     "esModuleInterop": true,
     "exactOptionalPropertyTypes": true,
     "forceConsistentCasingInFileNames": true,
     "isolatedModules": true,
-    "lib": [
-      "ES2022",
-      "DOM",
-      "DOM.Iterable"
-    ],
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "moduleDetection": "force",
     "moduleResolution": "bundler",
@@ -35,22 +31,12 @@
     "skipLibCheck": true,
     "strict": true,
     "target": "es2022",
-    "types": [
-      "bun-types",
-      "node"
-    ],
+    "types": ["bun-types", "node"],
     "useDefineForClassFields": true,
     "paths": {
-      "bun:test": [
-        "./types/bun-test.d.ts"
-      ]
+      "bun:test": ["./types/bun-test.d.ts"]
     }
   },
-  "include": [
-    "src"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist"
-  ]
+  "include": ["src"],
+  "exclude": ["node_modules", "dist"]
 }
