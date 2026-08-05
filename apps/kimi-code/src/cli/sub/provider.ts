@@ -23,7 +23,7 @@ import {
   applyCatalogProvider,
   catalogProviderModels,
   CatalogFetchError,
-  createKimiHarness,
+  createKimiHarnessV2,
   DEFAULT_CATALOG_URL,
   resolveCatalogImport,
   type Catalog,
@@ -634,7 +634,7 @@ function resolveDeps(overrides: Partial<ProviderDeps> = {}): ProviderDeps {
     getHarness:
       overrides.getHarness ??
       (() => {
-        harness ??= createKimiHarness({ identity });
+        harness ??= createKimiHarnessV2({ identity });
         return harness;
       }),
     stdout: overrides.stdout ?? process.stdout,

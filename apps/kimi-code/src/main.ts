@@ -6,7 +6,7 @@
  */
 
 import {
-  createKimiHarness,
+  createKimiHarnessV2,
   flushDiagnosticLogs,
   installGlobalProxyDispatcher,
   log,
@@ -85,7 +85,7 @@ async function handleMigrateCommand(version: string): Promise<void> {
 }
 
 export async function handleUpgradeCommand(version: string): Promise<void> {
-  const harness = createKimiHarness({
+  const harness = createKimiHarnessV2({
     homeDir: resolveKimiHome(),
     identity: createKimiCodeHostIdentity(version),
   });

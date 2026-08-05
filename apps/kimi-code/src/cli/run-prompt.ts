@@ -1,6 +1,6 @@
 import chalk from "chalk";
 import {
-  createKimiHarness,
+  createKimiHarnessV2,
   log,
   resolveKimiHome,
   type Event,
@@ -12,7 +12,6 @@ import { resolve } from "pathe";
 import { PROMPT_CLEANUP_TIMEOUT_MS } from "#/constant/app";
 
 import { resolveAgentProfileSelection } from "./agent-selection";
-import { isKimiV2Enabled } from "./experimental-v2";
 import { resolveOutputFormat } from "./options";
 import type { CLIOptions, PromptOutputFormat } from "./options";
 import {
@@ -99,15 +98,14 @@ export async function runPrompt(
   version: string,
   io: PromptRunIO = {},
 ): Promise<void> {
-  if (isKimiV2Enabled()) {
-    // The experimental agent-core-v2 engine runs on its own native DI service
-    // runtime (see v2/run-v2-print.ts); it does not share the v1 PromptHarness
-    // path below. Loaded lazily so the v2 module graph stays off the default
-    // (v1) path.
-    const { runV2Print } = await import("./v2/run-v2-print");
-    await runV2Print(opts, version, io);
-    return;
-  }
+  const { runV2Print } = await import("./v2/run-v2-print");
+  await runV2Print(opts, version, io);
+  return;
+
+  // The code below this point is v1-only and unreachable since the v1→v2
+  // cutover. It remains until Phase 4d (v1 deletion) removes it with the
+  // rest of the v1 type contract.
+  /* v1-only (unreachable) */
 
   const stdout = io.stdout ?? process.stdout;
   const stderr = io.stderr ?? process.stderr;
@@ -201,11 +199,9 @@ export async function runPrompt(
 }
 
 async function createPromptHarness(
-  options: Parameters<typeof createKimiHarness>[0],
+  options: Parameters<typeof createKimiHarnessV2>[0],
 ): Promise<PromptHarness> {
-  // The v2 engine is dispatched earlier in `runPrompt` (see the
-  // `isKimiV2Enabled()` branch) and never reaches here; this is the v1 path.
-  return createKimiHarness(options);
+  return createKimiHarnessV2(options);
 }
 
 async function runHeadlessGoal(

@@ -8,7 +8,7 @@
 import { createInterface } from "node:readline/promises";
 
 import {
-  createKimiHarness,
+  createKimiHarnessV2,
   resolveKimiHome,
   type ExportSessionInput,
   type ExportSessionResult,
@@ -146,7 +146,7 @@ function createDefaultExportDeps(
   let harness: KimiHarness | undefined;
   const identity = createKimiCodeHostIdentity();
   const getHarness = (): KimiHarness => {
-    harness ??= createKimiHarness({
+    harness ??= createKimiHarnessV2({
       homeDir: resolveKimiHome(),
       identity,
     });
