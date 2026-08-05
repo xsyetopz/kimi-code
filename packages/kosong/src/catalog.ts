@@ -18,6 +18,13 @@ export interface CatalogModelEntry {
   readonly tool_call?: boolean;
   readonly reasoning?: boolean;
   /**
+   * Pricing in USD per million tokens. models.dev declares `input`/`output`
+   * on most models and `cache_read`/`cache_write` on those with explicit
+   * prompt-caching rates; the audio/reasoning variants are rarer. Purely
+   * informational — nothing in the engine bills against it.
+   */
+  readonly cost?: CatalogModelCost;
+  /**
    * models.dev reasoning declaration: `[{ type: 'toggle' }, ...]` entries.
    * Only `{ type: 'effort', values: [...] }` maps onto concrete thinking
    * effort levels; `toggle` is the boolean form and `budget_tokens` a token
@@ -39,6 +46,16 @@ export interface CatalogModelEntry {
     readonly input?: readonly string[];
     readonly output?: readonly string[];
   };
+}
+
+export interface CatalogModelCost {
+  readonly input?: number;
+  readonly output?: number;
+  readonly cache_read?: number;
+  readonly cache_write?: number;
+  readonly reasoning?: number;
+  readonly input_audio?: number;
+  readonly output_audio?: number;
 }
 
 export interface CatalogReasoningOption {

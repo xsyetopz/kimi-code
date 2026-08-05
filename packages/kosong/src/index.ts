@@ -54,6 +54,7 @@ export {
 export type {
   Catalog,
   CatalogModel,
+  CatalogModelCost,
   CatalogModelEntry,
   CatalogProviderEntry,
   CatalogImportInvalidReason,

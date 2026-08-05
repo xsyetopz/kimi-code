@@ -29,6 +29,11 @@ export interface ModelsDevModelEntry {
   };
   readonly tool_call?: boolean;
   readonly reasoning?: boolean;
+  /**
+   * Pricing in USD per million tokens (see `CatalogModelCost` in kosong,
+   * which mirrors the same models.dev schema). Informational only.
+   */
+  readonly cost?: ModelsDevModelCost;
   readonly reasoning_options?: readonly ModelsDevReasoningOption[];
   readonly status?: string;
   readonly provider?: ModelsDevModelProviderOverride;
@@ -38,6 +43,16 @@ export interface ModelsDevModelEntry {
     readonly input?: readonly string[];
     readonly output?: readonly string[];
   };
+}
+
+export interface ModelsDevModelCost {
+  readonly input?: number;
+  readonly output?: number;
+  readonly cache_read?: number;
+  readonly cache_write?: number;
+  readonly reasoning?: number;
+  readonly input_audio?: number;
+  readonly output_audio?: number;
 }
 
 export interface ModelsDevReasoningOption {

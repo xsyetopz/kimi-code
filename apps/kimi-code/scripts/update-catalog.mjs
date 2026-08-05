@@ -28,6 +28,9 @@ const KEEP_MODEL = new Set([
   "name",
   "family",
   "limit",
+  // USD-per-million-token pricing — kept so the built-in snapshot can surface
+  // catalog pricing without a live fetch.
+  "cost",
   "tool_call",
   "reasoning",
   "interleaved",
