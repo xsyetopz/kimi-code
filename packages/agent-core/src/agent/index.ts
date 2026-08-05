@@ -1,7 +1,6 @@
 // Re-exports from agent subdirectories (the Agent class was deleted in the
 // v1→v2 cutover — agent-core-v2 is the only engine now). Types and utilities
 // remain for monorepo consumers.
-export * from "./background";
 export * from "./compaction";
 export * from "./config";
 export * from "./context";

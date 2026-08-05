@@ -43,13 +43,6 @@ export type {
   PromptOrigin,
   UserPromptOrigin,
 } from "./agent/context";
-export type {
-  AgentBackgroundTaskInfo,
-  BackgroundTaskInfo,
-  BackgroundTaskStatus,
-  ProcessBackgroundTaskInfo,
-  QuestionBackgroundTaskInfo,
-} from "./agent/background";
 export type { CronTaskSnapshot } from "./agent/cron";
 export type { ToolServices } from "./tools/support/services";
 
@@ -142,19 +135,6 @@ export type {
 } from "./agent/permission";
 export type { UsageRecordScope } from "./agent/usage";
 export type { ToolStoreUpdate } from "./tools/store";
-export type {
-  LoopRecordedEvent,
-  LoopStepBeginEvent,
-  LoopStepEndEvent,
-  LoopContentPartEvent,
-  LoopToolCallEvent,
-  LoopToolResultEvent,
-} from "./loop";
-export type {
-  ExecutableToolResult,
-  ExecutableToolSuccessResult,
-  ExecutableToolErrorResult,
-} from "./loop/types";
 
 // ─── Dependency injection container ────────────────────────────────────────
 export * from "./di";
