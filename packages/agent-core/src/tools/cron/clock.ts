@@ -27,7 +27,7 @@
  * `wallNow` resolution is driven by the `KIMI_CRON_CLOCK` env var; see
  * `resolveClockSources` below. Defaults to `Date.now()`.
  */
-import { closeSync, openSync, readSync } from 'node:fs';
+import { closeSync, openSync, readSync } from "node:fs";
 
 export interface ClockSources {
   /**
@@ -44,7 +44,8 @@ export interface ClockSources {
   monoNowMs(): number;
 }
 
-const systemMonoNowMs = (): number => Number(process.hrtime.bigint() / 1_000_000n);
+const systemMonoNowMs = (): number =>
+  Number(process.hrtime.bigint() / 1_000_000n);
 
 /**
  * Production default — `Date.now()` + `process.hrtime.bigint()`. Used
@@ -82,14 +83,14 @@ export const SYSTEM_CLOCKS: ClockSources = {
  * typoed bench env var would be worse than running with system time.
  */
 export function resolveClockSources(spec?: string): ClockSources {
-  if (spec === undefined || spec === '' || spec === 'system') {
+  if (spec === undefined || spec === "" || spec === "system") {
     return SYSTEM_CLOCKS;
   }
 
-  if (spec.startsWith('file:')) {
-    const filePath = spec.slice('file:'.length);
-    if (filePath === '') {
-      debugInvalidSpec(spec, 'empty file path');
+  if (spec.startsWith("file:")) {
+    const filePath = spec.slice("file:".length);
+    if (filePath === "") {
+      debugInvalidSpec(spec, "empty file path");
       return SYSTEM_CLOCKS;
     }
     return {
@@ -98,7 +99,7 @@ export function resolveClockSources(spec?: string): ClockSources {
     };
   }
 
-  debugInvalidSpec(spec, 'unrecognised scheme');
+  debugInvalidSpec(spec, "unrecognised scheme");
   return SYSTEM_CLOCKS;
 }
 
@@ -112,7 +113,7 @@ function readFileWall(filePath: string): number {
   const buf = Buffer.alloc(MAX_CLOCK_FILE_BYTES);
   let fd: number;
   try {
-    fd = openSync(filePath, 'r');
+    fd = openSync(filePath, "r");
   } catch {
     return Date.now();
   }
@@ -127,9 +128,9 @@ function readFileWall(filePath: string): number {
       /* swallow close errors */
     }
   }
-  const raw = buf.subarray(0, bytesRead).toString('utf8');
-  const firstLine = raw.split('\n', 1)[0]?.trim() ?? '';
-  if (firstLine === '') return Date.now();
+  const raw = buf.subarray(0, bytesRead).toString("utf8");
+  const firstLine = raw.split("\n", 1)[0]?.trim() ?? "";
+  if (firstLine === "") return Date.now();
   const parsed = Number(firstLine);
   if (!Number.isFinite(parsed)) return Date.now();
   return parsed;
@@ -140,7 +141,7 @@ function debugInvalidSpec(spec: string, reason: string): void {
   // the cron module and must stay dependency-free so it can be imported
   // from anywhere (including lint rules, type files). A stderr write
   // gated on KIMI_CRON_DEBUG is enough — production is silent.
-  if (process.env['KIMI_CRON_DEBUG'] === '1') {
+  if (process.env["KIMI_CRON_DEBUG"] === "1") {
     process.stderr.write(
       `[cron/clock] invalid KIMI_CRON_CLOCK spec ${JSON.stringify(spec)}: ${reason} — falling back to system clock\n`,
     );

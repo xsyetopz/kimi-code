@@ -7,10 +7,10 @@
 // injected through BackupDeps, so this module never imports the MiniDb class
 // itself.
 
-import fs from 'node:fs/promises';
-import path from 'node:path';
-import { fsyncDir } from './compaction.js';
-import { isPersistentFile } from './generation.js';
+import fs from "node:fs/promises";
+import path from "node:path";
+import { fsyncDir } from "./compaction.js";
+import { isPersistentFile } from "./generation.js";
 
 /** Unique suffixes for backup's temp/aside dirs (see copyBackupAtomic). */
 let backupTmpSeq = 0;
@@ -38,9 +38,14 @@ export interface BackupDeps {
  *  fence is short (file copies) and retryable, so callers can simply
  *  re-issue the write afterwards. */
 export function backupInProgressError(): Error {
-  return Object.assign(new Error('MiniDb backup is in progress: writes are fenced until it completes'), {
-    code: 'BACKUP_IN_PROGRESS',
-  });
+  return Object.assign(
+    new Error(
+      "MiniDb backup is in progress: writes are fenced until it completes",
+    ),
+    {
+      code: "BACKUP_IN_PROGRESS",
+    },
+  );
 }
 
 /** Write a consistent online backup of this database directory.
@@ -57,9 +62,13 @@ export function backupInProgressError(): Error {
  *  restored if the rename fails). A failure anywhere before the rename
  *  leaves the destination untouched and the temp dir removed — never a half
  *  backup. Concurrent backups serialize on serializeBackups. */
-export async function backup(deps: BackupDeps, destDir: string, opts: { compact?: boolean } = {}): Promise<void> {
+export async function backup(
+  deps: BackupDeps,
+  destDir: string,
+  opts: { compact?: boolean } = {},
+): Promise<void> {
   deps.ensureOpen();
-  if (!destDir) throw new TypeError('backup: destDir is required');
+  if (!destDir) throw new TypeError("backup: destDir is required");
   if (deps.compacting()) await deps.compactDone();
   if (opts.compact !== false && !deps.readOnly()) await deps.compact();
   if (deps.compacting()) await deps.compactDone();
@@ -101,15 +110,27 @@ export async function backup(deps: BackupDeps, destDir: string, opts: { compact?
 /** The atomic-copy core of backup(): temp dir → per-file fsync → manifest
  *  (commit marker) → dir fsync → rename swap → parent fsync. Runs with the
  *  write gate paused. */
-async function copyBackupAtomic(deps: BackupDeps, destDir: string): Promise<void> {
+async function copyBackupAtomic(
+  deps: BackupDeps,
+  destDir: string,
+): Promise<void> {
   const parent = path.dirname(destDir);
   const base = path.basename(destDir);
-  const tmp = path.join(parent, `.${base}.backup-tmp-${process.pid}-${++backupTmpSeq}`);
-  const aside = path.join(parent, `.${base}.backup-old-${process.pid}-${++backupTmpSeq}`);
+  const tmp = path.join(
+    parent,
+    `.${base}.backup-tmp-${process.pid}-${++backupTmpSeq}`,
+  );
+  const aside = path.join(
+    parent,
+    `.${base}.backup-old-${process.pid}-${++backupTmpSeq}`,
+  );
   await fs.mkdir(parent, { recursive: true });
   // Sweep orphans from a crashed previous backup of this destination.
   for (const name of await fs.readdir(parent)) {
-    if (name.startsWith(`.${base}.backup-tmp-`) || name.startsWith(`.${base}.backup-old-`)) {
+    if (
+      name.startsWith(`.${base}.backup-tmp-`) ||
+      name.startsWith(`.${base}.backup-old-`)
+    ) {
       await fs.rm(path.join(parent, name), { recursive: true, force: true });
     }
   }
@@ -117,20 +138,29 @@ async function copyBackupAtomic(deps: BackupDeps, destDir: string): Promise<void
   try {
     const files = await persistentFiles(deps.dir());
     const copied: string[] = [];
-    for (const name of files) if (await copyIfExists(deps.dir(), name, tmp)) copied.push(name);
+    for (const name of files)
+      if (await copyIfExists(deps.dir(), name, tmp)) copied.push(name);
     // Fsync every copied file BEFORE the manifest: the manifest is the
     // commit marker, so a durable manifest must imply durable payloads.
     for (const name of copied) {
-      const h = await fs.open(path.join(tmp, name), 'r');
+      const h = await fs.open(path.join(tmp, name), "r");
       try {
         await h.sync();
       } finally {
         await h.close();
       }
     }
-    const manifest = path.join(tmp, 'backup.manifest.json');
-    await fs.writeFile(manifest, JSON.stringify({ version: 1, createdAt: Date.now(), files: copied }, null, 2), 'utf8');
-    const mh = await fs.open(manifest, 'r');
+    const manifest = path.join(tmp, "backup.manifest.json");
+    await fs.writeFile(
+      manifest,
+      JSON.stringify(
+        { version: 1, createdAt: Date.now(), files: copied },
+        null,
+        2,
+      ),
+      "utf8",
+    );
+    const mh = await fs.open(manifest, "r");
     try {
       await mh.sync();
     } finally {
@@ -145,7 +175,7 @@ async function copyBackupAtomic(deps: BackupDeps, destDir: string): Promise<void
         await fs.rename(destDir, aside);
         asideUsed = true;
       } catch (e) {
-        if ((e as NodeJS.ErrnoException).code !== 'ENOENT') throw e;
+        if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e;
       }
       await fs.rename(tmp, destDir);
     } catch (err) {
@@ -166,18 +196,23 @@ async function persistentFiles(dir: string): Promise<string[]> {
   return names.filter(isPersistentFile);
 }
 
-async function copyIfExists(dir: string, name: string, destDir: string): Promise<boolean> {
+async function copyIfExists(
+  dir: string,
+  name: string,
+  destDir: string,
+): Promise<boolean> {
   try {
     const src = path.join(dir, name);
     const st = await fs.stat(src);
     // The generations/ tree is a directory: copy it recursively (backup
     // includes published generations; a restore's inode change safely
     // invalidates their WAL anchors, so they fall back to a rebuild).
-    if (st.isDirectory()) await fs.cp(src, path.join(destDir, name), { recursive: true });
+    if (st.isDirectory())
+      await fs.cp(src, path.join(destDir, name), { recursive: true });
     else await fs.copyFile(src, path.join(destDir, name));
     return true;
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === 'ENOENT') return false;
+    if ((e as NodeJS.ErrnoException).code === "ENOENT") return false;
     throw e;
   }
 }

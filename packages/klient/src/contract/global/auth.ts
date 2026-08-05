@@ -5,24 +5,24 @@
  * and `getCachedAccessToken` are excluded (non-serializable).
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { maybe, noResult } from '../helpers.js';
-import type { ServiceContract } from '../types.js';
+import { maybe, noResult } from "../helpers.js";
+import type { ServiceContract } from "../types.js";
 
 export const oAuthFlowStatusSchema = z.enum([
-  'pending',
-  'authenticated',
-  'denied',
-  'expired',
-  'cancelled',
+  "pending",
+  "authenticated",
+  "denied",
+  "expired",
+  "cancelled",
 ]);
 
-export const oAuthFlowStartSchema = z.discriminatedUnion('status', [
+export const oAuthFlowStartSchema = z.discriminatedUnion("status", [
   z.object({
     flow_id: z.string(),
     provider: z.string(),
-    status: z.literal('pending'),
+    status: z.literal("pending"),
     verification_uri: z.string(),
     verification_uri_complete: z.string(),
     user_code: z.string(),
@@ -33,7 +33,7 @@ export const oAuthFlowStartSchema = z.discriminatedUnion('status', [
   z.object({
     flow_id: z.string(),
     provider: z.string(),
-    status: z.literal('authenticated'),
+    status: z.literal("authenticated"),
   }),
 ]);
 
@@ -81,7 +81,10 @@ export const refreshOAuthProviderModelsResponseSchema = z.object({
 });
 
 export const authContract = {
-  startLogin: { input: z.tuple([z.string().optional()]), output: oAuthFlowStartSchema },
+  startLogin: {
+    input: z.tuple([z.string().optional()]),
+    output: oAuthFlowStartSchema,
+  },
   getFlow: {
     input: z.tuple([z.string().optional()]),
     output: maybe(oAuthFlowSnapshotSchema),
@@ -90,7 +93,10 @@ export const authContract = {
     input: z.tuple([z.string().optional()]),
     output: oAuthLoginCancelResponseSchema,
   },
-  logout: { input: z.tuple([z.string().optional()]), output: oAuthLogoutResponseSchema },
+  logout: {
+    input: z.tuple([z.string().optional()]),
+    output: oAuthLogoutResponseSchema,
+  },
   status: { input: z.tuple([z.string().optional()]), output: authStatusSchema },
   refreshOAuthProviderModels: {
     input: z.tuple([]),

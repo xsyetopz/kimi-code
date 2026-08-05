@@ -11,11 +11,15 @@ import type {
   IDisposable,
   KlientChannel,
   ScopeRef,
-} from '../../core/channel.js';
-import { createKlientFromChannel, type Klient, type KlientOptions } from '../../core/klient.js';
-import { createMemoryDispatcher, type ScopeLike } from './dispatcher.js';
+} from "../../core/channel.js";
+import {
+  createKlientFromChannel,
+  type Klient,
+  type KlientOptions,
+} from "../../core/klient.js";
+import { createMemoryDispatcher, type ScopeLike } from "./dispatcher.js";
 
-export type { ScopeLike } from './dispatcher.js';
+export type { ScopeLike } from "./dispatcher.js";
 
 export interface MemoryKlientOptions extends KlientOptions {
   /**
@@ -33,11 +37,21 @@ class MemoryChannel implements KlientChannel {
     this.dispatcher = createMemoryDispatcher(scope);
   }
 
-  call(scope: ScopeRef, service: string, method: string, args: unknown[]): Promise<unknown> {
+  call(
+    scope: ScopeRef,
+    service: string,
+    method: string,
+    args: unknown[],
+  ): Promise<unknown> {
     return this.dispatcher.call(scope, service, method, args);
   }
 
-  stream(scope: ScopeRef, service: string, method: string, args: unknown[]): AsyncIterable<unknown> {
+  stream(
+    scope: ScopeRef,
+    service: string,
+    method: string,
+    args: unknown[],
+  ): AsyncIterable<unknown> {
     return this.dispatcher.stream(scope, service, method, args);
   }
 

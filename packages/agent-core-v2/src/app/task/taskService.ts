@@ -6,9 +6,17 @@
  * and output. App-scoped — one instance per process.
  */
 
-import { Emitter, type Event } from '#/_base/event';
-import { Disposable, markAsDisposed, trackDisposable } from '#/_base/di/lifecycle';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
+import { Emitter, type Event } from "#/_base/event";
+import {
+  Disposable,
+  markAsDisposed,
+  trackDisposable,
+} from "#/_base/di/lifecycle";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
 
 import {
   type ITaskHandle,
@@ -17,14 +25,14 @@ import {
   type TaskState,
   TERMINAL_TASK_STATES,
   TaskCancelledError,
-} from './task';
+} from "./task";
 
 function isTerminal(state: TaskState): boolean {
   return TERMINAL_TASK_STATES.has(state);
 }
 
 class RunHandle<T> implements ITaskHandle<T> {
-  private _state: TaskState = 'pending';
+  private _state: TaskState = "pending";
   private readonly _abortController = new AbortController();
   private readonly _onDidChangeState = new Emitter<TaskState>();
   readonly onDidChangeState: Event<TaskState> = this._onDidChangeState.event;
@@ -45,22 +53,22 @@ class RunHandle<T> implements ITaskHandle<T> {
       }
     };
 
-    this._transition('running');
+    this._transition("running");
 
     this.result = fn(this._abortController.signal, output).then(
       (value) => {
         if (this._abortController.signal.aborted) {
-          this._transition('cancelled');
+          this._transition("cancelled");
           throw new TaskCancelledError(this.id);
         }
-        this._transition('completed');
+        this._transition("completed");
         return value;
       },
       (error: unknown) => {
         if (this._abortController.signal.aborted) {
-          this._transition('cancelled');
+          this._transition("cancelled");
         } else {
-          this._transition('failed');
+          this._transition("failed");
         }
         throw error;
       },
@@ -76,7 +84,7 @@ class RunHandle<T> implements ITaskHandle<T> {
   cancel(): void {
     if (isTerminal(this._state)) return;
     this._abortController.abort(new TaskCancelledError(this.id));
-    this._transition('cancelled');
+    this._transition("cancelled");
   }
 
   dispose(): void {
@@ -98,7 +106,7 @@ class RunHandle<T> implements ITaskHandle<T> {
 }
 
 class DeferHandle<T> implements IDeferredHandle<T> {
-  private _state: TaskState = 'pending';
+  private _state: TaskState = "pending";
   private _resolvePromise!: (value: T) => void;
   private _rejectPromise!: (reason: unknown) => void;
   private readonly _onDidChangeState = new Emitter<TaskState>();
@@ -125,19 +133,19 @@ class DeferHandle<T> implements IDeferredHandle<T> {
 
   resolve(value: T): void {
     if (isTerminal(this._state)) return;
-    this._transition('completed');
+    this._transition("completed");
     this._resolvePromise(value);
   }
 
   reject(reason?: unknown): void {
     if (isTerminal(this._state)) return;
-    this._transition('failed');
+    this._transition("failed");
     this._rejectPromise(reason);
   }
 
   cancel(): void {
     if (isTerminal(this._state)) return;
-    this._transition('cancelled');
+    this._transition("cancelled");
     this._rejectPromise(new TaskCancelledError(this.id));
   }
 
@@ -163,7 +171,9 @@ export class TaskService extends Disposable implements ITaskService {
   declare readonly _serviceBrand: undefined;
   private _nextId = 0;
 
-  run<T>(fn: (signal: AbortSignal, output: (data: string) => void) => Promise<T>): ITaskHandle<T> {
+  run<T>(
+    fn: (signal: AbortSignal, output: (data: string) => void) => Promise<T>,
+  ): ITaskHandle<T> {
     return new RunHandle<T>(this._generateId(), fn);
   }
 
@@ -181,5 +191,5 @@ registerScopedService(
   ITaskService,
   TaskService,
   ScopeActivation.OnScopeCreated,
-  'task',
+  "task",
 );

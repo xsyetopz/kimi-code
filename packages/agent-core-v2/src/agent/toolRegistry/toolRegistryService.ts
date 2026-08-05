@@ -7,18 +7,22 @@
  */
 
 import { toDisposable, type IDisposable } from "#/_base/di/lifecycle";
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
 import type {
   ExecutableTool,
   ToolDisclosure,
   ToolInfo,
   ToolSource,
-} from '#/tool/toolContract';
+} from "#/tool/toolContract";
 import {
   IAgentToolRegistryService,
   type ToolReference,
   type ToolRegistrationOptions,
-} from './toolRegistry';
+} from "./toolRegistry";
 
 interface ToolEntry {
   readonly tool: ExecutableTool;
@@ -30,8 +34,11 @@ export class AgentToolRegistryService implements IAgentToolRegistryService {
   declare readonly _serviceBrand: undefined;
   private readonly tools = new Map<string, ToolEntry>();
 
-  register(tool: ExecutableTool, options: ToolRegistrationOptions = {}): IDisposable {
-    const source = options.source ?? 'builtin';
+  register(
+    tool: ExecutableTool,
+    options: ToolRegistrationOptions = {},
+  ): IDisposable {
+    const source = options.source ?? "builtin";
     const entry: ToolEntry = { tool, source, disclosure: options.disclosure };
     this.unregisterTool(tool.name);
     this.tools.set(tool.name, entry);
@@ -78,5 +85,5 @@ registerScopedService(
   IAgentToolRegistryService,
   AgentToolRegistryService,
   ScopeActivation.OnScopeCreated,
-  'toolRegistry',
+  "toolRegistry",
 );

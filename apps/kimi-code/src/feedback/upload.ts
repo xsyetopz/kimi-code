@@ -1,7 +1,7 @@
-import { createReadStream } from 'node:fs';
-import { Readable } from 'node:stream';
+import { createReadStream } from "node:fs";
+import { Readable } from "node:stream";
 
-import type { FeedbackArchive } from './archive';
+import type { FeedbackArchive } from "./archive";
 
 const MAX_ARCHIVE_SIZE = 524_288_000; // 500 MiB, matches the backend limit.
 const DEFAULT_CONCURRENCY = 3;
@@ -39,7 +39,9 @@ export interface CompleteFeedbackUploadUrlInput {
 }
 
 export interface FeedbackUploadUrlApi {
-  createUploadUrl(input: CreateFeedbackUploadUrlInput): Promise<CreateFeedbackUploadUrlResult>;
+  createUploadUrl(
+    input: CreateFeedbackUploadUrlInput,
+  ): Promise<CreateFeedbackUploadUrlResult>;
   completeUpload(input: CompleteFeedbackUploadUrlInput): Promise<void>;
 }
 
@@ -73,7 +75,12 @@ export async function uploadArchive(
     size: archive.size,
     sha256: archive.sha256,
   });
-  const completed = await uploadParts(archive.path, created.parts, archive.size, options);
+  const completed = await uploadParts(
+    archive.path,
+    created.parts,
+    archive.size,
+    options,
+  );
   await api.completeUpload({ uploadId: created.uploadId, parts: completed });
 }
 
@@ -100,7 +107,10 @@ async function uploadParts(
 ): Promise<CompletedUploadPart[]> {
   const layout = layoutParts(parts);
   const results: CompletedUploadPart[] = Array.from({ length: layout.length });
-  const concurrency = Math.max(1, Math.min(options.concurrency ?? DEFAULT_CONCURRENCY, layout.length));
+  const concurrency = Math.max(
+    1,
+    Math.min(options.concurrency ?? DEFAULT_CONCURRENCY, layout.length),
+  );
   let nextIndex = 0;
   let uploadedBytes = 0;
 
@@ -152,28 +162,36 @@ async function uploadOnePart(
   const timer = setTimeout(() => {
     controller.abort();
   }, timeoutMs);
-  const stream = createReadStream(filePath, { start, end: start + part.size - 1 });
+  const stream = createReadStream(filePath, {
+    start,
+    end: start + part.size - 1,
+  });
   try {
     const res = await fetch(part.url, {
       method: part.method,
       body: Readable.toWeb(stream),
-      headers: { 'Content-Length': String(part.size) },
-      duplex: 'half',
+      headers: { "Content-Length": String(part.size) },
+      duplex: "half",
       signal: controller.signal,
     } as RequestInit);
     if (!res.ok) {
-      const text = await res.text().catch(() => '');
+      const text = await res.text().catch(() => "");
       throw new UploadPartHttpError(part.partNumber, res.status, text);
     }
-    const etag = res.headers.get('etag');
+    const etag = res.headers.get("etag");
     if (etag === null || etag.length === 0) {
-      throw new Error(`Failed to upload part ${part.partNumber}: missing ETag in response.`);
+      throw new Error(
+        `Failed to upload part ${part.partNumber}: missing ETag in response.`,
+      );
     }
     return { partNumber: part.partNumber, etag };
   } catch (error) {
     stream.destroy();
-    if (error instanceof Error && error.name === 'AbortError') {
-      throw new Error(`Failed to upload part ${part.partNumber}: upload timed out.`, { cause: error });
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error(
+        `Failed to upload part ${part.partNumber}: upload timed out.`,
+        { cause: error },
+      );
     }
     throw error;
   } finally {
@@ -188,7 +206,7 @@ class UploadPartHttpError extends Error {
     readonly responseBody: string,
   ) {
     super(
-      `Failed to upload part ${partNumber}: HTTP ${String(status)}${responseBody.length > 0 ? ` ${responseBody}` : ''}`,
+      `Failed to upload part ${partNumber}: HTTP ${String(status)}${responseBody.length > 0 ? ` ${responseBody}` : ""}`,
     );
   }
 }

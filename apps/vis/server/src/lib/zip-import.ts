@@ -7,12 +7,12 @@
 // ("zip slip"), and total entry-count / uncompressed-size caps guard against
 // zip bombs. Only regular files are written; directories are created lazily.
 
-import { createWriteStream } from 'node:fs';
-import { mkdir } from 'node:fs/promises';
-import { dirname, resolve, sep } from 'node:path';
-import { pipeline } from 'node:stream/promises';
+import { createWriteStream } from "node:fs";
+import { mkdir } from "node:fs/promises";
+import { dirname, resolve, sep } from "node:path";
+import { pipeline } from "node:stream/promises";
 
-import { fromBuffer, type Entry, type ZipFile } from 'yauzl';
+import { fromBuffer, type Entry, type ZipFile } from "yauzl";
 
 export interface ExtractOptions {
   /** Reject once this many entries have been seen. */
@@ -32,10 +32,13 @@ export class ZipImportError extends Error {}
  * the path-traversal guard, which is otherwise hard to exercise because zip
  * writers refuse to emit `..` entries.
  */
-export function resolveSafeTarget(root: string, entryName: string): string | null {
+export function resolveSafeTarget(
+  root: string,
+  entryName: string,
+): string | null {
   const absRoot = resolve(root);
   const rootPrefix = absRoot + sep;
-  const rel = entryName.replaceAll('\\', '/');
+  const rel = entryName.replaceAll("\\", "/");
   const target = resolve(absRoot, rel);
   if (target !== absRoot && !target.startsWith(rootPrefix)) return null;
   return target;
@@ -67,7 +70,7 @@ export async function extractZip(
     };
 
     zip.readEntry();
-    zip.on('entry', (entry: Entry) => {
+    zip.on("entry", (entry: Entry) => {
       entryCount += 1;
       if (entryCount > maxEntries) {
         fail(`zip has too many entries (> ${maxEntries})`);
@@ -80,12 +83,12 @@ export async function extractZip(
       }
 
       // Directory entries end with '/'. Files inside still create their dirs.
-      if (entry.fileName.endsWith('/')) {
+      if (entry.fileName.endsWith("/")) {
         zip.readEntry();
         return;
       }
 
-      const rel = entry.fileName.replaceAll('\\', '/');
+      const rel = entry.fileName.replaceAll("\\", "/");
       const target = resolveSafeTarget(root, rel);
       if (target === null) {
         fail(`zip entry escapes the import directory: "${entry.fileName}"`);
@@ -94,7 +97,9 @@ export async function extractZip(
 
       zip.openReadStream(entry, (err, readStream) => {
         if (err !== null || readStream === undefined) {
-          fail(`failed to read zip entry "${entry.fileName}": ${err?.message ?? 'unknown'}`);
+          fail(
+            `failed to read zip entry "${entry.fileName}": ${err?.message ?? "unknown"}`,
+          );
           return;
         }
         void mkdir(dirname(target), { recursive: true })
@@ -108,10 +113,10 @@ export async function extractZip(
           });
       });
     });
-    zip.on('end', () => {
+    zip.on("end", () => {
       resolvePromise(written);
     });
-    zip.on('error', (err: Error) => {
+    zip.on("error", (err: Error) => {
       reject(new ZipImportError(`corrupt zip: ${err.message}`));
     });
   });
@@ -121,7 +126,11 @@ function openZip(buffer: Buffer): Promise<ZipFile> {
   return new Promise<ZipFile>((resolvePromise, reject) => {
     fromBuffer(buffer, { lazyEntries: true }, (err, zipfile) => {
       if (err !== null || zipfile === undefined) {
-        reject(new ZipImportError(`not a valid zip file: ${err?.message ?? 'unknown'}`));
+        reject(
+          new ZipImportError(
+            `not a valid zip file: ${err?.message ?? "unknown"}`,
+          ),
+        );
         return;
       }
       resolvePromise(zipfile);

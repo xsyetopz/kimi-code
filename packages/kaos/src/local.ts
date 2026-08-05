@@ -1,5 +1,5 @@
-import type { ChildProcess, SpawnOptions } from 'node:child_process';
-import { spawn } from 'node:child_process';
+import type { ChildProcess, SpawnOptions } from "node:child_process";
+import { spawn } from "node:child_process";
 import {
   appendFile,
   lstat,
@@ -9,23 +9,27 @@ import {
   readFile,
   stat,
   writeFile,
-} from 'node:fs/promises';
-import { homedir } from 'node:os';
-import { isAbsolute, join, normalize } from 'pathe';
-import type { Readable, Writable } from 'node:stream';
+} from "node:fs/promises";
+import { homedir } from "node:os";
+import { isAbsolute, join, normalize } from "pathe";
+import type { Readable, Writable } from "node:stream";
 
-import { detectEnvironmentFromNode, type Environment } from './environment';
-import { KaosFileExistsError } from './errors';
-import { BufferedReadable, decodeTextWithErrors, globPatternToRegex } from './internal';
-import type { Kaos } from './kaos';
-import { applyLoginShellPathFromNode } from './login-shell-path';
-import type { KaosProcess } from './process';
-import type { StatResult } from './types';
+import { detectEnvironmentFromNode, type Environment } from "./environment";
+import { KaosFileExistsError } from "./errors";
+import {
+  BufferedReadable,
+  decodeTextWithErrors,
+  globPatternToRegex,
+} from "./internal";
+import type { Kaos } from "./kaos";
+import { applyLoginShellPathFromNode } from "./login-shell-path";
+import type { KaosProcess } from "./process";
+import type { StatResult } from "./types";
 
-const isWindows: boolean = process.platform === 'win32';
+const isWindows: boolean = process.platform === "win32";
 const READ_CHUNK_SIZE = 64 * 1024;
 
-type TextDecodeErrors = 'strict' | 'replace' | 'ignore';
+type TextDecodeErrors = "strict" | "replace" | "ignore";
 
 interface LineEndingFlags {
   hasCrLf: boolean;
@@ -62,7 +66,7 @@ export function buildLocalSpawnOptions(
   return {
     cwd,
     env,
-    stdio: ['pipe', 'pipe', 'pipe'],
+    stdio: ["pipe", "pipe", "pipe"],
     detached: !isWindows,
     windowsHide: true,
   };
@@ -80,8 +84,14 @@ class LocalProcess implements KaosProcess {
   private _disposed = false;
 
   constructor(child: ChildProcess) {
-    if (child.stdin === null || child.stdout === null || child.stderr === null) {
-      throw new Error('Process must be created with stdin/stdout/stderr pipes.');
+    if (
+      child.stdin === null ||
+      child.stdout === null ||
+      child.stderr === null
+    ) {
+      throw new Error(
+        "Process must be created with stdin/stdout/stderr pipes.",
+      );
     }
 
     this._child = child;
@@ -91,11 +101,11 @@ class LocalProcess implements KaosProcess {
     this.pid = child.pid ?? -1;
 
     this._exitPromise = new Promise<number>((resolve, reject) => {
-      child.on('exit', (code: number | null) => {
+      child.on("exit", (code: number | null) => {
         this._exitCode = code ?? -1;
         resolve(this._exitCode);
       });
-      child.on('error', (error: Error) => {
+      child.on("error", (error: Error) => {
         reject(error);
       });
     });
@@ -126,17 +136,17 @@ class LocalProcess implements KaosProcess {
     // signal for it — Node's own `ChildProcess.kill()` is always a forceful
     // TerminateProcess on Windows — so always force-terminate the tree.
     if (isWindows) {
-      const taskkillArgs = ['/T', '/F', '/PID', String(this.pid)];
+      const taskkillArgs = ["/T", "/F", "/PID", String(this.pid)];
       return new Promise<void>((resolve) => {
-        const killer = spawn('taskkill', taskkillArgs, {
-          stdio: 'ignore',
+        const killer = spawn("taskkill", taskkillArgs, {
+          stdio: "ignore",
           windowsHide: true,
         });
         const done = (): void => {
           resolve();
         };
-        killer.once('error', done);
-        killer.once('close', done);
+        killer.once("error", done);
+        killer.once("close", done);
       });
     }
 
@@ -146,18 +156,18 @@ class LocalProcess implements KaosProcess {
     // grandchildren orphaned. `process.kill(-pid, signal)` signals the group
     // (negative pid = process-group id under POSIX kill(2)).
     try {
-      process.kill(-this.pid, signal ?? 'SIGTERM');
+      process.kill(-this.pid, signal ?? "SIGTERM");
     } catch (error) {
       const err = error as NodeJS.ErrnoException;
       // ESRCH = group already gone (child exited + reaped between
       // `wait()` racing spawn + this call). Treat as successful kill.
-      if (err.code === 'ESRCH') return Promise.resolve();
+      if (err.code === "ESRCH") return Promise.resolve();
       // EPERM is typically a misconfiguration (e.g. non-detached
       // spawn earlier in the file); fall back to direct `.kill()` so
       // we at least signal the direct child instead of throwing.
-      if (err.code === 'EPERM') {
+      if (err.code === "EPERM") {
         try {
-          this._child.kill(signal ?? 'SIGTERM');
+          this._child.kill(signal ?? "SIGTERM");
         } catch {
           /* best effort */
         }
@@ -186,7 +196,7 @@ class LocalProcess implements KaosProcess {
  * `runWithKaos`) without cross-polluting each other's relative-path resolution.
  */
 export class LocalKaos implements Kaos {
-  readonly name: string = 'local';
+  readonly name: string = "local";
   readonly osEnv: Environment;
   private _cwd: string;
   private readonly _envLayers: readonly Record<string, string>[];
@@ -217,7 +227,10 @@ export class LocalKaos implements Kaos {
     // commands find user-installed tools (e.g. Homebrew's gh) even when
     // kimi-code itself was launched without the full profile PATH. Both
     // probes are memoised, independent, and run concurrently.
-    const [osEnv] = await Promise.all([detectEnvironmentFromNode(), applyLoginShellPathFromNode()]);
+    const [osEnv] = await Promise.all([
+      detectEnvironmentFromNode(),
+      applyLoginShellPathFromNode(),
+    ]);
     return new LocalKaos(osEnv);
   }
 
@@ -234,8 +247,8 @@ export class LocalKaos implements Kaos {
     return join(this._cwd, path);
   }
 
-  pathClass(): 'posix' | 'win32' {
-    return isWindows ? 'win32' : 'posix';
+  pathClass(): "posix" | "win32" {
+    return isWindows ? "win32" : "posix";
   }
 
   normpath(path: string): string {
@@ -268,7 +281,10 @@ export class LocalKaos implements Kaos {
     this._cwd = resolved;
   }
 
-  async stat(path: string, options?: { followSymlinks?: boolean }): Promise<StatResult> {
+  async stat(
+    path: string,
+    options?: { followSymlinks?: boolean },
+  ): Promise<StatResult> {
     const resolved = this._resolvePath(path);
     const followSymlinks = options?.followSymlinks ?? true;
     const s = followSymlinks ? await stat(resolved) : await lstat(resolved);
@@ -303,7 +319,7 @@ export class LocalKaos implements Kaos {
   ): AsyncGenerator<string> {
     const resolved = this._resolvePath(path);
     const caseSensitive = options?.caseSensitive ?? true;
-    const patternParts = pattern.split('/');
+    const patternParts = pattern.split("/");
     // Seed `visited` with basePath's own inode so that a symlink inside
     // basePath that points back at basePath is caught on its first
     // encounter (not on the second level — the "+1 depth" off-by-one
@@ -353,7 +369,7 @@ export class LocalKaos implements Kaos {
 
     const [currentPattern, ...remainingParts] = patternParts;
 
-    if (currentPattern === '**') {
+    if (currentPattern === "**") {
       // `**` matches zero or more directory components.
       //
       // There are exactly two cases to handle:
@@ -408,7 +424,7 @@ export class LocalKaos implements Kaos {
         }
       }
     } else {
-      const regex = globPatternToRegex(currentPattern ?? '', caseSensitive);
+      const regex = globPatternToRegex(currentPattern ?? "", caseSensitive);
 
       let entries: string[];
       try {
@@ -454,7 +470,7 @@ export class LocalKaos implements Kaos {
     if (n === undefined) {
       return Buffer.from(await readFile(resolved));
     }
-    const fh = await open(resolved, 'r');
+    const fh = await open(resolved, "r");
     try {
       const buf = Buffer.alloc(n);
       const { bytesRead } = await fh.read(buf, 0, n, 0);
@@ -466,11 +482,14 @@ export class LocalKaos implements Kaos {
 
   async readText(
     path: string,
-    options?: { encoding?: BufferEncoding; errors?: 'strict' | 'replace' | 'ignore' },
+    options?: {
+      encoding?: BufferEncoding;
+      errors?: "strict" | "replace" | "ignore";
+    },
   ): Promise<string> {
     const resolved = this._resolvePath(path);
-    const encoding = options?.encoding ?? 'utf-8';
-    const errors = options?.errors ?? 'strict';
+    const encoding = options?.encoding ?? "utf-8";
+    const errors = options?.errors ?? "strict";
     const data = await readFile(resolved);
     return decodeTextWithErrors(data, encoding, errors);
   }
@@ -480,11 +499,15 @@ export class LocalKaos implements Kaos {
     options?: { encoding?: BufferEncoding; errors?: TextDecodeErrors },
   ): AsyncGenerator<string> {
     const resolved = this._resolvePath(path);
-    const encoding = options?.encoding ?? 'utf-8';
-    const errors = options?.errors ?? 'strict';
+    const encoding = options?.encoding ?? "utf-8";
+    const errors = options?.errors ?? "strict";
 
     if (!isUtf8Encoding(encoding)) {
-      const content = decodeTextWithErrors(await readFile(resolved), encoding, errors);
+      const content = decodeTextWithErrors(
+        await readFile(resolved),
+        encoding,
+        errors,
+      );
       yield* splitLinesKeepingTerminator(content);
       return;
     }
@@ -494,10 +517,14 @@ export class LocalKaos implements Kaos {
 
   async scanTextFile(path: string): Promise<TextFileScan> {
     const resolved = this._resolvePath(path);
-    const fh = await open(resolved, 'r');
+    const fh = await open(resolved, "r");
     try {
       const buf = Buffer.alloc(READ_CHUNK_SIZE);
-      const flags: LineEndingFlags = { hasCrLf: false, hasLf: false, hasLoneCr: false };
+      const flags: LineEndingFlags = {
+        hasCrLf: false,
+        hasLf: false,
+        hasLoneCr: false,
+      };
       const validator = createUtf8Validator();
       let totalLines = 0;
       let totalBytes = 0;
@@ -535,7 +562,7 @@ export class LocalKaos implements Kaos {
     options: { startLine: number; maxLines: number; errors?: TextDecodeErrors },
   ): AsyncGenerator<string> {
     const resolved = this._resolvePath(path);
-    const errors = options.errors ?? 'strict';
+    const errors = options.errors ?? "strict";
     yield* this._readUtf8Lines(resolved, errors, {
       startLine: options.startLine,
       maxLines: options.maxLines,
@@ -548,8 +575,8 @@ export class LocalKaos implements Kaos {
   ): AsyncGenerator<string> {
     if (options.tailCount <= 0) return;
     const resolved = this._resolvePath(path);
-    const errors = options.errors ?? 'strict';
-    const fh = await open(resolved, 'r');
+    const errors = options.errors ?? "strict";
+    const fh = await open(resolved, "r");
     try {
       const s = await fh.stat();
       if (s.size === 0) return;
@@ -583,7 +610,12 @@ export class LocalKaos implements Kaos {
 
       if (foundLf < needLf) startOffset = 0;
       const data = await readRange(fh, startOffset, s.size - startOffset);
-      const text = decodeTextWithErrors(data, 'utf-8', errors, startOffset !== 0);
+      const text = decodeTextWithErrors(
+        data,
+        "utf-8",
+        errors,
+        startOffset !== 0,
+      );
       yield* splitLinesKeepingTerminator(text);
     } finally {
       await fh.close();
@@ -597,7 +629,7 @@ export class LocalKaos implements Kaos {
   ): AsyncGenerator<string> {
     const startLine = range?.startLine ?? 1;
     const maxLines = range?.maxLines ?? Number.POSITIVE_INFINITY;
-    const fh = await open(resolved, 'r');
+    const fh = await open(resolved, "r");
     try {
       const buf = Buffer.alloc(READ_CHUNK_SIZE);
       let pending: Buffer[] = [];
@@ -616,10 +648,12 @@ export class LocalKaos implements Kaos {
           const byte = chunk[i];
           if (byte !== 0x0a) continue;
           const piece = chunk.subarray(lineStart, i + 1);
-          const lineOffset = pending.length === 0 ? fileOffset + lineStart : pendingOffset;
-          const line = pending.length === 0 ? piece : Buffer.concat([...pending, piece]);
+          const lineOffset =
+            pending.length === 0 ? fileOffset + lineStart : pendingOffset;
+          const line =
+            pending.length === 0 ? piece : Buffer.concat([...pending, piece]);
           if (lineNo >= startLine) {
-            yield decodeTextWithErrors(line, 'utf-8', errors, lineOffset !== 0);
+            yield decodeTextWithErrors(line, "utf-8", errors, lineOffset !== 0);
             yielded += 1;
             if (yielded >= maxLines) return;
           }
@@ -639,7 +673,12 @@ export class LocalKaos implements Kaos {
       if (pending.length > 0) {
         const line = Buffer.concat(pending);
         if (lineNo >= startLine) {
-          yield decodeTextWithErrors(line, 'utf-8', errors, pendingOffset !== 0);
+          yield decodeTextWithErrors(
+            line,
+            "utf-8",
+            errors,
+            pendingOffset !== 0,
+          );
         }
       }
     } finally {
@@ -656,12 +695,12 @@ export class LocalKaos implements Kaos {
   async writeText(
     path: string,
     data: string,
-    options?: { mode?: 'w' | 'a'; encoding?: BufferEncoding },
+    options?: { mode?: "w" | "a"; encoding?: BufferEncoding },
   ): Promise<number> {
     const resolved = this._resolvePath(path);
-    const encoding = options?.encoding ?? 'utf-8';
-    const mode = options?.mode ?? 'w';
-    if (mode === 'a') {
+    const encoding = options?.encoding ?? "utf-8";
+    const mode = options?.mode ?? "w";
+    if (mode === "a") {
       await appendFile(resolved, data, encoding);
     } else {
       await writeFile(resolved, data, encoding);
@@ -669,7 +708,10 @@ export class LocalKaos implements Kaos {
     return data.length;
   }
 
-  async mkdir(path: string, options?: { parents?: boolean; existOk?: boolean }): Promise<void> {
+  async mkdir(
+    path: string,
+    options?: { parents?: boolean; existOk?: boolean },
+  ): Promise<void> {
     const resolved = this._resolvePath(path);
     const parents = options?.parents ?? false;
     const existOk = options?.existOk ?? false;
@@ -690,7 +732,7 @@ export class LocalKaos implements Kaos {
         } catch (error: unknown) {
           if (error instanceof KaosFileExistsError) throw error;
           const err = error as NodeJS.ErrnoException;
-          if (err.code !== 'ENOENT') throw error;
+          if (err.code !== "ENOENT") throw error;
           // ENOENT: target doesn't exist yet — proceed to mkdir.
         }
       }
@@ -705,8 +747,8 @@ export class LocalKaos implements Kaos {
       if (
         existOk &&
         error instanceof Error &&
-        'code' in error &&
-        (error as NodeJS.ErrnoException).code === 'EEXIST'
+        "code" in error &&
+        (error as NodeJS.ErrnoException).code === "EEXIST"
       ) {
         // `existOk` only applies when the conflicting path is itself a
         // directory. If a regular file (or other non-directory) already
@@ -716,7 +758,9 @@ export class LocalKaos implements Kaos {
         // "directory already present".
         const s = await stat(resolved);
         if (!s.isDirectory()) {
-          throw new KaosFileExistsError(`${resolved} already exists but is not a directory`);
+          throw new KaosFileExistsError(
+            `${resolved} already exists but is not a directory`,
+          );
         }
         return;
       }
@@ -727,7 +771,9 @@ export class LocalKaos implements Kaos {
   async exec(...args: string[]): Promise<KaosProcess> {
     const command = args[0];
     if (command === undefined) {
-      throw new Error('LocalKaos.exec(): at least one argument (the command to run) is required.');
+      throw new Error(
+        "LocalKaos.exec(): at least one argument (the command to run) is required.",
+      );
     }
     const restArgs = args.slice(1);
     const child = spawn(
@@ -739,11 +785,14 @@ export class LocalKaos implements Kaos {
     return new LocalProcess(child);
   }
 
-  async execWithEnv(args: string[], env?: Record<string, string>): Promise<KaosProcess> {
+  async execWithEnv(
+    args: string[],
+    env?: Record<string, string>,
+  ): Promise<KaosProcess> {
     const command = args[0];
     if (command === undefined) {
       throw new Error(
-        'LocalKaos.execWithEnv(): at least one argument (the command to run) is required.',
+        "LocalKaos.execWithEnv(): at least one argument (the command to run) is required.",
       );
     }
     const restArgs = args.slice(1);
@@ -756,7 +805,9 @@ export class LocalKaos implements Kaos {
     return new LocalProcess(child);
   }
 
-  private _buildExecEnv(invocationEnv?: Record<string, string>): Record<string, string> | undefined {
+  private _buildExecEnv(
+    invocationEnv?: Record<string, string>,
+  ): Record<string, string> | undefined {
     if (this._envLayers.length === 0) return invocationEnv;
     const merged: Record<string, string> = {
       ...(process.env as Record<string, string>),
@@ -770,7 +821,7 @@ export class LocalKaos implements Kaos {
 }
 
 function isUtf8Encoding(encoding: BufferEncoding): boolean {
-  return encoding === 'utf-8' || encoding === 'utf8';
+  return encoding === "utf-8" || encoding === "utf8";
 }
 
 function* splitLinesKeepingTerminator(text: string): Generator<string> {
@@ -819,7 +870,7 @@ function createUtf8Validator(): { write(chunk: Buffer): void; end(): void } {
   let upper = 0xbf;
 
   const fail = (): never => {
-    throw new TypeError('Invalid UTF-8 data');
+    throw new TypeError("Invalid UTF-8 data");
   };
 
   return {
@@ -874,7 +925,12 @@ async function readRange(
   const data = Buffer.alloc(length);
   let offset = 0;
   while (offset < length) {
-    const { bytesRead } = await fh.read(data, offset, length - offset, start + offset);
+    const { bytesRead } = await fh.read(
+      data,
+      offset,
+      length - offset,
+      start + offset,
+    );
     if (bytesRead === 0) break;
     offset += bytesRead;
   }
@@ -888,14 +944,14 @@ async function readRange(
 function waitForSpawn(child: ChildProcess): Promise<void> {
   return new Promise((resolve, reject) => {
     const onSpawn = (): void => {
-      child.off('error', onError);
+      child.off("error", onError);
       resolve();
     };
     const onError = (err: Error): void => {
-      child.off('spawn', onSpawn);
+      child.off("spawn", onSpawn);
       reject(err);
     };
-    child.once('spawn', onSpawn);
-    child.once('error', onError);
+    child.once("spawn", onSpawn);
+    child.once("error", onError);
   });
 }

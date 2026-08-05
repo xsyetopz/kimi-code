@@ -10,16 +10,16 @@
  * helper module, not a scoped Service.
  */
 
-import { runHook } from '#/agent/externalHooks/runner';
+import { runHook } from "#/agent/externalHooks/runner";
 import type {
   HookBlockDecision,
   HookDef,
   HookMatcherValue,
   HookResult,
-} from '#/agent/externalHooks/types';
-import type { IHostProcessService } from '#/os/interface/hostProcess';
+} from "#/agent/externalHooks/types";
+import type { IHostProcessService } from "#/os/interface/hostProcess";
 
-import type { ExternalHooksRunnerTriggerArgs } from './externalHooksRunner';
+import type { ExternalHooksRunnerTriggerArgs } from "./externalHooksRunner";
 
 const DEFAULT_HOOK_TIMEOUT_SECONDS = 30;
 
@@ -52,12 +52,12 @@ export async function runMatchedHooks(
   callbacks: HookRunCallbacks = {},
 ): Promise<HookResult[]> {
   const matcherValue = matcherValueText(args.matcherValue);
-  const cwd = args.cwd ?? '';
+  const cwd = args.cwd ?? "";
   const matched: HookDef[] = [];
   const seen = new Set<string>();
   for (const hook of byEvent.get(event) ?? []) {
-    if (!matches(hook.matcher ?? '', matcherValue)) continue;
-    const key = (hook.cwd ?? '') + '\0' + hook.command;
+    if (!matches(hook.matcher ?? "", matcherValue)) continue;
+    const key = (hook.cwd ?? "") + "\0" + hook.command;
     if (seen.has(key)) continue;
     seen.add(key);
     matched.push(hook);
@@ -70,7 +70,7 @@ export async function runMatchedHooks(
 
   const inputData = toHookInputData({
     hookEventName: event,
-    sessionId: args.sessionId ?? '',
+    sessionId: args.sessionId ?? "",
     cwd,
     ...args.inputData,
   });
@@ -80,7 +80,7 @@ export async function runMatchedHooks(
     matched.map((hook) =>
       runHook(hostProcess, hook.command, inputData, {
         timeout: hook.timeout ?? DEFAULT_HOOK_TIMEOUT_SECONDS,
-        cwd: hook.cwd ?? (cwd === '' ? undefined : cwd),
+        cwd: hook.cwd ?? (cwd === "" ? undefined : cwd),
         env: hook.env,
         signal: args.signal,
       }),
@@ -92,7 +92,7 @@ export async function runMatchedHooks(
     callbacks.onResolved?.(
       event,
       matcherValue,
-      decision === undefined ? 'allow' : decision.block ? 'block' : 'allow',
+      decision === undefined ? "allow" : decision.block ? "block" : "allow",
       decision?.reason,
       Date.now() - startedAt,
     );
@@ -105,12 +105,15 @@ export function blockDecision(
   event: string,
   results: readonly HookResult[],
 ): HookBlockDecision | undefined {
-  const block = results.find((result) => result.action === 'block');
+  const block = results.find((result) => result.action === "block");
   if (block === undefined) return undefined;
   const reason = block.reason?.trim();
   return {
     block: true,
-    reason: reason === undefined || reason.length === 0 ? `Blocked by ${event} hook` : reason,
+    reason:
+      reason === undefined || reason.length === 0
+        ? `Blocked by ${event} hook`
+        : reason,
   };
 }
 
@@ -124,15 +127,17 @@ function matches(pattern: string, value: string): boolean {
 }
 
 function matcherValueText(value: HookMatcherValue | undefined): string {
-  if (value === undefined) return '';
-  if (typeof value === 'string') return value;
+  if (value === undefined) return "";
+  if (typeof value === "string") return value;
   return value
-    .filter((part) => part.type === 'text')
+    .filter((part) => part.type === "text")
     .map((part) => part.text)
-    .join(' ');
+    .join(" ");
 }
 
-function toHookInputData(input: Record<string, unknown>): Record<string, unknown> {
+function toHookInputData(
+  input: Record<string, unknown>,
+): Record<string, unknown> {
   const result: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(input)) {
     result[camelToSnake(key)] = value;

@@ -1,17 +1,17 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { SyncDescriptor } from '#/di/descriptors';
+import { SyncDescriptor } from "#/di/descriptors";
 import {
   InstantiationType,
   _clearRegistryForTests,
   getSingletonServiceDescriptors,
   registerSingleton,
-} from '#/di/extensions';
-import { createDecorator } from '#/di/instantiation';
-import { InstantiationService } from '#/di/instantiationService';
-import { ServiceCollection } from '#/di/serviceCollection';
+} from "#/di/extensions";
+import { createDecorator } from "#/di/instantiation";
+import { InstantiationService } from "#/di/instantiationService";
+import { ServiceCollection } from "#/di/serviceCollection";
 
-describe('registerSingleton / getSingletonServiceDescriptors', () => {
+describe("registerSingleton / getSingletonServiceDescriptors", () => {
   beforeEach(() => {
     _clearRegistryForTests();
   });
@@ -19,11 +19,11 @@ describe('registerSingleton / getSingletonServiceDescriptors', () => {
     _clearRegistryForTests();
   });
 
-  it('registers a descriptor that the snapshot exposes', () => {
+  it("registers a descriptor that the snapshot exposes", () => {
     interface ILogger {
       log(m: string): void;
     }
-    const ILogger = createDecorator<ILogger>('logger');
+    const ILogger = createDecorator<ILogger>("logger");
     class ConsoleLogger implements ILogger {
       log(_m: string): void {
         /* noop */
@@ -41,15 +41,15 @@ describe('registerSingleton / getSingletonServiceDescriptors', () => {
     expect(descriptor.supportsDelayedInstantiation).toBe(false);
   });
 
-  it('maps InstantiationType to descriptor.supportsDelayedInstantiation', () => {
+  it("maps InstantiationType to descriptor.supportsDelayedInstantiation", () => {
     interface IFoo {
       a: number;
     }
     interface IBar {
       b: number;
     }
-    const IFoo = createDecorator<IFoo>('foo');
-    const IBar = createDecorator<IBar>('bar');
+    const IFoo = createDecorator<IFoo>("foo");
+    const IBar = createDecorator<IBar>("bar");
     class Foo implements IFoo {
       a = 1;
     }
@@ -67,15 +67,15 @@ describe('registerSingleton / getSingletonServiceDescriptors', () => {
         descriptor.supportsDelayedInstantiation,
       ]),
     );
-    expect(map.get('foo')).toBe(false);
-    expect(map.get('bar')).toBe(true);
+    expect(map.get("foo")).toBe(false);
+    expect(map.get("bar")).toBe(true);
   });
 
-  it('re-registering the same id appends another registry entry', () => {
+  it("re-registering the same id appends another registry entry", () => {
     interface ILogger {
       log(m: string): void;
     }
-    const ILogger = createDecorator<ILogger>('logger');
+    const ILogger = createDecorator<ILogger>("logger");
     class A implements ILogger {
       log(_m: string): void {
         /* noop */
@@ -95,11 +95,11 @@ describe('registerSingleton / getSingletonServiceDescriptors', () => {
     expect(snapshot.map(([, descriptor]) => descriptor.ctor)).toEqual([A, B]);
   });
 
-  it('accepts a SyncDescriptor overload directly', () => {
+  it("accepts a SyncDescriptor overload directly", () => {
     interface IFoo {
       a: number;
     }
-    const IFoo = createDecorator<IFoo>('foo');
+    const IFoo = createDecorator<IFoo>("foo");
     class Foo implements IFoo {
       constructor(public readonly a: number) {}
     }
@@ -113,11 +113,11 @@ describe('registerSingleton / getSingletonServiceDescriptors', () => {
     expect(descriptor.supportsDelayedInstantiation).toBe(true);
   });
 
-  it('_clearRegistryForTests empties the registry', () => {
+  it("_clearRegistryForTests empties the registry", () => {
     interface IFoo {
       a: number;
     }
-    const IFoo = createDecorator<IFoo>('foo');
+    const IFoo = createDecorator<IFoo>("foo");
     class Foo implements IFoo {
       a = 1;
     }
@@ -127,14 +127,14 @@ describe('registerSingleton / getSingletonServiceDescriptors', () => {
     expect(getSingletonServiceDescriptors()).toHaveLength(0);
   });
 
-  it('end-to-end bootstrap (mirrors the README copy-paste example)', () => {
-    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+  it("end-to-end bootstrap (mirrors the README copy-paste example)", () => {
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
 
     // 1. Declare a service.
     interface ILogger {
       log(message: string): void;
     }
-    const ILogger = createDecorator<ILogger>('logger');
+    const ILogger = createDecorator<ILogger>("logger");
 
     // 2. Implement it.
     class ConsoleLogger implements ILogger {
@@ -158,22 +158,22 @@ describe('registerSingleton / getSingletonServiceDescriptors', () => {
     // 5. Use.
     ix.invokeFunction((accessor) => {
       const logger = accessor.get(ILogger);
-      logger.log('hello world');
+      logger.log("hello world");
     });
-    expect(logSpy).toHaveBeenCalledWith('[log] hello world');
+    expect(logSpy).toHaveBeenCalledWith("[log] hello world");
 
     // 6. Scoped child.
     interface IRequestContext {
       requestId: string;
     }
-    const IRequestContext = createDecorator<IRequestContext>('requestContext');
+    const IRequestContext = createDecorator<IRequestContext>("requestContext");
     class RequestContext implements IRequestContext {
       constructor(public readonly requestId: string) {}
     }
     const child = ix.createChild(
       new ServiceCollection([
         IRequestContext,
-        new SyncDescriptor(RequestContext, ['req-123']),
+        new SyncDescriptor(RequestContext, ["req-123"]),
       ]),
     );
     child.invokeFunction((accessor) => {
@@ -182,7 +182,7 @@ describe('registerSingleton / getSingletonServiceDescriptors', () => {
         .get(ILogger)
         .log(`handling ${accessor.get(IRequestContext).requestId}`);
     });
-    expect(logSpy).toHaveBeenCalledWith('[log] handling req-123');
+    expect(logSpy).toHaveBeenCalledWith("[log] handling req-123");
 
     // 7. Teardown.
     ix.dispose();
@@ -191,11 +191,11 @@ describe('registerSingleton / getSingletonServiceDescriptors', () => {
     logSpy.mockRestore();
   });
 
-  it('getSingletonServiceDescriptors returns the live registry array', () => {
+  it("getSingletonServiceDescriptors returns the live registry array", () => {
     interface IFoo {
       a: number;
     }
-    const IFoo = createDecorator<IFoo>('foo');
+    const IFoo = createDecorator<IFoo>("foo");
     class Foo implements IFoo {
       a = 1;
     }
@@ -207,7 +207,7 @@ describe('registerSingleton / getSingletonServiceDescriptors', () => {
     interface IBar {
       b: number;
     }
-    const IBar = createDecorator<IBar>('bar');
+    const IBar = createDecorator<IBar>("bar");
     class Bar implements IBar {
       b = 2;
     }

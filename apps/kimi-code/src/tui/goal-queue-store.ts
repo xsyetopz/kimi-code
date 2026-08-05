@@ -1,12 +1,9 @@
-import { randomUUID } from 'node:crypto';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
-import {
-  ErrorCodes,
-  KimiError,
-} from '@moonshot-ai/kimi-code-sdk';
+import { randomUUID } from "node:crypto";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
+import { ErrorCodes, KimiError } from "@moonshot-ai/kimi-code-sdk";
 
-const GOAL_QUEUE_FILE = 'upcoming-goals.json';
+const GOAL_QUEUE_FILE = "upcoming-goals.json";
 const GOAL_QUEUE_VERSION = 1;
 const MAX_GOAL_OBJECTIVE_LENGTH = 4000;
 
@@ -21,7 +18,7 @@ export interface GoalQueueSnapshot {
   readonly goals: readonly UpcomingGoal[];
 }
 
-export type GoalQueueMoveDirection = 'up' | 'down';
+export type GoalQueueMoveDirection = "up" | "down";
 
 interface GoalQueueFile {
   readonly version: typeof GOAL_QUEUE_VERSION;
@@ -37,7 +34,9 @@ interface GoalQueueSession {
 
 const queueMutationLocks = new Map<string, Promise<void>>();
 
-export async function readGoalQueue(session: GoalQueueSession): Promise<GoalQueueSnapshot> {
+export async function readGoalQueue(
+  session: GoalQueueSession,
+): Promise<GoalQueueSnapshot> {
   const state = await readQueueFile(session);
   return toSnapshot(state);
 }
@@ -56,7 +55,10 @@ export async function appendGoalQueueItem(
       createdAt: now,
       updatedAt: now,
     };
-    const next: GoalQueueFile = { version: GOAL_QUEUE_VERSION, goals: [...state.goals, goal] };
+    const next: GoalQueueFile = {
+      version: GOAL_QUEUE_VERSION,
+      goals: [...state.goals, goal],
+    };
     await writeQueueFile(session, next);
     return toSnapshot(next);
   });
@@ -104,7 +106,10 @@ export async function restoreGoalQueueItem(
     if (state.goals.some((item) => item.id === goal.id)) {
       return toSnapshot(state);
     }
-    const next: GoalQueueFile = { version: GOAL_QUEUE_VERSION, goals: [goal, ...state.goals] };
+    const next: GoalQueueFile = {
+      version: GOAL_QUEUE_VERSION,
+      goals: [goal, ...state.goals],
+    };
     await writeQueueFile(session, next);
     return toSnapshot(next);
   });
@@ -112,12 +117,15 @@ export async function restoreGoalQueueItem(
 
 export async function moveGoalQueueItem(
   session: GoalQueueSession,
-  input: { readonly goalId: string; readonly direction: GoalQueueMoveDirection },
+  input: {
+    readonly goalId: string;
+    readonly direction: GoalQueueMoveDirection;
+  },
 ): Promise<GoalQueueSnapshot> {
   return withQueueMutationLock(session, async () => {
     const state = await readQueueFile(session);
     const index = findGoalIndex(state, input.goalId);
-    const targetIndex = input.direction === 'up' ? index - 1 : index + 1;
+    const targetIndex = input.direction === "up" ? index - 1 : index + 1;
     if (targetIndex < 0 || targetIndex >= state.goals.length) {
       return toSnapshot(state);
     }
@@ -133,18 +141,22 @@ export async function moveGoalQueueItem(
 function goalQueuePath(session: GoalQueueSession): string {
   const sessionDir = session.summary?.sessionDir;
   if (sessionDir === undefined || sessionDir.trim().length === 0) {
-    throw new Error(`Session ${session.id} does not expose a session directory`);
+    throw new Error(
+      `Session ${session.id} does not expose a session directory`,
+    );
   }
   return join(sessionDir, GOAL_QUEUE_FILE);
 }
 
-async function readQueueFile(session: GoalQueueSession): Promise<GoalQueueFile> {
+async function readQueueFile(
+  session: GoalQueueSession,
+): Promise<GoalQueueFile> {
   const filePath = goalQueuePath(session);
   let raw: string;
   try {
-    raw = await readFile(filePath, 'utf-8');
+    raw = await readFile(filePath, "utf-8");
   } catch (error) {
-    if (isErrno(error, 'ENOENT')) return emptyQueueFile();
+    if (isErrno(error, "ENOENT")) return emptyQueueFile();
     throw error;
   }
 
@@ -167,10 +179,13 @@ async function readQueueFile(session: GoalQueueSession): Promise<GoalQueueFile> 
   return parsed;
 }
 
-async function writeQueueFile(session: GoalQueueSession, file: GoalQueueFile): Promise<void> {
+async function writeQueueFile(
+  session: GoalQueueSession,
+  file: GoalQueueFile,
+): Promise<void> {
   const filePath = goalQueuePath(session);
   await mkdir(dirname(filePath), { recursive: true });
-  await writeFile(filePath, `${JSON.stringify(file, null, 2)}\n`, 'utf-8');
+  await writeFile(filePath, `${JSON.stringify(file, null, 2)}\n`, "utf-8");
 }
 
 async function withQueueMutationLock<T>(
@@ -205,7 +220,10 @@ function toSnapshot(file: GoalQueueFile): GoalQueueSnapshot {
 function normalizeObjective(value: string): string {
   const objective = value.trim();
   if (objective.length === 0) {
-    throw new KimiError(ErrorCodes.GOAL_OBJECTIVE_EMPTY, 'Goal objective cannot be empty');
+    throw new KimiError(
+      ErrorCodes.GOAL_OBJECTIVE_EMPTY,
+      "Goal objective cannot be empty",
+    );
   }
   if (objective.length > MAX_GOAL_OBJECTIVE_LENGTH) {
     throw new KimiError(
@@ -219,7 +237,7 @@ function normalizeObjective(value: string): string {
 function findGoalIndex(file: GoalQueueFile, goalId: string): number {
   const index = file.goals.findIndex((goal) => goal.id === goalId);
   if (index === -1) {
-    throw new KimiError(ErrorCodes.GOAL_NOT_FOUND, 'No queued goal found');
+    throw new KimiError(ErrorCodes.GOAL_NOT_FOUND, "No queued goal found");
   }
   return index;
 }
@@ -227,28 +245,28 @@ function findGoalIndex(file: GoalQueueFile, goalId: string): number {
 function isGoalQueueFile(value: unknown): value is GoalQueueFile {
   if (!isRecord(value)) return false;
   return (
-    value['version'] === GOAL_QUEUE_VERSION &&
-    Array.isArray(value['goals']) &&
-    value['goals'].every(isUpcomingGoal)
+    value["version"] === GOAL_QUEUE_VERSION &&
+    Array.isArray(value["goals"]) &&
+    value["goals"].every(isUpcomingGoal)
   );
 }
 
 function isUpcomingGoal(value: unknown): value is UpcomingGoal {
   if (!isRecord(value)) return false;
   return (
-    isNonEmptyString(value['id']) &&
-    isNonEmptyString(value['objective']) &&
-    isNonEmptyString(value['createdAt']) &&
-    isNonEmptyString(value['updatedAt'])
+    isNonEmptyString(value["id"]) &&
+    isNonEmptyString(value["objective"]) &&
+    isNonEmptyString(value["createdAt"]) &&
+    isNonEmptyString(value["updatedAt"])
   );
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function isNonEmptyString(value: unknown): value is string {
-  return typeof value === 'string' && value.length > 0;
+  return typeof value === "string" && value.length > 0;
 }
 
 function timestampAfter(previous: string): string {
@@ -261,7 +279,7 @@ function timestampAfter(previous: string): string {
 }
 
 function isErrno(error: unknown, code: string): boolean {
-  return isRecord(error) && error['code'] === code;
+  return isRecord(error) && error["code"] === code;
 }
 
 function describeError(error: unknown): string {

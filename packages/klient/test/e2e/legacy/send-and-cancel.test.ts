@@ -13,14 +13,18 @@
  * daemons do not expose `/debug/*`, so this file skips when that surface is
  * absent.
  */
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from "vitest";
 
-import { DaemonClient, EnvelopeError, type AnyFrame } from '../harness/index.js';
-import { fetchWithReport } from '../harness/report.js';
-import { createCaseLogger, errorForLog } from './log.js';
+import {
+  DaemonClient,
+  EnvelopeError,
+  type AnyFrame,
+} from "../harness/index.js";
+import { fetchWithReport } from "../harness/report.js";
+import { createCaseLogger, errorForLog } from "./log.js";
 
-const BASE_URL = process.env['KIMI_SERVER_URL'] ?? 'http://127.0.0.1:58627';
-const API_PREFIX = '/api/v1';
+const BASE_URL = process.env["KIMI_SERVER_URL"] ?? "http://127.0.0.1:58627";
+const API_PREFIX = "/api/v1";
 const PROMPT_TIMEOUT_MS = 120_000;
 const SHORT_TIMEOUT_MS = 30_000;
 
@@ -51,7 +55,11 @@ const reachable = await daemonReachable();
 const debugReachable = reachable && (await debugPromptsReachable());
 const describeLive = debugReachable ? describe : describe.skip;
 
-const created: Array<{ client: DaemonClient; sid: string; promptIds: string[] }> = [];
+const created: Array<{
+  client: DaemonClient;
+  sid: string;
+  promptIds: string[];
+}> = [];
 
 afterEach(async () => {
   for (const { client, sid, promptIds } of created.splice(0)) {
@@ -75,73 +83,75 @@ afterEach(async () => {
   }
 });
 
-describeLive('send prompt + cancel prompt (live server required)', () => {
+describeLive("send prompt + cancel prompt (live server required)", () => {
   it(
-    'submits a prompt and receives prompt.completed',
+    "submits a prompt and receives prompt.completed",
     async () => {
-      const log = createCaseLogger('send: prompt completes');
+      const log = createCaseLogger("send: prompt completes");
       const client = new DaemonClient({ baseUrl: BASE_URL });
       const session = await client.createSession({
-        title: 'server-e2e send and cancel',
-        metadata: { cwd: process.cwd(), scenario: 'send-and-cancel' },
+        title: "server-e2e send and cancel",
+        metadata: { cwd: process.cwd(), scenario: "send-and-cancel" },
       });
       const cleanup = { client, sid: session.id, promptIds: [] as string[] };
       created.push(cleanup);
-      log('created session', session);
+      log("created session", session);
 
       await client.connect();
       await client.subscribe(session.id);
-      log('subscribe accepted', { session_id: session.id });
+      log("subscribe accepted", { session_id: session.id });
 
       const result = await client.submitAndWait(
         session.id,
-        { content: [{ type: 'text', text: 'Reply with the single word "OK".' }] },
-        { waitFor: 'prompt.completed', timeoutMs: PROMPT_TIMEOUT_MS },
+        {
+          content: [{ type: "text", text: 'Reply with the single word "OK".' }],
+        },
+        { waitFor: "prompt.completed", timeoutMs: PROMPT_TIMEOUT_MS },
       );
       cleanup.promptIds.push(result.prompt_id);
-      log('prompt completed', {
+      log("prompt completed", {
         prompt_id: result.prompt_id,
         final_frame: frameForLog(result.finalFrame),
       });
 
       expect(result.prompt_id).toMatch(/^prompt_/);
-      expect(result.finalFrame.type).toBe('prompt.completed');
+      expect(result.finalFrame.type).toBe("prompt.completed");
     },
     PROMPT_TIMEOUT_MS + SHORT_TIMEOUT_MS,
   );
 
   it(
-    'aborts a queued prompt and receives prompt.aborted',
+    "aborts a queued prompt and receives prompt.aborted",
     async () => {
-      const log = createCaseLogger('cancel: queued prompt abort');
+      const log = createCaseLogger("cancel: queued prompt abort");
       const client = new DaemonClient({ baseUrl: BASE_URL });
       const session = await client.createSession({
-        title: 'server-e2e send and cancel',
-        metadata: { cwd: process.cwd(), scenario: 'send-and-cancel' },
+        title: "server-e2e send and cancel",
+        metadata: { cwd: process.cwd(), scenario: "send-and-cancel" },
       });
       const cleanup = { client, sid: session.id, promptIds: [] as string[] };
       created.push(cleanup);
-      log('created session', session);
+      log("created session", session);
 
       await client.connect();
       await client.subscribe(session.id);
-      log('subscribe accepted', { session_id: session.id });
+      log("subscribe accepted", { session_id: session.id });
 
       const active = await injectActivePrompt(session.id, {
         prompt_id: `prompt_debug_cancel_queued_${process.pid}`,
       });
-      log('debug active prompt injected', active);
+      log("debug active prompt injected", active);
       cleanup.promptIds.push(active.prompt_id);
 
       const queued = await client.submitPrompt(session.id, {
-        content: [{ type: 'text', text: 'Count slowly to 100.' }],
+        content: [{ type: "text", text: "Count slowly to 100." }],
       });
       cleanup.promptIds.push(queued.prompt_id);
-      log('queued prompt submitted', queued);
-      expect(queued.status).toBe('queued');
+      log("queued prompt submitted", queued);
+      expect(queued.status).toBe("queued");
 
       const listedBefore = await client.listPrompts(session.id);
-      log('prompt list before abort', listedBefore);
+      log("prompt list before abort", listedBefore);
       expect(listedBefore.active?.prompt_id).toBe(active.prompt_id);
       expect(listedBefore.queued.map((prompt) => prompt.prompt_id)).toEqual([
         queued.prompt_id,
@@ -149,155 +159,162 @@ describeLive('send prompt + cancel prompt (live server required)', () => {
 
       const abortedFramePromise = client.waitForFrame(
         (f) =>
-          f.type === 'prompt.aborted' &&
-          (f.payload as { promptId?: string } | undefined)?.promptId === queued.prompt_id,
+          f.type === "prompt.aborted" &&
+          (f.payload as { promptId?: string } | undefined)?.promptId ===
+            queued.prompt_id,
         { timeoutMs: SHORT_TIMEOUT_MS },
       );
 
       const abort = await client.abortPrompt(session.id, queued.prompt_id);
-      log('abort response', abort);
+      log("abort response", abort);
       expect(abort.aborted).toBe(true);
 
       const abortedFrame = await abortedFramePromise;
-      log('prompt.aborted frame', frameForLog(abortedFrame));
-      expect(abortedFrame.type).toBe('prompt.aborted');
+      log("prompt.aborted frame", frameForLog(abortedFrame));
+      expect(abortedFrame.type).toBe("prompt.aborted");
 
       const listedAfter = await client.listPrompts(session.id);
-      log('prompt list after abort', listedAfter);
+      log("prompt list after abort", listedAfter);
       expect(listedAfter.queued).toHaveLength(0);
     },
     PROMPT_TIMEOUT_MS + SHORT_TIMEOUT_MS,
   );
 
   it(
-    'aborts an active prompt via session-level abort',
+    "aborts an active prompt via session-level abort",
     async () => {
-      const log = createCaseLogger('cancel: session-level abort');
+      const log = createCaseLogger("cancel: session-level abort");
       const client = new DaemonClient({ baseUrl: BASE_URL });
       const session = await client.createSession({
-        title: 'server-e2e send and cancel',
-        metadata: { cwd: process.cwd(), scenario: 'send-and-cancel' },
+        title: "server-e2e send and cancel",
+        metadata: { cwd: process.cwd(), scenario: "send-and-cancel" },
       });
       const cleanup = { client, sid: session.id, promptIds: [] as string[] };
       created.push(cleanup);
-      log('created session', session);
+      log("created session", session);
 
       await client.connect();
       await client.subscribe(session.id);
-      log('subscribe accepted', { session_id: session.id });
+      log("subscribe accepted", { session_id: session.id });
 
       const active = await injectActivePrompt(session.id, {
         prompt_id: `prompt_debug_cancel_session_${process.pid}`,
       });
       cleanup.promptIds.push(active.prompt_id);
-      log('debug active prompt injected', active);
+      log("debug active prompt injected", active);
 
       const listedBefore = await client.listPrompts(session.id);
-      log('prompt list before session abort', listedBefore);
+      log("prompt list before session abort", listedBefore);
       expect(listedBefore.active?.prompt_id).toBe(active.prompt_id);
 
       const abortedFramePromise = client.waitForFrame(
         (f) =>
-          f.type === 'prompt.aborted' &&
-          (f.payload as { promptId?: string } | undefined)?.promptId === active.prompt_id,
+          f.type === "prompt.aborted" &&
+          (f.payload as { promptId?: string } | undefined)?.promptId ===
+            active.prompt_id,
         { timeoutMs: SHORT_TIMEOUT_MS },
       );
 
       const abort = await client.abortSession(session.id);
-      log('session abort response', abort);
+      log("session abort response", abort);
       expect(abort.aborted).toBe(true);
 
       const abortedFrame = await abortedFramePromise;
-      log('prompt.aborted frame', frameForLog(abortedFrame));
-      expect(abortedFrame.type).toBe('prompt.aborted');
+      log("prompt.aborted frame", frameForLog(abortedFrame));
+      expect(abortedFrame.type).toBe("prompt.aborted");
 
       const listedAfter = await client.listPrompts(session.id);
-      log('prompt list after session abort', listedAfter);
+      log("prompt list after session abort", listedAfter);
       expect(listedAfter.active).toBeNull();
     },
     PROMPT_TIMEOUT_MS + SHORT_TIMEOUT_MS,
   );
 
   it(
-    'recovers and completes a prompt after aborts',
+    "recovers and completes a prompt after aborts",
     async () => {
-      const log = createCaseLogger('send: scheduler recovery after abort');
+      const log = createCaseLogger("send: scheduler recovery after abort");
       const client = new DaemonClient({ baseUrl: BASE_URL });
       const session = await client.createSession({
-        title: 'server-e2e send and cancel',
-        metadata: { cwd: process.cwd(), scenario: 'send-and-cancel' },
+        title: "server-e2e send and cancel",
+        metadata: { cwd: process.cwd(), scenario: "send-and-cancel" },
       });
       const cleanup = { client, sid: session.id, promptIds: [] as string[] };
       created.push(cleanup);
-      log('created session', session);
+      log("created session", session);
 
       await client.connect();
       await client.subscribe(session.id);
-      log('subscribe accepted', { session_id: session.id });
+      log("subscribe accepted", { session_id: session.id });
 
       const active = await injectActivePrompt(session.id, {
         prompt_id: `prompt_debug_cancel_recovery_${process.pid}`,
       });
       cleanup.promptIds.push(active.prompt_id);
-      log('debug active prompt injected', active);
+      log("debug active prompt injected", active);
 
       const abort = await client.abortSession(session.id);
-      log('session abort response', abort);
+      log("session abort response", abort);
       expect(abort.aborted).toBe(true);
 
       const result = await client.submitAndWait(
         session.id,
-        { content: [{ type: 'text', text: 'Reply with the single word "RECOVERED".' }] },
-        { waitFor: 'prompt.completed', timeoutMs: PROMPT_TIMEOUT_MS },
+        {
+          content: [
+            { type: "text", text: 'Reply with the single word "RECOVERED".' },
+          ],
+        },
+        { waitFor: "prompt.completed", timeoutMs: PROMPT_TIMEOUT_MS },
       );
       cleanup.promptIds.push(result.prompt_id);
-      log('recovered prompt completed', {
+      log("recovered prompt completed", {
         prompt_id: result.prompt_id,
         final_frame: frameForLog(result.finalFrame),
       });
 
-      expect(result.finalFrame.type).toBe('prompt.completed');
+      expect(result.finalFrame.type).toBe("prompt.completed");
     },
     PROMPT_TIMEOUT_MS + SHORT_TIMEOUT_MS,
   );
 
   it(
-    'idempotently aborts a prompt on repeated ESC',
+    "idempotently aborts a prompt on repeated ESC",
     async () => {
-      const log = createCaseLogger('cancel: repeated ESC idempotent');
+      const log = createCaseLogger("cancel: repeated ESC idempotent");
       const client = new DaemonClient({ baseUrl: BASE_URL });
       const session = await client.createSession({
-        title: 'server-e2e send and cancel',
-        metadata: { cwd: process.cwd(), scenario: 'send-and-cancel' },
+        title: "server-e2e send and cancel",
+        metadata: { cwd: process.cwd(), scenario: "send-and-cancel" },
       });
       const cleanup = { client, sid: session.id, promptIds: [] as string[] };
       created.push(cleanup);
-      log('created session', session);
+      log("created session", session);
 
       await client.connect();
       await client.subscribe(session.id);
-      log('subscribe accepted', { session_id: session.id });
+      log("subscribe accepted", { session_id: session.id });
 
       const active = await injectActivePrompt(session.id, {
         prompt_id: `prompt_debug_repeated_esc_${process.pid}`,
       });
       cleanup.promptIds.push(active.prompt_id);
-      log('debug active prompt injected', active);
+      log("debug active prompt injected", active);
 
       const abortedFramePromise = client.waitForFrame(
         (f) =>
-          f.type === 'prompt.aborted' &&
-          (f.payload as { promptId?: string } | undefined)?.promptId === active.prompt_id,
+          f.type === "prompt.aborted" &&
+          (f.payload as { promptId?: string } | undefined)?.promptId ===
+            active.prompt_id,
         { timeoutMs: SHORT_TIMEOUT_MS },
       );
 
       const first = await client.abortPrompt(session.id, active.prompt_id);
-      log('first ESC abort response', first);
+      log("first ESC abort response", first);
       expect(first.aborted).toBe(true);
 
       const abortedFrame = await abortedFramePromise;
-      log('prompt.aborted frame', frameForLog(abortedFrame));
-      expect(abortedFrame.type).toBe('prompt.aborted');
+      log("prompt.aborted frame", frameForLog(abortedFrame));
+      expect(abortedFrame.type).toBe("prompt.aborted");
 
       let secondError: unknown;
       try {
@@ -305,61 +322,62 @@ describeLive('send prompt + cancel prompt (live server required)', () => {
       } catch (error) {
         secondError = error;
       }
-      log('second ESC abort error', errorForLog(secondError));
+      log("second ESC abort error", errorForLog(secondError));
       expect(secondError).toBeInstanceOf(EnvelopeError);
       expect((secondError as EnvelopeError).code).toBe(40903);
       expect((secondError as EnvelopeError).data).toEqual({ aborted: false });
 
       const listed = await client.listPrompts(session.id);
-      log('prompt list after repeated ESC', listed);
+      log("prompt list after repeated ESC", listed);
       expect(listed.active).toBeNull();
     },
     PROMPT_TIMEOUT_MS + SHORT_TIMEOUT_MS,
   );
 
   it(
-    'remains stable when session-level abort is sent repeatedly',
+    "remains stable when session-level abort is sent repeatedly",
     async () => {
-      const log = createCaseLogger('cancel: repeated session-level ESC stable');
+      const log = createCaseLogger("cancel: repeated session-level ESC stable");
       const client = new DaemonClient({ baseUrl: BASE_URL });
       const session = await client.createSession({
-        title: 'server-e2e send and cancel',
-        metadata: { cwd: process.cwd(), scenario: 'send-and-cancel' },
+        title: "server-e2e send and cancel",
+        metadata: { cwd: process.cwd(), scenario: "send-and-cancel" },
       });
       const cleanup = { client, sid: session.id, promptIds: [] as string[] };
       created.push(cleanup);
-      log('created session', session);
+      log("created session", session);
 
       await client.connect();
       await client.subscribe(session.id);
-      log('subscribe accepted', { session_id: session.id });
+      log("subscribe accepted", { session_id: session.id });
 
       const active = await injectActivePrompt(session.id, {
         prompt_id: `prompt_debug_repeated_session_abort_${process.pid}`,
       });
       cleanup.promptIds.push(active.prompt_id);
-      log('debug active prompt injected', active);
+      log("debug active prompt injected", active);
 
       const abortedFrames: AnyFrame[] = [];
       const unsubscribe = client.onFrame((f) => {
         if (
-          f.type === 'prompt.aborted' &&
-          (f.payload as { promptId?: string } | undefined)?.promptId === active.prompt_id
+          f.type === "prompt.aborted" &&
+          (f.payload as { promptId?: string } | undefined)?.promptId ===
+            active.prompt_id
         ) {
           abortedFrames.push(f);
         }
       });
       try {
         const first = await client.abortSession(session.id);
-        log('first session-level ESC abort response', first);
+        log("first session-level ESC abort response", first);
         expect(first.aborted).toBe(true);
 
         const second = await client.abortSession(session.id);
-        log('second session-level ESC abort response', second);
+        log("second session-level ESC abort response", second);
         expect(second.aborted).toBe(true);
 
         const third = await client.abortSession(session.id);
-        log('third session-level ESC abort response', third);
+        log("third session-level ESC abort response", third);
         expect(third.aborted).toBe(true);
 
         expect(abortedFrames).toHaveLength(1);
@@ -368,7 +386,7 @@ describeLive('send prompt + cancel prompt (live server required)', () => {
       }
 
       const listed = await client.listPrompts(session.id);
-      log('prompt list after repeated session-level abort', listed);
+      log("prompt list after repeated session-level abort", listed);
       expect(listed.active).toBeNull();
     },
     PROMPT_TIMEOUT_MS + SHORT_TIMEOUT_MS,
@@ -391,8 +409,11 @@ async function injectActivePrompt(
   const res = await fetchWithReport(
     `${BASE_URL}${API_PREFIX}/debug/prompts/${encodeURIComponent(sid)}/active`,
     {
-      method: 'POST',
-      headers: { accept: 'application/json', 'content-type': 'application/json' },
+      method: "POST",
+      headers: {
+        accept: "application/json",
+        "content-type": "application/json",
+      },
       body: JSON.stringify(body),
     },
   );

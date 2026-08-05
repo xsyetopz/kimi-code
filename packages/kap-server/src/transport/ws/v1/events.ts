@@ -10,17 +10,20 @@
  * broadcaster that emits them.
  */
 
-import type { DomainEvent } from '@moonshot-ai/agent-core-v2/app/event/eventBus';
-import type { MessageContent } from '../../../protocol/message';
-import type { PermissionMode } from '@moonshot-ai/agent-core-v2/agent/permissionPolicy/types';
-import type { UsageStatus } from '@moonshot-ai/agent-core-v2/agent/usage/usage';
-import type { AgentPhase } from '../../../services/legacyStatus/legacyStatus';
-import type { ConfigResponse } from '../../../protocol/rest-config';
-import type { Session, SessionPendingInteraction } from '../../../protocol/session';
-import type { Workspace } from '../../../protocol/workspace';
+import type { DomainEvent } from "@moonshot-ai/agent-core-v2/app/event/eventBus";
+import type { MessageContent } from "../../../protocol/message";
+import type { PermissionMode } from "@moonshot-ai/agent-core-v2/agent/permissionPolicy/types";
+import type { UsageStatus } from "@moonshot-ai/agent-core-v2/agent/usage/usage";
+import type { AgentPhase } from "../../../services/legacyStatus/legacyStatus";
+import type { ConfigResponse } from "../../../protocol/rest-config";
+import type {
+  Session,
+  SessionPendingInteraction,
+} from "../../../protocol/session";
+import type { Workspace } from "../../../protocol/workspace";
 
 export interface AgentStatusUpdatedEvent {
-  readonly type: 'agent.status.updated';
+  readonly type: "agent.status.updated";
   readonly model?: string;
   readonly thinkingEffort?: string;
   readonly contextTokens?: number;
@@ -34,64 +37,64 @@ export interface AgentStatusUpdatedEvent {
 }
 
 export interface AgentCreatedEvent {
-  readonly type: 'agent.created';
+  readonly type: "agent.created";
 }
 
 export interface AgentDisposedEvent {
-  readonly type: 'agent.disposed';
+  readonly type: "agent.disposed";
 }
 
 export interface SessionMetaUpdatedEvent {
-  readonly type: 'session.meta.updated';
+  readonly type: "session.meta.updated";
   readonly title?: string;
   readonly patch?: Record<string, unknown>;
 }
 
 export interface SessionCreatedEvent {
-  readonly type: 'event.session.created';
+  readonly type: "event.session.created";
   readonly session: Session;
 }
 
 export interface WorkspaceCreatedEvent {
-  readonly type: 'event.workspace.created';
+  readonly type: "event.workspace.created";
   readonly workspace: Workspace;
 }
 
 export interface WorkspaceUpdatedEvent {
-  readonly type: 'event.workspace.updated';
+  readonly type: "event.workspace.updated";
   readonly workspace: Workspace;
 }
 
 export interface WorkspaceDeletedEvent {
-  readonly type: 'event.workspace.deleted';
+  readonly type: "event.workspace.deleted";
   readonly workspace_id: string;
   readonly root: string;
 }
 
 export interface SessionWorkChangedEvent {
-  readonly type: 'event.session.work_changed';
+  readonly type: "event.session.work_changed";
   readonly busy: boolean;
   readonly main_turn_active?: boolean;
   readonly pending_interaction?: SessionPendingInteraction;
-  readonly last_turn_reason?: 'completed' | 'cancelled' | 'failed';
+  readonly last_turn_reason?: "completed" | "cancelled" | "failed";
 }
 
 type LegacySessionStatus =
-  | 'idle'
-  | 'running'
-  | 'awaiting_approval'
-  | 'awaiting_question'
-  | 'aborted';
+  | "idle"
+  | "running"
+  | "awaiting_approval"
+  | "awaiting_question"
+  | "aborted";
 
 export interface SessionStatusChangedEvent {
-  readonly type: 'event.session.status_changed';
+  readonly type: "event.session.status_changed";
   readonly status: LegacySessionStatus;
   readonly previous_status: LegacySessionStatus;
   readonly current_prompt_id?: string;
 }
 
 export interface ConfigChangedEvent {
-  readonly type: 'event.config.changed';
+  readonly type: "event.config.changed";
   readonly changedFields: string[];
   readonly config: ConfigResponse;
 }
@@ -109,26 +112,26 @@ export interface ConfigWarningItem {
  * config diagnostics RPC surface instead.
  */
 export interface ConfigWarningEvent {
-  readonly type: 'event.config.warning';
+  readonly type: "event.config.warning";
   readonly warnings: readonly ConfigWarningItem[];
 }
 
 export interface PromptSubmittedEvent {
-  readonly type: 'prompt.submitted';
+  readonly type: "prompt.submitted";
   readonly promptId: string;
   readonly userMessageId: string;
-  readonly status: 'running' | 'queued' | 'blocked';
+  readonly status: "running" | "queued" | "blocked";
   readonly content: readonly MessageContent[];
   readonly createdAt: string;
 }
 
 export type TaskLifecycleStatus =
-  | 'running'
-  | 'completed'
-  | 'failed'
-  | 'timed_out'
-  | 'killed'
-  | 'lost';
+  | "running"
+  | "completed"
+  | "failed"
+  | "timed_out"
+  | "killed"
+  | "lost";
 
 export interface TaskInfoBase {
   readonly taskId: string;
@@ -143,28 +146,25 @@ export interface TaskInfoBase {
 }
 
 export interface ProcessTaskInfo extends TaskInfoBase {
-  readonly kind: 'process';
+  readonly kind: "process";
   readonly command: string;
   readonly pid: number;
   readonly exitCode: number | null;
 }
 
 export interface AgentTaskInfo extends TaskInfoBase {
-  readonly kind: 'agent';
+  readonly kind: "agent";
   readonly agentId?: string;
   readonly subagentType?: string;
 }
 
 export interface QuestionTaskInfo extends TaskInfoBase {
-  readonly kind: 'question';
+  readonly kind: "question";
   readonly questionCount: number;
   readonly toolCallId?: string;
 }
 
-export type TaskInfo =
-  | ProcessTaskInfo
-  | AgentTaskInfo
-  | QuestionTaskInfo;
+export type TaskInfo = ProcessTaskInfo | AgentTaskInfo | QuestionTaskInfo;
 
 /**
  * Legacy background-task lifecycle events (`background.task.started` /
@@ -173,12 +173,12 @@ export type TaskInfo =
  * older clients see a consistent stream.
  */
 export interface BackgroundTaskStartedEvent {
-  readonly type: 'background.task.started';
+  readonly type: "background.task.started";
   readonly info: TaskInfo;
 }
 
 export interface BackgroundTaskTerminatedEvent {
-  readonly type: 'background.task.terminated';
+  readonly type: "background.task.terminated";
   readonly info: TaskInfo;
 }
 
@@ -203,14 +203,14 @@ export type AgentEvent =
 export type Event = AgentEvent & { agentId: string; sessionId: string };
 
 export const VOLATILE_EVENT_TYPES = [
-  'assistant.delta',
-  'thinking.delta',
-  'tool.call.delta',
-  'tool.progress',
-  'shell.output',
-  'shell.started',
-  'shell.completed',
-  'agent.status.updated',
+  "assistant.delta",
+  "thinking.delta",
+  "tool.call.delta",
+  "tool.progress",
+  "shell.output",
+  "shell.started",
+  "shell.completed",
+  "agent.status.updated",
 ] as const;
 
 export type VolatileEventType = (typeof VOLATILE_EVENT_TYPES)[number];

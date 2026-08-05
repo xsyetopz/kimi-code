@@ -6,20 +6,24 @@
  * and final `TurnResult` mapping. One-step execution lives in `turn-step.ts`.
  */
 
-import { addUsage, emptyUsage, type TokenUsage } from '@moonshot-ai/kosong';
+import { addUsage, emptyUsage, type TokenUsage } from "@moonshot-ai/kosong";
 
-import type { Logger } from '#/logging/types';
+import type { Logger } from "#/logging/types";
 
-import { isUserCancellation } from '../utils/abort';
+import { isUserCancellation } from "../utils/abort";
 import {
   createMaxStepsExceededError,
   errorMessage,
   isAbortError,
   isMaxStepsExceededError,
-} from './errors';
-import type { LoopInterruptReason, LoopEventDispatcher, LoopTurnInterruptedEvent } from './events';
-import type { LLM, LLMRequestTrace } from './llm';
-import { executeLoopStep } from './turn-step';
+} from "./errors";
+import type {
+  LoopInterruptReason,
+  LoopEventDispatcher,
+  LoopTurnInterruptedEvent,
+} from "./events";
+import type { LLM, LLMRequestTrace } from "./llm";
+import { executeLoopStep } from "./turn-step";
 import type {
   ExecutableTool,
   LoopHooks,
@@ -28,7 +32,7 @@ import type {
   LoopTerminalStepStopReason,
   LoopTurnStopReason,
   TurnResult,
-} from './types';
+} from "./types";
 
 export interface RunTurnInput {
   readonly turnId: string;
@@ -75,13 +79,17 @@ export interface RunTurnInput {
    * disconnected" from a plain unknown name under progressive disclosure.
    * Returning `undefined` keeps the default "not found" message.
    */
-  readonly describeMissingTool?: ((name: string) => string | undefined) | undefined;
+  readonly describeMissingTool?:
+    | ((name: string) => string | undefined)
+    | undefined;
   readonly hooks?: LoopHooks | undefined;
   readonly log?: Logger | undefined;
   readonly maxSteps?: number | undefined;
   readonly maxRetryAttempts?: number;
   readonly recordStepUsage?:
-    | ((usage: TokenUsage) => RecordStepUsageResult | void | Promise<RecordStepUsageResult | void>)
+    | ((
+        usage: TokenUsage,
+      ) => RecordStepUsageResult | void | Promise<RecordStepUsageResult | void>)
     | undefined;
   readonly onRequestTrace?: (trace: LLMRequestTrace) => void;
 }
@@ -109,7 +117,7 @@ export async function runTurn(input: RunTurnInput): Promise<TurnResult> {
   let usage: TokenUsage = emptyUsage();
   let steps = 0;
   // Normal exits overwrite this with the completed step's stop reason.
-  let stopReason: LoopTurnStopReason = 'end_turn';
+  let stopReason: LoopTurnStopReason = "end_turn";
   let activeStep: number | undefined;
   let activeRequestTrace: LLMRequestTrace | undefined;
   // Once a step only succeeded via the media-degraded resend, later steps of
@@ -153,10 +161,10 @@ export async function runTurn(input: RunTurnInput): Promise<TurnResult> {
               ? buildMessagesMediaDegraded
               : buildMessages,
         initialMediaProjection: mediaStrippedActive
-          ? 'media-stripped'
+          ? "media-stripped"
           : mediaDegradedActive
-            ? 'media-degraded'
-            : 'normal',
+            ? "media-degraded"
+            : "normal",
         buildMessagesStrict,
         buildMessagesMediaDegraded,
         buildMessagesMediaStripped,
@@ -177,14 +185,17 @@ export async function runTurn(input: RunTurnInput): Promise<TurnResult> {
         onRequestTrace: captureRequestTrace,
       });
       activeStep = undefined;
-      mediaDegradedActive = mediaDegradedActive || stepResult.mediaDegradedResendUsed === true;
-      mediaStrippedActive = mediaStrippedActive || stepResult.mediaStrippedResendUsed === true;
+      mediaDegradedActive =
+        mediaDegradedActive || stepResult.mediaDegradedResendUsed === true;
+      mediaStrippedActive =
+        mediaStrippedActive || stepResult.mediaStrippedResendUsed === true;
 
-      if (stepResult.stopReason === 'tool_use') {
+      if (stepResult.stopReason === "tool_use") {
         continue;
       }
 
-      const terminalStopReason: LoopTerminalStepStopReason = stepResult.stopReason;
+      const terminalStopReason: LoopTerminalStepStopReason =
+        stepResult.stopReason;
       stopReason = terminalStopReason;
 
       const continuation = await hooks?.shouldContinueAfterStop?.({
@@ -205,10 +216,12 @@ export async function runTurn(input: RunTurnInput): Promise<TurnResult> {
       // thrown error itself). Report it distinctly from a timeout or other
       // programmatic abort so telemetry can tell the two apart.
       const interruptReason =
-        isUserCancellation(signal.reason) || isUserCancellation(error) ? 'user_cancelled' : 'aborted';
+        isUserCancellation(signal.reason) || isUserCancellation(error)
+          ? "user_cancelled"
+          : "aborted";
       dispatchEvent(
         makeInterruptedEvent(
-          'aborted',
+          "aborted",
           steps,
           activeStep,
           undefined,
@@ -216,9 +229,11 @@ export async function runTurn(input: RunTurnInput): Promise<TurnResult> {
           activeRequestTrace?.traceId,
         ),
       );
-      return { stopReason: 'aborted', steps, usage };
+      return { stopReason: "aborted", steps, usage };
     }
-    const reason: LoopInterruptReason = isMaxStepsExceededError(error) ? 'max_steps' : 'error';
+    const reason: LoopInterruptReason = isMaxStepsExceededError(error)
+      ? "max_steps"
+      : "error";
     dispatchEvent(
       makeInterruptedEvent(
         reason,
@@ -240,11 +255,11 @@ function makeInterruptedEvent(
   attemptedSteps: number,
   activeStep: number | undefined,
   message?: string | undefined,
-  interruptReason: LoopTurnInterruptedEvent['interruptReason'] = reason,
+  interruptReason: LoopTurnInterruptedEvent["interruptReason"] = reason,
   traceId?: string,
 ): LoopTurnInterruptedEvent {
   return {
-    type: 'turn.interrupted',
+    type: "turn.interrupted",
     reason,
     attemptedSteps,
     ...(activeStep !== undefined ? { activeStep } : {}),

@@ -37,32 +37,32 @@
  * `task.recurring !== false` to keep that default behaviour even when
  * the field is omitted by the caller.
  */
-import type { ContentPart } from '@moonshot-ai/kosong';
+import type { ContentPart } from "@moonshot-ai/kosong";
 
-import type { Agent } from '../index';
-import type { CronJobOrigin, CronMissedOrigin } from '../context/types';
+import type { Agent } from "../index";
+import type { CronJobOrigin, CronMissedOrigin } from "../context/types";
 import {
   resolveClockSources,
   SYSTEM_CLOCKS,
   type ClockSources,
-} from '../../tools/cron/clock';
-import { renderCronFireXml } from '../../tools/cron/cron-fire-xml';
-import { createCronPersistStore } from '../../tools/cron/persist';
-import { SessionCronStore } from '../../tools/cron/session-store';
+} from "../../tools/cron/clock";
+import { renderCronFireXml } from "../../tools/cron/cron-fire-xml";
+import { createCronPersistStore } from "../../tools/cron/persist";
+import { SessionCronStore } from "../../tools/cron/session-store";
 import {
   createCronScheduler,
   type CronScheduler,
-} from '../../tools/cron/scheduler';
+} from "../../tools/cron/scheduler";
 import {
   CRON_DELETED,
   CRON_FIRED,
   CRON_MISSED,
   CRON_SCHEDULED,
-} from '../../tools/cron/telemetry-events';
-import type { CronTask } from '../../tools/cron/types';
-import type { PerIdJsonStore } from '../../utils/per-id-json-store';
+} from "../../tools/cron/telemetry-events";
+import type { CronTask } from "../../tools/cron/types";
+import type { PerIdJsonStore } from "../../utils/per-id-json-store";
 
-import type { SessionCronTaskInit } from '../../tools/cron/session-store';
+import type { SessionCronTaskInit } from "../../tools/cron/session-store";
 
 /**
  * Threshold past which a recurring task is flagged `stale: true` on its
@@ -162,7 +162,7 @@ export class CronManager {
     this.store = new SessionCronStore();
     this.clocks =
       opts.clocks ??
-      resolveClockSources(process.env['KIMI_CRON_CLOCK']) ??
+      resolveClockSources(process.env["KIMI_CRON_CLOCK"]) ??
       SYSTEM_CLOCKS;
     this.persistStore =
       agent.homedir === undefined
@@ -173,7 +173,7 @@ export class CronManager {
       clocks: this.clocks,
       source: () => this.store.list(),
       isIdle: () => !agent.turn.hasActiveTurn,
-      isKilled: () => process.env['KIMI_DISABLE_CRON'] === '1',
+      isKilled: () => process.env["KIMI_DISABLE_CRON"] === "1",
       onFire: (task, ctx) => {
         this.handleFire(task, ctx);
       },
@@ -190,7 +190,7 @@ export class CronManager {
       // (`opts.pollIntervalMs`) lose to the env so a bench can flip the
       // switch from the outside without rebuilding the manager wiring.
       pollIntervalMs:
-        process.env['KIMI_CRON_MANUAL_TICK'] === '1'
+        process.env["KIMI_CRON_MANUAL_TICK"] === "1"
           ? null
           : opts.pollIntervalMs,
     });
@@ -214,9 +214,7 @@ export class CronManager {
    */
   addTask(init: SessionCronTaskInit): CronTask {
     const task = this.store.add(init, this.clocks.wallNow());
-    this.persistEnqueue(task.id, () =>
-      this.persistStore!.write(task.id, task),
-    );
+    this.persistEnqueue(task.id, () => this.persistStore!.write(task.id, task));
     return task;
   }
 
@@ -296,7 +294,7 @@ export class CronManager {
       .catch(() => {})
       .then(() => work())
       .catch((error: unknown) => {
-        this.agent.log?.warn?.('cron persist failed', error);
+        this.agent.log?.warn?.("cron persist failed", error);
       })
       .finally(() => {
         if (this.persistQueues.get(id) === next) {
@@ -408,7 +406,7 @@ export class CronManager {
    * treated as "we don't know, don't claim stale".
    */
   isStale(task: CronTask): boolean {
-    if (process.env['KIMI_CRON_NO_STALE'] === '1') return false;
+    if (process.env["KIMI_CRON_NO_STALE"] === "1") return false;
     if (task.recurring === false) return false;
     const age = this.clocks.wallNow() - task.createdAt;
     return Number.isFinite(age) && age >= STALE_THRESHOLD_MS;
@@ -437,7 +435,7 @@ export class CronManager {
   ): void {
     const stale = this.isStale(task);
     const origin: CronJobOrigin = {
-      kind: 'cron_job',
+      kind: "cron_job",
       jobId: task.id,
       cron: task.cron,
       recurring: task.recurring !== false,
@@ -446,12 +444,12 @@ export class CronManager {
     };
     const content: ContentPart[] = [
       {
-        type: 'text',
+        type: "text",
         text: renderCronFireXml(origin, task.prompt),
       },
     ];
     this.agent.emitEvent({
-      type: 'cron.fired',
+      type: "cron.fired",
       origin,
       prompt: task.prompt,
     });
@@ -503,7 +501,7 @@ export class CronManager {
     if (tasks.length === 0) return;
     const content = renderMissedNotification(tasks);
     const origin: CronMissedOrigin = {
-      kind: 'cron_missed',
+      kind: "cron_missed",
       count: tasks.length,
     };
     this.agent.turn.steer(content, origin);
@@ -565,23 +563,21 @@ export class CronManager {
    * see a bad tick.
    */
   private bindSigusr1(): void {
-    if (process.platform === 'win32') return;
-    if (process.env['KIMI_CRON_MANUAL_TICK'] !== '1') return;
+    if (process.platform === "win32") return;
+    if (process.env["KIMI_CRON_MANUAL_TICK"] !== "1") return;
     if (this.sigusr1Handler !== null) return;
     const handler: NodeJS.SignalsListener = () => {
       try {
         this.tick();
       } catch (error) {
-        if (process.env['KIMI_CRON_DEBUG'] === '1') {
+        if (process.env["KIMI_CRON_DEBUG"] === "1") {
           const msg = error instanceof Error ? error.message : String(error);
-          process.stderr.write(
-            `[cron/manager] SIGUSR1 tick threw: ${msg}\n`,
-          );
+          process.stderr.write(`[cron/manager] SIGUSR1 tick threw: ${msg}\n`);
         }
       }
     };
     this.sigusr1Handler = handler;
-    process.on('SIGUSR1', handler);
+    process.on("SIGUSR1", handler);
   }
 
   /**
@@ -593,7 +589,7 @@ export class CronManager {
    */
   private unbindSigusr1(): void {
     if (this.sigusr1Handler === null) return;
-    process.off('SIGUSR1', this.sigusr1Handler);
+    process.off("SIGUSR1", this.sigusr1Handler);
     this.sigusr1Handler = null;
   }
 }

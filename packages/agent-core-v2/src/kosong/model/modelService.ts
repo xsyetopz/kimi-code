@@ -6,11 +6,15 @@
  * persists the change events it fires. Bound at App scope.
  */
 
-import { Disposable } from '#/_base/di/lifecycle';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { AsyncEmitter, type Event, type IWaitUntil } from '#/_base/event';
+import { Disposable } from "#/_base/di/lifecycle";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { AsyncEmitter, type Event, type IWaitUntil } from "#/_base/event";
 
-import { deepEqual, diffRecords, isEmptyDiff } from '../recordDiff';
+import { deepEqual, diffRecords, isEmptyDiff } from "../recordDiff";
 
 import {
   type DefaultModelChangedEvent,
@@ -18,7 +22,7 @@ import {
   type ModelRecord,
   type ModelsChangedEvent,
   type ModelsSection,
-} from './model';
+} from "./model";
 
 const NO_ABORT = new AbortController().signal;
 
@@ -41,8 +45,9 @@ export class ModelService extends Disposable implements IModelService {
   private readonly _onDidChangeDefaultModel = this._register(
     new AsyncEmitter<DefaultModelChangedEvent & IWaitUntil>(),
   );
-  readonly onDidChangeDefaultModel: Event<DefaultModelChangedEvent & IWaitUntil> =
-    this._onDidChangeDefaultModel.event;
+  readonly onDidChangeDefaultModel: Event<
+    DefaultModelChangedEvent & IWaitUntil
+  > = this._onDidChangeDefaultModel.event;
 
   get(id: string): ModelRecord | undefined {
     return this.models[id];
@@ -88,7 +93,9 @@ export class ModelService extends Disposable implements IModelService {
     await this.applyDefaultModel(id);
   }
 
-  private async applyRecords(next: Readonly<Record<string, ModelRecord>>): Promise<void> {
+  private async applyRecords(
+    next: Readonly<Record<string, ModelRecord>>,
+  ): Promise<void> {
     const diff = diffRecords(this.models, next);
     if (isEmptyDiff(diff)) return;
     this.models = { ...next };
@@ -102,4 +109,10 @@ export class ModelService extends Disposable implements IModelService {
   }
 }
 
-registerScopedService(LifecycleScope.App, IModelService, ModelService, ScopeActivation.OnScopeCreated, 'model');
+registerScopedService(
+  LifecycleScope.App,
+  IModelService,
+  ModelService,
+  ScopeActivation.OnScopeCreated,
+  "model",
+);

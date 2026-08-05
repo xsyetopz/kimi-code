@@ -16,19 +16,19 @@
  * scoped state.
  */
 
-import { join } from 'pathe';
+import { join } from "pathe";
 
-import type { IHostFileSystem } from '#/os/interface/hostFileSystem';
-import { HostFsError, OsFsErrors } from '#/os/interface/hostFsErrors';
+import type { IHostFileSystem } from "#/os/interface/hostFileSystem";
+import { HostFsError, OsFsErrors } from "#/os/interface/hostFsErrors";
 
-import { AgentFileParseError, parseAgentFileText } from './agentFile';
-import { isDirectoryPath, isFilePath } from './paths';
+import { AgentFileParseError, parseAgentFileText } from "./agentFile";
+import { isDirectoryPath, isFilePath } from "./paths";
 import type {
   AgentFileDefinition,
   AgentFileDiscoveryResult,
   AgentFileRoot,
   SkippedAgentFile,
-} from './types';
+} from "./types";
 
 const MAX_AGENT_SCAN_DEPTH = 8;
 const MAX_SKIP_WARNINGS = 5;
@@ -48,7 +48,11 @@ export async function discoverAgentFiles(
   let emittedWarnings = 0;
   let suppressedWarnings = 0;
   const suppressedSubjects: string[] = [];
-  const warnCapped = (subject: string, message: string, error?: unknown): void => {
+  const warnCapped = (
+    subject: string,
+    message: string,
+    error?: unknown,
+  ): void => {
     if (emittedWarnings < MAX_SKIP_WARNINGS) {
       emittedWarnings += 1;
       warn?.(message, error);
@@ -58,10 +62,17 @@ export async function discoverAgentFiles(
     }
   };
 
-  async function parseAndRegister(filePath: string, root: AgentFileRoot): Promise<void> {
+  async function parseAndRegister(
+    filePath: string,
+    root: AgentFileRoot,
+  ): Promise<void> {
     try {
       const text = await fs.readText(filePath);
-      const agent = parseAgentFileText({ path: filePath, source: root.source, text });
+      const agent = parseAgentFileText({
+        path: filePath,
+        source: root.source,
+        text,
+      });
       if (!byName.has(agent.name)) {
         byName.set(agent.name, agent);
       }
@@ -74,22 +85,40 @@ export async function discoverAgentFiles(
       }
       if (error instanceof AgentFileParseError) {
         skipped.push({ path: filePath, reason: error.message });
-        warnCapped(filePath, `Skipping invalid agent file at ${filePath}: ${error.message}`, error);
+        warnCapped(
+          filePath,
+          `Skipping invalid agent file at ${filePath}: ${error.message}`,
+          error,
+        );
       } else {
-        warnCapped(filePath, `Skipping agent file at ${filePath} due to unexpected error`, error);
+        warnCapped(
+          filePath,
+          `Skipping agent file at ${filePath} due to unexpected error`,
+          error,
+        );
       }
     }
   }
 
-  async function walk(dirPath: string, root: AgentFileRoot, depth: number): Promise<void> {
+  async function walk(
+    dirPath: string,
+    root: AgentFileRoot,
+    depth: number,
+  ): Promise<void> {
     if (depth > MAX_AGENT_SCAN_DEPTH) return;
 
     let entries: readonly string[];
     try {
-      entries = (await fs.readdir(dirPath)).map((entry) => entry.name).toSorted();
+      entries = (await fs.readdir(dirPath))
+        .map((entry) => entry.name)
+        .toSorted();
     } catch (error) {
       if (depth > 0) {
-        warnCapped(dirPath, `Skipping unreadable directory ${dirPath}: ${errorMessage(error)}`, error);
+        warnCapped(
+          dirPath,
+          `Skipping unreadable directory ${dirPath}: ${errorMessage(error)}`,
+          error,
+        );
         return;
       }
       if (
@@ -103,14 +132,15 @@ export async function discoverAgentFiles(
     }
 
     for (const entry of entries) {
-      if (entry.startsWith('.') || entry === 'node_modules') continue;
+      if (entry.startsWith(".") || entry === "node_modules") continue;
       const entryPath = join(dirPath, entry);
       try {
         if (await isDirectoryPath(fs, entryPath)) {
           await walk(entryPath, root, depth + 1);
           continue;
         }
-        if (!entry.endsWith('.md') || !(await isFilePath(fs, entryPath))) continue;
+        if (!entry.endsWith(".md") || !(await isFilePath(fs, entryPath)))
+          continue;
         await parseAndRegister(entryPath, root);
       } catch (error) {
         if (
@@ -119,7 +149,11 @@ export async function discoverAgentFiles(
         ) {
           throw error;
         }
-        warnCapped(entryPath, `Skipping unreadable agent path ${entryPath}: ${errorMessage(error)}`, error);
+        warnCapped(
+          entryPath,
+          `Skipping unreadable agent path ${entryPath}: ${errorMessage(error)}`,
+          error,
+        );
       }
     }
   }
@@ -134,19 +168,27 @@ export async function discoverAgentFiles(
       ) {
         throw error;
       }
-      warnCapped(root.path, `Skipping unreadable agent root ${root.path}: ${errorMessage(error)}`, error);
+      warnCapped(
+        root.path,
+        `Skipping unreadable agent root ${root.path}: ${errorMessage(error)}`,
+        error,
+      );
     }
   }
 
   if (suppressedWarnings > 0) {
-    const examples = suppressedSubjects.map((subject) => `"${subject}"`).join(', ');
+    const examples = suppressedSubjects
+      .map((subject) => `"${subject}"`)
+      .join(", ");
     warn?.(
       `Suppressed ${suppressedWarnings} further agent-discovery skip warnings (e.g. ${examples}); fix or remove the offending files/directories to silence them`,
     );
   }
 
   return {
-    agents: [...byName.values()].toSorted((a, b) => a.name.localeCompare(b.name)),
+    agents: [...byName.values()].toSorted((a, b) =>
+      a.name.localeCompare(b.name),
+    ),
     skipped,
     scannedRoots: roots.map((root) => root.path),
   };

@@ -7,9 +7,9 @@
  * as a 'goal' marker and here as floating status.
  */
 
-import type { StepUsage } from './turn';
+import type { StepUsage } from "./turn";
 
-export type GoalStatus = 'active' | 'paused' | 'blocked' | 'complete';
+export type GoalStatus = "active" | "paused" | "blocked" | "complete";
 
 export interface GoalMeta {
   readonly objective: string;
@@ -31,14 +31,21 @@ export interface ModesMeta {
  * key keeps the prior state.
  */
 export interface ModesMetaMerge {
-  readonly plan?: { readonly reviewPath?: string; readonly version?: number } | null;
+  readonly plan?: {
+    readonly reviewPath?: string;
+    readonly version?: number;
+  } | null;
   readonly swarm?: { readonly trigger?: string } | null;
 }
 
-export type ActivityMeta = 'idle' | 'turn' | 'disposing' | 'unknown';
+export type ActivityMeta = "idle" | "turn" | "disposing" | "unknown";
 
 /** Turn end reason inside the 'ended' phase; mirrors the wire `turnEndReasonSchema`. */
-export type TurnEndReasonMeta = 'completed' | 'cancelled' | 'failed' | 'blocked';
+export type TurnEndReasonMeta =
+  | "completed"
+  | "cancelled"
+  | "failed"
+  | "blocked";
 
 /**
  * What the agent is doing right now. Same shape as the wire
@@ -46,26 +53,26 @@ export type TurnEndReasonMeta = 'completed' | 'cancelled' | 'failed' | 'blocked'
  * opaquely — this package must not import the server.
  */
 export type AgentPhaseMeta =
-  | { readonly kind: 'idle' }
+  | { readonly kind: "idle" }
   | {
-      readonly kind: 'running';
+      readonly kind: "running";
       readonly turnId: number;
       readonly step: number;
       readonly stepId: string;
       readonly since: number;
     }
   | {
-      readonly kind: 'streaming';
+      readonly kind: "streaming";
       readonly turnId: number;
       readonly step: number;
       readonly stepId: string;
-      readonly stream: 'assistant' | 'thinking' | 'tool_call';
+      readonly stream: "assistant" | "thinking" | "tool_call";
       readonly toolCallId?: string;
       readonly toolName?: string;
       readonly since: number;
     }
   | {
-      readonly kind: 'tool_call';
+      readonly kind: "tool_call";
       readonly turnId: number;
       readonly step: number;
       readonly toolCallId: string;
@@ -73,7 +80,7 @@ export type AgentPhaseMeta =
       readonly since: number;
     }
   | {
-      readonly kind: 'retrying';
+      readonly kind: "retrying";
       readonly turnId: number;
       readonly step: number;
       readonly stepId: string;
@@ -86,22 +93,22 @@ export type AgentPhaseMeta =
       readonly since: number;
     }
   | {
-      readonly kind: 'awaiting_approval';
+      readonly kind: "awaiting_approval";
       readonly turnId: number;
       readonly step?: number;
       readonly approval?: unknown;
       readonly since: number;
     }
   | {
-      readonly kind: 'interrupted';
+      readonly kind: "interrupted";
       readonly turnId: number;
       readonly step?: number;
-      readonly reason: 'aborted' | 'max_steps' | 'error';
+      readonly reason: "aborted" | "max_steps" | "error";
       readonly message?: string;
       readonly at: number;
     }
   | {
-      readonly kind: 'ended';
+      readonly kind: "ended";
       readonly turnId: number;
       readonly reason: TurnEndReasonMeta;
       readonly durationMs?: number;
@@ -128,7 +135,7 @@ export interface AgentStatusMeta {
   readonly contextTokens?: number;
   readonly maxContextTokens?: number;
   readonly contextUsage?: number;
-  readonly permission?: 'manual' | 'yolo' | 'auto';
+  readonly permission?: "manual" | "yolo" | "auto";
   readonly phase?: AgentPhaseMeta;
 }
 
@@ -140,6 +147,6 @@ export interface TranscriptMeta {
 }
 
 /** Contract shape of a `meta.merge` payload — like {@link TranscriptMeta}, but mode keys may be `null` to clear. */
-export type TranscriptMetaMerge = Omit<TranscriptMeta, 'modes'> & {
+export type TranscriptMetaMerge = Omit<TranscriptMeta, "modes"> & {
   readonly modes?: ModesMetaMerge;
 };

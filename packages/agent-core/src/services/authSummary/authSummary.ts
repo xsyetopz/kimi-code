@@ -27,8 +27,8 @@
  * caching — keeps the staleness window at zero.
  */
 
-import { createDecorator } from '../../di';
-import type { AuthSummary } from '@moonshot-ai/protocol';
+import { createDecorator } from "../../di";
+import type { AuthSummary } from "@moonshot-ai/protocol";
 
 export interface IAuthSummaryService {
   readonly _serviceBrand: undefined;
@@ -48,17 +48,18 @@ export interface IAuthSummaryService {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
-export const IAuthSummaryService = createDecorator<IAuthSummaryService>(
-  'authSummaryService',
-);
+export const IAuthSummaryService =
+  createDecorator<IAuthSummaryService>("authSummaryService");
 
 /**
  * `40110 auth.provisioning_required` — daemon has zero provider configs.
  */
 export class AuthProvisioningRequiredError extends Error {
   constructor() {
-    super('no provider configured; complete onboarding via /login or POST /v1/providers');
-    this.name = 'AuthProvisioningRequiredError';
+    super(
+      "no provider configured; complete onboarding via /login or POST /v1/providers",
+    );
+    this.name = "AuthProvisioningRequiredError";
   }
 }
 
@@ -70,7 +71,7 @@ export class AuthTokenMissingError extends Error {
   readonly providerId: string;
   constructor(providerId: string) {
     super(`provider ${providerId} has no credential configured`);
-    this.name = 'AuthTokenMissingError';
+    this.name = "AuthTokenMissingError";
     this.providerId = providerId;
   }
 }
@@ -84,7 +85,7 @@ export class AuthTokenUnauthorizedError extends Error {
   readonly providerId: string;
   constructor(providerId: string) {
     super(`provider ${providerId} oauth grant revoked; re-login required`);
-    this.name = 'AuthTokenUnauthorizedError';
+    this.name = "AuthTokenUnauthorizedError";
     this.providerId = providerId;
   }
 }
@@ -101,10 +102,10 @@ export class AuthModelNotResolvedError extends Error {
   constructor(modelId: string | undefined, providerId?: string) {
     super(
       modelId === undefined
-        ? 'no default model configured'
+        ? "no default model configured"
         : `model ${modelId} does not resolve to a configured provider`,
     );
-    this.name = 'AuthModelNotResolvedError';
+    this.name = "AuthModelNotResolvedError";
     this.modelId = modelId;
     this.providerId = providerId;
   }

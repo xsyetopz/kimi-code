@@ -2,12 +2,12 @@
  * `mcpCore` domain — stdio transport MCP client.
  */
 
-import { ErrorCodes, Error2 } from '#/errors';
-import type { McpServerStdioConfig } from './config-schema';
-import { proxyEnvForChild, reconcileChildNoProxy } from '#/_base/utils/proxy';
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
-import { isAbsolute, resolve } from 'pathe';
+import { ErrorCodes, Error2 } from "#/errors";
+import type { McpServerStdioConfig } from "./config-schema";
+import { proxyEnvForChild, reconcileChildNoProxy } from "#/_base/utils/proxy";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { isAbsolute, resolve } from "pathe";
 
 import {
   buildRequestOptions,
@@ -18,8 +18,8 @@ import {
   toMcpToolResult,
   type UnexpectedCloseListener,
   type UnexpectedCloseReason,
-} from './client-shared';
-import type { MCPClient, MCPToolDefinition, MCPToolResult } from './types';
+} from "./client-shared";
+import type { MCPClient, MCPToolDefinition, MCPToolResult } from "./types";
 
 export interface StdioMcpClientOptions {
   readonly clientName?: string;
@@ -47,19 +47,27 @@ export class StdioMcpClient implements MCPClient {
 
   static readonly stderrBufferCapacity = STDERR_BUFFER_CAPACITY;
 
-  constructor(config: McpServerStdioConfig, options: StdioMcpClientOptions = {}) {
-    if (config.executor !== undefined && config.executor !== 'local') {
-      throw new Error2(ErrorCodes.NOT_IMPLEMENTED, `MCP stdio executor '${config.executor}' is not yet implemented`);
+  constructor(
+    config: McpServerStdioConfig,
+    options: StdioMcpClientOptions = {},
+  ) {
+    if (config.executor !== undefined && config.executor !== "local") {
+      throw new Error2(
+        ErrorCodes.NOT_IMPLEMENTED,
+        `MCP stdio executor '${config.executor}' is not yet implemented`,
+      );
     }
     this.transport = new StdioClientTransport({
       command: config.command,
       args: config.args,
       env: mergeStdioEnv(config.env),
       cwd: resolveStdioCwd(config.cwd, options.defaultCwd),
-      stderr: 'pipe',
+      stderr: "pipe",
     });
-    this.transport.stderr?.on('data', (chunk: Buffer | string) => {
-      this.stderrBuffer.push(typeof chunk === 'string' ? chunk : chunk.toString('utf8'));
+    this.transport.stderr?.on("data", (chunk: Buffer | string) => {
+      this.stderrBuffer.push(
+        typeof chunk === "string" ? chunk : chunk.toString("utf8"),
+      );
     });
     this.client = new Client({
       name: options.clientName ?? KIMI_MCP_CLIENT_NAME,
@@ -71,7 +79,10 @@ export class StdioMcpClient implements MCPClient {
 
   async connect(): Promise<void> {
     if (this.closed) {
-      throw new Error2(ErrorCodes.MCP_STARTUP_FAILED, 'MCP stdio client is closed');
+      throw new Error2(
+        ErrorCodes.MCP_STARTUP_FAILED,
+        "MCP stdio client is closed",
+      );
     }
     if (this.started) return;
     this.started = true;
@@ -87,7 +98,10 @@ export class StdioMcpClient implements MCPClient {
     }
     if (this.closed) {
       await this.closeStartedClient();
-      throw new Error2(ErrorCodes.MCP_STARTUP_FAILED, 'MCP stdio client was closed during startup');
+      throw new Error2(
+        ErrorCodes.MCP_STARTUP_FAILED,
+        "MCP stdio client was closed during startup",
+      );
     }
     this.ready = true;
   }
@@ -125,12 +139,18 @@ export class StdioMcpClient implements MCPClient {
     signal?: AbortSignal,
   ): Promise<MCPToolResult> {
     const requestOptions = buildRequestOptions(this.toolCallTimeoutMs, signal);
-    const result = await this.client.callTool({ name, arguments: args }, undefined, requestOptions);
+    const result = await this.client.callTool(
+      { name, arguments: args },
+      undefined,
+      requestOptions,
+    );
     return toMcpToolResult(result);
   }
 
   async ping(signal?: AbortSignal): Promise<void> {
-    await this.client.ping(buildRequestOptions(MCP_LIVENESS_PROBE_TIMEOUT_MS, signal));
+    await this.client.ping(
+      buildRequestOptions(MCP_LIVENESS_PROBE_TIMEOUT_MS, signal),
+    );
   }
 
   private async closeStartedClient(): Promise<void> {
@@ -164,7 +184,7 @@ export class StdioMcpClient implements MCPClient {
 }
 
 class BoundedTail {
-  private buffer = '';
+  private buffer = "";
   constructor(private readonly capacity: number) {}
 
   push(chunk: string): void {
@@ -179,9 +199,13 @@ class BoundedTail {
   }
 }
 
-function resolveStdioCwd(configCwd: string | undefined, defaultCwd: string | undefined): string | undefined {
+function resolveStdioCwd(
+  configCwd: string | undefined,
+  defaultCwd: string | undefined,
+): string | undefined {
   if (configCwd === undefined) return defaultCwd;
-  if (defaultCwd !== undefined && !isAbsolute(configCwd)) return resolve(defaultCwd, configCwd);
+  if (defaultCwd !== undefined && !isAbsolute(configCwd))
+    return resolve(defaultCwd, configCwd);
   return configCwd;
 }
 

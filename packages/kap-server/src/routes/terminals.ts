@@ -28,25 +28,27 @@ import {
   isError2,
   Error2,
   type Scope,
-} from '@moonshot-ai/agent-core-v2';
-import { createTerminalRequestSchema } from '@moonshot-ai/agent-core-v2/os/interface/terminal';
-import { z } from 'zod';
+} from "@moonshot-ai/agent-core-v2";
+import { createTerminalRequestSchema } from "@moonshot-ai/agent-core-v2/os/interface/terminal";
+import { z } from "zod";
 
-import { errEnvelope, okEnvelope } from '../envelope';
-import { requestLog } from '../lib/requestLog';
-import { defineRoute } from '../middleware/defineRoute';
-import { ErrorCode } from '../protocol/error-codes';
+import { errEnvelope, okEnvelope } from "../envelope";
+import { requestLog } from "../lib/requestLog";
+import { defineRoute } from "../middleware/defineRoute";
+import { ErrorCode } from "../protocol/error-codes";
 import {
   closeTerminalResponseSchema,
   getTerminalResponseSchema,
   listTerminalsResponseSchema,
-} from '../protocol/rest-terminal';
-import { parseActionSuffix } from './action-suffix';
+} from "../protocol/rest-terminal";
+import { parseActionSuffix } from "./action-suffix";
 
 interface TerminalsRouteHost {
   get(
     path: string,
-    options: { preHandler: unknown[]; schema?: Record<string, unknown> } | undefined,
+    options:
+      | { preHandler: unknown[]; schema?: Record<string, unknown> }
+      | undefined,
     handler: (
       req: { id: string; params: unknown },
       reply: { send(payload: unknown): unknown },
@@ -76,7 +78,9 @@ const sessionAndTailParamSchema = z.object({
   tail: z.string().min(1),
 });
 
-const detailsSchema = z.array(z.object({ path: z.string(), message: z.string() }));
+const detailsSchema = z.array(
+  z.object({ path: z.string(), message: z.string() }),
+);
 
 /**
  * Resolve the session's `ISessionTerminalService` from the URL session id,
@@ -84,27 +88,36 @@ const detailsSchema = z.array(z.object({ path: z.string(), message: z.string() }
  * from the persisted cwd). Throws `session.not_found` only when the session is
  * unknown or its workspace is gone.
  */
-async function resolveTerminal(core: Scope, sessionId: string): Promise<ISessionTerminalService> {
+async function resolveTerminal(
+  core: Scope,
+  sessionId: string,
+): Promise<ISessionTerminalService> {
   const session = await resumeSessionById(core.accessor, sessionId);
   if (session === undefined) {
-    throw new Error2(ErrorCodes.SESSION_NOT_FOUND, `session ${sessionId} does not exist`);
+    throw new Error2(
+      ErrorCodes.SESSION_NOT_FOUND,
+      `session ${sessionId} does not exist`,
+    );
   }
   return session.accessor.get(ISessionTerminalService);
 }
 
-export function registerTerminalsRoutes(app: TerminalsRouteHost, core: Scope): void {
+export function registerTerminalsRoutes(
+  app: TerminalsRouteHost,
+  core: Scope,
+): void {
   const listRoute = defineRoute(
     {
-      method: 'GET',
-      path: '/sessions/{session_id}/terminals',
+      method: "GET",
+      path: "/sessions/{session_id}/terminals",
       params: sessionIdParamSchema,
       success: { data: listTerminalsResponseSchema },
       errors: {
         [ErrorCode.VALIDATION_FAILED]: { detailsSchema },
         [ErrorCode.SESSION_NOT_FOUND]: {},
       },
-      description: 'List terminals for a session',
-      tags: ['terminals'],
+      description: "List terminals for a session",
+      tags: ["terminals"],
     },
     async (req, reply) => {
       try {
@@ -119,13 +132,13 @@ export function registerTerminalsRoutes(app: TerminalsRouteHost, core: Scope): v
   app.get(
     listRoute.path,
     listRoute.options,
-    listRoute.handler as Parameters<TerminalsRouteHost['get']>[2],
+    listRoute.handler as Parameters<TerminalsRouteHost["get"]>[2],
   );
 
   const createRoute = defineRoute(
     {
-      method: 'POST',
-      path: '/sessions/{session_id}/terminals',
+      method: "POST",
+      path: "/sessions/{session_id}/terminals",
       params: sessionIdParamSchema,
       body: createTerminalRequestSchema,
       success: { data: getTerminalResponseSchema },
@@ -134,14 +147,19 @@ export function registerTerminalsRoutes(app: TerminalsRouteHost, core: Scope): v
         [ErrorCode.SESSION_NOT_FOUND]: {},
         [ErrorCode.FS_PATH_ESCAPES_SESSION]: {},
       },
-      description: 'Create a terminal for a session',
-      tags: ['terminals'],
+      description: "Create a terminal for a session",
+      tags: ["terminals"],
     },
     async (req, reply) => {
       try {
         const { session_id } = req.params;
-        const terminal = await (await resolveTerminal(core, session_id)).create(req.body);
-        requestLog(req)?.info({ session_id, terminal_id: terminal.id }, 'terminal created');
+        const terminal = await (await resolveTerminal(core, session_id)).create(
+          req.body,
+        );
+        requestLog(req)?.info(
+          { session_id, terminal_id: terminal.id },
+          "terminal created",
+        );
         reply.send(okEnvelope(terminal, req.id));
       } catch (err) {
         sendMappedError(reply, req.id, err);
@@ -151,13 +169,13 @@ export function registerTerminalsRoutes(app: TerminalsRouteHost, core: Scope): v
   app.post(
     createRoute.path,
     createRoute.options,
-    createRoute.handler as Parameters<TerminalsRouteHost['post']>[2],
+    createRoute.handler as Parameters<TerminalsRouteHost["post"]>[2],
   );
 
   const getRoute = defineRoute(
     {
-      method: 'GET',
-      path: '/sessions/{session_id}/terminals/{terminal_id}',
+      method: "GET",
+      path: "/sessions/{session_id}/terminals/{terminal_id}",
       params: sessionAndTerminalIdParamSchema,
       success: { data: getTerminalResponseSchema },
       errors: {
@@ -165,13 +183,15 @@ export function registerTerminalsRoutes(app: TerminalsRouteHost, core: Scope): v
         [ErrorCode.SESSION_NOT_FOUND]: {},
         [ErrorCode.TERMINAL_NOT_FOUND]: {},
       },
-      description: 'Get a terminal by ID',
-      tags: ['terminals'],
+      description: "Get a terminal by ID",
+      tags: ["terminals"],
     },
     async (req, reply) => {
       try {
         const { session_id, terminal_id } = req.params;
-        const terminal = await (await resolveTerminal(core, session_id)).get(terminal_id);
+        const terminal = await (await resolveTerminal(core, session_id)).get(
+          terminal_id,
+        );
         reply.send(okEnvelope(terminal, req.id));
       } catch (err) {
         sendMappedError(reply, req.id, err);
@@ -181,13 +201,13 @@ export function registerTerminalsRoutes(app: TerminalsRouteHost, core: Scope): v
   app.get(
     getRoute.path,
     getRoute.options,
-    getRoute.handler as Parameters<TerminalsRouteHost['get']>[2],
+    getRoute.handler as Parameters<TerminalsRouteHost["get"]>[2],
   );
 
   const closeRoute = defineRoute(
     {
-      method: 'POST',
-      path: '/sessions/{session_id}/terminals/{tail}',
+      method: "POST",
+      path: "/sessions/{session_id}/terminals/{tail}",
       params: sessionAndTailParamSchema,
       success: { data: closeTerminalResponseSchema },
       errors: {
@@ -195,26 +215,33 @@ export function registerTerminalsRoutes(app: TerminalsRouteHost, core: Scope): v
         [ErrorCode.SESSION_NOT_FOUND]: {},
         [ErrorCode.TERMINAL_NOT_FOUND]: {},
       },
-      description: 'Close a terminal',
-      tags: ['terminals'],
-      operationId: 'closeTerminal',
+      description: "Close a terminal",
+      tags: ["terminals"],
+      operationId: "closeTerminal",
     },
     async (req, reply) => {
       try {
         const { session_id, tail } = req.params;
         const parsed = parseActionSuffix({
           tail,
-          allowedActions: ['close'] as const,
-          resourceLabel: 'terminal',
+          allowedActions: ["close"] as const,
+          resourceLabel: "terminal",
         });
-        if (parsed.kind !== 'action') {
+        if (parsed.kind !== "action") {
           const message =
-            parsed.kind === 'invalid' ? parsed.reason : `unsupported action: ${tail}`;
+            parsed.kind === "invalid"
+              ? parsed.reason
+              : `unsupported action: ${tail}`;
           reply.send(errEnvelope(ErrorCode.VALIDATION_FAILED, message, req.id));
           return;
         }
-        const result = await (await resolveTerminal(core, session_id)).close(parsed.id);
-        requestLog(req)?.info({ session_id, terminal_id: parsed.id }, 'terminal closed');
+        const result = await (await resolveTerminal(core, session_id)).close(
+          parsed.id,
+        );
+        requestLog(req)?.info(
+          { session_id, terminal_id: parsed.id },
+          "terminal closed",
+        );
         reply.send(okEnvelope(result, req.id));
       } catch (err) {
         sendMappedError(reply, req.id, err);
@@ -224,7 +251,7 @@ export function registerTerminalsRoutes(app: TerminalsRouteHost, core: Scope): v
   app.post(
     closeRoute.path,
     closeRoute.options,
-    closeRoute.handler as Parameters<TerminalsRouteHost['post']>[2],
+    closeRoute.handler as Parameters<TerminalsRouteHost["post"]>[2],
   );
 }
 
@@ -236,10 +263,24 @@ function sendMappedError(
   if (isError2(err)) {
     switch (err.code) {
       case ErrorCodes.SESSION_NOT_FOUND:
-        reply.send(errEnvelope(ErrorCode.SESSION_NOT_FOUND, err.message, requestId, err.stack));
+        reply.send(
+          errEnvelope(
+            ErrorCode.SESSION_NOT_FOUND,
+            err.message,
+            requestId,
+            err.stack,
+          ),
+        );
         return;
       case ErrorCodes.TERMINAL_NOT_FOUND:
-        reply.send(errEnvelope(ErrorCode.TERMINAL_NOT_FOUND, err.message, requestId, err.stack));
+        reply.send(
+          errEnvelope(
+            ErrorCode.TERMINAL_NOT_FOUND,
+            err.message,
+            requestId,
+            err.stack,
+          ),
+        );
         return;
     }
   }
@@ -247,8 +288,18 @@ function sendMappedError(
   // escapes the workspace — map it to the same wire code v1 uses for path
   // escapes. TODO: push a coded error into `assertAllowed` so this branch can
   // be folded into the `isError2` switch above.
-  if (err instanceof Error && err.message.startsWith('Path outside workspace')) {
-    reply.send(errEnvelope(ErrorCode.FS_PATH_ESCAPES_SESSION, err.message, requestId, err.stack));
+  if (
+    err instanceof Error &&
+    err.message.startsWith("Path outside workspace")
+  ) {
+    reply.send(
+      errEnvelope(
+        ErrorCode.FS_PATH_ESCAPES_SESSION,
+        err.message,
+        requestId,
+        err.stack,
+      ),
+    );
     return;
   }
   throw err;

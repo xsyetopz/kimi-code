@@ -9,14 +9,14 @@
  * options, and the null appender.
  */
 
-import { createDecorator } from '#/_base/di/instantiation';
-import type { IDisposable } from '#/_base/di/lifecycle';
+import { createDecorator } from "#/_base/di/instantiation";
+import type { IDisposable } from "#/_base/di/lifecycle";
 
 import type {
   StrictPropertyCheck,
   TelemetryEventName,
   TelemetryEventPayload,
-} from './events';
+} from "./events";
 
 export type TelemetryPrimitive = string | number | boolean | null | undefined;
 
@@ -45,7 +45,10 @@ export interface ITelemetryService {
   readonly _serviceBrand: undefined;
 
   track(event: string, properties?: TelemetryProperties): void;
-  track2<K extends TelemetryEventName, E extends TelemetryEventPayload<K> = never>(
+  track2<
+    K extends TelemetryEventName,
+    E extends TelemetryEventPayload<K> = never,
+  >(
     event: K,
     properties?: StrictPropertyCheck<TelemetryEventPayload<K>, E>,
   ): void;
@@ -82,5 +85,5 @@ export const noopTelemetryService: ITelemetryService = {
 };
 
 export const ITelemetryService = createDecorator<ITelemetryService>(
-  'agentTelemetryService',
+  "agentTelemetryService",
 );

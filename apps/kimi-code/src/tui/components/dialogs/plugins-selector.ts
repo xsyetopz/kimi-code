@@ -6,46 +6,53 @@ import {
   truncateToWidth,
   visibleWidth,
   type Focusable,
-} from '@moonshot-ai/pi-tui';
+} from "@moonshot-ai/pi-tui";
 import type {
   CapabilityStatus,
   PluginInfo,
   PluginMcpServerInfo,
   PluginSummary,
-} from '@moonshot-ai/kimi-code-sdk';
-import chalk from 'chalk';
+} from "@moonshot-ai/kimi-code-sdk";
+import chalk from "chalk";
 
-import { SELECT_POINTER } from '#/tui/constant/symbols';
-import { currentTheme } from '#/tui/theme';
-import type { ColorPalette } from '#/tui/theme/colors';
-import { formatPluginSourceLabel, pluginTrustLabel } from '#/tui/utils/plugin-source-label';
-import { printableChar } from '#/tui/utils/printable-key';
-import { renderTabStrip } from '#/tui/utils/tab-strip';
-import { computeUpdateStatus, type PluginMarketplaceEntry } from '#/utils/plugin-marketplace';
+import { SELECT_POINTER } from "#/tui/constant/symbols";
+import { currentTheme } from "#/tui/theme";
+import type { ColorPalette } from "#/tui/theme/colors";
+import {
+  formatPluginSourceLabel,
+  pluginTrustLabel,
+} from "#/tui/utils/plugin-source-label";
+import { printableChar } from "#/tui/utils/printable-key";
+import { renderTabStrip } from "#/tui/utils/tab-strip";
+import {
+  computeUpdateStatus,
+  type PluginMarketplaceEntry,
+} from "#/utils/plugin-marketplace";
 
-import { ChoicePickerComponent } from './choice-picker';
+import { ChoicePickerComponent } from "./choice-picker";
 
-const MCP_SERVER_PREFIX = 'mcp:';
+const MCP_SERVER_PREFIX = "mcp:";
 
-const REMOVE_CONFIRM_CANCEL = 'cancel';
-const REMOVE_CONFIRM_REMOVE = 'remove';
-const INSTALL_TRUST_EXIT = 'exit';
-const INSTALL_TRUST_TRUST = 'trust';
-const ELLIPSIS = '…';
+const REMOVE_CONFIRM_CANCEL = "cancel";
+const REMOVE_CONFIRM_REMOVE = "remove";
+const INSTALL_TRUST_EXIT = "exit";
+const INSTALL_TRUST_TRUST = "trust";
+const ELLIPSIS = "…";
 
 // Hardcoded Web Bridge promotion: a built-in fallback shown only while the
 // marketplace catalog is loading, unreachable, or predates the real
 // `kimi-webbridge` entry. Selecting it opens the install page in the browser;
 // once the catalog carries the real entry, that row wins and installs
 // normally.
-const WEB_BRIDGE_URL = 'https://www.kimi.com/features/webbridge#local-agent';
+const WEB_BRIDGE_URL = "https://www.kimi.com/features/webbridge#local-agent";
 const WEB_BRIDGE_ENTRY: PluginMarketplaceEntry = {
-  id: 'kimi-webbridge',
-  displayName: 'Kimi WebBridge',
+  id: "kimi-webbridge",
+  displayName: "Kimi WebBridge",
   source: WEB_BRIDGE_URL,
-  tier: 'official',
+  tier: "official",
   homepage: WEB_BRIDGE_URL,
-  description: 'Control your real browser from Kimi Code — navigate, click, type, and screenshot',
+  description:
+    "Control your real browser from Kimi Code — navigate, click, type, and screenshot",
 };
 
 // Only the hardcoded pinned row should open the WebBridge install page. Match
@@ -57,15 +64,20 @@ function isPinnedWebBridgeEntry(entry: PluginMarketplaceEntry): boolean {
 
 interface PluginsOverviewItem {
   readonly value: string;
-  readonly kind: 'plugin' | 'action';
+  readonly kind: "plugin" | "action";
   readonly label: string;
   readonly status?: string;
   readonly description: string;
 }
 
 export type PluginMcpSelection =
-  | { readonly kind: 'toggle'; readonly pluginId: string; readonly server: string; readonly enabled: boolean }
-  | { readonly kind: 'back'; readonly pluginId: string };
+  | {
+      readonly kind: "toggle";
+      readonly pluginId: string;
+      readonly server: string;
+      readonly enabled: boolean;
+    }
+  | { readonly kind: "back"; readonly pluginId: string };
 
 export interface PluginMcpSelectorOptions {
   readonly info: PluginInfo;
@@ -105,22 +117,31 @@ export class PluginMcpSelectorComponent extends Container implements Focusable {
       return;
     }
     if (matchesKey(data, Key.down)) {
-      this.selectedIndex = Math.min(this.items.length - 1, this.selectedIndex + 1);
+      this.selectedIndex = Math.min(
+        this.items.length - 1,
+        this.selectedIndex + 1,
+      );
       return;
     }
-    if (matchesKey(data, Key.enter) || matchesKey(data, Key.space) || printableChar(data) === ' ') {
+    if (
+      matchesKey(data, Key.enter) ||
+      matchesKey(data, Key.space) ||
+      printableChar(data) === " "
+    ) {
       const chosen = this.items[this.selectedIndex];
       if (chosen === undefined) return;
-      if (chosen.value === 'back') {
-        this.opts.onSelect({ kind: 'back', pluginId: this.opts.info.id });
+      if (chosen.value === "back") {
+        this.opts.onSelect({ kind: "back", pluginId: this.opts.info.id });
         return;
       }
       const serverName = mcpItemServerName(chosen);
       if (serverName === undefined) return;
-      const server = this.opts.info.mcpServers.find((item) => item.name === serverName);
+      const server = this.opts.info.mcpServers.find(
+        (item) => item.name === serverName,
+      );
       if (server === undefined) return;
       this.opts.onSelect({
-        kind: 'toggle',
+        kind: "toggle",
         pluginId: this.opts.info.id,
         server: server.name,
         enabled: !server.enabled,
@@ -131,52 +152,74 @@ export class PluginMcpSelectorComponent extends Container implements Focusable {
   override render(width: number): string[] {
     const { info } = this.opts;
     const colors = currentTheme.palette;
-    const serverItems = this.items.filter((item) => item.kind === 'plugin');
-    const actionItems = this.items.filter((item) => item.kind === 'action');
+    const serverItems = this.items.filter((item) => item.kind === "plugin");
+    const actionItems = this.items.filter((item) => item.kind === "action");
     const lines: string[] = [
-      chalk.hex(colors.primary)('─'.repeat(width)),
+      chalk.hex(colors.primary)("─".repeat(width)),
       chalk.hex(colors.primary).bold(` MCP servers · ${info.displayName}`),
-      mutedHintLine(' ↑↓ navigate · Enter/Space enable/disable · Esc cancel', colors),
-      '',
-      sectionLabel(`MCP servers (${info.enabledMcpServerCount}/${info.mcpServerCount} enabled)`, colors),
+      mutedHintLine(
+        " ↑↓ navigate · Enter/Space enable/disable · Esc cancel",
+        colors,
+      ),
+      "",
+      sectionLabel(
+        `MCP servers (${info.enabledMcpServerCount}/${info.mcpServerCount} enabled)`,
+        colors,
+      ),
     ];
 
     if (serverItems.length === 0) {
-      lines.push(chalk.hex(colors.textMuted)('  No MCP servers declared.'));
+      lines.push(chalk.hex(colors.textMuted)("  No MCP servers declared."));
     } else {
       for (let i = 0; i < serverItems.length; i++) {
         lines.push(...this.renderItem(serverItems[i]!, i, width));
       }
     }
 
-    lines.push('');
-    lines.push(sectionLabel('Actions', colors));
+    lines.push("");
+    lines.push(sectionLabel("Actions", colors));
     for (let i = 0; i < actionItems.length; i++) {
-      lines.push(...this.renderItem(actionItems[i]!, serverItems.length + i, width));
+      lines.push(
+        ...this.renderItem(actionItems[i]!, serverItems.length + i, width),
+      );
     }
 
-    lines.push('');
-    lines.push(chalk.hex(colors.primary)('─'.repeat(width)));
+    lines.push("");
+    lines.push(chalk.hex(colors.primary)("─".repeat(width)));
     return lines.map((line) => truncateToWidth(line, width, ELLIPSIS));
   }
 
-  private renderItem(item: PluginsOverviewItem, index: number, width: number): string[] {
+  private renderItem(
+    item: PluginsOverviewItem,
+    index: number,
+    width: number,
+  ): string[] {
     const colors = currentTheme.palette;
     const selected = index === this.selectedIndex;
-    const pointer = selected ? SELECT_POINTER : ' ';
-    const labelStyle = selected ? chalk.hex(colors.primary).bold : chalk.hex(colors.text);
-    const prefix = chalk.hex(selected ? colors.primary : colors.textDim)(`  ${pointer} `);
+    const pointer = selected ? SELECT_POINTER : " ";
+    const labelStyle = selected
+      ? chalk.hex(colors.primary).bold
+      : chalk.hex(colors.text);
+    const prefix = chalk.hex(selected ? colors.primary : colors.textDim)(
+      `  ${pointer} `,
+    );
     let line = prefix + labelStyle(item.label);
     if (item.status !== undefined) {
-      line += '  ' + statusStyle(item, colors)(item.status);
+      line += "  " + statusStyle(item, colors)(item.status);
     }
     const serverName = mcpItemServerName(item);
-    if (serverName !== undefined && this.opts.serverHint?.server === serverName) {
-      line += '  ' + chalk.hex(colors.warning)(this.opts.serverHint.text);
+    if (
+      serverName !== undefined &&
+      this.opts.serverHint?.server === serverName
+    ) {
+      line += "  " + chalk.hex(colors.warning)(this.opts.serverHint.text);
     }
     const descriptionWidth = Math.max(1, width - 4);
     const lines = [line];
-    for (const descLine of wrapOverviewDescription(item.description, descriptionWidth)) {
+    for (const descLine of wrapOverviewDescription(
+      item.description,
+      descriptionWidth,
+    )) {
       lines.push(mutedHintLine(`    ${descLine}`, colors));
     }
     return lines;
@@ -184,8 +227,8 @@ export class PluginMcpSelectorComponent extends Container implements Focusable {
 }
 
 export type PluginRemoveConfirmResult =
-  | { readonly kind: 'confirm' }
-  | { readonly kind: 'cancel' };
+  | { readonly kind: "confirm" }
+  | { readonly kind: "cancel" };
 
 export interface PluginRemoveConfirmOptions {
   readonly id: string;
@@ -197,34 +240,39 @@ export class PluginRemoveConfirmComponent extends ChoicePickerComponent {
   constructor(opts: PluginRemoveConfirmOptions) {
     super({
       title: `Remove ${opts.displayName} (${opts.id})?`,
-      hint: '↑↓ navigate · Enter/Space select · ←/Esc cancel',
+      hint: "↑↓ navigate · Enter/Space select · ←/Esc cancel",
       formatHint: mutedHintLine,
       options: [
         {
           value: REMOVE_CONFIRM_CANCEL,
-          label: 'Cancel',
-          description: 'Keep this plugin installed.',
+          label: "Cancel",
+          description: "Keep this plugin installed.",
         },
         {
           value: REMOVE_CONFIRM_REMOVE,
-          label: 'Remove plugin',
-          tone: 'danger',
-          description: 'Remove only the install record; plugin files are left in place.',
+          label: "Remove plugin",
+          tone: "danger",
+          description:
+            "Remove only the install record; plugin files are left in place.",
         },
       ],
       onSelect: (value) => {
-        opts.onDone(value === REMOVE_CONFIRM_REMOVE ? { kind: 'confirm' } : { kind: 'cancel' });
+        opts.onDone(
+          value === REMOVE_CONFIRM_REMOVE
+            ? { kind: "confirm" }
+            : { kind: "cancel" },
+        );
       },
       onCancel: () => {
-        opts.onDone({ kind: 'cancel' });
+        opts.onDone({ kind: "cancel" });
       },
     });
   }
 }
 
 export type PluginInstallTrustConfirmResult =
-  | { readonly kind: 'confirm' }
-  | { readonly kind: 'cancel' };
+  | { readonly kind: "confirm" }
+  | { readonly kind: "cancel" };
 
 export interface PluginInstallTrustConfirmOptions {
   /** Plugin display name or source, shown in the title for identification. */
@@ -241,64 +289,75 @@ export class PluginInstallTrustConfirmComponent extends ChoicePickerComponent {
   constructor(opts: PluginInstallTrustConfirmOptions) {
     super({
       title: `Install third-party plugin ${opts.label}?`,
-      hint: '↑↓ navigate · Enter/Space select · ←/Esc cancel',
+      hint: "↑↓ navigate · Enter/Space select · ←/Esc cancel",
       formatHint: mutedHintLine,
       notice:
-        '⚠️ This is a third-party plugin that Kimi has not reviewed. It can bundle MCP servers, ' +
-        'skills, or files that run code and access your workspace. Install it only if you ' +
-        'trust the source.',
-      noticeTone: 'warning',
+        "⚠️ This is a third-party plugin that Kimi has not reviewed. It can bundle MCP servers, " +
+        "skills, or files that run code and access your workspace. Install it only if you " +
+        "trust the source.",
+      noticeTone: "warning",
       options: [
         {
           value: INSTALL_TRUST_EXIT,
-          label: 'Exit',
-          description: 'Cancel the installation.',
+          label: "Exit",
+          description: "Cancel the installation.",
         },
         {
           value: INSTALL_TRUST_TRUST,
-          label: 'Trust and install',
-          tone: 'danger',
-          description: 'Install this third-party plugin anyway.',
+          label: "Trust and install",
+          tone: "danger",
+          description: "Install this third-party plugin anyway.",
         },
       ],
       onSelect: (value) => {
-        opts.onDone(value === INSTALL_TRUST_TRUST ? { kind: 'confirm' } : { kind: 'cancel' });
+        opts.onDone(
+          value === INSTALL_TRUST_TRUST
+            ? { kind: "confirm" }
+            : { kind: "cancel" },
+        );
       },
       onCancel: () => {
-        opts.onDone({ kind: 'cancel' });
+        opts.onDone({ kind: "cancel" });
       },
     });
   }
 }
 
 function overviewPluginDescription(plugin: PluginSummary): string {
-  const state = plugin.state === 'ok' ? '' : ` · state ${plugin.state}`;
-  const skills = `${plugin.skillCount} skill${plugin.skillCount === 1 ? '' : 's'}`;
+  const state = plugin.state === "ok" ? "" : ` · state ${plugin.state}`;
+  const skills = `${plugin.skillCount} skill${plugin.skillCount === 1 ? "" : "s"}`;
   const mcp =
     plugin.mcpServerCount > 0
       ? ` · MCP ${plugin.enabledMcpServerCount}/${plugin.mcpServerCount}`
-      : '';
-  const diagnostics = plugin.hasErrors ? ' · diagnostics available' : '';
+      : "";
+  const diagnostics = plugin.hasErrors ? " · diagnostics available" : "";
   const source = ` · ${formatPluginSourceLabel(plugin)}`;
   const trust = ` · ${pluginTrustLabel(plugin)}`;
   return `id ${plugin.id} · ${skills}${mcp}${source}${trust}${state}${diagnostics}`;
 }
 
 function pluginStatus(plugin: PluginSummary): string | undefined {
-  if (plugin.state !== 'ok') return plugin.state;
-  return plugin.enabled ? 'enabled' : 'disabled';
+  if (plugin.state !== "ok") return plugin.state;
+  return plugin.enabled ? "enabled" : "disabled";
 }
 
-function marketplaceStatusStyle(status: string, colors: ColorPalette): (text: string) => string {
+function marketplaceStatusStyle(
+  status: string,
+  colors: ColorPalette,
+): (text: string) => string {
   // States recede, actions pop: "installed …" is a quiet fact (dim), while
   // "install …" (the available action) stays primary and "update …" stays a
   // warning — the two used to share near-identical green-ish treatments in
   // the same column and read as interchangeable.
-  if (status.startsWith('update')) return chalk.hex(colors.warning);
-  if (status === 'finish setup' || status === 'installing…' || status === 'unsupported') {
+  if (status.startsWith("update")) return chalk.hex(colors.warning);
+  if (
+    status === "finish setup" ||
+    status === "installing…" ||
+    status === "unsupported"
+  ) {
     return chalk.hex(colors.warning);
   }
-  if (status.startsWith('installed')) return chalk.hex(colors.textDim);
+  if (status.startsWith("installed")) return chalk.hex(colors.textDim);
   return chalk.hex(colors.primary);
 }
 
@@ -314,12 +373,12 @@ function renderUrlInputBox(
   const border = (s: string): string => chalk.hex(colors.primary)(s);
   const boxWidth = Math.max(24, width - 2);
   const innerWidth = Math.max(10, boxWidth - 4);
-  const inputLine = input.render(innerWidth)[0] ?? '';
+  const inputLine = input.render(innerWidth)[0] ?? "";
   const rightPad = Math.max(0, innerWidth - visibleWidth(inputLine));
   return [
-    ' ' + border('╭' + '─'.repeat(boxWidth - 2) + '╮'),
-    ' ' + border('│') + '  ' + inputLine + ' '.repeat(rightPad) + border('│'),
-    ' ' + border('╰' + '─'.repeat(boxWidth - 2) + '╯'),
+    " " + border("╭" + "─".repeat(boxWidth - 2) + "╮"),
+    " " + border("│") + "  " + inputLine + " ".repeat(rightPad) + border("│"),
+    " " + border("╰" + "─".repeat(boxWidth - 2) + "╯"),
   ];
 }
 
@@ -327,17 +386,21 @@ function renderUrlInputBox(
 // Unified /plugins panel: Installed / Official / Third-party / Custom tabs.
 // ===========================================================================
 
-export type PluginsPanelTabId = 'installed' | 'official' | 'third-party' | 'custom';
+export type PluginsPanelTabId =
+  | "installed"
+  | "official"
+  | "third-party"
+  | "custom";
 
 export type PluginsPanelSelection =
-  | { readonly kind: 'toggle'; readonly id: string; readonly enabled: boolean }
-  | { readonly kind: 'remove'; readonly id: string }
-  | { readonly kind: 'mcp'; readonly id: string }
-  | { readonly kind: 'details'; readonly id: string }
-  | { readonly kind: 'reload' }
-  | { readonly kind: 'install'; readonly entry: PluginMarketplaceEntry }
-  | { readonly kind: 'install-source'; readonly source: string }
-  | { readonly kind: 'open-url'; readonly url: string; readonly label: string };
+  | { readonly kind: "toggle"; readonly id: string; readonly enabled: boolean }
+  | { readonly kind: "remove"; readonly id: string }
+  | { readonly kind: "mcp"; readonly id: string }
+  | { readonly kind: "details"; readonly id: string }
+  | { readonly kind: "reload" }
+  | { readonly kind: "install"; readonly entry: PluginMarketplaceEntry }
+  | { readonly kind: "install-source"; readonly source: string }
+  | { readonly kind: "open-url"; readonly url: string; readonly label: string };
 
 export interface PluginsPanelOptions {
   readonly installed: readonly PluginSummary[];
@@ -360,17 +423,22 @@ export interface PluginsPanelOptions {
 }
 
 type MarketState =
-  | { readonly status: 'idle' }
-  | { readonly status: 'loading' }
-  | { readonly status: 'error'; readonly message: string }
-  | { readonly status: 'loaded'; readonly entries: readonly PluginMarketplaceEntry[]; readonly source: string };
+  | { readonly status: "idle" }
+  | { readonly status: "loading" }
+  | { readonly status: "error"; readonly message: string }
+  | {
+      readonly status: "loaded";
+      readonly entries: readonly PluginMarketplaceEntry[];
+      readonly source: string;
+    };
 
-const PLUGINS_PANEL_TABS: readonly { id: PluginsPanelTabId; label: string }[] = [
-  { id: 'installed', label: 'Installed' },
-  { id: 'official', label: 'Official' },
-  { id: 'third-party', label: 'Third-party' },
-  { id: 'custom', label: 'Custom' },
-];
+const PLUGINS_PANEL_TABS: readonly { id: PluginsPanelTabId; label: string }[] =
+  [
+    { id: "installed", label: "Installed" },
+    { id: "official", label: "Official" },
+    { id: "third-party", label: "Third-party" },
+    { id: "custom", label: "Custom" },
+  ];
 
 export class PluginsPanelComponent extends Container implements Focusable {
   focused = false;
@@ -379,7 +447,7 @@ export class PluginsPanelComponent extends Container implements Focusable {
   private readonly customInput = new Input();
   private activeTabIndex: number;
   private selectedIndex = 0;
-  private market: MarketState = { status: 'idle' };
+  private market: MarketState = { status: "idle" };
   private installing: string | undefined;
 
   constructor(opts: PluginsPanelOptions) {
@@ -387,32 +455,38 @@ export class PluginsPanelComponent extends Container implements Focusable {
     this.opts = opts;
     this.activeTabIndex = Math.max(
       0,
-      PLUGINS_PANEL_TABS.findIndex((tab) => tab.id === (opts.initialTab ?? 'installed')),
+      PLUGINS_PANEL_TABS.findIndex(
+        (tab) => tab.id === (opts.initialTab ?? "installed"),
+      ),
     );
-    if (opts.selectedId !== undefined && this.activeTab.id === 'installed') {
+    if (opts.selectedId !== undefined && this.activeTab.id === "installed") {
       const idx = opts.installed.findIndex((p) => p.id === opts.selectedId);
       if (idx >= 0) this.selectedIndex = idx;
     }
     this.customInput.onSubmit = (value) => {
       const source = value.trim();
-      if (source.length > 0) this.opts.onSelect({ kind: 'install-source', source });
+      if (source.length > 0)
+        this.opts.onSelect({ kind: "install-source", source });
     };
   }
 
-  marketplaceStatus(): MarketState['status'] {
+  marketplaceStatus(): MarketState["status"] {
     return this.market.status;
   }
 
   setMarketplaceLoading(): void {
-    this.market = { status: 'loading' };
+    this.market = { status: "loading" };
   }
 
-  setMarketplace(entries: readonly PluginMarketplaceEntry[], source: string): void {
-    this.market = { status: 'loaded', entries, source };
+  setMarketplace(
+    entries: readonly PluginMarketplaceEntry[],
+    source: string,
+  ): void {
+    this.market = { status: "loaded", entries, source };
   }
 
   setMarketplaceError(message: string): void {
-    this.market = { status: 'error', message };
+    this.market = { status: "error", message };
   }
 
   setInstalling(label: string): void {
@@ -430,7 +504,7 @@ export class PluginsPanelComponent extends Container implements Focusable {
   }
 
   private get marketplaceEntries(): readonly PluginMarketplaceEntry[] {
-    if (this.market.status !== 'loaded') return [];
+    if (this.market.status !== "loaded") return [];
     const { installedIds } = this.opts;
     return this.market.entries.toSorted(
       (a, b) => Number(installedIds.has(b.id)) - Number(installedIds.has(a.id)),
@@ -438,7 +512,9 @@ export class PluginsPanelComponent extends Container implements Focusable {
   }
 
   private get installedVersions(): ReadonlyMap<string, string | undefined> {
-    return new Map(this.opts.installed.map((plugin) => [plugin.id, plugin.version]));
+    return new Map(
+      this.opts.installed.map((plugin) => [plugin.id, plugin.version]),
+    );
   }
 
   private capabilityFor(id: string): CapabilityStatus | undefined {
@@ -448,7 +524,9 @@ export class PluginsPanelComponent extends Container implements Focusable {
   /** Capability state for a MARKETPLACE row: only our own injected rows
    * (flagged `builtIn` — a custom catalog cannot forge the flag) may show
    * capability status, matching how Enter routes them. */
-  private capabilityForEntry(entry: PluginMarketplaceEntry): CapabilityStatus | undefined {
+  private capabilityForEntry(
+    entry: PluginMarketplaceEntry,
+  ): CapabilityStatus | undefined {
     return entry.builtIn === true ? this.capabilityFor(entry.id) : undefined;
   }
 
@@ -456,15 +534,19 @@ export class PluginsPanelComponent extends Container implements Focusable {
     // While the catalog is loading or unreachable, the locally-known
     // capability rows still render and install — built-in runtime setup
     // must never be blocked by an unrelated catalog fetch.
-    if (this.market.status !== 'loaded') {
-      return this.pendingBuiltInEntries.some((entry) => entry.id === WEB_BRIDGE_ENTRY.id)
+    if (this.market.status !== "loaded") {
+      return this.pendingBuiltInEntries.some(
+        (entry) => entry.id === WEB_BRIDGE_ENTRY.id,
+      )
         ? this.pendingBuiltInEntries
         : [...this.pendingBuiltInEntries, WEB_BRIDGE_ENTRY];
     }
     // The real catalog entry wins when present (it installs the actual
     // plugin); the hardcoded promo row is only a fallback while the catalog
     // is loading, unreachable, or predates it — never a duplicate row.
-    return this.officialCatalogEntries.some((entry) => entry.id === WEB_BRIDGE_ENTRY.id)
+    return this.officialCatalogEntries.some(
+      (entry) => entry.id === WEB_BRIDGE_ENTRY.id,
+    )
       ? this.officialCatalogEntries
       : [WEB_BRIDGE_ENTRY, ...this.officialCatalogEntries];
   }
@@ -482,7 +564,7 @@ export class PluginsPanelComponent extends Container implements Focusable {
 
   private get officialCatalogEntries(): readonly PluginMarketplaceEntry[] {
     return this.marketplaceEntries.filter((entry) => {
-      if (entry.tier !== 'official') return false;
+      if (entry.tier !== "official") return false;
       return this.capabilityForEntry(entry)?.supported !== false;
     });
   }
@@ -491,14 +573,14 @@ export class PluginsPanelComponent extends Container implements Focusable {
     // Anything not explicitly marked official lands here: `curated` entries plus
     // entries that omit `tier` (custom marketplaces often do). Without this,
     // untiered entries would be invisible in both marketplace tabs.
-    return this.marketplaceEntries.filter((entry) => entry.tier !== 'official');
+    return this.marketplaceEntries.filter((entry) => entry.tier !== "official");
   }
 
   private requestMarketplaceIfNeeded(): void {
     // The Installed tab also needs the catalog to render update badges; only the
     // Custom tab (manual URL entry) can skip the fetch entirely.
-    if (this.market.status === 'idle' && this.activeTab.id !== 'custom') {
-      this.market = { status: 'loading' };
+    if (this.market.status === "idle" && this.activeTab.id !== "custom") {
+      this.market = { status: "loading" };
       this.opts.onRequestMarketplace?.();
     }
   }
@@ -509,27 +591,29 @@ export class PluginsPanelComponent extends Container implements Focusable {
       return;
     }
     if (matchesKey(data, Key.tab)) {
-      this.activeTabIndex = (this.activeTabIndex + 1) % PLUGINS_PANEL_TABS.length;
+      this.activeTabIndex =
+        (this.activeTabIndex + 1) % PLUGINS_PANEL_TABS.length;
       this.selectedIndex = 0;
       this.requestMarketplaceIfNeeded();
       return;
     }
-    if (matchesKey(data, Key.shift('tab'))) {
+    if (matchesKey(data, Key.shift("tab"))) {
       this.activeTabIndex =
-        (this.activeTabIndex - 1 + PLUGINS_PANEL_TABS.length) % PLUGINS_PANEL_TABS.length;
+        (this.activeTabIndex - 1 + PLUGINS_PANEL_TABS.length) %
+        PLUGINS_PANEL_TABS.length;
       this.selectedIndex = 0;
       this.requestMarketplaceIfNeeded();
       return;
     }
     switch (this.activeTab.id) {
-      case 'installed':
+      case "installed":
         this.handleInstalledInput(data);
         return;
-      case 'official':
-      case 'third-party':
+      case "official":
+      case "third-party":
         this.handleMarketplaceInput(data);
         return;
-      case 'custom':
+      case "custom":
         this.customInput.handleInput(data);
         return;
     }
@@ -550,46 +634,59 @@ export class PluginsPanelComponent extends Container implements Focusable {
     // Decode Space for terminals that send printable keys via Kitty/CSI-u
     // sequences (e.g. VS Code's integrated terminal); `matchesKey(Key.space)`
     // alone misses those and the toggle silently stops working.
-    if (matchesKey(data, Key.space) || ch === ' ') {
+    if (matchesKey(data, Key.space) || ch === " ") {
       if (plugin !== undefined) {
-        this.opts.onSelect({ kind: 'toggle', id: plugin.id, enabled: !plugin.enabled });
+        this.opts.onSelect({
+          kind: "toggle",
+          id: plugin.id,
+          enabled: !plugin.enabled,
+        });
       }
       return;
     }
-    if (ch === 'd' || ch === 'D') {
-      if (plugin !== undefined) this.opts.onSelect({ kind: 'remove', id: plugin.id });
+    if (ch === "d" || ch === "D") {
+      if (plugin !== undefined)
+        this.opts.onSelect({ kind: "remove", id: plugin.id });
       return;
     }
-    if (ch === 'm' || ch === 'M') {
-      if (plugin !== undefined) this.opts.onSelect({ kind: 'mcp', id: plugin.id });
+    if (ch === "m" || ch === "M") {
+      if (plugin !== undefined)
+        this.opts.onSelect({ kind: "mcp", id: plugin.id });
       return;
     }
-    if (ch === 'r' || ch === 'R') {
-      this.opts.onSelect({ kind: 'reload' });
+    if (ch === "r" || ch === "R") {
+      this.opts.onSelect({ kind: "reload" });
       return;
     }
     if (matchesKey(data, Key.enter)) {
       if (plugin === undefined) return;
       const capability = this.capabilityFor(plugin.id);
       if (capability !== undefined && capabilityNeedsSetup(capability)) {
-        this.opts.onSelect({ kind: 'install', entry: capabilityMarketplaceEntry(capability) });
+        this.opts.onSelect({
+          kind: "install",
+          entry: capabilityMarketplaceEntry(capability),
+        });
         return;
       }
       const update = this.installedUpdateStatus(plugin);
       if (update !== undefined) {
-        this.opts.onSelect({ kind: 'install', entry: update.entry });
+        this.opts.onSelect({ kind: "install", entry: update.entry });
       } else {
-        this.opts.onSelect({ kind: 'details', id: plugin.id });
+        this.opts.onSelect({ kind: "details", id: plugin.id });
       }
       return;
     }
-    if (ch === 'i' || ch === 'I') {
-      if (plugin !== undefined) this.opts.onSelect({ kind: 'details', id: plugin.id });
+    if (ch === "i" || ch === "I") {
+      if (plugin !== undefined)
+        this.opts.onSelect({ kind: "details", id: plugin.id });
     }
   }
 
   private handleMarketplaceInput(data: string): void {
-    const entries = this.activeTab.id === 'official' ? this.officialEntries : this.thirdPartyEntries;
+    const entries =
+      this.activeTab.id === "official"
+        ? this.officialEntries
+        : this.thirdPartyEntries;
     if (matchesKey(data, Key.up)) {
       this.selectedIndex = Math.max(0, this.selectedIndex - 1);
       return;
@@ -597,17 +694,24 @@ export class PluginsPanelComponent extends Container implements Focusable {
     if (matchesKey(data, Key.down)) {
       // Clamp to 0 while the catalog is still loading (entries empty); otherwise
       // `entries.length - 1` is -1 and a later Enter reads `entries[-1]`.
-      this.selectedIndex = entries.length === 0 ? 0 : Math.min(entries.length - 1, this.selectedIndex + 1);
+      this.selectedIndex =
+        entries.length === 0
+          ? 0
+          : Math.min(entries.length - 1, this.selectedIndex + 1);
       return;
     }
     if (matchesKey(data, Key.enter)) {
       const entry = entries[this.selectedIndex];
       if (entry === undefined) return;
       if (isPinnedWebBridgeEntry(entry)) {
-        this.opts.onSelect({ kind: 'open-url', url: WEB_BRIDGE_URL, label: entry.displayName });
+        this.opts.onSelect({
+          kind: "open-url",
+          url: WEB_BRIDGE_URL,
+          label: entry.displayName,
+        });
         return;
       }
-      this.opts.onSelect({ kind: 'install', entry });
+      this.opts.onSelect({ kind: "install", entry });
     }
   }
 
@@ -623,31 +727,31 @@ export class PluginsPanelComponent extends Container implements Focusable {
     const colors = currentTheme.palette;
     const tab = this.activeTab.id;
     const hint =
-      tab === 'installed'
+      tab === "installed"
         ? this.installedHint()
-        : tab === 'custom'
-          ? ' Tab switch · Enter install · Esc cancel'
-          : ' Tab switch · ↑↓ navigate · Enter open/install · Esc cancel';
+        : tab === "custom"
+          ? " Tab switch · Enter install · Esc cancel"
+          : " Tab switch · ↑↓ navigate · Enter open/install · Esc cancel";
     const lines: string[] = [
-      chalk.hex(colors.primary)('─'.repeat(width)),
-      chalk.hex(colors.primary).bold(' Plugins'),
+      chalk.hex(colors.primary)("─".repeat(width)),
+      chalk.hex(colors.primary).bold(" Plugins"),
       mutedHintLine(hint, colors),
-      '',
+      "",
       renderTabStrip({
         labels: PLUGINS_PANEL_TABS.map((t) => t.label),
         activeIndex: this.activeTabIndex,
         width,
         colors,
       }),
-      '',
+      "",
     ];
 
-    if (tab === 'installed') this.renderInstalled(lines, width);
-    else if (tab === 'official') this.renderOfficial(lines, width);
-    else if (tab === 'third-party') this.renderThirdParty(lines, width);
+    if (tab === "installed") this.renderInstalled(lines, width);
+    else if (tab === "official") this.renderOfficial(lines, width);
+    else if (tab === "third-party") this.renderThirdParty(lines, width);
     else this.renderCustom(lines, width);
 
-    lines.push(chalk.hex(colors.primary)('─'.repeat(width)));
+    lines.push(chalk.hex(colors.primary)("─".repeat(width)));
     return lines.map((line) => truncateToWidth(line, width, ELLIPSIS));
   }
 
@@ -655,72 +759,101 @@ export class PluginsPanelComponent extends Container implements Focusable {
     const { installed } = this.opts;
     const colors = currentTheme.palette;
     if (installed.length === 0) {
-      lines.push(chalk.hex(colors.textMuted)('  No plugins installed.'));
+      lines.push(chalk.hex(colors.textMuted)("  No plugins installed."));
     } else {
       for (let i = 0; i < installed.length; i++) {
         lines.push(...this.renderInstalledRow(installed[i]!, i, width));
       }
     }
-    lines.push('');
+    lines.push("");
     lines.push(mutedHintLine(` ${installed.length} installed`, colors));
   }
 
   private installedHint(): string {
     const plugin = this.opts.installed[this.selectedIndex];
-    const capability = plugin === undefined ? undefined : this.capabilityFor(plugin.id);
-    const needsSetup = capability !== undefined && capabilityNeedsSetup(capability);
-    const hasUpdate = plugin !== undefined && this.installedUpdateStatus(plugin) !== undefined;
-    const enter = needsSetup ? 'Enter finish setup' : hasUpdate ? 'Enter update' : 'Enter details';
+    const capability =
+      plugin === undefined ? undefined : this.capabilityFor(plugin.id);
+    const needsSetup =
+      capability !== undefined && capabilityNeedsSetup(capability);
+    const hasUpdate =
+      plugin !== undefined && this.installedUpdateStatus(plugin) !== undefined;
+    const enter = needsSetup
+      ? "Enter finish setup"
+      : hasUpdate
+        ? "Enter update"
+        : "Enter details";
     return ` Tab switch · Space toggle · D remove · M MCP · ${enter} · I details · R reload · Esc cancel`;
   }
 
   private installedUpdateStatus(
     plugin: PluginSummary,
-  ): { entry: PluginMarketplaceEntry; local: string; latest: string } | undefined {
-    if (this.market.status !== 'loaded') return undefined;
+  ):
+    | { entry: PluginMarketplaceEntry; local: string; latest: string }
+    | undefined {
+    if (this.market.status !== "loaded") return undefined;
     const entry = this.market.entries.find((e) => e.id === plugin.id);
     if (entry === undefined) return undefined;
     const status = computeUpdateStatus(entry.version, plugin.version, true);
-    return status.kind === 'update' ? { entry, local: status.local, latest: status.latest } : undefined;
+    return status.kind === "update"
+      ? { entry, local: status.local, latest: status.latest }
+      : undefined;
   }
 
-  private renderInstalledRow(plugin: PluginSummary, index: number, width: number): string[] {
+  private renderInstalledRow(
+    plugin: PluginSummary,
+    index: number,
+    width: number,
+  ): string[] {
     const colors = currentTheme.palette;
     const selected = index === this.selectedIndex;
-    const pointer = selected ? SELECT_POINTER : ' ';
-    const labelStyle = selected ? chalk.hex(colors.primary).bold : chalk.hex(colors.text);
-    const prefix = chalk.hex(selected ? colors.primary : colors.textDim)(`  ${pointer} `);
+    const pointer = selected ? SELECT_POINTER : " ";
+    const labelStyle = selected
+      ? chalk.hex(colors.primary).bold
+      : chalk.hex(colors.text);
+    const prefix = chalk.hex(selected ? colors.primary : colors.textDim)(
+      `  ${pointer} `,
+    );
     const status = pluginStatus(plugin);
     const update = this.installedUpdateStatus(plugin);
     const capability = this.capabilityFor(plugin.id);
     let line = prefix + labelStyle(plugin.displayName);
     if (status !== undefined) {
-      line += '  ' + statusStyle({ kind: 'plugin', value: '', label: '', description: '', status }, colors)(status);
+      line +=
+        "  " +
+        statusStyle(
+          { kind: "plugin", value: "", label: "", description: "", status },
+          colors,
+        )(status);
     }
     if (update !== undefined) {
       const badge = `update ${update.local} → ${update.latest}`;
-      line += '  ' + marketplaceStatusStyle(badge, colors)(badge);
+      line += "  " + marketplaceStatusStyle(badge, colors)(badge);
     }
-    if (capability !== undefined && capability.state !== 'ready') {
+    if (capability !== undefined && capability.state !== "ready") {
       const badge = capability.install.running
-        ? 'installing…'
+        ? "installing…"
         : capabilityNeedsSetup(capability)
-          ? 'setup incomplete'
-          : capability.state === 'unsupported'
-            ? 'unsupported'
+          ? "setup incomplete"
+          : capability.state === "unsupported"
+            ? "unsupported"
             : undefined;
       if (badge !== undefined) {
         // Unsupported is a fact, not a problem: dim it; actionable setup
         // states keep the warning tone.
-        line += '  ' + (badge === 'unsupported' ? chalk.hex(colors.textDim)(badge) : chalk.hex(colors.warning)(badge));
+        line +=
+          "  " +
+          (badge === "unsupported"
+            ? chalk.hex(colors.textDim)(badge)
+            : chalk.hex(colors.warning)(badge));
       }
     }
     if (this.opts.pluginHint?.id === plugin.id) {
-      line += '  ' + chalk.hex(colors.warning)(this.opts.pluginHint.text);
+      line += "  " + chalk.hex(colors.warning)(this.opts.pluginHint.text);
     }
     const descWidth = Math.max(1, width - 4);
     const out = [line];
-    const capabilityIssues = capability === undefined ? '' : describeCapabilityIssues(capability);
+    const capabilityIssues =
+      capability === undefined ? "" : describeCapabilityIssues(capability);
     const description =
       capabilityIssues.length === 0
         ? overviewPluginDescription(plugin)
@@ -742,24 +875,34 @@ export class PluginsPanelComponent extends Container implements Focusable {
     entriesForCount: readonly PluginMarketplaceEntry[] = entries,
   ): void {
     const colors = currentTheme.palette;
-    if (this.market.status === 'loading' || this.market.status === 'idle') {
-      lines.push(chalk.hex(colors.textMuted)('  Loading marketplace…'));
+    if (this.market.status === "loading" || this.market.status === "idle") {
+      lines.push(chalk.hex(colors.textMuted)("  Loading marketplace…"));
       return;
     }
-    if (this.market.status === 'error') {
-      lines.push(chalk.hex(colors.warning)(`  Marketplace unavailable: ${this.market.message}`));
-      lines.push(mutedHintLine('  Use the Custom tab to install from a URL.', colors));
+    if (this.market.status === "error") {
+      lines.push(
+        chalk.hex(colors.warning)(
+          `  Marketplace unavailable: ${this.market.message}`,
+        ),
+      );
+      lines.push(
+        mutedHintLine("  Use the Custom tab to install from a URL.", colors),
+      );
       return;
     }
     if (entries.length === 0) {
-      lines.push(chalk.hex(colors.textMuted)('  No plugins found.'));
+      lines.push(chalk.hex(colors.textMuted)("  No plugins found."));
     } else {
       for (let i = 0; i < entries.length; i++) {
-        lines.push(...this.renderMarketplaceRow(entries[i]!, i + indexOffset, width));
+        lines.push(
+          ...this.renderMarketplaceRow(entries[i]!, i + indexOffset, width),
+        );
       }
     }
-    const installedCount = entriesForCount.filter((e) => this.opts.installedIds.has(e.id)).length;
-    lines.push('');
+    const installedCount = entriesForCount.filter((e) =>
+      this.opts.installedIds.has(e.id),
+    ).length;
+    lines.push("");
     lines.push(
       mutedHintLine(
         ` ${installedCount} installed · ${entriesForCount.length - installedCount} available`,
@@ -774,7 +917,7 @@ export class PluginsPanelComponent extends Container implements Focusable {
     // capability rows (plus the promo fallback when webbridge is not among
     // them), so built-in setup works before the catalog arrives. Once
     // loaded, the promo appears only when the catalog lacks the real entry.
-    if (this.market.status !== 'loaded') {
+    if (this.market.status !== "loaded") {
       const entries = this.officialEntries;
       for (let i = 0; i < entries.length; i += 1) {
         lines.push(...this.renderMarketplaceRow(entries[i]!, i, width));
@@ -782,30 +925,48 @@ export class PluginsPanelComponent extends Container implements Focusable {
       this.renderMarketplaceTab(lines, width, [], entries.length);
       return;
     }
-    this.renderMarketplaceTab(lines, width, this.officialEntries, 0, this.officialCatalogEntries);
+    this.renderMarketplaceTab(
+      lines,
+      width,
+      this.officialEntries,
+      0,
+      this.officialCatalogEntries,
+    );
   }
 
   private renderThirdParty(lines: string[], width: number): void {
     this.renderMarketplaceTab(lines, width, this.thirdPartyEntries);
   }
 
-  private renderMarketplaceRow(entry: PluginMarketplaceEntry, index: number, width: number): string[] {
+  private renderMarketplaceRow(
+    entry: PluginMarketplaceEntry,
+    index: number,
+    width: number,
+  ): string[] {
     const colors = currentTheme.palette;
     const selected = index === this.selectedIndex;
-    const pointer = selected ? SELECT_POINTER : ' ';
-    const labelStyle = selected ? chalk.hex(colors.primary).bold : chalk.hex(colors.text);
-    const prefix = chalk.hex(selected ? colors.primary : colors.textDim)(`  ${pointer} `);
+    const pointer = selected ? SELECT_POINTER : " ";
+    const labelStyle = selected
+      ? chalk.hex(colors.primary).bold
+      : chalk.hex(colors.text);
+    const prefix = chalk.hex(selected ? colors.primary : colors.textDim)(
+      `  ${pointer} `,
+    );
     const capability = this.capabilityForEntry(entry);
     const status = isPinnedWebBridgeEntry(entry)
-      ? 'open in browser'
+      ? "open in browser"
       : capability === undefined
         ? marketplaceEntryStatus(entry, this.installedVersions)
         : capabilityRowStatus(capability, entry);
     const line =
-      prefix + labelStyle(entry.displayName) + '  ' + marketplaceStatusStyle(status, colors)(status);
+      prefix +
+      labelStyle(entry.displayName) +
+      "  " +
+      marketplaceStatusStyle(status, colors)(status);
     const descWidth = Math.max(1, width - 4);
     const out = [line];
-    const capabilityIssues = capability === undefined ? '' : describeCapabilityIssues(capability);
+    const capabilityIssues =
+      capability === undefined ? "" : describeCapabilityIssues(capability);
     const description =
       capabilityIssues.length === 0
         ? marketplaceEntryDescription(entry)
@@ -818,20 +979,29 @@ export class PluginsPanelComponent extends Container implements Focusable {
 
   private renderCustom(lines: string[], width: number): void {
     const colors = currentTheme.palette;
-    lines.push(mutedHintLine(' Install from a GitHub URL (or zip URL / local path):', colors));
-    lines.push('');
-    lines.push(...renderUrlInputBox(this.customInput, this.focused, width, colors));
+    lines.push(
+      mutedHintLine(
+        " Install from a GitHub URL (or zip URL / local path):",
+        colors,
+      ),
+    );
+    lines.push("");
+    lines.push(
+      ...renderUrlInputBox(this.customInput, this.focused, width, colors),
+    );
   }
 
   private renderInstalling(width: number): string[] {
     const colors = currentTheme.palette;
     const lines = [
-      chalk.hex(colors.primary)('─'.repeat(width)),
-      chalk.hex(colors.primary).bold(' Plugins'),
-      '',
-      chalk.hex(colors.textMuted)(`  Installing ${this.installing} from marketplace…`),
-      '',
-      chalk.hex(colors.primary)('─'.repeat(width)),
+      chalk.hex(colors.primary)("─".repeat(width)),
+      chalk.hex(colors.primary).bold(" Plugins"),
+      "",
+      chalk.hex(colors.textMuted)(
+        `  Installing ${this.installing} from marketplace…`,
+      ),
+      "",
+      chalk.hex(colors.primary)("─".repeat(width)),
     ];
     return lines.map((line) => truncateToWidth(line, width, ELLIPSIS));
   }
@@ -840,28 +1010,31 @@ export class PluginsPanelComponent extends Container implements Focusable {
 function buildMcpItems(info: PluginInfo): PluginsOverviewItem[] {
   const items: PluginsOverviewItem[] = info.mcpServers.map((server) => ({
     value: `${MCP_SERVER_PREFIX}${server.name}`,
-    kind: 'plugin',
+    kind: "plugin",
     label: server.name,
-    status: server.enabled ? 'enabled' : 'disabled',
+    status: server.enabled ? "enabled" : "disabled",
     description: mcpServerDescription(server),
   }));
   items.push({
-    value: 'back',
-    kind: 'action',
-    label: 'Back to installed plugins',
-    description: 'Return to the local plugin manager.',
+    value: "back",
+    kind: "action",
+    label: "Back to installed plugins",
+    description: "Return to the local plugin manager.",
   });
   return items;
 }
 
 function mcpServerDescription(server: PluginMcpServerInfo): string {
-  const action = server.enabled ? 'Enter/Space disable' : 'Enter/Space enable';
-  if (server.transport === 'http' || server.transport === 'sse') {
+  const action = server.enabled ? "Enter/Space disable" : "Enter/Space enable";
+  if (server.transport === "http" || server.transport === "sse") {
     return `${action} · ${server.transport.toUpperCase()} · ${server.url ?? server.runtimeName}`;
   }
-  const args = server.args !== undefined && server.args.length > 0 ? ` ${server.args.join(' ')}` : '';
-  const command = `${server.command ?? ''}${args}`.trim();
-  const cwd = server.cwd === undefined ? '' : ` · cwd ${server.cwd}`;
+  const args =
+    server.args !== undefined && server.args.length > 0
+      ? ` ${server.args.join(" ")}`
+      : "";
+  const command = `${server.command ?? ""}${args}`.trim();
+  const cwd = server.cwd === undefined ? "" : ` · cwd ${server.cwd}`;
   return `${action} · stdio · ${command || server.runtimeName}${cwd}`;
 }
 
@@ -873,27 +1046,29 @@ function mcpItemServerName(item: PluginsOverviewItem): string | undefined {
 function marketplaceEntryDescription(entry: PluginMarketplaceEntry): string {
   const tier = marketplaceTierLabel(entry.tier);
   const description = entry.description ?? tier;
-  const version = entry.version !== undefined ? ` · v${entry.version}` : '';
+  const version = entry.version !== undefined ? ` · v${entry.version}` : "";
   const keywords =
     entry.keywords !== undefined && entry.keywords.length > 0
-      ? ` · ${entry.keywords.join(', ')}`
-      : '';
-  const tierSuffix = entry.description !== undefined ? ` · ${tier}` : '';
+      ? ` · ${entry.keywords.join(", ")}`
+      : "";
+  const tierSuffix = entry.description !== undefined ? ` · ${tier}` : "";
   return `${description} · id ${entry.id}${version}${tierSuffix}${keywords}`;
 }
 
-function marketplaceTierLabel(tier: PluginMarketplaceEntry['tier']): string {
-  if (tier === 'official') return 'Official plugin';
-  if (tier === 'curated') return 'Curated plugin';
-  return 'Plugin';
+function marketplaceTierLabel(tier: PluginMarketplaceEntry["tier"]): string {
+  if (tier === "official") return "Official plugin";
+  if (tier === "curated") return "Curated plugin";
+  return "Plugin";
 }
 
-function capabilityMarketplaceEntry(capability: CapabilityStatus): PluginMarketplaceEntry {
+function capabilityMarketplaceEntry(
+  capability: CapabilityStatus,
+): PluginMarketplaceEntry {
   return {
     id: capability.id,
     displayName: capability.displayName,
     source: `capability:${capability.id}`,
-    tier: 'official',
+    tier: "official",
     description: capability.description,
     builtIn: true,
   };
@@ -907,7 +1082,7 @@ function capabilityMarketplaceEntry(capability: CapabilityStatus): PluginMarketp
  */
 function capabilityNeedsSetup(capability: CapabilityStatus): boolean {
   return (
-    (capability.state === 'not_installed' || capability.state === 'partial') &&
+    (capability.state === "not_installed" || capability.state === "partial") &&
     !capability.install.running
   );
 }
@@ -916,73 +1091,80 @@ function capabilityRowStatus(
   capability: CapabilityStatus,
   entry: PluginMarketplaceEntry,
 ): string {
-  if (capability.install.running) return 'installing…';
+  if (capability.install.running) return "installing…";
   switch (capability.state) {
-    case 'ready':
+    case "ready":
       return capability.version === undefined
-        ? 'ready'
+        ? "ready"
         : `ready · ${formatCapabilityVersion(capability.version)}`;
-    case 'partial':
-      return 'finish setup';
-    case 'not_installed':
+    case "partial":
+      return "finish setup";
+    case "not_installed":
       return installStatus(entry);
-    case 'unsupported':
-      return 'unsupported';
+    case "unsupported":
+      return "unsupported";
   }
 }
 
 export function formatCapabilityVersion(version: string): string {
-  return version.startsWith('v') ? version : `v${version}`;
+  return version.startsWith("v") ? version : `v${version}`;
 }
 
 export function describeCapabilityIssues(capability: CapabilityStatus): string {
   const issues: string[] = [];
   const required = capability.steps.filter(
-    (step) => step.optional !== true && step.state !== 'ok',
+    (step) => step.optional !== true && step.state !== "ok",
   );
   if (required.length > 0) {
-    issues.push(`needs ${required.map(formatCapabilityStep).join(', ')}`);
+    issues.push(`needs ${required.map(formatCapabilityStep).join(", ")}`);
   }
   const extension = capability.steps.find(
-    (step) => step.id === 'extension' && step.state !== 'ok',
+    (step) => step.id === "extension" && step.state !== "ok",
   );
-  if (extension !== undefined) issues.push('browser extension not connected');
+  if (extension !== undefined) issues.push("browser extension not connected");
   const skillShadow = capability.steps.find(
-    (step) => step.id === 'skill-shadow' && step.state !== 'ok',
+    (step) => step.id === "skill-shadow" && step.state !== "ok",
   );
-  if (skillShadow !== undefined) issues.push('user skill shadows managed plugin');
-  return issues.join(', ');
+  if (skillShadow !== undefined)
+    issues.push("user skill shadows managed plugin");
+  return issues.join(", ");
 }
 
-function formatCapabilityStep(step: CapabilityStatus['steps'][number]): string {
+function formatCapabilityStep(step: CapabilityStatus["steps"][number]): string {
   const label =
-    step.id === 'daemon-binary'
-      ? 'daemon binary'
-      : step.id === 'skill'
-        ? 'agent skill'
+    step.id === "daemon-binary"
+      ? "daemon binary"
+      : step.id === "skill"
+        ? "agent skill"
         : step.id;
   if (step.detail === undefined || step.detail.length === 0) return label;
   const detail = step.detail
-    .replaceAll('screenRecording', 'screen recording')
-    .replaceAll(',', ', ');
+    .replaceAll("screenRecording", "screen recording")
+    .replaceAll(",", ", ");
   return `${label} (${detail})`;
 }
 
 function installStatus(entry: PluginMarketplaceEntry): string {
-  return entry.version === undefined ? 'install' : `install v${entry.version}`;
+  return entry.version === undefined ? "install" : `install v${entry.version}`;
 }
 
 function marketplaceEntryStatus(
   entry: PluginMarketplaceEntry,
   installed: ReadonlyMap<string, string | undefined>,
 ): string {
-  const status = computeUpdateStatus(entry.version, installed.get(entry.id), installed.has(entry.id));
+  const status = computeUpdateStatus(
+    entry.version,
+    installed.get(entry.id),
+    installed.has(entry.id),
+  );
   switch (status.kind) {
-    case 'update':
+    case "update":
       return `update ${status.local} → ${status.latest}`;
-    case 'up-to-date':
-      return status.version === undefined ? 'installed' : `installed · v${status.version}`;
-    case 'not-installed':
+    case "up-to-date":
+      return status.version === undefined
+        ? "installed"
+        : `installed · v${status.version}`;
+    case "not-installed":
       return installStatus(entry);
   }
 }
@@ -995,11 +1177,13 @@ function statusStyle(
   item: PluginsOverviewItem,
   colors: ColorPalette,
 ): (text: string) => string {
-  if (item.kind === 'action') return chalk.hex(colors.textDim);
-  if (item.status === 'enabled' || item.status === 'installed') return chalk.hex(colors.success);
-  if (item.status?.startsWith('install')) return chalk.hex(colors.primary);
-  if (item.status === 'disabled') return chalk.hex(colors.textDim);
-  if (item.status !== undefined && /^\d/.test(item.status)) return chalk.hex(colors.textDim);
+  if (item.kind === "action") return chalk.hex(colors.textDim);
+  if (item.status === "enabled" || item.status === "installed")
+    return chalk.hex(colors.success);
+  if (item.status?.startsWith("install")) return chalk.hex(colors.primary);
+  if (item.status === "disabled") return chalk.hex(colors.textDim);
+  if (item.status !== undefined && /^\d/.test(item.status))
+    return chalk.hex(colors.textDim);
   return chalk.hex(colors.warning);
 }
 
@@ -1007,7 +1191,7 @@ function mutedHintLine(text: string, colors?: ColorPalette): string {
   if (colors !== undefined) {
     return chalk.hex(colors.textMuted)(text);
   }
-  return currentTheme.fg('textMuted', text);
+  return currentTheme.fg("textMuted", text);
 }
 
 function wrapOverviewDescription(text: string, width: number): string[] {
@@ -1017,7 +1201,7 @@ function wrapOverviewDescription(text: string, width: number): string[] {
     .split(/\s+/)
     .filter((word) => word.length > 0);
   const lines: string[] = [];
-  let current = '';
+  let current = "";
 
   for (const word of words) {
     const candidate = current.length === 0 ? word : `${current} ${word}`;
@@ -1026,7 +1210,10 @@ function wrapOverviewDescription(text: string, width: number): string[] {
       continue;
     }
     if (current.length > 0) lines.push(current);
-    current = visibleWidth(word) <= maxWidth ? word : truncateToWidth(word, maxWidth, ELLIPSIS);
+    current =
+      visibleWidth(word) <= maxWidth
+        ? word
+        : truncateToWidth(word, maxWidth, ELLIPSIS);
   }
 
   if (current.length > 0) lines.push(current);

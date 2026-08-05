@@ -16,26 +16,31 @@
  *   - invalid query     → `40001` (validation.failed, via defineRoute)
  */
 
-import { type Scope } from '@moonshot-ai/agent-core-v2';
-import { ErrorCode } from '../protocol/error-codes';
-import { messageRoleSchema } from '../protocol/message';
-import { getMessageResponseSchema, listMessagesResponseSchema } from '../protocol/rest-message';
-import { z } from 'zod';
+import { type Scope } from "@moonshot-ai/agent-core-v2";
+import { ErrorCode } from "../protocol/error-codes";
+import { messageRoleSchema } from "../protocol/message";
+import {
+  getMessageResponseSchema,
+  listMessagesResponseSchema,
+} from "../protocol/rest-message";
+import { z } from "zod";
 
-import { errEnvelope, okEnvelope } from '../envelope';
-import { requestLog } from '../lib/requestLog';
-import { defineRoute } from '../middleware/defineRoute';
+import { errEnvelope, okEnvelope } from "../envelope";
+import { requestLog } from "../lib/requestLog";
+import { defineRoute } from "../middleware/defineRoute";
 import {
   getMessage,
   listMessages,
   MessageNotFoundError,
   SessionNotFoundError,
-} from '../services/messages/messageHistory';
+} from "../services/messages/messageHistory";
 
 interface MessageRouteHost {
   get(
     path: string,
-    options: { preHandler: unknown[]; schema?: Record<string, unknown> } | undefined,
+    options:
+      | { preHandler: unknown[]; schema?: Record<string, unknown> }
+      | undefined,
     handler: (
       req: { id: string; query: unknown; params: unknown },
       reply: { send(payload: unknown): unknown },
@@ -60,9 +65,9 @@ const messagesListQueryCoercion = z
   .superRefine((value, ctx) => {
     if (value.before_id !== undefined && value.after_id !== undefined) {
       ctx.addIssue({
-        code: 'custom',
-        message: 'before_id and after_id are mutually exclusive',
-        path: ['before_id'],
+        code: "custom",
+        message: "before_id and after_id are mutually exclusive",
+        path: ["before_id"],
         params: { code: ErrorCode.VALIDATION_FAILED },
       });
     }
@@ -79,16 +84,21 @@ const messageIdParamSchema = z.object({
   message_id: z.string().min(1),
 });
 
-const detailsSchema = z.array(z.object({ path: z.string(), message: z.string() }));
+const detailsSchema = z.array(
+  z.object({ path: z.string(), message: z.string() }),
+);
 
 // --- Registration -----------------------------------------------------------
 
-export function registerMessagesRoutes(app: MessageRouteHost, core: Scope): void {
+export function registerMessagesRoutes(
+  app: MessageRouteHost,
+  core: Scope,
+): void {
   // GET /sessions/{session_id}/messages --------------------------------
   const listRoute = defineRoute(
     {
-      method: 'GET',
-      path: '/sessions/{session_id}/messages',
+      method: "GET",
+      path: "/sessions/{session_id}/messages",
       params: sessionIdParamSchema,
       querystring: messagesListQueryCoercion,
       success: { data: listMessagesResponseSchema },
@@ -96,8 +106,8 @@ export function registerMessagesRoutes(app: MessageRouteHost, core: Scope): void
         [ErrorCode.VALIDATION_FAILED]: { detailsSchema },
         [ErrorCode.SESSION_NOT_FOUND]: {},
       },
-      description: 'List messages for a session',
-      tags: ['messages'],
+      description: "List messages for a session",
+      tags: ["messages"],
     },
     async (req, reply) => {
       try {
@@ -112,14 +122,14 @@ export function registerMessagesRoutes(app: MessageRouteHost, core: Scope): void
   app.get(
     listRoute.path,
     listRoute.options,
-    listRoute.handler as Parameters<MessageRouteHost['get']>[2],
+    listRoute.handler as Parameters<MessageRouteHost["get"]>[2],
   );
 
   // GET /sessions/{session_id}/messages/{message_id} -------------------
   const getRoute = defineRoute(
     {
-      method: 'GET',
-      path: '/sessions/{session_id}/messages/{message_id}',
+      method: "GET",
+      path: "/sessions/{session_id}/messages/{message_id}",
       params: messageIdParamSchema,
       success: { data: getMessageResponseSchema },
       errors: {
@@ -127,8 +137,8 @@ export function registerMessagesRoutes(app: MessageRouteHost, core: Scope): void
         [ErrorCode.SESSION_NOT_FOUND]: {},
         [ErrorCode.MESSAGE_NOT_FOUND]: {},
       },
-      description: 'Get a message by ID',
-      tags: ['messages'],
+      description: "Get a message by ID",
+      tags: ["messages"],
     },
     async (req, reply) => {
       try {
@@ -143,7 +153,7 @@ export function registerMessagesRoutes(app: MessageRouteHost, core: Scope): void
   app.get(
     getRoute.path,
     getRoute.options,
-    getRoute.handler as Parameters<MessageRouteHost['get']>[2],
+    getRoute.handler as Parameters<MessageRouteHost["get"]>[2],
   );
 }
 
@@ -161,15 +171,34 @@ function sendMappedError(
   const requestId = req.id;
   const log = requestLog(req);
   if (err instanceof SessionNotFoundError) {
-    reply.send(errEnvelope(ErrorCode.SESSION_NOT_FOUND, err.message, requestId, err.stack));
+    reply.send(
+      errEnvelope(
+        ErrorCode.SESSION_NOT_FOUND,
+        err.message,
+        requestId,
+        err.stack,
+      ),
+    );
     return;
   }
   if (err instanceof MessageNotFoundError) {
-    reply.send(errEnvelope(ErrorCode.MESSAGE_NOT_FOUND, err.message, requestId, err.stack));
+    reply.send(
+      errEnvelope(
+        ErrorCode.MESSAGE_NOT_FOUND,
+        err.message,
+        requestId,
+        err.stack,
+      ),
+    );
     return;
   }
-  log?.error({ err }, 'message request failed');
+  log?.error({ err }, "message request failed");
   reply.send(
-    errEnvelope(ErrorCode.INTERNAL_ERROR, err instanceof Error ? err.message : String(err), requestId, err instanceof Error ? err.stack : undefined),
+    errEnvelope(
+      ErrorCode.INTERNAL_ERROR,
+      err instanceof Error ? err.message : String(err),
+      requestId,
+      err instanceof Error ? err.stack : undefined,
+    ),
   );
 }

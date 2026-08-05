@@ -1,8 +1,5 @@
-import type { Agent } from '../..';
-import {
-  matchPermissionRule,
-  type PermissionRuleMatch,
-} from '../matches-rule';
+import type { Agent } from "../..";
+import { matchPermissionRule, type PermissionRuleMatch } from "../matches-rule";
 import type {
   PermissionPolicy,
   PermissionPolicyContext,
@@ -10,12 +7,12 @@ import type {
   PermissionRule,
   PermissionRuleDecision,
   PermissionRuleScope,
-} from '../types';
+} from "../types";
 
 const USER_CONFIGURED_SCOPES = new Set<PermissionRuleScope>([
-  'turn-override',
-  'project',
-  'user',
+  "turn-override",
+  "project",
+  "user",
 ]);
 
 abstract class UserConfiguredPermissionPolicy {
@@ -25,9 +22,11 @@ abstract class UserConfiguredPermissionPolicy {
     context: PermissionPolicyContext,
     decision: PermissionRuleDecision,
   ): PermissionRuleMatch | undefined {
-    const rules = this.agent.permission.data().rules.filter((rule): rule is PermissionRule =>
-      USER_CONFIGURED_SCOPES.has(rule.scope),
-    );
+    const rules = this.agent.permission
+      .data()
+      .rules.filter((rule): rule is PermissionRule =>
+        USER_CONFIGURED_SCOPES.has(rule.scope),
+      );
     for (const rule of rules) {
       if (rule.decision !== decision) continue;
       const match = matchPermissionRule({
@@ -45,14 +44,16 @@ export class UserConfiguredDenyPermissionPolicy
   extends UserConfiguredPermissionPolicy
   implements PermissionPolicy
 {
-  readonly name = 'user-configured-deny';
+  readonly name = "user-configured-deny";
 
-  evaluate(context: PermissionPolicyContext): PermissionPolicyResult | undefined {
-    const match = this.firstMatchingRule(context, 'deny');
+  evaluate(
+    context: PermissionPolicyContext,
+  ): PermissionPolicyResult | undefined {
+    const match = this.firstMatchingRule(context, "deny");
     if (match === undefined) return;
     return {
-      kind: 'deny',
-      reason: userRuleReason('deny', match),
+      kind: "deny",
+      reason: userRuleReason("deny", match),
       message: formatPermissionRuleDenyMessage(
         context.toolCall.name,
         match.rule.reason,
@@ -66,14 +67,16 @@ export class UserConfiguredAllowPermissionPolicy
   extends UserConfiguredPermissionPolicy
   implements PermissionPolicy
 {
-  readonly name = 'user-configured-allow';
+  readonly name = "user-configured-allow";
 
-  evaluate(context: PermissionPolicyContext): PermissionPolicyResult | undefined {
-    const match = this.firstMatchingRule(context, 'allow');
+  evaluate(
+    context: PermissionPolicyContext,
+  ): PermissionPolicyResult | undefined {
+    const match = this.firstMatchingRule(context, "allow");
     if (match === undefined) return;
     return {
-      kind: 'approve',
-      reason: userRuleReason('allow', match),
+      kind: "approve",
+      reason: userRuleReason("allow", match),
     };
   }
 }
@@ -82,19 +85,24 @@ export class UserConfiguredAskPermissionPolicy
   extends UserConfiguredPermissionPolicy
   implements PermissionPolicy
 {
-  readonly name = 'user-configured-ask';
+  readonly name = "user-configured-ask";
 
-  evaluate(context: PermissionPolicyContext): PermissionPolicyResult | undefined {
-    const match = this.firstMatchingRule(context, 'ask');
+  evaluate(
+    context: PermissionPolicyContext,
+  ): PermissionPolicyResult | undefined {
+    const match = this.firstMatchingRule(context, "ask");
     if (match === undefined) return;
     return {
-      kind: 'ask',
-      reason: userRuleReason('ask', match),
+      kind: "ask",
+      reason: userRuleReason("ask", match),
     };
   }
 }
 
-function userRuleReason(decision: PermissionRuleDecision, match: PermissionRuleMatch) {
+function userRuleReason(
+  decision: PermissionRuleDecision,
+  match: PermissionRuleMatch,
+) {
   return {
     rule_decision: decision,
     has_rule_args: match.hasRuleArgs,
@@ -105,10 +113,11 @@ function userRuleReason(decision: PermissionRuleDecision, match: PermissionRuleM
 function formatPermissionRuleDenyMessage(
   tool: string,
   reason: string | undefined,
-  agentType?: Agent['type'],
+  agentType?: Agent["type"],
 ): string {
-  const suffix = reason !== undefined && reason.length > 0 ? ` Reason: ${reason}` : '';
-  if (agentType === 'sub') {
+  const suffix =
+    reason !== undefined && reason.length > 0 ? ` Reason: ${reason}` : "";
+  if (agentType === "sub") {
     return `Tool "${tool}" was denied.${suffix} Try a different approach — don't retry the same call, don't attempt to bypass the restriction.`;
   }
   return `Tool "${tool}" was denied by permission rule.${suffix}`;

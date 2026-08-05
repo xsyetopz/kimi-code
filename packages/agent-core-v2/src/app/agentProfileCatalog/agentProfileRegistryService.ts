@@ -9,19 +9,23 @@
  * catalog projection.
  */
 
-import { ContributionRegistry } from '#/_base/contribution/registry';
-import { Disposable, type IDisposable } from '#/_base/di/lifecycle';
-import type { Event } from '#/_base/event';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import type { AgentProfileContribution } from './agentProfileContribution';
+import { ContributionRegistry } from "#/_base/contribution/registry";
+import { Disposable, type IDisposable } from "#/_base/di/lifecycle";
+import type { Event } from "#/_base/event";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import type { AgentProfileContribution } from "./agentProfileContribution";
 
 import type {
   AgentProfileRegistration,
   AgentProfileRegistryChange,
   IAgentProfileRegistry,
   RegisterAgentProfileOptions,
-} from './agentProfileRegistry';
-import { IAgentProfileRegistry as IAgentProfileRegistryDecorator } from './agentProfileRegistry';
+} from "./agentProfileRegistry";
+import { IAgentProfileRegistry as IAgentProfileRegistryDecorator } from "./agentProfileRegistry";
 
 function encodeKey(sourceId: string, workspaceKey: string | undefined): string {
   return JSON.stringify([sourceId, workspaceKey ?? null]);
@@ -42,7 +46,11 @@ export class AgentProfileRegistryService
     new ContributionRegistry<AgentProfileRegistration>(),
   );
 
-  readonly onDidChange: Event<AgentProfileRegistryChange> = (listener, thisArg, disposables) =>
+  readonly onDidChange: Event<AgentProfileRegistryChange> = (
+    listener,
+    thisArg,
+    disposables,
+  ) =>
     this.registry.onDidChange(
       (key) => listener.call(thisArg, decodeKey(key)),
       undefined,
@@ -60,7 +68,10 @@ export class AgentProfileRegistryService
       workspaceKey: options?.workspaceKey,
       contribution,
     };
-    return this.registry.register(encodeKey(sourceId, options?.workspaceKey), registration);
+    return this.registry.register(
+      encodeKey(sourceId, options?.workspaceKey),
+      registration,
+    );
   }
 
   unregister(sourceId: string, workspaceKey?: string): void {
@@ -77,5 +88,5 @@ registerScopedService(
   IAgentProfileRegistryDecorator,
   AgentProfileRegistryService,
   ScopeActivation.OnScopeCreated,
-  'agentProfileCatalog',
+  "agentProfileCatalog",
 );

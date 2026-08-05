@@ -18,7 +18,10 @@
  * the kosong registries' `ready`.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
 
 export interface IKosongConfigService {
   readonly _serviceBrand: undefined;
@@ -27,4 +30,4 @@ export interface IKosongConfigService {
 }
 
 export const IKosongConfigService: ServiceIdentifier<IKosongConfigService> =
-  createDecorator<IKosongConfigService>('kosongConfigService');
+  createDecorator<IKosongConfigService>("kosongConfigService");

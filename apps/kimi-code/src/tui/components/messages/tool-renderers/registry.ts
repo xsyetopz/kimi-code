@@ -10,9 +10,9 @@
  * choose, so adding a new tool means appending one case.
  */
 
-import { readMediaSummary } from './media';
-import { shellExecutionResultRenderer } from '../shell-execution';
-import { goalSummary } from './goal';
+import { readMediaSummary } from "./media";
+import { shellExecutionResultRenderer } from "../shell-execution";
+import { goalSummary } from "./goal";
 import {
   editSummary,
   fetchSummary,
@@ -22,9 +22,9 @@ import {
   thinkSummary,
   webSearchSummary,
   writeSummary,
-} from './summary';
-import { renderTruncated } from './truncated';
-import type { ResultRenderer } from './types';
+} from "./summary";
+import { renderTruncated } from "./truncated";
+import type { ResultRenderer } from "./types";
 
 /**
  * True when a tool has no dedicated renderer and falls back to the generic
@@ -38,34 +38,34 @@ export function isGenericToolResult(toolName: string): boolean {
 
 export function pickResultRenderer(toolName: string): ResultRenderer {
   switch (toolName) {
-    case 'Read':
+    case "Read":
       return readSummary;
-    case 'ReadMediaFile':
+    case "ReadMediaFile":
       return readMediaSummary;
-    case 'Grep':
+    case "Grep":
       return grepSummary;
-    case 'Glob':
+    case "Glob":
       return globSummary;
-    case 'FetchURL':
+    case "FetchURL":
       return fetchSummary;
-    case 'WebSearch':
+    case "WebSearch":
       return webSearchSummary;
-    case 'Bash':
+    case "Bash":
       return shellExecutionResultRenderer;
-    case 'Think':
+    case "Think":
       return thinkSummary;
-    case 'Edit':
+    case "Edit":
       return editSummary;
-    case 'Write':
+    case "Write":
       return writeSummary;
-    case 'CreateGoal':
-    case 'GetGoal':
-    case 'SetGoalBudget':
-    case 'UpdateGoal':
+    case "CreateGoal":
+    case "GetGoal":
+    case "SetGoalBudget":
+    case "UpdateGoal":
       return goalSummary;
     default:
       return renderTruncated;
   }
 }
 
-export type { ResultRenderer } from './types';
+export type { ResultRenderer } from "./types";

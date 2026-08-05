@@ -7,7 +7,11 @@ interface UseInputHistoryOptions {
   onHeightChange?: () => void;
 }
 
-export function useInputHistory({ text, setText, onHeightChange }: UseInputHistoryOptions) {
+export function useInputHistory({
+  text,
+  setText,
+  onHeightChange,
+}: UseInputHistoryOptions) {
   const [history, setHistory] = useState<string[]>([]);
   const [index, setIndex] = useState(-1);
 
@@ -22,7 +26,9 @@ export function useInputHistory({ text, setText, onHeightChange }: UseInputHisto
     }
 
     void bridge.addInputHistory(trimmed);
-    setHistory((prev) => (prev[prev.length - 1] === trimmed ? prev : [...prev, trimmed]));
+    setHistory((prev) =>
+      prev[prev.length - 1] === trimmed ? prev : [...prev, trimmed],
+    );
     setIndex(-1);
   }, []);
 

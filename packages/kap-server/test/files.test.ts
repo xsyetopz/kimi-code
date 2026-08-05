@@ -8,20 +8,20 @@
  * with hand-built multipart bodies.
  */
 
-import { mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { type RunningServer, startServer } from '../src/start';
-import { TEST_HOST_IDENTITY } from './helpers/hostIdentity';
+import { type RunningServer, startServer } from "../src/start";
+import { TEST_HOST_IDENTITY } from "./helpers/hostIdentity";
 
 let home: string;
 let server: RunningServer | undefined;
 
 beforeEach(() => {
-  home = mkdtempSync(join(tmpdir(), 'kimi-server-v2-files-'));
+  home = mkdtempSync(join(tmpdir(), "kimi-server-v2-files-"));
 });
 
 afterEach(async () => {
@@ -37,10 +37,10 @@ afterEach(async () => {
 async function boot(): Promise<RunningServer> {
   server = await startServer({
     hostIdentity: TEST_HOST_IDENTITY,
-    host: '127.0.0.1',
+    host: "127.0.0.1",
     port: 0,
     homeDir: home,
-    logLevel: 'silent',
+    logLevel: "silent",
   });
   return server;
 }
@@ -83,15 +83,22 @@ interface Envelope<T = unknown> {
 }
 
 function buildMultipart(parts: {
-  file: { fieldName: string; filename: string; contentType: string; data: Buffer };
+  file: {
+    fieldName: string;
+    filename: string;
+    contentType: string;
+    data: Buffer;
+  };
   fields?: Array<{ name: string; value: string }>;
 }): { body: Buffer; contentType: string } {
-  const boundary = '------WebKitFormBoundaryKimiServerV2Test';
+  const boundary = "------WebKitFormBoundaryKimiServerV2Test";
   const lines: Array<Buffer | string> = [];
   if (parts.fields) {
     for (const f of parts.fields) {
       lines.push(`--${boundary}\r\n`);
-      lines.push(`Content-Disposition: form-data; name="${f.name}"\r\n\r\n${f.value}\r\n`);
+      lines.push(
+        `Content-Disposition: form-data; name="${f.name}"\r\n\r\n${f.value}\r\n`,
+      );
     }
   }
   lines.push(`--${boundary}\r\n`);
@@ -104,7 +111,7 @@ function buildMultipart(parts: {
 
   const chunks: Buffer[] = [];
   for (const ln of lines) {
-    chunks.push(typeof ln === 'string' ? Buffer.from(ln, 'utf8') : ln);
+    chunks.push(typeof ln === "string" ? Buffer.from(ln, "utf8") : ln);
   }
   return {
     body: Buffer.concat(chunks),
@@ -112,19 +119,24 @@ function buildMultipart(parts: {
   };
 }
 
-describe('POST /api/v1/files (server-v2)', () => {
-  it('upload → GET stream → DELETE → re-GET 40407', async () => {
+describe("POST /api/v1/files (server-v2)", () => {
+  it("upload → GET stream → DELETE → re-GET 40407", async () => {
     const r = await boot();
-    const data = Buffer.from('hello server v2 files');
+    const data = Buffer.from("hello server v2 files");
     const mp = buildMultipart({
-      file: { fieldName: 'file', filename: 'hello.txt', contentType: 'text/plain', data },
+      file: {
+        fieldName: "file",
+        filename: "hello.txt",
+        contentType: "text/plain",
+        data,
+      },
     });
 
     const upRes = await appOf(r).inject({
-      method: 'POST',
-      url: '/api/v1/files',
+      method: "POST",
+      url: "/api/v1/files",
       payload: mp.body,
-      headers: { 'content-type': mp.contentType },
+      headers: { "content-type": mp.contentType },
     });
     expect(upRes.statusCode).toBe(200);
     const upEnv = upRes.json() as Envelope<{
@@ -136,25 +148,25 @@ describe('POST /api/v1/files (server-v2)', () => {
     }>;
     expect(upEnv.code).toBe(0);
     const meta = upEnv.data!;
-    expect(meta.name).toBe('hello.txt');
-    expect(meta.media_type).toBe('text/plain');
+    expect(meta.name).toBe("hello.txt");
+    expect(meta.media_type).toBe("text/plain");
     expect(meta.size).toBe(data.length);
 
     const getRes = await appOf(r).inject({
-      method: 'GET',
+      method: "GET",
       url: `/api/v1/files/${meta.id}`,
     });
     expect(getRes.statusCode).toBe(200);
-    expect(getRes.headers['content-type']).toBe('text/plain');
-    expect(getRes.headers['content-length']).toBe(String(data.length));
-    expect(getRes.headers['etag']).toBe(`"${meta.id}-${meta.size}"`);
-    expect(String(getRes.headers['content-disposition'])).toMatch(
+    expect(getRes.headers["content-type"]).toBe("text/plain");
+    expect(getRes.headers["content-length"]).toBe(String(data.length));
+    expect(getRes.headers["etag"]).toBe(`"${meta.id}-${meta.size}"`);
+    expect(String(getRes.headers["content-disposition"])).toMatch(
       /attachment; filename="hello\.txt"/,
     );
     expect(getRes.rawPayload).toEqual(data);
 
     const delRes = await appOf(r).inject({
-      method: 'DELETE',
+      method: "DELETE",
       url: `/api/v1/files/${meta.id}`,
     });
     expect(delRes.statusCode).toBe(200);
@@ -163,29 +175,29 @@ describe('POST /api/v1/files (server-v2)', () => {
     expect(delEnv.data?.deleted).toBe(true);
 
     const get2Res = await appOf(r).inject({
-      method: 'GET',
+      method: "GET",
       url: `/api/v1/files/${meta.id}`,
     });
     expect(get2Res.statusCode).toBe(404);
     expect((get2Res.json() as Envelope).code).toBe(40407);
   });
 
-  it('uploads a file larger than the former 50 MiB cap', async () => {
+  it("uploads a file larger than the former 50 MiB cap", async () => {
     const r = await boot();
     const big = Buffer.alloc(51 * 1024 * 1024, 0);
     const mp = buildMultipart({
       file: {
-        fieldName: 'file',
-        filename: 'big.bin',
-        contentType: 'application/octet-stream',
+        fieldName: "file",
+        filename: "big.bin",
+        contentType: "application/octet-stream",
         data: big,
       },
     });
     const res = await appOf(r).inject({
-      method: 'POST',
-      url: '/api/v1/files',
+      method: "POST",
+      url: "/api/v1/files",
       payload: mp.body,
-      headers: { 'content-type': mp.contentType },
+      headers: { "content-type": mp.contentType },
     });
     expect(res.statusCode).toBe(200);
     const env = res.json() as Envelope<{ id: string; size: number }>;
@@ -193,7 +205,7 @@ describe('POST /api/v1/files (server-v2)', () => {
     expect(env.data!.size).toBe(big.length);
 
     const getRes = await appOf(r).inject({
-      method: 'GET',
+      method: "GET",
       url: `/api/v1/files/${env.data!.id}`,
     });
     expect(getRes.statusCode).toBe(200);
@@ -202,34 +214,39 @@ describe('POST /api/v1/files (server-v2)', () => {
     expect(getRes.rawPayload.equals(big)).toBe(true);
   });
 
-  it('GET / DELETE unknown file_id → 40407', async () => {
+  it("GET / DELETE unknown file_id → 40407", async () => {
     const r = await boot();
     const getRes = await appOf(r).inject({
-      method: 'GET',
-      url: '/api/v1/files/f_does_not_exist',
+      method: "GET",
+      url: "/api/v1/files/f_does_not_exist",
     });
     expect(getRes.statusCode).toBe(404);
     expect((getRes.json() as Envelope).code).toBe(40407);
 
     const delRes = await appOf(r).inject({
-      method: 'DELETE',
-      url: '/api/v1/files/f_does_not_exist',
+      method: "DELETE",
+      url: "/api/v1/files/f_does_not_exist",
     });
     expect(delRes.statusCode).toBe(404);
     expect((delRes.json() as Envelope).code).toBe(40407);
   });
 
-  it('survives a server restart (index + blob persist)', async () => {
+  it("survives a server restart (index + blob persist)", async () => {
     let r = await boot();
-    const data = Buffer.from('persistent payload');
+    const data = Buffer.from("persistent payload");
     const mp = buildMultipart({
-      file: { fieldName: 'file', filename: 'persist.txt', contentType: 'text/plain', data },
+      file: {
+        fieldName: "file",
+        filename: "persist.txt",
+        contentType: "text/plain",
+        data,
+      },
     });
     const upRes = await appOf(r).inject({
-      method: 'POST',
-      url: '/api/v1/files',
+      method: "POST",
+      url: "/api/v1/files",
       payload: mp.body,
-      headers: { 'content-type': mp.contentType },
+      headers: { "content-type": mp.contentType },
     });
     const meta = (upRes.json() as Envelope<{ id: string; size: number }>).data!;
     expect(meta.id).toBeDefined();
@@ -239,95 +256,99 @@ describe('POST /api/v1/files (server-v2)', () => {
     r = await boot();
 
     const getRes = await appOf(r).inject({
-      method: 'GET',
+      method: "GET",
       url: `/api/v1/files/${meta.id}`,
     });
     expect(getRes.statusCode).toBe(200);
     expect(getRes.rawPayload).toEqual(data);
   });
 
-  it('honors the multipart `name` field override', async () => {
+  it("honors the multipart `name` field override", async () => {
     const r = await boot();
     const mp = buildMultipart({
       file: {
-        fieldName: 'file',
-        filename: 'original.txt',
-        contentType: 'text/plain',
-        data: Buffer.from('renamed payload'),
+        fieldName: "file",
+        filename: "original.txt",
+        contentType: "text/plain",
+        data: Buffer.from("renamed payload"),
       },
-      fields: [{ name: 'name', value: 'overridden.txt' }],
+      fields: [{ name: "name", value: "overridden.txt" }],
     });
     const res = await appOf(r).inject({
-      method: 'POST',
-      url: '/api/v1/files',
+      method: "POST",
+      url: "/api/v1/files",
       payload: mp.body,
-      headers: { 'content-type': mp.contentType },
+      headers: { "content-type": mp.contentType },
     });
     expect(res.statusCode).toBe(200);
-    expect((res.json() as Envelope<{ name: string }>).data?.name).toBe('overridden.txt');
+    expect((res.json() as Envelope<{ name: string }>).data?.name).toBe(
+      "overridden.txt",
+    );
   });
 
-  it('serves byte ranges with 206 Partial Content for video playback', async () => {
+  it("serves byte ranges with 206 Partial Content for video playback", async () => {
     const r = await boot();
-    const data = Buffer.from('0123456789abcdefghijklmnopqrstuvwxyz');
+    const data = Buffer.from("0123456789abcdefghijklmnopqrstuvwxyz");
     const mp = buildMultipart({
       file: {
-        fieldName: 'file',
-        filename: 'clip.mp4',
-        contentType: 'video/mp4',
+        fieldName: "file",
+        filename: "clip.mp4",
+        contentType: "video/mp4",
         data,
       },
     });
     const upRes = await appOf(r).inject({
-      method: 'POST',
-      url: '/api/v1/files',
+      method: "POST",
+      url: "/api/v1/files",
       payload: mp.body,
-      headers: { 'content-type': mp.contentType },
+      headers: { "content-type": mp.contentType },
     });
     const meta = (upRes.json() as Envelope<{ id: string; size: number }>).data!;
 
     const full = await appOf(r).inject({
-      method: 'GET',
+      method: "GET",
       url: `/api/v1/files/${meta.id}`,
     });
     expect(full.statusCode).toBe(200);
-    expect(full.headers['accept-ranges']).toBe('bytes');
-    expect(full.headers['content-type']).toBe('video/mp4');
-    expect(String(full.headers['content-disposition'])).toMatch(/^inline;/);
+    expect(full.headers["accept-ranges"]).toBe("bytes");
+    expect(full.headers["content-type"]).toBe("video/mp4");
+    expect(String(full.headers["content-disposition"])).toMatch(/^inline;/);
     expect(full.rawPayload).toEqual(data);
 
     const part = await appOf(r).inject({
-      method: 'GET',
+      method: "GET",
       url: `/api/v1/files/${meta.id}`,
-      headers: { range: 'bytes=4-9' },
+      headers: { range: "bytes=4-9" },
     });
     expect(part.statusCode).toBe(206);
-    expect(part.headers['content-range']).toBe(`bytes 4-9/${data.length}`);
-    expect(part.headers['content-length']).toBe('6');
+    expect(part.headers["content-range"]).toBe(`bytes 4-9/${data.length}`);
+    expect(part.headers["content-length"]).toBe("6");
     expect(part.rawPayload).toEqual(data.subarray(4, 10));
 
     const tail = await appOf(r).inject({
-      method: 'GET',
+      method: "GET",
       url: `/api/v1/files/${meta.id}`,
-      headers: { range: 'bytes=30-' },
+      headers: { range: "bytes=30-" },
     });
     expect(tail.statusCode).toBe(206);
-    expect(tail.headers['content-range']).toBe(`bytes 30-${data.length - 1}/${data.length}`);
+    expect(tail.headers["content-range"]).toBe(
+      `bytes 30-${data.length - 1}/${data.length}`,
+    );
     expect(tail.rawPayload).toEqual(data.subarray(30));
   });
 
-  it('missing file part → 40001 validation error', async () => {
+  it("missing file part → 40001 validation error", async () => {
     const r = await boot();
-    const boundary = '------WebKitFormBoundaryNoFile';
+    const boundary = "------WebKitFormBoundaryNoFile";
     const body = Buffer.from(
       `--${boundary}\r\nContent-Disposition: form-data; name="other"\r\n\r\nhi\r\n--${boundary}--\r\n`,
-      'utf8',
+      "utf8",
     );
     const res = await appOf(r).inject({
-      method: 'POST',
-      url: '/api/v1/files',
+      method: "POST",
+      url: "/api/v1/files",
       payload: body,
-      headers: { 'content-type': `multipart/form-data; boundary=${boundary}` },
+      headers: { "content-type": `multipart/form-data; boundary=${boundary}` },
     });
     expect(res.statusCode).toBe(200);
     expect((res.json() as Envelope).code).toBe(40001);

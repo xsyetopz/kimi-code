@@ -1,15 +1,15 @@
-import type { Message, StreamedMessagePart, VideoURLPart } from './message';
-import type { Tool } from './tool';
-import type { TokenUsage } from './usage';
+import type { Message, StreamedMessagePart, VideoURLPart } from "./message";
+import type { Tool } from "./tool";
+import type { TokenUsage } from "./usage";
 
 export type JsonSchemaObject = Record<string, unknown>;
 
 export interface JsonObjectResponseFormat {
-  readonly type: 'json_object';
+  readonly type: "json_object";
 }
 
 export interface JsonSchemaResponseFormat {
-  readonly type: 'json_schema';
+  readonly type: "json_schema";
   readonly jsonSchema: {
     readonly name: string;
     readonly schema: JsonSchemaObject;
@@ -18,7 +18,9 @@ export interface JsonSchemaResponseFormat {
   };
 }
 
-export type ResponseFormat = JsonObjectResponseFormat | JsonSchemaResponseFormat;
+export type ResponseFormat =
+  | JsonObjectResponseFormat
+  | JsonSchemaResponseFormat;
 
 /**
  * Thinking effort passed to {@link ChatProvider.withThinking}.
@@ -34,7 +36,7 @@ export type ResponseFormat = JsonObjectResponseFormat | JsonSchemaResponseFormat
  * effort field pass concrete strings through to their upstream API; model
  * compatibility and fallback are resolved before this boundary.
  */
-export type ThinkingEffort = 'off' | 'on' | (string & {});
+export type ThinkingEffort = "off" | "on" | (string & {});
 
 /**
  * Optional context passed to {@link ChatProvider.withMaxCompletionTokens} so a
@@ -74,12 +76,12 @@ export interface MaxCompletionTokensOptions {
  *   above.
  */
 export type FinishReason =
-  | 'completed'
-  | 'tool_calls'
-  | 'truncated'
-  | 'filtered'
-  | 'paused'
-  | 'other';
+  | "completed"
+  | "tool_calls"
+  | "truncated"
+  | "filtered"
+  | "paused"
+  | "other";
 
 /**
  * An async-iterable stream of message parts produced by a single LLM response.
@@ -270,5 +272,8 @@ export interface ChatProvider {
     options?: MaxCompletionTokensOptions,
   ): ChatProvider;
   /** Upload a video and return a content part that can be sent to this provider. */
-  uploadVideo?(input: string | VideoUploadInput, options?: GenerateOptions): Promise<VideoURLPart>;
+  uploadVideo?(
+    input: string | VideoUploadInput,
+    options?: GenerateOptions,
+  ): Promise<VideoURLPart>;
 }

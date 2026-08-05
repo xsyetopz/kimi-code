@@ -6,9 +6,9 @@
 // published index generation on open (stage 5) or rebuilt from the store as
 // the fallback.
 
-import { SkipList, cmpNumber, cmpString } from './skiplist.js';
-import type { RangeEntry } from './skiplist.js';
-import type { DtImageColumn } from './gen-codec.js';
+import { SkipList, cmpNumber, cmpString } from "./skiplist.js";
+import type { RangeEntry } from "./skiplist.js";
+import type { DtImageColumn } from "./gen-codec.js";
 
 interface DtColumn {
   list: SkipList<number, string>;
@@ -27,7 +27,13 @@ export class DtIndex {
   private col(name: string): DtColumn {
     let c = this.cols.get(name);
     if (!c) {
-      c = { list: new SkipList<number, string>({ compareKey: cmpNumber, compareVal: cmpString }), byKey: new Map() };
+      c = {
+        list: new SkipList<number, string>({
+          compareKey: cmpNumber,
+          compareVal: cmpString,
+        }),
+        byKey: new Map(),
+      };
       this.cols.set(name, c);
     }
     return c;
@@ -50,7 +56,7 @@ export class DtIndex {
     }
     for (const col of Object.keys(next)) {
       const ms = next[col]!;
-      if (typeof ms !== 'number' || !Number.isFinite(ms)) continue;
+      if (typeof ms !== "number" || !Number.isFinite(ms)) continue;
       if (old[col] === ms) continue;
       const c = this.col(col);
       c.list.insert(ms, key);
@@ -76,17 +82,22 @@ export class DtIndex {
   }
 
   /** Range over a dt column. */
-  range(col: string, opts: Parameters<SkipList<number, string>['range']>[0] = {}): DtRangeEntry[] {
+  range(
+    col: string,
+    opts: Parameters<SkipList<number, string>["range"]>[0] = {},
+  ): DtRangeEntry[] {
     const c = this.cols.get(col);
     if (!c) return [];
-    return c.list.range(opts).map((n: RangeEntry<number, string>) => ({ key: n.val, value: n.key }));
+    return c.list
+      .range(opts)
+      .map((n: RangeEntry<number, string>) => ({ key: n.val, value: n.key }));
   }
 
   /** Lazy range over a dt column; yields { key: recordKey, value: ts } like
    *  range() but lets the caller stop early without materializing everything. */
   *iterate(
     col: string,
-    opts: Parameters<SkipList<number, string>['iterate']>[0] = {},
+    opts: Parameters<SkipList<number, string>["iterate"]>[0] = {},
   ): Generator<DtRangeEntry> {
     const c = this.cols.get(col);
     if (!c) return;
@@ -98,7 +109,12 @@ export class DtIndex {
   }
 
   /** Rebuild from an iterator of { key, dt }. */
-  rebuild(entries: Iterable<{ key: string; dt: Record<string, number> | null | undefined }>): void {
+  rebuild(
+    entries: Iterable<{
+      key: string;
+      dt: Record<string, number> | null | undefined;
+    }>,
+  ): void {
     const b = this.beginRebuild();
     for (const { key, dt } of entries) b.add(key, dt);
     b.commit();
@@ -109,7 +125,9 @@ export class DtIndex {
   exportImage(): DtImageColumn[] {
     return [...this.cols.entries()].map(([name, c]) => ({
       name,
-      entries: c.list.toArray().map((n: RangeEntry<number, string>) => ({ ms: n.key, key: n.val })),
+      entries: c.list
+        .toArray()
+        .map((n: RangeEntry<number, string>) => ({ ms: n.key, key: n.val })),
     }));
   }
 
@@ -140,7 +158,10 @@ export class DtIndex {
    *  that fails midway leaves the previous index fully intact. Rebuild keys
    *  are unique (one store record each), so add() is a pure insert — the
    *  diff-based set() logic is not needed here. */
-  beginRebuild(): { add(key: string, dt: Record<string, number> | null | undefined): void; commit(): void } {
+  beginRebuild(): {
+    add(key: string, dt: Record<string, number> | null | undefined): void;
+    commit(): void;
+  } {
     const cols = new Map<string, DtColumn>();
     const byKey = new Map<string, Record<string, number>>();
     return {
@@ -148,10 +169,16 @@ export class DtIndex {
         if (!dt) return;
         const rec: Record<string, number> = {};
         for (const [name, ms] of Object.entries(dt)) {
-          if (typeof ms !== 'number' || !Number.isFinite(ms)) continue;
+          if (typeof ms !== "number" || !Number.isFinite(ms)) continue;
           let c = cols.get(name);
           if (!c) {
-            c = { list: new SkipList<number, string>({ compareKey: cmpNumber, compareVal: cmpString }), byKey: new Map() };
+            c = {
+              list: new SkipList<number, string>({
+                compareKey: cmpNumber,
+                compareVal: cmpString,
+              }),
+              byKey: new Map(),
+            };
             cols.set(name, c);
           }
           c.list.insert(ms, key);

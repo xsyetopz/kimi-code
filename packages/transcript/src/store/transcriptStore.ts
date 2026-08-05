@@ -8,13 +8,13 @@
  * can render an agent picker).
  */
 
-import type { AgentId } from '../model/ids';
-import { AgentTranscript, type Disposable } from './agentTranscript';
+import type { AgentId } from "../model/ids";
+import { AgentTranscript, type Disposable } from "./agentTranscript";
 
 export interface AgentDescriptor {
   readonly agentId: AgentId;
   /** Engine metadata, mirrored for display (e.g. 'main' | 'sub' | swarm member). */
-  readonly type?: 'main' | 'sub' | 'independent';
+  readonly type?: "main" | "sub" | "independent";
   readonly parentAgentId?: AgentId;
   readonly label?: string;
   readonly createdAt?: string;
@@ -28,7 +28,7 @@ export class TranscriptStore {
   readonly #descriptors = new Map<AgentId, AgentDescriptor>();
   readonly #rosterListeners = new Set<RosterListener>();
 
-  constructor(readonly sessionId: string) { }
+  constructor(readonly sessionId: string) {}
 
   /** Lazily create (or fetch) the transcript for an agent. */
   ensureAgent(agentId: AgentId, descriptor?: AgentDescriptor): AgentTranscript {

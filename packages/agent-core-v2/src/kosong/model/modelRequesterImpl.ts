@@ -20,28 +20,32 @@
  * Constructed by `ModelCatalog` — plain constructor args, no DI.
  */
 
-import { AsyncEventQueue } from '#/_base/asyncEventQueue';
-import type { VideoURLPart } from '#/kosong/contract/message';
-import { APIStatusError, isAbortError, VideoUploadUnsupportedError } from '#/kosong/contract/errors';
-import { generate, type GenerateResult } from '#/kosong/contract/generate';
+import { AsyncEventQueue } from "#/_base/asyncEventQueue";
+import type { VideoURLPart } from "#/kosong/contract/message";
+import {
+  APIStatusError,
+  isAbortError,
+  VideoUploadUnsupportedError,
+} from "#/kosong/contract/errors";
+import { generate, type GenerateResult } from "#/kosong/contract/generate";
 import type {
   ChatProvider,
   GenerateOptions,
   ProviderRequestAuth,
   StreamDecodeStats,
   VideoUploadInput,
-} from '#/kosong/contract/provider';
-import { translateProviderError } from '#/kosong/protocol/errors';
-import type { IProtocolAdapterRegistry } from '#/kosong/protocol/protocol';
+} from "#/kosong/contract/provider";
+import { translateProviderError } from "#/kosong/protocol/errors";
+import type { IProtocolAdapterRegistry } from "#/kosong/protocol/protocol";
 
-import type { AuthProvider, Model } from './catalog';
+import type { AuthProvider, Model } from "./catalog";
 import type {
   ModelRequestEvent,
   ModelRequestInput,
   ModelRequestParams,
   ModelRequester,
   ModelRequestTiming,
-} from './modelRequester';
+} from "./modelRequester";
 
 export class ModelRequesterImpl implements ModelRequester {
   private cachedChatProvider: ChatProvider | undefined;
@@ -146,7 +150,7 @@ export class ModelRequesterImpl implements ModelRequester {
           {
             onMessagePart: (part) => {
               firstChunkAt ??= Date.now();
-              queue.push({ type: 'part', part });
+              queue.push({ type: "part", part });
             },
           },
           { ...options, auth },
@@ -158,10 +162,14 @@ export class ModelRequesterImpl implements ModelRequester {
     }
 
     if (result.usage !== undefined && result.usage !== null) {
-      queue.push({ type: 'usage', usage: result.usage, model: this.model.name });
+      queue.push({
+        type: "usage",
+        usage: result.usage,
+        model: this.model.name,
+      });
     }
     queue.push({
-      type: 'finish',
+      type: "finish",
       message: result.message,
       providerFinishReason: result.finishReason ?? undefined,
       rawFinishReason: result.rawFinishReason ?? undefined,
@@ -170,7 +178,7 @@ export class ModelRequesterImpl implements ModelRequester {
     });
     if (firstChunkAt !== undefined) {
       queue.push({
-        type: 'timing',
+        type: "timing",
         ...buildStreamTiming(
           requestStartedAt,
           requestSentAt,
@@ -206,7 +214,9 @@ export class ModelRequesterImpl implements ModelRequester {
   }
 
   private shouldForceRefresh(error: unknown): boolean {
-    return this.authProvider.canRefresh === true && isUnauthorizedStatusError(error);
+    return (
+      this.authProvider.canRefresh === true && isUnauthorizedStatusError(error)
+    );
   }
 }
 
@@ -214,7 +224,9 @@ function isUnauthorizedStatusError(error: unknown): error is APIStatusError {
   return error instanceof APIStatusError && error.statusCode === 401;
 }
 
-type MutableModelRequestTiming = { -readonly [K in keyof ModelRequestTiming]: ModelRequestTiming[K] };
+type MutableModelRequestTiming = {
+  -readonly [K in keyof ModelRequestTiming]: ModelRequestTiming[K];
+};
 
 export function buildStreamTiming(
   requestStartedAt: number,
@@ -229,7 +241,10 @@ export function buildStreamTiming(
     streamDurationMs: Math.max(0, outputEndedAt - firstChunkAt),
   };
   if (requestSentAt !== undefined) {
-    const sentAt = Math.min(Math.max(requestSentAt, requestStartedAt), firstChunkAt);
+    const sentAt = Math.min(
+      Math.max(requestSentAt, requestStartedAt),
+      firstChunkAt,
+    );
     timing.requestBuildMs = sentAt - requestStartedAt;
     timing.serverFirstTokenMs = firstChunkAt - sentAt;
   }

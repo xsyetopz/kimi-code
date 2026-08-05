@@ -3,13 +3,13 @@
  * shown. Cheap, synchronous-ish, no TTY required. Returns the MigrationPlan to
  * drive the screen, or null when there is nothing to offer.
  */
-import { existsSync } from 'node:fs';
+import { existsSync } from "node:fs";
 
 import {
   detectMigration,
   shouldSuppressMigration,
   type MigrationPlan,
-} from '@moonshot-ai/migration-legacy';
+} from "@moonshot-ai/migration-legacy";
 
 export interface DetectPendingInput {
   readonly sourceHome: string;

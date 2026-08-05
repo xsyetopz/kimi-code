@@ -22,11 +22,15 @@
  * was removed server-side, so there is no live push to render.
  */
 
-import { useQuery } from '@tanstack/react-query';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useQuery } from "@tanstack/react-query";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { fetchChannelDescriptors, type ChannelDescriptor, type ChannelScope } from '../channel';
-import { useConnection } from '../connection';
+import {
+  fetchChannelDescriptors,
+  type ChannelDescriptor,
+  type ChannelScope,
+} from "../channel";
+import { useConnection } from "../connection";
 import {
   AGENT_PANELS,
   CORE_PANELS,
@@ -34,12 +38,27 @@ import {
   call,
   type AnyService,
   type ServicePanelDef,
-} from '../panels';
-import { ActionButton, Badge, ErrorLine, JsonView, errorMessage, relTime } from '../ui';
-import { buildArgs, fieldKey, parseParamFields, type ParamField } from './methodArgs';
+} from "../panels";
+import {
+  ActionButton,
+  Badge,
+  ErrorLine,
+  JsonView,
+  errorMessage,
+  relTime,
+} from "../ui";
+import {
+  buildArgs,
+  fieldKey,
+  parseParamFields,
+  type ParamField,
+} from "./methodArgs";
 
 const PANEL_OVERRIDES: ReadonlyMap<string, ServicePanelDef> = new Map(
-  [...CORE_PANELS, ...SESSION_PANELS, ...AGENT_PANELS].map((def) => [def.id, def]),
+  [...CORE_PANELS, ...SESSION_PANELS, ...AGENT_PANELS].map((def) => [
+    def.id,
+    def,
+  ]),
 );
 
 /** One merged Service entry: the wire channel plus its curated override, if any. */
@@ -53,7 +72,7 @@ interface ScopeEntry {
 function useChannels() {
   const { klient } = useConnection();
   return useQuery({
-    queryKey: ['channels', klient.baseUrl],
+    queryKey: ["channels", klient.baseUrl],
     queryFn: () => fetchChannelDescriptors(klient),
     staleTime: Number.POSITIVE_INFINITY,
   });
@@ -74,7 +93,8 @@ function useScopePanels(scope: ChannelScope) {
       }
       // Keep overrides the introspection missed (e.g. server drift).
       for (const def of PANEL_OVERRIDES.values()) {
-        if (def.scope === scope && !byName.has(def.id)) byName.set(def.id, undefined);
+        if (def.scope === scope && !byName.has(def.id))
+          byName.set(def.id, undefined);
       }
     } else {
       for (const def of PANEL_OVERRIDES.values()) {
@@ -119,11 +139,23 @@ export function ScopePanels({
       ) : null}
       {entries.map(({ name, channel, def }) => {
         if (def !== undefined) {
-          return <ServiceCard key={name} def={def} svc={proxyFor(name)} onError={onError} />;
+          return (
+            <ServiceCard
+              key={name}
+              def={def}
+              svc={proxyFor(name)}
+              onError={onError}
+            />
+          );
         }
         if (channel === undefined) return null;
         return (
-          <DynamicServiceCard key={name} channel={channel} svc={proxyFor(name)} onError={onError} />
+          <DynamicServiceCard
+            key={name}
+            channel={channel}
+            svc={proxyFor(name)}
+            onError={onError}
+          />
         );
       })}
     </>
@@ -136,7 +168,7 @@ export function ScopePanels({
  */
 function fuzzyMatch(name: string, query: string): boolean {
   const q = query.trim().toLowerCase();
-  if (q === '') return true;
+  if (q === "") return true;
   const n = name.toLowerCase();
   let i = 0;
   for (const ch of n) {
@@ -169,7 +201,7 @@ export function ScopePanelsScrollspy({
 }) {
   const { entries, channels } = useScopePanels(scope);
   const [active, setActive] = useState<string | null>(null);
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState("");
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const sectionRefs = useRef(new Map<string, HTMLElement>());
   const navRefs = useRef(new Map<string, HTMLButtonElement>());
@@ -186,7 +218,7 @@ export function ScopePanelsScrollspy({
   const [records, setRecords] = useState<readonly CallRecord[]>([]);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const recordId = useRef(0);
-  const record = useCallback((entry: Omit<CallRecord, 'id'>) => {
+  const record = useCallback((entry: Omit<CallRecord, "id">) => {
     const id = ++recordId.current;
     setRecords((prev) => [{ ...entry, id }, ...prev].slice(0, 100));
     // Like Postman's response pane: the newest call is always open.
@@ -224,12 +256,14 @@ export function ScopePanelsScrollspy({
   // Keep the highlighted item inside the left list's viewport.
   useEffect(() => {
     if (active === null) return;
-    navRefs.current.get(active)?.scrollIntoView({ block: 'nearest' });
+    navRefs.current.get(active)?.scrollIntoView({ block: "nearest" });
   }, [active]);
 
   const scrollTo = (name: string) => {
     setActive(name);
-    sectionRefs.current.get(name)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    sectionRefs.current
+      .get(name)
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   return (
@@ -247,7 +281,9 @@ export function ScopePanelsScrollspy({
           />
         </div>
         {filtered.length === 0 ? (
-          <div className="px-3 py-1 text-[11px] text-neutral-600 italic">no matches</div>
+          <div className="px-3 py-1 text-[11px] text-neutral-600 italic">
+            no matches
+          </div>
         ) : null}
         {filtered.map(({ name, def }) => (
           <button
@@ -260,8 +296,8 @@ export function ScopePanelsScrollspy({
             onClick={() => scrollTo(name)}
             className={`block w-full truncate px-3 py-1 text-left font-mono text-[11px] transition-colors ${
               active === name
-                ? 'bg-neutral-800 text-sky-400'
-                : 'text-neutral-500 hover:bg-neutral-800/60 hover:text-neutral-300'
+                ? "bg-neutral-800 text-sky-400"
+                : "text-neutral-500 hover:bg-neutral-800/60 hover:text-neutral-300"
             }`}
             title={def?.label ?? name}
           >
@@ -292,7 +328,11 @@ export function ScopePanelsScrollspy({
             className="scroll-mt-3"
           >
             {def !== undefined ? (
-              <ServiceCard def={def} svc={recordingProxyFor(name)} onError={onError} />
+              <ServiceCard
+                def={def}
+                svc={recordingProxyFor(name)}
+                onError={onError}
+              />
             ) : channel !== undefined ? (
               <DynamicServiceCard
                 channel={channel}
@@ -342,12 +382,12 @@ interface CallRecord {
 function makeRecordingProxy(
   service: string,
   svc: AnyService,
-  record: (entry: Omit<CallRecord, 'id'>) => void,
+  record: (entry: Omit<CallRecord, "id">) => void,
 ): AnyService {
   return new Proxy(svc, {
     get(target, prop) {
       const member = target[prop as string];
-      if (typeof member !== 'function') return member;
+      if (typeof member !== "function") return member;
       return (...args: unknown[]) => {
         const at = Date.now();
         return Promise.resolve(member(...args)).then(
@@ -396,9 +436,11 @@ function HistoryPane({
     <div className="hidden w-[360px] shrink-0 flex-col border-l border-neutral-800 bg-neutral-900/30 lg:flex">
       <div className="flex items-center justify-between border-b border-neutral-800 px-3 py-2">
         <span className="text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
-          History {records.length > 0 ? `(${records.length})` : ''}
+          History {records.length > 0 ? `(${records.length})` : ""}
         </span>
-        {records.length > 0 ? <ActionButton onClick={onClear}>Clear</ActionButton> : null}
+        {records.length > 0 ? (
+          <ActionButton onClick={onClear}>Clear</ActionButton>
+        ) : null}
       </div>
       <div className="flex-1 overflow-y-auto p-2">
         {records.length === 0 ? (
@@ -409,22 +451,31 @@ function HistoryPane({
         {records.map((r) => {
           const open = r.id === expandedId;
           return (
-            <div key={r.id} className="mb-2 rounded border border-neutral-800 bg-neutral-900/60">
+            <div
+              key={r.id}
+              className="mb-2 rounded border border-neutral-800 bg-neutral-900/60"
+            >
               <div
                 className="flex cursor-pointer items-center gap-2 px-2 py-1.5 select-none"
                 onClick={() => onToggle(r.id)}
               >
                 <span
-                  className={`shrink-0 text-[9px] ${r.ok ? 'text-emerald-400' : 'text-red-400'}`}
+                  className={`shrink-0 text-[9px] ${r.ok ? "text-emerald-400" : "text-red-400"}`}
                 >
                   ●
                 </span>
                 <span className="min-w-0 flex-1 truncate font-mono text-[11px] text-neutral-200">
                   {r.service}.{r.method}
                 </span>
-                <span className="shrink-0 text-[10px] text-neutral-600">{r.durationMs}ms</span>
-                <span className="shrink-0 text-[10px] text-neutral-600">{relTime(r.at)}</span>
-                <span className="shrink-0 text-[10px] text-neutral-600">{open ? '▾' : '▸'}</span>
+                <span className="shrink-0 text-[10px] text-neutral-600">
+                  {r.durationMs}ms
+                </span>
+                <span className="shrink-0 text-[10px] text-neutral-600">
+                  {relTime(r.at)}
+                </span>
+                <span className="shrink-0 text-[10px] text-neutral-600">
+                  {open ? "▾" : "▸"}
+                </span>
               </div>
               {open ? (
                 <div className="border-t border-neutral-800/60 px-2 py-1.5">
@@ -433,12 +484,14 @@ function HistoryPane({
                   </div>
                   <JsonView data={r.args} empty="(no args)" />
                   <div className="mt-1.5 mb-0.5 text-[10px] font-semibold uppercase tracking-wider text-neutral-600">
-                    {r.ok ? 'Response' : 'Error'}
+                    {r.ok ? "Response" : "Error"}
                   </div>
                   {r.ok ? (
                     <JsonView data={r.result} empty="(no result)" />
                   ) : (
-                    <div className="text-[11px] break-words text-red-400">{r.error}</div>
+                    <div className="text-[11px] break-words text-red-400">
+                      {r.error}
+                    </div>
                   )}
                 </div>
               ) : null}
@@ -455,7 +508,13 @@ function HistoryPane({
 // ---------------------------------------------------------------------------
 
 /** Service name that copies itself to the clipboard on click. */
-function CopyableName({ name, className }: { name: string; className?: string }) {
+function CopyableName({
+  name,
+  className,
+}: {
+  name: string;
+  className?: string;
+}) {
   const [copied, setCopied] = useState(false);
   return (
     <button
@@ -471,7 +530,7 @@ function CopyableName({ name, className }: { name: string; className?: string })
         });
       }}
     >
-      {copied ? 'copied ✓' : name}
+      {copied ? "copied ✓" : name}
     </button>
   );
 }
@@ -507,7 +566,9 @@ function ServiceCard({
     <div className="mb-3 rounded-lg border border-neutral-800 bg-neutral-900/60">
       <div className="flex items-center justify-between border-b border-neutral-800/60 px-3 py-2">
         <div>
-          <span className="text-[12px] font-medium text-neutral-200">{def.label}</span>
+          <span className="text-[12px] font-medium text-neutral-200">
+            {def.label}
+          </span>
           <CopyableName
             name={def.id}
             className="ml-2 font-mono text-[10px] text-neutral-600 hover:text-sky-400"
@@ -515,7 +576,7 @@ function ServiceCard({
         </div>
         {def.fetch !== undefined ? (
           <ActionButton onClick={() => void refresh()} disabled={svc === null}>
-            {loaded ? 'Refresh' : 'Load'}
+            {loaded ? "Refresh" : "Load"}
           </ActionButton>
         ) : null}
       </div>
@@ -553,7 +614,8 @@ function ServiceCard({
                   setError(null);
                   try {
                     const result = await action.run(svc, input);
-                    if (result !== undefined && def.fetch === undefined) setData(result);
+                    if (result !== undefined && def.fetch === undefined)
+                      setData(result);
                     if (def.fetch !== undefined) await refresh();
                   } catch (error) {
                     setError(error);
@@ -563,7 +625,7 @@ function ServiceCard({
                   }
                 }}
               >
-                {busy === action.label ? '…' : action.label}
+                {busy === action.label ? "…" : action.label}
               </ActionButton>
             ))}
           </div>
@@ -609,25 +671,36 @@ function DynamicServiceCard({
   inlineResults?: boolean;
 }) {
   const [open, setOpen] = useState(false);
-  const [inputs, setInputs] = useState<Record<string, Record<string, string>>>({});
+  const [inputs, setInputs] = useState<Record<string, Record<string, string>>>(
+    {},
+  );
   const [results, setResults] = useState<Record<string, unknown>>({});
   const [errors, setErrors] = useState<Record<string, unknown>>({});
   const [busy, setBusy] = useState<string | null>(null);
 
-  const invoke = async (method: ChannelDescriptor['methods'][number]) => {
+  const invoke = async (method: ChannelDescriptor["methods"][number]) => {
     if (svc === null) return;
     let argv: unknown[];
     try {
-      argv = buildArgs(parseParamFields(method.params), inputs[method.name] ?? {});
+      argv = buildArgs(
+        parseParamFields(method.params),
+        inputs[method.name] ?? {},
+      );
     } catch {
-      setErrors((prev) => ({ ...prev, [method.name]: new Error('arg is not valid JSON') }));
+      setErrors((prev) => ({
+        ...prev,
+        [method.name]: new Error("arg is not valid JSON"),
+      }));
       return;
     }
     setBusy(method.name);
     setErrors((prev) => ({ ...prev, [method.name]: null }));
     try {
       const result = await call(svc, method.name, ...argv);
-      setResults((prev) => ({ ...prev, [method.name]: result ?? '(no result)' }));
+      setResults((prev) => ({
+        ...prev,
+        [method.name]: result ?? "(no result)",
+      }));
     } catch (error) {
       setErrors((prev) => ({ ...prev, [method.name]: error }));
       onError?.(error);
@@ -640,7 +713,7 @@ function DynamicServiceCard({
     <div className="mb-3 rounded-lg border border-neutral-800 bg-neutral-900/60">
       <div
         className={`flex items-center justify-between px-3 py-2 ${
-          collapsible ? 'cursor-pointer select-none' : ''
+          collapsible ? "cursor-pointer select-none" : ""
         }`}
         onClick={collapsible ? () => setOpen((v) => !v) : undefined}
       >
@@ -654,16 +727,21 @@ function DynamicServiceCard({
           </span>
         </div>
         {collapsible ? (
-          <span className="text-[10px] text-neutral-600">{open ? '▾' : '▸'}</span>
+          <span className="text-[10px] text-neutral-600">
+            {open ? "▾" : "▸"}
+          </span>
         ) : null}
       </div>
       {!collapsible || open ? (
         <div className="border-t border-neutral-800/60 px-3 py-2">
           {channel.methods.length === 0 ? (
-            <div className="text-[11px] text-neutral-600 italic">no callable members</div>
+            <div className="text-[11px] text-neutral-600 italic">
+              no callable members
+            </div>
           ) : null}
           {channel.methods.map((m) => {
-            const fields = m.kind === 'method' ? parseParamFields(m.params) : [];
+            const fields =
+              m.kind === "method" ? parseParamFields(m.params) : [];
             return (
               <div key={m.name} className="mb-2 last:mb-0">
                 <div className="flex items-center gap-1.5">
@@ -671,9 +749,11 @@ function DynamicServiceCard({
                     disabled={svc === null || busy !== null}
                     onClick={() => void invoke(m)}
                   >
-                    {busy === m.name ? '…' : `${m.name}(${m.params})`}
+                    {busy === m.name ? "…" : `${m.name}(${m.params})`}
                   </ActionButton>
-                  {m.kind === 'property' ? <Badge tone="neutral">get</Badge> : null}
+                  {m.kind === "property" ? (
+                    <Badge tone="neutral">get</Badge>
+                  ) : null}
                 </div>
                 {fields.length > 0 ? (
                   <MethodArgInputs
@@ -724,17 +804,19 @@ function MethodArgInputs({
   return (
     <div className="mt-1 flex flex-col gap-1">
       {fields.map((f, i) => {
-        if (f.kind === 'object') {
+        if (f.kind === "object") {
           return (
             <div key={i}>
-              <div className="mb-0.5 font-mono text-[10px] text-neutral-600">{f.name}</div>
+              <div className="mb-0.5 font-mono text-[10px] text-neutral-600">
+                {f.name}
+              </div>
               <div className="flex flex-col gap-1 border-l border-neutral-800 pl-2">
                 {f.keys.map((key) => (
                   <div key={key} className="flex items-center gap-1.5">
                     <ArgLabel label={key} />
                     <ArgInput
                       placeholder="JSON or plain string"
-                      value={values[fieldKey(i, key)] ?? ''}
+                      value={values[fieldKey(i, key)] ?? ""}
                       onChange={(v) => onChange(fieldKey(i, key), v)}
                     />
                   </div>
@@ -743,7 +825,7 @@ function MethodArgInputs({
             </div>
           );
         }
-        if (f.kind === 'value') {
+        if (f.kind === "value") {
           return (
             <div key={i} className="flex items-center gap-1.5">
               <ArgLabel label={f.name} />
@@ -751,9 +833,9 @@ function MethodArgInputs({
                 placeholder={
                   f.defaultValue !== undefined
                     ? `default: ${f.defaultValue}`
-                    : 'JSON or plain string'
+                    : "JSON or plain string"
                 }
-                value={values[fieldKey(i)] ?? ''}
+                value={values[fieldKey(i)] ?? ""}
                 onChange={(v) => onChange(fieldKey(i), v)}
               />
             </div>
@@ -764,7 +846,7 @@ function MethodArgInputs({
             <ArgLabel label={f.label} />
             <ArgInput
               placeholder="arg (JSON)"
-              value={values[fieldKey(i)] ?? ''}
+              value={values[fieldKey(i)] ?? ""}
               onChange={(v) => onChange(fieldKey(i), v)}
             />
           </div>

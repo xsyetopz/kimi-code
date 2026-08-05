@@ -12,9 +12,9 @@
  * `ToolCallFrame.todoId`.
  */
 
-import type { TodoId } from './ids';
+import type { TodoId } from "./ids";
 
-export type TodoStatus = 'pending' | 'in_progress' | 'done';
+export type TodoStatus = "pending" | "in_progress" | "done";
 
 export interface TodoItem {
   readonly title: string;

@@ -6,7 +6,16 @@
  * VS Code host APIs are the only stubbed boundary.
  * Run: pnpm --filter kimi-code exec vitest run --config vitest.config.ts test/workspace-paths.test.ts
  */
-import { mkdtemp, mkdir, readFile, readdir, rm, stat, symlink, writeFile } from "node:fs/promises";
+import {
+  mkdtemp,
+  mkdir,
+  readFile,
+  readdir,
+  rm,
+  stat,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -50,14 +59,24 @@ const vscodeHost = vi.hoisted(() => {
     }
 
     static remote(authority: string, fsPath: string): Uri {
-      return new Uri("vscode-remote", authority, normalizeUriPath(fsPath), fsPath);
+      return new Uri(
+        "vscode-remote",
+        authority,
+        normalizeUriPath(fsPath),
+        fsPath,
+      );
     }
 
     static joinPath(base: Uri, ...segments: string[]): Uri {
       const path = normalizeUriPath(`${base.path}/${segments.join("/")}`);
       const suffix = segments.join("/");
       const separator = base.fsPath.endsWith("/") ? "" : "/";
-      return new Uri(base.scheme, base.authority, path, `${base.fsPath}${separator}${suffix}`);
+      return new Uri(
+        base.scheme,
+        base.authority,
+        path,
+        `${base.fsPath}${separator}${suffix}`,
+      );
     }
 
     static from(parts: { scheme: string; path?: string; query?: string }): Uri {
@@ -74,7 +93,10 @@ const vscodeHost = vi.hoisted(() => {
     readonly baseUri: Uri;
     readonly base: string;
 
-    constructor(base: Uri, readonly pattern: string) {
+    constructor(
+      base: Uri,
+      readonly pattern: string,
+    ) {
       this.baseUri = base;
       this.base = base.fsPath;
     }
@@ -121,7 +143,9 @@ vi.mock("vscode", () => ({
       onDidDelete: vi.fn(),
       dispose: vi.fn(),
     }),
-    getConfiguration: () => ({ get: (_key: string, fallback: unknown) => fallback }),
+    getConfiguration: () => ({
+      get: (_key: string, fallback: unknown) => fallback,
+    }),
     textDocuments: [],
   },
   commands: { executeCommand: vscodeHost.executeCommand },
@@ -134,7 +158,8 @@ vi.mock("vscode", () => ({
 }));
 
 vi.mock("@moonshot-ai/kimi-code-sdk", async (importOriginal) => {
-  const original = await importOriginal<typeof import("@moonshot-ai/kimi-code-sdk")>();
+  const original =
+    await importOriginal<typeof import("@moonshot-ai/kimi-code-sdk")>();
   return {
     ...original,
     createKimiHarness: () => ({
@@ -152,15 +177,21 @@ let extraRoots: string[];
 
 beforeEach(async () => {
   root = await mkdtemp(join(tmpdir(), "kimi-vscode-workspace-paths-"));
-  vscodeHost.workspaceFolders.splice(0, vscodeHost.workspaceFolders.length, { uri: vscodeHost.Uri.file(root) });
+  vscodeHost.workspaceFolders.splice(0, vscodeHost.workspaceFolders.length, {
+    uri: vscodeHost.Uri.file(root),
+  });
   vscodeHost.readDirectory.mockImplementation(async (uri: { fsPath: string }) =>
     (await readdir(uri.fsPath, { withFileTypes: true })).map((entry) => [
       entry.name,
       entry.isDirectory() ? 2 : entry.isSymbolicLink() ? 64 : 1,
     ]),
   );
-  vscodeHost.stat.mockImplementation((uri: { fsPath: string }) => stat(uri.fsPath));
-  vscodeHost.readFile.mockImplementation((uri: { fsPath: string }) => readFile(uri.fsPath));
+  vscodeHost.stat.mockImplementation((uri: { fsPath: string }) =>
+    stat(uri.fsPath),
+  );
+  vscodeHost.readFile.mockImplementation((uri: { fsPath: string }) =>
+    readFile(uri.fsPath),
+  );
   vscodeHost.findFiles.mockResolvedValue([]);
   fileManager = new FileManager({} as never, vi.fn());
   bridges = [];
@@ -173,7 +204,11 @@ afterEach(async () => {
   await Promise.all(bridges.map((bridge) => bridge.dispose()));
   fileManager.dispose();
   vi.clearAllMocks();
-  await Promise.all([root, ...extraRoots].map((directory) => rm(directory, { recursive: true, force: true })));
+  await Promise.all(
+    [root, ...extraRoots].map((directory) =>
+      rm(directory, { recursive: true, force: true }),
+    ),
+  );
 });
 
 describe("Webview workspace paths (selected-directory containment)", () => {
@@ -191,7 +226,9 @@ describe("Webview workspace paths (selected-directory containment)", () => {
     const workDir = join(root, "project");
     await mkdir(workDir);
 
-    const files = await getProjectFiles(workDir, { directory: join(root, "outside") });
+    const files = await getProjectFiles(workDir, {
+      directory: join(root, "outside"),
+    });
 
     expect(files).toEqual([]);
     expect(vscodeHost.readDirectory).not.toHaveBeenCalled();
@@ -234,14 +271,24 @@ describe("Webview workspace paths (selected-directory containment)", () => {
     const inside = join(workDir, "src", "inside.ts");
     const sibling = join(root, "project", "sibling.ts");
     await mkdir(join(workDir, "src"), { recursive: true });
-    await Promise.all([writeFile(inside, "inside"), writeFile(sibling, "sibling")]);
-    vscodeHost.findFiles.mockResolvedValue([vscodeHost.Uri.file(inside), vscodeHost.Uri.file(sibling)]);
+    await Promise.all([
+      writeFile(inside, "inside"),
+      writeFile(sibling, "sibling"),
+    ]);
+    vscodeHost.findFiles.mockResolvedValue([
+      vscodeHost.Uri.file(inside),
+      vscodeHost.Uri.file(sibling),
+    ]);
 
     const files = await getProjectFiles(workDir, { query: "inside" });
 
-    const include = vscodeHost.findFiles.mock.calls[0]?.[0] as InstanceType<typeof vscodeHost.RelativePattern>;
+    const include = vscodeHost.findFiles.mock.calls[0]?.[0] as InstanceType<
+      typeof vscodeHost.RelativePattern
+    >;
     expect(include.baseUri.fsPath).toBe(workDir);
-    expect(files).toEqual([{ path: "src/inside.ts", name: "inside.ts", isDirectory: false }]);
+    expect(files).toEqual([
+      { path: "src/inside.ts", name: "inside.ts", isDirectory: false },
+    ]);
   });
 
   it("normalizes native Windows separators during directory navigation", async () => {
@@ -251,19 +298,32 @@ describe("Webview workspace paths (selected-directory containment)", () => {
 
     const files = await getProjectFiles(workDir, { directory: "src\\nested" });
 
-    expect(files).toEqual([{ path: "src/nested/app.ts", name: "app.ts", isDirectory: false }]);
+    expect(files).toEqual([
+      { path: "src/nested/app.ts", name: "app.ts", isDirectory: false },
+    ]);
   });
 
   it("preserves the remote workspace URI while listing a directory", async () => {
-    const remoteRoot = vscodeHost.Uri.remote("ssh-remote+example", "/workspace/project");
+    const remoteRoot = vscodeHost.Uri.remote(
+      "ssh-remote+example",
+      "/workspace/project",
+    );
     vscodeHost.readDirectory.mockResolvedValue([["remote.ts", 1]]);
     const ctx = createContext(remoteRoot);
 
-    const files = await fileHandlers[Methods.GetProjectFiles]!({ directory: "." }, ctx);
+    const files = await fileHandlers[Methods.GetProjectFiles]!(
+      { directory: "." },
+      ctx,
+    );
 
     const requestedUri = vscodeHost.readDirectory.mock.calls[0]?.[0];
-    expect(requestedUri).toMatchObject({ scheme: "vscode-remote", authority: "ssh-remote+example" });
-    expect(files).toEqual([{ path: "remote.ts", name: "remote.ts", isDirectory: false }]);
+    expect(requestedUri).toMatchObject({
+      scheme: "vscode-remote",
+      authority: "ssh-remote+example",
+    });
+    expect(files).toEqual([
+      { path: "remote.ts", name: "remote.ts", isDirectory: false },
+    ]);
   });
 
   it("refuses to open a symlink whose target lies outside the selected working directory", async () => {
@@ -274,7 +334,10 @@ describe("Webview workspace paths (selected-directory containment)", () => {
     await symlink(outside, join(workDir, "secret.txt"));
     const ctx = createContext(vscodeHost.Uri.file(workDir));
 
-    const result = await fileHandlers[Methods.OpenFile]!({ filePath: "secret.txt" }, ctx);
+    const result = await fileHandlers[Methods.OpenFile]!(
+      { filePath: "secret.txt" },
+      ctx,
+    );
 
     expect(result).toEqual({ ok: false });
     expect(vscodeHost.executeCommand).not.toHaveBeenCalled();
@@ -282,7 +345,9 @@ describe("Webview workspace paths (selected-directory containment)", () => {
 
   it("omits an outside symlink when an SDK Write event requests baseline capture", async () => {
     const workDir = join(root, "project");
-    const outsideRoot = await mkdtemp(join(tmpdir(), "kimi-vscode-baseline-outside-"));
+    const outsideRoot = await mkdtemp(
+      join(tmpdir(), "kimi-vscode-baseline-outside-"),
+    );
     extraRoots.push(outsideRoot);
     const outside = join(outsideRoot, "outside.txt");
     const linkedFile = join(workDir, "linked.txt");
@@ -324,7 +389,9 @@ describe("Webview workspace paths (selected-directory containment)", () => {
       args: { path: linkedFile },
     });
 
-    await expect(bridge.baselineManager.getChanges({ id: "session-1", workDir })).resolves.toEqual([]);
+    await expect(
+      bridge.baselineManager.getChanges({ id: "session-1", workDir }),
+    ).resolves.toEqual([]);
   });
 
   it("builds an editor mention relative to the selected working directory", async () => {
@@ -333,7 +400,10 @@ describe("Webview workspace paths (selected-directory containment)", () => {
     await mkdir(join(workDir, "src"), { recursive: true });
     await writeFile(inside, "inside");
     const bridge = createBridge();
-    await bridge.handle({ id: "set", method: Methods.SetWorkDir, params: { workDir } }, "view-1");
+    await bridge.handle(
+      { id: "set", method: Methods.SetWorkDir, params: { workDir } },
+      "view-1",
+    );
 
     const mention = await bridge.getEditorMention(
       "view-1",
@@ -350,7 +420,10 @@ describe("Webview workspace paths (selected-directory containment)", () => {
     await mkdir(workDir, { recursive: true });
     await writeFile(sibling, "sibling");
     const bridge = createBridge();
-    await bridge.handle({ id: "set", method: Methods.SetWorkDir, params: { workDir } }, "view-1");
+    await bridge.handle(
+      { id: "set", method: Methods.SetWorkDir, params: { workDir } },
+      "view-1",
+    );
 
     const mention = await bridge.getEditorMention(
       "view-1",
@@ -362,7 +435,9 @@ describe("Webview workspace paths (selected-directory containment)", () => {
   });
 
   it("builds an absolute editor mention when the file is outside the workspace root", async () => {
-    const otherRoot = await mkdtemp(join(tmpdir(), "kimi-vscode-mention-outside-"));
+    const otherRoot = await mkdtemp(
+      join(tmpdir(), "kimi-vscode-mention-outside-"),
+    );
     extraRoots.push(otherRoot);
     const outside = join(otherRoot, "App.java");
     await writeFile(outside, "class App {}");
@@ -378,7 +453,9 @@ describe("Webview workspace paths (selected-directory containment)", () => {
   });
 
   it("quotes an absolute editor mention whose path contains spaces", async () => {
-    const otherRoot = await mkdtemp(join(tmpdir(), "kimi vscode mention space-"));
+    const otherRoot = await mkdtemp(
+      join(tmpdir(), "kimi vscode mention space-"),
+    );
     extraRoots.push(otherRoot);
     const outside = join(otherRoot, "App.java");
     await writeFile(outside, "class App {}");
@@ -399,12 +476,19 @@ describe("Webview workspace paths (selected-directory containment)", () => {
     await mkdir(join(workDir, "some dir"), { recursive: true });
     await writeFile(inside, "inside");
     const bridge = createBridge();
-    await bridge.handle({ id: "set", method: Methods.SetWorkDir, params: { workDir } }, "view-1");
+    await bridge.handle(
+      { id: "set", method: Methods.SetWorkDir, params: { workDir } },
+      "view-1",
+    );
 
     const mention = await bridge.getEditorMention(
       "view-1",
       vscodeHost.Uri.file(inside) as vscode.Uri,
-      { isEmpty: false, start: { line: 2 }, end: { line: 4 } } as vscode.Selection,
+      {
+        isEmpty: false,
+        start: { line: 2 },
+        end: { line: 4 },
+      } as vscode.Selection,
     );
 
     expect(mention).toBe('@"some dir/inside.ts":3-5');
@@ -412,7 +496,10 @@ describe("Webview workspace paths (selected-directory containment)", () => {
 
   it("omits an editor mention for a document that is not on the workspace file system", async () => {
     const bridge = createBridge();
-    const untitled = vscodeHost.Uri.from({ scheme: "untitled", path: "Untitled-1" });
+    const untitled = vscodeHost.Uri.from({
+      scheme: "untitled",
+      path: "Untitled-1",
+    });
 
     const mention = await bridge.getEditorMention(
       "view-1",
@@ -431,7 +518,11 @@ describe("Webview workspace paths (selected-directory containment)", () => {
     const bridge = createBridge();
 
     const result = await bridge.handle(
-      { id: "set", method: Methods.SetWorkDir, params: { workDir: linkedWorkDir } },
+      {
+        id: "set",
+        method: Methods.SetWorkDir,
+        params: { workDir: linkedWorkDir },
+      },
       "view-1",
     );
 
@@ -441,14 +532,23 @@ describe("Webview workspace paths (selected-directory containment)", () => {
 
 describe("native workspace path comparison (Windows drive and UNC semantics)", () => {
   it("treats slash and casing differences as the same Windows drive path", () => {
-    expect(areSameFsPath("C:\\Users\\Example User\\项目", "c:/users/example user/项目")).toBe(true);
+    expect(
+      areSameFsPath(
+        "C:\\Users\\Example User\\项目",
+        "c:/users/example user/项目",
+      ),
+    ).toBe(true);
   });
 
   it("keeps an in-share UNC child relative to its workspace", () => {
     const rootUri = vscodeHost.Uri.file("\\\\Server\\Share\\Workspace");
-    const childUri = vscodeHost.Uri.file("\\\\server\\share\\workspace\\src\\app.ts");
+    const childUri = vscodeHost.Uri.file(
+      "\\\\server\\share\\workspace\\src\\app.ts",
+    );
 
-    expect(relativeWorkspacePath(rootUri as vscode.Uri, childUri as vscode.Uri)).toBe("src/app.ts");
+    expect(
+      relativeWorkspacePath(rootUri as vscode.Uri, childUri as vscode.Uri),
+    ).toBe("src/app.ts");
   });
 
   it("rejects a UNC path from another share", () => {
@@ -461,11 +561,19 @@ describe("native workspace path comparison (Windows drive and UNC semantics)", (
   });
 });
 
-async function getProjectFiles(workDir: string, params: { query?: string; directory?: string }) {
-  return fileHandlers[Methods.GetProjectFiles]!(params, createContext(vscodeHost.Uri.file(workDir)));
+async function getProjectFiles(
+  workDir: string,
+  params: { query?: string; directory?: string },
+) {
+  return fileHandlers[Methods.GetProjectFiles]!(
+    params,
+    createContext(vscodeHost.Uri.file(workDir)),
+  );
 }
 
-function createContext(workDirUri: InstanceType<typeof vscodeHost.Uri>): HandlerContext {
+function createContext(
+  workDirUri: InstanceType<typeof vscodeHost.Uri>,
+): HandlerContext {
   return {
     webviewId: "view-1",
     workDir: workDirUri.fsPath,

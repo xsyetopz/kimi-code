@@ -1,25 +1,39 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import graph from 'virtual:dep-graph';
+import { useCallback, useEffect, useMemo, useState } from "react";
+import graph from "virtual:dep-graph";
 
-import type { EdgeKind, ServiceScope } from '../../analyzer/types';
-import { Filters, type FilterState } from './Filters';
-import { GraphView } from './GraphView';
-import { readQueryParams } from './query-params';
-import { EDGE_KINDS } from './style';
-import { collectTagCounts, loadTags, saveTags, tagsEqual, type TagMap } from './tags';
+import type { EdgeKind, ServiceScope } from "../../analyzer/types";
+import { Filters, type FilterState } from "./Filters";
+import { GraphView } from "./GraphView";
+import { readQueryParams } from "./query-params";
+import { EDGE_KINDS } from "./style";
+import {
+  collectTagCounts,
+  loadTags,
+  saveTags,
+  tagsEqual,
+  type TagMap,
+} from "./tags";
 
-const ALL_SCOPES: ServiceScope[] = ['App', 'Session', 'Agent'];
+const ALL_SCOPES: ServiceScope[] = ["App", "Session", "Agent"];
 
 export function App(): JSX.Element {
-  const queryParams = useMemo(() => readQueryParams(window.location.search), []);
+  const queryParams = useMemo(
+    () => readQueryParams(window.location.search),
+    [],
+  );
 
   const domains = useMemo(
-    () => [...new Set(graph.services.map((s) => s.domain))].sort((a, b) => a.localeCompare(b)),
+    () =>
+      [...new Set(graph.services.map((s) => s.domain))].sort((a, b) =>
+        a.localeCompare(b),
+      ),
     [],
   );
 
   const [filters, setFilters] = useState<FilterState>(() => {
-    const visibleDomains = queryParams.domains ? new Set(queryParams.domains) : undefined;
+    const visibleDomains = queryParams.domains
+      ? new Set(queryParams.domains)
+      : undefined;
     return {
       scopes: queryParams.scopes
         ? new Set<ServiceScope>(queryParams.scopes)
@@ -30,7 +44,7 @@ export function App(): JSX.Element {
       hiddenDomains: visibleDomains
         ? new Set<string>(domains.filter((d) => !visibleDomains.has(d)))
         : new Set<string>(),
-      search: queryParams.search ?? '',
+      search: queryParams.search ?? "",
       hideOrphans: queryParams.hideOrphans ?? false,
       groupByScope: queryParams.groupByScope ?? false,
       activeTags: new Set<string>(),
@@ -61,7 +75,7 @@ export function App(): JSX.Element {
   }, []);
 
   return (
-    <div style={{ display: 'flex', height: '100vh', width: '100vw' }}>
+    <div style={{ display: "flex", height: "100vh", width: "100vw" }}>
       <Filters
         graph={graph}
         domains={domains}
@@ -69,7 +83,7 @@ export function App(): JSX.Element {
         state={filters}
         onChange={setFilters}
       />
-      <div style={{ flex: 1, position: 'relative', minWidth: 0 }}>
+      <div style={{ flex: 1, position: "relative", minWidth: 0 }}>
         <GraphView
           graph={graph}
           filters={filters}

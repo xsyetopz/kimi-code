@@ -8,10 +8,13 @@
  * There is no central catalog to edit by hand. App-scoped.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
-import type { IDisposable } from '#/_base/di/lifecycle';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
+import type { IDisposable } from "#/_base/di/lifecycle";
 
-export type FlagSurface = 'core' | 'tui' | 'both';
+export type FlagSurface = "core" | "tui" | "both";
 
 export type FlagId = string;
 
@@ -43,4 +46,4 @@ export interface IFlagRegistry {
 }
 
 export const IFlagRegistry: ServiceIdentifier<IFlagRegistry> =
-  createDecorator<IFlagRegistry>('flagRegistry');
+  createDecorator<IFlagRegistry>("flagRegistry");

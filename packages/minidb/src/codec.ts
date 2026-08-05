@@ -20,8 +20,8 @@
 // The fixed-size header (22 bytes) lets a reader compute the full frame length
 // (22 + keyLen + valLen + metaLen + 4) before reading the payload.
 
-import fs from 'node:fs';
-import { crc32 } from './crc32.ts';
+import fs from "node:fs";
+import { crc32 } from "./crc32.ts";
 
 export const MAGIC = Buffer.from([0x4d, 0x44]); // "MD"
 export const TYPE_SET = 1;
@@ -97,7 +97,7 @@ export class CorruptFrameError extends Error {
   readonly offset: number;
   constructor(message: string, offset: number) {
     super(message);
-    this.name = 'CorruptFrameError';
+    this.name = "CorruptFrameError";
     this.offset = offset; // absolute byte offset in the stream where the bad frame starts
   }
 }
@@ -114,28 +114,41 @@ export function encodeFrame({
   meta = null,
   expireAt = 0,
 }: EncodeFrameInput): Buffer {
-  if (!Buffer.isBuffer(key)) throw new TypeError('key must be a Buffer');
-  if (key.length > MAX_KEY_LEN) throw new RangeError('key too large');
+  if (!Buffer.isBuffer(key)) throw new TypeError("key must be a Buffer");
+  if (key.length > MAX_KEY_LEN) throw new RangeError("key too large");
   const val: Buffer = value ?? EMPTY;
   const met: Buffer = meta ?? EMPTY;
-  if (type === TYPE_SET && !Buffer.isBuffer(val)) throw new TypeError('value must be a Buffer for SET');
-  if (!Buffer.isBuffer(met)) throw new TypeError('meta must be a Buffer');
-  if (val.length > MAX_VAL_LEN) throw new RangeError('value too large');
-  if (met.length > MAX_VAL_LEN) throw new RangeError('meta too large');
+  if (type === TYPE_SET && !Buffer.isBuffer(val))
+    throw new TypeError("value must be a Buffer for SET");
+  if (!Buffer.isBuffer(met)) throw new TypeError("meta must be a Buffer");
+  if (val.length > MAX_VAL_LEN) throw new RangeError("value too large");
+  if (met.length > MAX_VAL_LEN) throw new RangeError("meta too large");
 
-  const frame = Buffer.allocUnsafe(HEADER_SIZE + key.length + val.length + met.length + CRC_SIZE);
+  const frame = Buffer.allocUnsafe(
+    HEADER_SIZE + key.length + val.length + met.length + CRC_SIZE,
+  );
 
   let o = 0;
-  MAGIC.copy(frame, o); o += 2;
-  frame.writeUInt8(type, o); o += 1;
-  frame.writeUInt8(0, o); o += 1; // flags
-  frame.writeUInt16LE(key.length, o); o += 2;
-  frame.writeUInt32LE(val.length, o); o += 4;
-  frame.writeUInt32LE(met.length, o); o += 4;
-  frame.writeBigInt64LE(BigInt(expireAt ?? 0), o); o += 8;
-  key.copy(frame, o); o += key.length;
-  val.copy(frame, o); o += val.length;
-  met.copy(frame, o); o += met.length;
+  MAGIC.copy(frame, o);
+  o += 2;
+  frame.writeUInt8(type, o);
+  o += 1;
+  frame.writeUInt8(0, o);
+  o += 1; // flags
+  frame.writeUInt16LE(key.length, o);
+  o += 2;
+  frame.writeUInt32LE(val.length, o);
+  o += 4;
+  frame.writeUInt32LE(met.length, o);
+  o += 4;
+  frame.writeBigInt64LE(BigInt(expireAt ?? 0), o);
+  o += 8;
+  key.copy(frame, o);
+  o += key.length;
+  val.copy(frame, o);
+  o += val.length;
+  met.copy(frame, o);
+  o += met.length;
 
   // CRC trailer over everything after magic, before the crc field.
   const c = crc32(frame.subarray(2, o));
@@ -162,23 +175,36 @@ export function encodeBatchOps(ops: BatchOp[]): Buffer {
     if (op.type !== TYPE_SET && op.type !== TYPE_DEL) {
       throw new RangeError(`batch op type must be SET or DEL, got ${op.type}`);
     }
-    total += SUB_HEADER + op.key.length + (op.value ? op.value.length : 0) + (op.meta ? op.meta.length : 0);
+    total +=
+      SUB_HEADER +
+      op.key.length +
+      (op.value ? op.value.length : 0) +
+      (op.meta ? op.meta.length : 0);
   }
   const body = Buffer.allocUnsafe(total);
   let o = 0;
-  body.writeUInt16LE(ops.length, o); o += 2;
+  body.writeUInt16LE(ops.length, o);
+  o += 2;
   for (const op of ops) {
     const key = op.key;
     const val: Buffer = op.value ?? EMPTY;
     const met: Buffer = op.meta ?? EMPTY;
-    body.writeUInt8(op.type, o); o += 1;
-    body.writeUInt16LE(key.length, o); o += 2;
-    body.writeUInt32LE(val.length, o); o += 4;
-    body.writeUInt32LE(met.length, o); o += 4;
-    body.writeBigInt64LE(BigInt(op.expireAt ?? 0), o); o += 8;
-    key.copy(body, o); o += key.length;
-    val.copy(body, o); o += val.length;
-    met.copy(body, o); o += met.length;
+    body.writeUInt8(op.type, o);
+    o += 1;
+    body.writeUInt16LE(key.length, o);
+    o += 2;
+    body.writeUInt32LE(val.length, o);
+    o += 4;
+    body.writeUInt32LE(met.length, o);
+    o += 4;
+    body.writeBigInt64LE(BigInt(op.expireAt ?? 0), o);
+    o += 8;
+    key.copy(body, o);
+    o += key.length;
+    val.copy(body, o);
+    o += val.length;
+    met.copy(body, o);
+    o += met.length;
   }
   return body;
 }
@@ -186,25 +212,38 @@ export function encodeBatchOps(ops: BatchOp[]): Buffer {
 export function decodeBatchOps(body: Buffer): BatchOp[] {
   const ops: BatchOp[] = [];
   let o = 0;
-  if (body.length < 2) throw new RangeError('batch body truncated: op count');
-  const count = body.readUInt16LE(o); o += 2;
+  if (body.length < 2) throw new RangeError("batch body truncated: op count");
+  const count = body.readUInt16LE(o);
+  o += 2;
   for (let i = 0; i < count; i++) {
-    if (o + SUB_HEADER > body.length) throw new RangeError('batch op header truncated');
-    const type = body.readUInt8(o); o += 1;
-    if (type !== TYPE_SET && type !== TYPE_DEL) throw new RangeError(`batch op has unknown type ${type}`);
-    const keyLen = body.readUInt16LE(o); o += 2;
-    const valLen = body.readUInt32LE(o); o += 4;
-    const metaLen = body.readUInt32LE(o); o += 4;
-    const expireAt = Number(body.readBigInt64LE(o)); o += 8;
-    if (o + keyLen + valLen + metaLen > body.length) throw new RangeError('batch op payload truncated');
-    const key = Buffer.from(body.subarray(o, o + keyLen)); o += keyLen;
-    const value = Buffer.from(body.subarray(o, o + valLen)); o += valLen;
-    const meta = metaLen ? Buffer.from(body.subarray(o, o + metaLen)) : null; o += metaLen;
+    if (o + SUB_HEADER > body.length)
+      throw new RangeError("batch op header truncated");
+    const type = body.readUInt8(o);
+    o += 1;
+    if (type !== TYPE_SET && type !== TYPE_DEL)
+      throw new RangeError(`batch op has unknown type ${type}`);
+    const keyLen = body.readUInt16LE(o);
+    o += 2;
+    const valLen = body.readUInt32LE(o);
+    o += 4;
+    const metaLen = body.readUInt32LE(o);
+    o += 4;
+    const expireAt = Number(body.readBigInt64LE(o));
+    o += 8;
+    if (o + keyLen + valLen + metaLen > body.length)
+      throw new RangeError("batch op payload truncated");
+    const key = Buffer.from(body.subarray(o, o + keyLen));
+    o += keyLen;
+    const value = Buffer.from(body.subarray(o, o + valLen));
+    o += valLen;
+    const meta = metaLen ? Buffer.from(body.subarray(o, o + metaLen)) : null;
+    o += metaLen;
     ops.push({ type, key, value, meta, expireAt });
   }
   // All-or-nothing structure check: a valid batch body ends exactly after its
   // last op — trailing bytes mean the body is malformed (review #9).
-  if (o !== body.length) throw new RangeError(`batch body has ${body.length - o} trailing byte(s)`);
+  if (o !== body.length)
+    throw new RangeError(`batch body has ${body.length - o} trailing byte(s)`);
   return ops;
 }
 
@@ -219,7 +258,9 @@ export class FrameParser {
   private offset = 0; // absolute offset of the next byte to be consumed
 
   *feed(chunk: Buffer): Generator<Frame> {
-    let buf: Buffer = this.pending.length ? Buffer.concat([this.pending, chunk]) : chunk;
+    let buf: Buffer = this.pending.length
+      ? Buffer.concat([this.pending, chunk])
+      : chunk;
     let pos = 0;
 
     while (true) {
@@ -227,7 +268,8 @@ export class FrameParser {
 
       if (buf[pos] !== MAGIC[0] || buf[pos + 1] !== MAGIC[1]) {
         const next = buf.indexOf(MAGIC, pos + 1);
-        if (next === -1) throw new CorruptFrameError('magic not found', this.offset + pos);
+        if (next === -1)
+          throw new CorruptFrameError("magic not found", this.offset + pos);
         pos = next;
         continue;
       }
@@ -241,9 +283,14 @@ export class FrameParser {
       if (buf.length - pos < frameLen) break; // incomplete payload/crc, wait for more
 
       const storedCrc = buf.readUInt32LE(pos + frameLen - CRC_SIZE);
-      const computedCrc = crc32(buf.subarray(pos + 2, pos + frameLen - CRC_SIZE));
+      const computedCrc = crc32(
+        buf.subarray(pos + 2, pos + frameLen - CRC_SIZE),
+      );
       if (storedCrc !== computedCrc) {
-        throw new CorruptFrameError(`crc mismatch at offset ${this.offset + pos}`, this.offset + pos);
+        throw new CorruptFrameError(
+          `crc mismatch at offset ${this.offset + pos}`,
+          this.offset + pos,
+        );
       }
 
       const expireAt = Number(buf.readBigInt64LE(pos + 14));
@@ -251,7 +298,9 @@ export class FrameParser {
       const key = buf.subarray(keyStart, keyStart + keyLen);
       const value = buf.subarray(keyStart + keyLen, keyStart + keyLen + valLen);
       const metaStart = keyStart + keyLen + valLen;
-      const meta = metaLen ? buf.subarray(metaStart, metaStart + metaLen) : null;
+      const meta = metaLen
+        ? buf.subarray(metaStart, metaStart + metaLen)
+        : null;
 
       yield {
         type,
@@ -290,7 +339,10 @@ export class FrameParser {
  * @returns the parsed frame + its byte length, or null when there is no valid,
  *   complete frame at `pos` (no magic, incomplete, insane length, or CRC mismatch).
  */
-function readFrameAt(buf: Buffer, pos: number): { frame: Frame; frameLen: number } | null {
+function readFrameAt(
+  buf: Buffer,
+  pos: number,
+): { frame: Frame; frameLen: number } | null {
   if (buf.length - pos < HEADER_SIZE) return null;
   if (buf[pos] !== MAGIC[0] || buf[pos + 1] !== MAGIC[1]) return null;
   const keyLen = buf.readUInt16LE(pos + 4);
@@ -337,12 +389,16 @@ function readExactSync(fd: number, buf: Buffer, pos: number): void {
   let got = 0;
   while (got < buf.length) {
     const r = fs.readSync(fd, buf, got, buf.length - got, pos + got);
-    if (r === 0) throw new Error('codec: short read past EOF');
+    if (r === 0) throw new Error("codec: short read past EOF");
     got += r;
   }
 }
 
-function readFrameRefAt(fd: number, pos: number, size: number): FrameRef | null {
+function readFrameRefAt(
+  fd: number,
+  pos: number,
+  size: number,
+): FrameRef | null {
   if (size - pos < HEADER_SIZE) return null;
   const header = Buffer.allocUnsafe(HEADER_SIZE);
   readExactSync(fd, header, pos);
@@ -419,10 +475,14 @@ function findMagicSync(fd: number, start: number, size: number): number {
 export function scanFrameRefsFd(
   fd: number,
   {
-    onCorrupt = 'resync',
+    onCorrupt = "resync",
     startOffset = 0,
     maxResyncCandidates = DEFAULT_RESYNC_CANDIDATE_BUDGET,
-  }: { onCorrupt?: 'resync' | 'strict'; startOffset?: number; maxResyncCandidates?: number } = {},
+  }: {
+    onCorrupt?: "resync" | "strict";
+    startOffset?: number;
+    maxResyncCandidates?: number;
+  } = {},
 ): ScanFrameRefsResult {
   const size = fs.fstatSync(fd).size;
   const frames: FrameRef[] = [];
@@ -438,7 +498,7 @@ export function scanFrameRefsFd(
       continue;
     }
 
-    if (onCorrupt === 'strict') {
+    if (onCorrupt === "strict") {
       corruptRanges.push([pos, size]);
       break;
     }
@@ -467,9 +527,9 @@ export function scanFrameRefsFd(
 /** Scan a snapshot/WAL file into frame refs without copying values. */
 export function scanFrameRefsFile(
   filePath: string,
-  opts: { onCorrupt?: 'resync' | 'strict' } = {},
+  opts: { onCorrupt?: "resync" | "strict" } = {},
 ): ScanFrameRefsResult {
-  const fd = fs.openSync(filePath, 'r');
+  const fd = fs.openSync(filePath, "r");
   try {
     return scanFrameRefsFd(fd, opts);
   } finally {
@@ -493,31 +553,47 @@ const SCAN_YIELD_BYTES = 1 << 23; // yield + cancel check every 8 MiB scanned
 const yieldToLoop = (): Promise<void> => new Promise((r) => setImmediate(r));
 
 function scanAbortError(): Error {
-  const err = new Error('frame scan aborted');
-  err.name = 'AbortError';
+  const err = new Error("frame scan aborted");
+  err.name = "AbortError";
   return err;
 }
 
 /** Promise wrapper over fs.read (the callback API keeps using the libuv
  *  thread pool for a plain fd; fs.promises has no fd-level read). */
-function readAt(fd: number, buf: Buffer, bufOff: number, len: number, pos: number): Promise<number> {
+function readAt(
+  fd: number,
+  buf: Buffer,
+  bufOff: number,
+  len: number,
+  pos: number,
+): Promise<number> {
   return new Promise((resolve, reject) => {
-    fs.read(fd, buf, bufOff, len, pos, (err, bytesRead) => (err ? reject(err) : resolve(bytesRead)));
+    fs.read(fd, buf, bufOff, len, pos, (err, bytesRead) =>
+      err ? reject(err) : resolve(bytesRead),
+    );
   });
 }
 
-async function readExactAsync(fd: number, buf: Buffer, pos: number): Promise<void> {
+async function readExactAsync(
+  fd: number,
+  buf: Buffer,
+  pos: number,
+): Promise<void> {
   let got = 0;
   while (got < buf.length) {
     const bytesRead = await readAt(fd, buf, got, buf.length - got, pos + got);
-    if (bytesRead === 0) throw new Error('codec: short read past EOF');
+    if (bytesRead === 0) throw new Error("codec: short read past EOF");
     got += bytesRead;
   }
 }
 
 /** Async twin of readFrameRefAt (chunked positioned reads; values are never
  *  copied — only header, key and meta bytes land in RAM). */
-async function readFrameRefAtAsync(fd: number, pos: number, size: number): Promise<FrameRef | null> {
+async function readFrameRefAtAsync(
+  fd: number,
+  pos: number,
+  size: number,
+): Promise<FrameRef | null> {
   if (size - pos < HEADER_SIZE) return null;
   const header = Buffer.allocUnsafe(HEADER_SIZE);
   await readExactAsync(fd, header, pos);
@@ -581,7 +657,7 @@ function parseFrameRefInWindow(
   winLen: number,
   pos: number,
   size: number,
-): FrameRef | null | 'window' {
+): FrameRef | null | "window" {
   const avail = winStart + winLen - pos;
   if (avail < HEADER_SIZE) return null; // caller only asks when pos < end
   if (size - pos < HEADER_SIZE) return null;
@@ -595,7 +671,7 @@ function parseFrameRefInWindow(
   const frameLen = HEADER_SIZE + keyLen + valLen + metaLen + CRC_SIZE;
   if (frameLen < HEADER_SIZE + CRC_SIZE) return null;
   if (size - pos < frameLen) return null;
-  if (avail < frameLen) return 'window';
+  if (avail < frameLen) return "window";
 
   // The whole frame is in the window: validate the CRC per CRC_CHUNK slice
   // (the slices also bound the per-slice CPU run between yield checks).
@@ -614,8 +690,19 @@ function parseFrameRefInWindow(
   const valueOff = pos + HEADER_SIZE + keyLen;
   const metaStart = keyStart + keyLen + valLen;
   const key = Buffer.from(win.subarray(keyStart, keyStart + keyLen));
-  const meta = metaLen ? Buffer.from(win.subarray(metaStart, metaStart + metaLen)) : null;
-  return { type, key, meta, expireAt: Number(win.readBigInt64LE(o + 14)), frameOff: pos, valueOff, valLen, frameLen };
+  const meta = metaLen
+    ? Buffer.from(win.subarray(metaStart, metaStart + metaLen))
+    : null;
+  return {
+    type,
+    key,
+    meta,
+    expireAt: Number(win.readBigInt64LE(o + 14)),
+    frameOff: pos,
+    valueOff,
+    valLen,
+    frameLen,
+  };
 }
 
 /** Async sequential scan of an open snapshot/WAL fd into frame refs without
@@ -626,13 +713,13 @@ function parseFrameRefInWindow(
 export async function scanFrameRefsFdAsync(
   fd: number,
   {
-    onCorrupt = 'resync',
+    onCorrupt = "resync",
     startOffset = 0,
     endOffset,
     signal,
     maxResyncCandidates = DEFAULT_RESYNC_CANDIDATE_BUDGET,
   }: {
-    onCorrupt?: 'resync' | 'strict';
+    onCorrupt?: "resync" | "strict";
     startOffset?: number;
     /** Scan only [startOffset, endOffset) of the file (the stage-6 worker
      *  pins its source to a WAL checkpoint; a live writer may have appended
@@ -642,7 +729,10 @@ export async function scanFrameRefsFdAsync(
     maxResyncCandidates?: number;
   } = {},
 ): Promise<ScanFrameRefsResult> {
-  const size = Math.min(fs.fstatSync(fd).size, endOffset ?? Number.POSITIVE_INFINITY);
+  const size = Math.min(
+    fs.fstatSync(fd).size,
+    endOffset ?? Number.POSITIVE_INFINITY,
+  );
   const frames: FrameRef[] = [];
   const corruptRanges: [number, number][] = [];
   const win = Buffer.allocUnsafe(ASYNC_SCAN_WINDOW);
@@ -670,7 +760,13 @@ export async function scanFrameRefsFdAsync(
       winLen = 0;
     }
     while (winLen < win.length && winStart + winLen < size) {
-      const bytesRead = await readAt(fd, win, winLen, Math.min(win.length - winLen, size - winStart - winLen), winStart + winLen);
+      const bytesRead = await readAt(
+        fd,
+        win,
+        winLen,
+        Math.min(win.length - winLen, size - winStart - winLen),
+        winStart + winLen,
+      );
       if (bytesRead === 0) break;
       winLen += bytesRead;
     }
@@ -679,16 +775,17 @@ export async function scanFrameRefsFdAsync(
   /** Parse the frame at `pos`, refilling the window or falling back to
    *  chunked positioned reads for a frame larger than the window. */
   const frameAt = async (at: number): Promise<FrameRef | null> => {
-    if (at < winStart || at + HEADER_SIZE > winStart + winLen) await fillWindow(at);
+    if (at < winStart || at + HEADER_SIZE > winStart + winLen)
+      await fillWindow(at);
     let r = parseFrameRefInWindow(win, winStart, winLen, at, size);
-    if (r !== 'window') return r;
+    if (r !== "window") return r;
     // The frame spans past the window: refilling can only help while the
     // whole frame still fits one window; larger frames take the positioned
     // path so their value bytes never sit in RAM.
     if (at - winStart > 0) {
       await fillWindow(at);
       r = parseFrameRefInWindow(win, winStart, winLen, at, size);
-      if (r !== 'window') return r;
+      if (r !== "window") return r;
     }
     return readFrameRefAtAsync(fd, at, size);
   };
@@ -712,7 +809,7 @@ export async function scanFrameRefsFdAsync(
       continue;
     }
 
-    if (onCorrupt === 'strict') {
+    if (onCorrupt === "strict") {
       corruptRanges.push([pos, size]);
       break;
     }
@@ -769,14 +866,16 @@ export async function scanFrameRefsFdAsync(
 export function scanBatchOpRefs(body: Buffer, bodyOff: number): BatchOpRef[] {
   const ops: BatchOpRef[] = [];
   let o = 0;
-  if (body.length < 2) throw new RangeError('batch body truncated: op count');
+  if (body.length < 2) throw new RangeError("batch body truncated: op count");
   const count = body.readUInt16LE(o);
   o += 2;
   for (let i = 0; i < count; i++) {
-    if (o + SUB_HEADER > body.length) throw new RangeError('batch op header truncated');
+    if (o + SUB_HEADER > body.length)
+      throw new RangeError("batch op header truncated");
     const type = body.readUInt8(o);
     o += 1;
-    if (type !== TYPE_SET && type !== TYPE_DEL) throw new RangeError(`batch op has unknown type ${type}`);
+    if (type !== TYPE_SET && type !== TYPE_DEL)
+      throw new RangeError(`batch op has unknown type ${type}`);
     const keyLen = body.readUInt16LE(o);
     o += 2;
     const valLen = body.readUInt32LE(o);
@@ -785,7 +884,8 @@ export function scanBatchOpRefs(body: Buffer, bodyOff: number): BatchOpRef[] {
     o += 4;
     const expireAt = Number(body.readBigInt64LE(o));
     o += 8;
-    if (o + keyLen + valLen + metaLen > body.length) throw new RangeError('batch op payload truncated');
+    if (o + keyLen + valLen + metaLen > body.length)
+      throw new RangeError("batch op payload truncated");
     const key = Buffer.from(body.subarray(o, o + keyLen));
     const valueOff = bodyOff + o + keyLen;
     o += keyLen + valLen;
@@ -793,7 +893,8 @@ export function scanBatchOpRefs(body: Buffer, bodyOff: number): BatchOpRef[] {
     o += metaLen;
     ops.push({ type, key, valueOff, valLen, meta, expireAt });
   }
-  if (o !== body.length) throw new RangeError(`batch body has ${body.length - o} trailing byte(s)`);
+  if (o !== body.length)
+    throw new RangeError(`batch body has ${body.length - o} trailing byte(s)`);
   return ops;
 }
 
@@ -808,7 +909,7 @@ export function scanBatchOpRefs(body: Buffer, bodyOff: number): BatchOpRef[] {
  */
 export function parseBuffer(
   buf: Buffer,
-  { onCorrupt = 'resync' }: { onCorrupt?: 'resync' | 'strict' } = {},
+  { onCorrupt = "resync" }: { onCorrupt?: "resync" | "strict" } = {},
 ): ParseResult {
   const frames: Frame[] = [];
   const corruptRanges: [number, number][] = [];
@@ -822,7 +923,7 @@ export function parseBuffer(
       continue;
     }
 
-    if (onCorrupt === 'strict') {
+    if (onCorrupt === "strict") {
       corruptRanges.push([pos, buf.length]);
       break;
     }

@@ -12,8 +12,11 @@
  * Workspace-scoped.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
-import type { AgentProfile } from '#/app/agentProfileCatalog/agentProfileCatalog';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
+import type { AgentProfile } from "#/app/agentProfileCatalog/agentProfileCatalog";
 
 export interface IUserAgentProfileLoader {
   readonly _serviceBrand: undefined;
@@ -23,4 +26,4 @@ export interface IUserAgentProfileLoader {
 }
 
 export const IUserAgentProfileLoader: ServiceIdentifier<IUserAgentProfileLoader> =
-  createDecorator<IUserAgentProfileLoader>('userAgentProfileLoader');
+  createDecorator<IUserAgentProfileLoader>("userAgentProfileLoader");

@@ -13,16 +13,16 @@
  * message.
  */
 
-import type { Component } from '@moonshot-ai/pi-tui';
-import { Text } from '@moonshot-ai/pi-tui';
-import chalk from 'chalk';
+import type { Component } from "@moonshot-ai/pi-tui";
+import { Text } from "@moonshot-ai/pi-tui";
+import chalk from "chalk";
 
-import type { ChipProvider } from './chip';
-import { renderTruncated } from './truncated';
-import type { ResultRenderer } from './types';
+import type { ChipProvider } from "./chip";
+import { renderTruncated } from "./truncated";
+import type { ResultRenderer } from "./types";
 
 export interface ReadMediaSummary {
-  kind: 'image' | 'video';
+  kind: "image" | "video";
   path?: string;
   mimeType?: string;
   bytes?: number;
@@ -35,7 +35,7 @@ const DATA_URL_RE = /^data:([^;]+);base64,(.*)$/s;
 function bytesFromBase64(b64: string): number {
   const len = b64.length;
   if (len === 0) return 0;
-  const padding = b64.endsWith('==') ? 2 : b64.endsWith('=') ? 1 : 0;
+  const padding = b64.endsWith("==") ? 2 : b64.endsWith("=") ? 1 : 0;
   return Math.floor((len * 3) / 4) - padding;
 }
 
@@ -48,7 +48,7 @@ export function parseReadMediaOutput(output: string): ReadMediaSummary | null {
   }
   if (!Array.isArray(parsed)) return null;
 
-  let kind: 'image' | 'video' | undefined;
+  let kind: "image" | "video" | undefined;
   let path: string | undefined;
   let mimeType: string | undefined;
   let bytes: number | undefined;
@@ -56,27 +56,27 @@ export function parseReadMediaOutput(output: string): ReadMediaSummary | null {
   let foundMedia = false;
 
   for (const raw of parsed) {
-    if (typeof raw !== 'object' || raw === null) continue;
+    if (typeof raw !== "object" || raw === null) continue;
     const part = raw as Record<string, unknown>;
-    const type = part['type'];
+    const type = part["type"];
 
-    if (type === 'text' && typeof part['text'] === 'string') {
-      const tag = PATH_TAG_RE.exec(part['text']);
+    if (type === "text" && typeof part["text"] === "string") {
+      const tag = PATH_TAG_RE.exec(part["text"]);
       if (tag) {
-        kind = tag[1] as 'image' | 'video';
+        kind = tag[1] as "image" | "video";
         path = tag[2];
       }
       continue;
     }
 
-    if (type === 'image_url' || type === 'video_url') {
+    if (type === "image_url" || type === "video_url") {
       foundMedia = true;
-      kind = type === 'image_url' ? 'image' : 'video';
-      const holder = part[type === 'image_url' ? 'imageUrl' : 'videoUrl'];
-      if (typeof holder === 'object' && holder !== null) {
+      kind = type === "image_url" ? "image" : "video";
+      const holder = part[type === "image_url" ? "imageUrl" : "videoUrl"];
+      if (typeof holder === "object" && holder !== null) {
         const h = holder as Record<string, unknown>;
-        const u = h['url'];
-        if (typeof u === 'string') {
+        const u = h["url"];
+        if (typeof u === "string") {
           const data = DATA_URL_RE.exec(u);
           if (data && data[1] !== undefined && data[2] !== undefined) {
             mimeType = data[1];
@@ -113,14 +113,16 @@ function metaSegments(summary: ReadMediaSummary): string[] {
 }
 
 export const readMediaChip: ChipProvider = (_toolCall, result) => {
-  if (result.is_error) return '';
+  if (result.is_error) return "";
   const summary = parseReadMediaOutput(result.output);
-  if (summary === null) return '';
+  if (summary === null) return "";
   const meta = metaSegments(summary);
   if (meta.length === 0) {
-    return summary.url !== undefined ? `${summary.kind} · uploaded` : summary.kind;
+    return summary.url !== undefined
+      ? `${summary.kind} · uploaded`
+      : summary.kind;
   }
-  return `${summary.kind} (${meta.join(', ')})`;
+  return `${summary.kind} (${meta.join(", ")})`;
 };
 
 export const readMediaSummary: ResultRenderer = (toolCall, result, ctx) => {
@@ -136,8 +138,8 @@ export const readMediaSummary: ResultRenderer = (toolCall, result, ctx) => {
   }
   const meta = metaSegments(summary);
   const tail: string[] = [summary.kind];
-  if (meta.length > 0) tail.push(meta.join(', '));
+  if (meta.length > 0) tail.push(meta.join(", "));
   if (summary.url !== undefined) tail.push(summary.url);
-  out.push(new Text(`  ${dim(tail.join(' · '))}`, 0, 0));
+  out.push(new Text(`  ${dim(tail.join(" · "))}`, 0, 0));
   return out;
 };

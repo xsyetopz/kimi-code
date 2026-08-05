@@ -2,17 +2,17 @@
  * `di` domain — service identifiers, `createDecorator`, and the `IInstantiationService` contract.
  */
 
-import type { SyncDescriptor, SyncDescriptor0 } from './descriptors';
-import type { CascadeEngine } from './cascadeEngine';
-import type { DisposableStore, IDisposable } from './lifecycle';
-import type { ServiceCollection } from './serviceCollection';
+import type { SyncDescriptor, SyncDescriptor0 } from "./descriptors";
+import type { CascadeEngine } from "./cascadeEngine";
+import type { DisposableStore, IDisposable } from "./lifecycle";
+import type { ServiceCollection } from "./serviceCollection";
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace _util {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   export const serviceIds = new Map<string, ServiceIdentifier<any>>();
-  export const DI_TARGET = '$di$target';
-  export const DI_DEPENDENCIES = '$di$dependencies';
+  export const DI_TARGET = "$di$target";
+  export const DI_DEPENDENCIES = "$di$dependencies";
 
   export function getServiceDependencies(
     ctor: DI_TARGET_OBJ,
@@ -37,10 +37,11 @@ export interface IConstructorSignature<T, Args extends any[] = []> {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type GetLeadingNonServiceArgs<TArgs extends any[]> =
-  TArgs extends [] ? []
-  : TArgs extends [...infer TFirst, BrandedService] ? GetLeadingNonServiceArgs<TFirst>
-  : TArgs;
+export type GetLeadingNonServiceArgs<TArgs extends any[]> = TArgs extends []
+  ? []
+  : TArgs extends [...infer TFirst, BrandedService]
+    ? GetLeadingNonServiceArgs<TFirst>
+    : TArgs;
 
 export interface ServiceIdentifier<T> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -81,13 +82,13 @@ export function createDecorator<T>(name: string): ServiceIdentifier<T> {
   ): void {
     if (arguments.length !== 3) {
       throw new Error(
-        '@IServiceName-decorator can only be used to decorate a parameter',
+        "@IServiceName-decorator can only be used to decorate a parameter",
       );
     }
     storeServiceDependency(id, target, index);
   } as unknown as ServiceIdentifier<T>;
 
-  Object.defineProperty(id, 'toString', {
+  Object.defineProperty(id, "toString", {
     value: function toString(): string {
       return name;
     },
@@ -118,7 +119,7 @@ export interface ProvideOptions {
    * satisfied. `ondemand`: it materializes at first resolution (a cascade-torn
    * unit always rebuilds regardless).
    */
-  readonly activation?: 'eager' | 'ondemand';
+  readonly activation?: "eager" | "ondemand";
 }
 
 /**
@@ -152,7 +153,10 @@ export interface IInstantiationService {
     ctor: Ctor,
     ...args: GetLeadingNonServiceArgs<ConstructorParameters<Ctor>>
   ): R;
-  createChild(services: ServiceCollection, store?: DisposableStore): IInstantiationService;
+  createChild(
+    services: ServiceCollection,
+    store?: DisposableStore,
+  ): IInstantiationService;
   /**
    * Register (or replace) a token at runtime. Replacing retires the previous
    * materialized instance before the new generation becomes visible.
@@ -168,7 +172,7 @@ export interface IInstantiationService {
 }
 
 export const IInstantiationService: ServiceIdentifier<IInstantiationService> =
-  createDecorator<IInstantiationService>('instantiationService');
+  createDecorator<IInstantiationService>("instantiationService");
 
 export interface ServiceCollectionLike {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

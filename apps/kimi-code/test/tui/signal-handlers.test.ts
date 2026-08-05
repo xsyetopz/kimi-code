@@ -1,6 +1,10 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { KimiTUI, type KimiTUIStartupInput, type TUIState } from '#/tui/kimi-tui';
+import {
+  KimiTUI,
+  type KimiTUIStartupInput,
+  type TUIState,
+} from "#/tui/kimi-tui";
 
 interface SignalDriver {
   state: TUIState;
@@ -26,15 +30,15 @@ function makeStartupInput(): KimiTUIStartupInput {
       agentFiles: [],
     },
     tuiConfig: {
-      theme: 'dark',
+      theme: "dark",
       disablePasteBurst: false,
       editorCommand: null,
-      notifications: { enabled: true, condition: 'unfocused' },
+      notifications: { enabled: true, condition: "unfocused" },
       upgrade: { autoInstall: true },
       statusLine: { items: null, command: null },
     },
-    version: '0.0.0-test',
-    workDir: '/tmp/proj-signals',
+    version: "0.0.0-test",
+    workDir: "/tmp/proj-signals",
   };
 }
 
@@ -74,13 +78,21 @@ interface CapturedHandlers {
 }
 
 function captureHandlers(driver: SignalDriver): CapturedHandlers {
-  const signalHandlers = new Map<NodeJS.Signals, (...args: unknown[]) => void>();
+  const signalHandlers = new Map<
+    NodeJS.Signals,
+    (...args: unknown[]) => void
+  >();
   // The Node typings give `process.prependListener` a long list of overloads
   // (one per signal). We bypass that by typing the spy through `unknown`.
-  const prependSpy = vi.spyOn(process, 'prependListener');
-  (prependSpy as unknown as { mockImplementation: (fn: unknown) => unknown }).mockImplementation(
-    (event: string | symbol, listener: (...args: unknown[]) => void): NodeJS.Process => {
-      if (event === 'SIGTERM' || event === 'SIGHUP') {
+  const prependSpy = vi.spyOn(process, "prependListener");
+  (
+    prependSpy as unknown as { mockImplementation: (fn: unknown) => unknown }
+  ).mockImplementation(
+    (
+      event: string | symbol,
+      listener: (...args: unknown[]) => void,
+    ): NodeJS.Process => {
+      if (event === "SIGTERM" || event === "SIGHUP") {
         signalHandlers.set(event, listener);
       }
       return process;
@@ -89,19 +101,23 @@ function captureHandlers(driver: SignalDriver): CapturedHandlers {
 
   let stdoutErrorHandler: ((error: Error) => void) | undefined;
   let stderrErrorHandler: ((error: Error) => void) | undefined;
-  const stdoutOnSpy = vi.spyOn(process.stdout, 'on');
-  (stdoutOnSpy as unknown as { mockImplementation: (fn: unknown) => unknown }).mockImplementation(
+  const stdoutOnSpy = vi.spyOn(process.stdout, "on");
+  (
+    stdoutOnSpy as unknown as { mockImplementation: (fn: unknown) => unknown }
+  ).mockImplementation(
     (event: string | symbol, listener: (...args: unknown[]) => void) => {
-      if (event === 'error') {
+      if (event === "error") {
         stdoutErrorHandler = listener as (error: Error) => void;
       }
       return process.stdout;
     },
   );
-  const stderrOnSpy = vi.spyOn(process.stderr, 'on');
-  (stderrOnSpy as unknown as { mockImplementation: (fn: unknown) => unknown }).mockImplementation(
+  const stderrOnSpy = vi.spyOn(process.stderr, "on");
+  (
+    stderrOnSpy as unknown as { mockImplementation: (fn: unknown) => unknown }
+  ).mockImplementation(
     (event: string | symbol, listener: (...args: unknown[]) => void) => {
-      if (event === 'error') {
+      if (event === "error") {
         stderrErrorHandler = listener as (error: Error) => void;
       }
       return process.stderr;
@@ -126,57 +142,66 @@ function captureHandlers(driver: SignalDriver): CapturedHandlers {
   } as unknown as CapturedHandlers;
 }
 
-describe('KimiTUI signal handlers', () => {
+describe("KimiTUI signal handlers", () => {
   let exitSpy: ReturnType<typeof vi.spyOn>;
   let platformDescriptor: PropertyDescriptor | undefined;
 
   beforeEach(() => {
     exitSpy = vi
-      .spyOn(process, 'exit')
+      .spyOn(process, "exit")
       .mockImplementation((() => undefined) as unknown as typeof process.exit);
-    platformDescriptor = Object.getOwnPropertyDescriptor(process, 'platform');
+    platformDescriptor = Object.getOwnPropertyDescriptor(process, "platform");
   });
 
   afterEach(() => {
     exitSpy.mockRestore();
     if (platformDescriptor !== undefined) {
-      Object.defineProperty(process, 'platform', platformDescriptor);
+      Object.defineProperty(process, "platform", platformDescriptor);
     }
   });
 
-  it('emergencyTerminalExit exits with code 129', () => {
+  it("emergencyTerminalExit exits with code 129", () => {
     const { driver } = makeDriver();
     driver.emergencyTerminalExit();
     expect(exitSpy).toHaveBeenCalledWith(129);
   });
 
-  it('registers SIGTERM and SIGHUP on POSIX, only SIGTERM on Windows', () => {
+  it("registers SIGTERM and SIGHUP on POSIX, only SIGTERM on Windows", () => {
     // POSIX
-    Object.defineProperty(process, 'platform', { value: 'darwin', configurable: true });
+    Object.defineProperty(process, "platform", {
+      value: "darwin",
+      configurable: true,
+    });
     const posix = makeDriver();
     const posixCaptured = captureHandlers(posix.driver);
-    expect(posixCaptured.signalHandlers.has('SIGTERM')).toBe(true);
-    expect(posixCaptured.signalHandlers.has('SIGHUP')).toBe(true);
+    expect(posixCaptured.signalHandlers.has("SIGTERM")).toBe(true);
+    expect(posixCaptured.signalHandlers.has("SIGHUP")).toBe(true);
     posixCaptured.restore();
     posix.driver.unregisterSignalHandlers();
 
     // Windows
-    Object.defineProperty(process, 'platform', { value: 'win32', configurable: true });
+    Object.defineProperty(process, "platform", {
+      value: "win32",
+      configurable: true,
+    });
     const win = makeDriver();
     const winCaptured = captureHandlers(win.driver);
-    expect(winCaptured.signalHandlers.has('SIGTERM')).toBe(true);
-    expect(winCaptured.signalHandlers.has('SIGHUP')).toBe(false);
+    expect(winCaptured.signalHandlers.has("SIGTERM")).toBe(true);
+    expect(winCaptured.signalHandlers.has("SIGHUP")).toBe(false);
     winCaptured.restore();
     win.driver.unregisterSignalHandlers();
   });
 
-  it('SIGHUP handler calls emergencyTerminalExit (process.exit(129)) without going through stop()', () => {
-    Object.defineProperty(process, 'platform', { value: 'darwin', configurable: true });
+  it("SIGHUP handler calls emergencyTerminalExit (process.exit(129)) without going through stop()", () => {
+    Object.defineProperty(process, "platform", {
+      value: "darwin",
+      configurable: true,
+    });
     const { driver, tui } = makeDriver();
-    const stopSpy = vi.spyOn(tui, 'stop').mockResolvedValue(undefined);
+    const stopSpy = vi.spyOn(tui, "stop").mockResolvedValue(undefined);
     const captured = captureHandlers(driver);
 
-    const sighup = captured.signalHandlers.get('SIGHUP');
+    const sighup = captured.signalHandlers.get("SIGHUP");
     expect(sighup).toBeDefined();
     sighup?.();
 
@@ -188,13 +213,18 @@ describe('KimiTUI signal handlers', () => {
     driver.unregisterSignalHandlers();
   });
 
-  it('SIGTERM handler falls back to emergency exit (code 143) when stop() rejects', async () => {
-    Object.defineProperty(process, 'platform', { value: 'darwin', configurable: true });
+  it("SIGTERM handler falls back to emergency exit (code 143) when stop() rejects", async () => {
+    Object.defineProperty(process, "platform", {
+      value: "darwin",
+      configurable: true,
+    });
     const { driver, tui } = makeDriver();
-    const stopSpy = vi.spyOn(tui, 'stop').mockRejectedValue(new Error('cleanup boom'));
+    const stopSpy = vi
+      .spyOn(tui, "stop")
+      .mockRejectedValue(new Error("cleanup boom"));
     const captured = captureHandlers(driver);
 
-    const sigterm = captured.signalHandlers.get('SIGTERM');
+    const sigterm = captured.signalHandlers.get("SIGTERM");
     expect(sigterm).toBeDefined();
     sigterm?.();
 
@@ -214,16 +244,19 @@ describe('KimiTUI signal handlers', () => {
     driver.unregisterSignalHandlers();
   });
 
-  it('SIGTERM handler routes through stop(143) and forces exit 143 on success', async () => {
-    Object.defineProperty(process, 'platform', { value: 'darwin', configurable: true });
+  it("SIGTERM handler routes through stop(143) and forces exit 143 on success", async () => {
+    Object.defineProperty(process, "platform", {
+      value: "darwin",
+      configurable: true,
+    });
     const { driver, tui } = makeDriver();
     // `stop()` resolving without exiting models the defensive fallback path
     // where `onExit` was not wired up. The handler must still exit 143 so
     // supervisors see signal termination.
-    const stopSpy = vi.spyOn(tui, 'stop').mockResolvedValue(undefined);
+    const stopSpy = vi.spyOn(tui, "stop").mockResolvedValue(undefined);
     const captured = captureHandlers(driver);
 
-    const sigterm = captured.signalHandlers.get('SIGTERM');
+    const sigterm = captured.signalHandlers.get("SIGTERM");
     expect(sigterm).toBeDefined();
     sigterm?.();
 
@@ -239,24 +272,24 @@ describe('KimiTUI signal handlers', () => {
     driver.unregisterSignalHandlers();
   });
 
-  it('emergencyTerminalExit accepts a custom exit code', () => {
+  it("emergencyTerminalExit accepts a custom exit code", () => {
     const { driver } = makeDriver();
-    (driver as unknown as { emergencyTerminalExit(code?: number): never }).emergencyTerminalExit(
-      143,
-    );
+    (
+      driver as unknown as { emergencyTerminalExit(code?: number): never }
+    ).emergencyTerminalExit(143);
     expect(exitSpy).toHaveBeenCalledWith(143);
   });
 
-  it('stdout EIO error triggers emergency exit; ENOENT does not', () => {
+  it("stdout EIO error triggers emergency exit; ENOENT does not", () => {
     const { driver } = makeDriver();
     const captured = captureHandlers(driver);
 
-    const eio = Object.assign(new Error('write EIO'), { code: 'EIO' });
+    const eio = Object.assign(new Error("write EIO"), { code: "EIO" });
     captured.stdoutErrorHandler?.(eio);
     expect(exitSpy).toHaveBeenCalledWith(129);
 
     exitSpy.mockClear();
-    const enoent = Object.assign(new Error('not found'), { code: 'ENOENT' });
+    const enoent = Object.assign(new Error("not found"), { code: "ENOENT" });
     captured.stdoutErrorHandler?.(enoent);
     expect(exitSpy).not.toHaveBeenCalled();
 
@@ -264,11 +297,11 @@ describe('KimiTUI signal handlers', () => {
     driver.unregisterSignalHandlers();
   });
 
-  it('stderr EPIPE error triggers emergency exit', () => {
+  it("stderr EPIPE error triggers emergency exit", () => {
     const { driver } = makeDriver();
     const captured = captureHandlers(driver);
 
-    const epipe = Object.assign(new Error('write EPIPE'), { code: 'EPIPE' });
+    const epipe = Object.assign(new Error("write EPIPE"), { code: "EPIPE" });
     captured.stderrErrorHandler?.(epipe);
     expect(exitSpy).toHaveBeenCalledWith(129);
 
@@ -276,44 +309,46 @@ describe('KimiTUI signal handlers', () => {
     driver.unregisterSignalHandlers();
   });
 
-  it('registerSignalHandlers is idempotent (second call replaces first)', () => {
+  it("registerSignalHandlers is idempotent (second call replaces first)", () => {
     const { driver } = makeDriver();
-    const beforeSigterm = process.listenerCount('SIGTERM');
+    const beforeSigterm = process.listenerCount("SIGTERM");
 
     driver.registerSignalHandlers();
     driver.registerSignalHandlers();
 
-    expect(process.listenerCount('SIGTERM')).toBe(beforeSigterm + 1);
+    expect(process.listenerCount("SIGTERM")).toBe(beforeSigterm + 1);
 
     driver.unregisterSignalHandlers();
-    expect(process.listenerCount('SIGTERM')).toBe(beforeSigterm);
+    expect(process.listenerCount("SIGTERM")).toBe(beforeSigterm);
   });
 
-  it('stop() unregisters previously-installed signal handlers', async () => {
+  it("stop() unregisters previously-installed signal handlers", async () => {
     const { driver, tui } = makeDriver();
     // Suppress real stop work for this test — focus on the cleanup contract.
-    vi.spyOn(tui, 'stop').mockImplementation(async () => {
+    vi.spyOn(tui, "stop").mockImplementation(async () => {
       (tui as unknown as SignalDriver).unregisterSignalHandlers();
     });
-    const beforeSigterm = process.listenerCount('SIGTERM');
+    const beforeSigterm = process.listenerCount("SIGTERM");
     driver.registerSignalHandlers();
-    expect(process.listenerCount('SIGTERM')).toBe(beforeSigterm + 1);
+    expect(process.listenerCount("SIGTERM")).toBe(beforeSigterm + 1);
 
     await tui.stop();
-    expect(process.listenerCount('SIGTERM')).toBe(beforeSigterm);
+    expect(process.listenerCount("SIGTERM")).toBe(beforeSigterm);
   });
 
-  it('stop() drains terminal input before stopping the UI and exiting', async () => {
+  it("stop() drains terminal input before stopping the UI and exiting", async () => {
     const { driver, tui } = makeDriver();
     const events: string[] = [];
-    const drainInput = vi.spyOn(driver.state.terminal, 'drainInput').mockImplementation(async () => {
-      events.push('drain');
-    });
-    const uiStop = vi.spyOn(driver.state.ui, 'stop').mockImplementation(() => {
-      events.push('ui.stop');
+    const drainInput = vi
+      .spyOn(driver.state.terminal, "drainInput")
+      .mockImplementation(async () => {
+        events.push("drain");
+      });
+    const uiStop = vi.spyOn(driver.state.ui, "stop").mockImplementation(() => {
+      events.push("ui.stop");
     });
     tui.onExit = vi.fn(async () => {
-      events.push('exit');
+      events.push("exit");
     });
 
     await tui.stop();
@@ -321,34 +356,35 @@ describe('KimiTUI signal handlers', () => {
     expect(drainInput).toHaveBeenCalledOnce();
     expect(uiStop).toHaveBeenCalledOnce();
     expect(tui.onExit).toHaveBeenCalledOnce();
-    expect(events).toEqual(['drain', 'ui.stop', 'exit']);
+    expect(events).toEqual(["drain", "ui.stop", "exit"]);
   });
 
-  it('start() unregisters signal handlers when initialization throws', async () => {
+  it("start() unregisters signal handlers when initialization throws", async () => {
     const { tui } = makeDriver();
     // Force the very first awaited call inside start() to reject. We don't
     // care which method blows up — only that the failure surfaces and any
     // listeners we installed up front get cleaned up before the throw escapes.
-    vi.spyOn(tui as unknown as { initMainTui(): Promise<boolean> }, 'initMainTui').mockRejectedValue(
-      new Error('init boom'),
-    );
+    vi.spyOn(
+      tui as unknown as { initMainTui(): Promise<boolean> },
+      "initMainTui",
+    ).mockRejectedValue(new Error("init boom"));
     // Stub state.ui.stop so the failure-path cleanup does not touch the real
     // event loop.
     vi.spyOn(
       (tui as unknown as { state: { ui: { stop(): void } } }).state.ui,
-      'stop',
+      "stop",
     ).mockImplementation(() => {});
 
-    const beforeSigterm = process.listenerCount('SIGTERM');
-    const beforeSighup = process.listenerCount('SIGHUP');
-    const beforeStdout = process.stdout.listenerCount('error');
-    const beforeStderr = process.stderr.listenerCount('error');
+    const beforeSigterm = process.listenerCount("SIGTERM");
+    const beforeSighup = process.listenerCount("SIGHUP");
+    const beforeStdout = process.stdout.listenerCount("error");
+    const beforeStderr = process.stderr.listenerCount("error");
 
     await expect(tui.start()).rejects.toThrow(/init boom/);
 
-    expect(process.listenerCount('SIGTERM')).toBe(beforeSigterm);
-    expect(process.listenerCount('SIGHUP')).toBe(beforeSighup);
-    expect(process.stdout.listenerCount('error')).toBe(beforeStdout);
-    expect(process.stderr.listenerCount('error')).toBe(beforeStderr);
+    expect(process.listenerCount("SIGTERM")).toBe(beforeSigterm);
+    expect(process.listenerCount("SIGHUP")).toBe(beforeSighup);
+    expect(process.stdout.listenerCount("error")).toBe(beforeStdout);
+    expect(process.stderr.listenerCount("error")).toBe(beforeStderr);
   });
 });

@@ -6,11 +6,11 @@
 // added. This is the anti-rot guarantee that keeps vis from silently falling
 // behind the wire protocol.
 
-import type { ReactNode } from 'react';
+import type { ReactNode } from "react";
 
-import type { AgentRecord, AgentRecordOf } from '../../types';
-import type { PillTone } from '../shared/Pill';
-import { Pill } from '../shared/Pill';
+import type { AgentRecord, AgentRecordOf } from "../../types";
+import type { PillTone } from "../shared/Pill";
+import { Pill } from "../shared/Pill";
 import {
   Dim,
   type HeadlineRender,
@@ -22,11 +22,11 @@ import {
   firstText,
   truncate,
   loopEventSummary,
-} from './parts';
-import { SizePreview } from '../shared/SizePreview';
-import { JsonViewer } from '../shared/JsonViewer';
+} from "./parts";
+import { SizePreview } from "../shared/SizePreview";
+import { JsonViewer } from "../shared/JsonViewer";
 
-export type RecordType = AgentRecord['type'];
+export type RecordType = AgentRecord["type"];
 
 export interface WireRenderer<K extends RecordType> {
   tone: PillTone;
@@ -44,8 +44,8 @@ type RendererMap = { [K in RecordType]: WireRenderer<K> };
 
 export const WIRE_RENDERERS: RendererMap = {
   metadata: {
-    tone: 'meta',
-    label: 'meta',
+    tone: "meta",
+    label: "meta",
     headline: (r) => ({
       main: (
         <span className="flex items-center gap-2 min-w-0">
@@ -58,57 +58,60 @@ export const WIRE_RENDERERS: RendererMap = {
   },
 
   forked: {
-    tone: 'lifecycle',
-    label: 'fork',
+    tone: "lifecycle",
+    label: "fork",
     headline: () => ({ main: <Dim>session forked</Dim> }),
   },
 
-  'config.update': {
-    tone: 'config',
-    label: 'config',
+  "config.update": {
+    tone: "config",
+    label: "config",
     headline: (r) => {
       const parts: string[] = [];
       if (r.profileName !== undefined) parts.push(`profile=${r.profileName}`);
       if (r.modelAlias !== undefined) parts.push(`model=${r.modelAlias}`);
       if (r.cwd !== undefined) parts.push(`cwd=${r.cwd}`);
-      if (r.thinkingEffort !== undefined) parts.push(`thinking=${r.thinkingEffort}`);
-      if (r.systemPrompt !== undefined) parts.push(`system(${r.systemPrompt.length}b)`);
+      if (r.thinkingEffort !== undefined)
+        parts.push(`thinking=${r.thinkingEffort}`);
+      if (r.systemPrompt !== undefined)
+        parts.push(`system(${r.systemPrompt.length}b)`);
       return {
         main: (
           <span className="truncate text-fg-0">
-            {parts.length === 0 ? <Dim>(no fields)</Dim> : parts.join(' · ')}
+            {parts.length === 0 ? <Dim>(no fields)</Dim> : parts.join(" · ")}
           </span>
         ),
       };
     },
   },
 
-  'profile.bind': {
-    tone: 'config',
-    label: 'profile',
+  "profile.bind": {
+    tone: "config",
+    label: "profile",
     headline: (r) => {
       const parts: string[] = [];
       if (r.profileName !== undefined) parts.push(`profile=${r.profileName}`);
       if (r.modelAlias !== undefined) parts.push(`model=${r.modelAlias}`);
-      if (r.thinkingEffort !== undefined) parts.push(`thinking=${r.thinkingEffort}`);
+      if (r.thinkingEffort !== undefined)
+        parts.push(`thinking=${r.thinkingEffort}`);
       if (r.activeToolNames !== undefined) {
         parts.push(`${r.activeToolNames.length} tools`);
       } else {
-        parts.push('all tools');
+        parts.push("all tools");
       }
       return {
         main: (
           <span className="truncate text-fg-0">
-            {parts.length === 0 ? <Dim>(no fields)</Dim> : parts.join(' · ')}
+            {parts.length === 0 ? <Dim>(no fields)</Dim> : parts.join(" · ")}
           </span>
         ),
       };
     },
   },
 
-  'turn.prompt': {
-    tone: 'turn',
-    label: 'prompt',
+  "turn.prompt": {
+    tone: "turn",
+    label: "prompt",
     headline: (r) => {
       const text = firstText(r.input);
       return {
@@ -131,7 +134,7 @@ export const WIRE_RENDERERS: RendererMap = {
         </div>
         <div>
           <div className="mb-1 text-fg-2">
-            input ({r.input.length} part{r.input.length === 1 ? '' : 's'})
+            input ({r.input.length} part{r.input.length === 1 ? "" : "s"})
           </div>
           <div className="space-y-1">
             {r.input.map((part, i) => (
@@ -143,9 +146,9 @@ export const WIRE_RENDERERS: RendererMap = {
     ),
   },
 
-  'turn.steer': {
-    tone: 'turn',
-    label: 'steer',
+  "turn.steer": {
+    tone: "turn",
+    label: "steer",
     headline: (r) => {
       const text = firstText(r.input);
       return {
@@ -168,7 +171,7 @@ export const WIRE_RENDERERS: RendererMap = {
         </div>
         <div>
           <div className="mb-1 text-fg-2">
-            input ({r.input.length} part{r.input.length === 1 ? '' : 's'})
+            input ({r.input.length} part{r.input.length === 1 ? "" : "s"})
           </div>
           <div className="space-y-1">
             {r.input.map((part, i) => (
@@ -180,55 +183,61 @@ export const WIRE_RENDERERS: RendererMap = {
     ),
   },
 
-  'turn.cancel': {
-    tone: 'warning',
-    label: 'cancel',
+  "turn.cancel": {
+    tone: "warning",
+    label: "cancel",
     headline: (r) => ({
-      main: <Mono>{r.turnId !== undefined ? `turn ${r.turnId}` : '(latest)'}</Mono>,
+      main: (
+        <Mono>{r.turnId !== undefined ? `turn ${r.turnId}` : "(latest)"}</Mono>
+      ),
     }),
   },
 
-  'context.append_message': {
-    tone: 'assistant',
-    label: 'message',
+  "context.append_message": {
+    tone: "assistant",
+    label: "message",
     headline: (r) => {
       const m = r.message;
-      const tc = m.toolCalls.length > 0 ? `${m.toolCalls.length} tool_call(s)` : '';
+      const tc =
+        m.toolCalls.length > 0 ? `${m.toolCalls.length} tool_call(s)` : "";
       return {
         main: (
           <span className="flex items-center gap-2 min-w-0">
             <Pill
               tone={
-                m.role === 'user'
-                  ? 'user'
-                  : m.role === 'assistant'
-                    ? 'assistant'
-                    : m.role === 'tool'
-                      ? 'tool'
-                      : 'meta'
+                m.role === "user"
+                  ? "user"
+                  : m.role === "assistant"
+                    ? "assistant"
+                    : m.role === "tool"
+                      ? "tool"
+                      : "meta"
               }
               variant="soft"
             >
               {m.role}
             </Pill>
-            <Dim>({m.content.length} part{m.content.length === 1 ? '' : 's'})</Dim>
+            <Dim>
+              ({m.content.length} part{m.content.length === 1 ? "" : "s"})
+            </Dim>
             {tc ? <Dim>· {tc}</Dim> : null}
             {m.origin?.kind ? <Dim>· origin={m.origin.kind}</Dim> : null}
           </span>
         ),
-        right: m.isError === true ? (
-          <Pill tone="error" variant="solid">
-            error
-          </Pill>
-        ) : undefined,
+        right:
+          m.isError === true ? (
+            <Pill tone="error" variant="solid">
+              error
+            </Pill>
+          ) : undefined,
       };
     },
     detail: (r) => <MessageDetail message={r.message} />,
   },
 
-  'context.append_loop_event': {
-    tone: 'meta',
-    label: 'loop',
+  "context.append_loop_event": {
+    tone: "meta",
+    label: "loop",
     headline: (r) => ({
       main: (
         <span className="flex items-center gap-2 min-w-0">
@@ -240,21 +249,21 @@ export const WIRE_RENDERERS: RendererMap = {
     detail: (r) => <LoopEventDetail event={r.event} />,
   },
 
-  'context.update_token_count': {
-    tone: 'meta',
-    label: 'tokens',
+  "context.update_token_count": {
+    tone: "meta",
+    label: "tokens",
     headline: (r) => ({ main: <Dim>context {r.tokenCount} tok</Dim> }),
   },
 
-  'context.clear': {
-    tone: 'warning',
-    label: 'clear',
+  "context.clear": {
+    tone: "warning",
+    label: "clear",
     headline: () => ({ main: <Dim>context cleared</Dim> }),
   },
 
-  'context.apply_compaction': {
-    tone: 'compaction',
-    label: 'compacted',
+  "context.apply_compaction": {
+    tone: "compaction",
+    label: "compacted",
     headline: (r) => ({
       main: (
         <span className="flex items-center gap-2 min-w-0">
@@ -262,8 +271,8 @@ export const WIRE_RENDERERS: RendererMap = {
             compacted
           </Pill>
           <Dim>
-            summary {r.summary.length}b · {r.tokensBefore}→{r.tokensAfter} tok · {r.compactedCount}{' '}
-            msgs
+            summary {r.summary.length}b · {r.tokensBefore}→{r.tokensAfter} tok ·{" "}
+            {r.compactedCount} msgs
           </Dim>
         </span>
       ),
@@ -271,12 +280,20 @@ export const WIRE_RENDERERS: RendererMap = {
     detail: (r) => (
       <div className="grid grid-cols-[140px_1fr] gap-x-3 gap-y-[2px]">
         <FieldRow label="summary" wide>
-          <SizePreview label="summary" sizeBytes={r.summary.length} preview={r.summary}>
-            <pre className="whitespace-pre-wrap break-words text-fg-1">{r.summary}</pre>
+          <SizePreview
+            label="summary"
+            sizeBytes={r.summary.length}
+            preview={r.summary}
+          >
+            <pre className="whitespace-pre-wrap break-words text-fg-1">
+              {r.summary}
+            </pre>
           </SizePreview>
         </FieldRow>
         <FieldRow label="compactedCount">
-          <span className="text-[var(--color-sev-info)]">{r.compactedCount}</span>
+          <span className="text-[var(--color-sev-info)]">
+            {r.compactedCount}
+          </span>
         </FieldRow>
         <FieldRow label="tokensBefore">
           <span className="text-[var(--color-sev-info)]">{r.tokensBefore}</span>
@@ -288,9 +305,9 @@ export const WIRE_RENDERERS: RendererMap = {
     ),
   },
 
-  'context.undo': {
-    tone: 'warning',
-    label: 'undo',
+  "context.undo": {
+    tone: "warning",
+    label: "undo",
     headline: (r) => ({
       main: (
         <span className="flex items-center gap-2">
@@ -298,16 +315,16 @@ export const WIRE_RENDERERS: RendererMap = {
             undo
           </Pill>
           <Dim>
-            {r.count} prompt{r.count === 1 ? '' : 's'}
+            {r.count} prompt{r.count === 1 ? "" : "s"}
           </Dim>
         </span>
       ),
     }),
   },
 
-  'tools.register_user_tool': {
-    tone: 'tools',
-    label: 'tool+',
+  "tools.register_user_tool": {
+    tone: "tools",
+    label: "tool+",
     headline: (r) => ({
       main: (
         <span className="flex items-center gap-2">
@@ -317,9 +334,9 @@ export const WIRE_RENDERERS: RendererMap = {
     }),
   },
 
-  'tools.unregister_user_tool': {
-    tone: 'tools',
-    label: 'tool-',
+  "tools.unregister_user_tool": {
+    tone: "tools",
+    label: "tool-",
     headline: (r) => ({
       main: (
         <span className="flex items-center gap-2">
@@ -329,12 +346,12 @@ export const WIRE_RENDERERS: RendererMap = {
     }),
   },
 
-  'tools.set_active_tools': {
-    tone: 'tools',
-    label: 'tools',
+  "tools.set_active_tools": {
+    tone: "tools",
+    label: "tools",
     headline: (r) => {
-      const head = r.names.slice(0, 3).join(', ');
-      const rest = r.names.length > 3 ? ` +${r.names.length - 3} more` : '';
+      const head = r.names.slice(0, 3).join(", ");
+      const rest = r.names.length > 3 ? ` +${r.names.length - 3} more` : "";
       return {
         main: (
           <Mono className="truncate">
@@ -347,21 +364,21 @@ export const WIRE_RENDERERS: RendererMap = {
     },
   },
 
-  'tools.reset_active_tools': {
-    tone: 'tools',
-    label: 'reset',
+  "tools.reset_active_tools": {
+    tone: "tools",
+    label: "reset",
     headline: () => ({
       main: <Mono>all tools active</Mono>,
     }),
   },
 
-  'tools.update_store': {
-    tone: 'meta',
-    label: 'store',
+  "tools.update_store": {
+    tone: "meta",
+    label: "store",
     headline: (r) => {
       const valuePreview =
-        typeof r.value === 'object' && r.value !== null
-          ? '(object)'
+        typeof r.value === "object" && r.value !== null
+          ? "(object)"
           : truncate(String(r.value), 60);
       return {
         main: (
@@ -374,9 +391,9 @@ export const WIRE_RENDERERS: RendererMap = {
     },
   },
 
-  'permission.set_mode': {
-    tone: 'approval',
-    label: 'perm',
+  "permission.set_mode": {
+    tone: "approval",
+    label: "perm",
     headline: (r) => ({
       main: (
         <span className="flex items-center gap-2">
@@ -389,16 +406,16 @@ export const WIRE_RENDERERS: RendererMap = {
     }),
   },
 
-  'permission.record_approval_result': {
-    tone: 'approval',
-    label: 'approval',
+  "permission.record_approval_result": {
+    tone: "approval",
+    label: "approval",
     headline: (r) => {
       const tone =
-        r.result.decision === 'approved'
-          ? 'success'
-          : r.result.decision === 'rejected'
-            ? 'error'
-            : 'neutral';
+        r.result.decision === "approved"
+          ? "success"
+          : r.result.decision === "rejected"
+            ? "error"
+            : "neutral";
       return {
         main: (
           <span className="flex items-center gap-2 min-w-0">
@@ -447,23 +464,25 @@ export const WIRE_RENDERERS: RendererMap = {
         ) : null}
         {r.result.feedback !== undefined ? (
           <FieldRow label="feedback" wide>
-            <pre className="whitespace-pre-wrap break-words text-fg-1">{r.result.feedback}</pre>
+            <pre className="whitespace-pre-wrap break-words text-fg-1">
+              {r.result.feedback}
+            </pre>
           </FieldRow>
         ) : null}
       </div>
     ),
   },
 
-  'usage.record': {
-    tone: 'meta',
-    label: 'usage',
+  "usage.record": {
+    tone: "meta",
+    label: "usage",
     headline: (r) => ({
       main: (
         <span className="flex items-center gap-2 min-w-0">
           <Mono>{r.model}</Mono>
           <Dim>
-            in {r.usage.inputOther} / out {r.usage.output} / cache r{r.usage.inputCacheRead} w
-            {r.usage.inputCacheCreation}
+            in {r.usage.inputOther} / out {r.usage.output} / cache r
+            {r.usage.inputCacheRead} w{r.usage.inputCacheCreation}
           </Dim>
         </span>
       ),
@@ -475,9 +494,9 @@ export const WIRE_RENDERERS: RendererMap = {
     }),
   },
 
-  'full_compaction.begin': {
-    tone: 'compaction',
-    label: 'compact↻',
+  "full_compaction.begin": {
+    tone: "compaction",
+    label: "compact↻",
     headline: (r) => ({
       main: (
         <span className="flex items-center gap-2 min-w-0">
@@ -492,9 +511,9 @@ export const WIRE_RENDERERS: RendererMap = {
     }),
   },
 
-  'full_compaction.cancel': {
-    tone: 'warning',
-    label: 'compact×',
+  "full_compaction.cancel": {
+    tone: "warning",
+    label: "compact×",
     headline: () => ({ main: <Dim>cancelled</Dim> }),
   },
 
@@ -503,15 +522,15 @@ export const WIRE_RENDERERS: RendererMap = {
   // none of which exist on this record — a runtime crash. Those fields belong
   // to `context.apply_compaction` (its own entry above). This is a static,
   // payload-free renderer; the generic JSON dump shows type + time only.
-  'full_compaction.complete': {
-    tone: 'success',
-    label: 'compact✓',
+  "full_compaction.complete": {
+    tone: "success",
+    label: "compact✓",
     headline: () => ({ main: <Dim>compaction complete</Dim> }),
   },
 
-  'micro_compaction.apply': {
-    tone: 'compaction',
-    label: 'µcompact',
+  "micro_compaction.apply": {
+    tone: "compaction",
+    label: "µcompact",
     headline: (r) => ({
       main: (
         <span className="flex items-center gap-2 min-w-0">
@@ -524,9 +543,9 @@ export const WIRE_RENDERERS: RendererMap = {
     }),
   },
 
-  'plan_mode.enter': {
-    tone: 'lifecycle',
-    label: 'plan↻',
+  "plan_mode.enter": {
+    tone: "lifecycle",
+    label: "plan↻",
     headline: (r) => ({
       main: (
         <span className="flex items-center gap-2">
@@ -539,39 +558,39 @@ export const WIRE_RENDERERS: RendererMap = {
     }),
   },
 
-  'plan_mode.cancel': {
-    tone: 'warning',
-    label: 'plan×',
+  "plan_mode.cancel": {
+    tone: "warning",
+    label: "plan×",
     headline: (r) => ({
       main: (
         <span className="flex items-center gap-2">
           <Pill tone="warning" variant="soft">
             cancel
           </Pill>
-          <Mono>{r.id ?? '(latest)'}</Mono>
+          <Mono>{r.id ?? "(latest)"}</Mono>
         </span>
       ),
     }),
   },
 
-  'plan_mode.exit': {
-    tone: 'success',
-    label: 'plan✓',
+  "plan_mode.exit": {
+    tone: "success",
+    label: "plan✓",
     headline: (r) => ({
       main: (
         <span className="flex items-center gap-2">
           <Pill tone="success" variant="soft">
             exit
           </Pill>
-          <Mono>{r.id ?? '(latest)'}</Mono>
+          <Mono>{r.id ?? "(latest)"}</Mono>
         </span>
       ),
     }),
   },
 
-  'swarm_mode.enter': {
-    tone: 'subagent',
-    label: 'swarm↻',
+  "swarm_mode.enter": {
+    tone: "subagent",
+    label: "swarm↻",
     headline: (r) => ({
       main: (
         <span className="flex items-center gap-2">
@@ -584,15 +603,15 @@ export const WIRE_RENDERERS: RendererMap = {
     }),
   },
 
-  'swarm_mode.exit': {
-    tone: 'subagent',
-    label: 'swarm✓',
+  "swarm_mode.exit": {
+    tone: "subagent",
+    label: "swarm✓",
     headline: () => ({ main: <Dim>swarm mode exited</Dim> }),
   },
 
-  'goal.create': {
-    tone: 'lifecycle',
-    label: 'goal+',
+  "goal.create": {
+    tone: "lifecycle",
+    label: "goal+",
     headline: (r) => ({
       main: (
         <span className="flex items-center gap-2 min-w-0">
@@ -605,9 +624,9 @@ export const WIRE_RENDERERS: RendererMap = {
     }),
   },
 
-  'goal.update': {
-    tone: 'lifecycle',
-    label: 'goal',
+  "goal.update": {
+    tone: "lifecycle",
+    label: "goal",
     headline: (r) => {
       const parts: string[] = [];
       if (r.status !== undefined) parts.push(`status=${r.status}`);
@@ -617,36 +636,36 @@ export const WIRE_RENDERERS: RendererMap = {
       return {
         main: (
           <span className="truncate text-fg-1">
-            {parts.length === 0 ? <Dim>(no change)</Dim> : parts.join(' · ')}
+            {parts.length === 0 ? <Dim>(no change)</Dim> : parts.join(" · ")}
           </span>
         ),
       };
     },
   },
 
-  'goal.clear': {
-    tone: 'warning',
-    label: 'goal×',
+  "goal.clear": {
+    tone: "warning",
+    label: "goal×",
     headline: () => ({ main: <Dim>goal cleared</Dim> }),
   },
 
   // Observability records — the request trace (see agent-core records/types.ts).
 
-  'llm.tools_snapshot': {
-    tone: 'tools',
-    label: 'req·tools',
+  "llm.tools_snapshot": {
+    tone: "tools",
+    label: "req·tools",
     headline: (r) => ({
       main: (
         <span className="flex items-center gap-2 min-w-0">
           <Mono>
-            {r.tools.length} tool{r.tools.length === 1 ? '' : 's'}
+            {r.tools.length} tool{r.tools.length === 1 ? "" : "s"}
           </Mono>
           <Dim className="truncate">
             {r.tools
               .slice(0, 4)
               .map((tool) => tool.name)
-              .join(', ')}
-            {r.tools.length > 4 ? ` +${r.tools.length - 4} more` : ''}
+              .join(", ")}
+            {r.tools.length > 4 ? ` +${r.tools.length - 4} more` : ""}
           </Dim>
         </span>
       ),
@@ -654,9 +673,9 @@ export const WIRE_RENDERERS: RendererMap = {
     }),
   },
 
-  'llm.request': {
-    tone: 'meta',
-    label: 'llm→',
+  "llm.request": {
+    tone: "meta",
+    label: "llm→",
     headline: (r) => {
       const parts: string[] = [];
       if (r.turnStep !== undefined) parts.push(`step ${r.turnStep}`);
@@ -666,11 +685,14 @@ export const WIRE_RENDERERS: RendererMap = {
       return {
         main: (
           <span className="flex items-center gap-2 min-w-0">
-            <Pill tone={r.kind === 'compaction' ? 'compaction' : 'turn'} variant="soft">
+            <Pill
+              tone={r.kind === "compaction" ? "compaction" : "turn"}
+              variant="soft"
+            >
               {r.kind}
             </Pill>
             <Mono>{r.model}</Mono>
-            <Dim className="truncate">{parts.join(' · ')}</Dim>
+            <Dim className="truncate">{parts.join(" · ")}</Dim>
           </span>
         ),
         right:
@@ -706,7 +728,9 @@ export const WIRE_RENDERERS: RendererMap = {
         ) : null}
         {r.temperature !== undefined ? (
           <FieldRow label="temperature">
-            <span className="text-[var(--color-sev-info)]">{r.temperature}</span>
+            <span className="text-[var(--color-sev-info)]">
+              {r.temperature}
+            </span>
           </FieldRow>
         ) : null}
         {r.topP !== undefined ? (
@@ -740,36 +764,41 @@ export const WIRE_RENDERERS: RendererMap = {
               sizeBytes={r.systemPrompt.length}
               preview={r.systemPrompt}
             >
-              <pre className="whitespace-pre-wrap break-words text-fg-1">{r.systemPrompt}</pre>
+              <pre className="whitespace-pre-wrap break-words text-fg-1">
+                {r.systemPrompt}
+              </pre>
             </SizePreview>
           </FieldRow>
         ) : null}
         {r.droppedCount !== undefined ? (
           <FieldRow label="droppedCount">
-            <span className="text-[var(--color-sev-info)]">{r.droppedCount}</span>
+            <span className="text-[var(--color-sev-info)]">
+              {r.droppedCount}
+            </span>
           </FieldRow>
         ) : null}
       </div>
     ),
   },
 
-  'mcp.tools_discovered': {
-    tone: 'tools',
-    label: 'mcp·list',
+  "mcp.tools_discovered": {
+    tone: "tools",
+    label: "mcp·list",
     headline: (r) => ({
       main: (
         <span className="flex items-center gap-2 min-w-0">
           <Mono>{r.serverName}</Mono>
           <Dim>
-            {r.tools.length} tool{r.tools.length === 1 ? '' : 's'} · {r.enabledNames.length}{' '}
-            enabled
+            {r.tools.length} tool{r.tools.length === 1 ? "" : "s"} ·{" "}
+            {r.enabledNames.length} enabled
           </Dim>
         </span>
       ),
       right:
         r.collisions !== undefined && r.collisions.length > 0 ? (
           <Pill tone="warning" variant="soft">
-            {r.collisions.length} collision{r.collisions.length === 1 ? '' : 's'}
+            {r.collisions.length} collision
+            {r.collisions.length === 1 ? "" : "s"}
           </Pill>
         ) : (
           <Mono>#{r.hash.slice(0, 8)}</Mono>
@@ -795,6 +824,10 @@ export const WIRE_RENDERERS: RendererMap = {
  *  its own kind, but at dispatch time we only have the union, so we widen the
  *  value to `WireRenderer<RecordType>` (callable with any `AgentRecord`). Safe
  *  because we only ever call it with the matching record. */
-export function rendererFor(type: string): WireRenderer<RecordType> | undefined {
-  return (WIRE_RENDERERS as unknown as Record<string, WireRenderer<RecordType>>)[type];
+export function rendererFor(
+  type: string,
+): WireRenderer<RecordType> | undefined {
+  return (
+    WIRE_RENDERERS as unknown as Record<string, WireRenderer<RecordType>>
+  )[type];
 }

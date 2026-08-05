@@ -1,6 +1,6 @@
 import { createDecorator } from "#/_base/di/instantiation";
-import type { Event } from '#/_base/event';
-import type { PermissionMode } from '#/agent/permissionPolicy/types';
+import type { Event } from "#/_base/event";
+import type { PermissionMode } from "#/agent/permissionPolicy/types";
 
 export interface PermissionModeChangedContext {
   readonly mode: PermissionMode;
@@ -17,4 +17,4 @@ export interface IAgentPermissionModeService {
 }
 
 export const IAgentPermissionModeService =
-  createDecorator<IAgentPermissionModeService>('agentPermissionModeService');
+  createDecorator<IAgentPermissionModeService>("agentPermissionModeService");

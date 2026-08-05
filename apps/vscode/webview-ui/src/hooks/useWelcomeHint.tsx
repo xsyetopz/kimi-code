@@ -8,7 +8,13 @@ export interface WelcomeHint {
   component?: React.ReactNode;
 }
 
-function ShortcutRow({ kbd, children }: { kbd: string; children: React.ReactNode }) {
+function ShortcutRow({
+  kbd,
+  children,
+}: {
+  kbd: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="flex justify-between items-start gap-3">
       <kbd className="kbd shrink-0">{kbd}</kbd>
@@ -24,8 +30,12 @@ function ShortcutGuide() {
         <div className="font-medium text-foreground mb-1.5">⚡ Commands</div>
         <div className="text-muted-foreground space-y-1">
           <ShortcutRow kbd="/">View all commands</ShortcutRow>
-          <ShortcutRow kbd="/init">Scan project and generate AGENTS.md file</ShortcutRow>
-          <ShortcutRow kbd="/compact">Trim context so that I focus on the essentials</ShortcutRow>
+          <ShortcutRow kbd="/init">
+            Scan project and generate AGENTS.md file
+          </ShortcutRow>
+          <ShortcutRow kbd="/compact">
+            Trim context so that I focus on the essentials
+          </ShortcutRow>
         </div>
       </div>
       <div>
@@ -33,7 +43,9 @@ function ShortcutGuide() {
         <div className="text-muted-foreground space-y-1">
           <ShortcutRow kbd="↑">Browse input history</ShortcutRow>
           <ShortcutRow kbd="@">Add/Search files to reference</ShortcutRow>
-          <ShortcutRow kbd="Alt+K">Add selected code directly from editor</ShortcutRow>
+          <ShortcutRow kbd="Alt+K">
+            Add selected code directly from editor
+          </ShortcutRow>
         </div>
       </div>
       <div>

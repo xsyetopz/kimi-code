@@ -20,7 +20,7 @@ interface SavedConsole {
 }
 
 function formatArg(value: unknown): string {
-  if (typeof value === 'string') return value;
+  if (typeof value === "string") return value;
   if (value instanceof Error) return value.stack ?? value.message;
   try {
     return JSON.stringify(value);
@@ -45,7 +45,7 @@ export function redirectConsoleToStderr(): () => void {
   };
 
   const writeStderr: ConsoleSink = (...args) => {
-    process.stderr.write(`${args.map(formatArg).join(' ')}\n`);
+    process.stderr.write(`${args.map(formatArg).join(" ")}\n`);
   };
 
   console.log = writeStderr;

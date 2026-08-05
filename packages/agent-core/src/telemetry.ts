@@ -1,6 +1,13 @@
-export type TelemetryPropertyValue = boolean | number | string | undefined | null;
+export type TelemetryPropertyValue =
+  | boolean
+  | number
+  | string
+  | undefined
+  | null;
 
-export type TelemetryProperties = Readonly<Record<string, TelemetryPropertyValue>>;
+export type TelemetryProperties = Readonly<
+  Record<string, TelemetryPropertyValue>
+>;
 
 export interface TelemetryContextPatch {
   readonly sessionId?: string | null;
@@ -34,7 +41,10 @@ export function withTelemetryProperties(
       telemetry.track(event, { ...defaults, ...properties });
     },
     withContext(patch) {
-      return withTelemetryProperties(withTelemetryContext(telemetry, patch), defaults);
+      return withTelemetryProperties(
+        withTelemetryContext(telemetry, patch),
+        defaults,
+      );
     },
     setContext(patch) {
       telemetry.setContext?.(patch);

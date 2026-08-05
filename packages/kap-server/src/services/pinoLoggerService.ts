@@ -11,11 +11,18 @@
  * the business outcome carried in the envelope `code` (see `requestLogging.ts`).
  */
 
-import { pino, type Logger, type LoggerOptions } from 'pino';
+import { pino, type Logger, type LoggerOptions } from "pino";
 
 export type ServerLogger = Logger;
 
-export type ServerLogLevel = 'fatal' | 'error' | 'warn' | 'info' | 'debug' | 'trace' | 'silent';
+export type ServerLogLevel =
+  | "fatal"
+  | "error"
+  | "warn"
+  | "info"
+  | "debug"
+  | "trace"
+  | "silent";
 
 export interface CreateLoggerOptions {
   level: ServerLogLevel;
@@ -24,7 +31,7 @@ export interface CreateLoggerOptions {
 export function createServerLogger(opts: CreateLoggerOptions): ServerLogger {
   const base: LoggerOptions = {
     level: opts.level,
-    base: { name: 'kimi-server-v2' },
+    base: { name: "kimi-server-v2" },
     timestamp: pino.stdTimeFunctions.isoTime,
   };
   return pino(base);

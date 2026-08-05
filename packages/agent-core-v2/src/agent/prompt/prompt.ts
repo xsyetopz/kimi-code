@@ -1,7 +1,7 @@
-import { createDecorator } from '#/_base/di/instantiation';
-import type { ContextMessage } from '#/agent/contextMemory/types';
-import type { Turn, TurnResult } from '#/agent/loop/loop';
-import type { Hooks } from '#/hooks';
+import { createDecorator } from "#/_base/di/instantiation";
+import type { ContextMessage } from "#/agent/contextMemory/types";
+import type { Turn, TurnResult } from "#/agent/loop/loop";
+import type { Hooks } from "#/hooks";
 
 export interface PromptSubmitContext {
   readonly promptMessage: ContextMessage;
@@ -15,18 +15,21 @@ export interface PromptInput {
 }
 
 export type PromptState =
-  | 'pending'
-  | 'running'
-  | 'steered'
-  | 'completed'
-  | 'failed'
-  | 'cancelled'
-  | 'blocked';
+  | "pending"
+  | "running"
+  | "steered"
+  | "completed"
+  | "failed"
+  | "cancelled"
+  | "blocked";
 
 export interface PromptCompletion {
   readonly promptId: string;
   readonly result: TurnResult | undefined;
-  readonly state: Extract<PromptState, 'completed' | 'failed' | 'cancelled' | 'blocked'>;
+  readonly state: Extract<
+    PromptState,
+    "completed" | "failed" | "cancelled" | "blocked"
+  >;
 }
 
 export interface PromptSnapshot {
@@ -59,4 +62,5 @@ export interface IAgentPromptService {
   readonly hooks: Hooks<{ onBeforeSubmitPrompt: PromptSubmitContext }>;
 }
 
-export const IAgentPromptService = createDecorator<IAgentPromptService>('agentPromptService');
+export const IAgentPromptService =
+  createDecorator<IAgentPromptService>("agentPromptService");

@@ -4,9 +4,9 @@
  * wire shapes mirror `protocol/src/rest/fsBrowse.ts` (snake_case fields).
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import type { ServiceContract } from '../types.js';
+import type { ServiceContract } from "../types.js";
 
 export const fsBrowseEntrySchema = z.object({
   name: z.string().min(1),
@@ -26,6 +26,9 @@ export const fsHomeResponseSchema = z.object({
 });
 
 export const hostFsContract = {
-  browse: { input: z.tuple([z.string().optional()]), output: fsBrowseResponseSchema },
+  browse: {
+    input: z.tuple([z.string().optional()]),
+    output: fsBrowseResponseSchema,
+  },
   home: { input: z.tuple([]), output: fsHomeResponseSchema },
 } satisfies ServiceContract;

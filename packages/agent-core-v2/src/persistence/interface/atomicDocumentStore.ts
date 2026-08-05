@@ -8,9 +8,12 @@
  * This file ships the interface, codec contract, and DI tokens only.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
-import { type IDisposable } from '#/_base/di/lifecycle';
-import { type Event } from '#/_base/event';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
+import { type IDisposable } from "#/_base/di/lifecycle";
+import { type Event } from "#/_base/event";
 
 export interface DocumentCodec {
   readonly format: string;
@@ -30,7 +33,7 @@ export interface IAtomicDocumentStore {
 }
 
 export const IAtomicDocumentStore: ServiceIdentifier<IAtomicDocumentStore> =
-  createDecorator<IAtomicDocumentStore>('atomicDocumentStore');
+  createDecorator<IAtomicDocumentStore>("atomicDocumentStore");
 
 export const IAtomicTomlDocumentStore: ServiceIdentifier<IAtomicDocumentStore> =
-  createDecorator<IAtomicDocumentStore>('atomicTomlDocumentStore');
+  createDecorator<IAtomicDocumentStore>("atomicTomlDocumentStore");

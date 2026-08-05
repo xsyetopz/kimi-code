@@ -6,11 +6,14 @@
  * the date rendered into its system prompt.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
 
 export interface IAgentDateChangeService {
   readonly _serviceBrand: undefined;
 }
 
 export const IAgentDateChangeService: ServiceIdentifier<IAgentDateChangeService> =
-  createDecorator<IAgentDateChangeService>('agentDateChangeService');
+  createDecorator<IAgentDateChangeService>("agentDateChangeService");

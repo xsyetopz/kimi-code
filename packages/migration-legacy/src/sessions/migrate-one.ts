@@ -1,26 +1,29 @@
-import { existsSync } from 'node:fs';
-import { readFile, mkdir, rm, stat, utimes } from 'node:fs/promises';
-import { join } from 'node:path';
+import { existsSync } from "node:fs";
+import { readFile, mkdir, rm, stat, utimes } from "node:fs/promises";
+import { join } from "node:path";
 
-import { OldSessionStateSchema, type OldSessionState } from '../kimi-cli-schema.js';
-import { targetSessionsDir } from '../paths.js';
-import { computeWorkdirBucket } from './workdir-bucket.js';
-import { closeDanglingToolCalls } from './close-tool-calls.js';
+import {
+  OldSessionStateSchema,
+  type OldSessionState,
+} from "../kimi-cli-schema.js";
+import { targetSessionsDir } from "../paths.js";
+import { computeWorkdirBucket } from "./workdir-bucket.js";
+import { closeDanglingToolCalls } from "./close-tool-calls.js";
 import {
   analyzeContextContent,
   translateContextLines,
   type NormalizedMessage,
-} from './translator.js';
-import { writeMainAgentWire } from './wire-writer.js';
-import { writeSessionState } from './state-writer.js';
-import { extractToolCallDisplays } from './tool-call-display.js';
+} from "./translator.js";
+import { writeMainAgentWire } from "./wire-writer.js";
+import { writeSessionState } from "./state-writer.js";
+import { extractToolCallDisplays } from "./tool-call-display.js";
 
 export type MigrateOneResult =
-  | { readonly outcome: 'migrated'; readonly targetDir: string }
-  | { readonly outcome: 'already-migrated'; readonly targetDir: string }
-  | { readonly outcome: 'conflict'; readonly targetDir: string }
-  | { readonly outcome: 'empty' }
-  | { readonly outcome: 'failed'; readonly reason: string };
+  | { readonly outcome: "migrated"; readonly targetDir: string }
+  | { readonly outcome: "already-migrated"; readonly targetDir: string }
+  | { readonly outcome: "conflict"; readonly targetDir: string }
+  | { readonly outcome: "empty" }
+  | { readonly outcome: "failed"; readonly reason: string };
 
 export interface MigrateOneInput {
   readonly sourceSessionDir: string;
@@ -29,19 +32,25 @@ export interface MigrateOneInput {
   readonly targetHome: string;
 }
 
-export async function migrateOneSession(input: MigrateOneInput): Promise<MigrateOneResult> {
+export async function migrateOneSession(
+  input: MigrateOneInput,
+): Promise<MigrateOneResult> {
   const bucket = computeWorkdirBucket(input.workdirPath);
-  const targetDir = join(targetSessionsDir(input.targetHome), bucket, `ses_${input.oldSessionUuid}`);
+  const targetDir = join(
+    targetSessionsDir(input.targetHome),
+    bucket,
+    `ses_${input.oldSessionUuid}`,
+  );
 
   if (existsSync(targetDir)) {
     const cls = await classifyExistingTarget(targetDir);
     // A dir we wrote ourselves on a previous run — idempotent re-run.
-    if (cls === 'imported') {
-      return { outcome: 'already-migrated', targetDir };
+    if (cls === "imported") {
+      return { outcome: "already-migrated", targetDir };
     }
     // A real, unrelated kimi-code session occupies the path — a true conflict.
-    if (cls === 'foreign') {
-      return { outcome: 'conflict', targetDir };
+    if (cls === "foreign") {
+      return { outcome: "conflict", targetDir };
     }
     // 'debris': `state.json` is absent or corrupt — a prior migration was
     // killed mid-write. Treat it as stale and re-migrate, rather than
@@ -51,33 +60,44 @@ export async function migrateOneSession(input: MigrateOneInput): Promise<Migrate
 
   let oldState: Partial<OldSessionState> = {};
   try {
-    const stateText = await readFile(join(input.sourceSessionDir, 'state.json'), 'utf-8');
+    const stateText = await readFile(
+      join(input.sourceSessionDir, "state.json"),
+      "utf-8",
+    );
     oldState = OldSessionStateSchema.parse(JSON.parse(stateText));
   } catch {
     // missing or corrupt state — proceed with defaults
   }
 
   let messages: NormalizedMessage[] = [];
-  let lastUserPrompt = '';
+  let lastUserPrompt = "";
   let contextLines: readonly string[] = [];
   let oldWireText: string | undefined;
   try {
-    const contextText = await readFile(join(input.sourceSessionDir, 'context.jsonl'), 'utf-8');
+    const contextText = await readFile(
+      join(input.sourceSessionDir, "context.jsonl"),
+      "utf-8",
+    );
     contextLines = contextText.split(/\r?\n/);
     try {
-      oldWireText = await readFile(join(input.sourceSessionDir, 'wire.jsonl'), 'utf-8');
+      oldWireText = await readFile(
+        join(input.sourceSessionDir, "wire.jsonl"),
+        "utf-8",
+      );
     } catch {
       // A missing/corrupt wire must not prevent the model-facing context from
       // migrating; it only means UI display enrichment is unavailable.
     }
     const toolCallDisplays =
-      oldWireText === undefined ? undefined : extractToolCallDisplays(oldWireText);
+      oldWireText === undefined
+        ? undefined
+        : extractToolCallDisplays(oldWireText);
     messages = closeDanglingToolCalls(
       translateContextLines(contextLines, toolCallDisplays),
     );
     lastUserPrompt = extractLastUserText(messages);
   } catch {
-    return { outcome: 'failed', reason: 'cannot read context.jsonl' };
+    return { outcome: "failed", reason: "cannot read context.jsonl" };
   }
 
   if (messages.length === 0) {
@@ -87,13 +107,13 @@ export async function migrateOneSession(input: MigrateOneInput): Promise<Migrate
     // and must show up in `migration-errors.log`, not get silently lumped in
     // with skipped-empty. `classifySessionDir` normally catches both ahead
     // of time; this stays as a defense-in-depth safety net.
-    if (analyzeContextContent(contextLines) === 'corrupt') {
+    if (analyzeContextContent(contextLines) === "corrupt") {
       return {
-        outcome: 'failed',
-        reason: 'context.jsonl is corrupt: no parseable JSON lines',
+        outcome: "failed",
+        reason: "context.jsonl is corrupt: no parseable JSON lines",
       };
     }
-    return { outcome: 'empty' };
+    return { outcome: "empty" };
   }
 
   const wireMtimeS = oldState.wire_mtime ?? null;
@@ -108,7 +128,7 @@ export async function migrateOneSession(input: MigrateOneInput): Promise<Migrate
     // the migration time and break resume ordering.
     try {
       createdAtMs = Math.floor(
-        (await stat(join(input.sourceSessionDir, 'wire.jsonl'))).mtimeMs,
+        (await stat(join(input.sourceSessionDir, "wire.jsonl"))).mtimeMs,
       );
     } catch {
       createdAtMs = Date.now();
@@ -123,10 +143,12 @@ export async function migrateOneSession(input: MigrateOneInput): Promise<Migrate
         const parsed: unknown = JSON.parse(firstLine);
         if (
           parsed !== null &&
-          typeof parsed === 'object' &&
-          typeof (parsed as { protocol_version?: unknown }).protocol_version === 'string'
+          typeof parsed === "object" &&
+          typeof (parsed as { protocol_version?: unknown }).protocol_version ===
+            "string"
         ) {
-          wireProtocolFromOld = (parsed as { protocol_version: string }).protocol_version;
+          wireProtocolFromOld = (parsed as { protocol_version: string })
+            .protocol_version;
         }
       }
     } catch {
@@ -152,7 +174,7 @@ export async function migrateOneSession(input: MigrateOneInput): Promise<Migrate
     // so the migration loop continues.
     await rm(targetDir, { recursive: true, force: true }).catch(() => {});
     const reason = error instanceof Error ? error.message : String(error);
-    return { outcome: 'failed', reason };
+    return { outcome: "failed", reason };
   }
 
   // kimi-core's `SessionStore.list()` ranks sessions by the *filesystem*
@@ -164,7 +186,7 @@ export async function migrateOneSession(input: MigrateOneInput): Promise<Migrate
   // it only leaves ordering slightly off.
   await applyOriginalMtime(targetDir, createdAtMs);
 
-  return { outcome: 'migrated', targetDir };
+  return { outcome: "migrated", targetDir };
 }
 
 /**
@@ -172,18 +194,21 @@ export async function migrateOneSession(input: MigrateOneInput): Promise<Migrate
  * original timestamp. The session directory is stamped LAST, since writing
  * files into it bumps the directory mtime.
  */
-async function applyOriginalMtime(targetDir: string, createdAtMs: number): Promise<void> {
+async function applyOriginalMtime(
+  targetDir: string,
+  createdAtMs: number,
+): Promise<void> {
   const stamp = new Date(createdAtMs);
   try {
-    await utimes(join(targetDir, 'agents', 'main', 'wire.jsonl'), stamp, stamp);
-    await utimes(join(targetDir, 'state.json'), stamp, stamp);
+    await utimes(join(targetDir, "agents", "main", "wire.jsonl"), stamp, stamp);
+    await utimes(join(targetDir, "state.json"), stamp, stamp);
     await utimes(targetDir, stamp, stamp);
   } catch {
     // Non-fatal: ordering may be slightly off, but the migration succeeded.
   }
 }
 
-type ExistingTarget = 'imported' | 'foreign' | 'debris';
+type ExistingTarget = "imported" | "foreign" | "debris";
 
 /**
  * Classify an existing `targetDir`:
@@ -192,38 +217,41 @@ type ExistingTarget = 'imported' | 'foreign' | 'debris';
  *  - `debris`:   no `state.json`, or a corrupt/unparseable one — a prior
  *                migration was killed mid-write; safe to delete and re-migrate.
  */
-async function classifyExistingTarget(targetDir: string): Promise<ExistingTarget> {
+async function classifyExistingTarget(
+  targetDir: string,
+): Promise<ExistingTarget> {
   let text: string;
   try {
-    text = await readFile(join(targetDir, 'state.json'), 'utf-8');
+    text = await readFile(join(targetDir, "state.json"), "utf-8");
   } catch {
-    return 'debris'; // no state.json at all
+    return "debris"; // no state.json at all
   }
   let parsed: unknown;
   try {
     parsed = JSON.parse(text);
   } catch {
-    return 'debris'; // corrupt / half-written state.json
+    return "debris"; // corrupt / half-written state.json
   }
-  if (typeof parsed !== 'object' || parsed === null) return 'debris';
+  if (typeof parsed !== "object" || parsed === null) return "debris";
   const custom = (parsed as { custom?: unknown }).custom;
   if (
-    typeof custom === 'object' &&
+    typeof custom === "object" &&
     custom !== null &&
-    (custom as { imported_from_kimi_cli?: unknown }).imported_from_kimi_cli === true
+    (custom as { imported_from_kimi_cli?: unknown }).imported_from_kimi_cli ===
+      true
   ) {
-    return 'imported';
+    return "imported";
   }
-  return 'foreign';
+  return "foreign";
 }
 
 function extractLastUserText(messages: readonly NormalizedMessage[]): string {
   for (let i = messages.length - 1; i >= 0; i--) {
     const m = messages[i];
     if (m === undefined) continue;
-    if (m.role !== 'user') continue;
-    const textPart = m.content.find((p) => p.type === 'text');
-    if (textPart && textPart.type === 'text') return textPart.text;
+    if (m.role !== "user") continue;
+    const textPart = m.content.find((p) => p.type === "text");
+    if (textPart && textPart.type === "text") return textPart.text;
   }
-  return '';
+  return "";
 }

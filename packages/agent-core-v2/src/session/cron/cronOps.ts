@@ -16,32 +16,32 @@
  * `OP_REGISTRY` at import time.
  */
 
-import type { CronJobOrigin } from '#/agent/contextMemory/types';
-import { z } from 'zod';
+import type { CronJobOrigin } from "#/agent/contextMemory/types";
+import { z } from "zod";
 
-import { defineModel } from '#/wire/model';
+import { defineModel } from "#/wire/model";
 
-import type { CronTask } from '#/app/cron/cronTask';
+import type { CronTask } from "#/app/cron/cronTask";
 
 export type CronModelState = Map<string, CronTask>;
 
-export const CronModel = defineModel<CronModelState>('cron', () => new Map());
+export const CronModel = defineModel<CronModelState>("cron", () => new Map());
 
-declare module '#/app/event/eventBus' {
+declare module "#/app/event/eventBus" {
   interface DomainEventMap {
-    'cron.fired': { readonly origin: CronJobOrigin; readonly prompt: string };
+    "cron.fired": { readonly origin: CronJobOrigin; readonly prompt: string };
   }
 }
 
-declare module '#/wire/types' {
+declare module "#/wire/types" {
   interface TransientOpMap {
-    'cron.add': typeof cronAdd;
-    'cron.delete': typeof cronDelete;
-    'cron.cursor': typeof cronCursor;
+    "cron.add": typeof cronAdd;
+    "cron.delete": typeof cronDelete;
+    "cron.cursor": typeof cronCursor;
   }
 }
 
-export const cronAdd = CronModel.defineOp('cron.add', {
+export const cronAdd = CronModel.defineOp("cron.add", {
   schema: z.object({ task: z.custom<CronTask>() }),
   persist: false,
   apply: (s, p) => {
@@ -51,7 +51,7 @@ export const cronAdd = CronModel.defineOp('cron.add', {
   },
 });
 
-export const cronDelete = CronModel.defineOp('cron.delete', {
+export const cronDelete = CronModel.defineOp("cron.delete", {
   schema: z.object({ ids: z.array(z.string()).readonly() }),
   persist: false,
   apply: (s, p) => {
@@ -66,7 +66,7 @@ export const cronDelete = CronModel.defineOp('cron.delete', {
   },
 });
 
-export const cronCursor = CronModel.defineOp('cron.cursor', {
+export const cronCursor = CronModel.defineOp("cron.cursor", {
   schema: z.object({ id: z.string(), lastFiredAt: z.number() }),
   persist: false,
   apply: (s, p) => {

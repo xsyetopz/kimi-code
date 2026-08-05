@@ -1,8 +1,8 @@
-import { readFile } from 'node:fs/promises';
-import { isAbsolute, join, normalize, resolve } from 'pathe';
-import type { Readable, Writable } from 'node:stream';
+import { readFile } from "node:fs/promises";
+import { isAbsolute, join, normalize, resolve } from "pathe";
+import type { Readable, Writable } from "node:stream";
 
-import * as ssh2 from 'ssh2';
+import * as ssh2 from "ssh2";
 import type {
   AnyAuthMethod,
   Client,
@@ -10,14 +10,18 @@ import type {
   ConnectConfig,
   SFTPWrapper,
   Stats as SFTPStats,
-} from 'ssh2';
+} from "ssh2";
 
-import type { Environment } from './environment';
-import { KaosError, KaosFileExistsError, KaosValueError } from './errors';
-import { BufferedReadable, decodeTextWithErrors, globPatternToRegex } from './internal';
-import type { Kaos } from './kaos';
-import type { KaosProcess } from './process';
-import type { StatResult } from './types';
+import type { Environment } from "./environment";
+import { KaosError, KaosFileExistsError, KaosValueError } from "./errors";
+import {
+  BufferedReadable,
+  decodeTextWithErrors,
+  globPatternToRegex,
+} from "./internal";
+import type { Kaos } from "./kaos";
+import type { KaosProcess } from "./process";
+import type { StatResult } from "./types";
 
 // ── stat mode constants ────────────────────────────────────────────────
 const S_IFMT = 0o170000;
@@ -50,7 +54,13 @@ const DEFAULT_SFTP_STATUS_CODE = {
  */
 export type SSHKaosExtraOptions = Omit<
   ConnectConfig,
-  'host' | 'port' | 'username' | 'password' | 'privateKey' | 'authHandler' | 'hostVerifier'
+  | "host"
+  | "port"
+  | "username"
+  | "password"
+  | "privateKey"
+  | "authHandler"
+  | "hostVerifier"
 >;
 
 export interface SSHKaosOptions {
@@ -79,7 +89,7 @@ export class KaosSSHError extends KaosError {
 
   constructor(message: string, code?: number) {
     super(message);
-    this.name = 'KaosSSHError';
+    this.name = "KaosSSHError";
     this.code = code;
   }
 }
@@ -87,21 +97,21 @@ export class KaosSSHError extends KaosError {
 export class KaosFileNotFoundError extends KaosSSHError {
   constructor(message: string, code?: number) {
     super(message, code);
-    this.name = 'KaosFileNotFoundError';
+    this.name = "KaosFileNotFoundError";
   }
 }
 
 export class KaosPermissionError extends KaosSSHError {
   constructor(message: string, code?: number) {
     super(message, code);
-    this.name = 'KaosPermissionError';
+    this.name = "KaosPermissionError";
   }
 }
 
 export class KaosConnectionError extends KaosSSHError {
   constructor(message: string, code?: number) {
     super(message, code);
-    this.name = 'KaosConnectionError';
+    this.name = "KaosConnectionError";
   }
 }
 
@@ -112,7 +122,7 @@ export class KaosConnectionError extends KaosSSHError {
  * Mirrors Python's shlex.quote().
  */
 function shellQuote(arg: string): string {
-  if (arg === '') return "''";
+  if (arg === "") return "''";
   // If the string is safe (only contains safe chars), return as-is
   if (/^[A-Za-z0-9_./:=@%^,+-]+$/.test(arg)) return arg;
   // Otherwise wrap in single quotes, escaping any embedded single quotes
@@ -152,11 +162,11 @@ function getSftpStatusCode(): typeof DEFAULT_SFTP_STATUS_CODE {
 }
 
 function getErrorCode(error: unknown): number | undefined {
-  if (typeof error !== 'object' || error === null) {
+  if (typeof error !== "object" || error === null) {
     return undefined;
   }
   const { code } = error as { code?: unknown };
-  return typeof code === 'number' ? code : undefined;
+  return typeof code === "number" ? code : undefined;
 }
 
 function getErrorMessage(error: unknown): string {
@@ -177,7 +187,10 @@ function mapSftpError(operation: string, error: unknown): KaosSSHError {
   if (code === statusCode.PERMISSION_DENIED) {
     return new KaosPermissionError(message, code);
   }
-  if (code === statusCode.NO_CONNECTION || code === statusCode.CONNECTION_LOST) {
+  if (
+    code === statusCode.NO_CONNECTION ||
+    code === statusCode.CONNECTION_LOST
+  ) {
     return new KaosConnectionError(message, code);
   }
   return new KaosSSHError(message, code);
@@ -187,16 +200,16 @@ function buildAuthHandler(
   username: string,
   privateKeys: readonly (Buffer | string)[],
   password?: string,
-): ConnectConfig['authHandler'] {
+): ConnectConfig["authHandler"] {
   const authQueue: AnyAuthMethod[] = privateKeys.map((key) => ({
     key,
-    type: 'publickey',
+    type: "publickey",
     username,
   }));
   if (password !== undefined) {
     authQueue.push({
       password,
-      type: 'password',
+      type: "password",
       username,
     });
   }
@@ -233,12 +246,12 @@ export class SSHProcess implements KaosProcess {
     this._exitPromise = new Promise<number>((resolve) => {
       // Listen to 'close' on the channel, not 'exit', to ensure all
       // buffered output is flushed before we resolve.
-      channel.on('close', (code: number | null) => {
+      channel.on("close", (code: number | null) => {
         // Some ssh2 backends surface the exit status only on 'close'.
         this._exitCode ??= code ?? 1;
         resolve(this._exitCode);
       });
-      channel.on('exit', (code: number | null) => {
+      channel.on("exit", (code: number | null) => {
         this._exitCode = code ?? 1;
       });
     });
@@ -257,8 +270,10 @@ export class SSHProcess implements KaosProcess {
     // e.g. 'SIGTERM' → 'TERM', 'SIGKILL' → 'KILL', 'SIGINT' → 'INT'.
     // Honor the caller's requested signal so that remote processes can
     // perform graceful shutdown on SIGTERM/SIGINT.
-    const rawSignal = signal ?? 'SIGTERM';
-    const sshSignal = rawSignal.startsWith('SIG') ? rawSignal.slice(3) : rawSignal;
+    const rawSignal = signal ?? "SIGTERM";
+    const sshSignal = rawSignal.startsWith("SIG")
+      ? rawSignal.slice(3)
+      : rawSignal;
     this._channel.signal(sshSignal);
     return Promise.resolve();
   }
@@ -277,10 +292,10 @@ export class SSHProcess implements KaosProcess {
 function connectClient(config: ConnectConfig): Promise<Client> {
   const client = new ssh2.Client();
   return new Promise<Client>((resolve, reject) => {
-    client.on('ready', () => {
+    client.on("ready", () => {
       resolve(client);
     });
-    client.on('error', (err: Error) => {
+    client.on("error", (err: Error) => {
       reject(err);
     });
     client.connect(config);
@@ -310,7 +325,7 @@ function sftpRealpath(sftp: SFTPWrapper, path: string): Promise<string> {
   return new Promise<string>((resolve, reject) => {
     sftp.realpath(path, (err, absPath) => {
       if (err) {
-        reject(mapSftpError('realpath', err));
+        reject(mapSftpError("realpath", err));
       } else {
         resolve(absPath);
       }
@@ -322,7 +337,7 @@ function sftpStat(sftp: SFTPWrapper, path: string): Promise<SFTPStats> {
   return new Promise<SFTPStats>((resolve, reject) => {
     sftp.stat(path, (err, stats) => {
       if (err) {
-        reject(mapSftpError('stat', err));
+        reject(mapSftpError("stat", err));
       } else {
         resolve(stats);
       }
@@ -334,7 +349,7 @@ function sftpLstat(sftp: SFTPWrapper, path: string): Promise<SFTPStats> {
   return new Promise<SFTPStats>((resolve, reject) => {
     sftp.lstat(path, (err, stats) => {
       if (err) {
-        reject(mapSftpError('lstat', err));
+        reject(mapSftpError("lstat", err));
       } else {
         resolve(stats);
       }
@@ -347,11 +362,14 @@ interface SFTPFileEntry {
   attrs: SFTPStats;
 }
 
-function sftpReaddir(sftp: SFTPWrapper, path: string): Promise<SFTPFileEntry[]> {
+function sftpReaddir(
+  sftp: SFTPWrapper,
+  path: string,
+): Promise<SFTPFileEntry[]> {
   return new Promise<SFTPFileEntry[]>((resolve, reject) => {
     sftp.readdir(path, (err, list) => {
       if (err) {
-        reject(mapSftpError('readdir', err));
+        reject(mapSftpError("readdir", err));
       } else {
         resolve(list as SFTPFileEntry[]);
       }
@@ -363,7 +381,7 @@ function sftpMkdir(sftp: SFTPWrapper, path: string): Promise<void> {
   return new Promise<void>((resolve, reject) => {
     sftp.mkdir(path, (err) => {
       if (err) {
-        reject(mapSftpError('mkdir', err));
+        reject(mapSftpError("mkdir", err));
       } else {
         resolve();
       }
@@ -383,7 +401,7 @@ function sftpReadFile(sftp: SFTPWrapper, path: string): Promise<Buffer> {
   return new Promise<Buffer>((resolve, reject) => {
     sftp.readFile(path, (err, data) => {
       if (err) {
-        reject(mapSftpError('readFile', err));
+        reject(mapSftpError("readFile", err));
       } else {
         resolve(data);
       }
@@ -391,11 +409,15 @@ function sftpReadFile(sftp: SFTPWrapper, path: string): Promise<Buffer> {
   });
 }
 
-function sftpWriteFile(sftp: SFTPWrapper, path: string, data: string | Buffer): Promise<void> {
+function sftpWriteFile(
+  sftp: SFTPWrapper,
+  path: string,
+  data: string | Buffer,
+): Promise<void> {
   return new Promise<void>((resolve, reject) => {
     sftp.writeFile(path, data, (err) => {
       if (err) {
-        reject(mapSftpError('writeFile', err));
+        reject(mapSftpError("writeFile", err));
       } else {
         resolve();
       }
@@ -403,11 +425,15 @@ function sftpWriteFile(sftp: SFTPWrapper, path: string, data: string | Buffer): 
   });
 }
 
-function sftpAppendFile(sftp: SFTPWrapper, path: string, data: string | Buffer): Promise<void> {
+function sftpAppendFile(
+  sftp: SFTPWrapper,
+  path: string,
+  data: string | Buffer,
+): Promise<void> {
   return new Promise<void>((resolve, reject) => {
     sftp.appendFile(path, data, (err) => {
       if (err) {
-        reject(mapSftpError('appendFile', err));
+        reject(mapSftpError("appendFile", err));
       } else {
         resolve();
       }
@@ -433,7 +459,7 @@ function clientExec(client: Client, command: string): Promise<ClientChannel> {
  * A KAOS implementation that interacts with a remote machine via SSH and SFTP.
  */
 export class SSHKaos implements Kaos {
-  readonly name: string = 'ssh';
+  readonly name: string = "ssh";
 
   private _client: Client;
   private _sftp: SFTPWrapper;
@@ -445,7 +471,7 @@ export class SSHKaos implements Kaos {
   // SSH transport) is deferred.
   get osEnv(): Environment {
     throw new KaosError(
-      'SSHKaos.osEnv is not yet wired — remote environment probing is not implemented.',
+      "SSHKaos.osEnv is not yet wired — remote environment probing is not implemented.",
     );
   }
 
@@ -464,11 +490,20 @@ export class SSHKaos implements Kaos {
   }
 
   withCwd(cwd: string): SSHKaos {
-    return new SSHKaos(this._client, this._sftp, this._home, cwd, this._envLayers);
+    return new SSHKaos(
+      this._client,
+      this._sftp,
+      this._home,
+      cwd,
+      this._envLayers,
+    );
   }
 
   withEnv(env: Record<string, string>): SSHKaos {
-    return new SSHKaos(this._client, this._sftp, this._home, this._cwd, [...this._envLayers, env]);
+    return new SSHKaos(this._client, this._sftp, this._home, this._cwd, [
+      ...this._envLayers,
+      env,
+    ]);
   }
 
   private _resolvePath(path: string): string {
@@ -502,14 +537,20 @@ export class SSHKaos implements Kaos {
       }
     }
     if (options.keyPaths) {
-      const keyPromises = options.keyPaths.map((keyPath) => readFile(keyPath, 'utf-8'));
+      const keyPromises = options.keyPaths.map((keyPath) =>
+        readFile(keyPath, "utf-8"),
+      );
       const keyData = await Promise.all(keyPromises);
       for (const key of keyData) {
         privateKeys.push(key);
       }
     }
     if (privateKeys.length > 0) {
-      const authHandler = buildAuthHandler(options.username, privateKeys, options.password);
+      const authHandler = buildAuthHandler(
+        options.username,
+        privateKeys,
+        options.password,
+      );
       if (authHandler !== undefined) {
         config.authHandler = authHandler;
       }
@@ -523,7 +564,7 @@ export class SSHKaos implements Kaos {
       const sftp = await getSftp(client);
 
       // Determine home and cwd
-      const home = await sftpRealpath(sftp, '.');
+      const home = await sftpRealpath(sftp, ".");
       let cwd: string;
       if (options.cwd === undefined) {
         cwd = home;
@@ -544,8 +585,8 @@ export class SSHKaos implements Kaos {
 
   // ── Path operations (sync) ─────────────────────────────────────────
 
-  pathClass(): 'posix' | 'win32' {
-    return 'posix';
+  pathClass(): "posix" | "win32" {
+    return "posix";
   }
 
   normpath(path: string): string {
@@ -581,7 +622,10 @@ export class SSHKaos implements Kaos {
     this._cwd = resolved;
   }
 
-  async stat(path: string, options?: { followSymlinks?: boolean }): Promise<StatResult> {
+  async stat(
+    path: string,
+    options?: { followSymlinks?: boolean },
+  ): Promise<StatResult> {
     const resolved = this._resolvePath(path);
     const followSymlinks = options?.followSymlinks ?? true;
     // sftpStat / sftpLstat already wrap errors via mapSftpError.
@@ -611,7 +655,7 @@ export class SSHKaos implements Kaos {
     const resolved = this._resolvePath(path);
     const entries = await sftpReaddir(this._sftp, resolved);
     for (const entry of entries) {
-      if (entry.filename === '.' || entry.filename === '..') continue;
+      if (entry.filename === "." || entry.filename === "..") continue;
       yield join(resolved, entry.filename);
     }
   }
@@ -624,10 +668,12 @@ export class SSHKaos implements Kaos {
     const resolved = this._resolvePath(path);
     const caseSensitive = options?.caseSensitive ?? true;
     if (!caseSensitive) {
-      throw new KaosValueError('Case insensitive glob is not supported in current environment');
+      throw new KaosValueError(
+        "Case insensitive glob is not supported in current environment",
+      );
     }
     // Use local glob implementation over SFTP readdir
-    const patternParts = pattern.split('/');
+    const patternParts = pattern.split("/");
     yield* this._globWalk(resolved, patternParts, caseSensitive);
   }
 
@@ -640,7 +686,7 @@ export class SSHKaos implements Kaos {
 
     const [currentPattern, ...remainingParts] = patternParts;
 
-    if (currentPattern === '**') {
+    if (currentPattern === "**") {
       // `**` matches zero or more directory components.
       //
       // Two cases to handle:
@@ -670,7 +716,7 @@ export class SSHKaos implements Kaos {
       }
 
       for (const entry of entries) {
-        if (entry.filename === '.' || entry.filename === '..') continue;
+        if (entry.filename === "." || entry.filename === "..") continue;
         const fullPath = join(basePath, entry.filename);
         if (entry.attrs.isDirectory()) {
           yield* this._globWalk(fullPath, patternParts, caseSensitive);
@@ -680,7 +726,7 @@ export class SSHKaos implements Kaos {
         }
       }
     } else {
-      const regex = globPatternToRegex(currentPattern ?? '', caseSensitive);
+      const regex = globPatternToRegex(currentPattern ?? "", caseSensitive);
 
       let entries: SFTPFileEntry[];
       try {
@@ -690,7 +736,7 @@ export class SSHKaos implements Kaos {
       }
 
       for (const entry of entries) {
-        if (entry.filename === '.' || entry.filename === '..') continue;
+        if (entry.filename === "." || entry.filename === "..") continue;
         if (!regex.test(entry.filename)) continue;
 
         const fullPath = join(basePath, entry.filename);
@@ -714,24 +760,30 @@ export class SSHKaos implements Kaos {
 
   async readText(
     path: string,
-    options?: { encoding?: BufferEncoding; errors?: 'strict' | 'replace' | 'ignore' },
+    options?: {
+      encoding?: BufferEncoding;
+      errors?: "strict" | "replace" | "ignore";
+    },
   ): Promise<string> {
-    const encoding = options?.encoding ?? 'utf-8';
-    const errors = options?.errors ?? 'strict';
+    const encoding = options?.encoding ?? "utf-8";
+    const errors = options?.errors ?? "strict";
     const data = await sftpReadFile(this._sftp, this._resolvePath(path));
     return decodeTextWithErrors(data, encoding, errors);
   }
 
   async *readLines(
     path: string,
-    options?: { encoding?: BufferEncoding; errors?: 'strict' | 'replace' | 'ignore' },
+    options?: {
+      encoding?: BufferEncoding;
+      errors?: "strict" | "replace" | "ignore";
+    },
   ): AsyncGenerator<string> {
     // SFTP does not support streaming line reads; read all then split.
     // Match Python's splitlines() semantics: returned lines do NOT include
     // the line terminator, and a trailing newline does not create an extra
     // empty line.
     const text = await this.readText(this._resolvePath(path), options);
-    if (text === '') {
+    if (text === "") {
       return;
     }
 
@@ -740,7 +792,7 @@ export class SSHKaos implements Kaos {
       lines.pop();
     }
     for (const line of lines) {
-      yield line ?? '';
+      yield line ?? "";
     }
   }
 
@@ -752,13 +804,13 @@ export class SSHKaos implements Kaos {
   async writeText(
     path: string,
     data: string,
-    options?: { mode?: 'w' | 'a'; encoding?: BufferEncoding },
+    options?: { mode?: "w" | "a"; encoding?: BufferEncoding },
   ): Promise<number> {
     const resolved = this._resolvePath(path);
-    const mode = options?.mode ?? 'w';
-    const encoding = options?.encoding ?? 'utf-8';
+    const mode = options?.mode ?? "w";
+    const encoding = options?.encoding ?? "utf-8";
     const buf = Buffer.from(data, encoding);
-    if (mode === 'a') {
+    if (mode === "a") {
       await sftpAppendFile(this._sftp, resolved, buf);
     } else {
       await sftpWriteFile(this._sftp, resolved, buf);
@@ -766,7 +818,10 @@ export class SSHKaos implements Kaos {
     return data.length;
   }
 
-  async mkdir(path: string, options?: { parents?: boolean; existOk?: boolean }): Promise<void> {
+  async mkdir(
+    path: string,
+    options?: { parents?: boolean; existOk?: boolean },
+  ): Promise<void> {
     const resolved = this._resolvePath(path);
     const parents = options?.parents ?? false;
     const existOk = options?.existOk ?? false;
@@ -784,7 +839,9 @@ export class SSHKaos implements Kaos {
         // a conflict — we must not pretend mkdir succeeded.
         const st = await sftpStat(this._sftp, resolved);
         if (!st.isDirectory()) {
-          throw new KaosFileExistsError(`${resolved} already exists but is not a directory`);
+          throw new KaosFileExistsError(
+            `${resolved} already exists but is not a directory`,
+          );
         }
         return;
       }
@@ -794,8 +851,8 @@ export class SSHKaos implements Kaos {
 
   private async _mkdirRecursive(path: string, existOk: boolean): Promise<void> {
     // Split path into components and create each level.
-    const parts = path.split('/').filter(Boolean);
-    let current = path.startsWith('/') ? '/' : '';
+    const parts = path.split("/").filter(Boolean);
+    let current = path.startsWith("/") ? "/" : "";
     const lastIndex = parts.length - 1;
     for (const [i, part] of parts.entries()) {
       current = current ? join(current, part) : part;
@@ -818,7 +875,9 @@ export class SSHKaos implements Kaos {
         // eslint-disable-next-line no-await-in-loop
         const st = await sftpStat(this._sftp, current);
         if (!st.isDirectory()) {
-          throw new KaosFileExistsError(`${current} already exists but is not a directory`);
+          throw new KaosFileExistsError(
+            `${current} already exists but is not a directory`,
+          );
         }
         continue;
       }
@@ -829,14 +888,19 @@ export class SSHKaos implements Kaos {
         // Race condition: another process may have created it.
         // eslint-disable-next-line no-await-in-loop
         const nowExists = await sftpExists(this._sftp, current);
-        if (!nowExists) throw new Error(`Failed to create directory: ${current}`, { cause: error });
+        if (!nowExists)
+          throw new Error(`Failed to create directory: ${current}`, {
+            cause: error,
+          });
         // A raced path must still be a directory. Another process may have
         // created a regular file at the same pathname after our exists()
         // check but before mkdir(), which must remain a hard conflict.
         // eslint-disable-next-line no-await-in-loop
         const st = await sftpStat(this._sftp, current);
         if (!st.isDirectory()) {
-          throw new KaosFileExistsError(`${current} already exists but is not a directory`);
+          throw new KaosFileExistsError(
+            `${current} already exists but is not a directory`,
+          );
         }
         // If the final component lost a race and existOk=false, surface the
         // conflict to match the non-race path above.
@@ -852,22 +916,27 @@ export class SSHKaos implements Kaos {
   exec(...args: string[]): Promise<KaosProcess> {
     if (args.length === 0) {
       throw new KaosValueError(
-        'SSHKaos.exec(): at least one argument (the command to run) is required.',
+        "SSHKaos.exec(): at least one argument (the command to run) is required.",
       );
     }
     return this._execInternal(args, this._buildExecEnv());
   }
 
-  execWithEnv(args: string[], env?: Record<string, string>): Promise<KaosProcess> {
+  execWithEnv(
+    args: string[],
+    env?: Record<string, string>,
+  ): Promise<KaosProcess> {
     if (args.length === 0) {
       throw new KaosValueError(
-        'SSHKaos.execWithEnv(): at least one argument (the command to run) is required.',
+        "SSHKaos.execWithEnv(): at least one argument (the command to run) is required.",
       );
     }
     return this._execInternal(args, this._buildExecEnv(env));
   }
 
-  private _buildExecEnv(invocationEnv?: Record<string, string>): Record<string, string> | undefined {
+  private _buildExecEnv(
+    invocationEnv?: Record<string, string>,
+  ): Record<string, string> | undefined {
     if (this._envLayers.length === 0) return invocationEnv;
     const merged: Record<string, string> = { ...invocationEnv };
     for (const layer of this._envLayers) {
@@ -896,7 +965,7 @@ export class SSHKaos implements Kaos {
     cwd: string,
     env?: Record<string, string>,
   ): string {
-    let command = args.map((arg) => shellQuote(arg)).join(' ');
+    let command = args.map((arg) => shellQuote(arg)).join(" ");
 
     if (env !== undefined) {
       const assignments: string[] = [];
@@ -911,18 +980,21 @@ export class SSHKaos implements Kaos {
         assignments.push(`${key}=${shellQuote(value)}`);
       }
       if (assignments.length > 0) {
-        command = `${assignments.join(' ')} ${command}`;
+        command = `${assignments.join(" ")} ${command}`;
       }
     }
 
-    if (cwd !== '') {
+    if (cwd !== "") {
       command = `cd ${shellQuote(cwd)} && ${command}`;
     }
 
     return command;
   }
 
-  private async _execInternal(args: string[], env?: Record<string, string>): Promise<KaosProcess> {
+  private async _execInternal(
+    args: string[],
+    env?: Record<string, string>,
+  ): Promise<KaosProcess> {
     const command = SSHKaos._buildExecCommand(args, this._cwd, env);
     const channel = await clientExec(this._client, command);
     return new SSHProcess(channel);
@@ -936,7 +1008,7 @@ export class SSHKaos implements Kaos {
   close(): Promise<void> {
     this._sftp.end();
     return new Promise<void>((resolve) => {
-      this._client.once('close', () => {
+      this._client.once("close", () => {
         resolve();
       });
       this._client.end();

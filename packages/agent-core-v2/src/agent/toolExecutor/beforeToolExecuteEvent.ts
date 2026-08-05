@@ -22,21 +22,21 @@
  * ignored.
  */
 
-import { Emitter } from '#/_base/event';
-import { BugIndicatingError } from '#/errors';
-import type { ToolCall } from '#/kosong/contract/message';
-import type { LLMRequestTrace } from '#/kosong/contract/requestTrace';
+import { Emitter } from "#/_base/event";
+import { BugIndicatingError } from "#/errors";
+import type { ToolCall } from "#/kosong/contract/message";
+import type { LLMRequestTrace } from "#/kosong/contract/requestTrace";
 import type {
   ExecutableTool,
   ExecutableToolResult,
   RunnableToolExecution,
-} from '#/tool/toolContract';
+} from "#/tool/toolContract";
 
 import type {
   BeforeExecuteDecision,
   BeforeToolExecuteEvent,
   ResolvedToolExecutionHookContext,
-} from './toolHooks';
+} from "./toolHooks";
 
 type PendingVetoFactory = () => Promise<BeforeExecuteDecision | undefined>;
 
@@ -72,22 +72,22 @@ export class BeforeToolExecuteEventImpl implements BeforeToolExecuteEvent {
   }
 
   veto(result: ExecutableToolResult): void {
-    this.assertOpen('veto');
+    this.assertOpen("veto");
     this._vetoResult ??= result;
   }
 
   allow(): void {
-    this.assertOpen('allow');
+    this.assertOpen("allow");
     this._finalAllowed = true;
   }
 
   pass(metadata?: unknown): void {
-    this.assertOpen('pass');
+    this.assertOpen("pass");
     this._passMetadata ??= metadata;
   }
 
   waitUntil(factory: PendingVetoFactory): void {
-    this.assertOpen('waitUntil');
+    this.assertOpen("waitUntil");
     this._pendingVetos.push(factory);
   }
 
@@ -113,7 +113,9 @@ export class BeforeToolExecuteEventImpl implements BeforeToolExecuteEvent {
 
   private assertOpen(statement: string): void {
     if (!this._open) {
-      throw new BugIndicatingError(`${statement} can NOT be called asynchronously`);
+      throw new BugIndicatingError(
+        `${statement} can NOT be called asynchronously`,
+      );
     }
   }
 }
@@ -122,7 +124,11 @@ export class BeforeToolExecuteEmitter extends Emitter<BeforeToolExecuteEvent> {
   async fireBeforeExecute(
     context: ResolvedToolExecutionHookContext,
   ): Promise<BeforeExecuteDecision | undefined> {
-    if (this.isDisposed || this._listeners === undefined || this._listeners.size === 0) {
+    if (
+      this.isDisposed ||
+      this._listeners === undefined ||
+      this._listeners.size === 0
+    ) {
       return undefined;
     }
 
@@ -140,6 +146,8 @@ export class BeforeToolExecuteEmitter extends Emitter<BeforeToolExecuteEvent> {
       if (decision?.veto !== undefined) return { veto: decision.veto };
       passMetadata ??= decision?.executionMetadata;
     }
-    return passMetadata === undefined ? undefined : { executionMetadata: passMetadata };
+    return passMetadata === undefined
+      ? undefined
+      : { executionMetadata: passMetadata };
   }
 }

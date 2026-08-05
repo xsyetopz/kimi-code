@@ -4,16 +4,18 @@
 // either inline in memory or as a pointer into the on-disk snapshot/WAL; in the
 // latter case the caller injects a synchronous positioned reader.
 
-import { SkipList, cmpString } from './skiplist.js';
-import type { RangeEntry, RangeOptions } from './skiplist.js';
+import { SkipList, cmpString } from "./skiplist.js";
+import type { RangeEntry, RangeOptions } from "./skiplist.js";
 
 export interface ValueLoc {
-  file: 'snapshot' | 'wal';
+  file: "snapshot" | "wal";
   off: number;
   len: number;
 }
 
-export type ValueRef = { kind: 'memory'; value: Buffer } | { kind: 'disk'; loc: ValueLoc };
+export type ValueRef =
+  | { kind: "memory"; value: Buffer }
+  | { kind: "disk"; loc: ValueLoc };
 
 export interface StoreRecord {
   ref: ValueRef;
@@ -43,8 +45,8 @@ export interface RawRecord {
 }
 
 const toKStr = (key: string | Buffer): string =>
-  typeof key === 'string' ? key : Buffer.from(key).toString('binary');
-const fromKStr = (kstr: string): Buffer => Buffer.from(kstr, 'binary');
+  typeof key === "string" ? key : Buffer.from(key).toString("binary");
+const fromKStr = (kstr: string): Buffer => Buffer.from(kstr, "binary");
 const DISK_REF_BYTES = 64;
 
 interface HeapEntry {
@@ -142,7 +144,8 @@ export class Store {
     this.onExpire = opts.onExpire;
     this.readValue = opts.readValue;
     const interval = opts.activeExpireIntervalMs ?? 100;
-    this.timer = interval > 0 ? setInterval(() => this.activeExpire(), interval) : null;
+    this.timer =
+      interval > 0 ? setInterval(() => this.activeExpire(), interval) : null;
     this.timer?.unref?.();
   }
 
@@ -159,27 +162,36 @@ export class Store {
   }
 
   private metaBytes(dt: Record<string, number> | null): number {
-    return dt ? Buffer.byteLength(JSON.stringify({ dt }), 'utf8') : 0;
+    return dt ? Buffer.byteLength(JSON.stringify({ dt }), "utf8") : 0;
   }
 
   private refBytes(ref: ValueRef): number {
-    return ref.kind === 'memory' ? ref.value.length : DISK_REF_BYTES;
+    return ref.kind === "memory" ? ref.value.length : DISK_REF_BYTES;
   }
 
   private cloneRef(ref: ValueRef): ValueRef {
-    return ref.kind === 'memory' ? { kind: 'memory', value: Buffer.from(ref.value) } : { kind: 'disk', loc: { ...ref.loc } };
+    return ref.kind === "memory"
+      ? { kind: "memory", value: Buffer.from(ref.value) }
+      : { kind: "disk", loc: { ...ref.loc } };
   }
 
   private materialize(ref: ValueRef): Buffer {
-    if (ref.kind === 'memory') return ref.value;
-    if (!this.readValue) throw new Error('Store cannot read disk-backed value without a ValueReader');
+    if (ref.kind === "memory") return ref.value;
+    if (!this.readValue)
+      throw new Error(
+        "Store cannot read disk-backed value without a ValueReader",
+      );
     return this.readValue(ref.loc);
   }
 
   /** Approximate bytes used by one record, matching the bytes tracked on set(). */
   recordBytes(k: string): number {
     const r = this.map.get(k);
-    return r ? Buffer.byteLength(k, 'binary') + this.refBytes(r.ref) + this.metaBytes(r.dt) : 0;
+    return r
+      ? Buffer.byteLength(k, "binary") +
+          this.refBytes(r.ref) +
+          this.metaBytes(r.dt)
+      : 0;
   }
 
   /** Approximate bytes a SET would store for this key/value/dt. Pass
@@ -193,7 +205,11 @@ export class Store {
   ): number {
     const k = toKStr(key);
     const countValue = opts.countValue ?? true;
-    return Buffer.byteLength(k, 'binary') + (countValue ? value.length : DISK_REF_BYTES) + this.metaBytes(dt);
+    return (
+      Buffer.byteLength(k, "binary") +
+      (countValue ? value.length : DISK_REF_BYTES) +
+      this.metaBytes(dt)
+    );
   }
 
   private remove(k: string): boolean {
@@ -201,7 +217,10 @@ export class Store {
     const ok = this.map.delete(k);
     if (ok) {
       if (r) {
-        this.bytes -= Buffer.byteLength(k, 'binary') + this.refBytes(r.ref) + this.metaBytes(r.dt);
+        this.bytes -=
+          Buffer.byteLength(k, "binary") +
+          this.refBytes(r.ref) +
+          this.metaBytes(r.dt);
         if (r.expireAt) this.expiring--;
       }
       this.order.delete(k, k);
@@ -215,11 +234,26 @@ export class Store {
     if (this.remove(k)) this.onExpire?.(k, rec);
   }
 
-  set(key: string | Buffer, value: Buffer, expireAt = 0, dt: Record<string, number> | null = null): void {
-    this.setRef(key, { kind: 'memory', value: Buffer.from(value) }, expireAt, dt);
+  set(
+    key: string | Buffer,
+    value: Buffer,
+    expireAt = 0,
+    dt: Record<string, number> | null = null,
+  ): void {
+    this.setRef(
+      key,
+      { kind: "memory", value: Buffer.from(value) },
+      expireAt,
+      dt,
+    );
   }
 
-  setRef(key: string | Buffer, ref: ValueRef, expireAt = 0, dt: Record<string, number> | null = null): void {
+  setRef(
+    key: string | Buffer,
+    ref: ValueRef,
+    expireAt = 0,
+    dt: Record<string, number> | null = null,
+  ): void {
     const k = toKStr(key);
     const prev = this.map.get(k);
     if (prev) {
@@ -229,7 +263,10 @@ export class Store {
     const seq = ++this.seq;
     const stored = this.cloneRef(ref);
     this.map.set(k, { ref: stored, expireAt: expireAt || 0, seq, dt });
-    this.bytes += Buffer.byteLength(k, 'binary') + this.refBytes(stored) + this.metaBytes(dt);
+    this.bytes +=
+      Buffer.byteLength(k, "binary") +
+      this.refBytes(stored) +
+      this.metaBytes(dt);
     if (!prev) this.order.insert(k, k);
     if (expireAt) {
       this.expiring++;
@@ -298,7 +335,12 @@ export class Store {
     const now = Date.now();
     for (const [k, r] of this.map) {
       if (r.expireAt && r.expireAt <= now) continue;
-      yield { key: fromKStr(k), value: this.materialize(r.ref), expireAt: r.expireAt, dt: r.dt };
+      yield {
+        key: fromKStr(k),
+        value: this.materialize(r.ref),
+        expireAt: r.expireAt,
+        dt: r.dt,
+      };
     }
   }
 
@@ -319,7 +361,12 @@ export class Store {
    *  path (grouped, bounded-concurrency) instead of one synchronous
    *  positioned read per record. Expired records are skipped exactly as in
    *  entries(). Internal to the package. */
-  *rawRefRecords(): Generator<{ kstr: string; ref: ValueRef; expireAt: number; dt: Record<string, number> | null }> {
+  *rawRefRecords(): Generator<{
+    kstr: string;
+    ref: ValueRef;
+    expireAt: number;
+    dt: Record<string, number> | null;
+  }> {
     const now = Date.now();
     for (const [k, r] of this.map) {
       if (r.expireAt && r.expireAt <= now) continue;
@@ -329,24 +376,33 @@ export class Store {
 
   /** Ordered scan over keys. */
   *scan(opts: RangeOptions<string> = {}): Generator<StoreEntry> {
-    for (const n of this.order.range(opts) as Iterable<RangeEntry<string, string>>) {
+    for (const n of this.order.range(opts) as Iterable<
+      RangeEntry<string, string>
+    >) {
       const r = this.getRecord(n.key);
       if (!r) continue;
-      yield { key: fromKStr(n.key), value: this.materialize(r.ref), expireAt: r.expireAt, dt: r.dt };
+      yield {
+        key: fromKStr(n.key),
+        value: this.materialize(r.ref),
+        expireAt: r.expireAt,
+        dt: r.dt,
+      };
     }
   }
 
   /** Prefix scan over keys. */
   *prefix(p: string, limit = Infinity): Generator<StoreEntry> {
     const pk = toKStr(p);
-    yield* this.scan({ gte: pk, lt: pk + '\uffff', count: limit });
+    yield* this.scan({ gte: pk, lt: pk + "\uffff", count: limit });
   }
 
   /** Ordered scan yielding canonical keys only, without materializing values
    *  (no buffer copies in memory mode, no positioned reads in disk mode).
    *  Expired records are lazily reaped, exactly as in scan(). */
   *rawKeys(opts: RangeOptions<string> = {}): Generator<string> {
-    for (const n of this.order.range(opts) as Iterable<RangeEntry<string, string>>) {
+    for (const n of this.order.range(opts) as Iterable<
+      RangeEntry<string, string>
+    >) {
       if (!this.getRecord(n.key)) continue;
       yield n.key;
     }
@@ -354,11 +410,13 @@ export class Store {
 
   /** Rewrite disk-backed value locations after compaction rotates the
    *  snapshot/WAL files. Memory refs are left untouched. */
-  remapLocs(remap: (k: string, loc: ValueLoc, rec: StoreRecord) => ValueLoc | undefined): void {
+  remapLocs(
+    remap: (k: string, loc: ValueLoc, rec: StoreRecord) => ValueLoc | undefined,
+  ): void {
     for (const [k, r] of this.map) {
-      if (r.ref.kind !== 'disk') continue;
+      if (r.ref.kind !== "disk") continue;
       const next = remap(k, r.ref.loc, r);
-      if (next) r.ref = { kind: 'disk', loc: { ...next } };
+      if (next) r.ref = { kind: "disk", loc: { ...next } };
     }
   }
 
@@ -373,13 +431,22 @@ export class Store {
    *  `metaBytes` is the precomputed dt accounting value (0 = none), so the
    *  load never re-stringifies per record. */
   bulkLoadRefs(
-    records: Iterable<{ kstr: string; ref: ValueRef; expireAt: number; dt: Record<string, number> | null; metaBytes?: number }>,
+    records: Iterable<{
+      kstr: string;
+      ref: ValueRef;
+      expireAt: number;
+      dt: Record<string, number> | null;
+      metaBytes?: number;
+    }>,
   ): void {
     const orderEntries: RangeEntry<string, string>[] = [];
     for (const { kstr, ref, expireAt, dt, metaBytes } of records) {
       const seq = ++this.seq;
       this.map.set(kstr, { ref, expireAt: expireAt || 0, seq, dt });
-      this.bytes += Buffer.byteLength(kstr, 'binary') + this.refBytes(ref) + (metaBytes ?? 0);
+      this.bytes +=
+        Buffer.byteLength(kstr, "binary") +
+        this.refBytes(ref) +
+        (metaBytes ?? 0);
       if (expireAt) {
         this.expiring++;
         this.heap.push({ t: expireAt, k: kstr, seq });
@@ -394,7 +461,11 @@ export class Store {
     // Normal ticks stay within the small budget; a tick that still finds a
     // full quota of expired keys flips to aggressive mode (larger budget, like
     // Redis's fast expire cycle) until the storm drains.
-    const deadline = now + (this.expireAggressive ? Math.max(this.expireTimeBudgetMs, 10) : this.expireTimeBudgetMs);
+    const deadline =
+      now +
+      (this.expireAggressive
+        ? Math.max(this.expireTimeBudgetMs, 10)
+        : this.expireTimeBudgetMs);
     let n = 0;
     let reaped = 0;
     while (this.heap.size && this.heap.peek()!.t <= now) {
@@ -402,7 +473,8 @@ export class Store {
       // time budget: a fixed ~1000/s rate let a large simultaneous-expiry storm
       // (e.g. 100k keys) linger in memory for minutes. The budget bounds the
       // pause each tick instead of bounding the work.
-      if (n >= this.maxPerTick && (n & 15) === 0 && Date.now() >= deadline) break;
+      if (n >= this.maxPerTick && (n & 15) === 0 && Date.now() >= deadline)
+        break;
       const e = this.heap.pop()!;
       const r = this.map.get(e.k);
       if (r && r.seq === e.seq && r.expireAt && r.expireAt <= now) {
@@ -444,7 +516,8 @@ export class Store {
         n++;
       }
     }
-    if (this.expiring > 0 && this.heap.size === 0) return n + this.reapExpired();
+    if (this.expiring > 0 && this.heap.size === 0)
+      return n + this.reapExpired();
     return n;
   }
 

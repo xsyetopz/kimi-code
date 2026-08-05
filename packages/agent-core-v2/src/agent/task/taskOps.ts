@@ -24,20 +24,20 @@
  * full-fidelity registry and is reconciled on resume.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { defineModel } from '#/wire/model';
+import { defineModel } from "#/wire/model";
 
-import type { AgentTaskInfo } from './types';
+import type { AgentTaskInfo } from "./types";
 
 export type TaskModelState = Map<string, AgentTaskInfo>;
 
-export const TaskModel = defineModel<TaskModelState>('task', () => new Map());
+export const TaskModel = defineModel<TaskModelState>("task", () => new Map());
 
-declare module '#/app/event/eventBus' {
+declare module "#/app/event/eventBus" {
   interface DomainEventMap {
-    'task.started': { readonly info: AgentTaskInfo };
-    'task.terminated': { readonly info: AgentTaskInfo };
+    "task.started": { readonly info: AgentTaskInfo };
+    "task.terminated": { readonly info: AgentTaskInfo };
   }
 }
 
@@ -48,29 +48,29 @@ const taskTerminatedSchema = z.object({
   outputTail: z.string().optional(),
 });
 
-declare module '#/wire/types' {
+declare module "#/wire/types" {
   interface PersistedOpMap {
-    'task.started': typeof taskStarted;
-    'task.terminated': typeof taskTerminated;
+    "task.started": typeof taskStarted;
+    "task.terminated": typeof taskTerminated;
   }
 }
 
-export const taskStarted = TaskModel.defineOp('task.started', {
+export const taskStarted = TaskModel.defineOp("task.started", {
   schema: taskStartedSchema,
   apply: (s, p) => {
     const next = new Map(s);
     next.set(p.info.taskId, p.info);
     return next;
   },
-  toEvent: (p) => ({ type: 'task.started' as const, info: p.info }),
+  toEvent: (p) => ({ type: "task.started" as const, info: p.info }),
 });
 
-export const taskTerminated = TaskModel.defineOp('task.terminated', {
+export const taskTerminated = TaskModel.defineOp("task.terminated", {
   schema: taskTerminatedSchema,
   apply: (s, p) => {
     const next = new Map(s);
     next.set(p.info.taskId, p.info);
     return next;
   },
-  toEvent: (p) => ({ type: 'task.terminated' as const, info: p.info }),
+  toEvent: (p) => ({ type: "task.terminated" as const, info: p.info }),
 });

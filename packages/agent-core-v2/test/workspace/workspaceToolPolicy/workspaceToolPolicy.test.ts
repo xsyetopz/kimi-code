@@ -4,31 +4,41 @@
  * every session.
  */
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from "vitest";
 
-import { LifecycleScope } from '#/_base/di/scope';
-import { createScopedTestHost, stubPair, type ScopedTestHost } from '#/_base/di/test';
-import { IWorkspaceContext } from '#/workspace/workspaceContext/workspaceContext';
-import { IWorkspaceToolPolicy } from '#/workspace/workspaceToolPolicy/workspaceToolPolicy';
+import { LifecycleScope } from "#/_base/di/scope";
+import {
+  createScopedTestHost,
+  stubPair,
+  type ScopedTestHost,
+} from "#/_base/di/test";
+import { IWorkspaceContext } from "#/workspace/workspaceContext/workspaceContext";
+import { IWorkspaceToolPolicy } from "#/workspace/workspaceToolPolicy/workspaceToolPolicy";
 import {
   WorkspaceToolPolicyService,
   computeCapabilityDisabledTools,
-} from '#/workspace/workspaceToolPolicy/workspaceToolPolicyService';
+} from "#/workspace/workspaceToolPolicy/workspaceToolPolicyService";
 
 void WorkspaceToolPolicyService;
 
-const WORK_DIR = '/repo';
+const WORK_DIR = "/repo";
 
-function stubWorkspaceContext(osBackendId = 'local'): IWorkspaceContext {
+function stubWorkspaceContext(osBackendId = "local"): IWorkspaceContext {
   return {
     _serviceBrand: undefined,
-    workspaceId: 'w',
+    workspaceId: "w",
     cwd: WORK_DIR,
-    source: 'local',
-    meta: { id: 'w', root: WORK_DIR, name: 'proj', createdAt: 1, lastOpenedAt: 1 },
-    persistenceScope: 'sessions/w',
+    source: "local",
+    meta: {
+      id: "w",
+      root: WORK_DIR,
+      name: "proj",
+      createdAt: 1,
+      lastOpenedAt: 1,
+    },
+    persistenceScope: "sessions/w",
     osBackendId,
-    persistenceBackendId: 'local',
+    persistenceBackendId: "local",
   };
 }
 
@@ -39,26 +49,26 @@ afterEach(() => {
   host = undefined;
 });
 
-function makePolicy(osBackendId = 'local'): IWorkspaceToolPolicy {
+function makePolicy(osBackendId = "local"): IWorkspaceToolPolicy {
   host = createScopedTestHost();
-  const workspace = host.child(LifecycleScope.Workspace, 'w1', [
+  const workspace = host.child(LifecycleScope.Workspace, "w1", [
     stubPair(IWorkspaceContext, stubWorkspaceContext(osBackendId)),
   ]);
   return workspace.accessor.get(IWorkspaceToolPolicy);
 }
 
-describe('computeCapabilityDisabledTools', () => {
-  it('disables nothing for the local os backend', () => {
-    expect(computeCapabilityDisabledTools('local')).toEqual([]);
+describe("computeCapabilityDisabledTools", () => {
+  it("disables nothing for the local os backend", () => {
+    expect(computeCapabilityDisabledTools("local")).toEqual([]);
   });
 });
 
-describe('WorkspaceToolPolicyService', () => {
-  it('exposes an empty veto set on the local runtime', () => {
+describe("WorkspaceToolPolicyService", () => {
+  it("exposes an empty veto set on the local runtime", () => {
     expect(makePolicy().disabledTools()).toEqual([]);
   });
 
-  it('hands sessions a live gate view over the same veto set', () => {
+  it("hands sessions a live gate view over the same veto set", () => {
     const gate = makePolicy().sessionGate();
     expect(gate.disabledTools).toEqual([]);
     expect(gate.onDidChange).toBeDefined();

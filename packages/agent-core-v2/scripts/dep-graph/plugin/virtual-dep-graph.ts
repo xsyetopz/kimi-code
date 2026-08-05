@@ -10,10 +10,10 @@
  * only bundles `src/index.ts`).
  */
 
-import { relative } from 'node:path';
+import { relative } from "node:path";
 
-import chokidar, { type FSWatcher } from 'chokidar';
-import type { Plugin, ViteDevServer } from 'vite';
+import chokidar, { type FSWatcher } from "chokidar";
+import type { Plugin, ViteDevServer } from "vite";
 
 import {
   SNAPSHOT_PATH,
@@ -22,10 +22,10 @@ import {
   readHeadSha,
   summarize,
   writeSnapshot,
-} from '../analyzer/analyze';
-import type { Graph } from '../analyzer/types';
+} from "../analyzer/analyze";
+import type { Graph } from "../analyzer/types";
 
-const VIRTUAL_ID = 'virtual:dep-graph';
+const VIRTUAL_ID = "virtual:dep-graph";
 const RESOLVED_ID = `\0${VIRTUAL_ID}`;
 
 const DEBOUNCE_MS = 200;
@@ -36,7 +36,9 @@ function tag(): string {
 
 function isSrcFile(file: string): boolean {
   const rel = relative(SRC_ROOT, file);
-  return !rel.startsWith('..') && (file.endsWith('.ts') || file.endsWith('.tsx'));
+  return (
+    !rel.startsWith("..") && (file.endsWith(".ts") || file.endsWith(".tsx"))
+  );
 }
 
 interface PluginOptions {
@@ -73,9 +75,11 @@ export function depGraphPlugin(options: PluginOptions = {}): Plugin {
     const suffix = changed
       ? shouldWrite
         ? ` (wrote ${relative(process.cwd(), SNAPSHOT_PATH)})`
-        : ''
-      : ' (no change)';
-    console.log(`[dep-graph] ${reason} → ${summarize(next)}${suffix} in ${took}ms`);
+        : ""
+      : " (no change)";
+    console.log(
+      `[dep-graph] ${reason} → ${summarize(next)}${suffix} in ${took}ms`,
+    );
     return changed;
   }
 
@@ -92,14 +96,14 @@ export function depGraphPlugin(options: PluginOptions = {}): Plugin {
     const mod = server.moduleGraph.getModuleById(RESOLVED_ID);
     if (mod) {
       server.moduleGraph.invalidateModule(mod);
-      server.ws.send({ type: 'full-reload', path: '*' });
+      server.ws.send({ type: "full-reload", path: "*" });
     }
   }
 
   return {
-    name: 'agent-core-v2:dep-graph',
+    name: "agent-core-v2:dep-graph",
     buildStart() {
-      if (!cached) analyzeNow('startup');
+      if (!cached) analyzeNow("startup");
     },
     configureServer(dev) {
       server = dev;
@@ -108,13 +112,15 @@ export function depGraphPlugin(options: PluginOptions = {}): Plugin {
         ignored: (path, stats) => {
           if (!stats) return false;
           if (stats.isDirectory()) return false;
-          return !path.endsWith('.ts');
+          return !path.endsWith(".ts");
         },
       });
-      watcher.on('ready', () => {
-        console.log(`[dep-graph] watching ${relative(process.cwd(), SRC_ROOT)}`);
+      watcher.on("ready", () => {
+        console.log(
+          `[dep-graph] watching ${relative(process.cwd(), SRC_ROOT)}`,
+        );
       });
-      for (const evt of ['add', 'change', 'unlink'] as const) {
+      for (const evt of ["add", "change", "unlink"] as const) {
         watcher.on(evt, (file: string) => {
           if (!isSrcFile(file)) return;
           scheduleRefresh(`${evt} ${relative(SRC_ROOT, file)}`);
@@ -131,7 +137,7 @@ export function depGraphPlugin(options: PluginOptions = {}): Plugin {
     },
     load(id) {
       if (id !== RESOLVED_ID) return undefined;
-      if (!cached) analyzeNow('load');
+      if (!cached) analyzeNow("load");
       return `export default ${JSON.stringify(cached)};`;
     },
   };

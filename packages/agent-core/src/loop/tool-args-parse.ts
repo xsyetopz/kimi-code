@@ -1,4 +1,4 @@
-import { errorMessage } from './errors';
+import { errorMessage } from "./errors";
 
 export type ParseToolArgsResult = {
   readonly success: true;
@@ -7,13 +7,19 @@ export type ParseToolArgsResult = {
   readonly error?: string;
 };
 
-export function parseToolCallArguments(raw: string | null): ParseToolArgsResult {
+export function parseToolCallArguments(
+  raw: string | null,
+): ParseToolArgsResult {
   if (raw === null || raw.length === 0) {
     return { success: true, data: {}, parseFailed: false };
   }
 
   try {
-    return { success: true, data: JSON.parse(raw) as unknown, parseFailed: false };
+    return {
+      success: true,
+      data: JSON.parse(raw) as unknown,
+      parseFailed: false,
+    };
   } catch (error) {
     return {
       success: true,

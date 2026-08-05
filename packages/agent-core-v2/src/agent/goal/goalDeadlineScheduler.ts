@@ -5,8 +5,11 @@
  * and arming hard wall-clock budget deadlines.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
-import type { IDisposable } from '#/_base/di/lifecycle';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
+import type { IDisposable } from "#/_base/di/lifecycle";
 
 export interface IGoalDeadlineScheduler {
   readonly _serviceBrand: undefined;
@@ -16,4 +19,4 @@ export interface IGoalDeadlineScheduler {
 }
 
 export const IGoalDeadlineScheduler: ServiceIdentifier<IGoalDeadlineScheduler> =
-  createDecorator<IGoalDeadlineScheduler>('goalDeadlineScheduler');
+  createDecorator<IGoalDeadlineScheduler>("goalDeadlineScheduler");

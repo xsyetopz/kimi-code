@@ -1,16 +1,16 @@
-import type { Message, StreamedMessagePart, ToolCall } from '#/message';
-import type { ChatProvider, StreamedMessage, ThinkingEffort } from '#/provider';
+import type { Message, StreamedMessagePart, ToolCall } from "#/message";
+import type { ChatProvider, StreamedMessage, ThinkingEffort } from "#/provider";
 import {
   SimpleToolset,
   toolOk,
   type ToolResult,
   type ToolReturnValue,
-} from '../fixtures/simple-toolset';
-import { step, type StepCallbacks } from '../fixtures/step';
-import type { Tool } from '#/tool';
-import type { JsonValue } from '../fixtures/args-validator';
-import type { TokenUsage } from '#/usage';
-import { describe, expect, it } from 'vitest';
+} from "../fixtures/simple-toolset";
+import { step, type StepCallbacks } from "../fixtures/step";
+import type { Tool } from "#/tool";
+import type { JsonValue } from "../fixtures/args-validator";
+import type { TokenUsage } from "#/usage";
+import { describe, expect, it } from "vitest";
 function buildStream(
   parts: StreamedMessagePart[],
   opts?: { id?: string; usage?: TokenUsage },
@@ -33,8 +33,8 @@ function buildStream(
 }
 
 class QueuedProvider implements ChatProvider {
-  readonly name: string = 'queued';
-  readonly modelName: string = 'queued';
+  readonly name: string = "queued";
+  readonly modelName: string = "queued";
   readonly thinkingEffort: ThinkingEffort | null = null;
   private readonly _queue: StreamedMessage[];
   private _cursor: number = 0;
@@ -60,32 +60,37 @@ class QueuedProvider implements ChatProvider {
     return this;
   }
 }
-describe('e2e: toolset advanced', () => {
-  describe('tool argument boundaries', () => {
-    it('arguments=null -> handler receives {}', async () => {
+describe("e2e: toolset advanced", () => {
+  describe("tool argument boundaries", () => {
+    it("arguments=null -> handler receives {}", async () => {
       const tc: ToolCall = {
-        type: 'function',
-        id: 'tc-null',
-        name: 'my_tool', arguments: null,
+        type: "function",
+        id: "tc-null",
+        name: "my_tool",
+        arguments: null,
       };
 
       const provider = new QueuedProvider([
         buildStream([tc]),
-        buildStream([{ type: 'text', text: 'done' }]),
+        buildStream([{ type: "text", text: "done" }]),
       ]);
 
       let receivedArgs: JsonValue = undefined as unknown as JsonValue;
       const toolset = new SimpleToolset();
       toolset.add(
-        { name: 'my_tool', description: 'Test tool', parameters: {} },
+        { name: "my_tool", description: "Test tool", parameters: {} },
         async (args: JsonValue): Promise<ToolReturnValue> => {
           receivedArgs = args;
-          return toolOk({ output: 'ok' });
+          return toolOk({ output: "ok" });
         },
       );
 
-      const result = await step(provider, '', toolset, [
-        { role: 'user', content: [{ type: 'text', text: 'go' }], toolCalls: [] },
+      const result = await step(provider, "", toolset, [
+        {
+          role: "user",
+          content: [{ type: "text", text: "go" }],
+          toolCalls: [],
+        },
       ]);
       const results = await result.toolResults();
 
@@ -96,24 +101,29 @@ describe('e2e: toolset advanced', () => {
 
     it('arguments="" -> toolParseError', async () => {
       const tc: ToolCall = {
-        type: 'function',
-        id: 'tc-empty',
-        name: 'my_tool', arguments: '',
+        type: "function",
+        id: "tc-empty",
+        name: "my_tool",
+        arguments: "",
       };
 
       const provider = new QueuedProvider([
         buildStream([tc]),
-        buildStream([{ type: 'text', text: 'done' }]),
+        buildStream([{ type: "text", text: "done" }]),
       ]);
 
       const toolset = new SimpleToolset();
       toolset.add(
-        { name: 'my_tool', description: 'Test tool', parameters: {} },
-        async (): Promise<ToolReturnValue> => toolOk({ output: 'ok' }),
+        { name: "my_tool", description: "Test tool", parameters: {} },
+        async (): Promise<ToolReturnValue> => toolOk({ output: "ok" }),
       );
 
-      const result = await step(provider, '', toolset, [
-        { role: 'user', content: [{ type: 'text', text: 'go' }], toolCalls: [] },
+      const result = await step(provider, "", toolset, [
+        {
+          role: "user",
+          content: [{ type: "text", text: "go" }],
+          toolCalls: [],
+        },
       ]);
       const results = await result.toolResults();
 
@@ -123,28 +133,33 @@ describe('e2e: toolset advanced', () => {
 
     it('arguments="null" -> handler receives null', async () => {
       const tc: ToolCall = {
-        type: 'function',
-        id: 'tc-string-null',
-        name: 'my_tool', arguments: 'null',
+        type: "function",
+        id: "tc-string-null",
+        name: "my_tool",
+        arguments: "null",
       };
 
       const provider = new QueuedProvider([
         buildStream([tc]),
-        buildStream([{ type: 'text', text: 'done' }]),
+        buildStream([{ type: "text", text: "done" }]),
       ]);
 
       let receivedArgs: JsonValue = undefined as unknown as JsonValue;
       const toolset = new SimpleToolset();
       toolset.add(
-        { name: 'my_tool', description: 'Test tool', parameters: {} },
+        { name: "my_tool", description: "Test tool", parameters: {} },
         async (args: JsonValue): Promise<ToolReturnValue> => {
           receivedArgs = args;
-          return toolOk({ output: 'ok' });
+          return toolOk({ output: "ok" });
         },
       );
 
-      const result = await step(provider, '', toolset, [
-        { role: 'user', content: [{ type: 'text', text: 'go' }], toolCalls: [] },
+      const result = await step(provider, "", toolset, [
+        {
+          role: "user",
+          content: [{ type: "text", text: "go" }],
+          toolCalls: [],
+        },
       ]);
       await result.toolResults();
 
@@ -154,28 +169,33 @@ describe('e2e: toolset advanced', () => {
 
     it('arguments="[]" -> handler receives empty array', async () => {
       const tc: ToolCall = {
-        type: 'function',
-        id: 'tc-array',
-        name: 'my_tool', arguments: '[]',
+        type: "function",
+        id: "tc-array",
+        name: "my_tool",
+        arguments: "[]",
       };
 
       const provider = new QueuedProvider([
         buildStream([tc]),
-        buildStream([{ type: 'text', text: 'done' }]),
+        buildStream([{ type: "text", text: "done" }]),
       ]);
 
       let receivedArgs: JsonValue = undefined as unknown as JsonValue;
       const toolset = new SimpleToolset();
       toolset.add(
-        { name: 'my_tool', description: 'Test tool', parameters: {} },
+        { name: "my_tool", description: "Test tool", parameters: {} },
         async (args: JsonValue): Promise<ToolReturnValue> => {
           receivedArgs = args;
-          return toolOk({ output: 'ok' });
+          return toolOk({ output: "ok" });
         },
       );
 
-      const result = await step(provider, '', toolset, [
-        { role: 'user', content: [{ type: 'text', text: 'go' }], toolCalls: [] },
+      const result = await step(provider, "", toolset, [
+        {
+          role: "user",
+          content: [{ type: "text", text: "go" }],
+          toolCalls: [],
+        },
       ]);
       await result.toolResults();
 
@@ -183,118 +203,136 @@ describe('e2e: toolset advanced', () => {
       expect(receivedArgs).toEqual([]);
     });
 
-    it('arguments with unicode JSON -> correctly parsed', async () => {
-      const args = JSON.stringify({ message: 'Hello \u4E16\u754C!', emoji: '\uD83D\uDE80' });
+    it("arguments with unicode JSON -> correctly parsed", async () => {
+      const args = JSON.stringify({
+        message: "Hello \u4E16\u754C!",
+        emoji: "\uD83D\uDE80",
+      });
       const tc: ToolCall = {
-        type: 'function',
-        id: 'tc-unicode',
-        name: 'my_tool', arguments: args,
+        type: "function",
+        id: "tc-unicode",
+        name: "my_tool",
+        arguments: args,
       };
 
       const provider = new QueuedProvider([
         buildStream([tc]),
-        buildStream([{ type: 'text', text: 'done' }]),
+        buildStream([{ type: "text", text: "done" }]),
       ]);
 
       let receivedArgs: JsonValue = undefined as unknown as JsonValue;
       const toolset = new SimpleToolset();
       toolset.add(
-        { name: 'my_tool', description: 'Test tool', parameters: {} },
+        { name: "my_tool", description: "Test tool", parameters: {} },
         async (receivedArgsParam: JsonValue): Promise<ToolReturnValue> => {
           receivedArgs = receivedArgsParam;
-          return toolOk({ output: 'ok' });
+          return toolOk({ output: "ok" });
         },
       );
 
-      const result = await step(provider, '', toolset, [
-        { role: 'user', content: [{ type: 'text', text: 'go' }], toolCalls: [] },
+      const result = await step(provider, "", toolset, [
+        {
+          role: "user",
+          content: [{ type: "text", text: "go" }],
+          toolCalls: [],
+        },
       ]);
       await result.toolResults();
 
       const parsed = receivedArgs as Record<string, JsonValue>;
-      expect(parsed['message']).toBe('Hello \u4E16\u754C!');
-      expect(parsed['emoji']).toBe('\uD83D\uDE80');
+      expect(parsed["message"]).toBe("Hello \u4E16\u754C!");
+      expect(parsed["emoji"]).toBe("\uD83D\uDE80");
     });
   });
-  describe('concurrent tool execution order guarantees', () => {
-    it('toolResults() returns in ToolCall order, not completion order', async () => {
+  describe("concurrent tool execution order guarantees", () => {
+    it("toolResults() returns in ToolCall order, not completion order", async () => {
       const tc1: ToolCall = {
-        type: 'function',
-        id: 'tc-slow',
-        name: 'delayed', arguments: '{"delay":100,"label":"slow"}',
+        type: "function",
+        id: "tc-slow",
+        name: "delayed",
+        arguments: '{"delay":100,"label":"slow"}',
       };
       const tc2: ToolCall = {
-        type: 'function',
-        id: 'tc-fast',
-        name: 'delayed', arguments: '{"delay":10,"label":"fast"}',
+        type: "function",
+        id: "tc-fast",
+        name: "delayed",
+        arguments: '{"delay":10,"label":"fast"}',
       };
       const tc3: ToolCall = {
-        type: 'function',
-        id: 'tc-mid',
-        name: 'delayed', arguments: '{"delay":50,"label":"mid"}',
+        type: "function",
+        id: "tc-mid",
+        name: "delayed",
+        arguments: '{"delay":50,"label":"mid"}',
       };
 
       const provider = new QueuedProvider([
         buildStream([tc1, tc2, tc3]),
-        buildStream([{ type: 'text', text: 'done' }]),
+        buildStream([{ type: "text", text: "done" }]),
       ]);
 
       const toolset = new SimpleToolset();
       toolset.add(
-        { name: 'delayed', description: 'Delayed tool', parameters: {} },
+        { name: "delayed", description: "Delayed tool", parameters: {} },
         async (args: JsonValue): Promise<ToolReturnValue> => {
           const obj = args as Record<string, JsonValue>;
-          const delay = obj['delay'] as number;
-          const label = obj['label'] as string;
+          const delay = obj["delay"] as number;
+          const label = obj["label"] as string;
           await new Promise<void>((r) => setTimeout(r, delay));
           return toolOk({ output: label });
         },
       );
 
-      const result = await step(provider, '', toolset, [
-        { role: 'user', content: [{ type: 'text', text: 'go' }], toolCalls: [] },
+      const result = await step(provider, "", toolset, [
+        {
+          role: "user",
+          content: [{ type: "text", text: "go" }],
+          toolCalls: [],
+        },
       ]);
       const results = await result.toolResults();
 
       // Results must be in ToolCall order: slow, fast, mid
       expect(results).toHaveLength(3);
-      expect(results[0]!.toolCallId).toBe('tc-slow');
-      expect(results[0]!.returnValue.output).toBe('slow');
-      expect(results[1]!.toolCallId).toBe('tc-fast');
-      expect(results[1]!.returnValue.output).toBe('fast');
-      expect(results[2]!.toolCallId).toBe('tc-mid');
-      expect(results[2]!.returnValue.output).toBe('mid');
+      expect(results[0]!.toolCallId).toBe("tc-slow");
+      expect(results[0]!.returnValue.output).toBe("slow");
+      expect(results[1]!.toolCallId).toBe("tc-fast");
+      expect(results[1]!.returnValue.output).toBe("fast");
+      expect(results[2]!.toolCallId).toBe("tc-mid");
+      expect(results[2]!.returnValue.output).toBe("mid");
     });
 
-    it('onToolResult fires in completion order, not ToolCall order', async () => {
+    it("onToolResult fires in completion order, not ToolCall order", async () => {
       const tc1: ToolCall = {
-        type: 'function',
-        id: 'tc-slow',
-        name: 'delayed', arguments: '{"delay":80,"label":"slow"}',
+        type: "function",
+        id: "tc-slow",
+        name: "delayed",
+        arguments: '{"delay":80,"label":"slow"}',
       };
       const tc2: ToolCall = {
-        type: 'function',
-        id: 'tc-fast',
-        name: 'delayed', arguments: '{"delay":10,"label":"fast"}',
+        type: "function",
+        id: "tc-fast",
+        name: "delayed",
+        arguments: '{"delay":10,"label":"fast"}',
       };
       const tc3: ToolCall = {
-        type: 'function',
-        id: 'tc-mid',
-        name: 'delayed', arguments: '{"delay":40,"label":"mid"}',
+        type: "function",
+        id: "tc-mid",
+        name: "delayed",
+        arguments: '{"delay":40,"label":"mid"}',
       };
 
       const provider = new QueuedProvider([
         buildStream([tc1, tc2, tc3]),
-        buildStream([{ type: 'text', text: 'done' }]),
+        buildStream([{ type: "text", text: "done" }]),
       ]);
 
       const toolset = new SimpleToolset();
       toolset.add(
-        { name: 'delayed', description: 'Delayed tool', parameters: {} },
+        { name: "delayed", description: "Delayed tool", parameters: {} },
         async (args: JsonValue): Promise<ToolReturnValue> => {
           const obj = args as Record<string, JsonValue>;
-          const delay = obj['delay'] as number;
-          const label = obj['label'] as string;
+          const delay = obj["delay"] as number;
+          const label = obj["label"] as string;
           await new Promise<void>((r) => setTimeout(r, delay));
           return toolOk({ output: label });
         },
@@ -309,21 +347,27 @@ describe('e2e: toolset advanced', () => {
 
       const result = await step(
         provider,
-        '',
+        "",
         toolset,
-        [{ role: 'user', content: [{ type: 'text', text: 'go' }], toolCalls: [] }],
+        [
+          {
+            role: "user",
+            content: [{ type: "text", text: "go" }],
+            toolCalls: [],
+          },
+        ],
         callbacks,
       );
       await result.toolResults();
 
       // onToolResult should fire in completion order: fast(10ms), mid(40ms), slow(80ms)
-      expect(completionOrder[0]).toBe('tc-fast');
-      expect(completionOrder[1]).toBe('tc-mid');
-      expect(completionOrder[2]).toBe('tc-slow');
+      expect(completionOrder[0]).toBe("tc-fast");
+      expect(completionOrder[1]).toBe("tc-mid");
+      expect(completionOrder[2]).toBe("tc-slow");
     });
   });
-  describe('step() error cleanup', () => {
-    it('generate() failure does not dispatch any tool handlers', async () => {
+  describe("step() error cleanup", () => {
+    it("generate() failure does not dispatch any tool handlers", async () => {
       // Tool dispatch is deferred until after the stream has fully drained,
       // so a mid-stream provider failure never starts pending tool promises.
       const errorStream: StreamedMessage = {
@@ -337,18 +381,19 @@ describe('e2e: toolset advanced', () => {
         rawFinishReason: null,
         async *[Symbol.asyncIterator](): AsyncIterator<StreamedMessagePart> {
           yield {
-            type: 'function',
-            id: 'tc-doomed',
-            name: 'slow_tool', arguments: '{}',
+            type: "function",
+            id: "tc-doomed",
+            name: "slow_tool",
+            arguments: "{}",
           } satisfies ToolCall;
-          yield { type: 'text', text: 'processing...' };
-          throw new Error('stream connection lost');
+          yield { type: "text", text: "processing..." };
+          throw new Error("stream connection lost");
         },
       };
 
       const errorProvider: ChatProvider = {
-        name: 'error-provider',
-        modelName: 'error-model',
+        name: "error-provider",
+        modelName: "error-model",
         thinkingEffort: null,
         async generate(): Promise<StreamedMessage> {
           return errorStream;
@@ -363,20 +408,24 @@ describe('e2e: toolset advanced', () => {
 
       const toolset = new SimpleToolset();
       toolset.add(
-        { name: 'slow_tool', description: 'Slow tool', parameters: {} },
+        { name: "slow_tool", description: "Slow tool", parameters: {} },
         async (): Promise<ToolReturnValue> => {
           handlerStarted = true;
           await new Promise<void>((r) => setTimeout(r, 50));
           handlerFinished = true;
-          return toolOk({ output: 'done' });
+          return toolOk({ output: "done" });
         },
       );
 
       await expect(
-        step(errorProvider, '', toolset, [
-          { role: 'user', content: [{ type: 'text', text: 'go' }], toolCalls: [] },
+        step(errorProvider, "", toolset, [
+          {
+            role: "user",
+            content: [{ type: "text", text: "go" }],
+            toolCalls: [],
+          },
         ]),
-      ).rejects.toThrow('stream connection lost');
+      ).rejects.toThrow("stream connection lost");
 
       // Give any in-flight microtasks a chance to run; the handler must
       // never have been invoked.
@@ -385,35 +434,40 @@ describe('e2e: toolset advanced', () => {
       expect(handlerFinished).toBe(false);
     });
 
-    it('tool handler exception does not crash step()', async () => {
+    it("tool handler exception does not crash step()", async () => {
       const tc: ToolCall = {
-        type: 'function',
-        id: 'tc-error',
-        name: 'bad_tool', arguments: '{}',
+        type: "function",
+        id: "tc-error",
+        name: "bad_tool",
+        arguments: "{}",
       };
 
       const provider = new QueuedProvider([
         buildStream([tc]),
-        buildStream([{ type: 'text', text: 'done' }]),
+        buildStream([{ type: "text", text: "done" }]),
       ]);
 
       const toolset = new SimpleToolset();
       toolset.add(
-        { name: 'bad_tool', description: 'Bad tool', parameters: {} },
+        { name: "bad_tool", description: "Bad tool", parameters: {} },
         async (): Promise<ToolReturnValue> => {
-          throw new Error('handler exploded');
+          throw new Error("handler exploded");
         },
       );
 
-      const result = await step(provider, '', toolset, [
-        { role: 'user', content: [{ type: 'text', text: 'go' }], toolCalls: [] },
+      const result = await step(provider, "", toolset, [
+        {
+          role: "user",
+          content: [{ type: "text", text: "go" }],
+          toolCalls: [],
+        },
       ]);
       const results = await result.toolResults();
 
       // The error should be wrapped as a toolRuntimeError
       expect(results).toHaveLength(1);
       expect(results[0]!.returnValue.isError).toBe(true);
-      expect(results[0]!.returnValue.message).toContain('handler exploded');
+      expect(results[0]!.returnValue.message).toContain("handler exploded");
     });
   });
 });

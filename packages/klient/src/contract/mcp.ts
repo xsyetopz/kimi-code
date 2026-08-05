@@ -3,7 +3,7 @@
  * Mirrors `agent-core-v2/mcpCore/config-schema.ts`.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
 const stringRecordSchema = z.record(z.string(), z.string());
 
@@ -17,25 +17,25 @@ const mcpServerCommonFields = {
   disabledTools: z.array(z.string()).optional(),
 } as const;
 
-export const mcpServerConfigSchema = z.discriminatedUnion('transport', [
+export const mcpServerConfigSchema = z.discriminatedUnion("transport", [
   z.object({
-    transport: z.literal('stdio'),
+    transport: z.literal("stdio"),
     command: z.string().min(1),
     args: z.array(z.string()).optional(),
     env: stringRecordSchema.optional(),
     cwd: z.string().optional(),
-    executor: z.enum(['local', 'kaos']).optional(),
+    executor: z.enum(["local", "kaos"]).optional(),
     ...mcpServerCommonFields,
   }),
   z.object({
-    transport: z.literal('http'),
+    transport: z.literal("http"),
     url: z.string().url(),
     headers: stringRecordSchema.optional(),
     bearerTokenEnvVar: z.string().min(1).optional(),
     ...mcpServerCommonFields,
   }),
   z.object({
-    transport: z.literal('sse'),
+    transport: z.literal("sse"),
     url: z.string().url(),
     headers: stringRecordSchema.optional(),
     bearerTokenEnvVar: z.string().min(1).optional(),

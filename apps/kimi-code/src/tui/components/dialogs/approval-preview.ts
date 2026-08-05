@@ -24,15 +24,21 @@ import {
   truncateToWidth,
   visibleWidth,
   type Focusable,
-} from '@moonshot-ai/pi-tui';
+} from "@moonshot-ai/pi-tui";
 
-import { highlightLines, langFromPath } from '#/tui/components/media/code-highlight';
-import { renderDiffLinesClustered } from '#/tui/components/media/diff-preview';
-import type { DiffDisplayBlock, FileContentDisplayBlock } from '#/tui/reverse-rpc/types';
-import { currentTheme } from '#/tui/theme';
-import { printableChar } from '#/tui/utils/printable-key';
+import {
+  highlightLines,
+  langFromPath,
+} from "#/tui/components/media/code-highlight";
+import { renderDiffLinesClustered } from "#/tui/components/media/diff-preview";
+import type {
+  DiffDisplayBlock,
+  FileContentDisplayBlock,
+} from "#/tui/reverse-rpc/types";
+import { currentTheme } from "#/tui/theme";
+import { printableChar } from "#/tui/utils/printable-key";
 
-const ELLIPSIS = '…';
+const ELLIPSIS = "…";
 
 export type ApprovalPreviewBlock = DiffDisplayBlock | FileContentDisplayBlock;
 
@@ -45,7 +51,7 @@ function padToWidth(line: string, width: number): string {
   const w = visibleWidth(line);
   if (w === width) return line;
   if (w > width) return truncateToWidth(line, width, ELLIPSIS);
-  return line + ' '.repeat(width - w);
+  return line + " ".repeat(width - w);
 }
 
 function fitExactly(line: string, width: number): string {
@@ -81,34 +87,34 @@ export class ApprovalPreviewViewer extends Container implements Focusable {
 
     if (
       matchesKey(data, Key.escape) ||
-      matchesKey(data, Key.ctrl('e')) ||
-      k === 'q' ||
-      k === 'Q'
+      matchesKey(data, Key.ctrl("e")) ||
+      k === "q" ||
+      k === "Q"
     ) {
       this.props.onClose();
       return;
     }
-    if (matchesKey(data, Key.up) || k === 'k') {
+    if (matchesKey(data, Key.up) || k === "k") {
       this.scrollBy(-1);
       return;
     }
-    if (matchesKey(data, Key.down) || k === 'j') {
+    if (matchesKey(data, Key.down) || k === "j") {
       this.scrollBy(1);
       return;
     }
-    if (matchesKey(data, Key.pageUp) || k === ' ' || data === '\x02') {
+    if (matchesKey(data, Key.pageUp) || k === " " || data === "\x02") {
       this.scrollBy(-Math.max(1, visible - 1));
       return;
     }
-    if (matchesKey(data, Key.pageDown) || data === '\x06') {
+    if (matchesKey(data, Key.pageDown) || data === "\x06") {
       this.scrollBy(Math.max(1, visible - 1));
       return;
     }
-    if (matchesKey(data, Key.home) || k === 'g') {
+    if (matchesKey(data, Key.home) || k === "g") {
       this.scrollTo(0);
       return;
     }
-    if (matchesKey(data, Key.end) || k === 'G') {
+    if (matchesKey(data, Key.end) || k === "G") {
       this.scrollTo(this.maxScroll());
       return;
     }
@@ -150,7 +156,7 @@ export class ApprovalPreviewViewer extends Container implements Focusable {
   }
 
   private renderHeader(width: number): string {
-    const title = currentTheme.boldFg('primary', ' Preview ');
+    const title = currentTheme.boldFg("primary", " Preview ");
     return fitExactly(title + this.headerTitle, width);
   }
 
@@ -162,44 +168,55 @@ export class ApprovalPreviewViewer extends Container implements Focusable {
     if (this.scrollTop < 0) this.scrollTop = 0;
 
     const viewRows = bodyHeight - 2;
-    const top = currentTheme.fg('primary', '┌' + '─'.repeat(Math.max(0, width - 2)) + '┐');
-    const bottom = currentTheme.fg('primary', '└' + '─'.repeat(Math.max(0, width - 2)) + '┘');
+    const top = currentTheme.fg(
+      "primary",
+      "┌" + "─".repeat(Math.max(0, width - 2)) + "┐",
+    );
+    const bottom = currentTheme.fg(
+      "primary",
+      "└" + "─".repeat(Math.max(0, width - 2)) + "┘",
+    );
 
     const out: string[] = [top];
     for (let i = 0; i < viewRows; i++) {
       const lineIndex = this.scrollTop + i;
-      const raw = this.bodyLines[lineIndex] ?? '';
-      out.push(currentTheme.fg('primary', '│ ') + fitExactly(raw, innerWidth) + currentTheme.fg('primary', ' │'));
+      const raw = this.bodyLines[lineIndex] ?? "";
+      out.push(
+        currentTheme.fg("primary", "│ ") +
+          fitExactly(raw, innerWidth) +
+          currentTheme.fg("primary", " │"),
+      );
     }
     out.push(bottom);
     return out;
   }
 
   private renderFooter(width: number, bodyHeight: number): string {
-    const key = (text: string): string => currentTheme.boldFg('primary', text);
-    const dim = (text: string): string => currentTheme.fg('textMuted', text);
+    const key = (text: string): string => currentTheme.boldFg("primary", text);
+    const dim = (text: string): string => currentTheme.fg("textMuted", text);
 
     const total = this.bodyLines.length;
     const viewRows = Math.max(1, bodyHeight - 2);
     const maxScroll = Math.max(0, total - viewRows);
-    const percent = maxScroll === 0 ? 100 : Math.round((this.scrollTop / maxScroll) * 100);
+    const percent =
+      maxScroll === 0 ? 100 : Math.round((this.scrollTop / maxScroll) * 100);
     const lineFrom = total === 0 ? 0 : this.scrollTop + 1;
     const lineTo = Math.min(total, this.scrollTop + viewRows);
 
     const position = currentTheme.fg(
-      'textMuted',
+      "textMuted",
       ` ${String(lineFrom)}-${String(lineTo)} / ${String(total)} (${String(percent)}%) `,
     );
     const keys =
-      `${key('↑↓')} ${dim('line')}  ` +
-      `${key('PgUp/PgDn')} ${dim('page')}  ` +
-      `${key('g/G')} ${dim('top/bot')}  ` +
-      `${key('Q/Esc/Ctrl+E')} ${dim('cancel')}`;
+      `${key("↑↓")} ${dim("line")}  ` +
+      `${key("PgUp/PgDn")} ${dim("page")}  ` +
+      `${key("g/G")} ${dim("top/bot")}  ` +
+      `${key("Q/Esc/Ctrl+E")} ${dim("cancel")}`;
     const left = ` ${keys}`;
     const leftW = visibleWidth(left);
     const rightW = visibleWidth(position);
     if (leftW + 2 + rightW <= width) {
-      return left + ' '.repeat(width - leftW - rightW) + position;
+      return left + " ".repeat(width - leftW - rightW) + position;
     }
     return fitExactly(left, width);
   }
@@ -211,7 +228,7 @@ interface BuiltBody {
 }
 
 function buildBody(block: ApprovalPreviewBlock): BuiltBody {
-  if (block.type === 'diff') {
+  if (block.type === "diff") {
     return buildDiffBody(block);
   }
   return buildFileContentBody(block);
@@ -232,7 +249,7 @@ function buildDiffBody(block: DiffDisplayBlock): BuiltBody {
       newStart: block.new_start ?? 1,
     },
   );
-  const [header = '', ...rest] = rendered;
+  const [header = "", ...rest] = rendered;
   return { lines: rest, title: stripLeadingSpace(header) };
 }
 
@@ -240,12 +257,13 @@ function buildFileContentBody(block: FileContentDisplayBlock): BuiltBody {
   const lang = block.language ?? langFromPath(block.path);
   const highlighted = highlightLines(block.content, lang);
   const lines = highlighted.map(
-    (line, i) => currentTheme.fg('diffGutter', String(i + 1).padStart(4) + '  ') + line,
+    (line, i) =>
+      currentTheme.fg("diffGutter", String(i + 1).padStart(4) + "  ") + line,
   );
-  const title = currentTheme.fg('textStrong', block.path);
+  const title = currentTheme.fg("textStrong", block.path);
   return { lines, title };
 }
 
 function stripLeadingSpace(s: string): string {
-  return s.replace(/^ +/, '');
+  return s.replace(/^ +/, "");
 }

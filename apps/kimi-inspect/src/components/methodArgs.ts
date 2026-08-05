@@ -18,15 +18,19 @@
  */
 
 export type ParamField =
-  | { readonly kind: 'value'; readonly name: string; readonly defaultValue?: string }
   | {
-      readonly kind: 'object';
+      readonly kind: "value";
+      readonly name: string;
+      readonly defaultValue?: string;
+    }
+  | {
+      readonly kind: "object";
       /** Original pattern text, used as the group label (e.g. `{ workspaceId, limit }`). */
       readonly name: string;
       readonly keys: readonly string[];
       readonly defaultValue?: string;
     }
-  | { readonly kind: 'raw'; readonly label: string };
+  | { readonly kind: "raw"; readonly label: string };
 
 /** Input state key for a field: the param index, or `index.key` for object keys. */
 export function fieldKey(index: number, key?: string): string {
@@ -45,14 +49,14 @@ function splitTopLevel(src: string): string[] {
   for (let i = 0; i < src.length; i++) {
     const ch = src[i]!;
     if (quote !== null) {
-      if (ch === '\\') i++;
+      if (ch === "\\") i++;
       else if (ch === quote) quote = null;
       continue;
     }
-    if (ch === "'" || ch === '"' || ch === '`') quote = ch;
-    else if (ch === '(' || ch === '{' || ch === '[') depth++;
-    else if (ch === ')' || ch === '}' || ch === ']') depth--;
-    else if (ch === ',' && depth === 0) {
+    if (ch === "'" || ch === '"' || ch === "`") quote = ch;
+    else if (ch === "(" || ch === "{" || ch === "[") depth++;
+    else if (ch === ")" || ch === "}" || ch === "]") depth--;
+    else if (ch === "," && depth === 0) {
       parts.push(src.slice(start, i));
       start = i + 1;
     }
@@ -68,14 +72,20 @@ function indexOfTopLevelEquals(src: string): number {
   for (let i = 0; i < src.length; i++) {
     const ch = src[i]!;
     if (quote !== null) {
-      if (ch === '\\') i++;
+      if (ch === "\\") i++;
       else if (ch === quote) quote = null;
       continue;
     }
-    if (ch === "'" || ch === '"' || ch === '`') quote = ch;
-    else if (ch === '(' || ch === '{' || ch === '[') depth++;
-    else if (ch === ')' || ch === '}' || ch === ']') depth--;
-    else if (ch === '=' && depth === 0 && src[i + 1] !== '=' && src[i + 1] !== '>') return i;
+    if (ch === "'" || ch === '"' || ch === "`") quote = ch;
+    else if (ch === "(" || ch === "{" || ch === "[") depth++;
+    else if (ch === ")" || ch === "}" || ch === "]") depth--;
+    else if (
+      ch === "=" &&
+      depth === 0 &&
+      src[i + 1] !== "=" &&
+      src[i + 1] !== ">"
+    )
+      return i;
   }
   return -1;
 }
@@ -87,13 +97,13 @@ function matchingBrace(src: string): number {
   for (let i = 0; i < src.length; i++) {
     const ch = src[i]!;
     if (quote !== null) {
-      if (ch === '\\') i++;
+      if (ch === "\\") i++;
       else if (ch === quote) quote = null;
       continue;
     }
-    if (ch === "'" || ch === '"' || ch === '`') quote = ch;
-    else if (ch === '{') depth++;
-    else if (ch === '}') {
+    if (ch === "'" || ch === '"' || ch === "`") quote = ch;
+    else if (ch === "{") depth++;
+    else if (ch === "}") {
       depth--;
       if (depth === 0) return i;
     }
@@ -103,7 +113,7 @@ function matchingBrace(src: string): number {
 
 /** Property name out of one object-pattern entry: `a`, `a: b`, `a = 1`, `a: b = 1` → `a`. */
 function objectPatternKey(entry: string): string {
-  const colon = entry.indexOf(':');
+  const colon = entry.indexOf(":");
   const eq = indexOfTopLevelEquals(entry);
   let end = entry.length;
   if (colon !== -1) end = Math.min(end, colon);
@@ -115,31 +125,34 @@ function objectPatternKey(entry: string): string {
 export function parseParamFields(params: string): readonly ParamField[] {
   return splitTopLevel(params)
     .map((s) => s.trim())
-    .filter((s) => s !== '')
+    .filter((s) => s !== "")
     .map((part): ParamField => {
-      if (part.startsWith('{')) {
+      if (part.startsWith("{")) {
         const close = matchingBrace(part);
-        if (close === -1) return { kind: 'raw', label: part };
+        if (close === -1) return { kind: "raw", label: part };
         const keys = splitTopLevel(part.slice(1, close))
           .map((k) => objectPatternKey(k.trim()))
-          .filter((k) => k !== '' && !k.startsWith('...'));
+          .filter((k) => k !== "" && !k.startsWith("..."));
         const rest = part.slice(close + 1).trim();
-        const defaultValue = rest.startsWith('=') ? rest.slice(1).trim() : undefined;
-        if (keys.length === 0) return { kind: 'raw', label: part };
-        return { kind: 'object', name: part, keys, defaultValue };
+        const defaultValue = rest.startsWith("=")
+          ? rest.slice(1).trim()
+          : undefined;
+        if (keys.length === 0) return { kind: "raw", label: part };
+        return { kind: "object", name: part, keys, defaultValue };
       }
-      if (part.startsWith('[') || part.startsWith('...')) {
-        return { kind: 'raw', label: part };
+      if (part.startsWith("[") || part.startsWith("...")) {
+        return { kind: "raw", label: part };
       }
       const eq = indexOfTopLevelEquals(part);
       if (eq !== -1) {
         const name = part.slice(0, eq).trim();
         const defaultValue = part.slice(eq + 1).trim();
-        if (/^[A-Za-z_$][\w$]*$/.test(name)) return { kind: 'value', name, defaultValue };
-        return { kind: 'raw', label: part };
+        if (/^[A-Za-z_$][\w$]*$/.test(name))
+          return { kind: "value", name, defaultValue };
+        return { kind: "raw", label: part };
       }
-      if (/^[A-Za-z_$][\w$]*$/.test(part)) return { kind: 'value', name: part };
-      return { kind: 'raw', label: part };
+      if (/^[A-Za-z_$][\w$]*$/.test(part)) return { kind: "value", name: part };
+      return { kind: "raw", label: part };
     });
 }
 
@@ -151,7 +164,7 @@ export function smartParse(raw: string): unknown {
     // Declared defaults are source text, where strings use JS single-quote
     // literals ('auto') that JSON.parse rejects — unquote those.
     if (raw.length >= 2 && raw.startsWith("'") && raw.endsWith("'")) {
-      return raw.slice(1, -1).replaceAll(/\\(.)/g, '$1');
+      return raw.slice(1, -1).replaceAll(/\\(.)/g, "$1");
     }
     return raw;
   }
@@ -170,25 +183,26 @@ export function buildArgs(
 ): unknown[] {
   const args: unknown[] = [];
   fields.forEach((field, i) => {
-    if (field.kind === 'value') {
-      const raw = (values[fieldKey(i)] ?? '').trim();
-      if (raw !== '') args[i] = smartParse(raw);
-      else if (field.defaultValue !== undefined) args[i] = smartParse(field.defaultValue);
+    if (field.kind === "value") {
+      const raw = (values[fieldKey(i)] ?? "").trim();
+      if (raw !== "") args[i] = smartParse(raw);
+      else if (field.defaultValue !== undefined)
+        args[i] = smartParse(field.defaultValue);
       else args[i] = undefined;
-    } else if (field.kind === 'object') {
+    } else if (field.kind === "object") {
       const obj: Record<string, unknown> = {};
       let filled = false;
       for (const key of field.keys) {
-        const raw = (values[fieldKey(i, key)] ?? '').trim();
-        if (raw !== '') {
+        const raw = (values[fieldKey(i, key)] ?? "").trim();
+        if (raw !== "") {
           obj[key] = smartParse(raw);
           filled = true;
         }
       }
       args[i] = filled ? obj : undefined;
     } else {
-      const raw = (values[fieldKey(i)] ?? '').trim();
-      if (raw !== '') args[i] = JSON.parse(raw);
+      const raw = (values[fieldKey(i)] ?? "").trim();
+      if (raw !== "") args[i] = JSON.parse(raw);
       else args[i] = undefined;
     }
   });

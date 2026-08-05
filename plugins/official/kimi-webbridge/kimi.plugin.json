@@ -3,14 +3,7 @@
   "name": "kimi-webbridge",
   "version": "1.11.3",
   "description": "Control your real browser (with your login sessions) from Kimi Code via the local Kimi WebBridge daemon — navigate, click, type, read pages, and screenshot any website.",
-  "keywords": [
-    "browser",
-    "webbridge",
-    "cdp",
-    "automation",
-    "web",
-    "scraping"
-  ],
+  "keywords": ["browser", "webbridge", "cdp", "automation", "web", "scraping"],
   "author": "Moonshot AI",
   "license": "Proprietary",
   "skills": "./skills/",

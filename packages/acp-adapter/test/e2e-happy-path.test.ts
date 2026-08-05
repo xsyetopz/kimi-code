@@ -23,7 +23,7 @@
  * established in `test/session-prompt.test.ts:24-37`.
  */
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from "vitest";
 
 import {
   AgentSideConnection,
@@ -38,11 +38,11 @@ import {
   type SessionNotification,
   type WriteTextFileRequest,
   type WriteTextFileResponse,
-} from '@agentclientprotocol/sdk';
-import type { Event, KimiHarness, Session } from '@moonshot-ai/kimi-code-sdk';
+} from "@agentclientprotocol/sdk";
+import type { Event, KimiHarness, Session } from "@moonshot-ai/kimi-code-sdk";
 
-import { AcpServer } from '../src/server';
-import { AUTHED_STATUS, makeModelsMap } from './_helpers/harness-stubs';
+import { AcpServer } from "../src/server";
+import { AUTHED_STATUS, makeModelsMap } from "./_helpers/harness-stubs";
 
 class CollectingClient implements Client {
   readonly updates: SessionNotification[] = [];
@@ -56,21 +56,31 @@ class CollectingClient implements Client {
     return this.updates.filter(
       (n) =>
         (n.update as { sessionUpdate?: string }).sessionUpdate !==
-        'available_commands_update',
+        "available_commands_update",
     );
   }
 
-  async requestPermission(_p: RequestPermissionRequest): Promise<RequestPermissionResponse> {
-    throw new Error('CollectingClient.requestPermission should not be called in happy-path test');
+  async requestPermission(
+    _p: RequestPermissionRequest,
+  ): Promise<RequestPermissionResponse> {
+    throw new Error(
+      "CollectingClient.requestPermission should not be called in happy-path test",
+    );
   }
   async sessionUpdate(n: SessionNotification): Promise<void> {
     this.updates.push(n);
   }
-  async writeTextFile(_p: WriteTextFileRequest): Promise<WriteTextFileResponse> {
-    throw new Error('CollectingClient.writeTextFile should not be called in happy-path test');
+  async writeTextFile(
+    _p: WriteTextFileRequest,
+  ): Promise<WriteTextFileResponse> {
+    throw new Error(
+      "CollectingClient.writeTextFile should not be called in happy-path test",
+    );
   }
   async readTextFile(_p: ReadTextFileRequest): Promise<ReadTextFileResponse> {
-    throw new Error('CollectingClient.readTextFile should not be called in happy-path test');
+    throw new Error(
+      "CollectingClient.readTextFile should not be called in happy-path test",
+    );
   }
 }
 
@@ -80,8 +90,14 @@ function makeInMemoryStreamPair(): {
 } {
   const clientToAgent = new TransformStream<Uint8Array, Uint8Array>();
   const agentToClient = new TransformStream<Uint8Array, Uint8Array>();
-  const agentStream = ndJsonStream(agentToClient.writable, clientToAgent.readable);
-  const clientStream = ndJsonStream(clientToAgent.writable, agentToClient.readable);
+  const agentStream = ndJsonStream(
+    agentToClient.writable,
+    clientToAgent.readable,
+  );
+  const clientStream = ndJsonStream(
+    clientToAgent.writable,
+    agentToClient.readable,
+  );
   return { agentStream, clientStream };
 }
 
@@ -126,29 +142,36 @@ function makeHarness(session: Session): KimiHarness {
     // Phase 14: server.newSession reads these for configOptions.
     getConfig: async () => ({
       providers: {},
-      defaultModel: 'kimi-coder',
-      models: makeModelsMap([{ id: 'kimi-coder', name: 'Kimi Coder', thinkingSupported: false }]),
+      defaultModel: "kimi-coder",
+      models: makeModelsMap([
+        { id: "kimi-coder", name: "Kimi Coder", thinkingSupported: false },
+      ]),
     }),
   } as unknown as KimiHarness;
 }
 
-const textBlock = (text: string): ContentBlock => ({ type: 'text', text });
+const textBlock = (text: string): ContentBlock => ({ type: "text", text });
 
-describe('AcpServer end-to-end happy path', () => {
-  it('initialize advertises the documented capability matrix (PLAN D4)', async () => {
+describe("AcpServer end-to-end happy path", () => {
+  it("initialize advertises the documented capability matrix (PLAN D4)", async () => {
     // No session-side work here — just exercise the `initialize`
     // handshake to lock the capability surface. `createSession` would
     // throw if it were ever called.
     const harness = {
       auth: { status: async () => AUTHED_STATUS },
       createSession: async () => {
-        throw new Error('createSession should not be called from initialize-only test');
+        throw new Error(
+          "createSession should not be called from initialize-only test",
+        );
       },
     } as unknown as KimiHarness;
 
     const { agentStream, clientStream } = makeInMemoryStreamPair();
     new AgentSideConnection((c) => new AcpServer(harness, c), agentStream);
-    const client = new ClientSideConnection(() => new CollectingClient(), clientStream);
+    const client = new ClientSideConnection(
+      () => new CollectingClient(),
+      clientStream,
+    );
 
     const response = await client.initialize({
       protocolVersion: 1,
@@ -160,7 +183,7 @@ describe('AcpServer end-to-end happy path', () => {
     // ACP `protocolVersion` is the integer the server agreed on; we
     // just assert it is a number — Phase 1 already pins the exact
     // negotiated value in version.test.ts.
-    expect(typeof response.protocolVersion).toBe('number');
+    expect(typeof response.protocolVersion).toBe("number");
 
     expect(response.agentCapabilities).toMatchObject({
       loadSession: true,
@@ -183,18 +206,36 @@ describe('AcpServer end-to-end happy path', () => {
     expect(response.agentInfo).toBeUndefined();
     expect(response.authMethods).toHaveLength(1);
     expect(response.authMethods?.[0]).toMatchObject({
-      id: 'login',
-      type: 'terminal',
-      args: ['--login'],
+      id: "login",
+      type: "terminal",
+      args: ["--login"],
     });
   });
 
-  it('drives the full happy path: initialize → newSession → prompt(end_turn)', async () => {
-    const sessionId = 'sess-e2e-happy';
+  it("drives the full happy path: initialize → newSession → prompt(end_turn)", async () => {
+    const sessionId = "sess-e2e-happy";
     const { session, unsubscribeCount } = makeScriptedSession(sessionId, [
-      { type: 'assistant.delta', sessionId, agentId: 'main', turnId: 1, delta: 'echo ' } as Event,
-      { type: 'assistant.delta', sessionId, agentId: 'main', turnId: 1, delta: 'hi' } as Event,
-      { type: 'turn.ended', sessionId, agentId: 'main', turnId: 1, reason: 'completed' } as Event,
+      {
+        type: "assistant.delta",
+        sessionId,
+        agentId: "main",
+        turnId: 1,
+        delta: "echo ",
+      } as Event,
+      {
+        type: "assistant.delta",
+        sessionId,
+        agentId: "main",
+        turnId: 1,
+        delta: "hi",
+      } as Event,
+      {
+        type: "turn.ended",
+        sessionId,
+        agentId: "main",
+        turnId: 1,
+        reason: "completed",
+      } as Event,
     ]);
     const harness = makeHarness(session);
 
@@ -211,9 +252,12 @@ describe('AcpServer end-to-end happy path', () => {
     expect(init.agentCapabilities?.mcpCapabilities?.http).toBe(true);
 
     // 2. session/new
-    const newRes = await client.newSession({ cwd: '/tmp/work', mcpServers: [] });
+    const newRes = await client.newSession({
+      cwd: "/tmp/work",
+      mcpServers: [],
+    });
     expect(newRes.sessionId).toBe(sessionId);
-    expect(typeof newRes.sessionId).toBe('string');
+    expect(typeof newRes.sessionId).toBe("string");
     expect(newRes.sessionId.length).toBeGreaterThan(0);
     // Phase 14 (PLAN D11) configOptions advertisement — replaces
     // Phase 12.1's dedicated `modes:` field on NewSessionResponse with
@@ -222,16 +266,16 @@ describe('AcpServer end-to-end happy path', () => {
     // 'default'` (Phase 12.1 default mode).
     expect(newRes.modes).toBeUndefined();
     expect(
-      newRes.configOptions?.find((o) => o.id === 'mode')?.currentValue,
-    ).toBe('default');
+      newRes.configOptions?.find((o) => o.id === "mode")?.currentValue,
+    ).toBe("default");
     expect(newRes.configOptions?.length).toBe(2);
 
     // 3. session/prompt
     const promptRes = await client.prompt({
       sessionId,
-      prompt: [textBlock('echo hi')],
+      prompt: [textBlock("echo hi")],
     });
-    expect(promptRes.stopReason).toBe('end_turn');
+    expect(promptRes.stopReason).toBe("end_turn");
 
     // Give the agent side a tick to flush queued sessionUpdate writes
     // through the ndjson stream (matching session-prompt.test.ts:128).
@@ -245,8 +289,8 @@ describe('AcpServer end-to-end happy path', () => {
       sessionUpdate?: string;
       content?: { type?: string; text?: string };
     };
-    expect(firstChunk.sessionUpdate).toBe('agent_message_chunk');
-    expect(firstChunk.content?.type).toBe('text');
+    expect(firstChunk.sessionUpdate).toBe("agent_message_chunk");
+    expect(firstChunk.content?.type).toBe("text");
     expect(firstChunk.content?.text).toBeTruthy();
     for (const note of promptOnlyUpdates) {
       expect(note.sessionId).toBe(sessionId);
@@ -256,15 +300,27 @@ describe('AcpServer end-to-end happy path', () => {
     expect(unsubscribeCount()).toBe(1);
   });
 
-  it('cancel mid-stream resolves with stopReason cancelled', async () => {
-    const sessionId = 'sess-e2e-cancel';
+  it("cancel mid-stream resolves with stopReason cancelled", async () => {
+    const sessionId = "sess-e2e-cancel";
     // Scripted session that emits one delta, then a cancelled
     // turn.ended. The ACP `cancel` notification flows through the
     // adapter; we assert the prompt resolves with `cancelled` and
     // does not throw.
     const { session } = makeScriptedSession(sessionId, [
-      { type: 'assistant.delta', sessionId, agentId: 'main', turnId: 1, delta: 'partial' } as Event,
-      { type: 'turn.ended', sessionId, agentId: 'main', turnId: 1, reason: 'cancelled' } as Event,
+      {
+        type: "assistant.delta",
+        sessionId,
+        agentId: "main",
+        turnId: 1,
+        delta: "partial",
+      } as Event,
+      {
+        type: "turn.ended",
+        sessionId,
+        agentId: "main",
+        turnId: 1,
+        reason: "cancelled",
+      } as Event,
     ]);
     const harness = makeHarness(session);
 
@@ -277,7 +333,7 @@ describe('AcpServer end-to-end happy path', () => {
       protocolVersion: 1,
       clientCapabilities: { fs: { readTextFile: false, writeTextFile: false } },
     });
-    await client.newSession({ cwd: '/tmp/work', mcpServers: [] });
+    await client.newSession({ cwd: "/tmp/work", mcpServers: [] });
 
     // Fire-and-forget the cancel notification before awaiting prompt.
     // The scripted session emits turn.ended(cancelled) regardless;
@@ -286,10 +342,10 @@ describe('AcpServer end-to-end happy path', () => {
     // AcpSession in `AcpServer.cancel`).
     const promptPromise = client.prompt({
       sessionId,
-      prompt: [textBlock('long task')],
+      prompt: [textBlock("long task")],
     });
     await client.cancel({ sessionId });
     const promptRes = await promptPromise;
-    expect(promptRes.stopReason).toBe('cancelled');
+    expect(promptRes.stopReason).toBe("cancelled");
   });
 });

@@ -11,7 +11,9 @@ interface InsertMentionResult {
   newCursorPos: number;
 }
 
-export function computeMentionInsert(params: InsertMentionParams): InsertMentionResult {
+export function computeMentionInsert(
+  params: InsertMentionParams,
+): InsertMentionResult {
   const { text, cursorPos, filePath, activeToken, isAppend } = params;
 
   if (isAppend || !activeToken) {

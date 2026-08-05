@@ -8,11 +8,14 @@
  * stderr, the pid, the exit code, and lifecycle methods. Bound at App scope.
  */
 
-import type { Readable, Writable } from 'node:stream';
+import type { Readable, Writable } from "node:stream";
 
-import { registerErrorDomain, type ErrorDomain } from '#/_base/errors/codes';
-import { Error2, type Error2Options } from '#/_base/errors/errors';
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
+import { registerErrorDomain, type ErrorDomain } from "#/_base/errors/codes";
+import { Error2, type Error2Options } from "#/_base/errors/errors";
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
 
 export interface HostProcessOptions {
   readonly cwd?: string;
@@ -48,31 +51,32 @@ export interface IHostProcessService {
 }
 
 export const IHostProcessService: ServiceIdentifier<IHostProcessService> =
-  createDecorator<IHostProcessService>('hostProcessService');
+  createDecorator<IHostProcessService>("hostProcessService");
 
 export const OsProcessErrors = {
   codes: {
-    OS_PROCESS_SPAWN_FAILED: 'os.process.spawn_failed',
-    OS_PROCESS_KILL_FAILED: 'os.process.kill_failed',
-    SHELL_GIT_BASH_NOT_FOUND: 'shell.git_bash_not_found',
+    OS_PROCESS_SPAWN_FAILED: "os.process.spawn_failed",
+    OS_PROCESS_KILL_FAILED: "os.process.kill_failed",
+    SHELL_GIT_BASH_NOT_FOUND: "shell.git_bash_not_found",
   },
   info: {
-    'os.process.spawn_failed': {
-      title: 'Failed to spawn process',
+    "os.process.spawn_failed": {
+      title: "Failed to spawn process",
       retryable: false,
       public: true,
-      action: 'Check that the command exists and is executable.',
+      action: "Check that the command exists and is executable.",
     },
-    'os.process.kill_failed': {
-      title: 'Failed to kill process',
+    "os.process.kill_failed": {
+      title: "Failed to kill process",
       retryable: false,
       public: true,
     },
-    'shell.git_bash_not_found': {
-      title: 'Git Bash not found',
+    "shell.git_bash_not_found": {
+      title: "Git Bash not found",
       retryable: false,
       public: true,
-      action: 'Install Git for Windows so shell commands can run under Git Bash.',
+      action:
+        "Install Git for Windows so shell commands can run under Git Bash.",
     },
   },
 } as const satisfies ErrorDomain;
@@ -84,11 +88,16 @@ export const HostProcessErrorCode = {
   KillFailed: OsProcessErrors.codes.OS_PROCESS_KILL_FAILED,
 } as const;
 
-export type HostProcessErrorCode = (typeof HostProcessErrorCode)[keyof typeof HostProcessErrorCode];
+export type HostProcessErrorCode =
+  (typeof HostProcessErrorCode)[keyof typeof HostProcessErrorCode];
 
 export class HostProcessError extends Error2 {
-  constructor(code: HostProcessErrorCode, message: string, options?: Error2Options) {
+  constructor(
+    code: HostProcessErrorCode,
+    message: string,
+    options?: Error2Options,
+  ) {
     super(code, message, options);
-    this.name = 'HostProcessError';
+    this.name = "HostProcessError";
   }
 }

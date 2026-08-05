@@ -1,4 +1,4 @@
-import { createDecorator } from '@moonshot-ai/agent-core-v2';
+import { createDecorator } from "@moonshot-ai/agent-core-v2";
 
 /**
  * `IGuiStoreService` — a server-backed key/value store mirroring the browser
@@ -15,4 +15,5 @@ export interface IGuiStoreService {
   length(): Promise<number>;
 }
 
-export const IGuiStoreService = createDecorator<IGuiStoreService>('guiStoreService');
+export const IGuiStoreService =
+  createDecorator<IGuiStoreService>("guiStoreService");

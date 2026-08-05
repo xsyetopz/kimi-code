@@ -60,17 +60,26 @@ function getRichDisplayBlocks(display?: DisplayBlock[]): DisplayBlock[] {
   return display.filter((b) => b.type === "diff");
 }
 
-function CodeBlock({ content, maxLines = 10 }: { content: string; maxLines?: number }) {
+function CodeBlock({
+  content,
+  maxLines = 10,
+}: {
+  content: string;
+  maxLines?: number;
+}) {
   const [expanded, setExpanded] = useState(false);
   const lines = content.split("\n");
   const shouldCollapse = lines.length > maxLines;
-  const displayContent = shouldCollapse && !expanded ? lines.slice(0, maxLines).join("\n") : content;
+  const displayContent =
+    shouldCollapse && !expanded ? lines.slice(0, maxLines).join("\n") : content;
 
   return (
     <div className="relative group/codeblock">
       <pre className="text-[11px] bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 rounded px-3 py-2 overflow-x-auto whitespace-pre-wrap break-all">
         {displayContent}
-        {shouldCollapse && !expanded && <span className="text-zinc-500">{"\n"}...</span>}
+        {shouldCollapse && !expanded && (
+          <span className="text-zinc-500">{"\n"}...</span>
+        )}
       </pre>
       {shouldCollapse && (
         <button
@@ -84,7 +93,11 @@ function CodeBlock({ content, maxLines = 10 }: { content: string; maxLines?: num
   );
 }
 
-function StatusIndicator({ status }: { status: "pending" | "success" | "error" }) {
+function StatusIndicator({
+  status,
+}: {
+  status: "pending" | "success" | "error";
+}) {
   if (status === "pending") {
     return (
       <span className="relative flex size-2">
@@ -93,7 +106,14 @@ function StatusIndicator({ status }: { status: "pending" | "success" | "error" }
       </span>
     );
   }
-  return <span className={cn("inline-flex rounded-full size-2", status === "success" ? "bg-emerald-500" : "bg-red-500")} />;
+  return (
+    <span
+      className={cn(
+        "inline-flex rounded-full size-2",
+        status === "success" ? "bg-emerald-500" : "bg-red-500",
+      )}
+    />
+  );
 }
 
 function ToolIcon({ name }: { name: string }) {
@@ -118,10 +138,18 @@ function ToolIcon({ name }: { name: string }) {
   }
 }
 
-function IORow({ label, children }: { label: "IN" | "OUT"; children: React.ReactNode }) {
+function IORow({
+  label,
+  children,
+}: {
+  label: "IN" | "OUT";
+  children: React.ReactNode;
+}) {
   return (
     <div className="flex flex-col @[420px]:flex-row gap-1 @[420px]:gap-0.5 py-2">
-      <span className="shrink-0 w-8 text-xs text-muted-foreground font-medium">{label}</span>
+      <span className="shrink-0 w-8 text-xs text-muted-foreground font-medium">
+        {label}
+      </span>
       <div className="flex-1 min-w-0">{children}</div>
     </div>
   );
@@ -144,7 +172,11 @@ function TodoStatusIcon({ status }: { status: string }) {
 function SetTodoListTool({ result }: ToolRendererProps) {
   const todoBlock = getTodoBlock(result?.display);
   if (!todoBlock || !todoBlock.items || todoBlock.items.length === 0) {
-    return <div className="py-2 text-xs text-muted-foreground">{!result?.is_error && "Todo list updated"}</div>;
+    return (
+      <div className="py-2 text-xs text-muted-foreground">
+        {!result?.is_error && "Todo list updated"}
+      </div>
+    );
   }
   return (
     <div className="py-1">
@@ -154,7 +186,14 @@ function SetTodoListTool({ result }: ToolRendererProps) {
             <div className="mt-0.5">
               <TodoStatusIcon status={item.status} />
             </div>
-            <span className={cn("text-xs leading-relaxed", item.status === "done" && "line-through text-muted-foreground")}>{item.title}</span>
+            <span
+              className={cn(
+                "text-xs leading-relaxed",
+                item.status === "done" && "line-through text-muted-foreground",
+              )}
+            >
+              {item.title}
+            </span>
           </div>
         ))}
       </div>
@@ -192,7 +231,11 @@ function ReadFileTool({ call, result }: ToolRendererProps) {
       <IORow label="IN">
         <span className="inline-flex items-center gap-1.5">
           <FileLink path={filePath} display={filePath} />
-          {lineOffset && lineOffset > 1 && <span className="text-[11px] text-muted-foreground">:L{lineOffset}</span>}
+          {lineOffset && lineOffset > 1 && (
+            <span className="text-[11px] text-muted-foreground">
+              :L{lineOffset}
+            </span>
+          )}
         </span>
       </IORow>
       {result && output && (
@@ -224,7 +267,14 @@ function WriteFileTool({ call, result }: ToolRendererProps) {
           {hasRichDisplay ? (
             <DisplayBlocks blocks={richDisplay} maxHeight="max-h-48" />
           ) : (
-            <span className={cn("text-xs", !result.is_error ? "text-emerald-500" : "text-red-500")}>{!result.is_error ? "✓ Written" : formatOutput(result.output)}</span>
+            <span
+              className={cn(
+                "text-xs",
+                !result.is_error ? "text-emerald-500" : "text-red-500",
+              )}
+            >
+              {!result.is_error ? "✓ Written" : formatOutput(result.output)}
+            </span>
           )}
         </IORow>
       )}
@@ -248,8 +298,17 @@ function StrReplaceFileTool({ call, result }: ToolRendererProps) {
           {hasRichDisplay ? (
             <DisplayBlocks blocks={richDisplay} maxHeight="max-h-48" />
           ) : (
-            <span className={cn("text-xs font-medium", !result.is_error ? "text-emerald-600 dark:text-emerald-500" : "text-destructive")}>
-              {!result.is_error ? "✓ Replaced successfully" : formatOutput(result.output)}
+            <span
+              className={cn(
+                "text-xs font-medium",
+                !result.is_error
+                  ? "text-emerald-600 dark:text-emerald-500"
+                  : "text-destructive",
+              )}
+            >
+              {!result.is_error
+                ? "✓ Replaced successfully"
+                : formatOutput(result.output)}
             </span>
           )}
         </IORow>
@@ -269,7 +328,9 @@ function GlobTool({ call, result }: ToolRendererProps) {
       <IORow label="IN">
         <span className="text-[11px] font-mono">
           {pattern}
-          {directory && <span className="text-muted-foreground ml-1.5">in {directory}</span>}
+          {directory && (
+            <span className="text-muted-foreground ml-1.5">in {directory}</span>
+          )}
         </span>
       </IORow>
       {result && output && (
@@ -299,7 +360,14 @@ function GenericTool({ call, result }: ToolRendererProps) {
           ) : output ? (
             <CodeBlock content={output} />
           ) : (
-            <span className={cn("text-xs", !result.is_error ? "text-emerald-500" : "text-red-500")}>{!result.is_error ? "✓ Done" : "✗ Failed"}</span>
+            <span
+              className={cn(
+                "text-xs",
+                !result.is_error ? "text-emerald-500" : "text-red-500",
+              )}
+            >
+              {!result.is_error ? "✓ Done" : "✗ Failed"}
+            </span>
           )}
         </IORow>
       )}
@@ -309,13 +377,27 @@ function GenericTool({ call, result }: ToolRendererProps) {
 
 function SubagentStepItemRenderer({ item }: { item: UIStepItem }) {
   if (item.type === "thinking") {
-    return <ThinkingBlock content={item.content} finished={item.finished} compact />;
+    return (
+      <ThinkingBlock content={item.content} finished={item.finished} compact />
+    );
   }
   if (item.type === "text") {
-    return <Markdown content={item.content} className="text-[0.75rem] leading-relaxed" enableEnrichment={item.finished} />;
+    return (
+      <Markdown
+        content={item.content}
+        className="text-[0.75rem] leading-relaxed"
+        enableEnrichment={item.finished}
+      />
+    );
   }
   if (item.type === "tool_use") {
-    return <ToolCallCard call={item.call} result={item.result} subagentSteps={item.subagent_steps} />;
+    return (
+      <ToolCallCard
+        call={item.call}
+        result={item.result}
+        subagentSteps={item.subagent_steps}
+      />
+    );
   }
   return null;
 }
@@ -324,7 +406,8 @@ function TaskTool({ call, result, subagentSteps }: ToolRendererProps) {
   const [showProcess, setShowProcess] = useState(false);
   const args = parseArgs(call.arguments);
   const description = (args.description as string) || "";
-  const subagentName = (args.subagent_name as string) || (args.subagent_type as string) || "coder";
+  const subagentName =
+    (args.subagent_name as string) || (args.subagent_type as string) || "coder";
   const prompt = (args.prompt as string) || "";
   const hasSubagentSteps = subagentSteps && subagentSteps.length > 0;
 
@@ -335,7 +418,9 @@ function TaskTool({ call, result, subagentSteps }: ToolRendererProps) {
     const lastStep = subagentSteps[subagentSteps.length - 1];
     const textItems = lastStep.items.filter((i) => i.type === "text");
     if (textItems.length > 0) {
-      return textItems.map((i) => (i as { type: "text"; content: string }).content).join("\n");
+      return textItems
+        .map((i) => (i as { type: "text"; content: string }).content)
+        .join("\n");
     }
     return result ? formatOutput(result.output) : "";
   })();
@@ -344,15 +429,28 @@ function TaskTool({ call, result, subagentSteps }: ToolRendererProps) {
     <div className="divide-y divide-border">
       <div className="py-2">
         <div className="flex items-center gap-2 mb-1.5">
-          <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 font-medium">{subagentName}</span>
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 font-medium">
+            {subagentName}
+          </span>
           <span className="text-xs font-medium">{description}</span>
         </div>
-        {prompt && <div className="text-[10px] text-muted-foreground line-clamp-2">{prompt}</div>}
+        {prompt && (
+          <div className="text-[10px] text-muted-foreground line-clamp-2">
+            {prompt}
+          </div>
+        )}
       </div>
       {hasSubagentSteps && (
         <div className="py-2">
-          <button onClick={() => setShowProcess(!showProcess)} className="flex items-center gap-1.5 text-[0.75rem] text-muted-foreground hover:text-foreground transition-colors">
-            {showProcess ? <IconChevronDown className="size-3" /> : <IconChevronRight className="size-3" />}
+          <button
+            onClick={() => setShowProcess(!showProcess)}
+            className="flex items-center gap-1.5 text-[0.75rem] text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {showProcess ? (
+              <IconChevronDown className="size-3" />
+            ) : (
+              <IconChevronRight className="size-3" />
+            )}
             <span>
               {subagentSteps.length} step{subagentSteps.length > 1 ? "s" : ""}
             </span>
@@ -361,10 +459,15 @@ function TaskTool({ call, result, subagentSteps }: ToolRendererProps) {
             <div className="mt-2 space-y-3">
               {subagentSteps.map((step) => (
                 <div key={step.n} className="space-y-2">
-                  <div className="text-[0.75rem] text-muted-foreground uppercase tracking-wider">Step {step.n}</div>
+                  <div className="text-[0.75rem] text-muted-foreground uppercase tracking-wider">
+                    Step {step.n}
+                  </div>
                   <div className="space-y-2">
                     {step.items.map((item, idx) => (
-                      <SubagentStepItemRenderer key={`${step.n}-${idx}`} item={item} />
+                      <SubagentStepItemRenderer
+                        key={`${step.n}-${idx}`}
+                        item={item}
+                      />
                     ))}
                   </div>
                 </div>
@@ -404,7 +507,11 @@ function getToolLabel(call: UIToolCall): string {
   }
 }
 
-export function ToolCallCard({ call, result, subagentSteps }: ToolRendererProps) {
+export function ToolCallCard({
+  call,
+  result,
+  subagentSteps,
+}: ToolRendererProps) {
   const [expanded, setExpanded] = useState(false);
   const status = !result ? "pending" : !result.is_error ? "success" : "error";
 
@@ -433,15 +540,33 @@ export function ToolCallCard({ call, result, subagentSteps }: ToolRendererProps)
 
   return (
     <div className="rounded-lg border border-border overflow-hidden">
-      <button onClick={() => setExpanded(!expanded)} className="w-full flex items-center gap-2 px-3 py-2 hover:bg-muted/50 transition-colors">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center gap-2 px-3 py-2 hover:bg-muted/50 transition-colors"
+      >
         <StatusIndicator status={status} />
         <ToolIcon name={call.name} />
         <span className="text-xs font-medium">{call.name}</span>
-        <span className="text-xs text-muted-foreground truncate flex-1 text-left">{getToolLabel(call)}</span>
-        {subagentSteps && subagentSteps.length > 0 && <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-500">{subagentSteps.length} steps</span>}
-        <IconChevronDown className={cn("size-3.5 text-muted-foreground transition-transform", expanded && "rotate-180")} />
+        <span className="text-xs text-muted-foreground truncate flex-1 text-left">
+          {getToolLabel(call)}
+        </span>
+        {subagentSteps && subagentSteps.length > 0 && (
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-500">
+            {subagentSteps.length} steps
+          </span>
+        )}
+        <IconChevronDown
+          className={cn(
+            "size-3.5 text-muted-foreground transition-transform",
+            expanded && "rotate-180",
+          )}
+        />
       </button>
-      {expanded && <div className="@container px-3 py-0.5 border-t border-border">{renderContent()}</div>}
+      {expanded && (
+        <div className="@container px-3 py-0.5 border-t border-border">
+          {renderContent()}
+        </div>
+      )}
     </div>
   );
 }

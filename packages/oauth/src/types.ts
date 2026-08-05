@@ -8,7 +8,7 @@
  * contract; in-process types use camelCase per TS convention.
  */
 
-export type OAuthStorageBackend = 'file';
+export type OAuthStorageBackend = "file";
 
 /** A persisted OAuth token bundle. */
 export interface TokenInfo {
@@ -46,12 +46,12 @@ export interface OAuthFlowConfig {
 
 /** Device identification for `X-Msh-*` headers. */
 export type DeviceHeaders = {
-  readonly 'X-Msh-Platform': string;
-  readonly 'X-Msh-Version': string;
-  readonly 'X-Msh-Device-Name': string;
-  readonly 'X-Msh-Device-Model': string;
-  readonly 'X-Msh-Os-Version': string;
-  readonly 'X-Msh-Device-Id': string;
+  readonly "X-Msh-Platform": string;
+  readonly "X-Msh-Version": string;
+  readonly "X-Msh-Device-Name": string;
+  readonly "X-Msh-Device-Model": string;
+  readonly "X-Msh-Os-Version": string;
+  readonly "X-Msh-Device-Id": string;
 };
 
 /** Headers sent with OAuth HTTP requests: the `X-Msh-*` device set, plus a
@@ -83,11 +83,11 @@ export function tokenToWire(token: TokenInfo): TokenInfoWire {
 
 export function tokenFromWire(wire: Partial<TokenInfoWire>): TokenInfo {
   return {
-    accessToken: wire.access_token ?? '',
-    refreshToken: wire.refresh_token ?? '',
-    expiresAt: typeof wire.expires_at === 'number' ? wire.expires_at : 0,
-    scope: wire.scope ?? '',
-    tokenType: wire.token_type ?? '',
-    expiresIn: typeof wire.expires_in === 'number' ? wire.expires_in : 0,
+    accessToken: wire.access_token ?? "",
+    refreshToken: wire.refresh_token ?? "",
+    expiresAt: typeof wire.expires_at === "number" ? wire.expires_at : 0,
+    scope: wire.scope ?? "",
+    tokenType: wire.token_type ?? "",
+    expiresIn: typeof wire.expires_in === "number" ? wire.expires_in : 0,
   };
 }

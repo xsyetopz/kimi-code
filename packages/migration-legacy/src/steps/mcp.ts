@@ -1,8 +1,8 @@
-import { readFile, mkdir } from 'node:fs/promises';
-import { dirname } from 'node:path';
-import { McpServerConfigSchema } from '@moonshot-ai/agent-core';
-import { atomicWrite } from '../atomic-write.js';
-import { siblingMcpJson, sourceMcpJson, targetMcpFile } from '../paths.js';
+import { readFile, mkdir } from "node:fs/promises";
+import { dirname } from "node:path";
+import { McpServerConfigSchema } from "@moonshot-ai/agent-core";
+import { atomicWrite } from "../atomic-write.js";
+import { siblingMcpJson, sourceMcpJson, targetMcpFile } from "../paths.js";
 
 export interface McpStepInput {
   readonly sourceHome: string;
@@ -19,26 +19,38 @@ export interface McpStepResult {
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-export async function migrateMcpStep(input: McpStepInput): Promise<McpStepResult> {
+export async function migrateMcpStep(
+  input: McpStepInput,
+): Promise<McpStepResult> {
   let sourceText: string;
   try {
-    sourceText = await readFile(sourceMcpJson(input.sourceHome), 'utf-8');
+    sourceText = await readFile(sourceMcpJson(input.sourceHome), "utf-8");
   } catch {
-    return { mergedServers: [], keptNewForConflicts: [], droppedServers: [], wroteSiblingDueToConflict: false };
+    return {
+      mergedServers: [],
+      keptNewForConflicts: [],
+      droppedServers: [],
+      wroteSiblingDueToConflict: false,
+    };
   }
 
   let sourceJson: unknown;
   try {
     sourceJson = JSON.parse(sourceText);
   } catch {
-    return { mergedServers: [], keptNewForConflicts: [], droppedServers: [], wroteSiblingDueToConflict: false };
+    return {
+      mergedServers: [],
+      keptNewForConflicts: [],
+      droppedServers: [],
+      wroteSiblingDueToConflict: false,
+    };
   }
   const srcServers: Record<string, unknown> = {};
   if (isRecord(sourceJson)) {
-    const raw = sourceJson['mcpServers'];
+    const raw = sourceJson["mcpServers"];
     if (isRecord(raw)) {
       for (const [name, srv] of Object.entries(raw)) {
         srcServers[name] = srv;
@@ -49,7 +61,7 @@ export async function migrateMcpStep(input: McpStepInput): Promise<McpStepResult
   const mergedTargetServers: Record<string, unknown> = {};
   let targetText: string | undefined;
   try {
-    targetText = await readFile(targetMcpFile(input.targetHome), 'utf-8');
+    targetText = await readFile(targetMcpFile(input.targetHome), "utf-8");
   } catch {
     targetText = undefined; // absent — start fresh
   }
@@ -58,7 +70,7 @@ export async function migrateMcpStep(input: McpStepInput): Promise<McpStepResult
     try {
       const parsed: unknown = JSON.parse(targetText);
       if (isRecord(parsed)) {
-        const raw = parsed['mcpServers'];
+        const raw = parsed["mcpServers"];
         if (isRecord(raw)) {
           for (const [name, srv] of Object.entries(raw)) {
             mergedTargetServers[name] = srv;
@@ -96,7 +108,15 @@ export async function migrateMcpStep(input: McpStepInput): Promise<McpStepResult
     ? siblingMcpJson(input.targetHome)
     : targetMcpFile(input.targetHome);
   await mkdir(dirname(outPath), { recursive: true, mode: 0o700 });
-  await atomicWrite(outPath, JSON.stringify({ mcpServers: mergedTargetServers }, null, 2));
+  await atomicWrite(
+    outPath,
+    JSON.stringify({ mcpServers: mergedTargetServers }, null, 2),
+  );
 
-  return { mergedServers, keptNewForConflicts, droppedServers, wroteSiblingDueToConflict: targetUnparseable };
+  return {
+    mergedServers,
+    keptNewForConflicts,
+    droppedServers,
+    wroteSiblingDueToConflict: targetUnparseable,
+  };
 }

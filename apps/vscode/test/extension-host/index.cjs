@@ -24,25 +24,37 @@ exports.run = async function run() {
   process.env.HOME = isolatedHome;
   process.env.USERPROFILE = isolatedHome;
   const root = path.parse(isolatedHome).root;
-  process.env.HOMEDRIVE = process.platform === "win32" ? root.replace(/[\\/]+$/, "") : root;
-  process.env.HOMEPATH = process.platform === "win32"
-    ? `${path.sep}${isolatedHome.slice(root.length)}`
-    : isolatedHome;
+  process.env.HOMEDRIVE =
+    process.platform === "win32" ? root.replace(/[\\/]+$/, "") : root;
+  process.env.HOMEPATH =
+    process.platform === "win32"
+      ? `${path.sep}${isolatedHome.slice(root.length)}`
+      : isolatedHome;
 
   const extension = vscode.extensions.getExtension(EXTENSION_ID);
-  assert.ok(extension, `${EXTENSION_ID} is not installed in the isolated Extension Host`);
+  assert.ok(
+    extension,
+    `${EXTENSION_ID} is not installed in the isolated Extension Host`,
+  );
   const sourceManifest = JSON.parse(
     await readFile(path.join(__dirname, "..", "..", "package.json"), "utf8"),
   );
   assert.equal(extension.packageJSON.version, sourceManifest.version);
   assert.equal(extension.packageJSON.main, "./dist/extension.js");
-  assert.ok(process.env.KIMI_CODE_HOME, "KIMI_CODE_HOME must point at the isolated test home");
+  assert.ok(
+    process.env.KIMI_CODE_HOME,
+    "KIMI_CODE_HOME must point at the isolated test home",
+  );
   assert.equal(process.env.HOME, isolatedHome);
   assert.equal(process.env.USERPROFILE, isolatedHome);
   assert.equal(os.homedir(), isolatedHome);
 
   await extension.activate();
-  assert.equal(extension.isActive, true, "extension activation did not complete");
+  assert.equal(
+    extension.isActive,
+    true,
+    "extension activation did not complete",
+  );
 
   const commands = new Set(await vscode.commands.getCommands(true));
   for (const command of EXPECTED_COMMANDS) {
@@ -51,15 +63,31 @@ exports.run = async function run() {
 
   const config = vscode.workspace.getConfiguration("kimi");
   assert.equal(config.get("autosave"), true);
-  assert.equal(config.get("executablePath"), undefined, "removed Python CLI setting is still contributed");
-  assert.equal(config.get("environmentVariables"), undefined, "removed global CLI env setting is still contributed");
+  assert.equal(
+    config.get("executablePath"),
+    undefined,
+    "removed Python CLI setting is still contributed",
+  );
+  assert.equal(
+    config.get("environmentVariables"),
+    undefined,
+    "removed global CLI env setting is still contributed",
+  );
 
   await vscode.commands.executeCommand("kimi.openInTab");
-  await waitFor(() => {
-    return vscode.window.tabGroups.all.some((group) =>
-      group.tabs.some((tab) =>
-        tab.input instanceof vscode.TabInputWebview && isKimiPanelViewType(tab.input.viewType)));
-  }, 5_000, () => `Kimi Webview tab did not open; tabs=${describeTabs()}`);
+  await waitFor(
+    () => {
+      return vscode.window.tabGroups.all.some((group) =>
+        group.tabs.some(
+          (tab) =>
+            tab.input instanceof vscode.TabInputWebview &&
+            isKimiPanelViewType(tab.input.viewType),
+        ),
+      );
+    },
+    5_000,
+    () => `Kimi Webview tab did not open; tabs=${describeTabs()}`,
+  );
 
   await vscode.commands.executeCommand("kimi.showLogs");
   await vscode.commands.executeCommand("kimi.resetKimi");
@@ -75,7 +103,10 @@ exports.run = async function run() {
       webview: "opened",
     }),
   );
-  assert.ok(process.env.KIMI_VSCODE_SMOKE_REPORT, "Extension Host report path must be provided");
+  assert.ok(
+    process.env.KIMI_VSCODE_SMOKE_REPORT,
+    "Extension Host report path must be provided",
+  );
   await writeFile(
     process.env.KIMI_VSCODE_SMOKE_REPORT,
     JSON.stringify({ vscode: vscode.version }),
@@ -93,13 +124,19 @@ async function waitFor(predicate, timeoutMs, message) {
 }
 
 function describeTabs() {
-  return JSON.stringify(vscode.window.tabGroups.all.map((group) =>
-    group.tabs.map((tab) => ({
-      label: tab.label,
-      input: tab.input?.constructor?.name,
-      viewType: tab.input instanceof vscode.TabInputWebview ? tab.input.viewType : undefined,
-      active: tab.isActive,
-    }))));
+  return JSON.stringify(
+    vscode.window.tabGroups.all.map((group) =>
+      group.tabs.map((tab) => ({
+        label: tab.label,
+        input: tab.input?.constructor?.name,
+        viewType:
+          tab.input instanceof vscode.TabInputWebview
+            ? tab.input.viewType
+            : undefined,
+        active: tab.isActive,
+      })),
+    ),
+  );
 }
 
 function isKimiPanelViewType(viewType) {

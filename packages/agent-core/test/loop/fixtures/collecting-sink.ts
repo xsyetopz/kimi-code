@@ -1,10 +1,10 @@
-import type { LoopEvent, LoopLiveEventEmitter } from '../../../src/loop/index';
+import type { LoopEvent, LoopLiveEventEmitter } from "../../../src/loop/index";
 
 export type SinkErrorMode =
-  | { kind: 'none' }
-  | { kind: 'sync-throw'; onlyAt?: number }
-  | { kind: 'async-reject'; onlyAt?: number }
-  | { kind: 'every-call-throws' };
+  | { kind: "none" }
+  | { kind: "sync-throw"; onlyAt?: number }
+  | { kind: "async-reject"; onlyAt?: number }
+  | { kind: "every-call-throws" };
 
 export interface CollectingSinkOptions {
   readonly errorMode?: SinkErrorMode | undefined;
@@ -28,28 +28,30 @@ export class CollectingSink {
   private callCount = 0;
 
   constructor(opts: CollectingSinkOptions = {}) {
-    this.mode = opts.errorMode ?? { kind: 'none' };
-    this.id = opts.id ?? 'sink';
+    this.mode = opts.errorMode ?? { kind: "none" };
+    this.id = opts.id ?? "sink";
   }
 
   readonly emit: LoopLiveEventEmitter = (event) => {
     const callIndex = this.callCount;
     this.callCount += 1;
 
-    if (this.mode.kind === 'every-call-throws') {
+    if (this.mode.kind === "every-call-throws") {
       this.events.push(event);
       throw new Error(`sink ${this.id} fails on every emit`);
     }
 
     if (
-      this.mode.kind === 'sync-throw' &&
+      this.mode.kind === "sync-throw" &&
       (this.mode.onlyAt === undefined || this.mode.onlyAt === callIndex)
     ) {
-      throw new Error(`sink ${this.id} sync throw at call ${String(callIndex)}`);
+      throw new Error(
+        `sink ${this.id} sync throw at call ${String(callIndex)}`,
+      );
     }
 
     if (
-      this.mode.kind === 'async-reject' &&
+      this.mode.kind === "async-reject" &&
       (this.mode.onlyAt === undefined || this.mode.onlyAt === callIndex)
     ) {
       // Structurally the function returns a rejected promise instead of
@@ -68,15 +70,19 @@ export class CollectingSink {
     this.mode = mode;
   }
 
-  typesIn(): LoopEvent['type'][] {
+  typesIn(): LoopEvent["type"][] {
     return this.events.map((e) => e.type);
   }
 
-  count(type: LoopEvent['type']): number {
+  count(type: LoopEvent["type"]): number {
     return this.events.filter((e) => e.type === type).length;
   }
 
-  byType<T extends LoopEvent['type']>(type: T): Extract<LoopEvent, { type: T }>[] {
-    return this.events.filter((e): e is Extract<LoopEvent, { type: T }> => e.type === type);
+  byType<T extends LoopEvent["type"]>(
+    type: T,
+  ): Extract<LoopEvent, { type: T }>[] {
+    return this.events.filter(
+      (e): e is Extract<LoopEvent, { type: T }> => e.type === type,
+    );
   }
 }

@@ -1,7 +1,7 @@
-import type { Environment } from '@moonshot-ai/kaos';
-import { z } from 'zod';
+import type { Environment } from "@moonshot-ai/kaos";
+import { z } from "zod";
 
-import type { SkillRegistry } from '../agent/skill/types';
+import type { SkillRegistry } from "../agent/skill/types";
 
 export const RawSubagentProfileSchema = z.object({
   description: z.string().optional(),
@@ -14,7 +14,7 @@ export type RawSubagentProfile = z.infer<typeof RawSubagentProfileSchema>;
  * `Agent` / `AgentSwarm` tools use it as the default for their `model`
  * parameter when the call does not pass one explicitly.
  */
-export const AgentModelPreferenceSchema = z.enum(['primary', 'secondary']);
+export const AgentModelPreferenceSchema = z.enum(["primary", "secondary"]);
 
 export type AgentModelPreference = z.infer<typeof AgentModelPreferenceSchema>;
 

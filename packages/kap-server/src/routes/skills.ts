@@ -99,22 +99,22 @@ import {
   type SkillDefinition,
   type ExtraSkillDirsConfig,
   type MergeAllAvailableSkillsConfig,
-} from '@moonshot-ai/agent-core-v2';
-import { z } from 'zod';
+} from "@moonshot-ai/agent-core-v2";
+import { z } from "zod";
 
-import { errEnvelope, okEnvelope } from '../envelope';
-import { requestLog } from '../lib/requestLog';
-import { defineRoute } from '../middleware/defineRoute';
-import { ensureMainAgent } from '../transport/mainAgent';
-import { ErrorCode } from '../protocol/error-codes';
+import { errEnvelope, okEnvelope } from "../envelope";
+import { requestLog } from "../lib/requestLog";
+import { defineRoute } from "../middleware/defineRoute";
+import { ensureMainAgent } from "../transport/mainAgent";
+import { ErrorCode } from "../protocol/error-codes";
 import {
   activateSkillRequestSchema,
   activateSkillResultSchema,
   listSkillsResponseSchema,
-} from '../protocol/rest-skill';
-import { workspaceIdParamSchema } from '../protocol/rest-workspace';
-import type { SkillDescriptor } from '../protocol/skill';
-import { parseActionSuffix } from './action-suffix';
+} from "../protocol/rest-skill";
+import { workspaceIdParamSchema } from "../protocol/rest-workspace";
+import type { SkillDescriptor } from "../protocol/skill";
+import { parseActionSuffix } from "./action-suffix";
 
 interface SkillsRouteHost {
   get(
@@ -177,21 +177,21 @@ export function registerSkillsRoutes(app: SkillsRouteHost, core: Scope): void {
   // GET /sessions/{session_id}/skills ------------------------------------
   const listSkillsRoute = defineRoute(
     {
-      method: 'GET',
-      path: '/sessions/{session_id}/skills',
+      method: "GET",
+      path: "/sessions/{session_id}/skills",
       params: sessionIdParamSchema,
       success: { data: listSkillsResponseSchema },
       errors: {
         [ErrorCode.SESSION_NOT_FOUND]: {},
       },
-      description: 'List the skills available to a session',
-      tags: ['skills'],
-      operationId: 'listSkills',
+      description: "List the skills available to a session",
+      tags: ["skills"],
+      operationId: "listSkills",
     },
     async (req, reply) => {
       const { session_id } = req.params;
       const resolved = await resolveActivatedSession(core, session_id, req.id);
-      if ('envelope' in resolved) {
+      if ("envelope" in resolved) {
         reply.send(resolved.envelope);
         return;
       }
@@ -204,22 +204,23 @@ export function registerSkillsRoutes(app: SkillsRouteHost, core: Scope): void {
   app.get(
     listSkillsRoute.path,
     listSkillsRoute.options,
-    listSkillsRoute.handler as Parameters<SkillsRouteHost['get']>[2],
+    listSkillsRoute.handler as Parameters<SkillsRouteHost["get"]>[2],
   );
 
   // GET /workspaces/{workspace_id}/skills ------------------------------
   const listWorkspaceSkillsRoute = defineRoute(
     {
-      method: 'GET',
-      path: '/workspaces/{workspace_id}/skills',
+      method: "GET",
+      path: "/workspaces/{workspace_id}/skills",
       params: workspaceIdParamSchema,
       success: { data: listSkillsResponseSchema },
       errors: {
         [ErrorCode.WORKSPACE_NOT_FOUND]: {},
       },
-      description: 'List the skills available to a workspace (no session required)',
-      tags: ['skills'],
-      operationId: 'listWorkspaceSkills',
+      description:
+        "List the skills available to a workspace (no session required)",
+      tags: ["skills"],
+      operationId: "listWorkspaceSkills",
     },
     async (req, reply) => {
       const { workspace_id } = req.params;
@@ -234,21 +235,23 @@ export function registerSkillsRoutes(app: SkillsRouteHost, core: Scope): void {
         );
         return;
       }
-      const skills = (await listWorkspaceSkillsForRoot(core, ws.root)).map(toProtocolSkill);
+      const skills = (await listWorkspaceSkillsForRoot(core, ws.root)).map(
+        toProtocolSkill,
+      );
       reply.send(okEnvelope({ skills }, req.id));
     },
   );
   app.get(
     listWorkspaceSkillsRoute.path,
     listWorkspaceSkillsRoute.options,
-    listWorkspaceSkillsRoute.handler as Parameters<SkillsRouteHost['get']>[2],
+    listWorkspaceSkillsRoute.handler as Parameters<SkillsRouteHost["get"]>[2],
   );
 
   // POST /sessions/{session_id}/skills/{skill_name}:activate --------------
   const activateSkillRoute = defineRoute(
     {
-      method: 'POST',
-      path: '/sessions/{session_id}/skills/{tail}',
+      method: "POST",
+      path: "/sessions/{session_id}/skills/{tail}",
       body: activateSkillRequestSchema,
       params: skillTailParamsSchema,
       success: { data: activateSkillResultSchema },
@@ -258,31 +261,38 @@ export function registerSkillsRoutes(app: SkillsRouteHost, core: Scope): void {
         [ErrorCode.SKILL_NOT_FOUND]: {},
         [ErrorCode.SKILL_NOT_ACTIVATABLE]: {},
       },
-      description: 'Activate a skill in a session (REST analogue of the /<skill> slash command)',
-      tags: ['skills'],
-      operationId: 'activateSkill',
+      description:
+        "Activate a skill in a session (REST analogue of the /<skill> slash command)",
+      tags: ["skills"],
+      operationId: "activateSkill",
     },
     async (req, reply) => {
       const { session_id, tail } = req.params;
       const parsed = parseActionSuffix({
         tail,
-        allowedActions: ['activate'] as const,
-        resourceLabel: 'skill_name',
+        allowedActions: ["activate"] as const,
+        resourceLabel: "skill_name",
       });
-      if (parsed.kind === 'invalid') {
-        reply.send(errEnvelope(ErrorCode.VALIDATION_FAILED, parsed.reason, req.id));
+      if (parsed.kind === "invalid") {
+        reply.send(
+          errEnvelope(ErrorCode.VALIDATION_FAILED, parsed.reason, req.id),
+        );
         return;
       }
-      if (parsed.kind === 'bare') {
+      if (parsed.kind === "bare") {
         // No bare form for /skills/{name} — only :activate.
         reply.send(
-          errEnvelope(ErrorCode.VALIDATION_FAILED, `unsupported action: ${tail}`, req.id),
+          errEnvelope(
+            ErrorCode.VALIDATION_FAILED,
+            `unsupported action: ${tail}`,
+            req.id,
+          ),
         );
         return;
       }
 
       const resolved = await resolveActivatedSession(core, session_id, req.id);
-      if ('envelope' in resolved) {
+      if ("envelope" in resolved) {
         reply.send(resolved.envelope);
         return;
       }
@@ -302,8 +312,13 @@ export function registerSkillsRoutes(app: SkillsRouteHost, core: Scope): void {
           },
           promptMetadataTextFromSkill({ name: parsed.id, args: req.body.args }),
         );
-        requestLog(req)?.info({ session_id, skill_name: parsed.id }, 'skill activated');
-        reply.send(okEnvelope({ activated: true, skill_name: parsed.id }, req.id));
+        requestLog(req)?.info(
+          { session_id, skill_name: parsed.id },
+          "skill activated",
+        );
+        reply.send(
+          okEnvelope({ activated: true, skill_name: parsed.id }, req.id),
+        );
       } catch (err) {
         sendMappedError(reply, req.id, err);
       }
@@ -312,7 +327,7 @@ export function registerSkillsRoutes(app: SkillsRouteHost, core: Scope): void {
   app.post(
     activateSkillRoute.path,
     activateSkillRoute.options,
-    activateSkillRoute.handler as Parameters<SkillsRouteHost['post']>[2],
+    activateSkillRoute.handler as Parameters<SkillsRouteHost["post"]>[2],
   );
 }
 
@@ -342,20 +357,31 @@ async function listWorkspaceSkillsForRoot(
   const plugins = core.accessor.get(IPluginService);
   const config = core.accessor.get(IConfigService);
   await config.ready;
-  const extraSkillDirs = config.get<ExtraSkillDirsConfig>(EXTRA_SKILL_DIRS_SECTION) ?? [];
+  const extraSkillDirs =
+    config.get<ExtraSkillDirsConfig>(EXTRA_SKILL_DIRS_SECTION) ?? [];
   const mergeAllAvailableSkills =
-    config.get<MergeAllAvailableSkillsConfig>(MERGE_ALL_AVAILABLE_SKILLS_SECTION) ?? true;
+    config.get<MergeAllAvailableSkillsConfig>(
+      MERGE_ALL_AVAILABLE_SKILLS_SECTION,
+    ) ?? true;
   const explicitDirs = bootstrap.args.skillDirs ?? [];
   const useExplicitDirs = explicitDirs.length > 0;
   const rootOptions = { mergeAllAvailableSkills };
 
-  const [userRootList, projectRootList, explicitRootList, extraRootList, pluginRootList] = await Promise.all([
-    useExplicitDirs ? Promise.resolve([]) : userRoots(bootstrap.homeDir, bootstrap.osHomeDir, rootOptions),
+  const [
+    userRootList,
+    projectRootList,
+    explicitRootList,
+    extraRootList,
+    pluginRootList,
+  ] = await Promise.all([
+    useExplicitDirs
+      ? Promise.resolve([])
+      : userRoots(bootstrap.homeDir, bootstrap.osHomeDir, rootOptions),
     useExplicitDirs ? Promise.resolve([]) : projectRoots(workDir, rootOptions),
     useExplicitDirs
-      ? configuredRoots(explicitDirs, workDir, bootstrap.osHomeDir, 'user')
+      ? configuredRoots(explicitDirs, workDir, bootstrap.osHomeDir, "user")
       : Promise.resolve([]),
-    configuredRoots(extraSkillDirs, workDir, bootstrap.osHomeDir, 'extra'),
+    configuredRoots(extraSkillDirs, workDir, bootstrap.osHomeDir, "extra"),
     plugins.pluginSkillRoots(),
   ]);
   const [user, project, explicit, extra, plugin] = await Promise.all([
@@ -388,7 +414,9 @@ async function listWorkspaceSkillsForRoot(
 // Projection — v2 `SkillDefinition` → protocol `SkillDescriptor` (see header).
 // ---------------------------------------------------------------------------
 
-type SkillElement = ReturnType<ISessionSkillCatalog['catalog']['listSkills']>[number];
+type SkillElement = ReturnType<
+  ISessionSkillCatalog["catalog"]["listSkills"]
+>[number];
 
 function toProtocolSkill(skill: SkillElement): SkillDescriptor {
   const base: SkillDescriptor = {
@@ -421,10 +449,24 @@ function sendMappedError(
     switch (err.code) {
       case ErrorCodes.SKILL_NOT_FOUND:
       case ErrorCodes.SKILL_NAME_EMPTY:
-        reply.send(errEnvelope(ErrorCode.SKILL_NOT_FOUND, err.message, requestId, err.stack));
+        reply.send(
+          errEnvelope(
+            ErrorCode.SKILL_NOT_FOUND,
+            err.message,
+            requestId,
+            err.stack,
+          ),
+        );
         return;
       case ErrorCodes.SKILL_TYPE_UNSUPPORTED:
-        reply.send(errEnvelope(ErrorCode.SKILL_NOT_ACTIVATABLE, err.message, requestId, err.stack));
+        reply.send(
+          errEnvelope(
+            ErrorCode.SKILL_NOT_ACTIVATABLE,
+            err.message,
+            requestId,
+            err.stack,
+          ),
+        );
         return;
     }
   }

@@ -30,10 +30,17 @@ import {
   type IAgentScopeHandle,
   type Interaction,
   type ISessionScopeHandle,
-} from '@moonshot-ai/agent-core-v2';
-import type { AgentDescriptor, TranscriptChangeEvent, TranscriptStore } from '@moonshot-ai/transcript';
+} from "@moonshot-ai/agent-core-v2";
+import type {
+  AgentDescriptor,
+  TranscriptChangeEvent,
+  TranscriptStore,
+} from "@moonshot-ai/transcript";
 
-import { AgentTranscriptProjector, type ProjectorInteraction } from './coreEventMap';
+import {
+  AgentTranscriptProjector,
+  type ProjectorInteraction,
+} from "./coreEventMap";
 
 /** Minimal warn sink (matches `JournalLogger`). */
 export interface TranscriptBindingLogger {
@@ -91,19 +98,26 @@ export function bindSessionTranscript(
    */
   const unseeded = new Map<string, Interaction>();
   /** Resolves captured before the seed ran: id → routed resolve to replay. */
-  const earlyResolves = new Map<string, { agentId: string; response: unknown }>();
+  const earlyResolves = new Map<
+    string,
+    { agentId: string; response: unknown }
+  >();
   /** Agents whose pendings may announce live (their backfill+seed has run). */
   const seededAgents = new Set<string>();
   let seededAll = false;
-  const isSeeded = (agentId: string): boolean => seededAll || seededAgents.has(agentId);
+  const isSeeded = (agentId: string): boolean =>
+    seededAll || seededAgents.has(agentId);
 
-  const applyOps = (agentId: string, ops: ReturnType<AgentTranscriptProjector['map']>): void => {
+  const applyOps = (
+    agentId: string,
+    ops: ReturnType<AgentTranscriptProjector["map"]>,
+  ): void => {
     if (ops.length === 0) return;
     const result = store.ensureAgent(agentId).apply(ops);
     if (result.gap !== undefined) {
       logger?.warn(
         { sessionId: store.sessionId, agentId, gap: result.gap },
-        'transcript: append gap — producer/consumer skew',
+        "transcript: append gap — producer/consumer skew",
       );
       // A gapped batch never reaches the wire: the producer store could not
       // place it, so clients would inherit the inconsistency.
@@ -121,15 +135,18 @@ export function bindSessionTranscript(
       // results, instead of clobbering the seeded state or dropping events.
       projector = new AgentTranscriptProjector(agentId, {
         stepFrames: (turnId, stepId) =>
-          store.getAgent(agentId)?.getTurn(turnId)?.steps.find((s) => s.stepId === stepId)?.frames,
+          store
+            .getAgent(agentId)
+            ?.getTurn(turnId)
+            ?.steps.find((s) => s.stepId === stepId)?.frames,
         toolFrame: (toolCallId) => {
           const transcript = store.getAgent(agentId);
           if (transcript === undefined) return undefined;
           for (const item of transcript.getItems()) {
-            if (item.kind !== 'turn') continue;
+            if (item.kind !== "turn") continue;
             for (const step of item.steps) {
               for (const frame of step.frames) {
-                if (frame.kind === 'tool' && frame.toolCallId === toolCallId) {
+                if (frame.kind === "tool" && frame.toolCallId === toolCallId) {
                   return { turnId: item.turnId, stepId: step.stepId, frame };
                 }
               }
@@ -143,9 +160,12 @@ export function bindSessionTranscript(
         stepOrdinal: (turnId) => {
           const agentHandle = agents.get(agentId);
           if (agentHandle === undefined) return undefined;
-          const view: IAgentActivityView | undefined = agentHandle.accessor.get(IAgentActivityView);
+          const view: IAgentActivityView | undefined =
+            agentHandle.accessor.get(IAgentActivityView);
           const turn = view?.state().turn;
-          return turn === undefined || `t${turn.turnId}` !== turnId ? undefined : turn.step;
+          return turn === undefined || `t${turn.turnId}` !== turnId
+            ? undefined
+            : turn.step;
         },
       });
       projectors.set(agentId, projector);
@@ -166,7 +186,9 @@ export function bindSessionTranscript(
     // tracked per agent and disposed with it — the listener captures the
     // projector, so a dead agent must not keep projecting into the store.
     const bus = handle.accessor.get(IEventBus);
-    const busD = bus.subscribe((event) => applyOps(handle.id, projector.map(event)));
+    const busD = bus.subscribe((event) =>
+      applyOps(handle.id, projector.map(event)),
+    );
     const list = agentDisposables.get(handle.id) ?? [];
     list.push(busD);
     agentDisposables.set(handle.id, list);
@@ -176,13 +198,14 @@ export function bindSessionTranscript(
     const payloadAgent = (interaction.payload as { agentId?: unknown }).agentId;
     return (
       interaction.origin.agentId ??
-      (typeof payloadAgent === 'string' ? payloadAgent : undefined) ??
+      (typeof payloadAgent === "string" ? payloadAgent : undefined) ??
       MAIN_AGENT_ID
     );
   };
 
   const announceInteraction = (interaction: Interaction): void => {
-    if (interaction.kind !== 'approval' && interaction.kind !== 'question') return;
+    if (interaction.kind !== "approval" && interaction.kind !== "question")
+      return;
     const agentId = interactionAgentId(interaction);
     interactionAgents.set(interaction.id, agentId);
     const request: ProjectorInteraction = {
@@ -204,7 +227,9 @@ export function bindSessionTranscript(
       .read()
       .then((meta) => {
         for (const agentId of projectors.keys()) {
-          store.describeAgent(descriptorFromMeta(agentId, meta.agents?.[agentId]));
+          store.describeAgent(
+            descriptorFromMeta(agentId, meta.agents?.[agentId]),
+          );
         }
       })
       .catch(() => {
@@ -246,7 +271,7 @@ export function bindSessionTranscript(
   // backfill so the resolve-time approvalId back-link finds the persisted
   // tool frames. New pendings announce live through onDidChangePending below.
   for (const pending of interactions.listPending()) {
-    if (pending.kind !== 'approval' && pending.kind !== 'question') continue;
+    if (pending.kind !== "approval" && pending.kind !== "question") continue;
     if (knownInteractions.has(pending.id)) continue;
     knownInteractions.add(pending.id);
     interactionAgents.set(pending.id, interactionAgentId(pending));
@@ -256,7 +281,8 @@ export function bindSessionTranscript(
     if (agentId === undefined) seededAll = true;
     else seededAgents.add(agentId);
     for (const [id, interaction] of unseeded) {
-      if (agentId !== undefined && interactionAgents.get(id) !== agentId) continue;
+      if (agentId !== undefined && interactionAgents.get(id) !== agentId)
+        continue;
       unseeded.delete(id);
       announceInteraction(interaction);
       const early = earlyResolves.get(id);
@@ -268,14 +294,18 @@ export function bindSessionTranscript(
       earlyResolves.delete(id);
       const projector = projectors.get(early.agentId);
       if (projector !== undefined) {
-        applyOps(early.agentId, projector.mapInteractionResolved(id, early.response));
+        applyOps(
+          early.agentId,
+          projector.mapInteractionResolved(id, early.response),
+        );
       }
     }
     // Pendings that arrived live since bind are announced already; sweep for
     // any that slipped past (e.g. a pending change during the backfill).
     for (const pending of interactions.listPending()) {
       if (knownInteractions.has(pending.id)) continue;
-      if (agentId !== undefined && interactionAgentId(pending) !== agentId) continue;
+      if (agentId !== undefined && interactionAgentId(pending) !== agentId)
+        continue;
       knownInteractions.add(pending.id);
       announceInteraction(pending);
     }
@@ -334,16 +364,20 @@ export function bindSessionTranscript(
   };
 }
 
-export function descriptorFromMeta(agentId: string, meta: AgentMeta | undefined): AgentDescriptor {
-  const parentFromLabels = meta?.labels?.['parentAgentId'];
-  const swarmItem = meta?.labels?.['swarmItem'] ?? meta?.swarmItem;
+export function descriptorFromMeta(
+  agentId: string,
+  meta: AgentMeta | undefined,
+): AgentDescriptor {
+  const parentFromLabels = meta?.labels?.["parentAgentId"];
+  const swarmItem = meta?.labels?.["swarmItem"] ?? meta?.swarmItem;
   return {
     agentId,
-    type: meta?.type ?? (agentId === MAIN_AGENT_ID ? 'main' : 'sub'),
+    type: meta?.type ?? (agentId === MAIN_AGENT_ID ? "main" : "sub"),
     parentAgentId:
       parentFromLabels !== undefined && parentFromLabels.length > 0
         ? parentFromLabels
         : (meta?.parentAgentId ?? undefined),
-    label: swarmItem !== undefined && swarmItem.length > 0 ? swarmItem : undefined,
+    label:
+      swarmItem !== undefined && swarmItem.length > 0 ? swarmItem : undefined,
   };
 }

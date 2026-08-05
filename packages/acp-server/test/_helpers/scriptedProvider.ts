@@ -28,7 +28,7 @@ import {
   type StreamedMessagePart,
   type TokenUsage,
   type Tool,
-} from '@moonshot-ai/agent-core-v2';
+} from "@moonshot-ai/agent-core-v2";
 
 interface ScriptedResponse {
   readonly parts: readonly StreamedMessagePart[];
@@ -65,19 +65,20 @@ class ScriptedStream {
     for (const part of this.parts) {
       yield part;
     }
-    const hasToolCall = this.parts.some((p) => p.type === 'function');
+    const hasToolCall = this.parts.some((p) => p.type === "function");
     this.id = `scripted-${String(this.index)}`;
     this.usage = { ...ZERO_USAGE, output: this.parts.length };
     this.finishReason =
-      this.response.finishReason ?? (hasToolCall ? 'tool_calls' : 'completed');
+      this.response.finishReason ?? (hasToolCall ? "tool_calls" : "completed");
     this.rawFinishReason =
-      this.response.rawFinishReason ?? (this.finishReason === 'completed' ? 'stop' : this.finishReason);
+      this.response.rawFinishReason ??
+      (this.finishReason === "completed" ? "stop" : this.finishReason);
   }
 }
 
 class ScriptedChatProvider {
-  readonly name = 'scripted';
-  readonly modelName = 'scripted';
+  readonly name = "scripted";
+  readonly modelName = "scripted";
   readonly thinkingEffort = null;
 
   constructor(
@@ -114,7 +115,10 @@ class ScriptedChatProvider {
 
 export interface ScriptedProvider {
   /** App-scope seed tuple to pass as `extraSeeds: [seed]`. */
-  readonly seed: readonly [typeof IProtocolAdapterRegistry, IProtocolAdapterRegistryType];
+  readonly seed: readonly [
+    typeof IProtocolAdapterRegistry,
+    IProtocolAdapterRegistryType,
+  ];
   /** Push a text-only assistant response onto the queue. */
   mockNextText(text: string): void;
   /** Push a response assembled from arbitrary streamed parts. */
@@ -158,7 +162,7 @@ export function createScriptedProvider(): ScriptedProvider {
   return {
     seed: [IProtocolAdapterRegistry, registry],
     mockNextText: (text) => {
-      queue.push({ parts: [{ type: 'text', text }] });
+      queue.push({ parts: [{ type: "text", text }] });
     },
     mockNextResponse: (...parts) => {
       queue.push({ parts: structuredClone(parts) });

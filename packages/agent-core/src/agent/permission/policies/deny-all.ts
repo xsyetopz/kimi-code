@@ -1,15 +1,15 @@
-import type { PermissionPolicy, PermissionPolicyResult } from '../types';
+import type { PermissionPolicy, PermissionPolicyResult } from "../types";
 
 export class DenyAllPermissionPolicy implements PermissionPolicy {
-  readonly name = 'deny-all';
+  readonly name = "deny-all";
 
   constructor(private readonly message: string) {}
 
   evaluate(): PermissionPolicyResult {
     return {
-      kind: 'deny',
+      kind: "deny",
       message: this.message,
-      reason: { source: 'side_question' },
+      reason: { source: "side_question" },
     };
   }
 }

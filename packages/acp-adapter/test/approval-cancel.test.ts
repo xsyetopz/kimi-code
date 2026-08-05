@@ -27,7 +27,7 @@
  * the path the harness will actually take.
  */
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from "vitest";
 
 import {
   AgentSideConnection,
@@ -42,7 +42,7 @@ import {
   type SessionNotification,
   type WriteTextFileRequest,
   type WriteTextFileResponse,
-} from '@agentclientprotocol/sdk';
+} from "@agentclientprotocol/sdk";
 import type {
   ApprovalHandler,
   ApprovalRequest,
@@ -50,11 +50,11 @@ import type {
   Event,
   KimiHarness,
   Session,
-} from '@moonshot-ai/kimi-code-sdk';
+} from "@moonshot-ai/kimi-code-sdk";
 
-import { APPROVE_ONCE_OPTION_ID } from '../src/approval';
-import { AcpServer } from '../src/server';
-import { AUTHED_STATUS } from './_helpers/harness-stubs';
+import { APPROVE_ONCE_OPTION_ID } from "../src/approval";
+import { AcpServer } from "../src/server";
+import { AUTHED_STATUS } from "./_helpers/harness-stubs";
 
 function makeInMemoryStreamPair(): {
   agentStream: ReturnType<typeof ndJsonStream>;
@@ -62,8 +62,14 @@ function makeInMemoryStreamPair(): {
 } {
   const clientToAgent = new TransformStream<Uint8Array, Uint8Array>();
   const agentToClient = new TransformStream<Uint8Array, Uint8Array>();
-  const agentStream = ndJsonStream(agentToClient.writable, clientToAgent.readable);
-  const clientStream = ndJsonStream(clientToAgent.writable, agentToClient.readable);
+  const agentStream = ndJsonStream(
+    agentToClient.writable,
+    clientToAgent.readable,
+  );
+  const clientStream = ndJsonStream(
+    clientToAgent.writable,
+    agentToClient.readable,
+  );
   return { agentStream, clientStream };
 }
 
@@ -80,7 +86,9 @@ function makeInMemoryStreamPair(): {
 function makeCancellableApprovalSession(sessionId: string): {
   session: Session;
   emit: (event: Event) => void;
-  invokeHandler: (req: ApprovalRequest) => Promise<ApprovalResponse> | ApprovalResponse;
+  invokeHandler: (
+    req: ApprovalRequest,
+  ) => Promise<ApprovalResponse> | ApprovalResponse;
   resolvePrompt: () => void;
   cancelCalls: () => number;
 } {
@@ -117,7 +125,7 @@ function makeCancellableApprovalSession(sessionId: string): {
     },
     invokeHandler: (req: ApprovalRequest) => {
       if (!approvalHandler) {
-        throw new Error('approval handler was not registered by AcpSession');
+        throw new Error("approval handler was not registered by AcpSession");
       }
       return approvalHandler(req);
     },
@@ -151,7 +159,10 @@ class ParkingPermissionClient implements Client {
   /** Settle the parked request with the supplied outcome. */
   respond(response: RequestPermissionResponse): void {
     const cb = this.pending;
-    if (!cb) throw new Error('respond() called before a requestPermission was received');
+    if (!cb)
+      throw new Error(
+        "respond() called before a requestPermission was received",
+      );
     this.pending = undefined;
     cb(response);
   }
@@ -160,7 +171,9 @@ class ParkingPermissionClient implements Client {
     return this.pending !== undefined;
   }
 
-  async requestPermission(p: RequestPermissionRequest): Promise<RequestPermissionResponse> {
+  async requestPermission(
+    p: RequestPermissionRequest,
+  ): Promise<RequestPermissionResponse> {
     this.permissionRequests.push(p);
     this.signalReceived?.();
     this.signalReceived = undefined;
@@ -172,19 +185,21 @@ class ParkingPermissionClient implements Client {
   async sessionUpdate(n: SessionNotification): Promise<void> {
     this.updates.push(n);
   }
-  async writeTextFile(_p: WriteTextFileRequest): Promise<WriteTextFileResponse> {
-    throw new Error('not used');
+  async writeTextFile(
+    _p: WriteTextFileRequest,
+  ): Promise<WriteTextFileResponse> {
+    throw new Error("not used");
   }
   async readTextFile(_p: ReadTextFileRequest): Promise<ReadTextFileResponse> {
-    throw new Error('not used');
+    throw new Error("not used");
   }
 }
 
-const textBlock = (text: string): ContentBlock => ({ type: 'text', text });
+const textBlock = (text: string): ContentBlock => ({ type: "text", text });
 
-describe('AcpServer cancel ⇄ pending requestPermission', () => {
-  it('processes session/cancel without blocking on an in-flight requestPermission, and the parked request can still settle to { decision: cancelled }', async () => {
-    const sessionId = 'sess-cancel-while-approval';
+describe("AcpServer cancel ⇄ pending requestPermission", () => {
+  it("processes session/cancel without blocking on an in-flight requestPermission, and the parked request can still settle to { decision: cancelled }", async () => {
+    const sessionId = "sess-cancel-while-approval";
     const turnId = 11;
     const handle = makeCancellableApprovalSession(sessionId);
     const harness = {
@@ -197,13 +212,13 @@ describe('AcpServer cancel ⇄ pending requestPermission', () => {
     const client = new ParkingPermissionClient();
     const clientConn = new ClientSideConnection(() => client, clientStream);
 
-    await clientConn.newSession({ cwd: '/tmp/x', mcpServers: [] });
+    await clientConn.newSession({ cwd: "/tmp/x", mcpServers: [] });
 
     // Start a prompt so the in-prompt onEvent subscription is live; the
     // scripted session parks `prompt()` until `resolvePrompt` is called.
     const pending = clientConn.prompt({
       sessionId,
-      prompt: [textBlock('do the thing')],
+      prompt: [textBlock("do the thing")],
     });
 
     // Yield once so the agent-side subscribes to events before we emit.
@@ -213,13 +228,13 @@ describe('AcpServer cancel ⇄ pending requestPermission', () => {
     // prefixed `${turnId}:${rawId}` form — proves the cancel test also
     // covers the production wire id.
     handle.emit({
-      type: 'tool.call.started',
+      type: "tool.call.started",
       sessionId,
-      agentId: 'main',
+      agentId: "main",
       turnId,
-      toolCallId: 'tc-cancel',
-      name: 'Bash',
-      args: { command: 'rm -rf /' },
+      toolCallId: "tc-cancel",
+      name: "Bash",
+      args: { command: "rm -rf /" },
     } as Event);
 
     // Invoke the approval handler as the SDK reverse-RPC layer would.
@@ -227,10 +242,10 @@ describe('AcpServer cancel ⇄ pending requestPermission', () => {
     // parks until we explicitly respond.
     const approvalPromise = Promise.resolve(
       handle.invokeHandler({
-        toolCallId: 'tc-cancel',
-        toolName: 'Bash',
-        action: 'run command',
-        display: { kind: 'command', command: 'rm -rf /' },
+        toolCallId: "tc-cancel",
+        toolName: "Bash",
+        action: "run command",
+        display: { kind: "command", command: "rm -rf /" },
       }),
     );
 
@@ -238,7 +253,9 @@ describe('AcpServer cancel ⇄ pending requestPermission', () => {
     await client.received;
     expect(client.isPending()).toBe(true);
     expect(client.permissionRequests).toHaveLength(1);
-    expect(client.permissionRequests[0]!.toolCall.toolCallId).toBe(`${turnId}:tc-cancel`);
+    expect(client.permissionRequests[0]!.toolCall.toolCallId).toBe(
+      `${turnId}:tc-cancel`,
+    );
 
     // The critical invariant: `session/cancel` (a notification) must
     // reach the SDK even though `requestPermission` is still parked at
@@ -254,33 +271,33 @@ describe('AcpServer cancel ⇄ pending requestPermission', () => {
     // prompt: `outcome: 'cancelled'`. The bridge must translate that
     // into `{ decision: 'cancelled' }` for the SDK so the audit trail
     // is "user cancelled", not "user rejected".
-    client.respond({ outcome: { outcome: 'cancelled' } });
+    client.respond({ outcome: { outcome: "cancelled" } });
     const decision = await approvalPromise;
-    expect(decision.decision).toBe('cancelled');
+    expect(decision.decision).toBe("cancelled");
 
     // Close out the parked prompt so the test exits cleanly. The
     // adapter resolves the prompt promise with `stopReason: 'cancelled'`
     // when the SDK lands the `turn.ended` event below.
     handle.emit({
-      type: 'turn.ended',
+      type: "turn.ended",
       sessionId,
-      agentId: 'main',
+      agentId: "main",
       turnId,
-      reason: 'cancelled',
+      reason: "cancelled",
     } as Event);
     handle.resolvePrompt();
     const promptResp = await pending;
-    expect(promptResp.stopReason).toBe('cancelled');
+    expect(promptResp.stopReason).toBe("cancelled");
   });
 
-  it('a client that ignores the cancel and approves the parked request still resolves the bridge to { decision: approved } — cancel and approval are independent channels', async () => {
+  it("a client that ignores the cancel and approves the parked request still resolves the bridge to { decision: approved } — cancel and approval are independent channels", async () => {
     // Sister case to the test above: this guards against a refactor
     // that ties the `requestPermission` await to `Session.cancel()` and
     // accidentally aborts approval flows on cancel. The dev-2 design
     // keeps them independent — the client is the source of truth for
     // the approval outcome — and we want a regression that fails if
     // that changes silently.
-    const sessionId = 'sess-cancel-independent-approval';
+    const sessionId = "sess-cancel-independent-approval";
     const handle = makeCancellableApprovalSession(sessionId);
     const harness = {
       auth: { status: async () => AUTHED_STATUS },
@@ -292,29 +309,29 @@ describe('AcpServer cancel ⇄ pending requestPermission', () => {
     const client = new ParkingPermissionClient();
     const clientConn = new ClientSideConnection(() => client, clientStream);
 
-    await clientConn.newSession({ cwd: '/tmp/x', mcpServers: [] });
+    await clientConn.newSession({ cwd: "/tmp/x", mcpServers: [] });
     const pending = clientConn.prompt({
       sessionId,
-      prompt: [textBlock('hi')],
+      prompt: [textBlock("hi")],
     });
     await new Promise((r) => setTimeout(r, 5));
 
     handle.emit({
-      type: 'tool.call.started',
+      type: "tool.call.started",
       sessionId,
-      agentId: 'main',
+      agentId: "main",
       turnId: 1,
-      toolCallId: 'tc-ind',
-      name: 'Bash',
-      args: { command: 'echo hi' },
+      toolCallId: "tc-ind",
+      name: "Bash",
+      args: { command: "echo hi" },
     } as Event);
 
     const approvalPromise = Promise.resolve(
       handle.invokeHandler({
-        toolCallId: 'tc-ind',
-        toolName: 'Bash',
-        action: 'run command',
-        display: { kind: 'command', command: 'echo hi' },
+        toolCallId: "tc-ind",
+        toolName: "Bash",
+        action: "run command",
+        display: { kind: "command", command: "echo hi" },
       }),
     );
 
@@ -326,20 +343,20 @@ describe('AcpServer cancel ⇄ pending requestPermission', () => {
     // Client decides to approve anyway. The bridge does not unilaterally
     // re-interpret the outcome — `approved` round-trips through verbatim.
     client.respond({
-      outcome: { outcome: 'selected', optionId: APPROVE_ONCE_OPTION_ID },
+      outcome: { outcome: "selected", optionId: APPROVE_ONCE_OPTION_ID },
     });
     const decision = await approvalPromise;
-    expect(decision.decision).toBe('approved');
+    expect(decision.decision).toBe("approved");
 
     handle.emit({
-      type: 'turn.ended',
+      type: "turn.ended",
       sessionId,
-      agentId: 'main',
+      agentId: "main",
       turnId: 1,
-      reason: 'cancelled',
+      reason: "cancelled",
     } as Event);
     handle.resolvePrompt();
     const promptResp = await pending;
-    expect(promptResp.stopReason).toBe('cancelled');
+    expect(promptResp.stopReason).toBe("cancelled");
   });
 });

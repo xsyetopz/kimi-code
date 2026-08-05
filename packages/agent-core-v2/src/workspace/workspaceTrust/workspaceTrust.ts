@@ -14,8 +14,11 @@
  * Workspace-scoped.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
-import type { Event } from '#/_base/event';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
+import type { Event } from "#/_base/event";
 
 export interface WorkspaceTrustChange {
   readonly trusted: boolean;
@@ -37,4 +40,4 @@ export interface IWorkspaceTrust {
 }
 
 export const IWorkspaceTrust: ServiceIdentifier<IWorkspaceTrust> =
-  createDecorator<IWorkspaceTrust>('workspaceTrust');
+  createDecorator<IWorkspaceTrust>("workspaceTrust");

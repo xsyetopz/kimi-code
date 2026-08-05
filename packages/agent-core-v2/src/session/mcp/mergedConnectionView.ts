@@ -17,9 +17,9 @@ import type {
   McpConnectionView,
   McpServerEntry,
   McpStatusListener,
-} from '#/mcpCore/connection-manager';
-import type { McpOAuthService } from '#/mcpCore/oauth/service';
-import { abortable } from '#/_base/utils/abort';
+} from "#/mcpCore/connection-manager";
+import type { McpOAuthService } from "#/mcpCore/oauth/service";
+import { abortable } from "#/_base/utils/abort";
 
 export class MergedMcpConnectionView implements McpConnectionView {
   constructor(
@@ -33,7 +33,9 @@ export class MergedMcpConnectionView implements McpConnectionView {
   }
 
   list(): readonly McpServerEntry[] {
-    const baseEntries = this.base.list().filter((entry) => !this.overlayNames.has(entry.name));
+    const baseEntries = this.base
+      .list()
+      .filter((entry) => !this.overlayNames.has(entry.name));
     return [...baseEntries, ...this.overlay.list()];
   }
 
@@ -41,7 +43,7 @@ export class MergedMcpConnectionView implements McpConnectionView {
     return this.owner(name).get(name);
   }
 
-  resolved(name: string): ReturnType<McpConnectionView['resolved']> {
+  resolved(name: string): ReturnType<McpConnectionView["resolved"]> {
     return this.owner(name).resolved(name);
   }
 
@@ -67,7 +69,10 @@ export class MergedMcpConnectionView implements McpConnectionView {
   }
 
   initialLoadDurationMs(): number {
-    return Math.max(this.base.initialLoadDurationMs(), this.overlay.initialLoadDurationMs());
+    return Math.max(
+      this.base.initialLoadDurationMs(),
+      this.overlay.initialLoadDurationMs(),
+    );
   }
 
   onStatusChange(listener: McpStatusListener): () => void {

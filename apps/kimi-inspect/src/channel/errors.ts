@@ -11,6 +11,6 @@ export class RPCError extends Error {
     readonly details?: unknown,
   ) {
     super(message);
-    this.name = 'RPCError';
+    this.name = "RPCError";
   }
 }

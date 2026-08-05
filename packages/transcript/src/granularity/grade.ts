@@ -17,7 +17,7 @@
  *    filter itself never invents a second projection path.
  */
 
-export type TranscriptGrade = 'off' | 'turn' | 'block' | 'delta';
+export type TranscriptGrade = "off" | "turn" | "block" | "delta";
 
 export const GRADE_RANK: Readonly<Record<TranscriptGrade, number>> = {
   off: 0,
@@ -30,15 +30,23 @@ export const GRADE_RANK: Readonly<Record<TranscriptGrade, number>> = {
  * Per-session subscription spec. Key `'*'` sets the default for all agents;
  * explicit agent ids override it. Absent spec === everything 'off'.
  */
-export type TranscriptGradeSpec = Readonly<Record<string, TranscriptGrade | undefined>>;
+export type TranscriptGradeSpec = Readonly<
+  Record<string, TranscriptGrade | undefined>
+>;
 
-export function gradeFor(spec: TranscriptGradeSpec | undefined, agentId: string): TranscriptGrade {
-  if (!spec) return 'off';
-  return spec[agentId] ?? spec['*'] ?? 'off';
+export function gradeFor(
+  spec: TranscriptGradeSpec | undefined,
+  agentId: string,
+): TranscriptGrade {
+  if (!spec) return "off";
+  return spec[agentId] ?? spec["*"] ?? "off";
 }
 
 /** Whether the transition needs the server to rebuild via reset snapshot. */
-export function needsResetOnTransition(prev: TranscriptGrade, next: TranscriptGrade): boolean {
+export function needsResetOnTransition(
+  prev: TranscriptGrade,
+  next: TranscriptGrade,
+): boolean {
   return GRADE_RANK[next] > GRADE_RANK[prev];
 }
 
@@ -56,10 +64,12 @@ export function detachGrades(
   if (spec === undefined) return undefined;
   const next: Record<string, TranscriptGrade | undefined> = { ...spec };
   for (const agentId of agentIds) {
-    if (agentId === '*') delete next['*'];
-    else next[agentId] = 'off';
+    if (agentId === "*") delete next["*"];
+    else next[agentId] = "off";
   }
-  return Object.values(next).some((grade) => grade !== undefined && grade !== 'off')
+  return Object.values(next).some(
+    (grade) => grade !== undefined && grade !== "off",
+  )
     ? next
     : undefined;
 }

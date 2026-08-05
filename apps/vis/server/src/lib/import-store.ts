@@ -13,31 +13,39 @@
 // detail construction stays in `session-store` so imported and local sessions
 // share one code path.
 
-import { randomBytes } from 'node:crypto';
-import { mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { randomBytes } from "node:crypto";
+import {
+  mkdir,
+  readFile,
+  readdir,
+  rm,
+  stat,
+  writeFile,
+} from "node:fs/promises";
+import { join } from "node:path";
 
-import type { ImportInfo, ImportManifest } from './agent-record-types';
-import { extractZip, ZipImportError } from './zip-import';
+import type { ImportInfo, ImportManifest } from "./agent-record-types";
+import { extractZip, ZipImportError } from "./zip-import";
 
 const IMPORT_ID_RE = /^imp_[0-9a-f]{12}$/;
-const META_FILE = 'import-meta.json';
+const META_FILE = "import-meta.json";
 
 export function isImportId(id: string): boolean {
   return IMPORT_ID_RE.test(id);
 }
 
 export function importedRootOf(home: string): string {
-  return join(home, 'imported');
+  return join(home, "imported");
 }
 
 export function importedDirOf(home: string, importId: string): string {
-  if (!isImportId(importId)) throw new ZipImportError(`invalid import id: "${importId}"`);
+  if (!isImportId(importId))
+    throw new ZipImportError(`invalid import id: "${importId}"`);
   return join(importedRootOf(home), importId);
 }
 
 function newImportId(): string {
-  return `imp_${randomBytes(6).toString('hex')}`;
+  return `imp_${randomBytes(6).toString("hex")}`;
 }
 
 /**
@@ -61,10 +69,12 @@ export async function importSessionZip(
 
     // A debug bundle must contain a main wire; without it there is nothing to
     // visualize. `state.json` / `manifest.json` are best-effort.
-    const hasMainWire = await pathExists(join(dir, 'agents', 'main', 'wire.jsonl'));
+    const hasMainWire = await pathExists(
+      join(dir, "agents", "main", "wire.jsonl"),
+    );
     if (!hasMainWire) {
       throw new ZipImportError(
-        'zip does not look like a kimi-code session bundle (missing agents/main/wire.jsonl)',
+        "zip does not look like a kimi-code session bundle (missing agents/main/wire.jsonl)",
       );
     }
 
@@ -72,21 +82,28 @@ export async function importSessionZip(
     const meta: ImportInfo = {
       importId,
       importedAt: now.toISOString(),
-      originalName: originalName !== null && originalName.length > 0 ? originalName : null,
+      originalName:
+        originalName !== null && originalName.length > 0 ? originalName : null,
       manifest,
     };
-    await writeFile(join(dir, META_FILE), JSON.stringify(meta, null, 2), 'utf8');
+    await writeFile(
+      join(dir, META_FILE),
+      JSON.stringify(meta, null, 2),
+      "utf8",
+    );
     return meta;
   } catch (error) {
     await rm(dir, { recursive: true, force: true }).catch(() => {});
-    throw error instanceof ZipImportError ? error : new ZipImportError((error as Error).message);
+    throw error instanceof ZipImportError
+      ? error
+      : new ZipImportError((error as Error).message);
   }
 }
 
 /** Enumerate imported bundle ids (newest-first by directory mtime). */
 export async function listImportedIds(home: string): Promise<string[]> {
   const root = importedRootOf(home);
-  let entries: import('node:fs').Dirent[];
+  let entries: import("node:fs").Dirent[];
   try {
     entries = await readdir(root, { withFileTypes: true });
   } catch {
@@ -97,27 +114,41 @@ export async function listImportedIds(home: string): Promise<string[]> {
     .map((e) => e.name);
   const withMtime = await Promise.all(
     ids.map(async (id) => {
-      const mtime = await stat(join(root, id)).then((s) => s.mtimeMs).catch(() => 0);
+      const mtime = await stat(join(root, id))
+        .then((s) => s.mtimeMs)
+        .catch(() => 0);
       return { id, mtime };
     }),
   );
   return withMtime.toSorted((a, b) => b.mtime - a.mtime).map((x) => x.id);
 }
 
-export async function readImportMeta(home: string, importId: string): Promise<ImportInfo | null> {
+export async function readImportMeta(
+  home: string,
+  importId: string,
+): Promise<ImportInfo | null> {
   try {
-    const raw = await readFile(join(importedDirOf(home, importId), META_FILE), 'utf8');
+    const raw = await readFile(
+      join(importedDirOf(home, importId), META_FILE),
+      "utf8",
+    );
     const meta = JSON.parse(raw) as ImportInfo;
     // The sidecar is vis-written, but re-sanitize the manifest in case the
     // imported directory was hand-edited, so a corrupt type cannot reach the
     // session list and crash the UI.
-    return { ...meta, manifest: meta.manifest ? sanitizeManifest(meta.manifest) : null };
+    return {
+      ...meta,
+      manifest: meta.manifest ? sanitizeManifest(meta.manifest) : null,
+    };
   } catch {
     return null;
   }
 }
 
-export async function deleteImported(home: string, importId: string): Promise<boolean> {
+export async function deleteImported(
+  home: string,
+  importId: string,
+): Promise<boolean> {
   if (!isImportId(importId)) return false;
   const dir = importedDirOf(home, importId);
   if (!(await pathExists(dir))) return false;
@@ -127,7 +158,9 @@ export async function deleteImported(home: string, importId: string): Promise<bo
 
 async function readManifest(dir: string): Promise<ImportManifest | null> {
   try {
-    return sanitizeManifest(JSON.parse(await readFile(join(dir, 'manifest.json'), 'utf8')));
+    return sanitizeManifest(
+      JSON.parse(await readFile(join(dir, "manifest.json"), "utf8")),
+    );
   } catch {
     return null;
   }
@@ -135,9 +168,19 @@ async function readManifest(dir: string): Promise<ImportManifest | null> {
 
 /** Declared string fields of {@link ImportManifest}. `shellEnv` is free-form. */
 const MANIFEST_STRING_FIELDS = [
-  'sessionId', 'exportedAt', 'kimiCodeVersion', 'wireProtocolVersion', 'os',
-  'nodejsVersion', 'sessionFirstActivity', 'sessionLastActivity', 'title',
-  'workspaceDir', 'sessionLogPath', 'globalLogPath', 'installSource',
+  "sessionId",
+  "exportedAt",
+  "kimiCodeVersion",
+  "wireProtocolVersion",
+  "os",
+  "nodejsVersion",
+  "sessionFirstActivity",
+  "sessionLastActivity",
+  "title",
+  "workspaceDir",
+  "sessionLogPath",
+  "globalLogPath",
+  "installSource",
 ] as const;
 
 /**
@@ -147,13 +190,13 @@ const MANIFEST_STRING_FIELDS = [
  * the session rail calls `.split('/')` and crashes the whole list.
  */
 function sanitizeManifest(raw: unknown): ImportManifest | null {
-  if (typeof raw !== 'object' || raw === null) return null;
+  if (typeof raw !== "object" || raw === null) return null;
   const o = raw as Record<string, unknown>;
   const m: Record<string, unknown> = {};
   for (const field of MANIFEST_STRING_FIELDS) {
-    if (typeof o[field] === 'string') m[field] = o[field];
+    if (typeof o[field] === "string") m[field] = o[field];
   }
-  if (o['shellEnv'] !== undefined) m['shellEnv'] = o['shellEnv'];
+  if (o["shellEnv"] !== undefined) m["shellEnv"] = o["shellEnv"];
   return m as ImportManifest;
 }
 

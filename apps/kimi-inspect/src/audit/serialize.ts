@@ -14,7 +14,7 @@ import type {
   TranscriptMeta,
   TranscriptTask,
   TranscriptTodo,
-} from '@moonshot-ai/transcript';
+} from "@moonshot-ai/transcript";
 
 /** Plain-object view of an `AgentState` (Maps/Sets unwrapped). */
 export interface SerializedAgentState {

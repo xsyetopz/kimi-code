@@ -19,32 +19,37 @@
  * unreadable one-line JSON dump.
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from "react";
 
-import { elementId, type DiffNode, type DiffStatus } from '../../audit/diff';
-import { tailTrunc } from '../../audit/truncate';
+import { elementId, type DiffNode, type DiffStatus } from "../../audit/diff";
+import { tailTrunc } from "../../audit/truncate";
 
 /** Build an all-`unchanged` tree over a plain value (plain state mode). */
 export function plainNode(value: unknown): DiffNode {
-  return blockNode(value, 'unchanged');
+  return blockNode(value, "unchanged");
 }
 
 function blockNode(value: unknown, status: DiffStatus): DiffNode {
-  const current = status === 'removed' ? undefined : value;
-  const prev = status === 'removed' ? value : undefined;
-  if (typeof value === 'object' && value !== null) {
+  const current = status === "removed" ? undefined : value;
+  const prev = status === "removed" ? value : undefined;
+  if (typeof value === "object" && value !== null) {
     const children = new Map<string, DiffNode>();
     const entries: Array<readonly [string, unknown]> = Array.isArray(value)
-      ? value.map((item, index) => [elementId(item) ?? `#${index}`, item] as const)
-      : Object.entries(value as Record<string, unknown>).filter(([, item]) => item !== undefined);
-    for (const [key, item] of entries) children.set(key, blockNode(item, status));
+      ? value.map(
+          (item, index) => [elementId(item) ?? `#${index}`, item] as const,
+        )
+      : Object.entries(value as Record<string, unknown>).filter(
+          ([, item]) => item !== undefined,
+        );
+    for (const [key, item] of entries)
+      children.set(key, blockNode(item, status));
     return { status, value: current, prev, children };
   }
   return { status, value: current, prev };
 }
 
 function subtreeHasChanges(node: DiffNode): boolean {
-  if (node.status !== 'unchanged') return true;
+  if (node.status !== "unchanged") return true;
   if (node.children === undefined) return false;
   for (const child of node.children.values()) {
     if (subtreeHasChanges(child)) return true;
@@ -53,33 +58,38 @@ function subtreeHasChanges(node: DiffNode): boolean {
 }
 
 const ROW_TONE: Record<DiffStatus, string> = {
-  unchanged: 'border-transparent',
-  added: 'border-green-800 bg-green-950/40',
-  removed: 'border-red-800 bg-red-950/40',
-  modified: 'border-amber-700 bg-amber-950/30',
+  unchanged: "border-transparent",
+  added: "border-green-800 bg-green-950/40",
+  removed: "border-red-800 bg-red-950/40",
+  modified: "border-amber-700 bg-amber-950/30",
 };
 
 const TEXT_TONE: Record<DiffStatus, string> = {
-  unchanged: 'text-neutral-400',
-  added: 'text-green-400',
-  removed: 'text-red-400 line-through',
-  modified: 'text-amber-300',
+  unchanged: "text-neutral-400",
+  added: "text-green-400",
+  removed: "text-red-400 line-through",
+  modified: "text-amber-300",
 };
 
 function Leaf({ value, tone }: { value: unknown; tone: DiffStatus }) {
   const className = TEXT_TONE[tone];
   if (value === null) return <span className={className}>null</span>;
   if (value === undefined) return <span className={className}>undefined</span>;
-  if (typeof value === 'string') {
-    if (value.includes('\n')) return <MultilineString value={value} tone={tone} />;
+  if (typeof value === "string") {
+    if (value.includes("\n"))
+      return <MultilineString value={value} tone={tone} />;
     return (
-      <span className={`${className} whitespace-pre-wrap break-all`}>"{tailTrunc(value)}"</span>
+      <span className={`${className} whitespace-pre-wrap break-all`}>
+        "{tailTrunc(value)}"
+      </span>
     );
   }
-  if (typeof value === 'number' || typeof value === 'boolean') {
+  if (typeof value === "number" || typeof value === "boolean") {
     return <span className={className}>{String(value)}</span>;
   }
-  return <span className={className}>{JSON.stringify(value) ?? 'unknown'}</span>;
+  return (
+    <span className={className}>{JSON.stringify(value) ?? "unknown"}</span>
+  );
 }
 
 /**
@@ -101,7 +111,12 @@ function popupStyle(rect: DOMRect): React.CSSProperties {
   const top = Math.max(margin, Math.min(rect.top, vh - maxHeight - margin));
   const rightSpace = vw - rect.right - margin * 2;
   if (rightSpace >= 320) {
-    return { left: rect.right + margin, top, maxHeight, width: Math.min(560, rightSpace) };
+    return {
+      left: rect.right + margin,
+      top,
+      maxHeight,
+      width: Math.min(560, rightSpace),
+    };
   }
   const leftSpace = rect.left - margin * 2;
   return {
@@ -114,12 +129,15 @@ function popupStyle(rect: DOMRect): React.CSSProperties {
 
 function MultilineString({ value, tone }: { value: string; tone: DiffStatus }) {
   const [rect, setRect] = useState<DOMRect | null>(null);
-  const closeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
   useEffect(() => () => clearTimeout(closeTimer.current), []);
 
-  const lines = value.split('\n');
-  const firstLine = lines[0] ?? '';
-  const preview = firstLine.length > 40 ? `${firstLine.slice(0, 40)}…` : firstLine;
+  const lines = value.split("\n");
+  const firstLine = lines[0] ?? "";
+  const preview =
+    firstLine.length > 40 ? `${firstLine.slice(0, 40)}…` : firstLine;
 
   const open = (e: React.MouseEvent<HTMLButtonElement>) => {
     clearTimeout(closeTimer.current);
@@ -173,13 +191,15 @@ function Node({
   // Childless object/array nodes (whole-subtree added/removed, or
   // reference-equal unchanged subtrees) are expanded into same-status
   // blocks so every field stays visible — never a one-line JSON dump.
-  const raw = node.status === 'removed' ? node.prev : node.value;
+  const raw = node.status === "removed" ? node.prev : node.value;
   const effective =
-    node.children === undefined && typeof raw === 'object' && raw !== null
+    node.children === undefined && typeof raw === "object" && raw !== null
       ? blockNode(raw, node.status)
       : node;
 
-  const [open, setOpen] = useState(() => subtreeHasChanges(effective) || depth < defaultDepth);
+  const [open, setOpen] = useState(
+    () => subtreeHasChanges(effective) || depth < defaultDepth,
+  );
   const label = <span className={TEXT_TONE[effective.status]}>{name}: </span>;
 
   if (effective.children === undefined) {
@@ -189,7 +209,7 @@ function Node({
         style={{ paddingLeft: `${depth * 14 + 4}px` }}
       >
         {label}
-        {effective.status === 'modified' ? (
+        {effective.status === "modified" ? (
           <>
             <Leaf value={effective.prev} tone="removed" />
             <span className="text-neutral-600"> → </span>
@@ -203,7 +223,7 @@ function Node({
   }
 
   const isArray = Array.isArray(raw);
-  const [openBrace, closeBrace] = isArray ? ['[', ']'] : ['{', '}'];
+  const [openBrace, closeBrace] = isArray ? ["[", "]"] : ["{", "}"];
   return (
     <div>
       <div
@@ -211,16 +231,24 @@ function Node({
         style={{ paddingLeft: `${depth * 14 + 4}px` }}
         onClick={() => setOpen((v) => !v)}
       >
-        <span className="text-neutral-600">{open ? '▾ ' : '▸ '}</span>
+        <span className="text-neutral-600">{open ? "▾ " : "▸ "}</span>
         {label}
         <span className="text-neutral-600">
-          {open ? openBrace : `${openBrace} …${effective.children.size} ${closeBrace}`}
+          {open
+            ? openBrace
+            : `${openBrace} …${effective.children.size} ${closeBrace}`}
         </span>
       </div>
       {open ? (
         <>
           {[...effective.children.entries()].map(([key, child]) => (
-            <Node key={key} name={key} node={child} depth={depth + 1} defaultDepth={defaultDepth} />
+            <Node
+              key={key}
+              name={key}
+              node={child}
+              depth={depth + 1}
+              defaultDepth={defaultDepth}
+            />
           ))}
           <div
             className={`border-l-2 px-1 font-mono text-[11px] leading-[1.7] ${ROW_TONE[effective.status]}`}
@@ -252,7 +280,13 @@ export function StateTree({
   return (
     <div className="py-1">
       {[...root.children.entries()].map(([key, child]) => (
-        <Node key={key} name={key} node={child} depth={0} defaultDepth={defaultDepth} />
+        <Node
+          key={key}
+          name={key}
+          node={child}
+          depth={0}
+          defaultDepth={defaultDepth}
+        />
       ))}
     </div>
   );

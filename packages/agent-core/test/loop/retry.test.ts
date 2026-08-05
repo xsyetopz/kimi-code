@@ -4,14 +4,18 @@ import {
   APIProviderRateLimitError,
   emptyUsage,
   isRetryableGenerateError,
-} from '@moonshot-ai/kosong';
-import { describe, expect, it } from 'vitest';
+} from "@moonshot-ai/kosong";
+import { describe, expect, it } from "vitest";
 
-import type { KimiConfig } from '#/config';
-import { ErrorCodes, KimiError } from '#/errors';
-import type { LLM, LLMChatParams, LLMChatResponse } from '#/loop/llm';
-import { chatWithRetry, DEFAULT_MAX_RETRY_ATTEMPTS, retryBackoffDelays } from '#/loop/retry';
-import { ProviderManager } from '#/session/provider-manager';
+import type { KimiConfig } from "#/config";
+import { ErrorCodes, KimiError } from "#/errors";
+import type { LLM, LLMChatParams, LLMChatResponse } from "#/loop/llm";
+import {
+  chatWithRetry,
+  DEFAULT_MAX_RETRY_ATTEMPTS,
+  retryBackoffDelays,
+} from "#/loop/retry";
+import { ProviderManager } from "#/session/provider-manager";
 
 function okResponse(): LLMChatResponse {
   return { toolCalls: [], usage: emptyUsage() };
@@ -25,27 +29,27 @@ function makeInput(
     llm,
     params: { messages: [], tools: [], signal },
     dispatchEvent: async () => {},
-    turnId: 't',
+    turnId: "t",
     currentStep: 1,
-    stepUuid: 'u',
+    stepUuid: "u",
   };
 }
 
-describe('chatWithRetry: terminated stream drops', () => {
-  it('preserves caller-set requestLogFields across attempts while owning turnStep/attempt', async () => {
+describe("chatWithRetry: terminated stream drops", () => {
+  it("preserves caller-set requestLogFields across attempts while owning turnStep/attempt", async () => {
     // The strict-resend path marks its params with `projection: 'strict'`;
     // the per-attempt rebuild must merge that marker instead of replacing
     // the whole fields object.
     let calls = 0;
-    const seenFields: Array<LLMChatParams['requestLogFields']> = [];
+    const seenFields: Array<LLMChatParams["requestLogFields"]> = [];
     const llm: LLM = {
-      systemPrompt: '',
-      modelName: 'mock',
+      systemPrompt: "",
+      modelName: "mock",
       isRetryableError: (e) => isRetryableGenerateError(e),
       async chat(params: LLMChatParams): Promise<LLMChatResponse> {
         calls += 1;
         seenFields.push(params.requestLogFields);
-        if (calls === 1) throw new APIConnectionError('terminated');
+        if (calls === 1) throw new APIConnectionError("terminated");
         return okResponse();
       },
     };
@@ -53,12 +57,12 @@ describe('chatWithRetry: terminated stream drops', () => {
 
     await chatWithRetry({
       ...input,
-      params: { ...input.params, requestLogFields: { projection: 'strict' } },
+      params: { ...input.params, requestLogFields: { projection: "strict" } },
     });
 
     expect(seenFields).toEqual([
-      { projection: 'strict', turnStep: 't.1' },
-      { projection: 'strict', turnStep: 't.1', attempt: '2/10' },
+      { projection: "strict", turnStep: "t.1" },
+      { projection: "strict", turnStep: "t.1", attempt: "2/10" },
     ]);
   });
 
@@ -67,23 +71,25 @@ describe('chatWithRetry: terminated stream drops', () => {
     // so an intermittent connection drop should be recovered transparently.
     let calls = 0;
     const llm: LLM = {
-      systemPrompt: '',
-      modelName: 'mock',
+      systemPrompt: "",
+      modelName: "mock",
       isRetryableError: (e) => isRetryableGenerateError(e),
       async chat(_params: LLMChatParams): Promise<LLMChatResponse> {
         calls += 1;
-        if (calls === 1) throw new APIConnectionError('terminated');
+        if (calls === 1) throw new APIConnectionError("terminated");
         return okResponse();
       },
     };
 
-    const response = await chatWithRetry(makeInput(llm, new AbortController().signal));
+    const response = await chatWithRetry(
+      makeInput(llm, new AbortController().signal),
+    );
 
     expect(calls).toBe(2);
     expect(response).toEqual(okResponse());
   });
 
-  it('does NOT retry when the signal is aborted (user ESC), surfacing a clean AbortError', async () => {
+  it("does NOT retry when the signal is aborted (user ESC), surfacing a clean AbortError", async () => {
     // Even though `terminated` is retryable, a user-aborted request must never
     // be retried: the abort signal is checked before any retry, so it surfaces
     // as an AbortError rather than a provider error.
@@ -92,22 +98,24 @@ describe('chatWithRetry: terminated stream drops', () => {
     ac.abort();
 
     const llm: LLM = {
-      systemPrompt: '',
-      modelName: 'mock',
+      systemPrompt: "",
+      modelName: "mock",
       isRetryableError: (e) => isRetryableGenerateError(e),
       async chat(_params: LLMChatParams): Promise<LLMChatResponse> {
         calls += 1;
-        throw new APIConnectionError('terminated');
+        throw new APIConnectionError("terminated");
       },
     };
 
-    await expect(chatWithRetry(makeInput(llm, ac.signal))).rejects.toMatchObject({
-      name: 'AbortError',
+    await expect(
+      chatWithRetry(makeInput(llm, ac.signal)),
+    ).rejects.toMatchObject({
+      name: "AbortError",
     });
     expect(calls).toBe(1);
   });
 
-  it('does not retry OAuth token fetch connection errors (already retried internally)', async () => {
+  it("does not retry OAuth token fetch connection errors (already retried internally)", async () => {
     let tokenCalls = 0;
     const manager = new ProviderManager({
       config: oauthConfig(),
@@ -121,13 +129,14 @@ describe('chatWithRetry: terminated stream drops', () => {
         },
       }),
     });
-    const resolveAuth = manager.resolveAuth('kimi-code/kimi-for-coding');
-    if (resolveAuth === undefined) throw new Error('expected OAuth auth resolver');
+    const resolveAuth = manager.resolveAuth("kimi-code/kimi-for-coding");
+    if (resolveAuth === undefined)
+      throw new Error("expected OAuth auth resolver");
 
     let chatCalls = 0;
     const llm: LLM = {
-      systemPrompt: '',
-      modelName: 'mock',
+      systemPrompt: "",
+      modelName: "mock",
       isRetryableError: (e) => isRetryableGenerateError(e),
       async chat(_params: LLMChatParams): Promise<LLMChatResponse> {
         chatCalls += 1;
@@ -135,7 +144,9 @@ describe('chatWithRetry: terminated stream drops', () => {
       },
     };
 
-    await expect(chatWithRetry(makeInput(llm, new AbortController().signal))).rejects.toMatchObject({
+    await expect(
+      chatWithRetry(makeInput(llm, new AbortController().signal)),
+    ).rejects.toMatchObject({
       code: ErrorCodes.PROVIDER_CONNECTION_ERROR,
     });
     expect(chatCalls).toBe(1);
@@ -143,8 +154,8 @@ describe('chatWithRetry: terminated stream drops', () => {
   });
 });
 
-describe('retryBackoffDelays', () => {
-  it('uses a 500ms base, factor-2 ramp, 32s cap, and up to +25% jitter', () => {
+describe("retryBackoffDelays", () => {
+  it("uses a 500ms base, factor-2 ramp, 32s cap, and up to +25% jitter", () => {
     const delays = retryBackoffDelays(10);
     expect(delays).toHaveLength(9);
     // Max possible delay is the capped base (32s) plus 25% jitter = 40s.
@@ -157,7 +168,7 @@ describe('retryBackoffDelays', () => {
     expect(delays[0]).toBeLessThanOrEqual(625);
   });
 
-  it('reaches the 32s cap for high-attempt configs (overload ride-out)', () => {
+  it("reaches the 32s cap for high-attempt configs (overload ride-out)", () => {
     // The ramp hits 32s by attempt 7 (500 * 2^6); across many draws the peak
     // approaches the cap (32s..40s with jitter), well above the old 5s cap.
     let maxSeen = 0;
@@ -169,7 +180,7 @@ describe('retryBackoffDelays', () => {
     expect(maxSeen).toBeGreaterThan(30_000);
   });
 
-  it('keeps low-attempt configs quick so latency-sensitive runs are not slowed', () => {
+  it("keeps low-attempt configs quick so latency-sensitive runs are not slowed", () => {
     // 3 attempts -> 2 delays at the bottom of the ramp (~0.5s / ~1s before
     // jitter); their sum stays small.
     const delays = retryBackoffDelays(3);
@@ -178,19 +189,19 @@ describe('retryBackoffDelays', () => {
   });
 });
 
-describe('chatWithRetry: default retry budget', () => {
-  it('retries up to DEFAULT_MAX_RETRY_ATTEMPTS before giving up', async () => {
+describe("chatWithRetry: default retry budget", () => {
+  it("retries up to DEFAULT_MAX_RETRY_ATTEMPTS before giving up", async () => {
     // A sustained 429 carries a 1ms server retry-after so the test exercises
     // the full default budget without sleeping through the real backoff.
     let calls = 0;
     const captured: Array<{ type: string }> = [];
     const llm: LLM = {
-      systemPrompt: '',
-      modelName: 'mock',
+      systemPrompt: "",
+      modelName: "mock",
       isRetryableError: (e) => isRetryableGenerateError(e),
       async chat(): Promise<LLMChatResponse> {
         calls += 1;
-        throw new APIProviderRateLimitError('rate limited', null, 1);
+        throw new APIProviderRateLimitError("rate limited", null, 1);
       },
     };
     const input = makeInput(llm, new AbortController().signal);
@@ -202,17 +213,17 @@ describe('chatWithRetry: default retry budget', () => {
           captured.push(event as { type: string });
         },
       }),
-    ).rejects.toMatchObject({ name: 'APIProviderRateLimitError' });
+    ).rejects.toMatchObject({ name: "APIProviderRateLimitError" });
 
     expect(calls).toBe(DEFAULT_MAX_RETRY_ATTEMPTS);
-    expect(captured.filter((e) => e.type === 'step.retrying')).toHaveLength(
+    expect(captured.filter((e) => e.type === "step.retrying")).toHaveLength(
       DEFAULT_MAX_RETRY_ATTEMPTS - 1,
     );
   });
 });
 
-describe('chatWithRetry: quota-exhausted 429 fails fast', () => {
-  it('does not retry a quota-exhausted 429 even when it carries retry-after', async () => {
+describe("chatWithRetry: quota-exhausted 429 fails fast", () => {
+  it("does not retry a quota-exhausted 429 even when it carries retry-after", async () => {
     // Same status as a rate limit, but exhausted quota/balance never clears
     // on its own — the error must surface after a single attempt instead of
     // burning the whole default budget. The 1ms retry-after proves a server
@@ -220,13 +231,13 @@ describe('chatWithRetry: quota-exhausted 429 fails fast', () => {
     let calls = 0;
     const captured: Array<{ type: string }> = [];
     const llm: LLM = {
-      systemPrompt: '',
-      modelName: 'mock',
+      systemPrompt: "",
+      modelName: "mock",
       isRetryableError: (e) => isRetryableGenerateError(e),
       async chat(): Promise<LLMChatResponse> {
         calls += 1;
         throw new APIProviderQuotaExhaustedError(
-          'Your account is suspended due to insufficient balance, please recharge your account',
+          "Your account is suspended due to insufficient balance, please recharge your account",
           null,
           1,
         );
@@ -241,20 +252,20 @@ describe('chatWithRetry: quota-exhausted 429 fails fast', () => {
           captured.push(event as { type: string });
         },
       }),
-    ).rejects.toMatchObject({ name: 'APIProviderQuotaExhaustedError' });
+    ).rejects.toMatchObject({ name: "APIProviderQuotaExhaustedError" });
 
     expect(calls).toBe(1);
-    expect(captured.filter((e) => e.type === 'step.retrying')).toHaveLength(0);
+    expect(captured.filter((e) => e.type === "step.retrying")).toHaveLength(0);
   });
 });
 
-describe('chatWithRetry: honors server retry-after', () => {
-  it('uses the error retryAfterMs as the retry delay instead of the backoff', async () => {
+describe("chatWithRetry: honors server retry-after", () => {
+  it("uses the error retryAfterMs as the retry delay instead of the backoff", async () => {
     let calls = 0;
     const captured: Array<{ type: string; delayMs?: number }> = [];
     const llm: LLM = {
-      systemPrompt: '',
-      modelName: 'mock',
+      systemPrompt: "",
+      modelName: "mock",
       isRetryableError: (e) => isRetryableGenerateError(e),
       async chat(): Promise<LLMChatResponse> {
         calls += 1;
@@ -262,7 +273,7 @@ describe('chatWithRetry: honors server retry-after', () => {
           // 429 carrying a server `retry-after` of 42ms. Kept tiny so the test
           // sleeps only briefly, while still being distinguishable from the
           // attempt-1 backoff (500..625ms) it must override.
-          throw new APIProviderRateLimitError('rate limited', null, 42);
+          throw new APIProviderRateLimitError("rate limited", null, 42);
         }
         return okResponse();
       },
@@ -276,26 +287,26 @@ describe('chatWithRetry: honors server retry-after', () => {
     });
 
     expect(calls).toBe(2);
-    const retrying = captured.find((e) => e.type === 'step.retrying');
+    const retrying = captured.find((e) => e.type === "step.retrying");
     expect(retrying?.delayMs).toBe(42);
   });
 });
 
 function oauthConfig(): KimiConfig {
   return {
-    defaultModel: 'kimi-code/kimi-for-coding',
+    defaultModel: "kimi-code/kimi-for-coding",
     providers: {
-      'managed:kimi-code': {
-        type: 'kimi',
-        apiKey: '',
-        baseUrl: 'https://api.example/v1',
-        oauth: { storage: 'file', key: 'oauth/kimi-code' },
+      "managed:kimi-code": {
+        type: "kimi",
+        apiKey: "",
+        baseUrl: "https://api.example/v1",
+        oauth: { storage: "file", key: "oauth/kimi-code" },
       },
     },
     models: {
-      'kimi-code/kimi-for-coding': {
-        provider: 'managed:kimi-code',
-        model: 'kimi-for-coding',
+      "kimi-code/kimi-for-coding": {
+        provider: "managed:kimi-code",
+        model: "kimi-for-coding",
         maxContextSize: 1_000_000,
       },
     },

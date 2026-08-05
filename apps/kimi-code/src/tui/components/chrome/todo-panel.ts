@@ -9,14 +9,14 @@
  * is issued.
  */
 
-import type { Component } from '@moonshot-ai/pi-tui';
-import { truncateToWidth } from '@moonshot-ai/pi-tui';
-import chalk from 'chalk';
+import type { Component } from "@moonshot-ai/pi-tui";
+import { truncateToWidth } from "@moonshot-ai/pi-tui";
+import chalk from "chalk";
 
-import { currentTheme } from '#/tui/theme';
-import type { ColorPalette } from '#/tui/theme/colors';
+import { currentTheme } from "#/tui/theme";
+import type { ColorPalette } from "#/tui/theme/colors";
 
-export type TodoStatus = 'pending' | 'in_progress' | 'done';
+export type TodoStatus = "pending" | "in_progress" | "done";
 
 export interface TodoItem {
   readonly title: string;
@@ -61,8 +61,8 @@ export function selectVisibleTodos(todos: readonly TodoItem[]): VisibleTodos {
   const pending: number[] = [];
   const done: number[] = [];
   for (const [i, todo] of todos.entries()) {
-    if (todo.status === 'in_progress') inProgress.push(i);
-    else if (todo.status === 'pending') pending.push(i);
+    if (todo.status === "in_progress") inProgress.push(i);
+    else if (todo.status === "pending") pending.push(i);
     else done.push(i);
   }
 
@@ -92,12 +92,17 @@ export function selectVisibleTodos(todos: readonly TodoItem[]): VisibleTodos {
     }
 
     for (let i = 0; i < doneCount; i++) picked.add(doneCandidates[i] as number);
-    for (let i = 0; i < pendingCount; i++) picked.add(pendingCandidates[i] as number);
+    for (let i = 0; i < pendingCount; i++)
+      picked.add(pendingCandidates[i] as number);
   }
 
   const sortedIdx = [...picked].toSorted((a, b) => a - b);
 
-  const hiddenCounts: Record<TodoStatus, number> = { done: 0, in_progress: 0, pending: 0 };
+  const hiddenCounts: Record<TodoStatus, number> = {
+    done: 0,
+    in_progress: 0,
+    pending: 0,
+  };
   for (const [i, todo] of todos.entries()) {
     if (!picked.has(i)) {
       hiddenCounts[todo.status] += 1;
@@ -151,8 +156,8 @@ export class TodoPanelComponent implements Component {
     if (this.todos.length === 0) return [];
     const c = currentTheme.palette;
     const lines: string[] = [
-      chalk.hex(c.border)('─'.repeat(width)),
-      chalk.hex(c.primary).bold('  Todo'),
+      chalk.hex(c.border)("─".repeat(width)),
+      chalk.hex(c.primary).bold("  Todo"),
     ];
 
     if (this.expanded) {
@@ -161,7 +166,9 @@ export class TodoPanelComponent implements Component {
       }
       if (this.todos.length > MAX_VISIBLE) {
         lines.push(
-          chalk.hex(c.textDim)(`  all ${String(this.todos.length)} items · ctrl+t to collapse`),
+          chalk.hex(c.textDim)(
+            `  all ${String(this.todos.length)} items · ctrl+t to collapse`,
+          ),
         );
       }
     } else {
@@ -171,9 +178,11 @@ export class TodoPanelComponent implements Component {
       }
       if (hidden > 0) {
         const distribution = formatHiddenCounts(hiddenCounts);
-        const suffix = distribution.length > 0 ? ` (${distribution})` : '';
+        const suffix = distribution.length > 0 ? ` (${distribution})` : "";
         lines.push(
-          chalk.hex(c.textDim)(`  … +${hidden} more${suffix} · ctrl+t to expand`),
+          chalk.hex(c.textDim)(
+            `  … +${hidden} more${suffix} · ctrl+t to expand`,
+          ),
         );
       }
     }
@@ -190,34 +199,38 @@ function renderRow(todo: TodoItem, colors: ColorPalette): string {
 
 function statusMarker(status: TodoStatus, colors: ColorPalette): string {
   switch (status) {
-    case 'in_progress':
-      return chalk.hex(colors.primary).bold('●');
-    case 'done':
-      return chalk.hex(colors.success)('✓');
-    case 'pending':
-      return chalk.hex(colors.textDim)('○');
+    case "in_progress":
+      return chalk.hex(colors.primary).bold("●");
+    case "done":
+      return chalk.hex(colors.success)("✓");
+    case "pending":
+      return chalk.hex(colors.textDim)("○");
   }
 }
 
-function styleTitle(title: string, status: TodoStatus, colors: ColorPalette): string {
+function styleTitle(
+  title: string,
+  status: TodoStatus,
+  colors: ColorPalette,
+): string {
   switch (status) {
-    case 'in_progress':
+    case "in_progress":
       return chalk.hex(colors.text).bold(title);
-    case 'done':
+    case "done":
       return chalk.hex(colors.textDim).strikethrough(title);
-    case 'pending':
+    case "pending":
       return chalk.hex(colors.text)(title);
   }
 }
 
 const STATUS_LABELS: readonly { status: TodoStatus; label: string }[] = [
-  { status: 'done', label: 'done' },
-  { status: 'in_progress', label: 'in progress' },
-  { status: 'pending', label: 'pending' },
+  { status: "done", label: "done" },
+  { status: "in_progress", label: "in progress" },
+  { status: "pending", label: "pending" },
 ];
 
 export function formatHiddenCounts(counts: Record<TodoStatus, number>): string {
   return STATUS_LABELS.filter(({ status }) => counts[status] > 0)
     .map(({ status, label }) => `${counts[status]} ${label}`)
-    .join(' · ');
+    .join(" · ");
 }

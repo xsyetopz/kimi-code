@@ -1,14 +1,18 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { Writable } from 'node:stream';
+import { afterEach, describe, expect, it, vi } from "vitest";
+import type { Writable } from "node:stream";
 
-import { drainStdio, finalizeHeadlessRun, scheduleHeadlessForceExit } from '#/cli/headless-exit';
+import {
+  drainStdio,
+  finalizeHeadlessRun,
+  scheduleHeadlessForceExit,
+} from "#/cli/headless-exit";
 
-describe('scheduleHeadlessForceExit', () => {
+describe("scheduleHeadlessForceExit", () => {
   afterEach(() => {
     vi.useRealTimers();
   });
 
-  it('force-exits with the lazily-resolved exit code after the grace period', () => {
+  it("force-exits with the lazily-resolved exit code after the grace period", () => {
     vi.useFakeTimers();
     const exit = vi.fn();
     let code = 0;
@@ -26,7 +30,7 @@ describe('scheduleHeadlessForceExit', () => {
     clearTimeout(handle);
   });
 
-  it('schedules an unref\'d timer so a healthy run still exits naturally', () => {
+  it("schedules an unref'd timer so a healthy run still exits naturally", () => {
     // Real timers: an un-unref'd guard would itself keep the event loop alive,
     // turning the fix into a regression (every healthy run would wait the full
     // grace before exiting). hasRef() must be false.
@@ -36,7 +40,7 @@ describe('scheduleHeadlessForceExit', () => {
     clearTimeout(handle);
   });
 
-  it('does not fire once cancelled via clearTimeout', () => {
+  it("does not fire once cancelled via clearTimeout", () => {
     vi.useFakeTimers();
     const exit = vi.fn();
     const handle = scheduleHeadlessForceExit({ exit }, () => 0, 2000);
@@ -46,12 +50,12 @@ describe('scheduleHeadlessForceExit', () => {
   });
 });
 
-describe('drainStdio', () => {
+describe("drainStdio", () => {
   afterEach(() => {
     vi.useRealTimers();
   });
 
-  it('resolves once buffered output has flushed', async () => {
+  it("resolves once buffered output has flushed", async () => {
     let flush: (() => void) | undefined;
     const stream = {
       write: vi.fn((_chunk: string, cb: () => void) => {
@@ -72,7 +76,7 @@ describe('drainStdio', () => {
     expect(resolved).toBe(true);
   });
 
-  it('gives up after the timeout when the consumer never drains', async () => {
+  it("gives up after the timeout when the consumer never drains", async () => {
     vi.useFakeTimers();
     // write() never invokes its flush callback — a permanently-stuck consumer.
     const stream = { write: vi.fn(() => false) } as unknown as Writable;
@@ -89,12 +93,12 @@ describe('drainStdio', () => {
   });
 });
 
-describe('finalizeHeadlessRun', () => {
+describe("finalizeHeadlessRun", () => {
   afterEach(() => {
     vi.useRealTimers();
   });
 
-  it('flushes stdio before arming the force-exit so buffered output is not truncated', async () => {
+  it("flushes stdio before arming the force-exit so buffered output is not truncated", async () => {
     vi.useFakeTimers();
     let flush: (() => void) | undefined;
     const stream = {

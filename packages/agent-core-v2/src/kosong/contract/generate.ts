@@ -9,7 +9,7 @@
  * `APIEmptyResponseError`.
  */
 
-import { APIEmptyResponseError, createAbortError } from './errors';
+import { APIEmptyResponseError, createAbortError } from "./errors";
 import {
   isContentPart,
   isToolCall,
@@ -18,12 +18,17 @@ import {
   type Message,
   type StreamedMessagePart,
   type ToolCall,
-} from './message';
-import type { ChatProvider, FinishReason, GenerateOptions, StreamedMessage } from './provider';
-import type { Tool } from './tool';
-import type { TokenUsage } from './usage';
+} from "./message";
+import type {
+  ChatProvider,
+  FinishReason,
+  GenerateOptions,
+  StreamedMessage,
+} from "./provider";
+import type { Tool } from "./tool";
+import type { TokenUsage } from "./usage";
 
-type StoredToolCall = Omit<ToolCall, '_streamIndex'>;
+type StoredToolCall = Omit<ToolCall, "_streamIndex">;
 
 export interface GenerateResult {
   readonly id: string | null;
@@ -47,7 +52,7 @@ export async function generate(
   callbacks?: GenerateCallbacks,
   options?: GenerateOptions,
 ): Promise<GenerateResult> {
-  const message: Message = { role: 'assistant', content: [], toolCalls: [] };
+  const message: Message = { role: "assistant", content: [], toolCalls: [] };
   let pendingPart: StreamedMessagePart | null = null;
 
   const toolCallIndexMap = new Map<number | string, number>();
@@ -61,7 +66,12 @@ export async function generate(
     : tools;
 
   options?.onRequestStart?.();
-  const stream = await provider.generate(systemPrompt, wireTools, history, options);
+  const stream = await provider.generate(
+    systemPrompt,
+    wireTools,
+    history,
+    options,
+  );
   if (stream.traceId !== undefined) {
     options?.onTraceId?.(stream.traceId);
   }
@@ -132,7 +142,7 @@ export async function generate(
   }
   if (message.content.length === 0 && message.toolCalls.length === 0) {
     throw new APIEmptyResponseError(
-      'The API returned an empty response (no content, no tool calls).' +
+      "The API returned an empty response (no content, no tool calls)." +
         formatFinishReasonHint(stream) +
         ` Provider: ${provider.name}, model: ${provider.modelName}`,
       {
@@ -142,16 +152,18 @@ export async function generate(
     );
   }
 
-  const hasThink = message.content.some((p) => p.type === 'think');
-  const hasText = message.content.some((p) => p.type === 'text' && p.text.trim().length > 0);
+  const hasThink = message.content.some((p) => p.type === "think");
+  const hasText = message.content.some(
+    (p) => p.type === "text" && p.text.trim().length > 0,
+  );
   const hasToolCalls = message.toolCalls.length > 0;
 
   if (hasThink && !hasText && !hasToolCalls) {
     throw new APIEmptyResponseError(
-      'The API returned a response containing only thinking content ' +
-        'without any text or tool calls. This usually indicates the ' +
-        'stream was interrupted or the output token budget was exhausted ' +
-        'during reasoning.' +
+      "The API returned a response containing only thinking content " +
+        "without any text or tool calls. This usually indicates the " +
+        "stream was interrupted or the output token budget was exhausted " +
+        "during reasoning." +
         formatFinishReasonHint(stream) +
         ` Provider: ${provider.name}, model: ${provider.modelName}`,
       {
@@ -198,7 +210,10 @@ async function cancelStream(stream: StreamedMessage): Promise<void> {
   } catch {}
 }
 
-async function throwIfAborted(signal?: AbortSignal, stream?: StreamedMessage): Promise<void> {
+async function throwIfAborted(
+  signal?: AbortSignal,
+  stream?: StreamedMessage,
+): Promise<void> {
   if (!signal?.aborted) {
     return;
   }
@@ -214,7 +229,9 @@ function isPendingToolCallAtIndex(
   pending: StreamedMessagePart | null,
   index: number | string,
 ): pending is ToolCall {
-  return pending !== null && isToolCall(pending) && pending._streamIndex === index;
+  return (
+    pending !== null && isToolCall(pending) && pending._streamIndex === index
+  );
 }
 
 function flushPart(
@@ -229,7 +246,7 @@ function flushPart(
   if (isToolCall(part)) {
     const streamIndex = part._streamIndex;
     const stored: StoredToolCall = {
-      type: 'function',
+      type: "function",
       id: part.id,
       name: part.name,
       arguments: part.arguments,
@@ -244,16 +261,19 @@ function flushPart(
 }
 
 function formatFinishReasonHint(stream: StreamedMessage): string {
-  if (stream.finishReason === null && stream.rawFinishReason === null) return '';
+  if (stream.finishReason === null && stream.rawFinishReason === null)
+    return "";
 
   const raw =
-    stream.rawFinishReason === null ? '' : `, rawFinishReason=${stream.rawFinishReason}`;
+    stream.rawFinishReason === null
+      ? ""
+      : `, rawFinishReason=${stream.rawFinishReason}`;
   const filteredHint =
-    stream.finishReason === 'filtered'
-      ? ' The provider filtered the response before visible output was emitted.'
-      : '';
+    stream.finishReason === "filtered"
+      ? " The provider filtered the response before visible output was emitted."
+      : "";
 
-  return ` Provider stop details: finishReason=${stream.finishReason ?? 'unknown'}${raw}.${filteredHint}`;
+  return ` Provider stop details: finishReason=${stream.finishReason ?? "unknown"}${raw}.${filteredHint}`;
 }
 
 function deepCopyPart(part: StreamedMessagePart): StreamedMessagePart {

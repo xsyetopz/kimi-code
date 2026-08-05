@@ -38,15 +38,15 @@ import {
   IWorkspaceTrust,
   type Scope,
   type Workspace,
-} from '@moonshot-ai/agent-core-v2';
-import { isAbsolute } from 'node:path';
+} from "@moonshot-ai/agent-core-v2";
+import { isAbsolute } from "node:path";
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { errEnvelope, okEnvelope } from '../envelope';
-import { requestLog } from '../lib/requestLog';
-import { defineRoute } from '../middleware/defineRoute';
-import { ErrorCode } from '../protocol/error-codes';
+import { errEnvelope, okEnvelope } from "../envelope";
+import { requestLog } from "../lib/requestLog";
+import { defineRoute } from "../middleware/defineRoute";
+import { ErrorCode } from "../protocol/error-codes";
 import {
   createWorkspaceRequestSchema,
   createWorkspaceResponseSchema,
@@ -56,13 +56,15 @@ import {
   updateWorkspaceResponseSchema,
   workspaceIdParamSchema,
   workspaceTrustResponseSchema,
-} from '../protocol/rest-workspace';
-import type { Workspace as WorkspaceWire } from '../protocol/workspace';
+} from "../protocol/rest-workspace";
+import type { Workspace as WorkspaceWire } from "../protocol/workspace";
 
 interface WorkspaceRouteHost {
   get(
     path: string,
-    options: { preHandler: unknown[]; schema?: Record<string, unknown> } | undefined,
+    options:
+      | { preHandler: unknown[]; schema?: Record<string, unknown> }
+      | undefined,
     handler: (
       req: { id: string },
       reply: { send(payload: unknown): unknown },
@@ -86,7 +88,9 @@ interface WorkspaceRouteHost {
   ): unknown;
   delete(
     path: string,
-    options: { preHandler: unknown[]; schema?: Record<string, unknown> } | undefined,
+    options:
+      | { preHandler: unknown[]; schema?: Record<string, unknown> }
+      | undefined,
     handler: (
       req: { id: string; params: unknown },
       reply: { send(payload: unknown): unknown },
@@ -94,44 +98,55 @@ interface WorkspaceRouteHost {
   ): unknown;
 }
 
-const detailsSchema = z.array(z.object({ path: z.string(), message: z.string() }));
+const detailsSchema = z.array(
+  z.object({ path: z.string(), message: z.string() }),
+);
 
-export function registerWorkspacesRoutes(app: WorkspaceRouteHost, core: Scope): void {
+export function registerWorkspacesRoutes(
+  app: WorkspaceRouteHost,
+  core: Scope,
+): void {
   const listRoute = defineRoute(
     {
-      method: 'GET',
-      path: '/workspaces',
+      method: "GET",
+      path: "/workspaces",
       success: { data: listWorkspacesResponseSchema },
-      description: 'List registered workspaces',
-      tags: ['workspaces'],
+      description: "List registered workspaces",
+      tags: ["workspaces"],
     },
     async (req, reply) => {
       const items = await core.accessor.get(IWorkspaceService).list();
-      const projected = await Promise.all(items.map((ws) => toWireWorkspace(core, ws)));
+      const projected = await Promise.all(
+        items.map((ws) => toWireWorkspace(core, ws)),
+      );
       reply.send(okEnvelope({ items: projected }, req.id));
     },
   );
-  app.get(listRoute.path, listRoute.options, listRoute.handler as Parameters<WorkspaceRouteHost['get']>[2]);
+  app.get(
+    listRoute.path,
+    listRoute.options,
+    listRoute.handler as Parameters<WorkspaceRouteHost["get"]>[2],
+  );
 
   const createRoute = defineRoute(
     {
-      method: 'POST',
-      path: '/workspaces',
+      method: "POST",
+      path: "/workspaces",
       body: createWorkspaceRequestSchema,
       success: { data: createWorkspaceResponseSchema },
       errors: {
         [ErrorCode.VALIDATION_FAILED]: { detailsSchema },
         [ErrorCode.FS_PATH_NOT_FOUND]: {},
       },
-      description: 'Register a workspace (idempotent on root)',
-      tags: ['workspaces'],
+      description: "Register a workspace (idempotent on root)",
+      tags: ["workspaces"],
     },
     async (req, reply) => {
       const root = req.body.root;
       if (!isAbsolute(root)) {
         reply.send(
           buildValidationEnvelope(
-            [{ path: 'root', message: 'root must be an absolute path' }],
+            [{ path: "root", message: "root must be an absolute path" }],
             req.id,
           ),
         );
@@ -142,28 +157,40 @@ export function registerWorkspacesRoutes(app: WorkspaceRouteHost, core: Scope): 
         const stat = await hostFs.stat(root);
         if (!stat.isDirectory) {
           reply.send(
-            errEnvelope(ErrorCode.FS_PATH_NOT_FOUND, `root ${root} is not a directory`, req.id),
+            errEnvelope(
+              ErrorCode.FS_PATH_NOT_FOUND,
+              `root ${root} is not a directory`,
+              req.id,
+            ),
           );
           return;
         }
       } catch {
-        reply.send(errEnvelope(ErrorCode.FS_PATH_NOT_FOUND, `root ${root} does not exist`, req.id));
+        reply.send(
+          errEnvelope(
+            ErrorCode.FS_PATH_NOT_FOUND,
+            `root ${root} does not exist`,
+            req.id,
+          ),
+        );
         return;
       }
-      const ws = await core.accessor.get(IWorkspaceService).createOrTouch(root, req.body.name);
+      const ws = await core.accessor
+        .get(IWorkspaceService)
+        .createOrTouch(root, req.body.name);
       reply.send(okEnvelope(await toWireWorkspace(core, ws), req.id));
     },
   );
   app.post(
     createRoute.path,
     createRoute.options,
-    createRoute.handler as Parameters<WorkspaceRouteHost['post']>[2],
+    createRoute.handler as Parameters<WorkspaceRouteHost["post"]>[2],
   );
 
   const updateRoute = defineRoute(
     {
-      method: 'PATCH',
-      path: '/workspaces/{workspace_id}',
+      method: "PATCH",
+      path: "/workspaces/{workspace_id}",
       params: workspaceIdParamSchema,
       body: updateWorkspaceRequestSchema,
       success: { data: updateWorkspaceResponseSchema },
@@ -171,8 +198,8 @@ export function registerWorkspacesRoutes(app: WorkspaceRouteHost, core: Scope): 
         [ErrorCode.VALIDATION_FAILED]: { detailsSchema },
         [ErrorCode.WORKSPACE_NOT_FOUND]: {},
       },
-      description: 'Rename a workspace (display name only)',
-      tags: ['workspaces'],
+      description: "Rename a workspace (display name only)",
+      tags: ["workspaces"],
     },
     async (req, reply) => {
       const { workspace_id } = req.params;
@@ -181,7 +208,11 @@ export function registerWorkspacesRoutes(app: WorkspaceRouteHost, core: Scope): 
         .update(workspace_id, { name: req.body.name });
       if (ws === undefined) {
         reply.send(
-          errEnvelope(ErrorCode.WORKSPACE_NOT_FOUND, `workspace ${workspace_id} does not exist`, req.id),
+          errEnvelope(
+            ErrorCode.WORKSPACE_NOT_FOUND,
+            `workspace ${workspace_id} does not exist`,
+            req.id,
+          ),
         );
         return;
       }
@@ -191,21 +222,21 @@ export function registerWorkspacesRoutes(app: WorkspaceRouteHost, core: Scope): 
   app.patch(
     updateRoute.path,
     updateRoute.options,
-    updateRoute.handler as Parameters<WorkspaceRouteHost['patch']>[2],
+    updateRoute.handler as Parameters<WorkspaceRouteHost["patch"]>[2],
   );
 
   const deleteRoute = defineRoute(
     {
-      method: 'DELETE',
-      path: '/workspaces/{workspace_id}',
+      method: "DELETE",
+      path: "/workspaces/{workspace_id}",
       params: workspaceIdParamSchema,
       success: { data: deleteWorkspaceResponseSchema },
       errors: {
         [ErrorCode.VALIDATION_FAILED]: { detailsSchema },
         [ErrorCode.WORKSPACE_NOT_FOUND]: {},
       },
-      description: 'Unregister a workspace (does not remove on-disk content)',
-      tags: ['workspaces'],
+      description: "Unregister a workspace (does not remove on-disk content)",
+      tags: ["workspaces"],
     },
     async (req, reply) => {
       const { workspace_id } = req.params;
@@ -213,35 +244,44 @@ export function registerWorkspacesRoutes(app: WorkspaceRouteHost, core: Scope): 
       const existing = await registry.get(workspace_id);
       if (existing === undefined) {
         reply.send(
-          errEnvelope(ErrorCode.WORKSPACE_NOT_FOUND, `workspace ${workspace_id} does not exist`, req.id),
+          errEnvelope(
+            ErrorCode.WORKSPACE_NOT_FOUND,
+            `workspace ${workspace_id} does not exist`,
+            req.id,
+          ),
         );
         return;
       }
       await registry.delete(workspace_id);
-      requestLog(req)?.info({ workspace_id }, 'workspace deleted');
+      requestLog(req)?.info({ workspace_id }, "workspace deleted");
       reply.send(okEnvelope({ deleted: true as const }, req.id));
     },
   );
   app.delete(
     deleteRoute.path,
     deleteRoute.options,
-    deleteRoute.handler as Parameters<WorkspaceRouteHost['delete']>[2],
+    deleteRoute.handler as Parameters<WorkspaceRouteHost["delete"]>[2],
   );
 
   const getTrustRoute = defineRoute(
     {
-      method: 'GET',
-      path: '/workspaces/{workspace_id}/trust',
+      method: "GET",
+      path: "/workspaces/{workspace_id}/trust",
       params: workspaceIdParamSchema,
       success: { data: workspaceTrustResponseSchema },
       errors: {
         [ErrorCode.WORKSPACE_NOT_FOUND]: {},
       },
-      description: 'Read the workspace trust state',
-      tags: ['workspaces'],
+      description: "Read the workspace trust state",
+      tags: ["workspaces"],
     },
     async (req, reply) => {
-      const trust = await resolveTrust(core, req.params.workspace_id, req.id, reply);
+      const trust = await resolveTrust(
+        core,
+        req.params.workspace_id,
+        req.id,
+        reply,
+      );
       if (trust === undefined) return;
       reply.send(okEnvelope({ trusted: await trust.get() }, req.id));
     },
@@ -249,23 +289,29 @@ export function registerWorkspacesRoutes(app: WorkspaceRouteHost, core: Scope): 
   app.get(
     getTrustRoute.path,
     getTrustRoute.options,
-    getTrustRoute.handler as Parameters<WorkspaceRouteHost['get']>[2],
+    getTrustRoute.handler as Parameters<WorkspaceRouteHost["get"]>[2],
   );
 
   const trustRoute = defineRoute(
     {
-      method: 'POST',
-      path: '/workspaces/{workspace_id}/trust',
+      method: "POST",
+      path: "/workspaces/{workspace_id}/trust",
       params: workspaceIdParamSchema,
       success: { data: workspaceTrustResponseSchema },
       errors: {
         [ErrorCode.WORKSPACE_NOT_FOUND]: {},
       },
-      description: 'Mark the workspace trusted (project-level MCP config loads)',
-      tags: ['workspaces'],
+      description:
+        "Mark the workspace trusted (project-level MCP config loads)",
+      tags: ["workspaces"],
     },
     async (req, reply) => {
-      const trust = await resolveTrust(core, req.params.workspace_id, req.id, reply);
+      const trust = await resolveTrust(
+        core,
+        req.params.workspace_id,
+        req.id,
+        reply,
+      );
       if (trust === undefined) return;
       await trust.trust();
       reply.send(okEnvelope({ trusted: true }, req.id));
@@ -274,23 +320,28 @@ export function registerWorkspacesRoutes(app: WorkspaceRouteHost, core: Scope): 
   app.post(
     trustRoute.path,
     trustRoute.options,
-    trustRoute.handler as Parameters<WorkspaceRouteHost['post']>[2],
+    trustRoute.handler as Parameters<WorkspaceRouteHost["post"]>[2],
   );
 
   const untrustRoute = defineRoute(
     {
-      method: 'POST',
-      path: '/workspaces/{workspace_id}/untrust',
+      method: "POST",
+      path: "/workspaces/{workspace_id}/untrust",
       params: workspaceIdParamSchema,
       success: { data: workspaceTrustResponseSchema },
       errors: {
         [ErrorCode.WORKSPACE_NOT_FOUND]: {},
       },
-      description: 'Revoke workspace trust (project-level MCP config unloads)',
-      tags: ['workspaces'],
+      description: "Revoke workspace trust (project-level MCP config unloads)",
+      tags: ["workspaces"],
     },
     async (req, reply) => {
-      const trust = await resolveTrust(core, req.params.workspace_id, req.id, reply);
+      const trust = await resolveTrust(
+        core,
+        req.params.workspace_id,
+        req.id,
+        reply,
+      );
       if (trust === undefined) return;
       await trust.untrust();
       reply.send(okEnvelope({ trusted: false }, req.id));
@@ -299,7 +350,7 @@ export function registerWorkspacesRoutes(app: WorkspaceRouteHost, core: Scope): 
   app.post(
     untrustRoute.path,
     untrustRoute.options,
-    untrustRoute.handler as Parameters<WorkspaceRouteHost['post']>[2],
+    untrustRoute.handler as Parameters<WorkspaceRouteHost["post"]>[2],
   );
 }
 
@@ -314,12 +365,16 @@ async function resolveTrust(
   const ws = await core.accessor.get(IWorkspaceService).get(workspaceId);
   if (ws === undefined) {
     reply.send(
-      errEnvelope(ErrorCode.WORKSPACE_NOT_FOUND, `workspace ${workspaceId} does not exist`, requestId),
+      errEnvelope(
+        ErrorCode.WORKSPACE_NOT_FOUND,
+        `workspace ${workspaceId} does not exist`,
+        requestId,
+      ),
     );
     return undefined;
   }
-  const handle = await core
-    .accessor.get(IWorkspaceLifecycleService)
+  const handle = await core.accessor
+    .get(IWorkspaceLifecycleService)
     .handlerFor({ workspaceId, root: ws.root });
   return handle.accessor.get(IWorkspaceTrust);
 }
@@ -328,7 +383,10 @@ async function resolveTrust(
 // Projection — v2 `Workspace` onto the v1 wire `workspaceSchema`.
 // ---------------------------------------------------------------------------
 
-async function toWireWorkspace(core: Scope, ws: Workspace): Promise<WorkspaceWire> {
+async function toWireWorkspace(
+  core: Scope,
+  ws: Workspace,
+): Promise<WorkspaceWire> {
   const sessionCount = await core.accessor.get(IWorkspaceSessions).count(ws.id);
   return {
     id: ws.id,
@@ -351,7 +409,10 @@ function buildValidationEnvelope(
   details: { path: string; message: string }[];
 } {
   const first = details[0];
-  const msg = first === undefined ? 'validation failed' : `${first.path}: ${first.message}`;
+  const msg =
+    first === undefined
+      ? "validation failed"
+      : `${first.path}: ${first.message}`;
   return {
     code: ErrorCode.VALIDATION_FAILED,
     msg,

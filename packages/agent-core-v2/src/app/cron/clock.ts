@@ -27,7 +27,7 @@
  * `wallNow` resolution is driven by the `KIMI_CRON_CLOCK` env var; see
  * `resolveClockSources` below. Defaults to `Date.now()`.
  */
-import { closeSync, openSync, readSync } from 'node:fs';
+import { closeSync, openSync, readSync } from "node:fs";
 
 export interface ClockSources {
   wallNow(): number;
@@ -35,22 +35,26 @@ export interface ClockSources {
   monoNowMs(): number;
 }
 
-const systemMonoNowMs = (): number => Number(process.hrtime.bigint() / 1_000_000n);
+const systemMonoNowMs = (): number =>
+  Number(process.hrtime.bigint() / 1_000_000n);
 
 export const SYSTEM_CLOCKS: ClockSources = {
   wallNow: () => Date.now(),
   monoNowMs: systemMonoNowMs,
 };
 
-export function resolveClockSources(spec?: string, debug = false): ClockSources {
-  if (spec === undefined || spec === '' || spec === 'system') {
+export function resolveClockSources(
+  spec?: string,
+  debug = false,
+): ClockSources {
+  if (spec === undefined || spec === "" || spec === "system") {
     return SYSTEM_CLOCKS;
   }
 
-  if (spec.startsWith('file:')) {
-    const filePath = spec.slice('file:'.length);
-    if (filePath === '') {
-      debugInvalidSpec(spec, 'empty file path', debug);
+  if (spec.startsWith("file:")) {
+    const filePath = spec.slice("file:".length);
+    if (filePath === "") {
+      debugInvalidSpec(spec, "empty file path", debug);
       return SYSTEM_CLOCKS;
     }
     return {
@@ -59,7 +63,7 @@ export function resolveClockSources(spec?: string, debug = false): ClockSources 
     };
   }
 
-  debugInvalidSpec(spec, 'unrecognised scheme', debug);
+  debugInvalidSpec(spec, "unrecognised scheme", debug);
   return SYSTEM_CLOCKS;
 }
 
@@ -70,7 +74,7 @@ function readFileWall(filePath: string): number {
   const buf = Buffer.alloc(MAX_CLOCK_FILE_BYTES);
   let fd: number;
   try {
-    fd = openSync(filePath, 'r');
+    fd = openSync(filePath, "r");
   } catch {
     return Date.now();
   }
@@ -81,12 +85,11 @@ function readFileWall(filePath: string): number {
   } finally {
     try {
       closeSync(fd);
-    } catch {
-    }
+    } catch {}
   }
-  const raw = buf.subarray(0, bytesRead).toString('utf8');
-  const firstLine = raw.split('\n', 1)[0]?.trim() ?? '';
-  if (firstLine === '') return Date.now();
+  const raw = buf.subarray(0, bytesRead).toString("utf8");
+  const firstLine = raw.split("\n", 1)[0]?.trim() ?? "";
+  if (firstLine === "") return Date.now();
   const parsed = Number(firstLine);
   if (!Number.isFinite(parsed)) return Date.now();
   return parsed;

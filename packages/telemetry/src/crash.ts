@@ -1,8 +1,8 @@
-import { getDefaultTelemetryClient, type TelemetryClient } from './client';
+import { getDefaultTelemetryClient, type TelemetryClient } from "./client";
 
-export type CrashPhase = 'startup' | 'runtime' | 'shutdown';
+export type CrashPhase = "startup" | "runtime" | "shutdown";
 
-let phase: CrashPhase = 'startup';
+let phase: CrashPhase = "startup";
 let installed = false;
 let installedUncaughtHandler:
   | ((error: Error, origin: NodeJS.UncaughtExceptionOrigin) => void)
@@ -17,8 +17,14 @@ export function installCrashHandlers(): () => void {
   return installCrashHandlersForClient(getDefaultTelemetryClient());
 }
 
-export function installCrashHandlersForClient(client: TelemetryClient): () => void {
-  if (installed && installedUncaughtHandler !== null && installedRejectionHandler !== null) {
+export function installCrashHandlersForClient(
+  client: TelemetryClient,
+): () => void {
+  if (
+    installed &&
+    installedUncaughtHandler !== null &&
+    installedRejectionHandler !== null
+  ) {
     return () => {
       uninstallCrashHandlers();
     };
@@ -29,7 +35,7 @@ export function installCrashHandlersForClient(client: TelemetryClient): () => vo
   const recordedRejections = new Set<unknown>();
   const trackCrash = (errorType: string, source: string) => {
     try {
-      client.track('crash', {
+      client.track("crash", {
         error_type: errorType,
         where: phase,
         source,
@@ -46,7 +52,7 @@ export function installCrashHandlersForClient(client: TelemetryClient): () => vo
     // through (primitives, null) — classify it null-safely.
     trackCrash(crashErrorType(error), origin);
   };
-  process.on('uncaughtExceptionMonitor', installedUncaughtHandler);
+  process.on("uncaughtExceptionMonitor", installedUncaughtHandler);
   // `uncaughtExceptionMonitor` never fires for a rejection that has a
   // listener — and the TUI always registers one, converting the rejection
   // into a silent exit(1) with no telemetry at all. Observe rejections
@@ -55,16 +61,16 @@ export function installCrashHandlersForClient(client: TelemetryClient): () => vo
   // the only listener (print / server modes) rethrow to preserve it; the
   // dedupe set above keeps the monitor from double-reporting that path.
   installedRejectionHandler = (reason: unknown) => {
-    const soleListener = process.listenerCount('unhandledRejection') === 1;
+    const soleListener = process.listenerCount("unhandledRejection") === 1;
     if (!isAbortError(reason)) {
-      trackCrash(crashErrorType(reason), 'unhandledRejection');
+      trackCrash(crashErrorType(reason), "unhandledRejection");
       recordedRejections.add(reason);
     }
     if (soleListener) {
       throw reason;
     }
   };
-  process.on('unhandledRejection', installedRejectionHandler);
+  process.on("unhandledRejection", installedRejectionHandler);
   installed = true;
   return () => {
     uninstallCrashHandlers();
@@ -74,10 +80,10 @@ export function installCrashHandlersForClient(client: TelemetryClient): () => vo
 export function uninstallCrashHandlers(): void {
   if (!installed) return;
   if (installedUncaughtHandler !== null) {
-    process.off('uncaughtExceptionMonitor', installedUncaughtHandler);
+    process.off("uncaughtExceptionMonitor", installedUncaughtHandler);
   }
   if (installedRejectionHandler !== null) {
-    process.off('unhandledRejection', installedRejectionHandler);
+    process.off("unhandledRejection", installedRejectionHandler);
   }
   installedUncaughtHandler = null;
   installedRejectionHandler = null;
@@ -91,9 +97,9 @@ function crashErrorType(reason: unknown): string {
 
 function isAbortError(reason: unknown): boolean {
   return (
-    typeof reason === 'object' &&
+    typeof reason === "object" &&
     reason !== null &&
-    'name' in reason &&
-    reason.name === 'AbortError'
+    "name" in reason &&
+    reason.name === "AbortError"
   );
 }

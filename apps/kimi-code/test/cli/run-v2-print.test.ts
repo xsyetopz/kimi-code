@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from "vitest";
 
 import {
   applyPrintBackgroundPolicy,
@@ -6,13 +6,13 @@ import {
   PrintSteeredTurnFailedError,
   type PrintTurnEnding,
   type PrintTurnEndings,
-} from '#/cli/v2/run-v2-print';
+} from "#/cli/v2/run-v2-print";
 
 function ending(
   turnId: number,
-  reason: PrintTurnEnding['reason'] = 'completed',
+  reason: PrintTurnEnding["reason"] = "completed",
 ): PrintTurnEnding {
-  return { type: 'turn.ended', turnId, reason };
+  return { type: "turn.ended", turnId, reason };
 }
 
 interface ScriptedEntry {
@@ -40,12 +40,12 @@ function scriptedTurnEndings(entries: ScriptedEntry[]): PrintTurnEndings {
   };
 }
 
-describe('applyPrintBackgroundPolicy', () => {
-  it('exit returns immediately without draining or waiting', async () => {
+describe("applyPrintBackgroundPolicy", () => {
+  it("exit returns immediately without draining or waiting", async () => {
     const drain = vi.fn(async () => {});
     const countPending = vi.fn(() => 1);
     await applyPrintBackgroundPolicy({
-      mode: 'exit',
+      mode: "exit",
       ceilingS: 60,
       maxTurns: 50,
       countPending,
@@ -59,10 +59,10 @@ describe('applyPrintBackgroundPolicy', () => {
     expect(countPending).not.toHaveBeenCalled();
   });
 
-  it('drain drains once and returns', async () => {
+  it("drain drains once and returns", async () => {
     const drain = vi.fn(async () => {});
     await applyPrintBackgroundPolicy({
-      mode: 'drain',
+      mode: "drain",
       ceilingS: 60,
       maxTurns: 50,
       countPending: () => 1,
@@ -75,11 +75,11 @@ describe('applyPrintBackgroundPolicy', () => {
     expect(drain).toHaveBeenCalledTimes(1);
   });
 
-  it('steer returns once background tasks are quiescent', async () => {
+  it("steer returns once background tasks are quiescent", async () => {
     let pending = 1;
     const warn = vi.fn();
     await applyPrintBackgroundPolicy({
-      mode: 'steer',
+      mode: "steer",
       ceilingS: 60,
       maxTurns: 50,
       countPending: () => pending,
@@ -89,7 +89,12 @@ describe('applyPrintBackgroundPolicy', () => {
         { event: ending(1) },
         // A background task completed and steered a new turn; it finished and
         // no tasks remain.
-        { event: ending(2), apply: () => { pending = 0; } },
+        {
+          event: ending(2),
+          apply: () => {
+            pending = 0;
+          },
+        },
       ]),
       skipTurnId: 1,
       warn,
@@ -98,47 +103,55 @@ describe('applyPrintBackgroundPolicy', () => {
     expect(warn).not.toHaveBeenCalled();
   });
 
-  it('steer finishes with a warning when max turns is reached', async () => {
+  it("steer finishes with a warning when max turns is reached", async () => {
     const warn = vi.fn();
     await applyPrintBackgroundPolicy({
-      mode: 'steer',
+      mode: "steer",
       ceilingS: 60,
       maxTurns: 2,
       countPending: () => 1,
       drain: async () => {},
-      turnEndings: scriptedTurnEndings([{ event: ending(2) }, { event: ending(3) }]),
+      turnEndings: scriptedTurnEndings([
+        { event: ending(2) },
+        { event: ending(3) },
+      ]),
       skipTurnId: 1,
       warn,
       now: () => Date.now(),
     });
     expect(warn).toHaveBeenCalledTimes(1);
-    expect(warn.mock.calls[0]?.[0]).toContain('max turns');
+    expect(warn.mock.calls[0]?.[0]).toContain("max turns");
   });
 
-  it('steer finishes with a warning when the ceiling is reached', async () => {
+  it("steer finishes with a warning when the ceiling is reached", async () => {
     let now = 0;
     const warn = vi.fn();
     await applyPrintBackgroundPolicy({
-      mode: 'steer',
+      mode: "steer",
       ceilingS: 10,
       maxTurns: 50,
       countPending: () => 1,
       drain: async () => {},
       turnEndings: scriptedTurnEndings([
-        { event: ending(2), apply: () => { now = 10_001; } },
+        {
+          event: ending(2),
+          apply: () => {
+            now = 10_001;
+          },
+        },
       ]),
       skipTurnId: 1,
       warn,
       now: () => now,
     });
     expect(warn).toHaveBeenCalledTimes(1);
-    expect(warn.mock.calls[0]?.[0]).toContain('ceiling');
+    expect(warn.mock.calls[0]?.[0]).toContain("ceiling");
   });
 
-  it('steer returns when the wait times out with tasks still pending', async () => {
+  it("steer returns when the wait times out with tasks still pending", async () => {
     const warn = vi.fn();
     await applyPrintBackgroundPolicy({
-      mode: 'steer',
+      mode: "steer",
       ceilingS: 60,
       maxTurns: 50,
       countPending: () => 1,
@@ -152,10 +165,10 @@ describe('applyPrintBackgroundPolicy', () => {
     expect(warn).not.toHaveBeenCalled();
   });
 
-  it('steer throws when a steered turn does not complete', async () => {
+  it("steer throws when a steered turn does not complete", async () => {
     await expect(
       applyPrintBackgroundPolicy({
-        mode: 'steer',
+        mode: "steer",
         ceilingS: 60,
         maxTurns: 50,
         countPending: () => 1,
@@ -163,10 +176,10 @@ describe('applyPrintBackgroundPolicy', () => {
         turnEndings: scriptedTurnEndings([
           {
             event: {
-              type: 'turn.ended',
+              type: "turn.ended",
               turnId: 2,
-              reason: 'failed',
-              error: { code: 'provider.overloaded', message: 'try later' },
+              reason: "failed",
+              error: { code: "provider.overloaded", message: "try later" },
             } as PrintTurnEnding,
           },
         ]),
@@ -177,18 +190,23 @@ describe('applyPrintBackgroundPolicy', () => {
     ).rejects.toThrow(PrintSteeredTurnFailedError);
   });
 
-  it('waits for goal continuation turns before applying the mode', async () => {
+  it("waits for goal continuation turns before applying the mode", async () => {
     let active = true;
     let consumed = 0;
     const drain = vi.fn(async () => {});
     await applyPrintBackgroundPolicy({
-      mode: 'drain',
+      mode: "drain",
       ceilingS: 60,
       maxTurns: 50,
       countPending: () => 0,
       drain,
       turnEndings: scriptedTurnEndings([
-        { event: ending(2), apply: () => { consumed += 1; } },
+        {
+          event: ending(2),
+          apply: () => {
+            consumed += 1;
+          },
+        },
         {
           event: ending(3),
           apply: () => {
@@ -207,11 +225,11 @@ describe('applyPrintBackgroundPolicy', () => {
     expect(drain).toHaveBeenCalledTimes(1);
   });
 
-  it('warns and returns when the goal wait hits the ceiling', async () => {
+  it("warns and returns when the goal wait hits the ceiling", async () => {
     let now = 0;
     const warn = vi.fn();
     await applyPrintBackgroundPolicy({
-      mode: 'exit',
+      mode: "exit",
       ceilingS: 10,
       maxTurns: 50,
       countPending: () => 0,
@@ -229,14 +247,14 @@ describe('applyPrintBackgroundPolicy', () => {
       goalActive: () => true,
     });
     expect(warn).toHaveBeenCalledTimes(1);
-    expect(warn.mock.calls[0]?.[0]).toContain('goal wait ceiling');
+    expect(warn.mock.calls[0]?.[0]).toContain("goal wait ceiling");
   });
 
-  it('exits the goal wait promptly when the goal settles without a turn ending', async () => {
+  it("exits the goal wait promptly when the goal settles without a turn ending", async () => {
     let active = true;
     const warn = vi.fn();
     await applyPrintBackgroundPolicy({
-      mode: 'exit',
+      mode: "exit",
       ceilingS: 3600,
       maxTurns: 50,
       countPending: () => 0,
@@ -257,13 +275,13 @@ describe('applyPrintBackgroundPolicy', () => {
     expect(warn).not.toHaveBeenCalled();
   });
 
-  it('keeps an exit-mode run alive until a pending cron fire steered a turn', async () => {
+  it("keeps an exit-mode run alive until a pending cron fire steered a turn", async () => {
     let nextFire: number | null = 60_000;
     let fireTurnEnded = false;
     const cronNextFireAt = vi.fn(() => nextFire);
     const countPending = vi.fn(() => 0);
     await applyPrintBackgroundPolicy({
-      mode: 'exit',
+      mode: "exit",
       ceilingS: 3600,
       maxTurns: 50,
       countPending,
@@ -292,10 +310,10 @@ describe('applyPrintBackgroundPolicy', () => {
     expect(countPending).not.toHaveBeenCalled();
   });
 
-  it('throws when a cron-fire steered turn does not complete', async () => {
+  it("throws when a cron-fire steered turn does not complete", async () => {
     await expect(
       applyPrintBackgroundPolicy({
-        mode: 'exit',
+        mode: "exit",
         ceilingS: 3600,
         maxTurns: 50,
         countPending: () => 0,
@@ -303,10 +321,10 @@ describe('applyPrintBackgroundPolicy', () => {
         turnEndings: scriptedTurnEndings([
           {
             event: {
-              type: 'turn.ended',
+              type: "turn.ended",
               turnId: 2,
-              reason: 'failed',
-              error: { code: 'provider.overloaded', message: 'try later' },
+              reason: "failed",
+              error: { code: "provider.overloaded", message: "try later" },
             } as PrintTurnEnding,
           },
         ]),
@@ -318,20 +336,30 @@ describe('applyPrintBackgroundPolicy', () => {
     ).rejects.toThrow(PrintSteeredTurnFailedError);
   });
 
-  it('keeps waiting while a recurring cron advances its next fire time', async () => {
+  it("keeps waiting while a recurring cron advances its next fire time", async () => {
     let nextFire: number | null = 10_000;
     const cronNextFireAt = vi.fn(() => nextFire);
     await applyPrintBackgroundPolicy({
-      mode: 'exit',
+      mode: "exit",
       ceilingS: 3600,
       maxTurns: 50,
       countPending: () => 0,
       drain: async () => {},
       turnEndings: scriptedTurnEndings([
         // First fire: the recurring task advances to its next slot.
-        { event: ending(2), apply: () => { nextFire = 20_000; } },
+        {
+          event: ending(2),
+          apply: () => {
+            nextFire = 20_000;
+          },
+        },
         // Second fire: the task is deleted, no future fire remains.
-        { event: ending(3), apply: () => { nextFire = null; } },
+        {
+          event: ending(3),
+          apply: () => {
+            nextFire = null;
+          },
+        },
       ]),
       skipTurnId: 1,
       warn: () => {},
@@ -341,7 +369,7 @@ describe('applyPrintBackgroundPolicy', () => {
     expect(cronNextFireAt).toHaveBeenCalledTimes(3);
   });
 
-  it('re-reads the cron schedule when the fire wait times out without a turn', async () => {
+  it("re-reads the cron schedule when the fire wait times out without a turn", async () => {
     let nextFire: number | null = 10_000;
     const cronNextFireAt = vi.fn(() => {
       const value = nextFire;
@@ -351,7 +379,7 @@ describe('applyPrintBackgroundPolicy', () => {
     });
     const warn = vi.fn();
     await applyPrintBackgroundPolicy({
-      mode: 'exit',
+      mode: "exit",
       ceilingS: 3600,
       maxTurns: 50,
       countPending: () => 0,
@@ -367,10 +395,10 @@ describe('applyPrintBackgroundPolicy', () => {
     expect(warn).not.toHaveBeenCalled();
   });
 
-  it('warns and stops cron waiting when the next fire time is stuck in the past', async () => {
+  it("warns and stops cron waiting when the next fire time is stuck in the past", async () => {
     const warn = vi.fn();
     await applyPrintBackgroundPolicy({
-      mode: 'exit',
+      mode: "exit",
       ceilingS: 3600,
       maxTurns: 50,
       countPending: () => 0,
@@ -383,10 +411,10 @@ describe('applyPrintBackgroundPolicy', () => {
       cronNextFireAt: () => 500,
     });
     expect(warn).toHaveBeenCalledTimes(1);
-    expect(warn.mock.calls[0]?.[0]).toContain('cron');
+    expect(warn.mock.calls[0]?.[0]).toContain("cron");
   });
 
-  it('finishes goal waiting before consulting the cron schedule', async () => {
+  it("finishes goal waiting before consulting the cron schedule", async () => {
     let active = true;
     let consumed = 0;
     let nextFire: number | null = 60_000;
@@ -396,13 +424,18 @@ describe('applyPrintBackgroundPolicy', () => {
       return nextFire;
     });
     await applyPrintBackgroundPolicy({
-      mode: 'exit',
+      mode: "exit",
       ceilingS: 3600,
       maxTurns: 50,
       countPending: () => 0,
       drain: async () => {},
       turnEndings: scriptedTurnEndings([
-        { event: ending(2), apply: () => { consumed += 1; } },
+        {
+          event: ending(2),
+          apply: () => {
+            consumed += 1;
+          },
+        },
         {
           event: ending(3),
           apply: () => {
@@ -411,7 +444,12 @@ describe('applyPrintBackgroundPolicy', () => {
           },
         },
         // The pending cron fire steered this turn.
-        { event: ending(4), apply: () => { nextFire = null; } },
+        {
+          event: ending(4),
+          apply: () => {
+            nextFire = null;
+          },
+        },
       ]),
       skipTurnId: 1,
       warn: () => {},
@@ -425,27 +463,27 @@ describe('applyPrintBackgroundPolicy', () => {
   });
 });
 
-describe('createPrintTurnEndings', () => {
-  it('buffers events pushed before next() and skips the given turn id', async () => {
+describe("createPrintTurnEndings", () => {
+  it("buffers events pushed before next() and skips the given turn id", async () => {
     const endings = createPrintTurnEndings();
     endings.push(ending(1));
     endings.push(ending(2));
     await expect(endings.next(1000, 1)).resolves.toMatchObject({ turnId: 2 });
   });
 
-  it('delivers a pushed event to a pending next()', async () => {
+  it("delivers a pushed event to a pending next()", async () => {
     const endings = createPrintTurnEndings();
     const pending = endings.next(1000, 1);
     endings.push(ending(3));
     await expect(pending).resolves.toMatchObject({ turnId: 3 });
   });
 
-  it('resolves null when the remaining time elapses', async () => {
+  it("resolves null when the remaining time elapses", async () => {
     const endings = createPrintTurnEndings();
     await expect(endings.next(5, 1)).resolves.toBeNull();
   });
 
-  it('keeps waiting when only the skipped turn ends', async () => {
+  it("keeps waiting when only the skipped turn ends", async () => {
     const endings = createPrintTurnEndings();
     const pending = endings.next(1000, 1);
     endings.push(ending(1));

@@ -36,10 +36,15 @@
 // ./image.ts the stage-5 image export/attach + postings repointing. This
 // file keeps the TextIndex core: live writes, the delta, rebase, and search.
 
-import { PostingsFile } from '../text-postings.js';
-import type { PostingEntry } from '../text-postings.js';
-import { extractText, MAX_TERM_BYTES, tokenize, yieldToLoop } from './tokenize.js';
-import { EMPTY_MAP, TopK } from './types.js';
+import { PostingsFile } from "../text-postings.js";
+import type { PostingEntry } from "../text-postings.js";
+import {
+  extractText,
+  MAX_TERM_BYTES,
+  tokenize,
+  yieldToLoop,
+} from "./tokenize.js";
+import { EMPTY_MAP, TopK } from "./types.js";
 import type {
   BoundedSearchResult,
   BuildOp,
@@ -47,19 +52,19 @@ import type {
   SearchOptions,
   TextIndexBuild,
   TextIndexOptions,
-} from './types.js';
-import { feedBuild, StagedBuild } from './builder.js';
+} from "./types.js";
+import { feedBuild, StagedBuild } from "./builder.js";
 import {
   attachImage as attachImageImpl,
   exportImageState as exportImageStateImpl,
   exportImageStateAsync as exportImageStateAsyncImpl,
   repointPostings as repointPostingsImpl,
-} from './image.js';
-import type { TextIndexImage } from './image.js';
+} from "./image.js";
+import type { TextIndexImage } from "./image.js";
 
-export * from './tokenize.js';
-export * from './types.js';
-export type { TextIndexImage } from './image.js';
+export * from "./tokenize.js";
+export * from "./types.js";
+export type { TextIndexImage } from "./image.js";
 
 /**
  * Raised by text searches while the index's base is (re)building. The
@@ -71,10 +76,12 @@ export type { TextIndexImage } from './image.js';
  * build commits.
  */
 export class TextIndexBuildingError extends Error {
-  readonly code = 'TEXT_INDEX_BUILDING';
+  readonly code = "TEXT_INDEX_BUILDING";
   constructor(readonly indexName: string | undefined) {
-    super(`text index${indexName ? ` "${indexName}"` : ''} base is still building`);
-    this.name = 'TextIndexBuildingError';
+    super(
+      `text index${indexName ? ` "${indexName}"` : ""} base is still building`,
+    );
+    this.name = "TextIndexBuildingError";
   }
 }
 
@@ -170,7 +177,10 @@ export class TextIndex {
   // approximate byte weight; eviction honors BOTH the term cap and the byte
   // budget (cacheBytesCap), so a few hot million-entry lists cannot pin
   // unbounded memory (stage 6).
-  private readonly cache = new Map<string, { arr: [number, number][]; bytes: number }>();
+  private readonly cache = new Map<
+    string,
+    { arr: [number, number][]; bytes: number }
+  >();
   private cacheBytes = 0;
 
   /** Number of live indexed documents. */
@@ -180,7 +190,8 @@ export class TextIndex {
     this.fields = opts.fields ?? null;
     this.indexName = opts.name;
     this.tokenizer = opts.tokenizer ?? tokenize;
-    this.customTokenizer = opts.tokenizer !== undefined && opts.builtinTokenizer === undefined;
+    this.customTokenizer =
+      opts.tokenizer !== undefined && opts.builtinTokenizer === undefined;
     this.queryTokenizer = opts.queryTokenizer ?? this.tokenizer;
     this.path = opts.postingsPath ?? null;
     this.cacheTerms = opts.cacheTerms ?? 1024;
@@ -190,8 +201,11 @@ export class TextIndex {
 
   /** Approximate byte weight of a cached decoded list (entry pairs plus the
    *  term and array overhead) — the cache's eviction currency. */
-  private static cacheEntryBytes(term: string, arr: [number, number][]): number {
-    return 64 + Buffer.byteLength(term, 'utf8') + arr.length * 24;
+  private static cacheEntryBytes(
+    term: string,
+    arr: [number, number][],
+  ): number {
+    return 64 + Buffer.byteLength(term, "utf8") + arr.length * 24;
   }
 
   private cacheGet(term: string): [number, number][] | undefined {
@@ -208,7 +222,10 @@ export class TextIndex {
     const bytes = TextIndex.cacheEntryBytes(term, arr);
     this.cache.set(term, { arr, bytes });
     this.cacheBytes += bytes;
-    while (this.cache.size > this.cacheTerms || (this.cacheBytesCap > 0 && this.cacheBytes > this.cacheBytesCap)) {
+    while (
+      this.cache.size > this.cacheTerms ||
+      (this.cacheBytesCap > 0 && this.cacheBytes > this.cacheBytesCap)
+    ) {
       if (this.cache.size === 0) break;
       const oldest = this.cache.keys().next().value as string;
       const ev = this.cache.get(oldest)!;
@@ -237,8 +254,10 @@ export class TextIndex {
     const tokens = this.tokenizer(this.extract(doc));
     if (this.customTokenizer) {
       for (const t of tokens) {
-        if (Buffer.byteLength(t, 'utf8') > MAX_TERM_BYTES) {
-          throw new RangeError(`text index tokenizer produced a term longer than ${MAX_TERM_BYTES} utf8 bytes`);
+        if (Buffer.byteLength(t, "utf8") > MAX_TERM_BYTES) {
+          throw new RangeError(
+            `text index tokenizer produced a term longer than ${MAX_TERM_BYTES} utf8 bytes`,
+          );
         }
       }
     }
@@ -302,7 +321,9 @@ export class TextIndex {
    * batches its I/O, so a large rebuild never hard-blocks the host process
    * for many seconds the way the old fully-synchronous build did.
    */
-  async build(entries: Iterable<{ key: string; value: unknown }>): Promise<void> {
+  async build(
+    entries: Iterable<{ key: string; value: unknown }>,
+  ): Promise<void> {
     await feedBuild(this.beginBuild(), entries);
   }
 
@@ -327,7 +348,8 @@ export class TextIndex {
    * (nothing is written before commit() runs).
    */
   beginBuild(opts: { postingsPath?: string } = {}): TextIndexBuild {
-    if (this.buildQueue !== null) throw new Error('text index build already in progress');
+    if (this.buildQueue !== null)
+      throw new Error("text index build already in progress");
     const queue: BuildOp[] = [];
     this.buildQueue = queue;
     // Failure/abort paths only disarm their own queue: the ops in it were
@@ -338,7 +360,15 @@ export class TextIndex {
     return new StagedBuild({
       tokensFor: (value) => this.tokensFor(value),
       commit: (staged) =>
-        this.commitBuild(queue, staged.agg, staged.keys, staged.keyToId, staged.docLens, staged.n, opts.postingsPath),
+        this.commitBuild(
+          queue,
+          staged.agg,
+          staged.keys,
+          staged.keyToId,
+          staged.docLens,
+          staged.n,
+          opts.postingsPath,
+        ),
       disarm,
     });
   }
@@ -370,7 +400,7 @@ export class TextIndex {
       try {
         const res = await PostingsFile.rebuild(targetPath, aggToSorted(agg), {
           beforeRename:
-            process.platform === 'win32' && oldPf !== null
+            process.platform === "win32" && oldPf !== null
               ? () => {
                   oldPf.close();
                   if (this.pf === oldPf) this.pf = null;
@@ -444,7 +474,7 @@ export class TextIndex {
     this.N = n;
     this.buildQueue = null;
     for (const op of queue) {
-      if (op.kind === 'add') this.addPrepared(op.key, op.tokens);
+      if (op.kind === "add") this.addPrepared(op.key, op.tokens);
       else this.remove(op.key);
     }
   }
@@ -463,7 +493,8 @@ export class TextIndex {
   /** Start capturing mutations for a worker rebase. Must pair with
    *  commitRebase/abortRebase. */
   beginRebase(): void {
-    if (this.buildQueue !== null) throw new Error('text index build already in progress');
+    if (this.buildQueue !== null)
+      throw new Error("text index build already in progress");
     this.buildQueue = [];
   }
 
@@ -481,7 +512,12 @@ export class TextIndex {
     keys: (string | undefined)[],
     docLens: Map<number, number>,
     opts: { sliceEvery?: number } = {},
-  ): Promise<{ postings: Map<string, PostingEntry>; keys: (string | undefined)[]; keyToId: Map<string, number>; docLens: Map<number, number> }> {
+  ): Promise<{
+    postings: Map<string, PostingEntry>;
+    keys: (string | undefined)[];
+    keyToId: Map<string, number>;
+    docLens: Map<number, number>;
+  }> {
     const sliceEvery = opts.sliceEvery ?? 65536;
     const postings = new Map<string, PostingEntry>();
     let n = 0;
@@ -506,12 +542,17 @@ export class TextIndex {
    *  were already applied to it, exactly like a failed commitBuild. */
   commitRebase(base: {
     postingsPath: string;
-    containers: { postings: Map<string, PostingEntry>; keys: (string | undefined)[]; keyToId: Map<string, number>; docLens: Map<number, number> };
+    containers: {
+      postings: Map<string, PostingEntry>;
+      keys: (string | undefined)[];
+      keyToId: Map<string, number>;
+      docLens: Map<number, number>;
+    };
     liveCount: number;
     postingsFileInfo: { bytes: number; crc32: number };
   }): void {
     const queue = this.buildQueue;
-    if (queue === null) throw new Error('text index rebase is not in progress');
+    if (queue === null) throw new Error("text index rebase is not in progress");
     const disarm = (): void => {
       if (this.buildQueue === queue) this.buildQueue = null;
     };
@@ -533,7 +574,13 @@ export class TextIndex {
     this.pf = newPf;
     this.postingsFileInfo = { ...base.postingsFileInfo };
 
-    this.swapDocStateAndReplay(queue, base.containers.keys, base.containers.keyToId, base.containers.docLens, base.liveCount);
+    this.swapDocStateAndReplay(
+      queue,
+      base.containers.keys,
+      base.containers.keyToId,
+      base.containers.docLens,
+      base.liveCount,
+    );
   }
 
   /** Discard the rebase capture without swapping (worker failed/cancelled):
@@ -555,7 +602,7 @@ export class TextIndex {
    *  map/set bookkeeping — this is the only text-index entry point the db's
    *  purified applyOp uses. */
   addPrepared(key: string, tokens: readonly string[]): void {
-    this.buildQueue?.push({ kind: 'add', key, tokens });
+    this.buildQueue?.push({ kind: "add", key, tokens });
     // The overwrite's internal remove must NOT queue a second op: replaying
     // the queue applies the add (which itself displaces the old docID), and a
     // queued remove would then delete the freshly-added doc.
@@ -580,7 +627,7 @@ export class TextIndex {
    *  delta terms via the reverse map — O(terms in document), not O(all delta
    *  terms). */
   remove(key: string): void {
-    this.buildQueue?.push({ kind: 'remove', key });
+    this.buildQueue?.push({ kind: "remove", key });
     this.removeInner(key);
   }
 
@@ -629,7 +676,11 @@ export class TextIndex {
     }
 
     const entry = this.postings.get(term);
-    if (entry !== undefined && maxEntries !== undefined && entry.df > maxEntries) {
+    if (
+      entry !== undefined &&
+      maxEntries !== undefined &&
+      entry.df > maxEntries
+    ) {
       // Over budget before decoding even starts: cap the decode itself and
       // skip the cache (a partial list must never be cached as complete).
       const arr = this.pf ? this.pf.read(entry, maxEntries) : [];
@@ -671,7 +722,11 @@ export class TextIndex {
       let result: { map: ReadonlyMap<number, number>; capped: boolean };
       let cacheable: [number, number][] | null = null;
       try {
-        if (entry !== undefined && maxEntries !== undefined && entry.df > maxEntries) {
+        if (
+          entry !== undefined &&
+          maxEntries !== undefined &&
+          entry.df > maxEntries
+        ) {
           // Over budget before decoding even starts: cap the decode itself
           // and skip the cache (a partial list is never cached as complete).
           const arr = this.pf ? await this.pf.readAsync(entry, maxEntries) : [];
@@ -763,7 +818,9 @@ export class TextIndex {
   /** Estimated document frequency without decoding the list: the on-disk
    *  dictionary carries df, the memory base and delta know their size. */
   private estimatedDf(term: string): number {
-    let n = this.memBase ? (this.memBase.get(term)?.size ?? 0) : (this.postings.get(term)?.df ?? 0);
+    let n = this.memBase
+      ? (this.memBase.get(term)?.size ?? 0)
+      : (this.postings.get(term)?.df ?? 0);
     n += this.delta.get(term)?.size ?? 0;
     return n;
   }
@@ -777,22 +834,25 @@ export class TextIndex {
   private scoreTermMaps(
     qtokens: string[],
     termMaps: Map<string, Map<number, number>>,
-    op: 'AND' | 'OR',
+    op: "AND" | "OR",
     limit: number,
     visits: number,
     truncated: boolean,
   ): BoundedSearchResult {
     let candidates: Set<number>;
-    if (op === 'OR') {
+    if (op === "OR") {
       candidates = new Set();
-      for (const m of termMaps.values()) for (const id of m.keys()) candidates.add(id);
+      for (const m of termMaps.values())
+        for (const id of m.keys()) candidates.add(id);
     } else {
       const lists = [...termMaps.values()];
-      if (lists.some((m) => m.size === 0)) return { hits: [], visits, truncated };
+      if (lists.some((m) => m.size === 0))
+        return { hits: [], visits, truncated };
       lists.sort((a, b) => a.size - b.size);
       candidates = new Set(lists[0]!.keys());
       for (let i = 1; i < lists.length && candidates.size; i++) {
-        for (const id of candidates) if (!lists[i]!.has(id)) candidates.delete(id);
+        for (const id of candidates)
+          if (!lists[i]!.has(id)) candidates.delete(id);
       }
     }
 
@@ -836,7 +896,7 @@ export class TextIndex {
     this.ensureBaseAvailable();
     const qtokens = this.queryTerms(query);
     if (!qtokens.length) return { hits: [], visits: 0, truncated: false };
-    const op = opts.op ?? 'AND';
+    const op = opts.op ?? "AND";
     const limit = opts.limit ?? 50;
 
     // Decode the most selective terms first: under a visit budget the hot
@@ -852,7 +912,10 @@ export class TextIndex {
     let truncated = false;
     const termMaps = new Map<string, Map<number, number>>();
     for (const { t } of terms) {
-      const cap = remaining === Number.POSITIVE_INFINITY ? undefined : Math.max(0, remaining);
+      const cap =
+        remaining === Number.POSITIVE_INFINITY
+          ? undefined
+          : Math.max(0, remaining);
       const live = this.livePostingsBounded(t, cap);
       termMaps.set(t, live.map);
       visits += live.visited;
@@ -866,11 +929,14 @@ export class TextIndex {
   /** Async twin of searchBounded (stage 6): identical results and budget
    *  semantics; only the postings reads move off the event loop, so a cold
    *  disk-mode query no longer stalls every other request on readSync. */
-  async searchBoundedAsync(query: string, opts: SearchOptions = {}): Promise<BoundedSearchResult> {
+  async searchBoundedAsync(
+    query: string,
+    opts: SearchOptions = {},
+  ): Promise<BoundedSearchResult> {
     this.ensureBaseAvailable();
     const qtokens = this.queryTerms(query);
     if (!qtokens.length) return { hits: [], visits: 0, truncated: false };
-    const op = opts.op ?? 'AND';
+    const op = opts.op ?? "AND";
     const limit = opts.limit ?? 50;
 
     const terms = qtokens
@@ -882,7 +948,10 @@ export class TextIndex {
     let truncated = false;
     const termMaps = new Map<string, Map<number, number>>();
     for (const { t } of terms) {
-      const cap = remaining === Number.POSITIVE_INFINITY ? undefined : Math.max(0, remaining);
+      const cap =
+        remaining === Number.POSITIVE_INFINITY
+          ? undefined
+          : Math.max(0, remaining);
       const live = await this.livePostingsBoundedAsync(t, cap);
       termMaps.set(t, live.map);
       visits += live.visited;
@@ -894,7 +963,10 @@ export class TextIndex {
   }
 
   /** Async convenience: the async counterpart of search(). */
-  async searchAsync(query: string, opts: SearchOptions = {}): Promise<SearchHit[]> {
+  async searchAsync(
+    query: string,
+    opts: SearchOptions = {},
+  ): Promise<SearchHit[]> {
     return (await this.searchBoundedAsync(query, opts)).hits;
   }
 
@@ -917,7 +989,9 @@ export class TextIndex {
    *  impossible before the copy point). The generation load's WAL-delta
    *  replay reconciles any mid-copy write exactly as it reconciles any
    *  post-seal write. */
-  async exportImageStateAsync(opts: { sliceEvery?: number } = {}): Promise<TextIndexImage> {
+  async exportImageStateAsync(
+    opts: { sliceEvery?: number } = {},
+  ): Promise<TextIndexImage> {
     return exportImageStateAsyncImpl(this, opts);
   }
 

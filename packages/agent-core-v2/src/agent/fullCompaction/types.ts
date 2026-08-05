@@ -9,7 +9,7 @@ export interface CompactionResult {
   droppedCount?: number;
 }
 
-export type CompactionSource = 'manual' | 'auto';
+export type CompactionSource = "manual" | "auto";
 
 export interface CompactionBeginData {
   instruction?: string;

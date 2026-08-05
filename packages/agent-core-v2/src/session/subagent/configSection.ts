@@ -33,34 +33,34 @@
  * `registerConfigSection`.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { Error2, ErrorCodes, isError2 } from '#/errors';
-import type { AgentModelPreference } from '#/app/agentProfileCatalog/agentProfileCatalog';
-import { isPlainObject } from '#/app/config/toml';
-import type { IFlagService } from '#/app/flag/flag';
+import { Error2, ErrorCodes, isError2 } from "#/errors";
+import type { AgentModelPreference } from "#/app/agentProfileCatalog/agentProfileCatalog";
+import { isPlainObject } from "#/app/config/toml";
+import type { IFlagService } from "#/app/flag/flag";
 import {
   SECONDARY_MODEL_ENV,
   SECONDARY_MODEL_SECTION,
-} from '#/app/kosongConfig/configSection';
+} from "#/app/kosongConfig/configSection";
 import {
   SECONDARY_DERIVED_MODEL_ID,
   secondaryModelPatch,
-} from '#/app/kosongConfig/secondaryModelOverlay';
-import { type SecondaryModelConfig } from '#/app/kosongConfig/configSection';
+} from "#/app/kosongConfig/secondaryModelOverlay";
+import { type SecondaryModelConfig } from "#/app/kosongConfig/configSection";
 import {
   type EnvBindings,
   envBindings,
   stripEnvBoundFields,
   type IConfigService,
-} from '#/app/config/config';
-import { registerConfigSection } from '#/app/config/configSectionContributions';
-import type { ModelCapability } from '#/kosong/contract/capability';
-import type { IModelCatalog } from '#/kosong/model/catalog';
+} from "#/app/config/config";
+import { registerConfigSection } from "#/app/config/configSectionContributions";
+import type { ModelCapability } from "#/kosong/contract/capability";
+import type { IModelCatalog } from "#/kosong/model/catalog";
 
-import { SECONDARY_MODEL_FLAG_ID } from './flag';
+import { SECONDARY_MODEL_FLAG_ID } from "./flag";
 
-export const SUBAGENT_SECTION = 'subagent';
+export const SUBAGENT_SECTION = "subagent";
 
 export const SubagentConfigSchema = z.object({
   timeoutMs: z.number().int().min(0).optional(),
@@ -70,7 +70,7 @@ export type SubagentConfig = z.infer<typeof SubagentConfigSchema>;
 
 export const DEFAULT_SUBAGENT_TIMEOUT_MS = 2 * 60 * 60 * 1000;
 
-export const SUBAGENT_TIMEOUT_ENV = 'KIMI_SUBAGENT_TIMEOUT_MS';
+export const SUBAGENT_TIMEOUT_ENV = "KIMI_SUBAGENT_TIMEOUT_MS";
 
 function parseTimeoutMsEnv(raw: string): number | undefined {
   const parsed = Number(raw);
@@ -116,7 +116,7 @@ export function resolveSubagentBinding(
   requested?: SubagentModelChoice,
 ): { model: string; thinking?: string } {
   const secondary = resolveSecondaryModel(config, flags);
-  if (requested !== 'primary' && secondary?.model !== undefined) {
+  if (requested !== "primary" && secondary?.model !== undefined) {
     return {
       model:
         secondaryModelPatch(secondary) === undefined
@@ -136,29 +136,34 @@ export function buildSubagentModelDescriptions(
 ): string | undefined {
   const secondary = resolveSecondaryModel(config, flags);
   const secondaryModel = secondary?.model;
-  if (secondaryModel === undefined || callerModelAlias === undefined) return undefined;
+  if (secondaryModel === undefined || callerModelAlias === undefined)
+    return undefined;
   const boundSecondary =
-    secondaryModelPatch(secondary) === undefined ? secondaryModel : SECONDARY_DERIVED_MODEL_ID;
+    secondaryModelPatch(secondary) === undefined
+      ? secondaryModel
+      : SECONDARY_DERIVED_MODEL_ID;
   return [
-    'Available models (pass via model):',
+    "Available models (pass via model):",
     `- secondary: ${secondaryModel} (default) — the configured secondary model; prefer it for routine subagent tasks${capabilitiesSuffix(resolvedCapabilities(modelCatalog, boundSecondary))}`,
     `- primary: ${callerModelAlias} — the main model you are running on; use it for hard, quality-sensitive subagent tasks${capabilitiesSuffix(resolvedCapabilities(modelCatalog, callerModelAlias))}`,
-  ].join('\n');
+  ].join("\n");
 }
 
 const ADVERTISED_CAPABILITY_FLAGS = [
-  'image_in',
-  'video_in',
-  'audio_in',
-  'thinking',
-  'tool_use',
-  'dynamically_loaded_tools',
+  "image_in",
+  "video_in",
+  "audio_in",
+  "thinking",
+  "tool_use",
+  "dynamically_loaded_tools",
 ] as const satisfies readonly (keyof ModelCapability)[];
 
 function capabilitiesSuffix(capability: ModelCapability | undefined): string {
-  if (capability === undefined) return '';
-  const names = ADVERTISED_CAPABILITY_FLAGS.filter((flag) => capability[flag] === true);
-  return `; capabilities: ${names.length === 0 ? 'none' : names.join(', ')}`;
+  if (capability === undefined) return "";
+  const names = ADVERTISED_CAPABILITY_FLAGS.filter(
+    (flag) => capability[flag] === true,
+  );
+  return `; capabilities: ${names.length === 0 ? "none" : names.join(", ")}`;
 }
 
 function resolvedCapabilities(
@@ -186,14 +191,17 @@ function resolvedCapabilities(
 export function stripSubagentModelParameter(
   parameters: Record<string, unknown>,
 ): Record<string, unknown> {
-  const properties = parameters['properties'];
-  if (!isPlainObject(properties) || !('model' in properties)) return parameters;
+  const properties = parameters["properties"];
+  if (!isPlainObject(properties) || !("model" in properties)) return parameters;
   const nextProperties = { ...properties };
-  delete nextProperties['model'];
-  const next: Record<string, unknown> = { ...parameters, properties: nextProperties };
-  const required = parameters['required'];
-  if (Array.isArray(required) && required.includes('model')) {
-    next['required'] = required.filter((entry) => entry !== 'model');
+  delete nextProperties["model"];
+  const next: Record<string, unknown> = {
+    ...parameters,
+    properties: nextProperties,
+  };
+  const required = parameters["required"];
+  if (Array.isArray(required) && required.includes("model")) {
+    next["required"] = required.filter((entry) => entry !== "model");
   }
   return next;
 }
@@ -204,8 +212,9 @@ export function wrapSubagentModelError(
   callerModelAlias: string | undefined,
 ): unknown {
   if (boundModel === callerModelAlias) return error;
-  if (!isError2(error) || error.code !== ErrorCodes.CONFIG_INVALID) return error;
-  if (error.details?.['model'] !== boundModel) return error;
+  if (!isError2(error) || error.code !== ErrorCodes.CONFIG_INVALID)
+    return error;
+  if (error.details?.["model"] !== boundModel) return error;
   const displayModel =
     boundModel === SECONDARY_DERIVED_MODEL_ID
       ? `the derived entry "${SECONDARY_DERIVED_MODEL_ID}"`
@@ -220,7 +229,7 @@ export function wrapSubagentModelError(
         ...error.details,
         secondaryModel: boundModel,
         secondaryModelConfig: {
-          section: 'secondaryModel.model',
+          section: "secondaryModel.model",
           environment: SECONDARY_MODEL_ENV,
         },
       },
@@ -231,15 +240,15 @@ export function wrapSubagentModelError(
 export function formatSubagentTimeoutDescription(ms: number): string {
   if (ms % (60 * 60 * 1000) === 0) {
     const h = ms / (60 * 60 * 1000);
-    return `${h} hour${h === 1 ? '' : 's'}`;
+    return `${h} hour${h === 1 ? "" : "s"}`;
   }
   if (ms % (60 * 1000) === 0) {
     const m = ms / (60 * 1000);
-    return `${m} minute${m === 1 ? '' : 's'}`;
+    return `${m} minute${m === 1 ? "" : "s"}`;
   }
   if (ms % 1000 === 0) {
     const s = ms / 1000;
-    return `${s} second${s === 1 ? '' : 's'}`;
+    return `${s} second${s === 1 ? "" : "s"}`;
   }
   return `${ms} ms`;
 }

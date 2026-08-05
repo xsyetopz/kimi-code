@@ -17,15 +17,18 @@
  * Workspace-scoped — one instance per materialized handler.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
-import type { ISessionScopeHandle } from '#/_base/di/scope';
-import type { Event } from '#/_base/event';
-import type { BindAgentInput } from '#/agent/profile/profile';
-import type { McpServerConfig } from '#/mcpCore/config-schema';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
+import type { ISessionScopeHandle } from "#/_base/di/scope";
+import type { Event } from "#/_base/event";
+import type { BindAgentInput } from "#/agent/profile/profile";
+import type { McpServerConfig } from "#/mcpCore/config-schema";
 import type {
   SessionCloseReason,
   SessionCreateSource,
-} from '#/session/sessionLifecycleHooks/sessionLifecycleHooks';
+} from "#/session/sessionLifecycleHooks/sessionLifecycleHooks";
 
 export type { SessionCloseReason, SessionCreateSource };
 
@@ -104,14 +107,20 @@ export interface ISessionLifecycleService {
   create(opts: CreateSessionOptions): Promise<ISessionScopeHandle>;
   get(sessionId: string): ISessionScopeHandle | undefined;
   list(): readonly ISessionScopeHandle[];
-  resume(sessionId: string, opts?: ResumeSessionOptions): Promise<ISessionScopeHandle | undefined>;
+  resume(
+    sessionId: string,
+    opts?: ResumeSessionOptions,
+  ): Promise<ISessionScopeHandle | undefined>;
   close(sessionId: string): Promise<void>;
   archive(sessionId: string): Promise<void>;
-  restore(sessionId: string, opts?: ResumeSessionOptions): Promise<ISessionScopeHandle | undefined>;
+  restore(
+    sessionId: string,
+    opts?: ResumeSessionOptions,
+  ): Promise<ISessionScopeHandle | undefined>;
   delete(sessionId: string): Promise<void>;
   fork(opts: ForkSessionOptions): Promise<ISessionScopeHandle>;
   createChild(opts: CreateChildSessionOptions): Promise<ISessionScopeHandle>;
 }
 
 export const ISessionLifecycleService: ServiceIdentifier<ISessionLifecycleService> =
-  createDecorator<ISessionLifecycleService>('sessionLifecycleService');
+  createDecorator<ISessionLifecycleService>("sessionLifecycleService");

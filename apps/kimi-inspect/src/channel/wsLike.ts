@@ -9,7 +9,7 @@ export interface WsLike {
   send(data: string): void;
   close(code?: number, reason?: string): void;
   addEventListener(
-    type: 'open' | 'message' | 'close' | 'error',
+    type: "open" | "message" | "close" | "error",
     listener: (event: never) => void,
   ): void;
 }

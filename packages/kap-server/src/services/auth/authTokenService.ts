@@ -11,10 +11,10 @@
  * async — the token path is synchronous, but the interface must await both.
  */
 
-import { createDecorator } from '@moonshot-ai/agent-core-v2';
+import { createDecorator } from "@moonshot-ai/agent-core-v2";
 
-import { verifyPassword } from './password';
-import type { TokenStore } from './tokenStore';
+import { verifyPassword } from "./password";
+import type { TokenStore } from "./tokenStore";
 
 export interface IAuthTokenService {
   readonly _serviceBrand: undefined;
@@ -32,7 +32,7 @@ export interface IAuthTokenService {
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const IAuthTokenService =
-  createDecorator<IAuthTokenService>('authTokenService');
+  createDecorator<IAuthTokenService>("authTokenService");
 
 /**
  * Default `IAuthTokenService` over a `TokenStore` + optional password hash.

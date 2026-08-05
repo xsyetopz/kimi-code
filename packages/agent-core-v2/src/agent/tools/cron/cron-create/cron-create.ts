@@ -9,10 +9,10 @@
  * cadence (`recurring: true`, the default). Bound at Agent scope.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { createDecorator } from '#/_base/di/instantiation';
-import type { AgentTool } from '#/tool/toolContract';
+import { createDecorator } from "#/_base/di/instantiation";
+import type { AgentTool } from "#/tool/toolContract";
 
 export const MAX_CRON_JOBS_PER_SESSION = 50;
 
@@ -28,7 +28,9 @@ export const CronCreateInputSchema = z.object({
     .string()
     .min(1)
     .max(MAX_PROMPT_BYTES)
-    .describe('The prompt to enqueue at each fire time. Limited to 8 KiB (UTF-8).'),
+    .describe(
+      "The prompt to enqueue at each fire time. Limited to 8 KiB (UTF-8).",
+    ),
   recurring: z
     .boolean()
     .optional()
@@ -48,5 +50,8 @@ export interface CronCreateOutput {
   readonly nextFireAt: number | null;
 }
 
-export interface ICronCreateTool extends AgentTool<CronCreateInput> { readonly _serviceBrand: undefined }
-export const ICronCreateTool = createDecorator<ICronCreateTool>('cronCreateTool');
+export interface ICronCreateTool extends AgentTool<CronCreateInput> {
+  readonly _serviceBrand: undefined;
+}
+export const ICronCreateTool =
+  createDecorator<ICronCreateTool>("cronCreateTool");

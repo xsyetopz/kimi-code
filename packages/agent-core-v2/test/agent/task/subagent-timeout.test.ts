@@ -9,24 +9,24 @@
  *     only be set for the caller-driven deadline
  */
 
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { IAgentTaskService } from '#/agent/task/task';
-import { SubagentTask } from '#/agent/tools/agent/subagent-task';
-import { createTestAgent, type TestAgentContext } from '../../harness';
+import { IAgentTaskService } from "#/agent/task/task";
+import { SubagentTask } from "#/agent/tools/agent/subagent-task";
+import { createTestAgent, type TestAgentContext } from "../../harness";
 
 function agentTask(
   completion: Promise<{ result: string }>,
   description: string,
 ): SubagentTask {
   return new SubagentTask(
-    { agentId: 'agent-child', profileName: 'coder', completion },
+    { agentId: "agent-child", profileName: "coder", completion },
     description,
     new AbortController(),
   );
 }
 
-describe('SubagentTask — timeoutMs', () => {
+describe("SubagentTask — timeoutMs", () => {
   let ctx: TestAgentContext;
   let background: IAgentTaskService;
 
@@ -44,10 +44,10 @@ describe('SubagentTask — timeoutMs', () => {
     }
   });
 
-  it('external deadline marks task timed_out', async () => {
-    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+  it("external deadline marks task timed_out", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     const hangForever = new Promise<{ result: string }>(() => {});
-    const taskId = background.registerTask(agentTask(hangForever, 'hang'), {
+    const taskId = background.registerTask(agentTask(hangForever, "hang"), {
       timeoutMs: 2_000,
     });
 
@@ -55,83 +55,106 @@ describe('SubagentTask — timeoutMs', () => {
     await vi.advanceTimersByTimeAsync(7_100);
     const info = await terminalPromise;
 
-    expect(info?.status).toBe('timed_out');
+    expect(info?.status).toBe("timed_out");
     expect(info?.stopReason).toBeUndefined();
   });
 
-  it('omitting timeoutMs lets the task run to completion without a manager deadline', async () => {
-    let resolveFn!: (r: { result: string }) => void;
-    const completion = new Promise<{ result: string }>((res) => {
-      resolveFn = res;
-    });
-    const taskId = background.registerTask(agentTask(completion, 'no deadline'));
-
-    resolveFn({ result: 'finished' });
-    const info = await background.wait(taskId);
-    expect(info?.status).toBe('completed');
-    expect(info?.stopReason).toBeUndefined();
-  });
-
-  it('internal TimeoutError rejection = generic failure with error reason', async () => {
-    const internalErr = new Error('aiohttp sock_read timeout');
-    internalErr.name = 'TimeoutError';
-    const rejecting = Promise.reject(internalErr);
-    const taskId = background.registerTask(agentTask(rejecting, 'internal timeout'), {
-      timeoutMs: 900_000,
-    });
-
-    const info = await background.wait(taskId);
-    expect(info?.status).toBe('failed');
-    expect(info?.stopReason).toBe('aiohttp sock_read timeout');
-  });
-
-  it('explicit timeoutMs is persisted on the task info', async () => {
-    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+  it("omitting timeoutMs lets the task run to completion without a manager deadline", async () => {
     let resolveFn!: (r: { result: string }) => void;
     const completion = new Promise<{ result: string }>((res) => {
       resolveFn = res;
     });
     const taskId = background.registerTask(
-      agentTask(completion, 'persist timeout'),
+      agentTask(completion, "no deadline"),
+    );
+
+    resolveFn({ result: "finished" });
+    const info = await background.wait(taskId);
+    expect(info?.status).toBe("completed");
+    expect(info?.stopReason).toBeUndefined();
+  });
+
+  it("internal TimeoutError rejection = generic failure with error reason", async () => {
+    const internalErr = new Error("aiohttp sock_read timeout");
+    internalErr.name = "TimeoutError";
+    const rejecting = Promise.reject(internalErr);
+    const taskId = background.registerTask(
+      agentTask(rejecting, "internal timeout"),
+      {
+        timeoutMs: 900_000,
+      },
+    );
+
+    const info = await background.wait(taskId);
+    expect(info?.status).toBe("failed");
+    expect(info?.stopReason).toBe("aiohttp sock_read timeout");
+  });
+
+  it("explicit timeoutMs is persisted on the task info", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    let resolveFn!: (r: { result: string }) => void;
+    const completion = new Promise<{ result: string }>((res) => {
+      resolveFn = res;
+    });
+    const taskId = background.registerTask(
+      agentTask(completion, "persist timeout"),
       { timeoutMs: 1_800_000 },
     );
     const info = background.getTask(taskId);
-    expect((info as unknown as { timeoutMs?: number }).timeoutMs).toBe(1_800_000);
-    resolveFn({ result: 'finished' });
-    await expect(background.wait(taskId)).resolves.toMatchObject({ status: 'completed' });
+    expect((info as unknown as { timeoutMs?: number }).timeoutMs).toBe(
+      1_800_000,
+    );
+    resolveFn({ result: "finished" });
+    await expect(background.wait(taskId)).resolves.toMatchObject({
+      status: "completed",
+    });
   });
 
-  it('omitted timeoutMs leaves the task info field undefined', async () => {
+  it("omitted timeoutMs leaves the task info field undefined", async () => {
     let resolveFn!: (r: { result: string }) => void;
     const completion = new Promise<{ result: string }>((res) => {
       resolveFn = res;
     });
-    const taskId = background.registerTask(agentTask(completion, 'default timeout'));
+    const taskId = background.registerTask(
+      agentTask(completion, "default timeout"),
+    );
     const info = background.getTask(taskId);
-    expect((info as unknown as { timeoutMs?: number }).timeoutMs).toBeUndefined();
-    resolveFn({ result: 'finished' });
-    await expect(background.wait(taskId)).resolves.toMatchObject({ status: 'completed' });
+    expect(
+      (info as unknown as { timeoutMs?: number }).timeoutMs,
+    ).toBeUndefined();
+    resolveFn({ result: "finished" });
+    await expect(background.wait(taskId)).resolves.toMatchObject({
+      status: "completed",
+    });
   });
 
-  it('timeoutMs=0 is preserved on the task info and does not arm a deadline', async () => {
+  it("timeoutMs=0 is preserved on the task info and does not arm a deadline", async () => {
     let resolveFn!: (r: { result: string }) => void;
     const completion = new Promise<{ result: string }>((res) => {
       resolveFn = res;
     });
-    const taskId = background.registerTask(agentTask(completion, 'zero timeout'), {
-      timeoutMs: 0,
-    });
+    const taskId = background.registerTask(
+      agentTask(completion, "zero timeout"),
+      {
+        timeoutMs: 0,
+      },
+    );
     const initial = background.getTask(taskId);
     expect((initial as unknown as { timeoutMs?: number }).timeoutMs).toBe(0);
 
     const info = await background.wait(taskId, 5);
-    const raced = info === undefined ? undefined : {
-      status: info.status,
-      stopReason: info.stopReason,
-    };
-    expect(raced?.status).toBe('running');
+    const raced =
+      info === undefined
+        ? undefined
+        : {
+            status: info.status,
+            stopReason: info.stopReason,
+          };
+    expect(raced?.status).toBe("running");
     expect(raced?.stopReason).toBeUndefined();
-    resolveFn({ result: 'finished' });
-    await expect(background.wait(taskId)).resolves.toMatchObject({ status: 'completed' });
+    resolveFn({ result: "finished" });
+    await expect(background.wait(taskId)).resolves.toMatchObject({
+      status: "completed",
+    });
   });
 });

@@ -10,11 +10,11 @@
  * `{ id, kind }` (loose — extra fields may appear in-process).
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { maybe, noResult } from '../helpers.js';
-import { mcpServerConfigSchema } from '../mcp.js';
-import type { ServiceContract } from '../types.js';
+import { maybe, noResult } from "../helpers.js";
+import { mcpServerConfigSchema } from "../mcp.js";
+import type { ServiceContract } from "../types.js";
 
 export const createSessionOptionsSchema = z.object({
   sessionId: z.string().optional(),
@@ -60,11 +60,17 @@ export const workspaceRefSchema = z.union([
 ]);
 
 export const workspaceLifecycleContract = {
-  handlerFor: { input: z.tuple([workspaceRefSchema]), output: handleWireSchema },
+  handlerFor: {
+    input: z.tuple([workspaceRefSchema]),
+    output: handleWireSchema,
+  },
 } satisfies ServiceContract;
 
 export const sessionLifecycleContract = {
-  create: { input: z.tuple([createSessionOptionsSchema]), output: handleWireSchema },
+  create: {
+    input: z.tuple([createSessionOptionsSchema]),
+    output: handleWireSchema,
+  },
   resume: {
     input: z.tuple([z.string(), resumeSessionOptionsSchema.optional()]),
     output: maybe(handleWireSchema),
@@ -76,6 +82,12 @@ export const sessionLifecycleContract = {
     output: maybe(handleWireSchema),
   },
   delete: { input: z.tuple([z.string()]), output: noResult },
-  fork: { input: z.tuple([forkSessionOptionsSchema]), output: handleWireSchema },
-  createChild: { input: z.tuple([createChildSessionOptionsSchema]), output: handleWireSchema },
+  fork: {
+    input: z.tuple([forkSessionOptionsSchema]),
+    output: handleWireSchema,
+  },
+  createChild: {
+    input: z.tuple([createChildSessionOptionsSchema]),
+    output: handleWireSchema,
+  },
 } satisfies ServiceContract;

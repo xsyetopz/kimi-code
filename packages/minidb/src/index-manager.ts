@@ -5,11 +5,11 @@
 // published index generation (stage 5) or, as the fallback, rebuilt from the
 // store wholesale; individual indexes are rebuilt on definition changes.
 
-import { SkipList, cmpNumber, cmpString } from './skiplist.js';
-import type { RangeOptions } from './skiplist.js';
-import type { SecondaryImageIndex } from './gen-codec.js';
+import { SkipList, cmpNumber, cmpString } from "./skiplist.js";
+import type { RangeOptions } from "./skiplist.js";
+import type { SecondaryImageIndex } from "./gen-codec.js";
 
-export type IndexType = 'equality' | 'range';
+export type IndexType = "equality" | "range";
 
 export interface IndexDef {
   field: string;
@@ -29,7 +29,7 @@ export interface IndexInfo {
 interface EqIndex {
   name: string;
   field: string;
-  type: 'equality';
+  type: "equality";
   unique: boolean;
   sparse: boolean;
   map: Map<string, Set<string>>;
@@ -39,7 +39,7 @@ interface EqIndex {
 interface RangeIndex {
   name: string;
   field: string;
-  type: 'range';
+  type: "range";
   unique: boolean;
   sparse: boolean;
   list: SkipList<number, string>;
@@ -50,25 +50,36 @@ type AnyIndex = EqIndex | RangeIndex;
 
 export class UniqueViolationError extends Error {
   constructor(index: string, value: unknown) {
-    super(`unique index "${index}" violation on value ${JSON.stringify(value)}`);
-    this.name = 'UniqueViolationError';
+    super(
+      `unique index "${index}" violation on value ${JSON.stringify(value)}`,
+    );
+    this.name = "UniqueViolationError";
   }
 }
 
 function getField(doc: unknown, path: string): unknown {
-  return path.split('.').reduce<unknown>((o, k) => (o === null || o === undefined ? undefined : (o as Record<string, unknown>)[k]), doc);
+  return path
+    .split(".")
+    .reduce<unknown>(
+      (o, k) =>
+        o === null || o === undefined
+          ? undefined
+          : (o as Record<string, unknown>)[k],
+      doc,
+    );
 }
 
 function stableStringify(v: unknown): string {
-  if (v === null || typeof v !== 'object') return JSON.stringify(v);
-  if (Array.isArray(v)) return `[${v.map(stableStringify).join(',')}]`;
+  if (v === null || typeof v !== "object") return JSON.stringify(v);
+  if (Array.isArray(v)) return `[${v.map(stableStringify).join(",")}]`;
   const keys = Object.keys(v as Record<string, unknown>).sort();
-  return `{${keys.map((k) => `${JSON.stringify(k)}:${stableStringify((v as Record<string, unknown>)[k])}`).join(',')}}`;
+  return `{${keys.map((k) => `${JSON.stringify(k)}:${stableStringify((v as Record<string, unknown>)[k])}`).join(",")}}`;
 }
 
 function scalarKey(v: unknown): string {
   const t = typeof v;
-  if (t === 'string' || t === 'number' || t === 'boolean') return `${t}:${String(v)}`;
+  if (t === "string" || t === "number" || t === "boolean")
+    return `${t}:${String(v)}`;
   // Canonicalize property order so {a:1,b:2} and {b:2,a:1} hash to the same
   // key; JSON.stringify alone preserves insertion order and would split them.
   return `json:${stableStringify(v)}`;
@@ -90,7 +101,7 @@ function assertVacated(
   holder: string,
   claimant: string,
   value: unknown,
-  lastOp: ReadonlyMap<string, { op: 'set' | 'del'; doc: unknown }>,
+  lastOp: ReadonlyMap<string, { op: "set" | "del"; doc: unknown }>,
 ): void {
   if (holder === claimant) return;
   const fin = lastOp.get(holder);
@@ -105,11 +116,17 @@ function assertVacated(
 function insertDoc(idx: AnyIndex, pk: string, doc: unknown): void {
   const value = getField(doc, idx.field);
   if (value === undefined && idx.sparse) return;
-  if (idx.type === 'range') {
+  if (idx.type === "range") {
     // Index each distinct numeric element once. Without the de-dupe, an
     // array like [10, 10, 10] would insert three (10, pk) nodes and the
     // same key would be reported three times by findRange.
-    const vals = [...new Set(flatten(value).filter((v): v is number => typeof v === 'number' && Number.isFinite(v)))];
+    const vals = [
+      ...new Set(
+        flatten(value).filter(
+          (v): v is number => typeof v === "number" && Number.isFinite(v),
+        ),
+      ),
+    ];
     if (vals.length === 0) return;
     for (const v of vals) idx.list.insert(v, pk);
     idx.byPk.set(pk, vals);
@@ -129,7 +146,7 @@ function insertDoc(idx: AnyIndex, pk: string, doc: unknown): void {
 /** Remove one key from an index's given state (the per-index body of
  *  IndexManager.remove). */
 function removeFromIndex(idx: AnyIndex, pk: string): void {
-  if (idx.type === 'range') {
+  if (idx.type === "range") {
     const old = idx.byPk.get(pk);
     if (old) {
       for (const v of old) idx.list.delete(v, pk);
@@ -157,10 +174,11 @@ function checkUniqueOnIndex(idx: AnyIndex, pk: string, doc: unknown): void {
   const value = getField(doc, idx.field);
   if (value === undefined && idx.sparse) return;
   for (const v of flatten(value)) {
-    if (idx.type === 'range') {
-      if (typeof v !== 'number' || !Number.isFinite(v)) continue;
+    if (idx.type === "range") {
+      if (typeof v !== "number" || !Number.isFinite(v)) continue;
       const hit = idx.list.range({ gte: v, lte: v, count: 1 });
-      if (hit.length && hit[0]!.val !== pk) throw new UniqueViolationError(idx.name, v);
+      if (hit.length && hit[0]!.val !== pk)
+        throw new UniqueViolationError(idx.name, v);
     } else {
       const set = idx.map.get(scalarKey(v));
       if (set && (set.size > 1 || (set.size === 1 && !set.has(pk)))) {
@@ -173,7 +191,10 @@ function checkUniqueOnIndex(idx: AnyIndex, pk: string, doc: unknown): void {
 /** Validate one unique index for a batch of ops against the index state AFTER
  *  the whole batch (the per-index body of IndexManager.checkUniqueBatch;
  *  `lastOp` is the batch's last op per key). */
-function checkUniqueBatchOnIndex(idx: AnyIndex, lastOp: ReadonlyMap<string, { op: 'set' | 'del'; doc: unknown }>): void {
+function checkUniqueBatchOnIndex(
+  idx: AnyIndex,
+  lastOp: ReadonlyMap<string, { op: "set" | "del"; doc: unknown }>,
+): void {
   if (!idx.unique) return;
   // Batch-local claims: value -> claiming pk. Two different keys finally
   // claiming the same value is a conflict regardless of the live index.
@@ -181,14 +202,15 @@ function checkUniqueBatchOnIndex(idx: AnyIndex, lastOp: ReadonlyMap<string, { op
   // case: the holder's own final claims pass through this same map.
   const claimed = new Map<string | number, string>();
   for (const [pk, o] of lastOp) {
-    if (o.op === 'del') continue;
+    if (o.op === "del") continue;
     const value = getField(o.doc, idx.field);
     if (value === undefined && idx.sparse) continue;
     for (const v of flatten(value)) {
-      if (idx.type === 'range') {
-        if (typeof v !== 'number' || !Number.isFinite(v)) continue;
+      if (idx.type === "range") {
+        if (typeof v !== "number" || !Number.isFinite(v)) continue;
         const prev = claimed.get(v);
-        if (prev !== undefined && prev !== pk) throw new UniqueViolationError(idx.name, v);
+        if (prev !== undefined && prev !== pk)
+          throw new UniqueViolationError(idx.name, v);
         claimed.set(v, pk);
         // Current holder in the live index, if any: a conflict unless it
         // is the claimant itself or a key the batch vacates.
@@ -197,7 +219,8 @@ function checkUniqueBatchOnIndex(idx: AnyIndex, lastOp: ReadonlyMap<string, { op
       } else {
         const sk = scalarKey(v);
         const prev = claimed.get(sk);
-        if (prev !== undefined && prev !== pk) throw new UniqueViolationError(idx.name, v);
+        if (prev !== undefined && prev !== pk)
+          throw new UniqueViolationError(idx.name, v);
         claimed.set(sk, pk);
         const set = idx.map.get(sk);
         if (set) for (const h of set) assertVacated(idx, h, pk, v, lastOp);
@@ -239,16 +262,22 @@ export class IndexManager {
   }
 
   /** Validate the definition and construct the (empty) index state. */
-  private static build(name: string, { field, type = 'equality', unique = false, sparse = true }: IndexDef): AnyIndex {
-    if (!field) throw new TypeError('index requires a field');
-    return type === 'range'
+  private static build(
+    name: string,
+    { field, type = "equality", unique = false, sparse = true }: IndexDef,
+  ): AnyIndex {
+    if (!field) throw new TypeError("index requires a field");
+    return type === "range"
       ? {
           name,
           field,
           type,
           unique,
           sparse,
-          list: new SkipList<number, string>({ compareKey: cmpNumber, compareVal: cmpString }),
+          list: new SkipList<number, string>({
+            compareKey: cmpNumber,
+            compareVal: cmpString,
+          }),
           byPk: new Map(),
         }
       : { name, field, type, unique, sparse, map: new Map(), byPk: new Map() };
@@ -258,7 +287,8 @@ export class IndexManager {
     // Build first: the field validation precedes the name collision check,
     // exactly as it did before the constructor was factored out.
     const idx = IndexManager.build(name, def);
-    if (this.indexes.has(name)) throw new Error(`index "${name}" already exists`);
+    if (this.indexes.has(name))
+      throw new Error(`index "${name}" already exists`);
     this.indexes.set(name, idx);
     return idx;
   }
@@ -268,19 +298,24 @@ export class IndexManager {
    *  error precedence. */
   stage(name: string, def: IndexDef): void {
     const idx = IndexManager.build(name, def);
-    if (this.indexes.has(name) || this.staged.has(name)) throw new Error(`index "${name}" already exists`);
+    if (this.indexes.has(name) || this.staged.has(name))
+      throw new Error(`index "${name}" already exists`);
     this.staged.set(name, idx);
   }
 
   /** Rebuild ONE staged index from an iterator of { key, value } (value =
    *  decoded doc). Unlike rebuild() this touches nothing live: a failure
    *  midway leaves every published index fully intact. */
-  rebuildStaged(name: string, entries: Iterable<{ key: string | Buffer; value: unknown }>): void {
+  rebuildStaged(
+    name: string,
+    entries: Iterable<{ key: string | Buffer; value: unknown }>,
+  ): void {
     const idx = this.staged.get(name);
     if (!idx) throw new Error(`no staged index: ${name}`);
     for (const { key, value } of entries) {
-      if (!value || typeof value !== 'object') continue;
-      const pk = typeof key === 'string' ? key : Buffer.from(key).toString('binary');
+      if (!value || typeof value !== "object") continue;
+      const pk =
+        typeof key === "string" ? key : Buffer.from(key).toString("binary");
       insertDoc(idx, pk, value);
     }
   }
@@ -319,13 +354,15 @@ export class IndexManager {
   }
 
   list(): IndexInfo[] {
-    return [...this.indexes.values()].map(({ name, field, type, unique, sparse }) => ({
-      name,
-      field,
-      type,
-      unique,
-      sparse,
-    }));
+    return [...this.indexes.values()].map(
+      ({ name, field, type, unique, sparse }) => ({
+        name,
+        field,
+        type,
+        unique,
+        sparse,
+      }),
+    );
   }
 
   /** Throw a UniqueViolationError if adding `doc` for `pk` would violate a unique index.
@@ -354,13 +391,17 @@ export class IndexManager {
    * batch-local claim map — it never copies the full per-index owner state,
    * so a small batch stays cheap on a large index.
    */
-  checkUniqueBatch(ops: readonly { pk: string; op: 'set' | 'del'; doc: unknown }[]): void {
-    const lastOp = new Map<string, { op: 'set' | 'del'; doc: unknown }>();
+  checkUniqueBatch(
+    ops: readonly { pk: string; op: "set" | "del"; doc: unknown }[],
+  ): void {
+    const lastOp = new Map<string, { op: "set" | "del"; doc: unknown }>();
     for (const o of ops) lastOp.set(o.pk, o);
 
-    for (const idx of this.indexes.values()) checkUniqueBatchOnIndex(idx, lastOp);
+    for (const idx of this.indexes.values())
+      checkUniqueBatchOnIndex(idx, lastOp);
     // A staged unique index already constrains writes (see `staged`).
-    for (const idx of this.staged.values()) checkUniqueBatchOnIndex(idx, lastOp);
+    for (const idx of this.staged.values())
+      checkUniqueBatchOnIndex(idx, lastOp);
   }
 
   /**
@@ -373,12 +414,13 @@ export class IndexManager {
   assertUniqueValid(name: string): void {
     const idx = this.staged.get(name) ?? this.get(name);
     if (!idx.unique) return;
-    if (idx.type === 'range') {
+    if (idx.type === "range") {
       const owner = new Map<number, string>();
       for (const [pk, vals] of idx.byPk) {
         for (const v of vals) {
           const prev = owner.get(v);
-          if (prev !== undefined && prev !== pk) throw new UniqueViolationError(idx.name, v);
+          if (prev !== undefined && prev !== pk)
+            throw new UniqueViolationError(idx.name, v);
           owner.set(v, pk);
         }
       }
@@ -386,7 +428,10 @@ export class IndexManager {
       for (const [, set] of idx.map) {
         if (set.size > 1) {
           const sample = [...set][0];
-          throw new UniqueViolationError(idx.name, `${set.size} keys (e.g. ${sample})`);
+          throw new UniqueViolationError(
+            idx.name,
+            `${set.size} keys (e.g. ${sample})`,
+          );
         }
       }
     }
@@ -405,7 +450,8 @@ export class IndexManager {
 
   findEq(name: string, value: unknown): string[] {
     const idx = this.get(name);
-    if (idx.type !== 'equality') throw new Error(`index "${name}" is not an equality index`);
+    if (idx.type !== "equality")
+      throw new Error(`index "${name}" is not an equality index`);
     const set = idx.map.get(scalarKey(value));
     return set ? [...set] : [];
   }
@@ -414,17 +460,27 @@ export class IndexManager {
    *  index? Avoids materializing the full posting list like findEq does. */
   hasEq(name: string, value: unknown, pk: string): boolean {
     const idx = this.get(name);
-    if (idx.type !== 'equality') throw new Error(`index "${name}" is not an equality index`);
+    if (idx.type !== "equality")
+      throw new Error(`index "${name}" is not an equality index`);
     const set = idx.map.get(scalarKey(value));
     return !!set && set.has(pk);
   }
 
   findRange(
     name: string,
-    opts: { min?: number; max?: number; minExclusive?: boolean; maxExclusive?: boolean; offset?: number; count?: number; reverse?: boolean } = {},
+    opts: {
+      min?: number;
+      max?: number;
+      minExclusive?: boolean;
+      maxExclusive?: boolean;
+      offset?: number;
+      count?: number;
+      reverse?: boolean;
+    } = {},
   ): { pk: string; value: number }[] {
     const idx = this.get(name);
-    if (idx.type !== 'range') throw new Error(`index "${name}" is not a range index`);
+    if (idx.type !== "range")
+      throw new Error(`index "${name}" is not a range index`);
     const r: RangeOptions<number> = {};
     if (opts.min !== undefined) {
       if (opts.minExclusive) r.gt = opts.min;
@@ -444,7 +500,8 @@ export class IndexManager {
   rebuild(entries: Iterable<{ key: string | Buffer; value: unknown }>): void {
     const b = this.beginRebuild();
     for (const { key, value } of entries) {
-      const pk = typeof key === 'string' ? key : Buffer.from(key).toString('binary');
+      const pk =
+        typeof key === "string" ? key : Buffer.from(key).toString("binary");
       b.add(pk, value);
     }
     b.commit();
@@ -456,20 +513,29 @@ export class IndexManager {
     const staged: { idx: AnyIndex; next: AnyIndex }[] = [];
     for (const idx of this.indexes.values()) {
       const next: AnyIndex =
-        idx.type === 'range'
-          ? { ...idx, list: new SkipList<number, string>({ compareKey: cmpNumber, compareVal: cmpString }), byPk: new Map() }
+        idx.type === "range"
+          ? {
+              ...idx,
+              list: new SkipList<number, string>({
+                compareKey: cmpNumber,
+                compareVal: cmpString,
+              }),
+              byPk: new Map(),
+            }
           : { ...idx, map: new Map(), byPk: new Map() };
       staged.push({ idx, next });
     }
     return {
       add: (pk, doc) => {
-        if (!doc || typeof doc !== 'object') return;
+        if (!doc || typeof doc !== "object") return;
         for (const { next } of staged) insertDoc(next, pk, doc);
       },
       commit: () => {
         for (const { idx, next } of staged) {
-          if (idx.type === 'range' && next.type === 'range') idx.list = next.list;
-          else if (idx.type === 'equality' && next.type === 'equality') idx.map = next.map;
+          if (idx.type === "range" && next.type === "range")
+            idx.list = next.list;
+          else if (idx.type === "equality" && next.type === "equality")
+            idx.map = next.map;
           idx.byPk = next.byPk;
         }
       },
@@ -481,11 +547,11 @@ export class IndexManager {
   exportImage(): SecondaryImageIndex[] {
     const out: SecondaryImageIndex[] = [];
     for (const idx of this.indexes.values()) {
-      if (idx.type === 'range') {
+      if (idx.type === "range") {
         out.push({
           name: idx.name,
           field: idx.field,
-          type: 'range',
+          type: "range",
           unique: idx.unique,
           sparse: idx.sparse,
           equality: null,
@@ -495,10 +561,13 @@ export class IndexManager {
         out.push({
           name: idx.name,
           field: idx.field,
-          type: 'equality',
+          type: "equality",
           unique: idx.unique,
           sparse: idx.sparse,
-          equality: [...idx.map.entries()].map(([scalarKey, set]) => ({ scalarKey, pks: [...set] })),
+          equality: [...idx.map.entries()].map(([scalarKey, set]) => ({
+            scalarKey,
+            pks: [...set],
+          })),
           range: null,
         });
       }
@@ -512,8 +581,9 @@ export class IndexManager {
   loadImage(image: SecondaryImageIndex): void {
     const idx = this.indexes.get(image.name);
     if (!idx) throw new Error(`no such index: ${image.name}`);
-    if (idx.type !== image.type) throw new Error(`index "${image.name}" image type mismatch`);
-    if (idx.type === 'range' && image.range) {
+    if (idx.type !== image.type)
+      throw new Error(`index "${image.name}" image type mismatch`);
+    if (idx.type === "range" && image.range) {
       idx.list = SkipList.bulkLoad<number, string>(
         image.range.map((e) => ({ key: e.value, val: e.pk })),
         { compareKey: cmpNumber, compareVal: cmpString },
@@ -525,7 +595,7 @@ export class IndexManager {
         else byPk.set(e.pk, [e.value]);
       }
       idx.byPk = byPk;
-    } else if (idx.type === 'equality' && image.equality) {
+    } else if (idx.type === "equality" && image.equality) {
       const map = new Map<string, Set<string>>();
       const byPk = new Map<string, string[]>();
       for (const v of image.equality) {

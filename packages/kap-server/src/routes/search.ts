@@ -9,21 +9,24 @@
  *   POST /search   body: SearchMessagesBody   data: SearchMessagesResponse
  */
 
-import { type Scope } from '@moonshot-ai/agent-core-v2';
-import { z } from 'zod';
+import { type Scope } from "@moonshot-ai/agent-core-v2";
+import { z } from "zod";
 
-import { errEnvelope, okEnvelope } from '../envelope';
-import { requestLog } from '../lib/requestLog';
-import { defineRoute } from '../middleware/defineRoute';
-import { ErrorCode } from '../protocol/error-codes';
+import { errEnvelope, okEnvelope } from "../envelope";
+import { requestLog } from "../lib/requestLog";
+import { defineRoute } from "../middleware/defineRoute";
+import { ErrorCode } from "../protocol/error-codes";
 import {
   searchMessagesBodySchema,
   searchMessagesResponseSchema,
   type SearchMessagesBody,
   type SearchMessagesResponse,
-} from '../protocol/rest-search';
-import type { GlobalSearchPage, GlobalSearchQuery } from '../search/contract';
-import { GlobalSearchError, IGlobalSearchService } from '../search/searchService';
+} from "../protocol/rest-search";
+import type { GlobalSearchPage, GlobalSearchQuery } from "../search/contract";
+import {
+  GlobalSearchError,
+  IGlobalSearchService,
+} from "../search/searchService";
 
 interface SearchRouteHost {
   post(
@@ -36,7 +39,9 @@ interface SearchRouteHost {
   ): unknown;
 }
 
-const detailsSchema = z.array(z.object({ path: z.string(), message: z.string() }));
+const detailsSchema = z.array(
+  z.object({ path: z.string(), message: z.string() }),
+);
 
 function toServiceQuery(body: SearchMessagesBody): GlobalSearchQuery {
   return {
@@ -46,7 +51,10 @@ function toServiceQuery(body: SearchMessagesBody): GlobalSearchQuery {
     container:
       body.container === undefined
         ? undefined
-        : { sessionId: body.container.session_id, agentId: body.container.agent_id },
+        : {
+            sessionId: body.container.session_id,
+            agentId: body.container.agent_id,
+          },
     role: body.role,
     startTime: body.start_time,
     endTime: body.end_time,
@@ -88,30 +96,40 @@ function toWirePage(page: GlobalSearchPage): SearchMessagesResponse {
 export function registerSearchRoutes(app: SearchRouteHost, core: Scope): void {
   const route = defineRoute(
     {
-      method: 'POST',
-      path: '/search',
+      method: "POST",
+      path: "/search",
       body: searchMessagesBodySchema,
       success: { data: searchMessagesResponseSchema },
       errors: {
         [ErrorCode.VALIDATION_FAILED]: { detailsSchema },
       },
       description:
-        'Global full-text search over user messages, assistant replies and session titles across all sessions',
-      tags: ['search'],
+        "Global full-text search over user messages, assistant replies and session titles across all sessions",
+      tags: ["search"],
     },
     async (req, reply) => {
       try {
-        const page = await core.accessor.get(IGlobalSearchService).search(toServiceQuery(req.body));
+        const page = await core.accessor
+          .get(IGlobalSearchService)
+          .search(toServiceQuery(req.body));
         reply.send(okEnvelope(toWirePage(page), req.id));
       } catch (error) {
         if (
           error instanceof GlobalSearchError &&
-          (error.reason === 'invalid_query' || error.reason === 'invalid_page_token')
+          (error.reason === "invalid_query" ||
+            error.reason === "invalid_page_token")
         ) {
-          reply.send(errEnvelope(ErrorCode.VALIDATION_FAILED, error.message, req.id, error.stack));
+          reply.send(
+            errEnvelope(
+              ErrorCode.VALIDATION_FAILED,
+              error.message,
+              req.id,
+              error.stack,
+            ),
+          );
           return;
         }
-        requestLog(req)?.error({ err: error }, 'global search request failed');
+        requestLog(req)?.error({ err: error }, "global search request failed");
         reply.send(
           errEnvelope(
             ErrorCode.INTERNAL_ERROR,
@@ -123,5 +141,9 @@ export function registerSearchRoutes(app: SearchRouteHost, core: Scope): void {
       }
     },
   );
-  app.post(route.path, route.options, route.handler as Parameters<SearchRouteHost['post']>[2]);
+  app.post(
+    route.path,
+    route.options,
+    route.handler as Parameters<SearchRouteHost["post"]>[2],
+  );
 }

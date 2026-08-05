@@ -9,9 +9,24 @@
 // TOOL-role messages fold their toolResult content into the preceding assistant
 // group rather than becoming separate turns.
 
-import type { AppMessage, AppApprovalRequest, AppTask, CompactionMarkerMetadata } from '../api/types';
-import { COMPACTION_MARKER_METADATA_KEY } from '../api/types';
-import type { AgentMember, ApprovalBlock, ChatTurn, CronTurnData, DiffLine, ToolCall, ToolMedia, TurnAttachment, TurnBlock } from '../types';
+import type {
+  AppMessage,
+  AppApprovalRequest,
+  AppTask,
+  CompactionMarkerMetadata,
+} from "../api/types";
+import { COMPACTION_MARKER_METADATA_KEY } from "../api/types";
+import type {
+  AgentMember,
+  ApprovalBlock,
+  ChatTurn,
+  CronTurnData,
+  DiffLine,
+  ToolCall,
+  ToolMedia,
+  TurnAttachment,
+  TurnBlock,
+} from "../types";
 
 const READ_MEDIA_TOOL_RE = /^read[_-]?media(?:file)?$/i;
 const DATA_URL_RE = /^data:([^;]+);base64,(.*)$/s;
@@ -21,7 +36,8 @@ const MEDIA_PATH_TAG_RE = /^<(image|video|audio)\s+path="([^"]+)">$/;
 // The tag is its own content part, so anchoring keeps ordinary prose from
 // matching; the closing tag is optional because ReadMediaFile emits the bare
 // opening tag as a standalone part.
-const USER_MEDIA_PATH_TAG_RE = /^<(image|video|audio)\s+path="([^"]+)">(?:<\/\1>)?$/;
+const USER_MEDIA_PATH_TAG_RE =
+  /^<(image|video|audio)\s+path="([^"]+)">(?:<\/\1>)?$/;
 const SYSTEM_MIME_RE = /Mime type:\s*([^.\s]+)/i;
 const SYSTEM_SIZE_RE = /Size:\s*(\d+)\s*bytes/i;
 const SYSTEM_DIMENSIONS_RE = /Original dimensions:\s*(\d+)x(\d+)\s*pixels/i;
@@ -36,28 +52,34 @@ const SYSTEM_DIMENSIONS_RE = /Original dimensions:\s*(\d+)x(\d+)\s*pixels/i;
 // hidden system-reminder injection. Mirror that narrow targeting here: a
 // literal `<system>…</system>` the user pasted themselves (e.g. an XML / prompt
 // example) is their own text, not harness metadata, so it survives untouched.
-const CAPTION_OPENING = '<system>Image compressed to fit model limits:';
-const CAPTION_PATTERN = /<system>Image compressed to fit model limits:[\s\S]*?<\/system>/g;
+const CAPTION_OPENING = "<system>Image compressed to fit model limits:";
+const CAPTION_PATTERN =
+  /<system>Image compressed to fit model limits:[\s\S]*?<\/system>/g;
 
 function stripImageCompressionCaptions(text: string): string {
   if (!text.includes(CAPTION_OPENING)) return text;
-  return text.replace(CAPTION_PATTERN, '');
+  return text.replace(CAPTION_PATTERN, "");
 }
 
 function unescapeAttr(value: string): string {
   // &amp; last so a doubly-escaped value isn't decoded twice.
   return value
-    .replaceAll('&quot;', '"')
-    .replaceAll('&lt;', '<')
-    .replaceAll('&gt;', '>')
-    .replaceAll('&amp;', '&');
+    .replaceAll("&quot;", '"')
+    .replaceAll("&lt;", "<")
+    .replaceAll("&gt;", ">")
+    .replaceAll("&amp;", "&");
 }
 
 /** Parse a `<video|image|audio path="…"></video>` text part. */
-function mediaPathTag(text: string): { kind: 'image' | 'video' | 'audio'; path: string } | null {
+function mediaPathTag(
+  text: string,
+): { kind: "image" | "video" | "audio"; path: string } | null {
   const m = USER_MEDIA_PATH_TAG_RE.exec(text.trim());
   if (!m) return null;
-  return { kind: m[1] as 'image' | 'video' | 'audio', path: unescapeAttr(m[2]!) };
+  return {
+    kind: m[1] as "image" | "video" | "audio",
+    path: unescapeAttr(m[2]!),
+  };
 }
 
 /** The server materializes uploads into `<cacheDir>/<fileId>.<ext>` (see
@@ -78,8 +100,8 @@ const FILE_STORE_ID_RE =
 const FILE_STORE_ID_AT_START_RE =
   /^f_(?:[0-9A-Za-z]{26}|[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12})(?=-)/;
 function fileIdFromCachePath(p: string): string | undefined {
-  const base = p.split(/[\\/]/).at(-1) ?? '';
-  const dot = base.lastIndexOf('.');
+  const base = p.split(/[\\/]/).at(-1) ?? "";
+  const dot = base.lastIndexOf(".");
   const id = dot > 0 ? base.slice(0, dot) : base;
   return FILE_STORE_ID_RE.test(id) ? id : undefined;
 }
@@ -100,7 +122,7 @@ function attachedFileNotice(
 ): { name: string; mediaType: string; size: number; fileId?: string } | null {
   const m = ATTACHED_FILE_NOTICE_RE.exec(text.trim());
   if (!m) return null;
-  const base = (m[4] ?? '').split(/[\\/]/).at(-1) ?? '';
+  const base = (m[4] ?? "").split(/[\\/]/).at(-1) ?? "";
   const id = FILE_STORE_ID_AT_START_RE.exec(base)?.[0];
   return {
     name: m[1]!,
@@ -112,13 +134,13 @@ function attachedFileNotice(
 
 function bytesFromBase64(b64: string): number {
   if (b64.length === 0) return 0;
-  const padding = b64.endsWith('==') ? 2 : b64.endsWith('=') ? 1 : 0;
+  const padding = b64.endsWith("==") ? 2 : b64.endsWith("=") ? 1 : 0;
   return Math.floor((b64.length * 3) / 4) - padding;
 }
 
 function contentPartsFromOutput(output: unknown): unknown[] | null {
   if (Array.isArray(output)) return output;
-  if (typeof output !== 'string') return null;
+  if (typeof output !== "string") return null;
   try {
     const parsed = JSON.parse(output);
     return Array.isArray(parsed) ? parsed : null;
@@ -127,44 +149,50 @@ function contentPartsFromOutput(output: unknown): unknown[] | null {
   }
 }
 
-function mediaUrlPart(part: Record<string, unknown>): { kind: ToolMedia['kind']; url: string } | null {
-  const type = part['type'];
+function mediaUrlPart(
+  part: Record<string, unknown>,
+): { kind: ToolMedia["kind"]; url: string } | null {
+  const type = part["type"];
   const kind =
-    type === 'image_url'
-      ? 'image'
-      : type === 'video_url'
-        ? 'video'
-        : type === 'audio_url'
-          ? 'audio'
+    type === "image_url"
+      ? "image"
+      : type === "video_url"
+        ? "video"
+        : type === "audio_url"
+          ? "audio"
           : null;
   if (kind === null) return null;
-  const holderKey = kind === 'image' ? 'imageUrl' : kind === 'video' ? 'videoUrl' : 'audioUrl';
+  const holderKey =
+    kind === "image" ? "imageUrl" : kind === "video" ? "videoUrl" : "audioUrl";
   const holder = part[holderKey];
-  if (typeof holder !== 'object' || holder === null) return null;
-  const url = (holder as Record<string, unknown>)['url'];
-  return typeof url === 'string' ? { kind, url } : null;
+  if (typeof holder !== "object" || holder === null) return null;
+  const url = (holder as Record<string, unknown>)["url"];
+  return typeof url === "string" ? { kind, url } : null;
 }
 
-function normalizeToolMedia(toolName: string, output: unknown): ToolMedia | undefined {
+function normalizeToolMedia(
+  toolName: string,
+  output: unknown,
+): ToolMedia | undefined {
   if (!READ_MEDIA_TOOL_RE.test(toolName)) return undefined;
   const parts = contentPartsFromOutput(output);
   if (parts === null) return undefined;
 
   let path: string | undefined;
-  let tagKind: ToolMedia['kind'] | undefined;
+  let tagKind: ToolMedia["kind"] | undefined;
   let mimeType: string | undefined;
   let bytes: number | undefined;
   let dimensions: string | undefined;
-  let media: { kind: ToolMedia['kind']; url: string } | null = null;
+  let media: { kind: ToolMedia["kind"]; url: string } | null = null;
 
   for (const raw of parts) {
-    if (typeof raw !== 'object' || raw === null) continue;
+    if (typeof raw !== "object" || raw === null) continue;
     const part = raw as Record<string, unknown>;
-    if (part['type'] === 'text' && typeof part['text'] === 'string') {
-      const text = part['text'];
+    if (part["type"] === "text" && typeof part["text"] === "string") {
+      const text = part["text"];
       const tag = MEDIA_PATH_TAG_RE.exec(text);
       if (tag) {
-        tagKind = tag[1] as ToolMedia['kind'];
+        tagKind = tag[1] as ToolMedia["kind"];
         path = tag[2];
       }
       const mime = SYSTEM_MIME_RE.exec(text);
@@ -186,7 +214,7 @@ function normalizeToolMedia(toolName: string, output: unknown): ToolMedia | unde
   if (data?.[2]) bytes = bytesFromBase64(data[2]);
 
   return {
-    kind: media.kind ?? tagKind ?? 'image',
+    kind: media.kind ?? tagKind ?? "image",
     url: media.url,
     path,
     mimeType,
@@ -203,18 +231,21 @@ function normalizeToolMedia(toolName: string, output: unknown): ToolMedia | unde
  */
 function normalizeToolOutput(output: unknown): string[] | undefined {
   if (output === null || output === undefined) return undefined;
-  if (typeof output === 'string') return output.split('\n');
+  if (typeof output === "string") return output.split("\n");
   if (Array.isArray(output)) {
     const lines: string[] = [];
     for (const part of output) {
-      if (typeof part === 'string') {
-        lines.push(...part.split('\n'));
-      } else if (part && typeof part === 'object') {
+      if (typeof part === "string") {
+        lines.push(...part.split("\n"));
+      } else if (part && typeof part === "object") {
         const p = part as Record<string, unknown>;
-        if (p.type === 'text' && typeof p.text === 'string') lines.push(...p.text.split('\n'));
-        else if (p.type === 'think' && typeof p.think === 'string') lines.push(...p.think.split('\n'));
-        else if (p.type === 'image_url' || p.type === 'image') lines.push('[image]');
-        else if (typeof p.type === 'string') lines.push(`[${p.type}]`);
+        if (p.type === "text" && typeof p.text === "string")
+          lines.push(...p.text.split("\n"));
+        else if (p.type === "think" && typeof p.think === "string")
+          lines.push(...p.think.split("\n"));
+        else if (p.type === "image_url" || p.type === "image")
+          lines.push("[image]");
+        else if (typeof p.type === "string") lines.push(`[${p.type}]`);
         else lines.push(JSON.stringify(part));
       }
     }
@@ -231,7 +262,11 @@ export function toAgentMember(task: AppTask): AgentMember {
     subagentType: task.subagentType,
     phase:
       task.subagentPhase ??
-      (task.status === 'completed' ? 'completed' : task.status === 'failed' ? 'failed' : 'working'),
+      (task.status === "completed"
+        ? "completed"
+        : task.status === "failed"
+          ? "failed"
+          : "working"),
     status: task.status,
     summary: task.outputPreview,
     outputLines: task.outputLines,
@@ -247,120 +282,134 @@ export function toAgentMember(task: AppTask): AgentMember {
 // ---------------------------------------------------------------------------
 
 function buildDiffLines(oldText: string, newText: string): DiffLine[] {
-  const removed = oldText.split('\n');
-  const added = newText.split('\n');
+  const removed = oldText.split("\n");
+  const added = newText.split("\n");
   const lines: DiffLine[] = [];
   removed.forEach((text, i) => {
-    lines.push({ kind: 'rem', gutter: String(i + 1), text: `- ${text}` });
+    lines.push({ kind: "rem", gutter: String(i + 1), text: `- ${text}` });
   });
   added.forEach((text, i) => {
-    lines.push({ kind: 'add', gutter: String(i + 1), text: `+ ${text}` });
+    lines.push({ kind: "add", gutter: String(i + 1), text: `+ ${text}` });
   });
   return lines;
 }
 
 function buildApprovalBlock(a: AppApprovalRequest): ApprovalBlock {
   const d = (a.display ?? {}) as Record<string, unknown>;
-  const kind = typeof d['kind'] === 'string' ? d['kind'] : '';
+  const kind = typeof d["kind"] === "string" ? d["kind"] : "";
 
-  if (kind === 'diff') {
-    const path = typeof d['path'] === 'string' ? d['path'] : '';
-    if (Array.isArray(d['diff'])) {
-      return { kind: 'diff', path, diff: d['diff'] as DiffLine[] };
+  if (kind === "diff") {
+    const path = typeof d["path"] === "string" ? d["path"] : "";
+    if (Array.isArray(d["diff"])) {
+      return { kind: "diff", path, diff: d["diff"] as DiffLine[] };
     }
-    if (typeof d['old_text'] === 'string' && typeof d['new_text'] === 'string') {
-      return { kind: 'diff', path, diff: buildDiffLines(d['old_text'], d['new_text']) };
+    if (
+      typeof d["old_text"] === "string" &&
+      typeof d["new_text"] === "string"
+    ) {
+      return {
+        kind: "diff",
+        path,
+        diff: buildDiffLines(d["old_text"], d["new_text"]),
+      };
     }
-    return { kind: 'diff', path, diff: [] };
+    return { kind: "diff", path, diff: [] };
   }
 
-  if (kind === 'shell' || kind === 'command') {
+  if (kind === "shell" || kind === "command") {
     return {
-      kind: 'shell',
-      command: typeof d['command'] === 'string' ? d['command'] : a.action,
-      cwd: typeof d['cwd'] === 'string' ? d['cwd'] : undefined,
-      danger: typeof d['danger'] === 'string' ? d['danger'] : undefined,
+      kind: "shell",
+      command: typeof d["command"] === "string" ? d["command"] : a.action,
+      cwd: typeof d["cwd"] === "string" ? d["cwd"] : undefined,
+      danger: typeof d["danger"] === "string" ? d["danger"] : undefined,
     };
   }
 
-  if (kind === 'file_content' || kind === 'file') {
+  if (kind === "file_content" || kind === "file") {
     return {
-      kind: 'file',
-      path: typeof d['path'] === 'string' ? d['path'] : '',
-      content: typeof d['content'] === 'string' ? d['content'] : '',
-      language: typeof d['language'] === 'string' ? d['language'] : undefined,
+      kind: "file",
+      path: typeof d["path"] === "string" ? d["path"] : "",
+      content: typeof d["content"] === "string" ? d["content"] : "",
+      language: typeof d["language"] === "string" ? d["language"] : undefined,
     };
   }
 
-  if (kind === 'file_op' || kind === 'fileop') {
+  if (kind === "file_op" || kind === "fileop") {
     const op =
-      typeof d['operation'] === 'string'
-        ? d['operation']
-        : typeof d['op'] === 'string'
-          ? d['op']
+      typeof d["operation"] === "string"
+        ? d["operation"]
+        : typeof d["op"] === "string"
+          ? d["op"]
           : kind;
     return {
-      kind: 'fileop',
+      kind: "fileop",
       op,
-      path: typeof d['path'] === 'string' ? d['path'] : '',
-      detail: typeof d['detail'] === 'string' ? d['detail'] : undefined,
+      path: typeof d["path"] === "string" ? d["path"] : "",
+      detail: typeof d["detail"] === "string" ? d["detail"] : undefined,
     };
   }
 
-  if (kind === 'url_fetch' || kind === 'url') {
+  if (kind === "url_fetch" || kind === "url") {
     return {
-      kind: 'url',
-      method: typeof d['method'] === 'string' ? d['method'] : undefined,
-      url: typeof d['url'] === 'string' ? d['url'] : a.action,
+      kind: "url",
+      method: typeof d["method"] === "string" ? d["method"] : undefined,
+      url: typeof d["url"] === "string" ? d["url"] : a.action,
     };
   }
 
-  if (kind === 'search') {
+  if (kind === "search") {
     return {
-      kind: 'search',
-      query: typeof d['query'] === 'string' ? d['query'] : a.action,
-      scope: typeof d['scope'] === 'string' ? d['scope'] : undefined,
+      kind: "search",
+      query: typeof d["query"] === "string" ? d["query"] : a.action,
+      scope: typeof d["scope"] === "string" ? d["scope"] : undefined,
     };
   }
 
-  if (kind === 'invocation' || kind === 'agent_call' || kind === 'skill_call') {
+  if (kind === "invocation" || kind === "agent_call" || kind === "skill_call") {
     return {
-      kind: 'invocation',
-      kind2: typeof d['kind'] === 'string' ? d['kind'] : kind,
-      name: typeof d['name'] === 'string' ? d['name'] : a.toolName,
-      description: typeof d['description'] === 'string' ? d['description'] : undefined,
+      kind: "invocation",
+      kind2: typeof d["kind"] === "string" ? d["kind"] : kind,
+      name: typeof d["name"] === "string" ? d["name"] : a.toolName,
+      description:
+        typeof d["description"] === "string" ? d["description"] : undefined,
     };
   }
 
-  if (kind === 'todo' || kind === 'todo_list') {
-    const rawItems = Array.isArray(d['items']) ? d['items'] : [];
+  if (kind === "todo" || kind === "todo_list") {
+    const rawItems = Array.isArray(d["items"]) ? d["items"] : [];
     const items = rawItems.map((item: unknown) => {
       const it = (item ?? {}) as Record<string, unknown>;
       return {
-        title: typeof it['title'] === 'string' ? it['title'] : '',
-        status: typeof it['status'] === 'string' ? it['status'] : 'pending',
+        title: typeof it["title"] === "string" ? it["title"] : "",
+        status: typeof it["status"] === "string" ? it["status"] : "pending",
       };
     });
-    return { kind: 'todo', items };
+    return { kind: "todo", items };
   }
 
-  if (kind === 'plan_review') {
-    const plan = typeof d['plan'] === 'string' ? d['plan'] : '';
-    const path = typeof d['path'] === 'string' ? d['path'] : undefined;
-    const rawOptions = Array.isArray(d['options']) ? d['options'] : [];
+  if (kind === "plan_review") {
+    const plan = typeof d["plan"] === "string" ? d["plan"] : "";
+    const path = typeof d["path"] === "string" ? d["path"] : undefined;
+    const rawOptions = Array.isArray(d["options"]) ? d["options"] : [];
     const options = rawOptions
       .map((item: unknown): { label: string; description?: string } | null => {
         const it = (item ?? {}) as Record<string, unknown>;
-        const label = typeof it['label'] === 'string' ? it['label'] : '';
+        const label = typeof it["label"] === "string" ? it["label"] : "";
         if (!label) return null;
-        const description = typeof it['description'] === 'string' ? it['description'] : undefined;
+        const description =
+          typeof it["description"] === "string" ? it["description"] : undefined;
         return { label, description };
       })
       .filter((o): o is { label: string; description?: string } => o !== null);
-    return { kind: 'plan_review', plan, path, options: options.length > 0 ? options : undefined };
+    return {
+      kind: "plan_review",
+      plan,
+      path,
+      options: options.length > 0 ? options : undefined,
+    };
   }
 
-  return { kind: 'generic', summary: a.action };
+  return { kind: "generic", summary: a.action };
 }
 
 // ---------------------------------------------------------------------------
@@ -404,8 +453,8 @@ interface Group {
  * extractCronPrompt / stripCronEnvelope.
  */
 function extractCronPrompt(text: string): string {
-  const open = '<prompt>\n';
-  const close = '\n</prompt>';
+  const open = "<prompt>\n";
+  const close = "\n</prompt>";
   const start = text.indexOf(open);
   const end = text.lastIndexOf(close);
   if (start >= 0 && end >= start + open.length) {
@@ -415,60 +464,75 @@ function extractCronPrompt(text: string): string {
 }
 
 function stripCronEnvelope(text: string): string {
-  const lines = text.split('\n');
+  const lines = text.split("\n");
   if (
     lines.length >= 2 &&
-    lines[0]?.startsWith('<cron-fire ') &&
-    lines.at(-1) === '</cron-fire>'
+    lines[0]?.startsWith("<cron-fire ") &&
+    lines.at(-1) === "</cron-fire>"
   ) {
-    return lines.slice(1, -1).join('\n');
+    return lines.slice(1, -1).join("\n");
   }
   return text;
 }
 
-function cronOriginKind(msg: AppMessage): 'cron_job' | 'cron_missed' | undefined {
-  const origin = msg.metadata?.['origin'] as { kind?: string } | undefined;
-  if (origin?.kind === 'cron_job' || origin?.kind === 'cron_missed') return origin.kind;
+function cronOriginKind(
+  msg: AppMessage,
+): "cron_job" | "cron_missed" | undefined {
+  const origin = msg.metadata?.["origin"] as { kind?: string } | undefined;
+  if (origin?.kind === "cron_job" || origin?.kind === "cron_missed")
+    return origin.kind;
   return undefined;
 }
 
 function cronPromptText(msg: AppMessage): string {
   const raw = msg.content
-    .filter((c): c is { type: 'text'; text: string } => c.type === 'text')
+    .filter((c): c is { type: "text"; text: string } => c.type === "text")
     .map((c) => c.text)
-    .join('\n');
+    .join("\n");
   return extractCronPrompt(raw);
 }
 
 function buildCronData(
   msg: AppMessage,
-  kind: 'cron_job' | 'cron_missed',
+  kind: "cron_job" | "cron_missed",
 ): { text: string; cron: CronTurnData } {
-  const origin = (msg.metadata?.['origin'] ?? {}) as Record<string, unknown>;
+  const origin = (msg.metadata?.["origin"] ?? {}) as Record<string, unknown>;
   const text = cronPromptText(msg);
-  if (kind === 'cron_missed') {
+  if (kind === "cron_missed") {
     return {
       text,
-      cron: { missedCount: typeof origin['count'] === 'number' ? origin['count'] : undefined },
+      cron: {
+        missedCount:
+          typeof origin["count"] === "number" ? origin["count"] : undefined,
+      },
     };
   }
   return {
     text,
     cron: {
-      jobId: typeof origin['jobId'] === 'string' ? origin['jobId'] : undefined,
-      cron: typeof origin['cron'] === 'string' ? origin['cron'] : undefined,
-      recurring: typeof origin['recurring'] === 'boolean' ? origin['recurring'] : undefined,
-      coalescedCount: typeof origin['coalescedCount'] === 'number' ? origin['coalescedCount'] : undefined,
-      stale: typeof origin['stale'] === 'boolean' ? origin['stale'] : undefined,
+      jobId: typeof origin["jobId"] === "string" ? origin["jobId"] : undefined,
+      cron: typeof origin["cron"] === "string" ? origin["cron"] : undefined,
+      recurring:
+        typeof origin["recurring"] === "boolean"
+          ? origin["recurring"]
+          : undefined,
+      coalescedCount:
+        typeof origin["coalescedCount"] === "number"
+          ? origin["coalescedCount"]
+          : undefined,
+      stale: typeof origin["stale"] === "boolean" ? origin["stale"] : undefined,
     },
   };
 }
 
-function buildCronTurn(msg: AppMessage, no: number, kind: 'cron_job' | 'cron_missed'): ChatTurn {
+function buildCronTurn(
+  msg: AppMessage,
+  no: number,
+  kind: "cron_job" | "cron_missed",
+): ChatTurn {
   const { text, cron } = buildCronData(msg, kind);
-  return { id: msg.id, role: 'cron', no, text, createdAt: msg.createdAt, cron };
+  return { id: msg.id, role: "cron", no, text, createdAt: msg.createdAt, cron };
 }
-
 
 /**
  * Whether a USER-role message should be shown. Mirrors agent-core's
@@ -480,11 +544,13 @@ function buildCronTurn(msg: AppMessage, no: number, kind: 'cron_job' | 'cron_mis
  * @moonshot-ai/agent-core).
  */
 function isDisplayableUserMessage(msg: AppMessage): boolean {
-  const origin = msg.metadata?.['origin'] as { kind?: string; trigger?: string } | undefined;
+  const origin = msg.metadata?.["origin"] as
+    | { kind?: string; trigger?: string }
+    | undefined;
   const kind = origin?.kind;
-  if (kind === undefined || kind === 'user') return true;
-  if (kind === 'skill_activation') return origin?.trigger === 'user-slash';
-  if (kind === 'plugin_command') return origin?.trigger === 'user-slash';
+  if (kind === undefined || kind === "user") return true;
+  if (kind === "skill_activation") return origin?.trigger === "user-slash";
+  if (kind === "plugin_command") return origin?.trigger === "user-slash";
   return false;
 }
 
@@ -495,11 +561,14 @@ function isDisplayableUserMessage(msg: AppMessage): boolean {
  * "context compacted" divider; the summary text opens in the side panel.
  */
 function isCompactionSummaryMessage(msg: AppMessage): boolean {
-  const origin = msg.metadata?.['origin'] as { kind?: string } | undefined;
-  return origin?.kind === 'compaction_summary';
+  const origin = msg.metadata?.["origin"] as { kind?: string } | undefined;
+  return origin?.kind === "compaction_summary";
 }
 
-function continuesAssistantGroup(group: Group | null, promptId: string | undefined): group is Group {
+function continuesAssistantGroup(
+  group: Group | null,
+  promptId: string | undefined,
+): group is Group {
   if (group === null) return false;
   return (
     group.promptId === undefined ||
@@ -508,14 +577,13 @@ function continuesAssistantGroup(group: Group | null, promptId: string | undefin
   );
 }
 
-
 /** Extract the plan file path from an ExitPlanMode tool result. The approved
  *  output contains `Plan saved to: <path>`; this survives a page reload (unlike
  *  the ephemeral plan_review approval display), so the tool card can still link
  *  to the plan file. */
 function parsePlanSavedPath(output: string[] | undefined): string | undefined {
   if (!output || output.length === 0) return undefined;
-  const marker = 'Plan saved to: ';
+  const marker = "Plan saved to: ";
   for (const line of output) {
     if (line.startsWith(marker)) return line.slice(marker.length).trim();
   }
@@ -540,15 +608,15 @@ interface ContentSig {
   rest: string[];
 }
 
-function contentSig(content: AppMessage['content']): ContentSig {
-  let text = '';
-  let thinking = '';
+function contentSig(content: AppMessage["content"]): ContentSig {
+  let text = "";
+  let thinking = "";
   const toolIds: string[] = [];
   const rest: string[] = [];
   for (const c of content) {
-    if (c.type === 'text') text += c.text;
-    else if (c.type === 'thinking') thinking += c.thinking;
-    else if (c.type === 'toolUse') toolIds.push(c.toolCallId);
+    if (c.type === "text") text += c.text;
+    else if (c.type === "thinking") thinking += c.thinking;
+    else if (c.type === "toolUse") toolIds.push(c.toolCallId);
     else rest.push(JSON.stringify(c));
   }
   toolIds.sort();
@@ -565,8 +633,9 @@ function contentSig(content: AppMessage['content']): ContentSig {
  * covered.
  */
 function covers(folded: ContentSig, incoming: ContentSig): boolean {
-  if (incoming.text !== '' && incoming.text !== folded.text) return false;
-  if (incoming.thinking !== '' && incoming.thinking !== folded.thinking) return false;
+  if (incoming.text !== "" && incoming.text !== folded.text) return false;
+  if (incoming.thinking !== "" && incoming.thinking !== folded.thinking)
+    return false;
   return (
     incoming.toolIds.every((id) => folded.toolIds.includes(id)) &&
     incoming.rest.every((j) => folded.rest.includes(j))
@@ -613,19 +682,22 @@ export function messagesToTurns(
     if (!final || !sessionActive) {
       for (let i = 0; i < g.tools.length; i++) {
         const t = g.tools[i]!;
-        if (t.status !== 'running') continue;
-        const updated: ToolCall = { ...t, status: 'ok' };
+        if (t.status !== "running") continue;
+        const updated: ToolCall = { ...t, status: "ok" };
         g.tools[i] = updated;
-        const blk = g.blocks.find((b) => b.kind === 'tool' && b.tool.id === updated.id);
-        if (blk && blk.kind === 'tool') blk.tool = updated;
+        const blk = g.blocks.find(
+          (b) => b.kind === "tool" && b.tool.id === updated.id,
+        );
+        if (blk && blk.kind === "tool") blk.tool = updated;
       }
     }
     turns.push({
       id: g.id,
-      role: 'assistant',
+      role: "assistant",
       no: no++,
-      text: g.textParts.join('\n'),
-      thinking: g.thinkingParts.length > 0 ? g.thinkingParts.join('\n') : undefined,
+      text: g.textParts.join("\n"),
+      thinking:
+        g.thinkingParts.length > 0 ? g.thinkingParts.join("\n") : undefined,
       tools: g.tools.length > 0 ? g.tools : undefined,
       blocks: g.blocks.length > 0 ? g.blocks : undefined,
       approval: g.approval,
@@ -634,27 +706,28 @@ export function messagesToTurns(
     });
   }
 
-  function absorbContent(g: Group, content: AppMessage['content']): void {
+  function absorbContent(g: Group, content: AppMessage["content"]): void {
     for (const c of content) {
-      if (c.type === 'text') {
+      if (c.type === "text") {
         if (c.text) {
           g.textParts.push(c.text);
           // Append to a trailing text block, else open a new one — so a tool
           // call between two text segments splits them into separate blocks.
           const last = g.blocks.at(-1);
-          if (last && last.kind === 'text') last.text += '\n' + c.text;
-          else g.blocks.push({ kind: 'text', text: c.text });
+          if (last && last.kind === "text") last.text += "\n" + c.text;
+          else g.blocks.push({ kind: "text", text: c.text });
         }
-      } else if (c.type === 'thinking') {
+      } else if (c.type === "thinking") {
         if (c.thinking) {
           g.thinkingParts.push(c.thinking);
           // Ordered block too: thinking renders WHERE it happened in the turn,
           // merging consecutive segments (same rule as text blocks above).
           const last = g.blocks.at(-1);
-          if (last && last.kind === 'thinking') last.thinking += '\n' + c.thinking;
-          else g.blocks.push({ kind: 'thinking', thinking: c.thinking });
+          if (last && last.kind === "thinking")
+            last.thinking += "\n" + c.thinking;
+          else g.blocks.push({ kind: "thinking", thinking: c.thinking });
         }
-      } else if (c.type === 'toolUse') {
+      } else if (c.type === "toolUse") {
         // Single `Agent` subagent spawns and all other tools render as a normal
         // tool card: the card shows the fixed args (prompt / description) plus
         // the final result when expanded, while a subagent's live progress
@@ -663,20 +736,23 @@ export function messagesToTurns(
         const toolCall: ToolCall = {
           id: c.toolCallId,
           name: c.toolName,
-          arg: typeof c.input === 'string' ? c.input : JSON.stringify(c.input),
+          arg: typeof c.input === "string" ? c.input : JSON.stringify(c.input),
           // 'running' until the toolResult is absorbed (resolves to ok/error);
           // flushGroup settles dangling tools of finished turns back to 'ok'.
-          status: 'running',
+          status: "running",
           output: c.outputLines,
-          planPath: c.toolName === 'ExitPlanMode' ? planReviewByToolCallId[c.toolCallId]?.path : undefined,
+          planPath:
+            c.toolName === "ExitPlanMode"
+              ? planReviewByToolCallId[c.toolCallId]?.path
+              : undefined,
         };
         g.tools.push(toolCall);
-        g.blocks.push({ kind: 'tool', tool: toolCall });
+        g.blocks.push({ kind: "tool", tool: toolCall });
         if (pendingApproval) {
           g.approval = buildApprovalBlock(pendingApproval);
           g.approvalId = pendingApproval.approvalId;
         }
-      } else if (c.type === 'toolResult') {
+      } else if (c.type === "toolResult") {
         // Update the matching tool call status within this group (both the flat
         // tools[] and the ordered block that renders it).
         const idx = g.tools.findIndex((t) => t.id === c.toolCallId);
@@ -684,19 +760,23 @@ export function messagesToTurns(
           const tool = g.tools[idx]!;
           const updated: ToolCall = {
             ...tool,
-            status: c.isError ? 'error' : 'ok',
+            status: c.isError ? "error" : "ok",
             output: normalizeToolOutput(c.output),
-            media: c.isError ? undefined : normalizeToolMedia(tool.name, c.output),
+            media: c.isError
+              ? undefined
+              : normalizeToolMedia(tool.name, c.output),
           };
           // ExitPlanMode: if the plan path wasn't captured from the (ephemeral)
           // approval display, recover it from the result output so the file link
           // survives a reload for approved plans.
-          if (updated.name === 'ExitPlanMode' && !updated.planPath) {
+          if (updated.name === "ExitPlanMode" && !updated.planPath) {
             updated.planPath = parsePlanSavedPath(updated.output);
           }
           g.tools[idx] = updated;
-          const blk = g.blocks.find((b) => b.kind === 'tool' && b.tool.id === c.toolCallId);
-          if (blk && blk.kind === 'tool') blk.tool = updated;
+          const blk = g.blocks.find(
+            (b) => b.kind === "tool" && b.tool.id === c.toolCallId,
+          );
+          if (blk && blk.kind === "tool") blk.tool = updated;
         }
       }
     }
@@ -710,39 +790,45 @@ export function messagesToTurns(
    * until the next progress frame. Never overwrite output a tool result
    * already settled.
    */
-  function mergeVolatileExtras(g: Group, content: AppMessage['content']): void {
+  function mergeVolatileExtras(g: Group, content: AppMessage["content"]): void {
     for (const c of content) {
-      if (c.type !== 'toolUse' || !c.outputLines?.length) continue;
+      if (c.type !== "toolUse" || !c.outputLines?.length) continue;
       const idx = g.tools.findIndex((t) => t.id === c.toolCallId);
       if (idx === -1) continue;
       const tool = g.tools[idx]!;
       if (tool.output !== undefined) continue;
       const updated: ToolCall = { ...tool, output: c.outputLines };
       g.tools[idx] = updated;
-      const blk = g.blocks.find((b) => b.kind === 'tool' && b.tool.id === c.toolCallId);
-      if (blk && blk.kind === 'tool') blk.tool = updated;
+      const blk = g.blocks.find(
+        (b) => b.kind === "tool" && b.tool.id === c.toolCallId,
+      );
+      if (blk && blk.kind === "tool") blk.tool = updated;
     }
   }
 
   function resolveMediaUrl(
-    c: AppMessage['content'][number],
-  ): { url: string; kind: 'image' | 'video'; fileId?: string } | undefined {
-    if (c.type === 'image' || c.type === 'video') {
+    c: AppMessage["content"][number],
+  ): { url: string; kind: "image" | "video"; fileId?: string } | undefined {
+    if (c.type === "image" || c.type === "video") {
       const kind = c.type;
       const src = c.source;
-      if (src.kind === 'url') return { url: src.url, kind };
-      if (src.kind === 'base64') return { url: `data:${src.mediaType};base64,${src.data}`, kind };
-      if (src.kind === 'file' && getFileUrl) return { url: getFileUrl(src.fileId), kind, fileId: src.fileId };
+      if (src.kind === "url") return { url: src.url, kind };
+      if (src.kind === "base64")
+        return { url: `data:${src.mediaType};base64,${src.data}`, kind };
+      if (src.kind === "file" && getFileUrl)
+        return { url: getFileUrl(src.fileId), kind, fileId: src.fileId };
     }
-    if (c.type === 'file' && getFileUrl) {
-      if (c.mediaType.startsWith('image/')) return { url: getFileUrl(c.fileId), kind: 'image', fileId: c.fileId };
-      if (c.mediaType.startsWith('video/')) return { url: getFileUrl(c.fileId), kind: 'video', fileId: c.fileId };
+    if (c.type === "file" && getFileUrl) {
+      if (c.mediaType.startsWith("image/"))
+        return { url: getFileUrl(c.fileId), kind: "image", fileId: c.fileId };
+      if (c.mediaType.startsWith("video/"))
+        return { url: getFileUrl(c.fileId), kind: "video", fileId: c.fileId };
     }
     return undefined;
   }
 
   for (const msg of messages) {
-    if (msg.role === 'system') continue;
+    if (msg.role === "system") continue;
 
     // Compaction summaries become a divider turn — never a chat bubble. The
     // snapshot variant carries no token stats (marker metadata is client-side).
@@ -753,12 +839,12 @@ export function messagesToTurns(
         | undefined;
       turns.push({
         id: msg.id,
-        role: 'compaction',
+        role: "compaction",
         no, // not displayed — dividers have no gutter number
         text: msg.content
-          .filter((c): c is { type: 'text'; text: string } => c.type === 'text')
+          .filter((c): c is { type: "text"; text: string } => c.type === "text")
           .map((c) => c.text)
-          .join('\n'),
+          .join("\n"),
         compaction: {
           trigger: marker?.trigger,
           tokensBefore: marker?.tokensBefore,
@@ -769,7 +855,7 @@ export function messagesToTurns(
     }
 
     // User messages flush the pending group and start a new user turn
-    if (msg.role === 'user') {
+    if (msg.role === "user") {
       const cronKind = cronOriginKind(msg);
       // A cron injection always renders as its own standalone turn: agent-core
       // buffers steer input while a turn is in flight and only injects it at the
@@ -784,7 +870,7 @@ export function messagesToTurns(
       // assistant turn but aren't rendered as a user bubble.
       if (!isDisplayableUserMessage(msg)) continue;
 
-      const origin = msg.metadata?.['origin'] as
+      const origin = msg.metadata?.["origin"] as
         | {
             kind?: string;
             skillName?: string;
@@ -796,22 +882,22 @@ export function messagesToTurns(
           }
         | undefined;
       const isSkillActivation =
-        origin?.kind === 'skill_activation' && origin?.trigger === 'user-slash';
+        origin?.kind === "skill_activation" && origin?.trigger === "user-slash";
       const isPluginCommand =
-        origin?.kind === 'plugin_command' && origin?.trigger === 'user-slash';
+        origin?.kind === "plugin_command" && origin?.trigger === "user-slash";
 
       const textParts: string[] = [];
       const attachments: TurnAttachment[] = [];
       for (const c of msg.content) {
-        if (c.type === 'text') {
+        if (c.type === "text") {
           if (isSkillActivation) {
             // Skill activation messages carry the raw XML block; we strip it and
             // surface only the user-provided args as the "user input" text.
-            textParts.push(origin.skillArgs ?? '');
+            textParts.push(origin.skillArgs ?? "");
           } else if (isPluginCommand) {
             // Plugin command turns carry the expanded body; surface only the
             // user-provided args, mirroring skill activations.
-            textParts.push(origin.commandArgs ?? '');
+            textParts.push(origin.commandArgs ?? "");
           } else {
             // A video/image upload comes back from the server as a
             // `<video path="…"></video>` text tag (see resolvePromptMediaFiles).
@@ -819,10 +905,18 @@ export function messagesToTurns(
             // bubble — recover the fileId from the cache filename so the browser
             // gets a playable URL via getFileUrl.
             const tag = mediaPathTag(c.text);
-            if (tag && (tag.kind === 'video' || tag.kind === 'image') && getFileUrl) {
+            if (
+              tag &&
+              (tag.kind === "video" || tag.kind === "image") &&
+              getFileUrl
+            ) {
               const fileId = fileIdFromCachePath(tag.path);
               if (fileId) {
-                attachments.push({ url: getFileUrl(fileId), kind: tag.kind, fileId });
+                attachments.push({
+                  url: getFileUrl(fileId),
+                  kind: tag.kind,
+                  fileId,
+                });
                 continue;
               }
             }
@@ -831,10 +925,13 @@ export function messagesToTurns(
             const attached = attachedFileNotice(c.text);
             if (attached) {
               attachments.push({
-                kind: 'file',
+                kind: "file",
                 // No recoverable fileId (inline-base64 upload) → no URL: the
                 // chip renders name/size but stays non-clickable.
-                url: attached.fileId && getFileUrl ? getFileUrl(attached.fileId) : '',
+                url:
+                  attached.fileId && getFileUrl
+                    ? getFileUrl(attached.fileId)
+                    : "",
                 fileId: attached.fileId,
                 name: attached.name,
                 mediaType: attached.mediaType,
@@ -852,16 +949,16 @@ export function messagesToTurns(
           attachments.push({
             url: media.url,
             kind: media.kind,
-            name: c.type === 'file' ? c.name : undefined,
+            name: c.type === "file" ? c.name : undefined,
             fileId: media.fileId,
           });
           continue;
         }
         // Non-media files (pdf/zip/yaml/…) carry no playable URL, but the chip
         // still renders them with name/size and a download action.
-        if (c.type === 'file' && getFileUrl) {
+        if (c.type === "file" && getFileUrl) {
           attachments.push({
-            kind: 'file',
+            kind: "file",
             url: getFileUrl(c.fileId),
             fileId: c.fileId,
             name: c.name,
@@ -872,15 +969,19 @@ export function messagesToTurns(
       }
       turns.push({
         id: msg.id,
-        role: 'user',
+        role: "user",
         no: no++,
-        text: textParts.join('\n'),
+        text: textParts.join("\n"),
         attachments: attachments.length > 0 ? attachments : undefined,
         skillActivation: isSkillActivation
           ? { name: origin.skillName!, args: origin.skillArgs }
           : undefined,
         pluginCommand: isPluginCommand
-          ? { pluginId: origin.pluginId!, commandName: origin.commandName!, args: origin.commandArgs }
+          ? {
+              pluginId: origin.pluginId!,
+              commandName: origin.commandName!,
+              args: origin.commandArgs,
+            }
           : undefined,
         createdAt: msg.createdAt,
       });
@@ -888,7 +989,7 @@ export function messagesToTurns(
     }
 
     // Tool-role messages (toolResult) fold into the pending group's tool list
-    if (msg.role === 'tool') {
+    if (msg.role === "tool") {
       if (pendingGroup) absorbContent(pendingGroup, msg.content);
       continue;
     }
@@ -918,7 +1019,11 @@ export function messagesToTurns(
         foldedSigs: [],
         durationMs: msg.durationMs,
       };
-    } else if (pendingGroup !== null && pendingGroup.promptId === undefined && pid !== undefined) {
+    } else if (
+      pendingGroup !== null &&
+      pendingGroup.promptId === undefined &&
+      pid !== undefined
+    ) {
       pendingGroup.promptId = pid;
     }
 
@@ -931,7 +1036,10 @@ export function messagesToTurns(
     // volatile extras the persisted copy lacks (tool progress), so merge those
     // into the existing cards before dropping it.
     const sig = contentSig(msg.content);
-    if (group.promptId !== undefined && group.foldedSigs.some((folded) => covers(folded, sig))) {
+    if (
+      group.promptId !== undefined &&
+      group.foldedSigs.some((folded) => covers(folded, sig))
+    ) {
       mergeVolatileExtras(group, msg.content);
       continue;
     }

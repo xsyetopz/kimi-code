@@ -1,9 +1,14 @@
-import { EventEmitter } from 'node:events';
+import { EventEmitter } from "node:events";
 
-import type { AnyAuthMethod, ConnectConfig, SFTPWrapper, Stats as SFTPStats } from 'ssh2';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import type {
+  AnyAuthMethod,
+  ConnectConfig,
+  SFTPWrapper,
+  Stats as SFTPStats,
+} from "ssh2";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { SSHKaos as SSHKaosType } from '#/ssh';
+import type { SSHKaos as SSHKaosType } from "#/ssh";
 
 interface CreateHarnessState {
   attemptedKeys: string[];
@@ -13,7 +18,11 @@ interface CreateHarnessState {
 }
 
 interface CreateHarnessOptions {
-  onConnect?: (client: EventEmitter, config: ConnectConfig, state: CreateHarnessState) => void;
+  onConnect?: (
+    client: EventEmitter,
+    config: ConnectConfig,
+    state: CreateHarnessState,
+  ) => void;
   readFileValues?: Record<string, string>;
   sftp?: SFTPWrapper;
   sftpError?: Error;
@@ -39,15 +48,21 @@ function makeStats(isDirectory: boolean): SFTPStats {
 
 function createSuccessfulSftp(): SFTPWrapper {
   return {
-    realpath(path: string, callback: (err: Error | undefined, absPath: string) => void): void {
-      if (path === '.') {
-        callback(undefined, '/home/tester');
+    realpath(
+      path: string,
+      callback: (err: Error | undefined, absPath: string) => void,
+    ): void {
+      if (path === ".") {
+        callback(undefined, "/home/tester");
         return;
       }
       callback(undefined, path);
     },
-    stat(path: string, callback: (err: Error | undefined, stats: SFTPStats) => void): void {
-      callback(undefined, makeStats(path !== '/home/tester/file.txt'));
+    stat(
+      path: string,
+      callback: (err: Error | undefined, stats: SFTPStats) => void,
+    ): void {
+      callback(undefined, makeStats(path !== "/home/tester/file.txt"));
     },
     end(): void {
       // no-op
@@ -76,14 +91,14 @@ async function loadSSHModule(options: CreateHarnessOptions = {}): Promise<{
         return;
       }
       queueMicrotask(() => {
-        this.emit('ready');
+        this.emit("ready");
       });
     }
 
     end(): void {
       state.endCalls += 1;
       queueMicrotask(() => {
-        this.emit('close');
+        this.emit("close");
       });
     }
 
@@ -96,7 +111,7 @@ async function loadSSHModule(options: CreateHarnessOptions = {}): Promise<{
     }
   }
 
-  vi.doMock('ssh2', () => ({
+  vi.doMock("ssh2", () => ({
     Client: MockClient,
     utils: {
       sftp: {
@@ -112,7 +127,7 @@ async function loadSSHModule(options: CreateHarnessOptions = {}): Promise<{
     },
   }));
 
-  vi.doMock('node:fs/promises', () => ({
+  vi.doMock("node:fs/promises", () => ({
     readFile: vi.fn(async (path: string) => {
       state.readFileCalls.push(path);
       const value = options.readFileValues?.[path];
@@ -123,18 +138,18 @@ async function loadSSHModule(options: CreateHarnessOptions = {}): Promise<{
     }),
   }));
 
-  const { SSHKaos } = await import('#/ssh');
+  const { SSHKaos } = await import("#/ssh");
   return { SSHKaos, state };
 }
 
 afterEach(() => {
-  vi.doUnmock('ssh2');
+  vi.doUnmock("ssh2");
   vi.restoreAllMocks();
   vi.resetModules();
 });
 
-describe('SSHKaos.create()', () => {
-  it('initializes cwd equal to gethome() when no cwd option is passed', async () => {
+describe("SSHKaos.create()", () => {
+  it("initializes cwd equal to gethome() when no cwd option is passed", async () => {
     // Pins the Python test_ssh_kaos.py::test_pathclass_home_and_cwd invariant:
     // on a fresh SSH connection without an explicit cwd, `getcwd()` must equal
     // `gethome()`. The smoke-level SSH suite can't cover this because its
@@ -143,26 +158,32 @@ describe('SSHKaos.create()', () => {
     const { SSHKaos } = await loadSSHModule();
 
     const ssh = await SSHKaos.create({
-      host: 'example.com',
-      username: 'tester',
+      host: "example.com",
+      username: "tester",
     });
 
-    expect(ssh.pathClass()).toBe('posix');
-    expect(ssh.gethome()).toBe('/home/tester');
-    expect(ssh.getcwd()).toBe('/home/tester');
+    expect(ssh.pathClass()).toBe("posix");
+    expect(ssh.gethome()).toBe("/home/tester");
+    expect(ssh.getcwd()).toBe("/home/tester");
     expect(ssh.getcwd()).toBe(ssh.gethome());
   });
 
-  it('rejects a cwd that resolves to a regular file', async () => {
+  it("rejects a cwd that resolves to a regular file", async () => {
     const sftp = {
-      realpath(path: string, callback: (err: Error | undefined, absPath: string) => void): void {
-        if (path === '.') {
-          callback(undefined, '/home/tester');
+      realpath(
+        path: string,
+        callback: (err: Error | undefined, absPath: string) => void,
+      ): void {
+        if (path === ".") {
+          callback(undefined, "/home/tester");
           return;
         }
-        callback(undefined, '/home/tester/file.txt');
+        callback(undefined, "/home/tester/file.txt");
       },
-      stat(_path: string, callback: (err: Error | undefined, stats: SFTPStats) => void): void {
+      stat(
+        _path: string,
+        callback: (err: Error | undefined, stats: SFTPStats) => void,
+      ): void {
         callback(undefined, makeStats(false));
       },
       end(): void {
@@ -173,54 +194,60 @@ describe('SSHKaos.create()', () => {
     const { SSHKaos, state } = await loadSSHModule({ sftp });
 
     const error = await SSHKaos.create({
-      host: 'example.com',
-      username: 'tester',
-      cwd: 'file.txt',
+      host: "example.com",
+      username: "tester",
+      cwd: "file.txt",
     }).catch((error: unknown) => error);
 
     expect(error).toBeInstanceOf(Error);
-    expect((error as Error).name).toBe('KaosValueError');
+    expect((error as Error).name).toBe("KaosValueError");
     expect((error as Error).message).toMatch(/not a directory/);
     expect(state.endCalls).toBe(1);
   });
 
-  it('tries multiple private keys via authHandler until one succeeds', async () => {
+  it("tries multiple private keys via authHandler until one succeeds", async () => {
     const { SSHKaos, state } = await loadSSHModule({
       readFileValues: {
-        '/keys/second': 'second-key',
+        "/keys/second": "second-key",
       },
       onConnect(client, config, harnessState) {
         const authHandler = config.authHandler;
-        if (typeof authHandler !== 'function') {
-          client.emit('error', new Error('missing authHandler'));
+        if (typeof authHandler !== "function") {
+          client.emit("error", new Error("missing authHandler"));
           return;
         }
 
         const requestNextKey = (): void => {
           authHandler([], false, (auth: string | AnyAuthMethod | false) => {
             expect(auth).not.toBe(false);
-            expect(typeof auth).toBe('object');
-            if (auth === false || typeof auth !== 'object') {
-              client.emit('error', new Error('authHandler returned no auth method'));
+            expect(typeof auth).toBe("object");
+            if (auth === false || typeof auth !== "object") {
+              client.emit(
+                "error",
+                new Error("authHandler returned no auth method"),
+              );
               return;
             }
-            if (auth.type !== 'publickey') {
-              client.emit('error', new Error(`unexpected auth type: ${auth.type}`));
+            if (auth.type !== "publickey") {
+              client.emit(
+                "error",
+                new Error(`unexpected auth type: ${auth.type}`),
+              );
               return;
             }
             const key =
-              typeof auth.key === 'string'
+              typeof auth.key === "string"
                 ? auth.key
                 : Buffer.isBuffer(auth.key)
-                  ? auth.key.toString('utf-8')
+                  ? auth.key.toString("utf-8")
                   : JSON.stringify(auth.key);
             harnessState.attemptedKeys.push(key);
-            if (key === 'first-key') {
+            if (key === "first-key") {
               requestNextKey();
               return;
             }
             queueMicrotask(() => {
-              client.emit('ready');
+              client.emit("ready");
             });
           });
         };
@@ -230,46 +257,46 @@ describe('SSHKaos.create()', () => {
     });
 
     const ssh = await SSHKaos.create({
-      host: 'example.com',
-      username: 'tester',
-      keyContents: ['first-key'],
-      keyPaths: ['/keys/second'],
+      host: "example.com",
+      username: "tester",
+      keyContents: ["first-key"],
+      keyPaths: ["/keys/second"],
     });
 
-    expect(ssh.getcwd()).toBe('/home/tester');
-    expect(state.readFileCalls).toEqual(['/keys/second']);
-    expect(state.attemptedKeys).toEqual(['first-key', 'second-key']);
-    expect(state.connectConfigs[0]?.authHandler).toBeTypeOf('function');
+    expect(ssh.getcwd()).toBe("/home/tester");
+    expect(state.readFileCalls).toEqual(["/keys/second"]);
+    expect(state.attemptedKeys).toEqual(["first-key", "second-key"]);
+    expect(state.connectConfigs[0]?.authHandler).toBeTypeOf("function");
     expect(state.connectConfigs[0]?.privateKey).toBeUndefined();
   });
 
-  it('ends the client when opening SFTP fails after connect succeeds', async () => {
+  it("ends the client when opening SFTP fails after connect succeeds", async () => {
     const { SSHKaos, state } = await loadSSHModule({
-      sftpError: new Error('sftp open failed'),
+      sftpError: new Error("sftp open failed"),
     });
 
     await expect(
       SSHKaos.create({
-        host: 'example.com',
-        username: 'tester',
+        host: "example.com",
+        username: "tester",
       }),
     ).rejects.toThrow(/sftp open failed/);
     expect(state.endCalls).toBe(1);
   });
 
-  it('merges extraOptions into the ssh2 ConnectConfig', async () => {
+  it("merges extraOptions into the ssh2 ConnectConfig", async () => {
     const { SSHKaos, state } = await loadSSHModule();
 
     await SSHKaos.create({
-      host: 'example.com',
-      username: 'tester',
+      host: "example.com",
+      username: "tester",
       extraOptions: {
         keepaliveInterval: 10_000,
         readyTimeout: 5_000,
         // Cast to the ssh2 Algorithms shape — deliberately narrow for the test
         // harness so we can assert pass-through without pulling the full ssh2
         // type graph.
-        algorithms: { cipher: ['aes256-ctr'] } as never,
+        algorithms: { cipher: ["aes256-ctr"] } as never,
       },
     });
 
@@ -277,52 +304,52 @@ describe('SSHKaos.create()', () => {
     expect(cfg).toBeDefined();
     expect(cfg?.keepaliveInterval).toBe(10_000);
     expect(cfg?.readyTimeout).toBe(5_000);
-    expect(cfg?.algorithms).toEqual({ cipher: ['aes256-ctr'] });
+    expect(cfg?.algorithms).toEqual({ cipher: ["aes256-ctr"] });
     // Managed fields must still come from top-level options.
-    expect(cfg?.host).toBe('example.com');
-    expect(cfg?.username).toBe('tester');
+    expect(cfg?.host).toBe("example.com");
+    expect(cfg?.username).toBe("tester");
   });
 
-  it('managed fields override extraOptions when both are specified', async () => {
+  it("managed fields override extraOptions when both are specified", async () => {
     const { SSHKaos, state } = await loadSSHModule();
 
     await SSHKaos.create({
-      host: 'managed.example.com',
-      username: 'managed',
+      host: "managed.example.com",
+      username: "managed",
       extraOptions: {
         // Malicious / accidental attempts to override managed fields must
         // NOT win — the top-level values take precedence.
-        host: 'attacker.example.com',
-        username: 'attacker',
+        host: "attacker.example.com",
+        username: "attacker",
         port: 1234,
       } as never,
     });
 
     const cfg = state.connectConfigs[0];
-    expect(cfg?.host).toBe('managed.example.com');
-    expect(cfg?.username).toBe('managed');
+    expect(cfg?.host).toBe("managed.example.com");
+    expect(cfg?.username).toBe("managed");
     expect(cfg?.port).toBe(22); // default, not the 1234 from extraOptions
   });
 
-  it('forwards a password-only connection without building an authHandler', async () => {
+  it("forwards a password-only connection without building an authHandler", async () => {
     // Password auth without any private keys must wire ssh2 ConnectConfig.password
     // directly rather than constructing an authHandler (the handler is only
     // needed when we're rotating through multiple private keys).
     const { SSHKaos, state } = await loadSSHModule();
 
     const ssh = await SSHKaos.create({
-      host: 'example.com',
-      username: 'tester',
-      password: 'hunter2',
+      host: "example.com",
+      username: "tester",
+      password: "hunter2",
     });
 
     const cfg = state.connectConfigs[0];
-    expect(cfg?.password).toBe('hunter2');
+    expect(cfg?.password).toBe("hunter2");
     expect(cfg?.authHandler).toBeUndefined();
-    expect(ssh.getcwd()).toBe('/home/tester');
+    expect(ssh.getcwd()).toBe("/home/tester");
   });
 
-  it('queues password after private keys when both are provided', async () => {
+  it("queues password after private keys when both are provided", async () => {
     // When the user supplies both keyContents and a password, buildAuthHandler
     // should try every private key first, then fall back to password auth.
     // We observe this by walking the handler to exhaustion and recording
@@ -331,8 +358,8 @@ describe('SSHKaos.create()', () => {
     const { SSHKaos } = await loadSSHModule({
       onConnect(client, config) {
         const handler = config.authHandler;
-        if (typeof handler !== 'function') {
-          client.emit('error', new Error('missing authHandler'));
+        if (typeof handler !== "function") {
+          client.emit("error", new Error("missing authHandler"));
           return;
         }
 
@@ -342,17 +369,17 @@ describe('SSHKaos.create()', () => {
         const pump = (): void => {
           handler([], false, (auth: string | AnyAuthMethod | false) => {
             if (auth === false) {
-              client.emit('error', new Error('unexpected end of auth queue'));
+              client.emit("error", new Error("unexpected end of auth queue"));
               return;
             }
-            if (typeof auth !== 'object') {
-              client.emit('error', new Error(`unexpected auth: ${auth}`));
+            if (typeof auth !== "object") {
+              client.emit("error", new Error(`unexpected auth: ${auth}`));
               return;
             }
             yielded.push(auth.type);
-            if (auth.type === 'password') {
+            if (auth.type === "password") {
               queueMicrotask(() => {
-                client.emit('ready');
+                client.emit("ready");
               });
               return;
             }
@@ -364,12 +391,12 @@ describe('SSHKaos.create()', () => {
     });
 
     await SSHKaos.create({
-      host: 'example.com',
-      username: 'tester',
-      keyContents: ['only-key'],
-      password: 'hunter2',
+      host: "example.com",
+      username: "tester",
+      keyContents: ["only-key"],
+      password: "hunter2",
     });
 
-    expect(yielded).toEqual(['publickey', 'password']);
+    expect(yielded).toEqual(["publickey", "password"]);
   });
 });

@@ -13,50 +13,68 @@
  *    raw REST request/response or WS payload).
  */
 
-import { EMPTY_AGENT_STATE } from '@moonshot-ai/transcript';
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { EMPTY_AGENT_STATE } from "@moonshot-ai/transcript";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 
-import { diffValue, type DiffNode } from '../../audit/diff';
-import { serializeState } from '../../audit/serialize';
-import type { AuditEntry, AuditTrail } from '../../audit/trail';
-import { tailTrunc } from '../../audit/truncate';
-import { Badge } from '../../ui';
-import { plainNode, StateTree } from './StateTree';
+import { diffValue, type DiffNode } from "../../audit/diff";
+import { serializeState } from "../../audit/serialize";
+import type { AuditEntry, AuditTrail } from "../../audit/trail";
+import { tailTrunc } from "../../audit/truncate";
+import { Badge } from "../../ui";
+import { plainNode, StateTree } from "./StateTree";
 
-const KIND_TONE: Record<AuditEntry['kind'], 'sky' | 'green' | 'violet' | 'neutral'> = {
-  rest: 'sky',
-  ops: 'green',
-  reset: 'violet',
-  event: 'neutral',
+const KIND_TONE: Record<
+  AuditEntry["kind"],
+  "sky" | "green" | "violet" | "neutral"
+> = {
+  rest: "sky",
+  ops: "green",
+  reset: "violet",
+  event: "neutral",
 };
 
 function fmtTime(iso: string): string {
   const d = new Date(iso);
-  const base = d.toLocaleTimeString('en-GB', { hour12: false });
-  return `${base}.${String(d.getMilliseconds()).padStart(3, '0')}`;
+  const base = d.toLocaleTimeString("en-GB", { hour12: false });
+  return `${base}.${String(d.getMilliseconds()).padStart(3, "0")}`;
 }
 
 /** Raw payload view: full JSON, with long strings tail-truncated. */
 function EventJson({ entry }: { entry: AuditEntry }) {
   const payload = useMemo(() => {
     switch (entry.kind) {
-      case 'rest':
-        return { request: entry.request, appliedAs: entry.appliedAs, response: entry.page };
-      case 'ops':
-        return { envelopeAt: entry.envelopeAt, delivery: entry.delivery, ops: entry.ops };
-      case 'reset':
+      case "rest":
+        return {
+          request: entry.request,
+          appliedAs: entry.appliedAs,
+          response: entry.page,
+        };
+      case "ops":
+        return {
+          envelopeAt: entry.envelopeAt,
+          delivery: entry.delivery,
+          ops: entry.ops,
+        };
+      case "reset":
         return {
           envelopeAt: entry.envelopeAt,
           hasMoreOlder: entry.hasMoreOlder,
           snapshot: entry.snapshot,
         };
-      case 'event':
+      case "event":
         return { event: entry.event, detail: entry.detail };
     }
   }, [entry]);
   const text = JSON.stringify(
     payload,
-    (_key, value: unknown) => (typeof value === 'string' ? tailTrunc(value) : value),
+    (_key, value: unknown) =>
+      typeof value === "string" ? tailTrunc(value) : value,
     2,
   );
   return (
@@ -67,10 +85,12 @@ function EventJson({ entry }: { entry: AuditEntry }) {
 }
 
 export function AuditPanel({ trail }: { trail: AuditTrail }) {
-  const entries = useSyncExternalStore(trail.subscribe, () => trail.getEntries());
+  const entries = useSyncExternalStore(trail.subscribe, () =>
+    trail.getEntries(),
+  );
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [follow, setFollow] = useState(true);
-  const [tab, setTab] = useState<'diff' | 'state' | 'event'>('diff');
+  const [tab, setTab] = useState<"diff" | "state" | "event">("diff");
   const listRef = useRef<HTMLDivElement>(null);
 
   const current: AuditEntry | undefined =
@@ -86,17 +106,21 @@ export function AuditPanel({ trail }: { trail: AuditTrail }) {
   }, [entries, follow]);
 
   const root: DiffNode | null = useMemo(() => {
-    if (current === undefined || tab === 'event') return null;
-    if (tab === 'state') return plainNode(serializeState(current.state));
+    if (current === undefined || tab === "event") return null;
+    if (tab === "state") return plainNode(serializeState(current.state));
     const prevState =
-      currentPos > 0 ? (entries[currentPos - 1]?.state ?? EMPTY_AGENT_STATE) : EMPTY_AGENT_STATE;
+      currentPos > 0
+        ? (entries[currentPos - 1]?.state ?? EMPTY_AGENT_STATE)
+        : EMPTY_AGENT_STATE;
     return diffValue(serializeState(prevState), serializeState(current.state));
   }, [current, currentPos, entries, tab]);
 
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center gap-2 border-b border-neutral-800 px-3 py-2">
-        <span className="text-[12px] font-medium text-neutral-200">Transcript audit</span>
+        <span className="text-[12px] font-medium text-neutral-200">
+          Transcript audit
+        </span>
         <Badge tone="neutral">{entries.length} entries</Badge>
       </div>
 
@@ -127,7 +151,10 @@ export function AuditPanel({ trail }: { trail: AuditTrail }) {
         </label>
       </div>
 
-      <div ref={listRef} className="h-56 shrink-0 overflow-y-auto border-b border-neutral-800">
+      <div
+        ref={listRef}
+        className="h-56 shrink-0 overflow-y-auto border-b border-neutral-800"
+      >
         {entries.length === 0 ? (
           <div className="px-3 py-2 text-[11px] text-neutral-600 italic">
             Nothing recorded yet — the initial transcript load is still running.
@@ -137,17 +164,24 @@ export function AuditPanel({ trail }: { trail: AuditTrail }) {
           <div
             key={entry.index}
             className={`flex cursor-pointer items-center gap-2 px-3 py-1 text-[11px] hover:bg-neutral-800/70 ${
-              entry.index === current?.index ? 'bg-sky-950/50' : ''
+              entry.index === current?.index ? "bg-sky-950/50" : ""
             }`}
             onClick={() => {
               setFollow(pos === entries.length - 1);
               setSelectedIndex(entry.index);
             }}
           >
-            <span className="w-8 shrink-0 font-mono text-neutral-600">#{entry.index}</span>
-            <span className="shrink-0 font-mono text-neutral-500">{fmtTime(entry.at)}</span>
+            <span className="w-8 shrink-0 font-mono text-neutral-600">
+              #{entry.index}
+            </span>
+            <span className="shrink-0 font-mono text-neutral-500">
+              {fmtTime(entry.at)}
+            </span>
             <Badge tone={KIND_TONE[entry.kind]}>{entry.kind}</Badge>
-            <span className="min-w-0 truncate text-neutral-400" title={entry.summary}>
+            <span
+              className="min-w-0 truncate text-neutral-400"
+              title={entry.summary}
+            >
               {entry.summary}
             </span>
           </div>
@@ -155,17 +189,21 @@ export function AuditPanel({ trail }: { trail: AuditTrail }) {
       </div>
 
       <div className="flex items-center gap-1 border-b border-neutral-800 px-3 py-1.5">
-        {(['diff', 'state', 'event'] as const).map((name) => (
+        {(["diff", "state", "event"] as const).map((name) => (
           <button
             key={name}
             className={`rounded px-2 py-0.5 text-[11px] ${
               tab === name
-                ? 'bg-neutral-800 text-neutral-100'
-                : 'text-neutral-500 hover:text-neutral-300'
+                ? "bg-neutral-800 text-neutral-100"
+                : "text-neutral-500 hover:text-neutral-300"
             }`}
             onClick={() => setTab(name)}
           >
-            {name === 'diff' ? 'Diff vs prev' : name === 'state' ? 'State' : 'Event'}
+            {name === "diff"
+              ? "Diff vs prev"
+              : name === "state"
+                ? "State"
+                : "Event"}
           </button>
         ))}
         {current !== undefined ? (
@@ -177,11 +215,13 @@ export function AuditPanel({ trail }: { trail: AuditTrail }) {
 
       <div className="min-h-0 flex-1 overflow-y-auto px-2">
         {current === undefined ? (
-          <div className="px-1 py-2 text-[11px] text-neutral-600 italic">No entry selected.</div>
-        ) : tab === 'event' ? (
+          <div className="px-1 py-2 text-[11px] text-neutral-600 italic">
+            No entry selected.
+          </div>
+        ) : tab === "event" ? (
           <EventJson entry={current} />
         ) : root !== null ? (
-          <StateTree root={root} defaultDepth={tab === 'state' ? 2 : 0} />
+          <StateTree root={root} defaultDepth={tab === "state" ? 2 : 0} />
         ) : null}
       </div>
     </div>

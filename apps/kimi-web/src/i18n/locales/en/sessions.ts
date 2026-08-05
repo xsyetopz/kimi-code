@@ -1,3 +1,3 @@
 export default {
-  justNow: 'just now',
+  justNow: "just now",
 } as const;

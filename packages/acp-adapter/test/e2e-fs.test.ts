@@ -34,13 +34,13 @@ import {
   type SessionNotification,
   type WriteTextFileRequest,
   type WriteTextFileResponse,
-} from '@agentclientprotocol/sdk';
-import type { Kaos } from '@moonshot-ai/kaos';
-import type { Event, KimiHarness, Session } from '@moonshot-ai/kimi-code-sdk';
-import { describe, expect, it } from 'vitest';
+} from "@agentclientprotocol/sdk";
+import type { Kaos } from "@moonshot-ai/kaos";
+import type { Event, KimiHarness, Session } from "@moonshot-ai/kimi-code-sdk";
+import { describe, expect, it } from "vitest";
 
-import { AcpServer } from '../src/server';
-import { AUTHED_STATUS } from './_helpers/harness-stubs';
+import { AcpServer } from "../src/server";
+import { AUTHED_STATUS } from "./_helpers/harness-stubs";
 
 function makeInMemoryStreamPair(): {
   agentStream: ReturnType<typeof ndJsonStream>;
@@ -48,28 +48,38 @@ function makeInMemoryStreamPair(): {
 } {
   const clientToAgent = new TransformStream<Uint8Array, Uint8Array>();
   const agentToClient = new TransformStream<Uint8Array, Uint8Array>();
-  const agentStream = ndJsonStream(agentToClient.writable, clientToAgent.readable);
-  const clientStream = ndJsonStream(clientToAgent.writable, agentToClient.readable);
+  const agentStream = ndJsonStream(
+    agentToClient.writable,
+    clientToAgent.readable,
+  );
+  const clientStream = ndJsonStream(
+    clientToAgent.writable,
+    agentToClient.readable,
+  );
   return { agentStream, clientStream };
 }
 
 class UnsavedBufferClient implements Client {
   readonly readRequests: ReadTextFileRequest[] = [];
   readonly updates: SessionNotification[] = [];
-  unsavedContent = 'UNSAVED BUFFER CONTENT';
+  unsavedContent = "UNSAVED BUFFER CONTENT";
 
   async readTextFile(p: ReadTextFileRequest): Promise<ReadTextFileResponse> {
     this.readRequests.push(p);
     return { content: this.unsavedContent };
   }
-  async writeTextFile(_p: WriteTextFileRequest): Promise<WriteTextFileResponse> {
-    throw new Error('writeTextFile not exercised in this e2e test');
+  async writeTextFile(
+    _p: WriteTextFileRequest,
+  ): Promise<WriteTextFileResponse> {
+    throw new Error("writeTextFile not exercised in this e2e test");
   }
   async sessionUpdate(n: SessionNotification): Promise<void> {
     this.updates.push(n);
   }
-  async requestPermission(_p: RequestPermissionRequest): Promise<RequestPermissionResponse> {
-    throw new Error('requestPermission not exercised in this e2e test');
+  async requestPermission(
+    _p: RequestPermissionRequest,
+  ): Promise<RequestPermissionResponse> {
+    throw new Error("requestPermission not exercised in this e2e test");
   }
 }
 
@@ -89,26 +99,26 @@ function makeReadingSession(
     id: sessionId,
     prompt: async (_input: unknown) => {
       if (kaos === undefined) {
-        throw new Error('kaos missing — boundary injection failed');
+        throw new Error("kaos missing — boundary injection failed");
       }
       const content = await kaos.readText(targetPath);
 
       for (const fn of listeners) {
         fn({
-          type: 'assistant.delta',
+          type: "assistant.delta",
           sessionId,
-          agentId: 'main',
+          agentId: "main",
           turnId: 1,
           delta: content,
         } as Event);
       }
       for (const fn of listeners) {
         fn({
-          type: 'turn.ended',
+          type: "turn.ended",
           sessionId,
-          agentId: 'main',
+          agentId: "main",
           turnId: 1,
-          reason: 'completed',
+          reason: "completed",
         } as Event);
       }
     },
@@ -122,18 +132,26 @@ function makeReadingSession(
   } as unknown as Session;
 }
 
-const textBlock = (text: string): ContentBlock => ({ type: 'text', text });
+const textBlock = (text: string): ContentBlock => ({ type: "text", text });
 
-describe('end-to-end FS reverse-RPC', () => {
-  it('routes a tool-time readText through the client when fs.readTextFile is advertised', async () => {
-    const targetPath = '/Users/test/x.ts';
+describe("end-to-end FS reverse-RPC", () => {
+  it("routes a tool-time readText through the client when fs.readTextFile is advertised", async () => {
+    const targetPath = "/Users/test/x.ts";
     let createdSession: Session | undefined;
     let capturedSessionId: string | undefined;
     const harness = {
       auth: { status: async () => AUTHED_STATUS },
-      createSession: async (options: { id?: string; workDir: string; kaos?: Kaos }) => {
-        capturedSessionId = options.id ?? 'fallback';
-        createdSession = makeReadingSession(capturedSessionId, targetPath, options.kaos);
+      createSession: async (options: {
+        id?: string;
+        workDir: string;
+        kaos?: Kaos;
+      }) => {
+        capturedSessionId = options.id ?? "fallback";
+        createdSession = makeReadingSession(
+          capturedSessionId,
+          targetPath,
+          options.kaos,
+        );
         return createdSession;
       },
     } as unknown as KimiHarness;
@@ -153,14 +171,17 @@ describe('end-to-end FS reverse-RPC', () => {
       },
     });
 
-    const newSession = await client.newSession({ cwd: '/tmp/x', mcpServers: [] });
+    const newSession = await client.newSession({
+      cwd: "/tmp/x",
+      mcpServers: [],
+    });
 
     const response = await client.prompt({
       sessionId: newSession.sessionId,
-      prompt: [textBlock('read the unsaved file please')],
+      prompt: [textBlock("read the unsaved file please")],
     });
 
-    expect(response.stopReason).toBe('end_turn');
+    expect(response.stopReason).toBe("end_turn");
 
     // The client saw exactly one fs/readTextFile request with the
     // expected path and matching sessionId.
@@ -171,7 +192,9 @@ describe('end-to-end FS reverse-RPC', () => {
     // before the fs/readTextFile RPC (see kaos-acp.test.ts "uses win32-native
     // separators"). Mirror that here so the assertion holds on every platform.
     const expectedWirePath =
-      process.platform === 'win32' ? targetPath.replaceAll('/', '\\') : targetPath;
+      process.platform === "win32"
+        ? targetPath.replaceAll("/", "\\")
+        : targetPath;
     expect(bufferClient.readRequests[0]).toMatchObject({
       sessionId: capturedSessionId,
       path: expectedWirePath,
@@ -182,35 +205,39 @@ describe('end-to-end FS reverse-RPC', () => {
     await new Promise((resolve) => setTimeout(resolve, 20));
 
     const chunkUpdate = bufferClient.updates.find(
-      (u) => u.update.sessionUpdate === 'agent_message_chunk',
+      (u) => u.update.sessionUpdate === "agent_message_chunk",
     );
     expect(chunkUpdate).toBeDefined();
     expect(chunkUpdate?.update).toMatchObject({
-      sessionUpdate: 'agent_message_chunk',
-      content: { type: 'text', text: 'UNSAVED BUFFER CONTENT' },
+      sessionUpdate: "agent_message_chunk",
+      content: { type: "text", text: "UNSAVED BUFFER CONTENT" },
     });
   });
 
-  it('does NOT route through the client when no FS capability is advertised', async () => {
+  it("does NOT route through the client when no FS capability is advertised", async () => {
     let observedKaos: Kaos | undefined;
     let capturedSessionId: string | undefined;
 
     const listeners = new Set<(event: Event) => void>();
     const harness = {
       auth: { status: async () => AUTHED_STATUS },
-      createSession: async (options: { id?: string; workDir: string; kaos?: Kaos }) => {
+      createSession: async (options: {
+        id?: string;
+        workDir: string;
+        kaos?: Kaos;
+      }) => {
         observedKaos = options.kaos;
-        capturedSessionId = options.id ?? 'fallback';
+        capturedSessionId = options.id ?? "fallback";
         return {
           id: capturedSessionId,
           prompt: async () => {
             for (const fn of listeners) {
               fn({
-                type: 'turn.ended',
+                type: "turn.ended",
                 sessionId: capturedSessionId,
-                agentId: 'main',
+                agentId: "main",
                 turnId: 1,
-                reason: 'completed',
+                reason: "completed",
               } as Event);
             }
           },
@@ -238,14 +265,17 @@ describe('end-to-end FS reverse-RPC', () => {
       },
     });
 
-    const newSession = await client.newSession({ cwd: '/tmp/x', mcpServers: [] });
+    const newSession = await client.newSession({
+      cwd: "/tmp/x",
+      mcpServers: [],
+    });
 
     const response = await client.prompt({
       sessionId: newSession.sessionId,
-      prompt: [textBlock('hi')],
+      prompt: [textBlock("hi")],
     });
 
-    expect(response.stopReason).toBe('end_turn');
+    expect(response.stopReason).toBe("end_turn");
     expect(bufferClient.readRequests).toEqual([]);
     expect(observedKaos).toBeUndefined();
   });

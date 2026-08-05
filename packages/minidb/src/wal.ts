@@ -23,13 +23,13 @@
 // clearPoison(). A background everysec sync failure never poisons: it rejects
 // no write and is observable only in stats (stage-1 semantics).
 
-import fs from 'node:fs/promises';
-import type { FileHandle } from 'node:fs/promises';
-import { OpTracker } from './op-tracker.js';
+import fs from "node:fs/promises";
+import type { FileHandle } from "node:fs/promises";
+import { OpTracker } from "./op-tracker.js";
 
-export type FsyncPolicy = 'always' | 'everysec' | 'no';
+export type FsyncPolicy = "always" | "everysec" | "no";
 
-const POLICIES = new Set<FsyncPolicy>(['always', 'everysec', 'no']);
+const POLICIES = new Set<FsyncPolicy>(["always", "everysec", "no"]);
 
 interface PendingWrite {
   buf: Buffer;
@@ -125,8 +125,9 @@ export class WAL {
   private readonly bgSync = new OpTracker();
 
   constructor(path: string, opts: WALOptions = {}) {
-    const policy = opts.fsyncPolicy ?? 'everysec';
-    if (!POLICIES.has(policy)) throw new RangeError(`unknown fsyncPolicy: ${policy}`);
+    const policy = opts.fsyncPolicy ?? "everysec";
+    if (!POLICIES.has(policy))
+      throw new RangeError(`unknown fsyncPolicy: ${policy}`);
     this.path = path;
     this.policy = policy;
     this.syncIntervalMs = opts.syncIntervalMs ?? 1000;
@@ -135,11 +136,11 @@ export class WAL {
 
   async open(): Promise<void> {
     if (this.fh) return;
-    this.fh = await fs.open(this.path, 'a'); // create + append at EOF
+    this.fh = await fs.open(this.path, "a"); // create + append at EOF
     const st = await this.fh.stat();
     this.size = st.size;
     this.nextOffset = st.size;
-    if (this.policy === 'everysec') {
+    if (this.policy === "everysec") {
       this.timer = setInterval(() => {
         void this.backgroundTick();
       }, this.syncIntervalMs);
@@ -185,16 +186,36 @@ export class WAL {
    *  that window would hit a short read past the current end of the file.
    *  batchId is -1 for frames that never entered a group (immediate
    *  rejections: closed/poisoned/sealed/invalid). */
-  appendLoc(frame: Buffer): { offset: number; batchId: number; done: Promise<void> } {
-    if (this.closed) return { offset: -1, batchId: -1, done: Promise.reject(new Error('WAL is closed')) };
-    if (this.poisoned) return { offset: -1, batchId: -1, done: Promise.reject(this.poisonError()) };
+  appendLoc(frame: Buffer): {
+    offset: number;
+    batchId: number;
+    done: Promise<void>;
+  } {
+    if (this.closed)
+      return {
+        offset: -1,
+        batchId: -1,
+        done: Promise.reject(new Error("WAL is closed")),
+      };
+    if (this.poisoned)
+      return {
+        offset: -1,
+        batchId: -1,
+        done: Promise.reject(this.poisonError()),
+      };
     if (this.sealed) {
-      const err = new Error('WAL is sealed by a compaction rotation; retry against the new WAL');
-      (err as { code?: string }).code = 'WAL_SEALED';
+      const err = new Error(
+        "WAL is sealed by a compaction rotation; retry against the new WAL",
+      );
+      (err as { code?: string }).code = "WAL_SEALED";
       return { offset: -1, batchId: -1, done: Promise.reject(err) };
     }
     if (!Buffer.isBuffer(frame)) {
-      return { offset: -1, batchId: -1, done: Promise.reject(new TypeError('frame must be a Buffer')) };
+      return {
+        offset: -1,
+        batchId: -1,
+        done: Promise.reject(new TypeError("frame must be a Buffer")),
+      };
     }
     const offset = this.nextOffset;
     this.nextOffset += frame.length;
@@ -210,7 +231,9 @@ export class WAL {
       }
       if (!this.flushing && !this.scheduled) {
         this.scheduled = true;
-        setImmediate(() => { void this.flushBatch(); });
+        setImmediate(() => {
+          void this.flushBatch();
+        });
       }
     });
     return { offset, batchId, done };
@@ -253,9 +276,11 @@ export class WAL {
       let failure: unknown = null;
       try {
         while (bufs.length > 0) {
-          const toWrite = off > 0 ? [bufs[0]!.subarray(off), ...bufs.slice(1)] : bufs;
+          const toWrite =
+            off > 0 ? [bufs[0]!.subarray(off), ...bufs.slice(1)] : bufs;
           const { bytesWritten } = await this.fh!.writev(toWrite);
-          if (bytesWritten === 0) throw new Error('WAL writev made no progress (short write)');
+          if (bytesWritten === 0)
+            throw new Error("WAL writev made no progress (short write)");
           this.size += bytesWritten;
           if (this.stats) this.stats.walBytesWritten += bytesWritten;
           // The bytes are in the OS page cache but not necessarily on disk:
@@ -278,7 +303,7 @@ export class WAL {
         failure = err;
         if (this.stats) this.stats.walWriteErrors++;
       }
-      if (!failure && this.policy === 'always') {
+      if (!failure && this.policy === "always") {
         // sync() records walFsyncErrors itself. The batch's bytes are in the
         // page cache but unacknowledged, so an fsync failure poisons exactly
         // like a write failure.
@@ -304,7 +329,9 @@ export class WAL {
       this.inflight = null;
       if (this.queue.length > 0 && !this.closed && !this.poisoned) {
         this.scheduled = true;
-        setImmediate(() => { void this.flushBatch(); });
+        setImmediate(() => {
+          void this.flushBatch();
+        });
       }
     };
     this.inflight = run();
@@ -348,7 +375,10 @@ export class WAL {
       // Already poisoned (poisonPending raced a flush failure, or a second
       // batch failed): widen the truncation point to also cover the older
       // un-acked bytes, never narrowing it.
-      this.poisoned.failedAtOffset = Math.min(this.poisoned.failedAtOffset, failedAtOffset);
+      this.poisoned.failedAtOffset = Math.min(
+        this.poisoned.failedAtOffset,
+        failedAtOffset,
+      );
       return;
     }
     this.poisoned = { failedAtOffset, error };
@@ -358,7 +388,8 @@ export class WAL {
    *  flushBatch failure path for why newest-first matters). */
   private rejectQueued(perr: Error): void {
     if (this.queue.length === 0) return;
-    for (let i = this.queue.length - 1; i >= 0; i--) this.queue[i]!.reject(perr);
+    for (let i = this.queue.length - 1; i >= 0; i--)
+      this.queue[i]!.reject(perr);
     if (this.stats) this.stats.walQueuedBytes -= this.queuedBytes;
     this.queue = [];
     this.queuedBytes = 0;
@@ -373,7 +404,7 @@ export class WAL {
     const err = new Error(
       `WAL is poisoned by a previous write failure: ${cause instanceof Error ? cause.message : String(cause)}`,
     );
-    (err as { code?: string }).code = 'WAL_POISONED';
+    (err as { code?: string }).code = "WAL_POISONED";
     (err as { cause?: unknown }).cause = cause;
     return err;
   }

@@ -1,4 +1,4 @@
-import { AsyncLocalStorage } from 'node:async_hooks';
+import { AsyncLocalStorage } from "node:async_hooks";
 import {
   appendFileSync,
   existsSync,
@@ -7,11 +7,11 @@ import {
   readdirSync,
   rmSync,
   writeFileSync,
-} from 'node:fs';
-import { join, resolve } from 'node:path';
+} from "node:fs";
+import { join, resolve } from "node:path";
 
-export type ReportEventKind = 'log' | 'http' | 'ws' | 'test-result';
-export type WsDirection = 'in' | 'out' | 'lifecycle';
+export type ReportEventKind = "log" | "http" | "ws" | "test-result";
+export type WsDirection = "in" | "out" | "lifecycle";
 
 export interface ReportEventBase {
   kind: ReportEventKind;
@@ -20,13 +20,13 @@ export interface ReportEventBase {
 }
 
 export interface LogReportEvent extends ReportEventBase {
-  kind: 'log';
+  kind: "log";
   label: string;
   value?: unknown;
 }
 
 export interface HttpReportEvent extends ReportEventBase {
-  kind: 'http';
+  kind: "http";
   method: string;
   path: string;
   url?: string;
@@ -38,7 +38,7 @@ export interface HttpReportEvent extends ReportEventBase {
 }
 
 export interface WsReportEvent extends ReportEventBase {
-  kind: 'ws';
+  kind: "ws";
   direction: WsDirection;
   url?: string;
   frame?: unknown;
@@ -47,8 +47,8 @@ export interface WsReportEvent extends ReportEventBase {
 }
 
 export interface TestResultReportEvent extends ReportEventBase {
-  kind: 'test-result';
-  state: 'passed' | 'failed' | 'skipped';
+  kind: "test-result";
+  state: "passed" | "failed" | "skipped";
   durationMs?: number;
   error?: unknown;
 }
@@ -75,7 +75,7 @@ export interface StoredReportEvent extends ReportEventBase {
   direction?: WsDirection;
   frame?: unknown;
   message?: string;
-  state?: 'passed' | 'failed' | 'skipped';
+  state?: "passed" | "failed" | "skipped";
   error?: unknown;
 }
 
@@ -108,31 +108,36 @@ export function getActiveReportCase(): string | undefined {
 export function resetReportDir(reportDir = defaultReportDir()): void {
   rmSync(reportDir, { recursive: true, force: true });
   mkdirSync(reportDir, { recursive: true });
-  writeFileSync(join(reportDir, '.gitignore'), '*\n!.gitignore\n');
+  writeFileSync(join(reportDir, ".gitignore"), "*\n!.gitignore\n");
 }
 
-export function recordReportEvent(event: ReportEvent, options?: ReportOptions): void {
+export function recordReportEvent(
+  event: ReportEvent,
+  options?: ReportOptions,
+): void {
   const reportDir = options?.reportDir ?? defaultReportDir();
   mkdirSync(reportDir, { recursive: true });
   const stored = normalizeEvent(event);
   appendFileSync(reportEventsPath(reportDir), `${JSON.stringify(stored)}\n`);
 }
 
-export function readReportEvents(reportDir = defaultReportDir()): StoredReportEvent[] {
+export function readReportEvents(
+  reportDir = defaultReportDir(),
+): StoredReportEvent[] {
   if (!existsSync(reportDir)) return [];
   const files = readdirSync(reportDir)
-    .filter((file) => file.startsWith('events-') && file.endsWith('.jsonl'))
+    .filter((file) => file.startsWith("events-") && file.endsWith(".jsonl"))
     .toSorted();
   const events: StoredReportEvent[] = [];
   for (const file of files) {
-    const text = readFileSync(join(reportDir, file), 'utf8');
-    for (const line of text.split('\n')) {
+    const text = readFileSync(join(reportDir, file), "utf8");
+    for (const line of text.split("\n")) {
       if (line.trim().length === 0) continue;
       events.push(JSON.parse(line) as StoredReportEvent);
     }
   }
   return events.toSorted((a, b) => {
-    const byTime = Date.parse(a.at ?? '') - Date.parse(b.at ?? '');
+    const byTime = Date.parse(a.at ?? "") - Date.parse(b.at ?? "");
     if (byTime !== 0) return byTime;
     if (a.pid !== b.pid) return a.pid - b.pid;
     return a.ordinal - b.ordinal;
@@ -142,9 +147,9 @@ export function readReportEvents(reportDir = defaultReportDir()): StoredReportEv
 export function writeHtmlReport(options?: HtmlReportOptions): string {
   const reportDir = options?.reportDir ?? defaultReportDir();
   mkdirSync(reportDir, { recursive: true });
-  const title = options?.title ?? 'server-e2e report';
+  const title = options?.title ?? "server-e2e report";
   const events = readReportEvents(reportDir);
-  const htmlPath = join(reportDir, 'index.html');
+  const htmlPath = join(reportDir, "index.html");
   writeFileSync(htmlPath, renderHtml(title, events));
   return htmlPath;
 }
@@ -165,7 +170,7 @@ export async function fetchWithReport(
   } catch (error) {
     recordReportEvent(
       {
-        kind: 'http',
+        kind: "http",
         method,
         path,
         url,
@@ -181,7 +186,7 @@ export async function fetchWithReport(
   const text = await response.clone().text();
   recordReportEvent(
     {
-      kind: 'http',
+      kind: "http",
       method,
       path,
       url,
@@ -196,7 +201,10 @@ export async function fetchWithReport(
 }
 
 export function defaultReportDir(): string {
-  return resolve(process.env['KIMI_SERVER_E2E_REPORT_DIR'] ?? join(process.cwd(), 'reports', 'latest'));
+  return resolve(
+    process.env["KIMI_SERVER_E2E_REPORT_DIR"] ??
+      join(process.cwd(), "reports", "latest"),
+  );
 }
 
 function normalizeEvent(event: ReportEvent): StoredReportEvent {
@@ -204,7 +212,11 @@ function normalizeEvent(event: ReportEvent): StoredReportEvent {
   return {
     ...stored,
     at: event.at ?? new Date().toISOString(),
-    caseName: event.caseName ?? getActiveReportCase() ?? process.env['KIMI_SERVER_E2E_CASE_NAME'] ?? 'unassigned',
+    caseName:
+      event.caseName ??
+      getActiveReportCase() ??
+      process.env["KIMI_SERVER_E2E_CASE_NAME"] ??
+      "unassigned",
     pid: process.pid,
     ordinal: ordinal++,
   };
@@ -299,7 +311,7 @@ function renderHtml(title: string, events: StoredReportEvent[]): string {
         <div class="summary">${events.length} event(s), ${cases.length} case(s)<br>generated ${escapeHtml(new Date().toISOString())}</div>
       </div>
       <nav class="case-list">
-        ${cases.map(renderCaseLink).join('\n')}
+        ${cases.map(renderCaseLink).join("\n")}
       </nav>
     </aside>
     <main class="report">
@@ -311,13 +323,13 @@ function renderHtml(title: string, events: StoredReportEvent[]): string {
           <span>Server -&gt; Client</span>
         </div>
         <div class="event-scroll" id="event-scroll">
-          ${cases.map(renderCase).join('\n')}
+          ${cases.map(renderCase).join("\n")}
         </div>
       </section>
       <aside class="detail-pane" aria-label="Event details">
         <div class="detail-head">Details</div>
         <div class="detail-scroll" id="detail-scroll">
-          ${cases.map(renderDetailCase).join('\n')}
+          ${cases.map(renderDetailCase).join("\n")}
         </div>
       </aside>
     </main>
@@ -423,10 +435,12 @@ interface RenderEvent {
   event: StoredReportEvent;
 }
 
-function groupByCase(events: StoredReportEvent[]): Map<string, StoredReportEvent[]> {
+function groupByCase(
+  events: StoredReportEvent[],
+): Map<string, StoredReportEvent[]> {
   const cases = new Map<string, StoredReportEvent[]>();
   for (const event of events) {
-    const caseName = event.caseName ?? 'unassigned';
+    const caseName = event.caseName ?? "unassigned";
     const group = cases.get(caseName);
     if (group) {
       group.push(event);
@@ -465,18 +479,19 @@ function renderCase(testCase: RenderCase): string {
   return `<section class="case-section" id="${escapeHtml(testCase.id)}" data-case-section="${escapeHtml(testCase.id)}">
   <h2 class="case-title">${escapeHtml(testCase.name)}</h2>
   <ol class="swimlanes">
-    ${testCase.events.map(renderEvent).join('\n')}
+    ${testCase.events.map(renderEvent).join("\n")}
   </ol>
 </section>`;
 }
 
 function renderEvent(rendered: RenderEvent): string {
-  const left = eventLaneContent(rendered.event, 'left');
-  const right = eventLaneContent(rendered.event, 'right');
+  const left = eventLaneContent(rendered.event, "left");
+  const right = eventLaneContent(rendered.event, "right");
   const center = lifecycleLaneContent(rendered.event);
-  const rowClass = rendered.event.kind === 'ws' && rendered.event.direction === 'lifecycle'
-    ? `${rendered.event.kind} lifecycle`
-    : rendered.event.kind;
+  const rowClass =
+    rendered.event.kind === "ws" && rendered.event.direction === "lifecycle"
+      ? `${rendered.event.kind} lifecycle`
+      : rendered.event.kind;
   return `<li class="swim-row ${escapeHtml(rowClass)}" data-event-id="${escapeHtml(rendered.id)}" data-case-id="${escapeHtml(rendered.caseId)}">
   <div class="time">#${rendered.stepIndex}</div>
   <div class="lane lane-left">${left}</div>
@@ -489,7 +504,7 @@ function renderEvent(rendered: RenderEvent): string {
 function renderDetailCase(testCase: RenderCase): string {
   return `<section class="detail-case" data-case-details="${escapeHtml(testCase.id)}">
   <h2 class="detail-case-title">${escapeHtml(testCase.name)}</h2>
-  ${testCase.events.map(renderDetailCard).join('\n')}
+  ${testCase.events.map(renderDetailCard).join("\n")}
 </section>`;
 }
 
@@ -504,65 +519,75 @@ function renderDetailCard(rendered: RenderEvent): string {
 </article>`;
 }
 
-function eventLaneContent(event: StoredReportEvent, lane: 'left' | 'right'): string {
-  const content = lane === 'left' ? leftLaneSummary(event) : rightLaneSummary(event);
-  if (!content) return '';
+function eventLaneContent(
+  event: StoredReportEvent,
+  lane: "left" | "right",
+): string {
+  const content =
+    lane === "left" ? leftLaneSummary(event) : rightLaneSummary(event);
+  if (!content) return "";
   return `<button class="event-card ${escapeHtml(event.kind)}" type="button">
   <span class="event-title">${escapeHtml(content.title)}</span>
 </button>`;
 }
 
 function lifecycleLaneContent(event: StoredReportEvent): string {
-  if (event.kind !== 'ws' || event.direction !== 'lifecycle') return '';
+  if (event.kind !== "ws" || event.direction !== "lifecycle") return "";
   return `<button class="event-card ${escapeHtml(event.kind)} life-event" type="button">
   <span class="event-title">${escapeHtml(eventSummary(event))}</span>
 </button>`;
 }
 
-function leftLaneSummary(event: StoredReportEvent): { title: string } | undefined {
-  if (event.kind === 'http') {
+function leftLaneSummary(
+  event: StoredReportEvent,
+): { title: string } | undefined {
+  if (event.kind === "http") {
     return {
-      title: `${event.method ?? 'HTTP'} ${event.path ?? event.url ?? ''}`.trim(),
+      title:
+        `${event.method ?? "HTTP"} ${event.path ?? event.url ?? ""}`.trim(),
     };
   }
-  if (event.kind === 'ws' && event.direction === 'out') {
+  if (event.kind === "ws" && event.direction === "out") {
     return { title: eventSummary(event) };
   }
-  if (event.kind === 'log') {
-    return { title: event.label ?? 'log' };
+  if (event.kind === "log") {
+    return { title: event.label ?? "log" };
   }
   return undefined;
 }
 
-function rightLaneSummary(event: StoredReportEvent): { title: string } | undefined {
-  if (event.kind === 'http') {
+function rightLaneSummary(
+  event: StoredReportEvent,
+): { title: string } | undefined {
+  if (event.kind === "http") {
     return {
-      title: event.status === undefined ? 'HTTP response' : `HTTP ${event.status}`,
+      title:
+        event.status === undefined ? "HTTP response" : `HTTP ${event.status}`,
     };
   }
-  if (event.kind === 'ws' && event.direction === 'in') {
+  if (event.kind === "ws" && event.direction === "in") {
     return { title: eventSummary(event) };
   }
-  if (event.kind === 'test-result') {
+  if (event.kind === "test-result") {
     return { title: eventSummary(event) };
   }
   return undefined;
 }
 
 function eventSummary(event: StoredReportEvent): string {
-  if (event.kind === 'http') {
-    return `${event.method ?? 'HTTP'} ${event.path ?? event.url ?? ''}`.trim();
+  if (event.kind === "http") {
+    return `${event.method ?? "HTTP"} ${event.path ?? event.url ?? ""}`.trim();
   }
-  if (event.kind === 'ws') {
-    const label = frameType(event.frame) ?? event.message ?? 'frame';
-    if (event.direction === 'lifecycle') return `WS ${label}`;
-    const arrow = event.direction === 'out' ? '->' : '<-';
+  if (event.kind === "ws") {
+    const label = frameType(event.frame) ?? event.message ?? "frame";
+    if (event.direction === "lifecycle") return `WS ${label}`;
+    const arrow = event.direction === "out" ? "->" : "<-";
     return `WS ${arrow} ${label}`;
   }
-  if (event.kind === 'test-result') {
-    return `test ${event.state ?? 'unknown'}`;
+  if (event.kind === "test-result") {
+    return `test ${event.state ?? "unknown"}`;
   }
-  return event.label ?? 'log';
+  return event.label ?? "log";
 }
 
 function eventDetail(event: StoredReportEvent): Record<string, unknown> {
@@ -571,28 +596,31 @@ function eventDetail(event: StoredReportEvent): Record<string, unknown> {
 }
 
 function frameType(frame: unknown): string | undefined {
-  if (!frame || typeof frame !== 'object') return undefined;
+  if (!frame || typeof frame !== "object") return undefined;
   const value = (frame as { type?: unknown }).type;
-  return typeof value === 'string' ? value : undefined;
+  return typeof value === "string" ? value : undefined;
 }
 
 function escapeHtml(value: unknown): string {
   return String(value)
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
 }
 
-function fetchMethod(input: Parameters<typeof fetch>[0], init: Parameters<typeof fetch>[1]): string {
+function fetchMethod(
+  input: Parameters<typeof fetch>[0],
+  init: Parameters<typeof fetch>[1],
+): string {
   if (init?.method) return init.method.toUpperCase();
   if (input instanceof Request) return input.method.toUpperCase();
-  return 'GET';
+  return "GET";
 }
 
 function fetchUrl(input: Parameters<typeof fetch>[0]): string {
-  if (typeof input === 'string') return input;
+  if (typeof input === "string") return input;
   if (input instanceof URL) return input.toString();
   return input.url;
 }
@@ -617,8 +645,8 @@ function requestForFetchReport(
   return {};
 }
 
-function parseBodyForReport(body: NonNullable<RequestInit['body']>): unknown {
-  if (typeof body === 'string') {
+function parseBodyForReport(body: NonNullable<RequestInit["body"]>): unknown {
+  if (typeof body === "string") {
     try {
       return JSON.parse(body) as unknown;
     } catch {
@@ -629,10 +657,10 @@ function parseBodyForReport(body: NonNullable<RequestInit['body']>): unknown {
     return body.toString();
   }
   if (body instanceof FormData) {
-    return '[FormData]';
+    return "[FormData]";
   }
   if (body instanceof Blob) {
-    return `[Blob ${body.type || 'application/octet-stream'} ${body.size} bytes]`;
+    return `[Blob ${body.type || "application/octet-stream"} ${body.size} bytes]`;
   }
   if (body instanceof ArrayBuffer) {
     return `[ArrayBuffer ${body.byteLength} bytes]`;
@@ -640,7 +668,7 @@ function parseBodyForReport(body: NonNullable<RequestInit['body']>): unknown {
   if (ArrayBuffer.isView(body)) {
     return `[${body.constructor.name} ${body.byteLength} bytes]`;
   }
-  return '[ReadableStream]';
+  return "[ReadableStream]";
 }
 
 function responseForReport(text: string): { envelope?: unknown; raw?: string } {

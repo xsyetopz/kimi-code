@@ -1,12 +1,12 @@
-import { mkdir, stat, writeFile } from 'node:fs/promises';
-import { dirname, resolve } from 'node:path';
+import { mkdir, stat, writeFile } from "node:fs/promises";
+import { dirname, resolve } from "node:path";
 
 import {
   collectNativeAssets,
   nativeAssetManifestKey,
   nativeAssetSummary,
-} from './assets.mjs';
-import { fail, run } from './exec.mjs';
+} from "./assets.mjs";
+import { fail, run } from "./exec.mjs";
 import {
   appRoot,
   nativeBlobPath,
@@ -15,14 +15,16 @@ import {
   nativeManifestDir,
   nativeSeaConfigPath,
   targetTriple,
-} from './paths.mjs';
-import { collectWebAssets, webAssetManifestKey } from './web-assets.mjs';
+} from "./paths.mjs";
+import { collectWebAssets, webAssetManifestKey } from "./web-assets.mjs";
 
 async function ensureBundleExists() {
   try {
     await stat(nativeJsBundlePath());
   } catch {
-    fail(`Native JS bundle not found at ${nativeJsBundlePath()}. Run 01-bundle.mjs first.`);
+    fail(
+      `Native JS bundle not found at ${nativeJsBundlePath()}. Run 01-bundle.mjs first.`,
+    );
   }
 }
 
@@ -33,8 +35,13 @@ async function writeSeaConfig(target) {
     target,
   });
   const web = await collectWebAssets({ appRoot, target });
-  const manifestPath = resolve(nativeManifestDir(target), 'manifest.json');
-  const webManifestPath = resolve(nativeIntermediatesDir(), 'web-assets', target, 'manifest.json');
+  const manifestPath = resolve(nativeManifestDir(target), "manifest.json");
+  const webManifestPath = resolve(
+    nativeIntermediatesDir(),
+    "web-assets",
+    target,
+    "manifest.json",
+  );
   await mkdir(dirname(manifestPath), { recursive: true });
   await mkdir(dirname(webManifestPath), { recursive: true });
   await writeFile(manifestPath, manifestJson);
@@ -56,7 +63,10 @@ async function writeSeaConfig(target) {
     useCodeCache: false,
     useSnapshot: false,
   };
-  await writeFile(nativeSeaConfigPath(), `${JSON.stringify(config, null, 2)}\n`);
+  await writeFile(
+    nativeSeaConfigPath(),
+    `${JSON.stringify(config, null, 2)}\n`,
+  );
 
   console.log(`Collected native assets for ${manifest.target}:`);
   for (const line of nativeAssetSummary(manifest)) {
@@ -71,7 +81,10 @@ export async function runSeaBlobStep() {
   await ensureBundleExists();
   const target = targetTriple();
   await writeSeaConfig(target);
-  await run(process.execPath, ['--experimental-sea-config', nativeSeaConfigPath()]);
+  await run(process.execPath, [
+    "--experimental-sea-config",
+    nativeSeaConfigPath(),
+  ]);
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

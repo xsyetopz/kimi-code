@@ -1,5 +1,5 @@
-import { ErrorCodes, KimiError } from '#/errors';
-import { parseBooleanEnv } from './resolve';
+import { ErrorCodes, KimiError } from "#/errors";
+import { parseBooleanEnv } from "./resolve";
 import {
   validateConfig,
   type KimiConfig,
@@ -7,17 +7,17 @@ import {
   type ProviderConfig,
   type ProviderType,
   type ThinkingConfig,
-} from './schema';
+} from "./schema";
 
 /** Reserved keys for the env-driven synthetic provider / model alias. */
-export const ENV_MODEL_PROVIDER_KEY = '__kimi_env__';
-export const ENV_MODEL_ALIAS_KEY = '__kimi_env_model__';
+export const ENV_MODEL_PROVIDER_KEY = "__kimi_env__";
+export const ENV_MODEL_ALIAS_KEY = "__kimi_env_model__";
 
-const ALLOWED_TYPES: readonly ProviderType[] = ['kimi', 'anthropic', 'openai'];
+const ALLOWED_TYPES: readonly ProviderType[] = ["kimi", "anthropic", "openai"];
 
 const DEFAULT_BASE_URL: Partial<Record<ProviderType, string>> = {
-  kimi: 'https://api.moonshot.ai/v1',
-  openai: 'https://api.openai.com/v1',
+  kimi: "https://api.moonshot.ai/v1",
+  openai: "https://api.openai.com/v1",
   // anthropic: omitted -> let the Anthropic SDK pick its default
 };
 
@@ -25,7 +25,7 @@ const DEFAULT_BASE_URL: Partial<Record<ProviderType, string>> = {
 const DEFAULT_MAX_CONTEXT_SIZE = 262144;
 
 /** Default capabilities when KIMI_MODEL_CAPABILITIES is unset (kimi models support both). */
-const DEFAULT_CAPABILITIES = ['image_in', 'thinking'];
+const DEFAULT_CAPABILITIES = ["image_in", "thinking"];
 
 type Env = Readonly<Record<string, string | undefined>>;
 
@@ -46,11 +46,11 @@ function parsePositiveInt(raw: string, varName: string): number {
 }
 
 function parseProviderType(raw: string | undefined): ProviderType {
-  if (raw === undefined) return 'kimi';
+  if (raw === undefined) return "kimi";
   const normalized = raw.toLowerCase() as ProviderType;
   if (!ALLOWED_TYPES.includes(normalized)) {
     fail(
-      `KIMI_MODEL_PROVIDER_TYPE must be one of ${ALLOWED_TYPES.join(', ')}, got "${raw}".`,
+      `KIMI_MODEL_PROVIDER_TYPE must be one of ${ALLOWED_TYPES.join(", ")}, got "${raw}".`,
     );
   }
   return normalized;
@@ -59,7 +59,7 @@ function parseProviderType(raw: string | undefined): ProviderType {
 function parseCapabilities(raw: string | undefined): string[] | undefined {
   if (raw === undefined) return undefined;
   const caps = raw
-    .split(',')
+    .split(",")
     .map((c) => c.trim().toLowerCase())
     .filter((c) => c.length > 0);
   return caps.length === 0 ? undefined : caps;
@@ -69,12 +69,17 @@ function parseCapabilities(raw: string | undefined): string[] | undefined {
 // but unparseable value (e.g. a typo like `flase`) as a config error so it
 // fails fast like the other KIMI_MODEL_* values, instead of silently keeping
 // config.toml's existing value.
-function parseBooleanVar(raw: string | undefined, varName: string): boolean | undefined {
+function parseBooleanVar(
+  raw: string | undefined,
+  varName: string,
+): boolean | undefined {
   const value = trimmed(raw);
   if (value === undefined) return undefined;
   const parsed = parseBooleanEnv(value);
   if (parsed === undefined) {
-    fail(`${varName} must be a boolean (true/false/1/0/yes/no/on/off), got "${raw}".`);
+    fail(
+      `${varName} must be a boolean (true/false/1/0/yes/no/on/off), got "${raw}".`,
+    );
   }
   return parsed;
 }
@@ -90,23 +95,26 @@ function parseBooleanVar(raw: string | undefined, varName: string): boolean | un
  * and `writeConfigFile` strips the reserved entries via `stripEnvModelConfig` as
  * a final guard against patch round-trips (getConfig -> setConfig).
  */
-export function applyEnvModelConfig(config: KimiConfig, env: Env = process.env): KimiConfig {
-  const model = trimmed(env['KIMI_MODEL_NAME']);
+export function applyEnvModelConfig(
+  config: KimiConfig,
+  env: Env = process.env,
+): KimiConfig {
+  const model = trimmed(env["KIMI_MODEL_NAME"]);
   if (model === undefined) return config;
 
-  const apiKey = trimmed(env['KIMI_MODEL_API_KEY']);
+  const apiKey = trimmed(env["KIMI_MODEL_API_KEY"]);
   if (apiKey === undefined) {
-    fail('KIMI_MODEL_NAME is set but KIMI_MODEL_API_KEY is missing.');
+    fail("KIMI_MODEL_NAME is set but KIMI_MODEL_API_KEY is missing.");
   }
 
-  const maxContextRaw = trimmed(env['KIMI_MODEL_MAX_CONTEXT_SIZE']);
+  const maxContextRaw = trimmed(env["KIMI_MODEL_MAX_CONTEXT_SIZE"]);
   const maxContextSize =
     maxContextRaw === undefined
       ? DEFAULT_MAX_CONTEXT_SIZE
-      : parsePositiveInt(maxContextRaw, 'KIMI_MODEL_MAX_CONTEXT_SIZE');
+      : parsePositiveInt(maxContextRaw, "KIMI_MODEL_MAX_CONTEXT_SIZE");
 
-  const type = parseProviderType(trimmed(env['KIMI_MODEL_PROVIDER_TYPE']));
-  const baseUrl = trimmed(env['KIMI_MODEL_BASE_URL']) ?? DEFAULT_BASE_URL[type];
+  const type = parseProviderType(trimmed(env["KIMI_MODEL_PROVIDER_TYPE"]));
+  const baseUrl = trimmed(env["KIMI_MODEL_BASE_URL"]) ?? DEFAULT_BASE_URL[type];
 
   const provider: ProviderConfig = {
     type,
@@ -114,17 +122,18 @@ export function applyEnvModelConfig(config: KimiConfig, env: Env = process.env):
     ...(baseUrl !== undefined ? { baseUrl } : {}),
   };
 
-  const maxOutputRaw = trimmed(env['KIMI_MODEL_MAX_OUTPUT_SIZE']);
+  const maxOutputRaw = trimmed(env["KIMI_MODEL_MAX_OUTPUT_SIZE"]);
   const maxOutputSize =
     maxOutputRaw !== undefined
-      ? parsePositiveInt(maxOutputRaw, 'KIMI_MODEL_MAX_OUTPUT_SIZE')
+      ? parsePositiveInt(maxOutputRaw, "KIMI_MODEL_MAX_OUTPUT_SIZE")
       : undefined;
-  const capabilities = parseCapabilities(env['KIMI_MODEL_CAPABILITIES']) ?? DEFAULT_CAPABILITIES;
-  const displayName = trimmed(env['KIMI_MODEL_DISPLAY_NAME']);
-  const reasoningKey = trimmed(env['KIMI_MODEL_REASONING_KEY']);
+  const capabilities =
+    parseCapabilities(env["KIMI_MODEL_CAPABILITIES"]) ?? DEFAULT_CAPABILITIES;
+  const displayName = trimmed(env["KIMI_MODEL_DISPLAY_NAME"]);
+  const reasoningKey = trimmed(env["KIMI_MODEL_REASONING_KEY"]);
   const adaptiveThinking = parseBooleanVar(
-    env['KIMI_MODEL_ADAPTIVE_THINKING'],
-    'KIMI_MODEL_ADAPTIVE_THINKING',
+    env["KIMI_MODEL_ADAPTIVE_THINKING"],
+    "KIMI_MODEL_ADAPTIVE_THINKING",
   );
 
   const alias: ModelAlias = {
@@ -138,9 +147,11 @@ export function applyEnvModelConfig(config: KimiConfig, env: Env = process.env):
     ...(adaptiveThinking !== undefined ? { adaptiveThinking } : {}),
   };
 
-  const thinkingEffort = trimmed(env['KIMI_MODEL_THINKING_EFFORT']);
+  const thinkingEffort = trimmed(env["KIMI_MODEL_THINKING_EFFORT"]);
   const thinking: ThinkingConfig | undefined =
-    thinkingEffort !== undefined ? { ...config.thinking, effort: thinkingEffort } : config.thinking;
+    thinkingEffort !== undefined
+      ? { ...config.thinking, effort: thinkingEffort }
+      : config.thinking;
 
   const merged: KimiConfig = {
     ...config,
@@ -169,7 +180,8 @@ export function applyEnvModelConfig(config: KimiConfig, env: Env = process.env):
  */
 export function stripEnvModelConfig(config: KimiConfig): KimiConfig {
   const hasProvider = ENV_MODEL_PROVIDER_KEY in config.providers;
-  const hasModel = config.models !== undefined && ENV_MODEL_ALIAS_KEY in config.models;
+  const hasModel =
+    config.models !== undefined && ENV_MODEL_ALIAS_KEY in config.models;
   const defaultIsEnv = config.defaultModel === ENV_MODEL_ALIAS_KEY;
   if (!hasProvider && !hasModel && !defaultIsEnv) return config;
 
@@ -197,13 +209,13 @@ export function stripEnvModelConfig(config: KimiConfig): KimiConfig {
 }
 
 function rawDefaultModel(config: KimiConfig): string | undefined {
-  const raw = config.raw?.['default_model'];
-  return typeof raw === 'string' ? raw : undefined;
+  const raw = config.raw?.["default_model"];
+  return typeof raw === "string" ? raw : undefined;
 }
 
 function rawThinking(config: KimiConfig): ThinkingConfig | undefined {
-  const raw = config.raw?.['thinking'];
-  return typeof raw === 'object' && raw !== null && !Array.isArray(raw)
+  const raw = config.raw?.["thinking"];
+  return typeof raw === "object" && raw !== null && !Array.isArray(raw)
     ? (raw as ThinkingConfig)
     : undefined;
 }

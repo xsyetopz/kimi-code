@@ -10,18 +10,18 @@
  *
  *   node scripts/generate-webp-dec-wasm.mjs
  */
-import { createRequire } from 'node:module';
-import { readFileSync, writeFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { createRequire } from "node:module";
+import { readFileSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
 
-const packageRoot = resolve(import.meta.dirname, '..');
-const require = createRequire(resolve(packageRoot, 'package.json'));
+const packageRoot = resolve(import.meta.dirname, "..");
+const require = createRequire(resolve(packageRoot, "package.json"));
 
-const wasmPath = require.resolve('@jsquash/webp/codec/dec/webp_dec.wasm');
-const version = require('@jsquash/webp/package.json').version;
+const wasmPath = require.resolve("@jsquash/webp/codec/dec/webp_dec.wasm");
+const version = require("@jsquash/webp/package.json").version;
 const wasm = readFileSync(wasmPath);
 
-const target = resolve(packageRoot, 'src/tools/support/webp-dec-wasm.ts');
+const target = resolve(packageRoot, "src/tools/support/webp-dec-wasm.ts");
 writeFileSync(
   target,
   `// GENERATED FILE — do not edit by hand.
@@ -30,7 +30,7 @@ writeFileSync(
 // Regenerate with: node scripts/generate-webp-dec-wasm.mjs
 
 export const WEBP_DECODER_WASM_BASE64 =
-  '${wasm.toString('base64')}';
+  '${wasm.toString("base64")}';
 `,
 );
 console.log(`Wrote ${target} (${wasm.length} bytes of wasm)`);

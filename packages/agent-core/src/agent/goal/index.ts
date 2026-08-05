@@ -1,11 +1,9 @@
-import { randomUUID } from 'node:crypto';
+import { randomUUID } from "node:crypto";
 
-import { ErrorCodes, KimiError } from '#/errors';
-import type { Agent } from '..';
-import type { AgentRecordOf } from '../records/types';
-import {
-  type TelemetryProperties,
-} from '../../telemetry';
+import { ErrorCodes, KimiError } from "#/errors";
+import type { Agent } from "..";
+import type { AgentRecordOf } from "../records/types";
+import { type TelemetryProperties } from "../../telemetry";
 
 /**
  * Durable goal-mode state owned by {@link GoalMode}.
@@ -29,16 +27,16 @@ const MAX_GOAL_OBJECTIVE_LENGTH = 4000;
 const MAX_GOAL_COMPLETION_CRITERION_LENGTH = MAX_GOAL_OBJECTIVE_LENGTH;
 
 const GOAL_CANCELLED_REMINDER = [
-  'The user cancelled the current goal.',
-  'Ignore earlier active-goal reminders for that goal.',
-  'Handle the next user request normally unless the user starts or resumes a goal.',
-].join(' ');
+  "The user cancelled the current goal.",
+  "Ignore earlier active-goal reminders for that goal.",
+  "Handle the next user request normally unless the user starts or resumes a goal.",
+].join(" ");
 
 const GOAL_FORK_CLEARED_REMINDER = [
-  'This fork does not have a current goal.',
-  'Ignore earlier active-goal reminders from the source session.',
-  'Handle requests normally unless the user starts a new goal.',
-].join(' ');
+  "This fork does not have a current goal.",
+  "Ignore earlier active-goal reminders from the source session.",
+  "Handle requests normally unless the user starts a new goal.",
+].join(" ");
 
 /**
  * Lifecycle status of a goal — deliberately minimal. The durable record only
@@ -73,7 +71,7 @@ export type GoalStatus =
    * (`resumeGoal`). The only status under which turns/tokens/wall-clock are
    * accounted and continuation turns run.
    */
-  | 'active'
+  | "active"
   /**
    * The user stopped the goal but it is fully intact and resumable via
    * `/goal resume`. Reached three ways: the user pauses (`pauseGoal`); a live
@@ -82,7 +80,7 @@ export type GoalStatus =
    * and is demoted (`normalizeAfterReplay`); or a runtime/model/provider failure
    * parked it via `pauseActiveGoal`.
    */
-  | 'paused'
+  | "paused"
   /**
    * The *system* stopped pursuing the goal, for a reason carried in
    * `terminalReason`: the model reported it cannot proceed via
@@ -94,17 +92,17 @@ export type GoalStatus =
    * just runs one normal turn without reactivating the loop. Editing the goal
    * while blocked takes effect on the next turn.
    */
-  | 'blocked'
+  | "blocked"
   /**
    * Success: the model reported the objective met via `UpdateGoal('complete')`.
    * Set by `markComplete`. This status is **transient**
    * — `markComplete` emits the completion event and then clears the durable
    * record, so the goal box disappears and `complete` never rests on disk.
    */
-  | 'complete';
+  | "complete";
 
 /** Who performed a goal action. `cleared` is a record action, not a status. */
-export type GoalActor = 'user' | 'model' | 'runtime' | 'system';
+export type GoalActor = "user" | "model" | "runtime" | "system";
 
 export interface GoalBudgetLimits {
   readonly tokenBudget?: number;
@@ -185,7 +183,7 @@ export interface GoalChangeStats {
  *   `terminal` name, which since the state consolidation only ever meant
  *   `complete` — `blocked` is a resumable `lifecycle` change, not a completion.
  */
-export type GoalChangeKind = 'lifecycle' | 'completion';
+export type GoalChangeKind = "lifecycle" | "completion";
 
 export interface GoalChange {
   readonly kind: GoalChangeKind;
@@ -227,8 +225,7 @@ interface GoalReasonInput {
 export class GoalMode {
   private state: GoalState | undefined;
 
-  constructor(private readonly agent: Agent) {
-  }
+  constructor(private readonly agent: Agent) {}
 
   /**
    * Reconciles replayed goal state with runtime reality on agent resume.
@@ -245,29 +242,29 @@ export class GoalMode {
 
     state.wallClockResumedAt = undefined;
 
-    if (state.status === 'complete') {
-      this.clearInternal('runtime', { emit: false, track: false });
+    if (state.status === "complete") {
+      this.clearInternal("runtime", { emit: false, track: false });
       return;
     }
 
-    if (state.status === 'active') {
-      const reason = 'Paused after agent resume';
-      this.applyStatus(state, 'paused');
+    if (state.status === "active") {
+      const reason = "Paused after agent resume";
+      this.applyStatus(state, "paused");
       state.terminalReason = reason;
       this.persistState(state, { silent: true });
-      this.appendStatusUpdate(state, 'runtime', reason);
+      this.appendStatusUpdate(state, "runtime", reason);
       return;
     }
 
     // `paused` and `blocked` goals are left intact (both resumable).
   }
 
-  restoreCreate(record: AgentRecordOf<'goal.create'>): void {
+  restoreCreate(record: AgentRecordOf<"goal.create">): void {
     const state: GoalState = {
       goalId: record.goalId,
       objective: record.objective,
       completionCriterion: record.completionCriterion,
-      status: 'active',
+      status: "active",
       turnsUsed: 0,
       tokensUsed: 0,
       wallClockMs: 0,
@@ -275,13 +272,13 @@ export class GoalMode {
     };
     this.state = state;
     this.agent.replayBuilder.push({
-      type: 'goal_updated',
+      type: "goal_updated",
       snapshot: this.toSnapshot(state),
-      change: { kind: 'created' },
+      change: { kind: "created" },
     });
   }
 
-  restoreUpdate(record: AgentRecordOf<'goal.update'>): void {
+  restoreUpdate(record: AgentRecordOf<"goal.update">): void {
     const state = this.state;
     if (state === undefined) return;
 
@@ -289,7 +286,7 @@ export class GoalMode {
     if (status !== undefined) {
       state.status = status;
       state.wallClockResumedAt = undefined;
-      state.terminalReason = status === 'active' ? undefined : record.reason;
+      state.terminalReason = status === "active" ? undefined : record.reason;
     }
     if (record.turnsUsed !== undefined) state.turnsUsed = record.turnsUsed;
     if (record.tokensUsed !== undefined) state.tokensUsed = record.tokensUsed;
@@ -297,40 +294,42 @@ export class GoalMode {
       state.wallClockMs = record.wallClockMs;
       state.wallClockResumedAt = undefined;
     }
-    if (record.budgetLimits !== undefined) state.budgetLimits = record.budgetLimits;
+    if (record.budgetLimits !== undefined)
+      state.budgetLimits = record.budgetLimits;
     if (status === undefined) return;
 
     this.agent.replayBuilder.push({
-      type: 'goal_updated',
+      type: "goal_updated",
       snapshot: this.toSnapshot(state),
-      change: status === 'complete'
-        ? {
-            kind: 'completion',
-            status,
-            reason: record.reason,
-            stats: this.statsOf(state),
-            actor: record.actor,
-          }
-        : {
-            kind: 'lifecycle',
-            status,
-            reason: record.reason,
-            actor: record.actor,
-          },
+      change:
+        status === "complete"
+          ? {
+              kind: "completion",
+              status,
+              reason: record.reason,
+              stats: this.statsOf(state),
+              actor: record.actor,
+            }
+          : {
+              kind: "lifecycle",
+              status,
+              reason: record.reason,
+              actor: record.actor,
+            },
     });
   }
 
-  restoreClear(_record: AgentRecordOf<'goal.clear'>): void {
+  restoreClear(_record: AgentRecordOf<"goal.clear">): void {
     this.state = undefined;
   }
 
-  restoreForked(_record: AgentRecordOf<'forked'>): void {
+  restoreForked(_record: AgentRecordOf<"forked">): void {
     const hadGoal = this.state !== undefined;
     this.state = undefined;
     if (!hadGoal) return;
     this.agent.context.appendSystemReminder(GOAL_FORK_CLEARED_REMINDER, {
-      kind: 'system_trigger',
-      name: 'goal_fork_cleared',
+      kind: "system_trigger",
+      name: "goal_fork_cleared",
     });
   }
 
@@ -343,16 +342,22 @@ export class GoalMode {
 
   getActiveGoal(): GoalSnapshot | null {
     const state = this.state;
-    if (state === undefined || state.status !== 'active') return null;
+    if (state === undefined || state.status !== "active") return null;
     return this.toSnapshot(state);
   }
 
   // --- Creation ----------------------------------------------------------
 
-  async createGoal(input: CreateGoalInput, actor: GoalActor = 'user'): Promise<GoalSnapshot> {
+  async createGoal(
+    input: CreateGoalInput,
+    actor: GoalActor = "user",
+  ): Promise<GoalSnapshot> {
     const objective = input.objective.trim();
     if (objective.length === 0) {
-      throw new KimiError(ErrorCodes.GOAL_OBJECTIVE_EMPTY, 'Goal objective cannot be empty');
+      throw new KimiError(
+        ErrorCodes.GOAL_OBJECTIVE_EMPTY,
+        "Goal objective cannot be empty",
+      );
     }
     if (objective.length > MAX_GOAL_OBJECTIVE_LENGTH) {
       throw new KimiError(
@@ -370,20 +375,22 @@ export class GoalMode {
       if (input.replace !== true) {
         throw new KimiError(
           ErrorCodes.GOAL_ALREADY_EXISTS,
-          'A goal already exists; use replace to start a new one',
+          "A goal already exists; use replace to start a new one",
         );
       }
       // Clear the previous goal through the same internal clear path so records
       // stay consistent before storing the replacement.
-      this.clearInternal('system');
+      this.clearInternal("system");
     }
 
-    const completionCriterion = normalizeCompletionCriterion(input.completionCriterion);
+    const completionCriterion = normalizeCompletionCriterion(
+      input.completionCriterion,
+    );
     const state: GoalState = {
       goalId: randomUUID(),
       objective,
       completionCriterion,
-      status: 'active',
+      status: "active",
       turnsUsed: 0,
       tokensUsed: 0,
       wallClockMs: 0,
@@ -393,7 +400,7 @@ export class GoalMode {
 
     this.persistState(state);
     this.agent.records.logRecord({
-      type: 'goal.create',
+      type: "goal.create",
       goalId: state.goalId,
       objective: state.objective,
       completionCriterion: state.completionCriterion,
@@ -404,19 +411,27 @@ export class GoalMode {
 
   // --- User-owned lifecycle ---------------------------------------------
 
-  async pauseGoal(input: GoalReasonInput = {}, actor: GoalActor = 'user'): Promise<GoalSnapshot> {
+  async pauseGoal(
+    input: GoalReasonInput = {},
+    actor: GoalActor = "user",
+  ): Promise<GoalSnapshot> {
     const state = this.requireState();
-    if (state.status === 'paused') return this.toSnapshot(state);
-    if (state.status !== 'active') {
+    if (state.status === "paused") return this.toSnapshot(state);
+    if (state.status !== "active") {
       throw new KimiError(
         ErrorCodes.GOAL_STATUS_INVALID,
         `Cannot pause a goal in status "${state.status}"`,
       );
     }
-    this.applyStatus(state, 'paused');
+    this.applyStatus(state, "paused");
     state.terminalReason = input.reason;
     this.persistState(state, {
-      change: { kind: 'lifecycle', status: 'paused', reason: input.reason, actor },
+      change: {
+        kind: "lifecycle",
+        status: "paused",
+        reason: input.reason,
+        actor,
+      },
     });
     this.appendStatusUpdate(state, actor, input.reason);
     return this.toSnapshot(state);
@@ -429,23 +444,31 @@ export class GoalMode {
    */
   async pauseActiveGoal(
     input: GoalReasonInput = {},
-    actor: GoalActor = 'runtime',
+    actor: GoalActor = "runtime",
   ): Promise<GoalSnapshot | null> {
     const state = this.state;
-    if (state === undefined || state.status !== 'active') return null;
-    this.applyStatus(state, 'paused');
+    if (state === undefined || state.status !== "active") return null;
+    this.applyStatus(state, "paused");
     state.terminalReason = input.reason;
     this.persistState(state, {
-      change: { kind: 'lifecycle', status: 'paused', reason: input.reason, actor },
+      change: {
+        kind: "lifecycle",
+        status: "paused",
+        reason: input.reason,
+        actor,
+      },
     });
     this.appendStatusUpdate(state, actor, input.reason);
     return this.toSnapshot(state);
   }
 
-  async resumeGoal(input: GoalReasonInput = {}, actor: GoalActor = 'user'): Promise<GoalSnapshot> {
+  async resumeGoal(
+    input: GoalReasonInput = {},
+    actor: GoalActor = "user",
+  ): Promise<GoalSnapshot> {
     const state = this.requireState();
-    if (state.status === 'active') return this.toSnapshot(state);
-    if (state.status !== 'paused' && state.status !== 'blocked') {
+    if (state.status === "active") return this.toSnapshot(state);
+    if (state.status !== "paused" && state.status !== "blocked") {
       throw new KimiError(
         ErrorCodes.GOAL_NOT_RESUMABLE,
         `Cannot resume a goal in status "${state.status}"`,
@@ -454,9 +477,14 @@ export class GoalMode {
     // Resuming is a fresh attempt: clear the stop reason so a re-activated goal
     // starts clean.
     state.terminalReason = undefined;
-    this.applyStatus(state, 'active');
+    this.applyStatus(state, "active");
     this.persistState(state, {
-      change: { kind: 'lifecycle', status: 'active', reason: input.reason, actor },
+      change: {
+        kind: "lifecycle",
+        status: "active",
+        reason: input.reason,
+        actor,
+      },
     });
     this.appendStatusUpdate(state, actor, input.reason);
     return this.toSnapshot(state);
@@ -464,13 +492,13 @@ export class GoalMode {
 
   async setBudgetLimits(
     input: { budgetLimits: GoalBudgetLimits },
-    actor: GoalActor = 'user',
+    actor: GoalActor = "user",
   ): Promise<GoalSnapshot> {
     const state = this.requireState();
     state.budgetLimits = { ...state.budgetLimits, ...input.budgetLimits };
     this.persistState(state);
     this.appendGoalUpdate({ budgetLimits: state.budgetLimits });
-    this.track('goal_budget_set', {
+    this.track("goal_budget_set", {
       actor,
       ...budgetTelemetryProperties(input.budgetLimits),
     });
@@ -485,14 +513,14 @@ export class GoalMode {
    * without a return — e.g. `createGoal` replacing an existing goal — use the
    * private `clearInternal`.)
    */
-  async cancelGoal(actor: GoalActor = 'user'): Promise<GoalSnapshot> {
+  async cancelGoal(actor: GoalActor = "user"): Promise<GoalSnapshot> {
     const state = this.requireState();
     const snapshot = this.toSnapshot(state);
     this.clearInternal(actor);
-    if (actor === 'user') {
+    if (actor === "user") {
       this.agent.context.appendSystemReminder(GOAL_CANCELLED_REMINDER, {
-        kind: 'system_trigger',
-        name: 'goal_cancelled',
+        kind: "system_trigger",
+        name: "goal_cancelled",
       });
     }
     return snapshot;
@@ -511,14 +539,19 @@ export class GoalMode {
    */
   async markBlocked(
     input: GoalReasonInput = {},
-    actor: GoalActor = 'runtime',
+    actor: GoalActor = "runtime",
   ): Promise<GoalSnapshot | null> {
     const state = this.state;
-    if (state === undefined || state.status !== 'active') return null;
-    this.applyStatus(state, 'blocked');
+    if (state === undefined || state.status !== "active") return null;
+    this.applyStatus(state, "blocked");
     state.terminalReason = input.reason;
     this.persistState(state, {
-      change: { kind: 'lifecycle', status: 'blocked', reason: input.reason, actor },
+      change: {
+        kind: "lifecycle",
+        status: "blocked",
+        reason: input.reason,
+        actor,
+      },
     });
     this.appendStatusUpdate(state, actor, input.reason);
     return this.toSnapshot(state);
@@ -533,18 +566,18 @@ export class GoalMode {
    */
   async markComplete(
     input: GoalReasonInput = {},
-    actor: GoalActor = 'model',
+    actor: GoalActor = "model",
   ): Promise<GoalSnapshot | null> {
     const state = this.state;
-    if (state === undefined || state.status !== 'active') return null;
-    this.applyStatus(state, 'complete');
+    if (state === undefined || state.status !== "active") return null;
+    this.applyStatus(state, "complete");
     state.terminalReason = input.reason;
     const snapshot = this.toSnapshot(state);
     // Record + notify the UI of completion (with final stats) before clearing.
     this.appendStatusUpdate(state, actor, input.reason);
     this.emitGoalUpdated(snapshot, {
-      kind: 'completion',
-      status: 'complete',
+      kind: "completion",
+      status: "complete",
       reason: input.reason,
       stats: this.statsOf(state),
       actor,
@@ -564,15 +597,17 @@ export class GoalMode {
    * a goal that is missing or already non-active, so a user pause / clear or an
    * already-stopped goal is never overwritten.
    */
-  async pauseOnInterrupt(input: { reason?: string } = {}): Promise<GoalSnapshot | null> {
-    return this.pauseActiveGoal(input, 'user');
+  async pauseOnInterrupt(
+    input: { reason?: string } = {},
+  ): Promise<GoalSnapshot | null> {
+    return this.pauseActiveGoal(input, "user");
   }
 
   // --- Accounting & reporting -------------------------------------------
 
   async recordTokenUsage(tokenDelta: number): Promise<GoalSnapshot | null> {
     const state = this.state;
-    if (state === undefined || state.status !== 'active') return null;
+    if (state === undefined || state.status !== "active") return null;
     const delta = Math.max(0, tokenDelta);
     state.tokensUsed += delta;
     this.persistState(state, { silent: true }); // per-step: no UI update
@@ -582,11 +617,11 @@ export class GoalMode {
 
   async incrementTurn(): Promise<GoalSnapshot | null> {
     const state = this.state;
-    if (state === undefined || state.status !== 'active') return null;
+    if (state === undefined || state.status !== "active") return null;
     state.turnsUsed += 1;
     this.persistState(state);
     this.appendGoalUpdate({ turnsUsed: state.turnsUsed });
-    this.track('goal_continued', {
+    this.track("goal_continued", {
       turns_used: state.turnsUsed,
     });
     return this.toSnapshot(state);
@@ -601,20 +636,24 @@ export class GoalMode {
     const state = this.state;
     if (state === undefined) return; // idempotent
     this.persistState(undefined, { silent: opts.emit === false });
-    this.agent.records.logRecord({ type: 'goal.clear' });
+    this.agent.records.logRecord({ type: "goal.clear" });
     if (opts.track !== false) {
-      this.track('goal_cleared', { actor });
+      this.track("goal_cleared", { actor });
     }
   }
 
-  private appendStatusUpdate(state: GoalState, actor: GoalActor, reason?: string): void {
+  private appendStatusUpdate(
+    state: GoalState,
+    actor: GoalActor,
+    reason?: string,
+  ): void {
     this.appendGoalUpdate({
       status: state.status,
       reason,
       wallClockMs: liveWallClockMs(state, Date.now()),
       actor,
     });
-    this.track('goal_status_changed', {
+    this.track("goal_status_changed", {
       actor,
       status: state.status,
       turns_used: state.turnsUsed,
@@ -625,19 +664,16 @@ export class GoalMode {
   }
 
   private appendGoalUpdate(
-    update: Omit<AgentRecordOf<'goal.update'>, 'type' | 'time'>,
+    update: Omit<AgentRecordOf<"goal.update">, "type" | "time">,
   ): void {
     this.agent.records.logRecord({
-      type: 'goal.update',
+      type: "goal.update",
       ...update,
     });
   }
 
-  private trackGoalCreated(
-    actor: GoalActor,
-    replace: boolean,
-  ): void {
-    this.track('goal_created', {
+  private trackGoalCreated(actor: GoalActor, replace: boolean): void {
+    this.track("goal_created", {
       actor,
       replace,
     });
@@ -647,19 +683,16 @@ export class GoalMode {
     this.agent.telemetry.track(event, properties);
   }
 
-  private applyStatus(
-    state: GoalState,
-    status: GoalStatus,
-  ): void {
+  private applyStatus(state: GoalState, status: GoalStatus): void {
     // Fold the live wall-clock interval into the running total when leaving
     // `active`, and anchor a fresh interval when entering it, so `wallClockMs`
     // stays a correct, persistable total across pause/resume/complete.
     const now = Date.now();
-    if (state.status === 'active' && state.wallClockResumedAt !== undefined) {
+    if (state.status === "active" && state.wallClockResumedAt !== undefined) {
       state.wallClockMs += Math.max(0, now - state.wallClockResumedAt);
       state.wallClockResumedAt = undefined;
     }
-    if (status === 'active') {
+    if (status === "active") {
       state.wallClockResumedAt = now;
     }
     state.status = status;
@@ -668,11 +701,10 @@ export class GoalMode {
   private requireState(): GoalState {
     const state = this.state;
     if (state === undefined) {
-      throw new KimiError(ErrorCodes.GOAL_NOT_FOUND, 'No current goal');
+      throw new KimiError(ErrorCodes.GOAL_NOT_FOUND, "No current goal");
     }
     return state;
   }
-
 
   /**
    * Updates in-memory goal state and (unless `silent`) emits a `goal.updated`
@@ -685,12 +717,18 @@ export class GoalMode {
   ): void {
     this.state = state;
     if (opts.silent !== true) {
-      this.emitGoalUpdated(state === undefined ? null : this.toSnapshot(state), opts.change);
+      this.emitGoalUpdated(
+        state === undefined ? null : this.toSnapshot(state),
+        opts.change,
+      );
     }
   }
 
-  private emitGoalUpdated(snapshot: GoalSnapshot | null, change?: GoalChange): void {
-    this.agent.emitEvent({ type: 'goal.updated', snapshot, change });
+  private emitGoalUpdated(
+    snapshot: GoalSnapshot | null,
+    change?: GoalChange,
+  ): void {
+    this.agent.emitEvent({ type: "goal.updated", snapshot, change });
   }
 
   /** Counter snapshot for a {@link GoalChange}. */
@@ -723,7 +761,7 @@ export class GoalMode {
  * `wallClockMs` until the goal leaves `active`).
  */
 function liveWallClockMs(state: GoalState, now: number = Date.now()): number {
-  if (state.status === 'active' && state.wallClockResumedAt !== undefined) {
+  if (state.status === "active" && state.wallClockResumedAt !== undefined) {
     return state.wallClockMs + Math.max(0, now - state.wallClockResumedAt);
   }
   return state.wallClockMs;
@@ -739,8 +777,10 @@ function computeBudgetReport(
   const wallClockBudgetMs = limits.wallClockBudgetMs ?? null;
   const wallClockMs = liveWallClockMs(state, now);
 
-  const tokenBudgetReached = tokenBudget !== null && state.tokensUsed >= tokenBudget;
-  const turnBudgetReached = turnBudget !== null && state.turnsUsed >= turnBudget;
+  const tokenBudgetReached =
+    tokenBudget !== null && state.tokensUsed >= tokenBudget;
+  const turnBudgetReached =
+    turnBudget !== null && state.turnsUsed >= turnBudget;
   const wallClockBudgetReached =
     wallClockBudgetMs !== null && wallClockMs >= wallClockBudgetMs;
 
@@ -748,18 +788,25 @@ function computeBudgetReport(
     tokenBudget,
     turnBudget,
     wallClockBudgetMs,
-    remainingTokens: tokenBudget === null ? null : Math.max(0, tokenBudget - state.tokensUsed),
-    remainingTurns: turnBudget === null ? null : Math.max(0, turnBudget - state.turnsUsed),
+    remainingTokens:
+      tokenBudget === null ? null : Math.max(0, tokenBudget - state.tokensUsed),
+    remainingTurns:
+      turnBudget === null ? null : Math.max(0, turnBudget - state.turnsUsed),
     remainingWallClockMs:
-      wallClockBudgetMs === null ? null : Math.max(0, wallClockBudgetMs - wallClockMs),
+      wallClockBudgetMs === null
+        ? null
+        : Math.max(0, wallClockBudgetMs - wallClockMs),
     tokenBudgetReached,
     turnBudgetReached,
     wallClockBudgetReached,
-    overBudget: tokenBudgetReached || turnBudgetReached || wallClockBudgetReached,
+    overBudget:
+      tokenBudgetReached || turnBudgetReached || wallClockBudgetReached,
   };
 }
 
-function budgetTelemetryProperties(limits: GoalBudgetLimits): TelemetryProperties {
+function budgetTelemetryProperties(
+  limits: GoalBudgetLimits,
+): TelemetryProperties {
   return {
     has_token_budget: limits.tokenBudget !== undefined,
     has_turn_budget: limits.turnBudget !== undefined,
@@ -767,7 +814,9 @@ function budgetTelemetryProperties(limits: GoalBudgetLimits): TelemetryPropertie
   };
 }
 
-function normalizeCompletionCriterion(value: string | undefined): string | undefined {
+function normalizeCompletionCriterion(
+  value: string | undefined,
+): string | undefined {
   const trimmed = value?.trim();
   if (!trimmed?.length) return undefined;
   return trimmed.length > MAX_GOAL_COMPLETION_CRITERION_LENGTH

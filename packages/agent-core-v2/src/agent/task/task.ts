@@ -9,23 +9,23 @@
  * Bound at Agent scope.
  */
 
-import { createDecorator } from '#/_base/di/instantiation';
-import type { ITaskHandle } from '#/app/task/task';
+import { createDecorator } from "#/_base/di/instantiation";
+import type { ITaskHandle } from "#/app/task/task";
 import type {
   AgentTask,
   AgentTaskInfo,
   AgentTaskInfoBase,
   AgentTaskStatus,
-} from './types';
+} from "./types";
 
-export { AgentTaskPersistence } from './persist';
+export { AgentTaskPersistence } from "./persist";
 export type {
   AgentTask,
   AgentTaskInfo,
   AgentTaskInfoBase,
   AgentTaskKind,
   AgentTaskStatus,
-} from './types';
+} from "./types";
 
 export interface AgentTaskLoadOptions {
   readonly replace?: boolean;
@@ -48,7 +48,10 @@ export interface RegisterAgentTaskOptions {
   readonly signal?: AbortSignal;
 }
 
-export type ForegroundTaskReleaseReason = 'detached' | 'timeout_detached' | 'terminal';
+export type ForegroundTaskReleaseReason =
+  | "detached"
+  | "timeout_detached"
+  | "terminal";
 
 export interface AgentTaskTrackOptions {
   readonly idPrefix?: string;
@@ -71,7 +74,7 @@ export interface AgentTaskNotificationContext {
   readonly notificationType: string;
   readonly title: string;
   readonly body: string;
-  readonly severity: 'info' | 'warning';
+  readonly severity: "info" | "warning";
   readonly sourceKind: string;
   readonly sourceId: string;
 }
@@ -106,4 +109,4 @@ export interface IAgentTaskService {
 }
 
 export const IAgentTaskService =
-  createDecorator<IAgentTaskService>('agentTaskService');
+  createDecorator<IAgentTaskService>("agentTaskService");

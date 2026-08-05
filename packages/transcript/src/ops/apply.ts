@@ -7,23 +7,30 @@
  * replaying, duplicating, or reordering them converges to the same store.
  */
 
-import type { AttachmentId, InteractionId, PromptId, TaskId, TodoId, TurnId } from '../model/ids';
-import { turnOrdinal } from '../model/ids';
-import type { TranscriptAttachment } from '../model/attachment';
-import type { TranscriptFrame } from '../model/frame';
-import type { TranscriptInteraction } from '../model/interaction';
-import type { TranscriptItem } from '../model/item';
-import type { TranscriptMeta, TranscriptMetaMerge } from '../model/meta';
-import type { TranscriptPrompt } from '../model/prompt';
-import type { TranscriptTask } from '../model/task';
-import type { TranscriptTodo } from '../model/todo';
-import type { TranscriptStep, TranscriptTurn } from '../model/turn';
+import type {
+  AttachmentId,
+  InteractionId,
+  PromptId,
+  TaskId,
+  TodoId,
+  TurnId,
+} from "../model/ids";
+import { turnOrdinal } from "../model/ids";
+import type { TranscriptAttachment } from "../model/attachment";
+import type { TranscriptFrame } from "../model/frame";
+import type { TranscriptInteraction } from "../model/interaction";
+import type { TranscriptItem } from "../model/item";
+import type { TranscriptMeta, TranscriptMetaMerge } from "../model/meta";
+import type { TranscriptPrompt } from "../model/prompt";
+import type { TranscriptTask } from "../model/task";
+import type { TranscriptTodo } from "../model/todo";
+import type { TranscriptStep, TranscriptTurn } from "../model/turn";
 import type {
   AppendOp,
   TranscriptOperation,
   TurnHeader,
   StepHeader,
-} from './operation';
+} from "./operation";
 
 /** Mutable-free aggregate state behind one AgentTranscript. */
 export interface AgentState {
@@ -64,60 +71,74 @@ export interface ApplyResult {
   readonly gap?: { readonly expected: number; readonly got: number };
 }
 
-export function applyOperation(state: AgentState, op: TranscriptOperation): ApplyResult {
+export function applyOperation(
+  state: AgentState,
+  op: TranscriptOperation,
+): ApplyResult {
   switch (op.op) {
-    case 'reset':
+    case "reset":
       return applyReset(state, op);
-    case 'turn.upsert':
+    case "turn.upsert":
       return applyTurnUpsert(state, op.turn);
-    case 'step.upsert':
+    case "step.upsert":
       return applyStepUpsert(state, op.turnId, op.step);
-    case 'frame.upsert':
+    case "frame.upsert":
       return applyFrameUpsert(state, op);
-    case 'append':
+    case "append":
       return applyAppend(state, op);
-    case 'marker.upsert':
+    case "marker.upsert":
       return applyItemUpsert(state, op.item, op.item.markerId, op.beforeTurn);
-    case 'taskref.upsert':
+    case "taskref.upsert":
       return applyItemUpsert(state, op.item, op.item.refId, op.beforeTurn);
-    case 'task.upsert':
+    case "task.upsert":
       return applyTaskUpsert(state, op.task);
-    case 'interaction.upsert':
+    case "interaction.upsert":
       return applyInteractionUpsert(state, op.interaction);
-    case 'attachment.upsert':
+    case "attachment.upsert":
       return applyAttachmentUpsert(state, op.attachment);
-    case 'todo.upsert':
+    case "todo.upsert":
       return applyTodoUpsert(state, op.todo);
-    case 'prompt.upsert':
+    case "prompt.upsert":
       return applyPromptUpsert(state, op.prompt);
-    case 'meta.merge':
+    case "meta.merge":
       return applyMetaMerge(state, op.meta);
-    case 'items.remove':
+    case "items.remove":
       return applyItemsRemove(state, op.ids);
   }
 }
 
 // ---------------------------------------------------------------- reset
 
-function applyReset(state: AgentState, op: Extract<TranscriptOperation, { op: 'reset' }>): ApplyResult {
+function applyReset(
+  state: AgentState,
+  op: Extract<TranscriptOperation, { op: "reset" }>,
+): ApplyResult {
   // Pending derives from the global interaction entities (the only channel —
   // interactions are never step frames).
   const pending = new Set<InteractionId>();
   for (const interaction of op.snapshot.interactions) {
-    if (interaction.state === 'pending') pending.add(interaction.interactionId);
+    if (interaction.state === "pending") pending.add(interaction.interactionId);
   }
   return {
     state: {
       items: op.snapshot.items,
       tasks: new Map(op.snapshot.tasks.map((task) => [task.taskId, task])),
       interactions: new Map(
-        op.snapshot.interactions.map((interaction) => [interaction.interactionId, interaction]),
+        op.snapshot.interactions.map((interaction) => [
+          interaction.interactionId,
+          interaction,
+        ]),
       ),
       attachments: new Map(
-        op.snapshot.attachments.map((attachment) => [attachment.attachmentId, attachment]),
+        op.snapshot.attachments.map((attachment) => [
+          attachment.attachmentId,
+          attachment,
+        ]),
       ),
       todos: new Map(op.snapshot.todos.map((todo) => [todo.todoId, todo])),
-      prompts: new Map(op.snapshot.prompts.map((prompt) => [prompt.promptId, prompt])),
+      prompts: new Map(
+        op.snapshot.prompts.map((prompt) => [prompt.promptId, prompt]),
+      ),
       meta: op.snapshot.meta,
       pendingInteractions: pending,
       hasMoreOlder: op.snapshot.hasMoreOlder ?? false,
@@ -128,38 +149,56 @@ function applyReset(state: AgentState, op: Extract<TranscriptOperation, { op: 'r
 
 // ---------------------------------------------------------------- turn / step / frame
 
-function turnHeaderToTurn(header: TurnHeader, steps: readonly TranscriptStep[]): TranscriptTurn {
-  return { ...header, kind: 'turn', steps: [...steps] };
+function turnHeaderToTurn(
+  header: TurnHeader,
+  steps: readonly TranscriptStep[],
+): TranscriptTurn {
+  return { ...header, kind: "turn", steps: [...steps] };
 }
 
 function skeletonTurn(turnId: TurnId): TranscriptTurn {
   return {
-    kind: 'turn',
+    kind: "turn",
     turnId,
     ordinal: turnOrdinal(turnId),
-    state: 'running',
-    origin: { kind: 'other' },
+    state: "running",
+    origin: { kind: "other" },
     steps: [],
   };
 }
 
 function skeletonStep(stepId: string, turnId: TurnId): TranscriptStep {
   const ordinal = Number(stepId.slice(turnId.length + 1)) || 0;
-  return { kind: 'step', stepId, turnId, ordinal, state: 'running', frames: [] };
+  return {
+    kind: "step",
+    stepId,
+    turnId,
+    ordinal,
+    state: "running",
+    frames: [],
+  };
 }
 
-function getTurn(state: AgentState, turnId: TurnId): TranscriptTurn | undefined {
-  const item = state.items.find((entry) => entry.kind === 'turn' && entry.turnId === turnId);
-  return item?.kind === 'turn' ? item : undefined;
+function getTurn(
+  state: AgentState,
+  turnId: TurnId,
+): TranscriptTurn | undefined {
+  const item = state.items.find(
+    (entry) => entry.kind === "turn" && entry.turnId === turnId,
+  );
+  return item?.kind === "turn" ? item : undefined;
 }
 
 /** Insert a new turn keeping turns ordered by ordinal; markers stay put. */
-function insertTurn(items: readonly TranscriptItem[], turn: TranscriptTurn): readonly TranscriptItem[] {
+function insertTurn(
+  items: readonly TranscriptItem[],
+  turn: TranscriptTurn,
+): readonly TranscriptItem[] {
   const next = [...items];
   let at = next.length;
   for (let i = 0; i < next.length; i += 1) {
     const entry = next[i];
-    if (entry?.kind === 'turn' && entry.ordinal > turn.ordinal) {
+    if (entry?.kind === "turn" && entry.ordinal > turn.ordinal) {
       at = i;
       break;
     }
@@ -174,7 +213,7 @@ function replaceTurn(
   fn: (turn: TranscriptTurn) => TranscriptTurn,
 ): readonly TranscriptItem[] {
   return items.map((entry) =>
-    entry.kind === 'turn' && entry.turnId === turnId ? fn(entry) : entry,
+    entry.kind === "turn" && entry.turnId === turnId ? fn(entry) : entry,
   );
 }
 
@@ -193,7 +232,10 @@ function applyTurnUpsert(state: AgentState, header: TurnHeader): ApplyResult {
     };
   }
   return {
-    state: { ...state, items: insertTurn(state.items, turnHeaderToTurn(header, [])) },
+    state: {
+      ...state,
+      items: insertTurn(state.items, turnHeaderToTurn(header, [])),
+    },
     changed: true,
   };
 }
@@ -214,9 +256,15 @@ function turnEquals(turn: TranscriptTurn, header: TurnHeader): boolean {
   );
 }
 
-function applyStepUpsert(state: AgentState, turnId: TurnId, header: StepHeader): ApplyResult {
+function applyStepUpsert(
+  state: AgentState,
+  turnId: TurnId,
+  header: StepHeader,
+): ApplyResult {
   const turn = getTurn(state, turnId) ?? skeletonTurn(turnId);
-  const stepIndex = turn.steps.findIndex((step) => step.stepId === header.stepId);
+  const stepIndex = turn.steps.findIndex(
+    (step) => step.stepId === header.stepId,
+  );
   let steps: readonly TranscriptStep[];
   let changed = true;
   if (stepIndex >= 0) {
@@ -226,13 +274,16 @@ function applyStepUpsert(state: AgentState, turnId: TurnId, header: StepHeader):
       steps = turn.steps;
     } else {
       steps = turn.steps.map((step) =>
-        step.stepId === header.stepId ? { ...header, kind: 'step' as const, frames: step.frames } : step,
+        step.stepId === header.stepId
+          ? { ...header, kind: "step" as const, frames: step.frames }
+          : step,
       );
     }
   } else {
-    steps = [...turn.steps, { ...header, kind: 'step' as const, frames: [] }].toSorted(
-      (a, b) => a.ordinal - b.ordinal,
-    );
+    steps = [
+      ...turn.steps,
+      { ...header, kind: "step" as const, frames: [] },
+    ].toSorted((a, b) => a.ordinal - b.ordinal);
   }
   if (!changed) return { state, changed: false };
   const nextTurn: TranscriptTurn = { ...turn, steps: [...steps] };
@@ -259,18 +310,24 @@ function stepEquals(step: TranscriptStep, header: StepHeader): boolean {
 
 function applyFrameUpsert(
   state: AgentState,
-  op: Extract<TranscriptOperation, { op: 'frame.upsert' }>,
+  op: Extract<TranscriptOperation, { op: "frame.upsert" }>,
 ): ApplyResult {
   const turn = getTurn(state, op.turnId) ?? skeletonTurn(op.turnId);
-  const step = turn.steps.find((entry) => entry.stepId === op.stepId) ?? skeletonStep(op.stepId, op.turnId);
-  const existing = step.frames.findIndex((frame) => frame.frameId === op.frame.frameId);
+  const step =
+    turn.steps.find((entry) => entry.stepId === op.stepId) ??
+    skeletonStep(op.stepId, op.turnId);
+  const existing = step.frames.findIndex(
+    (frame) => frame.frameId === op.frame.frameId,
+  );
   let frames: readonly TranscriptFrame[];
   if (existing >= 0) {
     const current = step.frames[existing];
     if (current !== undefined && frameEquals(current, op.frame)) {
       return { state, changed: false };
     }
-    frames = step.frames.map((frame) => (frame.frameId === op.frame.frameId ? op.frame : frame));
+    frames = step.frames.map((frame) =>
+      frame.frameId === op.frame.frameId ? op.frame : frame,
+    );
   } else {
     frames = [...step.frames, op.frame];
   }
@@ -290,7 +347,7 @@ function applyFrameUpsert(
 
 function frameEquals(a: TranscriptFrame, b: TranscriptFrame): boolean {
   if (a.kind !== b.kind) return false;
-  if (a.kind === 'text' && b.kind === 'text') {
+  if (a.kind === "text" && b.kind === "text") {
     return (
       a.text === b.text &&
       a.role === b.role &&
@@ -298,8 +355,8 @@ function frameEquals(a: TranscriptFrame, b: TranscriptFrame): boolean {
       a.taskId === b.taskId
     );
   }
-  if (a.kind === 'thinking' && b.kind === 'thinking') return a.text === b.text;
-  if (a.kind === 'tool' && b.kind === 'tool') {
+  if (a.kind === "thinking" && b.kind === "thinking") return a.text === b.text;
+  if (a.kind === "tool" && b.kind === "tool") {
     return (
       a.state === b.state &&
       a.toolCallId === b.toolCallId &&
@@ -317,8 +374,10 @@ function frameEquals(a: TranscriptFrame, b: TranscriptFrame): boolean {
       a.agentRefs === b.agentRefs
     );
   }
-  if (a.kind === 'notice' && b.kind === 'notice') {
-    return a.message === b.message && a.level === b.level && a.detail === b.detail;
+  if (a.kind === "notice" && b.kind === "notice") {
+    return (
+      a.message === b.message && a.level === b.level && a.detail === b.detail
+    );
   }
   return false;
 }
@@ -326,12 +385,17 @@ function frameEquals(a: TranscriptFrame, b: TranscriptFrame): boolean {
 // ---------------------------------------------------------------- append (only non-idempotent op)
 
 function applyAppend(state: AgentState, op: AppendOp): ApplyResult {
-  if (op.target.type === 'task') return applyTaskAppend(state, op);
+  if (op.target.type === "task") return applyTaskAppend(state, op);
   const { turnId, stepId, frameId } = op.target;
   const turn = getTurn(state, turnId);
   const step = turn?.steps.find((entry) => entry.stepId === stepId);
   const frame = step?.frames.find((entry) => entry.frameId === frameId);
-  if (!turn || !step || !frame || (frame.kind !== 'text' && frame.kind !== 'thinking')) {
+  if (
+    !turn ||
+    !step ||
+    !frame ||
+    (frame.kind !== "text" && frame.kind !== "thinking")
+  ) {
     return { state, changed: false, gap: { expected: 0, got: op.offset } };
   }
   const merged = appendAtOffset(frame.text, op.offset, op.text);
@@ -340,29 +404,42 @@ function applyAppend(state: AgentState, op: AppendOp): ApplyResult {
   const nextFrame = { ...frame, text: merged.text };
   const nextStep: TranscriptStep = {
     ...step,
-    frames: step.frames.map((entry) => (entry.frameId === frameId ? nextFrame : entry)),
+    frames: step.frames.map((entry) =>
+      entry.frameId === frameId ? nextFrame : entry,
+    ),
   };
   const nextTurn: TranscriptTurn = {
     ...turn,
-    steps: turn.steps.map((entry) => (entry.stepId === stepId ? nextStep : entry)),
+    steps: turn.steps.map((entry) =>
+      entry.stepId === stepId ? nextStep : entry,
+    ),
   };
   return {
-    state: { ...state, items: replaceTurn(state.items, turnId, () => nextTurn) },
+    state: {
+      ...state,
+      items: replaceTurn(state.items, turnId, () => nextTurn),
+    },
     changed: true,
   };
 }
 
 function applyTaskAppend(state: AgentState, op: AppendOp): ApplyResult {
-  if (op.target.type !== 'task') throw new Error('unreachable');
+  if (op.target.type !== "task") throw new Error("unreachable");
   const taskId = op.target.taskId;
   const task = state.tasks.get(taskId);
-  const current = task?.outputTail ?? '';
+  const current = task?.outputTail ?? "";
   const merged = appendAtOffset(current, op.offset, op.text);
   if (merged.gap) return { state, changed: false, gap: merged.gap };
   if (!merged.changed) return { state, changed: false };
   const nextTask: TranscriptTask = task
     ? { ...task, outputTail: merged.text }
-    : { taskId, kind: 'other', state: 'running', detached: false, outputTail: merged.text };
+    : {
+        taskId,
+        kind: "other",
+        state: "running",
+        detached: false,
+        outputTail: merged.text,
+      };
   const tasks = new Map(state.tasks);
   tasks.set(taskId, nextTask);
   return { state: { ...state, tasks }, changed: true };
@@ -381,7 +458,12 @@ export function appendAtOffset(
   offset: number,
   chunk: string,
 ): { text: string; changed: boolean; gap?: { expected: number; got: number } } {
-  if (offset > local.length) return { text: local, changed: false, gap: { expected: local.length, got: offset } };
+  if (offset > local.length)
+    return {
+      text: local,
+      changed: false,
+      gap: { expected: local.length, got: offset },
+    };
   if (local.slice(offset, offset + chunk.length) === chunk) {
     return { text: local, changed: false };
   }
@@ -391,7 +473,11 @@ export function appendAtOffset(
   // rewriting from `offset` would silently drop local content (e.g. a stale
   // buffered append landing on a refreshed page).
   if (local.slice(offset) !== chunk.slice(0, overlap)) {
-    return { text: local, changed: false, gap: { expected: local.length, got: offset } };
+    return {
+      text: local,
+      changed: false,
+      gap: { expected: local.length, got: offset },
+    };
   }
   const novel = overlap > 0 ? chunk.slice(overlap) : chunk;
   if (novel.length === 0) return { text: local, changed: false };
@@ -427,7 +513,7 @@ function applyItemUpsert(
     let at = items.length;
     for (let i = 0; i < items.length; i += 1) {
       const entry = items[i];
-      if (entry?.kind === 'turn' && entry.ordinal >= beforeTurn) {
+      if (entry?.kind === "turn" && entry.ordinal >= beforeTurn) {
         at = i;
         break;
       }
@@ -440,19 +526,23 @@ function applyItemUpsert(
 
 function itemIdOf(item: TranscriptItem): string {
   switch (item.kind) {
-    case 'turn':
+    case "turn":
       return item.turnId;
-    case 'marker':
+    case "marker":
       return item.markerId;
-    case 'taskref':
+    case "taskref":
       return item.refId;
   }
 }
 
-function applyItemsRemove(state: AgentState, ids: readonly string[]): ApplyResult {
+function applyItemsRemove(
+  state: AgentState,
+  ids: readonly string[],
+): ApplyResult {
   const drop = new Set(ids);
   const removedTurns = state.items.filter(
-    (entry): entry is TranscriptTurn => entry.kind === 'turn' && drop.has(entry.turnId),
+    (entry): entry is TranscriptTurn =>
+      entry.kind === "turn" && drop.has(entry.turnId),
   );
   const items = state.items.filter((entry) => !drop.has(itemIdOf(entry)));
   if (items.length === state.items.length) return { state, changed: false };
@@ -467,12 +557,15 @@ function applyItemsRemove(state: AgentState, ids: readonly string[]): ApplyResul
     for (const turn of removedTurns) {
       for (const step of turn.steps) {
         for (const frame of step.frames) {
-          if (frame.kind === 'tool') anchoredToolCallIds.add(frame.toolCallId);
+          if (frame.kind === "tool") anchoredToolCallIds.add(frame.toolCallId);
         }
       }
     }
     for (const interaction of interactions.values()) {
-      if (interaction.toolCallId !== undefined && anchoredToolCallIds.has(interaction.toolCallId)) {
+      if (
+        interaction.toolCallId !== undefined &&
+        anchoredToolCallIds.has(interaction.toolCallId)
+      ) {
         deadEntityIds.add(interaction.interactionId);
         nextPending.delete(interaction.interactionId);
       }
@@ -484,7 +577,10 @@ function applyItemsRemove(state: AgentState, ids: readonly string[]): ApplyResul
     }
     pending = nextPending;
   }
-  return { state: { ...state, items, interactions, pendingInteractions: pending }, changed: true };
+  return {
+    state: { ...state, items, interactions, pendingInteractions: pending },
+    changed: true,
+  };
 }
 
 // ---------------------------------------------------------------- tasks / meta
@@ -502,11 +598,12 @@ function applyInteractionUpsert(
   interaction: TranscriptInteraction,
 ): ApplyResult {
   const current = state.interactions.get(interaction.interactionId);
-  if (current && interactionEquals(current, interaction)) return { state, changed: false };
+  if (current && interactionEquals(current, interaction))
+    return { state, changed: false };
   const interactions = new Map(state.interactions);
   interactions.set(interaction.interactionId, interaction);
   let pending = state.pendingInteractions;
-  if (interaction.state === 'pending') {
+  if (interaction.state === "pending") {
     if (!pending.has(interaction.interactionId)) {
       const next = new Set(pending);
       next.add(interaction.interactionId);
@@ -517,10 +614,16 @@ function applyInteractionUpsert(
     next.delete(interaction.interactionId);
     pending = next;
   }
-  return { state: { ...state, interactions, pendingInteractions: pending }, changed: true };
+  return {
+    state: { ...state, interactions, pendingInteractions: pending },
+    changed: true,
+  };
 }
 
-function interactionEquals(a: TranscriptInteraction, b: TranscriptInteraction): boolean {
+function interactionEquals(
+  a: TranscriptInteraction,
+  b: TranscriptInteraction,
+): boolean {
   return (
     a.interactionKind === b.interactionKind &&
     a.toolCallId === b.toolCallId &&
@@ -535,13 +638,17 @@ function applyAttachmentUpsert(
   attachment: TranscriptAttachment,
 ): ApplyResult {
   const current = state.attachments.get(attachment.attachmentId);
-  if (current && attachmentEquals(current, attachment)) return { state, changed: false };
+  if (current && attachmentEquals(current, attachment))
+    return { state, changed: false };
   const attachments = new Map(state.attachments);
   attachments.set(attachment.attachmentId, attachment);
   return { state: { ...state, attachments }, changed: true };
 }
 
-function attachmentEquals(a: TranscriptAttachment, b: TranscriptAttachment): boolean {
+function attachmentEquals(
+  a: TranscriptAttachment,
+  b: TranscriptAttachment,
+): boolean {
   return (
     a.mediaType === b.mediaType &&
     a.name === b.name &&
@@ -563,9 +670,13 @@ function todoEquals(a: TranscriptTodo, b: TranscriptTodo): boolean {
   return a.items === b.items && a.updatedAt === b.updatedAt;
 }
 
-function applyPromptUpsert(state: AgentState, prompt: TranscriptPrompt): ApplyResult {
+function applyPromptUpsert(
+  state: AgentState,
+  prompt: TranscriptPrompt,
+): ApplyResult {
   const current = state.prompts.get(prompt.promptId);
-  if (current && promptEquals(current, prompt)) return { state, changed: false };
+  if (current && promptEquals(current, prompt))
+    return { state, changed: false };
   const prompts = new Map(state.prompts);
   prompts.set(prompt.promptId, prompt);
   return { state: { ...state, prompts }, changed: true };
@@ -599,24 +710,40 @@ function taskEquals(a: TranscriptTask, b: TranscriptTask): boolean {
   );
 }
 
-function applyMetaMerge(state: AgentState, meta: TranscriptMetaMerge): ApplyResult {
+function applyMetaMerge(
+  state: AgentState,
+  meta: TranscriptMetaMerge,
+): ApplyResult {
   // `null` clears a mode badge (the mode exited); an absent key keeps it.
   const modes =
     meta.modes !== undefined
       ? {
-          plan: meta.modes.plan === null ? undefined : (meta.modes.plan ?? state.meta.modes?.plan),
-          swarm: meta.modes.swarm === null ? undefined : (meta.modes.swarm ?? state.meta.modes?.swarm),
+          plan:
+            meta.modes.plan === null
+              ? undefined
+              : (meta.modes.plan ?? state.meta.modes?.plan),
+          swarm:
+            meta.modes.swarm === null
+              ? undefined
+              : (meta.modes.swarm ?? state.meta.modes?.swarm),
         }
       : state.meta.modes;
   // The agent status arrives in slices (`agent.status.updated` carries only
   // the fields that changed), so the key merges one level deep instead of
   // replacing wholesale — a replace would drop fields from earlier slices.
   const agent =
-    meta.agent !== undefined ? { ...state.meta.agent, ...meta.agent } : state.meta.agent;
+    meta.agent !== undefined
+      ? { ...state.meta.agent, ...meta.agent }
+      : state.meta.agent;
   const next: TranscriptMeta = {
     goal: meta.goal ?? state.meta.goal,
     activity: meta.activity ?? state.meta.activity,
-    modes: modes !== undefined && modes.plan === undefined && modes.swarm === undefined ? undefined : modes,
+    modes:
+      modes !== undefined &&
+      modes.plan === undefined &&
+      modes.swarm === undefined
+        ? undefined
+        : modes,
     agent,
   };
   if (

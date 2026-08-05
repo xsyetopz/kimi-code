@@ -1,6 +1,6 @@
 // apps/kimi-web/src/composables/useMentionMenu.ts
-import { nextTick, ref, type Ref } from 'vue';
-import type { FileItem } from '../types';
+import { nextTick, ref, type Ref } from "vue";
+import type { FileItem } from "../types";
 
 export interface MentionMenuDeps {
   /** The live composer text — the @token is read from it and rewritten on select. */
@@ -49,7 +49,7 @@ export function useMentionMenu(deps: MentionMenuDeps) {
     }
     start++;
     const tokenPart = val.slice(start, pos);
-    if (!tokenPart.startsWith('@')) return null;
+    if (!tokenPart.startsWith("@")) return null;
     // The end of the token is where the cursor is (or after the next space).
     return { token: tokenPart.slice(1), start, end: pos };
   }

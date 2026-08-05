@@ -15,9 +15,12 @@
  * keeps this honest.
  */
 
-import type { ModelCapability } from '#/kosong/contract/capability';
+import type { ModelCapability } from "#/kosong/contract/capability";
 
-import type { CompletionBudgetConfig, CompletionBudgetParams } from './model.types';
+import type {
+  CompletionBudgetConfig,
+  CompletionBudgetParams,
+} from "./model.types";
 
 const MIN_FLOOR = 1;
 const DEFAULT_UNKNOWN_CONTEXT_FALLBACK = 32000;
@@ -47,7 +50,9 @@ export function computeCompletionBudgetCap(args: {
   const maxCtx = args.capability?.max_context_tokens ?? 0;
   const cap =
     args.budget.hardCap ??
-    (maxCtx > 0 ? maxCtx : args.budget.fallback ?? DEFAULT_UNKNOWN_CONTEXT_FALLBACK);
+    (maxCtx > 0
+      ? maxCtx
+      : (args.budget.fallback ?? DEFAULT_UNKNOWN_CONTEXT_FALLBACK));
   return Math.max(MIN_FLOOR, cap);
 }
 

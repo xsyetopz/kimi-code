@@ -22,7 +22,8 @@ export function mergeConsecutiveUserMessages<T>(
       last !== undefined &&
       mergePolicy.isUser(last) &&
       mergePolicy.isUser(message) &&
-      (mergePolicy.isToolResultOnly(last) || !mergePolicy.isToolResultOnly(message))
+      (mergePolicy.isToolResultOnly(last) ||
+        !mergePolicy.isToolResultOnly(message))
     ) {
       out[lastIndex] = mergePolicy.merge(last, message);
     } else {

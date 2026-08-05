@@ -1,10 +1,13 @@
-import type { TUI } from '@moonshot-ai/pi-tui';
+import type { TUI } from "@moonshot-ai/pi-tui";
 
-import { clipboardHasImage } from '#/utils/clipboard/clipboard-has-image';
+import { clipboardHasImage } from "#/utils/clipboard/clipboard-has-image";
 
-import { FOCUS_DEBOUNCE_MS, HINT_DISPLAY_MS } from '../constant/clipboard-image-hint';
-import { TERMINAL_FOCUS_IN, TERMINAL_FOCUS_OUT } from '../utils/terminal-focus';
-import type { FooterComponent } from '../components/chrome/footer';
+import {
+  FOCUS_DEBOUNCE_MS,
+  HINT_DISPLAY_MS,
+} from "../constant/clipboard-image-hint";
+import { TERMINAL_FOCUS_IN, TERMINAL_FOCUS_OUT } from "../utils/terminal-focus";
+import type { FooterComponent } from "../components/chrome/footer";
 
 export interface ClipboardImageHintHost {
   readonly ui: TUI;
@@ -14,7 +17,7 @@ export interface ClipboardImageHintHost {
 }
 
 function getPasteImageShortcut(): string {
-  return process.platform === 'win32' ? 'Alt+V' : 'Ctrl+V';
+  return process.platform === "win32" ? "Alt+V" : "Ctrl+V";
 }
 
 export class ClipboardImageHintController {
@@ -76,7 +79,10 @@ export class ClipboardImageHintController {
     this.clearDebounceTimer();
     this.checkGeneration += 1;
     const generation = this.checkGeneration;
-    this.debounceTimer = setTimeout(() => void this.runCheck(generation), FOCUS_DEBOUNCE_MS);
+    this.debounceTimer = setTimeout(
+      () => void this.runCheck(generation),
+      FOCUS_DEBOUNCE_MS,
+    );
   }
 
   private clearDebounceTimer(): void {

@@ -1,20 +1,20 @@
-import * as fs from 'node:fs';
-import * as path from 'node:path';
-import { Blob, File } from 'node:buffer';
+import * as fs from "node:fs";
+import * as path from "node:path";
+import { Blob, File } from "node:buffer";
 
-import { ChatProviderError } from '#/errors';
-import type { VideoURLPart } from '#/message';
-import type { ProviderRequestAuth, VideoUploadInput } from '#/provider';
-import type OpenAI from 'openai';
-import OpenAIClient from 'openai';
+import { ChatProviderError } from "#/errors";
+import type { VideoURLPart } from "#/message";
+import type { ProviderRequestAuth, VideoUploadInput } from "#/provider";
+import type OpenAI from "openai";
+import OpenAIClient from "openai";
 
-import { classifyKimiQuotaError } from './kimi-errors';
-import { convertOpenAIError } from './openai-common';
+import { classifyKimiQuotaError } from "./kimi-errors";
+import { convertOpenAIError } from "./openai-common";
 import {
   mergeRequestHeaders,
   requireProviderApiKey,
   resolveAuthBackedClient,
-} from './request-auth';
+} from "./request-auth";
 
 export interface KimiUploadOptions {
   auth?: ProviderRequestAuth;
@@ -43,7 +43,9 @@ export class KimiFiles {
   private readonly _baseUrl: string;
   private readonly _defaultHeaders: Record<string, string> | undefined;
   private readonly _client: OpenAI | undefined;
-  private readonly _clientFactory: ((auth: ProviderRequestAuth) => OpenAI) | undefined;
+  private readonly _clientFactory:
+    | ((auth: ProviderRequestAuth) => OpenAI)
+    | undefined;
 
   constructor(options: KimiFilesOptions) {
     this._apiKey = options.apiKey;
@@ -79,7 +81,7 @@ export class KimiFiles {
   ): Promise<VideoURLPart> {
     let file: unknown;
 
-    if (typeof input === 'string') {
+    if (typeof input === "string") {
       // Validate the path eagerly so callers get a clear synchronous-ish
       // failure rather than a generic stream error from the upload pipeline.
       if (!fs.existsSync(input)) {
@@ -92,7 +94,7 @@ export class KimiFiles {
       // fail with a confusing server error; surfacing the issue here keeps
       // the API contract honest and matches the `VideoUploadInput` branch.
       const mimeType = guessMimeTypeFromExt(filename);
-      if (mimeType === undefined || !mimeType.startsWith('video/')) {
+      if (mimeType === undefined || !mimeType.startsWith("video/")) {
         throw new ChatProviderError(
           `KimiFiles.uploadVideo: file extension does not indicate a video type: ${filename}`,
         );
@@ -105,15 +107,20 @@ export class KimiFiles {
       const blob = new Blob([new Uint8Array(data)], { type: mimeType });
       file = new File([blob], filename, { type: mimeType });
     } else {
-      if (!input.mimeType.startsWith('video/')) {
-        throw new ChatProviderError(`Expected a video mime type, got ${input.mimeType}`);
+      if (!input.mimeType.startsWith("video/")) {
+        throw new ChatProviderError(
+          `Expected a video mime type, got ${input.mimeType}`,
+        );
       }
       const filename = input.filename ?? guessFilename(input.mimeType);
       // The OpenAI SDK's `Uploadable` accepts a File-like object. We build
       // one via the standard Web `File` constructor (available in Node 20+).
       // `Blob` and `File` are available as globals in Node 20+. The cast via
       // `Uint8Array` satisfies `BlobPart` in both Node and DOM lib contexts.
-      const bytes = input.data instanceof Uint8Array ? input.data : new Uint8Array(input.data);
+      const bytes =
+        input.data instanceof Uint8Array
+          ? input.data
+          : new Uint8Array(input.data);
       const blob = new Blob([bytes], { type: input.mimeType });
       file = new File([blob], filename, { type: input.mimeType });
     }
@@ -124,7 +131,7 @@ export class KimiFiles {
       uploaded = (await client.files.create(
         {
           file: file as never,
-          purpose: 'video' as never,
+          purpose: "video" as never,
         },
         options?.signal ? { signal: options.signal } : undefined,
       )) as unknown as { id: string };
@@ -133,7 +140,7 @@ export class KimiFiles {
     }
 
     return {
-      type: 'video_url',
+      type: "video_url",
       videoUrl: {
         url: `ms://${uploaded.id}`,
         id: uploaded.id,
@@ -146,9 +153,16 @@ export class KimiFiles {
       { cachedClient: this._client, clientFactory: this._clientFactory },
       auth,
       (a) => {
-        const defaultHeaders = mergeRequestHeaders(this._defaultHeaders, a?.headers);
+        const defaultHeaders = mergeRequestHeaders(
+          this._defaultHeaders,
+          a?.headers,
+        );
         return new OpenAIClient({
-          apiKey: requireProviderApiKey('KimiFiles.uploadVideo', a, this._apiKey),
+          apiKey: requireProviderApiKey(
+            "KimiFiles.uploadVideo",
+            a,
+            this._apiKey,
+          ),
           baseURL: this._baseUrl,
           defaultHeaders,
         });
@@ -162,19 +176,19 @@ export class KimiFiles {
  * Falls back to `upload.bin` for unknown types.
  */
 function guessFilename(mimeType: string): string {
-  const ext = MIME_TO_EXT[mimeType.toLowerCase()] ?? 'bin';
+  const ext = MIME_TO_EXT[mimeType.toLowerCase()] ?? "bin";
   return `upload.${ext}`;
 }
 
 const MIME_TO_EXT: Record<string, string> = {
-  'video/mp4': 'mp4',
-  'video/mpeg': 'mpeg',
-  'video/quicktime': 'mov',
-  'video/webm': 'webm',
-  'video/x-matroska': 'mkv',
-  'video/x-msvideo': 'avi',
-  'video/x-flv': 'flv',
-  'video/3gpp': '3gp',
+  "video/mp4": "mp4",
+  "video/mpeg": "mpeg",
+  "video/quicktime": "mov",
+  "video/webm": "webm",
+  "video/x-matroska": "mkv",
+  "video/x-msvideo": "avi",
+  "video/x-flv": "flv",
+  "video/3gpp": "3gp",
 };
 
 const EXT_TO_MIME: Record<string, string> = Object.fromEntries(
@@ -186,7 +200,7 @@ const EXT_TO_MIME: Record<string, string> = Object.fromEntries(
  * types listed in {@link MIME_TO_EXT}; returns `undefined` otherwise.
  */
 function guessMimeTypeFromExt(filename: string): string | undefined {
-  const dot = filename.lastIndexOf('.');
+  const dot = filename.lastIndexOf(".");
   if (dot < 0) return undefined;
   const ext = filename.slice(dot + 1).toLowerCase();
   return EXT_TO_MIME[ext];

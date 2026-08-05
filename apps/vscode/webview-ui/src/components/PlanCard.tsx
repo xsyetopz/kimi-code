@@ -17,13 +17,18 @@ export function PlanCard({ children }: PlanCardProps) {
         className="flex items-center gap-1.5 w-full px-3 py-1.5 bg-amber-100/50 dark:bg-amber-900/30 border-b border-amber-300/50 dark:border-amber-700/50 cursor-pointer hover:bg-amber-100/80 dark:hover:bg-amber-900/50 transition-colors"
       >
         <IconClipboardList className="size-3.5 text-amber-600 dark:text-amber-400" />
-        <span className="text-[11px] font-semibold text-amber-700 dark:text-amber-300 flex-1 text-left">Plan Mode</span>
-        <IconChevronDown className={cn("size-3.5 text-amber-600 dark:text-amber-400 transition-transform", collapsed && "-rotate-90")} />
+        <span className="text-[11px] font-semibold text-amber-700 dark:text-amber-300 flex-1 text-left">
+          Plan Mode
+        </span>
+        <IconChevronDown
+          className={cn(
+            "size-3.5 text-amber-600 dark:text-amber-400 transition-transform",
+            collapsed && "-rotate-90",
+          )}
+        />
       </button>
       {!collapsed && (
-        <div className="px-1 py-1 [&>*:not(:last-child)]:mb-3">
-          {children}
-        </div>
+        <div className="px-1 py-1 [&>*:not(:last-child)]:mb-3">{children}</div>
       )}
     </div>
   );

@@ -59,7 +59,12 @@ export interface StreamError {
 }
 
 export type UIStreamEvent =
-  | { type: "session_start"; sessionId: string; model?: string; _sessionId?: string }
+  | {
+      type: "session_start";
+      sessionId: string;
+      model?: string;
+      _sessionId?: string;
+    }
   | { type: "stream_complete"; result: RunResult; _sessionId?: string }
   | (StreamError & { _sessionId?: string })
   | (StreamEvent & { _sessionId?: string });
@@ -68,4 +73,9 @@ export interface LoginStatus {
   loggedIn: boolean;
 }
 
-export type { QuestionRequest, QuestionItem, QuestionOption, QuestionResponse } from "./legacy-sdk";
+export type {
+  QuestionRequest,
+  QuestionItem,
+  QuestionOption,
+  QuestionResponse,
+} from "./legacy-sdk";

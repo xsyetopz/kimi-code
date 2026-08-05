@@ -5,13 +5,20 @@
  * construction; only serialization separates them.
  */
 
-import { createServer, type Server, type Socket } from 'node:net';
-import { unlink } from 'node:fs/promises';
+import { createServer, type Server, type Socket } from "node:net";
+import { unlink } from "node:fs/promises";
 
-import type { EventSourceRef, IDisposable, ScopeRef } from '../../core/channel.js';
-import { RPCError } from '../../core/errors.js';
-import { createMemoryDispatcher, type ScopeLike } from '../memory/dispatcher.js';
-import { encodeFrame, NdjsonDecoder, type IpcFrame } from './codec.js';
+import type {
+  EventSourceRef,
+  IDisposable,
+  ScopeRef,
+} from "../../core/channel.js";
+import { RPCError } from "../../core/errors.js";
+import {
+  createMemoryDispatcher,
+  type ScopeLike,
+} from "../memory/dispatcher.js";
+import { encodeFrame, NdjsonDecoder, type IpcFrame } from "./codec.js";
 
 const REQUEST_INVALID = 40001;
 const UNAUTHORIZED = 40100;
@@ -31,24 +38,31 @@ export interface KlientIpcHost {
 }
 
 function scopeRefFromFrame(frame: IpcFrame): ScopeRef {
-  const scope: { workspaceId?: string; sessionId?: string; agentId?: string } = {};
-  if (typeof frame.workspaceId === 'string') scope.workspaceId = frame.workspaceId;
-  if (typeof frame.sessionId === 'string') scope.sessionId = frame.sessionId;
-  if (typeof frame.agentId === 'string') scope.agentId = frame.agentId;
+  const scope: { workspaceId?: string; sessionId?: string; agentId?: string } =
+    {};
+  if (typeof frame.workspaceId === "string")
+    scope.workspaceId = frame.workspaceId;
+  if (typeof frame.sessionId === "string") scope.sessionId = frame.sessionId;
+  if (typeof frame.agentId === "string") scope.agentId = frame.agentId;
   return scope;
 }
 
 function eventSourceFromFrame(frame: IpcFrame): EventSourceRef {
-  if (typeof frame.service === 'string' && typeof frame.event === 'string') {
-    return { kind: 'emitter', service: frame.service, event: frame.event };
+  if (typeof frame.service === "string" && typeof frame.event === "string") {
+    return { kind: "emitter", service: frame.service, event: frame.event };
   }
-  if (typeof frame.event === 'string' && frame.event.length > 0) {
-    return { kind: 'stream', name: frame.event };
+  if (typeof frame.event === "string" && frame.event.length > 0) {
+    return { kind: "stream", name: frame.event };
   }
-  throw new RPCError(REQUEST_INVALID, `unknown event stream: ${String(frame.event)}`);
+  throw new RPCError(
+    REQUEST_INVALID,
+    `unknown event stream: ${String(frame.event)}`,
+  );
 }
 
-export async function serveKlientIpc(options: ServeKlientIpcOptions): Promise<KlientIpcHost> {
+export async function serveKlientIpc(
+  options: ServeKlientIpcOptions,
+): Promise<KlientIpcHost> {
   const dispatcher = createMemoryDispatcher(options.scope);
 
   // Best-effort cleanup of a stale socket file; ignore everything but a real
@@ -56,7 +70,7 @@ export async function serveKlientIpc(options: ServeKlientIpcOptions): Promise<Kl
   try {
     await unlink(options.socketPath);
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
   }
 
   const connections = new Set<Socket>();
@@ -73,10 +87,10 @@ export async function serveKlientIpc(options: ServeKlientIpcOptions): Promise<Kl
     };
     const sendError = (id: string, error: unknown): void => {
       if (error instanceof RPCError) {
-        send({ type: 'error', id, code: error.code, msg: error.message });
+        send({ type: "error", id, code: error.code, msg: error.message });
       } else {
         send({
-          type: 'error',
+          type: "error",
           id,
           code: 50001,
           msg: error instanceof Error ? error.message : String(error),
@@ -86,10 +100,15 @@ export async function serveKlientIpc(options: ServeKlientIpcOptions): Promise<Kl
 
     const sendStreamError = (id: string, error: unknown): void => {
       if (error instanceof RPCError) {
-        send({ type: 'stream_error', id, code: error.code, msg: error.message });
+        send({
+          type: "stream_error",
+          id,
+          code: error.code,
+          msg: error.message,
+        });
       } else {
         send({
-          type: 'stream_error',
+          type: "stream_error",
           id,
           code: 50001,
           msg: error instanceof Error ? error.message : String(error),
@@ -98,36 +117,56 @@ export async function serveKlientIpc(options: ServeKlientIpcOptions): Promise<Kl
     };
 
     const handleFrame = (frame: IpcFrame): void => {
-      const id = typeof frame.id === 'string' ? frame.id : '';
+      const id = typeof frame.id === "string" ? frame.id : "";
       switch (frame.type) {
-        case 'hello': {
+        case "hello": {
           if (options.token !== undefined && frame.token !== options.token) {
-            send({ type: 'error', id: 'hello', code: UNAUTHORIZED, msg: 'unauthorized' });
+            send({
+              type: "error",
+              id: "hello",
+              code: UNAUTHORIZED,
+              msg: "unauthorized",
+            });
             socket.end();
             return;
           }
           helloDone = true;
           return;
         }
-        case 'call': {
+        case "call": {
           if (!helloDone) {
-            sendError(id, new RPCError(REQUEST_INVALID, 'expected hello first'));
+            sendError(
+              id,
+              new RPCError(REQUEST_INVALID, "expected hello first"),
+            );
             return;
           }
-          const args = Array.isArray(frame.arg) ? frame.arg : frame.arg === undefined ? [] : [frame.arg];
+          const args = Array.isArray(frame.arg)
+            ? frame.arg
+            : frame.arg === undefined
+              ? []
+              : [frame.arg];
           dispatcher
-            .call(scopeRefFromFrame(frame), String(frame.service), String(frame.method), args)
+            .call(
+              scopeRefFromFrame(frame),
+              String(frame.service),
+              String(frame.method),
+              args,
+            )
             .then((data) => {
-              send({ type: 'result', id, data });
+              send({ type: "result", id, data });
             })
             .catch((error: unknown) => {
               sendError(id, error);
             });
           return;
         }
-        case 'listen': {
+        case "listen": {
           if (!helloDone) {
-            sendError(id, new RPCError(REQUEST_INVALID, 'expected hello first'));
+            sendError(
+              id,
+              new RPCError(REQUEST_INVALID, "expected hello first"),
+            );
             return;
           }
           try {
@@ -136,30 +175,37 @@ export async function serveKlientIpc(options: ServeKlientIpcOptions): Promise<Kl
               scopeRefFromFrame(frame),
               source,
               (data) => {
-                send({ type: 'event', id, data });
+                send({ type: "event", id, data });
               },
               (error) => {
                 sendError(id, error);
               },
             );
             listens.set(id, sub);
-            send({ type: 'listen_result', id });
+            send({ type: "listen_result", id });
           } catch (error) {
             sendError(id, error);
           }
           return;
         }
-        case 'unlisten': {
+        case "unlisten": {
           listens.get(id)?.dispose();
           listens.delete(id);
           return;
         }
-        case 'stream': {
+        case "stream": {
           if (!helloDone) {
-            sendStreamError(id, new RPCError(REQUEST_INVALID, 'expected hello first'));
+            sendStreamError(
+              id,
+              new RPCError(REQUEST_INVALID, "expected hello first"),
+            );
             return;
           }
-          const args = Array.isArray(frame.arg) ? frame.arg : frame.arg === undefined ? [] : [frame.arg];
+          const args = Array.isArray(frame.arg)
+            ? frame.arg
+            : frame.arg === undefined
+              ? []
+              : [frame.arg];
           const ac = new AbortController();
           activeStreams.set(id, ac);
           const iterable = dispatcher.stream(
@@ -172,10 +218,10 @@ export async function serveKlientIpc(options: ServeKlientIpcOptions): Promise<Kl
             try {
               for await (const chunk of iterable) {
                 if (ac.signal.aborted || socket.destroyed) break;
-                send({ type: 'stream_data', id, data: chunk });
+                send({ type: "stream_data", id, data: chunk });
               }
               if (!ac.signal.aborted && !socket.destroyed) {
-                send({ type: 'stream_end', id });
+                send({ type: "stream_end", id });
               }
             } catch (error) {
               if (!ac.signal.aborted && !socket.destroyed) {
@@ -187,7 +233,7 @@ export async function serveKlientIpc(options: ServeKlientIpcOptions): Promise<Kl
           })();
           return;
         }
-        case 'stream_cancel': {
+        case "stream_cancel": {
           const ac = activeStreams.get(id);
           if (ac !== undefined) {
             ac.abort();
@@ -200,8 +246,8 @@ export async function serveKlientIpc(options: ServeKlientIpcOptions): Promise<Kl
       }
     };
 
-    socket.on('data', (chunk) => {
-      for (const frame of decoder.push(chunk.toString('utf8'))) {
+    socket.on("data", (chunk) => {
+      for (const frame of decoder.push(chunk.toString("utf8"))) {
         handleFrame(frame);
       }
     });
@@ -212,14 +258,14 @@ export async function serveKlientIpc(options: ServeKlientIpcOptions): Promise<Kl
       activeStreams.clear();
       connections.delete(socket);
     };
-    socket.on('close', teardown);
-    socket.on('error', teardown);
+    socket.on("close", teardown);
+    socket.on("error", teardown);
 
-    send({ type: 'ready' });
+    send({ type: "ready" });
   });
 
   await new Promise<void>((resolve, reject) => {
-    server.once('error', reject);
+    server.once("error", reject);
     server.listen(options.socketPath, resolve);
   });
 

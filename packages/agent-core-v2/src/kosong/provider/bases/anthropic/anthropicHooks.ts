@@ -9,16 +9,21 @@
  * shared single-value binding from `traitConvertError` (last declarer wins).
  */
 
-import { traitConvertError, type ResolvedTrait } from '#/kosong/protocol/protocolTrait';
+import {
+  traitConvertError,
+  type ResolvedTrait,
+} from "#/kosong/protocol/protocolTrait";
 
-import type { AnthropicHooks } from './anthropic';
+import type { AnthropicHooks } from "./anthropic";
 
 export function composeAnthropicHooks(
   traits: readonly ResolvedTrait[],
 ): AnthropicHooks | undefined {
   const hooks: AnthropicHooks = {};
 
-  const thinkingTraits = traits.filter(({ trait }) => trait.withThinking !== undefined);
+  const thinkingTraits = traits.filter(
+    ({ trait }) => trait.withThinking !== undefined,
+  );
   if (thinkingTraits.length > 0) {
     const { trait, context } = thinkingTraits.at(-1)!;
     hooks.withThinking = (effort, options, kwargs) =>

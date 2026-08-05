@@ -8,7 +8,10 @@
  * can adapt it to their own shape. Bound at App scope.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
 
 export interface FileEditInput {
   readonly path: string;
@@ -29,4 +32,4 @@ export interface IFileEditService {
 }
 
 export const IFileEditService: ServiceIdentifier<IFileEditService> =
-  createDecorator<IFileEditService>('fileEditService');
+  createDecorator<IFileEditService>("fileEditService");

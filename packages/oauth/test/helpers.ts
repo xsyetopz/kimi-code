@@ -1,14 +1,14 @@
-import { spawn, type ChildProcessByStdio } from 'node:child_process';
-import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
-import type { Readable } from 'node:stream';
-import { fileURLToPath } from 'node:url';
+import { spawn, type ChildProcessByStdio } from "node:child_process";
+import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
+import type { Readable } from "node:stream";
+import { fileURLToPath } from "node:url";
 
 const tsxCli = join(
-  dirname(fileURLToPath(import.meta.resolve('tsx/package.json'))),
-  'dist',
-  'cli.mjs',
+  dirname(fileURLToPath(import.meta.resolve("tsx/package.json"))),
+  "dist",
+  "cli.mjs",
 );
 
 export interface TempDirHandle {
@@ -17,7 +17,7 @@ export interface TempDirHandle {
 }
 
 export async function createTempWorkDir(): Promise<TempDirHandle> {
-  const path = await mkdtemp(join(tmpdir(), 'kimi-oauth-test-work-'));
+  const path = await mkdtemp(join(tmpdir(), "kimi-oauth-test-work-"));
   let disposed = false;
   return {
     path,
@@ -52,15 +52,18 @@ interface RunningWorker {
   readonly child: ChildProcessByStdio<null, Readable, Readable>;
   stdout: string;
   stderr: string;
-  readonly exit: Promise<{ code: number | null; signal: NodeJS.Signals | null }>;
+  readonly exit: Promise<{
+    code: number | null;
+    signal: NodeJS.Signals | null;
+  }>;
 }
 
 export async function spawnInlineWorkers(
   opts: SpawnInlineWorkersOptions,
 ): Promise<readonly SpawnedWorker[]> {
   await mkdir(opts.tmpDir, { recursive: true });
-  const scriptPath = join(opts.tmpDir, 'worker.mjs');
-  await writeFile(scriptPath, opts.inlineScript, 'utf8');
+  const scriptPath = join(opts.tmpDir, "worker.mjs");
+  await writeFile(scriptPath, opts.inlineScript, "utf8");
   const running: RunningWorker[] = [];
   for (let id = 0; id < opts.count; id += 1) {
     const child = spawn(tsxCli, [scriptPath, String(id)], {
@@ -70,28 +73,28 @@ export async function spawnInlineWorkers(
         KIMI_WORKER_ID: String(id),
         ...opts.env,
       },
-      stdio: ['ignore', 'pipe', 'pipe'],
+      stdio: ["ignore", "pipe", "pipe"],
     });
     const worker: RunningWorker = {
       id,
       child,
-      stdout: '',
-      stderr: '',
+      stdout: "",
+      stderr: "",
       exit: new Promise((resolve) => {
-        child.on('exit', (code, signal) => {
+        child.on("exit", (code, signal) => {
           resolve({ code, signal });
         });
-        child.on('error', () => {
+        child.on("error", () => {
           resolve({ code: -1, signal: null });
         });
       }),
     };
-    child.stdout.setEncoding('utf8');
-    child.stderr.setEncoding('utf8');
-    child.stdout.on('data', (chunk: string) => {
+    child.stdout.setEncoding("utf8");
+    child.stderr.setEncoding("utf8");
+    child.stdout.on("data", (chunk: string) => {
       worker.stdout += chunk;
     });
-    child.stderr.on('data', (chunk: string) => {
+    child.stderr.on("data", (chunk: string) => {
       worker.stderr += chunk;
     });
     running.push(worker);
@@ -101,7 +104,7 @@ export async function spawnInlineWorkers(
   const timer = setTimeout(() => {
     timedOut = true;
     for (const worker of running) {
-      if (worker.child.exitCode === null) worker.child.kill('SIGKILL');
+      if (worker.child.exitCode === null) worker.child.kill("SIGKILL");
     }
   }, opts.timeoutMs ?? 60_000);
 
@@ -120,7 +123,9 @@ export async function spawnInlineWorkers(
       }),
     );
     if (timedOut) {
-      throw new Error(`spawnInlineWorkers timed out after ${String(opts.timeoutMs ?? 60_000)}ms`);
+      throw new Error(
+        `spawnInlineWorkers timed out after ${String(opts.timeoutMs ?? 60_000)}ms`,
+      );
     }
     return results;
   } finally {

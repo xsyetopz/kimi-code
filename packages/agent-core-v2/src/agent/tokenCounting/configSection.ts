@@ -18,26 +18,31 @@
  * into `config.toml`.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
 import {
   type ConfigSchema,
   type EnvBindings,
   envBindings,
   stripEnvBoundFields,
-} from '#/app/config/config';
-import { registerConfigSection } from '#/app/config/configSectionContributions';
-import type { TokenCountingStrategy } from './tokenCounting';
+} from "#/app/config/config";
+import { registerConfigSection } from "#/app/config/configSectionContributions";
+import type { TokenCountingStrategy } from "./tokenCounting";
 
-export const TOKEN_COUNTING_SECTION = 'tokenCounting';
+export const TOKEN_COUNTING_SECTION = "tokenCounting";
 
-export const TOKEN_COUNTING_STRATEGY_ENV = 'KIMI_TOKEN_COUNTING_STRATEGY';
+export const TOKEN_COUNTING_STRATEGY_ENV = "KIMI_TOKEN_COUNTING_STRATEGY";
 
-export const TOKEN_COUNTING_STRATEGIES = ['measured+estimated', 'measured', 'estimated'] as const;
+export const TOKEN_COUNTING_STRATEGIES = [
+  "measured+estimated",
+  "measured",
+  "estimated",
+] as const;
 
-export const TokenCountingConfigSchema: ConfigSchema<TokenCountingConfig> = z.object({
-  strategy: z.enum(TOKEN_COUNTING_STRATEGIES),
-});
+export const TokenCountingConfigSchema: ConfigSchema<TokenCountingConfig> =
+  z.object({
+    strategy: z.enum(TOKEN_COUNTING_STRATEGIES),
+  });
 
 export type TokenCountingConfig = {
   readonly strategy: TokenCountingStrategy;
@@ -60,7 +65,7 @@ export const stripTokenCountingEnv = stripEnvBoundFields<TokenCountingConfig>(
 );
 
 export const DEFAULT_TOKEN_COUNTING_CONFIG: TokenCountingConfig = {
-  strategy: 'measured+estimated',
+  strategy: "measured+estimated",
 };
 
 registerConfigSection(TOKEN_COUNTING_SECTION, TokenCountingConfigSchema, {

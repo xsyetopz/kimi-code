@@ -2,9 +2,9 @@
  * `goal` domain — public goal lifecycle and budget models.
  */
 
-export type GoalStatus = 'active' | 'paused' | 'blocked' | 'complete';
+export type GoalStatus = "active" | "paused" | "blocked" | "complete";
 
-export type GoalActor = 'user' | 'model' | 'runtime' | 'system';
+export type GoalActor = "user" | "model" | "runtime" | "system";
 
 export interface GoalBudgetLimits {
   readonly tokenBudget?: number;
@@ -47,7 +47,7 @@ export interface GoalChangeStats {
   readonly wallClockMs: number;
 }
 
-export type GoalChangeKind = 'lifecycle' | 'completion';
+export type GoalChangeKind = "lifecycle" | "completion";
 
 export interface GoalChange {
   readonly kind: GoalChangeKind;

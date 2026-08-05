@@ -16,20 +16,20 @@
  * Pure types only — no other domain, no I/O, no SDKs.
  */
 
-import type { Message, StreamedMessagePart, VideoURLPart } from './message';
-import type { Tool } from './tool';
-import type { TokenUsage } from './usage';
+import type { Message, StreamedMessagePart, VideoURLPart } from "./message";
+import type { Tool } from "./tool";
+import type { TokenUsage } from "./usage";
 
-export type ThinkingEffort = 'off' | 'on' | (string & {});
+export type ThinkingEffort = "off" | "on" | (string & {});
 
 export type JsonSchemaObject = Record<string, unknown>;
 
 export interface JsonObjectResponseFormat {
-  readonly type: 'json_object';
+  readonly type: "json_object";
 }
 
 export interface JsonSchemaResponseFormat {
-  readonly type: 'json_schema';
+  readonly type: "json_schema";
   readonly jsonSchema: {
     readonly name: string;
     readonly schema: JsonSchemaObject;
@@ -38,15 +38,17 @@ export interface JsonSchemaResponseFormat {
   };
 }
 
-export type ResponseFormat = JsonObjectResponseFormat | JsonSchemaResponseFormat;
+export type ResponseFormat =
+  | JsonObjectResponseFormat
+  | JsonSchemaResponseFormat;
 
 export type FinishReason =
-  | 'completed'
-  | 'tool_calls'
-  | 'truncated'
-  | 'filtered'
-  | 'paused'
-  | 'other';
+  | "completed"
+  | "tool_calls"
+  | "truncated"
+  | "filtered"
+  | "paused"
+  | "other";
 
 export interface StreamedMessage {
   [Symbol.asyncIterator](): AsyncIterator<StreamedMessagePart>;
@@ -115,5 +117,8 @@ export interface ChatProvider {
     history: Message[],
     options?: GenerateOptions,
   ): Promise<StreamedMessage>;
-  uploadVideo?(input: string | VideoUploadInput, options?: GenerateOptions): Promise<VideoURLPart>;
+  uploadVideo?(
+    input: string | VideoUploadInput,
+    options?: GenerateOptions,
+  ): Promise<VideoURLPart>;
 }

@@ -11,10 +11,13 @@
  * Session-scoped — the pending set is keyed by session and dies with it.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
-import type { Event } from '#/_base/event';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
+import type { Event } from "#/_base/event";
 
-export type InteractionKind = 'approval' | 'question' | 'user_tool';
+export type InteractionKind = "approval" | "question" | "user_tool";
 
 export interface InteractionOrigin {
   readonly agentId?: string;
@@ -48,7 +51,9 @@ export interface InteractionPendingChangedEvent {
 export interface ISessionInteractionService {
   readonly _serviceBrand: undefined;
 
-  request<TPayload, TResponse>(req: InteractionRequest<TPayload>): Promise<TResponse>;
+  request<TPayload, TResponse>(
+    req: InteractionRequest<TPayload>,
+  ): Promise<TResponse>;
   enqueue<TPayload>(req: InteractionRequest<TPayload>): Interaction;
   respond(id: string, response: unknown): void;
   listPending(kind?: InteractionKind): readonly Interaction[];
@@ -59,4 +64,4 @@ export interface ISessionInteractionService {
 }
 
 export const ISessionInteractionService: ServiceIdentifier<ISessionInteractionService> =
-  createDecorator<ISessionInteractionService>('sessionInteractionService');
+  createDecorator<ISessionInteractionService>("sessionInteractionService");

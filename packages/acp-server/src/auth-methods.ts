@@ -13,7 +13,7 @@
 // first-class handler is beta-gated. Mirrors `packages/acp-adapter` so the
 // v1 and v2 ACP hosts advertise identical login surfaces.
 
-import type { AuthMethod } from '@agentclientprotocol/sdk';
+import type { AuthMethod } from "@agentclientprotocol/sdk";
 
 /**
  * Build the `terminal-auth` method advertised to ACP clients.
@@ -27,27 +27,24 @@ import type { AuthMethod } from '@agentclientprotocol/sdk';
  *    When omitted, the `_meta` fallback is left off entirely.
  */
 export function buildTerminalAuthMethod(
-  opts: {
-    env?: Readonly<Record<string, string>>;
-    legacyCommand?: string;
-  } = {},
+  opts: { env?: Readonly<Record<string, string>>; legacyCommand?: string } = {},
 ): AuthMethod {
   const env = opts.env ?? {};
   const method: AuthMethod = {
-    id: 'login',
-    type: 'terminal',
-    name: 'Login with Kimi account',
-    description: 'Open the device-code login flow in a terminal.',
-    args: ['--login'],
+    id: "login",
+    type: "terminal",
+    name: "Login with Kimi account",
+    description: "Open the device-code login flow in a terminal.",
+    args: ["--login"],
     env: { ...env },
   };
   if (opts.legacyCommand !== undefined && opts.legacyCommand.length > 0) {
-    (method as AuthMethod & { _meta: { 'terminal-auth': unknown } })._meta = {
-      'terminal-auth': {
-        type: 'terminal',
-        label: 'Login with Kimi account',
+    (method as AuthMethod & { _meta: { "terminal-auth": unknown } })._meta = {
+      "terminal-auth": {
+        type: "terminal",
+        label: "Login with Kimi account",
         command: opts.legacyCommand,
-        args: ['login'],
+        args: ["login"],
         env: { ...env },
       },
     };

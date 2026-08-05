@@ -1,7 +1,7 @@
-import type { FlagId } from './registry';
+import type { FlagId } from "./registry";
 
 /** Which layer consumes a flag — documentation/grouping only; not used in resolution. */
-export type FlagSurface = 'core' | 'tui' | 'both';
+export type FlagSurface = "core" | "tui" | "both";
 
 /** Shape of a registry entry (id is a loose string so `as const satisfies` can validate it). */
 export interface FlagDefinitionInput {
@@ -23,7 +23,11 @@ export type ExperimentalFlagMap = Record<string, boolean>;
 /** User config overrides for experimental flags (flag id → enabled). */
 export type ExperimentalFlagConfig = Partial<Record<FlagId, boolean>>;
 
-export type ExperimentalFlagSource = 'master-env' | 'env' | 'config' | 'default';
+export type ExperimentalFlagSource =
+  | "master-env"
+  | "env"
+  | "config"
+  | "default";
 
 export interface ExperimentalFeatureState {
   /** Feature id. Typed as `string` because this is a runtime snapshot that

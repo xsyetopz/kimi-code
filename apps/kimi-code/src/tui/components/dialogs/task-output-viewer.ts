@@ -17,13 +17,16 @@ import {
   truncateToWidth,
   visibleWidth,
   type Focusable,
-} from '@moonshot-ai/pi-tui';
-import type { BackgroundTaskInfo, BackgroundTaskStatus } from '@moonshot-ai/kimi-code-sdk';
+} from "@moonshot-ai/pi-tui";
+import type {
+  BackgroundTaskInfo,
+  BackgroundTaskStatus,
+} from "@moonshot-ai/kimi-code-sdk";
 
-import { currentTheme } from '#/tui/theme';
-import { printableChar } from '@/tui/utils/printable-key';
+import { currentTheme } from "#/tui/theme";
+import { printableChar } from "@/tui/utils/printable-key";
 
-const ELLIPSIS = '…';
+const ELLIPSIS = "…";
 
 export interface TaskOutputViewerProps {
   readonly taskId: string;
@@ -33,25 +36,27 @@ export interface TaskOutputViewerProps {
 }
 
 const STATUS_LABEL: Record<BackgroundTaskStatus, string> = {
-  running: 'running',
-  completed: 'completed',
-  failed: 'failed',
-  timed_out: 'timed out',
-  killed: 'killed',
-  lost: 'lost',
+  running: "running",
+  completed: "completed",
+  failed: "failed",
+  timed_out: "timed out",
+  killed: "killed",
+  lost: "lost",
 };
 
-function statusColor(status: BackgroundTaskStatus): 'success' | 'textMuted' | 'error' {
+function statusColor(
+  status: BackgroundTaskStatus,
+): "success" | "textMuted" | "error" {
   switch (status) {
-    case 'running':
-      return 'success';
-    case 'completed':
-      return 'textMuted';
-    case 'failed':
-    case 'timed_out':
-    case 'killed':
-    case 'lost':
-      return 'error';
+    case "running":
+      return "success";
+    case "completed":
+      return "textMuted";
+    case "failed":
+    case "timed_out":
+    case "killed":
+    case "lost":
+      return "error";
   }
 }
 
@@ -59,7 +64,7 @@ function padToWidth(line: string, width: number): string {
   const w = visibleWidth(line);
   if (w === width) return line;
   if (w > width) return truncateToWidth(line, width, ELLIPSIS);
-  return line + ' '.repeat(width - w);
+  return line + " ".repeat(width - w);
 }
 
 function fitExactly(line: string, width: number): string {
@@ -104,7 +109,7 @@ export class TaskOutputViewer extends Container implements Focusable {
   }
 
   private splitOutput(output: string): string[] {
-    return (output.length > 0 ? output : '[no output captured]').split('\n');
+    return (output.length > 0 ? output : "[no output captured]").split("\n");
   }
 
   // ── input ──────────────────────────────────────────────────────────
@@ -113,40 +118,40 @@ export class TaskOutputViewer extends Container implements Focusable {
     const visible = this.viewableRows();
     const k = printableChar(data);
 
-    if (matchesKey(data, Key.escape) || k === 'q' || k === 'Q') {
+    if (matchesKey(data, Key.escape) || k === "q" || k === "Q") {
       this.props.onClose();
       return;
     }
-    if (matchesKey(data, Key.up) || k === 'k') {
+    if (matchesKey(data, Key.up) || k === "k") {
       this.scrollBy(-1);
       return;
     }
-    if (matchesKey(data, Key.down) || k === 'j') {
+    if (matchesKey(data, Key.down) || k === "j") {
       this.scrollBy(1);
       return;
     }
     if (
       matchesKey(data, Key.pageUp) ||
-      matchesKey(data, Key.ctrl('u')) ||
-      k === ' ' ||
-      data === '\u0002' /* C-b */
+      matchesKey(data, Key.ctrl("u")) ||
+      k === " " ||
+      data === "\u0002" /* C-b */
     ) {
       this.scrollBy(-Math.max(1, visible - 1));
       return;
     }
     if (
       matchesKey(data, Key.pageDown) ||
-      matchesKey(data, Key.ctrl('d')) ||
-      data === '\u0006' /* C-f */
+      matchesKey(data, Key.ctrl("d")) ||
+      data === "\u0006" /* C-f */
     ) {
       this.scrollBy(Math.max(1, visible - 1));
       return;
     }
-    if (matchesKey(data, Key.home) || k === 'g') {
+    if (matchesKey(data, Key.home) || k === "g") {
       this.scrollTo(0);
       return;
     }
-    if (matchesKey(data, Key.end) || k === 'G') {
+    if (matchesKey(data, Key.end) || k === "G") {
       this.scrollTo(this.maxScroll());
       return;
     }
@@ -190,20 +195,25 @@ export class TaskOutputViewer extends Container implements Focusable {
   }
 
   private renderHeader(width: number): string {
-    const title = currentTheme.boldFg('primary', ' Task output ');
-    const id = currentTheme.boldFg('text', this.props.taskId);
+    const title = currentTheme.boldFg("primary", " Task output ");
+    const id = currentTheme.boldFg("text", this.props.taskId);
     const info = this.props.info;
     const segments: string[] = [];
     if (info !== undefined) {
-      segments.push(currentTheme.fg(statusColor(info.status), STATUS_LABEL[info.status]));
-      if (info.kind === 'process' && info.exitCode !== null) {
-        segments.push(currentTheme.fg('textMuted', `exit ${String(info.exitCode)}`));
+      segments.push(
+        currentTheme.fg(statusColor(info.status), STATUS_LABEL[info.status]),
+      );
+      if (info.kind === "process" && info.exitCode !== null) {
+        segments.push(
+          currentTheme.fg("textMuted", `exit ${String(info.exitCode)}`),
+        );
       }
       if (info.description && info.description.length > 0) {
-        segments.push(currentTheme.fg('textMuted', info.description));
+        segments.push(currentTheme.fg("textMuted", info.description));
       }
     }
-    const composed = title + id + (segments.length > 0 ? '  ' + segments.join('  ') : '');
+    const composed =
+      title + id + (segments.length > 0 ? "  " + segments.join("  ") : "");
     return fitExactly(composed, width);
   }
 
@@ -217,23 +227,33 @@ export class TaskOutputViewer extends Container implements Focusable {
     if (this.scrollTop < 0) this.scrollTop = 0;
 
     const viewRows = bodyHeight - 2; // inside top + bottom border
-    const top = currentTheme.fg('primary', '┌' + '─'.repeat(Math.max(0, width - 2)) + '┐');
-    const bottom = currentTheme.fg('primary', '└' + '─'.repeat(Math.max(0, width - 2)) + '┘');
+    const top = currentTheme.fg(
+      "primary",
+      "┌" + "─".repeat(Math.max(0, width - 2)) + "┐",
+    );
+    const bottom = currentTheme.fg(
+      "primary",
+      "└" + "─".repeat(Math.max(0, width - 2)) + "┘",
+    );
 
     const out: string[] = [top];
     for (let i = 0; i < viewRows; i++) {
       const lineIndex = this.scrollTop + i;
-      const raw = this.lines[lineIndex] ?? '';
-      const inner = fitExactly(currentTheme.fg('text', raw), innerWidth);
-      out.push(currentTheme.fg('primary', '│ ') + inner + currentTheme.fg('primary', ' │'));
+      const raw = this.lines[lineIndex] ?? "";
+      const inner = fitExactly(currentTheme.fg("text", raw), innerWidth);
+      out.push(
+        currentTheme.fg("primary", "│ ") +
+          inner +
+          currentTheme.fg("primary", " │"),
+      );
     }
     out.push(bottom);
     return out;
   }
 
   private renderFooter(width: number, bodyHeight: number): string {
-    const key = (text: string): string => currentTheme.boldFg('primary', text);
-    const dim = (text: string): string => currentTheme.fg('textMuted', text);
+    const key = (text: string): string => currentTheme.boldFg("primary", text);
+    const dim = (text: string): string => currentTheme.fg("textMuted", text);
 
     const total = this.lines.length;
     const viewRows = Math.max(1, bodyHeight - 2);
@@ -244,19 +264,19 @@ export class TaskOutputViewer extends Container implements Focusable {
     const lineTo = Math.min(total, this.scrollTop + viewRows);
 
     const position = currentTheme.fg(
-      'textMuted',
+      "textMuted",
       ` ${String(lineFrom)}-${String(lineTo)} / ${String(total)} (${String(percent)}%) `,
     );
     const keys =
-      `${key('↑↓')} ${dim('line')}  ` +
-      `${key('PgUp/PgDn/Ctrl+U/D')} ${dim('page')}  ` +
-      `${key('g/G')} ${dim('top/bot')}  ` +
-      `${key('Q/Esc')} ${dim('cancel')}`;
+      `${key("↑↓")} ${dim("line")}  ` +
+      `${key("PgUp/PgDn/Ctrl+U/D")} ${dim("page")}  ` +
+      `${key("g/G")} ${dim("top/bot")}  ` +
+      `${key("Q/Esc")} ${dim("cancel")}`;
     const left = ` ${keys}`;
     const leftW = visibleWidth(left);
     const rightW = visibleWidth(position);
     if (leftW + 2 + rightW <= width) {
-      return left + ' '.repeat(width - leftW - rightW) + position;
+      return left + " ".repeat(width - leftW - rightW) + position;
     }
     return fitExactly(left, width);
   }

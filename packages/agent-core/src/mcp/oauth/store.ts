@@ -12,7 +12,7 @@
  * undefined (never throws). The provider treats undefined as "not stored".
  */
 
-import { createHash, randomBytes } from 'node:crypto';
+import { createHash, randomBytes } from "node:crypto";
 import {
   chmodSync,
   closeSync,
@@ -23,23 +23,25 @@ import {
   renameSync,
   unlinkSync,
   writeSync,
-} from 'node:fs';
-import { homedir } from 'node:os';
-import { basename, join } from 'pathe';
+} from "node:fs";
+import { homedir } from "node:os";
+import { basename, join } from "pathe";
 
 export function mcpCredentialsDir(kimiHomeDir: string): string {
-  return join(kimiHomeDir, 'credentials', 'mcp');
+  return join(kimiHomeDir, "credentials", "mcp");
 }
 
 export function defaultMcpCredentialsDir(): string {
-  return mcpCredentialsDir(join(homedir(), '.kimi-code'));
+  return mcpCredentialsDir(join(homedir(), ".kimi-code"));
 }
 
 export function sanitizeStoreKey(name: string): string {
   // Strip path-traversal segments. Tokens land under `<key>-<suffix>.json`,
   // so the sanitized value must also be a single filename component.
-  const safe = basename(name).replaceAll(/[^a-zA-Z0-9_-]/g, '_').replaceAll(/_+/g, '_');
-  if (safe.length === 0 || safe.startsWith('.')) {
+  const safe = basename(name)
+    .replaceAll(/[^a-zA-Z0-9_-]/g, "_")
+    .replaceAll(/_+/g, "_");
+  if (safe.length === 0 || safe.startsWith(".")) {
     throw new Error(`Invalid MCP OAuth store key: "${name}"`);
   }
   return safe;
@@ -47,18 +49,21 @@ export function sanitizeStoreKey(name: string): string {
 
 export function canonicalMcpOAuthResource(serverUrl: string | URL): string {
   const url = new URL(serverUrl);
-  url.hash = '';
+  url.hash = "";
   return url.toString();
 }
 
-export function mcpOAuthStoreKey(serverName: string, serverUrl: string | URL): string {
+export function mcpOAuthStoreKey(
+  serverName: string,
+  serverUrl: string | URL,
+): string {
   const safeName = sanitizeStoreKey(serverName);
   const resource = canonicalMcpOAuthResource(serverUrl);
-  const digest = createHash('sha256')
+  const digest = createHash("sha256")
     .update(serverName)
-    .update('\0')
+    .update("\0")
     .update(resource)
-    .digest('hex')
+    .digest("hex")
     .slice(0, 24);
   return `${safeName}-${digest}`;
 }
@@ -74,7 +79,7 @@ export class JsonFileStore {
     const path = join(this.dir, file);
     let raw: string;
     try {
-      raw = readFileSync(path, 'utf-8');
+      raw = readFileSync(path, "utf-8");
     } catch {
       return undefined;
     }
@@ -93,9 +98,9 @@ export class JsonFileStore {
       // best-effort; Windows / read-only FS may refuse
     }
     const target = join(this.dir, file);
-    const tmp = `${target}.tmp.${process.pid}.${randomBytes(4).toString('hex')}`;
-    const buf = Buffer.from(`${JSON.stringify(data, null, 2)}\n`, 'utf-8');
-    const fd = openSync(tmp, 'w', 0o600);
+    const tmp = `${target}.tmp.${process.pid}.${randomBytes(4).toString("hex")}`;
+    const buf = Buffer.from(`${JSON.stringify(data, null, 2)}\n`, "utf-8");
+    const fd = openSync(tmp, "w", 0o600);
     try {
       let written = 0;
       while (written < buf.length) {
@@ -122,7 +127,7 @@ export class JsonFileStore {
     try {
       unlinkSync(join(this.dir, file));
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
         throw error;
       }
     }

@@ -6,17 +6,17 @@
  * `client_hello` / `unsubscribe` control frames per the v1 ws protocol.
  */
 
-import { mkdtemp, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
-import { connectionsListResponseSchema } from '../src/protocol/rest-connection';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { WebSocket } from 'ws';
+import { connectionsListResponseSchema } from "../src/protocol/rest-connection";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { WebSocket } from "ws";
 
-import { type RunningServer, startServer } from '../src/start';
-import { TEST_HOST_IDENTITY } from './helpers/hostIdentity';
-import { authHeaders } from './helpers/auth';
+import { type RunningServer, startServer } from "../src/start";
+import { TEST_HOST_IDENTITY } from "./helpers/hostIdentity";
+import { authHeaders } from "./helpers/auth";
 
 interface Envelope<T> {
   code: number;
@@ -25,15 +25,21 @@ interface Envelope<T> {
   request_id: string;
 }
 
-describe('server-v2 GET /api/v1/connections', () => {
+describe("server-v2 GET /api/v1/connections", () => {
   let server: RunningServer | undefined;
   let home: string | undefined;
   let base: string;
   let wsUrl: string;
 
   beforeEach(async () => {
-    home = await mkdtemp(join(tmpdir(), 'kimi-server-v2-connections-'));
-    server = await startServer({ hostIdentity: TEST_HOST_IDENTITY, host: '127.0.0.1', port: 0, homeDir: home, logLevel: 'silent' });
+    home = await mkdtemp(join(tmpdir(), "kimi-server-v2-connections-"));
+    server = await startServer({
+      hostIdentity: TEST_HOST_IDENTITY,
+      host: "127.0.0.1",
+      port: 0,
+      homeDir: home,
+      logLevel: "silent",
+    });
     base = `http://127.0.0.1:${server.port}`;
     wsUrl = `ws://127.0.0.1:${server.port}/api/v1/ws`;
   });
@@ -60,8 +66,10 @@ describe('server-v2 GET /api/v1/connections', () => {
 
   async function createSession(cwd: string): Promise<string> {
     const res = await fetch(`${base}/api/v1/sessions`, {
-      method: 'POST',
-      headers: authHeaders(server as RunningServer, { 'content-type': 'application/json' }),
+      method: "POST",
+      headers: authHeaders(server as RunningServer, {
+        "content-type": "application/json",
+      }),
       body: JSON.stringify({ metadata: { cwd } }),
     } as never);
     const body = (await res.json()) as Envelope<{ id: string }>;
@@ -74,8 +82,8 @@ describe('server-v2 GET /api/v1/connections', () => {
       const token = (server as RunningServer).authTokenService.getToken();
       const ws = new WebSocket(wsUrl, [`kimi-code.bearer.${token}`]);
       // Resolve on the server's first (`server_hello`) frame.
-      ws.once('message', () => resolve(ws));
-      ws.once('error', reject);
+      ws.once("message", () => resolve(ws));
+      ws.once("error", reject);
     });
   }
 
@@ -89,17 +97,19 @@ describe('server-v2 GET /api/v1/connections', () => {
       if (server?.connectionRegistry.size() === target) return;
       await new Promise((r) => setTimeout(r, 10));
     }
-    throw new Error(`registry size ${target} not observed within ${timeoutMs}ms`);
+    throw new Error(
+      `registry size ${target} not observed within ${timeoutMs}ms`,
+    );
   }
 
-  it('returns an empty list when no clients are attached', async () => {
+  it("returns an empty list when no clients are attached", async () => {
     const connections = await listConnections();
     expect(connections).toEqual([]);
   });
 
-  it('lists a raw connection without hello', async () => {
+  it("lists a raw connection without hello", async () => {
     const ws = await connect();
-    const closed = new Promise<void>((res) => ws.on('close', () => res()));
+    const closed = new Promise<void>((res) => ws.on("close", () => res()));
     await waitForSize(1);
 
     const connections = await listConnections();
@@ -109,21 +119,21 @@ describe('server-v2 GET /api/v1/connections', () => {
     expect(c.has_client_hello).toBe(false);
     expect(c.subscriptions).toEqual([]);
     expect(c.connected_at).toMatch(/Z$/);
-    expect(typeof c.remote_address).toBe('string');
-    expect((c.remote_address ?? '').length).toBeGreaterThan(0);
+    expect(typeof c.remote_address).toBe("string");
+    expect((c.remote_address ?? "").length).toBeGreaterThan(0);
 
     ws.close();
     await closed;
   });
 
-  it('reflects client_hello and session subscriptions', async () => {
+  it("reflects client_hello and session subscriptions", async () => {
     const sessionId = await createSession(home as string);
     const ws = await connect();
     try {
       send(ws, {
-        type: 'client_hello',
-        id: 'h1',
-        payload: { client_id: 'connections-test', subscriptions: [sessionId] },
+        type: "client_hello",
+        id: "h1",
+        payload: { client_id: "connections-test", subscriptions: [sessionId] },
       });
       // Let the `client_hello` register server-side.
       await new Promise((r) => setTimeout(r, 50));
@@ -134,7 +144,11 @@ describe('server-v2 GET /api/v1/connections', () => {
       expect(c.has_client_hello).toBe(true);
       expect(c.subscriptions).toContain(sessionId);
 
-      send(ws, { type: 'unsubscribe', id: 'u1', payload: { session_ids: [sessionId] } });
+      send(ws, {
+        type: "unsubscribe",
+        id: "u1",
+        payload: { session_ids: [sessionId] },
+      });
       await new Promise((r) => setTimeout(r, 50));
       connections = await listConnections();
       expect(connections[0]!.subscriptions).not.toContain(sessionId);
@@ -143,12 +157,12 @@ describe('server-v2 GET /api/v1/connections', () => {
     }
   });
 
-  it('removes the connection after the socket closes', async () => {
+  it("removes the connection after the socket closes", async () => {
     const ws = await connect();
     send(ws, {
-      type: 'client_hello',
-      id: 'h1',
-      payload: { client_id: 'connections-test', subscriptions: [] },
+      type: "client_hello",
+      id: "h1",
+      payload: { client_id: "connections-test", subscriptions: [] },
     });
     await waitForSize(1);
 

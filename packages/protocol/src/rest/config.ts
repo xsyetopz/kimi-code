@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 export const providerConfigResponseSchema = z.object({
   type: z.string(),
@@ -6,7 +6,9 @@ export const providerConfigResponseSchema = z.object({
   default_model: z.string().optional(),
   has_api_key: z.boolean(),
 });
-export type ProviderConfigResponse = z.infer<typeof providerConfigResponseSchema>;
+export type ProviderConfigResponse = z.infer<
+  typeof providerConfigResponseSchema
+>;
 
 export const configResponseSchema = z.object({
   providers: z.record(z.string(), providerConfigResponseSchema).default({}),

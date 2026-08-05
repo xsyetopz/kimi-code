@@ -48,10 +48,16 @@
 // pathological single token cannot starve the deadline check. Node counting
 // (budget.tick()) is the parser's job.
 
-import type { ParseBudget } from '#/budget';
-import { SPECIAL_VARIABLE_CHARS } from '#/grammar';
+import type { ParseBudget } from "#/budget";
+import { SPECIAL_VARIABLE_CHARS } from "#/grammar";
 
-export type TokenType = 'word' | 'op' | 'io_number' | 'newline' | 'comment' | 'eof';
+export type TokenType =
+  | "word"
+  | "op"
+  | "io_number"
+  | "newline"
+  | "comment"
+  | "eof";
 
 export interface Token {
   readonly type: TokenType;
@@ -98,20 +104,47 @@ const SCAN_TICK_INTERVAL = 2048;
  */
 const MAX_SCAN_DEPTH = 1024;
 
-const CONTROL_OPERATORS = ['&>>', '&>', '&&', '&', '|&', '||', '|', ';;&', ';;', ';&', ';', '(', ')'] as const;
-const REDIRECT_OPERATORS = ['<<-', '<<<', '<<', '<&-', '<&', '<>', '<', '>&-', '>&', '>>', '>|', '>'] as const;
+const CONTROL_OPERATORS = [
+  "&>>",
+  "&>",
+  "&&",
+  "&",
+  "|&",
+  "||",
+  "|",
+  ";;&",
+  ";;",
+  ";&",
+  ";",
+  "(",
+  ")",
+] as const;
+const REDIRECT_OPERATORS = [
+  "<<-",
+  "<<<",
+  "<<",
+  "<&-",
+  "<&",
+  "<>",
+  "<",
+  ">&-",
+  ">&",
+  ">>",
+  ">|",
+  ">",
+] as const;
 
 function isWordChar(ch: string | undefined): boolean {
   return ch !== undefined && /[\w]/.test(ch);
 }
 
 function isBlank(ch: string | undefined): boolean {
-  return ch === ' ' || ch === '\t' || ch === '\r';
+  return ch === " " || ch === "\t" || ch === "\r";
 }
 
 function isDigitAt(source: string, i: number): boolean {
   const ch = source[i]!;
-  return ch >= '0' && ch <= '9';
+  return ch >= "0" && ch <= "9";
 }
 
 /** Skip a "..." quoted region starting at `i` (which points at the opening
@@ -119,7 +152,13 @@ function isDigitAt(source: string, i: number): boolean {
  *  string is unterminated. Substitution-aware: $(...), ${...} and `...`
  *  inside the string may themselves contain quotes. `depth` tracks the
  *  scanBalanced ↔ skipDoubleQuoted recursion (see MAX_SCAN_DEPTH). */
-export function skipDoubleQuoted(source: string, budget: ParseBudget, i: number, end: number, depth = 0): number {
+export function skipDoubleQuoted(
+  source: string,
+  budget: ParseBudget,
+  i: number,
+  end: number,
+  depth = 0,
+): number {
   if (depth >= MAX_SCAN_DEPTH) return end;
   let j = i + 1;
   let sinceTick = 0;
@@ -129,23 +168,23 @@ export function skipDoubleQuoted(source: string, budget: ParseBudget, i: number,
       sinceTick = 0;
     }
     const ch = source[j]!;
-    if (ch === '\\') {
+    if (ch === "\\") {
       j += 2;
       continue;
     }
     if (ch === '"') return j + 1;
-    if (ch === '`') {
+    if (ch === "`") {
       j = skipBacktick(source, budget, j, end);
       continue;
     }
-    if (ch === '$') {
+    if (ch === "$") {
       const next = source[j + 1];
-      if (next === '(') {
+      if (next === "(") {
         j = scanBalancedStatements(source, budget, j + 1, end, depth + 1).end;
         continue;
       }
-      if (next === '{') {
-        j = scanBalanced(source, budget, j + 1, end, '{', '}', depth + 1).end;
+      if (next === "{") {
+        j = scanBalanced(source, budget, j + 1, end, "{", "}", depth + 1).end;
         continue;
       }
     }
@@ -155,14 +194,24 @@ export function skipDoubleQuoted(source: string, budget: ParseBudget, i: number,
 }
 
 /** Skip a '...' region starting at `i`. No escapes exist in raw strings. */
-export function skipSingleQuoted(source: string, _budget: ParseBudget, i: number, end: number): number {
+export function skipSingleQuoted(
+  source: string,
+  _budget: ParseBudget,
+  i: number,
+  end: number,
+): number {
   const close = source.indexOf("'", i + 1);
   if (close === -1 || close >= end) return end;
   return close + 1;
 }
 
 /** Skip a `...` region starting at `i`; \` is an escaped backtick. */
-export function skipBacktick(source: string, budget: ParseBudget, i: number, end: number): number {
+export function skipBacktick(
+  source: string,
+  budget: ParseBudget,
+  i: number,
+  end: number,
+): number {
   let j = i + 1;
   let sinceTick = 0;
   while (j < end) {
@@ -171,11 +220,11 @@ export function skipBacktick(source: string, budget: ParseBudget, i: number, end
       sinceTick = 0;
     }
     const ch = source[j]!;
-    if (ch === '\\') {
+    if (ch === "\\") {
       j += 2;
       continue;
     }
-    if (ch === '`') return j + 1;
+    if (ch === "`") return j + 1;
     j++;
   }
   return end;
@@ -211,7 +260,7 @@ export function scanBalanced(
       sinceTick = 0;
     }
     const ch = source[j]!;
-    if (ch === '\\') {
+    if (ch === "\\") {
       j += 2;
       continue;
     }
@@ -226,7 +275,7 @@ export function scanBalanced(
     } else if (ch === "'") {
       j = skipSingleQuoted(source, budget, j, end);
       continue;
-    } else if (ch === '`') {
+    } else if (ch === "`") {
       j = skipBacktick(source, budget, j, end);
       continue;
     }
@@ -237,7 +286,15 @@ export function scanBalanced(
 
 /** Words after which a `case` word opens a case_statement (statement
  *  position) rather than being an ordinary argument. */
-const CASE_ENABLING_WORDS: ReadonlySet<string> = new Set(['if', 'then', 'elif', 'else', 'while', 'until', 'do']);
+const CASE_ENABLING_WORDS: ReadonlySet<string> = new Set([
+  "if",
+  "then",
+  "elif",
+  "else",
+  "while",
+  "until",
+  "do",
+]);
 
 /**
  * Case-aware variant of scanBalanced for `(` … `)` regions that may hold
@@ -268,7 +325,7 @@ export function scanBalancedStatements(
   const caseDepths: number[] = [];
   let j = i;
   /** What preceded the current position: 'start' | 'sep' | 'keyword' | 'word'. */
-  let previous: 'start' | 'sep' | 'keyword' | 'word' = 'start';
+  let previous: "start" | "sep" | "keyword" | "word" = "start";
   let sinceTick = 0;
   while (j < end) {
     if (++sinceTick >= SCAN_TICK_INTERVAL) {
@@ -276,55 +333,55 @@ export function scanBalancedStatements(
       sinceTick = 0;
     }
     const ch = source[j]!;
-    if (ch === '\\') {
+    if (ch === "\\") {
       j += 2;
       continue;
     }
     if (ch === '"') {
       j = skipDoubleQuoted(source, budget, j, end, depth + 1);
-      previous = 'word';
+      previous = "word";
       continue;
     }
     if (ch === "'") {
       j = skipSingleQuoted(source, budget, j, end);
-      previous = 'word';
+      previous = "word";
       continue;
     }
-    if (ch === '`') {
+    if (ch === "`") {
       j = skipBacktick(source, budget, j, end);
-      previous = 'word';
+      previous = "word";
       continue;
     }
-    if (ch === ' ' || ch === '\t' || ch === '\r') {
+    if (ch === " " || ch === "\t" || ch === "\r") {
       j++;
       continue;
     }
-    if (ch === '\n' || ch === ';' || ch === '&' || ch === '|') {
-      previous = 'sep';
+    if (ch === "\n" || ch === ";" || ch === "&" || ch === "|") {
+      previous = "sep";
       j++;
       continue;
     }
-    if (ch === '{') {
-      previous = 'sep';
+    if (ch === "{") {
+      previous = "sep";
       j++;
       continue;
     }
-    if (ch === '(') {
+    if (ch === "(") {
       nesting++;
-      previous = 'sep';
+      previous = "sep";
       j++;
       continue;
     }
-    if (ch === ')') {
+    if (ch === ")") {
       if (caseDepths.length > 0 && caseDepths.at(-1) === nesting) {
         // A case_item pattern close: not a paren.
-        previous = 'sep';
+        previous = "sep";
         j++;
         continue;
       }
       nesting--;
       if (nesting === 0) return { end: j + 1, balanced: true };
-      previous = 'word';
+      previous = "word";
       j++;
       continue;
     }
@@ -333,19 +390,19 @@ export function scanBalancedStatements(
     while (k < end && isWordChar(source[k])) k++;
     if (k > j) {
       const word = source.slice(j, k);
-      if (word === 'esac' && caseDepths.length > 0) {
+      if (word === "esac" && caseDepths.length > 0) {
         caseDepths.pop();
-        previous = 'sep';
-      } else if (word === 'case' && previous !== 'word') {
+        previous = "sep";
+      } else if (word === "case" && previous !== "word") {
         caseDepths.push(nesting);
-        previous = 'word';
+        previous = "word";
       } else {
-        previous = CASE_ENABLING_WORDS.has(word) ? 'keyword' : 'word';
+        previous = CASE_ENABLING_WORDS.has(word) ? "keyword" : "word";
       }
       j = k;
       continue;
     }
-    previous = 'word';
+    previous = "word";
     j++;
   }
   return { end, balanced: false };
@@ -355,13 +412,21 @@ export function scanBalancedStatements(
  *  $(...), $((...)), ${...}, $'...' (escape-aware: \' does not close),
  *  $name and the single-character specials. A `$` followed by anything else
  *  (including a double quote) consumes just the `$`. */
-export function skipDollar(source: string, budget: ParseBudget, i: number, end: number): number {
+export function skipDollar(
+  source: string,
+  budget: ParseBudget,
+  i: number,
+  end: number,
+): number {
   const next = source[i + 1];
-  if (next === '(') return scanBalancedStatements(source, budget, i + 1, end).end;
-  if (next === '{') return scanBalanced(source, budget, i + 1, end, '{', '}').end;
+  if (next === "(")
+    return scanBalancedStatements(source, budget, i + 1, end).end;
+  if (next === "{")
+    return scanBalanced(source, budget, i + 1, end, "{", "}").end;
   // $[...] legacy arithmetic (only when `[` directly follows the `$`; `$a[0]`
   // takes the word-character branch above).
-  if (next === '[') return scanBalanced(source, budget, i + 1, end, '[', ']').end;
+  if (next === "[")
+    return scanBalanced(source, budget, i + 1, end, "[", "]").end;
   if (next === "'") {
     // ANSI-C string: \' is an escaped quote and does not terminate it.
     let j = i + 2;
@@ -372,7 +437,7 @@ export function skipDollar(source: string, budget: ParseBudget, i: number, end: 
         sinceTick = 0;
       }
       const ch = source[j]!;
-      if (ch === '\\') {
+      if (ch === "\\") {
         j += 2;
         continue;
       }
@@ -446,46 +511,47 @@ export class Lexer {
     this.budget.progress();
     this.skipBlanks();
     const start = this.pos;
-    if (this.pos >= this.end) return this.scanBoundary('eof', start, start);
+    if (this.pos >= this.end) return this.scanBoundary("eof", start, start);
     const ch = this.source[this.pos]!;
-    if (ch === '\n') {
+    if (ch === "\n") {
       this.pos++;
-      return this.scanBoundary('newline', start, this.pos);
+      return this.scanBoundary("newline", start, this.pos);
     }
-    if (ch === '#') {
+    if (ch === "#") {
       let sinceTick = 0;
-      while (this.pos < this.end && this.source[this.pos] !== '\n') {
+      while (this.pos < this.end && this.source[this.pos] !== "\n") {
         if (++sinceTick >= SCAN_TICK_INTERVAL) {
           this.budget.progress();
           sinceTick = 0;
         }
         this.pos++;
       }
-      return { type: 'comment', start, end: this.pos, heredocBodies: [] };
+      return { type: "comment", start, end: this.pos, heredocBodies: [] };
     }
-    if (ch === '<' || ch === '>') {
+    if (ch === "<" || ch === ">") {
       // <( / >( start a process substitution, which is word material. The
       // heredoc operators were already excluded: <<( is << + ( …
-      if (this.source[this.pos + 1] === '(') return this.scanWord();
+      if (this.source[this.pos + 1] === "(") return this.scanWord();
       return this.scanOp(REDIRECT_OPERATORS);
     }
-    if (ch === '&' || ch === '|' || ch === ';' || ch === '(' || ch === ')') {
+    if (ch === "&" || ch === "|" || ch === ";" || ch === "(" || ch === ")") {
       // `((` at token start opens arithmetic (an arithmetic command or a
       // c-style for header), which is word material, not two parens.
-      if (ch === '(' && this.source[this.pos + 1] === '(') return this.scanWord();
+      if (ch === "(" && this.source[this.pos + 1] === "(")
+        return this.scanWord();
       return this.scanOp(CONTROL_OPERATORS);
     }
-    if (ch === '{' || ch === '}' || ch === '[' || ch === ']') {
+    if (ch === "{" || ch === "}" || ch === "[" || ch === "]") {
       this.pos++;
-      return { type: 'word', start, end: this.pos, heredocBodies: [] };
+      return { type: "word", start, end: this.pos, heredocBodies: [] };
     }
-    if (ch >= '0' && ch <= '9') {
+    if (ch >= "0" && ch <= "9") {
       let i = this.pos;
       while (i < this.end && isDigitAt(this.source, i)) i++;
       const next = this.source[i];
-      if (next === '<' || next === '>') {
+      if (next === "<" || next === ">") {
         this.pos = i;
-        return { type: 'io_number', start, end: i, heredocBodies: [] };
+        return { type: "io_number", start, end: i, heredocBodies: [] };
       }
       return this.scanWord();
     }
@@ -494,7 +560,11 @@ export class Lexer {
 
   /** Produce a newline/eof token, scanning any queued heredoc bodies that
    *  start right after it. */
-  private scanBoundary(type: 'newline' | 'eof', start: number, end: number): Token {
+  private scanBoundary(
+    type: "newline" | "eof",
+    start: number,
+    end: number,
+  ): Token {
     const bodies: HeredocBody[] = [];
     while (this.pendingHeredocs.length > 0) {
       bodies.push(this.readHeredocBody(this.pendingHeredocs.shift()!));
@@ -515,7 +585,7 @@ export class Lexer {
         continue;
       }
       // Line continuation is whitespace, not word material.
-      if (ch === '\\' && this.source[this.pos + 1] === '\n') {
+      if (ch === "\\" && this.source[this.pos + 1] === "\n") {
         this.pos += 2;
         continue;
       }
@@ -526,23 +596,33 @@ export class Lexer {
   private scanOp(table: readonly string[]): Token {
     const start = this.pos;
     for (const op of table) {
-      if (this.source.startsWith(op, this.pos) && this.pos + op.length <= this.end) {
+      if (
+        this.source.startsWith(op, this.pos) &&
+        this.pos + op.length <= this.end
+      ) {
         this.pos += op.length;
-        return { type: 'op', start, end: this.pos, heredocBodies: [] };
+        return { type: "op", start, end: this.pos, heredocBodies: [] };
       }
     }
     // Unreachable for the callers above, but never loop forever.
     this.pos++;
-    return { type: 'op', start, end: this.pos, heredocBodies: [] };
+    return { type: "op", start, end: this.pos, heredocBodies: [] };
   }
 
   private scanWord(): Token {
     const start = this.pos;
     // `((...))` at token start: one word token ending right after the
     // balanced close (the parser re-scans the range as arithmetic).
-    if (this.source[start] === '(' && this.source[start + 1] === '(') {
-      this.pos = scanBalanced(this.source, this.budget, start, this.end, '(', ')').end;
-      return { type: 'word', start, end: this.pos, heredocBodies: [] };
+    if (this.source[start] === "(" && this.source[start + 1] === "(") {
+      this.pos = scanBalanced(
+        this.source,
+        this.budget,
+        start,
+        this.end,
+        "(",
+        ")",
+      ).end;
+      return { type: "word", start, end: this.pos, heredocBodies: [] };
     }
     let i = this.pos;
     let sinceTick = 0;
@@ -552,20 +632,26 @@ export class Lexer {
         sinceTick = 0;
       }
       const ch = this.source[i]!;
-      if (isBlank(ch) || ch === '\n') break;
-      if (ch === '&' || ch === '|' || ch === ';' || ch === '(' || ch === ')') break;
-      if (ch === '{' || ch === '}' || ch === '[' || ch === ']') break;
-      if (ch === '<' || ch === '>') {
-        if (this.source[i + 1] === '(') {
-          i = scanBalancedStatements(this.source, this.budget, i + 1, this.end).end;
+      if (isBlank(ch) || ch === "\n") break;
+      if (ch === "&" || ch === "|" || ch === ";" || ch === "(" || ch === ")")
+        break;
+      if (ch === "{" || ch === "}" || ch === "[" || ch === "]") break;
+      if (ch === "<" || ch === ">") {
+        if (this.source[i + 1] === "(") {
+          i = scanBalancedStatements(
+            this.source,
+            this.budget,
+            i + 1,
+            this.end,
+          ).end;
           continue;
         }
         break;
       }
-      if (ch === '\\') {
+      if (ch === "\\") {
         // A line continuation ends the run (it acts as whitespace); a lone
         // trailing backslash at end of range is consumed as word text.
-        if (this.source[i + 1] === '\n') break;
+        if (this.source[i + 1] === "\n") break;
         i += 2;
         continue;
       }
@@ -577,11 +663,11 @@ export class Lexer {
         i = skipSingleQuoted(this.source, this.budget, i, this.end);
         continue;
       }
-      if (ch === '`') {
+      if (ch === "`") {
         i = skipBacktick(this.source, this.budget, i, this.end);
         continue;
       }
-      if (ch === '$') {
+      if (ch === "$") {
         i = skipDollar(this.source, this.budget, i, this.end);
         continue;
       }
@@ -589,7 +675,7 @@ export class Lexer {
     }
     if (i === start) i++; // defensive: never emit a zero-width word token
     this.pos = i;
-    return { type: 'word', start, end: i, heredocBodies: [] };
+    return { type: "word", start, end: i, heredocBodies: [] };
   }
 
   /**
@@ -602,28 +688,44 @@ export class Lexer {
   private readHeredocBody(spec: HeredocSpec): HeredocBody {
     let bodyStart = this.pos;
     if (spec.stripTabs) {
-      while (bodyStart < this.end && this.source[bodyStart] === '\t') bodyStart++;
+      while (bodyStart < this.end && this.source[bodyStart] === "\t")
+        bodyStart++;
     }
     let lineStart = this.pos;
     while (lineStart < this.end) {
       this.budget.progress();
       let marker = lineStart;
       if (spec.stripTabs) {
-        while (marker < this.end && this.source[marker] === '\t') marker++;
+        while (marker < this.end && this.source[marker] === "\t") marker++;
       }
-      if (spec.delimiter.length > 0 && this.source.startsWith(spec.delimiter, marker)) {
+      if (
+        spec.delimiter.length > 0 &&
+        this.source.startsWith(spec.delimiter, marker)
+      ) {
         const after = marker + spec.delimiter.length;
-        if (after >= this.end || this.source[after] === '\n') {
+        if (after >= this.end || this.source[after] === "\n") {
           this.pos = after;
-          return { bodyStart, bodyEnd: marker, endStart: marker, endEnd: after, found: true };
+          return {
+            bodyStart,
+            bodyEnd: marker,
+            endStart: marker,
+            endEnd: after,
+            found: true,
+          };
         }
       }
-      const newline = this.source.indexOf('\n', lineStart);
+      const newline = this.source.indexOf("\n", lineStart);
       if (newline === -1) break;
       lineStart = newline + 1;
     }
     // Unterminated: the body runs to the end of this lexer's range.
     this.pos = this.end;
-    return { bodyStart, bodyEnd: this.end, endStart: this.end, endEnd: this.end, found: false };
+    return {
+      bodyStart,
+      bodyEnd: this.end,
+      endStart: this.end,
+      endEnd: this.end,
+      found: false,
+    };
   }
 }

@@ -51,13 +51,13 @@
  * handler.
  */
 
-import { createDecorator } from '../../di';
-import type { ApprovalRequest, ApprovalResponse } from '../../rpc';
+import { createDecorator } from "../../di";
+import type { ApprovalRequest, ApprovalResponse } from "../../rpc";
 import type {
   ApprovalRequest as ProtocolApprovalRequest,
   ApprovalResponse as ProtocolApprovalResponse,
-} from '@moonshot-ai/protocol';
-import type {} from '@moonshot-ai/protocol'; // type-only marker — keep protocol dep referenced
+} from "@moonshot-ai/protocol";
+import type {} from "@moonshot-ai/protocol"; // type-only marker — keep protocol dep referenced
 
 // Re-export ApprovalResponse for service-side consumers so they don't have to
 // also depend on agent-core directly.
@@ -71,7 +71,9 @@ export interface IApprovalService {
    * user's decision (or a cancelled response if no client is connected /
    * timeout elapses — concrete-impl policy).
    */
-  request(req: ApprovalRequest & { sessionId: string; agentId: string }): Promise<ApprovalResponse>;
+  request(
+    req: ApprovalRequest & { sessionId: string; agentId: string },
+  ): Promise<ApprovalResponse>;
 
   /**
    * Called by the answer-side (REST handler / TUI / mock) to settle a pending
@@ -88,7 +90,8 @@ export interface IApprovalService {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
-export const IApprovalService = createDecorator<IApprovalService>('approvalService');
+export const IApprovalService =
+  createDecorator<IApprovalService>("approvalService");
 
 // ---------------------------------------------------------------------------
 // Adapter helpers (moved from adapter/approval-adapter.ts)

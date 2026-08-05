@@ -1,16 +1,16 @@
-import { formatTaskList } from '#/tools/background/task-list';
+import { formatTaskList } from "#/tools/background/task-list";
 
-import type { Agent } from '..';
-import { GoalInjector } from './goal';
-import type { DynamicInjector } from './injector';
-import { PermissionModeInjector } from './permission-mode';
-import { PluginSessionStartInjector } from './plugin-session-start';
-import { PlanModeInjector } from './plan-mode';
-import { TodoListReminderInjector } from './todo-list';
-import { ToolsDiffInjector } from './tools-diff';
+import type { Agent } from "..";
+import { GoalInjector } from "./goal";
+import type { DynamicInjector } from "./injector";
+import { PermissionModeInjector } from "./permission-mode";
+import { PluginSessionStartInjector } from "./plugin-session-start";
+import { PlanModeInjector } from "./plan-mode";
+import { TodoListReminderInjector } from "./todo-list";
+import { ToolsDiffInjector } from "./tools-diff";
 
 const ACTIVE_BACKGROUND_TASK_GUIDANCE =
-  'The conversation was compacted, so the earlier messages that started these background tasks are gone — but the tasks are still running from before. Do not start duplicates. Use TaskList to list them, TaskOutput for a non-blocking status/output snapshot, and TaskStop to cancel one — completion arrives via automatic notification.';
+  "The conversation was compacted, so the earlier messages that started these background tasks are gone — but the tasks are still running from before. Do not start duplicates. Use TaskList to list them, TaskOutput for a non-blocking status/output snapshot, and TaskStop to cancel one — completion arrives via automatic notification.";
 
 export class InjectionManager {
   private readonly injectors: DynamicInjector[];
@@ -31,7 +31,7 @@ export class InjectionManager {
       new PlanModeInjector(agent),
       new PermissionModeInjector(agent),
     ];
-    this.goalInjector = agent.type === 'main' ? new GoalInjector(agent) : null;
+    this.goalInjector = agent.type === "main" ? new GoalInjector(agent) : null;
     this.toolsDiffInjector = new ToolsDiffInjector(agent);
   }
 
@@ -80,7 +80,7 @@ export class InjectionManager {
     if (tasks.length === 0) return;
     this.agent.context.appendSystemReminder(
       `${ACTIVE_BACKGROUND_TASK_GUIDANCE}\n\n${formatTaskList(tasks, true)}`,
-      { kind: 'injection', variant: 'background_task_status' },
+      { kind: "injection", variant: "background_task_status" },
     );
   }
 
@@ -109,7 +109,9 @@ export class InjectionManager {
   /** Per-step injectors plus the boundary goal injector, for lifecycle events. */
   private lifecycleInjectors(): DynamicInjector[] {
     const goalInjector = this.activeGoalInjector();
-    return goalInjector === null ? this.injectors : [goalInjector, ...this.injectors];
+    return goalInjector === null
+      ? this.injectors
+      : [goalInjector, ...this.injectors];
   }
 
   private activeGoalInjector(): GoalInjector | null {

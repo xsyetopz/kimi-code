@@ -3,58 +3,80 @@
  * Supports expand/collapse via Ctrl+O.
  */
 
-import { isAbsolute, relative, sep } from 'node:path';
+import { isAbsolute, relative, sep } from "node:path";
 
-import { Container, Spacer, Text, truncateToWidth, visibleWidth } from '@moonshot-ai/pi-tui';
-import type { Component, TUI } from '@moonshot-ai/pi-tui';
-import { highlightLines, langFromPath } from '#/tui/components/media/code-highlight';
-import { renderDiffLinesClustered } from '#/tui/components/media/diff-preview';
+import {
+  Container,
+  Spacer,
+  Text,
+  truncateToWidth,
+  visibleWidth,
+} from "@moonshot-ai/pi-tui";
+import type { Component, TUI } from "@moonshot-ai/pi-tui";
+import {
+  highlightLines,
+  langFromPath,
+} from "#/tui/components/media/code-highlight";
+import { renderDiffLinesClustered } from "#/tui/components/media/diff-preview";
 import {
   BRAILLE_SPINNER_FRAMES,
   BRAILLE_SPINNER_INTERVAL_MS,
   COMMAND_PREVIEW_LINES,
   RESULT_PREVIEW_LINES,
   THINKING_PREVIEW_LINES,
-} from '#/tui/constant/rendering';
+} from "#/tui/constant/rendering";
 import {
   STREAMING_ARGS_FIELD_RE,
   STREAMING_ARGS_PREVIEW_MAX_CHARS,
-} from '#/tui/constant/streaming';
-import { FAILURE_MARK, STATUS_BULLET, SUCCESS_MARK } from '#/tui/constant/symbols';
-import { currentTheme } from '#/tui/theme';
-import { createMarkdownTheme } from '#/tui/theme/pi-tui-theme';
-import type { ToolCallBlockData, ToolResultBlockData } from '#/tui/types';
-import type { TokenUsage } from '@moonshot-ai/kimi-code-sdk';
-import { appendStreamingArgsPreview } from '#/tui/utils/event-payload';
-import { decodeMcpToolName } from '#/tui/utils/mcp-tool-name';
-import { isRenderCacheEnabled } from '#/tui/utils/render-cache';
-import { formatTokenCount } from '#/utils/usage/usage-format';
+} from "#/tui/constant/streaming";
+import {
+  FAILURE_MARK,
+  STATUS_BULLET,
+  SUCCESS_MARK,
+} from "#/tui/constant/symbols";
+import { currentTheme } from "#/tui/theme";
+import { createMarkdownTheme } from "#/tui/theme/pi-tui-theme";
+import type { ToolCallBlockData, ToolResultBlockData } from "#/tui/types";
+import type { TokenUsage } from "@moonshot-ai/kimi-code-sdk";
+import { appendStreamingArgsPreview } from "#/tui/utils/event-payload";
+import { decodeMcpToolName } from "#/tui/utils/mcp-tool-name";
+import { isRenderCacheEnabled } from "#/tui/utils/render-cache";
+import { formatTokenCount } from "#/utils/usage/usage-format";
 
-import { agentSwarmResultSummaryFromOutput } from './agent-swarm-progress';
-import { PlanBoxComponent } from './plan-box';
-import { ShellExecutionComponent } from './shell-execution';
-import { countNonEmptyLines, pickChip } from './tool-renderers/chip';
-import { buildGoalToolHeader } from './tool-renderers/goal';
-import { isGenericToolResult, pickResultRenderer } from './tool-renderers/registry';
+import { agentSwarmResultSummaryFromOutput } from "./agent-swarm-progress";
+import { PlanBoxComponent } from "./plan-box";
+import { ShellExecutionComponent } from "./shell-execution";
+import { countNonEmptyLines, pickChip } from "./tool-renderers/chip";
+import { buildGoalToolHeader } from "./tool-renderers/goal";
+import {
+  isGenericToolResult,
+  pickResultRenderer,
+} from "./tool-renderers/registry";
 
 const MAX_ARG_LENGTH = 60;
 const MAX_SUB_TOOL_CALLS_SHOWN = 4;
 // Cap the Agent `description` in the single-subagent header so a long prompt
 // cannot wrap the header onto a second row and break the card's stable height.
 const MAX_SUBAGENT_DESCRIPTION_LENGTH = 60;
-const APPROVED_PLAN_MARKER = '## Approved Plan:';
-const AUTO_APPROVED_PLAN_MARKER = '## Plan (auto-approved, not user-reviewed):';
+const APPROVED_PLAN_MARKER = "## Approved Plan:";
+const AUTO_APPROVED_PLAN_MARKER = "## Plan (auto-approved, not user-reviewed):";
 const STREAMING_PROGRESS_INTERVAL_MS = 1000;
 const PROGRESS_URL_RE = /https?:\/\/\S+/g;
-const ABORTED_MARK = '⊘';
+const ABORTED_MARK = "⊘";
 const MAX_LIVE_OUTPUT_CHARS = 50_000;
 
 /** Delay before a long-running foreground Bash/Agent card advertises Ctrl+B. */
 const DETACH_HINT_DELAY_MS = 10_000;
-const DETACH_HINT_TEXT = 'Press Ctrl+B to run in background';
+const DETACH_HINT_TEXT = "Press Ctrl+B to run in background";
 
-type SubagentTextKind = 'thinking' | 'text';
-type SubagentPhase = 'queued' | 'spawning' | 'running' | 'done' | 'failed' | 'backgrounded';
+type SubagentTextKind = "thinking" | "text";
+type SubagentPhase =
+  | "queued"
+  | "spawning"
+  | "running"
+  | "done"
+  | "failed"
+  | "backgrounded";
 
 interface FinishedSubCall {
   readonly name: string;
@@ -73,7 +95,7 @@ interface SubToolActivity {
   readonly id: string;
   name: string;
   args: Record<string, unknown>;
-  phase: 'ongoing' | 'done' | 'failed';
+  phase: "ongoing" | "done" | "failed";
   output?: string;
   readonly orderSeq: number;
 }
@@ -113,39 +135,45 @@ export interface ToolCallSubagentSnapshot {
 export interface ToolCallReadSnapshot {
   readonly toolCallId: string;
   readonly filePath: string | undefined;
-  readonly phase: 'pending' | 'done' | 'failed';
+  readonly phase: "pending" | "done" | "failed";
   readonly lines: number;
 }
 
 function backgroundFailureMessage(
-  status: 'completed' | 'failed' | 'timed_out' | 'killed' | 'lost' | undefined,
+  status: "completed" | "failed" | "timed_out" | "killed" | "lost" | undefined,
 ): string | undefined {
   switch (status) {
-    case 'lost':
-      return 'Background agent lost (session restarted before completion)';
-    case 'killed':
-      return 'Background agent killed';
-    case 'timed_out':
-      return 'Background agent timed out';
-    case 'failed':
-      return 'Background agent failed';
-    case 'completed':
+    case "lost":
+      return "Background agent lost (session restarted before completion)";
+    case "killed":
+      return "Background agent killed";
+    case "timed_out":
+      return "Background agent timed out";
+    case "failed":
+      return "Background agent failed";
+    case "completed":
     case undefined:
       return undefined;
   }
 }
 
 function str(v: unknown): string {
-  return typeof v === 'string' ? v : '';
+  return typeof v === "string" ? v : "";
 }
 
-function formatSubagentContextTokens(contextTokens: number | undefined): string | undefined {
+function formatSubagentContextTokens(
+  contextTokens: number | undefined,
+): string | undefined {
   if (contextTokens === undefined || contextTokens <= 0) return undefined;
   return `${formatTokenCount(contextTokens)} tok`;
 }
 
 function usageInputTotal(usage: TokenUsage): number {
-  return (usage.inputOther ?? 0) + (usage.inputCacheRead ?? 0) + (usage.inputCacheCreation ?? 0);
+  return (
+    (usage.inputOther ?? 0) +
+    (usage.inputCacheRead ?? 0) +
+    (usage.inputCacheCreation ?? 0)
+  );
 }
 
 function usageTotal(usage: TokenUsage | undefined): number {
@@ -153,7 +181,9 @@ function usageTotal(usage: TokenUsage | undefined): number {
   return usageInputTotal(usage) + usage.output;
 }
 
-function formatSubagentTokens(usage: TokenUsage | undefined): string | undefined {
+function formatSubagentTokens(
+  usage: TokenUsage | undefined,
+): string | undefined {
   const total = usageTotal(usage);
   if (total <= 0) return undefined;
   return `${formatTokenCount(total)} tok`;
@@ -177,22 +207,23 @@ function extractApprovedPlan(output: string): string {
     ? AUTO_APPROVED_PLAN_MARKER
     : APPROVED_PLAN_MARKER;
   const markerIndex = output.indexOf(marker);
-  if (markerIndex < 0) return '';
+  if (markerIndex < 0) return "";
   return output.slice(markerIndex + marker.length).trim();
 }
 
 interface ExitPlanModeOutcome {
-  readonly kind: 'approved' | 'auto_approved' | 'rejected';
+  readonly kind: "approved" | "auto_approved" | "rejected";
   readonly chosen?: string;
   readonly feedback?: string;
   readonly path?: string;
 }
 
-const REJECT_PREFIX = 'User rejected the plan.';
-const REJECT_FEEDBACK_PREFIX = 'User rejected the plan. Feedback:';
+const REJECT_PREFIX = "User rejected the plan.";
+const REJECT_FEEDBACK_PREFIX = "User rejected the plan. Feedback:";
 const APPROVED_OPTION_RE = /^User approved option "([^"]+)"\./;
-const PLAN_REJECT_PREFIX = 'Plan rejected by user.';
-const SELECTED_APPROACH_RE = /^Exited plan mode\. Selected approach: ([^\n]+)\n/;
+const PLAN_REJECT_PREFIX = "Plan rejected by user.";
+const SELECTED_APPROACH_RE =
+  /^Exited plan mode\. Selected approach: ([^\n]+)\n/;
 const PLAN_SAVED_TO_RE = /\nPlan saved to: ([^\n]+)\n/;
 
 /**
@@ -218,34 +249,37 @@ function interpretExitPlanModeOutcome(output: string): ExitPlanModeOutcome {
   if (output.startsWith(REJECT_PREFIX)) {
     if (output.startsWith(REJECT_FEEDBACK_PREFIX)) {
       const feedback = output.slice(REJECT_FEEDBACK_PREFIX.length).trimStart();
-      return { kind: 'rejected', feedback };
+      return { kind: "rejected", feedback };
     }
-    return { kind: 'rejected' };
+    return { kind: "rejected" };
   }
   if (output.startsWith(PLAN_REJECT_PREFIX)) {
-    return { kind: 'rejected' };
+    return { kind: "rejected" };
   }
   const pathMatch = PLAN_SAVED_TO_RE.exec(output);
   const path = pathMatch?.[1]?.trim();
   if (output.includes(AUTO_APPROVED_PLAN_MARKER)) {
     return path !== undefined && path.length > 0
-      ? { kind: 'auto_approved', path }
-      : { kind: 'auto_approved' };
+      ? { kind: "auto_approved", path }
+      : { kind: "auto_approved" };
   }
-  const optionMatch = SELECTED_APPROACH_RE.exec(output) ?? APPROVED_OPTION_RE.exec(output);
+  const optionMatch =
+    SELECTED_APPROACH_RE.exec(output) ?? APPROVED_OPTION_RE.exec(output);
   if (optionMatch !== null) {
     return path !== undefined && path.length > 0
-      ? { kind: 'approved', chosen: optionMatch[1], path }
-      : { kind: 'approved', chosen: optionMatch[1] };
+      ? { kind: "approved", chosen: optionMatch[1], path }
+      : { kind: "approved", chosen: optionMatch[1] };
   }
-  return path !== undefined && path.length > 0 ? { kind: 'approved', path } : { kind: 'approved' };
+  return path !== undefined && path.length > 0
+    ? { kind: "approved", path }
+    : { kind: "approved" };
 }
 
 function isExitPlanModeOutcomeOutput(output: string): boolean {
   return (
     output.startsWith(REJECT_PREFIX) ||
     output.startsWith(PLAN_REJECT_PREFIX) ||
-    output.startsWith('Exited plan mode.') ||
+    output.startsWith("Exited plan mode.") ||
     APPROVED_OPTION_RE.test(output) ||
     output.includes(APPROVED_PLAN_MARKER) ||
     output.includes(AUTO_APPROVED_PLAN_MARKER)
@@ -255,22 +289,22 @@ function isExitPlanModeOutcomeOutput(output: string): boolean {
 function unescapeJsonString(s: string): string {
   return s.replaceAll(/\\(["\\/bfnrt])/g, (_, ch: string) => {
     switch (ch) {
-      case 'n':
-        return '\n';
-      case 't':
-        return '\t';
-      case 'r':
-        return '\r';
-      case 'b':
-        return '\b';
-      case 'f':
-        return '\f';
+      case "n":
+        return "\n";
+      case "t":
+        return "\t";
+      case "r":
+        return "\r";
+      case "b":
+        return "\b";
+      case "f":
+        return "\f";
       case '"':
         return '"';
-      case '\\':
-        return '\\';
-      case '/':
-        return '/';
+      case "\\":
+        return "\\";
+      case "/":
+        return "/";
       default:
         return ch;
     }
@@ -284,44 +318,47 @@ function unescapeJsonString(s: string): string {
  * real newline we can highlight. Returns `undefined` if the field hasn't
  * started streaming yet.
  */
-function extractPartialStringField(text: string, key: string): string | undefined {
+function extractPartialStringField(
+  text: string,
+  key: string,
+): string | undefined {
   const opener = new RegExp(`"${key}"\\s*:\\s*"`);
   const match = opener.exec(text);
   if (match === null) return undefined;
   const start = match.index + match[0].length;
-  let out = '';
+  let out = "";
   let i = start;
   while (i < text.length) {
     const ch = text[i];
-    if (ch === '\\') {
+    if (ch === "\\") {
       const next = text[i + 1];
       if (next === undefined) return out;
       switch (next) {
-        case 'n':
-          out += '\n';
+        case "n":
+          out += "\n";
           break;
-        case 't':
-          out += '\t';
+        case "t":
+          out += "\t";
           break;
-        case 'r':
-          out += '\r';
+        case "r":
+          out += "\r";
           break;
-        case 'b':
-          out += '\b';
+        case "b":
+          out += "\b";
           break;
-        case 'f':
-          out += '\f';
+        case "f":
+          out += "\f";
           break;
         case '"':
           out += '"';
           break;
-        case '\\':
-          out += '\\';
+        case "\\":
+          out += "\\";
           break;
-        case '/':
-          out += '/';
+        case "/":
+          out += "/";
           break;
-        case 'u': {
+        case "u": {
           if (i + 5 >= text.length) return out;
           const hex = text.slice(i + 2, i + 6);
           const code = Number.parseInt(hex, 16);
@@ -348,11 +385,15 @@ function parseArgsPreview(value: string): Record<string, unknown> {
   if (previewText.trim().length === 0) return {};
   if (
     value.length <= STREAMING_ARGS_PREVIEW_MAX_CHARS &&
-    previewText.trimEnd().endsWith('}')
+    previewText.trimEnd().endsWith("}")
   ) {
     try {
       const parsed = JSON.parse(previewText) as unknown;
-      if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+      if (
+        typeof parsed === "object" &&
+        parsed !== null &&
+        !Array.isArray(parsed)
+      ) {
         return parsed as Record<string, unknown>;
       }
     } catch {
@@ -369,26 +410,33 @@ function parseArgsPreview(value: string): Record<string, unknown> {
   return result;
 }
 
-const PATH_KEYS = new Set(['path', 'file_path']);
+const PATH_KEYS = new Set(["path", "file_path"]);
 
 function truncateArgValue(key: string, value: string): string {
   if (value.length <= MAX_ARG_LENGTH) return value;
   if (PATH_KEYS.has(key)) {
     // Preserve the tail (filename) — drop the prefix so the user can
     // still tell which file is being touched.
-    return '…' + value.slice(value.length - (MAX_ARG_LENGTH - 1));
+    return "…" + value.slice(value.length - (MAX_ARG_LENGTH - 1));
   }
-  return value.slice(0, MAX_ARG_LENGTH - 3) + '...';
+  return value.slice(0, MAX_ARG_LENGTH - 3) + "...";
 }
 
-function makeWorkspaceRelativePath(filePath: string, workspaceDir: string | undefined): string {
-  if (workspaceDir === undefined || workspaceDir.length === 0 || !isAbsolute(filePath)) {
+function makeWorkspaceRelativePath(
+  filePath: string,
+  workspaceDir: string | undefined,
+): string {
+  if (
+    workspaceDir === undefined ||
+    workspaceDir.length === 0 ||
+    !isAbsolute(filePath)
+  ) {
     return filePath;
   }
   const relativePath = relative(workspaceDir, filePath);
   if (
     relativePath.length === 0 ||
-    relativePath === '..' ||
+    relativePath === ".." ||
     relativePath.startsWith(`..${sep}`) ||
     isAbsolute(relativePath)
   ) {
@@ -404,7 +452,7 @@ function formatKeyArgument(
   workspaceDir: string | undefined,
 ): string {
   const displayValue =
-    toolName === 'Read' && PATH_KEYS.has(key)
+    toolName === "Read" && PATH_KEYS.has(key)
       ? makeWorkspaceRelativePath(value, workspaceDir)
       : value;
   return truncateArgValue(key, displayValue);
@@ -416,42 +464,42 @@ function extractKeyArgument(
   workspaceDir?: string,
 ): string | null {
   const keyMap: Record<string, string[]> = {
-    Bash: ['command'],
-    Read: ['path', 'file_path'],
-    Write: ['path', 'file_path'],
-    Edit: ['path', 'file_path'],
-    Grep: ['pattern'],
-    Glob: ['pattern'],
-    FetchURL: ['url'],
-    WebSearch: ['query'],
+    Bash: ["command"],
+    Read: ["path", "file_path"],
+    Write: ["path", "file_path"],
+    Edit: ["path", "file_path"],
+    Grep: ["pattern"],
+    Glob: ["pattern"],
+    FetchURL: ["url"],
+    WebSearch: ["query"],
     // Prefer the short `description` so the header preview never spills a
     // multi-line `prompt` into the TUI chrome.
-    Agent: ['description', 'prompt'],
+    Agent: ["description", "prompt"],
   };
 
   // Glob: concatenate multiple args into a single summary so the header
   // shows pattern, optional explicit path, and ignored-file inclusion.
-  if (toolName === 'Glob') {
-    const pattern = args['pattern'];
-    if (typeof pattern !== 'string' || pattern.length === 0) return null;
+  if (toolName === "Glob") {
+    const pattern = args["pattern"];
+    if (typeof pattern !== "string" || pattern.length === 0) return null;
     let summary = pattern;
-    const path = args['path'];
-    if (typeof path === 'string' && path.length > 0) {
+    const path = args["path"];
+    if (typeof path === "string" && path.length > 0) {
       summary += ` · ${makeWorkspaceRelativePath(path, workspaceDir)}`;
     }
-    if (args['include_ignored'] === true) {
-      summary += ' · include ignored';
+    if (args["include_ignored"] === true) {
+      summary += " · include ignored";
     }
-    return truncateArgValue('pattern', summary);
+    return truncateArgValue("pattern", summary);
   }
 
   const candidates = keyMap[toolName] ?? Object.keys(args);
   for (const key of candidates) {
     const val = args[key];
-    if (typeof val === 'string' && val.length > 0) {
-      const firstLine = val.split('\n')[0] ?? val;
+    if (typeof val === "string" && val.length > 0) {
+      const firstLine = val.split("\n")[0] ?? val;
       const displayValue =
-        toolName === 'Bash' && val.includes('\n') ? `${firstLine}…` : firstLine;
+        toolName === "Bash" && val.includes("\n") ? `${firstLine}…` : firstLine;
       return formatKeyArgument(toolName, key, displayValue, workspaceDir);
     }
   }
@@ -460,12 +508,12 @@ function extractKeyArgument(
 
 function formatSubagentLabel(agentName: string | undefined): string {
   const raw = agentName?.trim();
-  if (raw === undefined || raw.length === 0) return 'SubAgent';
+  if (raw === undefined || raw.length === 0) return "SubAgent";
   const label = raw
     .split(/[-_\s]+/)
     .filter((part) => part.length > 0)
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ');
+    .join(" ");
   if (/\bagent$/i.test(label)) return label;
   return `${label} Agent`;
 }
@@ -473,7 +521,7 @@ function formatSubagentLabel(agentName: string | undefined): string {
 function tailNonEmptyLines(text: string, maxLines: number): string[] {
   if (text.length === 0) return [];
   return text
-    .split('\n')
+    .split("\n")
     .map((line) => line.trimEnd())
     .filter((line) => line.trim().length > 0)
     .slice(-maxLines);
@@ -494,7 +542,7 @@ class PrefixedWrappedLine implements Component {
     // reaches this many display rows, so a short paragraph still fills a
     // fixed-height window. Applied after `tailLines`.
     private readonly minLines?: number,
-  ) { }
+  ) {}
 
   invalidate(): void {
     this.renderCache = undefined;
@@ -502,7 +550,7 @@ class PrefixedWrappedLine implements Component {
 
   render(width: number): string[] {
     const safeWidth = Math.max(0, width);
-    if (safeWidth <= 0) return [''];
+    if (safeWidth <= 0) return [""];
 
     if (isRenderCacheEnabled() && this.renderCache?.width === safeWidth) {
       return this.renderCache.lines;
@@ -519,13 +567,15 @@ class PrefixedWrappedLine implements Component {
         ? wrapped.slice(wrapped.length - this.tailLines)
         : wrapped;
     if (this.minLines !== undefined) {
-      while (lines.length < this.minLines) lines.push('');
+      while (lines.length < this.minLines) lines.push("");
     }
     const rendered = lines
       .map((line, index) =>
-        index === 0 ? `${this.firstPrefix}${line}` : `${this.continuationPrefix}${line}`,
+        index === 0
+          ? `${this.firstPrefix}${line}`
+          : `${this.continuationPrefix}${line}`,
       )
-      .map((line) => truncateToWidth(line, safeWidth, '…'));
+      .map((line) => truncateToWidth(line, safeWidth, "…"));
     if (isRenderCacheEnabled()) {
       this.renderCache = { width: safeWidth, lines: rendered };
     }
@@ -569,11 +619,11 @@ export class ToolCallComponent extends Container {
    * Recent normal-output lines from the child agent. Historical replay can also
    * store mixed text here.
    */
-  private subagentText = '';
-  private subagentThinkingText = '';
+  private subagentText = "";
+  private subagentThinkingText = "";
   /** Tracks whether the child agent's latest streamed delta was text or thinking,
    *  so the active window can follow whichever is currently live. */
-  private lastSubagentStreamKind: SubagentTextKind = 'text';
+  private lastSubagentStreamKind: SubagentTextKind = "text";
   // ── Subagent lifecycle state from subagent.spawned/started/completed/failed ──
   private subagentPhase: SubagentPhase | undefined;
   /**
@@ -594,7 +644,7 @@ export class ToolCallComponent extends Container {
    * for grouped), which would otherwise mislabel every terminated
    * background agent — including lost ones — as `✓ Completed`.
    */
-  private backgroundTaskTerminalPhase: 'done' | 'failed' | undefined;
+  private backgroundTaskTerminalPhase: "done" | "failed" | undefined;
   private subagentContextTokens: number | undefined;
   private subagentUsage: TokenUsage | undefined;
   /** Display name of the model the subagent is bound to (from its `agent.status.updated`). */
@@ -617,7 +667,7 @@ export class ToolCallComponent extends Container {
   // authoritative final state.
   private progressLines: string[] = [];
   private static readonly MAX_PROGRESS_LINES = 24;
-  private liveOutput = '';
+  private liveOutput = "";
 
   /**
    * Advertises `Ctrl+B` on a foreground Bash/Agent card that has been running
@@ -663,7 +713,12 @@ export class ToolCallComponent extends Container {
   }
 
   private renderCache:
-    | { width: number; lines: string[]; childRefs: Component[]; childLines: string[][] }
+    | {
+        width: number;
+        lines: string[];
+        childRefs: Component[];
+        childLines: string[][];
+      }
     | undefined;
 
   override render(width: number): string[] {
@@ -683,7 +738,10 @@ export class ToolCallComponent extends Container {
       const lines = child.render(width);
       childRefs.push(child);
       childLines.push(lines);
-      if (cacheValid && (cache.childRefs[i] !== child || cache.childLines[i] !== lines)) {
+      if (
+        cacheValid &&
+        (cache.childRefs[i] !== child || cache.childLines[i] !== lines)
+      ) {
         allReused = false;
       }
       i++;
@@ -727,7 +785,7 @@ export class ToolCallComponent extends Container {
     // authoritative final state. Without this clear, a finished tool would
     // show both the streamed status lines and the final output stacked.
     this.progressLines = [];
-    this.liveOutput = '';
+    this.liveOutput = "";
     this.detachHintVisible = false;
     this.stopDetachHintTimer();
     this.finalizeSubagentElapsedIfNeeded();
@@ -761,7 +819,7 @@ export class ToolCallComponent extends Container {
    */
   appendProgress(text: string): void {
     if (this.result !== undefined) return;
-    for (const line of text.split('\n')) {
+    for (const line of text.split("\n")) {
       this.progressLines.push(line);
     }
     while (this.progressLines.length > ToolCallComponent.MAX_PROGRESS_LINES) {
@@ -798,13 +856,21 @@ export class ToolCallComponent extends Container {
    * plan box.
    */
   setPlanInfo(info: { plan?: string; path?: string }): void {
-    if (this.toolCall.name !== 'ExitPlanMode') return;
+    if (this.toolCall.name !== "ExitPlanMode") return;
     let changed = false;
-    if (info.plan !== undefined && info.plan.length > 0 && this.currentPlan !== info.plan) {
+    if (
+      info.plan !== undefined &&
+      info.plan.length > 0 &&
+      this.currentPlan !== info.plan
+    ) {
       this.currentPlan = info.plan;
       changed = true;
     }
-    if (info.path !== undefined && info.path.length > 0 && this.planPath !== info.path) {
+    if (
+      info.path !== undefined &&
+      info.path.length > 0 &&
+      this.planPath !== info.path
+    ) {
       this.planPath = info.path;
       changed = true;
     }
@@ -813,15 +879,15 @@ export class ToolCallComponent extends Container {
     this.ui?.requestRender();
   }
 
-  private applySubagentReplay(subagent: ToolCallBlockData['subagent']): void {
+  private applySubagentReplay(subagent: ToolCallBlockData["subagent"]): void {
     if (subagent === undefined) return;
     this.subagentAgentId = subagent.id;
     this.subagentAgentName = subagent.name;
-    this.subagentText = subagent.text ?? '';
+    this.subagentText = subagent.text ?? "";
     for (const call of subagent.toolCalls ?? []) {
       if (call.result === undefined) {
         this.ongoingSubCalls.set(call.id, { name: call.name, args: call.args });
-        this.upsertSubToolActivity(call.id, call.name, call.args, 'ongoing');
+        this.upsertSubToolActivity(call.id, call.name, call.args, "ongoing");
         continue;
       }
       this.finishedSubCalls.push({
@@ -834,7 +900,7 @@ export class ToolCallComponent extends Container {
         call.id,
         call.name,
         call.args,
-        call.result.is_error === true ? 'failed' : 'done',
+        call.result.is_error === true ? "failed" : "done",
         call.result.output,
       );
     }
@@ -847,7 +913,11 @@ export class ToolCallComponent extends Container {
   // ── Subagent API (called by KimiTUI event routing) ───────────────
 
   setSubagentMeta(agentId: string, agentName?: string): void {
-    if (this.subagentAgentId === agentId && this.subagentAgentName === agentName) return;
+    if (
+      this.subagentAgentId === agentId &&
+      this.subagentAgentName === agentName
+    )
+      return;
     this.subagentAgentId = agentId;
     this.subagentAgentName = agentName;
     this.headerText.setText(this.buildHeader());
@@ -873,7 +943,9 @@ export class ToolCallComponent extends Container {
     const tokens =
       contextTokens && contextTokens > 0
         ? contextTokens
-        : (this.subagentUsage === undefined ? 0 : usageTotal(this.subagentUsage));
+        : this.subagentUsage === undefined
+          ? 0
+          : usageTotal(this.subagentUsage);
     const latestActivity = computeLatestActivity(
       this.ongoingSubCalls,
       this.finishedSubCalls,
@@ -896,18 +968,21 @@ export class ToolCallComponent extends Container {
     // the standalone derivation so both paths agree.
     const derivedPhase = this.getDerivedSubagentPhase();
     const errorText =
-      this.subagentError ?? (derivedPhase === 'failed' ? this.result?.output : undefined);
+      this.subagentError ??
+      (derivedPhase === "failed" ? this.result?.output : undefined);
     return {
       toolCallId: this.toolCall.id,
       toolName: this.toolCall.name,
-      toolCallDescription: str(this.toolCall.args['description']) || str(this.toolCall.description),
+      toolCallDescription:
+        str(this.toolCall.args["description"]) ||
+        str(this.toolCall.description),
       agentName: this.subagentAgentName,
       model: this.subagentModel,
       phase: derivedPhase,
       toolCount: finished,
       elapsedSeconds: this.getSubagentElapsedSeconds(),
       tokens,
-      isError: derivedPhase === 'failed',
+      isError: derivedPhase === "failed",
       errorText,
       latestActivity,
     };
@@ -921,21 +996,31 @@ export class ToolCallComponent extends Container {
    */
   getReadSnapshot(): ToolCallReadSnapshot {
     const args = this.toolCall.args;
-    const filePathRaw = args['file_path'] ?? args['path'];
+    const filePathRaw = args["file_path"] ?? args["path"];
     const filePath =
-      typeof filePathRaw === 'string'
+      typeof filePathRaw === "string"
         ? makeWorkspaceRelativePath(filePathRaw, this.workspaceDir)
         : undefined;
     if (this.result === undefined) {
-      return { toolCallId: this.toolCall.id, filePath, phase: 'pending', lines: 0 };
+      return {
+        toolCallId: this.toolCall.id,
+        filePath,
+        phase: "pending",
+        lines: 0,
+      };
     }
     if (this.result.is_error === true) {
-      return { toolCallId: this.toolCall.id, filePath, phase: 'failed', lines: 0 };
+      return {
+        toolCallId: this.toolCall.id,
+        filePath,
+        phase: "failed",
+        lines: 0,
+      };
     }
     return {
       toolCallId: this.toolCall.id,
       filePath,
-      phase: 'done',
+      phase: "done",
       lines: countNonEmptyLines(this.result.output),
     };
   }
@@ -954,7 +1039,7 @@ export class ToolCallComponent extends Container {
     id: string,
     name: string,
     args: Record<string, unknown>,
-    phase: SubToolActivity['phase'],
+    phase: SubToolActivity["phase"],
     output?: string,
   ): void {
     const existing = this.subToolActivities.get(id);
@@ -976,12 +1061,14 @@ export class ToolCallComponent extends Container {
   }
 
   private getCombinedSubagentText(): string {
-    return [this.subagentThinkingText, this.subagentText].filter((s) => s.length > 0).join('\n');
+    return [this.subagentThinkingText, this.subagentText]
+      .filter((s) => s.length > 0)
+      .join("\n");
   }
 
   private isStreamingEditPreview(): boolean {
     return (
-      this.toolCall.name === 'Edit' &&
+      this.toolCall.name === "Edit" &&
       this.result === undefined &&
       this.toolCall.streamingArguments !== undefined
     );
@@ -992,7 +1079,8 @@ export class ToolCallComponent extends Container {
       this.stopStreamingProgressTimer();
       return;
     }
-    if (this.ui === undefined || this.streamingProgressTimer !== undefined) return;
+    if (this.ui === undefined || this.streamingProgressTimer !== undefined)
+      return;
     this.streamingProgressTimer = setInterval(() => {
       if (!this.isStreamingEditPreview()) {
         this.stopStreamingProgressTimer();
@@ -1011,14 +1099,14 @@ export class ToolCallComponent extends Container {
 
   /** Only foreground Bash/Agent calls can be detached via Ctrl+B. */
   private isDetachHintEligible(): boolean {
-    return this.toolCall.name === 'Bash' || this.toolCall.name === 'Agent';
+    return this.toolCall.name === "Bash" || this.toolCall.name === "Agent";
   }
 
   private startDetachHintTimer(): void {
     if (!this.isDetachHintEligible()) return;
     if (this.result !== undefined) return;
     if (this.ui === undefined) return;
-    if (this.toolCall.name === 'Agent') {
+    if (this.toolCall.name === "Agent") {
       // Subagents are long-running by nature; advertise Ctrl+B immediately
       // instead of waiting out the delay used for short Bash commands.
       if (this.detachHintVisible) return;
@@ -1054,22 +1142,28 @@ export class ToolCallComponent extends Container {
     const shouldTick =
       this.isSingleSubagentView() &&
       this.subagentStartedAtMs !== undefined &&
-      (phase === 'queued' || phase === 'spawning' || phase === 'running');
+      (phase === "queued" || phase === "spawning" || phase === "running");
     if (!shouldTick) {
       this.stopSubagentElapsedTimer();
       return;
     }
-    if (this.ui === undefined || this.subagentElapsedTimer !== undefined) return;
+    if (this.ui === undefined || this.subagentElapsedTimer !== undefined)
+      return;
     this.subagentElapsedTimer = setInterval(() => {
       const latestPhase = this.getDerivedSubagentPhase();
-      if (latestPhase !== 'queued' && latestPhase !== 'spawning' && latestPhase !== 'running') {
+      if (
+        latestPhase !== "queued" &&
+        latestPhase !== "spawning" &&
+        latestPhase !== "running"
+      ) {
         this.stopSubagentElapsedTimer();
         return;
       }
       // Drives both the braille spinner in the header and the elapsed-seconds
       // refresh. Only the header text changes on a tick, so we avoid rebuilding
       // the body (which would defeat the per-component render caches).
-      this.subagentSpinnerFrame = (this.subagentSpinnerFrame + 1) % BRAILLE_SPINNER_FRAMES.length;
+      this.subagentSpinnerFrame =
+        (this.subagentSpinnerFrame + 1) % BRAILLE_SPINNER_FRAMES.length;
       this.headerText.setText(this.buildHeader());
       this.notifySnapshotChange();
       this.ui?.requestRender();
@@ -1084,7 +1178,7 @@ export class ToolCallComponent extends Container {
 
   private finalizeSubagentElapsedIfNeeded(): void {
     if (
-      this.toolCall.name === 'Agent' &&
+      this.toolCall.name === "Agent" &&
       this.subagentStartedAtMs !== undefined &&
       this.subagentEndedAtMs === undefined
     ) {
@@ -1105,7 +1199,7 @@ export class ToolCallComponent extends Container {
   }): void {
     this.subagentAgentId = meta.agentId;
     this.subagentAgentName = meta.agentName;
-    this.subagentPhase = meta.runInBackground ? 'backgrounded' : 'queued';
+    this.subagentPhase = meta.runInBackground ? "backgrounded" : "queued";
     this.subagentStartedAtMs = Date.now();
     this.subagentEndedAtMs = undefined;
     this.syncSubagentElapsedTimer();
@@ -1125,9 +1219,9 @@ export class ToolCallComponent extends Container {
     this.subagentAgentName = meta.agentName;
     if (
       !meta.runInBackground &&
-      (this.subagentPhase === undefined || this.subagentPhase === 'queued')
+      (this.subagentPhase === undefined || this.subagentPhase === "queued")
     ) {
-      this.subagentPhase = 'running';
+      this.subagentPhase = "running";
     }
     this.syncSubagentElapsedTimer();
     this.headerText.setText(this.buildHeader());
@@ -1145,7 +1239,7 @@ export class ToolCallComponent extends Container {
     usage?: TokenUsage | undefined;
     resultSummary: string;
   }): void {
-    this.subagentPhase = 'done';
+    this.subagentPhase = "done";
     this.subagentEndedAtMs ??= Date.now();
     if (payload.contextTokens !== undefined && payload.contextTokens > 0) {
       this.subagentContextTokens = payload.contextTokens;
@@ -1153,7 +1247,10 @@ export class ToolCallComponent extends Container {
     this.subagentUsage = payload.usage;
     this.subagentResultSummary =
       payload.resultSummary.length > 0 ? payload.resultSummary : undefined;
-    if (this.subagentText.trim().length === 0 && this.subagentResultSummary !== undefined) {
+    if (
+      this.subagentText.trim().length === 0 &&
+      this.subagentResultSummary !== undefined
+    ) {
       this.subagentText = this.subagentResultSummary;
     }
     this.syncSubagentElapsedTimer();
@@ -1186,7 +1283,7 @@ export class ToolCallComponent extends Container {
 
   /** Handles SDK `subagent.failed`. */
   onSubagentFailed(payload: { error: string }): void {
-    this.subagentPhase = 'failed';
+    this.subagentPhase = "failed";
     this.subagentEndedAtMs ??= Date.now();
     this.subagentError = payload.error;
     this.syncSubagentElapsedTimer();
@@ -1204,14 +1301,14 @@ export class ToolCallComponent extends Container {
    * reclassifies a previously-running task as `lost`).
    */
   setBackgroundTaskTerminalStatus(
-    status: 'completed' | 'failed' | 'timed_out' | 'killed' | 'lost',
+    status: "completed" | "failed" | "timed_out" | "killed" | "lost",
     options: { errorText?: string | undefined } = {},
   ): void {
-    const phase: 'done' | 'failed' = status === 'completed' ? 'done' : 'failed';
+    const phase: "done" | "failed" = status === "completed" ? "done" : "failed";
     const { errorText } = options;
     const phaseUnchanged = this.backgroundTaskTerminalPhase === phase;
     let errorChanged = false;
-    if (phase === 'failed') {
+    if (phase === "failed") {
       // Surface the failure line through the same `subagentError` slot that
       // `onSubagentFailed` writes. The standalone card reads this in
       // `buildSingleSubagentBlock`; the group card reads it via `errorText`
@@ -1252,7 +1349,7 @@ export class ToolCallComponent extends Container {
   markBackgrounded(): void {
     if (this.detachedFromForeground) return;
     this.detachedFromForeground = true;
-    this.subagentPhase = 'backgrounded';
+    this.subagentPhase = "backgrounded";
     this.headerText.setText(this.buildHeader());
     this.rebuildContent();
     this.notifySnapshotChange();
@@ -1282,8 +1379,11 @@ export class ToolCallComponent extends Container {
    */
   getSubagentAgentId(): string | undefined {
     if (this.subagentAgentId !== undefined) return this.subagentAgentId;
-    if (this.toolCall.name !== 'Agent' || this.result === undefined) return undefined;
-    const match = this.result.output.match(/^agent_id:\s*(agent-[A-Za-z0-9_-]+)/m);
+    if (this.toolCall.name !== "Agent" || this.result === undefined)
+      return undefined;
+    const match = this.result.output.match(
+      /^agent_id:\s*(agent-[A-Za-z0-9_-]+)/m,
+    );
     return match?.[1];
   }
 
@@ -1291,14 +1391,14 @@ export class ToolCallComponent extends Container {
    *  fallback when the wire format pre-dates persisted subagent ids and
    *  the only stable cross-restart identifier is the description string. */
   getAgentToolDescription(): string | undefined {
-    if (this.toolCall.name !== 'Agent') return undefined;
-    const desc = this.toolCall.args['description'];
-    return typeof desc === 'string' ? desc : undefined;
+    if (this.toolCall.name !== "Agent") return undefined;
+    const desc = this.toolCall.args["description"];
+    return typeof desc === "string" ? desc : undefined;
   }
 
-  appendSubagentText(text: string, kind: SubagentTextKind = 'text'): void {
+  appendSubagentText(text: string, kind: SubagentTextKind = "text"): void {
     this.lastSubagentStreamKind = kind;
-    if (kind === 'thinking') {
+    if (kind === "thinking") {
       this.subagentThinkingText += text;
     } else {
       this.subagentText += text;
@@ -1306,10 +1406,10 @@ export class ToolCallComponent extends Container {
     // Child-agent activity means it is running unless already terminal/backgrounded.
     if (
       this.subagentPhase === undefined ||
-      this.subagentPhase === 'queued' ||
-      this.subagentPhase === 'spawning'
+      this.subagentPhase === "queued" ||
+      this.subagentPhase === "spawning"
     ) {
-      this.subagentPhase = 'running';
+      this.subagentPhase = "running";
     }
     this.headerText.setText(this.buildHeader());
     this.rebuildContent();
@@ -1317,7 +1417,11 @@ export class ToolCallComponent extends Container {
     this.ui?.requestRender();
   }
 
-  appendSubToolCall(call: { id: string; name: string; args: Record<string, unknown> }): void {
+  appendSubToolCall(call: {
+    id: string;
+    name: string;
+    args: Record<string, unknown>;
+  }): void {
     const existing = this.ongoingSubCalls.get(call.id);
     this.ongoingSubCalls.set(call.id, {
       name: call.name,
@@ -1326,13 +1430,13 @@ export class ToolCallComponent extends Container {
         ? { streamingArguments: existing.streamingArguments }
         : {}),
     });
-    this.upsertSubToolActivity(call.id, call.name, call.args, 'ongoing');
+    this.upsertSubToolActivity(call.id, call.name, call.args, "ongoing");
     if (
       this.subagentPhase === undefined ||
-      this.subagentPhase === 'queued' ||
-      this.subagentPhase === 'spawning'
+      this.subagentPhase === "queued" ||
+      this.subagentPhase === "spawning"
     ) {
-      this.subagentPhase = 'running';
+      this.subagentPhase = "running";
     }
     this.headerText.setText(this.buildHeader());
     this.rebuildContent();
@@ -1352,17 +1456,22 @@ export class ToolCallComponent extends Container {
     );
     const parsed = parseArgsPreview(nextArgsText);
     this.ongoingSubCalls.set(delta.id, {
-      name: delta.name ?? existing?.name ?? 'Tool',
+      name: delta.name ?? existing?.name ?? "Tool",
       args: parsed,
       streamingArguments: nextArgsText,
     });
-    this.upsertSubToolActivity(delta.id, delta.name ?? existing?.name ?? 'Tool', parsed, 'ongoing');
+    this.upsertSubToolActivity(
+      delta.id,
+      delta.name ?? existing?.name ?? "Tool",
+      parsed,
+      "ongoing",
+    );
     if (
       this.subagentPhase === undefined ||
-      this.subagentPhase === 'queued' ||
-      this.subagentPhase === 'spawning'
+      this.subagentPhase === "queued" ||
+      this.subagentPhase === "spawning"
     ) {
-      this.subagentPhase = 'running';
+      this.subagentPhase = "running";
     }
     this.headerText.setText(this.buildHeader());
     this.rebuildContent();
@@ -1375,14 +1484,20 @@ export class ToolCallComponent extends Container {
     const activity = this.subToolActivities.get(id);
     const ongoing = this.ongoingSubCalls.get(id);
     if (activity === undefined && ongoing === undefined) return;
-    const name = activity?.name ?? ongoing?.name ?? 'Tool';
+    const name = activity?.name ?? ongoing?.name ?? "Tool";
     const args = activity?.args ?? ongoing?.args ?? {};
-    const existingOutput = activity?.output ?? '';
+    const existingOutput = activity?.output ?? "";
     let output = existingOutput + text;
     if (output.length > MAX_LIVE_OUTPUT_CHARS) {
       output = `[...truncated]\n${output.slice(output.length - MAX_LIVE_OUTPUT_CHARS)}`;
     }
-    this.upsertSubToolActivity(id, name, args, activity?.phase ?? 'ongoing', output);
+    this.upsertSubToolActivity(
+      id,
+      name,
+      args,
+      activity?.phase ?? "ongoing",
+      output,
+    );
     this.rebuildContent();
     this.notifySnapshotChange();
     this.ui?.requestRender();
@@ -1406,7 +1521,7 @@ export class ToolCallComponent extends Container {
       result.tool_call_id,
       ongoing.name,
       ongoing.args,
-      result.is_error === true ? 'failed' : 'done',
+      result.is_error === true ? "failed" : "done",
       result.output,
     );
     while (this.finishedSubCalls.length > MAX_SUB_TOOL_CALLS_SHOWN) {
@@ -1427,62 +1542,65 @@ export class ToolCallComponent extends Container {
 
     let bullet: string;
     if (isFinished) {
-      bullet = isError ? currentTheme.fg('error', '✗ ') : currentTheme.fg('success', STATUS_BULLET);
+      bullet = isError
+        ? currentTheme.fg("error", "✗ ")
+        : currentTheme.fg("success", STATUS_BULLET);
     } else if (isTruncated) {
-      bullet = currentTheme.fg('error', '✗ ');
+      bullet = currentTheme.fg("error", "✗ ");
     } else {
       // Solid bullet for in-flight tools — the previous marker ↔ blank
       // toggle caused visible flicker on every re-render.
-      bullet = currentTheme.fg('text', STATUS_BULLET);
+      bullet = currentTheme.fg("text", STATUS_BULLET);
     }
 
-    if (toolCall.name === 'ExitPlanMode') {
-      const label = currentTheme.boldFg('primary', 'Current plan');
+    if (toolCall.name === "ExitPlanMode") {
+      const label = currentTheme.boldFg("primary", "Current plan");
       if (!isFinished || result === undefined || result.is_error === true) {
         return label;
       }
       const outcome = interpretExitPlanModeOutcome(result.output);
-      if (outcome.kind === 'approved') {
+      if (outcome.kind === "approved") {
         const chipText =
           outcome.chosen !== undefined && outcome.chosen.length > 0
             ? `Approved: ${outcome.chosen}`
-            : 'Approved';
-        return `${label}${currentTheme.fg('success', ` · ${chipText}`)}`;
+            : "Approved";
+        return `${label}${currentTheme.fg("success", ` · ${chipText}`)}`;
       }
-      if (outcome.kind === 'auto_approved') {
+      if (outcome.kind === "auto_approved") {
         // Auto permission mode let the plan through without user review —
         // a warning-toned chip keeps "the user approved this" out of the UI.
-        return `${label}${currentTheme.fg('warning', ' · Auto-approved')}`;
+        return `${label}${currentTheme.fg("warning", " · Auto-approved")}`;
       }
       return label;
     }
 
-    if (toolCall.name === 'AskUserQuestion') {
-      const isBackgroundAsk = toolCall.args['background'] === true;
+    if (toolCall.name === "AskUserQuestion") {
+      const isBackgroundAsk = toolCall.args["background"] === true;
       const label = isFinished
         ? isError
-          ? 'Could not collect your input'
+          ? "Could not collect your input"
           : isBackgroundAsk
-            ? 'Started background question'
-          : 'Collected your answers'
+            ? "Started background question"
+            : "Collected your answers"
         : isBackgroundAsk
-          ? 'Starting background question'
-          : 'Waiting for your input';
-      const tone = isError ? 'error' : 'primary';
+          ? "Starting background question"
+          : "Waiting for your input";
+      const tone = isError ? "error" : "primary";
       return `${bullet}${currentTheme.boldFg(tone, label)}`;
     }
 
-    if (toolCall.name === 'Bash') {
+    if (toolCall.name === "Bash") {
       // The command itself is rendered in the body (with a `$` prompt), so the
       // header only names the action — repeating the command in parentheses
       // would duplicate the body. Wording mirrors the other label-only headers
       // (e.g. AskUserQuestion): the whole label takes the tone colour.
       if (isTruncated) {
-        return `${bullet}${currentTheme.fg('error', 'Truncated')} ${currentTheme.boldFg('primary', 'Bash')}`;
+        return `${bullet}${currentTheme.fg("error", "Truncated")} ${currentTheme.boldFg("primary", "Bash")}`;
       }
-      const label = isFinished ? 'Ran a command' : 'Running a command';
-      const tone = isError ? 'error' : 'primary';
-      const chipStr = isFinished && result !== undefined ? this.buildHeaderChip(result) : '';
+      const label = isFinished ? "Ran a command" : "Running a command";
+      const tone = isError ? "error" : "primary";
+      const chipStr =
+        isFinished && result !== undefined ? this.buildHeaderChip(result) : "";
       return `${bullet}${currentTheme.boldFg(tone, label)}${chipStr}`;
     }
 
@@ -1490,7 +1608,8 @@ export class ToolCallComponent extends Container {
       toolCall,
       result,
       bullet,
-      chip: isFinished && result !== undefined ? this.buildHeaderChip(result) : '',
+      chip:
+        isFinished && result !== undefined ? this.buildHeaderChip(result) : "",
     });
     if (goalHeader !== undefined) return goalHeader;
 
@@ -1498,28 +1617,30 @@ export class ToolCallComponent extends Container {
       return this.buildSingleSubagentHeader();
     }
 
-    const verb = isFinished ? 'Used' : isTruncated ? 'Truncated' : 'Using';
-    const keyArg = extractKeyArgument(toolCall.name, toolCall.args, this.workspaceDir);
+    const verb = isFinished ? "Used" : isTruncated ? "Truncated" : "Using";
+    const keyArg = extractKeyArgument(
+      toolCall.name,
+      toolCall.args,
+      this.workspaceDir,
+    );
     const decoded = decodeMcpToolName(toolCall.name);
-    const verbStyled = isTruncated
-      ? currentTheme.fg('error', verb)
-      : verb;
+    const verbStyled = isTruncated ? currentTheme.fg("error", verb) : verb;
     const toolLabel =
       decoded !== null
-        ? `${currentTheme.boldFg('primary', decoded.toolName)}${currentTheme.dim(` · MCP/${decoded.serverName}`)}`
-        : currentTheme.boldFg('primary', toolCall.name);
-    const argStr = keyArg ? currentTheme.dim(` (${keyArg})`) : '';
-    let chipStr = '';
+        ? `${currentTheme.boldFg("primary", decoded.toolName)}${currentTheme.dim(` · MCP/${decoded.serverName}`)}`
+        : currentTheme.boldFg("primary", toolCall.name);
+    const argStr = keyArg ? currentTheme.dim(` (${keyArg})`) : "";
+    let chipStr = "";
     if (isFinished && result) chipStr = this.buildHeaderChip(result);
     return `${bullet}${verbStyled} ${toolLabel}${argStr}${chipStr}`;
   }
 
   private buildHeaderChip(result: ToolResultBlockData): string {
     const provider = pickChip(this.toolCall.name);
-    if (provider === undefined) return '';
+    if (provider === undefined) return "";
     const text = provider(this.toolCall, result);
-    if (text.length === 0) return '';
-    if (result.is_error) return currentTheme.fg('error', ` · ${text}`);
+    if (text.length === 0) return "";
+    if (result.is_error) return currentTheme.fg("error", ` · ${text}`);
     return currentTheme.dim(` · ${text}`);
   }
 
@@ -1562,15 +1683,15 @@ export class ToolCallComponent extends Container {
     if (this.result !== undefined) return;
     for (const raw of this.progressLines) {
       if (raw.length === 0) {
-        this.addChild(new Text('', 2, 0));
+        this.addChild(new Text("", 2, 0));
         continue;
       }
       PROGRESS_URL_RE.lastIndex = 0;
       const styled = PROGRESS_URL_RE.test(raw)
         ? raw.replace(PROGRESS_URL_RE, (url) => {
-          const visible = currentTheme.underlineFg('warning', url);
-          return `\u001B]8;;${url}\u001B\\${visible}\u001B]8;;\u001B\\`;
-        })
+            const visible = currentTheme.underlineFg("warning", url);
+            return `\u001B]8;;${url}\u001B\\${visible}\u001B]8;;\u001B\\`;
+          })
         : currentTheme.dim(raw);
       PROGRESS_URL_RE.lastIndex = 0;
       this.addChild(new Text(styled, 2, 0));
@@ -1617,13 +1738,19 @@ export class ToolCallComponent extends Container {
       this.subagentAgentName !== undefined
         ? `subagent ${this.subagentAgentName} (${this.formatAgentId()})`
         : `subagent (${this.formatAgentId()})`;
-    this.addChild(new Text(`  ${currentTheme.dim(`↳ ${headerLabel}`)}${phaseChip}`, 0, 0));
+    this.addChild(
+      new Text(`  ${currentTheme.dim(`↳ ${headerLabel}`)}${phaseChip}`, 0, 0),
+    );
 
     if (this.hiddenSubCallCount > 0) {
-      const suffix = this.hiddenSubCallCount > 1 ? 's' : '';
+      const suffix = this.hiddenSubCallCount > 1 ? "s" : "";
       this.addChild(
         new Text(
-          currentTheme.italic(currentTheme.dim(`    ${String(this.hiddenSubCallCount)} more tool call${suffix} ...`)),
+          currentTheme.italic(
+            currentTheme.dim(
+              `    ${String(this.hiddenSubCallCount)} more tool call${suffix} ...`,
+            ),
+          ),
           0,
           0,
         ),
@@ -1632,42 +1759,57 @@ export class ToolCallComponent extends Container {
 
     for (const sub of this.finishedSubCalls) {
       const mark = sub.isError
-        ? currentTheme.fg('error', '✗')
-        : currentTheme.fg('success', '•');
+        ? currentTheme.fg("error", "✗")
+        : currentTheme.fg("success", "•");
       const keyArg = extractKeyArgument(sub.name, sub.args, this.workspaceDir);
-      const nameCol = currentTheme.fg('primary', sub.name);
-      const argCol = keyArg ? currentTheme.dim(` (${keyArg})`) : '';
+      const nameCol = currentTheme.fg("primary", sub.name);
+      const argCol = keyArg ? currentTheme.dim(` (${keyArg})`) : "";
       this.addChild(new Text(`    ${mark} Used ${nameCol}${argCol}`, 0, 0));
     }
 
     for (const [id, call] of this.ongoingSubCalls) {
-      const keyArg = extractKeyArgument(call.name, call.args, this.workspaceDir);
-      const nameCol = currentTheme.fg('primary', call.name);
-      const argCol = keyArg ? currentTheme.dim(` (${keyArg})`) : '';
+      const keyArg = extractKeyArgument(
+        call.name,
+        call.args,
+        this.workspaceDir,
+      );
+      const nameCol = currentTheme.fg("primary", call.name);
+      const argCol = keyArg ? currentTheme.dim(` (${keyArg})`) : "";
       void id;
-      this.addChild(new Text(`    ${currentTheme.dim('…')} Using ${nameCol}${argCol}`, 0, 0));
+      this.addChild(
+        new Text(
+          `    ${currentTheme.dim("…")} Using ${nameCol}${argCol}`,
+          0,
+          0,
+        ),
+      );
     }
 
     if (this.subagentText.length > 0) {
-      const tailLines = this.subagentText.split('\n').slice(-3);
+      const tailLines = this.subagentText.split("\n").slice(-3);
       for (const line of tailLines) {
         this.addChild(new Text(`    ${currentTheme.dim(line)}`, 0, 0));
       }
     }
 
     // Result summary from subagent.completed.
-    if (this.subagentPhase === 'done' && this.subagentResultSummary !== undefined) {
-      const summaryLines = this.subagentResultSummary.split('\n').slice(0, 2);
+    if (
+      this.subagentPhase === "done" &&
+      this.subagentResultSummary !== undefined
+    ) {
+      const summaryLines = this.subagentResultSummary.split("\n").slice(0, 2);
       for (const line of summaryLines) {
-        this.addChild(new Text(`    ${currentTheme.dim('└')} ${line}`, 0, 0));
+        this.addChild(new Text(`    ${currentTheme.dim("└")} ${line}`, 0, 0));
       }
     }
 
     // Full error text from subagent.failed; do not collapse it.
-    if (this.subagentPhase === 'failed' && this.subagentError !== undefined) {
-      const errLines = this.subagentError.split('\n');
+    if (this.subagentPhase === "failed" && this.subagentError !== undefined) {
+      const errLines = this.subagentError.split("\n");
       for (const line of errLines) {
-        this.addChild(new Text(`    ${currentTheme.fg('error', '└')} ${line}`, 0, 0));
+        this.addChild(
+          new Text(`    ${currentTheme.fg("error", "└")} ${line}`, 0, 0),
+        );
       }
     }
   }
@@ -1682,41 +1824,43 @@ export class ToolCallComponent extends Container {
    *   backgrounded  -> backgrounded
    */
   private formatPhaseChip(): string {
-    if (this.subagentPhase === undefined) return '';
+    if (this.subagentPhase === undefined) return "";
     const parts: string[] = [];
     switch (this.subagentPhase) {
-      case 'queued':
-        parts.push('○ queued');
+      case "queued":
+        parts.push("○ queued");
         break;
-      case 'spawning':
-        parts.push('↻ starting…');
+      case "spawning":
+        parts.push("↻ starting…");
         break;
-      case 'running':
-        parts.push('↻ running');
+      case "running":
+        parts.push("↻ running");
         break;
-      case 'done': {
-        parts.push(currentTheme.fg('success', '✓ done'));
-        const toolCount = this.finishedSubCalls.length + this.hiddenSubCallCount;
-        if (toolCount > 0) parts.push(`${String(toolCount)} tool${toolCount > 1 ? 's' : ''}`);
+      case "done": {
+        parts.push(currentTheme.fg("success", "✓ done"));
+        const toolCount =
+          this.finishedSubCalls.length + this.hiddenSubCallCount;
+        if (toolCount > 0)
+          parts.push(`${String(toolCount)} tool${toolCount > 1 ? "s" : ""}`);
         const tokens =
           formatSubagentContextTokens(this.subagentContextTokens) ??
           formatSubagentTokens(this.subagentUsage);
         if (tokens !== undefined) parts.push(tokens);
         break;
       }
-      case 'failed':
-        parts.push(currentTheme.fg('error', '✗ failed'));
+      case "failed":
+        parts.push(currentTheme.fg("error", "✗ failed"));
         break;
-      case 'backgrounded':
-        parts.push('◐ backgrounded');
+      case "backgrounded":
+        parts.push("◐ backgrounded");
         break;
     }
-    return parts.length > 0 ? currentTheme.dim(` · ${parts.join(' · ')}`) : '';
+    return parts.length > 0 ? currentTheme.dim(` · ${parts.join(" · ")}`) : "";
   }
 
   private formatAgentId(): string {
-    const id = this.subagentAgentId ?? '';
-    return id.length > 10 ? id.slice(0, 10) + '…' : id;
+    const id = this.subagentAgentId ?? "";
+    return id.length > 10 ? id.slice(0, 10) + "…" : id;
   }
 
   private hasSubagentState(): boolean {
@@ -1733,7 +1877,7 @@ export class ToolCallComponent extends Container {
   }
 
   private isSingleSubagentView(): boolean {
-    return this.toolCall.name === 'Agent' && this.hasSubagentState();
+    return this.toolCall.name === "Agent" && this.hasSubagentState();
   }
 
   private getDerivedSubagentPhase(): SubagentPhase | undefined {
@@ -1745,30 +1889,32 @@ export class ToolCallComponent extends Container {
     // to `✓ Completed` and look like the work actually finished. Agents that
     // started in the background (`detachedFromForeground === false`) read as
     // `done` once their result lands.
-    if (this.detachedFromForeground && this.subagentPhase === 'backgrounded') {
-      return 'backgrounded';
+    if (this.detachedFromForeground && this.subagentPhase === "backgrounded") {
+      return "backgrounded";
     }
-    if (this.result !== undefined) return this.result.is_error ? 'failed' : 'done';
+    if (this.result !== undefined)
+      return this.result.is_error ? "failed" : "done";
     return this.subagentPhase;
   }
 
   private buildSingleSubagentHeader(): string {
     const phase = this.getDerivedSubagentPhase();
-    const isDone = phase === 'done';
+    const isDone = phase === "done";
     const marker = this.buildSingleSubagentMarker(phase);
     const labelText = formatSubagentLabel(this.subagentAgentName);
-    const label = currentTheme.boldFg('primary', labelText);
+    const label = currentTheme.boldFg("primary", labelText);
     const status = this.formatSingleSubagentStatus(phase);
-    const rawDescription = str(this.toolCall.args['description']);
+    const rawDescription = str(this.toolCall.args["description"]);
     const description =
       rawDescription.length > MAX_SUBAGENT_DESCRIPTION_LENGTH
         ? `${rawDescription.slice(0, MAX_SUBAGENT_DESCRIPTION_LENGTH - 1)}…`
         : rawDescription;
-    const descriptionPlain = description.length > 0 ? ` (${description})` : '';
-    const descriptionText = descriptionPlain.length > 0 ? currentTheme.dim(descriptionPlain) : '';
+    const descriptionPlain = description.length > 0 ? ` (${description})` : "";
+    const descriptionText =
+      descriptionPlain.length > 0 ? currentTheme.dim(descriptionPlain) : "";
     const statsText = this.formatSingleSubagentStatsText();
     if (isDone) {
-      return `${marker}${currentTheme.boldFg('success', labelText)} ${currentTheme.fg('success', `Completed${descriptionPlain}${statsText}`)}`;
+      return `${marker}${currentTheme.boldFg("success", labelText)} ${currentTheme.fg("success", `Completed${descriptionPlain}${statsText}`)}`;
     }
     const stats = currentTheme.dim(statsText);
     return `${marker}${label} ${status}${descriptionText}${stats}`;
@@ -1776,26 +1922,28 @@ export class ToolCallComponent extends Container {
 
   private formatSingleSubagentStatus(phase: SubagentPhase | undefined): string {
     switch (phase) {
-      case 'done':
-        return currentTheme.fg('success', 'Completed');
-      case 'failed':
-        return currentTheme.fg('error', 'Failed');
-      case 'running':
-        return currentTheme.fg('primary', 'Running');
-      case 'backgrounded':
-        return 'Backgrounded';
-      case 'queued':
-        return currentTheme.fg('primary', 'Queued');
-      case 'spawning':
+      case "done":
+        return currentTheme.fg("success", "Completed");
+      case "failed":
+        return currentTheme.fg("error", "Failed");
+      case "running":
+        return currentTheme.fg("primary", "Running");
+      case "backgrounded":
+        return "Backgrounded";
+      case "queued":
+        return currentTheme.fg("primary", "Queued");
+      case "spawning":
       case undefined:
-        return currentTheme.fg('primary', 'Starting');
+        return currentTheme.fg("primary", "Starting");
     }
   }
 
   private formatSingleSubagentStatsText(): string {
     const parts: string[] = [];
     if (this.subagentModel !== undefined) parts.push(this.subagentModel);
-    parts.push(`${String(this.subToolActivities.size)} tool${this.subToolActivities.size === 1 ? '' : 's'}`);
+    parts.push(
+      `${String(this.subToolActivities.size)} tool${this.subToolActivities.size === 1 ? "" : "s"}`,
+    );
     const elapsed = this.getSubagentElapsedSeconds();
     if (elapsed !== undefined) parts.push(formatElapsed(elapsed));
     const tokens =
@@ -1805,7 +1953,7 @@ export class ToolCallComponent extends Container {
           ? 0
           : usageTotal(this.subagentUsage);
     if (tokens > 0) parts.push(formatTokens(tokens));
-    return ` · ${parts.join(' · ')}`;
+    return ` · ${parts.join(" · ")}`;
   }
 
   private getSubagentElapsedSeconds(): number | undefined {
@@ -1815,13 +1963,15 @@ export class ToolCallComponent extends Container {
   }
 
   private buildSingleSubagentMarker(phase: SubagentPhase | undefined): string {
-    if (phase === 'failed') return currentTheme.fg('error', '✗ ');
-    if (phase === 'done') return currentTheme.fg('success', STATUS_BULLET);
-    if (phase === 'backgrounded') return currentTheme.dim('◐ ');
+    if (phase === "failed") return currentTheme.fg("error", "✗ ");
+    if (phase === "done") return currentTheme.fg("success", STATUS_BULLET);
+    if (phase === "backgrounded") return currentTheme.dim("◐ ");
     // Active (queued / spawning / running): a braille spinner reads as alive
     // where a static bullet looked frozen.
-    const frame = BRAILLE_SPINNER_FRAMES[this.subagentSpinnerFrame] ?? BRAILLE_SPINNER_FRAMES[0];
-    return currentTheme.fg('primary', `${frame} `);
+    const frame =
+      BRAILLE_SPINNER_FRAMES[this.subagentSpinnerFrame] ??
+      BRAILLE_SPINNER_FRAMES[0];
+    return currentTheme.fg("primary", `${frame} `);
   }
 
   private buildSingleSubagentBlock(): void {
@@ -1832,12 +1982,12 @@ export class ToolCallComponent extends Container {
     // while running and after it finishes (no end-of-run shrink).
     this.addChild(new Text(this.buildSingleSubagentSummaryLine(), 0, 0));
 
-    if (phase === 'failed') {
-      this.addChild(this.buildSingleSubagentResultWindow('error'));
+    if (phase === "failed") {
+      this.addChild(this.buildSingleSubagentResultWindow("error"));
       return;
     }
-    if (phase === 'done' || phase === 'backgrounded') {
-      this.addChild(this.buildSingleSubagentResultWindow('output'));
+    if (phase === "done" || phase === "backgrounded") {
+      this.addChild(this.buildSingleSubagentResultWindow("output"));
       return;
     }
     this.addChild(this.buildSingleSubagentActiveWindow());
@@ -1848,10 +1998,12 @@ export class ToolCallComponent extends Container {
     let latestOngoing: SubToolActivity | undefined;
     let latest: SubToolActivity | undefined;
     for (const activity of this.subToolActivities.values()) {
-      if (latest === undefined || activity.orderSeq > latest.orderSeq) latest = activity;
+      if (latest === undefined || activity.orderSeq > latest.orderSeq)
+        latest = activity;
       if (
-        activity.phase === 'ongoing' &&
-        (latestOngoing === undefined || activity.orderSeq > latestOngoing.orderSeq)
+        activity.phase === "ongoing" &&
+        (latestOngoing === undefined ||
+          activity.orderSeq > latestOngoing.orderSeq)
       ) {
         latestOngoing = activity;
       }
@@ -1864,59 +2016,68 @@ export class ToolCallComponent extends Container {
    * previewable output (Bash or any tool without a dedicated renderer) wins;
    * otherwise the most-recently-updated of the child agent's text / thinking.
    */
-  private getActiveSubagentContent(): { text: string; tone: 'text' | 'thinking' } | undefined {
+  private getActiveSubagentContent():
+    | { text: string; tone: "text" | "thinking" }
+    | undefined {
     const current = this.getCurrentSubToolActivity();
     if (
-      current?.phase === 'ongoing' &&
+      current?.phase === "ongoing" &&
       current.output !== undefined &&
       current.output.trim().length > 0 &&
-      (current.name === 'Bash' || isGenericToolResult(current.name))
+      (current.name === "Bash" || isGenericToolResult(current.name))
     ) {
-      return { text: current.output, tone: 'text' };
+      return { text: current.output, tone: "text" };
     }
-    if (this.lastSubagentStreamKind === 'thinking' && this.subagentThinkingText.trim().length > 0) {
-      return { text: this.subagentThinkingText.trimEnd(), tone: 'thinking' };
+    if (
+      this.lastSubagentStreamKind === "thinking" &&
+      this.subagentThinkingText.trim().length > 0
+    ) {
+      return { text: this.subagentThinkingText.trimEnd(), tone: "thinking" };
     }
     if (this.subagentText.trim().length > 0) {
-      return { text: this.subagentText, tone: 'text' };
+      return { text: this.subagentText, tone: "text" };
     }
     if (this.subagentThinkingText.trim().length > 0) {
-      return { text: this.subagentThinkingText.trimEnd(), tone: 'thinking' };
+      return { text: this.subagentThinkingText.trimEnd(), tone: "thinking" };
     }
     return undefined;
   }
 
   private buildSingleSubagentSummaryLine(): string {
     const toolCount = this.subToolActivities.size;
-    const countLabel = `${String(toolCount)} tool${toolCount === 1 ? '' : 's'}`;
+    const countLabel = `${String(toolCount)} tool${toolCount === 1 ? "" : "s"}`;
     const current = this.getCurrentSubToolActivity();
     if (current === undefined) {
       return currentTheme.dim(`  · ${countLabel}`);
     }
-    const verb = current.phase === 'ongoing' ? 'Using' : 'Used';
-    const keyArg = extractKeyArgument(current.name, current.args, this.workspaceDir);
-    const nameCol = currentTheme.fg('primary', current.name);
-    const argCol = keyArg ? currentTheme.dim(` (${keyArg})`) : '';
+    const verb = current.phase === "ongoing" ? "Using" : "Used";
+    const keyArg = extractKeyArgument(
+      current.name,
+      current.args,
+      this.workspaceDir,
+    );
+    const nameCol = currentTheme.fg("primary", current.name);
+    const argCol = keyArg ? currentTheme.dim(` (${keyArg})`) : "";
     const mark =
-      current.phase === 'failed'
-        ? currentTheme.fg('error', ' ✗')
-        : current.phase === 'done'
-          ? currentTheme.fg('success', ' ✓')
-          : '';
+      current.phase === "failed"
+        ? currentTheme.fg("error", " ✗")
+        : current.phase === "done"
+          ? currentTheme.fg("success", " ✓")
+          : "";
     return `${currentTheme.dim(`  · ${countLabel} · `)}${verb} ${nameCol}${argCol}${mark}`;
   }
 
   private buildSingleSubagentActiveWindow(): Component {
-    const gutter = currentTheme.dim('│');
+    const gutter = currentTheme.dim("│");
     const content = this.getActiveSubagentContent();
     // Keep both tones muted: a bright `fg('text')` here flashed white whenever
     // the window flipped between thinking and a brief text/tool-output segment.
     const styled =
       content === undefined
-        ? currentTheme.dim('…')
-        : content.tone === 'thinking'
+        ? currentTheme.dim("…")
+        : content.tone === "thinking"
           ? currentTheme.dim(content.text)
-          : currentTheme.fg('textDim', content.text);
+          : currentTheme.fg("textDim", content.text);
     // Always exactly two rows (padded when short) so the live window matches
     // the finished card's height.
     return new PrefixedWrappedLine(
@@ -1928,12 +2089,15 @@ export class ToolCallComponent extends Container {
     );
   }
 
-  private buildSingleSubagentResultWindow(kind: 'output' | 'error'): Component {
-    const gutter = currentTheme.dim('│');
-    const source = kind === 'error' ? this.subagentError : this.subagentText;
-    const text = source === undefined ? '' : tailNonEmptyLines(source, 2).join('\n');
+  private buildSingleSubagentResultWindow(kind: "output" | "error"): Component {
+    const gutter = currentTheme.dim("│");
+    const source = kind === "error" ? this.subagentError : this.subagentText;
+    const text =
+      source === undefined ? "" : tailNonEmptyLines(source, 2).join("\n");
     const styled =
-      kind === 'error' ? currentTheme.fg('error', text) : currentTheme.fg('text', text);
+      kind === "error"
+        ? currentTheme.fg("error", text)
+        : currentTheme.fg("text", text);
     return new PrefixedWrappedLine(
       `  ${gutter} `,
       `  ${gutter} `,
@@ -1945,21 +2109,26 @@ export class ToolCallComponent extends Container {
 
   private buildCallPreview(): void {
     const name = this.toolCall.name;
-    if (name === 'ExitPlanMode') {
+    if (name === "ExitPlanMode") {
       this.buildPlanPreview();
       return;
     }
     if (this.result === undefined && this.toolCall.truncated === true) {
       this.addChild(
         new Text(
-          currentTheme.dim('Tool call arguments truncated by max_tokens — call never executed.'),
+          currentTheme.dim(
+            "Tool call arguments truncated by max_tokens — call never executed.",
+          ),
           2,
           0,
         ),
       );
       return;
     }
-    if (this.result === undefined && this.toolCall.streamingArguments !== undefined) {
+    if (
+      this.result === undefined &&
+      this.toolCall.streamingArguments !== undefined
+    ) {
       this.buildStreamingPreview(this.toolCall.streamingArguments);
       return;
     }
@@ -1971,10 +2140,12 @@ export class ToolCallComponent extends Container {
     // redraw and wipes scrollback. Streaming frames (streamingArguments set)
     // still take buildStreamingPreview above and never reach here.
     const shouldCap = !this.expanded;
-    if (name === 'Write') {
-      const content = str(this.toolCall.args['content']);
+    if (name === "Write") {
+      const content = str(this.toolCall.args["content"]);
       if (content.length === 0) return;
-      const filePath = str(this.toolCall.args['file_path'] ?? this.toolCall.args['path']);
+      const filePath = str(
+        this.toolCall.args["file_path"] ?? this.toolCall.args["path"],
+      );
       const lang = langFromPath(filePath);
       const allLines = highlightLines(content, lang);
       // Cap as soon as args finalize, not just when result lands. Otherwise the
@@ -1982,10 +2153,12 @@ export class ToolCallComponent extends Container {
       // and the snap back to the collapsed cap triggers pi-tui's full-redraw
       // path which wipes the terminal scrollback (pre-TUI history).
       const writeShouldCap = !this.expanded;
-      const shown = writeShouldCap ? allLines.slice(0, COMMAND_PREVIEW_LINES) : allLines;
+      const shown = writeShouldCap
+        ? allLines.slice(0, COMMAND_PREVIEW_LINES)
+        : allLines;
       const remaining = allLines.length - shown.length;
       for (const [i, line] of shown.entries()) {
-        const lineNum = currentTheme.dim(String(i + 1).padStart(4) + '  ');
+        const lineNum = currentTheme.dim(String(i + 1).padStart(4) + "  ");
         this.addChild(new Text(lineNum + line, 2, 0));
       }
       if (writeShouldCap && remaining > 0) {
@@ -1999,11 +2172,13 @@ export class ToolCallComponent extends Container {
           ),
         );
       }
-    } else if (name === 'Edit') {
-      const oldStr = str(this.toolCall.args['old_string']);
-      const newStr = str(this.toolCall.args['new_string']);
+    } else if (name === "Edit") {
+      const oldStr = str(this.toolCall.args["old_string"]);
+      const newStr = str(this.toolCall.args["new_string"]);
       if (oldStr.length === 0 && newStr.length === 0) return;
-      const filePath = str(this.toolCall.args['file_path'] ?? this.toolCall.args['path']);
+      const filePath = str(
+        this.toolCall.args["file_path"] ?? this.toolCall.args["path"],
+      );
       const lines = renderDiffLinesClustered(oldStr, newStr, filePath, {
         contextLines: 3,
         ...(shouldCap ? { maxLines: COMMAND_PREVIEW_LINES } : {}),
@@ -2011,7 +2186,7 @@ export class ToolCallComponent extends Container {
       for (const line of lines) {
         this.addChild(new Text(line, 2, 0));
       }
-    } else if (name === 'Bash') {
+    } else if (name === "Bash") {
       // Surface the command in the body across the whole lifecycle — while
       // streaming, running, and after the result lands. Keeping the collapsed
       // command preview here (instead of yielding to the result renderer once
@@ -2020,13 +2195,15 @@ export class ToolCallComponent extends Container {
       // live-output tail swaps for the result. Owned solely by buildCallPreview
       // so the command never renders twice; shellExecutionResultRenderer
       // renders the result only.
-      const command = str(this.toolCall.args['command']);
+      const command = str(this.toolCall.args["command"]);
       if (command.length === 0) return;
       this.addChild(
         new ShellExecutionComponent({
           command,
           showCommand: true,
-          commandPreviewLines: this.expanded ? undefined : COMMAND_PREVIEW_LINES,
+          commandPreviewLines: this.expanded
+            ? undefined
+            : COMMAND_PREVIEW_LINES,
         }),
       );
     }
@@ -2045,13 +2222,13 @@ export class ToolCallComponent extends Container {
   private buildStreamingPreview(streamText: string): void {
     const name = this.toolCall.name;
     const previewText = streamText.slice(0, STREAMING_ARGS_PREVIEW_MAX_CHARS);
-    if (name === 'Write') {
-      const content = extractPartialStringField(previewText, 'content');
+    if (name === "Write") {
+      const content = extractPartialStringField(previewText, "content");
       if (content === undefined || content.length === 0) return;
       const filePath =
-        extractPartialStringField(previewText, 'file_path') ??
-        extractPartialStringField(previewText, 'path') ??
-        '';
+        extractPartialStringField(previewText, "file_path") ??
+        extractPartialStringField(previewText, "path") ??
+        "";
       const lang = langFromPath(filePath);
       const allLines = highlightLines(content, lang);
       const maxLines = COMMAND_PREVIEW_LINES;
@@ -2061,38 +2238,42 @@ export class ToolCallComponent extends Container {
           : allLines;
       for (const [i, line] of scrollLines.entries()) {
         const originalLineNumber =
-          allLines.length > maxLines
-            ? allLines.length - maxLines + i
-            : i;
-        const lineNum = currentTheme.dim(String(originalLineNumber + 1).padStart(4) + '  ');
+          allLines.length > maxLines ? allLines.length - maxLines + i : i;
+        const lineNum = currentTheme.dim(
+          String(originalLineNumber + 1).padStart(4) + "  ",
+        );
         this.addChild(new Text(lineNum + line, 2, 0));
       }
       return;
     }
-    if (name === 'Edit') {
+    if (name === "Edit") {
       const filePath =
-        extractPartialStringField(previewText, 'file_path') ??
-        extractPartialStringField(previewText, 'path') ??
-        '';
-      const bytes = Buffer.byteLength(previewText, 'utf8');
+        extractPartialStringField(previewText, "file_path") ??
+        extractPartialStringField(previewText, "path") ??
+        "";
+      const bytes = Buffer.byteLength(previewText, "utf8");
       const startedAtMs = this.toolCall.streamingStartedAtMs;
       const elapsedSeconds =
-        startedAtMs === undefined ? 0 : Math.max(0, Math.floor((Date.now() - startedAtMs) / 1000));
-      const target = filePath.length > 0 ? ` for ${filePath}` : '';
+        startedAtMs === undefined
+          ? 0
+          : Math.max(0, Math.floor((Date.now() - startedAtMs) / 1000));
+      const target = filePath.length > 0 ? ` for ${filePath}` : "";
       const progress = `Preparing changes${target}... ${formatByteSize(bytes)} · ${formatElapsed(
         elapsedSeconds,
       )} elapsed`;
       this.addChild(new Text(currentTheme.dim(progress), 2, 0));
       return;
     }
-    if (name === 'Bash') {
-      const cmd = extractPartialStringField(previewText, 'command');
+    if (name === "Bash") {
+      const cmd = extractPartialStringField(previewText, "command");
       if (cmd === undefined || cmd.length === 0) return;
       this.addChild(
         new ShellExecutionComponent({
           command: cmd,
           showCommand: true,
-          commandPreviewLines: this.expanded ? undefined : COMMAND_PREVIEW_LINES,
+          commandPreviewLines: this.expanded
+            ? undefined
+            : COMMAND_PREVIEW_LINES,
         }),
       );
     }
@@ -2108,20 +2289,26 @@ export class ToolCallComponent extends Container {
     if (plan.length === 0) return;
     const path = this.resolvePlanPath();
     this.addChild(
-      new PlanBoxComponent(plan, this.markdownTheme, currentTheme.color('success'), path, {
-        status: this.resolvePlanBoxStatus(),
-      }),
+      new PlanBoxComponent(
+        plan,
+        this.markdownTheme,
+        currentTheme.color("success"),
+        path,
+        {
+          status: this.resolvePlanBoxStatus(),
+        },
+      ),
     );
   }
 
   private resolvePlanForPreview(): string {
-    const inlinePlan = str(this.toolCall.args['plan']);
+    const inlinePlan = str(this.toolCall.args["plan"]);
     if (inlinePlan.length > 0) return inlinePlan;
     if (this.result !== undefined && !this.result.is_error) {
       const approved = extractApprovedPlan(this.result.output);
       if (approved.length > 0) return approved;
     }
-    return this.currentPlan ?? '';
+    return this.currentPlan ?? "";
   }
 
   // Priority: approved result.output with 'Plan saved to: <path>', then the
@@ -2134,20 +2321,23 @@ export class ToolCallComponent extends Container {
     return this.planPath;
   }
 
-  private resolvePlanBoxStatus(): { label: string; colorHex: string } | undefined {
+  private resolvePlanBoxStatus():
+    | { label: string; colorHex: string }
+    | undefined {
     const result = this.result;
-    if (this.toolCall.name !== 'ExitPlanMode' || result === undefined) return undefined;
+    if (this.toolCall.name !== "ExitPlanMode" || result === undefined)
+      return undefined;
     if (!isExitPlanModeOutcomeOutput(result.output)) return undefined;
     const outcome = interpretExitPlanModeOutcome(result.output);
-    if (outcome.kind !== 'rejected') return undefined;
-    return { label: 'Rejected', colorHex: currentTheme.color('error') };
+    if (outcome.kind !== "rejected") return undefined;
+    return { label: "Rejected", colorHex: currentTheme.color("error") };
   }
 
   private buildContent(): void {
     const { result } = this;
     if (result === undefined) return;
 
-    if (this.toolCall.name === 'AgentSwarm') {
+    if (this.toolCall.name === "AgentSwarm") {
       this.buildAgentSwarmResultSummary(result);
       return;
     }
@@ -2165,21 +2355,25 @@ export class ToolCallComponent extends Container {
     // metadata no longer travels inside `output` (it rides the result's
     // `note` side channel), so real output starting with a literal `<system>`
     // is user data and must stay visible.
-    if (result.output.trimStart().startsWith('<system-reminder>')) {
+    if (result.output.trimStart().startsWith("<system-reminder>")) {
       return;
     }
 
-    if (this.toolCall.name === 'ExitPlanMode' && isExitPlanModeOutcomeOutput(result.output)) {
+    if (
+      this.toolCall.name === "ExitPlanMode" &&
+      isExitPlanModeOutcomeOutput(result.output)
+    ) {
       // Approved plans are already rendered by buildCallPreview via
       // resolvePlanForPreview. Rejected or revise feedback uses a warning label
       // plus normal body text so it remains visible in the transcript.
       const outcome = interpretExitPlanModeOutcome(result.output);
-      if (outcome.kind === 'rejected' && outcome.feedback !== undefined) {
+      if (outcome.kind === "rejected" && outcome.feedback !== undefined) {
         const trimmed = outcome.feedback.trim();
         if (trimmed.length > 0) {
-          const labelTone = (text: string) => currentTheme.boldFg('warning', text);
-          this.addChild(new Text(labelTone('↪ Suggestion'), 2, 0));
-          for (const line of trimmed.split('\n')) {
+          const labelTone = (text: string) =>
+            currentTheme.boldFg("warning", text);
+          this.addChild(new Text(labelTone("↪ Suggestion"), 2, 0));
+          for (const line of trimmed.split("\n")) {
             this.addChild(new Text(line, 4, 0));
           }
         }
@@ -2190,17 +2384,17 @@ export class ToolCallComponent extends Container {
     // TodoList: the authoritative list is shown in the dedicated
     // TodoPanel before the input area, so repeating the text dump here is
     // pure clutter. Keep the headline, drop the body.
-    if (this.toolCall.name === 'TodoList' && !result.is_error) {
+    if (this.toolCall.name === "TodoList" && !result.is_error) {
       return;
     }
 
-    if (this.toolCall.name === 'EnterPlanMode' && !result.is_error) {
+    if (this.toolCall.name === "EnterPlanMode" && !result.is_error) {
       return;
     }
 
     if (
-      this.toolCall.name === 'AskUserQuestion' &&
-      this.toolCall.args['background'] !== true &&
+      this.toolCall.name === "AskUserQuestion" &&
+      this.toolCall.args["background"] !== true &&
       !result.is_error &&
       this.renderAskUserQuestionResult(result.output)
     ) {
@@ -2218,38 +2412,61 @@ export class ToolCallComponent extends Container {
 
   private buildAgentSwarmResultSummary(result: ToolResultBlockData): void {
     const summary = agentSwarmResultSummaryFromOutput(result.output);
-    const dim = (s: string): string => currentTheme.fg('textDim', s);
+    const dim = (s: string): string => currentTheme.fg("textDim", s);
     const segments: string[] = [];
 
     if (summary.completed > 0) {
       segments.push(
-        currentTheme.fg('success', `${SUCCESS_MARK.trimEnd()} ${String(summary.completed)} completed`),
+        currentTheme.fg(
+          "success",
+          `${SUCCESS_MARK.trimEnd()} ${String(summary.completed)} completed`,
+        ),
       );
     }
     if (summary.failed > 0) {
       segments.push(
-        currentTheme.fg('error', `${FAILURE_MARK.trimEnd()} ${String(summary.failed)} failed`),
+        currentTheme.fg(
+          "error",
+          `${FAILURE_MARK.trimEnd()} ${String(summary.failed)} failed`,
+        ),
       );
     }
     if (summary.aborted > 0) {
       segments.push(
-        currentTheme.fg('warning', `${ABORTED_MARK} ${String(summary.aborted)} aborted`),
+        currentTheme.fg(
+          "warning",
+          `${ABORTED_MARK} ${String(summary.aborted)} aborted`,
+        ),
       );
     }
 
     if (segments.length > 0) {
-      this.addChild(new Text(`${dim('Agent swarm: ')}${segments.join(dim(' · '))}`, 2, 0));
+      this.addChild(
+        new Text(`${dim("Agent swarm: ")}${segments.join(dim(" · "))}`, 2, 0),
+      );
       return;
     }
 
-    const isAborted = result.is_error === true && /\b(?:aborted|cancelled)\b/i.test(result.output);
-    const colorToken = isAborted ? 'warning' : result.is_error === true ? 'error' : 'success';
+    const isAborted =
+      result.is_error === true &&
+      /\b(?:aborted|cancelled)\b/i.test(result.output);
+    const colorToken = isAborted
+      ? "warning"
+      : result.is_error === true
+        ? "error"
+        : "success";
     const label = isAborted
       ? `${ABORTED_MARK} Aborted.`
       : result.is_error === true
         ? `${FAILURE_MARK.trimEnd()} Failed.`
         : `${SUCCESS_MARK.trimEnd()} Completed.`;
-    this.addChild(new Text(`${dim('Agent swarm: ')}${currentTheme.fg(colorToken, label)}`, 2, 0));
+    this.addChild(
+      new Text(
+        `${dim("Agent swarm: ")}${currentTheme.fg(colorToken, label)}`,
+        2,
+        0,
+      ),
+    );
   }
 
   /**
@@ -2264,27 +2481,34 @@ export class ToolCallComponent extends Container {
     } catch {
       return false;
     }
-    if (typeof parsed !== 'object' || parsed === null) return false;
+    if (typeof parsed !== "object" || parsed === null) return false;
 
-    const accent = (text: string) => currentTheme.fg('primary', text);
+    const accent = (text: string) => currentTheme.fg("primary", text);
 
     const answers = (parsed as { answers?: unknown }).answers;
     const note = (parsed as { note?: unknown }).note;
 
     const hasAnswers =
-      typeof answers === 'object' && answers !== null && Object.keys(answers).length > 0;
+      typeof answers === "object" &&
+      answers !== null &&
+      Object.keys(answers).length > 0;
 
     if (!hasAnswers) {
       const noteText =
-        typeof note === 'string' && note.length > 0 ? note : 'User dismissed the question.';
+        typeof note === "string" && note.length > 0
+          ? note
+          : "User dismissed the question.";
       this.addChild(new Text(currentTheme.dim(`  ${noteText}`), 0, 0));
       return true;
     }
 
-    for (const [question, answer] of Object.entries(answers as Record<string, unknown>)) {
-      const answerText = typeof answer === 'string' ? answer : JSON.stringify(answer);
-      this.addChild(new Text(`  ${currentTheme.dim('Q')}  ${question}`, 0, 0));
-      this.addChild(new Text(`  ${accent('→')}  ${answerText}`, 0, 0));
+    for (const [question, answer] of Object.entries(
+      answers as Record<string, unknown>,
+    )) {
+      const answerText =
+        typeof answer === "string" ? answer : JSON.stringify(answer);
+      this.addChild(new Text(`  ${currentTheme.dim("Q")}  ${question}`, 0, 0));
+      this.addChild(new Text(`  ${accent("→")}  ${answerText}`, 0, 0));
     }
     return true;
   }
@@ -2305,18 +2529,23 @@ function computeLatestActivity(
   if (ongoing.size > 0) {
     const lastOngoing = [...ongoing.values()].at(-1);
     if (lastOngoing !== undefined) {
-      return formatActivityLine('Using', lastOngoing.name, lastOngoing.args, workspaceDir);
+      return formatActivityLine(
+        "Using",
+        lastOngoing.name,
+        lastOngoing.args,
+        workspaceDir,
+      );
     }
   }
   if (finished.length > 0) {
     const last = finished.at(-1);
     if (last !== undefined) {
-      return formatActivityLine('Used', last.name, last.args, workspaceDir);
+      return formatActivityLine("Used", last.name, last.args, workspaceDir);
     }
   }
   if (text.length > 0) {
     const tail = text
-      .split('\n')
+      .split("\n")
       .toReversed()
       .find((l) => l.trim().length > 0);
     if (tail !== undefined) return tail.trim();

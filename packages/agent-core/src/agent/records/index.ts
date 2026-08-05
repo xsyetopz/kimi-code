@@ -1,4 +1,4 @@
-import type { Agent } from '..';
+import type { Agent } from "..";
 import {
   AGENT_WIRE_PROTOCOL_VERSION,
   isNewerWireVersion,
@@ -6,18 +6,18 @@ import {
   resolveWireMigrations,
   type WireMigration,
   type WireMigrationRecord,
-} from './migration';
-import type { AgentRecord, AgentRecordPersistence } from './types';
+} from "./migration";
+import type { AgentRecord, AgentRecordPersistence } from "./types";
 
-export * from './types';
-export { AGENT_WIRE_PROTOCOL_VERSION } from './migration';
+export * from "./types";
+export { AGENT_WIRE_PROTOCOL_VERSION } from "./migration";
 export {
   FileSystemAgentRecordPersistence,
   InMemoryAgentRecordPersistence,
-} from './persistence';
-export type { FileSystemAgentRecordPersistenceOptions } from './persistence';
-export { BlobStore, isBlobRef } from './blobref';
-export type { BlobStoreOptions } from './blobref';
+} from "./persistence";
+export type { FileSystemAgentRecordPersistenceOptions } from "./persistence";
+export { BlobStore, isBlobRef } from "./blobref";
+export type { BlobStoreOptions } from "./blobref";
 
 // Contract: restore MUST only rebuild in-memory state. It must not emit UI
 // events, call the LLM, execute tools, start background work, make network
@@ -31,24 +31,24 @@ export type { BlobStoreOptions } from './blobref';
 // during resume.
 function restoreAgentRecord(agent: Agent, input: AgentRecord): void {
   switch (input.type) {
-    case 'metadata':
+    case "metadata":
       return;
-    case 'forked':
+    case "forked":
       agent.goal.restoreForked(input);
       return;
-    case 'turn.prompt':
+    case "turn.prompt":
       agent.turn.restorePrompt();
       return;
-    case 'turn.steer':
+    case "turn.steer":
       agent.turn.restoreSteer(input.input, input.origin);
       return;
-    case 'turn.cancel':
+    case "turn.cancel":
       agent.turn.cancel(input.turnId);
       return;
-    case 'config.update':
+    case "config.update":
       agent.config.update(input);
       return;
-    case 'profile.bind': {
+    case "profile.bind": {
       // v2-engine wires persist the profile binding (including the tool
       // allowlist) via profile.bind instead of the v1 pair of config.update +
       // tools.set_active_tools. Map it onto the v1 equivalents so a v2
@@ -61,117 +61,126 @@ function restoreAgentRecord(agent: Agent, input: AgentRecord): void {
       if (!Array.isArray(input.activeToolNames)) return;
       const thinkingEffort = input.thinkingEffort ?? input.thinkingLevel;
       agent.config.restore({
-        ...(input.modelAlias !== undefined ? { modelAlias: input.modelAlias } : {}),
-        ...(input.profileName !== undefined ? { profileName: input.profileName } : {}),
+        ...(input.modelAlias !== undefined
+          ? { modelAlias: input.modelAlias }
+          : {}),
+        ...(input.profileName !== undefined
+          ? { profileName: input.profileName }
+          : {}),
         ...(thinkingEffort !== undefined ? { thinkingEffort } : {}),
-        ...(input.systemPrompt !== undefined ? { systemPrompt: input.systemPrompt } : {}),
-        ...(input.subagents !== undefined ? { subagentNames: input.subagents } : {}),
+        ...(input.systemPrompt !== undefined
+          ? { systemPrompt: input.systemPrompt }
+          : {}),
+        ...(input.subagents !== undefined
+          ? { subagentNames: input.subagents }
+          : {}),
       });
       agent.tools.setActiveTools(input.activeToolNames, input.disallowedTools);
       return;
     }
-    case 'tools.reset_active_tools':
+    case "tools.reset_active_tools":
       // v2-only transition back to the unrestricted default (every tool
       // active). v1 keeps no "all tools" state to restore — the
       // session-level profile fallback covers fresh resumes — so the record
       // replays as a no-op.
       return;
-    case 'permission.set_mode':
+    case "permission.set_mode":
       agent.permission.setMode(input.mode);
       return;
-    case 'permission.record_approval_result':
+    case "permission.record_approval_result":
       agent.permission.recordApprovalResult(input);
       return;
-    case 'usage.record':
-      agent.usage.record(input.model, input.usage, 'session');
+    case "usage.record":
+      agent.usage.record(input.model, input.usage, "session");
       return;
-    case 'full_compaction.begin':
+    case "full_compaction.begin":
       agent.fullCompaction.begin(input);
       return;
-    case 'full_compaction.cancel':
+    case "full_compaction.cancel":
       agent.fullCompaction.cancel();
       return;
-    case 'full_compaction.complete':
+    case "full_compaction.complete":
       agent.fullCompaction.markCompleted();
       return;
-    case 'micro_compaction.apply':
+    case "micro_compaction.apply":
       agent.microCompaction.apply(input.cutoff);
       return;
-    case 'plan_mode.enter':
+    case "plan_mode.enter":
       agent.planMode.restoreEnter(input);
       return;
-    case 'plan_mode.cancel':
+    case "plan_mode.cancel":
       agent.planMode.cancel(input.id);
       return;
-    case 'plan_mode.exit':
+    case "plan_mode.exit":
       agent.planMode.exit(input.id);
       return;
-    case 'swarm_mode.enter':
+    case "swarm_mode.enter":
       agent.swarmMode.restoreEnter(input.trigger);
       return;
-    case 'swarm_mode.exit':
+    case "swarm_mode.exit":
       agent.swarmMode.exit();
       return;
-    case 'context.append_message':
+    case "context.append_message":
       agent.context.appendMessage(input.message);
       return;
-    case 'context.append_loop_event':
+    case "context.append_loop_event":
       agent.context.appendLoopEvent(input.event);
       // Advance the turn counter past internally-driven turns (goal
       // continuations, steer-launched turns) that allocate a turnId without a
       // `turn.prompt` record. Their loop events still carry the real turnId.
-      if ('turnId' in input.event) {
+      if ("turnId" in input.event) {
         const restoredTurnId = Number.parseInt(input.event.turnId, 10);
         if (!Number.isNaN(restoredTurnId)) {
           agent.turn.observeRestoredTurnId(restoredTurnId);
         }
       }
       return;
-    case 'context.update_token_count':
+    case "context.update_token_count":
       agent.context.updateTokenCount(input.tokenCount);
       return;
-    case 'context.clear':
+    case "context.clear":
       agent.context.clear();
       return;
-    case 'context.apply_compaction':
+    case "context.apply_compaction":
       agent.context.applyCompaction(input);
       return;
-    case 'context.undo':
+    case "context.undo":
       agent.context.undo(input.count);
       return;
-    case 'tools.register_user_tool':
+    case "tools.register_user_tool":
       agent.tools.registerUserTool(input);
       return;
-    case 'tools.unregister_user_tool':
+    case "tools.unregister_user_tool":
       agent.tools.unregisterUserTool(input.name);
       return;
-    case 'tools.set_active_tools':
+    case "tools.set_active_tools":
       // v2-engine wires may omit `names` (= every tool active); there is no
       // state to restore in that case, and calling setActiveTools(undefined)
       // would throw and wedge the whole resume.
-      if (Array.isArray(input.names)) agent.tools.setActiveTools(input.names, input.disallowedNames);
+      if (Array.isArray(input.names))
+        agent.tools.setActiveTools(input.names, input.disallowedNames);
       return;
-    case 'tools.update_store':
+    case "tools.update_store":
       agent.tools.updateStore(input.key, input.value);
       return;
-    case 'goal.create':
+    case "goal.create":
       agent.goal.restoreCreate(input);
       return;
-    case 'goal.update':
+    case "goal.update":
       agent.goal.restoreUpdate(input);
       return;
-    case 'goal.clear':
+    case "goal.clear":
       agent.goal.restoreClear(input);
       return;
     // Observability records: no state to rebuild; only restore the
     // write-dedup cursors so a resumed session does not re-log snapshots
     // that are already durable in this wire log.
-    case 'llm.tools_snapshot':
+    case "llm.tools_snapshot":
       agent.llmRequestRecorder.restoreToolsSnapshot(input.hash);
       return;
-    case 'llm.request':
+    case "llm.request":
       return;
-    case 'mcp.tools_discovered':
+    case "mcp.tools_discovered":
       agent.tools.restoreMcpDiscovery(input.serverName, input.hash);
       return;
   }
@@ -248,16 +257,16 @@ export class AgentRecords {
     if (
       this.persistence !== undefined &&
       !this.metadataInitialized &&
-      stamped.type !== 'metadata'
+      stamped.type !== "metadata"
     ) {
       this.persistence.append({
-        type: 'metadata',
+        type: "metadata",
         protocol_version: AGENT_WIRE_PROTOCOL_VERSION,
         created_at: Date.now(),
       });
       this.metadataInitialized = true;
     }
-    if (stamped.type === 'metadata') {
+    if (stamped.type === "metadata") {
       this.metadataInitialized = true;
     }
     this.persistence?.append(stamped);
@@ -280,21 +289,28 @@ export class AgentRecords {
     }
   }
 
-  async replay(options: AgentRecordsReplayOptions = {}): Promise<{ warning?: string }> {
-    if (!this.persistence) throw new Error('No persistence provided for AgentRecords');
+  async replay(
+    options: AgentRecordsReplayOptions = {},
+  ): Promise<{ warning?: string }> {
+    if (!this.persistence)
+      throw new Error("No persistence provided for AgentRecords");
     const rewriteMigratedRecords = options.rewriteMigratedRecords ?? true;
     let migrations: readonly WireMigration[] = [];
     let hasMetadata = false;
     let shouldRewrite = false;
     let warning: string | undefined;
-    const replayedRecords: AgentRecord[] | undefined = rewriteMigratedRecords ? [] : undefined;
+    const replayedRecords: AgentRecord[] | undefined = rewriteMigratedRecords
+      ? []
+      : undefined;
     let completed = true;
     this._replaying = true;
     try {
       for await (const record of this.persistence.read()) {
         if (!hasMetadata) {
-          if (record.type !== 'metadata') {
-            throw new Error('AgentRecords replay expected metadata as the first record');
+          if (record.type !== "metadata") {
+            throw new Error(
+              "AgentRecords replay expected metadata as the first record",
+            );
           }
           hasMetadata = true;
           this.metadataInitialized = true;
@@ -311,7 +327,7 @@ export class AgentRecords {
           record as WireMigrationRecord,
           migrations,
         ) as AgentRecord;
-        if (migratedRecord.type === 'metadata') {
+        if (migratedRecord.type === "metadata") {
           migratedRecord = {
             ...migratedRecord,
             protocol_version: AGENT_WIRE_PROTOCOL_VERSION,

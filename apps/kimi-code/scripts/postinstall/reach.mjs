@@ -26,12 +26,12 @@
  * All functions are pure w.r.t. the filesystem (no mutations).
  */
 
-import { spawn } from 'node:child_process';
-import { promises as fs } from 'node:fs';
-import { delimiter, dirname, join, sep } from 'node:path';
+import { spawn } from "node:child_process";
+import { promises as fs } from "node:fs";
+import { delimiter, dirname, join, sep } from "node:path";
 
-const LEGACY_BIN = 'kimi';
-const IS_WINDOWS = process.platform === 'win32';
+const LEGACY_BIN = "kimi";
+const IS_WINDOWS = process.platform === "win32";
 
 /**
  * Expand a basename like `kimi` into the set of filenames the OS
@@ -46,9 +46,9 @@ const IS_WINDOWS = process.platform === 'win32';
  */
 export function executableCandidates(basename) {
   if (!IS_WINDOWS) return [basename];
-  const pathext = (process.env['PATHEXT'] ?? '.EXE;.CMD;.BAT;.COM')
+  const pathext = (process.env["PATHEXT"] ?? ".EXE;.CMD;.BAT;.COM")
     .toLowerCase()
-    .split(';')
+    .split(";")
     .map((e) => e.trim())
     .filter(Boolean);
   return [basename, ...pathext.map((ext) => basename + ext)];
@@ -61,10 +61,10 @@ export function executableCandidates(basename) {
  * missing values.
  */
 export function detectPackageManager() {
-  const ua = process.env['npm_config_user_agent'] ?? '';
-  if (ua.startsWith('pnpm/')) return 'pnpm';
-  if (ua.startsWith('yarn/')) return 'yarn';
-  return 'npm';
+  const ua = process.env["npm_config_user_agent"] ?? "";
+  if (ua.startsWith("pnpm/")) return "pnpm";
+  if (ua.startsWith("yarn/")) return "yarn";
+  return "npm";
 }
 
 /**
@@ -74,24 +74,24 @@ export function detectPackageManager() {
  */
 export function pmGlobalBinCommand(pm) {
   switch (pm) {
-    case 'pnpm':
-      return 'pnpm bin -g';
-    case 'yarn':
-      return 'yarn global bin';
-    case 'npm':
+    case "pnpm":
+      return "pnpm bin -g";
+    case "yarn":
+      return "yarn global bin";
+    case "npm":
     default:
-      return 'npm prefix -g';
+      return "npm prefix -g";
   }
 }
 
 /** Manager-specific reinstall command, used in the success-notice hint. */
 export function pmGlobalInstallCommand(pm, pkg) {
   switch (pm) {
-    case 'pnpm':
+    case "pnpm":
       return `pnpm add -g ${pkg}`;
-    case 'yarn':
+    case "yarn":
       return `yarn global add ${pkg}`;
-    case 'npm':
+    case "npm":
     default:
       return `npm install -g ${pkg}`;
   }
@@ -128,9 +128,9 @@ export function pmGlobalInstallCommand(pm, pkg) {
  */
 export function isGlobalInstall() {
   return (
-    process.env['npm_config_global'] === 'true' ||
-    process.env['pnpm_config_global'] === 'true' ||
-    process.env['npm_config_location'] === 'global' ||
+    process.env["npm_config_global"] === "true" ||
+    process.env["pnpm_config_global"] === "true" ||
+    process.env["npm_config_location"] === "global" ||
     isYarnClassicGlobalAdd()
   );
 }
@@ -159,9 +159,9 @@ export function isGlobalInstall() {
  *     so `isOwnCliResolvableFirst` will refuse to migrate.
  */
 function isYarnClassicGlobalAdd() {
-  const ua = process.env['npm_config_user_agent'] ?? '';
-  if (!ua.startsWith('yarn/1.')) return false;
-  const raw = process.env['npm_config_argv'];
+  const ua = process.env["npm_config_user_agent"] ?? "";
+  if (!ua.startsWith("yarn/1.")) return false;
+  const raw = process.env["npm_config_argv"];
   if (!raw) return false;
   let argv;
   try {
@@ -170,10 +170,10 @@ function isYarnClassicGlobalAdd() {
     return false;
   }
   if (!Array.isArray(argv?.original)) return false;
-  const globalIdx = argv.original.indexOf('global');
+  const globalIdx = argv.original.indexOf("global");
   if (globalIdx === -1) return false;
   const next = argv.original[globalIdx + 1];
-  return typeof next === 'string' && YARN_GLOBAL_SUBCOMMANDS.has(next);
+  return typeof next === "string" && YARN_GLOBAL_SUBCOMMANDS.has(next);
 }
 
 // Yarn 1.x global subcommands. The install-class ones (`add`,
@@ -181,13 +181,13 @@ function isYarnClassicGlobalAdd() {
 // our postinstall, but the read-only ones are included so the
 // detection is consistent across all `yarn global ...` invocations.
 const YARN_GLOBAL_SUBCOMMANDS = new Set([
-  'add',
-  'remove',
-  'upgrade',
-  'upgrade-interactive',
-  'list',
-  'bin',
-  'dir',
+  "add",
+  "remove",
+  "upgrade",
+  "upgrade-interactive",
+  "list",
+  "bin",
+  "dir",
 ]);
 
 /**
@@ -207,7 +207,7 @@ export async function ownPackageRoot(startDir) {
   let dir = startDir;
   for (let i = 0; i < 6; i++) {
     try {
-      await fs.access(join(dir, 'package.json'));
+      await fs.access(join(dir, "package.json"));
       try {
         return await fs.realpath(dir);
       } catch {
@@ -246,15 +246,18 @@ async function isExecutableFile(filePath) {
 //   - pnpm POSIX shims (literal `/bin/sh` scripts, not symlinks; pnpm
 //     does not symlink into the package root the way npm/yarn classic
 //     do on POSIX)
-const PACKAGE_NAME_MARKERS = ['@moonshot-ai/kimi-code', '@moonshot-ai\\kimi-code'];
+const PACKAGE_NAME_MARKERS = [
+  "@moonshot-ai/kimi-code",
+  "@moonshot-ai\\kimi-code",
+];
 
 async function shimReferencesOwnPackage(shimPath) {
   try {
-    const handle = await fs.open(shimPath, 'r');
+    const handle = await fs.open(shimPath, "r");
     try {
       const buf = Buffer.alloc(4096);
       const { bytesRead } = await handle.read(buf, 0, 4096, 0);
-      const text = buf.subarray(0, bytesRead).toString('latin1');
+      const text = buf.subarray(0, bytesRead).toString("latin1");
       return PACKAGE_NAME_MARKERS.some((m) => text.includes(m));
     } finally {
       await handle.close().catch(() => {});
@@ -269,11 +272,11 @@ async function classifyShim(shim, ownRoot, ownPrefix) {
   try {
     real = await fs.realpath(shim);
   } catch {
-    return 'unreadable';
+    return "unreadable";
   }
-  if (real === ownRoot || real.startsWith(ownPrefix)) return 'own';
-  if (await shimReferencesOwnPackage(shim)) return 'own';
-  return 'other';
+  if (real === ownRoot || real.startsWith(ownPrefix)) return "own";
+  if (await shimReferencesOwnPackage(shim)) return "own";
+  return "other";
 }
 
 /**
@@ -305,7 +308,7 @@ export async function findFirstResolvableKimi(
   actionableShimPaths,
   allDetectedShimPaths,
 ) {
-  if (!ownRoot || !pathString) return { kind: 'none' };
+  if (!ownRoot || !pathString) return { kind: "none" };
   const ownPrefix = ownRoot + sep;
   const candidates = executableCandidates(LEGACY_BIN);
   const skipSet = new Set(actionableShimPaths ?? []);
@@ -319,15 +322,15 @@ export async function findFirstResolvableKimi(
       if (skipSet.has(shim)) continue;
       if (!(await isExecutableFile(shim))) continue;
       const kind = await classifyShim(shim, ownRoot, ownPrefix);
-      if (kind === 'unreadable') continue;
-      if (kind === 'own') return { kind: 'own' };
+      if (kind === "unreadable") continue;
+      if (kind === "own") return { kind: "own" };
       if (knownLegacySet.has(shim)) {
-        return { kind: 'blocked-legacy', shim };
+        return { kind: "blocked-legacy", shim };
       }
-      return { kind: 'foreign', path: shim };
+      return { kind: "foreign", path: shim };
     }
   }
-  return { kind: 'none' };
+  return { kind: "none" };
 }
 
 /**
@@ -360,10 +363,10 @@ export async function userShellPath() {
   // their PATH already comes from the user's persistent registry env
   // (which is what `process.env.PATH` reflects). Skip the spawn and
   // let the caller fall back to `process.env.PATH`.
-  if (IS_WINDOWS) return { kind: 'unknown', reason: 'windows skip' };
+  if (IS_WINDOWS) return { kind: "unknown", reason: "windows skip" };
 
-  const shell = process.env['SHELL'];
-  if (!shell) return { kind: 'unknown', reason: 'no SHELL env var' };
+  const shell = process.env["SHELL"];
+  if (!shell) return { kind: "unknown", reason: "no SHELL env var" };
 
   return new Promise((resolve) => {
     let settled = false;
@@ -373,39 +376,39 @@ export async function userShellPath() {
       resolve(value);
     };
 
-    let stdout = '';
+    let stdout = "";
     // Wrap PATH in delimiters we can parse out, defensively, in case
     // the shell prints anything else (motd, prompt redraw, …).
     const probe =
       'printf "<<<KIMI_PATH_BEGIN>>>%s<<<KIMI_PATH_END>>>\\n" "$PATH"';
-    const child = spawn(shell, ['-l', '-c', probe], {
-      stdio: ['ignore', 'pipe', 'ignore'],
+    const child = spawn(shell, ["-l", "-c", probe], {
+      stdio: ["ignore", "pipe", "ignore"],
     });
-    child.stdout.on('data', (chunk) => {
-      stdout += chunk.toString('utf-8');
+    child.stdout.on("data", (chunk) => {
+      stdout += chunk.toString("utf-8");
     });
 
     // Bound the wait. Login rc files are usually quick, but a hostile
     // `.profile` could hang indefinitely.
     const timer = setTimeout(() => {
-      child.kill('SIGKILL');
-      settle({ kind: 'unknown', reason: 'shell spawn timed out' });
+      child.kill("SIGKILL");
+      settle({ kind: "unknown", reason: "shell spawn timed out" });
     }, 5000);
 
-    child.on('close', (code) => {
+    child.on("close", (code) => {
       clearTimeout(timer);
       const match = stdout.match(
         /<<<KIMI_PATH_BEGIN>>>([\s\S]*?)<<<KIMI_PATH_END>>>/,
       );
       if (match && match[1].length > 0) {
-        settle({ kind: 'ok', path: match[1] });
+        settle({ kind: "ok", path: match[1] });
         return;
       }
-      settle({ kind: 'unknown', reason: `no PATH printed (exit ${code})` });
+      settle({ kind: "unknown", reason: `no PATH printed (exit ${code})` });
     });
-    child.on('error', (err) => {
+    child.on("error", (err) => {
       clearTimeout(timer);
-      settle({ kind: 'unknown', reason: `spawn error: ${err.message}` });
+      settle({ kind: "unknown", reason: `spawn error: ${err.message}` });
     });
   });
 }
@@ -434,8 +437,8 @@ export async function userShellPath() {
  */
 export async function postinstallPaths() {
   const shellResult = await userShellPath();
-  const processPath = process.env['PATH'] ?? '';
-  const shellPathStr = shellResult.kind === 'ok' ? shellResult.path : null;
+  const processPath = process.env["PATH"] ?? "";
+  const shellPathStr = shellResult.kind === "ok" ? shellResult.path : null;
   const reachability = shellPathStr ?? processPath;
   const detection = unionPaths(shellPathStr, processPath);
   return { detection, reachability };
@@ -454,4 +457,3 @@ function unionPaths(...paths) {
   }
   return out.join(delimiter);
 }
-

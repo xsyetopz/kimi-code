@@ -21,7 +21,8 @@ export const RECOMMENDED_MCP_SERVERS: RecommendedMCPServer[] = [
   {
     id: "context7",
     name: "Context7",
-    description: "Up-to-date documentation for any library directly in your prompt",
+    description:
+      "Up-to-date documentation for any library directly in your prompt",
     command: "npx",
     args: ["-y", "@upstash/context7-mcp@latest"],
     github: "https://github.com/upstash/context7",
@@ -29,14 +30,17 @@ export const RECOMMENDED_MCP_SERVERS: RecommendedMCPServer[] = [
   {
     id: "github",
     name: "GitHub",
-    description: "Repository management, file operations, and GitHub API integration",
+    description:
+      "Repository management, file operations, and GitHub API integration",
     command: "npx",
     args: ["-y", "@modelcontextprotocol/server-github@latest"],
     github: "https://github.com/modelcontextprotocol/servers",
   },
 ];
 
-export function recommendedToConfig(server: RecommendedMCPServer): MCPServerConfig {
+export function recommendedToConfig(
+  server: RecommendedMCPServer,
+): MCPServerConfig {
   return {
     name: server.id,
     transport: "stdio",

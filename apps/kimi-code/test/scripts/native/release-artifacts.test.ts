@@ -1,26 +1,32 @@
-import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
-import { inflateRawSync } from 'node:zlib';
+import { createHash } from "node:crypto";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+import { inflateRawSync } from "node:zlib";
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from "vitest";
 
-import { appRoot } from '../../../scripts/native/paths.mjs';
+import { appRoot } from "../../../scripts/native/paths.mjs";
 
 const execFileAsync = promisify(execFile);
-const packageScript = resolve(appRoot, 'scripts/native/package.mjs');
-const manifestScript = resolve(appRoot, 'scripts/native/produce-manifest.mjs');
-const artifactsDir = resolve(appRoot, 'dist-native/artifacts');
-const target = 'test-zip-artifact';
-const executableName = process.platform === 'win32' ? 'kimi.exe' : 'kimi';
-const fakeBinary = resolve(appRoot, 'dist-native/bin', target, executableName);
+const packageScript = resolve(appRoot, "scripts/native/package.mjs");
+const manifestScript = resolve(appRoot, "scripts/native/produce-manifest.mjs");
+const artifactsDir = resolve(appRoot, "dist-native/artifacts");
+const target = "test-zip-artifact";
+const executableName = process.platform === "win32" ? "kimi.exe" : "kimi";
+const fakeBinary = resolve(appRoot, "dist-native/bin", target, executableName);
 
 function sha256(bytes: Buffer | string): string {
-  return createHash('sha256').update(bytes).digest('hex');
+  return createHash("sha256").update(bytes).digest("hex");
 }
 
 function zipEntryNames(zipPath: string): readonly string[] {
@@ -35,7 +41,9 @@ function zipEntryNames(zipPath: string): readonly string[] {
     const nameLength = zip.readUInt16LE(offset + 28);
     const extraLength = zip.readUInt16LE(offset + 30);
     const commentLength = zip.readUInt16LE(offset + 32);
-    names.push(zip.subarray(offset + 46, offset + 46 + nameLength).toString('utf-8'));
+    names.push(
+      zip.subarray(offset + 46, offset + 46 + nameLength).toString("utf-8"),
+    );
     offset += 46 + nameLength + extraLength + commentLength;
   }
 
@@ -56,7 +64,9 @@ function readZipEntry(zipPath: string, expectedName: string): Buffer {
     const extraLength = zip.readUInt16LE(offset + 30);
     const commentLength = zip.readUInt16LE(offset + 32);
     const localHeaderOffset = zip.readUInt32LE(offset + 42);
-    const name = zip.subarray(offset + 46, offset + 46 + nameLength).toString('utf-8');
+    const name = zip
+      .subarray(offset + 46, offset + 46 + nameLength)
+      .toString("utf-8");
     if (name === expectedName) {
       return readLocalEntry(zip, localHeaderOffset, method, compressedSize);
     }
@@ -86,19 +96,24 @@ function findEndOfCentralDirectory(zip: Buffer): number {
   for (let offset = zip.length - 22; offset >= 0; offset -= 1) {
     if (zip.readUInt32LE(offset) === 0x06054b50) return offset;
   }
-  throw new Error('end of central directory not found');
+  throw new Error("end of central directory not found");
 }
 
-describe('native release artifacts', () => {
+describe("native release artifacts", () => {
   afterEach(() => {
-    rmSync(resolve(appRoot, 'dist-native/bin', target), { recursive: true, force: true });
+    rmSync(resolve(appRoot, "dist-native/bin", target), {
+      recursive: true,
+      force: true,
+    });
     rmSync(resolve(artifactsDir, `kimi-code-${target}.zip`), { force: true });
-    rmSync(resolve(artifactsDir, `kimi-code-${target}.zip.sha256`), { force: true });
+    rmSync(resolve(artifactsDir, `kimi-code-${target}.zip.sha256`), {
+      force: true,
+    });
   });
 
-  it('packages the native binary as a zip archive and checksums the archive', async () => {
-    const binaryContent = 'native binary payload\n';
-    mkdirSync(resolve(appRoot, 'dist-native/bin', target), { recursive: true });
+  it("packages the native binary as a zip archive and checksums the archive", async () => {
+    const binaryContent = "native binary payload\n";
+    mkdirSync(resolve(appRoot, "dist-native/bin", target), { recursive: true });
     writeFileSync(fakeBinary, binaryContent, { mode: 0o755 });
 
     await execFileAsync(process.execPath, [packageScript], {
@@ -111,37 +126,46 @@ describe('native release artifacts', () => {
     expect(existsSync(archivePath)).toBe(true);
     expect(existsSync(checksumPath)).toBe(true);
     expect(zipEntryNames(archivePath)).toEqual([executableName]);
-    expect(readZipEntry(archivePath, executableName).toString('utf-8')).toBe(binaryContent);
-    expect(readFileSync(checksumPath, 'utf-8')).toBe(
+    expect(readZipEntry(archivePath, executableName).toString("utf-8")).toBe(
+      binaryContent,
+    );
+    expect(readFileSync(checksumPath, "utf-8")).toBe(
       `${sha256(readFileSync(archivePath))}  kimi-code-${target}.zip\n`,
     );
   });
 
-  it('produces a manifest from zip archive checksums', async () => {
-    const releaseDir = await mkdtemp(join(tmpdir(), 'kimi-manifest-zip-'));
-    const archiveBytes = Buffer.from('fake zip bytes');
+  it("produces a manifest from zip archive checksums", async () => {
+    const releaseDir = await mkdtemp(join(tmpdir(), "kimi-manifest-zip-"));
+    const archiveBytes = Buffer.from("fake zip bytes");
     const checksum = sha256(archiveBytes);
-    await writeFile(join(releaseDir, 'kimi-code-darwin-arm64.zip'), archiveBytes);
     await writeFile(
-      join(releaseDir, 'kimi-code-darwin-arm64.zip.sha256'),
+      join(releaseDir, "kimi-code-darwin-arm64.zip"),
+      archiveBytes,
+    );
+    await writeFile(
+      join(releaseDir, "kimi-code-darwin-arm64.zip.sha256"),
       `${checksum}  kimi-code-darwin-arm64.zip\n`,
     );
 
-    await execFileAsync(process.execPath, [manifestScript, releaseDir, '@moonshot-ai/kimi-code@0.5.0']);
+    await execFileAsync(process.execPath, [
+      manifestScript,
+      releaseDir,
+      "@moonshot-ai/kimi-code@0.5.0",
+    ]);
 
     const manifest = JSON.parse(
-      await readFile(join(releaseDir, 'manifest.json'), 'utf-8'),
+      await readFile(join(releaseDir, "manifest.json"), "utf-8"),
     ) as {
       version: string;
       tag: string;
       platforms: Record<string, { filename: string; checksum: string }>;
     };
     expect(manifest).toEqual({
-      version: '0.5.0',
-      tag: '@moonshot-ai/kimi-code@0.5.0',
+      version: "0.5.0",
+      tag: "@moonshot-ai/kimi-code@0.5.0",
       platforms: {
-        'darwin-arm64': {
-          filename: 'kimi-code-darwin-arm64.zip',
+        "darwin-arm64": {
+          filename: "kimi-code-darwin-arm64.zip",
           checksum,
         },
       },

@@ -7,20 +7,22 @@
 // text-index builds degrade to the inline main-thread core, stalling the
 // event loop on large corpora.
 
-import { resolve } from 'node:path';
+import { resolve } from "node:path";
 
-import { defineConfig } from 'tsdown';
+import { defineConfig } from "tsdown";
 
 const here = import.meta.dirname;
 
 export default defineConfig({
-  entry: [resolve(here, '../../packages/minidb/src/worker/text-build-worker.ts')],
-  format: ['esm'],
-  outDir: resolve(here, 'dist-native/intermediates'),
-  entryFileNames: 'text-build-worker.mjs',
+  entry: [
+    resolve(here, "../../packages/minidb/src/worker/text-build-worker.ts"),
+  ],
+  format: ["esm"],
+  outDir: resolve(here, "dist-native/intermediates"),
+  entryFileNames: "text-build-worker.mjs",
   codeSplitting: false,
-  platform: 'node',
-  target: 'node24',
+  platform: "node",
+  target: "node24",
   dts: false,
   sourcemap: false,
   minify: false,

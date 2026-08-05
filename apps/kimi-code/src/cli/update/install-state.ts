@@ -1,18 +1,22 @@
-import { z } from 'zod';
+import { z } from "zod";
 
-import { getUpdateInstallStateFile } from '#/utils/paths';
-import { readJsonFile, writeJsonFile } from '#/utils/persistence';
+import { getUpdateInstallStateFile } from "#/utils/paths";
+import { readJsonFile, writeJsonFile } from "#/utils/persistence";
 
-import { emptyUpdateInstallState, type InstallSource, type UpdateInstallState } from './types';
+import {
+  emptyUpdateInstallState,
+  type InstallSource,
+  type UpdateInstallState,
+} from "./types";
 
 const InstallSourceSchema: z.ZodType<InstallSource> = z.enum([
-  'npm-global',
-  'pnpm-global',
-  'yarn-global',
-  'bun-global',
-  'homebrew',
-  'native',
-  'unsupported',
+  "npm-global",
+  "pnpm-global",
+  "yarn-global",
+  "bun-global",
+  "homebrew",
+  "native",
+  "unsupported",
 ]);
 
 const UpdateInstallStateSchema: z.ZodType<UpdateInstallState> = z
@@ -50,7 +54,11 @@ export async function readUpdateInstallState(
   filePath: string = getUpdateInstallStateFile(),
 ): Promise<UpdateInstallState> {
   try {
-    return await readJsonFile(filePath, UpdateInstallStateSchema, emptyUpdateInstallState());
+    return await readJsonFile(
+      filePath,
+      UpdateInstallStateSchema,
+      emptyUpdateInstallState(),
+    );
   } catch {
     return emptyUpdateInstallState();
   }

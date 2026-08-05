@@ -1,4 +1,4 @@
-import type { AvailableCommand } from '@agentclientprotocol/sdk';
+import type { AvailableCommand } from "@agentclientprotocol/sdk";
 import type {
   AgentHandle,
   AgentTaskInfo,
@@ -6,7 +6,7 @@ import type {
   McpServerEntry,
   SessionHandle,
   UsageStatus,
-} from '@moonshot-ai/klient';
+} from "@moonshot-ai/klient";
 
 /**
  * ACP-owned built-in slash commands. Advertised in
@@ -16,39 +16,42 @@ import type {
  */
 export const ACP_BUILTIN_SLASH_COMMANDS = [
   {
-    name: 'compact',
-    description: 'Compact the conversation context',
-    input: { hint: '<optional custom summarization instructions>' },
+    name: "compact",
+    description: "Compact the conversation context",
+    input: { hint: "<optional custom summarization instructions>" },
   },
   {
-    name: 'status',
-    description: 'Show current session status',
+    name: "status",
+    description: "Show current session status",
   },
   {
-    name: 'usage',
-    description: 'Show session token usage',
+    name: "usage",
+    description: "Show session token usage",
   },
   {
-    name: 'mcp',
-    description: 'Show MCP server status',
+    name: "mcp",
+    description: "Show MCP server status",
   },
   {
-    name: 'tasks',
-    description: 'List background tasks',
+    name: "tasks",
+    description: "List background tasks",
   },
   {
-    name: 'help',
-    description: 'Show available ACP commands',
+    name: "help",
+    description: "Show available ACP commands",
   },
 ] as const satisfies readonly AvailableCommand[];
 
-export type AcpBuiltinSlashCommandName = (typeof ACP_BUILTIN_SLASH_COMMANDS)[number]['name'];
+export type AcpBuiltinSlashCommandName =
+  (typeof ACP_BUILTIN_SLASH_COMMANDS)[number]["name"];
 
 export const ACP_BUILTIN_SLASH_COMMAND_NAMES = new Set<string>(
   ACP_BUILTIN_SLASH_COMMANDS.map((command) => command.name),
 );
 
-export function isAcpBuiltinSlashCommand(name: string): name is AcpBuiltinSlashCommandName {
+export function isAcpBuiltinSlashCommand(
+  name: string,
+): name is AcpBuiltinSlashCommandName {
   return ACP_BUILTIN_SLASH_COMMAND_NAMES.has(name);
 }
 
@@ -79,42 +82,45 @@ export interface BuiltinCommandDeps {
 export async function runBuiltinSlashCommand(
   name: AcpBuiltinSlashCommandName,
   deps: BuiltinCommandDeps,
-  args = '',
+  args = "",
 ): Promise<string> {
   switch (name) {
-    case 'help':
+    case "help":
       return helpText(deps.availableCommands);
-    case 'status':
+    case "status":
       return statusText(await deps.session.get(), deps);
-    case 'usage':
+    case "usage":
       return usageText(
         await deps.agent.getUsage(),
         await deps.agent.getContext(),
-        (await deps.klient.global.kosong.listModels()).find((item) => item.model === deps.modelId)
-          ?.max_context_size,
+        (await deps.klient.global.kosong.listModels()).find(
+          (item) => item.model === deps.modelId,
+        )?.max_context_size,
       );
-    case 'tasks':
+    case "tasks":
       return tasksText(await deps.agent.getTasks({ activeOnly: true }));
-    case 'mcp':
+    case "mcp":
       return mcpText(await deps.agent.getMcpServers());
-    case 'compact': {
+    case "compact": {
       // `begin` is fire-and-forget: the compaction runs as a background LLM
       // task on the engine side, so confirm the trigger instead of awaiting
       // the result. Engine refusals (empty history, active turn) throw and
       // are surfaced by the caller as `/compact failed: …`.
       const started = await deps.agent.compact({
-        instruction: args === '' ? undefined : args,
+        instruction: args === "" ? undefined : args,
       });
       return started
-        ? 'Context compaction started — it runs in the background and the compacted context applies once it finishes.'
-        : 'A context compaction is already running.';
+        ? "Context compaction started — it runs in the background and the compacted context applies once it finishes."
+        : "A context compaction is already running.";
     }
   }
 }
 
 function helpText(commands: readonly AvailableCommand[]): string {
-  const lines = commands.map((command) => `/${command.name} — ${command.description}`);
-  return ['Available commands:', ...lines].join('\n');
+  const lines = commands.map(
+    (command) => `/${command.name} — ${command.description}`,
+  );
+  return ["Available commands:", ...lines].join("\n");
 }
 
 function statusText(
@@ -123,14 +129,14 @@ function statusText(
 ): string {
   const lines = [
     `Session: ${deps.sessionId}`,
-    `Model: ${deps.modelId === '' ? '(unbound)' : deps.modelId} (thinking: ${deps.thinkingEnabled ? 'on' : 'off'})`,
+    `Model: ${deps.modelId === "" ? "(unbound)" : deps.modelId} (thinking: ${deps.thinkingEnabled ? "on" : "off"})`,
     `Mode: ${deps.modeId}`,
-    `Working directory: ${meta.cwd ?? '(unknown)'}`,
+    `Working directory: ${meta.cwd ?? "(unknown)"}`,
   ];
-  if (meta.title !== undefined && meta.title !== '') {
+  if (meta.title !== undefined && meta.title !== "") {
     lines.splice(1, 0, `Title: ${meta.title}`);
   }
-  return lines.join('\n');
+  return lines.join("\n");
 }
 
 function usageText(
@@ -145,25 +151,31 @@ function usageText(
   ];
   const total = usage.total;
   if (total === undefined) {
-    lines.push('Session total: no LLM calls yet');
+    lines.push("Session total: no LLM calls yet");
   } else {
-    const input = total.inputOther + total.inputCacheRead + total.inputCacheCreation;
+    const input =
+      total.inputOther + total.inputCacheRead + total.inputCacheCreation;
     lines.push(`Session total: ${input} input, ${total.output} output`);
   }
-  return lines.join('\n');
+  return lines.join("\n");
 }
 
 function tasksText(tasks: readonly AgentTaskInfo[]): string {
-  if (tasks.length === 0) return 'No background tasks.';
-  const lines = tasks.map((task) => `- ${task.taskId}: ${task.description} (${task.status})`);
-  return [`Background tasks (${tasks.length}):`, ...lines].join('\n');
+  if (tasks.length === 0) return "No background tasks.";
+  const lines = tasks.map(
+    (task) => `- ${task.taskId}: ${task.description} (${task.status})`,
+  );
+  return [`Background tasks (${tasks.length}):`, ...lines].join("\n");
 }
 
 function mcpText(servers: readonly McpServerEntry[]): string {
-  if (servers.length === 0) return 'No MCP servers configured for this session.';
+  if (servers.length === 0)
+    return "No MCP servers configured for this session.";
   const lines = servers.map((server) => {
     const line = `- ${server.name} (${server.transport}): ${server.status}, ${server.toolCount} tools`;
-    return server.error !== undefined && server.error !== '' ? `${line} — ${server.error}` : line;
+    return server.error !== undefined && server.error !== ""
+      ? `${line} — ${server.error}`
+      : line;
   });
-  return [`MCP servers (${servers.length}):`, ...lines].join('\n');
+  return [`MCP servers (${servers.length}):`, ...lines].join("\n");
 }

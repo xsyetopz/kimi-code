@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 export const modelCatalogItemSchema = z.object({
   provider: z.string().min(1),
@@ -12,9 +12,9 @@ export const modelCatalogItemSchema = z.object({
 export type ModelCatalogItem = z.infer<typeof modelCatalogItemSchema>;
 
 export const providerCatalogStatusSchema = z.enum([
-  'connected',
-  'error',
-  'unconfigured',
+  "connected",
+  "error",
+  "unconfigured",
 ]);
 export type ProviderCatalogStatus = z.infer<typeof providerCatalogStatusSchema>;
 
@@ -41,4 +41,6 @@ export const providerRefreshFailureSchema = z.object({
   provider: z.string().min(1),
   reason: z.string().min(1),
 });
-export type ProviderRefreshFailure = z.infer<typeof providerRefreshFailureSchema>;
+export type ProviderRefreshFailure = z.infer<
+  typeof providerRefreshFailureSchema
+>;

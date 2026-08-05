@@ -13,14 +13,17 @@ import {
   Disposable,
   getScopedServiceDescriptors,
   LifecycleScope,
-} from '@moonshot-ai/agent-core-v2';
+} from "@moonshot-ai/agent-core-v2";
 
-import type { ScopedEntry, ServiceIdentifier } from '@moonshot-ai/agent-core-v2';
+import type {
+  ScopedEntry,
+  ServiceIdentifier,
+} from "@moonshot-ai/agent-core-v2";
 
 export interface ChannelMethodDescriptor {
   readonly name: string;
   /** `method` is a callable; `property` is a getter readable with no args. */
-  readonly kind: 'method' | 'property';
+  readonly kind: "method" | "property";
   /** Declared parameter count (`Function.length`) — a UI hint, not a schema. */
   readonly arity: number;
   /**
@@ -39,18 +42,18 @@ export interface ChannelDescriptor {
    * Registration scope — the minimal scope at which the channel resolves.
    * Derived from the scoped DI registry.
    */
-  readonly scope: 'app' | 'workspace' | 'session' | 'agent';
+  readonly scope: "app" | "workspace" | "session" | "agent";
   /** Domain tag recorded at `registerScopedService`. */
   readonly domain: string;
   /** Public prototype members, sorted — events are instance properties and never appear. */
   readonly methods: readonly ChannelMethodDescriptor[];
 }
 
-const SCOPE_NAME: Record<LifecycleScope, ChannelDescriptor['scope']> = {
-  [LifecycleScope.App]: 'app',
-  [LifecycleScope.Workspace]: 'workspace',
-  [LifecycleScope.Session]: 'session',
-  [LifecycleScope.Agent]: 'agent',
+const SCOPE_NAME: Record<LifecycleScope, ChannelDescriptor["scope"]> = {
+  [LifecycleScope.App]: "app",
+  [LifecycleScope.Workspace]: "workspace",
+  [LifecycleScope.Session]: "session",
+  [LifecycleScope.Agent]: "agent",
 };
 
 let serviceNameIndex: Map<string, ServiceIdentifier<unknown>> | undefined;
@@ -82,7 +85,9 @@ function scopedServiceNameIndex(): Map<string, ServiceIdentifier<unknown>> {
 }
 
 /** Resolve a wire name to its `ServiceIdentifier` anywhere in the DI registry. */
-export function resolveAnyScopedServiceId(name: string): ServiceIdentifier<unknown> | undefined {
+export function resolveAnyScopedServiceId(
+  name: string,
+): ServiceIdentifier<unknown> | undefined {
   return scopedServiceNameIndex().get(name);
 }
 
@@ -93,18 +98,18 @@ export function resolveAnyScopedServiceId(name: string): ServiceIdentifier<unkno
  */
 function extractParams(fn: (...args: never[]) => unknown): string {
   const src = fn.toString();
-  const start = src.indexOf('(');
-  if (start === -1) return '';
+  const start = src.indexOf("(");
+  if (start === -1) return "";
   let depth = 0;
   for (let i = start; i < src.length; i++) {
     const ch = src[i];
-    if (ch === '(') depth++;
-    else if (ch === ')') {
+    if (ch === "(") depth++;
+    else if (ch === ")") {
       depth--;
       if (depth === 0) return src.slice(start + 1, i).trim();
     }
   }
-  return '';
+  return "";
 }
 
 /** Enumerate public methods/getters by walking the ctor prototype chain. */
@@ -115,18 +120,23 @@ function describeMethods(
   const methods = new Map<string, ChannelMethodDescriptor>();
   let proto: object | null = ctor.prototype;
   // Stop at framework plumbing: `Disposable` (`dispose`, `_register`) and `Object`.
-  while (proto !== null && proto !== Object.prototype && proto !== Disposable.prototype) {
+  while (
+    proto !== null &&
+    proto !== Object.prototype &&
+    proto !== Disposable.prototype
+  ) {
     for (const name of Object.getOwnPropertyNames(proto)) {
-      if (name === 'constructor' || name.startsWith('_') || methods.has(name)) continue;
+      if (name === "constructor" || name.startsWith("_") || methods.has(name))
+        continue;
       const desc = Object.getOwnPropertyDescriptor(proto, name);
       if (desc === undefined) continue;
-      if (typeof desc.get === 'function') {
-        methods.set(name, { name, kind: 'property', arity: 0, params: '' });
-      } else if (typeof desc.value === 'function') {
+      if (typeof desc.get === "function") {
+        methods.set(name, { name, kind: "property", arity: 0, params: "" });
+      } else if (typeof desc.value === "function") {
         const fn = desc.value as (...args: never[]) => unknown;
         methods.set(name, {
           name,
-          kind: 'method',
+          kind: "method",
           arity: fn.length,
           params: extractParams(fn),
         });

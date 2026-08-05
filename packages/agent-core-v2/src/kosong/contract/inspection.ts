@@ -12,12 +12,12 @@
  */
 
 export type InspectionSourceKind =
-  | 'config'
-  | 'override'
-  | 'builtin'
-  | 'env'
-  | 'synthesized'
-  | 'none';
+  | "config"
+  | "override"
+  | "builtin"
+  | "env"
+  | "synthesized"
+  | "none";
 
 export interface InspectionSource {
   readonly kind: InspectionSourceKind;

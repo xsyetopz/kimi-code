@@ -1,7 +1,11 @@
 // apps/kimi-web/src/composables/useSlashMenu.ts
-import { nextTick, ref, type Ref } from 'vue';
-import type { AppSkill } from '../api/types';
-import { buildSlashItems, filterCommands, type SlashCommand } from '../lib/slashCommands';
+import { nextTick, ref, type Ref } from "vue";
+import type { AppSkill } from "../api/types";
+import {
+  buildSlashItems,
+  filterCommands,
+  type SlashCommand,
+} from "../lib/slashCommands";
 
 export interface SlashMenuDeps {
   /** The live composer text — drives filtering and is rewritten on select. */
@@ -33,7 +37,15 @@ export interface SlashMenuDeps {
  * when an item is chosen.
  */
 export function useSlashMenu(deps: SlashMenuDeps) {
-  const { text, textareaRef, autosize, skills, emitCommand, historyPush, clearDraft } = deps;
+  const {
+    text,
+    textareaRef,
+    autosize,
+    skills,
+    emitCommand,
+    historyPush,
+    clearDraft,
+  } = deps;
 
   const open = ref(false);
   const items = ref<SlashCommand[]>([]);
@@ -42,7 +54,7 @@ export function useSlashMenu(deps: SlashMenuDeps) {
   function update(): void {
     const val = text.value;
     // Only show if the value starts with `/` and has no space yet (single token).
-    if (val.startsWith('/') && !val.includes(' ')) {
+    if (val.startsWith("/") && !val.includes(" ")) {
       // Built-in commands + the active session's skills (shown as /<skill-name>).
       items.value = filterCommands(val, buildSlashItems(skills()));
       active.value = 0;
@@ -66,7 +78,7 @@ export function useSlashMenu(deps: SlashMenuDeps) {
       });
       return;
     }
-    text.value = '';
+    text.value = "";
     clearDraft?.();
     // Menu-selected bare commands (e.g. /model, /login) reach here directly and
     // never go through handleSubmit, so record them for recall too. acceptsInput

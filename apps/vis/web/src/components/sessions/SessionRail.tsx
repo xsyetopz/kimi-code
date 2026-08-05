@@ -1,30 +1,43 @@
-import { useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useMemo, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 
-import { useDeleteSession, useImportZip, useSessions } from '../../hooks/useSession';
-import type { SessionSummary, SessionHealth } from '../../types';
-import { SessionCard } from './SessionCard';
-import { SessionFilter } from './SessionFilter';
+import {
+  useDeleteSession,
+  useImportZip,
+  useSessions,
+} from "../../hooks/useSession";
+import type { SessionSummary, SessionHealth } from "../../types";
+import { SessionCard } from "./SessionCard";
+import { SessionFilter } from "./SessionFilter";
 
-export type SessionSortKey = 'recent' | 'oldest' | 'most_records' | 'most_subagents';
-export type HealthFilter = 'all' | SessionHealth;
-export type SourceFilter = 'all' | 'local' | 'imported';
+export type SessionSortKey =
+  | "recent"
+  | "oldest"
+  | "most_records"
+  | "most_subagents";
+export type HealthFilter = "all" | SessionHealth;
+export type SourceFilter = "all" | "local" | "imported";
 
 function workspaceKey(s: SessionSummary): string {
-  if (!s.workDir) return '(no workspace)';
-  return s.workDir.split('/').slice(-2).join('/');
+  if (!s.workDir) return "(no workspace)";
+  return s.workDir.split("/").slice(-2).join("/");
 }
 
-function sortSessions(sessions: readonly SessionSummary[], key: SessionSortKey): SessionSummary[] {
+function sortSessions(
+  sessions: readonly SessionSummary[],
+  key: SessionSortKey,
+): SessionSummary[] {
   switch (key) {
-    case 'recent':
+    case "recent":
       return sessions.toSorted((a, b) => b.updatedAt - a.updatedAt);
-    case 'oldest':
+    case "oldest":
       return sessions.toSorted((a, b) => a.createdAt - b.createdAt);
-    case 'most_records':
-      return sessions.toSorted((a, b) => b.mainWireRecordCount - a.mainWireRecordCount);
-    case 'most_subagents':
-      return sessions.toSorted((a, b) => (b.agentCount - 1) - (a.agentCount - 1));
+    case "most_records":
+      return sessions.toSorted(
+        (a, b) => b.mainWireRecordCount - a.mainWireRecordCount,
+      );
+    case "most_subagents":
+      return sessions.toSorted((a, b) => b.agentCount - 1 - (a.agentCount - 1));
   }
 }
 
@@ -34,45 +47,50 @@ export function SessionRail() {
   const importZip = useImportZip();
   const navigate = useNavigate();
   const { sessionId } = useParams<{ sessionId: string }>();
-  const [search, setSearch] = useState('');
-  const [sortKey, setSortKey] = useState<SessionSortKey>('recent');
-  const [healthFilter, setHealthFilter] = useState<HealthFilter>('all');
-  const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all');
+  const [search, setSearch] = useState("");
+  const [sortKey, setSortKey] = useState<SessionSortKey>("recent");
+  const [healthFilter, setHealthFilter] = useState<HealthFilter>("all");
+  const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
 
   const filtered = useMemo(() => {
     if (!data) return [];
     const q = search.trim().toLowerCase();
     return data.filter((s) => {
-      if (healthFilter !== 'all' && s.health !== healthFilter) return false;
-      if (sourceFilter === 'local' && s.imported) return false;
-      if (sourceFilter === 'imported' && !s.imported) return false;
+      if (healthFilter !== "all" && s.health !== healthFilter) return false;
+      if (sourceFilter === "local" && s.imported) return false;
+      if (sourceFilter === "imported" && !s.imported) return false;
       if (!q) return true;
       const hay = [
         s.sessionId,
-        s.title ?? '',
-        s.lastPrompt ?? '',
-        s.workDir ?? '',
-        s.importMeta?.originalName ?? '',
+        s.title ?? "",
+        s.lastPrompt ?? "",
+        s.workDir ?? "",
+        s.importMeta?.originalName ?? "",
       ]
-        .join(' ')
+        .join(" ")
         .toLowerCase();
       return hay.includes(q);
     });
   }, [data, search, healthFilter, sourceFilter]);
 
-  const importedCount = useMemo(() => (data ?? []).filter((s) => s.imported).length, [data]);
+  const importedCount = useMemo(
+    () => (data ?? []).filter((s) => s.imported).length,
+    [data],
+  );
 
   async function handleImport(file: File) {
     try {
       const result = await importZip.mutateAsync(file);
       void navigate(`/sessions/${result.sessionId}`);
     } catch (importError) {
-      window.alert(`Import failed: ${importError instanceof Error ? importError.message : String(importError)}`);
+      window.alert(
+        `Import failed: ${importError instanceof Error ? importError.message : String(importError)}`,
+      );
     }
   }
 
   const grouped = useMemo(() => {
-    if (sortKey !== 'recent') return null;
+    if (sortKey !== "recent") return null;
     const map = new Map<string, SessionSummary[]>();
     for (const s of filtered) {
       const k = workspaceKey(s);
@@ -102,16 +120,24 @@ export function SessionRail() {
 
   async function handleDeleteSession(session: SessionSummary) {
     const label = session.title ?? session.lastPrompt ?? session.sessionId;
-    if (!window.confirm(`Delete session "${label}"?\n\nThis removes its files from KIMI_CODE_HOME.`)) {
+    if (
+      !window.confirm(
+        `Delete session "${label}"?\n\nThis removes its files from KIMI_CODE_HOME.`,
+      )
+    ) {
       return;
     }
     try {
       await deleteSession.mutateAsync(session.sessionId);
       if (sessionId === session.sessionId) {
-        void navigate('/');
+        void navigate("/");
       }
     } catch (deleteError) {
-      window.alert(deleteError instanceof Error ? deleteError.message : String(deleteError));
+      window.alert(
+        deleteError instanceof Error
+          ? deleteError.message
+          : String(deleteError),
+      );
     }
   }
 
@@ -129,7 +155,9 @@ export function SessionRail() {
         totalCount={data?.length ?? 0}
         filteredCount={filtered.length}
         importedCount={importedCount}
-        onImport={(file) => { void handleImport(file); }}
+        onImport={(file) => {
+          void handleImport(file);
+        }}
         importing={importZip.isPending}
       />
       <div className="min-h-0 flex-1 overflow-y-auto">
@@ -140,12 +168,15 @@ export function SessionRail() {
             {error.message}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="p-3 font-mono text-[11px] text-fg-3">no sessions match</div>
+          <div className="p-3 font-mono text-[11px] text-fg-3">
+            no sessions match
+          </div>
         ) : grouped !== null ? (
           grouped.map(([group, items]) => (
             <div key={group}>
               <div className="sticky top-0 z-10 border-b border-border bg-surface-1 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.12em] text-fg-3">
-                {group} <span className="text-fg-3 tabular">· {items.length}</span>
+                {group}{" "}
+                <span className="text-fg-3 tabular">· {items.length}</span>
               </div>
               {items.map((s) => (
                 <SessionCard
@@ -154,7 +185,10 @@ export function SessionRail() {
                   onDelete={(target) => {
                     void handleDeleteSession(target);
                   }}
-                  deleting={deleteSession.isPending && deleteSession.variables === s.sessionId}
+                  deleting={
+                    deleteSession.isPending &&
+                    deleteSession.variables === s.sessionId
+                  }
                 />
               ))}
             </div>
@@ -167,7 +201,10 @@ export function SessionRail() {
               onDelete={(target) => {
                 void handleDeleteSession(target);
               }}
-              deleting={deleteSession.isPending && deleteSession.variables === s.sessionId}
+              deleting={
+                deleteSession.isPending &&
+                deleteSession.variables === s.sessionId
+              }
             />
           ))
         )}

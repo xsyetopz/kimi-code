@@ -1,20 +1,20 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from "vitest";
 
-import { SyncDescriptor } from '#/di/descriptors';
-import { InstantiationService } from '#/di/instantiationService';
+import { SyncDescriptor } from "#/di/descriptors";
+import { InstantiationService } from "#/di/instantiationService";
 import {
   createDecorator,
   type BrandedService,
   type IConstructorSignature,
   type ServicesAccessor,
-} from '#/di/instantiation';
-import type { IDisposable } from '#/di/lifecycle';
-import { ServiceCollection } from '#/di/serviceCollection';
+} from "#/di/instantiation";
+import type { IDisposable } from "#/di/lifecycle";
+import { ServiceCollection } from "#/di/serviceCollection";
 
 interface ILogger {
   log(msg: string): void;
 }
-const ILogger = createDecorator<ILogger>('logger');
+const ILogger = createDecorator<ILogger>("logger");
 
 function captureThrown(fn: () => void): unknown {
   try {
@@ -25,9 +25,9 @@ function captureThrown(fn: () => void): unknown {
   }
 }
 
-describe('InstantiationService (basic)', () => {
-  it('constructs an impl from SyncDescriptor on first get', () => {
-    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+describe("InstantiationService (basic)", () => {
+  it("constructs an impl from SyncDescriptor on first get", () => {
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
     class ConsoleLogger implements ILogger {
       log(m: string): void {
         // eslint-disable-next-line no-console
@@ -38,13 +38,13 @@ describe('InstantiationService (basic)', () => {
       new ServiceCollection([ILogger, new SyncDescriptor(ConsoleLogger)]),
     );
     ix.invokeFunction((a) => {
-      a.get(ILogger).log('hi');
+      a.get(ILogger).log("hi");
     });
-    expect(logSpy).toHaveBeenCalledWith('hi');
+    expect(logSpy).toHaveBeenCalledWith("hi");
     logSpy.mockRestore();
   });
 
-  it('returns the same cached instance across multiple invokeFunction calls', () => {
+  it("returns the same cached instance across multiple invokeFunction calls", () => {
     class ConsoleLogger implements ILogger {
       log(_m: string): void {}
     }
@@ -56,7 +56,7 @@ describe('InstantiationService (basic)', () => {
     expect(first).toBe(second);
   });
 
-  it('returns the same cached instance within a single invokeFunction call', () => {
+  it("returns the same cached instance within a single invokeFunction call", () => {
     class ConsoleLogger implements ILogger {
       log(_m: string): void {}
     }
@@ -72,7 +72,7 @@ describe('InstantiationService (basic)', () => {
     expect(outer).toBe(inner);
   });
 
-  it('createInstance() constructs a raw ctor with literal args (no DI)', () => {
+  it("createInstance() constructs a raw ctor with literal args (no DI)", () => {
     class MyClass {
       constructor(
         public readonly a: string,
@@ -80,18 +80,18 @@ describe('InstantiationService (basic)', () => {
       ) {}
     }
     const ix = new InstantiationService();
-    const inst = ix.createInstance(MyClass, 'x', 7);
+    const inst = ix.createInstance(MyClass, "x", 7);
     expect(inst).toBeInstanceOf(MyClass);
-    expect(inst.a).toBe('x');
+    expect(inst.a).toBe("x");
     expect(inst.b).toBe(7);
   });
 
-  it('IConstructorSignature models manual constructor args followed by DI services', () => {
+  it("IConstructorSignature models manual constructor args followed by DI services", () => {
     interface IBrandedLogger {
       readonly _serviceBrand: undefined;
       log(msg: string): void;
     }
-    const IBrandedLogger = createDecorator<IBrandedLogger>('branded-logger');
+    const IBrandedLogger = createDecorator<IBrandedLogger>("branded-logger");
 
     class BrandedLogger implements IBrandedLogger {
       declare readonly _serviceBrand: undefined;
@@ -122,22 +122,25 @@ describe('InstantiationService (basic)', () => {
     const ctor = registerRouteContribution(RouteContribution);
     (IBrandedLogger as unknown as (t: unknown, k: string, i: number) => void)(
       RouteContribution,
-      '',
+      "",
       1,
     );
     const ix = new InstantiationService(
-      new ServiceCollection([IBrandedLogger, new SyncDescriptor(BrandedLogger)]),
+      new ServiceCollection([
+        IBrandedLogger,
+        new SyncDescriptor(BrandedLogger),
+      ]),
     );
 
-    const contribution = ix.createInstance(ctor, '/auth');
+    const contribution = ix.createInstance(ctor, "/auth");
     contribution.start();
 
-    expect(contribution.route).toBe('/auth');
+    expect(contribution.route).toBe("/auth");
     expect(contribution.logger).toBeInstanceOf(BrandedLogger);
-    expect((contribution.logger as BrandedLogger).messages).toEqual(['/auth']);
+    expect((contribution.logger as BrandedLogger).messages).toEqual(["/auth"]);
   });
 
-  it('createInstance(descriptor) unpacks ctor + staticArguments (P0.4)', () => {
+  it("createInstance(descriptor) unpacks ctor + staticArguments (P0.4)", () => {
     class Foo {
       constructor(
         public readonly a: string,
@@ -145,13 +148,13 @@ describe('InstantiationService (basic)', () => {
       ) {}
     }
     const ix = new InstantiationService();
-    const inst = ix.createInstance(new SyncDescriptor(Foo, ['a', 'b']));
+    const inst = ix.createInstance(new SyncDescriptor(Foo, ["a", "b"]));
     expect(inst).toBeInstanceOf(Foo);
-    expect(inst.a).toBe('a');
-    expect(inst.b).toBe('b');
+    expect(inst.a).toBe("a");
+    expect(inst.b).toBe("b");
   });
 
-  it('createInstance(descriptor, ...rest) concatenates static prefix + rest (P0.4)', () => {
+  it("createInstance(descriptor, ...rest) concatenates static prefix + rest (P0.4)", () => {
     class Foo {
       constructor(
         public readonly a: string,
@@ -159,21 +162,21 @@ describe('InstantiationService (basic)', () => {
       ) {}
     }
     const ix = new InstantiationService();
-    const inst = ix.createInstance(new SyncDescriptor(Foo, ['a']), 'b');
-    expect(inst.a).toBe('a');
-    expect(inst.b).toBe('b');
+    const inst = ix.createInstance(new SyncDescriptor(Foo, ["a"]), "b");
+    expect(inst.a).toBe("a");
+    expect(inst.b).toBe("b");
   });
 
-  it('eagerly constructs on first get (ctor side-effect runs during get)', () => {
+  it("eagerly constructs on first get (ctor side-effect runs during get)", () => {
     let ctorCount = 0;
     class CountingService {
-      readonly tag = 'counting';
+      readonly tag = "counting";
 
       constructor() {
         ctorCount++;
       }
     }
-    const IFoo = createDecorator<CountingService>('foo');
+    const IFoo = createDecorator<CountingService>("foo");
     const ix = new InstantiationService(
       new ServiceCollection([IFoo, new SyncDescriptor(CountingService)]),
     );
@@ -184,21 +187,23 @@ describe('InstantiationService (basic)', () => {
     expect(ctorCount).toBe(1);
   });
 
-  it('honours SyncDescriptor.staticArguments when constructing', () => {
+  it("honours SyncDescriptor.staticArguments when constructing", () => {
     class Greeter {
       constructor(public readonly prefix: string) {}
       greet(name: string): string {
         return `${this.prefix} ${name}`;
       }
     }
-    const IGreeter = createDecorator<Greeter>('greeter');
+    const IGreeter = createDecorator<Greeter>("greeter");
     const ix = new InstantiationService(
-      new ServiceCollection([IGreeter, new SyncDescriptor(Greeter, ['hello'])]),
+      new ServiceCollection([IGreeter, new SyncDescriptor(Greeter, ["hello"])]),
     );
-    expect(ix.invokeFunction((a) => a.get(IGreeter).greet('world'))).toBe('hello world');
+    expect(ix.invokeFunction((a) => a.get(IGreeter).greet("world"))).toBe(
+      "hello world",
+    );
   });
 
-  it('accepts a pre-built instance shorthand from ServiceCollection', () => {
+  it("accepts a pre-built instance shorthand from ServiceCollection", () => {
     class ConsoleLogger implements ILogger {
       log(_m: string): void {}
     }
@@ -207,30 +212,30 @@ describe('InstantiationService (basic)', () => {
     expect(ix.invokeFunction((a) => a.get(ILogger))).toBe(inst);
   });
 
-  it('non-strict mode returns undefined for an unregistered id', () => {
+  it("non-strict mode returns undefined for an unregistered id", () => {
     const ix = new InstantiationService();
     expect(ix.invokeFunction((a) => a.get(ILogger))).toBeUndefined();
   });
 
-  it('strict mode throws when getting an unregistered id', () => {
+  it("strict mode throws when getting an unregistered id", () => {
     const ix = new InstantiationService(new ServiceCollection(), true);
     expect(() => ix.invokeFunction((a) => a.get(ILogger))).toThrowError(
       /unknown service 'logger'/,
     );
   });
 
-  it('invokeFunction forwards additional arguments to the callback', () => {
+  it("invokeFunction forwards additional arguments to the callback", () => {
     const ix = new InstantiationService();
     expect(
       ix.invokeFunction(
         (_a, prefix: string, count: number) => `${prefix}:${count}`,
-        'req',
+        "req",
         7,
       ),
-    ).toBe('req:7');
+    ).toBe("req:7");
   });
 
-  it('invokeFunction accessor is invalid after the callback returns', () => {
+  it("invokeFunction accessor is invalid after the callback returns", () => {
     class AccessorLogger implements ILogger {
       log(_m: string): void {}
     }
@@ -247,7 +252,7 @@ describe('InstantiationService (basic)', () => {
     );
   });
 
-  it('uses the live ServiceCollection entry instead of a stale instance cache', () => {
+  it("uses the live ServiceCollection entry instead of a stale instance cache", () => {
     class InitialLogger implements ILogger {
       log(_m: string): void {}
     }
@@ -263,44 +268,46 @@ describe('InstantiationService (basic)', () => {
     expect(ix.invokeFunction((a) => a.get(ILogger))).toBe(second);
   });
 
-  it('does not expose the backing ServiceCollection as a public runtime property', () => {
+  it("does not expose the backing ServiceCollection as a public runtime property", () => {
     const ix = new InstantiationService(new ServiceCollection());
-    expect('services' in ix).toBe(false);
+    expect("services" in ix).toBe(false);
   });
 
-  it('createChild returns a child container, dispose tears down', () => {
+  it("createChild returns a child container, dispose tears down", () => {
     const ix = new InstantiationService();
     const child = ix.createChild(new ServiceCollection());
     expect(child).toBeDefined();
-    expect(() => { ix.dispose(); }).not.toThrow();
+    expect(() => {
+      ix.dispose();
+    }).not.toThrow();
   });
 
-  it('disposes all constructed services before throwing AggregateError', () => {
+  it("disposes all constructed services before throwing AggregateError", () => {
     interface IService {
       tag: string;
     }
-    const IA = createDecorator<IService>('dispose-a');
-    const IB = createDecorator<IService>('dispose-b');
-    const IC = createDecorator<IService>('dispose-c');
+    const IA = createDecorator<IService>("dispose-a");
+    const IB = createDecorator<IService>("dispose-b");
+    const IC = createDecorator<IService>("dispose-c");
     const events: string[] = [];
     class A implements IService, IDisposable {
-      tag = 'a';
+      tag = "a";
       dispose(): void {
-        events.push('A');
-        throw new Error('dispose-a');
+        events.push("A");
+        throw new Error("dispose-a");
       }
     }
     class B implements IService, IDisposable {
-      tag = 'b';
+      tag = "b";
       dispose(): void {
-        events.push('B');
+        events.push("B");
       }
     }
     class C implements IService, IDisposable {
-      tag = 'c';
+      tag = "c";
       dispose(): void {
-        events.push('C');
-        throw new Error('dispose-c');
+        events.push("C");
+        throw new Error("dispose-c");
       }
     }
     const ix = new InstantiationService(
@@ -316,13 +323,14 @@ describe('InstantiationService (basic)', () => {
       a.get(IB);
       a.get(IC);
     });
-    const error = captureThrown(() => { ix.dispose(); });
+    const error = captureThrown(() => {
+      ix.dispose();
+    });
 
-    expect(events).toEqual(['C', 'B', 'A']);
+    expect(events).toEqual(["C", "B", "A"]);
     expect(error).toBeInstanceOf(AggregateError);
-    expect((error as AggregateError).errors.map((err) => (err as Error).message)).toEqual([
-      'dispose-c',
-      'dispose-a',
-    ]);
+    expect(
+      (error as AggregateError).errors.map((err) => (err as Error).message),
+    ).toEqual(["dispose-c", "dispose-a"]);
   });
 });

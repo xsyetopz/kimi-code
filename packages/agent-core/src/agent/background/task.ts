@@ -1,23 +1,28 @@
-import type { AgentBackgroundTaskInfo } from './agent-task';
-import type { ProcessBackgroundTaskInfo } from './process-task';
-import type { QuestionBackgroundTaskInfo } from './question-task';
+import type { AgentBackgroundTaskInfo } from "./agent-task";
+import type { ProcessBackgroundTaskInfo } from "./process-task";
+import type { QuestionBackgroundTaskInfo } from "./question-task";
 
 export type BackgroundTaskStatus =
-  | 'running'
-  | 'completed'
-  | 'failed'
-  | 'timed_out'
-  | 'killed'
-  | 'lost';
+  | "running"
+  | "completed"
+  | "failed"
+  | "timed_out"
+  | "killed"
+  | "lost";
 
-export const TERMINAL_STATUSES: ReadonlySet<BackgroundTaskStatus> = new Set<BackgroundTaskStatus>([
-  'completed',
-  'failed',
-  'timed_out',
-  'killed',
-  'lost',
-]);
-export type BackgroundTaskSettlementStatus = 'completed' | 'failed' | 'timed_out' | 'killed';
+export const TERMINAL_STATUSES: ReadonlySet<BackgroundTaskStatus> =
+  new Set<BackgroundTaskStatus>([
+    "completed",
+    "failed",
+    "timed_out",
+    "killed",
+    "lost",
+  ]);
+export type BackgroundTaskSettlementStatus =
+  | "completed"
+  | "failed"
+  | "timed_out"
+  | "killed";
 
 export interface BackgroundTaskSettlement {
   readonly status: BackgroundTaskSettlementStatus;
@@ -57,7 +62,7 @@ export interface BackgroundTaskSink {
 
 export interface BackgroundTask {
   readonly idPrefix: string;
-  readonly kind: BackgroundTaskInfo['kind'];
+  readonly kind: BackgroundTaskInfo["kind"];
   readonly description: string;
   readonly timeoutMs?: number;
 

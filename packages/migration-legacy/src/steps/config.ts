@@ -1,42 +1,47 @@
-import { readFile, mkdir } from 'node:fs/promises';
-import { parse as parseToml, stringify as stringifyToml } from 'smol-toml';
+import { readFile, mkdir } from "node:fs/promises";
+import { parse as parseToml, stringify as stringifyToml } from "smol-toml";
 import {
   HookDefSchema,
   KimiConfigSchema,
   ModelAliasSchema,
   ProviderConfigSchema,
   transformTomlData,
-} from '@moonshot-ai/agent-core';
-import { FLAG_DEFINITIONS } from '@moonshot-ai/agent-core/flags/registry';
-import { atomicWrite } from '../atomic-write.js';
-import { DEFAULT_CONFIG_FILE_TEXT, isTuiStubOrMissing } from '../stub-detect.js';
+} from "@moonshot-ai/agent-core";
+import { FLAG_DEFINITIONS } from "@moonshot-ai/agent-core/flags/registry";
+import { atomicWrite } from "../atomic-write.js";
+import {
+  DEFAULT_CONFIG_FILE_TEXT,
+  isTuiStubOrMissing,
+} from "../stub-detect.js";
 import {
   sourceConfigToml,
   targetConfigFile,
   targetTuiFile,
   siblingConfigToml,
   siblingTuiToml,
-} from '../paths.js';
+} from "../paths.js";
 
 // `theme` / `default_editor` belong in tui.toml, not config.toml.
-const TUI_TOP_LEVEL_KEYS = new Set(['theme', 'default_editor']);
-const TOP_LEVEL_KEYS_TO_DROP = new Set(['plan_mode', 'yolo']);
+const TUI_TOP_LEVEL_KEYS = new Set(["theme", "default_editor"]);
+const TOP_LEVEL_KEYS_TO_DROP = new Set(["plan_mode", "yolo"]);
 const LOOP_CONTROL_FIELDS_TO_KEEP = new Set([
-  'max_retries_per_step',
-  'reserved_context_size',
+  "max_retries_per_step",
+  "reserved_context_size",
 ]);
 const BACKGROUND_FIELDS_TO_KEEP = new Set([
-  'max_running_tasks',
-  'keep_alive_on_exit',
+  "max_running_tasks",
+  "keep_alive_on_exit",
 ]);
 const REGISTERED_EXPERIMENTAL_FLAGS: ReadonlySet<string> = new Set(
-  (FLAG_DEFINITIONS as ReadonlyArray<{ readonly id: string }>).map((definition) => definition.id),
+  (FLAG_DEFINITIONS as ReadonlyArray<{ readonly id: string }>).map(
+    (definition) => definition.id,
+  ),
 );
 
 // kimi-code's tui.toml `theme` enum (mirrors apps/kimi-code TuiThemeSchema).
 // A legacy theme outside this set would fail loadTuiConfig()'s whole-file
 // validation, taking the migrated editor command down with it — so drop it.
-const TUI_THEMES: ReadonlySet<string> = new Set(['dark', 'light', 'auto']);
+const TUI_THEMES: ReadonlySet<string> = new Set(["dark", "light", "auto"]);
 
 function camelToSnake(s: string): string {
   return s.replaceAll(/[A-Z]/g, (c) => `_${c.toLowerCase()}`);
@@ -48,7 +53,10 @@ function camelToSnake(s: string): string {
 // not via this set.
 const SUPPORTED_TOP_LEVEL_KEYS: ReadonlySet<string> = new Set(
   Object.keys(KimiConfigSchema.shape)
-    .filter((k) => k !== 'raw' && k !== 'providers' && k !== 'models' && k !== 'hooks')
+    .filter(
+      (k) =>
+        k !== "raw" && k !== "providers" && k !== "models" && k !== "hooks",
+    )
     .map(camelToSnake),
 );
 
@@ -91,7 +99,7 @@ export interface ConfigStepResult {
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function emptyResult(): ConfigStepResult {
@@ -114,7 +122,9 @@ function filterFields(
   value: Record<string, unknown>,
   fieldsToKeep: ReadonlySet<string>,
 ): Record<string, unknown> | undefined {
-  const keptEntries = Object.entries(value).filter(([field]) => fieldsToKeep.has(field));
+  const keptEntries = Object.entries(value).filter(([field]) =>
+    fieldsToKeep.has(field),
+  );
   return keptEntries.length > 0 ? Object.fromEntries(keptEntries) : undefined;
 }
 
@@ -122,7 +132,8 @@ function filterRegisteredExperimentalFlags(
   value: Record<string, unknown>,
 ): Record<string, unknown> | undefined {
   const keptEntries = Object.entries(value).filter(
-    ([field, flag]) => REGISTERED_EXPERIMENTAL_FLAGS.has(field) && typeof flag === 'boolean',
+    ([field, flag]) =>
+      REGISTERED_EXPERIMENTAL_FLAGS.has(field) && typeof flag === "boolean",
   );
   return keptEntries.length > 0 ? Object.fromEntries(keptEntries) : undefined;
 }
@@ -130,27 +141,31 @@ function filterRegisteredExperimentalFlags(
 /** True when the kimi-cli provider entry validates against kimi-code's schema. */
 function providerIsSupported(prov: Record<string, unknown>): boolean {
   const transformed = transformTomlData({ providers: { x: prov } });
-  const entry = isRecord(transformed['providers']) ? transformed['providers']['x'] : undefined;
+  const entry = isRecord(transformed["providers"])
+    ? transformed["providers"]["x"]
+    : undefined;
   return ProviderConfigSchema.safeParse(entry).success;
 }
 
 /** True when the kimi-cli model entry validates against kimi-code's schema. */
 function modelIsSupported(mod: Record<string, unknown>): boolean {
   const transformed = transformTomlData({ models: { x: mod } });
-  const entry = isRecord(transformed['models']) ? transformed['models']['x'] : undefined;
+  const entry = isRecord(transformed["models"])
+    ? transformed["models"]["x"]
+    : undefined;
   return ModelAliasSchema.safeParse(entry).success;
 }
 
 /** Order-insensitive deep-equality key, so re-ordered tables are not conflicts. */
 function stableKey(value: unknown): string {
-  if (Array.isArray(value)) return `[${value.map(stableKey).join(',')}]`;
+  if (Array.isArray(value)) return `[${value.map(stableKey).join(",")}]`;
   if (isRecord(value)) {
     return `{${Object.keys(value)
       .toSorted()
       .map((k) => `${JSON.stringify(k)}:${stableKey(value[k])}`)
-      .join(',')}}`;
+      .join(",")}}`;
   }
-  return JSON.stringify(value) ?? 'null';
+  return JSON.stringify(value) ?? "null";
 }
 
 function deepEqual(a: unknown, b: unknown): boolean {
@@ -169,8 +184,10 @@ function mergeConfig(
   const merged: Record<string, unknown> = { ...target };
   const conflicts: string[] = [];
   for (const [key, value] of Object.entries(migrated)) {
-    if ((key === 'providers' || key === 'models') && isRecord(value)) {
-      const section: Record<string, unknown> = isRecord(merged[key]) ? { ...merged[key] } : {};
+    if ((key === "providers" || key === "models") && isRecord(value)) {
+      const section: Record<string, unknown> = isRecord(merged[key])
+        ? { ...merged[key] }
+        : {};
       for (const [name, entry] of Object.entries(value)) {
         if (section[name] === undefined) {
           section[name] = entry;
@@ -190,10 +207,12 @@ function mergeConfig(
   return { merged, conflicts };
 }
 
-export async function migrateConfigStep(input: ConfigStepInput): Promise<ConfigStepResult> {
+export async function migrateConfigStep(
+  input: ConfigStepInput,
+): Promise<ConfigStepResult> {
   let oldText: string;
   try {
-    oldText = await readFile(sourceConfigToml(input.sourceHome), 'utf-8');
+    oldText = await readFile(sourceConfigToml(input.sourceHome), "utf-8");
   } catch {
     return emptyResult();
   }
@@ -214,41 +233,43 @@ export async function migrateConfigStep(input: ConfigStepInput): Promise<ConfigS
   const configPath = targetConfigFile(input.targetHome);
   let targetText: string | undefined;
   try {
-    targetText = await readFile(configPath, 'utf-8');
+    targetText = await readFile(configPath, "utf-8");
   } catch {
     targetText = undefined;
   }
-  let targetMode: 'overwrite' | 'merge' | 'sibling';
+  let targetMode: "overwrite" | "merge" | "sibling";
   let targetParsed: Record<string, unknown> = {};
   if (targetText === undefined || targetText === DEFAULT_CONFIG_FILE_TEXT) {
-    targetMode = 'overwrite';
+    targetMode = "overwrite";
   } else {
     try {
       const tp: unknown = parseToml(targetText);
       targetParsed = isRecord(tp) ? tp : {};
-      targetMode = 'merge';
+      targetMode = "merge";
     } catch {
-      targetMode = 'sibling';
+      targetMode = "sibling";
     }
   }
 
   // Provider names available to migrated models: those kept by this run, plus
   // any already present in the target config being merged into.
   const availableProviderNames = new Set<string>(
-    isRecord(targetParsed['providers']) ? Object.keys(targetParsed['providers']) : [],
+    isRecord(targetParsed["providers"])
+      ? Object.keys(targetParsed["providers"])
+      : [],
   );
 
   // Model alias names already present in the target config being merged into —
   // a migrated `default_model` may legitimately point at one of these.
   const availableModelNames = new Set<string>(
-    isRecord(targetParsed['models']) ? Object.keys(targetParsed['models']) : [],
+    isRecord(targetParsed["models"]) ? Object.keys(targetParsed["models"]) : [],
   );
 
   // 1) Providers — keep only those kimi-code's schema accepts.
   const droppedProviders: string[] = [];
   const keptProviders: Record<string, Record<string, unknown>> = {};
-  if (isRecord(parsed['providers'])) {
-    for (const [name, prov] of Object.entries(parsed['providers'])) {
+  if (isRecord(parsed["providers"])) {
+    for (const [name, prov] of Object.entries(parsed["providers"])) {
       if (isRecord(prov) && providerIsSupported(prov)) {
         keptProviders[name] = prov;
       } else {
@@ -262,8 +283,10 @@ export async function migrateConfigStep(input: ConfigStepInput): Promise<ConfigS
   // so `mergeConfig` keeps the target's. A migrated model bound to such a name
   // would silently run against the target's endpoint/credentials, not the
   // legacy ones it was configured for — so treat the name as unavailable.
-  const targetProviders: Record<string, unknown> = isRecord(targetParsed['providers'])
-    ? targetParsed['providers']
+  const targetProviders: Record<string, unknown> = isRecord(
+    targetParsed["providers"],
+  )
+    ? targetParsed["providers"]
     : {};
   const conflictedProviderNames = new Set<string>();
   for (const [name, prov] of Object.entries(keptProviders)) {
@@ -277,8 +300,8 @@ export async function migrateConfigStep(input: ConfigStepInput): Promise<ConfigS
   //    whose provider was dropped as unsupported (they could never resolve).
   const droppedModels: string[] = [];
   const keptModels: Record<string, Record<string, unknown>> = {};
-  if (isRecord(parsed['models'])) {
-    for (const [name, mod] of Object.entries(parsed['models'])) {
+  if (isRecord(parsed["models"])) {
+    for (const [name, mod] of Object.entries(parsed["models"])) {
       if (!isRecord(mod) || !modelIsSupported(mod)) {
         droppedModels.push(name);
         continue;
@@ -287,10 +310,11 @@ export async function migrateConfigStep(input: ConfigStepInput): Promise<ConfigS
       // only if that provider is available — kept by this run or already in
       // the target config — and is not a name whose merged entry will differ
       // from the legacy provider this model was configured against.
-      const provider = mod['provider'];
+      const provider = mod["provider"];
       if (
-        typeof provider !== 'string' ||
-        (keptProviders[provider] === undefined && !availableProviderNames.has(provider)) ||
+        typeof provider !== "string" ||
+        (keptProviders[provider] === undefined &&
+          !availableProviderNames.has(provider)) ||
         conflictedProviderNames.has(provider)
       ) {
         droppedModels.push(name);
@@ -308,8 +332,8 @@ export async function migrateConfigStep(input: ConfigStepInput): Promise<ConfigS
   //     models — no `transformTomlData` snake→camel pass is needed first.
   let droppedHooks = 0;
   const keptHooks: unknown[] = [];
-  if (Array.isArray(parsed['hooks'])) {
-    for (const entry of parsed['hooks']) {
+  if (Array.isArray(parsed["hooks"])) {
+    for (const entry of parsed["hooks"]) {
       if (HookDefSchema.safeParse(entry).success) {
         keptHooks.push(entry);
       } else {
@@ -322,27 +346,27 @@ export async function migrateConfigStep(input: ConfigStepInput): Promise<ConfigS
   const tuiEditor: Record<string, unknown> = {};
   const tuiOut: Record<string, unknown> = {
     editor: tuiEditor,
-    notifications: { enabled: true, notification_condition: 'unfocused' },
+    notifications: { enabled: true, notification_condition: "unfocused" },
   };
-  const themeVal = parsed['theme'];
-  if (typeof themeVal === 'string' && TUI_THEMES.has(themeVal)) {
-    tuiOut['theme'] = themeVal;
+  const themeVal = parsed["theme"];
+  if (typeof themeVal === "string" && TUI_THEMES.has(themeVal)) {
+    tuiOut["theme"] = themeVal;
   }
-  const editorVal = parsed['default_editor'];
-  if (typeof editorVal === 'string') {
-    tuiEditor['command'] = editorVal;
+  const editorVal = parsed["default_editor"];
+  if (typeof editorVal === "string") {
+    tuiEditor["command"] = editorVal;
   }
 
   // 4) Build the migrated top-level — only keys kimi-code's schema supports.
   const droppedKeys: string[] = [];
   const migratedTop: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(parsed)) {
-    if (k === 'providers' || k === 'models' || k === 'hooks') continue;
+    if (k === "providers" || k === "models" || k === "hooks") continue;
     if (TUI_TOP_LEVEL_KEYS.has(k)) continue;
     if (TOP_LEVEL_KEYS_TO_DROP.has(k)) continue;
-    if (k === 'default_yolo') {
+    if (k === "default_yolo") {
       // kimi-cli's `default_yolo` maps to kimi-code's `default_permission_mode`.
-      if (v === true) migratedTop['default_permission_mode'] = 'yolo';
+      if (v === true) migratedTop["default_permission_mode"] = "yolo";
       continue;
     }
     if (!SUPPORTED_TOP_LEVEL_KEYS.has(k)) {
@@ -354,28 +378,28 @@ export async function migrateConfigStep(input: ConfigStepInput): Promise<ConfigS
     // merged into. A dangling alias (dropped, stale, or never present) would
     // fail the next session-create.
     if (
-      k === 'default_model' &&
-      typeof v === 'string' &&
+      k === "default_model" &&
+      typeof v === "string" &&
       keptModels[v] === undefined &&
       !availableModelNames.has(v)
     ) {
       continue;
     }
-    if (k === 'loop_control' && isRecord(v)) {
+    if (k === "loop_control" && isRecord(v)) {
       const filteredLoopControl = filterFields(v, LOOP_CONTROL_FIELDS_TO_KEEP);
       if (filteredLoopControl !== undefined) {
         migratedTop[k] = filteredLoopControl;
       }
       continue;
     }
-    if (k === 'background' && isRecord(v)) {
+    if (k === "background" && isRecord(v)) {
       const filteredBackground = filterFields(v, BACKGROUND_FIELDS_TO_KEEP);
       if (filteredBackground !== undefined) {
         migratedTop[k] = filteredBackground;
       }
       continue;
     }
-    if (k === 'experimental' && isRecord(v)) {
+    if (k === "experimental" && isRecord(v)) {
       const filteredExperimental = filterRegisteredExperimentalFlags(v);
       if (filteredExperimental !== undefined) {
         migratedTop[k] = filteredExperimental;
@@ -384,9 +408,10 @@ export async function migrateConfigStep(input: ConfigStepInput): Promise<ConfigS
     }
     migratedTop[k] = v;
   }
-  if (Object.keys(keptProviders).length > 0) migratedTop['providers'] = keptProviders;
-  if (Object.keys(keptModels).length > 0) migratedTop['models'] = keptModels;
-  if (keptHooks.length > 0) migratedTop['hooks'] = keptHooks;
+  if (Object.keys(keptProviders).length > 0)
+    migratedTop["providers"] = keptProviders;
+  if (Object.keys(keptModels).length > 0) migratedTop["models"] = keptModels;
+  if (keptHooks.length > 0) migratedTop["hooks"] = keptHooks;
 
   // 4b) Drop any supported top-level key whose VALUE kimi-code's config
   //     schema rejects (e.g. `telemetry = "false"`, `extra_skill_dirs = "/tmp"`).
@@ -398,7 +423,7 @@ export async function migrateConfigStep(input: ConfigStepInput): Promise<ConfigS
     const badKeys = new Set<string>();
     for (const issue of result.error.issues) {
       const top = issue.path[0];
-      if (typeof top === 'string' && top !== 'providers' && top !== 'models') {
+      if (typeof top === "string" && top !== "providers" && top !== "models") {
         badKeys.add(camelToSnake(top));
       }
     }
@@ -415,10 +440,13 @@ export async function migrateConfigStep(input: ConfigStepInput): Promise<ConfigS
   await mkdir(input.targetHome, { recursive: true, mode: 0o700 });
   let wroteConfigSibling = false;
   let configConflicts: readonly string[] = [];
-  if (targetMode === 'sibling') {
-    await atomicWrite(siblingConfigToml(input.targetHome), stringifyToml(migratedTop));
+  if (targetMode === "sibling") {
+    await atomicWrite(
+      siblingConfigToml(input.targetHome),
+      stringifyToml(migratedTop),
+    );
     wroteConfigSibling = true;
-  } else if (targetMode === 'merge') {
+  } else if (targetMode === "merge") {
     const { merged, conflicts } = mergeConfig(targetParsed, migratedTop);
     configConflicts = conflicts;
     await atomicWrite(configPath, stringifyToml(merged));
@@ -430,8 +458,8 @@ export async function migrateConfigStep(input: ConfigStepInput): Promise<ConfigS
   const tuiPath = targetTuiFile(input.targetHome);
   const canOverwriteTui = await isTuiStubOrMissing(tuiPath);
   const renderedTui = stringifyToml(tuiOut);
-  const hasThemeExtracted = tuiOut['theme'] !== undefined;
-  const hasEditorExtracted = tuiEditor['command'] !== undefined;
+  const hasThemeExtracted = tuiOut["theme"] !== undefined;
+  const hasEditorExtracted = tuiEditor["command"] !== undefined;
   let wroteTuiSibling = false;
   let tuiExtracted = false;
   if (hasThemeExtracted || hasEditorExtracted) {
@@ -456,14 +484,14 @@ export async function migrateConfigStep(input: ConfigStepInput): Promise<ConfigS
   // not `migratedHooks`.
   const hooksLandedInLiveConfig =
     keptHooks.length > 0 &&
-    (targetMode === 'overwrite' ||
-      (targetMode === 'merge' && targetParsed['hooks'] === undefined));
+    (targetMode === "overwrite" ||
+      (targetMode === "merge" && targetParsed["hooks"] === undefined));
   const migratedHooks = hooksLandedInLiveConfig ? keptHooks.length : 0;
 
   // In sibling mode, enumerate what landed in the sibling file so the result
   // screen can tell the user exactly what is awaiting manual merge.
   const siblingContents =
-    targetMode === 'sibling'
+    targetMode === "sibling"
       ? {
           providers: Object.keys(keptProviders),
           models: Object.keys(keptModels),

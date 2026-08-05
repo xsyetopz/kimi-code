@@ -7,7 +7,7 @@
  * unboundedly. Kept as a pure helper with no DI dependencies.
  */
 
-import { Readable } from 'node:stream';
+import { Readable } from "node:stream";
 
 export class BufferedReadable extends Readable {
   private readonly _source: Readable;
@@ -16,10 +16,10 @@ export class BufferedReadable extends Readable {
   constructor(source: Readable) {
     super({ highWaterMark: 128 * 1024 });
     this._source = source;
-    this._source.on('data', this._onData);
-    this._source.on('end', this._onEnd);
-    this._source.on('close', this._onClose);
-    this._source.on('error', this._onError);
+    this._source.on("data", this._onData);
+    this._source.on("end", this._onEnd);
+    this._source.on("close", this._onClose);
+    this._source.on("error", this._onError);
   }
 
   override _read(): void {
@@ -28,11 +28,14 @@ export class BufferedReadable extends Readable {
     }
   }
 
-  override _destroy(error: Error | null, callback: (error?: Error | null) => void): void {
-    this._source.off('data', this._onData);
-    this._source.off('end', this._onEnd);
-    this._source.off('close', this._onClose);
-    this._source.off('error', this._onError);
+  override _destroy(
+    error: Error | null,
+    callback: (error?: Error | null) => void,
+  ): void {
+    this._source.off("data", this._onData);
+    this._source.off("end", this._onEnd);
+    this._source.off("close", this._onClose);
+    this._source.off("error", this._onError);
     this._source.destroy();
     callback(error);
   }

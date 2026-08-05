@@ -42,7 +42,13 @@ function highlightMatch(text: string, query: string): React.ReactNode {
   return parts.length > 0 ? parts : text;
 }
 
-export function SlashCommandMenu({ commands, query, selectedIndex, onSelect, onHover }: SlashCommandMenuProps) {
+export function SlashCommandMenu({
+  commands,
+  query,
+  selectedIndex,
+  onSelect,
+  onHover,
+}: SlashCommandMenuProps) {
   const selectedRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -50,7 +56,11 @@ export function SlashCommandMenu({ commands, query, selectedIndex, onSelect, onH
   }, [selectedIndex]);
 
   if (commands.length === 0) {
-    return <div className="rounded-md border bg-popover shadow-md p-3 text-xs text-muted-foreground text-center">No commands found</div>;
+    return (
+      <div className="rounded-md border bg-popover shadow-md p-3 text-xs text-muted-foreground text-center">
+        No commands found
+      </div>
+    );
   }
 
   return (
@@ -62,10 +72,17 @@ export function SlashCommandMenu({ commands, query, selectedIndex, onSelect, onH
             ref={idx === selectedIndex ? selectedRef : null}
             onClick={() => onSelect(cmd.name)}
             onMouseEnter={() => onHover(idx)}
-            className={cn("w-full px-2 py-1.5 text-left flex items-center justify-between gap-3", idx === selectedIndex ? "bg-accent" : "hover:bg-accent/50")}
+            className={cn(
+              "w-full px-2 py-1.5 text-left flex items-center justify-between gap-3",
+              idx === selectedIndex ? "bg-accent" : "hover:bg-accent/50",
+            )}
           >
-            <span className="text-xs shrink-0">{highlightMatch(`/${cmd.name}`, query)}</span>
-            <span className="text-[10px] text-muted-foreground truncate">{cmd.description}</span>
+            <span className="text-xs shrink-0">
+              {highlightMatch(`/${cmd.name}`, query)}
+            </span>
+            <span className="text-[10px] text-muted-foreground truncate">
+              {cmd.description}
+            </span>
           </button>
         ))}
       </div>

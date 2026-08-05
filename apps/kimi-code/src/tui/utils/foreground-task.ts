@@ -1,10 +1,10 @@
-import type { BackgroundTaskInfo } from '@moonshot-ai/kimi-code-sdk';
+import type { BackgroundTaskInfo } from "@moonshot-ai/kimi-code-sdk";
 
 function isDetachableForegroundTask(t: BackgroundTaskInfo): boolean {
   return (
     t.detached === false &&
-    t.status === 'running' &&
-    (t.kind === 'process' || t.kind === 'agent')
+    t.status === "running" &&
+    (t.kind === "process" || t.kind === "agent")
   );
 }
 

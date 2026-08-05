@@ -40,19 +40,16 @@
  * direct `store.add(...)` inserts.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import type { BuiltinTool } from '../../agent/tool';
-import type { CronManager } from '../../agent/cron';
-import type { ToolExecution } from '../../loop/types';
-import { toInputJsonSchema } from '../support/input-schema';
-import {
-  cronToHuman,
-  parseCronExpression,
-} from './cron-expr';
-import { formatLocalIsoWithOffset } from './time-format';
-import type { CronTask } from './types';
-import CRON_LIST_DESCRIPTION from './cron-list.md?raw';
+import type { BuiltinTool } from "../../agent/tool";
+import type { CronManager } from "../../agent/cron";
+import type { ToolExecution } from "../../loop/types";
+import { toInputJsonSchema } from "../support/input-schema";
+import { cronToHuman, parseCronExpression } from "./cron-expr";
+import { formatLocalIsoWithOffset } from "./time-format";
+import type { CronTask } from "./types";
+import CRON_LIST_DESCRIPTION from "./cron-list.md?raw";
 
 // ── Input schema ─────────────────────────────────────────────────────
 
@@ -73,30 +70,29 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const PROMPT_PREVIEW_BYTES = 200;
 
 function previewPrompt(prompt: string): string {
-  const buf = Buffer.from(prompt, 'utf8');
+  const buf = Buffer.from(prompt, "utf8");
   if (buf.byteLength <= PROMPT_PREVIEW_BYTES) return prompt;
   // Slice to PROMPT_PREVIEW_BYTES. If that lands inside a multi-byte
   // sequence, walk back to the nearest UTF-8 char boundary (continuation
   // bytes start with 10xxxxxx).
   let end = PROMPT_PREVIEW_BYTES;
   while (end > 0 && (buf[end]! & 0b1100_0000) === 0b1000_0000) end--;
-  return `${buf.subarray(0, end).toString('utf8')}…(truncated)`;
+  return `${buf.subarray(0, end).toString("utf8")}…(truncated)`;
 }
 
 // ── Implementation ───────────────────────────────────────────────────
 
 export class CronListTool implements BuiltinTool<CronListInput> {
-  readonly name = 'CronList' as const;
+  readonly name = "CronList" as const;
   readonly description = CRON_LIST_DESCRIPTION;
-  readonly parameters: Record<string, unknown> = toInputJsonSchema(
-    CronListInputSchema,
-  );
+  readonly parameters: Record<string, unknown> =
+    toInputJsonSchema(CronListInputSchema);
 
   constructor(private readonly manager: CronManager) {}
 
   resolveExecution(_args: CronListInput): ToolExecution {
     return {
-      description: 'Listing scheduled cron jobs',
+      description: "Listing scheduled cron jobs",
       approvalRule: this.name,
       execute: async () => {
         // Snapshot the store once and pin "now" from the manager's
@@ -115,7 +111,7 @@ export class CronListTool implements BuiltinTool<CronListInput> {
           };
         }
         return {
-          output: `${header}\n${records.join('\n---\n')}`,
+          output: `${header}\n${records.join("\n---\n")}`,
           isError: false,
         };
       },
@@ -137,7 +133,7 @@ export class CronListTool implements BuiltinTool<CronListInput> {
     const stale = this.manager.isStale(task);
 
     let humanSchedule = task.cron;
-    let nextFireAtIso = 'null';
+    let nextFireAtIso = "null";
     try {
       const parsed = parseCronExpression(task.cron);
       humanSchedule = cronToHuman(parsed);
@@ -167,6 +163,6 @@ export class CronListTool implements BuiltinTool<CronListInput> {
       `recurring: ${String(recurring)}`,
       `ageDays: ${ageDays.toFixed(2)}`,
       `stale: ${String(stale)}`,
-    ].join('\n');
+    ].join("\n");
   }
 }

@@ -5,10 +5,10 @@
  * schemas are shared with `agent/rpc.ts` (they mirror the same wire shapes).
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { maybe, noResult } from '../helpers.js';
-import type { ServiceContract } from '../types.js';
+import { maybe, noResult } from "../helpers.js";
+import type { ServiceContract } from "../types.js";
 import {
   agentTaskInfoSchema,
   planDataSchema,
@@ -16,7 +16,7 @@ import {
   setModelResultSchema,
   shellCommandResultSchema,
   usageStatusSchema,
-} from './rpc.js';
+} from "./rpc.js";
 
 export const agentShellCommandContract = {
   run: {
@@ -47,8 +47,8 @@ export const agentPlanContract = {
 /** `McpServerEntry` from the engine's `mcpCore/connection-manager`. */
 export const mcpServerEntrySchema = z.object({
   name: z.string(),
-  transport: z.enum(['stdio', 'http', 'sse']),
-  status: z.enum(['pending', 'connected', 'failed', 'disabled', 'needs-auth']),
+  transport: z.enum(["stdio", "http", "sse"]),
+  status: z.enum(["pending", "connected", "failed", "disabled", "needs-auth"]),
   toolCount: z.number(),
   error: z.string().optional(),
 });
@@ -59,7 +59,7 @@ export const agentMcpContract = {
 
 /** `FullCompactionInput` from the engine's `agent/fullCompaction`. */
 export const fullCompactionInputSchema = z.object({
-  source: z.enum(['manual', 'auto']),
+  source: z.enum(["manual", "auto"]),
   instruction: z.string().optional(),
 });
 
@@ -72,7 +72,10 @@ export const agentTaskContract = {
     input: z.tuple([z.boolean().optional(), z.number().optional()]),
     output: z.array(agentTaskInfoSchema),
   },
-  stopByUser: { input: z.tuple([z.string()]), output: maybe(agentTaskInfoSchema) },
+  stopByUser: {
+    input: z.tuple([z.string()]),
+    output: maybe(agentTaskInfoSchema),
+  },
   stop: {
     input: z.tuple([z.string(), z.string().optional()]),
     output: maybe(agentTaskInfoSchema),

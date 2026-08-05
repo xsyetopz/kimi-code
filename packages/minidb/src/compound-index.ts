@@ -8,11 +8,11 @@
 // Multiple order columns (multiple dt) are supported by creating one compound
 // index per order column.
 
-import { SkipList, cmpNumber, cmpString } from './skiplist.js';
-import type { Comparator, RangeOptions } from './skiplist.js';
-import type { CompoundImageIndex } from './gen-codec.js';
+import { SkipList, cmpNumber, cmpString } from "./skiplist.js";
+import type { Comparator, RangeOptions } from "./skiplist.js";
+import type { CompoundImageIndex } from "./gen-codec.js";
 
-export type OrderType = 'number' | 'string';
+export type OrderType = "number" | "string";
 
 export interface CompoundIndexDef {
   /** value field path used as the group key (e.g. "workspaceId") */
@@ -37,7 +37,15 @@ interface CompoundEntry {
 }
 
 function getPath(doc: unknown, path: string): unknown {
-  return path.split('.').reduce<unknown>((o, k) => (o === null || o === undefined ? undefined : (o as Record<string, unknown>)[k]), doc);
+  return path
+    .split(".")
+    .reduce<unknown>(
+      (o, k) =>
+        o === null || o === undefined
+          ? undefined
+          : (o as Record<string, unknown>)[k],
+      doc,
+    );
 }
 
 export class CompoundIndexManager {
@@ -49,30 +57,51 @@ export class CompoundIndexManager {
   private readonly staged = new Map<string, CompoundEntry>();
 
   private static entry(def: CompoundIndexDef): CompoundEntry {
-    const orderType = def.orderType ?? 'number';
-    const full: Required<CompoundIndexDef> = { groupBy: def.groupBy, orderBy: def.orderBy, orderType };
-    const cmp = orderType === 'string' ? (cmpString as Comparator<unknown>) : (cmpNumber as Comparator<unknown>);
+    const orderType = def.orderType ?? "number";
+    const full: Required<CompoundIndexDef> = {
+      groupBy: def.groupBy,
+      orderBy: def.orderBy,
+      orderType,
+    };
+    const cmp =
+      orderType === "string"
+        ? (cmpString as Comparator<unknown>)
+        : (cmpNumber as Comparator<unknown>);
     return { def: full, cmp, groups: new Map(), byPk: new Map() };
   }
 
   create(name: string, def: CompoundIndexDef): void {
-    if (this.indexes.has(name)) throw new Error(`compound index "${name}" already exists`);
+    if (this.indexes.has(name))
+      throw new Error(`compound index "${name}" already exists`);
     this.indexes.set(name, CompoundIndexManager.entry(def));
   }
 
   /** Stage a new compound index definition off to the side (see `staged`). */
   stage(name: string, def: CompoundIndexDef): void {
-    if (this.indexes.has(name) || this.staged.has(name)) throw new Error(`compound index "${name}" already exists`);
+    if (this.indexes.has(name) || this.staged.has(name))
+      throw new Error(`compound index "${name}" already exists`);
     this.staged.set(name, CompoundIndexManager.entry(def));
   }
 
   /** Rebuild ONE staged index from entries of { key, value, dt }. Touches
    *  nothing live, so a failure midway leaves every published index intact. */
-  rebuildStaged(name: string, entries: Iterable<{ key: string | Buffer; value: unknown; dt?: Record<string, number> | null }>): void {
+  rebuildStaged(
+    name: string,
+    entries: Iterable<{
+      key: string | Buffer;
+      value: unknown;
+      dt?: Record<string, number> | null;
+    }>,
+  ): void {
     const entry = this.staged.get(name);
     if (!entry) throw new Error(`no staged compound index: ${name}`);
     for (const { key, value, dt } of entries) {
-      this.addToEntry(entry, typeof key === 'string' ? key : Buffer.from(key).toString('binary'), value, dt ?? null);
+      this.addToEntry(
+        entry,
+        typeof key === "string" ? key : Buffer.from(key).toString("binary"),
+        value,
+        dt ?? null,
+      );
     }
   }
 
@@ -80,7 +109,12 @@ export class CompoundIndexManager {
   stagedInfo(name: string): CompoundIndexInfo {
     const e = this.staged.get(name);
     if (!e) throw new Error(`no staged compound index: ${name}`);
-    return { name, groupBy: e.def.groupBy, orderBy: e.def.orderBy, orderType: e.def.orderType };
+    return {
+      name,
+      groupBy: e.def.groupBy,
+      orderBy: e.def.orderBy,
+      orderType: e.def.orderType,
+    };
   }
 
   /** Move a staged index into the live registry (its sidecar persist already
@@ -116,32 +150,51 @@ export class CompoundIndexManager {
     }));
   }
 
-  private groupOf(entry: CompoundEntry, group: unknown): SkipList<unknown, string> {
+  private groupOf(
+    entry: CompoundEntry,
+    group: unknown,
+  ): SkipList<unknown, string> {
     let list = entry.groups.get(group);
     if (!list) {
-      list = new SkipList<unknown, string>({ compareKey: entry.cmp, compareVal: cmpString });
+      list = new SkipList<unknown, string>({
+        compareKey: entry.cmp,
+        compareVal: cmpString,
+      });
       entry.groups.set(group, list);
     }
     return list;
   }
 
-  private extract(entry: CompoundEntry, doc: unknown, dt: Record<string, number> | null): { group: unknown; order: unknown } {
+  private extract(
+    entry: CompoundEntry,
+    doc: unknown,
+    dt: Record<string, number> | null,
+  ): { group: unknown; order: unknown } {
     const group = getPath(doc, entry.def.groupBy);
     const order =
-      dt && entry.def.orderBy in dt ? (dt as Record<string, unknown>)[entry.def.orderBy] : getPath(doc, entry.def.orderBy);
+      dt && entry.def.orderBy in dt
+        ? (dt as Record<string, unknown>)[entry.def.orderBy]
+        : getPath(doc, entry.def.orderBy);
     return { group, order };
   }
 
   private validOrder(entry: CompoundEntry, order: unknown): boolean {
-    if (entry.def.orderType === 'number') return typeof order === 'number' && Number.isFinite(order);
-    return typeof order === 'string';
+    if (entry.def.orderType === "number")
+      return typeof order === "number" && Number.isFinite(order);
+    return typeof order === "string";
   }
 
   /** Add/update a document in one compound index entry. */
-  private addToEntry(entry: CompoundEntry, pk: string, doc: unknown, dt: Record<string, number> | null): void {
+  private addToEntry(
+    entry: CompoundEntry,
+    pk: string,
+    doc: unknown,
+    dt: Record<string, number> | null,
+  ): void {
     const { group, order } = this.extract(entry, doc, dt);
     const prev = entry.byPk.get(pk);
-    const valid = group !== undefined && group !== null && this.validOrder(entry, order);
+    const valid =
+      group !== undefined && group !== null && this.validOrder(entry, order);
 
     // No-op when placement is unchanged. Without this guard, re-setting a key
     // with the same group+order inserted a duplicate skiplist node (and a
@@ -168,13 +221,21 @@ export class CompoundIndexManager {
    *  staged entry is kept exactly as current as the live ones, so publish()
    *  is a bare map move; see `staged`). */
   add(pk: string, doc: unknown, dt: Record<string, number> | null): void {
-    for (const entry of this.indexes.values()) this.addToEntry(entry, pk, doc, dt);
-    for (const entry of this.staged.values()) this.addToEntry(entry, pk, doc, dt);
+    for (const entry of this.indexes.values())
+      this.addToEntry(entry, pk, doc, dt);
+    for (const entry of this.staged.values())
+      this.addToEntry(entry, pk, doc, dt);
   }
 
-  remove(pk: string, _doc?: unknown, _dt?: Record<string, number> | null): void {
-    for (const entry of this.indexes.values()) CompoundIndexManager.removeFromEntry(entry, pk);
-    for (const entry of this.staged.values()) CompoundIndexManager.removeFromEntry(entry, pk);
+  remove(
+    pk: string,
+    _doc?: unknown,
+    _dt?: Record<string, number> | null,
+  ): void {
+    for (const entry of this.indexes.values())
+      CompoundIndexManager.removeFromEntry(entry, pk);
+    for (const entry of this.staged.values())
+      CompoundIndexManager.removeFromEntry(entry, pk);
   }
 
   private static removeFromEntry(entry: CompoundEntry, pk: string): void {
@@ -208,20 +269,36 @@ export class CompoundIndexManager {
   }
 
   /** Rebuild from entries of { key, value, dt }. */
-  rebuild(entries: Iterable<{ key: string | Buffer; value: unknown; dt?: Record<string, number> | null }>): void {
+  rebuild(
+    entries: Iterable<{
+      key: string | Buffer;
+      value: unknown;
+      dt?: Record<string, number> | null;
+    }>,
+  ): void {
     const b = this.beginRebuild();
     for (const { key, value, dt } of entries) {
-      b.add(typeof key === 'string' ? key : Buffer.from(key).toString('binary'), value, dt ?? null);
+      b.add(
+        typeof key === "string" ? key : Buffer.from(key).toString("binary"),
+        value,
+        dt ?? null,
+      );
     }
     b.commit();
   }
 
   /** Stage a rebuild in fresh per-index state and swap it in on commit(), so
    *  a rebuild that fails midway leaves the previous indexes fully intact. */
-  beginRebuild(): { add(pk: string, doc: unknown, dt: Record<string, number> | null): void; commit(): void } {
+  beginRebuild(): {
+    add(pk: string, doc: unknown, dt: Record<string, number> | null): void;
+    commit(): void;
+  } {
     const staged: { entry: CompoundEntry; next: CompoundEntry }[] = [];
     for (const entry of this.indexes.values()) {
-      staged.push({ entry, next: { ...entry, groups: new Map(), byPk: new Map() } });
+      staged.push({
+        entry,
+        next: { ...entry, groups: new Map(), byPk: new Map() },
+      });
     }
     return {
       add: (pk, doc, dt) => {
@@ -246,16 +323,23 @@ export class CompoundIndexManager {
     const skipped: string[] = [];
     for (const [name, entry] of this.indexes) {
       let serializable = true;
-      const groups: CompoundImageIndex['groups'] = [];
+      const groups: CompoundImageIndex["groups"] = [];
       for (const [group, list] of entry.groups) {
         const t = typeof group;
-        if (group !== null && t !== 'number' && t !== 'string' && t !== 'boolean') {
+        if (
+          group !== null &&
+          t !== "number" &&
+          t !== "string" &&
+          t !== "boolean"
+        ) {
           serializable = false;
           break;
         }
         groups.push({
           group: group as number | string | boolean | null,
-          entries: list.toArray().map((n) => ({ order: n.key as number | string, pk: n.val })),
+          entries: list
+            .toArray()
+            .map((n) => ({ order: n.key as number | string, pk: n.val })),
         });
       }
       if (!serializable) {
@@ -287,7 +371,8 @@ export class CompoundIndexManager {
         { compareKey: entry.cmp, compareVal: cmpString },
       );
       groups.set(g.group, list);
-      for (const e of g.entries) byPk.set(e.pk, { group: g.group, order: e.order });
+      for (const e of g.entries)
+        byPk.set(e.pk, { group: g.group, order: e.order });
     }
     entry.groups = groups;
     entry.byPk = byPk;

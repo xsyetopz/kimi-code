@@ -29,11 +29,11 @@
  * Role: cross-process adapter — see `packages/services/AGENTS.md`.
  */
 
-import { createDecorator } from '../../di';
-import type { CoreRPC, KimiCoreOptions } from '../../rpc';
-import type { TelemetryClient } from '../../telemetry';
-import { type KimiHostIdentity } from '@moonshot-ai/kimi-code-oauth';
-import type { ImageLimits } from '#/tools/support/image-limits';
+import { createDecorator } from "../../di";
+import type { CoreRPC, KimiCoreOptions } from "../../rpc";
+import type { TelemetryClient } from "../../telemetry";
+import { type KimiHostIdentity } from "@moonshot-ai/kimi-code-oauth";
+import type { ImageLimits } from "#/tools/support/image-limits";
 
 export interface CoreProcessServiceOptions extends KimiCoreOptions {
   /**
@@ -89,4 +89,5 @@ export interface ICoreProcessService {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
-export const ICoreProcessService = createDecorator<ICoreProcessService>('coreProcessService');
+export const ICoreProcessService =
+  createDecorator<ICoreProcessService>("coreProcessService");

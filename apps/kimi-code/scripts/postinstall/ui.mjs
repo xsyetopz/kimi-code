@@ -27,9 +27,9 @@
  * calls exactly one renderer at the end.
  */
 
-import { writeFileSync } from 'node:fs';
+import { writeFileSync } from "node:fs";
 
-import { pmGlobalInstallCommand, pmGlobalBinCommand } from './reach.mjs';
+import { pmGlobalInstallCommand, pmGlobalBinCommand } from "./reach.mjs";
 
 // Fixed-width box rendering. 80 cols is the de facto terminal default.
 // We can't reliably read TTY width from a piped postinstall context, so
@@ -42,24 +42,24 @@ const BOX_PAD_LEFT = 2; // leading spaces inside the box for breathing room
 // We can't reliably tell whether `/dev/tty`'s far end supports color,
 // but modern terminals all do; users who want plain output can set
 // NO_COLOR.
-const USE_COLOR = !process.env['NO_COLOR'];
+const USE_COLOR = !process.env["NO_COLOR"];
 const ANSI_ESCAPE = /\x1b\[[0-9;]*[a-zA-Z]/g;
-const C_RESET = USE_COLOR ? '\x1b[0m' : '';
-const C_DIM = USE_COLOR ? '\x1b[2m' : '';
-const C_BOLD_GREEN = USE_COLOR ? '\x1b[1;32m' : '';
-const C_BOLD_YELLOW = USE_COLOR ? '\x1b[1;33m' : '';
-const C_CYAN = USE_COLOR ? '\x1b[36m' : '';
+const C_RESET = USE_COLOR ? "\x1b[0m" : "";
+const C_DIM = USE_COLOR ? "\x1b[2m" : "";
+const C_BOLD_GREEN = USE_COLOR ? "\x1b[1;32m" : "";
+const C_BOLD_YELLOW = USE_COLOR ? "\x1b[1;33m" : "";
+const C_CYAN = USE_COLOR ? "\x1b[36m" : "";
 
 function color(c, text) {
   return USE_COLOR ? c + text + C_RESET : text;
 }
 
 function visibleLength(s) {
-  return s.replace(ANSI_ESCAPE, '').length;
+  return s.replace(ANSI_ESCAPE, "").length;
 }
 
 function stripAnsi(s) {
-  return s.replace(ANSI_ESCAPE, '');
+  return s.replace(ANSI_ESCAPE, "");
 }
 
 // Platform-specific path to the controlling terminal device. Writing
@@ -69,7 +69,7 @@ function stripAnsi(s) {
 // the console device. (The fully-qualified `\\.\CON` form looks
 // equivalent but Node appends a trailing backslash that breaks the
 // open call — confirmed empirically on Windows 11 / Node 22.)
-const TERMINAL_DEVICE = process.platform === 'win32' ? 'CON' : '/dev/tty';
+const TERMINAL_DEVICE = process.platform === "win32" ? "CON" : "/dev/tty";
 
 /**
  * Print a user-facing line. npm 7+ captures lifecycle stdout/stderr by
@@ -82,7 +82,7 @@ const TERMINAL_DEVICE = process.platform === 'win32' ? 'CON' : '/dev/tty';
  * the log file stays readable.
  */
 export function notify(line) {
-  const text = line + '\n';
+  const text = line + "\n";
   try {
     writeFileSync(TERMINAL_DEVICE, text);
     return;
@@ -105,32 +105,31 @@ function quotePowerShellPath(path) {
   return "'" + path.replace(/'/g, "''") + "'";
 }
 
-function boxBorder(left, right, fill = '─') {
+function boxBorder(left, right, fill = "─") {
   return color(C_DIM, left + fill.repeat(BOX_INNER) + right);
 }
 
-function boxLine(content = '') {
+function boxLine(content = "") {
   const visible = visibleLength(content);
-  const padding =
-    visible < BOX_INNER ? ' '.repeat(BOX_INNER - visible) : '';
-  return color(C_DIM, '│') + content + padding + color(C_DIM, '│');
+  const padding = visible < BOX_INNER ? " ".repeat(BOX_INNER - visible) : "";
+  return color(C_DIM, "│") + content + padding + color(C_DIM, "│");
 }
 
 function pad(content) {
-  return ' '.repeat(BOX_PAD_LEFT) + content;
+  return " ".repeat(BOX_PAD_LEFT) + content;
 }
 
 function renderBox(lines) {
-  const out = [boxBorder('╭', '╮'), boxLine('')];
+  const out = [boxBorder("╭", "╮"), boxLine("")];
   for (const line of lines) out.push(boxLine(line));
-  out.push(boxLine(''), boxBorder('╰', '╯'));
+  out.push(boxLine(""), boxBorder("╰", "╯"));
   return out;
 }
 
 function emit(lines) {
-  notify('');
+  notify("");
   for (const line of lines) notify(line);
-  notify('');
+  notify("");
 }
 
 function pathInBox(path) {
@@ -141,16 +140,16 @@ function pathInBox(path) {
   // un-copy-pasteable instructions. Long lines just overflow the box
   // border, which is visually less pretty but keeps the content
   // intact.
-  const lead = ' '.repeat(BOX_PAD_LEFT + 5);
+  const lead = " ".repeat(BOX_PAD_LEFT + 5);
   return lead + color(C_CYAN, path);
 }
 
 function successHeading(text) {
-  return pad(color(C_BOLD_GREEN, '✓  ' + text));
+  return pad(color(C_BOLD_GREEN, "✓  " + text));
 }
 
 function warningHeading(text) {
-  return pad(color(C_BOLD_YELLOW, '!  ' + text));
+  return pad(color(C_BOLD_YELLOW, "!  " + text));
 }
 
 /**
@@ -181,7 +180,7 @@ function warningHeading(text) {
  *     fs errors). Listed last so the user can see what to retry.
  */
 export function logMigrationDone(outcomes, pm) {
-  const reinstallCmd = pmGlobalInstallCommand(pm, '@moonshot-ai/kimi-code');
+  const reinstallCmd = pmGlobalInstallCommand(pm, "@moonshot-ai/kimi-code");
   const {
     renames,
     consolidates,
@@ -191,63 +190,63 @@ export function logMigrationDone(outcomes, pm) {
     errors,
   } = outcomes;
 
-  const lines = [successHeading('kimi now runs the new version'), ''];
+  const lines = [successHeading("kimi now runs the new version"), ""];
 
   if (renames.length > 0) {
-    lines.push(pad('   Renamed your old kimi so you can still run it as'));
-    lines.push(pad('   kimi-legacy:'));
+    lines.push(pad("   Renamed your old kimi so you can still run it as"));
+    lines.push(pad("   kimi-legacy:"));
     for (const c of renames) {
-      lines.push(pathInBox(c.shimPath + '  ->  ' + c.target));
+      lines.push(pathInBox(c.shimPath + "  ->  " + c.target));
     }
-    lines.push('');
+    lines.push("");
   }
 
   if (consolidates.length > 0) {
-    lines.push(pad('   Removed an extra copy of your old kimi (kimi-legacy'));
-    lines.push(pad('   was already set up here from before):'));
+    lines.push(pad("   Removed an extra copy of your old kimi (kimi-legacy"));
+    lines.push(pad("   was already set up here from before):"));
     for (const c of consolidates) {
       lines.push(pathInBox(c.shimPath));
-      lines.push(pathInBox('  (kimi-legacy is at ' + c.target + ')'));
+      lines.push(pathInBox("  (kimi-legacy is at " + c.target + ")"));
     }
-    lines.push('');
+    lines.push("");
   }
 
   if (skippedForeignTarget.length > 0) {
-    lines.push(pad('   Removed your old kimi (a file you created was already'));
-    lines.push(pad('   using the name kimi-legacy, so we left it alone):'));
+    lines.push(pad("   Removed your old kimi (a file you created was already"));
+    lines.push(pad("   using the name kimi-legacy, so we left it alone):"));
     for (const c of skippedForeignTarget) {
       lines.push(pathInBox(c.shimPath));
-      lines.push(pathInBox('  (your file at ' + c.target + ' is untouched)'));
+      lines.push(pathInBox("  (your file at " + c.target + " is untouched)"));
     }
-    lines.push('');
+    lines.push("");
   }
 
   if (deletes.length > 0) {
-    lines.push(pad('   Also removed (these would have run instead of the'));
-    lines.push(pad('   new kimi if we left them):'));
+    lines.push(pad("   Also removed (these would have run instead of the"));
+    lines.push(pad("   new kimi if we left them):"));
     for (const c of deletes) {
       lines.push(pathInBox(c.shimPath));
     }
-    lines.push('');
+    lines.push("");
   }
 
   if (blockedHarmless.length > 0) {
-    lines.push(pad('   Note: we can\'t change these files, but it\'s OK —'));
-    lines.push(pad('   they won\'t run instead of the new kimi:'));
+    lines.push(pad("   Note: we can't change these files, but it's OK —"));
+    lines.push(pad("   they won't run instead of the new kimi:"));
     for (const c of blockedHarmless) {
       lines.push(pathInBox(c.shimPath));
     }
-    lines.push('');
+    lines.push("");
   }
 
   if (errors.length > 0) {
-    lines.push(pad('   Some changes didn\'t go through:'));
+    lines.push(pad("   Some changes didn't go through:"));
     for (const e of errors) {
       lines.push(
-        pathInBox(e.shimPath + '  (' + (e.message ?? e.code ?? 'error') + ')'),
+        pathInBox(e.shimPath + "  (" + (e.message ?? e.code ?? "error") + ")"),
       );
     }
-    lines.push('');
+    lines.push("");
   }
 
   // Footer has three branches based on what actually happened:
@@ -269,44 +268,44 @@ export function logMigrationDone(outcomes, pm) {
   const preservedSomewhere = renames.length > 0 || consolidates.length > 0;
   if (preservedSomewhere) {
     lines.push(
-      pad('   Now typing `kimi` runs the new version. To run the old'),
-      pad('   version, type `kimi-legacy` instead. Your settings from'),
-      pad('   the old version will be moved over the first time you'),
-      pad('   run `kimi`.'),
-      '',
-      pad('   Note: if you reinstall the old kimi later (e.g. with'),
-      pad('   `uv tool`, `pip`, or `pipx`), it will put `kimi` back.'),
-      pad('   Run this command again to switch to the new one:'),
+      pad("   Now typing `kimi` runs the new version. To run the old"),
+      pad("   version, type `kimi-legacy` instead. Your settings from"),
+      pad("   the old version will be moved over the first time you"),
+      pad("   run `kimi`."),
+      "",
+      pad("   Note: if you reinstall the old kimi later (e.g. with"),
+      pad("   `uv tool`, `pip`, or `pipx`), it will put `kimi` back."),
+      pad("   Run this command again to switch to the new one:"),
       pathInBox(reinstallCmd),
-      '',
-      pad('   If typing `kimi` still runs the old version, open a new'),
-      pad('   terminal window — your current one may have remembered'),
-      pad('   the old path.'),
+      "",
+      pad("   If typing `kimi` still runs the old version, open a new"),
+      pad("   terminal window — your current one may have remembered"),
+      pad("   the old path."),
     );
   } else if (skippedForeignTarget.length > 0) {
     lines.push(
-      pad('   Now typing `kimi` runs the new version. Your settings'),
-      pad('   from the old version will be moved over the first time'),
-      pad('   you run `kimi`.'),
-      '',
-      pad('   We couldn\'t save the old kimi as `kimi-legacy` because'),
-      pad('   that name was already taken by a file you\'d created.'),
-      pad('   If you need the old kimi back, install it again with'),
-      pad('   `uv tool install kimi-cli` (or pipx / pip).'),
-      '',
-      pad('   If typing `kimi` still runs the old version, open a new'),
-      pad('   terminal window — your current one may have remembered'),
-      pad('   the old path.'),
+      pad("   Now typing `kimi` runs the new version. Your settings"),
+      pad("   from the old version will be moved over the first time"),
+      pad("   you run `kimi`."),
+      "",
+      pad("   We couldn't save the old kimi as `kimi-legacy` because"),
+      pad("   that name was already taken by a file you'd created."),
+      pad("   If you need the old kimi back, install it again with"),
+      pad("   `uv tool install kimi-cli` (or pipx / pip)."),
+      "",
+      pad("   If typing `kimi` still runs the old version, open a new"),
+      pad("   terminal window — your current one may have remembered"),
+      pad("   the old path."),
     );
   } else {
     lines.push(
-      pad('   Now typing `kimi` runs the new version. Your settings'),
-      pad('   from the old version will be moved over the first time'),
-      pad('   you run `kimi`.'),
-      '',
-      pad('   If typing `kimi` still runs the old version, open a new'),
-      pad('   terminal window — your current one may have remembered'),
-      pad('   the old path.'),
+      pad("   Now typing `kimi` runs the new version. Your settings"),
+      pad("   from the old version will be moved over the first time"),
+      pad("   you run `kimi`."),
+      "",
+      pad("   If typing `kimi` still runs the old version, open a new"),
+      pad("   terminal window — your current one may have remembered"),
+      pad("   the old path."),
     );
   }
 
@@ -321,42 +320,42 @@ export function logMigrationDone(outcomes, pm) {
  * platform-appropriate manual fix.
  */
 export function logMigrationBlocked(blocked, actionable, pm) {
-  const isWindows = process.platform === 'win32';
-  const reinstallCmd = pmGlobalInstallCommand(pm, '@moonshot-ai/kimi-code');
+  const isWindows = process.platform === "win32";
+  const reinstallCmd = pmGlobalInstallCommand(pm, "@moonshot-ai/kimi-code");
 
   const lines = [
-    warningHeading('Can\'t switch to the new kimi yet'),
-    '',
-    pad('   There\'s an old kimi on your computer that we can\'t change.'),
-    pad('   As long as it\'s there, typing `kimi` will still run the old'),
-    pad('   version. Files we can\'t change:'),
+    warningHeading("Can't switch to the new kimi yet"),
+    "",
+    pad("   There's an old kimi on your computer that we can't change."),
+    pad("   As long as it's there, typing `kimi` will still run the old"),
+    pad("   version. Files we can't change:"),
   ];
 
   for (const c of blocked) {
     lines.push(pathInBox(c.shimPath));
   }
 
-  lines.push('', pad('   Please delete them yourself, then install again:'));
+  lines.push("", pad("   Please delete them yourself, then install again:"));
 
   for (const c of blocked) {
     if (isWindows && c.isSystemPath) {
       // Admin PowerShell needed.
-      lines.push(pathInBox('# in an elevated PowerShell:'));
-      lines.push(pathInBox('Remove-Item ' + quotePowerShellPath(c.shimPath)));
+      lines.push(pathInBox("# in an elevated PowerShell:"));
+      lines.push(pathInBox("Remove-Item " + quotePowerShellPath(c.shimPath)));
     } else if (c.isSystemPath) {
-      lines.push(pathInBox('sudo rm ' + quotePosixPath(c.shimPath)));
+      lines.push(pathInBox("sudo rm " + quotePosixPath(c.shimPath)));
     } else if (isWindows) {
-      lines.push(pathInBox('Remove-Item ' + quotePowerShellPath(c.shimPath)));
+      lines.push(pathInBox("Remove-Item " + quotePowerShellPath(c.shimPath)));
     } else {
-      lines.push(pathInBox('rm ' + quotePosixPath(c.shimPath)));
+      lines.push(pathInBox("rm " + quotePosixPath(c.shimPath)));
     }
   }
 
   if (actionable.length > 0) {
     lines.push(
-      '',
-      pad('   We also found these old kimi files. We could remove them'),
-      pad('   ourselves, once the ones above are gone:'),
+      "",
+      pad("   We also found these old kimi files. We could remove them"),
+      pad("   ourselves, once the ones above are gone:"),
     );
     for (const c of actionable) {
       lines.push(pathInBox(c.shimPath));
@@ -364,11 +363,11 @@ export function logMigrationBlocked(blocked, actionable, pm) {
   }
 
   lines.push(
-    '',
-    pad('   After deleting them, install again to finish:'),
+    "",
+    pad("   After deleting them, install again to finish:"),
     pathInBox(reinstallCmd),
-    '',
-    pad('   Nothing on your computer was changed.'),
+    "",
+    pad("   Nothing on your computer was changed."),
   );
 
   emit(renderBox(lines));
@@ -384,24 +383,24 @@ export function logMigrationBlocked(blocked, actionable, pm) {
  * user can decide.
  */
 export function logForeignKimiInTheWay(foreignPath, pm) {
-  const reinstallCmd = pmGlobalInstallCommand(pm, '@moonshot-ai/kimi-code');
+  const reinstallCmd = pmGlobalInstallCommand(pm, "@moonshot-ai/kimi-code");
   emit(
     renderBox([
-      warningHeading('Can\'t switch to the new kimi yet'),
-      '',
-      pad('   There\'s another file called `kimi` on your computer that\'s'),
-      pad('   not the new CLI and not the old one — it looks like'),
-      pad('   something you set up yourself. As long as it\'s there,'),
-      pad('   typing `kimi` will run it instead of the new version.'),
-      '',
-      pad('   We found it at:'),
+      warningHeading("Can't switch to the new kimi yet"),
+      "",
+      pad("   There's another file called `kimi` on your computer that's"),
+      pad("   not the new CLI and not the old one — it looks like"),
+      pad("   something you set up yourself. As long as it's there,"),
+      pad("   typing `kimi` will run it instead of the new version."),
+      "",
+      pad("   We found it at:"),
       pathInBox(foreignPath),
-      '',
-      pad('   To use the new kimi, delete or rename that file, then'),
-      pad('   install again:'),
+      "",
+      pad("   To use the new kimi, delete or rename that file, then"),
+      pad("   install again:"),
       pathInBox(reinstallCmd),
-      '',
-      pad('   Nothing on your computer was changed.'),
+      "",
+      pad("   Nothing on your computer was changed."),
     ]),
   );
 }
@@ -424,35 +423,35 @@ export function logForeignKimiInTheWay(foreignPath, pm) {
  * skip the `/bin` suffix the POSIX branch needs for npm.
  */
 export function logNewCliNotOnPath(detection, pm) {
-  const isWindows = process.platform === 'win32';
+  const isWindows = process.platform === "win32";
   const binCmd = pmGlobalBinCommand(pm);
-  const reinstallCmd = pmGlobalInstallCommand(pm, '@moonshot-ai/kimi-code');
+  const reinstallCmd = pmGlobalInstallCommand(pm, "@moonshot-ai/kimi-code");
 
   const newPathHint = isWindows
     ? `$env:Path = "$(${binCmd});$env:Path"`
-    : pm === 'npm'
+    : pm === "npm"
       ? `export PATH="$(${binCmd})/bin:$PATH"`
       : `export PATH="$(${binCmd}):$PATH"`;
-  const rcLabel = isWindows ? 'PowerShell profile' : 'shell rc';
+  const rcLabel = isWindows ? "PowerShell profile" : "shell rc";
 
   emit(
     renderBox([
-      warningHeading('New kimi is installed, but your terminal can\'t find it'),
-      '',
-      pad('   The old kimi is still here:'),
+      warningHeading("New kimi is installed, but your terminal can't find it"),
+      "",
+      pad("   The old kimi is still here:"),
       pathInBox(detection.shimPath),
-      '',
-      pad('   The new kimi was installed by ' + pm + ', but it landed in a'),
-      pad('   folder your terminal doesn\'t search. (Your terminal looks'),
-      pad('   for commands in folders listed in your PATH.) If we removed'),
-      pad('   the old kimi now, typing `kimi` wouldn\'t find anything.'),
-      '',
-      pad('   Add the new kimi\'s folder to your PATH (and save the change'),
-      pad('   in your ' + rcLabel + ' so it sticks), then install again:'),
+      "",
+      pad("   The new kimi was installed by " + pm + ", but it landed in a"),
+      pad("   folder your terminal doesn't search. (Your terminal looks"),
+      pad("   for commands in folders listed in your PATH.) If we removed"),
+      pad("   the old kimi now, typing `kimi` wouldn't find anything."),
+      "",
+      pad("   Add the new kimi's folder to your PATH (and save the change"),
+      pad("   in your " + rcLabel + " so it sticks), then install again:"),
       pathInBox(newPathHint),
       pathInBox(reinstallCmd),
-      '',
-      pad('   The old kimi is still where it was.'),
+      "",
+      pad("   The old kimi is still where it was."),
     ]),
   );
 }

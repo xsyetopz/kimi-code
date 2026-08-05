@@ -1,6 +1,6 @@
-import { onUnmounted, ref, watch, type Ref } from 'vue';
-import { getKimiWebApi } from '../api';
-import type { AppTerminal, KimiEventConnection } from '../api/types';
+import { onUnmounted, ref, watch, type Ref } from "vue";
+import { getKimiWebApi } from "../api";
+import type { AppTerminal, KimiEventConnection } from "../api/types";
 
 export function useTerminal(sessionId: Ref<string>) {
   const terminal = ref<AppTerminal | null>(null);
@@ -16,7 +16,7 @@ export function useTerminal(sessionId: Ref<string>) {
 
   function ensureConnection(): KimiEventConnection | null {
     if (conn !== null) return conn;
-    if (typeof WebSocket === 'undefined') return null;
+    if (typeof WebSocket === "undefined") return null;
     conn = getKimiWebApi().connectEvents({
       onEvent: () => {},
       onResync: () => {},
@@ -27,15 +27,17 @@ export function useTerminal(sessionId: Ref<string>) {
         connected.value = state;
       },
       onTerminalOutput: (sid, terminalId, data, seq) => {
-        if (sid !== sessionId.value || terminal.value?.id !== terminalId) return;
+        if (sid !== sessionId.value || terminal.value?.id !== terminalId)
+          return;
         lastSeq.value = Math.max(lastSeq.value, seq);
         for (const handler of outputHandlers) handler(data);
       },
       onTerminalExit: (sid, terminalId, exitCode) => {
-        if (sid !== sessionId.value || terminal.value?.id !== terminalId) return;
+        if (sid !== sessionId.value || terminal.value?.id !== terminalId)
+          return;
         readOnly.value = true;
         terminal.value = terminal.value
-          ? { ...terminal.value, status: 'exited', exitCode }
+          ? { ...terminal.value, status: "exited", exitCode }
           : terminal.value;
         for (const handler of exitHandlers) handler(exitCode);
       },
@@ -50,13 +52,17 @@ export function useTerminal(sessionId: Ref<string>) {
     error.value = null;
     try {
       const api = getKimiWebApi();
-      const existing = (await api.listTerminals(sid)).find((item) => item.status === 'running');
-      const next = existing ?? await api.createTerminal(sid, {
-        cols: size?.cols,
-        rows: size?.rows,
-      });
+      const existing = (await api.listTerminals(sid)).find(
+        (item) => item.status === "running",
+      );
+      const next =
+        existing ??
+        (await api.createTerminal(sid, {
+          cols: size?.cols,
+          rows: size?.rows,
+        }));
       terminal.value = next;
-      readOnly.value = next.status === 'exited';
+      readOnly.value = next.status === "exited";
       ensureConnection()?.terminalAttach(sid, next.id, lastSeq.value);
     } catch (error_) {
       error.value = error_ instanceof Error ? error_.message : String(error_);
@@ -74,7 +80,12 @@ export function useTerminal(sessionId: Ref<string>) {
   function resize(cols: number, rows: number): void {
     const current = terminal.value;
     if (!current || readOnly.value) return;
-    ensureConnection()?.terminalResize(current.sessionId, current.id, cols, rows);
+    ensureConnection()?.terminalResize(
+      current.sessionId,
+      current.id,
+      cols,
+      rows,
+    );
   }
 
   async function close(): Promise<void> {

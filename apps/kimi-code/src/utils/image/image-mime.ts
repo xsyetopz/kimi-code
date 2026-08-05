@@ -9,7 +9,11 @@
  * decline the paste cleanly.
  */
 
-export type SupportedImageMime = 'image/png' | 'image/jpeg' | 'image/gif' | 'image/webp';
+export type SupportedImageMime =
+  | "image/png"
+  | "image/jpeg"
+  | "image/gif"
+  | "image/webp";
 
 export interface ImageMeta {
   mime: SupportedImageMime;
@@ -48,7 +52,7 @@ function parsePng(b: Uint8Array): ImageMeta | null {
   const width = readUInt32BE(b, 16);
   const height = readUInt32BE(b, 20);
   if (width <= 0 || height <= 0) return null;
-  return { mime: 'image/png', width, height };
+  return { mime: "image/png", width, height };
 }
 
 // ── JPEG ────────────────────────────────────────────────────────────
@@ -80,7 +84,7 @@ function parseJpeg(b: Uint8Array): ImageMeta | null {
       const height = readUInt16BE(b, i + 3);
       const width = readUInt16BE(b, i + 5);
       if (width <= 0 || height <= 0) return null;
-      return { mime: 'image/jpeg', width, height };
+      return { mime: "image/jpeg", width, height };
     }
     i += segLen;
   }
@@ -114,7 +118,7 @@ function parseGif(b: Uint8Array): ImageMeta | null {
   const width = readUInt16LE(b, 6);
   const height = readUInt16LE(b, 8);
   if (width <= 0 || height <= 0) return null;
-  return { mime: 'image/gif', width, height };
+  return { mime: "image/gif", width, height };
 }
 
 // ── WebP ────────────────────────────────────────────────────────────
@@ -138,7 +142,7 @@ function parseWebp(b: Uint8Array): ImageMeta | null {
   // (extended). Offset 12 is the 4-byte chunk identifier.
   if (b.length < 30) return null;
   const chunk = String.fromCodePoint(b[12]!, b[13]!, b[14]!, b[15]!);
-  if (chunk === 'VP8 ') {
+  if (chunk === "VP8 ") {
     // Frame data starts at offset 20 + 3-byte start code; dimensions at
     // offsets 26-29 (little-endian, 14-bit values with 2 top bits masked).
     const widthRaw = readUInt16LE(b, 26);
@@ -146,9 +150,9 @@ function parseWebp(b: Uint8Array): ImageMeta | null {
     const width = widthRaw & 0x3fff;
     const height = heightRaw & 0x3fff;
     if (width <= 0 || height <= 0) return null;
-    return { mime: 'image/webp', width, height };
+    return { mime: "image/webp", width, height };
   }
-  if (chunk === 'VP8L') {
+  if (chunk === "VP8L") {
     // VP8L packs width-1 (14 bits) and height-1 (14 bits) across bytes 21-24
     // starting from the signature byte at offset 20 (0x2F).
     if (b[20] !== 0x2f) return null;
@@ -159,14 +163,14 @@ function parseWebp(b: Uint8Array): ImageMeta | null {
     const width = 1 + (((b2 & 0x3f) << 8) | b1);
     const height = 1 + (((b4 & 0x0f) << 10) | (b3 << 2) | ((b2 & 0xc0) >> 6));
     if (width <= 0 || height <= 0) return null;
-    return { mime: 'image/webp', width, height };
+    return { mime: "image/webp", width, height };
   }
-  if (chunk === 'VP8X') {
+  if (chunk === "VP8X") {
     // Canvas width-1 at offsets 24-26, height-1 at 27-29 (24-bit LE).
     const width = 1 + readUInt24LE(b, 24);
     const height = 1 + readUInt24LE(b, 27);
     if (width <= 0 || height <= 0) return null;
-    return { mime: 'image/webp', width, height };
+    return { mime: "image/webp", width, height };
   }
   return null;
 }
@@ -184,6 +188,9 @@ function readUInt24LE(b: Uint8Array, off: number): number {
 }
 function readUInt32BE(b: Uint8Array, off: number): number {
   return Math.trunc(
-    b[off]! * 0x100_0000 + (b[off + 1]! << 16) + (b[off + 2]! << 8) + b[off + 3]!,
+    b[off]! * 0x100_0000 +
+      (b[off + 1]! << 16) +
+      (b[off + 2]! << 8) +
+      b[off + 3]!,
   );
 }

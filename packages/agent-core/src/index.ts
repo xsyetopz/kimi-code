@@ -1,14 +1,17 @@
-export * from './agent';
-export * from './session';
-export * from './rpc';
-export * from './config';
-export * from './flags';
-export * from './session/export';
-export * from './telemetry';
-export * from './errors';
-export * from './plugin';
-export { buildReplay } from './agent/replay/build';
-export { isAgentReplayUserTurnRecord, limitAgentReplayByTurns } from './agent/replay/turns';
+export * from "./agent";
+export * from "./session";
+export * from "./rpc";
+export * from "./config";
+export * from "./flags";
+export * from "./session/export";
+export * from "./telemetry";
+export * from "./errors";
+export * from "./plugin";
+export { buildReplay } from "./agent/replay/build";
+export {
+  isAgentReplayUserTurnRecord,
+  limitAgentReplayByTurns,
+} from "./agent/replay/turns";
 export {
   flushDiagnosticLogs,
   flushDiagnosticLogsSync,
@@ -16,10 +19,10 @@ export {
   log,
   redact,
   resolveGlobalLogPath,
-} from './logging/logger';
-export { resolveLoggingConfig } from './logging/resolve-config';
-export type { ResolveLoggingInput } from './logging/resolve-config';
-export { installGlobalProxyDispatcher } from './utils/proxy';
+} from "./logging/logger";
+export { resolveLoggingConfig } from "./logging/resolve-config";
+export type { ResolveLoggingInput } from "./logging/resolve-config";
+export { installGlobalProxyDispatcher } from "./utils/proxy";
 export type {
   LogContext,
   LogEntry,
@@ -30,26 +33,26 @@ export type {
   RootLogger,
   SessionAttachInput,
   SessionLogHandle,
-} from './logging/types';
-export { USER_PROMPT_ORIGIN } from './agent/context';
-export { parseAgentFileText, resolveAgentPath } from './profile/agentfile';
-export { renderToolResultForModel } from './agent/context/tool-result-render';
-export type { RenderableToolResult } from './agent/context/tool-result-render';
+} from "./logging/types";
+export { USER_PROMPT_ORIGIN } from "./agent/context";
+export { parseAgentFileText, resolveAgentPath } from "./profile/agentfile";
+export { renderToolResultForModel } from "./agent/context/tool-result-render";
+export type { RenderableToolResult } from "./agent/context/tool-result-render";
 export type {
   AgentContextData,
   ContextMessage,
   PromptOrigin,
   UserPromptOrigin,
-} from './agent/context';
+} from "./agent/context";
 export type {
   AgentBackgroundTaskInfo,
   BackgroundTaskInfo,
   BackgroundTaskStatus,
   ProcessBackgroundTaskInfo,
   QuestionBackgroundTaskInfo,
-} from './agent/background';
-export type { CronTaskSnapshot } from './agent/cron';
-export type { ToolServices } from './tools/support/services';
+} from "./agent/background";
+export type { CronTaskSnapshot } from "./agent/cron";
+export type { ToolServices } from "./tools/support/services";
 
 // Image compression — prompt-ingestion sites (CLI paste, server upload
 // resolution, ACP) call compressBase64ForModel / compressImageForModel per
@@ -74,7 +77,7 @@ export {
   IMAGE_BYTE_BUDGET,
   MAX_IMAGE_EDGE_PX,
   READ_IMAGE_BYTE_BUDGET,
-} from './tools/support/image-compress';
+} from "./tools/support/image-compress";
 export {
   MODEL_ACCEPTED_IMAGE_MIMES,
   buildImageConversionGuidance,
@@ -85,8 +88,8 @@ export {
   parseImageDataUrl,
   resolveEffectiveImageMime,
   unsupportedImageMimeFromUrl,
-} from './tools/support/image-format-policy';
-export { ImageLimits } from './tools/support/image-limits';
+} from "./tools/support/image-format-policy";
+export { ImageLimits } from "./tools/support/image-limits";
 export type {
   CompressAnnotateOptions,
   CompressedContentParts,
@@ -99,20 +102,20 @@ export type {
   ImageCompressionTelemetry,
   ImageCropRegion,
   ImageVariantDescription,
-} from './tools/support/image-compress';
+} from "./tools/support/image-compress";
 export {
   originalImageCacheDir,
   persistOriginalImage,
   sessionMediaOriginalsDir,
-} from './tools/support/image-originals';
-export type { PersistOriginalImageOptions } from './tools/support/image-originals';
-export { SingleModelProvider } from './session/provider-manager';
+} from "./tools/support/image-originals";
+export type { PersistOriginalImageOptions } from "./tools/support/image-originals";
+export { SingleModelProvider } from "./session/provider-manager";
 export type {
   BearerTokenProvider,
   ModelProvider,
   OAuthTokenProviderResolver,
   ResolvedRuntimeProvider,
-} from './session/provider-manager';
+} from "./session/provider-manager";
 
 // ─── Wire records (for in-monorepo consumers like apps/vis) ────────────────
 export type {
@@ -120,10 +123,10 @@ export type {
   AgentRecordEvents,
   AgentRecordOf,
   AgentRecordPersistence,
-} from './agent/records';
-export { AGENT_WIRE_PROTOCOL_VERSION } from './agent/records';
-export type { AgentConfigUpdateData } from './agent/config';
-export type { CompactionBeginData, CompactionResult } from './agent/compaction';
+} from "./agent/records";
+export { AGENT_WIRE_PROTOCOL_VERSION } from "./agent/records";
+export type { AgentConfigUpdateData } from "./agent/config";
+export type { CompactionBeginData, CompactionResult } from "./agent/compaction";
 export {
   COMPACT_USER_MESSAGE_HEAD_TOKENS,
   COMPACT_USER_MESSAGE_MAX_TOKENS,
@@ -133,13 +136,13 @@ export {
   isRealUserInput,
   selectCompactionUserMessages,
   selectRecentUserMessages,
-} from './agent/compaction';
+} from "./agent/compaction";
 export type {
   PermissionApprovalResultRecord,
   PermissionMode,
-} from './agent/permission';
-export type { UsageRecordScope } from './agent/usage';
-export type { ToolStoreUpdate } from './tools/store';
+} from "./agent/permission";
+export type { UsageRecordScope } from "./agent/usage";
+export type { ToolStoreUpdate } from "./tools/store";
 export type {
   LoopRecordedEvent,
   LoopStepBeginEvent,
@@ -147,15 +150,15 @@ export type {
   LoopContentPartEvent,
   LoopToolCallEvent,
   LoopToolResultEvent,
-} from './loop';
+} from "./loop";
 export type {
   ExecutableToolResult,
   ExecutableToolSuccessResult,
   ExecutableToolErrorResult,
-} from './loop/types';
+} from "./loop/types";
 
 // ─── Dependency injection container ────────────────────────────────────────
-export * from './di';
+export * from "./di";
 
 // ─── Base — Event<T> / Emitter<T> ──────────────────────────────────────────
 // NOTE: only `Emitter` is re-exported from the top-level barrel — the new
@@ -166,7 +169,7 @@ export * from './di';
 // `exports`). This keeps the existing top-level `Event` semantics stable for
 // consumers like `services/src/event/event.ts` while letting new code reach
 // for the emitter type without naming clashes.
-export { Emitter } from './base/common/event';
+export { Emitter } from "./base/common/event";
 
 // ─── In-process services (merged from @moonshot-ai/services) ─────────────────
 // Re-exports the `IXxxService` contracts, default `XxxService` implementations,
@@ -178,4 +181,4 @@ export { Emitter } from './base/common/event';
 // `QuestionResult` are intentionally NOT re-exported here — they are the
 // canonical protocol shapes already exported via `./rpc` (`rpc/sdk-api.ts`),
 // and re-exporting them again would collide (TS2308).
-export * from './services';
+export * from "./services";

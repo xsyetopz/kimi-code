@@ -1,8 +1,8 @@
-import { defineConfig } from 'vitest/config';
+import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   test: {
-    name: 'acp-adapter',
-    include: ['test/**/*.test.ts'],
+    name: "acp-adapter",
+    include: ["test/**/*.test.ts"],
   },
 });

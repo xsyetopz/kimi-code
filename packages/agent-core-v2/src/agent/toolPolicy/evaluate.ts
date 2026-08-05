@@ -23,9 +23,9 @@
  * registered tool and no builtin-profile tool is almost always a typo).
  */
 
-import picomatch from 'picomatch';
+import picomatch from "picomatch";
 
-import { isMcpToolName, type ToolSource } from '#/tool/toolContract';
+import { isMcpToolName, type ToolSource } from "#/tool/toolContract";
 
 export interface ToolActivationPolicy {
   readonly tools?: readonly string[];
@@ -35,11 +35,11 @@ export interface ToolActivationPolicy {
 export function isToolActive(
   policy: ToolActivationPolicy,
   name: string,
-  source: ToolSource = 'builtin',
+  source: ToolSource = "builtin",
 ): boolean {
   if (policy.tools !== undefined) {
     const allowed =
-      source !== 'mcp'
+      source !== "mcp"
         ? policy.tools.includes(name)
         : policy.tools
             .filter((pattern) => isMcpToolName(pattern))
@@ -47,7 +47,7 @@ export function isToolActive(
     if (!allowed) return false;
   }
   if (policy.disallowedTools === undefined) return true;
-  if (source !== 'mcp') return !policy.disallowedTools.includes(name);
+  if (source !== "mcp") return !policy.disallowedTools.includes(name);
   return !policy.disallowedTools
     .filter((pattern) => isMcpToolName(pattern))
     .some((pattern) => picomatch.isMatch(name, pattern));
@@ -68,14 +68,20 @@ export interface ToolPolicyLayers {
 export function isToolActiveComposed(
   layers: ToolPolicyLayers,
   name: string,
-  source: ToolSource = 'builtin',
+  source: ToolSource = "builtin",
 ): boolean {
   return (
-    isToolActive({ disallowedTools: layers.workspaceDisabledTools }, name, source) &&
+    isToolActive(
+      { disallowedTools: layers.workspaceDisabledTools },
+      name,
+      source,
+    ) &&
     isToolActive(layers.profile, name, source) &&
     isToolActive(
       {
-        tools: layers.global?.enabled?.length ? layers.global.enabled : undefined,
+        tools: layers.global?.enabled?.length
+          ? layers.global.enabled
+          : undefined,
         disallowedTools: layers.global?.disabled,
       },
       name,
@@ -90,11 +96,14 @@ export function resolveActiveToolNames(
 ): readonly string[] | undefined {
   if (policy.tools === undefined) return undefined;
   return policy.tools.filter((name) =>
-    isToolActive(policy, name, isMcpToolName(name) ? 'mcp' : 'builtin'),
+    isToolActive(policy, name, isMcpToolName(name) ? "mcp" : "builtin"),
   );
 }
 
-export type InactiveToolPatternKind = 'wildcard-not-mcp' | 'incomplete-mcp-name' | 'unknown-tool';
+export type InactiveToolPatternKind =
+  | "wildcard-not-mcp"
+  | "incomplete-mcp-name"
+  | "unknown-tool";
 
 export interface InactiveToolPattern {
   readonly pattern: string;
@@ -104,7 +113,9 @@ export interface InactiveToolPattern {
 const GLOB_MAGIC = /[*?[\]{}]/;
 
 export function literalToolNames(patterns: readonly string[]): string[] {
-  return patterns.filter((pattern) => !isMcpToolName(pattern) && !GLOB_MAGIC.test(pattern));
+  return patterns.filter(
+    (pattern) => !isMcpToolName(pattern) && !GLOB_MAGIC.test(pattern),
+  );
 }
 
 export function findInactiveToolPatterns(
@@ -114,17 +125,20 @@ export function findInactiveToolPatterns(
   const issues: InactiveToolPattern[] = [];
   for (const pattern of patterns) {
     if (isMcpToolName(pattern)) {
-      if (!GLOB_MAGIC.test(pattern) && !pattern.slice('mcp__'.length).includes('__')) {
-        issues.push({ pattern, kind: 'incomplete-mcp-name' });
+      if (
+        !GLOB_MAGIC.test(pattern) &&
+        !pattern.slice("mcp__".length).includes("__")
+      ) {
+        issues.push({ pattern, kind: "incomplete-mcp-name" });
       }
       continue;
     }
     if (GLOB_MAGIC.test(pattern)) {
-      issues.push({ pattern, kind: 'wildcard-not-mcp' });
+      issues.push({ pattern, kind: "wildcard-not-mcp" });
       continue;
     }
     if (isKnownToolName !== undefined && !isKnownToolName(pattern)) {
-      issues.push({ pattern, kind: 'unknown-tool' });
+      issues.push({ pattern, kind: "unknown-tool" });
     }
   }
   return issues;

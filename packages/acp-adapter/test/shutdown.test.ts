@@ -1,10 +1,10 @@
-import { EventEmitter } from 'node:events';
-import { PassThrough } from 'node:stream';
+import { EventEmitter } from "node:events";
+import { PassThrough } from "node:stream";
 
-import { describe, expect, it } from 'vitest';
-import type { KimiHarness } from '@moonshot-ai/kimi-code-sdk';
+import { describe, expect, it } from "vitest";
+import type { KimiHarness } from "@moonshot-ai/kimi-code-sdk";
 
-import { runAcpServer } from '../src/server';
+import { runAcpServer } from "../src/server";
 
 interface CloseCounterHarness {
   harness: KimiHarness;
@@ -18,13 +18,15 @@ interface CloseCounterHarness {
  * here. Each close call increments a counter so we can assert
  * idempotency on signal+natural-close interleavings.
  */
-function makeCloseCounterHarness(opts: { throwOnClose?: boolean } = {}): CloseCounterHarness {
+function makeCloseCounterHarness(
+  opts: { throwOnClose?: boolean } = {},
+): CloseCounterHarness {
   let calls = 0;
   const harness = {
     close: async (): Promise<void> => {
       calls += 1;
       if (opts.throwOnClose) {
-        throw new Error('intentional close failure for test');
+        throw new Error("intentional close failure for test");
       }
     },
   } as unknown as KimiHarness;
@@ -41,20 +43,20 @@ function endInput(input: PassThrough): void {
   input.end();
 }
 
-describe('runAcpServer graceful shutdown', () => {
-  it('calls harness.close() exactly once when SIGINT fires before natural close', async () => {
+describe("runAcpServer graceful shutdown", () => {
+  it("calls harness.close() exactly once when SIGINT fires before natural close", async () => {
     const { harness, closeCalls } = makeCloseCounterHarness();
     const signals = new EventEmitter();
     const input = new PassThrough();
     const output = new PassThrough();
     // Drain output so the agent side never backpressures.
-    output.on('data', () => undefined);
+    output.on("data", () => undefined);
 
     const run = runAcpServer(harness, { input, output, signals });
 
     // Give the connection a tick to start, then fire SIGINT.
     await new Promise((resolve) => setTimeout(resolve, 10));
-    signals.emit('SIGINT');
+    signals.emit("SIGINT");
 
     // The signal-driven cleanup runs synchronously after the tick but
     // doesn't itself end the stream — close the input so the
@@ -64,16 +66,16 @@ describe('runAcpServer graceful shutdown', () => {
     await run;
 
     expect(closeCalls()).toBe(1);
-    expect(signals.listenerCount('SIGINT')).toBe(0);
-    expect(signals.listenerCount('SIGTERM')).toBe(0);
+    expect(signals.listenerCount("SIGINT")).toBe(0);
+    expect(signals.listenerCount("SIGTERM")).toBe(0);
   });
 
-  it('calls harness.close() exactly once on natural close (no signal)', async () => {
+  it("calls harness.close() exactly once on natural close (no signal)", async () => {
     const { harness, closeCalls } = makeCloseCounterHarness();
     const signals = new EventEmitter();
     const input = new PassThrough();
     const output = new PassThrough();
-    output.on('data', () => undefined);
+    output.on("data", () => undefined);
 
     const run = runAcpServer(harness, { input, output, signals });
 
@@ -83,22 +85,22 @@ describe('runAcpServer graceful shutdown', () => {
     await run;
 
     expect(closeCalls()).toBe(1);
-    expect(signals.listenerCount('SIGINT')).toBe(0);
-    expect(signals.listenerCount('SIGTERM')).toBe(0);
+    expect(signals.listenerCount("SIGINT")).toBe(0);
+    expect(signals.listenerCount("SIGTERM")).toBe(0);
   });
 
-  it('treats SIGTERM the same as SIGINT and stays idempotent if both fire', async () => {
+  it("treats SIGTERM the same as SIGINT and stays idempotent if both fire", async () => {
     const { harness, closeCalls } = makeCloseCounterHarness();
     const signals = new EventEmitter();
     const input = new PassThrough();
     const output = new PassThrough();
-    output.on('data', () => undefined);
+    output.on("data", () => undefined);
 
     const run = runAcpServer(harness, { input, output, signals });
 
     await new Promise((resolve) => setTimeout(resolve, 10));
-    signals.emit('SIGTERM');
-    signals.emit('SIGINT'); // duplicate signal — must NOT call close again
+    signals.emit("SIGTERM");
+    signals.emit("SIGINT"); // duplicate signal — must NOT call close again
 
     await new Promise((resolve) => setTimeout(resolve, 10));
     endInput(input);
@@ -110,25 +112,27 @@ describe('runAcpServer graceful shutdown', () => {
     expect(closeCalls()).toBe(1);
   });
 
-  it('uninstalls listeners even when harness.close() throws', async () => {
+  it("uninstalls listeners even when harness.close() throws", async () => {
     // The process is exiting anyway; the implementation must NOT let a
     // throwing `close()` leak the SIGINT/SIGTERM handlers.
-    const { harness, closeCalls } = makeCloseCounterHarness({ throwOnClose: true });
+    const { harness, closeCalls } = makeCloseCounterHarness({
+      throwOnClose: true,
+    });
     const signals = new EventEmitter();
     const input = new PassThrough();
     const output = new PassThrough();
-    output.on('data', () => undefined);
+    output.on("data", () => undefined);
 
     const run = runAcpServer(harness, { input, output, signals });
 
     await new Promise((resolve) => setTimeout(resolve, 10));
-    signals.emit('SIGINT');
+    signals.emit("SIGINT");
     await new Promise((resolve) => setTimeout(resolve, 10));
     endInput(input);
     await run;
 
     expect(closeCalls()).toBe(1);
-    expect(signals.listenerCount('SIGINT')).toBe(0);
-    expect(signals.listenerCount('SIGTERM')).toBe(0);
+    expect(signals.listenerCount("SIGINT")).toBe(0);
+    expect(signals.listenerCount("SIGTERM")).toBe(0);
   });
 });

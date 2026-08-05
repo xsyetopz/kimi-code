@@ -1,6 +1,6 @@
-import { writeFile, mkdir } from 'node:fs/promises';
-import { join } from 'node:path';
-import type { OldSessionState } from '../kimi-cli-schema.js';
+import { writeFile, mkdir } from "node:fs/promises";
+import { join } from "node:path";
+import type { OldSessionState } from "../kimi-cli-schema.js";
 
 export interface StateWriteInput {
   readonly oldState: Partial<OldSessionState>;
@@ -11,15 +11,21 @@ export interface StateWriteInput {
   readonly createdAtMs: number;
 }
 
-export async function writeSessionState(sessionDir: string, input: StateWriteInput): Promise<void> {
+export async function writeSessionState(
+  sessionDir: string,
+  input: StateWriteInput,
+): Promise<void> {
   await mkdir(sessionDir, { recursive: true, mode: 0o700 });
 
   const customTitle = input.oldState.custom_title ?? null;
   const isCustomTitle =
-    customTitle !== null && customTitle.length > 0 && !input.oldState.title_generated;
+    customTitle !== null &&
+    customTitle.length > 0 &&
+    !input.oldState.title_generated;
   const fallbackTitle = input.lastUserPrompt.slice(0, 50).trim();
   const candidateTitle = customTitle ?? fallbackTitle;
-  const finalTitle = candidateTitle.length > 0 ? candidateTitle : 'Imported session';
+  const finalTitle =
+    candidateTitle.length > 0 ? candidateTitle : "Imported session";
 
   const wireMtimeS = input.oldState.wire_mtime ?? null;
   const updatedAt =
@@ -44,8 +50,8 @@ export async function writeSessionState(sessionDir: string, input: StateWriteInp
         // migrator writes the translated history to
         // `<sessionDir>/agents/main/wire.jsonl`, so this must point there,
         // NOT at the user's project workdir.
-        homedir: join(sessionDir, 'agents', 'main'),
-        type: 'main',
+        homedir: join(sessionDir, "agents", "main"),
+        type: "main",
         parentAgentId: null,
       },
     },
@@ -66,5 +72,9 @@ export async function writeSessionState(sessionDir: string, input: StateWriteInp
     },
   };
 
-  await writeFile(join(sessionDir, 'state.json'), JSON.stringify(meta, null, 2), 'utf-8');
+  await writeFile(
+    join(sessionDir, "state.json"),
+    JSON.stringify(meta, null, 2),
+    "utf-8",
+  );
 }

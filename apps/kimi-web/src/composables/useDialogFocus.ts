@@ -1,4 +1,4 @@
-import { nextTick, onBeforeUnmount, onMounted, type Ref } from 'vue';
+import { nextTick, onBeforeUnmount, onMounted, type Ref } from "vue";
 
 /**
  * Baseline modal-dialog focus lifecycle, shared by the overlay dialogs so they
@@ -21,7 +21,8 @@ export function useDialogFocus(
 
   onMounted(() => {
     previouslyFocused =
-      typeof document !== 'undefined' && document.activeElement instanceof HTMLElement
+      typeof document !== "undefined" &&
+      document.activeElement instanceof HTMLElement
         ? document.activeElement
         : null;
     void nextTick(() => {
@@ -37,7 +38,8 @@ export function useDialogFocus(
   onBeforeUnmount(() => {
     const el = previouslyFocused;
     previouslyFocused = null;
-    if (!el || typeof document === 'undefined' || !document.contains(el)) return;
+    if (!el || typeof document === "undefined" || !document.contains(el))
+      return;
     try {
       el.focus();
     } catch {

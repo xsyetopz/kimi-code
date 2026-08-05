@@ -20,12 +20,13 @@
  * rejected. See M4.3 for the deliberate present-only deviation.
  */
 
-import type { FastifyReply, FastifyRequest } from 'fastify';
+import type { FastifyReply, FastifyRequest } from "fastify";
 
-import { stripPort } from './hostnames';
+import { stripPort } from "./hostnames";
 
-const CORS_ALLOW_METHODS = 'GET, POST, PUT, PATCH, DELETE, OPTIONS';
-const CORS_ALLOW_HEADERS = 'Content-Type, Authorization, X-Kimi-Client-Id, X-Kimi-Client-Name, X-Kimi-Client-Version, X-Kimi-Client-Ui-Mode';
+const CORS_ALLOW_METHODS = "GET, POST, PUT, PATCH, DELETE, OPTIONS";
+const CORS_ALLOW_HEADERS =
+  "Content-Type, Authorization, X-Kimi-Client-Id, X-Kimi-Client-Name, X-Kimi-Client-Version, X-Kimi-Client-Ui-Mode";
 
 export interface OriginHookOptions {
   /** Explicit cross-origin allowlist (full origin strings, scheme + host). */
@@ -38,13 +39,15 @@ export interface OriginHookOptions {
  * Comma-separated, trimmed, empties dropped. No `*` wildcard — every entry is
  * an explicit origin (PLAN §3.4).
  */
-export function parseCorsOrigins(env: NodeJS.ProcessEnv = process.env): string[] {
-  const raw = env['KIMI_CODE_CORS_ORIGINS'];
+export function parseCorsOrigins(
+  env: NodeJS.ProcessEnv = process.env,
+): string[] {
+  const raw = env["KIMI_CODE_CORS_ORIGINS"];
   if (raw === undefined) {
     return [];
   }
   return raw
-    .split(',')
+    .split(",")
     .map((entry) => entry.trim())
     .filter((entry) => entry.length > 0);
 }
@@ -103,11 +106,11 @@ export function isOriginAllowed(
 /** Loopback-only host names, mirroring the allowlist in `hostnames.ts`. */
 function isLoopbackHost(h: string): boolean {
   return (
-    h === 'localhost' ||
-    h === '::1' ||
-    h === '[::1]' ||
-    h.startsWith('127.') ||
-    h.endsWith('.localhost')
+    h === "localhost" ||
+    h === "::1" ||
+    h === "[::1]" ||
+    h.startsWith("127.") ||
+    h.endsWith(".localhost")
   );
 }
 
@@ -133,21 +136,21 @@ export function createOriginHook(
       return;
     }
     if (isOriginAllowed(origin, req.headers.host, allowed)) {
-      reply.header('Access-Control-Allow-Origin', origin);
-      reply.header('Access-Control-Allow-Methods', CORS_ALLOW_METHODS);
+      reply.header("Access-Control-Allow-Origin", origin);
+      reply.header("Access-Control-Allow-Methods", CORS_ALLOW_METHODS);
       reply.header(
-        'Access-Control-Allow-Headers',
-        req.headers['access-control-request-headers'] ?? CORS_ALLOW_HEADERS,
+        "Access-Control-Allow-Headers",
+        req.headers["access-control-request-headers"] ?? CORS_ALLOW_HEADERS,
       );
-      reply.header('Vary', 'Origin');
-      if (req.method === 'OPTIONS') {
+      reply.header("Vary", "Origin");
+      if (req.method === "OPTIONS") {
         return reply.code(204).send();
       }
       return;
     }
     // Origin present but not allowed: emit no CORS headers so the browser
     // blocks the response. Short-circuit the preflight to fail closed.
-    if (req.method === 'OPTIONS') {
+    if (req.method === "OPTIONS") {
       return reply.code(204).send();
     }
   };

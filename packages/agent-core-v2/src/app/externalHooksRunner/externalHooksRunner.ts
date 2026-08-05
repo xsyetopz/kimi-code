@@ -9,9 +9,16 @@
  * time, so the runner itself holds no per-scope state.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
-import type { Event } from '#/_base/event';
-import type { HookBlockDecision, HookMatcherValue, HookResult } from '#/agent/externalHooks/types';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
+import type { Event } from "#/_base/event";
+import type {
+  HookBlockDecision,
+  HookMatcherValue,
+  HookResult,
+} from "#/agent/externalHooks/types";
 
 export interface ExternalHooksRunnerTriggerArgs {
   readonly matcherValue?: HookMatcherValue;
@@ -26,14 +33,20 @@ export interface IExternalHooksRunnerService {
   readonly ready: Promise<void>;
   /** Fired after the hook index is (re)built — initial load and plugin reloads. */
   readonly onDidReload: Event<void>;
-  trigger(event: string, args?: ExternalHooksRunnerTriggerArgs): Promise<HookResult[]>;
+  trigger(
+    event: string,
+    args?: ExternalHooksRunnerTriggerArgs,
+  ): Promise<HookResult[]>;
   triggerBlock(
     event: string,
     args?: ExternalHooksRunnerTriggerArgs,
   ): Promise<HookBlockDecision | undefined>;
-  fireAndForgetTrigger(event: string, args?: ExternalHooksRunnerTriggerArgs): Promise<HookResult[]>;
+  fireAndForgetTrigger(
+    event: string,
+    args?: ExternalHooksRunnerTriggerArgs,
+  ): Promise<HookResult[]>;
   hasHooksFor(event: string): boolean;
 }
 
 export const IExternalHooksRunnerService: ServiceIdentifier<IExternalHooksRunnerService> =
-  createDecorator<IExternalHooksRunnerService>('externalHooksRunnerService');
+  createDecorator<IExternalHooksRunnerService>("externalHooksRunnerService");

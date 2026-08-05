@@ -1,11 +1,15 @@
 // apps/kimi-web/src/api/daemon/http.ts
 // DaemonHttpClient — REST transport with envelope unwrap and allowCodes support.
 
-import { buildRestUrl } from '../config';
-import { DaemonApiError, DaemonNetworkError } from '../errors';
-import { traceRestFailure, traceRestRequest, traceRestResponse } from '../../debug/trace';
-import { getCredential, markAuthRequired } from './serverAuth';
-import type { WireEnvelope } from './wire';
+import { buildRestUrl } from "../config";
+import { DaemonApiError, DaemonNetworkError } from "../errors";
+import {
+  traceRestFailure,
+  traceRestRequest,
+  traceRestResponse,
+} from "../../debug/trace";
+import { getCredential, markAuthRequired } from "./serverAuth";
+import type { WireEnvelope } from "./wire";
 
 /** Per-request timeout. Without one, a hung connection (half-open TCP after a
     network change, stuck daemon) leaves promises pending for minutes — and the
@@ -13,7 +17,7 @@ import type { WireEnvelope } from './wire';
     streaming runs over the WS, not these REST calls. */
 const REQUEST_TIMEOUT_MS = 30_000;
 const EXPORT_TIMEOUT_MS = 5 * 60_000;
-const ULID_ALPHABET = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
+const ULID_ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
 const BODY_PREVIEW_LIMIT = 500;
 
 // Server-transport auth failure envelope code (see kap-server
@@ -28,7 +32,9 @@ export interface DaemonHttpClientIdentity {
 }
 
 /** AbortSignal.timeout with a fallback for older environments (jsdom). */
-function timeoutSignal(timeoutMs = REQUEST_TIMEOUT_MS): AbortSignal | undefined {
+function timeoutSignal(
+  timeoutMs = REQUEST_TIMEOUT_MS,
+): AbortSignal | undefined {
   try {
     return AbortSignal.timeout(timeoutMs);
   } catch {
@@ -37,7 +43,7 @@ function timeoutSignal(timeoutMs = REQUEST_TIMEOUT_MS): AbortSignal | undefined 
 }
 
 function encodeBase32(value: number, length: number): string {
-  let out = '';
+  let out = "";
   let next = value;
   for (let i = 0; i < length; i++) {
     out = ULID_ALPHABET[next % 32] + out;
@@ -55,7 +61,7 @@ function randomBase32(length: number): string {
       bytes[i] = Math.floor(Math.random() * 256);
     }
   }
-  return Array.from(bytes, (byte) => ULID_ALPHABET[byte % 32]).join('');
+  return Array.from(bytes, (byte) => ULID_ALPHABET[byte % 32]).join("");
 }
 
 function createRequestId(): string {
@@ -67,23 +73,32 @@ function describeFormData(formData: FormData): unknown {
   try {
     const fields: Array<Record<string, unknown>> = [];
     formData.forEach((value, field) => {
-      if (typeof value === 'string') {
+      if (typeof value === "string") {
         fields.push({ field, value });
       } else {
-        fields.push({ field, file: value.name, size: value.size, type: value.type });
+        fields.push({
+          field,
+          file: value.name,
+          size: value.size,
+          type: value.type,
+        });
       }
     });
     return { formData: fields };
   } catch {
-    return '[FormData]';
+    return "[FormData]";
   }
 }
 
-async function readResponsePreview(response: Response): Promise<string | undefined> {
+async function readResponsePreview(
+  response: Response,
+): Promise<string | undefined> {
   try {
     const text = await response.text();
     if (!text) return undefined;
-    return text.length > BODY_PREVIEW_LIMIT ? `${text.slice(0, BODY_PREVIEW_LIMIT)}...` : text;
+    return text.length > BODY_PREVIEW_LIMIT
+      ? `${text.slice(0, BODY_PREVIEW_LIMIT)}...`
+      : text;
   } catch {
     return undefined;
   }
@@ -95,8 +110,11 @@ export class DaemonHttpClient {
     private readonly identity?: DaemonHttpClientIdentity,
   ) {}
 
-  async get<T>(path: string, query?: Record<string, string | number | boolean | undefined>): Promise<T> {
-    return this.request<T>('GET', path, undefined, query);
+  async get<T>(
+    path: string,
+    query?: Record<string, string | number | boolean | undefined>,
+  ): Promise<T> {
+    return this.request<T>("GET", path, undefined, query);
   }
 
   /** Authenticated raw-binary GET (no envelope). Used for file downloads that
@@ -106,30 +124,34 @@ export class DaemonHttpClient {
   async getBlob(path: string): Promise<Blob> {
     const url = buildRestUrl(this.origin, path);
     const requestId = createRequestId();
-    const headers: Record<string, string> = { 'X-Request-Id': requestId };
+    const headers: Record<string, string> = { "X-Request-Id": requestId };
     this.addClientHeaders(headers);
     const startedAt = Date.now();
-    traceRestRequest({ method: 'GET', path, url, requestId });
+    traceRestRequest({ method: "GET", path, url, requestId });
     let response: Response;
     try {
-      response = await fetch(url, { method: 'GET', headers, signal: timeoutSignal() });
+      response = await fetch(url, {
+        method: "GET",
+        headers,
+        signal: timeoutSignal(),
+      });
     } catch (err) {
       traceRestFailure({
-        method: 'GET',
+        method: "GET",
         path,
         requestId,
-        phase: 'fetch',
+        phase: "fetch",
         durationMs: Date.now() - startedAt,
         error: err,
       });
       throw new DaemonNetworkError({
         message: `Network error calling GET ${path}`,
         cause: err,
-        method: 'GET',
+        method: "GET",
         path,
         url,
         requestId,
-        phase: 'fetch',
+        phase: "fetch",
         timeoutMs: REQUEST_TIMEOUT_MS,
         timestamp: Date.now(),
         durationMs: Date.now() - startedAt,
@@ -137,13 +159,13 @@ export class DaemonHttpClient {
     }
     if (response.ok) {
       traceRestResponse({
-        method: 'GET',
+        method: "GET",
         path,
         requestId,
         status: response.status,
         durationMs: Date.now() - startedAt,
         code: 0,
-        msg: '',
+        msg: "",
       });
       return response.blob();
     }
@@ -156,7 +178,7 @@ export class DaemonHttpClient {
     }
     this.checkAuthRequired(response, envelope?.code ?? 0);
     traceRestResponse({
-      method: 'GET',
+      method: "GET",
       path,
       requestId,
       status: response.status,
@@ -175,8 +197,12 @@ export class DaemonHttpClient {
     });
   }
 
-  async post<T>(path: string, body?: unknown, opts?: { allowCodes?: number[] }): Promise<T> {
-    return this.request<T>('POST', path, body, undefined, opts?.allowCodes);
+  async post<T>(
+    path: string,
+    body?: unknown,
+    opts?: { allowCodes?: number[] },
+  ): Promise<T> {
+    return this.request<T>("POST", path, body, undefined, opts?.allowCodes);
   }
 
   /** POST JSON and receive a raw ZIP. The request trace accepts a separate
@@ -186,12 +212,12 @@ export class DaemonHttpClient {
     body: unknown,
     traceBody: Record<string, number>,
   ): Promise<{ blob: Blob; contentDisposition?: string }> {
-    const method = 'POST';
+    const method = "POST";
     const url = buildRestUrl(this.origin, path);
     const requestId = createRequestId();
     const headers: Record<string, string> = {
-      'X-Request-Id': requestId,
-      'Content-Type': 'application/json; charset=utf-8',
+      "X-Request-Id": requestId,
+      "Content-Type": "application/json; charset=utf-8",
     };
     this.addClientHeaders(headers);
     const startedAt = Date.now();
@@ -210,7 +236,7 @@ export class DaemonHttpClient {
         method,
         path,
         requestId,
-        phase: 'fetch',
+        phase: "fetch",
         durationMs: Date.now() - startedAt,
         error,
       });
@@ -221,16 +247,16 @@ export class DaemonHttpClient {
         path,
         url,
         requestId,
-        phase: 'fetch',
+        phase: "fetch",
         timeoutMs: EXPORT_TIMEOUT_MS,
         timestamp: Date.now(),
         durationMs: Date.now() - startedAt,
       });
     }
 
-    const contentType = response.headers.get('content-type') ?? undefined;
-    const mediaType = contentType?.split(';', 1)[0]?.trim().toLowerCase();
-    if (!response.ok || mediaType !== 'application/zip') {
+    const contentType = response.headers.get("content-type") ?? undefined;
+    const mediaType = contentType?.split(";", 1)[0]?.trim().toLowerCase();
+    if (!response.ok || mediaType !== "application/zip") {
       let envelope: WireEnvelope<unknown> | undefined;
       try {
         envelope = (await response.clone().json()) as WireEnvelope<unknown>;
@@ -262,12 +288,14 @@ export class DaemonHttpClient {
       }
 
       const diagnosticResponse = response.clone();
-      const error = new TypeError(`Expected application/zip, received ${contentType ?? 'no content type'}`);
+      const error = new TypeError(
+        `Expected application/zip, received ${contentType ?? "no content type"}`,
+      );
       traceRestFailure({
         method,
         path,
         requestId,
-        phase: 'parse',
+        phase: "parse",
         durationMs: Date.now() - startedAt,
         status: response.status,
         error,
@@ -279,7 +307,7 @@ export class DaemonHttpClient {
         path,
         url,
         requestId,
-        phase: 'parse',
+        phase: "parse",
         timeoutMs: EXPORT_TIMEOUT_MS,
         status: response.status,
         statusText: response.statusText,
@@ -298,7 +326,7 @@ export class DaemonHttpClient {
         method,
         path,
         requestId,
-        phase: 'parse',
+        phase: "parse",
         durationMs: Date.now() - startedAt,
         status: response.status,
         error,
@@ -310,7 +338,7 @@ export class DaemonHttpClient {
         path,
         url,
         requestId,
-        phase: 'parse',
+        phase: "parse",
         timeoutMs: EXPORT_TIMEOUT_MS,
         status: response.status,
         statusText: response.statusText,
@@ -326,11 +354,12 @@ export class DaemonHttpClient {
       status: response.status,
       durationMs: Date.now() - startedAt,
       code: 0,
-      msg: '',
+      msg: "",
     });
     return {
       blob,
-      contentDisposition: response.headers.get('content-disposition') ?? undefined,
+      contentDisposition:
+        response.headers.get("content-disposition") ?? undefined,
     };
   }
 
@@ -339,24 +368,42 @@ export class DaemonHttpClient {
     const url = buildRestUrl(this.origin, path);
     const requestId = createRequestId();
     const headers: Record<string, string> = {
-      'X-Request-Id': requestId,
+      "X-Request-Id": requestId,
     };
     this.addClientHeaders(headers);
     const startedAt = Date.now();
-    traceRestRequest({ method: 'POST', path, url, requestId, body: describeFormData(formData) });
+    traceRestRequest({
+      method: "POST",
+      path,
+      url,
+      requestId,
+      body: describeFormData(formData),
+    });
     let response: Response;
     try {
-      response = await fetch(url, { method: 'POST', headers, body: formData, signal: timeoutSignal() });
+      response = await fetch(url, {
+        method: "POST",
+        headers,
+        body: formData,
+        signal: timeoutSignal(),
+      });
     } catch (err) {
-      traceRestFailure({ method: 'POST', path, requestId, phase: 'fetch', durationMs: Date.now() - startedAt, error: err });
+      traceRestFailure({
+        method: "POST",
+        path,
+        requestId,
+        phase: "fetch",
+        durationMs: Date.now() - startedAt,
+        error: err,
+      });
       throw new DaemonNetworkError({
         message: `Network error calling POST ${path}`,
         cause: err,
-        method: 'POST',
+        method: "POST",
         path,
         url,
         requestId,
-        phase: 'fetch',
+        phase: "fetch",
         timeoutMs: REQUEST_TIMEOUT_MS,
         timestamp: Date.now(),
         durationMs: Date.now() - startedAt,
@@ -367,26 +414,34 @@ export class DaemonHttpClient {
     try {
       envelope = (await response.json()) as WireEnvelope<T>;
     } catch (err) {
-      traceRestFailure({ method: 'POST', path, requestId, phase: 'parse', durationMs: Date.now() - startedAt, status: response.status, error: err });
+      traceRestFailure({
+        method: "POST",
+        path,
+        requestId,
+        phase: "parse",
+        durationMs: Date.now() - startedAt,
+        status: response.status,
+        error: err,
+      });
       throw new DaemonNetworkError({
         message: `Failed to parse JSON response from POST ${path}`,
         cause: err,
-        method: 'POST',
+        method: "POST",
         path,
         url,
         requestId,
-        phase: 'parse',
+        phase: "parse",
         timeoutMs: REQUEST_TIMEOUT_MS,
         status: response.status,
         statusText: response.statusText,
-        contentType: response.headers.get('content-type') ?? undefined,
+        contentType: response.headers.get("content-type") ?? undefined,
         bodyPreview: await readResponsePreview(responseForDiagnostics),
         timestamp: Date.now(),
         durationMs: Date.now() - startedAt,
       });
     }
     traceRestResponse({
-      method: 'POST',
+      method: "POST",
       path,
       requestId,
       status: response.status,
@@ -411,11 +466,11 @@ export class DaemonHttpClient {
   }
 
   async patch<T>(path: string, body: unknown): Promise<T> {
-    return this.request<T>('PATCH', path, body);
+    return this.request<T>("PATCH", path, body);
   }
 
   async delete<T>(path: string): Promise<T> {
-    return this.request<T>('DELETE', path);
+    return this.request<T>("DELETE", path);
   }
 
   private async request<T>(
@@ -441,11 +496,11 @@ export class DaemonHttpClient {
     // Build headers
     const requestId = createRequestId();
     const headers: Record<string, string> = {
-      'X-Request-Id': requestId,
+      "X-Request-Id": requestId,
     };
     this.addClientHeaders(headers);
     if (body !== undefined) {
-      headers['Content-Type'] = 'application/json; charset=utf-8';
+      headers["Content-Type"] = "application/json; charset=utf-8";
     }
 
     const startedAt = Date.now();
@@ -461,7 +516,14 @@ export class DaemonHttpClient {
         signal: timeoutSignal(),
       });
     } catch (err) {
-      traceRestFailure({ method, path, requestId, phase: 'fetch', durationMs: Date.now() - startedAt, error: err });
+      traceRestFailure({
+        method,
+        path,
+        requestId,
+        phase: "fetch",
+        durationMs: Date.now() - startedAt,
+        error: err,
+      });
       throw new DaemonNetworkError({
         message: `Network error calling ${method} ${path}`,
         cause: err,
@@ -469,7 +531,7 @@ export class DaemonHttpClient {
         path,
         url,
         requestId,
-        phase: 'fetch',
+        phase: "fetch",
         timeoutMs: REQUEST_TIMEOUT_MS,
         timestamp: Date.now(),
         durationMs: Date.now() - startedAt,
@@ -482,7 +544,15 @@ export class DaemonHttpClient {
     try {
       envelope = (await response.json()) as WireEnvelope<T>;
     } catch (err) {
-      traceRestFailure({ method, path, requestId, phase: 'parse', durationMs: Date.now() - startedAt, status: response.status, error: err });
+      traceRestFailure({
+        method,
+        path,
+        requestId,
+        phase: "parse",
+        durationMs: Date.now() - startedAt,
+        status: response.status,
+        error: err,
+      });
       throw new DaemonNetworkError({
         message: `Failed to parse JSON response from ${method} ${path}`,
         cause: err,
@@ -490,11 +560,11 @@ export class DaemonHttpClient {
         path,
         url,
         requestId,
-        phase: 'parse',
+        phase: "parse",
         timeoutMs: REQUEST_TIMEOUT_MS,
         status: response.status,
         statusText: response.statusText,
-        contentType: response.headers.get('content-type') ?? undefined,
+        contentType: response.headers.get("content-type") ?? undefined,
         bodyPreview: await readResponsePreview(responseForDiagnostics),
         timestamp: Date.now(),
         durationMs: Date.now() - startedAt,
@@ -535,13 +605,13 @@ export class DaemonHttpClient {
   private addClientHeaders(headers: Record<string, string>): void {
     const credential = getCredential();
     if (credential !== undefined) {
-      headers['Authorization'] = `Bearer ${credential}`;
+      headers["Authorization"] = `Bearer ${credential}`;
     }
     if (this.identity === undefined) return;
-    headers['X-Kimi-Client-Id'] = this.identity.clientId;
-    headers['X-Kimi-Client-Name'] = this.identity.clientName;
-    headers['X-Kimi-Client-Version'] = this.identity.clientVersion;
-    headers['X-Kimi-Client-Ui-Mode'] = this.identity.clientUiMode;
+    headers["X-Kimi-Client-Id"] = this.identity.clientId;
+    headers["X-Kimi-Client-Name"] = this.identity.clientName;
+    headers["X-Kimi-Client-Version"] = this.identity.clientVersion;
+    headers["X-Kimi-Client-Ui-Mode"] = this.identity.clientUiMode;
   }
 
   private checkAuthRequired(response: Response, envelopeCode: number): void {

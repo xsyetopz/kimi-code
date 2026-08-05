@@ -16,7 +16,8 @@ export function getForkTurnIndex(
   messageIndex: number,
 ): number | undefined {
   const target = messages[messageIndex];
-  if (target?.role !== "assistant" || target.forkable === false) return undefined;
+  if (target?.role !== "assistant" || target.forkable === false)
+    return undefined;
 
   let visibleTurns = 0;
   for (let index = 0; index <= messageIndex; index += 1) {
@@ -36,7 +37,8 @@ export function getForkTurnIndex(
 function countSteers(message: ForkTurnMessage): number {
   return (
     message.steps?.reduce(
-      (count, step) => count + step.items.filter((item) => item.type === "steer").length,
+      (count, step) =>
+        count + step.items.filter((item) => item.type === "steer").length,
       0,
     ) ?? 0
   );

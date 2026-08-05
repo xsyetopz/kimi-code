@@ -10,9 +10,10 @@
 // jitter before giving up. POSIX renames over open files directly and never
 // takes the retry path.
 
-import fs from 'node:fs/promises';
+import fs from "node:fs/promises";
 
-const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
+const sleep = (ms: number): Promise<void> =>
+  new Promise((r) => setTimeout(r, ms));
 
 export interface RenameReplaceOptions {
   /** Max EPERM retries before the error propagates (Windows only). */
@@ -21,15 +22,20 @@ export interface RenameReplaceOptions {
   baseDelayMs?: number;
 }
 
-export async function renameReplace(src: string, dst: string, opts: RenameReplaceOptions = {}): Promise<void> {
-  if (process.platform !== 'win32') return fs.rename(src, dst);
+export async function renameReplace(
+  src: string,
+  dst: string,
+  opts: RenameReplaceOptions = {},
+): Promise<void> {
+  if (process.platform !== "win32") return fs.rename(src, dst);
   const retries = opts.retries ?? 100;
   const base = opts.baseDelayMs ?? 20;
   for (let attempt = 0; ; attempt++) {
     try {
       return await fs.rename(src, dst);
     } catch (e) {
-      if ((e as NodeJS.ErrnoException).code !== 'EPERM' || attempt >= retries) throw e;
+      if ((e as NodeJS.ErrnoException).code !== "EPERM" || attempt >= retries)
+        throw e;
       await sleep(base + Math.floor(Math.random() * (base + 10)));
     }
   }

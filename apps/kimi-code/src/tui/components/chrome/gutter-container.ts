@@ -15,10 +15,10 @@
  * style changes that genuinely dirty every child (e.g. theme switches).
  */
 
-import { Container } from '@moonshot-ai/pi-tui';
-import type { Component } from '@moonshot-ai/pi-tui';
+import { Container } from "@moonshot-ai/pi-tui";
+import type { Component } from "@moonshot-ai/pi-tui";
 
-import { isRenderCacheEnabled } from '#/tui/utils/render-cache';
+import { isRenderCacheEnabled } from "#/tui/utils/render-cache";
 
 interface TranscriptRenderCache {
   width: number;
@@ -44,7 +44,7 @@ export class GutterContainer extends Container {
 
   override render(width: number): string[] {
     const inner = Math.max(1, width - this.leftPad - this.rightPad);
-    const lead = ' '.repeat(this.leftPad);
+    const lead = " ".repeat(this.leftPad);
 
     const cache = this.renderCache;
     const cacheValid =
@@ -63,7 +63,10 @@ export class GutterContainer extends Container {
       const lines = child.render(inner);
       childRefs.push(child);
       childRenderRefs.push(lines);
-      const reused = cacheValid && cache.childRefs[i] === child && cache.childRenderRefs[i] === lines;
+      const reused =
+        cacheValid &&
+        cache.childRefs[i] === child &&
+        cache.childRenderRefs[i] === lines;
       if (reused) {
         prefixed.push(cache.prefixed[i]!);
       } else {

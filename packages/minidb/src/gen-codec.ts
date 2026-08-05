@@ -20,19 +20,19 @@
 //
 // Internal to the package — NOT re-exported from the root entry point.
 
-import fs from 'node:fs/promises';
-import fsSync from 'node:fs';
-import type { FileHandle } from 'node:fs/promises';
-import { crc32 } from './crc32.ts';
-import type { ValueRef } from './store.js';
+import fs from "node:fs/promises";
+import fsSync from "node:fs";
+import type { FileHandle } from "node:fs/promises";
+import { crc32 } from "./crc32.ts";
+import type { ValueRef } from "./store.js";
 
 /** Thrown by every reader on a malformed/truncated/crc-mismatched generation
  *  file. Distinct from CorruptFrameError so the loader can route precisely. */
 export class GenerationCorruptError extends Error {
-  readonly code = 'GENERATION_CORRUPT';
+  readonly code = "GENERATION_CORRUPT";
   constructor(message: string) {
     super(message);
-    this.name = 'GenerationCorruptError';
+    this.name = "GenerationCorruptError";
   }
 }
 
@@ -100,21 +100,21 @@ class ByteWriter {
 
   /** A canonical (binary) key string: u16 byte length + raw bytes. */
   key(kstr: string): void {
-    const b = Buffer.from(kstr, 'binary');
+    const b = Buffer.from(kstr, "binary");
     this.u16(b.length);
     this.bytes(b);
   }
 
   /** A genuine text string: u32 utf8 byte length + utf8 bytes. */
   text(s: string): void {
-    const b = Buffer.from(s, 'utf8');
+    const b = Buffer.from(s, "utf8");
     this.u32(b.length);
     this.bytes(b);
   }
 
   /** A term (bounded by the text index's uint16 limit): u16 + utf8. */
   term(s: string): void {
-    const b = Buffer.from(s, 'utf8');
+    const b = Buffer.from(s, "utf8");
     this.u16(b.length);
     this.bytes(b);
   }
@@ -126,7 +126,8 @@ export class ByteReader {
   constructor(readonly buf: Buffer) {}
 
   private need(n: number): void {
-    if (this.off + n > this.buf.length) throw new GenerationCorruptError('generation file truncated');
+    if (this.off + n > this.buf.length)
+      throw new GenerationCorruptError("generation file truncated");
   }
 
   u8(): number {
@@ -180,17 +181,17 @@ export class ByteReader {
 
   key(): string {
     const n = this.u16();
-    return this.bytes(n).toString('binary');
+    return this.bytes(n).toString("binary");
   }
 
   text(): string {
     const n = this.u32();
-    return this.bytes(n).toString('utf8');
+    return this.bytes(n).toString("utf8");
   }
 
   term(): string {
     const n = this.u16();
-    return this.bytes(n).toString('utf8');
+    return this.bytes(n).toString("utf8");
   }
 
   get done(): boolean {
@@ -225,9 +226,14 @@ export class GenFileWriter {
     this.queued = head.length;
   }
 
-  static async open(path: string, magic: string, version: number): Promise<GenFileWriter> {
-    if (magic.length !== 4) throw new RangeError('generation file magic must be 4 chars');
-    const fh = await fs.open(path, 'w');
+  static async open(
+    path: string,
+    magic: string,
+    version: number,
+  ): Promise<GenFileWriter> {
+    if (magic.length !== 4)
+      throw new RangeError("generation file magic must be 4 chars");
+    const fh = await fs.open(path, "w");
     try {
       return new GenFileWriter(fh, magic, version);
     } catch (e) {
@@ -260,9 +266,17 @@ export class GenFileWriter {
     let idx = 0;
     let off = 0;
     while (idx < bufs.length) {
-      const toWrite = off > 0 ? [bufs[idx]!.subarray(off), ...bufs.slice(idx + 1)] : idx === 0 ? bufs : bufs.slice(idx);
+      const toWrite =
+        off > 0
+          ? [bufs[idx]!.subarray(off), ...bufs.slice(idx + 1)]
+          : idx === 0
+            ? bufs
+            : bufs.slice(idx);
       const { bytesWritten } = await this.fh.writev(toWrite);
-      if (bytesWritten === 0) throw new Error('generation file writev made no progress (short write)');
+      if (bytesWritten === 0)
+        throw new Error(
+          "generation file writev made no progress (short write)",
+        );
       this.bytes += bytesWritten;
       let rem = bytesWritten;
       while (rem > 0 && idx < bufs.length) {
@@ -289,7 +303,10 @@ export class GenFileWriter {
       let written = 0;
       while (written < 4) {
         const { bytesWritten } = await this.fh.write(trailer, written);
-        if (bytesWritten === 0) throw new Error('generation file write made no progress (short write)');
+        if (bytesWritten === 0)
+          throw new Error(
+            "generation file write made no progress (short write)",
+          );
         written += bytesWritten;
       }
       this.bytes += 4;
@@ -317,27 +334,47 @@ export interface VerifiedGenerationFile {
 
 /** Read + verify one whole generation file: magic, version, and the crc
  *  trailer. Returns the payload reader and the computed integrity record. */
-export async function readGenerationFile(path: string, magic: string, version: number): Promise<VerifiedGenerationFile> {
+export async function readGenerationFile(
+  path: string,
+  magic: string,
+  version: number,
+): Promise<VerifiedGenerationFile> {
   let buf: Buffer;
   try {
     buf = await fs.readFile(path);
   } catch (e) {
-    throw new GenerationCorruptError(`generation file unreadable: ${(e as NodeJS.ErrnoException).code ?? String(e)}`);
+    throw new GenerationCorruptError(
+      `generation file unreadable: ${(e as NodeJS.ErrnoException).code ?? String(e)}`,
+    );
   }
   return parseGenerationBuffer(buf, magic, version);
 }
 
 /** Pure-buffer variant of readGenerationFile (tests, in-memory verification). */
-export function parseGenerationBuffer(buf: Buffer, magic: string, version: number): VerifiedGenerationFile {
-  if (buf.length < 8 + 4) throw new GenerationCorruptError('generation file too short');
+export function parseGenerationBuffer(
+  buf: Buffer,
+  magic: string,
+  version: number,
+): VerifiedGenerationFile {
+  if (buf.length < 8 + 4)
+    throw new GenerationCorruptError("generation file too short");
   for (let i = 0; i < 4; i++) {
-    if (buf.readUInt8(i) !== magic.charCodeAt(i)) throw new GenerationCorruptError(`bad magic (want ${magic})`);
+    if (buf.readUInt8(i) !== magic.charCodeAt(i))
+      throw new GenerationCorruptError(`bad magic (want ${magic})`);
   }
-  if (buf.readUInt32LE(4) !== version) throw new GenerationCorruptError(`unsupported file version (want ${version})`);
+  if (buf.readUInt32LE(4) !== version)
+    throw new GenerationCorruptError(
+      `unsupported file version (want ${version})`,
+    );
   const stored = buf.readUInt32LE(buf.length - 4);
   const calc = crc32(buf.subarray(0, buf.length - 4));
-  if (stored !== calc) throw new GenerationCorruptError('generation file crc mismatch');
-  return { payload: new ByteReader(buf.subarray(8, buf.length - 4)), bytes: buf.length, crc32: stored };
+  if (stored !== calc)
+    throw new GenerationCorruptError("generation file crc mismatch");
+  return {
+    payload: new ByteReader(buf.subarray(8, buf.length - 4)),
+    bytes: buf.length,
+    crc32: stored,
+  };
 }
 
 /** Read + verify a generation file AND cross-check it against the manifest's
@@ -351,7 +388,9 @@ export async function readGenerationFileChecked(
 ): Promise<ByteReader> {
   const f = await readGenerationFile(path, magic, version);
   if (f.bytes !== expected.bytes || f.crc32 !== expected.crc32) {
-    throw new GenerationCorruptError('generation file does not match manifest record');
+    throw new GenerationCorruptError(
+      "generation file does not match manifest record",
+    );
   }
   return f.payload;
 }
@@ -371,13 +410,20 @@ export async function readGenerationFileCheckedAsync(
   try {
     buf = await fs.readFile(path);
   } catch (e) {
-    throw new GenerationCorruptError(`generation file unreadable: ${(e as NodeJS.ErrnoException).code ?? String(e)}`);
+    throw new GenerationCorruptError(
+      `generation file unreadable: ${(e as NodeJS.ErrnoException).code ?? String(e)}`,
+    );
   }
-  if (buf.length < 8 + 4) throw new GenerationCorruptError('generation file too short');
+  if (buf.length < 8 + 4)
+    throw new GenerationCorruptError("generation file too short");
   for (let i = 0; i < 4; i++) {
-    if (buf.readUInt8(i) !== magic.charCodeAt(i)) throw new GenerationCorruptError(`bad magic (want ${magic})`);
+    if (buf.readUInt8(i) !== magic.charCodeAt(i))
+      throw new GenerationCorruptError(`bad magic (want ${magic})`);
   }
-  if (buf.readUInt32LE(4) !== version) throw new GenerationCorruptError(`unsupported file version (want ${version})`);
+  if (buf.readUInt32LE(4) !== version)
+    throw new GenerationCorruptError(
+      `unsupported file version (want ${version})`,
+    );
   const stored = buf.readUInt32LE(buf.length - 4);
   let crc = 0;
   const SLICE = 1 << 20;
@@ -385,9 +431,12 @@ export async function readGenerationFileCheckedAsync(
     crc = crc32(buf.subarray(pos, Math.min(pos + SLICE, buf.length - 4)), crc);
     await new Promise((r) => setImmediate(r));
   }
-  if (stored !== crc) throw new GenerationCorruptError('generation file crc mismatch');
+  if (stored !== crc)
+    throw new GenerationCorruptError("generation file crc mismatch");
   if (buf.length !== expected.bytes || stored !== expected.crc32) {
-    throw new GenerationCorruptError('generation file does not match manifest record');
+    throw new GenerationCorruptError(
+      "generation file does not match manifest record",
+    );
   }
   return new ByteReader(buf.subarray(8, buf.length - 4));
 }
@@ -397,21 +446,37 @@ export async function readGenerationFileCheckedAsync(
  *  envelope of their own and are otherwise only verified lazily, per-record,
  *  at search time). One sequential read: cheap insurance that a corrupt base
  *  is discarded and rebuilt at OPEN, not discovered mid-query. */
-export function verifyFileIntegritySync(path: string, expected: { bytes: number; crc32: number }): void {
-  const fd = fsSync.openSync(path, 'r');
+export function verifyFileIntegritySync(
+  path: string,
+  expected: { bytes: number; crc32: number },
+): void {
+  const fd = fsSync.openSync(path, "r");
   try {
     const st = fsSync.fstatSync(fd);
-    if (st.size !== expected.bytes) throw new GenerationCorruptError('file size does not match manifest record');
+    if (st.size !== expected.bytes)
+      throw new GenerationCorruptError(
+        "file size does not match manifest record",
+      );
     let crc = 0;
     const buf = Buffer.allocUnsafe(1 << 16);
     let pos = 0;
     while (pos < st.size) {
-      const n = fsSync.readSync(fd, buf, 0, Math.min(buf.length, st.size - pos), pos);
-      if (n === 0) throw new GenerationCorruptError('file shrank during integrity check');
+      const n = fsSync.readSync(
+        fd,
+        buf,
+        0,
+        Math.min(buf.length, st.size - pos),
+        pos,
+      );
+      if (n === 0)
+        throw new GenerationCorruptError("file shrank during integrity check");
       crc = crc32(buf.subarray(0, n), crc);
       pos += n;
     }
-    if ((crc >>> 0) !== expected.crc32) throw new GenerationCorruptError('file crc does not match manifest record');
+    if (crc >>> 0 !== expected.crc32)
+      throw new GenerationCorruptError(
+        "file crc does not match manifest record",
+      );
   } finally {
     fsSync.closeSync(fd);
   }
@@ -419,7 +484,7 @@ export function verifyFileIntegritySync(path: string, expected: { bytes: number;
 
 // ---- store image ------------------------------------------------------------
 
-const STORE_MAGIC = 'MDGS';
+const STORE_MAGIC = "MDGS";
 // v4: the dt header fields are u32 (column count, metaLen, column-name
 // length) — the v3 u8/u16 widths threw a RangeError mid-build on extreme
 // shapes (many/wide dt columns), and every later build would fail the same
@@ -450,7 +515,7 @@ const TAG_WAL_LOC = 2;
 /** The Store's dt accounting value for one record (mirrors Store.metaBytes:
  *  byte length of the canonical `{"dt":...}` meta JSON, 0 for none). */
 function dtMetaBytes(dt: Record<string, number> | null): number {
-  return dt ? Buffer.byteLength(JSON.stringify({ dt }), 'utf8') : 0;
+  return dt ? Buffer.byteLength(JSON.stringify({ dt }), "utf8") : 0;
 }
 
 /** Stream the store image to `path`. `records` must yield live records in
@@ -471,17 +536,17 @@ export async function writeStoreImage(
         b.u32(dtMetaBytes(r.dt));
         b.u32(cols.length);
         for (const [name, ms] of cols) {
-          const nb = Buffer.from(name, 'utf8');
+          const nb = Buffer.from(name, "utf8");
           b.u32(nb.length);
           b.bytes(nb);
           b.f64(ms);
         }
-        if (r.ref.kind === 'memory') {
+        if (r.ref.kind === "memory") {
           b.u8(TAG_INLINE);
           b.u32(r.ref.value.length);
           b.bytes(r.ref.value);
         } else {
-          b.u8(r.ref.loc.file === 'snapshot' ? TAG_SNAPSHOT_LOC : TAG_WAL_LOC);
+          b.u8(r.ref.loc.file === "snapshot" ? TAG_SNAPSHOT_LOC : TAG_WAL_LOC);
           b.u64(r.ref.loc.off);
           b.u32(r.ref.loc.len);
         }
@@ -510,7 +575,7 @@ export function* readStoreImage(r: ByteReader): Generator<StoreImageRecord> {
       dt = {};
       for (let i = 0; i < colCount; i++) {
         const nameLen = r.u32();
-        const name = r.bytes(nameLen).toString('utf8');
+        const name = r.bytes(nameLen).toString("utf8");
         dt[name] = r.f64();
       }
     }
@@ -518,11 +583,14 @@ export function* readStoreImage(r: ByteReader): Generator<StoreImageRecord> {
     let ref: ValueRef;
     if (tag === TAG_INLINE) {
       const len = r.u32();
-      ref = { kind: 'memory', value: Buffer.from(r.bytes(len)) };
+      ref = { kind: "memory", value: Buffer.from(r.bytes(len)) };
     } else if (tag === TAG_SNAPSHOT_LOC || tag === TAG_WAL_LOC) {
       const off = r.u64();
       const len = r.u32();
-      ref = { kind: 'disk', loc: { file: tag === TAG_SNAPSHOT_LOC ? 'snapshot' : 'wal', off, len } };
+      ref = {
+        kind: "disk",
+        loc: { file: tag === TAG_SNAPSHOT_LOC ? "snapshot" : "wal", off, len },
+      };
     } else {
       throw new GenerationCorruptError(`store image: unknown value tag ${tag}`);
     }
@@ -532,7 +600,7 @@ export function* readStoreImage(r: ByteReader): Generator<StoreImageRecord> {
 
 // ---- dt index image ---------------------------------------------------------
 
-const DT_MAGIC = 'MDGD';
+const DT_MAGIC = "MDGD";
 const DT_VERSION = 1;
 
 export interface DtImageColumn {
@@ -541,7 +609,10 @@ export interface DtImageColumn {
   entries: { ms: number; key: string }[];
 }
 
-export async function writeDtIndexImage(path: string, cols: DtImageColumn[]): Promise<{ bytes: number; crc32: number }> {
+export async function writeDtIndexImage(
+  path: string,
+  cols: DtImageColumn[],
+): Promise<{ bytes: number; crc32: number }> {
   const w = await GenFileWriter.open(path, DT_MAGIC, DT_VERSION);
   try {
     await w.writeRecord((b) => b.u32(cols.length));
@@ -570,23 +641,24 @@ export function readDtIndexImage(r: ByteReader): DtImageColumn[] {
   for (let i = 0; i < colCount; i++) {
     const name = r.text();
     const n = r.u64();
-    const entries: DtImageColumn['entries'] = [];
+    const entries: DtImageColumn["entries"] = [];
     for (let j = 0; j < n; j++) entries.push({ ms: r.f64(), key: r.key() });
     cols.push({ name, entries });
   }
-  if (!r.done) throw new GenerationCorruptError('dt index image: trailing bytes');
+  if (!r.done)
+    throw new GenerationCorruptError("dt index image: trailing bytes");
   return cols;
 }
 
 // ---- secondary index image --------------------------------------------------
 
-const SECONDARY_MAGIC = 'MDSI';
+const SECONDARY_MAGIC = "MDSI";
 const SECONDARY_VERSION = 1;
 
 export interface SecondaryImageIndex {
   name: string;
   field: string;
-  type: 'equality' | 'range';
+  type: "equality" | "range";
   unique: boolean;
   sparse: boolean;
   /** Equality state: (scalarKey -> pks). Null for range indexes. */
@@ -606,10 +678,10 @@ export async function writeSecondaryIndexImage(
       await w.writeRecord((b) => {
         b.text(idx.name);
         b.text(idx.field);
-        b.u8(idx.type === 'range' ? 2 : 1);
+        b.u8(idx.type === "range" ? 2 : 1);
         b.u8((idx.unique ? 1 : 0) | (idx.sparse ? 2 : 0));
       });
-      if (idx.type === 'equality') {
+      if (idx.type === "equality") {
         const values = idx.equality ?? [];
         await w.writeRecord((b) => b.u64(values.length));
         for (const v of values) {
@@ -645,11 +717,14 @@ export function readSecondaryIndexImage(r: ByteReader): SecondaryImageIndex[] {
     const field = r.text();
     const typeTag = r.u8();
     const flags = r.u8();
-    const type = typeTag === 2 ? 'range' : typeTag === 1 ? 'equality' : null;
-    if (type === null) throw new GenerationCorruptError(`secondary image: unknown index type ${typeTag}`);
-    let equality: SecondaryImageIndex['equality'] = null;
-    let range: SecondaryImageIndex['range'] = null;
-    if (type === 'equality') {
+    const type = typeTag === 2 ? "range" : typeTag === 1 ? "equality" : null;
+    if (type === null)
+      throw new GenerationCorruptError(
+        `secondary image: unknown index type ${typeTag}`,
+      );
+    let equality: SecondaryImageIndex["equality"] = null;
+    let range: SecondaryImageIndex["range"] = null;
+    if (type === "equality") {
       equality = [];
       const valueCount = r.u64();
       for (let v = 0; v < valueCount; v++) {
@@ -664,15 +739,24 @@ export function readSecondaryIndexImage(r: ByteReader): SecondaryImageIndex[] {
       const n = r.u64();
       for (let j = 0; j < n; j++) range.push({ value: r.f64(), pk: r.key() });
     }
-    out.push({ name, field, type, unique: (flags & 1) !== 0, sparse: (flags & 2) !== 0, equality, range });
+    out.push({
+      name,
+      field,
+      type,
+      unique: (flags & 1) !== 0,
+      sparse: (flags & 2) !== 0,
+      equality,
+      range,
+    });
   }
-  if (!r.done) throw new GenerationCorruptError('secondary index image: trailing bytes');
+  if (!r.done)
+    throw new GenerationCorruptError("secondary index image: trailing bytes");
   return out;
 }
 
 // ---- compound index image ---------------------------------------------------
 
-const COMPOUND_MAGIC = 'MDCI';
+const COMPOUND_MAGIC = "MDCI";
 const COMPOUND_VERSION = 1;
 
 export type CompoundImageGroupValue = number | string | boolean | null;
@@ -681,8 +765,11 @@ export interface CompoundImageIndex {
   name: string;
   groupBy: string;
   orderBy: string;
-  orderType: 'number' | 'string';
-  groups: { group: CompoundImageGroupValue; entries: { order: number | string; pk: string }[] }[];
+  orderType: "number" | "string";
+  groups: {
+    group: CompoundImageGroupValue;
+    entries: { order: number | string; pk: string }[];
+  }[];
 }
 
 const GTAG_NUMBER = 1;
@@ -694,10 +781,10 @@ const GTAG_NULL = 5;
 function writeGroupValue(b: ByteWriter, v: CompoundImageGroupValue): void {
   if (v === null) {
     b.u8(GTAG_NULL);
-  } else if (typeof v === 'number') {
+  } else if (typeof v === "number") {
     b.u8(GTAG_NUMBER);
     b.f64(v);
-  } else if (typeof v === 'string') {
+  } else if (typeof v === "string") {
     b.u8(GTAG_STRING);
     b.text(v);
   } else if (v === false) {
@@ -729,7 +816,7 @@ export async function writeCompoundIndexImage(
         b.text(idx.name);
         b.text(idx.groupBy);
         b.text(idx.orderBy);
-        b.u8(idx.orderType === 'string' ? 2 : 1);
+        b.u8(idx.orderType === "string" ? 2 : 1);
         b.u64(idx.groups.length);
       });
       for (const g of idx.groups) {
@@ -739,7 +826,7 @@ export async function writeCompoundIndexImage(
         });
         for (const e of g.entries) {
           await w.writeRecord((b) => {
-            if (idx.orderType === 'string') b.text(String(e.order));
+            if (idx.orderType === "string") b.text(String(e.order));
             else b.f64(Number(e.order));
             b.key(e.pk);
           });
@@ -761,31 +848,35 @@ export function readCompoundIndexImage(r: ByteReader): CompoundImageIndex[] {
     const groupBy = r.text();
     const orderBy = r.text();
     const ot = r.u8();
-    const orderType = ot === 2 ? 'string' : ot === 1 ? 'number' : null;
-    if (orderType === null) throw new GenerationCorruptError(`compound image: unknown order type ${ot}`);
+    const orderType = ot === 2 ? "string" : ot === 1 ? "number" : null;
+    if (orderType === null)
+      throw new GenerationCorruptError(
+        `compound image: unknown order type ${ot}`,
+      );
     const groupCount = r.u64();
-    const groups: CompoundImageIndex['groups'] = [];
+    const groups: CompoundImageIndex["groups"] = [];
     for (let g = 0; g < groupCount; g++) {
       const group = readGroupValue(r);
       const n = r.u64();
       const entries: { order: number | string; pk: string }[] = [];
       for (let j = 0; j < n; j++) {
-        const order = orderType === 'string' ? r.text() : r.f64();
+        const order = orderType === "string" ? r.text() : r.f64();
         entries.push({ order, pk: r.key() });
       }
       groups.push({ group, entries });
     }
     out.push({ name, groupBy, orderBy, orderType, groups });
   }
-  if (!r.done) throw new GenerationCorruptError('compound index image: trailing bytes');
+  if (!r.done)
+    throw new GenerationCorruptError("compound index image: trailing bytes");
   return out;
 }
 
 // ---- text index images ------------------------------------------------------
 
-const TEXT_DICT_MAGIC = 'MDTD';
+const TEXT_DICT_MAGIC = "MDTD";
 const TEXT_DICT_VERSION = 1;
-const TEXT_DOCS_MAGIC = 'MDTC';
+const TEXT_DOCS_MAGIC = "MDTC";
 const TEXT_DOCS_VERSION = 1;
 
 export interface TextDictImageEntry {
@@ -818,14 +909,18 @@ export async function writeTextDictionaryImage(
 
 export function readTextDictionaryImage(r: ByteReader): TextDictImageEntry[] {
   const out: TextDictImageEntry[] = [];
-  while (!r.done) out.push({ term: r.term(), off: r.u64(), len: r.u32(), df: r.u32() });
+  while (!r.done)
+    out.push({ term: r.term(), off: r.u64(), len: r.u32(), df: r.u32() });
   return out;
 }
 
 /** Sliced variant (stage 6): identical result, with event-loop yields every
  *  `yieldEvery` entries so a million-term dictionary never parses in one
  *  synchronous run. */
-export async function readTextDictionaryImageAsync(r: ByteReader, yieldEvery = 65536): Promise<TextDictImageEntry[]> {
+export async function readTextDictionaryImageAsync(
+  r: ByteReader,
+  yieldEvery = 65536,
+): Promise<TextDictImageEntry[]> {
   const out: TextDictImageEntry[] = [];
   let n = 0;
   while (!r.done) {
@@ -849,7 +944,10 @@ export interface TextDocsImage {
   delta: { term: string; docs: { docID: number; freq: number }[] }[];
 }
 
-export async function writeTextDocsImage(path: string, image: TextDocsImage): Promise<{ bytes: number; crc32: number }> {
+export async function writeTextDocsImage(
+  path: string,
+  image: TextDocsImage,
+): Promise<{ bytes: number; crc32: number }> {
   const w = await GenFileWriter.open(path, TEXT_DOCS_MAGIC, TEXT_DOCS_VERSION);
   try {
     await w.writeRecord((b) => {
@@ -907,12 +1005,14 @@ export function readTextDocsImage(r: ByteReader): TextDocsImage {
       const len = r.u32();
       docLens.push(len === 0 ? undefined : len);
     } else {
-      throw new GenerationCorruptError(`text docs image: unknown presence tag ${present}`);
+      throw new GenerationCorruptError(
+        `text docs image: unknown presence tag ${present}`,
+      );
     }
   }
   const removed: number[] = [];
   for (let i = 0; i < removedCount; i++) removed.push(r.u32());
-  const delta: TextDocsImage['delta'] = [];
+  const delta: TextDocsImage["delta"] = [];
   for (let i = 0; i < deltaCount; i++) {
     const term = r.term();
     const n = r.u64();
@@ -920,6 +1020,7 @@ export function readTextDocsImage(r: ByteReader): TextDocsImage {
     for (let j = 0; j < n; j++) docs.push({ docID: r.u32(), freq: r.u32() });
     delta.push({ term, docs });
   }
-  if (!r.done) throw new GenerationCorruptError('text docs image: trailing bytes');
+  if (!r.done)
+    throw new GenerationCorruptError("text docs image: trailing bytes");
   return { keys, docLens, liveCount, removed, delta };
 }

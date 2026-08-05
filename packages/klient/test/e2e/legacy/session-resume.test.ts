@@ -16,14 +16,14 @@
  *
  * Both tests gate on `daemonReachable()` so CI without a server stays green.
  */
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from "vitest";
 
-import { DaemonClient } from '../harness/index.js';
-import { fetchWithReport } from '../harness/report.js';
-import { createCaseLogger } from './log.js';
+import { DaemonClient } from "../harness/index.js";
+import { fetchWithReport } from "../harness/report.js";
+import { createCaseLogger } from "./log.js";
 
-const BASE_URL = process.env['KIMI_SERVER_URL'] ?? 'http://127.0.0.1:58627';
-const API_PREFIX = '/api/v1';
+const BASE_URL = process.env["KIMI_SERVER_URL"] ?? "http://127.0.0.1:58627";
+const API_PREFIX = "/api/v1";
 const PROMPT_TIMEOUT_MS = 120_000;
 
 async function daemonReachable(): Promise<boolean> {
@@ -57,41 +57,43 @@ afterEach(async () => {
   }
 });
 
-describeLive('session resume + activity (live server required)', () => {
+describeLive("session resume + activity (live server required)", () => {
   // ── Gap 1: cold-session /messages ──────────────────────────────────────
   it(
-    'GET /messages on a persisted session returns 200 (resumeSession injection)',
+    "GET /messages on a persisted session returns 200 (resumeSession injection)",
     async () => {
-      const log = createCaseLogger('session resume: persisted messages');
+      const log = createCaseLogger("session resume: persisted messages");
       const probe = new DaemonClient({ baseUrl: BASE_URL });
 
       // Seed: ensure at least one session exists in the store. (If a prior
       // server process already left some, we'll still pick one of those —
       // either way, the resumeSession code path is the same.)
-      const seeded = await probe.createSession({ metadata: { cwd: process.cwd() } });
+      const seeded = await probe.createSession({
+        metadata: { cwd: process.cwd() },
+      });
       created.push({ client: probe, sid: seeded.id });
-      log('seeded session', seeded);
+      log("seeded session", seeded);
       await probe.connect();
       await probe.subscribe(seeded.id);
       const promptResult = await probe.submitAndWait(
         seeded.id,
-        { content: [{ type: 'text', text: 'Reply with "OK".' }] },
-        { waitFor: 'prompt.completed', timeoutMs: PROMPT_TIMEOUT_MS },
+        { content: [{ type: "text", text: 'Reply with "OK".' }] },
+        { waitFor: "prompt.completed", timeoutMs: PROMPT_TIMEOUT_MS },
       );
-      log('seed prompt completed', {
+      log("seed prompt completed", {
         prompt_id: promptResult.prompt_id,
         user_message_id: promptResult.user_message_id,
         final_frame: frameForLog(promptResult.finalFrame),
       });
       await probe.close();
-      log('closed seed client');
+      log("closed seed client");
 
       // Fresh client — closing the previous WS doesn't evict the bridge's
       // in-memory session, but it ensures the call goes through the REST
       // resume path (no stale subscription state).
       const fresh = new DaemonClient({ baseUrl: BASE_URL });
       const { items: sessions } = await fresh.listSessions({ page_size: 20 });
-      log('fresh listSessions snapshot', {
+      log("fresh listSessions snapshot", {
         count: sessions.length,
         sessions: sessions.map((s) => sessionSummaryForLog(s)),
       });
@@ -101,16 +103,21 @@ describeLive('session resume + activity (live server required)', () => {
       // states (fresh-start vs. long-running). Every one must return 200.
       const probeSet = sessions.slice(0, 3);
       for (const s of probeSet) {
-        const { items: msgs } = await fresh.listMessages(s.id, { page_size: 5 });
-        log('fresh listMessages snapshot', {
+        const { items: msgs } = await fresh.listMessages(s.id, {
+          page_size: 5,
+        });
+        log("fresh listMessages snapshot", {
           session: sessionSummaryForLog(s),
           count: msgs.length,
           messages: msgs,
         });
-        expect(Array.isArray(msgs), `messages for ${s.id} should be an array`).toBe(true);
+        expect(
+          Array.isArray(msgs),
+          `messages for ${s.id} should be an array`,
+        ).toBe(true);
       }
       await fresh.close();
-      log('closed fresh client');
+      log("closed fresh client");
     },
     PROMPT_TIMEOUT_MS + 30_000,
   );
@@ -119,24 +126,26 @@ describeLive('session resume + activity (live server required)', () => {
   // Asserts the live server transitions `false → true → false` across a
   // prompt, using the aggregate work fact exposed by both backends.
   it(
-    'GET /sessions/{sid}.busy transitions false → true → false across a prompt',
+    "GET /sessions/{sid}.busy transitions false → true → false across a prompt",
     async () => {
-      const log = createCaseLogger('session busy: live transition');
+      const log = createCaseLogger("session busy: live transition");
       const client = new DaemonClient({ baseUrl: BASE_URL });
-      const session = await client.createSession({ metadata: { cwd: process.cwd() } });
+      const session = await client.createSession({
+        metadata: { cwd: process.cwd() },
+      });
       created.push({ client, sid: session.id });
-      log('created session', session);
+      log("created session", session);
       expect(session.busy).toBe(false);
 
       await client.connect();
       await client.subscribe(session.id);
-      log('subscribe accepted', { session_id: session.id });
+      log("subscribe accepted", { session_id: session.id });
 
       // Fire-and-forget submit so we can poll while the prompt is mid-flight.
       const submit = await client.submitPrompt(session.id, {
-        content: [{ type: 'text', text: 'Reply with "OK".' }],
+        content: [{ type: "text", text: 'Reply with "OK".' }],
       });
-      log('submit response', submit);
+      log("submit response", submit);
 
       // Race the server: poll busy quickly until we observe active work or
       // `prompt.completed` lands. Either outcome ends the loop; we
@@ -144,14 +153,21 @@ describeLive('session resume + activity (live server required)', () => {
       let seenBusy = false;
       const ackPromise = client.waitForFrame(
         (f) => {
-          if (f.type !== 'prompt.completed') return false;
-          const payload = (f.payload ?? {}) as { promptId?: string; prompt_id?: string };
+          if (f.type !== "prompt.completed") return false;
+          const payload = (f.payload ?? {}) as {
+            promptId?: string;
+            prompt_id?: string;
+          };
           return (payload.promptId ?? payload.prompt_id) === submit.prompt_id;
         },
         { timeoutMs: PROMPT_TIMEOUT_MS },
       );
       const deadline = Date.now() + 5_000;
-      const busySamples: Array<{ at_ms: number; busy: boolean; current_prompt_id?: string }> = [];
+      const busySamples: Array<{
+        at_ms: number;
+        busy: boolean;
+        current_prompt_id?: string;
+      }> = [];
       const startedAt = Date.now();
       while (Date.now() < deadline && !seenBusy) {
         const snap = await client.http.getSession(session.id);
@@ -167,19 +183,26 @@ describeLive('session resume + activity (live server required)', () => {
         await new Promise((r) => setTimeout(r, 50));
       }
       const completedFrame = await ackPromise;
-      log('busy poll samples', busySamples);
-      log('prompt completed frame', frameForLog(completedFrame));
+      log("busy poll samples", busySamples);
+      log("prompt completed frame", frameForLog(completedFrame));
       const after = await client.http.getSession(session.id);
-      log('final session snapshot', after);
+      log("final session snapshot", after);
 
-      expect(seenBusy, 'expected at least one busy reading during prompt').toBe(true);
+      expect(seenBusy, "expected at least one busy reading during prompt").toBe(
+        true,
+      );
       expect(after.busy).toBe(false);
     },
     PROMPT_TIMEOUT_MS + 30_000,
   );
 });
 
-function frameForLog(frame: { type: string; seq?: number; session_id?: string; payload?: unknown }): Record<string, unknown> {
+function frameForLog(frame: {
+  type: string;
+  seq?: number;
+  session_id?: string;
+  payload?: unknown;
+}): Record<string, unknown> {
   return {
     type: frame.type,
     seq: frame.seq,
@@ -202,6 +225,6 @@ function sessionSummaryForLog(session: {
     busy: session.busy,
     message_count: session.message_count,
     last_seq: session.last_seq,
-    cwd: session.metadata['cwd'],
+    cwd: session.metadata["cwd"],
   };
 }

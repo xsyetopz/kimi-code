@@ -7,11 +7,19 @@
  * independent handle that owns its streams and exit promise. Bound at App scope.
  */
 
-import { spawn, type ChildProcess, type SpawnOptions } from 'node:child_process';
-import type { Readable, Writable } from 'node:stream';
+import {
+  spawn,
+  type ChildProcess,
+  type SpawnOptions,
+} from "node:child_process";
+import type { Readable, Writable } from "node:stream";
 
-import { BufferedReadable } from '#/_base/execEnv/bufferedReadable';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
+import { BufferedReadable } from "#/_base/execEnv/bufferedReadable";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
 
 import {
   HostProcessError,
@@ -19,16 +27,18 @@ import {
   IHostProcessService,
   type HostProcessOptions,
   type IHostProcess,
-} from '#/os/interface/hostProcess';
+} from "#/os/interface/hostProcess";
 
-const isWindows: boolean = process.platform === 'win32';
+const isWindows: boolean = process.platform === "win32";
 
 function buildSpawnOptions(options: HostProcessOptions): SpawnOptions {
   const detached = options.detached ?? !isWindows;
   const spawnOptions: SpawnOptions = {
     cwd: options.cwd,
     env: buildEnv(options.env),
-    stdio: options.mergeStderr ? ['pipe', 'pipe', 'pipe'] : ['pipe', 'pipe', 'pipe'],
+    stdio: options.mergeStderr
+      ? ["pipe", "pipe", "pipe"]
+      : ["pipe", "pipe", "pipe"],
     detached,
     windowsHide: options.windowsHide ?? true,
   };
@@ -40,7 +50,9 @@ function buildSpawnOptions(options: HostProcessOptions): SpawnOptions {
   return spawnOptions;
 }
 
-function buildEnv(overrides: Record<string, string> | undefined): Record<string, string> | undefined {
+function buildEnv(
+  overrides: Record<string, string> | undefined,
+): Record<string, string> | undefined {
   if (overrides === undefined) {
     return undefined;
   }
@@ -50,15 +62,15 @@ function buildEnv(overrides: Record<string, string> | undefined): Record<string,
 function waitForSpawn(child: ChildProcess): Promise<void> {
   return new Promise((resolve, reject) => {
     const onSpawn = (): void => {
-      child.off('error', onError);
+      child.off("error", onError);
       resolve();
     };
     const onError = (err: Error): void => {
-      child.off('spawn', onSpawn);
+      child.off("spawn", onSpawn);
       reject(err);
     };
-    child.once('spawn', onSpawn);
-    child.once('error', onError);
+    child.once("spawn", onSpawn);
+    child.once("error", onError);
   });
 }
 
@@ -79,13 +91,13 @@ class HostProcess implements IHostProcess {
     if (child.stdin === null || child.stdout === null) {
       throw new HostProcessError(
         HostProcessErrorCode.SpawnFailed,
-        'Process must be created with stdin/stdout pipes.',
+        "Process must be created with stdin/stdout pipes.",
       );
     }
     if (!mergeStderr && child.stderr === null) {
       throw new HostProcessError(
         HostProcessErrorCode.SpawnFailed,
-        'Process must be created with stderr pipe unless mergeStderr is set.',
+        "Process must be created with stderr pipe unless mergeStderr is set.",
       );
     }
 
@@ -98,11 +110,11 @@ class HostProcess implements IHostProcess {
     this.pid = child.pid ?? -1;
 
     this._exitPromise = new Promise<number>((resolve, reject) => {
-      child.on('exit', (code: number | null) => {
+      child.on("exit", (code: number | null) => {
         this._exitCode = code ?? -1;
         resolve(this._exitCode);
       });
-      child.on('error', (error: Error) => {
+      child.on("error", (error: Error) => {
         reject(error);
       });
     });
@@ -122,37 +134,40 @@ class HostProcess implements IHostProcess {
     }
 
     if (isWindows) {
-      const taskkillArgs = ['/T', '/F', '/PID', String(this.pid)];
+      const taskkillArgs = ["/T", "/F", "/PID", String(this.pid)];
       return new Promise<void>((resolve) => {
-        const killer = spawn('taskkill', taskkillArgs, {
-          stdio: 'ignore',
+        const killer = spawn("taskkill", taskkillArgs, {
+          stdio: "ignore",
           windowsHide: true,
         });
         const done = (): void => {
           resolve();
         };
-        killer.once('error', done);
-        killer.once('close', done);
+        killer.once("error", done);
+        killer.once("close", done);
       });
     }
 
     try {
-      process.kill(-this.pid, signal ?? 'SIGTERM');
+      process.kill(-this.pid, signal ?? "SIGTERM");
     } catch (error) {
       const err = error as NodeJS.ErrnoException;
-      if (err.code === 'ESRCH') return;
-      if (err.code === 'EPERM') {
+      if (err.code === "ESRCH") return;
+      if (err.code === "EPERM") {
         try {
-          this._child.kill(signal ?? 'SIGTERM');
-        } catch {
-        }
+          this._child.kill(signal ?? "SIGTERM");
+        } catch {}
         return;
       }
       throw new HostProcessError(
         HostProcessErrorCode.KillFailed,
         `Failed to kill process ${this.pid}: ${err.message}`,
         {
-          details: { pid: this.pid, signal: signal ?? 'SIGTERM', errno: err.code },
+          details: {
+            pid: this.pid,
+            signal: signal ?? "SIGTERM",
+            errno: err.code,
+          },
           cause: error,
         },
       );
@@ -188,7 +203,12 @@ export class HostProcessService implements IHostProcessService {
         HostProcessErrorCode.SpawnFailed,
         `Failed to spawn "${command}": ${err.message}`,
         {
-          details: { command, args: [...args], cwd: options.cwd, errno: err.code },
+          details: {
+            command,
+            args: [...args],
+            cwd: options.cwd,
+            errno: err.code,
+          },
           cause: error,
         },
       );
@@ -202,5 +222,5 @@ registerScopedService(
   IHostProcessService,
   HostProcessService,
   ScopeActivation.OnScopeCreated,
-  'hostProcess',
+  "hostProcess",
 );

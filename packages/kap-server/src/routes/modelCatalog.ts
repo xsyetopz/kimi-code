@@ -60,20 +60,20 @@ import {
   type ProviderConfig,
   type ProvidersSection,
   type Scope,
-} from '@moonshot-ai/agent-core-v2';
-import { setDefaultModelResponseSchema } from '@moonshot-ai/agent-core-v2/kosong/model/catalog';
-import { refreshProviderModelsResponseSchema } from '@moonshot-ai/agent-core-v2/app/kosongConfig/discovery';
+} from "@moonshot-ai/agent-core-v2";
+import { setDefaultModelResponseSchema } from "@moonshot-ai/agent-core-v2/kosong/model/catalog";
+import { refreshProviderModelsResponseSchema } from "@moonshot-ai/agent-core-v2/app/kosongConfig/discovery";
 import {
   DEFAULT_MODEL_SECTION,
   DEFAULT_PROVIDER_SECTION,
   MODELS_SECTION,
   PROVIDERS_SECTION,
-} from '@moonshot-ai/agent-core-v2/app/kosongConfig/configSection';
-import { z } from 'zod';
+} from "@moonshot-ai/agent-core-v2/app/kosongConfig/configSection";
+import { z } from "zod";
 
-import { errEnvelope, okEnvelope } from '../envelope';
-import { defineRoute } from '../middleware/defineRoute';
-import { ErrorCode } from '../protocol/error-codes';
+import { errEnvelope, okEnvelope } from "../envelope";
+import { defineRoute } from "../middleware/defineRoute";
+import { ErrorCode } from "../protocol/error-codes";
 import {
   createProviderRequestSchema,
   createProviderResponseSchema,
@@ -88,8 +88,8 @@ import {
   replaceProviderRequestSchema,
   replaceProviderResponseSchema,
   type ProviderCollectionActionBody,
-} from '../protocol/rest-modelCatalog';
-import { parseActionSuffix } from './action-suffix';
+} from "../protocol/rest-modelCatalog";
+import { parseActionSuffix } from "./action-suffix";
 
 interface ModelCatalogRouteHost {
   get(
@@ -213,20 +213,26 @@ function enqueueProviderWrite<T>(task: () => Promise<T>): Promise<T> {
  * existing pointer is never rewritten here, not even a dangling one — it is
  * the user's setting, not this route's to second-guess.
  */
-async function seedDefaultModelWhenUnset(config: IConfigService, alias: string): Promise<void> {
+async function seedDefaultModelWhenUnset(
+  config: IConfigService,
+  alias: string,
+): Promise<void> {
   const current = config.inspect<string>(DEFAULT_MODEL_SECTION).userValue;
-  if (current !== undefined && current.trim() !== '') return;
+  if (current !== undefined && current.trim() !== "") return;
   await config.replace(DEFAULT_MODEL_SECTION, alias);
 }
 
-export function registerModelCatalogRoutes(app: ModelCatalogRouteHost, core: Scope): void {
+export function registerModelCatalogRoutes(
+  app: ModelCatalogRouteHost,
+  core: Scope,
+): void {
   const listModelsRoute = defineRoute(
     {
-      method: 'GET',
-      path: '/models',
+      method: "GET",
+      path: "/models",
       success: { data: listModelsResponseSchema },
-      description: 'List configured model aliases',
-      tags: ['models'],
+      description: "List configured model aliases",
+      tags: ["models"],
     },
     async (req, reply) => {
       const items = await (await loadCatalog(core)).listModels();
@@ -236,7 +242,11 @@ export function registerModelCatalogRoutes(app: ModelCatalogRouteHost, core: Sco
       // default-model pointer to it out of config.toml).
       reply.send(
         okEnvelope(
-          { items: items.filter((item) => item.model !== SECONDARY_DERIVED_MODEL_ID) },
+          {
+            items: items.filter(
+              (item) => item.model !== SECONDARY_DERIVED_MODEL_ID,
+            ),
+          },
           req.id,
         ),
       );
@@ -245,38 +255,42 @@ export function registerModelCatalogRoutes(app: ModelCatalogRouteHost, core: Sco
   app.get(
     listModelsRoute.path,
     listModelsRoute.options,
-    listModelsRoute.handler as Parameters<ModelCatalogRouteHost['get']>[2],
+    listModelsRoute.handler as Parameters<ModelCatalogRouteHost["get"]>[2],
   );
 
   const setDefaultModelRoute = defineRoute(
     {
-      method: 'POST',
-      path: '/models/{tail}',
+      method: "POST",
+      path: "/models/{tail}",
       params: modelActionTailParamSchema,
       success: { data: setDefaultModelResponseSchema },
       errors: {
         [ErrorCode.VALIDATION_FAILED]: {},
         [ErrorCode.MODEL_NOT_FOUND]: {},
       },
-      description: 'Set the global default model alias',
-      tags: ['models'],
-      operationId: 'setDefaultModel',
+      description: "Set the global default model alias",
+      tags: ["models"],
+      operationId: "setDefaultModel",
     },
     async (req, reply) => {
       try {
         const { tail } = req.params;
         const parsed = parseActionSuffix({
           tail,
-          allowedActions: ['set_default'] as const,
-          resourceLabel: 'model',
+          allowedActions: ["set_default"] as const,
+          resourceLabel: "model",
         });
-        if (parsed.kind !== 'action') {
+        if (parsed.kind !== "action") {
           const message =
-            parsed.kind === 'invalid' ? parsed.reason : `unsupported action: ${tail}`;
+            parsed.kind === "invalid"
+              ? parsed.reason
+              : `unsupported action: ${tail}`;
           reply.send(errEnvelope(ErrorCode.VALIDATION_FAILED, message, req.id));
           return;
         }
-        const result = await (await loadCatalog(core)).setDefaultModel(parsed.id);
+        const result = await (await loadCatalog(core)).setDefaultModel(
+          parsed.id,
+        );
         reply.send(okEnvelope(result, req.id));
       } catch (err) {
         if (sendMappedError(reply, req.id, err)) return;
@@ -287,16 +301,18 @@ export function registerModelCatalogRoutes(app: ModelCatalogRouteHost, core: Sco
   app.post(
     setDefaultModelRoute.path,
     setDefaultModelRoute.options,
-    setDefaultModelRoute.handler as Parameters<ModelCatalogRouteHost['post']>[2],
+    setDefaultModelRoute.handler as Parameters<
+      ModelCatalogRouteHost["post"]
+    >[2],
   );
 
   const listProvidersRoute = defineRoute(
     {
-      method: 'GET',
-      path: '/providers',
+      method: "GET",
+      path: "/providers",
       success: { data: listProvidersResponseSchema },
-      description: 'List configured providers',
-      tags: ['providers'],
+      description: "List configured providers",
+      tags: ["providers"],
     },
     async (req, reply) => {
       const items = await (await loadCatalog(core)).listProviders();
@@ -306,13 +322,13 @@ export function registerModelCatalogRoutes(app: ModelCatalogRouteHost, core: Sco
   app.get(
     listProvidersRoute.path,
     listProvidersRoute.options,
-    listProvidersRoute.handler as Parameters<ModelCatalogRouteHost['get']>[2],
+    listProvidersRoute.handler as Parameters<ModelCatalogRouteHost["get"]>[2],
   );
 
   const createProviderRoute = defineRoute(
     {
-      method: 'POST',
-      path: '/providers',
+      method: "POST",
+      path: "/providers",
       body: createProviderRequestSchema,
       success: { data: createProviderResponseSchema },
       errors: {
@@ -320,15 +336,16 @@ export function registerModelCatalogRoutes(app: ModelCatalogRouteHost, core: Sco
         [ErrorCode.PROVIDER_ALREADY_EXISTS]: {},
       },
       description:
-        'Create a provider manually (type + credentials + model list). When no global default_model is configured (fresh setup), it is seeded with the new provider default (or first) model; an existing default is never modified.',
-      tags: ['providers'],
-      operationId: 'createProvider',
+        "Create a provider manually (type + credentials + model list). When no global default_model is configured (fresh setup), it is seeded with the new provider default (or first) model; an existing default is never modified.",
+      tags: ["providers"],
+      operationId: "createProvider",
     },
     async (req, reply) => {
       await enqueueProviderWrite(async () => {
         const config = await loadConfig(core);
         const { id } = req.body;
-        const providers = config.inspect<ProvidersSection>(PROVIDERS_SECTION).userValue ?? {};
+        const providers =
+          config.inspect<ProvidersSection>(PROVIDERS_SECTION).userValue ?? {};
         if (providers[id] !== undefined) {
           reply.send(
             errEnvelope(
@@ -342,7 +359,8 @@ export function registerModelCatalogRoutes(app: ModelCatalogRouteHost, core: Sco
 
         const provider: ProviderConfig = { type: req.body.type };
         if (req.body.api_key !== undefined) provider.apiKey = req.body.api_key;
-        if (req.body.base_url !== undefined) provider.baseUrl = req.body.base_url;
+        if (req.body.base_url !== undefined)
+          provider.baseUrl = req.body.base_url;
         if (req.body.default_model !== undefined) {
           // The provider-level default references the model alias id
           // (`<id>/<model>`), the form runtime resolution reads back.
@@ -357,9 +375,12 @@ export function registerModelCatalogRoutes(app: ModelCatalogRouteHost, core: Sco
             model: entry.model,
             maxContextSize: entry.max_context_size,
           };
-          if (entry.display_name !== undefined) alias.displayName = entry.display_name;
-          if (entry.capabilities !== undefined) alias.capabilities = [...entry.capabilities];
-          if (entry.max_output_size !== undefined) alias.maxOutputSize = entry.max_output_size;
+          if (entry.display_name !== undefined)
+            alias.displayName = entry.display_name;
+          if (entry.capabilities !== undefined)
+            alias.capabilities = [...entry.capabilities];
+          if (entry.max_output_size !== undefined)
+            alias.maxOutputSize = entry.max_output_size;
           if (entry.support_efforts !== undefined)
             alias.supportEfforts = [...entry.support_efforts];
           if (entry.adaptive_thinking !== undefined)
@@ -380,20 +401,22 @@ export function registerModelCatalogRoutes(app: ModelCatalogRouteHost, core: Sco
         }
 
         const created = await core.accessor.get(IModelCatalog).getProvider(id);
-        (reply as unknown as StatusReply).code(201).send(okEnvelope(created, req.id));
+        (reply as unknown as StatusReply)
+          .code(201)
+          .send(okEnvelope(created, req.id));
       });
     },
   );
   app.post(
     createProviderRoute.path,
     createProviderRoute.options,
-    createProviderRoute.handler as Parameters<ModelCatalogRouteHost['post']>[2],
+    createProviderRoute.handler as Parameters<ModelCatalogRouteHost["post"]>[2],
   );
 
   const replaceProviderRoute = defineRoute(
     {
-      method: 'PUT',
-      path: '/providers/{provider_id}',
+      method: "PUT",
+      path: "/providers/{provider_id}",
       params: providerIdParamSchema,
       body: replaceProviderRequestSchema,
       success: { data: replaceProviderResponseSchema },
@@ -404,15 +427,16 @@ export function registerModelCatalogRoutes(app: ModelCatalogRouteHost, core: Sco
         [ErrorCode.PROVIDER_ALREADY_EXISTS]: {},
       },
       description:
-        'Replace a provider in one save (type + base_url + model list), optionally renaming it via `new_id` (the providers key, model aliases, default_provider and a default_model pointing at an old alias all migrate). `api_key` is tri-state: omitted keeps the stored key, "" clears it, any other value replaces it. The provider\'s model aliases are rebuilt from `models` — aliases no longer listed disappear from config.toml, other providers\' aliases are untouched. Beyond the rename migration, the global default pointers are never modified. Answers 200 with `{provider}`. OAuth-managed providers are rejected: log out via /oauth/logout instead.',
-      tags: ['providers'],
-      operationId: 'replaceProvider',
+        "Replace a provider in one save (type + base_url + model list), optionally renaming it via `new_id` (the providers key, model aliases, default_provider and a default_model pointing at an old alias all migrate). `api_key` is tri-state: omitted keeps the stored key, \"\" clears it, any other value replaces it. The provider's model aliases are rebuilt from `models` — aliases no longer listed disappear from config.toml, other providers' aliases are untouched. Beyond the rename migration, the global default pointers are never modified. Answers 200 with `{provider}`. OAuth-managed providers are rejected: log out via /oauth/logout instead.",
+      tags: ["providers"],
+      operationId: "replaceProvider",
     },
     async (req, reply) => {
       await enqueueProviderWrite(async () => {
         const config = await loadConfig(core);
         const { provider_id } = req.params;
-        const providers = config.inspect<ProvidersSection>(PROVIDERS_SECTION).userValue ?? {};
+        const providers =
+          config.inspect<ProvidersSection>(PROVIDERS_SECTION).userValue ?? {};
         const target = providers[provider_id];
         if (target === undefined) {
           reply.send(
@@ -484,8 +508,11 @@ export function registerModelCatalogRoutes(app: ModelCatalogRouteHost, core: Sco
         // alias owned by ANOTHER provider may already sit on a `<newId>/<model>`
         // key the rebuild would write — refuse instead of silently retargeting
         // it. Checked BEFORE any write so a collision never lands half the edit.
-        const models = config.inspect<ModelsSection>(MODELS_SECTION).userValue ?? {};
-        const newAliasKeys = new Set(req.body.models.map((entry) => `${newId}/${entry.model}`));
+        const models =
+          config.inspect<ModelsSection>(MODELS_SECTION).userValue ?? {};
+        const newAliasKeys = new Set(
+          req.body.models.map((entry) => `${newId}/${entry.model}`),
+        );
         const colliding = Object.entries(models)
           .filter(([, record]) => record.provider !== provider_id)
           .map(([aliasId]) => aliasId)
@@ -494,7 +521,7 @@ export function registerModelCatalogRoutes(app: ModelCatalogRouteHost, core: Sco
           reply.send(
             errEnvelope(
               ErrorCode.VALIDATION_FAILED,
-              `model alias key already owned by another provider: ${colliding.join(', ')}`,
+              `model alias key already owned by another provider: ${colliding.join(", ")}`,
               req.id,
             ),
           );
@@ -511,11 +538,16 @@ export function registerModelCatalogRoutes(app: ModelCatalogRouteHost, core: Sco
             .map(([aliasId]) => aliasId),
         );
         const nextModels = Object.fromEntries(
-          Object.entries(models).filter(([, record]) => record.provider !== provider_id),
+          Object.entries(models).filter(
+            ([, record]) => record.provider !== provider_id,
+          ),
         );
         const previousByModel = new Map(
           Object.values(models)
-            .filter((record) => record.provider === provider_id && record.model !== undefined)
+            .filter(
+              (record) =>
+                record.provider === provider_id && record.model !== undefined,
+            )
             .map((record) => [record.model as string, record] as const),
         );
         for (const entry of req.body.models) {
@@ -533,14 +565,24 @@ export function registerModelCatalogRoutes(app: ModelCatalogRouteHost, core: Sco
             model: entry.model,
             maxContextSize: entry.max_context_size,
           };
-          alias.displayName = entry.display_name !== undefined ? entry.display_name : undefined;
+          alias.displayName =
+            entry.display_name !== undefined ? entry.display_name : undefined;
           alias.capabilities =
-            entry.capabilities !== undefined ? [...entry.capabilities] : undefined;
-          alias.maxOutputSize = entry.max_output_size !== undefined ? entry.max_output_size : undefined;
+            entry.capabilities !== undefined
+              ? [...entry.capabilities]
+              : undefined;
+          alias.maxOutputSize =
+            entry.max_output_size !== undefined
+              ? entry.max_output_size
+              : undefined;
           alias.supportEfforts =
-            entry.support_efforts !== undefined ? [...entry.support_efforts] : undefined;
+            entry.support_efforts !== undefined
+              ? [...entry.support_efforts]
+              : undefined;
           alias.adaptiveThinking =
-            entry.adaptive_thinking !== undefined ? entry.adaptive_thinking : undefined;
+            entry.adaptive_thinking !== undefined
+              ? entry.adaptive_thinking
+              : undefined;
           nextModels[`${newId}/${entry.model}`] = alias;
         }
         await config.replace(MODELS_SECTION, nextModels);
@@ -552,15 +594,28 @@ export function registerModelCatalogRoutes(app: ModelCatalogRouteHost, core: Sco
         // repointed via the old record's bare model name, not the alias key —
         // old aliases may carry a foreign prefix.
         if (newId !== provider_id) {
-          const defaultProvider = config.inspect<string>(DEFAULT_PROVIDER_SECTION).userValue;
+          const defaultProvider = config.inspect<string>(
+            DEFAULT_PROVIDER_SECTION,
+          ).userValue;
           if (defaultProvider === provider_id) {
             await config.replace(DEFAULT_PROVIDER_SECTION, newId);
           }
-          const defaultModel = config.inspect<string>(DEFAULT_MODEL_SECTION).userValue;
-          if (defaultModel !== undefined && previousAliasIds.has(defaultModel)) {
+          const defaultModel = config.inspect<string>(
+            DEFAULT_MODEL_SECTION,
+          ).userValue;
+          if (
+            defaultModel !== undefined &&
+            previousAliasIds.has(defaultModel)
+          ) {
             const renamedModel = models[defaultModel]?.model;
-            const renamedAlias = renamedModel !== undefined ? `${newId}/${renamedModel}` : undefined;
-            if (renamedAlias !== undefined && nextModels[renamedAlias] !== undefined) {
+            const renamedAlias =
+              renamedModel !== undefined
+                ? `${newId}/${renamedModel}`
+                : undefined;
+            if (
+              renamedAlias !== undefined &&
+              nextModels[renamedAlias] !== undefined
+            ) {
               await config.replace(DEFAULT_MODEL_SECTION, renamedAlias);
             }
           }
@@ -574,13 +629,13 @@ export function registerModelCatalogRoutes(app: ModelCatalogRouteHost, core: Sco
   app.put(
     replaceProviderRoute.path,
     replaceProviderRoute.options,
-    replaceProviderRoute.handler as Parameters<ModelCatalogRouteHost['put']>[2],
+    replaceProviderRoute.handler as Parameters<ModelCatalogRouteHost["put"]>[2],
   );
 
   const refreshProvidersRoute = defineRoute(
     {
-      method: 'POST',
-      path: '/providers:action',
+      method: "POST",
+      path: "/providers:action",
       params: providerCollectionActionParamSchema,
       // One route hosts every collection-level action because find-my-way
       // cannot register a static `/providers:import_catalog` next to the
@@ -603,65 +658,81 @@ export function registerModelCatalogRoutes(app: ModelCatalogRouteHost, core: Sco
         [ErrorCode.CATALOG_UNAVAILABLE]: {},
       },
       description:
-        'Provider collection actions. Use `:refresh` for all providers or `:refresh_oauth` for OAuth-backed providers only. Use `:import_catalog` to import a models.dev directory entry as a configured provider (201): the wire protocol and endpoint come from the catalog resolution (`base_url` overrides it; required when the entry resolves to needs-base-url), all catalogued models are written as aliases, and importing an id that already exists is a refresh — the provider entry and its aliases are rewritten from the catalog (OAuth-managed providers are rejected instead). `id` overrides the catalog id as the local provider id. Use `:import_registry` to import a models.dev-shaped private registry (api.json `url` + optional Bearer `api_key`, 201): every listed provider is written with a `source` blob so scheduled refreshes rediscover it, and re-importing the same URL removes providers that disappeared upstream (the URL is the stable registry identity). For both imports the global default_provider/default_model pointers are never modified — except that a default_model is seeded from the first imported model when none is configured at all (fresh setup).',
-      tags: ['providers'],
-      operationId: 'providerCollectionAction',
+        "Provider collection actions. Use `:refresh` for all providers or `:refresh_oauth` for OAuth-backed providers only. Use `:import_catalog` to import a models.dev directory entry as a configured provider (201): the wire protocol and endpoint come from the catalog resolution (`base_url` overrides it; required when the entry resolves to needs-base-url), all catalogued models are written as aliases, and importing an id that already exists is a refresh — the provider entry and its aliases are rewritten from the catalog (OAuth-managed providers are rejected instead). `id` overrides the catalog id as the local provider id. Use `:import_registry` to import a models.dev-shaped private registry (api.json `url` + optional Bearer `api_key`, 201): every listed provider is written with a `source` blob so scheduled refreshes rediscover it, and re-importing the same URL removes providers that disappeared upstream (the URL is the stable registry identity). For both imports the global default_provider/default_model pointers are never modified — except that a default_model is seeded from the first imported model when none is configured at all (fresh setup).",
+      tags: ["providers"],
+      operationId: "providerCollectionAction",
     },
     async (req, reply) => {
       const raw = req.params.action;
-      const action = raw.startsWith(':') ? raw.slice(1) : raw;
-      if (action === 'refresh_oauth') {
-        const result = await (await loadOAuth(core)).refreshOAuthProviderModels();
+      const action = raw.startsWith(":") ? raw.slice(1) : raw;
+      if (action === "refresh_oauth") {
+        const result = await (
+          await loadOAuth(core)
+        ).refreshOAuthProviderModels();
         reply.send(okEnvelope(result, req.id));
         return;
       }
-      if (action === 'refresh') {
-        const result = await (await loadDiscovery(core)).refreshProviderModels({ scope: 'all' });
+      if (action === "refresh") {
+        const result = await (await loadDiscovery(core)).refreshProviderModels({
+          scope: "all",
+        });
         reply.send(okEnvelope(result, req.id));
         return;
       }
-      if (action === 'import_catalog') {
+      if (action === "import_catalog") {
         await enqueueProviderWrite(() => handleImportCatalog(req, reply, core));
         return;
       }
-      if (action === 'import_registry') {
-        await enqueueProviderWrite(() => handleImportRegistry(req, reply, core));
+      if (action === "import_registry") {
+        await enqueueProviderWrite(() =>
+          handleImportRegistry(req, reply, core),
+        );
         return;
       }
-      reply.send(errEnvelope(ErrorCode.VALIDATION_FAILED, `unsupported action: ${raw}`, req.id));
+      reply.send(
+        errEnvelope(
+          ErrorCode.VALIDATION_FAILED,
+          `unsupported action: ${raw}`,
+          req.id,
+        ),
+      );
     },
   );
   app.post(
     refreshProvidersRoute.path,
     refreshProvidersRoute.options,
-    refreshProvidersRoute.handler as Parameters<ModelCatalogRouteHost['post']>[2],
+    refreshProvidersRoute.handler as Parameters<
+      ModelCatalogRouteHost["post"]
+    >[2],
   );
 
   const refreshProviderRoute = defineRoute(
     {
-      method: 'POST',
-      path: '/providers/{tail}',
+      method: "POST",
+      path: "/providers/{tail}",
       params: providerActionTailParamSchema,
       success: { data: refreshProviderModelsResponseSchema },
       errors: {
         [ErrorCode.VALIDATION_FAILED]: {},
         [ErrorCode.PROVIDER_NOT_FOUND]: {},
       },
-      description: 'Refresh model metadata for a single provider',
-      tags: ['providers'],
-      operationId: 'refreshProvider',
+      description: "Refresh model metadata for a single provider",
+      tags: ["providers"],
+      operationId: "refreshProvider",
     },
     async (req, reply) => {
       try {
         const { tail } = req.params;
         const parsed = parseActionSuffix({
           tail,
-          allowedActions: ['refresh'] as const,
-          resourceLabel: 'provider',
+          allowedActions: ["refresh"] as const,
+          resourceLabel: "provider",
         });
-        if (parsed.kind !== 'action') {
+        if (parsed.kind !== "action") {
           const message =
-            parsed.kind === 'invalid' ? parsed.reason : `unsupported action: ${tail}`;
+            parsed.kind === "invalid"
+              ? parsed.reason
+              : `unsupported action: ${tail}`;
           reply.send(errEnvelope(ErrorCode.VALIDATION_FAILED, message, req.id));
           return;
         }
@@ -678,13 +749,15 @@ export function registerModelCatalogRoutes(app: ModelCatalogRouteHost, core: Sco
   app.post(
     refreshProviderRoute.path,
     refreshProviderRoute.options,
-    refreshProviderRoute.handler as Parameters<ModelCatalogRouteHost['post']>[2],
+    refreshProviderRoute.handler as Parameters<
+      ModelCatalogRouteHost["post"]
+    >[2],
   );
 
   const getProviderRoute = defineRoute(
     {
-      method: 'GET',
-      path: '/providers/{provider_id}',
+      method: "GET",
+      path: "/providers/{provider_id}",
       params: providerIdParamSchema,
       success: { data: getProviderResponseSchema },
       errors: {
@@ -692,19 +765,26 @@ export function registerModelCatalogRoutes(app: ModelCatalogRouteHost, core: Sco
         [ErrorCode.PROVIDER_NOT_FOUND]: {},
       },
       description:
-        'Get a configured provider by ID. Unlike the list route, the response reveals the stored `api_key` when one is set, so local clients can prefill an edit form.',
-      tags: ['providers'],
+        "Get a configured provider by ID. Unlike the list route, the response reveals the stored `api_key` when one is set, so local clients can prefill an edit form.",
+      tags: ["providers"],
     },
     async (req, reply) => {
       try {
         const { provider_id } = req.params;
-        const provider = await (await loadCatalog(core)).getProvider(provider_id);
+        const provider = await (await loadCatalog(core)).getProvider(
+          provider_id,
+        );
         const config = await loadConfig(core);
-        const stored = config.inspect<ProvidersSection>(PROVIDERS_SECTION).userValue?.[provider_id];
+        const stored =
+          config.inspect<ProvidersSection>(PROVIDERS_SECTION).userValue?.[
+            provider_id
+          ];
         const apiKey = stored?.apiKey;
         reply.send(
           okEnvelope(
-            apiKey !== undefined && apiKey !== '' ? { ...provider, api_key: apiKey } : provider,
+            apiKey !== undefined && apiKey !== ""
+              ? { ...provider, api_key: apiKey }
+              : provider,
             req.id,
           ),
         );
@@ -717,13 +797,13 @@ export function registerModelCatalogRoutes(app: ModelCatalogRouteHost, core: Sco
   app.get(
     getProviderRoute.path,
     getProviderRoute.options,
-    getProviderRoute.handler as Parameters<ModelCatalogRouteHost['get']>[2],
+    getProviderRoute.handler as Parameters<ModelCatalogRouteHost["get"]>[2],
   );
 
   const deleteProviderRoute = defineRoute(
     {
-      method: 'DELETE',
-      path: '/providers/{provider_id}',
+      method: "DELETE",
+      path: "/providers/{provider_id}",
       params: providerIdParamSchema,
       errors: {
         [ErrorCode.VALIDATION_FAILED]: {},
@@ -731,18 +811,19 @@ export function registerModelCatalogRoutes(app: ModelCatalogRouteHost, core: Sco
         [ErrorCode.PROVIDER_NOT_FOUND]: {},
       },
       rawResponse: {
-        204: { description: 'Provider deleted.' },
+        204: { description: "Provider deleted." },
       },
       description:
-        'Delete a provider and all of its model aliases (204, no body). The global default_provider/default_model pointers are left untouched — they are the user\'s settings, not this endpoint\'s to garbage-collect. OAuth-managed providers are rejected: log out via /oauth/logout instead.',
-      tags: ['providers'],
-      operationId: 'deleteProvider',
+        "Delete a provider and all of its model aliases (204, no body). The global default_provider/default_model pointers are left untouched — they are the user's settings, not this endpoint's to garbage-collect. OAuth-managed providers are rejected: log out via /oauth/logout instead.",
+      tags: ["providers"],
+      operationId: "deleteProvider",
     },
     async (req, reply) => {
       await enqueueProviderWrite(async () => {
         const config = await loadConfig(core);
         const { provider_id } = req.params;
-        const providers = config.inspect<ProvidersSection>(PROVIDERS_SECTION).userValue ?? {};
+        const providers =
+          config.inspect<ProvidersSection>(PROVIDERS_SECTION).userValue ?? {};
         const target = providers[provider_id];
         if (target === undefined) {
           reply.send(
@@ -765,12 +846,15 @@ export function registerModelCatalogRoutes(app: ModelCatalogRouteHost, core: Sco
           return;
         }
 
-        const models = config.inspect<ModelsSection>(MODELS_SECTION).userValue ?? {};
+        const models =
+          config.inspect<ModelsSection>(MODELS_SECTION).userValue ?? {};
         const restProviders = { ...providers };
         delete restProviders[provider_id];
         await config.replace(PROVIDERS_SECTION, restProviders);
         const restModels = Object.fromEntries(
-          Object.entries(models).filter(([, record]) => record.provider !== provider_id),
+          Object.entries(models).filter(
+            ([, record]) => record.provider !== provider_id,
+          ),
         );
         if (Object.keys(restModels).length !== Object.keys(models).length) {
           await config.replace(MODELS_SECTION, restModels);
@@ -782,23 +866,27 @@ export function registerModelCatalogRoutes(app: ModelCatalogRouteHost, core: Sco
   app.delete(
     deleteProviderRoute.path,
     deleteProviderRoute.options,
-    deleteProviderRoute.handler as Parameters<ModelCatalogRouteHost['delete']>[2],
+    deleteProviderRoute.handler as Parameters<
+      ModelCatalogRouteHost["delete"]
+    >[2],
   );
 
   const listCatalogProvidersRoute = defineRoute(
     {
-      method: 'GET',
-      path: '/catalog/providers',
+      method: "GET",
+      path: "/catalog/providers",
       success: { data: listCatalogProvidersResponseSchema },
       errors: { [ErrorCode.CATALOG_UNAVAILABLE]: {} },
       description:
-        'Browse the models.dev directory (server-proxied, 10-minute in-memory cache, built-in snapshot fallback). Entries the server cannot import carry `rejected: true` with a machine-readable `reject_reason`; entries with `needs_base_url: true` require a base URL at import time. Items keep the upstream directory order.',
-      tags: ['providers'],
-      operationId: 'listCatalogProviders',
+        "Browse the models.dev directory (server-proxied, 10-minute in-memory cache, built-in snapshot fallback). Entries the server cannot import carry `rejected: true` with a machine-readable `reject_reason`; entries with `needs_base_url: true` require a base URL at import time. Items keep the upstream directory order.",
+      tags: ["providers"],
+      operationId: "listCatalogProviders",
     },
     async (req, reply) => {
       try {
-        const items = await core.accessor.get(IModelsDevImportService).listModelsDevProviders();
+        const items = await core.accessor
+          .get(IModelsDevImportService)
+          .listModelsDevProviders();
         reply.send(okEnvelope({ items }, req.id));
       } catch (err) {
         if (sendModelsDevImportError(reply, req.id, err)) return;
@@ -809,27 +897,31 @@ export function registerModelCatalogRoutes(app: ModelCatalogRouteHost, core: Sco
   app.get(
     listCatalogProvidersRoute.path,
     listCatalogProvidersRoute.options,
-    listCatalogProvidersRoute.handler as Parameters<ModelCatalogRouteHost['get']>[2],
+    listCatalogProvidersRoute.handler as Parameters<
+      ModelCatalogRouteHost["get"]
+    >[2],
   );
 
   const getCatalogProviderRoute = defineRoute(
     {
-      method: 'GET',
-      path: '/catalog/providers/{catalog_id}',
+      method: "GET",
+      path: "/catalog/providers/{catalog_id}",
       params: catalogIdParamSchema,
       success: { data: getCatalogProviderResponseSchema },
       errors: {
         [ErrorCode.CATALOG_ENTRY_NOT_FOUND]: {},
         [ErrorCode.CATALOG_UNAVAILABLE]: {},
       },
-      description: 'Get one models.dev directory entry by catalog id.',
-      tags: ['providers'],
-      operationId: 'getCatalogProvider',
+      description: "Get one models.dev directory entry by catalog id.",
+      tags: ["providers"],
+      operationId: "getCatalogProvider",
     },
     async (req, reply) => {
       try {
         const { catalog_id } = req.params;
-        const item = await core.accessor.get(IModelsDevImportService).getModelsDevProvider(catalog_id);
+        const item = await core.accessor
+          .get(IModelsDevImportService)
+          .getModelsDevProvider(catalog_id);
         reply.send(okEnvelope(item, req.id));
       } catch (err) {
         if (sendModelsDevImportError(reply, req.id, err)) return;
@@ -840,7 +932,9 @@ export function registerModelCatalogRoutes(app: ModelCatalogRouteHost, core: Sco
   app.get(
     getCatalogProviderRoute.path,
     getCatalogProviderRoute.options,
-    getCatalogProviderRoute.handler as Parameters<ModelCatalogRouteHost['get']>[2],
+    getCatalogProviderRoute.handler as Parameters<
+      ModelCatalogRouteHost["get"]
+    >[2],
   );
 }
 
@@ -851,12 +945,21 @@ function sendMappedError(
   err: unknown,
 ): boolean {
   if (!isError2(err)) return false;
-  if (err.code === 'provider.not_found') {
-    reply.send(errEnvelope(ErrorCode.PROVIDER_NOT_FOUND, err.message, requestId, err.stack));
+  if (err.code === "provider.not_found") {
+    reply.send(
+      errEnvelope(
+        ErrorCode.PROVIDER_NOT_FOUND,
+        err.message,
+        requestId,
+        err.stack,
+      ),
+    );
     return true;
   }
-  if (err.code === 'model.not_found') {
-    reply.send(errEnvelope(ErrorCode.MODEL_NOT_FOUND, err.message, requestId, err.stack));
+  if (err.code === "model.not_found") {
+    reply.send(
+      errEnvelope(ErrorCode.MODEL_NOT_FOUND, err.message, requestId, err.stack),
+    );
     return true;
   }
   return false;
@@ -864,11 +967,16 @@ function sendMappedError(
 
 /** The engine's provider-import error codes mapped onto the numeric protocol codes. */
 const MODELS_DEV_IMPORT_ERROR_CODES: Record<string, number> = {
-  [ModelsDevImportErrors.codes.CATALOG_UNAVAILABLE]: ErrorCode.CATALOG_UNAVAILABLE,
-  [ModelsDevImportErrors.codes.CATALOG_ENTRY_NOT_FOUND]: ErrorCode.CATALOG_ENTRY_NOT_FOUND,
-  [ModelsDevImportErrors.codes.CATALOG_IMPORT_INVALID]: ErrorCode.CATALOG_IMPORT_INVALID,
-  [ModelsDevImportErrors.codes.REGISTRY_IMPORT_INVALID]: ErrorCode.REGISTRY_IMPORT_INVALID,
-  [ModelsDevImportErrors.codes.PROVIDER_OAUTH_MANAGED]: ErrorCode.PROVIDER_OAUTH_MANAGED,
+  [ModelsDevImportErrors.codes.CATALOG_UNAVAILABLE]:
+    ErrorCode.CATALOG_UNAVAILABLE,
+  [ModelsDevImportErrors.codes.CATALOG_ENTRY_NOT_FOUND]:
+    ErrorCode.CATALOG_ENTRY_NOT_FOUND,
+  [ModelsDevImportErrors.codes.CATALOG_IMPORT_INVALID]:
+    ErrorCode.CATALOG_IMPORT_INVALID,
+  [ModelsDevImportErrors.codes.REGISTRY_IMPORT_INVALID]:
+    ErrorCode.REGISTRY_IMPORT_INVALID,
+  [ModelsDevImportErrors.codes.PROVIDER_OAUTH_MANAGED]:
+    ErrorCode.PROVIDER_OAUTH_MANAGED,
 };
 
 /** Map a provider-import domain error to the numeric protocol envelope. Returns true if handled. */
@@ -900,19 +1008,21 @@ async function handleImportCatalog(
       reply.send(
         errEnvelope(
           ErrorCode.VALIDATION_FAILED,
-          'catalog_id is required for :import_catalog',
+          "catalog_id is required for :import_catalog",
           req.id,
         ),
       );
       return;
     }
 
-    const result = await core.accessor.get(IModelsDevImportService).importModelsDevProvider({
-      catalogId: body.catalog_id,
-      id: body.id,
-      apiKey: body.api_key,
-      baseUrl: body.base_url,
-    });
+    const result = await core.accessor
+      .get(IModelsDevImportService)
+      .importModelsDevProvider({
+        catalogId: body.catalog_id,
+        id: body.id,
+        apiKey: body.api_key,
+        baseUrl: body.base_url,
+      });
     (reply as unknown as StatusReply)
       .code(201)
       .send(
@@ -943,19 +1053,28 @@ async function handleImportRegistry(
     const body = req.body;
     if (body?.url === undefined) {
       reply.send(
-        errEnvelope(ErrorCode.VALIDATION_FAILED, 'url is required for :import_registry', req.id),
+        errEnvelope(
+          ErrorCode.VALIDATION_FAILED,
+          "url is required for :import_registry",
+          req.id,
+        ),
       );
       return;
     }
-    const result = await core.accessor.get(IModelsDevImportService).importCustomRegistry({
-      url: body.url,
-      apiKey: body.api_key,
-    });
+    const result = await core.accessor
+      .get(IModelsDevImportService)
+      .importCustomRegistry({
+        url: body.url,
+        apiKey: body.api_key,
+      });
     (reply as unknown as StatusReply)
       .code(201)
       .send(
         okEnvelope(
-          { providers: result.providers, models_imported: result.modelsImported },
+          {
+            providers: result.providers,
+            models_imported: result.modelsImported,
+          },
           req.id,
         ),
       );
@@ -964,4 +1083,3 @@ async function handleImportRegistry(
     throw err;
   }
 }
-

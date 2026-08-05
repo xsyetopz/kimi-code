@@ -7,7 +7,7 @@
 // relative import carries an explicit `.ts` specifier (see the IMPORT NOTE in
 // worker/text-build-core.ts).
 
-import { getPath } from '../query.ts';
+import { getPath } from "../query.ts";
 
 const LATIN = /[a-z0-9]+/g;
 const CJK = /[\u3400-\u9fff\u3040-\u30ff\uff00-\uffef]+/g;
@@ -23,7 +23,8 @@ const MAX_TERM_CHARS = 0xffff;
 // the next postings rebuild (review #27).
 export const MAX_TERM_BYTES = 0xffff;
 
-export const yieldToLoop = (): Promise<void> => new Promise((r) => setImmediate(r));
+export const yieldToLoop = (): Promise<void> =>
+  new Promise((r) => setImmediate(r));
 
 /** Tokenize text into terms (lowercased latin words + CJK uni/bigrams). */
 export function tokenize(str: unknown): string[] {
@@ -33,7 +34,8 @@ export function tokenize(str: unknown): string[] {
   // Loop-push instead of `terms.push(...latin)`: spreading a large match array
   // (hundreds of thousands of tokens from a big doc) overflows the call stack.
   // Latin matches are ASCII, so chars == utf8 bytes for the length guard.
-  if (latin) for (const t of latin) if (t.length <= MAX_TERM_CHARS) terms.push(t);
+  if (latin)
+    for (const t of latin) if (t.length <= MAX_TERM_CHARS) terms.push(t);
   const runs = s.match(CJK) ?? [];
   for (const r of runs) {
     for (let i = 0; i < r.length; i++) {
@@ -46,24 +48,28 @@ export function tokenize(str: unknown): string[] {
 
 function stringLeaves(obj: unknown, acc: string[] = []): string[] {
   if (obj === null || obj === undefined) return acc;
-  if (typeof obj === 'string') {
+  if (typeof obj === "string") {
     acc.push(obj);
     return acc;
   }
-  if (typeof obj !== 'object') return acc;
-  for (const v of Object.values(obj as Record<string, unknown>)) stringLeaves(v, acc);
+  if (typeof obj !== "object") return acc;
+  for (const v of Object.values(obj as Record<string, unknown>))
+    stringLeaves(v, acc);
   return acc;
 }
 
 /** Extract the indexable text of a document (shared with the generation
  *  build's worker: fields mode joins the configured paths, otherwise every
  *  string leaf). Internal to the package. */
-export function extractText(fields: readonly string[] | null, doc: unknown): string {
+export function extractText(
+  fields: readonly string[] | null,
+  doc: unknown,
+): string {
   if (fields && fields.length) {
     return fields
       .map((f) => getPath(doc, f))
-      .filter((v): v is string => typeof v === 'string')
-      .join(' ');
+      .filter((v): v is string => typeof v === "string")
+      .join(" ");
   }
-  return stringLeaves(doc).join(' ');
+  return stringLeaves(doc).join(" ");
 }

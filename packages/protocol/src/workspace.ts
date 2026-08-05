@@ -1,11 +1,11 @@
-import { z } from 'zod';
+import { z } from "zod";
 
-import { isoDateTimeSchema } from './time';
+import { isoDateTimeSchema } from "./time";
 
 export const workspaceIdSchema = z
   .string()
   .regex(/^wd_[a-z0-9._-]+_[0-9a-f]{12}$/, {
-    message: 'workspace_id must be a wd_<slug>_<hash12> string',
+    message: "workspace_id must be a wd_<slug>_<hash12> string",
   });
 
 export type WorkspaceId = z.infer<typeof workspaceIdSchema>;

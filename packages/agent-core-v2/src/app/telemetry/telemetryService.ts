@@ -7,22 +7,26 @@
  * App-scoped root. Has no cross-domain collaborators.
  */
 
-import { type IDisposable, toDisposable } from '#/_base/di/lifecycle';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { onUnexpectedError } from '#/_base/errors/unexpectedError';
+import { type IDisposable, toDisposable } from "#/_base/di/lifecycle";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { onUnexpectedError } from "#/_base/errors/unexpectedError";
 
 import type {
   StrictPropertyCheck,
   TelemetryEventName,
   TelemetryEventPayload,
-} from './events';
+} from "./events";
 import {
   ITelemetryService,
   type ITelemetryAppender,
   nullTelemetryAppender,
   type TelemetryContextPatch,
   type TelemetryProperties,
-} from './telemetry';
+} from "./telemetry";
 
 export class TelemetryService implements ITelemetryService {
   declare readonly _serviceBrand: undefined;
@@ -45,7 +49,10 @@ export class TelemetryService implements ITelemetryService {
     }
   }
 
-  track2<K extends TelemetryEventName, E extends TelemetryEventPayload<K> = never>(
+  track2<
+    K extends TelemetryEventName,
+    E extends TelemetryEventPayload<K> = never,
+  >(
     event: K,
     properties?: StrictPropertyCheck<TelemetryEventPayload<K>, E>,
   ): void {
@@ -112,7 +119,10 @@ class TelemetryContextView implements ITelemetryService {
     this.root.track(event, { ...this.context, ...properties });
   }
 
-  track2<K extends TelemetryEventName, E extends TelemetryEventPayload<K> = never>(
+  track2<
+    K extends TelemetryEventName,
+    E extends TelemetryEventPayload<K> = never,
+  >(
     event: K,
     properties?: StrictPropertyCheck<TelemetryEventPayload<K>, E>,
   ): void {
@@ -157,5 +167,5 @@ registerScopedService(
   ITelemetryService,
   TelemetryService,
   ScopeActivation.OnScopeCreated,
-  'telemetry',
+  "telemetry",
 );

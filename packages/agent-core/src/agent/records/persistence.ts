@@ -1,10 +1,10 @@
-import { createReadStream } from 'node:fs';
-import { mkdir, open } from 'node:fs/promises';
-import { dirname } from 'pathe';
+import { createReadStream } from "node:fs";
+import { mkdir, open } from "node:fs/promises";
+import { dirname } from "pathe";
 
-import { syncDir } from '../../utils/fs';
-import type { BlobStore } from './blobref';
-import { type AgentRecord, type AgentRecordPersistence } from './types';
+import { syncDir } from "../../utils/fs";
+import type { BlobStore } from "./blobref";
+import { type AgentRecord, type AgentRecordPersistence } from "./types";
 
 export interface FileSystemAgentRecordPersistenceOptions {
   readonly onError?: ((error: unknown) => void) | undefined;
@@ -45,7 +45,9 @@ export class InMemoryAgentRecordPersistence implements AgentRecordPersistence {
   async close(): Promise<void> {}
 }
 
-export class FileSystemAgentRecordPersistence implements AgentRecordPersistence {
+export class FileSystemAgentRecordPersistence
+  implements AgentRecordPersistence
+{
   private readonly pendingRecords: AgentRecord[] = [];
   private shouldClear = false;
   private directorySynced = false;
@@ -60,32 +62,32 @@ export class FileSystemAgentRecordPersistence implements AgentRecordPersistence 
   async *read(): AsyncIterable<AgentRecord> {
     await this.flush();
 
-    let line = '';
+    let line = "";
     let lineNumber = 0;
-    const stream = createReadStream(this.filePath, { encoding: 'utf8' });
+    const stream = createReadStream(this.filePath, { encoding: "utf8" });
     try {
       for await (const chunk of stream) {
         line += chunk;
-        let newlineIndex = line.indexOf('\n');
+        let newlineIndex = line.indexOf("\n");
         while (newlineIndex !== -1) {
           const rawLine = line.slice(0, newlineIndex);
           line = line.slice(newlineIndex + 1);
           lineNumber++;
 
           const record = parseRecordLine(
-            rawLine.endsWith('\r') ? rawLine.slice(0, -1) : rawLine,
+            rawLine.endsWith("\r") ? rawLine.slice(0, -1) : rawLine,
             lineNumber,
             this.filePath,
             false,
           );
           if (record !== undefined) yield record;
 
-          newlineIndex = line.indexOf('\n');
+          newlineIndex = line.indexOf("\n");
         }
       }
     } catch (error) {
       const code = (error as NodeJS.ErrnoException).code;
-      if (code === 'ENOENT') return;
+      if (code === "ENOENT") return;
       throw error;
     }
 
@@ -171,20 +173,21 @@ export class FileSystemAgentRecordPersistence implements AgentRecordPersistence 
     const batch = this.pendingRecords.splice(0);
     this.shouldClear = false;
 
-    const writable = this.options.blobStore !== undefined
-      ? await Promise.all(
-          batch.map((record) => this.options.blobStore!.offload(record)),
-        )
-      : batch;
+    const writable =
+      this.options.blobStore !== undefined
+        ? await Promise.all(
+            batch.map((record) => this.options.blobStore!.offload(record)),
+          )
+        : batch;
 
-    const content = writable.map((e) => JSON.stringify(e) + '\n').join('');
+    const content = writable.map((e) => JSON.stringify(e) + "\n").join("");
     const directory = dirname(this.filePath);
     await mkdir(directory, { recursive: true });
 
-    const fh = await open(this.filePath, shouldClear ? 'w' : 'a');
+    const fh = await open(this.filePath, shouldClear ? "w" : "a");
     try {
       if (content.length > 0) {
-        await fh.writeFile(content, 'utf8');
+        await fh.writeFile(content, "utf8");
       }
       await fh.sync();
     } finally {

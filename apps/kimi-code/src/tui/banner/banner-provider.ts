@@ -1,11 +1,11 @@
-import { createHash } from 'node:crypto';
+import { createHash } from "node:crypto";
 
-import { eq, gte, lt, valid } from 'semver';
+import { eq, gte, lt, valid } from "semver";
 
-import { KIMI_CODE_TIPS_BANNER_URL } from '#/constant/app';
-import type { BannerDisplay, BannerState } from '#/tui/types';
+import { KIMI_CODE_TIPS_BANNER_URL } from "#/constant/app";
+import type { BannerDisplay, BannerState } from "#/tui/types";
 
-import type { BannerDisplayState } from './state';
+import type { BannerDisplayState } from "./state";
 
 interface BannerVersionFields {
   banner_min_version?: string | null;
@@ -76,31 +76,35 @@ const HOUR_MS = 60 * 60 * 1000;
 export const DEFAULT_COOLDOWN_TTL_HOURS = 24;
 
 function normalizeTag(value: unknown): string | null {
-  if (typeof value !== 'string') return null;
+  if (typeof value !== "string") return null;
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;
 }
 
 function normalizeText(value: unknown): string | null {
-  if (typeof value !== 'string') return null;
+  if (typeof value !== "string") return null;
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;
 }
 
 function normalizeUtcDate(value: string): string {
-  if (value.endsWith('Z')) return value;
+  if (value.endsWith("Z")) return value;
   if (/[+-]\d{2}:\d{2}$/.test(value)) return value;
   return `${value}Z`;
 }
 
 function parseDate(value: unknown): Date | null {
-  if (typeof value !== 'string' || value.length === 0) return null;
+  if (typeof value !== "string" || value.length === 0) return null;
   const normalized = normalizeUtcDate(value);
   const date = new Date(normalized);
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
-function isWithinWindow(start: Date | null, end: Date | null, now: Date): boolean {
+function isWithinWindow(
+  start: Date | null,
+  end: Date | null,
+  now: Date,
+): boolean {
   if (start !== null && now < start) return false;
   if (end !== null && now > end) return false;
   return true;
@@ -114,14 +118,17 @@ function meetsVersionConstraint(
   compare: VersionConstraintCompare,
 ): boolean {
   if (constraint === undefined || constraint === null) return true;
-  if (typeof constraint !== 'string' || constraint.length === 0) return true;
+  if (typeof constraint !== "string" || constraint.length === 0) return true;
   const target = valid(constraint);
   const current = valid(clientVersion);
   if (target === null || current === null) return false;
   return compare(current, target);
 }
 
-function meetsVersion(banner: BannerVersionFields, clientVersion: string): boolean {
+function meetsVersion(
+  banner: BannerVersionFields,
+  clientVersion: string,
+): boolean {
   return (
     meetsVersionConstraint(banner.banner_min_version, clientVersion, gte) &&
     meetsVersionConstraint(banner.banner_max_version, clientVersion, lt) &&
@@ -130,34 +137,34 @@ function meetsVersion(banner: BannerVersionFields, clientVersion: string): boole
 }
 
 function parseBannerDisplay(value: unknown): BannerDisplay {
-  if (value === 'once') return 'once';
-  if (value === 'cooldown') return 'cooldown';
-  return 'always';
+  if (value === "once") return "once";
+  if (value === "cooldown") return "cooldown";
+  return "always";
 }
 
 function parseBannerDisplayTtlHours(value: unknown): number {
-  return typeof value === 'number' && Number.isFinite(value) && value > 0
+  return typeof value === "number" && Number.isFinite(value) && value > 0
     ? value
     : DEFAULT_COOLDOWN_TTL_HOURS;
 }
 
 function normalizeBannerId(value: unknown): string | null {
-  if (typeof value !== 'string') return null;
+  if (typeof value !== "string") return null;
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;
 }
 
 function hashBannerIdentity(input: BannerHashInput): string {
   const raw = JSON.stringify([
-    input.tag ?? '',
+    input.tag ?? "",
     input.mainText,
-    input.subText ?? '',
-    input.startTime ?? '',
-    input.endTime ?? '',
+    input.subText ?? "",
+    input.startTime ?? "",
+    input.endTime ?? "",
     input.display,
-    input.ttlHours ?? '',
+    input.ttlHours ?? "",
   ]);
-  return createHash('sha256').update(raw).digest('hex').slice(0, 32);
+  return createHash("sha256").update(raw).digest("hex").slice(0, 32);
 }
 
 function getBannerKey(rawBannerId: unknown, input: BannerHashInput): string {
@@ -168,7 +175,10 @@ function toBannerState(input: BannerCandidateInput): BannerState {
   const tag = normalizeTag(input.tag);
   const subText = normalizeText(input.subText);
   const display = input.display;
-  const ttlHours = display === 'cooldown' ? parseBannerDisplayTtlHours(input.ttlHours) : undefined;
+  const ttlHours =
+    display === "cooldown"
+      ? parseBannerDisplayTtlHours(input.ttlHours)
+      : undefined;
   const startTime = normalizeText(input.startTime);
   const endTime = normalizeText(input.endTime);
   const key = getBannerKey(input.id, {
@@ -210,7 +220,10 @@ function pickActiveBanner(
     mainText,
     subText: json.banner_subtext,
     display,
-    ttlHours: display === 'cooldown' ? parseBannerDisplayTtlHours(json.banner_display_ttl_hours) : undefined,
+    ttlHours:
+      display === "cooldown"
+        ? parseBannerDisplayTtlHours(json.banner_display_ttl_hours)
+        : undefined,
     startTime: json.banner_start_time,
     endTime: json.banner_end_time,
   });
@@ -221,10 +234,12 @@ function pickFallbackCandidates(
   clientVersion: string,
 ): BannerState[] {
   if (json.banner_fallback_enabled !== true) return [];
-  const list = Array.isArray(json.banner_fallback_list) ? json.banner_fallback_list : [];
+  const list = Array.isArray(json.banner_fallback_list)
+    ? json.banner_fallback_list
+    : [];
   const candidates: BannerState[] = [];
   for (const raw of list) {
-    if (typeof raw !== 'object' || raw === null) continue;
+    if (typeof raw !== "object" || raw === null) continue;
     const item = raw as TipsBannerFallbackItem;
     if (item.enabled !== true) continue;
     if (!meetsVersion(item, clientVersion)) continue;
@@ -238,14 +253,20 @@ function pickFallbackCandidates(
         mainText,
         subText: item.banner_subtext,
         display,
-        ttlHours: display === 'cooldown' ? parseBannerDisplayTtlHours(item.banner_display_ttl_hours) : undefined,
+        ttlHours:
+          display === "cooldown"
+            ? parseBannerDisplayTtlHours(item.banner_display_ttl_hours)
+            : undefined,
       }),
     );
   }
   return candidates;
 }
 
-function pickRandomCandidate(candidates: BannerState[], random: () => number): BannerState | null {
+function pickRandomCandidate(
+  candidates: BannerState[],
+  random: () => number,
+): BannerState | null {
   if (candidates.length === 0) return null;
   const index = Math.floor(random() * candidates.length);
   return candidates[index]!;
@@ -256,7 +277,10 @@ function pickFallbackBanner(
   clientVersion: string,
   random: () => number,
 ): BannerState | null {
-  return pickRandomCandidate(pickFallbackCandidates(json, clientVersion), random);
+  return pickRandomCandidate(
+    pickFallbackCandidates(json, clientVersion),
+    random,
+  );
 }
 
 function parseShownAt(value: string | undefined): Date | null {
@@ -266,7 +290,9 @@ function parseShownAt(value: string | undefined): Date | null {
 }
 
 function getCooldownTtlHours(banner: BannerState): number {
-  return typeof banner.ttlHours === 'number' && Number.isFinite(banner.ttlHours) && banner.ttlHours > 0
+  return typeof banner.ttlHours === "number" &&
+    Number.isFinite(banner.ttlHours) &&
+    banner.ttlHours > 0
     ? banner.ttlHours
     : DEFAULT_COOLDOWN_TTL_HOURS;
 }
@@ -276,11 +302,14 @@ export function shouldDisplayBanner(
   state: BannerDisplayState,
   now: Date,
 ): boolean {
-  if (banner.display === 'always') return true;
+  if (banner.display === "always") return true;
   const lastShownAt = parseShownAt(state.shown[banner.key]?.lastShownAt);
   if (lastShownAt === null) return true;
-  if (banner.display === 'once') return false;
-  return now.getTime() - lastShownAt.getTime() >= getCooldownTtlHours(banner) * HOUR_MS;
+  if (banner.display === "once") return false;
+  return (
+    now.getTime() - lastShownAt.getTime() >=
+    getCooldownTtlHours(banner) * HOUR_MS
+  );
 }
 
 export function selectBannerState(
@@ -289,7 +318,8 @@ export function selectBannerState(
   now: Date,
   random: () => number,
 ): BannerState | null {
-  const typed = typeof json === 'object' && json !== null ? (json as TipsBannerJson) : {};
+  const typed =
+    typeof json === "object" && json !== null ? (json as TipsBannerJson) : {};
   return (
     pickActiveBanner(typed, clientVersion, now) ??
     pickFallbackBanner(typed, clientVersion, random)
@@ -303,11 +333,12 @@ export function selectDisplayableBanner({
   random,
   state,
 }: SelectDisplayableBannerArgs): BannerState | null {
-  const typed = typeof json === 'object' && json !== null ? (json as TipsBannerJson) : {};
+  const typed =
+    typeof json === "object" && json !== null ? (json as TipsBannerJson) : {};
   const active = pickActiveBanner(typed, clientVersion, now);
   if (active !== null && shouldDisplayBanner(active, state, now)) return active;
-  const candidates = pickFallbackCandidates(typed, clientVersion).filter((candidate) =>
-    shouldDisplayBanner(candidate, state, now),
+  const candidates = pickFallbackCandidates(typed, clientVersion).filter(
+    (candidate) => shouldDisplayBanner(candidate, state, now),
   );
   return pickRandomCandidate(candidates, random);
 }

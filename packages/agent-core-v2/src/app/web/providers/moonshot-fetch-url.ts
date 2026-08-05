@@ -1,9 +1,15 @@
-import { Error2, ErrorCodes } from '#/errors';
+import { Error2, ErrorCodes } from "#/errors";
 
-import { HttpFetchError, type UrlFetcher, type UrlFetchResult } from '../tools/fetch-url-types';
+import {
+  HttpFetchError,
+  type UrlFetcher,
+  type UrlFetchResult,
+} from "../tools/fetch-url-types";
 
 interface BearerTokenProvider {
-  getAccessToken(options?: { readonly force?: boolean | undefined }): Promise<string>;
+  getAccessToken(options?: {
+    readonly force?: boolean | undefined;
+  }): Promise<string>;
 }
 
 export interface MoonshotFetchURLProviderOptions {
@@ -40,8 +46,12 @@ export class MoonshotFetchURLProvider implements UrlFetcher {
     options?: { toolCallId?: string; signal?: AbortSignal },
   ): Promise<UrlFetchResult> {
     try {
-      const content = await this.fetchViaMoonshot(url, options?.toolCallId, options?.signal);
-      return { content, kind: 'extracted' };
+      const content = await this.fetchViaMoonshot(
+        url,
+        options?.toolCallId,
+        options?.signal,
+      );
+      return { content, kind: "extracted" };
     } catch (error) {
       if (options?.signal?.aborted === true) throw error;
       return this.localFallback.fetch(url, options ?? {});
@@ -57,11 +67,10 @@ export class MoonshotFetchURLProvider implements UrlFetcher {
     const response = await this.post(bodyJson, toolCallId, signal);
 
     if (response.status !== 200) {
-      let detail = '';
+      let detail = "";
       try {
         detail = await response.text();
-      } catch {
-      }
+      } catch {}
       throw new HttpFetchError(
         response.status,
         `Moonshot fetch request failed: HTTP ${String(response.status)}. ${detail}`.trim(),
@@ -77,14 +86,14 @@ export class MoonshotFetchURLProvider implements UrlFetcher {
   ): Promise<Response> {
     const accessToken = await this.resolveApiKey();
     return this.fetchImpl(this.baseUrl, {
-      method: 'POST',
+      method: "POST",
       headers: {
         ...this.defaultHeaders,
         Authorization: `Bearer ${accessToken}`,
-        Accept: 'text/markdown',
-        'Content-Type': 'application/json',
+        Accept: "text/markdown",
+        "Content-Type": "application/json",
         ...(toolCallId !== undefined && toolCallId.length > 0
-          ? { 'X-Msh-Tool-Call-Id': toolCallId }
+          ? { "X-Msh-Tool-Call-Id": toolCallId }
           : {}),
         ...this.customHeaders,
       },
@@ -98,16 +107,18 @@ export class MoonshotFetchURLProvider implements UrlFetcher {
       try {
         const token = await this.tokenProvider.getAccessToken();
         if (token.trim().length > 0) return token;
-        if (this.apiKey !== undefined && this.apiKey.length > 0) return this.apiKey;
+        if (this.apiKey !== undefined && this.apiKey.length > 0)
+          return this.apiKey;
       } catch (error) {
-        if (this.apiKey !== undefined && this.apiKey.length > 0) return this.apiKey;
+        if (this.apiKey !== undefined && this.apiKey.length > 0)
+          return this.apiKey;
         throw error;
       }
     }
     if (this.apiKey !== undefined && this.apiKey.length > 0) return this.apiKey;
     throw new Error2(
       ErrorCodes.AUTH_TOKEN_MISSING,
-      'Moonshot fetch service is not configured: missing API key or token provider.',
+      "Moonshot fetch service is not configured: missing API key or token provider.",
     );
   }
 }

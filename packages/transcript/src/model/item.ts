@@ -7,8 +7,8 @@
  * every page is a contiguous, self-consistent slice.
  */
 
-import type { MarkerId, TaskId, TaskRefId } from './ids';
-import type { TranscriptTurn } from './turn';
+import type { MarkerId, TaskId, TaskRefId } from "./ids";
+import type { TranscriptTurn } from "./turn";
 
 /**
  * Marker keys are namespaced strings. Well-known keys are listed in
@@ -18,19 +18,19 @@ import type { TranscriptTurn } from './turn';
 export type MarkerKey = string;
 
 export const KNOWN_MARKERS = [
-  'compaction',
-  'undo',
-  'clear',
-  'goal',
-  'plan.enter',
-  'plan.exit',
-  'plan.revision',
-  'swarm.enter',
-  'swarm.exit',
-  'skill',
-  'cron.fired',
-  'notice',
-  'hook',
+  "compaction",
+  "undo",
+  "clear",
+  "goal",
+  "plan.enter",
+  "plan.exit",
+  "plan.revision",
+  "swarm.enter",
+  "swarm.exit",
+  "skill",
+  "cron.fired",
+  "notice",
+  "hook",
 ] as const;
 
 /**
@@ -41,7 +41,7 @@ export const KNOWN_MARKERS = [
  * payload).
  */
 export interface TranscriptMarker {
-  readonly kind: 'marker';
+  readonly kind: "marker";
   readonly markerId: MarkerId;
   readonly marker: MarkerKey;
   /** Open content; interpreted by markerRenderers. */
@@ -56,21 +56,24 @@ export interface TranscriptMarker {
  * `detached` flag flipping; the ref does not change.
  */
 export interface TranscriptTaskRef {
-  readonly kind: 'taskref';
+  readonly kind: "taskref";
   readonly refId: TaskRefId;
   readonly taskId: TaskId;
   readonly at?: string;
 }
 
-export type TranscriptItem = TranscriptTurn | TranscriptMarker | TranscriptTaskRef;
+export type TranscriptItem =
+  | TranscriptTurn
+  | TranscriptMarker
+  | TranscriptTaskRef;
 
 export function itemId(item: TranscriptItem): string {
   switch (item.kind) {
-    case 'turn':
+    case "turn":
       return item.turnId;
-    case 'marker':
+    case "marker":
       return item.markerId;
-    case 'taskref':
+    case "taskref":
       return item.refId;
   }
 }

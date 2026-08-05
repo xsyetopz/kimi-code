@@ -7,17 +7,20 @@
  * predicate.
  */
 
-import type { Readable } from 'node:stream';
+import type { Readable } from "node:stream";
 
-import { BugIndicatingError } from '#/errors';
-import type { IHostProcess, IHostProcessService } from '#/os/interface/hostProcess';
+import { BugIndicatingError } from "#/errors";
+import type {
+  IHostProcess,
+  IHostProcessService,
+} from "#/os/interface/hostProcess";
 
 export const DEFAULT_TIMEOUT_MS = 20_000;
 export const SIGTERM_GRACE_MS = 5_000;
 export const MAX_OUTPUT_BYTES = 10 * 1024 * 1024;
 
 export interface RunRgResult {
-  readonly kind: 'result';
+  readonly kind: "result";
   readonly exitCode: number;
   readonly stdoutText: string;
   readonly stderrText: string;
@@ -26,13 +29,12 @@ export interface RunRgResult {
   readonly timedOut: boolean;
 }
 
-export type RunRgOutcome = RunRgResult | { readonly kind: 'aborted' };
+export type RunRgOutcome = RunRgResult | { readonly kind: "aborted" };
 
 function disposeProcess(proc: IHostProcess): void {
   try {
     proc.dispose();
-  } catch {
-  }
+  } catch {}
 }
 
 export async function runRgOnce(
@@ -42,19 +44,20 @@ export async function runRgOnce(
   options?: { readonly cwd?: string },
 ): Promise<RunRgOutcome> {
   if (signal.aborted) {
-    return { kind: 'aborted' };
+    return { kind: "aborted" };
   }
 
   const [command, ...args] = rgArgs;
   if (command === undefined) {
-    throw new BugIndicatingError('runRgOnce: rgArgs must not be empty');
+    throw new BugIndicatingError("runRgOnce: rgArgs must not be empty");
   }
-  const proc: IHostProcess = await processService.spawn(command, args, { cwd: options?.cwd });
+  const proc: IHostProcess = await processService.spawn(command, args, {
+    cwd: options?.cwd,
+  });
 
   try {
     proc.stdin.end();
-  } catch {
-  }
+  } catch {}
 
   let timedOut = false;
   let aborted = false;
@@ -64,9 +67,8 @@ export async function runRgOnce(
     if (killed) return;
     killed = true;
     try {
-      await proc.kill('SIGTERM');
-    } catch {
-    }
+      await proc.kill("SIGTERM");
+    } catch {}
     const exited = proc
       .wait()
       .then(() => true)
@@ -81,9 +83,8 @@ export async function runRgOnce(
     ]);
     if (!raced && proc.exitCode === null) {
       try {
-        await proc.kill('SIGKILL');
-      } catch {
-      }
+        await proc.kill("SIGKILL");
+      } catch {}
     }
     disposeProcess(proc);
   };
@@ -92,7 +93,7 @@ export async function runRgOnce(
     aborted = true;
     void killProc();
   };
-  signal.addEventListener('abort', onAbort);
+  signal.addEventListener("abort", onAbort);
   if (signal.aborted) onAbort();
 
   const timeoutHandle = setTimeout(() => {
@@ -101,8 +102,8 @@ export async function runRgOnce(
   }, DEFAULT_TIMEOUT_MS);
 
   let exitCode = 0;
-  let stdoutText = '';
-  let stderrText = '';
+  let stdoutText = "";
+  let stderrText = "";
   let bufferTruncated = false;
   let stderrTruncated = false;
 
@@ -124,16 +125,16 @@ export async function runRgOnce(
     }
   } finally {
     clearTimeout(timeoutHandle);
-    signal.removeEventListener('abort', onAbort);
+    signal.removeEventListener("abort", onAbort);
     disposeProcess(proc);
   }
 
   if (aborted) {
-    return { kind: 'aborted' };
+    return { kind: "aborted" };
   }
 
   return {
-    kind: 'result',
+    kind: "result",
     exitCode,
     stdoutText,
     stderrText,
@@ -153,13 +154,16 @@ export function shouldRetryRipgrepEagain(result: RunRgResult): boolean {
 }
 
 function isEagainRipgrepError(stderr: string): boolean {
-  return stderr.includes('os error 11') || stderr.includes('Resource temporarily unavailable');
+  return (
+    stderr.includes("os error 11") ||
+    stderr.includes("Resource temporarily unavailable")
+  );
 }
 
 function isPrematureCloseError(error: unknown): boolean {
   return (
     error instanceof Error &&
-    (error as NodeJS.ErrnoException).code === 'ERR_STREAM_PREMATURE_CLOSE'
+    (error as NodeJS.ErrnoException).code === "ERR_STREAM_PREMATURE_CLOSE"
   );
 }
 
@@ -179,7 +183,9 @@ async function readStreamWithCap(
   try {
     for await (const chunk of stream) {
       const buf: Buffer =
-        typeof chunk === 'string' ? Buffer.from(chunk, 'utf8') : (chunk as Buffer);
+        typeof chunk === "string"
+          ? Buffer.from(chunk, "utf8")
+          : (chunk as Buffer);
       if (truncated) continue;
       if (total + buf.length > maxBytes) {
         const remaining = maxBytes - total;
@@ -196,5 +202,5 @@ async function readStreamWithCap(
       throw error;
     }
   }
-  return { text: Buffer.concat(chunks).toString('utf8'), truncated };
+  return { text: Buffer.concat(chunks).toString("utf8"), truncated };
 }

@@ -1,12 +1,12 @@
 import type {
   PermissionPolicy,
   PermissionPolicyResult,
-} from '#/agent/permissionPolicy/types';
+} from "#/agent/permissionPolicy/types";
 
 export class FallbackAskPermissionPolicyService implements PermissionPolicy {
-  readonly name = 'fallback-ask';
+  readonly name = "fallback-ask";
 
   evaluate(): PermissionPolicyResult {
-    return { kind: 'ask' };
+    return { kind: "ask" };
   }
 }

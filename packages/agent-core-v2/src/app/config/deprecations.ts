@@ -9,9 +9,9 @@
  * and the user's file is left untouched — the warning is the migration guide.
  */
 
-import type { ConfigDiagnostic, ConfigSection } from './config';
-import { isPlainObject } from './configPure';
-import { camelToSnake } from './toml';
+import type { ConfigDiagnostic, ConfigSection } from "./config";
+import { isPlainObject } from "./configPure";
+import { camelToSnake } from "./toml";
 
 export function collectKeyDeprecations(
   rawSnake: Record<string, unknown>,
@@ -28,12 +28,12 @@ export function collectKeyDeprecations(
       if (rawSection[deprecation.key] === undefined) continue;
       diagnostics.push({
         domain: section.domain,
-        severity: 'warning',
+        severity: "warning",
         message:
           `[${snakeDomain}] '${deprecation.key}' is deprecated and no longer used; ` +
           `rename it to '${deprecation.replacement}'.` +
-          (deprecation.message === undefined ? '' : ` ${deprecation.message}`) +
-          ' Run /update-config to fix it.',
+          (deprecation.message === undefined ? "" : ` ${deprecation.message}`) +
+          " Run /update-config to fix it.",
       });
     }
   }

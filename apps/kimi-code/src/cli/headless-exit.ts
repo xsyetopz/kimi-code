@@ -1,6 +1,9 @@
-import type { Writable } from 'node:stream';
+import type { Writable } from "node:stream";
 
-import { HEADLESS_FORCE_EXIT_GRACE_MS, HEADLESS_STDIO_DRAIN_TIMEOUT_MS } from '#/constant/app';
+import {
+  HEADLESS_FORCE_EXIT_GRACE_MS,
+  HEADLESS_STDIO_DRAIN_TIMEOUT_MS,
+} from "#/constant/app";
 
 /** Minimal process surface needed to force a headless run to terminate. */
 export interface ExitableProcess {
@@ -45,7 +48,7 @@ function flushStream(stream: Writable): Promise<void> {
       // An empty write's callback fires after all previously-queued writes have
       // been flushed (writes are ordered), which is the documented way to know a
       // stream's buffer has drained.
-      stream.write('', () => resolve());
+      stream.write("", () => resolve());
     } catch {
       resolve();
     }
@@ -70,7 +73,10 @@ export async function drainStdio(
     timer.unref?.();
   });
   try {
-    await Promise.race([Promise.all(streams.map(flushStream)).then(() => undefined), timeout]);
+    await Promise.race([
+      Promise.all(streams.map(flushStream)).then(() => undefined),
+      timeout,
+    ]);
   } finally {
     if (timer !== undefined) clearTimeout(timer);
   }
@@ -91,6 +97,9 @@ export async function finalizeHeadlessRun(
   getExitCode: () => number,
   options: { drainTimeoutMs?: number; graceMs?: number } = {},
 ): Promise<void> {
-  await drainStdio(streams, options.drainTimeoutMs ?? HEADLESS_STDIO_DRAIN_TIMEOUT_MS);
+  await drainStdio(
+    streams,
+    options.drainTimeoutMs ?? HEADLESS_STDIO_DRAIN_TIMEOUT_MS,
+  );
   scheduleHeadlessForceExit(proc, getExitCode, options.graceMs);
 }

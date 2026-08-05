@@ -7,25 +7,28 @@
  * single Op replaces the mode and sets that marker.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import type { PermissionMode } from '#/agent/permissionPolicy/types';
-import { defineModel } from '#/wire/model';
+import type { PermissionMode } from "#/agent/permissionPolicy/types";
+import { defineModel } from "#/wire/model";
 
-export const PermissionModeModel = defineModel<PermissionMode>('permissionMode', () => 'manual');
+export const PermissionModeModel = defineModel<PermissionMode>(
+  "permissionMode",
+  () => "manual",
+);
 export const PermissionModeConfiguredModel = defineModel<boolean>(
-  'permissionMode.configured',
+  "permissionMode.configured",
   () => false,
-  { reducers: { 'permission.set_mode': () => true } },
+  { reducers: { "permission.set_mode": () => true } },
 );
 
-declare module '#/wire/types' {
+declare module "#/wire/types" {
   interface PersistedOpMap {
-    'permission.set_mode': typeof setMode;
+    "permission.set_mode": typeof setMode;
   }
 }
 
-export const setMode = PermissionModeModel.defineOp('permission.set_mode', {
+export const setMode = PermissionModeModel.defineOp("permission.set_mode", {
   schema: z.object({ mode: z.custom<PermissionMode>() }),
   apply: (_s, p) => p.mode,
 });

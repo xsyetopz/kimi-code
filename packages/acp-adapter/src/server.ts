@@ -6,8 +6,8 @@
  * advertises the terminal-auth method (see {@link TERMINAL_AUTH_METHOD}).
  */
 
-import { Readable, Writable } from 'node:stream';
-import { randomUUID } from 'node:crypto';
+import { Readable, Writable } from "node:stream";
+import { randomUUID } from "node:crypto";
 
 import {
   AgentSideConnection,
@@ -43,7 +43,7 @@ import {
   type SetSessionModelRequest,
   type SetSessionModelResponse,
   type Stream,
-} from '@agentclientprotocol/sdk';
+} from "@agentclientprotocol/sdk";
 import type {
   KimiConfig,
   KimiHarness,
@@ -51,20 +51,20 @@ import type {
   ProviderConfig,
   Session,
   SessionSummary,
-} from '@moonshot-ai/kimi-code-sdk';
-import { log } from '@moonshot-ai/kimi-code-sdk';
-import { LocalKaos, type Kaos } from '@moonshot-ai/kaos';
+} from "@moonshot-ai/kimi-code-sdk";
+import { log } from "@moonshot-ai/kimi-code-sdk";
+import { LocalKaos, type Kaos } from "@moonshot-ai/kaos";
 
-import { TERMINAL_AUTH_METHOD, buildTerminalAuthMethod } from './auth-methods';
-import { redirectConsoleToStderr } from './log-guard';
-import { AcpKaos } from './kaos-acp';
-import { AcpSession, type TelemetryTrackFn } from './session';
-import { buildSessionConfigOptions } from './config-options';
-import { availableCommandsUpdateNotification } from './events-map';
-import { acpMcpServersToConfigs } from './mcp';
-import { listModelsFromHarness } from './model-catalog';
-import { DEFAULT_MODE_ID } from './modes';
-import { negotiateVersion, type AcpVersionSpec } from './version';
+import { TERMINAL_AUTH_METHOD, buildTerminalAuthMethod } from "./auth-methods";
+import { redirectConsoleToStderr } from "./log-guard";
+import { AcpKaos } from "./kaos-acp";
+import { AcpSession, type TelemetryTrackFn } from "./session";
+import { buildSessionConfigOptions } from "./config-options";
+import { availableCommandsUpdateNotification } from "./events-map";
+import { acpMcpServersToConfigs } from "./mcp";
+import { listModelsFromHarness } from "./model-catalog";
+import { DEFAULT_MODE_ID } from "./modes";
+import { negotiateVersion, type AcpVersionSpec } from "./version";
 
 /**
  * Per-session snapshot returned by the {@link AcpServer} caller's
@@ -123,15 +123,20 @@ async function harnessIsAuthed(harness: KimiHarness): Promise<boolean> {
   return hasUsableConfiguredDefaultModel(harness);
 }
 
-async function hasUsableConfiguredDefaultModel(harness: KimiHarness): Promise<boolean> {
-  if (typeof harness.getConfig !== 'function') return false;
+async function hasUsableConfiguredDefaultModel(
+  harness: KimiHarness,
+): Promise<boolean> {
+  if (typeof harness.getConfig !== "function") return false;
   let config: KimiConfig;
   try {
     config = await harness.getConfig();
   } catch (error) {
-    log.warn('acp: harness.getConfig threw during auth gate; requiring terminal auth', {
-      error: error instanceof Error ? error.message : String(error),
-    });
+    log.warn(
+      "acp: harness.getConfig threw during auth gate; requiring terminal auth",
+      {
+        error: error instanceof Error ? error.message : String(error),
+      },
+    );
     return false;
   }
 
@@ -143,29 +148,34 @@ async function hasUsableConfiguredDefaultModel(harness: KimiHarness): Promise<bo
   return provider !== undefined && providerHasNonOAuthCredentials(provider);
 }
 
-function providerForAlias(config: KimiConfig, alias: ModelAlias): ProviderConfig | undefined {
+function providerForAlias(
+  config: KimiConfig,
+  alias: ModelAlias,
+): ProviderConfig | undefined {
   const providerName = alias.provider ?? config.defaultProvider;
-  return providerName === undefined ? undefined : config.providers[providerName];
+  return providerName === undefined
+    ? undefined
+    : config.providers[providerName];
 }
 
 function providerHasNonOAuthCredentials(provider: ProviderConfig): boolean {
   if (provider.oauth !== undefined) return false;
   switch (provider.type) {
-    case 'anthropic':
-      return hasProviderValue(provider, 'ANTHROPIC_API_KEY');
-    case 'openai':
-    case 'openai_responses':
-      return hasProviderValue(provider, 'OPENAI_API_KEY');
-    case 'kimi':
-      return hasProviderValue(provider, 'KIMI_API_KEY');
-    case 'google-genai':
-      return hasProviderValue(provider, 'GOOGLE_API_KEY');
-    case 'vertexai':
+    case "anthropic":
+      return hasProviderValue(provider, "ANTHROPIC_API_KEY");
+    case "openai":
+    case "openai_responses":
+      return hasProviderValue(provider, "OPENAI_API_KEY");
+    case "kimi":
+      return hasProviderValue(provider, "KIMI_API_KEY");
+    case "google-genai":
+      return hasProviderValue(provider, "GOOGLE_API_KEY");
+    case "vertexai":
       return (
-        hasProviderValue(provider, 'VERTEXAI_API_KEY') ||
-        hasEnvValue(provider, 'GOOGLE_API_KEY') ||
-        (hasEnvValue(provider, 'GOOGLE_CLOUD_PROJECT') &&
-          (hasEnvValue(provider, 'GOOGLE_CLOUD_LOCATION') ||
+        hasProviderValue(provider, "VERTEXAI_API_KEY") ||
+        hasEnvValue(provider, "GOOGLE_API_KEY") ||
+        (hasEnvValue(provider, "GOOGLE_CLOUD_PROJECT") &&
+          (hasEnvValue(provider, "GOOGLE_CLOUD_LOCATION") ||
             vertexAILocationFromBaseUrl(provider.baseUrl) !== undefined))
       );
     default: {
@@ -176,20 +186,27 @@ function providerHasNonOAuthCredentials(provider: ProviderConfig): boolean {
 }
 
 function hasProviderValue(provider: ProviderConfig, envKey: string): boolean {
-  return nonEmptyString(provider.apiKey) !== undefined || hasEnvValue(provider, envKey);
+  return (
+    nonEmptyString(provider.apiKey) !== undefined ||
+    hasEnvValue(provider, envKey)
+  );
 }
 
 function hasEnvValue(provider: ProviderConfig, envKey: string): boolean {
   return nonEmptyString(provider.env?.[envKey]) !== undefined;
 }
 
-function vertexAILocationFromBaseUrl(baseUrl: string | undefined): string | undefined {
+function vertexAILocationFromBaseUrl(
+  baseUrl: string | undefined,
+): string | undefined {
   const url = nonEmptyString(baseUrl);
   if (url === undefined) return undefined;
   try {
     const host = new URL(url).hostname;
-    const suffix = '-aiplatform.googleapis.com';
-    return host.endsWith(suffix) ? nonEmptyString(host.slice(0, -suffix.length)) : undefined;
+    const suffix = "-aiplatform.googleapis.com";
+    return host.endsWith(suffix)
+      ? nonEmptyString(host.slice(0, -suffix.length))
+      : undefined;
   } catch {
     return undefined;
   }
@@ -201,7 +218,7 @@ function nonEmptyString(value: string | undefined): string | undefined {
 }
 
 function effortStringOrUndefined(effort: unknown): string | undefined {
-  if (typeof effort !== 'string') return undefined;
+  if (typeof effort !== "string") return undefined;
   const trimmed = effort.trim();
   return trimmed.length > 0 ? trimmed : undefined;
 }
@@ -223,7 +240,9 @@ export class AcpServer implements Agent {
   private clientCapabilities: ClientCapabilities | undefined;
   private readonly sessions = new Map<string, AcpSession>();
   private readonly agentInfo: Implementation | undefined;
-  private readonly terminalAuthEnv: Readonly<Record<string, string>> | undefined;
+  private readonly terminalAuthEnv:
+    | Readonly<Record<string, string>>
+    | undefined;
   private readonly terminalAuthLegacyCommand: string | undefined;
   private readonly resolveSlashCommands: (
     session: Session,
@@ -282,7 +301,7 @@ export class AcpServer implements Agent {
     this.terminalAuthLegacyCommand = opts?.terminalAuthLegacyCommand;
     const slash = opts?.slashCommands;
     this.resolveSlashCommands =
-      typeof slash === 'function'
+      typeof slash === "function"
         ? async (session) => toResolvedSlashCommands(await slash(session))
         : async () => toResolvedSlashCommands(slash ?? []);
   }
@@ -327,7 +346,8 @@ export class AcpServer implements Agent {
       protocolVersion: this.negotiated.protocolVersion,
       agentCapabilities,
       authMethods: [
-        this.terminalAuthEnv !== undefined || this.terminalAuthLegacyCommand !== undefined
+        this.terminalAuthEnv !== undefined ||
+        this.terminalAuthLegacyCommand !== undefined
           ? buildTerminalAuthMethod({
               env: this.terminalAuthEnv,
               legacyCommand: this.terminalAuthLegacyCommand,
@@ -368,7 +388,10 @@ export class AcpServer implements Agent {
       // must supply the connection. Surface a clear internal error
       // rather than letting Phase 3.4's `prompt` discover a missing
       // connection mid-stream.
-      throw RequestError.internalError(undefined, 'AcpServer is missing its AgentSideConnection');
+      throw RequestError.internalError(
+        undefined,
+        "AcpServer is missing its AgentSideConnection",
+      );
     }
     // Pre-mint the session id so the optional `AcpKaos` (built when the
     // client advertised `fs.readTextFile` / `fs.writeTextFile`) carries
@@ -378,20 +401,22 @@ export class AcpServer implements Agent {
     // the same reference, no AsyncLocalStorage needed.
     const sessionId = `session_${randomUUID()}`;
     const acpKaos = await this.maybeBuildAcpKaos(sessionId);
-    const persistenceKaos = acpKaos === undefined ? undefined : await this.ensureInnerKaos();
+    const persistenceKaos =
+      acpKaos === undefined ? undefined : await this.ensureInnerKaos();
     const session = await this.harness.createSession({
       id: sessionId,
       workDir: params.cwd,
       kaos: acpKaos,
       persistenceKaos,
-      sessionStartedProperties: { mode: 'new' },
+      sessionStartedProperties: { mode: "new" },
       // @ts-expect-error — `mcpServers` is a kernel-side extension
       // (agent-core `CreateSessionPayload`) the SDK transparently
       // forwards via spread. See block comment above.
       mcpServers,
     });
     const currentModelId = await this.resolveCurrentModelId();
-    const currentThinkingEffort = await this.resolveCurrentThinkingEffort(session);
+    const currentThinkingEffort =
+      await this.resolveCurrentThinkingEffort(session);
     const acpSession = new AcpSession(
       this.conn,
       session,
@@ -451,12 +476,13 @@ export class AcpServer implements Agent {
    * deliberately skips it (per ACP spec G4 / plan gap-4.3).
    */
   async loadSession(params: LoadSessionRequest): Promise<LoadSessionResponse> {
-    const { session, acpSession, configOptions } = await this.setupSessionFromExisting({
-      cwd: params.cwd,
-      sessionId: params.sessionId,
-      mcpServers: params.mcpServers,
-      mode: 'load',
-    });
+    const { session, acpSession, configOptions } =
+      await this.setupSessionFromExisting({
+        cwd: params.cwd,
+        sessionId: params.sessionId,
+        mcpServers: params.mcpServers,
+        mode: "load",
+      });
     // Synchronously replay history — the response must not settle
     // until every historical `session/update` has been pushed,
     // otherwise the client would race the load completion against
@@ -486,12 +512,14 @@ export class AcpServer implements Agent {
    * `replayHistory()` call. See plan G4 (lines 106-170) for the
    * rationale, and gap-4.1 for the matching capability advertisement.
    */
-  async resumeSession(params: ResumeSessionRequest): Promise<ResumeSessionResponse> {
+  async resumeSession(
+    params: ResumeSessionRequest,
+  ): Promise<ResumeSessionResponse> {
     const { session, configOptions } = await this.setupSessionFromExisting({
       cwd: params.cwd,
       sessionId: params.sessionId,
       mcpServers: params.mcpServers,
-      mode: 'resume',
+      mode: "resume",
     });
     this.scheduleAvailableCommandsUpdate(session.id);
     return { configOptions };
@@ -524,7 +552,7 @@ export class AcpServer implements Agent {
     cwd: string;
     sessionId: string;
     mcpServers?: ReadonlyArray<McpServer>;
-    mode: 'load' | 'resume';
+    mode: "load" | "resume";
   }): Promise<{
     session: Session;
     acpSession: AcpSession;
@@ -534,7 +562,10 @@ export class AcpServer implements Agent {
       throw RequestError.authRequired();
     }
     if (!this.conn) {
-      throw RequestError.internalError(undefined, 'AcpServer is missing its AgentSideConnection');
+      throw RequestError.internalError(
+        undefined,
+        "AcpServer is missing its AgentSideConnection",
+      );
     }
     // ACP `cwd` → SDK `workDir` for parity with `newSession`. The
     // harness's `resumeSession` only takes `{ id }` today; the cwd
@@ -547,7 +578,8 @@ export class AcpServer implements Agent {
     // kernel.
     const mcpServers = acpMcpServersToConfigs(params.mcpServers);
     const acpKaos = await this.maybeBuildAcpKaos(params.sessionId);
-    const persistenceKaos = acpKaos === undefined ? undefined : await this.ensureInnerKaos();
+    const persistenceKaos =
+      acpKaos === undefined ? undefined : await this.ensureInnerKaos();
     let session: Session;
     try {
       session = await this.harness.resumeSession({
@@ -564,7 +596,7 @@ export class AcpServer implements Agent {
       // returns a structured failure rather than a generic internal
       // error. Other errors propagate as-is.
       const code = (err as { code?: string } | undefined)?.code;
-      if (code === 'session.not_found') {
+      if (code === "session.not_found") {
         throw RequestError.invalidParams(
           { sessionId: params.sessionId },
           `Unknown sessionId: ${params.sessionId}`,
@@ -580,9 +612,9 @@ export class AcpServer implements Agent {
     // actually use — falling back to the harness-level default
     // resolution when the resume state lacks a `modelAlias`.
     const resumeState = session.getResumeState?.();
-    const resumedModelAlias = resumeState?.agents?.['main']?.config?.modelAlias;
+    const resumedModelAlias = resumeState?.agents?.["main"]?.config?.modelAlias;
     const currentModelId =
-      typeof resumedModelAlias === 'string' && resumedModelAlias.length > 0
+      typeof resumedModelAlias === "string" && resumedModelAlias.length > 0
         ? resumedModelAlias
         : await this.resolveCurrentModelId();
     // The resumed thinking effort is read off the main-agent config and
@@ -591,7 +623,8 @@ export class AcpServer implements Agent {
     // projects onto its row set. Falls back to the live session status,
     // then the harness-level default, when the resume state lacks the
     // field.
-    const resumedThinkingEffort = resumeState?.agents?.['main']?.config?.thinkingEffort;
+    const resumedThinkingEffort =
+      resumeState?.agents?.["main"]?.config?.thinkingEffort;
     const currentThinkingEffort = await this.resolveCurrentThinkingEffort(
       session,
       resumedThinkingEffort,
@@ -628,7 +661,9 @@ export class AcpServer implements Agent {
    * `SessionImpl` ctor and every tool downstream sees the same
    * reference — no AsyncLocalStorage involved.
    */
-  private async maybeBuildAcpKaos(sessionId: string): Promise<AcpKaos | undefined> {
+  private async maybeBuildAcpKaos(
+    sessionId: string,
+  ): Promise<AcpKaos | undefined> {
     const fs = this.clientCapabilities?.fs;
     if (!fs?.readTextFile && !fs?.writeTextFile) {
       return undefined;
@@ -657,8 +692,10 @@ export class AcpServer implements Agent {
    * landed on disk. Mirrors kimi-cli `acp/server.py:374-398` semantics
    * (plan G3, lines 68-104).
    */
-  async authenticate(params: AuthenticateRequest): Promise<AuthenticateResponse | void> {
-    if (params.methodId !== 'login') {
+  async authenticate(
+    params: AuthenticateRequest,
+  ): Promise<AuthenticateResponse | void> {
+    if (params.methodId !== "login") {
       throw RequestError.invalidParams(
         { methodId: params.methodId },
         `Unknown auth method: ${params.methodId}`,
@@ -673,7 +710,10 @@ export class AcpServer implements Agent {
   async prompt(params: PromptRequest): Promise<PromptResponse> {
     const acpSession = this.sessions.get(params.sessionId);
     if (!acpSession) {
-      throw RequestError.invalidParams(undefined, `Unknown sessionId: ${params.sessionId}`);
+      throw RequestError.invalidParams(
+        undefined,
+        `Unknown sessionId: ${params.sessionId}`,
+      );
     }
     return acpSession.prompt(params.prompt);
   }
@@ -683,14 +723,16 @@ export class AcpServer implements Agent {
     if (!acpSession) {
       // `cancel` is a JSON-RPC notification — the spec forbids notifications
       // returning errors. Log so unknown sessionIds aren't silently absorbed.
-      log.warn('acp: cancel for unknown sessionId', { sessionId: params.sessionId });
+      log.warn("acp: cancel for unknown sessionId", {
+        sessionId: params.sessionId,
+      });
       return;
     }
     try {
       await acpSession.cancel();
     } catch (err) {
       // Same notification-cannot-error rule: log and swallow.
-      log.warn('acp: error while cancelling session', {
+      log.warn("acp: error while cancelling session", {
         sessionId: params.sessionId,
         error: err instanceof Error ? err.message : String(err),
       });
@@ -708,7 +750,9 @@ export class AcpServer implements Agent {
    * `SetSessionModeResponse | void` union) so the wire payload is the
    * canonical empty success.
    */
-  async setSessionMode(params: SetSessionModeRequest): Promise<SetSessionModeResponse | void> {
+  async setSessionMode(
+    params: SetSessionModeRequest,
+  ): Promise<SetSessionModeResponse | void> {
     const acpSession = this.sessions.get(params.sessionId);
     if (!acpSession) {
       throw RequestError.invalidParams(
@@ -775,13 +819,13 @@ export class AcpServer implements Agent {
     }
     const value = (params as { value: unknown }).value;
     switch (params.configId) {
-      case 'model':
+      case "model":
         await acpSession.setModel(String(value));
         break;
-      case 'mode':
+      case "mode":
         await acpSession.setMode(String(value));
         break;
-      case 'thinking': {
+      case "thinking": {
         // The accepted values mirror the picker's advertised rows:
         // `'off'`, the legacy `'on'` alias (mapped to the model's
         // default effort), or one of the current model's declared
@@ -819,7 +863,9 @@ export class AcpServer implements Agent {
    * where the response is built in a single shot from the harness'
    * full snapshot.
    */
-  async listSessions(params: ListSessionsRequest): Promise<ListSessionsResponse> {
+  async listSessions(
+    params: ListSessionsRequest,
+  ): Promise<ListSessionsResponse> {
     // ACP `cwd` ↔ SDK `workDir`. The filter is optional; treat
     // `null` (the schema-allowed sentinel for "no filter") the same
     // as `undefined`.
@@ -861,7 +907,10 @@ export class AcpServer implements Agent {
    * promises; throwing is the only way to signal "unsupported" back to
    * the connection layer.
    */
-  async extNotification(method: string, _params: Record<string, unknown>): Promise<void> {
+  async extNotification(
+    method: string,
+    _params: Record<string, unknown>,
+  ): Promise<void> {
     throw RequestError.methodNotFound(method);
   }
 
@@ -891,36 +940,44 @@ export class AcpServer implements Agent {
     // `typeof harness.listAvailableModels === 'function'` guard, and we
     // preserve that ergonomic so adapter unit tests with bare-bones
     // stubs don't fire spurious "no models" warnings.
-    if (typeof this.harness.getConfig !== 'function') return '';
+    if (typeof this.harness.getConfig !== "function") return "";
     try {
       const config = await this.harness.getConfig();
       const declared = config.defaultModel;
-      if (typeof declared === 'string' && declared.length > 0) {
+      if (typeof declared === "string" && declared.length > 0) {
         return declared;
       }
     } catch (err) {
-      log.warn('acp: harness.getConfig threw during configOptions assembly; falling back', {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      return '';
+      log.warn(
+        "acp: harness.getConfig threw during configOptions assembly; falling back",
+        {
+          error: err instanceof Error ? err.message : String(err),
+        },
+      );
+      return "";
     }
     try {
       const models = await listModelsFromHarness(this.harness);
       if (models.length === 0) {
-        log.warn('acp: harness exposes no models; configOptions will ship an empty model picker');
-        return '';
+        log.warn(
+          "acp: harness exposes no models; configOptions will ship an empty model picker",
+        );
+        return "";
       }
       log.warn(
-        'acp: harness has no defaultModel; falling back to first catalog entry for configOptions.currentValue',
+        "acp: harness has no defaultModel; falling back to first catalog entry for configOptions.currentValue",
         { fallbackModelId: models[0]!.id },
       );
       return models[0]!.id;
     } catch (err) {
-      log.warn('acp: listModelsFromHarness threw during configOptions assembly', {
-        error: err instanceof Error ? err.message : String(err),
-      });
+      log.warn(
+        "acp: listModelsFromHarness threw during configOptions assembly",
+        {
+          error: err instanceof Error ? err.message : String(err),
+        },
+      );
     }
-    return '';
+    return "";
   }
 
   /**
@@ -944,31 +1001,40 @@ export class AcpServer implements Agent {
     const resumed = effortStringOrUndefined(resumedThinkingEffort);
     if (resumed !== undefined) return resumed;
 
-    if (typeof session.getStatus === 'function') {
+    if (typeof session.getStatus === "function") {
       try {
-        const current = effortStringOrUndefined((await session.getStatus()).thinkingEffort);
+        const current = effortStringOrUndefined(
+          (await session.getStatus()).thinkingEffort,
+        );
         if (current !== undefined) return current;
       } catch (error) {
-        log.warn('acp: session.getStatus threw during thinking effort resolution; falling back', {
-          error: error instanceof Error ? error.message : String(error),
-        });
+        log.warn(
+          "acp: session.getStatus threw during thinking effort resolution; falling back",
+          {
+            error: error instanceof Error ? error.message : String(error),
+          },
+        );
       }
     }
 
-    if (typeof this.harness.getConfig !== 'function') return 'off';
+    if (typeof this.harness.getConfig !== "function") return "off";
     try {
       const config = await this.harness.getConfig();
-      const thinking = (config as { thinking?: { enabled?: unknown; effort?: unknown } })
-        .thinking;
-      if (thinking?.enabled === false) return 'off';
+      const thinking = (
+        config as { thinking?: { enabled?: unknown; effort?: unknown } }
+      ).thinking;
+      if (thinking?.enabled === false) return "off";
       const configured = effortStringOrUndefined(thinking?.effort);
       if (configured !== undefined) return configured;
-      return thinking?.enabled === true ? 'on' : 'off';
+      return thinking?.enabled === true ? "on" : "off";
     } catch (err) {
-      log.warn('acp: harness.getConfig threw during thinking effort resolution; defaulting to off', {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      return 'off';
+      log.warn(
+        "acp: harness.getConfig threw during thinking effort resolution; defaulting to off",
+        {
+          error: err instanceof Error ? err.message : String(err),
+        },
+      );
+      return "off";
     }
   }
 
@@ -992,7 +1058,7 @@ export class AcpServer implements Agent {
    */
   private makeTelemetryTrack(): TelemetryTrackFn | undefined {
     const harness = this.harness;
-    if (typeof harness.track !== 'function') return undefined;
+    if (typeof harness.track !== "function") return undefined;
     return (event, properties) => {
       // Cast: the harness expects the narrower `TelemetryProperties`
       // shape (Readonly<Record<string, primitive>>); Phase 13 callers
@@ -1021,22 +1087,21 @@ export class AcpServer implements Agent {
       // the client sees in its palette — no race between "/skill:X is
       // advertised" and "the adapter can intercept /skill:X". Intentionally
       // tolerant of older AcpSession builds in adapter-level unit tests.
-      if (typeof acpSession.setAvailableCommands === 'function') {
+      if (typeof acpSession.setAvailableCommands === "function") {
         acpSession.setAvailableCommands(commands, skillCommandMap);
-      } else if (typeof acpSession.setSkillCommandMap === 'function') {
+      } else if (typeof acpSession.setSkillCommandMap === "function") {
         acpSession.setSkillCommandMap(skillCommandMap);
       }
       await this.conn.sessionUpdate(
         availableCommandsUpdateNotification(sessionId, commands),
       );
     } catch (err) {
-      log.warn('acp: failed to push available_commands_update', {
+      log.warn("acp: failed to push available_commands_update", {
         sessionId,
         error: err instanceof Error ? err.message : String(err),
       });
     }
   }
-
 }
 
 /**
@@ -1055,7 +1120,10 @@ export async function runAcpServerWithStream(
     slashCommands?: SlashCommandsResolver;
   },
 ): Promise<void> {
-  const conn = new AgentSideConnection((c) => new AcpServer(harness, c, opts), stream);
+  const conn = new AgentSideConnection(
+    (c) => new AcpServer(harness, c, opts),
+    stream,
+  );
   await conn.closed;
 }
 
@@ -1113,7 +1181,7 @@ export async function runAcpServer(
      * without touching the real `process` listener set. Defaults to
      * `process` in production.
      */
-    signals?: Pick<NodeJS.EventEmitter, 'once' | 'off'>;
+    signals?: Pick<NodeJS.EventEmitter, "once" | "off">;
   },
 ): Promise<void> {
   // Stdout is the JSON-RPC channel; protect it before anything else
@@ -1132,27 +1200,27 @@ export async function runAcpServer(
     if (cleanedUp) return;
     cleanedUp = true;
     if (signal) {
-      log.info('acp: received signal, draining harness', { signal });
+      log.info("acp: received signal, draining harness", { signal });
     }
     try {
       await harness.close();
     } catch (err) {
       // The process is exiting either way; log so the diagnostic is
       // preserved rather than disappearing into a thrown promise.
-      log.error('acp: harness close failed during shutdown', {
+      log.error("acp: harness close failed during shutdown", {
         error: err instanceof Error ? err.message : String(err),
       });
     }
   };
 
   const onSigint = (): void => {
-    void cleanup('SIGINT');
+    void cleanup("SIGINT");
   };
   const onSigterm = (): void => {
-    void cleanup('SIGTERM');
+    void cleanup("SIGTERM");
   };
-  signals.once('SIGINT', onSigint);
-  signals.once('SIGTERM', onSigterm);
+  signals.once("SIGINT", onSigint);
+  signals.once("SIGTERM", onSigterm);
 
   try {
     // Resolves when `AgentSideConnection.closed` settles — either
@@ -1169,8 +1237,8 @@ export async function runAcpServer(
     // double-tapping Ctrl-C while the drain is in flight) propagates
     // to the default handler and force-kills the process — exactly
     // the behaviour terminal users expect.
-    signals.off('SIGINT', onSigint);
-    signals.off('SIGTERM', onSigterm);
+    signals.off("SIGINT", onSigint);
+    signals.off("SIGTERM", onSigterm);
     await cleanup();
   }
 }
@@ -1197,14 +1265,18 @@ export async function runAcpServer(
  */
 function sessionSummaryToSessionInfo(summary: SessionSummary): SessionInfo {
   let updatedAt: string | null = null;
-  if (typeof summary.updatedAt === 'number' && Number.isFinite(summary.updatedAt)) {
+  if (
+    typeof summary.updatedAt === "number" &&
+    Number.isFinite(summary.updatedAt)
+  ) {
     const date = new Date(summary.updatedAt);
     if (!Number.isNaN(date.getTime())) {
       updatedAt = date.toISOString();
     }
   }
   const titleRaw = summary.title;
-  const title = typeof titleRaw === 'string' && titleRaw.length > 0 ? titleRaw : null;
+  const title =
+    typeof titleRaw === "string" && titleRaw.length > 0 ? titleRaw : null;
   return {
     sessionId: summary.id,
     cwd: summary.workDir,

@@ -1,6 +1,6 @@
-import { readConfigFile, writeConfigFile } from '../../config';
-import type { KimiConfig, OAuthRef } from '../../config';
-import type { OAuthTokenProviderResolver } from '../../session/provider-manager';
+import { readConfigFile, writeConfigFile } from "../../config";
+import type { KimiConfig, OAuthRef } from "../../config";
+import type { OAuthTokenProviderResolver } from "../../session/provider-manager";
 import {
   applyManagedKimiCodeConfig,
   applyManagedKimiCodeLogoutConfig,
@@ -12,13 +12,13 @@ import {
   type KimiHostIdentity,
   type KimiOAuthLoginOptions,
   type ManagedKimiConfigShape,
-} from '@moonshot-ai/kimi-code-oauth';
+} from "@moonshot-ai/kimi-code-oauth";
 
-import type { IEnvironmentService } from '../environment/environment';
+import type { IEnvironmentService } from "../environment/environment";
 
 type ServicesManagedConfig = KimiConfig & ManagedKimiConfigShape;
 
-type ServicesAuthLoginOptions = Omit<KimiOAuthLoginOptions, 'provisionConfig'>;
+type ServicesAuthLoginOptions = Omit<KimiOAuthLoginOptions, "provisionConfig">;
 
 interface ServicesAuthLoginResult {
   readonly providerName: string;
@@ -50,7 +50,10 @@ class ServicesManagedAuthFacade implements ServicesAuthFacade {
   private readonly toolkit: KimiOAuthToolkit<ServicesManagedConfig>;
 
   constructor(
-    private readonly options: Pick<IEnvironmentService, 'homeDir' | 'configPath'>,
+    private readonly options: Pick<
+      IEnvironmentService,
+      "homeDir" | "configPath"
+    >,
     identity?: KimiHostIdentity,
   ) {
     this.toolkit = new KimiOAuthToolkit<ServicesManagedConfig>({
@@ -87,7 +90,7 @@ class ServicesManagedAuthFacade implements ServicesAuthFacade {
       provisionConfig: true,
     });
     if (result.provision === undefined) {
-      throw new Error('Kimi auth login did not provision model config.');
+      throw new Error("Kimi auth login did not provision model config.");
     }
     return {
       providerName: result.providerName,
@@ -171,7 +174,7 @@ class ServicesManagedAuthFacade implements ServicesAuthFacade {
 }
 
 export function createManagedAuthFacade(
-  env: Pick<IEnvironmentService, 'homeDir' | 'configPath'>,
+  env: Pick<IEnvironmentService, "homeDir" | "configPath">,
   identity?: KimiHostIdentity,
 ): ServicesAuthFacade {
   return new ServicesManagedAuthFacade(env, identity);

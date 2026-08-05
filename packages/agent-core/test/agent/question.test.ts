@@ -1,17 +1,17 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from "vitest";
 
-import { testAgent } from './harness/agent';
+import { testAgent } from "./harness/agent";
 
-describe('Agent question', () => {
-  it('roundtrips a question request through wire rpc', async () => {
+describe("Agent question", () => {
+  it("roundtrips a question request through wire rpc", async () => {
     const ctx = testAgent();
 
     const resultPromise = ctx.agent.rpc!.requestQuestion!(
       {
         questions: [
           {
-            question: 'Pick one',
-            options: [{ label: 'Yes' }, { label: 'No' }],
+            question: "Pick one",
+            options: [{ label: "Yes" }, { label: "No" }],
           },
         ],
       },
@@ -26,19 +26,19 @@ describe('Agent question', () => {
     await ctx.expectResumeMatches();
   });
 
-  it('sends multiple questions in one request', async () => {
+  it("sends multiple questions in one request", async () => {
     const ctx = testAgent();
 
     const resultPromise = ctx.agent.rpc!.requestQuestion!(
       {
         questions: [
           {
-            question: 'Pick one',
-            options: [{ label: 'Yes' }, { label: 'No' }],
+            question: "Pick one",
+            options: [{ label: "Yes" }, { label: "No" }],
           },
           {
-            question: 'Pick storage',
-            options: [{ label: 'Postgres' }, { label: 'SQLite' }],
+            question: "Pick storage",
+            options: [{ label: "Postgres" }, { label: "SQLite" }],
           },
         ],
       },
@@ -46,12 +46,15 @@ describe('Agent question', () => {
     );
 
     expect(
-      await ctx.untilQuestion({ Yes: true, 'Pick storage': 'Postgres' }),
+      await ctx.untilQuestion({ Yes: true, "Pick storage": "Postgres" }),
     ).toMatchInlineSnapshot(
       `[emit] requestQuestion   { "questions": [ { "question": "Pick one", "options": [ { "label": "Yes" }, { "label": "No" } ] }, { "question": "Pick storage", "options": [ { "label": "Postgres" }, { "label": "SQLite" } ] } ] }`,
     );
 
-    await expect(resultPromise).resolves.toEqual({ Yes: true, 'Pick storage': 'Postgres' });
+    await expect(resultPromise).resolves.toEqual({
+      Yes: true,
+      "Pick storage": "Postgres",
+    });
     await ctx.expectResumeMatches();
   });
 });

@@ -11,38 +11,45 @@
 //       keeping the shard's WAL hot so the parent's reads never see a quiet
 //       fingerprint.
 
-import { ClusterDb } from '../src/cluster/index.js';
-import { shardFor } from '../src/cluster/utils.js';
+import { ClusterDb } from "../src/cluster/index.js";
+import { shardFor } from "../src/cluster/utils.js";
 
 const [, , mode, ...rest] = process.argv;
 
 function out(report: Record<string, unknown>): void {
-  process.stdout.write(JSON.stringify(report) + '\n');
+  process.stdout.write(JSON.stringify(report) + "\n");
 }
 
 /** Keys `${seed}:${n}` (n = 0,1,2,...) that route to `shard`, in order. */
-function* keysOnShard(seed: string, shard: number, shards: number): Generator<string> {
+function* keysOnShard(
+  seed: string,
+  shard: number,
+  shards: number,
+): Generator<string> {
   for (let n = 0; ; n++) {
     const key = `${seed}:${n}`;
     if (shardFor(key, shards) === shard) yield key;
   }
 }
 
-function value(i: number, valueBytes: number): { p: string; i: number; pad: string } {
-  return { p: 'b', i, pad: 'x'.repeat(valueBytes) };
+function value(
+  i: number,
+  valueBytes: number,
+): { p: string; i: number; pad: string } {
+  return { p: "b", i, pad: "x".repeat(valueBytes) };
 }
 
 async function main(): Promise<void> {
-  if (mode === 'preload') {
+  if (mode === "preload") {
     const [dir, shards, shard, n, valueBytes] = rest;
     const db = await ClusterDb.open({
       dir: dir!,
       shardCount: Number(shards),
-      valueCodec: 'json',
-      fsyncPolicy: 'no',
+      valueCodec: "json",
+      fsyncPolicy: "no",
       autoCompact: false,
     });
-    const gen = keysOnShard('pre', Number(shard), Number(shards));
+    const gen = keysOnShard("pre", Number(shard), Number(shards));
     const t0 = performance.now();
     const count = Number(n);
     for (let i = 0; i < count; i++) {
@@ -57,13 +64,13 @@ async function main(): Promise<void> {
     return;
   }
 
-  if (mode === 'hammer') {
-    const [dir, shards, shard, valueBytes, paceMs = '5'] = rest;
+  if (mode === "hammer") {
+    const [dir, shards, shard, valueBytes, paceMs = "5"] = rest;
     const db = await ClusterDb.open({
       dir: dir!,
       shardCount: Number(shards),
-      valueCodec: 'json',
-      fsyncPolicy: 'no',
+      valueCodec: "json",
+      fsyncPolicy: "no",
       // No compaction during the measured window: rotation costs are covered
       // by tests, mixing one into a latency sample only muddies the numbers.
       autoCompact: false,
@@ -73,7 +80,7 @@ async function main(): Promise<void> {
       lockHoldMs: 0,
     });
     let stop = false;
-    process.on('SIGTERM', () => {
+    process.on("SIGTERM", () => {
       stop = true;
     });
     // A small yield between writes paces the WAL into a steady drip: un-paced,
@@ -81,7 +88,7 @@ async function main(): Promise<void> {
     // writev, so a reader only observes the file change a few times a second
     // instead of on (almost) every read.
     const pace = Number(paceMs);
-    const gen = keysOnShard('hot', Number(shard), Number(shards));
+    const gen = keysOnShard("hot", Number(shard), Number(shards));
     let i = 0;
     const t0 = performance.now();
     while (!stop) {
@@ -99,6 +106,10 @@ async function main(): Promise<void> {
 }
 
 main().catch((e) => {
-  out({ ok: 0, mode, error: String(e && (e as Error).stack ? (e as Error).stack : e) });
+  out({
+    ok: 0,
+    mode,
+    error: String(e && (e as Error).stack ? (e as Error).stack : e),
+  });
   process.exit(1);
 });

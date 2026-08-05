@@ -53,15 +53,15 @@
  * failing the session resume.
  */
 
-import { readFile } from 'node:fs/promises';
+import { readFile } from "node:fs/promises";
 
 import {
   Agent,
   type AgentRecord,
   type AgentRecordPersistence,
   type AgentReplayRecord,
-} from '@moonshot-ai/agent-core';
-import { LocalKaos } from '@moonshot-ai/kaos';
+} from "@moonshot-ai/agent-core";
+import { LocalKaos } from "@moonshot-ai/kaos";
 
 export interface FoldedAgentReplay {
   readonly replay: readonly AgentReplayRecord[];
@@ -101,14 +101,16 @@ class ReadOnlyAgentRecordPersistence implements AgentRecordPersistence {
  * snapshot. Best-effort: unreadable or malformed journals yield an empty
  * fold, never a rejected resume.
  */
-export async function foldAgentWireReplay(wirePath: string): Promise<FoldedAgentReplay> {
+export async function foldAgentWireReplay(
+  wirePath: string,
+): Promise<FoldedAgentReplay> {
   try {
-    const records = parseWireRecords(await readFile(wirePath, 'utf-8'));
+    const records = parseWireRecords(await readFile(wirePath, "utf-8"));
     if (records.length === 0) return EMPTY_FOLD;
     const agent = new Agent({
       kaos: await LocalKaos.create(),
       persistence: new ReadOnlyAgentRecordPersistence(records),
-      type: 'sub',
+      type: "sub",
     });
     await agent.resume({ rewriteMigratedRecords: false });
     return {
@@ -126,10 +128,10 @@ export async function foldAgentWireReplay(wirePath: string): Promise<FoldedAgent
  * else is an error.
  */
 function parseWireRecords(content: string): AgentRecord[] {
-  const lines = content.split('\n');
+  const lines = content.split("\n");
   const records: AgentRecord[] = [];
   for (const [index, rawLine] of lines.entries()) {
-    const line = rawLine.endsWith('\r') ? rawLine.slice(0, -1) : rawLine;
+    const line = rawLine.endsWith("\r") ? rawLine.slice(0, -1) : rawLine;
     if (line.length === 0) continue;
     try {
       records.push(JSON.parse(line) as AgentRecord);

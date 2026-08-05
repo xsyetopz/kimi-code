@@ -28,19 +28,19 @@
  * the env-synthesized entry sees the already-applied env view.
  */
 
-import type { ConfigEffectiveOverlay } from '#/app/config/config';
-import { registerConfigOverlay } from '#/app/config/configOverlayContributions';
-import { isPlainObject } from '#/app/config/toml';
-import type { ModelOverride } from '#/kosong/model/model';
+import type { ConfigEffectiveOverlay } from "#/app/config/config";
+import { registerConfigOverlay } from "#/app/config/configOverlayContributions";
+import { isPlainObject } from "#/app/config/toml";
+import type { ModelOverride } from "#/kosong/model/model";
 
 import {
   DEFAULT_MODEL_SECTION,
   MODELS_SECTION,
   SECONDARY_MODEL_SECTION,
   type SecondaryModelConfig,
-} from './configSection';
+} from "./configSection";
 
-export const SECONDARY_DERIVED_MODEL_ID = '__secondary__';
+export const SECONDARY_DERIVED_MODEL_ID = "__secondary__";
 
 export function secondaryModelPatch(
   secondary: SecondaryModelConfig | undefined,
@@ -63,10 +63,16 @@ function withoutKey(value: unknown, key: string): unknown {
 
 export const secondaryModelOverlay: ConfigEffectiveOverlay = {
   apply(effective, _getEnv, validate) {
-    const secondary = effective[SECONDARY_MODEL_SECTION] as SecondaryModelConfig | undefined;
+    const secondary = effective[SECONDARY_MODEL_SECTION] as
+      | SecondaryModelConfig
+      | undefined;
     const patch = secondaryModelPatch(secondary);
     const baseId = secondary?.model;
-    if (patch === undefined || baseId === undefined || baseId === SECONDARY_DERIVED_MODEL_ID) {
+    if (
+      patch === undefined ||
+      baseId === undefined ||
+      baseId === SECONDARY_DERIVED_MODEL_ID
+    ) {
       return [];
     }
     const models = asRecord(effective[MODELS_SECTION]);
@@ -90,8 +96,8 @@ export const secondaryModelOverlay: ConfigEffectiveOverlay = {
         return withoutKey(value, SECONDARY_DERIVED_MODEL_ID);
       case DEFAULT_MODEL_SECTION:
         if (value !== SECONDARY_DERIVED_MODEL_ID) return value;
-        return typeof rawSnake['default_model'] === 'string'
-          ? rawSnake['default_model']
+        return typeof rawSnake["default_model"] === "string"
+          ? rawSnake["default_model"]
           : undefined;
       default:
         return value;

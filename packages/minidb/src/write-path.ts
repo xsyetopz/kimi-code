@@ -14,24 +14,37 @@
 // publishes), the write-op gate, the unique-write serializer, and the
 // owner's lifecycle/compaction callbacks.
 
-import { backupInProgressError } from './backup.js';
-import { encodeFrame, encodeBatchOps, scanBatchOpRefs, HEADER_SIZE, TYPE_SET, TYPE_DEL, TYPE_BATCH } from './codec.js';
-import type { BatchOp as EncodedBatchOp, FrameRef } from './codec.js';
-import { frameToOps } from './recovery.js';
-import type { ValueMode, RecoveredOp } from './recovery.js';
-import { toBuf, toKStr, normDt, MAX_KEY_LEN } from './value-codec.js';
-import type { Store, StoreRecord, ValueLoc } from './store.js';
-import type { WAL } from './wal.js';
-import type { IndexManager } from './index-manager.js';
-import type { DtIndex } from './dt-index.js';
-import type { CompoundIndexManager } from './compound-index.js';
-import type { OpTracker } from './op-tracker.js';
-import type { WalGroupTracker } from './wal-group.js';
-import type { MemoryGuard } from './memory-guard.js';
-import type { TextRegistry } from './text-registry.js';
-import type { GenerationBuilder } from './generation-builder.js';
-import type { TextIndex } from './text-index/index.js';
-import type { SetOptions, BatchInputOp, PreparedOp, ValueCodecName } from './types.js';
+import { backupInProgressError } from "./backup.js";
+import {
+  encodeFrame,
+  encodeBatchOps,
+  scanBatchOpRefs,
+  HEADER_SIZE,
+  TYPE_SET,
+  TYPE_DEL,
+  TYPE_BATCH,
+} from "./codec.js";
+import type { BatchOp as EncodedBatchOp, FrameRef } from "./codec.js";
+import { frameToOps } from "./recovery.js";
+import type { ValueMode, RecoveredOp } from "./recovery.js";
+import { toBuf, toKStr, normDt, MAX_KEY_LEN } from "./value-codec.js";
+import type { Store, StoreRecord, ValueLoc } from "./store.js";
+import type { WAL } from "./wal.js";
+import type { IndexManager } from "./index-manager.js";
+import type { DtIndex } from "./dt-index.js";
+import type { CompoundIndexManager } from "./compound-index.js";
+import type { OpTracker } from "./op-tracker.js";
+import type { WalGroupTracker } from "./wal-group.js";
+import type { MemoryGuard } from "./memory-guard.js";
+import type { TextRegistry } from "./text-registry.js";
+import type { GenerationBuilder } from "./generation-builder.js";
+import type { TextIndex } from "./text-index/index.js";
+import type {
+  SetOptions,
+  BatchInputOp,
+  PreparedOp,
+  ValueCodecName,
+} from "./types.js";
 
 /** The stats counters the write path touches (a structural view of MiniDb's
  *  stats object). */
@@ -71,7 +84,9 @@ export class WritePath<V> {
    *  synchronous apply section of a commit body (shared safely because
    *  nothing awaits while it is read); callers lift the reference into a
    *  local before any await. Avoids one small allocation per write op. */
-  private readonly applyBox: { prev: StoreRecord | undefined } = { prev: undefined };
+  private readonly applyBox: { prev: StoreRecord | undefined } = {
+    prev: undefined,
+  };
 
   constructor(private readonly deps: WritePathDeps<V>) {}
 
@@ -108,9 +123,11 @@ export class WritePath<V> {
     try {
       await commit();
     } catch (e) {
-      const sealed = (e as { code?: string }).code === 'WAL_SEALED';
+      const sealed = (e as { code?: string }).code === "WAL_SEALED";
       const closedMidRotation =
-        this.deps.rotateLock() !== null && e instanceof Error && e.message === 'WAL is closed';
+        this.deps.rotateLock() !== null &&
+        e instanceof Error &&
+        e.message === "WAL is closed";
       if (!sealed && !closedMidRotation) throw e;
       await this.awaitRotation();
       await commit();
@@ -120,7 +137,7 @@ export class WritePath<V> {
   async evictKey(pk: string): Promise<void> {
     const bytes = this.deps.store().recordBytes(pk);
     if (!bytes) return;
-    const op = this.prepareDel(Buffer.from(pk, 'binary'));
+    const op = this.prepareDel(Buffer.from(pk, "binary"));
     // Committed through retryOnWalSeal like any other write: an evict that
     // passed the writer gate just before a compaction rotation can land its
     // DEL on the freshly-sealed (or just-closed, soon-to-be-replaced) old WAL,
@@ -131,7 +148,9 @@ export class WritePath<V> {
       const recoveryGate = this.deps.walGroups.walRecoveryGate();
       if (recoveryGate) await recoveryGate;
       const wal = this.deps.wal();
-      const appended = wal.appendLoc(encodeFrame({ type: TYPE_DEL, key: op.key }));
+      const appended = wal.appendLoc(
+        encodeFrame({ type: TYPE_DEL, key: op.key }),
+      );
       const group = this.deps.walGroups.groupFor(wal, appended.batchId);
       const applied = this.applyBox;
       let prev: StoreRecord | undefined;
@@ -158,7 +177,8 @@ export class WritePath<V> {
         await appended.done;
         this.deps.stats.evictions++;
       } catch (e) {
-        if (group) this.deps.walGroups.rollbackGroup(group, wal, appended.batchId);
+        if (group)
+          this.deps.walGroups.rollbackGroup(group, wal, appended.batchId);
         else this.restoreKey(op.pk, prev, seq);
         this.deps.walGroups.kickWalRecovery(wal);
         throw this.deps.walGroups.markAmbiguous(e);
@@ -169,10 +189,14 @@ export class WritePath<V> {
   }
 
   private checkKey(key: string | Buffer): void {
-    const len = typeof key === 'string' ? key.length : Buffer.from(key).length;
-    if (len > MAX_KEY_LEN) throw new RangeError(`key too long (>${MAX_KEY_LEN})`);
-    if ((typeof key === 'string' && key.length === 0) || (Buffer.isBuffer(key) && key.length === 0)) {
-      throw new RangeError('key must be non-empty');
+    const len = typeof key === "string" ? key.length : Buffer.from(key).length;
+    if (len > MAX_KEY_LEN)
+      throw new RangeError(`key too long (>${MAX_KEY_LEN})`);
+    if (
+      (typeof key === "string" && key.length === 0) ||
+      (Buffer.isBuffer(key) && key.length === 0)
+    ) {
+      throw new RangeError("key must be non-empty");
     }
   }
 
@@ -196,10 +220,14 @@ export class WritePath<V> {
     if (this.deps.wal() !== wal || seq === undefined) return;
     const cur = this.deps.store().map.get(pk);
     if (!cur || cur.seq !== seq) return;
-    this.deps.store().setRef(pk, { kind: 'disk', loc }, expireAt, dt);
+    this.deps.store().setRef(pk, { kind: "disk", loc }, expireAt, dt);
   }
 
-  async set(key: string | Buffer, value: V, { ttl, dt }: SetOptions = {}): Promise<void> {
+  async set(
+    key: string | Buffer,
+    value: V,
+    { ttl, dt }: SetOptions = {},
+  ): Promise<void> {
     this.deps.ensureOpen();
     this.deps.ensureWritable();
     this.checkKey(key);
@@ -216,7 +244,8 @@ export class WritePath<V> {
       // re-check (every violation-creating writer is serialized out).
       const run = async (): Promise<void> => {
         const op = this.prepareSet(key, value, { ttl, dt });
-        if (this.deps.indexes.size && this.deps.indexable(op.canonical)) this.deps.indexes.checkUnique(op.pk, op.canonical);
+        if (this.deps.indexes.size && this.deps.indexable(op.canonical))
+          this.deps.indexes.checkUnique(op.pk, op.canonical);
         await this.deps.memoryGuard.ensureMemoryFor([op]);
         await this.retryOnWalSeal(() => this.commitSetOp(op));
       };
@@ -230,73 +259,84 @@ export class WritePath<V> {
   /** The set() commit body: append the frame and apply the prepared op,
    *  rolling back (per-op or group) when the WAL write fails. */
   private async commitSetOp(op: PreparedOp<V>): Promise<void> {
-      // Queue behind any in-place WAL recovery: a write issued after a
-      // failure waits for the truncate + poison-clear instead of hitting the
-      // still-poisoned WAL. Null (and zero-cost) when no recovery is running.
-      const recoveryGate = this.deps.walGroups.walRecoveryGate();
-      if (recoveryGate) await recoveryGate;
-      const frame = encodeFrame({ type: TYPE_SET, key: op.key, value: op.value, meta: op.meta, expireAt: op.expireAt });
-      const wal = this.deps.wal();
-      const appended = wal.appendLoc(frame);
-      // Apply in the SAME synchronous tick as the WAL append, so a concurrent
-      // compaction always snapshots the post-write state. In valueMode 'disk'
-      // the record first holds an in-memory ref: the frame's bytes are not in
-      // db.wal yet (appendLoc's offset is only a prediction), so a disk
-      // pointer published now could point past the end of the file. The
-      // pointer is published once `done` resolves (see publishWalRef). If the
-      // WAL write ultimately fails, the whole flush group rolls back to the
-      // pre-group records so in-memory state never diverges from what is
-      // durable (and from what a reopen replays after the in-place recovery
-      // truncated the failed tail).
-      const group = this.deps.walGroups.groupFor(wal, appended.batchId);
-      const applied = this.applyBox;
-      let prev: StoreRecord | undefined;
-      let seq: number | undefined;
-      try {
-        this.applyOp(op, applied);
-        // Lift the pre-state reference out of the shared scratch before any
-        // await lets a later op overwrite it.
-        prev = applied.prev;
-        seq = this.deps.store().map.get(op.pk)?.seq;
-      } catch (err) {
-        // applyOp violated its must-not-throw contract (see its doc — stage 11
-        // makes it structural; this try is the defensive layer). An enqueued
-        // frame (batchId >= 0) is un-acked and must never reach disk: poison
-        // the WAL exactly like a write failure and roll the group back. A
-        // never-enqueued frame (batchId < 0, e.g. a seal race) poisons
-        // nothing — only the partial in-memory mutation needs undoing.
-        void appended.done.catch(() => {}); // this op throws here; swallow the frame's rejection
-        if (group) {
-          wal.poisonPending(err);
-          this.deps.walGroups.groupNoteKey(group, op.pk, applied.prev);
-          this.deps.walGroups.rollbackGroup(group, wal, appended.batchId);
-          this.deps.walGroups.kickWalRecovery(wal);
-        } else {
-          this.restoreGroupKey(op.pk, applied.prev);
-        }
-        throw this.deps.walGroups.markAmbiguous(err);
-      }
-      this.deps.walGroups.groupNoteKey(group, op.pk, prev);
-      try {
-        await appended.done;
-      } catch (e) {
-        if (group) this.deps.walGroups.rollbackGroup(group, wal, appended.batchId);
-        else this.restoreKey(op.pk, prev, seq);
+    // Queue behind any in-place WAL recovery: a write issued after a
+    // failure waits for the truncate + poison-clear instead of hitting the
+    // still-poisoned WAL. Null (and zero-cost) when no recovery is running.
+    const recoveryGate = this.deps.walGroups.walRecoveryGate();
+    if (recoveryGate) await recoveryGate;
+    const frame = encodeFrame({
+      type: TYPE_SET,
+      key: op.key,
+      value: op.value,
+      meta: op.meta,
+      expireAt: op.expireAt,
+    });
+    const wal = this.deps.wal();
+    const appended = wal.appendLoc(frame);
+    // Apply in the SAME synchronous tick as the WAL append, so a concurrent
+    // compaction always snapshots the post-write state. In valueMode 'disk'
+    // the record first holds an in-memory ref: the frame's bytes are not in
+    // db.wal yet (appendLoc's offset is only a prediction), so a disk
+    // pointer published now could point past the end of the file. The
+    // pointer is published once `done` resolves (see publishWalRef). If the
+    // WAL write ultimately fails, the whole flush group rolls back to the
+    // pre-group records so in-memory state never diverges from what is
+    // durable (and from what a reopen replays after the in-place recovery
+    // truncated the failed tail).
+    const group = this.deps.walGroups.groupFor(wal, appended.batchId);
+    const applied = this.applyBox;
+    let prev: StoreRecord | undefined;
+    let seq: number | undefined;
+    try {
+      this.applyOp(op, applied);
+      // Lift the pre-state reference out of the shared scratch before any
+      // await lets a later op overwrite it.
+      prev = applied.prev;
+      seq = this.deps.store().map.get(op.pk)?.seq;
+    } catch (err) {
+      // applyOp violated its must-not-throw contract (see its doc — stage 11
+      // makes it structural; this try is the defensive layer). An enqueued
+      // frame (batchId >= 0) is un-acked and must never reach disk: poison
+      // the WAL exactly like a write failure and roll the group back. A
+      // never-enqueued frame (batchId < 0, e.g. a seal race) poisons
+      // nothing — only the partial in-memory mutation needs undoing.
+      void appended.done.catch(() => {}); // this op throws here; swallow the frame's rejection
+      if (group) {
+        wal.poisonPending(err);
+        this.deps.walGroups.groupNoteKey(group, op.pk, applied.prev);
+        this.deps.walGroups.rollbackGroup(group, wal, appended.batchId);
         this.deps.walGroups.kickWalRecovery(wal);
-        throw this.deps.walGroups.markAmbiguous(e);
+      } else {
+        this.restoreGroupKey(op.pk, applied.prev);
       }
-      this.deps.walGroups.settleGroup(group, wal, appended.batchId);
-      if (this.deps.valueMode() === 'disk') {
-        this.publishWalRef(
-          op.pk,
-          wal,
-          seq,
-          { file: 'wal', off: appended.offset + HEADER_SIZE + op.key.length, len: op.value!.length },
-          op.expireAt,
-          op.dtNorm,
-        );
-      }
-      this.deps.maybeAutoCompact();
+      throw this.deps.walGroups.markAmbiguous(err);
+    }
+    this.deps.walGroups.groupNoteKey(group, op.pk, prev);
+    try {
+      await appended.done;
+    } catch (e) {
+      if (group)
+        this.deps.walGroups.rollbackGroup(group, wal, appended.batchId);
+      else this.restoreKey(op.pk, prev, seq);
+      this.deps.walGroups.kickWalRecovery(wal);
+      throw this.deps.walGroups.markAmbiguous(e);
+    }
+    this.deps.walGroups.settleGroup(group, wal, appended.batchId);
+    if (this.deps.valueMode() === "disk") {
+      this.publishWalRef(
+        op.pk,
+        wal,
+        seq,
+        {
+          file: "wal",
+          off: appended.offset + HEADER_SIZE + op.key.length,
+          len: op.value!.length,
+        },
+        op.expireAt,
+        op.dtNorm,
+      );
+    }
+    this.deps.maybeAutoCompact();
   }
 
   async del(key: string | Buffer): Promise<boolean> {
@@ -313,7 +353,9 @@ export class WritePath<V> {
         const recoveryGate = this.deps.walGroups.walRecoveryGate();
         if (recoveryGate) await recoveryGate;
         const wal = this.deps.wal();
-        const appended = wal.appendLoc(encodeFrame({ type: TYPE_DEL, key: op.key }));
+        const appended = wal.appendLoc(
+          encodeFrame({ type: TYPE_DEL, key: op.key }),
+        );
         const group = this.deps.walGroups.groupFor(wal, appended.batchId);
         const applied = this.applyBox;
         let prev: StoreRecord | undefined;
@@ -339,7 +381,8 @@ export class WritePath<V> {
         try {
           await appended.done;
         } catch (e) {
-          if (group) this.deps.walGroups.rollbackGroup(group, wal, appended.batchId);
+          if (group)
+            this.deps.walGroups.rollbackGroup(group, wal, appended.batchId);
           else this.restoreKey(op.pk, prev, seq);
           this.deps.walGroups.kickWalRecovery(wal);
           throw this.deps.walGroups.markAmbiguous(e);
@@ -373,7 +416,7 @@ export class WritePath<V> {
           this.deps.indexes.checkUniqueBatch(
             prepared.map((o) => ({
               pk: o.pk,
-              op: o.type === TYPE_DEL ? ('del' as const) : ('set' as const),
+              op: o.type === TYPE_DEL ? ("del" as const) : ("set" as const),
               doc: o.canonical,
             })),
           );
@@ -390,87 +433,115 @@ export class WritePath<V> {
 
   /** The batch() commit body: append one BATCH frame and apply every prepared
    *  op, rolling the whole batch back when the WAL write fails. */
-  private async commitBatchOps(prepared: readonly PreparedOp<V>[]): Promise<void> {
-      const recoveryGate = this.deps.walGroups.walRecoveryGate();
-      if (recoveryGate) await recoveryGate;
-      const body = encodeBatchOps(
-        prepared.map<EncodedBatchOp>((op) => ({ type: op.type, key: op.key, value: op.value, meta: op.meta, expireAt: op.expireAt })),
-      );
-      const frame = encodeFrame({ type: TYPE_BATCH, key: Buffer.alloc(0), value: body });
-      const wal = this.deps.wal();
-      const appended = wal.appendLoc(frame);
-      const group = this.deps.walGroups.groupFor(wal, appended.batchId);
-      // Capture each key's pre-batch record (first applyOp per key) so the whole
-      // batch can be rolled back if the WAL write fails, preserving atomicity.
-      const prevs = new Map<string, StoreRecord | undefined>();
-      const applied = this.applyBox;
-      let cur: PreparedOp<V> | null = null;
-      try {
-        for (const op of prepared) {
-          cur = op;
-          this.applyOp(op, applied);
-          if (!prevs.has(op.pk)) prevs.set(op.pk, applied.prev);
-        }
-      } catch (err) {
-        // See set() for this defensive path (applyOp's must-not-throw
-        // contract); the op that threw mid-apply has its pre-state in `applied`.
-        if (cur && !prevs.has(cur.pk)) prevs.set(cur.pk, applied.prev);
-        void appended.done.catch(() => {}); // this batch throws here; swallow the frame's rejection
-        if (group) {
-          wal.poisonPending(err);
-          for (const [pk, p] of prevs) this.deps.walGroups.groupNoteKey(group, pk, p);
-          this.deps.walGroups.rollbackGroup(group, wal, appended.batchId);
-          this.deps.walGroups.kickWalRecovery(wal);
-        } else {
-          for (const [pk, p] of prevs) this.restoreGroupKey(pk, p);
-        }
-        throw this.deps.walGroups.markAmbiguous(err);
+  private async commitBatchOps(
+    prepared: readonly PreparedOp<V>[],
+  ): Promise<void> {
+    const recoveryGate = this.deps.walGroups.walRecoveryGate();
+    if (recoveryGate) await recoveryGate;
+    const body = encodeBatchOps(
+      prepared.map<EncodedBatchOp>((op) => ({
+        type: op.type,
+        key: op.key,
+        value: op.value,
+        meta: op.meta,
+        expireAt: op.expireAt,
+      })),
+    );
+    const frame = encodeFrame({
+      type: TYPE_BATCH,
+      key: Buffer.alloc(0),
+      value: body,
+    });
+    const wal = this.deps.wal();
+    const appended = wal.appendLoc(frame);
+    const group = this.deps.walGroups.groupFor(wal, appended.batchId);
+    // Capture each key's pre-batch record (first applyOp per key) so the whole
+    // batch can be rolled back if the WAL write fails, preserving atomicity.
+    const prevs = new Map<string, StoreRecord | undefined>();
+    const applied = this.applyBox;
+    let cur: PreparedOp<V> | null = null;
+    try {
+      for (const op of prepared) {
+        cur = op;
+        this.applyOp(op, applied);
+        if (!prevs.has(op.pk)) prevs.set(op.pk, applied.prev);
       }
-      for (const [pk, p] of prevs) this.deps.walGroups.groupNoteKey(group, pk, p);
-      // Seq identity of each record as this batch left it (undefined where the
-      // batch's last op deleted the key): guards both the per-op rollback
-      // (frames that never entered a group, e.g. a seal race) and the WAL
-      // pointer publish against interleaved same-key commits.
-      const seqs = new Map<string, number | undefined>();
-      for (const pk of prevs.keys()) seqs.set(pk, this.deps.store().map.get(pk)?.seq);
-      // In valueMode 'disk' the applied records hold in-memory refs for now
-      // (see set()); their WAL pointers are published after `done` resolves.
-      // Only the LAST set per key may publish — an earlier op's frame range
-      // holds a superseded value.
-      const lastSet = new Map<string, { op: PreparedOp<V>; loc: ValueLoc; seq: number | undefined }>();
-      if (this.deps.valueMode() === 'disk') {
-        const bodyOff = appended.offset + HEADER_SIZE;
-        const opRefs = scanBatchOpRefs(body, 0);
-        for (let i = 0; i < prepared.length; i++) {
-          const op = prepared[i]!;
-          const ref = opRefs[i];
-          if (op.type === TYPE_SET && ref) {
-            lastSet.set(op.pk, { op, loc: { file: 'wal', off: bodyOff + ref.valueOff, len: ref.valLen }, seq: seqs.get(op.pk) });
-          }
-        }
-      }
-      try {
-        await appended.done;
-      } catch (e) {
-        if (group) this.deps.walGroups.rollbackGroup(group, wal, appended.batchId);
-        else for (const [pk, prev] of prevs) this.restoreKey(pk, prev, seqs.get(pk));
+    } catch (err) {
+      // See set() for this defensive path (applyOp's must-not-throw
+      // contract); the op that threw mid-apply has its pre-state in `applied`.
+      if (cur && !prevs.has(cur.pk)) prevs.set(cur.pk, applied.prev);
+      void appended.done.catch(() => {}); // this batch throws here; swallow the frame's rejection
+      if (group) {
+        wal.poisonPending(err);
+        for (const [pk, p] of prevs)
+          this.deps.walGroups.groupNoteKey(group, pk, p);
+        this.deps.walGroups.rollbackGroup(group, wal, appended.batchId);
         this.deps.walGroups.kickWalRecovery(wal);
-        throw this.deps.walGroups.markAmbiguous(e);
+      } else {
+        for (const [pk, p] of prevs) this.restoreGroupKey(pk, p);
       }
-      this.deps.walGroups.settleGroup(group, wal, appended.batchId);
-      for (const [pk, { op, loc, seq }] of lastSet) {
-        this.publishWalRef(pk, wal, seq, loc, op.expireAt, op.dtNorm);
+      throw this.deps.walGroups.markAmbiguous(err);
+    }
+    for (const [pk, p] of prevs) this.deps.walGroups.groupNoteKey(group, pk, p);
+    // Seq identity of each record as this batch left it (undefined where the
+    // batch's last op deleted the key): guards both the per-op rollback
+    // (frames that never entered a group, e.g. a seal race) and the WAL
+    // pointer publish against interleaved same-key commits.
+    const seqs = new Map<string, number | undefined>();
+    for (const pk of prevs.keys())
+      seqs.set(pk, this.deps.store().map.get(pk)?.seq);
+    // In valueMode 'disk' the applied records hold in-memory refs for now
+    // (see set()); their WAL pointers are published after `done` resolves.
+    // Only the LAST set per key may publish — an earlier op's frame range
+    // holds a superseded value.
+    const lastSet = new Map<
+      string,
+      { op: PreparedOp<V>; loc: ValueLoc; seq: number | undefined }
+    >();
+    if (this.deps.valueMode() === "disk") {
+      const bodyOff = appended.offset + HEADER_SIZE;
+      const opRefs = scanBatchOpRefs(body, 0);
+      for (let i = 0; i < prepared.length; i++) {
+        const op = prepared[i]!;
+        const ref = opRefs[i];
+        if (op.type === TYPE_SET && ref) {
+          lastSet.set(op.pk, {
+            op,
+            loc: { file: "wal", off: bodyOff + ref.valueOff, len: ref.valLen },
+            seq: seqs.get(op.pk),
+          });
+        }
       }
-      this.deps.maybeAutoCompact();
+    }
+    try {
+      await appended.done;
+    } catch (e) {
+      if (group)
+        this.deps.walGroups.rollbackGroup(group, wal, appended.batchId);
+      else
+        for (const [pk, prev] of prevs) this.restoreKey(pk, prev, seqs.get(pk));
+      this.deps.walGroups.kickWalRecovery(wal);
+      throw this.deps.walGroups.markAmbiguous(e);
+    }
+    this.deps.walGroups.settleGroup(group, wal, appended.batchId);
+    for (const [pk, { op, loc, seq }] of lastSet) {
+      this.publishWalRef(pk, wal, seq, loc, op.expireAt, op.dtNorm);
+    }
+    this.deps.maybeAutoCompact();
   }
 
   private prepareOp(o: BatchInputOp<V>): PreparedOp<V> {
-    if (o.op === 'set') return this.prepareSet(o.key, o.value, { ttl: o.ttl, dt: o.dt });
-    if (o.op === 'del') return this.prepareDel(o.key);
+    if (o.op === "set")
+      return this.prepareSet(o.key, o.value, { ttl: o.ttl, dt: o.dt });
+    if (o.op === "del") return this.prepareDel(o.key);
     throw new TypeError(`unknown batch op: ${(o as { op: string }).op}`);
   }
 
-  private prepareSet(key: string | Buffer, value: V, { ttl, dt }: SetOptions = {}): PreparedOp<V> {
+  private prepareSet(
+    key: string | Buffer,
+    value: V,
+    { ttl, dt }: SetOptions = {},
+  ): PreparedOp<V> {
     this.checkKey(key);
     const pk = toKStr(key);
     const dtNorm = normDt(dt);
@@ -479,7 +550,8 @@ export class WritePath<V> {
     // (NaN / ±Infinity) is rejected up front instead of exploding inside the
     // frame encoder with an opaque "cannot convert to BigInt" error. ttl 0 (or
     // omitted) keeps the existing "no expiry" semantics.
-    if (ttl !== undefined && !Number.isFinite(ttl)) throw new RangeError('ttl must be a finite number of milliseconds');
+    if (ttl !== undefined && !Number.isFinite(ttl))
+      throw new RangeError("ttl must be a finite number of milliseconds");
     const expireAt = ttl ? Date.now() + Math.floor(ttl) : 0;
     const vbuf = this.deps.encode(value);
     // Canonical value (stage 11): the json codec re-parses the encoded bytes
@@ -487,7 +559,8 @@ export class WritePath<V> {
     // (review #5). The decode is infallible here — it re-parses what
     // JSON.stringify just produced. Buffer/string codecs have no canonical
     // concept and keep the value as passed (their paths never feed indexes).
-    const canonical = this.deps.codecName() === 'json' ? (this.deps.decode(vbuf) as V) : value;
+    const canonical =
+      this.deps.codecName() === "json" ? (this.deps.decode(vbuf) as V) : value;
     // Tokenize at the prepare boundary (stage 11): a throwing custom
     // tokenizer — or one producing an overlong term — rejects the write here,
     // before the store/delta/buildQueue can be polluted (reviews #24/#27).
@@ -495,11 +568,24 @@ export class WritePath<V> {
     if (this.deps.textRegistry.text.size) {
       textTokens = new Map();
       for (const ti of this.deps.textRegistry.text.values()) {
-        textTokens.set(ti, this.deps.indexable(canonical) ? ti.prepareAdd(canonical) : null);
+        textTokens.set(
+          ti,
+          this.deps.indexable(canonical) ? ti.prepareAdd(canonical) : null,
+        );
       }
     }
     const meta = dtNorm ? Buffer.from(JSON.stringify({ dt: dtNorm })) : null;
-    return { type: TYPE_SET, key: toBuf(key), value: vbuf, meta, expireAt, dtNorm, pk, canonical, textTokens };
+    return {
+      type: TYPE_SET,
+      key: toBuf(key),
+      value: vbuf,
+      meta,
+      expireAt,
+      dtNorm,
+      pk,
+      canonical,
+      textTokens,
+    };
   }
 
   private prepareDel(key: string | Buffer): PreparedOp<V> {
@@ -531,9 +617,13 @@ export class WritePath<V> {
    *  (a createTextIndex racing this write — see the comment inline); the
    *  commit bodies' defensive try (stage 7) stays as the backstop for it and
    *  for catastrophic store I/O. */
-  private applyOp(op: PreparedOp<V>, out: { prev: StoreRecord | undefined }): void {
+  private applyOp(
+    op: PreparedOp<V>,
+    out: { prev: StoreRecord | undefined },
+  ): void {
     const oldBuf = this.deps.store().get(op.pk);
-    out.prev = oldBuf !== undefined ? this.deps.store().map.get(op.pk) : undefined;
+    out.prev =
+      oldBuf !== undefined ? this.deps.store().map.get(op.pk) : undefined;
     const oldDoc = oldBuf !== undefined ? this.deps.decode(oldBuf) : undefined;
     if (op.type === TYPE_SET) {
       // Always applied as an in-memory ref; in valueMode 'disk' the caller
@@ -543,8 +633,10 @@ export class WritePath<V> {
       this.deps.dt.set(op.pk, op.dtNorm);
       this.deps.compound.add(op.pk, op.canonical, op.dtNorm);
       if (this.deps.indexes.size) {
-        if (this.deps.indexable(oldDoc)) this.deps.indexes.remove(op.pk, oldDoc);
-        if (this.deps.indexable(op.canonical)) this.deps.indexes.add(op.pk, op.canonical);
+        if (this.deps.indexable(oldDoc))
+          this.deps.indexes.remove(op.pk, oldDoc);
+        if (this.deps.indexable(op.canonical))
+          this.deps.indexes.add(op.pk, op.canonical);
       }
       for (const ti of this.deps.textRegistry.text.values()) {
         const tokens = op.textTokens?.get(ti);
@@ -570,7 +662,8 @@ export class WritePath<V> {
         this.deps.memoryGuard.access.delete(op.pk);
         this.deps.dt.del(op.pk);
         this.deps.compound.remove(op.pk);
-        if (this.deps.indexes.size && this.deps.indexable(oldDoc)) this.deps.indexes.remove(op.pk, oldDoc);
+        if (this.deps.indexes.size && this.deps.indexable(oldDoc))
+          this.deps.indexes.remove(op.pk, oldDoc);
         for (const ti of this.deps.textRegistry.text.values()) ti.remove(op.pk);
       }
     }
@@ -604,9 +697,14 @@ export class WritePath<V> {
    *  frames that never entered a flush group (batchId < 0: a seal/rotation
    *  race) and cross-group interleaves with retryOnWalSeal retries; grouped
    *  failures roll back via rollbackGroup instead. */
-  private restoreKey(pk: string, prev: StoreRecord | undefined, appliedSeq: number | undefined): void {
+  private restoreKey(
+    pk: string,
+    prev: StoreRecord | undefined,
+    appliedSeq: number | undefined,
+  ): void {
     const cur = this.deps.store().map.get(pk);
-    if (appliedSeq === undefined ? cur !== undefined : cur?.seq !== appliedSeq) return;
+    if (appliedSeq === undefined ? cur !== undefined : cur?.seq !== appliedSeq)
+      return;
     this.restoreGroupKey(pk, prev);
   }
 
@@ -645,7 +743,8 @@ export class WritePath<V> {
    *  unique checks: the writer already validated, and intermediate frame
    *  states must apply literally (LWW). */
   applyRecoveredFrame(f: FrameRef, fd: number): void {
-    for (const op of frameToOps(f, 'wal', fd, this.deps.valueMode())) this.applyRecoveredOp(op);
+    for (const op of frameToOps(f, "wal", fd, this.deps.valueMode()))
+      this.applyRecoveredOp(op);
   }
 
   applyRecoveredOp(op: RecoveredOp): void {
@@ -653,13 +752,16 @@ export class WritePath<V> {
     // Old doc for derived-index removal; decoded before the overwrite, like
     // applyOp. This get also lazy-reaps an expired old record, whose onExpire
     // hook then removes its derived entries for us.
-    const oldDoc = this.deps.indexes.size ? this.deps.decode(this.deps.store().get(pk)) : undefined;
+    const oldDoc = this.deps.indexes.size
+      ? this.deps.decode(this.deps.store().get(pk))
+      : undefined;
     if (op.type === TYPE_DEL) {
       if (!this.deps.store().del(pk)) return;
       this.deps.memoryGuard.access.delete(pk);
       this.deps.dt.del(pk);
       this.deps.compound.remove(pk);
-      if (this.deps.indexes.size && this.deps.indexable(oldDoc)) this.deps.indexes.remove(pk, oldDoc);
+      if (this.deps.indexes.size && this.deps.indexable(oldDoc))
+        this.deps.indexes.remove(pk, oldDoc);
       for (const ti of this.deps.textRegistry.text.values()) ti.remove(pk);
       return;
     }
@@ -674,7 +776,11 @@ export class WritePath<V> {
     this.deps.dt.set(pk, op.dt);
     // Values are only decoded when a value-derived index exists (all of them
     // require the json codec): with none, recovery never copies them either.
-    if (this.deps.indexes.size || this.deps.textRegistry.text.size || this.deps.compound.size) {
+    if (
+      this.deps.indexes.size ||
+      this.deps.textRegistry.text.size ||
+      this.deps.compound.size
+    ) {
       const doc = this.deps.decode(buf)!;
       this.deps.compound.add(pk, doc, op.dt);
       if (this.deps.indexes.size) {
@@ -700,13 +806,20 @@ export class WritePath<V> {
       if (cur === undefined) return false;
       // Same validation as set(): the TTL is stored as an int64, so it must be a
       // finite integer of milliseconds (fractional values are floored).
-      if (!Number.isFinite(ttlMs)) throw new RangeError('ttl must be a finite number of milliseconds');
+      if (!Number.isFinite(ttlMs))
+        throw new RangeError("ttl must be a finite number of milliseconds");
       const expireAt = Date.now() + Math.floor(ttlMs);
       const curValue = this.deps.store().get(k);
       if (curValue === undefined) return false;
       const meta = cur.dt ? Buffer.from(JSON.stringify({ dt: cur.dt })) : null;
       const keyBuf = toBuf(key);
-      const frame = encodeFrame({ type: TYPE_SET, key: keyBuf, value: curValue, meta, expireAt });
+      const frame = encodeFrame({
+        type: TYPE_SET,
+        key: keyBuf,
+        value: curValue,
+        meta,
+        expireAt,
+      });
       const commit = async (): Promise<void> => {
         const recoveryGate = this.deps.walGroups.walRecoveryGate();
         if (recoveryGate) await recoveryGate;
@@ -757,18 +870,23 @@ export class WritePath<V> {
         try {
           await appended.done;
         } catch (e) {
-          if (group) this.deps.walGroups.rollbackGroup(group, wal, appended.batchId);
+          if (group)
+            this.deps.walGroups.rollbackGroup(group, wal, appended.batchId);
           else this.restoreKey(k, prev, seq);
           this.deps.walGroups.kickWalRecovery(wal);
           throw this.deps.walGroups.markAmbiguous(e);
         }
         this.deps.walGroups.settleGroup(group, wal, appended.batchId);
-        if (this.deps.valueMode() === 'disk') {
+        if (this.deps.valueMode() === "disk") {
           this.publishWalRef(
             k,
             wal,
             seq,
-            { file: 'wal', off: appended.offset + HEADER_SIZE + keyBuf.length, len: curValue.length },
+            {
+              file: "wal",
+              off: appended.offset + HEADER_SIZE + keyBuf.length,
+              len: curValue.length,
+            },
             expireAt,
             cur.dt,
           );

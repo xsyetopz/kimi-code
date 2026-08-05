@@ -3,16 +3,16 @@
  * envelope, guard serialization, time-box calls, and gate access.
  */
 
-import { ErrorCodes, Error2 } from '@moonshot-ai/agent-core-v2';
+import { ErrorCodes, Error2 } from "@moonshot-ai/agent-core-v2";
 
-import { errEnvelope } from '../protocol/envelope';
-import { ErrorCode } from '../protocol/error-codes';
+import { errEnvelope } from "../protocol/envelope";
+import { ErrorCode } from "../protocol/error-codes";
 
 /** Thrown by {@link withTimeout} when a call exceeds its deadline. */
 export class TimeoutError extends Error {
   constructor(readonly ms: number) {
     super(`call timed out after ${ms}ms`);
-    this.name = 'TimeoutError';
+    this.name = "TimeoutError";
   }
 }
 
@@ -63,13 +63,21 @@ const KIMI_TO_PROTOCOL: Record<string, ErrorCode> = {
  * mapping; everything else becomes `50001`. Stack traces are intentionally not
  * surfaced.
  */
-export function mapError(err: unknown, requestId: string): ReturnType<typeof errEnvelope> {
+export function mapError(
+  err: unknown,
+  requestId: string,
+): ReturnType<typeof errEnvelope> {
   if (err instanceof Error2) {
     const code = KIMI_TO_PROTOCOL[err.code] ?? ErrorCode.INTERNAL_ERROR;
     return errEnvelope(code, err.message, requestId, err.stack);
   }
   if (err instanceof TimeoutError) {
-    return errEnvelope(ErrorCode.INTERNAL_ERROR, err.message, requestId, err.stack);
+    return errEnvelope(
+      ErrorCode.INTERNAL_ERROR,
+      err.message,
+      requestId,
+      err.stack,
+    );
   }
   return errEnvelope(
     ErrorCode.INTERNAL_ERROR,
@@ -93,8 +101,8 @@ export function validationEnvelope(
   const first = details[0];
   const msg =
     first === undefined
-      ? 'validation failed'
-      : first.path === ''
+      ? "validation failed"
+      : first.path === ""
         ? first.message
         : `${first.path}: ${first.message}`;
   return {

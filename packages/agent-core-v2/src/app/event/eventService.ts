@@ -5,11 +5,15 @@
  * Bound at App scope.
  */
 
-import { Disposable, type IDisposable } from '#/_base/di/lifecycle';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { Emitter, type Event } from '#/_base/event';
+import { Disposable, type IDisposable } from "#/_base/di/lifecycle";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { Emitter, type Event } from "#/_base/event";
 
-import { type DomainEvent, IEventService } from './event';
+import { type DomainEvent, IEventService } from "./event";
 
 export class EventService extends Disposable implements IEventService {
   declare readonly _serviceBrand: undefined;
@@ -31,5 +35,5 @@ registerScopedService(
   IEventService,
   EventService,
   ScopeActivation.OnScopeCreated,
-  'event',
+  "event",
 );

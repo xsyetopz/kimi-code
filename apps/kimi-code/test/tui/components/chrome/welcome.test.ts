@@ -1,36 +1,39 @@
-import { visibleWidth } from '@moonshot-ai/pi-tui';
-import chalk from 'chalk';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { visibleWidth } from "@moonshot-ai/pi-tui";
+import chalk from "chalk";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { WelcomeComponent } from '#/tui/components/chrome/welcome';
-import { setRainbowDance, type RainbowDanceController } from '#/tui/easter-eggs/dance';
-import { darkColors } from '#/tui/theme/colors';
-import type { AppState } from '#/tui/types';
+import { WelcomeComponent } from "#/tui/components/chrome/welcome";
+import {
+  setRainbowDance,
+  type RainbowDanceController,
+} from "#/tui/easter-eggs/dance";
+import { darkColors } from "#/tui/theme/colors";
+import type { AppState } from "#/tui/types";
 
 const TRUECOLOR_PATTERN = /\u001B\[38;2;(\d+);(\d+);(\d+)m/g;
 
 const appState: AppState = {
-  version: '1.2.3',
-  workDir: '/tmp/project',
+  version: "1.2.3",
+  workDir: "/tmp/project",
   additionalDirs: [],
-  sessionId: 'ses-1',
+  sessionId: "ses-1",
   sessionTitle: null,
-  model: 'kimi-k2',
-  permissionMode: 'manual',
-  thinkingEffort: 'off',
+  model: "kimi-k2",
+  permissionMode: "manual",
+  thinkingEffort: "off",
   contextUsage: 0,
   contextTokens: 0,
   maxContextTokens: 0,
   isCompacting: false,
   isReplaying: false,
-  streamingPhase: 'idle',
+  streamingPhase: "idle",
   streamingStartTime: 0,
   planMode: false,
-  inputMode: 'prompt',
+  inputMode: "prompt",
   swarmMode: false,
-  theme: 'dark',
+  theme: "dark",
   editorCommand: null,
-  notifications: { enabled: true, condition: 'unfocused' },
+  notifications: { enabled: true, condition: "unfocused" },
   upgrade: { autoInstall: true },
   availableModels: {},
   availableProviders: {},
@@ -47,7 +50,7 @@ function truecolorCodes(text: string): Set<string> {
 
 /** The two header rows (logo + title) of the rendered welcome box. */
 function headerOf(lines: string[]): string {
-  return [lines[3], lines[4]].join('\n');
+  return [lines[3], lines[4]].join("\n");
 }
 
 function setDanceView(colored: boolean, phase: number): void {
@@ -61,7 +64,7 @@ function setDanceView(colored: boolean, phase: number): void {
   setRainbowDance(dance);
 }
 
-describe('WelcomeComponent', () => {
+describe("WelcomeComponent", () => {
   const previousChalkLevel = chalk.level;
 
   beforeEach(() => {
@@ -73,21 +76,25 @@ describe('WelcomeComponent', () => {
     setRainbowDance(undefined);
   });
 
-  it('renders the banner in a single brand color by default', () => {
-    const codes = truecolorCodes(headerOf(new WelcomeComponent(appState).render(80)));
+  it("renders the banner in a single brand color by default", () => {
+    const codes = truecolorCodes(
+      headerOf(new WelcomeComponent(appState).render(80)),
+    );
 
     // No rainbow by default — just the brand primary (plus the dim tagline).
     expect(codes.size).toBeLessThanOrEqual(2);
   });
 
-  it('paints the banner in rainbow while colored', () => {
+  it("paints the banner in rainbow while colored", () => {
     setDanceView(true, 0);
-    const codes = truecolorCodes(headerOf(new WelcomeComponent(appState).render(80)));
+    const codes = truecolorCodes(
+      headerOf(new WelcomeComponent(appState).render(80)),
+    );
 
     expect(codes.size).toBeGreaterThanOrEqual(5);
   });
 
-  it('renders exactly the default banner when not colored', () => {
+  it("renders exactly the default banner when not colored", () => {
     const base = headerOf(new WelcomeComponent(appState).render(80));
     setDanceView(false, 5);
     const off = headerOf(new WelcomeComponent(appState).render(80));
@@ -95,7 +102,7 @@ describe('WelcomeComponent', () => {
     expect(off).toBe(base);
   });
 
-  it('keeps every line within the requested width on narrow terminals', () => {
+  it("keeps every line within the requested width on narrow terminals", () => {
     for (const width of [0, 1, 2, 4, 10, 39, 80]) {
       for (const line of new WelcomeComponent(appState).render(width)) {
         expect(visibleWidth(line)).toBeLessThanOrEqual(width);

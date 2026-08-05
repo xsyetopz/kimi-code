@@ -1,21 +1,26 @@
-import { generate } from '#/generate';
-import type { ContentPart, Message, StreamedMessagePart, ToolCall } from '#/message';
-import { OpenAILegacyChatProvider } from '#/providers/openai-legacy';
-import type { GenerateOptions } from '#/provider';
-import type { Tool } from '#/tool';
-import { describe, it, expect, vi } from 'vitest';
+import { generate } from "#/generate";
+import type {
+  ContentPart,
+  Message,
+  StreamedMessagePart,
+  ToolCall,
+} from "#/message";
+import { OpenAILegacyChatProvider } from "#/providers/openai-legacy";
+import type { GenerateOptions } from "#/provider";
+import type { Tool } from "#/tool";
+import { describe, it, expect, vi } from "vitest";
 
-function makeChatCompletionResponse(model: string = 'test-model') {
+function makeChatCompletionResponse(model: string = "test-model") {
   return {
-    id: 'chatcmpl-test123',
-    object: 'chat.completion',
+    id: "chatcmpl-test123",
+    object: "chat.completion",
     created: 1234567890,
     model,
     choices: [
       {
         index: 0,
-        message: { role: 'assistant', content: 'Hello' },
-        finish_reason: 'stop',
+        message: { role: "assistant", content: "Hello" },
+        finish_reason: "stop",
       },
     ],
     usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
@@ -31,8 +36,8 @@ function createProvider(
   }>,
 ): OpenAILegacyChatProvider {
   return new OpenAILegacyChatProvider({
-    model: options?.model ?? 'gpt-4.1',
-    apiKey: 'test-key',
+    model: options?.model ?? "gpt-4.1",
+    apiKey: "test-key",
     stream: options?.stream ?? false,
     reasoningKey: options?.reasoningKey,
     offEffort: options?.offEffort,
@@ -62,236 +67,299 @@ async function captureRequestBody(
   }
 
   if (capturedBody === undefined) {
-    throw new Error('Expected provider.generate() to call chat.completions.create');
+    throw new Error(
+      "Expected provider.generate() to call chat.completions.create",
+    );
   }
   return capturedBody;
 }
 
 const ADD_TOOL: Tool = {
-  name: 'add',
-  description: 'Add two integers.',
+  name: "add",
+  description: "Add two integers.",
   parameters: {
-    type: 'object',
+    type: "object",
     properties: {
-      a: { type: 'integer', description: 'First number' },
-      b: { type: 'integer', description: 'Second number' },
+      a: { type: "integer", description: "First number" },
+      b: { type: "integer", description: "Second number" },
     },
-    required: ['a', 'b'],
+    required: ["a", "b"],
   },
 };
 
 const MUL_TOOL: Tool = {
-  name: 'multiply',
-  description: 'Multiply two integers.',
+  name: "multiply",
+  description: "Multiply two integers.",
   parameters: {
-    type: 'object',
+    type: "object",
     properties: {
-      a: { type: 'integer', description: 'First number' },
-      b: { type: 'integer', description: 'Second number' },
+      a: { type: "integer", description: "First number" },
+      b: { type: "integer", description: "Second number" },
     },
-    required: ['a', 'b'],
+    required: ["a", "b"],
   },
 };
 
-describe('OpenAILegacyChatProvider', () => {
-  describe('message conversion (COMMON_CASES)', () => {
-    it('simple user message with system prompt', async () => {
-      const provider = createProvider();
-      const history: Message[] = [
-        { role: 'user', content: [{ type: 'text', text: 'Hello!' }], toolCalls: [] },
-      ];
-      const body = await captureRequestBody(provider, 'You are helpful.', [], history);
-
-      expect(body['messages']).toEqual([
-        { role: 'system', content: 'You are helpful.' },
-        { role: 'user', content: 'Hello!' },
-      ]);
-      expect(body['tools']).toBeUndefined();
-    });
-
-    it('multi-turn conversation', async () => {
-      const provider = createProvider();
-      const history: Message[] = [
-        { role: 'user', content: [{ type: 'text', text: 'What is 2+2?' }], toolCalls: [] },
-        { role: 'assistant', content: [{ type: 'text', text: '2+2 equals 4.' }], toolCalls: [] },
-        { role: 'user', content: [{ type: 'text', text: 'And 3+3?' }], toolCalls: [] },
-      ];
-      const body = await captureRequestBody(provider, '', [], history);
-
-      expect(body['messages']).toEqual([
-        { role: 'user', content: 'What is 2+2?' },
-        { role: 'assistant', content: '2+2 equals 4.' },
-        { role: 'user', content: 'And 3+3?' },
-      ]);
-    });
-
-    it('multi-turn with system prompt', async () => {
-      const provider = createProvider();
-      const history: Message[] = [
-        { role: 'user', content: [{ type: 'text', text: 'What is 2+2?' }], toolCalls: [] },
-        { role: 'assistant', content: [{ type: 'text', text: '2+2 equals 4.' }], toolCalls: [] },
-        { role: 'user', content: [{ type: 'text', text: 'And 3+3?' }], toolCalls: [] },
-      ];
-      const body = await captureRequestBody(provider, 'You are a math tutor.', [], history);
-
-      expect(body['messages']).toEqual([
-        { role: 'system', content: 'You are a math tutor.' },
-        { role: 'user', content: 'What is 2+2?' },
-        { role: 'assistant', content: '2+2 equals 4.' },
-        { role: 'user', content: 'And 3+3?' },
-      ]);
-    });
-
-    it('image url content', async () => {
+describe("OpenAILegacyChatProvider", () => {
+  describe("message conversion (COMMON_CASES)", () => {
+    it("simple user message with system prompt", async () => {
       const provider = createProvider();
       const history: Message[] = [
         {
-          role: 'user',
+          role: "user",
+          content: [{ type: "text", text: "Hello!" }],
+          toolCalls: [],
+        },
+      ];
+      const body = await captureRequestBody(
+        provider,
+        "You are helpful.",
+        [],
+        history,
+      );
+
+      expect(body["messages"]).toEqual([
+        { role: "system", content: "You are helpful." },
+        { role: "user", content: "Hello!" },
+      ]);
+      expect(body["tools"]).toBeUndefined();
+    });
+
+    it("multi-turn conversation", async () => {
+      const provider = createProvider();
+      const history: Message[] = [
+        {
+          role: "user",
+          content: [{ type: "text", text: "What is 2+2?" }],
+          toolCalls: [],
+        },
+        {
+          role: "assistant",
+          content: [{ type: "text", text: "2+2 equals 4." }],
+          toolCalls: [],
+        },
+        {
+          role: "user",
+          content: [{ type: "text", text: "And 3+3?" }],
+          toolCalls: [],
+        },
+      ];
+      const body = await captureRequestBody(provider, "", [], history);
+
+      expect(body["messages"]).toEqual([
+        { role: "user", content: "What is 2+2?" },
+        { role: "assistant", content: "2+2 equals 4." },
+        { role: "user", content: "And 3+3?" },
+      ]);
+    });
+
+    it("multi-turn with system prompt", async () => {
+      const provider = createProvider();
+      const history: Message[] = [
+        {
+          role: "user",
+          content: [{ type: "text", text: "What is 2+2?" }],
+          toolCalls: [],
+        },
+        {
+          role: "assistant",
+          content: [{ type: "text", text: "2+2 equals 4." }],
+          toolCalls: [],
+        },
+        {
+          role: "user",
+          content: [{ type: "text", text: "And 3+3?" }],
+          toolCalls: [],
+        },
+      ];
+      const body = await captureRequestBody(
+        provider,
+        "You are a math tutor.",
+        [],
+        history,
+      );
+
+      expect(body["messages"]).toEqual([
+        { role: "system", content: "You are a math tutor." },
+        { role: "user", content: "What is 2+2?" },
+        { role: "assistant", content: "2+2 equals 4." },
+        { role: "user", content: "And 3+3?" },
+      ]);
+    });
+
+    it("image url content", async () => {
+      const provider = createProvider();
+      const history: Message[] = [
+        {
+          role: "user",
           content: [
-            { type: 'text', text: "What's in this image?" },
-            { type: 'image_url', imageUrl: { url: 'https://example.com/image.png' } },
+            { type: "text", text: "What's in this image?" },
+            {
+              type: "image_url",
+              imageUrl: { url: "https://example.com/image.png" },
+            },
           ] satisfies ContentPart[],
           toolCalls: [],
         },
       ];
-      const body = await captureRequestBody(provider, '', [], history);
+      const body = await captureRequestBody(provider, "", [], history);
 
-      expect(body['messages']).toEqual([
+      expect(body["messages"]).toEqual([
         {
-          role: 'user',
+          role: "user",
           content: [
-            { type: 'text', text: "What's in this image?" },
-            { type: 'image_url', image_url: { url: 'https://example.com/image.png' } },
+            { type: "text", text: "What's in this image?" },
+            {
+              type: "image_url",
+              image_url: { url: "https://example.com/image.png" },
+            },
           ],
         },
       ]);
     });
 
-    it('tool definitions', async () => {
+    it("tool definitions", async () => {
       const provider = createProvider();
       const history: Message[] = [
-        { role: 'user', content: [{ type: 'text', text: 'Add 2 and 3' }], toolCalls: [] },
-      ];
-      const body = await captureRequestBody(provider, '', [ADD_TOOL, MUL_TOOL], history);
-
-      expect(body['tools']).toEqual([
         {
-          type: 'function',
-          function: {
-            name: 'add',
-            description: 'Add two integers.',
-            parameters: {
-              type: 'object',
-              properties: {
-                a: { type: 'integer', description: 'First number' },
-                b: { type: 'integer', description: 'Second number' },
-              },
-              required: ['a', 'b'],
-            },
-          },
-        },
-        {
-          type: 'function',
-          function: {
-            name: 'multiply',
-            description: 'Multiply two integers.',
-            parameters: {
-              type: 'object',
-              properties: {
-                a: { type: 'integer', description: 'First number' },
-                b: { type: 'integer', description: 'Second number' },
-              },
-              required: ['a', 'b'],
-            },
-          },
-        },
-      ]);
-    });
-
-    it('tool call and tool result', async () => {
-      const provider = createProvider();
-      const toolCall: ToolCall = {
-        type: 'function',
-        id: 'call_abc123',
-        name: 'add',
-        arguments: '{"a": 2, "b": 3}',
-      };
-      const history: Message[] = [
-        { role: 'user', content: [{ type: 'text', text: 'Add 2 and 3' }], toolCalls: [] },
-        {
-          role: 'assistant',
-          content: [{ type: 'text', text: "I'll add those numbers for you." }],
-          toolCalls: [toolCall],
-        },
-        {
-          role: 'tool',
-          content: [{ type: 'text', text: '5' }],
-          toolCallId: 'call_abc123',
+          role: "user",
+          content: [{ type: "text", text: "Add 2 and 3" }],
           toolCalls: [],
         },
       ];
-      const body = await captureRequestBody(provider, '', [], history);
+      const body = await captureRequestBody(
+        provider,
+        "",
+        [ADD_TOOL, MUL_TOOL],
+        history,
+      );
 
-      expect(body['messages']).toEqual([
-        { role: 'user', content: 'Add 2 and 3' },
+      expect(body["tools"]).toEqual([
         {
-          role: 'assistant',
-          content: "I'll add those numbers for you.",
-          tool_calls: [
-            {
-              type: 'function',
-              id: 'call_abc123',
-              function: { name: 'add', arguments: '{"a": 2, "b": 3}' },
+          type: "function",
+          function: {
+            name: "add",
+            description: "Add two integers.",
+            parameters: {
+              type: "object",
+              properties: {
+                a: { type: "integer", description: "First number" },
+                b: { type: "integer", description: "Second number" },
+              },
+              required: ["a", "b"],
             },
-          ],
+          },
         },
-        { role: 'tool', content: '5', tool_call_id: 'call_abc123' },
+        {
+          type: "function",
+          function: {
+            name: "multiply",
+            description: "Multiply two integers.",
+            parameters: {
+              type: "object",
+              properties: {
+                a: { type: "integer", description: "First number" },
+                b: { type: "integer", description: "Second number" },
+              },
+              required: ["a", "b"],
+            },
+          },
+        },
       ]);
     });
 
-    it('normalizes invalid historical tool call ids and matching tool results', async () => {
+    it("tool call and tool result", async () => {
+      const provider = createProvider();
+      const toolCall: ToolCall = {
+        type: "function",
+        id: "call_abc123",
+        name: "add",
+        arguments: '{"a": 2, "b": 3}',
+      };
+      const history: Message[] = [
+        {
+          role: "user",
+          content: [{ type: "text", text: "Add 2 and 3" }],
+          toolCalls: [],
+        },
+        {
+          role: "assistant",
+          content: [{ type: "text", text: "I'll add those numbers for you." }],
+          toolCalls: [toolCall],
+        },
+        {
+          role: "tool",
+          content: [{ type: "text", text: "5" }],
+          toolCallId: "call_abc123",
+          toolCalls: [],
+        },
+      ];
+      const body = await captureRequestBody(provider, "", [], history);
+
+      expect(body["messages"]).toEqual([
+        { role: "user", content: "Add 2 and 3" },
+        {
+          role: "assistant",
+          content: "I'll add those numbers for you.",
+          tool_calls: [
+            {
+              type: "function",
+              id: "call_abc123",
+              function: { name: "add", arguments: '{"a": 2, "b": 3}' },
+            },
+          ],
+        },
+        { role: "tool", content: "5", tool_call_id: "call_abc123" },
+      ]);
+    });
+
+    it("normalizes invalid historical tool call ids and matching tool results", async () => {
       const provider = createProvider();
       const history: Message[] = [
-        { role: 'user', content: [{ type: 'text', text: 'Run bash' }], toolCalls: [] },
         {
-          role: 'assistant',
+          role: "user",
+          content: [{ type: "text", text: "Run bash" }],
+          toolCalls: [],
+        },
+        {
+          role: "assistant",
           content: [],
           toolCalls: [
             {
-              type: 'function',
-              id: 'Bash:7',
-              name: 'Bash',
+              type: "function",
+              id: "Bash:7",
+              name: "Bash",
               arguments: '{"command":"pwd"}',
             },
           ],
         },
         {
-          role: 'tool',
-          content: [{ type: 'text', text: '/tmp' }],
-          toolCallId: 'Bash:7',
+          role: "tool",
+          content: [{ type: "text", text: "/tmp" }],
+          toolCallId: "Bash:7",
           toolCalls: [],
         },
       ];
 
-      const body = await captureRequestBody(provider, '', [], history);
+      const body = await captureRequestBody(provider, "", [], history);
 
-      expect(body['messages']).toEqual([
-        { role: 'user', content: 'Run bash' },
+      expect(body["messages"]).toEqual([
+        { role: "user", content: "Run bash" },
         {
-          role: 'assistant',
+          role: "assistant",
           tool_calls: [
             {
-              type: 'function',
-              id: 'Bash_7',
-              function: { name: 'Bash', arguments: '{"command":"pwd"}' },
+              type: "function",
+              id: "Bash_7",
+              function: { name: "Bash", arguments: '{"command":"pwd"}' },
             },
           ],
         },
-        { role: 'tool', content: '/tmp', tool_call_id: 'Bash_7' },
+        { role: "tool", content: "/tmp", tool_call_id: "Bash_7" },
       ]);
     });
 
-    it('tool call with image result keeps the tool result textual and reattaches images as user input', async () => {
+    it("tool call with image result keeps the tool result textual and reattaches images as user input", async () => {
       // OpenAI Chat Completions `tool` messages only accept text content.
       // Even when toolMessageConversion is unset, a tool result containing
       // image_url / audio_url / video_url parts must not be serialized as a
@@ -299,321 +367,408 @@ describe('OpenAILegacyChatProvider', () => {
       // The provider is expected to force `extract_text` in that case.
       const provider = createProvider();
       const toolCall: ToolCall = {
-        type: 'function',
-        id: 'call_abc123',
-        name: 'add',
+        type: "function",
+        id: "call_abc123",
+        name: "add",
         arguments: '{"a": 2, "b": 3}',
       };
       const history: Message[] = [
-        { role: 'user', content: [{ type: 'text', text: 'Add 2 and 3' }], toolCalls: [] },
         {
-          role: 'assistant',
-          content: [{ type: 'text', text: "I'll add those numbers for you." }],
+          role: "user",
+          content: [{ type: "text", text: "Add 2 and 3" }],
+          toolCalls: [],
+        },
+        {
+          role: "assistant",
+          content: [{ type: "text", text: "I'll add those numbers for you." }],
           toolCalls: [toolCall],
         },
         {
-          role: 'tool',
+          role: "tool",
           content: [
-            { type: 'text', text: '5' },
-            { type: 'image_url', imageUrl: { url: 'https://example.com/image.png' } },
+            { type: "text", text: "5" },
+            {
+              type: "image_url",
+              imageUrl: { url: "https://example.com/image.png" },
+            },
           ] satisfies ContentPart[],
-          toolCallId: 'call_abc123',
+          toolCallId: "call_abc123",
           toolCalls: [],
         },
       ];
-      const body = await captureRequestBody(provider, '', [], history);
+      const body = await captureRequestBody(provider, "", [], history);
 
-      const messages = body['messages'] as Record<string, unknown>[];
+      const messages = body["messages"] as Record<string, unknown>[];
       const toolMsg = messages[2]!;
-      expect(toolMsg['role']).toBe('tool');
-      expect(toolMsg['tool_call_id']).toBe('call_abc123');
+      expect(toolMsg["role"]).toBe("tool");
+      expect(toolMsg["tool_call_id"]).toBe("call_abc123");
       // Content must be a plain string, not a content-part array.
-      expect(typeof toolMsg['content']).toBe('string');
+      expect(typeof toolMsg["content"]).toBe("string");
       // The text segment must survive; the image must not appear as a
       // structured image_url part inside the tool message.
-      expect(toolMsg['content']).toContain('5');
-      expect(Array.isArray(toolMsg['content'])).toBe(false);
+      expect(toolMsg["content"]).toContain("5");
+      expect(Array.isArray(toolMsg["content"])).toBe(false);
       expect(messages[3]).toEqual({
-        role: 'user',
+        role: "user",
         content: [
-          { type: 'text', text: 'Attached media from tool result:' },
-          { type: 'image_url', image_url: { url: 'https://example.com/image.png' } },
+          { type: "text", text: "Attached media from tool result:" },
+          {
+            type: "image_url",
+            image_url: { url: "https://example.com/image.png" },
+          },
         ],
       });
     });
 
-    it('tool call with audio result notes the omission inline without reattaching', async () => {
+    it("tool call with audio result notes the omission inline without reattaching", async () => {
       // Chat Completions has no url-based audio/video content part (only
       // base64 input_audio), so unlike images these cannot be reattached as
       // a user message — a standard OpenAI endpoint would reject the request
       // with a 400. The tool message notes the omission inline instead.
       const provider = createProvider();
       const history: Message[] = [
-        { role: 'user', content: [{ type: 'text', text: 'Say hi' }], toolCalls: [] },
         {
-          role: 'assistant',
-          content: [],
-          toolCalls: [{ type: 'function', id: 'call_tts', name: 'tts', arguments: '{}' }],
+          role: "user",
+          content: [{ type: "text", text: "Say hi" }],
+          toolCalls: [],
         },
         {
-          role: 'tool',
+          role: "assistant",
+          content: [],
+          toolCalls: [
+            { type: "function", id: "call_tts", name: "tts", arguments: "{}" },
+          ],
+        },
+        {
+          role: "tool",
           content: [
-            { type: 'audio_url', audioUrl: { url: 'https://example.com/hi.mp3' } },
+            {
+              type: "audio_url",
+              audioUrl: { url: "https://example.com/hi.mp3" },
+            },
           ] satisfies ContentPart[],
-          toolCallId: 'call_tts',
+          toolCallId: "call_tts",
           toolCalls: [],
         },
       ];
-      const body = await captureRequestBody(provider, '', [], history);
+      const body = await captureRequestBody(provider, "", [], history);
 
-      const messages = body['messages'] as Record<string, unknown>[];
+      const messages = body["messages"] as Record<string, unknown>[];
       expect(messages[2]).toEqual({
-        role: 'tool',
-        content: '(audio omitted: not supported by this provider)',
-        tool_call_id: 'call_tts',
+        role: "tool",
+        content: "(audio omitted: not supported by this provider)",
+        tool_call_id: "call_tts",
       });
       // No follow-up user message: audio_url is not a standard Chat
       // Completions content part and must not reach the wire.
       expect(messages).toHaveLength(3);
     });
 
-    it('tool call with text and video result appends the omission note to the text', async () => {
+    it("tool call with text and video result appends the omission note to the text", async () => {
       const provider = createProvider();
       const history: Message[] = [
-        { role: 'user', content: [{ type: 'text', text: 'Record it' }], toolCalls: [] },
         {
-          role: 'assistant',
-          content: [],
-          toolCalls: [{ type: 'function', id: 'call_rec', name: 'record', arguments: '{}' }],
+          role: "user",
+          content: [{ type: "text", text: "Record it" }],
+          toolCalls: [],
         },
         {
-          role: 'tool',
+          role: "assistant",
+          content: [],
+          toolCalls: [
+            {
+              type: "function",
+              id: "call_rec",
+              name: "record",
+              arguments: "{}",
+            },
+          ],
+        },
+        {
+          role: "tool",
           content: [
-            { type: 'text', text: 'recorded 5s clip' },
-            { type: 'video_url', videoUrl: { url: 'https://example.com/rec.mp4' } },
+            { type: "text", text: "recorded 5s clip" },
+            {
+              type: "video_url",
+              videoUrl: { url: "https://example.com/rec.mp4" },
+            },
           ] satisfies ContentPart[],
-          toolCallId: 'call_rec',
+          toolCallId: "call_rec",
           toolCalls: [],
         },
       ];
-      const body = await captureRequestBody(provider, '', [], history);
+      const body = await captureRequestBody(provider, "", [], history);
 
-      const messages = body['messages'] as Record<string, unknown>[];
+      const messages = body["messages"] as Record<string, unknown>[];
       expect(messages[2]).toEqual({
-        role: 'tool',
-        content: 'recorded 5s clip\n(video omitted: not supported by this provider)',
-        tool_call_id: 'call_rec',
+        role: "tool",
+        content:
+          "recorded 5s clip\n(video omitted: not supported by this provider)",
+        tool_call_id: "call_rec",
       });
       expect(messages).toHaveLength(3);
     });
 
-    it('groups consecutive tool result images after all matching tool messages', async () => {
+    it("groups consecutive tool result images after all matching tool messages", async () => {
       const provider = createProvider();
       const history: Message[] = [
-        { role: 'user', content: [{ type: 'text', text: 'Fetch both images' }], toolCalls: [] },
         {
-          role: 'assistant',
-          content: [{ type: 'text', text: 'ok' }],
-          toolCalls: [
-            { type: 'function', id: 'call_first', name: 'first_image', arguments: '{}' },
-            { type: 'function', id: 'call_second', name: 'second_image', arguments: '{}' },
-          ],
-        },
-        {
-          role: 'tool',
-          content: [
-            { type: 'image_url', imageUrl: { url: 'https://example.com/first.png' } },
-          ],
-          toolCallId: 'call_first',
+          role: "user",
+          content: [{ type: "text", text: "Fetch both images" }],
           toolCalls: [],
         },
         {
-          role: 'tool',
-          content: [
-            { type: 'text', text: 'second' },
-            { type: 'image_url', imageUrl: { url: 'https://example.com/second.png' } },
+          role: "assistant",
+          content: [{ type: "text", text: "ok" }],
+          toolCalls: [
+            {
+              type: "function",
+              id: "call_first",
+              name: "first_image",
+              arguments: "{}",
+            },
+            {
+              type: "function",
+              id: "call_second",
+              name: "second_image",
+              arguments: "{}",
+            },
           ],
-          toolCallId: 'call_second',
+        },
+        {
+          role: "tool",
+          content: [
+            {
+              type: "image_url",
+              imageUrl: { url: "https://example.com/first.png" },
+            },
+          ],
+          toolCallId: "call_first",
+          toolCalls: [],
+        },
+        {
+          role: "tool",
+          content: [
+            { type: "text", text: "second" },
+            {
+              type: "image_url",
+              imageUrl: { url: "https://example.com/second.png" },
+            },
+          ],
+          toolCallId: "call_second",
           toolCalls: [],
         },
       ];
-      const body = await captureRequestBody(provider, '', [], history);
+      const body = await captureRequestBody(provider, "", [], history);
 
-      expect(body['messages']).toEqual([
-        { role: 'user', content: 'Fetch both images' },
+      expect(body["messages"]).toEqual([
+        { role: "user", content: "Fetch both images" },
         {
-          role: 'assistant',
-          content: 'ok',
+          role: "assistant",
+          content: "ok",
           tool_calls: [
             {
-              type: 'function',
-              id: 'call_first',
-              function: { name: 'first_image', arguments: '{}' },
+              type: "function",
+              id: "call_first",
+              function: { name: "first_image", arguments: "{}" },
             },
             {
-              type: 'function',
-              id: 'call_second',
-              function: { name: 'second_image', arguments: '{}' },
+              type: "function",
+              id: "call_second",
+              function: { name: "second_image", arguments: "{}" },
             },
           ],
         },
-        { role: 'tool', content: '(see attached media)', tool_call_id: 'call_first' },
-        { role: 'tool', content: 'second', tool_call_id: 'call_second' },
         {
-          role: 'user',
+          role: "tool",
+          content: "(see attached media)",
+          tool_call_id: "call_first",
+        },
+        { role: "tool", content: "second", tool_call_id: "call_second" },
+        {
+          role: "user",
           content: [
-            { type: 'text', text: 'Attached media from tool result:' },
-            { type: 'image_url', image_url: { url: 'https://example.com/first.png' } },
-            { type: 'image_url', image_url: { url: 'https://example.com/second.png' } },
+            { type: "text", text: "Attached media from tool result:" },
+            {
+              type: "image_url",
+              image_url: { url: "https://example.com/first.png" },
+            },
+            {
+              type: "image_url",
+              image_url: { url: "https://example.com/second.png" },
+            },
           ],
         },
       ]);
     });
 
-    it('parallel tool calls', async () => {
+    it("parallel tool calls", async () => {
       const provider = createProvider();
       const history: Message[] = [
-        { role: 'user', content: [{ type: 'text', text: 'Calculate 2+3 and 4*5' }], toolCalls: [] },
         {
-          role: 'assistant',
-          content: [{ type: 'text', text: "I'll calculate both." }],
+          role: "user",
+          content: [{ type: "text", text: "Calculate 2+3 and 4*5" }],
+          toolCalls: [],
+        },
+        {
+          role: "assistant",
+          content: [{ type: "text", text: "I'll calculate both." }],
           toolCalls: [
             {
-              type: 'function',
-              id: 'call_add',
-              name: 'add',
+              type: "function",
+              id: "call_add",
+              name: "add",
               arguments: '{"a": 2, "b": 3}',
             },
             {
-              type: 'function',
-              id: 'call_mul',
-              name: 'multiply',
+              type: "function",
+              id: "call_mul",
+              name: "multiply",
               arguments: '{"a": 4, "b": 5}',
             },
           ],
         },
         {
-          role: 'tool',
+          role: "tool",
           content: [
-            { type: 'text', text: '<system-reminder>This is a system reminder</system-reminder>' },
-            { type: 'text', text: '5' },
+            {
+              type: "text",
+              text: "<system-reminder>This is a system reminder</system-reminder>",
+            },
+            { type: "text", text: "5" },
           ],
-          toolCallId: 'call_add',
+          toolCallId: "call_add",
           toolCalls: [],
         },
         {
-          role: 'tool',
+          role: "tool",
           content: [
-            { type: 'text', text: '<system-reminder>This is a system reminder</system-reminder>' },
-            { type: 'text', text: '20' },
+            {
+              type: "text",
+              text: "<system-reminder>This is a system reminder</system-reminder>",
+            },
+            { type: "text", text: "20" },
           ],
-          toolCallId: 'call_mul',
+          toolCallId: "call_mul",
           toolCalls: [],
         },
       ];
-      const body = await captureRequestBody(provider, '', [ADD_TOOL, MUL_TOOL], history);
+      const body = await captureRequestBody(
+        provider,
+        "",
+        [ADD_TOOL, MUL_TOOL],
+        history,
+      );
 
       // Snapshot of the expected wire format:
       // - 4 messages in order: user, assistant (with 2 tool_calls), tool (call_add), tool (call_mul)
       // - user / assistant use compressed string content (single-TextPart compression)
       // - both tool messages preserve multi-part content arrays (not compressed)
       // - tools array preserved
-      expect(body['messages']).toEqual([
-        { role: 'user', content: 'Calculate 2+3 and 4*5' },
+      expect(body["messages"]).toEqual([
+        { role: "user", content: "Calculate 2+3 and 4*5" },
         {
-          role: 'assistant',
+          role: "assistant",
           content: "I'll calculate both.",
           tool_calls: [
             {
-              type: 'function',
-              id: 'call_add',
-              function: { name: 'add', arguments: '{"a": 2, "b": 3}' },
+              type: "function",
+              id: "call_add",
+              function: { name: "add", arguments: '{"a": 2, "b": 3}' },
             },
             {
-              type: 'function',
-              id: 'call_mul',
-              function: { name: 'multiply', arguments: '{"a": 4, "b": 5}' },
+              type: "function",
+              id: "call_mul",
+              function: { name: "multiply", arguments: '{"a": 4, "b": 5}' },
             },
           ],
         },
         {
-          role: 'tool',
+          role: "tool",
           content: [
             {
-              type: 'text',
-              text: '<system-reminder>This is a system reminder</system-reminder>',
+              type: "text",
+              text: "<system-reminder>This is a system reminder</system-reminder>",
             },
-            { type: 'text', text: '5' },
+            { type: "text", text: "5" },
           ],
-          tool_call_id: 'call_add',
+          tool_call_id: "call_add",
         },
         {
-          role: 'tool',
+          role: "tool",
           content: [
             {
-              type: 'text',
-              text: '<system-reminder>This is a system reminder</system-reminder>',
+              type: "text",
+              text: "<system-reminder>This is a system reminder</system-reminder>",
             },
-            { type: 'text', text: '20' },
+            { type: "text", text: "20" },
           ],
-          tool_call_id: 'call_mul',
+          tool_call_id: "call_mul",
         },
       ]);
-      expect(body['tools']).toHaveLength(2);
+      expect(body["tools"]).toHaveLength(2);
     });
   });
 
-  describe('reasoning content', () => {
-    it('converts ThinkPart to configured reasoning key', async () => {
-      const provider = createProvider({ reasoningKey: 'reasoning_content' });
+  describe("reasoning content", () => {
+    it("converts ThinkPart to configured reasoning key", async () => {
+      const provider = createProvider({ reasoningKey: "reasoning_content" });
       const history: Message[] = [
-        { role: 'user', content: [{ type: 'text', text: 'What is 2+2?' }], toolCalls: [] },
         {
-          role: 'assistant',
+          role: "user",
+          content: [{ type: "text", text: "What is 2+2?" }],
+          toolCalls: [],
+        },
+        {
+          role: "assistant",
           content: [
-            { type: 'think', think: 'Thinking...' },
-            { type: 'text', text: '4.' },
+            { type: "think", think: "Thinking..." },
+            { type: "text", text: "4." },
           ],
           toolCalls: [],
         },
-        { role: 'user', content: [{ type: 'text', text: 'Thanks!' }], toolCalls: [] },
-      ];
-      const body = await captureRequestBody(provider, '', [], history);
-
-      expect(body['messages']).toEqual([
-        { role: 'user', content: 'What is 2+2?' },
         {
-          role: 'assistant',
-          content: '4.',
-          reasoning_content: 'Thinking...',
+          role: "user",
+          content: [{ type: "text", text: "Thanks!" }],
+          toolCalls: [],
         },
-        { role: 'user', content: 'Thanks!' },
+      ];
+      const body = await captureRequestBody(provider, "", [], history);
+
+      expect(body["messages"]).toEqual([
+        { role: "user", content: "What is 2+2?" },
+        {
+          role: "assistant",
+          content: "4.",
+          reasoning_content: "Thinking...",
+        },
+        { role: "user", content: "Thanks!" },
       ]);
     });
 
-    it('defaults to reasoning_content before any detection', async () => {
+    it("defaults to reasoning_content before any detection", async () => {
       const provider = createProvider();
       const history: Message[] = [
         {
-          role: 'assistant',
+          role: "assistant",
           content: [
-            { type: 'think', think: 'Thinking...' },
-            { type: 'text', text: '4.' },
+            { type: "think", think: "Thinking..." },
+            { type: "text", text: "4." },
           ],
           toolCalls: [],
         },
       ];
-      const body = await captureRequestBody(provider, '', [], history);
+      const body = await captureRequestBody(provider, "", [], history);
 
-      const messages = body['messages'] as Array<Record<string, unknown>>;
+      const messages = body["messages"] as Array<Record<string, unknown>>;
       expect(messages[0]).toEqual({
-        role: 'assistant',
-        content: '4.',
-        reasoning_content: 'Thinking...',
+        role: "assistant",
+        content: "4.",
+        reasoning_content: "Thinking...",
       });
     });
 
-    it('echoes thinking under the dialect detected from the response', async () => {
+    it("echoes thinking under the dialect detected from the response", async () => {
       const provider = createProvider();
       const captured: Array<Record<string, unknown>> = [];
       (provider as any)._client.chat.completions.create = vi
@@ -621,52 +776,58 @@ describe('OpenAILegacyChatProvider', () => {
         .mockImplementation((params: unknown) => {
           captured.push(params as Record<string, unknown>);
           return Promise.resolve({
-            id: 'chatcmpl-r',
+            id: "chatcmpl-r",
             choices: [
               {
                 index: 0,
-                message: { role: 'assistant', content: 'ok', reasoning: 'hmm' },
-                finish_reason: 'stop',
+                message: { role: "assistant", content: "ok", reasoning: "hmm" },
+                finish_reason: "stop",
               },
             ],
           });
         });
 
       // Detection happens while draining the first response.
-      const first = await provider.generate('', [], []);
+      const first = await provider.generate("", [], []);
       for await (const part of first) void part;
 
       const history: Message[] = [
         {
-          role: 'assistant',
+          role: "assistant",
           content: [
-            { type: 'think', think: 'hmm' },
-            { type: 'text', text: 'ok' },
+            { type: "think", think: "hmm" },
+            { type: "text", text: "ok" },
           ],
           toolCalls: [],
         },
       ];
-      const second = await provider.generate('', [], history);
+      const second = await provider.generate("", [], history);
       for await (const part of second) void part;
 
-      const messages = captured[1]?.['messages'] as Array<Record<string, unknown>>;
-      expect(messages[0]).toEqual({ role: 'assistant', content: 'ok', reasoning: 'hmm' });
+      const messages = captured[1]?.["messages"] as Array<
+        Record<string, unknown>
+      >;
+      expect(messages[0]).toEqual({
+        role: "assistant",
+        content: "ok",
+        reasoning: "hmm",
+      });
     });
 
-    it('explicit reasoningKey pins the dialect against detection', async () => {
-      const provider = createProvider({ reasoningKey: 'custom_reasoning' });
+    it("explicit reasoningKey pins the dialect against detection", async () => {
+      const provider = createProvider({ reasoningKey: "custom_reasoning" });
       const captured: Array<Record<string, unknown>> = [];
       (provider as any)._client.chat.completions.create = vi
         .fn()
         .mockImplementation((params: unknown) => {
           captured.push(params as Record<string, unknown>);
           return Promise.resolve({
-            id: 'chatcmpl-r',
+            id: "chatcmpl-r",
             choices: [
               {
                 index: 0,
-                message: { role: 'assistant', content: 'ok', reasoning: 'hmm' },
-                finish_reason: 'stop',
+                message: { role: "assistant", content: "ok", reasoning: "hmm" },
+                finish_reason: "stop",
               },
             ],
           });
@@ -674,29 +835,35 @@ describe('OpenAILegacyChatProvider', () => {
 
       // With an explicit key, only that key is read inbound: a `reasoning`
       // field is not picked up, and detection stays out of the way.
-      const first = await provider.generate('', [], []);
+      const first = await provider.generate("", [], []);
       const firstParts = [];
       for await (const part of first) firstParts.push(part);
-      expect(firstParts).toEqual([{ type: 'text', text: 'ok' }]);
+      expect(firstParts).toEqual([{ type: "text", text: "ok" }]);
 
       const history: Message[] = [
         {
-          role: 'assistant',
+          role: "assistant",
           content: [
-            { type: 'think', think: 'hmm' },
-            { type: 'text', text: 'ok' },
+            { type: "think", think: "hmm" },
+            { type: "text", text: "ok" },
           ],
           toolCalls: [],
         },
       ];
-      const second = await provider.generate('', [], history);
+      const second = await provider.generate("", [], history);
       for await (const part of second) void part;
 
-      const messages = captured[1]?.['messages'] as Array<Record<string, unknown>>;
-      expect(messages[0]).toEqual({ role: 'assistant', content: 'ok', custom_reasoning: 'hmm' });
+      const messages = captured[1]?.["messages"] as Array<
+        Record<string, unknown>
+      >;
+      expect(messages[0]).toEqual({
+        role: "assistant",
+        content: "ok",
+        custom_reasoning: "hmm",
+      });
     });
 
-    it('dialect detected on a per-step clone steers the original provider', async () => {
+    it("dialect detected on a per-step clone steers the original provider", async () => {
       const original = createProvider();
       const captured: Array<Record<string, unknown>> = [];
       (original as any)._client.chat.completions.create = vi
@@ -704,12 +871,12 @@ describe('OpenAILegacyChatProvider', () => {
         .mockImplementation((params: unknown) => {
           captured.push(params as Record<string, unknown>);
           return Promise.resolve({
-            id: 'chatcmpl-r',
+            id: "chatcmpl-r",
             choices: [
               {
                 index: 0,
-                message: { role: 'assistant', content: 'ok', reasoning: 'hmm' },
-                finish_reason: 'stop',
+                message: { role: "assistant", content: "ok", reasoning: "hmm" },
+                finish_reason: "stop",
               },
             ],
           });
@@ -718,101 +885,123 @@ describe('OpenAILegacyChatProvider', () => {
       // The per-step clone shares `_client` (mocked above) and must also share
       // the dialect cell: learning on the clone steers the original.
       const clone = original.withGenerationKwargs({ max_tokens: 2048 });
-      const first = await clone.generate('', [], []);
+      const first = await clone.generate("", [], []);
       for await (const part of first) void part;
 
       const history: Message[] = [
         {
-          role: 'assistant',
+          role: "assistant",
           content: [
-            { type: 'think', think: 'hmm' },
-            { type: 'text', text: 'ok' },
+            { type: "think", think: "hmm" },
+            { type: "text", text: "ok" },
           ],
           toolCalls: [],
         },
       ];
-      const second = await original.generate('', [], history);
+      const second = await original.generate("", [], history);
       for await (const part of second) void part;
 
-      const messages = captured[1]?.['messages'] as Array<Record<string, unknown>>;
-      expect(messages[0]).toEqual({ role: 'assistant', content: 'ok', reasoning: 'hmm' });
+      const messages = captured[1]?.["messages"] as Array<
+        Record<string, unknown>
+      >;
+      expect(messages[0]).toEqual({
+        role: "assistant",
+        content: "ok",
+        reasoning: "hmm",
+      });
     });
   });
 
-  describe('generation kwargs', () => {
-    it('applies temperature and max_tokens', async () => {
+  describe("generation kwargs", () => {
+    it("applies temperature and max_tokens", async () => {
       const provider = createProvider().withGenerationKwargs({
         temperature: 0.7,
         max_tokens: 2048,
       });
       const history: Message[] = [
-        { role: 'user', content: [{ type: 'text', text: 'Hi' }], toolCalls: [] },
+        {
+          role: "user",
+          content: [{ type: "text", text: "Hi" }],
+          toolCalls: [],
+        },
       ];
-      const body = await captureRequestBody(provider, '', [], history);
+      const body = await captureRequestBody(provider, "", [], history);
 
-      expect(body['temperature']).toBe(0.7);
-      expect(body['max_tokens']).toBe(2048);
+      expect(body["temperature"]).toBe(0.7);
+      expect(body["max_tokens"]).toBe(2048);
     });
 
-    it('passes constructor generationKwargs into the request body', async () => {
+    it("passes constructor generationKwargs into the request body", async () => {
       // The construction-time channel (session affinity): kwargs seeded via
       // the options land on every request, no morph required.
       const provider = new OpenAILegacyChatProvider({
-        model: 'gpt-4.1',
-        apiKey: 'test-key',
+        model: "gpt-4.1",
+        apiKey: "test-key",
         stream: false,
-        generationKwargs: { prompt_cache_key: 'session-test' },
+        generationKwargs: { prompt_cache_key: "session-test" },
       });
       const history: Message[] = [
-        { role: 'user', content: [{ type: 'text', text: 'Hi' }], toolCalls: [] },
+        {
+          role: "user",
+          content: [{ type: "text", text: "Hi" }],
+          toolCalls: [],
+        },
       ];
-      const body = await captureRequestBody(provider, '', [], history);
+      const body = await captureRequestBody(provider, "", [], history);
 
-      expect(body['prompt_cache_key']).toBe('session-test');
+      expect(body["prompt_cache_key"]).toBe("session-test");
     });
 
-    it('explicit maxTokens wins over constructor generationKwargs on conflict', async () => {
+    it("explicit maxTokens wins over constructor generationKwargs on conflict", async () => {
       const provider = new OpenAILegacyChatProvider({
-        model: 'gpt-4.1',
-        apiKey: 'test-key',
+        model: "gpt-4.1",
+        apiKey: "test-key",
         stream: false,
         maxTokens: 1024,
         generationKwargs: { max_tokens: 512 },
       });
       const history: Message[] = [
-        { role: 'user', content: [{ type: 'text', text: 'Hi' }], toolCalls: [] },
+        {
+          role: "user",
+          content: [{ type: "text", text: "Hi" }],
+          toolCalls: [],
+        },
       ];
-      const body = await captureRequestBody(provider, '', [], history);
+      const body = await captureRequestBody(provider, "", [], history);
 
-      expect(body['max_tokens']).toBe(1024);
+      expect(body["max_tokens"]).toBe(1024);
     });
 
-    it('maps json_schema response format to response_format', async () => {
+    it("maps json_schema response format to response_format", async () => {
       const provider = createProvider();
       const history: Message[] = [
-        { role: 'user', content: [{ type: 'text', text: 'Extract contact' }], toolCalls: [] },
+        {
+          role: "user",
+          content: [{ type: "text", text: "Extract contact" }],
+          toolCalls: [],
+        },
       ];
       const schema = {
-        type: 'object',
-        properties: { name: { type: 'string' } },
-        required: ['name'],
+        type: "object",
+        properties: { name: { type: "string" } },
+        required: ["name"],
         additionalProperties: false,
       };
-      const body = await captureRequestBody(provider, '', [], history, {
+      const body = await captureRequestBody(provider, "", [], history, {
         responseFormat: {
-          type: 'json_schema',
+          type: "json_schema",
           jsonSchema: {
-            name: 'contact',
+            name: "contact",
             schema,
             strict: true,
           },
         },
       });
 
-      expect(body['response_format']).toEqual({
-        type: 'json_schema',
+      expect(body["response_format"]).toEqual({
+        type: "json_schema",
         json_schema: {
-          name: 'contact',
+          name: "contact",
           schema,
           strict: true,
           description: undefined,
@@ -820,634 +1009,823 @@ describe('OpenAILegacyChatProvider', () => {
       });
     });
 
-    it('withMaxCompletionTokens sets max_tokens on the cloned provider', async () => {
+    it("withMaxCompletionTokens sets max_tokens on the cloned provider", async () => {
       const original = createProvider();
       const provider = original.withMaxCompletionTokens(1024);
       const history: Message[] = [
-        { role: 'user', content: [{ type: 'text', text: 'Hi' }], toolCalls: [] },
+        {
+          role: "user",
+          content: [{ type: "text", text: "Hi" }],
+          toolCalls: [],
+        },
       ];
-      const body = await captureRequestBody(provider, '', [], history);
+      const body = await captureRequestBody(provider, "", [], history);
 
       expect(provider).not.toBe(original);
-      expect(body['max_tokens']).toBe(1024);
+      expect(body["max_tokens"]).toBe(1024);
     });
 
-    it.each(['gpt-5', 'gpt-5-codex', 'o3'])(
-      'withMaxCompletionTokens sets max_completion_tokens for %s',
+    it.each(["gpt-5", "gpt-5-codex", "o3"])(
+      "withMaxCompletionTokens sets max_completion_tokens for %s",
       async (model) => {
-        const provider = createProvider({ model }).withMaxCompletionTokens(1024);
+        const provider = createProvider({ model }).withMaxCompletionTokens(
+          1024,
+        );
         const history: Message[] = [
-          { role: 'user', content: [{ type: 'text', text: 'Hi' }], toolCalls: [] },
+          {
+            role: "user",
+            content: [{ type: "text", text: "Hi" }],
+            toolCalls: [],
+          },
         ];
-        const body = await captureRequestBody(provider, '', [], history);
+        const body = await captureRequestBody(provider, "", [], history);
 
-        expect(body['max_completion_tokens']).toBe(1024);
-        expect(body['max_tokens']).toBeUndefined();
+        expect(body["max_completion_tokens"]).toBe(1024);
+        expect(body["max_tokens"]).toBeUndefined();
       },
     );
 
-    it('keeps max_tokens for OpenAI-compatible non-OpenAI reasoning models', async () => {
-      const provider = createProvider({ model: 'deepseek-reasoner' }).withMaxCompletionTokens(
-        1024,
-      );
+    it("keeps max_tokens for OpenAI-compatible non-OpenAI reasoning models", async () => {
+      const provider = createProvider({
+        model: "deepseek-reasoner",
+      }).withMaxCompletionTokens(1024);
       const history: Message[] = [
-        { role: 'user', content: [{ type: 'text', text: 'Hi' }], toolCalls: [] },
+        {
+          role: "user",
+          content: [{ type: "text", text: "Hi" }],
+          toolCalls: [],
+        },
       ];
-      const body = await captureRequestBody(provider, '', [], history);
+      const body = await captureRequestBody(provider, "", [], history);
 
-      expect(body['max_tokens']).toBe(1024);
-      expect(body['max_completion_tokens']).toBeUndefined();
+      expect(body["max_tokens"]).toBe(1024);
+      expect(body["max_completion_tokens"]).toBeUndefined();
     });
 
-    it('withMaxCompletionTokens clamps to the 128k ceiling', async () => {
+    it("withMaxCompletionTokens clamps to the 128k ceiling", async () => {
       const provider = createProvider().withMaxCompletionTokens(1000000, {
         usedContextTokens: 30000,
         maxContextTokens: 1000000,
       });
       const history: Message[] = [
-        { role: 'user', content: [{ type: 'text', text: 'Hi' }], toolCalls: [] },
+        {
+          role: "user",
+          content: [{ type: "text", text: "Hi" }],
+          toolCalls: [],
+        },
       ];
-      const body = await captureRequestBody(provider, '', [], history);
+      const body = await captureRequestBody(provider, "", [], history);
 
       // 1000000 - 30000 = 970000, clamped to 131072
-      expect(body['max_tokens']).toBe(131072);
+      expect(body["max_tokens"]).toBe(131072);
       // The exposed effective cap matches the ceiling-clamped wire value —
       // the request trace records this field.
       expect(provider.maxCompletionTokens).toBe(131072);
     });
   });
 
-  describe('maxTokens option', () => {
-    it('wires OpenAILegacyOptions.maxTokens into the request body as max_tokens', async () => {
+  describe("maxTokens option", () => {
+    it("wires OpenAILegacyOptions.maxTokens into the request body as max_tokens", async () => {
       const provider = new OpenAILegacyChatProvider({
-        model: 'gpt-4.1',
-        apiKey: 'test-key',
+        model: "gpt-4.1",
+        apiKey: "test-key",
         stream: false,
         maxTokens: 1024,
       });
       const history: Message[] = [
-        { role: 'user', content: [{ type: 'text', text: 'Hi' }], toolCalls: [] },
+        {
+          role: "user",
+          content: [{ type: "text", text: "Hi" }],
+          toolCalls: [],
+        },
       ];
-      const body = await captureRequestBody(provider, '', [], history);
-      expect(body['max_tokens']).toBe(1024);
+      const body = await captureRequestBody(provider, "", [], history);
+      expect(body["max_tokens"]).toBe(1024);
       // The constructor-level cap is on the wire without any budget
       // application, so the exposed cap must reflect it too.
       expect(provider.maxCompletionTokens).toBe(1024);
     });
 
-    it('does not inject max_tokens when maxTokens option is omitted', async () => {
+    it("does not inject max_tokens when maxTokens option is omitted", async () => {
       const provider = new OpenAILegacyChatProvider({
-        model: 'gpt-4.1',
-        apiKey: 'test-key',
+        model: "gpt-4.1",
+        apiKey: "test-key",
         stream: false,
       });
       const history: Message[] = [
-        { role: 'user', content: [{ type: 'text', text: 'Hi' }], toolCalls: [] },
+        {
+          role: "user",
+          content: [{ type: "text", text: "Hi" }],
+          toolCalls: [],
+        },
       ];
-      const body = await captureRequestBody(provider, '', [], history);
-      expect(body['max_tokens']).toBeUndefined();
+      const body = await captureRequestBody(provider, "", [], history);
+      expect(body["max_tokens"]).toBeUndefined();
     });
 
-    it('exposes max_tokens via modelParameters', () => {
+    it("exposes max_tokens via modelParameters", () => {
       const provider = new OpenAILegacyChatProvider({
-        model: 'gpt-4.1',
-        apiKey: 'test-key',
+        model: "gpt-4.1",
+        apiKey: "test-key",
         maxTokens: 2048,
       });
-      expect(provider.modelParameters['max_tokens']).toBe(2048);
+      expect(provider.modelParameters["max_tokens"]).toBe(2048);
     });
   });
 
-  describe('toolMessageConversion option', () => {
-    it('flattens tool message content to a string when set to extract_text', async () => {
+  describe("toolMessageConversion option", () => {
+    it("flattens tool message content to a string when set to extract_text", async () => {
       const provider = new OpenAILegacyChatProvider({
-        model: 'gpt-4.1',
-        apiKey: 'test-key',
+        model: "gpt-4.1",
+        apiKey: "test-key",
         stream: false,
-        toolMessageConversion: 'extract_text',
+        toolMessageConversion: "extract_text",
       });
       const toolCall: ToolCall = {
-        type: 'function',
-        id: 'call_abc123',
-        name: 'add',
+        type: "function",
+        id: "call_abc123",
+        name: "add",
         arguments: '{"a": 2, "b": 3}',
       };
       const history: Message[] = [
-        { role: 'user', content: [{ type: 'text', text: 'Add 2 and 3' }], toolCalls: [] },
         {
-          role: 'assistant',
-          content: [{ type: 'text', text: "I'll add them." }],
+          role: "user",
+          content: [{ type: "text", text: "Add 2 and 3" }],
+          toolCalls: [],
+        },
+        {
+          role: "assistant",
+          content: [{ type: "text", text: "I'll add them." }],
           toolCalls: [toolCall],
         },
         {
-          role: 'tool',
+          role: "tool",
           content: [
-            { type: 'text', text: 'part-1' },
-            { type: 'text', text: 'part-2' },
+            { type: "text", text: "part-1" },
+            { type: "text", text: "part-2" },
           ],
-          toolCallId: 'call_abc123',
+          toolCallId: "call_abc123",
           toolCalls: [],
         },
       ];
-      const body = await captureRequestBody(provider, '', [], history);
-      const messages = body['messages'] as Record<string, unknown>[];
+      const body = await captureRequestBody(provider, "", [], history);
+      const messages = body["messages"] as Record<string, unknown>[];
       const toolMsg = messages[2]!;
-      expect(toolMsg['role']).toBe('tool');
+      expect(toolMsg["role"]).toBe("tool");
       // With extract_text, content must be a plain string (concatenated text),
       // not an array of content parts.
-      expect(typeof toolMsg['content']).toBe('string');
-      expect(toolMsg['content']).toBe('part-1part-2');
+      expect(typeof toolMsg["content"]).toBe("string");
+      expect(toolMsg["content"]).toBe("part-1part-2");
     });
 
-    it('forces string content when tool result contains audio_url even with default conversion', async () => {
+    it("forces string content when tool result contains audio_url even with default conversion", async () => {
       const provider = createProvider();
       const toolCall: ToolCall = {
-        type: 'function',
-        id: 'call_audio',
-        name: 'fetch_audio',
-        arguments: '{}',
+        type: "function",
+        id: "call_audio",
+        name: "fetch_audio",
+        arguments: "{}",
       };
       const history: Message[] = [
-        { role: 'user', content: [{ type: 'text', text: 'Play it' }], toolCalls: [] },
         {
-          role: 'assistant',
-          content: [{ type: 'text', text: 'ok' }],
+          role: "user",
+          content: [{ type: "text", text: "Play it" }],
+          toolCalls: [],
+        },
+        {
+          role: "assistant",
+          content: [{ type: "text", text: "ok" }],
           toolCalls: [toolCall],
         },
         {
-          role: 'tool',
+          role: "tool",
           content: [
-            { type: 'text', text: 'audio result' },
-            { type: 'audio_url', audioUrl: { url: 'https://example.com/a.mp3' } },
+            { type: "text", text: "audio result" },
+            {
+              type: "audio_url",
+              audioUrl: { url: "https://example.com/a.mp3" },
+            },
           ] satisfies ContentPart[],
-          toolCallId: 'call_audio',
+          toolCallId: "call_audio",
           toolCalls: [],
         },
       ];
-      const body = await captureRequestBody(provider, '', [], history);
-      const toolMsg = (body['messages'] as Record<string, unknown>[])[2]!;
-      expect(typeof toolMsg['content']).toBe('string');
+      const body = await captureRequestBody(provider, "", [], history);
+      const toolMsg = (body["messages"] as Record<string, unknown>[])[2]!;
+      expect(typeof toolMsg["content"]).toBe("string");
     });
 
-    it('forces string content when tool result contains video_url even with default conversion', async () => {
+    it("forces string content when tool result contains video_url even with default conversion", async () => {
       const provider = createProvider();
       const toolCall: ToolCall = {
-        type: 'function',
-        id: 'call_video',
-        name: 'fetch_video',
-        arguments: '{}',
+        type: "function",
+        id: "call_video",
+        name: "fetch_video",
+        arguments: "{}",
       };
       const history: Message[] = [
-        { role: 'user', content: [{ type: 'text', text: 'Show it' }], toolCalls: [] },
         {
-          role: 'assistant',
-          content: [{ type: 'text', text: 'ok' }],
+          role: "user",
+          content: [{ type: "text", text: "Show it" }],
+          toolCalls: [],
+        },
+        {
+          role: "assistant",
+          content: [{ type: "text", text: "ok" }],
           toolCalls: [toolCall],
         },
         {
-          role: 'tool',
+          role: "tool",
           content: [
-            { type: 'text', text: 'video result' },
-            { type: 'video_url', videoUrl: { url: 'https://example.com/v.mp4' } },
+            { type: "text", text: "video result" },
+            {
+              type: "video_url",
+              videoUrl: { url: "https://example.com/v.mp4" },
+            },
           ] satisfies ContentPart[],
-          toolCallId: 'call_video',
+          toolCallId: "call_video",
           toolCalls: [],
         },
       ];
-      const body = await captureRequestBody(provider, '', [], history);
-      const toolMsg = (body['messages'] as Record<string, unknown>[])[2]!;
-      expect(typeof toolMsg['content']).toBe('string');
+      const body = await captureRequestBody(provider, "", [], history);
+      const toolMsg = (body["messages"] as Record<string, unknown>[])[2]!;
+      expect(typeof toolMsg["content"]).toBe("string");
     });
 
-    it('keeps default text-only tool message as plain string', async () => {
+    it("keeps default text-only tool message as plain string", async () => {
       const provider = createProvider();
       const toolCall: ToolCall = {
-        type: 'function',
-        id: 'call_text',
-        name: 'add',
+        type: "function",
+        id: "call_text",
+        name: "add",
         arguments: '{"a":1,"b":2}',
       };
       const history: Message[] = [
-        { role: 'user', content: [{ type: 'text', text: 'Add 1 2' }], toolCalls: [] },
         {
-          role: 'assistant',
-          content: [{ type: 'text', text: 'ok' }],
+          role: "user",
+          content: [{ type: "text", text: "Add 1 2" }],
+          toolCalls: [],
+        },
+        {
+          role: "assistant",
+          content: [{ type: "text", text: "ok" }],
           toolCalls: [toolCall],
         },
         {
-          role: 'tool',
-          content: [{ type: 'text', text: '3' }],
-          toolCallId: 'call_text',
+          role: "tool",
+          content: [{ type: "text", text: "3" }],
+          toolCallId: "call_text",
           toolCalls: [],
         },
       ];
-      const body = await captureRequestBody(provider, '', [], history);
-      const toolMsg = (body['messages'] as Record<string, unknown>[])[2]!;
+      const body = await captureRequestBody(provider, "", [], history);
+      const toolMsg = (body["messages"] as Record<string, unknown>[])[2]!;
       // Single-text tool result with default conversion stays as a plain string.
-      expect(toolMsg['content']).toBe('3');
+      expect(toolMsg["content"]).toBe("3");
     });
 
-    it('preserves default tool message content as array when option is omitted', async () => {
+    it("preserves default tool message content as array when option is omitted", async () => {
       const provider = createProvider();
       const toolCall: ToolCall = {
-        type: 'function',
-        id: 'call_abc123',
-        name: 'add',
+        type: "function",
+        id: "call_abc123",
+        name: "add",
         arguments: '{"a": 2, "b": 3}',
       };
       const history: Message[] = [
-        { role: 'user', content: [{ type: 'text', text: 'Add 2 and 3' }], toolCalls: [] },
         {
-          role: 'assistant',
-          content: [{ type: 'text', text: "I'll add them." }],
+          role: "user",
+          content: [{ type: "text", text: "Add 2 and 3" }],
+          toolCalls: [],
+        },
+        {
+          role: "assistant",
+          content: [{ type: "text", text: "I'll add them." }],
           toolCalls: [toolCall],
         },
         {
-          role: 'tool',
+          role: "tool",
           content: [
-            { type: 'text', text: 'part-1' },
-            { type: 'text', text: 'part-2' },
+            { type: "text", text: "part-1" },
+            { type: "text", text: "part-2" },
           ],
-          toolCallId: 'call_abc123',
+          toolCallId: "call_abc123",
           toolCalls: [],
         },
       ];
-      const body = await captureRequestBody(provider, '', [], history);
-      const messages = body['messages'] as Record<string, unknown>[];
+      const body = await captureRequestBody(provider, "", [], history);
+      const messages = body["messages"] as Record<string, unknown>[];
       const toolMsg = messages[2]!;
       // Default behavior: two text parts stay as a content-part array.
-      expect(Array.isArray(toolMsg['content'])).toBe(true);
+      expect(Array.isArray(toolMsg["content"])).toBe(true);
     });
   });
 
-  describe('with thinking', () => {
+  describe("with thinking", () => {
     it('.withThinking("high") sets reasoning_effort', async () => {
-      const provider = createProvider().withThinking('high');
+      const provider = createProvider().withThinking("high");
       const history: Message[] = [
-        { role: 'user', content: [{ type: 'text', text: 'Think' }], toolCalls: [] },
+        {
+          role: "user",
+          content: [{ type: "text", text: "Think" }],
+          toolCalls: [],
+        },
       ];
-      const body = await captureRequestBody(provider, '', [], history);
+      const body = await captureRequestBody(provider, "", [], history);
 
-      expect(body['reasoning_effort']).toBe('high');
+      expect(body["reasoning_effort"]).toBe("high");
     });
 
-    it.each(['deepseek/deepseek-v4-flash', 'gpt-5.4-pro', 'some-model'])(
+    it.each(["deepseek/deepseek-v4-flash", "gpt-5.4-pro", "some-model"])(
       '.withThinking("xhigh") passes through reasoning_effort for model %s',
       async (model) => {
-        const provider = createProvider({ model }).withThinking('xhigh');
+        const provider = createProvider({ model }).withThinking("xhigh");
         const history: Message[] = [
-          { role: 'user', content: [{ type: 'text', text: 'Think' }], toolCalls: [] },
+          {
+            role: "user",
+            content: [{ type: "text", text: "Think" }],
+            toolCalls: [],
+          },
         ];
-        const body = await captureRequestBody(provider, '', [], history);
+        const body = await captureRequestBody(provider, "", [], history);
 
-        expect(body['reasoning_effort']).toBe('xhigh');
-        expect(provider.thinkingEffort).toBe('xhigh');
+        expect(body["reasoning_effort"]).toBe("xhigh");
+        expect(provider.thinkingEffort).toBe("xhigh");
       },
     );
 
     it('.withThinking("max") passes max through verbatim', async () => {
       const history: Message[] = [
-        { role: 'user', content: [{ type: 'text', text: 'Think' }], toolCalls: [] },
+        {
+          role: "user",
+          content: [{ type: "text", text: "Think" }],
+          toolCalls: [],
+        },
       ];
 
       const openAIChatModel = await captureRequestBody(
-        createProvider({ model: 'gpt-5.5' }).withThinking('max'),
-        '',
+        createProvider({ model: "gpt-5.5" }).withThinking("max"),
+        "",
         [],
         history,
       );
       const openAIProModel = await captureRequestBody(
-        createProvider({ model: 'gpt-5.5-pro' }).withThinking('max'),
-        '',
+        createProvider({ model: "gpt-5.5-pro" }).withThinking("max"),
+        "",
         [],
         history,
       );
       const deepSeekModel = await captureRequestBody(
-        createProvider({ model: 'deepseek/deepseek-v4-pro' }).withThinking('max'),
-        '',
+        createProvider({ model: "deepseek/deepseek-v4-pro" }).withThinking(
+          "max",
+        ),
+        "",
         [],
         history,
       );
 
-      expect(openAIChatModel['reasoning_effort']).toBe('max');
-      expect(openAIProModel['reasoning_effort']).toBe('max');
-      expect(deepSeekModel['reasoning_effort']).toBe('max');
+      expect(openAIChatModel["reasoning_effort"]).toBe("max");
+      expect(openAIProModel["reasoning_effort"]).toBe("max");
+      expect(deepSeekModel["reasoning_effort"]).toBe("max");
     });
 
-    it('passes max through verbatim', async () => {
-      const provider = createProvider({ model: 'kimi-for-coding' }).withThinking('max');
+    it("passes max through verbatim", async () => {
+      const provider = createProvider({
+        model: "kimi-for-coding",
+      }).withThinking("max");
       const history: Message[] = [
-        { role: 'user', content: [{ type: 'text', text: 'Think' }], toolCalls: [] },
+        {
+          role: "user",
+          content: [{ type: "text", text: "Think" }],
+          toolCalls: [],
+        },
       ];
-      const body = await captureRequestBody(provider, '', [], history);
+      const body = await captureRequestBody(provider, "", [], history);
 
-      expect(body['reasoning_effort']).toBe('max');
-      expect(provider.thinkingEffort).toBe('max');
+      expect(body["reasoning_effort"]).toBe("max");
+      expect(provider.thinkingEffort).toBe("max");
     });
 
-    it('passes concrete effort strings through verbatim', async () => {
+    it("passes concrete effort strings through verbatim", async () => {
       const history: Message[] = [
-        { role: 'user', content: [{ type: 'text', text: 'Think' }], toolCalls: [] },
+        {
+          role: "user",
+          content: [{ type: "text", text: "Think" }],
+          toolCalls: [],
+        },
       ];
-      for (const requested of ['xhigh', 'medium', 'extreme'] as const) {
+      for (const requested of ["xhigh", "medium", "extreme"] as const) {
         const body = await captureRequestBody(
-          createProvider({ model: 'kimi-for-coding' }).withThinking(requested),
-          '',
+          createProvider({ model: "kimi-for-coding" }).withThinking(requested),
+          "",
           [],
           history,
         );
-        expect(body['reasoning_effort']).toBe(requested);
+        expect(body["reasoning_effort"]).toBe(requested);
       }
     });
 
-    it('does not filter concrete efforts through a client-side allow-list', async () => {
+    it("does not filter concrete efforts through a client-side allow-list", async () => {
       const history: Message[] = [
-        { role: 'user', content: [{ type: 'text', text: 'Think' }], toolCalls: [] },
+        {
+          role: "user",
+          content: [{ type: "text", text: "Think" }],
+          toolCalls: [],
+        },
       ];
       const provider = createProvider({
-        model: 'kimi-for-coding',
+        model: "kimi-for-coding",
       });
 
-      const maxBody = await captureRequestBody(provider.withThinking('max'), '', [], history);
-      const xhighBody = await captureRequestBody(provider.withThinking('xhigh'), '', [], history);
+      const maxBody = await captureRequestBody(
+        provider.withThinking("max"),
+        "",
+        [],
+        history,
+      );
+      const xhighBody = await captureRequestBody(
+        provider.withThinking("xhigh"),
+        "",
+        [],
+        history,
+      );
 
-      expect(maxBody['reasoning_effort']).toBe('max');
-      expect(xhighBody['reasoning_effort']).toBe('xhigh');
+      expect(maxBody["reasoning_effort"]).toBe("max");
+      expect(xhighBody["reasoning_effort"]).toBe("xhigh");
     });
 
     it('.withThinking("off") sends no reasoning_effort and reports "off"', async () => {
-      const provider = createProvider().withThinking('off');
+      const provider = createProvider().withThinking("off");
       const history: Message[] = [
-        { role: 'user', content: [{ type: 'text', text: 'Think' }], toolCalls: [] },
+        {
+          role: "user",
+          content: [{ type: "text", text: "Think" }],
+          toolCalls: [],
+        },
       ];
-      const body = await captureRequestBody(provider, '', [], history);
+      const body = await captureRequestBody(provider, "", [], history);
 
-      expect(body['reasoning_effort']).toBeUndefined();
-      expect(provider.thinkingEffort).toBe('off');
+      expect(body["reasoning_effort"]).toBeUndefined();
+      expect(provider.thinkingEffort).toBe("off");
     });
 
     it('.withThinking("off") sends the configured offEffort for models that reason by default', async () => {
-      const provider = createProvider({ offEffort: 'none' }).withThinking('off');
+      const provider = createProvider({ offEffort: "none" }).withThinking(
+        "off",
+      );
       const history: Message[] = [
-        { role: 'user', content: [{ type: 'text', text: 'Think' }], toolCalls: [] },
+        {
+          role: "user",
+          content: [{ type: "text", text: "Think" }],
+          toolCalls: [],
+        },
       ];
-      const body = await captureRequestBody(provider, '', [], history);
+      const body = await captureRequestBody(provider, "", [], history);
 
-      expect(body['reasoning_effort']).toBe('none');
-      expect(provider.thinkingEffort).toBe('off');
+      expect(body["reasoning_effort"]).toBe("none");
+      expect(provider.thinkingEffort).toBe("off");
     });
 
     it('.withThinking("on") sends no reasoning_effort without ThinkPart history and reports "on"', async () => {
-      const provider = createProvider().withThinking('on');
+      const provider = createProvider().withThinking("on");
       const history: Message[] = [
-        { role: 'user', content: [{ type: 'text', text: 'Think' }], toolCalls: [] },
+        {
+          role: "user",
+          content: [{ type: "text", text: "Think" }],
+          toolCalls: [],
+        },
       ];
-      const body = await captureRequestBody(provider, '', [], history);
+      const body = await captureRequestBody(provider, "", [], history);
 
-      expect(body['reasoning_effort']).toBeUndefined();
-      expect(provider.thinkingEffort).toBe('on');
+      expect(body["reasoning_effort"]).toBeUndefined();
+      expect(provider.thinkingEffort).toBe("on");
     });
 
-    it('reports a null thinkingEffort until withThinking is called', () => {
+    it("reports a null thinkingEffort until withThinking is called", () => {
       expect(createProvider().thinkingEffort).toBeNull();
     });
 
     it('.withThinking("off") clears a concrete effort set earlier', async () => {
-      const provider = createProvider().withThinking('high').withThinking('off');
-      expect(provider.thinkingEffort).toBe('off');
+      const provider = createProvider()
+        .withThinking("high")
+        .withThinking("off");
+      expect(provider.thinkingEffort).toBe("off");
 
       const history: Message[] = [
-        { role: 'user', content: [{ type: 'text', text: 'Think' }], toolCalls: [] },
+        {
+          role: "user",
+          content: [{ type: "text", text: "Think" }],
+          toolCalls: [],
+        },
       ];
-      const body = await captureRequestBody(provider, '', [], history);
-      expect(body['reasoning_effort']).toBeUndefined();
+      const body = await captureRequestBody(provider, "", [], history);
+      expect(body["reasoning_effort"]).toBeUndefined();
     });
   });
 
-  describe('auto reasoning_effort', () => {
-    it('auto-injects reasoning_effort when history has ThinkPart and reasoningKey is set', async () => {
+  describe("auto reasoning_effort", () => {
+    it("auto-injects reasoning_effort when history has ThinkPart and reasoningKey is set", async () => {
       const provider = createProvider({
-        model: 'kimi-k2.5',
-        reasoningKey: 'reasoning_content',
+        model: "kimi-k2.5",
+        reasoningKey: "reasoning_content",
       });
       const history: Message[] = [
-        { role: 'user', content: [{ type: 'text', text: 'Hello' }], toolCalls: [] },
         {
-          role: 'assistant',
+          role: "user",
+          content: [{ type: "text", text: "Hello" }],
+          toolCalls: [],
+        },
+        {
+          role: "assistant",
           content: [
-            { type: 'think', think: 'Let me think...' },
-            { type: 'text', text: 'Hi!' },
+            { type: "think", think: "Let me think..." },
+            { type: "text", text: "Hi!" },
           ],
           toolCalls: [],
         },
-        { role: 'user', content: [{ type: 'text', text: 'How are you?' }], toolCalls: [] },
+        {
+          role: "user",
+          content: [{ type: "text", text: "How are you?" }],
+          toolCalls: [],
+        },
       ];
-      const body = await captureRequestBody(provider, '', [], history);
+      const body = await captureRequestBody(provider, "", [], history);
 
       // reasoning_effort should be auto-set because history contains ThinkPart
-      expect(body['reasoning_effort']).toBe('medium');
+      expect(body["reasoning_effort"]).toBe("medium");
       // reasoning_content should still be present in the message
-      const messages = body['messages'] as Record<string, unknown>[];
-      expect(messages[1]!['reasoning_content']).toBe('Let me think...');
+      const messages = body["messages"] as Record<string, unknown>[];
+      expect(messages[1]!["reasoning_content"]).toBe("Let me think...");
     });
 
-    it('does not auto-inject reasoning_effort when history has no ThinkPart', async () => {
+    it("does not auto-inject reasoning_effort when history has no ThinkPart", async () => {
       const provider = createProvider({
-        model: 'kimi-k2.5',
-        reasoningKey: 'reasoning_content',
+        model: "kimi-k2.5",
+        reasoningKey: "reasoning_content",
       });
       const history: Message[] = [
-        { role: 'user', content: [{ type: 'text', text: 'Hello' }], toolCalls: [] },
-        { role: 'assistant', content: [{ type: 'text', text: 'Hi!' }], toolCalls: [] },
-        { role: 'user', content: [{ type: 'text', text: 'How are you?' }], toolCalls: [] },
+        {
+          role: "user",
+          content: [{ type: "text", text: "Hello" }],
+          toolCalls: [],
+        },
+        {
+          role: "assistant",
+          content: [{ type: "text", text: "Hi!" }],
+          toolCalls: [],
+        },
+        {
+          role: "user",
+          content: [{ type: "text", text: "How are you?" }],
+          toolCalls: [],
+        },
       ];
-      const body = await captureRequestBody(provider, '', [], history);
+      const body = await captureRequestBody(provider, "", [], history);
 
-      expect(body['reasoning_effort']).toBeUndefined();
+      expect(body["reasoning_effort"]).toBeUndefined();
     });
 
-    it('auto-injects reasoning_effort when history has ThinkPart even without explicit reasoningKey', async () => {
+    it("auto-injects reasoning_effort when history has ThinkPart even without explicit reasoningKey", async () => {
       // No reasoningKey configured — the provider should still treat ThinkPart in
       // history as a signal to inject reasoning_effort, so OpenAI-compatible
       // gateways (One API, DeepSeek) that demand a paired reasoning_effort
       // don't reject the request with 400.
-      const provider = createProvider({ model: 'some-model' });
+      const provider = createProvider({ model: "some-model" });
       const history: Message[] = [
-        { role: 'user', content: [{ type: 'text', text: 'Hello' }], toolCalls: [] },
         {
-          role: 'assistant',
+          role: "user",
+          content: [{ type: "text", text: "Hello" }],
+          toolCalls: [],
+        },
+        {
+          role: "assistant",
           content: [
-            { type: 'think', think: 'Thinking...' },
-            { type: 'text', text: 'Hi!' },
+            { type: "think", think: "Thinking..." },
+            { type: "text", text: "Hi!" },
           ],
           toolCalls: [],
         },
-        { role: 'user', content: [{ type: 'text', text: 'How are you?' }], toolCalls: [] },
+        {
+          role: "user",
+          content: [{ type: "text", text: "How are you?" }],
+          toolCalls: [],
+        },
       ];
-      const body = await captureRequestBody(provider, '', [], history);
+      const body = await captureRequestBody(provider, "", [], history);
 
-      expect(body['reasoning_effort']).toBe('medium');
+      expect(body["reasoning_effort"]).toBe("medium");
     });
 
-    it('does not overwrite reasoning_effort pinned via withGenerationKwargs', async () => {
+    it("does not overwrite reasoning_effort pinned via withGenerationKwargs", async () => {
       // Auto-injection must yield to an explicit caller-set reasoning_effort,
       // otherwise multi-turn requests silently downgrade a 'high' / 'low'
       // setting back to 'medium' once the history contains ThinkPart.
-      const provider = createProvider({ model: 'some-model' }).withGenerationKwargs({
-        reasoning_effort: 'high',
+      const provider = createProvider({
+        model: "some-model",
+      }).withGenerationKwargs({
+        reasoning_effort: "high",
       });
       const history: Message[] = [
-        { role: 'user', content: [{ type: 'text', text: 'Hello' }], toolCalls: [] },
         {
-          role: 'assistant',
+          role: "user",
+          content: [{ type: "text", text: "Hello" }],
+          toolCalls: [],
+        },
+        {
+          role: "assistant",
           content: [
-            { type: 'think', think: 'thinking' },
-            { type: 'text', text: 'Hi!' },
+            { type: "think", think: "thinking" },
+            { type: "text", text: "Hi!" },
           ],
           toolCalls: [],
         },
-        { role: 'user', content: [{ type: 'text', text: 'Again?' }], toolCalls: [] },
+        {
+          role: "user",
+          content: [{ type: "text", text: "Again?" }],
+          toolCalls: [],
+        },
       ];
-      const body = await captureRequestBody(provider, '', [], history);
+      const body = await captureRequestBody(provider, "", [], history);
 
-      expect(body['reasoning_effort']).toBe('high');
+      expect(body["reasoning_effort"]).toBe("high");
     });
 
-    it('does not auto-inject reasoning_effort when thinking was explicitly turned off', async () => {
+    it("does not auto-inject reasoning_effort when thinking was explicitly turned off", async () => {
       // An explicit withThinking('off') is not the same as "never configured":
       // with thinking off, auto-injection must not silently switch reasoning
       // back on (or leak reasoning_effort to models that reject the field).
-      const provider = createProvider({ model: 'some-model' }).withThinking('off');
+      const provider = createProvider({ model: "some-model" }).withThinking(
+        "off",
+      );
       const history: Message[] = [
-        { role: 'user', content: [{ type: 'text', text: 'Hello' }], toolCalls: [] },
         {
-          role: 'assistant',
+          role: "user",
+          content: [{ type: "text", text: "Hello" }],
+          toolCalls: [],
+        },
+        {
+          role: "assistant",
           content: [
-            { type: 'think', think: 'Thinking...' },
-            { type: 'text', text: 'Hi!' },
+            { type: "think", think: "Thinking..." },
+            { type: "text", text: "Hi!" },
           ],
           toolCalls: [],
         },
-        { role: 'user', content: [{ type: 'text', text: 'How are you?' }], toolCalls: [] },
+        {
+          role: "user",
+          content: [{ type: "text", text: "How are you?" }],
+          toolCalls: [],
+        },
       ];
-      const body = await captureRequestBody(provider, '', [], history);
+      const body = await captureRequestBody(provider, "", [], history);
 
-      expect(body['reasoning_effort']).toBeUndefined();
-      expect(provider.thinkingEffort).toBe('off');
+      expect(body["reasoning_effort"]).toBeUndefined();
+      expect(provider.thinkingEffort).toBe("off");
     });
 
     it('still auto-injects reasoning_effort for an explicit "on"', async () => {
       // 'on' keeps the #1616 behavior: thinking enabled without a concrete
       // effort still pairs reasoning_effort with ThinkPart history so strict
       // OpenAI-compatible gateways don't 400.
-      const provider = createProvider({ model: 'some-model' }).withThinking('on');
+      const provider = createProvider({ model: "some-model" }).withThinking(
+        "on",
+      );
       const history: Message[] = [
-        { role: 'user', content: [{ type: 'text', text: 'Hello' }], toolCalls: [] },
         {
-          role: 'assistant',
+          role: "user",
+          content: [{ type: "text", text: "Hello" }],
+          toolCalls: [],
+        },
+        {
+          role: "assistant",
           content: [
-            { type: 'think', think: 'Thinking...' },
-            { type: 'text', text: 'Hi!' },
+            { type: "think", think: "Thinking..." },
+            { type: "text", text: "Hi!" },
           ],
           toolCalls: [],
         },
-        { role: 'user', content: [{ type: 'text', text: 'How are you?' }], toolCalls: [] },
+        {
+          role: "user",
+          content: [{ type: "text", text: "How are you?" }],
+          toolCalls: [],
+        },
       ];
-      const body = await captureRequestBody(provider, '', [], history);
+      const body = await captureRequestBody(provider, "", [], history);
 
-      expect(body['reasoning_effort']).toBe('medium');
-      expect(provider.thinkingEffort).toBe('on');
+      expect(body["reasoning_effort"]).toBe("medium");
+      expect(provider.thinkingEffort).toBe("on");
     });
   });
 
-  describe('default reasoning protocol (no explicit reasoningKey)', () => {
-    it('serializes ThinkPart back to reasoning_content even without reasoningKey', async () => {
+  describe("default reasoning protocol (no explicit reasoningKey)", () => {
+    it("serializes ThinkPart back to reasoning_content even without reasoningKey", async () => {
       // The whole point of issue #69: a hand-written config.toml never sets
       // reasoningKey, but the round-trip must still work against DeepSeek-style
       // providers — otherwise the next turn sends the assistant message without
       // any reasoning field and the server rejects it.
-      const provider = createProvider({ model: 'deepseek-reasoner' });
+      const provider = createProvider({ model: "deepseek-reasoner" });
       const history: Message[] = [
-        { role: 'user', content: [{ type: 'text', text: 'q' }], toolCalls: [] },
+        { role: "user", content: [{ type: "text", text: "q" }], toolCalls: [] },
         {
-          role: 'assistant',
+          role: "assistant",
           content: [
-            { type: 'think', think: 'inner monologue' },
-            { type: 'text', text: 'answer' },
+            { type: "think", think: "inner monologue" },
+            { type: "text", text: "answer" },
           ],
           toolCalls: [],
         },
-        { role: 'user', content: [{ type: 'text', text: 'next' }], toolCalls: [] },
+        {
+          role: "user",
+          content: [{ type: "text", text: "next" }],
+          toolCalls: [],
+        },
       ];
-      const body = await captureRequestBody(provider, '', [], history);
+      const body = await captureRequestBody(provider, "", [], history);
 
-      const messages = body['messages'] as Record<string, unknown>[];
+      const messages = body["messages"] as Record<string, unknown>[];
       expect(messages[1]).toEqual({
-        role: 'assistant',
-        content: 'answer',
-        reasoning_content: 'inner monologue',
+        role: "assistant",
+        content: "answer",
+        reasoning_content: "inner monologue",
       });
     });
 
-    it('serializes an explicitly empty ThinkPart to reasoning_content', async () => {
-      const provider = createProvider({ model: 'deepseek-reasoner' });
+    it("serializes an explicitly empty ThinkPart to reasoning_content", async () => {
+      const provider = createProvider({ model: "deepseek-reasoner" });
       const history: Message[] = [
         {
-          role: 'assistant',
-          content: [{ type: 'think', think: '' }],
+          role: "assistant",
+          content: [{ type: "think", think: "" }],
           toolCalls: [
-            { type: 'function', id: 'call_1', name: 'lookup', arguments: '{"q":"test"}' },
+            {
+              type: "function",
+              id: "call_1",
+              name: "lookup",
+              arguments: '{"q":"test"}',
+            },
           ],
         },
       ];
 
-      const body = await captureRequestBody(provider, '', [], history);
-      const messages = body['messages'] as Record<string, unknown>[];
+      const body = await captureRequestBody(provider, "", [], history);
+      const messages = body["messages"] as Record<string, unknown>[];
 
       expect(messages[0]).toMatchObject({
-        role: 'assistant',
-        reasoning_content: '',
+        role: "assistant",
+        reasoning_content: "",
       });
     });
 
-    it('explicit reasoningKey overrides the default outbound field', async () => {
+    it("explicit reasoningKey overrides the default outbound field", async () => {
       const provider = createProvider({
-        model: 'oddball-reasoner',
-        reasoningKey: 'reasoning_details',
+        model: "oddball-reasoner",
+        reasoningKey: "reasoning_details",
       });
       const history: Message[] = [
         {
-          role: 'assistant',
+          role: "assistant",
           content: [
-            { type: 'think', think: 'thinking' },
-            { type: 'text', text: 'reply' },
+            { type: "think", think: "thinking" },
+            { type: "text", text: "reply" },
           ],
           toolCalls: [],
         },
       ];
-      const body = await captureRequestBody(provider, '', [], history);
-      const messages = body['messages'] as Record<string, unknown>[];
+      const body = await captureRequestBody(provider, "", [], history);
+      const messages = body["messages"] as Record<string, unknown>[];
 
       expect(messages[0]).toEqual({
-        role: 'assistant',
-        content: 'reply',
-        reasoning_details: 'thinking',
+        role: "assistant",
+        content: "reply",
+        reasoning_details: "thinking",
       });
-      expect(messages[0]).not.toHaveProperty('reasoning_content');
+      expect(messages[0]).not.toHaveProperty("reasoning_content");
     });
 
-    it('yields ThinkPart from streaming response even without explicit reasoningKey', async () => {
+    it("yields ThinkPart from streaming response even without explicit reasoningKey", async () => {
       const provider = new OpenAILegacyChatProvider({
-        model: 'deepseek-reasoner',
-        apiKey: 'test-key',
+        model: "deepseek-reasoner",
+        apiKey: "test-key",
         stream: true,
       });
 
       async function* mockedStream(): AsyncIterable<Record<string, unknown>> {
-        yield { id: 'c1', choices: [{ index: 0, delta: { reasoning_content: 'think 1' } }] };
-        yield { id: 'c1', choices: [{ index: 0, delta: { reasoning_content: ' think 2' } }] };
-        yield { id: 'c1', choices: [{ index: 0, delta: { content: 'final' } }] };
-        yield { id: 'c1', choices: [{ index: 0, delta: {}, finish_reason: 'stop' }] };
+        yield {
+          id: "c1",
+          choices: [{ index: 0, delta: { reasoning_content: "think 1" } }],
+        };
+        yield {
+          id: "c1",
+          choices: [{ index: 0, delta: { reasoning_content: " think 2" } }],
+        };
+        yield {
+          id: "c1",
+          choices: [{ index: 0, delta: { content: "final" } }],
+        };
+        yield {
+          id: "c1",
+          choices: [{ index: 0, delta: {}, finish_reason: "stop" }],
+        };
       }
 
       (provider as any)._client.chat.completions.create = vi
@@ -1455,92 +1833,103 @@ describe('OpenAILegacyChatProvider', () => {
         .mockResolvedValue(mockedStream());
 
       const stream = await provider.generate(
-        '',
+        "",
         [],
-        [{ role: 'user', content: [{ type: 'text', text: 'q' }], toolCalls: [] }],
+        [
+          {
+            role: "user",
+            content: [{ type: "text", text: "q" }],
+            toolCalls: [],
+          },
+        ],
       );
       const parts: StreamedMessagePart[] = [];
       for await (const part of stream) parts.push(part);
 
       expect(parts).toEqual([
-        { type: 'think', think: 'think 1' },
-        { type: 'think', think: ' think 2' },
-        { type: 'text', text: 'final' },
+        { type: "think", think: "think 1" },
+        { type: "think", think: " think 2" },
+        { type: "text", text: "final" },
       ]);
     });
 
-    it('yields an empty ThinkPart from an explicitly empty streaming reasoning field', async () => {
+    it("yields an empty ThinkPart from an explicitly empty streaming reasoning field", async () => {
       const provider = new OpenAILegacyChatProvider({
-        model: 'deepseek-reasoner',
-        apiKey: 'test-key',
+        model: "deepseek-reasoner",
+        apiKey: "test-key",
         stream: true,
       });
 
       async function* mockedStream(): AsyncIterable<Record<string, unknown>> {
-        yield { id: 'c1', choices: [{ index: 0, delta: { reasoning_content: '' } }] };
+        yield {
+          id: "c1",
+          choices: [{ index: 0, delta: { reasoning_content: "" } }],
+        };
       }
 
       (provider as any)._client.chat.completions.create = vi
         .fn()
         .mockResolvedValue(mockedStream());
 
-      const stream = await provider.generate('', [], []);
+      const stream = await provider.generate("", [], []);
       const parts: StreamedMessagePart[] = [];
       for await (const part of stream) parts.push(part);
 
-      expect(parts).toEqual([{ type: 'think', think: '' }]);
+      expect(parts).toEqual([{ type: "think", think: "" }]);
     });
 
-    it('treats blank reasoning_key as unset so defaults still apply', async () => {
+    it("treats blank reasoning_key as unset so defaults still apply", async () => {
       // ModelAliasSchema accepts `reasoning_key = ""` (z.string().optional()).
       // A blank value must not route reads/writes through an empty property
       // name — it should fall back to the default protocol behavior.
-      const provider = createProvider({ model: 'm', reasoningKey: '' });
+      const provider = createProvider({ model: "m", reasoningKey: "" });
       const history: Message[] = [
         {
-          role: 'assistant',
+          role: "assistant",
           content: [
-            { type: 'think', think: 'thinking' },
-            { type: 'text', text: 'answer' },
+            { type: "think", think: "thinking" },
+            { type: "text", text: "answer" },
           ],
           toolCalls: [],
         },
       ];
-      const body = await captureRequestBody(provider, '', [], history);
-      const messages = body['messages'] as Record<string, unknown>[];
+      const body = await captureRequestBody(provider, "", [], history);
+      const messages = body["messages"] as Record<string, unknown>[];
 
       expect(messages[0]).toEqual({
-        role: 'assistant',
-        content: 'answer',
-        reasoning_content: 'thinking',
+        role: "assistant",
+        content: "answer",
+        reasoning_content: "thinking",
       });
-      expect(Object.keys(messages[0] ?? {})).not.toContain('');
+      expect(Object.keys(messages[0] ?? {})).not.toContain("");
     });
 
-    it('trims whitespace around explicit reasoning_key before use', async () => {
+    it("trims whitespace around explicit reasoning_key before use", async () => {
       const provider = createProvider({
-        model: 'm',
-        reasoningKey: '  reasoning_details  ',
+        model: "m",
+        reasoningKey: "  reasoning_details  ",
       });
       const history: Message[] = [
         {
-          role: 'assistant',
+          role: "assistant",
           content: [
-            { type: 'think', think: 'thinking' },
-            { type: 'text', text: 'answer' },
+            { type: "think", think: "thinking" },
+            { type: "text", text: "answer" },
           ],
           toolCalls: [],
         },
       ];
-      const body = await captureRequestBody(provider, '', [], history);
-      const messages = body['messages'] as Record<string, unknown>[];
+      const body = await captureRequestBody(provider, "", [], history);
+      const messages = body["messages"] as Record<string, unknown>[];
 
       expect(messages[0]).toEqual({
-        role: 'assistant',
-        content: 'answer',
-        reasoning_details: 'thinking',
+        role: "assistant",
+        content: "answer",
+        reasoning_details: "thinking",
       });
-      expect(Object.keys(messages[0] ?? {})).not.toContain('  reasoning_details  ');
+      expect(Object.keys(messages[0] ?? {})).not.toContain(
+        "  reasoning_details  ",
+      );
     });
   });
   // argument deltas. Each delta carries `index` to identify the owning
@@ -1559,10 +1948,10 @@ describe('OpenAILegacyChatProvider', () => {
     opts?: { finishReason?: string; usage?: boolean },
   ): Record<string, unknown> {
     const chunk: Record<string, unknown> = {
-      id: 'chatcmpl-parallel',
-      object: 'chat.completion.chunk',
+      id: "chatcmpl-parallel",
+      object: "chat.completion.chunk",
       created: 1234567890,
-      model: 'gpt-4.1',
+      model: "gpt-4.1",
       choices: [
         {
           index: 0,
@@ -1572,7 +1961,11 @@ describe('OpenAILegacyChatProvider', () => {
       ],
     };
     if (opts?.usage) {
-      chunk['usage'] = { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 };
+      chunk["usage"] = {
+        prompt_tokens: 10,
+        completion_tokens: 20,
+        total_tokens: 30,
+      };
     }
     return chunk;
   }
@@ -1585,10 +1978,10 @@ describe('OpenAILegacyChatProvider', () => {
     }
   }
 
-  it('routes interleaved parallel tool_call arguments by streaming index', async () => {
+  it("routes interleaved parallel tool_call arguments by streaming index", async () => {
     const provider = new OpenAILegacyChatProvider({
-      model: 'gpt-4.1',
-      apiKey: 'test-key',
+      model: "gpt-4.1",
+      apiKey: "test-key",
       stream: true,
     });
 
@@ -1596,53 +1989,77 @@ describe('OpenAILegacyChatProvider', () => {
     // pre-fix code these deltas would all pile onto whichever tool call
     // was "most recently pending", corrupting both sets of arguments.
     const chunks = [
-      makeChunk([{ index: 0, id: 'call_a', function: { name: 'read_file', arguments: '' } }]),
-      makeChunk([{ index: 1, id: 'call_b', function: { name: 'write_file', arguments: '' } }]),
+      makeChunk([
+        {
+          index: 0,
+          id: "call_a",
+          function: { name: "read_file", arguments: "" },
+        },
+      ]),
+      makeChunk([
+        {
+          index: 1,
+          id: "call_b",
+          function: { name: "write_file", arguments: "" },
+        },
+      ]),
       makeChunk([{ index: 0, function: { arguments: '{"path":"' } }]),
       makeChunk([{ index: 1, function: { arguments: '{"path":"' } }]),
       makeChunk([{ index: 0, function: { arguments: '/a.txt"' } }]),
-      makeChunk([{ index: 1, function: { arguments: '/b.txt","content":"hi"' } }]),
-      makeChunk([{ index: 0, function: { arguments: '}' } }]),
-      makeChunk([{ index: 1, function: { arguments: '}' } }]),
-      makeChunk([], { finishReason: 'tool_calls', usage: true }),
+      makeChunk([
+        { index: 1, function: { arguments: '/b.txt","content":"hi"' } },
+      ]),
+      makeChunk([{ index: 0, function: { arguments: "}" } }]),
+      makeChunk([{ index: 1, function: { arguments: "}" } }]),
+      makeChunk([], { finishReason: "tool_calls", usage: true }),
     ];
 
     (
-      provider as unknown as { _client: { chat: { completions: { create: unknown } } } }
-    )._client.chat.completions.create = vi.fn().mockResolvedValue(mockStream(chunks));
+      provider as unknown as {
+        _client: { chat: { completions: { create: unknown } } };
+      }
+    )._client.chat.completions.create = vi
+      .fn()
+      .mockResolvedValue(mockStream(chunks));
 
     const result = await generate(
       provider,
-      '',
+      "",
       [],
-      [{ role: 'user', content: [{ type: 'text', text: 'do it' }], toolCalls: [] }],
+      [
+        {
+          role: "user",
+          content: [{ type: "text", text: "do it" }],
+          toolCalls: [],
+        },
+      ],
     );
 
     expect(result.message.toolCalls).toEqual([
       {
-        type: 'function',
-        id: 'call_a',
-        name: 'read_file',
+        type: "function",
+        id: "call_a",
+        name: "read_file",
         arguments: '{"path":"/a.txt"}',
       },
       {
-        type: 'function',
-        id: 'call_b',
-        name: 'write_file',
+        type: "function",
+        id: "call_b",
+        name: "write_file",
         arguments: '{"path":"/b.txt","content":"hi"}',
       },
     ]);
 
     // _streamIndex must not leak into the stored ToolCall shape.
     for (const tc of result.message.toolCalls) {
-      expect(tc).not.toHaveProperty('_streamIndex');
+      expect(tc).not.toHaveProperty("_streamIndex");
     }
   });
 
-  it('does not early-ready indexed OpenAI tool calls at merge boundaries', async () => {
+  it("does not early-ready indexed OpenAI tool calls at merge boundaries", async () => {
     const provider = new OpenAILegacyChatProvider({
-      model: 'gpt-4.1',
-      apiKey: 'test-key',
+      model: "gpt-4.1",
+      apiKey: "test-key",
       stream: true,
     });
 
@@ -1651,32 +2068,54 @@ describe('OpenAILegacyChatProvider', () => {
     // without an explicit done signal must not mark index 0 ready merely
     // because its current arguments happen to parse at that boundary.
     const chunks = [
-      makeChunk([{ index: 0, id: 'call_a', function: { name: 'read_file', arguments: '' } }]),
+      makeChunk([
+        {
+          index: 0,
+          id: "call_a",
+          function: { name: "read_file", arguments: "" },
+        },
+      ]),
       makeChunk([{ index: 0, function: { arguments: '{"path":"a.txt"}' } }]),
-      makeChunk([{ index: 1, id: 'call_b', function: { name: 'read_file', arguments: '' } }]),
-      makeChunk([{ index: 0, function: { arguments: ' ' } }]),
+      makeChunk([
+        {
+          index: 1,
+          id: "call_b",
+          function: { name: "read_file", arguments: "" },
+        },
+      ]),
+      makeChunk([{ index: 0, function: { arguments: " " } }]),
       makeChunk([{ index: 1, function: { arguments: '{"path":"b.txt"}' } }]),
-      makeChunk([], { finishReason: 'tool_calls', usage: true }),
+      makeChunk([], { finishReason: "tool_calls", usage: true }),
     ];
 
     (
-      provider as unknown as { _client: { chat: { completions: { create: unknown } } } }
-    )._client.chat.completions.create = vi.fn().mockResolvedValue(mockStream(chunks));
+      provider as unknown as {
+        _client: { chat: { completions: { create: unknown } } };
+      }
+    )._client.chat.completions.create = vi
+      .fn()
+      .mockResolvedValue(mockStream(chunks));
 
     const events: string[] = [];
     const result = await generate(
       provider,
-      '',
+      "",
       [],
-      [{ role: 'user', content: [{ type: 'text', text: 'do it' }], toolCalls: [] }],
+      [
+        {
+          role: "user",
+          content: [{ type: "text", text: "do it" }],
+          toolCalls: [],
+        },
+      ],
       {
         onMessagePart(part: StreamedMessagePart): void {
-          if (part.type === 'tool_call_part') {
+          if (part.type === "tool_call_part") {
             events.push(`part:${part.index}:${part.argumentsPart}`);
           }
         },
         onToolCall(toolCall: ToolCall): void {
-          events.push(`ready:${toolCall.id}:${toolCall.arguments ?? ''}`);
+          events.push(`ready:${toolCall.id}:${toolCall.arguments ?? ""}`);
         },
       },
     );
@@ -1684,41 +2123,43 @@ describe('OpenAILegacyChatProvider', () => {
     // onToolCall fires after stream drains, in final order.
     expect(events).toEqual([
       'part:0:{"path":"a.txt"}',
-      'part:0: ',
+      "part:0: ",
       'part:1:{"path":"b.txt"}',
       'ready:call_a:{"path":"a.txt"} ',
       'ready:call_b:{"path":"b.txt"}',
     ]);
     expect(result.message.toolCalls).toEqual([
       {
-        type: 'function',
-        id: 'call_a',
-        name: 'read_file',
+        type: "function",
+        id: "call_a",
+        name: "read_file",
         arguments: '{"path":"a.txt"} ',
       },
       {
-        type: 'function',
-        id: 'call_b',
-        name: 'read_file',
+        type: "function",
+        id: "call_b",
+        name: "read_file",
         arguments: '{"path":"b.txt"}',
       },
     ]);
   });
 
-  it('preserves index on ToolCallPart when streaming single tool call', async () => {
+  it("preserves index on ToolCallPart when streaming single tool call", async () => {
     // Single-tool-call path: verify `index` is present on yielded parts
     // so generate() can still use the map-based routing if it chooses.
     const provider = new OpenAILegacyChatProvider({
-      model: 'gpt-4.1',
-      apiKey: 'test-key',
+      model: "gpt-4.1",
+      apiKey: "test-key",
       stream: true,
     });
 
     const chunks = [
-      makeChunk([{ index: 0, id: 'call_x', function: { name: 'f', arguments: '' } }]),
+      makeChunk([
+        { index: 0, id: "call_x", function: { name: "f", arguments: "" } },
+      ]),
       makeChunk([{ index: 0, function: { arguments: '{"a":' } }]),
-      makeChunk([{ index: 0, function: { arguments: '1}' } }]),
-      makeChunk([], { finishReason: 'tool_calls', usage: true }),
+      makeChunk([{ index: 0, function: { arguments: "1}" } }]),
+      makeChunk([], { finishReason: "tool_calls", usage: true }),
     ];
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1727,9 +2168,9 @@ describe('OpenAILegacyChatProvider', () => {
       .mockResolvedValue(mockStream(chunks));
 
     const stream = await provider.generate(
-      '',
+      "",
       [],
-      [{ role: 'user', content: [{ type: 'text', text: 'x' }], toolCalls: [] }],
+      [{ role: "user", content: [{ type: "text", text: "x" }], toolCalls: [] }],
     );
 
     const parts: StreamedMessagePart[] = [];
@@ -1737,31 +2178,33 @@ describe('OpenAILegacyChatProvider', () => {
       parts.push(part);
     }
 
-    const header = parts.find((p) => p.type === 'function') as
+    const header = parts.find((p) => p.type === "function") as
       | (ToolCall & { _streamIndex?: number | string })
       | undefined;
     expect(header).toMatchObject({ _streamIndex: 0 });
 
-    const partDeltas = parts.filter((p) => p.type === 'tool_call_part');
+    const partDeltas = parts.filter((p) => p.type === "tool_call_part");
     expect(partDeltas.length).toBeGreaterThan(0);
     for (const p of partDeltas) {
       expect((p as { index?: number | string }).index).toBe(0);
     }
   });
 
-  it('buffers indexed argument deltas until the real tool name arrives', async () => {
+  it("buffers indexed argument deltas until the real tool name arrives", async () => {
     const provider = new OpenAILegacyChatProvider({
-      model: 'gpt-4.1',
-      apiKey: 'test-key',
+      model: "gpt-4.1",
+      apiKey: "test-key",
       stream: true,
     });
 
     const chunks = [
-      makeChunk([{ index: 0, id: 'call_delayed', function: { name: '', arguments: '' } }]),
+      makeChunk([
+        { index: 0, id: "call_delayed", function: { name: "", arguments: "" } },
+      ]),
       makeChunk([{ index: 0, function: { arguments: '{"a' } }]),
-      makeChunk([{ index: 0, function: { name: 'foo' } }]),
+      makeChunk([{ index: 0, function: { name: "foo" } }]),
       makeChunk([{ index: 0, function: { arguments: '":1}' } }]),
-      makeChunk([], { finishReason: 'tool_calls', usage: true }),
+      makeChunk([], { finishReason: "tool_calls", usage: true }),
     ];
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1771,30 +2214,38 @@ describe('OpenAILegacyChatProvider', () => {
 
     const result = await generate(
       provider,
-      '',
+      "",
       [],
-      [{ role: 'user', content: [{ type: 'text', text: 'do it' }], toolCalls: [] }],
+      [
+        {
+          role: "user",
+          content: [{ type: "text", text: "do it" }],
+          toolCalls: [],
+        },
+      ],
     );
 
     expect(result.message.toolCalls).toEqual([
       {
-        type: 'function',
-        id: 'call_delayed',
-        name: 'foo',
+        type: "function",
+        id: "call_delayed",
+        name: "foo",
         arguments: '{"a":1}',
       },
     ]);
   });
 });
 
-describe('OpenAILegacyChatProvider — non-stream response parsing', () => {
-  function makeNonStreamResponse(message: Record<string, unknown>): Record<string, unknown> {
+describe("OpenAILegacyChatProvider — non-stream response parsing", () => {
+  function makeNonStreamResponse(
+    message: Record<string, unknown>,
+  ): Record<string, unknown> {
     return {
-      id: 'chatcmpl-test123',
-      object: 'chat.completion',
+      id: "chatcmpl-test123",
+      object: "chat.completion",
       created: 1234567890,
-      model: 'gpt-4.1',
-      choices: [{ index: 0, message, finish_reason: 'stop' }],
+      model: "gpt-4.1",
+      choices: [{ index: 0, message, finish_reason: "stop" }],
       usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
     };
   }
@@ -1803,240 +2254,248 @@ describe('OpenAILegacyChatProvider — non-stream response parsing', () => {
     provider: OpenAILegacyChatProvider,
     response: Record<string, unknown>,
   ): Promise<StreamedMessagePart[]> {
-    (provider as any)._client.chat.completions.create = vi.fn().mockResolvedValue(response);
+    (provider as any)._client.chat.completions.create = vi
+      .fn()
+      .mockResolvedValue(response);
 
     const stream = await provider.generate(
-      '',
+      "",
       [],
-      [{ role: 'user', content: [{ type: 'text', text: 'hi' }], toolCalls: [] }],
+      [
+        {
+          role: "user",
+          content: [{ type: "text", text: "hi" }],
+          toolCalls: [],
+        },
+      ],
     );
     const parts: StreamedMessagePart[] = [];
     for await (const part of stream) parts.push(part);
     return parts;
   }
 
-  it('yields ThinkPart from non-stream response when reasoningKey content is present', async () => {
+  it("yields ThinkPart from non-stream response when reasoningKey content is present", async () => {
     const provider = new OpenAILegacyChatProvider({
-      model: 'deepseek-reasoner',
-      apiKey: 'test-key',
+      model: "deepseek-reasoner",
+      apiKey: "test-key",
       stream: false,
-      reasoningKey: 'reasoning_content',
+      reasoningKey: "reasoning_content",
     });
 
     const parts = await collectFromMockedResponse(
       provider,
       makeNonStreamResponse({
-        role: 'assistant',
-        content: 'Final answer',
-        reasoning_content: 'Some thinking here.',
+        role: "assistant",
+        content: "Final answer",
+        reasoning_content: "Some thinking here.",
       }),
     );
 
     expect(parts).toEqual([
-      { type: 'think', think: 'Some thinking here.' },
-      { type: 'text', text: 'Final answer' },
+      { type: "think", think: "Some thinking here." },
+      { type: "text", text: "Final answer" },
     ]);
   });
 
-  it('yields an empty ThinkPart when the non-stream reasoning field is explicitly empty', async () => {
+  it("yields an empty ThinkPart when the non-stream reasoning field is explicitly empty", async () => {
     const provider = new OpenAILegacyChatProvider({
-      model: 'deepseek-reasoner',
-      apiKey: 'test-key',
+      model: "deepseek-reasoner",
+      apiKey: "test-key",
       stream: false,
-      reasoningKey: 'reasoning_content',
+      reasoningKey: "reasoning_content",
     });
 
     const parts = await collectFromMockedResponse(
       provider,
       makeNonStreamResponse({
-        role: 'assistant',
+        role: "assistant",
         content: null,
-        reasoning_content: '',
+        reasoning_content: "",
       }),
     );
 
-    expect(parts).toEqual([{ type: 'think', think: '' }]);
+    expect(parts).toEqual([{ type: "think", think: "" }]);
   });
 
-  it('non-stream response yields ToolCall parts when tool_calls present', async () => {
+  it("non-stream response yields ToolCall parts when tool_calls present", async () => {
     const provider = new OpenAILegacyChatProvider({
-      model: 'gpt-4.1',
-      apiKey: 'test-key',
+      model: "gpt-4.1",
+      apiKey: "test-key",
       stream: false,
     });
 
     const parts = await collectFromMockedResponse(
       provider,
       makeNonStreamResponse({
-        role: 'assistant',
+        role: "assistant",
         content: null,
         tool_calls: [
           {
-            id: 'call_x',
-            type: 'function',
-            function: { name: 'lookup', arguments: '{"q":"hi"}' },
+            id: "call_x",
+            type: "function",
+            function: { name: "lookup", arguments: '{"q":"hi"}' },
           },
         ],
       }),
     );
 
-    const toolCall = parts.find((p) => p.type === 'function');
+    const toolCall = parts.find((p) => p.type === "function");
     expect(toolCall).toMatchObject({
-      type: 'function',
-      id: 'call_x',
-      name: 'lookup',
+      type: "function",
+      id: "call_x",
+      name: "lookup",
       arguments: '{"q":"hi"}',
     });
   });
 
-  it('non-stream response generates a fresh ID when tool_call has no id', async () => {
+  it("non-stream response generates a fresh ID when tool_call has no id", async () => {
     const provider = new OpenAILegacyChatProvider({
-      model: 'gpt-4.1',
-      apiKey: 'test-key',
+      model: "gpt-4.1",
+      apiKey: "test-key",
       stream: false,
     });
 
     const parts = await collectFromMockedResponse(
       provider,
       makeNonStreamResponse({
-        role: 'assistant',
+        role: "assistant",
         content: null,
         tool_calls: [
           {
-            type: 'function',
-            function: { name: 'lookup', arguments: '{}' },
+            type: "function",
+            function: { name: "lookup", arguments: "{}" },
           },
         ],
       }),
     );
 
-    const toolCall = parts.find((p) => p.type === 'function');
+    const toolCall = parts.find((p) => p.type === "function");
     expect(toolCall).toMatchObject({
-      type: 'function',
+      type: "function",
       id: expect.stringMatching(/.+/),
     });
   });
 
-  it('non-stream response yields reasoning_content as ThinkPart', async () => {
+  it("non-stream response yields reasoning_content as ThinkPart", async () => {
     const provider = new OpenAILegacyChatProvider({
-      model: 'deepseek-reasoner',
-      apiKey: 'test-key',
+      model: "deepseek-reasoner",
+      apiKey: "test-key",
       stream: false,
-      reasoningKey: 'reasoning_content',
+      reasoningKey: "reasoning_content",
     });
 
     const parts = await collectFromMockedResponse(
       provider,
       makeNonStreamResponse({
-        role: 'assistant',
-        content: 'Final answer',
-        reasoning_content: 'Let me think step by step',
+        role: "assistant",
+        content: "Final answer",
+        reasoning_content: "Let me think step by step",
       }),
     );
 
     expect(parts).toEqual([
-      { type: 'think', think: 'Let me think step by step' },
-      { type: 'text', text: 'Final answer' },
+      { type: "think", think: "Let me think step by step" },
+      { type: "text", text: "Final answer" },
     ]);
   });
 
-  it('yields ThinkPart from non-stream response even without explicit reasoningKey', async () => {
+  it("yields ThinkPart from non-stream response even without explicit reasoningKey", async () => {
     // Hand-written config path: provider has no reasoningKey, but the server
     // (DeepSeek/Qwen/One API) returns reasoning_content. We must still surface
     // the ThinkPart so users see the thinking and the next-turn round-trip
     // serializes it back.
     const provider = new OpenAILegacyChatProvider({
-      model: 'deepseek-reasoner',
-      apiKey: 'test-key',
+      model: "deepseek-reasoner",
+      apiKey: "test-key",
       stream: false,
     });
 
     const parts = await collectFromMockedResponse(
       provider,
       makeNonStreamResponse({
-        role: 'assistant',
-        content: 'Final answer',
-        reasoning_content: 'walking through it',
+        role: "assistant",
+        content: "Final answer",
+        reasoning_content: "walking through it",
       }),
     );
 
     expect(parts).toEqual([
-      { type: 'think', think: 'walking through it' },
-      { type: 'text', text: 'Final answer' },
+      { type: "think", think: "walking through it" },
+      { type: "text", text: "Final answer" },
     ]);
   });
 
-  it('reads reasoning_details when only that field is present and no reasoningKey is set', async () => {
+  it("reads reasoning_details when only that field is present and no reasoningKey is set", async () => {
     const provider = new OpenAILegacyChatProvider({
-      model: 'oddball-reasoner',
-      apiKey: 'test-key',
+      model: "oddball-reasoner",
+      apiKey: "test-key",
       stream: false,
     });
 
     const parts = await collectFromMockedResponse(
       provider,
       makeNonStreamResponse({
-        role: 'assistant',
-        content: 'answer',
-        reasoning_details: 'detail thinking',
+        role: "assistant",
+        content: "answer",
+        reasoning_details: "detail thinking",
       }),
     );
 
     expect(parts).toEqual([
-      { type: 'think', think: 'detail thinking' },
-      { type: 'text', text: 'answer' },
+      { type: "think", think: "detail thinking" },
+      { type: "text", text: "answer" },
     ]);
   });
 
-  it('explicit reasoningKey limits inbound scan to that single field', async () => {
+  it("explicit reasoningKey limits inbound scan to that single field", async () => {
     // When the user/catalog pins reasoningKey, the provider must read only that
     // field — no implicit fallback to other known field names. This is the
     // escape hatch for non-standard gateways.
     const provider = new OpenAILegacyChatProvider({
-      model: 'oddball',
-      apiKey: 'test-key',
+      model: "oddball",
+      apiKey: "test-key",
       stream: false,
-      reasoningKey: 'reasoning_details',
+      reasoningKey: "reasoning_details",
     });
 
     const parts = await collectFromMockedResponse(
       provider,
       makeNonStreamResponse({
-        role: 'assistant',
-        content: 'answer',
-        reasoning_content: 'should be ignored',
+        role: "assistant",
+        content: "answer",
+        reasoning_content: "should be ignored",
       }),
     );
 
-    expect(parts).toEqual([{ type: 'text', text: 'answer' }]);
+    expect(parts).toEqual([{ type: "text", text: "answer" }]);
   });
 });
 
-describe('OpenAILegacyChatProvider — non-indexed streaming tool_calls', () => {
+describe("OpenAILegacyChatProvider — non-indexed streaming tool_calls", () => {
   async function* mockStream(
     chunks: Record<string, unknown>[],
   ): AsyncIterable<Record<string, unknown>> {
     for (const c of chunks) yield c;
   }
 
-  it('handles non-indexed tool_call delta with concrete name', async () => {
+  it("handles non-indexed tool_call delta with concrete name", async () => {
     const provider = new OpenAILegacyChatProvider({
-      model: 'gpt-4.1',
-      apiKey: 'test-key',
+      model: "gpt-4.1",
+      apiKey: "test-key",
       stream: true,
     });
 
     const chunks = [
       {
-        id: 'chatcmpl-noidx',
+        id: "chatcmpl-noidx",
         choices: [
           {
             index: 0,
             delta: {
               tool_calls: [
                 {
-                  id: 'call_noidx',
-                  function: { name: 'foo', arguments: '{"a":1}' },
+                  id: "call_noidx",
+                  function: { name: "foo", arguments: '{"a":1}' },
                   // No index!
                 },
               ],
@@ -2047,36 +2506,46 @@ describe('OpenAILegacyChatProvider — non-indexed streaming tool_calls', () => 
     ];
 
     (
-      provider as unknown as { _client: { chat: { completions: { create: unknown } } } }
-    )._client.chat.completions.create = vi.fn().mockResolvedValue(mockStream(chunks));
+      provider as unknown as {
+        _client: { chat: { completions: { create: unknown } } };
+      }
+    )._client.chat.completions.create = vi
+      .fn()
+      .mockResolvedValue(mockStream(chunks));
 
     const result = await generate(
       provider,
-      '',
+      "",
       [],
-      [{ role: 'user', content: [{ type: 'text', text: 'do' }], toolCalls: [] }],
+      [
+        {
+          role: "user",
+          content: [{ type: "text", text: "do" }],
+          toolCalls: [],
+        },
+      ],
     );
 
     expect(result.message.toolCalls).toEqual([
       {
-        type: 'function',
-        id: 'call_noidx',
-        name: 'foo',
+        type: "function",
+        id: "call_noidx",
+        name: "foo",
         arguments: '{"a":1}',
       },
     ]);
   });
 
-  it('handles non-indexed tool_call delta with arguments only emits tool_call_part', async () => {
+  it("handles non-indexed tool_call delta with arguments only emits tool_call_part", async () => {
     const provider = new OpenAILegacyChatProvider({
-      model: 'gpt-4.1',
-      apiKey: 'test-key',
+      model: "gpt-4.1",
+      apiKey: "test-key",
       stream: true,
     });
 
     const chunks = [
       {
-        id: 'chatcmpl-argonly',
+        id: "chatcmpl-argonly",
         choices: [
           {
             index: 0,
@@ -2089,26 +2558,33 @@ describe('OpenAILegacyChatProvider — non-indexed streaming tool_calls', () => 
     ];
 
     (
-      provider as unknown as { _client: { chat: { completions: { create: unknown } } } }
-    )._client.chat.completions.create = vi.fn().mockResolvedValue(mockStream(chunks));
+      provider as unknown as {
+        _client: { chat: { completions: { create: unknown } } };
+      }
+    )._client.chat.completions.create = vi
+      .fn()
+      .mockResolvedValue(mockStream(chunks));
 
-    const stream = await provider.generate('', [], []);
+    const stream = await provider.generate("", [], []);
     const parts: Array<Record<string, unknown>> = [];
-    for await (const p of stream) parts.push(p as unknown as Record<string, unknown>);
+    for await (const p of stream)
+      parts.push(p as unknown as Record<string, unknown>);
 
-    expect(parts).toEqual([{ type: 'tool_call_part', argumentsPart: '{"x":1}' }]);
+    expect(parts).toEqual([
+      { type: "tool_call_part", argumentsPart: '{"x":1}' },
+    ]);
   });
 
-  it('handles tool_call delta with no function field (early return)', async () => {
+  it("handles tool_call delta with no function field (early return)", async () => {
     const provider = new OpenAILegacyChatProvider({
-      model: 'gpt-4.1',
-      apiKey: 'test-key',
+      model: "gpt-4.1",
+      apiKey: "test-key",
       stream: true,
     });
 
     const chunks = [
       {
-        id: 'chatcmpl-nofn',
+        id: "chatcmpl-nofn",
         choices: [
           {
             index: 0,
@@ -2121,27 +2597,32 @@ describe('OpenAILegacyChatProvider — non-indexed streaming tool_calls', () => 
     ];
 
     (
-      provider as unknown as { _client: { chat: { completions: { create: unknown } } } }
-    )._client.chat.completions.create = vi.fn().mockResolvedValue(mockStream(chunks));
+      provider as unknown as {
+        _client: { chat: { completions: { create: unknown } } };
+      }
+    )._client.chat.completions.create = vi
+      .fn()
+      .mockResolvedValue(mockStream(chunks));
 
-    const stream = await provider.generate('', [], []);
+    const stream = await provider.generate("", [], []);
     const parts: Array<Record<string, unknown>> = [];
-    for await (const p of stream) parts.push(p as unknown as Record<string, unknown>);
+    for await (const p of stream)
+      parts.push(p as unknown as Record<string, unknown>);
 
     // No parts yielded — the tool_call without function is silently ignored.
     expect(parts).toEqual([]);
   });
 
-  it('handles tool_call delta with null function field (early return)', async () => {
+  it("handles tool_call delta with null function field (early return)", async () => {
     const provider = new OpenAILegacyChatProvider({
-      model: 'gpt-4.1',
-      apiKey: 'test-key',
+      model: "gpt-4.1",
+      apiKey: "test-key",
       stream: true,
     });
 
     const chunks = [
       {
-        id: 'chatcmpl-nullfn',
+        id: "chatcmpl-nullfn",
         choices: [
           {
             index: 0,
@@ -2154,12 +2635,17 @@ describe('OpenAILegacyChatProvider — non-indexed streaming tool_calls', () => 
     ];
 
     (
-      provider as unknown as { _client: { chat: { completions: { create: unknown } } } }
-    )._client.chat.completions.create = vi.fn().mockResolvedValue(mockStream(chunks));
+      provider as unknown as {
+        _client: { chat: { completions: { create: unknown } } };
+      }
+    )._client.chat.completions.create = vi
+      .fn()
+      .mockResolvedValue(mockStream(chunks));
 
-    const stream = await provider.generate('', [], []);
+    const stream = await provider.generate("", [], []);
     const parts: Array<Record<string, unknown>> = [];
-    for await (const p of stream) parts.push(p as unknown as Record<string, unknown>);
+    for await (const p of stream)
+      parts.push(p as unknown as Record<string, unknown>);
 
     expect(parts).toEqual([]);
   });

@@ -6,23 +6,23 @@ import {
   truncateToWidth,
   visibleWidth,
   type Focusable,
-} from '@moonshot-ai/pi-tui';
+} from "@moonshot-ai/pi-tui";
 
-import { currentTheme } from '#/tui/theme';
+import { currentTheme } from "#/tui/theme";
 
 export type ApiKeyInputResult =
-  | { readonly kind: 'ok'; readonly value: string }
-  | { readonly kind: 'cancel' };
+  | { readonly kind: "ok"; readonly value: string }
+  | { readonly kind: "cancel" };
 
-const FOOTER = 'Enter to submit  ·  Esc to cancel';
+const FOOTER = "Enter to submit  ·  Esc to cancel";
 
 function maskInputLine(raw: string): string {
-  const prefix = '> ';
+  const prefix = "> ";
   if (!raw.startsWith(prefix)) return raw;
 
   // Strip trailing padding spaces so they stay as spaces.
   let end = raw.length;
-  while (end > prefix.length && raw[end - 1] === ' ') {
+  while (end > prefix.length && raw[end - 1] === " ") {
     end--;
   }
   const padding = raw.slice(end);
@@ -34,9 +34,9 @@ function maskInputLine(raw: string): string {
   const maskedContent = parts
     .map((part, index) => {
       if (index % 2 === 1) return part; // ANSI sequence
-      return part.replaceAll(/./g, '•');
+      return part.replaceAll(/./g, "•");
     })
-    .join('');
+    .join("");
 
   return prefix + maskedContent + padding;
 }
@@ -64,7 +64,7 @@ export class ApiKeyInputDialogComponent extends Container implements Focusable {
     this.title = options?.title ?? `Enter API key for ${platformName}`;
     this.subtitleLines = subtitleLines;
     this.mask = options?.mask ?? true;
-    this.emptyHint = options?.emptyHint ?? 'API key cannot be empty.';
+    this.emptyHint = options?.emptyHint ?? "API key cannot be empty.";
     this.input.onSubmit = (value) => {
       this.submit(value);
     };
@@ -74,8 +74,8 @@ export class ApiKeyInputDialogComponent extends Container implements Focusable {
     if (this.done) return;
     if (
       matchesKey(data, Key.escape) ||
-      matchesKey(data, Key.ctrl('c')) ||
-      matchesKey(data, Key.ctrl('d'))
+      matchesKey(data, Key.ctrl("c")) ||
+      matchesKey(data, Key.ctrl("d"))
     ) {
       this.cancel();
       return;
@@ -95,55 +95,64 @@ export class ApiKeyInputDialogComponent extends Container implements Focusable {
     this.input.focused = this.focused && !this.done;
 
     const safeWidth = Math.max(0, width);
-    if (safeWidth <= 0) return [''];
+    if (safeWidth <= 0) return [""];
     const innerWidth = Math.max(1, safeWidth - 4);
-    const pad = '  ';
+    const pad = "  ";
 
-    const border = (s: string): string => currentTheme.fg('primary', s);
-    const titleStyled = currentTheme.boldFg('textStrong', this.title);
-    const subtitleSource = this.emptyHinted ? [this.emptyHint] : this.subtitleLines;
+    const border = (s: string): string => currentTheme.fg("primary", s);
+    const titleStyled = currentTheme.boldFg("textStrong", this.title);
+    const subtitleSource = this.emptyHinted
+      ? [this.emptyHint]
+      : this.subtitleLines;
     const subtitleLines = subtitleSource.map((line) =>
-      truncateToWidth(currentTheme.fg('textDim', line), innerWidth, '…'),
+      truncateToWidth(currentTheme.fg("textDim", line), innerWidth, "…"),
     );
-    const footerStyled = currentTheme.fg('textDim', FOOTER);
+    const footerStyled = currentTheme.fg("textDim", FOOTER);
 
-    const titleLine = truncateToWidth(titleStyled, innerWidth, '…');
-    const footerLine = truncateToWidth(footerStyled, innerWidth, '…');
-    const rawInputLine = this.input.render(innerWidth)[0] ?? '> ';
+    const titleLine = truncateToWidth(titleStyled, innerWidth, "…");
+    const footerLine = truncateToWidth(footerStyled, innerWidth, "…");
+    const rawInputLine = this.input.render(innerWidth)[0] ?? "> ";
     const inputLine =
-      this.mask && this.input.getValue() !== '' ? maskInputLine(rawInputLine) : rawInputLine;
+      this.mask && this.input.getValue() !== ""
+        ? maskInputLine(rawInputLine)
+        : rawInputLine;
 
     const contentLines: string[] = [
       titleLine,
-      '',
+      "",
       ...subtitleLines,
-      '',
+      "",
       inputLine,
-      '',
+      "",
       footerLine,
     ];
 
     if (safeWidth < 4) {
-      return ['', ...contentLines.map((line) => truncateToWidth(line, safeWidth, '…'))];
+      return [
+        "",
+        ...contentLines.map((line) => truncateToWidth(line, safeWidth, "…")),
+      ];
     }
 
     const lines: string[] = [
-      '',
-      border('╭' + '─'.repeat(safeWidth - 2) + '╮'),
-      border('│') + ' '.repeat(safeWidth - 2) + border('│'),
+      "",
+      border("╭" + "─".repeat(safeWidth - 2) + "╮"),
+      border("│") + " ".repeat(safeWidth - 2) + border("│"),
     ];
 
     for (const content of contentLines) {
       const vis = visibleWidth(content);
       const rightPad = Math.max(0, innerWidth - vis);
-      lines.push(border('│') + pad + content + ' '.repeat(rightPad) + border('│'));
+      lines.push(
+        border("│") + pad + content + " ".repeat(rightPad) + border("│"),
+      );
     }
 
-    lines.push(border('│') + ' '.repeat(safeWidth - 2) + border('│'));
-    lines.push(border('╰' + '─'.repeat(safeWidth - 2) + '╯'));
-    lines.push('');
+    lines.push(border("│") + " ".repeat(safeWidth - 2) + border("│"));
+    lines.push(border("╰" + "─".repeat(safeWidth - 2) + "╯"));
+    lines.push("");
 
-    return lines.map((line) => truncateToWidth(line, safeWidth, '…'));
+    return lines.map((line) => truncateToWidth(line, safeWidth, "…"));
   }
 
   private submit(value: string): void {
@@ -154,12 +163,12 @@ export class ApiKeyInputDialogComponent extends Container implements Focusable {
       return;
     }
     this.done = true;
-    this.onDone({ kind: 'ok', value: trimmed });
+    this.onDone({ kind: "ok", value: trimmed });
   }
 
   private cancel(): void {
     if (this.done) return;
     this.done = true;
-    this.onDone({ kind: 'cancel' });
+    this.onDone({ kind: "cancel" });
   }
 }

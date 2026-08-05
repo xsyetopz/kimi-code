@@ -6,15 +6,15 @@
  * file; this tool reads that file and flips plan mode off.
  */
 
-import type { Agent } from '#/agent';
-import type { PlanData } from '#/agent/plan';
-import { z } from 'zod';
+import type { Agent } from "#/agent";
+import type { PlanData } from "#/agent/plan";
+import { z } from "zod";
 
-import type { BuiltinTool } from '../../../agent/tool';
-import type { ExecutableToolResult, ToolExecution } from '../../../loop/types';
-import type { ToolInputDisplay } from '../../display';
-import { toInputJsonSchema } from '../../support/input-schema';
-import DESCRIPTION from './exit-plan-mode.md?raw';
+import type { BuiltinTool } from "../../../agent/tool";
+import type { ExecutableToolResult, ToolExecution } from "../../../loop/types";
+import type { ToolInputDisplay } from "../../display";
+import { toInputJsonSchema } from "../../support/input-schema";
+import DESCRIPTION from "./exit-plan-mode.md?raw";
 
 // ── Input schema ─────────────────────────────────────────────────────
 
@@ -34,7 +34,7 @@ export interface ExitPlanModeInput {
 }
 
 const RESERVED_OPTION_LABELS = new Set(
-  ['Approve', 'Reject', 'Reject and Exit', 'Revise'].map(normalizeOptionLabel),
+  ["Approve", "Reject", "Reject and Exit", "Revise"].map(normalizeOptionLabel),
 );
 
 const ExitPlanModeOptionSchema = z
@@ -48,8 +48,8 @@ const ExitPlanModeOptionSchema = z
       ),
     description: z
       .string()
-      .default('')
-      .describe('Brief summary of this approach and its trade-offs.'),
+      .default("")
+      .describe("Brief summary of this approach and its trade-offs."),
   })
   .strict();
 
@@ -59,8 +59,11 @@ export const ExitPlanModeInputSchema: z.ZodType<ExitPlanModeInput> = z
       .array(ExitPlanModeOptionSchema)
       .min(1)
       .max(3)
-      .refine(hasUniqueOptionLabels, 'Option labels must be unique.')
-      .refine(hasNoReservedOptionLabels, 'Option labels must not use reserved approval labels.')
+      .refine(hasUniqueOptionLabels, "Option labels must be unique.")
+      .refine(
+        hasNoReservedOptionLabels,
+        "Option labels must not use reserved approval labels.",
+      )
       .optional()
       .describe(
         'When the plan contains multiple alternative approaches, list them here so the user can choose which one to execute. Provide up to 3 options; 2-3 distinct approaches work best when the plan offers a real choice. Passing a single option is allowed and is equivalent to a plain plan approval. Each option represents a distinct approach from the plan. Do not use "Reject", "Revise", "Approve", or "Reject and Exit" as labels.',
@@ -74,21 +77,27 @@ export interface ExitPlanModePlanSource {
 }
 
 type ResolvePlanResult =
-  | { readonly ok: true; readonly plan: string; readonly path?: string | undefined }
+  | {
+      readonly ok: true;
+      readonly plan: string;
+      readonly path?: string | undefined;
+    }
   | { readonly ok: false; readonly error: ExecutableToolResult };
 
 // ── Implementation ───────────────────────────────────────────────────
 
 export class ExitPlanModeTool implements BuiltinTool<ExitPlanModeInput> {
-  readonly name = 'ExitPlanMode' as const;
+  readonly name = "ExitPlanMode" as const;
   readonly description: string = DESCRIPTION;
-  readonly parameters: Record<string, unknown> = toInputJsonSchema(ExitPlanModeInputSchema);
+  readonly parameters: Record<string, unknown> = toInputJsonSchema(
+    ExitPlanModeInputSchema,
+  );
 
   constructor(private readonly agent: Agent) {}
 
   async resolveExecution(args: ExitPlanModeInput): Promise<ToolExecution> {
     return {
-      description: 'Presenting plan and exiting plan mode',
+      description: "Presenting plan and exiting plan mode",
       display: await this.resolvePlanReviewDisplay(args),
       approvalRule: this.name,
       execute: () => this.execution(args),
@@ -107,7 +116,7 @@ export class ExitPlanModeTool implements BuiltinTool<ExitPlanModeInput> {
     }
     if (data === null || data.content.trim().length === 0) return undefined;
     const display: ToolInputDisplay = {
-      kind: 'plan_review',
+      kind: "plan_review",
       plan: data.content,
       path: data.path,
     };
@@ -117,19 +126,21 @@ export class ExitPlanModeTool implements BuiltinTool<ExitPlanModeInput> {
     return display;
   }
 
-  private async execution(args: ExitPlanModeInput): Promise<ExecutableToolResult> {
+  private async execution(
+    args: ExitPlanModeInput,
+  ): Promise<ExecutableToolResult> {
     if (!this.agent.planMode.isActive) {
       return {
         isError: true,
         output:
-          'ExitPlanMode can only be called while plan mode is active. Use EnterPlanMode (or /plan) first.',
+          "ExitPlanMode can only be called while plan mode is active. Use EnterPlanMode (or /plan) first.",
       };
     }
 
     const resolvedPlan = await this.resolvePlan();
     if (!resolvedPlan.ok) return resolvedPlan.error;
 
-    this.agent.telemetry.track('plan_submitted', {
+    this.agent.telemetry.track("plan_submitted", {
       has_options: args.options !== undefined && args.options.length >= 2,
     });
 
@@ -143,15 +154,15 @@ export class ExitPlanModeTool implements BuiltinTool<ExitPlanModeInput> {
     // result; the only way `execute` still runs there is a configured or
     // session allow/ask rule — an explicit user decision that keeps the
     // user-approved wording.
-    if (this.agent.permission.mode === 'auto') {
-      this.agent.telemetry.track('plan_resolved', { outcome: 'auto_approved' });
+    if (this.agent.permission.mode === "auto") {
+      this.agent.telemetry.track("plan_resolved", { outcome: "auto_approved" });
       return {
         isError: false,
         output: `Exited plan mode. ${formatAutoApprovedPlanForOutput(resolvedPlan.plan, resolvedPlan.path)}`,
       };
     }
 
-    this.agent.telemetry.track('plan_resolved', { outcome: 'approved' });
+    this.agent.telemetry.track("plan_resolved", { outcome: "approved" });
     return {
       isError: false,
       output: `Exited plan mode. ${formatPlanForOutput(resolvedPlan.plan, resolvedPlan.path)}`,
@@ -162,7 +173,8 @@ export class ExitPlanModeTool implements BuiltinTool<ExitPlanModeInput> {
     try {
       this.agent.planMode.exit();
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to exit plan mode.';
+      const message =
+        error instanceof Error ? error.message : "Failed to exit plan mode.";
       return {
         isError: true,
         output: `Failed to exit plan mode: ${message}`,
@@ -176,10 +188,14 @@ export class ExitPlanModeTool implements BuiltinTool<ExitPlanModeInput> {
       const data = await this.agent.planMode.data();
       source = data === null ? null : { plan: data.content, path: data.path };
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to read plan file.';
+      const message =
+        error instanceof Error ? error.message : "Failed to read plan file.";
       return {
         ok: false,
-        error: { isError: true, output: `Failed to read plan file: ${message}` },
+        error: {
+          isError: true,
+          output: `Failed to read plan file: ${message}`,
+        },
       };
     }
 
@@ -198,14 +214,16 @@ export class ExitPlanModeTool implements BuiltinTool<ExitPlanModeInput> {
         isError: true,
         output:
           path === null
-            ? 'No plan file found. Write the plan to the current plan file first, then call ExitPlanMode.'
+            ? "No plan file found. Write the plan to the current plan file first, then call ExitPlanMode."
             : `No plan file found. Write your plan to ${path} first, then call ExitPlanMode.`,
       },
     };
   }
 }
 
-function hasUniqueOptionLabels(options: readonly ExitPlanModeOption[]): boolean {
+function hasUniqueOptionLabels(
+  options: readonly ExitPlanModeOption[],
+): boolean {
   const labels = new Set<string>();
   for (const option of options) {
     const label = normalizeOptionLabel(option.label);
@@ -215,20 +233,27 @@ function hasUniqueOptionLabels(options: readonly ExitPlanModeOption[]): boolean 
   return true;
 }
 
-function hasNoReservedOptionLabels(options: readonly ExitPlanModeOption[]): boolean {
-  return options.every((option) => !RESERVED_OPTION_LABELS.has(normalizeOptionLabel(option.label)));
+function hasNoReservedOptionLabels(
+  options: readonly ExitPlanModeOption[],
+): boolean {
+  return options.every(
+    (option) => !RESERVED_OPTION_LABELS.has(normalizeOptionLabel(option.label)),
+  );
 }
 
 function normalizeOptionLabel(label: string): string {
   return label.trim().toLowerCase();
 }
 
-function formatAutoApprovedPlanForOutput(plan: string, path: string | undefined): string {
-  const savedTo = path !== undefined ? `Plan saved to: ${path}\n\n` : '';
+function formatAutoApprovedPlanForOutput(
+  plan: string,
+  path: string | undefined,
+): string {
+  const savedTo = path !== undefined ? `Plan saved to: ${path}\n\n` : "";
   return `Plan mode deactivated. All tools are now available.\nNote: this plan was auto-approved without user review — the user has NOT explicitly approved it. Follow the user's original instructions on whether to proceed with execution; if they asked you to stop, wait, or only summarize after planning, do not start executing.\n${savedTo}## Plan (auto-approved, not user-reviewed):\n${plan}`;
 }
 
 function formatPlanForOutput(plan: string, path: string | undefined): string {
-  const savedTo = path !== undefined ? `Plan saved to: ${path}\n\n` : '';
+  const savedTo = path !== undefined ? `Plan saved to: ${path}\n\n` : "";
   return `Plan mode deactivated. All tools are now available.\n${savedTo}## Approved Plan:\n${plan}`;
 }

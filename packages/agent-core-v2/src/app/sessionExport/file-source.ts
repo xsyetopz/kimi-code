@@ -5,12 +5,12 @@
  * idempotent close operation shared by normal completion and failure cleanup.
  */
 
-import { open, type FileHandle } from 'node:fs/promises';
-import { Readable } from 'node:stream';
-import { finished } from 'node:stream/promises';
-import { resolve } from 'pathe';
+import { open, type FileHandle } from "node:fs/promises";
+import { Readable } from "node:stream";
+import { finished } from "node:stream/promises";
+import { resolve } from "pathe";
 
-import { Error2, ErrorCodes } from '#/errors';
+import { Error2, ErrorCodes } from "#/errors";
 
 export interface ZipSource {
   readonly stream: Readable;
@@ -27,8 +27,11 @@ export interface ZipSourceIdentity {
   readonly inode: bigint;
 }
 
-export async function openZipSource(source: string, signal?: AbortSignal): Promise<ZipSource> {
-  const handle = await open(source, 'r');
+export async function openZipSource(
+  source: string,
+  signal?: AbortSignal,
+): Promise<ZipSource> {
+  const handle = await open(source, "r");
   let stream: Readable | undefined;
   try {
     signal?.throwIfAborted();
@@ -40,9 +43,13 @@ export async function openZipSource(source: string, signal?: AbortSignal): Promi
     }
     const size = Number(file.size);
     if (!Number.isSafeInteger(size)) {
-      throw new Error2(ErrorCodes.SESSION_EXPORT_TOO_LARGE, `file is too large to export: ${source}`, {
-        details: { path: source },
-      });
+      throw new Error2(
+        ErrorCodes.SESSION_EXPORT_TOO_LARGE,
+        `file is too large to export: ${source}`,
+        {
+          details: { path: source },
+        },
+      );
     }
     signal?.throwIfAborted();
     stream =
@@ -74,7 +81,10 @@ export async function openZipSource(source: string, signal?: AbortSignal): Promi
   }
 }
 
-async function closeZipSource(stream: Readable, handle: FileHandle): Promise<void> {
+async function closeZipSource(
+  stream: Readable,
+  handle: FileHandle,
+): Promise<void> {
   stream.destroy();
   await finished(stream, { cleanup: true }).catch(() => {});
   await handle.close();

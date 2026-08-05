@@ -5,7 +5,7 @@ import {
   writeConfigFile,
   type KimiConfig,
   type OAuthRef,
-} from '@moonshot-ai/agent-core';
+} from "@moonshot-ai/agent-core";
 import {
   applyManagedKimiCodeConfig,
   applyManagedKimiCodeLogoutConfig,
@@ -23,9 +23,9 @@ import {
   type KimiOAuthLoginOptions,
   type ManagedKimiConfigShape,
   type OAuthRefreshOutcome,
-} from '@moonshot-ai/kimi-code-oauth';
+} from "@moonshot-ai/kimi-code-oauth";
 
-import { mapOAuthTokenError } from '#/oauth-error';
+import { mapOAuthTokenError } from "#/oauth-error";
 
 export interface KimiAuthSubmitFeedbackInput {
   readonly content: string;
@@ -62,7 +62,7 @@ export interface KimiAuthFeedbackUploadPart {
 }
 
 export interface KimiAuthCreateFeedbackUploadUrlOk {
-  readonly kind: 'ok';
+  readonly kind: "ok";
   readonly uploadId: number;
   readonly parts: readonly KimiAuthFeedbackUploadPart[];
 }
@@ -71,7 +71,10 @@ export type KimiAuthCreateFeedbackUploadUrlResult =
   | KimiAuthCreateFeedbackUploadUrlOk
   | FetchFeedbackUploadError;
 
-export type KimiAuthLoginOptions = Omit<KimiOAuthLoginOptions, 'provisionConfig'>;
+export type KimiAuthLoginOptions = Omit<
+  KimiOAuthLoginOptions,
+  "provisionConfig"
+>;
 
 export interface KimiAuthLoginResult {
   readonly providerName: string;
@@ -108,7 +111,8 @@ export class KimiAuthFacade {
         configPath: options.configPath,
         // Write-path base read: strict (a salvaged base would drop the user's
         // broken-but-fixable sections on rewrite) with an actionable message.
-        read: () => readConfigFileForUpdate(options.configPath) as SDKManagedConfig,
+        read: () =>
+          readConfigFileForUpdate(options.configPath) as SDKManagedConfig,
         write: async (config) => {
           await writeConfigFile(options.configPath, config);
         },
@@ -119,7 +123,10 @@ export class KimiAuthFacade {
   }
 
   async status(providerName?: string | undefined): Promise<AuthStatus> {
-    return this.toolkit.status(providerName, this.resolveRuntimeManagedAuth(providerName).oauthRef);
+    return this.toolkit.status(
+      providerName,
+      this.resolveRuntimeManagedAuth(providerName).oauthRef,
+    );
   }
 
   async login(
@@ -141,7 +148,7 @@ export class KimiAuthFacade {
       provisionConfig: true,
     });
     if (result.provision === undefined) {
-      throw new Error('Kimi auth login did not provision model config.');
+      throw new Error("Kimi auth login did not provision model config.");
     }
     const updated = readConfigFile(this.options.configPath);
     this.options.onConfigUpdated?.(updated);
@@ -154,7 +161,9 @@ export class KimiAuthFacade {
     };
   }
 
-  async logout(providerName?: string | undefined): Promise<KimiAuthLogoutResult> {
+  async logout(
+    providerName?: string | undefined,
+  ): Promise<KimiAuthLogoutResult> {
     const result = await this.toolkit.logout(
       providerName,
       this.resolveRuntimeManagedAuth(providerName).oauthRef,
@@ -167,7 +176,9 @@ export class KimiAuthFacade {
     };
   }
 
-  async getManagedUsage(providerName?: string | undefined): Promise<AuthManagedUsageResult> {
+  async getManagedUsage(
+    providerName?: string | undefined,
+  ): Promise<AuthManagedUsageResult> {
     const auth = this.resolveRuntimeManagedAuth(providerName);
     return this.toolkit.getManagedUsage(providerName, {
       oauthRef: auth.oauthRef,
@@ -216,9 +227,9 @@ export class KimiAuthFacade {
         baseUrl: auth.baseUrl,
       },
     );
-    if (result.kind !== 'ok') return result;
+    if (result.kind !== "ok") return result;
     return {
-      kind: 'ok',
+      kind: "ok",
       uploadId: result.upload_id,
       parts: result.parts.map((part) => ({
         partNumber: part.part_number,
@@ -237,7 +248,10 @@ export class KimiAuthFacade {
     return this.toolkit.completeFeedbackUpload(
       {
         upload_id: input.uploadId,
-        parts: input.parts.map((part) => ({ part_number: part.partNumber, etag: part.etag })),
+        parts: input.parts.map((part) => ({
+          part_number: part.partNumber,
+          etag: part.etag,
+        })),
       },
       providerName,
       {
@@ -309,7 +323,8 @@ export class KimiAuthFacade {
     providerName: string | undefined,
     oauthRef?: OAuthRef | undefined,
   ): OAuthRef | undefined {
-    if ((providerName ?? KIMI_CODE_PROVIDER_NAME) !== KIMI_CODE_PROVIDER_NAME) return oauthRef;
+    if ((providerName ?? KIMI_CODE_PROVIDER_NAME) !== KIMI_CODE_PROVIDER_NAME)
+      return oauthRef;
     const auth = this.resolveManagedAuth(providerName);
     return resolveKimiCodeRuntimeAuth({
       configuredBaseUrl: auth.baseUrl,

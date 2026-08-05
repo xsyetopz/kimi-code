@@ -12,13 +12,17 @@
  * same file, so both engines must agree on this shape.
  */
 
-import { promises as fsp } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { basename as posixBasename } from 'pathe';
+import { promises as fsp } from "node:fs";
+import { dirname, join } from "node:path";
+import { basename as posixBasename } from "pathe";
 
-import { encodeWorkDirKey, normalizeWorkDir, workspaceRootKey } from '#/session/store/workdir-key';
+import {
+  encodeWorkDirKey,
+  normalizeWorkDir,
+  workspaceRootKey,
+} from "#/session/store/workdir-key";
 
-const WORKSPACE_REGISTRY_FILE = 'workspaces.json';
+const WORKSPACE_REGISTRY_FILE = "workspaces.json";
 const WORKSPACE_REGISTRY_VERSION = 1;
 
 export interface WorkspaceRegistryEntry {
@@ -41,7 +45,11 @@ export interface WorkspaceRegistryFile {
 export type WorkspaceRegistryWarn = (context: object, message: string) => void;
 
 function emptyRegistryFile(): WorkspaceRegistryFile {
-  return { version: WORKSPACE_REGISTRY_VERSION, workspaces: {}, deleted_workspace_ids: [] };
+  return {
+    version: WORKSPACE_REGISTRY_VERSION,
+    workspaces: {},
+    deleted_workspace_ids: [],
+  };
 }
 
 /** Read `<homeDir>/workspaces.json`, tolerating a missing or malformed file
@@ -54,10 +62,10 @@ export async function readWorkspaceRegistryFile(
   const registryPath = join(homeDir, WORKSPACE_REGISTRY_FILE);
   let raw: string;
   try {
-    raw = await fsp.readFile(registryPath, 'utf8');
+    raw = await fsp.readFile(registryPath, "utf8");
   } catch (err) {
     const code = (err as NodeJS.ErrnoException).code;
-    if (code === 'ENOENT' || code === 'ENOTDIR') {
+    if (code === "ENOENT" || code === "ENOTDIR") {
       return emptyRegistryFile();
     }
     throw err;
@@ -66,19 +74,26 @@ export async function readWorkspaceRegistryFile(
   try {
     parsed = JSON.parse(raw);
   } catch (err) {
-    warn?.({ path: registryPath, err: String(err) }, 'workspaces.json malformed; treating as empty');
+    warn?.(
+      { path: registryPath, err: String(err) },
+      "workspaces.json malformed; treating as empty",
+    );
     return emptyRegistryFile();
   }
   if (
-    typeof parsed !== 'object' ||
+    typeof parsed !== "object" ||
     parsed === null ||
-    typeof (parsed as { workspaces?: unknown }).workspaces !== 'object' ||
+    typeof (parsed as { workspaces?: unknown }).workspaces !== "object" ||
     (parsed as { workspaces?: unknown }).workspaces === null
   ) {
-    warn?.({ path: registryPath }, 'workspaces.json missing required keys; treating as empty');
+    warn?.(
+      { path: registryPath },
+      "workspaces.json missing required keys; treating as empty",
+    );
     return emptyRegistryFile();
   }
-  const rawWorkspaces = (parsed as { workspaces: Record<string, unknown> }).workspaces;
+  const rawWorkspaces = (parsed as { workspaces: Record<string, unknown> })
+    .workspaces;
   const workspaces: Record<string, WorkspaceRegistryEntry> = {};
   for (const [id, value] of Object.entries(rawWorkspaces)) {
     const entry = sanitizeWorkspaceRegistryEntry(value);
@@ -87,12 +102,13 @@ export async function readWorkspaceRegistryFile(
     }
   }
   const version =
-    typeof (parsed as { version?: unknown }).version === 'number'
+    typeof (parsed as { version?: unknown }).version === "number"
       ? (parsed as { version: number }).version
       : WORKSPACE_REGISTRY_VERSION;
-  const rawDeleted = (parsed as { deleted_workspace_ids?: unknown }).deleted_workspace_ids;
+  const rawDeleted = (parsed as { deleted_workspace_ids?: unknown })
+    .deleted_workspace_ids;
   const deleted_workspace_ids = Array.isArray(rawDeleted)
-    ? rawDeleted.filter((id): id is string => typeof id === 'string')
+    ? rawDeleted.filter((id): id is string => typeof id === "string")
     : [];
   return { version, workspaces, deleted_workspace_ids };
 }
@@ -105,7 +121,7 @@ export async function writeWorkspaceRegistryFile(
   const registryPath = join(homeDir, WORKSPACE_REGISTRY_FILE);
   await fsp.mkdir(dirname(registryPath), { recursive: true, mode: 0o700 });
   const tmp = `${registryPath}.tmp`;
-  await fsp.writeFile(tmp, JSON.stringify(file, null, 2), 'utf8');
+  await fsp.writeFile(tmp, JSON.stringify(file, null, 2), "utf8");
   await fsp.rename(tmp, registryPath);
 }
 
@@ -156,19 +172,23 @@ export async function touchWorkspaceRegistry(
           created_at: now,
           last_opened_at: now,
         };
-  file.deleted_workspace_ids = file.deleted_workspace_ids.filter((id) => id !== workspaceId);
+  file.deleted_workspace_ids = file.deleted_workspace_ids.filter(
+    (id) => id !== workspaceId,
+  );
   await writeWorkspaceRegistryFile(homeDir, file);
   return { workspaceId, created: existing === undefined };
 }
 
-function sanitizeWorkspaceRegistryEntry(value: unknown): WorkspaceRegistryEntry | null {
-  if (typeof value !== 'object' || value === null) return null;
+function sanitizeWorkspaceRegistryEntry(
+  value: unknown,
+): WorkspaceRegistryEntry | null {
+  if (typeof value !== "object" || value === null) return null;
   const v = value as Partial<WorkspaceRegistryEntry>;
   if (
-    typeof v.root !== 'string' ||
-    typeof v.name !== 'string' ||
-    typeof v.created_at !== 'string' ||
-    typeof v.last_opened_at !== 'string'
+    typeof v.root !== "string" ||
+    typeof v.name !== "string" ||
+    typeof v.created_at !== "string" ||
+    typeof v.last_opened_at !== "string"
   ) {
     return null;
   }

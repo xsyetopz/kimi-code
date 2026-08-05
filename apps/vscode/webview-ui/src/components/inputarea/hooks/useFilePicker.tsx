@@ -34,26 +34,41 @@ interface UseFilePickerResult {
   resetFilePicker: () => void;
 }
 
-export function useFilePicker(activeToken: ActiveToken | null, onInsertFile: (path: string) => void, onPickMedia: () => void, onCancel: () => void): UseFilePickerResult {
+export function useFilePicker(
+  activeToken: ActiveToken | null,
+  onInsertFile: (path: string) => void,
+  onPickMedia: () => void,
+  onCancel: () => void,
+): UseFilePickerResult {
   const { isStreaming, draftMedia } = useChatStore();
   const canAddMedia = !isStreaming && draftMedia.length < MEDIA_CONFIG.maxCount;
 
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [filePickerMode, setFilePickerMode] = useState<FilePickerMode>("search");
+  const [filePickerMode, setFilePickerMode] =
+    useState<FilePickerMode>("search");
   const [folderPath, setFolderPath] = useState("");
 
   const showFileMenu = activeToken?.trigger === "@";
   const query = activeToken?.query || "";
 
   // 搜索文件 - query 变化时重新搜索
-  const { data: searchResults = [], loading: isSearchLoading } = useRequest(() => bridge.getProjectFiles({ query: query || undefined }), {
-    refreshDeps: [query],
-    debounceWait: 100,
-    ready: showFileMenu && filePickerMode === "search",
-  });
+  const { data: searchResults = [], loading: isSearchLoading } = useRequest(
+    () => bridge.getProjectFiles({ query: query || undefined }),
+    {
+      refreshDeps: [query],
+      debounceWait: 100,
+      ready: showFileMenu && filePickerMode === "search",
+    },
+  );
 
   // 文件夹浏览
-  const { data: folderItems = [], loading: isFolderLoading, run: loadFolder } = useRequest((dir: string) => bridge.getProjectFiles({ directory: dir }), { manual: true });
+  const {
+    data: folderItems = [],
+    loading: isFolderLoading,
+    run: loadFolder,
+  } = useRequest((dir: string) => bridge.getProjectFiles({ directory: dir }), {
+    manual: true,
+  });
 
   useEffect(() => {
     if (showFileMenu && filePickerMode === "folder") {
@@ -87,9 +102,17 @@ export function useFilePicker(activeToken: ActiveToken | null, onInsertFile: (pa
     }));
   }, [filePickerMode, folderItems, searchResults]);
 
-  const isLoading = filePickerMode === "search" ? isSearchLoading : isFolderLoading;
+  const isLoading =
+    filePickerMode === "search" ? isSearchLoading : isFolderLoading;
   const showMediaOption = filePickerMode === "search" && canAddMedia;
-  const fileMenuHeaderCount = filePickerMode === "search" ? (showMediaOption ? 2 : 1) : folderPath ? 2 : 1;
+  const fileMenuHeaderCount =
+    filePickerMode === "search"
+      ? showMediaOption
+        ? 2
+        : 1
+      : folderPath
+        ? 2
+        : 1;
 
   const resetFilePicker = useCallback(() => {
     setSelectedIndex(0);
@@ -137,7 +160,16 @@ export function useFilePicker(activeToken: ActiveToken | null, onInsertFile: (pa
     } else {
       onInsertFile(item.path);
     }
-  }, [filePickerMode, selectedIndex, showMediaOption, folderPath, fileMenuHeaderCount, fileItems, onPickMedia, onInsertFile]);
+  }, [
+    filePickerMode,
+    selectedIndex,
+    showMediaOption,
+    folderPath,
+    fileMenuHeaderCount,
+    fileItems,
+    onPickMedia,
+    onInsertFile,
+  ]);
 
   const handleFileMenuKey = useCallback(
     (e: React.KeyboardEvent): boolean => {
@@ -193,7 +225,16 @@ export function useFilePicker(activeToken: ActiveToken | null, onInsertFile: (pa
           return false;
       }
     },
-    [showFileMenu, fileMenuHeaderCount, fileItems, filePickerMode, folderPath, selectedIndex, handleFileMenuConfirm, onCancel],
+    [
+      showFileMenu,
+      fileMenuHeaderCount,
+      fileItems,
+      filePickerMode,
+      folderPath,
+      selectedIndex,
+      handleFileMenuConfirm,
+      onCancel,
+    ],
   );
 
   return {

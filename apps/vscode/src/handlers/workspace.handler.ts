@@ -23,7 +23,10 @@ const getInputHistory: Handler<void, string[]> = async (_, ctx) => {
   return ctx.workspaceState.get<string[]>(INPUT_HISTORY_KEY, []);
 };
 
-const addInputHistory: Handler<{ text: string }, { ok: boolean }> = async ({ text }, ctx) => {
+const addInputHistory: Handler<{ text: string }, { ok: boolean }> = async (
+  { text },
+  ctx,
+) => {
   const history = ctx.workspaceState.get<string[]>(INPUT_HISTORY_KEY, []);
   // 避免重复添加相同的最近一条
   if (history[history.length - 1] !== text) {

@@ -31,18 +31,18 @@
  * traits see configuration, not registry state.
  */
 
-import type { ModelCapability } from '#/kosong/contract/capability';
-import type { ChatProviderError } from '#/kosong/contract/errors';
-import type { Message, VideoURLPart } from '#/kosong/contract/message';
+import type { ModelCapability } from "#/kosong/contract/capability";
+import type { ChatProviderError } from "#/kosong/contract/errors";
+import type { Message, VideoURLPart } from "#/kosong/contract/message";
 import type {
   GenerateOptions,
   ThinkingEffort,
   ToolCallIdPolicy,
   VideoUploadInput,
-} from '#/kosong/contract/provider';
-import type { Tool } from '#/kosong/contract/tool';
+} from "#/kosong/contract/provider";
+import type { Tool } from "#/kosong/contract/tool";
 
-import type { ProtocolAdapterConfig } from './protocol';
+import type { ProtocolAdapterConfig } from "./protocol";
 
 export interface TraitContext {
   readonly config: ProtocolAdapterConfig;
@@ -64,7 +64,10 @@ export interface ProtocolTrait {
 
   defaultHeaders?(ctx: TraitContext): Record<string, string> | undefined;
 
-  convertTool?(tool: Tool, ctx: TraitContext): Record<string, unknown> | undefined;
+  convertTool?(
+    tool: Tool,
+    ctx: TraitContext,
+  ): Record<string, unknown> | undefined;
 
   convertMessage?(
     message: Message,
@@ -84,7 +87,10 @@ export interface ProtocolTrait {
 
   toolCallIdPolicy?(ctx: TraitContext): ToolCallIdPolicy | undefined;
 
-  convertError?(error: unknown, ctx: TraitContext): ChatProviderError | undefined;
+  convertError?(
+    error: unknown,
+    ctx: TraitContext,
+  ): ChatProviderError | undefined;
 
   withThinking?(
     effort: ThinkingEffort,
@@ -103,7 +109,10 @@ export interface ProtocolTrait {
     ctx: TraitContext,
   ): Record<string, unknown> | undefined;
 
-  cacheKey?(key: string, ctx: TraitContext): Record<string, unknown> | undefined;
+  cacheKey?(
+    key: string,
+    ctx: TraitContext,
+  ): Record<string, unknown> | undefined;
 
   extractUsage?(
     chunk: Record<string, unknown>,
@@ -112,7 +121,10 @@ export interface ProtocolTrait {
 
   reasoningKey?(ctx: TraitContext): string | undefined;
 
-  capability?(modelName: string, ctx: TraitContext): ModelCapability | undefined;
+  capability?(
+    modelName: string,
+    ctx: TraitContext,
+  ): ModelCapability | undefined;
 
   uploadVideo?(
     input: string | VideoUploadInput,

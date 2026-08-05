@@ -5,35 +5,39 @@
  * Run: pnpm -C apps/kimi-code exec vitest run test/cli/run-prompt.test.ts
  */
 
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
-import type { createKimiDeviceId as createKimiDeviceIdFn } from '@moonshot-ai/kimi-code-oauth';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { createKimiDeviceId as createKimiDeviceIdFn } from "@moonshot-ai/kimi-code-oauth";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { runPrompt } from '#/cli/run-prompt';
-import { PROMPT_CLEANUP_TIMEOUT_MS } from '#/constant/app';
+import { runPrompt } from "#/cli/run-prompt";
+import { PROMPT_CLEANUP_TIMEOUT_MS } from "#/constant/app";
 
 type CreateKimiDeviceId = typeof createKimiDeviceIdFn;
 
 const mocks = vi.hoisted(() => {
   const eventHandlers = new Set<(event: any) => void>();
   const agentEvent = (agentId: string, event: Record<string, unknown>) => ({
-    sessionId: 'ses_prompt',
+    sessionId: "ses_prompt",
     agentId,
     ...event,
   });
-  const mainEvent = (event: Record<string, unknown>) => agentEvent('main', event);
+  const mainEvent = (event: Record<string, unknown>) =>
+    agentEvent("main", event);
   const session = {
-    id: 'ses_prompt',
+    id: "ses_prompt",
     setModel: vi.fn(),
     setPermission: vi.fn(),
     setApprovalHandler: vi.fn(),
     setQuestionHandler: vi.fn(),
     getStatus: vi.fn(
-      async (): Promise<{ readonly permission: string; readonly model?: string }> => ({
-        permission: 'manual',
+      async (): Promise<{
+        readonly permission: string;
+        readonly model?: string;
+      }> => ({
+        permission: "manual",
       }),
     ),
     onEvent: vi.fn((handler: (event: any) => void) => {
@@ -43,17 +47,29 @@ const mocks = vi.hoisted(() => {
     prompt: vi.fn(async () => {
       for (const handler of eventHandlers) {
         handler(
-          mainEvent({ type: 'turn.started', turnId: 1, origin: { kind: 'user' } }),
+          mainEvent({
+            type: "turn.started",
+            turnId: 1,
+            origin: { kind: "user" },
+          }),
         );
-        handler(mainEvent({ type: 'assistant.delta', turnId: 1, delta: 'hello' }));
-        handler(mainEvent({ type: 'assistant.delta', turnId: 1, delta: ' world' }));
-        handler(mainEvent({ type: 'turn.ended', turnId: 1, reason: 'completed' }));
+        handler(
+          mainEvent({ type: "assistant.delta", turnId: 1, delta: "hello" }),
+        );
+        handler(
+          mainEvent({ type: "assistant.delta", turnId: 1, delta: " world" }),
+        );
+        handler(
+          mainEvent({ type: "turn.ended", turnId: 1, reason: "completed" }),
+        );
       }
     }),
     waitForBackgroundTasksOnPrint: vi.fn(async () => {}),
     getGoal: vi.fn(async () => ({ goal: null })),
     getCronTasks: vi.fn(async () => ({ tasks: [] })),
-    handlePrintMainTurnCompleted: vi.fn(async (): Promise<'finish' | 'continue'> => 'finish'),
+    handlePrintMainTurnCompleted: vi.fn(
+      async (): Promise<"finish" | "continue"> => "finish",
+    ),
   };
 
   return {
@@ -64,17 +80,25 @@ const mocks = vi.hoisted(() => {
     kimiHarnessConstructor: vi.fn(),
     harnessEnsureConfigFile: vi.fn(),
     harnessGetConfig: vi.fn(
-      async (): Promise<{ providers: {}; defaultModel?: string; telemetry: boolean }> => ({
+      async (): Promise<{
+        providers: {};
+        defaultModel?: string;
+        telemetry: boolean;
+      }> => ({
         providers: {},
-        defaultModel: 'k2',
+        defaultModel: "k2",
         telemetry: true,
       }),
     ),
-    harnessGetConfigDiagnostics: vi.fn(async () => ({ warnings: [] as readonly string[] })),
+    harnessGetConfigDiagnostics: vi.fn(async () => ({
+      warnings: [] as readonly string[],
+    })),
     harnessGetExperimentalFeatures: vi.fn(async () => []),
     harnessCreateSession: vi.fn(async () => session),
     harnessResumeSession: vi.fn(async () => session),
-    harnessListSessions: vi.fn(async () => [{ id: 'ses_previous', workDir: process.cwd() }]),
+    harnessListSessions: vi.fn(async () => [
+      { id: "ses_previous", workDir: process.cwd() },
+    ]),
     harnessClose: vi.fn(),
     harnessTrack: vi.fn(),
     harnessGetCachedAccessToken: vi.fn(),
@@ -92,26 +116,28 @@ const mocks = vi.hoisted(() => {
         // message, then the resume hint — in the active output format.
         const stdout = io?.stdout ?? process.stdout;
         const stderr = io?.stderr ?? process.stderr;
-        const outputFormat = opts?.outputFormat ?? 'text';
-        if (outputFormat === 'stream-json') {
+        const outputFormat = opts?.outputFormat ?? "text";
+        if (outputFormat === "stream-json") {
           stdout.write(
-            `${JSON.stringify({ role: 'meta', type: 'system.version', version })}\n`,
+            `${JSON.stringify({ role: "meta", type: "system.version", version })}\n`,
           );
-          stdout.write(`${JSON.stringify({ role: 'assistant', content: 'hello world' })}\n`);
+          stdout.write(
+            `${JSON.stringify({ role: "assistant", content: "hello world" })}\n`,
+          );
           stdout.write(
             `${JSON.stringify({
-              role: 'meta',
-              type: 'session.resume_hint',
-              session_id: 'ses_prompt',
-              command: 'kimi -r ses_prompt',
-              content: 'To resume this session: kimi -r ses_prompt',
+              role: "meta",
+              type: "session.resume_hint",
+              session_id: "ses_prompt",
+              command: "kimi -r ses_prompt",
+              content: "To resume this session: kimi -r ses_prompt",
             })}\n`,
           );
           return;
         }
         stderr.write(`kimi version ${version}\n`);
-        stdout.write('• hello world\n\n');
-        stderr.write('To resume this session: kimi -r ses_prompt\n');
+        stdout.write("• hello world\n\n");
+        stderr.write("To resume this session: kimi -r ses_prompt\n");
       },
     ),
     initializeTelemetry: vi.fn(),
@@ -121,20 +147,23 @@ const mocks = vi.hoisted(() => {
     setTelemetryContext: vi.fn(),
     lifecycleTrack: vi.fn(),
     withTelemetryContext: vi.fn(() => ({ track: vi.fn() })),
-    createKimiDeviceId: vi.fn<CreateKimiDeviceId>(() => 'device-1'),
-    resolveKimiHome: vi.fn((homeDir?: string) => homeDir ?? '/tmp/kimi-code-test-home'),
+    createKimiDeviceId: vi.fn<CreateKimiDeviceId>(() => "device-1"),
+    resolveKimiHome: vi.fn(
+      (homeDir?: string) => homeDir ?? "/tmp/kimi-code-test-home",
+    ),
     harnessCreatesDeviceIdOnConstruction: false,
   };
 });
 
-vi.mock('@moonshot-ai/kimi-code-sdk', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@moonshot-ai/kimi-code-sdk')>();
+vi.mock("@moonshot-ai/kimi-code-sdk", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@moonshot-ai/kimi-code-sdk")>();
   return {
     ...actual,
     resolveKimiHome: mocks.resolveKimiHome,
     createKimiHarness: (...args: unknown[]) => {
       const options = args[0] as { readonly homeDir?: string } | undefined;
-      const homeDir = options?.homeDir ?? '/tmp/kimi-code-test-home';
+      const homeDir = options?.homeDir ?? "/tmp/kimi-code-test-home";
       if (mocks.harnessCreatesDeviceIdOnConstruction) {
         mocks.createKimiDeviceId(homeDir);
       }
@@ -156,18 +185,18 @@ vi.mock('@moonshot-ai/kimi-code-sdk', async (importOriginal) => {
   };
 });
 
-vi.mock('@moonshot-ai/kimi-code-oauth', async () => {
-  const actual = await vi.importActual<typeof import('@moonshot-ai/kimi-code-oauth')>(
-    '@moonshot-ai/kimi-code-oauth',
-  );
+vi.mock("@moonshot-ai/kimi-code-oauth", async () => {
+  const actual = await vi.importActual<
+    typeof import("@moonshot-ai/kimi-code-oauth")
+  >("@moonshot-ai/kimi-code-oauth");
   return {
     ...actual,
     createKimiDeviceId: mocks.createKimiDeviceId,
-    KIMI_CODE_PROVIDER_NAME: 'kimi-code',
+    KIMI_CODE_PROVIDER_NAME: "kimi-code",
   };
 });
 
-vi.mock('@moonshot-ai/kimi-telemetry', () => ({
+vi.mock("@moonshot-ai/kimi-telemetry", () => ({
   initializeTelemetry: mocks.initializeTelemetry,
   setCrashPhase: mocks.setCrashPhase,
   shutdownTelemetry: mocks.shutdownTelemetry,
@@ -180,7 +209,7 @@ vi.mock('@moonshot-ai/kimi-telemetry', () => ({
 // when KIMI_CODE_EXPERIMENTAL_FLAG is set. Mock the native v2 runner so tests
 // that flip that flag can exercise the dispatch without pulling in the real
 // agent-core-v2 graph.
-vi.mock('../../src/cli/v2/run-v2-print', () => ({
+vi.mock("../../src/cli/v2/run-v2-print", () => ({
   runV2Print: mocks.runV2Print,
 }));
 
@@ -193,7 +222,7 @@ function opts(overrides: Partial<Parameters<typeof runPrompt>[0]> = {}) {
     plan: false,
     model: undefined,
     outputFormat: undefined,
-    prompt: 'say hello',
+    prompt: "say hello",
     skillsDirs: [],
     agent: undefined,
     agentFiles: [],
@@ -203,7 +232,7 @@ function opts(overrides: Partial<Parameters<typeof runPrompt>[0]> = {}) {
 }
 
 function writer(columns?: number) {
-  let text = '';
+  let text = "";
   return {
     columns,
     write: vi.fn((chunk: string) => {
@@ -217,14 +246,18 @@ function writer(columns?: number) {
 function fakeProcess() {
   const listeners = new Map<NodeJS.Signals, () => Promise<void> | void>();
   return {
-    once: vi.fn((signal: NodeJS.Signals, listener: () => Promise<void> | void) => {
-      listeners.set(signal, listener);
-    }),
-    off: vi.fn((signal: NodeJS.Signals, listener: () => Promise<void> | void) => {
-      if (listeners.get(signal) === listener) {
-        listeners.delete(signal);
-      }
-    }),
+    once: vi.fn(
+      (signal: NodeJS.Signals, listener: () => Promise<void> | void) => {
+        listeners.set(signal, listener);
+      },
+    ),
+    off: vi.fn(
+      (signal: NodeJS.Signals, listener: () => Promise<void> | void) => {
+        if (listeners.get(signal) === listener) {
+          listeners.delete(signal);
+        }
+      },
+    ),
     exit: vi.fn(),
     listener: (signal: NodeJS.Signals) => listeners.get(signal),
   };
@@ -244,73 +277,80 @@ async function waitForAssertion(assertion: () => void): Promise<void> {
   throw lastError;
 }
 
-describe('runPrompt', () => {
+describe("runPrompt", () => {
   beforeEach(() => {
     // Pin the experimental engine flag off so the default v1 path is
     // deterministic regardless of the host environment. Tests that exercise the
     // experimental path opt back in explicitly with `vi.stubEnv(..., '1')`.
-    vi.stubEnv('KIMI_CODE_EXPERIMENTAL_FLAG', '');
-    vi.stubEnv('KIMI_MODEL_OUTPUT_FORMAT', '');
+    vi.stubEnv("KIMI_CODE_EXPERIMENTAL_FLAG", "");
+    vi.stubEnv("KIMI_MODEL_OUTPUT_FORMAT", "");
   });
 
   afterEach(() => {
     vi.clearAllMocks();
     vi.unstubAllEnvs();
     mocks.eventHandlers.clear();
-    mocks.createKimiDeviceId.mockImplementation(() => 'device-1');
+    mocks.createKimiDeviceId.mockImplementation(() => "device-1");
     mocks.resolveKimiHome.mockImplementation(
-      (homeDir?: string) => homeDir ?? '/tmp/kimi-code-test-home',
+      (homeDir?: string) => homeDir ?? "/tmp/kimi-code-test-home",
     );
     mocks.harnessCreatesDeviceIdOnConstruction = false;
   });
 
-  it('creates a fresh auto-permission session and streams assistant output to stdout', async () => {
+  it("creates a fresh auto-permission session and streams assistant output to stdout", async () => {
     const stdout = writer();
     const stderr = writer();
 
-    await runPrompt(opts({ skillsDirs: ['/skills'] }), '1.2.3-test', { stdout, stderr });
+    await runPrompt(opts({ skillsDirs: ["/skills"] }), "1.2.3-test", {
+      stdout,
+      stderr,
+    });
 
     expect(mocks.kimiHarnessConstructor).toHaveBeenCalledWith(
-      expect.objectContaining({ skillDirs: ['/skills'], uiMode: 'print' }),
+      expect.objectContaining({ skillDirs: ["/skills"], uiMode: "print" }),
     );
     expect(mocks.harnessCreateSession).toHaveBeenCalledWith({
       workDir: process.cwd(),
-      model: 'k2',
-      permission: 'auto',
+      model: "k2",
+      permission: "auto",
       additionalDirs: undefined,
       drainAgentTasksOnStop: true,
     });
     expect(mocks.session.setPermission).not.toHaveBeenCalled();
-    expect(mocks.session.setApprovalHandler).toHaveBeenCalledWith(expect.any(Function));
-    expect(mocks.session.setQuestionHandler).toHaveBeenCalledWith(expect.any(Function));
-    expect(mocks.session.prompt).toHaveBeenCalledWith('say hello');
-    expect(stdout.text()).toBe('• hello world\n\n');
-    expect(stderr.text()).toBe('To resume this session: kimi -r ses_prompt\n');
+    expect(mocks.session.setApprovalHandler).toHaveBeenCalledWith(
+      expect.any(Function),
+    );
+    expect(mocks.session.setQuestionHandler).toHaveBeenCalledWith(
+      expect.any(Function),
+    );
+    expect(mocks.session.prompt).toHaveBeenCalledWith("say hello");
+    expect(stdout.text()).toBe("• hello world\n\n");
+    expect(stderr.text()).toBe("To resume this session: kimi -r ses_prompt\n");
     expect(mocks.initializeTelemetry).toHaveBeenCalledWith(
-      expect.objectContaining({ sessionId: 'ses_prompt' }),
+      expect.objectContaining({ sessionId: "ses_prompt" }),
     );
     expect(mocks.shutdownTelemetry).toHaveBeenCalled();
     expect(mocks.harnessClose).toHaveBeenCalled();
   });
 
-  it('selects the profile declared by an explicit agent file for a fresh v1 session', async () => {
-    const dir = await mkdtemp(join(tmpdir(), 'kimi-run-prompt-agent-'));
-    const agentFile = join(dir, 'reviewer.md');
+  it("selects the profile declared by an explicit agent file for a fresh v1 session", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "kimi-run-prompt-agent-"));
+    const agentFile = join(dir, "reviewer.md");
     await writeFile(
       agentFile,
-      '---\nname: reviewer\ndescription: Reviews code.\n---\n\nReview the requested change.\n',
-      'utf-8',
+      "---\nname: reviewer\ndescription: Reviews code.\n---\n\nReview the requested change.\n",
+      "utf-8",
     );
 
     try {
-      await runPrompt(opts({ agentFiles: [agentFile] }), '1.2.3-test', {
+      await runPrompt(opts({ agentFiles: [agentFile] }), "1.2.3-test", {
         stdout: writer(),
         stderr: writer(),
       });
 
       expect(mocks.harnessCreateSession).toHaveBeenCalledWith(
         expect.objectContaining({
-          agentProfile: 'reviewer',
+          agentProfile: "reviewer",
           agentFiles: [agentFile],
         }),
       );
@@ -319,7 +359,7 @@ describe('runPrompt', () => {
     }
   });
 
-  it('completes even if harness.close() never resolves (cleanup is time-bounded)', async () => {
+  it("completes even if harness.close() never resolves (cleanup is time-bounded)", async () => {
     vi.useFakeTimers();
     try {
       const stdout = writer();
@@ -330,7 +370,7 @@ describe('runPrompt', () => {
       mocks.harnessClose.mockReturnValueOnce(new Promise<void>(() => {}));
 
       let settled = false;
-      const done = runPrompt(opts(), '1.2.3-test', {
+      const done = runPrompt(opts(), "1.2.3-test", {
         stdout,
         stderr,
         process: fakeProcess(),
@@ -348,21 +388,25 @@ describe('runPrompt', () => {
     }
   });
 
-  it('propagates a cleanup failure that settles before the timeout', async () => {
+  it("propagates a cleanup failure that settles before the timeout", async () => {
     const stdout = writer();
     const stderr = writer();
     // A cleanup step that fails fast (e.g. a permission restore or harness close
     // hitting a persistence error) must surface — not be silently swallowed by
     // the timeout guard — otherwise the run reports success while shutdown
     // actually failed (e.g. a resumed session left in `auto`).
-    mocks.harnessClose.mockRejectedValueOnce(new Error('close failed'));
+    mocks.harnessClose.mockRejectedValueOnce(new Error("close failed"));
 
     await expect(
-      runPrompt(opts(), '1.2.3-test', { stdout, stderr, process: fakeProcess() }),
-    ).rejects.toThrow('close failed');
+      runPrompt(opts(), "1.2.3-test", {
+        stdout,
+        stderr,
+        process: fakeProcess(),
+      }),
+    ).rejects.toThrow("close failed");
   });
 
-  it('ignores a cleanup rejection that lands after the timeout', async () => {
+  it("ignores a cleanup rejection that lands after the timeout", async () => {
     vi.useFakeTimers();
     try {
       const stdout = writer();
@@ -373,47 +417,49 @@ describe('runPrompt', () => {
       mocks.harnessClose.mockReturnValueOnce(
         new Promise<void>((_, reject) => {
           const timer = setTimeout(
-            () => reject(new Error('late close')),
+            () => reject(new Error("late close")),
             PROMPT_CLEANUP_TIMEOUT_MS + 5000,
           );
           timer.unref?.();
         }),
       );
 
-      let settled: 'resolved' | 'rejected' | undefined;
-      const done = runPrompt(opts(), '1.2.3-test', {
+      let settled: "resolved" | "rejected" | undefined;
+      const done = runPrompt(opts(), "1.2.3-test", {
         stdout,
         stderr,
         process: fakeProcess(),
       }).then(
         () => {
-          settled = 'resolved';
+          settled = "resolved";
         },
         () => {
-          settled = 'rejected';
+          settled = "rejected";
         },
       );
 
       await vi.advanceTimersByTimeAsync(PROMPT_CLEANUP_TIMEOUT_MS + 100);
       await done;
-      expect(settled).toBe('resolved');
+      expect(settled).toBe("resolved");
 
       await vi.advanceTimersByTimeAsync(5000);
       await Promise.resolve();
-      expect(settled).toBe('resolved');
+      expect(settled).toBe("resolved");
     } finally {
       vi.useRealTimers();
     }
   });
 
-  it('stops prompt startup when session creation fails', async () => {
+  it("stops prompt startup when session creation fails", async () => {
     const stdout = writer();
     const stderr = writer();
-    mocks.harnessCreateSession.mockRejectedValueOnce(new Error('Git Bash missing'));
-
-    await expect(runPrompt(opts(), '1.2.3-test', { stdout, stderr })).rejects.toThrow(
-      'Git Bash missing',
+    mocks.harnessCreateSession.mockRejectedValueOnce(
+      new Error("Git Bash missing"),
     );
+
+    await expect(
+      runPrompt(opts(), "1.2.3-test", { stdout, stderr }),
+    ).rejects.toThrow("Git Bash missing");
 
     expect(mocks.harnessEnsureConfigFile).toHaveBeenCalledOnce();
     expect(mocks.harnessGetConfig).toHaveBeenCalledOnce();
@@ -422,40 +468,44 @@ describe('runPrompt', () => {
     expect(mocks.harnessClose).toHaveBeenCalledOnce();
   });
 
-  it('uses the CLI model override when creating a fresh prompt session', async () => {
-    await runPrompt(opts({ model: 'kimi-code/k2.5' }), '1.2.3-test', {
+  it("uses the CLI model override when creating a fresh prompt session", async () => {
+    await runPrompt(opts({ model: "kimi-code/k2.5" }), "1.2.3-test", {
       stdout: { write: vi.fn(() => true) },
       stderr: { write: vi.fn(() => true) },
     });
 
     expect(mocks.harnessCreateSession).toHaveBeenCalledWith({
       workDir: process.cwd(),
-      model: 'kimi-code/k2.5',
-      permission: 'auto',
+      model: "kimi-code/k2.5",
+      permission: "auto",
       additionalDirs: undefined,
       drainAgentTasksOnStop: true,
     });
     expect(mocks.initializeTelemetry).toHaveBeenCalledWith(
-      expect.objectContaining({ model: 'kimi-code/k2.5' }),
+      expect.objectContaining({ model: "kimi-code/k2.5" }),
     );
   });
 
-  it('passes the CLI additional directory when creating a fresh prompt session', async () => {
-    await runPrompt(opts({ addDirs: ['../shared', '/tmp/extra'] }), '1.2.3-test', {
-      stdout: { write: vi.fn(() => true) },
-      stderr: { write: vi.fn(() => true) },
-    });
+  it("passes the CLI additional directory when creating a fresh prompt session", async () => {
+    await runPrompt(
+      opts({ addDirs: ["../shared", "/tmp/extra"] }),
+      "1.2.3-test",
+      {
+        stdout: { write: vi.fn(() => true) },
+        stderr: { write: vi.fn(() => true) },
+      },
+    );
 
     expect(mocks.harnessCreateSession).toHaveBeenCalledWith({
       workDir: process.cwd(),
-      model: 'k2',
-      permission: 'auto',
-      additionalDirs: ['../shared', '/tmp/extra'],
+      model: "k2",
+      permission: "auto",
+      additionalDirs: ["../shared", "/tmp/extra"],
       drainAgentTasksOnStop: true,
     });
   });
 
-  it('tracks first launch in prompt mode before harness construction can create the device id', async () => {
+  it("tracks first launch in prompt mode before harness construction can create the device id", async () => {
     mocks.harnessCreatesDeviceIdOnConstruction = true;
     const createdHomes = new Set<string>();
     mocks.createKimiDeviceId.mockImplementation((homeDir, options) => {
@@ -467,111 +517,172 @@ describe('runPrompt', () => {
       return deviceId;
     });
 
-    await runPrompt(opts(), '1.2.3-test', {
+    await runPrompt(opts(), "1.2.3-test", {
       stdout: { write: vi.fn(() => true) },
       stderr: { write: vi.fn(() => true) },
     });
 
     expect(mocks.createKimiDeviceId).toHaveBeenNthCalledWith(
       1,
-      '/tmp/kimi-code-test-home',
+      "/tmp/kimi-code-test-home",
       expect.objectContaining({ onFirstLaunch: expect.any(Function) }),
     );
     expect(mocks.createKimiDeviceId.mock.invocationCallOrder[0]).toBeLessThan(
       mocks.kimiHarnessConstructor.mock.invocationCallOrder[0]!,
     );
     expect(mocks.kimiHarnessConstructor).toHaveBeenCalledWith(
-      expect.objectContaining({ homeDir: '/tmp/kimi-code-test-home' }),
+      expect.objectContaining({ homeDir: "/tmp/kimi-code-test-home" }),
     );
-    expect(mocks.harnessTrack).toHaveBeenCalledWith('first_launch');
+    expect(mocks.harnessTrack).toHaveBeenCalledWith("first_launch");
   });
 
-  it('formats thinking and assistant output as transcript blocks', async () => {
+  it("formats thinking and assistant output as transcript blocks", async () => {
     mocks.session.prompt.mockImplementationOnce(async () => {
       for (const handler of mocks.eventHandlers) {
         handler(
-          mocks.mainEvent({ type: 'turn.started', turnId: 3, origin: { kind: 'user' } }),
-        );
-        handler(
           mocks.mainEvent({
-            type: 'thinking.delta',
+            type: "turn.started",
             turnId: 3,
-            delta: 'The user wants an exact reply.',
+            origin: { kind: "user" },
           }),
         );
         handler(
           mocks.mainEvent({
-            type: 'thinking.delta',
+            type: "thinking.delta",
             turnId: 3,
-            delta: '\nNo tools are needed.',
+            delta: "The user wants an exact reply.",
           }),
         );
-        handler(mocks.mainEvent({ type: 'assistant.delta', turnId: 3, delta: 'prompt-mode-ok' }));
-        handler(mocks.mainEvent({ type: 'turn.ended', turnId: 3, reason: 'completed' }));
+        handler(
+          mocks.mainEvent({
+            type: "thinking.delta",
+            turnId: 3,
+            delta: "\nNo tools are needed.",
+          }),
+        );
+        handler(
+          mocks.mainEvent({
+            type: "assistant.delta",
+            turnId: 3,
+            delta: "prompt-mode-ok",
+          }),
+        );
+        handler(
+          mocks.mainEvent({
+            type: "turn.ended",
+            turnId: 3,
+            reason: "completed",
+          }),
+        );
       }
     });
     const stdout = writer();
     const stderr = writer();
 
-    await runPrompt(opts(), '1.2.3-test', { stdout, stderr });
+    await runPrompt(opts(), "1.2.3-test", { stdout, stderr });
 
     expect(stderr.text()).toBe(
-      '• The user wants an exact reply.\n  No tools are needed.\n\nTo resume this session: kimi -r ses_prompt\n',
+      "• The user wants an exact reply.\n  No tools are needed.\n\nTo resume this session: kimi -r ses_prompt\n",
     );
-    expect(stdout.text()).toBe('• prompt-mode-ok\n\n');
-    expect(stderr.write).toHaveBeenNthCalledWith(1, '• The user wants an exact reply.');
-    expect(stderr.write).toHaveBeenNthCalledWith(2, '\n  No tools are needed.');
-    expect(stdout.write).toHaveBeenNthCalledWith(1, '• prompt-mode-ok');
+    expect(stdout.text()).toBe("• prompt-mode-ok\n\n");
+    expect(stderr.write).toHaveBeenNthCalledWith(
+      1,
+      "• The user wants an exact reply.",
+    );
+    expect(stderr.write).toHaveBeenNthCalledWith(2, "\n  No tools are needed.");
+    expect(stdout.write).toHaveBeenNthCalledWith(1, "• prompt-mode-ok");
   });
 
-  it('formats hook results as their own transcript block', async () => {
+  it("formats hook results as their own transcript block", async () => {
     mocks.session.prompt.mockImplementationOnce(async () => {
       for (const handler of mocks.eventHandlers) {
         handler(
-          mocks.mainEvent({ type: 'turn.started', turnId: 3, origin: { kind: 'user' } }),
+          mocks.mainEvent({
+            type: "turn.started",
+            turnId: 3,
+            origin: { kind: "user" },
+          }),
         );
         handler(
           mocks.mainEvent({
-            type: 'hook.result',
+            type: "hook.result",
             turnId: 3,
-            hookEvent: 'UserPromptSubmit',
-            content: '{}',
+            hookEvent: "UserPromptSubmit",
+            content: "{}",
           }),
         );
-        handler(mocks.mainEvent({ type: 'assistant.delta', turnId: 3, delta: 'answer' }));
-        handler(mocks.mainEvent({ type: 'turn.ended', turnId: 3, reason: 'completed' }));
+        handler(
+          mocks.mainEvent({
+            type: "assistant.delta",
+            turnId: 3,
+            delta: "answer",
+          }),
+        );
+        handler(
+          mocks.mainEvent({
+            type: "turn.ended",
+            turnId: 3,
+            reason: "completed",
+          }),
+        );
       }
     });
     const stdout = writer();
     const stderr = writer();
 
-    await runPrompt(opts(), '1.2.3-test', { stdout, stderr });
+    await runPrompt(opts(), "1.2.3-test", { stdout, stderr });
 
-    expect(stdout.text()).toBe('• UserPromptSubmit hook\n\n  {}\n\n• answer\n\n');
-    expect(stderr.text()).toBe('To resume this session: kimi -r ses_prompt\n');
+    expect(stdout.text()).toBe(
+      "• UserPromptSubmit hook\n\n  {}\n\n• answer\n\n",
+    );
+    expect(stderr.text()).toBe("To resume this session: kimi -r ses_prompt\n");
   });
 
-  it('wraps transcript blocks with hanging indentation when terminal width is known', async () => {
+  it("wraps transcript blocks with hanging indentation when terminal width is known", async () => {
     mocks.session.prompt.mockImplementationOnce(async () => {
       for (const handler of mocks.eventHandlers) {
         handler(
-          mocks.mainEvent({ type: 'turn.started', turnId: 4, origin: { kind: 'user' } }),
+          mocks.mainEvent({
+            type: "turn.started",
+            turnId: 4,
+            origin: { kind: "user" },
+          }),
         );
-        handler(mocks.mainEvent({ type: 'thinking.delta', turnId: 4, delta: 'thinking-wrap' }));
-        handler(mocks.mainEvent({ type: 'assistant.delta', turnId: 4, delta: 'answer-wrap' }));
-        handler(mocks.mainEvent({ type: 'turn.ended', turnId: 4, reason: 'completed' }));
+        handler(
+          mocks.mainEvent({
+            type: "thinking.delta",
+            turnId: 4,
+            delta: "thinking-wrap",
+          }),
+        );
+        handler(
+          mocks.mainEvent({
+            type: "assistant.delta",
+            turnId: 4,
+            delta: "answer-wrap",
+          }),
+        );
+        handler(
+          mocks.mainEvent({
+            type: "turn.ended",
+            turnId: 4,
+            reason: "completed",
+          }),
+        );
       }
     });
     const stdout = writer(10);
     const stderr = writer(10);
 
-    await runPrompt(opts(), '1.2.3-test', { stdout, stderr });
+    await runPrompt(opts(), "1.2.3-test", { stdout, stderr });
 
-    expect(stderr.text()).toBe('• thinking\n  -wrap\n\nTo resume this session: kimi -r ses_prompt\n');
-    expect(stdout.text()).toBe('• answer-w\n  rap\n\n');
+    expect(stderr.text()).toBe(
+      "• thinking\n  -wrap\n\nTo resume this session: kimi -r ses_prompt\n",
+    );
+    expect(stdout.text()).toBe("• answer-w\n  rap\n\n");
   });
 
-  it('filters prompt output and completion to the main agent turn', async () => {
+  it("filters prompt output and completion to the main agent turn", async () => {
     mocks.session.prompt.mockImplementationOnce(async () => {
       const emit = (event: Record<string, unknown>) => {
         for (const handler of Array.from(mocks.eventHandlers)) {
@@ -579,36 +690,56 @@ describe('runPrompt', () => {
         }
       };
 
-      emit(mocks.mainEvent({ type: 'turn.started', turnId: 1, origin: { kind: 'user' } }));
       emit(
-        mocks.agentEvent('child-agent', {
-          type: 'turn.started',
+        mocks.mainEvent({
+          type: "turn.started",
           turnId: 1,
-          origin: { kind: 'user' },
+          origin: { kind: "user" },
         }),
       );
       emit(
-        mocks.agentEvent('child-agent', {
-          type: 'assistant.delta',
+        mocks.agentEvent("child-agent", {
+          type: "turn.started",
           turnId: 1,
-          delta: 'sub answer',
+          origin: { kind: "user" },
         }),
       );
-      emit(mocks.agentEvent('child-agent', { type: 'turn.ended', turnId: 1, reason: 'completed' }));
+      emit(
+        mocks.agentEvent("child-agent", {
+          type: "assistant.delta",
+          turnId: 1,
+          delta: "sub answer",
+        }),
+      );
+      emit(
+        mocks.agentEvent("child-agent", {
+          type: "turn.ended",
+          turnId: 1,
+          reason: "completed",
+        }),
+      );
       await Promise.resolve();
-      emit(mocks.mainEvent({ type: 'assistant.delta', turnId: 1, delta: 'main answer' }));
-      emit(mocks.mainEvent({ type: 'turn.ended', turnId: 1, reason: 'completed' }));
+      emit(
+        mocks.mainEvent({
+          type: "assistant.delta",
+          turnId: 1,
+          delta: "main answer",
+        }),
+      );
+      emit(
+        mocks.mainEvent({ type: "turn.ended", turnId: 1, reason: "completed" }),
+      );
     });
     const stdout = writer();
     const stderr = writer();
 
-    await runPrompt(opts(), '1.2.3-test', { stdout, stderr });
+    await runPrompt(opts(), "1.2.3-test", { stdout, stderr });
 
-    expect(stdout.text()).toBe('• main answer\n\n');
-    expect(stderr.text()).toBe('To resume this session: kimi -r ses_prompt\n');
+    expect(stdout.text()).toBe("• main answer\n\n");
+    expect(stderr.text()).toBe("To resume this session: kimi -r ses_prompt\n");
   });
 
-  it('ignores child-agent error events while the main turn continues', async () => {
+  it("ignores child-agent error events while the main turn continues", async () => {
     mocks.session.prompt.mockImplementationOnce(async () => {
       const emit = (event: Record<string, unknown>) => {
         for (const handler of Array.from(mocks.eventHandlers)) {
@@ -616,43 +747,59 @@ describe('runPrompt', () => {
         }
       };
 
-      emit(mocks.mainEvent({ type: 'turn.started', turnId: 1, origin: { kind: 'user' } }));
       emit(
-        mocks.agentEvent('child-agent', {
-          type: 'error',
-          code: 'subagent.failed',
-          message: 'child failed',
+        mocks.mainEvent({
+          type: "turn.started",
+          turnId: 1,
+          origin: { kind: "user" },
+        }),
+      );
+      emit(
+        mocks.agentEvent("child-agent", {
+          type: "error",
+          code: "subagent.failed",
+          message: "child failed",
         }),
       );
       await Promise.resolve();
-      emit(mocks.mainEvent({ type: 'assistant.delta', turnId: 1, delta: 'main recovered' }));
-      emit(mocks.mainEvent({ type: 'turn.ended', turnId: 1, reason: 'completed' }));
+      emit(
+        mocks.mainEvent({
+          type: "assistant.delta",
+          turnId: 1,
+          delta: "main recovered",
+        }),
+      );
+      emit(
+        mocks.mainEvent({ type: "turn.ended", turnId: 1, reason: "completed" }),
+      );
     });
     const stdout = writer();
     const stderr = writer();
 
-    await runPrompt(opts(), '1.2.3-test', { stdout, stderr });
+    await runPrompt(opts(), "1.2.3-test", { stdout, stderr });
 
-    expect(stdout.text()).toBe('• main recovered\n\n');
-    expect(stderr.text()).toBe('To resume this session: kimi -r ses_prompt\n');
+    expect(stdout.text()).toBe("• main recovered\n\n");
+    expect(stderr.text()).toBe("To resume this session: kimi -r ses_prompt\n");
   });
 
-  it('resumes a concrete session and forces auto permission before prompting', async () => {
-    await runPrompt(opts({ session: 'ses_existing' }), '1.2.3-test', {
+  it("resumes a concrete session and forces auto permission before prompting", async () => {
+    await runPrompt(opts({ session: "ses_existing" }), "1.2.3-test", {
       stdout: { write: vi.fn(() => true) },
       stderr: { write: vi.fn(() => true) },
     });
 
-    expect(mocks.harnessResumeSession).toHaveBeenCalledWith({ id: 'ses_existing' });
+    expect(mocks.harnessResumeSession).toHaveBeenCalledWith({
+      id: "ses_existing",
+    });
     expect(mocks.session.getStatus).toHaveBeenCalled();
-    expect(mocks.session.setPermission).toHaveBeenNthCalledWith(1, 'auto');
-    expect(mocks.session.setPermission).toHaveBeenNthCalledWith(2, 'manual');
+    expect(mocks.session.setPermission).toHaveBeenNthCalledWith(1, "auto");
+    expect(mocks.session.setPermission).toHaveBeenNthCalledWith(2, "manual");
   });
 
-  it('passes the CLI additional directories when resuming a concrete session', async () => {
+  it("passes the CLI additional directories when resuming a concrete session", async () => {
     await runPrompt(
-      opts({ session: 'ses_existing', addDirs: ['../shared', '/tmp/extra'] }),
-      '1.2.3-test',
+      opts({ session: "ses_existing", addDirs: ["../shared", "/tmp/extra"] }),
+      "1.2.3-test",
       {
         stdout: { write: vi.fn(() => true) },
         stderr: { write: vi.fn(() => true) },
@@ -660,31 +807,39 @@ describe('runPrompt', () => {
     );
 
     expect(mocks.harnessResumeSession).toHaveBeenCalledWith({
-      id: 'ses_existing',
-      additionalDirs: ['../shared', '/tmp/extra'],
+      id: "ses_existing",
+      additionalDirs: ["../shared", "/tmp/extra"],
     });
     expect(mocks.harnessCreateSession).not.toHaveBeenCalled();
   });
 
-  it('does not forward an agent profile when resuming a concrete v1 session', async () => {
+  it("does not forward an agent profile when resuming a concrete v1 session", async () => {
     // validateOptions rejects --agent with --session; runPrompt must not
     // forward a profile to resume even if a caller hands one over.
-    await runPrompt(opts({ session: 'ses_existing', agent: 'reviewer' }), '1.2.3-test', {
-      stdout: writer(),
-      stderr: writer(),
-    });
+    await runPrompt(
+      opts({ session: "ses_existing", agent: "reviewer" }),
+      "1.2.3-test",
+      {
+        stdout: writer(),
+        stderr: writer(),
+      },
+    );
 
-    expect(mocks.harnessResumeSession).toHaveBeenCalledWith({ id: 'ses_existing' });
+    expect(mocks.harnessResumeSession).toHaveBeenCalledWith({
+      id: "ses_existing",
+    });
   });
 
-  it('allows resuming a concrete session when Windows workdir uses backslashes', async () => {
-    const cwd = vi.spyOn(process, 'cwd').mockReturnValue(String.raw`C:\Users\kimi\project`);
+  it("allows resuming a concrete session when Windows workdir uses backslashes", async () => {
+    const cwd = vi
+      .spyOn(process, "cwd")
+      .mockReturnValue(String.raw`C:\Users\kimi\project`);
     mocks.harnessListSessions.mockResolvedValueOnce([
-      { id: 'ses_existing', workDir: 'C:/Users/kimi/project' },
+      { id: "ses_existing", workDir: "C:/Users/kimi/project" },
     ]);
 
     try {
-      await runPrompt(opts({ session: 'ses_existing' }), '1.2.3-test', {
+      await runPrompt(opts({ session: "ses_existing" }), "1.2.3-test", {
         stdout: { write: vi.fn(() => true) },
         stderr: { write: vi.fn(() => true) },
       });
@@ -693,73 +848,109 @@ describe('runPrompt', () => {
     }
 
     expect(mocks.harnessListSessions).toHaveBeenCalledWith({
-      sessionId: 'ses_existing',
+      sessionId: "ses_existing",
       workDir: String.raw`C:\Users\kimi\project`,
     });
-    expect(mocks.harnessResumeSession).toHaveBeenCalledWith({ id: 'ses_existing' });
+    expect(mocks.harnessResumeSession).toHaveBeenCalledWith({
+      id: "ses_existing",
+    });
   });
 
-  it('applies the CLI model override to resumed prompt sessions', async () => {
-    await runPrompt(opts({ session: 'ses_existing', model: 'kimi-code/k2.5' }), '1.2.3-test', {
-      stdout: { write: vi.fn(() => true) },
-      stderr: { write: vi.fn(() => true) },
-    });
+  it("applies the CLI model override to resumed prompt sessions", async () => {
+    await runPrompt(
+      opts({ session: "ses_existing", model: "kimi-code/k2.5" }),
+      "1.2.3-test",
+      {
+        stdout: { write: vi.fn(() => true) },
+        stderr: { write: vi.fn(() => true) },
+      },
+    );
 
-    expect(mocks.harnessResumeSession).toHaveBeenCalledWith({ id: 'ses_existing' });
-    expect(mocks.session.setModel).toHaveBeenCalledWith('kimi-code/k2.5');
+    expect(mocks.harnessResumeSession).toHaveBeenCalledWith({
+      id: "ses_existing",
+    });
+    expect(mocks.session.setModel).toHaveBeenCalledWith("kimi-code/k2.5");
     expect(mocks.initializeTelemetry).toHaveBeenCalledWith(
-      expect.objectContaining({ model: 'kimi-code/k2.5' }),
+      expect.objectContaining({ model: "kimi-code/k2.5" }),
     );
   });
 
-  it('writes stream-json output as assistant JSONL with resume meta without transcript bullets', async () => {
+  it("writes stream-json output as assistant JSONL with resume meta without transcript bullets", async () => {
     const stdout = writer();
     const stderr = writer();
 
-    await runPrompt(opts({ outputFormat: 'stream-json' }), '1.2.3-test', { stdout, stderr });
+    await runPrompt(opts({ outputFormat: "stream-json" }), "1.2.3-test", {
+      stdout,
+      stderr,
+    });
 
     expect(stdout.text()).toBe(
       [
         '{"role":"assistant","content":"hello world"}',
         '{"role":"meta","type":"session.resume_hint","session_id":"ses_prompt","command":"kimi -r ses_prompt","content":"To resume this session: kimi -r ses_prompt"}',
-        '',
-      ].join('\n'),
+        "",
+      ].join("\n"),
     );
-    expect(stderr.text()).toBe('');
+    expect(stderr.text()).toBe("");
   });
 
-  it('writes stream-json tool calls and tool results as JSONL messages', async () => {
+  it("writes stream-json tool calls and tool results as JSONL messages", async () => {
     mocks.session.prompt.mockImplementationOnce(async () => {
       for (const handler of mocks.eventHandlers) {
         handler(
-          mocks.mainEvent({ type: 'turn.started', turnId: 8, origin: { kind: 'user' } }),
-        );
-        handler(mocks.mainEvent({ type: 'assistant.delta', turnId: 8, delta: 'checking' }));
-        handler(
           mocks.mainEvent({
-            type: 'tool.call.started',
+            type: "turn.started",
             turnId: 8,
-            toolCallId: 'tc_1',
-            name: 'Shell',
-            args: { command: 'ls' },
+            origin: { kind: "user" },
           }),
         );
         handler(
           mocks.mainEvent({
-            type: 'tool.result',
+            type: "assistant.delta",
             turnId: 8,
-            toolCallId: 'tc_1',
-            output: 'file1.py\nfile2.py',
+            delta: "checking",
           }),
         );
-        handler(mocks.mainEvent({ type: 'assistant.delta', turnId: 8, delta: 'done' }));
-        handler(mocks.mainEvent({ type: 'turn.ended', turnId: 8, reason: 'completed' }));
+        handler(
+          mocks.mainEvent({
+            type: "tool.call.started",
+            turnId: 8,
+            toolCallId: "tc_1",
+            name: "Shell",
+            args: { command: "ls" },
+          }),
+        );
+        handler(
+          mocks.mainEvent({
+            type: "tool.result",
+            turnId: 8,
+            toolCallId: "tc_1",
+            output: "file1.py\nfile2.py",
+          }),
+        );
+        handler(
+          mocks.mainEvent({
+            type: "assistant.delta",
+            turnId: 8,
+            delta: "done",
+          }),
+        );
+        handler(
+          mocks.mainEvent({
+            type: "turn.ended",
+            turnId: 8,
+            reason: "completed",
+          }),
+        );
       }
     });
     const stdout = writer();
     const stderr = writer();
 
-    await runPrompt(opts({ outputFormat: 'stream-json' }), '1.2.3-test', { stdout, stderr });
+    await runPrompt(opts({ outputFormat: "stream-json" }), "1.2.3-test", {
+      stdout,
+      stderr,
+    });
 
     expect(stdout.text()).toBe(
       [
@@ -767,49 +958,77 @@ describe('runPrompt', () => {
         '{"role":"tool","tool_call_id":"tc_1","content":"file1.py\\nfile2.py"}',
         '{"role":"assistant","content":"done"}',
         '{"role":"meta","type":"session.resume_hint","session_id":"ses_prompt","command":"kimi -r ses_prompt","content":"To resume this session: kimi -r ses_prompt"}',
-        '',
-      ].join('\n'),
+        "",
+      ].join("\n"),
     );
   });
 
-  it('emits a stream-json meta line on retry and discards the failed attempt output', async () => {
+  it("emits a stream-json meta line on retry and discards the failed attempt output", async () => {
     mocks.session.prompt.mockImplementationOnce(async () => {
       for (const handler of mocks.eventHandlers) {
-        handler(mocks.mainEvent({ type: 'turn.started', turnId: 10, origin: { kind: 'user' } }));
-        handler(mocks.mainEvent({ type: 'assistant.delta', turnId: 10, delta: 'partial attempt' }));
         handler(
           mocks.mainEvent({
-            type: 'turn.step.retrying',
+            type: "turn.started",
+            turnId: 10,
+            origin: { kind: "user" },
+          }),
+        );
+        handler(
+          mocks.mainEvent({
+            type: "assistant.delta",
+            turnId: 10,
+            delta: "partial attempt",
+          }),
+        );
+        handler(
+          mocks.mainEvent({
+            type: "turn.step.retrying",
             turnId: 10,
             step: 1,
-            stepId: 'step-uuid',
+            stepId: "step-uuid",
             failedAttempt: 1,
             nextAttempt: 2,
             maxAttempts: 3,
             delayMs: 300,
-            errorName: 'APIProviderRateLimitError',
-            errorMessage: 'llmproxy/openai/responses/resp_abc.json status_code=429',
+            errorName: "APIProviderRateLimitError",
+            errorMessage:
+              "llmproxy/openai/responses/resp_abc.json status_code=429",
             statusCode: 429,
           }),
         );
-        handler(mocks.mainEvent({ type: 'assistant.delta', turnId: 10, delta: 'final answer' }));
-        handler(mocks.mainEvent({ type: 'turn.ended', turnId: 10, reason: 'completed' }));
+        handler(
+          mocks.mainEvent({
+            type: "assistant.delta",
+            turnId: 10,
+            delta: "final answer",
+          }),
+        );
+        handler(
+          mocks.mainEvent({
+            type: "turn.ended",
+            turnId: 10,
+            reason: "completed",
+          }),
+        );
       }
     });
     const stdout = writer();
     const stderr = writer();
 
-    await runPrompt(opts({ outputFormat: 'stream-json' }), '1.2.3-test', { stdout, stderr });
+    await runPrompt(opts({ outputFormat: "stream-json" }), "1.2.3-test", {
+      stdout,
+      stderr,
+    });
 
     const retryMeta = JSON.stringify({
-      role: 'meta',
-      type: 'turn.step.retrying',
+      role: "meta",
+      type: "turn.step.retrying",
       failed_attempt: 1,
       next_attempt: 2,
       max_attempts: 3,
       delay_ms: 300,
-      error_name: 'APIProviderRateLimitError',
-      error_message: 'llmproxy/openai/responses/resp_abc.json status_code=429',
+      error_name: "APIProviderRateLimitError",
+      error_message: "llmproxy/openai/responses/resp_abc.json status_code=429",
       status_code: 429,
     });
     expect(stdout.text()).toBe(
@@ -817,71 +1036,121 @@ describe('runPrompt', () => {
         retryMeta,
         '{"role":"assistant","content":"final answer"}',
         '{"role":"meta","type":"session.resume_hint","session_id":"ses_prompt","command":"kimi -r ses_prompt","content":"To resume this session: kimi -r ses_prompt"}',
-        '',
-      ].join('\n'),
+        "",
+      ].join("\n"),
     );
     // The failed attempt's partial text must not leak as an assistant line.
-    expect(stdout.text()).not.toContain('partial attempt');
-    expect(stderr.text()).toBe('');
+    expect(stdout.text()).not.toContain("partial attempt");
+    expect(stderr.text()).toBe("");
   });
 
-  it('flushes stream-json assistant output before waiting for background tasks', async () => {
+  it("flushes stream-json assistant output before waiting for background tasks", async () => {
     let releaseWait: () => void = () => {};
     const waitGate = new Promise<void>((resolve) => {
       releaseWait = resolve;
     });
-    mocks.session.waitForBackgroundTasksOnPrint.mockImplementationOnce(async () => waitGate);
+    mocks.session.waitForBackgroundTasksOnPrint.mockImplementationOnce(
+      async () => waitGate,
+    );
 
     mocks.session.prompt.mockImplementationOnce(async () => {
       for (const handler of mocks.eventHandlers) {
-        handler(mocks.mainEvent({ type: 'turn.started', turnId: 9, origin: { kind: 'user' } }));
-        handler(mocks.mainEvent({ type: 'assistant.delta', turnId: 9, delta: 'final answer' }));
-        handler(mocks.mainEvent({ type: 'turn.ended', turnId: 9, reason: 'completed' }));
+        handler(
+          mocks.mainEvent({
+            type: "turn.started",
+            turnId: 9,
+            origin: { kind: "user" },
+          }),
+        );
+        handler(
+          mocks.mainEvent({
+            type: "assistant.delta",
+            turnId: 9,
+            delta: "final answer",
+          }),
+        );
+        handler(
+          mocks.mainEvent({
+            type: "turn.ended",
+            turnId: 9,
+            reason: "completed",
+          }),
+        );
       }
     });
 
     const stdout = writer();
     const stderr = writer();
-    const runPromise = runPrompt(opts({ outputFormat: 'stream-json' }), '1.2.3-test', {
-      stdout,
-      stderr,
-    });
+    const runPromise = runPrompt(
+      opts({ outputFormat: "stream-json" }),
+      "1.2.3-test",
+      {
+        stdout,
+        stderr,
+      },
+    );
 
     // The assistant message must be flushed even while the background wait is pending.
     await waitForAssertion(() => {
-      expect(stdout.text()).toContain('{"role":"assistant","content":"final answer"}');
+      expect(stdout.text()).toContain(
+        '{"role":"assistant","content":"final answer"}',
+      );
     });
 
     releaseWait();
     await runPromise;
   });
 
-  it('follows a background-steered second main turn before finishing in steer mode', async () => {
+  it("follows a background-steered second main turn before finishing in steer mode", async () => {
     // First end-of-turn: stay alive (a background task is still pending).
     // Second end-of-turn: finish.
     mocks.session.handlePrintMainTurnCompleted
-      .mockResolvedValueOnce('continue')
-      .mockResolvedValueOnce('finish');
+      .mockResolvedValueOnce("continue")
+      .mockResolvedValueOnce("finish");
 
     mocks.session.prompt.mockImplementationOnce(async () => {
       for (const handler of mocks.eventHandlers) {
-        handler(mocks.mainEvent({ type: 'turn.started', turnId: 10, origin: { kind: 'user' } }));
-        handler(mocks.mainEvent({ type: 'assistant.delta', turnId: 10, delta: 'first' }));
-        handler(mocks.mainEvent({ type: 'turn.ended', turnId: 10, reason: 'completed' }));
+        handler(
+          mocks.mainEvent({
+            type: "turn.started",
+            turnId: 10,
+            origin: { kind: "user" },
+          }),
+        );
+        handler(
+          mocks.mainEvent({
+            type: "assistant.delta",
+            turnId: 10,
+            delta: "first",
+          }),
+        );
+        handler(
+          mocks.mainEvent({
+            type: "turn.ended",
+            turnId: 10,
+            reason: "completed",
+          }),
+        );
       }
     });
 
     const stdout = writer();
     const stderr = writer();
-    const runPromise = runPrompt(opts({ outputFormat: 'stream-json' }), '1.2.3-test', {
-      stdout,
-      stderr,
-    });
+    const runPromise = runPrompt(
+      opts({ outputFormat: "stream-json" }),
+      "1.2.3-test",
+      {
+        stdout,
+        stderr,
+      },
+    );
 
     // The first turn's assistant message must be flushed and the end-of-turn
     // policy consulted, while the run stays alive (action === 'continue').
     await waitForAssertion(() => {
-      expect(mocks.session.handlePrintMainTurnCompleted).toHaveBeenCalledTimes(1);
+      expect(mocks.session.handlePrintMainTurnCompleted).toHaveBeenCalledTimes(
+        1,
+      );
       expect(stdout.text()).toContain('{"role":"assistant","content":"first"}');
     });
 
@@ -891,13 +1160,25 @@ describe('runPrompt', () => {
     for (const handler of mocks.eventHandlers) {
       handler(
         mocks.mainEvent({
-          type: 'turn.started',
+          type: "turn.started",
           turnId: 11,
-          origin: { kind: 'background_task' },
+          origin: { kind: "background_task" },
         }),
       );
-      handler(mocks.mainEvent({ type: 'assistant.delta', turnId: 11, delta: 'second' }));
-      handler(mocks.mainEvent({ type: 'turn.ended', turnId: 11, reason: 'completed' }));
+      handler(
+        mocks.mainEvent({
+          type: "assistant.delta",
+          turnId: 11,
+          delta: "second",
+        }),
+      );
+      handler(
+        mocks.mainEvent({
+          type: "turn.ended",
+          turnId: 11,
+          reason: "completed",
+        }),
+      );
     }
 
     await runPromise;
@@ -906,114 +1187,150 @@ describe('runPrompt', () => {
     expect(stdout.text()).toContain('{"role":"assistant","content":"second"}');
   });
 
-  it('resumes a concrete session without a configured default model', async () => {
-    mocks.harnessGetConfig.mockResolvedValueOnce({ providers: {}, telemetry: true });
-    mocks.session.getStatus.mockResolvedValueOnce({ permission: 'manual', model: 'saved-model' });
-
-    await runPrompt(opts({ session: 'ses_existing' }), '1.2.3-test', {
-      stdout: { write: vi.fn(() => true) },
-      stderr: { write: vi.fn(() => true) },
+  it("resumes a concrete session without a configured default model", async () => {
+    mocks.harnessGetConfig.mockResolvedValueOnce({
+      providers: {},
+      telemetry: true,
+    });
+    mocks.session.getStatus.mockResolvedValueOnce({
+      permission: "manual",
+      model: "saved-model",
     });
 
-    expect(mocks.harnessResumeSession).toHaveBeenCalledWith({ id: 'ses_existing' });
-    expect(mocks.harnessCreateSession).not.toHaveBeenCalled();
-    expect(mocks.initializeTelemetry).toHaveBeenCalledWith(
-      expect.objectContaining({ model: 'saved-model' }),
-    );
-    expect(mocks.session.setPermission).toHaveBeenNthCalledWith(1, 'auto');
-    expect(mocks.session.setPermission).toHaveBeenNthCalledWith(2, 'manual');
-  });
-
-  it('continues the previous workdir session when --continue is used', async () => {
-    await runPrompt(opts({ continue: true }), '1.2.3-test', {
-      stdout: { write: vi.fn(() => true) },
-      stderr: { write: vi.fn(() => true) },
-    });
-
-    expect(mocks.harnessListSessions).toHaveBeenCalledWith({ workDir: process.cwd() });
-    expect(mocks.harnessResumeSession).toHaveBeenCalledWith({ id: 'ses_previous' });
-    expect(mocks.session.setPermission).toHaveBeenNthCalledWith(1, 'auto');
-    expect(mocks.session.setPermission).toHaveBeenNthCalledWith(2, 'manual');
-  });
-
-  it('passes the CLI additional directories when continuing the previous session', async () => {
-    await runPrompt(opts({ continue: true, addDirs: ['../shared', '/tmp/extra'] }), '1.2.3-test', {
+    await runPrompt(opts({ session: "ses_existing" }), "1.2.3-test", {
       stdout: { write: vi.fn(() => true) },
       stderr: { write: vi.fn(() => true) },
     });
 
     expect(mocks.harnessResumeSession).toHaveBeenCalledWith({
-      id: 'ses_previous',
-      additionalDirs: ['../shared', '/tmp/extra'],
+      id: "ses_existing",
     });
     expect(mocks.harnessCreateSession).not.toHaveBeenCalled();
+    expect(mocks.initializeTelemetry).toHaveBeenCalledWith(
+      expect.objectContaining({ model: "saved-model" }),
+    );
+    expect(mocks.session.setPermission).toHaveBeenNthCalledWith(1, "auto");
+    expect(mocks.session.setPermission).toHaveBeenNthCalledWith(2, "manual");
   });
 
-  it('does not forward an agent profile when continuing a previous v1 session', async () => {
-    // validateOptions rejects --agent with --continue; runPrompt must not
-    // forward a profile to resume even if a caller hands one over.
-    await runPrompt(opts({ continue: true, agent: 'reviewer' }), '1.2.3-test', {
-      stdout: writer(),
-      stderr: writer(),
-    });
-
-    expect(mocks.harnessResumeSession).toHaveBeenCalledWith({ id: 'ses_previous' });
-  });
-
-  it('continues a previous session without a configured default model', async () => {
-    mocks.harnessGetConfig.mockResolvedValueOnce({ providers: {}, telemetry: true });
-    mocks.session.getStatus.mockResolvedValueOnce({ permission: 'manual', model: 'saved-model' });
-
-    await runPrompt(opts({ continue: true }), '1.2.3-test', {
+  it("continues the previous workdir session when --continue is used", async () => {
+    await runPrompt(opts({ continue: true }), "1.2.3-test", {
       stdout: { write: vi.fn(() => true) },
       stderr: { write: vi.fn(() => true) },
     });
 
-    expect(mocks.harnessListSessions).toHaveBeenCalledWith({ workDir: process.cwd() });
-    expect(mocks.harnessResumeSession).toHaveBeenCalledWith({ id: 'ses_previous' });
+    expect(mocks.harnessListSessions).toHaveBeenCalledWith({
+      workDir: process.cwd(),
+    });
+    expect(mocks.harnessResumeSession).toHaveBeenCalledWith({
+      id: "ses_previous",
+    });
+    expect(mocks.session.setPermission).toHaveBeenNthCalledWith(1, "auto");
+    expect(mocks.session.setPermission).toHaveBeenNthCalledWith(2, "manual");
+  });
+
+  it("passes the CLI additional directories when continuing the previous session", async () => {
+    await runPrompt(
+      opts({ continue: true, addDirs: ["../shared", "/tmp/extra"] }),
+      "1.2.3-test",
+      {
+        stdout: { write: vi.fn(() => true) },
+        stderr: { write: vi.fn(() => true) },
+      },
+    );
+
+    expect(mocks.harnessResumeSession).toHaveBeenCalledWith({
+      id: "ses_previous",
+      additionalDirs: ["../shared", "/tmp/extra"],
+    });
+    expect(mocks.harnessCreateSession).not.toHaveBeenCalled();
+  });
+
+  it("does not forward an agent profile when continuing a previous v1 session", async () => {
+    // validateOptions rejects --agent with --continue; runPrompt must not
+    // forward a profile to resume even if a caller hands one over.
+    await runPrompt(opts({ continue: true, agent: "reviewer" }), "1.2.3-test", {
+      stdout: writer(),
+      stderr: writer(),
+    });
+
+    expect(mocks.harnessResumeSession).toHaveBeenCalledWith({
+      id: "ses_previous",
+    });
+  });
+
+  it("continues a previous session without a configured default model", async () => {
+    mocks.harnessGetConfig.mockResolvedValueOnce({
+      providers: {},
+      telemetry: true,
+    });
+    mocks.session.getStatus.mockResolvedValueOnce({
+      permission: "manual",
+      model: "saved-model",
+    });
+
+    await runPrompt(opts({ continue: true }), "1.2.3-test", {
+      stdout: { write: vi.fn(() => true) },
+      stderr: { write: vi.fn(() => true) },
+    });
+
+    expect(mocks.harnessListSessions).toHaveBeenCalledWith({
+      workDir: process.cwd(),
+    });
+    expect(mocks.harnessResumeSession).toHaveBeenCalledWith({
+      id: "ses_previous",
+    });
     expect(mocks.harnessCreateSession).not.toHaveBeenCalled();
     expect(mocks.initializeTelemetry).toHaveBeenCalledWith(
-      expect.objectContaining({ model: 'saved-model' }),
+      expect.objectContaining({ model: "saved-model" }),
     );
   });
 
-  it('restores resumed session permission even when the turn fails', async () => {
+  it("restores resumed session permission even when the turn fails", async () => {
     mocks.session.prompt.mockImplementationOnce(async () => {
       for (const handler of mocks.eventHandlers) {
         handler(
-          mocks.mainEvent({ type: 'turn.started', turnId: 5, origin: { kind: 'user' } }),
+          mocks.mainEvent({
+            type: "turn.started",
+            turnId: 5,
+            origin: { kind: "user" },
+          }),
         );
         handler(
           mocks.mainEvent({
-            type: 'turn.ended',
+            type: "turn.ended",
             turnId: 5,
-            reason: 'failed',
-            error: { code: 'provider.error', message: 'model failed' },
+            reason: "failed",
+            error: { code: "provider.error", message: "model failed" },
           }),
         );
       }
     });
 
     await expect(
-      runPrompt(opts({ session: 'ses_existing' }), '1.2.3-test', {
+      runPrompt(opts({ session: "ses_existing" }), "1.2.3-test", {
         stdout: { write: vi.fn(() => true) },
         stderr: { write: vi.fn(() => true) },
       }),
-    ).rejects.toThrow('provider.error: model failed');
+    ).rejects.toThrow("provider.error: model failed");
 
-    expect(mocks.session.setPermission).toHaveBeenNthCalledWith(1, 'auto');
-    expect(mocks.session.setPermission).toHaveBeenNthCalledWith(2, 'manual');
-    expect(mocks.session.setPermission.mock.invocationCallOrder[1]).toBeLessThan(
-      mocks.harnessClose.mock.invocationCallOrder[0]!,
-    );
+    expect(mocks.session.setPermission).toHaveBeenNthCalledWith(1, "auto");
+    expect(mocks.session.setPermission).toHaveBeenNthCalledWith(2, "manual");
+    expect(
+      mocks.session.setPermission.mock.invocationCallOrder[1],
+    ).toBeLessThan(mocks.harnessClose.mock.invocationCallOrder[0]!);
   });
 
-  it('restores resumed session permission before exiting on SIGINT', async () => {
+  it("restores resumed session permission before exiting on SIGINT", async () => {
     let releasePrompt!: () => void;
     mocks.session.prompt.mockImplementationOnce(async () => {
       for (const handler of mocks.eventHandlers) {
         handler(
-          mocks.mainEvent({ type: 'turn.started', turnId: 6, origin: { kind: 'user' } }),
+          mocks.mainEvent({
+            type: "turn.started",
+            turnId: 6,
+            origin: { kind: "user" },
+          }),
         );
       }
       await new Promise<void>((resolve) => {
@@ -1021,29 +1338,33 @@ describe('runPrompt', () => {
       });
     });
     const processMock = fakeProcess();
-    const run = runPrompt(opts({ session: 'ses_existing' }), '1.2.3-test', {
+    const run = runPrompt(opts({ session: "ses_existing" }), "1.2.3-test", {
       stdout: { write: vi.fn(() => true) },
       stderr: { write: vi.fn(() => true) },
       process: processMock,
-    } as Parameters<typeof runPrompt>[2] & { process: ReturnType<typeof fakeProcess> });
-
-    await waitForAssertion(() => {
-      expect(mocks.session.setPermission).toHaveBeenCalledWith('auto');
-      expect(processMock.listener('SIGINT')).toBeDefined();
+    } as Parameters<typeof runPrompt>[2] & {
+      process: ReturnType<typeof fakeProcess>;
     });
 
-    await processMock.listener('SIGINT')?.();
+    await waitForAssertion(() => {
+      expect(mocks.session.setPermission).toHaveBeenCalledWith("auto");
+      expect(processMock.listener("SIGINT")).toBeDefined();
+    });
 
-    expect(mocks.session.setPermission).toHaveBeenNthCalledWith(2, 'manual');
-    expect(mocks.session.setPermission.mock.invocationCallOrder[1]).toBeLessThan(
-      processMock.exit.mock.invocationCallOrder[0]!,
-    );
+    await processMock.listener("SIGINT")?.();
+
+    expect(mocks.session.setPermission).toHaveBeenNthCalledWith(2, "manual");
+    expect(
+      mocks.session.setPermission.mock.invocationCallOrder[1],
+    ).toBeLessThan(processMock.exit.mock.invocationCallOrder[0]!);
     expect(mocks.shutdownTelemetry).toHaveBeenCalled();
     expect(mocks.harnessClose).toHaveBeenCalled();
     expect(processMock.exit).toHaveBeenCalledWith(130);
 
     for (const handler of mocks.eventHandlers) {
-      handler(mocks.mainEvent({ type: 'turn.ended', turnId: 6, reason: 'completed' }));
+      handler(
+        mocks.mainEvent({ type: "turn.ended", turnId: 6, reason: "completed" }),
+      );
     }
     releasePrompt();
     await run;
@@ -1052,14 +1373,18 @@ describe('runPrompt', () => {
   });
 
   it.each([
-    ['SIGTERM' as NodeJS.Signals, 143],
-    ['SIGHUP' as NodeJS.Signals, 129],
-  ])('cleans up prompt mode before exiting on %s', async (signal, exitCode) => {
+    ["SIGTERM" as NodeJS.Signals, 143],
+    ["SIGHUP" as NodeJS.Signals, 129],
+  ])("cleans up prompt mode before exiting on %s", async (signal, exitCode) => {
     let releasePrompt!: () => void;
     mocks.session.prompt.mockImplementationOnce(async () => {
       for (const handler of mocks.eventHandlers) {
         handler(
-          mocks.mainEvent({ type: 'turn.started', turnId: 7, origin: { kind: 'user' } }),
+          mocks.mainEvent({
+            type: "turn.started",
+            turnId: 7,
+            origin: { kind: "user" },
+          }),
         );
       }
       await new Promise<void>((resolve) => {
@@ -1067,11 +1392,13 @@ describe('runPrompt', () => {
       });
     });
     const processMock = fakeProcess();
-    const run = runPrompt(opts(), '1.2.3-test', {
+    const run = runPrompt(opts(), "1.2.3-test", {
       stdout: { write: vi.fn(() => true) },
       stderr: { write: vi.fn(() => true) },
       process: processMock,
-    } as Parameters<typeof runPrompt>[2] & { process: ReturnType<typeof fakeProcess> });
+    } as Parameters<typeof runPrompt>[2] & {
+      process: ReturnType<typeof fakeProcess>;
+    });
 
     await waitForAssertion(() => {
       expect(processMock.listener(signal)).toBeDefined();
@@ -1084,7 +1411,9 @@ describe('runPrompt', () => {
     expect(processMock.exit).toHaveBeenCalledWith(exitCode);
 
     for (const handler of mocks.eventHandlers) {
-      handler(mocks.mainEvent({ type: 'turn.ended', turnId: 7, reason: 'completed' }));
+      handler(
+        mocks.mainEvent({ type: "turn.ended", turnId: 7, reason: "completed" }),
+      );
     }
     releasePrompt();
     await run;
@@ -1092,7 +1421,7 @@ describe('runPrompt', () => {
     expect(mocks.harnessClose).toHaveBeenCalledTimes(1);
   });
 
-  it('waits for the pending auto permission write before signal restore', async () => {
+  it("waits for the pending auto permission write before signal restore", async () => {
     let releaseAutoPermission!: () => void;
     let releasePrompt!: () => void;
     mocks.session.setPermission.mockImplementationOnce(async () => {
@@ -1103,7 +1432,11 @@ describe('runPrompt', () => {
     mocks.session.prompt.mockImplementationOnce(async () => {
       for (const handler of mocks.eventHandlers) {
         handler(
-          mocks.mainEvent({ type: 'turn.started', turnId: 7, origin: { kind: 'user' } }),
+          mocks.mainEvent({
+            type: "turn.started",
+            turnId: 7,
+            origin: { kind: "user" },
+          }),
         );
       }
       await new Promise<void>((resolve) => {
@@ -1111,21 +1444,23 @@ describe('runPrompt', () => {
       });
     });
     const processMock = fakeProcess();
-    const run = runPrompt(opts({ session: 'ses_existing' }), '1.2.3-test', {
+    const run = runPrompt(opts({ session: "ses_existing" }), "1.2.3-test", {
       stdout: { write: vi.fn(() => true) },
       stderr: { write: vi.fn(() => true) },
       process: processMock,
-    } as Parameters<typeof runPrompt>[2] & { process: ReturnType<typeof fakeProcess> });
+    } as Parameters<typeof runPrompt>[2] & {
+      process: ReturnType<typeof fakeProcess>;
+    });
 
     await waitForAssertion(() => {
-      expect(processMock.listener('SIGINT')).toBeDefined();
-      expect(mocks.session.setPermission).toHaveBeenCalledWith('auto');
+      expect(processMock.listener("SIGINT")).toBeDefined();
+      expect(mocks.session.setPermission).toHaveBeenCalledWith("auto");
     });
     expect(processMock.once.mock.invocationCallOrder[0]).toBeLessThan(
       mocks.session.setPermission.mock.invocationCallOrder[0]!,
     );
 
-    const signalCleanup = processMock.listener('SIGINT')?.();
+    const signalCleanup = processMock.listener("SIGINT")?.();
     await Promise.resolve();
 
     expect(mocks.session.setPermission).toHaveBeenCalledTimes(1);
@@ -1133,86 +1468,101 @@ describe('runPrompt', () => {
     releaseAutoPermission();
     await signalCleanup;
 
-    expect(mocks.session.setPermission).toHaveBeenNthCalledWith(2, 'manual');
+    expect(mocks.session.setPermission).toHaveBeenNthCalledWith(2, "manual");
     expect(processMock.exit).toHaveBeenCalledWith(130);
 
     await waitForAssertion(() => {
-      expect(mocks.session.prompt).toHaveBeenCalledWith('say hello');
+      expect(mocks.session.prompt).toHaveBeenCalledWith("say hello");
     });
     for (const handler of mocks.eventHandlers) {
-      handler(mocks.mainEvent({ type: 'turn.ended', turnId: 7, reason: 'completed' }));
+      handler(
+        mocks.mainEvent({ type: "turn.ended", turnId: 7, reason: "completed" }),
+      );
     }
     releasePrompt();
     await run;
   });
 
-  it('uses auto permission so headless mode can bypass plan approval and questions', async () => {
-    await runPrompt(opts(), '1.2.3-test', {
+  it("uses auto permission so headless mode can bypass plan approval and questions", async () => {
+    await runPrompt(opts(), "1.2.3-test", {
       stdout: { write: vi.fn(() => true) },
       stderr: { write: vi.fn(() => true) },
     });
 
     expect(mocks.harnessCreateSession).toHaveBeenCalledWith(
-      expect.objectContaining({ permission: 'auto' }),
+      expect.objectContaining({ permission: "auto" }),
     );
   });
 
-  it('throws when no default model is configured', async () => {
-    mocks.harnessGetConfig.mockResolvedValueOnce({ providers: {}, telemetry: true });
+  it("throws when no default model is configured", async () => {
+    mocks.harnessGetConfig.mockResolvedValueOnce({
+      providers: {},
+      telemetry: true,
+    });
 
     await expect(
-      runPrompt(opts(), '1.2.3-test', {
+      runPrompt(opts(), "1.2.3-test", {
         stdout: { write: vi.fn(() => true) },
         stderr: { write: vi.fn(() => true) },
       }),
     ).rejects.toThrow(
-      'No model configured. Run `kimi` and use /login to sign in, then retry; or set default_model in config.toml.',
+      "No model configured. Run `kimi` and use /login to sign in, then retry; or set default_model in config.toml.",
     );
 
     expect(mocks.harnessClose).toHaveBeenCalled();
   });
 
-  it('rejects when the turn fails and still closes resources', async () => {
+  it("rejects when the turn fails and still closes resources", async () => {
     mocks.session.prompt.mockImplementationOnce(async () => {
       for (const handler of mocks.eventHandlers) {
         handler(
-          mocks.mainEvent({ type: 'turn.started', turnId: 2, origin: { kind: 'user' } }),
+          mocks.mainEvent({
+            type: "turn.started",
+            turnId: 2,
+            origin: { kind: "user" },
+          }),
         );
         handler(
           mocks.mainEvent({
-            type: 'turn.ended',
+            type: "turn.ended",
             turnId: 2,
-            reason: 'failed',
-            error: { code: 'provider.error', message: 'model failed' },
+            reason: "failed",
+            error: { code: "provider.error", message: "model failed" },
           }),
         );
       }
     });
 
     await expect(
-      runPrompt(opts(), '1.2.3-test', {
+      runPrompt(opts(), "1.2.3-test", {
         stdout: { write: vi.fn(() => true) },
         stderr: { write: vi.fn(() => true) },
       }),
-    ).rejects.toThrow('provider.error: model failed');
+    ).rejects.toThrow("provider.error: model failed");
 
     expect(mocks.shutdownTelemetry).toHaveBeenCalled();
     expect(mocks.harnessClose).toHaveBeenCalled();
   });
 
-  it('rejects with a friendly message when the provider filters the response', async () => {
+  it("rejects with a friendly message when the provider filters the response", async () => {
     mocks.session.prompt.mockImplementationOnce(async () => {
       for (const handler of mocks.eventHandlers) {
-        handler(mocks.mainEvent({ type: 'turn.started', turnId: 2, origin: { kind: 'user' } }));
         handler(
           mocks.mainEvent({
-            type: 'turn.ended',
+            type: "turn.started",
             turnId: 2,
-            reason: 'failed',
+            origin: { kind: "user" },
+          }),
+        );
+        handler(
+          mocks.mainEvent({
+            type: "turn.ended",
+            turnId: 2,
+            reason: "failed",
             error: {
-              code: 'provider.filtered',
-              message: 'Provider safety policy blocked the response.',
-              name: 'ProviderFilteredError',
+              code: "provider.filtered",
+              message: "Provider safety policy blocked the response.",
+              name: "ProviderFilteredError",
               retryable: false,
             },
           }),
@@ -1221,99 +1571,124 @@ describe('runPrompt', () => {
     });
 
     await expect(
-      runPrompt(opts(), '1.2.3-test', {
+      runPrompt(opts(), "1.2.3-test", {
         stdout: { write: vi.fn(() => true) },
         stderr: { write: vi.fn(() => true) },
       }),
-    ).rejects.toThrow('Provider safety policy blocked the response.');
+    ).rejects.toThrow("Provider safety policy blocked the response.");
 
     expect(mocks.shutdownTelemetry).toHaveBeenCalled();
     expect(mocks.harnessClose).toHaveBeenCalled();
   });
 
-  it('approval fallback approves if an unexpected approval request reaches SDK', async () => {
-    await runPrompt(opts(), '1.2.3-test', {
+  it("approval fallback approves if an unexpected approval request reaches SDK", async () => {
+    await runPrompt(opts(), "1.2.3-test", {
       stdout: { write: vi.fn(() => true) },
       stderr: { write: vi.fn(() => true) },
     });
 
-    const handler = mocks.session.setApprovalHandler.mock.calls[0]![0] as () => unknown;
-    expect(handler()).toEqual({ decision: 'approved' });
+    const handler = mocks.session.setApprovalHandler.mock
+      .calls[0]![0] as () => unknown;
+    expect(handler()).toEqual({ decision: "approved" });
   });
 
-  it('question fallback returns null so prompt mode never opens a question UI', async () => {
-    await runPrompt(opts(), '1.2.3-test', {
+  it("question fallback returns null so prompt mode never opens a question UI", async () => {
+    await runPrompt(opts(), "1.2.3-test", {
       stdout: { write: vi.fn(() => true) },
       stderr: { write: vi.fn(() => true) },
     });
 
-    const handler = mocks.session.setQuestionHandler.mock.calls[0]![0] as () => unknown;
+    const handler = mocks.session.setQuestionHandler.mock
+      .calls[0]![0] as () => unknown;
     expect(handler()).toBeNull();
   });
 
-  it('emits the version first in text mode when the experimental flag is enabled', async () => {
-    vi.stubEnv('KIMI_CODE_EXPERIMENTAL_FLAG', '1');
+  it("emits the version first in text mode when the experimental flag is enabled", async () => {
+    vi.stubEnv("KIMI_CODE_EXPERIMENTAL_FLAG", "1");
     const stdout = writer();
     const stderr = writer();
 
-    await runPrompt(opts(), '1.2.3-test', { stdout, stderr });
+    await runPrompt(opts(), "1.2.3-test", { stdout, stderr });
 
     // The experimental engine is selected and the version banner is the very
     // first write, ahead of any assistant output or the resume hint.
     expect(mocks.runV2Print).toHaveBeenCalled();
     expect(mocks.kimiHarnessConstructor).not.toHaveBeenCalled();
-    expect(stderr.write).toHaveBeenNthCalledWith(1, 'kimi version 1.2.3-test\n');
-    expect(stderr.text().startsWith('kimi version 1.2.3-test\n')).toBe(true);
-    expect(stdout.text()).toBe('• hello world\n\n');
+    expect(stderr.write).toHaveBeenNthCalledWith(
+      1,
+      "kimi version 1.2.3-test\n",
+    );
+    expect(stderr.text().startsWith("kimi version 1.2.3-test\n")).toBe(true);
+    expect(stdout.text()).toBe("• hello world\n\n");
   });
 
-  it('emits the version first in stream-json mode when the experimental flag is enabled', async () => {
-    vi.stubEnv('KIMI_CODE_EXPERIMENTAL_FLAG', '1');
+  it("emits the version first in stream-json mode when the experimental flag is enabled", async () => {
+    vi.stubEnv("KIMI_CODE_EXPERIMENTAL_FLAG", "1");
     const stdout = writer();
     const stderr = writer();
 
-    await runPrompt(opts({ outputFormat: 'stream-json' }), '1.2.3-test', {
+    await runPrompt(opts({ outputFormat: "stream-json" }), "1.2.3-test", {
       stdout,
       stderr,
     });
 
     expect(mocks.runV2Print).toHaveBeenCalled();
     expect(mocks.kimiHarnessConstructor).not.toHaveBeenCalled();
-    const lines = stdout.text().split('\n');
+    const lines = stdout.text().split("\n");
     expect(lines[0]).toBe(
       '{"role":"meta","type":"system.version","version":"1.2.3-test"}',
     );
-    expect(stderr.text()).toBe('');
+    expect(stderr.text()).toBe("");
   });
 
-  it('does not emit the version when the experimental flag is disabled', async () => {
-    vi.stubEnv('KIMI_CODE_EXPERIMENTAL_FLAG', '0');
+  it("does not emit the version when the experimental flag is disabled", async () => {
+    vi.stubEnv("KIMI_CODE_EXPERIMENTAL_FLAG", "0");
     const stdout = writer();
     const stderr = writer();
 
-    await runPrompt(opts(), '1.2.3-test', { stdout, stderr });
+    await runPrompt(opts(), "1.2.3-test", { stdout, stderr });
 
     expect(mocks.runV2Print).not.toHaveBeenCalled();
     expect(mocks.kimiHarnessConstructor).toHaveBeenCalled();
-    expect(stderr.text()).not.toContain('kimi version');
+    expect(stderr.text()).not.toContain("kimi version");
   });
 
-  it('does not settle on end_turn while a goal is still active', async () => {
+  it("does not settle on end_turn while a goal is still active", async () => {
     mocks.session.prompt.mockImplementationOnce(async () => {
       for (const handler of mocks.eventHandlers) {
-        handler(mocks.mainEvent({ type: 'turn.started', turnId: 1, origin: { kind: 'user' } }));
-        handler(mocks.mainEvent({ type: 'assistant.delta', turnId: 1, delta: 'created a goal' }));
-        handler(mocks.mainEvent({ type: 'turn.ended', turnId: 1, reason: 'completed' }));
+        handler(
+          mocks.mainEvent({
+            type: "turn.started",
+            turnId: 1,
+            origin: { kind: "user" },
+          }),
+        );
+        handler(
+          mocks.mainEvent({
+            type: "assistant.delta",
+            turnId: 1,
+            delta: "created a goal",
+          }),
+        );
+        handler(
+          mocks.mainEvent({
+            type: "turn.ended",
+            turnId: 1,
+            reason: "completed",
+          }),
+        );
       }
     });
     // First evaluation (after turn 1) sees an active goal; the continuation
     // turn's evaluation sees the goal gone (completed → record cleared).
-    mocks.session.getGoal.mockResolvedValueOnce({ goal: { status: 'active' } } as never);
+    mocks.session.getGoal.mockResolvedValueOnce({
+      goal: { status: "active" },
+    } as never);
 
     const stdout = writer();
     const stderr = writer();
     let settled = false;
-    const run = runPrompt(opts(), '1.2.3-test', { stdout, stderr }).then(() => {
+    const run = runPrompt(opts(), "1.2.3-test", { stdout, stderr }).then(() => {
       settled = true;
     });
 
@@ -1327,39 +1702,65 @@ describe('runPrompt', () => {
     for (const handler of mocks.eventHandlers) {
       handler(
         mocks.mainEvent({
-          type: 'turn.started',
+          type: "turn.started",
           turnId: 2,
-          origin: { kind: 'system_trigger' },
+          origin: { kind: "system_trigger" },
         }),
       );
-      handler(mocks.mainEvent({ type: 'assistant.delta', turnId: 2, delta: 'goal work' }));
-      handler(mocks.mainEvent({ type: 'turn.ended', turnId: 2, reason: 'completed' }));
+      handler(
+        mocks.mainEvent({
+          type: "assistant.delta",
+          turnId: 2,
+          delta: "goal work",
+        }),
+      );
+      handler(
+        mocks.mainEvent({ type: "turn.ended", turnId: 2, reason: "completed" }),
+      );
     }
 
     await run;
     expect(settled).toBe(true);
-    expect(stdout.text()).toContain('goal work');
+    expect(stdout.text()).toContain("goal work");
   });
 
-  it('settles when the goal reaches a terminal state between turns with no trailing turn.ended', async () => {
+  it("settles when the goal reaches a terminal state between turns with no trailing turn.ended", async () => {
     mocks.session.prompt.mockImplementationOnce(async () => {
       for (const handler of mocks.eventHandlers) {
-        handler(mocks.mainEvent({ type: 'turn.started', turnId: 1, origin: { kind: 'user' } }));
-        handler(mocks.mainEvent({ type: 'assistant.delta', turnId: 1, delta: 'working' }));
-        handler(mocks.mainEvent({ type: 'turn.ended', turnId: 1, reason: 'completed' }));
+        handler(
+          mocks.mainEvent({
+            type: "turn.started",
+            turnId: 1,
+            origin: { kind: "user" },
+          }),
+        );
+        handler(
+          mocks.mainEvent({
+            type: "assistant.delta",
+            turnId: 1,
+            delta: "working",
+          }),
+        );
+        handler(
+          mocks.mainEvent({
+            type: "turn.ended",
+            turnId: 1,
+            reason: "completed",
+          }),
+        );
       }
     });
     // Turn 1's evaluation sees the goal still active; the terminal
     // goal.updated (e.g. the driver blocked it on a hard budget) arrives with
     // no further turn.ended and must settle the run itself.
     mocks.session.getGoal
-      .mockResolvedValueOnce({ goal: { status: 'active' } } as never)
-      .mockResolvedValue({ goal: { status: 'blocked' } } as never);
+      .mockResolvedValueOnce({ goal: { status: "active" } } as never)
+      .mockResolvedValue({ goal: { status: "blocked" } } as never);
 
     const stdout = writer();
     const stderr = writer();
     let settled = false;
-    const run = runPrompt(opts(), '1.2.3-test', { stdout, stderr }).then(() => {
+    const run = runPrompt(opts(), "1.2.3-test", { stdout, stderr }).then(() => {
       settled = true;
     });
 
@@ -1371,9 +1772,9 @@ describe('runPrompt', () => {
     for (const handler of mocks.eventHandlers) {
       handler(
         mocks.mainEvent({
-          type: 'goal.updated',
-          snapshot: { status: 'blocked' },
-          change: { kind: 'blocked' },
+          type: "goal.updated",
+          snapshot: { status: "blocked" },
+          change: { kind: "blocked" },
         }),
       );
     }
@@ -1382,12 +1783,30 @@ describe('runPrompt', () => {
     expect(settled).toBe(true);
   });
 
-  it('does not settle on end_turn while a cron task is pending, then lets the fire drive a turn', async () => {
+  it("does not settle on end_turn while a cron task is pending, then lets the fire drive a turn", async () => {
     mocks.session.prompt.mockImplementationOnce(async () => {
       for (const handler of mocks.eventHandlers) {
-        handler(mocks.mainEvent({ type: 'turn.started', turnId: 1, origin: { kind: 'user' } }));
-        handler(mocks.mainEvent({ type: 'assistant.delta', turnId: 1, delta: 'scheduled a reminder' }));
-        handler(mocks.mainEvent({ type: 'turn.ended', turnId: 1, reason: 'completed' }));
+        handler(
+          mocks.mainEvent({
+            type: "turn.started",
+            turnId: 1,
+            origin: { kind: "user" },
+          }),
+        );
+        handler(
+          mocks.mainEvent({
+            type: "assistant.delta",
+            turnId: 1,
+            delta: "scheduled a reminder",
+          }),
+        );
+        handler(
+          mocks.mainEvent({
+            type: "turn.ended",
+            turnId: 1,
+            reason: "completed",
+          }),
+        );
       }
     });
     // Turn 1 leaves a pending one-shot cron task; its fire steers turn 2, and
@@ -1396,8 +1815,8 @@ describe('runPrompt', () => {
       .mockResolvedValueOnce({
         tasks: [
           {
-            id: '3f9a1c2e',
-            cron: '*/5 * * * *',
+            id: "3f9a1c2e",
+            cron: "*/5 * * * *",
             recurring: false,
             createdAt: 1,
             lastFiredAt: undefined,
@@ -1410,7 +1829,7 @@ describe('runPrompt', () => {
     const stdout = writer();
     const stderr = writer();
     let settled = false;
-    const run = runPrompt(opts(), '1.2.3-test', { stdout, stderr }).then(() => {
+    const run = runPrompt(opts(), "1.2.3-test", { stdout, stderr }).then(() => {
       settled = true;
     });
 
@@ -1424,26 +1843,34 @@ describe('runPrompt', () => {
     for (const handler of mocks.eventHandlers) {
       handler(
         mocks.mainEvent({
-          type: 'turn.started',
+          type: "turn.started",
           turnId: 2,
-          origin: { kind: 'cron_job' },
+          origin: { kind: "cron_job" },
         }),
       );
-      handler(mocks.mainEvent({ type: 'assistant.delta', turnId: 2, delta: 'cron ran' }));
-      handler(mocks.mainEvent({ type: 'turn.ended', turnId: 2, reason: 'completed' }));
+      handler(
+        mocks.mainEvent({
+          type: "assistant.delta",
+          turnId: 2,
+          delta: "cron ran",
+        }),
+      );
+      handler(
+        mocks.mainEvent({ type: "turn.ended", turnId: 2, reason: "completed" }),
+      );
     }
 
     await run;
     expect(settled).toBe(true);
-    expect(stdout.text()).toContain('cron ran');
+    expect(stdout.text()).toContain("cron ran");
   });
 
-  it('does not wait for cron tasks whose expression has no future fire', async () => {
+  it("does not wait for cron tasks whose expression has no future fire", async () => {
     mocks.session.getCronTasks.mockResolvedValue({
       tasks: [
         {
-          id: '3f9a1c2e',
-          cron: '0 0 31 2 *',
+          id: "3f9a1c2e",
+          cron: "0 0 31 2 *",
           recurring: true,
           createdAt: 1,
           lastFiredAt: undefined,
@@ -1454,9 +1881,9 @@ describe('runPrompt', () => {
 
     const stdout = writer();
     const stderr = writer();
-    await runPrompt(opts(), '1.2.3-test', { stdout, stderr });
+    await runPrompt(opts(), "1.2.3-test", { stdout, stderr });
 
-    expect(stdout.text()).toBe('• hello world\n\n');
+    expect(stdout.text()).toBe("• hello world\n\n");
     expect(mocks.harnessClose).toHaveBeenCalled();
   });
 });

@@ -7,9 +7,12 @@
  * CDN URLs, never client-supplied.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
 
-import type { CapabilityStatus } from './types';
+import type { CapabilityStatus } from "./types";
 
 export interface ICapabilityService {
   readonly _serviceBrand: undefined;
@@ -22,4 +25,4 @@ export interface ICapabilityService {
 }
 
 export const ICapabilityService: ServiceIdentifier<ICapabilityService> =
-  createDecorator<ICapabilityService>('capabilityService');
+  createDecorator<ICapabilityService>("capabilityService");

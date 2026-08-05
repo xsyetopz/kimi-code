@@ -2,9 +2,7 @@
   "version": 1,
   "approval": {
     "yolo": false,
-    "auto_approve_actions": [
-      "run command"
-    ]
+    "auto_approve_actions": ["run command"]
   },
   "dynamic_subagents": [],
   "additional_dirs": [],

@@ -7,34 +7,37 @@
  * and the `/api/v1/ws` upgrade path.
  */
 
-import { mkdtemp, readFile, rm, stat } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { mkdtemp, readFile, rm, stat } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { WebSocket, type RawData } from 'ws';
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { WebSocket, type RawData } from "ws";
 
-import { type RunningServer, startServer } from '../src/start';
-import { TEST_HOST_IDENTITY } from './helpers/hostIdentity';
+import { type RunningServer, startServer } from "../src/start";
+import { TEST_HOST_IDENTITY } from "./helpers/hostIdentity";
 
 function rawToString(data: RawData): string {
-  if (typeof data === 'string') return data;
-  if (Buffer.isBuffer(data)) return data.toString('utf8');
-  if (Array.isArray(data)) return Buffer.concat(data).toString('utf8');
-  return Buffer.from(data as ArrayBuffer).toString('utf8');
+  if (typeof data === "string") return data;
+  if (Buffer.isBuffer(data)) return data.toString("utf8");
+  if (Array.isArray(data)) return Buffer.concat(data).toString("utf8");
+  return Buffer.from(data as ArrayBuffer).toString("utf8");
 }
 
-function openConn(url: string, protocols: string[]): Promise<{ ws: WebSocket; firstFrame: unknown }> {
+function openConn(
+  url: string,
+  protocols: string[],
+): Promise<{ ws: WebSocket; firstFrame: unknown }> {
   return new Promise((resolve, reject) => {
     const ws = new WebSocket(url, protocols);
-    ws.once('message', (data) => {
+    ws.once("message", (data) => {
       try {
         resolve({ ws, firstFrame: JSON.parse(rawToString(data)) });
       } catch {
         resolve({ ws, firstFrame: null });
       }
     });
-    ws.once('error', reject);
+    ws.once("error", reject);
   });
 }
 
@@ -53,24 +56,30 @@ function expectRejected(url: string): Promise<void> {
       else reject(err);
     };
     const t = setTimeout(
-      () => done(new Error('connection was not rejected within timeout')),
+      () => done(new Error("connection was not rejected within timeout")),
       1500,
     );
-    ws.once('open', () => done(new Error('connection unexpectedly opened')));
-    ws.once('error', () => done());
-    ws.once('close', () => done());
+    ws.once("open", () => done(new Error("connection unexpectedly opened")));
+    ws.once("error", () => done());
+    ws.once("close", () => done());
   });
 }
 
-describe('production auth wiring', () => {
+describe("production auth wiring", () => {
   let server: RunningServer | undefined;
   let home: string | undefined;
   let base: string;
   const sockets: WebSocket[] = [];
 
   beforeEach(async () => {
-    home = await mkdtemp(join(tmpdir(), 'kimi-server-v2-auth-wiring-'));
-    server = await startServer({ hostIdentity: TEST_HOST_IDENTITY, host: '127.0.0.1', port: 0, homeDir: home, logLevel: 'silent' });
+    home = await mkdtemp(join(tmpdir(), "kimi-server-v2-auth-wiring-"));
+    server = await startServer({
+      hostIdentity: TEST_HOST_IDENTITY,
+      host: "127.0.0.1",
+      port: 0,
+      homeDir: home,
+      logLevel: "silent",
+    });
     base = `http://127.0.0.1:${server.port}`;
   });
 
@@ -92,22 +101,27 @@ describe('production auth wiring', () => {
     }
   });
 
-  it.skipIf(process.platform === 'win32')('writes a 0600 token file at boot and keeps it on close', async () => {
-    const p = join(home as string, 'server.token');
-    const info = await stat(p);
-    expect(info.mode & 0o777).toBe(0o600);
-    const token = (await readFile(p, 'utf8')).trim();
-    expect(token.length).toBeGreaterThan(0);
+  it.skipIf(process.platform === "win32")(
+    "writes a 0600 token file at boot and keeps it on close",
+    async () => {
+      const p = join(home as string, "server.token");
+      const info = await stat(p);
+      expect(info.mode & 0o777).toBe(0o600);
+      const token = (await readFile(p, "utf8")).trim();
+      expect(token.length).toBeGreaterThan(0);
 
-    await (server as RunningServer).close();
-    server = undefined;
-    // Persistent token: the file survives shutdown so the next start reuses it.
-    const after = await stat(p);
-    expect(after.mode & 0o777).toBe(0o600);
-  });
+      await (server as RunningServer).close();
+      server = undefined;
+      // Persistent token: the file survives shutdown so the next start reuses it.
+      const after = await stat(p);
+      expect(after.mode & 0o777).toBe(0o600);
+    },
+  );
 
-  it('gates HTTP: 200 with the token, 401 without', async () => {
-    const token = (await readFile(join(home as string, 'server.token'), 'utf8')).trim();
+  it("gates HTTP: 200 with the token, 401 without", async () => {
+    const token = (
+      await readFile(join(home as string, "server.token"), "utf8")
+    ).trim();
 
     const ok = await fetch(`${base}/openapi.json`, {
       headers: { Authorization: `Bearer ${token}` },
@@ -120,8 +134,10 @@ describe('production auth wiring', () => {
     expect(body.code).toBe(40101);
   });
 
-  it('gates /asyncapi.json: 200 with the token, 401 without', async () => {
-    const token = (await readFile(join(home as string, 'server.token'), 'utf8')).trim();
+  it("gates /asyncapi.json: 200 with the token, 401 without", async () => {
+    const token = (
+      await readFile(join(home as string, "server.token"), "utf8")
+    ).trim();
 
     const ok = await fetch(`${base}/asyncapi.json`, {
       headers: { Authorization: `Bearer ${token}` },
@@ -134,13 +150,17 @@ describe('production auth wiring', () => {
     expect(bad.status).toBe(401);
   });
 
-  it('gates WS: server_hello with the token, rejected without', async () => {
-    const token = (await readFile(join(home as string, 'server.token'), 'utf8')).trim();
+  it("gates WS: server_hello with the token, rejected without", async () => {
+    const token = (
+      await readFile(join(home as string, "server.token"), "utf8")
+    ).trim();
     const wsUrl = `ws://127.0.0.1:${(server as RunningServer).port}/api/v1/ws`;
 
-    const { ws, firstFrame } = await openConn(wsUrl, [`kimi-code.bearer.${token}`]);
+    const { ws, firstFrame } = await openConn(wsUrl, [
+      `kimi-code.bearer.${token}`,
+    ]);
     sockets.push(ws);
-    expect(firstFrame).toMatchObject({ type: 'server_hello' });
+    expect(firstFrame).toMatchObject({ type: "server_hello" });
 
     await expectRejected(wsUrl);
   });

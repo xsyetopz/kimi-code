@@ -6,26 +6,29 @@
  * owns the byte packaging detail; callers provide already-resolved paths.
  */
 
-import { createWriteStream } from 'node:fs';
-import { mkdir, mkdtemp, readdir, rename, rm, stat } from 'node:fs/promises';
-import { Readable, Transform } from 'node:stream';
-import { pipeline } from 'node:stream/promises';
+import { createWriteStream } from "node:fs";
+import { mkdir, mkdtemp, readdir, rename, rm, stat } from "node:fs/promises";
+import { Readable, Transform } from "node:stream";
+import { pipeline } from "node:stream/promises";
 
-import { dirname, join, relative, resolve } from 'pathe';
-import { ZipFile, type ReadStreamOptions } from 'yazl';
+import { dirname, join, relative, resolve } from "pathe";
+import { ZipFile, type ReadStreamOptions } from "yazl";
 
-import { ErrorCodes, Error2 } from '#/errors';
+import { ErrorCodes, Error2 } from "#/errors";
 
 import {
   openZipSource,
   type ZipSource,
   type ZipSourceIdentity,
-} from './file-source';
-import type { ExportSessionManifest } from './sessionExport';
+} from "./file-source";
+import type { ExportSessionManifest } from "./sessionExport";
 
 export async function collectFilesRecursive(root: string): Promise<string[]> {
   try {
-    const entries = await readdir(root, { recursive: true, withFileTypes: true });
+    const entries = await readdir(root, {
+      recursive: true,
+      withFileTypes: true,
+    });
     return entries
       .filter((entry) => entry.isFile())
       .map((entry) => join(entry.parentPath, entry.name))
@@ -40,7 +43,9 @@ export type ExtraZipEntry =
   | { readonly source: ZipSource; readonly target: string }
   | { readonly data: Buffer; readonly target: string };
 
-export type SessionZipEntry = string | { readonly path: string; readonly source: ZipSource };
+export type SessionZipEntry =
+  | string
+  | { readonly path: string; readonly source: ZipSource };
 
 export async function writeExportZip(args: {
   readonly outputPath: string;
@@ -52,9 +57,11 @@ export async function writeExportZip(args: {
   readonly maxArchiveBytes?: number;
 }): Promise<readonly string[]> {
   const unusedSources = new Set<ZipSource>([
-    ...args.sessionFiles.flatMap((entry) => (typeof entry === 'string' ? [] : [entry.source])),
+    ...args.sessionFiles.flatMap((entry) =>
+      typeof entry === "string" ? [] : [entry.source],
+    ),
     ...(args.extraEntries ?? []).flatMap((entry) =>
-      'source' in entry ? [entry.source] : [],
+      "source" in entry ? [entry.source] : [],
     ),
   ]);
   const pendingOpens = new Set<Promise<void>>();
@@ -93,29 +100,36 @@ export async function writeExportZip(args: {
     }
     await mkdir(dirname(args.outputPath), { recursive: true });
     args.signal?.throwIfAborted();
-    tempDir = await mkdtemp(join(dirname(args.outputPath), '.kimi-session-export-'));
-    const tempOutputPath = join(tempDir, 'archive.zip');
+    tempDir = await mkdtemp(
+      join(dirname(args.outputPath), ".kimi-session-export-"),
+    );
+    const tempOutputPath = join(tempDir, "archive.zip");
 
     const zip = new ZipFile() as LazyZipFile;
     output = zip.outputStream as unknown as Readable;
-    zip.on('error', (error: Error) => {
+    zip.on("error", (error: Error) => {
       stop(error);
     });
-    output.on('error', (error: Error) => {
+    output.on("error", (error: Error) => {
       stop(error);
     });
     onAbort = (): void => {
       stop(abortReason(args.signal!));
     };
-    args.signal?.addEventListener('abort', onAbort, { once: true });
+    args.signal?.addEventListener("abort", onAbort, { once: true });
 
-    const destination = createWriteStream(tempOutputPath, { flags: 'wx' });
+    const destination = createWriteStream(tempOutputPath, { flags: "wx" });
     writing =
       args.maxArchiveBytes === undefined
         ? pipeline(output, destination, { signal: args.signal })
-        : pipeline(output, createArchiveLimit(args.maxArchiveBytes), destination, {
-            signal: args.signal,
-          });
+        : pipeline(
+            output,
+            createArchiveLimit(args.maxArchiveBytes),
+            destination,
+            {
+              signal: args.signal,
+            },
+          );
 
     const activate = (source: ZipSource): Readable => {
       unusedSources.delete(source);
@@ -129,11 +143,11 @@ export async function writeExportZip(args: {
         queueClose(source);
       };
       releaseActive = release;
-      source.stream.once('end', release);
-      source.stream.once('close', release);
-      source.stream.once('error', (error: Error) => {
+      source.stream.once("end", release);
+      source.stream.once("close", release);
+      source.stream.once("error", (error: Error) => {
         release();
-        zip.emit('error', error);
+        zip.emit("error", error);
       });
       return source.stream;
     };
@@ -164,35 +178,48 @@ export async function writeExportZip(args: {
           () => pendingOpens.delete(pending),
           (error: unknown) => {
             pendingOpens.delete(pending);
-            zip.emit('error', asError(error));
+            zip.emit("error", asError(error));
           },
         );
       });
     };
 
-    zip.addBuffer(Buffer.from(JSON.stringify(args.manifest, null, 2), 'utf8'), 'manifest.json');
+    zip.addBuffer(
+      Buffer.from(JSON.stringify(args.manifest, null, 2), "utf8"),
+      "manifest.json",
+    );
 
     for (const entry of args.sessionFiles) {
       const sourcePath = sessionEntryPath(entry);
-      const target = relative(args.sessionDir, sourcePath).split(/[\\/]/).join('/');
-      if (typeof entry === 'string') {
+      const target = relative(args.sessionDir, sourcePath)
+        .split(/[\\/]/)
+        .join("/");
+      if (typeof entry === "string") {
         addLazySource(target, {}, () => openZipSource(entry, args.signal));
       } else {
         addLazySource(
           target,
-          { size: entry.source.size, mtime: entry.source.mtime, mode: entry.source.mode },
+          {
+            size: entry.source.size,
+            mtime: entry.source.mtime,
+            mode: entry.source.mode,
+          },
           async () => entry.source,
         );
       }
     }
 
     for (const extra of args.extraEntries ?? []) {
-      if ('data' in extra) {
+      if ("data" in extra) {
         zip.addBuffer(extra.data, extra.target);
       } else {
         addLazySource(
           extra.target,
-          { size: extra.source.size, mtime: extra.source.mtime, mode: extra.source.mode },
+          {
+            size: extra.source.size,
+            mtime: extra.source.mtime,
+            mode: extra.source.mode,
+          },
           async () => extra.source,
         );
       }
@@ -203,7 +230,7 @@ export async function writeExportZip(args: {
     await Promise.allSettled(pendingOpens);
     await closing;
     if (onAbort !== undefined) {
-      args.signal?.removeEventListener('abort', onAbort);
+      args.signal?.removeEventListener("abort", onAbort);
       onAbort = undefined;
     }
     args.signal?.throwIfAborted();
@@ -213,7 +240,8 @@ export async function writeExportZip(args: {
     stop(asError(error));
     await writing?.catch(() => {});
   } finally {
-    if (onAbort !== undefined) args.signal?.removeEventListener('abort', onAbort);
+    if (onAbort !== undefined)
+      args.signal?.removeEventListener("abort", onAbort);
     await Promise.allSettled(pendingOpens);
     releaseActive?.();
     for (const source of unusedSources) queueClose(source);
@@ -235,9 +263,11 @@ export async function writeExportZip(args: {
   if (failure !== undefined) throw failure.error;
   if (stopped !== undefined) throw stopped;
   return [
-    'manifest.json',
+    "manifest.json",
     ...args.sessionFiles.map((entry) =>
-      relative(args.sessionDir, sessionEntryPath(entry)).split(/[\\/]/).join('/'),
+      relative(args.sessionDir, sessionEntryPath(entry))
+        .split(/[\\/]/)
+        .join("/"),
     ),
     ...(args.extraEntries ?? []).map((entry) => entry.target),
   ];
@@ -260,7 +290,7 @@ function asError(error: unknown): Error {
 function abortReason(signal: AbortSignal): Error {
   return signal.reason instanceof Error
     ? signal.reason
-    : new DOMException('The operation was aborted.', 'AbortError');
+    : new DOMException("The operation was aborted.", "AbortError");
 }
 
 function createArchiveLimit(maxArchiveBytes: number): Transform {
@@ -297,7 +327,7 @@ async function findConflictingSource(args: {
   }
   for (const entry of args.extraEntries ?? []) {
     if (
-      'source' in entry &&
+      "source" in entry &&
       entry.source.sourcePath !== undefined &&
       resolve(entry.source.sourcePath) === outputPath
     ) {
@@ -311,12 +341,16 @@ async function findConflictingSource(args: {
   for (const entry of args.sessionFiles) {
     args.signal?.throwIfAborted();
     const input =
-      typeof entry === 'string' ? await statExisting(entry) : entry.source.identity;
-    if (input !== undefined && sameFile(output, input)) return sessionEntryPath(entry);
+      typeof entry === "string"
+        ? await statExisting(entry)
+        : entry.source.identity;
+    if (input !== undefined && sameFile(output, input))
+      return sessionEntryPath(entry);
   }
   for (const entry of args.extraEntries ?? []) {
     args.signal?.throwIfAborted();
-    if ('source' in entry && sameFile(output, entry.source.identity)) return entry.target;
+    if ("source" in entry && sameFile(output, entry.source.identity))
+      return entry.target;
   }
   return undefined;
 }
@@ -333,10 +367,7 @@ async function statExisting(
   }
 }
 
-function sameFile(
-  left: ZipSourceIdentity,
-  right: ZipSourceIdentity,
-): boolean {
+function sameFile(left: ZipSourceIdentity, right: ZipSourceIdentity): boolean {
   return (
     left.inode !== 0n &&
     right.inode !== 0n &&
@@ -346,14 +377,14 @@ function sameFile(
 }
 
 function sessionEntryPath(entry: SessionZipEntry): string {
-  return typeof entry === 'string' ? entry : entry.path;
+  return typeof entry === "string" ? entry : entry.path;
 }
 
 function isMissingPath(error: unknown): boolean {
   return (
-    typeof error === 'object' &&
+    typeof error === "object" &&
     error !== null &&
-    'code' in error &&
-    (error as NodeJS.ErrnoException).code === 'ENOENT'
+    "code" in error &&
+    (error as NodeJS.ErrnoException).code === "ENOENT"
   );
 }

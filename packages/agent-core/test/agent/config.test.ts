@@ -1,18 +1,22 @@
-import type { ModelCapability, ProviderConfig, ToolCall } from '@moonshot-ai/kosong';
-import { describe, expect, it } from 'vitest';
+import type {
+  ModelCapability,
+  ProviderConfig,
+  ToolCall,
+} from "@moonshot-ai/kosong";
+import { describe, expect, it } from "vitest";
 
-import type { ResolvedAgentProfile } from '../../src/profile';
-import { createCommandKaos, testAgent } from './harness/agent';
-import { DEFAULT_TEST_SYSTEM_PROMPT } from './harness/snapshots';
+import type { ResolvedAgentProfile } from "../../src/profile";
+import { createCommandKaos, testAgent } from "./harness/agent";
+import { DEFAULT_TEST_SYSTEM_PROMPT } from "./harness/snapshots";
 
-describe('Agent config', () => {
-  it('exposes provider, system prompt, thinking effort, and model capability updates', async () => {
+describe("Agent config", () => {
+  it("exposes provider, system prompt, thinking effort, and model capability updates", async () => {
     const ctx = testAgent();
     const initialProvider: ProviderConfig = {
-      type: 'openai',
-      apiKey: 'sk-initial',
-      baseUrl: 'https://initial.example/v1',
-      model: 'gpt-initial',
+      type: "openai",
+      apiKey: "sk-initial",
+      baseUrl: "https://initial.example/v1",
+      model: "gpt-initial",
     };
     const initialCapability: ModelCapability = {
       image_in: true,
@@ -30,15 +34,15 @@ describe('Agent config', () => {
     await expect(ctx.rpc.getConfig({})).resolves.toMatchObject({
       provider: initialProvider,
       systemPrompt: DEFAULT_TEST_SYSTEM_PROMPT,
-      thinkingEffort: 'off',
+      thinkingEffort: "off",
       modelCapabilities: initialCapability,
     });
 
     const nextProvider: ProviderConfig = {
-      type: 'kimi',
-      apiKey: 'sk-next',
-      baseUrl: 'https://next.example/v1',
-      model: 'kimi-next',
+      type: "kimi",
+      apiKey: "sk-next",
+      baseUrl: "https://next.example/v1",
+      model: "kimi-next",
     };
     const nextCapability: ModelCapability = {
       image_in: true,
@@ -50,26 +54,26 @@ describe('Agent config', () => {
     };
     ctx.configureRuntimeModel(nextProvider, nextCapability);
     ctx.agent.config.update({
-      systemPrompt: 'Changed profile prompt.',
-      thinkingEffort: 'high',
+      systemPrompt: "Changed profile prompt.",
+      thinkingEffort: "high",
     });
 
     await expect(ctx.rpc.getConfig({})).resolves.toMatchObject({
       provider: nextProvider,
-      systemPrompt: 'Changed profile prompt.',
-      thinkingEffort: 'on',
+      systemPrompt: "Changed profile prompt.",
+      thinkingEffort: "on",
       modelCapabilities: nextCapability,
     });
     await ctx.expectResumeMatches();
   });
 
-  it('useProfile emits the rendered system prompt and active tools', async () => {
+  it("useProfile emits the rendered system prompt and active tools", async () => {
     const ctx = testAgent();
     ctx.configure();
     const profile: ResolvedAgentProfile = {
-      name: 'test-profile',
-      systemPrompt: () => 'Profile system prompt.',
-      tools: ['Bash'],
+      name: "test-profile",
+      systemPrompt: () => "Profile system prompt.",
+      tools: ["Bash"],
     };
 
     ctx.agent.useProfile(profile);
@@ -82,115 +86,130 @@ describe('Agent config', () => {
     await ctx.expectResumeMatches();
   });
 
-  it('useProfile passes additionalDirsInfo to profile system prompts', async () => {
+  it("useProfile passes additionalDirsInfo to profile system prompts", async () => {
     const ctx = testAgent();
     ctx.configure();
     const profile: ResolvedAgentProfile = {
-      name: 'context-profile',
+      name: "context-profile",
       systemPrompt: (context) =>
-        `Prompt with additional dirs: ${context.additionalDirsInfo ?? 'none'}`,
-      tools: ['Bash'],
+        `Prompt with additional dirs: ${context.additionalDirsInfo ?? "none"}`,
+      tools: ["Bash"],
     };
 
     ctx.agent.useProfile(profile, {
-      cwdListing: 'cwd listing',
-      agentsMd: 'agents md',
-      additionalDirsInfo: '### /extra\nextra-file.txt',
+      cwdListing: "cwd listing",
+      agentsMd: "agents md",
+      additionalDirsInfo: "### /extra\nextra-file.txt",
     });
 
     expect(ctx.agent.config.systemPrompt).toBe(
-      'Prompt with additional dirs: ### /extra\nextra-file.txt',
+      "Prompt with additional dirs: ### /extra\nextra-file.txt",
     );
 
     ctx.agent.useProfile(profile);
 
-    expect(ctx.agent.config.systemPrompt).toBe('Prompt with additional dirs: none');
+    expect(ctx.agent.config.systemPrompt).toBe(
+      "Prompt with additional dirs: none",
+    );
   });
 
-  it('useProfile injects enabled plugin system-prompt sections', async () => {
+  it("useProfile injects enabled plugin system-prompt sections", async () => {
     const ctx = testAgent();
     ctx.configure();
     const profile: ResolvedAgentProfile = {
-      name: 'plugin-profile',
-      systemPrompt: (context) => context.pluginSections ?? '',
+      name: "plugin-profile",
+      systemPrompt: (context) => context.pluginSections ?? "",
       tools: [],
     };
-    ctx.agent.setPluginSystemPrompts([{ pluginId: 'demo', content: 'Always cite sources.' }]);
-
-    ctx.agent.useProfile(profile);
-
-    expect(ctx.agent.config.systemPrompt).toBe('<!-- From: plugin demo -->\nAlways cite sources.');
-
-    ctx.agent.setPluginSystemPrompts([]);
-    ctx.agent.useProfile(profile);
-
-    expect(ctx.agent.config.systemPrompt).toBe('');
-  });
-
-  it('skips plugin sections beyond the aggregate byte budget and warns once', async () => {
-    const ctx = testAgent();
-    ctx.configure();
-    const profile: ResolvedAgentProfile = {
-      name: 'plugin-profile',
-      systemPrompt: (context) => context.pluginSections ?? '',
-      tools: [],
-    };
-    const large = 'x'.repeat(48 * 1024);
     ctx.agent.setPluginSystemPrompts([
-      { pluginId: 'first', content: large },
-      { pluginId: 'second', content: large },
+      { pluginId: "demo", content: "Always cite sources." },
     ]);
 
     ctx.agent.useProfile(profile);
 
-    expect(ctx.agent.config.systemPrompt).toContain('<!-- From: plugin first -->');
-    expect(ctx.agent.config.systemPrompt).not.toContain('<!-- From: plugin second -->');
+    expect(ctx.agent.config.systemPrompt).toBe(
+      "<!-- From: plugin demo -->\nAlways cite sources.",
+    );
+
+    ctx.agent.setPluginSystemPrompts([]);
+    ctx.agent.useProfile(profile);
+
+    expect(ctx.agent.config.systemPrompt).toBe("");
+  });
+
+  it("skips plugin sections beyond the aggregate byte budget and warns once", async () => {
+    const ctx = testAgent();
+    ctx.configure();
+    const profile: ResolvedAgentProfile = {
+      name: "plugin-profile",
+      systemPrompt: (context) => context.pluginSections ?? "",
+      tools: [],
+    };
+    const large = "x".repeat(48 * 1024);
+    ctx.agent.setPluginSystemPrompts([
+      { pluginId: "first", content: large },
+      { pluginId: "second", content: large },
+    ]);
+
+    ctx.agent.useProfile(profile);
+
+    expect(ctx.agent.config.systemPrompt).toContain(
+      "<!-- From: plugin first -->",
+    );
+    expect(ctx.agent.config.systemPrompt).not.toContain(
+      "<!-- From: plugin second -->",
+    );
     const budgetWarnings = (events: ReturnType<typeof ctx.newEvents>) =>
       events.filter(
         (entry) =>
-          (entry as { event?: string }).event === 'warning' &&
-          (entry as { args?: { code?: string } }).args?.code === 'plugin-sections-oversized',
+          (entry as { event?: string }).event === "warning" &&
+          (entry as { args?: { code?: string } }).args?.code ===
+            "plugin-sections-oversized",
       );
     expect(budgetWarnings(ctx.newEvents())).toHaveLength(1);
 
     // A re-render applies the budget again but does not warn twice.
     ctx.agent.setPluginSystemPrompts([
-      { pluginId: 'first', content: large },
-      { pluginId: 'second', content: large },
-      { pluginId: 'third', content: 'small' },
+      { pluginId: "first", content: large },
+      { pluginId: "second", content: large },
+      { pluginId: "third", content: "small" },
     ]);
     ctx.agent.useProfile(profile);
 
-    expect(ctx.agent.config.systemPrompt).toContain('<!-- From: plugin third -->');
-    expect(ctx.agent.config.systemPrompt).not.toContain('<!-- From: plugin second -->');
+    expect(ctx.agent.config.systemPrompt).toContain(
+      "<!-- From: plugin third -->",
+    );
+    expect(ctx.agent.config.systemPrompt).not.toContain(
+      "<!-- From: plugin second -->",
+    );
     expect(budgetWarnings(ctx.newEvents())).toHaveLength(0);
   });
 
-  it('config.update with cwd initializes builtin tools', async () => {
+  it("config.update with cwd initializes builtin tools", async () => {
     const ctx = testAgent();
     ctx.configure();
 
     const tools = await ctx.rpc.getTools({});
 
     expect(toolNames(tools)).toEqual(
-      expect.arrayContaining(['Bash', 'Read', 'Write', 'Edit', 'Grep', 'Glob']),
+      expect.arrayContaining(["Bash", "Read", "Write", "Edit", "Grep", "Glob"]),
     );
     await ctx.expectResumeMatches();
   });
 
-  it('keeps turn-start config for later steps and applies updates to the next turn', async () => {
+  it("keeps turn-start config for later steps and applies updates to the next turn", async () => {
     const bashCall: ToolCall = {
-      type: 'function',
-      id: 'call_bash',
-      name: 'Bash',
+      type: "function",
+      id: "call_bash",
+      name: "Bash",
       arguments: '{"command":"printf original-result","timeout":60}',
     };
-    const ctx = testAgent({ kaos: createCommandKaos('original-result') });
-    ctx.configure({ tools: ['Bash'] });
+    const ctx = testAgent({ kaos: createCommandKaos("original-result") });
+    ctx.configure({ tools: ["Bash"] });
 
-    ctx.mockNextResponse({ type: 'text', text: 'I will run Bash.' }, bashCall);
+    ctx.mockNextResponse({ type: "text", text: "I will run Bash." }, bashCall);
     await ctx.rpc.prompt({
-      input: [{ type: 'text', text: 'Run Bash before config changes' }],
+      input: [{ type: "text", text: "Run Bash before config changes" }],
     });
     expect(await ctx.untilApproval(true)).toMatchInlineSnapshot(`
       [wire] turn.prompt                 { "input": [ { "type": "text", "text": "Run Bash before config changes" } ], "origin": { "kind": "user" }, "time": "<time>" }
@@ -213,14 +232,17 @@ describe('Agent config', () => {
     `);
 
     ctx.configureRuntimeModel({
-      type: 'kimi',
-      apiKey: 'test-key',
-      model: 'changed-model',
+      type: "kimi",
+      apiKey: "test-key",
+      model: "changed-model",
     });
-    ctx.agent.config.update({ systemPrompt: 'Changed system prompt.' });
+    ctx.agent.config.update({ systemPrompt: "Changed system prompt." });
     await ctx.rpc.setActiveTools({ names: [] });
 
-    ctx.mockNextResponse({ type: 'text', text: 'Still using the original turn config.' });
+    ctx.mockNextResponse({
+      type: "text",
+      text: "Still using the original turn config.",
+    });
     expect(await ctx.untilTurnEnd()).toMatchInlineSnapshot(`
       [wire] permission.record_approval_result   { "turnId": 0, "toolCallId": "call_bash", "toolName": "Bash", "action": "Running: printf original-result", "result": { "decision": "approved", "selectedLabel": "approve" }, "time": "<time>" }
       [wire] config.update                       { "modelAlias": "changed-model", "thinkingEffort": "off", "time": "<time>" }
@@ -261,8 +283,13 @@ describe('Agent config', () => {
         tool[call_bash]: text "original-result"
     `);
 
-    ctx.mockNextResponse({ type: 'text', text: 'Now the changed config is active.' });
-    await ctx.rpc.prompt({ input: [{ type: 'text', text: 'Start a fresh turn' }] });
+    ctx.mockNextResponse({
+      type: "text",
+      text: "Now the changed config is active.",
+    });
+    await ctx.rpc.prompt({
+      input: [{ type: "text", text: "Start a fresh turn" }],
+    });
 
     expect(await ctx.untilTurnEnd()).toMatchInlineSnapshot(`
       [wire] turn.prompt                 { "input": [ { "type": "text", "text": "Start a fresh turn" } ], "origin": { "kind": "user" }, "time": "<time>" }
@@ -294,9 +321,9 @@ function toolNames(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
   return value
     .map((item) => {
-      if (item === null || typeof item !== 'object') return null;
+      if (item === null || typeof item !== "object") return null;
       const record = item as Record<string, unknown>;
-      return typeof record['name'] === 'string' ? record['name'] : null;
+      return typeof record["name"] === "string" ? record["name"] : null;
     })
     .filter((name): name is string => name !== null);
 }

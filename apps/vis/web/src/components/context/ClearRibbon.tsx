@@ -1,4 +1,4 @@
-import type { ProjectedMessage } from '../../types';
+import type { ProjectedMessage } from "../../types";
 
 interface ClearRibbonProps {
   /** The synthetic clear-marker message emitted by the projector in

@@ -1,24 +1,24 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from "vitest";
 
-import { UsageRecorder } from '../../src/agent/usage';
+import { UsageRecorder } from "../../src/agent/usage";
 
-describe('Agent usage', () => {
-  it('accumulates usage by model', () => {
+describe("Agent usage", () => {
+  it("accumulates usage by model", () => {
     const usage = new UsageRecorder();
 
-    usage.record('model-a', {
+    usage.record("model-a", {
       inputOther: 1,
       output: 2,
       inputCacheRead: 3,
       inputCacheCreation: 4,
     });
-    usage.record('model-a', {
+    usage.record("model-a", {
       inputOther: 10,
       output: 20,
       inputCacheRead: 30,
       inputCacheCreation: 40,
     });
-    usage.record('model-b', {
+    usage.record("model-b", {
       inputOther: 100,
       output: 200,
       inputCacheRead: 300,
@@ -27,13 +27,13 @@ describe('Agent usage', () => {
 
     expect(usage.data()).toEqual({
       byModel: {
-        'model-a': {
+        "model-a": {
           inputOther: 11,
           output: 22,
           inputCacheRead: 33,
           inputCacheCreation: 44,
         },
-        'model-b': {
+        "model-b": {
           inputOther: 100,
           output: 200,
           inputCacheRead: 300,
@@ -50,10 +50,10 @@ describe('Agent usage', () => {
     });
   });
 
-  it('tracks current turn usage separately from session totals', () => {
+  it("tracks current turn usage separately from session totals", () => {
     const usage = new UsageRecorder();
 
-    usage.record('model-a', {
+    usage.record("model-a", {
       inputOther: 1,
       output: 2,
       inputCacheRead: 3,
@@ -61,24 +61,24 @@ describe('Agent usage', () => {
     });
     usage.beginTurn();
     usage.record(
-      'model-a',
+      "model-a",
       {
         inputOther: 10,
         output: 20,
         inputCacheRead: 30,
         inputCacheCreation: 40,
       },
-      'turn',
+      "turn",
     );
     usage.record(
-      'model-b',
+      "model-b",
       {
         inputOther: 100,
         output: 200,
         inputCacheRead: 300,
         inputCacheCreation: 400,
       },
-      'turn',
+      "turn",
     );
 
     expect(usage.data()).toMatchObject({
@@ -101,10 +101,10 @@ describe('Agent usage', () => {
     expect(usage.data().currentTurn).toBeUndefined();
   });
 
-  it('returns immutable status snapshots', () => {
+  it("returns immutable status snapshots", () => {
     const usage = new UsageRecorder();
 
-    usage.record('model-a', {
+    usage.record("model-a", {
       inputOther: 1,
       output: 2,
       inputCacheRead: 3,
@@ -112,7 +112,7 @@ describe('Agent usage', () => {
     });
     const snapshot = usage.data();
 
-    usage.record('model-a', {
+    usage.record("model-a", {
       inputOther: 10,
       output: 20,
       inputCacheRead: 30,
@@ -121,7 +121,7 @@ describe('Agent usage', () => {
 
     expect(snapshot).toEqual({
       byModel: {
-        'model-a': {
+        "model-a": {
           inputOther: 1,
           output: 2,
           inputCacheRead: 3,

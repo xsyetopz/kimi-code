@@ -1,5 +1,7 @@
 export function quoteShellArg(value: string): string {
-  return process.platform === 'win32' ? quoteCmdArg(value) : quotePosixArg(value);
+  return process.platform === "win32"
+    ? quoteCmdArg(value)
+    : quotePosixArg(value);
 }
 
 function quotePosixArg(value: string): string {

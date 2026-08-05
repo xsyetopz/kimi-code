@@ -1,9 +1,9 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 // Mirrors kimi-cli's `Metadata` pydantic model (metadata.py:43–49).
 export const OldWorkDirMetaSchema = z.object({
   path: z.string(),
-  kaos: z.string().default('local'),
+  kaos: z.string().default("local"),
   last_session_id: z.string().nullable().optional(),
 });
 

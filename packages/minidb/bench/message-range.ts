@@ -17,13 +17,14 @@
 //
 // Run:  node --import tsx bench/message-range.ts
 
-import fs from 'node:fs/promises';
-import { existsSync, readFileSync } from 'node:fs';
-import path from 'node:path';
-import os from 'node:os';
-import { MiniDb } from '../src/index.js';
+import fs from "node:fs/promises";
+import { existsSync, readFileSync } from "node:fs";
+import path from "node:path";
+import os from "node:os";
+import { MiniDb } from "../src/index.js";
 
-const fmt = (n: number) => n.toLocaleString('en-US', { maximumFractionDigits: 0 });
+const fmt = (n: number) =>
+  n.toLocaleString("en-US", { maximumFractionDigits: 0 });
 const LIMIT = 50;
 const WINDOW_DAYS = 30; // replicated timestamps are spread over the last 30 days
 const SINCE_DAYS = 7; // "recent" = last 7 days
@@ -36,8 +37,10 @@ interface Msg {
 }
 
 function loadRealMessages(): Msg[] {
-  const DATA = path.join(os.homedir(), '.kimi-code');
-  const lines = readFileSync(path.join(DATA, 'session_index.jsonl'), 'utf8').trim().split('\n');
+  const DATA = path.join(os.homedir(), ".kimi-code");
+  const lines = readFileSync(path.join(DATA, "session_index.jsonl"), "utf8")
+    .trim()
+    .split("\n");
   const out: Msg[] = [];
   for (const line of lines) {
     let meta: any;
@@ -46,15 +49,15 @@ function loadRealMessages(): Msg[] {
     } catch {
       continue;
     }
-    const wire = path.join(meta.sessionDir, 'agents', 'main', 'wire.jsonl');
+    const wire = path.join(meta.sessionDir, "agents", "main", "wire.jsonl");
     if (!existsSync(wire)) continue;
     let raw: string;
     try {
-      raw = readFileSync(wire, 'utf8');
+      raw = readFileSync(wire, "utf8");
     } catch {
       continue;
     }
-    for (const ln of raw.split('\n')) {
+    for (const ln of raw.split("\n")) {
       if (!ln) continue;
       let o: any;
       try {
@@ -62,13 +65,19 @@ function loadRealMessages(): Msg[] {
       } catch {
         continue;
       }
-      if (o.type !== 'context.append_message' || !o.message) continue;
+      if (o.type !== "context.append_message" || !o.message) continue;
       const m = o.message;
-      const ts = typeof o.time === 'number' ? o.time : 0;
-      let text = '';
+      const ts = typeof o.time === "number" ? o.time : 0;
+      let text = "";
       for (const c of m.content || [])
-        if (c && c.type === 'text' && typeof c.text === 'string') text += c.text;
-      out.push({ id: `${meta.sessionId}:${out.length}`, ts, role: m.role || 'user', text });
+        if (c && c.type === "text" && typeof c.text === "string")
+          text += c.text;
+      out.push({
+        id: `${meta.sessionId}:${out.length}`,
+        ts,
+        role: m.role || "user",
+        text,
+      });
     }
   }
   return out;
@@ -91,9 +100,16 @@ function scaleTo(real: Msg[], n: number): Msg[] {
   return out;
 }
 
-async function buildMinidb(msgs: Msg[]): Promise<{ db: any; buildMs: number; dir: string }> {
-  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'minidb-msg-'));
-  const db = await MiniDb.open({ dir, valueCodec: 'json', fsyncPolicy: 'no', autoCompact: false });
+async function buildMinidb(
+  msgs: Msg[],
+): Promise<{ db: any; buildMs: number; dir: string }> {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "minidb-msg-"));
+  const db = await MiniDb.open({
+    dir,
+    valueCodec: "json",
+    fsyncPolicy: "no",
+    autoCompact: false,
+  });
   const t0 = performance.now();
   // concurrent insert in chunks to avoid one giant promise array
   const CHUNK = 5000;
@@ -101,7 +117,9 @@ async function buildMinidb(msgs: Msg[]): Promise<{ db: any; buildMs: number; dir
     const p: Promise<unknown>[] = [];
     for (let i = s; i < Math.min(s + CHUNK, msgs.length); i++) {
       const m = msgs[i]!;
-      p.push(db.set(m.id, { role: m.role, text: m.text }, { dt: { ts: m.ts } }));
+      p.push(
+        db.set(m.id, { role: m.role, text: m.text }, { dt: { ts: m.ts } }),
+      );
     }
     await Promise.all(p);
   }
@@ -126,13 +144,13 @@ async function runCase(label: string, msgs: Msg[]) {
   const { db, buildMs, dir } = await buildMinidb(msgs);
   let indexHits = 0;
   const indexMs = med(() => {
-    const res = db.dtRange('ts', { gte: since, reverse: true, limit: LIMIT });
+    const res = db.dtRange("ts", { gte: since, reverse: true, limit: LIMIT });
     indexHits = res.length;
   });
   // variant: return ALL matches (no limit), to mirror the earlier metadata case
   let allHits = 0;
   const indexAllMs = med(() => {
-    const res = db.dtRange('ts', { gte: since });
+    const res = db.dtRange("ts", { gte: since });
     allHits = res.length;
   });
   if (global.gc) global.gc();
@@ -143,7 +161,10 @@ async function runCase(label: string, msgs: Msg[]) {
   // ---- naive baseline ----
   let naiveHits = 0;
   const naiveMs = med(() => {
-    const res = msgs.filter((m) => m.ts >= since).sort((a, b) => b.ts - a.ts).slice(0, LIMIT);
+    const res = msgs
+      .filter((m) => m.ts >= since)
+      .sort((a, b) => b.ts - a.ts)
+      .slice(0, LIMIT);
     naiveHits = res.length;
   });
   let naiveAllHits = 0;
@@ -153,7 +174,9 @@ async function runCase(label: string, msgs: Msg[]) {
   });
 
   console.log(`\n--- ${label}: N=${fmt(msgs.length)} messages ---`);
-  console.log(`  build: minidb ${(buildMs / 1000).toFixed(2)}s  |  heap ${(heap / 1024 / 1024).toFixed(0)} MiB`);
+  console.log(
+    `  build: minidb ${(buildMs / 1000).toFixed(2)}s  |  heap ${(heap / 1024 / 1024).toFixed(0)} MiB`,
+  );
   console.log(
     `  top-${LIMIT} recent:  minidb dtRange ${indexMs.toFixed(3)} ms (${indexHits})  vs  naive filter+sort ${naiveMs.toFixed(3)} ms (${naiveHits})  ->  ${(naiveMs / indexMs).toFixed(1)}x`,
   );
@@ -168,9 +191,9 @@ async function main() {
   const sizes = [real.length, 100_000, 1_000_000];
   for (const n of sizes) {
     const msgs = n === real.length ? real : scaleTo(real, n);
-    await runCase(n === real.length ? 'real data' : `scaled`, msgs);
+    await runCase(n === real.length ? "real data" : `scaled`, msgs);
   }
-  console.log('\ndone.');
+  console.log("\ndone.");
 }
 
 main().catch((e) => {

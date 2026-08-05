@@ -1,4 +1,4 @@
-import { useSessions } from '../hooks/useSession';
+import { useSessions } from "../hooks/useSession";
 
 export function SessionListPage() {
   const { data } = useSessions();

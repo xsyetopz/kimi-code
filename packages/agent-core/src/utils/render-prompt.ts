@@ -1,4 +1,4 @@
-import nunjucks from 'nunjucks';
+import nunjucks from "nunjucks";
 
 /**
  * Shared prompt template renderer.
@@ -12,8 +12,14 @@ import nunjucks from 'nunjucks';
  * - `throwOnUndefined: true` — a missing variable is a loud error, never a
  *   silently leaked `{{ placeholder }}` in the text sent to the model.
  */
-const env = new nunjucks.Environment(null, { autoescape: false, throwOnUndefined: true });
+const env = new nunjucks.Environment(null, {
+  autoescape: false,
+  throwOnUndefined: true,
+});
 
-export function renderPrompt(template: string, vars: Record<string, unknown>): string {
+export function renderPrompt(
+  template: string,
+  vars: Record<string, unknown>,
+): string {
   return env.renderString(template, vars);
 }

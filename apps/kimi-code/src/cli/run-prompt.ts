@@ -4,8 +4,8 @@ import {
   shutdownTelemetry,
   track,
   withTelemetryContext,
-} from '@moonshot-ai/kimi-telemetry';
-import chalk from 'chalk';
+} from "@moonshot-ai/kimi-telemetry";
+import chalk from "chalk";
 import {
   createKimiHarness,
   log,
@@ -13,26 +13,36 @@ import {
   type GoalSnapshot,
   type SessionStatus,
   type TelemetryClient,
-} from '@moonshot-ai/kimi-code-sdk';
-import { resolve } from 'pathe';
+} from "@moonshot-ai/kimi-code-sdk";
+import { resolve } from "pathe";
 
-import { CLI_SHUTDOWN_TIMEOUT_MS, PROMPT_CLEANUP_TIMEOUT_MS } from '#/constant/app';
+import {
+  CLI_SHUTDOWN_TIMEOUT_MS,
+  PROMPT_CLEANUP_TIMEOUT_MS,
+} from "#/constant/app";
 
-import { resolveAgentProfileSelection } from './agent-selection';
-import { isKimiV2Enabled } from './experimental-v2';
-import { resolveOutputFormat } from './options';
-import type { CLIOptions, PromptOutputFormat } from './options';
+import { resolveAgentProfileSelection } from "./agent-selection";
+import { isKimiV2Enabled } from "./experimental-v2";
+import { resolveOutputFormat } from "./options";
+import type { CLIOptions, PromptOutputFormat } from "./options";
 import {
   formatGoalSummaryText,
   goalExitCode,
   goalSummaryJson,
   parseHeadlessGoalCreate,
   type HeadlessGoalCreate,
-} from './goal-prompt';
-import type { PromptHarness, PromptSession } from './prompt-session';
-import { PromptJsonWriter, PromptTranscriptWriter, writeResumeHint } from './prompt-render';
-import { createCliTelemetryBootstrap, initializeCliTelemetry } from './telemetry';
-import { createKimiCodeHostIdentity } from './version';
+} from "./goal-prompt";
+import type { PromptHarness, PromptSession } from "./prompt-session";
+import {
+  PromptJsonWriter,
+  PromptTranscriptWriter,
+  writeResumeHint,
+} from "./prompt-render";
+import {
+  createCliTelemetryBootstrap,
+  initializeCliTelemetry,
+} from "./telemetry";
+import { createKimiCodeHostIdentity } from "./version";
 
 /**
  * Await `promise`, but stop waiting after `timeoutMs`.
@@ -52,7 +62,10 @@ import { createKimiCodeHostIdentity } from './version';
  * alive until it fires, then gives the rejection a chance to surface. A wedged
  * cleanup is still bounded by `timeoutMs`, so this can't hang the run forever.
  */
-export async function raceWithTimeout(promise: Promise<void>, timeoutMs: number): Promise<void> {
+export async function raceWithTimeout(
+  promise: Promise<void>,
+  timeoutMs: number,
+): Promise<void> {
   let timedOut = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
   // Attach the catch eagerly (synchronously) so `promise` is always consumed and
@@ -92,8 +105,8 @@ export interface PromptProcess {
   exit(code?: number): never | void;
 }
 
-const PROMPT_UI_MODE = 'print';
-const PROMPT_MAIN_AGENT_ID = 'main';
+const PROMPT_UI_MODE = "print";
+const PROMPT_MAIN_AGENT_ID = "main";
 
 export async function runPrompt(
   opts: CLIOptions,
@@ -105,7 +118,7 @@ export async function runPrompt(
     // runtime (see v2/run-v2-print.ts); it does not share the v1 PromptHarness
     // path below. Loaded lazily so the v2 module graph stays off the default
     // (v1) path.
-    const { runV2Print } = await import('./v2/run-v2-print');
+    const { runV2Print } = await import("./v2/run-v2-print");
     await runV2Print(opts, version, io);
     return;
   }
@@ -130,14 +143,14 @@ export async function runPrompt(
     telemetry: telemetryClient,
     onOAuthRefresh: (outcome) => {
       if (outcome.success) {
-        track('oauth_refresh', { outcome: 'success' });
+        track("oauth_refresh", { outcome: "success" });
         return;
       }
-      track('oauth_refresh', { outcome: 'error', reason: outcome.reason });
+      track("oauth_refresh", { outcome: "error", reason: outcome.reason });
     },
     sessionStartedProperties: { yolo: false, plan: false, afk: true },
   });
-  log.info('kimi-code starting', {
+  log.info("kimi-code starting", {
     version,
     uiMode: PROMPT_UI_MODE,
     nodeVersion: process.version,
@@ -150,7 +163,7 @@ export async function runPrompt(
   const cleanupPromptRun = async (): Promise<void> => {
     const pending = (cleanupPromise ??= (async () => {
       removeTerminationCleanup?.();
-      setCrashPhase('shutdown');
+      setCrashPhase("shutdown");
       try {
         await restorePromptSessionPermission();
       } finally {
@@ -165,7 +178,10 @@ export async function runPrompt(
     // after, so any straggling work is torn down with the process.
     await raceWithTimeout(pending, PROMPT_CLEANUP_TIMEOUT_MS);
   };
-  removeTerminationCleanup = installPromptTerminationCleanup(promptProcess, cleanupPromptRun);
+  removeTerminationCleanup = installPromptTerminationCleanup(
+    promptProcess,
+    cleanupPromptRun,
+  );
 
   try {
     await harness.ensureConfigFile();
@@ -195,7 +211,7 @@ export async function runPrompt(
       model: telemetryModel,
       sessionId: session.id,
     });
-    setCrashPhase('runtime');
+    setCrashPhase("runtime");
 
     // Headless goal mode: `kimi -p "/goal <objective>"`. The goal driver keeps
     // the turn-run alive across continuation turns, so the normal prompt-turn
@@ -203,7 +219,14 @@ export async function runPrompt(
     // distinct exit code.
     const goalCreate = parseHeadlessGoalCreate(opts.prompt!);
     if (goalCreate !== undefined) {
-      await runHeadlessGoal(session, goalCreate, goalModel, outputFormat, stdout, stderr);
+      await runHeadlessGoal(
+        session,
+        goalCreate,
+        goalModel,
+        outputFormat,
+        stdout,
+        stderr,
+      );
     } else {
       await runPromptTurn(
         session as PrintTurnSession,
@@ -215,7 +238,7 @@ export async function runPrompt(
     }
     writeResumeHint(session.id, outputFormat, stdout, stderr);
 
-    withTelemetryContext({ sessionId: session.id }).track('exit', {
+    withTelemetryContext({ sessionId: session.id }).track("exit", {
       duration_ms: Date.now() - startedAt,
     });
   } finally {
@@ -247,9 +270,9 @@ async function runHeadlessGoal(
   let completedSnapshot: GoalSnapshot | null = null;
   const unsubscribeGoalEvents = session.onEvent((event) => {
     if (
-      event.type === 'goal.updated' &&
-      event.agentId === 'main' &&
-      event.change?.kind === 'completion' &&
+      event.type === "goal.updated" &&
+      event.agentId === "main" &&
+      event.change?.kind === "completion" &&
       event.snapshot !== null
     ) {
       completedSnapshot = event.snapshot;
@@ -268,14 +291,14 @@ async function runHeadlessGoal(
   } finally {
     unsubscribeGoalEvents();
     const snapshot = completedSnapshot ?? (await session.getGoal()).goal;
-    if (outputFormat === 'stream-json') {
+    if (outputFormat === "stream-json") {
       stdout.write(`${JSON.stringify(goalSummaryJson(snapshot))}\n`);
     } else {
       stderr.write(`${formatGoalSummaryText(snapshot)}\n`);
     }
     // Map the terminal goal status to a distinct, non-fatal exit code. A turn
     // that threw (error / cancellation) already propagates its own exit path.
-    if (snapshot !== null && snapshot.status !== 'complete') {
+    if (snapshot !== null && snapshot.status !== "complete") {
       process.exitCode = goalExitCode(snapshot.status);
     }
   }
@@ -301,14 +324,17 @@ async function resolvePromptSession(
   // together with --session/--continue, so resume paths never forward a
   // profile — the bound agent is restored from the session itself.
   if (opts.session !== undefined) {
-    const sessions = await harness.listSessions({ sessionId: opts.session, workDir });
+    const sessions = await harness.listSessions({
+      sessionId: opts.session,
+      workDir,
+    });
     const target = sessions[0];
     if (target === undefined) {
       throw new Error(`Session "${opts.session}" not found.`);
     }
     if (resolve(target.workDir) !== resolve(workDir)) {
       stderr.write(
-        `${chalk.hex('#E8A838')(
+        `${chalk.hex("#E8A838")(
           `Session "${opts.session}" was created under a different directory.\n` +
             `  cd "${target.workDir}" && kimi -r ${opts.session}`,
         )}\n\n`,
@@ -366,7 +392,9 @@ async function resolvePromptSession(
         goalModel: configuredModel(opts.model, status.model),
       };
     }
-    stderr.write(`No sessions to continue under "${workDir}"; starting a fresh session.\n`);
+    stderr.write(
+      `No sessions to continue under "${workDir}"; starting a fresh session.\n`,
+    );
   }
 
   const agentProfile = await resolveAgentProfileSelection(opts, workDir);
@@ -374,7 +402,7 @@ async function resolvePromptSession(
   const session = await harness.createSession({
     workDir,
     model,
-    permission: 'auto',
+    permission: "auto",
     additionalDirs: opts.addDirs?.length ? opts.addDirs : undefined,
     agentProfile,
     agentFiles: opts.agentFiles?.length ? opts.agentFiles : undefined,
@@ -392,40 +420,44 @@ async function resolvePromptSession(
 
 async function forcePromptPermission(
   session: PromptSession,
-  previousPermission: SessionStatus['permission'],
+  previousPermission: SessionStatus["permission"],
   setRestorePermission: (restorePermission: () => Promise<void>) => void,
 ): Promise<() => Promise<void>> {
   let overridePermission: Promise<void> | undefined;
   const restorePermission = async () => {
     await overridePermission?.catch(() => {});
-    if (previousPermission !== 'auto') {
+    if (previousPermission !== "auto") {
       await session.setPermission(previousPermission);
     }
   };
   setRestorePermission(restorePermission);
-  if (previousPermission !== 'auto') {
-    overridePermission = session.setPermission('auto');
+  if (previousPermission !== "auto") {
+    overridePermission = session.setPermission("auto");
     await overridePermission;
   }
   return restorePermission;
 }
 
-export function requireConfiguredModel(...models: readonly (string | undefined)[]): string {
+export function requireConfiguredModel(
+  ...models: readonly (string | undefined)[]
+): string {
   const model = configuredModel(...models);
   if (model === undefined) {
     throw new Error(
-      'No model configured. Run `kimi` and use /login to sign in, then retry; or set default_model in config.toml.',
+      "No model configured. Run `kimi` and use /login to sign in, then retry; or set default_model in config.toml.",
     );
   }
   return model;
 }
 
-export function configuredModel(...models: readonly (string | undefined)[]): string | undefined {
+export function configuredModel(
+  ...models: readonly (string | undefined)[]
+): string | undefined {
   return models.find((model) => model !== undefined && model.trim().length > 0);
 }
 
 function installHeadlessHandlers(session: PromptSession): void {
-  session.setApprovalHandler(() => ({ decision: 'approved' }));
+  session.setApprovalHandler(() => ({ decision: "approved" }));
   session.setQuestionHandler(() => null);
 }
 
@@ -443,27 +475,27 @@ export function installPromptTerminationCleanup(
       promptProcess.exit(signalExitCode(signal));
     }
   };
-  const onSigint = () => exitAfterCleanup('SIGINT');
-  const onSigterm = () => exitAfterCleanup('SIGTERM');
-  const onSighup = () => exitAfterCleanup('SIGHUP');
-  promptProcess.once('SIGINT', onSigint);
-  promptProcess.once('SIGTERM', onSigterm);
-  promptProcess.once('SIGHUP', onSighup);
+  const onSigint = () => exitAfterCleanup("SIGINT");
+  const onSigterm = () => exitAfterCleanup("SIGTERM");
+  const onSighup = () => exitAfterCleanup("SIGHUP");
+  promptProcess.once("SIGINT", onSigint);
+  promptProcess.once("SIGTERM", onSigterm);
+  promptProcess.once("SIGHUP", onSighup);
   return () => {
-    promptProcess.off('SIGINT', onSigint);
-    promptProcess.off('SIGTERM', onSigterm);
-    promptProcess.off('SIGHUP', onSighup);
+    promptProcess.off("SIGINT", onSigint);
+    promptProcess.off("SIGTERM", onSigterm);
+    promptProcess.off("SIGHUP", onSighup);
   };
 }
 
 export function signalExitCode(signal: NodeJS.Signals): number {
-  if (signal === 'SIGINT') return 130;
-  if (signal === 'SIGHUP') return 129;
+  if (signal === "SIGINT") return 130;
+  if (signal === "SIGHUP") return 129;
   return 143;
 }
 
 type PrintTurnSession = PromptSession &
-  Required<Pick<PromptSession, 'handlePrintMainTurnCompleted'>>;
+  Required<Pick<PromptSession, "handlePrintMainTurnCompleted">>;
 
 function runPromptTurn(
   session: PrintTurnSession,
@@ -475,7 +507,7 @@ function runPromptTurn(
   let activeTurnId: number | undefined;
   let activeAgentId: string | undefined;
   const outputWriter =
-    outputFormat === 'stream-json'
+    outputFormat === "stream-json"
       ? new PromptJsonWriter(stdout)
       : new PromptTranscriptWriter(stdout, stderr);
   let settled = false;
@@ -523,7 +555,7 @@ function runPromptTurn(
       try {
         const { goal } = await session.getGoal();
         if (settled || activeTurnId !== undefined) return;
-        if (goal?.status === 'active') {
+        if (goal?.status === "active") {
           holdEventLoop();
           return;
         }
@@ -542,14 +574,14 @@ function runPromptTurn(
     };
 
     unsubscribe = session.onEvent((event) => {
-      if (event.type === 'error') {
+      if (event.type === "error") {
         if (event.agentId !== PROMPT_MAIN_AGENT_ID) {
           return;
         }
         finish(new Error(`${event.code}: ${event.message}`));
         return;
       }
-      if (event.type === 'turn.started') {
+      if (event.type === "turn.started") {
         if (event.agentId !== PROMPT_MAIN_AGENT_ID) {
           return;
         }
@@ -558,11 +590,11 @@ function runPromptTurn(
         return;
       }
       if (
-        event.type === 'goal.updated' &&
+        event.type === "goal.updated" &&
         event.agentId === PROMPT_MAIN_AGENT_ID &&
         activeTurnId === undefined &&
         event.snapshot !== null &&
-        event.snapshot.status !== 'active'
+        event.snapshot.status !== "active"
       ) {
         void evaluateRunCompletion();
         return;
@@ -577,41 +609,47 @@ function runPromptTurn(
         return;
       }
       switch (event.type) {
-        case 'turn.step.started':
-        case 'turn.step.interrupted':
+        case "turn.step.started":
+        case "turn.step.interrupted":
           outputWriter.flushAssistant();
           return;
-        case 'turn.step.retrying':
+        case "turn.step.retrying":
           outputWriter.discardAssistant();
           outputWriter.writeRetrying(event);
           return;
-        case 'assistant.delta':
+        case "assistant.delta":
           outputWriter.writeAssistantDelta(event.delta);
           return;
-        case 'hook.result':
+        case "hook.result":
           outputWriter.writeHookResult(event);
           return;
-        case 'thinking.delta':
+        case "thinking.delta":
           outputWriter.writeThinkingDelta(event.delta);
           return;
-        case 'tool.call.started':
+        case "tool.call.started":
           outputWriter.writeToolCall(event.toolCallId, event.name, event.args);
           return;
-        case 'tool.call.delta':
-          outputWriter.writeToolCallDelta(event.toolCallId, event.name, event.argumentsPart);
+        case "tool.call.delta":
+          outputWriter.writeToolCallDelta(
+            event.toolCallId,
+            event.name,
+            event.argumentsPart,
+          );
           return;
-        case 'tool.result':
+        case "tool.result":
           outputWriter.writeToolResult(event.toolCallId, event.output);
           return;
-        case 'tool.progress':
+        case "tool.progress":
           if (event.update.text !== undefined && event.update.text.length > 0) {
             stderr.write(
-              event.update.text.endsWith('\n') ? event.update.text : `${event.update.text}\n`,
+              event.update.text.endsWith("\n")
+                ? event.update.text
+                : `${event.update.text}\n`,
             );
           }
           return;
-        case 'turn.ended':
-          if (event.reason === 'completed') {
+        case "turn.ended":
+          if (event.reason === "completed") {
             outputWriter.flushAssistant();
             activeTurnId = undefined;
             activeAgentId = undefined;
@@ -620,26 +658,26 @@ function runPromptTurn(
           }
           finish(new Error(formatTurnEndedFailure(event)));
           return;
-        case 'agent.status.updated':
-        case 'background.task.started':
-        case 'background.task.terminated':
-        case 'compaction.blocked':
-        case 'compaction.cancelled':
-        case 'compaction.completed':
-        case 'compaction.started':
-        case 'cron.fired':
-        case 'goal.updated':
-        case 'mcp.server.status':
-        case 'session.meta.updated':
-        case 'skill.activated':
-        case 'subagent.completed':
-        case 'subagent.failed':
-        case 'subagent.spawned':
-        case 'subagent.started':
-        case 'subagent.suspended':
-        case 'tool.list.updated':
-        case 'turn.step.completed':
-        case 'warning':
+        case "agent.status.updated":
+        case "background.task.started":
+        case "background.task.terminated":
+        case "compaction.blocked":
+        case "compaction.cancelled":
+        case "compaction.completed":
+        case "compaction.started":
+        case "cron.fired":
+        case "goal.updated":
+        case "mcp.server.status":
+        case "session.meta.updated":
+        case "skill.activated":
+        case "subagent.completed":
+        case "subagent.failed":
+        case "subagent.spawned":
+        case "subagent.started":
+        case "subagent.suspended":
+        case "tool.list.updated":
+        case "turn.step.completed":
+        case "warning":
           return;
       }
     });
@@ -656,7 +694,7 @@ function runPromptTurn(
       outputWriter.flushAssistant();
       try {
         const action = await session.handlePrintMainTurnCompleted();
-        if (action === 'continue') {
+        if (action === "continue") {
           // Stay alive: a still-pending background task will, on completion,
           // steer the main agent into a new turn whose events we keep mapping.
           // Do not finish yet.
@@ -664,7 +702,7 @@ function runPromptTurn(
           return;
         }
       } catch (error) {
-        log.warn('handlePrintMainTurnCompleted failed', { error });
+        log.warn("handlePrintMainTurnCompleted failed", { error });
       }
       finish();
     }
@@ -672,16 +710,19 @@ function runPromptTurn(
 }
 
 function hasTurnId(event: Event): event is Event & { readonly turnId: number } {
-  return 'turnId' in event;
+  return "turnId" in event;
 }
 
-function formatTurnEndedFailure(event: Extract<Event, { type: 'turn.ended' }>): string {
-  if (event.error?.code === 'provider.filtered') {
-    return 'Provider safety policy blocked the response.';
+function formatTurnEndedFailure(
+  event: Extract<Event, { type: "turn.ended" }>,
+): string {
+  if (event.error?.code === "provider.filtered") {
+    return "Provider safety policy blocked the response.";
   }
-  if (event.error !== undefined) return `${event.error.code}: ${event.error.message}`;
-  if (event.reason === 'blocked') {
-    return 'Prompt hook blocked the request.';
+  if (event.error !== undefined)
+    return `${event.error.code}: ${event.error.message}`;
+  if (event.reason === "blocked") {
+    return "Prompt hook blocked the request.";
   }
   return `Prompt turn ended with reason: ${event.reason}`;
 }

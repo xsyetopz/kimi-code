@@ -1,4 +1,8 @@
-import type { PromptResponse, ToolCallStatus, ToolKind } from '@agentclientprotocol/sdk';
+import type {
+  PromptResponse,
+  ToolCallStatus,
+  ToolKind,
+} from "@agentclientprotocol/sdk";
 
 /**
  * Local alias for the ACP `stopReason` enum.
@@ -7,7 +11,7 @@ import type { PromptResponse, ToolCallStatus, ToolKind } from '@agentclientproto
  * don't have to repeat the literal union and the file is the single place
  * to look when the upstream SDK widens or renames a variant.
  */
-export type AcpStopReason = PromptResponse['stopReason'];
+export type AcpStopReason = PromptResponse["stopReason"];
 
 /**
  * Local alias for the ACP `ToolCallStatus` enum.

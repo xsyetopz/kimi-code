@@ -5,12 +5,12 @@ import {
   wrapTextWithAnsi,
   type Component,
   type Focusable,
-} from '@moonshot-ai/pi-tui';
+} from "@moonshot-ai/pi-tui";
 
-import { SELECT_POINTER } from '#/tui/constant/symbols';
-import { currentTheme } from '#/tui/theme';
+import { SELECT_POINTER } from "#/tui/constant/symbols";
+import { currentTheme } from "#/tui/theme";
 
-export type TrustPromptChoice = 'trust' | 'distrust';
+export type TrustPromptChoice = "trust" | "distrust";
 
 export interface TrustPromptOptions {
   readonly workDir: string;
@@ -28,14 +28,14 @@ interface TrustPromptOption {
 
 const OPTIONS: readonly TrustPromptOption[] = [
   {
-    value: 'trust',
-    label: 'Trust this folder',
-    description: 'Enable project MCP servers. Remembered for this folder.',
+    value: "trust",
+    label: "Trust this folder",
+    description: "Enable project MCP servers. Remembered for this folder.",
   },
   {
-    value: 'distrust',
+    value: "distrust",
     label: "Don't trust",
-    description: 'Exit Kimi Code. Asked again next launch.',
+    description: "Exit Kimi Code. Asked again next launch.",
   },
 ];
 
@@ -49,7 +49,7 @@ export class TrustPromptComponent implements Component, Focusable {
 
   handleInput(data: string): void {
     if (matchesKey(data, Key.escape)) {
-      this.opts.onSelect('distrust');
+      this.opts.onSelect("distrust");
       return;
     }
     if (matchesKey(data, Key.up)) {
@@ -66,39 +66,45 @@ export class TrustPromptComponent implements Component, Focusable {
   }
 
   render(width: number): string[] {
-    const rule = currentTheme.fg('primary', '─'.repeat(width));
+    const rule = currentTheme.fg("primary", "─".repeat(width));
     const lines = [
       rule,
-      currentTheme.boldFg('primary', ' Trust this folder?'),
-      currentTheme.fg('textMuted', ' ↑↓ navigate · Enter select · Esc exit'),
-      '',
+      currentTheme.boldFg("primary", " Trust this folder?"),
+      currentTheme.fg("textMuted", " ↑↓ navigate · Enter select · Esc exit"),
+      "",
       ...wrapTextWithAnsi(this.opts.workDir, Math.max(20, width - 2)).map(
-        (line) => ` ${currentTheme.fg('textStrong', line)}`,
+        (line) => ` ${currentTheme.fg("textStrong", line)}`,
       ),
-      '',
+      "",
     ];
 
     const notice =
       this.opts.gatedMcpServers.length > 0
-        ? `Kimi Code loads project-level MCP servers (.mcp.json, .kimi-code/mcp.json) only in trusted folders. They run as local processes on your machine. This folder defines: ${this.opts.gatedMcpServers.join(', ')}.`
-        : 'Kimi Code loads project-level MCP servers (.mcp.json, .kimi-code/mcp.json) only in trusted folders. They run as local processes on your machine.';
+        ? `Kimi Code loads project-level MCP servers (.mcp.json, .kimi-code/mcp.json) only in trusted folders. They run as local processes on your machine. This folder defines: ${this.opts.gatedMcpServers.join(", ")}.`
+        : "Kimi Code loads project-level MCP servers (.mcp.json, .kimi-code/mcp.json) only in trusted folders. They run as local processes on your machine.";
     for (const line of wrapTextWithAnsi(notice, Math.max(20, width - 2))) {
-      lines.push(` ${currentTheme.fg('textMuted', line)}`);
+      lines.push(` ${currentTheme.fg("textMuted", line)}`);
     }
-    lines.push('');
+    lines.push("");
 
     for (let i = 0; i < OPTIONS.length; i += 1) {
       const option = OPTIONS[i]!;
       const selected = i === this.selectedIndex;
-      const pointer = selected ? SELECT_POINTER : ' ';
+      const pointer = selected ? SELECT_POINTER : " ";
       const label = selected
-        ? currentTheme.boldFg('primary', option.label)
-        : currentTheme.fg('text', option.label);
-      lines.push(currentTheme.fg(selected ? 'primary' : 'textDim', `  ${pointer} `) + label);
-      for (const line of wrapTextWithAnsi(option.description, Math.max(20, width - 4))) {
-        lines.push(`    ${currentTheme.fg('textMuted', line)}`);
+        ? currentTheme.boldFg("primary", option.label)
+        : currentTheme.fg("text", option.label);
+      lines.push(
+        currentTheme.fg(selected ? "primary" : "textDim", `  ${pointer} `) +
+          label,
+      );
+      for (const line of wrapTextWithAnsi(
+        option.description,
+        Math.max(20, width - 4),
+      )) {
+        lines.push(`    ${currentTheme.fg("textMuted", line)}`);
       }
-      lines.push('');
+      lines.push("");
     }
 
     lines.push(rule);

@@ -1,4 +1,4 @@
-import type { RunningServer } from '../../src/start';
+import type { RunningServer } from "../../src/start";
 
 type HeaderMap = Record<string, string>;
 
@@ -12,7 +12,10 @@ export function bearerToken(server: RunningServer): string {
   return server.authTokenService.getToken();
 }
 
-export function authHeaders(server: RunningServer, extra: HeaderMap = {}): HeaderMap {
+export function authHeaders(
+  server: RunningServer,
+  extra: HeaderMap = {},
+): HeaderMap {
   return {
     ...extra,
     authorization: `Bearer ${bearerToken(server)}`,

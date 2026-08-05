@@ -18,11 +18,11 @@
  * test/workspace/workspaceDirs/workspaceDirs.test.ts`.
  */
 
-import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'pathe';
+import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "pathe";
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import {
   LifecycleScope,
@@ -30,63 +30,68 @@ import {
   _clearScopedRegistryForTests,
   registerScopedService,
   type ISessionScopeHandle,
-} from '#/_base/di/scope';
-import { type ScopedTestHost, createScopedTestHost, stubPair } from '#/_base/di/test';
-import { Event } from '#/_base/event';
-import { ILogService } from '#/_base/log/log';
-import { IBootstrapService } from '#/app/bootstrap/bootstrap';
-import { IConfigService } from '#/app/config/config';
-import { ICronTaskPersistence } from '#/app/cron/cronTaskPersistence';
-import { IEventService } from '#/app/event/event';
+} from "#/_base/di/scope";
 import {
-  IProjectLocalConfigService,
-} from '#/app/projectLocalConfig/projectLocalConfig';
-import { ISessionIndex } from '#/app/sessionIndex/sessionIndex';
-import { ITelemetryService, noopTelemetryService } from '#/app/telemetry/telemetry';
-import { IWorkspaceLifecycleService } from '#/app/workspaceLifecycle/workspaceLifecycle';
-import { WorkspaceLifecycleService } from '#/app/workspaceLifecycle/workspaceLifecycleService';
-import { IWorkspaceService, type Workspace } from '#/app/workspace/workspace';
-import { encodeWorkDirKey } from '#/_base/utils/workdir-slug';
-import { IHostEnvironment } from '#/os/interface/hostEnvironment';
-import { IHostFileSystem } from '#/os/interface/hostFileSystem';
-import { HostFileSystem } from '#/os/backends/node-local/hostFsService';
-import { IHostFsWatchService } from '#/os/interface/hostFsWatch';
-import { HostFsWatchService } from '#/os/backends/node-local/hostFsWatchService';
-import { IAppendLogStore } from '#/persistence/interface/appendLogStore';
-import { IAtomicDocumentStore } from '#/persistence/interface/atomicDocumentStore';
-import { FileProjectLocalConfigService } from '#/persistence/backends/node-fs/projectLocalConfigService';
-import { IAgentLifecycleService } from '#/session/agentLifecycle/agentLifecycle';
-import { ISessionMetadata } from '#/session/sessionMetadata/sessionMetadata';
-import { ISessionToolPolicy } from '#/session/sessionToolPolicy/sessionToolPolicy';
-import { ISessionProcessRunner } from '#/session/process/processRunner';
-import { ISessionStateService } from '#/session/state/sessionState';
-import { SessionStateService } from '#/session/state/sessionStateService';
-import { IAppStateService } from '#/app/state/appState';
-import { AppStateService } from '#/app/state/appStateService';
-import { IWorkspaceStateService } from '#/workspace/state/workspaceState';
-import { WorkspaceStateService } from '#/workspace/state/workspaceStateService';
-import { ISessionWorkspaceContext } from '#/session/workspaceContext/workspaceContext';
-import { SessionWorkspaceContextService } from '#/session/workspaceContext/workspaceContextService';
-import { IWorkspaceAgentProfileLoader } from '#/workspace/workspaceAgentProfileLoader/workspaceAgentProfileLoader';
-import { IExtraAgentProfileLoader } from '#/workspace/workspaceAgentProfileLoader/extraAgentProfileLoader';
-import { IExplicitAgentProfileLoader } from '#/workspace/workspaceAgentProfileLoader/explicitAgentProfileLoader';
-import { IUserAgentProfileLoader } from '#/workspace/workspaceAgentProfileLoader/userAgentProfileLoader';
-import { IPluginAgentProfileLoader } from '#/workspace/workspaceAgentProfileLoader/pluginAgentProfileLoader';
-import { IWorkspaceDirs } from '#/workspace/workspaceDirs/workspaceDirs';
+  type ScopedTestHost,
+  createScopedTestHost,
+  stubPair,
+} from "#/_base/di/test";
+import { Event } from "#/_base/event";
+import { ILogService } from "#/_base/log/log";
+import { IBootstrapService } from "#/app/bootstrap/bootstrap";
+import { IConfigService } from "#/app/config/config";
+import { ICronTaskPersistence } from "#/app/cron/cronTaskPersistence";
+import { IEventService } from "#/app/event/event";
+import { IProjectLocalConfigService } from "#/app/projectLocalConfig/projectLocalConfig";
+import { ISessionIndex } from "#/app/sessionIndex/sessionIndex";
+import {
+  ITelemetryService,
+  noopTelemetryService,
+} from "#/app/telemetry/telemetry";
+import { IWorkspaceLifecycleService } from "#/app/workspaceLifecycle/workspaceLifecycle";
+import { WorkspaceLifecycleService } from "#/app/workspaceLifecycle/workspaceLifecycleService";
+import { IWorkspaceService, type Workspace } from "#/app/workspace/workspace";
+import { encodeWorkDirKey } from "#/_base/utils/workdir-slug";
+import { IHostEnvironment } from "#/os/interface/hostEnvironment";
+import { IHostFileSystem } from "#/os/interface/hostFileSystem";
+import { HostFileSystem } from "#/os/backends/node-local/hostFsService";
+import { IHostFsWatchService } from "#/os/interface/hostFsWatch";
+import { HostFsWatchService } from "#/os/backends/node-local/hostFsWatchService";
+import { IAppendLogStore } from "#/persistence/interface/appendLogStore";
+import { IAtomicDocumentStore } from "#/persistence/interface/atomicDocumentStore";
+import { FileProjectLocalConfigService } from "#/persistence/backends/node-fs/projectLocalConfigService";
+import { IAgentLifecycleService } from "#/session/agentLifecycle/agentLifecycle";
+import { ISessionMetadata } from "#/session/sessionMetadata/sessionMetadata";
+import { ISessionToolPolicy } from "#/session/sessionToolPolicy/sessionToolPolicy";
+import { ISessionProcessRunner } from "#/session/process/processRunner";
+import { ISessionStateService } from "#/session/state/sessionState";
+import { SessionStateService } from "#/session/state/sessionStateService";
+import { IAppStateService } from "#/app/state/appState";
+import { AppStateService } from "#/app/state/appStateService";
+import { IWorkspaceStateService } from "#/workspace/state/workspaceState";
+import { WorkspaceStateService } from "#/workspace/state/workspaceStateService";
+import { ISessionWorkspaceContext } from "#/session/workspaceContext/workspaceContext";
+import { SessionWorkspaceContextService } from "#/session/workspaceContext/workspaceContextService";
+import { IWorkspaceAgentProfileLoader } from "#/workspace/workspaceAgentProfileLoader/workspaceAgentProfileLoader";
+import { IExtraAgentProfileLoader } from "#/workspace/workspaceAgentProfileLoader/extraAgentProfileLoader";
+import { IExplicitAgentProfileLoader } from "#/workspace/workspaceAgentProfileLoader/explicitAgentProfileLoader";
+import { IUserAgentProfileLoader } from "#/workspace/workspaceAgentProfileLoader/userAgentProfileLoader";
+import { IPluginAgentProfileLoader } from "#/workspace/workspaceAgentProfileLoader/pluginAgentProfileLoader";
+import { IWorkspaceDirs } from "#/workspace/workspaceDirs/workspaceDirs";
 import {
   WorkspaceDirsService,
   workspaceDirsEphemeralDirsKey,
   workspaceDirsFileDirsKey,
-} from '#/workspace/workspaceDirs/workspaceDirsService';
-import { ISessionLifecycleService } from '#/workspace/sessionLifecycle/sessionLifecycle';
-import { SessionLifecycleService } from '#/workspace/sessionLifecycle/sessionLifecycleService';
-import { IWorkspaceToolPolicy } from '#/workspace/workspaceToolPolicy/workspaceToolPolicy';
-import { WorkspaceToolPolicyService } from '#/workspace/workspaceToolPolicy/workspaceToolPolicyService';
-import { IWorkspaceInstructionsService } from '#/workspace/workspaceInstructions/workspaceInstructions';
-import { IWorkspaceMcpService } from '#/workspace/workspaceMcp/workspaceMcp';
-import { IWorkspaceSkillCatalog } from '#/workspace/workspaceSkillCatalog/workspaceSkillCatalog';
+} from "#/workspace/workspaceDirs/workspaceDirsService";
+import { ISessionLifecycleService } from "#/workspace/sessionLifecycle/sessionLifecycle";
+import { SessionLifecycleService } from "#/workspace/sessionLifecycle/sessionLifecycleService";
+import { IWorkspaceToolPolicy } from "#/workspace/workspaceToolPolicy/workspaceToolPolicy";
+import { WorkspaceToolPolicyService } from "#/workspace/workspaceToolPolicy/workspaceToolPolicyService";
+import { IWorkspaceInstructionsService } from "#/workspace/workspaceInstructions/workspaceInstructions";
+import { IWorkspaceMcpService } from "#/workspace/workspaceMcp/workspaceMcp";
+import { IWorkspaceSkillCatalog } from "#/workspace/workspaceSkillCatalog/workspaceSkillCatalog";
 
-import { stubLog } from '../../_base/log/stubs';
+import { stubLog } from "../../_base/log/stubs";
 
 function workspaceCatalogStub(): IWorkspaceService {
   const workspaces = new Map<string, Workspace>();
@@ -99,7 +104,7 @@ function workspaceCatalogStub(): IWorkspaceService {
       const workspace: Workspace = workspaces.get(id) ?? {
         id,
         root,
-        name: name ?? 'proj',
+        name: name ?? "proj",
         createdAt: 1,
         lastOpenedAt: 1,
       };
@@ -115,12 +120,12 @@ function workspaceSkillCatalogStub(): IWorkspaceSkillCatalog {
   const catalog = {
     getSkill: () => undefined,
     getPluginSkill: () => undefined,
-    renderSkillPrompt: () => '',
+    renderSkillPrompt: () => "",
     listSkills: () => [],
     listInvocableSkills: () => [],
     getSkillRoots: () => [],
     getSkippedByPolicy: () => [],
-    getModelSkillListing: () => '',
+    getModelSkillListing: () => "",
   };
   return {
     _serviceBrand: undefined,
@@ -150,7 +155,7 @@ function userAgentProfileLoaderStub(): IUserAgentProfileLoader {
   return {
     ...agentProfileLoaderStub(),
     getDefaultProfile: () => {
-      throw new Error('not implemented');
+      throw new Error("not implemented");
     },
   };
 }
@@ -181,13 +186,13 @@ function workspaceMcpStub(): IWorkspaceMcpService {
       _serviceBrand: undefined,
       ready: Promise.resolve(),
       get connectionManager(): never {
-        throw new Error('not implemented');
+        throw new Error("not implemented");
       },
     }),
   } as unknown as IWorkspaceMcpService;
 }
 
-describe('workspace add-dir (handler chain)', () => {
+describe("workspace add-dir (handler chain)", () => {
   let hosts: ScopedTestHost[];
   let tmpRoots: string[];
 
@@ -200,56 +205,56 @@ describe('workspace add-dir (handler chain)', () => {
       IWorkspaceLifecycleService,
       WorkspaceLifecycleService,
       ScopeActivation.OnScopeCreated,
-      'workspaceLifecycle',
+      "workspaceLifecycle",
     );
     registerScopedService(
       LifecycleScope.Workspace,
       ISessionLifecycleService,
       SessionLifecycleService,
       ScopeActivation.OnScopeCreated,
-      'sessionLifecycle',
+      "sessionLifecycle",
     );
     registerScopedService(
       LifecycleScope.Workspace,
       IWorkspaceToolPolicy,
       WorkspaceToolPolicyService,
       ScopeActivation.OnScopeCreated,
-      'workspaceToolPolicy',
+      "workspaceToolPolicy",
     );
     registerScopedService(
       LifecycleScope.Workspace,
       IWorkspaceDirs,
       WorkspaceDirsService,
       ScopeActivation.OnScopeCreated,
-      'workspaceDirs',
+      "workspaceDirs",
     );
     registerScopedService(
       LifecycleScope.App,
       IAppStateService,
       AppStateService,
       ScopeActivation.OnScopeCreated,
-      'state',
+      "state",
     );
     registerScopedService(
       LifecycleScope.Workspace,
       IWorkspaceStateService,
       WorkspaceStateService,
       ScopeActivation.OnScopeCreated,
-      'state',
+      "state",
     );
     registerScopedService(
       LifecycleScope.Session,
       ISessionStateService,
       SessionStateService,
       ScopeActivation.OnScopeCreated,
-      'state',
+      "state",
     );
     registerScopedService(
       LifecycleScope.Session,
       ISessionWorkspaceContext,
       SessionWorkspaceContextService,
       ScopeActivation.OnScopeCreated,
-      'workspaceContext',
+      "workspaceContext",
     );
   });
 
@@ -257,7 +262,9 @@ describe('workspace add-dir (handler chain)', () => {
     for (const host of hosts.splice(0)) {
       host.dispose();
     }
-    await Promise.all(tmpRoots.map((root) => rm(root, { recursive: true, force: true })));
+    await Promise.all(
+      tmpRoots.map((root) => rm(root, { recursive: true, force: true })),
+    );
   });
 
   async function makeRoot(prefix: string): Promise<string> {
@@ -268,8 +275,8 @@ describe('workspace add-dir (handler chain)', () => {
 
   /** A project root with a `.git` marker so local.toml lands at the root. */
   async function makeProjectRoot(): Promise<string> {
-    const root = await makeRoot('kimi-add-dir-proj-');
-    await mkdir(join(root, '.git'));
+    const root = await makeRoot("kimi-add-dir-proj-");
+    await mkdir(join(root, ".git"));
     return root;
   }
 
@@ -285,7 +292,7 @@ describe('workspace add-dir (handler chain)', () => {
       stubPair(IBootstrapService, bootstrap),
       stubPair(IHostEnvironment, {
         _serviceBrand: undefined,
-        osKind: 'Linux',
+        osKind: "Linux",
         homeDir,
         ready: Promise.resolve(),
       } as unknown as IHostEnvironment),
@@ -356,14 +363,17 @@ describe('workspace add-dir (handler chain)', () => {
       } as unknown as ISessionToolPolicy),
       stubPair(ISessionProcessRunner, {
         _serviceBrand: undefined,
-        exec: () => Promise.reject(new Error('process exec is not supported in this test')),
+        exec: () =>
+          Promise.reject(
+            new Error("process exec is not supported in this test"),
+          ),
       } satisfies ISessionProcessRunner),
       stubPair(IAgentLifecycleService, {
         _serviceBrand: undefined,
         onDidCreate: () => ({ dispose: () => {} }),
         onDidDispose: () => ({ dispose: () => {} }),
-        create: () => Promise.reject(new Error('not implemented')),
-        fork: () => Promise.reject(new Error('not implemented')),
+        create: () => Promise.reject(new Error("not implemented")),
+        fork: () => Promise.reject(new Error("not implemented")),
         get: () => undefined,
         list: () => [],
         remove: () => Promise.resolve(),
@@ -386,7 +396,9 @@ describe('workspace add-dir (handler chain)', () => {
     host: ScopedTestHost,
     root: string,
   ): Promise<{ service: ISessionLifecycleService; dirs: IWorkspaceDirs }> {
-    const handler = await host.app.accessor.get(IWorkspaceLifecycleService).handlerFor({ root });
+    const handler = await host.app.accessor
+      .get(IWorkspaceLifecycleService)
+      .handlerFor({ root });
     return {
       service: handler.accessor.get(ISessionLifecycleService),
       dirs: handler.accessor.get(IWorkspaceDirs),
@@ -397,57 +409,60 @@ describe('workspace add-dir (handler chain)', () => {
     return handle.accessor.get(ISessionWorkspaceContext).additionalDirs;
   }
 
-  it('persists addDir to local.toml and every session of the workspace sees the dir', async () => {
-    const homeDir = await makeRoot('kimi-add-dir-home-');
+  it("persists addDir to local.toml and every session of the workspace sees the dir", async () => {
+    const homeDir = await makeRoot("kimi-add-dir-home-");
     const root = await makeProjectRoot();
-    const extra = await makeRoot('kimi-add-dir-extra-');
+    const extra = await makeRoot("kimi-add-dir-extra-");
     const host = buildHost(homeDir);
     const { service, dirs } = await handlerFor(host, root);
 
-    const s1 = await service.create({ sessionId: 's1', workDir: root });
+    const s1 = await service.create({ sessionId: "s1", workDir: root });
     expect(dirsOf(s1)).toEqual([]);
 
     const result = await dirs.addDir({ path: extra, persist: true });
 
     expect(result.persisted).toBe(true);
     expect(result.projectRoot).toBe(root);
-    expect(result.configPath).toBe(join(root, '.kimi-code', 'local.toml'));
+    expect(result.configPath).toBe(join(root, ".kimi-code", "local.toml"));
     expect(result.additionalDirs).toEqual([extra]);
     // local.toml written on disk.
-    const toml = await readFile(join(root, '.kimi-code', 'local.toml'), 'utf8');
-    expect(toml).toContain('additional_dir');
+    const toml = await readFile(join(root, ".kimi-code", "local.toml"), "utf8");
+    expect(toml).toContain("additional_dir");
     expect(toml).toContain(extra);
     // The live session's view refreshed through the change event.
     expect(dirsOf(s1)).toEqual([extra]);
     // A second session of the same workspace sees it immediately.
-    const s2 = await service.create({ sessionId: 's2', workDir: root });
+    const s2 = await service.create({ sessionId: "s2", workDir: root });
     expect(dirsOf(s2)).toEqual([extra]);
   });
 
-  it('keeps the persisted dir across a handler rebuild (simulated restart)', async () => {
-    const homeDir = await makeRoot('kimi-add-dir-home-');
+  it("keeps the persisted dir across a handler rebuild (simulated restart)", async () => {
+    const homeDir = await makeRoot("kimi-add-dir-home-");
     const root = await makeProjectRoot();
-    const extra = await makeRoot('kimi-add-dir-extra-');
+    const extra = await makeRoot("kimi-add-dir-extra-");
     const first = buildHost(homeDir);
     const firstHandler = await handlerFor(first, root);
-    await firstHandler.service.create({ sessionId: 's1', workDir: root });
+    await firstHandler.service.create({ sessionId: "s1", workDir: root });
     await firstHandler.dirs.addDir({ path: extra, persist: true });
     first.dispose();
     hosts = hosts.filter((h) => h !== first);
 
     const second = buildHost(homeDir);
     const secondHandler = await handlerFor(second, root);
-    const s2 = await secondHandler.service.create({ sessionId: 's2', workDir: root });
+    const s2 = await secondHandler.service.create({
+      sessionId: "s2",
+      workDir: root,
+    });
     expect(dirsOf(s2)).toEqual([extra]);
   });
 
-  it('persist: false stays in handler memory, never touches the disk, and is shared', async () => {
-    const homeDir = await makeRoot('kimi-add-dir-home-');
+  it("persist: false stays in handler memory, never touches the disk, and is shared", async () => {
+    const homeDir = await makeRoot("kimi-add-dir-home-");
     const root = await makeProjectRoot();
-    const extra = await makeRoot('kimi-add-dir-extra-');
+    const extra = await makeRoot("kimi-add-dir-extra-");
     const host = buildHost(homeDir);
     const { service, dirs } = await handlerFor(host, root);
-    const s1 = await service.create({ sessionId: 's1', workDir: root });
+    const s1 = await service.create({ sessionId: "s1", workDir: root });
 
     const result = await dirs.addDir({ path: extra, persist: false });
 
@@ -455,25 +470,30 @@ describe('workspace add-dir (handler chain)', () => {
     expect(result.additionalDirs).toEqual([extra]);
     expect(dirsOf(s1)).toEqual([extra]);
     // Nothing written: local.toml does not exist.
-    await expect(readFile(join(root, '.kimi-code', 'local.toml'), 'utf8')).rejects.toThrow();
+    await expect(
+      readFile(join(root, ".kimi-code", "local.toml"), "utf8"),
+    ).rejects.toThrow();
     // The in-memory dir is shared with a second session of the workspace.
-    const s2 = await service.create({ sessionId: 's2', workDir: root });
+    const s2 = await service.create({ sessionId: "s2", workDir: root });
     expect(dirsOf(s2)).toEqual([extra]);
   });
 
-  it('refreshes live session views when another process edits local.toml', async () => {
-    const homeDir = await makeRoot('kimi-add-dir-home-');
+  it("refreshes live session views when another process edits local.toml", async () => {
+    const homeDir = await makeRoot("kimi-add-dir-home-");
     const root = await makeProjectRoot();
-    const extra = await makeRoot('kimi-add-dir-extra-');
+    const extra = await makeRoot("kimi-add-dir-extra-");
     const host = buildHost(homeDir);
     const { service } = await handlerFor(host, root);
-    const s1 = await service.create({ sessionId: 's1', workDir: root });
+    const s1 = await service.create({ sessionId: "s1", workDir: root });
     expect(dirsOf(s1)).toEqual([]);
 
     // External write (another process, an editor, `kimi` in a second CLI).
-    await mkdir(join(root, '.kimi-code'), { recursive: true });
+    await mkdir(join(root, ".kimi-code"), { recursive: true });
     const writeLocalToml = () =>
-      writeFile(join(root, '.kimi-code', 'local.toml'), `[workspace]\nadditional_dir = ["${extra}"]\n`);
+      writeFile(
+        join(root, ".kimi-code", "local.toml"),
+        `[workspace]\nadditional_dir = ["${extra}"]\n`,
+      );
     await writeLocalToml();
 
     // The chokidar watcher ignores files it finds during its initial scan
@@ -483,20 +503,22 @@ describe('workspace add-dir (handler chain)', () => {
     const deadline = Date.now() + 10_000;
     while (!dirsOf(s1).includes(extra)) {
       if (Date.now() > deadline) {
-        throw new Error('timed out waiting for watch-driven local.toml reload');
+        throw new Error("timed out waiting for watch-driven local.toml reload");
       }
       await writeLocalToml();
       await new Promise((resolve) => setTimeout(resolve, 400));
     }
   }, 15_000);
 
-  it('registers the additional-directory sets into the workspace state container', async () => {
-    const homeDir = await makeRoot('kimi-add-dir-home-');
+  it("registers the additional-directory sets into the workspace state container", async () => {
+    const homeDir = await makeRoot("kimi-add-dir-home-");
     const root = await makeProjectRoot();
-    const persisted = await makeRoot('kimi-add-dir-persisted-');
-    const ephemeral = await makeRoot('kimi-add-dir-ephemeral-');
+    const persisted = await makeRoot("kimi-add-dir-persisted-");
+    const ephemeral = await makeRoot("kimi-add-dir-ephemeral-");
     const host = buildHost(homeDir);
-    const handler = await host.app.accessor.get(IWorkspaceLifecycleService).handlerFor({ root });
+    const handler = await host.app.accessor
+      .get(IWorkspaceLifecycleService)
+      .handlerFor({ root });
     const dirs = handler.accessor.get(IWorkspaceDirs);
     const states = handler.accessor.get(IWorkspaceStateService);
 
@@ -512,19 +534,25 @@ describe('workspace add-dir (handler chain)', () => {
     expect(states.get(workspaceDirsEphemeralDirsKey)).toEqual([ephemeral]);
   });
 
-  it('unions caller additionalDirs from create options into the shared set', async () => {
-    const homeDir = await makeRoot('kimi-add-dir-home-');
+  it("unions caller additionalDirs from create options into the shared set", async () => {
+    const homeDir = await makeRoot("kimi-add-dir-home-");
     const root = await makeProjectRoot();
-    const extra = await makeRoot('kimi-add-dir-extra-');
+    const extra = await makeRoot("kimi-add-dir-extra-");
     const host = buildHost(homeDir);
     const { service } = await handlerFor(host, root);
 
-    const s1 = await service.create({ sessionId: 's1', workDir: root, additionalDirs: [extra] });
+    const s1 = await service.create({
+      sessionId: "s1",
+      workDir: root,
+      additionalDirs: [extra],
+    });
     expect(dirsOf(s1)).toEqual([extra]);
     // Caller dirs join the handler-shared set: a session created WITHOUT the
     // option sees them too, and nothing was persisted.
-    const s2 = await service.create({ sessionId: 's2', workDir: root });
+    const s2 = await service.create({ sessionId: "s2", workDir: root });
     expect(dirsOf(s2)).toEqual([extra]);
-    await expect(readFile(join(root, '.kimi-code', 'local.toml'), 'utf8')).rejects.toThrow();
+    await expect(
+      readFile(join(root, ".kimi-code", "local.toml"), "utf8"),
+    ).rejects.toThrow();
   });
 });

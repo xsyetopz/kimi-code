@@ -1,9 +1,9 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from "vitest";
 
-import type { Agent } from '../../../src/agent';
-import type { PermissionMode } from '../../../src/agent/permission';
-import { EnterPlanModeTool } from '../../../src/tools/builtin/planning/enter-plan-mode';
-import { executeTool } from '../fixtures/execute-tool';
+import type { Agent } from "../../../src/agent";
+import type { PermissionMode } from "../../../src/agent/permission";
+import { EnterPlanModeTool } from "../../../src/tools/builtin/planning/enter-plan-mode";
+import { executeTool } from "../fixtures/execute-tool";
 
 function makeAgent(mode: PermissionMode): {
   readonly agent: Agent;
@@ -11,7 +11,7 @@ function makeAgent(mode: PermissionMode): {
   readonly telemetryTrack: ReturnType<typeof vi.fn>;
 } {
   let active = false;
-  const requestApproval = vi.fn(async () => ({ decision: 'approved' }));
+  const requestApproval = vi.fn(async () => ({ decision: "approved" }));
   const telemetryTrack = vi.fn();
   const agent = {
     planMode: {
@@ -19,7 +19,7 @@ function makeAgent(mode: PermissionMode): {
         return active;
       },
       get planFilePath() {
-        return '/tmp/kimi-plan.md';
+        return "/tmp/kimi-plan.md";
       },
       enter: vi.fn(async () => {
         active = true;
@@ -32,14 +32,14 @@ function makeAgent(mode: PermissionMode): {
   return { agent, requestApproval, telemetryTrack };
 }
 
-describe('EnterPlanMode telemetry', () => {
-  it.each(['manual', 'auto', 'yolo'] satisfies PermissionMode[])(
-    'tracks direct entry as auto_approved in %s mode',
+describe("EnterPlanMode telemetry", () => {
+  it.each(["manual", "auto", "yolo"] satisfies PermissionMode[])(
+    "tracks direct entry as auto_approved in %s mode",
     async (mode) => {
       const { agent, requestApproval, telemetryTrack } = makeAgent(mode);
 
       const result = await executeTool(new EnterPlanModeTool(agent), {
-        turnId: '0',
+        turnId: "0",
         toolCallId: `call_${mode}`,
         args: {},
         signal: new AbortController().signal,
@@ -47,8 +47,8 @@ describe('EnterPlanMode telemetry', () => {
 
       expect(result.isError).toBeFalsy();
       expect(requestApproval).not.toHaveBeenCalled();
-      expect(telemetryTrack).toHaveBeenCalledWith('plan_enter_resolved', {
-        outcome: 'auto_approved',
+      expect(telemetryTrack).toHaveBeenCalledWith("plan_enter_resolved", {
+        outcome: "auto_approved",
       });
     },
   );

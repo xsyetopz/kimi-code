@@ -1,15 +1,18 @@
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
-import { RequestError } from '@agentclientprotocol/sdk';
-import { afterEach, describe, expect, it } from 'vitest';
+import { RequestError } from "@agentclientprotocol/sdk";
+import { afterEach, describe, expect, it } from "vitest";
 
-import { AcpHostFileSystem } from '../src/acp-fs/acpFsService';
-import type { IAcpConnection } from '../src/acp-fs/acpConnection';
+import { AcpHostFileSystem } from "../src/acp-fs/acpFsService";
+import type { IAcpConnection } from "../src/acp-fs/acpConnection";
 
 interface FakeClient {
-  readTextFile: (params: { sessionId: string; path: string }) => Promise<{ content: string }>;
+  readTextFile: (params: {
+    sessionId: string;
+    path: string;
+  }) => Promise<{ content: string }>;
   writeTextFile: (params: {
     sessionId: string;
     path: string;
@@ -19,7 +22,10 @@ interface FakeClient {
 
 function makeConnection(
   client: FakeClient,
-  capabilities: { read?: boolean; write?: boolean } = { read: true, write: true },
+  capabilities: { read?: boolean; write?: boolean } = {
+    read: true,
+    write: true,
+  },
 ): IAcpConnection {
   return {
     _serviceBrand: undefined,
@@ -41,12 +47,12 @@ function makeFileSystem(
   capabilities?: { read?: boolean; write?: boolean },
 ): AcpHostFileSystem {
   return new AcpHostFileSystem(
-    { sessionId: 'session-test' } as never,
+    { sessionId: "session-test" } as never,
     makeConnection(client, capabilities),
   );
 }
 
-describe('AcpHostFileSystem', () => {
+describe("AcpHostFileSystem", () => {
   let tempDir: string | undefined;
 
   afterEach(async () => {
@@ -56,39 +62,39 @@ describe('AcpHostFileSystem', () => {
     }
   });
 
-  it('bridges append through client read-modify-write', async () => {
+  it("bridges append through client read-modify-write", async () => {
     const writes: string[] = [];
     const fs = makeFileSystem({
-      readTextFile: async () => ({ content: 'old:' }),
+      readTextFile: async () => ({ content: "old:" }),
       writeTextFile: async ({ content }) => {
         writes.push(content);
       },
     });
 
-    await fs.appendText('/buffer.txt', 'new');
+    await fs.appendText("/buffer.txt", "new");
 
-    expect(writes).toEqual(['old:new']);
+    expect(writes).toEqual(["old:new"]);
   });
 
-  it('creates a client file when append read reports resource not found', async () => {
+  it("creates a client file when append read reports resource not found", async () => {
     const writes: string[] = [];
     const fs = makeFileSystem({
       readTextFile: async () => {
-        throw RequestError.resourceNotFound('/buffer.txt');
+        throw RequestError.resourceNotFound("/buffer.txt");
       },
       writeTextFile: async ({ content }) => {
         writes.push(content);
       },
     });
 
-    await fs.appendText('/buffer.txt', 'fresh');
+    await fs.appendText("/buffer.txt", "fresh");
 
-    expect(writes).toEqual(['fresh']);
+    expect(writes).toEqual(["fresh"]);
   });
 
-  it('does not write after a non-not-found client read failure', async () => {
+  it("does not write after a non-not-found client read failure", async () => {
     const writes: string[] = [];
-    const failure = new Error('transport failed');
+    const failure = new Error("transport failed");
     const fs = makeFileSystem({
       readTextFile: async () => {
         throw failure;
@@ -98,31 +104,31 @@ describe('AcpHostFileSystem', () => {
       },
     });
 
-    await expect(fs.appendText('/buffer.txt', 'new')).rejects.toBe(failure);
+    await expect(fs.appendText("/buffer.txt", "new")).rejects.toBe(failure);
     expect(writes).toEqual([]);
   });
 
-  it('bridges valid UTF-8 writeBytes through client text write', async () => {
+  it("bridges valid UTF-8 writeBytes through client text write", async () => {
     const writes: string[] = [];
     const fs = makeFileSystem({
-      readTextFile: async () => ({ content: '' }),
+      readTextFile: async () => ({ content: "" }),
       writeTextFile: async ({ content }) => {
         writes.push(content);
       },
     });
 
-    await fs.writeBytes('/buffer.txt', new TextEncoder().encode('你好'));
+    await fs.writeBytes("/buffer.txt", new TextEncoder().encode("你好"));
 
-    expect(writes).toEqual(['你好']);
+    expect(writes).toEqual(["你好"]);
   });
 
-  it('keeps invalid UTF-8 writeBytes on the local binary backend', async () => {
-    tempDir = await mkdtemp(join(tmpdir(), 'acp-fs-'));
-    const path = join(tempDir, 'binary.dat');
+  it("keeps invalid UTF-8 writeBytes on the local binary backend", async () => {
+    tempDir = await mkdtemp(join(tmpdir(), "acp-fs-"));
+    const path = join(tempDir, "binary.dat");
     const fs = makeFileSystem({
-      readTextFile: async () => ({ content: '' }),
+      readTextFile: async () => ({ content: "" }),
       writeTextFile: async () => {
-        throw new Error('must not use client text write');
+        throw new Error("must not use client text write");
       },
     });
 
@@ -131,22 +137,22 @@ describe('AcpHostFileSystem', () => {
     expect(Array.from(await readFile(path))).toEqual([0xff, 0xfe]);
   });
 
-  it('falls back to the local filesystem when text capabilities are unavailable', async () => {
-    tempDir = await mkdtemp(join(tmpdir(), 'acp-fs-'));
-    const path = join(tempDir, 'buffer.txt');
-    await writeFile(path, 'old:');
+  it("falls back to the local filesystem when text capabilities are unavailable", async () => {
+    tempDir = await mkdtemp(join(tmpdir(), "acp-fs-"));
+    const path = join(tempDir, "buffer.txt");
+    await writeFile(path, "old:");
     const fs = makeFileSystem(
       {
-        readTextFile: async () => ({ content: 'client content' }),
+        readTextFile: async () => ({ content: "client content" }),
         writeTextFile: async () => {
-          throw new Error('must not use client text write');
+          throw new Error("must not use client text write");
         },
       },
       { read: false, write: false },
     );
 
-    await fs.appendText(path, 'new');
+    await fs.appendText(path, "new");
 
-    expect(await readFile(path, 'utf8')).toBe('old:new');
+    expect(await readFile(path, "utf8")).toBe("old:new");
   });
 });

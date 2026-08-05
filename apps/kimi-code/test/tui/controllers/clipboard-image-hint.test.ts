@@ -1,15 +1,18 @@
-import type { TUI } from '@moonshot-ai/pi-tui';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { TUI } from "@moonshot-ai/pi-tui";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   ClipboardImageHintController,
   type ClipboardImageHintHost,
-} from '#/tui/controllers/clipboard-image-hint';
-import type { FooterComponent } from '#/tui/components/chrome/footer';
-import { TERMINAL_FOCUS_IN, TERMINAL_FOCUS_OUT } from '#/tui/utils/terminal-focus';
-import { clipboardHasImage } from '#/utils/clipboard/clipboard-has-image';
+} from "#/tui/controllers/clipboard-image-hint";
+import type { FooterComponent } from "#/tui/components/chrome/footer";
+import {
+  TERMINAL_FOCUS_IN,
+  TERMINAL_FOCUS_OUT,
+} from "#/tui/utils/terminal-focus";
+import { clipboardHasImage } from "#/utils/clipboard/clipboard-has-image";
 
-vi.mock('#/utils/clipboard/clipboard-has-image', () => ({
+vi.mock("#/utils/clipboard/clipboard-has-image", () => ({
   clipboardHasImage: vi.fn(async () => false),
 }));
 
@@ -35,7 +38,9 @@ function createFakeFooter(): FooterComponent {
 }
 
 function createFakeTUI(): FakeTUI {
-  const listeners = new Set<(data: string) => { consume?: boolean; data?: string } | undefined>();
+  const listeners = new Set<
+    (data: string) => { consume?: boolean; data?: string } | undefined
+  >();
   return {
     addInputListener: vi.fn((listener) => {
       listeners.add(listener);
@@ -53,7 +58,9 @@ function createFakeTUI(): FakeTUI {
 }
 
 function createFakeTUIWithConsumingFocusTracker(): FakeTUI {
-  const listeners = new Set<(data: string) => { consume?: boolean; data?: string } | undefined>();
+  const listeners = new Set<
+    (data: string) => { consume?: boolean; data?: string } | undefined
+  >();
   return {
     addInputListener: vi.fn((listener) => {
       listeners.add(listener);
@@ -87,14 +94,16 @@ async function focusReturnAndFlush(ui: FakeTUI): Promise<void> {
   await vi.advanceTimersByTimeAsync(1000);
 }
 
-describe('ClipboardImageHintController', () => {
+describe("ClipboardImageHintController", () => {
   let platformSpy: ReturnType<typeof vi.spyOn> | undefined;
 
   beforeEach(() => {
     vi.useFakeTimers();
     vi.clearAllMocks();
     vi.mocked(clipboardHasImage).mockResolvedValue(false);
-    platformSpy = vi.spyOn(process, 'platform', 'get').mockReturnValue('darwin');
+    platformSpy = vi
+      .spyOn(process, "platform", "get")
+      .mockReturnValue("darwin");
   });
 
   afterEach(() => {
@@ -102,7 +111,7 @@ describe('ClipboardImageHintController', () => {
     vi.useRealTimers();
   });
 
-  it('does not show a hint for an image already in the clipboard at startup', async () => {
+  it("does not show a hint for an image already in the clipboard at startup", async () => {
     vi.mocked(clipboardHasImage).mockResolvedValue(true);
 
     const footer = createFakeFooter();
@@ -129,7 +138,7 @@ describe('ClipboardImageHintController', () => {
     controller.stop();
   });
 
-  it('shows hint when a new image is copied during the session', async () => {
+  it("shows hint when a new image is copied during the session", async () => {
     const footer = createFakeFooter();
     const ui = createFakeTUI();
     const host: ClipboardImageHintHost = {
@@ -153,7 +162,7 @@ describe('ClipboardImageHintController', () => {
     controller.stop();
   });
 
-  it('shows hint for the first image copied after startup when startup baseline was empty', async () => {
+  it("shows hint for the first image copied after startup when startup baseline was empty", async () => {
     const footer = createFakeFooter();
     const ui = createFakeTUI();
     const host: ClipboardImageHintHost = {
@@ -179,7 +188,7 @@ describe('ClipboardImageHintController', () => {
     controller.stop();
   });
 
-  it('does not show hint when model does not support images', async () => {
+  it("does not show hint when model does not support images", async () => {
     vi.mocked(clipboardHasImage).mockResolvedValue(true);
 
     const footer = createFakeFooter();
@@ -202,7 +211,7 @@ describe('ClipboardImageHintController', () => {
     controller.stop();
   });
 
-  it('does not repeat the hint for the same lingering image', async () => {
+  it("does not repeat the hint for the same lingering image", async () => {
     const footer = createFakeFooter();
     const ui = createFakeTUI();
     const host: ClipboardImageHintHost = {
@@ -231,7 +240,7 @@ describe('ClipboardImageHintController', () => {
     controller.stop();
   });
 
-  it('shows the hint again for a new image after the clipboard is cleared', async () => {
+  it("shows the hint again for a new image after the clipboard is cleared", async () => {
     const footer = createFakeFooter();
     const ui = createFakeTUI();
     const host: ClipboardImageHintHost = {
@@ -264,7 +273,7 @@ describe('ClipboardImageHintController', () => {
     controller.stop();
   });
 
-  it('clears the hint after the display duration', async () => {
+  it("clears the hint after the display duration", async () => {
     const footer = createFakeFooter();
     const ui = createFakeTUI();
     const host: ClipboardImageHintHost = {
@@ -288,7 +297,7 @@ describe('ClipboardImageHintController', () => {
     controller.stop();
   });
 
-  it('cancels a pending debounced check when focus is lost', async () => {
+  it("cancels a pending debounced check when focus is lost", async () => {
     vi.mocked(clipboardHasImage).mockResolvedValue(true);
 
     const footer = createFakeFooter();
@@ -316,7 +325,7 @@ describe('ClipboardImageHintController', () => {
     controller.stop();
   });
 
-  it('handles rapid focus churn without duplicate checks or hints', async () => {
+  it("handles rapid focus churn without duplicate checks or hints", async () => {
     const footer = createFakeFooter();
     const ui = createFakeTUI();
     const host: ClipboardImageHintHost = {
@@ -346,9 +355,14 @@ describe('ClipboardImageHintController', () => {
     controller.stop();
   });
 
-  it('ignores stale clipboard read result when focus is lost', async () => {
+  it("ignores stale clipboard read result when focus is lost", async () => {
     vi.mocked(clipboardHasImage).mockImplementation(
-      () => new Promise((resolve) => setTimeout(() => { resolve(true); }, 1500)),
+      () =>
+        new Promise((resolve) =>
+          setTimeout(() => {
+            resolve(true);
+          }, 1500),
+        ),
     );
 
     const footer = createFakeFooter();
@@ -375,12 +389,13 @@ describe('ClipboardImageHintController', () => {
     controller.stop();
   });
 
-  it('ignores a pending clipboard read result after stop', async () => {
+  it("ignores a pending clipboard read result after stop", async () => {
     let resolveDeferred: (value: boolean) => void = () => {};
     vi.mocked(clipboardHasImage).mockImplementation(
-      () => new Promise<boolean>((resolve) => {
-        resolveDeferred = resolve;
-      }),
+      () =>
+        new Promise<boolean>((resolve) => {
+          resolveDeferred = resolve;
+        }),
     );
 
     const footer = createFakeFooter();
@@ -406,7 +421,7 @@ describe('ClipboardImageHintController', () => {
     expect(footer.getTransientHint()).toBeNull();
   });
 
-  it('clears a displayed hint when stopped', async () => {
+  it("clears a displayed hint when stopped", async () => {
     const footer = createFakeFooter();
     const ui = createFakeTUI();
     const host: ClipboardImageHintHost = {
@@ -429,7 +444,7 @@ describe('ClipboardImageHintController', () => {
     expect(host.requestRender).toHaveBeenCalled();
   });
 
-  it('does not clear a hint set by another caller when stopped', async () => {
+  it("does not clear a hint set by another caller when stopped", async () => {
     vi.mocked(clipboardHasImage).mockResolvedValue(true);
 
     const footer = createFakeFooter();
@@ -448,7 +463,7 @@ describe('ClipboardImageHintController', () => {
     // First observation only establishes the baseline and sets no hint.
     ui.emitInput(TERMINAL_FOCUS_IN);
     await vi.advanceTimersByTimeAsync(1000);
-    const otherHint = 'Other hint';
+    const otherHint = "Other hint";
     footer.setTransientHint(otherHint);
 
     const requestRenderCalls = requestRender.mock.calls.length;
@@ -457,7 +472,7 @@ describe('ClipboardImageHintController', () => {
     expect(host.requestRender).toHaveBeenCalledTimes(requestRenderCalls);
   });
 
-  it('uses only the latest clipboard read result after focus churn', async () => {
+  it("uses only the latest clipboard read result after focus churn", async () => {
     const footer = createFakeFooter();
     const ui = createFakeTUI();
     const host: ClipboardImageHintHost = {
@@ -473,7 +488,10 @@ describe('ClipboardImageHintController', () => {
     // Establish an empty baseline with a normal resolved read first.
     await primeEmptyBaseline(ui);
 
-    const deferreds: Array<{ resolve: (value: boolean) => void; promise: Promise<boolean> }> = [];
+    const deferreds: Array<{
+      resolve: (value: boolean) => void;
+      promise: Promise<boolean>;
+    }> = [];
     vi.mocked(clipboardHasImage).mockImplementation(() => {
       let resolve: (value: boolean) => void = () => {};
       const promise = new Promise<boolean>((res) => {
@@ -504,7 +522,7 @@ describe('ClipboardImageHintController', () => {
     controller.stop();
   });
 
-  it('keeps the existing auto-clear timer when a re-check exits early', async () => {
+  it("keeps the existing auto-clear timer when a re-check exits early", async () => {
     const footer = createFakeFooter();
     const ui = createFakeTUI();
     const host: ClipboardImageHintHost = {
@@ -537,7 +555,7 @@ describe('ClipboardImageHintController', () => {
     controller.stop();
   });
 
-  it('does not clear a matching hint owned by another caller after auto-clear', async () => {
+  it("does not clear a matching hint owned by another caller after auto-clear", async () => {
     const footer = createFakeFooter();
     const ui = createFakeTUI();
     const host: ClipboardImageHintHost = {
@@ -566,7 +584,7 @@ describe('ClipboardImageHintController', () => {
     expect(footer.getTransientHint()).toBe(hintText);
   });
 
-  it('re-establishes the baseline after stop and restart', async () => {
+  it("re-establishes the baseline after stop and restart", async () => {
     vi.mocked(clipboardHasImage).mockResolvedValue(true);
 
     const footer = createFakeFooter();
@@ -606,7 +624,7 @@ describe('ClipboardImageHintController', () => {
     controller.stop();
   });
 
-  it('observes focus events even when another listener consumes them', async () => {
+  it("observes focus events even when another listener consumes them", async () => {
     const footer = createFakeFooter();
     const ui = createFakeTUIWithConsumingFocusTracker();
     const host: ClipboardImageHintHost = {
@@ -639,15 +657,19 @@ describe('ClipboardImageHintController', () => {
     ui.emitInput(TERMINAL_FOCUS_IN);
     await vi.advanceTimersByTimeAsync(1000);
 
-    expect(consumedEvents).toEqual([TERMINAL_FOCUS_IN, TERMINAL_FOCUS_OUT, TERMINAL_FOCUS_IN]);
+    expect(consumedEvents).toEqual([
+      TERMINAL_FOCUS_IN,
+      TERMINAL_FOCUS_OUT,
+      TERMINAL_FOCUS_IN,
+    ]);
     expect(footer.getTransientHint()).toMatch(/Image in clipboard/);
 
     controller.stop();
   });
 
-  it('shows Alt+V shortcut on Windows', async () => {
+  it("shows Alt+V shortcut on Windows", async () => {
     platformSpy?.mockRestore();
-    vi.spyOn(process, 'platform', 'get').mockReturnValue('win32');
+    vi.spyOn(process, "platform", "get").mockReturnValue("win32");
 
     const footer = createFakeFooter();
     const ui = createFakeTUI();

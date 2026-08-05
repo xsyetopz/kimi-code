@@ -1,37 +1,37 @@
-import type { ContentPart } from '@moonshot-ai/kosong';
+import type { ContentPart } from "@moonshot-ai/kosong";
 
-import type { TelemetryClient } from '../../telemetry';
-import type { LLMRequestTrace } from '../../loop/llm';
-import { parseToolCallArguments } from '../../loop/tool-args-parse';
-import type { ExecutableToolResult } from '../../loop/types';
+import type { TelemetryClient } from "../../telemetry";
+import type { LLMRequestTrace } from "../../loop/llm";
+import { parseToolCallArguments } from "../../loop/tool-args-parse";
+import type { ExecutableToolResult } from "../../loop/types";
 
-import { canonicalTelemetryArgs } from './canonical-args';
+import { canonicalTelemetryArgs } from "./canonical-args";
 
 const REMINDER_TEXT_1 =
-  '\n\n<system-reminder>\n' +
-  'The same tool call has been repeated several times in a row. ' +
-  'Before making your next call, write one sentence stating what new information you expect it to produce. ' +
-  'Then act on that sentence: if it names something this result does not already give you, choose the action that best provides it; otherwise, continue with the evidence you already have.' +
-  '\n</system-reminder>';
+  "\n\n<system-reminder>\n" +
+  "The same tool call has been repeated several times in a row. " +
+  "Before making your next call, write one sentence stating what new information you expect it to produce. " +
+  "Then act on that sentence: if it names something this result does not already give you, choose the action that best provides it; otherwise, continue with the evidence you already have." +
+  "\n</system-reminder>";
 
 function makeReminderText2(repeatCount: number): string {
   return (
-    '\n\n<system-reminder>\n' +
+    "\n\n<system-reminder>\n" +
     `The same tool call has now been issued ${String(repeatCount)} times in a row. ` +
-    'Choose exactly one of the following and state your choice before acting:\n' +
-    '(1) Falsification check: run the cheapest test that could conclusively disprove your current approach, if such a test exists.\n' +
-    '(2) Missing input: tell the user precisely what information or decision you need to proceed, and ask for it.\n' +
-    '(3) Conclude: deliver your best result based on the evidence already gathered, listing anything that remains uncertain.' +
-    '\n</system-reminder>'
+    "Choose exactly one of the following and state your choice before acting:\n" +
+    "(1) Falsification check: run the cheapest test that could conclusively disprove your current approach, if such a test exists.\n" +
+    "(2) Missing input: tell the user precisely what information or decision you need to proceed, and ask for it.\n" +
+    "(3) Conclude: deliver your best result based on the evidence already gathered, listing anything that remains uncertain." +
+    "\n</system-reminder>"
   );
 }
 
 const REMINDER_TEXT_3 =
-  '\n\n<system-reminder>\n' +
-  'Write your final response now, without any further tool calls. ' +
-  'Cover: the current blocker, each approach you have tried and what it established, and the specific information or decision you need from the user to unblock progress. ' +
-  'Text only.' +
-  '\n</system-reminder>';
+  "\n\n<system-reminder>\n" +
+  "Write your final response now, without any further tool calls. " +
+  "Cover: the current blocker, each approach you have tried and what it established, and the specific information or decision you need from the user to unblock progress. " +
+  "Text only." +
+  "\n</system-reminder>";
 
 const REPEAT_REMINDER_1_START = 3;
 const REPEAT_REMINDER_2_START = 5;
@@ -55,18 +55,21 @@ function makeKey(toolName: string, args: unknown): string {
   return `${toolName} ${canonicalTelemetryArgs(args)}`;
 }
 
-function appendReminder(result: ExecutableToolResult, reminderText: string): ExecutableToolResult {
+function appendReminder(
+  result: ExecutableToolResult,
+  reminderText: string,
+): ExecutableToolResult {
   const output = result.output;
   let newOutput: string | ContentPart[];
-  if (typeof output === 'string') {
+  if (typeof output === "string") {
     newOutput = output + reminderText;
   } else {
     const arr: ContentPart[] = [...output];
     const last = arr.at(-1);
-    if (last !== undefined && last.type === 'text') {
-      arr[arr.length - 1] = { type: 'text', text: last.text + reminderText };
+    if (last !== undefined && last.type === "text") {
+      arr[arr.length - 1] = { type: "text", text: last.text + reminderText };
     } else {
-      arr.push({ type: 'text', text: reminderText });
+      arr.push({ type: "text", text: reminderText });
     }
     newOutput = arr;
   }
@@ -92,7 +95,7 @@ function forceStopResult(
  * It must be a non-error result so `toolResultStopsTurn` in tool-call.ts does
  * not short-circuit the batch on the dup's behalf.
  */
-const DEDUP_PLACEHOLDER_RESULT: ExecutableToolResult = { output: '' };
+const DEDUP_PLACEHOLDER_RESULT: ExecutableToolResult = { output: "" };
 
 /**
  * Detects and suppresses repetitive tool calls within a single turn.
@@ -143,7 +146,7 @@ export class ToolCallDeduplicator {
     this.requestTrace = trace;
     for (const deferred of this.stepDeferreds.values()) {
       deferred.resolve({
-        output: 'Tool call deduplicated but original result was lost',
+        output: "Tool call deduplicated but original result was lost",
         isError: true,
       });
     }
@@ -175,7 +178,11 @@ export class ToolCallDeduplicator {
    * This method is intentionally synchronous to avoid deadlocking the prepare
    * loop on a deferred that only resolves in the finalize phase.
    */
-  checkSameStep(toolCallId: string, toolName: string, args: unknown): ExecutableToolResult | null {
+  checkSameStep(
+    toolCallId: string,
+    toolName: string,
+    args: unknown,
+  ): ExecutableToolResult | null {
     const key = makeKey(toolName, args);
     const index = this.stepCalls.length;
     this.stepCalls.push(key);
@@ -262,23 +269,23 @@ export class ToolCallDeduplicator {
     }
 
     let finalResult = result;
-    let action: 'none' | 'r1' | 'r2' | 'r3' | 'stop' = 'none';
+    let action: "none" | "r1" | "r2" | "r3" | "stop" = "none";
     if (streak >= REPEAT_FORCE_STOP_STREAK) {
       finalResult = forceStopResult(result, REMINDER_TEXT_3);
-      action = 'stop';
+      action = "stop";
     } else if (streak >= REPEAT_REMINDER_3_START) {
       finalResult = appendReminder(result, REMINDER_TEXT_3);
-      action = 'r3';
+      action = "r3";
     } else if (streak >= REPEAT_REMINDER_2_START) {
       finalResult = appendReminder(result, makeReminderText2(streak));
-      action = 'r2';
+      action = "r2";
     } else if (streak >= REPEAT_REMINDER_1_START) {
       finalResult = appendReminder(result, REMINDER_TEXT_1);
-      action = 'r1';
+      action = "r1";
     }
 
     if (streak >= 2) {
-      this.telemetry?.track('tool_call_repeat', {
+      this.telemetry?.track("tool_call_repeat", {
         tool_name: toolName,
         repeat_count: streak,
         action,

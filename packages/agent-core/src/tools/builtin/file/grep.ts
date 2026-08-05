@@ -17,22 +17,25 @@
  *     backend path class.
  */
 
-import type { Kaos } from '@moonshot-ai/kaos';
-import { normalize } from 'pathe';
-import { z } from 'zod';
+import type { Kaos } from "@moonshot-ai/kaos";
+import { normalize } from "pathe";
+import { z } from "zod";
 
-import type { BuiltinTool } from '../../../agent/tool';
-import { isAbortError } from '../../../loop/errors';
-import { ToolAccesses } from '../../../loop/tool-access';
-import type { ExecutableToolResult, ToolExecution } from '../../../loop/types';
-import { noopTelemetryClient, type TelemetryClient } from '../../../telemetry';
-import { resolvePathAccessPath } from '../../policies/path-access';
-import type { PathClass } from '../../policies/path-access';
-import { isSensitiveFile } from '../../policies/sensitive';
-import { toInputJsonSchema } from '../../support/input-schema';
-import { ensureRgPath, rgUnavailableMessage } from '../../support/rg-locator';
-import { literalRulePattern, matchesGlobRuleSubject } from '../../support/rule-match';
-import { ToolResultBuilder } from '../../support/result-builder';
+import type { BuiltinTool } from "../../../agent/tool";
+import { isAbortError } from "../../../loop/errors";
+import { ToolAccesses } from "../../../loop/tool-access";
+import type { ExecutableToolResult, ToolExecution } from "../../../loop/types";
+import { noopTelemetryClient, type TelemetryClient } from "../../../telemetry";
+import { resolvePathAccessPath } from "../../policies/path-access";
+import type { PathClass } from "../../policies/path-access";
+import { isSensitiveFile } from "../../policies/sensitive";
+import { toInputJsonSchema } from "../../support/input-schema";
+import { ensureRgPath, rgUnavailableMessage } from "../../support/rg-locator";
+import {
+  literalRulePattern,
+  matchesGlobRuleSubject,
+} from "../../support/rule-match";
+import { ToolResultBuilder } from "../../support/result-builder";
 import {
   DEFAULT_TIMEOUT_MS,
   MAX_OUTPUT_BYTES,
@@ -40,17 +43,17 @@ import {
   VCS_DIRECTORIES_TO_EXCLUDE,
   runRipgrepOnce,
   shouldRetryRipgrepEagain,
-} from '../../support/run-rg';
-import type { WorkspaceConfig } from '../../support/workspace';
-import GREP_DESCRIPTION from './grep.md?raw';
+} from "../../support/run-rg";
+import type { WorkspaceConfig } from "../../support/workspace";
+import GREP_DESCRIPTION from "./grep.md?raw";
 
 export const GrepInputSchema = z.object({
-  pattern: z.string().describe('Regular expression to search for.'),
+  pattern: z.string().describe("Regular expression to search for."),
   path: z
     .string()
     .optional()
     .describe(
-      'File or directory to search. Accepts an absolute path, or a path relative to the current working directory. Omit to search the current working directory. Use Read instead when you already know a concrete file path and need its contents.',
+      "File or directory to search. Accepts an absolute path, or a path relative to the current working directory. Omit to search the current working directory. Use Read instead when you already know a concrete file path and need its contents.",
     ),
   glob: z
     .string()
@@ -62,44 +65,47 @@ export const GrepInputSchema = z.object({
     .string()
     .optional()
     .describe(
-      'Optional ripgrep file type filter, such as ts or py. Prefer this over `glob` when filtering by language or file kind: it is more efficient and less error-prone than an equivalent glob pattern.',
+      "Optional ripgrep file type filter, such as ts or py. Prefer this over `glob` when filtering by language or file kind: it is more efficient and less error-prone than an equivalent glob pattern.",
     ),
   output_mode: z
-    .enum(['content', 'files_with_matches', 'count_matches'])
+    .enum(["content", "files_with_matches", "count_matches"])
     .optional()
     .describe(
-      'Shape of the result. `content` shows matching lines (honors `-A`, `-B`, `-C`, `-n`, and `head_limit`); `files_with_matches` shows only the paths of files that contain a match, most-recently-modified first (honors `head_limit`); `count_matches` shows per-file match counts as `path:count` lines, preceded by an aggregate total line. Defaults to `files_with_matches`.',
+      "Shape of the result. `content` shows matching lines (honors `-A`, `-B`, `-C`, `-n`, and `head_limit`); `files_with_matches` shows only the paths of files that contain a match, most-recently-modified first (honors `head_limit`); `count_matches` shows per-file match counts as `path:count` lines, preceded by an aggregate total line. Defaults to `files_with_matches`.",
     ),
-  '-i': z.boolean().optional().describe('Perform a case-insensitive search. Defaults to false.'),
-  '-n': z
+  "-i": z
+    .boolean()
+    .optional()
+    .describe("Perform a case-insensitive search. Defaults to false."),
+  "-n": z
     .boolean()
     .optional()
     .describe(
-      'Prefix each matching line with its line number. Applies only when `output_mode` is `content`. Defaults to true.',
+      "Prefix each matching line with its line number. Applies only when `output_mode` is `content`. Defaults to true.",
     ),
-  '-A': z
+  "-A": z
     .number()
     .int()
     .nonnegative()
     .optional()
     .describe(
-      'Number of lines to show after each match. Applies only when `output_mode` is `content`.',
+      "Number of lines to show after each match. Applies only when `output_mode` is `content`.",
     ),
-  '-B': z
+  "-B": z
     .number()
     .int()
     .nonnegative()
     .optional()
     .describe(
-      'Number of lines to show before each match. Applies only when `output_mode` is `content`.',
+      "Number of lines to show before each match. Applies only when `output_mode` is `content`.",
     ),
-  '-C': z
+  "-C": z
     .number()
     .int()
     .nonnegative()
     .optional()
     .describe(
-      'Number of lines to show before and after each match. Applies only when `output_mode` is `content`; takes precedence over `-A` and `-B`.',
+      "Number of lines to show before and after each match. Applies only when `output_mode` is `content`; takes precedence over `-A` and `-B`.",
     ),
   head_limit: z
     .number()
@@ -107,7 +113,7 @@ export const GrepInputSchema = z.object({
     .nonnegative()
     .optional()
     .describe(
-      'Limit output to the first N lines/entries after offset. Defaults to 250. Pass 0 for unlimited.',
+      "Limit output to the first N lines/entries after offset. Defaults to 250. Pass 0 for unlimited.",
     ),
   offset: z
     .number()
@@ -115,24 +121,24 @@ export const GrepInputSchema = z.object({
     .nonnegative()
     .optional()
     .describe(
-      'Number of leading lines/entries to skip before applying `head_limit`. Use it together with `head_limit` to page through large result sets. Defaults to 0.',
+      "Number of leading lines/entries to skip before applying `head_limit`. Use it together with `head_limit` to page through large result sets. Defaults to 0.",
     ),
   multiline: z
     .boolean()
     .optional()
     .describe(
-      'Enable multiline matching, where the pattern can span line boundaries and `.` also matches newlines. Defaults to false.',
+      "Enable multiline matching, where the pattern can span line boundaries and `.` also matches newlines. Defaults to false.",
     ),
   include_ignored: z
     .boolean()
     .optional()
     .describe(
-      'Also search files excluded by ignore files such as `.gitignore`, `.ignore`, and `.rgignore` (for example `node_modules` or build outputs). Sensitive files (such as `.env`) remain filtered out for safety. VCS metadata directories (`.git` and similar) are always skipped, even when this is true. Defaults to false.',
+      "Also search files excluded by ignore files such as `.gitignore`, `.ignore`, and `.rgignore` (for example `node_modules` or build outputs). Sensitive files (such as `.env`) remain filtered out for safety. VCS metadata directories (`.git` and similar) are always skipped, even when this is true. Defaults to false.",
     ),
 });
 
 export const GrepOutputSchema = z.object({
-  mode: z.enum(['content', 'files_with_matches', 'count_matches']),
+  mode: z.enum(["content", "files_with_matches", "count_matches"]),
   numFiles: z.number().int().nonnegative(),
   filenames: z.array(z.string()),
   content: z.string().optional(),
@@ -161,9 +167,10 @@ const MTIME_STAT_CONCURRENCY = 32;
 const CONTENT_LINE_RE = /^(.*?)([:-])(\d+)\2/;
 
 export class GrepTool implements BuiltinTool<GrepInput> {
-  readonly name = 'Grep' as const;
+  readonly name = "Grep" as const;
   readonly description = GREP_DESCRIPTION;
-  readonly parameters: Record<string, unknown> = toInputJsonSchema(GrepInputSchema);
+  readonly parameters: Record<string, unknown> =
+    toInputJsonSchema(GrepInputSchema);
   private readonly telemetry: TelemetryClient;
   constructor(
     private readonly kaos: Kaos,
@@ -179,8 +186,11 @@ export class GrepTool implements BuiltinTool<GrepInput> {
       path = resolvePathAccessPath(args.path, {
         kaos: this.kaos,
         workspace: this.workspace,
-        operation: 'search',
-        policy: { guardMode: 'absolute-outside-allowed', checkSensitive: false },
+        operation: "search",
+        policy: {
+          guardMode: "absolute-outside-allowed",
+          checkSensitive: false,
+        },
       });
     }
     const searchPaths = [path ?? this.workspace.workspaceDir];
@@ -188,7 +198,7 @@ export class GrepTool implements BuiltinTool<GrepInput> {
     return {
       accesses: ToolAccesses.searchTree(searchPaths[0]!),
       description: `Searching for '${args.pattern}' in ${searchPath}`,
-      display: { kind: 'file_io', operation: 'grep', path: searchPaths[0]! },
+      display: { kind: "file_io", operation: "grep", path: searchPaths[0]! },
       approvalRule: literalRulePattern(this.name, args.pattern),
       matchesRule: (ruleArgs) => matchesGlobRuleSubject(ruleArgs, args.pattern),
       execute: ({ signal }) => this.execution(args, signal, searchPaths),
@@ -201,7 +211,7 @@ export class GrepTool implements BuiltinTool<GrepInput> {
     searchPaths: string[],
   ): Promise<ExecutableToolResult> {
     if (signal.aborted) {
-      return { isError: true, output: 'Aborted before search started' };
+      return { isError: true, output: "Aborted before search started" };
     }
 
     const pathClass = this.kaos.pathClass();
@@ -209,17 +219,17 @@ export class GrepTool implements BuiltinTool<GrepInput> {
     try {
       const resolution = await ensureRgPath({ signal });
       rgPath = resolution.path;
-      if (resolution.source !== 'system-path') {
-        this.telemetry.track('grep_tool_rg_fallback', {
+      if (resolution.source !== "system-path") {
+        this.telemetry.track("grep_tool_rg_fallback", {
           source: resolution.source,
-          outcome: 'resolved',
+          outcome: "resolved",
         });
       }
     } catch (error) {
       if (isAbortError(error)) {
-        return { isError: true, output: 'Grep aborted' };
+        return { isError: true, output: "Grep aborted" };
       }
-      this.telemetry.track('grep_tool_rg_fallback', { outcome: 'failed' });
+      this.telemetry.track("grep_tool_rg_fallback", { outcome: "failed" });
       return { isError: true, output: rgUnavailableMessage(error) };
     }
 
@@ -227,20 +237,21 @@ export class GrepTool implements BuiltinTool<GrepInput> {
       this.kaos,
       buildRgArgs(rgPath, args, searchPaths),
       signal,
-      { abortedMessage: 'Grep aborted' },
+      { abortedMessage: "Grep aborted" },
     );
-    if (runResult.kind === 'tool-error') return runResult.result;
+    if (runResult.kind === "tool-error") return runResult.result;
     if (shouldRetryRipgrepEagain(runResult)) {
       runResult = await runRipgrepOnce(
         this.kaos,
         buildRgArgs(rgPath, args, searchPaths, true),
         signal,
-        { abortedMessage: 'Grep aborted' },
+        { abortedMessage: "Grep aborted" },
       );
-      if (runResult.kind === 'tool-error') return runResult.result;
+      if (runResult.kind === "tool-error") return runResult.result;
     }
 
-    const { exitCode, stderrText, bufferTruncated, stderrTruncated, timedOut } = runResult;
+    const { exitCode, stderrText, bufferTruncated, stderrTruncated, timedOut } =
+      runResult;
     let { stdoutText } = runResult;
 
     // rg exit codes: 0 = matches, 1 = no matches, 2 = error. Timeout kills
@@ -252,33 +263,38 @@ export class GrepTool implements BuiltinTool<GrepInput> {
       };
     }
 
-    const mode = args.output_mode ?? 'files_with_matches';
+    const mode = args.output_mode ?? "files_with_matches";
     if (bufferTruncated || timedOut) {
       stdoutText = omitIncompleteTrailingRecord(stdoutText, mode);
     }
-    if (timedOut && stdoutText.trim() === '') {
+    if (timedOut && stdoutText.trim() === "") {
       return {
         isError: true,
         output: `Grep timed out after ${String(DEFAULT_TIMEOUT_MS / 1000)}s. Try a more specific path or pattern.`,
       };
     }
     if (signal.aborted) {
-      return { isError: true, output: 'Grep aborted' };
+      return { isError: true, output: "Grep aborted" };
     }
 
     const rawLines = parseRipgrepOutput(stdoutText, mode);
 
     const filteredSensitive = new Set<string>();
-    const keptLines = filterSensitiveLines(rawLines, mode, filteredSensitive, pathClass);
+    const keptLines = filterSensitiveLines(
+      rawLines,
+      mode,
+      filteredSensitive,
+      pathClass,
+    );
     let orderedLines: ParsedGrepLine[];
     try {
       orderedLines =
-        mode === 'files_with_matches' && !timedOut
+        mode === "files_with_matches" && !timedOut
           ? await sortFilesWithMatchesByMtime(keptLines, this.kaos, signal)
           : keptLines;
     } catch (error) {
       if (error instanceof GrepAbortedError) {
-        return { isError: true, output: 'Grep aborted' };
+        return { isError: true, output: "Grep aborted" };
       }
       throw error;
     }
@@ -303,17 +319,19 @@ export class GrepTool implements BuiltinTool<GrepInput> {
         relativizeIfUnder(path, this.workspace.workspaceDir, pathClass),
       );
       messages.push(
-        `Filtered ${String(filteredSensitive.size)} sensitive file(s): ${displayedFilteredPaths.join(', ')}`,
+        `Filtered ${String(filteredSensitive.size)} sensitive file(s): ${displayedFilteredPaths.join(", ")}`,
       );
     }
-    if (mode === 'count_matches' && orderedLines.length > 0) {
-      headerLines.push(formatCountSummary(orderedLines, filteredSensitive.size > 0));
+    if (mode === "count_matches" && orderedLines.length > 0) {
+      headerLines.push(
+        formatCountSummary(orderedLines, filteredSensitive.size > 0),
+      );
     }
     if (paginationTruncated) {
       const total = afterOffset.length + offset;
       const nextOffset = offset + headLimit;
       const paginationNotice = `Results truncated to ${String(headLimit)} lines (total: ${String(total)}). Use offset=${String(nextOffset)} to see more.`;
-      if (mode === 'count_matches') {
+      if (mode === "count_matches") {
         headerLines.push(paginationNotice);
       } else {
         messages.push(paginationNotice);
@@ -330,7 +348,8 @@ export class GrepTool implements BuiltinTool<GrepInput> {
       );
     }
 
-    const contentIncludesLineNumbers = mode === 'content' && args['-n'] !== false;
+    const contentIncludesLineNumbers =
+      mode === "content" && args["-n"] !== false;
     const displayedLines = limited.map((line) =>
       formatDisplayLine(
         line,
@@ -340,46 +359,49 @@ export class GrepTool implements BuiltinTool<GrepInput> {
         contentIncludesLineNumbers,
       ),
     );
-    const contentBody = displayedLines.join('\n');
+    const contentBody = displayedLines.join("\n");
     const visibleBody =
       orderedLines.length === 0 && filteredSensitive.size > 0
-        ? 'No non-sensitive matches found'
+        ? "No non-sensitive matches found"
         : contentBody;
     const emptyResultMessage =
-      SENSITIVE_GLOBS_TO_EXCLUDE.length > 0 ? 'No non-sensitive matches found' : 'No matches found';
+      SENSITIVE_GLOBS_TO_EXCLUDE.length > 0
+        ? "No non-sensitive matches found"
+        : "No matches found";
     const body =
-      visibleBody === '' && headerLines.length === 0 && messages.length === 0
+      visibleBody === "" && headerLines.length === 0 && messages.length === 0
         ? emptyResultMessage
         : visibleBody;
-    const combined = [...headerLines, body, ...messages].filter((part) => part !== '').join('\n');
+    const combined = [...headerLines, body, ...messages]
+      .filter((part) => part !== "")
+      .join("\n");
 
     const builder = new ToolResultBuilder();
     builder.write(combined);
     return builder.ok();
   }
-
 }
 
-type GrepMode = 'content' | 'files_with_matches' | 'count_matches';
+type GrepMode = "content" | "files_with_matches" | "count_matches";
 
 type ParsedGrepLine =
   | {
-      readonly kind: 'record';
+      readonly kind: "record";
       readonly filePath: string;
       readonly payload: string;
     }
   | {
-      readonly kind: 'separator';
+      readonly kind: "separator";
     }
   | {
-      readonly kind: 'legacy';
+      readonly kind: "legacy";
       readonly text: string;
     };
 
 class GrepAbortedError extends Error {
   constructor() {
-    super('Grep aborted');
-    this.name = 'GrepAbortedError';
+    super("Grep aborted");
+    this.name = "GrepAbortedError";
   }
 }
 
@@ -394,7 +416,11 @@ async function sortFilesWithMatchesByMtime(
     signal,
     async (line, index) => {
       const path =
-        line.kind === 'record' ? line.filePath : line.kind === 'legacy' ? line.text : undefined;
+        line.kind === "record"
+          ? line.filePath
+          : line.kind === "legacy"
+            ? line.text
+            : undefined;
       let mtime = 0;
       if (path !== undefined) {
         try {
@@ -445,118 +471,122 @@ function buildRgArgs(
   singleThreaded = false,
 ): string[] {
   const cmd: string[] = [rgPath];
-  if (singleThreaded) cmd.push('-j', '1');
-  cmd.push('--hidden');
-  const mode = args.output_mode ?? 'files_with_matches';
+  if (singleThreaded) cmd.push("-j", "1");
+  cmd.push("--hidden");
+  const mode = args.output_mode ?? "files_with_matches";
   // `content` mode returns matching lines verbatim. Capping columns here would
   // make rg replace any line wider than the cap with a placeholder, silently
   // dropping the actual match text. The cap is only useful outside `content`
   // mode, where line text is never surfaced.
-  if (mode !== 'content') {
-    cmd.push('--max-columns', String(RG_MAX_COLUMNS));
+  if (mode !== "content") {
+    cmd.push("--max-columns", String(RG_MAX_COLUMNS));
   }
-  cmd.push('--null');
+  cmd.push("--null");
   for (const dir of VCS_DIRECTORIES_TO_EXCLUDE) {
-    cmd.push('--glob', `!${dir}`);
+    cmd.push("--glob", `!${dir}`);
   }
 
-  if (mode === 'files_with_matches') cmd.push('-l');
-  else if (mode === 'count_matches') {
+  if (mode === "files_with_matches") cmd.push("-l");
+  else if (mode === "count_matches") {
     // rg omits the filename when only one file is searched, so pin it on. Without
     // this, the per-file line collapses to a bare count and the summary parser
     // disagrees with the displayed number.
-    cmd.push('--count-matches', '--with-filename');
+    cmd.push("--count-matches", "--with-filename");
   }
 
-  if (args['-i']) cmd.push('-i');
-  if (mode === 'content') {
-    cmd.push('--with-filename');
-    if (args['-n'] !== false) {
-      cmd.push('-n');
+  if (args["-i"]) cmd.push("-i");
+  if (mode === "content") {
+    cmd.push("--with-filename");
+    if (args["-n"] !== false) {
+      cmd.push("-n");
     } else {
-      cmd.push('--field-context-separator', ':');
+      cmd.push("--field-context-separator", ":");
     }
-    if (args['-C'] !== undefined) {
-      cmd.push('-C', String(args['-C']));
+    if (args["-C"] !== undefined) {
+      cmd.push("-C", String(args["-C"]));
     } else {
-      if (args['-A'] !== undefined) cmd.push('-A', String(args['-A']));
-      if (args['-B'] !== undefined) cmd.push('-B', String(args['-B']));
+      if (args["-A"] !== undefined) cmd.push("-A", String(args["-A"]));
+      if (args["-B"] !== undefined) cmd.push("-B", String(args["-B"]));
     }
   }
-  if (args.glob !== undefined) cmd.push('--glob', args.glob);
-  if (args.type !== undefined) cmd.push('--type', args.type);
-  if (args.multiline) cmd.push('-U', '--multiline-dotall');
-  if (args.include_ignored) cmd.push('--no-ignore');
+  if (args.glob !== undefined) cmd.push("--glob", args.glob);
+  if (args.type !== undefined) cmd.push("--type", args.type);
+  if (args.multiline) cmd.push("-U", "--multiline-dotall");
+  if (args.include_ignored) cmd.push("--no-ignore");
   for (const glob of SENSITIVE_GLOBS_TO_EXCLUDE) {
     // Appended after user globs so a broad include such as `**/.env` cannot
     // undo this first-pass exclusion. Explicit file paths are still protected
     // by the post-processing filter because rg intentionally searches them.
-    cmd.push('--glob', `!${glob}`);
+    cmd.push("--glob", `!${glob}`);
   }
   // Do not forward `head_limit` to `rg --max-count`: omitted means "use the
   // tool default", head_limit=0 means "unlimited", while `rg --max-count 0`
   // means "zero matches per file". Pagination happens in post-processing.
 
-  cmd.push('--', args.pattern, ...searchPaths);
+  cmd.push("--", args.pattern, ...searchPaths);
   return cmd;
 }
 
 function splitRgLines(text: string): string[] {
-  if (text === '') return [];
-  const lines = text.split('\n');
+  if (text === "") return [];
+  const lines = text.split("\n");
   // Strip the trailing empty line left by a final newline.
-  while (lines.length > 0 && lines.at(-1) === '') {
+  while (lines.length > 0 && lines.at(-1) === "") {
     lines.pop();
   }
   return lines.map((line) => stripTrailingCarriageReturn(line));
 }
 
 function parseRipgrepOutput(text: string, mode: GrepMode): ParsedGrepLine[] {
-  if (text === '') return [];
-  if (!text.includes('\0')) {
+  if (text === "") return [];
+  if (!text.includes("\0")) {
     return splitRgLines(text).map((line) =>
-      mode === 'content' && line === '--' ? { kind: 'separator' } : { kind: 'legacy', text: line },
+      mode === "content" && line === "--"
+        ? { kind: "separator" }
+        : { kind: "legacy", text: line },
     );
   }
 
-  if (mode === 'files_with_matches') {
+  if (mode === "files_with_matches") {
     return text
-      .split('\0')
+      .split("\0")
       .map((filePath) => stripTrailingCarriageReturn(filePath))
-      .filter((filePath) => filePath !== '')
-      .map((filePath) => ({ kind: 'record', filePath, payload: '' }));
+      .filter((filePath) => filePath !== "")
+      .map((filePath) => ({ kind: "record", filePath, payload: "" }));
   }
 
   const records: ParsedGrepLine[] = [];
   let cursor = 0;
   while (cursor < text.length) {
-    if (text[cursor] === '\n') {
+    if (text[cursor] === "\n") {
       cursor += 1;
       continue;
     }
-    if (text.startsWith('--\r\n', cursor)) {
-      records.push({ kind: 'separator' });
+    if (text.startsWith("--\r\n", cursor)) {
+      records.push({ kind: "separator" });
       cursor += 4;
       continue;
     }
-    if (text.startsWith('--\n', cursor)) {
-      records.push({ kind: 'separator' });
+    if (text.startsWith("--\n", cursor)) {
+      records.push({ kind: "separator" });
       cursor += 3;
       continue;
     }
 
-    const nulIndex = text.indexOf('\0', cursor);
+    const nulIndex = text.indexOf("\0", cursor);
     if (nulIndex < 0) {
       const tail = stripTrailingCarriageReturn(text.slice(cursor));
-      if (tail !== '') records.push({ kind: 'legacy', text: tail });
+      if (tail !== "") records.push({ kind: "legacy", text: tail });
       break;
     }
 
-    const lineEnd = text.indexOf('\n', nulIndex + 1);
+    const lineEnd = text.indexOf("\n", nulIndex + 1);
     const payloadEnd = lineEnd >= 0 ? lineEnd : text.length;
     const filePath = text.slice(cursor, nulIndex);
-    const payload = stripTrailingCarriageReturn(text.slice(nulIndex + 1, payloadEnd));
-    records.push({ kind: 'record', filePath, payload });
+    const payload = stripTrailingCarriageReturn(
+      text.slice(nulIndex + 1, payloadEnd),
+    );
+    records.push({ kind: "record", filePath, payload });
     cursor = lineEnd >= 0 ? lineEnd + 1 : text.length;
   }
   return records;
@@ -569,28 +599,40 @@ function formatDisplayLine(
   pathClass: PathClass,
   contentIncludesLineNumbers: boolean,
 ): string {
-  if (line.kind === 'separator') return '--';
-  if (line.kind === 'record') {
-    const displayPath = relativizeIfUnder(line.filePath, workspaceDir, pathClass);
-    if (mode === 'files_with_matches') return displayPath;
-    if (mode === 'count_matches') return `${displayPath}:${line.payload}`;
-    const separator = contentIncludesLineNumbers ? contentPayloadPathSeparator(line.payload) : ':';
+  if (line.kind === "separator") return "--";
+  if (line.kind === "record") {
+    const displayPath = relativizeIfUnder(
+      line.filePath,
+      workspaceDir,
+      pathClass,
+    );
+    if (mode === "files_with_matches") return displayPath;
+    if (mode === "count_matches") return `${displayPath}:${line.payload}`;
+    const separator = contentIncludesLineNumbers
+      ? contentPayloadPathSeparator(line.payload)
+      : ":";
     return `${displayPath}${separator}${line.payload}`;
   }
 
   const text = line.text;
-  if (mode === 'files_with_matches') {
+  if (mode === "files_with_matches") {
     return relativizeIfUnder(text, workspaceDir, pathClass);
   }
-  if (mode === 'count_matches') {
-    const idx = text.lastIndexOf(':');
+  if (mode === "count_matches") {
+    const idx = text.lastIndexOf(":");
     if (idx <= 0) return text;
-    return relativizeIfUnder(text.slice(0, idx), workspaceDir, pathClass) + text.slice(idx);
+    return (
+      relativizeIfUnder(text.slice(0, idx), workspaceDir, pathClass) +
+      text.slice(idx)
+    );
   }
 
   const filePath = extractContentFilePath(text, pathClass);
   if (filePath !== undefined) {
-    return relativizeIfUnder(filePath, workspaceDir, pathClass) + text.slice(filePath.length);
+    return (
+      relativizeIfUnder(filePath, workspaceDir, pathClass) +
+      text.slice(filePath.length)
+    );
   }
   return text;
 }
@@ -600,13 +642,21 @@ function formatDisplayLine(
  * Otherwise return `candidate` unchanged. Both arguments should be
  * canonical absolute paths in the active backend path class.
  */
-function relativizeIfUnder(candidate: string, base: string, pathClass: PathClass): string {
+function relativizeIfUnder(
+  candidate: string,
+  base: string,
+  pathClass: PathClass,
+): string {
   const normCandidate = normalize(candidate);
   const normBase = normalize(base);
-  const comparableCandidate = pathClass === 'win32' ? normCandidate.toLowerCase() : normCandidate;
-  const comparableBase = pathClass === 'win32' ? normBase.toLowerCase() : normBase;
-  if (comparableCandidate === comparableBase) return '.';
-  const prefix = comparableBase.endsWith('/') ? comparableBase : comparableBase + '/';
+  const comparableCandidate =
+    pathClass === "win32" ? normCandidate.toLowerCase() : normCandidate;
+  const comparableBase =
+    pathClass === "win32" ? normBase.toLowerCase() : normBase;
+  if (comparableCandidate === comparableBase) return ".";
+  const prefix = comparableBase.endsWith("/")
+    ? comparableBase
+    : comparableBase + "/";
   if (comparableCandidate.startsWith(prefix)) {
     return normCandidate.slice(prefix.length);
   }
@@ -614,34 +664,34 @@ function relativizeIfUnder(candidate: string, base: string, pathClass: PathClass
 }
 
 function omitIncompleteTrailingRecord(text: string, mode: GrepMode): string {
-  if (!text.includes('\0')) return omitIncompleteTrailingLine(text);
-  if (mode === 'files_with_matches') {
-    const lastNul = text.lastIndexOf('\0');
-    return lastNul >= 0 ? text.slice(0, lastNul + 1) : '';
+  if (!text.includes("\0")) return omitIncompleteTrailingLine(text);
+  if (mode === "files_with_matches") {
+    const lastNul = text.lastIndexOf("\0");
+    return lastNul >= 0 ? text.slice(0, lastNul + 1) : "";
   }
 
   let cursor = 0;
   let lastCompleteEnd = 0;
   while (cursor < text.length) {
-    if (text[cursor] === '\n') {
+    if (text[cursor] === "\n") {
       cursor += 1;
       lastCompleteEnd = cursor;
       continue;
     }
-    if (text.startsWith('--\r\n', cursor)) {
+    if (text.startsWith("--\r\n", cursor)) {
       cursor += 4;
       lastCompleteEnd = cursor;
       continue;
     }
-    if (text.startsWith('--\n', cursor)) {
+    if (text.startsWith("--\n", cursor)) {
       cursor += 3;
       lastCompleteEnd = cursor;
       continue;
     }
 
-    const nulIndex = text.indexOf('\0', cursor);
+    const nulIndex = text.indexOf("\0", cursor);
     if (nulIndex < 0) break;
-    const lineEnd = text.indexOf('\n', nulIndex + 1);
+    const lineEnd = text.indexOf("\n", nulIndex + 1);
     if (lineEnd < 0) break;
     cursor = lineEnd + 1;
     lastCompleteEnd = cursor;
@@ -650,8 +700,8 @@ function omitIncompleteTrailingRecord(text: string, mode: GrepMode): string {
 }
 
 function omitIncompleteTrailingLine(text: string): string {
-  const lastNewline = text.lastIndexOf('\n');
-  return lastNewline >= 0 ? text.slice(0, lastNewline) : '';
+  const lastNewline = text.lastIndexOf("\n");
+  return lastNewline >= 0 ? text.slice(0, lastNewline) : "";
 }
 
 function formatRipgrepError(
@@ -665,19 +715,21 @@ function formatRipgrepError(
   }
 
   const summary = summarizeRipgrepStderr(stderr);
-  const lines = [`Failed to grep: ${summary}`, '', 'ripgrep stderr:', stderr];
+  const lines = [`Failed to grep: ${summary}`, "", "ripgrep stderr:", stderr];
   if (stderrTruncated) {
     lines.push(`[stderr truncated at ${String(MAX_OUTPUT_BYTES)} bytes]`);
   }
-  return lines.join('\n');
+  return lines.join("\n");
 }
 
 function summarizeRipgrepStderr(stderr: string): string {
   const lines = splitRgLines(stderr)
     .map((line) => line.trim())
     .filter((line) => line.length > 0);
-  const errorLine = lines.findLast((line) => line.toLowerCase().startsWith('error:'));
-  return errorLine ?? lines.at(-1) ?? 'ripgrep error';
+  const errorLine = lines.findLast((line) =>
+    line.toLowerCase().startsWith("error:"),
+  );
+  return errorLine ?? lines.at(-1) ?? "ripgrep error";
 }
 
 function filterSensitiveLines(
@@ -688,7 +740,7 @@ function filterSensitiveLines(
 ): ParsedGrepLine[] {
   const kept: ParsedGrepLine[] = [];
   for (const line of lines) {
-    if (line.kind === 'separator') {
+    if (line.kind === "separator") {
       kept.push(line);
       continue;
     }
@@ -699,21 +751,23 @@ function filterSensitiveLines(
     }
     kept.push(line);
   }
-  return mode === 'content' ? normalizeContextSeparators(kept) : kept;
+  return mode === "content" ? normalizeContextSeparators(kept) : kept;
 }
 
-function normalizeContextSeparators(lines: readonly ParsedGrepLine[]): ParsedGrepLine[] {
+function normalizeContextSeparators(
+  lines: readonly ParsedGrepLine[],
+): ParsedGrepLine[] {
   const normalized: ParsedGrepLine[] = [];
   for (const line of lines) {
     if (
-      line.kind === 'separator' &&
-      (normalized.length === 0 || normalized.at(-1)?.kind === 'separator')
+      line.kind === "separator" &&
+      (normalized.length === 0 || normalized.at(-1)?.kind === "separator")
     ) {
       continue;
     }
     normalized.push(line);
   }
-  while (normalized.length > 0 && normalized.at(-1)?.kind === 'separator') {
+  while (normalized.length > 0 && normalized.at(-1)?.kind === "separator") {
     normalized.pop();
   }
   return normalized;
@@ -724,47 +778,58 @@ function parsedFilePath(
   mode: GrepMode,
   pathClass: PathClass,
 ): string | undefined {
-  if (line.kind === 'record') return normalize(line.filePath);
-  if (line.kind === 'separator') return undefined;
+  if (line.kind === "record") return normalize(line.filePath);
+  if (line.kind === "separator") return undefined;
   const text = line.text;
-  if (mode === 'files_with_matches') return normalize(text);
-  if (mode === 'count_matches') {
-    const idx = text.lastIndexOf(':');
+  if (mode === "files_with_matches") return normalize(text);
+  if (mode === "count_matches") {
+    const idx = text.lastIndexOf(":");
     return idx > 0 ? normalize(text.slice(0, idx)) : normalize(text);
   }
   return extractContentFilePath(text, pathClass);
 }
 
-function extractContentFilePath(line: string, pathClass: PathClass): string | undefined {
+function extractContentFilePath(
+  line: string,
+  pathClass: PathClass,
+): string | undefined {
   const m = CONTENT_LINE_RE.exec(line);
   if (m?.[1] !== undefined) return normalize(m[1]);
 
   const separatorIndex = noLineNumberContentSeparatorIndex(line, pathClass);
-  return separatorIndex > 0 ? normalize(line.slice(0, separatorIndex)) : undefined;
+  return separatorIndex > 0
+    ? normalize(line.slice(0, separatorIndex))
+    : undefined;
 }
 
-function noLineNumberContentSeparatorIndex(line: string, pathClass: PathClass): number {
-  const searchFrom = pathClass === 'win32' && /^[A-Za-z]:/.test(line) ? 2 : 0;
-  return line.indexOf(':', searchFrom);
+function noLineNumberContentSeparatorIndex(
+  line: string,
+  pathClass: PathClass,
+): number {
+  const searchFrom = pathClass === "win32" && /^[A-Za-z]:/.test(line) ? 2 : 0;
+  return line.indexOf(":", searchFrom);
 }
 
-function contentPayloadPathSeparator(payload: string): ':' | '-' {
+function contentPayloadPathSeparator(payload: string): ":" | "-" {
   const m = /^(\d+)([:-])/.exec(payload);
-  return m?.[2] === '-' ? '-' : ':';
+  return m?.[2] === "-" ? "-" : ":";
 }
 
 function stripTrailingCarriageReturn(value: string): string {
-  return value.endsWith('\r') ? value.slice(0, -1) : value;
+  return value.endsWith("\r") ? value.slice(0, -1) : value;
 }
 
-function formatCountSummary(lines: readonly ParsedGrepLine[], redactedSensitive: boolean): string {
+function formatCountSummary(
+  lines: readonly ParsedGrepLine[],
+  redactedSensitive: boolean,
+): string {
   let totalMatches = 0;
   let totalFiles = 0;
   for (const line of lines) {
     const rawCount =
-      line.kind === 'record'
+      line.kind === "record"
         ? line.payload
-        : line.kind === 'legacy'
+        : line.kind === "legacy"
           ? countPayloadFromLegacyLine(line.text)
           : undefined;
     if (rawCount === undefined) continue;
@@ -774,13 +839,13 @@ function formatCountSummary(lines: readonly ParsedGrepLine[], redactedSensitive:
     totalFiles++;
   }
 
-  const occurrenceWord = totalMatches === 1 ? 'occurrence' : 'occurrences';
-  const fileWord = totalFiles === 1 ? 'file' : 'files';
-  const scope = redactedSensitive ? 'total non-sensitive' : 'total';
+  const occurrenceWord = totalMatches === 1 ? "occurrence" : "occurrences";
+  const fileWord = totalFiles === 1 ? "file" : "files";
+  const scope = redactedSensitive ? "total non-sensitive" : "total";
   return `Found ${String(totalMatches)} ${scope} ${occurrenceWord} across ${String(totalFiles)} ${fileWord}.`;
 }
 
 function countPayloadFromLegacyLine(line: string): string | undefined {
-  const idx = line.lastIndexOf(':');
+  const idx = line.lastIndexOf(":");
   return idx > 0 ? line.slice(idx + 1) : undefined;
 }

@@ -9,20 +9,21 @@
 //
 // Run:  node --import tsx bench/search-baseline.ts [--data ~/.kimi-code]
 
-import { existsSync, readFileSync } from 'node:fs';
-import path from 'node:path';
-import os from 'node:os';
+import { existsSync, readFileSync } from "node:fs";
+import path from "node:path";
+import os from "node:os";
 
 const argv = process.argv.slice(2);
 const arg = (name: string, def: string) => {
   const i = argv.indexOf(`--${name}`);
   return i === -1 ? def : argv[i + 1]!;
 };
-const DATA = path.resolve(arg('data', path.join(os.homedir(), '.kimi-code')));
-const FULL = argv.includes('--full'); // also index full tool results (matches import-kimi-code --full)
+const DATA = path.resolve(arg("data", path.join(os.homedir(), ".kimi-code")));
+const FULL = argv.includes("--full"); // also index full tool results (matches import-kimi-code --full)
 
-const fmt = (n: number) => n.toLocaleString('en-US', { maximumFractionDigits: 0 });
-const mib = (n: number) => (n / 1024 / 1024).toFixed(1) + ' MiB';
+const fmt = (n: number) =>
+  n.toLocaleString("en-US", { maximumFractionDigits: 0 });
+const mib = (n: number) => (n / 1024 / 1024).toFixed(1) + " MiB";
 
 interface Doc {
   sessionId: string;
@@ -34,17 +35,25 @@ interface Doc {
   created: number;
 }
 
-const ARG_FIELDS = ['command', 'pattern', 'path', 'description', 'query', 'prompt', 'file_path'];
+const ARG_FIELDS = [
+  "command",
+  "pattern",
+  "path",
+  "description",
+  "query",
+  "prompt",
+  "file_path",
+];
 
 function extractWireText(wirePath: string, full: boolean): string {
   let raw: string;
   try {
-    raw = readFileSync(wirePath, 'utf8');
+    raw = readFileSync(wirePath, "utf8");
   } catch {
-    return '';
+    return "";
   }
   const parts: string[] = [];
-  for (const line of raw.split('\n')) {
+  for (const line of raw.split("\n")) {
     if (!line) continue;
     let o: any;
     try {
@@ -52,27 +61,38 @@ function extractWireText(wirePath: string, full: boolean): string {
     } catch {
       continue;
     }
-    if (o.type === 'context.append_message' && o.message && o.message.content) {
+    if (o.type === "context.append_message" && o.message && o.message.content) {
       for (const c of o.message.content)
-        if (c && c.type === 'text' && typeof c.text === 'string') parts.push(c.text);
-    } else if (o.type === 'context.append_loop_event' && o.event && o.event.type === 'tool.call') {
+        if (c && c.type === "text" && typeof c.text === "string")
+          parts.push(c.text);
+    } else if (
+      o.type === "context.append_loop_event" &&
+      o.event &&
+      o.event.type === "tool.call"
+    ) {
       const e = o.event;
       const bits: string[] = [e.name];
       for (const k of ARG_FIELDS) {
         const v = e.args && e.args[k];
-        if (typeof v === 'string' && v) bits.push(v.length > 2000 ? v.slice(0, 2000) : v);
+        if (typeof v === "string" && v)
+          bits.push(v.length > 2000 ? v.slice(0, 2000) : v);
       }
-      parts.push(bits.join(' '));
-    } else if (full && o.type === 'context.append_loop_event' && o.event && o.event.type === 'tool.result') {
+      parts.push(bits.join(" "));
+    } else if (
+      full &&
+      o.type === "context.append_loop_event" &&
+      o.event &&
+      o.event.type === "tool.result"
+    ) {
       const r = o.event.result;
-      let out = '';
-      if (typeof r === 'string') out = r;
-      else if (r && typeof r.output === 'string') out = r.output;
-      else if (r && typeof r.content === 'string') out = r.content;
+      let out = "";
+      if (typeof r === "string") out = r;
+      else if (r && typeof r.output === "string") out = r.output;
+      else if (r && typeof r.content === "string") out = r.content;
       if (out) parts.push(out.length > 5000 ? out.slice(0, 5000) : out);
     }
   }
-  return parts.join('\n');
+  return parts.join("\n");
 }
 
 function tokenize(s: string): string[] {
@@ -123,9 +143,13 @@ function med<T>(fn: () => T, runs = 7): { value: T; ms: number } {
 async function main() {
   console.log(`data: ${DATA}`);
 
-  const wsRaw = JSON.parse(readFileSync(path.join(DATA, 'workspaces.json'), 'utf8'));
+  const wsRaw = JSON.parse(
+    readFileSync(path.join(DATA, "workspaces.json"), "utf8"),
+  );
   const workspaces = wsRaw.workspaces || wsRaw;
-  const lines = readFileSync(path.join(DATA, 'session_index.jsonl'), 'utf8').trim().split('\n');
+  const lines = readFileSync(path.join(DATA, "session_index.jsonl"), "utf8")
+    .trim()
+    .split("\n");
 
   const t0 = performance.now();
   const docs: Doc[] = [];
@@ -139,24 +163,26 @@ async function main() {
       continue;
     }
     const { sessionId, sessionDir } = meta;
-    const wirePath = path.join(sessionDir, 'agents', 'main', 'wire.jsonl');
+    const wirePath = path.join(sessionDir, "agents", "main", "wire.jsonl");
     if (!existsSync(wirePath)) {
       skipped++;
       continue;
     }
     let state: any = {};
     try {
-      state = JSON.parse(readFileSync(path.join(sessionDir, 'state.json'), 'utf8'));
+      state = JSON.parse(
+        readFileSync(path.join(sessionDir, "state.json"), "utf8"),
+      );
     } catch {}
     const body = extractWireText(wirePath, FULL);
-    const text = (state.title ? state.title + '\n' : '') + body;
-    totalTextBytes += Buffer.byteLength(text, 'utf8');
+    const text = (state.title ? state.title + "\n" : "") + body;
+    totalTextBytes += Buffer.byteLength(text, "utf8");
     const wsId = path.basename(path.dirname(sessionDir));
     const ws = workspaces[wsId] || {};
     docs.push({
       sessionId,
-      title: state.title || '',
-      workspaceName: ws.name || '',
+      title: state.title || "",
+      workspaceName: ws.name || "",
       text,
       lower: text.toLowerCase(),
       updated: state.updatedAt ? Date.parse(state.updatedAt) : 0,
@@ -172,24 +198,35 @@ async function main() {
   console.log(`  heap used      : ${mib(process.memoryUsage().heapUsed)}`);
 
   // ---- naive full-text searches ----
-  const queries = ['lark-approval', 'database compaction', '北京', 'Redis 持久化', 'worktree init', 'nonexistentxyz123'];
+  const queries = [
+    "lark-approval",
+    "database compaction",
+    "北京",
+    "Redis 持久化",
+    "worktree init",
+    "nonexistentxyz123",
+  ];
   console.log(`\n=== naive full-text search (full scan, median of 7) ===`);
   for (const q of queries) {
     const { value: res, ms } = med(() => naiveTextSearch(docs, q, 5));
     console.log(`  "${q}"  ->  ${res.length} hits in ${ms.toFixed(2)} ms`);
     for (const r of res.slice(0, 3)) {
-      console.log(`     [${r.score}] ${r.doc.workspaceName} :: ${r.doc.title.slice(0, 60)}`);
+      console.log(
+        `     [${r.score}] ${r.doc.workspaceName} :: ${r.doc.title.slice(0, 60)}`,
+      );
     }
   }
 
   // ---- naive composed query: text includes 'database', then sort ----
   {
     const { value: res, ms } = med(() => {
-      const hit = docs.filter((d) => d.lower.includes('database'));
+      const hit = docs.filter((d) => d.lower.includes("database"));
       hit.sort((a, b) => a.workspaceName.localeCompare(b.workspaceName));
       return hit.slice(0, 5);
     });
-    console.log(`\n  naive composed (text "database" + sort) -> ${res.length} in ${ms.toFixed(2)} ms`);
+    console.log(
+      `\n  naive composed (text "database" + sort) -> ${res.length} in ${ms.toFixed(2)} ms`,
+    );
   }
 
   // ---- naive dt range: updated in last 7 days ----
@@ -200,13 +237,19 @@ async function main() {
       hit.sort((a, b) => b.updated - a.updated);
       return hit.slice(0, 10);
     });
-    console.log(`  naive dt range (updated in last 7d) -> ${res.length} shown in ${ms.toFixed(2)} ms`);
+    console.log(
+      `  naive dt range (updated in last 7d) -> ${res.length} shown in ${ms.toFixed(2)} ms`,
+    );
   }
 
   // ---- naive secondary index lookup: workspaceName ----
   {
-    const { value: res, ms } = med(() => docs.filter((d) => d.workspaceName === 'kimi-code-dev-1'));
-    console.log(`  naive lookup (workspace=kimi-code-dev-1) -> ${res.length} in ${ms.toFixed(2)} ms`);
+    const { value: res, ms } = med(() =>
+      docs.filter((d) => d.workspaceName === "kimi-code-dev-1"),
+    );
+    console.log(
+      `  naive lookup (workspace=kimi-code-dev-1) -> ${res.length} in ${ms.toFixed(2)} ms`,
+    );
   }
 
   console.log(`\ndone.`);

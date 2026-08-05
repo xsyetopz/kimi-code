@@ -3,14 +3,17 @@
 // drive the "transport disconnected after connect" path in
 // McpConnectionManager.
 
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { z } from 'zod';
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { z } from "zod";
 
-const server = new McpServer({ name: 'crash-after-connect', version: '0.0.1' });
+const server = new McpServer({ name: "crash-after-connect", version: "0.0.1" });
 
-const exitCode = Number.parseInt(process.env['KIMI_TEST_MCP_EXIT_CODE'] ?? '1', 10);
-const stderrBanner = process.env['KIMI_TEST_MCP_STDERR'];
+const exitCode = Number.parseInt(
+  process.env["KIMI_TEST_MCP_EXIT_CODE"] ?? "1",
+  10,
+);
+const stderrBanner = process.env["KIMI_TEST_MCP_STDERR"];
 
 function exitWithBanner() {
   if (stderrBanner !== undefined) {
@@ -20,13 +23,13 @@ function exitWithBanner() {
 }
 
 server.registerTool(
-  'echo',
+  "echo",
   {
-    description: 'Echoes input text',
+    description: "Echoes input text",
     inputSchema: { text: z.string() },
   },
   ({ text }) => ({
-    content: [{ type: 'text', text }],
+    content: [{ type: "text", text }],
   }),
 );
 
@@ -34,20 +37,20 @@ server.registerTool(
 // fully flushed to stdout before the pipe closes. Lets a test deterministically
 // trigger "post-handshake disconnect" without racing against startup timing.
 server.registerTool(
-  'exit_after_reply',
+  "exit_after_reply",
   {
-    description: 'Replies, then exits the process',
+    description: "Replies, then exits the process",
     inputSchema: {},
   },
   () => {
     setImmediate(exitWithBanner);
-    return { content: [{ type: 'text', text: 'bye' }] };
+    return { content: [{ type: "text", text: "bye" }] };
   },
 );
 
 await server.connect(new StdioServerTransport());
 
-const exitAfterMsRaw = process.env['KIMI_TEST_MCP_EXIT_AFTER_MS'];
+const exitAfterMsRaw = process.env["KIMI_TEST_MCP_EXIT_AFTER_MS"];
 if (exitAfterMsRaw !== undefined) {
   setTimeout(exitWithBanner, Number.parseInt(exitAfterMsRaw, 10));
 }

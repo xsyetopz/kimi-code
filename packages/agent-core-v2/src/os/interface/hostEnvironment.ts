@@ -18,14 +18,17 @@
  * App-scoped — one shared instance for the whole process.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
 
 import type {
   HostEnvironmentInfo,
   OsKind,
   PathClass,
   ShellName,
-} from '#/_base/execEnv/environmentProbe';
+} from "#/_base/execEnv/environmentProbe";
 
 export type { HostEnvironmentInfo, OsKind, PathClass, ShellName };
 
@@ -43,4 +46,4 @@ export interface IHostEnvironment {
 }
 
 export const IHostEnvironment: ServiceIdentifier<IHostEnvironment> =
-  createDecorator<IHostEnvironment>('hostEnvironment');
+  createDecorator<IHostEnvironment>("hostEnvironment");

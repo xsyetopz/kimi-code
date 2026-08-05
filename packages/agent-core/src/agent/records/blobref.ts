@@ -1,14 +1,14 @@
-import { createHash } from 'node:crypto';
-import { mkdir, open, readFile } from 'node:fs/promises';
-import { join } from 'pathe';
-import type { ContentPart } from '@moonshot-ai/kosong';
-import type { AgentRecord } from './types';
+import { createHash } from "node:crypto";
+import { mkdir, open, readFile } from "node:fs/promises";
+import { join } from "pathe";
+import type { ContentPart } from "@moonshot-ai/kosong";
+import type { AgentRecord } from "./types";
 
 const DEFAULT_THRESHOLD = 4096;
 const DEFAULT_MAX_CACHE_SIZE = 50 * 1024 * 1024;
-const BLOBREF_PROTOCOL = 'blobref:';
+const BLOBREF_PROTOCOL = "blobref:";
 const DATA_URI_HEADER_RE = /^data:([^;]+);base64,/;
-const MISSING_MEDIA_PLACEHOLDER = '[media missing]';
+const MISSING_MEDIA_PLACEHOLDER = "[media missing]";
 
 export function isBlobRef(url: string): boolean {
   return url.startsWith(BLOBREF_PROTOCOL);
@@ -36,20 +36,23 @@ export class BlobStore {
 
   async offload(record: AgentRecord): Promise<AgentRecord> {
     switch (record.type) {
-      case 'turn.prompt':
-      case 'turn.steer': {
+      case "turn.prompt":
+      case "turn.steer": {
         const input = await this.offloadParts(record.input);
         return input === record.input ? record : { ...record, input };
       }
-      case 'context.append_message': {
+      case "context.append_message": {
         const content = await this.offloadParts(record.message.content);
         return content === record.message.content
           ? record
           : { ...record, message: { ...record.message, content } };
       }
-      case 'context.append_loop_event': {
+      case "context.append_loop_event": {
         const event = record.event;
-        if (event.type !== 'tool.result' || typeof event.result.output === 'string') {
+        if (
+          event.type !== "tool.result" ||
+          typeof event.result.output === "string"
+        ) {
           return record;
         }
         const output = await this.offloadParts(event.result.output);
@@ -67,7 +70,9 @@ export class BlobStore {
     }
   }
 
-  private async offloadParts(parts: readonly ContentPart[]): Promise<ContentPart[]> {
+  private async offloadParts(
+    parts: readonly ContentPart[],
+  ): Promise<ContentPart[]> {
     let changed = false;
     const out: ContentPart[] = [];
     for (const part of parts) {
@@ -80,16 +85,19 @@ export class BlobStore {
 
   async rehydrate(record: AgentRecord): Promise<void> {
     switch (record.type) {
-      case 'turn.prompt':
-      case 'turn.steer':
+      case "turn.prompt":
+      case "turn.steer":
         await this.rehydrateParts(record.input);
         break;
-      case 'context.append_message':
+      case "context.append_message":
         await this.rehydrateParts(record.message.content);
         break;
-      case 'context.append_loop_event': {
+      case "context.append_loop_event": {
         const event = record.event;
-        if (event.type === 'tool.result' && typeof event.result.output !== 'string') {
+        if (
+          event.type === "tool.result" &&
+          typeof event.result.output !== "string"
+        ) {
           await this.rehydrateParts(event.result.output);
         }
         break;
@@ -112,7 +120,7 @@ export class BlobStore {
       if (mediaObj === undefined) continue;
 
       const url = mediaObj.url;
-      if (typeof url !== 'string') continue;
+      if (typeof url !== "string") continue;
 
       const newUrl = await this.maybeOffloadString(url);
       if (newUrl === url) continue;
@@ -130,7 +138,7 @@ export class BlobStore {
       if (mediaObj === undefined) continue;
 
       const url = mediaObj.url;
-      if (typeof url !== 'string' || !isBlobRef(url)) continue;
+      if (typeof url !== "string" || !isBlobRef(url)) continue;
 
       const newUrl = await this.rehydrateBlobRefUrl(url);
       mediaObj.url = newUrl ?? MISSING_MEDIA_PLACEHOLDER;
@@ -139,7 +147,7 @@ export class BlobStore {
 
   private async rehydrateBlobRefUrl(url: string): Promise<string | undefined> {
     const rest = url.slice(BLOBREF_PROTOCOL.length);
-    const semiIdx = rest.indexOf(';');
+    const semiIdx = rest.indexOf(";");
     if (semiIdx === -1) {
       return undefined;
     }
@@ -152,7 +160,7 @@ export class BlobStore {
     if (payload === undefined) {
       return undefined;
     }
-    return `data:${mimeType};base64,${payload.toString('base64')}`;
+    return `data:${mimeType};base64,${payload.toString("base64")}`;
   }
 
   private async readBlob(hash: string): Promise<Buffer | undefined> {
@@ -163,7 +171,9 @@ export class BlobStore {
       this.cache.set(hash, cached);
       return cached;
     }
-    const payload = await readFile(join(this.blobsDir, hash)).catch(() => undefined);
+    const payload = await readFile(join(this.blobsDir, hash)).catch(
+      () => undefined,
+    );
     if (payload !== undefined) {
       this.setCache(hash, payload);
     }
@@ -186,13 +196,18 @@ export class BlobStore {
     return this.writeBlob(mimeType, payload);
   }
 
-  private async writeBlob(mimeType: string, base64Payload: string): Promise<string> {
+  private async writeBlob(
+    mimeType: string,
+    base64Payload: string,
+  ): Promise<string> {
     await mkdir(this.blobsDir, { recursive: true, mode: 0o700 });
-    const hash = createHash('sha256').update(base64Payload, 'utf8').digest('hex');
+    const hash = createHash("sha256")
+      .update(base64Payload, "utf8")
+      .digest("hex");
     const blobPath = join(this.blobsDir, hash);
-    const binary = Buffer.from(base64Payload, 'base64');
+    const binary = Buffer.from(base64Payload, "base64");
     try {
-      const fh = await open(blobPath, 'wx');
+      const fh = await open(blobPath, "wx");
       try {
         await fh.writeFile(binary);
         await fh.sync();
@@ -202,7 +217,7 @@ export class BlobStore {
     } catch (error) {
       const code = (error as NodeJS.ErrnoException).code;
       // EEXIST means the identical payload was already written; deduplication.
-      if (code !== 'EEXIST') throw error;
+      if (code !== "EEXIST") throw error;
     }
     this.setCache(hash, binary);
     return `${BLOBREF_PROTOCOL}${mimeType};${hash}`;
@@ -221,7 +236,10 @@ export class BlobStore {
         // Skip caching a single blob that exceeds the entire cap.
         return;
       }
-      while (this.currentCacheSize + size > this.maxCacheSize && this.cache.size > 0) {
+      while (
+        this.currentCacheSize + size > this.maxCacheSize &&
+        this.cache.size > 0
+      ) {
         this.evictLRU();
       }
       this.currentCacheSize += size;
@@ -241,9 +259,9 @@ export class BlobStore {
 }
 
 function asMediaContainer(value: unknown): { url: unknown } | undefined {
-  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
     return undefined;
   }
   const obj = value as Record<string, unknown>;
-  return 'url' in obj ? (obj as { url: unknown }) : undefined;
+  return "url" in obj ? (obj as { url: unknown }) : undefined;
 }

@@ -9,7 +9,10 @@
  * Agent scope.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
 
 export interface IAgentAgentsMdReminderService {
   readonly _serviceBrand: undefined;
@@ -18,4 +21,6 @@ export interface IAgentAgentsMdReminderService {
 }
 
 export const IAgentAgentsMdReminderService: ServiceIdentifier<IAgentAgentsMdReminderService> =
-  createDecorator<IAgentAgentsMdReminderService>('agentAgentsMdReminderService');
+  createDecorator<IAgentAgentsMdReminderService>(
+    "agentAgentsMdReminderService",
+  );

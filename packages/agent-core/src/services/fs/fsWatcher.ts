@@ -1,8 +1,8 @@
-import type { FSWatcher } from 'chokidar';
+import type { FSWatcher } from "chokidar";
 
-import { createDecorator } from '../../di';
+import { createDecorator } from "../../di";
 
-import type { FsChangeEntry } from '@moonshot-ai/protocol';
+import type { FsChangeEntry } from "@moonshot-ai/protocol";
 
 export class FsWatchLimitError extends Error {
   readonly connectionId: string;
@@ -13,7 +13,7 @@ export class FsWatchLimitError extends Error {
     super(
       `connection ${connectionId} would watch ${attempted} paths; limit is ${limit}`,
     );
-    this.name = 'FsWatchLimitError';
+    this.name = "FsWatchLimitError";
     this.connectionId = connectionId;
     this.attempted = attempted;
     this.limit = limit;
@@ -21,7 +21,7 @@ export class FsWatchLimitError extends Error {
 }
 
 export interface FsChangedFrame {
-  type: 'event.fs.changed';
+  type: "event.fs.changed";
   seq: number;
   session_id: string;
   timestamp: string;
@@ -56,7 +56,7 @@ export interface IFsWatcher {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
-export const IFsWatcher = createDecorator<IFsWatcher>('fsWatcher');
+export const IFsWatcher = createDecorator<IFsWatcher>("fsWatcher");
 
 export interface FsWatcherDeliverySink {
   send(frame: FsChangedFrame): void;

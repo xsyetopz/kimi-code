@@ -1,10 +1,10 @@
-import { useMemo } from 'react';
+import { useMemo } from "react";
 
-import type { ImportInfo } from '../../types';
-import { formatAbsoluteTime, formatRelativeTime } from '../../util/time';
-import { CopyButton } from '../shared/CopyButton';
-import { JsonViewer } from '../shared/JsonViewer';
-import { Pill } from '../shared/Pill';
+import type { ImportInfo } from "../../types";
+import { formatAbsoluteTime, formatRelativeTime } from "../../util/time";
+import { CopyButton } from "../shared/CopyButton";
+import { JsonViewer } from "../shared/JsonViewer";
+import { Pill } from "../shared/Pill";
 
 interface StateTabProps {
   state: unknown;
@@ -59,7 +59,7 @@ export function StateTab({ state, importMeta }: StateTabProps) {
       {/* Highlight cards */}
       <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2">
         <Card label="title">
-          {s.title !== undefined && s.title !== '' ? (
+          {s.title !== undefined && s.title !== "" ? (
             <span className="font-mono text-[12px] text-fg-0">"{s.title}"</span>
           ) : (
             <span className="font-mono text-[12px] text-fg-3">(none)</span>
@@ -72,7 +72,7 @@ export function StateTab({ state, importMeta }: StateTabProps) {
         </Card>
 
         <Card label="forkedFrom">
-          {s.forkedFrom !== undefined && s.forkedFrom !== '' ? (
+          {s.forkedFrom !== undefined && s.forkedFrom !== "" ? (
             <span className="font-mono text-[12px] text-fg-0 break-all">
               {s.forkedFrom}
             </span>
@@ -90,7 +90,7 @@ export function StateTab({ state, importMeta }: StateTabProps) {
         </Card>
 
         <Card label="lastPrompt">
-          {s.lastPrompt !== undefined && s.lastPrompt !== '' ? (
+          {s.lastPrompt !== undefined && s.lastPrompt !== "" ? (
             <span
               className="font-mono text-[12px] text-fg-0 line-clamp-3"
               title={s.lastPrompt}
@@ -147,7 +147,13 @@ export function StateTab({ state, importMeta }: StateTabProps) {
   );
 }
 
-function Card({ label, children }: { label: string; children: import('react').ReactNode }) {
+function Card({
+  label,
+  children,
+}: {
+  label: string;
+  children: import("react").ReactNode;
+}) {
   return (
     <div className="border border-border bg-surface-0 px-3 py-2">
       <div className="font-mono text-[10px] uppercase tracking-[0.1em] text-fg-3">
@@ -162,34 +168,68 @@ function Card({ label, children }: { label: string; children: import('react').Re
 function ManifestCard({ meta }: { meta: ImportInfo }) {
   const m = meta.manifest;
   const candidates: [string, string | undefined][] = [
-    ['original session', m?.sessionId],
-    ['kimi-code version', m?.kimiCodeVersion],
-    ['wire protocol', m?.wireProtocolVersion],
-    ['os', m?.os],
-    ['node', m?.nodejsVersion],
-    ['install source', m?.installSource],
-    ['workspace', m?.workspaceDir],
-    ['exported at', m?.exportedAt ? `${formatAbsoluteTime(Date.parse(m.exportedAt))} (${formatRelativeTime(Date.parse(m.exportedAt))})` : undefined],
-    ['first activity', m?.sessionFirstActivity ? formatAbsoluteTime(Date.parse(m.sessionFirstActivity)) : undefined],
-    ['last activity', m?.sessionLastActivity ? formatAbsoluteTime(Date.parse(m.sessionLastActivity)) : undefined],
-    ['imported at', `${formatAbsoluteTime(Date.parse(meta.importedAt))} (${formatRelativeTime(Date.parse(meta.importedAt))})`],
-    ['original file', meta.originalName ?? undefined],
+    ["original session", m?.sessionId],
+    ["kimi-code version", m?.kimiCodeVersion],
+    ["wire protocol", m?.wireProtocolVersion],
+    ["os", m?.os],
+    ["node", m?.nodejsVersion],
+    ["install source", m?.installSource],
+    ["workspace", m?.workspaceDir],
+    [
+      "exported at",
+      m?.exportedAt
+        ? `${formatAbsoluteTime(Date.parse(m.exportedAt))} (${formatRelativeTime(Date.parse(m.exportedAt))})`
+        : undefined,
+    ],
+    [
+      "first activity",
+      m?.sessionFirstActivity
+        ? formatAbsoluteTime(Date.parse(m.sessionFirstActivity))
+        : undefined,
+    ],
+    [
+      "last activity",
+      m?.sessionLastActivity
+        ? formatAbsoluteTime(Date.parse(m.sessionLastActivity))
+        : undefined,
+    ],
+    [
+      "imported at",
+      `${formatAbsoluteTime(Date.parse(meta.importedAt))} (${formatRelativeTime(Date.parse(meta.importedAt))})`,
+    ],
+    ["original file", meta.originalName ?? undefined],
   ];
   const rows = candidates
-    .filter((r): r is [string, string] => typeof r[1] === 'string' && r[1].length > 0)
+    .filter(
+      (r): r is [string, string] => typeof r[1] === "string" && r[1].length > 0,
+    )
     .map(([label, value]) => ({ label, value }));
 
   return (
     <section className="mb-5 border border-[var(--color-cat-subagent)] bg-[color-mix(in_oklab,var(--color-cat-subagent)_8%,transparent)] p-3">
       <div className="flex items-center gap-2">
-        <Pill tone="subagent" variant="outline">imported bundle</Pill>
-        <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-fg-3">manifest</span>
-        <span className="ml-auto"><CopyButton value={JSON.stringify(meta, null, 2)} label="copy manifest" /></span>
+        <Pill tone="subagent" variant="outline">
+          imported bundle
+        </Pill>
+        <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-fg-3">
+          manifest
+        </span>
+        <span className="ml-auto">
+          <CopyButton
+            value={JSON.stringify(meta, null, 2)}
+            label="copy manifest"
+          />
+        </span>
       </div>
       <div className="mt-2 grid grid-cols-1 gap-x-6 gap-y-1 md:grid-cols-2">
         {rows.map((r) => (
-          <div key={r.label} className="flex items-baseline gap-2 font-mono text-[11px]">
-            <span className="w-32 shrink-0 text-[10px] uppercase tracking-[0.1em] text-fg-3">{r.label}</span>
+          <div
+            key={r.label}
+            className="flex items-baseline gap-2 font-mono text-[11px]"
+          >
+            <span className="w-32 shrink-0 text-[10px] uppercase tracking-[0.1em] text-fg-3">
+              {r.label}
+            </span>
             <span className="min-w-0 break-all text-fg-1">{r.value}</span>
           </div>
         ))}
@@ -205,7 +245,7 @@ function ManifestCard({ meta }: { meta: ImportInfo }) {
 
 function TsValue({ ms, raw }: { ms: number | null; raw: string | undefined }) {
   if (ms === null) {
-    return raw !== undefined && raw !== '' ? (
+    return raw !== undefined && raw !== "" ? (
       <span className="font-mono text-[12px] text-fg-3 break-all">{raw}</span>
     ) : (
       <span className="font-mono text-[12px] text-fg-3">(none)</span>
@@ -224,7 +264,7 @@ function TsValue({ ms, raw }: { ms: number | null; raw: string | undefined }) {
 }
 
 function parseIso(input: string | undefined): number | null {
-  if (input === undefined || input === '') return null;
+  if (input === undefined || input === "") return null;
   const n = Date.parse(input);
   return Number.isFinite(n) ? n : null;
 }

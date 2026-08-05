@@ -11,18 +11,22 @@
  * maxCompletionTokens`.
  */
 
-import type { Message, StreamedMessagePart, VideoURLPart } from '#/kosong/contract/message';
+import type {
+  Message,
+  StreamedMessagePart,
+  VideoURLPart,
+} from "#/kosong/contract/message";
 import type {
   FinishReason,
   ResponseFormat,
   SamplingOptions,
   ThinkingEffort,
   VideoUploadInput,
-} from '#/kosong/contract/provider';
-import type { Tool } from '#/kosong/contract/tool';
-import type { TokenUsage } from '#/kosong/contract/usage';
+} from "#/kosong/contract/provider";
+import type { Tool } from "#/kosong/contract/tool";
+import type { TokenUsage } from "#/kosong/contract/usage";
 
-import type { Model } from './catalog';
+import type { Model } from "./catalog";
 
 export interface ModelRequestInput {
   readonly systemPrompt: string;
@@ -41,17 +45,21 @@ export interface ModelRequestTiming {
 }
 
 export type ModelRequestEvent =
-  | { readonly type: 'part'; readonly part: StreamedMessagePart }
-  | { readonly type: 'usage'; readonly usage: TokenUsage; readonly model?: string }
+  | { readonly type: "part"; readonly part: StreamedMessagePart }
   | {
-      readonly type: 'finish';
+      readonly type: "usage";
+      readonly usage: TokenUsage;
+      readonly model?: string;
+    }
+  | {
+      readonly type: "finish";
       readonly message: Message;
       readonly providerFinishReason?: FinishReason;
       readonly rawFinishReason?: string;
       readonly id?: string;
       readonly traceId?: string;
     }
-  | ({ readonly type: 'timing' } & ModelRequestTiming);
+  | ({ readonly type: "timing" } & ModelRequestTiming);
 
 export interface ModelRequestParams {
   readonly cacheKey?: string;
@@ -79,6 +87,8 @@ export interface ModelRequester {
   ): Promise<VideoURLPart>;
 }
 
-export function effectiveMaxCompletionTokens(params?: ModelRequestParams): number | undefined {
+export function effectiveMaxCompletionTokens(
+  params?: ModelRequestParams,
+): number | undefined {
   return params?.maxCompletionTokens;
 }

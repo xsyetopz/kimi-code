@@ -1,6 +1,6 @@
-import { appendFile, mkdir, readFile } from 'node:fs/promises';
-import { dirname } from 'node:path';
-import { targetSessionIndex } from './paths.js';
+import { appendFile, mkdir, readFile } from "node:fs/promises";
+import { dirname } from "node:path";
+import { targetSessionIndex } from "./paths.js";
 
 export interface SessionIndexEntry {
   readonly sessionId: string;
@@ -14,7 +14,7 @@ export async function appendSessionIndexEntry(
 ): Promise<void> {
   const path = targetSessionIndex(targetHome);
   await mkdir(dirname(path), { recursive: true, mode: 0o700 });
-  await appendFile(path, JSON.stringify(entry) + '\n', 'utf-8');
+  await appendFile(path, JSON.stringify(entry) + "\n", "utf-8");
 }
 
 /**
@@ -33,13 +33,16 @@ export async function ensureSessionIndexEntry(
   const path = targetSessionIndex(targetHome);
   if (await hasSessionIndexEntry(path, entry.sessionId)) return;
   await mkdir(dirname(path), { recursive: true, mode: 0o700 });
-  await appendFile(path, JSON.stringify(entry) + '\n', 'utf-8');
+  await appendFile(path, JSON.stringify(entry) + "\n", "utf-8");
 }
 
-async function hasSessionIndexEntry(path: string, sessionId: string): Promise<boolean> {
+async function hasSessionIndexEntry(
+  path: string,
+  sessionId: string,
+): Promise<boolean> {
   let text: string;
   try {
-    text = await readFile(path, 'utf-8');
+    text = await readFile(path, "utf-8");
   } catch {
     return false;
   }
@@ -49,7 +52,7 @@ async function hasSessionIndexEntry(path: string, sessionId: string): Promise<bo
       const parsed: unknown = JSON.parse(line);
       if (
         parsed !== null &&
-        typeof parsed === 'object' &&
+        typeof parsed === "object" &&
         (parsed as { sessionId?: unknown }).sessionId === sessionId
       ) {
         return true;

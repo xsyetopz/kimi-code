@@ -2,13 +2,13 @@
  * `GuiStoreService` — persistent TOML-backed implementation of `IGuiStoreService`.
  */
 
-import { randomBytes } from 'node:crypto';
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
+import { randomBytes } from "node:crypto";
+import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
 
-import { parse as parseToml, stringify as stringifyToml } from 'smol-toml';
+import { parse as parseToml, stringify as stringifyToml } from "smol-toml";
 
-import { IGuiStoreService } from './guiStore';
+import { IGuiStoreService } from "./guiStore";
 
 /** Minimal logger surface — keeps the store decoupled from the server logger. */
 export interface GuiStoreLogger {
@@ -29,7 +29,7 @@ export class GuiStoreService implements IGuiStoreService {
   private queue: Promise<void> = Promise.resolve();
 
   constructor(homeDir: string, logger?: GuiStoreLogger) {
-    this.filePath = join(homeDir, 'gui.toml');
+    this.filePath = join(homeDir, "gui.toml");
     this.logger = logger ?? noopLogger;
   }
 
@@ -78,9 +78,10 @@ export class GuiStoreService implements IGuiStoreService {
   private async readAll(): Promise<Record<string, string>> {
     let text: string;
     try {
-      text = await readFile(this.filePath, 'utf-8');
+      text = await readFile(this.filePath, "utf-8");
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return emptyStore();
+      if ((error as NodeJS.ErrnoException).code === "ENOENT")
+        return emptyStore();
       throw error;
     }
     if (text.trim().length === 0) return emptyStore();
@@ -88,13 +89,13 @@ export class GuiStoreService implements IGuiStoreService {
       const parsed = parseToml(text) as Record<string, unknown>;
       const out = emptyStore();
       for (const [k, v] of Object.entries(parsed)) {
-        if (typeof v === 'string') out[k] = v;
+        if (typeof v === "string") out[k] = v;
       }
       return out;
     } catch (error) {
       this.logger.warn(
         { filePath: this.filePath, err: error },
-        'gui.toml parse failed; using an empty store',
+        "gui.toml parse failed; using an empty store",
       );
       return emptyStore();
     }
@@ -103,9 +104,9 @@ export class GuiStoreService implements IGuiStoreService {
   private async writeAll(obj: Record<string, string>): Promise<void> {
     await mkdir(dirname(this.filePath), { recursive: true, mode: 0o700 });
     const plain: Record<string, string> = { ...obj };
-    const text = Object.keys(plain).length === 0 ? '' : stringifyToml(plain);
-    const tmp = `${this.filePath}.tmp.${process.pid}.${randomBytes(4).toString('hex')}`;
-    await writeFile(tmp, text, { encoding: 'utf-8', mode: 0o600 });
+    const text = Object.keys(plain).length === 0 ? "" : stringifyToml(plain);
+    const tmp = `${this.filePath}.tmp.${process.pid}.${randomBytes(4).toString("hex")}`;
+    await writeFile(tmp, text, { encoding: "utf-8", mode: 0o600 });
     await rename(tmp, this.filePath);
   }
 }

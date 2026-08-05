@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from "vitest";
 
 import {
   AgentSideConnection,
@@ -13,24 +13,36 @@ import {
   type SessionNotification,
   type WriteTextFileRequest,
   type WriteTextFileResponse,
-} from '@agentclientprotocol/sdk';
-import type { KimiHarness, Session } from '@moonshot-ai/kimi-code-sdk';
+} from "@agentclientprotocol/sdk";
+import type { KimiHarness, Session } from "@moonshot-ai/kimi-code-sdk";
 
-import { AcpServer } from '../src/server';
-import { AUTHED_STATUS, makeModelsMap } from './_helpers/harness-stubs';
+import { AcpServer } from "../src/server";
+import { AUTHED_STATUS, makeModelsMap } from "./_helpers/harness-stubs";
 
 class StubClient implements Client {
-  async requestPermission(_p: RequestPermissionRequest): Promise<RequestPermissionResponse> {
-    throw new Error('StubClient.requestPermission should not be called in session-new test');
+  async requestPermission(
+    _p: RequestPermissionRequest,
+  ): Promise<RequestPermissionResponse> {
+    throw new Error(
+      "StubClient.requestPermission should not be called in session-new test",
+    );
   }
   async sessionUpdate(_n: SessionNotification): Promise<void> {
-    throw new Error('StubClient.sessionUpdate should not be called in session-new test');
+    throw new Error(
+      "StubClient.sessionUpdate should not be called in session-new test",
+    );
   }
-  async writeTextFile(_p: WriteTextFileRequest): Promise<WriteTextFileResponse> {
-    throw new Error('StubClient.writeTextFile should not be called in session-new test');
+  async writeTextFile(
+    _p: WriteTextFileRequest,
+  ): Promise<WriteTextFileResponse> {
+    throw new Error(
+      "StubClient.writeTextFile should not be called in session-new test",
+    );
   }
   async readTextFile(_p: ReadTextFileRequest): Promise<ReadTextFileResponse> {
-    throw new Error('StubClient.readTextFile should not be called in session-new test');
+    throw new Error(
+      "StubClient.readTextFile should not be called in session-new test",
+    );
   }
 }
 
@@ -40,13 +52,23 @@ function makeInMemoryStreamPair(): {
 } {
   const clientToAgent = new TransformStream<Uint8Array, Uint8Array>();
   const agentToClient = new TransformStream<Uint8Array, Uint8Array>();
-  const agentStream = ndJsonStream(agentToClient.writable, clientToAgent.readable);
-  const clientStream = ndJsonStream(clientToAgent.writable, agentToClient.readable);
+  const agentStream = ndJsonStream(
+    agentToClient.writable,
+    clientToAgent.readable,
+  );
+  const clientStream = ndJsonStream(
+    clientToAgent.writable,
+    agentToClient.readable,
+  );
   return { agentStream, clientStream };
 }
 
 interface CapturedCall {
-  options: { id?: string; workDir: string; mcpServers?: Record<string, unknown> };
+  options: {
+    id?: string;
+    workDir: string;
+    mcpServers?: Record<string, unknown>;
+  };
 }
 
 function makeHarness(
@@ -67,7 +89,8 @@ function makeHarness(
       statusThinkingEffort === undefined
         ? undefined
         : vi.fn(async () => {
-            if (statusThinkingEffort instanceof Error) throw statusThinkingEffort;
+            if (statusThinkingEffort instanceof Error)
+              throw statusThinkingEffort;
             return { thinkingEffort: statusThinkingEffort };
           }),
   } as unknown as Session;
@@ -75,15 +98,17 @@ function makeHarness(
     auth: { status: async () => AUTHED_STATUS },
     createSession: async (options: { id?: string; workDir: string }) => {
       captured.push({ options });
-      return Object.assign({}, fakeSession, { id: options.id ?? sessionId }) as Session;
+      return Object.assign({}, fakeSession, {
+        id: options.id ?? sessionId,
+      }) as Session;
     },
     // Phase 14: server.newSession reads these to assemble configOptions.
     getConfig: async () => ({
       providers: {},
-      defaultModel: 'kimi-coder',
+      defaultModel: "kimi-coder",
       models: makeModelsMap([
-        { id: 'kimi-coder', name: 'Kimi Coder', thinkingSupported: true },
-        { id: 'kimi-plain', name: 'Kimi Plain', thinkingSupported: false },
+        { id: "kimi-coder", name: "Kimi Coder", thinkingSupported: true },
+        { id: "kimi-plain", name: "Kimi Plain", thinkingSupported: false },
       ]),
       thinking: fallbackThinking,
     }),
@@ -91,10 +116,10 @@ function makeHarness(
   return { harness, fakeSession };
 }
 
-describe('AcpServer session/new', () => {
-  it('calls harness.createSession with workDir from ACP cwd and returns the new sessionId', async () => {
+describe("AcpServer session/new", () => {
+  it("calls harness.createSession with workDir from ACP cwd and returns the new sessionId", async () => {
     const captured: CapturedCall[] = [];
-    const { harness } = makeHarness('sess-42', captured);
+    const { harness } = makeHarness("sess-42", captured);
     const { agentStream, clientStream } = makeInMemoryStreamPair();
 
     let server: AcpServer | undefined;
@@ -102,19 +127,22 @@ describe('AcpServer session/new', () => {
       server = new AcpServer(harness, c);
       return server;
     }, agentStream);
-    const client = new ClientSideConnection((_a) => new StubClient(), clientStream);
+    const client = new ClientSideConnection(
+      (_a) => new StubClient(),
+      clientStream,
+    );
 
     const request: NewSessionRequest = {
-      cwd: '/tmp/work',
+      cwd: "/tmp/work",
       mcpServers: [],
     };
 
     const response = await client.newSession(request);
 
-    expect(typeof response.sessionId).toBe('string');
+    expect(typeof response.sessionId).toBe("string");
     expect(response.sessionId.length).toBeGreaterThan(0);
     expect(captured).toHaveLength(1);
-    expect(captured[0]?.options.workDir).toBe('/tmp/work');
+    expect(captured[0]?.options.workDir).toBe("/tmp/work");
     expect(captured[0]?.options.id).toBe(response.sessionId);
     expect(captured[0]?.options.mcpServers).toEqual({});
 
@@ -123,14 +151,14 @@ describe('AcpServer session/new', () => {
     expect(server?.getSession(response.sessionId)?.id).toBe(response.sessionId);
   });
 
-  it('returns a distinct sessionId per call (one createSession per request)', async () => {
+  it("returns a distinct sessionId per call (one createSession per request)", async () => {
     const captured: CapturedCall[] = [];
     const harness = {
       auth: { status: async () => AUTHED_STATUS },
       createSession: async (options: { id?: string; workDir: string }) => {
         captured.push({ options });
         return {
-          id: options.id ?? 'fallback',
+          id: options.id ?? "fallback",
           prompt: async () => undefined,
           cancel: async () => undefined,
           onEvent: () => () => undefined,
@@ -142,30 +170,39 @@ describe('AcpServer session/new', () => {
 
     const { agentStream, clientStream } = makeInMemoryStreamPair();
     new AgentSideConnection((c) => new AcpServer(harness, c), agentStream);
-    const client = new ClientSideConnection((_a) => new StubClient(), clientStream);
+    const client = new ClientSideConnection(
+      (_a) => new StubClient(),
+      clientStream,
+    );
 
-    const first = await client.newSession({ cwd: '/tmp/a', mcpServers: [] });
-    const second = await client.newSession({ cwd: '/tmp/b', mcpServers: [] });
+    const first = await client.newSession({ cwd: "/tmp/a", mcpServers: [] });
+    const second = await client.newSession({ cwd: "/tmp/b", mcpServers: [] });
 
-    expect(typeof first.sessionId).toBe('string');
-    expect(typeof second.sessionId).toBe('string');
+    expect(typeof first.sessionId).toBe("string");
+    expect(typeof second.sessionId).toBe("string");
     expect(first.sessionId).not.toBe(second.sessionId);
     expect(captured).toHaveLength(2);
-    expect(captured[0]?.options.workDir).toBe('/tmp/a');
+    expect(captured[0]?.options.workDir).toBe("/tmp/a");
     expect(captured[0]?.options.id).toBe(first.sessionId);
-    expect(captured[1]?.options.workDir).toBe('/tmp/b');
+    expect(captured[1]?.options.workDir).toBe("/tmp/b");
     expect(captured[1]?.options.id).toBe(second.sessionId);
   });
 
-  it('advertises configOptions (PLAN D11 + Phase 15 thinking toggle) — model + thinking + mode under the unified SessionConfigOption surface', async () => {
+  it("advertises configOptions (PLAN D11 + Phase 15 thinking toggle) — model + thinking + mode under the unified SessionConfigOption surface", async () => {
     const captured: CapturedCall[] = [];
-    const { harness } = makeHarness('sess-modes', captured);
+    const { harness } = makeHarness("sess-modes", captured);
     const { agentStream, clientStream } = makeInMemoryStreamPair();
 
     new AgentSideConnection((c) => new AcpServer(harness, c), agentStream);
-    const client = new ClientSideConnection((_a) => new StubClient(), clientStream);
+    const client = new ClientSideConnection(
+      (_a) => new StubClient(),
+      clientStream,
+    );
 
-    const response = await client.newSession({ cwd: '/tmp/work', mcpServers: [] });
+    const response = await client.newSession({
+      cwd: "/tmp/work",
+      mcpServers: [],
+    });
 
     // Phase 14 (PLAN D11) replaces Phase 12's dedicated `modes:` field
     // with the spec's generic `configOptions:` surface — model + mode
@@ -178,97 +215,124 @@ describe('AcpServer session/new', () => {
     // visible between model and mode → 3 options total.
     expect(response.configOptions).toHaveLength(3);
     const [modelOpt, thinkingOpt, modeOpt] = response.configOptions!;
-    expect(modelOpt!.id).toBe('model');
-    expect(thinkingOpt!.id).toBe('thinking');
-    expect(modeOpt!.id).toBe('mode');
+    expect(modelOpt!.id).toBe("model");
+    expect(thinkingOpt!.id).toBe("thinking");
+    expect(modeOpt!.id).toBe("mode");
 
     // Thinking picker — Phase 16 reshaped this to a 2-entry select
     // (`off` / `on`) so Zed renders it; the underlying axis is still
     // binary. `thought_level` category, currentValue='off' (no
     // defaultThinking set on the harness fixture).
-    if (thinkingOpt!.type !== 'select') {
-      throw new Error('thinking option must be a select');
+    if (thinkingOpt!.type !== "select") {
+      throw new Error("thinking option must be a select");
     }
-    expect(thinkingOpt!.category).toBe('thought_level');
-    expect(thinkingOpt!.currentValue).toBe('off');
+    expect(thinkingOpt!.category).toBe("thought_level");
+    expect(thinkingOpt!.currentValue).toBe("off");
 
     // Mode picker — locked taxonomy (PLAN D9). Same order assertions
     // the Phase 12 test made, just rephrased against the new shape.
-    if (modeOpt!.type !== 'select') {
-      throw new Error('mode option must be a select');
+    if (modeOpt!.type !== "select") {
+      throw new Error("mode option must be a select");
     }
-    expect(modeOpt!.currentValue).toBe('default');
+    expect(modeOpt!.currentValue).toBe("default");
     expect(modeOpt!.options).toHaveLength(4);
-    const modeIds = modeOpt!.options.map((o) => 'value' in o ? o.value : '');
-    expect(modeIds).toEqual(['default', 'plan', 'auto', 'yolo']);
+    const modeIds = modeOpt!.options.map((o) => ("value" in o ? o.value : ""));
+    expect(modeIds).toEqual(["default", "plan", "auto", "yolo"]);
     for (const entry of modeOpt!.options) {
-      if ('value' in entry) {
-        expect(typeof entry.name).toBe('string');
+      if ("value" in entry) {
+        expect(typeof entry.name).toBe("string");
         expect(entry.name.length).toBeGreaterThan(0);
-        expect(typeof entry.description).toBe('string');
-        expect((entry.description ?? '').length).toBeGreaterThan(0);
+        expect(typeof entry.description).toBe("string");
+        expect((entry.description ?? "").length).toBeGreaterThan(0);
       }
     }
 
     // Model picker — Phase 15 removed `,thinking` variant rows: each
     // catalog entry surfaces exactly one option. Fixture has 2 entries.
-    if (modelOpt!.type !== 'select') {
-      throw new Error('model option must be a select');
+    if (modelOpt!.type !== "select") {
+      throw new Error("model option must be a select");
     }
-    expect(modelOpt!.currentValue).toBe('kimi-coder');
+    expect(modelOpt!.currentValue).toBe("kimi-coder");
     expect(modelOpt!.options).toHaveLength(2);
-    const modelValues = modelOpt!.options.map((o) => 'value' in o ? o.value : '');
-    expect(modelValues).toEqual(['kimi-coder', 'kimi-plain']);
+    const modelValues = modelOpt!.options.map((o) =>
+      "value" in o ? o.value : "",
+    );
+    expect(modelValues).toEqual(["kimi-coder", "kimi-plain"]);
   });
 
-  it('advertises thinking on when the created session status has a high effort', async () => {
+  it("advertises thinking on when the created session status has a high effort", async () => {
     const captured: CapturedCall[] = [];
-    const { harness } = makeHarness('sess-thinking-high', captured, 'high');
+    const { harness } = makeHarness("sess-thinking-high", captured, "high");
     const { agentStream, clientStream } = makeInMemoryStreamPair();
 
     void new AgentSideConnection((c) => new AcpServer(harness, c), agentStream);
-    const client = new ClientSideConnection((_a) => new StubClient(), clientStream);
+    const client = new ClientSideConnection(
+      (_a) => new StubClient(),
+      clientStream,
+    );
 
-    const response = await client.newSession({ cwd: '/tmp/work', mcpServers: [] });
+    const response = await client.newSession({
+      cwd: "/tmp/work",
+      mcpServers: [],
+    });
 
-    const thinking = response.configOptions?.find((option) => option.id === 'thinking');
-    if (thinking?.type !== 'select') throw new Error('thinking option must be a select');
-    expect(thinking.currentValue).toBe('on');
+    const thinking = response.configOptions?.find(
+      (option) => option.id === "thinking",
+    );
+    if (thinking?.type !== "select")
+      throw new Error("thinking option must be a select");
+    expect(thinking.currentValue).toBe("on");
   });
 
   it.each([
-    { name: 'explicit high effort', config: { effort: 'high' }, expected: 'on' },
-    { name: 'explicit off effort', config: { effort: 'off' }, expected: 'off' },
     {
-      name: 'disabled with a high effort',
-      config: { enabled: false, effort: 'high' },
-      expected: 'off',
+      name: "explicit high effort",
+      config: { effort: "high" },
+      expected: "on",
+    },
+    { name: "explicit off effort", config: { effort: "off" }, expected: "off" },
+    {
+      name: "disabled with a high effort",
+      config: { enabled: false, effort: "high" },
+      expected: "off",
     },
     {
-      name: 'enabled with an off effort',
-      config: { enabled: true, effort: 'off' },
-      expected: 'off',
+      name: "enabled with an off effort",
+      config: { enabled: true, effort: "off" },
+      expected: "off",
     },
   ])(
-    'falls back to $name when the created session status cannot be read',
+    "falls back to $name when the created session status cannot be read",
     async ({ config, expected }) => {
       const captured: CapturedCall[] = [];
       const { harness, fakeSession } = makeHarness(
-        'sess-thinking-status-error',
+        "sess-thinking-status-error",
         captured,
-        new Error('status unavailable'),
+        new Error("status unavailable"),
         config,
       );
       const { agentStream, clientStream } = makeInMemoryStreamPair();
 
-      void new AgentSideConnection((c) => new AcpServer(harness, c), agentStream);
-      const client = new ClientSideConnection((_a) => new StubClient(), clientStream);
+      void new AgentSideConnection(
+        (c) => new AcpServer(harness, c),
+        agentStream,
+      );
+      const client = new ClientSideConnection(
+        (_a) => new StubClient(),
+        clientStream,
+      );
 
-      const response = await client.newSession({ cwd: '/tmp/work', mcpServers: [] });
+      const response = await client.newSession({
+        cwd: "/tmp/work",
+        mcpServers: [],
+      });
 
       expect(fakeSession.getStatus).toHaveBeenCalledOnce();
-      const thinking = response.configOptions?.find((option) => option.id === 'thinking');
-      if (thinking?.type !== 'select') throw new Error('thinking option must be a select');
+      const thinking = response.configOptions?.find(
+        (option) => option.id === "thinking",
+      );
+      if (thinking?.type !== "select")
+        throw new Error("thinking option must be a select");
       expect(thinking.currentValue).toBe(expected);
     },
   );

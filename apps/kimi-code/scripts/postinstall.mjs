@@ -106,20 +106,20 @@ import {
   isGlobalInstall,
   ownPackageRoot,
   postinstallPaths,
-} from './postinstall/reach.mjs';
+} from "./postinstall/reach.mjs";
 import {
   classifyShim,
   deleteShim,
   detectLegacyShims,
   renameInPlace,
-} from './postinstall/migrate.mjs';
+} from "./postinstall/migrate.mjs";
 import {
   logForeignKimiInTheWay,
   logMigrationBlocked,
   logMigrationDone,
   logNewCliNotOnPath,
   notify,
-} from './postinstall/ui.mjs';
+} from "./postinstall/ui.mjs";
 
 async function main() {
   // Step 1: skip non-global installs (npx, local project deps,
@@ -170,8 +170,8 @@ async function main() {
   //   - nothing resolves (our shim isn't on PATH at all)
   // For each we render a different notice and touch NOTHING. The
   // common-case fourth result is "our shim wins" — we proceed.
-  const actionable = classifications.filter((c) => c.kind !== 'blocked');
-  const blocked = classifications.filter((c) => c.kind === 'blocked');
+  const actionable = classifications.filter((c) => c.kind !== "blocked");
+  const blocked = classifications.filter((c) => c.kind === "blocked");
   const actionableShimPaths = actionable.map((c) => c.shimPath);
   const allDetectedShimPaths = classifications.map((c) => c.shimPath);
 
@@ -181,10 +181,10 @@ async function main() {
     actionableShimPaths,
     allDetectedShimPaths,
   );
-  if (blocker.kind !== 'own') {
-    if (blocker.kind === 'blocked-legacy') {
+  if (blocker.kind !== "own") {
+    if (blocker.kind === "blocked-legacy") {
       logMigrationBlocked(blocked, actionable, pm);
-    } else if (blocker.kind === 'foreign') {
+    } else if (blocker.kind === "foreign") {
       logForeignKimiInTheWay(blocker.path, pm);
     } else {
       // 'none' — our shim isn't on PATH at all.
@@ -205,11 +205,11 @@ async function main() {
   let preservedFirst = false;
 
   for (const c of classifications) {
-    if (c.kind === 'blocked') continue; // already established harmless
+    if (c.kind === "blocked") continue; // already established harmless
 
     if (!preservedFirst) {
       preservedFirst = true;
-      if (c.kind === 'renameable') {
+      if (c.kind === "renameable") {
         const r = await renameInPlace(c.shimPath, c.target);
         if (r.success) {
           renames.push(c);
@@ -218,7 +218,7 @@ async function main() {
         }
         continue;
       }
-      if (c.kind === 'consolidate') {
+      if (c.kind === "consolidate") {
         const r = await deleteShim(c.shimPath);
         if (r.success) {
           consolidates.push(c);
@@ -227,7 +227,7 @@ async function main() {
         }
         continue;
       }
-      if (c.kind === 'delete-only') {
+      if (c.kind === "delete-only") {
         const r = await deleteShim(c.shimPath);
         if (r.success) {
           skippedForeignTarget.push(c);

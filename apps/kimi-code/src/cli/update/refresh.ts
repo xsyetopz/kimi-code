@@ -1,6 +1,6 @@
-import { writeUpdateCache } from './cache';
-import { fetchLatestFromCdn, type FetchLatestResult } from './cdn';
-import { type UpdateCache } from './types';
+import { writeUpdateCache } from "./cache";
+import { fetchLatestFromCdn, type FetchLatestResult } from "./cdn";
+import { type UpdateCache } from "./types";
 
 export interface RefreshUpdateCacheDeps {
   /** Resolves with the latest version + rollout manifest. **Throws** on any
@@ -24,7 +24,7 @@ export async function refreshUpdateCache(
 
   const { latest, manifest } = await resolved.fetchLatest();
   const cache: UpdateCache = {
-    source: 'cdn',
+    source: "cdn",
     checkedAt: resolved.now().toISOString(),
     latest,
     manifest,

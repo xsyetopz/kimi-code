@@ -13,16 +13,19 @@
  * log — was removed server-side, so there is no live push to render.
  */
 
-import { ISessionMetadata } from '@moonshot-ai/agent-core-v2/session/sessionMetadata/sessionMetadata';
-import { useQuery } from '@tanstack/react-query';
-import { useEffect, useMemo, useState } from 'react';
+import { ISessionMetadata } from "@moonshot-ai/agent-core-v2/session/sessionMetadata/sessionMetadata";
+import { useQuery } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from "react";
 
-import { serviceByName } from '../channel';
-import { useConnection } from '../connection';
-import { type AnyService } from '../panels';
-import { fetchTranscriptPlan, type TranscriptPlanInfo } from '../transcript/api';
-import { ActionButton, Badge, ErrorLine } from '../ui';
-import { ScopePanels } from './ServicePanels';
+import { serviceByName } from "../channel";
+import { useConnection } from "../connection";
+import { type AnyService } from "../panels";
+import {
+  fetchTranscriptPlan,
+  type TranscriptPlanInfo,
+} from "../transcript/api";
+import { ActionButton, Badge, ErrorLine } from "../ui";
+import { ScopePanels } from "./ServicePanels";
 
 export function Inspector({
   sessionId,
@@ -38,7 +41,7 @@ export function Inspector({
   const { klient } = useConnection();
 
   const meta = useQuery({
-    queryKey: ['sessionMeta', sessionId],
+    queryKey: ["sessionMeta", sessionId],
     queryFn: () =>
       klient
         .session(sessionId as string)
@@ -49,8 +52,8 @@ export function Inspector({
 
   const agentIds = useMemo(() => {
     const ids = Object.keys(meta.data?.agents ?? {});
-    if (ids.length === 0) return ['main'];
-    return ['main', ...ids.filter((id) => id !== 'main')].filter(
+    if (ids.length === 0) return ["main"];
+    return ["main", ...ids.filter((id) => id !== "main")].filter(
       (id, i, all) => all.indexOf(id) === i,
     );
   }, [meta.data]);
@@ -66,11 +69,18 @@ export function Inspector({
   // session close), so the switcher lists entries that cannot be called.
   // Mark one as "not loaded" when an agent-scope call comes back with
   // `agent.not_found` (message names the agent).
-  const [stoppedAgents, setStoppedAgents] = useState<ReadonlySet<string>>(new Set());
+  const [stoppedAgents, setStoppedAgents] = useState<ReadonlySet<string>>(
+    new Set(),
+  );
   useEffect(() => setStoppedAgents(new Set()), [sessionId]);
   const noteAgentError = (agent: string, error: unknown) => {
-    if (error instanceof Error && error.message.includes('not found in session')) {
-      setStoppedAgents((prev) => (prev.has(agent) ? prev : new Set(prev).add(agent)));
+    if (
+      error instanceof Error &&
+      error.message.includes("not found in session")
+    ) {
+      setStoppedAgents((prev) =>
+        prev.has(agent) ? prev : new Set(prev).add(agent),
+      );
     }
   };
 
@@ -81,7 +91,7 @@ export function Inspector({
     return (name: string): AnyService | null => {
       return (
         serviceByName<AnyService>(klient, name, {
-          scope: 'agent',
+          scope: "agent",
           sessionId: sessionId !== null && ready ? sessionId : undefined,
           agentId: effectiveAgent,
         }) ?? null
@@ -112,8 +122,9 @@ export function Inspector({
           </select>
           {stoppedAgents.has(effectiveAgent) ? (
             <div className="mt-1 text-[10px] text-neutral-600">
-              this agent is not materialized in the running server (e.g. created before a restart) —
-              calls will fail; its persisted records remain on disk
+              this agent is not materialized in the running server (e.g. created
+              before a restart) — calls will fail; its persisted records remain
+              on disk
             </div>
           ) : null}
           {meta.isError ? (
@@ -127,7 +138,7 @@ export function Inspector({
       <div className="flex-1 overflow-y-auto p-3">
         {sessionBlocked ? (
           <div className="text-[12px] text-neutral-600">
-            {sessionId === null ? 'No session selected.' : 'Loading session…'}
+            {sessionId === null ? "No session selected." : "Loading session…"}
           </div>
         ) : (
           <>
@@ -151,10 +162,18 @@ export function Inspector({
 // here.
 // ---------------------------------------------------------------------------
 
-function PlanCard({ sessionId, agentId }: { sessionId: string; agentId: string }) {
+function PlanCard({
+  sessionId,
+  agentId,
+}: {
+  sessionId: string;
+  agentId: string;
+}) {
   const { baseUrl, config } = useConnection();
-  const [toolCallId, setToolCallId] = useState('');
-  const [result, setResult] = useState<readonly TranscriptPlanInfo[] | null>(null);
+  const [toolCallId, setToolCallId] = useState("");
+  const [result, setResult] = useState<readonly TranscriptPlanInfo[] | null>(
+    null,
+  );
   const [error, setError] = useState<unknown>(null);
   const [loading, setLoading] = useState(false);
 
@@ -174,10 +193,10 @@ function PlanCard({ sessionId, agentId }: { sessionId: string; agentId: string }
       setResult(
         await fetchTranscriptPlan({
           baseUrl,
-          token: token === '' ? undefined : token,
+          token: token === "" ? undefined : token,
           sessionId,
           agentId,
-          toolCallId: id === '' ? undefined : id,
+          toolCallId: id === "" ? undefined : id,
         }),
       );
     } catch (error) {
@@ -191,7 +210,9 @@ function PlanCard({ sessionId, agentId }: { sessionId: string; agentId: string }
   return (
     <div className="mb-3 rounded-lg border border-neutral-800 bg-neutral-950/40">
       <div className="flex items-center justify-between border-b border-neutral-800 px-3 py-2">
-        <span className="text-[12px] font-medium text-neutral-200">Plan lookup</span>
+        <span className="text-[12px] font-medium text-neutral-200">
+          Plan lookup
+        </span>
         <Badge tone="sky">{agentId}</Badge>
       </div>
       <div className="px-3 py-2">
@@ -202,11 +223,11 @@ function PlanCard({ sessionId, agentId }: { sessionId: string; agentId: string }
             value={toolCallId}
             onChange={(e) => setToolCallId(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') void query();
+              if (e.key === "Enter") void query();
             }}
           />
           <ActionButton disabled={loading} onClick={() => void query()}>
-            {loading ? 'Loading…' : 'Query'}
+            {loading ? "Loading…" : "Query"}
           </ActionButton>
         </div>
         {error !== null ? (
@@ -216,9 +237,13 @@ function PlanCard({ sessionId, agentId }: { sessionId: string; agentId: string }
         ) : null}
         {result !== null ? (
           result.length === 0 ? (
-            <div className="mt-2 text-[11px] text-neutral-600 italic">no plans on this agent</div>
+            <div className="mt-2 text-[11px] text-neutral-600 italic">
+              no plans on this agent
+            </div>
           ) : (
-            result.map((entry) => <PlanEntryView key={entry.toolCallId} entry={entry} />)
+            result.map((entry) => (
+              <PlanEntryView key={entry.toolCallId} entry={entry} />
+            ))
           )
         ) : null}
       </div>
@@ -238,16 +263,24 @@ function PlanEntryView({ entry }: { entry: TranscriptPlanInfo }) {
         {review !== undefined ? (
           <Badge
             tone={
-              review.state === 'approved' ? 'green' : review.state === 'pending' ? 'amber' : 'red'
+              review.state === "approved"
+                ? "green"
+                : review.state === "pending"
+                  ? "amber"
+                  : "red"
             }
           >
             {review.state}
           </Badge>
         ) : null}
-        <span className="font-mono text-[10px] text-neutral-500">{entry.turnId}</span>
+        <span className="font-mono text-[10px] text-neutral-500">
+          {entry.turnId}
+        </span>
       </div>
       {entry.path !== undefined ? (
-        <div className="mb-1 break-all font-mono text-[10px] text-neutral-500">{entry.path}</div>
+        <div className="mb-1 break-all font-mono text-[10px] text-neutral-500">
+          {entry.path}
+        </div>
       ) : null}
       {review?.selectedOption !== undefined ? (
         <div className="mb-1 text-[11px] text-neutral-400">

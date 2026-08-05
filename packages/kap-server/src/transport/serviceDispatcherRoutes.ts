@@ -19,19 +19,19 @@
  * (`registerDebugRoutes.ts`).
  */
 
-import type { Scope } from '@moonshot-ai/agent-core-v2';
+import type { Scope } from "@moonshot-ai/agent-core-v2";
 
-import { requestLog } from '../lib/requestLog';
-import { okEnvelope } from '../protocol/envelope';
-import { ErrorCode } from '../protocol/error-codes';
-import type { ScopeKind } from './channel';
+import { requestLog } from "../lib/requestLog";
+import { okEnvelope } from "../protocol/envelope";
+import { ErrorCode } from "../protocol/error-codes";
+import type { ScopeKind } from "./channel";
 import {
   type ChannelDescriptor,
   describeAllChannels,
   resolveAnyScopedServiceId,
-} from './channelRegistry';
-import { type ChannelLookup, dispatch } from './dispatcher';
-import { mapError, validationEnvelope, withTimeout } from './errors';
+} from "./channelRegistry";
+import { type ChannelLookup, dispatch } from "./dispatcher";
+import { mapError, validationEnvelope, withTimeout } from "./errors";
 
 interface RpcRequest {
   readonly id: string;
@@ -48,8 +48,14 @@ interface RpcReply {
 }
 
 export interface RouteHost {
-  get(path: string, handler: (req: RpcRequest, reply: RpcReply) => Promise<unknown>): unknown;
-  post(path: string, handler: (req: RpcRequest, reply: RpcReply) => Promise<unknown>): unknown;
+  get(
+    path: string,
+    handler: (req: RpcRequest, reply: RpcReply) => Promise<unknown>,
+  ): unknown;
+  post(
+    path: string,
+    handler: (req: RpcRequest, reply: RpcReply) => Promise<unknown>,
+  ): unknown;
 }
 
 export interface ServiceDispatcherRouteOptions {
@@ -75,12 +81,18 @@ export function registerServiceDispatcherRoutes(
 ): void {
   const lookup = opts.lookup ?? resolveAnyScopedServiceId;
   const scopeRoutes: { path: string; scopeKind: ScopeKind }[] = [
-    { path: `${basePath}/:service/:method`, scopeKind: 'core' },
-    { path: `${basePath}/workspace/:workspace_id/:service/:method`, scopeKind: 'workspace' },
-    { path: `${basePath}/session/:session_id/:service/:method`, scopeKind: 'session' },
+    { path: `${basePath}/:service/:method`, scopeKind: "core" },
+    {
+      path: `${basePath}/workspace/:workspace_id/:service/:method`,
+      scopeKind: "workspace",
+    },
+    {
+      path: `${basePath}/session/:session_id/:service/:method`,
+      scopeKind: "session",
+    },
     {
       path: `${basePath}/session/:session_id/agent/:agent_id/:service/:method`,
-      scopeKind: 'agent',
+      scopeKind: "agent",
     },
   ];
   for (const { path, scopeKind } of scopeRoutes) {
@@ -110,15 +122,24 @@ function makeHandler(
     // `middleware/auth.ts`); the handler runs only after a valid credential
     // has been verified.
 
-    const { service, method } = req.params as { service: string; method: string };
+    const { service, method } = req.params as {
+      service: string;
+      method: string;
+    };
 
     // Parse argument.
     let arg: unknown;
     try {
-      arg = req.method.toUpperCase() === 'GET' ? parseArgFromQuery(req.query) : req.body;
+      arg =
+        req.method.toUpperCase() === "GET"
+          ? parseArgFromQuery(req.query)
+          : req.body;
     } catch {
       return reply.send(
-        validationEnvelope([{ path: 'arg', message: 'invalid JSON in ?arg=' }], requestId),
+        validationEnvelope(
+          [{ path: "arg", message: "invalid JSON in ?arg=" }],
+          requestId,
+        ),
       );
     }
 
@@ -143,9 +164,9 @@ function makeHandler(
       // at error; mapped business codes (4xxxx) are expected client outcomes.
       const log = requestLog(req);
       if (envelope.code === ErrorCode.INTERNAL_ERROR) {
-        log?.error({ err: error, service, method }, 'rpc dispatch failed');
+        log?.error({ err: error, service, method }, "rpc dispatch failed");
       } else {
-        log?.warn({ err: error, service, method }, 'rpc dispatch failed');
+        log?.warn({ err: error, service, method }, "rpc dispatch failed");
       }
       return reply.send(envelope);
     }
@@ -154,8 +175,8 @@ function makeHandler(
 
 function parseArgFromQuery(query: unknown): unknown {
   const q = query as Record<string, unknown> | undefined;
-  const raw = q?.['arg'];
+  const raw = q?.["arg"];
   if (raw === undefined) return undefined;
-  if (typeof raw !== 'string') return undefined;
+  if (typeof raw !== "string") return undefined;
   return JSON.parse(raw) as unknown;
 }

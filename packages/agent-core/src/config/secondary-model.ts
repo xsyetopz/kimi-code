@@ -3,7 +3,7 @@ import type {
   ModelAlias,
   ModelAliasOverrides,
   SecondaryModelConfig,
-} from './schema';
+} from "./schema";
 
 /**
  * Secondary-model runtime overlay.
@@ -25,9 +25,9 @@ import type {
  * path mirror, wired next to `stripEnvModelConfig`.
  */
 
-export const SECONDARY_DERIVED_MODEL_ALIAS = '__secondary__';
-export const SECONDARY_MODEL_ENV = 'KIMI_SECONDARY_MODEL';
-export const SECONDARY_MODEL_EFFORT_ENV = 'KIMI_SECONDARY_EFFORT';
+export const SECONDARY_DERIVED_MODEL_ALIAS = "__secondary__";
+export const SECONDARY_MODEL_ENV = "KIMI_SECONDARY_MODEL";
+export const SECONDARY_MODEL_EFFORT_ENV = "KIMI_SECONDARY_EFFORT";
 
 type Env = Readonly<Record<string, string | undefined>>;
 
@@ -59,7 +59,10 @@ export function secondaryModelPatch(
  * pointed entry does not exist (the session warning reports the dangling
  * pointer; spawn fails with the wrapped error).
  */
-export function applySecondaryModelConfig(config: KimiConfig, env: Env = process.env): KimiConfig {
+export function applySecondaryModelConfig(
+  config: KimiConfig,
+  env: Env = process.env,
+): KimiConfig {
   let secondary = config.secondaryModel;
   const envModel = trimmed(env[SECONDARY_MODEL_ENV]);
   const envEffort = trimmed(env[SECONDARY_MODEL_EFFORT_ENV]);
@@ -71,11 +74,18 @@ export function applySecondaryModelConfig(config: KimiConfig, env: Env = process
     };
   }
 
-  let next = secondary === config.secondaryModel ? config : { ...config, secondaryModel: secondary };
+  let next =
+    secondary === config.secondaryModel
+      ? config
+      : { ...config, secondaryModel: secondary };
 
   const patch = secondaryModelPatch(secondary);
   const baseId = secondary?.model;
-  if (patch === undefined || baseId === undefined || baseId === SECONDARY_DERIVED_MODEL_ALIAS) {
+  if (
+    patch === undefined ||
+    baseId === undefined ||
+    baseId === SECONDARY_DERIVED_MODEL_ALIAS
+  ) {
     return next;
   }
   const base = next.models?.[baseId];
@@ -110,34 +120,43 @@ export function stripSecondaryModelConfig(
 ): KimiConfig {
   let next = config;
 
-  if (next.models !== undefined && SECONDARY_DERIVED_MODEL_ALIAS in next.models) {
+  if (
+    next.models !== undefined &&
+    SECONDARY_DERIVED_MODEL_ALIAS in next.models
+  ) {
     const models = { ...next.models };
     delete models[SECONDARY_DERIVED_MODEL_ALIAS];
     next = { ...next, models };
   }
 
   if (next.defaultModel === SECONDARY_DERIVED_MODEL_ALIAS) {
-    const rawDefault = config.raw?.['default_model'];
+    const rawDefault = config.raw?.["default_model"];
     next = {
       ...next,
-      defaultModel: typeof rawDefault === 'string' ? rawDefault : undefined,
+      defaultModel: typeof rawDefault === "string" ? rawDefault : undefined,
     };
   }
 
   const envModel = trimmed(env[SECONDARY_MODEL_ENV]);
   const envEffort = trimmed(env[SECONDARY_MODEL_EFFORT_ENV]);
-  if ((envModel !== undefined || envEffort !== undefined) && next.secondaryModel !== undefined) {
-    const raw = isPlainObject(config.raw?.['secondary_model']) ? config.raw['secondary_model'] : {};
+  if (
+    (envModel !== undefined || envEffort !== undefined) &&
+    next.secondaryModel !== undefined
+  ) {
+    const raw = isPlainObject(config.raw?.["secondary_model"])
+      ? config.raw["secondary_model"]
+      : {};
     const restored = { ...next.secondaryModel };
     // Restore from raw only when the value being written still IS the env
     // value (a round-trip of the overlaid runtime view). A different value is
     // a deliberate new selection and must persist.
     if (envModel !== undefined && restored.model === envModel) {
-      if (typeof raw['model'] === 'string') restored.model = raw['model'];
+      if (typeof raw["model"] === "string") restored.model = raw["model"];
       else delete restored.model;
     }
     if (envEffort !== undefined && restored.defaultEffort === envEffort) {
-      if (typeof raw['default_effort'] === 'string') restored.defaultEffort = raw['default_effort'];
+      if (typeof raw["default_effort"] === "string")
+        restored.defaultEffort = raw["default_effort"];
       else delete restored.defaultEffort;
     }
     next = {
@@ -150,5 +169,5 @@ export function stripSecondaryModelConfig(
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

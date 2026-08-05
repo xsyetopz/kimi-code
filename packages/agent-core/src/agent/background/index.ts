@@ -10,18 +10,22 @@
  * registration, lifecycle state, persistence, output, and notifications.
  */
 
-import { randomBytes } from 'node:crypto';
+import { randomBytes } from "node:crypto";
 
-import { createControlledPromise, type ControlledPromise } from '@antfu/utils';
-import type { ContentPart } from '@moonshot-ai/kosong';
+import { createControlledPromise, type ControlledPromise } from "@antfu/utils";
+import type { ContentPart } from "@moonshot-ai/kosong";
 
-import type { Agent } from '../..';
-import { errorMessage } from '../../loop/errors';
-import { resettableTimeoutOutcome, timeoutOutcome, type ResettableTimeoutPromise } from '../../utils/promise';
-import { escapeXml, escapeXmlAttr } from '../../utils/xml-escape';
-import type { BackgroundTaskOrigin } from '../context';
-import { renderNotificationXml } from '../context/notification-xml';
-import { type BackgroundTaskPersistence } from './persist';
+import type { Agent } from "../..";
+import { errorMessage } from "../../loop/errors";
+import {
+  resettableTimeoutOutcome,
+  timeoutOutcome,
+  type ResettableTimeoutPromise,
+} from "../../utils/promise";
+import { escapeXml, escapeXmlAttr } from "../../utils/xml-escape";
+import type { BackgroundTaskOrigin } from "../context";
+import { renderNotificationXml } from "../context/notification-xml";
+import { type BackgroundTaskPersistence } from "./persist";
 import {
   TERMINAL_STATUSES,
   type BackgroundTask,
@@ -29,7 +33,7 @@ import {
   type BackgroundTaskInfoBase,
   type BackgroundTaskSettlement,
   type BackgroundTaskStatus,
-} from './task';
+} from "./task";
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -38,11 +42,13 @@ import {
  * that were marked `running` at startup but have no live KaosProcess
  * (the previous CLI process died) are reclassified as lost.
  */
-export function isBackgroundTaskTerminal(status: BackgroundTaskStatus): boolean {
+export function isBackgroundTaskTerminal(
+  status: BackgroundTaskStatus,
+): boolean {
   return TERMINAL_STATUSES.has(status);
 }
 
-const MAX_RUNNING_TASKS_ENV = 'KIMI_CODE_BACKGROUND_MAX_RUNNING_TASKS';
+const MAX_RUNNING_TASKS_ENV = "KIMI_CODE_BACKGROUND_MAX_RUNNING_TASKS";
 
 /**
  * Resolve the effective background-task concurrency cap. Precedence:
@@ -50,7 +56,9 @@ const MAX_RUNNING_TASKS_ENV = 'KIMI_CODE_BACKGROUND_MAX_RUNNING_TASKS';
  * (`background.max_running_tasks`) → `undefined` (no cap). An invalid env
  * value is ignored.
  */
-export function resolveMaxRunningTasks(configValue?: number): number | undefined {
+export function resolveMaxRunningTasks(
+  configValue?: number,
+): number | undefined {
   const raw = process.env[MAX_RUNNING_TASKS_ENV]?.trim();
   if (raw !== undefined && raw.length > 0 && /^\d+$/.test(raw)) {
     const parsed = Number(raw);
@@ -59,17 +67,17 @@ export function resolveMaxRunningTasks(configValue?: number): number | undefined
   return configValue;
 }
 
-export { AgentBackgroundTask } from './agent-task';
-export type { AgentBackgroundTaskInfo } from './agent-task';
-export { ProcessBackgroundTask } from './process-task';
-export type { ProcessBackgroundTaskInfo } from './process-task';
-export { QuestionBackgroundTask } from './question-task';
-export type { QuestionBackgroundTaskInfo } from './question-task';
-export { BackgroundTaskPersistence } from './persist';
+export { AgentBackgroundTask } from "./agent-task";
+export type { AgentBackgroundTaskInfo } from "./agent-task";
+export { ProcessBackgroundTask } from "./process-task";
+export type { ProcessBackgroundTaskInfo } from "./process-task";
+export { QuestionBackgroundTask } from "./question-task";
+export type { QuestionBackgroundTaskInfo } from "./question-task";
+export { BackgroundTaskPersistence } from "./persist";
 export type {
   BackgroundTaskInfo,
   BackgroundTaskStatus,
-} from './task';
+} from "./task";
 
 interface ManagedTask {
   readonly taskId: string;
@@ -155,15 +163,15 @@ function outputLimitReason(): string {
   const mib = Math.floor(MAX_TASK_OUTPUT_BYTES / (1024 * 1024));
   return (
     `Output limit exceeded: the command produced more than ${mib} MiB and was ` +
-    'terminated. Redirect large output to a file (e.g. `command > out.txt`) and ' +
-    'inspect it in slices instead.'
+    "terminated. Redirect large output to a file (e.g. `command > out.txt`) and " +
+    "inspect it in slices instead."
   );
 }
 
 const SIGTERM_GRACE_MS = 5_000;
-const USER_INTERRUPT_REASON = 'Interrupted by user';
+const USER_INTERRUPT_REASON = "Interrupted by user";
 
-const _ALPHABET = '0123456789abcdefghijklmnopqrstuvwxyz';
+const _ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyz";
 
 /**
  * Generate `{prefix}-{8 base36 chars}`.
@@ -174,7 +182,7 @@ const _ALPHABET = '0123456789abcdefghijklmnopqrstuvwxyz';
  */
 function generateTaskId(kind: string): string {
   const bytes = randomBytes(8);
-  let suffix = '';
+  let suffix = "";
   for (let i = 0; i < 8; i++) {
     suffix += _ALPHABET[bytes[i]! % 36];
   }
@@ -196,20 +204,20 @@ function emptyOutputSnapshot(): BackgroundTaskOutputSnapshot {
     previewBytes: 0,
     truncated: false,
     fullOutputAvailable: false,
-    preview: '',
+    preview: "",
   };
 }
 
 type BackgroundTaskNotification = Record<string, unknown> & {
   readonly id: string;
-  readonly category: 'task';
+  readonly category: "task";
   readonly type: string;
-  readonly source_kind: 'background_task';
+  readonly source_kind: "background_task";
   readonly source_id: string;
   /** Subagent id accepted by Agent(resume=...). Omitted for process tasks. */
   readonly agent_id?: string | undefined;
   readonly title: string;
-  readonly severity: 'info' | 'warning';
+  readonly severity: "info" | "warning";
   readonly body: string;
   readonly children?: readonly string[] | undefined;
 };
@@ -244,7 +252,10 @@ export interface RegisterBackgroundTaskOptions {
   readonly signal?: AbortSignal;
 }
 
-export type ForegroundTaskReleaseReason = 'detached' | 'timeout_detached' | 'terminal';
+export type ForegroundTaskReleaseReason =
+  | "detached"
+  | "timeout_detached"
+  | "terminal";
 
 interface StopRequest {
   readonly reason?: string;
@@ -252,9 +263,9 @@ interface StopRequest {
 }
 
 type TerminalOutcome =
-  | { readonly kind: 'worker'; readonly settlement: BackgroundTaskSettlement }
-  | { readonly kind: 'timeout' }
-  | { readonly kind: 'stop'; readonly request: StopRequest };
+  | { readonly kind: "worker"; readonly settlement: BackgroundTaskSettlement }
+  | { readonly kind: "timeout" }
+  | { readonly kind: "stop"; readonly request: StopRequest };
 
 // ── Manager ──────────────────────────────────────────────────────────
 
@@ -273,25 +284,25 @@ export class BackgroundManager {
   constructor(
     private readonly agent: Agent,
     private readonly persistence?: BackgroundTaskPersistence,
-  ) { }
+  ) {}
 
   private fireTerminalEffects(entry: ManagedTask): void {
     if (!this.isDetached(entry)) return;
     const info = this.toInfo(entry);
-    void this.notifyBackgroundTask(info).catch(() => { });
+    void this.notifyBackgroundTask(info).catch(() => {});
     this.emitTaskTerminated(info);
   }
 
   private emitTaskStarted(info: BackgroundTaskInfo): void {
-    this.agent.emitEvent({ type: 'background.task.started', info });
-    this.agent.telemetry.track('background_task_created', {
-      kind: info.kind === 'process' ? 'bash' : info.kind,
+    this.agent.emitEvent({ type: "background.task.started", info });
+    this.agent.telemetry.track("background_task_created", {
+      kind: info.kind === "process" ? "bash" : info.kind,
     });
   }
 
   private emitTaskTerminated(info: BackgroundTaskInfo): void {
-    this.agent.emitEvent({ type: 'background.task.terminated', info });
-    this.agent.telemetry.track('background_task_completed', {
+    this.agent.emitEvent({ type: "background.task.terminated", info });
+    this.agent.telemetry.track("background_task_completed", {
       kind: info.kind,
       duration_ms: info.endedAt !== null ? info.endedAt - info.startedAt : null,
       status: info.status,
@@ -305,13 +316,17 @@ export class BackgroundManager {
     if (maxRunningTasks === undefined) return;
     if (!startedInBackground) return;
     if (this.activeBackgroundAdmissionCount() < maxRunningTasks) return;
-    throw new Error('Too many background tasks are already running.');
+    throw new Error("Too many background tasks are already running.");
   }
 
   private activeBackgroundAdmissionCount(): number {
     let count = 0;
     for (const entry of this.tasks.values()) {
-      if (!TERMINAL_STATUSES.has(entry.status) && this.startedInBackground(entry)) count++;
+      if (
+        !TERMINAL_STATUSES.has(entry.status) &&
+        this.startedInBackground(entry)
+      )
+        count++;
     }
     return count;
   }
@@ -329,10 +344,15 @@ export class BackgroundManager {
    * by detaching to the background instead of being killed.
    */
   private canAutoBackgroundOnTimeout(entry: ManagedTask): boolean {
-    return entry.options.autoBackgroundOnTimeout === true && !this.isDetached(entry);
+    return (
+      entry.options.autoBackgroundOnTimeout === true && !this.isDetached(entry)
+    );
   }
 
-  registerTask(task: BackgroundTask, options: RegisterBackgroundTaskOptions = {}): string {
+  registerTask(
+    task: BackgroundTask,
+    options: RegisterBackgroundTaskOptions = {},
+  ): string {
     const detached = options.detached ?? true;
     const timeoutMs = options.timeoutMs ?? task.timeoutMs;
     const entryOptions: RegisterBackgroundTaskOptions = {
@@ -351,7 +371,7 @@ export class BackgroundManager {
       outputRingChars: 0,
       outputSizeBytes: 0,
       outputLimitTripped: false,
-      status: 'running',
+      status: "running",
       options: entryOptions,
       startedAt: Date.now(),
       endedAt: null,
@@ -413,7 +433,10 @@ export class BackgroundManager {
     return result;
   }
 
-  private shouldListTask(info: BackgroundTaskInfo, activeOnly: boolean): boolean {
+  private shouldListTask(
+    info: BackgroundTaskInfo,
+    activeOnly: boolean,
+  ): boolean {
     if (!TERMINAL_STATUSES.has(info.status)) return true;
     if (activeOnly) return false;
     return info.detached !== false;
@@ -438,11 +461,18 @@ export class BackgroundManager {
 
     const previewLimit = Math.max(0, Math.trunc(maxPreviewBytes));
     const persistence = this.persistence;
-    if (persistence !== undefined && (await persistence.taskOutputExists(taskId))) {
+    if (
+      persistence !== undefined &&
+      (await persistence.taskOutputExists(taskId))
+    ) {
       const outputSizeBytes = await persistence.taskOutputSizeBytes(taskId);
       const previewOffset = Math.max(0, outputSizeBytes - previewLimit);
       const previewBytes = outputSizeBytes - previewOffset;
-      const preview = await persistence.readTaskOutputBytes(taskId, previewOffset, previewBytes);
+      const preview = await persistence.readTaskOutputBytes(
+        taskId,
+        previewOffset,
+        previewBytes,
+      );
       return {
         outputPath: persistence.taskOutputFile(taskId),
         outputSizeBytes,
@@ -456,20 +486,26 @@ export class BackgroundManager {
     const entry = this.tasks.get(taskId);
     if (entry === undefined) return emptyOutputSnapshot();
 
-    const available = Buffer.from(entry.outputChunks.join(''), 'utf-8');
-    const previewBytes = Math.min(previewLimit, available.byteLength, entry.outputSizeBytes);
+    const available = Buffer.from(entry.outputChunks.join(""), "utf-8");
+    const previewBytes = Math.min(
+      previewLimit,
+      available.byteLength,
+      entry.outputSizeBytes,
+    );
     const previewOffset = available.byteLength - previewBytes;
     return {
       outputSizeBytes: entry.outputSizeBytes,
       previewBytes,
       truncated: entry.outputSizeBytes > previewBytes,
       fullOutputAvailable: false,
-      preview: available.subarray(previewOffset).toString('utf-8'),
+      preview: available.subarray(previewOffset).toString("utf-8"),
     };
   }
 
   async readOutput(taskId: string, tail?: number): Promise<string> {
-    const output = (await this.getOutputSnapshot(taskId, Number.MAX_SAFE_INTEGER)).preview;
+    const output = (
+      await this.getOutputSnapshot(taskId, Number.MAX_SAFE_INTEGER)
+    ).preview;
     if (tail !== undefined && tail < output.length) {
       return output.slice(-tail);
     }
@@ -478,7 +514,8 @@ export class BackgroundManager {
 
   async suppressTerminalNotification(taskId: string): Promise<void> {
     const entry = this.tasks.get(taskId);
-    if (entry === undefined || entry.terminalNotificationSuppressed === true) return;
+    if (entry === undefined || entry.terminalNotificationSuppressed === true)
+      return;
     entry.terminalNotificationSuppressed = true;
     await this.persistLive(entry);
   }
@@ -509,7 +546,7 @@ export class BackgroundManager {
     this.startOutputPersist(entry);
     void this.persistLive(entry);
     this.emitTaskStarted(this.toInfo(entry));
-    foregroundRelease.resolve(viaTimeout ? 'timeout_detached' : 'detached');
+    foregroundRelease.resolve(viaTimeout ? "timeout_detached" : "detached");
     return this.toInfo(entry);
   }
 
@@ -520,7 +557,10 @@ export class BackgroundManager {
   }
 
   /** Stop a running task. SIGTERM → 5s grace → SIGKILL. */
-  async stop(taskId: string, reason?: string): Promise<BackgroundTaskInfo | undefined> {
+  async stop(
+    taskId: string,
+    reason?: string,
+  ): Promise<BackgroundTaskInfo | undefined> {
     const entry = this.tasks.get(taskId);
     if (!entry) return undefined;
     // Normalize at this shared boundary: every public stop path (the TaskStop
@@ -528,7 +568,9 @@ export class BackgroundManager {
     // reason must never be recorded as an empty stopReason.
     const trimmedReason = reason?.trim();
     const stopReason =
-      trimmedReason === undefined || trimmedReason.length === 0 ? undefined : trimmedReason;
+      trimmedReason === undefined || trimmedReason.length === 0
+        ? undefined
+        : trimmedReason;
     // Terminal tasks short-circuit.
     if (TERMINAL_STATUSES.has(entry.status)) {
       await entry.persistWriteQueue;
@@ -544,15 +586,22 @@ export class BackgroundManager {
 
   async stopAll(reason?: string): Promise<readonly BackgroundTaskInfo[]> {
     const taskIds = Array.from(this.tasks.keys());
-    const results = await Promise.all(taskIds.map((taskId) => this.stop(taskId, reason)));
-    return results.filter((info): info is BackgroundTaskInfo => info !== undefined);
+    const results = await Promise.all(
+      taskIds.map((taskId) => this.stop(taskId, reason)),
+    );
+    return results.filter(
+      (info): info is BackgroundTaskInfo => info !== undefined,
+    );
   }
 
   /**
    * Wait for a task to reach a terminal state.
    * Returns immediately if already terminal. Times out after `timeoutMs`.
    */
-  async wait(taskId: string, timeoutMs = 30_000): Promise<BackgroundTaskInfo | undefined> {
+  async wait(
+    taskId: string,
+    timeoutMs = 30_000,
+  ): Promise<BackgroundTaskInfo | undefined> {
     const entry = this.tasks.get(taskId);
     if (!entry) return undefined;
     if (TERMINAL_STATUSES.has(entry.status)) {
@@ -564,7 +613,9 @@ export class BackgroundManager {
       return this.toInfo(entry);
     }
     const timeout = timeoutOutcome(timeoutMs, undefined);
-    await Promise.race([entry.terminal, timeout]).finally(() => timeout.clear());
+    await Promise.race([entry.terminal, timeout]).finally(() =>
+      timeout.clear(),
+    );
 
     if (TERMINAL_STATUSES.has(entry.status)) {
       await entry.persistWriteQueue;
@@ -601,7 +652,9 @@ export class BackgroundManager {
         if (remaining <= 0) return;
         perTaskTimeout = remaining;
       }
-      const batch = Promise.all(active.map((t) => this.wait(t.taskId, perTaskTimeout)));
+      const batch = Promise.all(
+        active.map((t) => this.wait(t.taskId, perTaskTimeout)),
+      );
       if (signal === undefined) {
         await batch;
       } else {
@@ -622,16 +675,16 @@ export class BackgroundManager {
     if (!entry) return undefined;
     if (TERMINAL_STATUSES.has(entry.status)) {
       await entry.persistWriteQueue;
-      return 'terminal';
+      return "terminal";
     }
-    if (this.isDetached(entry)) return 'detached';
+    if (this.isDetached(entry)) return "detached";
 
     const foregroundRelease = entry.foregroundRelease;
     const reason = await Promise.race([
       foregroundRelease,
-      entry.terminal.then(() => 'terminal' as const),
+      entry.terminal.then(() => "terminal" as const),
     ]);
-    if (reason === 'terminal') {
+    if (reason === "terminal") {
       await entry.persistWriteQueue;
     }
     return reason;
@@ -670,7 +723,7 @@ export class BackgroundManager {
       if (TERMINAL_STATUSES.has(info.status)) continue;
       const updated: BackgroundTaskInfo = {
         ...info,
-        status: 'lost',
+        status: "lost",
         endedAt: info.endedAt ?? Date.now(),
       };
       this.ghosts.set(id, updated);
@@ -700,12 +753,12 @@ export class BackgroundManager {
     const info = this.toInfo(entry);
     entry.persistWriteQueue = entry.persistWriteQueue
       .then(() => persistence.writeTask(info))
-      .catch(() => { });
+      .catch(() => {});
     return entry.persistWriteQueue;
   }
 
   private appendOutput(entry: ManagedTask, chunk: string): void {
-    entry.outputSizeBytes += Buffer.byteLength(chunk, 'utf-8');
+    entry.outputSizeBytes += Buffer.byteLength(chunk, "utf-8");
     entry.outputChunks.push(chunk);
     entry.outputRingChars += chunk.length;
     // Enforce the ring-buffer cap: drop oldest chunks when over budget. The
@@ -713,7 +766,10 @@ export class BackgroundManager {
     // buffer on every chunk was O(n²) over a command's lifetime and could
     // starve the event loop (and so the foreground timeout) under a high-rate
     // output stream.
-    while (entry.outputRingChars > MAX_OUTPUT_BYTES && entry.outputChunks.length > 1) {
+    while (
+      entry.outputRingChars > MAX_OUTPUT_BYTES &&
+      entry.outputChunks.length > 1
+    ) {
       const removed = entry.outputChunks.shift();
       if (removed === undefined) break;
       entry.outputRingChars -= removed.length;
@@ -728,7 +784,7 @@ export class BackgroundManager {
     // are intentionally not capped here.
     if (
       !entry.outputLimitTripped &&
-      entry.task.kind === 'process' &&
+      entry.task.kind === "process" &&
       entry.outputSizeBytes > MAX_TASK_OUTPUT_BYTES
     ) {
       entry.outputLimitTripped = true;
@@ -749,8 +805,9 @@ export class BackgroundManager {
     // a never-detached command can't grow the buffer without limit.
     if (!entry.outputPersistStarted) {
       entry.pendingOutput.push(chunk);
-      entry.pendingOutputBytes += Buffer.byteLength(chunk, 'utf-8');
-      if (entry.pendingOutputBytes > MAX_OUTPUT_BYTES) this.startOutputPersist(entry);
+      entry.pendingOutputBytes += Buffer.byteLength(chunk, "utf-8");
+      if (entry.pendingOutputBytes > MAX_OUTPUT_BYTES)
+        this.startOutputPersist(entry);
       return;
     }
 
@@ -763,7 +820,7 @@ export class BackgroundManager {
     if (persistence === undefined) return;
     entry.outputWriteQueue = entry.outputWriteQueue
       .then(() => persistence.appendTaskOutput(entry.taskId, chunk))
-      .catch(() => { });
+      .catch(() => {});
   }
 
   /**
@@ -776,7 +833,7 @@ export class BackgroundManager {
     if (entry.outputPersistStarted) return;
     entry.outputPersistStarted = true;
     if (entry.pendingOutput.length > 0) {
-      this.appendTaskOutput(entry, entry.pendingOutput.join(''));
+      this.appendTaskOutput(entry, entry.pendingOutput.join(""));
     }
     entry.pendingOutput = [];
     entry.pendingOutputBytes = 0;
@@ -796,7 +853,9 @@ export class BackgroundManager {
     this.fireNotificationHook(context.notification);
   }
 
-  private async restoreBackgroundTaskNotification(info: BackgroundTaskInfo): Promise<void> {
+  private async restoreBackgroundTaskNotification(
+    info: BackgroundTaskInfo,
+  ): Promise<void> {
     const context = await this.buildBackgroundTaskNotificationContext(info);
     if (context === undefined) return;
     this.agent.context.appendUserMessage(context.content, context.origin);
@@ -809,7 +868,7 @@ export class BackgroundManager {
     if (info.detached === false) return undefined;
     if (this.isTerminalNotificationSuppressed(info.taskId)) return undefined;
     const origin: BackgroundTaskOrigin = {
-      kind: 'background_task',
+      kind: "background_task",
       taskId: info.taskId,
       status: info.status,
       notificationId: `task:${info.taskId}:${info.status}`,
@@ -821,24 +880,27 @@ export class BackgroundManager {
     this.scheduledNotificationKeys.add(key);
     let output = await this.getOutputSnapshot(info.taskId, 0);
     if (!output.fullOutputAvailable) {
-      output = await this.getOutputSnapshot(info.taskId, NOTIFICATION_FALLBACK_PREVIEW_BYTES);
+      output = await this.getOutputSnapshot(
+        info.taskId,
+        NOTIFICATION_FALLBACK_PREVIEW_BYTES,
+      );
     }
     if (this.isTerminalNotificationSuppressed(info.taskId)) return undefined;
     const notification: BackgroundTaskNotification = {
       id: origin.notificationId,
-      category: 'task',
+      category: "task",
       type: `task.${info.status}`,
-      source_kind: 'background_task',
+      source_kind: "background_task",
       source_id: info.taskId,
-      agent_id: info.kind === 'agent' ? info.agentId : undefined,
+      agent_id: info.kind === "agent" ? info.agentId : undefined,
       title: `Background ${info.kind} ${info.status}`,
-      severity: info.status === 'completed' ? 'info' : 'warning',
+      severity: info.status === "completed" ? "info" : "warning",
       body: buildBackgroundTaskNotificationBody(info),
       children: backgroundTaskNotificationChildren(output),
     };
     const content = [
       {
-        type: 'text',
+        type: "text",
         text: renderNotificationXml(notification),
       },
     ] as const;
@@ -846,10 +908,10 @@ export class BackgroundManager {
   }
 
   private fireNotificationHook(notification: BackgroundTaskNotification): void {
-    void this.agent.hooks?.fireAndForgetTrigger('Notification', {
+    void this.agent.hooks?.fireAndForgetTrigger("Notification", {
       matcherValue: notification.type,
       inputData: {
-        sink: 'context',
+        sink: "context",
         notificationType: notification.type,
         title: notification.title,
         body: notification.body,
@@ -882,38 +944,54 @@ export class BackgroundManager {
     };
 
     void Promise.resolve()
-      .then(() => entry.task.start({
-        signal: entry.abortController.signal,
-        appendOutput: (chunk) => {
-          this.appendOutput(entry, chunk);
-        },
-        settle: async (settlement) => settleWorker(settlement),
-      }))
+      .then(() =>
+        entry.task.start({
+          signal: entry.abortController.signal,
+          appendOutput: (chunk) => {
+            this.appendOutput(entry, chunk);
+          },
+          settle: async (settlement) => settleWorker(settlement),
+        }),
+      )
       .catch((error: unknown) => {
         settleWorker({
-          status: entry.abortController.signal.aborted ? 'killed' : 'failed',
-          stopReason: entry.abortController.signal.aborted ? undefined : errorMessage(error),
+          status: entry.abortController.signal.aborted ? "killed" : "failed",
+          stopReason: entry.abortController.signal.aborted
+            ? undefined
+            : errorMessage(error),
         });
       });
 
-    let timeout = resettableTimeoutOutcome(entry.options.timeoutMs, { kind: 'timeout' as const });
+    let timeout = resettableTimeoutOutcome(entry.options.timeoutMs, {
+      kind: "timeout" as const,
+    });
     entry.timeoutHandle = timeout;
     let outcome: TerminalOutcome;
     try {
       while (true) {
         outcome = await Promise.race([
-          worker.then((settlement): TerminalOutcome => ({ kind: 'worker', settlement })),
+          worker.then(
+            (settlement): TerminalOutcome => ({ kind: "worker", settlement }),
+          ),
           timeout,
-          entry.stop.then((request): TerminalOutcome => ({ kind: 'stop', request })),
+          entry.stop.then(
+            (request): TerminalOutcome => ({ kind: "stop", request }),
+          ),
           this.signalOutcome(entry),
         ]);
-        if (outcome.kind !== 'timeout' || !this.canAutoBackgroundOnTimeout(entry)) break;
+        if (
+          outcome.kind !== "timeout" ||
+          !this.canAutoBackgroundOnTimeout(entry)
+        )
+          break;
         // Move the foreground task to the background instead of killing it:
         // detach() releases the tool-call waiter, then a fresh deadline is
         // armed (reset() is a no-op once the timeout promise has resolved).
         this.detach(entry.taskId, true);
         timeout.clear();
-        timeout = resettableTimeoutOutcome(entry.options.detachTimeoutMs, { kind: 'timeout' as const });
+        timeout = resettableTimeoutOutcome(entry.options.detachTimeoutMs, {
+          kind: "timeout" as const,
+        });
         entry.timeoutHandle = timeout;
       }
     } finally {
@@ -928,13 +1006,13 @@ export class BackgroundManager {
     const signal = entry.options.signal;
     if (signal === undefined) return new Promise<never>(() => {});
     const outcome = (): TerminalOutcome => ({
-      kind: 'stop',
+      kind: "stop",
       request: { reason: USER_INTERRUPT_REASON, abortReason: signal.reason },
     });
     if (signal.aborted) return Promise.resolve(outcome());
     return new Promise((resolve) => {
       signal.addEventListener(
-        'abort',
+        "abort",
         () => {
           if (!this.isDetached(entry)) resolve(outcome());
         },
@@ -948,30 +1026,30 @@ export class BackgroundManager {
     outcome: TerminalOutcome,
     worker: Promise<BackgroundTaskSettlement>,
   ): Promise<BackgroundTaskSettlement> {
-    if (outcome.kind === 'worker') return outcome.settlement;
+    if (outcome.kind === "worker") return outcome.settlement;
 
-    const timedOut = outcome.kind === 'timeout';
-    const stopReason = outcome.kind === 'stop' ? outcome.request.reason : undefined;
+    const timedOut = outcome.kind === "timeout";
+    const stopReason =
+      outcome.kind === "stop" ? outcome.request.reason : undefined;
     let abortReason: unknown;
     if (timedOut) {
-      abortReason = 'Timed out';
-    } else if (outcome.kind === 'stop') {
+      abortReason = "Timed out";
+    } else if (outcome.kind === "stop") {
       abortReason = outcome.request.abortReason ?? stopReason;
     }
     entry.stopReason = stopReason;
     entry.abortController.abort(abortReason);
 
     const graceTimeout = timeoutOutcome(SIGTERM_GRACE_MS, undefined);
-    const workerAfterAbort = await Promise.race([
-      worker,
-      graceTimeout,
-    ]).finally(() => graceTimeout.clear());
+    const workerAfterAbort = await Promise.race([worker, graceTimeout]).finally(
+      () => graceTimeout.clear(),
+    );
 
     if (
-      outcome.kind === 'stop' &&
+      outcome.kind === "stop" &&
       workerAfterAbort !== undefined &&
-      workerAfterAbort.status !== 'killed' &&
-      workerAfterAbort.status !== 'timed_out'
+      workerAfterAbort.status !== "killed" &&
+      workerAfterAbort.status !== "timed_out"
     ) {
       return workerAfterAbort;
     }
@@ -985,7 +1063,7 @@ export class BackgroundManager {
     }
 
     return {
-      status: timedOut ? 'timed_out' : 'killed',
+      status: timedOut ? "timed_out" : "killed",
       stopReason,
     };
   }
@@ -997,7 +1075,8 @@ export class BackgroundManager {
     entry.status = settlement.status;
     entry.endedAt = Date.now();
     entry.stopReason =
-      settlement.stopReason ?? (settlement.status === 'killed' ? entry.stopReason : undefined);
+      settlement.stopReason ??
+      (settlement.status === "killed" ? entry.stopReason : undefined);
     // Persist the terminal record only when the task actually touched disk:
     // detached tasks, and foreground tasks that spilled past the in-memory
     // buffer. A foreground task whose output stayed in memory leaves nothing on
@@ -1010,7 +1089,7 @@ export class BackgroundManager {
       entry.pendingOutputBytes = 0;
     }
     this.fireTerminalEffects(entry);
-    entry.foregroundRelease?.resolve('terminal');
+    entry.foregroundRelease?.resolve("terminal");
     entry.terminal.resolve();
   }
 
@@ -1040,23 +1119,28 @@ function backgroundTaskNotificationChildren(
   return [renderOutputPreviewBlock(output)];
 }
 
-function renderOutputFileBlock(outputPath: string, outputSizeBytes: number): string {
+function renderOutputFileBlock(
+  outputPath: string,
+  outputSizeBytes: number,
+): string {
   return [
     `<output-file path="${escapeXmlAttr(outputPath)}" bytes="${String(outputSizeBytes)}">`,
     `Read the output file to retrieve the result: ${escapeXml(outputPath)}`,
-    '</output-file>',
-  ].join('\n');
+    "</output-file>",
+  ].join("\n");
 }
 
-function renderOutputPreviewBlock(output: BackgroundTaskOutputSnapshot): string {
+function renderOutputPreviewBlock(
+  output: BackgroundTaskOutputSnapshot,
+): string {
   return [
     `<output-preview bytes="${String(output.previewBytes)}" total_bytes="${String(output.outputSizeBytes)}" truncated="${String(output.truncated)}">`,
     output.truncated
       ? `Showing the last ${String(output.previewBytes)} bytes. No persisted full output is available.`
-      : 'No persisted full output is available; this preview is the currently buffered task output.',
+      : "No persisted full output is available; this preview is the currently buffered task output.",
     escapeXml(output.preview),
-    '</output-preview>',
-  ].join('\n');
+    "</output-preview>",
+  ].join("\n");
 }
 
 function notificationKey(origin: BackgroundTaskOrigin): string {
@@ -1065,37 +1149,38 @@ function notificationKey(origin: BackgroundTaskOrigin): string {
 
 function buildBackgroundTaskNotificationBody(info: BackgroundTaskInfo): string {
   const baseLine =
-    info.status === 'timed_out'
+    info.status === "timed_out"
       ? `${info.description} timed out.`
       : info.stopReason
-        ? `${info.description} ${info.status === 'killed' ? 'was killed' : info.status}: ${info.stopReason
-        }.`
+        ? `${info.description} ${info.status === "killed" ? "was killed" : info.status}: ${
+            info.stopReason
+          }.`
         : `${info.description} ${info.status}.`;
 
-  if (info.kind !== 'agent') return baseLine;
-  if (info.status === 'completed') return baseLine;
+  if (info.kind !== "agent") return baseLine;
+  if (info.status === "completed") return baseLine;
   const agentId = info.agentId;
   if (agentId === undefined || agentId === info.taskId) return baseLine;
 
   const recovery = [
-    '',
+    "",
     `To recover or continue this subagent, call Agent(resume="${agentId}", prompt="Pick up where you left off; redo the last tool call if its result was never observed.").`,
     `Use agent_id ("${agentId}"), NOT source_id / task_id ("${info.taskId}") — the two look alike but only agent_id is accepted by the resume parameter.`,
-    'Add run_in_background=true to keep it backgrounded, or omit it to take the result inline in the current turn.',
-    'The subagent retains its full prior context across the restart, but any in-flight tool call lost its result and may need to be redone.',
-  ].join('\n');
+    "Add run_in_background=true to keep it backgrounded, or omit it to take the result inline in the current turn.",
+    "The subagent retains its full prior context across the restart, but any in-flight tool call lost its result and may need to be redone.",
+  ].join("\n");
 
   return `${baseLine}${recovery}`;
 }
 
 function abortRejecter(signal: AbortSignal): Promise<never> {
   if (signal.aborted) {
-    return Promise.reject(signal.reason ?? new Error('Aborted'));
+    return Promise.reject(signal.reason ?? new Error("Aborted"));
   }
   return new Promise<never>((_, reject) => {
     signal.addEventListener(
-      'abort',
-      () => reject(signal.reason ?? new Error('Aborted')),
+      "abort",
+      () => reject(signal.reason ?? new Error("Aborted")),
       { once: true },
     );
   });

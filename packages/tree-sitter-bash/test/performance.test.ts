@@ -4,9 +4,9 @@
 // timing assertions beyond the documented abort path), meant to catch
 // accidental quadratic complexity in future changes.
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from "vitest";
 
-import { parse } from '#/parse';
+import { parse } from "#/parse";
 
 /** ~100 KB of realistic script-shaped text (functions, loops, redirects,
  *  expansions, heredocs — not a pathological single construct). */
@@ -40,8 +40,8 @@ SCRIPT_EOF
   return block.repeat(Math.ceil(100_000 / block.length));
 }
 
-describe('performance smoke', () => {
-  it('parses a 100KB realistic script fast (default budget suffices)', () => {
+describe("performance smoke", () => {
+  it("parses a 100KB realistic script fast (default budget suffices)", () => {
     const source = realisticScript();
     expect(source.length).toBeGreaterThan(100_000);
     const start = performance.now();
@@ -49,7 +49,7 @@ describe('performance smoke', () => {
     const elapsed = performance.now() - start;
     if (!result.ok) {
       // An abort is acceptable only when it is prompt (< 100 ms).
-      expect(result).toEqual({ ok: false, reason: 'aborted' });
+      expect(result).toEqual({ ok: false, reason: "aborted" });
       expect(elapsed).toBeLessThan(100);
       return;
     }
@@ -60,34 +60,38 @@ describe('performance smoke', () => {
     const fullElapsed = performance.now() - restart;
     expect(full.ok).toBe(true);
     expect(fullElapsed).toBeLessThan(1000);
-    console.log(`100KB realistic script: default-budget parse ${elapsed.toFixed(1)}ms, unbounded ${fullElapsed.toFixed(1)}ms`);
+    console.log(
+      `100KB realistic script: default-budget parse ${elapsed.toFixed(1)}ms, unbounded ${fullElapsed.toFixed(1)}ms`,
+    );
   });
 
-  it('the abort path is prompt (< 100 ms) on a node-budget bomb', () => {
-    const source = 'echo a; '.repeat(50_000);
+  it("the abort path is prompt (< 100 ms) on a node-budget bomb", () => {
+    const source = "echo a; ".repeat(50_000);
     const start = performance.now();
     const result = parse(source);
     const elapsed = performance.now() - start;
-    expect(result).toEqual({ ok: false, reason: 'aborted' });
+    expect(result).toEqual({ ok: false, reason: "aborted" });
     expect(elapsed).toBeLessThan(100);
-    console.log(`abort after ${elapsed.toFixed(1)}ms on a 400KB node-budget bomb`);
+    console.log(
+      `abort after ${elapsed.toFixed(1)}ms on a 400KB node-budget bomb`,
+    );
   });
 
-  it('typical one-line commands parse in well under a millisecond', () => {
+  it("typical one-line commands parse in well under a millisecond", () => {
     // Warm up.
-    parse('git status && rm -rf /');
+    parse("git status && rm -rf /");
     const iterations = 200;
     const start = performance.now();
     for (let i = 0; i < iterations; i++) {
-      parse('git status && rm -rf /');
+      parse("git status && rm -rf /");
     }
     const perParse = (performance.now() - start) / iterations;
     expect(perParse).toBeLessThan(5);
     console.log(`typical command: ${(perParse * 1000).toFixed(0)}µs per parse`);
   });
 
-  it('a 500KB heredoc body parses within the default budget (few nodes)', () => {
-    const source = `cat <<EOF\n${'line of text\n'.repeat(40_000)}EOF`;
+  it("a 500KB heredoc body parses within the default budget (few nodes)", () => {
+    const source = `cat <<EOF\n${"line of text\n".repeat(40_000)}EOF`;
     expect(source.length).toBeGreaterThan(500_000);
     const result = parse(source);
     expect(result.ok).toBe(true);

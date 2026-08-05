@@ -6,8 +6,8 @@
 // that swaps the staged base in, and the queue disarm), so this module never
 // imports the TextIndex class itself.
 
-import { yieldToLoop } from './tokenize.js';
-import type { TextIndexBuild } from './types.js';
+import { yieldToLoop } from "./tokenize.js";
+import type { TextIndexBuild } from "./types.js";
 
 // `build()` yields to the event loop at the first of these two watermarks, so
 // many-small-docs and few-huge-docs corpora are both bounded per slice. The
@@ -50,7 +50,7 @@ export class StagedBuild implements TextIndexBuild {
   constructor(private readonly hooks: StagedBuildHooks) {}
 
   add(key: string, value: unknown): number {
-    if (this.done) throw new Error('text index build already finished');
+    if (this.done) throw new Error("text index build already finished");
     // Tokenize (and validate) BEFORE staging anything: a throwing
     // tokenizer must not leave a ghost docID in the staged state.
     const tokens = this.hooks.tokensFor(value);
@@ -70,7 +70,7 @@ export class StagedBuild implements TextIndexBuild {
   }
 
   async commit(): Promise<void> {
-    if (this.done) throw new Error('text index build already finished');
+    if (this.done) throw new Error("text index build already finished");
     this.done = true;
     try {
       await this.hooks.commit({
@@ -111,7 +111,10 @@ export async function feedBuild(
     for (const { key, value } of entries) {
       tokensSinceYield += b.add(key, value);
       docsSinceYield++;
-      if (docsSinceYield >= BUILD_YIELD_DOCS || tokensSinceYield >= BUILD_YIELD_TOKENS) {
+      if (
+        docsSinceYield >= BUILD_YIELD_DOCS ||
+        tokensSinceYield >= BUILD_YIELD_TOKENS
+      ) {
         docsSinceYield = 0;
         tokensSinceYield = 0;
         await yieldToLoop();

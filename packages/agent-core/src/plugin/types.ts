@@ -1,6 +1,6 @@
-import type { HookDefConfig, McpServerConfig } from '../config/schema';
+import type { HookDefConfig, McpServerConfig } from "../config/schema";
 
-export type PluginDiagnosticSeverity = 'error' | 'warn' | 'info';
+export type PluginDiagnosticSeverity = "error" | "warn" | "info";
 
 export interface PluginDiagnostic {
   readonly severity: PluginDiagnosticSeverity;
@@ -55,7 +55,7 @@ export interface PluginMcpServerInfo {
   readonly name: string;
   readonly runtimeName: string;
   readonly enabled: boolean;
-  readonly transport: 'stdio' | 'http' | 'sse';
+  readonly transport: "stdio" | "http" | "sse";
   readonly command?: string;
   readonly args?: readonly string[];
   readonly cwd?: string;
@@ -85,12 +85,12 @@ export interface PluginCommandEntry {
   readonly name: string;
 }
 
-export type PluginManifestKind = 'kimi-plugin-root' | 'kimi-plugin-dir';
-export type PluginSource = 'local-path' | 'zip-url' | 'github';
-export type PluginState = 'ok' | 'error';
+export type PluginManifestKind = "kimi-plugin-root" | "kimi-plugin-dir";
+export type PluginSource = "local-path" | "zip-url" | "github";
+export type PluginState = "ok" | "error";
 
 export interface PluginGithubRef {
-  readonly kind: 'branch' | 'tag' | 'sha';
+  readonly kind: "branch" | "tag" | "sha";
   readonly value: string;
 }
 
@@ -163,7 +163,10 @@ export interface EnabledPluginSystemPrompt {
 export interface ReloadSummary {
   readonly added: readonly string[];
   readonly removed: readonly string[];
-  readonly errors: ReadonlyArray<{ readonly id: string; readonly message: string }>;
+  readonly errors: ReadonlyArray<{
+    readonly id: string;
+    readonly message: string;
+  }>;
 }
 
 export const PLUGIN_NAME_REGEX = /^[a-z0-9][a-z0-9_-]{0,63}$/;

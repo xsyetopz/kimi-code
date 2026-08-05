@@ -8,10 +8,14 @@
  * workspace-resource injection contract works.
  */
 
-import { Event } from '#/_base/event';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
+import { Event } from "#/_base/event";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
 
-import { ISessionToolPolicyGate } from './sessionToolPolicyGate';
+import { ISessionToolPolicyGate } from "./sessionToolPolicyGate";
 
 export class NoopSessionToolPolicyGate implements ISessionToolPolicyGate {
   declare readonly _serviceBrand: undefined;
@@ -25,5 +29,5 @@ registerScopedService(
   ISessionToolPolicyGate,
   NoopSessionToolPolicyGate,
   ScopeActivation.OnScopeCreated,
-  'sessionToolPolicyGate',
+  "sessionToolPolicyGate",
 );

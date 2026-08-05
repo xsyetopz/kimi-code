@@ -1,8 +1,8 @@
-import type { GithubRef } from './source';
-import type { PluginGithubRef } from './types';
+import type { GithubRef } from "./source";
+import type { PluginGithubRef } from "./types";
 
 export interface GithubSourceInput {
-  readonly kind: 'github';
+  readonly kind: "github";
   readonly owner: string;
   readonly repo: string;
   readonly ref?: GithubRef;
@@ -51,19 +51,21 @@ export async function resolveGithubSource(
   const latestTag = await tryResolveLatestReleaseTag(owner, repo);
   if (latestTag !== undefined) {
     return {
-      tarballUrl: codeloadUrl(owner, repo, { kind: 'tag', value: latestTag }),
+      tarballUrl: codeloadUrl(owner, repo, { kind: "tag", value: latestTag }),
       displayVersion: latestTag,
-      ref: { kind: 'tag', value: latestTag },
+      ref: { kind: "tag", value: latestTag },
     };
   }
 
   // No release we could resolve. Fall back to the default branch via codeload.
   const headProbe = await fetch(
     `https://codeload.github.com/${owner}/${repo}/zip/HEAD`,
-    { method: 'HEAD' },
+    { method: "HEAD" },
   );
   if (headProbe.status === 404) {
-    throw new Error(`Repository \`${owner}/${repo}\` not found or not accessible.`);
+    throw new Error(
+      `Repository \`${owner}/${repo}\` not found or not accessible.`,
+    );
   }
   if (!headProbe.ok) {
     throw new Error(
@@ -72,8 +74,8 @@ export async function resolveGithubSource(
   }
   return {
     tarballUrl: `https://codeload.github.com/${owner}/${repo}/zip/HEAD`,
-    displayVersion: 'HEAD',
-    ref: { kind: 'branch', value: 'HEAD' },
+    displayVersion: "HEAD",
+    ref: { kind: "branch", value: "HEAD" },
   };
 }
 
@@ -94,7 +96,7 @@ async function tryResolveLatestReleaseTag(
   repo: string,
 ): Promise<string | undefined> {
   const url = `https://github.com/${owner}/${repo}/releases/latest`;
-  const resp = await fetch(url, { redirect: 'manual' });
+  const resp = await fetch(url, { redirect: "manual" });
 
   // Definitive "no own latest release". Distinct from transient errors.
   if (resp.status === 404) return undefined;
@@ -107,7 +109,7 @@ async function tryResolveLatestReleaseTag(
     );
   }
 
-  const location = resp.headers.get('location');
+  const location = resp.headers.get("location");
   if (location === null) return undefined;
 
   // Forks without their own releases redirect to bare `/releases` (the page
@@ -125,11 +127,11 @@ async function tryResolveLatestReleaseTag(
 function codeloadUrl(owner: string, repo: string, ref: GithubRef): string {
   const base = `https://codeload.github.com/${owner}/${repo}/zip`;
   const encoded = encodeCodeloadRefPath(ref.value);
-  if (ref.kind === 'sha') return `${base}/${encoded}`;
+  if (ref.kind === "sha") return `${base}/${encoded}`;
   // For a ref we confirmed is a tag (came from /releases/tag/...), use the
   // explicit refs/tags/ path so the download is unambiguous even if a branch
   // with the same name exists in the repo.
-  if (ref.kind === 'tag') return `${base}/refs/tags/${encoded}`;
+  if (ref.kind === "tag") return `${base}/refs/tags/${encoded}`;
   // For a `branch`-kind ref we cannot tell whether the user-typed value names
   // a branch or a tag (e.g. `/tree/v5.1.0`). Use codeload's short form to let
   // the GitHub backend resolve it the same way `github.com/.../tree/<x>` does.
@@ -151,5 +153,5 @@ function codeloadUrl(owner: string, repo: string, ref: GithubRef): string {
  * So: split on `/`, percent-encode each segment, and rejoin.
  */
 function encodeCodeloadRefPath(value: string): string {
-  return value.split('/').map(encodeURIComponent).join('/');
+  return value.split("/").map(encodeURIComponent).join("/");
 }

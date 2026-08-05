@@ -9,15 +9,19 @@
  * App-scoped; independent of `@moonshot-ai/kimi-telemetry`.
  */
 
-import { randomUUID } from 'node:crypto';
-import { release } from 'node:os';
+import { randomUUID } from "node:crypto";
+import { release } from "node:os";
 
-import type { ServicesAccessor } from '#/_base/di/instantiation';
-import { onUnexpectedError } from '#/_base/errors/unexpectedError';
-import { IBootstrapService } from '#/app/bootstrap/bootstrap';
-import { IFileSystemStorageService } from '#/persistence/interface/storage';
+import type { ServicesAccessor } from "#/_base/di/instantiation";
+import { onUnexpectedError } from "#/_base/errors/unexpectedError";
+import { IBootstrapService } from "#/app/bootstrap/bootstrap";
+import { IFileSystemStorageService } from "#/persistence/interface/storage";
 
-import type { ITelemetryAppender, TelemetryContextPatch, TelemetryProperties } from './telemetry';
+import type {
+  ITelemetryAppender,
+  TelemetryContextPatch,
+  TelemetryProperties,
+} from "./telemetry";
 import {
   type CloudContext,
   type CloudPrimitive,
@@ -25,9 +29,9 @@ import {
   CloudTransport,
   type EnrichedCloudEvent,
   isCloudPrimitive,
-} from './cloudTransport';
-import { resolveCoreVersion } from './coreVersion';
-import { cleanTelemetryProperties } from './privacy';
+} from "./cloudTransport";
+import { resolveCoreVersion } from "./coreVersion";
+import { cleanTelemetryProperties } from "./privacy";
 
 export interface CloudAppenderOptions {
   readonly storage: IFileSystemStorageService;
@@ -105,11 +109,12 @@ export class CloudAppender implements ITelemetryAppender {
   }
 
   track(event: string, properties?: TelemetryProperties): void {
-    const eventSessionId = properties?.['sessionId'];
+    const eventSessionId = properties?.["sessionId"];
     const enriched: EnrichedCloudEvent = {
-      event_id: randomUUID().replaceAll('-', ''),
+      event_id: randomUUID().replaceAll("-", ""),
       device_id: this.deviceId,
-      session_id: typeof eventSessionId === 'string' ? eventSessionId : this.sessionId,
+      session_id:
+        typeof eventSessionId === "string" ? eventSessionId : this.sessionId,
       event,
       timestamp: Date.now() / 1000,
       properties: cleanTelemetryProperties(sanitizeProperties(properties)),
@@ -122,17 +127,17 @@ export class CloudAppender implements ITelemetryAppender {
   }
 
   setContext(patch: TelemetryContextPatch): void {
-    const deviceId = patch['deviceId'];
-    if (typeof deviceId === 'string') {
+    const deviceId = patch["deviceId"];
+    if (typeof deviceId === "string") {
       this.deviceId = deviceId;
     }
-    const sessionId = patch['sessionId'];
-    if (typeof sessionId === 'string') {
+    const sessionId = patch["sessionId"];
+    if (typeof sessionId === "string") {
       this.sessionId = sessionId;
     }
-    const model = patch['model'];
-    if (typeof model === 'string') {
-      setPrimitive(this.context, 'model', model);
+    const model = patch["model"];
+    if (typeof model === "string") {
+      setPrimitive(this.context, "model", model);
     }
   }
 
@@ -175,7 +180,9 @@ function sanitizeProperties(input?: TelemetryProperties): CloudProperties {
       out[key] = value;
     } else {
       onUnexpectedError(
-        new Error(`telemetry property "${key}" is not a primitive and was dropped`),
+        new Error(
+          `telemetry property "${key}" is not a primitive and was dropped`,
+        ),
       );
     }
   }
@@ -189,23 +196,27 @@ function buildContext(options: CloudAppenderOptions): CloudContext {
     client_version: bootstrap.clientIdentity.version,
     version: bootstrap.clientIdentity.version,
     core_version: resolveCoreVersion(),
-    runtime: 'node',
+    runtime: "node",
     platform: bootstrap.platform,
     arch: bootstrap.arch,
     node_version: process.versions.node,
     os_version: release(),
-    ci: bootstrap.getEnv('CI') !== undefined,
-    locale: options.locale ?? bootstrap.getEnv('LANG') ?? '',
-    terminal: options.terminal ?? bootstrap.getEnv('TERM_PROGRAM') ?? '',
-    ui_mode: options.uiMode ?? 'shell',
+    ci: bootstrap.getEnv("CI") !== undefined,
+    locale: options.locale ?? bootstrap.getEnv("LANG") ?? "",
+    terminal: options.terminal ?? bootstrap.getEnv("TERM_PROGRAM") ?? "",
+    ui_mode: options.uiMode ?? "shell",
   };
-  setPrimitive(context, 'model', options.model);
-  setPrimitive(context, 'build_sha', options.buildSha);
+  setPrimitive(context, "model", options.model);
+  setPrimitive(context, "build_sha", options.buildSha);
   return context;
 }
 
-function setPrimitive(target: CloudContext, key: string, value: CloudPrimitive): void {
+function setPrimitive(
+  target: CloudContext,
+  key: string,
+  value: CloudPrimitive,
+): void {
   if (value === undefined) return;
-  if (typeof value === 'string' && value.length === 0) return;
+  if (typeof value === "string" && value.length === 0) return;
   target[key] = value;
 }

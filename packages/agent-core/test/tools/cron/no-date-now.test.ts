@@ -7,20 +7,20 @@
  * abstraction is *defined*. Non-existent files (P2 additions) are
  * skipped so the guard activates automatically when they land.
  */
-import { existsSync, readFileSync } from 'node:fs';
-import { describe, expect, it } from 'vitest';
-import { dirname, join } from 'pathe';
-import { fileURLToPath } from 'node:url';
+import { existsSync, readFileSync } from "node:fs";
+import { describe, expect, it } from "vitest";
+import { dirname, join } from "pathe";
+import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
 // `test/tools/cron/` → package root → `src/tools/cron/`.
-const cronSrcDir = join(here, '..', '..', '..', 'src', 'tools', 'cron');
+const cronSrcDir = join(here, "..", "..", "..", "src", "tools", "cron");
 
 const GUARDED_FILES = [
-  'scheduler.ts',
-  'persist.ts',
-  'lock.ts',
-  'jitter.ts',
+  "scheduler.ts",
+  "persist.ts",
+  "lock.ts",
+  "jitter.ts",
 ] as const;
 
 // Matches a `Date.now(` call. Word boundary on the `D` side so it
@@ -30,7 +30,7 @@ const GUARDED_FILES = [
 // regex is the cheap proxy for the AST selector we'd use in ESLint.
 const DATE_NOW_REGEX = /\bDate\s*\.\s*now\s*\(/;
 
-describe('cron scheduler files do not call Date.now()', () => {
+describe("cron scheduler files do not call Date.now()", () => {
   for (const file of GUARDED_FILES) {
     it(`${file} contains no Date.now() call`, () => {
       const path = join(cronSrcDir, file);
@@ -40,7 +40,7 @@ describe('cron scheduler files do not call Date.now()', () => {
         // automatically once they exist.
         return;
       }
-      const source = readFileSync(path, 'utf8');
+      const source = readFileSync(path, "utf8");
       const match = DATE_NOW_REGEX.exec(source);
       expect(
         match,

@@ -6,31 +6,37 @@
  * through `event`.
  */
 
-import type { IEventService } from '#/app/event/event';
-import type { ISessionMetadata } from '#/session/sessionMetadata/sessionMetadata';
+import type { IEventService } from "#/app/event/event";
+import type { ISessionMetadata } from "#/session/sessionMetadata/sessionMetadata";
 
 import {
   promptMetadataTextFromContentParts,
   promptMetadataTextFromText,
   titleFromPromptMetadataText,
-} from '#/agent/prompt/promptMetadataText';
+} from "#/agent/prompt/promptMetadataText";
 
 import type {
   ActivatePluginCommandPayload,
   ActivateSkillPayload,
   PromptPayload,
-} from './core-api';
+} from "./core-api";
 
 export { promptMetadataTextFromContentParts, titleFromPromptMetadataText };
 
-export function promptMetadataTextFromPayload(payload: PromptPayload): string | undefined {
+export function promptMetadataTextFromPayload(
+  payload: PromptPayload,
+): string | undefined {
   return promptMetadataTextFromContentParts(payload.input);
 }
 
-export function promptMetadataTextFromSkill(payload: ActivateSkillPayload): string | undefined {
+export function promptMetadataTextFromSkill(
+  payload: ActivateSkillPayload,
+): string | undefined {
   const args = payload.args?.trim();
   return promptMetadataTextFromText(
-    args === undefined || args.length === 0 ? `/${payload.name}` : `/${payload.name} ${args}`,
+    args === undefined || args.length === 0
+      ? `/${payload.name}`
+      : `/${payload.name} ${args}`,
   );
 }
 
@@ -45,7 +51,9 @@ export function promptMetadataTextFromPluginCommand(
 }
 
 export function isUntitled(title: string | undefined): boolean {
-  return title === undefined || title.trim().length === 0 || title === 'New Session';
+  return (
+    title === undefined || title.trim().length === 0 || title === "New Session"
+  );
 }
 
 export interface PromptMetadataUpdateTarget {
@@ -60,18 +68,19 @@ export async function applyPromptMetadataUpdate(
 ): Promise<void> {
   if (text === undefined) return;
   const current = await target.metadata.read();
-  const patch: { lastPrompt: string; title?: string; isCustomTitle?: boolean } = {
-    lastPrompt: text,
-  };
+  const patch: { lastPrompt: string; title?: string; isCustomTitle?: boolean } =
+    {
+      lastPrompt: text,
+    };
   if (!current.isCustomTitle && isUntitled(current.title)) {
     patch.title = titleFromPromptMetadataText(text);
     patch.isCustomTitle = false;
   }
   await target.metadata.update(patch);
   target.eventService.publish({
-    type: 'session.meta.updated',
+    type: "session.meta.updated",
     payload: {
-      agentId: 'main',
+      agentId: "main",
       sessionId: target.sessionId,
       title: patch.title,
       patch: {

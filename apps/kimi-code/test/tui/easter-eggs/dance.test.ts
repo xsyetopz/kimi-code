@@ -1,5 +1,5 @@
-import chalk from 'chalk';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import chalk from "chalk";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   DANCE_FLOW_MS,
@@ -10,30 +10,32 @@ import {
   rainbowText,
   setRainbowDance,
   tryHandleDanceCommand,
-} from '#/tui/easter-eggs/dance';
-import type { SlashCommandHost } from '#/tui/commands/dispatch';
-import { darkColors } from '#/tui/theme/colors';
+} from "#/tui/easter-eggs/dance";
+import type { SlashCommandHost } from "#/tui/commands/dispatch";
+import { darkColors } from "#/tui/theme/colors";
 
 const TRUECOLOR_PATTERN = /\[38;2;(\d+);(\d+);(\d+)m/g;
 
 /** Ordered list of "r,g,b" truecolor codes in the order they appear. */
 function truecolorCodes(text: string): string[] {
-  return [...text.matchAll(TRUECOLOR_PATTERN)].map((m) => `${m[1]},${m[2]},${m[3]}`);
+  return [...text.matchAll(TRUECOLOR_PATTERN)].map(
+    (m) => `${m[1]},${m[2]},${m[3]}`,
+  );
 }
 
-describe('RainbowDance', () => {
+describe("RainbowDance", () => {
   afterEach(() => {
     vi.useRealTimers();
   });
 
-  it('starts uncolored — the banner keeps its default look', () => {
+  it("starts uncolored — the banner keeps its default look", () => {
     const dance = new RainbowDance(vi.fn());
 
     expect(dance.colored).toBe(false);
     expect(dance.phase).toBe(0);
   });
 
-  it('flows while dancing and requests renders', () => {
+  it("flows while dancing and requests renders", () => {
     vi.useFakeTimers();
     const requestRender = vi.fn();
     const dance = new RainbowDance(requestRender);
@@ -47,7 +49,7 @@ describe('RainbowDance', () => {
     expect(requestRender).toHaveBeenCalled();
   });
 
-  it('fades back to default after the flow when not holding', () => {
+  it("fades back to default after the flow when not holding", () => {
     vi.useFakeTimers();
     const dance = new RainbowDance(vi.fn());
 
@@ -58,7 +60,7 @@ describe('RainbowDance', () => {
     expect(dance.phase).toBe(0);
   });
 
-  it('freezes into a static rainbow after the flow when holding', () => {
+  it("freezes into a static rainbow after the flow when holding", () => {
     vi.useFakeTimers();
     const dance = new RainbowDance(vi.fn());
 
@@ -71,7 +73,7 @@ describe('RainbowDance', () => {
     expect(dance.phase).toBe(frozen);
   });
 
-  it('stops on demand back to the default colors and clears its timers', () => {
+  it("stops on demand back to the default colors and clears its timers", () => {
     vi.useFakeTimers();
     const requestRender = vi.fn();
     const dance = new RainbowDance(requestRender);
@@ -91,7 +93,7 @@ describe('RainbowDance', () => {
     expect(requestRender).not.toHaveBeenCalled();
   });
 
-  it('dispose clears timers silently, without a final render', () => {
+  it("dispose clears timers silently, without a final render", () => {
     vi.useFakeTimers();
     const requestRender = vi.fn();
     const dance = new RainbowDance(requestRender);
@@ -107,7 +109,7 @@ describe('RainbowDance', () => {
     expect(requestRender).not.toHaveBeenCalled();
   });
 
-  it('advances the phase by one per frame while flowing', () => {
+  it("advances the phase by one per frame while flowing", () => {
     vi.useFakeTimers();
     const dance = new RainbowDance(vi.fn());
 
@@ -121,7 +123,7 @@ describe('RainbowDance', () => {
   });
 });
 
-describe('rainbowText', () => {
+describe("rainbowText", () => {
   const previousChalkLevel = chalk.level;
 
   beforeEach(() => {
@@ -132,37 +134,41 @@ describe('rainbowText', () => {
     chalk.level = previousChalkLevel;
   });
 
-  it('assigns each visible character the next palette color', () => {
-    const out = rainbowText('abcd', ['#111111', '#226622', '#aa33cc', '#44ddee'], 0);
+  it("assigns each visible character the next palette color", () => {
+    const out = rainbowText(
+      "abcd",
+      ["#111111", "#226622", "#aa33cc", "#44ddee"],
+      0,
+    );
 
     expect(truecolorCodes(out)).toEqual([
-      '17,17,17',
-      '34,102,34',
-      '170,51,204',
-      '68,221,238',
+      "17,17,17",
+      "34,102,34",
+      "170,51,204",
+      "68,221,238",
     ]);
   });
 
-  it('does not consume a palette slot for spaces', () => {
-    const out = rainbowText('a b', ['#111111', '#226622'], 0);
+  it("does not consume a palette slot for spaces", () => {
+    const out = rainbowText("a b", ["#111111", "#226622"], 0);
 
-    expect(truecolorCodes(out)).toEqual(['17,17,17', '34,102,34']);
+    expect(truecolorCodes(out)).toEqual(["17,17,17", "34,102,34"]);
   });
 
-  it('starts from the given offset', () => {
-    const out = rainbowText('a', ['#111111', '#226622'], 1);
+  it("starts from the given offset", () => {
+    const out = rainbowText("a", ["#111111", "#226622"], 1);
 
-    expect(truecolorCodes(out)).toEqual(['34,102,34']);
+    expect(truecolorCodes(out)).toEqual(["34,102,34"]);
   });
 });
 
-describe('installRainbowDance', () => {
+describe("installRainbowDance", () => {
   afterEach(() => {
     setRainbowDance(undefined);
     vi.useRealTimers();
   });
 
-  it('returns a disposer that clears timers and uninstalls the controller', () => {
+  it("returns a disposer that clears timers and uninstalls the controller", () => {
     vi.useFakeTimers();
     const requestRender = vi.fn();
     const dispose = installRainbowDance(requestRender);
@@ -171,7 +177,7 @@ describe('installRainbowDance', () => {
       state: { theme: { palette: darkColors } },
     } as unknown as SlashCommandHost;
 
-    tryHandleDanceCommand(host, { name: 'dance', args: 'on' });
+    tryHandleDanceCommand(host, { name: "dance", args: "on" });
     vi.advanceTimersByTime(DANCE_FRAME_MS * 2);
     expect(requestRender).toHaveBeenCalled();
 
@@ -185,18 +191,23 @@ describe('installRainbowDance', () => {
 });
 
 interface DanceCall {
-  fn: 'start' | 'stop';
+  fn: "start" | "stop";
   hold?: boolean;
 }
 
-function makeHost(): { host: SlashCommandHost; calls: DanceCall[]; status: string[] } {
+function makeHost(): {
+  host: SlashCommandHost;
+  calls: DanceCall[];
+  status: string[];
+} {
   const calls: DanceCall[] = [];
   const status: string[] = [];
   const rainbowDance = {
     colored: false,
     phase: 0,
-    start: (opts: { hold: boolean }) => calls.push({ fn: 'start', hold: opts.hold }),
-    stop: () => calls.push({ fn: 'stop' }),
+    start: (opts: { hold: boolean }) =>
+      calls.push({ fn: "start", hold: opts.hold }),
+    stop: () => calls.push({ fn: "stop" }),
     dispose: () => {},
   };
   setRainbowDance(rainbowDance);
@@ -207,7 +218,7 @@ function makeHost(): { host: SlashCommandHost; calls: DanceCall[]; status: strin
   return { host, calls, status };
 }
 
-describe('tryHandleDanceCommand', () => {
+describe("tryHandleDanceCommand", () => {
   let host: SlashCommandHost;
   let calls: DanceCall[];
   let status: string[];
@@ -220,43 +231,43 @@ describe('tryHandleDanceCommand', () => {
     setRainbowDance(undefined);
   });
 
-  it('claims /dance, flowing then fading, and hints at /dance on', () => {
-    const handled = tryHandleDanceCommand(host, { name: 'dance', args: '' });
+  it("claims /dance, flowing then fading, and hints at /dance on", () => {
+    const handled = tryHandleDanceCommand(host, { name: "dance", args: "" });
 
     expect(handled).toBe(true);
-    expect(calls).toEqual([{ fn: 'start', hold: false }]);
-    expect(status.join(' ')).toContain('/dance on');
+    expect(calls).toEqual([{ fn: "start", hold: false }]);
+    expect(status.join(" ")).toContain("/dance on");
   });
 
-  it('holds the rainbow for /dance on and hints at /dance off', () => {
-    const handled = tryHandleDanceCommand(host, { name: 'dance', args: 'on' });
+  it("holds the rainbow for /dance on and hints at /dance off", () => {
+    const handled = tryHandleDanceCommand(host, { name: "dance", args: "on" });
 
     expect(handled).toBe(true);
-    expect(calls).toEqual([{ fn: 'start', hold: true }]);
-    expect(status.join(' ')).toContain('/dance off');
+    expect(calls).toEqual([{ fn: "start", hold: true }]);
+    expect(status.join(" ")).toContain("/dance off");
   });
 
-  it('turns the rainbow off for /dance off', () => {
-    const handled = tryHandleDanceCommand(host, { name: 'dance', args: 'off' });
+  it("turns the rainbow off for /dance off", () => {
+    const handled = tryHandleDanceCommand(host, { name: "dance", args: "off" });
 
     expect(handled).toBe(true);
-    expect(calls).toEqual([{ fn: 'stop' }]);
+    expect(calls).toEqual([{ fn: "stop" }]);
   });
 
-  it('ignores case and surrounding whitespace in the sub-command', () => {
-    tryHandleDanceCommand(host, { name: 'dance', args: '  ON  ' });
+  it("ignores case and surrounding whitespace in the sub-command", () => {
+    tryHandleDanceCommand(host, { name: "dance", args: "  ON  " });
 
-    expect(calls).toEqual([{ fn: 'start', hold: true }]);
+    expect(calls).toEqual([{ fn: "start", hold: true }]);
   });
 
-  it('treats an unknown sub-command as a one-off dance', () => {
-    tryHandleDanceCommand(host, { name: 'dance', args: 'wiggle' });
+  it("treats an unknown sub-command as a one-off dance", () => {
+    tryHandleDanceCommand(host, { name: "dance", args: "wiggle" });
 
-    expect(calls).toEqual([{ fn: 'start', hold: false }]);
+    expect(calls).toEqual([{ fn: "start", hold: false }]);
   });
 
-  it('does not claim other commands, so they fall through normally', () => {
-    const handled = tryHandleDanceCommand(host, { name: 'help', args: '' });
+  it("does not claim other commands, so they fall through normally", () => {
+    const handled = tryHandleDanceCommand(host, { name: "help", args: "" });
 
     expect(handled).toBe(false);
     expect(calls).toEqual([]);

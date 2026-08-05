@@ -10,15 +10,15 @@
  * legacy v1 `session_index.jsonl`.
  */
 
-import { isAbsolute } from 'pathe';
+import { isAbsolute } from "pathe";
 
-import { encodeWorkDirKey, workspaceRootKey } from '#/_base/utils/workdir-slug';
-import type { IFileSystemStorageService } from '#/persistence/interface/storage';
+import { encodeWorkDirKey, workspaceRootKey } from "#/_base/utils/workdir-slug";
+import type { IFileSystemStorageService } from "#/persistence/interface/storage";
 
-import type { Workspace } from './workspace';
+import type { Workspace } from "./workspace";
 
-export const SESSION_INDEX_SCOPE = '';
-export const SESSION_INDEX_KEY = 'session_index.jsonl';
+export const SESSION_INDEX_SCOPE = "";
+export const SESSION_INDEX_KEY = "session_index.jsonl";
 
 const textDecoder = new TextDecoder();
 
@@ -45,12 +45,15 @@ export function collectAliasIds(
     if (workspaceRootKey(ws.root) === rootKey) add(ws.id);
   }
   for (const line of sessionIndexEntries) {
-    if (workspaceRootKey(line.workDir) === rootKey) add(encodeWorkDirKey(line.workDir));
+    if (workspaceRootKey(line.workDir) === rootKey)
+      add(encodeWorkDirKey(line.workDir));
   }
   return ids;
 }
 
-export function dedupeByRoot(byId: ReadonlyMap<string, Workspace>): Workspace[] {
+export function dedupeByRoot(
+  byId: ReadonlyMap<string, Workspace>,
+): Workspace[] {
   const byRoot = new Map<string, Workspace>();
   for (const ws of byId.values()) {
     const rootKey = workspaceRootKey(ws.root);
@@ -75,7 +78,7 @@ export async function readSessionIndexEntries(
   const entries: SessionIndexLine[] = [];
   for (const line of textDecoder.decode(bytes).split(/\r?\n/)) {
     const trimmed = line.trim();
-    if (trimmed === '') continue;
+    if (trimmed === "") continue;
     const entry = parseSessionIndexLine(trimmed);
     if (entry === undefined) continue;
     entries.push(entry);
@@ -94,15 +97,17 @@ export async function readSessionIndexWorkDirs(
   return workDirs;
 }
 
-export function parseSessionIndexLine(line: string): SessionIndexLine | undefined {
+export function parseSessionIndexLine(
+  line: string,
+): SessionIndexLine | undefined {
   try {
     const parsed = JSON.parse(line) as unknown;
-    if (typeof parsed !== 'object' || parsed === null) return undefined;
+    if (typeof parsed !== "object" || parsed === null) return undefined;
     const entry = parsed as Partial<SessionIndexLine>;
     if (
-      typeof entry.sessionId !== 'string' ||
-      typeof entry.sessionDir !== 'string' ||
-      typeof entry.workDir !== 'string'
+      typeof entry.sessionId !== "string" ||
+      typeof entry.sessionDir !== "string" ||
+      typeof entry.workDir !== "string"
     ) {
       return undefined;
     }

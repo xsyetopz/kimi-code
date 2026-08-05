@@ -11,9 +11,13 @@
  * unchanged.
  */
 
-import { Readable, Writable } from 'node:stream';
+import { Readable, Writable } from "node:stream";
 
-import { ndJsonStream, type AgentConnection, type Stream } from '@agentclientprotocol/sdk';
+import {
+  ndJsonStream,
+  type AgentConnection,
+  type Stream,
+} from "@agentclientprotocol/sdk";
 import {
   bootstrap,
   getLiveSessionById,
@@ -26,20 +30,20 @@ import {
   type Scope,
   type ScopeSeed,
   sessionMediaOriginalsDir,
-} from '@moonshot-ai/agent-core-v2';
-import type { Klient } from '@moonshot-ai/klient';
-import { createKlient } from '@moonshot-ai/klient/memory';
+} from "@moonshot-ai/agent-core-v2";
+import type { Klient } from "@moonshot-ai/klient";
+import { createKlient } from "@moonshot-ai/klient/memory";
 
-import { acpClientFromContext } from './acp-client';
+import { acpClientFromContext } from "./acp-client";
 // Importing the `acp-fs` barrel also registers the ACP-backed Session-scope
 // `IHostFileSystem` and the App-scope `IAcpConnection` holder via the barrel's
 // module side effects. `IAcpConnection` is used below to bind the ACP client
 // connection.
-import { IAcpConnection } from './acp-fs';
+import { IAcpConnection } from "./acp-fs";
 // Importing the `acp-terminal` barrel registers the ACP-backed Agent-scope
 // `ISessionProcessRunner` (capability-gated — see the module doc).
-import './acp-terminal';
-import { AcpServer, type AcpServerOptions, createAcpAgentApp } from './server';
+import "./acp-terminal";
+import { AcpServer, type AcpServerOptions, createAcpAgentApp } from "./server";
 
 export interface RunAcpServerOptions extends AcpServerOptions {
   readonly homeDir?: string;
@@ -68,7 +72,7 @@ export interface RunningAcpServer {
  */
 function redirectConsoleToStderr(): void {
   const sink = (...args: unknown[]): void => {
-    process.stderr.write(`${args.map(String).join(' ')}\n`);
+    process.stderr.write(`${args.map(String).join(" ")}\n`);
   };
   globalThis.console.log = sink;
   globalThis.console.info = sink;
@@ -89,7 +93,10 @@ export async function runAcpServerWithStream(
   opts: RunAcpServerOptions = {},
 ): Promise<RunningAcpServer> {
   const homeDir = resolveKimiHome(opts.homeDir);
-  const configPath = resolveConfigPath({ homeDir, configPath: opts.configPath });
+  const configPath = resolveConfigPath({
+    homeDir,
+    configPath: opts.configPath,
+  });
   // `ILogOptions` (logSeed) is required by the Session-scoped log writer; any
   // session creation would otherwise fail to instantiate the Session scope.
   const logging = resolveLoggingConfig({ homeDir, env: process.env });
@@ -105,9 +112,9 @@ export async function runAcpServerWithStream(
       homeDir,
       configPath,
       clientIdentity: {
-        productName: opts.agentInfo?.name ?? 'kimi-code-acp',
-        version: opts.agentInfo?.version ?? '0.0.0',
-        platform: 'kimi_code_cli',
+        productName: opts.agentInfo?.name ?? "kimi-code-acp",
+        version: opts.agentInfo?.version ?? "0.0.0",
+        platform: "kimi_code_cli",
       },
     },
     [...logSeed(logging), ...(opts.extraSeeds ?? [])],
@@ -147,7 +154,9 @@ export async function runAcpServerWithStream(
       const handle = getLiveSessionById(core.accessor, sessionId);
       return handle === undefined
         ? undefined
-        : sessionMediaOriginalsDir(handle.accessor.get(ISessionContext).sessionDir);
+        : sessionMediaOriginalsDir(
+            handle.accessor.get(ISessionContext).sessionDir,
+          );
     },
   });
 
@@ -184,7 +193,9 @@ export async function runAcpServerWithStream(
  * The ACP SDK speaks Web `ReadableStream` / `WritableStream`, so Node stdio is
  * bridged through `Readable.toWeb` / `Writable.toWeb`.
  */
-export async function runAcpServer(opts: RunAcpServerOptions = {}): Promise<void> {
+export async function runAcpServer(
+  opts: RunAcpServerOptions = {},
+): Promise<void> {
   redirectConsoleToStderr();
   const input = (opts.input ?? process.stdin) as Readable;
   const output = (opts.output ?? process.stdout) as Writable;

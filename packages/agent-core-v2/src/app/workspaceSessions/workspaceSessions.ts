@@ -9,9 +9,12 @@
  * JSON-in/JSON-out so it is directly exposable over the wire. App-scoped.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
 
-import type { SessionSummary } from '#/app/sessionIndex/sessionIndex';
+import type { SessionSummary } from "#/app/sessionIndex/sessionIndex";
 
 export type { SessionSummary };
 
@@ -25,4 +28,4 @@ export interface IWorkspaceSessions {
 }
 
 export const IWorkspaceSessions: ServiceIdentifier<IWorkspaceSessions> =
-  createDecorator<IWorkspaceSessions>('workspaceSessions');
+  createDecorator<IWorkspaceSessions>("workspaceSessions");

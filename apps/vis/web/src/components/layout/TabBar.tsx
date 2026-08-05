@@ -1,4 +1,4 @@
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams } from "react-router-dom";
 
 export interface TabSpec {
   id: string;
@@ -13,7 +13,7 @@ interface TabBarProps {
 
 export function TabBar({ tabs, defaultTab }: TabBarProps) {
   const [search, setSearch] = useSearchParams();
-  const active = search.get('tab') ?? defaultTab;
+  const active = search.get("tab") ?? defaultTab;
 
   return (
     <div className="flex h-9 shrink-0 items-stretch border-b border-border bg-surface-1">
@@ -24,15 +24,13 @@ export function TabBar({ tabs, defaultTab }: TabBarProps) {
             key={t.id}
             onClick={() => {
               const next = new URLSearchParams(search);
-              next.set('tab', t.id);
+              next.set("tab", t.id);
               setSearch(next, { replace: true });
             }}
             className={[
-              'relative flex items-center gap-2 px-4 font-mono text-[11px] uppercase tracking-[0.08em] transition-colors',
-              on
-                ? 'text-fg-0'
-                : 'text-fg-2 hover:text-fg-1',
-            ].join(' ')}
+              "relative flex items-center gap-2 px-4 font-mono text-[11px] uppercase tracking-[0.08em] transition-colors",
+              on ? "text-fg-0" : "text-fg-2 hover:text-fg-1",
+            ].join(" ")}
           >
             {t.label}
             {t.count !== null && t.count !== undefined ? (
@@ -52,5 +50,5 @@ export function TabBar({ tabs, defaultTab }: TabBarProps) {
 
 export function useActiveTab(defaultTab: string): string {
   const [search] = useSearchParams();
-  return search.get('tab') ?? defaultTab;
+  return search.get("tab") ?? defaultTab;
 }

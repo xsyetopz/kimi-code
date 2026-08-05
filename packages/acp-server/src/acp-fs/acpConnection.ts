@@ -19,7 +19,7 @@ import {
   registerScopedService,
   ScopeActivation,
   type ServiceIdentifier,
-} from '@moonshot-ai/agent-core-v2';
+} from "@moonshot-ai/agent-core-v2";
 
 /**
  * Narrow ACP-client file surface the ACP-backed `IHostFileSystem` needs.
@@ -46,7 +46,10 @@ export interface IAcpFsClient {
  */
 export interface IAcpTerminalHandle {
   readonly id: string;
-  currentOutput(): Promise<{ readonly output: string; readonly truncated: boolean }>;
+  currentOutput(): Promise<{
+    readonly output: string;
+    readonly truncated: boolean;
+  }>;
   waitForExit(): Promise<{
     readonly exitCode?: number | null;
     readonly signal?: string | null;
@@ -86,7 +89,9 @@ export interface AcpTerminalCreatedEvent {
   readonly terminalId: string;
 }
 
-export type AcpTerminalCreatedListener = (event: AcpTerminalCreatedEvent) => void;
+export type AcpTerminalCreatedListener = (
+  event: AcpTerminalCreatedEvent,
+) => void;
 
 export interface IAcpConnection {
   readonly _serviceBrand: undefined;
@@ -97,7 +102,9 @@ export interface IAcpConnection {
   /** Whether a client connection has been bound. */
   readonly bound: boolean;
   /** Bind the client's FS capabilities (from the `initialize` handshake). */
-  bindFsCapabilities(fs: { readTextFile?: boolean; writeTextFile?: boolean } | undefined): void;
+  bindFsCapabilities(
+    fs: { readTextFile?: boolean; writeTextFile?: boolean } | undefined,
+  ): void;
   /** Whether the client supports `fs.readTextFile`. */
   readonly fsReadTextFile: boolean;
   /** Whether the client supports `fs.writeTextFile`. */
@@ -113,7 +120,7 @@ export interface IAcpConnection {
 }
 
 export const IAcpConnection: ServiceIdentifier<IAcpConnection> =
-  createDecorator<IAcpConnection>('acpConnection');
+  createDecorator<IAcpConnection>("acpConnection");
 
 export class AcpConnection implements IAcpConnection {
   declare readonly _serviceBrand: undefined;
@@ -122,7 +129,8 @@ export class AcpConnection implements IAcpConnection {
   private _fsReadTextFile = false;
   private _fsWriteTextFile = false;
   private _terminalEnabled = false;
-  private readonly terminalCreatedListeners = new Set<AcpTerminalCreatedListener>();
+  private readonly terminalCreatedListeners =
+    new Set<AcpTerminalCreatedListener>();
 
   bind(client: IAcpFsClient & IAcpTerminalClient): void {
     this.client = client;
@@ -131,7 +139,7 @@ export class AcpConnection implements IAcpConnection {
   get(): IAcpFsClient & IAcpTerminalClient {
     if (this.client === undefined) {
       throw new Error(
-        'IAcpConnection.get() called before bind() — acp-server must bind the ACP client connection before any session performs file or terminal IO.',
+        "IAcpConnection.get() called before bind() — acp-server must bind the ACP client connection before any session performs file or terminal IO.",
       );
     }
     return this.client;
@@ -141,7 +149,9 @@ export class AcpConnection implements IAcpConnection {
     return this.client !== undefined;
   }
 
-  bindFsCapabilities(fs: { readTextFile?: boolean; writeTextFile?: boolean } | undefined): void {
+  bindFsCapabilities(
+    fs: { readTextFile?: boolean; writeTextFile?: boolean } | undefined,
+  ): void {
     this._fsReadTextFile = fs?.readTextFile === true;
     this._fsWriteTextFile = fs?.writeTextFile === true;
   }
@@ -185,5 +195,5 @@ registerScopedService(
   IAcpConnection,
   AcpConnection,
   ScopeActivation.OnDemand,
-  'acp',
+  "acp",
 );

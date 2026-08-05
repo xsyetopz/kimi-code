@@ -1,4 +1,4 @@
-import type { AppSubagentPhase, AppTask } from '../api/types';
+import type { AppSubagentPhase, AppTask } from "../api/types";
 
 export interface SwarmMember {
   id: string;
@@ -20,16 +20,22 @@ export interface SwarmGroup {
   counts: Record<AppSubagentPhase, number>;
 }
 
-const PHASES: readonly AppSubagentPhase[] = ['queued', 'working', 'suspended', 'completed', 'failed'];
+const PHASES: readonly AppSubagentPhase[] = [
+  "queued",
+  "working",
+  "suspended",
+  "completed",
+  "failed",
+];
 
 export function phaseForTask(task: AppTask): AppSubagentPhase {
   // Terminal statuses are authoritative over a possibly-stale subagentPhase: a
   // cancelled task keeps whatever phase it last had (e.g. 'working'), which
   // would otherwise keep it "live" and suppress the finished swarm card forever.
-  if (task.status === 'completed') return 'completed';
-  if (task.status === 'failed' || task.status === 'cancelled') return 'failed';
+  if (task.status === "completed") return "completed";
+  if (task.status === "failed" || task.status === "cancelled") return "failed";
   if (task.subagentPhase) return task.subagentPhase;
-  return 'working';
+  return "working";
 }
 
 function emptyCounts(): Record<AppSubagentPhase, number> {
@@ -46,8 +52,8 @@ export function buildSwarmGroups(tasks: AppTask[]): SwarmGroup[] {
   const buckets = new Map<string, SwarmMember[]>();
 
   for (const task of tasks) {
-    if (task.kind !== 'subagent' || task.swarmIndex === undefined) continue;
-    const key = task.parentToolCallId ?? 'swarm';
+    if (task.kind !== "subagent" || task.swarmIndex === undefined) continue;
+    const key = task.parentToolCallId ?? "swarm";
     const list = buckets.get(key) ?? [];
     list.push({
       id: task.id,
@@ -65,7 +71,9 @@ export function buildSwarmGroups(tasks: AppTask[]): SwarmGroup[] {
 
   return [...buckets.entries()]
     .map(([id, members]) => {
-      const sorted = members.toSorted((a, b) => a.swarmIndex - b.swarmIndex || a.id.localeCompare(b.id));
+      const sorted = members.toSorted(
+        (a, b) => a.swarmIndex - b.swarmIndex || a.id.localeCompare(b.id),
+      );
       const counts = emptyCounts();
       for (const member of sorted) counts[member.phase]++;
       return { id, members: sorted, counts };
@@ -79,13 +87,17 @@ export function buildSwarmGroups(tasks: AppTask[]): SwarmGroup[] {
     });
 }
 
-export function countSwarmMembers(groups: SwarmGroup[]): { done: number; total: number } {
+export function countSwarmMembers(groups: SwarmGroup[]): {
+  done: number;
+  total: number;
+} {
   let done = 0;
   let total = 0;
   for (const group of groups) {
     total += group.members.length;
     for (const phase of PHASES) {
-      if (phase === 'completed' || phase === 'failed') done += group.counts[phase];
+      if (phase === "completed" || phase === "failed")
+        done += group.counts[phase];
     }
   }
   return { done, total };
@@ -99,10 +111,12 @@ export function countSwarmMembers(groups: SwarmGroup[]): { done: number; total: 
  * structured result arrives. Also includes subagents without a swarmIndex so a
  * late-synced task still appears (sorted last).
  */
-export function swarmMembersByToolCall(tasks: AppTask[]): Map<string, SwarmMember[]> {
+export function swarmMembersByToolCall(
+  tasks: AppTask[],
+): Map<string, SwarmMember[]> {
   const buckets = new Map<string, SwarmMember[]>();
   for (const task of tasks) {
-    if (task.kind !== 'subagent' || !task.parentToolCallId) continue;
+    if (task.kind !== "subagent" || !task.parentToolCallId) continue;
     const list = buckets.get(task.parentToolCallId) ?? [];
     list.push({
       id: task.id,
@@ -120,7 +134,9 @@ export function swarmMembersByToolCall(tasks: AppTask[]): Map<string, SwarmMembe
   for (const [key, members] of buckets) {
     buckets.set(
       key,
-      members.toSorted((a, b) => a.swarmIndex - b.swarmIndex || a.id.localeCompare(b.id)),
+      members.toSorted(
+        (a, b) => a.swarmIndex - b.swarmIndex || a.id.localeCompare(b.id),
+      ),
     );
   }
   return buckets;

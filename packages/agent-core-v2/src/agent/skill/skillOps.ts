@@ -11,15 +11,18 @@
  * `DomainEventMap` with `skill.activated`, derived from the Op via `toEvent`.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { defineModel } from '#/wire/model';
+import { defineModel } from "#/wire/model";
 
-import type { SkillActivationOrigin, SkillSource } from '#/agent/contextMemory/types';
+import type {
+  SkillActivationOrigin,
+  SkillSource,
+} from "#/agent/contextMemory/types";
 
-declare module '#/app/event/eventBus' {
+declare module "#/app/event/eventBus" {
   interface DomainEventMap {
-    'skill.activated': {
+    "skill.activated": {
       activationId: string;
       skillName: string;
       trigger: string;
@@ -30,20 +33,20 @@ declare module '#/app/event/eventBus' {
   }
 }
 
-export const SkillModel = defineModel<null>('skill', () => null);
+export const SkillModel = defineModel<null>("skill", () => null);
 
-declare module '#/wire/types' {
+declare module "#/wire/types" {
   interface TransientOpMap {
-    'skill.activate': typeof skillActivate;
+    "skill.activate": typeof skillActivate;
   }
 }
 
-export const skillActivate = SkillModel.defineOp('skill.activate', {
+export const skillActivate = SkillModel.defineOp("skill.activate", {
   schema: z.object({ origin: z.custom<SkillActivationOrigin>() }),
   persist: false,
   apply: (s) => s,
   toEvent: (p) => ({
-    type: 'skill.activated' as const,
+    type: "skill.activated" as const,
     activationId: p.origin.activationId,
     skillName: p.origin.skillName,
     trigger: p.origin.trigger,

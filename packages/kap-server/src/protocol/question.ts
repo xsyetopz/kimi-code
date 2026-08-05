@@ -1,6 +1,6 @@
-import { z } from 'zod';
+import { z } from "zod";
 
-import { isoDateTimeSchema } from '@moonshot-ai/agent-core-v2/_base/utils/isoDateTime';
+import { isoDateTimeSchema } from "@moonshot-ai/agent-core-v2/_base/utils/isoDateTime";
 
 export const questionOptionSchema = z.object({
   id: z.string().min(1),
@@ -32,20 +32,28 @@ export const questionRequestSchema = z.object({
 });
 export type QuestionRequest = z.infer<typeof questionRequestSchema>;
 
-export const questionAnswerSchema = z.discriminatedUnion('kind', [
-  z.object({ kind: z.literal('single'), option_id: z.string().min(1) }),
-  z.object({ kind: z.literal('multi'), option_ids: z.array(z.string().min(1)).min(1) }),
-  z.object({ kind: z.literal('other'), text: z.string() }),
+export const questionAnswerSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("single"), option_id: z.string().min(1) }),
   z.object({
-    kind: z.literal('multi_with_other'),
+    kind: z.literal("multi"),
+    option_ids: z.array(z.string().min(1)).min(1),
+  }),
+  z.object({ kind: z.literal("other"), text: z.string() }),
+  z.object({
+    kind: z.literal("multi_with_other"),
     option_ids: z.array(z.string().min(1)),
     other_text: z.string(),
   }),
-  z.object({ kind: z.literal('skipped') }),
+  z.object({ kind: z.literal("skipped") }),
 ]);
 export type QuestionAnswer = z.infer<typeof questionAnswerSchema>;
 
-export const questionAnswerMethodSchema = z.enum(['enter', 'space', 'number_key', 'click']);
+export const questionAnswerMethodSchema = z.enum([
+  "enter",
+  "space",
+  "number_key",
+  "click",
+]);
 export type QuestionAnswerMethod = z.infer<typeof questionAnswerMethodSchema>;
 
 export const questionResponseSchema = z.object({

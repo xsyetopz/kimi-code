@@ -7,9 +7,9 @@
  * these are only the REST list/get/close wrappers around it.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { terminalSchema } from '@moonshot-ai/agent-core-v2/os/interface/terminal';
+import { terminalSchema } from "@moonshot-ai/agent-core-v2/os/interface/terminal";
 
 export const getTerminalResponseSchema = terminalSchema;
 export type GetTerminalResponse = z.infer<typeof getTerminalResponseSchema>;

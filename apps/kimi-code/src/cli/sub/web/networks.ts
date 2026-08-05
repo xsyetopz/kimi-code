@@ -4,12 +4,12 @@
  * binds a wildcard host (`0.0.0.0` / `::`).
  */
 
-import { networkInterfaces } from 'node:os';
+import { networkInterfaces } from "node:os";
 
 export interface NetworkAddress {
   /** Raw IP address (IPv4 or IPv6); IPv6 is NOT bracket-wrapped here. */
   address: string;
-  family: 'IPv4' | 'IPv6';
+  family: "IPv4" | "IPv6";
 }
 
 /**
@@ -28,10 +28,10 @@ export function listNetworkAddresses(): NetworkAddress[] {
       if (info.internal) {
         continue;
       }
-      if (info.family === 'IPv4') {
-        raw.push({ address: info.address, family: 'IPv4' });
-      } else if (info.family === 'IPv6') {
-        raw.push({ address: info.address, family: 'IPv6' });
+      if (info.family === "IPv4") {
+        raw.push({ address: info.address, family: "IPv4" });
+      } else if (info.family === "IPv6") {
+        raw.push({ address: info.address, family: "IPv6" });
       }
     }
   }
@@ -54,7 +54,7 @@ export function filterDisplayAddresses(
   const seen = new Set<string>();
   const kept: NetworkAddress[] = [];
   for (const addr of addrs) {
-    if (addr.family === 'IPv6' && isLinkLocalV6(addr.address)) {
+    if (addr.family === "IPv6" && isLinkLocalV6(addr.address)) {
       continue;
     }
     if (seen.has(addr.address)) {
@@ -64,14 +64,14 @@ export function filterDisplayAddresses(
     kept.push(addr);
   }
   return [
-    ...kept.filter((a) => a.family === 'IPv4'),
-    ...kept.filter((a) => a.family === 'IPv6'),
+    ...kept.filter((a) => a.family === "IPv4"),
+    ...kept.filter((a) => a.family === "IPv6"),
   ];
 }
 
 /** True for IPv6 link-local addresses (`fe80::/10`, i.e. `fe80::`–`febf::`). */
 function isLinkLocalV6(address: string): boolean {
-  const first = Number.parseInt(address.split(':')[0] ?? '', 16);
+  const first = Number.parseInt(address.split(":")[0] ?? "", 16);
   return first >= 0xfe80 && first <= 0xfebf;
 }
 
@@ -79,6 +79,9 @@ function isLinkLocalV6(address: string): boolean {
  * Format an address for use as a URL host: bracket-wrap IPv6 per RFC 3986,
  * return IPv4 as-is.
  */
-export function formatHostForUrl(address: string, family: NetworkAddress['family']): string {
-  return family === 'IPv6' ? `[${address}]` : address;
+export function formatHostForUrl(
+  address: string,
+  family: NetworkAddress["family"],
+): string {
+  return family === "IPv6" ? `[${address}]` : address;
 }

@@ -1,5 +1,5 @@
-import type { AgentNode } from '../../types';
-import { SubagentNode } from './SubagentNode';
+import type { AgentNode } from "../../types";
+import { SubagentNode } from "./SubagentNode";
 
 interface SubagentTreeProps {
   tree: AgentNode[];

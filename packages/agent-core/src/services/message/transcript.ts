@@ -46,26 +46,26 @@
  * missing tail (see `MessageService`).
  */
 
-import { readFile } from 'node:fs/promises';
-import path from 'node:path';
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 
-import type { AgentRecord } from '../../agent/records';
-import type { ContextMessage } from '../../agent/context';
-import type { ExecutableToolResult, LoopRecordedEvent } from '../../loop';
+import type { AgentRecord } from "../../agent/records";
+import type { ContextMessage } from "../../agent/context";
+import type { ExecutableToolResult, LoopRecordedEvent } from "../../loop";
 import {
   COMPACT_USER_MESSAGE_MAX_TOKENS,
   collectCompactableUserMessages,
   isRealUserInput,
   selectRecentUserMessages,
-} from '../../agent/compaction';
+} from "../../agent/compaction";
 
-type ContentPart = ContextMessage['content'][number];
+type ContentPart = ContextMessage["content"][number];
 
-const BLOBREF_PROTOCOL = 'blobref:';
-const MISSING_MEDIA_PLACEHOLDER = '[media missing]';
+const BLOBREF_PROTOCOL = "blobref:";
+const MISSING_MEDIA_PLACEHOLDER = "[media missing]";
 
 const TOOL_INTERRUPTED_ON_RESUME_OUTPUT =
-  'Tool execution was interrupted before its result was recorded. Do not assume the tool completed successfully.';
+  "Tool execution was interrupted before its result was recorded. Do not assume the tool completed successfully.";
 
 export interface TranscriptEntry {
   readonly message: ContextMessage;
@@ -84,13 +84,18 @@ export interface WireTranscript {
 }
 
 interface MutableMessage {
-  role: ContextMessage['role'];
+  role: ContextMessage["role"];
   content: ContentPart[];
-  toolCalls: { type: 'function'; id: string; name: string; arguments: string | null }[];
+  toolCalls: {
+    type: "function";
+    id: string;
+    name: string;
+    arguments: string | null;
+  }[];
   toolCallId?: string;
   isError?: boolean | undefined;
   note?: string | undefined;
-  origin?: ContextMessage['origin'];
+  origin?: ContextMessage["origin"];
 }
 
 interface MutableEntry {
@@ -133,8 +138,8 @@ export function reduceWireRecords(records: Iterable<AgentRecord>): {
     for (const toolCallId of interruptedToolCallIds) {
       push({
         message: {
-          role: 'tool',
-          content: [{ type: 'text', text: TOOL_INTERRUPTED_ON_RESUME_OUTPUT }],
+          role: "tool",
+          content: [{ type: "text", text: TOOL_INTERRUPTED_ON_RESUME_OUTPUT }],
           toolCalls: [],
           toolCallId,
           isError: true,
@@ -151,48 +156,52 @@ export function reduceWireRecords(records: Iterable<AgentRecord>): {
     deferred = [];
   };
 
-  const applyLoopEvent = (event: LoopRecordedEvent, time: number | undefined): void => {
+  const applyLoopEvent = (
+    event: LoopRecordedEvent,
+    time: number | undefined,
+  ): void => {
     switch (event.type) {
-      case 'step.begin': {
+      case "step.begin": {
         closePendingToolResults(time);
         const entry: MutableEntry = {
-          message: { role: 'assistant', content: [], toolCalls: [] },
+          message: { role: "assistant", content: [], toolCalls: [] },
           time,
         };
         push(entry);
         openSteps.set(event.uuid, entry);
         return;
       }
-      case 'step.end': {
+      case "step.end": {
         openSteps.delete(event.uuid);
         flushDeferredIfToolExchangeClosed();
         return;
       }
-      case 'content.part': {
+      case "content.part": {
         // Lenient where ContextMemory throws: a dangling part in a damaged
         // file should not take the whole messages endpoint down.
         openSteps.get(event.stepUuid)?.message.content.push(event.part);
         return;
       }
-      case 'tool.call': {
+      case "tool.call": {
         const openStep = openSteps.get(event.stepUuid);
         if (openStep === undefined) return;
         openStep.message.toolCalls.push({
-          type: 'function',
+          type: "function",
           id: event.toolCallId,
           name: event.name,
-          arguments: event.args === undefined ? null : JSON.stringify(event.args),
+          arguments:
+            event.args === undefined ? null : JSON.stringify(event.args),
         });
         pendingToolResultIds.add(event.toolCallId);
         return;
       }
-      case 'tool.result': {
+      case "tool.result": {
         // Drop a result for an id not awaiting one (already closed in place, or
         // its call is gone) — mirrors ContextMemory.
         if (!pendingToolResultIds.has(event.toolCallId)) return;
         push({
           message: {
-            role: 'tool',
+            role: "tool",
             content: rawToolResultContent(event.result.output),
             toolCalls: [],
             toolCallId: event.toolCallId,
@@ -213,8 +222,8 @@ export function reduceWireRecords(records: Iterable<AgentRecord>): {
     let removedUserCount = 0;
     for (let i = transcript.length - 1; i >= clearFloor; i--) {
       const message = transcript[i]!.message;
-      if (message.origin?.kind === 'injection') continue;
-      if (message.origin?.kind === 'compaction_summary') break;
+      if (message.origin?.kind === "injection") continue;
+      if (message.origin?.kind === "compaction_summary") break;
       transcript.splice(i, 1);
       foldedLength = Math.max(0, foldedLength - 1);
       if (isRealUserInput(message)) {
@@ -227,7 +236,7 @@ export function reduceWireRecords(records: Iterable<AgentRecord>): {
 
   for (const record of records) {
     switch (record.type) {
-      case 'context.append_message': {
+      case "context.append_message": {
         const entry: MutableEntry = {
           message: record.message as MutableMessage,
           time: record.time,
@@ -239,10 +248,10 @@ export function reduceWireRecords(records: Iterable<AgentRecord>): {
         }
         break;
       }
-      case 'context.append_loop_event':
+      case "context.append_loop_event":
         applyLoopEvent(record.event, record.time);
         break;
-      case 'context.apply_compaction': {
+      case "context.apply_compaction": {
         // Mirrors ContextMemory.applyCompaction: the live context becomes the
         // kept user messages (head + tail, possibly separated by an elision
         // marker) followed by a user-role summary. The transcript keeps the
@@ -250,10 +259,10 @@ export function reduceWireRecords(records: Iterable<AgentRecord>): {
         // post-compaction live context length.
         transcript.push({
           message: {
-            role: 'user',
-            content: [{ type: 'text', text: record.summary }],
+            role: "user",
+            content: [{ type: "text", text: record.summary }],
             toolCalls: [],
-            origin: { kind: 'compaction_summary' },
+            origin: { kind: "compaction_summary" },
           },
           time: record.time,
         });
@@ -269,7 +278,8 @@ export function reduceWireRecords(records: Iterable<AgentRecord>): {
           // head + tail, because the live context then also holds an elision
           // marker message between the two segments.
           foldedLength =
-            record.keptUserMessageCount + (record.keptHeadUserMessageCount === undefined ? 1 : 2);
+            record.keptUserMessageCount +
+            (record.keptHeadUserMessageCount === undefined ? 1 : 2);
         } else if (record.compactedCount < foldedLength) {
           // Legacy record (predates keptUserMessageCount) that kept
           // history.slice(compactedCount) verbatim. Mirror ContextMemory's
@@ -302,10 +312,10 @@ export function reduceWireRecords(records: Iterable<AgentRecord>): {
         resetOpenState();
         break;
       }
-      case 'context.undo':
+      case "context.undo":
         applyUndo(record.count);
         break;
-      case 'context.clear':
+      case "context.clear":
         clearFloor = transcript.length;
         foldedLength = 0;
         resetOpenState();
@@ -319,8 +329,12 @@ export function reduceWireRecords(records: Iterable<AgentRecord>): {
 }
 
 /** Mirrors `createToolMessage`: raw output verbatim — status text is added only at LLM projection. */
-function rawToolResultContent(output: ExecutableToolResult['output']): ContentPart[] {
-  return typeof output === 'string' ? [{ type: 'text', text: output }] : [...output];
+function rawToolResultContent(
+  output: ExecutableToolResult["output"],
+): ContentPart[] {
+  return typeof output === "string"
+    ? [{ type: "text", text: output }]
+    : [...output];
 }
 
 /**
@@ -328,13 +342,15 @@ function rawToolResultContent(output: ExecutableToolResult['output']): ContentPa
  * matching `FileSystemAgentRecordPersistence.read`; corruption anywhere else
  * throws so the caller can fall back to the live context view.
  */
-export async function readWireRecords(wirePath: string): Promise<AgentRecord[]> {
-  const raw = await readFile(wirePath, 'utf8');
-  const lines = raw.split('\n');
+export async function readWireRecords(
+  wirePath: string,
+): Promise<AgentRecord[]> {
+  const raw = await readFile(wirePath, "utf8");
+  const lines = raw.split("\n");
   const records: AgentRecord[] = [];
   for (let i = 0; i < lines.length; i++) {
     let line = lines[i]!;
-    if (line.endsWith('\r')) line = line.slice(0, -1);
+    if (line.endsWith("\r")) line = line.slice(0, -1);
     if (line.length === 0) continue;
     try {
       records.push(JSON.parse(line) as AgentRecord);
@@ -357,10 +373,10 @@ export async function readWireTranscript(
   sessionDir: string,
   agentId: string,
 ): Promise<WireTranscript> {
-  const agentDir = path.join(sessionDir, 'agents', agentId);
-  const records = await readWireRecords(path.join(agentDir, 'wire.jsonl'));
+  const agentDir = path.join(sessionDir, "agents", agentId);
+  const records = await readWireRecords(path.join(agentDir, "wire.jsonl"));
   const { entries, foldedLength } = reduceWireRecords(records);
-  await rehydrateBlobRefs(entries, path.join(agentDir, 'blobs'));
+  await rehydrateBlobRefs(entries, path.join(agentDir, "blobs"));
   return { entries, foldedLength };
 }
 
@@ -376,13 +392,21 @@ async function rehydrateBlobRefs(
   const cache = new Map<string, string | undefined>();
   for (const entry of entries) {
     for (const part of entry.message.content) {
-      for (const value of Object.values(part as unknown as Record<string, unknown>)) {
-        if (value === null || typeof value !== 'object' || Array.isArray(value)) continue;
+      for (const value of Object.values(
+        part as unknown as Record<string, unknown>,
+      )) {
+        if (value === null || typeof value !== "object" || Array.isArray(value))
+          continue;
         const media = value as { url?: unknown };
-        if (typeof media.url !== 'string' || !media.url.startsWith(BLOBREF_PROTOCOL)) {
+        if (
+          typeof media.url !== "string" ||
+          !media.url.startsWith(BLOBREF_PROTOCOL)
+        ) {
           continue;
         }
-        media.url = (await resolveBlobRef(media.url, blobsDir, cache)) ?? MISSING_MEDIA_PLACEHOLDER;
+        media.url =
+          (await resolveBlobRef(media.url, blobsDir, cache)) ??
+          MISSING_MEDIA_PLACEHOLDER;
       }
     }
   }
@@ -396,16 +420,18 @@ async function resolveBlobRef(
   if (cache.has(url)) return cache.get(url);
   let resolved: string | undefined;
   const rest = url.slice(BLOBREF_PROTOCOL.length);
-  const semiIdx = rest.indexOf(';');
+  const semiIdx = rest.indexOf(";");
   if (semiIdx !== -1) {
     const mimeType = rest.slice(0, semiIdx);
     const hash = rest.slice(semiIdx + 1);
     // Hashes are hex digests written by BlobStore; reject anything that could
     // escape the blobs directory.
     if (/^[0-9a-f]{16,}$/i.test(hash)) {
-      const payload = await readFile(path.join(blobsDir, hash)).catch(() => undefined);
+      const payload = await readFile(path.join(blobsDir, hash)).catch(
+        () => undefined,
+      );
       if (payload !== undefined) {
-        resolved = `data:${mimeType};base64,${payload.toString('base64')}`;
+        resolved = `data:${mimeType};base64,${payload.toString("base64")}`;
       }
     }
   }

@@ -1,13 +1,13 @@
-import type { Message, StreamedMessagePart } from '#/message';
+import type { Message, StreamedMessagePart } from "#/message";
 import type {
   ChatProvider,
   FinishReason,
   GenerateOptions,
   StreamedMessage,
   ThinkingEffort,
-} from '#/provider';
-import type { Tool } from '#/tool';
-import type { TokenUsage } from '#/usage';
+} from "#/provider";
+import type { Tool } from "#/tool";
+import type { TokenUsage } from "#/usage";
 
 /**
  * Constructor options accepted by {@link MockChatProvider}.
@@ -29,7 +29,7 @@ export interface MockChatProviderOptions {
  * Always returns the predefined message parts.
  */
 export class MockChatProvider implements ChatProvider {
-  readonly name: string = 'mock';
+  readonly name: string = "mock";
   readonly modelName: string;
   readonly thinkingEffort: ThinkingEffort | null = null;
 
@@ -41,17 +41,17 @@ export class MockChatProvider implements ChatProvider {
 
   constructor(parts: StreamedMessagePart[], options?: MockChatProviderOptions) {
     this._parts = parts;
-    this._id = options?.id ?? 'mock';
+    this._id = options?.id ?? "mock";
     this._usage = options?.usage ?? null;
-    this.modelName = options?.modelName ?? 'mock';
+    this.modelName = options?.modelName ?? "mock";
     this._finishReason =
-      options !== undefined && 'finishReason' in options
+      options !== undefined && "finishReason" in options
         ? (options.finishReason ?? null)
-        : 'completed';
+        : "completed";
     this._rawFinishReason =
-      options !== undefined && 'rawFinishReason' in options
+      options !== undefined && "rawFinishReason" in options
         ? (options.rawFinishReason ?? null)
-        : 'stop';
+        : "stop";
   }
 
   async generate(

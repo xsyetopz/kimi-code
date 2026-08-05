@@ -8,9 +8,9 @@
  * scope. Bound at App scope.
  */
 
-import { createDecorator } from '#/_base/di/instantiation';
+import { createDecorator } from "#/_base/di/instantiation";
 
-import type { CronTask } from './cronTask';
+import type { CronTask } from "./cronTask";
 
 export interface CronTaskQuery {
   readonly workspaceId: string;
@@ -25,4 +25,6 @@ export interface ICronTaskPersistence {
   delete(workspaceId: string, taskId: string): Promise<void>;
 }
 
-export const ICronTaskPersistence = createDecorator<ICronTaskPersistence>('cronTaskPersistence');
+export const ICronTaskPersistence = createDecorator<ICronTaskPersistence>(
+  "cronTaskPersistence",
+);

@@ -7,55 +7,91 @@
 // Document model:
 //   { key: string(<=128), value: <any JSON>, dt1..dtN: <epoch-ms datetime columns> }
 
-import fs from 'node:fs/promises';
-import fsSync from 'node:fs';
-import path from 'node:path';
-import { randomUUID } from 'node:crypto';
-import { Store } from './store.js';
-import type { StoreRecord } from './store.js';
-import { WAL } from './wal.js';
-import { ValueReader } from './value-reader.js';
-import { catchUpWal } from './recovery.js';
-import { compact, shouldCompact } from './compaction.js';
-import { OpTracker } from './op-tracker.js';
-import { TEXT_INDEXES_FILE, SNAPSHOT_FILE, isPersistentFile, rootPostingsFile, textDictionaryFile, textDocsFile } from './generation.js';
-import { IndexManager } from './index-manager.js';
-import { DtIndex } from './dt-index.js';
-import { TextIndex } from './text-index/index.js';
-import { CompoundIndexManager } from './compound-index.js';
-import { toKStr, writeFileAtomic } from './value-codec.js';
-import { LockFile } from './lockfile.js';
-import { createSerializer } from './serialize.js';
-import { MaintenanceScheduler, defaultWorkerSlots } from './maintenance.js';
-import { MemoryGuard } from './memory-guard.js';
-import { backup as runBackup, backupInProgressError as newBackupInProgressError } from './backup.js';
-import type { BackupDeps } from './backup.js';
-import { QueryEngine } from './query-engine.js';
-import { GenerationBuilder, TEXT_BUILD_WORKER_MIN_DOCS, GEN_BUILD_WAL_DELTA_BYTES } from './generation-builder.js';
-import type { GenBuildOp } from './generation-builder.js';
-import { WalGroupTracker } from './wal-group.js';
-import { WritePath } from './write-path.js';
-import { openMiniDb, closeMiniDb, renewMiniDbLock, openOrRebuildMiniDb } from './lifecycle.js';
-import { IndexAdmin } from './index-admin.js';
-import { ReadPath } from './read-path.js';
-import { createMiniDbStats } from './stats.js';
-import type { LifecycleHooks } from './lifecycle.js';
-import { TextRegistry } from './text-registry.js';
-import type { TextIndexDef } from './text-registry.js';
-import type { MaintenanceContext, MaintenanceTaskInfo } from './maintenance.js';
-import type { FrameRef } from './codec.js';
-import type { FsyncPolicy } from './wal.js';
-import type { RecoveryMode, RecoveryInfo, ValueMode, RecoveredOp } from './recovery.js';
-import type { IndexDef, IndexInfo } from './index-manager.js';
-import type { CompoundIndexDef, CompoundIndexInfo } from './compound-index.js';
-import type { RangeOptions } from './skiplist.js';
-import type { TextIndexTokenizerName } from './trigram.js';
-import type { PostingEntry } from './text-postings.js';
-import { startWorkerTextBuild, textBuildWorkerAvailable, verifyFileCrcAsync, WorkerTextBuildError } from './worker/text-build.js';
-import type { TextBuildCheckpoint } from './worker/text-build.js';
-import { readBaseDocsImageAsync, BASE_DOCS_MAGIC, BASE_DOCS_VERSION } from './worker/text-build-core.js';
-import type { TextBuildCoreResult } from './worker/text-build-core.js';
-import { readGenerationFileCheckedAsync, readTextDictionaryImageAsync } from './gen-codec.js';
+import fs from "node:fs/promises";
+import fsSync from "node:fs";
+import path from "node:path";
+import { randomUUID } from "node:crypto";
+import { Store } from "./store.js";
+import type { StoreRecord } from "./store.js";
+import { WAL } from "./wal.js";
+import { ValueReader } from "./value-reader.js";
+import { catchUpWal } from "./recovery.js";
+import { compact, shouldCompact } from "./compaction.js";
+import { OpTracker } from "./op-tracker.js";
+import {
+  TEXT_INDEXES_FILE,
+  SNAPSHOT_FILE,
+  isPersistentFile,
+  rootPostingsFile,
+  textDictionaryFile,
+  textDocsFile,
+} from "./generation.js";
+import { IndexManager } from "./index-manager.js";
+import { DtIndex } from "./dt-index.js";
+import { TextIndex } from "./text-index/index.js";
+import { CompoundIndexManager } from "./compound-index.js";
+import { toKStr, writeFileAtomic } from "./value-codec.js";
+import { LockFile } from "./lockfile.js";
+import { createSerializer } from "./serialize.js";
+import { MaintenanceScheduler, defaultWorkerSlots } from "./maintenance.js";
+import { MemoryGuard } from "./memory-guard.js";
+import {
+  backup as runBackup,
+  backupInProgressError as newBackupInProgressError,
+} from "./backup.js";
+import type { BackupDeps } from "./backup.js";
+import { QueryEngine } from "./query-engine.js";
+import {
+  GenerationBuilder,
+  TEXT_BUILD_WORKER_MIN_DOCS,
+  GEN_BUILD_WAL_DELTA_BYTES,
+} from "./generation-builder.js";
+import type { GenBuildOp } from "./generation-builder.js";
+import { WalGroupTracker } from "./wal-group.js";
+import { WritePath } from "./write-path.js";
+import {
+  openMiniDb,
+  closeMiniDb,
+  renewMiniDbLock,
+  openOrRebuildMiniDb,
+} from "./lifecycle.js";
+import { IndexAdmin } from "./index-admin.js";
+import { ReadPath } from "./read-path.js";
+import { createMiniDbStats } from "./stats.js";
+import type { LifecycleHooks } from "./lifecycle.js";
+import { TextRegistry } from "./text-registry.js";
+import type { TextIndexDef } from "./text-registry.js";
+import type { MaintenanceContext, MaintenanceTaskInfo } from "./maintenance.js";
+import type { FrameRef } from "./codec.js";
+import type { FsyncPolicy } from "./wal.js";
+import type {
+  RecoveryMode,
+  RecoveryInfo,
+  ValueMode,
+  RecoveredOp,
+} from "./recovery.js";
+import type { IndexDef, IndexInfo } from "./index-manager.js";
+import type { CompoundIndexDef, CompoundIndexInfo } from "./compound-index.js";
+import type { RangeOptions } from "./skiplist.js";
+import type { TextIndexTokenizerName } from "./trigram.js";
+import type { PostingEntry } from "./text-postings.js";
+import {
+  startWorkerTextBuild,
+  textBuildWorkerAvailable,
+  verifyFileCrcAsync,
+  WorkerTextBuildError,
+} from "./worker/text-build.js";
+import type { TextBuildCheckpoint } from "./worker/text-build.js";
+import {
+  readBaseDocsImageAsync,
+  BASE_DOCS_MAGIC,
+  BASE_DOCS_VERSION,
+} from "./worker/text-build-core.js";
+import type { TextBuildCoreResult } from "./worker/text-build-core.js";
+import {
+  readGenerationFileCheckedAsync,
+  readTextDictionaryImageAsync,
+} from "./gen-codec.js";
 
 import type {
   ValueCodec,
@@ -67,7 +103,7 @@ import type {
   DocRecord,
   ScanEntry,
   QueryOptions,
-} from './types.js';
+} from "./types.js";
 // ClusterDb (the multi-process sharding layer) lives at the './cluster'
 // subpath export to keep this module free of import cycles.
 
@@ -79,7 +115,7 @@ export class MiniDb<V = unknown> {
   store!: Store;
   wal!: WAL;
   valueReader?: ValueReader;
-  valueMode: ValueMode = 'memory';
+  valueMode: ValueMode = "memory";
   readonly indexes = new IndexManager();
   readonly dt = new DtIndex();
   readonly compound = new CompoundIndexManager();
@@ -97,23 +133,29 @@ export class MiniDb<V = unknown> {
   }
 
   /* Non-private (package-internal): lifecycle.ts reads/writes this through its LifecycleHost view. */ codec!: ValueCodec<V>;
-  /* Non-private (package-internal): lifecycle.ts reads/writes this through its LifecycleHost view. */ codecName: ValueCodecName = 'buffer';
-  fsyncPolicy: FsyncPolicy = 'everysec';
+  /* Non-private (package-internal): lifecycle.ts reads/writes this through its LifecycleHost view. */ codecName: ValueCodecName =
+    "buffer";
+  fsyncPolicy: FsyncPolicy = "everysec";
   syncIntervalMs = 1000;
   /** Lifecycle state machine. 'closing' is a real state (not just a flag on
    *  the way down): a cleanup failure leaves the instance there so a later
    *  close() call can retry the remaining cleanup, and ensureOpen rejects
    *  'closing' and 'closed' alike. */
-  /* Non-private (package-internal): lifecycle.ts reads/writes this through its LifecycleHost view. */ state: 'open' | 'closing' | 'closed' = 'open';
+  /* Non-private (package-internal): lifecycle.ts reads/writes this through its LifecycleHost view. */ state:
+    | "open"
+    | "closing"
+    | "closed" = "open";
   /** The in-flight close() cleanup pass, shared by concurrent close() calls. */
-  /* Non-private (package-internal): lifecycle.ts reads/writes this through its LifecycleHost view. */ closePromise: Promise<void> | null = null;
+  /* Non-private (package-internal): lifecycle.ts reads/writes this through its LifecycleHost view. */ closePromise: Promise<void> | null =
+    null;
   recoveryInfo: RecoveryInfo | null = null;
   /** Continuation watermark for catchUpFromWal: the WAL inode + applied
    *  offset as advanced by the last successful catch-up (recoveryInfo's scan
    *  endpoint anchors the first call). */
   private walTail: { dev: number; ino: number; size: number } | null = null;
   readOnly = false;
-  /* Non-private (package-internal): lifecycle.ts reads/writes this through its LifecycleHost view. */ lock: LockFile | null = null;
+  /* Non-private (package-internal): lifecycle.ts reads/writes this through its LifecycleHost view. */ lock: LockFile | null =
+    null;
 
   compactThresholdBytes = 64 * 1024 * 1024;
   autoCompact = true;
@@ -125,7 +167,7 @@ export class MiniDb<V = unknown> {
   _rotateLock: Promise<void> | null = null;
   lastCompactError: unknown = null;
   maxMemoryBytes: number | null = null;
-  maxMemoryPolicy: 'reject' | 'evict-lru' = 'reject';
+  maxMemoryPolicy: "reject" | "evict-lru" = "reject";
   /** The LRU access set lives in the MemoryGuard facet (declared below, after
    *  stats); this view keeps the class's delete-only call sites unchanged. */
   private get access(): Set<string> {
@@ -192,7 +234,8 @@ export class MiniDb<V = unknown> {
    *  next build uses the in-thread staged path. */
   private textWorkerDisabled = false;
   /** Stage 6: worker aggregation memory budget. */
-  /* Non-private (package-internal): lifecycle.ts reads/writes this through its LifecycleHost view. */ textBuildMemoryBytes = 128 * 1024 * 1024;
+  /* Non-private (package-internal): lifecycle.ts reads/writes this through its LifecycleHost view. */ textBuildMemoryBytes =
+    128 * 1024 * 1024;
   /** Stage 6: maintenance I/O concurrency (snapshot grouped reads). */
   /* Non-private (package-internal): lifecycle.ts reads/writes this through its LifecycleHost view. */ maintenanceIoConcurrency = 8;
   /** Defer the open-time full text rebuild (no-generation fallback) to a background
@@ -200,7 +243,9 @@ export class MiniDb<V = unknown> {
   /* Non-private (package-internal): lifecycle.ts reads/writes this through its LifecycleHost view. */ deferTextBuildsEnabled = true;
   /** A read-only deferred build's private scratch dir (outside the db dir);
    *  created on first use, dropped on close (lifecycle.ts closeResources). */
-  /* Non-private (package-internal): lifecycle.ts reads/writes this through its LifecycleHost view. */ roScratchDir: string | null = null;
+  /* Non-private (package-internal): lifecycle.ts reads/writes this through its LifecycleHost view. */ roScratchDir:
+    | string
+    | null = null;
   /** Runtime generation-build trigger (see maybeAutoGenerationBuild):
    *  throttles — minimum interval between kicks, and the longer backoff
    *  after a build failed/aborted (public test knobs, same pattern as the
@@ -217,13 +262,23 @@ export class MiniDb<V = unknown> {
   private get genBuildAbort(): AbortController | null {
     return this.generationBuilder.genBuildAbort;
   }
-  private get genBuild(): { queue: GenBuildOp[]; bytes: number; wal: WAL; aborted: boolean } | null {
+  private get genBuild(): {
+    queue: GenBuildOp[];
+    bytes: number;
+    wal: WAL;
+    aborted: boolean;
+  } | null {
     return this.generationBuilder.genBuild;
   }
   private get genBuildPromise(): Promise<void> | null {
     return this.generationBuilder.genBuildPromise;
   }
-  private get generationInfo(): { id: string; createdAt: number; walCheckpoint: number; records: number } | null {
+  private get generationInfo(): {
+    id: string;
+    createdAt: number;
+    walCheckpoint: number;
+    records: number;
+  } | null {
     return this.generationBuilder.generationInfo;
   }
   /** Set when in-place WAL recovery's truncate fails (persistent I/O error):
@@ -251,8 +306,10 @@ export class MiniDb<V = unknown> {
     decode: (b) => this.decode(b),
     readValueAsync: (kstr) => this.readValueAsync(kstr),
     textRecords: () => this.textRecords(),
-    persistTextIndexDefinitions: (defs) => this.persistTextIndexDefinitions(defs),
-    boundedTextBuild: (name, ti, def, checkpoint) => this.boundedTextBuild(name, ti, def, checkpoint),
+    persistTextIndexDefinitions: (defs) =>
+      this.persistTextIndexDefinitions(defs),
+    boundedTextBuild: (name, ti, def, checkpoint) =>
+      this.boundedTextBuild(name, ti, def, checkpoint),
   });
 
   /** The maxMemory guard facet: owns the LRU access set and the
@@ -341,7 +398,8 @@ export class MiniDb<V = unknown> {
     applyRecoveredOp: (op) => this.applyRecoveredOp(op),
     ensureOpen: () => this.ensureOpen(),
     ensureWritable: () => this.ensureWritable(),
-    boundedTextBuild: (name, ti, def, checkpoint) => this.boundedTextBuild(name, ti, def, checkpoint),
+    boundedTextBuild: (name, ti, def, checkpoint) =>
+      this.boundedTextBuild(name, ti, def, checkpoint),
     noteBuildFailure: () => {
       this.lastGenBuildFailureAt = Date.now();
     },
@@ -395,7 +453,8 @@ export class MiniDb<V = unknown> {
     secondaryDefChain: (fn) => this.secondaryDefChain(fn),
     compoundDefChain: (fn) => this.compoundDefChain(fn),
     persistIndexDefinitions: (defs) => this.persistIndexDefinitions(defs),
-    persistCompoundIndexDefinitions: (defs) => this.persistCompoundIndexDefinitions(defs),
+    persistCompoundIndexDefinitions: (defs) =>
+      this.persistCompoundIndexDefinitions(defs),
   });
 
   /** The read path facet (read-path.ts): KV reads, scans, dt reads, and the
@@ -454,7 +513,7 @@ export class MiniDb<V = unknown> {
       this.stats.textRebuildDurationMs += ms;
       return;
     }
-    await this.buildGeneration('compact');
+    await this.buildGeneration("compact");
     this.stats.compactionPostingsDurationMs += performance.now() - t0;
   };
 
@@ -466,15 +525,15 @@ export class MiniDb<V = unknown> {
    *  compaction's publishing phase — a shutdown must wait it out instead of
    *  cancelling mid-rotation (stage 6). The scheduler's markPublishing is
    *  one-way, so 'running' needs no handling. */
-  onMaintenancePhase = (phase: 'running' | 'publishing'): void => {
-    if (phase === 'publishing') this.maintenanceTaskCtx?.markPublishing();
+  onMaintenancePhase = (phase: "running" | "publishing"): void => {
+    if (phase === "publishing") this.maintenanceTaskCtx?.markPublishing();
   };
 
   /** Queue a compaction on the maintenance scheduler (stage 6): one heavy
    *  task per database at a time; a duplicate submission dedupes onto the
    *  in-flight/queued one. */
   private submitCompaction(): Promise<void> {
-    return this.maintenance.submit('compact', async (ctx) => {
+    return this.maintenance.submit("compact", async (ctx) => {
       this.maintenanceTaskCtx = ctx;
       try {
         await compact(this);
@@ -519,10 +578,14 @@ export class MiniDb<V = unknown> {
     return toKStr(key);
   }
   private indexable(v: unknown): v is Record<string, unknown> {
-    return v !== null && typeof v === 'object';
+    return v !== null && typeof v === "object";
   }
 
-  private *liveRecords(): Generator<{ key: Buffer; value: V | undefined; dt: Record<string, number> | null }> {
+  private *liveRecords(): Generator<{
+    key: Buffer;
+    value: V | undefined;
+    dt: Record<string, number> | null;
+  }> {
     yield* this.readPath.liveRecords();
   }
 
@@ -561,7 +624,9 @@ export class MiniDb<V = unknown> {
         deferred.add(name);
       }
     }
-    await this.indexAdmin.rebuildAllIndexes({ skipTextIndex: (name) => deferred.has(name) });
+    await this.indexAdmin.rebuildAllIndexes({
+      skipTextIndex: (name) => deferred.has(name),
+    });
     if (deferred.size > 0) this.deferOpenTextBuilds([...deferred]);
   }
 
@@ -618,7 +683,7 @@ export class MiniDb<V = unknown> {
         snapshotDev = snapAnchor.dev;
         snapshotIno = snapAnchor.ino;
       } catch (e) {
-        if ((e as NodeJS.ErrnoException).code !== 'ENOENT') throw e;
+        if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e;
       }
       const checkpoint: TextBuildCheckpoint = {
         walOffset: walAnchor.size,
@@ -633,21 +698,34 @@ export class MiniDb<V = unknown> {
     const scratchDir = this.readOnly
       ? (this.roScratchDir ??= path.join(
           this.dir,
-          '..',
+          "..",
           `${path.basename(this.dir)}.ro-scratch`,
           `${process.pid}-${randomUUID().slice(0, 8)}`,
         ))
       : null;
     void this.maintenance
-      .submit('text-build', async (ctx) => {
+      .submit("text-build", async (ctx) => {
         for (const { name, ti, def } of armed) {
-          const output = scratchDir !== null ? { dir: scratchDir, postingsPath: path.join(scratchDir, rootPostingsFile(name)) } : null;
+          const output =
+            scratchDir !== null
+              ? {
+                  dir: scratchDir,
+                  postingsPath: path.join(scratchDir, rootPostingsFile(name)),
+                }
+              : null;
           let checkpoint = pin();
           let committed = false;
           for (let attempt = 1; attempt <= 3 && !committed; attempt++) {
             if (attempt > 1) checkpoint = repin(ti);
             try {
-              const hosted = await this.boundedTextBuild(name, ti, def, checkpoint, output, ctx.signal);
+              const hosted = await this.boundedTextBuild(
+                name,
+                ti,
+                def,
+                checkpoint,
+                output,
+                ctx.signal,
+              );
               // Ineligible after all (e.g. the sticky worker-disable landed
               // mid-task): no build will come — stop retrying.
               if (hosted === null) break;
@@ -695,7 +773,6 @@ export class MiniDb<V = unknown> {
     yield* this.readPath.liveRecordsRaw();
   }
 
-
   // ---- persistent index generations (stage 5) ------------------------------
   //
   // The generation machinery (load path, build path, genBuild state) lives in
@@ -707,7 +784,9 @@ export class MiniDb<V = unknown> {
     return this.generationBuilder.tryLoadGeneration(mode);
   }
 
-  private async buildGeneration(trigger: 'open' | 'compact' | 'manual' | 'wal-growth' | 'close'): Promise<void> {
+  private async buildGeneration(
+    trigger: "open" | "compact" | "manual" | "wal-growth" | "close",
+  ): Promise<void> {
     return this.generationBuilder.buildGeneration(trigger);
   }
 
@@ -746,11 +825,11 @@ export class MiniDb<V = unknown> {
     checkpoint: TextBuildCheckpoint | null,
     output: { dir: string; postingsPath: string } | null = null,
     signal?: AbortSignal,
-  ): Promise<'worker' | 'inline' | null> {
+  ): Promise<"worker" | "inline" | null> {
     if (
       !this.textBuildWorkerEnabled ||
       this.textWorkerDisabled ||
-      this.state !== 'open' ||
+      this.state !== "open" ||
       // A memory-base index (read-only open) must not write into the live
       // writer's db dir: it is only eligible when the build's artifacts are
       // redirected to a caller-owned scratch location.
@@ -778,7 +857,9 @@ export class MiniDb<V = unknown> {
     // read-only open whose WAL was never opened, so its caller MUST pin the
     // checkpoint (recoveryInfo anchors) instead.
     if (checkpoint === null && ti.memBase !== null) {
-      throw new Error('bounded text build on a memory-base index requires a pinned checkpoint');
+      throw new Error(
+        "bounded text build on a memory-base index requires a pinned checkpoint",
+      );
     }
     // A caller may have pre-armed the capture (the deferred open-time build
     // arms at the recovery checkpoint, so ops queue from that exact point
@@ -792,11 +873,13 @@ export class MiniDb<V = unknown> {
         walDev = walAnchor.dev;
         walIno = walAnchor.ino;
         try {
-          const snapAnchor = fsSync.statSync(path.join(this.dir, SNAPSHOT_FILE));
+          const snapAnchor = fsSync.statSync(
+            path.join(this.dir, SNAPSHOT_FILE),
+          );
           snapDev = snapAnchor.dev;
           snapIno = snapAnchor.ino;
         } catch (e) {
-          if ((e as NodeJS.ErrnoException).code !== 'ENOENT') throw e;
+          if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e;
         }
       } else {
         sealedOffset = checkpoint.walOffset;
@@ -818,15 +901,25 @@ export class MiniDb<V = unknown> {
     // (read-only scratch) writes straight into the caller's dir: crash
     // residue there is harmless — the next attempt overwrites it and the
     // whole dir is dropped on close.
-    const tmpDir = output === null ? path.join(this.dir, `${rootPostingsFile(name)}.tmpbuild`) : null;
+    const tmpDir =
+      output === null
+        ? path.join(this.dir, `${rootPostingsFile(name)}.tmpbuild`)
+        : null;
     let slotRelease: (() => void) | null = null;
     try {
       const artifactsDir = tmpDir ?? output!.dir;
-      if (tmpDir !== null) await fs.rm(tmpDir, { recursive: true, force: true });
+      if (tmpDir !== null)
+        await fs.rm(tmpDir, { recursive: true, force: true });
       await fs.mkdir(artifactsDir, { recursive: true });
-      const postingsPath = tmpDir !== null ? path.join(tmpDir, rootPostingsFile(name)) : output!.postingsPath;
+      const postingsPath =
+        tmpDir !== null
+          ? path.join(tmpDir, rootPostingsFile(name))
+          : output!.postingsPath;
       const dictionaryPath = path.join(artifactsDir, textDictionaryFile(name));
-      const baseDocsPath = path.join(artifactsDir, `${textDocsFile(name)}.base`);
+      const baseDocsPath = path.join(
+        artifactsDir,
+        `${textDocsFile(name)}.base`,
+      );
       // Worker thread when its entry file exists; the inline bounded core
       // otherwise (slot pressure or a single-file deployment) — never the
       // unbounded staged aggregation.
@@ -835,7 +928,8 @@ export class MiniDb<V = unknown> {
       const inline = slotRelease === null;
       const handle = startWorkerTextBuild(
         {
-          snapshotPath: snapIno !== 0 ? path.join(this.dir, SNAPSHOT_FILE) : null,
+          snapshotPath:
+            snapIno !== 0 ? path.join(this.dir, SNAPSHOT_FILE) : null,
           walPath: this.walPath,
           walOffset: sealedOffset,
           walDev,
@@ -846,7 +940,10 @@ export class MiniDb<V = unknown> {
             {
               name,
               fields: def.fields,
-              tokenizer: def.tokenizer === 'ngram' ? ('ngram' as const) : ('default' as const),
+              tokenizer:
+                def.tokenizer === "ngram"
+                  ? ("ngram" as const)
+                  : ("default" as const),
               postingsPath,
               dictionaryPath,
               baseDocsPath,
@@ -855,9 +952,11 @@ export class MiniDb<V = unknown> {
           memoryBudgetBytes: this.textBuildMemoryBytes,
         },
         {
-          shouldAbort: () => this.state !== 'open' || signal?.aborted === true,
+          shouldAbort: () => this.state !== "open" || signal?.aborted === true,
           inline,
-          inlineReason: workerAvailable ? 'slot-pressure' : 'runtime-unavailable',
+          inlineReason: workerAvailable
+            ? "slot-pressure"
+            : "runtime-unavailable",
           signal,
           onFallback: (reason) => {
             this.stats.textWorkerFallbacks++;
@@ -869,7 +968,10 @@ export class MiniDb<V = unknown> {
       try {
         result = await handle.promise;
       } catch (error) {
-        if (!handle.inline && !(error instanceof WorkerTextBuildError && error.aborted)) {
+        if (
+          !handle.inline &&
+          !(error instanceof WorkerTextBuildError && error.aborted)
+        ) {
           this.stats.textWorkerErrors++;
         }
         throw error;
@@ -883,14 +985,33 @@ export class MiniDb<V = unknown> {
       // streaming crc on the raw postings file, envelope+crc on the images.
       const r = result.indexes[0]!;
       await verifyFileCrcAsync(postingsPath, r.postingsInfo);
-      const dictPayload = await readGenerationFileCheckedAsync(dictionaryPath, 'MDTD', 1, r.dictionaryInfo);
-      const dictEntries = (await readTextDictionaryImageAsync(dictPayload)).map(
-        (e) => [e.term, { off: e.off, len: e.len, df: e.df }] as [string, PostingEntry],
+      const dictPayload = await readGenerationFileCheckedAsync(
+        dictionaryPath,
+        "MDTD",
+        1,
+        r.dictionaryInfo,
       );
-      const baseDocsPayload = await readGenerationFileCheckedAsync(baseDocsPath, BASE_DOCS_MAGIC, BASE_DOCS_VERSION, r.baseDocsInfo);
+      const dictEntries = (await readTextDictionaryImageAsync(dictPayload)).map(
+        (e) =>
+          [e.term, { off: e.off, len: e.len, df: e.df }] as [
+            string,
+            PostingEntry,
+          ],
+      );
+      const baseDocsPayload = await readGenerationFileCheckedAsync(
+        baseDocsPath,
+        BASE_DOCS_MAGIC,
+        BASE_DOCS_VERSION,
+        r.baseDocsInfo,
+      );
       const baseDocs = await readBaseDocsImageAsync(baseDocsPayload);
-      const containers = await TextIndex.prepareRebaseContainers(dictEntries, baseDocs.keys, baseDocs.docLens);
-      const finalPostingsPath = tmpDir !== null ? this.textPostingsPath(name) : postingsPath;
+      const containers = await TextIndex.prepareRebaseContainers(
+        dictEntries,
+        baseDocs.keys,
+        baseDocs.docLens,
+      );
+      const finalPostingsPath =
+        tmpDir !== null ? this.textPostingsPath(name) : postingsPath;
       if (tmpDir !== null) await fs.rename(postingsPath, finalPostingsPath);
       ti.commitRebase({
         postingsPath: finalPostingsPath,
@@ -899,7 +1020,7 @@ export class MiniDb<V = unknown> {
         postingsFileInfo: r.postingsInfo,
       });
       if (!handle.inline) this.stats.textWorkerBuilds++;
-      return handle.inline ? 'inline' : 'worker';
+      return handle.inline ? "inline" : "worker";
     } catch (e) {
       ti.abortRebase();
       throw e;
@@ -913,15 +1034,26 @@ export class MiniDb<V = unknown> {
         // which stays live and is dropped with the whole scratch dir on
         // close. (A failed build's partial postings file is overwritten by
         // the next attempt and removed with the dir as well.)
-        await fs.rm(path.join(output!.dir, textDictionaryFile(name)), { force: true }).catch(() => {});
-        await fs.rm(path.join(output!.dir, `${textDocsFile(name)}.base`), { force: true }).catch(() => {});
+        await fs
+          .rm(path.join(output!.dir, textDictionaryFile(name)), { force: true })
+          .catch(() => {});
+        await fs
+          .rm(path.join(output!.dir, `${textDocsFile(name)}.base`), {
+            force: true,
+          })
+          .catch(() => {});
       }
     }
   }
 
   /** Stable generation status: the generation this instance loaded at open or
    *  last published (null when running on the legacy recovery path). */
-  getIndexGeneration(): { id: string; createdAt: number; walCheckpoint: number; records: number } | null {
+  getIndexGeneration(): {
+    id: string;
+    createdAt: number;
+    walCheckpoint: number;
+    records: number;
+  } | null {
     return this.generationBuilder.getIndexGeneration();
   }
 
@@ -933,7 +1065,9 @@ export class MiniDb<V = unknown> {
    *  implicit snapshot of the registry — a create persists live+staged BEFORE
    *  publishing, a drop persists live-minus BEFORE removing. */
   private async persistIndexDefinitions(defs: IndexInfo[]): Promise<void> {
-    await writeFileAtomic(this.indexPath, JSON.stringify(defs), { stats: this.stats });
+    await writeFileAtomic(this.indexPath, JSON.stringify(defs), {
+      stats: this.stats,
+    });
   }
   private async loadTextIndexDefinitions(): Promise<void> {
     return this.textRegistry.loadTextIndexDefinitions();
@@ -942,16 +1076,26 @@ export class MiniDb<V = unknown> {
    *  rule as persistIndexDefinitions). This is the registry's persistence
    *  SEAM (injected into TextRegistry): kept on MiniDb so tests can stub it
    *  on the instance. */
-  private async persistTextIndexDefinitions(defs: TextIndexDef[]): Promise<void> {
-    await writeFileAtomic(path.join(this.dir, TEXT_INDEXES_FILE), JSON.stringify(defs), { stats: this.stats });
+  private async persistTextIndexDefinitions(
+    defs: TextIndexDef[],
+  ): Promise<void> {
+    await writeFileAtomic(
+      path.join(this.dir, TEXT_INDEXES_FILE),
+      JSON.stringify(defs),
+      { stats: this.stats },
+    );
   }
   private async loadCompoundIndexDefinitions(): Promise<void> {
     return this.indexAdmin.loadCompoundIndexDefinitions(this.compoundIndexPath);
   }
   /** Persist the given compound-index definition list (same
    *  transaction-content rule as persistIndexDefinitions). */
-  private async persistCompoundIndexDefinitions(defs: CompoundIndexInfo[]): Promise<void> {
-    await writeFileAtomic(this.compoundIndexPath, JSON.stringify(defs), { stats: this.stats });
+  private async persistCompoundIndexDefinitions(
+    defs: CompoundIndexInfo[],
+  ): Promise<void> {
+    await writeFileAtomic(this.compoundIndexPath, JSON.stringify(defs), {
+      stats: this.stats,
+    });
   }
 
   /** Drop every derived index entry for a key that just expired in the Store. */
@@ -964,7 +1108,8 @@ export class MiniDb<V = unknown> {
   }
 
   private maybeAutoCompact(): void {
-    if (this.autoCompact && !this.compacting && shouldCompact(this)) this.submitCompaction().catch(() => {});
+    if (this.autoCompact && !this.compacting && shouldCompact(this))
+      this.submitCompaction().catch(() => {});
     this.maybeAutoGenerationBuild();
   }
 
@@ -976,12 +1121,14 @@ export class MiniDb<V = unknown> {
    *  grew/rotated past the threshold since the current generation's
    *  checkpoint (a rotated-away anchor reads as a negative drift). */
   private generationStale(): boolean {
-    if (this.readOnly || !this.indexGenerationsEnabled || this.state !== 'open') return false;
+    if (this.readOnly || !this.indexGenerationsEnabled || this.state !== "open")
+      return false;
     const gen = this.generationInfo;
     const walOffset = this.wal.appendOffset;
     return gen === null
       ? this.store.size > 0 && walOffset >= GEN_BUILD_WAL_DELTA_BYTES
-      : walOffset - gen.walCheckpoint >= GEN_BUILD_WAL_DELTA_BYTES || walOffset < gen.walCheckpoint;
+      : walOffset - gen.walCheckpoint >= GEN_BUILD_WAL_DELTA_BYTES ||
+          walOffset < gen.walCheckpoint;
   }
 
   /** Runtime generation-availability trigger, riding the per-write
@@ -993,10 +1140,11 @@ export class MiniDb<V = unknown> {
   private maybeAutoGenerationBuild(): void {
     const now = Date.now();
     if (now - this.lastGenBuildKickAt < this.genBuildKickMinIntervalMs) return;
-    if (now - this.lastGenBuildFailureAt < this.genBuildKickFailureBackoffMs) return;
+    if (now - this.lastGenBuildFailureAt < this.genBuildKickFailureBackoffMs)
+      return;
     if (!this.generationStale()) return;
     this.lastGenBuildKickAt = now;
-    void this.buildGeneration('wal-growth').catch(() => {});
+    void this.buildGeneration("wal-growth").catch(() => {});
   }
 
   // ---- WAL poison: in-place recovery + flush-group rollback ----------------
@@ -1047,7 +1195,8 @@ export class MiniDb<V = unknown> {
       // it would zero-extend the new file. The new file never carried the
       // un-acked tail, so skipping the truncate is the correct recovery.
       const st = await fs.stat(this.walPath);
-      if (poison.failedAtOffset <= st.size) await fs.truncate(this.walPath, poison.failedAtOffset);
+      if (poison.failedAtOffset <= st.size)
+        await fs.truncate(this.walPath, poison.failedAtOffset);
     } catch (err) {
       this.writeDisabled = err;
       return;
@@ -1089,7 +1238,11 @@ export class MiniDb<V = unknown> {
     return this.readPath.getRecord(key);
   }
 
-  async set(key: string | Buffer, value: V, { ttl, dt }: SetOptions = {}): Promise<void> {
+  async set(
+    key: string | Buffer,
+    value: V,
+    { ttl, dt }: SetOptions = {},
+  ): Promise<void> {
     return this.writePath.set(key, value, { ttl, dt });
   }
 
@@ -1130,7 +1283,9 @@ export class MiniDb<V = unknown> {
   }
   async mset(entries: readonly (readonly [string, V])[]): Promise<void> {
     if (!entries.length) return;
-    await this.batch(entries.map(([key, value]) => ({ op: 'set' as const, key, value })));
+    await this.batch(
+      entries.map(([key, value]) => ({ op: "set" as const, key, value })),
+    );
   }
   mget(keys: readonly string[]): (V | undefined)[] {
     return this.readPath.mget(keys);
@@ -1160,7 +1315,10 @@ export class MiniDb<V = unknown> {
     return this.readPath.dtColumns();
   }
 
-  dtRange(col: string, opts: RangeOptions<number> & { limit?: number } = {}): (ScanEntry<V> & { dtValue: number })[] {
+  dtRange(
+    col: string,
+    opts: RangeOptions<number> & { limit?: number } = {},
+  ): (ScanEntry<V> & { dtValue: number })[] {
     return this.readPath.dtRange(col, opts);
   }
 
@@ -1175,16 +1333,25 @@ export class MiniDb<V = unknown> {
   listIndexes(): IndexInfo[] {
     return this.indexAdmin.listIndexes();
   }
-  findEq(name: string, value: unknown): { key: string; value: V | undefined }[] {
+  findEq(
+    name: string,
+    value: unknown,
+  ): { key: string; value: V | undefined }[] {
     return this.indexAdmin.findEq(name, value);
   }
-  findRange(name: string, opts: Parameters<IndexManager['findRange']>[1]): { key: string; value: V | undefined; field: number }[] {
+  findRange(
+    name: string,
+    opts: Parameters<IndexManager["findRange"]>[1],
+  ): { key: string; value: V | undefined; field: number }[] {
     return this.indexAdmin.findRange(name, opts);
   }
 
   // ---- compound indexes (groupBy + orderBy) -------------------------------
 
-  async createCompoundIndex(name: string, def: CompoundIndexDef): Promise<void> {
+  async createCompoundIndex(
+    name: string,
+    def: CompoundIndexDef,
+  ): Promise<void> {
     return this.indexAdmin.createCompoundIndex(name, def);
   }
 
@@ -1212,7 +1379,10 @@ export class MiniDb<V = unknown> {
 
   async createTextIndex(
     name: string,
-    { fields, tokenizer }: { fields?: readonly string[]; tokenizer?: TextIndexTokenizerName } = {},
+    {
+      fields,
+      tokenizer,
+    }: { fields?: readonly string[]; tokenizer?: TextIndexTokenizerName } = {},
   ): Promise<void> {
     return this.textRegistry.createTextIndex(name, { fields, tokenizer });
   }
@@ -1220,7 +1390,11 @@ export class MiniDb<V = unknown> {
     return this.textRegistry.dropTextIndex(name);
   }
 
-  search(name: string, q: string, opts: { op?: 'AND' | 'OR'; limit?: number; maxVisits?: number } = {}): { key: string; value: V | undefined; score: number }[] {
+  search(
+    name: string,
+    q: string,
+    opts: { op?: "AND" | "OR"; limit?: number; maxVisits?: number } = {},
+  ): { key: string; value: V | undefined; score: number }[] {
     return this.textRegistry.search(name, q, opts);
   }
 
@@ -1233,8 +1407,12 @@ export class MiniDb<V = unknown> {
   searchBounded(
     name: string,
     q: string,
-    opts: { op?: 'AND' | 'OR'; limit?: number; maxVisits?: number } = {},
-  ): { hits: { key: string; value: V; score: number }[]; visits: number; truncated: boolean } {
+    opts: { op?: "AND" | "OR"; limit?: number; maxVisits?: number } = {},
+  ): {
+    hits: { key: string; value: V; score: number }[];
+    visits: number;
+    truncated: boolean;
+  } {
     return this.textRegistry.searchBounded(name, q, opts);
   }
 
@@ -1244,8 +1422,12 @@ export class MiniDb<V = unknown> {
   async searchBoundedAsync(
     name: string,
     q: string,
-    opts: { op?: 'AND' | 'OR'; limit?: number; maxVisits?: number } = {},
-  ): Promise<{ hits: { key: string; value: V; score: number }[]; visits: number; truncated: boolean }> {
+    opts: { op?: "AND" | "OR"; limit?: number; maxVisits?: number } = {},
+  ): Promise<{
+    hits: { key: string; value: V; score: number }[];
+    visits: number;
+    truncated: boolean;
+  }> {
     return this.textRegistry.searchBoundedAsync(name, q, opts);
   }
 
@@ -1253,7 +1435,7 @@ export class MiniDb<V = unknown> {
   async searchAsync(
     name: string,
     q: string,
-    opts: { op?: 'AND' | 'OR'; limit?: number; maxVisits?: number } = {},
+    opts: { op?: "AND" | "OR"; limit?: number; maxVisits?: number } = {},
   ): Promise<{ key: string; value: V | undefined; score: number }[]> {
     return this.textRegistry.searchAsync(name, q, opts);
   }
@@ -1293,14 +1475,21 @@ export class MiniDb<V = unknown> {
    *  restored if the rename fails). A failure anywhere before the rename
    *  leaves the destination untouched and the temp dir removed — never a half
    *  backup. Concurrent backups serialize on serializeBackups. */
-  async backup(destDir: string, opts: { compact?: boolean } = {}): Promise<void> {
+  async backup(
+    destDir: string,
+    opts: { compact?: boolean } = {},
+  ): Promise<void> {
     return runBackup(this.backupDeps, destDir, opts);
   }
 
   /** Restore a backup directory into destDir and open it. */
-  static async restore<V = unknown>(srcDir: string, destDir: string, opts: RestoreOptions = {}): Promise<MiniDb<V>> {
-    if (!srcDir) throw new TypeError('restore: srcDir is required');
-    if (!destDir) throw new TypeError('restore: destDir is required');
+  static async restore<V = unknown>(
+    srcDir: string,
+    destDir: string,
+    opts: RestoreOptions = {},
+  ): Promise<MiniDb<V>> {
+    if (!srcDir) throw new TypeError("restore: srcDir is required");
+    if (!destDir) throw new TypeError("restore: destDir is required");
     const { force, ...openOpts } = opts;
 
     if (force) {
@@ -1308,19 +1497,21 @@ export class MiniDb<V = unknown> {
     } else {
       try {
         const existing = await fs.readdir(destDir);
-        if (existing.length) throw new Error(`restore destination is not empty: ${destDir}`);
+        if (existing.length)
+          throw new Error(`restore destination is not empty: ${destDir}`);
       } catch (e) {
-        if ((e as NodeJS.ErrnoException).code !== 'ENOENT') throw e;
+        if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e;
       }
     }
     await fs.mkdir(destDir, { recursive: true });
 
     const names = await fs.readdir(srcDir);
     for (const name of names) {
-      if (isPersistentFile(name) || name === 'backup.manifest.json') {
+      if (isPersistentFile(name) || name === "backup.manifest.json") {
         const src = path.join(srcDir, name);
         const st = await fs.stat(src);
-        if (st.isDirectory()) await fs.cp(src, path.join(destDir, name), { recursive: true });
+        if (st.isDirectory())
+          await fs.cp(src, path.join(destDir, name), { recursive: true });
         else await fs.copyFile(src, path.join(destDir, name));
       }
     }
@@ -1353,13 +1544,22 @@ export class MiniDb<V = unknown> {
    *  scratch. A partial/torn tail left by a writer mid-writev is NOT an
    *  error: the scan stops at the last fully-valid frame; call again later
    *  and its CRC validates once the writev landed. */
-  async catchUpFromWal(offset: number): Promise<{ offset: number; appliedFrames: number } | null> {
+  async catchUpFromWal(
+    offset: number,
+  ): Promise<{ offset: number; appliedFrames: number } | null> {
     this.ensureOpen();
     const ri = this.recoveryInfo;
-    const anchor = this.walTail ?? (ri && ri.walIno ? { dev: ri.walDev, ino: ri.walIno, size: ri.walScanEnd } : null);
+    const anchor =
+      this.walTail ??
+      (ri && ri.walIno
+        ? { dev: ri.walDev, ino: ri.walIno, size: ri.walScanEnd }
+        : null);
     if (!anchor || offset !== anchor.size) return null;
-    const res = catchUpWal(this.walPath, offset, anchor, (f, fd) => this.applyRecoveredFrame(f, fd));
-    if (res) this.walTail = { dev: anchor.dev, ino: anchor.ino, size: res.offset };
+    const res = catchUpWal(this.walPath, offset, anchor, (f, fd) =>
+      this.applyRecoveredFrame(f, fd),
+    );
+    if (res)
+      this.walTail = { dev: anchor.dev, ino: anchor.ino, size: res.offset };
     return res;
   }
 
@@ -1381,10 +1581,10 @@ export class MiniDb<V = unknown> {
   }
 
   private ensureOpen(): void {
-    if (this.state !== 'open') throw new Error('MiniDb is closed');
+    if (this.state !== "open") throw new Error("MiniDb is closed");
   }
   private ensureWritable(): void {
-    if (this.readOnly) throw new Error('MiniDb is open in read-only mode');
+    if (this.readOnly) throw new Error("MiniDb is open in read-only mode");
     if (this.writeDisabled) throw this.writeDisabledError();
   }
 }

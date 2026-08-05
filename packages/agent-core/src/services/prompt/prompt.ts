@@ -66,15 +66,15 @@
  * `IEventService.publish` (also a daemon-side interface; agent-core not touched).
  */
 
-import { createDecorator } from '../../di';
-import type { Event } from '../../base/common/event';
+import { createDecorator } from "../../di";
+import type { Event } from "../../base/common/event";
 import type {
   PromptListResponse,
   PromptSubmission,
   PromptStatus,
   PromptSteerResult,
   PromptSubmitResult,
-} from '@moonshot-ai/protocol';
+} from "@moonshot-ai/protocol";
 
 export interface PromptAbortResult {
   /** True iff this call performed the cancel (false on idempotent already-completed). */
@@ -100,7 +100,7 @@ export interface AgentStatePatch {
   plan_mode?: boolean;
   swarm_mode?: boolean;
   goal_objective?: string;
-  goal_control?: 'pause' | 'resume' | 'cancel';
+  goal_control?: "pause" | "resume" | "cancel";
 }
 
 /**
@@ -110,7 +110,7 @@ export interface AgentStatePatch {
  * attribute every dispatched setter to its triggering endpoint without the
  * caller having to interleave its own log entries.
  */
-export type AgentStateSource = 'prompt' | 'meta';
+export type AgentStateSource = "prompt" | "meta";
 
 export interface IPromptService {
   readonly _serviceBrand: undefined;
@@ -239,7 +239,7 @@ export interface IPromptService {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
-export const IPromptService = createDecorator<IPromptService>('promptService');
+export const IPromptService = createDecorator<IPromptService>("promptService");
 
 /**
  * Sentinel — REST → 40901 `session.busy`. Carries the active prompt id so the
@@ -250,7 +250,7 @@ export class SessionBusyError extends Error {
   readonly activePromptId: string;
   constructor(sessionId: string, activePromptId: string) {
     super(`session ${sessionId} is busy (prompt ${activePromptId} in flight)`);
-    this.name = 'SessionBusyError';
+    this.name = "SessionBusyError";
     this.sessionId = sessionId;
     this.activePromptId = activePromptId;
   }
@@ -264,7 +264,7 @@ export class PromptNotFoundError extends Error {
   readonly promptId: string;
   constructor(sessionId: string, promptId: string) {
     super(`prompt ${promptId} does not exist in session ${sessionId}`);
-    this.name = 'PromptNotFoundError';
+    this.name = "PromptNotFoundError";
     this.sessionId = sessionId;
     this.promptId = promptId;
   }
@@ -280,20 +280,20 @@ export class PromptAlreadyCompletedError extends Error {
   readonly promptId: string;
   constructor(sessionId: string, promptId: string) {
     super(`prompt ${promptId} in session ${sessionId} is already completed`);
-    this.name = 'PromptAlreadyCompletedError';
+    this.name = "PromptAlreadyCompletedError";
     this.sessionId = sessionId;
     this.promptId = promptId;
   }
 }
 
 export interface SyntheticPromptSubmittedEvent {
-  readonly type: 'prompt.submitted';
+  readonly type: "prompt.submitted";
   readonly agentId: string;
   readonly sessionId: string;
   readonly promptId: string;
   readonly userMessageId: string;
   readonly status: PromptStatus;
-  readonly content: PromptSubmission['content'];
+  readonly content: PromptSubmission["content"];
   readonly createdAt: string;
 }
 
@@ -304,19 +304,19 @@ export interface SyntheticPromptSubmittedEvent {
  * `prompt.*` (not part of agent-core's union — see service header).
  */
 export interface SyntheticPromptCompletedEvent {
-  readonly type: 'prompt.completed';
+  readonly type: "prompt.completed";
   readonly agentId: string;
   readonly sessionId: string;
   readonly promptId: string;
   readonly finishedAt: string;
-  readonly reason: 'completed' | 'failed' | 'blocked';
+  readonly reason: "completed" | "failed" | "blocked";
 }
 
 /**
  * `prompt.aborted` synthetic event shape.
  */
 export interface SyntheticPromptAbortedEvent {
-  readonly type: 'prompt.aborted';
+  readonly type: "prompt.aborted";
   readonly agentId: string;
   readonly sessionId: string;
   readonly promptId: string;
@@ -324,12 +324,12 @@ export interface SyntheticPromptAbortedEvent {
 }
 
 export interface SyntheticPromptSteeredEvent {
-  readonly type: 'prompt.steered';
+  readonly type: "prompt.steered";
   readonly agentId: string;
   readonly sessionId: string;
   readonly activePromptId: string;
   readonly promptIds: readonly string[];
-  readonly content: PromptSubmission['content'];
+  readonly content: PromptSubmission["content"];
   readonly steeredAt: string;
 }
 
@@ -359,17 +359,17 @@ export interface PromptDispatchLogEntry {
   readonly ts: string;
   /** Which setter ran. */
   readonly kind:
-    | 'setModel'
-    | 'setThinking'
-    | 'setPermission'
-    | 'enterPlan'
-    | 'cancelPlan'
-    | 'enterSwarm'
-    | 'exitSwarm'
-    | 'createGoal'
-    | 'pauseGoal'
-    | 'resumeGoal'
-    | 'cancelGoal';
+    | "setModel"
+    | "setThinking"
+    | "setPermission"
+    | "enterPlan"
+    | "cancelPlan"
+    | "enterSwarm"
+    | "exitSwarm"
+    | "createGoal"
+    | "pauseGoal"
+    | "resumeGoal"
+    | "cancelGoal";
   /** Verbatim payload passed to the setter (sessionId redacted by caller if needed). */
   readonly payload: Record<string, unknown>;
   /**

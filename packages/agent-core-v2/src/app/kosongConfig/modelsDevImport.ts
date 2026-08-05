@@ -13,9 +13,11 @@
  * model when none is configured at all (fresh setup).
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
-import type { ProviderCatalogItem } from '#/kosong/model/catalog';
-
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
+import type { ProviderCatalogItem } from "#/kosong/model/catalog";
 
 export interface ModelsDevModelItem {
   readonly id: string;
@@ -36,7 +38,6 @@ export interface ModelsDevProviderItem {
   readonly env_key: string | null;
   readonly models: readonly ModelsDevModelItem[];
 }
-
 
 export const PROVIDER_ID_PATTERN = /^[\p{L}\p{N}][\p{L}\p{N}\-_ ]*$/u;
 
@@ -76,4 +77,4 @@ export interface IModelsDevImportService {
 }
 
 export const IModelsDevImportService: ServiceIdentifier<IModelsDevImportService> =
-  createDecorator<IModelsDevImportService>('modelsDevImport');
+  createDecorator<IModelsDevImportService>("modelsDevImport");

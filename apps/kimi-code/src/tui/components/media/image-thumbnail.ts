@@ -12,10 +12,16 @@
  * the viewport; pi-tui handles proportional scaling internally.
  */
 
-import { Container, Image, Text, type ImageTheme, getCapabilities } from '@moonshot-ai/pi-tui';
+import {
+  Container,
+  Image,
+  Text,
+  type ImageTheme,
+  getCapabilities,
+} from "@moonshot-ai/pi-tui";
 
-import { currentTheme } from '#/tui/theme';
-import type { ImageAttachment } from '#/tui/utils/image-attachment-store';
+import { currentTheme } from "#/tui/theme";
+import type { ImageAttachment } from "#/tui/utils/image-attachment-store";
 
 const MAX_IMAGE_ROWS = 12;
 const MAX_IMAGE_WIDTH = 40;
@@ -35,19 +41,21 @@ export class ImageThumbnail extends Container {
   private buildChildren(width: number): void {
     this.clear();
     const caps = getCapabilities();
-    const supportsInline = caps.images === 'kitty' || caps.images === 'iterm2';
+    const supportsInline = caps.images === "kitty" || caps.images === "iterm2";
 
     if (!supportsInline) {
-      this.addChild(new Text(currentTheme.fg('accent', this.attachment.placeholder), 0, 0));
+      this.addChild(
+        new Text(currentTheme.fg("accent", this.attachment.placeholder), 0, 0),
+      );
       this.lastBuiltWidth = width;
       this.lastBuiltInline = false;
       return;
     }
 
     const theme: ImageTheme = {
-      fallbackColor: (s: string) => currentTheme.fg('textDim', s),
+      fallbackColor: (s: string) => currentTheme.fg("textDim", s),
     };
-    const base64 = Buffer.from(this.attachment.bytes).toString('base64');
+    const base64 = Buffer.from(this.attachment.bytes).toString("base64");
     const image = new Image(
       base64,
       this.attachment.mime,
@@ -69,14 +77,19 @@ export class ImageThumbnail extends Container {
     this.lastRenderWidth = safeWidth;
 
     if (safeWidth < MAX_IMAGE_WIDTH + 2) {
-      return new Text(currentTheme.fg('accent', this.attachment.placeholder), 0, 0).render(
-        safeWidth,
-      );
+      return new Text(
+        currentTheme.fg("accent", this.attachment.placeholder),
+        0,
+        0,
+      ).render(safeWidth);
     }
 
     const caps = getCapabilities();
-    const supportsInline = caps.images === 'kitty' || caps.images === 'iterm2';
-    if (this.lastBuiltWidth !== safeWidth || this.lastBuiltInline !== supportsInline) {
+    const supportsInline = caps.images === "kitty" || caps.images === "iterm2";
+    if (
+      this.lastBuiltWidth !== safeWidth ||
+      this.lastBuiltInline !== supportsInline
+    ) {
       this.buildChildren(safeWidth);
     }
     return super.render(safeWidth);

@@ -8,18 +8,21 @@
  * Kaos I/O.
  */
 
-import type { Kaos } from '@moonshot-ai/kaos';
-import { z } from 'zod';
+import type { Kaos } from "@moonshot-ai/kaos";
+import { z } from "zod";
 
-import type { BuiltinTool } from '../../../agent/tool';
-import { ToolAccesses } from '../../../loop/tool-access';
-import type { ExecutableToolResult, ToolExecution } from '../../../loop/types';
-import { resolvePathAccessPath } from '../../policies/path-access';
-import { toInputJsonSchema } from '../../support/input-schema';
-import { literalRulePattern, matchesPathRuleSubject } from '../../support/rule-match';
-import type { WorkspaceConfig } from '../../support/workspace';
-import { materializeModelText, toModelTextView } from './line-endings';
-import EDIT_DESCRIPTION from './edit.md?raw';
+import type { BuiltinTool } from "../../../agent/tool";
+import { ToolAccesses } from "../../../loop/tool-access";
+import type { ExecutableToolResult, ToolExecution } from "../../../loop/types";
+import { resolvePathAccessPath } from "../../policies/path-access";
+import { toInputJsonSchema } from "../../support/input-schema";
+import {
+  literalRulePattern,
+  matchesPathRuleSubject,
+} from "../../support/rule-match";
+import type { WorkspaceConfig } from "../../support/workspace";
+import { materializeModelText, toModelTextView } from "./line-endings";
+import EDIT_DESCRIPTION from "./edit.md?raw";
 
 // `old_string` must be non-empty: the non-replace_all branch walks
 // occurrences with `content.indexOf("", pos)`, which would loop forever
@@ -28,37 +31,48 @@ export const EditInputSchema = z.object({
   path: z
     .string()
     .describe(
-      'Path to the text file to edit. Relative paths resolve against the working directory; a path outside the working directory must be absolute.',
+      "Path to the text file to edit. Relative paths resolve against the working directory; a path outside the working directory must be absolute.",
     ),
   old_string: z
     .string()
     .min(1)
     .describe(
-      'Exact content to replace from the Read output view, without the line-number prefix. Use LF for pure CRLF files; use actual \\r escapes where Read shows \\r.',
+      "Exact content to replace from the Read output view, without the line-number prefix. Use LF for pure CRLF files; use actual \\r escapes where Read shows \\r.",
     ),
   new_string: z
     .string()
     .describe(
-      'Replacement text in the same Read output view. LF is written back as CRLF only for pure CRLF files.',
+      "Replacement text in the same Read output view. LF is written back as CRLF only for pure CRLF files.",
     ),
   replace_all: z
     .boolean()
     .optional()
-    .describe('Set true only when every occurrence of old_string should be replaced.'),
+    .describe(
+      "Set true only when every occurrence of old_string should be replaced.",
+    ),
 });
 
 export type EditInput = z.Infer<typeof EditInputSchema>;
 
-function replaceOnceLiteral(content: string, oldString: string, newString: string): string {
+function replaceOnceLiteral(
+  content: string,
+  oldString: string,
+  newString: string,
+): string {
   const index = content.indexOf(oldString);
   if (index === -1) return content;
-  return content.slice(0, index) + newString + content.slice(index + oldString.length);
+  return (
+    content.slice(0, index) +
+    newString +
+    content.slice(index + oldString.length)
+  );
 }
 
 export class EditTool implements BuiltinTool<EditInput> {
-  readonly name = 'Edit' as const;
+  readonly name = "Edit" as const;
   readonly description = EDIT_DESCRIPTION;
-  readonly parameters: Record<string, unknown> = toInputJsonSchema(EditInputSchema);
+  readonly parameters: Record<string, unknown> =
+    toInputJsonSchema(EditInputSchema);
 
   constructor(
     private readonly kaos: Kaos,
@@ -69,14 +83,14 @@ export class EditTool implements BuiltinTool<EditInput> {
     const path = resolvePathAccessPath(args.path, {
       kaos: this.kaos,
       workspace: this.workspace,
-      operation: 'write',
+      operation: "write",
     });
     return {
       accesses: ToolAccesses.readWriteFile(path),
       description: `Editing ${args.path}`,
       display: {
-        kind: 'file_io',
-        operation: 'edit',
+        kind: "file_io",
+        operation: "edit",
         path,
         before: args.old_string,
         after: args.new_string,
@@ -92,11 +106,15 @@ export class EditTool implements BuiltinTool<EditInput> {
     };
   }
 
-  private async execution(args: EditInput, safePath: string): Promise<ExecutableToolResult> {
+  private async execution(
+    args: EditInput,
+    safePath: string,
+  ): Promise<ExecutableToolResult> {
     if (args.old_string === args.new_string) {
       return {
         isError: true,
-        output: 'No changes to make: old_string and new_string are exactly the same.',
+        output:
+          "No changes to make: old_string and new_string are exactly the same.",
       };
     }
 
@@ -117,19 +135,26 @@ export class EditTool implements BuiltinTool<EditInput> {
         }
 
         if (count === 0) {
-          return { isError: true, output: `old_string not found in ${args.path}, the file contents may be out of date. Please use the Read Tool to reload the content.
-` };
+          return {
+            isError: true,
+            output: `old_string not found in ${args.path}, the file contents may be out of date. Please use the Read Tool to reload the content.
+`,
+          };
         }
         if (count > 1) {
           return {
             isError: true,
             output:
               `old_string is not unique in ${args.path} (found ${String(count)} occurrences). ` +
-              'To replace every occurrence, set replace_all=true. To replace only one occurrence, include more surrounding context in old_string.',
+              "To replace every occurrence, set replace_all=true. To replace only one occurrence, include more surrounding context in old_string.",
           };
         }
 
-        const newContent = replaceOnceLiteral(content, args.old_string, args.new_string);
+        const newContent = replaceOnceLiteral(
+          content,
+          args.old_string,
+          args.new_string,
+        );
         await this.kaos.writeText(
           safePath,
           materializeModelText(newContent, modelView.lineEndingStyle),
@@ -140,8 +165,11 @@ export class EditTool implements BuiltinTool<EditInput> {
       const parts = content.split(args.old_string);
       const replacementCount = parts.length - 1;
       if (replacementCount === 0) {
-        return { isError: true, output: `old_string not found in ${args.path}, the file contents may be out of date. Please use the Read Tool to reload the content.
-` };
+        return {
+          isError: true,
+          output: `old_string not found in ${args.path}, the file contents may be out of date. Please use the Read Tool to reload the content.
+`,
+        };
       }
 
       const newContent = parts.join(args.new_string);
@@ -149,10 +177,12 @@ export class EditTool implements BuiltinTool<EditInput> {
         safePath,
         materializeModelText(newContent, modelView.lineEndingStyle),
       );
-      return { output: `Replaced ${String(replacementCount)} occurrences in ${args.path}` };
+      return {
+        output: `Replaced ${String(replacementCount)} occurrences in ${args.path}`,
+      };
     } catch (error) {
       const code = (error as { code?: unknown } | null)?.code;
-      if (code === 'EISDIR') {
+      if (code === "EISDIR") {
         return { isError: true, output: `${args.path} is not a file.` };
       }
       return {

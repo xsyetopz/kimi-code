@@ -27,19 +27,19 @@ import {
   type ModelCapability,
   type StreamDecodeStats,
   type StreamedMessagePart,
-} from '@moonshot-ai/kosong';
+} from "@moonshot-ai/kosong";
 
 import type {
   LLM,
   LLMChatParams,
   LLMChatResponse,
   LLMStreamTiming,
-} from '../../loop';
+} from "../../loop";
 import {
   applyCompletionBudget,
   type CompletionBudgetConfig,
-} from '../../utils/completion-budget';
-import type { GenerateOptionsWithRequestLogFields } from '../llm-request-logger';
+} from "../../utils/completion-budget";
+import type { GenerateOptionsWithRequestLogFields } from "../llm-request-logger";
 
 export type GenerateFn = typeof kosongGenerate;
 
@@ -140,9 +140,9 @@ export class KosongLLM implements LLM {
     // parts from landing if the upstream stream aborts mid-message.
     if (params.onTextPart !== undefined || params.onThinkPart !== undefined) {
       for (const part of result.message.content) {
-        if (part.type === 'text' && params.onTextPart !== undefined) {
+        if (part.type === "text" && params.onTextPart !== undefined) {
           await params.onTextPart(part);
-        } else if (part.type === 'think' && params.onThinkPart !== undefined) {
+        } else if (part.type === "think" && params.onThinkPart !== undefined) {
           await params.onThinkPart(part);
         }
       }
@@ -157,7 +157,13 @@ export class KosongLLM implements LLM {
       streamTiming:
         firstChunkAt === undefined
           ? undefined
-          : buildStreamTiming(requestStartedAt, requestSentAt, firstChunkAt, streamEndedAt, decodeStats),
+          : buildStreamTiming(
+              requestStartedAt,
+              requestSentAt,
+              firstChunkAt,
+              streamEndedAt,
+              decodeStats,
+            ),
       traceId: result.traceId ?? undefined,
     };
 
@@ -188,7 +194,10 @@ function buildStreamTiming(
   // it. Clamp `requestSentAt` into [requestStartedAt, firstChunkAt] so a stray
   // clock reading can never produce a negative or over-long component.
   if (requestSentAt !== undefined) {
-    const sentAt = Math.min(Math.max(requestSentAt, requestStartedAt), firstChunkAt);
+    const sentAt = Math.min(
+      Math.max(requestSentAt, requestStartedAt),
+      firstChunkAt,
+    );
     timing.requestBuildMs = sentAt - requestStartedAt;
     timing.serverFirstTokenMs = firstChunkAt - sentAt;
   }
@@ -205,11 +214,17 @@ function buildKosongCallbacks(
   params: LLMChatParams,
   markStreamOutput: () => void,
 ): GenerateCallbacks {
-  type ToolCallIdentity = { readonly toolCallId: string; readonly name: string };
+  type ToolCallIdentity = {
+    readonly toolCallId: string;
+    readonly name: string;
+  };
   type BufferedToolCallDelta = { readonly argumentsPart?: string | undefined };
 
   const toolCallIdentities = new Map<number | string, ToolCallIdentity>();
-  const pendingIndexedToolCallDeltas = new Map<number | string, BufferedToolCallDelta[]>();
+  const pendingIndexedToolCallDeltas = new Map<
+    number | string,
+    BufferedToolCallDelta[]
+  >();
   let lastToolCallIdentity: ToolCallIdentity | undefined;
 
   const emitToolCallDelta = (delta: {
@@ -224,17 +239,17 @@ function buildKosongCallbacks(
   return {
     onMessagePart: (part: StreamedMessagePart) => {
       markStreamOutput();
-      if (part.type === 'text') {
+      if (part.type === "text") {
         if (params.onTextDelta === undefined) return;
         params.onTextDelta(part.text);
         return;
       }
-      if (part.type === 'think') {
+      if (part.type === "think") {
         if (params.onThinkDelta === undefined) return;
         params.onThinkDelta(part.think);
         return;
       }
-      if (part.type === 'function') {
+      if (part.type === "function") {
         const identity = { toolCallId: part.id, name: part.name };
         lastToolCallIdentity = identity;
         if (part._streamIndex !== undefined) {
@@ -246,7 +261,9 @@ function buildKosongCallbacks(
           ...(part.arguments !== null ? { argumentsPart: part.arguments } : {}),
         });
         if (part._streamIndex !== undefined) {
-          const pendingDeltas = pendingIndexedToolCallDeltas.get(part._streamIndex);
+          const pendingDeltas = pendingIndexedToolCallDeltas.get(
+            part._streamIndex,
+          );
           if (pendingDeltas !== undefined) {
             pendingIndexedToolCallDeltas.delete(part._streamIndex);
             for (const delta of pendingDeltas) {
@@ -260,13 +277,14 @@ function buildKosongCallbacks(
         }
         return;
       }
-      if (part.type === 'tool_call_part') {
+      if (part.type === "tool_call_part") {
         const argumentsPart = part.argumentsPart;
         const delta = argumentsPart !== null ? { argumentsPart } : {};
         if (part.index !== undefined) {
           const identity = toolCallIdentities.get(part.index);
           if (identity === undefined) {
-            const pendingDeltas = pendingIndexedToolCallDeltas.get(part.index) ?? [];
+            const pendingDeltas =
+              pendingIndexedToolCallDeltas.get(part.index) ?? [];
             pendingDeltas.push(delta);
             pendingIndexedToolCallDeltas.set(part.index, pendingDeltas);
             return;
@@ -290,9 +308,16 @@ function buildKosongCallbacks(
   };
 }
 
-export function buildMessagesWithSystem(systemPrompt: string, history: Message[]): Message[] {
+export function buildMessagesWithSystem(
+  systemPrompt: string,
+  history: Message[],
+): Message[] {
   return [
-    { role: 'system', content: [{ type: 'text', text: systemPrompt }], toolCalls: [] },
+    {
+      role: "system",
+      content: [{ type: "text", text: systemPrompt }],
+      toolCalls: [],
+    },
     ...history,
   ];
 }
@@ -301,7 +326,8 @@ export function downgradeUnsupportedMedia(
   messages: readonly Message[],
   capability: ModelCapability | undefined,
 ): Message[] {
-  if (capability === undefined || isUnknownCapability(capability)) return [...messages];
+  if (capability === undefined || isUnknownCapability(capability))
+    return [...messages];
   const dropImage = !capability.image_in;
   const dropVideo = !capability.video_in;
   const dropAudio = !capability.audio_in;
@@ -320,26 +346,34 @@ export function downgradeUnsupportedMedia(
         continue;
       }
       nextContent ??= message.content.slice(0, i);
-      nextContent.push({ type: 'text', text: placeholder });
+      nextContent.push({ type: "text", text: placeholder });
       changed = true;
     }
-    out.push(nextContent === undefined ? message : { ...message, content: nextContent });
+    out.push(
+      nextContent === undefined
+        ? message
+        : { ...message, content: nextContent },
+    );
   }
   return changed ? out : [...messages];
 }
 
 function mediaPlaceholder(
   part: ContentPart,
-  drop: { readonly dropImage: boolean; readonly dropVideo: boolean; readonly dropAudio: boolean },
+  drop: {
+    readonly dropImage: boolean;
+    readonly dropVideo: boolean;
+    readonly dropAudio: boolean;
+  },
 ): string | undefined {
-  if (part.type === 'image_url' && drop.dropImage) {
-    return '[image omitted: current model has no image input]';
+  if (part.type === "image_url" && drop.dropImage) {
+    return "[image omitted: current model has no image input]";
   }
-  if (part.type === 'video_url' && drop.dropVideo) {
-    return '[video omitted: current model has no video input]';
+  if (part.type === "video_url" && drop.dropVideo) {
+    return "[video omitted: current model has no video input]";
   }
-  if (part.type === 'audio_url' && drop.dropAudio) {
-    return '[audio omitted: current model has no audio input]';
+  if (part.type === "audio_url" && drop.dropAudio) {
+    return "[audio omitted: current model has no audio input]";
   }
   return undefined;
 }

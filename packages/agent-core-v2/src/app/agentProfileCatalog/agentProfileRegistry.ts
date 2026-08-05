@@ -20,10 +20,13 @@
  * affected (sourceId, workspaceKey) so session catalogs can re-project.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
-import type { IDisposable } from '#/_base/di/lifecycle';
-import type { Event } from '#/_base/event';
-import type { AgentProfileContribution } from './agentProfileContribution';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
+import type { IDisposable } from "#/_base/di/lifecycle";
+import type { Event } from "#/_base/event";
+import type { AgentProfileContribution } from "./agentProfileContribution";
 
 export interface AgentProfileRegistration {
   readonly sourceId: string;
@@ -59,4 +62,4 @@ export interface IAgentProfileRegistry {
 }
 
 export const IAgentProfileRegistry: ServiceIdentifier<IAgentProfileRegistry> =
-  createDecorator<IAgentProfileRegistry>('agentProfileRegistry');
+  createDecorator<IAgentProfileRegistry>("agentProfileRegistry");

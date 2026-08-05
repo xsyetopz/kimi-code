@@ -1,3 +1,3 @@
 export default {
-  justNow: '刚刚',
+  justNow: "刚刚",
 };

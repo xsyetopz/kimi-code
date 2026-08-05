@@ -9,9 +9,9 @@
 // the loaded generation's status is handed back through the
 // setGenerationInfo callback (the builder owns generationInfo).
 
-import fs from 'node:fs/promises';
-import fsSync from 'node:fs';
-import path from 'node:path';
+import fs from "node:fs/promises";
+import fsSync from "node:fs";
+import path from "node:path";
 import {
   SNAPSHOT_FILE,
   STORE_IMAGE_FILE,
@@ -22,9 +22,14 @@ import {
   textDictionaryFile,
   textPostingsFile,
   textDocsFile,
-} from './generation.js';
-import type { GenerationManifest } from './generation.js';
-import { generationDir, listGenerations, readCurrent, readManifest } from './generation-files.js';
+} from "./generation.js";
+import type { GenerationManifest } from "./generation.js";
+import {
+  generationDir,
+  listGenerations,
+  readCurrent,
+  readManifest,
+} from "./generation-files.js";
 import {
   GenerationCorruptError,
   STORE_VERSION,
@@ -36,26 +41,31 @@ import {
   readTextDictionaryImage,
   readTextDocsImage,
   verifyFileIntegritySync,
-} from './gen-codec.js';
-import type { StoreImageRecord } from './gen-codec.js';
-import { IndexManager } from './index-manager.js';
-import type { IndexInfo } from './index-manager.js';
-import { CompoundIndexManager } from './compound-index.js';
-import type { CompoundIndexInfo } from './compound-index.js';
-import { TextRegistry } from './text-registry.js';
-import type { TextIndexDef } from './text-registry.js';
-import type { TextIndex } from './text-index/index.js';
-import type { TextBuildCheckpoint } from './worker/text-build.js';
-import { ValueReader } from './value-reader.js';
-import { frameToOps } from './recovery.js';
-import type { RecoveryMode, RecoveryInfo, ValueMode, RecoveredOp } from './recovery.js';
-import { scanFrameRefsFdAsync } from './codec.js';
-import { toKStr } from './value-codec.js';
-import type { Store } from './store.js';
-import type { WAL } from './wal.js';
-import type { DtIndex } from './dt-index.js';
-import type { ValueCodecName } from './types.js';
-import type { GenerationStats } from './generation-builder.js';
+} from "./gen-codec.js";
+import type { StoreImageRecord } from "./gen-codec.js";
+import { IndexManager } from "./index-manager.js";
+import type { IndexInfo } from "./index-manager.js";
+import { CompoundIndexManager } from "./compound-index.js";
+import type { CompoundIndexInfo } from "./compound-index.js";
+import { TextRegistry } from "./text-registry.js";
+import type { TextIndexDef } from "./text-registry.js";
+import type { TextIndex } from "./text-index/index.js";
+import type { TextBuildCheckpoint } from "./worker/text-build.js";
+import { ValueReader } from "./value-reader.js";
+import { frameToOps } from "./recovery.js";
+import type {
+  RecoveryMode,
+  RecoveryInfo,
+  ValueMode,
+  RecoveredOp,
+} from "./recovery.js";
+import { scanFrameRefsFdAsync } from "./codec.js";
+import { toKStr } from "./value-codec.js";
+import type { Store } from "./store.js";
+import type { WAL } from "./wal.js";
+import type { DtIndex } from "./dt-index.js";
+import type { ValueCodecName } from "./types.js";
+import type { GenerationStats } from "./generation-builder.js";
 
 /** The owner-injected surface the load path needs (a structural subset of
  *  GenerationBuilderDeps — the builder passes its own deps through). */
@@ -77,7 +87,11 @@ export interface GenerationLoaderDeps<V> {
   stats: GenerationStats;
   indexable: (v: unknown) => v is Record<string, unknown>;
   /** Live records (decoded values), for per-index rebuilds. */
-  liveRecords: () => Generator<{ key: Buffer; value: V | undefined; dt: Record<string, number> | null }>;
+  liveRecords: () => Generator<{
+    key: Buffer;
+    value: V | undefined;
+    dt: Record<string, number> | null;
+  }>;
   /** Live records with untyped decoded values, for secondary-index rebuilds. */
   liveRecordsRaw: () => Generator<{ key: Buffer; value: unknown }>;
   /** Live indexable records with canonical keys, for text-index rebuilds. */
@@ -90,14 +104,24 @@ export interface GenerationLoaderDeps<V> {
    *  MiniDb.boundedTextBuild); called with the candidate generation's manifest
    *  checkpoint. Returns null when the index is ineligible for the bounded
    *  path (the caller falls back to the staged rebuild). */
-  boundedTextBuild: (name: string, ti: TextIndex, def: TextIndexDef, checkpoint: TextBuildCheckpoint | null) => Promise<'worker' | 'inline' | null>;
+  boundedTextBuild: (
+    name: string,
+    ti: TextIndex,
+    def: TextIndexDef,
+    checkpoint: TextBuildCheckpoint | null,
+  ) => Promise<"worker" | "inline" | null>;
 }
 
 export class GenerationLoader<V> {
   constructor(
     private readonly deps: GenerationLoaderDeps<V>,
     /** The loaded generation's status record (the builder owns the field). */
-    private readonly setGenerationInfo: (info: { id: string; createdAt: number; walCheckpoint: number; records: number }) => void,
+    private readonly setGenerationInfo: (info: {
+      id: string;
+      createdAt: number;
+      walCheckpoint: number;
+      records: number;
+    }) => void,
   ) {}
 
   /** Read the store image / index images of one published generation and
@@ -109,53 +133,84 @@ export class GenerationLoader<V> {
     const genDir = generationDir(this.deps.dir(), id);
     const manifest = await readManifest(this.deps.dir(), id);
     if (manifest.valueCodec !== this.deps.codecName()) {
-      throw new GenerationCorruptError(`codec mismatch (${manifest.valueCodec} != ${this.deps.codecName()})`);
+      throw new GenerationCorruptError(
+        `codec mismatch (${manifest.valueCodec} != ${this.deps.codecName()})`,
+      );
     }
     if (manifest.valueMode !== this.deps.valueMode()) {
-      throw new GenerationCorruptError(`value mode mismatch (${manifest.valueMode} != ${this.deps.valueMode()})`);
+      throw new GenerationCorruptError(
+        `value mode mismatch (${manifest.valueMode} != ${this.deps.valueMode()})`,
+      );
     }
     const cp = manifest.checkpoint;
     // WAL anchor: the checkpoint offset only has meaning on the exact inode
     // the build measured, and the file must still reach it.
-    const walSt = await fs.stat(this.deps.walPath()).catch((e: NodeJS.ErrnoException) => {
-      if (e.code === 'ENOENT') return null;
-      throw e;
-    });
-    if (!walSt || walSt.dev !== cp.walDev || walSt.ino !== cp.walIno || walSt.size < cp.walOffset) {
-      throw new GenerationCorruptError('WAL anchor mismatch (rotated or truncated since the build)');
+    const walSt = await fs
+      .stat(this.deps.walPath())
+      .catch((e: NodeJS.ErrnoException) => {
+        if (e.code === "ENOENT") return null;
+        throw e;
+      });
+    if (
+      !walSt ||
+      walSt.dev !== cp.walDev ||
+      walSt.ino !== cp.walIno ||
+      walSt.size < cp.walOffset
+    ) {
+      throw new GenerationCorruptError(
+        "WAL anchor mismatch (rotated or truncated since the build)",
+      );
     }
     // Disk mode: image refs point into the generation's snapshot, which the
     // live db.snapshot still aliases (hard link) — verify the identity.
-    if (this.deps.valueMode() === 'disk' && cp.snapshotIno !== 0) {
-      if (!cp.snapshotLinked) throw new GenerationCorruptError('snapshot not hard-linked; disk refs unservable');
-      const snapSt = await fs.stat(path.join(this.deps.dir(), SNAPSHOT_FILE)).catch((e: NodeJS.ErrnoException) => {
-        if (e.code === 'ENOENT') return null;
-        throw e;
-      });
-      if (!snapSt || snapSt.dev !== cp.snapshotDev || snapSt.ino !== cp.snapshotIno) {
-        throw new GenerationCorruptError('snapshot anchor mismatch (rotated since the build)');
+    if (this.deps.valueMode() === "disk" && cp.snapshotIno !== 0) {
+      if (!cp.snapshotLinked)
+        throw new GenerationCorruptError(
+          "snapshot not hard-linked; disk refs unservable",
+        );
+      const snapSt = await fs
+        .stat(path.join(this.deps.dir(), SNAPSHOT_FILE))
+        .catch((e: NodeJS.ErrnoException) => {
+          if (e.code === "ENOENT") return null;
+          throw e;
+        });
+      if (
+        !snapSt ||
+        snapSt.dev !== cp.snapshotDev ||
+        snapSt.ino !== cp.snapshotIno
+      ) {
+        throw new GenerationCorruptError(
+          "snapshot anchor mismatch (rotated since the build)",
+        );
       }
     }
     // Disk mode: attach the positioned reader NOW, before anything reads a
     // value back — the image's refs and the WAL-delta replay both resolve
     // through it (mirrors the legacy recovery's attach check).
-    if (this.deps.valueMode() === 'disk') {
+    if (this.deps.valueMode() === "disk") {
       const reader = new ValueReader(this.deps.dir());
-      let ids: ReturnType<ValueReader['open']>;
+      let ids: ReturnType<ValueReader["open"]>;
       try {
         ids = reader.open();
       } catch (e) {
         reader.close();
         throw e;
       }
-      const walOk = ids.wal !== null && ids.wal.dev === cp.walDev && ids.wal.ino === cp.walIno;
+      const walOk =
+        ids.wal !== null &&
+        ids.wal.dev === cp.walDev &&
+        ids.wal.ino === cp.walIno;
       const snapOk =
         cp.snapshotIno === 0
           ? true // the build had no snapshot; the image can carry no snapshot refs
-          : ids.snapshot !== null && ids.snapshot.dev === cp.snapshotDev && ids.snapshot.ino === cp.snapshotIno;
+          : ids.snapshot !== null &&
+            ids.snapshot.dev === cp.snapshotDev &&
+            ids.snapshot.ino === cp.snapshotIno;
       if (!walOk || !snapOk) {
         reader.close();
-        throw new GenerationCorruptError('value reader attach raced a rotation');
+        throw new GenerationCorruptError(
+          "value reader attach raced a rotation",
+        );
       }
       this.deps.setValueReader(reader);
     }
@@ -164,8 +219,14 @@ export class GenerationLoader<V> {
     // noted, so their loaded index entries can be reconciled below (the
     // image legitimately contains records whose TTL elapsed after the build).
     const storeInfo = manifest.files[STORE_IMAGE_FILE];
-    if (!storeInfo) throw new GenerationCorruptError('store image missing from manifest');
-    const storePayload = await readGenerationFileChecked(path.join(genDir, STORE_IMAGE_FILE), 'MDGS', STORE_VERSION, storeInfo);
+    if (!storeInfo)
+      throw new GenerationCorruptError("store image missing from manifest");
+    const storePayload = await readGenerationFileChecked(
+      path.join(genDir, STORE_IMAGE_FILE),
+      "MDGS",
+      STORE_VERSION,
+      storeInfo,
+    );
     const now = Date.now();
     const droppedExpired: string[] = [];
     const records: StoreImageRecord[] = [];
@@ -176,14 +237,22 @@ export class GenerationLoader<V> {
         droppedExpired.push(rec.kstr);
         continue;
       }
-      if (this.deps.valueMode() === 'memory' && rec.ref.kind !== 'memory') {
-        throw new GenerationCorruptError('store image carries disk refs for a memory-mode open');
+      if (this.deps.valueMode() === "memory" && rec.ref.kind !== "memory") {
+        throw new GenerationCorruptError(
+          "store image carries disk refs for a memory-mode open",
+        );
       }
       records.push(rec);
     }
     this.deps.store().bulkLoadRefs(records);
-    if (manifest.counts && typeof manifest.counts.records === 'number' && manifest.counts.records !== imageCount) {
-      throw new GenerationCorruptError(`store image record count mismatch (${imageCount} != ${manifest.counts.records})`);
+    if (
+      manifest.counts &&
+      typeof manifest.counts.records === "number" &&
+      manifest.counts.records !== imageCount
+    ) {
+      throw new GenerationCorruptError(
+        `store image record count mismatch (${imageCount} != ${manifest.counts.records})`,
+      );
     }
 
     // Derived-index images. Every failure here is LOCAL: a corrupt or missing
@@ -208,12 +277,14 @@ export class GenerationLoader<V> {
     // A rotation racing the load invalidates the coordinate system the
     // recoveryInfo below is anchored to (and, in disk mode, the value reader
     // attached above) — reject the candidate.
-    const walAfter = await fs.stat(this.deps.walPath()).catch((e: NodeJS.ErrnoException) => {
-      if (e.code === 'ENOENT') return null;
-      throw e;
-    });
+    const walAfter = await fs
+      .stat(this.deps.walPath())
+      .catch((e: NodeJS.ErrnoException) => {
+        if (e.code === "ENOENT") return null;
+        throw e;
+      });
     if (!walAfter || walAfter.dev !== cp.walDev || walAfter.ino !== cp.walIno) {
-      throw new GenerationCorruptError('WAL rotated during generation load');
+      throw new GenerationCorruptError("WAL rotated during generation load");
     }
 
     this.deps.setRecoveryInfo({
@@ -232,10 +303,19 @@ export class GenerationLoader<V> {
       snapshotIno: cp.snapshotIno,
       corruptBatches: replay.corruptBatches,
       generationRetries: 0,
-      indexGeneration: { id, walCheckpoint: cp.walOffset, records: records.length },
+      indexGeneration: {
+        id,
+        walCheckpoint: cp.walOffset,
+        records: records.length,
+      },
       walDeltaAppliedOps: replay.appliedOps,
     });
-    this.setGenerationInfo({ id, createdAt: manifest.createdAt, walCheckpoint: cp.walOffset, records: records.length });
+    this.setGenerationInfo({
+      id,
+      createdAt: manifest.createdAt,
+      walCheckpoint: cp.walOffset,
+      records: records.length,
+    });
     this.deps.seedAccessFromStore();
   }
 
@@ -263,7 +343,8 @@ export class GenerationLoader<V> {
       const current = await readCurrent(this.deps.dir());
       if (current) candidates.push(current);
       for (const g of await listGenerations(this.deps.dir())) {
-        if (!g.tmp && g.id !== current && candidates.length < 3) candidates.push(g.id);
+        if (!g.tmp && g.id !== current && candidates.length < 3)
+          candidates.push(g.id);
       }
     } catch (e) {
       this.deps.stats.generationLoadFallbacks++;
@@ -277,7 +358,11 @@ export class GenerationLoader<V> {
         this.deps.stats.generationLoadDurationMs += performance.now() - t0;
         return true;
       } catch (e) {
-        if (!(e instanceof GenerationCorruptError) && (e as NodeJS.ErrnoException).code !== 'ENOENT') throw e;
+        if (
+          !(e instanceof GenerationCorruptError) &&
+          (e as NodeJS.ErrnoException).code !== "ENOENT"
+        )
+          throw e;
         this.deps.stats.generationLoadFallbacks++;
         this.deps.stats.lastGenerationFallback = `${id}: ${(e as Error).message}`;
         this.resetAfterFailedGenerationLoad();
@@ -288,11 +373,19 @@ export class GenerationLoader<V> {
 
   /** Load the dt image; rebuild the (cheap, metadata-only) dt index from the
    *  loaded store when the image is absent/corrupt. */
-  private async loadDtImage(genDir: string, manifest: GenerationManifest): Promise<void> {
+  private async loadDtImage(
+    genDir: string,
+    manifest: GenerationManifest,
+  ): Promise<void> {
     const info = manifest.files[DT_INDEX_FILE];
     if (info) {
       try {
-        const payload = await readGenerationFileChecked(path.join(genDir, DT_INDEX_FILE), 'MDGD', 1, info);
+        const payload = await readGenerationFileChecked(
+          path.join(genDir, DT_INDEX_FILE),
+          "MDGD",
+          1,
+          info,
+        );
         this.deps.dt.loadImage(readDtIndexImage(payload));
         return;
       } catch (e) {
@@ -302,8 +395,12 @@ export class GenerationLoader<V> {
     this.deps.stats.generationIndexRebuilds++;
     const store = this.deps.store();
     this.deps.dt.rebuild(
-      (function* (): Generator<{ key: string; dt: Record<string, number> | null }> {
-        for (const rec of store.rawRecords()) yield { key: rec.kstr, dt: rec.dt };
+      (function* (): Generator<{
+        key: string;
+        dt: Record<string, number> | null;
+      }> {
+        for (const rec of store.rawRecords())
+          yield { key: rec.kstr, dt: rec.dt };
       })(),
     );
   }
@@ -311,22 +408,38 @@ export class GenerationLoader<V> {
   /** Load secondary-index images for definitions whose hash still matches;
    *  rebuild exactly the affected indexes otherwise (plan: only the affected
    *  index is rebuilt, never the whole registry). */
-  private async loadSecondaryImages(genDir: string, manifest: GenerationManifest): Promise<void> {
+  private async loadSecondaryImages(
+    genDir: string,
+    manifest: GenerationManifest,
+  ): Promise<void> {
     const live = this.deps.indexes.list();
     if (live.length === 0) return;
-    let images: Map<string, ReturnType<typeof readSecondaryIndexImage>[number]> | null = null;
+    let images: Map<
+      string,
+      ReturnType<typeof readSecondaryIndexImage>[number]
+    > | null = null;
     const info = manifest.files[SECONDARY_INDEX_FILE];
     if (info) {
       try {
-        const payload = await readGenerationFileChecked(path.join(genDir, SECONDARY_INDEX_FILE), 'MDSI', 1, info);
-        images = new Map(readSecondaryIndexImage(payload).map((i) => [i.name, i]));
+        const payload = await readGenerationFileChecked(
+          path.join(genDir, SECONDARY_INDEX_FILE),
+          "MDSI",
+          1,
+          info,
+        );
+        images = new Map(
+          readSecondaryIndexImage(payload).map((i) => [i.name, i]),
+        );
       } catch (e) {
         if (!(e instanceof GenerationCorruptError)) throw e;
       }
     }
     for (const def of live) {
       const image = images?.get(def.name);
-      if (image && manifest.indexDefs.secondary[def.name] === indexDefHash(def)) {
+      if (
+        image &&
+        manifest.indexDefs.secondary[def.name] === indexDefHash(def)
+      ) {
         try {
           this.deps.indexes.loadImage(image);
           continue;
@@ -349,22 +462,38 @@ export class GenerationLoader<V> {
   }
 
   /** Load compound-index images (same per-index discipline as secondary). */
-  private async loadCompoundImages(genDir: string, manifest: GenerationManifest): Promise<void> {
+  private async loadCompoundImages(
+    genDir: string,
+    manifest: GenerationManifest,
+  ): Promise<void> {
     const live = this.deps.compound.list();
     if (live.length === 0) return;
-    let images: Map<string, ReturnType<typeof readCompoundIndexImage>[number]> | null = null;
+    let images: Map<
+      string,
+      ReturnType<typeof readCompoundIndexImage>[number]
+    > | null = null;
     const info = manifest.files[COMPOUND_INDEX_FILE];
     if (info) {
       try {
-        const payload = await readGenerationFileChecked(path.join(genDir, COMPOUND_INDEX_FILE), 'MDCI', 1, info);
-        images = new Map(readCompoundIndexImage(payload).map((i) => [i.name, i]));
+        const payload = await readGenerationFileChecked(
+          path.join(genDir, COMPOUND_INDEX_FILE),
+          "MDCI",
+          1,
+          info,
+        );
+        images = new Map(
+          readCompoundIndexImage(payload).map((i) => [i.name, i]),
+        );
       } catch (e) {
         if (!(e instanceof GenerationCorruptError)) throw e;
       }
     }
     for (const def of live) {
       const image = images?.get(def.name);
-      if (image && manifest.indexDefs.compound[def.name] === indexDefHash(def)) {
+      if (
+        image &&
+        manifest.indexDefs.compound[def.name] === indexDefHash(def)
+      ) {
         try {
           this.deps.compound.loadImage(image);
           continue;
@@ -379,7 +508,11 @@ export class GenerationLoader<V> {
 
   private rebuildOneCompoundIndex(def: CompoundIndexInfo): void {
     const fresh = new CompoundIndexManager();
-    fresh.create(def.name, { groupBy: def.groupBy, orderBy: def.orderBy, orderType: def.orderType });
+    fresh.create(def.name, {
+      groupBy: def.groupBy,
+      orderBy: def.orderBy,
+      orderType: def.orderType,
+    });
     for (const { key, value, dt } of this.deps.liveRecords()) {
       fresh.add(toKStr(key), value, dt);
     }
@@ -390,7 +523,10 @@ export class GenerationLoader<V> {
    *  definitions whose hash still matches; rebuild exactly the affected
    *  indexes otherwise — a rebuild is the full corpus tokenization for that
    *  one index, the cost stage 5 exists to avoid on the happy path. */
-  private async loadTextImages(genDir: string, manifest: GenerationManifest): Promise<void> {
+  private async loadTextImages(
+    genDir: string,
+    manifest: GenerationManifest,
+  ): Promise<void> {
     const registry = this.deps.textRegistry;
     for (const def of registry.textDefs) {
       const ti = registry.text.get(def.name);
@@ -399,17 +535,38 @@ export class GenerationLoader<V> {
       const docsInfo = manifest.files[textDocsFile(def.name)];
       const postingsInfo = manifest.files[textPostingsFile(def.name)];
       let attached = false;
-      if (dictInfo && docsInfo && postingsInfo && manifest.indexDefs.text[def.name] === indexDefHash(TextRegistry.canonicalTextDef(def))) {
+      if (
+        dictInfo &&
+        docsInfo &&
+        postingsInfo &&
+        manifest.indexDefs.text[def.name] ===
+          indexDefHash(TextRegistry.canonicalTextDef(def))
+      ) {
         try {
-          const dictPayload = await readGenerationFileChecked(path.join(genDir, textDictionaryFile(def.name)), 'MDTD', 1, dictInfo);
-          const docsPayload = await readGenerationFileChecked(path.join(genDir, textDocsFile(def.name)), 'MDTC', 1, docsInfo);
+          const dictPayload = await readGenerationFileChecked(
+            path.join(genDir, textDictionaryFile(def.name)),
+            "MDTD",
+            1,
+            dictInfo,
+          );
+          const docsPayload = await readGenerationFileChecked(
+            path.join(genDir, textDocsFile(def.name)),
+            "MDTC",
+            1,
+            docsInfo,
+          );
           // The postings file carries the base every search reads: verify it
           // wholesale against the manifest NOW (one streaming crc pass), so a
           // corrupt base is rebuilt at open instead of failing a query later
           // (its per-record CRCs would only trip on the first read).
           const postingsPath = path.join(genDir, textPostingsFile(def.name));
           verifyFileIntegritySync(postingsPath, postingsInfo);
-          const dict = new Map(readTextDictionaryImage(dictPayload).map((e) => [e.term, { off: e.off, len: e.len, df: e.df }]));
+          const dict = new Map(
+            readTextDictionaryImage(dictPayload).map((e) => [
+              e.term,
+              { off: e.off, len: e.len, df: e.df },
+            ]),
+          );
           const docs = readTextDocsImage(docsPayload);
           const docLens = new Map<number, number>();
           for (let i = 0; i < docs.docLens.length; i++) {
@@ -423,14 +580,28 @@ export class GenerationLoader<V> {
             docLens,
             liveCount: docs.liveCount,
             removed: new Set(docs.removed),
-            delta: new Map(docs.delta.map((d) => [d.term, new Map(d.docs.map((x) => [x.docID, x.freq] as [number, number]))])),
+            delta: new Map(
+              docs.delta.map((d) => [
+                d.term,
+                new Map(
+                  d.docs.map((x) => [x.docID, x.freq] as [number, number]),
+                ),
+              ]),
+            ),
           });
           // Carry the integrity record forward: a later CLEAN fast-path build
           // re-publishes this unchanged file without re-reading it.
-          ti.postingsFileInfo = { bytes: postingsInfo.bytes, crc32: postingsInfo.crc32 };
+          ti.postingsFileInfo = {
+            bytes: postingsInfo.bytes,
+            crc32: postingsInfo.crc32,
+          };
           attached = true;
         } catch (e) {
-          if (!(e instanceof GenerationCorruptError) && (e as NodeJS.ErrnoException).code !== 'ENOENT') throw e;
+          if (
+            !(e instanceof GenerationCorruptError) &&
+            (e as NodeJS.ErrnoException).code !== "ENOENT"
+          )
+            throw e;
         }
       }
       if (!attached) {
@@ -441,9 +612,14 @@ export class GenerationLoader<V> {
         // The bounded build is discardable: on ANY failure the staged
         // rebuild below is the fallback (it reads the already-loaded store,
         // so opens always complete).
-        let hosted: 'worker' | 'inline' | null = null;
+        let hosted: "worker" | "inline" | null = null;
         try {
-          hosted = await this.deps.boundedTextBuild(def.name, ti, def, manifest.checkpoint);
+          hosted = await this.deps.boundedTextBuild(
+            def.name,
+            ti,
+            def,
+            manifest.checkpoint,
+          );
         } catch {
           /* fall through to the staged rebuild */
         }
@@ -466,14 +642,23 @@ export class GenerationLoader<V> {
     corruptBatches: number;
     appliedOps: number;
   }> {
-    const fd = fsSync.openSync(this.deps.walPath(), 'r');
+    const fd = fsSync.openSync(this.deps.walPath(), "r");
     try {
       const st = fsSync.fstatSync(fd);
-      const r = await scanFrameRefsFdAsync(fd, { onCorrupt: mode, startOffset });
+      const r = await scanFrameRefsFdAsync(fd, {
+        onCorrupt: mode,
+        startOffset,
+      });
       let corruptBatches = 0;
       let appliedOps = 0;
       for (const f of r.frames) {
-        for (const op of frameToOps(f, 'wal', fd, this.deps.valueMode(), () => corruptBatches++)) {
+        for (const op of frameToOps(
+          f,
+          "wal",
+          fd,
+          this.deps.valueMode(),
+          () => corruptBatches++,
+        )) {
           this.deps.applyRecoveredOp(op);
           appliedOps++;
         }
@@ -485,7 +670,14 @@ export class GenerationLoader<V> {
         truncatedWal = true;
         await this.deps.wal().refreshSize();
       }
-      return { walFrames: r.frames.length, walScanEnd: r.eofOffset, corruptRanges: r.corruptRanges, truncatedWal, corruptBatches, appliedOps };
+      return {
+        walFrames: r.frames.length,
+        walScanEnd: r.eofOffset,
+        corruptRanges: r.corruptRanges,
+        truncatedWal,
+        corruptBatches,
+        appliedOps,
+      };
     } finally {
       fsSync.closeSync(fd);
     }

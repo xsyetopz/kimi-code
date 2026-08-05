@@ -27,8 +27,8 @@
  * of cheap arithmetic ops for a guarantee that there is no hidden
  * state to invalidate when a task is rescheduled.
  */
-import type { ParsedCronExpression } from './cron-expr';
-import { computeNextCronRun } from './cron-expr';
+import type { ParsedCronExpression } from "./cron-expr";
+import { computeNextCronRun } from "./cron-expr";
 
 export interface JitterConfig {
   readonly recurringMaxFractionOfPeriod: number;

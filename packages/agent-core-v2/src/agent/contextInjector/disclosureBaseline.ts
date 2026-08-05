@@ -11,9 +11,9 @@
  * part of the barrel export.
  */
 
-import type { ContextInjectionDisclosure } from '#/agent/contextMemory/types';
+import type { ContextInjectionDisclosure } from "#/agent/contextMemory/types";
 
-export function disclosureOfKind<K extends ContextInjectionDisclosure['kind']>(
+export function disclosureOfKind<K extends ContextInjectionDisclosure["kind"]>(
   disclosure: ContextInjectionDisclosure | undefined,
   kind: K,
 ): Extract<ContextInjectionDisclosure, { kind: K }> | undefined {
@@ -22,14 +22,15 @@ export function disclosureOfKind<K extends ContextInjectionDisclosure['kind']>(
     : undefined;
 }
 
-export function pickDisclosureBaseline<T extends { readonly renderGeneration: number }>(
-  ...candidates: readonly (T | undefined)[]
-): T | undefined {
+export function pickDisclosureBaseline<
+  T extends { readonly renderGeneration: number },
+>(...candidates: readonly (T | undefined)[]): T | undefined {
   let winner: T | undefined;
   for (const candidate of candidates) {
     if (
       candidate !== undefined &&
-      (winner === undefined || candidate.renderGeneration > winner.renderGeneration)
+      (winner === undefined ||
+        candidate.renderGeneration > winner.renderGeneration)
     ) {
       winner = candidate;
     }

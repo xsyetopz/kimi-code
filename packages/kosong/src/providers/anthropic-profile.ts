@@ -5,7 +5,7 @@
  * https://platform.claude.com/docs/en/build-with-claude/extended-thinking
  */
 
-export type AnthropicThinkingMode = 'budget' | 'adaptive';
+export type AnthropicThinkingMode = "budget" | "adaptive";
 
 export interface AnthropicModelProfile {
   readonly mode: AnthropicThinkingMode;
@@ -14,7 +14,12 @@ export interface AnthropicModelProfile {
   readonly canDisableThinking: boolean;
 }
 
-export type AnthropicModelFamily = 'opus' | 'sonnet' | 'haiku' | 'fable' | 'mythos';
+export type AnthropicModelFamily =
+  | "opus"
+  | "sonnet"
+  | "haiku"
+  | "fable"
+  | "mythos";
 
 export interface AnthropicModelVersion {
   readonly family: AnthropicModelFamily;
@@ -22,18 +27,18 @@ export interface AnthropicModelVersion {
   readonly minor: number | null;
 }
 
-export const BUDGET_THINKING_EFFORTS = ['low', 'medium', 'high'] as const;
-const ADAPTIVE_MAX_EFFORTS = ['low', 'medium', 'high', 'max'] as const;
+export const BUDGET_THINKING_EFFORTS = ["low", "medium", "high"] as const;
+const ADAPTIVE_MAX_EFFORTS = ["low", "medium", "high", "max"] as const;
 export const LATEST_OPUS_THINKING_EFFORTS = [
-  'low',
-  'medium',
-  'high',
-  'xhigh',
-  'max',
+  "low",
+  "medium",
+  "high",
+  "xhigh",
+  "max",
 ] as const;
 
 const BUDGET_PROFILE: AnthropicModelProfile = {
-  mode: 'budget',
+  mode: "budget",
   efforts: BUDGET_THINKING_EFFORTS,
   supportsEffortParam: false,
   canDisableThinking: true,
@@ -45,14 +50,14 @@ const OPUS_45_PROFILE: AnthropicModelProfile = {
 };
 
 const ADAPTIVE_MAX_PROFILE: AnthropicModelProfile = {
-  mode: 'adaptive',
+  mode: "adaptive",
   efforts: ADAPTIVE_MAX_EFFORTS,
   supportsEffortParam: true,
   canDisableThinking: true,
 };
 
 export const LATEST_OPUS_PROFILE: AnthropicModelProfile = {
-  mode: 'adaptive',
+  mode: "adaptive",
   efforts: LATEST_OPUS_THINKING_EFFORTS,
   supportsEffortParam: true,
   canDisableThinking: true,
@@ -78,14 +83,17 @@ export function parseAnthropicModelVersion(
   requireClaudeMarker = false,
 ): AnthropicModelVersion | null {
   const normalized = model.toLowerCase();
-  if (requireClaudeMarker && !normalized.includes('claude')) return null;
+  if (requireClaudeMarker && !normalized.includes("claude")) return null;
 
   const familyFirst = FAMILY_FIRST_RE.exec(normalized);
   if (familyFirst !== null) {
     return {
       family: familyFirst[1] as AnthropicModelFamily,
       major: Number.parseInt(familyFirst[2]!, 10),
-      minor: familyFirst[3] !== undefined ? Number.parseInt(familyFirst[3], 10) : null,
+      minor:
+        familyFirst[3] !== undefined
+          ? Number.parseInt(familyFirst[3], 10)
+          : null,
     };
   }
 
@@ -120,36 +128,49 @@ export function matchKnownAnthropicModelProfile(
   if (version === null) return undefined;
 
   switch (version.family) {
-    case 'opus':
+    case "opus":
       if (version.major === 4 && (version.minor === 7 || version.minor === 8)) {
         return LATEST_OPUS_PROFILE;
       }
-      if (version.major === 4 && version.minor === 6) return ADAPTIVE_MAX_PROFILE;
+      if (version.major === 4 && version.minor === 6)
+        return ADAPTIVE_MAX_PROFILE;
       if (version.major === 4 && version.minor === 5) return OPUS_45_PROFILE;
-      if (version.major < 4 || (version.major === 4 && (version.minor ?? 0) < 5)) {
+      if (
+        version.major < 4 ||
+        (version.major === 4 && (version.minor ?? 0) < 5)
+      ) {
         return BUDGET_PROFILE;
       }
       return undefined;
-    case 'sonnet':
+    case "sonnet":
       if (version.major === 5) return LATEST_OPUS_PROFILE;
-      if (version.major === 4 && version.minor === 6) return ADAPTIVE_MAX_PROFILE;
-      if (version.major < 4 || (version.major === 4 && (version.minor ?? 0) <= 5)) {
+      if (version.major === 4 && version.minor === 6)
+        return ADAPTIVE_MAX_PROFILE;
+      if (
+        version.major < 4 ||
+        (version.major === 4 && (version.minor ?? 0) <= 5)
+      ) {
         return BUDGET_PROFILE;
       }
       return undefined;
-    case 'haiku':
-      if (version.major < 4 || (version.major === 4 && (version.minor ?? 0) <= 5)) {
+    case "haiku":
+      if (
+        version.major < 4 ||
+        (version.major === 4 && (version.minor ?? 0) <= 5)
+      ) {
         return BUDGET_PROFILE;
       }
       return undefined;
-    case 'fable':
+    case "fable":
       return version.major === 5 ? ALWAYS_ADAPTIVE_PROFILE : undefined;
-    case 'mythos':
+    case "mythos":
       return version.major === 5 ? ALWAYS_ADAPTIVE_PROFILE : undefined;
   }
 }
 
-export function inferAnthropicModelProfile(model: string): AnthropicModelProfile {
+export function inferAnthropicModelProfile(
+  model: string,
+): AnthropicModelProfile {
   return matchKnownAnthropicModelProfile(model) ?? LATEST_OPUS_PROFILE;
 }
 
@@ -164,9 +185,11 @@ export function inferAnthropicModelProfile(model: string): AnthropicModelProfile
  * fallback: an Anthropic-protocol endpoint still needs some profile to shape
  * requests.
  */
-export function matchUnknownClaudeProfile(model: string): AnthropicModelProfile | undefined {
+export function matchUnknownClaudeProfile(
+  model: string,
+): AnthropicModelProfile | undefined {
   const normalized = model.toLowerCase();
-  return normalized.includes('claude') || CLAUDE_FAMILY_WORD_RE.test(normalized)
+  return normalized.includes("claude") || CLAUDE_FAMILY_WORD_RE.test(normalized)
     ? LATEST_OPUS_PROFILE
     : undefined;
 }

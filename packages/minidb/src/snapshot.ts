@@ -14,10 +14,10 @@
 // the event loop. Each work slice is bounded by a value-byte budget, so both
 // the per-slice CPU run and the in-flight memory stay flat.
 
-import fs from 'node:fs/promises';
-import type { FileHandle } from 'node:fs/promises';
-import { encodeFrame, HEADER_SIZE, TYPE_SET } from './codec.js';
-import type { Store, ValueLoc } from './store.js';
+import fs from "node:fs/promises";
+import type { FileHandle } from "node:fs/promises";
+import { encodeFrame, HEADER_SIZE, TYPE_SET } from "./codec.js";
+import type { Store, ValueLoc } from "./store.js";
 
 const yieldToLoop = (): Promise<void> => new Promise((r) => setImmediate(r));
 const FLUSH_BYTES = 1 << 20; // coalesce into ~1 MiB writev batches
@@ -58,9 +58,12 @@ export async function writeSnapshot(
   opts: SnapshotOptions = {},
 ): Promise<SnapshotResult> {
   const yieldEvery = opts.yieldEvery ?? 2000;
-  const readConcurrency = Math.max(1, opts.readConcurrency ?? DEFAULT_READ_CONCURRENCY);
+  const readConcurrency = Math.max(
+    1,
+    opts.readConcurrency ?? DEFAULT_READ_CONCURRENCY,
+  );
   const sliceBytes = Math.max(1, opts.sliceBytes ?? DEFAULT_SLICE_BYTES);
-  const fh: FileHandle = await fs.open(tmpPath, 'w');
+  const fh: FileHandle = await fs.open(tmpPath, "w");
   let count = 0;
   let bytes = 0;
   let batch: Buffer[] = [];
@@ -75,9 +78,11 @@ export async function writeSnapshot(
     let bufs = batch;
     let off = 0; // byte offset within bufs[0]
     while (bufs.length > 0) {
-      const toWrite = off > 0 ? [bufs[0]!.subarray(off), ...bufs.slice(1)] : bufs;
+      const toWrite =
+        off > 0 ? [bufs[0]!.subarray(off), ...bufs.slice(1)] : bufs;
       const { bytesWritten } = await fh.writev(toWrite);
-      if (bytesWritten === 0) throw new Error('snapshot writev made no progress (short write)');
+      if (bytesWritten === 0)
+        throw new Error("snapshot writev made no progress (short write)");
       bytes += bytesWritten;
       let rem = bytesWritten;
       while (rem > 0 && bufs.length > 0) {
@@ -96,12 +101,17 @@ export async function writeSnapshot(
     batchBytes = 0;
   };
 
-  const writeRecord = async (key: Buffer, value: Buffer, expireAt: number, dt: Record<string, number> | null): Promise<void> => {
+  const writeRecord = async (
+    key: Buffer,
+    value: Buffer,
+    expireAt: number,
+    dt: Record<string, number> | null,
+  ): Promise<void> => {
     const meta = dt ? Buffer.from(JSON.stringify({ dt })) : null;
     const frame = encodeFrame({ type: TYPE_SET, key, value, expireAt, meta });
     const frameOff = bytes + batchBytes;
-    locs.set(key.toString('binary'), {
-      file: 'snapshot',
+    locs.set(key.toString("binary"), {
+      file: "snapshot",
       off: frameOff + HEADER_SIZE + key.length,
       len: value.length,
     });
@@ -121,20 +131,39 @@ export async function writeSnapshot(
     const memRecs: PendingRecord[] = [];
     const diskRecs: PendingRecord[] = [];
     for (const r of store.rawRefRecords()) {
-      const key = Buffer.from(r.kstr, 'binary');
-      if (r.ref.kind === 'memory') {
-        memRecs.push({ key, value: r.ref.value, loc: null, expireAt: r.expireAt, dt: r.dt });
+      const key = Buffer.from(r.kstr, "binary");
+      if (r.ref.kind === "memory") {
+        memRecs.push({
+          key,
+          value: r.ref.value,
+          loc: null,
+          expireAt: r.expireAt,
+          dt: r.dt,
+        });
       } else {
-        diskRecs.push({ key, value: null, loc: r.ref.loc, expireAt: r.expireAt, dt: r.dt });
+        diskRecs.push({
+          key,
+          value: null,
+          loc: r.ref.loc,
+          expireAt: r.expireAt,
+          dt: r.dt,
+        });
       }
     }
 
-    for (const rec of memRecs) await writeRecord(rec.key, rec.value!, rec.expireAt, rec.dt);
+    for (const rec of memRecs)
+      await writeRecord(rec.key, rec.value!, rec.expireAt, rec.dt);
 
     if (diskRecs.length > 0) {
       // Group by source file, sort by offset: the async reads below then hit
       // each file in ascending-offset order (sequential I/O), never random.
-      diskRecs.sort((a, b) => (a.loc!.file < b.loc!.file ? -1 : a.loc!.file > b.loc!.file ? 1 : a.loc!.off - b.loc!.off));
+      diskRecs.sort((a, b) =>
+        a.loc!.file < b.loc!.file
+          ? -1
+          : a.loc!.file > b.loc!.file
+            ? 1
+            : a.loc!.off - b.loc!.off,
+      );
       if (!opts.readValueAsync) {
         // Legacy fallback: no async reader wired — synchronous materialize
         // per record (the pre-stage-6 behavior), one record at a time.
@@ -157,16 +186,21 @@ export async function writeSnapshot(
             j++;
           }
           const slice = diskRecs.slice(i, j);
-          const values: (Buffer | undefined)[] = Array.from({ length: slice.length });
-          let cursor = 0;
-          const workers = Array.from({ length: Math.min(readConcurrency, slice.length) }, async () => {
-            for (;;) {
-              const idx = cursor++;
-              if (idx >= slice.length) return;
-              const rec = slice[idx]!;
-              values[idx] = await readValue(rec.loc!);
-            }
+          const values: (Buffer | undefined)[] = Array.from({
+            length: slice.length,
           });
+          let cursor = 0;
+          const workers = Array.from(
+            { length: Math.min(readConcurrency, slice.length) },
+            async () => {
+              for (;;) {
+                const idx = cursor++;
+                if (idx >= slice.length) return;
+                const rec = slice[idx]!;
+                values[idx] = await readValue(rec.loc!);
+              }
+            },
+          );
           await Promise.all(workers);
           for (let k = 0; k < slice.length; k++) {
             const value = values[k];

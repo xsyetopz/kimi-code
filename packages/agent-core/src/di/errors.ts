@@ -2,7 +2,7 @@
  * Errors raised by the DI subsystem.
  */
 
-import type { Graph } from './graph';
+import type { Graph } from "./graph";
 
 /**
  * Thrown when the container detects a cycle in the dependency graph.
@@ -34,18 +34,19 @@ export class CyclicDependencyError extends Error {
   constructor(pathOrGraph: ReadonlyArray<string> | Graph<any>) {
     if (Array.isArray(pathOrGraph)) {
       const path = pathOrGraph as ReadonlyArray<string>;
-      super(`Cyclic DI dependency detected: ${path.join(' → ')}`);
+      super(`Cyclic DI dependency detected: ${path.join(" → ")}`);
       this.path = path;
     } else {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const graph = pathOrGraph as Graph<any>;
       const cycle = graph.findCycleSlow();
-      const detail = cycle ?? `UNABLE to detect cycle, dumping graph:\n${graph.toString()}`;
+      const detail =
+        cycle ?? `UNABLE to detect cycle, dumping graph:\n${graph.toString()}`;
       super(`cyclic dependency between services: ${detail}`);
       // Provide a structured path for callers that read `.path` directly.
       // `findCycleSlow` formats as `A -> B -> A`; split it back into segments.
-      this.path = cycle ? cycle.split(' -> ') : [];
+      this.path = cycle ? cycle.split(" -> ") : [];
     }
-    this.name = 'CyclicDependencyError';
+    this.name = "CyclicDependencyError";
   }
 }

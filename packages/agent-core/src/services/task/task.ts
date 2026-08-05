@@ -38,52 +38,56 @@
  *            lost      → failed       (lossy)
  */
 
-import { createDecorator } from '../../di';
-import type { BackgroundTaskInfo } from '../../agent/background';
-import type { BackgroundTask, BackgroundTaskKind, BackgroundTaskStatus } from '@moonshot-ai/protocol';
+import { createDecorator } from "../../di";
+import type { BackgroundTaskInfo } from "../../agent/background";
+import type {
+  BackgroundTask,
+  BackgroundTaskKind,
+  BackgroundTaskStatus,
+} from "@moonshot-ai/protocol";
 
 // ---------------------------------------------------------------------------
 // Adapter helpers (moved from adapter/task-adapter.ts)
 // ---------------------------------------------------------------------------
 
-function mapKind(k: BackgroundTaskInfo['kind']): BackgroundTaskKind {
+function mapKind(k: BackgroundTaskInfo["kind"]): BackgroundTaskKind {
   switch (k) {
-    case 'process':
-      return 'bash';
-    case 'agent':
-      return 'subagent';
-    case 'question':
+    case "process":
+      return "bash";
+    case "agent":
+      return "subagent";
+    case "question":
       // SCHEMAS §7 has no 'question' literal; question background tasks are
       // tool-spawned flows (Loop runs them as part of `Question` tool
       // execution), so 'tool' is the closest spec literal.
-      return 'tool';
+      return "tool";
   }
 }
 
-function mapStatus(s: BackgroundTaskInfo['status']): BackgroundTaskStatus {
+function mapStatus(s: BackgroundTaskInfo["status"]): BackgroundTaskStatus {
   switch (s) {
-    case 'running':
-      return 'running';
-    case 'completed':
-      return 'completed';
-    case 'failed':
-      return 'failed';
-    case 'timed_out':
+    case "running":
+      return "running";
+    case "completed":
+      return "completed";
+    case "failed":
+      return "failed";
+    case "timed_out":
       // SCHEMAS §7 has no 'timed_out' literal; collapse to 'failed'. The
       // optional `stop_reason`/`last_error` surface would carry the hint
       // once SCHEMAS adds the field (deferred).
-      return 'failed';
-    case 'killed':
-      return 'cancelled';
-    case 'lost':
-      return 'failed';
+      return "failed";
+    case "killed":
+      return "cancelled";
+    case "lost":
+      return "failed";
   }
 }
 
 const TERMINAL_WIRE_STATUSES: ReadonlySet<BackgroundTaskStatus> = new Set([
-  'completed',
-  'failed',
-  'cancelled',
+  "completed",
+  "failed",
+  "cancelled",
 ]);
 
 export function isTerminalStatus(status: BackgroundTaskStatus): boolean {
@@ -121,7 +125,11 @@ export function toProtocolTask(
   if (info.endedAt !== null && info.endedAt !== undefined) {
     base.completed_at = new Date(info.endedAt).toISOString();
   }
-  if (info.kind === 'process' && 'command' in info && typeof info.command === 'string') {
+  if (
+    info.kind === "process" &&
+    "command" in info &&
+    typeof info.command === "string"
+  ) {
     base.command = info.command;
   }
   if (output !== undefined) {
@@ -143,7 +151,10 @@ export interface ITaskService {
   readonly _serviceBrand: undefined;
 
   /** Return the (full) list of background tasks for the session. */
-  list(sessionId: string, query: TaskListQuery): Promise<readonly BackgroundTask[]>;
+  list(
+    sessionId: string,
+    query: TaskListQuery,
+  ): Promise<readonly BackgroundTask[]>;
 
   /**
    * Return a single background task. Throws `TaskNotFoundError` (→ 40406)
@@ -154,7 +165,11 @@ export interface ITaskService {
    * returned preview to the last N bytes; when omitted, a server-default
    * cap is used.
    */
-  get(sessionId: string, taskId: string, options?: GetTaskOptions): Promise<BackgroundTask>;
+  get(
+    sessionId: string,
+    taskId: string,
+    options?: GetTaskOptions,
+  ): Promise<BackgroundTask>;
 
   /**
    * Cancel a running task. Throws:
@@ -166,7 +181,7 @@ export interface ITaskService {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
-export const ITaskService = createDecorator<ITaskService>('taskService');
+export const ITaskService = createDecorator<ITaskService>("taskService");
 
 /**
  * Sentinel — daemon route maps to `code: 40406 task.not_found`.
@@ -176,7 +191,7 @@ export class TaskNotFoundError extends Error {
   readonly taskId: string;
   constructor(sessionId: string, taskId: string) {
     super(`task ${taskId} does not exist in session ${sessionId}`);
-    this.name = 'TaskNotFoundError';
+    this.name = "TaskNotFoundError";
     this.sessionId = sessionId;
     this.taskId = taskId;
   }
@@ -191,9 +206,13 @@ export class TaskAlreadyFinishedError extends Error {
   readonly sessionId: string;
   readonly taskId: string;
   readonly currentStatus: BackgroundTaskStatus;
-  constructor(sessionId: string, taskId: string, currentStatus: BackgroundTaskStatus) {
+  constructor(
+    sessionId: string,
+    taskId: string,
+    currentStatus: BackgroundTaskStatus,
+  ) {
     super(`task ${taskId} already finished (status: ${currentStatus})`);
-    this.name = 'TaskAlreadyFinishedError';
+    this.name = "TaskAlreadyFinishedError";
     this.sessionId = sessionId;
     this.taskId = taskId;
     this.currentStatus = currentStatus;

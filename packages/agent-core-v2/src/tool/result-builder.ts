@@ -6,14 +6,17 @@
  * service.
  */
 
-import { BugIndicatingError } from '#/errors';
+import { BugIndicatingError } from "#/errors";
 
-import type { ExecutableToolErrorResult, ExecutableToolSuccessResult } from './toolContract';
+import type {
+  ExecutableToolErrorResult,
+  ExecutableToolSuccessResult,
+} from "./toolContract";
 
 const DEFAULT_MAX_CHARS = 50_000;
 const DEFAULT_MAX_LINE_LENGTH = 2000;
-const TRUNCATION_MARKER = '[...truncated]';
-const TRUNCATION_MESSAGE = 'Output is truncated to fit in the message.';
+const TRUNCATION_MARKER = "[...truncated]";
+const TRUNCATION_MESSAGE = "Output is truncated to fit in the message.";
 
 export interface ToolResultBuilderOptions {
   readonly maxChars?: number;
@@ -40,10 +43,17 @@ export class ToolResultBuilder {
   constructor(options: ToolResultBuilderOptions = {}) {
     this.maxChars = options.maxChars ?? DEFAULT_MAX_CHARS;
     this.maxLineLength =
-      options.maxLineLength === undefined ? DEFAULT_MAX_LINE_LENGTH : options.maxLineLength;
+      options.maxLineLength === undefined
+        ? DEFAULT_MAX_LINE_LENGTH
+        : options.maxLineLength;
 
-    if (this.maxLineLength !== null && this.maxLineLength <= TRUNCATION_MARKER.length) {
-      throw new BugIndicatingError('maxLineLength must be greater than the truncation marker length.');
+    if (
+      this.maxLineLength !== null &&
+      this.maxLineLength <= TRUNCATION_MARKER.length
+    ) {
+      throw new BugIndicatingError(
+        "maxLineLength must be greater than the truncation marker length.",
+      );
     }
   }
 
@@ -86,7 +96,7 @@ export class ToolResultBuilder {
           : Math.min(remainingChars, this.maxLineLength);
       let line = originalLine;
       if (line.length > limit) {
-        const lineBreak = /[\r\n]+$/.exec(line)?.[0] ?? '';
+        const lineBreak = /[\r\n]+$/.exec(line)?.[0] ?? "";
         const suffix = TRUNCATION_MARKER + lineBreak;
         const effectiveMaxLength = Math.max(limit, suffix.length);
         line = line.slice(0, effectiveMaxLength - suffix.length) + suffix;
@@ -103,25 +113,31 @@ export class ToolResultBuilder {
     return charsWritten;
   }
 
-  ok(message = '', options: { readonly brief?: string } = {}): ExecutableToolResultBuilderResult {
+  ok(
+    message = "",
+    options: { readonly brief?: string } = {},
+  ): ExecutableToolResultBuilderResult {
     let finalMessage = message;
-    if (finalMessage.length > 0 && !finalMessage.endsWith('.')) {
-      finalMessage += '.';
+    if (finalMessage.length > 0 && !finalMessage.endsWith(".")) {
+      finalMessage += ".";
     }
     if (this.truncationHappened) {
       finalMessage =
-        finalMessage.length === 0 ? TRUNCATION_MESSAGE : `${finalMessage} ${TRUNCATION_MESSAGE}`;
+        finalMessage.length === 0
+          ? TRUNCATION_MESSAGE
+          : `${finalMessage} ${TRUNCATION_MESSAGE}`;
     }
 
-    const output = this.buffer.join('');
+    const output = this.buffer.join("");
     const shouldAppendMessage =
-      finalMessage.length > 0 && (this.truncationHappened || output.length === 0);
+      finalMessage.length > 0 &&
+      (this.truncationHappened || output.length === 0);
     return {
       isError: false,
       output: shouldAppendMessage
         ? output.length === 0
           ? finalMessage
-          : output.endsWith('\n')
+          : output.endsWith("\n")
             ? `${output}${finalMessage}`
             : `${output}\n${finalMessage}`
         : output,
@@ -139,7 +155,7 @@ export class ToolResultBuilder {
         ? TRUNCATION_MESSAGE
         : `${message} ${TRUNCATION_MESSAGE}`
       : message;
-    const output = this.buffer.join('');
+    const output = this.buffer.join("");
     return {
       isError: true,
       output:
@@ -147,7 +163,7 @@ export class ToolResultBuilder {
           ? output
           : output.length === 0
             ? finalMessage
-            : output.endsWith('\n')
+            : output.endsWith("\n")
               ? `${output}${finalMessage}`
               : `${output}\n${finalMessage}`,
       truncated: this.truncationHappened,

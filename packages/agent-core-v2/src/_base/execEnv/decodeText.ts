@@ -6,14 +6,14 @@
  * dependencies.
  */
 
-export type TextDecodeErrors = 'strict' | 'replace' | 'ignore';
+export type TextDecodeErrors = "strict" | "replace" | "ignore";
 
 function isUtf8Continuation(byte: number): boolean {
   return byte >= 0x80 && byte <= 0xbf;
 }
 
 function decodeUtf8Ignore(data: Buffer): string {
-  let output = '';
+  let output = "";
   let i = 0;
 
   while (i < data.length) {
@@ -48,7 +48,9 @@ function decodeUtf8Ignore(data: Buffer): string {
           (b0 >= 0xee && b0 <= 0xef && isUtf8Continuation(b1)));
 
       if (validSecond && b2 !== undefined && isUtf8Continuation(b2)) {
-        output += String.fromCodePoint(((b0 & 0x0f) << 12) | ((b1 & 0x3f) << 6) | (b2 & 0x3f));
+        output += String.fromCodePoint(
+          ((b0 & 0x0f) << 12) | ((b1 & 0x3f) << 6) | (b2 & 0x3f),
+        );
         i += 3;
         continue;
       }
@@ -74,7 +76,10 @@ function decodeUtf8Ignore(data: Buffer): string {
         isUtf8Continuation(b3)
       ) {
         output += String.fromCodePoint(
-          ((b0 & 0x07) << 18) | ((b1 & 0x3f) << 12) | ((b2 & 0x3f) << 6) | (b3 & 0x3f),
+          ((b0 & 0x07) << 18) |
+            ((b1 & 0x3f) << 12) |
+            ((b2 & 0x3f) << 6) |
+            (b3 & 0x3f),
         );
         i += 4;
         continue;
@@ -90,7 +95,7 @@ function decodeUtf8Ignore(data: Buffer): string {
 }
 
 function decodeUtf16LeIgnore(data: Buffer): string {
-  let output = '';
+  let output = "";
   let i = 0;
 
   while (i + 1 < data.length) {
@@ -106,7 +111,8 @@ function decodeUtf16LeIgnore(data: Buffer): string {
       if (lowFirst !== undefined && lowSecond !== undefined) {
         const low = lowFirst | (lowSecond << 8);
         if (low >= 0xdc00 && low <= 0xdfff) {
-          const codePoint = 0x10000 + ((codeUnit - 0xd800) << 10) + (low - 0xdc00);
+          const codePoint =
+            0x10000 + ((codeUnit - 0xd800) << 10) + (low - 0xdc00);
           output += String.fromCodePoint(codePoint);
           i += 4;
           continue;
@@ -131,20 +137,20 @@ function decodeUtf16LeIgnore(data: Buffer): string {
 export function decodeTextWithErrors(
   data: Buffer,
   encoding: BufferEncoding,
-  errors: TextDecodeErrors = 'strict',
+  errors: TextDecodeErrors = "strict",
   ignoreBOM: boolean = false,
 ): string {
   let webLabel: string | undefined;
   // eslint-disable-next-line typescript-eslint/switch-exhaustiveness-check
   switch (encoding) {
-    case 'utf-8':
-    case 'utf8':
-      webLabel = 'utf-8';
+    case "utf-8":
+    case "utf8":
+      webLabel = "utf-8";
       break;
-    case 'utf16le':
-    case 'ucs2':
-    case 'ucs-2':
-      webLabel = 'utf-16le';
+    case "utf16le":
+    case "ucs2":
+    case "ucs-2":
+      webLabel = "utf-16le";
       break;
     default:
       webLabel = undefined;
@@ -154,12 +160,14 @@ export function decodeTextWithErrors(
     return data.toString(encoding);
   }
 
-  if (errors === 'strict') {
+  if (errors === "strict") {
     return new TextDecoder(webLabel, { fatal: true, ignoreBOM }).decode(data);
   }
 
-  if (errors === 'ignore') {
-    return webLabel === 'utf-8' ? decodeUtf8Ignore(data) : decodeUtf16LeIgnore(data);
+  if (errors === "ignore") {
+    return webLabel === "utf-8"
+      ? decodeUtf8Ignore(data)
+      : decodeUtf16LeIgnore(data);
   }
 
   return new TextDecoder(webLabel, { fatal: false, ignoreBOM }).decode(data);

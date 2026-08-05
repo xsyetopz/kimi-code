@@ -1,8 +1,15 @@
-import { mkdtemp, mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'pathe';
+import {
+  mkdtemp,
+  mkdir,
+  readdir,
+  readFile,
+  rm,
+  writeFile,
+} from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "pathe";
 
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   createRPC,
@@ -10,16 +17,16 @@ import {
   type CoreAPI,
   type SDKAPI,
   type TelemetryClient,
-} from '../../src';
+} from "../../src";
 import {
   __resetRootLoggerForTest,
   getRootLogger,
-} from '../../src/logging/logger';
-import { resolveLoggingConfig } from '../../src/logging/resolve-config';
+} from "../../src/logging/logger";
+import { resolveLoggingConfig } from "../../src/logging/resolve-config";
 import {
   recordingContextTelemetry,
   type TelemetryContextRecord,
-} from '../fixtures/telemetry';
+} from "../fixtures/telemetry";
 
 const CONFIG = `
 default_model = "kimi-code/kimi-for-coding"
@@ -38,17 +45,17 @@ support_efforts = ["low", "medium", "high"]
 default_effort = "high"
 `;
 
-describe('HarnessAPI session model aliases', () => {
+describe("HarnessAPI session model aliases", () => {
   let tmp: string;
   let homeDir: string;
   let workDir: string;
   let configPath: string;
 
   beforeEach(async () => {
-    tmp = await mkdtemp(join(tmpdir(), 'kimi-model-alias-'));
-    homeDir = join(tmp, 'home');
-    workDir = join(tmp, 'work');
-    configPath = join(tmp, 'config.toml');
+    tmp = await mkdtemp(join(tmpdir(), "kimi-model-alias-"));
+    homeDir = join(tmp, "home");
+    workDir = join(tmp, "work");
+    configPath = join(tmp, "config.toml");
     await mkdir(workDir, { recursive: true });
     await writeFile(configPath, CONFIG);
   });
@@ -77,46 +84,56 @@ default_effort = "${defaultEffort}"
 `;
 
   async function createEffortReplaySession(): Promise<string> {
-    await writeFile(configPath, compatibleConfig('"high", "max"', 'high'));
-    const rpc = await createTestRpc();
-    const created = await rpc.createSession({ workDir, model: 'compatible/model' });
-    await rpc.setThinking({ sessionId: created.id, agentId: 'main', effort: 'max' });
-    await rpc.closeSession({ sessionId: created.id });
-    await writeFile(configPath, compatibleConfig('"max"', 'max'));
-    return created.id;
-  }
-
-  it('keeps the configured alias separate from the provider model across create, setModel, and resume', async () => {
+    await writeFile(configPath, compatibleConfig('"high", "max"', "high"));
     const rpc = await createTestRpc();
     const created = await rpc.createSession({
       workDir,
-      model: 'kimi-code/kimi-for-coding',
+      model: "compatible/model",
+    });
+    await rpc.setThinking({
+      sessionId: created.id,
+      agentId: "main",
+      effort: "max",
+    });
+    await rpc.closeSession({ sessionId: created.id });
+    await writeFile(configPath, compatibleConfig('"max"', "max"));
+    return created.id;
+  }
+
+  it("keeps the configured alias separate from the provider model across create, setModel, and resume", async () => {
+    const rpc = await createTestRpc();
+    const created = await rpc.createSession({
+      workDir,
+      model: "kimi-code/kimi-for-coding",
     });
 
-    expect(await rpc.getModel({ sessionId: created.id, agentId: 'main' })).toBe(
-      'kimi-code/kimi-for-coding',
+    expect(await rpc.getModel({ sessionId: created.id, agentId: "main" })).toBe(
+      "kimi-code/kimi-for-coding",
     );
 
-    const config = await rpc.getConfig({ sessionId: created.id, agentId: 'main' });
-    expect(config.modelAlias).toBe('kimi-code/kimi-for-coding');
-    expect(config.provider?.model).toBe('kimi-for-coding');
+    const config = await rpc.getConfig({
+      sessionId: created.id,
+      agentId: "main",
+    });
+    expect(config.modelAlias).toBe("kimi-code/kimi-for-coding");
+    expect(config.provider?.model).toBe("kimi-for-coding");
     expect(config.modelCapabilities?.max_context_tokens).toBe(1_000_000);
 
     await rpc.setModel({
       sessionId: created.id,
-      agentId: 'main',
-      model: 'kimi-code/kimi-for-coding',
+      agentId: "main",
+      model: "kimi-code/kimi-for-coding",
     });
 
     const freshRpc = await createTestRpc();
     await freshRpc.resumeSession({ sessionId: created.id });
 
-    expect(await freshRpc.getModel({ sessionId: created.id, agentId: 'main' })).toBe(
-      'kimi-code/kimi-for-coding',
-    );
+    expect(
+      await freshRpc.getModel({ sessionId: created.id, agentId: "main" }),
+    ).toBe("kimi-code/kimi-for-coding");
   });
 
-  it('resolves the initial effort with provider context for an Anthropic-typed provider', async () => {
+  it("resolves the initial effort with provider context for an Anthropic-typed provider", async () => {
     // The model name is unknown to the Anthropic profile matrix but still
     // carries a Claude marker, and the alias declares no protocol/capabilities
     // itself; the provider's `type = "anthropic"` must still route the
@@ -141,18 +158,24 @@ max_context_size = 200000
     const rpc = await createTestRpc();
     const created = await rpc.createSession({ workDir });
 
-    const config = await rpc.getConfig({ sessionId: created.id, agentId: 'main' });
-    expect(config.thinkingEffort).toBe('high');
+    const config = await rpc.getConfig({
+      sessionId: created.id,
+      agentId: "main",
+    });
+    expect(config.thinkingEffort).toBe("high");
 
     // The recorded bootstrap effort must survive resume unchanged.
     await rpc.closeSession({ sessionId: created.id });
     const freshRpc = await createTestRpc();
     await freshRpc.resumeSession({ sessionId: created.id });
-    const restored = await freshRpc.getConfig({ sessionId: created.id, agentId: 'main' });
-    expect(restored.thinkingEffort).toBe('high');
+    const restored = await freshRpc.getConfig({
+      sessionId: created.id,
+      agentId: "main",
+    });
+    expect(restored.thinkingEffort).toBe("high");
   });
 
-  it('honors an explicit session effort for an Anthropic-typed provider', async () => {
+  it("honors an explicit session effort for an Anthropic-typed provider", async () => {
     await writeFile(
       configPath,
       `
@@ -170,47 +193,54 @@ max_context_size = 200000
 `,
     );
     const rpc = await createTestRpc();
-    const created = await rpc.createSession({ workDir, thinking: 'low' });
+    const created = await rpc.createSession({ workDir, thinking: "low" });
 
-    const config = await rpc.getConfig({ sessionId: created.id, agentId: 'main' });
-    expect(config.thinkingEffort).toBe('low');
+    const config = await rpc.getConfig({
+      sessionId: created.id,
+      agentId: "main",
+    });
+    expect(config.thinkingEffort).toBe("low");
   });
 
-  it('restores the final effort after replaying an earlier unlisted Anthropic effort', async () => {
+  it("restores the final effort after replaying an earlier unlisted Anthropic effort", async () => {
     const sessionId = await createEffortReplaySession();
 
     // The current catalog no longer lists the earlier `high` state. Replay
     // must continue to the following `max` record instead of validating and
     // aborting at the transient state.
-    const events: Array<Parameters<SDKAPI['emitEvent']>[0]> = [];
-    const freshRpc = await createTestRpc({ emitEvent: (event) => events.push(event) });
+    const events: Array<Parameters<SDKAPI["emitEvent"]>[0]> = [];
+    const freshRpc = await createTestRpc({
+      emitEvent: (event) => events.push(event),
+    });
 
     await expect(freshRpc.resumeSession({ sessionId })).resolves.toBeDefined();
     expect(events).toContainEqual({
       sessionId,
-      agentId: 'main',
-      type: 'warning',
-      code: 'anthropic-thinking-effort-not-listed',
+      agentId: "main",
+      type: "warning",
+      code: "anthropic-thinking-effort-not-listed",
       message:
         'Thinking effort "high" is not listed for model "compatible-model" (known: max). The configured value will be sent unchanged to the Anthropic-compatible backend.',
     });
-    const restored = await freshRpc.getConfig({ sessionId, agentId: 'main' });
-    expect(restored.modelAlias).toBe('compatible/model');
-    expect(restored.thinkingEffort).toBe('max');
+    const restored = await freshRpc.getConfig({ sessionId, agentId: "main" });
+    expect(restored.modelAlias).toBe("compatible/model");
+    expect(restored.thinkingEffort).toBe("max");
   });
 
-  it('does not block resume when the warning sink fails', async () => {
+  it("does not block resume when the warning sink fails", async () => {
     const sessionId = await createEffortReplaySession();
 
     const throwingRpc = await createTestRpc({
       emitEvent: () => {
-        throw new Error('warning sink failed');
+        throw new Error("warning sink failed");
       },
     });
-    await expect(throwingRpc.resumeSession({ sessionId })).resolves.toBeDefined();
+    await expect(
+      throwingRpc.resumeSession({ sessionId }),
+    ).resolves.toBeDefined();
   });
 
-  it('re-bootstraps profile and model when resuming a session whose wire has no config.update', async () => {
+  it("re-bootstraps profile and model when resuming a session whose wire has no config.update", async () => {
     // A migrated session ships a wire.jsonl with only `metadata` and message
     // records — none of the `config.update` / `tools.set_active_tools`
     // bootstrap events a natively-created session writes. Resuming it must
@@ -218,76 +248,82 @@ max_context_size = 200000
     const rpc = await createTestRpc();
     const created = await rpc.createSession({
       workDir,
-      model: 'kimi-code/kimi-for-coding',
+      model: "kimi-code/kimi-for-coding",
     });
     await rpc.closeSession({ sessionId: created.id });
 
     const wirePath = await findWireFile(homeDir);
-    const kept = (await readFile(wirePath, 'utf-8'))
-      .split('\n')
+    const kept = (await readFile(wirePath, "utf-8"))
+      .split("\n")
       .filter((line) => line.trim().length > 0)
       .filter((line) => {
         const type = (JSON.parse(line) as { type?: string }).type;
-        return type !== 'config.update' && type !== 'tools.set_active_tools';
+        return type !== "config.update" && type !== "tools.set_active_tools";
       });
-    await writeFile(wirePath, `${kept.join('\n')}\n`);
+    await writeFile(wirePath, `${kept.join("\n")}\n`);
 
     const freshRpc = await createTestRpc();
     await freshRpc.resumeSession({ sessionId: created.id });
 
-    expect(await freshRpc.getModel({ sessionId: created.id, agentId: 'main' })).toBe(
-      'kimi-code/kimi-for-coding',
-    );
-    const config = await freshRpc.getConfig({ sessionId: created.id, agentId: 'main' });
-    expect(config.modelAlias).toBe('kimi-code/kimi-for-coding');
+    expect(
+      await freshRpc.getModel({ sessionId: created.id, agentId: "main" }),
+    ).toBe("kimi-code/kimi-for-coding");
+    const config = await freshRpc.getConfig({
+      sessionId: created.id,
+      agentId: "main",
+    });
+    expect(config.modelAlias).toBe("kimi-code/kimi-for-coding");
     expect(config.systemPrompt.length).toBeGreaterThan(0);
   });
 
-  it('applies RPC config updates to later agent model changes', async () => {
+  it("applies RPC config updates to later agent model changes", async () => {
     const rpc = await createTestRpc();
     const created = await rpc.createSession({
       workDir,
-      model: 'kimi-code/kimi-for-coding',
+      model: "kimi-code/kimi-for-coding",
     });
 
     const updatedConfig = await rpc.setKimiConfig({
-      defaultModel: 'gpt-alias',
+      defaultModel: "gpt-alias",
       providers: {
         openai: {
-          type: 'openai',
-          apiKey: 'sk-openai',
-          baseUrl: 'https://openai.example/v1',
+          type: "openai",
+          apiKey: "sk-openai",
+          baseUrl: "https://openai.example/v1",
         },
       },
       models: {
-        'gpt-alias': {
-          provider: 'openai',
-          model: 'gpt-runtime',
+        "gpt-alias": {
+          provider: "openai",
+          model: "gpt-runtime",
           maxContextSize: 200000,
-          capabilities: ['tool_use'],
+          capabilities: ["tool_use"],
         },
       },
     });
-    expect(updatedConfig.defaultModel).toBe('gpt-alias');
+    expect(updatedConfig.defaultModel).toBe("gpt-alias");
 
     await expect(
       rpc.setModel({
         sessionId: created.id,
-        agentId: 'main',
-        model: 'gpt-alias',
+        agentId: "main",
+        model: "gpt-alias",
       }),
     ).resolves.toEqual({
-      model: 'gpt-alias',
-      providerName: 'openai',
+      model: "gpt-alias",
+      providerName: "openai",
     });
 
-    const config = await rpc.getConfig({ sessionId: created.id, agentId: 'main' });
-    expect(config.modelAlias).toBe('gpt-alias');
+    const config = await rpc.getConfig({
+      sessionId: created.id,
+      agentId: "main",
+    });
+    expect(config.modelAlias).toBe("gpt-alias");
     expect(config.provider).toMatchObject({
-      type: 'openai',
-      model: 'gpt-runtime',
-      apiKey: 'sk-openai',
-      baseUrl: 'https://openai.example/v1',
+      type: "openai",
+      model: "gpt-runtime",
+      apiKey: "sk-openai",
+      baseUrl: "https://openai.example/v1",
     });
     expect(config.modelCapabilities).toMatchObject({
       tool_use: true,
@@ -295,17 +331,19 @@ max_context_size = 200000
     });
   });
 
-  it('can create an unconfigured session when no model is selected', async () => {
-    await writeFile(configPath, '');
+  it("can create an unconfigured session when no model is selected", async () => {
+    await writeFile(configPath, "");
     const rpc = await createTestRpc();
 
     const created = await rpc.createSession({ workDir });
 
-    expect(created.id.startsWith('session_')).toBe(true);
-    expect(await rpc.getModel({ sessionId: created.id, agentId: 'main' })).toBe('');
+    expect(created.id.startsWith("session_")).toBe(true);
+    expect(await rpc.getModel({ sessionId: created.id, agentId: "main" })).toBe(
+      "",
+    );
   });
 
-  it('loads configured permission rules into created and resumed sessions', async () => {
+  it("loads configured permission rules into created and resumed sessions", async () => {
     await writeFile(
       configPath,
       `${CONFIG}
@@ -319,14 +357,16 @@ reason = "no rm"
     const rpc = await createTestRpc();
     const created = await rpc.createSession({ workDir });
 
-    await expect(rpc.getPermission({ sessionId: created.id, agentId: 'main' })).resolves.toEqual({
-      mode: 'manual',
+    await expect(
+      rpc.getPermission({ sessionId: created.id, agentId: "main" }),
+    ).resolves.toEqual({
+      mode: "manual",
       rules: [
         {
-          decision: 'deny',
-          scope: 'user',
-          pattern: 'Bash(rm *)',
-          reason: 'no rm',
+          decision: "deny",
+          scope: "user",
+          pattern: "Bash(rm *)",
+          reason: "no rm",
         },
       ],
     });
@@ -334,21 +374,21 @@ reason = "no rm"
     const freshRpc = await createTestRpc();
     await freshRpc.resumeSession({ sessionId: created.id });
     await expect(
-      freshRpc.getPermission({ sessionId: created.id, agentId: 'main' }),
+      freshRpc.getPermission({ sessionId: created.id, agentId: "main" }),
     ).resolves.toEqual({
-      mode: 'manual',
+      mode: "manual",
       rules: [
         {
-          decision: 'deny',
-          scope: 'user',
-          pattern: 'Bash(rm *)',
-          reason: 'no rm',
+          decision: "deny",
+          scope: "user",
+          pattern: "Bash(rm *)",
+          reason: "no rm",
         },
       ],
     });
   });
 
-  it('uses configured default permission mode for fresh sessions', async () => {
+  it("uses configured default permission mode for fresh sessions", async () => {
     await writeFile(
       configPath,
       CONFIG.replace(
@@ -359,73 +399,91 @@ reason = "no rm"
     const rpc = await createTestRpc();
     const created = await rpc.createSession({ workDir });
 
-    await expect(rpc.getPermission({ sessionId: created.id, agentId: 'main' })).resolves.toEqual({
-      mode: 'auto',
+    await expect(
+      rpc.getPermission({ sessionId: created.id, agentId: "main" }),
+    ).resolves.toEqual({
+      mode: "auto",
       rules: [],
     });
 
-    const explicit = await rpc.createSession({ workDir, permission: 'manual' });
-    await expect(rpc.getPermission({ sessionId: explicit.id, agentId: 'main' })).resolves.toEqual({
-      mode: 'manual',
+    const explicit = await rpc.createSession({ workDir, permission: "manual" });
+    await expect(
+      rpc.getPermission({ sessionId: explicit.id, agentId: "main" }),
+    ).resolves.toEqual({
+      mode: "manual",
       rules: [],
     });
   });
 
-  it('does not expose raw provider switching through the core RPC surface', async () => {
+  it("does not expose raw provider switching through the core RPC surface", async () => {
     const rpc = (await createTestRpc()) as unknown as Record<string, unknown>;
 
-    expect(rpc['setProvider']).toBeUndefined();
+    expect(rpc["setProvider"]).toBeUndefined();
   });
 
-  it('exposes the core package version as read-only metadata', async () => {
+  it("exposes the core package version as read-only metadata", async () => {
     const rpc = await createTestRpc();
     const pkg = JSON.parse(
-      await readFile(new URL('../../package.json', import.meta.url), 'utf-8'),
+      await readFile(new URL("../../package.json", import.meta.url), "utf-8"),
     ) as { version: string };
 
     await expect(rpc.getCoreInfo({})).resolves.toEqual({
       version: pkg.version,
     });
-    expect((rpc as unknown as Record<string, unknown>)['setVersion']).toBeUndefined();
+    expect(
+      (rpc as unknown as Record<string, unknown>)["setVersion"],
+    ).toBeUndefined();
   });
 
-  it('keeps the resumed model alias visible when it no longer resolves', async () => {
+  it("keeps the resumed model alias visible when it no longer resolves", async () => {
     const rpc = await createTestRpc();
-    const created = await rpc.createSession({ workDir, model: 'kimi-code/kimi-for-coding' });
+    const created = await rpc.createSession({
+      workDir,
+      model: "kimi-code/kimi-for-coding",
+    });
     await rpc.closeSession({ sessionId: created.id });
 
     // The config now has no models and no default model — the alias replayed
     // from the session is invalid and there is no fallback to resolve.
-    await writeFile(configPath, '');
+    await writeFile(configPath, "");
 
     const freshRpc = await createTestRpc();
     await freshRpc.resumeSession({ sessionId: created.id });
 
     // The stale alias stays visible so the UI can surface which model the
     // user had selected. The next prompt will raise MODEL_NOT_CONFIGURED.
-    expect(await freshRpc.getModel({ sessionId: created.id, agentId: 'main' })).toBe(
-      'kimi-code/kimi-for-coding',
-    );
+    expect(
+      await freshRpc.getModel({ sessionId: created.id, agentId: "main" }),
+    ).toBe("kimi-code/kimi-for-coding");
   });
 
-  it('logs app_version when resuming a session', async () => {
+  it("logs app_version when resuming a session", async () => {
     await getRootLogger().configure(resolveLoggingConfig({ homeDir }));
     const rpc = await createTestRpc();
-    const created = await rpc.createSession({ workDir, model: 'kimi-code/kimi-for-coding' });
+    const created = await rpc.createSession({
+      workDir,
+      model: "kimi-code/kimi-for-coding",
+    });
     await rpc.closeSession({ sessionId: created.id });
 
-    const freshRpc = await createTestRpc({ appVersion: '1.2.3-test' });
+    const freshRpc = await createTestRpc({ appVersion: "1.2.3-test" });
     await freshRpc.resumeSession({ sessionId: created.id });
     await getRootLogger().flushSession(created.id);
 
-    const logText = await readFile(join(created.sessionDir, 'logs', 'kimi-code.log'), 'utf-8');
-    expect(logText).toContain('session resume');
-    expect(logText).toContain('app_version=1.2.3-test');
+    const logText = await readFile(
+      join(created.sessionDir, "logs", "kimi-code.log"),
+      "utf-8",
+    );
+    expect(logText).toContain("session resume");
+    expect(logText).toContain("app_version=1.2.3-test");
   });
 
-  it('surfaces a config error when a resumed model is configured but unresolvable', async () => {
+  it("surfaces a config error when a resumed model is configured but unresolvable", async () => {
     const rpc = await createTestRpc();
-    const created = await rpc.createSession({ workDir, model: 'kimi-code/kimi-for-coding' });
+    const created = await rpc.createSession({
+      workDir,
+      model: "kimi-code/kimi-for-coding",
+    });
     await rpc.closeSession({ sessionId: created.id });
 
     // The model alias is still in config, but it now references a provider
@@ -449,137 +507,176 @@ max_context_size = 1000000
     );
 
     const freshRpc = await createTestRpc();
-    await expect(freshRpc.resumeSession({ sessionId: created.id })).rejects.toThrow();
+    await expect(
+      freshRpc.resumeSession({ sessionId: created.id }),
+    ).rejects.toThrow();
   });
 
-  it('scopes agent telemetry events to the owning session', async () => {
+  it("scopes agent telemetry events to the owning session", async () => {
     const createRecords: TelemetryContextRecord[] = [];
-    const createRpc = await createTestRpc({ telemetry: recordingContextTelemetry(createRecords) });
+    const createRpc = await createTestRpc({
+      telemetry: recordingContextTelemetry(createRecords),
+    });
     const created = await createRpc.createSession({
       workDir,
-      model: 'kimi-code/kimi-for-coding',
+      model: "kimi-code/kimi-for-coding",
     });
 
-    await createRpc.setPermission({ sessionId: created.id, agentId: 'main', mode: 'yolo' });
-
-    expect(createRecords).toContainEqual({
-      event: 'yolo_toggle',
+    await createRpc.setPermission({
       sessionId: created.id,
-      properties: { enabled: true, agent_id: 'main' },
+      agentId: "main",
+      mode: "yolo",
     });
 
-    await createRpc.setPermission({ sessionId: created.id, agentId: 'main', mode: 'auto' });
+    expect(createRecords).toContainEqual({
+      event: "yolo_toggle",
+      sessionId: created.id,
+      properties: { enabled: true, agent_id: "main" },
+    });
+
+    await createRpc.setPermission({
+      sessionId: created.id,
+      agentId: "main",
+      mode: "auto",
+    });
 
     expect(createRecords).toContainEqual({
-      event: 'afk_toggle',
+      event: "afk_toggle",
       sessionId: created.id,
-      properties: { enabled: true, agent_id: 'main' },
+      properties: { enabled: true, agent_id: "main" },
     });
 
     await createRpc.setKimiConfig({
-      defaultModel: 'gpt-alias',
+      defaultModel: "gpt-alias",
       providers: {
         openai: {
-          type: 'openai',
-          apiKey: 'sk-openai',
-          baseUrl: 'https://openai.example/v1',
+          type: "openai",
+          apiKey: "sk-openai",
+          baseUrl: "https://openai.example/v1",
         },
       },
       models: {
-        'gpt-alias': {
-          provider: 'openai',
-          model: 'gpt-runtime',
+        "gpt-alias": {
+          provider: "openai",
+          model: "gpt-runtime",
           maxContextSize: 200000,
         },
       },
     });
     await createRpc.setModel({
       sessionId: created.id,
-      agentId: 'main',
-      model: 'gpt-alias',
+      agentId: "main",
+      model: "gpt-alias",
     });
 
     expect(createRecords).toContainEqual({
-      event: 'model_switch',
+      event: "model_switch",
       sessionId: created.id,
-      properties: { model: 'gpt-alias', agent_id: 'main' },
+      properties: { model: "gpt-alias", agent_id: "main" },
     });
 
     const resumeRecords: TelemetryContextRecord[] = [];
-    const resumeRpc = await createTestRpc({ telemetry: recordingContextTelemetry(resumeRecords) });
+    const resumeRpc = await createTestRpc({
+      telemetry: recordingContextTelemetry(resumeRecords),
+    });
     await resumeRpc.resumeSession({ sessionId: created.id });
-    await resumeRpc.setThinking({ sessionId: created.id, agentId: 'main', effort: 'off' });
+    await resumeRpc.setThinking({
+      sessionId: created.id,
+      agentId: "main",
+      effort: "off",
+    });
 
     expect(resumeRecords).toContainEqual({
-      event: 'thinking_toggle',
+      event: "thinking_toggle",
       sessionId: created.id,
-      properties: { enabled: false, effort: 'off', from: 'high', agent_id: 'main' },
+      properties: {
+        enabled: false,
+        effort: "off",
+        from: "high",
+        agent_id: "main",
+      },
     });
   });
 
-  it('tracks session_load_failed with the attempted session context', async () => {
+  it("tracks session_load_failed with the attempted session context", async () => {
     const rpc = await createTestRpc();
     const created = await rpc.createSession({ workDir });
-    await writeFile(join(created.sessionDir, 'state.json'), '{bad json', 'utf-8');
+    await writeFile(
+      join(created.sessionDir, "state.json"),
+      "{bad json",
+      "utf-8",
+    );
 
     const records: TelemetryContextRecord[] = [];
-    const freshRpc = await createTestRpc({ telemetry: recordingContextTelemetry(records) });
+    const freshRpc = await createTestRpc({
+      telemetry: recordingContextTelemetry(records),
+    });
 
-    await expect(freshRpc.resumeSession({ sessionId: created.id })).rejects.toThrow();
+    await expect(
+      freshRpc.resumeSession({ sessionId: created.id }),
+    ).rejects.toThrow();
     expect(records).toContainEqual({
-      event: 'session_load_failed',
+      event: "session_load_failed",
       sessionId: created.id,
-      properties: { reason: 'SyntaxError' },
+      properties: { reason: "SyntaxError" },
     });
   });
 
-  it('adds web client metadata to new-session telemetry', async () => {
+  it("adds web client metadata to new-session telemetry", async () => {
     const records: TelemetryContextRecord[] = [];
-    const rpc = await createTestRpc({ telemetry: recordingContextTelemetry(records) });
+    const rpc = await createTestRpc({
+      telemetry: recordingContextTelemetry(records),
+    });
     const created = await rpc.createSession({
       workDir,
       client: {
-        id: 'web_test_client',
-        name: 'kimi-code-web',
-        version: '0.1.1',
-        uiMode: 'web',
+        id: "web_test_client",
+        name: "kimi-code-web",
+        version: "0.1.1",
+        uiMode: "web",
       },
     });
 
     expect(records).toContainEqual({
-      event: 'session_started',
+      event: "session_started",
       sessionId: created.id,
       properties: {
-        client_id: 'web_test_client',
-        client_name: 'kimi-code-web',
-        client_version: '0.1.1',
-        ui_mode: 'web',
+        client_id: "web_test_client",
+        client_name: "kimi-code-web",
+        client_version: "0.1.1",
+        ui_mode: "web",
         resumed: false,
       },
     });
 
-    await rpc.setPermission({ sessionId: created.id, agentId: 'main', mode: 'yolo' });
+    await rpc.setPermission({
+      sessionId: created.id,
+      agentId: "main",
+      mode: "yolo",
+    });
 
     expect(records).toContainEqual({
-      event: 'yolo_toggle',
+      event: "yolo_toggle",
       sessionId: created.id,
       properties: {
-        client_id: 'web_test_client',
-        client_name: 'kimi-code-web',
-        client_version: '0.1.1',
-        ui_mode: 'web',
+        client_id: "web_test_client",
+        client_name: "kimi-code-web",
+        client_version: "0.1.1",
+        ui_mode: "web",
         enabled: true,
-        agent_id: 'main',
+        agent_id: "main",
       },
     });
   });
 
   async function findWireFile(root: string): Promise<string> {
-    const suffix = join('agents', 'main', 'wire.jsonl');
+    const suffix = join("agents", "main", "wire.jsonl");
     const entries = await readdir(root, { recursive: true });
-    const match = entries.find((entry) => entry.replaceAll('\\', '/').endsWith(suffix));
+    const match = entries.find((entry) =>
+      entry.replaceAll("\\", "/").endsWith(suffix),
+    );
     if (match === undefined) {
-      throw new Error('wire.jsonl not found under session home');
+      throw new Error("wire.jsonl not found under session home");
     }
     return join(root, match);
   }
@@ -587,7 +684,7 @@ max_context_size = 1000000
   async function createTestRpc(
     options: {
       readonly appVersion?: string;
-      readonly emitEvent?: (event: Parameters<SDKAPI['emitEvent']>[0]) => void;
+      readonly emitEvent?: (event: Parameters<SDKAPI["emitEvent"]>[0]) => void;
       readonly telemetry?: TelemetryClient;
     } = {},
   ) {
@@ -600,9 +697,9 @@ max_context_size = 1000000
     });
     return sdkRpc({
       emitEvent: options.emitEvent ?? vi.fn(),
-      requestApproval: vi.fn(async () => ({ decision: 'rejected' as const })),
+      requestApproval: vi.fn(async () => ({ decision: "rejected" as const })),
       requestQuestion: vi.fn(async () => null),
-      toolCall: vi.fn(async () => ({ output: '' })),
+      toolCall: vi.fn(async () => ({ output: "" })),
     });
   }
 });

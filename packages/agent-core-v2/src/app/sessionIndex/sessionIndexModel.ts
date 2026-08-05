@@ -15,11 +15,11 @@
  * the domain.
  */
 
-import type { SessionSummary } from './sessionIndex';
+import type { SessionSummary } from "./sessionIndex";
 
-export const SESSION_INDEX_MANIFEST = 'sessionIndex';
+export const SESSION_INDEX_MANIFEST = "sessionIndex";
 
-export const PARENT_INDEX_NAME = 'byParent';
+export const PARENT_INDEX_NAME = "byParent";
 
 export interface SessionWorkspaceCounts {
   readonly active: number;
@@ -48,12 +48,18 @@ export function recencyColumn(generation: number): string {
 }
 
 /** Attach the generation's recency field to a summary for storage. */
-export function withRecencyField(generation: number, summary: SessionSummary): SessionSummary {
+export function withRecencyField(
+  generation: number,
+  summary: SessionSummary,
+): SessionSummary {
   return { ...summary, [recencyColumn(generation)]: summary.updatedAt };
 }
 
 /** Remove the generation's recency field from a stored record. */
-export function stripRecencyField(generation: number, record: SessionSummary): SessionSummary {
+export function stripRecencyField(
+  generation: number,
+  record: SessionSummary,
+): SessionSummary {
   const key = recencyColumn(generation);
   if (!(key in record)) return record;
   const rest: Record<string, unknown> = { ...record };

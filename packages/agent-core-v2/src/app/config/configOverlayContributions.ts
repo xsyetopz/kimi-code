@@ -13,7 +13,7 @@
  * are available before any scope activation.
  */
 
-import type { ConfigEffectiveOverlay } from './config';
+import type { ConfigEffectiveOverlay } from "./config";
 
 const _overlays: ConfigEffectiveOverlay[] = [];
 

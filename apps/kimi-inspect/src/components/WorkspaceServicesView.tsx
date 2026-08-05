@@ -11,23 +11,23 @@
  * manual join needed.
  */
 
-import { IWorkspaceService } from '@moonshot-ai/agent-core-v2/app/workspace/workspace';
-import { useQuery } from '@tanstack/react-query';
-import { useCallback, useEffect, useState } from 'react';
+import { IWorkspaceService } from "@moonshot-ai/agent-core-v2/app/workspace/workspace";
+import { useQuery } from "@tanstack/react-query";
+import { useCallback, useEffect, useState } from "react";
 
-import { serviceByName } from '../channel';
-import { useConnection } from '../connection';
-import type { AnyService } from '../panels';
-import { ErrorLine } from '../ui';
-import { ScopePanelsScrollspy } from './ServicePanels';
-import { WorkspaceDirBrowser } from './WorkspaceDirBrowser';
+import { serviceByName } from "../channel";
+import { useConnection } from "../connection";
+import type { AnyService } from "../panels";
+import { ErrorLine } from "../ui";
+import { ScopePanelsScrollspy } from "./ServicePanels";
+import { WorkspaceDirBrowser } from "./WorkspaceDirBrowser";
 
 export function WorkspaceServicesView() {
   const { klient, baseUrl } = useConnection();
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
 
   const workspaces = useQuery({
-    queryKey: ['workspaces', klient.baseUrl],
+    queryKey: ["workspaces", klient.baseUrl],
     queryFn: () => klient.core(IWorkspaceService).list(),
   });
 
@@ -43,7 +43,10 @@ export function WorkspaceServicesView() {
     (name: string): AnyService | null =>
       workspaceId === null
         ? null
-        : (serviceByName<AnyService>(klient, name, { scope: 'workspace', workspaceId }) ?? null),
+        : (serviceByName<AnyService>(klient, name, {
+            scope: "workspace",
+            workspaceId,
+          }) ?? null),
     [klient, workspaceId],
   );
 

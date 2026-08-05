@@ -6,7 +6,7 @@
  * stay mechanical to write and audit.
  */
 
-import type { z } from 'zod';
+import type { z } from "zod";
 
 export interface ProcedureContract {
   /** Tuple schema over the engine method's positional args. */
@@ -34,11 +34,13 @@ export interface StreamingProcedureContract {
 export function isStreamingContract(
   contract: ProcedureContract | StreamingProcedureContract,
 ): contract is StreamingProcedureContract {
-  return 'streaming' in contract && contract.streaming === true;
+  return "streaming" in contract && contract.streaming === true;
 }
 
 /** method name → procedure */
-export type ServiceContract = Readonly<Record<string, ProcedureContract | StreamingProcedureContract>>;
+export type ServiceContract = Readonly<
+  Record<string, ProcedureContract | StreamingProcedureContract>
+>;
 
 /** service wire name (decorator id string) → its methods */
 export type KlientContract = Readonly<Record<string, ServiceContract>>;
@@ -53,15 +55,15 @@ export type KlientContract = Readonly<Record<string, ServiceContract>>;
  * - `emitter` — subscribe one service's `onDid*` property.
  */
 export type EventRegistration =
-  | { readonly kind: 'bus'; readonly type: string; readonly schema: z.ZodType }
+  | { readonly kind: "bus"; readonly type: string; readonly schema: z.ZodType }
   | {
-      readonly kind: 'stream';
+      readonly kind: "stream";
       readonly name: string;
       readonly type?: string;
       readonly schema: z.ZodType;
     }
   | {
-      readonly kind: 'emitter';
+      readonly kind: "emitter";
       readonly service: string;
       readonly event: string;
       readonly schema: z.ZodType;

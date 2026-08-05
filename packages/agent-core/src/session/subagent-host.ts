@@ -2,43 +2,40 @@ import {
   APIProviderRateLimitError,
   isProviderRateLimitError,
   type TokenUsage,
-} from '@moonshot-ai/kosong';
+} from "@moonshot-ai/kosong";
 
-import type { Agent } from '../agent';
-import type { PromptOrigin } from '../agent/context';
-import { ErrorCodes } from '../errors';
-import { DenyAllPermissionPolicy } from '../agent/permission/policies/deny-all';
-import { InMemoryAgentRecordPersistence } from '../agent/records';
-import { isAbortError } from '../loop/errors';
+import type { Agent } from "../agent";
+import type { PromptOrigin } from "../agent/context";
+import { ErrorCodes } from "../errors";
+import { DenyAllPermissionPolicy } from "../agent/permission/policies/deny-all";
+import { InMemoryAgentRecordPersistence } from "../agent/records";
+import { isAbortError } from "../loop/errors";
 import {
   prepareSystemPromptContext,
   type ResolvedAgentProfile,
-} from '../profile';
-import {
-  linkAbortSignal,
-  userCancellationReason,
-} from '../utils/abort';
-import { collectGitContext } from './git-context';
-import type { Session } from './index';
+} from "../profile";
+import { linkAbortSignal, userCancellationReason } from "../utils/abort";
+import { collectGitContext } from "./git-context";
+import type { Session } from "./index";
 import {
   resolveSubagentBinding,
   wrapSubagentModelError,
   type SubagentModelBinding,
   type SubagentModelChoice,
-} from './subagent-binding';
+} from "./subagent-binding";
 import {
   SubagentBatch,
   resolveSwarmMaxConcurrency,
   type SubagentResult,
   type SubagentSuspendedEvent,
   type QueuedSubagentTask,
-} from './subagent-batch';
-import SUMMARY_CONTINUATION_PROMPT from './summary-continuation.md?raw';
+} from "./subagent-batch";
+import SUMMARY_CONTINUATION_PROMPT from "./summary-continuation.md?raw";
 
 export const DEFAULT_SUBAGENT_TIMEOUT_MS = 2 * 60 * 60 * 1000;
-export const DEFAULT_SUBAGENT_TIMEOUT_DESCRIPTION = '2 hours';
+export const DEFAULT_SUBAGENT_TIMEOUT_DESCRIPTION = "2 hours";
 
-const SUBAGENT_TIMEOUT_ENV = 'KIMI_SUBAGENT_TIMEOUT_MS';
+const SUBAGENT_TIMEOUT_ENV = "KIMI_SUBAGENT_TIMEOUT_MS";
 
 /**
  * Resolve the effective subagent per-task timeout. Precedence:
@@ -63,15 +60,15 @@ export function resolveSubagentTimeoutMs(configMs?: number): number {
 export function formatSubagentTimeoutDescription(ms: number): string {
   if (ms % (60 * 60 * 1000) === 0) {
     const h = ms / (60 * 60 * 1000);
-    return `${h} hour${h === 1 ? '' : 's'}`;
+    return `${h} hour${h === 1 ? "" : "s"}`;
   }
   if (ms % (60 * 1000) === 0) {
     const m = ms / (60 * 1000);
-    return `${m} minute${m === 1 ? '' : 's'}`;
+    return `${m} minute${m === 1 ? "" : "s"}`;
   }
   if (ms % 1000 === 0) {
     const s = ms / 1000;
-    return `${s} second${s === 1 ? '' : 's'}`;
+    return `${s} second${s === 1 ? "" : "s"}`;
   }
   return `${ms} ms`;
 }
@@ -81,7 +78,7 @@ export type {
   QueuedSubagentTask,
   ResumeQueuedSubagentTask,
   SpawnQueuedSubagentTask,
-} from './subagent-batch';
+} from "./subagent-batch";
 
 /**
  * A subagent summary shorter than this many characters triggers one
@@ -92,10 +89,13 @@ const SUMMARY_MIN_LENGTH = 200;
 const SUMMARY_CONTINUATION_ATTEMPTS = 1;
 const HOOK_TEXT_PREVIEW_LENGTH = 500;
 const SUBAGENT_MAX_TOKENS_ERROR =
-  'Subagent turn failed before completing its final summary: reason=max_tokens';
+  "Subagent turn failed before completing its final summary: reason=max_tokens";
 const TOOL_CALL_DISABLED_MESSAGE =
-  'Tool calls are disabled for side questions. Answer with text only.';
-const SUBAGENT_PROMPT_ORIGIN: PromptOrigin = { kind: 'system_trigger', name: 'subagent' };
+  "Tool calls are disabled for side questions. Answer with text only.";
+const SUBAGENT_PROMPT_ORIGIN: PromptOrigin = {
+  kind: "system_trigger",
+  name: "subagent",
+};
 const SIDE_QUESTION_SYSTEM_REMINDER = `
 This is a side-channel conversation with the user. You should answer user questions directly based on what you already know.
 
@@ -169,19 +169,34 @@ export class SessionSubagentHost {
     const parent = await this.session.ensureAgentResumed(this.ownerAgentId);
     const profile = this.resolveProfile(parent, options.profileName);
     const { id, agent } = await this.session.createAgent(
-      { type: 'sub', generate: parent.rawGenerate },
+      { type: "sub", generate: parent.rawGenerate },
       { parentAgentId: this.ownerAgentId, swarmItem: options.swarmItem },
     );
-    const completion = this.runWithActiveChild(id, options, async (runOptions) => {
-      this.emitSubagentSpawned(parent, id, profile.name, runOptions);
-      try {
-        await this.configureChild(parent, agent, profile, options.modelChoice);
-        return await this.runPromptTurn(parent, id, agent, profile.name, runOptions);
-      } catch (error) {
-        this.emitSubagentFailed(parent, id, runOptions, error);
-        throw error;
-      }
-    });
+    const completion = this.runWithActiveChild(
+      id,
+      options,
+      async (runOptions) => {
+        this.emitSubagentSpawned(parent, id, profile.name, runOptions);
+        try {
+          await this.configureChild(
+            parent,
+            agent,
+            profile,
+            options.modelChoice,
+          );
+          return await this.runPromptTurn(
+            parent,
+            id,
+            agent,
+            profile.name,
+            runOptions,
+          );
+        } catch (error) {
+          this.emitSubagentFailed(parent, id, runOptions, error);
+          throw error;
+        }
+      },
+    );
     return {
       agentId: id,
       profileName: profile.name,
@@ -190,65 +205,105 @@ export class SessionSubagentHost {
     };
   }
 
-  async resume(agentId: string, options: RunSubagentOptions): Promise<SubagentHandle> {
+  async resume(
+    agentId: string,
+    options: RunSubagentOptions,
+  ): Promise<SubagentHandle> {
     options.signal.throwIfAborted();
-    const { parent, child, profileName } = await this.ensureIdleSubagent(agentId);
-    const completion = this.runWithActiveChild(agentId, options, async (runOptions) => {
-      this.emitSubagentSpawned(parent, agentId, profileName, runOptions);
-      try {
-        this.reInheritParentModel(parent, child);
-        return await this.runPromptTurn(parent, agentId, child, profileName, runOptions);
-      } catch (error) {
-        this.emitSubagentFailed(parent, agentId, runOptions, error);
-        throw error;
-      }
-    });
+    const { parent, child, profileName } =
+      await this.ensureIdleSubagent(agentId);
+    const completion = this.runWithActiveChild(
+      agentId,
+      options,
+      async (runOptions) => {
+        this.emitSubagentSpawned(parent, agentId, profileName, runOptions);
+        try {
+          this.reInheritParentModel(parent, child);
+          return await this.runPromptTurn(
+            parent,
+            agentId,
+            child,
+            profileName,
+            runOptions,
+          );
+        } catch (error) {
+          this.emitSubagentFailed(parent, agentId, runOptions, error);
+          throw error;
+        }
+      },
+    );
     return { agentId, profileName, resumed: true, completion };
   }
 
-  async retry(agentId: string, options: RunSubagentOptions): Promise<SubagentHandle> {
+  async retry(
+    agentId: string,
+    options: RunSubagentOptions,
+  ): Promise<SubagentHandle> {
     options.signal.throwIfAborted();
-    const { parent, child, profileName } = await this.ensureIdleSubagent(agentId);
-    const completion = this.runWithActiveChild(agentId, options, async (runOptions) => {
-      try {
-        runOptions.signal.throwIfAborted();
-        this.reInheritParentModel(parent, child);
-        this.emitSubagentStarted(parent, agentId);
-        const turnId = child.turn.retry('agent-host');
-        if (turnId === null) {
-          throw new Error(`Agent instance "${agentId}" could not start a retry turn`);
+    const { parent, child, profileName } =
+      await this.ensureIdleSubagent(agentId);
+    const completion = this.runWithActiveChild(
+      agentId,
+      options,
+      async (runOptions) => {
+        try {
+          runOptions.signal.throwIfAborted();
+          this.reInheritParentModel(parent, child);
+          this.emitSubagentStarted(parent, agentId);
+          const turnId = child.turn.retry("agent-host");
+          if (turnId === null) {
+            throw new Error(
+              `Agent instance "${agentId}" could not start a retry turn`,
+            );
+          }
+          this.observeFirstRequest(child, runOptions);
+          return await this.waitForChildCompletion(
+            parent,
+            agentId,
+            child,
+            profileName,
+            runOptions,
+          );
+        } catch (error) {
+          this.emitSubagentFailed(parent, agentId, runOptions, error);
+          throw error;
         }
-        this.observeFirstRequest(child, runOptions);
-        return await this.waitForChildCompletion(parent, agentId, child, profileName, runOptions);
-      } catch (error) {
-        this.emitSubagentFailed(parent, agentId, runOptions, error);
-        throw error;
-      }
-    });
+      },
+    );
     return { agentId, profileName, resumed: true, completion };
   }
 
   private async ensureIdleSubagent(
     agentId: string,
-  ): Promise<{ readonly parent: Agent; readonly child: Agent; readonly profileName: string }> {
+  ): Promise<{
+    readonly parent: Agent;
+    readonly child: Agent;
+    readonly profileName: string;
+  }> {
     const parent = await this.session.ensureAgentResumed(this.ownerAgentId);
     const metadata = this.session.metadata.agents[agentId];
-    if (metadata?.type !== 'sub') {
+    if (metadata?.type !== "sub") {
       throw new Error(`Agent instance "${agentId}" is not a subagent`);
     }
     if (metadata.parentAgentId !== this.ownerAgentId) {
-      throw new Error(`Agent instance "${agentId}" does not belong to this parent agent`);
+      throw new Error(
+        `Agent instance "${agentId}" does not belong to this parent agent`,
+      );
     }
     const child = await this.session.ensureAgentResumed(agentId);
     if (this.activeChildren.has(agentId) || child.turn.hasActiveTurn) {
-      throw new Error(`Agent instance "${agentId}" is already running and cannot run concurrently`);
+      throw new Error(
+        `Agent instance "${agentId}" is already running and cannot run concurrently`,
+      );
     }
 
-    const profileName = child.config.profileName ?? 'subagent';
+    const profileName = child.config.profileName ?? "subagent";
     return { parent, child, profileName };
   }
 
-  async runQueued<T>(tasks: readonly QueuedSubagentTask<T>[]): Promise<Array<SubagentResult<T>>> {
+  async runQueued<T>(
+    tasks: readonly QueuedSubagentTask<T>[],
+  ): Promise<Array<SubagentResult<T>>> {
     const maxConcurrency = resolveSwarmMaxConcurrency();
     return new SubagentBatch(this, tasks, { maxConcurrency }).run();
   }
@@ -256,7 +311,7 @@ export class SessionSubagentHost {
   suspended(event: SubagentSuspendedEvent): void {
     const parent = this.session.getReadyAgent?.(this.ownerAgentId);
     parent?.emitEvent({
-      type: 'subagent.suspended',
+      type: "subagent.suspended",
       subagentId: event.agentId,
       reason: event.reason,
     });
@@ -266,7 +321,7 @@ export class SessionSubagentHost {
     const parent = await this.session.ensureAgentResumed(this.ownerAgentId);
     const { id, agent: child } = await this.session.createAgent(
       {
-        type: 'sub',
+        type: "sub",
         generate: parent.rawGenerate,
         persistence: new InMemoryAgentRecordPersistence(),
       },
@@ -281,10 +336,12 @@ export class SessionSubagentHost {
     child.tools.copyLoopToolsFrom(parent.tools);
     child.context.useProjectedHistoryFrom(parent.context);
     child.context.appendSystemReminder(SIDE_QUESTION_SYSTEM_REMINDER.trim(), {
-      kind: 'system_trigger',
-      name: 'btw',
+      kind: "system_trigger",
+      name: "btw",
     });
-    child.permission.policies.unshift(new DenyAllPermissionPolicy(TOOL_CALL_DISABLED_MESSAGE));
+    child.permission.policies.unshift(
+      new DenyAllPermissionPolicy(TOOL_CALL_DISABLED_MESSAGE),
+    );
     return id;
   }
 
@@ -307,7 +364,10 @@ export class SessionSubagentHost {
 
   async getProfileName(agentId: string): Promise<string | undefined> {
     const metadata = this.session.metadata.agents[agentId];
-    if (metadata?.type !== 'sub' || metadata.parentAgentId !== this.ownerAgentId) {
+    if (
+      metadata?.type !== "sub" ||
+      metadata.parentAgentId !== this.ownerAgentId
+    ) {
       return undefined;
     }
     return (await this.session.ensureAgentResumed(agentId)).config.profileName;
@@ -315,13 +375,19 @@ export class SessionSubagentHost {
 
   getSwarmItem(agentId: string): string | undefined {
     const metadata = this.session.metadata.agents[agentId];
-    if (metadata?.type !== 'sub' || metadata.parentAgentId !== this.ownerAgentId) {
+    if (
+      metadata?.type !== "sub" ||
+      metadata.parentAgentId !== this.ownerAgentId
+    ) {
       return undefined;
     }
     return metadata.swarmItem;
   }
 
-  private resolveProfile(parent: Agent, profileName: string): ResolvedAgentProfile {
+  private resolveProfile(
+    parent: Agent,
+    profileName: string,
+  ): ResolvedAgentProfile {
     const profile = this.resolveDelegatableSubagents(
       parent.config.profileName,
       parent.config.subagentNames,
@@ -337,16 +403,23 @@ export class SessionSubagentHost {
    * or the default profile's when it declares none). Backs the `Agent` tool's
    * "Available agent types" description.
    */
-  delegatableSubagents(callerProfileName?: string): Record<string, ResolvedAgentProfile> {
-    const owner = this.getOwnerAgent?.() ?? this.session.getReadyAgent(this.ownerAgentId);
-    return this.resolveDelegatableSubagents(callerProfileName, owner?.config.subagentNames);
+  delegatableSubagents(
+    callerProfileName?: string,
+  ): Record<string, ResolvedAgentProfile> {
+    const owner =
+      this.getOwnerAgent?.() ?? this.session.getReadyAgent(this.ownerAgentId);
+    return this.resolveDelegatableSubagents(
+      callerProfileName,
+      owner?.config.subagentNames,
+    );
   }
 
   private resolveDelegatableSubagents(
     callerProfileName: string | undefined,
     persistedNames: readonly string[] | undefined,
   ): Record<string, ResolvedAgentProfile> {
-    const catalogProfiles = this.session.agentCatalog.delegatableSubagents(callerProfileName);
+    const catalogProfiles =
+      this.session.agentCatalog.delegatableSubagents(callerProfileName);
     if (persistedNames === undefined) return catalogProfiles;
 
     return Object.fromEntries(
@@ -383,22 +456,36 @@ export class SessionSubagentHost {
     options: RunSubagentOptions,
   ): Promise<SubagentCompletion> {
     options.signal.throwIfAborted();
-    await this.triggerSubagentStart(parent, profileName, options.prompt, options.signal);
+    await this.triggerSubagentStart(
+      parent,
+      profileName,
+      options.prompt,
+      options.signal,
+    );
     options.signal.throwIfAborted();
 
     let childPrompt = options.prompt;
-    if (profileName === 'explore') {
+    if (profileName === "explore") {
       const gitContext = await collectGitContext(child.kaos, child.config.cwd);
       if (gitContext) childPrompt = `${gitContext}\n\n${childPrompt}`;
     }
 
     this.emitSubagentStarted(parent, childId);
-    const turnId = child.turn.prompt([{ type: 'text', text: childPrompt }], SUBAGENT_PROMPT_ORIGIN);
+    const turnId = child.turn.prompt(
+      [{ type: "text", text: childPrompt }],
+      SUBAGENT_PROMPT_ORIGIN,
+    );
     if (turnId === null) {
       throw new Error(`Agent instance "${childId}" could not start a turn`);
     }
     this.observeFirstRequest(child, options);
-    return this.waitForChildCompletion(parent, childId, child, profileName, options);
+    return this.waitForChildCompletion(
+      parent,
+      childId,
+      child,
+      profileName,
+      options,
+    );
   }
 
   private async waitForChildCompletion(
@@ -420,13 +507,16 @@ export class SessionSubagentHost {
     while (remainingContinuations > 0 && result.length < SUMMARY_MIN_LENGTH) {
       remainingContinuations -= 1;
       options.signal.throwIfAborted();
-      child.turn.prompt([{ type: 'text', text: SUMMARY_CONTINUATION_PROMPT }], SUBAGENT_PROMPT_ORIGIN);
+      child.turn.prompt(
+        [{ type: "text", text: SUMMARY_CONTINUATION_PROMPT }],
+        SUBAGENT_PROMPT_ORIGIN,
+      );
       await runChildTurnToCompletion(child, options.signal);
       result = lastAssistantText(child);
     }
     const usage = child.usage.data().total;
     parent.emitEvent({
-      type: 'subagent.completed',
+      type: "subagent.completed",
       subagentId: childId,
       resultSummary: result,
       usage,
@@ -457,7 +547,12 @@ export class SessionSubagentHost {
     const subagentNames = Object.keys(
       this.session.agentCatalog.delegatableSubagents(profile.name),
     );
-    child.useProfile(profile, context, this.session.options.kimiHomeDir, subagentNames);
+    child.useProfile(
+      profile,
+      context,
+      this.session.options.kimiHomeDir,
+      subagentNames,
+    );
     child.tools.inheritUserTools(parent.tools);
   }
 
@@ -476,7 +571,10 @@ export class SessionSubagentHost {
     const binding = resolveSubagentBinding(
       this.session.kimiConfig,
       this.session.experimentalFlags,
-      { modelAlias: parent.config.modelAlias, thinkingEffort: parent.config.thinkingEffort },
+      {
+        modelAlias: parent.config.modelAlias,
+        thinkingEffort: parent.config.thinkingEffort,
+      },
       modelChoice ?? profile.modelPreference,
     );
     if (binding.modelAlias !== undefined) {
@@ -484,7 +582,11 @@ export class SessionSubagentHost {
       try {
         providerManager?.resolveProviderConfig(binding.modelAlias);
       } catch (error) {
-        throw wrapSubagentModelError(error, binding.modelAlias, parent.config.modelAlias);
+        throw wrapSubagentModelError(
+          error,
+          binding.modelAlias,
+          parent.config.modelAlias,
+        );
       }
     }
     return binding;
@@ -498,7 +600,7 @@ export class SessionSubagentHost {
    * invariant).
    */
   private reInheritParentModel(parent: Agent, child: Agent): void {
-    if (this.session.experimentalFlags.enabled('secondary-model')) return;
+    if (this.session.experimentalFlags.enabled("secondary-model")) return;
     child.config.update({ modelAlias: parent.config.modelAlias });
   }
 
@@ -512,7 +614,10 @@ export class SessionSubagentHost {
    * never reaches the parent. Bounded by the run's signal — the Agent
    * tool's per-run timeout / user-cancel envelope covers the drain too.
    */
-  private async drainChildBackgroundTasks(child: Agent, signal: AbortSignal): Promise<void> {
+  private async drainChildBackgroundTasks(
+    child: Agent,
+    signal: AbortSignal,
+  ): Promise<void> {
     for (;;) {
       signal.throwIfAborted();
       await this.suppressChildTaskNotifications(child);
@@ -551,7 +656,7 @@ export class SessionSubagentHost {
     prompt: string,
     signal: AbortSignal,
   ): Promise<void> {
-    await parent.hooks?.trigger('SubagentStart', {
+    await parent.hooks?.trigger("SubagentStart", {
       matcherValue: profileName,
       signal,
       inputData: {
@@ -561,8 +666,12 @@ export class SessionSubagentHost {
     });
   }
 
-  private triggerSubagentStop(parent: Agent, profileName: string, result: string): void {
-    void parent.hooks?.fireAndForgetTrigger('SubagentStop', {
+  private triggerSubagentStop(
+    parent: Agent,
+    profileName: string,
+    result: string,
+  ): void {
+    void parent.hooks?.fireAndForgetTrigger("SubagentStop", {
       matcherValue: profileName,
       inputData: {
         agentName: profileName,
@@ -571,10 +680,7 @@ export class SessionSubagentHost {
     });
   }
 
-  private observeFirstRequest(
-    child: Agent,
-    options: RunSubagentOptions,
-  ): void {
+  private observeFirstRequest(child: Agent, options: RunSubagentOptions): void {
     if (options.onReady === undefined) return;
     void child.turn
       .waitForTurnFirstRequest()
@@ -591,7 +697,7 @@ export class SessionSubagentHost {
     options: RunSubagentOptions,
   ): void {
     parent.emitEvent({
-      type: 'subagent.spawned',
+      type: "subagent.spawned",
       subagentId: childId,
       subagentName: profileName,
       parentToolCallId: options.parentToolCallId,
@@ -601,21 +707,18 @@ export class SessionSubagentHost {
       swarmIndex: options.swarmIndex,
       runInBackground: options.runInBackground,
     });
-    parent.telemetry.track('subagent_created', {
+    parent.telemetry.track("subagent_created", {
       agent_id: childId,
       parent_agent_id: this.ownerAgentId,
-      parent_tool_call_id: options.parentToolCallId ?? '',
+      parent_tool_call_id: options.parentToolCallId ?? "",
       subagent_name: profileName,
       run_in_background: options.runInBackground,
     });
   }
 
-  private emitSubagentStarted(
-    parent: Agent,
-    childId: string,
-  ): void {
+  private emitSubagentStarted(parent: Agent, childId: string): void {
     parent.emitEvent({
-      type: 'subagent.started',
+      type: "subagent.started",
       subagentId: childId,
     });
   }
@@ -628,19 +731,22 @@ export class SessionSubagentHost {
   ): void {
     if (shouldSuppressQueuedAttemptFailureEvent(options, error)) return;
     parent.emitEvent({
-      type: 'subagent.failed',
+      type: "subagent.failed",
       subagentId: childId,
       error: error instanceof Error ? error.message : String(error),
     });
   }
 }
 
-async function runChildTurnToCompletion(child: Agent, signal: AbortSignal): Promise<void> {
+async function runChildTurnToCompletion(
+  child: Agent,
+  signal: AbortSignal,
+): Promise<void> {
   const completion = await child.turn.waitForCurrentTurn(signal);
   const turnEnded = completion.event;
-  if (turnEnded.reason !== 'completed') {
+  if (turnEnded.reason !== "completed") {
     if (turnEnded.error?.code === ErrorCodes.PROVIDER_FILTERED) {
-      throw new Error('Subagent turn blocked by provider safety policy');
+      throw new Error("Subagent turn blocked by provider safety policy");
     }
     if (turnEnded.error?.code === ErrorCodes.PROVIDER_RATE_LIMIT) {
       throw providerRateLimitErrorFromPayload(turnEnded.error);
@@ -651,7 +757,7 @@ async function runChildTurnToCompletion(child: Agent, signal: AbortSignal): Prom
         : `[${turnEnded.error.code}] ${turnEnded.error.message}`,
     );
   }
-  if (completion.stopReason === 'max_tokens') {
+  if (completion.stopReason === "max_tokens") {
     throw new Error(`${SUBAGENT_MAX_TOKENS_ERROR}.`);
   }
 }
@@ -661,20 +767,22 @@ function providerRateLimitErrorFromPayload(error: {
   readonly details?: Record<string, unknown>;
 }): APIProviderRateLimitError {
   const requestId =
-    typeof error.details?.['requestId'] === 'string' ? error.details['requestId'] : null;
+    typeof error.details?.["requestId"] === "string"
+      ? error.details["requestId"]
+      : null;
   return new APIProviderRateLimitError(error.message, requestId);
 }
 
 function lastAssistantText(agent: Agent): string {
   for (const message of [...agent.context.history].toReversed()) {
-    if (message.role !== 'assistant') continue;
+    if (message.role !== "assistant") continue;
     const text = message.content
-      .filter((part) => part.type === 'text')
+      .filter((part) => part.type === "text")
       .map((part) => part.text)
-      .join('');
+      .join("");
     if (text.trim().length > 0) return text.trim();
   }
-  return '';
+  return "";
 }
 
 function shouldSuppressQueuedAttemptFailureEvent(

@@ -1,12 +1,12 @@
-import { generate } from '#/generate';
-import type { GenerateCallbacks, GenerateResult } from '#/generate';
-import type { Message, StreamedMessagePart, ToolCall } from '#/message';
-import type { ChatProvider, FinishReason, GenerateOptions } from '#/provider';
-import type { ToolResult, Toolset } from './simple-toolset';
-import type { TokenUsage } from '#/usage';
+import { generate } from "#/generate";
+import type { GenerateCallbacks, GenerateResult } from "#/generate";
+import type { Message, StreamedMessagePart, ToolCall } from "#/message";
+import type { ChatProvider, FinishReason, GenerateOptions } from "#/provider";
+import type { ToolResult, Toolset } from "./simple-toolset";
+import type { TokenUsage } from "#/usage";
 
-export type { GenerateResult } from '#/generate';
-export { generate } from '#/generate';
+export type { GenerateResult } from "#/generate";
+export { generate } from "#/generate";
 export interface StepCallbacks {
   onMessagePart?: (part: StreamedMessagePart) => void | Promise<void>;
   /** Sync-only callback fired when a tool result resolves. */
@@ -85,7 +85,9 @@ export async function step(
 
     // Normalise to a Promise regardless of whether handle() returned sync.
     const promise: Promise<ToolResult> =
-      handleResult instanceof Promise ? handleResult : Promise.resolve(handleResult);
+      handleResult instanceof Promise
+        ? handleResult
+        : Promise.resolve(handleResult);
 
     // When the promise resolves, fire the onToolResult callback.
     const tracked = promise.then((result) => {
@@ -144,7 +146,9 @@ export async function step(
     },
   };
 }
-async function cleanupPromises(promises: Map<string, Promise<ToolResult>>): Promise<void> {
+async function cleanupPromises(
+  promises: Map<string, Promise<ToolResult>>,
+): Promise<void> {
   // Await all, swallowing errors — they've already been reported or will
   // be reported via the original rejection.
   const values = [...promises.values()];

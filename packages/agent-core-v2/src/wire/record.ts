@@ -7,11 +7,11 @@
  * This module owns only pure encoding and decoding.
  */
 
-import type { Op } from '#/wire/op';
+import type { Op } from "#/wire/op";
 
-import { WIRE_PROTOCOL_VERSION } from './migration/migration';
+import { WIRE_PROTOCOL_VERSION } from "./migration/migration";
 
-export const AGENT_WIRE_RECORD_KEY = 'wire.jsonl';
+export const AGENT_WIRE_RECORD_KEY = "wire.jsonl";
 
 export interface WireRecord {
   readonly type: string;
@@ -20,7 +20,7 @@ export interface WireRecord {
 }
 
 export interface WireMetadataRecord extends WireRecord {
-  readonly type: 'metadata';
+  readonly type: "metadata";
   readonly protocol_version: string;
   readonly created_at: number;
 }
@@ -28,41 +28,43 @@ export interface WireMetadataRecord extends WireRecord {
 export function isWireRecord(record: unknown): record is WireRecord {
   return (
     record !== null &&
-    typeof record === 'object' &&
+    typeof record === "object" &&
     !Array.isArray(record) &&
-    typeof (record as { type?: unknown }).type === 'string'
+    typeof (record as { type?: unknown }).type === "string"
   );
 }
 
 export function createWireMetadataRecord(now = Date.now()): WireMetadataRecord {
   return {
-    type: 'metadata',
+    type: "metadata",
     protocol_version: WIRE_PROTOCOL_VERSION,
     created_at: now,
   };
 }
 
-export function isWireMetadataRecord(record: WireRecord): record is WireMetadataRecord {
+export function isWireMetadataRecord(
+  record: WireRecord,
+): record is WireMetadataRecord {
   return (
-    record.type === 'metadata' &&
-    typeof record['protocol_version'] === 'string' &&
-    typeof record['created_at'] === 'number'
+    record.type === "metadata" &&
+    typeof record["protocol_version"] === "string" &&
+    typeof record["created_at"] === "number"
   );
 }
 
 export function opToWireRecord(op: Op, now = Date.now()): WireRecord {
   const payload = op.payload;
   const record: Record<string, unknown> =
-    payload !== null && typeof payload === 'object' && !Array.isArray(payload)
+    payload !== null && typeof payload === "object" && !Array.isArray(payload)
       ? { type: op.type, ...(payload as Record<string, unknown>) }
       : { type: op.type, payload };
-  if (record['time'] === undefined) record['time'] = now;
+  if (record["time"] === undefined) record["time"] = now;
   return record as WireRecord;
 }
 
 export function wireRecordToPayload(record: WireRecord): unknown {
   const { type: _type, time: _time, ...payload } = record;
-  return Object.keys(payload).length === 1 && 'payload' in payload
-    ? payload['payload']
+  return Object.keys(payload).length === 1 && "payload" in payload
+    ? payload["payload"]
     : payload;
 }

@@ -3,22 +3,22 @@
  * linking, and deadline abort signals.
  */
 
-export function abortError(message = 'Aborted'): Error {
+export function abortError(message = "Aborted"): Error {
   const error = new Error(message);
-  error.name = 'AbortError';
+  error.name = "AbortError";
   return error;
 }
 
 export function isAbortError(error: unknown): error is Error {
-  return error instanceof Error && error.name === 'AbortError';
+  return error instanceof Error && error.name === "AbortError";
 }
 
 export class UserCancellationError extends Error {
   readonly userCancelled = true;
 
   constructor() {
-    super('Aborted by the user');
-    this.name = 'AbortError';
+    super("Aborted by the user");
+    this.name = "AbortError";
   }
 }
 
@@ -26,24 +26,32 @@ export function userCancellationReason(): UserCancellationError {
   return new UserCancellationError();
 }
 
-export function isUserCancellation(value: unknown): value is UserCancellationError {
+export function isUserCancellation(
+  value: unknown,
+): value is UserCancellationError {
   return value instanceof UserCancellationError;
 }
 
-export function abortable<T>(promise: Promise<T>, signal: AbortSignal): Promise<T> {
+export function abortable<T>(
+  promise: Promise<T>,
+  signal: AbortSignal,
+): Promise<T> {
   if (signal.aborted) return Promise.reject(abortReason(signal));
   return new Promise<T>((resolve, reject) => {
     const onAbort = () => {
       reject(abortReason(signal));
     };
-    signal.addEventListener('abort', onAbort, { once: true });
+    signal.addEventListener("abort", onAbort, { once: true });
     promise.then(resolve, reject).finally(() => {
-      signal.removeEventListener('abort', onAbort);
+      signal.removeEventListener("abort", onAbort);
     });
   });
 }
 
-export function linkAbortSignal(source: AbortSignal, target: AbortController): () => void {
+export function linkAbortSignal(
+  source: AbortSignal,
+  target: AbortController,
+): () => void {
   const onAbort = () => {
     target.abort(source.reason);
   };
@@ -51,9 +59,9 @@ export function linkAbortSignal(source: AbortSignal, target: AbortController): (
     onAbort();
     return () => {};
   }
-  source.addEventListener('abort', onAbort, { once: true });
+  source.addEventListener("abort", onAbort, { once: true });
   return () => {
-    source.removeEventListener('abort', onAbort);
+    source.removeEventListener("abort", onAbort);
   };
 }
 
@@ -65,7 +73,10 @@ function abortReason(signal: AbortSignal): Error {
 }
 
 function isDefaultAbortReason(reason: Error): boolean {
-  return reason.name === 'AbortError' && reason.message === 'This operation was aborted';
+  return (
+    reason.name === "AbortError" &&
+    reason.message === "This operation was aborted"
+  );
 }
 
 export interface DeadlineAbortSignal {

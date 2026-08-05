@@ -10,9 +10,12 @@
  * WRITE path (external world → kosong → config).
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
 
 export const providerRefreshChangeSchema = z.object({
   provider_id: z.string().min(1),
@@ -26,7 +29,9 @@ export const providerRefreshFailureSchema = z.object({
   provider: z.string().min(1),
   reason: z.string().min(1),
 });
-export type ProviderRefreshFailure = z.infer<typeof providerRefreshFailureSchema>;
+export type ProviderRefreshFailure = z.infer<
+  typeof providerRefreshFailureSchema
+>;
 
 export const refreshProviderModelsResponseSchema = z.object({
   changed: z.array(providerRefreshChangeSchema),
@@ -37,7 +42,7 @@ export type RefreshProviderModelsResponse = z.infer<
   typeof refreshProviderModelsResponseSchema
 >;
 
-export type RefreshProviderModelsScope = 'all' | 'oauth';
+export type RefreshProviderModelsScope = "all" | "oauth";
 
 export interface RefreshProviderModelsOptions {
   readonly scope?: RefreshProviderModelsScope;
@@ -53,4 +58,4 @@ export interface IProviderDiscoveryService {
 }
 
 export const IProviderDiscoveryService: ServiceIdentifier<IProviderDiscoveryService> =
-  createDecorator<IProviderDiscoveryService>('providerDiscovery');
+  createDecorator<IProviderDiscoveryService>("providerDiscovery");

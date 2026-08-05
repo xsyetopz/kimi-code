@@ -16,6 +16,6 @@ export interface CronTask {
   readonly tags?: Readonly<Record<string, string>>;
 }
 
-export type CronTaskInit = Omit<CronTask, 'id' | 'createdAt'>;
+export type CronTaskInit = Omit<CronTask, "id" | "createdAt">;
 
-export const CRON_SESSION_TAG = 'sessionId';
+export const CRON_SESSION_TAG = "sessionId";

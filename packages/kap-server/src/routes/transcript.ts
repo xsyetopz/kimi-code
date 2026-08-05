@@ -44,7 +44,7 @@
  * the `plan.revision` reference records carry no tool-call linkage.
  */
 
-import { MAIN_AGENT_ID, type Scope } from '@moonshot-ai/agent-core-v2';
+import { MAIN_AGENT_ID, type Scope } from "@moonshot-ai/agent-core-v2";
 import {
   isPlainAgentId,
   paginateTurns,
@@ -58,18 +58,20 @@ import {
   type TranscriptItem,
   type TurnOrigin,
   type TurnState,
-} from '@moonshot-ai/transcript';
-import { z } from 'zod';
+} from "@moonshot-ai/transcript";
+import { z } from "zod";
 
-import { errEnvelope, okEnvelope } from '../envelope';
-import { ErrorCode } from '../protocol/error-codes';
-import { defineRoute } from '../middleware/defineRoute';
-import type { TranscriptService } from '../services/transcript/transcriptService';
+import { errEnvelope, okEnvelope } from "../envelope";
+import { ErrorCode } from "../protocol/error-codes";
+import { defineRoute } from "../middleware/defineRoute";
+import type { TranscriptService } from "../services/transcript/transcriptService";
 
 interface TranscriptRouteHost {
   get(
     path: string,
-    options: { preHandler: unknown[]; schema?: Record<string, unknown> } | undefined,
+    options:
+      | { preHandler: unknown[]; schema?: Record<string, unknown> }
+      | undefined,
     handler: (
       req: { id: string; query: unknown; params: unknown },
       reply: { send(payload: unknown): unknown },
@@ -96,23 +98,25 @@ const transcriptQueryCoercion = z
   .superRefine((value, ctx) => {
     if (value.before_turn !== undefined && value.after_turn !== undefined) {
       ctx.addIssue({
-        code: 'custom',
-        message: 'before_turn and after_turn are mutually exclusive',
-        path: ['before_turn'],
+        code: "custom",
+        message: "before_turn and after_turn are mutually exclusive",
+        path: ["before_turn"],
         params: { code: ErrorCode.VALIDATION_FAILED },
       });
     }
     if (!isPlainAgentId(value.agent_id)) {
       ctx.addIssue({
-        code: 'custom',
-        message: 'agent_id must be a plain agent id (no path separators)',
-        path: ['agent_id'],
+        code: "custom",
+        message: "agent_id must be a plain agent id (no path separators)",
+        path: ["agent_id"],
         params: { code: ErrorCode.VALIDATION_FAILED },
       });
     }
   });
 
-const detailsSchema = z.array(z.object({ path: z.string(), message: z.string() }));
+const detailsSchema = z.array(
+  z.object({ path: z.string(), message: z.string() }),
+);
 
 /**
  * `GET .../transcript/ops` query: `since_seq` is the caller's op-batch
@@ -126,9 +130,9 @@ const transcriptOpsQueryCoercion = z
   .superRefine((value, ctx) => {
     if (!isPlainAgentId(value.agent_id)) {
       ctx.addIssue({
-        code: 'custom',
-        message: 'agent_id must be a plain agent id (no path separators)',
-        path: ['agent_id'],
+        code: "custom",
+        message: "agent_id must be a plain agent id (no path separators)",
+        path: ["agent_id"],
         params: { code: ErrorCode.VALIDATION_FAILED },
       });
     }
@@ -149,9 +153,9 @@ const userMessagesQueryCoercion = z
   .superRefine((value, ctx) => {
     if (value.agent_id !== undefined && !isPlainAgentId(value.agent_id)) {
       ctx.addIssue({
-        code: 'custom',
-        message: 'agent_id must be a plain agent id (no path separators)',
-        path: ['agent_id'],
+        code: "custom",
+        message: "agent_id must be a plain agent id (no path separators)",
+        path: ["agent_id"],
         params: { code: ErrorCode.VALIDATION_FAILED },
       });
     }
@@ -171,9 +175,9 @@ const planQueryCoercion = z
   .superRefine((value, ctx) => {
     if (!isPlainAgentId(value.agent_id)) {
       ctx.addIssue({
-        code: 'custom',
-        message: 'agent_id must be a plain agent id (no path separators)',
-        path: ['agent_id'],
+        code: "custom",
+        message: "agent_id must be a plain agent id (no path separators)",
+        path: ["agent_id"],
         params: { code: ErrorCode.VALIDATION_FAILED },
       });
     }
@@ -184,13 +188,16 @@ export interface TranscriptRouteDeps {
   readonly transcriptService: TranscriptService;
 }
 
-export function registerTranscriptRoutes(app: TranscriptRouteHost, deps: TranscriptRouteDeps): void {
+export function registerTranscriptRoutes(
+  app: TranscriptRouteHost,
+  deps: TranscriptRouteDeps,
+): void {
   const { transcriptService } = deps;
 
   const route = defineRoute(
     {
-      method: 'GET',
-      path: '/sessions/{session_id}/transcript',
+      method: "GET",
+      path: "/sessions/{session_id}/transcript",
       params: sessionIdParamSchema,
       querystring: transcriptQueryCoercion,
       success: { data: transcriptResponseSchema },
@@ -199,8 +206,8 @@ export function registerTranscriptRoutes(app: TranscriptRouteHost, deps: Transcr
         [ErrorCode.SESSION_NOT_FOUND]: {},
       },
       description:
-        'Turn-granular session transcript page: live sessions read the in-memory store (wire-records backfill awaited per requested agent), cold sessions rebuild the requested agent from the persisted wire records',
-      tags: ['transcript'],
+        "Turn-granular session transcript page: live sessions read the in-memory store (wire-records backfill awaited per requested agent), cold sessions rebuild the requested agent from the persisted wire records",
+      tags: ["transcript"],
     },
     async (req, reply) => {
       const { session_id } = req.params;
@@ -234,7 +241,10 @@ export function registerTranscriptRoutes(app: TranscriptRouteHost, deps: Transcr
               agents: store.agents(),
               pending_interactions: transcript.listPendingInteractions(),
               // Watermark: this state includes every op batch with seq <= N.
-              seq: transcriptService.getSeqWatermark(session_id, query.agent_id),
+              seq: transcriptService.getSeqWatermark(
+                session_id,
+                query.agent_id,
+              ),
             },
             req.id,
           ),
@@ -243,7 +253,10 @@ export function registerTranscriptRoutes(app: TranscriptRouteHost, deps: Transcr
       }
 
       // Cold session — rebuild the requested agent from its wire records.
-      const snapshot = await transcriptService.readColdSnapshot(session_id, query.agent_id);
+      const snapshot = await transcriptService.readColdSnapshot(
+        session_id,
+        query.agent_id,
+      );
       if (snapshot === undefined) {
         sendSessionNotFound(reply, req.id, session_id);
         return;
@@ -255,11 +268,16 @@ export function registerTranscriptRoutes(app: TranscriptRouteHost, deps: Transcr
       const roster = (await transcriptService.readColdRoster(session_id)) ?? [];
       if (
         !roster.some((d) => d.agentId === query.agent_id) &&
-        (snapshot.items.length > 0 || snapshot.tasks.length > 0 || query.agent_id === MAIN_AGENT_ID)
+        (snapshot.items.length > 0 ||
+          snapshot.tasks.length > 0 ||
+          query.agent_id === MAIN_AGENT_ID)
       ) {
         roster.push({
           agentId: query.agent_id,
-          type: query.agent_id === MAIN_AGENT_ID ? ('main' as const) : ('sub' as const),
+          type:
+            query.agent_id === MAIN_AGENT_ID
+              ? ("main" as const)
+              : ("sub" as const),
         });
       }
       reply.send(
@@ -281,12 +299,16 @@ export function registerTranscriptRoutes(app: TranscriptRouteHost, deps: Transcr
       );
     },
   );
-  app.get(route.path, route.options, route.handler as Parameters<TranscriptRouteHost['get']>[2]);
+  app.get(
+    route.path,
+    route.options,
+    route.handler as Parameters<TranscriptRouteHost["get"]>[2],
+  );
 
   const opsRoute = defineRoute(
     {
-      method: 'GET',
-      path: '/sessions/{session_id}/transcript/ops',
+      method: "GET",
+      path: "/sessions/{session_id}/transcript/ops",
       params: sessionIdParamSchema,
       querystring: transcriptOpsQueryCoercion,
       success: { data: transcriptOpsCatchupResponseSchema },
@@ -295,14 +317,18 @@ export function registerTranscriptRoutes(app: TranscriptRouteHost, deps: Transcr
         [ErrorCode.SESSION_NOT_FOUND]: {},
       },
       description:
-        'Point-to-point transcript catch-up: journaled op batches with seq > since_seq for one agent, oldest first. complete:false means the session is not live or the journal no longer reaches back to since_seq — the caller must fall back to a full transcript refresh',
-      tags: ['transcript'],
+        "Point-to-point transcript catch-up: journaled op batches with seq > since_seq for one agent, oldest first. complete:false means the session is not live or the journal no longer reaches back to since_seq — the caller must fall back to a full transcript refresh",
+      tags: ["transcript"],
     },
     async (req, reply) => {
       const { session_id } = req.params;
       const query = req.query;
 
-      const catchup = transcriptService.getOpsSince(session_id, query.agent_id, query.since_seq);
+      const catchup = transcriptService.getOpsSince(
+        session_id,
+        query.agent_id,
+        query.since_seq,
+      );
       if (catchup === undefined) {
         // Not live in this process: a truly unknown session is a 40401 (same
         // mapping as the transcript route); a known-but-cold session has no
@@ -314,7 +340,12 @@ export function registerTranscriptRoutes(app: TranscriptRouteHost, deps: Transcr
         }
         reply.send(
           okEnvelope(
-            { agent_id: query.agent_id, batches: [], latest_seq: 0, complete: false },
+            {
+              agent_id: query.agent_id,
+              batches: [],
+              latest_seq: 0,
+              complete: false,
+            },
             req.id,
           ),
         );
@@ -333,12 +364,16 @@ export function registerTranscriptRoutes(app: TranscriptRouteHost, deps: Transcr
       );
     },
   );
-  app.get(opsRoute.path, opsRoute.options, opsRoute.handler as Parameters<TranscriptRouteHost['get']>[2]);
+  app.get(
+    opsRoute.path,
+    opsRoute.options,
+    opsRoute.handler as Parameters<TranscriptRouteHost["get"]>[2],
+  );
 
   const userMessagesRoute = defineRoute(
     {
-      method: 'GET',
-      path: '/sessions/{session_id}/transcript/user-messages',
+      method: "GET",
+      path: "/sessions/{session_id}/transcript/user-messages",
       params: sessionIdParamSchema,
       querystring: userMessagesQueryCoercion,
       success: { data: transcriptUserMessagesResponseSchema },
@@ -348,7 +383,7 @@ export function registerTranscriptRoutes(app: TranscriptRouteHost, deps: Transcr
       },
       description:
         'All turn-opening inputs ("user messages") of a session, grouped per agent: every turn with a defined prompt (real user text, user-slash skill/plugin commands, cron prompts — distinguish via origin). agent_id optional: present reads one agent, absent reads every rostered agent. Live sessions answer from the in-memory store (history backfill awaited per agent), cold sessions rebuild from the persisted wire records. Unpaginated; attachment entities referenced by the messages ride along (metadata only)',
-      tags: ['transcript'],
+      tags: ["transcript"],
     },
     async (req, reply) => {
       const { session_id } = req.params;
@@ -361,7 +396,9 @@ export function registerTranscriptRoutes(app: TranscriptRouteHost, deps: Transcr
       if (store !== undefined) {
         await transcriptService.whenReady(session_id);
         const agentIds =
-          agent_id !== undefined ? [agent_id] : store.agents().map((d) => d.agentId);
+          agent_id !== undefined
+            ? [agent_id]
+            : store.agents().map((d) => d.agentId);
         const agents = [];
         for (const agentId of agentIds) {
           await transcriptService.ensureAgentHistory(session_id, agentId);
@@ -369,7 +406,9 @@ export function registerTranscriptRoutes(app: TranscriptRouteHost, deps: Transcr
           const attachments = transcript.getAttachments();
           agents.push({
             agent_id: agentId,
-            ...projectUserMessages(transcript.getItems(), (id) => attachments.get(id)),
+            ...projectUserMessages(transcript.getItems(), (id) =>
+              attachments.get(id),
+            ),
           });
         }
         reply.send(okEnvelope({ agents }, req.id));
@@ -385,18 +424,24 @@ export function registerTranscriptRoutes(app: TranscriptRouteHost, deps: Transcr
         sendSessionNotFound(reply, req.id, session_id);
         return;
       }
-      const agentIds = agent_id !== undefined ? [agent_id] : roster.map((d) => d.agentId);
+      const agentIds =
+        agent_id !== undefined ? [agent_id] : roster.map((d) => d.agentId);
       if (agent_id === undefined && !agentIds.includes(MAIN_AGENT_ID)) {
         agentIds.unshift(MAIN_AGENT_ID);
       }
       const agents = [];
       for (const agentId of agentIds) {
-        const snapshot = await transcriptService.readColdSnapshot(session_id, agentId);
+        const snapshot = await transcriptService.readColdSnapshot(
+          session_id,
+          agentId,
+        );
         if (snapshot === undefined) {
           sendSessionNotFound(reply, req.id, session_id);
           return;
         }
-        const byId = new Map(snapshot.attachments.map((a) => [a.attachmentId, a]));
+        const byId = new Map(
+          snapshot.attachments.map((a) => [a.attachmentId, a]),
+        );
         agents.push({
           agent_id: agentId,
           ...projectUserMessages(snapshot.items, (id) => byId.get(id)),
@@ -408,13 +453,13 @@ export function registerTranscriptRoutes(app: TranscriptRouteHost, deps: Transcr
   app.get(
     userMessagesRoute.path,
     userMessagesRoute.options,
-    userMessagesRoute.handler as Parameters<TranscriptRouteHost['get']>[2],
+    userMessagesRoute.handler as Parameters<TranscriptRouteHost["get"]>[2],
   );
 
   const planRoute = defineRoute(
     {
-      method: 'GET',
-      path: '/sessions/{session_id}/transcript/plan',
+      method: "GET",
+      path: "/sessions/{session_id}/transcript/plan",
       params: sessionIdParamSchema,
       querystring: planQueryCoercion,
       success: { data: transcriptPlanResponseSchema },
@@ -424,8 +469,8 @@ export function registerTranscriptRoutes(app: TranscriptRouteHost, deps: Transcr
         [ErrorCode.TOOL_CALL_NOT_FOUND]: {},
       },
       description:
-        'Plan information of an agent\'s ExitPlanMode tool calls: the reviewed plan content, plan file path, offered options, and the review outcome, in timeline order. agent_id required; tool_call_id optional — present narrows the read to that one call (unknown id or non-ExitPlanMode call → 40416), absent lists every call with recoverable plan content. Content is projected from the linked approval interaction (interactive reviews, live or cold), the live tool frame display (auto mode), or the tool result output text (cold rebuilds without an interaction). Live sessions read the in-memory store (history backfill awaited), cold sessions rebuild the agent from the persisted wire records',
-      tags: ['transcript'],
+        "Plan information of an agent's ExitPlanMode tool calls: the reviewed plan content, plan file path, offered options, and the review outcome, in timeline order. agent_id required; tool_call_id optional — present narrows the read to that one call (unknown id or non-ExitPlanMode call → 40416), absent lists every call with recoverable plan content. Content is projected from the linked approval interaction (interactive reviews, live or cold), the live tool frame display (auto mode), or the tool result output text (cold rebuilds without an interaction). Live sessions read the in-memory store (history backfill awaited), cold sessions rebuild the agent from the persisted wire records",
+      tags: ["transcript"],
     },
     async (req, reply) => {
       const { session_id } = req.params;
@@ -453,12 +498,19 @@ export function registerTranscriptRoutes(app: TranscriptRouteHost, deps: Transcr
       // Cold session — rebuild the agent from its wire records (undefined
       // means the session itself is unknown, same mapping as the paged
       // route).
-      const snapshot = await transcriptService.readColdSnapshot(session_id, agent_id);
+      const snapshot = await transcriptService.readColdSnapshot(
+        session_id,
+        agent_id,
+      );
       if (snapshot === undefined) {
         sendSessionNotFound(reply, req.id, session_id);
         return;
       }
-      const plans = projectPlans(snapshot.items, snapshot.interactions, tool_call_id);
+      const plans = projectPlans(
+        snapshot.items,
+        snapshot.interactions,
+        tool_call_id,
+      );
       if (tool_call_id !== undefined && plans.length === 0) {
         sendToolCallNotFound(reply, req.id, tool_call_id);
         return;
@@ -466,7 +518,11 @@ export function registerTranscriptRoutes(app: TranscriptRouteHost, deps: Transcr
       reply.send(okEnvelope({ agent_id, plans }, req.id));
     },
   );
-  app.get(planRoute.path, planRoute.options, planRoute.handler as Parameters<TranscriptRouteHost['get']>[2]);
+  app.get(
+    planRoute.path,
+    planRoute.options,
+    planRoute.handler as Parameters<TranscriptRouteHost["get"]>[2],
+  );
 }
 
 /**
@@ -495,7 +551,7 @@ function projectUserMessages(
   const messages: UserMessageEntry[] = [];
   const attachments = new Map<string, TranscriptAttachment>();
   for (const item of items) {
-    if (item.kind !== 'turn' || item.prompt === undefined) continue;
+    if (item.kind !== "turn" || item.prompt === undefined) continue;
     messages.push({
       turn_id: item.turnId,
       ordinal: item.ordinal,
@@ -519,7 +575,11 @@ function sendSessionNotFound(
   sessionId: string,
 ): void {
   reply.send(
-    errEnvelope(ErrorCode.SESSION_NOT_FOUND, `session not found: ${sessionId}`, requestId),
+    errEnvelope(
+      ErrorCode.SESSION_NOT_FOUND,
+      `session not found: ${sessionId}`,
+      requestId,
+    ),
   );
 }
 
@@ -543,7 +603,7 @@ function sendToolCallNotFound(
 
 /** The review round-trip of one ExitPlanMode call, from its approval interaction. */
 interface PlanReviewInfo {
-  state: 'pending' | 'approved' | 'rejected' | 'cancelled';
+  state: "pending" | "approved" | "rejected" | "cancelled";
   selected_option?: string;
   feedback?: string;
 }
@@ -552,7 +612,7 @@ interface PlanReviewInfo {
 interface PlanInfo {
   tool_call_id: string;
   turn_id: string;
-  source: 'interaction' | 'display' | 'output';
+  source: "interaction" | "display" | "output";
   plan: string;
   path?: string;
   options?: { label: string; description?: string }[];
@@ -587,11 +647,12 @@ function projectPlans(
 ): PlanInfo[] {
   const plans: PlanInfo[] = [];
   for (const item of items) {
-    if (item.kind !== 'turn') continue;
+    if (item.kind !== "turn") continue;
     for (const step of item.steps) {
       for (const frame of step.frames) {
-        if (frame.kind !== 'tool' || frame.name !== 'ExitPlanMode') continue;
-        if (toolCallId !== undefined && frame.toolCallId !== toolCallId) continue;
+        if (frame.kind !== "tool" || frame.name !== "ExitPlanMode") continue;
+        if (toolCallId !== undefined && frame.toolCallId !== toolCallId)
+          continue;
         const info = projectPlanFrame(item.turnId, frame, interactions);
         if (info !== undefined) plans.push(info);
       }
@@ -608,74 +669,120 @@ function projectPlanFrame(
 ): PlanInfo | undefined {
   const toolCallId = frame.toolCallId;
   const interaction = interactions.find(
-    (i) => i.interactionKind === 'approval' && i.toolCallId === toolCallId,
+    (i) => i.interactionKind === "approval" && i.toolCallId === toolCallId,
   );
   const review = readPlanReview(interaction);
 
   const requestDisplay =
-    interaction !== undefined && interaction.request !== null && typeof interaction.request === 'object'
+    interaction !== undefined &&
+    interaction.request !== null &&
+    typeof interaction.request === "object"
       ? (interaction.request as { display?: unknown }).display
       : undefined;
   const fromInteraction = readPlanReviewDisplay(requestDisplay);
   if (fromInteraction !== undefined) {
-    return { tool_call_id: toolCallId, turn_id: turnId, source: 'interaction', ...fromInteraction, review };
+    return {
+      tool_call_id: toolCallId,
+      turn_id: turnId,
+      source: "interaction",
+      ...fromInteraction,
+      review,
+    };
   }
   const fromDisplay = readPlanReviewDisplay(frame.display);
   if (fromDisplay !== undefined) {
-    return { tool_call_id: toolCallId, turn_id: turnId, source: 'display', ...fromDisplay, review };
+    return {
+      tool_call_id: toolCallId,
+      turn_id: turnId,
+      source: "display",
+      ...fromDisplay,
+      review,
+    };
   }
   const fromOutput = parsePlanFromOutput(frame.output);
   if (fromOutput !== undefined) {
-    return { tool_call_id: toolCallId, turn_id: turnId, source: 'output', ...fromOutput, review };
+    return {
+      tool_call_id: toolCallId,
+      turn_id: turnId,
+      source: "output",
+      ...fromOutput,
+      review,
+    };
   }
   return undefined;
 }
 
 /** Map an approval interaction onto the review info; `undefined` when there is none. */
-function readPlanReview(interaction: TranscriptInteraction | undefined): PlanReviewInfo | undefined {
+function readPlanReview(
+  interaction: TranscriptInteraction | undefined,
+): PlanReviewInfo | undefined {
   if (interaction === undefined) return undefined;
   const state = interaction.state;
-  if (state !== 'pending' && state !== 'approved' && state !== 'rejected' && state !== 'cancelled') {
+  if (
+    state !== "pending" &&
+    state !== "approved" &&
+    state !== "rejected" &&
+    state !== "cancelled"
+  ) {
     return undefined;
   }
   const response =
-    interaction.response !== null && typeof interaction.response === 'object'
-      ? (interaction.response as { selectedLabel?: unknown; feedback?: unknown })
+    interaction.response !== null && typeof interaction.response === "object"
+      ? (interaction.response as {
+          selectedLabel?: unknown;
+          feedback?: unknown;
+        })
       : undefined;
   const selected =
-    typeof response?.selectedLabel === 'string' && response.selectedLabel.length > 0
+    typeof response?.selectedLabel === "string" &&
+    response.selectedLabel.length > 0
       ? response.selectedLabel
       : undefined;
   const feedback =
-    typeof response?.feedback === 'string' && response.feedback.length > 0
+    typeof response?.feedback === "string" && response.feedback.length > 0
       ? response.feedback
       : undefined;
   return { state, selected_option: selected, feedback };
 }
 
 /** Read a `plan_review` display payload (open content) into plan info. */
-function readPlanReviewDisplay(display: unknown): PlanReviewDisplayInfo | undefined {
-  if (display === null || typeof display !== 'object') return undefined;
-  const d = display as { kind?: unknown; plan?: unknown; path?: unknown; options?: unknown };
-  if (d.kind !== 'plan_review' || typeof d.plan !== 'string' || d.plan.trim().length === 0) {
+function readPlanReviewDisplay(
+  display: unknown,
+): PlanReviewDisplayInfo | undefined {
+  if (display === null || typeof display !== "object") return undefined;
+  const d = display as {
+    kind?: unknown;
+    plan?: unknown;
+    path?: unknown;
+    options?: unknown;
+  };
+  if (
+    d.kind !== "plan_review" ||
+    typeof d.plan !== "string" ||
+    d.plan.trim().length === 0
+  ) {
     return undefined;
   }
   const options = Array.isArray(d.options)
     ? d.options
-        .map((option: unknown): { label: string; description?: string } | null => {
-          if (option === null || typeof option !== 'object') return null;
-          const o = option as { label?: unknown; description?: unknown };
-          if (typeof o.label !== 'string' || o.label.length === 0) return null;
-          return {
-            label: o.label,
-            description: typeof o.description === 'string' ? o.description : undefined,
-          };
-        })
+        .map(
+          (option: unknown): { label: string; description?: string } | null => {
+            if (option === null || typeof option !== "object") return null;
+            const o = option as { label?: unknown; description?: unknown };
+            if (typeof o.label !== "string" || o.label.length === 0)
+              return null;
+            return {
+              label: o.label,
+              description:
+                typeof o.description === "string" ? o.description : undefined,
+            };
+          },
+        )
         .filter((o): o is { label: string; description?: string } => o !== null)
     : undefined;
   return {
     plan: d.plan,
-    path: typeof d.path === 'string' ? d.path : undefined,
+    path: typeof d.path === "string" ? d.path : undefined,
     options: options !== undefined && options.length > 0 ? options : undefined,
   };
 }
@@ -684,17 +791,22 @@ function readPlanReviewDisplay(display: unknown): PlanReviewDisplayInfo | undefi
 // in `agent-core-v2/src/agent/tools/plan/exit-plan-mode/exitPlanModeTool.ts` — the approved
 // tool result embeds the full plan body after one of these markers, and the
 // plan file path on a `Plan saved to: <path>` line.
-const PLAN_SAVED_TO_MARKER = 'Plan saved to: ';
-const PLAN_BODY_MARKERS = ['## Approved Plan:\n', '## Plan (auto-approved, not user-reviewed):\n'];
+const PLAN_SAVED_TO_MARKER = "Plan saved to: ";
+const PLAN_BODY_MARKERS = [
+  "## Approved Plan:\n",
+  "## Plan (auto-approved, not user-reviewed):\n",
+];
 
 /**
  * Recover plan info from the ExitPlanMode tool result output text — the cold
  * rebuild path keeps the tool result but not the ephemeral review display.
  */
-function parsePlanFromOutput(output: unknown): { plan: string; path?: string } | undefined {
-  if (typeof output !== 'string') return undefined;
+function parsePlanFromOutput(
+  output: unknown,
+): { plan: string; path?: string } | undefined {
+  if (typeof output !== "string") return undefined;
   let path: string | undefined;
-  for (const line of output.split('\n')) {
+  for (const line of output.split("\n")) {
     if (line.startsWith(PLAN_SAVED_TO_MARKER)) {
       path = line.slice(PLAN_SAVED_TO_MARKER.length).trim() || undefined;
       break;

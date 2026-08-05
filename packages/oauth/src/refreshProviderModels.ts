@@ -3,7 +3,7 @@ import {
   fetchCustomRegistry,
   removeCustomRegistryProvider,
   type CustomRegistrySource,
-} from './custom-registry';
+} from "./custom-registry";
 import {
   applyManagedApiKeyProviderModels,
   applyManagedKimiCodeConfig,
@@ -14,16 +14,16 @@ import {
   type ManagedKimiConfigShape,
   type ManagedKimiModelAlias,
   type ManagedKimiOAuthRef,
-} from './managed-kimi-code';
-import { isManagedKimiCodeBaseUrl } from './managed-usage';
+} from "./managed-kimi-code";
+import { isManagedKimiCodeBaseUrl } from "./managed-usage";
 import {
   applyOpenPlatformConfig,
   fetchOpenPlatformModels,
   filterModelsByPrefix,
   getOpenPlatformById,
   isOpenPlatformId,
-} from './open-platform';
-import { isRecord } from './utils';
+} from "./open-platform";
+import { isRecord } from "./utils";
 
 /**
  * Host capabilities the refresh orchestrator needs. Intentionally typed against
@@ -35,7 +35,10 @@ export interface RefreshProviderHost {
   getConfig(): Promise<ManagedKimiConfigShape>;
   removeProvider(providerId: string): Promise<ManagedKimiConfigShape>;
   setConfig(patch: ManagedKimiConfigShape): Promise<ManagedKimiConfigShape>;
-  resolveOAuthToken(providerName: string, oauthRef?: ManagedKimiOAuthRef): Promise<string>;
+  resolveOAuthToken(
+    providerName: string,
+    oauthRef?: ManagedKimiOAuthRef,
+  ): Promise<string>;
   /**
    * Product User-Agent sent on custom-registry (api.json) fetches, e.g.
    * `kimi-code-cli/1.2.3`. When omitted the fetch falls back to the runtime
@@ -57,10 +60,13 @@ export interface RefreshResult {
   readonly changed: readonly ProviderChange[];
   /** Providers whose model list stayed identical after refresh. */
   readonly unchanged: readonly string[];
-  readonly failed: ReadonlyArray<{ readonly provider: string; readonly reason: string }>;
+  readonly failed: ReadonlyArray<{
+    readonly provider: string;
+    readonly reason: string;
+  }>;
 }
 
-export type RefreshProviderScope = 'all' | 'oauth';
+export type RefreshProviderScope = "all" | "oauth";
 
 export interface RefreshProviderOptions {
   readonly scope?: RefreshProviderScope;
@@ -87,12 +93,12 @@ interface ProviderView {
  * wins, with `env.KIMI_API_KEY` as the documented config-file fallback.
  */
 function resolveProviderApiKey(provider: ProviderView): string | undefined {
-  if (typeof provider.apiKey === 'string' && provider.apiKey.length > 0) {
+  if (typeof provider.apiKey === "string" && provider.apiKey.length > 0) {
     return provider.apiKey;
   }
   if (isRecord(provider.env)) {
-    const fromEnv = provider.env['KIMI_API_KEY'];
-    if (typeof fromEnv === 'string' && fromEnv.length > 0) return fromEnv;
+    const fromEnv = provider.env["KIMI_API_KEY"];
+    if (typeof fromEnv === "string" && fromEnv.length > 0) return fromEnv;
   }
   return undefined;
 }
@@ -115,23 +121,27 @@ function readModel(
   return model as ManagedKimiModelAlias;
 }
 
-function readCustomRegistrySource(provider: ProviderView): CustomRegistrySource | undefined {
+function readCustomRegistrySource(
+  provider: ProviderView,
+): CustomRegistrySource | undefined {
   const source = provider.source;
-  if (typeof source !== 'object' || source === null) return undefined;
+  if (typeof source !== "object" || source === null) return undefined;
   const candidate = source as Record<string, unknown>;
-  if (candidate['kind'] !== 'apiJson') return undefined;
-  const url = candidate['url'];
-  const apiKey = candidate['apiKey'];
-  if (typeof url !== 'string' || url.length === 0) return undefined;
-  if (typeof apiKey !== 'string') return undefined;
-  return { kind: 'apiJson', url, apiKey };
+  if (candidate["kind"] !== "apiJson") return undefined;
+  const url = candidate["url"];
+  const apiKey = candidate["apiKey"];
+  if (typeof url !== "string" || url.length === 0) return undefined;
+  if (typeof apiKey !== "string") return undefined;
+  return { kind: "apiJson", url, apiKey };
 }
 
 function customRegistrySourceKey(source: CustomRegistrySource): string {
   return JSON.stringify([source.url]);
 }
 
-function customRegistrySourceCredentialKey(source: CustomRegistrySource): string {
+function customRegistrySourceCredentialKey(
+  source: CustomRegistrySource,
+): string {
   return JSON.stringify([source.url, source.apiKey]);
 }
 
@@ -154,8 +164,8 @@ async function fetchCustomRegistryFromSources(
     }
   }
   if (lastError instanceof Error) throw lastError;
-  if (typeof lastError === 'string') throw new Error(lastError);
-  throw new Error('No custom registry sources configured.');
+  if (typeof lastError === "string") throw new Error(lastError);
+  throw new Error("No custom registry sources configured.");
 }
 
 function collectModelIdsForAliases(
@@ -172,7 +182,10 @@ function collectModelIdsForAliases(
   return ids;
 }
 
-function providerAliasKeys(config: ManagedKimiConfigShape, providerId: string): Set<string> {
+function providerAliasKeys(
+  config: ManagedKimiConfigShape,
+  providerId: string,
+): Set<string> {
   const keys = new Set<string>();
   for (const [alias, raw] of Object.entries(config.models ?? {})) {
     if ((raw as ManagedKimiModelAlias).provider === providerId) keys.add(alias);
@@ -195,7 +208,10 @@ function generatedProviderAliasKeys(
   return keys;
 }
 
-function computeChanges(oldIds: Set<string>, newIds: Set<string>): { added: number; removed: number } {
+function computeChanges(
+  oldIds: Set<string>,
+  newIds: Set<string>,
+): { added: number; removed: number } {
   let added = 0;
   for (const id of newIds) {
     if (!oldIds.has(id)) added++;
@@ -230,7 +246,10 @@ function providerModelSnapshot(
       alias,
       model: {
         ...model,
-        capabilities: model.capabilities === undefined ? undefined : model.capabilities.toSorted(),
+        capabilities:
+          model.capabilities === undefined
+            ? undefined
+            : model.capabilities.toSorted(),
       },
     });
   }
@@ -250,7 +269,10 @@ function providerModelsEqual(
   );
 }
 
-function providerConfigSnapshot(config: ManagedKimiConfigShape, providerId: string): string {
+function providerConfigSnapshot(
+  config: ManagedKimiConfigShape,
+  providerId: string,
+): string {
   return JSON.stringify(config.providers[providerId] ?? null);
 }
 
@@ -259,7 +281,10 @@ function providerConfigEqual(
   nextConfig: ManagedKimiConfigShape,
   providerId: string,
 ): boolean {
-  return providerConfigSnapshot(config, providerId) === providerConfigSnapshot(nextConfig, providerId);
+  return (
+    providerConfigSnapshot(config, providerId) ===
+    providerConfigSnapshot(nextConfig, providerId)
+  );
 }
 
 function providerRefreshAliasKeys(
@@ -281,7 +306,8 @@ function preserveUserProviderAliases(
   const preserved: Record<string, ManagedKimiModelAlias> = {};
   for (const [alias, raw] of Object.entries(config.models ?? {})) {
     const model = raw as ManagedKimiModelAlias;
-    if (model.provider !== providerId || refreshedAliasKeys.has(alias)) continue;
+    if (model.provider !== providerId || refreshedAliasKeys.has(alias))
+      continue;
     preserved[alias] = structuredClone(model);
   }
   return preserved;
@@ -303,12 +329,18 @@ function restoreDefaultSelection(
   defaultModel: string | undefined,
   defaultEnabled: boolean | undefined,
 ): void {
-  if (defaultModel === undefined || readModel(config, defaultModel) === undefined) return;
+  if (
+    defaultModel === undefined ||
+    readModel(config, defaultModel) === undefined
+  )
+    return;
   config.defaultModel = defaultModel;
   // A refresh may have just learned that the default model cannot disable
   // thinking — never restore a stale thinking-off selection onto it.
   const capabilities = readModel(config, defaultModel)?.capabilities ?? [];
-  const enabled = capabilities.includes('always_thinking') ? true : defaultEnabled;
+  const enabled = capabilities.includes("always_thinking")
+    ? true
+    : defaultEnabled;
   if (enabled !== undefined) {
     config.thinking = { ...config.thinking, enabled };
   }
@@ -319,7 +351,10 @@ function restoreDefaultSelection(
 // `setConfig` deep-merge cannot clear a key, so the matching `removeProvider`
 // call handles disk cleanup while this drops the dangling reference in memory.
 function clampDanglingDefault(config: ManagedKimiConfigShape): void {
-  if (config.defaultModel !== undefined && readModel(config, config.defaultModel) === undefined) {
+  if (
+    config.defaultModel !== undefined &&
+    readModel(config, config.defaultModel) === undefined
+  ) {
     config.defaultModel = undefined;
     config.thinking = undefined;
   }
@@ -340,7 +375,7 @@ function pickDefaultModel(
   models: Array<{ id: string }>,
 ): string {
   const firstModel = models[0];
-  if (firstModel === undefined) return '';
+  if (firstModel === undefined) return "";
 
   const existingDefault = config.defaultModel;
   if (existingDefault !== undefined) {
@@ -381,7 +416,7 @@ export async function refreshProviderModels(
   const changed: ProviderChange[] = [];
   const unchanged: string[] = [];
   const failed: Array<{ provider: string; reason: string }> = [];
-  const scope = options.scope ?? 'all';
+  const scope = options.scope ?? "all";
   const targetId = options.providerId;
 
   let config = await host.getConfig();
@@ -390,11 +425,12 @@ export async function refreshProviderModels(
   // 1. Managed Kimi Code (OAuth)
   // ---------------------------------------------------------------------------
   const managedProvider = readProvider(config, KIMI_CODE_PROVIDER_NAME);
-  const managedWanted = targetId === undefined || targetId === KIMI_CODE_PROVIDER_NAME;
+  const managedWanted =
+    targetId === undefined || targetId === KIMI_CODE_PROVIDER_NAME;
   if (
     managedWanted &&
     managedProvider !== undefined &&
-    managedProvider.type === 'kimi' &&
+    managedProvider.type === "kimi" &&
     managedProvider.oauth !== undefined
   ) {
     try {
@@ -402,7 +438,10 @@ export async function refreshProviderModels(
         configuredBaseUrl: managedProvider.baseUrl,
         configuredOAuthRef: managedProvider.oauth,
       });
-      const accessToken = await host.resolveOAuthToken(KIMI_CODE_PROVIDER_NAME, auth.oauthRef);
+      const accessToken = await host.resolveOAuthToken(
+        KIMI_CODE_PROVIDER_NAME,
+        auth.oauthRef,
+      );
       const models = await fetchManagedKimiCodeModels({
         accessToken,
         baseUrl: auth.baseUrl,
@@ -424,13 +463,28 @@ export async function refreshProviderModels(
         );
         restoreProviderAliases(
           next,
-          preserveUserProviderAliases(config, KIMI_CODE_PROVIDER_NAME, refreshedAliasKeys),
+          preserveUserProviderAliases(
+            config,
+            KIMI_CODE_PROVIDER_NAME,
+            refreshedAliasKeys,
+          ),
         );
-        restoreDefaultSelection(next, config.defaultModel, config.thinking?.enabled);
+        restoreDefaultSelection(
+          next,
+          config.defaultModel,
+          config.thinking?.enabled,
+        );
         clampDanglingDefault(next);
         clearDefaultThinkingWhenDefaultRemoved(next, config.defaultModel);
 
-        if (providerModelsEqual(config, next, KIMI_CODE_PROVIDER_NAME, refreshedAliasKeys)) {
+        if (
+          providerModelsEqual(
+            config,
+            next,
+            KIMI_CODE_PROVIDER_NAME,
+            refreshedAliasKeys,
+          )
+        ) {
           unchanged.push(KIMI_CODE_PROVIDER_NAME);
         } else {
           const { added, removed } = computeChanges(
@@ -446,7 +500,7 @@ export async function refreshProviderModels(
           });
           changed.push({
             providerId: KIMI_CODE_PROVIDER_NAME,
-            providerName: 'Kimi Code',
+            providerName: "Kimi Code",
             added,
             removed,
           });
@@ -464,14 +518,16 @@ export async function refreshProviderModels(
   // must fall through: branch 2 no-ops on a non-open-platform id, branch 2.5
   // handles a hand-written `managed:kimi-code` that carries an API key instead
   // of an oauth ref, and branch 3 no-ops when no registry group contains it.
-  if (scope === 'oauth') {
+  if (scope === "oauth") {
     return { changed, unchanged, failed };
   }
 
   // ---------------------------------------------------------------------------
   // 2. Open Platforms (moonshot-cn, moonshot-ai, …)
   // ---------------------------------------------------------------------------
-  const openPlatformIds = Object.keys(config.providers).filter((id) => isOpenPlatformId(id));
+  const openPlatformIds = Object.keys(config.providers).filter((id) =>
+    isOpenPlatformId(id),
+  );
   for (const providerId of openPlatformIds) {
     if (targetId !== undefined && targetId !== providerId) continue;
     const platform = getOpenPlatformById(providerId);
@@ -480,7 +536,7 @@ export async function refreshProviderModels(
     const providerConfig = readProvider(config, providerId);
     if (providerConfig === undefined) continue;
     const apiKey = providerConfig.apiKey;
-    if (typeof apiKey !== 'string' || apiKey.length === 0) continue;
+    if (typeof apiKey !== "string" || apiKey.length === 0) continue;
 
     try {
       let models = await fetchOpenPlatformModels(platform, apiKey);
@@ -504,8 +560,15 @@ export async function refreshProviderModels(
         providerId,
         `${providerId}/`,
       );
-      restoreProviderAliases(next, preserveUserProviderAliases(config, providerId, refreshedAliasKeys));
-      restoreDefaultSelection(next, config.defaultModel, config.thinking?.enabled);
+      restoreProviderAliases(
+        next,
+        preserveUserProviderAliases(config, providerId, refreshedAliasKeys),
+      );
+      restoreDefaultSelection(
+        next,
+        config.defaultModel,
+        config.thinking?.enabled,
+      );
       clampDanglingDefault(next);
       clearDefaultThinkingWhenDefaultRemoved(next, config.defaultModel);
 
@@ -551,7 +614,7 @@ export async function refreshProviderModels(
     if (targetId !== undefined && targetId !== providerId) continue;
     const provider = readProvider(config, providerId);
     if (provider === undefined) continue;
-    if (provider.type !== 'kimi') continue;
+    if (provider.type !== "kimi") continue;
     if (provider.oauth !== undefined) continue;
     if (readCustomRegistrySource(provider) !== undefined) continue;
     if (!isManagedKimiCodeBaseUrl(provider.baseUrl)) continue;
@@ -562,7 +625,7 @@ export async function refreshProviderModels(
       const models = await fetchManagedKimiCodeModels({
         accessToken: apiKey,
         baseUrl: provider.baseUrl,
-        credentialKind: 'apiKey',
+        credentialKind: "apiKey",
       });
       if (models.length === 0) continue;
 
@@ -570,15 +633,26 @@ export async function refreshProviderModels(
       // `kimi-code/` alias prefix so the two shapes merge cleanly if the user
       // later logs in via OAuth; ordinary providers use their own id.
       const aliasPrefix =
-        providerId === KIMI_CODE_PROVIDER_NAME ? `${KIMI_CODE_PLATFORM_ID}/` : `${providerId}/`;
+        providerId === KIMI_CODE_PROVIDER_NAME
+          ? `${KIMI_CODE_PLATFORM_ID}/`
+          : `${providerId}/`;
       const next = structuredClone(config);
       applyManagedApiKeyProviderModels(next, providerId, models, aliasPrefix);
-      const refreshedAliasKeys = providerRefreshAliasKeys(config, next, providerId, aliasPrefix);
+      const refreshedAliasKeys = providerRefreshAliasKeys(
+        config,
+        next,
+        providerId,
+        aliasPrefix,
+      );
       restoreProviderAliases(
         next,
         preserveUserProviderAliases(config, providerId, refreshedAliasKeys),
       );
-      restoreDefaultSelection(next, config.defaultModel, config.thinking?.enabled);
+      restoreDefaultSelection(
+        next,
+        config.defaultModel,
+        config.thinking?.enabled,
+      );
       clampDanglingDefault(next);
       clearDefaultThinkingWhenDefaultRemoved(next, config.defaultModel);
 
@@ -598,7 +672,7 @@ export async function refreshProviderModels(
           // The v1 `removeProvider` RPC clears `defaultProvider` when it points
           // at this provider; the clone still holds the original value, so
           // write it back — a refresh must not silently drop the fallback.
-          defaultProvider: next['defaultProvider'],
+          defaultProvider: next["defaultProvider"],
         });
         changed.push({
           providerId,
@@ -657,7 +731,10 @@ export async function refreshProviderModels(
     // are left untouched).
     if (targetId !== undefined && !providerIds.includes(targetId)) continue;
     try {
-      const { entries, source } = await fetchCustomRegistryFromSources(sources, host.userAgent);
+      const { entries, source } = await fetchCustomRegistryFromSources(
+        sources,
+        host.userAgent,
+      );
       // Build the whole batch on one clone so that several changed providers
       // from the same source do not overwrite each other's aliases, and so the
       // config we compare is exactly the config we persist.
@@ -685,7 +762,10 @@ export async function refreshProviderModels(
         if (targetId !== undefined && providerId !== targetId) continue;
         const entry = remoteEntriesByProviderId.get(providerId);
         if (entry === undefined) {
-          const oldIds = collectModelIdsForAliases(config, providerAliasKeys(config, providerId));
+          const oldIds = collectModelIdsForAliases(
+            config,
+            providerAliasKeys(config, providerId),
+          );
           removeCustomRegistryProvider(next, providerId);
           changedProviders.push({
             providerId,
@@ -699,9 +779,17 @@ export async function refreshProviderModels(
 
         const existed = config.providers[providerId] !== undefined;
         applyCustomRegistryProvider(next, entry, source);
-        const refreshedAliasKeys = providerRefreshAliasKeys(config, next, providerId, `${providerId}/`);
+        const refreshedAliasKeys = providerRefreshAliasKeys(
+          config,
+          next,
+          providerId,
+          `${providerId}/`,
+        );
         if (existed) {
-          restoreProviderAliases(next, preserveUserProviderAliases(config, providerId, refreshedAliasKeys));
+          restoreProviderAliases(
+            next,
+            preserveUserProviderAliases(config, providerId, refreshedAliasKeys),
+          );
         }
 
         if (
@@ -710,7 +798,10 @@ export async function refreshProviderModels(
           providerConfigEqual(config, next, providerId)
         ) {
           unchanged.push(providerId);
-        } else if (existed && providerModelsEqual(config, next, providerId, refreshedAliasKeys)) {
+        } else if (
+          existed &&
+          providerModelsEqual(config, next, providerId, refreshedAliasKeys)
+        ) {
           unchanged.push(providerId);
           providersToRemoveBeforeSet.add(providerId);
           hasUnreportedConfigChange = true;
@@ -730,7 +821,11 @@ export async function refreshProviderModels(
       }
 
       if (changedProviders.length > 0 || hasUnreportedConfigChange) {
-        restoreDefaultSelection(next, config.defaultModel, config.thinking?.enabled);
+        restoreDefaultSelection(
+          next,
+          config.defaultModel,
+          config.thinking?.enabled,
+        );
         clampDanglingDefault(next);
         clearDefaultThinkingWhenDefaultRemoved(next, config.defaultModel);
         for (const providerId of providersToRemoveBeforeSet) {

@@ -5,13 +5,13 @@ import {
   truncateToWidth,
   wrapTextWithAnsi,
   type Focusable,
-} from '@moonshot-ai/pi-tui';
+} from "@moonshot-ai/pi-tui";
 
-import type { ThinkingEffort } from '@moonshot-ai/kimi-code-sdk';
+import type { ThinkingEffort } from "@moonshot-ai/kimi-code-sdk";
 
-import { currentTheme } from '#/tui/theme';
+import { currentTheme } from "#/tui/theme";
 
-import { effortLabel } from './model-selector';
+import { effortLabel } from "./model-selector";
 
 export interface EffortSelectorOptions {
   readonly title?: string;
@@ -59,10 +59,16 @@ export class EffortSelectorComponent extends Container implements Focusable {
       return;
     }
     if (matchesKey(data, Key.right)) {
-      this.activeIndex = Math.min(this.opts.efforts.length - 1, this.activeIndex + 1);
+      this.activeIndex = Math.min(
+        this.opts.efforts.length - 1,
+        this.activeIndex + 1,
+      );
       return;
     }
-    if (matchesKey(data, Key.alt('s')) && this.opts.onSessionOnlySelect !== undefined) {
+    if (
+      matchesKey(data, Key.alt("s")) &&
+      this.opts.onSessionOnlySelect !== undefined
+    ) {
       this.opts.onSessionOnlySelect(this.opts.efforts[this.activeIndex]!);
       return;
     }
@@ -73,32 +79,39 @@ export class EffortSelectorComponent extends Container implements Focusable {
   }
 
   override render(width: number): string[] {
-    const hintParts = ['←→ switch', 'Enter select'];
-    if (this.opts.onSessionOnlySelect !== undefined) hintParts.push('Alt+S session-only');
-    hintParts.push('Esc cancel');
+    const hintParts = ["←→ switch", "Enter select"];
+    if (this.opts.onSessionOnlySelect !== undefined)
+      hintParts.push("Alt+S session-only");
+    hintParts.push("Esc cancel");
 
     const lines: string[] = [
-      currentTheme.fg('primary', '─'.repeat(width)),
-      currentTheme.boldFg('primary', ` ${this.opts.title ?? 'Select thinking effort'}`),
-      currentTheme.fg('textMuted', ` ${hintParts.join(' · ')}`),
+      currentTheme.fg("primary", "─".repeat(width)),
+      currentTheme.boldFg(
+        "primary",
+        ` ${this.opts.title ?? "Select thinking effort"}`,
+      ),
+      currentTheme.fg("textMuted", ` ${hintParts.join(" · ")}`),
     ];
     if (this.opts.warning !== undefined) {
-      for (const line of wrapTextWithAnsi(this.opts.warning, Math.max(1, width - 1))) {
-        lines.push(currentTheme.fg('warning', ` ${line}`));
+      for (const line of wrapTextWithAnsi(
+        this.opts.warning,
+        Math.max(1, width - 1),
+      )) {
+        lines.push(currentTheme.fg("warning", ` ${line}`));
       }
     }
-    lines.push('');
+    lines.push("");
 
     const segments = this.opts.efforts.map((effort, index) => {
       const label = effortLabel(effort);
       return index === this.activeIndex
-        ? currentTheme.boldFg('primary', `[ ${label} ]`)
-        : currentTheme.fg('text', `  ${label}  `);
+        ? currentTheme.boldFg("primary", `[ ${label} ]`)
+        : currentTheme.fg("text", `  ${label}  `);
     });
-    lines.push(`  ${segments.join('  ')}`);
+    lines.push(`  ${segments.join("  ")}`);
 
-    lines.push('');
-    lines.push(currentTheme.fg('primary', '─'.repeat(width)));
+    lines.push("");
+    lines.push(currentTheme.fg("primary", "─".repeat(width)));
     return lines.map((line) => truncateToWidth(line, width));
   }
 }

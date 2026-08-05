@@ -82,7 +82,8 @@ export class OpTracker {
 
   /** Release one enter(). Resolves every idle waiter when the count hits 0. */
   leave(): void {
-    if (this.count <= 0) throw new Error('OpTracker: leave() without a matching enter()');
+    if (this.count <= 0)
+      throw new Error("OpTracker: leave() without a matching enter()");
     this.count--;
     if (this.count === 0) {
       const waiters = this.idleWaiters;

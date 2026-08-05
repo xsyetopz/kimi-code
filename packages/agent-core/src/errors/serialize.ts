@@ -5,10 +5,10 @@ import {
   APIStatusError,
   APITimeoutError,
   ChatProviderError,
-} from '@moonshot-ai/kosong';
+} from "@moonshot-ai/kosong";
 
-import { KimiError } from './classes';
-import { ErrorCodes, KIMI_ERROR_INFO, type KimiErrorCode } from './codes';
+import { KimiError } from "./classes";
+import { ErrorCodes, KIMI_ERROR_INFO, type KimiErrorCode } from "./codes";
 
 /**
  * Wire-safe payload of a Kimi error.
@@ -42,7 +42,10 @@ export function isKimiError(error: unknown): error is KimiError {
 export function makeErrorPayload(
   code: KimiErrorCode,
   message: string,
-  options?: { readonly details?: Record<string, unknown>; readonly name?: string },
+  options?: {
+    readonly details?: Record<string, unknown>;
+    readonly name?: string;
+  },
 ): KimiErrorPayload {
   return {
     code,
@@ -106,13 +109,14 @@ export function toKimiErrorPayload(error: unknown): KimiErrorPayload {
       code: ErrorCodes.PROVIDER_CONNECTION_ERROR,
       message: error.message,
       name: error.name,
-      retryable: KIMI_ERROR_INFO[ErrorCodes.PROVIDER_CONNECTION_ERROR].retryable,
+      retryable:
+        KIMI_ERROR_INFO[ErrorCodes.PROVIDER_CONNECTION_ERROR].retryable,
     };
   }
 
   if (error instanceof APIEmptyResponseError) {
     const code =
-      error.finishReason === 'filtered'
+      error.finishReason === "filtered"
         ? ErrorCodes.PROVIDER_FILTERED
         : ErrorCodes.PROVIDER_API_ERROR;
     return {
@@ -164,8 +168,9 @@ export function toKimiErrorPayload(error: unknown): KimiErrorPayload {
 function sanitizeStatusErrorMessage(message: string): string {
   const titleMatch = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(message);
   const extracted = titleMatch?.[1]?.trim();
-  const normalized = extracted !== undefined && extracted.length > 0 ? extracted : message;
-  return normalized.replaceAll('\r', '');
+  const normalized =
+    extracted !== undefined && extracted.length > 0 ? extracted : message;
+  return normalized.replaceAll("\r", "");
 }
 
 /**

@@ -7,8 +7,7 @@
  *   - callers decide whether to drain results in provider order or completion order
  */
 
-import { ToolAccesses } from '#/tool/toolContract';
-
+import { ToolAccesses } from "#/tool/toolContract";
 
 export interface ToolCallTask<Result> {
   readonly accesses: ToolAccesses;
@@ -47,7 +46,8 @@ export class ToolScheduler<Result> {
     queuedBefore: readonly ToolCallTask<Result>[],
   ): boolean {
     return (
-      this.conflictsWithAny(task, this.activeTasks) || this.conflictsWithAny(task, queuedBefore)
+      this.conflictsWithAny(task, this.activeTasks) ||
+      this.conflictsWithAny(task, queuedBefore)
     );
   }
 

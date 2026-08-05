@@ -20,9 +20,9 @@
  * in their own files.
  */
 
-import type { ModelCapability } from '#/kosong/contract/capability';
+import type { ModelCapability } from "#/kosong/contract/capability";
 
-import type { OAuthRef } from '../provider/provider';
+import type { OAuthRef } from "../provider/provider";
 
 export interface ModelOverrides {
   readonly temperature?: number;

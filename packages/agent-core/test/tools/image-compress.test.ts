@@ -34,10 +34,10 @@
  *     result is a no-op; extreme aspect ratios never collapse to zero
  */
 
-import { createRequire } from 'node:module';
+import { createRequire } from "node:module";
 
-import { Jimp, ResizeStrategy } from 'jimp';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { Jimp, ResizeStrategy } from "jimp";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 // eslint-disable-next-line import/no-unresolved
 import {
@@ -55,36 +55,54 @@ import {
   READ_IMAGE_BYTE_BUDGET_ENV,
   resolveMaxImageEdgePx,
   resolveReadImageByteBudget,
-} from '../../src/tools/support/image-compress';
+} from "../../src/tools/support/image-compress";
 // eslint-disable-next-line import/no-unresolved
-import { ImageLimits } from '../../src/tools/support/image-limits';
+import { ImageLimits } from "../../src/tools/support/image-limits";
 // eslint-disable-next-line import/no-unresolved
-import { sniffImageDimensions } from '../../src/tools/support/file-type';
+import { sniffImageDimensions } from "../../src/tools/support/file-type";
 // eslint-disable-next-line import/no-unresolved
-import { normalizeImageMime, unsupportedImageMimeFromUrl } from '../../src/tools/support/image-format-policy';
+import {
+  normalizeImageMime,
+  unsupportedImageMimeFromUrl,
+} from "../../src/tools/support/image-format-policy";
 // eslint-disable-next-line import/no-unresolved
-import type { TelemetryClient, TelemetryProperties } from '../../src/telemetry';
+import type { TelemetryClient, TelemetryProperties } from "../../src/telemetry";
 
 // ── fixtures ─────────────────────────────────────────────────────────
 
-async function solidPng(width: number, height: number, color = 0x3366ccff): Promise<Uint8Array> {
+async function solidPng(
+  width: number,
+  height: number,
+  color = 0x3366ccff,
+): Promise<Uint8Array> {
   const image = new Jimp({ width, height, color });
-  return new Uint8Array(await image.getBuffer('image/png'));
+  return new Uint8Array(await image.getBuffer("image/png"));
 }
 
-async function solidJpeg(width: number, height: number, color = 0x3366ccff): Promise<Uint8Array> {
+async function solidJpeg(
+  width: number,
+  height: number,
+  color = 0x3366ccff,
+): Promise<Uint8Array> {
   const image = new Jimp({ width, height, color });
-  return new Uint8Array(await image.getBuffer('image/jpeg', { quality: 90 }));
+  return new Uint8Array(await image.getBuffer("image/jpeg", { quality: 90 }));
 }
 
-async function translucentPng(width: number, height: number): Promise<Uint8Array> {
+async function translucentPng(
+  width: number,
+  height: number,
+): Promise<Uint8Array> {
   // Alpha 0x80 on every pixel → hasAlpha() is true.
   const image = new Jimp({ width, height, color: 0x33_66_cc_80 });
-  return new Uint8Array(await image.getBuffer('image/png'));
+  return new Uint8Array(await image.getBuffer("image/png"));
 }
 
 /** High-entropy image whose PNG barely compresses — used to force the ladder. */
-async function noisePng(width: number, height: number, alpha = false): Promise<Uint8Array> {
+async function noisePng(
+  width: number,
+  height: number,
+  alpha = false,
+): Promise<Uint8Array> {
   const image = new Jimp({ width, height, color: 0x000000ff });
   const data = image.bitmap.data;
   for (let i = 0; i < data.length; i += 4) {
@@ -95,7 +113,7 @@ async function noisePng(width: number, height: number, alpha = false): Promise<U
     data[i + 2] = (i * 12_289) & 0xff;
     data[i + 3] = alpha ? (i * 7 + 17) & 0xff : 0xff;
   }
-  return new Uint8Array(await image.getBuffer('image/png'));
+  return new Uint8Array(await image.getBuffer("image/png"));
 }
 
 /**
@@ -104,17 +122,23 @@ async function noisePng(width: number, height: number, alpha = false): Promise<U
  * stays roughly proportionally incompressible after a resize smooths it,
  * so byte sizes can be compared across scales.
  */
-async function randomNoisePng(width: number, height: number): Promise<Uint8Array> {
+async function randomNoisePng(
+  width: number,
+  height: number,
+): Promise<Uint8Array> {
   const image = new Jimp({ width, height, color: 0x000000ff });
   fillXorshiftNoise(image.bitmap.data);
-  return new Uint8Array(await image.getBuffer('image/png'));
+  return new Uint8Array(await image.getBuffer("image/png"));
 }
 
 /** JPEG twin of {@link randomNoisePng}, for exercising the JPEG source path. */
-async function randomNoiseJpeg(width: number, height: number): Promise<Uint8Array> {
+async function randomNoiseJpeg(
+  width: number,
+  height: number,
+): Promise<Uint8Array> {
   const image = new Jimp({ width, height, color: 0x000000ff });
   fillXorshiftNoise(image.bitmap.data);
-  return new Uint8Array(await image.getBuffer('image/jpeg', { quality: 90 }));
+  return new Uint8Array(await image.getBuffer("image/jpeg", { quality: 90 }));
 }
 
 function fillXorshiftNoise(data: Buffer | Uint8Array): void {
@@ -143,10 +167,13 @@ async function decodeAlpha(bytes: Uint8Array): Promise<boolean> {
  * Insert a minimal EXIF APP1 segment carrying only an Orientation tag right
  * after the JPEG SOI marker (jimp itself never writes EXIF).
  */
-function withExifOrientation(jpeg: Uint8Array, orientation: number): Uint8Array {
+function withExifOrientation(
+  jpeg: Uint8Array,
+  orientation: number,
+): Uint8Array {
   // TIFF body, little-endian: 8-byte header + IFD0 with a single entry.
   const tiff = Buffer.alloc(26);
-  tiff.write('II', 0, 'latin1');
+  tiff.write("II", 0, "latin1");
   tiff.writeUInt16LE(42, 2);
   tiff.writeUInt32LE(8, 4); // offset of IFD0
   tiff.writeUInt16LE(1, 8); // one directory entry
@@ -155,7 +182,7 @@ function withExifOrientation(jpeg: Uint8Array, orientation: number): Uint8Array 
   tiff.writeUInt32LE(1, 14); // count
   tiff.writeUInt16LE(orientation, 18); // value, left-aligned in the 4-byte field
   tiff.writeUInt32LE(0, 22); // no next IFD
-  const exifBody = Buffer.concat([Buffer.from('Exif\0\0', 'latin1'), tiff]);
+  const exifBody = Buffer.concat([Buffer.from("Exif\0\0", "latin1"), tiff]);
   const app1Header = Buffer.alloc(4);
   app1Header.writeUInt16BE(0xff_e1, 0);
   app1Header.writeUInt16BE(exifBody.length + 2, 2);
@@ -171,20 +198,20 @@ function withExifOrientation(jpeg: Uint8Array, orientation: number): Uint8Array 
 
 // ── fast path ────────────────────────────────────────────────────────
 
-describe('compressImageForModel — fast path', () => {
-  it('passes a within-budget image through untouched (same reference)', async () => {
+describe("compressImageForModel — fast path", () => {
+  it("passes a within-budget image through untouched (same reference)", async () => {
     const png = await solidPng(64, 64);
-    const result = await compressImageForModel(png, 'image/png');
+    const result = await compressImageForModel(png, "image/png");
     expect(result.changed).toBe(false);
     expect(result.data).toBe(png); // identity: no copy, no re-encode
-    expect(result.mimeType).toBe('image/png');
+    expect(result.mimeType).toBe("image/png");
     expect(result.width).toBe(64);
     expect(result.height).toBe(64);
   });
 
-  it('treats image/jpg as image/jpeg', async () => {
+  it("treats image/jpg as image/jpeg", async () => {
     const jpeg = await solidJpeg(32, 32);
-    const result = await compressImageForModel(jpeg, 'image/jpg');
+    const result = await compressImageForModel(jpeg, "image/jpg");
     expect(result.changed).toBe(false);
     expect(result.data).toBe(jpeg);
   });
@@ -192,10 +219,10 @@ describe('compressImageForModel — fast path', () => {
 
 // ── dimension cap ────────────────────────────────────────────────────
 
-describe('compressImageForModel — dimension cap', () => {
-  it('scales the longest edge down to MAX_IMAGE_EDGE_PX, preserving aspect', async () => {
+describe("compressImageForModel — dimension cap", () => {
+  it("scales the longest edge down to MAX_IMAGE_EDGE_PX, preserving aspect", async () => {
     const png = await solidPng(2100, 1050);
-    const result = await compressImageForModel(png, 'image/png');
+    const result = await compressImageForModel(png, "image/png");
     expect(result.changed).toBe(true);
     expect(Math.max(result.width, result.height)).toBe(MAX_IMAGE_EDGE_PX);
     // 2100x1050 → 2000x1000 (aspect 2:1 preserved).
@@ -205,54 +232,60 @@ describe('compressImageForModel — dimension cap', () => {
     expect(dims).toEqual({ width: 2000, height: 1000 });
   });
 
-  it('respects a custom maxEdge', async () => {
+  it("respects a custom maxEdge", async () => {
     const png = await solidPng(1000, 500);
-    const result = await compressImageForModel(png, 'image/png', { maxEdge: 800 });
+    const result = await compressImageForModel(png, "image/png", {
+      maxEdge: 800,
+    });
     expect(result.changed).toBe(true);
     expect(result.width).toBe(800);
     expect(result.height).toBe(400);
   });
 
-  it('keeps a downscaled opaque PNG lossless (no needless JPEG conversion)', async () => {
+  it("keeps a downscaled opaque PNG lossless (no needless JPEG conversion)", async () => {
     // A screenshot-like opaque PNG that only needs downscaling must stay PNG so
     // sharp text is not degraded by JPEG artifacts.
     const png = await solidPng(2100, 1050);
-    const result = await compressImageForModel(png, 'image/png');
+    const result = await compressImageForModel(png, "image/png");
     expect(result.changed).toBe(true);
-    expect(result.mimeType).toBe('image/png');
+    expect(result.mimeType).toBe("image/png");
     expect(Math.max(result.width, result.height)).toBe(MAX_IMAGE_EDGE_PX);
   });
 });
 
 // ── byte budget ──────────────────────────────────────────────────────
 
-describe('compressImageForModel — byte budget', () => {
-  it('walks the JPEG ladder for an over-budget non-alpha image', async () => {
+describe("compressImageForModel — byte budget", () => {
+  it("walks the JPEG ladder for an over-budget non-alpha image", async () => {
     const png = await noisePng(500, 500);
-    const result = await compressImageForModel(png, 'image/png', { byteBudget: 8 * 1024 });
+    const result = await compressImageForModel(png, "image/png", {
+      byteBudget: 8 * 1024,
+    });
     expect(result.changed).toBe(true);
-    expect(result.mimeType).toBe('image/jpeg');
+    expect(result.mimeType).toBe("image/jpeg");
     expect(result.finalByteLength).toBeLessThan(result.originalByteLength);
   });
 
-  it('keeps a translucent PNG as PNG when the budget allows', async () => {
+  it("keeps a translucent PNG as PNG when the budget allows", async () => {
     const png = await translucentPng(2100, 1050);
-    const result = await compressImageForModel(png, 'image/png');
+    const result = await compressImageForModel(png, "image/png");
     expect(result.changed).toBe(true);
-    expect(result.mimeType).toBe('image/png');
+    expect(result.mimeType).toBe("image/png");
     expect(Math.max(result.width, result.height)).toBe(MAX_IMAGE_EDGE_PX);
     expect(await decodeAlpha(result.data)).toBe(true);
   });
 
-  it('drops alpha to JPEG only as a last resort under a tiny budget', async () => {
+  it("drops alpha to JPEG only as a last resort under a tiny budget", async () => {
     const png = await noisePng(400, 400, /* alpha */ true);
-    const result = await compressImageForModel(png, 'image/png', { byteBudget: 4 * 1024 });
+    const result = await compressImageForModel(png, "image/png", {
+      byteBudget: 4 * 1024,
+    });
     expect(result.changed).toBe(true);
-    expect(result.mimeType).toBe('image/jpeg');
+    expect(result.mimeType).toBe("image/jpeg");
     expect(result.finalByteLength).toBeLessThan(result.originalByteLength);
   });
 
-  it('steps down through the 2000px edge before the 1000px fallback', async () => {
+  it("steps down through the 2000px edge before the 1000px fallback", async () => {
     // Fallback-ladder guard, pinned with an explicit 3000px ceiling (the
     // built-in default is 2000px, where the first fallback edge is a no-op):
     // a PNG whose fitted encode is over budget but whose 2000px encode fits
@@ -261,58 +294,56 @@ describe('compressImageForModel — byte budget', () => {
     // an unlimited budget) so the test does not depend on exact deflate
     // output sizes.
     const png = await randomNoisePng(2400, 600);
-    const probe = await compressImageForModel(png, 'image/png', {
+    const probe = await compressImageForModel(png, "image/png", {
       maxEdge: 2000,
       byteBudget: Number.MAX_SAFE_INTEGER,
     });
     expect(probe.changed).toBe(true);
-    expect(probe.mimeType).toBe('image/png');
+    expect(probe.mimeType).toBe("image/png");
     expect(Math.max(probe.width, probe.height)).toBe(2000);
     // Sanity: the anchor budget must sit below the input size, or the run
     // below would pass through on the fast path instead of re-encoding.
     expect(probe.finalByteLength + 1024).toBeLessThan(png.length);
 
-    const result = await compressImageForModel(png, 'image/png', {
+    const result = await compressImageForModel(png, "image/png", {
       maxEdge: 3000,
       byteBudget: probe.finalByteLength + 1024,
     });
     expect(result.changed).toBe(true);
-    expect(result.mimeType).toBe('image/png');
+    expect(result.mimeType).toBe("image/png");
     expect(Math.max(result.width, result.height)).toBe(2000);
   });
 
-  it(
-    're-runs the JPEG quality ladder at fallback sizes instead of jumping to q20',
-    async () => {
-      // A JPEG whose quality ladder fails at every size above 1000px, with the
-      // budget tuned so that at 1000px a mid-quality (q60) encode fits. The
-      // fallback must walk the ladder again and return that q60 encode — not
-      // collapse straight to q20 and needlessly destroy detail.
-      // The probe replays the implementation's exact resize chain
-      // (2400 → 2000 → 1000): box-resizing twice does not yield the same
-      // bitmap as resizing once, and JPEG encoding is deterministic, so the
-      // probed q60 size matches the implementation's encode byte-for-byte.
-      // The width must exceed 2000px to exercise the full fallback chain; the
-      // height is kept small so the ~11 JPEG encodes stay fast on slow CI.
-      const jpeg = await randomNoiseJpeg(2400, 300);
-      const probe = await Jimp.fromBuffer(Buffer.from(jpeg));
-      probe.resize({ w: 2000, h: 250 });
-      probe.resize({ w: 1000, h: 125 });
-      const q60Size = (await probe.getBuffer('image/jpeg', { quality: 60 })).length;
-      const q20Size = (await probe.getBuffer('image/jpeg', { quality: 20 })).length;
-      expect(q60Size).toBeGreaterThan(q20Size); // sanity: the anchor separates the rungs
+  it("re-runs the JPEG quality ladder at fallback sizes instead of jumping to q20", async () => {
+    // A JPEG whose quality ladder fails at every size above 1000px, with the
+    // budget tuned so that at 1000px a mid-quality (q60) encode fits. The
+    // fallback must walk the ladder again and return that q60 encode — not
+    // collapse straight to q20 and needlessly destroy detail.
+    // The probe replays the implementation's exact resize chain
+    // (2400 → 2000 → 1000): box-resizing twice does not yield the same
+    // bitmap as resizing once, and JPEG encoding is deterministic, so the
+    // probed q60 size matches the implementation's encode byte-for-byte.
+    // The width must exceed 2000px to exercise the full fallback chain; the
+    // height is kept small so the ~11 JPEG encodes stay fast on slow CI.
+    const jpeg = await randomNoiseJpeg(2400, 300);
+    const probe = await Jimp.fromBuffer(Buffer.from(jpeg));
+    probe.resize({ w: 2000, h: 250 });
+    probe.resize({ w: 1000, h: 125 });
+    const q60Size = (await probe.getBuffer("image/jpeg", { quality: 60 }))
+      .length;
+    const q20Size = (await probe.getBuffer("image/jpeg", { quality: 20 }))
+      .length;
+    expect(q60Size).toBeGreaterThan(q20Size); // sanity: the anchor separates the rungs
 
-      const result = await compressImageForModel(jpeg, 'image/jpeg', {
-        byteBudget: q60Size + 256,
-      });
-      expect(result.changed).toBe(true);
-      expect(result.mimeType).toBe('image/jpeg');
-      expect(Math.max(result.width, result.height)).toBe(1000);
-      // The highest quality that fits the budget at 1000px is q60.
-      expect(result.finalByteLength).toBe(q60Size);
-    },
-    15_000,
-  );
+    const result = await compressImageForModel(jpeg, "image/jpeg", {
+      byteBudget: q60Size + 256,
+    });
+    expect(result.changed).toBe(true);
+    expect(result.mimeType).toBe("image/jpeg");
+    expect(Math.max(result.width, result.height)).toBe(1000);
+    // The highest quality that fits the budget at 1000px is q60.
+    expect(result.finalByteLength).toBe(q60Size);
+  }, 15_000);
 });
 
 // ── webp fixtures (encoder wasm loaded manually from node_modules) ──
@@ -325,21 +356,25 @@ describe('compressImageForModel — byte budget', () => {
  * initializes the decoder from the bundled base64.
  */
 async function encodeWebp(
-  image: { bitmap: { data: Buffer | Uint8Array; width: number; height: number } },
+  image: {
+    bitmap: { data: Buffer | Uint8Array; width: number; height: number };
+  },
   quality = 90,
 ): Promise<Uint8Array> {
   const requireLocal = createRequire(import.meta.url);
   const encMod = (await import(
-    requireLocal.resolve('@jsquash/webp/encode.js')
-  )) as typeof import('@jsquash/webp/encode.js');
-  const { readFileSync } = await import('node:fs');
+    requireLocal.resolve("@jsquash/webp/encode.js")
+  )) as typeof import("@jsquash/webp/encode.js");
+  const { readFileSync } = await import("node:fs");
   // The repo tsconfig has no DOM lib, so the global WebAssembly name is
   // reached structurally (same approach as the production decoder).
   const wasmNamespace = (
-    globalThis as unknown as { WebAssembly: { compile(bytes: Uint8Array): Promise<object> } }
+    globalThis as unknown as {
+      WebAssembly: { compile(bytes: Uint8Array): Promise<object> };
+    }
   ).WebAssembly;
   const wasm = await wasmNamespace.compile(
-    readFileSync(requireLocal.resolve('@jsquash/webp/codec/enc/webp_enc.wasm')),
+    readFileSync(requireLocal.resolve("@jsquash/webp/codec/enc/webp_enc.wasm")),
   );
   await encMod.init(wasm as never);
   const { bitmap } = image;
@@ -364,86 +399,79 @@ function animatedWebpHeader(): Uint8Array {
   const ascii = (s: string, at: number) => {
     for (let i = 0; i < s.length; i++) bytes[at + i] = s.charCodeAt(i);
   };
-  ascii('RIFF', 0);
+  ascii("RIFF", 0);
   new DataView(bytes.buffer).setUint32(4, 22, true);
-  ascii('WEBP', 8);
-  ascii('VP8X', 12);
+  ascii("WEBP", 8);
+  ascii("VP8X", 12);
   new DataView(bytes.buffer).setUint32(16, 10, true);
   bytes[20] = 0x02; // ANIM flag
   return bytes;
 }
 
-describe('compressImageForModel — webp', () => {
-  it(
-    'downscales an oversized WebP to the edge cap',
-    async () => {
-      const source = new Jimp({ width: 2100, height: 1050, color: 0x3366ccff });
-      const webp = await encodeWebp(source);
-      const result = await compressImageForModel(webp, 'image/webp');
-      expect(result.changed).toBe(true);
-      expect(Math.max(result.width, result.height)).toBe(2000);
-      expect(result.originalWidth).toBe(2100);
-      expect(result.originalHeight).toBe(1050);
-      expect(sniffImageDimensions(result.data)).toEqual({ width: 2000, height: 1000 });
-    },
-    15_000,
-  );
+describe("compressImageForModel — webp", () => {
+  it("downscales an oversized WebP to the edge cap", async () => {
+    const source = new Jimp({ width: 2100, height: 1050, color: 0x3366ccff });
+    const webp = await encodeWebp(source);
+    const result = await compressImageForModel(webp, "image/webp");
+    expect(result.changed).toBe(true);
+    expect(Math.max(result.width, result.height)).toBe(2000);
+    expect(result.originalWidth).toBe(2100);
+    expect(result.originalHeight).toBe(1050);
+    expect(sniffImageDimensions(result.data)).toEqual({
+      width: 2000,
+      height: 1000,
+    });
+  }, 15_000);
 
-  it(
-    're-encodes an over-budget WebP within the byte budget',
-    async () => {
-      const budget = 128 * 1024;
-      const noisy = new Jimp({ width: 700, height: 700, color: 0x000000ff });
-      fillXorshiftNoise(noisy.bitmap.data);
-      const webp = await encodeWebp(noisy, 100);
-      expect(webp.length).toBeGreaterThan(budget);
-      const result = await compressImageForModel(webp, 'image/webp', { byteBudget: budget });
-      expect(result.changed).toBe(true);
-      expect(result.finalByteLength).toBeLessThanOrEqual(budget);
-    },
-    15_000,
-  );
+  it("re-encodes an over-budget WebP within the byte budget", async () => {
+    const budget = 128 * 1024;
+    const noisy = new Jimp({ width: 700, height: 700, color: 0x000000ff });
+    fillXorshiftNoise(noisy.bitmap.data);
+    const webp = await encodeWebp(noisy, 100);
+    expect(webp.length).toBeGreaterThan(budget);
+    const result = await compressImageForModel(webp, "image/webp", {
+      byteBudget: budget,
+    });
+    expect(result.changed).toBe(true);
+    expect(result.finalByteLength).toBeLessThanOrEqual(budget);
+  }, 15_000);
 
-  it(
-    'keeps alpha when re-encoding a translucent WebP',
-    async () => {
-      const translucent = new Jimp({ width: 2100, height: 1050, color: 0x33_66_cc_80 });
-      const webp = await encodeWebp(translucent);
-      const result = await compressImageForModel(webp, 'image/webp');
-      expect(result.changed).toBe(true);
-      expect(result.mimeType).toBe('image/png');
-      expect(await decodeAlpha(result.data)).toBe(true);
-    },
-    15_000,
-  );
+  it("keeps alpha when re-encoding a translucent WebP", async () => {
+    const translucent = new Jimp({
+      width: 2100,
+      height: 1050,
+      color: 0x33_66_cc_80,
+    });
+    const webp = await encodeWebp(translucent);
+    const result = await compressImageForModel(webp, "image/webp");
+    expect(result.changed).toBe(true);
+    expect(result.mimeType).toBe("image/png");
+    expect(await decodeAlpha(result.data)).toBe(true);
+  }, 15_000);
 
-  it('passes an animated WebP through to preserve animation', async () => {
+  it("passes an animated WebP through to preserve animation", async () => {
     const animated = animatedWebpHeader();
-    const result = await compressImageForModel(animated, 'image/webp');
+    const result = await compressImageForModel(animated, "image/webp");
     expect(result.changed).toBe(false);
     expect(result.data).toBe(animated);
   });
 
-  it(
-    'crops a region out of a WebP',
-    async () => {
-      const source = new Jimp({ width: 800, height: 400, color: 0x3366ccff });
-      const webp = await encodeWebp(source);
-      const result = await cropImageForModel(webp, 'image/webp', {
-        x: 10,
-        y: 20,
-        width: 300,
-        height: 200,
-      });
-      expect(result.ok).toBe(true);
-      if (!result.ok) return;
-      expect(result.width).toBe(300);
-      expect(result.height).toBe(200);
-      expect(result.originalWidth).toBe(800);
-      expect(result.originalHeight).toBe(400);
-    },
-    15_000,
-  );
+  it("crops a region out of a WebP", async () => {
+    const source = new Jimp({ width: 800, height: 400, color: 0x3366ccff });
+    const webp = await encodeWebp(source);
+    const result = await cropImageForModel(webp, "image/webp", {
+      x: 10,
+      y: 20,
+      width: 300,
+      height: 200,
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.width).toBe(300);
+    expect(result.height).toBe(200);
+    expect(result.originalWidth).toBe(800);
+    expect(result.originalHeight).toBe(400);
+  }, 15_000);
 });
 
 // ── small byte budgets (per-image read budget scale) ────────────────
@@ -451,118 +479,123 @@ describe('compressImageForModel — webp', () => {
 // These walk many encode rungs over noise fixtures, which is slow on CI
 // runners — each carries an explicit timeout like the quality-ladder test
 // above.
-describe('compressImageForModel — small byte budgets', () => {
-  it(
-    'converges under a 128KB budget for high-entropy PNG content',
-    async () => {
-      // Statistically random noise is the entropy upper bound (photos, dense
-      // charts): the old [2000, 1000] fallback floor left q20@1000px at ~200KB,
-      // over a read-scale budget. The extended ladder must land within it.
-      const budget = 128 * 1024;
-      const png = await randomNoisePng(700, 700);
-      expect(png.length).toBeGreaterThan(budget);
-      const result = await compressImageForModel(png, 'image/png', { byteBudget: budget });
-      expect(result.changed).toBe(true);
-      expect(result.finalByteLength).toBeLessThanOrEqual(budget);
-      expect(sniffImageDimensions(result.data)).not.toBeNull();
-    },
-    15_000,
-  );
+describe("compressImageForModel — small byte budgets", () => {
+  it("converges under a 128KB budget for high-entropy PNG content", async () => {
+    // Statistically random noise is the entropy upper bound (photos, dense
+    // charts): the old [2000, 1000] fallback floor left q20@1000px at ~200KB,
+    // over a read-scale budget. The extended ladder must land within it.
+    const budget = 128 * 1024;
+    const png = await randomNoisePng(700, 700);
+    expect(png.length).toBeGreaterThan(budget);
+    const result = await compressImageForModel(png, "image/png", {
+      byteBudget: budget,
+    });
+    expect(result.changed).toBe(true);
+    expect(result.finalByteLength).toBeLessThanOrEqual(budget);
+    expect(sniffImageDimensions(result.data)).not.toBeNull();
+  }, 15_000);
 
-  it(
-    'converges under a 128KB budget for a JPEG source',
-    async () => {
-      const budget = 128 * 1024;
-      const jpeg = await randomNoiseJpeg(700, 700);
-      expect(jpeg.length).toBeGreaterThan(budget);
-      const result = await compressImageForModel(jpeg, 'image/jpeg', { byteBudget: budget });
-      expect(result.changed).toBe(true);
-      expect(result.mimeType).toBe('image/jpeg');
-      expect(result.finalByteLength).toBeLessThanOrEqual(budget);
-    },
-    15_000,
-  );
+  it("converges under a 128KB budget for a JPEG source", async () => {
+    const budget = 128 * 1024;
+    const jpeg = await randomNoiseJpeg(700, 700);
+    expect(jpeg.length).toBeGreaterThan(budget);
+    const result = await compressImageForModel(jpeg, "image/jpeg", {
+      byteBudget: budget,
+    });
+    expect(result.changed).toBe(true);
+    expect(result.mimeType).toBe("image/jpeg");
+    expect(result.finalByteLength).toBeLessThanOrEqual(budget);
+  }, 15_000);
 
-  it(
-    'shrinks pixels instead of passing through an already-optimized JPEG over budget',
-    async () => {
-      // A JPEG already at the encoder's quality floor for its size: re-encoding
-      // at the same size cannot shrink it, so without sub-size fallbacks the
-      // "unhelpful" guard used to return the original — silently over budget.
-      const image = new Jimp({ width: 500, height: 500, color: 0x000000ff });
-      fillXorshiftNoise(image.bitmap.data);
-      const optimized = new Uint8Array(await image.getBuffer('image/jpeg', { quality: 20 }));
-      const budget = optimized.length - 10 * 1024;
-      expect(budget).toBeGreaterThan(0);
+  it("shrinks pixels instead of passing through an already-optimized JPEG over budget", async () => {
+    // A JPEG already at the encoder's quality floor for its size: re-encoding
+    // at the same size cannot shrink it, so without sub-size fallbacks the
+    // "unhelpful" guard used to return the original — silently over budget.
+    const image = new Jimp({ width: 500, height: 500, color: 0x000000ff });
+    fillXorshiftNoise(image.bitmap.data);
+    const optimized = new Uint8Array(
+      await image.getBuffer("image/jpeg", { quality: 20 }),
+    );
+    const budget = optimized.length - 10 * 1024;
+    expect(budget).toBeGreaterThan(0);
 
-      const result = await compressImageForModel(optimized, 'image/jpeg', { byteBudget: budget });
-      expect(result.changed).toBe(true);
-      expect(result.finalByteLength).toBeLessThanOrEqual(budget);
-      expect(Math.max(result.width, result.height)).toBeLessThan(500);
-    },
-    15_000,
-  );
+    const result = await compressImageForModel(optimized, "image/jpeg", {
+      byteBudget: budget,
+    });
+    expect(result.changed).toBe(true);
+    expect(result.finalByteLength).toBeLessThanOrEqual(budget);
+    expect(Math.max(result.width, result.height)).toBeLessThan(500);
+  }, 15_000);
 });
 
 // ── fallback / robustness ────────────────────────────────────────────
 
-describe('compressImageForModel — fallback', () => {
-  it('returns the original on corrupt bytes (never throws)', async () => {
+describe("compressImageForModel — fallback", () => {
+  it("returns the original on corrupt bytes (never throws)", async () => {
     // Valid PNG signature followed by garbage — decode will fail.
-    const corrupt = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3, 4, 5]);
-    const result = await compressImageForModel(corrupt, 'image/png');
+    const corrupt = new Uint8Array([
+      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3, 4, 5,
+    ]);
+    const result = await compressImageForModel(corrupt, "image/png");
     expect(result.changed).toBe(false);
     expect(result.data).toBe(corrupt);
   });
 
-  it('passes empty buffers through', async () => {
+  it("passes empty buffers through", async () => {
     const empty = new Uint8Array(0);
-    const result = await compressImageForModel(empty, 'image/png');
+    const result = await compressImageForModel(empty, "image/png");
     expect(result.changed).toBe(false);
     expect(result.data).toBe(empty);
   });
 
-  it('passes GIF through (preserves animation)', async () => {
+  it("passes GIF through (preserves animation)", async () => {
     // Minimal GIF89a header — enough for the MIME guard to skip it.
-    const gif = new Uint8Array([0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 1, 0, 1, 0]);
-    const result = await compressImageForModel(gif, 'image/gif');
+    const gif = new Uint8Array([
+      0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 1, 0, 1, 0,
+    ]);
+    const result = await compressImageForModel(gif, "image/gif");
     expect(result.changed).toBe(false);
     expect(result.data).toBe(gif);
   });
 
-  it('passes undecodable WebP bytes through (never throws)', async () => {
+  it("passes undecodable WebP bytes through (never throws)", async () => {
     // A bare RIFF/WEBP container header with no image payload: the sniffer
     // reports no dimensions and the wasm decoder cannot decode it, so it
     // passes through unchanged like any other undecodable input.
     const webp = new Uint8Array([
       0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x45, 0x42, 0x50,
     ]);
-    const result = await compressImageForModel(webp, 'image/webp');
+    const result = await compressImageForModel(webp, "image/webp");
     expect(result.changed).toBe(false);
     expect(result.data).toBe(webp);
   });
 
-  it('skips compression for absurd pixel counts without decoding (bomb guard)', async () => {
+  it("skips compression for absurd pixel counts without decoding (bomb guard)", async () => {
     // A PNG header advertising 30000×30000 (900 MP) with no pixel data. The
     // dimension sniff reads the IHDR; the guard must pass through before Jimp
     // is ever invoked, so this completes instantly with no multi-GB bitmap.
     const header = Buffer.alloc(24);
-    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).copy(header, 0);
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).copy(
+      header,
+      0,
+    );
     header.writeUInt32BE(13, 8); // IHDR chunk length
-    header.write('IHDR', 12, 'latin1');
+    header.write("IHDR", 12, "latin1");
     header.writeUInt32BE(30000, 16);
     header.writeUInt32BE(30000, 20);
     const bomb = new Uint8Array(header);
 
-    const result = await compressImageForModel(bomb, 'image/png');
+    const result = await compressImageForModel(bomb, "image/png");
     expect(result.changed).toBe(false);
     expect(result.data).toBe(bomb); // identity → Jimp was never called
   });
 
-  it('skips compression for payloads over the byte cap without decoding', async () => {
+  it("skips compression for payloads over the byte cap without decoding", async () => {
     // Over the edge (so not the fast path), but capped by maxDecodeBytes.
     const png = await solidPng(2100, 100);
-    const result = await compressImageForModel(png, 'image/png', { maxDecodeBytes: 64 });
+    const result = await compressImageForModel(png, "image/png", {
+      maxDecodeBytes: 64,
+    });
     expect(result.changed).toBe(false);
     expect(result.data).toBe(png); // passthrough → Jimp was never called
   });
@@ -570,24 +603,27 @@ describe('compressImageForModel — fallback', () => {
 
 // ── invariants ───────────────────────────────────────────────────────
 
-describe('compressImageForModel — invariants', () => {
-  it('changed always yields a within-cap, decodable payload', async () => {
+describe("compressImageForModel — invariants", () => {
+  it("changed always yields a within-cap, decodable payload", async () => {
     const cases: Uint8Array[] = [
       await solidPng(2100, 1050),
       await noisePng(400, 400),
       await translucentPng(2100, 1050),
     ];
     for (const bytes of cases) {
-      const result = await compressImageForModel(bytes, 'image/png');
+      const result = await compressImageForModel(bytes, "image/png");
       expect(result.finalByteLength).toBe(result.data.length);
       if (result.changed) {
         // A change is only kept when it helped: fewer bytes or fewer pixels.
         const original = sniffImageDimensions(bytes)!;
         const shrankBytes = result.finalByteLength < result.originalByteLength;
-        const shrankPixels = result.width * result.height < original.width * original.height;
+        const shrankPixels =
+          result.width * result.height < original.width * original.height;
         expect(shrankBytes || shrankPixels).toBe(true);
         // Dimensions never exceed the cap after a change.
-        expect(Math.max(result.width, result.height)).toBeLessThanOrEqual(MAX_IMAGE_EDGE_PX);
+        expect(Math.max(result.width, result.height)).toBeLessThanOrEqual(
+          MAX_IMAGE_EDGE_PX,
+        );
         // The result must decode.
         expect(sniffImageDimensions(result.data)).not.toBeNull();
       }
@@ -597,30 +633,34 @@ describe('compressImageForModel — invariants', () => {
 
 // ── base64 wrapper ───────────────────────────────────────────────────
 
-describe('compressBase64ForModel', () => {
-  it('round-trips an over-sized image', async () => {
+describe("compressBase64ForModel", () => {
+  it("round-trips an over-sized image", async () => {
     const png = await noisePng(500, 500);
-    const base64 = Buffer.from(png).toString('base64');
-    const result = await compressBase64ForModel(base64, 'image/png', { byteBudget: 8 * 1024 });
+    const base64 = Buffer.from(png).toString("base64");
+    const result = await compressBase64ForModel(base64, "image/png", {
+      byteBudget: 8 * 1024,
+    });
     expect(result.changed).toBe(true);
     expect(result.finalByteLength).toBeLessThan(result.originalByteLength);
     // The re-encoded base64 still decodes to a valid image.
-    const dims = sniffImageDimensions(Buffer.from(result.base64, 'base64'));
+    const dims = sniffImageDimensions(Buffer.from(result.base64, "base64"));
     expect(dims).not.toBeNull();
   });
 
-  it('returns the original base64 unchanged on the fast path', async () => {
+  it("returns the original base64 unchanged on the fast path", async () => {
     const png = await solidPng(64, 64);
-    const base64 = Buffer.from(png).toString('base64');
-    const result = await compressBase64ForModel(base64, 'image/png');
+    const base64 = Buffer.from(png).toString("base64");
+    const result = await compressBase64ForModel(base64, "image/png");
     expect(result.changed).toBe(false);
     expect(result.base64).toBe(base64);
   });
 
-  it('skips a base64 payload over the byte cap without decoding', async () => {
+  it("skips a base64 payload over the byte cap without decoding", async () => {
     const png = await solidPng(2100, 100); // over edge, would otherwise compress
-    const base64 = Buffer.from(png).toString('base64');
-    const result = await compressBase64ForModel(base64, 'image/png', { maxDecodeBytes: 64 });
+    const base64 = Buffer.from(png).toString("base64");
+    const result = await compressBase64ForModel(base64, "image/png", {
+      maxDecodeBytes: 64,
+    });
     expect(result.changed).toBe(false);
     expect(result.base64).toBe(base64); // unchanged → not decoded
   });
@@ -628,12 +668,12 @@ describe('compressBase64ForModel', () => {
 
 // ── performance ──────────────────────────────────────────────────────
 
-describe('compressImageForModel — performance', () => {
-  it('fast path is codec-free and quick across many calls', async () => {
+describe("compressImageForModel — performance", () => {
+  it("fast path is codec-free and quick across many calls", async () => {
     const png = await solidPng(200, 200);
     const start = performance.now();
     for (let i = 0; i < 100; i += 1) {
-      const result = await compressImageForModel(png, 'image/png');
+      const result = await compressImageForModel(png, "image/png");
       expect(result.data).toBe(png); // proves no decode/encode happened
     }
     const elapsed = performance.now() - start;
@@ -641,16 +681,16 @@ describe('compressImageForModel — performance', () => {
     expect(elapsed).toBeLessThan(100);
   });
 
-  it('compresses a large image within a generous time bound', async () => {
+  it("compresses a large image within a generous time bound", async () => {
     const png = await solidPng(2100, 1050);
     const start = performance.now();
-    const result = await compressImageForModel(png, 'image/png');
+    const result = await compressImageForModel(png, "image/png");
     const elapsed = performance.now() - start;
     expect(result.changed).toBe(true);
     expect(elapsed).toBeLessThan(5000);
   });
 
-  it('exposes a sane default budget', () => {
+  it("exposes a sane default budget", () => {
     expect(IMAGE_BYTE_BUDGET).toBeGreaterThan(0);
     expect(MAX_IMAGE_EDGE_PX).toBe(2000);
   });
@@ -658,47 +698,52 @@ describe('compressImageForModel — performance', () => {
 
 // ── default edge resolution (env-only fallback) ─────────────────────
 
-describe('resolveMaxImageEdgePx', () => {
+describe("resolveMaxImageEdgePx", () => {
   afterEach(() => {
     vi.unstubAllEnvs();
   });
 
-  it('defaults to the built-in ceiling', () => {
+  it("defaults to the built-in ceiling", () => {
     expect(resolveMaxImageEdgePx()).toBe(MAX_IMAGE_EDGE_PX);
   });
 
-  it('lets the env var override the built-in ceiling', () => {
-    vi.stubEnv(MAX_IMAGE_EDGE_ENV, '900');
+  it("lets the env var override the built-in ceiling", () => {
+    vi.stubEnv(MAX_IMAGE_EDGE_ENV, "900");
     expect(resolveMaxImageEdgePx()).toBe(900);
   });
 
-  it.each(['abc', '-100', '0', '1.5', ' '])('ignores the invalid env value "%s"', (raw) => {
-    vi.stubEnv(MAX_IMAGE_EDGE_ENV, raw);
-    expect(resolveMaxImageEdgePx()).toBe(MAX_IMAGE_EDGE_PX);
-  });
+  it.each(["abc", "-100", "0", "1.5", " "])(
+    'ignores the invalid env value "%s"',
+    (raw) => {
+      vi.stubEnv(MAX_IMAGE_EDGE_ENV, raw);
+      expect(resolveMaxImageEdgePx()).toBe(MAX_IMAGE_EDGE_PX);
+    },
+  );
 
-  it('drives compressImageForModel when no explicit maxEdge is passed', async () => {
-    vi.stubEnv(MAX_IMAGE_EDGE_ENV, '1200');
+  it("drives compressImageForModel when no explicit maxEdge is passed", async () => {
+    vi.stubEnv(MAX_IMAGE_EDGE_ENV, "1200");
     const png = await solidPng(1300, 650);
-    const result = await compressImageForModel(png, 'image/png');
+    const result = await compressImageForModel(png, "image/png");
     expect(result.changed).toBe(true);
     expect(result.width).toBe(1200);
     expect(result.height).toBe(600);
   });
 
-  it('an explicit maxEdge option still wins over the env var', async () => {
-    vi.stubEnv(MAX_IMAGE_EDGE_ENV, '900');
+  it("an explicit maxEdge option still wins over the env var", async () => {
+    vi.stubEnv(MAX_IMAGE_EDGE_ENV, "900");
     const png = await solidPng(1000, 500);
-    const result = await compressImageForModel(png, 'image/png', { maxEdge: 800 });
+    const result = await compressImageForModel(png, "image/png", {
+      maxEdge: 800,
+    });
     expect(result.changed).toBe(true);
     expect(result.width).toBe(800);
     expect(result.height).toBe(400);
   });
 
-  it('drives cropImageForModel region fitting', async () => {
-    vi.stubEnv(MAX_IMAGE_EDGE_ENV, '400');
+  it("drives cropImageForModel region fitting", async () => {
+    vi.stubEnv(MAX_IMAGE_EDGE_ENV, "400");
     const png = await solidPng(1000, 800);
-    const result = await cropImageForModel(png, 'image/png', {
+    const result = await cropImageForModel(png, "image/png", {
       x: 0,
       y: 0,
       width: 800,
@@ -710,61 +755,70 @@ describe('resolveMaxImageEdgePx', () => {
   });
 });
 
-describe('resolveReadImageByteBudget', () => {
+describe("resolveReadImageByteBudget", () => {
   afterEach(() => {
     vi.unstubAllEnvs();
   });
 
-  it('defaults to the built-in read budget', () => {
+  it("defaults to the built-in read budget", () => {
     expect(READ_IMAGE_BYTE_BUDGET).toBe(256 * 1024);
     expect(resolveReadImageByteBudget()).toBe(READ_IMAGE_BYTE_BUDGET);
   });
 
-  it('lets the env var override the built-in budget', () => {
-    vi.stubEnv(READ_IMAGE_BYTE_BUDGET_ENV, '100000');
+  it("lets the env var override the built-in budget", () => {
+    vi.stubEnv(READ_IMAGE_BYTE_BUDGET_ENV, "100000");
     expect(resolveReadImageByteBudget()).toBe(100000);
   });
 
-  it.each(['abc', '-1', '0', '1.5', ' '])('ignores the invalid env value "%s"', (raw) => {
-    vi.stubEnv(READ_IMAGE_BYTE_BUDGET_ENV, raw);
-    expect(resolveReadImageByteBudget()).toBe(READ_IMAGE_BYTE_BUDGET);
-  });
+  it.each(["abc", "-1", "0", "1.5", " "])(
+    'ignores the invalid env value "%s"',
+    (raw) => {
+      vi.stubEnv(READ_IMAGE_BYTE_BUDGET_ENV, raw);
+      expect(resolveReadImageByteBudget()).toBe(READ_IMAGE_BYTE_BUDGET);
+    },
+  );
 });
 
 // ── ImageLimits (owner-scoped [image] config) ───────────────────────
 
-describe('ImageLimits', () => {
+describe("ImageLimits", () => {
   afterEach(() => {
     vi.unstubAllEnvs();
   });
 
-  it('resolves built-in defaults when no config is set', () => {
+  it("resolves built-in defaults when no config is set", () => {
     const limits = new ImageLimits();
     expect(limits.maxEdgePx()).toBe(MAX_IMAGE_EDGE_PX);
     expect(limits.readByteBudget()).toBe(READ_IMAGE_BYTE_BUDGET);
   });
 
-  it('uses the owning config when set', () => {
-    const limits = new ImageLimits(process.env, { maxEdgePx: 1200, readByteBudget: 512 * 1024 });
+  it("uses the owning config when set", () => {
+    const limits = new ImageLimits(process.env, {
+      maxEdgePx: 1200,
+      readByteBudget: 512 * 1024,
+    });
     expect(limits.maxEdgePx()).toBe(1200);
     expect(limits.readByteBudget()).toBe(512 * 1024);
   });
 
-  it('lets the env vars override the config', () => {
-    vi.stubEnv(MAX_IMAGE_EDGE_ENV, '900');
-    vi.stubEnv(READ_IMAGE_BYTE_BUDGET_ENV, '100000');
-    const limits = new ImageLimits(process.env, { maxEdgePx: 1200, readByteBudget: 512 * 1024 });
+  it("lets the env vars override the config", () => {
+    vi.stubEnv(MAX_IMAGE_EDGE_ENV, "900");
+    vi.stubEnv(READ_IMAGE_BYTE_BUDGET_ENV, "100000");
+    const limits = new ImageLimits(process.env, {
+      maxEdgePx: 1200,
+      readByteBudget: 512 * 1024,
+    });
     expect(limits.maxEdgePx()).toBe(900);
     expect(limits.readByteBudget()).toBe(100000);
   });
 
-  it('falls back to the config when the env value is invalid', () => {
-    vi.stubEnv(MAX_IMAGE_EDGE_ENV, 'abc');
+  it("falls back to the config when the env value is invalid", () => {
+    vi.stubEnv(MAX_IMAGE_EDGE_ENV, "abc");
     const limits = new ImageLimits(process.env, { maxEdgePx: 1200 });
     expect(limits.maxEdgePx()).toBe(1200);
   });
 
-  it('setConfig replaces and clears the config (reload semantics)', () => {
+  it("setConfig replaces and clears the config (reload semantics)", () => {
     const limits = new ImageLimits(process.env, { maxEdgePx: 1200 });
     limits.setConfig({ maxEdgePx: 1500 });
     expect(limits.maxEdgePx()).toBe(1500);
@@ -772,11 +826,14 @@ describe('ImageLimits', () => {
     expect(limits.maxEdgePx()).toBe(MAX_IMAGE_EDGE_PX);
   });
 
-  it('instances are isolated — one owner cannot leak limits into another', () => {
+  it("instances are isolated — one owner cannot leak limits into another", () => {
     // The regression this class exists for: two cores in one process (the
     // SDK's multi-client pattern) must each compress with their own [image]
     // settings, and a reload of one must not restamp the other.
-    const first = new ImageLimits(process.env, { maxEdgePx: 800, readByteBudget: 64 * 1024 });
+    const first = new ImageLimits(process.env, {
+      maxEdgePx: 800,
+      readByteBudget: 64 * 1024,
+    });
     const second = new ImageLimits(process.env, { maxEdgePx: 1600 });
     expect(first.maxEdgePx()).toBe(800);
     expect(second.maxEdgePx()).toBe(1600);
@@ -790,98 +847,125 @@ describe('ImageLimits', () => {
 
 // ── content-part helper ──────────────────────────────────────────────
 
-describe('compressImageContentParts', () => {
+describe("compressImageContentParts", () => {
   function dataUrl(mime: string, bytes: Uint8Array): string {
-    return `data:${mime};base64,${Buffer.from(bytes).toString('base64')}`;
+    return `data:${mime};base64,${Buffer.from(bytes).toString("base64")}`;
   }
 
-  it('compresses an oversized inline image part, leaving other parts untouched', async () => {
+  it("compresses an oversized inline image part, leaving other parts untouched", async () => {
     const big = await solidPng(2100, 1050);
     const parts = [
-      { type: 'text' as const, text: 'look at this' },
-      { type: 'image_url' as const, imageUrl: { url: dataUrl('image/png', big) } },
+      { type: "text" as const, text: "look at this" },
+      {
+        type: "image_url" as const,
+        imageUrl: { url: dataUrl("image/png", big) },
+      },
     ];
     const { parts: out } = await compressImageContentParts(parts);
 
-    expect(out[0]).toEqual({ type: 'text', text: 'look at this' });
+    expect(out[0]).toEqual({ type: "text", text: "look at this" });
     const imagePart = out[1];
-    if (imagePart?.type !== 'image_url') throw new Error('expected image_url');
-    const match = /^data:(image\/[a-z]+);base64,(.+)$/.exec(imagePart.imageUrl.url);
+    if (imagePart?.type !== "image_url") throw new Error("expected image_url");
+    const match = /^data:(image\/[a-z]+);base64,(.+)$/.exec(
+      imagePart.imageUrl.url,
+    );
     expect(match).not.toBeNull();
-    const dims = sniffImageDimensions(Buffer.from(match![2]!, 'base64'));
-    expect(Math.max(dims!.width, dims!.height)).toBeLessThanOrEqual(MAX_IMAGE_EDGE_PX);
+    const dims = sniffImageDimensions(Buffer.from(match![2]!, "base64"));
+    expect(Math.max(dims!.width, dims!.height)).toBeLessThanOrEqual(
+      MAX_IMAGE_EDGE_PX,
+    );
   });
 
-  it('preserves the part identity for a within-budget image (no change)', async () => {
+  it("preserves the part identity for a within-budget image (no change)", async () => {
     const small = await solidPng(48, 48);
-    const url = dataUrl('image/png', small);
-    const parts = [{ type: 'image_url' as const, imageUrl: { url } }];
+    const url = dataUrl("image/png", small);
+    const parts = [{ type: "image_url" as const, imageUrl: { url } }];
     const { parts: out } = await compressImageContentParts(parts);
-    expect(out[0]).toEqual({ type: 'image_url', imageUrl: { url } });
+    expect(out[0]).toEqual({ type: "image_url", imageUrl: { url } });
   });
 
-  it('leaves remote (non-data) image URLs untouched', async () => {
+  it("leaves remote (non-data) image URLs untouched", async () => {
     const parts = [
-      { type: 'image_url' as const, imageUrl: { url: 'https://example.com/pic.png' } },
+      {
+        type: "image_url" as const,
+        imageUrl: { url: "https://example.com/pic.png" },
+      },
     ];
     const { parts: out } = await compressImageContentParts(parts);
-    expect(out[0]).toEqual({ type: 'image_url', imageUrl: { url: 'https://example.com/pic.png' } });
+    expect(out[0]).toEqual({
+      type: "image_url",
+      imageUrl: { url: "https://example.com/pic.png" },
+    });
   });
 
-  it('keeps an image part id when rewriting the compressed url', async () => {
+  it("keeps an image part id when rewriting the compressed url", async () => {
     const big = await solidPng(2100, 1050);
     const parts = [
-      { type: 'image_url' as const, imageUrl: { url: dataUrl('image/png', big), id: 'att-1' } },
+      {
+        type: "image_url" as const,
+        imageUrl: { url: dataUrl("image/png", big), id: "att-1" },
+      },
     ];
     const { parts: out } = await compressImageContentParts(parts);
     const imagePart = out[0];
-    if (imagePart?.type !== 'image_url') throw new Error('expected image_url');
-    expect(imagePart.imageUrl.id).toBe('att-1');
-    expect(imagePart.imageUrl.url).not.toBe(dataUrl('image/png', big));
+    if (imagePart?.type !== "image_url") throw new Error("expected image_url");
+    expect(imagePart.imageUrl.id).toBe("att-1");
+    expect(imagePart.imageUrl.url).not.toBe(dataUrl("image/png", big));
   });
 
-  it('drops image parts the provider cannot accept, replacing each with a notice', async () => {
+  it("drops image parts the provider cannot accept, replacing each with a notice", async () => {
     // MCP servers can return any image/* MIME (e.g. an AVIF from an image
     // search tool). Forwarding it would poison the session history, so the
     // part is dropped and a text notice stands in.
     const parts = [
-      { type: 'text' as const, text: 'search results' },
-      { type: 'image_url' as const, imageUrl: { url: dataUrl('image/avif', new Uint8Array([1, 2, 3])) } },
-      { type: 'image_url' as const, imageUrl: { url: dataUrl('image/heic', new Uint8Array([4, 5, 6])) } },
+      { type: "text" as const, text: "search results" },
+      {
+        type: "image_url" as const,
+        imageUrl: { url: dataUrl("image/avif", new Uint8Array([1, 2, 3])) },
+      },
+      {
+        type: "image_url" as const,
+        imageUrl: { url: dataUrl("image/heic", new Uint8Array([4, 5, 6])) },
+      },
     ];
     const { parts: out, captions } = await compressImageContentParts(parts);
 
-    expect(out[0]).toEqual({ type: 'text', text: 'search results' });
-    expect(out.some((p) => p.type === 'image_url')).toBe(false);
-    const notices = out.filter((p) => p.type === 'text').map((p) => (p as { text: string }).text);
-    expect(notices.some((t) => t.includes('image/avif'))).toBe(true);
-    expect(notices.some((t) => t.includes('image/heic'))).toBe(true);
+    expect(out[0]).toEqual({ type: "text", text: "search results" });
+    expect(out.some((p) => p.type === "image_url")).toBe(false);
+    const notices = out
+      .filter((p) => p.type === "text")
+      .map((p) => (p as { text: string }).text);
+    expect(notices.some((t) => t.includes("image/avif"))).toBe(true);
+    expect(notices.some((t) => t.includes("image/heic"))).toBe(true);
     // Dropping is not compression: no captions are produced.
     expect(captions).toEqual([]);
   });
 
-  it('passes the accepted formats through the format gate untouched', async () => {
-    for (const mime of ['image/png', 'image/jpeg', 'image/gif', 'image/webp']) {
+  it("passes the accepted formats through the format gate untouched", async () => {
+    for (const mime of ["image/png", "image/jpeg", "image/gif", "image/webp"]) {
       const url = dataUrl(mime, new Uint8Array([1, 2, 3]));
-      const parts = [{ type: 'image_url' as const, imageUrl: { url } }];
+      const parts = [{ type: "image_url" as const, imageUrl: { url } }];
       const { parts: out } = await compressImageContentParts(parts);
-      expect(out[0]).toEqual({ type: 'image_url', imageUrl: { url } });
+      expect(out[0]).toEqual({ type: "image_url", imageUrl: { url } });
     }
   });
 
-  it('forwards accepted MIME aliases in canonical form', async () => {
+  it("forwards accepted MIME aliases in canonical form", async () => {
     // `image/jpg` (and case/whitespace variants) pass the gate, but the raw
     // alias must not land in the session: strict provider whitelists (e.g.
     // Anthropic's) reject it and every later request would fail.
     const bytes = new Uint8Array([1, 2, 3]);
-    const base64 = Buffer.from(bytes).toString('base64');
-    for (const alias of ['image/jpg', 'Image/JPEG', ' image/jpeg ']) {
+    const base64 = Buffer.from(bytes).toString("base64");
+    for (const alias of ["image/jpg", "Image/JPEG", " image/jpeg "]) {
       const parts = [
-        { type: 'image_url' as const, imageUrl: { url: `data:${alias};base64,${base64}` } },
+        {
+          type: "image_url" as const,
+          imageUrl: { url: `data:${alias};base64,${base64}` },
+        },
       ];
       const { parts: out, captions } = await compressImageContentParts(parts);
       expect(out[0]).toEqual({
-        type: 'image_url',
+        type: "image_url",
         imageUrl: { url: `data:image/jpeg;base64,${base64}` },
       });
       // Rewriting the MIME is not compression: no caption.
@@ -889,240 +973,326 @@ describe('compressImageContentParts', () => {
     }
   });
 
-  it('drops an unsupported image even when its data URL carries MIME parameters', async () => {
+  it("drops an unsupported image even when its data URL carries MIME parameters", async () => {
     const parts = [
       {
-        type: 'image_url' as const,
-        imageUrl: { url: dataUrl('image/avif;charset=utf-8', new Uint8Array([1, 2, 3])) },
+        type: "image_url" as const,
+        imageUrl: {
+          url: dataUrl("image/avif;charset=utf-8", new Uint8Array([1, 2, 3])),
+        },
       },
     ];
     const { parts: out } = await compressImageContentParts(parts);
-    expect(out.some((p) => p.type === 'image_url')).toBe(false);
-    expect(out[0]).toMatchObject({ type: 'text' });
-    expect((out[0] as { text: string }).text).toContain('image/avif');
+    expect(out.some((p) => p.type === "image_url")).toBe(false);
+    expect(out[0]).toMatchObject({ type: "text" });
+    expect((out[0] as { text: string }).text).toContain("image/avif");
   });
 });
 
 // ── format gate (shared by every ingestion point) ────────────────────
 
-describe('gateImageFormatParts', () => {
+describe("gateImageFormatParts", () => {
   function dataUrl(mime: string, bytes: Uint8Array): string {
-    return `data:${mime};base64,${Buffer.from(bytes).toString('base64')}`;
+    return `data:${mime};base64,${Buffer.from(bytes).toString("base64")}`;
   }
 
-  it('replaces every unsupported inline image with a notice and keeps the rest', () => {
+  it("replaces every unsupported inline image with a notice and keeps the rest", () => {
     const parts = [
-      { type: 'text' as const, text: 'results' },
-      { type: 'image_url' as const, imageUrl: { url: dataUrl('image/avif', new Uint8Array([1])) } },
-      { type: 'image_url' as const, imageUrl: { url: dataUrl('image/bmp', new Uint8Array([2])) } },
-      { type: 'video_url' as const, videoUrl: { url: dataUrl('video/mp4', new Uint8Array([3])) } },
-      { type: 'image_url' as const, imageUrl: { url: dataUrl('image/png', new Uint8Array([4])) } },
+      { type: "text" as const, text: "results" },
+      {
+        type: "image_url" as const,
+        imageUrl: { url: dataUrl("image/avif", new Uint8Array([1])) },
+      },
+      {
+        type: "image_url" as const,
+        imageUrl: { url: dataUrl("image/bmp", new Uint8Array([2])) },
+      },
+      {
+        type: "video_url" as const,
+        videoUrl: { url: dataUrl("video/mp4", new Uint8Array([3])) },
+      },
+      {
+        type: "image_url" as const,
+        imageUrl: { url: dataUrl("image/png", new Uint8Array([4])) },
+      },
     ];
     const out = gateImageFormatParts(parts);
 
-    expect(out[0]).toEqual({ type: 'text', text: 'results' });
+    expect(out[0]).toEqual({ type: "text", text: "results" });
     // Both unsupported images became notices naming their MIME.
-    const notices = out.filter((p) => p.type === 'text').map((p) => (p as { text: string }).text);
-    expect(notices.some((t) => t.includes('image/avif'))).toBe(true);
-    expect(notices.some((t) => t.includes('image/bmp'))).toBe(true);
+    const notices = out
+      .filter((p) => p.type === "text")
+      .map((p) => (p as { text: string }).text);
+    expect(notices.some((t) => t.includes("image/avif"))).toBe(true);
+    expect(notices.some((t) => t.includes("image/bmp"))).toBe(true);
     // Video parts and the accepted image pass through untouched.
     expect(out).toContainEqual(parts[3]);
     expect(out).toContainEqual(parts[4]);
     expect(
       out.some(
-        (p) => p.type === 'image_url' && !p.imageUrl.url.startsWith('data:image/png'),
+        (p) =>
+          p.type === "image_url" &&
+          !p.imageUrl.url.startsWith("data:image/png"),
       ),
     ).toBe(false);
   });
 
-  it('rewrites accepted MIME aliases to canonical form', () => {
-    const base64 = Buffer.from([1, 2, 3]).toString('base64');
+  it("rewrites accepted MIME aliases to canonical form", () => {
+    const base64 = Buffer.from([1, 2, 3]).toString("base64");
     const out = gateImageFormatParts([
-      { type: 'image_url', imageUrl: { url: `data:image/jpg;base64,${base64}` } },
+      {
+        type: "image_url",
+        imageUrl: { url: `data:image/jpg;base64,${base64}` },
+      },
     ]);
     expect(out[0]).toEqual({
-      type: 'image_url',
+      type: "image_url",
       imageUrl: { url: `data:image/jpeg;base64,${base64}` },
     });
   });
 
-  it('rewrites an accepted MIME carrying parameters to the bare canonical form', () => {
+  it("rewrites an accepted MIME carrying parameters to the bare canonical form", () => {
     // Strict provider whitelists exact-match the full data-URL header, so
     // `image/jpeg;charset=utf-8` would be rejected just like an alias.
-    const base64 = Buffer.from([1, 2, 3]).toString('base64');
+    const base64 = Buffer.from([1, 2, 3]).toString("base64");
     const out = gateImageFormatParts([
-      { type: 'image_url', imageUrl: { url: `data:image/jpeg;charset=utf-8;base64,${base64}` } },
+      {
+        type: "image_url",
+        imageUrl: { url: `data:image/jpeg;charset=utf-8;base64,${base64}` },
+      },
     ]);
     expect(out[0]).toEqual({
-      type: 'image_url',
+      type: "image_url",
       imageUrl: { url: `data:image/jpeg;base64,${base64}` },
     });
   });
 
-  it('gates on the sniffed bytes, not the declared MIME', () => {
-    const pngBytes = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3, 4]);
+  it("gates on the sniffed bytes, not the declared MIME", () => {
+    const pngBytes = Buffer.from([
+      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3, 4,
+    ]);
     const ftyp = (brand: string): Buffer => {
       const buf = Buffer.alloc(16);
       buf.writeUInt32BE(16, 0);
-      buf.write('ftyp', 4, 'latin1');
-      buf.write(brand, 8, 'latin1');
+      buf.write("ftyp", 4, "latin1");
+      buf.write(brand, 8, "latin1");
       return buf;
     };
 
     // AVIF bytes labeled image/png (a mislabeling MCP image search tool):
     // dropped as the AVIF it is — the provider decodes bytes, not labels.
     const mislabeled = gateImageFormatParts([
-      { type: 'image_url', imageUrl: { url: `data:image/png;base64,${ftyp('avif').toString('base64')}` } },
+      {
+        type: "image_url",
+        imageUrl: {
+          url: `data:image/png;base64,${ftyp("avif").toString("base64")}`,
+        },
+      },
     ]);
-    expect(mislabeled.some((p) => p.type === 'image_url')).toBe(false);
-    expect((mislabeled[0] as { text: string }).text).toContain('image/avif');
+    expect(mislabeled.some((p) => p.type === "image_url")).toBe(false);
+    expect((mislabeled[0] as { text: string }).text).toContain("image/avif");
 
     // A video container hiding in an image part is refused too.
     const video = gateImageFormatParts([
-      { type: 'image_url', imageUrl: { url: `data:image/png;base64,${ftyp('isom').toString('base64')}` } },
+      {
+        type: "image_url",
+        imageUrl: {
+          url: `data:image/png;base64,${ftyp("isom").toString("base64")}`,
+        },
+      },
     ]);
-    expect(video.some((p) => p.type === 'image_url')).toBe(false);
-    expect((video[0] as { text: string }).text).toContain('video/mp4');
+    expect(video.some((p) => p.type === "image_url")).toBe(false);
+    expect((video[0] as { text: string }).text).toContain("video/mp4");
 
     // PNG bytes labeled image/avif: rescued — forwarded as the PNG it is.
     const rescued = gateImageFormatParts([
-      { type: 'image_url', imageUrl: { url: `data:image/avif;base64,${pngBytes.toString('base64')}` } },
+      {
+        type: "image_url",
+        imageUrl: {
+          url: `data:image/avif;base64,${pngBytes.toString("base64")}`,
+        },
+      },
     ]);
     expect(rescued[0]).toEqual({
-      type: 'image_url',
-      imageUrl: { url: `data:image/png;base64,${pngBytes.toString('base64')}` },
+      type: "image_url",
+      imageUrl: { url: `data:image/png;base64,${pngBytes.toString("base64")}` },
     });
 
     // Unrecognized bytes (corrupt image): the declared MIME stands; the
     // 400-recovery path is the backstop for this case.
     const garbage = gateImageFormatParts([
-      { type: 'image_url', imageUrl: { url: `data:image/png;base64,${Buffer.from([1, 2, 3]).toString('base64')}` } },
+      {
+        type: "image_url",
+        imageUrl: {
+          url: `data:image/png;base64,${Buffer.from([1, 2, 3]).toString("base64")}`,
+        },
+      },
     ]);
-    expect(garbage[0]).toMatchObject({ type: 'image_url' });
+    expect(garbage[0]).toMatchObject({ type: "image_url" });
   });
 
-  it('parses the base64 marker case-insensitively', () => {
+  it("parses the base64 marker case-insensitively", () => {
     // `;BASE64,` is a legal data URL (RFC 2045 encoding names are
     // case-insensitive): an uppercase marker must not slip past the gate as
     // if it were a remote URL, and the canonical rebuild lowercases it.
-    const base64 = Buffer.from([1, 2, 3]).toString('base64');
+    const base64 = Buffer.from([1, 2, 3]).toString("base64");
 
     const accepted = gateImageFormatParts([
-      { type: 'image_url', imageUrl: { url: `data:image/jpeg;BASE64,${base64}` } },
+      {
+        type: "image_url",
+        imageUrl: { url: `data:image/jpeg;BASE64,${base64}` },
+      },
     ]);
     expect(accepted[0]).toEqual({
-      type: 'image_url',
+      type: "image_url",
       imageUrl: { url: `data:image/jpeg;base64,${base64}` },
     });
 
     const unsupported = gateImageFormatParts([
-      { type: 'image_url', imageUrl: { url: `data:image/avif;BASE64,${base64}` } },
+      {
+        type: "image_url",
+        imageUrl: { url: `data:image/avif;BASE64,${base64}` },
+      },
     ]);
-    expect(unsupported.some((p) => p.type === 'image_url')).toBe(false);
-    expect((unsupported[0] as { text: string }).text).toContain('image/avif');
+    expect(unsupported.some((p) => p.type === "image_url")).toBe(false);
+    expect((unsupported[0] as { text: string }).text).toContain("image/avif");
   });
 
-  it('drops remote image URLs whose extension is unsupported, passes others through', () => {
+  it("drops remote image URLs whose extension is unsupported, passes others through", () => {
     // No bytes to inspect, so the gate uses the path extension: a known-bad
     // extension becomes a notice; extensionless / unknown / accepted
     // extensions pass through to the provider (and the 400 recovery).
     for (const bad of [
-      'https://example.com/pic.avif',
-      'https://example.com/pic.AVIF',
-      'https://example.com/pic.heic?size=full',
-      'https://example.com/scan.tiff#frame',
-      'https://example.com/icon.ico',
-      'https://example.com/logo.svg',
+      "https://example.com/pic.avif",
+      "https://example.com/pic.AVIF",
+      "https://example.com/pic.heic?size=full",
+      "https://example.com/scan.tiff#frame",
+      "https://example.com/icon.ico",
+      "https://example.com/logo.svg",
     ]) {
-      const out = gateImageFormatParts([{ type: 'image_url', imageUrl: { url: bad } }]);
-      expect(out[0]).toMatchObject({ type: 'text' });
+      const out = gateImageFormatParts([
+        { type: "image_url", imageUrl: { url: bad } },
+      ]);
+      expect(out[0]).toMatchObject({ type: "text" });
       // The notice keeps the URL so the model can fetch and convert the image.
       expect((out[0] as { text: string }).text).toContain(bad);
     }
     for (const ok of [
-      'https://example.com/pic.png',
-      'https://example.com/pic.jpg?size=full#frame',
-      'https://example.com/avatar',
-      'https://cdn.example.com/v2/image?id=123',
+      "https://example.com/pic.png",
+      "https://example.com/pic.jpg?size=full#frame",
+      "https://example.com/avatar",
+      "https://cdn.example.com/v2/image?id=123",
     ]) {
-      const part = { type: 'image_url' as const, imageUrl: { url: ok } };
+      const part = { type: "image_url" as const, imageUrl: { url: ok } };
       expect(gateImageFormatParts([part])).toEqual([part]);
     }
   });
 
-  it('drops a malformed data URL instead of letting it poison the session', () => {
+  it("drops a malformed data URL instead of letting it poison the session", () => {
     // A `data:` URL parseImageDataUrl cannot parse is guaranteed to fail at
     // the provider (Anthropic throws, OpenAI-compat 400s): dropping it at
     // ingestion beats paying a rejected request + media strip every turn.
     const cases = [
-      'data:image/avif',
-      'data:image/png;notbase64,QUJD',
-      'data:;base64,QUJD',
-      'data:image/png;base64',
-      'DATA:image/avif',
+      "data:image/avif",
+      "data:image/png;notbase64,QUJD",
+      "data:;base64,QUJD",
+      "data:image/png;base64",
+      "DATA:image/avif",
     ];
     for (const url of cases) {
-      const out = gateImageFormatParts([{ type: 'image_url', imageUrl: { url } }]);
-      expect(out.some((p) => p.type === 'image_url')).toBe(false);
-      expect(out[0]).toMatchObject({ type: 'text' });
-      expect((out[0] as { text: string }).text).toContain('not a valid data URL');
+      const out = gateImageFormatParts([
+        { type: "image_url", imageUrl: { url } },
+      ]);
+      expect(out.some((p) => p.type === "image_url")).toBe(false);
+      expect(out[0]).toMatchObject({ type: "text" });
+      expect((out[0] as { text: string }).text).toContain(
+        "not a valid data URL",
+      );
     }
   });
 
-  it('truncates a long malformed data URL in the notice', () => {
-    const url = `data:image/png${'x'.repeat(500)}`;
-    const out = gateImageFormatParts([{ type: 'image_url', imageUrl: { url } }]);
+  it("truncates a long malformed data URL in the notice", () => {
+    const url = `data:image/png${"x".repeat(500)}`;
+    const out = gateImageFormatParts([
+      { type: "image_url", imageUrl: { url } },
+    ]);
     const notice = (out[0] as { text: string }).text;
     expect(notice.length).toBeLessThan(250);
     expect(notice).not.toContain(url);
   });
 });
 
-describe('normalizeImageMime', () => {
-  it('lowercases, strips MIME parameters, and applies the jpg alias', () => {
-    expect(normalizeImageMime('image/png')).toBe('image/png');
-    expect(normalizeImageMime('Image/JPEG')).toBe('image/jpeg');
-    expect(normalizeImageMime('image/jpg')).toBe('image/jpeg');
-    expect(normalizeImageMime(' image/webp ')).toBe('image/webp');
+describe("normalizeImageMime", () => {
+  it("lowercases, strips MIME parameters, and applies the jpg alias", () => {
+    expect(normalizeImageMime("image/png")).toBe("image/png");
+    expect(normalizeImageMime("Image/JPEG")).toBe("image/jpeg");
+    expect(normalizeImageMime("image/jpg")).toBe("image/jpeg");
+    expect(normalizeImageMime(" image/webp ")).toBe("image/webp");
     // Parameters (e.g. charset) are dropped so a declared media type stays
     // consistent with a data-URL MIME token.
-    expect(normalizeImageMime('image/jpeg; charset=utf-8')).toBe('image/jpeg');
-    expect(normalizeImageMime('IMAGE/PNG;foo=bar')).toBe('image/png');
+    expect(normalizeImageMime("image/jpeg; charset=utf-8")).toBe("image/jpeg");
+    expect(normalizeImageMime("IMAGE/PNG;foo=bar")).toBe("image/png");
   });
 });
 
-describe('unsupportedImageMimeFromUrl', () => {
-  it('flags known-unsupported extensions and ignores query/fragment/case', () => {
-    expect(unsupportedImageMimeFromUrl('https://example.com/pic.avif')).toBe('image/avif');
-    expect(unsupportedImageMimeFromUrl('https://example.com/pic.AVIF?x=1')).toBe('image/avif');
-    expect(unsupportedImageMimeFromUrl('https://example.com/photo.HEIC#frame')).toBe('image/heic');
-    expect(unsupportedImageMimeFromUrl('https://example.com/scan.tiff')).toBe('image/tiff');
-    expect(unsupportedImageMimeFromUrl('https://example.com/icon.ico')).toBe('image/x-icon');
+describe("unsupportedImageMimeFromUrl", () => {
+  it("flags known-unsupported extensions and ignores query/fragment/case", () => {
+    expect(unsupportedImageMimeFromUrl("https://example.com/pic.avif")).toBe(
+      "image/avif",
+    );
+    expect(
+      unsupportedImageMimeFromUrl("https://example.com/pic.AVIF?x=1"),
+    ).toBe("image/avif");
+    expect(
+      unsupportedImageMimeFromUrl("https://example.com/photo.HEIC#frame"),
+    ).toBe("image/heic");
+    expect(unsupportedImageMimeFromUrl("https://example.com/scan.tiff")).toBe(
+      "image/tiff",
+    );
+    expect(unsupportedImageMimeFromUrl("https://example.com/icon.ico")).toBe(
+      "image/x-icon",
+    );
     // .svg is not in the shared suffix map (SVG is text for the file tools),
     // but remote SVG images are accepted by no provider.
-    expect(unsupportedImageMimeFromUrl('https://example.com/logo.svg')).toBe('image/svg+xml');
-    expect(unsupportedImageMimeFromUrl('https://example.com/logo.svgz')).toBe('image/svg+xml');
+    expect(unsupportedImageMimeFromUrl("https://example.com/logo.svg")).toBe(
+      "image/svg+xml",
+    );
+    expect(unsupportedImageMimeFromUrl("https://example.com/logo.svgz")).toBe(
+      "image/svg+xml",
+    );
   });
 
-  it('returns null for accepted, extensionless, or unknown URLs', () => {
-    expect(unsupportedImageMimeFromUrl('https://example.com/pic.png')).toBeNull();
-    expect(unsupportedImageMimeFromUrl('https://example.com/pic.jpg')).toBeNull();
-    expect(unsupportedImageMimeFromUrl('https://example.com/avatar')).toBeNull();
-    expect(unsupportedImageMimeFromUrl('https://cdn.example.com/v2/image?id=123')).toBeNull();
-    expect(unsupportedImageMimeFromUrl('https://example.com/readme.json')).toBeNull();
+  it("returns null for accepted, extensionless, or unknown URLs", () => {
+    expect(
+      unsupportedImageMimeFromUrl("https://example.com/pic.png"),
+    ).toBeNull();
+    expect(
+      unsupportedImageMimeFromUrl("https://example.com/pic.jpg"),
+    ).toBeNull();
+    expect(
+      unsupportedImageMimeFromUrl("https://example.com/avatar"),
+    ).toBeNull();
+    expect(
+      unsupportedImageMimeFromUrl("https://cdn.example.com/v2/image?id=123"),
+    ).toBeNull();
+    expect(
+      unsupportedImageMimeFromUrl("https://example.com/readme.json"),
+    ).toBeNull();
   });
 });
 
 // ── original-dimension metadata ──────────────────────────────────────
 
-describe('compressImageForModel — EXIF orientation', () => {
-  it('reports original dimensions in the decoded (EXIF-rotated) space', async () => {
+describe("compressImageForModel — EXIF orientation", () => {
+  it("reports original dimensions in the decoded (EXIF-rotated) space", async () => {
     // Orientation 6 (rotate 90° CW): the file header says 120x80, but jimp
     // decodes to 80x120 — the space the sent image and any later crop region
     // actually live in. The reported original dimensions must match it, not
     // the pre-rotation header sniff.
     const jpeg = withExifOrientation(await solidJpeg(120, 80), 6);
-    const result = await compressImageForModel(jpeg, 'image/jpeg', { maxEdge: 64 });
+    const result = await compressImageForModel(jpeg, "image/jpeg", {
+      maxEdge: 64,
+    });
     expect(result.changed).toBe(true);
     expect(result.originalWidth).toBe(80);
     expect(result.originalHeight).toBe(120);
@@ -1130,12 +1300,12 @@ describe('compressImageForModel — EXIF orientation', () => {
     expect(result.width).toBeLessThan(result.height);
   });
 
-  it('reports display-space dimensions for an EXIF-rotated passthrough', async () => {
+  it("reports display-space dimensions for an EXIF-rotated passthrough", async () => {
     // Within both budgets → no decode ever happens. The header sniff itself
     // must account for EXIF orientation so passthrough metadata agrees with
     // the space a later region readback (which decodes) will use.
     const jpeg = withExifOrientation(await solidJpeg(120, 80), 6);
-    const result = await compressImageForModel(jpeg, 'image/jpeg');
+    const result = await compressImageForModel(jpeg, "image/jpeg");
     expect(result.changed).toBe(false);
     expect(result.data).toBe(jpeg); // fast path — not decoded
     expect(result.originalWidth).toBe(80);
@@ -1145,26 +1315,26 @@ describe('compressImageForModel — EXIF orientation', () => {
   });
 });
 
-describe('compressImageForModel — original dimensions metadata', () => {
-  it('reports original dimensions on passthrough and compressed results', async () => {
+describe("compressImageForModel — original dimensions metadata", () => {
+  it("reports original dimensions on passthrough and compressed results", async () => {
     const small = await solidPng(64, 64);
-    const pass = await compressImageForModel(small, 'image/png');
+    const pass = await compressImageForModel(small, "image/png");
     expect(pass.changed).toBe(false);
     expect(pass.originalWidth).toBe(64);
     expect(pass.originalHeight).toBe(64);
 
     const big = await solidPng(2100, 1050);
-    const shrunk = await compressImageForModel(big, 'image/png');
+    const shrunk = await compressImageForModel(big, "image/png");
     expect(shrunk.changed).toBe(true);
     expect(shrunk.originalWidth).toBe(2100);
     expect(shrunk.originalHeight).toBe(1050);
     expect(shrunk.width).toBe(2000);
   });
 
-  it('reports original dimensions through the base64 wrapper', async () => {
+  it("reports original dimensions through the base64 wrapper", async () => {
     const big = await solidPng(2100, 1050);
-    const base64 = Buffer.from(big).toString('base64');
-    const result = await compressBase64ForModel(base64, 'image/png');
+    const base64 = Buffer.from(big).toString("base64");
+    const result = await compressBase64ForModel(base64, "image/png");
     expect(result.changed).toBe(true);
     expect(result.originalWidth).toBe(2100);
     expect(result.originalHeight).toBe(1050);
@@ -1175,10 +1345,10 @@ describe('compressImageForModel — original dimensions metadata', () => {
 
 // ── crop ─────────────────────────────────────────────────────────────
 
-describe('cropImageForModel', () => {
-  it('crops a region out of a PNG at native resolution', async () => {
+describe("cropImageForModel", () => {
+  it("crops a region out of a PNG at native resolution", async () => {
     const png = await solidPng(3000, 1500);
-    const result = await cropImageForModel(png, 'image/png', {
+    const result = await cropImageForModel(png, "image/png", {
       x: 100,
       y: 200,
       width: 500,
@@ -1192,13 +1362,16 @@ describe('cropImageForModel', () => {
     expect(result.originalHeight).toBe(1500);
     expect(result.region).toEqual({ x: 100, y: 200, width: 500, height: 400 });
     expect(result.resized).toBe(false);
-    expect(result.mimeType).toBe('image/png');
-    expect(sniffImageDimensions(result.data)).toEqual({ width: 500, height: 400 });
+    expect(result.mimeType).toBe("image/png");
+    expect(sniffImageDimensions(result.data)).toEqual({
+      width: 500,
+      height: 400,
+    });
   });
 
-  it('preserves the JPEG format when cropping a JPEG', async () => {
+  it("preserves the JPEG format when cropping a JPEG", async () => {
     const jpeg = await solidJpeg(800, 400);
-    const result = await cropImageForModel(jpeg, 'image/jpeg', {
+    const result = await cropImageForModel(jpeg, "image/jpeg", {
       x: 0,
       y: 0,
       width: 300,
@@ -1206,14 +1379,14 @@ describe('cropImageForModel', () => {
     });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.mimeType).toBe('image/jpeg');
+    expect(result.mimeType).toBe("image/jpeg");
     expect(result.width).toBe(300);
     expect(result.height).toBe(300);
   });
 
-  it('clamps a region that overflows the image bounds', async () => {
+  it("clamps a region that overflows the image bounds", async () => {
     const png = await solidPng(3000, 1500);
-    const result = await cropImageForModel(png, 'image/png', {
+    const result = await cropImageForModel(png, "image/png", {
       x: 2500,
       y: 1000,
       width: 1000,
@@ -1221,14 +1394,19 @@ describe('cropImageForModel', () => {
     });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.region).toEqual({ x: 2500, y: 1000, width: 500, height: 500 });
+    expect(result.region).toEqual({
+      x: 2500,
+      y: 1000,
+      width: 500,
+      height: 500,
+    });
     expect(result.width).toBe(500);
     expect(result.height).toBe(500);
   });
 
-  it('rejects a region fully outside the image, naming the original size', async () => {
+  it("rejects a region fully outside the image, naming the original size", async () => {
     const png = await solidPng(2100, 1050);
-    const result = await cropImageForModel(png, 'image/png', {
+    const result = await cropImageForModel(png, "image/png", {
       x: 2100,
       y: 0,
       width: 100,
@@ -1236,12 +1414,12 @@ describe('cropImageForModel', () => {
     });
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(result.error).toContain('2100x1050');
+    expect(result.error).toContain("2100x1050");
   });
 
-  it('downscales an oversized crop to the edge cap by default', async () => {
+  it("downscales an oversized crop to the edge cap by default", async () => {
     const png = await solidPng(2500, 1250);
-    const result = await cropImageForModel(png, 'image/png', {
+    const result = await cropImageForModel(png, "image/png", {
       x: 0,
       y: 0,
       width: 2400,
@@ -1250,15 +1428,17 @@ describe('cropImageForModel', () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.resized).toBe(true);
-    expect(Math.max(result.width, result.height)).toBeLessThanOrEqual(MAX_IMAGE_EDGE_PX);
+    expect(Math.max(result.width, result.height)).toBeLessThanOrEqual(
+      MAX_IMAGE_EDGE_PX,
+    );
     expect(result.region).toEqual({ x: 0, y: 0, width: 2400, height: 1200 });
   });
 
-  it('keeps native resolution with skipResize', async () => {
+  it("keeps native resolution with skipResize", async () => {
     const png = await solidPng(3000, 1500);
     const result = await cropImageForModel(
       png,
-      'image/png',
+      "image/png",
       { x: 0, y: 0, width: 2500, height: 1200 },
       { skipResize: true },
     );
@@ -1269,11 +1449,11 @@ describe('cropImageForModel', () => {
     expect(result.height).toBe(1200);
   });
 
-  it('fails explicitly when a skipResize crop exceeds the byte budget', async () => {
+  it("fails explicitly when a skipResize crop exceeds the byte budget", async () => {
     const png = await noisePng(400, 400);
     const result = await cropImageForModel(
       png,
-      'image/png',
+      "image/png",
       { x: 0, y: 0, width: 400, height: 400 },
       { skipResize: true, byteBudget: 8 * 1024 },
     );
@@ -1282,9 +1462,11 @@ describe('cropImageForModel', () => {
     expect(result.error).toMatch(/smaller region/i);
   });
 
-  it('rejects non-recodable formats explicitly', async () => {
-    const gif = new Uint8Array([0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 1, 0, 1, 0]);
-    const result = await cropImageForModel(gif, 'image/gif', {
+  it("rejects non-recodable formats explicitly", async () => {
+    const gif = new Uint8Array([
+      0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 1, 0, 1, 0,
+    ]);
+    const result = await cropImageForModel(gif, "image/gif", {
       x: 0,
       y: 0,
       width: 1,
@@ -1295,9 +1477,11 @@ describe('cropImageForModel', () => {
     expect(result.error).toMatch(/PNG, JPEG, and WebP/);
   });
 
-  it('rejects corrupt bytes without throwing', async () => {
-    const corrupt = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3]);
-    const result = await cropImageForModel(corrupt, 'image/png', {
+  it("rejects corrupt bytes without throwing", async () => {
+    const corrupt = new Uint8Array([
+      0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3,
+    ]);
+    const result = await cropImageForModel(corrupt, "image/png", {
       x: 0,
       y: 0,
       width: 10,
@@ -1306,7 +1490,7 @@ describe('cropImageForModel', () => {
     expect(result.ok).toBe(false);
   });
 
-  it('rejects non-finite region coordinates with a clean error', async () => {
+  it("rejects non-finite region coordinates with a clean error", async () => {
     // NaN slips past every `<`/`>=` comparison, so without an explicit guard
     // it reaches jimp and surfaces as a misleading internal validation dump.
     const png = await solidPng(300, 200);
@@ -1316,7 +1500,7 @@ describe('cropImageForModel', () => {
       { x: 0, y: 0, width: Number.NaN, height: 10 },
       { x: 0, y: 0, width: 10, height: Number.NaN },
     ]) {
-      const result = await cropImageForModel(png, 'image/png', region);
+      const result = await cropImageForModel(png, "image/png", region);
       expect(result.ok).toBe(false);
       if (result.ok) continue;
       expect(result.error).toMatch(/finite/i);
@@ -1324,144 +1508,210 @@ describe('cropImageForModel', () => {
     }
   });
 
-  it('refuses to decode a decompression bomb', async () => {
+  it("refuses to decode a decompression bomb", async () => {
     const header = Buffer.alloc(24);
-    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).copy(header, 0);
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).copy(
+      header,
+      0,
+    );
     header.writeUInt32BE(13, 8);
-    header.write('IHDR', 12, 'latin1');
+    header.write("IHDR", 12, "latin1");
     header.writeUInt32BE(30000, 16);
     header.writeUInt32BE(30000, 20);
-    const result = await cropImageForModel(new Uint8Array(header), 'image/png', {
-      x: 0,
-      y: 0,
-      width: 10,
-      height: 10,
-    });
+    const result = await cropImageForModel(
+      new Uint8Array(header),
+      "image/png",
+      {
+        x: 0,
+        y: 0,
+        width: 10,
+        height: 10,
+      },
+    );
     expect(result.ok).toBe(false);
   });
 });
 
 // ── compression caption ──────────────────────────────────────────────
 
-describe('buildImageCompressionCaption', () => {
-  it('describes the original and sent variants with a readback path', () => {
+describe("buildImageCompressionCaption", () => {
+  it("describes the original and sent variants with a readback path", () => {
     const caption = buildImageCompressionCaption({
-      original: { width: 5184, height: 3456, byteLength: 13002342, mimeType: 'image/png' },
-      final: { width: 2000, height: 1333, byteLength: 1153433, mimeType: 'image/jpeg' },
-      originalPath: '/tmp/originals/ab.png',
+      original: {
+        width: 5184,
+        height: 3456,
+        byteLength: 13002342,
+        mimeType: "image/png",
+      },
+      final: {
+        width: 2000,
+        height: 1333,
+        byteLength: 1153433,
+        mimeType: "image/jpeg",
+      },
+      originalPath: "/tmp/originals/ab.png",
     });
     expect(caption).toMatch(/^<system>.*<\/system>$/s);
-    expect(caption).toContain('5184x3456 image/png (12.4 MB)');
-    expect(caption).toContain('2000x1333 image/jpeg (1.1 MB)');
-    expect(caption).toContain('/tmp/originals/ab.png');
-    expect(caption).toContain('region');
+    expect(caption).toContain("5184x3456 image/png (12.4 MB)");
+    expect(caption).toContain("2000x1333 image/jpeg (1.1 MB)");
+    expect(caption).toContain("/tmp/originals/ab.png");
+    expect(caption).toContain("region");
   });
 
-  it('omits dimensions when unknown and notes a missing original', () => {
+  it("omits dimensions when unknown and notes a missing original", () => {
     const caption = buildImageCompressionCaption({
-      original: { width: 0, height: 0, byteLength: 5 * 1024 * 1024, mimeType: 'image/png' },
-      final: { width: 0, height: 0, byteLength: 1024 * 1024, mimeType: 'image/jpeg' },
+      original: {
+        width: 0,
+        height: 0,
+        byteLength: 5 * 1024 * 1024,
+        mimeType: "image/png",
+      },
+      final: {
+        width: 0,
+        height: 0,
+        byteLength: 1024 * 1024,
+        mimeType: "image/jpeg",
+      },
     });
-    expect(caption).not.toContain('0x0');
-    expect(caption).toContain('image/png (5.0 MB)');
-    expect(caption).toContain('image/jpeg (1.0 MB)');
+    expect(caption).not.toContain("0x0");
+    expect(caption).toContain("image/png (5.0 MB)");
+    expect(caption).toContain("image/jpeg (1.0 MB)");
     expect(caption).toMatch(/not preserved/i);
   });
 });
 
-describe('extractImageCompressionCaptions', () => {
+describe("extractImageCompressionCaptions", () => {
   const caption = buildImageCompressionCaption({
-    original: { width: 3264, height: 666, byteLength: 344 * 1024, mimeType: 'image/png' },
-    final: { width: 2000, height: 408, byteLength: 282 * 1024, mimeType: 'image/png' },
-    originalPath: '/tmp/originals/shot.png',
+    original: {
+      width: 3264,
+      height: 666,
+      byteLength: 344 * 1024,
+      mimeType: "image/png",
+    },
+    final: {
+      width: 2000,
+      height: 408,
+      byteLength: 282 * 1024,
+      mimeType: "image/png",
+    },
+    originalPath: "/tmp/originals/shot.png",
   });
 
-  it('extracts a standalone caption, unwrapping the <system> tag', () => {
+  it("extracts a standalone caption, unwrapping the <system> tag", () => {
     const result = extractImageCompressionCaptions(caption);
     expect(result.captions).toHaveLength(1);
-    expect(result.captions[0]).toContain('Image compressed to fit model limits');
-    expect(result.captions[0]).toContain('/tmp/originals/shot.png');
-    expect(result.captions[0]).not.toContain('<system>');
-    expect(result.text).toBe('');
+    expect(result.captions[0]).toContain(
+      "Image compressed to fit model limits",
+    );
+    expect(result.captions[0]).toContain("/tmp/originals/shot.png");
+    expect(result.captions[0]).not.toContain("<system>");
+    expect(result.text).toBe("");
   });
 
-  it('extracts a caption merged into surrounding user text', () => {
-    const result = extractImageCompressionCaptions(`能展示但是没有快捷键提示${caption}`);
+  it("extracts a caption merged into surrounding user text", () => {
+    const result = extractImageCompressionCaptions(
+      `能展示但是没有快捷键提示${caption}`,
+    );
     expect(result.captions).toHaveLength(1);
-    expect(result.text).toBe('能展示但是没有快捷键提示');
+    expect(result.text).toBe("能展示但是没有快捷键提示");
   });
 
-  it('extracts multiple captions from one text', () => {
+  it("extracts multiple captions from one text", () => {
     const other = buildImageCompressionCaption({
-      original: { width: 4000, height: 3000, byteLength: 9 * 1024 * 1024, mimeType: 'image/jpeg' },
-      final: { width: 2000, height: 1500, byteLength: 1024 * 1024, mimeType: 'image/jpeg' },
-      originalPath: '/tmp/originals/photo.jpg',
+      original: {
+        width: 4000,
+        height: 3000,
+        byteLength: 9 * 1024 * 1024,
+        mimeType: "image/jpeg",
+      },
+      final: {
+        width: 2000,
+        height: 1500,
+        byteLength: 1024 * 1024,
+        mimeType: "image/jpeg",
+      },
+      originalPath: "/tmp/originals/photo.jpg",
     });
-    const result = extractImageCompressionCaptions(`看这两张图${caption}${other}`);
+    const result = extractImageCompressionCaptions(
+      `看这两张图${caption}${other}`,
+    );
     expect(result.captions).toHaveLength(2);
-    expect(result.captions[0]).toContain('/tmp/originals/shot.png');
-    expect(result.captions[1]).toContain('/tmp/originals/photo.jpg');
-    expect(result.text).toBe('看这两张图');
+    expect(result.captions[0]).toContain("/tmp/originals/shot.png");
+    expect(result.captions[1]).toContain("/tmp/originals/photo.jpg");
+    expect(result.text).toBe("看这两张图");
   });
 
-  it('leaves non-caption <system> blocks and plain text untouched', () => {
-    const toolStatus = '<system>ERROR: Tool execution failed.</system>';
+  it("leaves non-caption <system> blocks and plain text untouched", () => {
+    const toolStatus = "<system>ERROR: Tool execution failed.</system>";
     expect(extractImageCompressionCaptions(toolStatus)).toEqual({
       captions: [],
       text: toolStatus,
     });
-    expect(extractImageCompressionCaptions('just some text')).toEqual({
+    expect(extractImageCompressionCaptions("just some text")).toEqual({
       captions: [],
-      text: 'just some text',
+      text: "just some text",
     });
   });
 });
 
 // ── content-part annotation ──────────────────────────────────────────
 
-describe('compressImageContentParts — annotate', () => {
+describe("compressImageContentParts — annotate", () => {
   function dataUrl(mime: string, bytes: Uint8Array): string {
-    return `data:${mime};base64,${Buffer.from(bytes).toString('base64')}`;
+    return `data:${mime};base64,${Buffer.from(bytes).toString("base64")}`;
   }
 
-  it('collects a caption for a compressed image and persists the original', async () => {
+  it("collects a caption for a compressed image and persists the original", async () => {
     const big = await solidPng(2100, 1050);
     const persisted: { bytes: Uint8Array; mimeType: string }[] = [];
-    const parts = [{ type: 'image_url' as const, imageUrl: { url: dataUrl('image/png', big) } }];
+    const parts = [
+      {
+        type: "image_url" as const,
+        imageUrl: { url: dataUrl("image/png", big) },
+      },
+    ];
     const out = await compressImageContentParts(parts, {
       annotate: {
         persistOriginal: (bytes, mimeType) => {
           persisted.push({ bytes, mimeType });
-          return Promise.resolve('/tmp/originals/big.png');
+          return Promise.resolve("/tmp/originals/big.png");
         },
       },
     });
 
     // The caption comes back as data, never inserted into the parts.
     expect(out.parts).toHaveLength(1);
-    expect(out.parts[0]?.type).toBe('image_url');
+    expect(out.parts[0]?.type).toBe("image_url");
     expect(out.captions).toHaveLength(1);
-    expect(out.captions[0]).toContain('2100x1050');
-    expect(out.captions[0]).toContain('/tmp/originals/big.png');
+    expect(out.captions[0]).toContain("2100x1050");
+    expect(out.captions[0]).toContain("/tmp/originals/big.png");
     expect(persisted).toHaveLength(1);
-    expect(persisted[0]?.mimeType).toBe('image/png');
+    expect(persisted[0]?.mimeType).toBe("image/png");
     expect(persisted[0]?.bytes.length).toBe(big.length);
   });
 
-  it('collects no caption when the image passes through unchanged', async () => {
+  it("collects no caption when the image passes through unchanged", async () => {
     const small = await solidPng(48, 48);
-    const url = dataUrl('image/png', small);
-    const out = await compressImageContentParts([{ type: 'image_url' as const, imageUrl: { url } }], {
-      annotate: {},
-    });
+    const url = dataUrl("image/png", small);
+    const out = await compressImageContentParts(
+      [{ type: "image_url" as const, imageUrl: { url } }],
+      {
+        annotate: {},
+      },
+    );
     expect(out.parts).toHaveLength(1);
-    expect(out.parts[0]).toEqual({ type: 'image_url', imageUrl: { url } });
+    expect(out.parts[0]).toEqual({ type: "image_url", imageUrl: { url } });
     expect(out.captions).toEqual([]);
   });
 
-  it('captions without a path when persistence fails', async () => {
+  it("captions without a path when persistence fails", async () => {
     const big = await solidPng(2100, 1050);
-    const parts = [{ type: 'image_url' as const, imageUrl: { url: dataUrl('image/png', big) } }];
+    const parts = [
+      {
+        type: "image_url" as const,
+        imageUrl: { url: dataUrl("image/png", big) },
+      },
+    ];
     const out = await compressImageContentParts(parts, {
       annotate: { persistOriginal: () => Promise.resolve(null) },
     });
@@ -1498,7 +1748,7 @@ async function checkerboardPng(size: number): Promise<Uint8Array> {
       data[i + 3] = 0xff;
     }
   }
-  return new Uint8Array(await image.getBuffer('image/png'));
+  return new Uint8Array(await image.getBuffer("image/png"));
 }
 
 interface GrayStats {
@@ -1508,7 +1758,9 @@ interface GrayStats {
 }
 
 /** Min/max/mean over the red channel (all probes here are grayscale). */
-function grayStats(image: { bitmap: { data: Buffer | Uint8Array } }): GrayStats {
+function grayStats(image: {
+  bitmap: { data: Buffer | Uint8Array };
+}): GrayStats {
   const data = image.bitmap.data;
   let min = 255;
   let max = 0;
@@ -1522,13 +1774,15 @@ function grayStats(image: { bitmap: { data: Buffer | Uint8Array } }): GrayStats 
   return { min, max, mean: sum / (data.length / 4) };
 }
 
-describe('compressImageForModel — downscale quality guards', () => {
-  it('averages a 1px checkerboard to flat gray at an integer ratio (no aliasing)', async () => {
+describe("compressImageForModel — downscale quality guards", () => {
+  it("averages a 1px checkerboard to flat gray at an integer ratio (no aliasing)", async () => {
     // 1000 → 250 (4:1). Every output pixel covers a 4×4 block holding 8
     // black and 8 white pixels, so a full-coverage average lands on ~127.
     // Aliasing would instead show up as black/white patches or moiré bands.
     const png = await checkerboardPng(1000);
-    const result = await compressImageForModel(png, 'image/png', { maxEdge: 250 });
+    const result = await compressImageForModel(png, "image/png", {
+      maxEdge: 250,
+    });
     expect(result.changed).toBe(true);
     expect(Math.max(result.width, result.height)).toBe(250);
 
@@ -1538,12 +1792,14 @@ describe('compressImageForModel — downscale quality guards', () => {
     expect(max).toBeLessThanOrEqual(138);
   });
 
-  it('stays alias-free at a non-integer ratio (fractional pixel coverage)', async () => {
+  it("stays alias-free at a non-integer ratio (fractional pixel coverage)", async () => {
     // 1000 → 390 (≈2.56:1). Non-integer ratios are where phase-dependent
     // point sampling degrades worst. Fractional window coverage leaves the
     // average some mild texture, but nothing may approach black or white.
     const png = await checkerboardPng(1000);
-    const result = await compressImageForModel(png, 'image/png', { maxEdge: 390 });
+    const result = await compressImageForModel(png, "image/png", {
+      maxEdge: 390,
+    });
     expect(result.changed).toBe(true);
 
     const decoded = await Jimp.fromBuffer(Buffer.from(result.data));
@@ -1552,7 +1808,7 @@ describe('compressImageForModel — downscale quality guards', () => {
     expect(max).toBeLessThanOrEqual(165);
   });
 
-  it('control: jimp point-sampled BILINEAR aliases the same input (keeps the probe honest)', async () => {
+  it("control: jimp point-sampled BILINEAR aliases the same input (keeps the probe honest)", async () => {
     // Executable counter-example for the constraint documented on
     // fitWithinEdge: the named ResizeStrategy modes sample a fixed 2×2
     // neighborhood around the mapped point and skip the rest. At 4:1 the
@@ -1562,7 +1818,9 @@ describe('compressImageForModel — downscale quality guards', () => {
     // distinguishes resamplers) and pins the library behavior the
     // mode-less default call relies on — if jimp ever changes either
     // side, revisit the fitWithinEdge comment.
-    const image = await Jimp.fromBuffer(Buffer.from(await checkerboardPng(1000)));
+    const image = await Jimp.fromBuffer(
+      Buffer.from(await checkerboardPng(1000)),
+    );
     image.resize({ w: 250, h: 250, mode: ResizeStrategy.BILINEAR });
     const { min, max, mean } = grayStats(image);
     // The correct answer is flat ~127 gray (mean ≈ 127, max-min ≈ 0).
@@ -1572,7 +1830,7 @@ describe('compressImageForModel — downscale quality guards', () => {
     expect(aliased).toBe(true);
   });
 
-  it('never bleeds color from fully transparent pixels into visible ones', async () => {
+  it("never bleeds color from fully transparent pixels into visible ones", async () => {
     // Fully transparent pixels still carry RGB values. A resizer that
     // blends them into the average tints every transparency edge (halo).
     // Probe: a fully transparent BRIGHT RED field around an opaque blue
@@ -1589,11 +1847,13 @@ describe('compressImageForModel — downscale quality guards', () => {
         data[i + 3] = 0xff;
       }
     }
-    const png = new Uint8Array(await image.getBuffer('image/png'));
+    const png = new Uint8Array(await image.getBuffer("image/png"));
 
-    const result = await compressImageForModel(png, 'image/png', { maxEdge: 200 });
+    const result = await compressImageForModel(png, "image/png", {
+      maxEdge: 200,
+    });
     expect(result.changed).toBe(true);
-    expect(result.mimeType).toBe('image/png'); // alpha survives
+    expect(result.mimeType).toBe("image/png"); // alpha survives
 
     const decoded = await Jimp.fromBuffer(Buffer.from(result.data));
     const out = decoded.bitmap.data;
@@ -1607,24 +1867,29 @@ describe('compressImageForModel — downscale quality guards', () => {
     expect(visible).toBeGreaterThan(0); // the blue square is still there
   });
 
-  it('preserves mean brightness through the downscale (no energy drift)', async () => {
+  it("preserves mean brightness through the downscale (no energy drift)", async () => {
     // A normalized filter keeps the image mean; drift here would indicate
     // non-normalized weights (or a broken gamma pipeline stage).
     const png = await noisePng(400, 400);
     const input = await Jimp.fromBuffer(Buffer.from(png));
     const inputMean = grayStats(input).mean;
 
-    const result = await compressImageForModel(png, 'image/png', { maxEdge: 100 });
+    const result = await compressImageForModel(png, "image/png", {
+      maxEdge: 100,
+    });
     expect(result.changed).toBe(true);
     const output = await Jimp.fromBuffer(Buffer.from(result.data));
     expect(Math.abs(grayStats(output).mean - inputMean)).toBeLessThan(3);
   });
 
-  it('recompressing a compressed result is a no-op (no iterative degradation)', async () => {
+  it("recompressing a compressed result is a no-op (no iterative degradation)", async () => {
     // Model-bound bytes can re-enter the pipeline (session replay, MCP
     // round-trips). Once within budget they must pass through untouched
     // instead of being shaved a little smaller on every pass.
-    const first = await compressImageForModel(await solidPng(2100, 1050), 'image/png');
+    const first = await compressImageForModel(
+      await solidPng(2100, 1050),
+      "image/png",
+    );
     expect(first.changed).toBe(true);
 
     const second = await compressImageForModel(first.data, first.mimeType);
@@ -1632,15 +1897,18 @@ describe('compressImageForModel — downscale quality guards', () => {
     expect(second.data).toBe(first.data); // identity — not even re-decoded
   });
 
-  it('keeps a degenerate aspect ratio at least 1px tall (no zero-size collapse)', async () => {
+  it("keeps a degenerate aspect ratio at least 1px tall (no zero-size collapse)", async () => {
     // 9000×2 scaled to a 2000px edge would round the short side to 0.44px;
     // the resizer must clamp to 1, not produce an undecodable 2000×0 image.
     const png = await solidPng(9000, 2);
-    const result = await compressImageForModel(png, 'image/png');
+    const result = await compressImageForModel(png, "image/png");
     expect(result.changed).toBe(true);
     expect(result.width).toBe(2000);
     expect(result.height).toBe(1);
-    expect(sniffImageDimensions(result.data)).toEqual({ width: 2000, height: 1 });
+    expect(sniffImageDimensions(result.data)).toEqual({
+      width: 2000,
+      height: 1,
+    });
   });
 });
 
@@ -1651,209 +1919,227 @@ interface CapturedEvent {
   readonly props: TelemetryProperties;
 }
 
-function captureTelemetry(): { client: TelemetryClient; events: CapturedEvent[] } {
+function captureTelemetry(): {
+  client: TelemetryClient;
+  events: CapturedEvent[];
+} {
   const events: CapturedEvent[] = [];
   return {
-    client: { track: (event, props) => events.push({ event, props: props ?? {} }) },
+    client: {
+      track: (event, props) => events.push({ event, props: props ?? {} }),
+    },
     events,
   };
 }
 
-describe('compressImageForModel — telemetry', () => {
-  it('reports a compressed image with sizes, formats, and duration', async () => {
+describe("compressImageForModel — telemetry", () => {
+  it("reports a compressed image with sizes, formats, and duration", async () => {
     const { client, events } = captureTelemetry();
     const png = await solidPng(2100, 1050);
-    const result = await compressImageForModel(png, 'image/png', {
-      telemetry: { client, source: 'read_media' },
+    const result = await compressImageForModel(png, "image/png", {
+      telemetry: { client, source: "read_media" },
     });
     expect(result.changed).toBe(true);
 
     expect(events).toHaveLength(1);
     const { event, props } = events[0]!;
-    expect(event).toBe('image_compress');
-    expect(props['source']).toBe('read_media');
-    expect(props['outcome']).toBe('compressed');
-    expect(props['input_mime']).toBe('image/png');
-    expect(props['output_mime']).toBe(result.mimeType);
-    expect(props['original_bytes']).toBe(png.length);
-    expect(props['final_bytes']).toBe(result.finalByteLength);
-    expect(props['original_width']).toBe(2100);
-    expect(props['original_height']).toBe(1050);
-    expect(props['final_width']).toBe(2000);
-    expect(props['final_height']).toBe(1000);
-    expect(props['exif_transposed']).toBe(false);
-    expect(typeof props['duration_ms']).toBe('number');
+    expect(event).toBe("image_compress");
+    expect(props["source"]).toBe("read_media");
+    expect(props["outcome"]).toBe("compressed");
+    expect(props["input_mime"]).toBe("image/png");
+    expect(props["output_mime"]).toBe(result.mimeType);
+    expect(props["original_bytes"]).toBe(png.length);
+    expect(props["final_bytes"]).toBe(result.finalByteLength);
+    expect(props["original_width"]).toBe(2100);
+    expect(props["original_height"]).toBe(1050);
+    expect(props["final_width"]).toBe(2000);
+    expect(props["final_height"]).toBe(1000);
+    expect(props["exif_transposed"]).toBe(false);
+    expect(typeof props["duration_ms"]).toBe("number");
   });
 
-  it('reports the fast path as passthrough_fast', async () => {
+  it("reports the fast path as passthrough_fast", async () => {
     const { client, events } = captureTelemetry();
-    await compressImageForModel(await solidPng(64, 64), 'image/png', {
-      telemetry: { client, source: 'tui_paste' },
+    await compressImageForModel(await solidPng(64, 64), "image/png", {
+      telemetry: { client, source: "tui_paste" },
     });
     expect(events).toHaveLength(1);
-    expect(events[0]!.props['outcome']).toBe('passthrough_fast');
-    expect(events[0]!.props['source']).toBe('tui_paste');
+    expect(events[0]!.props["outcome"]).toBe("passthrough_fast");
+    expect(events[0]!.props["source"]).toBe("tui_paste");
   });
 
-  it('reports decode guards as passthrough_guard', async () => {
+  it("reports decode guards as passthrough_guard", async () => {
     // Decompression-bomb header: 30000×30000 with no pixel data.
     const header = Buffer.alloc(24);
-    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).copy(header, 0);
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).copy(
+      header,
+      0,
+    );
     header.writeUInt32BE(13, 8);
-    header.write('IHDR', 12, 'latin1');
+    header.write("IHDR", 12, "latin1");
     header.writeUInt32BE(30000, 16);
     header.writeUInt32BE(30000, 20);
 
     const bomb = captureTelemetry();
-    await compressImageForModel(new Uint8Array(header), 'image/png', {
-      telemetry: { client: bomb.client, source: 'mcp_tool_result' },
+    await compressImageForModel(new Uint8Array(header), "image/png", {
+      telemetry: { client: bomb.client, source: "mcp_tool_result" },
     });
-    expect(bomb.events[0]!.props['outcome']).toBe('passthrough_guard');
+    expect(bomb.events[0]!.props["outcome"]).toBe("passthrough_guard");
 
     const byteCap = captureTelemetry();
-    await compressImageForModel(await solidPng(2100, 100), 'image/png', {
+    await compressImageForModel(await solidPng(2100, 100), "image/png", {
       maxDecodeBytes: 64,
-      telemetry: { client: byteCap.client, source: 'mcp_tool_result' },
+      telemetry: { client: byteCap.client, source: "mcp_tool_result" },
     });
-    expect(byteCap.events[0]!.props['outcome']).toBe('passthrough_guard');
+    expect(byteCap.events[0]!.props["outcome"]).toBe("passthrough_guard");
   });
 
-  it('reports non-recodable formats and empty input as passthrough_unsupported', async () => {
+  it("reports non-recodable formats and empty input as passthrough_unsupported", async () => {
     const gif = captureTelemetry();
     await compressImageForModel(
       new Uint8Array([0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 1, 0, 1, 0]),
-      'image/gif',
-      { telemetry: { client: gif.client, source: 'mcp_tool_result' } },
+      "image/gif",
+      { telemetry: { client: gif.client, source: "mcp_tool_result" } },
     );
-    expect(gif.events[0]!.props['outcome']).toBe('passthrough_unsupported');
+    expect(gif.events[0]!.props["outcome"]).toBe("passthrough_unsupported");
 
     const empty = captureTelemetry();
-    await compressImageForModel(new Uint8Array(0), 'image/png', {
-      telemetry: { client: empty.client, source: 'mcp_tool_result' },
+    await compressImageForModel(new Uint8Array(0), "image/png", {
+      telemetry: { client: empty.client, source: "mcp_tool_result" },
     });
-    expect(empty.events[0]!.props['outcome']).toBe('passthrough_unsupported');
+    expect(empty.events[0]!.props["outcome"]).toBe("passthrough_unsupported");
   });
 
-  it('reports undecodable bytes as passthrough_error', async () => {
+  it("reports undecodable bytes as passthrough_error", async () => {
     // A tiny corrupt blob would pass through on the fast path (unknown dims,
     // small bytes) without ever decoding; to reach the decoder the header
     // must claim an over-cap size. 4000×4000 forces a decode of garbage.
     const { client, events } = captureTelemetry();
     const corrupt = Buffer.alloc(32);
-    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).copy(corrupt, 0);
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).copy(
+      corrupt,
+      0,
+    );
     corrupt.writeUInt32BE(13, 8);
-    corrupt.write('IHDR', 12, 'latin1');
+    corrupt.write("IHDR", 12, "latin1");
     corrupt.writeUInt32BE(4000, 16);
     corrupt.writeUInt32BE(4000, 20);
-    await compressImageForModel(new Uint8Array(corrupt), 'image/png', {
-      telemetry: { client, source: 'prompt_inline' },
+    await compressImageForModel(new Uint8Array(corrupt), "image/png", {
+      telemetry: { client, source: "prompt_inline" },
     });
-    expect(events[0]!.props['outcome']).toBe('passthrough_error');
+    expect(events[0]!.props["outcome"]).toBe("passthrough_error");
   });
 
-  it('marks EXIF-transposed inputs', async () => {
+  it("marks EXIF-transposed inputs", async () => {
     const { client, events } = captureTelemetry();
     const jpeg = withExifOrientation(await solidJpeg(120, 80), 6);
-    await compressImageForModel(jpeg, 'image/jpeg', {
+    await compressImageForModel(jpeg, "image/jpeg", {
       maxEdge: 64,
-      telemetry: { client, source: 'read_media' },
+      telemetry: { client, source: "read_media" },
     });
-    expect(events[0]!.props['outcome']).toBe('compressed');
-    expect(events[0]!.props['exif_transposed']).toBe(true);
+    expect(events[0]!.props["outcome"]).toBe("compressed");
+    expect(events[0]!.props["exif_transposed"]).toBe(true);
   });
 
-  it('reports the base64 early size-skip as passthrough_guard', async () => {
+  it("reports the base64 early size-skip as passthrough_guard", async () => {
     const { client, events } = captureTelemetry();
-    const base64 = Buffer.from(await solidPng(2100, 100)).toString('base64');
-    await compressBase64ForModel(base64, 'image/png', {
+    const base64 = Buffer.from(await solidPng(2100, 100)).toString("base64");
+    await compressBase64ForModel(base64, "image/png", {
       maxDecodeBytes: 64,
-      telemetry: { client, source: 'prompt_file' },
+      telemetry: { client, source: "prompt_file" },
     });
     expect(events).toHaveLength(1);
-    expect(events[0]!.props['outcome']).toBe('passthrough_guard');
-    expect(events[0]!.props['source']).toBe('prompt_file');
+    expect(events[0]!.props["outcome"]).toBe("passthrough_guard");
+    expect(events[0]!.props["source"]).toBe("prompt_file");
   });
 
-  it('threads telemetry through compressImageContentParts', async () => {
+  it("threads telemetry through compressImageContentParts", async () => {
     const { client, events } = captureTelemetry();
     const big = await solidPng(2100, 1050);
-    const url = `data:image/png;base64,${Buffer.from(big).toString('base64')}`;
-    await compressImageContentParts([{ type: 'image_url', imageUrl: { url } }], {
-      telemetry: { client, source: 'mcp_tool_result' },
-    });
+    const url = `data:image/png;base64,${Buffer.from(big).toString("base64")}`;
+    await compressImageContentParts(
+      [{ type: "image_url", imageUrl: { url } }],
+      {
+        telemetry: { client, source: "mcp_tool_result" },
+      },
+    );
     expect(events).toHaveLength(1);
-    expect(events[0]!.event).toBe('image_compress');
-    expect(events[0]!.props['outcome']).toBe('compressed');
-    expect(events[0]!.props['source']).toBe('mcp_tool_result');
+    expect(events[0]!.event).toBe("image_compress");
+    expect(events[0]!.props["outcome"]).toBe("compressed");
+    expect(events[0]!.props["source"]).toBe("mcp_tool_result");
   });
 
-  it('never lets a throwing telemetry client break compression', async () => {
+  it("never lets a throwing telemetry client break compression", async () => {
     const throwing: TelemetryClient = {
       track: () => {
-        throw new Error('sink down');
+        throw new Error("sink down");
       },
     };
     const png = await solidPng(2100, 1050);
-    const result = await compressImageForModel(png, 'image/png', {
-      telemetry: { client: throwing, source: 'read_media' },
+    const result = await compressImageForModel(png, "image/png", {
+      telemetry: { client: throwing, source: "read_media" },
     });
     expect(result.changed).toBe(true); // compression outcome unaffected
   });
 });
 
-describe('cropImageForModel — telemetry', () => {
-  it('reports a successful crop with the region share of the original', async () => {
+describe("cropImageForModel — telemetry", () => {
+  it("reports a successful crop with the region share of the original", async () => {
     const { client, events } = captureTelemetry();
     const png = await solidPng(1000, 500);
     const outcome = await cropImageForModel(
       png,
-      'image/png',
+      "image/png",
       { x: 0, y: 0, width: 500, height: 250 },
-      { telemetry: { client, source: 'read_media' } },
+      { telemetry: { client, source: "read_media" } },
     );
     expect(outcome.ok).toBe(true);
 
     expect(events).toHaveLength(1);
     const { event, props } = events[0]!;
-    expect(event).toBe('image_crop');
-    expect(props['source']).toBe('read_media');
-    expect(props['ok']).toBe(true);
-    expect(props['resized']).toBe(false);
-    expect(props['original_width']).toBe(1000);
-    expect(props['original_height']).toBe(500);
+    expect(event).toBe("image_crop");
+    expect(props["source"]).toBe("read_media");
+    expect(props["ok"]).toBe(true);
+    expect(props["resized"]).toBe(false);
+    expect(props["original_width"]).toBe(1000);
+    expect(props["original_height"]).toBe(500);
     // 500×250 of 1000×500 → a quarter of the pixels.
-    expect(props['region_area_ratio']).toBeCloseTo(0.25, 5);
-    expect(typeof props['duration_ms']).toBe('number');
-    expect(typeof props['final_bytes']).toBe('number');
+    expect(props["region_area_ratio"]).toBeCloseTo(0.25, 5);
+    expect(typeof props["duration_ms"]).toBe("number");
+    expect(typeof props["final_bytes"]).toBe("number");
   });
 
-  it('classifies failures by kind', async () => {
+  it("classifies failures by kind", async () => {
     const oob = captureTelemetry();
     await cropImageForModel(
       await solidPng(100, 100),
-      'image/png',
+      "image/png",
       { x: 200, y: 0, width: 10, height: 10 },
-      { telemetry: { client: oob.client, source: 'read_media' } },
+      { telemetry: { client: oob.client, source: "read_media" } },
     );
-    expect(oob.events[0]!.props['ok']).toBe(false);
-    expect(oob.events[0]!.props['error_kind']).toBe('out_of_bounds');
+    expect(oob.events[0]!.props["ok"]).toBe(false);
+    expect(oob.events[0]!.props["error_kind"]).toBe("out_of_bounds");
 
     const format = captureTelemetry();
     await cropImageForModel(
       new Uint8Array([0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 1, 0, 1, 0]),
-      'image/gif',
+      "image/gif",
       { x: 0, y: 0, width: 1, height: 1 },
-      { telemetry: { client: format.client, source: 'read_media' } },
+      { telemetry: { client: format.client, source: "read_media" } },
     );
-    expect(format.events[0]!.props['error_kind']).toBe('unsupported_format');
+    expect(format.events[0]!.props["error_kind"]).toBe("unsupported_format");
 
     const budget = captureTelemetry();
     await cropImageForModel(
       await noisePng(400, 400),
-      'image/png',
+      "image/png",
       { x: 0, y: 0, width: 400, height: 400 },
-      { skipResize: true, byteBudget: 8 * 1024, telemetry: { client: budget.client, source: 'read_media' } },
+      {
+        skipResize: true,
+        byteBudget: 8 * 1024,
+        telemetry: { client: budget.client, source: "read_media" },
+      },
     );
-    expect(budget.events[0]!.props['error_kind']).toBe('budget');
+    expect(budget.events[0]!.props["error_kind"]).toBe("budget");
   });
 });

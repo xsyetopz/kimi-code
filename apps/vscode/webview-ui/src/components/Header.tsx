@@ -1,8 +1,18 @@
 import { useState } from "react";
 import { IconPlus, IconChevronDown, IconInfoCircle } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { StreamingConfirmDialog } from "./StreamingConfirmDialog";
 import { KimiLogo } from "./KimiLogo";
 import { SessionList } from "./SessionList";
@@ -13,7 +23,8 @@ export function Header() {
   const [showSessionList, setShowSessionList] = useState(false);
   const [showSessionInfo, setShowSessionInfo] = useState(false);
   const [showConfirmNew, setShowConfirmNew] = useState(false);
-  const { startNewConversation, sessionId, messages, isStreaming } = useChatStore();
+  const { startNewConversation, sessionId, messages, isStreaming } =
+    useChatStore();
 
   const handleNewSession = async () => {
     // If streaming, show confirmation dialog
@@ -35,7 +46,9 @@ export function Header() {
     <header className="flex items-center justify-between px-3 py-2 border-b border-border shrink-0 @container">
       <div className="flex items-center gap-2 shrink-0">
         <KimiLogo className="size-5 shrink-0" />
-        <span className="text-sm font-semibold whitespace-nowrap">Kimi Code</span>
+        <span className="text-sm font-semibold whitespace-nowrap">
+          Kimi Code
+        </span>
       </div>
       <div className="flex items-center gap-1">
         {sessionId && (
@@ -57,7 +70,10 @@ export function Header() {
               <IconChevronDown className="size-3.5" />
             </Button>
           </PopoverTrigger>
-          <PopoverContent align="end" className="w-[20rem] max-w-[calc(100vw-1rem)] p-0">
+          <PopoverContent
+            align="end"
+            className="w-[20rem] max-w-[calc(100vw-1rem)] p-0"
+          >
             <SessionList onClose={() => setShowSessionList(false)} />
           </PopoverContent>
         </Popover>
@@ -76,15 +92,23 @@ export function Header() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="text-sm">Session Details</DialogTitle>
-            <DialogDescription className="text-xs">Details for this conversation.</DialogDescription>
+            <DialogDescription className="text-xs">
+              Details for this conversation.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 py-2">
             <div>
-              <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Session ID</div>
-              <code className="text-xs font-mono text-foreground break-all select-all">{sessionId}</code>
+              <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">
+                Session ID
+              </div>
+              <code className="text-xs font-mono text-foreground break-all select-all">
+                {sessionId}
+              </code>
             </div>
             <div>
-              <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Messages</div>
+              <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">
+                Messages
+              </div>
               <span className="text-xs text-foreground">{messages.length}</span>
             </div>
             <TokenInfo />

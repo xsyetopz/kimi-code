@@ -27,17 +27,17 @@
  * helpers stay private so callers cannot bypass the limits.
  */
 
-import type { ContentPart } from '@moonshot-ai/kosong';
+import type { ContentPart } from "@moonshot-ai/kosong";
 
-import type { TelemetryClient } from '#/telemetry';
+import type { TelemetryClient } from "#/telemetry";
 
-import { compressImageContentParts } from '../tools/support/image-compress';
+import { compressImageContentParts } from "../tools/support/image-compress";
 import {
   buildUnsupportedImageNotice,
   isModelAcceptedImageMime,
-} from '../tools/support/image-format-policy';
-import { persistOriginalImage } from '../tools/support/image-originals';
-import type { MCPContentBlock, MCPToolResult } from './types';
+} from "../tools/support/image-format-policy";
+import { persistOriginalImage } from "../tools/support/image-originals";
+import type { MCPContentBlock, MCPToolResult } from "./types";
 
 export interface McpOutputOptions {
   /**
@@ -66,9 +66,14 @@ const MCP_OUTPUT_TRUNCATED_TEXT = `\n\n[Output truncated: exceeded ${String(
 // useful proxy for multimodal model cost, and a single screenshot is enough to
 // evict every text part if both compete for the same 100k budget.
 export const MCP_MAX_BINARY_PART_BYTES = 10 * 1024 * 1024;
-const MCP_MAX_BINARY_PART_CHARS = Math.ceil((MCP_MAX_BINARY_PART_BYTES * 4) / 3);
+const MCP_MAX_BINARY_PART_CHARS = Math.ceil(
+  (MCP_MAX_BINARY_PART_BYTES * 4) / 3,
+);
 
-function binaryPartTooLargeNotice(kind: 'image' | 'audio' | 'video', urlLength: number): string {
+function binaryPartTooLargeNotice(
+  kind: "image" | "audio" | "video",
+  urlLength: number,
+): string {
   const approxMb = ((urlLength * 3) / 4 / (1024 * 1024)).toFixed(1);
   const capMb = String(MCP_MAX_BINARY_PART_BYTES / (1024 * 1024));
   return `[${kind}_url dropped: ~${approxMb} MB exceeds ${capMb} MB per-part limit. Try a smaller resource.]`;
@@ -80,51 +85,57 @@ function binaryPartTooLargeNotice(kind: 'image' | 'audio' | 'video', urlLength: 
  * Returns `null` for block types that cannot be represented (e.g. unknown
  * resource shapes) so the caller can drop them.
  */
-export function convertMCPContentBlock(block: MCPContentBlock): ContentPart | null {
-  if (block.type === 'text' && typeof block.text === 'string') {
-    return { type: 'text', text: block.text };
+export function convertMCPContentBlock(
+  block: MCPContentBlock,
+): ContentPart | null {
+  if (block.type === "text" && typeof block.text === "string") {
+    return { type: "text", text: block.text };
   }
 
-  if (block.type === 'image' && typeof block.data === 'string') {
-    const mimeType = block.mimeType ?? 'image/png';
+  if (block.type === "image" && typeof block.data === "string") {
+    const mimeType = block.mimeType ?? "image/png";
     return {
-      type: 'image_url',
+      type: "image_url",
       imageUrl: { url: `data:${mimeType};base64,${block.data}` },
     };
   }
 
-  if (block.type === 'audio' && typeof block.data === 'string') {
-    const mimeType = block.mimeType ?? 'audio/mpeg';
+  if (block.type === "audio" && typeof block.data === "string") {
+    const mimeType = block.mimeType ?? "audio/mpeg";
     return {
-      type: 'audio_url',
+      type: "audio_url",
       audioUrl: { url: `data:${mimeType};base64,${block.data}` },
     };
   }
 
   // EmbeddedResource: payload is nested under `resource`, as
   // TextResourceContents (`text`) or BlobResourceContents (`blob`).
-  if (block.type === 'resource' && typeof block.resource === 'object' && block.resource !== null) {
+  if (
+    block.type === "resource" &&
+    typeof block.resource === "object" &&
+    block.resource !== null
+  ) {
     const res = block.resource;
-    if (typeof res.text === 'string') {
-      return { type: 'text', text: res.text };
+    if (typeof res.text === "string") {
+      return { type: "text", text: res.text };
     }
-    if (typeof res.blob === 'string') {
-      const mimeType = res.mimeType ?? 'application/octet-stream';
-      if (mimeType.startsWith('image/')) {
+    if (typeof res.blob === "string") {
+      const mimeType = res.mimeType ?? "application/octet-stream";
+      if (mimeType.startsWith("image/")) {
         return {
-          type: 'image_url',
+          type: "image_url",
           imageUrl: { url: `data:${mimeType};base64,${res.blob}` },
         };
       }
-      if (mimeType.startsWith('audio/')) {
+      if (mimeType.startsWith("audio/")) {
         return {
-          type: 'audio_url',
+          type: "audio_url",
           audioUrl: { url: `data:${mimeType};base64,${res.blob}` },
         };
       }
-      if (mimeType.startsWith('video/')) {
+      if (mimeType.startsWith("video/")) {
         return {
-          type: 'video_url',
+          type: "video_url",
           videoUrl: { url: `data:${mimeType};base64,${res.blob}` },
         };
       }
@@ -134,9 +145,9 @@ export function convertMCPContentBlock(block: MCPContentBlock): ContentPart | nu
   }
 
   // ResourceLink: URL reference, not an inline blob.
-  if (block.type === 'resource_link' && typeof block.uri === 'string') {
-    const mimeType = block.mimeType ?? 'application/octet-stream';
-    if (mimeType.startsWith('image/')) {
+  if (block.type === "resource_link" && typeof block.uri === "string") {
+    const mimeType = block.mimeType ?? "application/octet-stream";
+    if (mimeType.startsWith("image/")) {
       // The declared MIME is the only format signal for a remote image: an
       // extensionless or signed URL gives the extension gate nothing to work
       // with, and the provider fetches it server-side. When the server
@@ -144,15 +155,18 @@ export function convertMCPContentBlock(block: MCPContentBlock): ContentPart | nu
       // tool returning AVIF links), drop the image for a notice that keeps
       // the URL — the model can still fetch and convert it.
       if (!isModelAcceptedImageMime(mimeType)) {
-        return { type: 'text', text: buildUnsupportedImageNotice(mimeType, block.uri) };
+        return {
+          type: "text",
+          text: buildUnsupportedImageNotice(mimeType, block.uri),
+        };
       }
-      return { type: 'image_url', imageUrl: { url: block.uri } };
+      return { type: "image_url", imageUrl: { url: block.uri } };
     }
-    if (mimeType.startsWith('audio/')) {
-      return { type: 'audio_url', audioUrl: { url: block.uri } };
+    if (mimeType.startsWith("audio/")) {
+      return { type: "audio_url", audioUrl: { url: block.uri } };
     }
-    if (mimeType.startsWith('video/')) {
-      return { type: 'video_url', videoUrl: { url: block.uri } };
+    if (mimeType.startsWith("video/")) {
+      return { type: "video_url", videoUrl: { url: block.uri } };
     }
     return null;
   }
@@ -197,22 +211,22 @@ export async function mcpResultToExecutableOutput(
   // host/protocol plumbing, not model-facing data.
   const structuredExtras: Record<string, unknown> = {};
   if (result.structuredContent !== undefined) {
-    structuredExtras['structuredContent'] = result.structuredContent;
+    structuredExtras["structuredContent"] = result.structuredContent;
   }
   if (result._meta !== undefined) {
     const meta = stripReservedMetaKeys(result._meta);
     if (meta !== undefined) {
-      structuredExtras['_meta'] = meta;
+      structuredExtras["_meta"] = meta;
     }
   }
   if (Object.keys(structuredExtras).length > 0) {
     try {
       const serialized = JSON.stringify(structuredExtras).replaceAll(
-        '</mcp-structured-result>',
-        '',
+        "</mcp-structured-result>",
+        "",
       );
       wrapped.push({
-        type: 'text',
+        type: "text",
         text: `\n<mcp-structured-result>\n${serialized}\n</mcp-structured-result>`,
       });
     } catch {
@@ -240,13 +254,15 @@ export async function mcpResultToExecutableOutput(
     telemetry:
       options.telemetry === undefined
         ? undefined
-        : { client: options.telemetry, source: 'mcp_tool_result' },
+        : { client: options.telemetry, source: "mcp_tool_result" },
     annotate: {
       persistOriginal: (bytes, mimeType) =>
         persistOriginalImage(
           bytes,
           mimeType,
-          options.originalsDir === undefined ? {} : { dir: options.originalsDir },
+          options.originalsDir === undefined
+            ? {}
+            : { dir: options.originalsDir },
         ),
     },
   });
@@ -256,7 +272,10 @@ export async function mcpResultToExecutableOutput(
   return {
     output,
     isError: result.isError,
-    note: compressed.captions.length > 0 ? compressed.captions.join('\n') : undefined,
+    note:
+      compressed.captions.length > 0
+        ? compressed.captions.join("\n")
+        : undefined,
     truncated: truncated ? true : undefined,
   };
 }
@@ -291,12 +310,13 @@ function stripReservedMetaKeys(
 }
 
 function isReservedMetaKey(key: string): boolean {
-  const slash = key.indexOf('/');
+  const slash = key.indexOf("/");
   if (slash <= 0) return false;
-  const labels = key.slice(0, slash).split('.');
+  const labels = key.slice(0, slash).split(".");
   return labels.some(
     (label, i) =>
-      (label === 'modelcontextprotocol' || label === 'mcp') && i < labels.length - 1,
+      (label === "modelcontextprotocol" || label === "mcp") &&
+      i < labels.length - 1,
   );
 }
 
@@ -305,16 +325,24 @@ function isReservedMetaKey(key: string): boolean {
  * `<mcp_tool_result name="…">` text tags so the model can attribute the
  * binary content. Returns the input untouched otherwise.
  */
-function wrapMediaOnly(parts: readonly ContentPart[], qualifiedToolName: string): ContentPart[] {
+function wrapMediaOnly(
+  parts: readonly ContentPart[],
+  qualifiedToolName: string,
+): ContentPart[] {
   const hasMedia = parts.some(
-    (p) => p.type === 'image_url' || p.type === 'audio_url' || p.type === 'video_url',
+    (p) =>
+      p.type === "image_url" ||
+      p.type === "audio_url" ||
+      p.type === "video_url",
   );
-  const hasNonEmptyText = parts.some((p) => p.type === 'text' && p.text.length > 0);
+  const hasNonEmptyText = parts.some(
+    (p) => p.type === "text" && p.text.length > 0,
+  );
   if (!hasMedia || hasNonEmptyText) return [...parts];
   return [
-    { type: 'text', text: `<mcp_tool_result name="${qualifiedToolName}">` },
+    { type: "text", text: `<mcp_tool_result name="${qualifiedToolName}">` },
     ...parts,
-    { type: 'text', text: '</mcp_tool_result>' },
+    { type: "text", text: "</mcp_tool_result>" },
   ];
 }
 
@@ -337,13 +365,13 @@ function applyTextBudget(parts: readonly ContentPart[]): {
   const out: ContentPart[] = [];
 
   for (const part of parts) {
-    if (part.type === 'text') {
+    if (part.type === "text") {
       if (remaining <= 0) {
         truncated = true;
         continue;
       }
       if (part.text.length > remaining) {
-        out.push({ type: 'text', text: part.text.slice(0, remaining) });
+        out.push({ type: "text", text: part.text.slice(0, remaining) });
         remaining = 0;
         truncated = true;
       } else {
@@ -353,14 +381,14 @@ function applyTextBudget(parts: readonly ContentPart[]): {
       continue;
     }
 
-    if (part.type === 'think') {
+    if (part.type === "think") {
       const size = part.think.length + (part.encrypted?.length ?? 0);
       if (remaining <= 0) {
         truncated = true;
         continue;
       }
       if (size > remaining) {
-        out.push({ type: 'think', think: part.think.slice(0, remaining) });
+        out.push({ type: "think", think: part.think.slice(0, remaining) });
         remaining = 0;
         truncated = true;
       } else {
@@ -394,21 +422,28 @@ function applyBinaryPartCap(parts: readonly ContentPart[]): {
   const out: ContentPart[] = [];
 
   for (const part of parts) {
-    if (part.type === 'text' || part.type === 'think') {
+    if (part.type === "text" || part.type === "think") {
       out.push(part);
       continue;
     }
 
     const url =
-      part.type === 'image_url'
+      part.type === "image_url"
         ? part.imageUrl.url
-        : part.type === 'audio_url'
+        : part.type === "audio_url"
           ? part.audioUrl.url
           : part.videoUrl.url;
     if (url.length > MCP_MAX_BINARY_PART_CHARS) {
       const kind =
-        part.type === 'image_url' ? 'image' : part.type === 'audio_url' ? 'audio' : 'video';
-      out.push({ type: 'text', text: binaryPartTooLargeNotice(kind, url.length) });
+        part.type === "image_url"
+          ? "image"
+          : part.type === "audio_url"
+            ? "audio"
+            : "video";
+      out.push({
+        type: "text",
+        text: binaryPartTooLargeNotice(kind, url.length),
+      });
       truncated = true;
       continue;
     }
@@ -424,16 +459,21 @@ function appendTruncationNotice(out: ContentPart[]): void {
   // back to a standalone notice part if there is no text part to merge with.
   for (let i = out.length - 1; i >= 0; i--) {
     const candidate = out[i];
-    if (candidate?.type === 'text') {
-      out[i] = { type: 'text', text: candidate.text + MCP_OUTPUT_TRUNCATED_TEXT };
+    if (candidate?.type === "text") {
+      out[i] = {
+        type: "text",
+        text: candidate.text + MCP_OUTPUT_TRUNCATED_TEXT,
+      };
       return;
     }
   }
-  out.push({ type: 'text', text: MCP_OUTPUT_TRUNCATED_TEXT });
+  out.push({ type: "text", text: MCP_OUTPUT_TRUNCATED_TEXT });
 }
 
-function collapseSingleText(parts: readonly ContentPart[]): string | ContentPart[] {
-  if (parts.length === 1 && parts[0]?.type === 'text') {
+function collapseSingleText(
+  parts: readonly ContentPart[],
+): string | ContentPart[] {
+  if (parts.length === 1 && parts[0]?.type === "text") {
     return parts[0].text;
   }
   return [...parts];

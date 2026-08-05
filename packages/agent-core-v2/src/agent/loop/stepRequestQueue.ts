@@ -13,7 +13,7 @@
  * into the next turn.
  */
 
-import type { StepRequest } from './stepRequest';
+import type { StepRequest } from "./stepRequest";
 
 export interface StepRequestBatch {
   readonly driver: StepRequest;
@@ -23,8 +23,8 @@ export interface StepRequestBatch {
 export class StepRequestQueue {
   private readonly items: StepRequest[] = [];
 
-  enqueue(request: StepRequest, at: 'head' | 'tail' = 'tail'): void {
-    if (at === 'head') {
+  enqueue(request: StepRequest, at: "head" | "tail" = "tail"): void {
+    if (at === "head") {
       this.items.unshift(request);
     } else {
       this.items.push(request);

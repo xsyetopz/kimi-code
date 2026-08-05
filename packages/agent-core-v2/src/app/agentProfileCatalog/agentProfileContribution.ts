@@ -16,7 +16,7 @@
  * that must always win.
  */
 
-import type { AgentProfile } from './agentProfileCatalog';
+import type { AgentProfile } from "./agentProfileCatalog";
 
 export interface SkippedAgentFile {
   readonly path: string;

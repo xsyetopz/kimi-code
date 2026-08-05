@@ -16,10 +16,14 @@
  * ladder so their delivery and fallback semantics stay identical.
  */
 
-import type { ContentPart, VideoUploadInput, VideoURLPart } from '@moonshot-ai/kosong';
+import type {
+  ContentPart,
+  VideoUploadInput,
+  VideoURLPart,
+} from "@moonshot-ai/kosong";
 
-import { ErrorCodes } from '../../errors';
-import { abortReason } from '../../utils/abort';
+import { ErrorCodes } from "../../errors";
+import { abortReason } from "../../utils/abort";
 
 /** Uploads a local video and returns the provider-issued `video_url` part. */
 export type VideoUploader = (
@@ -34,8 +38,9 @@ export type VideoUploader = (
  * directly.
  */
 export function isAuthUploadError(error: unknown): boolean {
-  if (typeof error !== 'object' || error === null) return false;
-  if ((error as { code?: unknown }).code === ErrorCodes.PROVIDER_AUTH_ERROR) return true;
+  if (typeof error !== "object" || error === null) return false;
+  if ((error as { code?: unknown }).code === ErrorCodes.PROVIDER_AUTH_ERROR)
+    return true;
   const statusCode = (error as { statusCode?: unknown }).statusCode;
   return statusCode === 401 || statusCode === 403;
 }
@@ -47,7 +52,7 @@ export function isAuthUploadError(error: unknown): boolean {
  * inline fallback there only bloats history with bytes the model never sees.
  */
 export function inlineVideoSupported(providerName: string): boolean {
-  return providerName !== 'openai' && providerName !== 'openai-responses';
+  return providerName !== "openai" && providerName !== "openai-responses";
 }
 
 /**
@@ -68,7 +73,9 @@ export async function deliverVideoContent(
       // Call with a single argument when there is no signal to thread, so
       // callers that never cancel (ReadMediaFile) invoke the channel exactly
       // as before signal support existed.
-      return await (signal === undefined ? uploader(input) : uploader(input, { signal }));
+      return await (signal === undefined
+        ? uploader(input)
+        : uploader(input, { signal }));
     } catch (error) {
       // The signal check (not the error's shape) decides cancellation: abort
       // rejections vary by provider, but our own aborted signal is definitive.
@@ -81,9 +88,9 @@ export async function deliverVideoContent(
   // 100MB after the user aborted only produces a part the caller would then
   // persist against their intent.
   if (signal?.aborted) throw abortReason(signal);
-  const base64 = Buffer.from(input.data).toString('base64');
+  const base64 = Buffer.from(input.data).toString("base64");
   return {
-    type: 'video_url',
+    type: "video_url",
     videoUrl: { url: `data:${input.mimeType};base64,${base64}` },
   };
 }

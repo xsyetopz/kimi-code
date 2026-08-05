@@ -18,9 +18,9 @@
  * `isWithinDirectory`. Pure policy; no scoped service.
  */
 
-import * as pathe from 'pathe';
+import * as pathe from "pathe";
 
-import type { IHostEnvironment } from '#/os/interface/hostEnvironment';
+import type { IHostEnvironment } from "#/os/interface/hostEnvironment";
 
 export interface WorkspaceConfig {
   readonly workspaceDir: string;
@@ -28,36 +28,51 @@ export interface WorkspaceConfig {
 }
 
 const SENSITIVE_BASENAMES = new Set<string>([
-  '.env',
-  'id_rsa',
-  'id_ed25519',
-  'id_ecdsa',
-  'credentials',
+  ".env",
+  "id_rsa",
+  "id_ed25519",
+  "id_ecdsa",
+  "credentials",
 ]);
 
 const SENSITIVE_PATH_SUFFIXES = [
-  ['.aws', 'credentials'],
-  ['.gcp', 'credentials'],
+  [".aws", "credentials"],
+  [".gcp", "credentials"],
 ];
 
-const ENV_PREFIX = '.env.';
-const ENV_EXEMPTIONS = new Set<string>(['.env.example', '.env.sample', '.env.template']);
+const ENV_PREFIX = ".env.";
+const ENV_EXEMPTIONS = new Set<string>([
+  ".env.example",
+  ".env.sample",
+  ".env.template",
+]);
 
-const SENSITIVE_BASENAME_PREFIXES = ['id_rsa', 'id_ed25519', 'id_ecdsa', 'credentials'];
-const PUBLIC_KEY_BASENAMES = new Set<string>(['id_rsa.pub', 'id_ed25519.pub', 'id_ecdsa.pub']);
+const SENSITIVE_BASENAME_PREFIXES = [
+  "id_rsa",
+  "id_ed25519",
+  "id_ecdsa",
+  "credentials",
+];
+const PUBLIC_KEY_BASENAMES = new Set<string>([
+  "id_rsa.pub",
+  "id_ed25519.pub",
+  "id_ecdsa.pub",
+]);
 export const SENSITIVE_DOT_VARIANT_SUFFIXES = [
-  '.bak',
-  '.backup',
-  '.copy',
-  '.disabled',
-  '.key',
-  '.old',
-  '.orig',
-  '.pem',
-  '.save',
-  '.tmp',
+  ".bak",
+  ".backup",
+  ".copy",
+  ".disabled",
+  ".key",
+  ".old",
+  ".orig",
+  ".pem",
+  ".save",
+  ".tmp",
 ] as const;
-const SENSITIVE_DOT_VARIANT_SUFFIX_SET = new Set<string>(SENSITIVE_DOT_VARIANT_SUFFIXES);
+const SENSITIVE_DOT_VARIANT_SUFFIX_SET = new Set<string>(
+  SENSITIVE_DOT_VARIANT_SUFFIXES,
+);
 
 function comparable(path: string): string {
   return path.toLowerCase();
@@ -75,16 +90,20 @@ export function isSensitiveFile(path: string): boolean {
 
   for (const prefix of SENSITIVE_BASENAME_PREFIXES) {
     if (comparableName === prefix) return true;
-    if (comparableName.length > prefix.length && comparableName.startsWith(prefix)) {
+    if (
+      comparableName.length > prefix.length &&
+      comparableName.startsWith(prefix)
+    ) {
       const suffix = comparableName.slice(prefix.length);
       const next = suffix[0];
-      if (next === '-' || next === '_') return true;
-      if (next === '.' && SENSITIVE_DOT_VARIANT_SUFFIX_SET.has(suffix)) return true;
+      if (next === "-" || next === "_") return true;
+      if (next === "." && SENSITIVE_DOT_VARIANT_SUFFIX_SET.has(suffix))
+        return true;
     }
   }
 
   for (const suffixParts of SENSITIVE_PATH_SUFFIXES) {
-    const suffix = suffixParts.join('/');
+    const suffix = suffixParts.join("/");
     const comparableSuffix = comparable(suffix);
     if (
       comparablePath.endsWith(`/${comparableSuffix}`) ||
@@ -97,10 +116,13 @@ export function isSensitiveFile(path: string): boolean {
   return false;
 }
 
-export type PathClass = 'posix' | 'win32';
-export type PathSecurityCode = 'PATH_OUTSIDE_WORKSPACE' | 'PATH_SENSITIVE' | 'PATH_INVALID';
-export type PathAccessOperation = 'read' | 'write' | 'search';
-export type WorkspaceGuardMode = 'absolute-outside-allowed' | 'disabled';
+export type PathClass = "posix" | "win32";
+export type PathSecurityCode =
+  | "PATH_OUTSIDE_WORKSPACE"
+  | "PATH_SENSITIVE"
+  | "PATH_INVALID";
+export type PathAccessOperation = "read" | "write" | "search";
+export type WorkspaceGuardMode = "absolute-outside-allowed" | "disabled";
 
 export interface WorkspaceAccessPolicy {
   readonly guardMode: WorkspaceGuardMode;
@@ -108,7 +130,7 @@ export interface WorkspaceAccessPolicy {
 }
 
 export const DEFAULT_WORKSPACE_ACCESS_POLICY: WorkspaceAccessPolicy = {
-  guardMode: 'absolute-outside-allowed',
+  guardMode: "absolute-outside-allowed",
   checkSensitive: true,
 };
 
@@ -122,27 +144,36 @@ export class PathSecurityError extends Error {
   readonly rawPath: string;
   readonly canonicalPath: string;
 
-  constructor(code: PathSecurityCode, rawPath: string, canonicalPath: string, message: string) {
+  constructor(
+    code: PathSecurityCode,
+    rawPath: string,
+    canonicalPath: string,
+    message: string,
+  ) {
     super(message);
-    this.name = 'PathSecurityError';
+    this.name = "PathSecurityError";
     this.code = code;
     this.rawPath = rawPath;
     this.canonicalPath = canonicalPath;
   }
 }
 
-const DEFAULT_PATH_CLASS: PathClass = process.platform === 'win32' ? 'win32' : 'posix';
+const DEFAULT_PATH_CLASS: PathClass =
+  process.platform === "win32" ? "win32" : "posix";
 
 function isWin32DriveRelative(path: string): boolean {
   return /^[A-Za-z]:(?:$|[^\\/])/.test(path);
 }
 
-export function normalizeUserPath(path: string, pathClass: PathClass = DEFAULT_PATH_CLASS): string {
-  if (pathClass !== 'win32') return path;
+export function normalizeUserPath(
+  path: string,
+  pathClass: PathClass = DEFAULT_PATH_CLASS,
+): string {
+  if (pathClass !== "win32") return path;
 
-  if (path === '/') return '/';
+  if (path === "/") return "/";
 
-  if (path.startsWith('//')) {
+  if (path.startsWith("//")) {
     return path;
   }
 
@@ -150,23 +181,30 @@ export function normalizeUserPath(path: string, pathClass: PathClass = DEFAULT_P
   if (cygdriveMatch !== null) {
     const drive = cygdriveMatch[1]!.toUpperCase();
     const rest = path.slice(`/cygdrive/${cygdriveMatch[1]!}`.length);
-    return `${drive}:${rest === '' ? '/' : rest}`;
+    return `${drive}:${rest === "" ? "/" : rest}`;
   }
 
   const driveMatch = /^\/([A-Za-z])(?:\/|$)/.exec(path);
   if (driveMatch !== null) {
     const drive = driveMatch[1]!.toUpperCase();
     const rest = path.slice(2);
-    return `${drive}:${rest === '' ? '/' : rest}`;
+    return `${drive}:${rest === "" ? "/" : rest}`;
   }
 
   return path;
 }
 
-function expandUserPath(path: string, homeDir: string | undefined, pathClass: PathClass): string {
+function expandUserPath(
+  path: string,
+  homeDir: string | undefined,
+  pathClass: PathClass,
+): string {
   if (homeDir === undefined) return path;
-  if (path === '~') return homeDir;
-  if (path.startsWith('~/') || (pathClass === 'win32' && path.startsWith('~\\'))) {
+  if (path === "~") return homeDir;
+  if (
+    path.startsWith("~/") ||
+    (pathClass === "win32" && path.startsWith("~\\"))
+  ) {
     return pathe.join(homeDir, path.slice(2));
   }
   return path;
@@ -177,13 +215,18 @@ export function canonicalizePath(
   cwd: string,
   pathClass: PathClass = DEFAULT_PATH_CLASS,
 ): string {
-  if (path === '') {
-    throw new PathSecurityError('PATH_INVALID', path, path, 'Path cannot be empty');
+  if (path === "") {
+    throw new PathSecurityError(
+      "PATH_INVALID",
+      path,
+      path,
+      "Path cannot be empty",
+    );
   }
   const normalizedPath = normalizeUserPath(path, pathClass);
-  if (pathClass === 'win32' && isWin32DriveRelative(normalizedPath)) {
+  if (pathClass === "win32" && isWin32DriveRelative(normalizedPath)) {
     throw new PathSecurityError(
-      'PATH_INVALID',
+      "PATH_INVALID",
       path,
       normalizedPath,
       `"${path}" is a drive-relative Windows path. Use an absolute path like C:\\path or a path relative to the working directory.`,
@@ -191,13 +234,15 @@ export function canonicalizePath(
   }
   if (!pathe.isAbsolute(normalizedPath) && !pathe.isAbsolute(cwd)) {
     throw new PathSecurityError(
-      'PATH_INVALID',
+      "PATH_INVALID",
       path,
       normalizedPath,
       `Cannot resolve "${path}" against non-absolute cwd "${cwd}".`,
     );
   }
-  const abs = pathe.isAbsolute(normalizedPath) ? normalizedPath : pathe.resolve(cwd, normalizedPath);
+  const abs = pathe.isAbsolute(normalizedPath)
+    ? normalizedPath
+    : pathe.resolve(cwd, normalizedPath);
   return pathe.normalize(abs);
 }
 
@@ -208,10 +253,12 @@ export function isWithinDirectory(
 ): boolean {
   const nc = pathe.normalize(candidate);
   const nb = pathe.normalize(base);
-  const comparableCandidate = pathClass === 'win32' ? nc.toLowerCase() : nc;
-  const comparableBase = pathClass === 'win32' ? nb.toLowerCase() : nb;
+  const comparableCandidate = pathClass === "win32" ? nc.toLowerCase() : nc;
+  const comparableBase = pathClass === "win32" ? nb.toLowerCase() : nb;
   if (comparableCandidate === comparableBase) return true;
-  const prefix = comparableBase.endsWith('/') ? comparableBase : comparableBase + '/';
+  const prefix = comparableBase.endsWith("/")
+    ? comparableBase
+    : comparableBase + "/";
   return comparableCandidate.startsWith(prefix);
 }
 
@@ -235,10 +282,12 @@ export function extendWorkspaceWithSkillRoots<T extends WorkspaceConfig>(
   const additionalDirs = [...workspace.additionalDirs];
   for (const root of skillRoots) {
     if (isWithinDirectory(root, workspace.workspaceDir, pathClass)) continue;
-    if (additionalDirs.some((dir) => isWithinDirectory(root, dir, pathClass))) continue;
+    if (additionalDirs.some((dir) => isWithinDirectory(root, dir, pathClass)))
+      continue;
     additionalDirs.push(root);
   }
-  if (additionalDirs.length === workspace.additionalDirs.length) return workspace;
+  if (additionalDirs.length === workspace.additionalDirs.length)
+    return workspace;
   return { ...workspace, additionalDirs };
 }
 
@@ -256,20 +305,23 @@ export interface ResolvePathAccessOptions {
 }
 
 export interface ResolvePathAccessPathOptions {
-  readonly env: Pick<IHostEnvironment, 'pathClass' | 'homeDir'>;
+  readonly env: Pick<IHostEnvironment, "pathClass" | "homeDir">;
   readonly workspace: WorkspaceConfig;
   readonly operation: PathAccessOperation;
   readonly policy?: WorkspaceAccessPolicy;
   readonly expandHome?: boolean;
 }
 
-function relativeOutsideMessage(path: string, operation: PathAccessOperation): string {
+function relativeOutsideMessage(
+  path: string,
+  operation: PathAccessOperation,
+): string {
   const verb =
-    operation === 'write'
-      ? 'write or edit a file'
-      : operation === 'search'
-        ? 'search'
-        : 'read a file';
+    operation === "write"
+      ? "write or edit a file"
+      : operation === "search"
+        ? "search"
+        : "read a file";
   return (
     `"${path}" is not an absolute path. ` +
     `You must provide an absolute path to ${verb} outside the working directory.`
@@ -284,7 +336,11 @@ export function resolvePathAccess(
 ): PathAccess {
   const pathClass = options.pathClass ?? DEFAULT_PATH_CLASS;
   const normalizedPath = normalizeUserPath(path, pathClass);
-  const expandedPath = expandUserPath(normalizedPath, options.homeDir, pathClass);
+  const expandedPath = expandUserPath(
+    normalizedPath,
+    options.homeDir,
+    pathClass,
+  );
   const rawIsAbsolute = pathe.isAbsolute(expandedPath);
   const canonical = canonicalizePath(expandedPath, cwd, pathClass);
   const outsideWorkspace = !isWithinWorkspace(canonical, config, pathClass);
@@ -292,7 +348,7 @@ export function resolvePathAccess(
 
   if (policy.checkSensitive && isSensitiveFile(canonical)) {
     throw new PathSecurityError(
-      'PATH_SENSITIVE',
+      "PATH_SENSITIVE",
       path,
       canonical,
       `"${path}" matches a sensitive-file pattern (env / credential / SSH key). ` +
@@ -302,17 +358,17 @@ export function resolvePathAccess(
 
   if (outsideWorkspace) {
     switch (policy.guardMode) {
-      case 'absolute-outside-allowed':
+      case "absolute-outside-allowed":
         if (!rawIsAbsolute) {
           throw new PathSecurityError(
-            'PATH_OUTSIDE_WORKSPACE',
+            "PATH_OUTSIDE_WORKSPACE",
             path,
             canonical,
             relativeOutsideMessage(path, options.operation),
           );
         }
         break;
-      case 'disabled':
+      case "disabled":
         break;
     }
   }
@@ -343,8 +399,10 @@ export function assertPathAllowed(
     operation: options.mode,
     pathClass: options.pathClass,
     policy: {
-      guardMode: 'absolute-outside-allowed',
-      checkSensitive: options.checkSensitive ?? DEFAULT_WORKSPACE_ACCESS_POLICY.checkSensitive,
+      guardMode: "absolute-outside-allowed",
+      checkSensitive:
+        options.checkSensitive ??
+        DEFAULT_WORKSPACE_ACCESS_POLICY.checkSensitive,
     },
   }).path;
 }

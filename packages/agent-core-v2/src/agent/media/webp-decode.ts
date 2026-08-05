@@ -37,12 +37,12 @@ let decoderReady: Promise<WebpDecodeFn> | null = null;
 async function loadDecoder(): Promise<WebpDecodeFn> {
   decoderReady ??= (async () => {
     const [decodeModule, { WEBP_DECODER_WASM_BASE64 }] = await Promise.all([
-      import('@jsquash/webp/decode.js'),
-      import('./webp-dec-wasm'),
+      import("@jsquash/webp/decode.js"),
+      import("./webp-dec-wasm"),
     ]);
-    const wasm = await (globalThis as unknown as WasmGlobal).WebAssembly.compile(
-      Buffer.from(WEBP_DECODER_WASM_BASE64, 'base64'),
-    );
+    const wasm = await (
+      globalThis as unknown as WasmGlobal
+    ).WebAssembly.compile(Buffer.from(WEBP_DECODER_WASM_BASE64, "base64"));
     await decodeModule.init(wasm as never);
     const decode = decodeModule.default;
     return async (bytes: Uint8Array) => {
@@ -61,9 +61,9 @@ export async function decodeWebp(bytes: Uint8Array): Promise<DecodedWebp> {
 export function isAnimatedWebp(bytes: Uint8Array): boolean {
   if (bytes.length < 21) return false;
   return (
-    hasAscii(bytes, 'RIFF', 0) &&
-    hasAscii(bytes, 'WEBP', 8) &&
-    hasAscii(bytes, 'VP8X', 12) &&
+    hasAscii(bytes, "RIFF", 0) &&
+    hasAscii(bytes, "WEBP", 8) &&
+    hasAscii(bytes, "VP8X", 12) &&
     (bytes[20]! & 0x02) !== 0
   );
 }

@@ -14,8 +14,8 @@
  * permissive module-load registry.
  */
 
-import { SyncDescriptor } from './descriptors';
-import type { BrandedService, ServiceIdentifier } from './instantiation';
+import { SyncDescriptor } from "./descriptors";
+import type { BrandedService, ServiceIdentifier } from "./instantiation";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const _registry: Array<[ServiceIdentifier<any>, SyncDescriptor<any>]> = [];
@@ -58,14 +58,18 @@ export function registerSingleton<T, Services extends BrandedService[]>(
   ctorOrDescriptor:
     | SyncDescriptor<any>
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    | (new (...services: Services) => T),
+    | (new (
+        ...services: Services
+      ) => T),
   instantiationType?: boolean | InstantiationType,
 ): void {
   const descriptor =
     ctorOrDescriptor instanceof SyncDescriptor
       ? ctorOrDescriptor
       : new SyncDescriptor<T>(
-          ctorOrDescriptor as new (...args: unknown[]) => T,
+          ctorOrDescriptor as new (
+            ...args: unknown[]
+          ) => T,
           [],
           Boolean(instantiationType),
         );

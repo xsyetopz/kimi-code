@@ -33,7 +33,9 @@ export interface ModelCapability {
   readonly dynamically_loaded_tools?: boolean;
 }
 
-const UNKNOWN_CAPABILITY_MARKER = Symbol.for('moonshot-ai.kosong.UNKNOWN_CAPABILITY');
+const UNKNOWN_CAPABILITY_MARKER = Symbol.for(
+  "moonshot-ai.kosong.UNKNOWN_CAPABILITY",
+);
 
 /**
  * Shared read-only default returned when a provider has not catalogued a
@@ -59,7 +61,9 @@ export const UNKNOWN_CAPABILITY: ModelCapability = Object.freeze(
 export function isUnknownCapability(capability: ModelCapability): boolean {
   if (capability === UNKNOWN_CAPABILITY) return true;
   const marked =
-    (capability as unknown as Record<PropertyKey, unknown>)[UNKNOWN_CAPABILITY_MARKER] === true;
+    (capability as unknown as Record<PropertyKey, unknown>)[
+      UNKNOWN_CAPABILITY_MARKER
+    ] === true;
   if (marked) return true;
   return (
     !capability.image_in &&

@@ -21,10 +21,10 @@
  * (resume kills the previous).
  */
 
-import { mkdir, readdir, readFile, unlink } from 'node:fs/promises';
-import { join } from 'pathe';
+import { mkdir, readdir, readFile, unlink } from "node:fs/promises";
+import { join } from "pathe";
 
-import { atomicWrite } from './fs';
+import { atomicWrite } from "./fs";
 
 export interface PerIdJsonStore<T> {
   /**
@@ -85,7 +85,7 @@ export interface PerIdJsonStoreOptions<T> {
 export function createPerIdJsonStore<T>(
   opts: PerIdJsonStoreOptions<T>,
 ): PerIdJsonStore<T> {
-  const { rootDir, subdir, idRegex, isValid, entityName = 'id' } = opts;
+  const { rootDir, subdir, idRegex, isValid, entityName = "id" } = opts;
   const dir = join(rootDir, subdir);
 
   function fileFor(id: string): string {
@@ -105,7 +105,7 @@ export function createPerIdJsonStore<T>(
     const path = fileFor(id);
     let raw: string;
     try {
-      raw = await readFile(path, 'utf-8');
+      raw = await readFile(path, "utf-8");
     } catch {
       return undefined;
     }
@@ -128,8 +128,8 @@ export function createPerIdJsonStore<T>(
     }
     const out: T[] = [];
     for (const entry of entries) {
-      if (!entry.endsWith('.json')) continue;
-      const id = entry.slice(0, -'.json'.length);
+      if (!entry.endsWith(".json")) continue;
+      const id = entry.slice(0, -".json".length);
       if (!idRegex.test(id)) continue;
       const value = await read(id);
       if (value === undefined) continue;
@@ -143,7 +143,7 @@ export function createPerIdJsonStore<T>(
     try {
       await unlink(path);
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
     }
   }
 

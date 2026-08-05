@@ -8,10 +8,10 @@
  * everywhere: ↑/↓, PgUp/PgDn, and search editing.
  */
 
-import { fuzzyFilter, Key, matchesKey } from '@moonshot-ai/pi-tui';
+import { fuzzyFilter, Key, matchesKey } from "@moonshot-ai/pi-tui";
 
-import { pageView, type PageView } from './paging';
-import { isPrintableChar, printableChar } from './printable-key';
+import { pageView, type PageView } from "./paging";
+import { isPrintableChar, printableChar } from "./printable-key";
 
 const DEFAULT_PAGE_SIZE = 8;
 
@@ -42,7 +42,7 @@ export class SearchableList<T> {
   private readonly toSearchText: (item: T) => string;
   private readonly pageSize: number;
   private readonly searchable: boolean;
-  private query = '';
+  private query = "";
   private cursor: number;
 
   constructor(opts: SearchableListOptions<T>) {
@@ -80,7 +80,10 @@ export class SearchableList<T> {
   }
 
   moveDown(): void {
-    this.cursor = Math.min(Math.max(0, this.filtered().length - 1), this.cursor + 1);
+    this.cursor = Math.min(
+      Math.max(0, this.filtered().length - 1),
+      this.cursor + 1,
+    );
   }
 
   pageUp(): void {
@@ -88,13 +91,16 @@ export class SearchableList<T> {
   }
 
   pageDown(): void {
-    this.cursor = Math.min(Math.max(0, this.filtered().length - 1), this.cursor + this.pageSize);
+    this.cursor = Math.min(
+      Math.max(0, this.filtered().length - 1),
+      this.cursor + this.pageSize,
+    );
   }
 
   /** Clears the active query and resets the cursor. Returns whether a query was cleared. */
   clearQuery(): boolean {
     if (this.query.length === 0) return false;
-    this.query = '';
+    this.query = "";
     this.cursor = 0;
     return true;
   }

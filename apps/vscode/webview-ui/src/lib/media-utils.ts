@@ -1,6 +1,12 @@
 import { heicTo } from "heic-to/csp";
 
-import { IMAGE_CONFIG, VIDEO_CONFIG, MEDIA_CONFIG, IMAGE_EXTENSIONS, VIDEO_EXTENSIONS } from "@/services/config";
+import {
+  IMAGE_CONFIG,
+  VIDEO_CONFIG,
+  MEDIA_CONFIG,
+  IMAGE_EXTENSIONS,
+  VIDEO_EXTENSIONS,
+} from "@/services/config";
 
 export type MediaType = "image" | "video";
 
@@ -73,32 +79,57 @@ export interface MediaValidationError {
   message: string;
 }
 
-export function validateMediaFile(file: File, currentCount: number): MediaValidationError | null {
+export function validateMediaFile(
+  file: File,
+  currentCount: number,
+): MediaValidationError | null {
   if (currentCount >= MEDIA_CONFIG.maxCount) {
-    return { type: "count", message: `Maximum ${MEDIA_CONFIG.maxCount} media files allowed` };
+    return {
+      type: "count",
+      message: `Maximum ${MEDIA_CONFIG.maxCount} media files allowed`,
+    };
   }
 
   const mediaType = getMediaType(file);
   if (!mediaType) {
-    return { type: "format", message: "Unsupported format. Use PNG, JPEG, GIF, WebP, HEIC, MP4, WebM or MOV" };
+    return {
+      type: "format",
+      message:
+        "Unsupported format. Use PNG, JPEG, GIF, WebP, HEIC, MP4, WebM or MOV",
+    };
   }
 
-  const maxSize = mediaType === "image" ? IMAGE_CONFIG.maxSizeBytes : VIDEO_CONFIG.maxSizeBytes;
+  const maxSize =
+    mediaType === "image"
+      ? IMAGE_CONFIG.maxSizeBytes
+      : VIDEO_CONFIG.maxSizeBytes;
   if (file.size > maxSize) {
-    return { type: "size", message: `File exceeds ${maxSize / (1024 * 1024)}MB limit` };
+    return {
+      type: "size",
+      message: `File exceeds ${maxSize / (1024 * 1024)}MB limit`,
+    };
   }
 
   return null;
 }
 
 // ============ Processing Helpers ============
-export function validateTotalSize(existingDataUris: string[], newDataUri: string): MediaValidationError | null {
-  const existingSize = existingDataUris.reduce((sum, uri) => sum + getDataUriByteSize(uri), 0);
+export function validateTotalSize(
+  existingDataUris: string[],
+  newDataUri: string,
+): MediaValidationError | null {
+  const existingSize = existingDataUris.reduce(
+    (sum, uri) => sum + getDataUriByteSize(uri),
+    0,
+  );
   const newSize = getDataUriByteSize(newDataUri);
   const totalSize = existingSize + newSize;
   if (totalSize > MEDIA_CONFIG.maxTotalBytes) {
     const maxMB = MEDIA_CONFIG.maxTotalBytes / (1024 * 1024);
-    return { type: "total_size", message: `Total media size exceeds ${maxMB}MB limit` };
+    return {
+      type: "total_size",
+      message: `Total media size exceeds ${maxMB}MB limit`,
+    };
   }
   return null;
 }
@@ -121,7 +152,11 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   });
 }
 
-function getScaledDimensions(w: number, h: number, max: number): { width: number; height: number } {
+function getScaledDimensions(
+  w: number,
+  h: number,
+  max: number,
+): { width: number; height: number } {
   if (w <= max && h <= max) {
     return { width: w, height: h };
   }
@@ -129,7 +164,13 @@ function getScaledDimensions(w: number, h: number, max: number): { width: number
   return { width: Math.round(w * ratio), height: Math.round(h * ratio) };
 }
 
-function canvasToDataUri(img: HTMLImageElement, mime: string, w: number, h: number, quality: number): string {
+function canvasToDataUri(
+  img: HTMLImageElement,
+  mime: string,
+  w: number,
+  h: number,
+  quality: number,
+): string {
   const canvas = document.createElement("canvas");
   canvas.width = w;
   canvas.height = h;
@@ -156,7 +197,11 @@ async function processImage(file: File): Promise<string> {
 
   const dataUri = await blobToDataUri(blob);
   const img = await loadImage(dataUri);
-  const { width, height } = getScaledDimensions(img.width, img.height, IMAGE_CONFIG.maxDimension);
+  const { width, height } = getScaledDimensions(
+    img.width,
+    img.height,
+    IMAGE_CONFIG.maxDimension,
+  );
   const needsResize = width !== img.width || height !== img.height;
   const isCompressible = mime === "image/jpeg" || mime === "image/webp";
 
@@ -166,10 +211,15 @@ async function processImage(file: File): Promise<string> {
   }
 
   // Resize if needed
-  let result = needsResize ? canvasToDataUri(img, mime, width, height, 1) : dataUri;
+  let result = needsResize
+    ? canvasToDataUri(img, mime, width, height, 1)
+    : dataUri;
 
   // Compress if still too large
-  if (isCompressible && dataUriSize(result) > IMAGE_CONFIG.compressThresholdBytes) {
+  if (
+    isCompressible &&
+    dataUriSize(result) > IMAGE_CONFIG.compressThresholdBytes
+  ) {
     for (let q = 0.85; q >= 0.5; q -= 0.1) {
       result = canvasToDataUri(img, mime, width, height, q);
       if (dataUriSize(result) <= IMAGE_CONFIG.targetCompressedBytes) {
@@ -182,5 +232,7 @@ async function processImage(file: File): Promise<string> {
 }
 
 export async function processMediaFile(file: File): Promise<string> {
-  return getMediaType(file) === "video" ? blobToDataUri(file) : processImage(file);
+  return getMediaType(file) === "video"
+    ? blobToDataUri(file)
+    : processImage(file);
 }

@@ -12,14 +12,14 @@
  * Run: `node scripts/dep-graph.mjs`.
  */
 
-import { readFileSync, readdirSync, statSync } from 'node:fs';
-import { dirname, join, relative } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { readFileSync, readdirSync, statSync } from "node:fs";
+import { dirname, join, relative } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const SRC_ROOT = join(__dirname, '..', 'src');
+const SRC_ROOT = join(__dirname, "..", "src");
 
-const SCOPE_DIRS = new Set(['app', 'session', 'agent']);
+const SCOPE_DIRS = new Set(["app", "session", "agent"]);
 
 /** Resolve a `src/`-relative file path to its domain, skipping the scope tier. */
 function domainOf(rel) {
@@ -33,7 +33,7 @@ function walk(dir) {
     const abs = join(dir, entry);
     const st = statSync(abs);
     if (st.isDirectory()) out.push(...walk(abs));
-    else if (entry.endsWith('.ts') && entry !== 'index.ts') out.push(abs);
+    else if (entry.endsWith(".ts") && entry !== "index.ts") out.push(abs);
   }
   return out;
 }
@@ -46,7 +46,8 @@ function extract(source) {
   const services = [];
 
   // Map impl class -> ctor deps (via @IToken decorators in the constructor).
-  const classRe = /export\s+class\s+(\w+)\s*(?:extends\s+\w+\s*)?(?:implements\s+[\w,\s]+)?\s*\{/g;
+  const classRe =
+    /export\s+class\s+(\w+)\s*(?:extends\s+\w+\s*)?(?:implements\s+[\w,\s]+)?\s*\{/g;
   let cls;
   const classDeps = new Map();
   while ((cls = classRe.exec(source)) !== null) {
@@ -55,12 +56,16 @@ function extract(source) {
     // Find the constructor belonging to this class (before the next top-level class).
     const nextClass = classRe.exec(source);
     classRe.lastIndex = cls.index + 1; // allow re-match
-    const slice = source.slice(start, nextClass ? nextClass.index : source.length);
+    const slice = source.slice(
+      start,
+      nextClass ? nextClass.index : source.length,
+    );
     if (nextClass) classRe.lastIndex = nextClass.index;
     const ctorMatch = /constructor\s*\(([^)]*)\)/.exec(slice);
     const deps = [];
     if (ctorMatch) {
-      const decRe = /@(I[A-Za-z]\w*)\s+(?:(?:private|protected|public|readonly)\s+)*_?\w+\s*:/g;
+      const decRe =
+        /@(I[A-Za-z]\w*)\s+(?:(?:private|protected|public|readonly)\s+)*_?\w+\s*:/g;
       let d;
       while ((d = decRe.exec(ctorMatch[1])) !== null) deps.push(d[1]);
     }
@@ -89,7 +94,7 @@ function main() {
   const byDomain = new Map();
   for (const f of files) {
     const domain = domainOf(relative(SRC_ROOT, f));
-    const services = extract(readFileSync(f, 'utf8'));
+    const services = extract(readFileSync(f, "utf8"));
     if (!byDomain.has(domain)) byDomain.set(domain, []);
     byDomain.get(domain).push(...services);
   }
@@ -97,11 +102,13 @@ function main() {
   const domains = [...byDomain.keys()].sort();
   let total = 0;
   for (const domain of domains) {
-    const services = byDomain.get(domain).sort((a, b) => a.token.localeCompare(b.token));
+    const services = byDomain
+      .get(domain)
+      .sort((a, b) => a.token.localeCompare(b.token));
     console.log(`\n## ${domain}`);
     for (const s of services) {
       total++;
-      const deps = s.deps.length > 0 ? s.deps.join(', ') : '—';
+      const deps = s.deps.length > 0 ? s.deps.join(", ") : "—";
       console.log(`- ${s.token} [${s.scope}] → ${deps}`);
     }
   }

@@ -1,20 +1,27 @@
-import type { McpServerInfo, McpServerStatusEvent } from '@moonshot-ai/kimi-code-sdk';
+import type {
+  McpServerInfo,
+  McpServerStatusEvent,
+} from "@moonshot-ai/kimi-code-sdk";
 
-export type McpServerStatusSnapshot = McpServerInfo | McpServerStatusEvent['server'];
+export type McpServerStatusSnapshot =
+  | McpServerInfo
+  | McpServerStatusEvent["server"];
 
 export const MCP_STARTUP_STATUS_ROW_LIMIT = 4;
 
-function mcpStartupStatusPriority(status: McpServerStatusSnapshot['status']): number {
+function mcpStartupStatusPriority(
+  status: McpServerStatusSnapshot["status"],
+): number {
   switch (status) {
-    case 'failed':
+    case "failed":
       return 0;
-    case 'needs-auth':
+    case "needs-auth":
       return 1;
-    case 'pending':
+    case "pending":
       return 2;
-    case 'connected':
+    case "connected":
       return 3;
-    case 'disabled':
+    case "disabled":
       return 4;
   }
 }
@@ -23,8 +30,11 @@ export function selectMcpStartupStatusRows(
   servers: readonly McpServerStatusSnapshot[],
 ): McpServerStatusSnapshot[] {
   return [...servers]
-    .filter((server) => server.status !== 'disabled')
-    .toSorted((a, b) => mcpStartupStatusPriority(a.status) - mcpStartupStatusPriority(b.status))
+    .filter((server) => server.status !== "disabled")
+    .toSorted(
+      (a, b) =>
+        mcpStartupStatusPriority(a.status) - mcpStartupStatusPriority(b.status),
+    )
     .slice(0, MCP_STARTUP_STATUS_ROW_LIMIT);
 }
 
@@ -38,19 +48,19 @@ export function formatMcpStartupStatusSummary(
   let disabled = 0;
   for (const server of servers) {
     switch (server.status) {
-      case 'failed':
+      case "failed":
         failed++;
         break;
-      case 'needs-auth':
+      case "needs-auth":
         needsAuth++;
         break;
-      case 'pending':
+      case "pending":
         connecting++;
         break;
-      case 'connected':
+      case "connected":
         connected++;
         break;
-      case 'disabled':
+      case "disabled":
         disabled++;
         break;
     }
@@ -62,9 +72,14 @@ export function formatMcpStartupStatusSummary(
   if (connecting > 0) parts.push(`${connecting} connecting`);
   if (connected > 0) parts.push(`${connected} connected`);
   if (disabled > 0) parts.push(`${disabled} disabled`);
-  return parts.join(', ');
+  return parts.join(", ");
 }
 
 export function mcpServerStatusKey(server: McpServerStatusSnapshot): string {
-  return JSON.stringify([server.status, server.transport, server.toolCount, server.error]);
+  return JSON.stringify([
+    server.status,
+    server.transport,
+    server.toolCount,
+    server.error,
+  ]);
 }

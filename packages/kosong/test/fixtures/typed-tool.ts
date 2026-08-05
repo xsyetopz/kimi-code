@@ -1,8 +1,8 @@
-import { z } from 'zod';
+import { z } from "zod";
 
-import type { Tool } from '#/tool';
-import { compileArgsValidator, type JsonValue } from './args-validator';
-import { toolValidateError, type ToolReturnValue } from './simple-toolset';
+import type { Tool } from "#/tool";
+import { compileArgsValidator, type JsonValue } from "./args-validator";
+import { toolValidateError, type ToolReturnValue } from "./simple-toolset";
 
 /**
  * Configuration for a typed tool.
@@ -25,14 +25,16 @@ export interface TypedTool {
   handler: (args: JsonValue) => Promise<ToolReturnValue>;
 }
 
-export function createTypedTool<TParams>(config: TypedToolConfig<TParams>): TypedTool {
+export function createTypedTool<TParams>(
+  config: TypedToolConfig<TParams>,
+): TypedTool {
   const runtimeSchema =
     config.params instanceof z.ZodObject
       ? (config.params.strict() as z.ZodType<TParams>)
       : config.params;
 
   const jsonSchema = z.toJSONSchema(runtimeSchema) as Record<string, unknown>;
-  delete jsonSchema['$schema'];
+  delete jsonSchema["$schema"];
 
   const tool: Tool = {
     name: config.name,
@@ -45,7 +47,8 @@ export function createTypedTool<TParams>(config: TypedToolConfig<TParams>): Type
     compileArgsValidator(tool.parameters);
   } catch (error) {
     throw new Error(
-      `Invalid parameters schema for tool '${tool.name}': ${(error as Error).message}`, { cause: error },
+      `Invalid parameters schema for tool '${tool.name}': ${(error as Error).message}`,
+      { cause: error },
     );
   }
 
@@ -54,10 +57,10 @@ export function createTypedTool<TParams>(config: TypedToolConfig<TParams>): Type
     if (!result.success) {
       const issues = result.error.issues
         .map((issue) => {
-          const path = issue.path.join('.');
+          const path = issue.path.join(".");
           return path ? `${path}: ${issue.message}` : issue.message;
         })
-        .join('; ');
+        .join("; ");
       return toolValidateError(`Tool parameter validation failed: ${issues}`);
     }
     return config.handler(result.data);

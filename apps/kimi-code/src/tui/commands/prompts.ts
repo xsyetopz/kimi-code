@@ -5,21 +5,32 @@ import {
   type CatalogModel,
   type ModelAlias,
   type ThinkingEffort,
-} from '@moonshot-ai/kimi-code-sdk';
-import { capabilitiesForModel } from '@moonshot-ai/kimi-code-oauth';
+} from "@moonshot-ai/kimi-code-sdk";
+import { capabilitiesForModel } from "@moonshot-ai/kimi-code-oauth";
 import type {
   ManagedKimiCodeModelInfo,
   OpenPlatformDefinition,
-} from '@moonshot-ai/kimi-code-oauth';
+} from "@moonshot-ai/kimi-code-oauth";
 
-import { ApiKeyInputDialogComponent, type ApiKeyInputResult } from '../components/dialogs/api-key-input-dialog';
-import { ChoicePickerComponent, type ChoiceOption } from '../components/dialogs/choice-picker';
-import { FeedbackInputDialogComponent, type FeedbackInputDialogResult } from '../components/dialogs/feedback-input-dialog';
-import { ModelSelectorComponent } from '../components/dialogs/model-selector';
-import { PlatformSelectorComponent } from '../components/dialogs/platform-selector';
-import type { SlashCommandHost } from './dispatch';
+import {
+  ApiKeyInputDialogComponent,
+  type ApiKeyInputResult,
+} from "../components/dialogs/api-key-input-dialog";
+import {
+  ChoicePickerComponent,
+  type ChoiceOption,
+} from "../components/dialogs/choice-picker";
+import {
+  FeedbackInputDialogComponent,
+  type FeedbackInputDialogResult,
+} from "../components/dialogs/feedback-input-dialog";
+import { ModelSelectorComponent } from "../components/dialogs/model-selector";
+import { PlatformSelectorComponent } from "../components/dialogs/platform-selector";
+import type { SlashCommandHost } from "./dispatch";
 
-export function promptPlatformSelection(host: SlashCommandHost): Promise<string | undefined> {
+export function promptPlatformSelection(
+  host: SlashCommandHost,
+): Promise<string | undefined> {
   return new Promise((resolve) => {
     const selector = new PlatformSelectorComponent({
       onSelect: (platformId) => {
@@ -42,7 +53,7 @@ export function promptLogoutProviderSelection(
 ): Promise<string | undefined> {
   return new Promise((resolve) => {
     const picker = new ChoicePickerComponent({
-      title: 'Select a provider to log out',
+      title: "Select a provider to log out",
       options,
       currentValue,
       onSelect: (value) => {
@@ -62,31 +73,35 @@ export interface FeedbackPromptResult {
   readonly value: string;
 }
 
-export function promptFeedbackInput(host: SlashCommandHost): Promise<FeedbackPromptResult | undefined> {
+export function promptFeedbackInput(
+  host: SlashCommandHost,
+): Promise<FeedbackPromptResult | undefined> {
   return new Promise((resolve) => {
-    const dialog = new FeedbackInputDialogComponent((result: FeedbackInputDialogResult) => {
-      host.restoreEditor();
-      resolve(result.kind === 'ok' ? { value: result.value } : undefined);
-    });
+    const dialog = new FeedbackInputDialogComponent(
+      (result: FeedbackInputDialogResult) => {
+        host.restoreEditor();
+        resolve(result.kind === "ok" ? { value: result.value } : undefined);
+      },
+    );
     host.mountEditorReplacement(dialog);
   });
 }
 
-export type FeedbackAttachmentLevel = 'none' | 'logs' | 'logs+codebase';
+export type FeedbackAttachmentLevel = "none" | "logs" | "logs+codebase";
 
 const FEEDBACK_ATTACHMENT_OPTIONS: readonly ChoiceOption[] = [
-  { value: 'none', label: 'No attachment', description: 'Text feedback only' },
+  { value: "none", label: "No attachment", description: "Text feedback only" },
   {
-    value: 'logs',
-    label: 'Logs only',
-    description: 'Upload wire events and diagnostic logs from this session',
+    value: "logs",
+    label: "Logs only",
+    description: "Upload wire events and diagnostic logs from this session",
   },
   {
-    value: 'logs+codebase',
-    label: 'Logs + codebase',
+    value: "logs+codebase",
+    label: "Logs + codebase",
     description:
-      'Include your codebase for deeper diagnosis. Sensitive files are automatically excluded — e.g. .env, config files, secret keys. We use attachments only for diagnosis and never share them.',
-    descriptionTone: 'warning',
+      "Include your codebase for deeper diagnosis. Sensitive files are automatically excluded — e.g. .env, config files, secret keys. We use attachments only for diagnosis and never share them.",
+    descriptionTone: "warning",
   },
 ];
 
@@ -95,7 +110,7 @@ export function promptFeedbackAttachment(
 ): Promise<FeedbackAttachmentLevel | undefined> {
   return new Promise((resolve) => {
     const picker = new ChoicePickerComponent({
-      title: 'Share diagnostic info to help us investigate?',
+      title: "Share diagnostic info to help us investigate?",
       options: FEEDBACK_ATTACHMENT_OPTIONS,
       onSelect: (value) => {
         host.restoreEditor();
@@ -113,7 +128,9 @@ export function promptFeedbackAttachment(
 export function promptApiKey(
   host: SlashCommandHost,
   platformName: string,
-  subtitleLines: readonly string[] = ['Your key will be saved to ~/.kimi-code/config.toml'],
+  subtitleLines: readonly string[] = [
+    "Your key will be saved to ~/.kimi-code/config.toml",
+  ],
 ): Promise<string | undefined> {
   return new Promise((resolve) => {
     const dialog = new ApiKeyInputDialogComponent(
@@ -121,7 +138,7 @@ export function promptApiKey(
       subtitleLines,
       (result: ApiKeyInputResult) => {
         host.restoreEditor();
-        resolve(result.kind === 'ok' ? result.value : undefined);
+        resolve(result.kind === "ok" ? result.value : undefined);
       },
     );
     host.mountEditorReplacement(dialog);
@@ -134,45 +151,55 @@ export function promptApiKey(
  * was guessed, where the built-in default endpoint would point at the wrong
  * host. Esc cancels the import.
  */
-export function promptBaseUrl(host: SlashCommandHost, platformName: string): Promise<string | undefined> {
+export function promptBaseUrl(
+  host: SlashCommandHost,
+  platformName: string,
+): Promise<string | undefined> {
   return new Promise((resolve) => {
     const dialog = new ApiKeyInputDialogComponent(
       platformName,
-      ['The catalog declares no endpoint for this provider — enter its base URL.'],
+      [
+        "The catalog declares no endpoint for this provider — enter its base URL.",
+      ],
       (result: ApiKeyInputResult) => {
         host.restoreEditor();
-        resolve(result.kind === 'ok' ? result.value : undefined);
+        resolve(result.kind === "ok" ? result.value : undefined);
       },
       {
         title: `Enter base URL for ${platformName}`,
         mask: false,
-        emptyHint: 'Base URL cannot be empty.',
+        emptyHint: "Base URL cannot be empty.",
       },
     );
     host.mountEditorReplacement(dialog);
   });
 }
 
-export function promptCatalogProviderSelection(host: SlashCommandHost, catalog: Catalog): Promise<string | undefined> {
+export function promptCatalogProviderSelection(
+  host: SlashCommandHost,
+  catalog: Catalog,
+): Promise<string | undefined> {
   return new Promise((resolve) => {
     const options: ChoiceOption[] = Object.entries(catalog)
-      .filter(([, entry]) => resolveCatalogImport(entry).kind !== 'invalid')
+      .filter(([, entry]) => resolveCatalogImport(entry).kind !== "invalid")
       .map(([id, entry]) => ({
         value: id,
         label: entry.name ?? id,
         description:
-          typeof entry.api === 'string' && entry.api.length > 0 ? entry.api : undefined,
+          typeof entry.api === "string" && entry.api.length > 0
+            ? entry.api
+            : undefined,
       }))
       .toSorted((a, b) => a.label.localeCompare(b.label));
 
     if (options.length === 0) {
-      host.showError('Catalog has no providers with supported wire types.');
+      host.showError("Catalog has no providers with supported wire types.");
       resolve(undefined);
       return;
     }
 
     const picker = new ChoicePickerComponent({
-      title: 'Select a provider',
+      title: "Select a provider",
       options,
       searchable: true,
       onSelect: (value) => {
@@ -192,7 +219,9 @@ export async function promptModelSelectionForOpenPlatform(
   host: SlashCommandHost,
   models: ManagedKimiCodeModelInfo[],
   platform: OpenPlatformDefinition,
-): Promise<{ model: ManagedKimiCodeModelInfo; thinking: ThinkingEffort } | undefined> {
+): Promise<
+  { model: ManagedKimiCodeModelInfo; thinking: ThinkingEffort } | undefined
+> {
   const modelDict: Record<string, ModelAlias> = {};
   for (const m of models) {
     modelDict[`${platform.id}/${m.id}`] = {
@@ -205,7 +234,9 @@ export async function promptModelSelectionForOpenPlatform(
   }
   const selection = await runModelSelector(host, modelDict);
   if (selection === undefined) return undefined;
-  const model = models.find((m) => `${platform.id}/${m.id}` === selection.alias);
+  const model = models.find(
+    (m) => `${platform.id}/${m.id}` === selection.alias,
+  );
   return model ? { model, thinking: selection.thinking } : undefined;
 }
 
@@ -229,13 +260,14 @@ export function runModelSelector(
   modelDict: Record<string, ModelAlias>,
 ): Promise<{ alias: string; thinking: ThinkingEffort } | undefined> {
   return new Promise((resolve) => {
-    const firstAlias = Object.keys(modelDict)[0] ?? '';
+    const firstAlias = Object.keys(modelDict)[0] ?? "";
     const caps = modelDict[firstAlias]?.capabilities ?? [];
-    const initialThinking = caps.includes('always_thinking') || caps.includes('thinking');
+    const initialThinking =
+      caps.includes("always_thinking") || caps.includes("thinking");
     const selector = new ModelSelectorComponent({
       models: modelDict,
       currentValue: firstAlias,
-      currentThinkingEffort: initialThinking ? 'on' : 'off',
+      currentThinkingEffort: initialThinking ? "on" : "off",
       searchable: true,
       onSelect: ({ alias, thinking }) => {
         host.restoreEditor();

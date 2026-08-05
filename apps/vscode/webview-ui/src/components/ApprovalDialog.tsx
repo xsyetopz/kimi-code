@@ -36,26 +36,51 @@ export function ApprovalDialog() {
   ] as const;
 
   return (
-    <div className={cn("mb-0.5 border border-blue-200 dark:border-blue-800 rounded-lg overflow-hidden bg-background flex flex-col shrink")}>
+    <div
+      className={cn(
+        "mb-0.5 border border-blue-200 dark:border-blue-800 rounded-lg overflow-hidden bg-background flex flex-col shrink",
+      )}
+    >
       <div className="p-2 space-y-2 flex-1 min-h-0 overflow-hidden flex flex-col">
         <div className="flex items-center justify-between shrink-0">
-          <div className="text-xs font-semibold text-foreground">Allow this {req.action.toLowerCase()}?</div>
+          <div className="text-xs font-semibold text-foreground">
+            Allow this {req.action.toLowerCase()}?
+          </div>
           {hasDisplay && (
-            <button onClick={() => setExpanded(!expanded)} className="p-1 hover:bg-muted rounded transition-colors">
-              {expanded ? <IconChevronDown className="size-4 text-muted-foreground" /> : <IconChevronUp className="size-4 text-muted-foreground" />}
+            <button
+              onClick={() => setExpanded(!expanded)}
+              className="p-1 hover:bg-muted rounded transition-colors"
+            >
+              {expanded ? (
+                <IconChevronDown className="size-4 text-muted-foreground" />
+              ) : (
+                <IconChevronUp className="size-4 text-muted-foreground" />
+              )}
             </button>
           )}
         </div>
 
-        <div className="text-xs text-foreground/90 break-all leading-relaxed bg-muted/30 py-2 px-2 rounded shrink-0 max-h-20 overflow-y-auto font-mono">{req.description}</div>
+        <div className="text-xs text-foreground/90 break-all leading-relaxed bg-muted/30 py-2 px-2 rounded shrink-0 max-h-20 overflow-y-auto font-mono">
+          {req.description}
+        </div>
 
         {hasDisplay && (
-          <div className={cn("overflow-y-auto", expanded ? "flex-1 min-h-0" : "max-h-24")}>
-            <DisplayBlocks blocks={req.display} maxHeight={expanded ? "max-h-none" : "max-h-20"} />
+          <div
+            className={cn(
+              "overflow-y-auto",
+              expanded ? "flex-1 min-h-0" : "max-h-24",
+            )}
+          >
+            <DisplayBlocks
+              blocks={req.display}
+              maxHeight={expanded ? "max-h-none" : "max-h-20"}
+            />
           </div>
         )}
 
-        <div className="text-xs text-muted-foreground shrink-0">{req.sender}</div>
+        <div className="text-xs text-muted-foreground shrink-0">
+          {req.sender}
+        </div>
 
         <div className="space-y-1.5 pt-1 shrink-0">
           {options.map((opt) => (
@@ -68,10 +93,21 @@ export function ApprovalDialog() {
               className={cn(
                 "w-full text-left px-2 py-1 rounded-md text-xs transition-colors",
                 "border border-border cursor-pointer",
-                selectedIndex === opt.index ? "bg-blue-500 text-white border-blue-500" : "bg-background hover:bg-muted/50",
+                selectedIndex === opt.index
+                  ? "bg-blue-500 text-white border-blue-500"
+                  : "bg-background hover:bg-muted/50",
               )}
             >
-              <span className={cn("mr-2", selectedIndex === opt.index ? "text-blue-200" : "text-muted-foreground")}>{opt.index}</span>
+              <span
+                className={cn(
+                  "mr-2",
+                  selectedIndex === opt.index
+                    ? "text-blue-200"
+                    : "text-muted-foreground",
+                )}
+              >
+                {opt.index}
+              </span>
               <span className="font-medium">{opt.label}</span>
             </button>
           ))}

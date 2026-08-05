@@ -1,13 +1,13 @@
-import { defineConfig } from 'vitest/config';
+import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   test: {
-    projects: ['packages/*', 'apps/kimi-code', 'apps/vscode'],
+    projects: ["packages/*", "apps/kimi-code", "apps/vscode"],
     coverage: {
-      provider: 'v8',
-      include: ['packages/*/src/**/*.ts', 'apps/*/src/**/*.ts'],
-      exclude: ['**/*.test.ts', '**/*.spec.ts', '**/dist/**'],
-      reporter: ['text', 'html'],
+      provider: "v8",
+      include: ["packages/*/src/**/*.ts", "apps/*/src/**/*.ts"],
+      exclude: ["**/*.test.ts", "**/*.spec.ts", "**/dist/**"],
+      reporter: ["text", "html"],
     },
   },
 });

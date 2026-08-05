@@ -51,21 +51,21 @@ export interface GlobalSearchQuery {
    * needs at least 2 normalized characters). `op`/`sort` only apply to
    * 'terms'; literal hits carry score 0 and sort by time desc.
    */
-  readonly mode?: 'terms' | 'literal';
+  readonly mode?: "terms" | "literal";
   /** Term combination, default AND. */
-  readonly op?: 'AND' | 'OR';
+  readonly op?: "AND" | "OR";
   /** Omit to search across every session. */
   readonly container?: {
     readonly sessionId?: string;
     readonly agentId?: string;
   };
   /** Restrict to one document role. */
-  readonly role?: 'user' | 'assistant' | 'title';
+  readonly role?: "user" | "assistant" | "title";
   /** Epoch ms, inclusive bounds. */
   readonly startTime?: number;
   readonly endTime?: number;
   /** Default 'score' (relevance). */
-  readonly sort?: 'score' | 'time_desc' | 'time_asc';
+  readonly sort?: "score" | "time_desc" | "time_asc";
   /** Default 20, max 50. */
   readonly pageSize?: number;
   /** Opaque cursor from the previous page; omit for the first page. */
@@ -80,7 +80,7 @@ export interface GlobalSearchHit {
   readonly sessionTitle: string;
   /** 'main' or a subagent id. */
   readonly agentId: string;
-  readonly role: 'user' | 'assistant' | 'title';
+  readonly role: "user" | "assistant" | "title";
   /** ~80-char window around the first hit term, generated server-side. */
   readonly snippet: string;
   /** Epoch ms of the wire record (session `updatedAt` for title docs). */
@@ -116,7 +116,7 @@ export interface GlobalSearchIndexState {
    * readonly — another process holds the index write lock, this process only
    * reads (catching up from the WAL in the background).
    */
-  readonly state: 'building' | 'ready' | 'readonly';
+  readonly state: "building" | "ready" | "readonly";
   /** Progress counters behind `state`. */
   readonly indexedSessions: number;
   readonly totalSessions: number;
@@ -144,7 +144,7 @@ export interface GlobalSearchIndexState {
  *     (container-scoped queries on a session resumed in this process).
  * Scores are only comparable within one source.
  */
-export type GlobalSearchSource = 'live' | 'index';
+export type GlobalSearchSource = "live" | "index";
 
 /**
  * Why a page may miss real hits (the query was bounded, never silently
@@ -158,7 +158,10 @@ export type GlobalSearchSource = 'live' | 'index';
  * A page token from a changed index generation is NOT reported here — it
  * fails the request with `invalid_page_token` (see the file header).
  */
-export type GlobalSearchIncomplete = 'candidate_cap' | 'postings_budget' | 'deadline';
+export type GlobalSearchIncomplete =
+  | "candidate_cap"
+  | "postings_budget"
+  | "deadline";
 
 export interface GlobalSearchPage {
   readonly items: GlobalSearchHit[];

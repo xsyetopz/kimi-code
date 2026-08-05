@@ -12,9 +12,9 @@
  *     Errors: 40407.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { fileMetaSchema } from '../file';
+import { fileMetaSchema } from "../file";
 
 export const uploadFileResponseSchema = fileMetaSchema;
 export type UploadFileResponse = z.infer<typeof uploadFileResponseSchema>;

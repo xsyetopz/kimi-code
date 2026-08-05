@@ -8,9 +8,12 @@
  * only.
  */
 
-import type { Readable, Writable } from 'node:stream';
+import type { Readable, Writable } from "node:stream";
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
 
 export interface IProcess {
   readonly stdin: Writable;
@@ -31,8 +34,11 @@ export interface ProcessExecOptions {
 export interface ISessionProcessRunner {
   readonly _serviceBrand: undefined;
 
-  exec(args: readonly string[], options?: ProcessExecOptions): Promise<IProcess>;
+  exec(
+    args: readonly string[],
+    options?: ProcessExecOptions,
+  ): Promise<IProcess>;
 }
 
 export const ISessionProcessRunner: ServiceIdentifier<ISessionProcessRunner> =
-  createDecorator<ISessionProcessRunner>('sessionProcessRunner');
+  createDecorator<ISessionProcessRunner>("sessionProcessRunner");

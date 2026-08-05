@@ -5,11 +5,16 @@
  * engine → wire direction only, like `agentContextData.history`).
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import type { ServiceContract } from '../types.js';
+import type { ServiceContract } from "../types.js";
 
-export const turnPhaseSchema = z.enum(['running', 'streaming', 'tool_call', 'retrying']);
+export const turnPhaseSchema = z.enum([
+  "running",
+  "streaming",
+  "tool_call",
+  "retrying",
+]);
 
 export const approvalRefSchema = z.object({
   approvalId: z.string(),
@@ -36,17 +41,22 @@ export const activityTurnStateSchema = z.object({
   turnId: z.number(),
   origin: z.unknown(),
   phase: turnPhaseSchema,
-  stream: z.enum(['assistant', 'thinking', 'tool_call']).optional(),
+  stream: z.enum(["assistant", "thinking", "tool_call"]).optional(),
   step: z.number(),
   ending: z.boolean(),
-  endingReason: z.enum(['aborted', 'max_steps', 'error']).optional(),
+  endingReason: z.enum(["aborted", "max_steps", "error"]).optional(),
   retry: activityRetryStateSchema.optional(),
   pendingApprovals: z.array(approvalRefSchema),
   activeToolCalls: z.array(toolCallRefSchema),
   since: z.number(),
 });
 
-export const turnEndReasonSchema = z.enum(['completed', 'cancelled', 'failed', 'blocked']);
+export const turnEndReasonSchema = z.enum([
+  "completed",
+  "cancelled",
+  "failed",
+  "blocked",
+]);
 
 export const activityLastTurnStateSchema = z.object({
   turnId: z.number(),
@@ -61,7 +71,7 @@ export const backgroundRefSchema = z.object({
   since: z.number(),
 });
 
-export const activityViewLifecycleSchema = z.enum(['ready', 'disposed']);
+export const activityViewLifecycleSchema = z.enum(["ready", "disposed"]);
 
 export const agentActivityStateSchema = z.object({
   lifecycle: activityViewLifecycleSchema,

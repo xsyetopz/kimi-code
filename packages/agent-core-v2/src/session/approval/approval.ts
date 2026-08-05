@@ -7,8 +7,11 @@
  * broker per session.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
-import type { ToolInputDisplay } from '#/tool/toolInputDisplay';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
+import type { ToolInputDisplay } from "#/tool/toolInputDisplay";
 
 export interface ApprovalRequest {
   readonly id?: string;
@@ -21,11 +24,11 @@ export interface ApprovalRequest {
   readonly display: ToolInputDisplay;
 }
 
-export type ApprovalDecision = 'approved' | 'rejected' | 'cancelled';
+export type ApprovalDecision = "approved" | "rejected" | "cancelled";
 
 export interface ApprovalResponse {
   readonly decision: ApprovalDecision;
-  readonly scope?: 'session';
+  readonly scope?: "session";
   readonly feedback?: string;
   readonly selectedLabel?: string;
 }
@@ -40,4 +43,4 @@ export interface ISessionApprovalService {
 }
 
 export const ISessionApprovalService: ServiceIdentifier<ISessionApprovalService> =
-  createDecorator<ISessionApprovalService>('sessionApprovalService');
+  createDecorator<ISessionApprovalService>("sessionApprovalService");

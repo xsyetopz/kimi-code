@@ -1,4 +1,4 @@
-import { chmod, rename, writeFile } from 'node:fs/promises';
+import { chmod, rename, writeFile } from "node:fs/promises";
 
 /**
  * Write atomically: write to a temp sibling then rename over the target.
@@ -13,7 +13,7 @@ export async function atomicWrite(path: string, data: string): Promise<void> {
   // private (0600) so they are never group/world-readable, even when the
   // target home directory itself has permissive permissions. `chmod` covers
   // the case where a stale temp file from a crashed run already exists.
-  await writeFile(tmp, data, { encoding: 'utf-8', mode: 0o600 });
+  await writeFile(tmp, data, { encoding: "utf-8", mode: 0o600 });
   await chmod(tmp, 0o600);
   await rename(tmp, path);
 }

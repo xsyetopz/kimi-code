@@ -1,4 +1,4 @@
 export default {
-  panelTitle: '思考过程',
-  close: '关闭',
+  panelTitle: "思考过程",
+  close: "关闭",
 };

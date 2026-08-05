@@ -14,31 +14,31 @@
  * verbatim. The injection target is an LLM-visible transcript where
  * double-escaping would be noisier than literal punctuation.
  */
-import type { CronJobOrigin } from '../../agent/context/types';
+import type { CronJobOrigin } from "../../agent/context/types";
 
 export function renderCronFireXml(
   origin: CronJobOrigin,
   prompt: string,
 ): string {
-  const jobId = stringAttr(origin.jobId, 'unknown');
-  const cron = stringAttr(origin.cron, 'unknown');
-  const recurring = origin.recurring ? 'true' : 'false';
+  const jobId = stringAttr(origin.jobId, "unknown");
+  const cron = stringAttr(origin.cron, "unknown");
+  const recurring = origin.recurring ? "true" : "false";
   const coalescedCount = String(origin.coalescedCount);
-  const stale = origin.stale ? 'true' : 'false';
+  const stale = origin.stale ? "true" : "false";
 
   return [
     `<cron-fire jobId="${jobId}" cron="${cron}" recurring="${recurring}" coalescedCount="${coalescedCount}" stale="${stale}">`,
-    '<prompt>',
+    "<prompt>",
     prompt,
-    '</prompt>',
-    '</cron-fire>',
-  ].join('\n');
+    "</prompt>",
+    "</cron-fire>",
+  ].join("\n");
 }
 
 function stringAttr(value: unknown, fallback: string): string {
-  if (typeof value !== 'string' || value.length === 0) return fallback;
+  if (typeof value !== "string" || value.length === 0) return fallback;
   // Attribute boundary safety: escape `&` and `"`. Body-text `<` / `>`
   // stay untouched — the injection target is an LLM-visible transcript
   // where double-escaping would be noisier than literal punctuation.
-  return value.replaceAll('&', '&amp;').replaceAll('"', '&quot;');
+  return value.replaceAll("&", "&amp;").replaceAll('"', "&quot;");
 }

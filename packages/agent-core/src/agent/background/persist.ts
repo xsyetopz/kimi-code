@@ -12,11 +12,14 @@
  * background-specific shape and the output.log helpers together.
  */
 
-import { appendFile, mkdir, open, stat } from 'node:fs/promises';
-import { dirname, join } from 'pathe';
+import { appendFile, mkdir, open, stat } from "node:fs/promises";
+import { dirname, join } from "pathe";
 
-import { createPerIdJsonStore, type PerIdJsonStore } from '../../utils/per-id-json-store';
-import type { BackgroundTaskInfo, BackgroundTaskStatus } from './task';
+import {
+  createPerIdJsonStore,
+  type PerIdJsonStore,
+} from "../../utils/per-id-json-store";
+import type { BackgroundTaskInfo, BackgroundTaskStatus } from "./task";
 
 /**
  * Task id format: `{prefix}-{8 chars of [0-9a-z]}`.
@@ -33,7 +36,7 @@ type PersistedTask = BackgroundTaskInfo;
 type DiskPersistedTask = PersistedTask | LegacyPersistedTask;
 
 function tasksDirOf(sessionDir: string): string {
-  return join(sessionDir, 'tasks');
+  return join(sessionDir, "tasks");
 }
 
 function taskOutputDir(sessionDir: string, taskId: string): string {
@@ -44,7 +47,7 @@ function taskOutputDir(sessionDir: string, taskId: string): string {
 }
 
 function taskOutputFile(sessionDir: string, taskId: string): string {
-  return join(taskOutputDir(sessionDir, taskId), 'output.log');
+  return join(taskOutputDir(sessionDir, taskId), "output.log");
 }
 
 export class BackgroundTaskPersistence {
@@ -53,10 +56,10 @@ export class BackgroundTaskPersistence {
   constructor(private readonly sessionDir: string) {
     this.store = createPerIdJsonStore<DiskPersistedTask>({
       rootDir: sessionDir,
-      subdir: 'tasks',
+      subdir: "tasks",
       idRegex: VALID_TASK_ID,
       isValid: isReadablePersistedTask,
-      entityName: 'task id',
+      entityName: "task id",
     });
   }
 
@@ -78,7 +81,7 @@ export class BackgroundTaskPersistence {
   async appendTaskOutput(taskId: string, chunk: string): Promise<void> {
     const path = this.taskOutputFile(taskId);
     await mkdir(dirname(path), { recursive: true, mode: 0o700 });
-    await appendFile(path, chunk, 'utf-8');
+    await appendFile(path, chunk, "utf-8");
   }
 
   /**
@@ -117,25 +120,29 @@ export class BackgroundTaskPersistence {
    * on disk, so callers can page arbitrarily large logs without loading the
    * whole file into memory.
    */
-  async readTaskOutputBytes(taskId: string, offset: number, maxBytes: number): Promise<string> {
+  async readTaskOutputBytes(
+    taskId: string,
+    offset: number,
+    maxBytes: number,
+  ): Promise<string> {
     const start = Math.max(0, Math.trunc(offset));
     const limit = Math.max(0, Math.trunc(maxBytes));
-    if (limit === 0) return '';
+    if (limit === 0) return "";
     let handle;
     try {
-      handle = await open(this.taskOutputFile(taskId), 'r');
+      handle = await open(this.taskOutputFile(taskId), "r");
     } catch {
-      return '';
+      return "";
     }
     try {
       const size = (await handle.stat()).size;
-      if (start >= size) return '';
+      if (start >= size) return "";
       const length = Math.min(limit, size - start);
       const buffer = Buffer.allocUnsafe(length);
       const { bytesRead } = await handle.read(buffer, 0, length, start);
-      return buffer.toString('utf-8', 0, bytesRead);
+      return buffer.toString("utf-8", 0, bytesRead);
     } catch {
-      return '';
+      return "";
     } finally {
       await handle.close();
     }
@@ -175,12 +182,12 @@ function normalizePersistedTask(task: DiskPersistedTask): PersistedTask {
 }
 
 type LegacyBackgroundTaskStatus =
-  | 'running'
-  | 'awaiting_approval'
-  | 'completed'
-  | 'failed'
-  | 'killed'
-  | 'lost';
+  | "running"
+  | "awaiting_approval"
+  | "completed"
+  | "failed"
+  | "killed"
+  | "lost";
 
 interface LegacyPersistedTask {
   readonly task_id: string;
@@ -201,7 +208,8 @@ interface LegacyPersistedTask {
 function legacyPersistedTaskToInfo(task: LegacyPersistedTask): PersistedTask {
   const status = legacyStatusToCurrent(task);
   const stopReason = optionalNonEmptyString(task.stop_reason);
-  const timeoutMs = typeof task.timeout_ms === 'number' ? task.timeout_ms : undefined;
+  const timeoutMs =
+    typeof task.timeout_ms === "number" ? task.timeout_ms : undefined;
   const base = {
     taskId: task.task_id,
     description: task.description,
@@ -213,10 +221,10 @@ function legacyPersistedTaskToInfo(task: LegacyPersistedTask): PersistedTask {
     timeoutMs,
   };
 
-  if (task.task_id.startsWith('agent-')) {
+  if (task.task_id.startsWith("agent-")) {
     return {
       ...base,
-      kind: 'agent',
+      kind: "agent",
       agentId: optionalNonEmptyString(task.agent_id),
       subagentType: optionalNonEmptyString(task.subagent_type),
     };
@@ -224,32 +232,36 @@ function legacyPersistedTaskToInfo(task: LegacyPersistedTask): PersistedTask {
 
   return {
     ...base,
-    kind: 'process',
+    kind: "process",
     command: task.command,
     pid: task.pid,
     exitCode: task.exit_code,
   };
 }
 
-function legacyStatusToCurrent(task: LegacyPersistedTask): BackgroundTaskStatus {
-  if (task.status === 'awaiting_approval') return 'running';
-  if (task.status === 'failed' && task.timed_out === true) return 'timed_out';
+function legacyStatusToCurrent(
+  task: LegacyPersistedTask,
+): BackgroundTaskStatus {
+  if (task.status === "awaiting_approval") return "running";
+  if (task.status === "failed" && task.timed_out === true) return "timed_out";
   return task.status;
 }
 
 function isReadablePersistedTask(obj: unknown): obj is DiskPersistedTask {
   return (
     isRecord(obj) &&
-    (typeof obj['taskId'] === 'string' || typeof obj['task_id'] === 'string')
+    (typeof obj["taskId"] === "string" || typeof obj["task_id"] === "string")
   );
 }
 
-function isLegacyPersistedTask(task: DiskPersistedTask): task is LegacyPersistedTask {
-  return 'task_id' in task;
+function isLegacyPersistedTask(
+  task: DiskPersistedTask,
+): task is LegacyPersistedTask {
+  return "task_id" in task;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
+  return typeof value === "object" && value !== null;
 }
 
 function optionalNonEmptyString(value: string | undefined): string | undefined {

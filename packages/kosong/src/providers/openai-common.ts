@@ -8,18 +8,18 @@ import {
   parseRetryAfterMs,
   parseTraceId,
   throwIfAbortError,
-} from '#/errors';
-import { extractText } from '#/message';
-import type { ContentPart, Message } from '#/message';
-import type { FinishReason } from '#/provider';
-import type { Tool } from '#/tool';
-import type { TokenUsage } from '#/usage';
+} from "#/errors";
+import { extractText } from "#/message";
+import type { ContentPart, Message } from "#/message";
+import type { FinishReason } from "#/provider";
+import type { Tool } from "#/tool";
+import type { TokenUsage } from "#/usage";
 import {
   APIConnectionError as OpenAIConnectionError,
   APIConnectionTimeoutError as OpenAITimeoutError,
   APIError as OpenAIAPIError,
   OpenAIError,
-} from 'openai';
+} from "openai";
 export interface OpenAIContentPart {
   type: string;
   text?: string | undefined;
@@ -32,39 +32,43 @@ export interface OpenAIContentPart {
  * Convert a kosong `ContentPart` to OpenAI-compatible content part.
  * Returns `null` for think parts (handled separately as reasoning_content).
  */
-export function convertContentPart(part: ContentPart): OpenAIContentPart | null {
+export function convertContentPart(
+  part: ContentPart,
+): OpenAIContentPart | null {
   switch (part.type) {
-    case 'text':
-      return { type: 'text', text: part.text };
-    case 'think':
+    case "text":
+      return { type: "text", text: part.text };
+    case "think":
       // Think parts are handled separately as reasoning_content — skip them here.
       return null;
-    case 'image_url':
+    case "image_url":
       return {
-        type: 'image_url',
+        type: "image_url",
         image_url:
           part.imageUrl.id === undefined
             ? { url: part.imageUrl.url }
             : { url: part.imageUrl.url, id: part.imageUrl.id },
       };
-    case 'audio_url':
+    case "audio_url":
       return {
-        type: 'audio_url',
+        type: "audio_url",
         audio_url:
           part.audioUrl.id === undefined
             ? { url: part.audioUrl.url }
             : { url: part.audioUrl.url, id: part.audioUrl.id },
       };
-    case 'video_url':
+    case "video_url":
       return {
-        type: 'video_url',
+        type: "video_url",
         video_url:
           part.videoUrl.id === undefined
             ? { url: part.videoUrl.url }
             : { url: part.videoUrl.url, id: part.videoUrl.id },
       };
     default:
-      throw new Error(`Unknown content part type: ${(part as ContentPart).type}`);
+      throw new Error(
+        `Unknown content part type: ${(part as ContentPart).type}`,
+      );
   }
 }
 export interface OpenAIToolParam {
@@ -81,7 +85,7 @@ export interface OpenAIToolParam {
  */
 export function toolToOpenAI(tool: Tool): OpenAIToolParam {
   return {
-    type: 'function',
+    type: "function",
     function: {
       name: tool.name,
       description: tool.description,
@@ -104,17 +108,27 @@ export function toolToOpenAI(tool: Tool): OpenAIToolParam {
 // equivalent vendor-specific signals (e.g. Moonshot's
 // `exceeded_current_quota_error`) live with their vendor and reach this
 // converter through the optional `convertErrorHook` instead.
-export function isOpenAIInsufficientQuotaCode(code: string | null | undefined): boolean {
-  return code === 'insufficient_quota';
+export function isOpenAIInsufficientQuotaCode(
+  code: string | null | undefined,
+): boolean {
+  return code === "insufficient_quota";
 }
 
 function isOpenAIInsufficientQuotaError(error: OpenAIAPIError): boolean {
   if (error.status !== 429) return false;
-  if (typeof error.code === 'string' && isOpenAIInsufficientQuotaCode(error.code)) return true;
-  if (typeof error.type === 'string' && isOpenAIInsufficientQuotaCode(error.type)) return true;
+  if (
+    typeof error.code === "string" &&
+    isOpenAIInsufficientQuotaCode(error.code)
+  )
+    return true;
+  if (
+    typeof error.type === "string" &&
+    isOpenAIInsufficientQuotaCode(error.type)
+  )
+    return true;
   // Gateways sometimes flatten the JSON body into the message text; the
   // literal code string is unambiguous there, unlike prose wordings.
-  return error.message.toLowerCase().includes('insufficient_quota');
+  return error.message.toLowerCase().includes("insufficient_quota");
 }
 
 export function convertOpenAIError(
@@ -146,16 +160,27 @@ export function convertOpenAIError(
     return new APIConnectionError(error.message);
   }
   // APIError with a status code => status error
-  if (error instanceof OpenAIAPIError && typeof error.status === 'number') {
+  if (error instanceof OpenAIAPIError && typeof error.status === "number") {
     const reqId = error.requestID ?? null;
     const retryAfterMs = parseRetryAfterMs(error.headers);
     const traceId = parseTraceId(error.headers);
     // Quota/balance exhaustion is a 429 but deterministic until the account
     // is recharged — it must not classify as a retryable rate limit.
     if (isOpenAIInsufficientQuotaError(error)) {
-      return new APIProviderQuotaExhaustedError(error.message, reqId, retryAfterMs, traceId);
+      return new APIProviderQuotaExhaustedError(
+        error.message,
+        reqId,
+        retryAfterMs,
+        traceId,
+      );
     }
-    return normalizeAPIStatusError(error.status, error.message, reqId, retryAfterMs, traceId);
+    return normalizeAPIStatusError(
+      error.status,
+      error.message,
+      reqId,
+      retryAfterMs,
+      traceId,
+    );
   }
   // Base APIError with no status and no body => transport-layer failure.
   // When the error has a body (e.g. SSE error events from the server),
@@ -182,7 +207,7 @@ export function convertOpenAIError(
 }
 /** Shape of a function-type tool call (subset used by the guard). */
 export interface FunctionToolCallShape {
-  type: 'function';
+  type: "function";
   id: string;
   function: { name: string; arguments: string | null };
 }
@@ -195,31 +220,33 @@ export interface FunctionToolCallShape {
 export function isFunctionToolCall<T extends { type: string }>(
   tc: T,
 ): tc is T & FunctionToolCallShape {
-  return tc.type === 'function';
+  return tc.type === "function";
 }
 
 /**
  * Extract `TokenUsage` from an OpenAI-compatible usage object.
  */
 export function extractUsage(usage: unknown): TokenUsage | null {
-  if (usage === null || usage === undefined || typeof usage !== 'object') {
+  if (usage === null || usage === undefined || typeof usage !== "object") {
     return null;
   }
   const u = usage as Record<string, unknown>;
-  const promptTokens = typeof u['prompt_tokens'] === 'number' ? u['prompt_tokens'] : 0;
-  const completionTokens = typeof u['completion_tokens'] === 'number' ? u['completion_tokens'] : 0;
+  const promptTokens =
+    typeof u["prompt_tokens"] === "number" ? u["prompt_tokens"] : 0;
+  const completionTokens =
+    typeof u["completion_tokens"] === "number" ? u["completion_tokens"] : 0;
 
   let cached = 0;
   // Moonshot proprietary: top-level cached_tokens
-  if (typeof u['cached_tokens'] === 'number') {
-    cached = u['cached_tokens'];
+  if (typeof u["cached_tokens"] === "number") {
+    cached = u["cached_tokens"];
   } else if (
-    typeof u['prompt_tokens_details'] === 'object' &&
-    u['prompt_tokens_details'] !== null
+    typeof u["prompt_tokens_details"] === "object" &&
+    u["prompt_tokens_details"] !== null
   ) {
-    const details = u['prompt_tokens_details'] as Record<string, unknown>;
-    if (typeof details['cached_tokens'] === 'number') {
-      cached = details['cached_tokens'];
+    const details = u["prompt_tokens_details"] as Record<string, unknown>;
+    if (typeof details["cached_tokens"] === "number") {
+      cached = details["cached_tokens"];
     }
   }
 
@@ -255,17 +282,17 @@ export function normalizeOpenAIFinishReason(raw: string | null | undefined): {
     return { finishReason: null, rawFinishReason: null };
   }
   switch (raw) {
-    case 'stop':
-      return { finishReason: 'completed', rawFinishReason: raw };
-    case 'tool_calls':
-    case 'function_call':
-      return { finishReason: 'tool_calls', rawFinishReason: raw };
-    case 'length':
-      return { finishReason: 'truncated', rawFinishReason: raw };
-    case 'content_filter':
-      return { finishReason: 'filtered', rawFinishReason: raw };
+    case "stop":
+      return { finishReason: "completed", rawFinishReason: raw };
+    case "tool_calls":
+    case "function_call":
+      return { finishReason: "tool_calls", rawFinishReason: raw };
+    case "length":
+      return { finishReason: "truncated", rawFinishReason: raw };
+    case "content_filter":
+      return { finishReason: "filtered", rawFinishReason: raw };
     default:
-      return { finishReason: 'other', rawFinishReason: raw };
+      return { finishReason: "other", rawFinishReason: raw };
   }
 }
 /**
@@ -275,18 +302,18 @@ export function normalizeOpenAIFinishReason(raw: string | null | undefined): {
  *   (some providers require tool results as plain text).
  * - `null`: convert content parts to the standard OpenAI content-part array.
  */
-export type ToolMessageConversion = 'extract_text' | null;
+export type ToolMessageConversion = "extract_text" | null;
 
 /**
  * Shared wording for tool-result media that cannot live inside the tool
  * message itself and is reattached as a follow-up user message instead.
  */
-export const TOOL_RESULT_MEDIA_PROMPT = 'Attached media from tool result:';
-export const TOOL_RESULT_MEDIA_PLACEHOLDER = '(see attached media)';
+export const TOOL_RESULT_MEDIA_PROMPT = "Attached media from tool result:";
+export const TOOL_RESULT_MEDIA_PLACEHOLDER = "(see attached media)";
 
 /** A content part that is neither plain text nor reasoning. */
 export function isMediaPart(part: ContentPart): boolean {
-  return part.type !== 'text' && part.type !== 'think';
+  return part.type !== "text" && part.type !== "think";
 }
 
 /**
@@ -296,7 +323,7 @@ export function convertToolMessageContent(
   message: Message,
   conversion: ToolMessageConversion,
 ): string | OpenAIContentPart[] {
-  if (conversion === 'extract_text') {
+  if (conversion === "extract_text") {
     return extractText(message);
   }
   return message.content

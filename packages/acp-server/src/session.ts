@@ -28,9 +28,9 @@ import type {
   SessionModeState,
   SessionNotification,
   ToolCallLocation,
-} from '@agentclientprotocol/sdk';
-import { RequestError } from '@agentclientprotocol/sdk';
-import type { ContextMessage } from '@moonshot-ai/agent-core-v2';
+} from "@agentclientprotocol/sdk";
+import { RequestError } from "@agentclientprotocol/sdk";
+import type { ContextMessage } from "@moonshot-ai/agent-core-v2";
 import type {
   AgentEventPayloads,
   AgentHandle,
@@ -41,25 +41,25 @@ import type {
   SessionEventPayloads,
   SessionHandle,
   SkillSummary,
-} from '@moonshot-ai/klient';
+} from "@moonshot-ai/klient";
 import type {
   ToolCallDeltaEvent,
   ToolCallStartedEvent,
   ToolInputDisplay,
   ToolProgressEvent,
   ToolResultEvent,
-} from '@moonshot-ai/protocol';
+} from "@moonshot-ai/protocol";
 
-import type { AcpClient } from './acp-client';
-import type { AcpTerminalCreatedEvent, IAcpConnection } from './acp-fs';
+import type { AcpClient } from "./acp-client";
+import type { AcpTerminalCreatedEvent, IAcpConnection } from "./acp-fs";
 import {
   ACP_BUILTIN_SLASH_COMMAND_NAMES,
   ACP_BUILTIN_SLASH_COMMANDS,
   type AcpBuiltinSlashCommandName,
   runBuiltinSlashCommand,
-} from './builtin-commands';
-import { buildSessionConfigOptions } from './config-options';
-import { acpBlocksToContentParts, compressPromptImageParts } from './convert';
+} from "./builtin-commands";
+import { buildSessionConfigOptions } from "./config-options";
+import { acpBlocksToContentParts, compressPromptImageParts } from "./convert";
 import {
   acpToolCallId,
   assistantDeltaToSessionUpdate,
@@ -80,18 +80,23 @@ import {
   usageUpdateNotification,
   isAuthError,
   stringifyArgs,
-} from './events-map';
-import { AcpInteractionBridge } from './interaction-bridge';
-import { log } from './log';
-import { projectModelCatalog } from './model-catalog';
-import { ACP_MODES, type AcpModeId, acpModeToToggles, DEFAULT_MODE_ID } from './modes';
-import { projectHistoryToSessionUpdates } from './replay';
-import { buildAcpSkillSlashCommands, detectSlashIntent } from './slash';
+} from "./events-map";
+import { AcpInteractionBridge } from "./interaction-bridge";
+import { log } from "./log";
+import { projectModelCatalog } from "./model-catalog";
+import {
+  ACP_MODES,
+  type AcpModeId,
+  acpModeToToggles,
+  DEFAULT_MODE_ID,
+} from "./modes";
+import { projectHistoryToSessionUpdates } from "./replay";
+import { buildAcpSkillSlashCommands, detectSlashIntent } from "./slash";
 
 /** Leading text of the first text block, if any (used for slash detection). */
 function leadingText(blocks: readonly ContentBlock[]): string | undefined {
   const first = blocks[0];
-  if (first !== undefined && first.type === 'text') return first.text;
+  if (first !== undefined && first.type === "text") return first.text;
   return undefined;
 }
 
@@ -101,7 +106,7 @@ function leadingText(blocks: readonly ContentBlock[]): string | undefined {
  * `undefined`, indistinguishable from a hook-blocked launch), so this code
  * only reaches us from `agent.activateSkill`, which rejects instead.
  */
-const TURN_AGENT_BUSY_CODE = 'turn.agent_busy';
+const TURN_AGENT_BUSY_CODE = "turn.agent_busy";
 
 /**
  * Map a prompt-launch rejection (from `agent.prompt` / `agent.activateSkill`)
@@ -115,25 +120,36 @@ const TURN_AGENT_BUSY_CODE = 'turn.agent_busy';
  *    raw engine message and stack are logged server-side but NEVER cross the
  *    wire, so internal details cannot leak into the JSON-RPC channel.
  */
-export function mapPromptLaunchError(error: unknown, sessionId: string): RequestError {
+export function mapPromptLaunchError(
+  error: unknown,
+  sessionId: string,
+): RequestError {
   const code = (error as { readonly code?: unknown } | null | undefined)?.code;
   const message = error instanceof Error ? error.message : String(error);
-  if (typeof code === 'string' && isAuthError({ code })) {
-    log.warn('acp: prompt launch rejected with an auth error; mapping to auth_required', {
-      sessionId,
-      error: message,
-    });
+  if (typeof code === "string" && isAuthError({ code })) {
+    log.warn(
+      "acp: prompt launch rejected with an auth error; mapping to auth_required",
+      {
+        sessionId,
+        error: message,
+      },
+    );
     return RequestError.authRequired(undefined, message);
   }
   if (code === TURN_AGENT_BUSY_CODE) {
-    log.warn('acp: prompt rejected because another turn is active', { sessionId });
+    log.warn("acp: prompt rejected because another turn is active", {
+      sessionId,
+    });
     return RequestError.invalidRequest({ code }, message);
   }
-  log.error('acp: prompt launch failed', {
+  log.error("acp: prompt launch failed", {
     sessionId,
-    error: error instanceof Error ? { message: error.message, stack: error.stack } : String(error),
+    error:
+      error instanceof Error
+        ? { message: error.message, stack: error.stack }
+        : String(error),
   });
-  return RequestError.internalError(undefined, 'session prompt failed');
+  return RequestError.internalError(undefined, "session prompt failed");
 }
 
 /** Per-turn settlement state for one in-flight `session/prompt`. */
@@ -181,9 +197,9 @@ export class AcpSession {
   private readonly agent: AgentHandle;
 
   /** Currently-selected model id (bare, no suffix). Empty when unbound. */
-  private currentModelId: string = '';
+  private currentModelId: string = "";
   /** The engine's current thinking level verbatim (`'off'`, `'on'`, or an effort). */
-  private currentThinkingLevel: string = 'off';
+  private currentThinkingLevel: string = "off";
   /** Current ACP mode. */
   private currentModeId: AcpModeId = DEFAULT_MODE_ID;
   /**
@@ -255,7 +271,9 @@ export class AcpSession {
      * reachable). Undefined / returning undefined → `persistOriginalImage`'s
      * shared temp-dir fallback applies.
      */
-    private readonly resolveOriginalsDir?: (sessionId: string) => string | undefined,
+    private readonly resolveOriginalsDir?: (
+      sessionId: string,
+    ) => string | undefined,
     private readonly hostCommands:
       | ReadonlyArray<AvailableCommand>
       | HostSlashCommandsSnapshot = [],
@@ -264,8 +282,13 @@ export class AcpSession {
     this.session = klient.session(sessionId);
     // `main` is auto-materialized by the transport's scope resolution on the
     // first call — no explicit agent bootstrap is needed here.
-    this.agent = this.session.agent('main');
-    this.interactionBridge = new AcpInteractionBridge(conn, this.session, sessionId, elicitationForm);
+    this.agent = this.session.agent("main");
+    this.interactionBridge = new AcpInteractionBridge(
+      conn,
+      this.session,
+      sessionId,
+      elicitationForm,
+    );
   }
 
   /**
@@ -275,37 +298,37 @@ export class AcpSession {
   async init(): Promise<void> {
     const events = this.agent.events;
     this.subscriptions.push(
-      events.on('assistant.delta', (event) => {
+      events.on("assistant.delta", (event) => {
         this.dispatchTurnEvent(event.turnId, () => {
           this.onAssistantDelta(event);
         });
       }),
-      events.on('thinking.delta', (event) => {
+      events.on("thinking.delta", (event) => {
         this.dispatchTurnEvent(event.turnId, () => {
           this.onThinkingDelta(event);
         });
       }),
-      events.on('tool.call.started', (event) => {
+      events.on("tool.call.started", (event) => {
         this.dispatchTurnEvent(event.turnId, () => {
           this.onToolCallStarted(event);
         });
       }),
-      events.on('tool.call.delta', (event) => {
+      events.on("tool.call.delta", (event) => {
         this.dispatchTurnEvent(event.turnId, () => {
           this.onToolCallDelta(event);
         });
       }),
-      events.on('tool.progress', (event) => {
+      events.on("tool.progress", (event) => {
         this.dispatchTurnEvent(event.turnId, () => {
           this.onToolProgress(event);
         });
       }),
-      events.on('tool.result', (event) => {
+      events.on("tool.result", (event) => {
         this.dispatchTurnEvent(event.turnId, () => {
           this.onToolResult(event);
         });
       }),
-      events.on('turn.ended', (event) => {
+      events.on("turn.ended", (event) => {
         this.dispatchTurnEvent(event.turnId, () => {
           this.onTurnEnded(event);
         });
@@ -313,47 +336,51 @@ export class AcpSession {
       // Compaction runs as a background LLM task outside any turn, so these
       // are not turn-scoped; the subscription is already agent-grained (this
       // session's main agent), which keeps other sessions' events out.
-      events.on('compaction.started', (event) => {
+      events.on("compaction.started", (event) => {
         this.onCompactionStarted(event);
       }),
-      events.on('compaction.completed', (event) => {
+      events.on("compaction.completed", (event) => {
         this.onCompactionCompleted(event);
       }),
-      events.on('compaction.cancelled', () => {
-        this.emitLocalChunk('Compaction cancelled.');
+      events.on("compaction.cancelled", () => {
+        this.emitLocalChunk("Compaction cancelled.");
       }),
-      events.on('compaction.blocked', () => {
+      events.on("compaction.blocked", () => {
         this.emitLocalChunk(
-          'Compaction is blocked by the current turn; retry when the turn is idle.',
+          "Compaction is blocked by the current turn; retry when the turn is idle.",
         );
       }),
     );
     // Session-scope stream: title changes surface as `session_info_update`.
     this.subscriptions.push(
-      this.session.events.on('metadata.changed', (event) => {
+      this.session.events.on("metadata.changed", (event) => {
         this.onMetadataChanged(event);
       }),
     );
     // Skill catalog changes refresh the cache and re-push the available
     // commands so the client's slash menu tracks the live catalog.
     this.subscriptions.push(
-      this.session.events.on('skills.changed', () => {
-        void this.refreshSkills().then(() => this.emitAvailableCommandsUpdate());
+      this.session.events.on("skills.changed", () => {
+        void this.refreshSkills().then(() =>
+          this.emitAvailableCommandsUpdate(),
+        );
       }),
     );
     // Terminal correlation: the ACP-backed process runner (same process,
     // App-scope holder) announces every terminal it creates so this session
     // can attach it to the matching in-flight Bash tool call.
-    const unsubscribeTerminal = this.acpConnection.onTerminalCreated((event) => {
-      this.onTerminalCreated(event);
-    });
+    const unsubscribeTerminal = this.acpConnection.onTerminalCreated(
+      (event) => {
+        this.onTerminalCreated(event);
+      },
+    );
     this.subscriptions.push({ dispose: unsubscribeTerminal });
     try {
       this.currentModelId = await this.agent.getModel();
       this.currentThinkingLevel = await this.agent.getThinking();
     } catch (error) {
       // Keep the unbound defaults — configOptions stays honest.
-      log.warn('acp: could not seed model/thinking state', {
+      log.warn("acp: could not seed model/thinking state", {
         sessionId: this.sessionId,
         error: error instanceof Error ? error.message : String(error),
       });
@@ -368,7 +395,7 @@ export class AcpSession {
     try {
       this.skills = await this.session.skills.list();
     } catch (error) {
-      log.warn('acp: could not list session skills', {
+      log.warn("acp: could not list session skills", {
         sessionId: this.sessionId,
         error: error instanceof Error ? error.message : String(error),
       });
@@ -386,7 +413,7 @@ export class AcpSession {
     if (driver !== undefined) {
       // Never leave the JSON-RPC `session/prompt` hanging after teardown.
       this.settleDriver(driver, () => {
-        driver.resolve({ stopReason: 'cancelled' });
+        driver.resolve({ stopReason: "cancelled" });
       });
     }
     this.interactionBridge.dispose();
@@ -408,7 +435,7 @@ export class AcpSession {
       // facade types them via the engine RPC signature).
       messages = (await this.agent.getContext()).history;
     } catch (error) {
-      log.warn('acp: replayHistory could not read context memory', {
+      log.warn("acp: replayHistory could not read context memory", {
         sessionId: this.sessionId,
         error: error instanceof Error ? error.message : String(error),
       });
@@ -421,10 +448,13 @@ export class AcpSession {
       } catch (error) {
         // A single transient push failure must not truncate the whole replay;
         // log and continue so the rest of the history still lands.
-        log.warn('acp: replayHistory failed to push a session/update; continuing', {
-          sessionId: this.sessionId,
-          error: error instanceof Error ? error.message : String(error),
-        });
+        log.warn(
+          "acp: replayHistory failed to push a session/update; continuing",
+          {
+            sessionId: this.sessionId,
+            error: error instanceof Error ? error.message : String(error),
+          },
+        );
       }
     }
   }
@@ -438,7 +468,10 @@ export class AcpSession {
   private resolveCommands(): ResolvedCommands {
     const skillSnapshot = buildAcpSkillSlashCommands(this.skills);
     const hostSnapshot = Array.isArray(this.hostCommands)
-      ? { commands: this.hostCommands, skillCommandMap: new Map<string, string>() }
+      ? {
+          commands: this.hostCommands,
+          skillCommandMap: new Map<string, string>(),
+        }
       : (this.hostCommands as HostSlashCommandsSnapshot);
     const commands: AvailableCommand[] = [];
     const names = new Set<string>();
@@ -469,9 +502,11 @@ export class AcpSession {
   async emitAvailableCommandsUpdate(): Promise<void> {
     try {
       const { commands } = this.resolveCommands();
-      await this.conn.sessionUpdate(availableCommandsUpdateNotification(this.sessionId, commands));
+      await this.conn.sessionUpdate(
+        availableCommandsUpdateNotification(this.sessionId, commands),
+      );
     } catch (error) {
-      log.warn('acp: failed to push available_commands_update', {
+      log.warn("acp: failed to push available_commands_update", {
         sessionId: this.sessionId,
         error: error instanceof Error ? error.message : String(error),
       });
@@ -488,13 +523,17 @@ export class AcpSession {
     if (text !== undefined) {
       const commands = this.resolveCommands();
       const intent = detectSlashIntent(text, commands.skillCommandMap);
-      if (intent.kind === 'builtin') {
-        return this.driveBuiltinCommand(intent.name, intent.args, commands.commands);
+      if (intent.kind === "builtin") {
+        return this.driveBuiltinCommand(
+          intent.name,
+          intent.args,
+          commands.commands,
+        );
       }
-      if (intent.kind === 'skill') {
+      if (intent.kind === "skill") {
         return this.driveSkillActivation(intent.skillName, intent.args);
       }
-      if (intent.kind === 'unknown') {
+      if (intent.kind === "unknown") {
         return this.driveUnknownCommand(intent.name);
       }
     }
@@ -503,7 +542,7 @@ export class AcpSession {
     if (content === undefined) {
       // Cancelled while compressing (see `cancel()`): settle without
       // launching a turn.
-      return { stopReason: 'cancelled' };
+      return { stopReason: "cancelled" };
     }
     return this.driveTurn(content);
   }
@@ -523,9 +562,12 @@ export class AcpSession {
     this.pendingPromptAborts.add(pending);
     let content: readonly ContentPart[];
     try {
-      content = await compressPromptImageParts(acpBlocksToContentParts(blocks), {
-        originalsDir: this.resolveOriginalsDir?.(this.sessionId),
-      });
+      content = await compressPromptImageParts(
+        acpBlocksToContentParts(blocks),
+        {
+          originalsDir: this.resolveOriginalsDir?.(this.sessionId),
+        },
+      );
     } finally {
       this.pendingPromptAborts.delete(pending);
     }
@@ -541,14 +583,14 @@ export class AcpSession {
     await this.conn.sessionUpdate({
       sessionId: this.sessionId,
       update: {
-        sessionUpdate: 'agent_message_chunk',
+        sessionUpdate: "agent_message_chunk",
         content: {
-          type: 'text',
+          type: "text",
           text: `Unknown ACP command: /${name}. Use /help to see available commands.`,
         },
       },
     });
-    return { stopReason: 'end_turn' };
+    return { stopReason: "end_turn" };
   }
 
   /**
@@ -558,10 +600,16 @@ export class AcpSession {
    * exactly like a plain prompt. Empty args go over as `undefined`, matching
    * the other consumers.
    */
-  private driveSkillActivation(skillName: string, args: string): Promise<PromptResponse> {
+  private driveSkillActivation(
+    skillName: string,
+    args: string,
+  ): Promise<PromptResponse> {
     this.assertNoActiveTurn();
     return this.driveLaunch(
-      this.agent.activateSkill({ name: skillName, args: args.length > 0 ? args : undefined }),
+      this.agent.activateSkill({
+        name: skillName,
+        args: args.length > 0 ? args : undefined,
+      }),
     );
   }
 
@@ -586,14 +634,14 @@ export class AcpSession {
           agent: this.agent,
           sessionId: this.sessionId,
           modelId: this.currentModelId,
-          thinkingEnabled: this.currentThinkingLevel !== 'off',
+          thinkingEnabled: this.currentThinkingLevel !== "off",
           modeId: this.currentModeId,
           availableCommands,
         },
         args,
       );
     } catch (error) {
-      log.warn('acp: builtin slash command failed', {
+      log.warn("acp: builtin slash command failed", {
         sessionId: this.sessionId,
         command: name,
         error: error instanceof Error ? error.message : String(error),
@@ -603,11 +651,11 @@ export class AcpSession {
     await this.conn.sessionUpdate({
       sessionId: this.sessionId,
       update: {
-        sessionUpdate: 'agent_message_chunk',
-        content: { type: 'text', text },
+        sessionUpdate: "agent_message_chunk",
+        content: { type: "text", text },
       },
     });
-    return { stopReason: 'end_turn' };
+    return { stopReason: "end_turn" };
   }
 
   /**
@@ -632,7 +680,7 @@ export class AcpSession {
     if (this.driver !== undefined && !this.driver.settled) {
       throw RequestError.invalidRequest(
         { code: TURN_AGENT_BUSY_CODE },
-        'another turn is already in progress',
+        "another turn is already in progress",
       );
     }
   }
@@ -656,7 +704,9 @@ export class AcpSession {
    * {@link assertNoActiveTurn}), so the prompt settles gracefully with
    * `end_turn`.
    */
-  private driveLaunch(launch: Promise<PromptLaunchResult>): Promise<PromptResponse> {
+  private driveLaunch(
+    launch: Promise<PromptLaunchResult>,
+  ): Promise<PromptResponse> {
     return new Promise<PromptResponse>((resolve, reject) => {
       const driver: TurnDriver = { resolve, reject, settled: false, early: [] };
       this.driver = driver;
@@ -669,7 +719,10 @@ export class AcpSession {
             // hook-blocked case; the wire carries no blocking message to
             // surface, matching the old `PromptHandle`-based behavior.
             this.settleDriver(driver, () => {
-              resolve({ stopReason: driver.cancelRequested === true ? 'cancelled' : 'end_turn' });
+              resolve({
+                stopReason:
+                  driver.cancelRequested === true ? "cancelled" : "end_turn",
+              });
             });
             return;
           }
@@ -678,12 +731,14 @@ export class AcpSession {
             // A cancel arrived before the id was known (see `cancel()`): the
             // unaddressed cancel may have predated the turn's activation, so
             // re-issue it now precisely addressed. Idempotent.
-            void this.agent.cancel({ turnId: launched.turn_id }).catch((error) => {
-              log.warn('acp: deferred cancel failed', {
-                sessionId: this.sessionId,
-                error: error instanceof Error ? error.message : String(error),
+            void this.agent
+              .cancel({ turnId: launched.turn_id })
+              .catch((error) => {
+                log.warn("acp: deferred cancel failed", {
+                  sessionId: this.sessionId,
+                  error: error instanceof Error ? error.message : String(error),
+                });
               });
-            });
           }
           // Replay the events the turn emitted before its id arrived (a fast
           // turn can outrun the launch round-trip — `activateSkill` returns
@@ -707,7 +762,11 @@ export class AcpSession {
    */
   private dispatchTurnEvent(turnId: number, dispatch: () => void): void {
     const driver = this.driver;
-    if (driver !== undefined && !driver.settled && driver.turnId === undefined) {
+    if (
+      driver !== undefined &&
+      !driver.settled &&
+      driver.turnId === undefined
+    ) {
       driver.early.push({ turnId, dispatch });
       return;
     }
@@ -728,35 +787,46 @@ export class AcpSession {
   /** The active driver, but only for events of ITS turn. */
   private driverFor(turnId: number): TurnDriver | undefined {
     const driver = this.driver;
-    if (driver === undefined || driver.turnId === undefined || driver.turnId !== turnId) {
+    if (
+      driver === undefined ||
+      driver.turnId === undefined ||
+      driver.turnId !== turnId
+    ) {
       return undefined;
     }
     return driver;
   }
 
-  private onAssistantDelta(event: AgentEventPayloads['assistant.delta']): void {
+  private onAssistantDelta(event: AgentEventPayloads["assistant.delta"]): void {
     if (this.driverFor(event.turnId) === undefined) return;
     this.emit(assistantDeltaToSessionUpdate(this.sessionId, event));
   }
 
-  private onThinkingDelta(event: AgentEventPayloads['thinking.delta']): void {
+  private onThinkingDelta(event: AgentEventPayloads["thinking.delta"]): void {
     if (this.driverFor(event.turnId) === undefined) return;
     this.emit(thinkingDeltaToSessionUpdate(this.sessionId, event));
   }
 
-  private onToolCallStarted(event: AgentEventPayloads['tool.call.started']): void {
+  private onToolCallStarted(
+    event: AgentEventPayloads["tool.call.started"],
+  ): void {
     if (this.driverFor(event.turnId) === undefined) return;
     // The klient payload mirrors `ToolCallStartedEvent` (`args` / `display`
     // arrive as `unknown` — cast at this seam).
     const mapped = event as unknown as ToolCallStartedEvent;
     const key = acpToolCallId(event.turnId, event.toolCallId);
-    const locations = toolCallLocations(mapped.name, mapped.args, mapped.display);
+    const locations = toolCallLocations(
+      mapped.name,
+      mapped.args,
+      mapped.display,
+    );
     if (locations !== undefined) {
       this.toolLocations.set(key, locations);
     }
-    if (mapped.name === 'Bash') {
-      const command = (mapped.args as { command?: unknown } | undefined)?.command;
-      if (typeof command === 'string') {
+    if (mapped.name === "Bash") {
+      const command = (mapped.args as { command?: unknown } | undefined)
+        ?.command;
+      if (typeof command === "string") {
         this.bashCallsAwaitingTerminal.set(key, command);
       }
     }
@@ -781,12 +851,16 @@ export class AcpSession {
     );
     if (event.display !== undefined) {
       this.emit(
-        planFromDisplayBlock(this.sessionId, event.turnId, event.display as ToolInputDisplay),
+        planFromDisplayBlock(
+          this.sessionId,
+          event.turnId,
+          event.display as ToolInputDisplay,
+        ),
       );
     }
   }
 
-  private onToolCallDelta(event: AgentEventPayloads['tool.call.delta']): void {
+  private onToolCallDelta(event: AgentEventPayloads["tool.call.delta"]): void {
     if (this.driverFor(event.turnId) === undefined) return;
     // The klient payload mirrors `ToolCallDeltaEvent` field-for-field.
     const mapped = event as unknown as ToolCallDeltaEvent;
@@ -799,7 +873,7 @@ export class AcpSession {
       // from this first delta so subsequent updates have a legitimate parent
       // — clients otherwise surface "Tool call not found" until the start
       // eventually lands.
-      this.toolCallStreamArgs.set(key, { args: event.argumentsPart ?? '' });
+      this.toolCallStreamArgs.set(key, { args: event.argumentsPart ?? "" });
       this.emit(toolCallLazyCreateToSessionUpdate(this.sessionId, mapped));
       return;
     }
@@ -808,15 +882,20 @@ export class AcpSession {
     this.emit(toolCallDeltaToSessionUpdate(this.sessionId, mapped, acc));
   }
 
-  private onToolProgress(event: AgentEventPayloads['tool.progress']): void {
+  private onToolProgress(event: AgentEventPayloads["tool.progress"]): void {
     if (this.driverFor(event.turnId) === undefined) return;
     // The klient payload mirrors `ToolProgressEvent` field-for-field; the
     // helper forwards only `status` updates with text (as a title refresh)
     // and returns null for everything else, which `emit` drops.
-    this.emit(toolProgressToSessionUpdate(this.sessionId, event as unknown as ToolProgressEvent));
+    this.emit(
+      toolProgressToSessionUpdate(
+        this.sessionId,
+        event as unknown as ToolProgressEvent,
+      ),
+    );
   }
 
-  private onToolResult(event: AgentEventPayloads['tool.result']): void {
+  private onToolResult(event: AgentEventPayloads["tool.result"]): void {
     if (this.driverFor(event.turnId) === undefined) return;
     const key = acpToolCallId(event.turnId, event.toolCallId);
     const locations = this.toolLocations.get(key);
@@ -833,17 +912,21 @@ export class AcpSession {
       this.emit({
         sessionId: this.sessionId,
         update: {
-          sessionUpdate: 'tool_call_update',
+          sessionUpdate: "tool_call_update",
           toolCallId: key,
-          status: event.isError === true ? 'failed' : 'completed',
-          content: [{ type: 'terminal', terminalId }],
+          status: event.isError === true ? "failed" : "completed",
+          content: [{ type: "terminal", terminalId }],
           locations,
         },
       });
       return;
     }
     this.emit(
-      toolResultToSessionUpdate(this.sessionId, event as unknown as ToolResultEvent, locations),
+      toolResultToSessionUpdate(
+        this.sessionId,
+        event as unknown as ToolResultEvent,
+        locations,
+      ),
     );
   }
 
@@ -858,15 +941,16 @@ export class AcpSession {
   private onTerminalCreated(event: AcpTerminalCreatedEvent): void {
     if (event.sessionId !== this.sessionId) return;
     for (const [key, command] of this.bashCallsAwaitingTerminal) {
-      if (command.length === 0 || !event.shellCommand.endsWith(command)) continue;
+      if (command.length === 0 || !event.shellCommand.endsWith(command))
+        continue;
       this.bashCallsAwaitingTerminal.delete(key);
       this.terminalBackedCalls.set(key, event.terminalId);
       this.emit({
         sessionId: this.sessionId,
         update: {
-          sessionUpdate: 'tool_call_update',
+          sessionUpdate: "tool_call_update",
           toolCallId: key,
-          content: [{ type: 'terminal', terminalId: event.terminalId }],
+          content: [{ type: "terminal", terminalId: event.terminalId }],
         },
       });
       return;
@@ -879,17 +963,21 @@ export class AcpSession {
    * `compaction.started` event too would double-report; an auto-triggered
    * compaction has no other client-visible signal.
    */
-  private onCompactionStarted(event: AgentEventPayloads['compaction.started']): void {
-    if (event.trigger !== 'auto') return;
+  private onCompactionStarted(
+    event: AgentEventPayloads["compaction.started"],
+  ): void {
+    if (event.trigger !== "auto") return;
     this.emitLocalChunk(
       event.instruction === undefined
-        ? 'Compacting conversation context…'
+        ? "Compacting conversation context…"
         : `Compacting conversation context with instruction: ${event.instruction}`,
     );
   }
 
   /** Report the compaction result (token/message summary). */
-  private onCompactionCompleted(event: AgentEventPayloads['compaction.completed']): void {
+  private onCompactionCompleted(
+    event: AgentEventPayloads["compaction.completed"],
+  ): void {
     this.emitLocalChunk(formatCompactionCompleted(event.result));
   }
 
@@ -898,24 +986,28 @@ export class AcpSession {
     this.emit({
       sessionId: this.sessionId,
       update: {
-        sessionUpdate: 'agent_message_chunk',
-        content: { type: 'text', text },
+        sessionUpdate: "agent_message_chunk",
+        content: { type: "text", text },
       },
     });
   }
 
-  private onTurnEnded(event: AgentEventPayloads['turn.ended']): void {
+  private onTurnEnded(event: AgentEventPayloads["turn.ended"]): void {
     const driver = this.driverFor(event.turnId);
     if (driver === undefined) return;
-    const error = event.error as { readonly code: string; readonly message?: string } | undefined;
+    const error = event.error as
+      | { readonly code: string; readonly message?: string }
+      | undefined;
     this.settleDriver(driver, () => {
       // Auth failures must surface as a JSON-RPC `auth_required` error
       // so the client triggers its re-auth flow, not a silent `end_turn`.
-      if (event.reason === 'failed' && isAuthError(error)) {
+      if (event.reason === "failed" && isAuthError(error)) {
         driver.reject(RequestError.authRequired(undefined, error?.message));
         return;
       }
-      driver.resolve({ stopReason: turnEndReasonToStopReason(event.reason, error) });
+      driver.resolve({
+        stopReason: turnEndReasonToStopReason(event.reason, error),
+      });
     });
     void this.emitUsageUpdate();
   }
@@ -934,17 +1026,21 @@ export class AcpSession {
       )?.max_context_size;
       if (size === undefined) return;
       const context = await this.agent.getContext();
-      this.emit(usageUpdateNotification(this.sessionId, context.tokenCount, size));
+      this.emit(
+        usageUpdateNotification(this.sessionId, context.tokenCount, size),
+      );
     } catch (error) {
-      log.warn('acp: failed to push usage_update', {
+      log.warn("acp: failed to push usage_update", {
         sessionId: this.sessionId,
         error: error instanceof Error ? error.message : String(error),
       });
     }
   }
 
-  private onMetadataChanged(event: SessionEventPayloads['metadata.changed']): void {
-    if (!event.changed.includes('title')) return;
+  private onMetadataChanged(
+    event: SessionEventPayloads["metadata.changed"],
+  ): void {
+    if (!event.changed.includes("title")) return;
     void this.emitSessionInfoUpdate();
   }
 
@@ -952,9 +1048,11 @@ export class AcpSession {
   private async emitSessionInfoUpdate(): Promise<void> {
     try {
       const meta = await this.session.get();
-      this.emit(sessionInfoUpdateNotification(this.sessionId, meta.title ?? null));
+      this.emit(
+        sessionInfoUpdateNotification(this.sessionId, meta.title ?? null),
+      );
     } catch (error) {
-      log.warn('acp: failed to push session_info_update', {
+      log.warn("acp: failed to push session_info_update", {
         sessionId: this.sessionId,
         error: error instanceof Error ? error.message : String(error),
       });
@@ -965,7 +1063,7 @@ export class AcpSession {
   private emit(notification: SessionNotification | null): void {
     if (notification === null) return;
     void this.conn.sessionUpdate(notification).catch((error) => {
-      log.warn('acp: failed to push session/update', {
+      log.warn("acp: failed to push session/update", {
         sessionId: this.sessionId,
         error: error instanceof Error ? error.message : String(error),
       });
@@ -994,7 +1092,7 @@ export class AcpSession {
       // outcome settles `cancelled` instead of `end_turn`.
       driver.cancelRequested = true;
       void this.agent.cancel().catch((error) => {
-        log.warn('acp: cancel (unaddressed) failed', {
+        log.warn("acp: cancel (unaddressed) failed", {
           sessionId: this.sessionId,
           error: error instanceof Error ? error.message : String(error),
         });
@@ -1002,7 +1100,7 @@ export class AcpSession {
       return;
     }
     void this.agent.cancel({ turnId }).catch((error) => {
-      log.warn('acp: cancel failed', {
+      log.warn("acp: cancel failed", {
         sessionId: this.sessionId,
         error: error instanceof Error ? error.message : String(error),
       });
@@ -1015,7 +1113,9 @@ export class AcpSession {
    * thinking-capable (see `buildSessionConfigOptions`).
    */
   async configOptions(): Promise<SessionConfigOption[]> {
-    const models = projectModelCatalog(await this.klient.global.kosong.listModels());
+    const models = projectModelCatalog(
+      await this.klient.global.kosong.listModels(),
+    );
     return buildSessionConfigOptions(
       models,
       this.currentModelId,
@@ -1030,7 +1130,10 @@ export class AcpSession {
    * taxonomy the `mode` config-option arm projects.
    */
   modeState(): SessionModeState {
-    return { currentModeId: this.currentModeId, availableModes: [...ACP_MODES] };
+    return {
+      currentModeId: this.currentModeId,
+      availableModes: [...ACP_MODES],
+    };
   }
 
   /**
@@ -1046,7 +1149,7 @@ export class AcpSession {
    * `model` arm of `session/set_config_option`) funnel here.
    */
   async setModel(id: string): Promise<void> {
-    const suffix = ',thinking';
+    const suffix = ",thinking";
     const hasSuffix = id.endsWith(suffix);
     const baseId = hasSuffix ? id.slice(0, -suffix.length) : id;
     await this.agent.setModel(baseId);
@@ -1054,8 +1157,12 @@ export class AcpSession {
     // picks the NEW model's default level, not the old one's.
     this.currentModelId = baseId;
     if (hasSuffix) {
-      const models = projectModelCatalog(await this.klient.global.kosong.listModels());
-      const level = models.find((model) => model.id === baseId)?.defaultThinkingEffort ?? 'on';
+      const models = projectModelCatalog(
+        await this.klient.global.kosong.listModels(),
+      );
+      const level =
+        models.find((model) => model.id === baseId)?.defaultThinkingEffort ??
+        "on";
       await this.agent.setThinking(level);
       this.currentThinkingLevel = level;
     }
@@ -1073,7 +1180,9 @@ export class AcpSession {
    * `invalid_params`.
    */
   async setThinking(value: string): Promise<boolean> {
-    const models = projectModelCatalog(await this.klient.global.kosong.listModels());
+    const models = projectModelCatalog(
+      await this.klient.global.kosong.listModels(),
+    );
     const entry = models.find((model) => model.id === this.currentModelId);
     const efforts = entry?.supportEfforts;
     const alwaysThinking = entry?.alwaysThinking === true;
@@ -1081,15 +1190,15 @@ export class AcpSession {
       efforts !== undefined
         ? alwaysThinking
           ? efforts
-          : ['off', ...efforts]
+          : ["off", ...efforts]
         : alwaysThinking
-          ? ['on']
-          : ['off', 'on'];
+          ? ["on"]
+          : ["off", "on"];
     let level: string;
     if (allowed.includes(value)) {
       level = value;
-    } else if (value === 'on' && efforts !== undefined) {
-      level = entry?.defaultThinkingEffort ?? 'on';
+    } else if (value === "on" && efforts !== undefined) {
+      level = entry?.defaultThinkingEffort ?? "on";
     } else {
       return false;
     }
@@ -1125,10 +1234,13 @@ export class AcpSession {
   private async emitConfigOptionUpdate(): Promise<void> {
     try {
       await this.conn.sessionUpdate(
-        configOptionUpdateNotification(this.sessionId, await this.configOptions()),
+        configOptionUpdateNotification(
+          this.sessionId,
+          await this.configOptions(),
+        ),
       );
     } catch (error) {
-      log.warn('acp: failed to push config_option_update', {
+      log.warn("acp: failed to push config_option_update", {
         sessionId: this.sessionId,
         error: error instanceof Error ? error.message : String(error),
       });
@@ -1146,9 +1258,9 @@ function formatCompactionCompleted(result: {
   readonly tokensAfter: number;
 }): string {
   return [
-    'Compaction completed.',
-    `- Messages compacted: ${result.compactedCount.toLocaleString('en-US')}`,
-    `- Tokens before: ${result.tokensBefore.toLocaleString('en-US')}`,
-    `- Tokens after: ${result.tokensAfter.toLocaleString('en-US')}`,
-  ].join('\n');
+    "Compaction completed.",
+    `- Messages compacted: ${result.compactedCount.toLocaleString("en-US")}`,
+    `- Tokens before: ${result.tokensBefore.toLocaleString("en-US")}`,
+    `- Tokens after: ${result.tokensAfter.toLocaleString("en-US")}`,
+  ].join("\n");
 }

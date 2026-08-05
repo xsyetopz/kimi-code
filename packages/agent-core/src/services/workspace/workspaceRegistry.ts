@@ -1,14 +1,12 @@
+import { Disposable, createDecorator } from "../../di";
 
-
-import { Disposable, createDecorator } from '../../di';
-
-import type { Workspace } from '@moonshot-ai/protocol';
+import type { Workspace } from "@moonshot-ai/protocol";
 
 export class WorkspaceNotFoundError extends Error {
   readonly workspaceId: string;
   constructor(workspaceId: string) {
     super(`workspace not found: ${workspaceId}`);
-    this.name = 'WorkspaceNotFoundError';
+    this.name = "WorkspaceNotFoundError";
     this.workspaceId = workspaceId;
   }
 }
@@ -17,13 +15,12 @@ export class WorkspaceRootNotFoundError extends Error {
   readonly root: string;
   constructor(root: string) {
     super(`workspace root does not exist: ${root}`);
-    this.name = 'WorkspaceRootNotFoundError';
+    this.name = "WorkspaceRootNotFoundError";
     this.root = root;
   }
 }
 
 export interface WorkspacePatch {
-
   name?: string;
 }
 
@@ -62,16 +59,25 @@ export interface IWorkspaceRegistry {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
-export const IWorkspaceRegistry = createDecorator<IWorkspaceRegistry>('workspaceRegistry');
+export const IWorkspaceRegistry =
+  createDecorator<IWorkspaceRegistry>("workspaceRegistry");
 
-export abstract class WorkspaceRegistryBase extends Disposable implements IWorkspaceRegistry {
+export abstract class WorkspaceRegistryBase
+  extends Disposable
+  implements IWorkspaceRegistry
+{
   readonly _serviceBrand: undefined;
   abstract list(): Promise<Workspace[]>;
   abstract get(workspaceId: string): Promise<Workspace>;
   abstract createOrTouch(root: string, name?: string): Promise<Workspace>;
-  abstract update(workspaceId: string, patch: WorkspacePatch): Promise<Workspace>;
+  abstract update(
+    workspaceId: string,
+    patch: WorkspacePatch,
+  ): Promise<Workspace>;
   abstract delete(workspaceId: string): Promise<void>;
   abstract resolveRoot(workspaceId: string): Promise<string>;
   abstract findWorkspaceIdByRoot(root: string): Promise<string | undefined>;
-  abstract resolveAliasWorkDirs(workspaceId: string): Promise<readonly string[]>;
+  abstract resolveAliasWorkDirs(
+    workspaceId: string,
+  ): Promise<readonly string[]>;
 }

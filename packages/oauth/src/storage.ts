@@ -12,7 +12,7 @@
  * undefined (never throws). Callers treat undefined as "no token stored".
  */
 
-import { randomBytes } from 'node:crypto';
+import { randomBytes } from "node:crypto";
 import {
   chmodSync,
   closeSync,
@@ -24,12 +24,12 @@ import {
   renameSync,
   unlinkSync,
   writeSync,
-} from 'node:fs';
-import { basename, join } from 'node:path';
+} from "node:fs";
+import { basename, join } from "node:path";
 
-import type { TokenInfo, TokenInfoWire } from './types';
-import { tokenFromWire, tokenToWire } from './types';
-import { isRecord } from './utils';
+import type { TokenInfo, TokenInfoWire } from "./types";
+import { tokenFromWire, tokenToWire } from "./types";
+import { isRecord } from "./utils";
 
 export interface TokenStorage {
   load(name: string): Promise<TokenInfo | undefined>;
@@ -63,7 +63,7 @@ export class FileTokenStorage implements TokenStorage {
     // the input we refuse the request entirely rather than silently
     // writing to a different file than the caller asked for.
     const safe = basename(name);
-    if (safe.length === 0 || safe !== name || safe.startsWith('.')) {
+    if (safe.length === 0 || safe !== name || safe.startsWith(".")) {
       throw new Error(`Invalid token name: "${name}"`);
     }
     return join(this.dir, `${safe}.json`);
@@ -73,7 +73,7 @@ export class FileTokenStorage implements TokenStorage {
     const file = this.pathFor(name);
     let raw: string;
     try {
-      raw = readFileSync(file, 'utf-8');
+      raw = readFileSync(file, "utf-8");
     } catch {
       return undefined;
     }
@@ -90,9 +90,12 @@ export class FileTokenStorage implements TokenStorage {
   async save(name: string, token: TokenInfo): Promise<void> {
     this.ensureDir();
     const target = this.pathFor(name);
-    const tmp = `${target}.tmp.${process.pid}.${randomBytes(4).toString('hex')}`;
-    const data = Buffer.from(`${JSON.stringify(tokenToWire(token), null, 2)}\n`, 'utf-8');
-    const fd = openSync(tmp, 'w', 0o600);
+    const tmp = `${target}.tmp.${process.pid}.${randomBytes(4).toString("hex")}`;
+    const data = Buffer.from(
+      `${JSON.stringify(tokenToWire(token), null, 2)}\n`,
+      "utf-8",
+    );
+    const fd = openSync(tmp, "w", 0o600);
     try {
       let written = 0;
       while (written < data.length) {
@@ -120,7 +123,7 @@ export class FileTokenStorage implements TokenStorage {
     try {
       unlinkSync(this.pathFor(name));
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
         throw error;
       }
     }
@@ -133,6 +136,8 @@ export class FileTokenStorage implements TokenStorage {
     } catch {
       return [];
     }
-    return entries.filter((e) => e.endsWith('.json')).map((e) => e.slice(0, -'.json'.length));
+    return entries
+      .filter((e) => e.endsWith(".json"))
+      .map((e) => e.slice(0, -".json".length));
   }
 }

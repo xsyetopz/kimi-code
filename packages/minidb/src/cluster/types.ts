@@ -3,10 +3,10 @@
 // Public option and result types for ClusterDb, the sharded multi-process
 // layer on top of MiniDb. See plan/minidb-cluster-plan.md for the design.
 
-import type { ValueCodecName } from '../index.js';
-import type { IndexDef } from '../index-manager.js';
-import type { CompoundIndexDef } from '../compound-index.js';
-import type { FsyncPolicy } from '../wal.js';
+import type { ValueCodecName } from "../index.js";
+import type { IndexDef } from "../index-manager.js";
+import type { CompoundIndexDef } from "../compound-index.js";
+import type { FsyncPolicy } from "../wal.js";
 
 /** Cross-shard write semantics.
  *  - 'best-effort': shard groups are written one by one in shard-id order;
@@ -14,7 +14,7 @@ import type { FsyncPolicy } from '../wal.js';
  *  - 'none': an operation spanning more than one shard throws.
  *  - '2pc': reserved for a future two-phase-commit implementation; rejected
  *    at open time for now. */
-export type CrossShardMode = 'best-effort' | '2pc' | 'none';
+export type CrossShardMode = "best-effort" | "2pc" | "none";
 
 export interface ClusterOpenOptions {
   dir: string;
@@ -24,13 +24,13 @@ export interface ClusterOpenOptions {
   shardCount?: number;
   valueCodec?: ValueCodecName;
   fsyncPolicy?: FsyncPolicy;
-  valueMode?: 'memory' | 'disk' | 'auto';
+  valueMode?: "memory" | "disk" | "auto";
   compactThresholdBytes?: number;
   autoCompact?: boolean;
   activeExpireIntervalMs?: number;
-  recovery?: 'resync' | 'strict';
+  recovery?: "resync" | "strict";
   maxMemoryBytes?: number;
-  maxMemoryPolicy?: 'reject' | 'evict-lru';
+  maxMemoryPolicy?: "reject" | "evict-lru";
 
   /** Open the whole cluster without ever acquiring a write lock. Writes
    *  throw; reads always go through revalidated read-only shard instances. */

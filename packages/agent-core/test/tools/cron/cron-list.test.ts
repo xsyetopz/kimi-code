@@ -5,26 +5,26 @@
  * corners CronCreate's validator would never let through (notably the
  * malformed-cron path).
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { CronManager } from '../../../src/agent/cron/manager';
+import { CronManager } from "../../../src/agent/cron/manager";
 import {
   CronListTool,
   type CronListInput,
-} from '../../../src/tools/cron/cron-list';
+} from "../../../src/tools/cron/cron-list";
 import type {
   ExecutableToolErrorResult,
   ExecutableToolResult,
   RunnableToolExecution,
   ToolExecution,
-} from '../../../src/loop/types';
+} from "../../../src/loop/types";
 import {
   createAgentStub,
   createClocks,
   scrubCronOutput,
   WALL_ANCHOR,
   type AgentStub,
-} from '../../agent/cron/harness/stub';
+} from "../../agent/cron/harness/stub";
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
@@ -53,8 +53,8 @@ async function runTool(
     return execution;
   }
   return execution.execute({
-    turnId: 'test-turn',
-    toolCallId: 'test-call',
+    turnId: "test-turn",
+    toolCallId: "test-call",
     signal: new AbortController().signal,
   });
 }
@@ -67,41 +67,40 @@ function isErrorExecution(
 
 function assertSuccess(result: ExecutableToolResult): string {
   expect(result.isError ?? false).toBe(false);
-  expect(typeof result.output).toBe('string');
+  expect(typeof result.output).toBe("string");
   return result.output as string;
 }
 
 function localIsoWithOffset(ms: number): string {
   const date = new Date(ms);
   const offsetMin = -date.getTimezoneOffset();
-  const sign = offsetMin >= 0 ? '+' : '-';
+  const sign = offsetMin >= 0 ? "+" : "-";
   const abs = Math.abs(offsetMin);
   const offset = `${sign}${pad(Math.floor(abs / 60))}:${pad(abs % 60)}`;
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(
     date.getHours(),
-  )}:${pad(date.getMinutes())}:${pad(date.getSeconds())}.${String(date.getMilliseconds()).padStart(
-    3,
-    '0',
-  )}${offset}`;
+  )}:${pad(date.getMinutes())}:${pad(date.getSeconds())}.${String(
+    date.getMilliseconds(),
+  ).padStart(3, "0")}${offset}`;
 }
 
 function pad(n: number): string {
-  return String(n).padStart(2, '0');
+  return String(n).padStart(2, "0");
 }
 
-describe('CronListTool', () => {
+describe("CronListTool", () => {
   beforeEach(() => {
     // Disable jitter so `nextFireAt` is the unmodified ideal — keeps
     // the one-shot-on-`:00` assertion bisectable without needing to
     // reason about a deterministic-but-task-id-dependent offset.
-    vi.stubEnv('KIMI_CRON_NO_JITTER', '1');
+    vi.stubEnv("KIMI_CRON_NO_JITTER", "1");
   });
 
   afterEach(() => {
     vi.unstubAllEnvs();
   });
 
-  it('renders the empty case with a zero header and no separator', async () => {
+  it("renders the empty case with a zero header and no separator", async () => {
     const { tool } = makeHarness();
     const out = assertSuccess(await runTool(tool, {}));
     expect(out).toMatchInlineSnapshot(`
@@ -110,11 +109,11 @@ describe('CronListTool', () => {
     `);
   });
 
-  it('renders a single recurring task with all expected columns', async () => {
+  it("renders a single recurring task with all expected columns", async () => {
     const { manager, tool } = makeHarness();
     const nowMs = manager.clocks.wallNow();
     manager.store.add(
-      { cron: '*/5 * * * *', prompt: 'hi', recurring: true },
+      { cron: "*/5 * * * *", prompt: "hi", recurring: true },
       nowMs,
     );
 
@@ -135,11 +134,11 @@ describe('CronListTool', () => {
     `);
   });
 
-  it('renders nextFireAt in local time with an explicit offset', async () => {
+  it("renders nextFireAt in local time with an explicit offset", async () => {
     const now = new Date(2026, 4, 29, 8, 35, 0, 0).getTime();
     const { manager, tool } = makeHarness(now);
     manager.store.add(
-      { cron: '0 9 * * *', prompt: 'morning', recurring: true },
+      { cron: "0 9 * * *", prompt: "morning", recurring: true },
       now,
     );
 
@@ -148,19 +147,21 @@ describe('CronListTool', () => {
     expected.setSeconds(0, 0);
     expected.setMinutes(0);
     expected.setHours(9);
-    expect(out).toContain(`nextFireAt: ${localIsoWithOffset(expected.getTime())}`);
-    expect(out).not.toContain('nextFireAt: 2026-05-29T01:00:00.000Z');
+    expect(out).toContain(
+      `nextFireAt: ${localIsoWithOffset(expected.getTime())}`,
+    );
+    expect(out).not.toContain("nextFireAt: 2026-05-29T01:00:00.000Z");
   });
 
-  it('separates multiple records with \\n---\\n in insertion order', async () => {
+  it("separates multiple records with \\n---\\n in insertion order", async () => {
     const { manager, tool } = makeHarness();
     const nowMs = manager.clocks.wallNow();
     manager.store.add(
-      { cron: '*/5 * * * *', prompt: 'first', recurring: true },
+      { cron: "*/5 * * * *", prompt: "first", recurring: true },
       nowMs,
     );
     manager.store.add(
-      { cron: '0 12 * * *', prompt: 'second', recurring: false },
+      { cron: "0 12 * * *", prompt: "second", recurring: false },
       nowMs,
     );
 
@@ -187,13 +188,13 @@ describe('CronListTool', () => {
     `);
   });
 
-  it('flags a recurring task older than 7 days as stale', async () => {
+  it("flags a recurring task older than 7 days as stale", async () => {
     // Anchor "now" at WALL_ANCHOR; seed the task with createdAt 8
     // days earlier so age > 7 d crosses the stale threshold.
     const { manager, tool } = makeHarness();
     const eightDaysAgo = WALL_ANCHOR - 8 * MS_PER_DAY;
     manager.store.add(
-      { cron: '*/5 * * * *', prompt: 'old', recurring: true },
+      { cron: "*/5 * * * *", prompt: "old", recurring: true },
       eightDaysAgo,
     );
 
@@ -212,14 +213,14 @@ describe('CronListTool', () => {
     `);
   });
 
-  it('reports recurring=false for one-shots; jittered nextFireAt is at-or-before the ideal', async () => {
+  it("reports recurring=false for one-shots; jittered nextFireAt is at-or-before the ideal", async () => {
     // KIMI_CRON_NO_JITTER is set in beforeEach, so the jittered value
     // equals the ideal: that satisfies "at-or-before" without making
     // the test sensitive to the per-task deterministic offset.
     const { manager, tool } = makeHarness();
     const nowMs = manager.clocks.wallNow();
     manager.store.add(
-      { cron: '0 12 * * *', prompt: 'noon', recurring: false },
+      { cron: "0 12 * * *", prompt: "noon", recurring: false },
       nowMs,
     );
 
@@ -254,15 +255,12 @@ describe('CronListTool', () => {
     `);
   });
 
-  it('renders malformed cron as raw / fallback humanSchedule / null nextFireAt without throwing', async () => {
+  it("renders malformed cron as raw / fallback humanSchedule / null nextFireAt without throwing", async () => {
     const { manager, tool } = makeHarness();
     // `store.add` does NOT validate — that's the seam we're using to
     // simulate "this slipped past CronCreate".
     const nowMs = manager.clocks.wallNow();
-    manager.store.add(
-      { cron: 'garbage', prompt: 'x', recurring: true },
-      nowMs,
-    );
+    manager.store.add({ cron: "garbage", prompt: "x", recurring: true }, nowMs);
 
     const out = assertSuccess(await runTool(tool, {}));
     expect(scrubCronOutput(out)).toMatchInlineSnapshot(`
@@ -278,7 +276,7 @@ describe('CronListTool', () => {
     `);
   });
 
-  it('one-shot nextFireAt is anchored at createdAt, not nowMs (pending today’s slot)', async () => {
+  it("one-shot nextFireAt is anchored at createdAt, not nowMs (pending today’s slot)", async () => {
     // Scenario from a review: a daily one-shot scheduled for
     // 12:00 that the agent could not yet deliver (busy turn, manual
     // tick mode) and is listed 5 minutes after the ideal slot. The
@@ -303,7 +301,7 @@ describe('CronListTool', () => {
     harness.setNow(today1155.getTime());
     const createdAt = harness.now();
     manager.store.add(
-      { cron: '0 12 * * *', prompt: 'noon-pending', recurring: false },
+      { cron: "0 12 * * *", prompt: "noon-pending", recurring: false },
       createdAt,
     );
     harness.advance(10 * 60_000); // now = 12:05
@@ -320,13 +318,13 @@ describe('CronListTool', () => {
     expect(renderedMs).toBe(expectedToday12.getTime());
   });
 
-  it('nextFireAt for a recurring task in its pending jitter window is the current period, not next period', async () => {
+  it("nextFireAt for a recurring task in its pending jitter window is the current period, not next period", async () => {
     // C1 regression: when the ideal slot is past but the jittered
     // delivery is still pending, CronList must report the pending
     // slot — otherwise the model is told the fire is one period away
     // when the scheduler will actually deliver inside the jitter cap.
     vi.unstubAllEnvs();
-    vi.stubEnv('KIMI_CRON_NO_STALE', '1');
+    vi.stubEnv("KIMI_CRON_NO_STALE", "1");
     const stub = createAgentStub();
     const harness = createClocks();
     const manager = new CronManager(stub.agent, {
@@ -346,9 +344,9 @@ describe('CronListTool', () => {
     manager.store.adopt({
       // Use a high deterministic jitter id so advancing 1 s past the
       // ideal fire remains inside the pending jitter window.
-      id: 'ffffffff',
-      cron: '*/5 * * * *',
-      prompt: 'pending-jitter',
+      id: "ffffffff",
+      cron: "*/5 * * * *",
+      prompt: "pending-jitter",
       recurring: true,
       createdAt: harness.now(),
     });
@@ -368,15 +366,15 @@ describe('CronListTool', () => {
     expect(renderedMs - now).toBeLessThanOrEqual(60_000);
   });
 
-  it('truncates prompts longer than 200 UTF-8 bytes with a …(truncated) marker', async () => {
+  it("truncates prompts longer than 200 UTF-8 bytes with a …(truncated) marker", async () => {
     // Explicit assertions instead of a snapshot: keeps the truncation
     // boundary visible in the test source rather than buried in a
     // mostly-x string.
     const { manager, tool } = makeHarness();
     const nowMs = manager.clocks.wallNow();
-    const longPrompt = 'x'.repeat(300);
+    const longPrompt = "x".repeat(300);
     manager.store.add(
-      { cron: '*/5 * * * *', prompt: longPrompt, recurring: true },
+      { cron: "*/5 * * * *", prompt: longPrompt, recurring: true },
       nowMs,
     );
 
@@ -387,10 +385,10 @@ describe('CronListTool', () => {
     // JSON-encoded, so closing quote terminates the line.
     expect(renderedPromptField.endsWith('…(truncated)"')).toBe(true);
     expect(renderedPromptField.length).toBeLessThan(longPrompt.length);
-    expect(out).toContain('prompt: ');
+    expect(out).toContain("prompt: ");
   });
 
-  it('walks back to a UTF-8 char boundary when truncating multi-byte prompts', async () => {
+  it("walks back to a UTF-8 char boundary when truncating multi-byte prompts", async () => {
     // Regression: a naïve `subarray(0, 200)` could split a 3-byte CJK
     // sequence and produce a `�` replacement char on decode. The
     // `0b1100_0000` continuation-byte walk-back must back off to a
@@ -398,9 +396,9 @@ describe('CronListTool', () => {
     const { manager, tool } = makeHarness();
     const nowMs = manager.clocks.wallNow();
     // `你` is 3 bytes in UTF-8; 100 × 3 = 300 bytes, well past the cap.
-    const cjkPrompt = '你'.repeat(100);
+    const cjkPrompt = "你".repeat(100);
     manager.store.add(
-      { cron: '*/5 * * * *', prompt: cjkPrompt, recurring: true },
+      { cron: "*/5 * * * *", prompt: cjkPrompt, recurring: true },
       nowMs,
     );
 
@@ -410,12 +408,12 @@ describe('CronListTool', () => {
     const rendered = promptMatch![1]!;
     expect(rendered.endsWith('…(truncated)"')).toBe(true);
     // No replacement char — the walk-back stopped at a legal boundary.
-    expect(rendered).not.toContain('�');
+    expect(rendered).not.toContain("�");
     // Inner content is JSON-stringified; strip the outer quotes and
     // the trailing `…(truncated)` marker, then verify the remainder
     // parses back to a run of `你` chars with no fractional sequence.
-    const stripped = rendered.replace(/^"|…\(truncated\)"$/g, '');
+    const stripped = rendered.replace(/^"|…\(truncated\)"$/g, "");
     expect(stripped.length).toBeGreaterThan(0);
-    for (const ch of stripped) expect(ch).toBe('你');
+    for (const ch of stripped) expect(ch).toBe("你");
   });
 });

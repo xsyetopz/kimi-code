@@ -11,27 +11,35 @@
  * returned array/object is never mutated by later applies.
  */
 
-import type { AgentId, AttachmentId, InteractionId, PromptId, TaskId, TodoId, TurnId } from '../model/ids';
-import type { TranscriptAttachment } from '../model/attachment';
-import type { TranscriptInteraction } from '../model/interaction';
-import type { TranscriptItem } from '../model/item';
-import type { TranscriptMeta } from '../model/meta';
-import type { TranscriptPrompt } from '../model/prompt';
-import type { TranscriptTask } from '../model/task';
-import type { TranscriptTodo } from '../model/todo';
-import type { TranscriptTurn } from '../model/turn';
+import type {
+  AgentId,
+  AttachmentId,
+  InteractionId,
+  PromptId,
+  TaskId,
+  TodoId,
+  TurnId,
+} from "../model/ids";
+import type { TranscriptAttachment } from "../model/attachment";
+import type { TranscriptInteraction } from "../model/interaction";
+import type { TranscriptItem } from "../model/item";
+import type { TranscriptMeta } from "../model/meta";
+import type { TranscriptPrompt } from "../model/prompt";
+import type { TranscriptTask } from "../model/task";
+import type { TranscriptTodo } from "../model/todo";
+import type { TranscriptTurn } from "../model/turn";
 import {
   EMPTY_AGENT_STATE,
   applyOperation,
   type AgentState,
-} from '../ops/apply';
+} from "../ops/apply";
 import type {
   AgentTranscriptSnapshot,
   AppendTarget,
   AppliedOps,
   TranscriptChangeEvent,
   TranscriptOperation,
-} from '../ops/operation';
+} from "../ops/operation";
 
 export type TranscriptListener = (event: TranscriptChangeEvent) => void;
 
@@ -57,12 +65,15 @@ export class AgentTranscript {
    */
   apply(ops: readonly TranscriptOperation[]): AppliedOps {
     const accepted: TranscriptOperation[] = [];
-    let gap: AppliedOps['gap'];
+    let gap: AppliedOps["gap"];
     let state = this.#state;
     for (const op of ops) {
       const result = applyOperation(state, op);
       if (result.gap) {
-        gap = { target: (op as { target: AppendTarget }).target, ...result.gap };
+        gap = {
+          target: (op as { target: AppendTarget }).target,
+          ...result.gap,
+        };
         continue;
       }
       if (!result.changed) continue;
@@ -71,7 +82,10 @@ export class AgentTranscript {
     }
     this.#state = state;
     if (accepted.length > 0) {
-      const event: TranscriptChangeEvent = { agentId: this.agentId, ops: accepted };
+      const event: TranscriptChangeEvent = {
+        agentId: this.agentId,
+        ops: accepted,
+      };
       for (const listener of this.#listeners) listener(event);
     }
     return { accepted, gap };
@@ -90,9 +104,9 @@ export class AgentTranscript {
 
   getTurn(turnId: TurnId): TranscriptTurn | undefined {
     const item = this.#state.items.find(
-      (entry) => entry.kind === 'turn' && entry.turnId === turnId,
+      (entry) => entry.kind === "turn" && entry.turnId === turnId,
     );
-    return item?.kind === 'turn' ? item : undefined;
+    return item?.kind === "turn" ? item : undefined;
   }
 
   getTasks(): ReadonlyMap<TaskId, TranscriptTask> {
@@ -107,7 +121,9 @@ export class AgentTranscript {
     return this.#state.interactions;
   }
 
-  getInteraction(interactionId: InteractionId): TranscriptInteraction | undefined {
+  getInteraction(
+    interactionId: InteractionId,
+  ): TranscriptInteraction | undefined {
     return this.#state.interactions.get(interactionId);
   }
 
@@ -152,13 +168,16 @@ export class AgentTranscript {
     let items = this.#state.items;
     let hasMoreOlder = this.#state.hasMoreOlder;
     if (window !== undefined) {
-      const turnCount = items.reduce((n, entry) => (entry.kind === 'turn' ? n + 1 : n), 0);
+      const turnCount = items.reduce(
+        (n, entry) => (entry.kind === "turn" ? n + 1 : n),
+        0,
+      );
       if (turnCount > window.tailTurns) {
         const skip = turnCount - window.tailTurns;
         const kept: TranscriptItem[] = [];
         let seen = 0;
         for (const entry of items) {
-          if (entry.kind === 'turn') {
+          if (entry.kind === "turn") {
             seen += 1;
             if (seen <= skip) continue;
             kept.push(entry);

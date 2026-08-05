@@ -11,8 +11,8 @@
 // composable owns the attachment state, all the file-input UI handlers, and the
 // paste listener + object-URL cleanup lifecycle.
 
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
-import { getKimiWebApi } from '../api';
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
+import { getKimiWebApi } from "../api";
 
 export interface Attachment {
   /** Unique local id (used as :key) */
@@ -20,7 +20,7 @@ export interface Attachment {
   /** File name */
   name: string;
   /** image, video, or any other file — drives the chip preview and the content-block type. */
-  kind: 'image' | 'video' | 'file';
+  kind: "image" | "video" | "file";
   /** Object URL for the thumbnail preview (unset for file attachments — those render an icon chip). */
   previewUrl?: string;
   /** Local MIME of the picked file — echoed into the wire file part. */
@@ -52,7 +52,9 @@ export function useAttachmentUpload(deps: AttachmentUploadDeps) {
   const { uploadImage, sessionId } = deps;
 
   const attachmentsBySession = ref<Record<string, Attachment[]>>({});
-  const attachments = computed(() => attachmentsBySession.value[sessionId() ?? ''] ?? []);
+  const attachments = computed(
+    () => attachmentsBySession.value[sessionId() ?? ""] ?? [],
+  );
   const previewAttachment = ref<Attachment | null>(null);
   const fileInputRef = ref<HTMLInputElement | null>(null);
   const isDragOver = ref(false);
@@ -68,14 +70,18 @@ export function useAttachmentUpload(deps: AttachmentUploadDeps) {
 
   function revokeAttachment(att: Attachment): void {
     if (att.previewUrl === undefined) return;
-    try { URL.revokeObjectURL(att.previewUrl); } catch { /* ignore */ }
+    try {
+      URL.revokeObjectURL(att.previewUrl);
+    } catch {
+      /* ignore */
+    }
   }
 
-  function attachmentKind(mime: string): 'image' | 'video' | 'file' {
-    if (mime.startsWith('image/')) return 'image';
-    if (mime.startsWith('video/')) return 'video';
+  function attachmentKind(mime: string): "image" | "video" | "file" {
+    if (mime.startsWith("image/")) return "image";
+    if (mime.startsWith("video/")) return "video";
     // Everything else — including an empty/unknown MIME — attaches as a file.
-    return 'file';
+    return "file";
   }
 
   async function addFiles(files: File[]): Promise<void> {
@@ -83,14 +89,15 @@ export function useAttachmentUpload(deps: AttachmentUploadDeps) {
     if (!upload) return;
     // Capture the session at upload time; async completion must update the same
     // session even if the user has since switched away.
-    const sid = sessionId() ?? '';
+    const sid = sessionId() ?? "";
     if (files.length === 0) return;
 
     for (const file of files) {
       const kind = attachmentKind(file.type);
       const localId = nextLocalId();
       // Only media gets a thumbnail object URL; files render an icon chip.
-      const previewUrl = kind === 'file' ? undefined : URL.createObjectURL(file);
+      const previewUrl =
+        kind === "file" ? undefined : URL.createObjectURL(file);
       const att: Attachment = {
         localId,
         name: file.name,
@@ -98,48 +105,58 @@ export function useAttachmentUpload(deps: AttachmentUploadDeps) {
         previewUrl,
         // Extensionless/unknown files report an empty MIME — normalize now so
         // the wire file part's required non-empty media_type never sees ''.
-        mediaType: file.type || 'application/octet-stream',
+        mediaType: file.type || "application/octet-stream",
         size: file.size,
         uploading: true,
       };
       setForSession(sid, [...(attachmentsBySession.value[sid] ?? []), att]);
 
       // Upload in background; update the attachment when done.
-      upload(file, file.name).then((result) => {
-        const current = attachmentsBySession.value[sid] ?? [];
-        setForSession(
-          sid,
-          current.map((a) =>
-            a.localId === localId
-              ? {
-                  ...a,
-                  uploading: false,
-                  fileId: result?.fileId,
-                  // Adopt the server-recorded MIME when available — the
-                  // server's file meta is what the prompt route reads.
-                  mediaType: result?.mediaType ?? a.mediaType,
-                  error: result === null,
-                }
-              : a,
-          ),
-        );
-      }).catch(() => {
-        const current = attachmentsBySession.value[sid] ?? [];
-        setForSession(
-          sid,
-          current.map((a) => (a.localId === localId ? { ...a, uploading: false, error: true } : a)),
-        );
-      });
+      upload(file, file.name)
+        .then((result) => {
+          const current = attachmentsBySession.value[sid] ?? [];
+          setForSession(
+            sid,
+            current.map((a) =>
+              a.localId === localId
+                ? {
+                    ...a,
+                    uploading: false,
+                    fileId: result?.fileId,
+                    // Adopt the server-recorded MIME when available — the
+                    // server's file meta is what the prompt route reads.
+                    mediaType: result?.mediaType ?? a.mediaType,
+                    error: result === null,
+                  }
+                : a,
+            ),
+          );
+        })
+        .catch(() => {
+          const current = attachmentsBySession.value[sid] ?? [];
+          setForSession(
+            sid,
+            current.map((a) =>
+              a.localId === localId
+                ? { ...a, uploading: false, error: true }
+                : a,
+            ),
+          );
+        });
     }
   }
 
   function removeAttachment(localId: string): void {
-    const sid = sessionId() ?? '';
+    const sid = sessionId() ?? "";
     const current = attachmentsBySession.value[sid] ?? [];
     const att = current.find((a) => a.localId === localId);
-    if (previewAttachment.value?.localId === localId) previewAttachment.value = null;
+    if (previewAttachment.value?.localId === localId)
+      previewAttachment.value = null;
     if (att) revokeAttachment(att);
-    setForSession(sid, current.filter((a) => a.localId !== localId));
+    setForSession(
+      sid,
+      current.filter((a) => a.localId !== localId),
+    );
   }
 
   function openAttachmentPreview(att: Attachment): void {
@@ -159,7 +176,7 @@ export function useAttachmentUpload(deps: AttachmentUploadDeps) {
     const files = Array.from(input.files ?? []);
     void addFiles(files);
     // Reset so re-selecting the same file fires change again.
-    input.value = '';
+    input.value = "";
   }
 
   // Global document-level paste handler — captures Ctrl+V anywhere the composer is mounted.
@@ -177,16 +194,25 @@ export function useAttachmentUpload(deps: AttachmentUploadDeps) {
       const key = `${blob.size}:${blob.type}:${name}`;
       if (seenKeys.has(key)) return;
       seenKeys.add(key);
-      const ext = blob.type.split('/')[1] ?? 'png';
-      const safeName = name.includes('.') ? name : `paste-${Date.now()}.${ext}`;
-      files.push(blob instanceof File ? blob : new File([blob], safeName, { type: blob.type }));
+      const ext = blob.type.split("/")[1] ?? "png";
+      const safeName = name.includes(".") ? name : `paste-${Date.now()}.${ext}`;
+      files.push(
+        blob instanceof File
+          ? blob
+          : new File([blob], safeName, { type: blob.type }),
+      );
     };
 
     // From DataTransferItemList.
     for (const item of Array.from(cd.items)) {
-      if (item.kind === 'file') {
+      if (item.kind === "file") {
         const blob = item.getAsFile();
-        if (blob) addBlob(blob, blob.name || `paste-${Date.now()}.${item.type.split('/')[1] ?? 'png'}`);
+        if (blob)
+          addBlob(
+            blob,
+            blob.name ||
+              `paste-${Date.now()}.${item.type.split("/")[1] ?? "png"}`,
+          );
       }
     }
 
@@ -208,7 +234,9 @@ export function useAttachmentUpload(deps: AttachmentUploadDeps) {
 
   function handleDragOver(e: DragEvent): void {
     if (!uploadImage()) return;
-    const hasFiles = Array.from(e.dataTransfer?.items ?? []).some((item) => item.kind === 'file');
+    const hasFiles = Array.from(e.dataTransfer?.items ?? []).some(
+      (item) => item.kind === "file",
+    );
     if (!hasFiles) return;
     // Stop the document-level handler from double-counting this as a new enter.
     e.preventDefault();
@@ -236,7 +264,9 @@ export function useAttachmentUpload(deps: AttachmentUploadDeps) {
   // the file. Nested dragenter/dragleave pairs fire while moving across child
   // elements, so the overlay is driven by a counter, not by single events.
   function windowDragHasFiles(e: DragEvent): boolean {
-    return Array.from(e.dataTransfer?.items ?? []).some((item) => item.kind === 'file');
+    return Array.from(e.dataTransfer?.items ?? []).some(
+      (item) => item.kind === "file",
+    );
   }
 
   function handleWindowDragEnter(e: DragEvent): void {
@@ -270,14 +300,18 @@ export function useAttachmentUpload(deps: AttachmentUploadDeps) {
   /** Revoke every object URL and drop all attachments for the current session
       (called after submit/steer). */
   function clearAfterSubmit(): void {
-    const sid = sessionId() ?? '';
+    const sid = sessionId() ?? "";
     for (const att of attachmentsBySession.value[sid] ?? []) {
       revokeAttachment(att);
     }
     setForSession(sid, []);
   }
 
-  function patchAttachment(sid: string, localId: string, patch: Partial<Attachment>): void {
+  function patchAttachment(
+    sid: string,
+    localId: string,
+    patch: Partial<Attachment>,
+  ): void {
     const current = attachmentsBySession.value[sid] ?? [];
     if (!current.some((a) => a.localId === localId)) return;
     setForSession(
@@ -299,9 +333,17 @@ export function useAttachmentUpload(deps: AttachmentUploadDeps) {
    *  fetch an authenticated blob URL so the thumbnail doesn't 401. Replaces any
    *  unsent draft attachments (mirroring loadForEdit(text), which overwrites) so
    *  a later submit sends exactly the edited message's files, not a mix. */
-  function loadAttachments(atts: { fileId?: string; kind: 'image' | 'video' | 'file'; url: string; name?: string }[]): void {
-    const sid = sessionId() ?? '';
-    for (const existing of attachmentsBySession.value[sid] ?? []) revokeAttachment(existing);
+  function loadAttachments(
+    atts: {
+      fileId?: string;
+      kind: "image" | "video" | "file";
+      url: string;
+      name?: string;
+    }[],
+  ): void {
+    const sid = sessionId() ?? "";
+    for (const existing of attachmentsBySession.value[sid] ?? [])
+      revokeAttachment(existing);
     setForSession(sid, []);
     for (const att of atts) {
       const localId = nextLocalId();
@@ -316,23 +358,26 @@ export function useAttachmentUpload(deps: AttachmentUploadDeps) {
           localId,
           name,
           kind: att.kind,
-          previewUrl: att.kind === 'file' ? undefined : att.url,
+          previewUrl: att.kind === "file" ? undefined : att.url,
           uploading: false,
           fileId: att.fileId,
         };
         setForSession(sid, [...(attachmentsBySession.value[sid] ?? []), entry]);
-        if (att.kind !== 'file' && !isData && !isBlob) {
-          void getKimiWebApi().getFileBlob(att.fileId).then((blob) => {
-            const blobUrl = URL.createObjectURL(blob);
-            const current = attachmentsBySession.value[sid] ?? [];
-            if (!current.some((a) => a.localId === localId)) {
-              URL.revokeObjectURL(blobUrl);
-              return;
-            }
-            patchAttachment(sid, localId, { previewUrl: blobUrl });
-          }).catch(() => {
-            // Keep the fallback previewUrl (honest broken state if it 401s).
-          });
+        if (att.kind !== "file" && !isData && !isBlob) {
+          void getKimiWebApi()
+            .getFileBlob(att.fileId)
+            .then((blob) => {
+              const blobUrl = URL.createObjectURL(blob);
+              const current = attachmentsBySession.value[sid] ?? [];
+              if (!current.some((a) => a.localId === localId)) {
+                URL.revokeObjectURL(blobUrl);
+                return;
+              }
+              patchAttachment(sid, localId, { previewUrl: blobUrl });
+            })
+            .catch(() => {
+              // Keep the fallback previewUrl (honest broken state if it 401s).
+            });
         }
       } else {
         // No fileId (e.g. a server-base64-inlined image, or a URL-backed source
@@ -356,20 +401,31 @@ export function useAttachmentUpload(deps: AttachmentUploadDeps) {
         setForSession(sid, [...(attachmentsBySession.value[sid] ?? []), entry]);
         void urlToBlob(att.url)
           .then((blob) => {
-            const fname = name.includes('.') ? name : `${name}.${blob.type.split('/')[1] ?? 'bin'}`;
+            const fname = name.includes(".")
+              ? name
+              : `${name}.${blob.type.split("/")[1] ?? "bin"}`;
             return upload(blob, fname);
           })
           .then((result) => {
             if (result === null) {
               const current = attachmentsBySession.value[sid] ?? [];
-              setForSession(sid, current.filter((a) => a.localId !== localId));
+              setForSession(
+                sid,
+                current.filter((a) => a.localId !== localId),
+              );
               return;
             }
-            patchAttachment(sid, localId, { uploading: false, fileId: result.fileId });
+            patchAttachment(sid, localId, {
+              uploading: false,
+              fileId: result.fileId,
+            });
           })
           .catch(() => {
             const current = attachmentsBySession.value[sid] ?? [];
-            setForSession(sid, current.filter((a) => a.localId !== localId));
+            setForSession(
+              sid,
+              current.filter((a) => a.localId !== localId),
+            );
           });
       }
     }
@@ -382,20 +438,20 @@ export function useAttachmentUpload(deps: AttachmentUploadDeps) {
   });
 
   onMounted(() => {
-    document.addEventListener('paste', handleDocumentPaste);
-    document.addEventListener('dragenter', handleWindowDragEnter);
-    document.addEventListener('dragover', handleWindowDragOver);
-    document.addEventListener('dragleave', handleWindowDragLeave);
-    document.addEventListener('drop', handleWindowDrop);
+    document.addEventListener("paste", handleDocumentPaste);
+    document.addEventListener("dragenter", handleWindowDragEnter);
+    document.addEventListener("dragover", handleWindowDragOver);
+    document.addEventListener("dragleave", handleWindowDragLeave);
+    document.addEventListener("drop", handleWindowDrop);
   });
 
   // Revoke all object URLs (every session) and remove the global listener on unmount.
   onUnmounted(() => {
-    document.removeEventListener('paste', handleDocumentPaste);
-    document.removeEventListener('dragenter', handleWindowDragEnter);
-    document.removeEventListener('dragover', handleWindowDragOver);
-    document.removeEventListener('dragleave', handleWindowDragLeave);
-    document.removeEventListener('drop', handleWindowDrop);
+    document.removeEventListener("paste", handleDocumentPaste);
+    document.removeEventListener("dragenter", handleWindowDragEnter);
+    document.removeEventListener("dragover", handleWindowDragOver);
+    document.removeEventListener("dragleave", handleWindowDragLeave);
+    document.removeEventListener("drop", handleWindowDrop);
     for (const atts of Object.values(attachmentsBySession.value)) {
       for (const att of atts) revokeAttachment(att);
     }

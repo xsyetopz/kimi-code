@@ -11,18 +11,35 @@
  * All network / clock / storage operations are injectable for tests.
  */
 
-import { randomUUID } from 'node:crypto';
-import { mkdir, writeFile } from 'node:fs/promises';
-import { dirname } from 'node:path';
+import { randomUUID } from "node:crypto";
+import { mkdir, writeFile } from "node:fs/promises";
+import { dirname } from "node:path";
 
-import lockfile from 'proper-lockfile';
+import lockfile from "proper-lockfile";
 
-import { DeviceCodeTimeoutError, OAuthError, OAuthUnauthorizedError } from './errors';
-import { pollDeviceToken, refreshAccessToken, requestDeviceAuthorization } from './oauth';
-import type { DevicePollResult, RefreshOptions } from './oauth';
-import type { TokenStorage } from './storage';
-import { classifyToken, revokedTombstone, type TokenState } from './token-state';
-import type { DeviceAuthorization, OAuthFlowConfig, OAuthRequestHeaders, TokenInfo } from './types';
+import {
+  DeviceCodeTimeoutError,
+  OAuthError,
+  OAuthUnauthorizedError,
+} from "./errors";
+import {
+  pollDeviceToken,
+  refreshAccessToken,
+  requestDeviceAuthorization,
+} from "./oauth";
+import type { DevicePollResult, RefreshOptions } from "./oauth";
+import type { TokenStorage } from "./storage";
+import {
+  classifyToken,
+  revokedTombstone,
+  type TokenState,
+} from "./token-state";
+import type {
+  DeviceAuthorization,
+  OAuthFlowConfig,
+  OAuthRequestHeaders,
+  TokenInfo,
+} from "./types";
 
 const MIN_REFRESH_THRESHOLD_SECONDS = 300;
 const REFRESH_THRESHOLD_RATIO = 0.5;
@@ -30,7 +47,10 @@ const DEFAULT_DEVICE_CODE_TIMEOUT_MS = 15 * 60 * 1000;
 
 export function defaultRefreshThreshold(expiresIn: number): number {
   if (expiresIn > 0) {
-    return Math.max(MIN_REFRESH_THRESHOLD_SECONDS, expiresIn * REFRESH_THRESHOLD_RATIO);
+    return Math.max(
+      MIN_REFRESH_THRESHOLD_SECONDS,
+      expiresIn * REFRESH_THRESHOLD_RATIO,
+    );
   }
   return MIN_REFRESH_THRESHOLD_SECONDS;
 }
@@ -40,11 +60,14 @@ const defaultSleep: Sleep = (ms) =>
   new Promise<void>((resolve) => {
     setTimeout(resolve, ms);
   });
-type ManagerRefreshOptions = Omit<RefreshOptions, 'deviceHeaders'>;
+type ManagerRefreshOptions = Omit<RefreshOptions, "deviceHeaders">;
 
 export type OAuthRefreshOutcome =
   | { readonly success: true }
-  | { readonly success: false; readonly reason: 'unauthorized' | 'network_or_other' };
+  | {
+      readonly success: false;
+      readonly reason: "unauthorized" | "network_or_other";
+    };
 
 export interface OAuthManagerOptions {
   readonly config: OAuthFlowConfig;
@@ -66,7 +89,10 @@ export interface OAuthManagerOptions {
     | ((config: OAuthFlowConfig) => Promise<DeviceAuthorization>)
     | undefined;
   readonly pollDeviceImpl?:
-    | ((config: OAuthFlowConfig, deviceCode: string) => Promise<DevicePollResult>)
+    | ((
+        config: OAuthFlowConfig,
+        deviceCode: string,
+      ) => Promise<DevicePollResult>)
     | undefined;
   readonly deviceHeaders?: (() => OAuthRequestHeaders | undefined) | undefined;
   /**
@@ -90,7 +116,9 @@ export interface OAuthManagerOptions {
 }
 
 export interface LoginOptions {
-  readonly onDeviceCode?: ((auth: DeviceAuthorization) => Promise<void> | void) | undefined;
+  readonly onDeviceCode?:
+    | ((auth: DeviceAuthorization) => Promise<void> | void)
+    | undefined;
   readonly signal?: AbortSignal | undefined;
 }
 
@@ -101,12 +129,20 @@ export class OAuthManager {
   private readonly deviceCodeTimeoutMs: number;
   private readonly now: () => number;
   private readonly sleep: Sleep;
-  private readonly refreshImpl: NonNullable<OAuthManagerOptions['refreshTokenImpl']>;
-  private readonly requestImpl: NonNullable<OAuthManagerOptions['requestDeviceImpl']>;
-  private readonly pollImpl: NonNullable<OAuthManagerOptions['pollDeviceImpl']>;
-  private readonly deviceHeaders: (() => OAuthRequestHeaders | undefined) | undefined;
+  private readonly refreshImpl: NonNullable<
+    OAuthManagerOptions["refreshTokenImpl"]
+  >;
+  private readonly requestImpl: NonNullable<
+    OAuthManagerOptions["requestDeviceImpl"]
+  >;
+  private readonly pollImpl: NonNullable<OAuthManagerOptions["pollDeviceImpl"]>;
+  private readonly deviceHeaders:
+    | (() => OAuthRequestHeaders | undefined)
+    | undefined;
   private readonly configDir: string | undefined;
-  private readonly onRefresh: ((outcome: OAuthRefreshOutcome) => void) | undefined;
+  private readonly onRefresh:
+    | ((outcome: OAuthRefreshOutcome) => void)
+    | undefined;
 
   /**
    * In-flight refresh coalescer: one refresh per ensureFresh race.
@@ -116,13 +152,17 @@ export class OAuthManager {
    * a still-cached token. A non-force caller is happy with any settled
    * outcome and may piggyback either kind.
    */
-  private inFlightRefresh: { promise: Promise<string>; force: boolean } | undefined;
+  private inFlightRefresh:
+    | { promise: Promise<string>; force: boolean }
+    | undefined;
 
   constructor(options: OAuthManagerOptions) {
     this.config = options.config;
     this.storage = options.storage;
-    this.refreshThresholdFn = options.refreshThreshold ?? defaultRefreshThreshold;
-    this.deviceCodeTimeoutMs = options.deviceCodeTimeoutMs ?? DEFAULT_DEVICE_CODE_TIMEOUT_MS;
+    this.refreshThresholdFn =
+      options.refreshThreshold ?? defaultRefreshThreshold;
+    this.deviceCodeTimeoutMs =
+      options.deviceCodeTimeoutMs ?? DEFAULT_DEVICE_CODE_TIMEOUT_MS;
     this.now = options.now ?? (() => Math.floor(Date.now() / 1000));
     this.sleep = options.sleep ?? defaultSleep;
     this.deviceHeaders = options.deviceHeaders;
@@ -151,7 +191,9 @@ export class OAuthManager {
     // env happens to be unset. vitest sets `NODE_ENV='test'` by default,
     // so multi-process test workers still pick up the test home path.
     const envConfigDir =
-      process.env['NODE_ENV'] === 'test' ? process.env['KIMI_CODE_HOME'] : undefined;
+      process.env["NODE_ENV"] === "test"
+        ? process.env["KIMI_CODE_HOME"]
+        : undefined;
     this.configDir = options.configDir ?? envConfigDir;
   }
 
@@ -180,8 +222,8 @@ export class OAuthManager {
    * locking is opted out (no configDir, Windows, env kill switch).
    */
   private resolveLockTarget(): string | undefined {
-    if (process.platform === 'win32') return undefined;
-    if (process.env['KIMI_DISABLE_OAUTH_LOCK'] === '1') return undefined;
+    if (process.platform === "win32") return undefined;
+    if (process.env["KIMI_DISABLE_OAUTH_LOCK"] === "1") return undefined;
     if (this.configDir === undefined) return undefined;
     return `${this.configDir}/oauth/${this.config.name}`;
   }
@@ -203,7 +245,7 @@ export class OAuthManager {
     // must be absent after a graceful exit).
     try {
       await mkdir(dirname(target), { recursive: true });
-      await writeFile(target, '', { flag: 'a' });
+      await writeFile(target, "", { flag: "a" });
     } catch (error) {
       throw new OAuthError(
         `Unable to prepare OAuth refresh lock for "${this.config.name}": ${
@@ -214,7 +256,12 @@ export class OAuthManager {
 
     try {
       const release = await lockfile.lock(target, {
-        retries: { retries: 120, factor: 1, minTimeout: 500, maxTimeout: 1_000 },
+        retries: {
+          retries: 120,
+          factor: 1,
+          minTimeout: 500,
+          maxTimeout: 1_000,
+        },
         stale: 5_000,
         realpath: false,
       });
@@ -235,12 +282,12 @@ export class OAuthManager {
   }
 
   async hasToken(): Promise<boolean> {
-    return (await this.loadState()).kind === 'valid';
+    return (await this.loadState()).kind === "valid";
   }
 
   async getCachedAccessToken(): Promise<string | undefined> {
     const state = await this.loadState();
-    return state.kind === 'valid' ? state.token.accessToken : undefined;
+    return state.kind === "valid" ? state.token.accessToken : undefined;
   }
 
   async logout(): Promise<void> {
@@ -266,7 +313,9 @@ export class OAuthManager {
       // Wait for the non-force call to settle (success or failure),
       // then start our own forced refresh. Swallowing rejection here
       // is safe: the non-force caller already owns surfacing that error.
-      return current.promise.catch(() => undefined).then(() => this.ensureFresh(options));
+      return current.promise
+        .catch(() => undefined)
+        .then(() => this.ensureFresh(options));
     }
 
     const promise = this.doEnsureFresh(force).finally(() => {
@@ -284,18 +333,18 @@ export class OAuthManager {
   private async doEnsureFresh(force: boolean): Promise<string> {
     const initial = await this.loadState();
     switch (initial.kind) {
-      case 'missing':
+      case "missing":
         throw new OAuthUnauthorizedError(
           `No token for "${this.config.name}". Run /login to authenticate.`,
         );
-      case 'revoked':
+      case "revoked":
         // A prior 401 (possibly from another process) tombstoned this token.
         // Surface as unauthorized so callers route into the re-login flow
         // instead of treating it as a transient error.
         throw new OAuthUnauthorizedError(
           `Stored token for "${this.config.name}" was rejected; re-login required.`,
         );
-      case 'valid':
+      case "valid":
         break;
     }
     const token = initial.token;
@@ -324,17 +373,17 @@ export class OAuthManager {
       const afterLock = await this.loadState();
       let activeToken: TokenInfo;
       switch (afterLock.kind) {
-        case 'revoked':
+        case "revoked":
           // Peer process tombstoned the file while we waited for the lock.
           throw new OAuthUnauthorizedError(
             `Stored token for "${this.config.name}" was rejected; re-login required.`,
           );
-        case 'missing':
+        case "missing":
           // File disappeared (e.g. logout from another process) while we
           // waited for the lock; fall back to the snapshot we read pre-lock.
           activeToken = token;
           break;
-        case 'valid': {
+        case "valid": {
           const after = afterLock.token;
           if (!this.shouldRefreshToken(after, force)) {
             return after.accessToken;
@@ -361,7 +410,10 @@ export class OAuthManager {
       }
 
       try {
-        const refreshed = await this.refreshImpl(this.config, activeToken.refreshToken);
+        const refreshed = await this.refreshImpl(
+          this.config,
+          activeToken.refreshToken,
+        );
         await this.storage.save(this.config.name, refreshed);
         this.notifyRefresh({ success: true });
         return refreshed.accessToken;
@@ -375,7 +427,7 @@ export class OAuthManager {
           await this.sleep(100);
           const recovery = await this.loadState();
           if (
-            recovery.kind === 'valid' &&
+            recovery.kind === "valid" &&
             recovery.token.refreshToken !== activeToken.refreshToken
           ) {
             this.notifyRefresh({ success: true });
@@ -385,10 +437,13 @@ export class OAuthManager {
           // a fresh process (with no in-memory state) won't re-attempt the
           // same dead refresh_token. The file stays present so peers see
           // "previously logged in, now rejected" instead of "never logged in".
-          await this.storage.save(this.config.name, revokedTombstone(activeToken));
-          this.notifyRefresh({ success: false, reason: 'unauthorized' });
+          await this.storage.save(
+            this.config.name,
+            revokedTombstone(activeToken),
+          );
+          this.notifyRefresh({ success: false, reason: "unauthorized" });
         } else {
-          this.notifyRefresh({ success: false, reason: 'network_or_other' });
+          this.notifyRefresh({ success: false, reason: "network_or_other" });
         }
         throw error;
       }
@@ -425,21 +480,21 @@ export class OAuthManager {
         }
 
         const result = await this.pollImpl(this.config, auth.deviceCode);
-        if (result.kind === 'success') {
+        if (result.kind === "success") {
           await this.storage.save(this.config.name, result.token);
           return result.token;
         }
-        if (result.kind === 'denied') {
+        if (result.kind === "denied") {
           throw new OAuthError(
-            `Authorization denied${result.description ? `: ${result.description}` : ''}`,
+            `Authorization denied${result.description ? `: ${result.description}` : ""}`,
           );
         }
-        if (result.kind === 'expired') {
+        if (result.kind === "expired") {
           deviceExpired = true;
           break;
         }
         // pending: bump interval permanently when server requests slow_down.
-        if (result.errorCode === 'slow_down') {
+        if (result.errorCode === "slow_down") {
           currentInterval += 5;
         }
         await this.sleep(currentInterval * 1000);
@@ -448,12 +503,12 @@ export class OAuthManager {
       // Otherwise loop outer to request a new device code.
       // Guard: if we're already past the deadline, bail.
       if (this.now() >= deadlineAt) {
-        throw new DeviceCodeTimeoutError('Device authorization timed out');
+        throw new DeviceCodeTimeoutError("Device authorization timed out");
       }
     }
 
     // Unreachable — inner loop always returns or throws.
-    throw new OAuthError('Device flow ended unexpectedly');
+    throw new OAuthError("Device flow ended unexpectedly");
   }
 
   private shouldRefreshToken(token: TokenInfo, force: boolean): boolean {
@@ -465,7 +520,7 @@ export class OAuthManager {
 
   private throwIfAborted(signal: AbortSignal | undefined): void {
     if (signal?.aborted === true) {
-      throw new OAuthError('Login aborted by caller');
+      throw new OAuthError("Login aborted by caller");
     }
   }
 }

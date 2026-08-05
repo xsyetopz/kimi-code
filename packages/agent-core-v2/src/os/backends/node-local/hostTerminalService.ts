@@ -10,22 +10,33 @@
  * module to be built or resolvable.
  */
 
-import type { IPty } from 'node-pty';
+import type { IPty } from "node-pty";
 
-import { Disposable } from '#/_base/di/lifecycle';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
+import { Disposable } from "#/_base/di/lifecycle";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
 
-import { IHostTerminalService, type TerminalProcess, type TerminalSpawnOptions } from '#/os/interface/terminal';
+import {
+  IHostTerminalService,
+  type TerminalProcess,
+  type TerminalSpawnOptions,
+} from "#/os/interface/terminal";
 
-export class HostTerminalService extends Disposable implements IHostTerminalService {
+export class HostTerminalService
+  extends Disposable
+  implements IHostTerminalService
+{
   declare readonly _serviceBrand: undefined;
 
   private readonly processes = new Set<TerminalProcess>();
 
   async spawn(options: TerminalSpawnOptions): Promise<TerminalProcess> {
-    const pty = await import('node-pty');
+    const pty = await import("node-pty");
     const proc: IPty = pty.spawn(options.shell, [], {
-      name: 'xterm-256color',
+      name: "xterm-256color",
       cwd: options.cwd,
       cols: options.cols,
       rows: options.rows,
@@ -33,7 +44,8 @@ export class HostTerminalService extends Disposable implements IHostTerminalServ
     });
     const terminalProcess: TerminalProcess = {
       onProcessData: (listener) => proc.onData(listener),
-      onProcessExit: (listener) => proc.onExit((event) => listener({ exitCode: event.exitCode })),
+      onProcessExit: (listener) =>
+        proc.onExit((event) => listener({ exitCode: event.exitCode })),
       write: (data) => proc.write(data),
       resize: (cols, rows) => proc.resize(cols, rows),
       kill: () => proc.kill(),
@@ -46,8 +58,7 @@ export class HostTerminalService extends Disposable implements IHostTerminalServ
     for (const process of this.processes) {
       try {
         process.kill();
-      } catch {
-      }
+      } catch {}
     }
     this.processes.clear();
     super.dispose();
@@ -59,5 +70,5 @@ registerScopedService(
   IHostTerminalService,
   HostTerminalService,
   ScopeActivation.OnScopeCreated,
-  'terminal',
+  "terminal",
 );

@@ -9,11 +9,11 @@
 // safe to render with `v-html`; never v-html raw user input.
 
 const HTML_ESCAPE: Record<string, string> = {
-  '&': '&amp;',
-  '<': '&lt;',
-  '>': '&gt;',
-  '"': '&quot;',
-  "'": '&#39;',
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  '"': "&quot;",
+  "'": "&#39;",
 };
 
 /** Escape the five HTML-significant characters. */
@@ -23,7 +23,7 @@ export function escapeHtml(s: string): string {
 
 /** Escape regexp metacharacters so `s` matches literally. */
 export function escapeRegExp(s: string): string {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 /**
@@ -33,8 +33,8 @@ export function escapeRegExp(s: string): string {
  * collapsed to spaces so the snippet renders on a single line.
  */
 export function snippet(text: string, query: string, radius = 40): string {
-  const flat = text.replace(/\s+/g, ' ').trim();
-  if (flat.length === 0) return '';
+  const flat = text.replace(/\s+/g, " ").trim();
+  if (flat.length === 0) return "";
   const q = query.trim();
   if (q.length === 0) return head(flat, radius * 2);
 
@@ -45,7 +45,7 @@ export function snippet(text: string, query: string, radius = 40): string {
   const end = Math.min(flat.length, idx + q.length + radius);
   const lead = start > 0;
   const tail = end < flat.length;
-  return `${lead ? '…' : ''}${flat.slice(start, end)}${tail ? '…' : ''}`;
+  return `${lead ? "…" : ""}${flat.slice(start, end)}${tail ? "…" : ""}`;
 }
 
 function head(s: string, n: number): string {
@@ -62,6 +62,6 @@ export function highlightHtml(text: string, query: string): string {
   const escaped = escapeHtml(text);
   const q = query.trim();
   if (q.length === 0) return escaped;
-  const re = new RegExp(escapeRegExp(escapeHtml(q)), 'gi');
+  const re = new RegExp(escapeRegExp(escapeHtml(q)), "gi");
   return escaped.replace(re, (m) => `<mark>${m}</mark>`);
 }

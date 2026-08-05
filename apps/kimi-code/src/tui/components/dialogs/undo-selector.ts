@@ -5,11 +5,11 @@ import {
   truncateToWidth,
   visibleWidth,
   type Focusable,
-} from '@moonshot-ai/pi-tui';
+} from "@moonshot-ai/pi-tui";
 
-import { SELECT_POINTER } from '#/tui/constant/symbols';
-import { currentTheme } from '#/tui/theme';
-import { SearchableList } from '#/tui/utils/searchable-list';
+import { SELECT_POINTER } from "#/tui/constant/symbols";
+import { currentTheme } from "#/tui/theme";
+import { SearchableList } from "#/tui/utils/searchable-list";
 
 const MAX_VISIBLE_CHOICES = 5;
 const PREFERRED_SELECTED_OFFSET = 2;
@@ -66,17 +66,17 @@ export class UndoSelectorComponent extends Container implements Focusable {
 
   override render(width: number): string[] {
     const view = this.list.view();
-    const hintParts = ['↑↓ navigate', 'Enter select', 'Esc cancel'];
+    const hintParts = ["↑↓ navigate", "Enter select", "Esc cancel"];
 
     const lines: string[] = [
-      currentTheme.fg('primary', '─'.repeat(width)),
-      currentTheme.boldFg('primary', ' Select messages to undo'),
-      currentTheme.fg('textMuted', ' ' + hintParts.join(' · ')),
-      '',
+      currentTheme.fg("primary", "─".repeat(width)),
+      currentTheme.boldFg("primary", " Select messages to undo"),
+      currentTheme.fg("textMuted", " " + hintParts.join(" · ")),
+      "",
     ];
 
     if (view.items.length === 0) {
-      lines.push(currentTheme.fg('textMuted', '   No messages'));
+      lines.push(currentTheme.fg("textMuted", "   No messages"));
     } else {
       const visibleCount = Math.min(MAX_VISIBLE_CHOICES, view.items.length);
       const maxStart = view.items.length - visibleCount;
@@ -90,13 +90,18 @@ export class UndoSelectorComponent extends Container implements Focusable {
         const choice = view.items[i];
         if (choice === undefined) continue;
         lines.push(
-          this.renderChoiceLine(choice, i === view.selectedIndex, i > view.selectedIndex, width),
+          this.renderChoiceLine(
+            choice,
+            i === view.selectedIndex,
+            i > view.selectedIndex,
+            width,
+          ),
         );
       }
     }
 
-    lines.push('');
-    lines.push(currentTheme.fg('primary', '─'.repeat(width)));
+    lines.push("");
+    lines.push(currentTheme.fg("primary", "─".repeat(width)));
     return lines.map((line) => truncateToWidth(line, width));
   }
 
@@ -106,12 +111,12 @@ export class UndoSelectorComponent extends Container implements Focusable {
     inUndoRange: boolean,
     width: number,
   ): string {
-    const pointer = isSelected ? SELECT_POINTER : ' ';
+    const pointer = isSelected ? SELECT_POINTER : " ";
     const prefix = `  ${pointer} `;
     const labelBudget = Math.max(8, width - visibleWidth(prefix));
-    const label = truncateToWidth(choice.label, labelBudget, '…');
-    const token = isSelected ? 'primary' : inUndoRange ? 'textDim' : 'text';
-    let line = currentTheme.fg(isSelected ? 'primary' : 'textDim', prefix);
+    const label = truncateToWidth(choice.label, labelBudget, "…");
+    const token = isSelected ? "primary" : inUndoRange ? "textDim" : "text";
+    let line = currentTheme.fg(isSelected ? "primary" : "textDim", prefix);
     line += isSelected
       ? currentTheme.boldFg(token, label)
       : currentTheme.fg(token, label);

@@ -11,7 +11,7 @@
  * inline position inside the carrier's text.
  */
 
-import type { AttachmentId } from './ids';
+import type { AttachmentId } from "./ids";
 
 /**
  * Where the frontend fetches the bytes. Mirrors the engine's media source
@@ -19,8 +19,8 @@ import type { AttachmentId } from './ids';
  * shipped over the transcript API.
  */
 export type AttachmentSource =
-  | { readonly kind: 'url'; readonly url: string }
-  | { readonly kind: 'file'; readonly fileId: string };
+  | { readonly kind: "url"; readonly url: string }
+  | { readonly kind: "file"; readonly fileId: string };
 
 export interface TranscriptAttachment {
   readonly attachmentId: AttachmentId;

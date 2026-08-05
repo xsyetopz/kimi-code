@@ -3,11 +3,11 @@
 // A minimal RESP (REdis Serialization Protocol) TCP front-end for MiniDb, so
 // existing Redis clients (redis-cli, ioredis, ...) can talk to it.
 
-import net from 'node:net';
-import type { Socket } from 'node:net';
-import { MiniDb } from './index.js';
+import net from "node:net";
+import type { Socket } from "node:net";
+import { MiniDb } from "./index.js";
 
-const CRLF = '\r\n';
+const CRLF = "\r\n";
 const NIL = `$-1${CRLF}`;
 
 const reply = {
@@ -22,7 +22,11 @@ const reply = {
   bulk: (v: unknown): Buffer => {
     if (v === undefined || v === null) return Buffer.from(NIL);
     const b = Buffer.isBuffer(v) ? v : Buffer.from(String(v as string));
-    return Buffer.concat([Buffer.from(`$${b.length}${CRLF}`), b, Buffer.from(CRLF)]);
+    return Buffer.concat([
+      Buffer.from(`$${b.length}${CRLF}`),
+      b,
+      Buffer.from(CRLF),
+    ]);
   },
   array: (items: unknown[]): Buffer => {
     const parts: Buffer[] = [Buffer.from(`*${items.length}${CRLF}`)];
@@ -61,7 +65,10 @@ class RespParser {
       if (idx === -1) return null;
       const line = this.buf.subarray(0, idx).toString();
       this.buf = this.buf.subarray(idx + 2);
-      return line.split(' ').filter(Boolean).map((s) => Buffer.from(s));
+      return line
+        .split(" ")
+        .filter(Boolean)
+        .map((s) => Buffer.from(s));
     }
 
     let pos = 1;
@@ -72,7 +79,8 @@ class RespParser {
 
     const args: Buffer[] = [];
     for (let i = 0; i < argc; i++) {
-      if (pos >= this.buf.length || this.buf[pos] !== 0x24 /* '$' */) return null;
+      if (pos >= this.buf.length || this.buf[pos] !== 0x24 /* '$' */)
+        return null;
       pos++;
       end = this.buf.indexOf(CRLF, pos);
       if (end === -1) return null;
@@ -87,39 +95,43 @@ class RespParser {
   }
 }
 
-async function handle(db: MiniDb<string>, args: Buffer[]): Promise<string | Buffer | null> {
+async function handle(
+  db: MiniDb<string>,
+  args: Buffer[],
+): Promise<string | Buffer | null> {
   const cmd = args[0]!.toString().toUpperCase();
-  const S = (i: number): string | undefined => (args[i] === undefined ? undefined : args[i]!.toString());
+  const S = (i: number): string | undefined =>
+    args[i] === undefined ? undefined : args[i]!.toString();
 
   switch (cmd) {
-    case 'PING':
+    case "PING":
       return args[1] ? reply.bulk(S(1)) : reply.pong();
-    case 'ECHO':
+    case "ECHO":
       return reply.bulk(S(1));
-    case 'GET': {
+    case "GET": {
       const v = db.get(S(1)!);
       return reply.bulk(v === undefined ? null : v);
     }
-    case 'SET': {
+    case "SET": {
       const key = S(1)!;
       const val = S(2)!;
       let ttl: number | undefined;
       for (let i = 3; i < args.length; i++) {
         const opt = S(i)!.toUpperCase();
-        if (opt === 'EX') ttl = Number(S(++i)) * 1000;
-        else if (opt === 'PX') ttl = Number(S(++i));
+        if (opt === "EX") ttl = Number(S(++i)) * 1000;
+        else if (opt === "PX") ttl = Number(S(++i));
       }
       await db.set(key, val, ttl ? { ttl } : {});
       return reply.ok();
     }
-    case 'DEL': {
+    case "DEL": {
       let n = 0;
       for (let i = 1; i < args.length; i++) if (await db.del(S(i)!)) n++;
       return reply.int(n);
     }
-    case 'EXISTS':
+    case "EXISTS":
       return reply.int(db.has(S(1)!) ? 1 : 0);
-    case 'MGET': {
+    case "MGET": {
       const out: unknown[] = [];
       for (let i = 1; i < args.length; i++) {
         const v = db.get(S(i)!);
@@ -127,22 +139,25 @@ async function handle(db: MiniDb<string>, args: Buffer[]): Promise<string | Buff
       }
       return reply.array(out);
     }
-    case 'MSET': {
+    case "MSET": {
       const entries: (readonly [string, string])[] = [];
-      for (let i = 1; i + 1 < args.length; i += 2) entries.push([S(i)!, S(i + 1)!]);
+      for (let i = 1; i + 1 < args.length; i += 2)
+        entries.push([S(i)!, S(i + 1)!]);
       await db.mset(entries); // atomic batch (single WAL frame), like Redis MSET
       return reply.ok();
     }
-    case 'TTL':
+    case "TTL":
       return reply.int(Math.trunc(db.ttl(S(1)!) / 1000));
-    case 'DBSIZE':
+    case "DBSIZE":
       return reply.int(db.size);
-    case 'COMPACT':
+    case "COMPACT":
       await db.compact();
       return reply.ok();
-    case 'INFO':
-      return reply.bulk(`minidb_version:0.0.1${CRLF}keys:${db.size}${CRLF}compactions:${db.stats.compactions}${CRLF}`);
-    case 'QUIT':
+    case "INFO":
+      return reply.bulk(
+        `minidb_version:0.0.1${CRLF}keys:${db.size}${CRLF}compactions:${db.stats.compactions}${CRLF}`,
+      );
+    case "QUIT":
       return null;
     default:
       return reply.err(`unknown command '${cmd}'`);
@@ -153,7 +168,7 @@ export interface ServerOptions {
   dir: string;
   port?: number;
   host?: string;
-  fsyncPolicy?: 'always' | 'everysec' | 'no';
+  fsyncPolicy?: "always" | "everysec" | "no";
 }
 
 export interface ServerHandle {
@@ -164,8 +179,17 @@ export interface ServerHandle {
   host: string;
 }
 
-export async function startServer({ dir, port = 6379, host = '127.0.0.1', fsyncPolicy = 'everysec' }: ServerOptions): Promise<ServerHandle> {
-  const db = (await MiniDb.open({ dir, valueCodec: 'string', fsyncPolicy })) as MiniDb<string>;
+export async function startServer({
+  dir,
+  port = 6379,
+  host = "127.0.0.1",
+  fsyncPolicy = "everysec",
+}: ServerOptions): Promise<ServerHandle> {
+  const db = (await MiniDb.open({
+    dir,
+    valueCodec: "string",
+    fsyncPolicy,
+  })) as MiniDb<string>;
   const server = net.createServer((socket: Socket) => {
     const parser = new RespParser();
     // Serialize per-connection processing: a new chunk's commands are queued
@@ -179,13 +203,13 @@ export async function startServer({ dir, port = 6379, host = '127.0.0.1', fsyncP
     // listener that event becomes an uncaught exception and takes the whole
     // process down, so swallow it: the connection is dead either way, and the
     // queued work below skips further writes to it.
-    socket.on('error', () => {});
+    socket.on("error", () => {});
     // Never write to a destroyed socket: write-after-destroy would just
     // surface as another 'error' event on the dead connection.
     const send = (res: string | Buffer): void => {
       if (!socket.destroyed) socket.write(res);
     };
-    socket.on('data', (chunk: Buffer) => {
+    socket.on("data", (chunk: Buffer) => {
       queue = queue.then(async () => {
         try {
           for (const args of parser.feed(chunk)) {
@@ -220,7 +244,7 @@ export async function startServer({ dir, port = 6379, host = '127.0.0.1', fsyncP
     server.close();
     await db.close();
   };
-  process.on('SIGINT', () => {
+  process.on("SIGINT", () => {
     void close().then(() => process.exit(0));
   });
   return { server, db, close, port: actualPort, host };
@@ -233,9 +257,11 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     const i = argv.indexOf(`--${name}`);
     return i === -1 ? def : argv[i + 1]!;
   };
-  const dir = arg('dir', './data');
-  const port = Number(arg('port', '6379'));
-  const fsyncPolicy = arg('fsync', 'everysec') as 'always' | 'everysec' | 'no';
+  const dir = arg("dir", "./data");
+  const port = Number(arg("port", "6379"));
+  const fsyncPolicy = arg("fsync", "everysec") as "always" | "everysec" | "no";
   const { host, port: p } = await startServer({ dir, port, fsyncPolicy });
-  console.log(`minidb RESP server listening on ${host}:${p} (dir=${dir}, fsync=${fsyncPolicy})`);
+  console.log(
+    `minidb RESP server listening on ${host}:${p} (dir=${dir}, fsync=${fsyncPolicy})`,
+  );
 }

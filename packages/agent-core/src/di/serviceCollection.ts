@@ -5,8 +5,8 @@
  * `instanceof SyncDescriptor`.
  */
 
-import type { SyncDescriptor } from './descriptors';
-import type { ServiceIdentifier } from './instantiation';
+import type { SyncDescriptor } from "./descriptors";
+import type { ServiceIdentifier } from "./instantiation";
 
 export class ServiceCollection {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -1,6 +1,4 @@
-
-
-import { createDecorator } from '../../di';
+import { createDecorator } from "../../di";
 
 export interface ILogService {
   readonly _serviceBrand: undefined;
@@ -14,4 +12,4 @@ export interface ILogService {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
-export const ILogService = createDecorator<ILogService>('logService');
+export const ILogService = createDecorator<ILogService>("logService");

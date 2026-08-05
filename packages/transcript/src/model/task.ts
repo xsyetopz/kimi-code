@@ -6,18 +6,18 @@
  * `append` op with `target: 'task'`.
  */
 
-import type { AgentId, TaskId } from './ids';
-import type { StepUsage } from './turn';
+import type { AgentId, TaskId } from "./ids";
+import type { StepUsage } from "./turn";
 
-export type TaskKind = 'shell' | 'subagent' | 'tool' | 'other';
+export type TaskKind = "shell" | "subagent" | "tool" | "other";
 
 export type TaskState =
-  | 'running'
-  | 'completed'
-  | 'failed'
-  | 'timed_out'
-  | 'killed'
-  | 'lost';
+  | "running"
+  | "completed"
+  | "failed"
+  | "timed_out"
+  | "killed"
+  | "lost";
 
 export interface TranscriptTask {
   readonly taskId: TaskId;

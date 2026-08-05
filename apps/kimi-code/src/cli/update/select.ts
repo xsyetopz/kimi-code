@@ -1,6 +1,6 @@
-import { gt, valid } from 'semver';
+import { gt, valid } from "semver";
 
-import { type UpdateTarget } from './types';
+import { type UpdateTarget } from "./types";
 
 export function selectUpdateTarget(
   currentVersion: string,

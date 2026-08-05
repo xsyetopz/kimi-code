@@ -1,4 +1,4 @@
-import type { WireMigration, WireMigrationRecord } from './index';
+import type { WireMigration, WireMigrationRecord } from "./index";
 
 /**
  * v1.2 -> v1.3 is a bump-only migration.
@@ -10,8 +10,8 @@ import type { WireMigration, WireMigrationRecord } from './index';
  * transparently handled at read/write time by BlobStore.
  */
 export const migrateV1_2ToV1_3: WireMigration = {
-  sourceVersion: '1.2',
-  targetVersion: '1.3',
+  sourceVersion: "1.2",
+  targetVersion: "1.3",
   migrateRecord(record: WireMigrationRecord): WireMigrationRecord {
     return record;
   },

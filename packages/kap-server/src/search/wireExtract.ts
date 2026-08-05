@@ -26,7 +26,7 @@
  */
 
 export interface ExtractedWireMessage {
-  readonly role: 'user' | 'assistant';
+  readonly role: "user" | "assistant";
   readonly text: string;
   /** Epoch ms; undefined when the record carries no usable time. */
   readonly time?: number;
@@ -57,10 +57,10 @@ export interface ExtractedWireMessage {
  *     matching the live TurnModel whose turn ids are monotonic.
  */
 export type TurnEffect =
-  | { readonly kind: 'open'; readonly anchor: boolean }
-  | { readonly kind: 'ensure' }
-  | { readonly kind: 'undo'; readonly count: number }
-  | { readonly kind: 'none' };
+  | { readonly kind: "open"; readonly anchor: boolean }
+  | { readonly kind: "ensure" }
+  | { readonly kind: "undo"; readonly count: number }
+  | { readonly kind: "none" };
 
 /**
  * How one wire record moves the per-turn step tracker:
@@ -74,8 +74,8 @@ export type TurnEffect =
  *     mapping is reset at turn boundaries, not per step.
  */
 export type StepEffect =
-  | { readonly kind: 'begin'; readonly uuid: string; readonly ordinal?: number }
-  | { readonly kind: 'none' };
+  | { readonly kind: "begin"; readonly uuid: string; readonly ordinal?: number }
+  | { readonly kind: "none" };
 
 export interface WireLineAnalysis {
   readonly messages: ExtractedWireMessage[];
@@ -83,9 +83,9 @@ export interface WireLineAnalysis {
   readonly step: StepEffect;
 }
 
-const NONE: TurnEffect = { kind: 'none' };
-const ENSURE: TurnEffect = { kind: 'ensure' };
-const STEP_NONE: StepEffect = { kind: 'none' };
+const NONE: TurnEffect = { kind: "none" };
+const ENSURE: TurnEffect = { kind: "ensure" };
+const STEP_NONE: StepEffect = { kind: "none" };
 
 /**
  * Message origins appended by the system rather than typed by the user. These
@@ -97,28 +97,32 @@ const STEP_NONE: StepEffect = { kind: 'none' };
  * triggers are system noise and are filtered.
  */
 const NON_USER_ORIGIN_KINDS: ReadonlySet<string> = new Set([
-  'injection',
-  'system_trigger',
-  'retry',
-  'compaction_summary',
+  "injection",
+  "system_trigger",
+  "retry",
+  "compaction_summary",
 ]);
 
 /** groupTurns: hidden user origins that are folded away without opening a turn. */
-const HIDDEN_USER_ORIGINS: ReadonlySet<string> = new Set(['injection', 'system_trigger', 'retry']);
+const HIDDEN_USER_ORIGINS: ReadonlySet<string> = new Set([
+  "injection",
+  "system_trigger",
+  "retry",
+]);
 /**
  * groupTurns: hidden origins that nonetheless OPEN a real engine turn
  * (`MessageStepRequest` with `admission: 'newTurn'` — goal continuation,
  * subagent run prompts). They advance the ordinal but are not undo anchors.
  */
 const TURN_OPENING_SYSTEM_TRIGGERS: ReadonlySet<string> = new Set([
-  'goal_continuation',
-  'subagent',
+  "goal_continuation",
+  "subagent",
 ]);
 /** groupTurns: origins rendered as timeline markers rather than turns. */
 const MARKER_USER_ORIGINS: ReadonlySet<string> = new Set([
-  'skill_activation',
-  'plugin_command',
-  'compaction_summary',
+  "skill_activation",
+  "plugin_command",
+  "compaction_summary",
 ]);
 
 interface OriginLike {
@@ -129,22 +133,24 @@ interface OriginLike {
 
 function isUserSlashPrompt(origin: OriginLike): boolean {
   return (
-    (origin.kind === 'skill_activation' || origin.kind === 'plugin_command') &&
-    origin.trigger === 'user-slash'
+    (origin.kind === "skill_activation" || origin.kind === "plugin_command") &&
+    origin.trigger === "user-slash"
   );
 }
 
 function isUserTypedOrigin(origin: OriginLike): boolean {
-  if (origin.kind === 'skill_activation' || origin.kind === 'plugin_command') {
-    return origin.trigger === 'user-slash';
+  if (origin.kind === "skill_activation" || origin.kind === "plugin_command") {
+    return origin.trigger === "user-slash";
   }
-  if (typeof origin.kind === 'string' && NON_USER_ORIGIN_KINDS.has(origin.kind)) return false;
+  if (typeof origin.kind === "string" && NON_USER_ORIGIN_KINDS.has(origin.kind))
+    return false;
   return true;
 }
 
 /** Same normalization as `sessionExport/wire-scan.ts`: seconds vs epoch ms. */
 function normalizeTimestampMs(value: unknown): number | undefined {
-  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) return undefined;
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0)
+    return undefined;
   return value > 1e12 ? Math.floor(value) : Math.floor(value * 1000);
 }
 
@@ -154,14 +160,14 @@ interface ContentPartLike {
 }
 
 function textOfContent(content: unknown): string {
-  if (!Array.isArray(content)) return '';
-  let text = '';
+  if (!Array.isArray(content)) return "";
+  let text = "";
   for (const part of content as readonly ContentPartLike[]) {
     if (
       part !== null &&
-      typeof part === 'object' &&
-      part.type === 'text' &&
-      typeof part.text === 'string'
+      typeof part === "object" &&
+      part.type === "text" &&
+      typeof part.text === "string"
     ) {
       text += part.text;
     }
@@ -186,41 +192,45 @@ function parseWireLine(line: string): ParsedWireRecord | undefined {
   } catch {
     return undefined;
   }
-  if (record === null || typeof record !== 'object' || Array.isArray(record)) return undefined;
+  if (record === null || typeof record !== "object" || Array.isArray(record))
+    return undefined;
   return record as ParsedWireRecord;
 }
 
 function turnEffectOfAppendMessage(message: unknown): TurnEffect {
-  if (message === null || typeof message !== 'object') return NONE;
+  if (message === null || typeof message !== "object") return NONE;
   const m = message as { role?: unknown; origin?: unknown };
-  if (m.role === 'system') return NONE; // groupTurns skips system messages
-  if (m.role === 'assistant') return ENSURE;
-  if (m.role !== 'user') return NONE; // tool-role messages attach, never open
+  if (m.role === "system") return NONE; // groupTurns skips system messages
+  if (m.role === "assistant") return ENSURE;
+  if (m.role !== "user") return NONE; // tool-role messages attach, never open
 
   const origin =
-    m.origin !== null && typeof m.origin === 'object' ? (m.origin as OriginLike) : undefined;
+    m.origin !== null && typeof m.origin === "object"
+      ? (m.origin as OriginLike)
+      : undefined;
   const kind = origin?.kind;
-  if (typeof kind === 'string' && HIDDEN_USER_ORIGINS.has(kind)) {
+  if (typeof kind === "string" && HIDDEN_USER_ORIGINS.has(kind)) {
     if (
-      kind === 'system_trigger' &&
-      typeof origin?.name === 'string' &&
+      kind === "system_trigger" &&
+      typeof origin?.name === "string" &&
       TURN_OPENING_SYSTEM_TRIGGERS.has(origin.name)
     ) {
-      return { kind: 'open', anchor: false };
+      return { kind: "open", anchor: false };
     }
     return NONE;
   }
-  if (typeof kind === 'string' && MARKER_USER_ORIGINS.has(kind)) {
+  if (typeof kind === "string" && MARKER_USER_ORIGINS.has(kind)) {
     // A user-slash skill/plugin command is a real user prompt (the engine's
     // `isRealUserPrompt`): marker AND a turn opener, and an undo anchor.
-    if (origin !== undefined && isUserSlashPrompt(origin)) return { kind: 'open', anchor: true };
+    if (origin !== undefined && isUserSlashPrompt(origin))
+      return { kind: "open", anchor: true };
     return NONE;
   }
   // Every other user message opens a turn (kind 'user' / undefined / cron /
   // task / hook_result / shell_command / …). Only origin-less and 'user'
   // ones are undo anchors (`isUndoAnchor`).
-  const anchor = kind === undefined || kind === 'user';
-  return { kind: 'open', anchor };
+  const anchor = kind === undefined || kind === "user";
+  return { kind: "open", anchor };
 }
 
 /** Full reading of one wire.jsonl line; unparseable lines analyze to zero. */
@@ -229,30 +239,35 @@ export function analyzeWireLine(line: string): WireLineAnalysis {
   if (r === undefined) return { messages: [], turn: NONE, step: STEP_NONE };
   const time = normalizeTimestampMs(r.time);
 
-  if (r.type === 'context.append_message') {
+  if (r.type === "context.append_message") {
     const turn = turnEffectOfAppendMessage(r.message);
     const message = r.message;
     const messages: ExtractedWireMessage[] = [];
-    if (message !== null && typeof message === 'object') {
-      const m = message as { role?: unknown; content?: unknown; origin?: unknown };
-      if (m.role === 'user') {
+    if (message !== null && typeof message === "object") {
+      const m = message as {
+        role?: unknown;
+        content?: unknown;
+        origin?: unknown;
+      };
+      if (m.role === "user") {
         const origin = m.origin;
         const userTyped =
           origin === null ||
           origin === undefined ||
-          (typeof origin === 'object' && isUserTypedOrigin(origin as OriginLike));
+          (typeof origin === "object" &&
+            isUserTypedOrigin(origin as OriginLike));
         if (userTyped) {
           const text = textOfContent(m.content).trim();
-          if (text.length > 0) messages.push({ role: 'user', text, time });
+          if (text.length > 0) messages.push({ role: "user", text, time });
         }
       }
     }
     return { messages, turn, step: STEP_NONE };
   }
 
-  if (r.type === 'context.append_loop_event') {
+  if (r.type === "context.append_loop_event") {
     const event = r.event;
-    if (event === null || typeof event !== 'object') {
+    if (event === null || typeof event !== "object") {
       return { messages: [], turn: NONE, step: STEP_NONE };
     }
     const e = event as {
@@ -263,52 +278,62 @@ export function analyzeWireLine(line: string): WireLineAnalysis {
       stepUuid?: unknown;
     };
     const messages: ExtractedWireMessage[] = [];
-    if (e.type === 'step.begin') {
-      if (typeof e.uuid !== 'string' || e.uuid.length === 0) {
+    if (e.type === "step.begin") {
+      if (typeof e.uuid !== "string" || e.uuid.length === 0) {
         return { messages: [], turn: NONE, step: STEP_NONE };
       }
       const ordinal =
-        typeof e.step === 'number' && Number.isSafeInteger(e.step) && e.step > 0
+        typeof e.step === "number" && Number.isSafeInteger(e.step) && e.step > 0
           ? e.step
           : undefined;
-      return { messages: [], turn: NONE, step: { kind: 'begin', uuid: e.uuid, ordinal } };
+      return {
+        messages: [],
+        turn: NONE,
+        step: { kind: "begin", uuid: e.uuid, ordinal },
+      };
     }
     const stepUuid =
-      typeof e.stepUuid === 'string' && e.stepUuid.length > 0 ? e.stepUuid : undefined;
+      typeof e.stepUuid === "string" && e.stepUuid.length > 0
+        ? e.stepUuid
+        : undefined;
     // `ensure` only for events whose folded assistant message survives
     // settling: non-vacuous content parts and tool calls. A `tool.result`
     // folds into a tool message (never opens a turn), and a step with only
     // vacuous content is dropped at `step.end`.
     let turn: TurnEffect = NONE;
-    if (e.type === 'content.part') {
+    if (e.type === "content.part") {
       const part = e.part;
-      if (part !== null && typeof part === 'object') {
-        const p = part as ContentPartLike & { think?: unknown; encrypted?: unknown };
-        if (p.type === 'text' && typeof p.text === 'string') {
+      if (part !== null && typeof part === "object") {
+        const p = part as ContentPartLike & {
+          think?: unknown;
+          encrypted?: unknown;
+        };
+        if (p.type === "text" && typeof p.text === "string") {
           const text = p.text.trim();
           if (text.length > 0) {
-            messages.push({ role: 'assistant', text, time, stepUuid });
+            messages.push({ role: "assistant", text, time, stepUuid });
             turn = ENSURE;
           }
-        } else if (p.type === 'think' && typeof p.think === 'string') {
+        } else if (p.type === "think" && typeof p.think === "string") {
           // Vacuous thinking (empty, unsigned) is dropped at `step.end`,
           // same as empty text; signed or non-empty thinking survives.
-          if (p.think.trim().length > 0 || p.encrypted !== undefined) turn = ENSURE;
+          if (p.think.trim().length > 0 || p.encrypted !== undefined)
+            turn = ENSURE;
         } else {
           // Non-text content (image, …) is non-vacuous: the assistant survives.
           turn = ENSURE;
         }
       }
-    } else if (e.type === 'tool.call') {
+    } else if (e.type === "tool.call") {
       turn = ENSURE;
     }
     return { messages, turn, step: STEP_NONE };
   }
 
-  if (r.type === 'context.undo') {
+  if (r.type === "context.undo") {
     const count = r.count;
-    if (typeof count === 'number' && Number.isSafeInteger(count) && count > 0) {
-      return { messages: [], turn: { kind: 'undo', count }, step: STEP_NONE };
+    if (typeof count === "number" && Number.isSafeInteger(count) && count > 0) {
+      return { messages: [], turn: { kind: "undo", count }, step: STEP_NONE };
     }
     return { messages: [], turn: NONE, step: STEP_NONE };
   }

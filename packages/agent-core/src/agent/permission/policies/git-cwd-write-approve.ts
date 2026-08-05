@@ -1,18 +1,24 @@
-import type { Agent } from '../..';
-import { isWithinWorkspace } from '../../../tools/policies/path-access';
-import { findGitWorkTreeMarker } from '../../../tools/support/git-worktree';
-import type { PermissionPolicy, PermissionPolicyContext, PermissionPolicyResult } from '../types';
-import { writeFileAccesses } from './file-access-ask';
+import type { Agent } from "../..";
+import { isWithinWorkspace } from "../../../tools/policies/path-access";
+import { findGitWorkTreeMarker } from "../../../tools/support/git-worktree";
+import type {
+  PermissionPolicy,
+  PermissionPolicyContext,
+  PermissionPolicyResult,
+} from "../types";
+import { writeFileAccesses } from "./file-access-ask";
 
 export class GitCwdWriteApprovePermissionPolicy implements PermissionPolicy {
-  readonly name = 'git-cwd-write-approve';
+  readonly name = "git-cwd-write-approve";
 
   constructor(private readonly agent: Agent) {}
 
-  async evaluate(context: PermissionPolicyContext): Promise<PermissionPolicyResult | undefined> {
+  async evaluate(
+    context: PermissionPolicyContext,
+  ): Promise<PermissionPolicyResult | undefined> {
     const toolName = context.toolCall.name;
-    if (toolName !== 'Write' && toolName !== 'Edit') return;
-    if (this.agent.kaos.pathClass() !== 'posix') return;
+    if (toolName !== "Write" && toolName !== "Edit") return;
+    if (this.agent.kaos.pathClass() !== "posix") return;
 
     const cwd = this.agent.config.cwd;
     if (cwd.length === 0) return;
@@ -24,7 +30,7 @@ export class GitCwdWriteApprovePermissionPolicy implements PermissionPolicy {
         isWithinWorkspace(
           access.path,
           { workspaceDir: cwd, additionalDirs: this.agent.getAdditionalDirs() },
-          'posix',
+          "posix",
         ),
       )
     ) {
@@ -35,7 +41,7 @@ export class GitCwdWriteApprovePermissionPolicy implements PermissionPolicy {
     if (marker === null) return;
 
     return {
-      kind: 'approve',
+      kind: "approve",
     };
   }
 }

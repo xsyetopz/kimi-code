@@ -1,4 +1,4 @@
-import type { ToolInputDisplay } from '@moonshot-ai/agent-core';
+import type { ToolInputDisplay } from "@moonshot-ai/agent-core";
 
 /**
  * Recover the UI display attached to a legacy top-level ToolResult.
@@ -18,7 +18,7 @@ export function extractToolCallDisplays(
 
   for (const rawLine of wireText.split(/\r?\n/)) {
     const line = rawLine.trim();
-    if (line === '') continue;
+    if (line === "") continue;
 
     let parsed: unknown;
     try {
@@ -28,12 +28,12 @@ export function extractToolCallDisplays(
     }
 
     const record = asRecord(parsed);
-    const message = asRecord(record?.['message']);
-    if (message?.['type'] !== 'ToolResult') continue;
+    const message = asRecord(record?.["message"]);
+    if (message?.["type"] !== "ToolResult") continue;
 
-    const payload = asRecord(message['payload']);
-    const toolCallId = payload?.['tool_call_id'];
-    if (typeof toolCallId !== 'string' || toolCallId === '') continue;
+    const payload = asRecord(message["payload"]);
+    const toolCallId = payload?.["tool_call_id"];
+    if (typeof toolCallId !== "string" || toolCallId === "") continue;
 
     // A duplicate result makes the id-to-display join ambiguous. Do not let a
     // later line silently replace the display chosen from an earlier result.
@@ -44,8 +44,8 @@ export function extractToolCallDisplays(
     seenToolCallIds.add(toolCallId);
 
     if (payload === undefined) continue;
-    const returnValue = asRecord(payload['return_value']);
-    const legacyDisplays = returnValue?.['display'];
+    const returnValue = asRecord(payload["return_value"]);
+    const legacyDisplays = returnValue?.["display"];
     if (!Array.isArray(legacyDisplays) || legacyDisplays.length !== 1) continue;
 
     const display = translateDisplayBlock(legacyDisplays[0]);
@@ -59,39 +59,44 @@ function translateDisplayBlock(raw: unknown): ToolInputDisplay | undefined {
   const block = asRecord(raw);
   if (block === undefined) return undefined;
 
-  switch (block['type']) {
-    case 'diff': {
-      const path = block['path'];
-      const before = block['old_text'];
-      const after = block['new_text'];
-      if (typeof path !== 'string' || typeof before !== 'string' || typeof after !== 'string') {
+  switch (block["type"]) {
+    case "diff": {
+      const path = block["path"];
+      const before = block["old_text"];
+      const after = block["new_text"];
+      if (
+        typeof path !== "string" ||
+        typeof before !== "string" ||
+        typeof after !== "string"
+      ) {
         return undefined;
       }
-      return { kind: 'diff', path, before, after };
+      return { kind: "diff", path, before, after };
     }
-    case 'todo': {
-      const items = block['items'];
+    case "todo": {
+      const items = block["items"];
       if (!Array.isArray(items)) return undefined;
       const normalizedItems: Array<{ title: string; status: string }> = [];
       for (const rawItem of items) {
         const item = asRecord(rawItem);
-        const title = item?.['title'];
-        const status = item?.['status'];
-        if (typeof title !== 'string' || typeof status !== 'string') return undefined;
+        const title = item?.["title"];
+        const status = item?.["status"];
+        if (typeof title !== "string" || typeof status !== "string")
+          return undefined;
         normalizedItems.push({ title, status });
       }
-      return { kind: 'todo_list', items: normalizedItems };
+      return { kind: "todo_list", items: normalizedItems };
     }
-    case 'shell': {
-      const command = block['command'];
-      const language = block['language'];
-      if (typeof command !== 'string' || language !== 'bash') return undefined;
-      return { kind: 'command', command, language: 'bash' };
+    case "shell": {
+      const command = block["command"];
+      const language = block["language"];
+      if (typeof command !== "string" || language !== "bash") return undefined;
+      return { kind: "command", command, language: "bash" };
     }
-    case 'brief': {
-      const summary = block['text'];
-      if (typeof summary !== 'string') return undefined;
-      return { kind: 'generic', summary };
+    case "brief": {
+      const summary = block["text"];
+      if (typeof summary !== "string") return undefined;
+      return { kind: "generic", summary };
     }
     default:
       return undefined;
@@ -99,7 +104,7 @@ function translateDisplayBlock(raw: unknown): ToolInputDisplay | undefined {
 }
 
 function asRecord(value: unknown): Record<string, unknown> | undefined {
-  return typeof value === 'object' && value !== null
+  return typeof value === "object" && value !== null
     ? (value as Record<string, unknown>)
     : undefined;
 }

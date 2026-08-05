@@ -17,13 +17,14 @@
 //
 // Run:  node --import tsx bench/message-composed.ts
 
-import fs from 'node:fs/promises';
-import { existsSync, readFileSync } from 'node:fs';
-import path from 'node:path';
-import os from 'node:os';
-import { MiniDb } from '../src/index.js';
+import fs from "node:fs/promises";
+import { existsSync, readFileSync } from "node:fs";
+import path from "node:path";
+import os from "node:os";
+import { MiniDb } from "../src/index.js";
 
-const fmt = (n: number) => n.toLocaleString('en-US', { maximumFractionDigits: 0 });
+const fmt = (n: number) =>
+  n.toLocaleString("en-US", { maximumFractionDigits: 0 });
 const LIMIT = 50;
 const WINDOW_DAYS = 30;
 const SINCE_DAYS = 7;
@@ -31,13 +32,15 @@ const SINCE_DAYS = 7;
 interface Msg {
   id: string;
   ts: number;
-  role: 'user' | 'assistant';
+  role: "user" | "assistant";
   text: string;
 }
 
 function loadAllMessages(): Msg[] {
-  const DATA = path.join(os.homedir(), '.kimi-code');
-  const lines = readFileSync(path.join(DATA, 'session_index.jsonl'), 'utf8').trim().split('\n');
+  const DATA = path.join(os.homedir(), ".kimi-code");
+  const lines = readFileSync(path.join(DATA, "session_index.jsonl"), "utf8")
+    .trim()
+    .split("\n");
   const out: Msg[] = [];
   for (const line of lines) {
     let meta: any;
@@ -46,15 +49,15 @@ function loadAllMessages(): Msg[] {
     } catch {
       continue;
     }
-    const wire = path.join(meta.sessionDir, 'agents', 'main', 'wire.jsonl');
+    const wire = path.join(meta.sessionDir, "agents", "main", "wire.jsonl");
     if (!existsSync(wire)) continue;
     let raw: string;
     try {
-      raw = readFileSync(wire, 'utf8');
+      raw = readFileSync(wire, "utf8");
     } catch {
       continue;
     }
-    for (const ln of raw.split('\n')) {
+    for (const ln of raw.split("\n")) {
       if (!ln) continue;
       let o: any;
       try {
@@ -62,21 +65,32 @@ function loadAllMessages(): Msg[] {
       } catch {
         continue;
       }
-      const ts = typeof o.time === 'number' ? o.time : 0;
-      if (o.type === 'context.append_message' && o.message) {
-        let text = '';
+      const ts = typeof o.time === "number" ? o.time : 0;
+      if (o.type === "context.append_message" && o.message) {
+        let text = "";
         for (const c of o.message.content || [])
-          if (c && c.type === 'text' && typeof c.text === 'string') text += c.text;
-        out.push({ id: `${meta.sessionId}:u${out.length}`, ts, role: 'user', text });
+          if (c && c.type === "text" && typeof c.text === "string")
+            text += c.text;
+        out.push({
+          id: `${meta.sessionId}:u${out.length}`,
+          ts,
+          role: "user",
+          text,
+        });
       } else if (
-        o.type === 'context.append_loop_event' &&
+        o.type === "context.append_loop_event" &&
         o.event &&
-        o.event.type === 'content.part' &&
+        o.event.type === "content.part" &&
         o.event.part &&
-        o.event.part.type === 'text' &&
-        typeof o.event.part.text === 'string'
+        o.event.part.type === "text" &&
+        typeof o.event.part.text === "string"
       ) {
-        out.push({ id: `${meta.sessionId}:a${out.length}`, ts, role: 'assistant', text: o.event.part.text });
+        out.push({
+          id: `${meta.sessionId}:a${out.length}`,
+          ts,
+          role: "assistant",
+          text: o.event.part.text,
+        });
       }
     }
   }
@@ -88,22 +102,34 @@ function scaleTo(real: Msg[], n: number): Msg[] {
   const span = WINDOW_DAYS * 864e5;
   const out: Msg[] = Array.from({ length: n }, (_, i) => {
     const r = real[i % real.length]!;
-    return { id: `m${i}`, ts: now - Math.floor((i / n) * span), role: r.role, text: r.text };
+    return {
+      id: `m${i}`,
+      ts: now - Math.floor((i / n) * span),
+      role: r.role,
+      text: r.text,
+    };
   });
   return out;
 }
 
 async function buildMinidb(msgs: Msg[]) {
-  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'minidb-mc-'));
-  const db = await MiniDb.open({ dir, valueCodec: 'json', fsyncPolicy: 'no', autoCompact: false });
-  await db.createIndex('byRole', { field: 'role' });
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "minidb-mc-"));
+  const db = await MiniDb.open({
+    dir,
+    valueCodec: "json",
+    fsyncPolicy: "no",
+    autoCompact: false,
+  });
+  await db.createIndex("byRole", { field: "role" });
   const t0 = performance.now();
   const CHUNK = 5000;
   for (let s = 0; s < msgs.length; s += CHUNK) {
     const p: Promise<unknown>[] = [];
     for (let i = s; i < Math.min(s + CHUNK, msgs.length); i++) {
       const m = msgs[i]!;
-      p.push(db.set(m.id, { role: m.role, text: m.text }, { dt: { ts: m.ts } }));
+      p.push(
+        db.set(m.id, { role: m.role, text: m.text }, { dt: { ts: m.ts } }),
+      );
     }
     await Promise.all(p);
   }
@@ -123,7 +149,7 @@ function med(fn: () => void, runs = 9): number {
 
 async function runCase(label: string, msgs: Msg[]) {
   const since = Date.now() - SINCE_DAYS * 864e5;
-  const userTotal = msgs.filter((m) => m.role === 'user').length;
+  const userTotal = msgs.filter((m) => m.role === "user").length;
   const { db, buildMs, dir } = await buildMinidb(msgs);
 
   // A. top-50 recent user in window
@@ -131,33 +157,39 @@ async function runCase(label: string, msgs: Msg[]) {
   const aDb = med(() => {
     aHits = db.query({
       dt: { ts: { gte: since } },
-      filter: { role: 'user' },
+      filter: { role: "user" },
       sort: { ts: -1 },
       limit: LIMIT,
     }).length;
   });
   const aNaive = med(() => {
-    aHits = msgs.filter((m) => m.role === 'user' && m.ts >= since).sort((a, b) => b.ts - a.ts).slice(0, LIMIT).length;
+    aHits = msgs
+      .filter((m) => m.role === "user" && m.ts >= since)
+      .sort((a, b) => b.ts - a.ts)
+      .slice(0, LIMIT).length;
   });
 
   // B. ALL user in window (no limit)
   let bDbHits = 0;
   const bDb = med(() => {
-    bDbHits = db.query({ dt: { ts: { gte: since } }, filter: { role: 'user' } }).length;
+    bDbHits = db.query({
+      dt: { ts: { gte: since } },
+      filter: { role: "user" },
+    }).length;
   });
   let bNaiveHits = 0;
   const bNaive = med(() => {
-    bNaiveHits = msgs.filter((m) => m.role === 'user' && m.ts >= since).length;
+    bNaiveHits = msgs.filter((m) => m.role === "user" && m.ts >= since).length;
   });
 
   // C. COUNT user in window (minidb has no count path -> materialize then .length)
   const cDb = med(() => {
-    db.query({ dt: { ts: { gte: since } }, filter: { role: 'user' } });
+    db.query({ dt: { ts: { gte: since } }, filter: { role: "user" } });
   });
   let cNaive = 0;
   const cNaiveMs = med(() => {
     let c = 0;
-    for (const m of msgs) if (m.role === 'user' && m.ts >= since) c++;
+    for (const m of msgs) if (m.role === "user" && m.ts >= since) c++;
     cNaive = c;
   });
 
@@ -166,8 +198,12 @@ async function runCase(label: string, msgs: Msg[]) {
   await db.close();
   await fs.rm(dir, { recursive: true, force: true });
 
-  console.log(`\n--- ${label}: N=${fmt(msgs.length)} msgs (user=${fmt(userTotal)}) ---`);
-  console.log(`  build: minidb ${(buildMs / 1000).toFixed(2)}s | heap ${(heap / 1024 / 1024).toFixed(0)} MiB`);
+  console.log(
+    `\n--- ${label}: N=${fmt(msgs.length)} msgs (user=${fmt(userTotal)}) ---`,
+  );
+  console.log(
+    `  build: minidb ${(buildMs / 1000).toFixed(2)}s | heap ${(heap / 1024 / 1024).toFixed(0)} MiB`,
+  );
   console.log(
     `  A top-${LIMIT}:  minidb ${aDb.toFixed(3)} ms  vs  naive ${aNaive.toFixed(3)} ms  ->  ${(aNaive / aDb).toFixed(1)}x  (hits ${aHits})`,
   );
@@ -181,13 +217,18 @@ async function runCase(label: string, msgs: Msg[]) {
 
 async function main() {
   const real = loadAllMessages();
-  const byRole = real.reduce((a: any, m) => ((a[m.role] = (a[m.role] || 0) + 1), a), {});
-  console.log(`loaded ${fmt(real.length)} real messages: ${JSON.stringify(byRole)}`);
+  const byRole = real.reduce(
+    (a: any, m) => ((a[m.role] = (a[m.role] || 0) + 1), a),
+    {},
+  );
+  console.log(
+    `loaded ${fmt(real.length)} real messages: ${JSON.stringify(byRole)}`,
+  );
   for (const n of [real.length, 100_000, 1_000_000]) {
     const msgs = n === real.length ? real : scaleTo(real, n);
-    await runCase(n === real.length ? 'real data' : 'scaled', msgs);
+    await runCase(n === real.length ? "real data" : "scaled", msgs);
   }
-  console.log('\ndone.');
+  console.log("\ndone.");
 }
 
 main().catch((e) => {

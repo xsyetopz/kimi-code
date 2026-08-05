@@ -1,6 +1,6 @@
-import type { Component } from '@moonshot-ai/pi-tui';
+import type { Component } from "@moonshot-ai/pi-tui";
 
-import { currentTheme } from '#/tui/theme';
+import { currentTheme } from "#/tui/theme";
 
 /**
  * A collapsed summary of older content within a turn. Accumulates counts of
@@ -31,6 +31,6 @@ export class StepSummaryComponent implements Component {
     if (this.tool > 0) parts.push(`call ${this.tool} tools`);
     if (this.message > 0) parts.push(`${this.message} messages`);
     if (parts.length === 0) return [];
-    return [currentTheme.dim(`\u2026 ${parts.join(', ')}`)];
+    return [currentTheme.dim(`\u2026 ${parts.join(", ")}`)];
   }
 }

@@ -15,16 +15,16 @@
  * server) — it does not consult this switch.
  */
 
-export const KIMI_V2_ENV = 'KIMI_CODE_EXPERIMENTAL_FLAG';
-export const KIMI_ACP_V2_ENV = 'KIMI_CODE_EXPERIMENTAL_ACP_V2';
+export const KIMI_V2_ENV = "KIMI_CODE_EXPERIMENTAL_FLAG";
+export const KIMI_ACP_V2_ENV = "KIMI_CODE_EXPERIMENTAL_ACP_V2";
 
-const TRUTHY_VALUES = new Set(['1', 'true', 'yes', 'on']);
+const TRUTHY_VALUES = new Set(["1", "true", "yes", "on"]);
 
 function isTruthyEnv(
   key: string,
   env: Readonly<Record<string, string | undefined>>,
 ): boolean {
-  return TRUTHY_VALUES.has((env[key] ?? '').trim().toLowerCase());
+  return TRUTHY_VALUES.has((env[key] ?? "").trim().toLowerCase());
 }
 
 export function isKimiV2Enabled(

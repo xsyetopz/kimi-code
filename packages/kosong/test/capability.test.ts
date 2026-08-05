@@ -4,11 +4,15 @@
  * `capability-providers.test.ts`.
  */
 
-import { UNKNOWN_CAPABILITY, isUnknownCapability, type ModelCapability } from '#/capability';
-import { describe, expect, it } from 'vitest';
+import {
+  UNKNOWN_CAPABILITY,
+  isUnknownCapability,
+  type ModelCapability,
+} from "#/capability";
+import { describe, expect, it } from "vitest";
 
-describe('ModelCapability / UNKNOWN_CAPABILITY', () => {
-  it('UNKNOWN_CAPABILITY has all boolean fields false', () => {
+describe("ModelCapability / UNKNOWN_CAPABILITY", () => {
+  it("UNKNOWN_CAPABILITY has all boolean fields false", () => {
     expect(UNKNOWN_CAPABILITY.image_in).toBe(false);
     expect(UNKNOWN_CAPABILITY.video_in).toBe(false);
     expect(UNKNOWN_CAPABILITY.audio_in).toBe(false);
@@ -16,11 +20,11 @@ describe('ModelCapability / UNKNOWN_CAPABILITY', () => {
     expect(UNKNOWN_CAPABILITY.tool_use).toBe(false);
   });
 
-  it('UNKNOWN_CAPABILITY.max_context_tokens is 0 (unknown)', () => {
+  it("UNKNOWN_CAPABILITY.max_context_tokens is 0 (unknown)", () => {
     expect(UNKNOWN_CAPABILITY.max_context_tokens).toBe(0);
   });
 
-  it('accepts a well-formed ModelCapability literal (type guard)', () => {
+  it("accepts a well-formed ModelCapability literal (type guard)", () => {
     const cap: ModelCapability = {
       image_in: true,
       video_in: false,
@@ -33,7 +37,7 @@ describe('ModelCapability / UNKNOWN_CAPABILITY', () => {
     expect(cap.max_context_tokens).toBe(128_000);
   });
 
-  it('UNKNOWN_CAPABILITY is read-only (frozen or otherwise immutable)', () => {
+  it("UNKNOWN_CAPABILITY is read-only (frozen or otherwise immutable)", () => {
     // Defensive: future code should not be able to mutate the shared default.
     // We accept either Object.isFrozen() or a thrown TypeError on mutation
     // attempt (strict mode). Either way, the observed value afterwards must
@@ -48,7 +52,7 @@ describe('ModelCapability / UNKNOWN_CAPABILITY', () => {
     expect(UNKNOWN_CAPABILITY.image_in).toBe(false);
   });
 
-  it('detects copied UNKNOWN_CAPABILITY objects by structure', () => {
+  it("detects copied UNKNOWN_CAPABILITY objects by structure", () => {
     const copiedUnknown: ModelCapability = {
       image_in: false,
       video_in: false,

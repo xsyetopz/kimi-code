@@ -1,17 +1,17 @@
-import { SimpleToolset, toolError, toolOk } from './fixtures/simple-toolset';
-import type { ToolReturnValue } from './fixtures/simple-toolset';
-import { createTypedTool } from './fixtures/typed-tool';
-import { describe, expect, test } from 'vitest';
-import { z } from 'zod';
+import { SimpleToolset, toolError, toolOk } from "./fixtures/simple-toolset";
+import type { ToolReturnValue } from "./fixtures/simple-toolset";
+import { createTypedTool } from "./fixtures/typed-tool";
+import { describe, expect, test } from "vitest";
+import { z } from "zod";
 
-describe('createTypedTool', () => {
-  test('creates a tool with zod schema and typed handler', async () => {
+describe("createTypedTool", () => {
+  test("creates a tool with zod schema and typed handler", async () => {
     const addTool = createTypedTool({
-      name: 'add',
-      description: 'Adds two numbers',
+      name: "add",
+      description: "Adds two numbers",
       params: z.object({
-        a: z.number().describe('First number'),
-        b: z.number().describe('Second number'),
+        a: z.number().describe("First number"),
+        b: z.number().describe("Second number"),
       }),
       handler: async (params): Promise<ToolReturnValue> => {
         // params is typed as { a: number; b: number }
@@ -19,10 +19,10 @@ describe('createTypedTool', () => {
       },
     });
 
-    expect(addTool.tool.name).toBe('add');
-    expect(addTool.tool.description).toBe('Adds two numbers');
+    expect(addTool.tool.name).toBe("add");
+    expect(addTool.tool.description).toBe("Adds two numbers");
     expect(addTool.tool.parameters).toMatchObject({
-      type: 'object',
+      type: "object",
       properties: expect.objectContaining({
         a: expect.any(Object),
         b: expect.any(Object),
@@ -31,13 +31,13 @@ describe('createTypedTool', () => {
 
     const result = await addTool.handler({ a: 2, b: 3 } as never);
     expect(result.isError).toBe(false);
-    expect(result.output).toBe('5');
+    expect(result.output).toBe("5");
   });
 
-  test('returns toolValidateError for missing required fields', async () => {
+  test("returns toolValidateError for missing required fields", async () => {
     const tool = createTypedTool({
-      name: 'greet',
-      description: 'Greets a user',
+      name: "greet",
+      description: "Greets a user",
       params: z.object({
         name: z.string(),
       }),
@@ -47,29 +47,30 @@ describe('createTypedTool', () => {
     // Pass invalid args (missing 'name')
     const result = await tool.handler({} as never);
     expect(result.isError).toBe(true);
-    expect(result.message).toContain('name');
+    expect(result.message).toContain("name");
   });
 
-  test('returns toolValidateError for wrong type', async () => {
+  test("returns toolValidateError for wrong type", async () => {
     const tool = createTypedTool({
-      name: 'multiply',
-      description: 'Multiplies two numbers',
+      name: "multiply",
+      description: "Multiplies two numbers",
       params: z.object({
         a: z.number(),
         b: z.number(),
       }),
-      handler: async (params) => toolOk({ output: String(params.a * params.b) }),
+      handler: async (params) =>
+        toolOk({ output: String(params.a * params.b) }),
     });
 
     // Pass string where number expected
-    const result = await tool.handler({ a: '2', b: 3 } as never);
+    const result = await tool.handler({ a: "2", b: 3 } as never);
     expect(result.isError).toBe(true);
   });
 
-  test('returns toolValidateError for unknown keys to match exported schema', async () => {
+  test("returns toolValidateError for unknown keys to match exported schema", async () => {
     const tool = createTypedTool({
-      name: 'strict_number',
-      description: 'Accepts only x',
+      name: "strict_number",
+      description: "Accepts only x",
       params: z.object({
         x: z.number(),
       }),
@@ -77,19 +78,19 @@ describe('createTypedTool', () => {
     });
 
     expect(tool.tool.parameters).toMatchObject({
-      type: 'object',
+      type: "object",
       additionalProperties: false,
     });
 
     const result = await tool.handler({ x: 1, extra: 2 } as never);
     expect(result.isError).toBe(true);
-    expect(result.message).toContain('extra');
+    expect(result.message).toContain("extra");
   });
 
-  test('integrates with SimpleToolset', async () => {
+  test("integrates with SimpleToolset", async () => {
     const echoTool = createTypedTool({
-      name: 'echo',
-      description: 'Echoes the input',
+      name: "echo",
+      description: "Echoes the input",
       params: z.object({ text: z.string() }),
       handler: async (params) => toolOk({ output: params.text }),
     });
@@ -98,19 +99,20 @@ describe('createTypedTool', () => {
     toolset.add(echoTool.tool, echoTool.handler);
 
     const result = await toolset.handle({
-      type: 'function',
-      id: 'tc_001',
-      name: 'echo', arguments: JSON.stringify({ text: 'hello' }),
+      type: "function",
+      id: "tc_001",
+      name: "echo",
+      arguments: JSON.stringify({ text: "hello" }),
     });
 
     expect(result.returnValue.isError).toBe(false);
-    expect(result.returnValue.output).toBe('hello');
+    expect(result.returnValue.output).toBe("hello");
   });
 
-  test('supports nested zod schemas', async () => {
+  test("supports nested zod schemas", async () => {
     const tool = createTypedTool({
-      name: 'process',
-      description: 'Processes a complex object',
+      name: "process",
+      description: "Processes a complex object",
       params: z.object({
         user: z.object({
           name: z.string(),
@@ -125,30 +127,30 @@ describe('createTypedTool', () => {
     });
 
     const result = await tool.handler({
-      user: { name: 'Alice', age: 30 },
-      tags: ['a', 'b', 'c'],
+      user: { name: "Alice", age: 30 },
+      tags: ["a", "b", "c"],
     } as never);
     expect(result.isError).toBe(false);
-    expect(result.output).toBe('Alice has 3 tags');
+    expect(result.output).toBe("Alice has 3 tags");
   });
 
-  test('handler errors are caught and returned as tool errors', async () => {
+  test("handler errors are caught and returned as tool errors", async () => {
     // Note: createTypedTool's handler does NOT catch user errors;
     // SimpleToolset.handle catches them. We test that the user can also
     // return toolError manually if they want.
     const tool2 = createTypedTool({
-      name: 'safe',
-      description: 'Returns error',
+      name: "safe",
+      description: "Returns error",
       params: z.object({ x: z.number() }),
       handler: async (params) =>
         toolError({
           message: `failed for x=${params.x}`,
-          brief: 'fail',
+          brief: "fail",
         }),
     });
 
     const result = await tool2.handler({ x: 5 } as never);
     expect(result.isError).toBe(true);
-    expect(result.message).toContain('failed for x=5');
+    expect(result.message).toContain("failed for x=5");
   });
 });

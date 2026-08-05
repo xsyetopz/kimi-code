@@ -12,11 +12,14 @@
  * Agent scope — one instance per agent, dying with it.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
-import type { PromptOrigin } from '#/agent/contextMemory/types';
-import type { TurnEndReason } from '#/agent/loop/turnEvents';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
+import type { PromptOrigin } from "#/agent/contextMemory/types";
+import type { TurnEndReason } from "#/agent/loop/turnEvents";
 
-export type TurnPhase = 'running' | 'streaming' | 'tool_call' | 'retrying';
+export type TurnPhase = "running" | "streaming" | "tool_call" | "retrying";
 
 export interface ApprovalRef {
   readonly approvalId: string;
@@ -43,10 +46,10 @@ export interface ActivityTurnState {
   readonly turnId: number;
   readonly origin: PromptOrigin;
   readonly phase: TurnPhase;
-  readonly stream?: 'assistant' | 'thinking' | 'tool_call';
+  readonly stream?: "assistant" | "thinking" | "tool_call";
   readonly step: number;
   readonly ending: boolean;
-  readonly endingReason?: 'aborted' | 'max_steps' | 'error';
+  readonly endingReason?: "aborted" | "max_steps" | "error";
   readonly retry?: ActivityRetryState;
   readonly pendingApprovals: readonly ApprovalRef[];
   readonly activeToolCalls: readonly ToolCallRef[];
@@ -66,7 +69,7 @@ export interface BackgroundRef {
   readonly since: number;
 }
 
-export type ActivityViewLifecycle = 'ready' | 'disposed';
+export type ActivityViewLifecycle = "ready" | "disposed";
 
 export interface AgentActivityState {
   readonly lifecycle: ActivityViewLifecycle;
@@ -82,10 +85,12 @@ export interface IAgentActivityView {
 }
 
 export const IAgentActivityView: ServiceIdentifier<IAgentActivityView> =
-  createDecorator<IAgentActivityView>('agentActivityView');
+  createDecorator<IAgentActivityView>("agentActivityView");
 
-declare module '#/app/event/eventBus' {
+declare module "#/app/event/eventBus" {
   interface DomainEventMap {
-    'agent.activity.updated': AgentActivityState & { readonly type: 'agent.activity.updated' };
+    "agent.activity.updated": AgentActivityState & {
+      readonly type: "agent.activity.updated";
+    };
   }
 }

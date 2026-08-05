@@ -1,6 +1,6 @@
-import type { McpServerConfig } from '#/config/schema';
+import type { McpServerConfig } from "#/config/schema";
 
-import { loadMcpServers } from './config-loader';
+import { loadMcpServers } from "./config-loader";
 
 export interface SessionMcpConfig {
   readonly servers: Record<string, McpServerConfig>;

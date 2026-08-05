@@ -2,17 +2,23 @@
  * `di` domain — `TestInstantiationService` and scoped test-container helpers.
  */
 
-import * as sinon from 'sinon';
+import * as sinon from "sinon";
 
-import { SyncDescriptor, type SyncDescriptor0 } from './descriptors';
+import { SyncDescriptor, type SyncDescriptor0 } from "./descriptors";
 import {
   type GetLeadingNonServiceArgs,
   type ServiceIdentifier,
   type ServicesAccessor,
-} from './instantiation';
-import { InstantiationService, Trace } from './instantiationService';
-import { DisposableStore, dispose, isDisposable, toDisposable, type IDisposable } from './lifecycle';
-import { ServiceCollection } from './serviceCollection';
+} from "./instantiation";
+import { InstantiationService, Trace } from "./instantiationService";
+import {
+  DisposableStore,
+  dispose,
+  isDisposable,
+  toDisposable,
+  type IDisposable,
+} from "./lifecycle";
+import { ServiceCollection } from "./serviceCollection";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyConstructor<T = unknown> = new (...args: any[]) => T;
@@ -24,9 +30,12 @@ interface IServiceMock<T> {
 }
 
 const isSinonSpyLike = (fn: Function): fn is sinon.SinonSpy =>
-  fn && 'callCount' in fn;
+  fn && "callCount" in fn;
 
-export class TestInstantiationService extends InstantiationService implements IDisposable, ServicesAccessor {
+export class TestInstantiationService
+  extends InstantiationService
+  implements IDisposable, ServicesAccessor
+{
   private readonly _classStubs = new Map<Function, unknown>();
   private readonly _parentTestService?: TestInstantiationService;
 
@@ -57,7 +66,7 @@ export class TestInstantiationService extends InstantiationService implements ID
     // a replaced materialized instance is retired, a new generation starts.
     // Descriptors stay lazy (constructed at first resolution), as before.
     const prev = this._serviceCollection.get(id);
-    this.provide(id, instanceOrDescriptor, { activation: 'ondemand' });
+    this.provide(id, instanceOrDescriptor, { activation: "ondemand" });
     return prev;
   }
 
@@ -70,7 +79,9 @@ export class TestInstantiationService extends InstantiationService implements ID
   }
 
   protected _getClassStub(ctor: Function): unknown {
-    return this._classStubs.get(ctor) ?? this._parentTestService?._getClassStub(ctor);
+    return (
+      this._classStubs.get(ctor) ?? this._parentTestService?._getClassStub(ctor)
+    );
   }
 
   public override createInstance<T>(descriptor: SyncDescriptor0<T>): T;
@@ -125,31 +136,37 @@ export class TestInstantiationService extends InstantiationService implements ID
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     arg4?: any,
   ): T | SyncDescriptor<T> | sinon.SinonStub | sinon.SinonSpy {
-    if (arg2 instanceof SyncDescriptor && typeof arg3 !== 'string') {
+    if (arg2 instanceof SyncDescriptor && typeof arg3 !== "string") {
       this._serviceCollection.set(id, arg2);
       return arg2;
     }
 
-    if (typeof arg2 !== 'string' && typeof arg3 !== 'string') {
+    if (typeof arg2 !== "string" && typeof arg3 !== "string") {
       const service = this._create(arg2, { stub: true }) as T;
       this._serviceCollection.set(id, service);
       return service;
     }
 
-    const service = typeof arg2 !== 'string' ? arg2 : undefined;
-    const property = typeof arg2 === 'string' ? arg2 : arg3;
-    const value = typeof arg2 === 'string' ? arg3 : arg4;
+    const service = typeof arg2 !== "string" ? arg2 : undefined;
+    const property = typeof arg2 === "string" ? arg2 : arg3;
+    const value = typeof arg2 === "string" ? arg3 : arg4;
 
-    if (typeof property !== 'string') {
-      throw new TypeError('stub requires a method/property name');
+    if (typeof property !== "string") {
+      throw new TypeError("stub requires a method/property name");
     }
 
     const serviceMock: IServiceMock<T> = { id, service };
-    const stubObject = this._create(serviceMock, { stub: true }, Boolean(service && !property)) as Record<string, unknown>;
+    const stubObject = this._create(
+      serviceMock,
+      { stub: true },
+      Boolean(service && !property),
+    ) as Record<string, unknown>;
     const replacement = this._createReplacement(value);
 
-    const current = stubObject[property] as { restore?: () => void } | undefined;
-    if (current && typeof current.restore === 'function') {
+    const current = stubObject[property] as
+      | { restore?: () => void }
+      | undefined;
+    if (current && typeof current.restore === "function") {
       current.restore();
     }
     stubObject[property] = replacement;
@@ -186,8 +203,11 @@ export class TestInstantiationService extends InstantiationService implements ID
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     arg4?: any,
   ): unknown {
-    arg3 = typeof arg2 === 'string' ? Promise.resolve(arg3) : arg3;
-    arg4 = typeof arg2 !== 'string' && typeof arg3 === 'string' ? Promise.resolve(arg4) : arg4;
+    arg3 = typeof arg2 === "string" ? Promise.resolve(arg3) : arg3;
+    arg4 =
+      typeof arg2 !== "string" && typeof arg3 === "string"
+        ? Promise.resolve(arg4)
+        : arg4;
     return this.stub(arg1, arg2, arg3, arg4);
   }
 
@@ -197,11 +217,19 @@ export class TestInstantiationService extends InstantiationService implements ID
     return spy;
   }
 
-  private _create<T>(serviceMock: IServiceMock<T>, options: SinonOptions, reset?: boolean): T;
+  private _create<T>(
+    serviceMock: IServiceMock<T>,
+    options: SinonOptions,
+    reset?: boolean,
+  ): T;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private _create<T>(ctor: any, options: SinonOptions): T | sinon.SinonMock;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private _create(arg1: any, options: SinonOptions, reset: boolean = false): any {
+  private _create(
+    arg1: any,
+    options: SinonOptions,
+    reset: boolean = false,
+  ): any {
     if (this._isServiceMock(arg1)) {
       const service = this._getOrCreateService(arg1, options, reset);
       if (options.mock) {
@@ -220,10 +248,10 @@ export class TestInstantiationService extends InstantiationService implements ID
   ): T {
     const service = this._serviceCollection.get(serviceMock.id);
     if (!reset && service && !(service instanceof SyncDescriptor)) {
-      if (opts.stub && this._hasSinonOption(service, 'stub')) {
+      if (opts.stub && this._hasSinonOption(service, "stub")) {
         return service as T;
       }
-      if (opts.mock && this._hasSinonOption(service, 'mock')) {
+      if (opts.mock && this._hasSinonOption(service, "mock")) {
         return service as T;
       }
       return service as T;
@@ -231,11 +259,14 @@ export class TestInstantiationService extends InstantiationService implements ID
     return this._createService(serviceMock, opts);
   }
 
-  private _createService<T>(serviceMock: IServiceMock<T>, opts: SinonOptions): T {
+  private _createService<T>(
+    serviceMock: IServiceMock<T>,
+    opts: SinonOptions,
+  ): T {
     const existing = this._serviceCollection.get(serviceMock.id);
     const source =
-      serviceMock.service
-      ?? (existing instanceof SyncDescriptor ? existing.ctor : undefined);
+      serviceMock.service ??
+      (existing instanceof SyncDescriptor ? existing.ctor : undefined);
     const service = this._createStub(source);
     service.sinonOptions = opts;
     return service as T;
@@ -246,10 +277,10 @@ export class TestInstantiationService extends InstantiationService implements ID
     if (arg instanceof SyncDescriptor) {
       return sinon.createStubInstance(arg.ctor);
     }
-    if (typeof arg === 'function') {
+    if (typeof arg === "function") {
       return sinon.createStubInstance(arg);
     }
-    if (arg && typeof arg === 'object') {
+    if (arg && typeof arg === "object") {
       return arg;
     }
     return Object.create(null);
@@ -257,7 +288,7 @@ export class TestInstantiationService extends InstantiationService implements ID
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private _createReplacement(value: any): sinon.SinonStub | sinon.SinonSpy {
-    if (typeof value === 'function') {
+    if (typeof value === "function") {
       return isSinonSpyLike(value) ? value : sinon.spy(value);
     }
     return value ? sinon.stub().returns(value) : sinon.stub();
@@ -270,14 +301,18 @@ export class TestInstantiationService extends InstantiationService implements ID
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private _isServiceMock(arg: any): arg is IServiceMock<unknown> {
-    return typeof arg === 'object' && arg !== null && 'id' in arg;
+    return typeof arg === "object" && arg !== null && "id" in arg;
   }
 
-  public override createChild(services: ServiceCollection): TestInstantiationService {
+  public override createChild(
+    services: ServiceCollection,
+  ): TestInstantiationService {
     return super.createChild(services) as TestInstantiationService;
   }
 
-  protected override _createChildService(services: ServiceCollection): InstantiationService {
+  protected override _createChildService(
+    services: ServiceCollection,
+  ): InstantiationService {
     return new TestInstantiationService(services, false, this);
   }
 
@@ -298,7 +333,10 @@ export interface ServiceRegistration {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   define<T>(id: ServiceIdentifier<T>, ctor: new (...args: any[]) => T): void;
   defineInstance<T>(id: ServiceIdentifier<T>, instance: T): void;
-  definePartialInstance<T>(id: ServiceIdentifier<T>, instance: Partial<T>): void;
+  definePartialInstance<T>(
+    id: ServiceIdentifier<T>,
+    instance: Partial<T>,
+  ): void;
 }
 
 export type ServiceGroup = (reg: ServiceRegistration) => void;
@@ -334,7 +372,8 @@ export function createServices(
   const baseReg: ServiceRegistration = {
     define: (id, ctor) => register(id, new SyncDescriptor(ctor), false, false),
     defineInstance: (id, instance) => register(id, instance, true, false),
-    definePartialInstance: (id, instance) => register(id, instance, true, false),
+    definePartialInstance: (id, instance) =>
+      register(id, instance, true, false),
   };
 
   for (const group of options.base ?? []) {
@@ -345,7 +384,8 @@ export function createServices(
     const overrideReg: ServiceRegistration = {
       define: (id, ctor) => register(id, new SyncDescriptor(ctor), false, true),
       defineInstance: (id, instance) => register(id, instance, true, true),
-      definePartialInstance: (id, instance) => register(id, instance, true, true),
+      definePartialInstance: (id, instance) =>
+        register(id, instance, true, true),
     };
     options.additionalServices(overrideReg);
   }
@@ -353,15 +393,17 @@ export function createServices(
   const instantiationService = disposables.add(
     new TestInstantiationService(serviceCollection, options.strict ?? false),
   );
-  disposables.add(toDisposable(() => {
-    const serviceDisposables: IDisposable[] = [];
-    for (const id of instanceIds) {
-      const instance = serviceCollection.get(id);
-      if (isDisposable(instance)) {
-        serviceDisposables.push(instance);
+  disposables.add(
+    toDisposable(() => {
+      const serviceDisposables: IDisposable[] = [];
+      for (const id of instanceIds) {
+        const instance = serviceCollection.get(id);
+        if (isDisposable(instance)) {
+          serviceDisposables.push(instance);
+        }
       }
-    }
-    dispose(serviceDisposables);
-  }));
+      dispose(serviceDisposables);
+    }),
+  );
   return instantiationService;
 }

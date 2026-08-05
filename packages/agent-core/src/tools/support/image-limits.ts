@@ -15,18 +15,20 @@
  * env switches.
  */
 
-import type { ImageConfig } from '#/config/schema';
+import type { ImageConfig } from "#/config/schema";
 
 import {
   MAX_IMAGE_EDGE_PX,
   maxImageEdgeFromEnv,
   READ_IMAGE_BYTE_BUDGET,
   readImageByteBudgetFromEnv,
-} from './image-compress';
+} from "./image-compress";
 
 export class ImageLimits {
   constructor(
-    private readonly env: Readonly<Record<string, string | undefined>> = process.env,
+    private readonly env: Readonly<
+      Record<string, string | undefined>
+    > = process.env,
     private config: ImageConfig | undefined = undefined,
   ) {}
 
@@ -38,13 +40,19 @@ export class ImageLimits {
 
   /** Longest-edge ceiling (px) for compressing images for the model. */
   maxEdgePx(): number {
-    return maxImageEdgeFromEnv(this.env) ?? this.config?.maxEdgePx ?? MAX_IMAGE_EDGE_PX;
+    return (
+      maxImageEdgeFromEnv(this.env) ??
+      this.config?.maxEdgePx ??
+      MAX_IMAGE_EDGE_PX
+    );
   }
 
   /** Raw-byte budget for model-initiated image reads (ReadMediaFile default path). */
   readByteBudget(): number {
     return (
-      readImageByteBudgetFromEnv(this.env) ?? this.config?.readByteBudget ?? READ_IMAGE_BYTE_BUDGET
+      readImageByteBudgetFromEnv(this.env) ??
+      this.config?.readByteBudget ??
+      READ_IMAGE_BYTE_BUDGET
     );
   }
 }

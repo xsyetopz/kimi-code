@@ -1,4 +1,7 @@
-import { createKimiDeviceId, KIMI_CODE_PROVIDER_NAME } from '@moonshot-ai/kimi-code-oauth';
+import {
+  createKimiDeviceId,
+  KIMI_CODE_PROVIDER_NAME,
+} from "@moonshot-ai/kimi-code-oauth";
 import {
   KimiAuthFacade,
   loadRuntimeConfigSafe,
@@ -6,19 +9,19 @@ import {
   resolveKimiHome,
   type KimiConfig,
   type TelemetryClient,
-} from '@moonshot-ai/kimi-code-sdk';
+} from "@moonshot-ai/kimi-code-sdk";
 
-import type { PromptHarness } from './prompt-session';
+import type { PromptHarness } from "./prompt-session";
 import {
   initializeTelemetry,
   setTelemetryContext,
   track,
   withTelemetryContext,
-} from '@moonshot-ai/kimi-telemetry';
+} from "@moonshot-ai/kimi-telemetry";
 
-import { CLI_USER_AGENT_PRODUCT, WEB_UI_MODE } from '#/constant/app';
+import { CLI_USER_AGENT_PRODUCT, WEB_UI_MODE } from "#/constant/app";
 
-import { createKimiCodeHostIdentity } from './version';
+import { createKimiCodeHostIdentity } from "./version";
 
 export interface CliTelemetryBootstrap {
   readonly homeDir: string;
@@ -29,7 +32,7 @@ export interface CliTelemetryBootstrap {
 export interface InitializeCliTelemetryOptions {
   readonly harness: PromptHarness;
   readonly bootstrap: CliTelemetryBootstrap;
-  readonly config: Pick<KimiConfig, 'defaultModel' | 'telemetry'>;
+  readonly config: Pick<KimiConfig, "defaultModel" | "telemetry">;
   readonly version: string;
   readonly uiMode: string;
   readonly model?: string;
@@ -47,7 +50,9 @@ export function createCliTelemetryBootstrap(): CliTelemetryBootstrap {
   return { homeDir, deviceId, firstLaunch };
 }
 
-export function initializeCliTelemetry(options: InitializeCliTelemetryOptions): void {
+export function initializeCliTelemetry(
+  options: InitializeCliTelemetryOptions,
+): void {
   initializeTelemetry({
     homeDir: options.harness.homeDir,
     deviceId: options.bootstrap.deviceId,
@@ -58,10 +63,12 @@ export function initializeCliTelemetry(options: InitializeCliTelemetryOptions): 
     model: options.model ?? options.config.defaultModel,
     sessionId: options.sessionId,
     getAccessToken: async () =>
-      (await options.harness.auth.getCachedAccessToken(KIMI_CODE_PROVIDER_NAME)) ?? null,
+      (await options.harness.auth.getCachedAccessToken(
+        KIMI_CODE_PROVIDER_NAME,
+      )) ?? null,
   });
   if (options.bootstrap.firstLaunch) {
-    options.harness.track('first_launch');
+    options.harness.track("first_launch");
   }
 }
 
@@ -105,7 +112,8 @@ export function initializeServerTelemetry(
     version: options.version,
     uiMode: WEB_UI_MODE,
     model: config.defaultModel,
-    getAccessToken: async () => (await auth.getCachedAccessToken(KIMI_CODE_PROVIDER_NAME)) ?? null,
+    getAccessToken: async () =>
+      (await auth.getCachedAccessToken(KIMI_CODE_PROVIDER_NAME)) ?? null,
   });
 
   return {
@@ -117,7 +125,7 @@ export function initializeServerTelemetry(
 
 function readServerTelemetryConfig(
   configPath: string,
-): Pick<KimiConfig, 'telemetry' | 'defaultModel'> {
+): Pick<KimiConfig, "telemetry" | "defaultModel"> {
   try {
     const { config, fileError } = loadRuntimeConfigSafe(configPath);
     // A broken config fails the server on its own inside KimiCore; for

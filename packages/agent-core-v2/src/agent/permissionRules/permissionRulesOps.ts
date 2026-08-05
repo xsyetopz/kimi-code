@@ -18,56 +18,71 @@
  * records feed the transcript.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { defineModel } from '#/wire/model';
+import { defineModel } from "#/wire/model";
 
-import type { PermissionApprovalResultRecord, PermissionRule } from './permissionRules';
+import type {
+  PermissionApprovalResultRecord,
+  PermissionRule,
+} from "./permissionRules";
 
 export interface PermissionRulesModelState {
   readonly rules: readonly PermissionRule[];
   readonly sessionApprovalRulePatterns: readonly string[];
 }
 
-export const PermissionRulesModel = defineModel<PermissionRulesModelState>('permissionRules', () => ({
-  rules: [],
-  sessionApprovalRulePatterns: [],
-}));
+export const PermissionRulesModel = defineModel<PermissionRulesModelState>(
+  "permissionRules",
+  () => ({
+    rules: [],
+    sessionApprovalRulePatterns: [],
+  }),
+);
 
-declare module '#/wire/types' {
+declare module "#/wire/types" {
   interface PersistedOpMap {
-    'permission.record_approval_result': typeof recordApprovalResult;
+    "permission.record_approval_result": typeof recordApprovalResult;
   }
 
   interface TransientOpMap {
-    'permission.rules.add': typeof addPermissionRules;
+    "permission.rules.add": typeof addPermissionRules;
   }
 }
 
-export const addPermissionRules = PermissionRulesModel.defineOp('permission.rules.add', {
-  schema: z.object({ rules: z.custom<readonly PermissionRule[]>() }),
-  persist: false,
-  apply: (s, p) => {
-    if (p.rules.length === 0) return s;
-    return { ...s, rules: [...s.rules, ...p.rules] };
+export const addPermissionRules = PermissionRulesModel.defineOp(
+  "permission.rules.add",
+  {
+    schema: z.object({ rules: z.custom<readonly PermissionRule[]>() }),
+    persist: false,
+    apply: (s, p) => {
+      if (p.rules.length === 0) return s;
+      return { ...s, rules: [...s.rules, ...p.rules] };
+    },
   },
-});
+);
 
 export const recordApprovalResult = PermissionRulesModel.defineOp(
-  'permission.record_approval_result',
+  "permission.record_approval_result",
   {
     schema: z.custom<PermissionApprovalResultRecord>(),
     apply: (s, p) => {
       const pattern = p.sessionApprovalRule;
       if (
-        p.result.decision !== 'approved' ||
-        p.result.scope !== 'session' ||
+        p.result.decision !== "approved" ||
+        p.result.scope !== "session" ||
         pattern === undefined ||
         s.sessionApprovalRulePatterns.includes(pattern)
       ) {
         return s;
       }
-      return { ...s, sessionApprovalRulePatterns: [...s.sessionApprovalRulePatterns, pattern] };
+      return {
+        ...s,
+        sessionApprovalRulePatterns: [
+          ...s.sessionApprovalRulePatterns,
+          pattern,
+        ],
+      };
     },
   },
 );

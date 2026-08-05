@@ -8,42 +8,44 @@
  * `dangerous_bypass_auth: false`.
  */
 
-import { mkdtemp, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
-import { afterEach, describe, expect, it } from 'vitest';
-import { WebSocket, type RawData } from 'ws';
+import { afterEach, describe, expect, it } from "vitest";
+import { WebSocket, type RawData } from "ws";
 
-import { type RunningServer, startServer } from '../src/start';
-import { TEST_HOST_IDENTITY } from './helpers/hostIdentity';
-import { fixedTokenAuth } from './helpers/fixedAuth';
+import { type RunningServer, startServer } from "../src/start";
+import { TEST_HOST_IDENTITY } from "./helpers/hostIdentity";
+import { fixedTokenAuth } from "./helpers/fixedAuth";
 
-const TOKEN = 'test-token';
+const TOKEN = "test-token";
 
 function rawToString(data: RawData): string {
-  if (typeof data === 'string') return data;
-  if (Buffer.isBuffer(data)) return data.toString('utf8');
-  if (Array.isArray(data)) return Buffer.concat(data).toString('utf8');
-  return Buffer.from(data as ArrayBuffer).toString('utf8');
+  if (typeof data === "string") return data;
+  if (Buffer.isBuffer(data)) return data.toString("utf8");
+  if (Array.isArray(data)) return Buffer.concat(data).toString("utf8");
+  return Buffer.from(data as ArrayBuffer).toString("utf8");
 }
 
 /** Resolve when the socket opens and the server's first frame arrives. */
-function openConn(url: string): Promise<{ ws: WebSocket; firstFrame: unknown }> {
+function openConn(
+  url: string,
+): Promise<{ ws: WebSocket; firstFrame: unknown }> {
   return new Promise((resolve, reject) => {
     const ws = new WebSocket(url);
-    ws.once('message', (data) => {
+    ws.once("message", (data) => {
       try {
         resolve({ ws, firstFrame: JSON.parse(rawToString(data)) });
       } catch {
         resolve({ ws, firstFrame: null });
       }
     });
-    ws.once('error', reject);
+    ws.once("error", reject);
   });
 }
 
-describe('server-v2 disableAuth (--dangerous-bypass-auth)', () => {
+describe("server-v2 disableAuth (--dangerous-bypass-auth)", () => {
   let server: RunningServer | undefined;
   let home: string | undefined;
   const sockets: WebSocket[] = [];
@@ -66,21 +68,23 @@ describe('server-v2 disableAuth (--dangerous-bypass-auth)', () => {
     }
   });
 
-  async function boot(disableAuth?: boolean): Promise<{ base: string; port: number }> {
-    home = await mkdtemp(join(tmpdir(), 'kimi-server-v2-disable-auth-'));
+  async function boot(
+    disableAuth?: boolean,
+  ): Promise<{ base: string; port: number }> {
+    home = await mkdtemp(join(tmpdir(), "kimi-server-v2-disable-auth-"));
     server = await startServer({
       hostIdentity: TEST_HOST_IDENTITY,
-      host: '127.0.0.1',
+      host: "127.0.0.1",
       port: 0,
       homeDir: home,
-      logLevel: 'silent',
+      logLevel: "silent",
       authTokenService: fixedTokenAuth(TOKEN),
       disableAuth,
     });
     return { base: `http://127.0.0.1:${server.port}`, port: server.port };
   }
 
-  it('disableAuth:true lets REST through without a token and advertises it in /meta', async () => {
+  it("disableAuth:true lets REST through without a token and advertises it in /meta", async () => {
     const { base } = await boot(true);
 
     const meta = await fetch(`${base}/api/v1/meta`); // no Authorization header
@@ -97,15 +101,15 @@ describe('server-v2 disableAuth (--dangerous-bypass-auth)', () => {
     expect(auth.status).toBe(200);
   });
 
-  it('disableAuth:true lets WebSocket upgrades through without a token', async () => {
+  it("disableAuth:true lets WebSocket upgrades through without a token", async () => {
     const { port } = await boot(true);
 
     const v1 = await openConn(`ws://127.0.0.1:${port}/api/v1/ws`);
     sockets.push(v1.ws);
-    expect(v1.firstFrame).toMatchObject({ type: 'server_hello' });
+    expect(v1.firstFrame).toMatchObject({ type: "server_hello" });
   });
 
-  it('default boot keeps the gate closed and reports dangerous_bypass_auth: false', async () => {
+  it("default boot keeps the gate closed and reports dangerous_bypass_auth: false", async () => {
     const { base } = await boot(undefined);
 
     const unauthed = await fetch(`${base}/api/v1/meta`); // no token

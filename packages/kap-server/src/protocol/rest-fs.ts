@@ -6,7 +6,7 @@
  * `/v1/meta` capabilities document.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
 export const fsOpenRequestSchema = z.object({
   path: z.string().min(1),
@@ -30,11 +30,11 @@ export const fsRevealResponseSchema = z.object({
 export type FsRevealResponse = z.infer<typeof fsRevealResponseSchema>;
 
 export const fsOpenInAppIdSchema = z.enum([
-  'finder',
-  'cursor',
-  'vscode',
-  'iterm',
-  'terminal',
+  "finder",
+  "cursor",
+  "vscode",
+  "iterm",
+  "terminal",
 ]);
 export type FsOpenInAppId = z.infer<typeof fsOpenInAppIdSchema>;
 

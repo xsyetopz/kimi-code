@@ -1,7 +1,7 @@
-import type { ApprovalController } from './approval/controller';
-import type { QuestionController } from './question/controller';
-import { ReverseRpcModalCoordinator } from './modal-coordinator';
-import type { ApprovalPanelData, QuestionPanelData } from './types';
+import type { ApprovalController } from "./approval/controller";
+import type { QuestionController } from "./question/controller";
+import { ReverseRpcModalCoordinator } from "./modal-coordinator";
+import type { ApprovalPanelData, QuestionPanelData } from "./types";
 
 export interface ReverseRPCUIHooks {
   readonly showApprovalPanel: (payload: ApprovalPanelData) => void;
@@ -23,7 +23,7 @@ export function registerReverseRPCHandlers(
       modalCoordinator.showApproval(payload);
     },
     hidePanel: () => {
-      modalCoordinator.hide('approval');
+      modalCoordinator.hide("approval");
     },
   });
 
@@ -32,7 +32,7 @@ export function registerReverseRPCHandlers(
       modalCoordinator.showQuestion(payload);
     },
     hidePanel: () => {
-      modalCoordinator.hide('question');
+      modalCoordinator.hide("question");
     },
   });
 

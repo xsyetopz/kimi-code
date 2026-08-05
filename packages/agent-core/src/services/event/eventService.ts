@@ -13,11 +13,11 @@
  * Publishing after `dispose()` is a no-op.
  */
 
-import { Disposable, InstantiationType, registerSingleton } from '../../di';
-import { Emitter } from '../../base/common/event';
-import type { Event as ProtocolEvent } from '@moonshot-ai/protocol';
+import { Disposable, InstantiationType, registerSingleton } from "../../di";
+import { Emitter } from "../../base/common/event";
+import type { Event as ProtocolEvent } from "@moonshot-ai/protocol";
 
-import { IEventService } from './event';
+import { IEventService } from "./event";
 
 export class EventService extends Disposable implements IEventService {
   readonly _serviceBrand: undefined;

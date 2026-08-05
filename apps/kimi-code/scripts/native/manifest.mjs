@@ -2,8 +2,8 @@ export const NATIVE_ASSET_MANIFEST_VERSION = 2;
 export const WEB_ASSET_MANIFEST_VERSION = 1;
 
 export const MINIDB_TEXT_BUILD_WORKER_ASSET = Object.freeze({
-  key: 'minidb-text-build-worker',
-  relativePath: 'runtime/minidb/text-build-worker.mjs',
+  key: "minidb-text-build-worker",
+  relativePath: "runtime/minidb/text-build-worker.mjs",
   mode: 0o644,
 });
 

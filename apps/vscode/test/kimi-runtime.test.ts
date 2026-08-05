@@ -23,7 +23,10 @@ import type {
 import { describe, expect, it } from "vitest";
 
 import { Events } from "../shared/bridge";
-import { KimiRuntime, type OpenSessionOptions } from "../src/runtime/kimi-runtime";
+import {
+  KimiRuntime,
+  type OpenSessionOptions,
+} from "../src/runtime/kimi-runtime";
 
 interface FakeSessionBoundary {
   readonly session: Session;
@@ -35,7 +38,9 @@ interface FakeSessionBoundary {
   readonly subscriptionCount: () => number;
   readonly closeCount: () => number;
   readonly emit: (event: Event) => void;
-  readonly setPromptImpl: (impl: (input: string | PromptInput) => Promise<void>) => void;
+  readonly setPromptImpl: (
+    impl: (input: string | PromptInput) => Promise<void>,
+  ) => void;
 }
 
 function createFakeSession(
@@ -52,7 +57,8 @@ function createFakeSession(
   const handlerInstallations = { approval: 0, question: 0 };
   let subscriptions = 0;
   let closes = 0;
-  let promptImpl: (input: string | PromptInput) => Promise<void> = async () => {};
+  let promptImpl: (input: string | PromptInput) => Promise<void> =
+    async () => {};
   let status: SessionStatus = {
     model: initial.model ?? "kimi-test",
     thinkingEffort: initial.thinkingEffort ?? "off",
@@ -194,7 +200,8 @@ function createFakeHarness(
     async resumeSession(input: ResumeSessionInput) {
       resumeInputs.push(input);
       const boundary = sessions.get(input.id);
-      if (boundary === undefined) throw new Error(`Unknown session: ${input.id}`);
+      if (boundary === undefined)
+        throw new Error(`Unknown session: ${input.id}`);
       return boundary.session;
     },
     async closeSession(id: string) {
@@ -220,7 +227,9 @@ function createFakeHarness(
   };
 }
 
-function openOptions(overrides: Partial<OpenSessionOptions> = {}): OpenSessionOptions {
+function openOptions(
+  overrides: Partial<OpenSessionOptions> = {},
+): OpenSessionOptions {
   return {
     webviewId: "view-1",
     workDir: "/workspace",
@@ -231,9 +240,7 @@ function openOptions(overrides: Partial<OpenSessionOptions> = {}): OpenSessionOp
   };
 }
 
-function createRuntime(
-  normalizeCreatedWorkDir?: (workDir: string) => string,
-) {
+function createRuntime(normalizeCreatedWorkDir?: (workDir: string) => string) {
   const sdk = createFakeHarness(normalizeCreatedWorkDir);
   const runtime = new KimiRuntime({
     version: "0.6.0",
@@ -266,11 +273,15 @@ describe("Kimi runtime (owns shared SDK sessions for Webviews)", () => {
   });
 
   it("accepts the normalized SDK workDir when a Windows session is created", async () => {
-    const { runtime } = createRuntime((workDir) => workDir.replaceAll("\\", "/"));
+    const { runtime } = createRuntime((workDir) =>
+      workDir.replaceAll("\\", "/"),
+    );
 
-    const opened = await runtime.openSession(openOptions({
-      workDir: "C:\\Users\\Example User\\项目",
-    }));
+    const opened = await runtime.openSession(
+      openOptions({
+        workDir: "C:\\Users\\Example User\\项目",
+      }),
+    );
 
     expect(opened.session.workDir).toBe("C:/Users/Example User/项目");
   });
@@ -279,10 +290,12 @@ describe("Kimi runtime (owns shared SDK sessions for Webviews)", () => {
     const { runtime, sdk } = createRuntime();
     sdk.addSession("saved-win", "C:/Users/Example User/项目");
 
-    const opened = await runtime.openSession(openOptions({
-      sessionId: "saved-win",
-      workDir: "c:\\users\\example user\\项目",
-    }));
+    const opened = await runtime.openSession(
+      openOptions({
+        sessionId: "saved-win",
+        workDir: "c:\\users\\example user\\项目",
+      }),
+    );
 
     expect(opened.id).toBe("saved-win");
   });
@@ -299,10 +312,14 @@ describe("Kimi runtime (owns shared SDK sessions for Webviews)", () => {
     const { runtime, sdk } = createRuntime();
     sdk.addSession("saved-1", "/workspace");
 
-    const opened = await runtime.openSession(openOptions({ sessionId: "saved-1" }));
+    const opened = await runtime.openSession(
+      openOptions({ sessionId: "saved-1" }),
+    );
 
     expect(opened.id).toBe("saved-1");
-    expect(sdk.resumeInputs).toEqual([{ id: "saved-1", includeSubagents: true }]);
+    expect(sdk.resumeInputs).toEqual([
+      { id: "saved-1", includeSubagents: true },
+    ]);
     expect(sdk.createInputs).toEqual([]);
   });
 
@@ -311,7 +328,9 @@ describe("Kimi runtime (owns shared SDK sessions for Webviews)", () => {
     await runtime.openSession(openOptions());
     sdk.addSession("saved-2", "/workspace");
 
-    const selected = await runtime.openSession(openOptions({ sessionId: "saved-2" }));
+    const selected = await runtime.openSession(
+      openOptions({ sessionId: "saved-2" }),
+    );
 
     expect(runtime.getSessionForView("view-1")?.id).toBe("saved-2");
     expect(selected.id).toBe("saved-2");
@@ -330,7 +349,9 @@ describe("Kimi runtime (owns shared SDK sessions for Webviews)", () => {
 
   it("shares one SDK subscription when two Webviews attach to the same session", async () => {
     const { runtime, sdk } = createRuntime();
-    const first = await runtime.openSession(openOptions({ webviewId: "view-1" }));
+    const first = await runtime.openSession(
+      openOptions({ webviewId: "view-1" }),
+    );
     const boundary = sdk.sessions.get(first.id)!;
 
     const second = await runtime.openSession(
@@ -345,27 +366,40 @@ describe("Kimi runtime (owns shared SDK sessions for Webviews)", () => {
 
   it("preserves the resumed session's model instead of reapplying the configured default", async () => {
     const { runtime, sdk } = createRuntime();
-    const session = sdk.addSession("saved-1", "/workspace", { model: "old-model" });
+    const session = sdk.addSession("saved-1", "/workspace", {
+      model: "old-model",
+    });
 
-    const opened = await runtime.openSession(openOptions({ sessionId: "saved-1", model: "new-model" }));
+    const opened = await runtime.openSession(
+      openOptions({ sessionId: "saved-1", model: "new-model" }),
+    );
 
     expect(session.setModels).toEqual([]);
-    await expect(opened.session.getStatus()).resolves.toMatchObject({ model: "old-model" });
+    await expect(opened.session.getStatus()).resolves.toMatchObject({
+      model: "old-model",
+    });
   });
 
   it("preserves the resumed session's thinking effort instead of reapplying the configured default", async () => {
     const { runtime, sdk } = createRuntime();
-    const session = sdk.addSession("saved-1", "/workspace", { thinkingEffort: "max" });
+    const session = sdk.addSession("saved-1", "/workspace", {
+      thinkingEffort: "max",
+    });
 
-    const opened = await runtime.openSession(openOptions({ sessionId: "saved-1", effort: "medium" }));
+    const opened = await runtime.openSession(
+      openOptions({ sessionId: "saved-1", effort: "medium" }),
+    );
 
     expect(session.setThinkingEfforts).toEqual([]);
-    await expect(opened.session.getStatus()).resolves.toMatchObject({ thinkingEffort: "max" });
+    await expect(opened.session.getStatus()).resolves.toMatchObject({
+      thinkingEffort: "max",
+    });
   });
 
   it("announces the session's actual status to the attaching view so the display matches it", async () => {
     const sdk = createFakeHarness();
-    const broadcasts: { event: string; data: unknown; webviewId?: string }[] = [];
+    const broadcasts: { event: string; data: unknown; webviewId?: string }[] =
+      [];
     const runtime = new KimiRuntime({
       version: "0.6.0",
       harness: sdk.harness,
@@ -381,13 +415,19 @@ describe("Kimi runtime (owns shared SDK sessions for Webviews)", () => {
       planMode: true,
     });
 
-    await runtime.openSession(openOptions({ sessionId: "saved-1", effort: "medium" }));
+    await runtime.openSession(
+      openOptions({ sessionId: "saved-1", effort: "medium" }),
+    );
 
     expect(broadcasts).toContainEqual({
       event: Events.StreamEvent,
       data: {
         type: "StatusUpdate",
-        payload: { model: "kimi-test", thinking_effort: "max", plan_mode: true },
+        payload: {
+          model: "kimi-test",
+          thinking_effort: "max",
+          plan_mode: true,
+        },
         _sessionId: "saved-1",
       },
       webviewId: "view-1",
@@ -396,9 +436,13 @@ describe("Kimi runtime (owns shared SDK sessions for Webviews)", () => {
 
   it("uses the yolo setting as the initial value for an unmarked resumed session", async () => {
     const { runtime, sdk } = createRuntime();
-    const session = sdk.addSession("saved-1", "/workspace", { permission: "manual" });
+    const session = sdk.addSession("saved-1", "/workspace", {
+      permission: "manual",
+    });
 
-    await runtime.openSession(openOptions({ sessionId: "saved-1", yoloMode: true }));
+    await runtime.openSession(
+      openOptions({ sessionId: "saved-1", yoloMode: true }),
+    );
 
     expect(session.metadataUpdates).toEqual([
       { vscode_legacy_approval: { yolo: true, afk: false } },
@@ -414,7 +458,9 @@ describe("Kimi runtime (owns shared SDK sessions for Webviews)", () => {
       { vscode_legacy_approval: { yolo: false, afk: false } },
     );
 
-    const opened = await runtime.openSession(openOptions({ sessionId: "saved-1", yoloMode: true }));
+    const opened = await runtime.openSession(
+      openOptions({ sessionId: "saved-1", yoloMode: true }),
+    );
 
     expect(session.setPermissions).toEqual(["yolo"]);
     expect(session.metadataUpdates).toEqual([
@@ -432,7 +478,9 @@ describe("Kimi runtime (owns shared SDK sessions for Webviews)", () => {
       { vscode_legacy_approval: { yolo: true, afk: false } },
     );
 
-    const opened = await runtime.openSession(openOptions({ sessionId: "saved-1", yoloMode: false }));
+    const opened = await runtime.openSession(
+      openOptions({ sessionId: "saved-1", yoloMode: false }),
+    );
 
     expect(session.setPermissions).toEqual(["manual"]);
     expect(session.metadataUpdates).toEqual([
@@ -450,7 +498,9 @@ describe("Kimi runtime (owns shared SDK sessions for Webviews)", () => {
       { vscode_legacy_approval: { yolo: false, afk: true } },
     );
 
-    const opened = await runtime.openSession(openOptions({ sessionId: "saved-1", yoloMode: true }));
+    const opened = await runtime.openSession(
+      openOptions({ sessionId: "saved-1", yoloMode: true }),
+    );
 
     expect(session.setPermissions).toEqual(["auto"]);
     expect(opened.legacyApprovalFlags).toEqual({ yolo: true, afk: true });
@@ -465,7 +515,9 @@ describe("Kimi runtime (owns shared SDK sessions for Webviews)", () => {
       { vscode_legacy_approval: { yolo: false, afk: true } },
     );
 
-    await runtime.openSession(openOptions({ sessionId: "saved-1", yoloMode: false }));
+    await runtime.openSession(
+      openOptions({ sessionId: "saved-1", yoloMode: false }),
+    );
 
     expect(session.setPermissions).toEqual(["auto"]);
   });
@@ -478,13 +530,19 @@ describe("Kimi runtime (owns shared SDK sessions for Webviews)", () => {
     await runtime.setYoloModeForActiveSessions(true);
 
     expect(opened.legacyApprovalFlags).toEqual({ yolo: true, afk: true });
-    await expect(opened.session.getStatus()).resolves.toMatchObject({ permission: "auto" });
+    await expect(opened.session.getStatus()).resolves.toMatchObject({
+      permission: "auto",
+    });
   });
 
   it("keeps a shared session open when one of its Webviews detaches", async () => {
     const { runtime, sdk } = createRuntime();
-    const opened = await runtime.openSession(openOptions({ webviewId: "view-1" }));
-    await runtime.openSession(openOptions({ webviewId: "view-2", sessionId: opened.id }));
+    const opened = await runtime.openSession(
+      openOptions({ webviewId: "view-1" }),
+    );
+    await runtime.openSession(
+      openOptions({ webviewId: "view-2", sessionId: opened.id }),
+    );
     const boundary = sdk.sessions.get(opened.id)!;
 
     await runtime.detachView("view-1");
@@ -507,9 +565,15 @@ describe("Kimi runtime (owns shared SDK sessions for Webviews)", () => {
   it("reattaches the same resumed session without replacing its handlers", async () => {
     const { runtime, sdk } = createRuntime();
     const boundary = sdk.addSession("saved-1", "/workspace");
-    const first = await runtime.attachResumedSession("view-1", boundary.session);
+    const first = await runtime.attachResumedSession(
+      "view-1",
+      boundary.session,
+    );
 
-    const second = await runtime.attachResumedSession("view-1", boundary.session);
+    const second = await runtime.attachResumedSession(
+      "view-1",
+      boundary.session,
+    );
 
     expect(second).toBe(first);
     expect(boundary.subscriptionCount()).toBe(1);
@@ -519,8 +583,12 @@ describe("Kimi runtime (owns shared SDK sessions for Webviews)", () => {
 
   it("removes every Webview mapping when a shared session is closed", async () => {
     const { runtime } = createRuntime();
-    const opened = await runtime.openSession(openOptions({ webviewId: "view-1" }));
-    await runtime.openSession(openOptions({ webviewId: "view-2", sessionId: opened.id }));
+    const opened = await runtime.openSession(
+      openOptions({ webviewId: "view-1" }),
+    );
+    await runtime.openSession(
+      openOptions({ webviewId: "view-2", sessionId: opened.id }),
+    );
 
     await runtime.closeSession(opened.id);
 
@@ -541,9 +609,13 @@ describe("Kimi runtime (owns shared SDK sessions for Webviews)", () => {
 
   it("closes every active SDK session when the host runtime is disposed", async () => {
     const { runtime, sdk } = createRuntime();
-    const first = await runtime.openSession(openOptions({ webviewId: "view-1" }));
+    const first = await runtime.openSession(
+      openOptions({ webviewId: "view-1" }),
+    );
     const secondBoundary = sdk.addSession("saved-2", "/workspace");
-    await runtime.openSession(openOptions({ webviewId: "view-2", sessionId: "saved-2" }));
+    await runtime.openSession(
+      openOptions({ webviewId: "view-2", sessionId: "saved-2" }),
+    );
 
     await runtime.dispose();
 
@@ -558,7 +630,9 @@ describe("Kimi runtime (owns shared SDK sessions for Webviews)", () => {
 
     await expect(
       runtime.openSession(openOptions({ sessionId: "foreign-1" })),
-    ).rejects.toThrow("The selected session belongs to a different working directory.");
+    ).rejects.toThrow(
+      "The selected session belongs to a different working directory.",
+    );
 
     expect(runtime.getSession("foreign-1")).toBeUndefined();
     expect(foreign.closeCount()).toBe(1);
@@ -585,18 +659,30 @@ describe("Kimi runtime (owns shared SDK sessions for Webviews)", () => {
     const boundary = sdk.sessions.get(opened.id)!;
 
     let releaseTurn!: () => void;
-    boundary.setPromptImpl(() => new Promise<void>((resolve) => {
-      releaseTurn = resolve;
-    }));
+    boundary.setPromptImpl(
+      () =>
+        new Promise<void>((resolve) => {
+          releaseTurn = resolve;
+        }),
+    );
     const first = opened.prompt("first message");
-    boundary.emit({ type: "turn.started", agentId: "main", sessionId: opened.id, turnId: "t1" } as unknown as Event);
+    boundary.emit({
+      type: "turn.started",
+      agentId: "main",
+      sessionId: opened.id,
+      turnId: "t1",
+    } as unknown as Event);
     expect(opened.isBusy).toBe(true);
 
-    await expect(opened.prompt("concurrent message")).resolves.toEqual({ status: "failed" });
+    await expect(opened.prompt("concurrent message")).resolves.toEqual({
+      status: "failed",
+    });
 
     // The rejection surfaces as a mid-turn warning; the active turn is untouched.
     expect(opened.isBusy).toBe(true);
-    const busyWarning = broadcasts.find(({ data }) => (data as { type?: string }).type === "error");
+    const busyWarning = broadcasts.find(
+      ({ data }) => (data as { type?: string }).type === "error",
+    );
     expect(busyWarning?.data).toMatchObject({
       type: "error",
       phase: "runtime",
@@ -604,7 +690,13 @@ describe("Kimi runtime (owns shared SDK sessions for Webviews)", () => {
       terminal: false,
     });
 
-    boundary.emit({ type: "turn.ended", agentId: "main", sessionId: opened.id, turnId: "t1", reason: "completed" } as unknown as Event);
+    boundary.emit({
+      type: "turn.ended",
+      agentId: "main",
+      sessionId: opened.id,
+      turnId: "t1",
+      reason: "completed",
+    } as unknown as Event);
     releaseTurn();
     await expect(first).resolves.toEqual({ status: "finished" });
     expect(opened.isBusy).toBe(false);
@@ -616,18 +708,25 @@ describe("Kimi runtime (owns shared SDK sessions for Webviews)", () => {
 
     let releaseExclusive!: () => void;
     const exclusive = opened.runExclusiveAfterCancelling(
-      () => new Promise<void>((resolve) => {
-        releaseExclusive = resolve;
-      }),
+      () =>
+        new Promise<void>((resolve) => {
+          releaseExclusive = resolve;
+        }),
     );
     // No active work means no later stream_complete: the rejection must be
     // terminal so the caller's composer can unlock.
     expect(opened.isBusy).toBe(true);
 
-    await expect(opened.prompt("during fork")).resolves.toEqual({ status: "failed" });
-    const rejection = broadcasts.find(({ data }) => (data as { type?: string }).type === "error");
+    await expect(opened.prompt("during fork")).resolves.toEqual({
+      status: "failed",
+    });
+    const rejection = broadcasts.find(
+      ({ data }) => (data as { type?: string }).type === "error",
+    );
     expect(rejection?.data).toMatchObject({ type: "error", phase: "runtime" });
-    expect((rejection?.data as Record<string, unknown>)["terminal"]).toBeUndefined();
+    expect(
+      (rejection?.data as Record<string, unknown>)["terminal"],
+    ).toBeUndefined();
 
     releaseExclusive();
     await exclusive;
@@ -640,11 +739,19 @@ describe("Kimi runtime (owns shared SDK sessions for Webviews)", () => {
     const boundary = sdk.sessions.get(opened.id)!;
 
     let releaseTurn!: () => void;
-    boundary.setPromptImpl(() => new Promise<void>((resolve) => {
-      releaseTurn = resolve;
-    }));
+    boundary.setPromptImpl(
+      () =>
+        new Promise<void>((resolve) => {
+          releaseTurn = resolve;
+        }),
+    );
     const first = opened.prompt("first message");
-    boundary.emit({ type: "turn.started", agentId: "main", sessionId: opened.id, turnId: "t1" } as unknown as Event);
+    boundary.emit({
+      type: "turn.started",
+      agentId: "main",
+      sessionId: opened.id,
+      turnId: "t1",
+    } as unknown as Event);
 
     boundary.emit({
       type: "error",
@@ -656,7 +763,9 @@ describe("Kimi runtime (owns shared SDK sessions for Webviews)", () => {
 
     // The turn is still running: no settlement, no terminal error on the wire.
     expect(opened.isBusy).toBe(true);
-    const warning = broadcasts.find(({ data }) => (data as { type?: string }).type === "error");
+    const warning = broadcasts.find(
+      ({ data }) => (data as { type?: string }).type === "error",
+    );
     expect(warning?.data).toMatchObject({
       type: "error",
       code: "records.write_failed",
@@ -664,7 +773,13 @@ describe("Kimi runtime (owns shared SDK sessions for Webviews)", () => {
       terminal: false,
     });
 
-    boundary.emit({ type: "turn.ended", agentId: "main", sessionId: opened.id, turnId: "t1", reason: "completed" } as unknown as Event);
+    boundary.emit({
+      type: "turn.ended",
+      agentId: "main",
+      sessionId: opened.id,
+      turnId: "t1",
+      reason: "completed",
+    } as unknown as Event);
     releaseTurn();
     await expect(first).resolves.toEqual({ status: "finished" });
     expect(opened.isBusy).toBe(false);
@@ -678,9 +793,13 @@ describe("Kimi runtime (owns shared SDK sessions for Webviews)", () => {
     boundary.setPromptImpl(() => Promise.reject(new Error("provider down")));
 
     await expect(opened.prompt("hi")).resolves.toEqual({ status: "failed" });
-    const failure = broadcasts.find(({ data }) => (data as { type?: string }).type === "error");
+    const failure = broadcasts.find(
+      ({ data }) => (data as { type?: string }).type === "error",
+    );
     expect(failure?.data).toMatchObject({ type: "error", phase: "preflight" });
-    expect((failure?.data as Record<string, unknown>)["terminal"]).toBeUndefined();
+    expect(
+      (failure?.data as Record<string, unknown>)["terminal"],
+    ).toBeUndefined();
     expect(opened.isBusy).toBe(false);
   });
 });

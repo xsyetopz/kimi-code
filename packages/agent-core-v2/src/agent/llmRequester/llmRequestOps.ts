@@ -5,10 +5,10 @@
  * traces, with replay restoring only the snapshot de-dup cursor.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import type { ThinkingEffort } from '#/kosong/contract/provider';
-import { defineModel } from '#/wire/model';
+import type { ThinkingEffort } from "#/kosong/contract/provider";
+import { defineModel } from "#/wire/model";
 
 export interface LlmRequestToolSchema {
   readonly name: string;
@@ -21,7 +21,7 @@ export interface LlmRequestTraceState {
 }
 
 export const LlmRequestTraceModel = defineModel<LlmRequestTraceState>(
-  'llm.requestTrace',
+  "llm.requestTrace",
   () => ({ seenToolsHashes: [] }),
 );
 
@@ -31,27 +31,30 @@ const llmToolEntrySchema = z.object({
   parameters: z.record(z.string(), z.unknown()),
 });
 
-declare module '#/wire/types' {
+declare module "#/wire/types" {
   interface PersistedOpMap {
-    'llm.tools_snapshot': typeof llmToolsSnapshot;
-    'llm.request': typeof llmRequest;
+    "llm.tools_snapshot": typeof llmToolsSnapshot;
+    "llm.request": typeof llmRequest;
   }
 }
 
-export const llmToolsSnapshot = LlmRequestTraceModel.defineOp('llm.tools_snapshot', {
-  schema: z.object({
-    hash: z.string(),
-    tools: z.array(llmToolEntrySchema).readonly(),
-  }),
-  apply: (s, p) => {
-    if (s.seenToolsHashes.includes(p.hash)) return s;
-    return { seenToolsHashes: [...s.seenToolsHashes, p.hash] };
+export const llmToolsSnapshot = LlmRequestTraceModel.defineOp(
+  "llm.tools_snapshot",
+  {
+    schema: z.object({
+      hash: z.string(),
+      tools: z.array(llmToolEntrySchema).readonly(),
+    }),
+    apply: (s, p) => {
+      if (s.seenToolsHashes.includes(p.hash)) return s;
+      return { seenToolsHashes: [...s.seenToolsHashes, p.hash] };
+    },
   },
-});
+);
 
-export const llmRequest = LlmRequestTraceModel.defineOp('llm.request', {
+export const llmRequest = LlmRequestTraceModel.defineOp("llm.request", {
   schema: z.object({
-    kind: z.enum(['loop', 'compaction']),
+    kind: z.enum(["loop", "compaction"]),
     provider: z.string(),
     model: z.string(),
     modelAlias: z.string().optional(),
@@ -68,7 +71,9 @@ export const llmRequest = LlmRequestTraceModel.defineOp('llm.request', {
     messageCount: z.number(),
     turnStep: z.string().optional(),
     attempt: z.string().optional(),
-    projection: z.enum(['strict', 'media-degraded', 'media-stripped']).optional(),
+    projection: z
+      .enum(["strict", "media-degraded", "media-stripped"])
+      .optional(),
     droppedCount: z.number().optional(),
   }),
   apply: (s) => s,

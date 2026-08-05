@@ -24,17 +24,17 @@
  *    base-converted, post-processed by the hook, and dropped on `null`.
  */
 
-import OpenAI from 'openai';
+import OpenAI from "openai";
 
-import { parseTraceId, type ChatProviderError } from '#/kosong/contract/errors';
+import { parseTraceId, type ChatProviderError } from "#/kosong/contract/errors";
 import type {
   ContentPart,
   Message,
   StreamedMessagePart,
   ToolCall,
   VideoURLPart,
-} from '#/kosong/contract/message';
-import { isToolDeclarationOnlyMessage } from '#/kosong/contract/message';
+} from "#/kosong/contract/message";
+import { isToolDeclarationOnlyMessage } from "#/kosong/contract/message";
 import type {
   ChatProvider,
   FinishReason,
@@ -45,14 +45,14 @@ import type {
   ThinkingEffort,
   ToolCallIdPolicy,
   VideoUploadInput,
-} from '#/kosong/contract/provider';
-import type { Tool } from '#/kosong/contract/tool';
-import type { TokenUsage } from '#/kosong/contract/usage';
+} from "#/kosong/contract/provider";
+import type { Tool } from "#/kosong/contract/tool";
+import type { TokenUsage } from "#/kosong/contract/usage";
 
 import {
   convertChatCompletionStreamToolCall,
   type BufferedChatCompletionToolCall,
-} from './chat-completions-stream';
+} from "./chat-completions-stream";
 import {
   convertContentPart,
   convertOpenAIError,
@@ -71,15 +71,17 @@ import {
   TOOL_RESULT_MEDIA_PROMPT,
   type ToolMessageConversion,
   toolToOpenAI,
-} from './openai-common';
-import { ReasoningKeyDialect } from './reasoning-key';
+} from "./openai-common";
+import { ReasoningKeyDialect } from "./reasoning-key";
 import {
   mergeRequestHeaders,
   requireProviderApiKey,
   resolveAuthBackedClient,
-} from '../request-auth';
-import { normalizeToolCallIdsForProvider, sanitizeToolCallId } from '../tool-call-id';
-
+} from "../request-auth";
+import {
+  normalizeToolCallIdsForProvider,
+  sanitizeToolCallId,
+} from "../tool-call-id";
 
 const CHAT_COMPLETIONS_MAX_OUTPUT_TOKENS_CEILING = 128 * 1024;
 
@@ -98,17 +100,25 @@ export interface OpenAIChatCompletionsHooks {
   mergeHistory?: (
     messages: readonly Record<string, unknown>[],
   ) => Record<string, unknown>[] | undefined;
-  buildParams?: (params: Record<string, unknown>) => Record<string, unknown> | undefined;
+  buildParams?: (
+    params: Record<string, unknown>,
+  ) => Record<string, unknown> | undefined;
   toolCallIdPolicy?: () => ToolCallIdPolicy | undefined;
   withThinking?: (
     effort: ThinkingEffort,
     options: { readonly keep?: string },
     generationKwargs: OpenAILegacyGenerationKwargs,
   ) => OpenAILegacyGenerationKwargs | undefined;
-  preserveThinking?: (generationKwargs: Record<string, unknown>) => boolean | undefined;
-  withMaxCompletionTokens?: (maxCompletionTokens: number) => Record<string, unknown> | undefined;
+  preserveThinking?: (
+    generationKwargs: Record<string, unknown>,
+  ) => boolean | undefined;
+  withMaxCompletionTokens?: (
+    maxCompletionTokens: number,
+  ) => Record<string, unknown> | undefined;
   cacheKey?: (key: string) => Record<string, unknown> | undefined;
-  extractUsage?: (chunk: Record<string, unknown>) => Record<string, unknown> | null | undefined;
+  extractUsage?: (
+    chunk: Record<string, unknown>,
+  ) => Record<string, unknown> | null | undefined;
   reasoningKey?: () => string | undefined;
   uploadVideo?: (
     input: string | VideoUploadInput,
@@ -161,7 +171,9 @@ interface OpenAIToolCallOut {
 
 function usesMaxCompletionTokens(model: string): boolean {
   const normalized = model.toLowerCase();
-  return /^o\d(?:$|[-.])/.test(normalized) || /^gpt-5(?:$|[-.])/.test(normalized);
+  return (
+    /^o\d(?:$|[-.])/.test(normalized) || /^gpt-5(?:$|[-.])/.test(normalized)
+  );
 }
 
 function completionTokenKwargs(
@@ -179,7 +191,10 @@ function normalizeGenerationKwargs(
 ): OpenAILegacyGenerationKwargs {
   const kwargs = { ...source };
   if (usesMaxCompletionTokens(model)) {
-    if (kwargs.max_completion_tokens === undefined && kwargs.max_tokens !== undefined) {
+    if (
+      kwargs.max_completion_tokens === undefined &&
+      kwargs.max_tokens !== undefined
+    ) {
       kwargs.max_completion_tokens = kwargs.max_tokens;
     }
     delete kwargs.max_tokens;
@@ -187,12 +202,14 @@ function normalizeGenerationKwargs(
   return kwargs;
 }
 
-function responseFormatToOpenAI(format: ResponseFormat): Record<string, unknown> {
-  if (format.type === 'json_object') {
-    return { type: 'json_object' };
+function responseFormatToOpenAI(
+  format: ResponseFormat,
+): Record<string, unknown> {
+  if (format.type === "json_object") {
+    return { type: "json_object" };
   }
   return {
-    type: 'json_schema',
+    type: "json_schema",
     json_schema: {
       name: format.jsonSchema.name,
       schema: format.jsonSchema.schema,
@@ -209,12 +226,12 @@ function convertMessage(
   preserveThinking: boolean,
   allowToolResultExtraction: boolean,
 ): OpenAIMessage {
-  let reasoningContent = '';
+  let reasoningContent = "";
   let hasReasoningPart = false;
   const nonThinkParts: ContentPart[] = [];
 
   for (const part of message.content) {
-    if (part.type === 'think') {
+    if (part.type === "think") {
       hasReasoningPart = true;
       reasoningContent += part.think;
     } else {
@@ -224,16 +241,23 @@ function convertMessage(
 
   const result: OpenAIMessage = { role: message.role };
 
-  if (message.role === 'tool') {
-    const hasNonTextPart = message.content.some((p) => p.type !== 'text' && p.type !== 'think');
+  if (message.role === "tool") {
+    const hasNonTextPart = message.content.some(
+      (p) => p.type !== "text" && p.type !== "think",
+    );
     const effectiveConversion: ToolMessageConversion =
-      allowToolResultExtraction && hasNonTextPart ? 'extract_text' : toolMessageConversion;
+      allowToolResultExtraction && hasNonTextPart
+        ? "extract_text"
+        : toolMessageConversion;
 
     if (effectiveConversion !== null) {
-      result.content = convertToolMessageContentForChat(message, effectiveConversion);
+      result.content = convertToolMessageContentForChat(
+        message,
+        effectiveConversion,
+      );
     } else {
       const firstPart = nonThinkParts[0];
-      if (nonThinkParts.length === 1 && firstPart?.type === 'text') {
+      if (nonThinkParts.length === 1 && firstPart?.type === "text") {
         result.content = firstPart.text;
       } else if (nonThinkParts.length > 0) {
         result.content = nonThinkParts
@@ -243,7 +267,7 @@ function convertMessage(
     }
   } else {
     const firstPart = nonThinkParts[0];
-    if (nonThinkParts.length === 1 && firstPart?.type === 'text') {
+    if (nonThinkParts.length === 1 && firstPart?.type === "text") {
       result.content = firstPart.text;
     } else if (nonThinkParts.length > 0) {
       result.content = nonThinkParts
@@ -268,41 +292,46 @@ function convertMessage(
     result.tool_call_id = message.toolCallId;
   }
 
-  if (hasReasoningPart || (preserveThinking && message.role === 'assistant')) {
+  if (hasReasoningPart || (preserveThinking && message.role === "assistant")) {
     result[reasoningKey] = reasoningContent;
   }
 
   return result;
 }
 
-const OMITTED_AUDIO_PLACEHOLDER = '(audio omitted: not supported by this provider)';
-const OMITTED_VIDEO_PLACEHOLDER = '(video omitted: not supported by this provider)';
+const OMITTED_AUDIO_PLACEHOLDER =
+  "(audio omitted: not supported by this provider)";
+const OMITTED_VIDEO_PLACEHOLDER =
+  "(video omitted: not supported by this provider)";
 
 function convertToolMessageContentForChat(
   message: Message,
   conversion: ToolMessageConversion,
 ): string | OpenAIContentPart[] {
   const content = convertToolMessageContent(message, conversion);
-  if (typeof content !== 'string') {
+  if (typeof content !== "string") {
     return content;
   }
   const lines: string[] = content.length > 0 ? [content] : [];
-  if (message.content.some((part) => part.type === 'audio_url')) {
+  if (message.content.some((part) => part.type === "audio_url")) {
     lines.push(OMITTED_AUDIO_PLACEHOLDER);
   }
-  if (message.content.some((part) => part.type === 'video_url')) {
+  if (message.content.some((part) => part.type === "video_url")) {
     lines.push(OMITTED_VIDEO_PLACEHOLDER);
   }
-  if (lines.length === 0 && message.content.some((part) => part.type === 'image_url')) {
+  if (
+    lines.length === 0 &&
+    message.content.some((part) => part.type === "image_url")
+  ) {
     return TOOL_RESULT_MEDIA_PLACEHOLDER;
   }
-  return lines.join('\n');
+  return lines.join("\n");
 }
 
 function toolResultImageParts(message: Message): OpenAIContentPart[] {
   const images: OpenAIContentPart[] = [];
   for (const part of message.content) {
-    if (part.type !== 'image_url') continue;
+    if (part.type !== "image_url") continue;
     const converted = convertContentPart(part);
     if (converted !== null) {
       images.push(converted);
@@ -317,8 +346,11 @@ function appendToolResultMediaMessage(
 ): void {
   if (pendingToolResultMedia.length === 0) return;
   messages.push({
-    role: 'user',
-    content: [{ type: 'text', text: TOOL_RESULT_MEDIA_PROMPT }, ...pendingToolResultMedia],
+    role: "user",
+    content: [
+      { type: "text", text: TOOL_RESULT_MEDIA_PROMPT },
+      ...pendingToolResultMedia,
+    ],
   });
   pendingToolResultMedia.length = 0;
 }
@@ -334,11 +366,19 @@ function convertHistoryMessages(
 
   for (const msg of history) {
     if (isToolDeclarationOnlyMessage(msg)) continue;
-    if (msg.role !== 'tool') {
+    if (msg.role !== "tool") {
       appendToolResultMediaMessage(messages, pendingToolResultMedia);
     }
-    messages.push(convertMessage(msg, reasoningKey, toolMessageConversion, preserveThinking, true));
-    if (msg.role === 'tool') {
+    messages.push(
+      convertMessage(
+        msg,
+        reasoningKey,
+        toolMessageConversion,
+        preserveThinking,
+        true,
+      ),
+    );
+    if (msg.role === "tool") {
       pendingToolResultMedia.push(...toolResultImageParts(msg));
     }
   }
@@ -355,12 +395,16 @@ export class OpenAILegacyStreamedMessage implements StreamedMessage {
   private readonly _iter: AsyncGenerator<StreamedMessagePart>;
 
   constructor(
-    response: OpenAI.Chat.ChatCompletion | AsyncIterable<OpenAI.Chat.ChatCompletionChunk>,
+    response:
+      | OpenAI.Chat.ChatCompletion
+      | AsyncIterable<OpenAI.Chat.ChatCompletionChunk>,
     isStream: boolean,
     reasoningKeyDialect: ReasoningKeyDialect,
     private readonly _traceId: string | null,
     private readonly _extractUsageHook?:
-      | ((chunk: Record<string, unknown>) => Record<string, unknown> | null | undefined)
+      | ((
+          chunk: Record<string, unknown>,
+        ) => Record<string, unknown> | null | undefined)
       | undefined,
     private readonly _convertErrorHook?:
       | ((error: unknown) => ChatProviderError | undefined)
@@ -422,7 +466,10 @@ export class OpenAILegacyStreamedMessage implements StreamedMessage {
     reasoningKeyDialect: ReasoningKeyDialect,
   ): AsyncGenerator<StreamedMessagePart> {
     this._id = response.id;
-    this._captureUsage(response as unknown as Record<string, unknown>, response.usage);
+    this._captureUsage(
+      response as unknown as Record<string, unknown>,
+      response.usage,
+    );
     this._captureFinishReason(response.choices[0]?.finish_reason ?? null);
 
     const message = response.choices[0]?.message;
@@ -430,18 +477,21 @@ export class OpenAILegacyStreamedMessage implements StreamedMessage {
 
     const reasoning = reasoningKeyDialect.observe(message);
     if (reasoning !== undefined) {
-      yield { type: 'think', think: reasoning } satisfies StreamedMessagePart;
+      yield { type: "think", think: reasoning } satisfies StreamedMessagePart;
     }
 
     if (message.content) {
-      yield { type: 'text', text: message.content } satisfies StreamedMessagePart;
+      yield {
+        type: "text",
+        text: message.content,
+      } satisfies StreamedMessagePart;
     }
 
     if (message.tool_calls) {
       for (const toolCall of message.tool_calls) {
         if (!isFunctionToolCall(toolCall)) continue;
         yield {
-          type: 'function',
+          type: "function",
           id: toolCall.id || crypto.randomUUID(),
           name: toolCall.function.name,
           arguments: toolCall.function.arguments,
@@ -454,7 +504,10 @@ export class OpenAILegacyStreamedMessage implements StreamedMessage {
     response: AsyncIterable<OpenAI.Chat.ChatCompletionChunk>,
     reasoningKeyDialect: ReasoningKeyDialect,
   ): AsyncGenerator<StreamedMessagePart> {
-    const bufferedToolCalls = new Map<number | string, BufferedChatCompletionToolCall>();
+    const bufferedToolCalls = new Map<
+      number | string,
+      BufferedChatCompletionToolCall
+    >();
 
     try {
       for await (const chunk of response) {
@@ -462,7 +515,10 @@ export class OpenAILegacyStreamedMessage implements StreamedMessage {
           this._id = chunk.id;
         }
 
-        this._captureUsage(chunk as unknown as Record<string, unknown>, chunk.usage);
+        this._captureUsage(
+          chunk as unknown as Record<string, unknown>,
+          chunk.usage,
+        );
 
         if (!chunk.choices || chunk.choices.length === 0) {
           continue;
@@ -471,7 +527,10 @@ export class OpenAILegacyStreamedMessage implements StreamedMessage {
         const choice = chunk.choices[0];
         if (!choice) continue;
 
-        if (choice.finish_reason !== null && choice.finish_reason !== undefined) {
+        if (
+          choice.finish_reason !== null &&
+          choice.finish_reason !== undefined
+        ) {
           this._captureFinishReason(choice.finish_reason);
         }
 
@@ -479,15 +538,24 @@ export class OpenAILegacyStreamedMessage implements StreamedMessage {
 
         const reasoning = reasoningKeyDialect.observe(delta);
         if (reasoning !== undefined) {
-          yield { type: 'think', think: reasoning } satisfies StreamedMessagePart;
+          yield {
+            type: "think",
+            think: reasoning,
+          } satisfies StreamedMessagePart;
         }
 
         if (delta.content) {
-          yield { type: 'text', text: delta.content } satisfies StreamedMessagePart;
+          yield {
+            type: "text",
+            text: delta.content,
+          } satisfies StreamedMessagePart;
         }
 
         for (const toolCall of delta.tool_calls ?? []) {
-          for (const part of convertChatCompletionStreamToolCall(toolCall, bufferedToolCalls)) {
+          for (const part of convertChatCompletionStreamToolCall(
+            toolCall,
+            bufferedToolCalls,
+          )) {
             yield part;
           }
         }
@@ -499,7 +567,7 @@ export class OpenAILegacyStreamedMessage implements StreamedMessage {
 }
 
 export class OpenAILegacyChatProvider implements ChatProvider {
-  readonly name: string = 'openai';
+  readonly name: string = "openai";
 
   private readonly _model: string;
   private readonly _stream: boolean;
@@ -513,7 +581,9 @@ export class OpenAILegacyChatProvider implements ChatProvider {
   private readonly _toolMessageConversion: ToolMessageConversion;
   private readonly _client: OpenAI | undefined;
   private readonly _httpClient: unknown;
-  private readonly _clientFactory: ((auth: ProviderRequestAuth) => OpenAI) | undefined;
+  private readonly _clientFactory:
+    | ((auth: ProviderRequestAuth) => OpenAI)
+    | undefined;
   private readonly _hooks: OpenAIChatCompletionsHooks | undefined;
 
   readonly uploadVideo?: (
@@ -522,9 +592,10 @@ export class OpenAILegacyChatProvider implements ChatProvider {
   ) => Promise<VideoURLPart>;
 
   constructor(options: OpenAILegacyOptions) {
-    const apiKey = options.apiKey ?? process.env['OPENAI_API_KEY'];
-    this._apiKey = apiKey === undefined || apiKey.length === 0 ? undefined : apiKey;
-    this._baseUrl = options.baseUrl ?? 'https://api.openai.com/v1';
+    const apiKey = options.apiKey ?? process.env["OPENAI_API_KEY"];
+    this._apiKey =
+      apiKey === undefined || apiKey.length === 0 ? undefined : apiKey;
+    this._baseUrl = options.baseUrl ?? "https://api.openai.com/v1";
     this._defaultHeaders = options.defaultHeaders;
     this._model = options.model;
     this._stream = options.stream ?? true;
@@ -539,17 +610,21 @@ export class OpenAILegacyChatProvider implements ChatProvider {
     this._offEffort = options.offEffort;
     this._generationKwargs = normalizeGenerationKwargs(
       this._model,
-      options.maxTokens !== undefined ? completionTokenKwargs(this._model, options.maxTokens) : {},
+      options.maxTokens !== undefined
+        ? completionTokenKwargs(this._model, options.maxTokens)
+        : {},
     );
     this._toolMessageConversion = options.toolMessageConversion ?? null;
     this._httpClient = options.httpClient;
     this._clientFactory = options.clientFactory;
 
-    this._client = this._apiKey === undefined ? undefined : this._buildClient(this._apiKey);
+    this._client =
+      this._apiKey === undefined ? undefined : this._buildClient(this._apiKey);
 
     const uploadVideo = this._hooks?.uploadVideo;
     if (uploadVideo !== undefined) {
-      this.uploadVideo = (input, generateOptions) => uploadVideo(input, generateOptions);
+      this.uploadVideo = (input, generateOptions) =>
+        uploadVideo(input, generateOptions);
     }
   }
 
@@ -562,7 +637,10 @@ export class OpenAILegacyChatProvider implements ChatProvider {
   }
 
   get maxCompletionTokens(): number | undefined {
-    return this._generationKwargs.max_completion_tokens ?? this._generationKwargs.max_tokens;
+    return (
+      this._generationKwargs.max_completion_tokens ??
+      this._generationKwargs.max_tokens
+    );
   }
 
   async generate(
@@ -571,23 +649,33 @@ export class OpenAILegacyChatProvider implements ChatProvider {
     history: Message[],
     options?: GenerateOptions,
   ): Promise<StreamedMessage> {
-    const { kwargs, reasoningEffort } = this._resolveRequestKwargs(history, options);
+    const { kwargs, reasoningEffort } = this._resolveRequestKwargs(
+      history,
+      options,
+    );
 
     const preserveThinking = this._hooks?.preserveThinking?.(kwargs) ?? false;
     const reasoningKey = this._reasoningKeyDialect.outboundKey();
 
     const messages: Record<string, unknown>[] = [];
     if (systemPrompt) {
-      messages.push({ role: 'system', content: systemPrompt });
+      messages.push({ role: "system", content: systemPrompt });
     }
 
-    const policy = this._hooks?.toolCallIdPolicy?.() ?? OPENAI_CHAT_TOOL_CALL_ID_POLICY;
+    const policy =
+      this._hooks?.toolCallIdPolicy?.() ?? OPENAI_CHAT_TOOL_CALL_ID_POLICY;
     const normalizedHistory = normalizeToolCallIdsForProvider(history, policy);
 
     const convertMessageHook = this._hooks?.convertMessage;
     if (convertMessageHook !== undefined) {
       for (const msg of normalizedHistory) {
-        const converted = convertMessage(msg, reasoningKey, null, preserveThinking, false);
+        const converted = convertMessage(
+          msg,
+          reasoningKey,
+          null,
+          preserveThinking,
+          false,
+        );
         const shaped = convertMessageHook(msg, converted);
         if (shaped !== null) {
           messages.push(shaped);
@@ -615,19 +703,22 @@ export class OpenAILegacyChatProvider implements ChatProvider {
     };
 
     if (tools.length > 0) {
-      const convertTool = this._hooks?.convertTool ?? ((tool: Tool) => toolToOpenAI(tool));
-      createParams['tools'] = tools.map((tool) => convertTool(tool));
+      const convertTool =
+        this._hooks?.convertTool ?? ((tool: Tool) => toolToOpenAI(tool));
+      createParams["tools"] = tools.map((tool) => convertTool(tool));
     }
     if (options?.responseFormat !== undefined) {
-      createParams['response_format'] = responseFormatToOpenAI(options.responseFormat);
+      createParams["response_format"] = responseFormatToOpenAI(
+        options.responseFormat,
+      );
     }
 
     if (this._stream) {
-      createParams['stream_options'] = { include_usage: true };
+      createParams["stream_options"] = { include_usage: true };
     }
 
     if (reasoningEffort !== undefined) {
-      createParams['reasoning_effort'] = reasoningEffort;
+      createParams["reasoning_effort"] = reasoningEffort;
     }
 
     const builtParams = this._hooks?.buildParams?.(createParams);
@@ -665,7 +756,10 @@ export class OpenAILegacyChatProvider implements ChatProvider {
 
     if (options?.cacheKey !== undefined) {
       const hooked = this._hooks?.cacheKey?.(options.cacheKey);
-      kwargs = { ...kwargs, ...(hooked ?? { prompt_cache_key: options.cacheKey }) };
+      kwargs = {
+        ...kwargs,
+        ...(hooked ?? { prompt_cache_key: options.cacheKey }),
+      };
     }
 
     if (options?.sampling?.temperature !== undefined) {
@@ -677,10 +771,16 @@ export class OpenAILegacyChatProvider implements ChatProvider {
 
     const thinking =
       options?.thinking ??
-      (this._thinkingEffort !== undefined ? { effort: this._thinkingEffort } : undefined);
+      (this._thinkingEffort !== undefined
+        ? { effort: this._thinkingEffort }
+        : undefined);
     let explicitThinkingEffort: ThinkingEffort | undefined;
     if (thinking !== undefined) {
-      const hooked = this._hooks?.withThinking?.(thinking.effort, { keep: thinking.keep }, kwargs);
+      const hooked = this._hooks?.withThinking?.(
+        thinking.effort,
+        { keep: thinking.keep },
+        kwargs,
+      );
       if (hooked !== undefined) {
         kwargs = { ...kwargs, ...hooked };
       } else {
@@ -689,23 +789,24 @@ export class OpenAILegacyChatProvider implements ChatProvider {
     }
 
     let reasoningEffort: string | undefined =
-      explicitThinkingEffort === 'off'
+      explicitThinkingEffort === "off"
         ? this._offEffort
-        : explicitThinkingEffort === undefined || explicitThinkingEffort === 'on'
+        : explicitThinkingEffort === undefined ||
+            explicitThinkingEffort === "on"
           ? undefined
           : explicitThinkingEffort;
 
     if (
       reasoningEffort === undefined &&
-      explicitThinkingEffort !== 'off' &&
-      kwargs['reasoning_effort'] === undefined &&
+      explicitThinkingEffort !== "off" &&
+      kwargs["reasoning_effort"] === undefined &&
       this._hooks?.withThinking === undefined
     ) {
       const hasThinkPart = history.some((message) =>
-        message.content.some((part) => part.type === 'think'),
+        message.content.some((part) => part.type === "think"),
       );
       if (hasThinkPart) {
-        reasoningEffort = 'medium';
+        reasoningEffort = "medium";
       }
     }
 
@@ -716,15 +817,24 @@ export class OpenAILegacyChatProvider implements ChatProvider {
         options.maxContextTokens !== undefined &&
         options.maxContextTokens > 0
       ) {
-        cap = Math.min(cap, options.maxContextTokens - options.usedContextTokens);
+        cap = Math.min(
+          cap,
+          options.maxContextTokens - options.usedContextTokens,
+        );
       }
       cap = Math.max(1, cap);
       const hooked = this._hooks?.withMaxCompletionTokens?.(cap);
       if (hooked !== undefined) {
         kwargs = { ...kwargs, ...hooked };
       } else {
-        const capped = Math.min(cap, CHAT_COMPLETIONS_MAX_OUTPUT_TOKENS_CEILING);
-        kwargs = { ...kwargs, ...completionTokenKwargs(this._model, Math.max(1, capped)) };
+        const capped = Math.min(
+          cap,
+          CHAT_COMPLETIONS_MAX_OUTPUT_TOKENS_CEILING,
+        );
+        kwargs = {
+          ...kwargs,
+          ...completionTokenKwargs(this._model, Math.max(1, capped)),
+        };
       }
     }
 
@@ -743,7 +853,10 @@ export class OpenAILegacyChatProvider implements ChatProvider {
       { cachedClient: this._client, clientFactory: this._clientFactory },
       auth,
       (a) =>
-        this._buildClient(requireProviderApiKey('OpenAILegacyChatProvider', a, this._apiKey), a),
+        this._buildClient(
+          requireProviderApiKey("OpenAILegacyChatProvider", a, this._apiKey),
+          a,
+        ),
     );
   }
 
@@ -752,17 +865,19 @@ export class OpenAILegacyChatProvider implements ChatProvider {
       apiKey,
       baseURL: this._baseUrl,
     };
-    const defaultHeaders = mergeRequestHeaders(this._defaultHeaders, auth?.headers);
+    const defaultHeaders = mergeRequestHeaders(
+      this._defaultHeaders,
+      auth?.headers,
+    );
     if (defaultHeaders !== undefined) {
-      clientOpts['defaultHeaders'] = defaultHeaders;
+      clientOpts["defaultHeaders"] = defaultHeaders;
     }
     if (this._httpClient !== undefined) {
-      clientOpts['httpClient'] = this._httpClient;
+      clientOpts["httpClient"] = this._httpClient;
     }
     return new OpenAI(clientOpts as ConstructorParameters<typeof OpenAI>[0]);
   }
 }
-
 
 export function getOpenAILegacyModelCapability(modelName: string) {
   const normalized = modelName.toLowerCase();
@@ -772,7 +887,7 @@ export function getOpenAILegacyModelCapability(modelName: string) {
   if (hasModelPrefix(normalized, OPENAI_VISION_TOOL_PREFIXES)) {
     return OPENAI_VISION_TOOL_CAPABILITY;
   }
-  if (normalized.startsWith('gpt-3.5-turbo')) {
+  if (normalized.startsWith("gpt-3.5-turbo")) {
     return OPENAI_TEXT_TOOL_CAPABILITY;
   }
   return undefined;

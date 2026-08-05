@@ -1,8 +1,8 @@
-import { getCoreVersion } from '#/version';
+import { getCoreVersion } from "#/version";
 
-import type { MCPToolDefinition, MCPToolResult } from './types';
+import type { MCPToolDefinition, MCPToolResult } from "./types";
 
-export const KIMI_MCP_CLIENT_NAME = 'kimi-code';
+export const KIMI_MCP_CLIENT_NAME = "kimi-code";
 // Resolved from agent-core's package.json so MCP servers see the real version
 // in `initialize` (used for compatibility checks, telemetry, debugging).
 // `getCoreVersion()` falls back to '0.0.0' if the package.json read fails.
@@ -54,7 +54,7 @@ interface SdkListedTool {
 export function toMcpToolDefinition(tool: SdkListedTool): MCPToolDefinition {
   return {
     name: tool.name,
-    description: tool.description ?? '',
+    description: tool.description ?? "",
     inputSchema: tool.inputSchema,
   };
 }
@@ -66,7 +66,7 @@ export function toMcpToolDefinition(tool: SdkListedTool): MCPToolDefinition {
  * text content block.
  */
 export function toMcpToolResult(result: unknown): MCPToolResult {
-  if (typeof result === 'object' && result !== null && 'content' in result) {
+  if (typeof result === "object" && result !== null && "content" in result) {
     const typed = result as {
       content: unknown;
       isError?: unknown;
@@ -75,23 +75,23 @@ export function toMcpToolResult(result: unknown): MCPToolResult {
     };
     if (Array.isArray(typed.content)) {
       return {
-        content: typed.content as MCPToolResult['content'],
+        content: typed.content as MCPToolResult["content"],
         isError: typed.isError === true,
         structuredContent: typed.structuredContent,
         _meta:
-          typeof typed._meta === 'object' && typed._meta !== null
+          typeof typed._meta === "object" && typed._meta !== null
             ? (typed._meta as Record<string, unknown>)
             : undefined,
       };
     }
   }
-  if (typeof result === 'object' && result !== null && 'toolResult' in result) {
+  if (typeof result === "object" && result !== null && "toolResult" in result) {
     const legacy = (result as { toolResult: unknown }).toolResult;
     return {
       content: [
         {
-          type: 'text',
-          text: typeof legacy === 'string' ? legacy : JSON.stringify(legacy),
+          type: "text",
+          text: typeof legacy === "string" ? legacy : JSON.stringify(legacy),
         },
       ],
       isError: false,

@@ -1,6 +1,11 @@
-import { z } from 'zod';
+import { z } from "zod";
 
-export const goalStatusSchema = z.enum(['active', 'paused', 'blocked', 'complete']);
+export const goalStatusSchema = z.enum([
+  "active",
+  "paused",
+  "blocked",
+  "complete",
+]);
 export type GoalStatus = z.infer<typeof goalStatusSchema>;
 
 export const goalBudgetReportSchema = z.object({

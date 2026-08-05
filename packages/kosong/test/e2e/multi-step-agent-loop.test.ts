@@ -1,14 +1,14 @@
-import { ScriptedEchoChatProvider } from '../fixtures/echo-provider';
-import { extractText } from '#/message';
-import type { Message, StreamedMessagePart, ToolCall } from '#/message';
-import type { ChatProvider, StreamedMessage, ThinkingEffort } from '#/provider';
-import { SimpleToolset, toolOk } from '../fixtures/simple-toolset';
-import type { ToolReturnValue } from '../fixtures/simple-toolset';
-import { step } from '../fixtures/step';
-import type { Tool } from '#/tool';
-import type { JsonValue } from '../fixtures/args-validator';
-import type { TokenUsage } from '#/usage';
-import { describe, expect, it } from 'vitest';
+import { ScriptedEchoChatProvider } from "../fixtures/echo-provider";
+import { extractText } from "#/message";
+import type { Message, StreamedMessagePart, ToolCall } from "#/message";
+import type { ChatProvider, StreamedMessage, ThinkingEffort } from "#/provider";
+import { SimpleToolset, toolOk } from "../fixtures/simple-toolset";
+import type { ToolReturnValue } from "../fixtures/simple-toolset";
+import { step } from "../fixtures/step";
+import type { Tool } from "#/tool";
+import type { JsonValue } from "../fixtures/args-validator";
+import type { TokenUsage } from "#/usage";
+import { describe, expect, it } from "vitest";
 function createMockStream(
   parts: StreamedMessagePart[],
   opts?: { id?: string; usage?: TokenUsage },
@@ -36,8 +36,8 @@ function createMockStream(
  * when we need programmatic ToolCall objects with specific argument strings.
  */
 class QueuedMockProvider implements ChatProvider {
-  readonly name: string = 'queued-mock';
-  readonly modelName: string = 'queued-mock';
+  readonly name: string = "queued-mock";
+  readonly modelName: string = "queued-mock";
   readonly thinkingEffort: ThinkingEffort | null = null;
   private readonly _queue: StreamedMessage[];
   private _cursor: number = 0;
@@ -53,7 +53,9 @@ class QueuedMockProvider implements ChatProvider {
   ): Promise<StreamedMessage> {
     const stream = this._queue[this._cursor];
     if (stream === undefined) {
-      throw new Error(`QueuedMockProvider exhausted at turn ${this._cursor + 1}.`);
+      throw new Error(
+        `QueuedMockProvider exhausted at turn ${this._cursor + 1}.`,
+      );
     }
     this._cursor++;
     return stream;
@@ -71,9 +73,9 @@ class QueuedMockProvider implements ChatProvider {
 async function runAgentLoop(
   provider: ChatProvider,
   toolset: SimpleToolset,
-  systemPrompt: string = '',
+  systemPrompt: string = "",
   initialHistory: Message[] = [
-    { role: 'user', content: [{ type: 'text', text: 'go' }], toolCalls: [] },
+    { role: "user", content: [{ type: "text", text: "go" }], toolCalls: [] },
   ],
 ): Promise<{ messages: Message[]; turns: number }> {
   const history: Message[] = [...initialHistory];
@@ -92,11 +94,14 @@ async function runAgentLoop(
     const toolResults = await result.toolResults();
     for (const tr of toolResults) {
       history.push({
-        role: 'tool',
+        role: "tool",
         content: [
           {
-            type: 'text',
-            text: typeof tr.returnValue.output === 'string' ? tr.returnValue.output : '',
+            type: "text",
+            text:
+              typeof tr.returnValue.output === "string"
+                ? tr.returnValue.output
+                : "",
           },
         ],
         toolCallId: tr.toolCallId,
@@ -107,27 +112,28 @@ async function runAgentLoop(
 
   return { messages: history, turns };
 }
-describe('e2e: multi-step agent loop', () => {
-  it('2-step loop: tool_call → result → final text', async () => {
+describe("e2e: multi-step agent loop", () => {
+  it("2-step loop: tool_call → result → final text", async () => {
     const toolCall: ToolCall = {
-      type: 'function',
-      id: 'tc-1',
-      name: 'search', arguments: '{"query":"vitest"}',
+      type: "function",
+      id: "tc-1",
+      name: "search",
+      arguments: '{"query":"vitest"}',
     };
 
     const provider = new QueuedMockProvider([
       // Turn 1: LLM returns a tool call
       createMockStream([toolCall]),
       // Turn 2: LLM returns final text
-      createMockStream([{ type: 'text', text: 'Found results for vitest.' }]),
+      createMockStream([{ type: "text", text: "Found results for vitest." }]),
     ]);
 
     const toolset = new SimpleToolset();
     toolset.add(
-      { name: 'search', description: 'Search the web', parameters: {} },
+      { name: "search", description: "Search the web", parameters: {} },
       async (args: JsonValue): Promise<ToolReturnValue> => {
         const obj = args as Record<string, JsonValue>;
-        return toolOk({ output: `results for ${obj['query'] as string}` });
+        return toolOk({ output: `results for ${obj["query"] as string}` });
       },
     );
 
@@ -136,39 +142,49 @@ describe('e2e: multi-step agent loop', () => {
     expect(turns).toBe(2);
     // History: user → assistant(tool_call) → tool → assistant(text)
     expect(messages).toHaveLength(4);
-    expect(messages[1]!.role).toBe('assistant');
+    expect(messages[1]!.role).toBe("assistant");
     expect(messages[1]!.toolCalls).toHaveLength(1);
-    expect(messages[2]!.role).toBe('tool');
-    expect(messages[3]!.role).toBe('assistant');
-    expect(extractText(messages[3]!)).toBe('Found results for vitest.');
+    expect(messages[2]!.role).toBe("tool");
+    expect(messages[3]!.role).toBe("assistant");
+    expect(extractText(messages[3]!)).toBe("Found results for vitest.");
   });
 
-  it('3-step loop: tool A → tool B → final text', async () => {
+  it("3-step loop: tool A → tool B → final text", async () => {
     const tcSearch: ToolCall = {
-      type: 'function',
-      id: 'tc-search',
-      name: 'search', arguments: '{"query":"vitest"}',
+      type: "function",
+      id: "tc-search",
+      name: "search",
+      arguments: '{"query":"vitest"}',
     };
     const tcRead: ToolCall = {
-      type: 'function',
-      id: 'tc-read',
-      name: 'read_file', arguments: '{"path":"/docs/vitest.md"}',
+      type: "function",
+      id: "tc-read",
+      name: "read_file",
+      arguments: '{"path":"/docs/vitest.md"}',
     };
 
     const provider = new QueuedMockProvider([
-      createMockStream([{ type: 'text', text: 'Let me search first.' }, tcSearch]),
-      createMockStream([{ type: 'text', text: 'Found a doc, reading it.' }, tcRead]),
-      createMockStream([{ type: 'text', text: 'The answer is: use vitest.' }]),
+      createMockStream([
+        { type: "text", text: "Let me search first." },
+        tcSearch,
+      ]),
+      createMockStream([
+        { type: "text", text: "Found a doc, reading it." },
+        tcRead,
+      ]),
+      createMockStream([{ type: "text", text: "The answer is: use vitest." }]),
     ]);
 
     const toolset = new SimpleToolset();
     toolset.add(
-      { name: 'search', description: 'Search', parameters: {} },
-      async (): Promise<ToolReturnValue> => toolOk({ output: '/docs/vitest.md' }),
+      { name: "search", description: "Search", parameters: {} },
+      async (): Promise<ToolReturnValue> =>
+        toolOk({ output: "/docs/vitest.md" }),
     );
     toolset.add(
-      { name: 'read_file', description: 'Read file', parameters: {} },
-      async (): Promise<ToolReturnValue> => toolOk({ output: 'vitest is a test runner' }),
+      { name: "read_file", description: "Read file", parameters: {} },
+      async (): Promise<ToolReturnValue> =>
+        toolOk({ output: "vitest is a test runner" }),
     );
 
     const { messages, turns } = await runAgentLoop(provider, toolset);
@@ -176,42 +192,49 @@ describe('e2e: multi-step agent loop', () => {
     expect(turns).toBe(3);
     // user → asst(search) → tool → asst(read_file) → tool → asst(final)
     expect(messages).toHaveLength(6);
-    expect(extractText(messages[5]!)).toBe('The answer is: use vitest.');
+    expect(extractText(messages[5]!)).toBe("The answer is: use vitest.");
   });
 
-  it('parallel tool calls: 3 tool_calls in one turn → all executed', async () => {
+  it("parallel tool calls: 3 tool_calls in one turn → all executed", async () => {
     const tc1: ToolCall = {
-      type: 'function',
-      id: 'tc-a',
-      name: 'fetch_url', arguments: '{"url":"https://a.com"}',
+      type: "function",
+      id: "tc-a",
+      name: "fetch_url",
+      arguments: '{"url":"https://a.com"}',
     };
     const tc2: ToolCall = {
-      type: 'function',
-      id: 'tc-b',
-      name: 'fetch_url', arguments: '{"url":"https://b.com"}',
+      type: "function",
+      id: "tc-b",
+      name: "fetch_url",
+      arguments: '{"url":"https://b.com"}',
     };
     const tc3: ToolCall = {
-      type: 'function',
-      id: 'tc-c',
-      name: 'fetch_url', arguments: '{"url":"https://c.com"}',
+      type: "function",
+      id: "tc-c",
+      name: "fetch_url",
+      arguments: '{"url":"https://c.com"}',
     };
 
     const provider = new QueuedMockProvider([
       // Turn 1: 3 parallel tool calls
       createMockStream([tc1, tc2, tc3]),
       // Turn 2: final text
-      createMockStream([{ type: 'text', text: 'All 3 URLs fetched.' }]),
+      createMockStream([{ type: "text", text: "All 3 URLs fetched." }]),
     ]);
 
     const callOrder: string[] = [];
     const toolset = new SimpleToolset();
     toolset.add(
-      { name: 'fetch_url', description: 'Fetch a URL', parameters: {} },
+      { name: "fetch_url", description: "Fetch a URL", parameters: {} },
       async (args: JsonValue): Promise<ToolReturnValue> => {
         const obj = args as Record<string, JsonValue>;
-        const url = obj['url'] as string;
+        const url = obj["url"] as string;
         // Vary delays to confirm parallel execution
-        const delay = url.includes('a.com') ? 30 : url.includes('b.com') ? 10 : 20;
+        const delay = url.includes("a.com")
+          ? 30
+          : url.includes("b.com")
+            ? 10
+            : 20;
         await new Promise<void>((r) => setTimeout(r, delay));
         callOrder.push(url);
         return toolOk({ output: `content of ${url}` });
@@ -222,26 +245,28 @@ describe('e2e: multi-step agent loop', () => {
 
     expect(turns).toBe(2);
     // All 3 tool results should be present
-    const toolMessages = messages.filter((m) => m.role === 'tool');
+    const toolMessages = messages.filter((m) => m.role === "tool");
     expect(toolMessages).toHaveLength(3);
 
     // b.com should finish first (10ms), c.com second (20ms), a.com last (30ms)
     // confirming parallel execution
-    expect(callOrder[0]).toBe('https://b.com');
-    expect(callOrder[1]).toBe('https://c.com');
-    expect(callOrder[2]).toBe('https://a.com');
+    expect(callOrder[0]).toBe("https://b.com");
+    expect(callOrder[1]).toBe("https://c.com");
+    expect(callOrder[2]).toBe("https://a.com");
   });
 
-  it('tool chain: tool A result triggers tool B call', async () => {
+  it("tool chain: tool A result triggers tool B call", async () => {
     const tcList: ToolCall = {
-      type: 'function',
-      id: 'tc-list',
-      name: 'list_files', arguments: '{"dir":"/src"}',
+      type: "function",
+      id: "tc-list",
+      name: "list_files",
+      arguments: '{"dir":"/src"}',
     };
     const tcRead: ToolCall = {
-      type: 'function',
-      id: 'tc-read',
-      name: 'read_file', arguments: '{"path":"/src/main.ts"}',
+      type: "function",
+      id: "tc-read",
+      name: "read_file",
+      arguments: '{"path":"/src/main.ts"}',
     };
 
     // The provider sees history growing—tool A result is in history when
@@ -249,19 +274,20 @@ describe('e2e: multi-step agent loop', () => {
     const provider = new QueuedMockProvider([
       createMockStream([tcList]),
       createMockStream([tcRead]),
-      createMockStream([{ type: 'text', text: 'main.ts exports greet()' }]),
+      createMockStream([{ type: "text", text: "main.ts exports greet()" }]),
     ]);
 
     const toolset = new SimpleToolset();
     toolset.add(
-      { name: 'list_files', description: 'List', parameters: {} },
-      async (): Promise<ToolReturnValue> => toolOk({ output: 'main.ts\nutils.ts' }),
+      { name: "list_files", description: "List", parameters: {} },
+      async (): Promise<ToolReturnValue> =>
+        toolOk({ output: "main.ts\nutils.ts" }),
     );
     toolset.add(
-      { name: 'read_file', description: 'Read', parameters: {} },
+      { name: "read_file", description: "Read", parameters: {} },
       async (args: JsonValue): Promise<ToolReturnValue> => {
         const obj = args as Record<string, JsonValue>;
-        return toolOk({ output: `content of ${obj['path'] as string}` });
+        return toolOk({ output: `content of ${obj["path"] as string}` });
       },
     );
 
@@ -270,34 +296,36 @@ describe('e2e: multi-step agent loop', () => {
     expect(turns).toBe(3);
     // user → asst(list) → tool(list result) → asst(read) → tool(read result) → asst(final)
     expect(messages).toHaveLength(6);
-    expect(extractText(messages[5]!)).toBe('main.ts exports greet()');
+    expect(extractText(messages[5]!)).toBe("main.ts exports greet()");
   });
 
-  it('text + tool_call interleaved across multiple turns', async () => {
+  it("text + tool_call interleaved across multiple turns", async () => {
     const tc1: ToolCall = {
-      type: 'function',
-      id: 'tc-1',
-      name: 'calc', arguments: '{"expr":"2+2"}',
+      type: "function",
+      id: "tc-1",
+      name: "calc",
+      arguments: '{"expr":"2+2"}',
     };
     const tc2: ToolCall = {
-      type: 'function',
-      id: 'tc-2',
-      name: 'calc', arguments: '{"expr":"4*3"}',
+      type: "function",
+      id: "tc-2",
+      name: "calc",
+      arguments: '{"expr":"4*3"}',
     };
 
     const provider = new QueuedMockProvider([
-      createMockStream([{ type: 'text', text: 'Computing 2+2...' }, tc1]),
-      createMockStream([{ type: 'text', text: 'Now 4*3...' }, tc2]),
-      createMockStream([{ type: 'text', text: 'Results: 4 and 12.' }]),
+      createMockStream([{ type: "text", text: "Computing 2+2..." }, tc1]),
+      createMockStream([{ type: "text", text: "Now 4*3..." }, tc2]),
+      createMockStream([{ type: "text", text: "Results: 4 and 12." }]),
     ]);
 
     const toolset = new SimpleToolset();
     toolset.add(
-      { name: 'calc', description: 'Calculate', parameters: {} },
+      { name: "calc", description: "Calculate", parameters: {} },
       async (args: JsonValue): Promise<ToolReturnValue> => {
         const obj = args as Record<string, JsonValue>;
-        const expr = obj['expr'] as string;
-        const result = expr === '2+2' ? '4' : '12';
+        const expr = obj["expr"] as string;
+        const result = expr === "2+2" ? "4" : "12";
         return toolOk({ output: result });
       },
     );
@@ -306,27 +334,31 @@ describe('e2e: multi-step agent loop', () => {
 
     expect(turns).toBe(3);
     // Each assistant message should have both text content and tool calls
-    expect(messages[1]!.content).toEqual([{ type: 'text', text: 'Computing 2+2...' }]);
+    expect(messages[1]!.content).toEqual([
+      { type: "text", text: "Computing 2+2..." },
+    ]);
     expect(messages[1]!.toolCalls).toHaveLength(1);
-    expect(messages[3]!.content).toEqual([{ type: 'text', text: 'Now 4*3...' }]);
+    expect(messages[3]!.content).toEqual([
+      { type: "text", text: "Now 4*3..." },
+    ]);
     expect(messages[3]!.toolCalls).toHaveLength(1);
-    expect(extractText(messages[5]!)).toBe('Results: 4 and 12.');
+    expect(extractText(messages[5]!)).toBe("Results: 4 and 12.");
   });
 
-  it('ScriptedEchoChatProvider works for multi-step loop with echo DSL', async () => {
+  it("ScriptedEchoChatProvider works for multi-step loop with echo DSL", async () => {
     const provider = new ScriptedEchoChatProvider([
       // Turn 1: tool call via DSL
       'tool_call: {"id":"tc-1","name":"greet","arguments":"{\\"name\\":\\"world\\"}"}',
       // Turn 2: final text
-      'text: Hello, world!',
+      "text: Hello, world!",
     ]);
 
     const toolset = new SimpleToolset();
     toolset.add(
-      { name: 'greet', description: 'Greet', parameters: {} },
+      { name: "greet", description: "Greet", parameters: {} },
       async (args: JsonValue): Promise<ToolReturnValue> => {
         const obj = args as Record<string, JsonValue>;
-        return toolOk({ output: `Hi ${obj['name'] as string}` });
+        return toolOk({ output: `Hi ${obj["name"] as string}` });
       },
     );
 
@@ -334,22 +366,23 @@ describe('e2e: multi-step agent loop', () => {
     expect(turns).toBe(2);
   });
 
-  it('empty tool arguments (null) are handled correctly', async () => {
+  it("empty tool arguments (null) are handled correctly", async () => {
     const tc: ToolCall = {
-      type: 'function',
-      id: 'tc-no-args',
-      name: 'get_time', arguments: null,
+      type: "function",
+      id: "tc-no-args",
+      name: "get_time",
+      arguments: null,
     };
 
     const provider = new QueuedMockProvider([
       createMockStream([tc]),
-      createMockStream([{ type: 'text', text: 'The time is 12:00.' }]),
+      createMockStream([{ type: "text", text: "The time is 12:00." }]),
     ]);
 
     const toolset = new SimpleToolset();
     toolset.add(
-      { name: 'get_time', description: 'Get current time', parameters: {} },
-      async (): Promise<ToolReturnValue> => toolOk({ output: '12:00' }),
+      { name: "get_time", description: "Get current time", parameters: {} },
+      async (): Promise<ToolReturnValue> => toolOk({ output: "12:00" }),
     );
 
     const { turns } = await runAgentLoop(provider, toolset);

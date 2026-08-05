@@ -55,14 +55,14 @@ import type {
   Workspace,
   WorkspaceCreate,
   WorkspaceUpdate,
-} from '@moonshot-ai/protocol';
-import { ulid } from 'ulid';
-import { WebSocket as WsWebSocket } from 'ws';
+} from "@moonshot-ai/protocol";
+import { ulid } from "ulid";
+import { WebSocket as WsWebSocket } from "ws";
 
-import { HttpClient } from './http.js';
-import { installReverseRpcHandler } from './reverse-rpc.js';
-import { DEFAULT_FRAME_TIMEOUT_MS, waitForSessionBusy } from './wait.js';
-import { type AnyFrame, WsClient } from './ws.js';
+import { HttpClient } from "./http.js";
+import { installReverseRpcHandler } from "./reverse-rpc.js";
+import { DEFAULT_FRAME_TIMEOUT_MS, waitForSessionBusy } from "./wait.js";
+import { type AnyFrame, WsClient } from "./ws.js";
 
 export interface DaemonClientOptions {
   /** Default `http://127.0.0.1:58627`. */
@@ -73,7 +73,11 @@ export interface DaemonClientOptions {
   clientId?: string;
   fetchImpl?: typeof fetch;
   wsImpl?: typeof WsWebSocket;
-  logger?: (level: 'info' | 'warn' | 'error' | 'debug', msg: string, meta?: unknown) => void;
+  logger?: (
+    level: "info" | "warn" | "error" | "debug",
+    msg: string,
+    meta?: unknown,
+  ) => void;
   /** Directory for JSONL trace events and generated HTML reports. */
   reportDir?: string;
   /** Default 5s. Applies to handshake + subscribe acks. */
@@ -82,15 +86,15 @@ export interface DaemonClientOptions {
 
 export interface SubmitAndWaitOptions {
   /** Default `prompt.completed`. */
-  waitFor?: 'prompt.completed' | 'turn.ended';
+  waitFor?: "prompt.completed" | "turn.ended";
   /** Default 60s. */
   timeoutMs?: number;
 }
 
 type UploadFileData = Blob | ArrayBuffer | Uint8Array | string;
 
-const DEFAULT_BASE_URL = 'http://127.0.0.1:58627';
-const DEFAULT_API_PREFIX = '/api/v1';
+const DEFAULT_BASE_URL = "http://127.0.0.1:58627";
+const DEFAULT_API_PREFIX = "/api/v1";
 const DEFAULT_CONTROL_ACK_TIMEOUT_MS = 5_000;
 
 /**
@@ -104,9 +108,9 @@ const DEFAULT_CONTROL_ACK_TIMEOUT_MS = 5_000;
  * default provider exposes `kimi-code/kimi-for-coding`).
  */
 export const DEFAULT_PROMPT_CONTROLS = {
-  model: 'kimi-code/kimi-for-coding',
-  thinking: 'off' as PromptThinking,
-  permission_mode: 'manual' as PromptPermissionMode,
+  model: "kimi-code/kimi-for-coding",
+  thinking: "off" as PromptThinking,
+  permission_mode: "manual" as PromptPermissionMode,
   plan_mode: false,
 } as const;
 
@@ -116,9 +120,13 @@ export const DEFAULT_PROMPT_CONTROLS = {
  * `DEFAULT_PROMPT_CONTROLS` when omitted. `metadata` carries through
  * verbatim.
  */
-export type PromptSubmitInput =
-  Pick<PromptSubmission, 'content'>
-  & Partial<Pick<PromptSubmission, 'metadata' | 'model' | 'thinking' | 'permission_mode' | 'plan_mode'>>;
+export type PromptSubmitInput = Pick<PromptSubmission, "content"> &
+  Partial<
+    Pick<
+      PromptSubmission,
+      "metadata" | "model" | "thinking" | "permission_mode" | "plan_mode"
+    >
+  >;
 
 export interface TerminalAttachOptions {
   sinceSeq?: number;
@@ -162,25 +170,26 @@ export class DaemonClient {
 
   private readonly _wsImpl: typeof WsWebSocket;
   private readonly _logger: (
-    level: 'info' | 'warn' | 'error' | 'debug',
+    level: "info" | "warn" | "error" | "debug",
     msg: string,
     meta?: unknown,
   ) => void;
   private readonly _reportDir: string | undefined;
   private readonly _controlAckTimeoutMs: number;
   private _ws: WsClient | null = null;
-  private _serverHello: ServerHelloMessage['payload'] | null = null;
+  private _serverHello: ServerHelloMessage["payload"] | null = null;
   private readonly _subscribed = new Set<string>();
   private readonly _disposers: Array<() => void> = [];
 
   constructor(opts: DaemonClientOptions = {}) {
-    this.baseUrl = (opts.baseUrl ?? DEFAULT_BASE_URL).replace(/\/+$/, '');
+    this.baseUrl = (opts.baseUrl ?? DEFAULT_BASE_URL).replace(/\/+$/, "");
     this.apiPrefix = opts.apiPrefix ?? DEFAULT_API_PREFIX;
     this.clientId = opts.clientId ?? `server-e2e-${ulid()}`;
     this._wsImpl = opts.wsImpl ?? WsWebSocket;
     this._logger = opts.logger ?? noopLogger;
     this._reportDir = opts.reportDir;
-    this._controlAckTimeoutMs = opts.controlAckTimeoutMs ?? DEFAULT_CONTROL_ACK_TIMEOUT_MS;
+    this._controlAckTimeoutMs =
+      opts.controlAckTimeoutMs ?? DEFAULT_CONTROL_ACK_TIMEOUT_MS;
     this.http = new HttpClient({
       baseUrl: this.baseUrl,
       apiPrefix: this.apiPrefix,
@@ -213,9 +222,12 @@ export class DaemonClient {
   getSession(sid: string): Promise<Session> {
     return this.http.getSession(sid);
   }
-  listSessions(
-    query?: { page_size?: number; before_id?: string; after_id?: string; workspace_id?: string },
-  ): Promise<{ items: Session[]; has_more: boolean }> {
+  listSessions(query?: {
+    page_size?: number;
+    before_id?: string;
+    after_id?: string;
+    workspace_id?: string;
+  }): Promise<{ items: Session[]; has_more: boolean }> {
     return this.http.listSessions(query);
   }
   updateSession(sid: string, body: SessionUpdate): Promise<Session> {
@@ -241,7 +253,12 @@ export class DaemonClient {
   }
   listChildren(
     sid: string,
-    query?: { page_size?: number; before_id?: string; after_id?: string; busy?: boolean },
+    query?: {
+      page_size?: number;
+      before_id?: string;
+      after_id?: string;
+      busy?: boolean;
+    },
   ): Promise<{ items: Session[]; has_more: boolean }> {
     return this.http.listChildren(sid, query);
   }
@@ -276,7 +293,10 @@ export class DaemonClient {
   createWorkspace(body: WorkspaceCreate): Promise<Workspace> {
     return this.http.createWorkspace(body);
   }
-  updateWorkspace(workspaceId: string, body: WorkspaceUpdate): Promise<Workspace> {
+  updateWorkspace(
+    workspaceId: string,
+    body: WorkspaceUpdate,
+  ): Promise<Workspace> {
     return this.http.updateWorkspace(workspaceId, body);
   }
   deleteWorkspace(workspaceId: string): Promise<{ deleted: true }> {
@@ -301,11 +321,19 @@ export class DaemonClient {
   }
   listMessages(
     sid: string,
-    query?: { page_size?: number; before_id?: string; after_id?: string; role?: string },
+    query?: {
+      page_size?: number;
+      before_id?: string;
+      after_id?: string;
+      role?: string;
+    },
   ): Promise<{ items: Message[]; has_more: boolean }> {
     return this.http.listMessages(sid, query);
   }
-  submitPrompt(sid: string, input: PromptSubmitInput): Promise<PromptSubmitResult> {
+  submitPrompt(
+    sid: string,
+    input: PromptSubmitInput,
+  ): Promise<PromptSubmitResult> {
     return this.http.submitPrompt(sid, fillPromptDefaults(input));
   }
   /**
@@ -327,7 +355,10 @@ export class DaemonClient {
   steerPrompt(sid: string, pid: string): Promise<PromptSteerResult> {
     return this.http.steerPrompt(sid, pid);
   }
-  steerPrompts(sid: string, promptIds: readonly string[]): Promise<PromptSteerResult> {
+  steerPrompts(
+    sid: string,
+    promptIds: readonly string[],
+  ): Promise<PromptSteerResult> {
     return this.http.steerPrompts(sid, promptIds);
   }
   abortPrompt(sid: string, pid: string): Promise<PromptAbortResponse> {
@@ -369,9 +400,9 @@ export class DaemonClient {
    * the ack. Returns the server's hello payload (buffer sizes, capabilities,
    * etc.).
    */
-  async connect(): Promise<ServerHelloMessage['payload']> {
+  async connect(): Promise<ServerHelloMessage["payload"]> {
     if (this._serverHello) return this._serverHello;
-    const wsUrl = `${this.baseUrl.replace(/^http/, 'ws')}${this.apiPrefix}/ws`;
+    const wsUrl = `${this.baseUrl.replace(/^http/, "ws")}${this.apiPrefix}/ws`;
     const ws = new WsClient({
       url: wsUrl,
       wsImpl: this._wsImpl,
@@ -382,25 +413,27 @@ export class DaemonClient {
     await ws.open();
 
     const helloFrame = await ws.waitForFrame(
-      (f) => f.type === 'server_hello',
+      (f) => f.type === "server_hello",
       this._controlAckTimeoutMs,
     );
-    const helloPayload = helloFrame.payload as ServerHelloMessage['payload'];
+    const helloPayload = helloFrame.payload as ServerHelloMessage["payload"];
     this._serverHello = helloPayload;
 
     const helloId = `hello-${ulid()}`;
     const ack = await ws.sendAndAwaitAck(
       {
-        type: 'client_hello',
+        type: "client_hello",
         id: helloId,
         payload: { client_id: this.clientId, subscriptions: [] },
       },
       this._controlAckTimeoutMs,
     );
     if (ack.code !== 0) {
-      throw new Error(`client_hello rejected (code=${ack.code}): ${ack.msg ?? 'no message'}`);
+      throw new Error(
+        `client_hello rejected (code=${ack.code}): ${ack.msg ?? "no message"}`,
+      );
     }
-    this._logger('debug', 'ws: handshake complete', {
+    this._logger("debug", "ws: handshake complete", {
       wsConnectionId: helloPayload.ws_connection_id,
       clientId: this.clientId,
     });
@@ -413,11 +446,13 @@ export class DaemonClient {
     if (this._subscribed.has(sid)) return;
     const id = `sub-${ulid()}`;
     const ack = await ws.sendAndAwaitAck(
-      { type: 'subscribe', id, payload: { session_ids: [sid] } },
+      { type: "subscribe", id, payload: { session_ids: [sid] } },
       this._controlAckTimeoutMs,
     );
     if (ack.code !== 0) {
-      throw new Error(`subscribe rejected (code=${ack.code}): ${ack.msg ?? 'no message'}`);
+      throw new Error(
+        `subscribe rejected (code=${ack.code}): ${ack.msg ?? "no message"}`,
+      );
     }
     this._subscribed.add(sid);
   }
@@ -428,11 +463,13 @@ export class DaemonClient {
     if (!this._subscribed.has(sid)) return;
     const id = `unsub-${ulid()}`;
     const ack = await ws.sendAndAwaitAck(
-      { type: 'unsubscribe', id, payload: { session_ids: [sid] } },
+      { type: "unsubscribe", id, payload: { session_ids: [sid] } },
       this._controlAckTimeoutMs,
     );
     if (ack.code !== 0) {
-      throw new Error(`unsubscribe rejected (code=${ack.code}): ${ack.msg ?? 'no message'}`);
+      throw new Error(
+        `unsubscribe rejected (code=${ack.code}): ${ack.msg ?? "no message"}`,
+      );
     }
     this._subscribed.delete(sid);
   }
@@ -487,7 +524,7 @@ export class DaemonClient {
     options: TerminalAttachOptions = {},
   ): Promise<TerminalAttachResult> {
     return this._sendWsControl<TerminalAttachResult>(
-      'terminal_attach',
+      "terminal_attach",
       {
         session_id: sid,
         terminal_id: terminalId,
@@ -503,7 +540,7 @@ export class DaemonClient {
     options: TerminalControlOptions = {},
   ): Promise<TerminalDetachResult> {
     return this._sendWsControl<TerminalDetachResult>(
-      'terminal_detach',
+      "terminal_detach",
       { session_id: sid, terminal_id: terminalId },
       options.timeoutMs,
     );
@@ -516,7 +553,7 @@ export class DaemonClient {
     options: TerminalControlOptions = {},
   ): Promise<TerminalInputResult> {
     return this._sendWsControl<TerminalInputResult>(
-      'terminal_input',
+      "terminal_input",
       { session_id: sid, terminal_id: terminalId, data },
       options.timeoutMs,
     );
@@ -530,7 +567,7 @@ export class DaemonClient {
     options: TerminalControlOptions = {},
   ): Promise<TerminalResizeResult> {
     return this._sendWsControl<TerminalResizeResult>(
-      'terminal_resize',
+      "terminal_resize",
       { session_id: sid, terminal_id: terminalId, cols, rows },
       options.timeoutMs,
     );
@@ -542,7 +579,7 @@ export class DaemonClient {
     options: TerminalControlOptions = {},
   ): Promise<TerminalCloseResult> {
     return this._sendWsControl<TerminalCloseResult>(
-      'terminal_close',
+      "terminal_close",
       { session_id: sid, terminal_id: terminalId },
       options.timeoutMs,
     );
@@ -555,15 +592,21 @@ export class DaemonClient {
    * Returns an unsubscribe handle (also auto-disposed by `close()`).
    */
   onApprovalRequested(
-    handler: (req: ApprovalRequest) => Promise<ApprovalResponse> | ApprovalResponse,
+    handler: (
+      req: ApprovalRequest,
+    ) => Promise<ApprovalResponse> | ApprovalResponse,
   ): () => void {
     const ws = this._requireWs();
-    const unsubscribe = installReverseRpcHandler<ApprovalRequest, ApprovalResponse>(ws, {
-      requestEventType: 'event.approval.requested',
-      idField: 'approval_id',
+    const unsubscribe = installReverseRpcHandler<
+      ApprovalRequest,
+      ApprovalResponse
+    >(ws, {
+      requestEventType: "event.approval.requested",
+      idField: "approval_id",
       buildPath: (sid, aid) => `/sessions/${sid}/approvals/${aid}`,
       handler,
-      postResolve: (sid, aid, body) => this.http.resolveApproval(sid, aid, body),
+      postResolve: (sid, aid, body) =>
+        this.http.resolveApproval(sid, aid, body),
       logger: this._logger,
     });
     this._disposers.push(unsubscribe);
@@ -579,15 +622,21 @@ export class DaemonClient {
    * Returns an unsubscribe handle (also auto-disposed by `close()`).
    */
   onQuestionAsked(
-    handler: (req: QuestionRequest) => Promise<QuestionResponse> | QuestionResponse,
+    handler: (
+      req: QuestionRequest,
+    ) => Promise<QuestionResponse> | QuestionResponse,
   ): () => void {
     const ws = this._requireWs();
-    const unsubscribe = installReverseRpcHandler<QuestionRequest, QuestionResponse>(ws, {
-      requestEventType: 'event.question.requested',
-      idField: 'question_id',
+    const unsubscribe = installReverseRpcHandler<
+      QuestionRequest,
+      QuestionResponse
+    >(ws, {
+      requestEventType: "event.question.requested",
+      idField: "question_id",
       buildPath: (sid, qid) => `/sessions/${sid}/questions/${qid}`,
       handler,
-      postResolve: (sid, qid, body) => this.http.resolveQuestion(sid, qid, body),
+      postResolve: (sid, qid, body) =>
+        this.http.resolveQuestion(sid, qid, body),
       logger: this._logger,
     });
     this._disposers.push(unsubscribe);
@@ -608,9 +657,13 @@ export class DaemonClient {
     sid: string,
     input: PromptSubmitInput,
     opts: SubmitAndWaitOptions = {},
-  ): Promise<{ prompt_id: string; user_message_id: string; finalFrame: AnyFrame }> {
+  ): Promise<{
+    prompt_id: string;
+    user_message_id: string;
+    finalFrame: AnyFrame;
+  }> {
     const ws = this._requireWs();
-    const waitFor = opts.waitFor ?? 'prompt.completed';
+    const waitFor = opts.waitFor ?? "prompt.completed";
     const timeoutMs = opts.timeoutMs ?? DEFAULT_FRAME_TIMEOUT_MS;
 
     // POST the prompt FIRST — without `prompt_id` we have nothing to match on.
@@ -621,12 +674,18 @@ export class DaemonClient {
 
     const finalFrame = await ws.waitForFrame((f) => {
       if (f.type !== waitFor) return false;
-      const payload = (f.payload as { promptId?: string; prompt_id?: string } | undefined) ?? {};
+      const payload =
+        (f.payload as { promptId?: string; prompt_id?: string } | undefined) ??
+        {};
       const pid = payload.promptId ?? payload.prompt_id;
       return pid === submit.prompt_id;
     }, timeoutMs);
 
-    return { prompt_id: submit.prompt_id, user_message_id: submit.user_message_id, finalFrame };
+    return {
+      prompt_id: submit.prompt_id,
+      user_message_id: submit.user_message_id,
+      finalFrame,
+    };
   }
 
   /**
@@ -640,24 +699,34 @@ export class DaemonClient {
     sid: string,
     body: PromptSubmission,
     opts: SubmitAndWaitOptions = {},
-  ): Promise<{ prompt_id: string; user_message_id: string; finalFrame: AnyFrame }> {
+  ): Promise<{
+    prompt_id: string;
+    user_message_id: string;
+    finalFrame: AnyFrame;
+  }> {
     const ws = this._requireWs();
-    const waitFor = opts.waitFor ?? 'prompt.completed';
+    const waitFor = opts.waitFor ?? "prompt.completed";
     const timeoutMs = opts.timeoutMs ?? DEFAULT_FRAME_TIMEOUT_MS;
     const submit = await this.http.submitPrompt(sid, body);
     const finalFrame = await ws.waitForFrame((f) => {
       if (f.type !== waitFor) return false;
-      const payload = (f.payload as { promptId?: string; prompt_id?: string } | undefined) ?? {};
+      const payload =
+        (f.payload as { promptId?: string; prompt_id?: string } | undefined) ??
+        {};
       const pid = payload.promptId ?? payload.prompt_id;
       return pid === submit.prompt_id;
     }, timeoutMs);
-    return { prompt_id: submit.prompt_id, user_message_id: submit.user_message_id, finalFrame };
+    return {
+      prompt_id: submit.prompt_id,
+      user_message_id: submit.user_message_id,
+      finalFrame,
+    };
   }
 
   // ── internals ───────────────────────────────────────────────────────────
   private _requireWs(): WsClient {
     if (!this._ws) {
-      throw new Error('ws not connected — call `await client.connect()` first');
+      throw new Error("ws not connected — call `await client.connect()` first");
     }
     return this._ws;
   }
@@ -673,7 +742,9 @@ export class DaemonClient {
       timeoutMs ?? this._controlAckTimeoutMs,
     );
     if (ack.code !== 0) {
-      throw new Error(`${type} rejected (code=${ack.code ?? 'unknown'}): ${ack.msg ?? 'no message'}`);
+      throw new Error(
+        `${type} rejected (code=${ack.code ?? "unknown"}): ${ack.msg ?? "no message"}`,
+      );
     }
     return (ack.payload ?? {}) as T;
   }

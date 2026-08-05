@@ -17,15 +17,19 @@
  * scope-agnostic contract.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
-import { type IDisposable } from '#/_base/di/lifecycle';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
+import { type IDisposable } from "#/_base/di/lifecycle";
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface DomainEventMap {}
 
-export type DomainEvent<K extends keyof DomainEventMap = keyof DomainEventMap> = {
-  [T in K]: Readonly<{ readonly type: T } & DomainEventMap[T]>;
-}[K];
+export type DomainEvent<K extends keyof DomainEventMap = keyof DomainEventMap> =
+  {
+    [T in K]: Readonly<{ readonly type: T } & DomainEventMap[T]>;
+  }[K];
 
 export interface IEventBus {
   readonly _serviceBrand: undefined;
@@ -38,4 +42,5 @@ export interface IEventBus {
   ): IDisposable;
 }
 
-export const IEventBus: ServiceIdentifier<IEventBus> = createDecorator<IEventBus>('eventBus');
+export const IEventBus: ServiceIdentifier<IEventBus> =
+  createDecorator<IEventBus>("eventBus");

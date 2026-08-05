@@ -10,27 +10,35 @@
  * root never changes).
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
-import { isoDateTimeSchema } from '#/_base/utils/isoDateTime';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
+import { isoDateTimeSchema } from "#/_base/utils/isoDateTime";
 import {
   fsGitStatusSchema,
   type FsDiffRequest,
   type FsDiffResponse,
   type FsGitStatusRequest,
   type FsGitStatusResponse,
-} from '#/app/git/git';
+} from "#/app/git/git";
 
 export {
   fsDiffRequestSchema,
   fsDiffResponseSchema,
   fsGitStatusRequestSchema,
   fsGitStatusResponseSchema,
-} from '#/app/git/git';
-export type { FsDiffRequest, FsDiffResponse, FsGitStatusRequest, FsGitStatusResponse };
+} from "#/app/git/git";
+export type {
+  FsDiffRequest,
+  FsDiffResponse,
+  FsGitStatusRequest,
+  FsGitStatusResponse,
+};
 
-export const fsKindSchema = z.enum(['file', 'directory', 'symlink']);
+export const fsKindSchema = z.enum(["file", "directory", "symlink"]);
 export type FsKind = z.infer<typeof fsKindSchema>;
 
 export const fsEntrySchema = z.object({
@@ -74,22 +82,22 @@ export const fsGrepFileHitSchema = z.object({
 export type FsGrepFileHit = z.infer<typeof fsGrepFileHitSchema>;
 
 export const fsListSortSchema = z.enum([
-  'type_first',
-  'name_asc',
-  'name_desc',
-  'mtime_desc',
-  'size_desc',
+  "type_first",
+  "name_asc",
+  "name_desc",
+  "mtime_desc",
+  "size_desc",
 ]);
 export type FsListSort = z.infer<typeof fsListSortSchema>;
 
 export const fsListRequestSchema = z.object({
-  path: z.string().default('.'),
+  path: z.string().default("."),
   depth: z.number().int().min(1).max(10).default(1),
   limit: z.number().int().min(1).max(1000).default(200),
   show_hidden: z.boolean().default(false),
   follow_gitignore: z.boolean().default(true),
   exclude_globs: z.array(z.string()).optional(),
-  sort: fsListSortSchema.default('type_first'),
+  sort: fsListSortSchema.default("type_first"),
   include_git_status: z.boolean().default(false),
 });
 export type FsListRequest = z.infer<typeof fsListRequestSchema>;
@@ -101,15 +109,15 @@ export const fsListResponseSchema = z.object({
 });
 export type FsListResponse = z.infer<typeof fsListResponseSchema>;
 
-export const fsReadEncodingRequestSchema = z.enum(['auto', 'utf-8', 'base64']);
-export const fsReadEncodingResponseSchema = z.enum(['utf-8', 'base64']);
+export const fsReadEncodingRequestSchema = z.enum(["auto", "utf-8", "base64"]);
+export const fsReadEncodingResponseSchema = z.enum(["utf-8", "base64"]);
 export type FsReadEncoding = z.infer<typeof fsReadEncodingResponseSchema>;
 
 export const fsReadRequestSchema = z.object({
   path: z.string().min(1),
   offset: z.number().int().nonnegative().default(0),
   length: z.number().int().min(1).max(10_485_760).default(1_048_576),
-  encoding: fsReadEncodingRequestSchema.default('auto'),
+  encoding: fsReadEncodingRequestSchema.default("auto"),
 });
 export type FsReadRequest = z.infer<typeof fsReadRequestSchema>;
 
@@ -143,7 +151,7 @@ export const fsListManyRequestSchema = z.object({
   show_hidden: z.boolean().default(false),
   follow_gitignore: z.boolean().default(true),
   exclude_globs: z.array(z.string()).optional(),
-  sort: fsListSortSchema.default('type_first'),
+  sort: fsListSortSchema.default("type_first"),
   include_git_status: z.boolean().default(false),
 });
 export type FsListManyRequest = z.infer<typeof fsListManyRequestSchema>;
@@ -152,7 +160,9 @@ export const fsListManyPartialErrorSchema = z.object({
   code: z.number().int(),
   msg: z.string(),
 });
-export type FsListManyPartialError = z.infer<typeof fsListManyPartialErrorSchema>;
+export type FsListManyPartialError = z.infer<
+  typeof fsListManyPartialErrorSchema
+>;
 
 export const fsListManyResponseSchema = z.object({
   results: z.record(z.string(), z.array(fsEntrySchema)),
@@ -249,4 +259,4 @@ export interface IWorkspaceFsService {
 }
 
 export const IWorkspaceFsService: ServiceIdentifier<IWorkspaceFsService> =
-  createDecorator<IWorkspaceFsService>('workspaceFsService');
+  createDecorator<IWorkspaceFsService>("workspaceFsService");

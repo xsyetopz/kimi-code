@@ -1,14 +1,20 @@
-import type { Agent } from '../..';
-import { isPlainRecord } from '../../turn/canonical-args';
-import type { PermissionPolicy, PermissionPolicyContext, PermissionPolicyResult } from '../types';
+import type { Agent } from "../..";
+import { isPlainRecord } from "../../turn/canonical-args";
+import type {
+  PermissionPolicy,
+  PermissionPolicyContext,
+  PermissionPolicyResult,
+} from "../types";
 
 export class PreToolCallHookPermissionPolicy implements PermissionPolicy {
-  readonly name = 'pre-tool-call-hook';
+  readonly name = "pre-tool-call-hook";
 
   constructor(private readonly agent: Agent) {}
 
-  async evaluate(context: PermissionPolicyContext): Promise<PermissionPolicyResult | undefined> {
-    const hookResult = await this.agent.hooks?.triggerBlock('PreToolUse', {
+  async evaluate(
+    context: PermissionPolicyContext,
+  ): Promise<PermissionPolicyResult | undefined> {
+    const hookResult = await this.agent.hooks?.triggerBlock("PreToolUse", {
       matcherValue: context.toolCall.name,
       signal: context.signal,
       inputData: {
@@ -20,7 +26,7 @@ export class PreToolCallHookPermissionPolicy implements PermissionPolicy {
     context.signal.throwIfAborted();
     if (hookResult === undefined) return;
     return {
-      kind: 'deny',
+      kind: "deny",
       message: hookResult.reason,
     };
   }

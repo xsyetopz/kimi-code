@@ -12,7 +12,7 @@ import type {
   GoalBudgetLimits,
   GoalSnapshot,
   GoalToolResult,
-} from './types';
+} from "./types";
 
 export interface GoalReasonInput {
   readonly reason?: string;
@@ -36,8 +36,15 @@ export interface IAgentGoalService {
     input: { readonly budgetLimits: GoalBudgetLimits },
     actor?: GoalActor,
   ): Promise<GoalSnapshot>;
-  markComplete(input?: GoalReasonInput, actor?: GoalActor): Promise<GoalSnapshot | null>;
-  markBlocked(input?: GoalReasonInput, actor?: GoalActor): Promise<GoalSnapshot | null>;
+  markComplete(
+    input?: GoalReasonInput,
+    actor?: GoalActor,
+  ): Promise<GoalSnapshot | null>;
+  markBlocked(
+    input?: GoalReasonInput,
+    actor?: GoalActor,
+  ): Promise<GoalSnapshot | null>;
 }
 
-export const IAgentGoalService = createDecorator<IAgentGoalService>('agentGoalService');
+export const IAgentGoalService =
+  createDecorator<IAgentGoalService>("agentGoalService");

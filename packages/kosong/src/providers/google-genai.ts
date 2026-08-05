@@ -3,9 +3,14 @@ import {
   APITimeoutError,
   ChatProviderError,
   normalizeAPIStatusError,
-} from '#/errors';
-import type { Message, StreamedMessagePart, ThinkPart, ToolCall } from '#/message';
-import { isToolDeclarationOnlyMessage } from '#/message';
+} from "#/errors";
+import type {
+  Message,
+  StreamedMessagePart,
+  ThinkPart,
+  ToolCall,
+} from "#/message";
+import { isToolDeclarationOnlyMessage } from "#/message";
 import type {
   ChatProvider,
   FinishReason,
@@ -14,13 +19,16 @@ import type {
   ResponseFormat,
   StreamedMessage,
   ThinkingEffort,
-} from '#/provider';
-import type { Tool } from '#/tool';
-import type { TokenUsage } from '#/usage';
-import { ApiError as GoogleApiError, GoogleGenAI as GenAIClient } from '@google/genai';
-import { mergeConsecutiveUserMessages } from './merge-user-messages';
+} from "#/provider";
+import type { Tool } from "#/tool";
+import type { TokenUsage } from "#/usage";
+import {
+  ApiError as GoogleApiError,
+  GoogleGenAI as GenAIClient,
+} from "@google/genai";
+import { mergeConsecutiveUserMessages } from "./merge-user-messages";
 
-import { requireProviderApiKey, resolveAuthBackedClient } from './request-auth';
+import { requireProviderApiKey, resolveAuthBackedClient } from "./request-auth";
 
 /**
  * Normalize a Google GenAI (Gemini) `finishReason` value to the unified
@@ -44,34 +52,38 @@ function normalizeGoogleGenAIFinishReason(raw: unknown): {
   // documented constants. Anything else collapses to "no signal" so we
   // never emit a junk `[object Object]` raw value.
   let rawString: string;
-  if (typeof raw === 'string') {
+  if (typeof raw === "string") {
     rawString = raw.toUpperCase();
-  } else if (typeof raw === 'number' || typeof raw === 'bigint' || typeof raw === 'boolean') {
+  } else if (
+    typeof raw === "number" ||
+    typeof raw === "bigint" ||
+    typeof raw === "boolean"
+  ) {
     rawString = String(raw).toUpperCase();
   } else {
     return { finishReason: null, rawFinishReason: null };
   }
-  if (rawString === 'FINISH_REASON_UNSPECIFIED' || rawString === '') {
+  if (rawString === "FINISH_REASON_UNSPECIFIED" || rawString === "") {
     return { finishReason: null, rawFinishReason: null };
   }
   switch (rawString) {
-    case 'STOP':
-      return { finishReason: 'completed', rawFinishReason: rawString };
-    case 'MAX_TOKENS':
-      return { finishReason: 'truncated', rawFinishReason: rawString };
-    case 'SAFETY':
-    case 'RECITATION':
-    case 'BLOCKLIST':
-    case 'PROHIBITED_CONTENT':
-    case 'SPII':
-    case 'IMAGE_SAFETY':
-      return { finishReason: 'filtered', rawFinishReason: rawString };
-    case 'MALFORMED_FUNCTION_CALL':
-    case 'OTHER':
-    case 'LANGUAGE':
-      return { finishReason: 'other', rawFinishReason: rawString };
+    case "STOP":
+      return { finishReason: "completed", rawFinishReason: rawString };
+    case "MAX_TOKENS":
+      return { finishReason: "truncated", rawFinishReason: rawString };
+    case "SAFETY":
+    case "RECITATION":
+    case "BLOCKLIST":
+    case "PROHIBITED_CONTENT":
+    case "SPII":
+    case "IMAGE_SAFETY":
+      return { finishReason: "filtered", rawFinishReason: rawString };
+    case "MALFORMED_FUNCTION_CALL":
+    case "OTHER":
+    case "LANGUAGE":
+      return { finishReason: "other", rawFinishReason: rawString };
     default:
-      return { finishReason: 'other', rawFinishReason: rawString };
+      return { finishReason: "other", rawFinishReason: rawString };
   }
 }
 export interface GoogleGenAIOptions {
@@ -134,11 +146,11 @@ function applyResponseFormat(
   format: ResponseFormat | undefined,
 ): void {
   if (format === undefined) return;
-  config['responseMimeType'] = 'application/json';
-  delete config['responseSchema'];
-  delete config['responseJsonSchema'];
-  if (format.type === 'json_schema') {
-    config['responseJsonSchema'] = format.jsonSchema.schema;
+  config["responseMimeType"] = "application/json";
+  delete config["responseSchema"];
+  delete config["responseJsonSchema"];
+  if (format.type === "json_schema") {
+    config["responseJsonSchema"] = format.jsonSchema.schema;
   }
 }
 interface GoogleContent {
@@ -159,7 +171,10 @@ interface GooglePart {
   [key: string]: unknown;
 }
 
-function toolCallIdToName(toolCallId: string, toolNameById: Map<string, string>): string {
+function toolCallIdToName(
+  toolCallId: string,
+  toolNameById: Map<string, string>,
+): string {
   const name = toolNameById.get(toolCallId);
   if (name !== undefined) return name;
   // Fallback: ids produced by this provider follow the format
@@ -172,7 +187,7 @@ function toolCallIdToName(toolCallId: string, toolNameById: Map<string, string>)
   // ids of the form "{tool_name}_{id_suffix}" still parse: a trailing 8-hex
   // segment is indistinguishable from the entropy suffix, and stripping it
   // recovers the same name the old single-suffix shape did.)
-  const withoutEntropy = toolCallId.replace(/_[0-9a-f]{8}$/, '');
+  const withoutEntropy = toolCallId.replace(/_[0-9a-f]{8}$/, "");
   const match = /^(.+)_[^_]+$/.exec(withoutEntropy);
   return match?.[1] ?? withoutEntropy;
 }
@@ -188,15 +203,15 @@ function convertMediaUrl(
 ):
   | { inlineData: { mimeType: string; data: string } }
   | { fileData: { fileUri: string; mimeType: string } } {
-  if (url.startsWith('data:')) {
-    const commaIndex = url.indexOf(',');
+  if (url.startsWith("data:")) {
+    const commaIndex = url.indexOf(",");
     if (commaIndex === -1) {
       return { fileData: { fileUri: url, mimeType: fallbackMimeType } };
     }
     const meta = url.slice(0, commaIndex);
     const data = url.slice(commaIndex + 1);
-    const colonIndex = meta.indexOf(':');
-    const semiIndex = meta.indexOf(';');
+    const colonIndex = meta.indexOf(":");
+    const semiIndex = meta.indexOf(";");
     const mimeType =
       colonIndex !== -1 && semiIndex !== -1
         ? meta.slice(colonIndex + 1, semiIndex)
@@ -207,13 +222,15 @@ function convertMediaUrl(
   let mimeType = fallbackMimeType;
   try {
     const pathname = new URL(url).pathname.toLowerCase();
-    if (pathname.endsWith('.png')) mimeType = 'image/png';
-    else if (pathname.endsWith('.jpg') || pathname.endsWith('.jpeg')) mimeType = 'image/jpeg';
-    else if (pathname.endsWith('.gif')) mimeType = 'image/gif';
-    else if (pathname.endsWith('.webp')) mimeType = 'image/webp';
-    else if (pathname.endsWith('.mp3') || pathname.endsWith('.mpeg')) mimeType = 'audio/mpeg';
-    else if (pathname.endsWith('.wav')) mimeType = 'audio/wav';
-    else if (pathname.endsWith('.ogg')) mimeType = 'audio/ogg';
+    if (pathname.endsWith(".png")) mimeType = "image/png";
+    else if (pathname.endsWith(".jpg") || pathname.endsWith(".jpeg"))
+      mimeType = "image/jpeg";
+    else if (pathname.endsWith(".gif")) mimeType = "image/gif";
+    else if (pathname.endsWith(".webp")) mimeType = "image/webp";
+    else if (pathname.endsWith(".mp3") || pathname.endsWith(".mpeg"))
+      mimeType = "audio/mpeg";
+    else if (pathname.endsWith(".wav")) mimeType = "audio/wav";
+    else if (pathname.endsWith(".ogg")) mimeType = "audio/ogg";
   } catch {
     // URL parsing failed, use fallback
   }
@@ -221,7 +238,7 @@ function convertMediaUrl(
 }
 
 function createAbortError(): DOMException {
-  return new DOMException('The operation was aborted.', 'AbortError');
+  return new DOMException("The operation was aborted.", "AbortError");
 }
 
 async function abortPromise(signal: AbortSignal | undefined): Promise<never> {
@@ -235,7 +252,7 @@ async function abortPromise(signal: AbortSignal | undefined): Promise<never> {
   }
   return new Promise((_, reject) => {
     signal.addEventListener(
-      'abort',
+      "abort",
       () => {
         reject(createAbortError());
       },
@@ -245,23 +262,23 @@ async function abortPromise(signal: AbortSignal | undefined): Promise<never> {
 }
 
 function messageToGoogleGenAI(message: Message): GoogleContent {
-  if (message.role === 'tool') {
+  if (message.role === "tool") {
     throw new ChatProviderError(
-      'Tool messages must be converted via messagesToGoogleGenAIContents.',
+      "Tool messages must be converted via messagesToGoogleGenAIContents.",
     );
   }
 
   // GoogleGenAI uses "model" instead of "assistant"
-  const role = message.role === 'assistant' ? 'model' : message.role;
+  const role = message.role === "assistant" ? "model" : message.role;
   const parts: GooglePart[] = [];
 
   // Handle content parts
   for (const part of message.content) {
     switch (part.type) {
-      case 'text':
+      case "text":
         parts.push({ text: part.text });
         break;
-      case 'think': {
+      case "think": {
         const thoughtPart: GooglePart = { text: part.think, thought: true };
         if (part.encrypted !== undefined && part.encrypted.length > 0) {
           thoughtPart.thoughtSignature = part.encrypted;
@@ -269,14 +286,14 @@ function messageToGoogleGenAI(message: Message): GoogleContent {
         parts.push(thoughtPart);
         break;
       }
-      case 'image_url':
-        parts.push(convertMediaUrl(part.imageUrl.url, 'image/jpeg'));
+      case "image_url":
+        parts.push(convertMediaUrl(part.imageUrl.url, "image/jpeg"));
         break;
-      case 'audio_url':
-        parts.push(convertMediaUrl(part.audioUrl.url, 'audio/mpeg'));
+      case "audio_url":
+        parts.push(convertMediaUrl(part.audioUrl.url, "audio/mpeg"));
         break;
-      case 'video_url':
-        parts.push(convertMediaUrl(part.videoUrl.url, 'video/mp4'));
+      case "video_url":
+        parts.push(convertMediaUrl(part.videoUrl.url, "video/mp4"));
         break;
     }
   }
@@ -287,14 +304,20 @@ function messageToGoogleGenAI(message: Message): GoogleContent {
     if (toolCall.arguments) {
       try {
         const parsed: unknown = JSON.parse(toolCall.arguments);
-        if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+        if (
+          typeof parsed === "object" &&
+          parsed !== null &&
+          !Array.isArray(parsed)
+        ) {
           args = parsed as Record<string, unknown>;
         } else {
-          throw new ChatProviderError('Tool call arguments must be a JSON object.');
+          throw new ChatProviderError(
+            "Tool call arguments must be a JSON object.",
+          );
         }
       } catch (error) {
         if (error instanceof ChatProviderError) throw error;
-        throw new ChatProviderError('Tool call arguments must be valid JSON.');
+        throw new ChatProviderError("Tool call arguments must be valid JSON.");
       }
     }
 
@@ -306,8 +329,10 @@ function messageToGoogleGenAI(message: Message): GoogleContent {
     };
 
     // Restore thoughtSignature if available
-    if (toolCall.extras && 'thought_signature_b64' in toolCall.extras) {
-      functionCallPart['thoughtSignature'] = toolCall.extras['thought_signature_b64'] as string;
+    if (toolCall.extras && "thought_signature_b64" in toolCall.extras) {
+      functionCallPart["thoughtSignature"] = toolCall.extras[
+        "thought_signature_b64"
+      ] as string;
     }
 
     parts.push(functionCallPart);
@@ -329,31 +354,31 @@ function toolMessageToFunctionResponseParts(
   message: Message,
   toolNameById: Map<string, string>,
 ): GooglePart[] {
-  if (message.role !== 'tool') {
-    throw new ChatProviderError('Expected a tool message.');
+  if (message.role !== "tool") {
+    throw new ChatProviderError("Expected a tool message.");
   }
   if (message.toolCallId === undefined) {
-    throw new ChatProviderError('Tool response is missing `toolCallId`.');
+    throw new ChatProviderError("Tool response is missing `toolCallId`.");
   }
 
   // Separate text output from media parts
-  let textOutput = '';
+  let textOutput = "";
   const mediaParts: GooglePart[] = [];
   for (const part of message.content) {
     switch (part.type) {
-      case 'text':
+      case "text":
         if (part.text) textOutput += part.text;
         break;
-      case 'image_url':
-        mediaParts.push(convertMediaUrl(part.imageUrl.url, 'image/jpeg'));
+      case "image_url":
+        mediaParts.push(convertMediaUrl(part.imageUrl.url, "image/jpeg"));
         break;
-      case 'audio_url':
-        mediaParts.push(convertMediaUrl(part.audioUrl.url, 'audio/mpeg'));
+      case "audio_url":
+        mediaParts.push(convertMediaUrl(part.audioUrl.url, "audio/mpeg"));
         break;
-      case 'video_url':
-        mediaParts.push(convertMediaUrl(part.videoUrl.url, 'video/mp4'));
+      case "video_url":
+        mediaParts.push(convertMediaUrl(part.videoUrl.url, "video/mp4"));
         break;
-      case 'think':
+      case "think":
         // Skip — handled separately via reasoning channel.
         break;
     }
@@ -370,7 +395,9 @@ function toolMessageToFunctionResponseParts(
   return [functionResponsePart, ...mediaParts];
 }
 
-export function messagesToGoogleGenAIContents(messages: Message[]): GoogleContent[] {
+export function messagesToGoogleGenAIContents(
+  messages: Message[],
+): GoogleContent[] {
   const contents: GoogleContent[] = [];
   const toolNameById = new Map<string, string>();
 
@@ -388,7 +415,7 @@ export function messagesToGoogleGenAIContents(messages: Message[]): GoogleConten
       continue;
     }
 
-    if (message.role === 'system') {
+    if (message.role === "system") {
       // Google GenAI's `Content.role` only accepts "user" or "model", so a
       // system message in the history (e.g. from session restore or
       // cross-provider migration) would be rejected by the API. Preserve
@@ -398,12 +425,12 @@ export function messagesToGoogleGenAIContents(messages: Message[]): GoogleConten
       // `systemInstruction` separately; only historical system messages
       // come through here.
       const text = message.content
-        .filter((p): p is { type: 'text'; text: string } => p.type === 'text')
+        .filter((p): p is { type: "text"; text: string } => p.type === "text")
         .map((p) => p.text)
-        .join('\n');
+        .join("\n");
       if (text.length > 0) {
         contents.push({
-          role: 'user',
+          role: "user",
           parts: [{ text: `<system>${text}</system>` }],
         });
       }
@@ -411,7 +438,7 @@ export function messagesToGoogleGenAIContents(messages: Message[]): GoogleConten
       continue;
     }
 
-    if (message.role === 'assistant' && message.toolCalls.length > 0) {
+    if (message.role === "assistant" && message.toolCalls.length > 0) {
       contents.push(messageToGoogleGenAI(message));
       const expectedToolCallIds: string[] = [];
       for (const toolCall of message.toolCalls) {
@@ -424,7 +451,7 @@ export function messagesToGoogleGenAIContents(messages: Message[]): GoogleConten
       const toolMessages: Message[] = [];
       while (j < messages.length) {
         const toolMsg = messages[j];
-        if (toolMsg === undefined || toolMsg.role !== 'tool') break;
+        if (toolMsg === undefined || toolMsg.role !== "tool") break;
         toolMessages.push(toolMsg);
         j += 1;
       }
@@ -438,10 +465,14 @@ export function messagesToGoogleGenAIContents(messages: Message[]): GoogleConten
         const seenToolCallIds = new Set<string>();
         for (const toolMsg of toolMessages) {
           if (toolMsg.toolCallId === undefined) {
-            throw new ChatProviderError('Tool response is missing `toolCallId`.');
+            throw new ChatProviderError(
+              "Tool response is missing `toolCallId`.",
+            );
           }
           if (seenToolCallIds.has(toolMsg.toolCallId)) {
-            throw new ChatProviderError(`Duplicate tool response for id: ${toolMsg.toolCallId}`);
+            throw new ChatProviderError(
+              `Duplicate tool response for id: ${toolMsg.toolCallId}`,
+            );
           }
           seenToolCallIds.add(toolMsg.toolCallId);
           toolMsgById.set(toolMsg.toolCallId, toolMsg);
@@ -451,7 +482,9 @@ export function messagesToGoogleGenAIContents(messages: Message[]): GoogleConten
         for (const expectedId of expectedToolCallIds) {
           const msg = toolMsgById.get(expectedId);
           if (msg === undefined) {
-            throw new ChatProviderError(`Missing tool responses for ids: ${expectedId}`);
+            throw new ChatProviderError(
+              `Missing tool responses for ids: ${expectedId}`,
+            );
           }
           sortedToolMessages.push(msg);
           toolMsgById.delete(expectedId);
@@ -467,9 +500,11 @@ export function messagesToGoogleGenAIContents(messages: Message[]): GoogleConten
         // media parts for image/audio/video outputs).
         const parts: GooglePart[] = [];
         for (const toolMsg of sortedToolMessages) {
-          parts.push(...toolMessageToFunctionResponseParts(toolMsg, toolNameById));
+          parts.push(
+            ...toolMessageToFunctionResponseParts(toolMsg, toolNameById),
+          );
         }
-        contents.push({ role: 'user', parts });
+        contents.push({ role: "user", parts });
         i = j;
         continue;
       }
@@ -478,10 +513,13 @@ export function messagesToGoogleGenAIContents(messages: Message[]): GoogleConten
       continue;
     }
 
-    if (message.role === 'tool') {
+    if (message.role === "tool") {
       // Tool message without preceding assistant message
-      const parts: GooglePart[] = toolMessageToFunctionResponseParts(message, toolNameById);
-      contents.push({ role: 'user', parts });
+      const parts: GooglePart[] = toolMessageToFunctionResponseParts(
+        message,
+        toolNameById,
+      );
+      contents.push({ role: "user", parts });
       i += 1;
       continue;
     }
@@ -494,7 +532,7 @@ export function messagesToGoogleGenAIContents(messages: Message[]): GoogleConten
   // user Contents arise after compaction (`[prompts, summary, reminders]`) and
   // when a user turn follows a tool result; collapse them into one user turn.
   return mergeConsecutiveUserMessages(contents, {
-    isUser: (content) => content.role === 'user',
+    isUser: (content) => content.role === "user",
     isToolResultOnly: (content) =>
       content.parts.length > 0 &&
       content.parts.every((part) => part.functionResponse !== undefined),
@@ -519,7 +557,10 @@ export class GoogleGenAIStreamedMessage implements StreamedMessage {
         signal,
       );
     } else {
-      this._iter = this._convertNonStreamResponse(response as Record<string, unknown>, signal);
+      this._iter = this._convertNonStreamResponse(
+        response as Record<string, unknown>,
+        signal,
+      );
     }
   }
 
@@ -544,7 +585,7 @@ export class GoogleGenAIStreamedMessage implements StreamedMessage {
   }
 
   private _captureFinishReason(response: Record<string, unknown>): void {
-    const candidates = response['candidates'] as unknown[] | undefined;
+    const candidates = response["candidates"] as unknown[] | undefined;
     if (!candidates || candidates.length === 0) {
       return;
     }
@@ -552,7 +593,7 @@ export class GoogleGenAIStreamedMessage implements StreamedMessage {
     if (first === undefined) {
       return;
     }
-    const raw = first['finishReason'] ?? first['finish_reason'];
+    const raw = first["finishReason"] ?? first["finish_reason"];
     if (raw === undefined) {
       return;
     }
@@ -560,37 +601,49 @@ export class GoogleGenAIStreamedMessage implements StreamedMessage {
     // Only overwrite when we got a definitive signal — early stream
     // chunks may contain `FINISH_REASON_UNSPECIFIED` while the model is
     // still generating, and we treat those as "not yet known".
-    if (normalized.finishReason !== null || normalized.rawFinishReason !== null) {
+    if (
+      normalized.finishReason !== null ||
+      normalized.rawFinishReason !== null
+    ) {
       this._finishReason = normalized.finishReason;
       this._rawFinishReason = normalized.rawFinishReason;
     }
   }
 
   /** Yield parts from a single (non-streamed) GenerateContentResponse. */
-  private _extractChunkParts(response: Record<string, unknown>): StreamedMessagePart[] {
+  private _extractChunkParts(
+    response: Record<string, unknown>,
+  ): StreamedMessagePart[] {
     const parts: StreamedMessagePart[] = [];
 
-    const candidates = response['candidates'] as unknown[] | undefined;
+    const candidates = response["candidates"] as unknown[] | undefined;
     for (const candidate of candidates ?? []) {
       const cand = candidate as Record<string, unknown>;
-      const content = cand['content'] as Record<string, unknown> | undefined;
-      const contentParts = content?.['parts'] as unknown[] | undefined;
+      const content = cand["content"] as Record<string, unknown> | undefined;
+      const contentParts = content?.["parts"] as unknown[] | undefined;
       if (!contentParts) continue;
 
       for (const part of contentParts) {
         const p = part as Record<string, unknown>;
-        if (p['thought'] === true && typeof p['text'] === 'string') {
-          const thoughtSignature = p['thoughtSignature'] ?? p['thought_signature'];
-          const thinkPart: ThinkPart = { type: 'think', think: p['text'] };
-          if (typeof thoughtSignature === 'string' && thoughtSignature.length > 0) {
+        if (p["thought"] === true && typeof p["text"] === "string") {
+          const thoughtSignature =
+            p["thoughtSignature"] ?? p["thought_signature"];
+          const thinkPart: ThinkPart = { type: "think", think: p["text"] };
+          if (
+            typeof thoughtSignature === "string" &&
+            thoughtSignature.length > 0
+          ) {
             thinkPart.encrypted = thoughtSignature;
           }
           parts.push(thinkPart);
-        } else if (p['text']) {
-          parts.push({ type: 'text', text: p['text'] as string });
-        } else if (p['functionCall'] || p['function_call']) {
-          const fc = (p['functionCall'] ?? p['function_call']) as Record<string, unknown>;
-          const name = fc['name'] as string;
+        } else if (p["text"]) {
+          parts.push({ type: "text", text: p["text"] as string });
+        } else if (p["functionCall"] || p["function_call"]) {
+          const fc = (p["functionCall"] ?? p["function_call"]) as Record<
+            string,
+            unknown
+          >;
+          const name = fc["name"] as string;
           if (!name) continue;
           // The upstream function-call id is only unique within its own
           // response (some backends re-issue small ids like "0" every turn),
@@ -598,16 +651,16 @@ export class GoogleGenAIStreamedMessage implements StreamedMessage {
           // different turns both became `AgentSwarm_0` and the web client
           // merged their member lists into one card. Append entropy so ids
           // stay unique across the whole session.
-          const id_ = (fc['id'] as string) ?? crypto.randomUUID();
-          const toolCallId = `${name}_${id_}_${crypto.randomUUID().replaceAll('-', '').slice(0, 8)}`;
-          const thoughtSigB64 = p['thoughtSignature'] ?? p['thought_signature'];
+          const id_ = (fc["id"] as string) ?? crypto.randomUUID();
+          const toolCallId = `${name}_${id_}_${crypto.randomUUID().replaceAll("-", "").slice(0, 8)}`;
+          const thoughtSigB64 = p["thoughtSignature"] ?? p["thought_signature"];
           const toolCall: ToolCall = {
-            type: 'function',
+            type: "function",
             id: toolCallId,
             name,
-            arguments: fc['args'] ? JSON.stringify(fc['args']) : '{}',
+            arguments: fc["args"] ? JSON.stringify(fc["args"]) : "{}",
           };
-          if (typeof thoughtSigB64 === 'string' && thoughtSigB64.length > 0) {
+          if (typeof thoughtSigB64 === "string" && thoughtSigB64.length > 0) {
             toolCall.extras = { thought_signature_b64: thoughtSigB64 };
           }
           parts.push(toolCall);
@@ -620,19 +673,21 @@ export class GoogleGenAIStreamedMessage implements StreamedMessage {
 
   /** Extract usage metadata from a response chunk. */
   private _extractUsage(response: Record<string, unknown>): void {
-    const usageMetadata = response['usageMetadata'] as Record<string, unknown> | undefined;
+    const usageMetadata = response["usageMetadata"] as
+      | Record<string, unknown>
+      | undefined;
     if (usageMetadata) {
       const promptTokenCount =
-        typeof usageMetadata['promptTokenCount'] === 'number'
-          ? usageMetadata['promptTokenCount']
+        typeof usageMetadata["promptTokenCount"] === "number"
+          ? usageMetadata["promptTokenCount"]
           : 0;
       const cachedContentTokenCount =
-        typeof usageMetadata['cachedContentTokenCount'] === 'number'
-          ? usageMetadata['cachedContentTokenCount']
+        typeof usageMetadata["cachedContentTokenCount"] === "number"
+          ? usageMetadata["cachedContentTokenCount"]
           : 0;
       this._usage = {
         inputOther: Math.max(promptTokenCount - cachedContentTokenCount, 0),
-        output: (usageMetadata['candidatesTokenCount'] as number) ?? 0,
+        output: (usageMetadata["candidatesTokenCount"] as number) ?? 0,
         inputCacheRead: cachedContentTokenCount,
         inputCacheCreation: 0,
       };
@@ -641,8 +696,8 @@ export class GoogleGenAIStreamedMessage implements StreamedMessage {
 
   /** Extract response ID from a response chunk. */
   private _extractId(response: Record<string, unknown>): void {
-    if (response['responseId'] !== undefined) {
-      this._id = response['responseId'] as string;
+    if (response["responseId"] !== undefined) {
+      this._id = response["responseId"] as string;
     }
   }
 
@@ -690,7 +745,7 @@ export class GoogleGenAIStreamedMessage implements StreamedMessage {
     } catch (error: unknown) {
       // Preserve AbortError identity so the retry/generate loop can
       // distinguish it from transient provider errors.
-      if (error instanceof DOMException && error.name === 'AbortError') {
+      if (error instanceof DOMException && error.name === "AbortError") {
         throw error;
       }
       throw convertGoogleGenAIError(error);
@@ -715,12 +770,15 @@ export function convertGoogleGenAIError(error: unknown): ChatProviderError {
       return new APITimeoutError(msg);
     }
     // Network / fetch errors (e.g. TypeError: fetch failed)
-    if (NETWORK_RE.test(msg) || (error instanceof TypeError && msg.includes('fetch'))) {
+    if (
+      NETWORK_RE.test(msg) ||
+      (error instanceof TypeError && msg.includes("fetch"))
+    ) {
       return new APIConnectionError(msg);
     }
     // Try to extract status code from unknown error shapes
     const statusCode = (error as { code?: number }).code;
-    if (typeof statusCode === 'number') {
+    if (typeof statusCode === "number") {
       return normalizeAPIStatusError(statusCode, msg);
     }
     return new ChatProviderError(`GoogleGenAI error: ${msg}`);
@@ -728,7 +786,7 @@ export function convertGoogleGenAIError(error: unknown): ChatProviderError {
   return new ChatProviderError(`GoogleGenAI error: ${String(error)}`);
 }
 export class GoogleGenAIChatProvider implements ChatProvider {
-  readonly name: string = 'google_genai';
+  readonly name: string = "google_genai";
 
   /** See {@link ChatProvider.maxCompletionTokens}. */
   get maxCompletionTokens(): number | undefined {
@@ -745,7 +803,9 @@ export class GoogleGenAIChatProvider implements ChatProvider {
   private _project: string | undefined;
   private _location: string | undefined;
   private _defaultHeaders: Record<string, string> | undefined;
-  private _clientFactory: ((auth: ProviderRequestAuth) => GenAIClient) | undefined;
+  private _clientFactory:
+    | ((auth: ProviderRequestAuth) => GenAIClient)
+    | undefined;
 
   constructor(options: GoogleGenAIOptions) {
     this._model = options.model;
@@ -753,16 +813,21 @@ export class GoogleGenAIChatProvider implements ChatProvider {
     this._stream = options.stream ?? true;
     this._generationKwargs = {};
 
-    const apiKey = options.apiKey ?? process.env['GOOGLE_API_KEY'];
-    this._apiKey = apiKey === undefined || apiKey.length === 0 ? undefined : apiKey;
+    const apiKey = options.apiKey ?? process.env["GOOGLE_API_KEY"];
+    this._apiKey =
+      apiKey === undefined || apiKey.length === 0 ? undefined : apiKey;
     this._baseUrl =
-      options.baseUrl === undefined || options.baseUrl.length === 0 ? undefined : options.baseUrl;
+      options.baseUrl === undefined || options.baseUrl.length === 0
+        ? undefined
+        : options.baseUrl;
     this._project = options.project;
     this._location = options.location;
     this._defaultHeaders = options.defaultHeaders;
     this._clientFactory = options.clientFactory;
     this._client =
-      this._vertexai || this._apiKey !== undefined ? this._buildClient(this._apiKey) : undefined;
+      this._vertexai || this._apiKey !== undefined
+        ? this._buildClient(this._apiKey)
+        : undefined;
   }
 
   private _buildClient(apiKey: string | undefined): GenAIClient {
@@ -772,7 +837,8 @@ export class GoogleGenAIChatProvider implements ChatProvider {
     // and a `User-Agent` overrides the SDK default (`google-genai-sdk/<ver> …`)
     // while preserving the other default headers (`x-goog-api-client`,
     // `Content-Type`). Build the object once so both can coexist.
-    const httpOptions: { headers?: Record<string, string>; baseUrl?: string } = {};
+    const httpOptions: { headers?: Record<string, string>; baseUrl?: string } =
+      {};
     if (this._defaultHeaders !== undefined) {
       httpOptions.headers = this._defaultHeaders;
     }
@@ -803,16 +869,16 @@ export class GoogleGenAIChatProvider implements ChatProvider {
     // For gemini-3 models that use thinkingLevel
     if (thinkingConfig.thinkingLevel !== undefined) {
       switch (thinkingConfig.thinkingLevel) {
-        case 'MINIMAL':
+        case "MINIMAL":
           // MINIMAL + suppressed thoughts is how 'off' is encoded for Gemini 3,
           // which has no true "disabled" level.
-          return thinkingConfig.includeThoughts === false ? 'off' : 'low';
-        case 'LOW':
-          return 'low';
-        case 'MEDIUM':
-          return 'medium';
-        case 'HIGH':
-          return 'high';
+          return thinkingConfig.includeThoughts === false ? "off" : "low";
+        case "LOW":
+          return "low";
+        case "MEDIUM":
+          return "medium";
+        case "HIGH":
+          return "high";
         default:
           return null;
       }
@@ -820,10 +886,10 @@ export class GoogleGenAIChatProvider implements ChatProvider {
 
     // For other models that use thinkingBudget
     if (thinkingConfig.thinkingBudget !== undefined) {
-      if (thinkingConfig.thinkingBudget === 0) return 'off';
-      if (thinkingConfig.thinkingBudget <= 1024) return 'low';
-      if (thinkingConfig.thinkingBudget <= 4096) return 'medium';
-      return 'high';
+      if (thinkingConfig.thinkingBudget === 0) return "off";
+      if (thinkingConfig.thinkingBudget <= 1024) return "low";
+      if (thinkingConfig.thinkingBudget <= 4096) return "medium";
+      return "high";
     }
 
     return null;
@@ -853,7 +919,9 @@ export class GoogleGenAIChatProvider implements ChatProvider {
     const config: Record<string, unknown> = {
       ...this._generationKwargs,
       systemInstruction: systemPrompt,
-      ...(tools.length > 0 ? { tools: tools.map((t) => toolToGoogleGenAI(t)) } : {}),
+      ...(tools.length > 0
+        ? { tools: tools.map((t) => toolToGoogleGenAI(t)) }
+        : {}),
     };
     applyResponseFormat(config, options?.responseFormat);
 
@@ -861,7 +929,9 @@ export class GoogleGenAIChatProvider implements ChatProvider {
       const client = this._createClient(options?.auth);
       const models = client.models as unknown as {
         generateContent(params: Record<string, unknown>): Promise<unknown>;
-        generateContentStream(params: Record<string, unknown>): Promise<AsyncGenerator>;
+        generateContentStream(
+          params: Record<string, unknown>,
+        ): Promise<AsyncGenerator>;
       };
 
       const params = { model: this._model, contents, config };
@@ -893,7 +963,7 @@ export class GoogleGenAIChatProvider implements ChatProvider {
         options?.signal,
       );
     } catch (error: unknown) {
-      if (error instanceof DOMException && error.name === 'AbortError') {
+      if (error instanceof DOMException && error.name === "AbortError") {
         throw error;
       }
       throw convertGoogleGenAIError(error);
@@ -912,7 +982,9 @@ export class GoogleGenAIChatProvider implements ChatProvider {
         // request-scoped credentials should instead point their service
         // account at the right principal.
         if (this._vertexai) return this._buildClient(this._apiKey);
-        return this._buildClient(requireProviderApiKey('GoogleGenAIChatProvider', a, this._apiKey));
+        return this._buildClient(
+          requireProviderApiKey("GoogleGenAIChatProvider", a, this._apiKey),
+        );
       },
     );
   }
@@ -920,44 +992,44 @@ export class GoogleGenAIChatProvider implements ChatProvider {
   withThinking(effort: ThinkingEffort): GoogleGenAIChatProvider {
     const thinkingConfig: ThinkingConfig = { includeThoughts: true };
 
-    if (this._model.includes('gemini-3')) {
+    if (this._model.includes("gemini-3")) {
       // Gemini 3 models use thinkingLevel (MINIMAL/LOW/MEDIUM/HIGH). The SDK
       // does not expose a "disabled" level, so 'off' maps to MINIMAL with
       // thought output suppressed — the lowest thinking intensity available.
       switch (effort) {
-        case 'off':
-          thinkingConfig.thinkingLevel = 'MINIMAL';
+        case "off":
+          thinkingConfig.thinkingLevel = "MINIMAL";
           thinkingConfig.includeThoughts = false;
           break;
-        case 'low':
-          thinkingConfig.thinkingLevel = 'LOW';
+        case "low":
+          thinkingConfig.thinkingLevel = "LOW";
           break;
-        case 'medium':
-          thinkingConfig.thinkingLevel = 'MEDIUM';
+        case "medium":
+          thinkingConfig.thinkingLevel = "MEDIUM";
           break;
-        case 'high':
-        case 'xhigh':
-        case 'max':
-          thinkingConfig.thinkingLevel = 'HIGH';
+        case "high":
+        case "xhigh":
+        case "max":
+          thinkingConfig.thinkingLevel = "HIGH";
           break;
       }
     } else {
       switch (effort) {
-        case 'off':
+        case "off":
           thinkingConfig.thinkingBudget = 0;
           thinkingConfig.includeThoughts = false;
           break;
-        case 'low':
+        case "low":
           thinkingConfig.thinkingBudget = 1024;
           thinkingConfig.includeThoughts = true;
           break;
-        case 'medium':
+        case "medium":
           thinkingConfig.thinkingBudget = 4096;
           thinkingConfig.includeThoughts = true;
           break;
-        case 'high':
-        case 'xhigh':
-        case 'max':
+        case "high":
+        case "xhigh":
+        case "max":
           thinkingConfig.thinkingBudget = 32_000;
           thinkingConfig.includeThoughts = true;
           break;
@@ -967,19 +1039,25 @@ export class GoogleGenAIChatProvider implements ChatProvider {
     return this.withGenerationKwargs({ thinkingConfig });
   }
 
-  withGenerationKwargs(kwargs: GoogleGenAIGenerationKwargs): GoogleGenAIChatProvider {
+  withGenerationKwargs(
+    kwargs: GoogleGenAIGenerationKwargs,
+  ): GoogleGenAIChatProvider {
     const clone = this._clone();
     clone._generationKwargs = { ...clone._generationKwargs, ...kwargs };
     return clone;
   }
 
-  withMaxCompletionTokens(maxCompletionTokens: number): GoogleGenAIChatProvider {
+  withMaxCompletionTokens(
+    maxCompletionTokens: number,
+  ): GoogleGenAIChatProvider {
     return this.withGenerationKwargs({ maxOutputTokens: maxCompletionTokens });
   }
 
   private _clone(): GoogleGenAIChatProvider {
     const clone = Object.assign(
-      Object.create(Object.getPrototypeOf(this) as object) as GoogleGenAIChatProvider,
+      Object.create(
+        Object.getPrototypeOf(this) as object,
+      ) as GoogleGenAIChatProvider,
       this,
     );
     clone._generationKwargs = { ...this._generationKwargs };

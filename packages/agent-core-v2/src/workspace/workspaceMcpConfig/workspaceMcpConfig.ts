@@ -18,10 +18,13 @@
  * stays out of the engine. Bound at Workspace scope.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
-import type { Event } from '#/_base/event';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
+import type { Event } from "#/_base/event";
 
-import type { McpServerConfig } from '#/mcpCore/config-schema';
+import type { McpServerConfig } from "#/mcpCore/config-schema";
 
 export interface McpServersChange {
   readonly upsert: Readonly<Record<string, McpServerConfig>>;
@@ -46,4 +49,4 @@ export interface IWorkspaceMcpConfigService {
 }
 
 export const IWorkspaceMcpConfigService: ServiceIdentifier<IWorkspaceMcpConfigService> =
-  createDecorator<IWorkspaceMcpConfigService>('workspaceMcpConfigService');
+  createDecorator<IWorkspaceMcpConfigService>("workspaceMcpConfigService");

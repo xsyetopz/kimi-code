@@ -1,22 +1,27 @@
-import { createHash } from 'node:crypto';
+import { createHash } from "node:crypto";
 
-import { readApiErrorMessage } from './api-error';
-import { DEFAULT_KIMI_CODE_OAUTH_HOST } from './constants';
-import { OAuthUnauthorizedError } from './errors';
-import { parseKimiCodeCustomHeaders } from './identity';
-import { DEFAULT_KIMI_CODE_BASE_URL, kimiCodeBaseUrl } from './managed-usage';
-import { MANAGED_KIMI_MODEL_FIELDS, mergeRefreshedModelAlias } from './model-alias-merge';
-import { isRecord } from './utils';
+import { readApiErrorMessage } from "./api-error";
+import { DEFAULT_KIMI_CODE_OAUTH_HOST } from "./constants";
+import { OAuthUnauthorizedError } from "./errors";
+import { parseKimiCodeCustomHeaders } from "./identity";
+import { DEFAULT_KIMI_CODE_BASE_URL, kimiCodeBaseUrl } from "./managed-usage";
+import {
+  MANAGED_KIMI_MODEL_FIELDS,
+  mergeRefreshedModelAlias,
+} from "./model-alias-merge";
+import { isRecord } from "./utils";
 
-export const KIMI_CODE_PLATFORM_ID = 'kimi-code';
-export const KIMI_CODE_PROVIDER_NAME = 'managed:kimi-code';
-export const KIMI_CODE_OAUTH_KEY = 'oauth/kimi-code';
-const KIMI_CODE_SCOPED_OAUTH_KEY_PREFIX = 'oauth/kimi-code-env-';
+export const KIMI_CODE_PLATFORM_ID = "kimi-code";
+export const KIMI_CODE_PROVIDER_NAME = "managed:kimi-code";
+export const KIMI_CODE_OAUTH_KEY = "oauth/kimi-code";
+const KIMI_CODE_SCOPED_OAUTH_KEY_PREFIX = "oauth/kimi-code-env-";
 
-export type ManagedKimiCodeProtocol = 'kimi' | 'anthropic';
+export type ManagedKimiCodeProtocol = "kimi" | "anthropic";
 
-export function parseModelProtocol(value: unknown): ManagedKimiCodeProtocol | undefined {
-  return value === 'anthropic' ? 'anthropic' : undefined;
+export function parseModelProtocol(
+  value: unknown,
+): ManagedKimiCodeProtocol | undefined {
+  return value === "anthropic" ? "anthropic" : undefined;
 }
 
 /**
@@ -26,7 +31,7 @@ export function parseModelProtocol(value: unknown): ManagedKimiCodeProtocol | un
  *  - 'both' — thinking can be toggled on and off
  * Absent on older servers — callers fall back to `supportsReasoning`.
  */
-export type SupportsThinkingType = 'only' | 'no' | 'both';
+export type SupportsThinkingType = "only" | "no" | "both";
 
 export interface ManagedKimiCodeModelInfo {
   readonly id: string;
@@ -61,7 +66,7 @@ export interface FetchManagedKimiCodeModelsOptions {
    * the managed endpoint pass 'apiKey' so a 401 doesn't tell the user their
    * "OAuth credentials" were rejected.
    */
-  readonly credentialKind?: 'oauth' | 'apiKey' | undefined;
+  readonly credentialKind?: "oauth" | "apiKey" | undefined;
 }
 
 export interface ManagedKimiCodeApplyResult {
@@ -78,13 +83,13 @@ export interface ManagedKimiCodeCleanupResult {
 }
 
 export interface ManagedKimiOAuthRef {
-  readonly storage: 'file' | 'keyring';
+  readonly storage: "file" | "keyring";
   readonly key: string;
   readonly oauthHost?: string | undefined;
 }
 
 export interface ManagedKimiOAuthRefInput {
-  readonly storage?: 'file' | 'keyring' | undefined;
+  readonly storage?: "file" | "keyring" | undefined;
   readonly key?: string | undefined;
   readonly oauthHost?: string | undefined;
 }
@@ -114,14 +119,16 @@ export class ManagedKimiCodeModelsAuthError extends OAuthUnauthorizedError {
     readonly status: number;
     readonly baseUrl: string;
     readonly message: string;
-    readonly credentialKind?: 'oauth' | 'apiKey' | undefined;
+    readonly credentialKind?: "oauth" | "apiKey" | undefined;
   }) {
     super(
       `Kimi Code models endpoint ${options.baseUrl} rejected ${
-        options.credentialKind === 'apiKey' ? 'the API key' : 'OAuth credentials'
+        options.credentialKind === "apiKey"
+          ? "the API key"
+          : "OAuth credentials"
       }: ${options.message}`,
     );
-    this.name = 'ManagedKimiCodeModelsAuthError';
+    this.name = "ManagedKimiCodeModelsAuthError";
     this.status = options.status;
     this.baseUrl = options.baseUrl;
   }
@@ -181,8 +188,13 @@ export interface ManagedKimiThinkingShape {
 }
 
 export interface ManagedKimiConfigShape {
-  providers: Record<string, ManagedKimiProviderConfig | Record<string, unknown>>;
-  models?: Record<string, ManagedKimiModelAlias | Record<string, unknown>> | undefined;
+  providers: Record<
+    string,
+    ManagedKimiProviderConfig | Record<string, unknown>
+  >;
+  models?:
+    | Record<string, ManagedKimiModelAlias | Record<string, unknown>>
+    | undefined;
   defaultModel?: string | undefined;
   thinking?: ManagedKimiThinkingShape | undefined;
   services?: ManagedKimiServicesConfig | undefined;
@@ -226,40 +238,42 @@ interface SelectedDefaultModel {
   readonly thinking: boolean;
 }
 
-function capabilitiesForModel(model: ManagedKimiCodeModelInfo): string[] | undefined {
+function capabilitiesForModel(
+  model: ManagedKimiCodeModelInfo,
+): string[] | undefined {
   const caps = new Set<string>();
   // supports_thinking_type is the full three-state declaration and wins over
   // the legacy supports_reasoning boolean; absent (older servers) falls back.
   switch (model.supportsThinkingType) {
-    case 'only':
-      caps.add('thinking');
-      caps.add('always_thinking');
+    case "only":
+      caps.add("thinking");
+      caps.add("always_thinking");
       break;
-    case 'both':
-      caps.add('thinking');
+    case "both":
+      caps.add("thinking");
       break;
-    case 'no':
+    case "no":
       break;
     case undefined:
-      if (model.supportsReasoning) caps.add('thinking');
+      if (model.supportsReasoning) caps.add("thinking");
       break;
   }
-  if (model.supportsImageIn) caps.add('image_in');
-  if (model.supportsVideoIn) caps.add('video_in');
-  if (model.supportsToolUse ?? true) caps.add('tool_use');
+  if (model.supportsImageIn) caps.add("image_in");
+  if (model.supportsVideoIn) caps.add("video_in");
+  if (model.supportsToolUse ?? true) caps.add("tool_use");
   return caps.size > 0 ? [...caps] : undefined;
 }
 
 function defaultBaseUrl(baseUrl: string | undefined): string {
-  return (baseUrl ?? kimiCodeBaseUrl()).replace(/\/+$/, '');
+  return (baseUrl ?? kimiCodeBaseUrl()).replace(/\/+$/, "");
 }
 
 function normalizeBaseUrl(baseUrl: string): string {
-  return baseUrl.replace(/\/+$/, '');
+  return baseUrl.replace(/\/+$/, "");
 }
 
 function normalizeEndpoint(value: string): string {
-  return value.trim().replace(/\/+$/, '');
+  return value.trim().replace(/\/+$/, "");
 }
 
 function persistedOAuthHost(options: {
@@ -267,7 +281,9 @@ function persistedOAuthHost(options: {
   readonly oauthHost?: string | undefined;
 }): string | undefined {
   const oauthHost = options.oauthHost;
-  const normalized = normalizeEndpoint(oauthHost ?? DEFAULT_KIMI_CODE_OAUTH_HOST);
+  const normalized = normalizeEndpoint(
+    oauthHost ?? DEFAULT_KIMI_CODE_OAUTH_HOST,
+  );
   if (
     options.key === KIMI_CODE_OAUTH_KEY &&
     normalized === normalizeEndpoint(DEFAULT_KIMI_CODE_OAUTH_HOST)
@@ -280,11 +296,11 @@ function persistedOAuthHost(options: {
 function managedOAuthRef(options: {
   readonly key: string;
   readonly oauthHost?: string | undefined;
-  readonly storage?: 'file' | 'keyring' | undefined;
+  readonly storage?: "file" | "keyring" | undefined;
 }): ManagedKimiOAuthRef {
   const oauthHost = persistedOAuthHost(options);
   return {
-    storage: options.storage ?? 'file',
+    storage: options.storage ?? "file",
     key: options.key,
     oauthHost,
   };
@@ -303,11 +319,15 @@ function configuredOAuthRef(
   });
 }
 
-export function kimiCodeEnvBaseUrl(env: ManagedKimiEnv = process.env): string | undefined {
+export function kimiCodeEnvBaseUrl(
+  env: ManagedKimiEnv = process.env,
+): string | undefined {
   return env.KIMI_CODE_BASE_URL;
 }
 
-export function kimiCodeEnvOAuthHost(env: ManagedKimiEnv = process.env): string | undefined {
+export function kimiCodeEnvOAuthHost(
+  env: ManagedKimiEnv = process.env,
+): string | undefined {
   return env.KIMI_CODE_OAUTH_HOST ?? env.KIMI_OAUTH_HOST;
 }
 
@@ -320,17 +340,22 @@ export function resolveKimiCodeOAuthKey(options: {
   readonly oauthHost?: string | undefined;
   readonly baseUrl?: string | undefined;
 }): string {
-  const oauthHost = normalizeEndpoint(options.oauthHost ?? DEFAULT_KIMI_CODE_OAUTH_HOST);
+  const oauthHost = normalizeEndpoint(
+    options.oauthHost ?? DEFAULT_KIMI_CODE_OAUTH_HOST,
+  );
   const baseUrl = defaultBaseUrl(options.baseUrl);
   const defaultOauthHost = normalizeEndpoint(DEFAULT_KIMI_CODE_OAUTH_HOST);
 
-  if (oauthHost === defaultOauthHost && SHARED_DEFAULT_BASE_URLS.includes(baseUrl)) {
+  if (
+    oauthHost === defaultOauthHost &&
+    SHARED_DEFAULT_BASE_URLS.includes(baseUrl)
+  ) {
     return KIMI_CODE_OAUTH_KEY;
   }
 
-  const digest = createHash('sha256')
+  const digest = createHash("sha256")
     .update(JSON.stringify({ oauthHost, baseUrl }))
-    .digest('hex')
+    .digest("hex")
     .slice(0, 16);
   return `${KIMI_CODE_SCOPED_OAUTH_KEY_PREFIX}${digest}`;
 }
@@ -365,9 +390,13 @@ export function resolveKimiCodeRuntimeAuth(options: {
   const envOAuthHost = kimiCodeEnvOAuthHost(env);
   const hasEnvOverride = envBaseUrl !== undefined || envOAuthHost !== undefined;
   const baseUrl =
-    envBaseUrl !== undefined ? normalizeBaseUrl(envBaseUrl) : options.configuredBaseUrl;
+    envBaseUrl !== undefined
+      ? normalizeBaseUrl(envBaseUrl)
+      : options.configuredBaseUrl;
   const expected = resolveKimiCodeOAuthRef({
-    oauthHost: hasEnvOverride ? envOAuthHost : options.configuredOAuthRef?.oauthHost,
+    oauthHost: hasEnvOverride
+      ? envOAuthHost
+      : options.configuredOAuthRef?.oauthHost,
     baseUrl,
   });
   const configured = configuredOAuthRef(options.configuredOAuthRef);
@@ -413,47 +442,65 @@ export function resolveKimiCodeLoginAuth(options: {
 }
 
 function toModelInfo(item: unknown): ManagedKimiCodeModelInfo | undefined {
-  if (!isRecord(item) || typeof item['id'] !== 'string' || item['id'].length === 0) {
+  if (
+    !isRecord(item) ||
+    typeof item["id"] !== "string" ||
+    item["id"].length === 0
+  ) {
     return undefined;
   }
-  const contextLength = Number(item['context_length']);
+  const contextLength = Number(item["context_length"]);
   if (!Number.isInteger(contextLength) || contextLength <= 0) {
-    throw new Error(`Kimi Code model "${item['id']}" must include a positive context_length.`);
+    throw new Error(
+      `Kimi Code model "${item["id"]}" must include a positive context_length.`,
+    );
   }
-  const displayName = item['display_name'];
+  const displayName = item["display_name"];
   const normalizedDisplayName =
-    typeof displayName === 'string' && displayName.length > 0 ? displayName : undefined;
-  const supportsToolUse = Object.hasOwn(item, 'supports_tool_use')
-    ? Boolean(item['supports_tool_use'])
+    typeof displayName === "string" && displayName.length > 0
+      ? displayName
+      : undefined;
+  const supportsToolUse = Object.hasOwn(item, "supports_tool_use")
+    ? Boolean(item["supports_tool_use"])
     : true;
   // Effort levels come from the nested `think_efforts` object
   // ({ support, valid_efforts, default_effort }) returned by /models.
-  const thinkEfforts = parseThinkEfforts(item['think_efforts']);
+  const thinkEfforts = parseThinkEfforts(item["think_efforts"]);
   return {
-    id: item['id'],
+    id: item["id"],
     contextLength,
-    supportsReasoning: Boolean(item['supports_reasoning']),
-    supportsImageIn: Boolean(item['supports_image_in']),
-    supportsVideoIn: Boolean(item['supports_video_in']),
+    supportsReasoning: Boolean(item["supports_reasoning"]),
+    supportsImageIn: Boolean(item["supports_image_in"]),
+    supportsVideoIn: Boolean(item["supports_video_in"]),
     supportsToolUse,
-    supportsThinkingType: parseSupportsThinkingType(item['supports_thinking_type']),
+    supportsThinkingType: parseSupportsThinkingType(
+      item["supports_thinking_type"],
+    ),
     supportEfforts: thinkEfforts.supportEfforts,
     defaultEffort: thinkEfforts.defaultEffort,
     displayName: normalizedDisplayName,
-    protocol: parseModelProtocol(item['protocol']),
+    protocol: parseModelProtocol(item["protocol"]),
   };
 }
 
-export function parseStringArray(value: unknown): readonly string[] | undefined {
+export function parseStringArray(
+  value: unknown,
+): readonly string[] | undefined {
   if (!Array.isArray(value)) return undefined;
-  const out = value.filter((v): v is string => typeof v === 'string' && v.length > 0);
+  const out = value.filter(
+    (v): v is string => typeof v === "string" && v.length > 0,
+  );
   return out.length > 0 ? out : undefined;
 }
 
 // Unknown or missing values resolve to undefined so callers fall back to the
 // legacy supports_reasoning boolean instead of guessing.
-export function parseSupportsThinkingType(value: unknown): SupportsThinkingType | undefined {
-  return value === 'only' || value === 'no' || value === 'both' ? value : undefined;
+export function parseSupportsThinkingType(
+  value: unknown,
+): SupportsThinkingType | undefined {
+  return value === "only" || value === "no" || value === "both"
+    ? value
+    : undefined;
 }
 
 /**
@@ -467,20 +514,22 @@ export function parseThinkEfforts(value: unknown): {
   supportEfforts: readonly string[] | undefined;
   defaultEffort: string | undefined;
 } {
-  if (value === null || typeof value !== 'object') {
+  if (value === null || typeof value !== "object") {
     return { supportEfforts: undefined, defaultEffort: undefined };
   }
   const record = value as Record<string, unknown>;
   // `support` gates the whole object: when it is not true, ignore
   // valid_efforts / default_effort entirely.
-  if (record['support'] !== true) {
+  if (record["support"] !== true) {
     return { supportEfforts: undefined, defaultEffort: undefined };
   }
-  const rawDefault = record['default_effort'];
+  const rawDefault = record["default_effort"];
   return {
-    supportEfforts: parseStringArray(record['valid_efforts']),
+    supportEfforts: parseStringArray(record["valid_efforts"]),
     defaultEffort:
-      typeof rawDefault === 'string' && rawDefault.length > 0 ? rawDefault : undefined,
+      typeof rawDefault === "string" && rawDefault.length > 0
+        ? rawDefault
+        : undefined,
   };
 }
 
@@ -494,7 +543,7 @@ export async function fetchManagedKimiCodeModels(
       ...parseKimiCodeCustomHeaders(),
       ...options.headers,
       Authorization: `Bearer ${options.accessToken}`,
-      Accept: 'application/json',
+      Accept: "application/json",
     },
   });
   if (!response.ok) {
@@ -502,7 +551,11 @@ export async function fetchManagedKimiCodeModels(
       response,
       `Failed to list Kimi Code models (HTTP ${response.status}).`,
     );
-    if (response.status === 401 || response.status === 402 || response.status === 403) {
+    if (
+      response.status === 401 ||
+      response.status === 402 ||
+      response.status === 403
+    ) {
       throw new ManagedKimiCodeModelsAuthError({
         status: response.status,
         baseUrl,
@@ -513,10 +566,10 @@ export async function fetchManagedKimiCodeModels(
     throw new Error(message);
   }
   const payload: unknown = await response.json();
-  if (!isRecord(payload) || !Array.isArray(payload['data'])) {
+  if (!isRecord(payload) || !Array.isArray(payload["data"])) {
     throw new Error(`Unexpected models response for ${baseUrl}.`);
   }
-  return payload['data']
+  return payload["data"]
     .map((item) => toModelInfo(item))
     .filter((item): item is ManagedKimiCodeModelInfo => item !== undefined);
 }
@@ -539,23 +592,29 @@ export function toManagedModelAlias(
   // `adaptiveThinking === true` as "supports a thinking toggle", so marking a
   // non-thinking model would misrepresent it.
   const supportsAdaptiveThinking =
-    model.protocol === 'anthropic' &&
-    (capabilities?.includes('thinking') === true ||
-      capabilities?.includes('always_thinking') === true);
+    model.protocol === "anthropic" &&
+    (capabilities?.includes("thinking") === true ||
+      capabilities?.includes("always_thinking") === true);
   return {
     provider: providerId,
     model: model.id,
     maxContextSize: model.contextLength,
     capabilities,
-    ...(model.displayName !== undefined ? { displayName: model.displayName } : {}),
-    ...(model.supportEfforts !== undefined ? { supportEfforts: model.supportEfforts } : {}),
-    ...(model.defaultEffort !== undefined ? { defaultEffort: model.defaultEffort } : {}),
+    ...(model.displayName !== undefined
+      ? { displayName: model.displayName }
+      : {}),
+    ...(model.supportEfforts !== undefined
+      ? { supportEfforts: model.supportEfforts }
+      : {}),
+    ...(model.defaultEffort !== undefined
+      ? { defaultEffort: model.defaultEffort }
+      : {}),
     protocol: model.protocol,
     // Kimi's anthropic-compatible endpoint is served behind the beta Messages
     // API (`/v1/messages?beta=true`), so route anthropic-protocol models
     // through `client.beta.messages.create`. Cleared on refresh when the
     // server stops declaring anthropic so stale routing never lingers.
-    betaApi: model.protocol === 'anthropic' ? true : undefined,
+    betaApi: model.protocol === "anthropic" ? true : undefined,
     adaptiveThinking: supportsAdaptiveThinking ? true : undefined,
   };
 }
@@ -571,7 +630,7 @@ export function applyManagedKimiCodeConfig(
   },
 ): ManagedKimiCodeApplyResult {
   if (options.models.length === 0) {
-    throw new Error('No models available for Kimi Code.');
+    throw new Error("No models available for Kimi Code.");
   }
   for (const model of options.models) {
     assertPositiveContextLength(model);
@@ -588,9 +647,9 @@ export function applyManagedKimiCodeConfig(
   });
 
   config.providers[KIMI_CODE_PROVIDER_NAME] = {
-    type: 'kimi',
+    type: "kimi",
     baseUrl,
-    apiKey: '',
+    apiKey: "",
     oauth,
   };
 
@@ -599,11 +658,13 @@ export function applyManagedKimiCodeConfig(
   // refresh. Managed models that upstream no longer lists are removed; the
   // rest are merged field-by-field — upstream-owned fields are overwritten,
   // everything else is preserved.
-  const upstreamKeys = new Set(options.models.map((m) => managedModelKey(m.id)));
+  const upstreamKeys = new Set(
+    options.models.map((m) => managedModelKey(m.id)),
+  );
   for (const [key, model] of Object.entries(existingModels)) {
     if (
       isRecord(model) &&
-      model['provider'] === KIMI_CODE_PROVIDER_NAME &&
+      model["provider"] === KIMI_CODE_PROVIDER_NAME &&
       !upstreamKeys.has(key)
     ) {
       delete existingModels[key];
@@ -625,12 +686,12 @@ export function applyManagedKimiCodeConfig(
   config.services = {
     moonshotSearch: {
       baseUrl: `${baseUrl}/search`,
-      apiKey: '',
+      apiKey: "",
       oauth,
     },
     moonshotFetch: {
       baseUrl: `${baseUrl}/fetch`,
-      apiKey: '',
+      apiKey: "",
       oauth,
     },
   };
@@ -672,7 +733,11 @@ export function applyManagedApiKeyProviderModels(
   // longer lists are removed (the orchestrator restores non-prefix ones).
   const upstreamKeys = new Set(models.map((m) => `${aliasPrefix}${m.id}`));
   for (const [key, model] of Object.entries(existingModels)) {
-    if (isRecord(model) && model['provider'] === providerId && !upstreamKeys.has(key)) {
+    if (
+      isRecord(model) &&
+      model["provider"] === providerId &&
+      !upstreamKeys.has(key)
+    ) {
       delete existingModels[key];
     }
   }
@@ -689,13 +754,16 @@ export function applyManagedApiKeyProviderModels(
   config.models = existingModels;
 }
 
-export function applyManagedKimiCodeLogoutConfig(config: ManagedKimiConfigShape): void {
+export function applyManagedKimiCodeLogoutConfig(
+  config: ManagedKimiConfigShape,
+): void {
   delete config.providers[KIMI_CODE_PROVIDER_NAME];
 
   let removedDefaultModel = false;
   const existingModels = config.models ?? {};
   for (const [key, model] of Object.entries(existingModels)) {
-    if (!isRecord(model) || model['provider'] !== KIMI_CODE_PROVIDER_NAME) continue;
+    if (!isRecord(model) || model["provider"] !== KIMI_CODE_PROVIDER_NAME)
+      continue;
     delete existingModels[key];
     if (config.defaultModel === key) removedDefaultModel = true;
   }
@@ -705,8 +773,8 @@ export function applyManagedKimiCodeLogoutConfig(config: ManagedKimiConfigShape)
     config.defaultModel = undefined;
   }
 
-  if (config['defaultProvider'] === KIMI_CODE_PROVIDER_NAME) {
-    config['defaultProvider'] = undefined;
+  if (config["defaultProvider"] === KIMI_CODE_PROVIDER_NAME) {
+    config["defaultProvider"] = undefined;
   }
 
   if (config.services !== undefined) {
@@ -726,8 +794,8 @@ function forcedThinking(
   model: ManagedKimiCodeModelInfo | undefined,
   fallback: boolean,
 ): boolean {
-  if (model?.supportsThinkingType === 'only') return true;
-  if (model?.supportsThinkingType === 'no') return false;
+  if (model?.supportsThinkingType === "only") return true;
+  if (model?.supportsThinkingType === "no") return false;
   return fallback;
 }
 
@@ -738,13 +806,15 @@ function selectDefaultModel(
 ): SelectedDefaultModel {
   const firstModel = models[0];
   if (firstModel === undefined) {
-    throw new Error('No models available for Kimi Code.');
+    throw new Error("No models available for Kimi Code.");
   }
 
-  const managedModels = new Map(models.map((model) => [managedModelKey(model.id), model]));
+  const managedModels = new Map(
+    models.map((model) => [managedModelKey(model.id), model]),
+  );
   const existingModels = config.models ?? {};
   const currentDefault =
-    typeof config.defaultModel === 'string' && config.defaultModel.length > 0
+    typeof config.defaultModel === "string" && config.defaultModel.length > 0
       ? config.defaultModel
       : undefined;
 
@@ -765,38 +835,51 @@ function selectDefaultModel(
 
   return {
     modelKey: managedModelKey(firstModel.id),
-    thinking: forcedThinking(firstModel, config.thinking?.enabled ?? firstModel.supportsReasoning),
+    thinking: forcedThinking(
+      firstModel,
+      config.thinking?.enabled ?? firstModel.supportsReasoning,
+    ),
   };
 }
 
 function canPreserveDefaultModel(
-  existingModels: Record<string, ManagedKimiModelAlias | Record<string, unknown>>,
+  existingModels: Record<
+    string,
+    ManagedKimiModelAlias | Record<string, unknown>
+  >,
   defaultModel: string,
   managedModels: ReadonlyMap<string, ManagedKimiCodeModelInfo>,
 ): boolean {
   if (managedModels.has(defaultModel)) return true;
   const existing = existingModels[defaultModel];
-  return isRecord(existing) && existing['provider'] !== KIMI_CODE_PROVIDER_NAME;
+  return isRecord(existing) && existing["provider"] !== KIMI_CODE_PROVIDER_NAME;
 }
 
 export function clearManagedKimiCodeConfig(
   config: ManagedKimiConfigShape,
 ): ManagedKimiCodeCleanupResult {
-  const removedProvider = Object.hasOwn(config.providers, KIMI_CODE_PROVIDER_NAME);
+  const removedProvider = Object.hasOwn(
+    config.providers,
+    KIMI_CODE_PROVIDER_NAME,
+  );
   delete config.providers[KIMI_CODE_PROVIDER_NAME];
 
   const removedModels: string[] = [];
   const models = config.models;
   if (models !== undefined) {
     for (const [key, model] of Object.entries(models)) {
-      if (!isRecord(model) || model['provider'] !== KIMI_CODE_PROVIDER_NAME) continue;
+      if (!isRecord(model) || model["provider"] !== KIMI_CODE_PROVIDER_NAME)
+        continue;
       delete models[key];
       removedModels.push(key);
     }
   }
 
   let defaultModelCleared = false;
-  if (typeof config.defaultModel === 'string' && removedModels.includes(config.defaultModel)) {
+  if (
+    typeof config.defaultModel === "string" &&
+    removedModels.includes(config.defaultModel)
+  ) {
     config.defaultModel = undefined;
     defaultModelCleared = true;
   }
@@ -804,13 +887,16 @@ export function clearManagedKimiCodeConfig(
   const removedServices: string[] = [];
   if (config.services?.moonshotSearch !== undefined) {
     delete config.services.moonshotSearch;
-    removedServices.push('moonshotSearch');
+    removedServices.push("moonshotSearch");
   }
   if (config.services?.moonshotFetch !== undefined) {
     delete config.services.moonshotFetch;
-    removedServices.push('moonshotFetch');
+    removedServices.push("moonshotFetch");
   }
-  if (config.services !== undefined && Object.keys(config.services).length === 0) {
+  if (
+    config.services !== undefined &&
+    Object.keys(config.services).length === 0
+  ) {
     config.services = undefined;
   }
 
@@ -825,7 +911,9 @@ export function clearManagedKimiCodeConfig(
 
 function assertPositiveContextLength(model: ManagedKimiCodeModelInfo): void {
   if (!Number.isInteger(model.contextLength) || model.contextLength <= 0) {
-    throw new Error(`Kimi Code model "${model.id}" must include a positive context_length.`);
+    throw new Error(
+      `Kimi Code model "${model.id}" must include a positive context_length.`,
+    );
   }
 }
 

@@ -1,7 +1,12 @@
-import type { Terminal } from '@moonshot-ai/pi-tui';
+import type { Terminal } from "@moonshot-ai/pi-tui";
 
-import { BEL, ESC, MAX_TERMINAL_NOTIFICATION_MESSAGE_LENGTH, ST } from '#/tui/constant/terminal';
-import type { TUIState } from '#/tui/tui-state';
+import {
+  BEL,
+  ESC,
+  MAX_TERMINAL_NOTIFICATION_MESSAGE_LENGTH,
+  ST,
+} from "#/tui/constant/terminal";
+import type { TUIState } from "#/tui/tui-state";
 
 export interface TerminalNotification {
   readonly title: string;
@@ -27,7 +32,7 @@ export function notifyTerminalOnce(
   if (!enabled) return;
   if (state.terminalState.notificationKeys.has(key)) return;
   state.terminalState.notificationKeys.add(key);
-  if (condition === 'unfocused' && state.terminalState.focused) return;
+  if (condition === "unfocused" && state.terminalState.focused) return;
   emitTerminalNotification(state.terminal, notification, {
     supportsOsc9: state.terminalState.supportsOsc9,
     insideTmux: state.terminalState.insideTmux,
@@ -35,7 +40,7 @@ export function notifyTerminalOnce(
 }
 
 export function emitTerminalNotification(
-  terminal: Pick<Terminal, 'write'>,
+  terminal: Pick<Terminal, "write">,
   notification: TerminalNotification,
   options: EmitOptions = {},
 ): void {
@@ -50,9 +55,13 @@ export function emitTerminalNotification(
 
 export function formatNotification(notification: TerminalNotification): string {
   const title = sanitizeNotificationText(notification.title);
-  const body = sanitizeNotificationText(notification.body ?? '');
+  const body = sanitizeNotificationText(notification.body ?? "");
   const message =
-    title.length > 0 && body.length > 0 ? `${title}: ${body}` : title.length > 0 ? title : body;
+    title.length > 0 && body.length > 0
+      ? `${title}: ${body}`
+      : title.length > 0
+        ? title
+        : body;
   return message.slice(0, MAX_TERMINAL_NOTIFICATION_MESSAGE_LENGTH);
 }
 
@@ -95,18 +104,20 @@ export function buildTerminalNotificationSequences(
  * while shipping OSC 9 to a terminal that doesn't grok it would print
  * escape garbage on screen.
  */
-export function supportsOsc9Notification(env: NodeJS.ProcessEnv = process.env): boolean {
-  const termProgram = env['TERM_PROGRAM'] ?? '';
+export function supportsOsc9Notification(
+  env: NodeJS.ProcessEnv = process.env,
+): boolean {
+  const termProgram = env["TERM_PROGRAM"] ?? "";
   if (
-    termProgram === 'iTerm.app' ||
-    termProgram === 'WezTerm' ||
-    termProgram === 'ghostty' ||
-    termProgram === 'WarpTerminal'
+    termProgram === "iTerm.app" ||
+    termProgram === "WezTerm" ||
+    termProgram === "ghostty" ||
+    termProgram === "WarpTerminal"
   ) {
     return true;
   }
-  const term = env['TERM'] ?? '';
-  if (term === 'xterm-kitty' || term === 'xterm-ghostty') return true;
+  const term = env["TERM"] ?? "";
+  if (term === "xterm-kitty" || term === "xterm-ghostty") return true;
   return false;
 }
 
@@ -119,26 +130,28 @@ export function supportsOsc9Notification(env: NodeJS.ProcessEnv = process.env): 
  * Terminals outside this list simply get no progress reporting, which is
  * always safe.
  */
-export function supportsTerminalProgress(env: NodeJS.ProcessEnv = process.env): boolean {
-  if ((env['WT_SESSION'] ?? '').length > 0) return true;
-  if (env['ConEmuANSI'] === 'ON') return true;
-  const termProgram = env['TERM_PROGRAM'] ?? '';
-  if (termProgram === 'ghostty' || termProgram === 'WezTerm') return true;
-  const term = env['TERM'] ?? '';
-  if (term === 'xterm-ghostty') return true;
+export function supportsTerminalProgress(
+  env: NodeJS.ProcessEnv = process.env,
+): boolean {
+  if ((env["WT_SESSION"] ?? "").length > 0) return true;
+  if (env["ConEmuANSI"] === "ON") return true;
+  const termProgram = env["TERM_PROGRAM"] ?? "";
+  if (termProgram === "ghostty" || termProgram === "WezTerm") return true;
+  const term = env["TERM"] ?? "";
+  if (term === "xterm-ghostty") return true;
   return false;
 }
 
 export function isInsideTmux(env: NodeJS.ProcessEnv = process.env): boolean {
-  const tmux = env['TMUX'] ?? '';
+  const tmux = env["TMUX"] ?? "";
   return tmux.length > 0;
 }
 
 function sanitizeNotificationText(value: string): string {
   return Array.from(value)
-    .map((ch) => (isControlCharacter(ch) ? ' ' : ch))
-    .join('')
-    .replaceAll(/\s+/g, ' ')
+    .map((ch) => (isControlCharacter(ch) ? " " : ch))
+    .join("")
+    .replaceAll(/\s+/g, " ")
     .trim();
 }
 

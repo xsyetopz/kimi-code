@@ -1,8 +1,8 @@
-import type { ServiceRegistration } from '#/_base/di/test';
+import type { ServiceRegistration } from "#/_base/di/test";
 import {
   IAgentToolResultTruncationService,
   type IAgentToolResultTruncationService as ToolResultTruncationServiceStub,
-} from '#/agent/toolResultTruncation/toolResultTruncation';
+} from "#/agent/toolResultTruncation/toolResultTruncation";
 
 export function stubToolResultTruncationService(): ToolResultTruncationServiceStub {
   return {
@@ -11,6 +11,11 @@ export function stubToolResultTruncationService(): ToolResultTruncationServiceSt
   };
 }
 
-export function registerToolResultTruncationServices(reg: ServiceRegistration): void {
-  reg.defineInstance(IAgentToolResultTruncationService, stubToolResultTruncationService());
+export function registerToolResultTruncationServices(
+  reg: ServiceRegistration,
+): void {
+  reg.defineInstance(
+    IAgentToolResultTruncationService,
+    stubToolResultTruncationService(),
+  );
 }

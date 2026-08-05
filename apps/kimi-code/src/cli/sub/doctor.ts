@@ -1,17 +1,17 @@
-import { existsSync } from 'node:fs';
-import { readFile } from 'node:fs/promises';
-import { isAbsolute, resolve } from 'node:path';
+import { existsSync } from "node:fs";
+import { readFile } from "node:fs/promises";
+import { isAbsolute, resolve } from "node:path";
 
 import {
   createKimiConfigRpc,
   type KimiConfigRpc,
   type KimiConfigValidationIssue,
-} from '@moonshot-ai/kimi-code-sdk';
-import type { Command } from 'commander';
-import { z } from 'zod';
+} from "@moonshot-ai/kimi-code-sdk";
+import type { Command } from "commander";
+import { z } from "zod";
 
-import { isKimiV2Enabled } from '#/cli/experimental-v2';
-import { getTuiConfigPath, parseTuiConfig } from '#/tui/config';
+import { isKimiV2Enabled } from "#/cli/experimental-v2";
+import { getTuiConfigPath, parseTuiConfig } from "#/tui/config";
 
 interface WritableLike {
   write(chunk: string): boolean;
@@ -29,16 +29,19 @@ export interface DoctorDeps {
   readonly configRpc?: KimiConfigRpc;
   readonly fileExists?: (path: string) => boolean;
   readonly readTextFile?: (path: string) => Promise<string>;
-  readonly validateConfigToml?: (text: string, path: string) => MaybePromise<string | void>;
+  readonly validateConfigToml?: (
+    text: string,
+    path: string,
+  ) => MaybePromise<string | void>;
 }
 
 export interface DoctorOptions {
-  readonly target?: 'config' | 'tui';
+  readonly target?: "config" | "tui";
   readonly path?: string;
 }
 
 interface CheckSpec {
-  readonly label: 'config.toml' | 'tui.toml';
+  readonly label: "config.toml" | "tui.toml";
   readonly path: string;
   readonly explicit: boolean;
   /** Throws on invalid content; may return a non-fatal warning message. */
@@ -46,9 +49,9 @@ interface CheckSpec {
 }
 
 interface CheckResult {
-  readonly label: CheckSpec['label'];
+  readonly label: CheckSpec["label"];
   readonly path: string;
-  readonly status: 'OK' | 'SKIP' | 'ERROR';
+  readonly status: "OK" | "SKIP" | "ERROR";
   readonly message?: string;
 }
 
@@ -61,17 +64,30 @@ interface ResolvedDoctorDeps {
   readonly exit: (code: number) => never;
   readonly fileExists: (path: string) => boolean;
   readonly readTextFile: (path: string) => Promise<string>;
-  readonly validateConfigToml: (text: string, path: string) => MaybePromise<string | void>;
+  readonly validateConfigToml: (
+    text: string,
+    path: string,
+  ) => MaybePromise<string | void>;
 }
 
-export async function handleDoctor(deps: DoctorDeps, options: DoctorOptions): Promise<number> {
+export async function handleDoctor(
+  deps: DoctorDeps,
+  options: DoctorOptions,
+): Promise<number> {
   const resolved = resolveDeps(deps);
   const cwd = resolved.cwd();
   const specs = await buildCheckSpecs(resolved, options, cwd);
-  const results = await Promise.all(specs.map((spec) => checkTomlFile(resolved, spec)));
+  const results = await Promise.all(
+    specs.map((spec) => checkTomlFile(resolved, spec)),
+  );
 
-  const issueCount = results.filter((result) => result.status === 'ERROR').length;
-  const text = issueCount === 0 ? formatSuccess(results) : formatFailure(results, issueCount);
+  const issueCount = results.filter(
+    (result) => result.status === "ERROR",
+  ).length;
+  const text =
+    issueCount === 0
+      ? formatSuccess(results)
+      : formatFailure(results, issueCount);
   if (issueCount === 0) {
     resolved.stdout.write(text);
   } else {
@@ -80,28 +96,37 @@ export async function handleDoctor(deps: DoctorDeps, options: DoctorOptions): Pr
   return issueCount === 0 ? 0 : 1;
 }
 
-export function registerDoctorCommand(parent: Command, deps?: Partial<DoctorDeps>): void {
+export function registerDoctorCommand(
+  parent: Command,
+  deps?: Partial<DoctorDeps>,
+): void {
   const doctor = parent
-    .command('doctor')
-    .description('Validate Kimi Code configuration files.')
+    .command("doctor")
+    .description("Validate Kimi Code configuration files.")
     .action(async () => {
       await runDoctorCommand(deps, {});
     });
 
   doctor
-    .command('config')
-    .description('Validate config.toml.')
-    .argument('[path]', 'Validate this file as config.toml instead of the default path.')
+    .command("config")
+    .description("Validate config.toml.")
+    .argument(
+      "[path]",
+      "Validate this file as config.toml instead of the default path.",
+    )
     .action(async (path: string | undefined) => {
-      await runDoctorCommand(deps, { target: 'config', path });
+      await runDoctorCommand(deps, { target: "config", path });
     });
 
   doctor
-    .command('tui')
-    .description('Validate tui.toml.')
-    .argument('[path]', 'Validate this file as tui.toml instead of the default path.')
+    .command("tui")
+    .description("Validate tui.toml.")
+    .argument(
+      "[path]",
+      "Validate this file as tui.toml instead of the default path.",
+    )
     .action(async (path: string | undefined) => {
-      await runDoctorCommand(deps, { target: 'tui', path });
+      await runDoctorCommand(deps, { target: "tui", path });
     });
 }
 
@@ -114,7 +139,9 @@ async function runDoctorCommand(
   if (code !== 0) resolved.exit(code);
 }
 
-function resolveDeps(deps: Partial<DoctorDeps> | DoctorDeps | undefined): ResolvedDoctorDeps {
+function resolveDeps(
+  deps: Partial<DoctorDeps> | DoctorDeps | undefined,
+): ResolvedDoctorDeps {
   let configRpc = deps?.configRpc;
   const getConfigRpc = (): KimiConfigRpc => {
     configRpc ??= createKimiConfigRpc();
@@ -123,13 +150,14 @@ function resolveDeps(deps: Partial<DoctorDeps> | DoctorDeps | undefined): Resolv
 
   return {
     cwd: deps?.cwd ?? (() => process.cwd()),
-    defaultConfigPath: deps?.defaultConfigPath ?? (() => getConfigRpc().resolveConfigPath()),
+    defaultConfigPath:
+      deps?.defaultConfigPath ?? (() => getConfigRpc().resolveConfigPath()),
     defaultTuiConfigPath: deps?.defaultTuiConfigPath ?? getTuiConfigPath,
     stdout: deps?.stdout ?? process.stdout,
     stderr: deps?.stderr ?? process.stderr,
     exit: deps?.exit ?? ((code) => process.exit(code)),
     fileExists: deps?.fileExists ?? existsSync,
-    readTextFile: deps?.readTextFile ?? ((path) => readFile(path, 'utf-8')),
+    readTextFile: deps?.readTextFile ?? ((path) => readFile(path, "utf-8")),
     validateConfigToml:
       deps?.validateConfigToml ??
       (async (text, filePath) => {
@@ -137,7 +165,9 @@ function resolveDeps(deps: Partial<DoctorDeps> | DoctorDeps | undefined): Resolv
           // Experimental v2 route (same master switch as `kimi -p`): validate
           // with the agent-core-v2 section registry instead of the v1 schema.
           // Loaded lazily so the v2 module graph stays off the default path.
-          const { validateConfigTomlV2 } = await import('../v2/validate-config');
+          const { validateConfigTomlV2 } = await import(
+            "../v2/validate-config"
+          );
           return validateConfigTomlV2(text, filePath);
         }
         await getConfigRpc().validateConfigToml({ text, filePath });
@@ -151,7 +181,7 @@ async function buildCheckSpecs(
   options: DoctorOptions,
   cwd: string,
 ): Promise<CheckSpec[]> {
-  if (options.target === 'config') {
+  if (options.target === "config") {
     return [
       makeConfigSpec(
         await resolveConfigTargetPath(deps, options.path, cwd),
@@ -161,7 +191,7 @@ async function buildCheckSpecs(
     ];
   }
 
-  if (options.target === 'tui') {
+  if (options.target === "tui") {
     return [
       makeTuiSpec(
         resolveTuiTargetPath(deps, options.path, cwd),
@@ -182,7 +212,7 @@ function makeConfigSpec(
   deps: ResolvedDoctorDeps,
 ): CheckSpec {
   return {
-    label: 'config.toml',
+    label: "config.toml",
     path,
     explicit,
     parse: (text, filePath) => {
@@ -193,7 +223,7 @@ function makeConfigSpec(
 
 function makeTuiSpec(path: string, explicit: boolean): CheckSpec {
   return {
-    label: 'tui.toml',
+    label: "tui.toml",
     path,
     explicit,
     parse: (text) => {
@@ -202,27 +232,35 @@ function makeTuiSpec(path: string, explicit: boolean): CheckSpec {
   };
 }
 
-async function checkTomlFile(deps: ResolvedDoctorDeps, spec: CheckSpec): Promise<CheckResult> {
+async function checkTomlFile(
+  deps: ResolvedDoctorDeps,
+  spec: CheckSpec,
+): Promise<CheckResult> {
   if (!deps.fileExists(spec.path)) {
     return {
       label: spec.label,
       path: spec.path,
-      status: spec.explicit ? 'ERROR' : 'SKIP',
+      status: spec.explicit ? "ERROR" : "SKIP",
       message: spec.explicit
-        ? 'File does not exist.'
-        : 'File does not exist; built-in defaults will apply.',
+        ? "File does not exist."
+        : "File does not exist; built-in defaults will apply.",
     };
   }
 
   try {
     const text = await deps.readTextFile(spec.path);
     const warning = await spec.parse(text, spec.path);
-    return { label: spec.label, path: spec.path, status: 'OK', message: warning ?? undefined };
+    return {
+      label: spec.label,
+      path: spec.path,
+      status: "OK",
+      message: warning ?? undefined,
+    };
   } catch (error) {
     return {
       label: spec.label,
       path: spec.path,
-      status: 'ERROR',
+      status: "ERROR",
       message: formatErrorMessage(error, spec.path),
     };
   }
@@ -233,7 +271,9 @@ async function resolveConfigTargetPath(
   input: string | undefined,
   cwd: string,
 ): Promise<string> {
-  return input === undefined ? deps.defaultConfigPath() : resolveInputPath(input, cwd);
+  return input === undefined
+    ? deps.defaultConfigPath()
+    : resolveInputPath(input, cwd);
 }
 
 function resolveTuiTargetPath(
@@ -241,7 +281,9 @@ function resolveTuiTargetPath(
   input: string | undefined,
   cwd: string,
 ): string {
-  return input === undefined ? deps.defaultTuiConfigPath() : resolveInputPath(input, cwd);
+  return input === undefined
+    ? deps.defaultTuiConfigPath()
+    : resolveInputPath(input, cwd);
 }
 
 function resolveInputPath(input: string, cwd: string): string {
@@ -250,22 +292,25 @@ function resolveInputPath(input: string, cwd: string): string {
 
 function formatSuccess(results: readonly CheckResult[]): string {
   return [
-    'Kimi doctor',
-    '',
+    "Kimi doctor",
+    "",
     ...formatResults(results),
-    '',
-    'All checked config files are valid.',
-    '',
-  ].join('\n');
+    "",
+    "All checked config files are valid.",
+    "",
+  ].join("\n");
 }
 
-function formatFailure(results: readonly CheckResult[], issueCount: number): string {
+function formatFailure(
+  results: readonly CheckResult[],
+  issueCount: number,
+): string {
   return [
-    `Kimi doctor found ${String(issueCount)} ${issueCount === 1 ? 'issue' : 'issues'}.`,
-    '',
+    `Kimi doctor found ${String(issueCount)} ${issueCount === 1 ? "issue" : "issues"}.`,
+    "",
     ...formatResults(results),
-    '',
-  ].join('\n');
+    "",
+  ].join("\n");
 }
 
 function formatResults(results: readonly CheckResult[]): string[] {
@@ -273,7 +318,7 @@ function formatResults(results: readonly CheckResult[]): string[] {
   for (const result of results) {
     lines.push(`${result.status} ${result.label.padEnd(12)} ${result.path}`);
     if (result.message !== undefined) {
-      for (const line of result.message.split('\n')) {
+      for (const line of result.message.split("\n")) {
         lines.push(`  ${line}`);
       }
     }
@@ -286,59 +331,72 @@ function formatErrorMessage(error: unknown, filePath: string): string {
   if (validationIssues !== undefined) {
     return [
       `Invalid configuration in ${filePath}.`,
-      'Validation issues:',
-      ...validationIssues.map((issue) => `  ${formatIssuePath(issue.path)}: ${issue.message}`),
-    ].join('\n');
+      "Validation issues:",
+      ...validationIssues.map(
+        (issue) => `  ${formatIssuePath(issue.path)}: ${issue.message}`,
+      ),
+    ].join("\n");
   }
 
   const zodError = findZodError(error);
   if (zodError !== undefined) {
     return [
       `Invalid configuration in ${filePath}.`,
-      'Validation issues:',
-      ...zodError.issues.map((issue) => `  ${formatIssuePath(issue.path)}: ${issue.message}`),
-    ].join('\n');
+      "Validation issues:",
+      ...zodError.issues.map(
+        (issue) => `  ${formatIssuePath(issue.path)}: ${issue.message}`,
+      ),
+    ].join("\n");
   }
   return error instanceof Error ? error.message : String(error);
 }
 
-function findValidationIssues(error: unknown): readonly KimiConfigValidationIssue[] | undefined {
+function findValidationIssues(
+  error: unknown,
+): readonly KimiConfigValidationIssue[] | undefined {
   if (!(error instanceof Error)) return undefined;
-  const details = 'details' in error ? error.details : undefined;
+  const details = "details" in error ? error.details : undefined;
   if (!isRecord(details)) return undefined;
-  const validationIssues = details['validationIssues'];
-  return isValidationIssueArray(validationIssues) ? validationIssues : undefined;
+  const validationIssues = details["validationIssues"];
+  return isValidationIssueArray(validationIssues)
+    ? validationIssues
+    : undefined;
 }
 
-function isValidationIssueArray(value: unknown): value is readonly KimiConfigValidationIssue[] {
+function isValidationIssueArray(
+  value: unknown,
+): value is readonly KimiConfigValidationIssue[] {
   return Array.isArray(value) && value.every(isValidationIssue);
 }
 
 function isValidationIssue(value: unknown): value is KimiConfigValidationIssue {
-  if (!isRecord(value) || typeof value['message'] !== 'string') return false;
-  const path = value['path'];
+  if (!isRecord(value) || typeof value["message"] !== "string") return false;
+  const path = value["path"];
   return (
     Array.isArray(path) &&
-    path.every((segment) => typeof segment === 'string' || typeof segment === 'number')
+    path.every(
+      (segment) => typeof segment === "string" || typeof segment === "number",
+    )
   );
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
+  return typeof value === "object" && value !== null;
 }
 
 function findZodError(error: unknown): z.ZodError | undefined {
   if (error instanceof z.ZodError) return error;
-  if (error instanceof Error && error.cause instanceof z.ZodError) return error.cause;
+  if (error instanceof Error && error.cause instanceof z.ZodError)
+    return error.cause;
   return undefined;
 }
 
 function formatIssuePath(path: readonly PropertyKey[]): string {
-  if (path.length === 0) return '<root>';
+  if (path.length === 0) return "<root>";
 
-  let out = '';
+  let out = "";
   for (const segment of path) {
-    if (typeof segment === 'number') {
+    if (typeof segment === "number") {
       out += `[${String(segment)}]`;
     } else if (out.length === 0) {
       out = camelToSnake(String(segment));

@@ -30,12 +30,17 @@ export function reconcileWorkspaceOrder(
  * the reconciliation watcher records it). The sort is stable, so items sharing
  * a position keep their relative order.
  */
-export function sortByWorkspaceOrder<T extends { id: string }>(items: T[], order: string[]): T[] {
+export function sortByWorkspaceOrder<T extends { id: string }>(
+  items: T[],
+  order: string[],
+): T[] {
   const index = new Map(order.map((id, i) => [id, i]));
-  return items.toSorted((a, b) => (index.get(a.id) ?? -1) - (index.get(b.id) ?? -1));
+  return items.toSorted(
+    (a, b) => (index.get(a.id) ?? -1) - (index.get(b.id) ?? -1),
+  );
 }
 
-export type DropPosition = 'before' | 'after';
+export type DropPosition = "before" | "after";
 
 /**
  * Move `fromId` so it lands immediately before or after `toId` — matching the
@@ -49,7 +54,7 @@ export function moveInOrder(
   order: string[],
   fromId: string,
   toId: string,
-  position: DropPosition = 'before',
+  position: DropPosition = "before",
 ): string[] {
   const fromIdx = order.indexOf(fromId);
   const toIdx = order.indexOf(toId);
@@ -57,14 +62,14 @@ export function moveInOrder(
   const next = [...order];
   next.splice(fromIdx, 1);
   const shiftedToIdx = fromIdx < toIdx ? toIdx - 1 : toIdx;
-  const insertIdx = position === 'before' ? shiftedToIdx : shiftedToIdx + 1;
+  const insertIdx = position === "before" ? shiftedToIdx : shiftedToIdx + 1;
   next.splice(insertIdx, 0, fromId);
   return next;
 }
 
 /** Sidebar workspace sort mode. `manual` keeps the user-defined (dragged)
  *  order; `recent` orders by each workspace's most recent session activity. */
-export type WorkspaceSortMode = 'manual' | 'recent';
+export type WorkspaceSortMode = "manual" | "recent";
 
 /**
  * Sort workspaces by their most recent session activity, newest first.

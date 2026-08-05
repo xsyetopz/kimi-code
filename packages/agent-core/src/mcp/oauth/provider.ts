@@ -15,27 +15,31 @@
  * orchestrator; the provider is the persistence + flow-state shim.
  */
 
-import { randomBytes } from 'node:crypto';
+import { randomBytes } from "node:crypto";
 
 import type {
   OAuthClientProvider,
   OAuthDiscoveryState,
-} from '@modelcontextprotocol/sdk/client/auth.js';
+} from "@modelcontextprotocol/sdk/client/auth.js";
 import type {
   OAuthClientInformationFull,
   OAuthClientInformationMixed,
   OAuthClientMetadata,
   OAuthTokens,
-} from '@modelcontextprotocol/sdk/shared/auth.js';
+} from "@modelcontextprotocol/sdk/shared/auth.js";
 
-import { JsonFileStore, canonicalMcpOAuthResource, mcpOAuthStoreKey } from './store';
+import {
+  JsonFileStore,
+  canonicalMcpOAuthResource,
+  mcpOAuthStoreKey,
+} from "./store";
 
-const TOKENS_SUFFIX = '-tokens.json';
-const CLIENT_SUFFIX = '-client.json';
-const DISCOVERY_SUFFIX = '-discovery.json';
+const TOKENS_SUFFIX = "-tokens.json";
+const CLIENT_SUFFIX = "-client.json";
+const DISCOVERY_SUFFIX = "-discovery.json";
 // Used only when the SDK probes auth during normal transport startup and no
 // callback listener is active. Interactive login overrides it with a real URL.
-const PASSIVE_REDIRECT_URI = 'http://127.0.0.1:3118/callback';
+const PASSIVE_REDIRECT_URI = "http://127.0.0.1:3118/callback";
 
 export interface McpOAuthProviderOptions {
   /** Friendly name of the MCP server; used in DCR `client_name`. */
@@ -62,7 +66,8 @@ export class McpOAuthClientProvider implements OAuthClientProvider {
     this.serverUrl = canonicalMcpOAuthResource(options.serverUrl);
     this.storeKey = mcpOAuthStoreKey(options.serverName, this.serverUrl);
     this.store = options.store;
-    this.clientLabel = options.clientLabel ?? `kimi-code (${options.serverName})`;
+    this.clientLabel =
+      options.clientLabel ?? `kimi-code (${options.serverName})`;
   }
 
   // ── flow-scoped state, set by McpOAuthService before invoking auth() ────
@@ -99,20 +104,22 @@ export class McpOAuthClientProvider implements OAuthClientProvider {
   get clientMetadata(): OAuthClientMetadata {
     return {
       redirect_uris: [this.effectiveRedirectUri()],
-      token_endpoint_auth_method: 'none',
-      grant_types: ['authorization_code', 'refresh_token'],
-      response_types: ['code'],
+      token_endpoint_auth_method: "none",
+      grant_types: ["authorization_code", "refresh_token"],
+      response_types: ["code"],
       client_name: this.clientLabel,
     };
   }
 
   state(): string {
-    this._state ??= randomBytes(16).toString('hex');
+    this._state ??= randomBytes(16).toString("hex");
     return this._state;
   }
 
   clientInformation(): OAuthClientInformationMixed | undefined {
-    return this.store.read<OAuthClientInformationFull>(`${this.storeKey}${CLIENT_SUFFIX}`);
+    return this.store.read<OAuthClientInformationFull>(
+      `${this.storeKey}${CLIENT_SUFFIX}`,
+    );
   }
 
   saveClientInformation(info: OAuthClientInformationMixed): void {
@@ -140,7 +147,9 @@ export class McpOAuthClientProvider implements OAuthClientProvider {
 
   codeVerifier(): string {
     if (this._codeVerifier === undefined) {
-      throw new Error('McpOAuthClientProvider: PKCE code verifier not initialized');
+      throw new Error(
+        "McpOAuthClientProvider: PKCE code verifier not initialized",
+      );
     }
     return this._codeVerifier;
   }
@@ -150,7 +159,9 @@ export class McpOAuthClientProvider implements OAuthClientProvider {
   }
 
   discoveryState(): OAuthDiscoveryState | undefined {
-    return this.store.read<OAuthDiscoveryState>(`${this.storeKey}${DISCOVERY_SUFFIX}`);
+    return this.store.read<OAuthDiscoveryState>(
+      `${this.storeKey}${DISCOVERY_SUFFIX}`,
+    );
   }
 
   /**
@@ -168,29 +179,31 @@ export class McpOAuthClientProvider implements OAuthClientProvider {
    */
   invalidateStaleRegistration(redirectUri: string): boolean {
     const info = this.clientInformation();
-    if (info === undefined || !('redirect_uris' in info)) return false;
+    if (info === undefined || !("redirect_uris" in info)) return false;
     const uris = info.redirect_uris;
     if (!Array.isArray(uris) || uris.length === 0) return false;
     if (uris.includes(redirectUri)) return false;
-    this.invalidateCredentials('client');
+    this.invalidateCredentials("client");
     return true;
   }
 
-  invalidateCredentials(scope: 'all' | 'client' | 'tokens' | 'verifier' | 'discovery'): void {
-    if (scope === 'verifier') {
+  invalidateCredentials(
+    scope: "all" | "client" | "tokens" | "verifier" | "discovery",
+  ): void {
+    if (scope === "verifier") {
       this._codeVerifier = undefined;
       return;
     }
-    if (scope === 'tokens' || scope === 'all') {
+    if (scope === "tokens" || scope === "all") {
       this.store.remove(`${this.storeKey}${TOKENS_SUFFIX}`);
     }
-    if (scope === 'client' || scope === 'all') {
+    if (scope === "client" || scope === "all") {
       this.store.remove(`${this.storeKey}${CLIENT_SUFFIX}`);
     }
-    if (scope === 'discovery' || scope === 'all') {
+    if (scope === "discovery" || scope === "all") {
       this.store.remove(`${this.storeKey}${DISCOVERY_SUFFIX}`);
     }
-    if (scope === 'all') {
+    if (scope === "all") {
       this._codeVerifier = undefined;
     }
   }
@@ -204,8 +217,10 @@ export class McpOAuthClientProvider implements OAuthClientProvider {
   }
 }
 
-function registeredRedirectUri(info: OAuthClientInformationMixed | undefined): string | undefined {
-  if (info === undefined || !('redirect_uris' in info)) return undefined;
+function registeredRedirectUri(
+  info: OAuthClientInformationMixed | undefined,
+): string | undefined {
+  if (info === undefined || !("redirect_uris" in info)) return undefined;
   const [redirectUri] = info.redirect_uris;
   return redirectUri;
 }

@@ -1,12 +1,24 @@
 import { useMemo } from "react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { oneDark, oneLight } from "react-syntax-highlighter/dist/esm/styles/prism";
-import type { DisplayBlock, DiffBlock, TodoBlock, BriefBlock, ShellBlock } from "shared/legacy-sdk";
+import {
+  oneDark,
+  oneLight,
+} from "react-syntax-highlighter/dist/esm/styles/prism";
+import type {
+  DisplayBlock,
+  DiffBlock,
+  TodoBlock,
+  BriefBlock,
+  ShellBlock,
+} from "shared/legacy-sdk";
 import { cn } from "@/lib/utils";
 import * as Diff from "diff";
 
 function useIsDark(): boolean {
-  return typeof document !== "undefined" && document.documentElement.classList.contains("dark");
+  return (
+    typeof document !== "undefined" &&
+    document.documentElement.classList.contains("dark")
+  );
 }
 
 interface DiffBlockProps {
@@ -20,19 +32,32 @@ interface DiffPart {
   removed?: boolean;
 }
 
-function renderDiffLine(parts: DiffPart[], type: "added" | "removed"): React.ReactNode {
+function renderDiffLine(
+  parts: DiffPart[],
+  type: "added" | "removed",
+): React.ReactNode {
   return parts.map((part, i) => {
     if (type === "removed") {
       if (part.added) return null;
       return (
-        <span key={i} className={cn(part.removed && "bg-red-300/50 dark:bg-red-700/50 rounded-sm")}>
+        <span
+          key={i}
+          className={cn(
+            part.removed && "bg-red-300/50 dark:bg-red-700/50 rounded-sm",
+          )}
+        >
           {part.value}
         </span>
       );
     } else {
       if (part.removed) return null;
       return (
-        <span key={i} className={cn(part.added && "bg-emerald-300/50 dark:bg-emerald-700/50 rounded-sm")}>
+        <span
+          key={i}
+          className={cn(
+            part.added && "bg-emerald-300/50 dark:bg-emerald-700/50 rounded-sm",
+          )}
+        >
           {part.value}
         </span>
       );
@@ -41,7 +66,10 @@ function renderDiffLine(parts: DiffPart[], type: "added" | "removed"): React.Rea
 }
 
 // Extract diff computation to a pure function for memoization
-function computeDiffLines(oldText: string, newText: string): { oldLines: DiffPart[][]; newLines: DiffPart[][] } {
+function computeDiffLines(
+  oldText: string,
+  newText: string,
+): { oldLines: DiffPart[][]; newLines: DiffPart[][] } {
   const diffParts = Diff.diffWords(oldText, newText);
 
   const oldLines: DiffPart[][] = [];
@@ -85,24 +113,36 @@ function computeDiffLines(oldText: string, newText: string): { oldLines: DiffPar
   return { oldLines, newLines };
 }
 
-export function DiffBlockView({ block, maxHeight = "max-h-40" }: DiffBlockProps) {
+export function DiffBlockView({
+  block,
+  maxHeight = "max-h-40",
+}: DiffBlockProps) {
   const fileName = block.path.split("/").pop() || block.path;
   const hasOld = block.old_text.length > 0;
   const hasNew = block.new_text.length > 0;
 
-  const { oldLines, newLines } = useMemo(() => computeDiffLines(block.old_text, block.new_text), [block.old_text, block.new_text]);
+  const { oldLines, newLines } = useMemo(
+    () => computeDiffLines(block.old_text, block.new_text),
+    [block.old_text, block.new_text],
+  );
 
   return (
     <div className="text-[11px] border border-border rounded-md overflow-hidden">
-      <div className="px-2 py-1 bg-muted/50 border-b border-border text-muted-foreground truncate">{fileName}</div>
+      <div className="px-2 py-1 bg-muted/50 border-b border-border text-muted-foreground truncate">
+        {fileName}
+      </div>
       <div className="flex flex-col md:flex-row">
         {hasOld && (
           <div className="bg-red-500/5 dark:bg-red-500/10 border-b md:border-b-0 md:border-r border-border/50 flex-1 min-w-0">
             <div className={cn("px-2 py-1.5 overflow-auto", maxHeight)}>
               {oldLines.map((lineParts, i) => (
                 <div key={i} className="flex">
-                  <span className="text-red-500 select-none mr-2 shrink-0">-</span>
-                  <span className="text-red-600 dark:text-red-400 whitespace-pre-wrap break-all">{renderDiffLine(lineParts, "removed") || " "}</span>
+                  <span className="text-red-500 select-none mr-2 shrink-0">
+                    -
+                  </span>
+                  <span className="text-red-600 dark:text-red-400 whitespace-pre-wrap break-all">
+                    {renderDiffLine(lineParts, "removed") || " "}
+                  </span>
                 </div>
               ))}
             </div>
@@ -113,8 +153,12 @@ export function DiffBlockView({ block, maxHeight = "max-h-40" }: DiffBlockProps)
             <div className={cn("px-2 py-1.5 overflow-auto", maxHeight)}>
               {newLines.map((lineParts, i) => (
                 <div key={i} className="flex">
-                  <span className="text-emerald-500 select-none mr-2 shrink-0">+</span>
-                  <span className="text-emerald-600 dark:text-emerald-400 whitespace-pre-wrap break-all">{renderDiffLine(lineParts, "added") || " "}</span>
+                  <span className="text-emerald-500 select-none mr-2 shrink-0">
+                    +
+                  </span>
+                  <span className="text-emerald-600 dark:text-emerald-400 whitespace-pre-wrap break-all">
+                    {renderDiffLine(lineParts, "added") || " "}
+                  </span>
                 </div>
               ))}
             </div>
@@ -133,7 +177,13 @@ export function TodoBlockView({ block }: TodoBlockProps) {
   return (
     <div className="text-xs border border-border rounded-md overflow-hidden">
       {block.items.map((item, i) => (
-        <div key={i} className={cn("px-2 py-1.5 flex items-center gap-2", i !== block.items.length - 1 && "border-b border-border/50")}>
+        <div
+          key={i}
+          className={cn(
+            "px-2 py-1.5 flex items-center gap-2",
+            i !== block.items.length - 1 && "border-b border-border/50",
+          )}
+        >
           <span
             className={cn(
               "size-2 rounded-full shrink-0",
@@ -154,7 +204,11 @@ interface BriefBlockProps {
 }
 
 export function BriefBlockView({ block }: BriefBlockProps) {
-  return <div className="text-xs text-muted-foreground bg-muted/30 rounded-md px-2 py-1.5">{block.text}</div>;
+  return (
+    <div className="text-xs text-muted-foreground bg-muted/30 rounded-md px-2 py-1.5">
+      {block.text}
+    </div>
+  );
 }
 
 interface ShellBlockProps {
@@ -162,7 +216,10 @@ interface ShellBlockProps {
   maxHeight?: string;
 }
 
-export function ShellBlockView({ block, maxHeight = "max-h-40" }: ShellBlockProps) {
+export function ShellBlockView({
+  block,
+  maxHeight = "max-h-40",
+}: ShellBlockProps) {
   console.log("ShellBlockView render", { block });
   const isDark = useIsDark();
   const language = block.language || "bash";
@@ -178,7 +235,12 @@ export function ShellBlockView({ block, maxHeight = "max-h-40" }: ShellBlockProp
           style={isDark ? oneDark : oneLight}
           language={language}
           PreTag="div"
-          customStyle={{ margin: 0, padding: "0.5rem", fontSize: "11px", background: "transparent" }}
+          customStyle={{
+            margin: 0,
+            padding: "0.5rem",
+            fontSize: "11px",
+            background: "transparent",
+          }}
           codeTagProps={{ style: { backgroundColor: "transparent" } }}
         >
           {block.command}
@@ -212,7 +274,11 @@ interface DisplayBlocksProps {
   className?: string;
 }
 
-export function DisplayBlocks({ blocks, maxHeight, className }: DisplayBlocksProps) {
+export function DisplayBlocks({
+  blocks,
+  maxHeight,
+  className,
+}: DisplayBlocksProps) {
   if (!blocks || blocks.length === 0) {
     return null;
   }

@@ -1,13 +1,13 @@
-import { generate } from '#/generate';
-import type { Message, StreamedMessagePart, ToolCall } from '#/message';
-import type { ChatProvider, StreamedMessage, ThinkingEffort } from '#/provider';
-import { SimpleToolset, toolOk } from '../fixtures/simple-toolset';
-import type { ToolReturnValue } from '../fixtures/simple-toolset';
-import { step } from '../fixtures/step';
-import type { Tool } from '#/tool';
-import type { JsonValue } from '../fixtures/args-validator';
-import type { TokenUsage } from '#/usage';
-import { describe, expect, it } from 'vitest';
+import { generate } from "#/generate";
+import type { Message, StreamedMessagePart, ToolCall } from "#/message";
+import type { ChatProvider, StreamedMessage, ThinkingEffort } from "#/provider";
+import { SimpleToolset, toolOk } from "../fixtures/simple-toolset";
+import type { ToolReturnValue } from "../fixtures/simple-toolset";
+import { step } from "../fixtures/step";
+import type { Tool } from "#/tool";
+import type { JsonValue } from "../fixtures/args-validator";
+import type { TokenUsage } from "#/usage";
+import { describe, expect, it } from "vitest";
 
 /**
  * Exercises interleaved parallel tool calls end to end: index-based argument
@@ -37,8 +37,8 @@ function createMockStream(
 
 function createMockProvider(stream: StreamedMessage): ChatProvider {
   return {
-    name: 'mock',
-    modelName: 'mock-model',
+    name: "mock",
+    modelName: "mock-model",
     thinkingEffort: null,
     generate: async (
       _systemPrompt: string,
@@ -50,87 +50,92 @@ function createMockProvider(stream: StreamedMessage): ChatProvider {
     },
   };
 }
-describe('integration: parallel tool calls through SimpleToolset', () => {
-  it('onToolCall fires after the stream drains for indexed parallel calls', async () => {
+describe("integration: parallel tool calls through SimpleToolset", () => {
+  it("onToolCall fires after the stream drains for indexed parallel calls", async () => {
     const parts: StreamedMessagePart[] = [
       {
-        type: 'function',
-        id: 'tc_read_a',
-        name: 'read_file', arguments: '',
+        type: "function",
+        id: "tc_read_a",
+        name: "read_file",
+        arguments: "",
         _streamIndex: 0,
       },
-      { type: 'tool_call_part', argumentsPart: '{"path":"a.txt"}', index: 0 },
+      { type: "tool_call_part", argumentsPart: '{"path":"a.txt"}', index: 0 },
       {
-        type: 'function',
-        id: 'tc_read_b',
-        name: 'read_file', arguments: '',
+        type: "function",
+        id: "tc_read_b",
+        name: "read_file",
+        arguments: "",
         _streamIndex: 1,
       },
-      { type: 'tool_call_part', argumentsPart: '{"path":"b.txt"}', index: 1 },
-      { type: 'text', text: 'after' },
+      { type: "tool_call_part", argumentsPart: '{"path":"b.txt"}', index: 1 },
+      { type: "text", text: "after" },
     ];
 
     const stream = createMockStream(parts);
     const provider = createMockProvider(stream);
     const events: string[] = [];
 
-    await generate(provider, '', [], [], {
+    await generate(provider, "", [], [], {
       onMessagePart(part): void {
-        if (part.type === 'tool_call_part') {
+        if (part.type === "tool_call_part") {
           events.push(`delta:${part.index}:${part.argumentsPart}`);
-        } else if (part.type === 'text') {
+        } else if (part.type === "text") {
           events.push(`text:${part.text}`);
         }
       },
       onToolCall(toolCall): void {
-        events.push(`ready:${toolCall.id}:${toolCall.arguments ?? ''}`);
+        events.push(`ready:${toolCall.id}:${toolCall.arguments ?? ""}`);
       },
     });
 
     expect(events).toEqual([
       'delta:0:{"path":"a.txt"}',
       'delta:1:{"path":"b.txt"}',
-      'text:after',
+      "text:after",
       'ready:tc_read_a:{"path":"a.txt"}',
       'ready:tc_read_b:{"path":"b.txt"}',
     ]);
   });
 
-  it('three parallel tool_calls with interleaved argument deltas dispatch with correct arguments', async () => {
+  it("three parallel tool_calls with interleaved argument deltas dispatch with correct arguments", async () => {
     // Simulate an OpenAI-style streaming response where three tool calls
     // are kicked off with empty arguments, then their argument deltas
     // arrive in a heavily interleaved order.
     const parts: StreamedMessagePart[] = [
       // Three tool-call headers (empty arguments) in order 0, 1, 2.
       {
-        type: 'function',
-        id: 'tc_read',
-        name: 'read_file', arguments: null,
+        type: "function",
+        id: "tc_read",
+        name: "read_file",
+        arguments: null,
         _streamIndex: 0,
       },
       {
-        type: 'function',
-        id: 'tc_write',
-        name: 'write_file', arguments: null,
+        type: "function",
+        id: "tc_write",
+        name: "write_file",
+        arguments: null,
         _streamIndex: 1,
       },
       {
-        type: 'function',
-        id: 'tc_list',
-        name: 'list_dir', arguments: null,
+        type: "function",
+        id: "tc_list",
+        name: "list_dir",
+        arguments: null,
         _streamIndex: 2,
       },
       // Interleaved argument deltas. Arguments for each call, arriving
       // in an unpredictable order.
-      { type: 'tool_call_part', argumentsPart: '{"path":', index: 0 },
-      { type: 'tool_call_part', argumentsPart: '{"path":', index: 1 },
-      { type: 'tool_call_part', argumentsPart: '{"path":', index: 2 },
-      { type: 'tool_call_part', argumentsPart: '"a.txt"', index: 0 },
-      { type: 'tool_call_part', argumentsPart: '"b.txt",', index: 1 },
-      { type: 'tool_call_part', argumentsPart: '"/tmp"', index: 2 },
-      { type: 'tool_call_part', argumentsPart: '}', index: 0 },
-      { type: 'tool_call_part', argumentsPart: '"data":"X"}', index: 1 },
-      { type: 'tool_call_part', argumentsPart: '}', index: 2 },
+      { type: "tool_call_part", argumentsPart: '{"path":', index: 0 },
+      { type: "tool_call_part", argumentsPart: '{"path":', index: 1 },
+      { type: "tool_call_part", argumentsPart: '{"path":', index: 2 },
+      { type: "tool_call_part", argumentsPart: '"a.txt"', index: 0 },
+      { type: "tool_call_part", argumentsPart: '"b.txt",', index: 1 },
+      { type: "tool_call_part", argumentsPart: '"/tmp"', index: 2 },
+      { type: "tool_call_part", argumentsPart: "}", index: 0 },
+      { type: "tool_call_part", argumentsPart: '"data":"X"}', index: 1 },
+      { type: "tool_call_part", argumentsPart: "}", index: 2 },
     ];
 
     const stream = createMockStream(parts);
@@ -143,60 +148,60 @@ describe('integration: parallel tool calls through SimpleToolset', () => {
     const toolset = new SimpleToolset();
     toolset.add(
       {
-        name: 'read_file',
-        description: 'Read a file',
+        name: "read_file",
+        description: "Read a file",
         parameters: {
-          type: 'object',
-          properties: { path: { type: 'string' } },
-          required: ['path'],
+          type: "object",
+          properties: { path: { type: "string" } },
+          required: ["path"],
         },
       },
       async (args: JsonValue): Promise<ToolReturnValue> => {
-        observed['read_file'] = args;
-        dispatchOrder.push('read_file');
-        return toolOk({ output: 'read-OK' });
+        observed["read_file"] = args;
+        dispatchOrder.push("read_file");
+        return toolOk({ output: "read-OK" });
       },
     );
     toolset.add(
       {
-        name: 'write_file',
-        description: 'Write a file',
+        name: "write_file",
+        description: "Write a file",
         parameters: {
-          type: 'object',
-          properties: { path: { type: 'string' }, data: { type: 'string' } },
-          required: ['path', 'data'],
+          type: "object",
+          properties: { path: { type: "string" }, data: { type: "string" } },
+          required: ["path", "data"],
         },
       },
       async (args: JsonValue): Promise<ToolReturnValue> => {
-        observed['write_file'] = args;
-        dispatchOrder.push('write_file');
-        return toolOk({ output: 'write-OK' });
+        observed["write_file"] = args;
+        dispatchOrder.push("write_file");
+        return toolOk({ output: "write-OK" });
       },
     );
     toolset.add(
       {
-        name: 'list_dir',
-        description: 'List a directory',
+        name: "list_dir",
+        description: "List a directory",
         parameters: {
-          type: 'object',
-          properties: { path: { type: 'string' } },
-          required: ['path'],
+          type: "object",
+          properties: { path: { type: "string" } },
+          required: ["path"],
         },
       },
       async (args: JsonValue): Promise<ToolReturnValue> => {
-        observed['list_dir'] = args;
-        dispatchOrder.push('list_dir');
-        return toolOk({ output: 'list-OK' });
+        observed["list_dir"] = args;
+        dispatchOrder.push("list_dir");
+        return toolOk({ output: "list-OK" });
       },
     );
 
-    const result = await step(provider, '', toolset, []);
+    const result = await step(provider, "", toolset, []);
 
     // Three tool calls, in stream order.
     expect(result.toolCalls).toHaveLength(3);
-    expect(result.toolCalls[0]!.name).toBe('read_file');
-    expect(result.toolCalls[1]!.name).toBe('write_file');
-    expect(result.toolCalls[2]!.name).toBe('list_dir');
+    expect(result.toolCalls[0]!.name).toBe("read_file");
+    expect(result.toolCalls[1]!.name).toBe("write_file");
+    expect(result.toolCalls[2]!.name).toBe("list_dir");
 
     // Fully-assembled arguments — no cross-contamination.
     expect(result.toolCalls[0]!.arguments).toBe('{"path":"a.txt"}');
@@ -208,44 +213,47 @@ describe('integration: parallel tool calls through SimpleToolset', () => {
     expect(toolResults).toHaveLength(3);
     expect(toolResults.every((r) => !r.returnValue.isError)).toBe(true);
 
-    expect(observed['read_file']).toEqual({ path: 'a.txt' });
-    expect(observed['write_file']).toEqual({ path: 'b.txt', data: 'X' });
-    expect(observed['list_dir']).toEqual({ path: '/tmp' });
+    expect(observed["read_file"]).toEqual({ path: "a.txt" });
+    expect(observed["write_file"]).toEqual({ path: "b.txt", data: "X" });
+    expect(observed["list_dir"]).toEqual({ path: "/tmp" });
 
     // The tool_results are returned in the same order as toolCalls,
     // regardless of handler completion order.
-    expect(toolResults[0]!.toolCallId).toBe('tc_read');
-    expect(toolResults[1]!.toolCallId).toBe('tc_write');
-    expect(toolResults[2]!.toolCallId).toBe('tc_list');
+    expect(toolResults[0]!.toolCallId).toBe("tc_read");
+    expect(toolResults[1]!.toolCallId).toBe("tc_write");
+    expect(toolResults[2]!.toolCallId).toBe("tc_list");
 
     // `_streamIndex` must be stripped from the stored ToolCall.
     for (const tc of result.toolCalls) {
-      expect(tc).not.toHaveProperty('_streamIndex');
+      expect(tc).not.toHaveProperty("_streamIndex");
     }
   });
 
-  it('tool handlers run concurrently — total wall time < sum of individual latencies', async () => {
+  it("tool handlers run concurrently — total wall time < sum of individual latencies", async () => {
     // Three parallel tool_calls, each handler sleeps 80ms. If the
     // handlers were serialised, the total wall time would be ~240ms.
     // If they are dispatched concurrently (Promise.all style), the
     // total must be close to ~80ms (with generous slack for CI jitter).
     const parts: StreamedMessagePart[] = [
       {
-        type: 'function',
-        id: 'tc_a',
-        name: 'slow', arguments: '{"id":"a"}',
+        type: "function",
+        id: "tc_a",
+        name: "slow",
+        arguments: '{"id":"a"}',
         _streamIndex: 0,
       },
       {
-        type: 'function',
-        id: 'tc_b',
-        name: 'slow', arguments: '{"id":"b"}',
+        type: "function",
+        id: "tc_b",
+        name: "slow",
+        arguments: '{"id":"b"}',
         _streamIndex: 1,
       },
       {
-        type: 'function',
-        id: 'tc_c',
-        name: 'slow', arguments: '{"id":"c"}',
+        type: "function",
+        id: "tc_c",
+        name: "slow",
+        arguments: '{"id":"c"}',
         _streamIndex: 2,
       },
     ];
@@ -257,12 +265,12 @@ describe('integration: parallel tool calls through SimpleToolset', () => {
     const startTimes: Record<string, number> = {};
     toolset.add(
       {
-        name: 'slow',
-        description: 'Slow tool',
+        name: "slow",
+        description: "Slow tool",
         parameters: {
-          type: 'object',
-          properties: { id: { type: 'string' } },
-          required: ['id'],
+          type: "object",
+          properties: { id: { type: "string" } },
+          required: ["id"],
         },
       },
       async (args: JsonValue): Promise<ToolReturnValue> => {
@@ -274,16 +282,20 @@ describe('integration: parallel tool calls through SimpleToolset', () => {
     );
 
     const t0 = Date.now();
-    const result = await step(provider, '', toolset, []);
+    const result = await step(provider, "", toolset, []);
     const toolResults = await result.toolResults();
     const elapsed = Date.now() - t0;
 
     expect(toolResults).toHaveLength(3);
-    expect(toolResults.map((r) => r.returnValue.output)).toEqual(['done-a', 'done-b', 'done-c']);
+    expect(toolResults.map((r) => r.returnValue.output)).toEqual([
+      "done-a",
+      "done-b",
+      "done-c",
+    ]);
 
     // All three handlers must have started within a small window of
     // each other — they were dispatched concurrently, not serially.
-    const t = [startTimes['a']!, startTimes['b']!, startTimes['c']!];
+    const t = [startTimes["a"]!, startTimes["b"]!, startTimes["c"]!];
     const spread = Math.max(...t) - Math.min(...t);
     expect(spread).toBeLessThan(50); // dispatched within 50ms of each other
 
@@ -292,25 +304,28 @@ describe('integration: parallel tool calls through SimpleToolset', () => {
     expect(elapsed).toBeLessThan(200);
   });
 
-  it('tool_results are returned in toolCalls order even when handlers complete out-of-order', async () => {
+  it("tool_results are returned in toolCalls order even when handlers complete out-of-order", async () => {
     // Reverse-order completion: the last handler finishes first.
     const parts: StreamedMessagePart[] = [
       {
-        type: 'function',
-        id: 'tc_slow',
-        name: 'sleep_tool', arguments: '{"ms":100,"tag":"slow"}',
+        type: "function",
+        id: "tc_slow",
+        name: "sleep_tool",
+        arguments: '{"ms":100,"tag":"slow"}',
         _streamIndex: 0,
       },
       {
-        type: 'function',
-        id: 'tc_med',
-        name: 'sleep_tool', arguments: '{"ms":50,"tag":"med"}',
+        type: "function",
+        id: "tc_med",
+        name: "sleep_tool",
+        arguments: '{"ms":50,"tag":"med"}',
         _streamIndex: 1,
       },
       {
-        type: 'function',
-        id: 'tc_fast',
-        name: 'sleep_tool', arguments: '{"ms":1,"tag":"fast"}',
+        type: "function",
+        id: "tc_fast",
+        name: "sleep_tool",
+        arguments: '{"ms":1,"tag":"fast"}',
         _streamIndex: 2,
       },
     ];
@@ -322,15 +337,15 @@ describe('integration: parallel tool calls through SimpleToolset', () => {
     const toolset = new SimpleToolset();
     toolset.add(
       {
-        name: 'sleep_tool',
-        description: 'Sleep then return tag',
+        name: "sleep_tool",
+        description: "Sleep then return tag",
         parameters: {
-          type: 'object',
+          type: "object",
           properties: {
-            ms: { type: 'integer' },
-            tag: { type: 'string' },
+            ms: { type: "integer" },
+            tag: { type: "string" },
           },
-          required: ['ms', 'tag'],
+          required: ["ms", "tag"],
         },
       },
       async (args: JsonValue): Promise<ToolReturnValue> => {
@@ -341,33 +356,40 @@ describe('integration: parallel tool calls through SimpleToolset', () => {
       },
     );
 
-    const result = await step(provider, '', toolset, []);
+    const result = await step(provider, "", toolset, []);
     const toolResults = await result.toolResults();
 
     // Handlers completed fast-first, but results are returned in
     // toolCalls order.
-    expect(completionOrder[0]).toBe('fast');
-    expect(toolResults.map((r) => r.returnValue.output)).toEqual(['slow', 'med', 'fast']);
+    expect(completionOrder[0]).toBe("fast");
+    expect(toolResults.map((r) => r.returnValue.output)).toEqual([
+      "slow",
+      "med",
+      "fast",
+    ]);
   });
 
-  it('one tool throws — other parallel tools still succeed', async () => {
+  it("one tool throws — other parallel tools still succeed", async () => {
     const parts: StreamedMessagePart[] = [
       {
-        type: 'function',
-        id: 'tc_ok_1',
-        name: 'good', arguments: '{"i":1}',
+        type: "function",
+        id: "tc_ok_1",
+        name: "good",
+        arguments: '{"i":1}',
         _streamIndex: 0,
       },
       {
-        type: 'function',
-        id: 'tc_bad',
-        name: 'bad', arguments: '{}',
+        type: "function",
+        id: "tc_bad",
+        name: "bad",
+        arguments: "{}",
         _streamIndex: 1,
       },
       {
-        type: 'function',
-        id: 'tc_ok_2',
-        name: 'good', arguments: '{"i":2}',
+        type: "function",
+        id: "tc_ok_2",
+        name: "good",
+        arguments: '{"i":2}',
         _streamIndex: 2,
       },
     ];
@@ -378,9 +400,9 @@ describe('integration: parallel tool calls through SimpleToolset', () => {
     const toolset = new SimpleToolset();
     toolset.add(
       {
-        name: 'good',
-        description: 'ok',
-        parameters: { type: 'object', properties: { i: { type: 'integer' } } },
+        name: "good",
+        description: "ok",
+        parameters: { type: "object", properties: { i: { type: "integer" } } },
       },
       async (args: JsonValue): Promise<ToolReturnValue> => {
         const i = (args as { i: number }).i;
@@ -388,52 +410,60 @@ describe('integration: parallel tool calls through SimpleToolset', () => {
       },
     );
     toolset.add(
-      { name: 'bad', description: 'bad', parameters: { type: 'object', properties: {} } },
+      {
+        name: "bad",
+        description: "bad",
+        parameters: { type: "object", properties: {} },
+      },
       async (): Promise<ToolReturnValue> => {
-        throw new Error('tool explosion');
+        throw new Error("tool explosion");
       },
     );
 
-    const result = await step(provider, '', toolset, []);
+    const result = await step(provider, "", toolset, []);
     const toolResults = await result.toolResults();
 
     expect(toolResults).toHaveLength(3);
     expect(toolResults[0]!.returnValue.isError).toBe(false);
-    expect(toolResults[0]!.returnValue.output).toBe('ok-1');
+    expect(toolResults[0]!.returnValue.output).toBe("ok-1");
     expect(toolResults[1]!.returnValue.isError).toBe(true);
-    expect(toolResults[1]!.returnValue.message).toBe('Error running tool: tool explosion');
+    expect(toolResults[1]!.returnValue.message).toBe(
+      "Error running tool: tool explosion",
+    );
     expect(toolResults[2]!.returnValue.isError).toBe(false);
-    expect(toolResults[2]!.returnValue.output).toBe('ok-2');
+    expect(toolResults[2]!.returnValue.output).toBe("ok-2");
   });
 
-  it('generate (direct) routes interleaved deltas by non-numeric streaming id (Responses API style)', async () => {
+  it("generate (direct) routes interleaved deltas by non-numeric streaming id (Responses API style)", async () => {
     // OpenAI Responses API uses string `item_id` rather than numeric
     // index. Verify index-based routing still works when the routing
     // key is a string.
     const parts: StreamedMessagePart[] = [
       {
-        type: 'function',
-        id: 'tc_alpha',
-        name: 't', arguments: null,
-        _streamIndex: 'item_alpha',
+        type: "function",
+        id: "tc_alpha",
+        name: "t",
+        arguments: null,
+        _streamIndex: "item_alpha",
       },
       {
-        type: 'function',
-        id: 'tc_beta',
-        name: 't', arguments: null,
-        _streamIndex: 'item_beta',
+        type: "function",
+        id: "tc_beta",
+        name: "t",
+        arguments: null,
+        _streamIndex: "item_beta",
       },
-      { type: 'tool_call_part', argumentsPart: '{"k":', index: 'item_alpha' },
-      { type: 'tool_call_part', argumentsPart: '{"k":', index: 'item_beta' },
-      { type: 'tool_call_part', argumentsPart: '"A"}', index: 'item_alpha' },
-      { type: 'tool_call_part', argumentsPart: '"B"}', index: 'item_beta' },
+      { type: "tool_call_part", argumentsPart: '{"k":', index: "item_alpha" },
+      { type: "tool_call_part", argumentsPart: '{"k":', index: "item_beta" },
+      { type: "tool_call_part", argumentsPart: '"A"}', index: "item_alpha" },
+      { type: "tool_call_part", argumentsPart: '"B"}', index: "item_beta" },
     ];
 
     const stream = createMockStream(parts);
     const provider = createMockProvider(stream);
 
     const seen: ToolCall[] = [];
-    const result = await generate(provider, '', [], [], {
+    const result = await generate(provider, "", [], [], {
       onToolCall: (tc: ToolCall): void => {
         seen.push(tc);
       },
@@ -444,7 +474,7 @@ describe('integration: parallel tool calls through SimpleToolset', () => {
     expect(result.message.toolCalls[1]!.arguments).toBe('{"k":"B"}');
     // onToolCall fired once per fully-assembled call after stream drained.
     expect(seen).toHaveLength(2);
-    expect(seen[0]!.id).toBe('tc_alpha');
-    expect(seen[1]!.id).toBe('tc_beta');
+    expect(seen[0]!.id).toBe("tc_alpha");
+    expect(seen[1]!.id).toBe("tc_beta");
   });
 });

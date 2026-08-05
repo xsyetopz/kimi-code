@@ -11,12 +11,12 @@
  * deliberately registers nothing on its own.
  */
 
-import { BugIndicatingError } from '#/_base/errors/errors';
-import type { ModelCapability } from '#/kosong/contract/capability';
-import type { ChatProvider } from '#/kosong/contract/provider';
+import { BugIndicatingError } from "#/_base/errors/errors";
+import type { ModelCapability } from "#/kosong/contract/capability";
+import type { ChatProvider } from "#/kosong/contract/provider";
 
-import type { Protocol, ProtocolAdapterConfig } from './protocol';
-import type { ResolvedTrait } from './protocolTrait';
+import type { Protocol, ProtocolAdapterConfig } from "./protocol";
+import type { ResolvedTrait } from "./protocolTrait";
 
 export type ProtocolBaseId = Protocol;
 
@@ -40,12 +40,16 @@ const protocolBases = new Map<ProtocolBaseId, ProtocolBaseDefinition>();
 
 export function registerProtocolBase(definition: ProtocolBaseDefinition): void {
   if (protocolBases.has(definition.id)) {
-    throw new BugIndicatingError(`protocol base '${definition.id}' is already registered`);
+    throw new BugIndicatingError(
+      `protocol base '${definition.id}' is already registered`,
+    );
   }
   protocolBases.set(definition.id, definition);
 }
 
-export function getProtocolBase(id: ProtocolBaseId): ProtocolBaseDefinition | undefined {
+export function getProtocolBase(
+  id: ProtocolBaseId,
+): ProtocolBaseDefinition | undefined {
   return protocolBases.get(id);
 }
 

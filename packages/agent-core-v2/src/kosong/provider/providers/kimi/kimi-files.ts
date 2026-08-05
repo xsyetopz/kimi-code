@@ -8,24 +8,27 @@
  * back to the base OpenAI conversion.
  */
 
-import { Blob, File } from 'node:buffer';
-import * as fs from 'node:fs';
-import * as path from 'node:path';
+import { Blob, File } from "node:buffer";
+import * as fs from "node:fs";
+import * as path from "node:path";
 
-import type OpenAI from 'openai';
-import OpenAIClient from 'openai';
+import type OpenAI from "openai";
+import OpenAIClient from "openai";
 
-import { ChatProviderError } from '#/kosong/contract/errors';
-import type { VideoURLPart } from '#/kosong/contract/message';
-import type { ProviderRequestAuth, VideoUploadInput } from '#/kosong/contract/provider';
+import { ChatProviderError } from "#/kosong/contract/errors";
+import type { VideoURLPart } from "#/kosong/contract/message";
+import type {
+  ProviderRequestAuth,
+  VideoUploadInput,
+} from "#/kosong/contract/provider";
 
-import { convertOpenAIError } from '../../bases/openai/openai-common';
+import { convertOpenAIError } from "../../bases/openai/openai-common";
 import {
   mergeRequestHeaders,
   requireProviderApiKey,
   resolveAuthBackedClient,
-} from '../../bases/request-auth';
-import { classifyKimiQuotaError } from './kimi-errors';
+} from "../../bases/request-auth";
+import { classifyKimiQuotaError } from "./kimi-errors";
 
 export interface KimiUploadOptions {
   auth?: ProviderRequestAuth;
@@ -44,7 +47,9 @@ export class KimiFiles {
   private readonly _baseUrl: string;
   private readonly _defaultHeaders: Record<string, string> | undefined;
   private readonly _client: OpenAI | undefined;
-  private readonly _clientFactory: ((auth: ProviderRequestAuth) => OpenAI) | undefined;
+  private readonly _clientFactory:
+    | ((auth: ProviderRequestAuth) => OpenAI)
+    | undefined;
 
   constructor(options: KimiFilesOptions) {
     this._apiKey = options.apiKey;
@@ -67,13 +72,13 @@ export class KimiFiles {
   ): Promise<VideoURLPart> {
     let file: unknown;
 
-    if (typeof input === 'string') {
+    if (typeof input === "string") {
       if (!fs.existsSync(input)) {
         throw new ChatProviderError(`Video file not found: ${input}`);
       }
       const filename = path.basename(input);
       const mimeType = guessMimeTypeFromExt(filename);
-      if (mimeType === undefined || !mimeType.startsWith('video/')) {
+      if (mimeType === undefined || !mimeType.startsWith("video/")) {
         throw new ChatProviderError(
           `KimiFiles.uploadVideo: file extension does not indicate a video type: ${filename}`,
         );
@@ -82,11 +87,16 @@ export class KimiFiles {
       const blob = new Blob([new Uint8Array(data)], { type: mimeType });
       file = new File([blob], filename, { type: mimeType });
     } else {
-      if (!input.mimeType.startsWith('video/')) {
-        throw new ChatProviderError(`Expected a video mime type, got ${input.mimeType}`);
+      if (!input.mimeType.startsWith("video/")) {
+        throw new ChatProviderError(
+          `Expected a video mime type, got ${input.mimeType}`,
+        );
       }
       const filename = input.filename ?? guessFilename(input.mimeType);
-      const bytes = input.data instanceof Uint8Array ? input.data : new Uint8Array(input.data);
+      const bytes =
+        input.data instanceof Uint8Array
+          ? input.data
+          : new Uint8Array(input.data);
       const blob = new Blob([bytes], { type: input.mimeType });
       file = new File([blob], filename, { type: input.mimeType });
     }
@@ -97,7 +107,7 @@ export class KimiFiles {
       uploaded = (await client.files.create(
         {
           file: file as never,
-          purpose: 'video' as never,
+          purpose: "video" as never,
         },
         options?.signal ? { signal: options.signal } : undefined,
       )) as unknown as { id: string };
@@ -106,7 +116,7 @@ export class KimiFiles {
     }
 
     return {
-      type: 'video_url',
+      type: "video_url",
       videoUrl: {
         url: `ms://${uploaded.id}`,
         id: uploaded.id,
@@ -119,9 +129,16 @@ export class KimiFiles {
       { cachedClient: this._client, clientFactory: this._clientFactory },
       auth,
       (a) => {
-        const defaultHeaders = mergeRequestHeaders(this._defaultHeaders, a?.headers);
+        const defaultHeaders = mergeRequestHeaders(
+          this._defaultHeaders,
+          a?.headers,
+        );
         return new OpenAIClient({
-          apiKey: requireProviderApiKey('KimiFiles.uploadVideo', a, this._apiKey),
+          apiKey: requireProviderApiKey(
+            "KimiFiles.uploadVideo",
+            a,
+            this._apiKey,
+          ),
           baseURL: this._baseUrl,
           defaultHeaders,
         });
@@ -131,19 +148,19 @@ export class KimiFiles {
 }
 
 function guessFilename(mimeType: string): string {
-  const ext = MIME_TO_EXT[mimeType.toLowerCase()] ?? 'bin';
+  const ext = MIME_TO_EXT[mimeType.toLowerCase()] ?? "bin";
   return `upload.${ext}`;
 }
 
 const MIME_TO_EXT: Record<string, string> = {
-  'video/mp4': 'mp4',
-  'video/mpeg': 'mpeg',
-  'video/quicktime': 'mov',
-  'video/webm': 'webm',
-  'video/x-matroska': 'mkv',
-  'video/x-msvideo': 'avi',
-  'video/x-flv': 'flv',
-  'video/3gpp': '3gp',
+  "video/mp4": "mp4",
+  "video/mpeg": "mpeg",
+  "video/quicktime": "mov",
+  "video/webm": "webm",
+  "video/x-matroska": "mkv",
+  "video/x-msvideo": "avi",
+  "video/x-flv": "flv",
+  "video/3gpp": "3gp",
 };
 
 const EXT_TO_MIME: Record<string, string> = Object.fromEntries(
@@ -151,7 +168,7 @@ const EXT_TO_MIME: Record<string, string> = Object.fromEntries(
 );
 
 function guessMimeTypeFromExt(filename: string): string | undefined {
-  const dot = filename.lastIndexOf('.');
+  const dot = filename.lastIndexOf(".");
   if (dot < 0) return undefined;
   const ext = filename.slice(dot + 1).toLowerCase();
   return EXT_TO_MIME[ext];

@@ -1,4 +1,4 @@
-import type { ContentPart, Message, Tool } from '@moonshot-ai/kosong';
+import type { ContentPart, Message, Tool } from "@moonshot-ai/kosong";
 
 /**
  * Structural subset of kosong's {@link Message} that token estimation reads.
@@ -10,11 +10,17 @@ import type { ContentPart, Message, Tool } from '@moonshot-ai/kosong';
 interface TokenEstimatableMessage {
   readonly role: string;
   readonly content: readonly ContentPart[];
-  readonly toolCalls?: readonly { readonly name: string; readonly arguments: unknown }[];
+  readonly toolCalls?: readonly {
+    readonly name: string;
+    readonly arguments: unknown;
+  }[];
   readonly tools?: readonly Tool[] | undefined;
 }
 
-const messageTokenEstimateCache = new WeakMap<TokenEstimatableMessage, number>();
+const messageTokenEstimateCache = new WeakMap<
+  TokenEstimatableMessage,
+  number
+>();
 
 /**
  * Estimate token count from text using a character-based heuristic.
@@ -37,7 +43,9 @@ export function estimateTokens(text: string): number {
   return Math.ceil(asciiCount / 4) + nonAsciiCount;
 }
 
-export function estimateTokensForMessages(messages: readonly Message[]): number {
+export function estimateTokensForMessages(
+  messages: readonly Message[],
+): number {
   let total = 0;
   for (const message of messages) {
     total += estimateTokensForMessage(message);
@@ -55,7 +63,9 @@ export function estimateTokensForTools(tools: readonly Tool[]): number {
   return total;
 }
 
-export function estimateTokensForMessage(message: TokenEstimatableMessage): number {
+export function estimateTokensForMessage(
+  message: TokenEstimatableMessage,
+): number {
   const cached = messageTokenEstimateCache.get(message);
   if (cached !== undefined) {
     return cached;
@@ -79,7 +89,9 @@ export function estimateTokensForMessage(message: TokenEstimatableMessage): numb
   return total;
 }
 
-export function estimateTokensForContentParts(parts: readonly ContentPart[]): number {
+export function estimateTokensForContentParts(
+  parts: readonly ContentPart[],
+): number {
   let total = 0;
   for (const part of parts) {
     total += estimateTokensForContentPart(part);
@@ -102,13 +114,13 @@ export const MEDIA_TOKEN_ESTIMATE = 2000;
 
 export function estimateTokensForContentPart(part: ContentPart): number {
   switch (part.type) {
-    case 'text':
+    case "text":
       return estimateTokens(part.text);
-    case 'think':
+    case "think":
       return estimateTokens(part.think);
-    case 'image_url':
-    case 'audio_url':
-    case 'video_url':
+    case "image_url":
+    case "audio_url":
+    case "video_url":
       return MEDIA_TOKEN_ESTIMATE;
     default: {
       // Exhaustiveness guard: a new ContentPart kind must declare its estimate

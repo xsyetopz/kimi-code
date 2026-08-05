@@ -1,19 +1,22 @@
-import { readFile } from 'node:fs/promises';
-import path from 'pathe';
+import { readFile } from "node:fs/promises";
+import path from "pathe";
 
-import { load as loadYaml } from 'js-yaml';
-import regexpEscape from 'regexp.escape';
+import { load as loadYaml } from "js-yaml";
+import regexpEscape from "regexp.escape";
 
-import type { SkillDefinition, SkillMetadata, SkillSource } from './types';
-import { isSupportedSkillType } from './types';
-import { escapeXmlTags } from '../utils/xml-escape';
+import type { SkillDefinition, SkillMetadata, SkillSource } from "./types";
+import { isSupportedSkillType } from "./types";
+import { escapeXmlTags } from "../utils/xml-escape";
 
 export class FrontmatterError extends Error {
   constructor(message: string, cause?: unknown) {
     super(message);
-    this.name = 'FrontmatterError';
+    this.name = "FrontmatterError";
     if (cause !== undefined) {
-      Object.defineProperty(this, 'cause', { value: cause, configurable: true });
+      Object.defineProperty(this, "cause", {
+        value: cause,
+        configurable: true,
+      });
     }
   }
 }
@@ -23,7 +26,7 @@ export class SkillParseError extends Error {
 
   constructor(message: string, cause?: unknown) {
     super(message);
-    this.name = 'SkillParseError';
+    this.name = "SkillParseError";
     if (cause !== undefined) this.reason = cause;
   }
 }
@@ -35,7 +38,7 @@ export class UnsupportedSkillTypeError extends Error {
     super(
       `Skill type "${skillType}" is not supported; only "prompt", "inline", and "flow" are supported.`,
     );
-    this.name = 'UnsupportedSkillTypeError';
+    this.name = "UnsupportedSkillTypeError";
     this.skillType = skillType;
   }
 }
@@ -61,18 +64,20 @@ export interface ParsedFrontmatter {
   readonly body: string;
 }
 
-const FENCE = '---';
+const FENCE = "---";
 const METADATA_ALIASES: Readonly<Record<string, string>> = {
-  'when-to-use': 'whenToUse',
-  when_to_use: 'whenToUse',
-  'disable-model-invocation': 'disableModelInvocation',
-  disable_model_invocation: 'disableModelInvocation',
+  "when-to-use": "whenToUse",
+  when_to_use: "whenToUse",
+  "disable-model-invocation": "disableModelInvocation",
+  disable_model_invocation: "disableModelInvocation",
 };
 
-export async function parseSkillFromFile(options: ParseSkillOptions): Promise<SkillDefinition> {
+export async function parseSkillFromFile(
+  options: ParseSkillOptions,
+): Promise<SkillDefinition> {
   let text: string;
   try {
-    text = await readFile(options.skillMdPath, 'utf8');
+    text = await readFile(options.skillMdPath, "utf8");
   } catch (error) {
     throw new SkillParseError(`Failed to read ${options.skillMdPath}`, error);
   }
@@ -85,14 +90,16 @@ export function parseFrontmatter(text: string): ParsedFrontmatter {
     return { data: null, body: text };
   }
 
-  const close = lines.findIndex((line, index) => index > 0 && line.trim() === FENCE);
+  const close = lines.findIndex(
+    (line, index) => index > 0 && line.trim() === FENCE,
+  );
   if (close === -1) {
-    throw new FrontmatterError('Missing closing frontmatter fence');
+    throw new FrontmatterError("Missing closing frontmatter fence");
   }
 
-  const yamlText = lines.slice(1, close).join('\n').trim();
-  const body = lines.slice(close + 1).join('\n');
-  if (yamlText === '') {
+  const yamlText = lines.slice(1, close).join("\n").trim();
+  const body = lines.slice(close + 1).join("\n");
+  if (yamlText === "") {
     return { data: {}, body };
   }
 
@@ -104,8 +111,10 @@ export function parseFrontmatter(text: string): ParsedFrontmatter {
   }
 }
 
-export function parseSkillText(options: ParseSkillTextOptions): SkillDefinition {
-  const isDirectorySkill = path.basename(options.skillMdPath) === 'SKILL.md';
+export function parseSkillText(
+  options: ParseSkillTextOptions,
+): SkillDefinition {
+  const isDirectorySkill = path.basename(options.skillMdPath) === "SKILL.md";
   if (isDirectorySkill && options.text.split(/\r?\n/, 1)[0]?.trim() !== FENCE) {
     throw new SkillParseError(`Missing frontmatter in ${options.skillMdPath}`);
   }
@@ -132,7 +141,9 @@ export function parseSkillText(options: ParseSkillTextOptions): SkillDefinition 
 
   const metadata = normalizeMetadata(frontmatter);
   if (!isSupportedSkillType(metadata.type)) {
-    throw new UnsupportedSkillTypeError(metadata.type ?? String(frontmatter['type']));
+    throw new UnsupportedSkillTypeError(
+      metadata.type ?? String(frontmatter["type"]),
+    );
   }
 
   const name = nonEmptyString(metadata.name);
@@ -186,26 +197,26 @@ export function expandSkillParameters(
     if (name === undefined) continue;
     const escaped = regexpEscape(name);
     content = content.replaceAll(
-      new RegExp(`\\$${escaped}(?![\\[\\w])`, 'g'),
-      escapeXmlTags(tokens[index] ?? ''),
+      new RegExp(`\\$${escaped}(?![\\[\\w])`, "g"),
+      escapeXmlTags(tokens[index] ?? ""),
     );
   }
 
   content = content
     .replaceAll(/\$ARGUMENTS\[(\d+)\]/g, (_match, indexText: string) => {
       const index = Number.parseInt(indexText, 10);
-      return escapeXmlTags(tokens[index] ?? '');
+      return escapeXmlTags(tokens[index] ?? "");
     })
     .replaceAll(/\$(\d+)(?!\w)/g, (_match, indexText: string) => {
       const index = Number.parseInt(indexText, 10);
-      return escapeXmlTags(tokens[index] ?? '');
+      return escapeXmlTags(tokens[index] ?? "");
     })
-    .replaceAll('$ARGUMENTS', escapeXmlTags(rawArgs));
+    .replaceAll("$ARGUMENTS", escapeXmlTags(rawArgs));
 
   const hasArgumentPlaceholder = content !== body;
   content = content
-    .replaceAll('${KIMI_SKILL_DIR}', context.skillDir)
-    .replaceAll('${KIMI_SESSION_ID}', context.sessionId ?? '');
+    .replaceAll("${KIMI_SKILL_DIR}", context.skillDir)
+    .replaceAll("${KIMI_SESSION_ID}", context.sessionId ?? "");
 
   if (!hasArgumentPlaceholder && rawArgs.length > 0) {
     return `${content}\n\nARGUMENTS: ${escapeXmlTags(rawArgs)}`;
@@ -216,10 +227,12 @@ export function expandSkillParameters(
 export function skillArgumentNames(metadata: SkillMetadata): readonly string[] {
   const value = metadata.arguments;
   const isValidName = (name: string): boolean =>
-    name.trim() !== '' && !/^\d+$/.test(name);
-  if (typeof value === 'string') return value.split(/\s+/).filter(isValidName);
+    name.trim() !== "" && !/^\d+$/.test(name);
+  if (typeof value === "string") return value.split(/\s+/).filter(isValidName);
   if (!Array.isArray(value)) return [];
-  return value.filter((item): item is string => typeof item === 'string' && isValidName(item));
+  return value.filter(
+    (item): item is string => typeof item === "string" && isValidName(item),
+  );
 }
 
 function normalizeMetadata(raw: Record<string, unknown>): SkillMetadata {
@@ -229,14 +242,14 @@ function normalizeMetadata(raw: Record<string, unknown>): SkillMetadata {
     out[key] = value;
   }
 
-  const type = nonEmptyString(out['type']);
-  if (type !== undefined) out['type'] = type;
+  const type = nonEmptyString(out["type"]);
+  if (type !== undefined) out["type"] = type;
 
-  const name = nonEmptyString(out['name']);
-  if (name !== undefined) out['name'] = name;
+  const name = nonEmptyString(out["name"]);
+  if (name !== undefined) out["name"] = name;
 
-  const description = nonEmptyString(out['description']);
-  if (description !== undefined) out['description'] = description;
+  const description = nonEmptyString(out["description"]);
+  if (description !== undefined) out["description"] = description;
 
   return out as SkillMetadata;
 }
@@ -246,13 +259,13 @@ function descriptionFromBody(body: string): string {
     .split(/\r?\n/)
     .map((line) => line.trim())
     .find((line) => line.length > 0);
-  if (firstLine === undefined) return 'No description provided.';
+  if (firstLine === undefined) return "No description provided.";
   return firstLine.length > 240 ? `${firstLine.slice(0, 239)}…` : firstLine;
 }
 
 function tokenizeArgs(raw: string): string[] {
   const out: string[] = [];
-  let current = '';
+  let current = "";
   let quote: '"' | "'" | undefined;
   let hasContent = false;
 
@@ -274,7 +287,7 @@ function tokenizeArgs(raw: string): string[] {
     if (/\s/.test(char)) {
       if (hasContent) {
         out.push(current);
-        current = '';
+        current = "";
         hasContent = false;
       }
       continue;
@@ -288,9 +301,11 @@ function tokenizeArgs(raw: string): string[] {
 }
 
 function nonEmptyString(value: unknown): string | undefined {
-  return typeof value === 'string' && value.trim() !== '' ? value.trim() : undefined;
+  return typeof value === "string" && value.trim() !== ""
+    ? value.trim()
+    : undefined;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

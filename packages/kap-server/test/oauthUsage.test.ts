@@ -1,23 +1,23 @@
-import { mkdtemp, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 import {
   IOAuthService,
   type IOAuthService as IOAuthServiceType,
   type ScopeSeed,
-} from '@moonshot-ai/agent-core-v2';
+} from "@moonshot-ai/agent-core-v2";
 import {
   managedUserInfoResultSchema,
   managedUsageResultSchema,
   type ManagedUserInfoResult,
   type ManagedUsageResult,
-} from '@moonshot-ai/agent-core-v2/app/auth/oauthProtocol';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+} from "@moonshot-ai/agent-core-v2/app/auth/oauthProtocol";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { type RunningServer, startServer } from '../src/start';
-import { TEST_HOST_IDENTITY } from './helpers/hostIdentity';
-import { authHeaders } from './helpers/auth';
+import { type RunningServer, startServer } from "../src/start";
+import { TEST_HOST_IDENTITY } from "./helpers/hostIdentity";
+import { authHeaders } from "./helpers/auth";
 
 interface Envelope<T> {
   code: number;
@@ -26,13 +26,13 @@ interface Envelope<T> {
   request_id: string;
 }
 
-describe('server-v2 GET /api/v1/oauth/usage', () => {
+describe("server-v2 GET /api/v1/oauth/usage", () => {
   let server: RunningServer | undefined;
   let home: string | undefined;
   let base: string;
 
   beforeEach(async () => {
-    home = await mkdtemp(join(tmpdir(), 'kimi-server-v2-oauth-usage-'));
+    home = await mkdtemp(join(tmpdir(), "kimi-server-v2-oauth-usage-"));
   });
 
   afterEach(async () => {
@@ -46,23 +46,32 @@ describe('server-v2 GET /api/v1/oauth/usage', () => {
     }
   });
 
-  function oauthStub(getManagedUsage: IOAuthServiceType['getManagedUsage']): IOAuthServiceType {
+  function oauthStub(
+    getManagedUsage: IOAuthServiceType["getManagedUsage"],
+  ): IOAuthServiceType {
     return {
       _serviceBrand: undefined,
       startLogin: async () => {
-        throw new Error('unused');
+        throw new Error("unused");
       },
       getFlow: () => undefined,
       cancelLogin: async () => {
-        throw new Error('unused');
+        throw new Error("unused");
       },
       logout: async () => {
-        throw new Error('unused');
+        throw new Error("unused");
       },
       status: async () => ({ loggedIn: false }),
-      refreshOAuthProviderModels: async () => ({ changed: [], unchanged: [], failed: [] }),
+      refreshOAuthProviderModels: async () => ({
+        changed: [],
+        unchanged: [],
+        failed: [],
+      }),
       getManagedUsage,
-      getManagedUserInfo: async () => ({ kind: 'error' as const, message: 'unused' }),
+      getManagedUserInfo: async () => ({
+        kind: "error" as const,
+        message: "unused",
+      }),
       resolveTokenProvider: () => undefined,
       getCachedAccessToken: async () => undefined,
     };
@@ -71,16 +80,16 @@ describe('server-v2 GET /api/v1/oauth/usage', () => {
   async function boot(seeds: ScopeSeed): Promise<void> {
     server = await startServer({
       hostIdentity: TEST_HOST_IDENTITY,
-      host: '127.0.0.1',
+      host: "127.0.0.1",
       port: 0,
       homeDir: home,
-      logLevel: 'silent',
+      logLevel: "silent",
       seeds,
     });
     base = `http://127.0.0.1:${server.port}`;
   }
 
-  async function getUsage(query = ''): Promise<ManagedUsageResult> {
+  async function getUsage(query = ""): Promise<ManagedUsageResult> {
     const res = await fetch(`${base}/api/v1/oauth/usage${query}`, {
       headers: authHeaders(server as RunningServer),
     } as never);
@@ -90,18 +99,23 @@ describe('server-v2 GET /api/v1/oauth/usage', () => {
     return managedUsageResultSchema.parse(body.data);
   }
 
-  it('maps the ok usage payload to the snake_case wire shape', async () => {
+  it("maps the ok usage payload to the snake_case wire shape", async () => {
     const getManagedUsage = vi.fn(async () => ({
-      kind: 'ok' as const,
+      kind: "ok" as const,
       summary: {
-        name: 'Weekly limit',
-        window: { duration: 1, unit: 'week' as const },
+        name: "Weekly limit",
+        window: { duration: 1, unit: "week" as const },
         used: 40,
         limit: 1000,
-        resetAt: '2030-01-01T00:00:00.000Z',
+        resetAt: "2030-01-01T00:00:00.000Z",
       },
       limits: [
-        { name: '5h limit', window: { duration: 5, unit: 'hour' as const }, used: 1, limit: 100 },
+        {
+          name: "5h limit",
+          window: { duration: 5, unit: "hour" as const },
+          used: 1,
+          limit: 100,
+        },
         { used: 2, limit: 50 },
       ],
       extraUsage: {
@@ -110,22 +124,29 @@ describe('server-v2 GET /api/v1/oauth/usage', () => {
         monthlyChargeLimitEnabled: true,
         monthlyChargeLimitCents: 2000,
         monthlyUsedCents: 1500,
-        currency: 'CNY',
+        currency: "CNY",
       },
     }));
-    await boot([[IOAuthService, oauthStub(getManagedUsage)]] as unknown as ScopeSeed);
+    await boot([
+      [IOAuthService, oauthStub(getManagedUsage)],
+    ] as unknown as ScopeSeed);
 
     expect(await getUsage()).toEqual({
-      kind: 'ok',
+      kind: "ok",
       summary: {
-        name: 'Weekly limit',
-        window: { duration: 1, unit: 'week' },
+        name: "Weekly limit",
+        window: { duration: 1, unit: "week" },
         used: 40,
         limit: 1000,
-        reset_at: '2030-01-01T00:00:00.000Z',
+        reset_at: "2030-01-01T00:00:00.000Z",
       },
       limits: [
-        { name: '5h limit', window: { duration: 5, unit: 'hour' }, used: 1, limit: 100 },
+        {
+          name: "5h limit",
+          window: { duration: 5, unit: "hour" },
+          used: 1,
+          limit: 100,
+        },
         { used: 2, limit: 50 },
       ],
       extra_usage: {
@@ -134,35 +155,37 @@ describe('server-v2 GET /api/v1/oauth/usage', () => {
         monthly_charge_limit_enabled: true,
         monthly_charge_limit_cents: 2000,
         monthly_used_cents: 1500,
-        currency: 'CNY',
+        currency: "CNY",
       },
     });
   });
 
-  it('passes through the error payload and forwards the provider query', async () => {
+  it("passes through the error payload and forwards the provider query", async () => {
     const getManagedUsage = vi.fn(async (_provider?: string) => ({
-      kind: 'error' as const,
-      message: 'Authorization failed.',
+      kind: "error" as const,
+      message: "Authorization failed.",
       status: 401,
     }));
-    await boot([[IOAuthService, oauthStub(getManagedUsage)]] as unknown as ScopeSeed);
+    await boot([
+      [IOAuthService, oauthStub(getManagedUsage)],
+    ] as unknown as ScopeSeed);
 
-    expect(await getUsage('?provider=managed%3Akimi-code')).toEqual({
-      kind: 'error',
-      message: 'Authorization failed.',
+    expect(await getUsage("?provider=managed%3Akimi-code")).toEqual({
+      kind: "error",
+      message: "Authorization failed.",
       status: 401,
     });
-    expect(getManagedUsage).toHaveBeenCalledWith('managed:kimi-code');
+    expect(getManagedUsage).toHaveBeenCalledWith("managed:kimi-code");
   });
 });
 
-describe('server-v2 GET /api/v1/oauth/userinfo', () => {
+describe("server-v2 GET /api/v1/oauth/userinfo", () => {
   let server: RunningServer | undefined;
   let home: string | undefined;
   let base: string;
 
   beforeEach(async () => {
-    home = await mkdtemp(join(tmpdir(), 'kimi-server-v2-oauth-userinfo-'));
+    home = await mkdtemp(join(tmpdir(), "kimi-server-v2-oauth-userinfo-"));
   });
 
   afterEach(async () => {
@@ -176,22 +199,31 @@ describe('server-v2 GET /api/v1/oauth/userinfo', () => {
     }
   });
 
-  function oauthStub(getManagedUserInfo: IOAuthServiceType['getManagedUserInfo']): IOAuthServiceType {
+  function oauthStub(
+    getManagedUserInfo: IOAuthServiceType["getManagedUserInfo"],
+  ): IOAuthServiceType {
     return {
       _serviceBrand: undefined,
       startLogin: async () => {
-        throw new Error('unused');
+        throw new Error("unused");
       },
       getFlow: () => undefined,
       cancelLogin: async () => {
-        throw new Error('unused');
+        throw new Error("unused");
       },
       logout: async () => {
-        throw new Error('unused');
+        throw new Error("unused");
       },
       status: async () => ({ loggedIn: false }),
-      refreshOAuthProviderModels: async () => ({ changed: [], unchanged: [], failed: [] }),
-      getManagedUsage: async () => ({ kind: 'error' as const, message: 'unused' }),
+      refreshOAuthProviderModels: async () => ({
+        changed: [],
+        unchanged: [],
+        failed: [],
+      }),
+      getManagedUsage: async () => ({
+        kind: "error" as const,
+        message: "unused",
+      }),
       getManagedUserInfo,
       resolveTokenProvider: () => undefined,
       getCachedAccessToken: async () => undefined,
@@ -201,16 +233,16 @@ describe('server-v2 GET /api/v1/oauth/userinfo', () => {
   async function boot(seeds: ScopeSeed): Promise<void> {
     server = await startServer({
       hostIdentity: TEST_HOST_IDENTITY,
-      host: '127.0.0.1',
+      host: "127.0.0.1",
       port: 0,
       homeDir: home,
-      logLevel: 'silent',
+      logLevel: "silent",
       seeds,
     });
     base = `http://127.0.0.1:${server.port}`;
   }
 
-  async function getUserInfo(query = ''): Promise<ManagedUserInfoResult> {
+  async function getUserInfo(query = ""): Promise<ManagedUserInfoResult> {
     const res = await fetch(`${base}/api/v1/oauth/userinfo${query}`, {
       headers: authHeaders(server as RunningServer),
     } as never);
@@ -220,64 +252,68 @@ describe('server-v2 GET /api/v1/oauth/userinfo', () => {
     return managedUserInfoResultSchema.parse(body.data);
   }
 
-  it('returns the ok profile payload in the camelCase domain shape', async () => {
+  it("returns the ok profile payload in the camelCase domain shape", async () => {
     const getManagedUserInfo = vi.fn(async () => ({
-      kind: 'ok' as const,
+      kind: "ok" as const,
       userInfo: {
-        userId: 'u_123',
-        nickname: 'moonwalker',
-        status: 'USER_STATUS_NORMAL',
-        region: 'REGION_CN',
+        userId: "u_123",
+        nickname: "moonwalker",
+        status: "USER_STATUS_NORMAL",
+        region: "REGION_CN",
         userLevel: 30,
-        userLevelName: 'Vivace',
+        userLevelName: "Vivace",
         domain: 1,
-        domainName: 'DOMAIN_EXAMPLE',
-        globalId: 'u_123',
-        avatar: 'https://example.com/avatar.png',
-        username: 'moonwalker2333',
-        email: 'user@example.com',
-        phone: { countryCode: '86', number: '176****0000' },
-        createdTime: '2026-06-11T13:26:47.561184Z',
-        lastLoginTime: '2026-07-16T03:12:03.033412Z',
+        domainName: "DOMAIN_EXAMPLE",
+        globalId: "u_123",
+        avatar: "https://example.com/avatar.png",
+        username: "moonwalker2333",
+        email: "user@example.com",
+        phone: { countryCode: "86", number: "176****0000" },
+        createdTime: "2026-06-11T13:26:47.561184Z",
+        lastLoginTime: "2026-07-16T03:12:03.033412Z",
       },
     }));
-    await boot([[IOAuthService, oauthStub(getManagedUserInfo)]] as unknown as ScopeSeed);
+    await boot([
+      [IOAuthService, oauthStub(getManagedUserInfo)],
+    ] as unknown as ScopeSeed);
 
     expect(await getUserInfo()).toEqual({
-      kind: 'ok',
+      kind: "ok",
       userInfo: {
-        userId: 'u_123',
-        nickname: 'moonwalker',
-        status: 'USER_STATUS_NORMAL',
-        region: 'REGION_CN',
+        userId: "u_123",
+        nickname: "moonwalker",
+        status: "USER_STATUS_NORMAL",
+        region: "REGION_CN",
         userLevel: 30,
-        userLevelName: 'Vivace',
+        userLevelName: "Vivace",
         domain: 1,
-        domainName: 'DOMAIN_EXAMPLE',
-        globalId: 'u_123',
-        avatar: 'https://example.com/avatar.png',
-        username: 'moonwalker2333',
-        email: 'user@example.com',
-        phone: { countryCode: '86', number: '176****0000' },
-        createdTime: '2026-06-11T13:26:47.561184Z',
-        lastLoginTime: '2026-07-16T03:12:03.033412Z',
+        domainName: "DOMAIN_EXAMPLE",
+        globalId: "u_123",
+        avatar: "https://example.com/avatar.png",
+        username: "moonwalker2333",
+        email: "user@example.com",
+        phone: { countryCode: "86", number: "176****0000" },
+        createdTime: "2026-06-11T13:26:47.561184Z",
+        lastLoginTime: "2026-07-16T03:12:03.033412Z",
       },
     });
   });
 
-  it('passes through the error payload and forwards the provider query', async () => {
+  it("passes through the error payload and forwards the provider query", async () => {
     const getManagedUserInfo = vi.fn(async (_provider?: string) => ({
-      kind: 'error' as const,
-      message: 'Authorization failed.',
+      kind: "error" as const,
+      message: "Authorization failed.",
       status: 401,
     }));
-    await boot([[IOAuthService, oauthStub(getManagedUserInfo)]] as unknown as ScopeSeed);
+    await boot([
+      [IOAuthService, oauthStub(getManagedUserInfo)],
+    ] as unknown as ScopeSeed);
 
-    expect(await getUserInfo('?provider=managed%3Akimi-code')).toEqual({
-      kind: 'error',
-      message: 'Authorization failed.',
+    expect(await getUserInfo("?provider=managed%3Akimi-code")).toEqual({
+      kind: "error",
+      message: "Authorization failed.",
       status: 401,
     });
-    expect(getManagedUserInfo).toHaveBeenCalledWith('managed:kimi-code');
+    expect(getManagedUserInfo).toHaveBeenCalledWith("managed:kimi-code");
   });
 });

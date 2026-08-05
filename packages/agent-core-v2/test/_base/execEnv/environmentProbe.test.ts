@@ -16,12 +16,12 @@
  * Windows / Scoop shim matrix, which the vendored probe shares verbatim.
  */
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from "vitest";
 
 import {
   probeHostEnvironment,
   type HostEnvironmentProbeDeps,
-} from '#/_base/execEnv/environmentProbe';
+} from "#/_base/execEnv/environmentProbe";
 
 interface StubOpts {
   readonly platform: string;
@@ -34,9 +34,9 @@ function stubDeps(opts: StubOpts): HostEnvironmentProbeDeps {
   const existing = new Set(opts.existingPaths ?? []);
   return {
     platform: opts.platform,
-    arch: 'x86_64',
-    release: '1.2.3',
-    homeDir: 'C:\\Users\\me',
+    arch: "x86_64",
+    release: "1.2.3",
+    homeDir: "C:\\Users\\me",
     env: opts.env ?? {},
     isFile: async (path: string) => existing.has(path),
     execFileText: async (file: string, args: readonly string[]) =>
@@ -45,55 +45,58 @@ function stubDeps(opts: StubOpts): HostEnvironmentProbeDeps {
 }
 
 function execFileKey(file: string, args: readonly string[]): string {
-  return [file, ...args].join('\0');
+  return [file, ...args].join("\0");
 }
 
-describe('probeHostEnvironment', () => {
-  it('resolves MSYS2 ucrt64 native git through git --exec-path', async () => {
-    const gitExe = 'C:\\msys64\\ucrt64\\bin\\git.exe';
+describe("probeHostEnvironment", () => {
+  it("resolves MSYS2 ucrt64 native git through git --exec-path", async () => {
+    const gitExe = "C:\\msys64\\ucrt64\\bin\\git.exe";
     const env = await probeHostEnvironment(
       stubDeps({
-        platform: 'win32',
-        env: { PATH: 'C:\\msys64\\ucrt64\\bin' },
+        platform: "win32",
+        env: { PATH: "C:\\msys64\\ucrt64\\bin" },
         execFileResults: {
-          [execFileKey(gitExe, ['--exec-path'])]: 'C:/msys64/ucrt64/libexec/git-core\n',
+          [execFileKey(gitExe, ["--exec-path"])]:
+            "C:/msys64/ucrt64/libexec/git-core\n",
         },
-        existingPaths: [gitExe, 'C:\\msys64\\usr\\bin\\bash.exe'],
+        existingPaths: [gitExe, "C:\\msys64\\usr\\bin\\bash.exe"],
       }),
     );
-    expect(env.shellName).toBe('bash');
-    expect(env.shellPath).toBe('C:\\msys64\\usr\\bin\\bash.exe');
+    expect(env.shellName).toBe("bash");
+    expect(env.shellPath).toBe("C:\\msys64\\usr\\bin\\bash.exe");
   });
 
-  it('resolves MSYS2 clang64 native git through git --exec-path', async () => {
-    const gitExe = 'C:\\msys64\\clang64\\bin\\git.exe';
+  it("resolves MSYS2 clang64 native git through git --exec-path", async () => {
+    const gitExe = "C:\\msys64\\clang64\\bin\\git.exe";
     const env = await probeHostEnvironment(
       stubDeps({
-        platform: 'win32',
-        env: { PATH: 'C:\\msys64\\clang64\\bin' },
+        platform: "win32",
+        env: { PATH: "C:\\msys64\\clang64\\bin" },
         execFileResults: {
-          [execFileKey(gitExe, ['--exec-path'])]: 'C:/msys64/clang64/libexec/git-core\n',
+          [execFileKey(gitExe, ["--exec-path"])]:
+            "C:/msys64/clang64/libexec/git-core\n",
         },
-        existingPaths: [gitExe, 'C:\\msys64\\usr\\bin\\bash.exe'],
+        existingPaths: [gitExe, "C:\\msys64\\usr\\bin\\bash.exe"],
       }),
     );
-    expect(env.shellName).toBe('bash');
-    expect(env.shellPath).toBe('C:\\msys64\\usr\\bin\\bash.exe');
+    expect(env.shellName).toBe("bash");
+    expect(env.shellPath).toBe("C:\\msys64\\usr\\bin\\bash.exe");
   });
 
-  it('resolves MSYS2 clangarm64 native git through git --exec-path', async () => {
-    const gitExe = 'C:\\msys64\\clangarm64\\bin\\git.exe';
+  it("resolves MSYS2 clangarm64 native git through git --exec-path", async () => {
+    const gitExe = "C:\\msys64\\clangarm64\\bin\\git.exe";
     const env = await probeHostEnvironment(
       stubDeps({
-        platform: 'win32',
-        env: { PATH: 'C:\\msys64\\clangarm64\\bin' },
+        platform: "win32",
+        env: { PATH: "C:\\msys64\\clangarm64\\bin" },
         execFileResults: {
-          [execFileKey(gitExe, ['--exec-path'])]: 'C:/msys64/clangarm64/libexec/git-core\n',
+          [execFileKey(gitExe, ["--exec-path"])]:
+            "C:/msys64/clangarm64/libexec/git-core\n",
         },
-        existingPaths: [gitExe, 'C:\\msys64\\usr\\bin\\bash.exe'],
+        existingPaths: [gitExe, "C:\\msys64\\usr\\bin\\bash.exe"],
       }),
     );
-    expect(env.shellName).toBe('bash');
-    expect(env.shellPath).toBe('C:\\msys64\\usr\\bin\\bash.exe');
+    expect(env.shellName).toBe("bash");
+    expect(env.shellPath).toBe("C:\\msys64\\usr\\bin\\bash.exe");
   });
 });

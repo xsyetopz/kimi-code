@@ -11,7 +11,7 @@
  * never collide with this namespace.
  */
 
-import { ulid } from 'ulid';
+import { ulid } from "ulid";
 
 export function newMessageId(): string {
   return `msg_${ulid()}`;

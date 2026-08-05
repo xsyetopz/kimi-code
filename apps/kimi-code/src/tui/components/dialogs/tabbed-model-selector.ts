@@ -13,27 +13,27 @@
  * AskUserQuestion dialog's tab strip) — see .agents/skills/write-tui/DESIGN.md.
  */
 
-import type { ModelAlias } from '@moonshot-ai/kimi-code-sdk';
+import type { ModelAlias } from "@moonshot-ai/kimi-code-sdk";
 import {
   Container,
   Key,
   matchesKey,
   truncateToWidth,
   type Focusable,
-} from '@moonshot-ai/pi-tui';
+} from "@moonshot-ai/pi-tui";
 
-import { currentTheme } from '#/tui/theme';
-import { renderTabStrip } from '#/tui/utils/tab-strip';
+import { currentTheme } from "#/tui/theme";
+import { renderTabStrip } from "#/tui/utils/tab-strip";
 
 import {
   ModelSelectorComponent,
   providerDisplayName,
   type ModelSelection,
   type ModelSelectorOptions,
-} from './model-selector';
+} from "./model-selector";
 
-const ALL_TAB_ID = 'all';
-const ALL_TAB_LABEL = 'All';
+const ALL_TAB_ID = "all";
+const ALL_TAB_LABEL = "All";
 
 export interface TabbedModelSelectorOptions {
   readonly models: Record<string, ModelAlias>;
@@ -63,7 +63,10 @@ interface ModelTab {
   readonly selector: ModelSelectorComponent;
 }
 
-export class TabbedModelSelectorComponent extends Container implements Focusable {
+export class TabbedModelSelectorComponent
+  extends Container
+  implements Focusable
+{
   focused = false;
   private readonly opts: TabbedModelSelectorOptions;
   private readonly tabs: readonly ModelTab[];
@@ -91,8 +94,9 @@ export class TabbedModelSelectorComponent extends Container implements Focusable
         this.syncFocusToActive();
         return;
       }
-      if (matchesKey(data, Key.shift('tab'))) {
-        this.activeIndex = (this.activeIndex - 1 + this.tabs.length) % this.tabs.length;
+      if (matchesKey(data, Key.shift("tab"))) {
+        this.activeIndex =
+          (this.activeIndex - 1 + this.tabs.length) % this.tabs.length;
         this.syncFocusToActive();
         return;
       }
@@ -117,9 +121,9 @@ export class TabbedModelSelectorComponent extends Container implements Focusable
       width,
       colors: currentTheme.palette,
     });
-    const headerEnd = inner.findIndex((line) => line === '');
+    const headerEnd = inner.findIndex((line) => line === "");
     const splitAt = headerEnd === -1 ? 3 : headerEnd;
-    const out: string[] = [...inner.slice(0, splitAt + 1), stripLine, ''];
+    const out: string[] = [...inner.slice(0, splitAt + 1), stripLine, ""];
     for (let i = splitAt + 1; i < inner.length; i++) out.push(inner[i]!);
     return out.map((line) => truncateToWidth(line, width));
   }

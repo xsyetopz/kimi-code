@@ -10,12 +10,12 @@
  * `interruptionReminder` domain projects `turn.cancel` into its own model.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { defineModel } from '#/wire/model';
-import type { KimiErrorPayload } from '#/_base/errors/serialize';
-import type { ContentPart } from '#/kosong/contract/message';
-import type { PromptOrigin } from '#/agent/contextMemory/types';
+import { defineModel } from "#/wire/model";
+import type { KimiErrorPayload } from "#/_base/errors/serialize";
+import type { ContentPart } from "#/kosong/contract/message";
+import type { PromptOrigin } from "#/agent/contextMemory/types";
 
 export interface TurnModelState {
   readonly nextTurnId: number;
@@ -23,12 +23,12 @@ export interface TurnModelState {
 }
 
 export const TurnModel = defineModel<TurnModelState>(
-  'turn',
+  "turn",
   () => ({ nextTurnId: 0, cancelledTurnIds: [] }),
   {
     reducers: {
-      'context.append_loop_event': (state, { event }) => {
-        if (event.type === 'tool.result' || event.turnId === undefined) {
+      "context.append_loop_event": (state, { event }) => {
+        if (event.type === "tool.result" || event.turnId === undefined) {
           return state;
         }
 
@@ -46,30 +46,30 @@ const turnInputShape = {
   origin: z.custom<PromptOrigin>(),
 };
 
-declare module '#/wire/types' {
+declare module "#/wire/types" {
   interface PersistedOpMap {
-    'turn.prompt': typeof promptTurn;
-    'turn.steer': typeof steerTurn;
-    'turn.cancel': typeof cancelTurn;
-    'turn.ended': typeof endTurn;
+    "turn.prompt": typeof promptTurn;
+    "turn.steer": typeof steerTurn;
+    "turn.cancel": typeof cancelTurn;
+    "turn.ended": typeof endTurn;
   }
 }
 
-export const promptTurn = TurnModel.defineOp('turn.prompt', {
+export const promptTurn = TurnModel.defineOp("turn.prompt", {
   schema: z.object(turnInputShape),
   apply: (s) => advanceTurnClock(s, s.nextTurnId + 1),
 });
 
-export const steerTurn = TurnModel.defineOp('turn.steer', {
+export const steerTurn = TurnModel.defineOp("turn.steer", {
   schema: z.object(turnInputShape),
   apply: (s) => s,
 });
 
-export const cancelTurn = TurnModel.defineOp('turn.cancel', {
+export const cancelTurn = TurnModel.defineOp("turn.cancel", {
   schema: z.object({
     turnId: z.number().optional(),
-    target: z.enum(['active', 'queued']).optional(),
-    reason: z.enum(['user_cancelled', 'aborted']).optional(),
+    target: z.enum(["active", "queued"]).optional(),
+    reason: z.enum(["user_cancelled", "aborted"]).optional(),
   }),
   apply: (s, { turnId, target }) => {
     if (target === undefined || turnId === undefined) return s;
@@ -78,10 +78,10 @@ export const cancelTurn = TurnModel.defineOp('turn.cancel', {
   },
 });
 
-export const endTurn = TurnModel.defineOp('turn.ended', {
+export const endTurn = TurnModel.defineOp("turn.ended", {
   schema: z.object({
     turnId: z.number(),
-    reason: z.enum(['completed', 'cancelled', 'failed', 'blocked']),
+    reason: z.enum(["completed", "cancelled", "failed", "blocked"]),
     error: z.custom<KimiErrorPayload>().optional(),
     durationMs: z.number().optional(),
   }),

@@ -22,11 +22,11 @@ import type {
   AppSession,
   AppTask,
   CompactionMarkerMetadata,
-} from '../types';
-import { COMPACTION_MARKER_METADATA_KEY } from '../types';
-import { i18n } from '../../i18n';
+} from "../types";
+import { COMPACTION_MARKER_METADATA_KEY } from "../types";
+import { i18n } from "../../i18n";
 
-const OPTIMISTIC_USER_MESSAGE_METADATA_KEY = 'kimiWeb.optimisticUserMessage';
+const OPTIMISTIC_USER_MESSAGE_METADATA_KEY = "kimiWeb.optimisticUserMessage";
 
 /** Tail cap for accumulated output of non-subagent (bash / background tool)
  *  tasks, whose stdout can be noisy and unbounded. Subagent progress is kept
@@ -37,7 +37,7 @@ const MAX_BACKGROUND_OUTPUT_LINES = 40;
  *  a lifecycle event re-projects a subagent the projector never saw spawn
  *  (e.g. after a page refresh, where the snapshot roster — not the WS stream —
  *  carried the real description). */
-const PLACEHOLDER_SUBAGENT_DESCRIPTION = 'Sub Agent';
+const PLACEHOLDER_SUBAGENT_DESCRIPTION = "Sub Agent";
 
 // ---------------------------------------------------------------------------
 // State
@@ -47,8 +47,8 @@ const PLACEHOLDER_SUBAGENT_DESCRIPTION = 'Sub Agent';
     while the daemon is compacting. Completion is recorded as a persistent
     divider marker message in the transcript, not as transient status. */
 export interface CompactionStatus {
-  status: 'running';
-  trigger: 'manual' | 'auto';
+  status: "running";
+  trigger: "manual" | "auto";
 }
 
 export interface KimiClientState {
@@ -124,7 +124,11 @@ function cloneState(s: KimiClientState): KimiClientState {
   };
 }
 
-function advanceSeq(state: KimiClientState, sessionId: string | undefined, seq: number | undefined): void {
+function advanceSeq(
+  state: KimiClientState,
+  sessionId: string | undefined,
+  seq: number | undefined,
+): void {
   if (sessionId !== undefined && seq !== undefined && seq > 0) {
     const prev = state.lastSeqBySession[sessionId] ?? 0;
     if (seq > prev) {
@@ -135,14 +139,14 @@ function advanceSeq(state: KimiClientState, sessionId: string | undefined, seq: 
 
 function isOptimisticUserMessage(message: AppMessage): boolean {
   return (
-    message.role === 'user' &&
+    message.role === "user" &&
     message.metadata?.[OPTIMISTIC_USER_MESSAGE_METADATA_KEY] === true
   );
 }
 
 function isCronOriginMessage(message: AppMessage): boolean {
-  const origin = message.metadata?.['origin'] as { kind?: string } | undefined;
-  return origin?.kind === 'cron_job' || origin?.kind === 'cron_missed';
+  const origin = message.metadata?.["origin"] as { kind?: string } | undefined;
+  return origin?.kind === "cron_job" || origin?.kind === "cron_missed";
 }
 
 function sameMessageContent(a: AppMessage, b: AppMessage): boolean {
@@ -159,16 +163,17 @@ function sameMessageContent(a: AppMessage, b: AppMessage): boolean {
 const MEDIA_PATH_TAG_SHAPE_RE = /^<(image|video|audio)\s+path="[^"]+"><\/\1>$/;
 
 function userMessageShape(m: AppMessage): { text: string; media: number } {
-  let text = '';
+  let text = "";
   let media = 0;
   for (const c of m.content) {
-    if (c.type === 'text') {
+    if (c.type === "text") {
       // A video/image upload reaches us (after the server resolves it) as a
       // `<video path=…></video>` text tag, not a media part — count it as media
       // and drop it from the text so the echo reconciles with our optimistic copy.
       if (MEDIA_PATH_TAG_SHAPE_RE.test(c.text.trim())) media += 1;
       else text += c.text;
-    } else if (c.type === 'image' || c.type === 'video' || c.type === 'file') media += 1;
+    } else if (c.type === "image" || c.type === "video" || c.type === "file")
+      media += 1;
   }
   return { text, media };
 }
@@ -179,7 +184,10 @@ function sameUserMessageLoosely(a: AppMessage, b: AppMessage): boolean {
   return sa.text === sb.text && sa.media === sb.media;
 }
 
-function findOptimisticUserEchoIndex(messages: AppMessage[], message: AppMessage): number {
+function findOptimisticUserEchoIndex(
+  messages: AppMessage[],
+  message: AppMessage,
+): number {
   // Prefer matching by prompt_id: image content serializes differently between
   // our optimistic copy ({source:{kind:'file',fileId}}) and the daemon's echo
   // (a resolved URL/base64), so content-equality alone lets an image steer's
@@ -189,14 +197,20 @@ function findOptimisticUserEchoIndex(messages: AppMessage[], message: AppMessage
   if (promptId !== undefined) {
     for (let i = messages.length - 1; i >= 0; i--) {
       const candidate = messages[i]!;
-      if (isOptimisticUserMessage(candidate) && candidate.promptId === promptId) {
+      if (
+        isOptimisticUserMessage(candidate) &&
+        candidate.promptId === promptId
+      ) {
         return i;
       }
     }
   }
   for (let i = messages.length - 1; i >= 0; i--) {
     const candidate = messages[i]!;
-    if (isOptimisticUserMessage(candidate) && sameMessageContent(candidate, message)) {
+    if (
+      isOptimisticUserMessage(candidate) &&
+      sameMessageContent(candidate, message)
+    ) {
       return i;
     }
   }
@@ -208,19 +222,27 @@ function findOptimisticUserEchoIndex(messages: AppMessage[], message: AppMessage
   // still reconciles into the optimistic message.
   for (let i = messages.length - 1; i >= 0; i--) {
     const candidate = messages[i]!;
-    if (isOptimisticUserMessage(candidate) && sameUserMessageLoosely(candidate, message)) {
+    if (
+      isOptimisticUserMessage(candidate) &&
+      sameUserMessageLoosely(candidate, message)
+    ) {
       return i;
     }
   }
   return -1;
 }
 
-function appendToolOutputToMessages(messages: AppMessage[], toolCallId: string, outputChunk: string): AppMessage[] {
+function appendToolOutputToMessages(
+  messages: AppMessage[],
+  toolCallId: string,
+  outputChunk: string,
+): AppMessage[] {
   let changed = false;
   const next = messages.map((message) => {
     let contentChanged = false;
     const content = message.content.map((part) => {
-      if (part.type !== 'toolUse' || part.toolCallId !== toolCallId) return part;
+      if (part.type !== "toolUse" || part.toolCallId !== toolCallId)
+        return part;
       contentChanged = true;
       return {
         ...part,
@@ -242,13 +264,13 @@ function appendToolOutputToMessages(messages: AppMessage[], toolCallId: string, 
  *  come from the protocol error domain (agent-core-v2 `ProtocolErrors`);
  *  anything unmapped falls back to the generic `title`. */
 const AGENT_ERROR_TITLE_KEYS: Readonly<Record<string, string>> = {
-  'provider.connection_error': 'connection',
-  'provider.auth_error': 'auth',
-  'provider.rate_limit': 'rateLimit',
-  'provider.overloaded': 'overloaded',
-  'provider.filtered': 'filtered',
-  'provider.api_error': 'api',
-  'context.overflow': 'contextOverflow',
+  "provider.connection_error": "connection",
+  "provider.auth_error": "auth",
+  "provider.rate_limit": "rateLimit",
+  "provider.overloaded": "overloaded",
+  "provider.filtered": "filtered",
+  "provider.api_error": "api",
+  "context.overflow": "contextOverflow",
 };
 
 interface AgentErrorRaw {
@@ -270,26 +292,28 @@ function buildAgentErrorNotice(raw: AgentErrorRaw): AppNotice {
   const t = i18n.global.t;
   const details: AppNoticeDetail[] = [];
   const push = (label: string, value: unknown): void => {
-    if (typeof value === 'number' || typeof value === 'boolean') {
+    if (typeof value === "number" || typeof value === "boolean") {
       details.push({ label, value: String(value) });
-    } else if (typeof value === 'string' && value.length > 0) {
+    } else if (typeof value === "string" && value.length > 0) {
       details.push({ label, value });
     }
   };
-  push(t('warnings.details.code'), raw.code);
+  push(t("warnings.details.code"), raw.code);
   const rawDetails = raw.details ?? {};
-  push(t('warnings.details.status'), rawDetails['statusCode']);
-  push(t('warnings.details.requestId'), rawDetails['requestId']);
-  push(t('warnings.details.errorName'), raw.name);
+  push(t("warnings.details.status"), rawDetails["statusCode"]);
+  push(t("warnings.details.requestId"), rawDetails["requestId"]);
+  push(t("warnings.details.errorName"), raw.name);
   // Keep any remaining detail fields (finishReason, rawFinishReason, …) so no
   // diagnostics the daemon sent are hidden.
   for (const [key, value] of Object.entries(rawDetails)) {
-    if (key === 'statusCode' || key === 'requestId') continue;
+    if (key === "statusCode" || key === "requestId") continue;
     push(key, value);
   }
-  const titleKey = (raw.code !== undefined ? AGENT_ERROR_TITLE_KEYS[raw.code] : undefined) ?? 'title';
+  const titleKey =
+    (raw.code !== undefined ? AGENT_ERROR_TITLE_KEYS[raw.code] : undefined) ??
+    "title";
   return {
-    severity: 'error',
+    severity: "error",
     title: t(`warnings.agentError.${titleKey}`),
     message: raw.message,
     details: details.length > 0 ? details : undefined,
@@ -323,7 +347,7 @@ export function reduceAppEvent(
 
   switch (event.type) {
     // -------------------------------------------------------------------------
-    case 'sessionCreated': {
+    case "sessionCreated": {
       const exists = next.sessions.some((s) => s.id === event.session.id);
       if (!exists) {
         next.sessions = [event.session, ...next.sessions];
@@ -332,7 +356,7 @@ export function reduceAppEvent(
     }
 
     // -------------------------------------------------------------------------
-    case 'sessionUpdated': {
+    case "sessionUpdated": {
       next.sessions = next.sessions.map((s) =>
         s.id === event.session.id ? event.session : s,
       );
@@ -340,7 +364,7 @@ export function reduceAppEvent(
     }
 
     // -------------------------------------------------------------------------
-    case 'sessionDeleted': {
+    case "sessionDeleted": {
       const id = event.sessionId;
       next.sessions = next.sessions.filter((s) => s.id !== id);
       delete next.messagesBySession[id];
@@ -357,13 +381,14 @@ export function reduceAppEvent(
     }
 
     // -------------------------------------------------------------------------
-    case 'sessionWorkChanged': {
+    case "sessionWorkChanged": {
       next.sessions = next.sessions.map((s) => {
         if (s.id !== event.sessionId) return s;
         return {
           ...s,
           busy: event.busy,
-          mainTurnActive: event.mainTurnActive ?? (event.busy ? s.mainTurnActive : false),
+          mainTurnActive:
+            event.mainTurnActive ?? (event.busy ? s.mainTurnActive : false),
           pendingInteraction: event.pendingInteraction ?? s.pendingInteraction,
           // Authoritative, not nullish-merge: an omitted last_turn_reason is
           // how the server says "no current outcome" (a fresh turn cleared
@@ -380,7 +405,7 @@ export function reduceAppEvent(
     }
 
     // -------------------------------------------------------------------------
-    case 'sessionMetaUpdated': {
+    case "sessionMetaUpdated": {
       // Lightweight meta patch — the daemon's auto-generated title (or a title
       // changed by another client) and the latest user prompt arrive via
       // session.meta.updated. We keep prior values for any field the event does
@@ -389,26 +414,31 @@ export function reduceAppEvent(
       // without a full reload.
       next.sessions = next.sessions.map((s) =>
         s.id === event.sessionId
-          ? { ...s, title: event.title ?? s.title, lastPrompt: event.lastPrompt ?? s.lastPrompt }
+          ? {
+              ...s,
+              title: event.title ?? s.title,
+              lastPrompt: event.lastPrompt ?? s.lastPrompt,
+            }
           : s,
       );
       break;
     }
 
     // -------------------------------------------------------------------------
-    case 'sessionUsageUpdated': {
+    case "sessionUsageUpdated": {
       next.sessions = next.sessions.map((s) => {
         if (s.id !== event.sessionId) return s;
         // The live model name (from agent.status.updated) rides along with usage.
         // Only overwrite model when a non-empty one is supplied.
-        const model = event.model && event.model.length > 0 ? event.model : s.model;
+        const model =
+          event.model && event.model.length > 0 ? event.model : s.model;
         return { ...s, usage: event.usage, model };
       });
       break;
     }
 
     // -------------------------------------------------------------------------
-    case 'historyCompacted': {
+    case "historyCompacted": {
       // Only advance lastSeqBySession; actual reload is triggered by client wrapper
       // when it sees this event type (before_seq is in event.beforeSeq).
       // The advanceSeq at top already handled seq update.
@@ -416,15 +446,15 @@ export function reduceAppEvent(
     }
 
     // -------------------------------------------------------------------------
-    case 'compactionStarted': {
+    case "compactionStarted": {
       next.compactionBySession = {
         ...next.compactionBySession,
-        [event.sessionId]: { status: 'running', trigger: event.trigger },
+        [event.sessionId]: { status: "running", trigger: event.trigger },
       };
       break;
     }
 
-    case 'compactionCompleted': {
+    case "compactionCompleted": {
       const sid = event.sessionId;
       const prev = next.compactionBySession[sid];
       const { [sid]: _doneEntry, ...rest } = next.compactionBySession;
@@ -440,7 +470,7 @@ export function reduceAppEvent(
         const markerId = `compaction_${sid}_${meta.seq}`;
         if (!msgs.some((m) => m.id === markerId)) {
           const marker: CompactionMarkerMetadata = {
-            trigger: prev?.trigger ?? 'auto',
+            trigger: prev?.trigger ?? "auto",
             tokensBefore: event.tokensBefore,
             tokensAfter: event.tokensAfter,
           };
@@ -449,11 +479,13 @@ export function reduceAppEvent(
             {
               id: markerId,
               sessionId: sid,
-              role: 'assistant',
-              content: event.summary ? [{ type: 'text', text: event.summary }] : [],
+              role: "assistant",
+              content: event.summary
+                ? [{ type: "text", text: event.summary }]
+                : [],
               createdAt: new Date().toISOString(),
               metadata: {
-                origin: { kind: 'compaction_summary' },
+                origin: { kind: "compaction_summary" },
                 [COMPACTION_MARKER_METADATA_KEY]: marker,
               },
             },
@@ -463,14 +495,14 @@ export function reduceAppEvent(
       break;
     }
 
-    case 'compactionCancelled': {
+    case "compactionCancelled": {
       const { [event.sessionId]: _gone, ...rest } = next.compactionBySession;
       next.compactionBySession = rest;
       break;
     }
 
     // -------------------------------------------------------------------------
-    case 'messageCreated': {
+    case "messageCreated": {
       const sid = event.message.sessionId;
       // A new message is activity on the session: bump its recency so it floats
       // to the top of its workspace group in the sidebar immediately. The daemon
@@ -478,7 +510,9 @@ export function reduceAppEvent(
       // so we rely on the message's own timestamp (and never move it backwards).
       const createdAt = event.message.createdAt;
       next.sessions = next.sessions.map((s) =>
-        s.id === sid && createdAt > s.updatedAt ? { ...s, updatedAt: createdAt } : s,
+        s.id === sid && createdAt > s.updatedAt
+          ? { ...s, updatedAt: createdAt }
+          : s,
       );
       const msgs = next.messagesBySession[sid] ?? [];
       const exists = msgs.some((m) => m.id === event.message.id);
@@ -488,8 +522,14 @@ export function reduceAppEvent(
         // optimistic user message. They must append as their own turn rather
         // than reconcile into (and replace) that optimistic echo — so skip the
         // echo lookup entirely for them.
-        if (event.message.role === 'user' && !isCronOriginMessage(event.message)) {
-          const optimisticIndex = findOptimisticUserEchoIndex(msgs, event.message);
+        if (
+          event.message.role === "user" &&
+          !isCronOriginMessage(event.message)
+        ) {
+          const optimisticIndex = findOptimisticUserEchoIndex(
+            msgs,
+            event.message,
+          );
           if (optimisticIndex !== -1) {
             const updated = [...msgs];
             const optimistic = updated[optimisticIndex]!;
@@ -512,7 +552,7 @@ export function reduceAppEvent(
     }
 
     // -------------------------------------------------------------------------
-    case 'messageUpdated': {
+    case "messageUpdated": {
       const sid = event.sessionId;
       const msgs = next.messagesBySession[sid] ?? [];
       next.messagesBySession[sid] = msgs.map((m) => {
@@ -527,7 +567,7 @@ export function reduceAppEvent(
     }
 
     // -------------------------------------------------------------------------
-    case 'assistantDelta': {
+    case "assistantDelta": {
       const sid = event.sessionId;
       const msgs = next.messagesBySession[sid] ?? [];
       next.messagesBySession[sid] = msgs.map((m) => {
@@ -536,25 +576,25 @@ export function reduceAppEvent(
         const idx = event.contentIndex;
         // Ensure the slot exists
         while (content.length <= idx) {
-          content.push({ type: 'text', text: '' });
+          content.push({ type: "text", text: "" });
         }
         const existing = content[idx]!;
         let patched: AppMessageContent;
         if (event.delta.text !== undefined) {
-          if (existing.type === 'text') {
-            patched = { type: 'text', text: existing.text + event.delta.text };
+          if (existing.type === "text") {
+            patched = { type: "text", text: existing.text + event.delta.text };
           } else {
-            patched = { type: 'text', text: event.delta.text };
+            patched = { type: "text", text: event.delta.text };
           }
         } else if (event.delta.thinking !== undefined) {
-          if (existing.type === 'thinking') {
+          if (existing.type === "thinking") {
             patched = {
-              type: 'thinking',
+              type: "thinking",
               thinking: existing.thinking + event.delta.thinking,
               signature: existing.signature,
             };
           } else {
-            patched = { type: 'thinking', thinking: event.delta.thinking };
+            patched = { type: "thinking", thinking: event.delta.thinking };
           }
         } else {
           patched = existing;
@@ -566,18 +606,24 @@ export function reduceAppEvent(
     }
 
     // -------------------------------------------------------------------------
-    case 'toolOutput': {
+    case "toolOutput": {
       const sid = event.sessionId;
       const msgs = next.messagesBySession[sid] ?? [];
-      next.messagesBySession[sid] = appendToolOutputToMessages(msgs, event.toolCallId, event.outputChunk);
+      next.messagesBySession[sid] = appendToolOutputToMessages(
+        msgs,
+        event.toolCallId,
+        event.outputChunk,
+      );
       break;
     }
 
     // -------------------------------------------------------------------------
-    case 'approvalRequested': {
+    case "approvalRequested": {
       const sid = event.sessionId;
       const list = next.approvalsBySession[sid] ?? [];
-      const exists = list.some((a) => a.approvalId === event.approval.approvalId);
+      const exists = list.some(
+        (a) => a.approvalId === event.approval.approvalId,
+      );
       if (!exists) {
         next.approvalsBySession[sid] = [...list, event.approval];
       }
@@ -587,12 +633,16 @@ export function reduceAppEvent(
         | { kind?: unknown; plan?: unknown; path?: unknown }
         | null
         | undefined;
-      if (display?.kind === 'plan_review' && typeof display.plan === 'string' && display.plan.length > 0) {
+      if (
+        display?.kind === "plan_review" &&
+        typeof display.plan === "string" &&
+        display.plan.length > 0
+      ) {
         next.planReviewByToolCallId = {
           ...next.planReviewByToolCallId,
           [event.approval.toolCallId]: {
             plan: display.plan,
-            path: typeof display.path === 'string' ? display.path : undefined,
+            path: typeof display.path === "string" ? display.path : undefined,
           },
         };
       }
@@ -600,8 +650,8 @@ export function reduceAppEvent(
     }
 
     // -------------------------------------------------------------------------
-    case 'approvalResolved':
-    case 'approvalExpired': {
+    case "approvalResolved":
+    case "approvalExpired": {
       const sid = event.sessionId;
       const aid = event.approvalId;
       const list = next.approvalsBySession[sid] ?? [];
@@ -610,10 +660,12 @@ export function reduceAppEvent(
     }
 
     // -------------------------------------------------------------------------
-    case 'questionRequested': {
+    case "questionRequested": {
       const sid = event.sessionId;
       const list = next.questionsBySession[sid] ?? [];
-      const exists = list.some((q) => q.questionId === event.question.questionId);
+      const exists = list.some(
+        (q) => q.questionId === event.question.questionId,
+      );
       if (!exists) {
         next.questionsBySession[sid] = [...list, event.question];
       }
@@ -621,8 +673,8 @@ export function reduceAppEvent(
     }
 
     // -------------------------------------------------------------------------
-    case 'questionAnswered':
-    case 'questionDismissed': {
+    case "questionAnswered":
+    case "questionDismissed": {
       const sid = event.sessionId;
       const qid = event.questionId;
       const list = next.questionsBySession[sid] ?? [];
@@ -631,7 +683,7 @@ export function reduceAppEvent(
     }
 
     // -------------------------------------------------------------------------
-    case 'taskCreated': {
+    case "taskCreated": {
       const sid = event.sessionId;
       const list = next.tasksBySession[sid] ?? [];
       const idx = list.findIndex((t) => t.id === event.task.id);
@@ -657,10 +709,13 @@ export function reduceAppEvent(
               ? previous.description
               : event.task.description,
           swarmIndex: event.task.swarmIndex ?? previous.swarmIndex,
-          parentToolCallId: event.task.parentToolCallId ?? previous.parentToolCallId,
+          parentToolCallId:
+            event.task.parentToolCallId ?? previous.parentToolCallId,
           subagentType: event.task.subagentType ?? previous.subagentType,
-          runInBackground: event.task.runInBackground ?? previous.runInBackground,
-          backgroundTaskId: event.task.backgroundTaskId ?? previous.backgroundTaskId,
+          runInBackground:
+            event.task.runInBackground ?? previous.runInBackground,
+          backgroundTaskId:
+            event.task.backgroundTaskId ?? previous.backgroundTaskId,
         };
         next.tasksBySession[sid] = patched;
       }
@@ -668,7 +723,7 @@ export function reduceAppEvent(
     }
 
     // -------------------------------------------------------------------------
-    case 'taskProgress': {
+    case "taskProgress": {
       const sid = event.sessionId;
       const list = next.tasksBySession[sid] ?? [];
       next.tasksBySession[sid] = list.map((t) => {
@@ -676,8 +731,8 @@ export function reduceAppEvent(
         // Subagent streamed output (assistant.delta) concatenates into a single
         // growing text block rather than fragmenting each delta into its own
         // line — the detail panel renders it like a thinking block.
-        if (t.kind === 'subagent' && event.kind === 'text') {
-          return { ...t, text: (t.text ?? '') + event.outputChunk };
+        if (t.kind === "subagent" && event.kind === "text") {
+          return { ...t, text: (t.text ?? "") + event.outputChunk };
         }
         const outputLines = t.outputLines ?? [];
         if (outputLines.at(-1) === event.outputChunk) return t;
@@ -687,14 +742,17 @@ export function reduceAppEvent(
           // Keep subagent progress in full (small synthesized lines) so the
           // panel shows the whole process; cap background bash/tool output,
           // which can grow without bound.
-          outputLines: t.kind === 'subagent' ? lines : lines.slice(-MAX_BACKGROUND_OUTPUT_LINES),
+          outputLines:
+            t.kind === "subagent"
+              ? lines
+              : lines.slice(-MAX_BACKGROUND_OUTPUT_LINES),
         };
       });
       break;
     }
 
     // -------------------------------------------------------------------------
-    case 'taskCompleted': {
+    case "taskCompleted": {
       const sid = event.sessionId;
       const list = next.tasksBySession[sid] ?? [];
       next.tasksBySession[sid] = list.map((t) => {
@@ -710,12 +768,13 @@ export function reduceAppEvent(
     }
 
     // -------------------------------------------------------------------------
-    case 'goalUpdated': {
+    case "goalUpdated": {
       const sid = event.sessionId;
       // Bump on every goal event — including clears — so refreshSessionGoal's
       // recovery read can detect any live event that landed mid-flight.
-      next.goalVersionBySession[sid] = (next.goalVersionBySession[sid] ?? 0) + 1;
-      if (event.goal === null || event.goal.status === 'complete') {
+      next.goalVersionBySession[sid] =
+        (next.goalVersionBySession[sid] ?? 0) + 1;
+      if (event.goal === null || event.goal.status === "complete") {
         delete next.goalBySession[sid];
       } else {
         next.goalBySession[sid] = event.goal;
@@ -724,7 +783,7 @@ export function reduceAppEvent(
     }
 
     // -------------------------------------------------------------------------
-    case 'configChanged': {
+    case "configChanged": {
       next.config = event.config;
       break;
     }
@@ -733,26 +792,26 @@ export function reduceAppEvent(
     // Provider-model catalog refresh result. The daemon already persisted the
     // new catalog; the web picks it up on the next explicit model/provider load
     // (model picker, session switch). Advance seq silently.
-    case 'modelCatalogChanged':
+    case "modelCatalogChanged":
       break;
 
     // -------------------------------------------------------------------------
     // Agent-scoped side-channel events (e.g. BTW side chat) are consumed by the
     // web layer, not the session reducer. Advance seq silently.
-    case 'agentDelta':
-    case 'agentTurnEnded':
+    case "agentDelta":
+    case "agentTurnEnded":
       break;
 
     // -------------------------------------------------------------------------
     // Prompt-level lifecycle events drive the web layer's in-flight cleanup
     // (see useKimiWebClient.processEvent), not reducer state. Advance seq
     // silently.
-    case 'promptCompleted':
-    case 'promptAborted':
+    case "promptCompleted":
+    case "promptAborted":
       break;
 
     // -------------------------------------------------------------------------
-    case 'turnActiveChanged': {
+    case "turnActiveChanged": {
       next.sessions = next.sessions.map((session) =>
         session.id === event.sessionId
           ? { ...session, mainTurnActive: event.active }
@@ -766,7 +825,7 @@ export function reduceAppEvent(
       break;
     }
 
-    case 'unknown': {
+    case "unknown": {
       // Distinguish no-op known events (sentinel _noop) from agent errors/warnings
       // and truly unknown events.
       const raw = event.raw as {
@@ -787,11 +846,14 @@ export function reduceAppEvent(
         // diagnostics (code / HTTP status / request id) for troubleshooting.
         next.warnings = [...next.warnings, buildAgentErrorNotice(raw)];
       } else if (raw && raw._agentWarning) {
-        const msg = raw.message ?? raw.code ?? 'agent warning';
-        next.warnings = [...next.warnings, `${i18n.global.t('warnings.noteLabel')}: ${msg}`];
+        const msg = raw.message ?? raw.code ?? "agent warning";
+        next.warnings = [
+          ...next.warnings,
+          `${i18n.global.t("warnings.noteLabel")}: ${msg}`,
+        ];
       } else {
         // Truly unknown — push a warning
-        const wireType = raw?.type ?? '(unknown)';
+        const wireType = raw?.type ?? "(unknown)";
         next.warnings = [...next.warnings, `Unhandled event: ${wireType}`];
       }
       break;
@@ -799,9 +861,9 @@ export function reduceAppEvent(
 
     // Workspace lifecycle events are handled in the composable (rawState), not
     // here — listed explicitly to keep the switch exhaustive.
-    case 'workspaceCreated':
-    case 'workspaceUpdated':
-    case 'workspaceDeleted':
+    case "workspaceCreated":
+    case "workspaceUpdated":
+    case "workspaceDeleted":
       break;
 
     default: {

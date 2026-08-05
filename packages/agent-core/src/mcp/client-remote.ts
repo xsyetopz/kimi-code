@@ -1,5 +1,5 @@
-import type { McpRemoteServerConfig, McpServerConfig } from '#/config/schema';
-import { ErrorCodes, KimiError } from '#/errors';
+import type { McpRemoteServerConfig, McpServerConfig } from "#/config/schema";
+import { ErrorCodes, KimiError } from "#/errors";
 
 export function buildMcpRemoteHeaders(
   config: McpRemoteServerConfig,
@@ -18,15 +18,17 @@ export function buildMcpRemoteHeaders(
     // bearer; Fetch Headers folds duplicate keys into a comma-joined value,
     // which produces an invalid auth header rather than letting the bearer win.
     for (const key of Object.keys(headers)) {
-      if (key.toLowerCase() === 'authorization') {
+      if (key.toLowerCase() === "authorization") {
         delete headers[key];
       }
     }
-    headers['Authorization'] = `Bearer ${token}`;
+    headers["Authorization"] = `Bearer ${token}`;
   }
   return Object.keys(headers).length > 0 ? headers : undefined;
 }
 
-export function isRemoteMcpConfig(config: McpServerConfig): config is McpRemoteServerConfig {
-  return config.transport === 'http' || config.transport === 'sse';
+export function isRemoteMcpConfig(
+  config: McpServerConfig,
+): config is McpRemoteServerConfig {
+  return config.transport === "http" || config.transport === "sse";
 }

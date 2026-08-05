@@ -8,10 +8,10 @@
  * transcript entries) sees the new colours on the next render frame.
  */
 
-import chalk from 'chalk';
+import chalk from "chalk";
 
-import type { ColorPalette } from './colors';
-import { darkColors } from './colors';
+import type { ColorPalette } from "./colors";
+import { darkColors } from "./colors";
 
 export type ColorToken = keyof ColorPalette;
 

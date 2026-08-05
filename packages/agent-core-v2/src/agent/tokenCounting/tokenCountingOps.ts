@@ -17,9 +17,9 @@
  * wire's reference-equality gate stays quiet.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { defineModel } from '#/wire/model';
+import { defineModel } from "#/wire/model";
 
 export interface TokenAnchor {
   readonly length: number;
@@ -32,76 +32,93 @@ export interface TokenCountingState {
   readonly tokens: number;
 }
 
-export const TokenCountingModel = defineModel<TokenCountingState>('tokenCounting', () => ({
-  anchors: [],
-  tokens: 0,
-}));
+export const TokenCountingModel = defineModel<TokenCountingState>(
+  "tokenCounting",
+  () => ({
+    anchors: [],
+    tokens: 0,
+  }),
+);
 
-declare module '#/wire/types' {
+declare module "#/wire/types" {
   interface TransientOpMap {
-    'token_counting.measured': typeof tokenCountingMeasured;
-    'token_counting.truncated': typeof tokenCountingTruncated;
-    'token_counting.rebased': typeof tokenCountingRebased;
+    "token_counting.measured": typeof tokenCountingMeasured;
+    "token_counting.truncated": typeof tokenCountingTruncated;
+    "token_counting.rebased": typeof tokenCountingRebased;
   }
 }
 
 const sizeSchema = z.object({ length: z.number(), tokens: z.number() });
 
 function statusEvent(state: TokenCountingState) {
-  return { type: 'agent.status.updated' as const, contextTokens: state.tokens };
+  return { type: "agent.status.updated" as const, contextTokens: state.tokens };
 }
 
-function anchorsEqual(a: readonly TokenAnchor[], b: readonly TokenAnchor[]): boolean {
+function anchorsEqual(
+  a: readonly TokenAnchor[],
+  b: readonly TokenAnchor[],
+): boolean {
   return a.length === b.length && a.every((anchor, i) => anchor === b[i]);
 }
 
 /** Exchange anchor: a true LLM-reported count for the whole live context. */
-export const tokenCountingMeasured = TokenCountingModel.defineOp('token_counting.measured', {
-  schema: sizeSchema,
-  persist: false,
-  apply: (s, p) => {
-    const length = normalizeAnchorLength(p.length);
-    const tokens = Math.max(0, p.tokens);
-    const anchor: TokenAnchor = { length, tokens, measured: true };
-    // Non-monotonic guard: a stale/future anchor can never outlive a newer
-    // exchange at a shorter context (e.g. after an uncascaded rewrite).
-    const anchors = [...s.anchors.filter((a) => a.length < length), anchor];
-    if (s.tokens === tokens && anchorsEqual(s.anchors, anchors)) return s;
-    return { anchors, tokens };
+export const tokenCountingMeasured = TokenCountingModel.defineOp(
+  "token_counting.measured",
+  {
+    schema: sizeSchema,
+    persist: false,
+    apply: (s, p) => {
+      const length = normalizeAnchorLength(p.length);
+      const tokens = Math.max(0, p.tokens);
+      const anchor: TokenAnchor = { length, tokens, measured: true };
+      // Non-monotonic guard: a stale/future anchor can never outlive a newer
+      // exchange at a shorter context (e.g. after an uncascaded rewrite).
+      const anchors = [...s.anchors.filter((a) => a.length < length), anchor];
+      if (s.tokens === tokens && anchorsEqual(s.anchors, anchors)) return s;
+      return { anchors, tokens };
+    },
+    toEvent: (_p, state) => statusEvent(state),
   },
-  toEvent: (_p, state) => statusEvent(state),
-});
+);
 
 /** Undo cut: drop anchors beyond the cut; `tokens` is the dispatcher's
  *  precomputed post-cut size, carried for status display only. */
-export const tokenCountingTruncated = TokenCountingModel.defineOp('token_counting.truncated', {
-  schema: sizeSchema,
-  persist: false,
-  apply: (s, p) => {
-    const length = normalizeAnchorLength(p.length);
-    const tokens = Math.max(0, p.tokens);
-    const anchors = s.anchors.filter((a) => a.length <= length);
-    if (s.tokens === tokens && anchorsEqual(s.anchors, anchors)) return s;
-    return { anchors, tokens };
+export const tokenCountingTruncated = TokenCountingModel.defineOp(
+  "token_counting.truncated",
+  {
+    schema: sizeSchema,
+    persist: false,
+    apply: (s, p) => {
+      const length = normalizeAnchorLength(p.length);
+      const tokens = Math.max(0, p.tokens);
+      const anchors = s.anchors.filter((a) => a.length <= length);
+      if (s.tokens === tokens && anchorsEqual(s.anchors, anchors)) return s;
+      return { anchors, tokens };
+    },
+    toEvent: (_p, state) => statusEvent(state),
   },
-  toEvent: (_p, state) => statusEvent(state),
-});
+);
 
 /** Clear / compaction: reset the ledger to a single anchor. Compaction passes
  *  `measured: false` — its `tokensAfter` blends a measured summary with
  *  estimated kept messages. */
-export const tokenCountingRebased = TokenCountingModel.defineOp('token_counting.rebased', {
-  schema: sizeSchema.extend({ measured: z.boolean() }),
-  persist: false,
-  apply: (s, p) => {
-    const length = normalizeAnchorLength(p.length);
-    const tokens = Math.max(0, p.tokens);
-    const anchors: readonly TokenAnchor[] = [{ length, tokens, measured: p.measured }];
-    if (s.tokens === tokens && anchorsEqual(s.anchors, anchors)) return s;
-    return { anchors, tokens };
+export const tokenCountingRebased = TokenCountingModel.defineOp(
+  "token_counting.rebased",
+  {
+    schema: sizeSchema.extend({ measured: z.boolean() }),
+    persist: false,
+    apply: (s, p) => {
+      const length = normalizeAnchorLength(p.length);
+      const tokens = Math.max(0, p.tokens);
+      const anchors: readonly TokenAnchor[] = [
+        { length, tokens, measured: p.measured },
+      ];
+      if (s.tokens === tokens && anchorsEqual(s.anchors, anchors)) return s;
+      return { anchors, tokens };
+    },
+    toEvent: (_p, state) => statusEvent(state),
   },
-  toEvent: (_p, state) => statusEvent(state),
-});
+);
 
 function normalizeAnchorLength(length: number): number {
   if (!Number.isFinite(length)) return 0;

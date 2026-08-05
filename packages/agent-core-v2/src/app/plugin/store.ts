@@ -1,11 +1,15 @@
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
-import path from 'node:path';
+import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import path from "node:path";
 
-import { Error2, ErrorCodes } from '#/errors';
+import { Error2, ErrorCodes } from "#/errors";
 
-import type { PluginCapabilityState, PluginGithubMetadata, PluginSource } from './types';
+import type {
+  PluginCapabilityState,
+  PluginGithubMetadata,
+  PluginSource,
+} from "./types";
 
-const INSTALLED_REL = path.join('plugins', 'installed.json');
+const INSTALLED_REL = path.join("plugins", "installed.json");
 
 export interface InstalledRecord {
   readonly id: string;
@@ -26,13 +30,15 @@ export interface InstalledFile {
 
 const EMPTY: InstalledFile = { version: 1, plugins: [] };
 
-export async function readInstalled(kimiHomeDir: string): Promise<InstalledFile> {
+export async function readInstalled(
+  kimiHomeDir: string,
+): Promise<InstalledFile> {
   const filePath = path.join(kimiHomeDir, INSTALLED_REL);
   let text: string;
   try {
-    text = await readFile(filePath, 'utf8');
+    text = await readFile(filePath, "utf8");
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return EMPTY;
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return EMPTY;
     throw error;
   }
   let parsed: InstalledFile;
@@ -45,7 +51,11 @@ export async function readInstalled(kimiHomeDir: string): Promise<InstalledFile>
       { cause: error, details: { path: filePath } },
     );
   }
-  if (typeof parsed !== 'object' || parsed === null || !Array.isArray(parsed.plugins)) {
+  if (
+    typeof parsed !== "object" ||
+    parsed === null ||
+    !Array.isArray(parsed.plugins)
+  ) {
     throw new Error2(
       ErrorCodes.PLUGIN_LOAD_FAILED,
       `Failed to parse ${filePath}: installed.json is not a valid InstalledFile object`,
@@ -55,11 +65,14 @@ export async function readInstalled(kimiHomeDir: string): Promise<InstalledFile>
   return parsed;
 }
 
-export async function writeInstalled(kimiHomeDir: string, data: InstalledFile): Promise<void> {
-  const dir = path.join(kimiHomeDir, 'plugins');
+export async function writeInstalled(
+  kimiHomeDir: string,
+  data: InstalledFile,
+): Promise<void> {
+  const dir = path.join(kimiHomeDir, "plugins");
   await mkdir(dir, { recursive: true });
-  const final = path.join(dir, 'installed.json');
+  const final = path.join(dir, "installed.json");
   const tmp = `${final}.tmp`;
-  await writeFile(tmp, JSON.stringify(data, null, 2), 'utf8');
+  await writeFile(tmp, JSON.stringify(data, null, 2), "utf8");
   await rename(tmp, final);
 }

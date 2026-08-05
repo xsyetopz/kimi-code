@@ -1,12 +1,12 @@
-import { createDecorator } from '../../di';
-import type { IDisposable } from '../../di';
-import type { Event } from '../../base/common/event';
+import { createDecorator } from "../../di";
+import type { IDisposable } from "../../di";
+import type { Event } from "../../base/common/event";
 import type {
   CreateTerminalRequest,
   Terminal,
   TerminalExitMessage,
   TerminalOutputMessage,
-} from '@moonshot-ai/protocol';
+} from "@moonshot-ai/protocol";
 
 export type TerminalFrame = TerminalOutputMessage | TerminalExitMessage;
 
@@ -68,12 +68,18 @@ export interface ITerminalService {
 
   write(sessionId: string, terminalId: string, data: string): Promise<void>;
 
-  resize(sessionId: string, terminalId: string, cols: number, rows: number): Promise<void>;
+  resize(
+    sessionId: string,
+    terminalId: string,
+    cols: number,
+    rows: number,
+  ): Promise<void>;
 
   close(sessionId: string, terminalId: string): Promise<{ closed: true }>;
 }
 
-export const ITerminalService = createDecorator<ITerminalService>('terminalService');
+export const ITerminalService =
+  createDecorator<ITerminalService>("terminalService");
 
 export class TerminalNotFoundError extends Error {
   readonly sessionId: string;
@@ -81,7 +87,7 @@ export class TerminalNotFoundError extends Error {
 
   constructor(sessionId: string, terminalId: string) {
     super(`terminal ${terminalId} does not exist in session ${sessionId}`);
-    this.name = 'TerminalNotFoundError';
+    this.name = "TerminalNotFoundError";
     this.sessionId = sessionId;
     this.terminalId = terminalId;
   }

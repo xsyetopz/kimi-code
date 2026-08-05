@@ -4,7 +4,7 @@
 export interface FileData {
   path: string;
   content: string;
-  encoding: 'utf-8' | 'base64';
+  encoding: "utf-8" | "base64";
   mime: string;
   sourceUrl?: string;
   languageId?: string;
@@ -29,10 +29,10 @@ export interface Session {
       flight. Background tasks and subagent turns do NOT set it. */
   busy: boolean;
   /** List-level fallback for action-required badges on unopened sessions. */
-  pendingInteraction?: 'none' | 'approval' | 'question';
+  pendingInteraction?: "none" | "approval" | "question";
   /** Main agent's latest turn outcome — drives the "aborted" tag when the
       session is quiet and the last turn was cancelled/failed. */
-  lastTurnReason?: 'completed' | 'cancelled' | 'failed';
+  lastTurnReason?: "completed" | "cancelled" | "failed";
   /** ISO timestamp for recency-based filtering (e.g. default visible sessions). */
   updatedAt?: string;
   /** Text of the most recent user prompt, used by sidebar search. */
@@ -82,9 +82,9 @@ export interface WorkspaceGroup {
 }
 
 /** Sidebar session-list scope: only the active workspace, or all workspaces. */
-export type WorkspaceScope = 'current' | 'all';
+export type WorkspaceScope = "current" | "all";
 
-export type ToolStatus = 'ok' | 'running' | 'error';
+export type ToolStatus = "ok" | "running" | "error";
 
 export interface ToolCall {
   id: string;
@@ -101,7 +101,7 @@ export interface ToolCall {
 }
 
 export interface ToolMedia {
-  kind: 'image' | 'video' | 'audio';
+  kind: "image" | "video" | "audio";
   url: string;
   path?: string;
   mimeType?: string;
@@ -112,7 +112,12 @@ export interface ToolMedia {
   fileId?: string;
 }
 
-export type AgentPhase = 'queued' | 'working' | 'suspended' | 'completed' | 'failed';
+export type AgentPhase =
+  | "queued"
+  | "working"
+  | "suspended"
+  | "completed"
+  | "failed";
 
 export interface AgentMember {
   id: string;
@@ -120,7 +125,7 @@ export interface AgentMember {
   name: string;
   subagentType?: string;
   phase: AgentPhase;
-  status: 'running' | 'completed' | 'failed' | 'cancelled';
+  status: "running" | "completed" | "failed" | "cancelled";
   /** The prompt/task the subagent was given (from the Agent tool input). */
   prompt?: string;
   summary?: string;
@@ -132,7 +137,7 @@ export interface AgentMember {
   swarmIndex?: number;
 }
 
-export type DiffKind = 'ctx' | 'add' | 'rem';
+export type DiffKind = "ctx" | "add" | "rem";
 
 export interface DiffLine {
   kind: DiffKind;
@@ -152,7 +157,7 @@ export interface DiffLine {
  * `text` is the line content WITHOUT the leading +/-/space marker.
  */
 export interface DiffViewLine {
-  type: 'add' | 'del' | 'context' | 'hunk';
+  type: "add" | "del" | "context" | "hunk";
   text: string;
   oldNo?: number;
   newNo?: number;
@@ -165,23 +170,23 @@ export interface DiffViewLine {
  * 'diff' (the original shape) and falls back to 'generic' for everything else.
  */
 export type ApprovalBlock =
-  | { kind: 'diff'; path: string; diff: DiffLine[] }
-  | { kind: 'shell'; command: string; cwd?: string; danger?: string }
-  | { kind: 'file'; path: string; content: string; language?: string }
-  | { kind: 'fileop'; op: string; path: string; detail?: string }
-  | { kind: 'url'; method?: string; url: string }
-  | { kind: 'search'; query: string; scope?: string }
-  | { kind: 'invocation'; kind2: string; name: string; description?: string }
-  | { kind: 'todo'; items: { title: string; status: string }[] }
+  | { kind: "diff"; path: string; diff: DiffLine[] }
+  | { kind: "shell"; command: string; cwd?: string; danger?: string }
+  | { kind: "file"; path: string; content: string; language?: string }
+  | { kind: "fileop"; op: string; path: string; detail?: string }
+  | { kind: "url"; method?: string; url: string }
+  | { kind: "search"; query: string; scope?: string }
+  | { kind: "invocation"; kind2: string; name: string; description?: string }
+  | { kind: "todo"; items: { title: string; status: string }[] }
   | {
-      kind: 'plan_review';
+      kind: "plan_review";
       plan: string;
       path?: string;
       options?: { label: string; description?: string }[];
     }
-  | { kind: 'generic'; summary: string };
+  | { kind: "generic"; summary: string };
 
-export type TurnRole = 'user' | 'assistant' | 'compaction' | 'cron';
+export type TurnRole = "user" | "assistant" | "compaction" | "cron";
 
 export interface FilePreviewRequest {
   path: string;
@@ -224,15 +229,15 @@ export interface CronTurnData {
  * streams in the right-side detail panel, sourced from the task rather than a
  * dedicated block. */
 export type TurnBlock =
-  | { kind: 'text'; text: string }
-  | { kind: 'thinking'; thinking: string }
-  | { kind: 'tool'; tool: ToolCall };
+  | { kind: "text"; text: string }
+  | { kind: "thinking"; thinking: string }
+  | { kind: "tool"; tool: ToolCall };
 
 /** One attachment on a user turn: an uploaded file, image or video. Images
     and pasted media carry no name; the chip falls back to a generic label.
     `url` is browser-loadable (a data URL, or the authed file URL). */
 export interface TurnAttachment {
-  kind: 'image' | 'video' | 'file';
+  kind: "image" | "video" | "file";
   url: string;
   fileId?: string;
   name?: string;
@@ -259,7 +264,11 @@ export interface ChatTurn {
   /** Compaction divider data (role 'compaction'): the transcript keeps all
       prior turns and renders this as a separator line; `text` holds the
       LLM-generated summary, opened in the right-side panel on click. */
-  compaction?: { trigger?: 'manual' | 'auto'; tokensBefore?: number; tokensAfter?: number };
+  compaction?: {
+    trigger?: "manual" | "auto";
+    tokensBefore?: number;
+    tokensAfter?: number;
+  };
   /** ISO timestamp when the message was created (used for the user bubble timestamp). */
   createdAt?: string;
   /** Client-side measured duration from turn.started to turn.ended (ms). */
@@ -282,10 +291,10 @@ export interface ChatTurn {
  */
 export interface TodoView {
   title: string;
-  status: 'pending' | 'in_progress' | 'done';
+  status: "pending" | "in_progress" | "done";
 }
 
-export type TaskState = 'run' | 'done' | 'fail';
+export type TaskState = "run" | "done" | "fail";
 
 export interface TaskItem {
   id: string;
@@ -311,7 +320,7 @@ export interface ConversationStatus {
   modelId: string;
   ctxUsed: number;
   ctxMax: number;
-  permission: 'manual' | 'auto' | 'yolo';
+  permission: "manual" | "auto" | "yolo";
   branch: string;
   /** Working directory of the active session */
   cwd: string;
@@ -321,7 +330,13 @@ export interface ConversationStatus {
 
 /** Kind of the global right-side detail layer. Only one detail is visible at a
  *  time; opening a new one closes the previous. */
-export type DetailTarget = 'file' | 'diff' | 'thinking' | 'compaction' | 'agent' | 'btw';
+export type DetailTarget =
+  | "file"
+  | "diff"
+  | "thinking"
+  | "compaction"
+  | "agent"
+  | "btw";
 
 export interface ActivationBadges {
   plan: boolean;
@@ -336,7 +351,12 @@ export interface QueuedPromptView {
   attachmentCount: number;
   /** Attachments waiting with this prompt, with resolved URLs for thumbnails
       (file attachments render an icon chip, no thumbnail). */
-  attachments?: { fileId: string; kind: 'image' | 'video' | 'file'; url: string; name?: string }[];
+  attachments?: {
+    fileId: string;
+    kind: "image" | "video" | "file";
+    url: string;
+    name?: string;
+  }[];
 }
 
 /** Horizontal alignment of the conversation reading column within the pane. */
@@ -352,7 +372,12 @@ export interface UIQuestion {
     question: string;
     header?: string;
     body?: string;
-    options: { id: string; label: string; description?: string; recommended?: boolean }[];
+    options: {
+      id: string;
+      label: string;
+      description?: string;
+      recommended?: boolean;
+    }[];
     multiSelect?: boolean;
     allowOther?: boolean;
     otherLabel?: string;
@@ -361,13 +386,13 @@ export interface UIQuestion {
 
 /** Activity state for the active session. */
 export type ActivityState =
-  | 'idle'
-  | 'running'
-  | 'awaiting-approval'
-  | 'awaiting-question';
+  | "idle"
+  | "running"
+  | "awaiting-approval"
+  | "awaiting-question";
 
 /** Connection state for the WebSocket. */
-export type ConnectionState = 'connecting' | 'connected' | 'disconnected';
+export type ConnectionState = "connecting" | "connected" | "disconnected";
 
 /** Permission mode (client-side policy). */
-export type PermissionMode = 'manual' | 'auto' | 'yolo';
+export type PermissionMode = "manual" | "auto" | "yolo";

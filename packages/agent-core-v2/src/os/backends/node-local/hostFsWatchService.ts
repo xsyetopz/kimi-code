@@ -6,11 +6,15 @@
  * handle closes it. Bound at App scope.
  */
 
-import { FSWatcher } from 'chokidar';
+import { FSWatcher } from "chokidar";
 
-import { Emitter, type Event } from '#/_base/event';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { onUnexpectedError } from '#/_base/errors/unexpectedError';
+import { Emitter, type Event } from "#/_base/event";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { onUnexpectedError } from "#/_base/errors/unexpectedError";
 
 import {
   type HostFsChange,
@@ -19,9 +23,10 @@ import {
   type HostFsWatchOptions,
   type IHostFsWatchHandle,
   IHostFsWatchService,
-} from '#/os/interface/hostFsWatch';
+} from "#/os/interface/hostFsWatch";
 
-const DEFAULT_IGNORED = (p: string): boolean => /(?:^|[/\\])\.git(?:$|[/\\])/.test(p);
+const DEFAULT_IGNORED = (p: string): boolean =>
+  /(?:^|[/\\])\.git(?:$|[/\\])/.test(p);
 
 class HostFsWatchHandle implements IHostFsWatchHandle {
   readonly onDidChange: Event<HostFsChange>;
@@ -40,11 +45,11 @@ class HostFsWatchHandle implements IHostFsWatchHandle {
       depth: options?.recursive === false ? 0 : undefined,
       ignored: options?.ignored ?? DEFAULT_IGNORED,
     });
-    this.watcher.on('all', (eventName: string, absPath: string) => {
+    this.watcher.on("all", (eventName: string, absPath: string) => {
       const mapped = mapChokidarEvent(eventName, absPath);
       if (mapped !== undefined) this.emitter.fire(mapped);
     });
-    this.watcher.on('error', (error: unknown) => {
+    this.watcher.on("error", (error: unknown) => {
       onUnexpectedError(error);
     });
     this.watcher.add(path);
@@ -66,7 +71,10 @@ export class HostFsWatchService implements IHostFsWatchService {
   }
 }
 
-function mapChokidarEvent(eventName: string, absPath: string): HostFsChange | undefined {
+function mapChokidarEvent(
+  eventName: string,
+  absPath: string,
+): HostFsChange | undefined {
   const mapped = mapActionAndKind(eventName);
   if (mapped === undefined) return undefined;
   return { path: absPath, action: mapped.action, kind: mapped.kind };
@@ -76,16 +84,16 @@ function mapActionAndKind(
   eventName: string,
 ): { action: HostFsChangeAction; kind: HostFsChangeKind } | undefined {
   switch (eventName) {
-    case 'add':
-      return { action: 'created', kind: 'file' };
-    case 'addDir':
-      return { action: 'created', kind: 'directory' };
-    case 'change':
-      return { action: 'modified', kind: 'file' };
-    case 'unlink':
-      return { action: 'deleted', kind: 'file' };
-    case 'unlinkDir':
-      return { action: 'deleted', kind: 'directory' };
+    case "add":
+      return { action: "created", kind: "file" };
+    case "addDir":
+      return { action: "created", kind: "directory" };
+    case "change":
+      return { action: "modified", kind: "file" };
+    case "unlink":
+      return { action: "deleted", kind: "file" };
+    case "unlinkDir":
+      return { action: "deleted", kind: "directory" };
     default:
       return undefined;
   }
@@ -96,5 +104,5 @@ registerScopedService(
   IHostFsWatchService,
   HostFsWatchService,
   ScopeActivation.OnScopeCreated,
-  'hostFsWatch',
+  "hostFsWatch",
 );

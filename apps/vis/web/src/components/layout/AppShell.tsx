@@ -1,9 +1,13 @@
-import type { ReactNode } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
-import { SessionRail } from '../sessions/SessionRail';
-import { ZipDropOverlay } from '../shared/ZipDropOverlay';
-import { useTheme, type ThemeChoice, type ResolvedTheme } from '../../hooks/useTheme';
+import type { ReactNode } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
+import { SessionRail } from "../sessions/SessionRail";
+import { ZipDropOverlay } from "../shared/ZipDropOverlay";
+import {
+  useTheme,
+  type ThemeChoice,
+  type ResolvedTheme,
+} from "../../hooks/useTheme";
 
 interface AppShellProps {
   children: ReactNode;
@@ -61,7 +65,7 @@ function ThemeToggle({
   resolved: ResolvedTheme;
   onCycle: () => void;
 }) {
-  const label = choice === 'auto' ? `auto · ${resolved}` : choice;
+  const label = choice === "auto" ? `auto · ${resolved}` : choice;
   const title = `Theme: ${label}. Click to cycle (auto → light → dark → auto).`;
   return (
     <button
@@ -70,7 +74,13 @@ function ThemeToggle({
       title={title}
       aria-label={`Theme ${label}`}
     >
-      {choice === 'auto' ? <AutoIcon /> : resolved === 'light' ? <SunIcon /> : <MoonIcon />}
+      {choice === "auto" ? (
+        <AutoIcon />
+      ) : resolved === "light" ? (
+        <SunIcon />
+      ) : (
+        <MoonIcon />
+      )}
       <span className="tabular">{label}</span>
     </button>
   );
@@ -79,9 +89,21 @@ function ThemeToggle({
 function LogoMark() {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-      <rect x="1" y="1" width="6" height="6" fill="var(--color-cat-conversation)" />
+      <rect
+        x="1"
+        y="1"
+        width="6"
+        height="6"
+        fill="var(--color-cat-conversation)"
+      />
       <rect x="9" y="1" width="6" height="6" fill="var(--color-cat-subagent)" />
-      <rect x="1" y="9" width="6" height="6" fill="var(--color-cat-ephemeral)" />
+      <rect
+        x="1"
+        y="9"
+        width="6"
+        height="6"
+        fill="var(--color-cat-ephemeral)"
+      />
       <rect x="9" y="9" width="6" height="6" fill="var(--color-cat-approval)" />
     </svg>
   );
@@ -97,7 +119,14 @@ function RefreshIcon() {
         fill="none"
         strokeLinecap="square"
       />
-      <path d="M7 1 L10 3 L7 5" stroke="currentColor" strokeWidth="1.2" fill="none" strokeLinecap="square" strokeLinejoin="miter" />
+      <path
+        d="M7 1 L10 3 L7 5"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        fill="none"
+        strokeLinecap="square"
+        strokeLinejoin="miter"
+      />
     </svg>
   );
 }
@@ -134,11 +163,15 @@ function MoonIcon() {
 function AutoIcon() {
   return (
     <svg width="11" height="11" viewBox="0 0 12 12" aria-hidden="true">
-      <path
-        d="M6 1 A5 5 0 1 1 6 11 Z"
-        fill="currentColor"
+      <path d="M6 1 A5 5 0 1 1 6 11 Z" fill="currentColor" />
+      <circle
+        cx="6"
+        cy="6"
+        r="4.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1"
       />
-      <circle cx="6" cy="6" r="4.5" fill="none" stroke="currentColor" strokeWidth="1" />
     </svg>
   );
 }

@@ -5,16 +5,16 @@ export type {
   BrandedService,
   IConstructorSignature,
   GetLeadingNonServiceArgs,
-} from './instantiation';
+} from "./instantiation";
 export {
   createDecorator,
   refineServiceDecorator,
   IInstantiationService,
-} from './instantiation';
-export { SyncDescriptor } from './descriptors';
-export type { SyncDescriptor0 } from './descriptors';
-export { ServiceCollection } from './serviceCollection';
-export { InstantiationService } from './instantiationService';
+} from "./instantiation";
+export { SyncDescriptor } from "./descriptors";
+export type { SyncDescriptor0 } from "./descriptors";
+export { ServiceCollection } from "./serviceCollection";
+export { InstantiationService } from "./instantiationService";
 export {
   Disposable,
   DisposableStore,
@@ -39,12 +39,12 @@ export {
   setDisposableTracker,
   trackDisposable,
   markAsDisposed,
-} from './lifecycle';
-export type { IDisposable, IDisposableTracker, IReference } from './lifecycle';
-export { CyclicDependencyError } from './errors';
+} from "./lifecycle";
+export type { IDisposable, IDisposableTracker, IReference } from "./lifecycle";
+export { CyclicDependencyError } from "./errors";
 export {
   InstantiationType,
   registerSingleton,
   getSingletonServiceDescriptors,
   _clearRegistryForTests,
-} from './extensions';
+} from "./extensions";

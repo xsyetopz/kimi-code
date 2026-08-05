@@ -19,10 +19,13 @@
  *     4-mode taxonomy ({@link ACP_MODES}).
  */
 
-import type { SessionConfigOption, SessionConfigSelectOption } from '@agentclientprotocol/sdk';
+import type {
+  SessionConfigOption,
+  SessionConfigSelectOption,
+} from "@agentclientprotocol/sdk";
 
-import { ACP_MODES, type AcpModeId } from './modes';
-import type { AcpModelEntry } from './model-catalog';
+import { ACP_MODES, type AcpModeId } from "./modes";
+import type { AcpModelEntry } from "./model-catalog";
 
 /**
  * Project the catalog into the `SessionConfigOption` `model` arm. One option
@@ -35,13 +38,15 @@ export function buildModelOption(
   const options: SessionConfigSelectOption[] = models.map((model) => ({
     value: model.id,
     name: model.name,
-    ...(model.description !== undefined ? { description: model.description } : {}),
+    ...(model.description !== undefined
+      ? { description: model.description }
+      : {}),
   }));
   return {
-    type: 'select',
-    id: 'model',
-    name: 'Model',
-    category: 'model',
+    type: "select",
+    id: "model",
+    name: "Model",
+    category: "model",
     currentValue: currentBaseModelId,
     options,
   };
@@ -61,18 +66,22 @@ export function buildThinkingOption(
   alwaysThinking = false,
   supportEfforts?: readonly string[],
 ): SessionConfigOption {
-  const values = supportEfforts !== undefined ? ['off', ...supportEfforts] : ['off', 'on'];
+  const values =
+    supportEfforts !== undefined ? ["off", ...supportEfforts] : ["off", "on"];
   const options: SessionConfigSelectOption[] = values
-    .filter((value) => !(alwaysThinking && value === 'off'))
+    .filter((value) => !(alwaysThinking && value === "off"))
     .map((value) => ({ value, name: thinkingOptionName(value) }));
   if (!options.some((option) => option.value === currentLevel)) {
-    options.push({ value: currentLevel, name: thinkingOptionName(currentLevel) });
+    options.push({
+      value: currentLevel,
+      name: thinkingOptionName(currentLevel),
+    });
   }
   return {
-    type: 'select',
-    id: 'thinking',
-    name: 'Thinking',
-    category: 'thought_level',
+    type: "select",
+    id: "thinking",
+    name: "Thinking",
+    category: "thought_level",
     currentValue: currentLevel,
     options,
   };
@@ -95,10 +104,10 @@ export function buildModeOption(currentModeId: AcpModeId): SessionConfigOption {
     description: mode.description,
   }));
   return {
-    type: 'select',
-    id: 'mode',
-    name: 'Mode',
-    category: 'mode',
+    type: "select",
+    id: "mode",
+    name: "Mode",
+    category: "mode",
     currentValue: currentModeId,
     options,
   };
@@ -125,12 +134,23 @@ export function buildSessionConfigOptions(
   const currentModelEntry = models.find((m) => m.id === currentBaseModelId);
   const showThinking = currentModelEntry?.thinkingSupported === true;
   const alwaysThinking = currentModelEntry?.alwaysThinking === true;
-  const out: SessionConfigOption[] = [buildModelOption(models, currentBaseModelId)];
+  const out: SessionConfigOption[] = [
+    buildModelOption(models, currentBaseModelId),
+  ];
   if (showThinking) {
     // Always-thinking models render locked-on regardless of the session's
     // recorded level — the runtime clamps the same way.
-    const level = alwaysThinking && currentThinkingLevel === 'off' ? 'on' : currentThinkingLevel;
-    out.push(buildThinkingOption(level, alwaysThinking, currentModelEntry?.supportEfforts));
+    const level =
+      alwaysThinking && currentThinkingLevel === "off"
+        ? "on"
+        : currentThinkingLevel;
+    out.push(
+      buildThinkingOption(
+        level,
+        alwaysThinking,
+        currentModelEntry?.supportEfforts,
+      ),
+    );
   }
   out.push(buildModeOption(currentModeId));
   return out;

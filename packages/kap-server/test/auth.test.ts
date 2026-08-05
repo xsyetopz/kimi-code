@@ -1,13 +1,16 @@
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
-import { authSummarySchema, type AuthSummary } from '@moonshot-ai/agent-core-v2/app/authLegacy/authLegacy';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import {
+  authSummarySchema,
+  type AuthSummary,
+} from "@moonshot-ai/agent-core-v2/app/authLegacy/authLegacy";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { type RunningServer, startServer } from '../src/start';
-import { TEST_HOST_IDENTITY } from './helpers/hostIdentity';
-import { authedFetch } from './helpers/auth';
+import { type RunningServer, startServer } from "../src/start";
+import { TEST_HOST_IDENTITY } from "./helpers/hostIdentity";
+import { authedFetch } from "./helpers/auth";
 
 interface Envelope<T> {
   code: number;
@@ -16,13 +19,13 @@ interface Envelope<T> {
   request_id: string;
 }
 
-describe('server-v2 GET /api/v1/auth', () => {
+describe("server-v2 GET /api/v1/auth", () => {
   let server: RunningServer | undefined;
   let home: string | undefined;
   let base: string;
 
   beforeEach(async () => {
-    home = await mkdtemp(join(tmpdir(), 'kimi-server-v2-auth-'));
+    home = await mkdtemp(join(tmpdir(), "kimi-server-v2-auth-"));
   });
 
   afterEach(async () => {
@@ -31,34 +34,43 @@ describe('server-v2 GET /api/v1/auth', () => {
       server = undefined;
     }
     if (home !== undefined) {
-      await rm(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 } as never);
+      await rm(home, {
+        recursive: true,
+        force: true,
+        maxRetries: 5,
+        retryDelay: 50,
+      } as never);
       home = undefined;
     }
   });
 
   async function boot(toml?: string): Promise<void> {
     if (toml !== undefined) {
-      await writeFile(join(home as string, 'config.toml'), toml, 'utf-8');
+      await writeFile(join(home as string, "config.toml"), toml, "utf-8");
     }
     server = await startServer({
       hostIdentity: TEST_HOST_IDENTITY,
-      host: '127.0.0.1',
+      host: "127.0.0.1",
       port: 0,
       homeDir: home,
-      logLevel: 'silent',
+      logLevel: "silent",
     });
     base = `http://127.0.0.1:${server.port}`;
   }
 
   async function getAuth(): Promise<AuthSummary> {
-    const res = await authedFetch(server as RunningServer, base, '/api/v1/auth');
+    const res = await authedFetch(
+      server as RunningServer,
+      base,
+      "/api/v1/auth",
+    );
     expect(res.status).toBe(200);
     const body = (await res.json()) as Envelope<AuthSummary>;
     expect(body.code).toBe(0);
     return authSummarySchema.parse(body.data);
   }
 
-  it('returns ready=false with an empty snapshot on empty config', async () => {
+  it("returns ready=false with an empty snapshot on empty config", async () => {
     await boot();
     expect(await getAuth()).toEqual({
       ready: false,
@@ -68,43 +80,43 @@ describe('server-v2 GET /api/v1/auth', () => {
     });
   });
 
-  it('returns ready=true when provider + api_key + default_model are set', async () => {
+  it("returns ready=true when provider + api_key + default_model are set", async () => {
     await boot(
       [
         'default_model = "x"',
-        '',
-        '[providers.x]',
+        "",
+        "[providers.x]",
         'type = "kimi"',
         'api_key = "sk-test"',
-        '',
-        '[models.x]',
+        "",
+        "[models.x]",
         'provider = "x"',
         'model = "x"',
-        'max_context_size = 1000',
-        '',
-      ].join('\n'),
+        "max_context_size = 1000",
+        "",
+      ].join("\n"),
     );
     expect(await getAuth()).toEqual({
       ready: true,
       providers_count: 1,
-      default_model: 'x',
+      default_model: "x",
       managed_provider: null,
     });
   });
 
-  it('returns ready=false when a provider exists but default_model is missing', async () => {
+  it("returns ready=false when a provider exists but default_model is missing", async () => {
     await boot(
       [
-        '[providers.x]',
+        "[providers.x]",
         'type = "kimi"',
         'api_key = "sk-test"',
-        '',
-        '[models.x]',
+        "",
+        "[models.x]",
         'provider = "x"',
         'model = "x"',
-        'max_context_size = 1000',
-        '',
-      ].join('\n'),
+        "max_context_size = 1000",
+        "",
+      ].join("\n"),
     );
     const summary = await getAuth();
     expect(summary.ready).toBe(false);
@@ -113,23 +125,23 @@ describe('server-v2 GET /api/v1/auth', () => {
     expect(summary.managed_provider).toBeNull();
   });
 
-  it('surfaces managed_provider.unauthenticated without a cached token', async () => {
+  it("surfaces managed_provider.unauthenticated without a cached token", async () => {
     await boot(
       [
         '[providers."managed:kimi-code"]',
         'type = "kimi"',
         'base_url = "https://example.test/v1"',
-        '',
+        "",
         '[providers."managed:kimi-code".oauth]',
         'storage = "file"',
         'key = "oauth/kimi-code"',
-        '',
-      ].join('\n'),
+        "",
+      ].join("\n"),
     );
     const summary = await getAuth();
     expect(summary.managed_provider).toEqual({
-      name: 'managed:kimi-code',
-      status: 'unauthenticated',
+      name: "managed:kimi-code",
+      status: "unauthenticated",
     });
     // No default_model → still not ready, even though the provider exists.
     expect(summary.ready).toBe(false);

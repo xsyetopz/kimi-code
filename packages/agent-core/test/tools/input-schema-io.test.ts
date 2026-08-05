@@ -12,12 +12,15 @@
  * exposed schema, and a minimal `{}` call passes runtime argument validation.
  */
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from "vitest";
 
-import { FLAG_DEFINITIONS, FlagResolver } from '../../src/flags';
-import { TaskListTool } from '../../src/tools/background/task-list';
-import { compileToolArgsValidator, validateToolArgs } from '../../src/tools/args-validator';
-import { AskUserQuestionTool } from '../../src/tools/builtin/collaboration/ask-user';
+import { FLAG_DEFINITIONS, FlagResolver } from "../../src/flags";
+import { TaskListTool } from "../../src/tools/background/task-list";
+import {
+  compileToolArgsValidator,
+  validateToolArgs,
+} from "../../src/tools/args-validator";
+import { AskUserQuestionTool } from "../../src/tools/builtin/collaboration/ask-user";
 
 /** Collect every `required` array nested anywhere inside a JSON Schema. */
 function collectRequired(schema: unknown, acc: string[] = []): string[] {
@@ -25,10 +28,10 @@ function collectRequired(schema: unknown, acc: string[] = []): string[] {
     for (const item of schema) collectRequired(item, acc);
     return acc;
   }
-  if (typeof schema !== 'object' || schema === null) return acc;
+  if (typeof schema !== "object" || schema === null) return acc;
   for (const [key, value] of Object.entries(schema)) {
-    if (key === 'required' && Array.isArray(value)) {
-      for (const name of value) if (typeof name === 'string') acc.push(name);
+    if (key === "required" && Array.isArray(value)) {
+      for (const name of value) if (typeof name === "string") acc.push(name);
     } else {
       collectRequired(value, acc);
     }
@@ -42,86 +45,92 @@ function askUserQuestionTool(): AskUserQuestionTool {
   } as never);
 }
 
-describe('builtin tool input JSON Schema', () => {
-  it('keeps AskUserQuestion defaulted fields out of `required`', () => {
+describe("builtin tool input JSON Schema", () => {
+  it("keeps AskUserQuestion defaulted fields out of `required`", () => {
     const schema = askUserQuestionTool().parameters;
     const required = collectRequired(schema);
     // `background`, `header`, `multi_select` and option `description` all carry `.default()`
     // and must therefore stay optional in the model-facing schema.
-    expect(required).not.toContain('background');
-    expect(required).not.toContain('header');
-    expect(required).not.toContain('multi_select');
-    expect(required).not.toContain('description');
+    expect(required).not.toContain("background");
+    expect(required).not.toContain("header");
+    expect(required).not.toContain("multi_select");
+    expect(required).not.toContain("description");
   });
 
-  it('keeps TaskList defaulted field out of `required`', () => {
+  it("keeps TaskList defaulted field out of `required`", () => {
     const schema = new TaskListTool({} as never).parameters;
-    expect(collectRequired(schema)).not.toContain('active_only');
+    expect(collectRequired(schema)).not.toContain("active_only");
   });
 
-  it('accepts an empty `{}` TaskList call through runtime argument validation', () => {
+  it("accepts an empty `{}` TaskList call through runtime argument validation", () => {
     const tool = new TaskListTool({} as never);
     const validator = compileToolArgsValidator(tool.parameters);
     // `TaskList()` with no arguments is the documented default usage.
     expect(validateToolArgs(validator, {})).toBeNull();
   });
 
-  it('rejects an unknown top-level argument through runtime validation', () => {
+  it("rejects an unknown top-level argument through runtime validation", () => {
     const tool = askUserQuestionTool();
     const validator = compileToolArgsValidator(tool.parameters);
     const question = {
-      question: 'Which?',
+      question: "Which?",
       options: [
-        { label: 'A', description: '' },
-        { label: 'B', description: '' },
+        { label: "A", description: "" },
+        { label: "B", description: "" },
       ],
     };
     // A misspelled / hallucinated argument must surface as an invalid-args
     // error rather than being silently accepted and dropped.
-    expect(validateToolArgs(validator, { questions: [question], bogus: true })).not.toBeNull();
+    expect(
+      validateToolArgs(validator, { questions: [question], bogus: true }),
+    ).not.toBeNull();
   });
 
-  it('rejects an unknown nested argument through runtime validation', () => {
+  it("rejects an unknown nested argument through runtime validation", () => {
     const tool = askUserQuestionTool();
     const validator = compileToolArgsValidator(tool.parameters);
     const question = {
-      question: 'Which?',
+      question: "Which?",
       options: [
-        { label: 'A', description: '' },
-        { label: 'B', description: '' },
+        { label: "A", description: "" },
+        { label: "B", description: "" },
       ],
       bogus: true,
     };
     // The closed-object guard must hold at every nesting level.
-    expect(validateToolArgs(validator, { questions: [question] })).not.toBeNull();
+    expect(
+      validateToolArgs(validator, { questions: [question] }),
+    ).not.toBeNull();
   });
 
-  it('rejects an empty option label through runtime validation (minLength reaches AJV)', () => {
+  it("rejects an empty option label through runtime validation (minLength reaches AJV)", () => {
     const tool = askUserQuestionTool();
     const validator = compileToolArgsValidator(tool.parameters);
     const question = {
-      question: 'Which?',
+      question: "Which?",
       options: [
-        { label: '', description: '' },
-        { label: 'B', description: '' },
+        { label: "", description: "" },
+        { label: "B", description: "" },
       ],
     };
-    expect(validateToolArgs(validator, { questions: [question] })).not.toBeNull();
+    expect(
+      validateToolArgs(validator, { questions: [question] }),
+    ).not.toBeNull();
   });
 
-  it('keeps the AskUserQuestion JSON Schema valid despite the zod uniqueness refine', () => {
+  it("keeps the AskUserQuestion JSON Schema valid despite the zod uniqueness refine", () => {
     // The uniqueness constraint (unique question texts, unique labels per
     // question) is a zod refine — unrepresentable in JSON Schema, so AJV must
     // still ACCEPT duplicates here. Enforcement lives in the tool's execution
     // path, not in the model-facing schema.
     const tool = askUserQuestionTool();
-    expect(tool.parameters).toMatchObject({ type: 'object' });
+    expect(tool.parameters).toMatchObject({ type: "object" });
     const validator = compileToolArgsValidator(tool.parameters);
     const question = {
-      question: 'Which?',
+      question: "Which?",
       options: [
-        { label: 'A', description: '' },
-        { label: 'A', description: '' },
+        { label: "A", description: "" },
+        { label: "A", description: "" },
       ],
     };
     expect(validateToolArgs(validator, { questions: [question] })).toBeNull();

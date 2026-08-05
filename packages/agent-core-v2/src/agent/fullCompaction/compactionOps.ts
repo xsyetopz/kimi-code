@@ -33,75 +33,87 @@
  * ride the per-agent `wire.jsonl` journal restored by `IWireService`.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { defineModel } from '#/wire/model';
+import { defineModel } from "#/wire/model";
 
-import type { CompactionBeginData, CompactionResult } from './types';
+import type { CompactionBeginData, CompactionResult } from "./types";
 
 export interface CompactionStartedEvent {
-  readonly type: 'compaction.started';
-  readonly trigger: 'manual' | 'auto';
+  readonly type: "compaction.started";
+  readonly trigger: "manual" | "auto";
   readonly instruction?: string;
 }
 
 export interface CompactionBlockedEvent {
-  readonly type: 'compaction.blocked';
+  readonly type: "compaction.blocked";
   readonly turnId?: number;
 }
 
 export interface CompactionCancelledEvent {
-  readonly type: 'compaction.cancelled';
+  readonly type: "compaction.cancelled";
 }
 
 export interface CompactionCompletedEvent {
-  readonly type: 'compaction.completed';
+  readonly type: "compaction.completed";
   readonly result: CompactionResult;
 }
 
-export type CompactionPhase = 'idle' | 'running' | 'cancelled' | 'completed';
+export type CompactionPhase = "idle" | "running" | "cancelled" | "completed";
 
 export interface CompactionState {
   readonly phase: CompactionPhase;
 }
 
-export const CompactionModel = defineModel<CompactionState>('fullCompaction', () => ({
-  phase: 'idle',
-}));
-
-declare module '#/app/event/eventBus' {
-  interface DomainEventMap {
-    'compaction.started': CompactionStartedEvent;
-    'compaction.blocked': CompactionBlockedEvent;
-    'compaction.cancelled': CompactionCancelledEvent;
-    'compaction.completed': CompactionCompletedEvent;
-  }
-}
-
-declare module '#/wire/types' {
-  interface PersistedOpMap {
-    'full_compaction.begin': typeof fullCompactionBegin;
-    'full_compaction.cancel': typeof fullCompactionCancel;
-    'full_compaction.complete': typeof fullCompactionComplete;
-  }
-}
-
-export const fullCompactionBegin = CompactionModel.defineOp('full_compaction.begin', {
-  schema: z.custom<CompactionBeginData>(),
-  apply: (s) => (s.phase === 'running' ? s : { phase: 'running' }),
-  toEvent: (p) => ({
-    type: 'compaction.started' as const,
-    trigger: p.source,
-    instruction: p.instruction,
+export const CompactionModel = defineModel<CompactionState>(
+  "fullCompaction",
+  () => ({
+    phase: "idle",
   }),
-});
+);
 
-export const fullCompactionCancel = CompactionModel.defineOp('full_compaction.cancel', {
-  schema: z.object({}),
-  apply: (s) => (s.phase === 'idle' ? s : { phase: 'idle' }),
-});
+declare module "#/app/event/eventBus" {
+  interface DomainEventMap {
+    "compaction.started": CompactionStartedEvent;
+    "compaction.blocked": CompactionBlockedEvent;
+    "compaction.cancelled": CompactionCancelledEvent;
+    "compaction.completed": CompactionCompletedEvent;
+  }
+}
 
-export const fullCompactionComplete = CompactionModel.defineOp('full_compaction.complete', {
-  schema: z.object({}),
-  apply: (s) => (s.phase === 'idle' ? s : { phase: 'idle' }),
-});
+declare module "#/wire/types" {
+  interface PersistedOpMap {
+    "full_compaction.begin": typeof fullCompactionBegin;
+    "full_compaction.cancel": typeof fullCompactionCancel;
+    "full_compaction.complete": typeof fullCompactionComplete;
+  }
+}
+
+export const fullCompactionBegin = CompactionModel.defineOp(
+  "full_compaction.begin",
+  {
+    schema: z.custom<CompactionBeginData>(),
+    apply: (s) => (s.phase === "running" ? s : { phase: "running" }),
+    toEvent: (p) => ({
+      type: "compaction.started" as const,
+      trigger: p.source,
+      instruction: p.instruction,
+    }),
+  },
+);
+
+export const fullCompactionCancel = CompactionModel.defineOp(
+  "full_compaction.cancel",
+  {
+    schema: z.object({}),
+    apply: (s) => (s.phase === "idle" ? s : { phase: "idle" }),
+  },
+);
+
+export const fullCompactionComplete = CompactionModel.defineOp(
+  "full_compaction.complete",
+  {
+    schema: z.object({}),
+    apply: (s) => (s.phase === "idle" ? s : { phase: "idle" }),
+  },
+);

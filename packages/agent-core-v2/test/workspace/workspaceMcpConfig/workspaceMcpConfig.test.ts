@@ -9,48 +9,48 @@
  * test/workspace/workspaceMcpConfig/workspaceMcpConfig.test.ts`.
  */
 
-import { mkdtempSync } from 'node:fs';
-import { mkdir, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'pathe';
+import { mkdtempSync } from "node:fs";
+import { mkdir, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "pathe";
 
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { DisposableStore } from '#/_base/di/lifecycle';
-import { createServices } from '#/_base/di/test';
-import { Emitter } from '#/_base/event';
-import { ILogService } from '#/_base/log/log';
-import type { McpServerConfig } from '#/mcpCore/config-schema';
-import { MCP_SECTION, type McpSection } from '#/app/mcpConfig/configSection';
-import { IBootstrapService } from '#/app/bootstrap/bootstrap';
-import { IConfigService } from '#/app/config/config';
-import { IPluginService } from '#/app/plugin/plugin';
-import type { ReloadSummary } from '#/app/plugin/types';
-import { HostFileSystem } from '#/os/backends/node-local/hostFsService';
-import { IHostFileSystem } from '#/os/interface/hostFileSystem';
+import { DisposableStore } from "#/_base/di/lifecycle";
+import { createServices } from "#/_base/di/test";
+import { Emitter } from "#/_base/event";
+import { ILogService } from "#/_base/log/log";
+import type { McpServerConfig } from "#/mcpCore/config-schema";
+import { MCP_SECTION, type McpSection } from "#/app/mcpConfig/configSection";
+import { IBootstrapService } from "#/app/bootstrap/bootstrap";
+import { IConfigService } from "#/app/config/config";
+import { IPluginService } from "#/app/plugin/plugin";
+import type { ReloadSummary } from "#/app/plugin/types";
+import { HostFileSystem } from "#/os/backends/node-local/hostFsService";
+import { IHostFileSystem } from "#/os/interface/hostFileSystem";
 import {
   IHostFsWatchService,
   type HostFsChange,
   type IHostFsWatchHandle,
-} from '#/os/interface/hostFsWatch';
-import { IWorkspaceContext } from '#/workspace/workspaceContext/workspaceContext';
+} from "#/os/interface/hostFsWatch";
+import { IWorkspaceContext } from "#/workspace/workspaceContext/workspaceContext";
 import {
   IWorkspaceTrust,
   type WorkspaceTrustChange,
-} from '#/workspace/workspaceTrust/workspaceTrust';
+} from "#/workspace/workspaceTrust/workspaceTrust";
 import {
   IWorkspaceMcpConfigService,
   type McpServersChange,
-} from '#/workspace/workspaceMcpConfig/workspaceMcpConfig';
-import { WorkspaceMcpConfigService } from '#/workspace/workspaceMcpConfig/workspaceMcpConfigService';
+} from "#/workspace/workspaceMcpConfig/workspaceMcpConfig";
+import { WorkspaceMcpConfigService } from "#/workspace/workspaceMcpConfig/workspaceMcpConfigService";
 
-import { stubLog } from '../../_base/log/stubs';
+import { stubLog } from "../../_base/log/stubs";
 
 function stdioConfig(command: string): McpServerConfig {
-  return { transport: 'stdio', command, args: [] };
+  return { transport: "stdio", command, args: [] };
 }
 
-describe('WorkspaceMcpConfigService', () => {
+describe("WorkspaceMcpConfigService", () => {
   let cwd: string;
   let homeDir: string;
   let disposables: DisposableStore;
@@ -62,8 +62,8 @@ describe('WorkspaceMcpConfigService', () => {
   let changes: McpServersChange[];
 
   beforeEach(() => {
-    cwd = mkdtempSync(join(tmpdir(), 'kimi-workspace-mcp-config-cwd-'));
-    homeDir = mkdtempSync(join(tmpdir(), 'kimi-workspace-mcp-config-home-'));
+    cwd = mkdtempSync(join(tmpdir(), "kimi-workspace-mcp-config-cwd-"));
+    homeDir = mkdtempSync(join(tmpdir(), "kimi-workspace-mcp-config-home-"));
     disposables = new DisposableStore();
     watchFires = new Map();
     pluginServers = {};
@@ -109,8 +109,8 @@ describe('WorkspaceMcpConfigService', () => {
         reg.defineInstance(ILogService, stubLog());
         reg.definePartialInstance(IConfigService, {
           ready: Promise.resolve(),
-          get: (<T = unknown>(domain: string): T =>
-            (domain === MCP_SECTION ? mcpSection : undefined) as T),
+          get: <T = unknown>(domain: string): T =>
+            (domain === MCP_SECTION ? mcpSection : undefined) as T,
         });
         reg.defineInstance(IHostFsWatchService, fsWatchStub());
         reg.defineInstance(IHostFileSystem, new HostFileSystem());
@@ -127,42 +127,50 @@ describe('WorkspaceMcpConfigService', () => {
     return service;
   }
 
-  async function writeProjectConfig(servers: Record<string, McpServerConfig>): Promise<string> {
-    const dir = join(cwd, '.kimi-code');
+  async function writeProjectConfig(
+    servers: Record<string, McpServerConfig>,
+  ): Promise<string> {
+    const dir = join(cwd, ".kimi-code");
     await mkdir(dir, { recursive: true });
-    const file = join(dir, 'mcp.json');
-    await writeFile(file, JSON.stringify({ mcpServers: servers }), 'utf8');
+    const file = join(dir, "mcp.json");
+    await writeFile(file, JSON.stringify({ mcpServers: servers }), "utf8");
     return file;
   }
 
-  it('merges file and plugin servers in the initial resolve (file wins name collisions)', async () => {
-    await writeProjectConfig({ shared: stdioConfig('file-version'), fileOnly: stdioConfig('file') });
-    pluginServers = { shared: stdioConfig('plugin-version'), pluginOnly: stdioConfig('plugin') };
+  it("merges file and plugin servers in the initial resolve (file wins name collisions)", async () => {
+    await writeProjectConfig({
+      shared: stdioConfig("file-version"),
+      fileOnly: stdioConfig("file"),
+    });
+    pluginServers = {
+      shared: stdioConfig("plugin-version"),
+      pluginOnly: stdioConfig("plugin"),
+    };
 
     const service = createService();
     await service.ready;
 
     expect(service.servers()).toEqual({
-      shared: stdioConfig('file-version'),
-      fileOnly: stdioConfig('file'),
-      pluginOnly: stdioConfig('plugin'),
+      shared: stdioConfig("file-version"),
+      fileOnly: stdioConfig("file"),
+      pluginOnly: stdioConfig("plugin"),
     });
     expect(changes).toEqual([]);
   });
 
-  it('skips the project-level config files while the workspace is untrusted', async () => {
-    await writeProjectConfig({ fileOnly: stdioConfig('file') });
-    pluginServers = { pluginOnly: stdioConfig('plugin') };
+  it("skips the project-level config files while the workspace is untrusted", async () => {
+    await writeProjectConfig({ fileOnly: stdioConfig("file") });
+    pluginServers = { pluginOnly: stdioConfig("plugin") };
     trusted = false;
 
     const service = createService();
     await service.ready;
 
-    expect(service.servers()).toEqual({ pluginOnly: stdioConfig('plugin') });
+    expect(service.servers()).toEqual({ pluginOnly: stdioConfig("plugin") });
   });
 
-  it('picks up the project servers when the workspace becomes trusted', async () => {
-    await writeProjectConfig({ fileOnly: stdioConfig('file') });
+  it("picks up the project servers when the workspace becomes trusted", async () => {
+    await writeProjectConfig({ fileOnly: stdioConfig("file") });
     trusted = false;
     const service = createService();
     await service.ready;
@@ -173,21 +181,23 @@ describe('WorkspaceMcpConfigService', () => {
 
     await vi.waitFor(
       () => {
-        expect(changes).toEqual([{ upsert: { fileOnly: stdioConfig('file') }, remove: [] }]);
+        expect(changes).toEqual([
+          { upsert: { fileOnly: stdioConfig("file") }, remove: [] },
+        ]);
       },
       { timeout: 10000, interval: 50 },
     );
-    expect(service.servers()).toEqual({ fileOnly: stdioConfig('file') });
+    expect(service.servers()).toEqual({ fileOnly: stdioConfig("file") });
   }, 20000);
 
-  it('drops the project servers when the workspace loses trust', async () => {
-    await writeProjectConfig({ fileOnly: stdioConfig('file') });
-    pluginServers = { pluginOnly: stdioConfig('plugin') };
+  it("drops the project servers when the workspace loses trust", async () => {
+    await writeProjectConfig({ fileOnly: stdioConfig("file") });
+    pluginServers = { pluginOnly: stdioConfig("plugin") };
     const service = createService();
     await service.ready;
     expect(service.servers()).toEqual({
-      fileOnly: stdioConfig('file'),
-      pluginOnly: stdioConfig('plugin'),
+      fileOnly: stdioConfig("file"),
+      pluginOnly: stdioConfig("plugin"),
     });
 
     trusted = false;
@@ -195,78 +205,88 @@ describe('WorkspaceMcpConfigService', () => {
 
     await vi.waitFor(
       () => {
-        expect(changes).toEqual([{ upsert: {}, remove: ['fileOnly'] }]);
+        expect(changes).toEqual([{ upsert: {}, remove: ["fileOnly"] }]);
       },
       { timeout: 10000, interval: 50 },
     );
-    expect(service.servers()).toEqual({ pluginOnly: stdioConfig('plugin') });
+    expect(service.servers()).toEqual({ pluginOnly: stdioConfig("plugin") });
   }, 20000);
 
-  it('exposes the [mcp] section as tunables, resolved live', async () => {
-    const service = createService({ startupTimeoutMs: 1234, toolTimeoutMs: 5678 });
+  it("exposes the [mcp] section as tunables, resolved live", async () => {
+    const service = createService({
+      startupTimeoutMs: 1234,
+      toolTimeoutMs: 5678,
+    });
     await service.ready;
 
-    expect(service.tunables()).toEqual({ startupTimeoutMs: 1234, toolTimeoutMs: 5678 });
+    expect(service.tunables()).toEqual({
+      startupTimeoutMs: 1234,
+      toolTimeoutMs: 5678,
+    });
   });
 
-  it('publishes the diff when a watched config file changes', async () => {
-    const file = await writeProjectConfig({ alpha: stdioConfig('alpha') });
+  it("publishes the diff when a watched config file changes", async () => {
+    const file = await writeProjectConfig({ alpha: stdioConfig("alpha") });
     const service = createService();
     await service.ready;
-    expect(service.servers()).toEqual({ alpha: stdioConfig('alpha') });
+    expect(service.servers()).toEqual({ alpha: stdioConfig("alpha") });
 
-    await writeProjectConfig({ beta: stdioConfig('beta') });
-    watchFires.get(cwd)?.fire({ path: file, action: 'modified', kind: 'file' });
+    await writeProjectConfig({ beta: stdioConfig("beta") });
+    watchFires.get(cwd)?.fire({ path: file, action: "modified", kind: "file" });
 
     await vi.waitFor(
       () => {
         expect(changes).toEqual([
-          { upsert: { beta: stdioConfig('beta') }, remove: ['alpha'] },
+          { upsert: { beta: stdioConfig("beta") }, remove: ["alpha"] },
         ]);
       },
       { timeout: 10000, interval: 50 },
     );
-    expect(service.servers()).toEqual({ beta: stdioConfig('beta') });
+    expect(service.servers()).toEqual({ beta: stdioConfig("beta") });
   }, 20000);
 
-  it('falls back to the same-named plugin server when a file server vanishes', async () => {
-    const file = await writeProjectConfig({ shared: stdioConfig('file-version') });
-    pluginServers = { shared: stdioConfig('plugin-version') };
+  it("falls back to the same-named plugin server when a file server vanishes", async () => {
+    const file = await writeProjectConfig({
+      shared: stdioConfig("file-version"),
+    });
+    pluginServers = { shared: stdioConfig("plugin-version") };
     const service = createService();
     await service.ready;
-    expect(service.servers()).toEqual({ shared: stdioConfig('file-version') });
+    expect(service.servers()).toEqual({ shared: stdioConfig("file-version") });
 
     await writeProjectConfig({});
-    watchFires.get(cwd)?.fire({ path: file, action: 'modified', kind: 'file' });
+    watchFires.get(cwd)?.fire({ path: file, action: "modified", kind: "file" });
 
     await vi.waitFor(
       () => {
         expect(changes).toEqual([
-          { upsert: { shared: stdioConfig('plugin-version') }, remove: [] },
+          { upsert: { shared: stdioConfig("plugin-version") }, remove: [] },
         ]);
       },
       { timeout: 10000, interval: 50 },
     );
   }, 20000);
 
-  it('publishes a plugin server that appears on plugin reload', async () => {
+  it("publishes a plugin server that appears on plugin reload", async () => {
     const service = createService();
     await service.ready;
 
-    pluginServers = { gamma: stdioConfig('gamma') };
+    pluginServers = { gamma: stdioConfig("gamma") };
     pluginReloads.fire({ added: [], removed: [], errors: [] });
 
     await vi.waitFor(
       () => {
-        expect(changes).toEqual([{ upsert: { gamma: stdioConfig('gamma') }, remove: [] }]);
+        expect(changes).toEqual([
+          { upsert: { gamma: stdioConfig("gamma") }, remove: [] },
+        ]);
       },
       { timeout: 10000, interval: 50 },
     );
-    expect(service.servers()).toEqual({ gamma: stdioConfig('gamma') });
+    expect(service.servers()).toEqual({ gamma: stdioConfig("gamma") });
   }, 20000);
 
-  it('removes a plugin server that vanishes on plugin reload', async () => {
-    pluginServers = { alpha: stdioConfig('alpha') };
+  it("removes a plugin server that vanishes on plugin reload", async () => {
+    pluginServers = { alpha: stdioConfig("alpha") };
     const service = createService();
     await service.ready;
 
@@ -275,18 +295,18 @@ describe('WorkspaceMcpConfigService', () => {
 
     await vi.waitFor(
       () => {
-        expect(changes).toEqual([{ upsert: {}, remove: ['alpha'] }]);
+        expect(changes).toEqual([{ upsert: {}, remove: ["alpha"] }]);
       },
       { timeout: 10000, interval: 50 },
     );
   }, 20000);
 
-  it('stays silent when a vanished plugin server leaves the same-named file entry in place', async () => {
-    await writeProjectConfig({ shared: stdioConfig('file-version') });
-    pluginServers = { shared: stdioConfig('plugin-version') };
+  it("stays silent when a vanished plugin server leaves the same-named file entry in place", async () => {
+    await writeProjectConfig({ shared: stdioConfig("file-version") });
+    pluginServers = { shared: stdioConfig("plugin-version") };
     const service = createService();
     await service.ready;
-    expect(service.servers()).toEqual({ shared: stdioConfig('file-version') });
+    expect(service.servers()).toEqual({ shared: stdioConfig("file-version") });
 
     pluginServers = {};
     pluginReloads.fire({ added: [], removed: [], errors: [] });
@@ -295,6 +315,6 @@ describe('WorkspaceMcpConfigService', () => {
     // fires and the snapshot stays put.
     await new Promise((resolvePromise) => setTimeout(resolvePromise, 500));
     expect(changes).toEqual([]);
-    expect(service.servers()).toEqual({ shared: stdioConfig('file-version') });
+    expect(service.servers()).toEqual({ shared: stdioConfig("file-version") });
   }, 20000);
 });

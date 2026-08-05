@@ -1,16 +1,16 @@
-import { NPM_PACKAGE_NAME } from '#/constant/app';
+import { NPM_PACKAGE_NAME } from "#/constant/app";
 
 export { NPM_PACKAGE_NAME };
 
 /** Where the running CLI was installed from. Drives update command + spawn. */
 export type InstallSource =
-  | 'npm-global'
-  | 'pnpm-global'
-  | 'yarn-global'
-  | 'bun-global'
-  | 'homebrew'
-  | 'native'
-  | 'unsupported';
+  | "npm-global"
+  | "pnpm-global"
+  | "yarn-global"
+  | "bun-global"
+  | "homebrew"
+  | "native"
+  | "unsupported";
 
 export interface UpdateTarget {
   readonly version: string;
@@ -33,7 +33,7 @@ export interface UpdateManifest {
 }
 
 export interface UpdateCache {
-  readonly source: 'cdn';
+  readonly source: "cdn";
   readonly checkedAt: string | null;
   readonly latest: string | null;
   /** Null when the manifest came from the plain-text fallback or a legacy cache file. */
@@ -64,12 +64,12 @@ export interface UpdateInstallState {
   readonly lastSuccess: UpdateInstallSuccess | null;
 }
 
-export type UpdateDecision = 'none' | 'prompt-install' | 'manual-command';
-export type UpdatePreflightResult = 'continue' | 'exit';
+export type UpdateDecision = "none" | "prompt-install" | "manual-command";
+export type UpdatePreflightResult = "continue" | "exit";
 
 export function emptyUpdateCache(): UpdateCache {
   return {
-    source: 'cdn',
+    source: "cdn",
     checkedAt: null,
     latest: null,
     manifest: null,

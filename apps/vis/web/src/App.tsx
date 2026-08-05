@@ -1,8 +1,8 @@
-import { Route, Routes } from 'react-router-dom';
-import { AppShell } from './components/layout/AppShell';
-import { SessionListPage } from './pages/SessionListPage';
-import { SessionDetailPage } from './pages/SessionDetailPage';
-import { SubagentDetailPage } from './pages/SubagentDetailPage';
+import { Route, Routes } from "react-router-dom";
+import { AppShell } from "./components/layout/AppShell";
+import { SessionListPage } from "./pages/SessionListPage";
+import { SessionDetailPage } from "./pages/SessionDetailPage";
+import { SubagentDetailPage } from "./pages/SubagentDetailPage";
 
 export function App() {
   return (

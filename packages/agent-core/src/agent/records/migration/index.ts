@@ -1,14 +1,14 @@
-import { migrateV1_0ToV1_1 } from './v1.1';
-import { migrateV1_1ToV1_2 } from './v1.2';
-import { migrateV1_2ToV1_3 } from './v1.3';
-import { migrateV1_3ToV1_4 } from './v1.4';
+import { migrateV1_0ToV1_1 } from "./v1.1";
+import { migrateV1_1ToV1_2 } from "./v1.2";
+import { migrateV1_2ToV1_3 } from "./v1.3";
+import { migrateV1_3ToV1_4 } from "./v1.4";
 
 // Wire protocol versions currently support only the `number.number` format.
 // Bump this only for changes that require migration of existing records or
 // change how existing records must be interpreted. Do not bump it only because
 // a new feature adds a new wire record type: older versions do not implement
 // that feature and do not need to understand the new record type.
-export const AGENT_WIRE_PROTOCOL_VERSION = '1.4';
+export const AGENT_WIRE_PROTOCOL_VERSION = "1.4";
 
 export interface WireMigrationRecord {
   readonly type: string;
@@ -32,7 +32,9 @@ export function isNewerWireVersion(readVersion: string): boolean {
   return compareWireVersions(readVersion, AGENT_WIRE_PROTOCOL_VERSION) > 0;
 }
 
-export function resolveWireMigrations(readVersion: string): readonly WireMigration[] {
+export function resolveWireMigrations(
+  readVersion: string,
+): readonly WireMigration[] {
   if (compareWireVersions(readVersion, AGENT_WIRE_PROTOCOL_VERSION) >= 0) {
     return [];
   }
@@ -77,12 +79,12 @@ function findMigration(sourceVersion: string): WireMigration | undefined {
 }
 
 function compareWireVersions(a: string, b: string): number {
-  const partsA = a.split('.');
-  const partsB = b.split('.');
+  const partsA = a.split(".");
+  const partsB = b.split(".");
   const maxLength = Math.max(partsA.length, partsB.length);
 
   for (let i = 0; i < maxLength; i++) {
-    const diff = Number(partsA[i] ?? '0') - Number(partsB[i] ?? '0');
+    const diff = Number(partsA[i] ?? "0") - Number(partsB[i] ?? "0");
     if (diff !== 0) return diff;
   }
 

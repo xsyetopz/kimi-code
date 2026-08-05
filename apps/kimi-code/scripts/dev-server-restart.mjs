@@ -13,26 +13,26 @@
 // is equivalent to `pnpm dev:server` with that arg list, but with the restart
 // loop on top.
 
-import { spawn } from 'node:child_process';
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { spawn } from "node:child_process";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
-const APP_ROOT = resolve(SCRIPT_DIR, '..');
+const APP_ROOT = resolve(SCRIPT_DIR, "..");
 
-const tsxBin = process.platform === 'win32' ? 'tsx.cmd' : 'tsx';
+const tsxBin = process.platform === "win32" ? "tsx.cmd" : "tsx";
 
 const cliArgs = process.argv.slice(2);
-if (cliArgs[0] === '--') cliArgs.shift();
+if (cliArgs[0] === "--") cliArgs.shift();
 
 const tsxArgs = [
-  '--tsconfig',
-  './tsconfig.dev.json',
-  '--import',
-  '../../build/register-raw-text-loader.mjs',
-  './src/main.ts',
-  'web',
-  '--no-open',
+  "--tsconfig",
+  "./tsconfig.dev.json",
+  "--import",
+  "../../build/register-raw-text-loader.mjs",
+  "./src/main.ts",
+  "web",
+  "--no-open",
   ...cliArgs,
 ];
 
@@ -42,19 +42,19 @@ let shuttingDown = false;
 let killTimer = null;
 
 function start() {
-  console.error('[dev:server:restart] starting server…');
+  console.error("[dev:server:restart] starting server…");
   child = spawn(tsxBin, tsxArgs, {
     cwd: APP_ROOT,
-    env: { ...process.env, KIMI_CODE_DEV_SERVER: '1' },
+    env: { ...process.env, KIMI_CODE_DEV_SERVER: "1" },
     // Server does not read stdin; keep ours free for the Enter trigger.
-    stdio: ['ignore', 'inherit', 'inherit'],
+    stdio: ["ignore", "inherit", "inherit"],
   });
 
-  child.on('error', (err) => {
+  child.on("error", (err) => {
     console.error(`[dev:server:restart] spawn error: ${err.message}`);
   });
 
-  child.on('exit', (code, signal) => {
+  child.on("exit", (code, signal) => {
     if (killTimer !== null) {
       clearTimeout(killTimer);
       killTimer = null;
@@ -89,23 +89,27 @@ function restart() {
   }
   if (restarting) return; // debounce — multiple Enters during shutdown collapse
   restarting = true;
-  console.error('[dev:server:restart] restarting…');
-  child.kill('SIGTERM');
+  console.error("[dev:server:restart] restarting…");
+  child.kill("SIGTERM");
   // Safety net: if the child ignores SIGTERM, force-kill after 5s so the
   // restart loop doesn't wedge.
   killTimer = setTimeout(() => {
-    if (child !== null && child.exitCode === null && child.signalCode === null) {
-      console.error('[dev:server:restart] SIGTERM timed out, sending SIGKILL');
-      child.kill('SIGKILL');
+    if (
+      child !== null &&
+      child.exitCode === null &&
+      child.signalCode === null
+    ) {
+      console.error("[dev:server:restart] SIGTERM timed out, sending SIGKILL");
+      child.kill("SIGKILL");
     }
   }, 5000);
 }
 
-process.stdin.setEncoding('utf8');
-process.stdin.on('data', (chunk) => {
+process.stdin.setEncoding("utf8");
+process.stdin.on("data", (chunk) => {
   // Any newline (Enter on most terminals) triggers a restart. Empty Enter is
   // the canonical signal; typing `r<Enter>` works too.
-  if (chunk.includes('\n') || chunk.includes('\r')) {
+  if (chunk.includes("\n") || chunk.includes("\r")) {
     restart();
   }
 });
@@ -121,7 +125,7 @@ const onShutdownSignal = (signal) => {
     process.exit(0);
   }
 };
-process.on('SIGINT', () => onShutdownSignal('SIGINT'));
-process.on('SIGTERM', () => onShutdownSignal('SIGTERM'));
+process.on("SIGINT", () => onShutdownSignal("SIGINT"));
+process.on("SIGTERM", () => onShutdownSignal("SIGTERM"));
 
 start();

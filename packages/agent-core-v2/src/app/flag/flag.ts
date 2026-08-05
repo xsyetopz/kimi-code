@@ -10,19 +10,22 @@
  * process.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
-import { registerConfigSection } from '#/app/config/configSectionContributions';
-import { cloneRecord, isPlainObject, setDefined } from '#/app/config/toml';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
+import { registerConfigSection } from "#/app/config/configSectionContributions";
+import { cloneRecord, isPlainObject, setDefined } from "#/app/config/toml";
 
-import type { FlagId, FlagSurface, IFlagRegistry } from './flagRegistry';
+import type { FlagId, FlagSurface, IFlagRegistry } from "./flagRegistry";
 
 export type ExperimentalFlagMap = Record<string, boolean>;
 
 export type ExperimentalFlagConfig = Partial<Record<FlagId, boolean>>;
 
-export const EXPERIMENTAL_SECTION = 'experimental';
+export const EXPERIMENTAL_SECTION = "experimental";
 
 export const ExperimentalConfigSchema = z.record(z.string(), z.boolean());
 
@@ -31,7 +34,10 @@ export type ExperimentalConfig = z.infer<typeof ExperimentalConfigSchema>;
 export const experimentalFromToml = (rawSnake: unknown): unknown =>
   isPlainObject(rawSnake) ? cloneRecord(rawSnake) : rawSnake;
 
-export const experimentalToToml = (value: unknown, _rawSnake: unknown): unknown => {
+export const experimentalToToml = (
+  value: unknown,
+  _rawSnake: unknown,
+): unknown => {
   if (!isPlainObject(value)) return value;
   const out: Record<string, unknown> = {};
   for (const [key, entry] of Object.entries(value)) {
@@ -45,7 +51,11 @@ registerConfigSection(EXPERIMENTAL_SECTION, ExperimentalConfigSchema, {
   toToml: experimentalToToml,
 });
 
-export type ExperimentalFlagSource = 'master-env' | 'env' | 'config' | 'default';
+export type ExperimentalFlagSource =
+  | "master-env"
+  | "env"
+  | "config"
+  | "default";
 
 export interface ExperimentalFeatureState {
   readonly id: FlagId;
@@ -72,4 +82,4 @@ export interface IFlagService {
 }
 
 export const IFlagService: ServiceIdentifier<IFlagService> =
-  createDecorator<IFlagService>('flagService');
+  createDecorator<IFlagService>("flagService");

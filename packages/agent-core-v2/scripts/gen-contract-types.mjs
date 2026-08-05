@@ -17,7 +17,7 @@
  *   4. Copy the scrubbed tree to the output directory.
  */
 
-import { execFileSync } from 'node:child_process';
+import { execFileSync } from "node:child_process";
 import {
   cpSync,
   existsSync,
@@ -26,25 +26,31 @@ import {
   readFileSync,
   rmSync,
   statSync,
-} from 'node:fs';
-import { dirname, join, relative } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { createRequire } from 'node:module';
+} from "node:fs";
+import { dirname, join, relative } from "node:path";
+import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
 
-import { Project, SyntaxKind } from 'ts-morph';
+import { Project, SyntaxKind } from "ts-morph";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const PKG = join(__dirname, '..'); // packages/agent-core-v2
-const SRC = join(PKG, 'src');
-const TMP = join(PKG, '.contract-types-tmp');
-const TSCONFIG = join(PKG, 'tsconfig.contract.json');
+const PKG = join(__dirname, ".."); // packages/agent-core-v2
+const SRC = join(PKG, "src");
+const TMP = join(PKG, ".contract-types-tmp");
+const TSCONFIG = join(PKG, "tsconfig.contract.json");
 
-const repoRoot = join(PKG, '..', '..');
-const defaultOut = join(repoRoot, '..', 'kimi-code-mini-bench', 'types', 'agent-core-v2');
+const repoRoot = join(PKG, "..", "..");
+const defaultOut = join(
+  repoRoot,
+  "..",
+  "kimi-code-mini-bench",
+  "types",
+  "agent-core-v2",
+);
 const OUT = process.argv[2] ? join(process.cwd(), process.argv[2]) : defaultOut;
 
 const require = createRequire(import.meta.url);
-const tscBin = require.resolve('typescript/bin/tsc');
+const tscBin = require.resolve("typescript/bin/tsc");
 
 function log(msg) {
   console.log(`[gen-contract-types] ${msg}`);
@@ -67,19 +73,20 @@ log(`emitting declarations via tsc -> ${relative(PKG, TMP)}`);
 // still emits `.d.ts` for every file when `noEmitOnError` is off. We only need
 // the declarations, so tolerate a non-zero exit and continue.
 try {
-  execFileSync(process.execPath, [tscBin, '-p', TSCONFIG, '--outDir', TMP], {
+  execFileSync(process.execPath, [tscBin, "-p", TSCONFIG, "--outDir", TMP], {
     cwd: PKG,
-    stdio: 'pipe',
+    stdio: "pipe",
   });
 } catch (err) {
-  const code = err && typeof err === 'object' && 'status' in err ? err.status : 'unknown';
+  const code =
+    err && typeof err === "object" && "status" in err ? err.status : "unknown";
   log(`tsc exited ${String(code)} (non-fatal; declarations are still emitted)`);
 }
 
 // 2. Detect impl files + registered class names (AST only).
-log('scanning for registerScopedService(...) bindings');
+log("scanning for registerScopedService(...) bindings");
 const project = new Project();
-project.addSourceFilesAtPaths(join(SRC, '**', '*.ts'));
+project.addSourceFilesAtPaths(join(SRC, "**", "*.ts"));
 
 /** @type {Map<string, Set<string>>} dtsPath -> class names to drop */
 const dropByDts = new Map();
@@ -88,7 +95,7 @@ const implFiles = [];
 for (const sf of project.getSourceFiles()) {
   const calls = sf
     .getDescendantsOfKind(SyntaxKind.CallExpression)
-    .filter((c) => c.getExpression().getText() === 'registerScopedService');
+    .filter((c) => c.getExpression().getText() === "registerScopedService");
   if (calls.length === 0) continue;
 
   implFiles.push(sf.getFilePath());
@@ -98,10 +105,10 @@ for (const sf of project.getSourceFiles()) {
     if (args.length < 3) continue;
     const text = args[2].getText().trim();
     // Only treat a bare identifier as a class name; otherwise signal "drop all".
-    names.add(/^[A-Za-z_$][\w$]*$/.test(text) ? text : '*');
+    names.add(/^[A-Za-z_$][\w$]*$/.test(text) ? text : "*");
   }
 
-  const rel = relative(SRC, sf.getFilePath()).replace(/\.ts$/, '.d.ts');
+  const rel = relative(SRC, sf.getFilePath()).replace(/\.ts$/, ".d.ts");
   const dtsPath = join(TMP, rel);
   const existing = dropByDts.get(dtsPath) ?? new Set();
   for (const n of names) existing.add(n);
@@ -117,7 +124,7 @@ for (const [dtsPath, names] of dropByDts) {
   if (!existsSync(dtsPath)) continue;
   const dtsProject = new Project();
   const dts = dtsProject.addSourceFileAtPath(dtsPath);
-  const dropAll = names.has('*');
+  const dropAll = names.has("*");
   let removed = 0;
   for (const cls of dts.getClasses()) {
     const clsName = cls.getName();
@@ -132,7 +139,9 @@ for (const [dtsPath, names] of dropByDts) {
     scrubbedClasses += removed;
   }
 }
-log(`scrubbed ${scrubbedClasses} impl class(es) across ${scrubbedFiles} file(s)`);
+log(
+  `scrubbed ${scrubbedClasses} impl class(es) across ${scrubbedFiles} file(s)`,
+);
 
 // 4. Copy the scrubbed tree to the output directory.
 rmSync(OUT, { recursive: true, force: true });
@@ -143,23 +152,26 @@ cpSync(TMP, OUT, { recursive: true });
 // name still declared in its own file).
 const emitted = [];
 walk(OUT, emitted);
-const dtsCount = emitted.filter((f) => f.endsWith('.d.ts')).length;
+const dtsCount = emitted.filter((f) => f.endsWith(".d.ts")).length;
 log(`wrote ${dtsCount} declaration file(s) -> ${OUT}`);
 
 // Verify no registered class name survives in the file that registered it.
 const leaks = [];
 for (const [dtsPath, names] of dropByDts) {
   const outPath = join(OUT, relative(TMP, dtsPath));
-  if (!existsSync(outPath) || names.has('*')) continue;
-  const text = readFileSync(outPath, 'utf8');
+  if (!existsSync(outPath) || names.has("*")) continue;
+  const text = readFileSync(outPath, "utf8");
   for (const n of names) {
     const re = new RegExp(`declare\\s+class\\s+${n}\\b`);
-    if (re.test(text)) leaks.push(`${relative(OUT, outPath)} still declares ${n}`);
+    if (re.test(text))
+      leaks.push(`${relative(OUT, outPath)} still declares ${n}`);
   }
 }
 if (leaks.length > 0) {
   log(`WARNING: ${leaks.length} possible leak(s):`);
   for (const l of leaks) log(`  - ${l}`);
 } else {
-  log('leak check passed: no registered impl class survives in its declaring file');
+  log(
+    "leak check passed: no registered impl class survives in its declaring file",
+  );
 }

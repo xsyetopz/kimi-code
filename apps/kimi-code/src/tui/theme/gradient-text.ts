@@ -1,4 +1,4 @@
-import chalk from 'chalk';
+import chalk from "chalk";
 
 interface RgbColor {
   readonly red: number;
@@ -6,18 +6,27 @@ interface RgbColor {
   readonly blue: number;
 }
 
-export function gradientText(text: string, fromHex: string, toHex: string, accentBias = 1): string {
+export function gradientText(
+  text: string,
+  fromHex: string,
+  toHex: string,
+  accentBias = 1,
+): string {
   const chars = Array.from(text);
   const from = parseHexColor(fromHex);
   const to = parseHexColor(toHex);
   if (chars.length <= 1 || from === undefined || to === undefined) {
     return chalk.hex(fromHex).bold(text);
   }
-  const safeAccentBias = Number.isFinite(accentBias) ? Math.max(0, accentBias) : 1;
-  return chars.map((char, index) => {
-    const ratio = Math.min(1, (index / (chars.length - 1)) * safeAccentBias);
-    return chalk.hex(interpolateHexColor(from, to, ratio)).bold(char);
-  }).join('');
+  const safeAccentBias = Number.isFinite(accentBias)
+    ? Math.max(0, accentBias)
+    : 1;
+  return chars
+    .map((char, index) => {
+      const ratio = Math.min(1, (index / (chars.length - 1)) * safeAccentBias);
+      return chalk.hex(interpolateHexColor(from, to, ratio)).bold(char);
+    })
+    .join("");
 }
 
 function parseHexColor(hex: string): RgbColor | undefined {
@@ -30,10 +39,14 @@ function parseHexColor(hex: string): RgbColor | undefined {
   };
 }
 
-function interpolateHexColor(from: RgbColor, to: RgbColor, ratio: number): string {
+function interpolateHexColor(
+  from: RgbColor,
+  to: RgbColor,
+  ratio: number,
+): string {
   const mix = (start: number, end: number): string =>
     Math.round(start + (end - start) * ratio)
       .toString(16)
-      .padStart(2, '0');
+      .padStart(2, "0");
   return `#${mix(from.red, to.red)}${mix(from.green, to.green)}${mix(from.blue, to.blue)}`;
 }

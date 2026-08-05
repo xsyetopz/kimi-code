@@ -29,12 +29,12 @@ export function encodeFrame(frame: IpcFrame): string {
 
 /** Incremental NDJSON decoder; malformed lines are dropped. */
 export class NdjsonDecoder {
-  private buffer = '';
+  private buffer = "";
 
   push(chunk: string): IpcFrame[] {
     this.buffer += chunk;
-    const lines = this.buffer.split('\n');
-    this.buffer = lines.pop() ?? '';
+    const lines = this.buffer.split("\n");
+    this.buffer = lines.pop() ?? "";
     const frames: IpcFrame[] = [];
     for (const line of lines) {
       if (line.length === 0) continue;

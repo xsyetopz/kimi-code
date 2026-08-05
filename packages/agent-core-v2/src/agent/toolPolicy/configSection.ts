@@ -6,11 +6,11 @@
  * applied on top of every profile's own `tools` / `disallowedTools` policy.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { registerConfigSection } from '#/app/config/configSectionContributions';
+import { registerConfigSection } from "#/app/config/configSectionContributions";
 
-export const TOOLS_SECTION = 'tools';
+export const TOOLS_SECTION = "tools";
 
 export const ToolsConfigSchema = z.object({
   enabled: z.array(z.string()).optional(),

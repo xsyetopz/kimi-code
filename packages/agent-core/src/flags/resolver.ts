@@ -1,14 +1,14 @@
-import { parseBooleanEnv } from '#/config/resolve';
+import { parseBooleanEnv } from "#/config/resolve";
 
-import { FLAG_DEFINITIONS, type FlagId } from './registry';
+import { FLAG_DEFINITIONS, type FlagId } from "./registry";
 import type {
   ExperimentalFeatureState,
   ExperimentalFlagConfig,
   FlagDefinitionInput,
-} from './types';
+} from "./types";
 
 /** Master switch: when truthy, forces every flag on (highest priority). */
-export const MASTER_ENV = 'KIMI_CODE_EXPERIMENTAL_FLAG';
+export const MASTER_ENV = "KIMI_CODE_EXPERIMENTAL_FLAG";
 
 /**
  * Pure, synchronous flag resolver. State comes entirely from (env, registry) and nothing is
@@ -25,7 +25,9 @@ export class FlagResolver {
   private readonly byId: ReadonlyMap<string, FlagDefinitionInput>;
 
   constructor(
-    private readonly env: Readonly<Record<string, string | undefined>> = process.env,
+    private readonly env: Readonly<
+      Record<string, string | undefined>
+    > = process.env,
     private readonly definitions: readonly FlagDefinitionInput[] = FLAG_DEFINITIONS,
     private configOverrides: ExperimentalFlagConfig = {},
   ) {
@@ -45,12 +47,14 @@ export class FlagResolver {
     if (def === undefined) return undefined;
     const configValue = this.configOverrides[def.id as FlagId];
     if (parseBooleanEnv(this.env[MASTER_ENV]) === true) {
-      return this.state(def, true, 'master-env', configValue);
+      return this.state(def, true, "master-env", configValue);
     }
     const override = parseBooleanEnv(this.env[def.env]); // L2 per-feature
-    if (override !== undefined) return this.state(def, override, 'env', configValue);
-    if (configValue !== undefined) return this.state(def, configValue, 'config', configValue);
-    return this.state(def, def.default, 'default', undefined);
+    if (override !== undefined)
+      return this.state(def, override, "env", configValue);
+    if (configValue !== undefined)
+      return this.state(def, configValue, "config", configValue);
+    return this.state(def, def.default, "default", undefined);
   }
 
   snapshot(): Record<string, boolean> {
@@ -68,13 +72,15 @@ export class FlagResolver {
   explainAll(): readonly ExperimentalFeatureState[] {
     return this.definitions
       .map((def) => this.explain(def.id as FlagId))
-      .filter((state): state is ExperimentalFeatureState => state !== undefined);
+      .filter(
+        (state): state is ExperimentalFeatureState => state !== undefined,
+      );
   }
 
   private state(
     def: FlagDefinitionInput,
     enabled: boolean,
-    source: ExperimentalFeatureState['source'],
+    source: ExperimentalFeatureState["source"],
     configValue: boolean | undefined,
   ): ExperimentalFeatureState {
     return {

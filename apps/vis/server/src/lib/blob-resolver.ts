@@ -1,6 +1,6 @@
-import type { ContentPart, WireEntry } from './agent-record-types';
+import type { ContentPart, WireEntry } from "./agent-record-types";
 
-const BLOBREF_PROTOCOL = 'blobref:';
+const BLOBREF_PROTOCOL = "blobref:";
 
 function isBlobRef(url: string): boolean {
   return url.startsWith(BLOBREF_PROTOCOL);
@@ -12,11 +12,11 @@ export function resolveBlobRefUrl(
   url: string,
   sessionId: string,
   agentId: string,
-  baseUrl: string = '',
+  baseUrl: string = "",
 ): string {
   if (!isBlobRef(url)) return url;
   const rest = url.slice(BLOBREF_PROTOCOL.length);
-  const semiIdx = rest.indexOf(';');
+  const semiIdx = rest.indexOf(";");
   if (semiIdx === -1) return url;
   const mimeType = rest.slice(0, semiIdx);
   const hash = rest.slice(semiIdx + 1);
@@ -32,10 +32,15 @@ export function rehydrateWireEntries(
   entries: readonly WireEntry[],
   sessionId: string,
   agentId: string,
-  baseUrl: string = '',
+  baseUrl: string = "",
 ): void {
   for (const entry of entries) {
-    rehydrateRecord(entry.data as Record<string, unknown>, sessionId, agentId, baseUrl);
+    rehydrateRecord(
+      entry.data as Record<string, unknown>,
+      sessionId,
+      agentId,
+      baseUrl,
+    );
   }
 }
 
@@ -45,25 +50,40 @@ function rehydrateRecord(
   agentId: string,
   baseUrl: string,
 ): void {
-  const type = record['type'];
-  if (type === 'turn.prompt' || type === 'turn.steer') {
-    rehydrateParts(record['input'] as unknown as ContentPart[], sessionId, agentId, baseUrl);
+  const type = record["type"];
+  if (type === "turn.prompt" || type === "turn.steer") {
+    rehydrateParts(
+      record["input"] as unknown as ContentPart[],
+      sessionId,
+      agentId,
+      baseUrl,
+    );
     return;
   }
-  if (type === 'context.append_message') {
-    const message = record['message'] as { content: ContentPart[] };
+  if (type === "context.append_message") {
+    const message = record["message"] as { content: ContentPart[] };
     rehydrateParts(message.content, sessionId, agentId, baseUrl);
     return;
   }
-  if (type === 'context.append_loop_event') {
-    const event = record['event'] as Record<string, unknown>;
-    if (event['type'] === 'tool.result') {
-      const result = event['result'] as Record<string, unknown>;
-      if (typeof result['output'] !== 'string') {
-        rehydrateParts(result['output'] as ContentPart[], sessionId, agentId, baseUrl);
+  if (type === "context.append_loop_event") {
+    const event = record["event"] as Record<string, unknown>;
+    if (event["type"] === "tool.result") {
+      const result = event["result"] as Record<string, unknown>;
+      if (typeof result["output"] !== "string") {
+        rehydrateParts(
+          result["output"] as ContentPart[],
+          sessionId,
+          agentId,
+          baseUrl,
+        );
       }
-    } else if (event['type'] === 'content.part') {
-      rehydrateParts([event['part'] as ContentPart], sessionId, agentId, baseUrl);
+    } else if (event["type"] === "content.part") {
+      rehydrateParts(
+        [event["part"] as ContentPart],
+        sessionId,
+        agentId,
+        baseUrl,
+      );
     }
     return;
   }
@@ -77,14 +97,29 @@ function rehydrateParts(
 ): void {
   for (const part of parts) {
     switch (part.type) {
-      case 'image_url':
-        part.imageUrl.url = resolveBlobRefUrl(part.imageUrl.url, sessionId, agentId, baseUrl);
+      case "image_url":
+        part.imageUrl.url = resolveBlobRefUrl(
+          part.imageUrl.url,
+          sessionId,
+          agentId,
+          baseUrl,
+        );
         break;
-      case 'audio_url':
-        part.audioUrl.url = resolveBlobRefUrl(part.audioUrl.url, sessionId, agentId, baseUrl);
+      case "audio_url":
+        part.audioUrl.url = resolveBlobRefUrl(
+          part.audioUrl.url,
+          sessionId,
+          agentId,
+          baseUrl,
+        );
         break;
-      case 'video_url':
-        part.videoUrl.url = resolveBlobRefUrl(part.videoUrl.url, sessionId, agentId, baseUrl);
+      case "video_url":
+        part.videoUrl.url = resolveBlobRefUrl(
+          part.videoUrl.url,
+          sessionId,
+          agentId,
+          baseUrl,
+        );
         break;
       default:
         break;

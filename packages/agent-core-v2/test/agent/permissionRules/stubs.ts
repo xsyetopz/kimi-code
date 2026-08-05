@@ -10,7 +10,7 @@
 import type {
   IAgentPermissionRulesService,
   PermissionRule,
-} from '#/agent/permissionRules/permissionRules';
+} from "#/agent/permissionRules/permissionRules";
 
 export function stubPermissionRulesService(
   rules: () => readonly PermissionRule[],

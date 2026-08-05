@@ -5,11 +5,14 @@
  * Bound at Agent scope and instantiated only for the main agent.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
 
 export interface IAgentPluginService {
   readonly _serviceBrand: undefined;
 }
 
 export const IAgentPluginService: ServiceIdentifier<IAgentPluginService> =
-  createDecorator<IAgentPluginService>('agentPluginService');
+  createDecorator<IAgentPluginService>("agentPluginService");

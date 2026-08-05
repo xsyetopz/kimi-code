@@ -6,8 +6,8 @@
  * `migration-legacy` into the session's `state.json` `custom` block.
  */
 
-const IMPORTED_BADGE = '[imported]';
-const IMPORTED_FLAG_KEY = 'imported_from_kimi_cli';
+const IMPORTED_BADGE = "[imported]";
+const IMPORTED_FLAG_KEY = "imported_from_kimi_cli";
 
 export interface SessionLabelInput {
   readonly title: string;
@@ -22,6 +22,6 @@ export function isImportedSession(
 }
 
 export function formatSessionLabel(input: SessionLabelInput): string {
-  const prefix = isImportedSession(input.metadata) ? `${IMPORTED_BADGE} ` : '';
+  const prefix = isImportedSession(input.metadata) ? `${IMPORTED_BADGE} ` : "";
   return `${prefix}${input.title}`;
 }

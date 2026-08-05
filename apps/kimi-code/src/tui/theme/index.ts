@@ -2,17 +2,21 @@
  * Theme system public API.
  */
 
-import { getBuiltInPalette } from './colors';
-import type { ColorPalette, ResolvedTheme } from './colors';
-import { loadCustomThemeMerged } from './custom-theme-loader';
-import { detectTerminalTheme } from './detect';
+import { getBuiltInPalette } from "./colors";
+import type { ColorPalette, ResolvedTheme } from "./colors";
+import { loadCustomThemeMerged } from "./custom-theme-loader";
+import { detectTerminalTheme } from "./detect";
 
-export { currentTheme, Theme } from './theme';
-export type { ColorToken } from './theme';
-export { darkColors, lightColors, getBuiltInPalette } from './colors';
-export type { ColorPalette, ResolvedTheme } from './colors';
-export { detectTerminalTheme } from './detect';
-export { loadCustomTheme, loadCustomThemeMerged, listCustomThemes } from './custom-theme-loader';
+export { currentTheme, Theme } from "./theme";
+export type { ColorToken } from "./theme";
+export { darkColors, lightColors, getBuiltInPalette } from "./colors";
+export type { ColorPalette, ResolvedTheme } from "./colors";
+export { detectTerminalTheme } from "./detect";
+export {
+  loadCustomTheme,
+  loadCustomThemeMerged,
+  listCustomThemes,
+} from "./custom-theme-loader";
 
 /**
  * User-facing theme preference.
@@ -21,11 +25,11 @@ export { loadCustomTheme, loadCustomThemeMerged, listCustomThemes } from './cust
  * Any other string is treated as a custom theme name looked up in
  * `~/.kimi-code/themes/<name>.json`.
  */
-export type BuiltInTheme = 'dark' | 'light' | 'auto';
+export type BuiltInTheme = "dark" | "light" | "auto";
 export type ThemeName = BuiltInTheme | (string & {});
 
 export function isBuiltInTheme(value: string): value is BuiltInTheme {
-  return value === 'dark' || value === 'light' || value === 'auto';
+  return value === "dark" || value === "light" || value === "auto";
 }
 
 export function isThemeName(_value: string): _value is ThemeName {
@@ -41,15 +45,15 @@ export function isThemeName(_value: string): _value is ThemeName {
  *   missing / invalid files fall back to dark palette.
  */
 export async function getColorPalette(theme: ThemeName): Promise<ColorPalette> {
-  if (theme === 'light') return getBuiltInPalette('light');
-  if (theme === 'dark') return getBuiltInPalette('dark');
-  if (theme === 'auto') {
+  if (theme === "light") return getBuiltInPalette("light");
+  if (theme === "dark") return getBuiltInPalette("dark");
+  if (theme === "auto") {
     const detected = await detectTerminalTheme();
     return getBuiltInPalette(detected);
   }
   // custom theme
   const custom = await loadCustomThemeMerged(theme);
-  return custom ?? getBuiltInPalette('dark');
+  return custom ?? getBuiltInPalette("dark");
 }
 
 /**
@@ -58,6 +62,6 @@ export async function getColorPalette(theme: ThemeName): Promise<ColorPalette> {
  * Custom themes are not supported here — falls back to dark.
  */
 export function getColorPaletteSync(theme: ThemeName): ColorPalette {
-  if (theme === 'light') return getBuiltInPalette('light');
-  return getBuiltInPalette('dark');
+  if (theme === "light") return getBuiltInPalette("light");
+  return getBuiltInPalette("dark");
 }

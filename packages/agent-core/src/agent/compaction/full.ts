@@ -3,7 +3,7 @@ import {
   KimiError,
   isKimiError,
   toKimiErrorPayload,
-} from '#/errors';
+} from "#/errors";
 import {
   APIEmptyResponseError,
   inputTotal,
@@ -17,42 +17,43 @@ import {
   APIStatusError,
   createUserMessage,
   isImageFormatError,
-} from '@moonshot-ai/kosong';
+} from "@moonshot-ai/kosong";
 
-import type { Agent } from '..';
-import type { GenerateOptionsWithRequestLogFields } from '../llm-request-logger';
-import type { ContextMessage } from '../context/types';
-import { stripDynamicToolContext } from '../context/dynamic-tools';
-import { isAbortError } from '../../loop/errors';
+import type { Agent } from "..";
+import type { GenerateOptionsWithRequestLogFields } from "../llm-request-logger";
+import type { ContextMessage } from "../context/types";
+import { stripDynamicToolContext } from "../context/dynamic-tools";
+import { isAbortError } from "../../loop/errors";
 import {
   findAPIStatusError,
   retryBackoffDelays,
   sleepForRetry,
-} from '../../loop/retry';
-import { LLMRequestTraceState } from '../../loop/llm';
+} from "../../loop/retry";
+import { LLMRequestTraceState } from "../../loop/llm";
 import {
   renderTodoList,
   TODO_STORE_KEY,
   type TodoItem,
-} from '../../tools/builtin/state/todo-list';
+} from "../../tools/builtin/state/todo-list";
 import {
   estimateTokens,
   estimateTokensForMessage,
   estimateTokensForMessages,
   estimateTokensForTools,
-} from '../../utils/tokens';
+} from "../../utils/tokens";
 import {
   applyCompletionBudget,
   resolveCompletionBudget,
-} from '../../utils/completion-budget';import { renderPrompt } from '../../utils/render-prompt';
-import compactionInstructionTemplate from './compaction-instruction.md?raw';
-import type { CompactionBeginData, CompactionResult } from './types';
+} from "../../utils/completion-budget";
+import { renderPrompt } from "../../utils/render-prompt";
+import compactionInstructionTemplate from "./compaction-instruction.md?raw";
+import type { CompactionBeginData, CompactionResult } from "./types";
 import {
   DEFAULT_COMPACTION_CONFIG,
   DefaultCompactionStrategy,
   type CompactionStrategy,
-} from './strategy';
-import { buildCompactionSummaryText, isRealUserInput } from './handoff';
+} from "./strategy";
+import { buildCompactionSummaryText, isRealUserInput } from "./handoff";
 
 export const MAX_COMPACTION_RETRY_ATTEMPTS = 5;
 
@@ -62,8 +63,10 @@ const OVERFLOW_STATUS_RECOVERY_RATIO = 0.5;
 
 class CompactionTruncatedError extends Error {
   constructor() {
-    super('Compaction response was truncated before producing a complete summary.');
-    this.name = 'CompactionTruncatedError';
+    super(
+      "Compaction response was truncated before producing a complete summary.",
+    );
+    this.name = "CompactionTruncatedError";
   }
 }
 
@@ -101,15 +104,12 @@ export class FullCompaction {
   ) {
     this.strategy =
       strategy ??
-      new DefaultCompactionStrategy(
-        () => this.getEffectiveMaxContextTokens(),
-        {
-          ...DEFAULT_COMPACTION_CONFIG,
-          reservedContextSize:
-            agent.kimiConfig?.loopControl?.reservedContextSize ??
-            DEFAULT_COMPACTION_CONFIG.reservedContextSize,
-        },
-      );
+      new DefaultCompactionStrategy(() => this.getEffectiveMaxContextTokens(), {
+        ...DEFAULT_COMPACTION_CONFIG,
+        reservedContextSize:
+          agent.kimiConfig?.loopControl?.reservedContextSize ??
+          DEFAULT_COMPACTION_CONFIG.reservedContextSize,
+      });
   }
 
   get isCompacting(): boolean {
@@ -125,10 +125,13 @@ export class FullCompaction {
 
   getEffectiveMaxContextTokens(): number {
     const capability = this.agent.config.modelCapabilities;
-    const configured = capability.max_input_tokens ?? capability.max_context_tokens;
+    const configured =
+      capability.max_input_tokens ?? capability.max_context_tokens;
     const modelAlias = this.agent.config.modelAlias;
     const observed =
-      modelAlias === undefined ? undefined : this.observedMaxContextTokensByModel.get(modelAlias);
+      modelAlias === undefined
+        ? undefined
+        : this.observedMaxContextTokensByModel.get(modelAlias);
     if (observed === undefined) return configured;
     if (configured <= 0) return observed;
     return Math.min(configured, observed);
@@ -143,15 +146,18 @@ export class FullCompaction {
     estimatedRequestTokens = this.estimateCurrentRequestTokens(),
   ): boolean {
     if (error instanceof APIContextOverflowError) return true;
-    if (!(error instanceof APIStatusError) || error.statusCode !== 413) return false;
+    if (!(error instanceof APIStatusError) || error.statusCode !== 413)
+      return false;
     const effectiveMax = this.getEffectiveMaxContextTokens();
     return (
-      effectiveMax > 0 && estimatedRequestTokens >= effectiveMax * OVERFLOW_STATUS_RECOVERY_RATIO
+      effectiveMax > 0 &&
+      estimatedRequestTokens >= effectiveMax * OVERFLOW_STATUS_RECOVERY_RATIO
     );
   }
 
   observeContextOverflow(estimatedRequestTokens: number): void {
-    if (!Number.isFinite(estimatedRequestTokens) || estimatedRequestTokens <= 0) return;
+    if (!Number.isFinite(estimatedRequestTokens) || estimatedRequestTokens <= 0)
+      return;
     const modelAlias = this.agent.config.modelAlias;
     if (modelAlias === undefined) return;
     const observed = Math.max(
@@ -165,7 +171,7 @@ export class FullCompaction {
 
   begin(data: Readonly<CompactionBeginData>): void {
     if (this.compacting) return;
-    if (data.source === 'manual') {
+    if (data.source === "manual") {
       this.compactionCountInTurn = 0;
     } else {
       this.compactionCountInTurn += 1;
@@ -173,13 +179,16 @@ export class FullCompaction {
     if (this.compactionCountInTurn > this.strategy.maxCompactionPerTurn) return;
     if (this.agent.records.restoring) {
       this.agent.replayBuilder.push({
-        type: 'compaction',
+        type: "compaction",
         instruction: data.instruction,
       });
       return;
     }
     if (this.agent.context.history.length === 0) {
-      throw new KimiError(ErrorCodes.COMPACTION_UNABLE, 'No messages to compact in current history.');
+      throw new KimiError(
+        ErrorCodes.COMPACTION_UNABLE,
+        "No messages to compact in current history.",
+      );
     }
     // Manual (SDK/REST) compaction must not start while a turn is running: the
     // turn keeps mutating the context (streaming content, appending messages)
@@ -188,18 +197,18 @@ export class FullCompaction {
     // triggered from within the turn at a step boundary, which blocks the turn
     // for the duration. Refuse manual compaction here so it only runs at a clean
     // boundary; the caller can retry once the turn finishes.
-    if (data.source === 'manual' && this.agent.turn.hasActiveTurn) {
+    if (data.source === "manual" && this.agent.turn.hasActiveTurn) {
       throw new KimiError(
         ErrorCodes.COMPACTION_UNABLE,
-        'Cannot compact while a turn is active. Wait for it to finish, then retry.',
+        "Cannot compact while a turn is active. Wait for it to finish, then retry.",
       );
     }
     this.agent.records.logRecord({
-      type: 'full_compaction.begin',
+      type: "full_compaction.begin",
       ...data,
     });
     this.agent.emitEvent({
-      type: 'compaction.started',
+      type: "compaction.started",
       trigger: data.source,
       instruction: data.instruction,
     });
@@ -212,21 +221,21 @@ export class FullCompaction {
   }
 
   cancel(): void {
-    this.agent.replayBuilder.patchLast('compaction', {
-      result: 'cancelled',
+    this.agent.replayBuilder.patchLast("compaction", {
+      result: "cancelled",
     });
     if (!this.compacting) return;
     this.agent.records.logRecord({
-      type: 'full_compaction.cancel',
+      type: "full_compaction.cancel",
     });
     this.compacting.abortController.abort();
     this.compacting = null;
-    this.agent.emitEvent({ type: 'compaction.cancelled' });
+    this.agent.emitEvent({ type: "compaction.cancelled" });
   }
 
   markCompleted() {
     this.agent.records.logRecord({
-      type: 'full_compaction.complete',
+      type: "full_compaction.complete",
     });
     this.compacting = null;
   }
@@ -240,7 +249,9 @@ export class FullCompaction {
       estimateTokens(this.agent.config.systemPrompt) +
       // Deferred tools never reach the outbound top-level tools[] (kosong
       // generate() strips them); keep the estimate aligned with the wire.
-      estimateTokensForTools(this.agent.tools.loopTools.filter((t) => t.deferred !== true)) +
+      estimateTokensForTools(
+        this.agent.tools.loopTools.filter((t) => t.deferred !== true),
+      ) +
       estimateTokensForMessages(messages)
     );
   }
@@ -302,13 +313,17 @@ export class FullCompaction {
     const maxCompactions = this.strategy.maxCompactionPerTurn;
     if (this.compactionCountInTurn >= maxCompactions) {
       if (throwOnLimit) {
-        throw new KimiError(ErrorCodes.CONTEXT_OVERFLOW, `Compaction limit exceeded (${String(maxCompactions)})`, {
-          details: { maxCompactions },
-        });
+        throw new KimiError(
+          ErrorCodes.CONTEXT_OVERFLOW,
+          `Compaction limit exceeded (${String(maxCompactions)})`,
+          {
+            details: { maxCompactions },
+          },
+        );
       }
       return false;
     }
-    this.begin({ source: 'auto', instruction: undefined });
+    this.begin({ source: "auto", instruction: undefined });
     return this.compacting !== null;
   }
 
@@ -316,13 +331,13 @@ export class FullCompaction {
     const active = this.compacting;
     if (active) {
       active.blockedByTurn = true;
-      signal.addEventListener('abort', () => {
+      signal.addEventListener("abort", () => {
         if (this.compacting === active) {
           this.cancel();
         }
       });
       this.agent.emitEvent({
-        type: 'compaction.blocked',
+        type: "compaction.blocked",
         turnId: this.agent.turn.currentId,
       });
       await active.promise;
@@ -344,7 +359,10 @@ export class FullCompaction {
       try {
         await this.agent.refreshSystemPrompt();
       } catch (error) {
-        this.agent.log.error('failed to refresh system prompt after compaction', { error });
+        this.agent.log.error(
+          "failed to refresh system prompt after compaction",
+          { error },
+        );
       }
       await this.agent.injection.injectAfterCompaction();
       // The reinjected reminders (loadable-tools manifest, goal) are part of
@@ -358,18 +376,21 @@ export class FullCompaction {
       this.markCompleted();
       const { contextSummary: _contextSummary, ...eventResult } = result;
       void _contextSummary;
-      this.agent.emitEvent({ type: 'compaction.completed', result: eventResult });
+      this.agent.emitEvent({
+        type: "compaction.completed",
+        result: eventResult,
+      });
       this.triggerPostCompactHook(data, result);
     } catch (error) {
       if (isAbortError(error)) return;
       const blockedByTurn = this.compacting?.blockedByTurn === true;
       this.cancel();
-      this.agent.log.error('compaction failed', { error });
+      this.agent.log.error("compaction failed", { error });
       if (blockedByTurn) {
         throw error;
       }
       this.agent.emitEvent({
-        type: 'error',
+        type: "error",
         ...toKimiErrorPayload(error),
       });
     } finally {
@@ -383,17 +404,18 @@ export class FullCompaction {
 
   private buildInstruction(customInstruction: string | undefined): string {
     return renderPrompt(compactionInstructionTemplate, {
-      customInstruction: customInstruction?.trim() ?? '',
+      customInstruction: customInstruction?.trim() ?? "",
     }).trimEnd();
   }
 
   private postProcessSummary(summary: string): string {
     const storeData = this.agent.tools.storeData();
-    const todos = (storeData[TODO_STORE_KEY] as readonly TodoItem[] | undefined) ?? [];
+    const todos =
+      (storeData[TODO_STORE_KEY] as readonly TodoItem[] | undefined) ?? [];
     if (todos.length === 0) {
       return summary;
     }
-    const todoMarkdown = renderTodoList(todos, '## TODO List');
+    const todoMarkdown = renderTodoList(todos, "## TODO List");
     return `${summary.trim()}\n\n${todoMarkdown}`;
   }
 
@@ -428,8 +450,10 @@ export class FullCompaction {
       const provider = applyCompletionBudget({
         provider: this.agent.config.provider,
         budget: resolveCompletionBudget({
-          maxOutputSize: this.agent.config.maxOutputSize ?? defaultCompactionCap,
-          reservedContextSize: this.agent.kimiConfig?.loopControl?.reservedContextSize,
+          maxOutputSize:
+            this.agent.config.maxOutputSize ?? defaultCompactionCap,
+          reservedContextSize:
+            this.agent.kimiConfig?.loopControl?.reservedContextSize,
         }),
         capability,
       });
@@ -450,7 +474,8 @@ export class FullCompaction {
       // demand. Must happen before project() (which strips the origin
       // anchor). `originalHistory` itself stays untouched for the
       // prefix-race check and `compactedCount`.
-      let historyForModel: readonly ContextMessage[] = stripDynamicToolContext(originalHistory);
+      let historyForModel: readonly ContextMessage[] =
+        stripDynamicToolContext(originalHistory);
       let droppedCount = 0;
       let mediaStripAttempted = false;
       let overflowShrinkCount = 0;
@@ -467,13 +492,14 @@ export class FullCompaction {
           }),
           createUserMessage(instruction),
         ];
-        const estimatedCompactionRequestTokens = this.estimateRequestTokens(messages);
+        const estimatedCompactionRequestTokens =
+          this.estimateRequestTokens(messages);
         try {
           const trace = new LLMRequestTraceState();
           this.activeSummarizerTrace = trace;
           const generateOptions: GenerateOptionsWithRequestLogFields = {
             signal,
-            requestLogFields: { kind: 'compaction', droppedCount },
+            requestLogFields: { kind: "compaction", droppedCount },
             onTraceId: (traceId) => {
               trace.capture(traceId);
             },
@@ -489,7 +515,7 @@ export class FullCompaction {
           // Multi-round compaction keeps the latest round's request trace id.
           this.lastSummarizerTraceId = response.traceId ?? undefined;
           this.activeSummarizerTrace = undefined;
-          if (response.finishReason === 'truncated') {
+          if (response.finishReason === "truncated") {
             throw new CompactionTruncatedError();
           }
           usage = response.usage;
@@ -499,7 +525,10 @@ export class FullCompaction {
           // A failed request usually still returns response headers, so its
           // trace id rides along on the converted status error.
           const statusError = findAPIStatusError(error);
-          if (statusError?.traceId !== null && statusError?.traceId !== undefined) {
+          if (
+            statusError?.traceId !== null &&
+            statusError?.traceId !== undefined
+          ) {
             this.activeSummarizerTrace?.capture(statusError.traceId);
           }
           // A request-body-size rejection (HTTP 413) or an image-format
@@ -514,7 +543,8 @@ export class FullCompaction {
           // propagates for a format error — dropping oldest messages cannot
           // fix a poisoned image's format.
           const mediaRejected =
-            error instanceof APIRequestTooLargeError || isImageFormatError(error);
+            error instanceof APIRequestTooLargeError ||
+            isImageFormatError(error);
           if (mediaRejected && !mediaStripAttempted) {
             mediaStripAttempted = true;
             const stripped = replaceMediaPartsWithMarkers(historyForModel);
@@ -561,7 +591,8 @@ export class FullCompaction {
               throw error;
             }
             const before = historyForModel.length;
-            historyForModel = dropOldestMessageAndLeadingToolResults(historyForModel);
+            historyForModel =
+              dropOldestMessageAndLeadingToolResults(historyForModel);
             droppedCount += before - historyForModel.length;
             retryCount = 0;
             continue;
@@ -597,12 +628,16 @@ export class FullCompaction {
       // cron reminder, or shell output) was neither summarized (the summary only
       // covers originalHistory) nor kept, so it would silently vanish. Cancel and
       // let a later clean-boundary compaction handle it.
-      if (newHistory.slice(originalHistory.length).some((message) => !isRealUserInput(message))) {
+      if (
+        newHistory
+          .slice(originalHistory.length)
+          .some((message) => !isRealUserInput(message))
+      ) {
         this.cancel();
         return undefined;
       }
 
-      const rawSummary = this.postProcessSummary(summary ?? '');
+      const rawSummary = this.postProcessSummary(summary ?? "");
       const contextSummary = buildCompactionSummaryText(rawSummary);
       const result = this.agent.context.applyCompaction({
         summary: rawSummary,
@@ -624,7 +659,7 @@ export class FullCompaction {
       // record written below keeps its persisted camelCase field names
       // (consumed by external projectors). The two channels intentionally
       // diverge — don't rename the record side to match.
-      this.agent.telemetry.track('compaction_finished', {
+      this.agent.telemetry.track("compaction_finished", {
         source: data.source,
         tokens_before: result.tokensBefore,
         tokens_after: result.tokensAfter,
@@ -648,14 +683,14 @@ export class FullCompaction {
       return result;
     } catch (error) {
       if (isAbortError(error)) return undefined;
-      this.agent.telemetry.track('compaction_failed', {
+      this.agent.telemetry.track("compaction_failed", {
         source: data.source,
         tokens_before: tokensBefore,
         duration_ms: Date.now() - startedAt,
         round: 1,
         retry_count: retryCount,
         thinking_effort: this.agent.config.thinkingEffort,
-        error_type: error instanceof Error ? error.name : 'Unknown',
+        error_type: error instanceof Error ? error.name : "Unknown",
         trace_id: this.lastTraceId,
       });
       if (
@@ -664,7 +699,9 @@ export class FullCompaction {
           error.code === ErrorCodes.PROVIDER_AUTH_ERROR)
       )
         throw error;
-      throw new KimiError(ErrorCodes.COMPACTION_FAILED, String(error), { cause: error });
+      throw new KimiError(ErrorCodes.COMPACTION_FAILED, String(error), {
+        cause: error,
+      });
     }
   }
 
@@ -674,7 +711,7 @@ export class FullCompaction {
     signal: AbortSignal,
   ): Promise<void> {
     signal.throwIfAborted();
-    await this.agent.hooks?.trigger('PreCompact', {
+    await this.agent.hooks?.trigger("PreCompact", {
       matcherValue: data.source,
       signal,
       inputData: {
@@ -689,7 +726,7 @@ export class FullCompaction {
     data: Readonly<CompactionBeginData>,
     result: CompactionResult,
   ): void {
-    void this.agent.hooks?.fireAndForgetTrigger('PostCompact', {
+    void this.agent.hooks?.fireAndForgetTrigger("PostCompact", {
       matcherValue: data.source,
       inputData: {
         trigger: data.source,
@@ -703,12 +740,14 @@ const MAX_COMPACTION_OVERFLOW_SHRINK_ATTEMPTS = 3;
 const COMPACTION_OVERFLOW_SHRINK_RATIOS = [0.7, 0.5, 0.35] as const;
 
 const MEDIA_PART_MARKERS = {
-  image_url: '[image]',
-  audio_url: '[audio]',
-  video_url: '[video]',
+  image_url: "[image]",
+  audio_url: "[audio]",
+  video_url: "[video]",
 } as const;
 
-function isMediaPart(part: ContentPart): part is ContentPart & { type: keyof typeof MEDIA_PART_MARKERS } {
+function isMediaPart(
+  part: ContentPart,
+): part is ContentPart & { type: keyof typeof MEDIA_PART_MARKERS } {
   return part.type in MEDIA_PART_MARKERS;
 }
 
@@ -728,8 +767,11 @@ function replaceMediaPartsWithMarkers(
     changed = true;
     return {
       ...message,
-      content: message.content.map((part): ContentPart =>
-        isMediaPart(part) ? { type: 'text', text: MEDIA_PART_MARKERS[part.type] } : part,
+      content: message.content.map(
+        (part): ContentPart =>
+          isMediaPart(part)
+            ? { type: "text", text: MEDIA_PART_MARKERS[part.type] }
+            : part,
       ),
     };
   });
@@ -741,9 +783,10 @@ function shrinkCompactionHistoryAfterOverflow<T extends Message>(
   attempt: number,
 ): T[] {
   if (messages.length <= 1) return messages.slice();
-  const ratio = COMPACTION_OVERFLOW_SHRINK_RATIOS[
-    Math.min(attempt - 1, COMPACTION_OVERFLOW_SHRINK_RATIOS.length - 1)
-  ]!;
+  const ratio =
+    COMPACTION_OVERFLOW_SHRINK_RATIOS[
+      Math.min(attempt - 1, COMPACTION_OVERFLOW_SHRINK_RATIOS.length - 1)
+    ]!;
   const tokenBudget = Math.floor(estimateTokensForMessages(messages) * ratio);
   return takeRecentMessagesWithinTokenBudget(messages, tokenBudget);
 }
@@ -764,16 +807,18 @@ function takeRecentMessagesWithinTokenBudget<T extends Message>(
   return dropLeadingToolResults(messages.slice(start));
 }
 
-function dropOldestMessageAndLeadingToolResults<T extends { readonly role: string }>(
-  messages: readonly T[],
-): T[] {
+function dropOldestMessageAndLeadingToolResults<
+  T extends { readonly role: string },
+>(messages: readonly T[]): T[] {
   if (messages.length <= 1) return messages.slice();
   return dropLeadingToolResults(messages.slice(1));
 }
 
-function dropLeadingToolResults<T extends { readonly role: string }>(messages: readonly T[]): T[] {
+function dropLeadingToolResults<T extends { readonly role: string }>(
+  messages: readonly T[],
+): T[] {
   let start = 0;
-  while (start < messages.length && messages[start]!.role === 'tool') {
+  while (start < messages.length && messages[start]!.role === "tool") {
     start += 1;
   }
   return messages.slice(start);
@@ -781,13 +826,15 @@ function dropLeadingToolResults<T extends { readonly role: string }>(messages: r
 
 function extractCompactionSummary(response: GenerateResult): string {
   const summary =
-    typeof response.message.content === 'string'
+    typeof response.message.content === "string"
       ? response.message.content
-      : response.message.content.map((part) => (part.type === 'text' ? part.text : '')).join('');
+      : response.message.content
+          .map((part) => (part.type === "text" ? part.text : ""))
+          .join("");
 
   if (summary.trim().length === 0) {
     throw new APIEmptyResponseError(
-      'The compaction response did not contain a non-empty summary.',
+      "The compaction response did not contain a non-empty summary.",
     );
   }
   return summary;

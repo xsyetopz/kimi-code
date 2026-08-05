@@ -3,26 +3,26 @@
  * contract: every code path that would otherwise be a silent no-op
  * (missing id, malformed id) reports an error.
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { CronManager } from '../../../src/agent/cron/manager';
+import { CronManager } from "../../../src/agent/cron/manager";
 import {
   CronDeleteTool,
   type CronDeleteInput,
-} from '../../../src/tools/cron/cron-delete';
-import { CRON_DELETED } from '../../../src/tools/cron/telemetry-events';
+} from "../../../src/tools/cron/cron-delete";
+import { CRON_DELETED } from "../../../src/tools/cron/telemetry-events";
 import type {
   ExecutableToolErrorResult,
   ExecutableToolResult,
   RunnableToolExecution,
   ToolExecution,
-} from '../../../src/loop/types';
+} from "../../../src/loop/types";
 import {
   createAgentStub,
   createClocks,
   scrubCronOutput,
   type AgentStub,
-} from '../../agent/cron/harness/stub';
+} from "../../agent/cron/harness/stub";
 
 interface Harness {
   readonly stub: AgentStub;
@@ -49,8 +49,8 @@ async function runTool(
     return execution;
   }
   return execution.execute({
-    turnId: 'test-turn',
-    toolCallId: 'test-call',
+    turnId: "test-turn",
+    toolCallId: "test-call",
     signal: new AbortController().signal,
   });
 }
@@ -63,34 +63,34 @@ function isErrorExecution(
 
 function assertSuccess(result: ExecutableToolResult): string {
   expect(result.isError ?? false).toBe(false);
-  expect(typeof result.output).toBe('string');
+  expect(typeof result.output).toBe("string");
   return result.output as string;
 }
 
 function assertError(result: ExecutableToolResult): string {
   expect(result.isError).toBe(true);
-  expect(typeof result.output).toBe('string');
+  expect(typeof result.output).toBe("string");
   return result.output as string;
 }
 
-describe('CronDeleteTool', () => {
+describe("CronDeleteTool", () => {
   beforeEach(() => {
     // Disable jitter — irrelevant to delete behaviour but keeps the
     // manager construction path consistent with the create / list
     // tests, in case a later assertion grows to read nextFireAt.
-    vi.stubEnv('KIMI_CRON_NO_JITTER', '1');
+    vi.stubEnv("KIMI_CRON_NO_JITTER", "1");
   });
 
   afterEach(() => {
     vi.unstubAllEnvs();
   });
 
-  it('deletes an existing task, drains the store, and emits cron_deleted', async () => {
+  it("deletes an existing task, drains the store, and emits cron_deleted", async () => {
     const { stub, manager, tool } = makeHarness();
     // Seed via the store directly so the test is independent of
     // CronCreate's validation surface.
     const task = manager.store.add(
-      { cron: '*/5 * * * *', prompt: 'hi', recurring: true },
+      { cron: "*/5 * * * *", prompt: "hi", recurring: true },
       manager.clocks.wallNow(),
     );
     expect(manager.store.list()).toHaveLength(1);
@@ -112,28 +112,28 @@ describe('CronDeleteTool', () => {
     expect(stub.steerCalls).toHaveLength(0);
   });
 
-  it('reports an error when the id is well-formed but absent, with no telemetry', async () => {
+  it("reports an error when the id is well-formed but absent, with no telemetry", async () => {
     const { stub, manager, tool } = makeHarness();
     // No tasks seeded — the lookup miss is the path under test.
-    const msg = assertError(await runTool(tool, { id: '0123abcd' }));
+    const msg = assertError(await runTool(tool, { id: "0123abcd" }));
     expect(msg).toMatchInlineSnapshot(`"No cron job with id 0123abcd."`);
 
     expect(manager.store.list()).toHaveLength(0);
     expect(stub.telemetryCalls).toHaveLength(0);
   });
 
-  it('rejects an uppercase id (format check, no store mutation)', async () => {
+  it("rejects an uppercase id (format check, no store mutation)", async () => {
     const { stub, manager, tool } = makeHarness();
     // Seed a real task so we can confirm the malformed id never reaches
     // the store. (The seeded id won't collide with the uppercase one,
     // but this guards against a regression that bypasses the format
     // check entirely and somehow clears the store.)
     manager.store.add(
-      { cron: '*/5 * * * *', prompt: 'hi', recurring: true },
+      { cron: "*/5 * * * *", prompt: "hi", recurring: true },
       manager.clocks.wallNow(),
     );
 
-    const msg = assertError(await runTool(tool, { id: 'ABCD1234' }));
+    const msg = assertError(await runTool(tool, { id: "ABCD1234" }));
     expect(msg).toMatchInlineSnapshot(
       `"Invalid cron job id "ABCD1234" — must be 8 lowercase hex characters."`,
     );
@@ -142,9 +142,9 @@ describe('CronDeleteTool', () => {
     expect(stub.telemetryCalls).toHaveLength(0);
   });
 
-  it('rejects a too-short id', async () => {
+  it("rejects a too-short id", async () => {
     const { stub, manager, tool } = makeHarness();
-    const msg = assertError(await runTool(tool, { id: 'abc' }));
+    const msg = assertError(await runTool(tool, { id: "abc" }));
     expect(msg).toMatchInlineSnapshot(
       `"Invalid cron job id "abc" — must be 8 lowercase hex characters."`,
     );
@@ -153,9 +153,9 @@ describe('CronDeleteTool', () => {
     expect(stub.telemetryCalls).toHaveLength(0);
   });
 
-  it('rejects a non-hex id of the right length', async () => {
+  it("rejects a non-hex id of the right length", async () => {
     const { stub, manager, tool } = makeHarness();
-    const msg = assertError(await runTool(tool, { id: 'zzzzzzzz' }));
+    const msg = assertError(await runTool(tool, { id: "zzzzzzzz" }));
     expect(msg).toMatchInlineSnapshot(
       `"Invalid cron job id "zzzzzzzz" — must be 8 lowercase hex characters."`,
     );
@@ -164,9 +164,9 @@ describe('CronDeleteTool', () => {
     expect(stub.telemetryCalls).toHaveLength(0);
   });
 
-  it('rejects an empty id', async () => {
+  it("rejects an empty id", async () => {
     const { stub, manager, tool } = makeHarness();
-    const msg = assertError(await runTool(tool, { id: '' }));
+    const msg = assertError(await runTool(tool, { id: "" }));
     expect(msg).toMatchInlineSnapshot(
       `"Invalid cron job id "" — must be 8 lowercase hex characters."`,
     );

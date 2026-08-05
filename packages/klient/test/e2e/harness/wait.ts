@@ -3,10 +3,10 @@
  * `HttpClient.getSession`. Kept separate from `client.ts` so scenarios can
  * import them directly without dragging the whole `DaemonClient` class.
  */
-import type { Session } from '@moonshot-ai/protocol';
+import type { Session } from "@moonshot-ai/protocol";
 
-import type { HttpClient } from './http.js';
-import type { AnyFrame, WsClient } from './ws.js';
+import type { HttpClient } from "./http.js";
+import type { AnyFrame, WsClient } from "./ws.js";
 
 /** Default 60s wait for a single event frame — matches approval/question TTL. */
 export const DEFAULT_FRAME_TIMEOUT_MS = 60_000;
@@ -20,7 +20,10 @@ export function waitForFrame(
   predicate: (frame: AnyFrame) => boolean,
   opts?: { timeoutMs?: number },
 ): Promise<AnyFrame> {
-  return ws.waitForFrame(predicate, opts?.timeoutMs ?? DEFAULT_FRAME_TIMEOUT_MS);
+  return ws.waitForFrame(
+    predicate,
+    opts?.timeoutMs ?? DEFAULT_FRAME_TIMEOUT_MS,
+  );
 }
 
 /**
@@ -47,7 +50,7 @@ export async function waitForSessionBusy(
   }
   throw new Error(
     `session ${sid} did not reach busy=${busy} within ${timeoutMs}ms ` +
-      `(last busy=${last?.busy ?? 'unknown'})`,
+      `(last busy=${last?.busy ?? "unknown"})`,
   );
 }
 

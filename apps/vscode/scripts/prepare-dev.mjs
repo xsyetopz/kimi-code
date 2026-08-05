@@ -1,14 +1,14 @@
 #!/usr/bin/env node
-import { mkdir, rm, writeFile } from 'node:fs/promises';
-import { basename, dirname, join, parse, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { mkdir, rm, writeFile } from "node:fs/promises";
+import { basename, dirname, join, parse, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
-import { isMainModule } from './vsix-targets.mjs';
+import { isMainModule } from "./vsix-targets.mjs";
 
-const SAFE_DIRECTORY_NAME = 'vscode-extension-dev';
+const SAFE_DIRECTORY_NAME = "vscode-extension-dev";
 const scriptDir = dirname(fileURLToPath(import.meta.url));
-const monorepoRoot = resolve(scriptDir, '../../..');
-const defaultBaseDir = join(monorepoRoot, '.tmp', SAFE_DIRECTORY_NAME);
+const monorepoRoot = resolve(scriptDir, "../../..");
+const defaultBaseDir = join(monorepoRoot, ".tmp", SAFE_DIRECTORY_NAME);
 
 export async function prepareDevEnvironment(baseDir = defaultBaseDir) {
   const root = resolve(baseDir);
@@ -17,10 +17,10 @@ export async function prepareDevEnvironment(baseDir = defaultBaseDir) {
 
   const paths = {
     root,
-    userData: join(root, 'user-data'),
-    extensions: join(root, 'extensions'),
-    kimiHome: join(root, 'kimi-home'),
-    workspace: join(root, 'workspace'),
+    userData: join(root, "user-data"),
+    extensions: join(root, "extensions"),
+    kimiHome: join(root, "kimi-home"),
+    workspace: join(root, "workspace"),
   };
   await Promise.all(
     Object.values(paths)
@@ -28,8 +28,8 @@ export async function prepareDevEnvironment(baseDir = defaultBaseDir) {
       .map((path) => mkdir(path, { recursive: true })),
   );
   await writeFile(
-    join(paths.workspace, 'README.md'),
-    '# Isolated Kimi Code extension development workspace\n',
+    join(paths.workspace, "README.md"),
+    "# Isolated Kimi Code extension development workspace\n",
   );
   return paths;
 }
@@ -48,13 +48,14 @@ function parseArguments(argv) {
   let help = false;
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index];
-    if (argument === '--') {
+    if (argument === "--") {
       continue;
-    } else if (argument === '--help' || argument === '-h') {
+    } else if (argument === "--help" || argument === "-h") {
       help = true;
-    } else if (argument === '--base-dir') {
+    } else if (argument === "--base-dir") {
       const value = argv[++index];
-      if (value === undefined || value.startsWith('-')) throw new Error('--base-dir requires a value.');
+      if (value === undefined || value.startsWith("-"))
+        throw new Error("--base-dir requires a value.");
       baseDir = value;
     } else {
       throw new Error(`Unknown option: ${argument}`);
@@ -66,7 +67,9 @@ function parseArguments(argv) {
 async function main() {
   const options = parseArguments(process.argv.slice(2));
   if (options.help) {
-    console.log('Usage: node scripts/prepare-dev.mjs [--base-dir <.../vscode-extension-dev>]');
+    console.log(
+      "Usage: node scripts/prepare-dev.mjs [--base-dir <.../vscode-extension-dev>]",
+    );
     return;
   }
   const paths = await prepareDevEnvironment(options.baseDir);
@@ -77,7 +80,9 @@ async function main() {
 
 if (isMainModule(import.meta.url)) {
   main().catch((error) => {
-    console.error(`Development environment setup failed: ${error instanceof Error ? error.message : String(error)}`);
+    console.error(
+      `Development environment setup failed: ${error instanceof Error ? error.message : String(error)}`,
+    );
     process.exitCode = 1;
   });
 }

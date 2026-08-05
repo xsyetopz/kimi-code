@@ -18,21 +18,21 @@
  * session recordings and dashboards stay valid.
  */
 
-import type { IAgentScopeHandle } from '#/_base/di/scope';
-import { userCancellationReason } from '#/_base/utils/abort';
-import { IAgentTokenCountingService } from '#/agent/tokenCounting/tokenCounting';
-import { IAgentProfileService } from '#/agent/profile/profile';
-import { isProviderRateLimitError } from '#/kosong/contract/errors';
-import { type TokenUsage } from '#/kosong/contract/usage';
-import { ITelemetryService } from '#/app/telemetry/telemetry';
-import { IEventBus } from '#/app/event/eventBus';
-import { isAbortError } from '#/_base/utils/abort';
-import { IAgentLifecycleService } from '#/session/agentLifecycle/agentLifecycle';
+import type { IAgentScopeHandle } from "#/_base/di/scope";
+import { userCancellationReason } from "#/_base/utils/abort";
+import { IAgentTokenCountingService } from "#/agent/tokenCounting/tokenCounting";
+import { IAgentProfileService } from "#/agent/profile/profile";
+import { isProviderRateLimitError } from "#/kosong/contract/errors";
+import { type TokenUsage } from "#/kosong/contract/usage";
+import { ITelemetryService } from "#/app/telemetry/telemetry";
+import { IEventBus } from "#/app/event/eventBus";
+import { isAbortError } from "#/_base/utils/abort";
+import { IAgentLifecycleService } from "#/session/agentLifecycle/agentLifecycle";
 
-import { type AgentRunHandle, ISessionSubagentService } from './subagent';
+import { type AgentRunHandle, ISessionSubagentService } from "./subagent";
 
 export interface SubagentSpawnedEvent {
-  readonly type: 'subagent.spawned';
+  readonly type: "subagent.spawned";
   readonly subagentId: string;
   readonly subagentName: string;
   readonly parentToolCallId: string;
@@ -45,12 +45,12 @@ export interface SubagentSpawnedEvent {
 }
 
 export interface SubagentStartedEvent {
-  readonly type: 'subagent.started';
+  readonly type: "subagent.started";
   readonly subagentId: string;
 }
 
 export interface SubagentCompletedEvent {
-  readonly type: 'subagent.completed';
+  readonly type: "subagent.completed";
   readonly subagentId: string;
   readonly resultSummary: string;
   readonly usage?: TokenUsage;
@@ -58,17 +58,17 @@ export interface SubagentCompletedEvent {
 }
 
 export interface SubagentFailedEvent {
-  readonly type: 'subagent.failed';
+  readonly type: "subagent.failed";
   readonly subagentId: string;
   readonly error: string;
 }
 
-declare module '#/app/event/eventBus' {
+declare module "#/app/event/eventBus" {
   interface DomainEventMap {
-    'subagent.spawned': SubagentSpawnedEvent;
-    'subagent.started': SubagentStartedEvent;
-    'subagent.completed': SubagentCompletedEvent;
-    'subagent.failed': SubagentFailedEvent;
+    "subagent.spawned": SubagentSpawnedEvent;
+    "subagent.started": SubagentStartedEvent;
+    "subagent.completed": SubagentCompletedEvent;
+    "subagent.failed": SubagentFailedEvent;
   }
 }
 
@@ -95,10 +95,10 @@ export function emitAgentRunSpawned(
   meta: AgentRunSpawnedMeta,
 ): void {
   requester.accessor.get(IEventBus)?.publish({
-    type: 'subagent.spawned',
+    type: "subagent.spawned",
     subagentId: targetAgentId,
     subagentName: meta.profileName,
-    parentToolCallId: meta.parentToolCallId ?? '',
+    parentToolCallId: meta.parentToolCallId ?? "",
     parentToolCallUuid: meta.parentToolCallUuid,
     parentAgentId: requester.id,
     callerAgentId: requester.id,
@@ -111,12 +111,12 @@ export function emitAgentRunSpawned(
     ?.get(targetAgentId)
     ?.accessor.get(IAgentProfileService)
     ?.republishStatus();
-  requester.accessor.get(ITelemetryService)?.track2('subagent_created', {
+  requester.accessor.get(ITelemetryService)?.track2("subagent_created", {
     subagent_name: meta.profileName,
     run_in_background: meta.runInBackground ?? false,
     agent_id: targetAgentId,
     parent_agent_id: requester.id,
-    parent_tool_call_id: meta.parentToolCallId ?? '',
+    parent_tool_call_id: meta.parentToolCallId ?? "",
   });
 }
 
@@ -128,7 +128,7 @@ export async function mirrorAgentRun(
   const eventBus = requester.accessor.get(IEventBus);
   const subagents = requester.accessor.get(ISessionSubagentService);
   const agentLifecycle = requester.accessor.get(IAgentLifecycleService);
-  eventBus?.publish({ type: 'subagent.started', subagentId: run.agentId });
+  eventBus?.publish({ type: "subagent.started", subagentId: run.agentId });
   if (options.prompt !== undefined) {
     const cancelAndRethrow = (reason: unknown): never => {
       options.cancel?.(reason);
@@ -152,7 +152,7 @@ export async function mirrorAgentRun(
     const result = await run.completion;
     const contextTokens = childContextTokens(agentLifecycle, run.agentId);
     eventBus?.publish({
-      type: 'subagent.completed',
+      type: "subagent.completed",
       subagentId: run.agentId,
       resultSummary: result.summary,
       usage: result.usage,
@@ -166,7 +166,7 @@ export async function mirrorAgentRun(
   } catch (error) {
     if (!isAbortError(error) && !shouldSuppressFailure(options, error)) {
       eventBus?.publish({
-        type: 'subagent.failed',
+        type: "subagent.failed",
         subagentId: run.agentId,
         error: errorMessage(error),
       });
@@ -175,7 +175,10 @@ export async function mirrorAgentRun(
   }
 }
 
-function shouldSuppressFailure(options: MirrorAgentRunOptions, error: unknown): boolean {
+function shouldSuppressFailure(
+  options: MirrorAgentRunOptions,
+  error: unknown,
+): boolean {
   if (options.suppressRateLimitFailureEvent !== true) return false;
   if (isProviderRateLimitError(error)) return true;
   return isAbortError(error) || options.signal.aborted;

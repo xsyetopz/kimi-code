@@ -4,10 +4,14 @@ import {
   type AgentContextData,
   type KimiErrorCode,
   type SwarmModeTrigger,
-} from '@moonshot-ai/agent-core';
+} from "@moonshot-ai/agent-core";
 
-import { type ApprovalHandler, type Event, type QuestionHandler } from '#/events';
-import type { SDKRpcClientBase } from '#/rpc';
+import {
+  type ApprovalHandler,
+  type Event,
+  type QuestionHandler,
+} from "#/events";
+import type { SDKRpcClientBase } from "#/rpc";
 import type {
   AddAdditionalDirOptions,
   AddAdditionalDirResult,
@@ -37,9 +41,9 @@ import type {
   PluginCommandDef,
   ThinkingEffort,
   Unsubscribe,
-} from '#/types';
+} from "#/types";
 
-const MAIN_AGENT_ID = 'main';
+const MAIN_AGENT_ID = "main";
 
 export interface SessionOptions {
   readonly id: string;
@@ -65,11 +69,13 @@ interface CapabilityRpcSurface {
 function capabilityRpc(rpc: SDKRpcClientBase): CapabilityRpcSurface {
   const candidate = rpc as Partial<CapabilityRpcSurface>;
   if (
-    typeof candidate.listCapabilities !== 'function' ||
-    typeof candidate.getCapability !== 'function' ||
-    typeof candidate.installCapability !== 'function'
+    typeof candidate.listCapabilities !== "function" ||
+    typeof candidate.getCapability !== "function" ||
+    typeof candidate.installCapability !== "function"
   ) {
-    throw new TypeError('The capability surface is unavailable on this engine (requires v2).');
+    throw new TypeError(
+      "The capability surface is unavailable on this engine (requires v2).",
+    );
   }
   return candidate as CapabilityRpcSurface;
 }
@@ -88,7 +94,8 @@ export class Session {
     this.id = options.id;
     this.workDir = options.workDir;
     this.summary = options.summary;
-    this.resumeState = options.resumeState ?? resumeStateFromSummary(options.summary);
+    this.resumeState =
+      options.resumeState ?? resumeStateFromSummary(options.summary);
     this.rpc = options.rpc;
     this.onClose = options.onClose;
   }
@@ -98,7 +105,9 @@ export class Session {
     return this.resumeState;
   }
 
-  async reloadSession(options?: ReloadSessionOptions): Promise<ResumedSessionSummary> {
+  async reloadSession(
+    options?: ReloadSessionOptions,
+  ): Promise<ResumedSessionSummary> {
     this.ensureOpen();
     const summary = await this.rpc.reloadSession({
       sessionId: this.id,
@@ -142,7 +151,12 @@ export class Session {
   async runShellCommand(
     command: string,
     options?: { commandId?: string },
-  ): Promise<{ stdout: string; stderr: string; isError?: boolean; backgrounded?: boolean }> {
+  ): Promise<{
+    stdout: string;
+    stderr: string;
+    isError?: boolean;
+    backgrounded?: boolean;
+  }> {
     this.ensureOpen();
     return this.rpc.runShellCommand({
       sessionId: this.id,
@@ -190,7 +204,7 @@ export class Session {
     this.ensureOpen();
     const normalized = normalizeRequiredString(
       path,
-      'Additional directory cannot be empty',
+      "Additional directory cannot be empty",
       ErrorCodes.REQUEST_INVALID,
     );
     const result = await this.rpc.addAdditionalDir({
@@ -198,7 +212,10 @@ export class Session {
       path: normalized,
       persist: options?.persist ?? true,
     });
-    this.summary = { ...this.requireSummary(), additionalDirs: result.additionalDirs };
+    this.summary = {
+      ...this.requireSummary(),
+      additionalDirs: result.additionalDirs,
+    };
     return result;
   }
 
@@ -216,7 +233,7 @@ export class Session {
     this.ensureOpen();
     const normalized = normalizeRequiredString(
       model,
-      'Session model cannot be empty',
+      "Session model cannot be empty",
       ErrorCodes.SESSION_MODEL_EMPTY,
     );
     await this.rpc.setModel({ sessionId: this.id, model: normalized });
@@ -226,7 +243,7 @@ export class Session {
     this.ensureOpen();
     const normalized = normalizeRequiredString(
       effort,
-      'Session thinking effort cannot be empty',
+      "Session thinking effort cannot be empty",
       ErrorCodes.SESSION_THINKING_EMPTY,
     );
     await this.rpc.setThinking({ sessionId: this.id, effort: normalized });
@@ -249,7 +266,7 @@ export class Session {
     if (!isPermissionMode(mode)) {
       throw new KimiError(
         ErrorCodes.SESSION_PERMISSION_MODE_INVALID,
-        'Session permission mode must be yolo, manual, or auto',
+        "Session permission mode must be yolo, manual, or auto",
       );
     }
     await this.rpc.setPermission({ sessionId: this.id, mode });
@@ -258,14 +275,17 @@ export class Session {
   /** Shallow-merge host-owned fields into this session's persisted custom metadata. */
   async updateMetadata(patch: JsonObject): Promise<void> {
     this.ensureOpen();
-    if (Object.hasOwn(patch, 'goal')) {
+    if (Object.hasOwn(patch, "goal")) {
       throw new KimiError(
         ErrorCodes.GOAL_METADATA_RESERVED,
         'Session metadata key "goal" is reserved for the goal lifecycle',
       );
     }
     const summary = this.requireSummary();
-    await this.rpc.updateSessionMetadata({ sessionId: this.id, metadata: patch });
+    await this.rpc.updateSessionMetadata({
+      sessionId: this.id,
+      metadata: patch,
+    });
     const metadata = { ...summary.metadata, ...patch };
     this.summary = { ...summary, metadata };
     if (this.resumeState !== undefined) {
@@ -281,25 +301,32 @@ export class Session {
 
   async setPlanMode(enabled: boolean): Promise<void> {
     this.ensureOpen();
-    if (typeof enabled !== 'boolean') {
+    if (typeof enabled !== "boolean") {
       throw new KimiError(
         ErrorCodes.SESSION_PLAN_MODE_INVALID,
-        'Session plan mode must be a boolean',
+        "Session plan mode must be a boolean",
       );
     }
     await this.rpc.setPlanMode({ sessionId: this.id, enabled });
   }
 
-  async setSwarmMode(enabled: boolean, trigger: SwarmModeTrigger): Promise<void> {
+  async setSwarmMode(
+    enabled: boolean,
+    trigger: SwarmModeTrigger,
+  ): Promise<void> {
     this.ensureOpen();
-    if (typeof enabled !== 'boolean') {
+    if (typeof enabled !== "boolean") {
       throw new KimiError(
         ErrorCodes.REQUEST_INVALID,
-        'Session swarm mode must be a boolean',
+        "Session swarm mode must be a boolean",
       );
     }
     if (enabled) {
-      await this.rpc.setSwarmMode({ sessionId: this.id, enabled: true, trigger });
+      await this.rpc.setSwarmMode({
+        sessionId: this.id,
+        enabled: true,
+        trigger,
+      });
     } else {
       await this.rpc.setSwarmMode({ sessionId: this.id, enabled: false });
     }
@@ -401,7 +428,7 @@ export class Session {
     this.ensureOpen();
     const trimmedTaskId = normalizeRequiredString(
       taskId,
-      'Task id cannot be empty',
+      "Task id cannot be empty",
       ErrorCodes.BACKGROUND_TASK_ID_EMPTY,
     );
     return this.rpc.getBackgroundTaskOutput({
@@ -425,7 +452,7 @@ export class Session {
     this.ensureOpen();
     const trimmedTaskId = normalizeRequiredString(
       taskId,
-      'Task id cannot be empty',
+      "Task id cannot be empty",
       ErrorCodes.BACKGROUND_TASK_ID_EMPTY,
     );
     await this.rpc.stopBackgroundTask({
@@ -439,11 +466,13 @@ export class Session {
    * Detach a running foreground task so the current tool call can return while
    * the task continues under background-task management.
    */
-  async detachBackgroundTask(taskId: string): Promise<BackgroundTaskInfo | undefined> {
+  async detachBackgroundTask(
+    taskId: string,
+  ): Promise<BackgroundTaskInfo | undefined> {
     this.ensureOpen();
     const trimmedTaskId = normalizeRequiredString(
       taskId,
-      'Task id cannot be empty',
+      "Task id cannot be empty",
       ErrorCodes.BACKGROUND_TASK_ID_EMPTY,
     );
     return this.rpc.detachBackgroundTask({
@@ -473,7 +502,7 @@ export class Session {
    * `background.print_background_mode` (`'exit' | 'drain' | 'steer'`); when unset
    * it falls back to the legacy `keep_alive_on_exit` mapping (`true ⇒ 'drain'`).
    */
-  async handlePrintMainTurnCompleted(): Promise<'finish' | 'continue'> {
+  async handlePrintMainTurnCompleted(): Promise<"finish" | "continue"> {
     this.ensureOpen();
     return this.rpc.handlePrintMainTurnCompleted({ sessionId: this.id });
   }
@@ -598,7 +627,7 @@ export class Session {
     this.ensureOpen();
     const skillName = normalizeRequiredString(
       name,
-      'Skill name cannot be empty',
+      "Skill name cannot be empty",
       ErrorCodes.SKILL_NAME_EMPTY,
     );
     const skillArgs = normalizeOptionalString(args);
@@ -620,7 +649,7 @@ export class Session {
     if (normalizedPluginId.length === 0 || normalizedCommandName.length === 0) {
       throw new KimiError(
         ErrorCodes.REQUEST_INVALID,
-        'Plugin id and command name cannot be empty',
+        "Plugin id and command name cannot be empty",
       );
     }
     const commandArgs = normalizeOptionalString(args);
@@ -646,7 +675,7 @@ export class Session {
   /** @internal */
   emitMetaUpdated(patch: { readonly title?: string | undefined }): void {
     this.emit({
-      type: 'session.meta.updated',
+      type: "session.meta.updated",
       sessionId: this.id,
       agentId: MAIN_AGENT_ID,
       title: patch.title,
@@ -660,53 +689,62 @@ export class Session {
 
   private ensureOpen(): void {
     if (this.closed) {
-      throw new KimiError(ErrorCodes.SESSION_CLOSED, 'Session is closed');
+      throw new KimiError(ErrorCodes.SESSION_CLOSED, "Session is closed");
     }
   }
 
   private requireSummary(): SessionSummary {
     if (this.summary === undefined) {
-      throw new KimiError(ErrorCodes.SESSION_STATE_INVALID, 'Session summary is unavailable');
+      throw new KimiError(
+        ErrorCodes.SESSION_STATE_INVALID,
+        "Session summary is unavailable",
+      );
     }
     return this.summary;
   }
 }
 
 function normalizePromptInput(input: string | PromptInput): PromptInput {
-  if (typeof input === 'string') {
+  if (typeof input === "string") {
     if (input.trim().length === 0) {
-      throw new KimiError(ErrorCodes.REQUEST_PROMPT_INPUT_EMPTY, 'Prompt input cannot be empty');
+      throw new KimiError(
+        ErrorCodes.REQUEST_PROMPT_INPUT_EMPTY,
+        "Prompt input cannot be empty",
+      );
     }
-    return [{ type: 'text', text: input }];
+    return [{ type: "text", text: input }];
   }
 
   if (input.length === 0) {
-    throw new KimiError(ErrorCodes.REQUEST_PROMPT_INPUT_EMPTY, 'Prompt input cannot be empty');
+    throw new KimiError(
+      ErrorCodes.REQUEST_PROMPT_INPUT_EMPTY,
+      "Prompt input cannot be empty",
+    );
   }
 
   for (const part of input) {
     switch (part.type) {
-      case 'text':
+      case "text":
         if (part.text.trim().length === 0) {
           throw new KimiError(
             ErrorCodes.REQUEST_PROMPT_INPUT_EMPTY,
-            'Prompt input cannot contain empty text parts',
+            "Prompt input cannot contain empty text parts",
           );
         }
         break;
-      case 'image_url':
+      case "image_url":
         if (part.imageUrl.url.trim().length === 0) {
           throw new KimiError(
             ErrorCodes.REQUEST_PROMPT_INPUT_EMPTY,
-            'Prompt input cannot contain empty image URLs',
+            "Prompt input cannot contain empty image URLs",
           );
         }
         break;
-      case 'video_url':
+      case "video_url":
         if (part.videoUrl.url.trim().length === 0) {
           throw new KimiError(
             ErrorCodes.REQUEST_PROMPT_INPUT_EMPTY,
-            'Prompt input cannot contain empty video URLs',
+            "Prompt input cannot contain empty video URLs",
           );
         }
         break;
@@ -727,14 +765,16 @@ function normalizeRequiredString(
   return normalized;
 }
 
-function normalizeOptionalString(value: string | undefined): string | undefined {
+function normalizeOptionalString(
+  value: string | undefined,
+): string | undefined {
   if (value === undefined) return undefined;
   const normalized = value.trim();
   return normalized.length > 0 ? normalized : undefined;
 }
 
 function isPermissionMode(value: unknown): value is PermissionMode {
-  return value === 'yolo' || value === 'manual' || value === 'auto';
+  return value === "yolo" || value === "manual" || value === "auto";
 }
 
 function resumeStateFromSummary(
@@ -753,9 +793,11 @@ function hasResumeState(
 ): summary is SessionSummary & ResumedSessionState {
   return (
     summary !== undefined &&
-    typeof (summary as { readonly sessionMetadata?: unknown }).sessionMetadata === 'object' &&
-    (summary as { readonly sessionMetadata?: unknown }).sessionMetadata !== null &&
-    typeof (summary as { readonly agents?: unknown }).agents === 'object' &&
+    typeof (summary as { readonly sessionMetadata?: unknown })
+      .sessionMetadata === "object" &&
+    (summary as { readonly sessionMetadata?: unknown }).sessionMetadata !==
+      null &&
+    typeof (summary as { readonly agents?: unknown }).agents === "object" &&
     (summary as { readonly agents?: unknown }).agents !== null
   );
 }

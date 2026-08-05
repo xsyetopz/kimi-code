@@ -161,10 +161,14 @@ export class LegacyMigrationManager {
 
   constructor(options: LegacyMigrationManagerOptions) {
     if (options.targetHome.trim().length === 0) {
-      throw new Error("LegacyMigrationManager requires a non-empty targetHome.");
+      throw new Error(
+        "LegacyMigrationManager requires a non-empty targetHome.",
+      );
     }
     this.targetHome = resolve(options.targetHome);
-    this.defaultSourceHome = resolve(options.defaultSourceHome ?? join(homedir(), ".kimi"));
+    this.defaultSourceHome = resolve(
+      options.defaultSourceHome ?? join(homedir(), ".kimi"),
+    );
     this.workspaceRoot =
       options.workspaceRoot === undefined || options.workspaceRoot === null
         ? null
@@ -211,7 +215,9 @@ export class LegacyMigrationManager {
     return this.execute(true);
   }
 
-  private async execute(ignoreMarker: boolean): Promise<LegacyMigrationRunResult> {
+  private async execute(
+    ignoreMarker: boolean,
+  ): Promise<LegacyMigrationRunResult> {
     const inspection = await this.inspect(ignoreMarker);
     const sourceResults: LegacyMigrationSourceResult[] = [];
 
@@ -303,7 +309,10 @@ export class LegacyMigrationManager {
       }
 
       oauthLoginsRequiringRelogin.push(
-        ...plan.oauthCredentials.map((name) => ({ sourceHome: candidate.sourceHome, name })),
+        ...plan.oauthCredentials.map((name) => ({
+          sourceHome: candidate.sourceHome,
+          name,
+        })),
       );
       mcpOauthServersRequiringReauth.push(
         ...plan.detectedMcpOauthServers.map((name) => ({
@@ -312,7 +321,9 @@ export class LegacyMigrationManager {
         })),
       );
 
-      const hasSkills = await directoryHasEntries(join(candidate.sourceHome, "skills"));
+      const hasSkills = await directoryHasEntries(
+        join(candidate.sourceHome, "skills"),
+      );
       const sessionScanFailures = plan.sessionScanFailures ?? [];
       warnings.push(
         ...sessionScanFailures.map((failure) => ({
@@ -347,7 +358,10 @@ export class LegacyMigrationManager {
       pending.push({
         preview,
         plan,
-        legacyMcpJsonValid: await isLegacyMcpJsonValid(plan, candidate.sourceHome),
+        legacyMcpJsonValid: await isLegacyMcpJsonValid(
+          plan,
+          candidate.sourceHome,
+        ),
       });
     }
 
@@ -356,7 +370,9 @@ export class LegacyMigrationManager {
       suppressed,
       warnings,
       notices: {
-        oauthLoginsRequiringRelogin: dedupeReauthItems(oauthLoginsRequiringRelogin),
+        oauthLoginsRequiringRelogin: dedupeReauthItems(
+          oauthLoginsRequiringRelogin,
+        ),
         mcpOauthServersRequiringReauth: dedupeReauthItems(
           mcpOauthServersRequiringReauth,
         ),
@@ -402,11 +418,14 @@ export class LegacyMigrationManager {
         warnings.push({
           code: "source-equals-target",
           sourceHome,
-          message: "The legacy KIMI_SHARE_DIR resolves to the Kimi Code home and was ignored.",
+          message:
+            "The legacy KIMI_SHARE_DIR resolves to the Kimi Code home and was ignored.",
         });
       } else if (
         sourceHome !== undefined &&
-        !candidates.some((candidate) => samePath(candidate.sourceHome, sourceHome))
+        !candidates.some((candidate) =>
+          samePath(candidate.sourceHome, sourceHome),
+        )
       ) {
         candidates.push({ sourceHome, origin: "legacy-vscode-setting" });
       }
@@ -416,12 +435,13 @@ export class LegacyMigrationManager {
   }
 }
 
-function readLegacyShareDir(
-  environmentVariables: unknown,
-): { readonly kind: "missing" } | { readonly kind: "value"; readonly value: string } | {
-  readonly kind: "invalid";
-  readonly message: string;
-} {
+function readLegacyShareDir(environmentVariables: unknown):
+  | { readonly kind: "missing" }
+  | { readonly kind: "value"; readonly value: string }
+  | {
+      readonly kind: "invalid";
+      readonly message: string;
+    } {
   if (environmentVariables === undefined) return { kind: "missing" };
   if (
     typeof environmentVariables !== "object" ||
@@ -430,16 +450,20 @@ function readLegacyShareDir(
   ) {
     return {
       kind: "invalid",
-      message: "The legacy kimi.environmentVariables setting is invalid and was ignored.",
+      message:
+        "The legacy kimi.environmentVariables setting is invalid and was ignored.",
     };
   }
 
-  const value = (environmentVariables as Record<string, unknown>)["KIMI_SHARE_DIR"];
+  const value = (environmentVariables as Record<string, unknown>)[
+    "KIMI_SHARE_DIR"
+  ];
   if (value === undefined) return { kind: "missing" };
   if (typeof value !== "string" || value.trim().length === 0) {
     return {
       kind: "invalid",
-      message: "The legacy KIMI_SHARE_DIR must be a non-empty string and was ignored.",
+      message:
+        "The legacy KIMI_SHARE_DIR must be a non-empty string and was ignored.",
     };
   }
   return { kind: "value", value };
@@ -514,7 +538,8 @@ function failuresFromReport(
       code: "legacy-config-unreadable",
       sourceHome: source.preview.sourceHome,
       item: "config.toml",
-      message: "The legacy config.toml could not be read or parsed; review it manually.",
+      message:
+        "The legacy config.toml could not be read or parsed; review it manually.",
     });
   }
   if (source.plan.hasMcp && !source.legacyMcpJsonValid) {
@@ -545,7 +570,9 @@ function runStatus(
   return "completed";
 }
 
-function aggregateTotals(sources: readonly LegacyMigrationSourceResult[]): LegacyMigrationTotals {
+function aggregateTotals(
+  sources: readonly LegacyMigrationSourceResult[],
+): LegacyMigrationTotals {
   let configFiles = 0;
   let mcpServers = 0;
   let userHistoryEntries = 0;
@@ -672,7 +699,8 @@ function runMessage(
   status: LegacyMigrationRunResult["status"],
   totals: LegacyMigrationTotals,
 ): string {
-  if (status === "nothing-to-migrate") return "No legacy Kimi data needs migration.";
+  if (status === "nothing-to-migrate")
+    return "No legacy Kimi data needs migration.";
   if (status === "failed") {
     return "Legacy migration failed. Fix the reported path or data error, then retry from the command palette.";
   }

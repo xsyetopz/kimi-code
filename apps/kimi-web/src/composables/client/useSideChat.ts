@@ -7,12 +7,16 @@
 // Cross-dependencies (failure reporting, optimistic-id generation, the event
 // connection) are injected by the facade.
 
-import { computed, ref } from 'vue';
-import { getKimiWebApi } from '../../api';
-import type { AppMessage, KimiEventConnection, ThinkingLevel } from '../../api/types';
-import { messagesToTurns } from '../messagesToTurns';
-import type { ChatTurn } from '../../types';
-import type { ExtendedState } from '../useKimiWebClient';
+import { computed, ref } from "vue";
+import { getKimiWebApi } from "../../api";
+import type {
+  AppMessage,
+  KimiEventConnection,
+  ThinkingLevel,
+} from "../../api/types";
+import { messagesToTurns } from "../messagesToTurns";
+import type { ChatTurn } from "../../types";
+import type { ExtendedState } from "../useKimiWebClient";
 
 export interface UseSideChatDeps {
   pushOperationFailure: (
@@ -43,7 +47,10 @@ export function useSideChat(rawState: ExtendedState, deps: UseSideChatDeps) {
 
   const sideChatTargetBySession = ref<Record<string, { agentId: string }>>({});
 
-  const activeSideChatTarget = computed<{ parentId: string; agentId: string } | null>(() => {
+  const activeSideChatTarget = computed<{
+    parentId: string;
+    agentId: string;
+  } | null>(() => {
     const sid = rawState.activeSessionId;
     if (!sid) return null;
     const target = sideChatTargetBySession.value[sid];
@@ -53,11 +60,15 @@ export function useSideChat(rawState: ExtendedState, deps: UseSideChatDeps) {
   const sideChatSessionId = computed<string | null>(
     () => activeSideChatTarget.value?.parentId ?? null,
   );
-  const sideChatVisible = computed<boolean>(() => activeSideChatTarget.value !== null);
+  const sideChatVisible = computed<boolean>(
+    () => activeSideChatTarget.value !== null,
+  );
 
   const sideChatSending = computed<boolean>(() => {
     const target = activeSideChatTarget.value;
-    return target ? Boolean(rawState.sideChatSendingByAgent[target.agentId]) : false;
+    return target
+      ? Boolean(rawState.sideChatSendingByAgent[target.agentId])
+      : false;
   });
 
   const sideChatRunning = computed<boolean>(() => {
@@ -65,7 +76,7 @@ export function useSideChat(rawState: ExtendedState, deps: UseSideChatDeps) {
     if (!target) return false;
     if (rawState.sideChatSendingByAgent[target.agentId]) return true;
     return (rawState.tasksBySession[target.parentId] ?? []).some(
-      (task) => task.id === target.agentId && task.status === 'running',
+      (task) => task.id === target.agentId && task.status === "running",
     );
   });
 
@@ -81,7 +92,10 @@ export function useSideChat(rawState: ExtendedState, deps: UseSideChatDeps) {
     );
   });
 
-  function updateSideChatMessages(agentId: string, update: (messages: AppMessage[]) => AppMessage[]): void {
+  function updateSideChatMessages(
+    agentId: string,
+    update: (messages: AppMessage[]) => AppMessage[],
+  ): void {
     rawState.sideChatMessagesByAgent = {
       ...rawState.sideChatMessagesByAgent,
       [agentId]: update(rawState.sideChatMessagesByAgent[agentId] ?? []),
@@ -94,19 +108,24 @@ export function useSideChat(rawState: ExtendedState, deps: UseSideChatDeps) {
 
   function removeLastSideChatUserMessage(agentId: string): void {
     updateSideChatMessages(agentId, (messages) => {
-      const idx = [...messages].reverse().findIndex((message) => message.role === 'user');
+      const idx = [...messages]
+        .reverse()
+        .findIndex((message) => message.role === "user");
       if (idx === -1) return messages;
       const removeIndex = messages.length - 1 - idx;
       return messages.filter((_, index) => index !== removeIndex);
     });
   }
 
-  function stampLastSideChatUserPrompt(agentId: string, promptId: string): void {
+  function stampLastSideChatUserPrompt(
+    agentId: string,
+    promptId: string,
+  ): void {
     updateSideChatMessages(agentId, (messages) => {
       const next = [...messages];
       for (let i = next.length - 1; i >= 0; i -= 1) {
         const message = next[i]!;
-        if (message.role !== 'user') continue;
+        if (message.role !== "user") continue;
         next[i] = { ...message, promptId: message.promptId ?? promptId };
         return next;
       }
@@ -114,18 +133,22 @@ export function useSideChat(rawState: ExtendedState, deps: UseSideChatDeps) {
     });
   }
 
-  function appendSideChatAssistantText(agentId: string, sessionId: string, chunk: string): void {
+  function appendSideChatAssistantText(
+    agentId: string,
+    sessionId: string,
+    chunk: string,
+  ): void {
     if (!chunk) return;
     updateSideChatMessages(agentId, (messages) => {
       const last = messages.at(-1);
-      if (last?.role === 'assistant') {
+      if (last?.role === "assistant") {
         const first = last.content[0];
-        const text = first?.type === 'text' ? first.text : '';
+        const text = first?.type === "text" ? first.text : "";
         return [
           ...messages.slice(0, -1),
           {
             ...last,
-            content: [{ type: 'text', text: `${text}${chunk}` }],
+            content: [{ type: "text", text: `${text}${chunk}` }],
           },
         ];
       }
@@ -134,22 +157,30 @@ export function useSideChat(rawState: ExtendedState, deps: UseSideChatDeps) {
         {
           id: nextOptimisticMsgId(),
           sessionId,
-          role: 'assistant',
-          content: [{ type: 'text', text: chunk }],
+          role: "assistant",
+          content: [{ type: "text", text: chunk }],
           createdAt: new Date().toISOString(),
         },
       ];
     });
   }
 
-  function finishSideChatAgent(agentId: string, sessionId: string, outputPreview?: string): void {
-    rawState.sideChatSendingByAgent = { ...rawState.sideChatSendingByAgent, [agentId]: false };
+  function finishSideChatAgent(
+    agentId: string,
+    sessionId: string,
+    outputPreview?: string,
+  ): void {
+    rawState.sideChatSendingByAgent = {
+      ...rawState.sideChatSendingByAgent,
+      [agentId]: false,
+    };
     if (!outputPreview) return;
     const messages = rawState.sideChatMessagesByAgent[agentId] ?? [];
     const last = messages.at(-1);
-    const lastText = last?.role === 'assistant' && last.content[0]?.type === 'text'
-      ? last.content[0].text
-      : '';
+    const lastText =
+      last?.role === "assistant" && last.content[0]?.type === "text"
+        ? last.content[0].text
+        : "";
     if (lastText.trim().length > 0) return;
     appendSideChatAssistantText(agentId, sessionId, outputPreview);
   }
@@ -165,13 +196,16 @@ export function useSideChat(rawState: ExtendedState, deps: UseSideChatDeps) {
    *  Used when the parent was just created from the empty composer so the call
    *  can target it directly instead of reading the active session (which could
    *  race with a concurrent session switch). */
-  async function openSideChatOn(parent: string, initialPrompt?: string): Promise<void> {
+  async function openSideChatOn(
+    parent: string,
+    initialPrompt?: string,
+  ): Promise<void> {
     if (!sideChatTargetBySession.value[parent]) {
       let agentId: string;
       try {
         ({ agentId } = await getKimiWebApi().startBtw(parent));
       } catch (err) {
-        pushOperationFailure('openSideChat', err, { sessionId: parent });
+        pushOperationFailure("openSideChat", err, { sessionId: parent });
         return;
       }
       rawState.sideChatMessagesByAgent = {
@@ -194,20 +228,26 @@ export function useSideChat(rawState: ExtendedState, deps: UseSideChatDeps) {
    *  Always uses `parent` as the session id, carrying model / thinking /
    *  permissionMode / plan / swarm so the turn matches the UI regardless of
    *  parent /profile inheritance or race. */
-  async function sendSideChatPromptOn(parent: string, text: string): Promise<void> {
+  async function sendSideChatPromptOn(
+    parent: string,
+    text: string,
+  ): Promise<void> {
     const target = sideChatTargetBySession.value[parent];
     const trimmed = text.trim();
     if (!target || !trimmed) return;
     const sid = parent;
     const agentId = target.agentId;
-    rawState.sideChatSendingByAgent = { ...rawState.sideChatSendingByAgent, [agentId]: true };
+    rawState.sideChatSendingByAgent = {
+      ...rawState.sideChatSendingByAgent,
+      [agentId]: true,
+    };
     const userMsg: AppMessage = {
       id: nextOptimisticMsgId(),
       sessionId: sid,
-      role: 'user',
-      content: [{ type: 'text', text: trimmed }],
+      role: "user",
+      content: [{ type: "text", text: trimmed }],
       createdAt: new Date().toISOString(),
-      metadata: { 'kimiWeb.optimisticUserMessage': true },
+      metadata: { "kimiWeb.optimisticUserMessage": true },
     };
     appendSideChatMessage(agentId, userMsg);
     try {
@@ -226,10 +266,11 @@ export function useSideChat(rawState: ExtendedState, deps: UseSideChatDeps) {
           ? promptSession.model
           : rawState.defaultModel) ?? undefined;
       const result = await getKimiWebApi().submitPrompt(sid, {
-        content: [{ type: 'text', text: trimmed }],
+        content: [{ type: "text", text: trimmed }],
         agentId,
         model,
-        thinking: (await resolveThinkingForPrompt(sid, model)) ?? rawState.thinking,
+        thinking:
+          (await resolveThinkingForPrompt(sid, model)) ?? rawState.thinking,
         permissionMode: rawState.permission,
         planMode: rawState.planModeBySession[sid] ?? false,
         swarmMode: rawState.swarmModeBySession[sid] ?? false,
@@ -237,12 +278,18 @@ export function useSideChat(rawState: ExtendedState, deps: UseSideChatDeps) {
       stampLastSideChatUserPrompt(agentId, result.promptId);
       rawState.sideChatUserMessageIdsBySession = {
         ...rawState.sideChatUserMessageIdsBySession,
-        [sid]: [...(rawState.sideChatUserMessageIdsBySession[sid] ?? []), result.userMessageId],
+        [sid]: [
+          ...(rawState.sideChatUserMessageIdsBySession[sid] ?? []),
+          result.userMessageId,
+        ],
       };
     } catch (err) {
-      pushOperationFailure('sendSideChatPrompt', err, { sessionId: sid });
+      pushOperationFailure("sendSideChatPrompt", err, { sessionId: sid });
       removeLastSideChatUserMessage(agentId);
-      rawState.sideChatSendingByAgent = { ...rawState.sideChatSendingByAgent, [agentId]: false };
+      rawState.sideChatSendingByAgent = {
+        ...rawState.sideChatSendingByAgent,
+        [agentId]: false,
+      };
     }
   }
 

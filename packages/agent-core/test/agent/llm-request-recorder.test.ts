@@ -1,15 +1,19 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from "vitest";
 
-import type { AgentRecord } from '../../src/agent';
+import type { AgentRecord } from "../../src/agent";
 import {
   InMemoryAgentRecordPersistence,
   type AgentRecordOf,
-} from '../../src/agent/records';
-import type { McpConnectionManager, McpServerEntry, McpStatusListener } from '../../src/mcp';
-import type { MCPClient, MCPToolDefinition } from '../../src/mcp/types';
-import { testAgent, type TestAgentContext } from './harness/agent';
+} from "../../src/agent/records";
+import type {
+  McpConnectionManager,
+  McpServerEntry,
+  McpStatusListener,
+} from "../../src/mcp";
+import type { MCPClient, MCPToolDefinition } from "../../src/mcp/types";
+import { testAgent, type TestAgentContext } from "./harness/agent";
 
-function recordsOf<T extends AgentRecord['type']>(
+function recordsOf<T extends AgentRecord["type"]>(
   persistence: InMemoryAgentRecordPersistence,
   type: T,
 ): AgentRecordOf<T>[] {
@@ -19,39 +23,39 @@ function recordsOf<T extends AgentRecord['type']>(
 }
 
 async function runTurn(ctx: TestAgentContext, prompt: string): Promise<void> {
-  await ctx.rpc.prompt({ input: [{ type: 'text', text: prompt }] });
+  await ctx.rpc.prompt({ input: [{ type: "text", text: prompt }] });
   await ctx.untilTurnEnd();
 }
 
-describe('llm request trace records', () => {
-  it('writes one tools snapshot per unique table and one llm.request per request', async () => {
+describe("llm request trace records", () => {
+  it("writes one tools snapshot per unique table and one llm.request per request", async () => {
     const persistence = new InMemoryAgentRecordPersistence();
     const ctx = testAgent({ persistence });
-    ctx.configure({ tools: ['Read'] });
+    ctx.configure({ tools: ["Read"] });
 
-    ctx.mockNextResponse({ type: 'text', text: 'one' });
-    await runTurn(ctx, 'first');
-    ctx.mockNextResponse({ type: 'text', text: 'two' });
-    await runTurn(ctx, 'second');
+    ctx.mockNextResponse({ type: "text", text: "one" });
+    await runTurn(ctx, "first");
+    ctx.mockNextResponse({ type: "text", text: "two" });
+    await runTurn(ctx, "second");
 
-    const snapshots = recordsOf(persistence, 'llm.tools_snapshot');
+    const snapshots = recordsOf(persistence, "llm.tools_snapshot");
     expect(snapshots).toHaveLength(1);
     const snapshot = snapshots[0]!;
-    expect(snapshot.tools.map((tool) => tool.name)).toEqual(['Read']);
+    expect(snapshot.tools.map((tool) => tool.name)).toEqual(["Read"]);
     expect(snapshot.tools[0]!.description.length).toBeGreaterThan(0);
-    expect(snapshot.tools[0]!.parameters).toMatchObject({ type: 'object' });
+    expect(snapshot.tools[0]!.parameters).toMatchObject({ type: "object" });
 
-    const requests = recordsOf(persistence, 'llm.request');
+    const requests = recordsOf(persistence, "llm.request");
     expect(requests).toHaveLength(2);
-    expect(requests.map((request) => request.turnStep)).toEqual(['0.1', '1.1']);
+    expect(requests.map((request) => request.turnStep)).toEqual(["0.1", "1.1"]);
     for (const request of requests) {
-      expect(request.kind).toBe('loop');
+      expect(request.kind).toBe("loop");
       expect(request.toolsHash).toBe(snapshot.hash);
       expect(request.systemPromptHash).toMatch(/^[0-9a-f]{64}$/);
       // The request used the config system prompt, so no inline copy.
       expect(request.systemPrompt).toBeUndefined();
       expect(request.messageCount).toBeGreaterThan(0);
-      expect(request.model).toBe('mock-model');
+      expect(request.model).toBe("mock-model");
       expect(request.toolSelect).toBe(false);
       // Thinking is off, so no keep passthrough is sent or recorded.
       expect(request.thinkingKeep).toBeUndefined();
@@ -62,73 +66,82 @@ describe('llm request trace records', () => {
     expect(requests[1]!.maxTokens!).toBeLessThan(requests[0]!.maxTokens!);
   });
 
-  it('writes a new snapshot when the active tool table changes', async () => {
+  it("writes a new snapshot when the active tool table changes", async () => {
     const persistence = new InMemoryAgentRecordPersistence();
     const ctx = testAgent({ persistence });
-    ctx.configure({ tools: ['Read'] });
+    ctx.configure({ tools: ["Read"] });
 
-    ctx.mockNextResponse({ type: 'text', text: 'one' });
-    await runTurn(ctx, 'first');
-    await ctx.rpc.setActiveTools({ names: ['Read', 'Glob'] });
-    ctx.mockNextResponse({ type: 'text', text: 'two' });
-    await runTurn(ctx, 'second');
+    ctx.mockNextResponse({ type: "text", text: "one" });
+    await runTurn(ctx, "first");
+    await ctx.rpc.setActiveTools({ names: ["Read", "Glob"] });
+    ctx.mockNextResponse({ type: "text", text: "two" });
+    await runTurn(ctx, "second");
 
-    const snapshots = recordsOf(persistence, 'llm.tools_snapshot');
+    const snapshots = recordsOf(persistence, "llm.tools_snapshot");
     expect(snapshots).toHaveLength(2);
     expect(snapshots[0]!.hash).not.toBe(snapshots[1]!.hash);
-    expect(snapshots[1]!.tools.map((tool) => tool.name)).toEqual(['Glob', 'Read']);
+    expect(snapshots[1]!.tools.map((tool) => tool.name)).toEqual([
+      "Glob",
+      "Read",
+    ]);
 
-    const requests = recordsOf(persistence, 'llm.request');
+    const requests = recordsOf(persistence, "llm.request");
     expect(requests.map((request) => request.toolsHash)).toEqual([
       snapshots[0]!.hash,
       snapshots[1]!.hash,
     ]);
   });
 
-  it('does not re-log a durable snapshot after resume', async () => {
+  it("does not re-log a durable snapshot after resume", async () => {
     const persistence = new InMemoryAgentRecordPersistence();
     const ctx = testAgent({ persistence });
-    ctx.configure({ tools: ['Read'] });
-    ctx.mockNextResponse({ type: 'text', text: 'one' });
-    await runTurn(ctx, 'first');
+    ctx.configure({ tools: ["Read"] });
+    ctx.mockNextResponse({ type: "text", text: "one" });
+    await runTurn(ctx, "first");
 
     const resumedPersistence = new InMemoryAgentRecordPersistence(
       structuredClone(persistence.records),
     );
     const resumed = testAgent({ persistence: resumedPersistence });
     await resumed.agent.resume();
-    resumed.mockNextResponse({ type: 'text', text: 'after resume' });
-    await runTurn(resumed, 'again');
+    resumed.mockNextResponse({ type: "text", text: "after resume" });
+    await runTurn(resumed, "again");
 
-    const snapshots = recordsOf(resumedPersistence, 'llm.tools_snapshot');
+    const snapshots = recordsOf(resumedPersistence, "llm.tools_snapshot");
     expect(snapshots).toHaveLength(1);
-    const requests = recordsOf(resumedPersistence, 'llm.request');
+    const requests = recordsOf(resumedPersistence, "llm.request");
     expect(requests).toHaveLength(2);
     expect(requests[1]!.toolsHash).toBe(requests[0]!.toolsHash);
   });
 
-  it('inlines the system prompt when a request bypasses the config prompt', async () => {
+  it("inlines the system prompt when a request bypasses the config prompt", async () => {
     const persistence = new InMemoryAgentRecordPersistence();
     const ctx = testAgent({ persistence });
     ctx.configure();
 
-    ctx.mockNextResponse({ type: 'text', text: 'ok' });
+    ctx.mockNextResponse({ type: "text", text: "ok" });
     await ctx.agent.generate(
       ctx.agent.config.provider,
-      'summarizer prompt',
+      "summarizer prompt",
       [],
-      [{ role: 'user', content: [{ type: 'text', text: 'hi' }], toolCalls: [] }],
+      [
+        {
+          role: "user",
+          content: [{ type: "text", text: "hi" }],
+          toolCalls: [],
+        },
+      ],
       undefined,
       { signal: new AbortController().signal },
     );
 
-    const request = recordsOf(persistence, 'llm.request').at(-1)!;
-    expect(request.systemPrompt).toBe('summarizer prompt');
+    const request = recordsOf(persistence, "llm.request").at(-1)!;
+    expect(request.systemPrompt).toBe("summarizer prompt");
     expect(request.messageCount).toBe(1);
   });
 
-  it('records the effective kimi thinking effort and keep passthrough', async () => {
-    vi.stubEnv('KIMI_MODEL_THINKING_EFFORT', 'max');
+  it("records the effective kimi thinking effort and keep passthrough", async () => {
+    vi.stubEnv("KIMI_MODEL_THINKING_EFFORT", "max");
     try {
       const persistence = new InMemoryAgentRecordPersistence();
       const ctx = testAgent({ persistence });
@@ -142,23 +155,23 @@ describe('llm request trace records', () => {
           max_context_tokens: 1_000_000,
         },
       });
-      ctx.agent.config.update({ thinkingEffort: 'high' });
+      ctx.agent.config.update({ thinkingEffort: "high" });
 
-      ctx.mockNextResponse({ type: 'text', text: 'ok' });
-      await runTurn(ctx, 'think about it');
+      ctx.mockNextResponse({ type: "text", text: "ok" });
+      await runTurn(ctx, "think about it");
 
-      const request = recordsOf(persistence, 'llm.request').at(-1)!;
+      const request = recordsOf(persistence, "llm.request").at(-1)!;
       // The Kimi provider derives thinkingEffort from the request body's
       // thinking payload, so the env override is the recorded wire value.
-      expect(request.thinkingEffort).toBe('max');
+      expect(request.thinkingEffort).toBe("max");
       // Default preserved-thinking passthrough while thinking is on.
-      expect(request.thinkingKeep).toBe('all');
+      expect(request.thinkingKeep).toBe("all");
     } finally {
       vi.unstubAllEnvs();
     }
   });
 
-  it('does not record a call that fails the pre-flight abort check', async () => {
+  it("does not record a call that fails the pre-flight abort check", async () => {
     const persistence = new InMemoryAgentRecordPersistence();
     const ctx = testAgent({ persistence });
     ctx.configure();
@@ -172,29 +185,35 @@ describe('llm request trace records', () => {
     await expect(
       ctx.agent.generate(
         ctx.agent.config.provider,
-        'prompt',
+        "prompt",
         [],
-        [{ role: 'user', content: [{ type: 'text', text: 'hi' }], toolCalls: [] }],
+        [
+          {
+            role: "user",
+            content: [{ type: "text", text: "hi" }],
+            toolCalls: [],
+          },
+        ],
         undefined,
         { signal: controller.signal },
       ),
-    ).rejects.toMatchObject({ name: 'AbortError' });
+    ).rejects.toMatchObject({ name: "AbortError" });
 
     expect(persistence.records).toHaveLength(recordCountBefore);
-    expect(recordsOf(persistence, 'llm.request')).toHaveLength(0);
-    expect(recordsOf(persistence, 'llm.tools_snapshot')).toHaveLength(0);
+    expect(recordsOf(persistence, "llm.request")).toHaveLength(0);
+    expect(recordsOf(persistence, "llm.tools_snapshot")).toHaveLength(0);
   });
 });
 
-describe('mcp.tools_discovered records', () => {
+describe("mcp.tools_discovered records", () => {
   const RAW_TOOLS: MCPToolDefinition[] = [
     {
-      name: 'query_range',
-      description: 'Query a metrics range',
+      name: "query_range",
+      description: "Query a metrics range",
       inputSchema: {
-        type: 'object',
-        properties: { query: { type: 'string' } },
-        required: ['query'],
+        type: "object",
+        properties: { query: { type: "string" } },
+        required: ["query"],
       },
     },
   ];
@@ -210,13 +229,13 @@ describe('mcp.tools_discovered records', () => {
         return [...input.rawTools];
       },
       async callTool() {
-        return { content: [{ type: 'text', text: 'ok' }], isError: false };
+        return { content: [{ type: "text", text: "ok" }], isError: false };
       },
     };
     const entry: McpServerEntry = {
-      name: input.serverName ?? 'grafana',
-      transport: 'stdio',
-      status: 'connected',
+      name: input.serverName ?? "grafana",
+      transport: "stdio",
+      status: "connected",
       toolCount: input.rawTools.length,
     };
     const mcp = {
@@ -241,18 +260,21 @@ describe('mcp.tools_discovered records', () => {
     return { mcp, entry };
   }
 
-  function attachFakeMcp(ctx: TestAgentContext, mcp: McpConnectionManager): void {
+  function attachFakeMcp(
+    ctx: TestAgentContext,
+    mcp: McpConnectionManager,
+  ): void {
     (ctx.agent as { mcp?: McpConnectionManager }).mcp = mcp;
     ctx.agent.tools.attachMcpTools();
   }
 
-  it('records the raw tools/list once and dedups unchanged re-registrations', async () => {
+  it("records the raw tools/list once and dedups unchanged re-registrations", async () => {
     const persistence = new InMemoryAgentRecordPersistence();
     const ctx = testAgent({ persistence });
-    ctx.configure({ tools: ['mcp__*'] });
+    ctx.configure({ tools: ["mcp__*"] });
 
     let statusListener: McpStatusListener | undefined;
-    let enabled: ReadonlySet<string> = new Set(['query_range']);
+    let enabled: ReadonlySet<string> = new Set(["query_range"]);
     const { mcp, entry } = fakeMcp({
       rawTools: RAW_TOOLS,
       enabledNames: () => enabled,
@@ -264,31 +286,31 @@ describe('mcp.tools_discovered records', () => {
     // Reconnect with identical content: no second record.
     statusListener?.(entry);
 
-    const discoveries = recordsOf(persistence, 'mcp.tools_discovered');
+    const discoveries = recordsOf(persistence, "mcp.tools_discovered");
     expect(discoveries).toHaveLength(1);
     expect(discoveries[0]).toMatchObject({
-      serverName: 'grafana',
+      serverName: "grafana",
       tools: RAW_TOOLS,
-      enabledNames: ['query_range'],
+      enabledNames: ["query_range"],
     });
     expect(discoveries[0]!.collisions).toBeUndefined();
 
     // An allow-list change is a different gating decision — record it.
     enabled = new Set();
     statusListener?.(entry);
-    expect(recordsOf(persistence, 'mcp.tools_discovered')).toHaveLength(2);
+    expect(recordsOf(persistence, "mcp.tools_discovered")).toHaveLength(2);
   });
 
-  it('does not re-log a durable discovery after resume', async () => {
+  it("does not re-log a durable discovery after resume", async () => {
     const persistence = new InMemoryAgentRecordPersistence();
     const ctx = testAgent({ persistence });
-    ctx.configure({ tools: ['mcp__*'] });
+    ctx.configure({ tools: ["mcp__*"] });
     const first = fakeMcp({
       rawTools: RAW_TOOLS,
-      enabledNames: () => new Set(['query_range']),
+      enabledNames: () => new Set(["query_range"]),
     });
     attachFakeMcp(ctx, first.mcp);
-    expect(recordsOf(persistence, 'mcp.tools_discovered')).toHaveLength(1);
+    expect(recordsOf(persistence, "mcp.tools_discovered")).toHaveLength(1);
 
     const resumedPersistence = new InMemoryAgentRecordPersistence(
       structuredClone(persistence.records),
@@ -297,23 +319,25 @@ describe('mcp.tools_discovered records', () => {
     await resumed.agent.resume();
     const second = fakeMcp({
       rawTools: RAW_TOOLS,
-      enabledNames: () => new Set(['query_range']),
+      enabledNames: () => new Set(["query_range"]),
     });
     attachFakeMcp(resumed, second.mcp);
 
-    expect(recordsOf(resumedPersistence, 'mcp.tools_discovered')).toHaveLength(1);
+    expect(recordsOf(resumedPersistence, "mcp.tools_discovered")).toHaveLength(
+      1,
+    );
   });
 
-  it('parks a pre-resume discovery and dedups it against the replayed record', async () => {
+  it("parks a pre-resume discovery and dedups it against the replayed record", async () => {
     const persistence = new InMemoryAgentRecordPersistence();
     const ctx = testAgent({ persistence });
-    ctx.configure({ tools: ['mcp__*'] });
+    ctx.configure({ tools: ["mcp__*"] });
     const first = fakeMcp({
       rawTools: RAW_TOOLS,
-      enabledNames: () => new Set(['query_range']),
+      enabledNames: () => new Set(["query_range"]),
     });
     attachFakeMcp(ctx, first.mcp);
-    expect(recordsOf(persistence, 'mcp.tools_discovered')).toHaveLength(1);
+    expect(recordsOf(persistence, "mcp.tools_discovered")).toHaveLength(1);
 
     // Real Session ordering: MCP servers are already connected when the
     // resumed agent is constructed, so ToolManager attaches (and observes the
@@ -325,7 +349,7 @@ describe('mcp.tools_discovered records', () => {
     const resumed = testAgent({ persistence: resumedPersistence });
     const second = fakeMcp({
       rawTools: RAW_TOOLS,
-      enabledNames: () => new Set(['query_range']),
+      enabledNames: () => new Set(["query_range"]),
     });
     attachFakeMcp(resumed, second.mcp);
     // Parked: nothing may be appended before replay — in particular no
@@ -334,37 +358,39 @@ describe('mcp.tools_discovered records', () => {
 
     await resumed.agent.resume();
 
-    expect(recordsOf(resumedPersistence, 'mcp.tools_discovered')).toHaveLength(1);
+    expect(recordsOf(resumedPersistence, "mcp.tools_discovered")).toHaveLength(
+      1,
+    );
     expect(
-      resumedPersistence.records.filter((record) => record.type === 'metadata'),
+      resumedPersistence.records.filter((record) => record.type === "metadata"),
     ).toHaveLength(1);
   });
 
-  it('parks a discovery observed before the log opens and writes it after the first record', async () => {
+  it("parks a discovery observed before the log opens and writes it after the first record", async () => {
     const persistence = new InMemoryAgentRecordPersistence();
     const ctx = testAgent({ persistence });
     // Attach BEFORE configure: nothing durable exists yet, so the discovery
     // must park instead of opening the log with an observability record.
     const { mcp } = fakeMcp({
       rawTools: RAW_TOOLS,
-      enabledNames: () => new Set(['query_range']),
+      enabledNames: () => new Set(["query_range"]),
     });
     attachFakeMcp(ctx, mcp);
     expect(persistence.records).toHaveLength(0);
 
-    ctx.configure({ tools: ['mcp__*'] });
+    ctx.configure({ tools: ["mcp__*"] });
 
-    expect(recordsOf(persistence, 'mcp.tools_discovered')).toHaveLength(1);
-    expect(persistence.records[0]!.type).toBe('metadata');
+    expect(recordsOf(persistence, "mcp.tools_discovered")).toHaveLength(1);
+    expect(persistence.records[0]!.type).toBe("metadata");
     expect(
-      persistence.records.filter((record) => record.type === 'metadata'),
+      persistence.records.filter((record) => record.type === "metadata"),
     ).toHaveLength(1);
   });
 
-  it('re-records when only the collision outcome changes', async () => {
+  it("re-records when only the collision outcome changes", async () => {
     const persistence = new InMemoryAgentRecordPersistence();
     const ctx = testAgent({ persistence });
-    ctx.configure({ tools: ['mcp__*'] });
+    ctx.configure({ tools: ["mcp__*"] });
 
     // "graf.ana" sanitizes to "graf_ana", so both servers qualify their tool
     // as mcp__graf_ana__query_range; whoever registers first wins the name.
@@ -376,31 +402,35 @@ describe('mcp.tools_discovered records', () => {
         return { content: [], isError: false };
       },
     };
-    ctx.agent.tools.registerMcpServer('graf.ana', occupant, [
-      { name: 'query_range', description: 'occupies the qualified name', parameters: {} },
+    ctx.agent.tools.registerMcpServer("graf.ana", occupant, [
+      {
+        name: "query_range",
+        description: "occupies the qualified name",
+        parameters: {},
+      },
     ]);
 
     let statusListener: McpStatusListener | undefined;
     const { mcp, entry } = fakeMcp({
-      serverName: 'graf_ana',
+      serverName: "graf_ana",
       rawTools: RAW_TOOLS,
-      enabledNames: () => new Set(['query_range']),
+      enabledNames: () => new Set(["query_range"]),
       onListener: (listener) => {
         statusListener = listener;
       },
     });
     attachFakeMcp(ctx, mcp);
 
-    const first = recordsOf(persistence, 'mcp.tools_discovered');
+    const first = recordsOf(persistence, "mcp.tools_discovered");
     expect(first).toHaveLength(1);
     expect(first[0]!.collisions).toHaveLength(1);
 
     // Same rawTools and allow-list, but the colliding server is gone: the
     // outcome flips, so a new record must be written.
-    ctx.agent.tools.unregisterMcpServer('graf.ana');
+    ctx.agent.tools.unregisterMcpServer("graf.ana");
     statusListener?.(entry);
 
-    const all = recordsOf(persistence, 'mcp.tools_discovered');
+    const all = recordsOf(persistence, "mcp.tools_discovered");
     expect(all).toHaveLength(2);
     expect(all[1]!.collisions).toBeUndefined();
   });

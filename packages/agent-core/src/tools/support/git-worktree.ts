@@ -3,9 +3,9 @@
  * null so callers can fall back to their safer path.
  */
 
-import * as pathe from 'pathe';
+import * as pathe from "pathe";
 
-import type { Kaos } from '@moonshot-ai/kaos';
+import type { Kaos } from "@moonshot-ai/kaos";
 
 const S_IFMT = 0o170000;
 const S_IFDIR = 0o040000;
@@ -24,7 +24,7 @@ export async function findGitWorkTreeMarker(
 
   let current = pathe.normalize(cwd);
   for (let depth = 0; depth < 256; depth += 1) {
-    const dotGitPath = pathe.join(current, '.git');
+    const dotGitPath = pathe.join(current, ".git");
     const hit = await probeGitMarker(kaos, dotGitPath, current);
     if (hit !== null) return hit;
 
@@ -40,14 +40,15 @@ async function probeGitMarker(
   dotGitPath: string,
   markerParent: string,
 ): Promise<GitWorkTreeMarker | null> {
-  let stat: Awaited<ReturnType<Kaos['stat']>>;
+  let stat: Awaited<ReturnType<Kaos["stat"]>>;
   try {
     stat = await kaos.stat(dotGitPath);
   } catch {
     return null;
   }
 
-  if (isMode(stat.stMode, S_IFDIR)) return { dotGitPath, controlDirPath: dotGitPath };
+  if (isMode(stat.stMode, S_IFDIR))
+    return { dotGitPath, controlDirPath: dotGitPath };
   if (!isMode(stat.stMode, S_IFREG)) return null;
 
   let content: string;
@@ -76,11 +77,13 @@ function parseGitDir(
   markerParent: string,
 ): string | undefined {
   const line = stripLeadingNoise(content).split(/\r?\n/, 1)[0]?.trim();
-  if (line === undefined || !line.startsWith('gitdir:')) return undefined;
+  if (line === undefined || !line.startsWith("gitdir:")) return undefined;
 
-  const rawPath = line.slice('gitdir:'.length).trim();
+  const rawPath = line.slice("gitdir:".length).trim();
   if (rawPath.length === 0) return undefined;
 
-  const absolute = pathe.isAbsolute(rawPath) ? rawPath : pathe.join(markerParent, rawPath);
+  const absolute = pathe.isAbsolute(rawPath)
+    ? rawPath
+    : pathe.join(markerParent, rawPath);
   return pathe.normalize(absolute);
 }

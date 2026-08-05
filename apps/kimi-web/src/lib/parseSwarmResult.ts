@@ -32,16 +32,16 @@ const RESUME_HINT_RE = /<resume_hint>([\s\S]*?)<\/resume_hint>/;
 // AgentSwarm snippet) does not register as a top-level row — producer writes
 // body unescaped.
 const TOKEN_RE = /<subagent\b([^>]*)>|<\/subagent>/g;
-const SUBAGENT_CLOSE = '</subagent>';
+const SUBAGENT_CLOSE = "</subagent>";
 const COUNT_RE = /(completed|failed|aborted):\s*(\d+)/g;
 const ATTR_RE = /([a-z_]+)="([^"]*)"/g;
 
 function unescapeAttr(value: string): string {
   return value
-    .replaceAll('&quot;', '"')
-    .replaceAll('&lt;', '<')
-    .replaceAll('&gt;', '>')
-    .replaceAll('&amp;', '&');
+    .replaceAll("&quot;", '"')
+    .replaceAll("&lt;", "<")
+    .replaceAll("&gt;", ">")
+    .replaceAll("&amp;", "&");
 }
 
 function parseAttrs(raw: string): Record<string, string> {
@@ -54,12 +54,14 @@ function parseAttrs(raw: string): Record<string, string> {
   return attrs;
 }
 
-function parseCounts(summary: string): Pick<SwarmResult, 'completed' | 'failed' | 'aborted'> {
+function parseCounts(
+  summary: string,
+): Pick<SwarmResult, "completed" | "failed" | "aborted"> {
   const counts = { completed: 0, failed: 0, aborted: 0 };
   COUNT_RE.lastIndex = 0;
   let m: RegExpExecArray | null;
   while ((m = COUNT_RE.exec(summary)) !== null) {
-    const key = m[1] as 'completed' | 'failed' | 'aborted';
+    const key = m[1] as "completed" | "failed" | "aborted";
     counts[key] = Number(m[2]);
   }
   return counts;
@@ -70,11 +72,11 @@ type RowFrame = { attrs: string; bodyStart: number };
 function parseSubagent(attrs: string, body: string): SwarmResultSubagent {
   const parsed = parseAttrs(attrs);
   return {
-    outcome: parsed['outcome'] ?? 'completed',
-    item: parsed['item'],
-    agentId: parsed['agent_id'],
-    mode: parsed['mode'],
-    state: parsed['state'],
+    outcome: parsed["outcome"] ?? "completed",
+    item: parsed["item"],
+    agentId: parsed["agent_id"],
+    mode: parsed["mode"],
+    state: parsed["state"],
     body: body.trim(),
   };
 }
@@ -94,10 +96,12 @@ function parseSubagents(text: string): SwarmResultSubagent[] {
       // Pop balances this close with its matching opening. A frame is real only
       // when it sits on a then-empty stack, i.e. a top-level row.
       if (frame && stack.length === 0) {
-        subs.push(parseSubagent(frame.attrs, text.slice(frame.bodyStart, m.index)));
+        subs.push(
+          parseSubagent(frame.attrs, text.slice(frame.bodyStart, m.index)),
+        );
       }
     } else if (stack.length === 0) {
-      stack.push({ attrs: m[1] ?? '', bodyStart: TOKEN_RE.lastIndex });
+      stack.push({ attrs: m[1] ?? "", bodyStart: TOKEN_RE.lastIndex });
     } else {
       stack.push(null);
     }
@@ -105,12 +109,14 @@ function parseSubagents(text: string): SwarmResultSubagent[] {
   return subs;
 }
 
-export function parseSwarmResult(output: string[] | string | undefined | null): SwarmResult | null {
+export function parseSwarmResult(
+  output: string[] | string | undefined | null,
+): SwarmResult | null {
   if (output === undefined || output === null) return null;
-  const text = Array.isArray(output) ? output.join('\n') : output;
-  if (!text.includes('<agent_swarm_result>')) return null;
+  const text = Array.isArray(output) ? output.join("\n") : output;
+  if (!text.includes("<agent_swarm_result>")) return null;
 
-  const summary = SUMMARY_RE.exec(text)?.[1]?.trim() ?? '';
+  const summary = SUMMARY_RE.exec(text)?.[1]?.trim() ?? "";
   const { completed, failed, aborted } = parseCounts(summary);
   const resumeHint = RESUME_HINT_RE.exec(text)?.[1]?.trim();
   const subagents = parseSubagents(text);

@@ -10,7 +10,7 @@
  * binding, so an Agent's tools reflect the Profile before the first turn. Bound at Agent scope.
  */
 
-import { createDecorator } from '#/_base/di/instantiation';
+import { createDecorator } from "#/_base/di/instantiation";
 
 export interface IAgentToolActivationService {
   readonly _serviceBrand: undefined;
@@ -19,4 +19,4 @@ export interface IAgentToolActivationService {
 }
 
 export const IAgentToolActivationService =
-  createDecorator<IAgentToolActivationService>('agentToolActivationService');
+  createDecorator<IAgentToolActivationService>("agentToolActivationService");

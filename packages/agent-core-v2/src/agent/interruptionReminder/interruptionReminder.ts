@@ -5,11 +5,13 @@
  * a user-cancelled turn. Bound at Agent scope.
  */
 
-import { createDecorator } from '#/_base/di/instantiation';
+import { createDecorator } from "#/_base/di/instantiation";
 
 export interface IAgentInterruptionReminderService {
   readonly _serviceBrand: undefined;
 }
 
 export const IAgentInterruptionReminderService =
-  createDecorator<IAgentInterruptionReminderService>('agentInterruptionReminderService');
+  createDecorator<IAgentInterruptionReminderService>(
+    "agentInterruptionReminderService",
+  );

@@ -1,73 +1,73 @@
-import type { ContentPart, Message } from '#/kosong/contract/message';
+import type { ContentPart, Message } from "#/kosong/contract/message";
 
-import type { AgentTaskStatus } from '#/agent/task/task';
+import type { AgentTaskStatus } from "#/agent/task/task";
 
-export type SkillSource = 'project' | 'user' | 'extra' | 'builtin';
+export type SkillSource = "project" | "user" | "extra" | "builtin";
 
 export interface UserPromptOrigin {
-  readonly kind: 'user';
+  readonly kind: "user";
 }
 
-export const USER_PROMPT_ORIGIN: UserPromptOrigin = { kind: 'user' };
+export const USER_PROMPT_ORIGIN: UserPromptOrigin = { kind: "user" };
 
 export interface SkillActivationOrigin {
-  readonly kind: 'skill_activation';
+  readonly kind: "skill_activation";
   readonly activationId: string;
   readonly skillName: string;
   readonly skillArgs?: string | undefined;
-  readonly trigger: 'user-slash' | 'model-tool' | 'nested-skill';
+  readonly trigger: "user-slash" | "model-tool" | "nested-skill";
   readonly skillType?: string | undefined;
   readonly skillPath?: string | undefined;
   readonly skillSource?: SkillSource | undefined;
 }
 
 export interface PluginCommandOrigin {
-  readonly kind: 'plugin_command';
+  readonly kind: "plugin_command";
   readonly activationId: string;
   readonly pluginId: string;
   readonly commandName: string;
   readonly commandArgs?: string | undefined;
-  readonly trigger: 'user-slash';
+  readonly trigger: "user-slash";
 }
 
 export interface InjectionOrigin {
-  readonly kind: 'injection';
+  readonly kind: "injection";
   readonly variant: string;
   readonly ownerPromptId?: string;
   readonly disclosure?: ContextInjectionDisclosure;
 }
 
 export type ContextInjectionDisclosure = {
-  readonly kind: 'date';
+  readonly kind: "date";
   readonly renderGeneration: number;
   readonly localDate: string;
   readonly timeZone: string;
 };
 
 export interface ShellCommandOrigin {
-  readonly kind: 'shell_command';
-  readonly phase: 'input' | 'output';
+  readonly kind: "shell_command";
+  readonly phase: "input" | "output";
   readonly isError?: boolean;
 }
 
 export interface CompactionSummaryOrigin {
-  readonly kind: 'compaction_summary';
+  readonly kind: "compaction_summary";
 }
 
 export interface SystemTriggerOrigin {
-  readonly kind: 'system_trigger';
+  readonly kind: "system_trigger";
   readonly name: string;
 }
 
 export interface TaskOrigin {
-  readonly kind: 'task';
+  readonly kind: "task";
   readonly taskId: string;
   readonly status: AgentTaskStatus;
   readonly notificationId: string;
 }
 
 export interface CronJobOrigin {
-  readonly kind: 'cron_job';
+  readonly kind: "cron_job";
   readonly jobId: string;
   readonly cron: string;
   readonly recurring: boolean;
@@ -76,18 +76,18 @@ export interface CronJobOrigin {
 }
 
 export interface CronMissedOrigin {
-  readonly kind: 'cron_missed';
+  readonly kind: "cron_missed";
   readonly count: number;
 }
 
 export interface HookResultOrigin {
-  readonly kind: 'hook_result';
+  readonly kind: "hook_result";
   readonly event: string;
   readonly blocked?: boolean;
 }
 
 export interface RetryOrigin {
-  readonly kind: 'retry';
+  readonly kind: "retry";
   readonly trigger?: string;
 }
 

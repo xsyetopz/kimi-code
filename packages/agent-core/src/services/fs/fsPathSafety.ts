@@ -1,20 +1,18 @@
-
-
-import { promises as fs } from 'node:fs';
-import path from 'node:path';
+import { promises as fs } from "node:fs";
+import path from "node:path";
 
 export class FsPathEscapesError extends Error {
   readonly inputPath: string;
   readonly reason:
-    | 'empty'
-    | 'absolute'
-    | 'dotdot_segment'
-    | 'resolved_outside_cwd'
-    | 'symlink_outside_cwd';
+    | "empty"
+    | "absolute"
+    | "dotdot_segment"
+    | "resolved_outside_cwd"
+    | "symlink_outside_cwd";
 
   constructor(
     inputPath: string,
-    reason: FsPathEscapesError['reason'],
+    reason: FsPathEscapesError["reason"],
     detail?: string,
   ) {
     super(
@@ -22,14 +20,13 @@ export class FsPathEscapesError extends Error {
         ? `path "${inputPath}" rejected (${reason}): ${detail}`
         : `path "${inputPath}" rejected (${reason})`,
     );
-    this.name = 'FsPathEscapesError';
+    this.name = "FsPathEscapesError";
     this.inputPath = inputPath;
     this.reason = reason;
   }
 }
 
 export interface PathSafetyResult {
-
   readonly absolute: string;
 
   readonly relative: string;
@@ -39,18 +36,17 @@ export async function resolveSafePath(
   cwd: string,
   inputPath: string,
 ): Promise<PathSafetyResult> {
-
-  if (inputPath === '' || inputPath === '/') {
-    throw new FsPathEscapesError(inputPath, 'empty');
+  if (inputPath === "" || inputPath === "/") {
+    throw new FsPathEscapesError(inputPath, "empty");
   }
 
   if (path.isAbsolute(inputPath)) {
-    throw new FsPathEscapesError(inputPath, 'absolute');
+    throw new FsPathEscapesError(inputPath, "absolute");
   }
 
   const segments = inputPath.split(/[/\\]+/);
-  if (segments.some((s) => s === '..')) {
-    throw new FsPathEscapesError(inputPath, 'dotdot_segment');
+  if (segments.some((s) => s === "..")) {
+    throw new FsPathEscapesError(inputPath, "dotdot_segment");
   }
 
   const realCwd = await fs.realpath(cwd);
@@ -60,10 +56,12 @@ export async function resolveSafePath(
   const resolved = await realpathLongestExistingPrefix(candidate);
 
   if (!isInsideOrEqual(resolved, realCwd)) {
-
-    const reason: FsPathEscapesError['reason'] = isInsideOrEqual(candidate, realCwd)
-      ? 'symlink_outside_cwd'
-      : 'resolved_outside_cwd';
+    const reason: FsPathEscapesError["reason"] = isInsideOrEqual(
+      candidate,
+      realCwd,
+    )
+      ? "symlink_outside_cwd"
+      : "resolved_outside_cwd";
     throw new FsPathEscapesError(inputPath, reason, resolved);
   }
 
@@ -75,8 +73,8 @@ export async function resolveSafePath(
 
 function isInsideOrEqual(child: string, parent: string): boolean {
   const rel = path.relative(parent, child);
-  if (rel === '') return true;
-  if (rel.startsWith('..')) return false;
+  if (rel === "") return true;
+  if (rel.startsWith("..")) return false;
   if (path.isAbsolute(rel)) return false;
   return true;
 }
@@ -90,16 +88,16 @@ async function realpathLongestExistingPrefix(target: string): Promise<string> {
       const real = await fs.realpath(current);
 
       tailSegments.reverse();
-      return tailSegments.length === 0 ? real : path.join(real, ...tailSegments);
+      return tailSegments.length === 0
+        ? real
+        : path.join(real, ...tailSegments);
     } catch (err) {
-
       const code = (err as NodeJS.ErrnoException).code;
-      if (code !== 'ENOENT' && code !== 'ENOTDIR') {
+      if (code !== "ENOENT" && code !== "ENOTDIR") {
         throw err;
       }
       const parent = path.dirname(current);
       if (parent === current) {
-
         return target;
       }
       tailSegments.push(path.basename(current));
@@ -110,9 +108,9 @@ async function realpathLongestExistingPrefix(target: string): Promise<string> {
 }
 
 function toPosixRelative(cwd: string, absolute: string): string {
-  if (absolute === cwd) return '.';
+  if (absolute === cwd) return ".";
   const rel = path.relative(cwd, absolute);
-  if (rel === '') return '.';
+  if (rel === "") return ".";
 
-  return rel.split(path.sep).join('/');
+  return rel.split(path.sep).join("/");
 }

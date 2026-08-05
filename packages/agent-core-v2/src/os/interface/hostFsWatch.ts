@@ -7,12 +7,15 @@
  * App-scoped — one shared instance.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
-import type { Event } from '#/_base/event';
-import type { IDisposable } from '#/_base/di/lifecycle';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
+import type { Event } from "#/_base/event";
+import type { IDisposable } from "#/_base/di/lifecycle";
 
-export type HostFsChangeKind = 'file' | 'directory';
-export type HostFsChangeAction = 'created' | 'modified' | 'deleted';
+export type HostFsChangeKind = "file" | "directory";
+export type HostFsChangeAction = "created" | "modified" | "deleted";
 
 export interface HostFsChange {
   readonly path: string;
@@ -36,4 +39,4 @@ export interface IHostFsWatchService {
 }
 
 export const IHostFsWatchService: ServiceIdentifier<IHostFsWatchService> =
-  createDecorator<IHostFsWatchService>('hostFsWatchService');
+  createDecorator<IHostFsWatchService>("hostFsWatchService");

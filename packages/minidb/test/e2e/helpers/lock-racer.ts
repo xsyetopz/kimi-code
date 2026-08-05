@@ -4,8 +4,8 @@
 // for each round it waits for `go-<round>` to appear in the gate directory,
 // then races to acquire the lock and prints "R<round> <pid> <0|1>".
 
-import fs from 'node:fs';
-import { LockFile } from '../../../src/lockfile.js';
+import fs from "node:fs";
+import { LockFile } from "../../../src/lockfile.js";
 
 const lockPath = process.argv[2]!;
 const gateDir = process.argv[3]!;
@@ -16,7 +16,7 @@ const sleep = (ms: number) => new Promise((res) => setTimeout(res, ms));
 // Signal readiness; the parent plants go-0 only once every racer is parked at
 // the gate. Without this, per-round "holders > 1" conflates true simultaneous
 // holders with plain boot-staggered sequential acquisitions.
-console.log('READY');
+console.log("READY");
 
 for (let r = 0; r < rounds; r++) {
   const gate = `${gateDir}/go-${r}`;

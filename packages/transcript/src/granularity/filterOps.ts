@@ -13,9 +13,12 @@
  * nothing.
  */
 
-import type { TranscriptGrade } from './grade';
-import { GRADE_RANK } from './grade';
-import type { AgentTranscriptSnapshot, TranscriptOperation } from '../ops/operation';
+import type { TranscriptGrade } from "./grade";
+import { GRADE_RANK } from "./grade";
+import type {
+  AgentTranscriptSnapshot,
+  TranscriptOperation,
+} from "../ops/operation";
 
 export function filterOpsForGrade(
   grade: TranscriptGrade,
@@ -28,10 +31,10 @@ export function filterOpsForGrade(
 
 function admits(grade: TranscriptGrade, op: TranscriptOperation): boolean {
   switch (op.op) {
-    case 'append':
+    case "append":
       return GRADE_RANK[grade] >= GRADE_RANK.delta;
-    case 'step.upsert':
-    case 'frame.upsert':
+    case "step.upsert":
+    case "frame.upsert":
       return GRADE_RANK[grade] >= GRADE_RANK.block;
     default:
       return true;
@@ -44,7 +47,7 @@ function admits(grade: TranscriptGrade, op: TranscriptOperation): boolean {
  * will hit an offset gap or a later flush and resynchronize).
  */
 export function isAppendOnly(ops: readonly TranscriptOperation[]): boolean {
-  return ops.length > 0 && ops.every((op) => op.op === 'append');
+  return ops.length > 0 && ops.every((op) => op.op === "append");
 }
 
 /**
@@ -62,6 +65,8 @@ export function redactSnapshotForGrade(
   if (GRADE_RANK[grade] >= GRADE_RANK.block) return snapshot;
   return {
     ...snapshot,
-    items: snapshot.items.map((item) => (item.kind === 'turn' ? { ...item, steps: [] } : item)),
+    items: snapshot.items.map((item) =>
+      item.kind === "turn" ? { ...item, steps: [] } : item,
+    ),
   };
 }

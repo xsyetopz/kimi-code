@@ -8,14 +8,14 @@ export class Node<T> {
 
   constructor(
     readonly key: string,
-    readonly data: T
-  ) { }
+    readonly data: T,
+  ) {}
 }
 
 export class Graph<T> {
   private readonly _nodes = new Map<string, Node<T>>();
 
-  constructor(private readonly _hashFn: (element: T) => string) { }
+  constructor(private readonly _hashFn: (element: T) => string) {}
 
   roots(): Node<T>[] {
     const ret: Node<T>[] = [];
@@ -60,9 +60,11 @@ export class Graph<T> {
   toString(): string {
     const data: string[] = [];
     for (const [key, value] of this._nodes) {
-      data.push(`${key}\n\t(-> incoming)[${[...value.incoming.keys()].join(', ')}]\n\t(outgoing ->)[${[...value.outgoing.keys()].join(',')}]\n`);
+      data.push(
+        `${key}\n\t(-> incoming)[${[...value.incoming.keys()].join(", ")}]\n\t(outgoing ->)[${[...value.outgoing.keys()].join(",")}]\n`,
+      );
     }
-    return data.join('\n');
+    return data.join("\n");
   }
 
   findCycleSlow() {
@@ -79,7 +81,7 @@ export class Graph<T> {
   private _findCycle(node: Node<T>, seen: Set<string>): string | undefined {
     for (const [id, outgoing] of node.outgoing) {
       if (seen.has(id)) {
-        return [...seen, id].join(' -> ');
+        return [...seen, id].join(" -> ");
       }
       seen.add(id);
       const value = this._findCycle(outgoing, seen);

@@ -18,8 +18,8 @@ export interface AcpVersionSpec {
 
 export const CURRENT_VERSION: AcpVersionSpec = {
   protocolVersion: 1,
-  specTag: 'v0.10.x',
-  sdkVersion: '0.23.0',
+  specTag: "v0.10.x",
+  sdkVersion: "0.23.0",
 };
 
 const SUPPORTED_VERSIONS: ReadonlyMap<number, AcpVersionSpec> = new Map([
@@ -36,14 +36,19 @@ export const MIN_PROTOCOL_VERSION = 1;
  * {@link MIN_PROTOCOL_VERSION} the server still returns its own current
  * version so the client can decide whether to disconnect.
  */
-export function negotiateVersion(clientProtocolVersion: number): AcpVersionSpec {
+export function negotiateVersion(
+  clientProtocolVersion: number,
+): AcpVersionSpec {
   if (clientProtocolVersion < MIN_PROTOCOL_VERSION) {
     return CURRENT_VERSION;
   }
 
   let best: AcpVersionSpec | undefined;
   for (const [ver, spec] of SUPPORTED_VERSIONS) {
-    if (ver <= clientProtocolVersion && (best === undefined || ver > best.protocolVersion)) {
+    if (
+      ver <= clientProtocolVersion &&
+      (best === undefined || ver > best.protocolVersion)
+    ) {
       best = spec;
     }
   }

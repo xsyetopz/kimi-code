@@ -1,12 +1,12 @@
 // Micro compaction is disabled; ContentPart is no longer referenced here.
 // import type { ContentPart } from '@moonshot-ai/kosong';
 
-import type { Agent } from '..';
-import type { ContextMessage } from '../context';
+import type { Agent } from "..";
+import type { ContextMessage } from "../context";
 import {
   estimateTokensForContentParts,
   // estimateTokensForMessages, // disabled with micro compaction
-} from '../../utils/tokens';
+} from "../../utils/tokens";
 
 export interface MicroCompactionConfig {
   keepRecentMessages: number;
@@ -20,7 +20,7 @@ const DEFAULT_CONFIG: MicroCompactionConfig = {
   keepRecentMessages: 20,
   minContentTokens: 100,
   cacheMissedThresholdMs: 60 * 60 * 1000,
-  truncatedMarker: '[Old tool result content cleared]',
+  truncatedMarker: "[Old tool result content cleared]",
   minContextUsageRatio: 0.5,
 };
 
@@ -41,7 +41,7 @@ export class MicroCompaction {
 
   apply(cutoff: number): void {
     this.agent.records.logRecord({
-      type: 'micro_compaction.apply',
+      type: "micro_compaction.apply",
       cutoff,
     });
     this.cutoff = cutoff;
@@ -137,23 +137,21 @@ export class MicroCompaction {
     // return result;
   }
 
-  private measureEffect(
-    messages: readonly ContextMessage[],
-    cutoff: number,
-  ) {
+  private measureEffect(messages: readonly ContextMessage[], cutoff: number) {
     let markerTokenCount: number | undefined;
     let truncatedToolResultCount = 0;
     let truncatedToolResultTokensBefore = 0;
     let truncatedToolResultTokensAfter = 0;
     for (let i = 0; i < messages.length && i < cutoff; i++) {
       const message = messages[i];
-      if (message?.role !== 'tool' || message.toolCallId === undefined) continue;
+      if (message?.role !== "tool" || message.toolCallId === undefined)
+        continue;
 
       const contentTokens = estimateTokensForContentParts(message.content);
       if (contentTokens < this.config.minContentTokens) continue;
 
       markerTokenCount ??= estimateTokensForContentParts([
-        { type: 'text', text: this.config.truncatedMarker },
+        { type: "text", text: this.config.truncatedMarker },
       ]);
       truncatedToolResultCount += 1;
       truncatedToolResultTokensBefore += contentTokens;

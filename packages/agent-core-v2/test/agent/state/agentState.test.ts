@@ -4,14 +4,14 @@
  * registered key must serialize, and the whole snapshot must stay small.
  */
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from "vitest";
 
-import { IAgentStateService } from '#/agent/state/agentState';
+import { IAgentStateService } from "#/agent/state/agentState";
 
-import { createTestAgent } from '../../harness/agent';
+import { createTestAgent } from "../../harness/agent";
 
-describe('agent state snapshot (full agent scope)', () => {
-  it('serializes every registered key and stays small', () => {
+describe("agent state snapshot (full agent scope)", () => {
+  it("serializes every registered key and stays small", () => {
     const ctx = createTestAgent();
     const states = ctx.get(IAgentStateService);
 

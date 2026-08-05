@@ -26,16 +26,16 @@
  * forces a replayed `active` goal back to `paused`.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { defineModel } from '#/wire/model';
+import { defineModel } from "#/wire/model";
 
 import type {
   GoalBudgetLimits,
   GoalChange,
   GoalSnapshot,
   GoalStatus,
-} from './types';
+} from "./types";
 
 export interface GoalState {
   readonly goalId: string;
@@ -52,11 +52,11 @@ export interface GoalState {
 
 export type GoalModelState = GoalState | null;
 
-export const GoalModel = defineModel<GoalModelState>('goal', () => null);
+export const GoalModel = defineModel<GoalModelState>("goal", () => null);
 
-const GoalStatusSchema = z.enum(['active', 'paused', 'blocked', 'complete']);
+const GoalStatusSchema = z.enum(["active", "paused", "blocked", "complete"]);
 
-const GoalActorSchema = z.enum(['user', 'model', 'runtime', 'system']);
+const GoalActorSchema = z.enum(["user", "model", "runtime", "system"]);
 
 const GoalBudgetLimitsSchema = z
   .object({
@@ -66,25 +66,25 @@ const GoalBudgetLimitsSchema = z
   })
   .strict();
 
-declare module '#/app/event/eventBus' {
+declare module "#/app/event/eventBus" {
   interface DomainEventMap {
-    'goal.updated': {
+    "goal.updated": {
       snapshot: GoalSnapshot | null;
       change?: GoalChange;
     };
   }
 }
 
-declare module '#/wire/types' {
+declare module "#/wire/types" {
   interface PersistedOpMap {
-    'goal.create': typeof createGoal;
-    'goal.update': typeof updateGoal;
-    'goal.clear': typeof clearGoal;
+    "goal.create": typeof createGoal;
+    "goal.update": typeof updateGoal;
+    "goal.clear": typeof clearGoal;
     forked: typeof forkGoal;
   }
 }
 
-export const createGoal = GoalModel.defineOp('goal.create', {
+export const createGoal = GoalModel.defineOp("goal.create", {
   schema: z
     .object({
       goalId: z.string(),
@@ -100,7 +100,7 @@ export const createGoal = GoalModel.defineOp('goal.create', {
     goalId: p.goalId,
     objective: p.objective,
     completionCriterion: p.completionCriterion,
-    status: 'active',
+    status: "active",
     turnsUsed: 0,
     tokensUsed: 0,
     wallClockMs: 0,
@@ -109,7 +109,7 @@ export const createGoal = GoalModel.defineOp('goal.create', {
   }),
 });
 
-export const updateGoal = GoalModel.defineOp('goal.update', {
+export const updateGoal = GoalModel.defineOp("goal.update", {
   schema: z
     .object({
       goalId: z.string().optional(),
@@ -130,9 +130,9 @@ export const updateGoal = GoalModel.defineOp('goal.update', {
       next = {
         ...(next ?? s),
         status: p.status,
-        terminalReason: p.status === 'active' ? undefined : p.reason,
+        terminalReason: p.status === "active" ? undefined : p.reason,
         wallClockResumedAt:
-          p.status === 'active' ? p.wallClockResumedAt : undefined,
+          p.status === "active" ? p.wallClockResumedAt : undefined,
       };
     }
     if (p.turnsUsed !== undefined && p.turnsUsed !== s.turnsUsed) {
@@ -146,7 +146,7 @@ export const updateGoal = GoalModel.defineOp('goal.update', {
     }
     if (
       p.wallClockResumedAt !== undefined &&
-      (p.status ?? s.status) === 'active' &&
+      (p.status ?? s.status) === "active" &&
       p.wallClockResumedAt !== s.wallClockResumedAt
     ) {
       next = { ...(next ?? s), wallClockResumedAt: p.wallClockResumedAt };
@@ -158,12 +158,12 @@ export const updateGoal = GoalModel.defineOp('goal.update', {
   },
 });
 
-export const clearGoal = GoalModel.defineOp('goal.clear', {
+export const clearGoal = GoalModel.defineOp("goal.clear", {
   schema: z.object({}),
   apply: () => null,
 });
 
-export const forkGoal = GoalModel.defineOp('forked', {
+export const forkGoal = GoalModel.defineOp("forked", {
   schema: z.object({}),
   apply: () => null,
 });

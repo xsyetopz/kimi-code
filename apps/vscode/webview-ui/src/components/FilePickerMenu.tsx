@@ -1,5 +1,11 @@
 import { useEffect, useRef } from "react";
-import { IconFolder, IconFile, IconArrowLeft, IconFolderOpen, IconPhoto } from "@tabler/icons-react";
+import {
+  IconFolder,
+  IconFile,
+  IconArrowLeft,
+  IconFolderOpen,
+  IconPhoto,
+} from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 
 export type FilePickerMode = "search" | "folder";
@@ -82,20 +88,27 @@ export function FilePickerMenu({
               onMouseDown={preventFocus}
               onClick={onSelectMedia}
               onMouseEnter={() => onHover(0)}
-              className={cn("w-full px-2 py-1.5 text-left flex items-center gap-2 border-b border-border", selectedIndex === 0 ? "bg-accent" : "hover:bg-accent/50")}
+              className={cn(
+                "w-full px-2 py-1.5 text-left flex items-center gap-2 border-b border-border",
+                selectedIndex === 0 ? "bg-accent" : "hover:bg-accent/50",
+              )}
             >
               <IconPhoto className="size-3.5 text-muted-foreground" />
               <span className="text-xs">Select images or videos...</span>
             </button>
           )}
           <button
-            ref={selectedIndex === (showMediaOption ? 1 : 0) ? selectedRef : null}
+            ref={
+              selectedIndex === (showMediaOption ? 1 : 0) ? selectedRef : null
+            }
             onMouseDown={preventFocus}
             onClick={onSwitchToFolder}
             onMouseEnter={() => onHover(showMediaOption ? 1 : 0)}
             className={cn(
               "w-full px-2 py-1.5 text-left flex items-center gap-2 border-b border-border",
-              selectedIndex === (showMediaOption ? 1 : 0) ? "bg-accent" : "hover:bg-accent/50",
+              selectedIndex === (showMediaOption ? 1 : 0)
+                ? "bg-accent"
+                : "hover:bg-accent/50",
             )}
           >
             <IconFolderOpen className="size-3.5 text-muted-foreground" />
@@ -109,7 +122,10 @@ export function FilePickerMenu({
             onMouseDown={preventFocus}
             onClick={onSwitchToSearch}
             onMouseEnter={() => onHover(0)}
-            className={cn("w-full px-2 py-1.5 text-left flex items-center gap-2 border-b border-border", selectedIndex === 0 ? "bg-accent" : "hover:bg-accent/50")}
+            className={cn(
+              "w-full px-2 py-1.5 text-left flex items-center gap-2 border-b border-border",
+              selectedIndex === 0 ? "bg-accent" : "hover:bg-accent/50",
+            )}
           >
             <IconArrowLeft className="size-3.5 text-muted-foreground" />
             <span className="text-xs">Back to search</span>
@@ -120,20 +136,29 @@ export function FilePickerMenu({
               onMouseDown={preventFocus}
               onClick={onNavigateUp}
               onMouseEnter={() => onHover(1)}
-              className={cn("w-full px-2 py-1.5 text-left flex items-center gap-2 border-b border-border/50", selectedIndex === 1 ? "bg-accent" : "hover:bg-accent/50")}
+              className={cn(
+                "w-full px-2 py-1.5 text-left flex items-center gap-2 border-b border-border/50",
+                selectedIndex === 1 ? "bg-accent" : "hover:bg-accent/50",
+              )}
             >
               <IconFolder className="size-3.5 text-muted-foreground" />
               <span className="text-xs font-medium">..</span>
-              <span className="text-[10px] text-muted-foreground truncate">({currentPath.split("/").pop()})</span>
+              <span className="text-[10px] text-muted-foreground truncate">
+                ({currentPath.split("/").pop()})
+              </span>
             </button>
           )}
         </>
       )}
       <div className="max-h-64 overflow-y-auto">
         {isLoading ? (
-          <div className="px-2 py-4 text-center text-xs text-muted-foreground">Loading...</div>
+          <div className="px-2 py-4 text-center text-xs text-muted-foreground">
+            Loading...
+          </div>
         ) : items.length === 0 ? (
-          <div className="px-2 py-4 text-center text-xs text-muted-foreground">{mode === "search" ? "No files found" : "Empty folder"}</div>
+          <div className="px-2 py-4 text-center text-xs text-muted-foreground">
+            {mode === "search" ? "No files found" : "Empty folder"}
+          </div>
         ) : (
           items.map((item, idx) => {
             const itemIndex = idx + headerCount;
@@ -150,18 +175,33 @@ export function FilePickerMenu({
                   }
                 }}
                 onMouseEnter={() => onHover(itemIndex)}
-                className={cn("w-full px-2 py-1.5 text-left flex items-center justify-between gap-3", itemIndex === selectedIndex ? "bg-accent" : "hover:bg-accent/50")}
+                className={cn(
+                  "w-full px-2 py-1.5 text-left flex items-center justify-between gap-3",
+                  itemIndex === selectedIndex
+                    ? "bg-accent"
+                    : "hover:bg-accent/50",
+                )}
               >
                 <span className="flex items-center gap-1.5 text-xs shrink-0">
-                  {item.isDirectory ? <IconFolder className="size-3 text-muted-foreground" /> : <IconFile className="size-3 text-muted-foreground" />}
+                  {item.isDirectory ? (
+                    <IconFolder className="size-3 text-muted-foreground" />
+                  ) : (
+                    <IconFile className="size-3 text-muted-foreground" />
+                  )}
                   <span className={cn(item.isDirectory && "font-medium")}>
-                    {mode === "folder" ? item.name : item.highlightedName || item.name}
+                    {mode === "folder"
+                      ? item.name
+                      : item.highlightedName || item.name}
                     {item.isDirectory && "/"}
                   </span>
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <span className="text-[10px] text-muted-foreground truncate max-w-32">{truncateMiddle(item.path, 25)}</span>
-                  {item.isDirectory && mode === "folder" && <span className="text-[10px] text-muted-foreground">→</span>}
+                  <span className="text-[10px] text-muted-foreground truncate max-w-32">
+                    {truncateMiddle(item.path, 25)}
+                  </span>
+                  {item.isDirectory && mode === "folder" && (
+                    <span className="text-[10px] text-muted-foreground">→</span>
+                  )}
                 </span>
               </button>
             );

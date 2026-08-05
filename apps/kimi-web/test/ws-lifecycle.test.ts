@@ -3,9 +3,12 @@
 // foreground recovery path added so a frozen/backgrounded tab can recover
 // without a full page reload.
 
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { DaemonEventSocket, type DaemonEventSocketHandlers } from '../src/api/daemon/ws';
+import {
+  DaemonEventSocket,
+  type DaemonEventSocketHandlers,
+} from "../src/api/daemon/ws";
 
 class FakeWebSocket {
   static readonly CONNECTING = 0;
@@ -18,7 +21,9 @@ class FakeWebSocket {
   onopen: (() => void) | null = null;
   onmessage: ((ev: { data: unknown }) => void) | null = null;
   onerror: (() => void) | null = null;
-  onclose: ((ev?: { code: number; reason: string; wasClean: boolean }) => void) | null = null;
+  onclose:
+    | ((ev?: { code: number; reason: string; wasClean: boolean }) => void)
+    | null = null;
   sent: string[] = [];
   closeCalls: Array<{ code?: number; reason?: string }> = [];
 
@@ -54,14 +59,14 @@ function makeHandlers(): DaemonEventSocketHandlers & { states: boolean[] } {
   };
 }
 
-const WS_URL = 'ws://example.test/ws';
-const CLIENT_ID = 'client_test';
+const WS_URL = "ws://example.test/ws";
+const CLIENT_ID = "client_test";
 
 // Frames the socket understands; only `type` (+ friends) matters here.
 const SERVER_HELLO = {
-  type: 'server_hello',
+  type: "server_hello",
   payload: {
-    ws_connection_id: 'conn_1',
+    ws_connection_id: "conn_1",
     protocol_version: 1,
     heartbeat_ms: 30_000,
     max_event_buffer_size: 1000,
@@ -69,7 +74,7 @@ const SERVER_HELLO = {
   },
 };
 
-describe('DaemonEventSocket reconnect + staleness', () => {
+describe("DaemonEventSocket reconnect + staleness", () => {
   let originalWebSocket: typeof globalThis.WebSocket;
 
   beforeEach(() => {
@@ -83,7 +88,7 @@ describe('DaemonEventSocket reconnect + staleness', () => {
     vi.useRealTimers();
   });
 
-  it('reconnect() closes the old socket, detaches it, and opens a new one', () => {
+  it("reconnect() closes the old socket, detaches it, and opens a new one", () => {
     const handlers = makeHandlers();
     const socket = new DaemonEventSocket(WS_URL, CLIENT_ID, handlers);
     socket.connect();
@@ -93,7 +98,7 @@ describe('DaemonEventSocket reconnect + staleness', () => {
 
     socket.reconnect();
 
-    expect(first.closeCalls).toEqual([{ code: 1000, reason: 'reconnect' }]);
+    expect(first.closeCalls).toEqual([{ code: 1000, reason: "reconnect" }]);
     // Old socket is fully detached so its late onclose cannot clobber the new.
     expect(first.onclose).toBeNull();
     expect(first.onmessage).toBeNull();
@@ -102,11 +107,11 @@ describe('DaemonEventSocket reconnect + staleness', () => {
     expect(handlers.states).toEqual([true, false]);
 
     // A late onclose from the stale socket must NOT schedule another connect.
-    first.onclose?.({ code: 1000, reason: 'reconnect', wasClean: true });
+    first.onclose?.({ code: 1000, reason: "reconnect", wasClean: true });
     expect(FakeWebSocket.instances).toHaveLength(2);
   });
 
-  it('reconnect() is a no-op after close()', () => {
+  it("reconnect() is a no-op after close()", () => {
     const handlers = makeHandlers();
     const socket = new DaemonEventSocket(WS_URL, CLIENT_ID, handlers);
     socket.connect();
@@ -115,7 +120,7 @@ describe('DaemonEventSocket reconnect + staleness', () => {
     expect(FakeWebSocket.instances).toHaveLength(1);
   });
 
-  it('health() flips stale after a long silence and clears on the next frame', () => {
+  it("health() flips stale after a long silence and clears on the next frame", () => {
     vi.useFakeTimers();
     const handlers = makeHandlers();
     const socket = new DaemonEventSocket(WS_URL, CLIENT_ID, handlers);
@@ -130,11 +135,11 @@ describe('DaemonEventSocket reconnect + staleness', () => {
     expect(socket.health().stale).toBe(true);
 
     // Any received frame (e.g. a server ping) proves the link is alive again.
-    first.emitMessage({ type: 'ping', payload: { nonce: 'n1' } });
+    first.emitMessage({ type: "ping", payload: { nonce: "n1" } });
     expect(socket.health().stale).toBe(false);
   });
 
-  it('health().open reflects the underlying readyState', () => {
+  it("health().open reflects the underlying readyState", () => {
     const handlers = makeHandlers();
     const socket = new DaemonEventSocket(WS_URL, CLIENT_ID, handlers);
     socket.connect();

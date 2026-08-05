@@ -11,8 +11,8 @@
  * the UI fetches Service state on demand instead.
  */
 
-import type { Event, IChannel } from './channel';
-import { RPCError } from './errors';
+import type { Event, IChannel } from "./channel";
+import { RPCError } from "./errors";
 
 interface Envelope<T> {
   readonly code: number;
@@ -37,7 +37,7 @@ export class ProxyChannel implements IChannel {
   private readonly fetchImpl: typeof fetch;
 
   constructor(opts: ProxyChannelOptions) {
-    this.baseUrl = opts.baseUrl.replace(/\/$/, '');
+    this.baseUrl = opts.baseUrl.replace(/\/$/, "");
     this.token = opts.token;
     // Bind the global fetch: browsers throw "Illegal invocation" when the
     // native function is invoked with a non-Window receiver.
@@ -48,14 +48,14 @@ export class ProxyChannel implements IChannel {
     const headers: Record<string, string> = {};
     let body: string | undefined;
     if (args.length > 0) {
-      headers['content-type'] = 'application/json';
+      headers["content-type"] = "application/json";
       body = JSON.stringify(args);
     }
     if (this.token !== undefined) {
-      headers['authorization'] = `Bearer ${this.token}`;
+      headers["authorization"] = `Bearer ${this.token}`;
     }
     const res = await this.fetchImpl(`${this.baseUrl}/${command}`, {
-      method: 'POST',
+      method: "POST",
       headers,
       body,
     });
@@ -68,7 +68,7 @@ export class ProxyChannel implements IChannel {
 
   listen<T>(_event: string): Event<T> {
     throw new Error(
-      'events are not supported on this channel (HTTP-only; the /api/v2/ws event socket was removed)',
+      "events are not supported on this channel (HTTP-only; the /api/v2/ws event socket was removed)",
     );
   }
 }

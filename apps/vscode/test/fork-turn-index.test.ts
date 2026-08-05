@@ -10,7 +10,10 @@ interface TestMessage {
   readonly forkable?: boolean;
   readonly steps?: readonly {
     readonly n: number;
-    readonly items: readonly { readonly type: string; readonly content?: string }[];
+    readonly items: readonly {
+      readonly type: string;
+      readonly content?: string;
+    }[];
   }[];
 }
 
@@ -32,7 +35,9 @@ describe("fork turn index", () => {
     const messages = [
       message("user"),
       message("assistant", {
-        steps: [{ n: 1, items: [{ type: "steer", content: "also fix tests" }] }],
+        steps: [
+          { n: 1, items: [{ type: "steer", content: "also fix tests" }] },
+        ],
       }),
     ];
 
@@ -43,7 +48,9 @@ describe("fork turn index", () => {
     const messages = [
       message("user"),
       message("assistant", {
-        steps: [{ n: 1, items: [{ type: "steer", content: "also fix tests" }] }],
+        steps: [
+          { n: 1, items: [{ type: "steer", content: "also fix tests" }] },
+        ],
       }),
       message("user"),
       message("assistant"),
@@ -55,7 +62,10 @@ describe("fork turn index", () => {
   it("does not count or offer forks for host-only command output", () => {
     const messages = [
       message("user", { content: "/compact", forkable: false }),
-      message("assistant", { content: "The context has been compacted.", forkable: false }),
+      message("assistant", {
+        content: "The context has been compacted.",
+        forkable: false,
+      }),
       message("user"),
       message("assistant"),
     ];

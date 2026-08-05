@@ -21,11 +21,11 @@
 // instance is gated). For tokenizer-style plain functions, wrap them with
 // deferred() directly.
 
-import fs from 'node:fs/promises';
-import os from 'node:os';
-import path from 'node:path';
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 
-export async function tmpDir(prefix = 'minidb-'): Promise<string> {
+export async function tmpDir(prefix = "minidb-"): Promise<string> {
   return fs.mkdtemp(path.join(os.tmpdir(), prefix));
 }
 
@@ -52,10 +52,15 @@ export function deferred<T = void>(): Deferred<T> {
 /** Poll a condition on the macrotask queue until it holds (or the timeout
  *  makes the failure loud). Use this instead of a fixed sleep when waiting
  *  for an asynchronous state a barrier cannot signal directly. */
-export async function waitFor(cond: () => boolean, what: string, timeoutMs = 10_000): Promise<void> {
+export async function waitFor(
+  cond: () => boolean,
+  what: string,
+  timeoutMs = 10_000,
+): Promise<void> {
   const t0 = Date.now();
   while (!cond()) {
-    if (Date.now() - t0 > timeoutMs) throw new Error(`timed out waiting for ${what}`);
+    if (Date.now() - t0 > timeoutMs)
+      throw new Error(`timed out waiting for ${what}`);
     await new Promise((r) => setImmediate(r));
   }
 }
@@ -84,7 +89,8 @@ export function barrier<Owner extends object>(
   when: number | ((call: number) => boolean) = 1,
 ): MethodBarrier {
   const original = (owner as unknown as Record<string, AnyMethod>)[name]!;
-  const matches = typeof when === 'number' ? (call: number) => call === when : when;
+  const matches =
+    typeof when === "number" ? (call: number) => call === when : when;
   const enteredD = deferred<number>();
   let released = false;
   let release!: () => void;
@@ -97,7 +103,10 @@ export function barrier<Owner extends object>(
     };
   });
   let calls = 0;
-  (owner as Record<string, unknown>)[name] = function (this: unknown, ...args: unknown[]) {
+  (owner as Record<string, unknown>)[name] = function (
+    this: unknown,
+    ...args: unknown[]
+  ) {
     calls++;
     const call = calls;
     if (matches(call)) {
@@ -127,9 +136,13 @@ export function failCalls<Owner extends object>(
   when: number | ((call: number) => boolean) = 1,
 ): { readonly calls: number; restore(): void } {
   const original = (owner as unknown as Record<string, AnyMethod>)[name]!;
-  const matches = typeof when === 'number' ? (call: number) => call === when : when;
+  const matches =
+    typeof when === "number" ? (call: number) => call === when : when;
   let calls = 0;
-  (owner as Record<string, unknown>)[name] = function (this: unknown, ...args: unknown[]) {
+  (owner as Record<string, unknown>)[name] = function (
+    this: unknown,
+    ...args: unknown[]
+  ) {
     calls++;
     if (matches(calls)) return Promise.reject(error);
     return original.apply(this, args);

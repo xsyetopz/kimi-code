@@ -6,9 +6,12 @@
  * cancellation can reach every run. Bound at Session scope.
  */
 
-import type { TokenUsage } from '#/kosong/contract/usage';
+import type { TokenUsage } from "#/kosong/contract/usage";
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
 
 type SessionSwarmTaskBase<T> = {
   readonly data: T;
@@ -25,17 +28,19 @@ type SessionSwarmTaskBase<T> = {
 };
 
 export type SessionSwarmSpawnTask<T = unknown> = SessionSwarmTaskBase<T> & {
-  readonly kind: 'spawn';
+  readonly kind: "spawn";
   readonly resumeAgentId?: undefined;
   readonly binding?: { readonly model: string; readonly thinking?: string };
 };
 
 export type SessionSwarmResumeTask<T = unknown> = SessionSwarmTaskBase<T> & {
-  readonly kind: 'resume';
+  readonly kind: "resume";
   readonly resumeAgentId: string;
 };
 
-export type SessionSwarmTask<T = unknown> = SessionSwarmSpawnTask<T> | SessionSwarmResumeTask<T>;
+export type SessionSwarmTask<T = unknown> =
+  | SessionSwarmSpawnTask<T>
+  | SessionSwarmResumeTask<T>;
 
 export interface SessionSwarmRunArgs<T = unknown> {
   readonly callerAgentId: string;
@@ -45,8 +50,8 @@ export interface SessionSwarmRunArgs<T = unknown> {
 export interface SessionSwarmRunResult<T = unknown> {
   readonly task: SessionSwarmTask<T>;
   readonly agentId?: string;
-  readonly status: 'completed' | 'failed' | 'aborted';
-  readonly state?: 'started' | 'not_started';
+  readonly status: "completed" | "failed" | "aborted";
+  readonly state?: "started" | "not_started";
   readonly result?: string;
   readonly usage?: TokenUsage;
   readonly error?: string;
@@ -59,9 +64,11 @@ export interface ISessionSwarmService {
     readonly callerAgentId: string;
     readonly agentId: string;
   }): Promise<string | undefined>;
-  run<T>(args: SessionSwarmRunArgs<T>): Promise<readonly SessionSwarmRunResult<T>[]>;
+  run<T>(
+    args: SessionSwarmRunArgs<T>,
+  ): Promise<readonly SessionSwarmRunResult<T>[]>;
   cancel(args: { readonly callerAgentId: string }): void;
 }
 
 export const ISessionSwarmService: ServiceIdentifier<ISessionSwarmService> =
-  createDecorator<ISessionSwarmService>('sessionSwarmService');
+  createDecorator<ISessionSwarmService>("sessionSwarmService");

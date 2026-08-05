@@ -15,16 +15,16 @@
  * Self-registered at module load via `registerConfigSection`.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
 import {
   type EnvBindings,
   envBindings,
   stripEnvBoundFields,
-} from '#/app/config/config';
-import { registerConfigSection } from '#/app/config/configSectionContributions';
+} from "#/app/config/config";
+import { registerConfigSection } from "#/app/config/configSectionContributions";
 
-export const IDENTITY_SECTION = 'identity';
+export const IDENTITY_SECTION = "identity";
 
 export const IdentityConfigSchema = z.object({
   name: z.string().optional(),
@@ -33,8 +33,8 @@ export const IdentityConfigSchema = z.object({
 
 export type IdentityConfig = z.infer<typeof IdentityConfigSchema>;
 
-export const IDENTITY_NAME_ENV = 'KIMI_CODE_IDENTITY_NAME';
-export const IDENTITY_SLUG_ENV = 'KIMI_CODE_IDENTITY_SLUG';
+export const IDENTITY_NAME_ENV = "KIMI_CODE_IDENTITY_NAME";
+export const IDENTITY_SLUG_ENV = "KIMI_CODE_IDENTITY_SLUG";
 
 function parseIdentityEnv(raw: string): string | undefined {
   const trimmed = raw.trim();

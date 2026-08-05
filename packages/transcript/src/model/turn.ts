@@ -6,25 +6,30 @@
  * coarse-grained subscriber legitimately holds turns with `steps: []`.
  */
 
-import type { TranscriptFrame } from './frame';
-import type { AttachmentId, StepId, TaskId, TurnId } from './ids';
+import type { TranscriptFrame } from "./frame";
+import type { AttachmentId, StepId, TaskId, TurnId } from "./ids";
 
 /**
  * What triggered this turn. Drives `inputRenderers` at the view layer. The
  * union is closed; per-origin detail rides in `payload` (open content).
  */
 export type TurnOrigin =
-  | { kind: 'user'; payload?: unknown }
-  | { kind: 'cron'; taskId?: TaskId; payload?: unknown }
-  | { kind: 'task'; taskId: TaskId; payload?: unknown }
-  | { kind: 'hook'; payload?: unknown }
-  | { kind: 'compaction'; payload?: unknown }
-  | { kind: 'side'; payload?: unknown }
-  | { kind: 'other'; payload?: unknown };
+  | { kind: "user"; payload?: unknown }
+  | { kind: "cron"; taskId?: TaskId; payload?: unknown }
+  | { kind: "task"; taskId: TaskId; payload?: unknown }
+  | { kind: "hook"; payload?: unknown }
+  | { kind: "compaction"; payload?: unknown }
+  | { kind: "side"; payload?: unknown }
+  | { kind: "other"; payload?: unknown };
 
-export type TurnState = 'queued' | 'running' | 'completed' | 'failed' | 'cancelled';
+export type TurnState =
+  | "queued"
+  | "running"
+  | "completed"
+  | "failed"
+  | "cancelled";
 
-export type StepState = 'running' | 'completed' | 'interrupted' | 'failed';
+export type StepState = "running" | "completed" | "interrupted" | "failed";
 
 export interface TranscriptUsage {
   readonly inputTokens?: number;
@@ -70,7 +75,7 @@ export interface StepRetry {
 }
 
 export interface TranscriptTurn {
-  readonly kind: 'turn';
+  readonly kind: "turn";
   readonly turnId: TurnId;
   /** Per-agent monotonic ordinal; also the pagination cursor anchor. */
   readonly ordinal: number;
@@ -94,7 +99,7 @@ export interface TranscriptTurn {
 }
 
 export interface TranscriptStep {
-  readonly kind: 'step';
+  readonly kind: "step";
   readonly stepId: StepId;
   readonly turnId: TurnId;
   readonly ordinal: number;

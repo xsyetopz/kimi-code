@@ -1,7 +1,7 @@
-import { resolveGlobalLogPath } from './logger';
-import type { LogLevel, LoggingConfig } from './types';
+import { resolveGlobalLogPath } from "./logger";
+import type { LogLevel, LoggingConfig } from "./types";
 
-export const DEFAULT_LOG_LEVEL: LogLevel = 'info';
+export const DEFAULT_LOG_LEVEL: LogLevel = "info";
 export const DEFAULT_GLOBAL_MAX_BYTES = 6 * 1024 * 1024; // 6 MB
 export const DEFAULT_GLOBAL_FILES = 5; // 6 MB x 5 = 30 MB
 export const DEFAULT_SESSION_MAX_BYTES = 5 * 1024 * 1024; // 5 MB
@@ -23,23 +23,37 @@ export interface ResolveLoggingInput {
  *   KIMI_LOG_GLOBAL_MAX_BYTES=... KIMI_LOG_GLOBAL_FILES=...
  *   KIMI_LOG_SESSION_MAX_BYTES=... KIMI_LOG_SESSION_FILES=...
  */
-export function resolveLoggingConfig(input: ResolveLoggingInput): LoggingConfig {
+export function resolveLoggingConfig(
+  input: ResolveLoggingInput,
+): LoggingConfig {
   const env = input.env ?? process.env;
   return {
-    level: parseLevel(env['KIMI_LOG_LEVEL']) ?? DEFAULT_LOG_LEVEL,
+    level: parseLevel(env["KIMI_LOG_LEVEL"]) ?? DEFAULT_LOG_LEVEL,
     globalLogPath: resolveGlobalLogPath(input.homeDir),
-    globalMaxBytes: parsePositiveInt(env['KIMI_LOG_GLOBAL_MAX_BYTES']) ?? DEFAULT_GLOBAL_MAX_BYTES,
-    globalFiles: parsePositiveInt(env['KIMI_LOG_GLOBAL_FILES']) ?? DEFAULT_GLOBAL_FILES,
+    globalMaxBytes:
+      parsePositiveInt(env["KIMI_LOG_GLOBAL_MAX_BYTES"]) ??
+      DEFAULT_GLOBAL_MAX_BYTES,
+    globalFiles:
+      parsePositiveInt(env["KIMI_LOG_GLOBAL_FILES"]) ?? DEFAULT_GLOBAL_FILES,
     sessionMaxBytes:
-      parsePositiveInt(env['KIMI_LOG_SESSION_MAX_BYTES']) ?? DEFAULT_SESSION_MAX_BYTES,
-    sessionFiles: parsePositiveInt(env['KIMI_LOG_SESSION_FILES']) ?? DEFAULT_SESSION_FILES,
+      parsePositiveInt(env["KIMI_LOG_SESSION_MAX_BYTES"]) ??
+      DEFAULT_SESSION_MAX_BYTES,
+    sessionFiles:
+      parsePositiveInt(env["KIMI_LOG_SESSION_FILES"]) ?? DEFAULT_SESSION_FILES,
   };
 }
 
 function parseLevel(value: string | undefined): LogLevel | undefined {
   if (value === undefined) return undefined;
   const v = value.toLowerCase().trim();
-  if (v === 'off' || v === 'error' || v === 'warn' || v === 'info' || v === 'debug') return v;
+  if (
+    v === "off" ||
+    v === "error" ||
+    v === "warn" ||
+    v === "info" ||
+    v === "debug"
+  )
+    return v;
   return undefined;
 }
 

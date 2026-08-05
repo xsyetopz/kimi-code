@@ -25,11 +25,11 @@
  * number, so the literal is passed directly.
  */
 
-import net from 'node:net';
+import net from "node:net";
 
-import type { FastifyReply, FastifyRequest } from 'fastify';
+import type { FastifyReply, FastifyRequest } from "fastify";
 
-import { errEnvelope } from '../envelope';
+import { errEnvelope } from "../envelope";
 
 /** Daemon-reserved "invalid Host" code (not in the protocol `ErrorCode` enum). */
 const HOST_ERROR_CODE = 40301;
@@ -46,7 +46,10 @@ export interface HostCheckOptions {
 /** Returned by {@link createHostCheck}: the Fastify hook plus the raw predicate. */
 export interface HostCheck {
   /** Fastify `onRequest` hook that 403s on a disallowed `Host`. */
-  readonly onRequest: (req: FastifyRequest, reply: FastifyReply) => Promise<FastifyReply | void>;
+  readonly onRequest: (
+    req: FastifyRequest,
+    reply: FastifyReply,
+  ) => Promise<FastifyReply | void>;
   /** Reusable predicate (also used by the WS upgrade path in M4.3). */
   readonly isAllowed: (host: string | undefined) => boolean;
 }
@@ -57,20 +60,24 @@ export interface HostCheck {
  * Comma-separated, trimmed, empties dropped. A leading `.` is preserved so the
  * caller can express domain-suffix wildcards (`.example.com`).
  */
-export function parseAllowedHosts(env: NodeJS.ProcessEnv = process.env): string[] {
-  const raw = env['KIMI_CODE_ALLOWED_HOSTS'];
+export function parseAllowedHosts(
+  env: NodeJS.ProcessEnv = process.env,
+): string[] {
+  const raw = env["KIMI_CODE_ALLOWED_HOSTS"];
   if (raw === undefined) {
     return [];
   }
   return raw
-    .split(',')
+    .split(",")
     .map((entry) => entry.trim())
     .filter((entry) => entry.length > 0);
 }
 
 /** True when `KIMI_CODE_DISABLE_HOST_CHECK=1` (test/controlled env only). */
-export function isHostCheckDisabled(env: NodeJS.ProcessEnv = process.env): boolean {
-  return env['KIMI_CODE_DISABLE_HOST_CHECK'] === '1';
+export function isHostCheckDisabled(
+  env: NodeJS.ProcessEnv = process.env,
+): boolean {
+  return env["KIMI_CODE_DISABLE_HOST_CHECK"] === "1";
 }
 
 /**
@@ -84,15 +91,15 @@ export function isHostCheckDisabled(env: NodeJS.ProcessEnv = process.env): boole
  *     lowercased as-is — there is no unambiguous port to strip.
  */
 export function stripPort(host: string): string {
-  if (host.startsWith('[')) {
-    const end = host.indexOf(']');
+  if (host.startsWith("[")) {
+    const end = host.indexOf("]");
     return (end === -1 ? host : host.slice(0, end + 1)).toLowerCase();
   }
-  const firstColon = host.indexOf(':');
+  const firstColon = host.indexOf(":");
   if (firstColon === -1) {
     return host.toLowerCase();
   }
-  const lastColon = host.lastIndexOf(':');
+  const lastColon = host.lastIndexOf(":");
   if (firstColon === lastColon) {
     const after = host.slice(lastColon + 1);
     if (after.length > 0 && /^\d+$/.test(after)) {
@@ -104,9 +111,10 @@ export function stripPort(host: string): string {
 }
 
 export function formatHostErrorMessage(host: string | undefined): string {
-  const normalizedHost = host === undefined || host.length === 0 ? undefined : stripPort(host);
-  const hostLabel = normalizedHost ?? '<missing>';
-  const hostArg = normalizedHost ?? '<host>';
+  const normalizedHost =
+    host === undefined || host.length === 0 ? undefined : stripPort(host);
+  const hostLabel = normalizedHost ?? "<missing>";
+  const hostArg = normalizedHost ?? "<host>";
   return `Invalid Host header: ${hostLabel}; allow this host with KIMI_CODE_ALLOWED_HOSTS=${hostArg} or 'kimi web --allowed-host ${hostArg}'.`;
 }
 
@@ -116,7 +124,10 @@ export function formatHostErrorMessage(host: string | undefined): string {
  * Missing/empty `Host` is rejected (HTTP/1.1 requires it). The check is a no-op
  * when `opts.disable` is set.
  */
-export function isAllowedHost(host: string | undefined, opts: HostCheckOptions): boolean {
+export function isAllowedHost(
+  host: string | undefined,
+  opts: HostCheckOptions,
+): boolean {
   if (opts.disable === true) {
     return true;
   }
@@ -125,10 +136,10 @@ export function isAllowedHost(host: string | undefined, opts: HostCheckOptions):
   }
   const h = stripPort(host);
 
-  if (h === 'localhost' || h === '127.0.0.1' || h === '::1' || h === '[::1]') {
+  if (h === "localhost" || h === "127.0.0.1" || h === "::1" || h === "[::1]") {
     return true;
   }
-  if (h.endsWith('.localhost')) {
+  if (h.endsWith(".localhost")) {
     return true;
   }
   if (net.isIP(h) !== 0) {
@@ -139,7 +150,7 @@ export function isAllowedHost(host: string | undefined, opts: HostCheckOptions):
   }
   if (opts.extra !== undefined) {
     for (const entry of opts.extra) {
-      if (entry.startsWith('.')) {
+      if (entry.startsWith(".")) {
         const base = entry.slice(1);
         if (h === base || h.endsWith(entry)) {
           return true;
@@ -159,13 +170,22 @@ export function isAllowedHost(host: string | undefined, opts: HostCheckOptions):
  * route handler never runs.
  */
 export function createHostCheck(opts: HostCheckOptions): HostCheck {
-  const isAllowed = (host: string | undefined): boolean => isAllowedHost(host, opts);
+  const isAllowed = (host: string | undefined): boolean =>
+    isAllowedHost(host, opts);
   const onRequest = async (
     req: FastifyRequest,
     reply: FastifyReply,
   ): Promise<FastifyReply | void> => {
     if (!isAllowed(req.headers.host)) {
-      return reply.code(403).send(errEnvelope(HOST_ERROR_CODE, formatHostErrorMessage(req.headers.host), req.id));
+      return reply
+        .code(403)
+        .send(
+          errEnvelope(
+            HOST_ERROR_CODE,
+            formatHostErrorMessage(req.headers.host),
+            req.id,
+          ),
+        );
     }
   };
   return { onRequest, isAllowed };

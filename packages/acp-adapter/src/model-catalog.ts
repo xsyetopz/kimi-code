@@ -31,8 +31,11 @@
  * declare `protocol`.
  */
 
-import { effectiveModelAlias, type ProviderType } from '@moonshot-ai/agent-core';
-import type { KimiHarness, ModelAlias } from '@moonshot-ai/kimi-code-sdk';
+import {
+  effectiveModelAlias,
+  type ProviderType,
+} from "@moonshot-ai/agent-core";
+import type { KimiHarness, ModelAlias } from "@moonshot-ai/kimi-code-sdk";
 
 /**
  * One catalog row per configured model alias, suitable for an ACP
@@ -71,14 +74,18 @@ export interface AcpModelEntry {
  * ACP-picker-specific UX — moving it into the kernel would bake an
  * adapter concern into a place that doesn't need to know about ACP.
  */
-const TOGGLEABLE_THINKING_MODELS = new Set(['kimi-for-coding', 'kimi-code']);
+const TOGGLEABLE_THINKING_MODELS = new Set(["kimi-for-coding", "kimi-code"]);
 
-export function deriveThinkingSupported(alias: ModelAlias, providerType?: ProviderType): boolean {
+export function deriveThinkingSupported(
+  alias: ModelAlias,
+  providerType?: ProviderType,
+): boolean {
   const effective = effectiveModelAlias(alias, providerType);
   const declared = effective.capabilities ?? [];
-  if (declared.includes('thinking') || declared.includes('always_thinking')) return true;
+  if (declared.includes("thinking") || declared.includes("always_thinking"))
+    return true;
   const lower = effective.model.toLowerCase();
-  if (lower.includes('thinking') || lower.includes('reason')) return true;
+  if (lower.includes("thinking") || lower.includes("reason")) return true;
   if (TOGGLEABLE_THINKING_MODELS.has(effective.model)) return true;
   return false;
 }
@@ -90,9 +97,12 @@ export function deriveThinkingSupported(alias: ModelAlias, providerType?: Provid
  * `thinkingSupported`, but only an explicit (server-derived) declaration
  * may remove the off option from the client.
  */
-export function deriveAlwaysThinking(alias: ModelAlias, providerType?: ProviderType): boolean {
+export function deriveAlwaysThinking(
+  alias: ModelAlias,
+  providerType?: ProviderType,
+): boolean {
   return (effectiveModelAlias(alias, providerType).capabilities ?? []).includes(
-    'always_thinking',
+    "always_thinking",
   );
 }
 
@@ -125,7 +135,7 @@ export function deriveDefaultThinkingEffort(
   if (efforts !== undefined && efforts.length > 0) {
     return effective.defaultEffort ?? efforts[Math.floor(efforts.length / 2)]!;
   }
-  return 'on';
+  return "on";
 }
 
 /**
@@ -139,8 +149,8 @@ export function deriveDefaultThinkingEffort(
 export async function listModelsFromHarness(
   harness: KimiHarness,
 ): Promise<readonly AcpModelEntry[]> {
-  if (typeof harness.getConfig !== 'function') return [];
-  let config: Awaited<ReturnType<KimiHarness['getConfig']>>;
+  if (typeof harness.getConfig !== "function") return [];
+  let config: Awaited<ReturnType<KimiHarness["getConfig"]>>;
   try {
     config = await harness.getConfig();
   } catch {
@@ -183,7 +193,9 @@ function providerTypeOf(
 ): ProviderType | undefined {
   const providerName = alias.provider ?? config.defaultProvider;
   const providerType =
-    providerName === undefined ? undefined : config.providers?.[providerName]?.type;
+    providerName === undefined
+      ? undefined
+      : config.providers?.[providerName]?.type;
   // Flat models (inline base_url, no named provider) have no provider entry to
   // look up; their own protocol declaration plays the provider-identity role,
   // mirroring the v2 ModelCatalog.

@@ -10,17 +10,24 @@
  * created.
  */
 
-import { Disposable, type IDisposable } from '#/_base/di/lifecycle';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { Emitter } from '#/_base/event';
+import { Disposable, type IDisposable } from "#/_base/di/lifecycle";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { Emitter } from "#/_base/event";
 
-import { type DomainEvent, type DomainEventMap, IEventBus } from './eventBus';
+import { type DomainEvent, type DomainEventMap, IEventBus } from "./eventBus";
 
 export class EventBusService extends Disposable implements IEventBus {
   declare readonly _serviceBrand: undefined;
 
   private readonly allEmitter = this._register(new Emitter<DomainEvent>());
-  private readonly perType = new Map<keyof DomainEventMap, Emitter<DomainEvent>>();
+  private readonly perType = new Map<
+    keyof DomainEventMap,
+    Emitter<DomainEvent>
+  >();
 
   publish(event: DomainEvent): void {
     this.allEmitter.fire(event);
@@ -36,7 +43,7 @@ export class EventBusService extends Disposable implements IEventBus {
     typeOrHandler: K | ((event: DomainEvent) => void),
     handler?: (event: DomainEvent<K>) => void,
   ): IDisposable {
-    if (typeof typeOrHandler === 'function') {
+    if (typeof typeOrHandler === "function") {
       return this.allEmitter.event(typeOrHandler);
     }
     const type = typeOrHandler;
@@ -54,5 +61,5 @@ registerScopedService(
   IEventBus,
   EventBusService,
   ScopeActivation.OnScopeCreated,
-  'event',
+  "event",
 );

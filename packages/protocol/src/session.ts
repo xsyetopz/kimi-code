@@ -1,11 +1,11 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 import {
   promptPermissionModeSchema,
   promptThinkingSchema,
-} from './rest/prompt';
-import { isoDateTimeSchema } from './time';
-import { workspaceIdSchema } from './workspace';
+} from "./rest/prompt";
+import { isoDateTimeSchema } from "./time";
+import { workspaceIdSchema } from "./workspace";
 
 export const sessionUsageSchema = z.object({
   input_tokens: z.number().int().nonnegative(),
@@ -34,7 +34,7 @@ export function emptySessionUsage(): SessionUsage {
 }
 
 export const permissionRuleMatcherSchema = z.object({
-  kind: z.enum(['command_prefix', 'path_glob', 'exact_input', 'always']),
+  kind: z.enum(["command_prefix", "path_glob", "exact_input", "always"]),
   value: z.string().optional(),
 });
 
@@ -42,9 +42,9 @@ export const permissionRuleSchema = z.object({
   id: z.string().min(1),
   tool_name: z.string().min(1),
   matcher: permissionRuleMatcherSchema.optional(),
-  decision: z.literal('approved'),
+  decision: z.literal("approved"),
   created_at: isoDateTimeSchema,
-  created_by: z.enum(['user', 'agent']),
+  created_by: z.enum(["user", "agent"]),
 });
 
 export type PermissionRule = z.infer<typeof permissionRuleSchema>;
@@ -59,13 +59,16 @@ export const sessionAgentConfigSchema = z.object({
   plan_mode: z.boolean().optional(),
   swarm_mode: z.boolean().optional(),
   goal_objective: z.string().optional(),
-  goal_control: z.enum(['pause', 'resume', 'cancel']).optional(),
+  goal_control: z.enum(["pause", "resume", "cancel"]).optional(),
 });
 
 export type SessionAgentConfig = z.infer<typeof sessionAgentConfigSchema>;
 
-export const sessionAgentConfigPartialSchema = sessionAgentConfigSchema.partial();
-export type SessionAgentConfigPartial = z.infer<typeof sessionAgentConfigPartialSchema>;
+export const sessionAgentConfigPartialSchema =
+  sessionAgentConfigSchema.partial();
+export type SessionAgentConfigPartial = z.infer<
+  typeof sessionAgentConfigPartialSchema
+>;
 
 export const sessionMetadataSchema = z
   .object({
@@ -75,8 +78,14 @@ export const sessionMetadataSchema = z
 
 export type SessionMetadata = z.infer<typeof sessionMetadataSchema>;
 
-export const sessionPendingInteractionSchema = z.enum(['none', 'approval', 'question']);
-export type SessionPendingInteraction = z.infer<typeof sessionPendingInteractionSchema>;
+export const sessionPendingInteractionSchema = z.enum([
+  "none",
+  "approval",
+  "question",
+]);
+export type SessionPendingInteraction = z.infer<
+  typeof sessionPendingInteractionSchema
+>;
 
 export const sessionSchema = z.object({
   id: z.string().min(1),
@@ -100,7 +109,7 @@ export const sessionSchema = z.object({
    *  and a turn has ended since activation. A fact, not a state: clients
    *  decide how to present it (e.g. an "aborted" tag when `!busy` and the
    *  reason is cancelled/failed). */
-  last_turn_reason: z.enum(['completed', 'cancelled', 'failed']).optional(),
+  last_turn_reason: z.enum(["completed", "cancelled", "failed"]).optional(),
   archived: z.boolean().optional(),
   current_prompt_id: z.string().min(1).optional(),
   /** Text of the most recent user prompt, for search/preview. Absent for empty sessions. */

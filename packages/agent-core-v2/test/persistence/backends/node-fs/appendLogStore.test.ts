@@ -7,15 +7,18 @@
  * test/persistence/backends/node-fs/appendLogStore.test.ts`.
  */
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { SyncDescriptor } from '#/_base/di/descriptors';
-import { DisposableStore } from '#/_base/di/lifecycle';
-import { TestInstantiationService } from '#/_base/di/test';
-import { AppendLogCorruptedError, IAppendLogStore } from '#/persistence/interface/appendLogStore';
-import { IFileSystemStorageService } from '#/persistence/interface/storage';
-import { AppendLogStore } from '#/persistence/backends/node-fs/appendLogStore';
-import { InMemoryStorageService } from '#/persistence/backends/memory/inMemoryStorageService';
+import { SyncDescriptor } from "#/_base/di/descriptors";
+import { DisposableStore } from "#/_base/di/lifecycle";
+import { TestInstantiationService } from "#/_base/di/test";
+import {
+  AppendLogCorruptedError,
+  IAppendLogStore,
+} from "#/persistence/interface/appendLogStore";
+import { IFileSystemStorageService } from "#/persistence/interface/storage";
+import { AppendLogStore } from "#/persistence/backends/node-fs/appendLogStore";
+import { InMemoryStorageService } from "#/persistence/backends/memory/inMemoryStorageService";
 
 const enc = new TextEncoder();
 
@@ -23,8 +26,8 @@ interface Rec {
   readonly n: number;
 }
 
-const SCOPE = 'agents/main';
-const KEY = 'wire.jsonl';
+const SCOPE = "agents/main";
+const KEY = "wire.jsonl";
 
 function chunkedStorage(chunks: Uint8Array[]): IFileSystemStorageService {
   return {
@@ -43,7 +46,7 @@ function chunkedStorage(chunks: Uint8Array[]): IFileSystemStorageService {
   };
 }
 
-describe('AppendLogStore', () => {
+describe("AppendLogStore", () => {
   let disposables: DisposableStore;
   let ix: TestInstantiationService;
   let storage: InMemoryStorageService;
@@ -68,18 +71,22 @@ describe('AppendLogStore', () => {
     return out;
   }
 
-  it('reads nothing from an empty log', async () => {
+  it("reads nothing from an empty log", async () => {
     expect(await collect<Rec>(SCOPE, KEY)).toEqual([]);
   });
 
-  it('append + read round-trips records in order', async () => {
+  it("append + read round-trips records in order", async () => {
     record.append<Rec>(SCOPE, KEY, { n: 1 });
     record.append<Rec>(SCOPE, KEY, { n: 2 });
     record.append<Rec>(SCOPE, KEY, { n: 3 });
-    expect(await collect<Rec>(SCOPE, KEY)).toEqual([{ n: 1 }, { n: 2 }, { n: 3 }]);
+    expect(await collect<Rec>(SCOPE, KEY)).toEqual([
+      { n: 1 },
+      { n: 2 },
+      { n: 3 },
+    ]);
   });
 
-  it('batches many appends into a single durable append', async () => {
+  it("batches many appends into a single durable append", async () => {
     const spy = { count: 0 };
     const original = storage.append.bind(storage);
     storage.append = async (...args) => {
@@ -94,8 +101,8 @@ describe('AppendLogStore', () => {
     expect(spy.count).toBe(1);
   });
 
-  it('later flush reports an ambiguous auto-flush failure without retrying the batch', async () => {
-    const failure = new Error('append failed after commit');
+  it("later flush reports an ambiguous auto-flush failure without retrying the batch", async () => {
+    const failure = new Error("append failed after commit");
     let markAppendStarted!: () => void;
     const appendStarted = new Promise<void>((resolve) => {
       markAppendStarted = resolve;
@@ -131,8 +138,8 @@ describe('AppendLogStore', () => {
     );
   });
 
-  it('reacquire after final release waits for retiring storage before fresh I/O', async () => {
-    const failure = new Error('retiring append failed');
+  it("reacquire after final release waits for retiring storage before fresh I/O", async () => {
+    const failure = new Error("retiring append failed");
     let markAppendStarted!: () => void;
     const appendStarted = new Promise<void>((resolve) => {
       markAppendStarted = resolve;
@@ -199,8 +206,8 @@ describe('AppendLogStore', () => {
     replacementOwner.dispose();
   });
 
-  it('keeps a sticky failure until every acquired owner releases it', async () => {
-    const failure = new Error('shared append failed');
+  it("keeps a sticky failure until every acquired owner releases it", async () => {
+    const failure = new Error("shared append failed");
     let reportFailure!: (error: unknown) => void;
     const reportedFailure = new Promise<unknown>((resolve) => {
       reportFailure = resolve;
@@ -229,7 +236,7 @@ describe('AppendLogStore', () => {
     replacementOwner.dispose();
   });
 
-  it('rewrite atomically replaces the whole log', async () => {
+  it("rewrite atomically replaces the whole log", async () => {
     record.append<Rec>(SCOPE, KEY, { n: 1 });
     record.append<Rec>(SCOPE, KEY, { n: 2 });
     await record.flush();
@@ -238,7 +245,7 @@ describe('AppendLogStore', () => {
     expect(await collect<Rec>(SCOPE, KEY)).toEqual([{ n: 9 }, { n: 8 }]);
   });
 
-  it('rewrite preserves an append accepted after the replacement snapshot', async () => {
+  it("rewrite preserves an append accepted after the replacement snapshot", async () => {
     let markWriteStarted!: () => void;
     const writeStarted = new Promise<void>((resolve) => {
       markWriteStarted = resolve;
@@ -266,7 +273,7 @@ describe('AppendLogStore', () => {
     await rewrite;
   });
 
-  it('rewrite preserves an append whose old drain is in flight at cutover', async () => {
+  it("rewrite preserves an append whose old drain is in flight at cutover", async () => {
     let markAppendStarted!: () => void;
     const appendStarted = new Promise<void>((resolve) => {
       markAppendStarted = resolve;
@@ -299,8 +306,8 @@ describe('AppendLogStore', () => {
     expect(await collect<Rec>(SCOPE, KEY)).toEqual([{ n: 9 }, { n: 2 }]);
   });
 
-  it('explicit rewrite recovers an in-flight ambiguous append failure', async () => {
-    const failure = new Error('append failed after commit');
+  it("explicit rewrite recovers an in-flight ambiguous append failure", async () => {
+    const failure = new Error("append failed after commit");
     let markAppendStarted!: () => void;
     const appendStarted = new Promise<void>((resolve) => {
       markAppendStarted = resolve;
@@ -333,8 +340,8 @@ describe('AppendLogStore', () => {
     expect(await collect<Rec>(SCOPE, KEY)).toEqual([{ n: 9 }, { n: 2 }]);
   });
 
-  it('atomic rewrite rejection does not retry an append already written before cutover', async () => {
-    const failure = new Error('atomic rewrite rejected');
+  it("atomic rewrite rejection does not retry an append already written before cutover", async () => {
+    const failure = new Error("atomic rewrite rejected");
     let markAppendStarted!: () => void;
     const appendStarted = new Promise<void>((resolve) => {
       markAppendStarted = resolve;
@@ -365,10 +372,12 @@ describe('AppendLogStore', () => {
 
     await expect(record.flush()).rejects.toBe(failure);
     expect(appendAttempts).toBe(1);
-    expect(new TextDecoder().decode(await storage.read(SCOPE, KEY))).toBe('{"n":2}\n');
+    expect(new TextDecoder().decode(await storage.read(SCOPE, KEY))).toBe(
+      '{"n":2}\n',
+    );
   });
 
-  it('invalid replacement records do not change append ownership', async () => {
+  it("invalid replacement records do not change append ownership", async () => {
     let markAppendStarted!: () => void;
     const appendStarted = new Promise<void>((resolve) => {
       markAppendStarted = resolve;
@@ -399,8 +408,8 @@ describe('AppendLogStore', () => {
     expect(await collect<Rec>(SCOPE, KEY)).toEqual([{ n: 2 }]);
   });
 
-  it('successful explicit rewrite recovers sticky failure and drains the tail once', async () => {
-    const failure = new Error('atomic rewrite rejected');
+  it("successful explicit rewrite recovers sticky failure and drains the tail once", async () => {
+    const failure = new Error("atomic rewrite rejected");
     let markAppendStarted!: () => void;
     const appendStarted = new Promise<void>((resolve) => {
       markAppendStarted = resolve;
@@ -446,10 +455,10 @@ describe('AppendLogStore', () => {
     expect(await collect<Rec>(SCOPE, KEY)).toEqual([{ n: 9 }, { n: 2 }]);
   });
 
-  it('close waits for every key before reporting the first sticky failure', async () => {
-    const failedScope = 'agents/a';
-    const pendingScope = 'agents/b';
-    const failure = new Error('first key failed');
+  it("close waits for every key before reporting the first sticky failure", async () => {
+    const failedScope = "agents/a";
+    const pendingScope = "agents/b";
+    const failure = new Error("first key failed");
     let reportFailure!: (error: unknown) => void;
     const reportedFailure = new Promise<unknown>((resolve) => {
       reportFailure = resolve;
@@ -478,19 +487,23 @@ describe('AppendLogStore', () => {
 
     const closed = record.close();
     let closeSettled = false;
-    void closed.finally(() => {
-      closeSettled = true;
-    }).catch(() => {});
+    void closed
+      .finally(() => {
+        closeSettled = true;
+      })
+      .catch(() => {});
     await Promise.resolve();
     await Promise.resolve();
     expect(closeSettled).toBe(false);
 
     releasePendingAppend();
     await expect(closed).rejects.toBe(failure);
-    expect(new TextDecoder().decode(await storage.read(pendingScope, KEY))).toBe('{"n":2}\n');
+    expect(
+      new TextDecoder().decode(await storage.read(pendingScope, KEY)),
+    ).toBe('{"n":2}\n');
   });
 
-  it('appends that arrive during a rewrite land after the replaced content', async () => {
+  it("appends that arrive during a rewrite land after the replaced content", async () => {
     let releaseWrite!: () => void;
     const writeGate = new Promise<void>((resolve) => {
       releaseWrite = resolve;
@@ -512,7 +525,7 @@ describe('AppendLogStore', () => {
     expect(await collect<Rec>(SCOPE, KEY)).toEqual([{ n: 9 }, { n: 2 }]);
   });
 
-  it('flush() awaits an in-flight rewrite', async () => {
+  it("flush() awaits an in-flight rewrite", async () => {
     let releaseWrite!: () => void;
     const writeGate = new Promise<void>((resolve) => {
       releaseWrite = resolve;
@@ -533,7 +546,7 @@ describe('AppendLogStore', () => {
     await rewrite;
   });
 
-  it('flush() stays pending until an append made during rewrite is durable', async () => {
+  it("flush() stays pending until an append made during rewrite is durable", async () => {
     let releaseWrite!: () => void;
     const writeGate = new Promise<void>((resolve) => {
       releaseWrite = resolve;
@@ -578,35 +591,41 @@ describe('AppendLogStore', () => {
     await rewrite;
   });
 
-  it('logs addressed by different scope/key are independent', async () => {
-    record.append<Rec>('a', 'l', { n: 1 });
-    record.append<Rec>('b', 'l', { n: 2 });
-    expect(await collect<Rec>('a', 'l')).toEqual([{ n: 1 }]);
-    expect(await collect<Rec>('b', 'l')).toEqual([{ n: 2 }]);
+  it("logs addressed by different scope/key are independent", async () => {
+    record.append<Rec>("a", "l", { n: 1 });
+    record.append<Rec>("b", "l", { n: 2 });
+    expect(await collect<Rec>("a", "l")).toEqual([{ n: 1 }]);
+    expect(await collect<Rec>("b", "l")).toEqual([{ n: 2 }]);
   });
 
-  it('drops a torn final line (crash mid-flush)', async () => {
+  it("drops a torn final line (crash mid-flush)", async () => {
     const raw = `${JSON.stringify({ n: 1 })}\n${JSON.stringify({ n: 2 }).slice(0, 4)}`;
     await storage.append(SCOPE, KEY, enc.encode(raw));
 
     expect(await collect<Rec>(SCOPE, KEY)).toEqual([{ n: 1 }]);
   });
 
-  it('throws AppendLogCorruptedError on a corrupted middle line', async () => {
+  it("throws AppendLogCorruptedError on a corrupted middle line", async () => {
     const raw = `${JSON.stringify({ n: 1 })}\nGARBAGE\n${JSON.stringify({ n: 3 })}\n`;
     await storage.append(SCOPE, KEY, enc.encode(raw));
 
-    await expect(collect<Rec>(SCOPE, KEY)).rejects.toSatisfy((error: unknown) => {
-      expect(error).toBeInstanceOf(AppendLogCorruptedError);
-      const corrupted = error as AppendLogCorruptedError;
-      expect(corrupted.code).toBe('storage.corrupted');
-      expect(corrupted.details).toEqual({ scope: SCOPE, key: KEY, lineNumber: 2 });
-      expect(corrupted.cause).toBeInstanceOf(SyntaxError);
-      return true;
-    });
+    await expect(collect<Rec>(SCOPE, KEY)).rejects.toSatisfy(
+      (error: unknown) => {
+        expect(error).toBeInstanceOf(AppendLogCorruptedError);
+        const corrupted = error as AppendLogCorruptedError;
+        expect(corrupted.code).toBe("storage.corrupted");
+        expect(corrupted.details).toEqual({
+          scope: SCOPE,
+          key: KEY,
+          lineNumber: 2,
+        });
+        expect(corrupted.cause).toBeInstanceOf(SyntaxError);
+        return true;
+      },
+    );
   });
 
-  it('reads across chunk boundaries (stream read splits lines)', async () => {
+  it("reads across chunk boundaries (stream read splits lines)", async () => {
     const full = `${JSON.stringify({ n: 1 })}\n${JSON.stringify({ n: 2 })}\n${JSON.stringify({ n: 3 })}\n`;
     const bytes = enc.encode(full);
     const chunks = [bytes.slice(0, 7), bytes.slice(7, 23), bytes.slice(23)];
@@ -620,11 +639,11 @@ describe('AppendLogStore', () => {
     expect(out).toEqual([{ n: 1 }, { n: 2 }, { n: 3 }]);
   });
 
-  it('does not leak decoder state into a later read when an earlier read returns early', async () => {
-    const line1 = `${JSON.stringify({ type: 'metadata', protocol_version: '1.4' })}\n`;
-    const line2 = `${JSON.stringify({ type: 'context.append_message', s: '中文中文中文' })}\n`;
+  it("does not leak decoder state into a later read when an earlier read returns early", async () => {
+    const line1 = `${JSON.stringify({ type: "metadata", protocol_version: "1.4" })}\n`;
+    const line2 = `${JSON.stringify({ type: "context.append_message", s: "中文中文中文" })}\n`;
     const bytes = enc.encode(line1 + line2);
-    const cut = bytes.indexOf(enc.encode('中')[0]!) + 1;
+    const cut = bytes.indexOf(enc.encode("中")[0]!) + 1;
     const chunks = [bytes.slice(0, cut), bytes.slice(cut)];
     const localIx = disposables.add(new TestInstantiationService());
     localIx.stub(IFileSystemStorageService, chunkedStorage(chunks));
@@ -636,18 +655,19 @@ describe('AppendLogStore', () => {
       first.push(r);
       break;
     }
-    expect(first).toEqual([{ type: 'metadata', protocol_version: '1.4' }]);
+    expect(first).toEqual([{ type: "metadata", protocol_version: "1.4" }]);
 
     const out: Array<{ type: string; s?: string }> = [];
-    for await (const r of log.read<{ type: string; s?: string }>(SCOPE, KEY)) out.push(r);
+    for await (const r of log.read<{ type: string; s?: string }>(SCOPE, KEY))
+      out.push(r);
     expect(out).toEqual([
-      { type: 'metadata', protocol_version: '1.4' },
-      { type: 'context.append_message', s: '中文中文中文' },
+      { type: "metadata", protocol_version: "1.4" },
+      { type: "context.append_message", s: "中文中文中文" },
     ]);
   });
 
-  it('isolates decoder state between concurrent reads', async () => {
-    const content = `${JSON.stringify({ s: '中文日本語' })}\n`;
+  it("isolates decoder state between concurrent reads", async () => {
+    const content = `${JSON.stringify({ s: "中文日本語" })}\n`;
     const bytes = enc.encode(content);
     const chunks = Array.from(bytes, (b) => new Uint8Array([b]));
     const localIx = disposables.add(new TestInstantiationService());
@@ -661,12 +681,12 @@ describe('AppendLogStore', () => {
       return out;
     };
     const [a, b] = await Promise.all([readAll(), readAll()]);
-    expect(a).toEqual([{ s: '中文日本語' }]);
-    expect(b).toEqual([{ s: '中文日本語' }]);
+    expect(a).toEqual([{ s: "中文日本語" }]);
+    expect(b).toEqual([{ s: "中文日本語" }]);
   });
 
-  it('reads across chunk boundaries with multi-byte UTF-8 split', async () => {
-    const full = `${JSON.stringify({ n: 1, s: '中文' })}\n${JSON.stringify({ n: 2, s: '日本語' })}\n`;
+  it("reads across chunk boundaries with multi-byte UTF-8 split", async () => {
+    const full = `${JSON.stringify({ n: 1, s: "中文" })}\n${JSON.stringify({ n: 2, s: "日本語" })}\n`;
     const bytes = enc.encode(full);
     const chunks = Array.from(bytes, (b) => new Uint8Array([b]));
     const localIx = disposables.add(new TestInstantiationService());
@@ -675,10 +695,11 @@ describe('AppendLogStore', () => {
     const log = localIx.get(IAppendLogStore);
 
     const out: Array<Rec & { s?: string }> = [];
-    for await (const r of log.read<Rec & { s?: string }>(SCOPE, KEY)) out.push(r);
+    for await (const r of log.read<Rec & { s?: string }>(SCOPE, KEY))
+      out.push(r);
     expect(out).toEqual([
-      { n: 1, s: '中文' },
-      { n: 2, s: '日本語' },
+      { n: 1, s: "中文" },
+      { n: 2, s: "日本語" },
     ]);
   });
 });

@@ -1,8 +1,13 @@
-import { Container, Spacer } from '@moonshot-ai/pi-tui';
+import { Container, Spacer } from "@moonshot-ai/pi-tui";
 
-import type { MoonLoader } from '#/tui/components/chrome/moon-loader';
+import type { MoonLoader } from "#/tui/components/chrome/moon-loader";
 
-export type ActivityPaneMode = 'hidden' | 'waiting' | 'thinking' | 'composing' | 'tool';
+export type ActivityPaneMode =
+  | "hidden"
+  | "waiting"
+  | "thinking"
+  | "composing"
+  | "tool";
 
 export interface ActivityPaneOptions {
   readonly mode: ActivityPaneMode;
@@ -18,7 +23,9 @@ export class ActivityPaneComponent extends Container {
     this.spinnerRef = options.spinner;
 
     if (
-      (options.mode === 'waiting' || options.mode === 'tool' || options.mode === 'composing') &&
+      (options.mode === "waiting" ||
+        options.mode === "tool" ||
+        options.mode === "composing") &&
       options.spinner !== undefined
     ) {
       this.addChild(new Spacer(1));
@@ -30,7 +37,7 @@ export class ActivityPaneComponent extends Container {
   }
 
   override render(width: number): string[] {
-    if (this.spinnerRef && 'setAvailableWidth' in this.spinnerRef) {
+    if (this.spinnerRef && "setAvailableWidth" in this.spinnerRef) {
       this.spinnerRef.setAvailableWidth(width);
     }
     return super.render(width);

@@ -5,10 +5,10 @@
  * always carries `log` — the same pattern `error-handler.ts` relies on.
  */
 
-import type { Logger } from 'pino';
+import type { Logger } from "pino";
 
 /** Minimal pino surface used by route handlers. */
-export type RequestLogger = Pick<Logger, 'info' | 'warn' | 'error'>;
+export type RequestLogger = Pick<Logger, "info" | "warn" | "error">;
 
 /**
  * Extract Fastify's per-request logger from a narrowed route-handler request.

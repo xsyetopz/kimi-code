@@ -29,16 +29,12 @@
  *     reseed after session close, agent.status.updated mirrors into shadow.
  */
 
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from "vitest";
 
-import { Emitter } from '../../src';
+import { Emitter } from "../../src";
 
-import type {
-  CoreRPC,
-  Event,
-  SessionSummary,
-} from '../../src';
-import type { PromptSubmission, Session } from '@moonshot-ai/protocol';
+import type { CoreRPC, Event, SessionSummary } from "../../src";
+import type { PromptSubmission, Session } from "@moonshot-ai/protocol";
 
 import {
   type IAuthSummaryService,
@@ -50,15 +46,15 @@ import {
   PromptNotFoundError,
   PromptService,
   SessionNotFoundError,
-} from '../../src/services';
+} from "../../src/services";
 
-const SID = 'sess_01PT';
+const SID = "sess_01PT";
 const SESSION_CREATED_AT = 1_700_000_000_000;
 
 function mkSummary(id = SID): SessionSummary {
   return {
     id,
-    workDir: '/tmp/ws',
+    workDir: "/tmp/ws",
     sessionDir: `/tmp/sessions/${id}`,
     createdAt: SESSION_CREATED_AT,
     updatedAt: SESSION_CREATED_AT,
@@ -73,10 +69,10 @@ function mkSummary(id = SID): SessionSummary {
  */
 function mkBody(over: Partial<PromptSubmission> = {}): PromptSubmission {
   return {
-    content: [{ type: 'text', text: 'hi' }],
-    model: 'kimi-code/k2',
-    thinking: 'off',
-    permission_mode: 'manual',
+    content: [{ type: "text", text: "hi" }],
+    model: "kimi-code/k2",
+    thinking: "off",
+    permission_mode: "manual",
     plan_mode: false,
     ...over,
   };
@@ -90,7 +86,7 @@ function mkBody(over: Partial<PromptSubmission> = {}): PromptSubmission {
  */
 function mkBodyMinimal(over: Partial<PromptSubmission> = {}): PromptSubmission {
   return {
-    content: [{ type: 'text', text: 'hi' }],
+    content: [{ type: "text", text: "hi" }],
     ...over,
   };
 }
@@ -120,15 +116,16 @@ interface RpcRecord {
 interface BridgeStubOptions {
   /** Initial bootstrap values returned by getConfig/getPermission/getPlan. */
   config?: { modelAlias?: string; thinkingEffort?: string };
-  permission?: { mode: 'manual' | 'yolo' | 'auto' };
+  permission?: { mode: "manual" | "yolo" | "auto" };
   plan?: null | { id: string; content: string; path: string };
   sessions?: SessionSummary[];
   onPrompt?: (payload: unknown) => void | Promise<void>;
 }
 
-function makeBridge(
-  opts: BridgeStubOptions = {},
-): { bridge: ICoreProcessService; record: RpcRecord } {
+function makeBridge(opts: BridgeStubOptions = {}): {
+  bridge: ICoreProcessService;
+  record: RpcRecord;
+} {
   const record: RpcRecord = {
     promptCalls: [],
     steerCalls: [],
@@ -151,13 +148,13 @@ function makeBridge(
     getPlanCalls: 0,
   };
   const config = {
-    cwd: '/tmp/ws',
+    cwd: "/tmp/ws",
     modelCapabilities: {} as unknown,
-    thinkingEffort: opts.config?.thinkingEffort ?? 'off',
-    systemPrompt: '',
-    modelAlias: opts.config?.modelAlias ?? 'kimi-code/k2',
+    thinkingEffort: opts.config?.thinkingEffort ?? "off",
+    systemPrompt: "",
+    modelAlias: opts.config?.modelAlias ?? "kimi-code/k2",
   };
-  const permission = { mode: opts.permission?.mode ?? 'manual', rules: [] };
+  const permission = { mode: opts.permission?.mode ?? "manual", rules: [] };
   const plan = opts.plan === undefined ? null : opts.plan;
   const sessions = opts.sessions ?? [mkSummary()];
 
@@ -214,7 +211,7 @@ function makeBridge(
     }),
     startBtw: vi.fn().mockImplementation(async (payload) => {
       record.startBtwCalls.push(payload);
-      return 'agent_btw';
+      return "agent_btw";
     }),
     enterSwarm: vi.fn().mockImplementation(async (payload) => {
       record.enterSwarmCalls.push(payload);
@@ -225,22 +222,22 @@ function makeBridge(
     createGoal: vi.fn().mockImplementation(async (payload) => {
       record.createGoalCalls.push(payload);
       return {
-        goalId: 'goal_1',
+        goalId: "goal_1",
         objective: (payload as { objective: string }).objective,
-        status: 'active',
+        status: "active",
       };
     }),
     pauseGoal: vi.fn().mockImplementation(async (payload) => {
       record.pauseGoalCalls.push(payload);
-      return { goalId: 'goal_1', status: 'paused' };
+      return { goalId: "goal_1", status: "paused" };
     }),
     resumeGoal: vi.fn().mockImplementation(async (payload) => {
       record.resumeGoalCalls.push(payload);
-      return { goalId: 'goal_1', status: 'active' };
+      return { goalId: "goal_1", status: "active" };
     }),
     cancelGoal: vi.fn().mockImplementation(async (payload) => {
       record.cancelGoalCalls.push(payload);
-      return { goalId: 'goal_1', status: 'cancelled' };
+      return { goalId: "goal_1", status: "cancelled" };
     }),
   };
   const bridge: ICoreProcessService = {
@@ -279,12 +276,14 @@ function makeBus(): {
  * `ensureReady()` resolves; tests that need to exercise the readiness gate
  * can pass `{ ensureReadyError }` and assert the error surfaces.
  */
-function makeAuth(opts: { ensureReadyError?: Error } = {}): IAuthSummaryService {
+function makeAuth(
+  opts: { ensureReadyError?: Error } = {},
+): IAuthSummaryService {
   return {
     get: vi.fn().mockResolvedValue({
       ready: true,
       providers_count: 1,
-      default_model: 'kimi-k2',
+      default_model: "kimi-k2",
       managed_provider: null,
     }),
     ensureReady: vi.fn().mockImplementation(async () => {
@@ -307,18 +306,19 @@ function makeSessionService(): {
   const createEmitter = new Emitter<{ session: Session }>();
   const sessionService: ISessionService = {
     _serviceBrand: undefined,
-    create: vi.fn() as unknown as ISessionService['create'],
-    list: vi.fn() as unknown as ISessionService['list'],
-    get: vi.fn() as unknown as ISessionService['get'],
-    update: vi.fn() as unknown as ISessionService['update'],
-    fork: vi.fn() as unknown as ISessionService['fork'],
-    listChildren: vi.fn() as unknown as ISessionService['listChildren'],
-    createChild: vi.fn() as unknown as ISessionService['createChild'],
-    getStatus: vi.fn() as unknown as ISessionService['getStatus'],
-    getSessionWarnings: vi.fn() as unknown as ISessionService['getSessionWarnings'],
-    compact: vi.fn() as unknown as ISessionService['compact'],
-    undo: vi.fn() as unknown as ISessionService['undo'],
-    archive: vi.fn() as unknown as ISessionService['archive'],
+    create: vi.fn() as unknown as ISessionService["create"],
+    list: vi.fn() as unknown as ISessionService["list"],
+    get: vi.fn() as unknown as ISessionService["get"],
+    update: vi.fn() as unknown as ISessionService["update"],
+    fork: vi.fn() as unknown as ISessionService["fork"],
+    listChildren: vi.fn() as unknown as ISessionService["listChildren"],
+    createChild: vi.fn() as unknown as ISessionService["createChild"],
+    getStatus: vi.fn() as unknown as ISessionService["getStatus"],
+    getSessionWarnings:
+      vi.fn() as unknown as ISessionService["getSessionWarnings"],
+    compact: vi.fn() as unknown as ISessionService["compact"],
+    undo: vi.fn() as unknown as ISessionService["undo"],
+    archive: vi.fn() as unknown as ISessionService["archive"],
     onDidCreate: createEmitter.event,
     onDidClose: closeEmitter.event,
   };
@@ -350,8 +350,8 @@ function newSvc(
   return new PromptService(bridge, bus, auth, sessionService, logService);
 }
 
-describe('PromptService.submit', () => {
-  it('returns ULID-shaped prompt_id + user_message_id derived from it', async () => {
+describe("PromptService.submit", () => {
+  it("returns ULID-shaped prompt_id + user_message_id derived from it", async () => {
     const { bridge } = makeBridge();
     const { bus } = makeBus();
     const impl = newSvc(bridge, bus);
@@ -360,7 +360,7 @@ describe('PromptService.submit', () => {
     expect(result.user_message_id).toMatch(/^msg_sess_01PT_pending_prompt_/);
   });
 
-  it('translates text + image content to kosong ContentParts', async () => {
+  it("translates text + image content to kosong ContentParts", async () => {
     const { bridge, record } = makeBridge();
     const { bus } = makeBus();
     const impl = newSvc(bridge, bus);
@@ -368,8 +368,8 @@ describe('PromptService.submit', () => {
       SID,
       mkBody({
         content: [
-          { type: 'text', text: 'hello' },
-          { type: 'image', source: { kind: 'url', url: 'https://a.png' } },
+          { type: "text", text: "hello" },
+          { type: "image", source: { kind: "url", url: "https://a.png" } },
         ],
       }),
     );
@@ -380,14 +380,14 @@ describe('PromptService.submit', () => {
       input: Array<Record<string, unknown>>;
     };
     expect(payload.sessionId).toBe(SID);
-    expect(payload.agentId).toBe('main');
+    expect(payload.agentId).toBe("main");
     expect(payload.input).toEqual([
-      { type: 'text', text: 'hello' },
-      { type: 'image_url', imageUrl: { url: 'https://a.png' } },
+      { type: "text", text: "hello" },
+      { type: "image_url", imageUrl: { url: "https://a.png" } },
     ]);
   });
 
-  it('translates base64 image content to a data URL image part', async () => {
+  it("translates base64 image content to a data URL image part", async () => {
     const { bridge, record } = makeBridge();
     const { bus } = makeBus();
     const impl = newSvc(bridge, bus);
@@ -395,13 +395,13 @@ describe('PromptService.submit', () => {
       SID,
       mkBody({
         content: [
-          { type: 'text', text: 'describe this' },
+          { type: "text", text: "describe this" },
           {
-            type: 'image',
+            type: "image",
             source: {
-              kind: 'base64',
-              media_type: 'image/png',
-              data: 'aGVsbG8=',
+              kind: "base64",
+              media_type: "image/png",
+              data: "aGVsbG8=",
             },
           },
         ],
@@ -411,54 +411,58 @@ describe('PromptService.submit', () => {
       input: Array<Record<string, unknown>>;
     };
     expect(payload.input).toEqual([
-      { type: 'text', text: 'describe this' },
+      { type: "text", text: "describe this" },
       {
-        type: 'image_url',
-        imageUrl: { url: 'data:image/png;base64,aGVsbG8=' },
+        type: "image_url",
+        imageUrl: { url: "data:image/png;base64,aGVsbG8=" },
       },
     ]);
   });
 
-  it('publishes prompt.submitted when a prompt starts running', async () => {
+  it("publishes prompt.submitted when a prompt starts running", async () => {
     const { bridge } = makeBridge();
     const { bus, events } = makeBus();
     const impl = newSvc(bridge, bus);
-    const body = mkBody({ content: [{ type: 'text', text: 'hello from client a' }] });
+    const body = mkBody({
+      content: [{ type: "text", text: "hello from client a" }],
+    });
 
     const result = await impl.submit(SID, body);
 
-    const submitted = events.find((event) => event.type === 'prompt.submitted') as
+    const submitted = events.find(
+      (event) => event.type === "prompt.submitted",
+    ) as
       | {
-          type: 'prompt.submitted';
+          type: "prompt.submitted";
           sessionId: string;
           agentId: string;
           promptId: string;
           userMessageId: string;
           status: string;
-          content: readonly PromptSubmission['content'][number][];
+          content: readonly PromptSubmission["content"][number][];
         }
       | undefined;
     expect(submitted).toBeDefined();
     expect(submitted?.sessionId).toBe(SID);
-    expect(submitted?.agentId).toBe('main');
+    expect(submitted?.agentId).toBe("main");
     expect(submitted).toMatchObject({
       promptId: result.prompt_id,
       userMessageId: result.user_message_id,
-      status: 'running',
+      status: "running",
       content: body.content,
     });
   });
 
-  it('publishes prompt.submitted before core prompt events can start the turn', async () => {
+  it("publishes prompt.submitted before core prompt events can start the turn", async () => {
     const { bus, events } = makeBus();
     const { bridge } = makeBridge({
       onPrompt: () => {
         bus.publish({
-          type: 'turn.started',
+          type: "turn.started",
           turnId: 7,
-          origin: { kind: 'user' },
+          origin: { kind: "user" },
           sessionId: SID,
-          agentId: 'main',
+          agentId: "main",
         } as unknown as Event);
       },
     });
@@ -467,134 +471,169 @@ describe('PromptService.submit', () => {
     const result = await impl.submit(SID, mkBodyMinimal());
 
     expect(events.map((event) => event.type).slice(0, 2)).toEqual([
-      'prompt.submitted',
-      'turn.started',
+      "prompt.submitted",
+      "turn.started",
     ]);
     expect(events[0]).toMatchObject({
-      type: 'prompt.submitted',
+      type: "prompt.submitted",
       promptId: result.prompt_id,
-      status: 'running',
+      status: "running",
     });
   });
 
-  it('queues a second prompt when a non-terminal prompt is already active', async () => {
+  it("queues a second prompt when a non-terminal prompt is already active", async () => {
     const { bridge } = makeBridge();
     const { bus } = makeBus();
     const impl = newSvc(bridge, bus);
-    const first = await impl.submit(SID, mkBody({ content: [{ type: 'text', text: 'one' }] }));
-    const second = await impl.submit(SID, mkBody({ content: [{ type: 'text', text: 'two' }] }));
+    const first = await impl.submit(
+      SID,
+      mkBody({ content: [{ type: "text", text: "one" }] }),
+    );
+    const second = await impl.submit(
+      SID,
+      mkBody({ content: [{ type: "text", text: "two" }] }),
+    );
     const listed = await impl.list(SID);
 
-    expect(first.status).toBe('running');
-    expect(second.status).toBe('queued');
+    expect(first.status).toBe("running");
+    expect(second.status).toBe("queued");
     expect(listed.active?.prompt_id).toBe(first.prompt_id);
     expect(listed.queued.map((p) => p.prompt_id)).toEqual([second.prompt_id]);
   });
 
-  it('runs an agent-scoped prompt without queueing behind the main prompt', async () => {
+  it("runs an agent-scoped prompt without queueing behind the main prompt", async () => {
     const { bridge, record } = makeBridge();
     const { bus, events } = makeBus();
     const impl = newSvc(bridge, bus);
 
-    const main = await impl.submit(SID, mkBodyMinimal({ content: [{ type: 'text', text: 'main' }] }));
+    const main = await impl.submit(
+      SID,
+      mkBodyMinimal({ content: [{ type: "text", text: "main" }] }),
+    );
     const btw = await impl.submit(
       SID,
       mkBodyMinimal({
-        agent_id: 'agent_btw',
-        content: [{ type: 'text', text: 'side question' }],
+        agent_id: "agent_btw",
+        content: [{ type: "text", text: "side question" }],
       }),
     );
     const listed = await impl.list(SID);
 
-    expect(main.status).toBe('running');
-    expect(btw.status).toBe('running');
+    expect(main.status).toBe("running");
+    expect(btw.status).toBe("running");
     expect(listed.active?.prompt_id).toBe(main.prompt_id);
     expect(listed.queued).toHaveLength(0);
     expect(record.promptCalls).toEqual([
-      { sessionId: SID, agentId: 'main', input: [{ type: 'text', text: 'main' }] },
-      { sessionId: SID, agentId: 'agent_btw', input: [{ type: 'text', text: 'side question' }] },
+      {
+        sessionId: SID,
+        agentId: "main",
+        input: [{ type: "text", text: "main" }],
+      },
+      {
+        sessionId: SID,
+        agentId: "agent_btw",
+        input: [{ type: "text", text: "side question" }],
+      },
     ]);
-    const submitted = events.filter((event) => event.type === 'prompt.submitted') as Array<{
-      type: 'prompt.submitted';
+    const submitted = events.filter(
+      (event) => event.type === "prompt.submitted",
+    ) as Array<{
+      type: "prompt.submitted";
       agentId: string;
       promptId: string;
     }>;
     expect(submitted.map((event) => [event.agentId, event.promptId])).toEqual([
-      ['main', main.prompt_id],
-      ['agent_btw', btw.prompt_id],
+      ["main", main.prompt_id],
+      ["agent_btw", btw.prompt_id],
     ]);
   });
 
-  it('publishes prompt.submitted when a prompt is queued', async () => {
+  it("publishes prompt.submitted when a prompt is queued", async () => {
     const { bridge } = makeBridge();
     const { bus, events } = makeBus();
     const impl = newSvc(bridge, bus);
 
-    await impl.submit(SID, mkBody({ content: [{ type: 'text', text: 'one' }] }));
-    const second = await impl.submit(SID, mkBody({ content: [{ type: 'text', text: 'two' }] }));
+    await impl.submit(
+      SID,
+      mkBody({ content: [{ type: "text", text: "one" }] }),
+    );
+    const second = await impl.submit(
+      SID,
+      mkBody({ content: [{ type: "text", text: "two" }] }),
+    );
 
-    const submitted = events.filter((event) => event.type === 'prompt.submitted') as Array<{
-      type: 'prompt.submitted';
+    const submitted = events.filter(
+      (event) => event.type === "prompt.submitted",
+    ) as Array<{
+      type: "prompt.submitted";
       promptId: string;
       status: string;
-      content: readonly PromptSubmission['content'][number][];
+      content: readonly PromptSubmission["content"][number][];
     }>;
-    expect(submitted.map((event) => event.promptId)).toContain(second.prompt_id);
+    expect(submitted.map((event) => event.promptId)).toContain(
+      second.prompt_id,
+    );
     expect(submitted.at(-1)).toMatchObject({
       promptId: second.prompt_id,
-      status: 'queued',
-      content: [{ type: 'text', text: 'two' }],
+      status: "queued",
+      content: [{ type: "text", text: "two" }],
     });
   });
 
-  it('starts the next queued prompt after the active prompt completes', async () => {
+  it("starts the next queued prompt after the active prompt completes", async () => {
     const { bridge, record } = makeBridge();
     const { bus, triggerSubscribers } = makeBus();
     const impl = newSvc(bridge, bus);
-    const first = await impl.submit(SID, mkBodyMinimal({ content: [{ type: 'text', text: 'one' }] }));
-    const second = await impl.submit(SID, mkBodyMinimal({ content: [{ type: 'text', text: 'two' }] }));
+    const first = await impl.submit(
+      SID,
+      mkBodyMinimal({ content: [{ type: "text", text: "one" }] }),
+    );
+    const second = await impl.submit(
+      SID,
+      mkBodyMinimal({ content: [{ type: "text", text: "two" }] }),
+    );
 
     triggerSubscribers({
-      type: 'turn.started',
+      type: "turn.started",
       turnId: 7,
-      origin: { kind: 'user' },
+      origin: { kind: "user" },
       sessionId: SID,
-      agentId: 'main',
+      agentId: "main",
     } as unknown as Event);
     triggerSubscribers({
-      type: 'turn.ended',
+      type: "turn.ended",
       turnId: 7,
-      reason: 'completed',
+      reason: "completed",
       sessionId: SID,
-      agentId: 'main',
+      agentId: "main",
     } as unknown as Event);
     await Promise.resolve();
 
     expect(record.promptCalls).toHaveLength(2);
     expect(record.promptCalls[1]).toEqual({
       sessionId: SID,
-      agentId: 'main',
-      input: [{ type: 'text', text: 'two' }],
+      agentId: "main",
+      input: [{ type: "text", text: "two" }],
     });
     const listed = await impl.list(SID);
     expect(listed.active?.prompt_id).toBe(second.prompt_id);
     expect(listed.queued).toHaveLength(0);
-    expect(first.status).toBe('running');
+    expect(first.status).toBe("running");
   });
 
-  it('throws SessionNotFoundError on unknown session id', async () => {
+  it("throws SessionNotFoundError on unknown session id", async () => {
     const { bridge } = makeBridge();
     const { bus } = makeBus();
     const impl = newSvc(bridge, bus);
-    await expect(impl.submit('sess_missing', mkBody())).rejects.toBeInstanceOf(
+    await expect(impl.submit("sess_missing", mkBody())).rejects.toBeInstanceOf(
       SessionNotFoundError,
     );
   });
 
-  it('clears active state if bridge.prompt() rejects', async () => {
+  it("clears active state if bridge.prompt() rejects", async () => {
     const { bridge } = makeBridge();
     (bridge.rpc.prompt as unknown as ReturnType<typeof vi.fn>)
-      .mockRejectedValueOnce(new Error('boom'))
+      .mockRejectedValueOnce(new Error("boom"))
       .mockResolvedValue(undefined);
     const { bus } = makeBus();
     const impl = newSvc(bridge, bus);
@@ -603,7 +642,7 @@ describe('PromptService.submit', () => {
     await impl.submit(SID, mkBody());
   });
 
-  it('calls resumeSession before prompt so cross-restart sessions resolve', async () => {
+  it("calls resumeSession before prompt so cross-restart sessions resolve", async () => {
     const { bridge } = makeBridge();
     const { bus } = makeBus();
     const impl = newSvc(bridge, bus);
@@ -619,75 +658,75 @@ describe('PromptService.submit', () => {
   });
 });
 
-describe('PromptService.startBtw', () => {
-  it('starts a side-channel agent through core RPC', async () => {
+describe("PromptService.startBtw", () => {
+  it("starts a side-channel agent through core RPC", async () => {
     const { bridge, record } = makeBridge();
     const { bus } = makeBus();
     const impl = newSvc(bridge, bus);
 
-    await expect(impl.startBtw(SID)).resolves.toBe('agent_btw');
+    await expect(impl.startBtw(SID)).resolves.toBe("agent_btw");
 
-    expect(record.startBtwCalls).toEqual([{ sessionId: SID, agentId: 'main' }]);
+    expect(record.startBtwCalls).toEqual([{ sessionId: SID, agentId: "main" }]);
   });
 });
 
-describe('PromptService lifecycle synthesis (via IEventService.onDidPublish)', () => {
-  it('captures turnId on the first turn.started after submit', async () => {
+describe("PromptService lifecycle synthesis (via IEventService.onDidPublish)", () => {
+  it("captures turnId on the first turn.started after submit", async () => {
     const { bridge } = makeBridge();
     const { bus, triggerSubscribers } = makeBus();
     const impl = newSvc(bridge, bus);
     await impl.submit(SID, mkBody());
     triggerSubscribers({
-      type: 'turn.started',
+      type: "turn.started",
       turnId: 42,
-      origin: { kind: 'user' },
+      origin: { kind: "user" },
       sessionId: SID,
-      agentId: 'main',
+      agentId: "main",
     } as unknown as Event);
     expect(impl._activeForTest(SID)?.turnId).toBe(42);
   });
 
-  it('ignores subsequent turn.started events (treated as nested turns)', async () => {
+  it("ignores subsequent turn.started events (treated as nested turns)", async () => {
     const { bridge } = makeBridge();
     const { bus, triggerSubscribers } = makeBus();
     const impl = newSvc(bridge, bus);
     await impl.submit(SID, mkBody());
     triggerSubscribers({
-      type: 'turn.started',
+      type: "turn.started",
       turnId: 42,
-      origin: { kind: 'user' },
+      origin: { kind: "user" },
       sessionId: SID,
-      agentId: 'main',
+      agentId: "main",
     } as unknown as Event);
     triggerSubscribers({
-      type: 'turn.started',
+      type: "turn.started",
       turnId: 99,
-      origin: { kind: 'user' },
+      origin: { kind: "user" },
       sessionId: SID,
-      agentId: 'main',
+      agentId: "main",
     } as unknown as Event);
     expect(impl._activeForTest(SID)?.turnId).toBe(42);
   });
 
-  it('synthesizes prompt.completed on top-level turn.ended (reason=completed)', async () => {
+  it("synthesizes prompt.completed on top-level turn.ended (reason=completed)", async () => {
     const { bridge } = makeBridge();
     const { bus, events, triggerSubscribers } = makeBus();
     const impl = newSvc(bridge, bus);
     const submit = await impl.submit(SID, mkBody());
     triggerSubscribers({
-      type: 'turn.started',
+      type: "turn.started",
       turnId: 7,
-      origin: { kind: 'user' },
+      origin: { kind: "user" },
       sessionId: SID,
-      agentId: 'main',
+      agentId: "main",
     } as unknown as Event);
     events.length = 0;
     triggerSubscribers({
-      type: 'turn.ended',
+      type: "turn.ended",
       turnId: 7,
-      reason: 'completed',
+      reason: "completed",
       sessionId: SID,
-      agentId: 'main',
+      agentId: "main",
     } as unknown as Event);
     expect(events).toHaveLength(1);
     const synth = events[0] as unknown as {
@@ -695,31 +734,31 @@ describe('PromptService lifecycle synthesis (via IEventService.onDidPublish)', (
       promptId: string;
       reason: string;
     };
-    expect(synth.type).toBe('prompt.completed');
+    expect(synth.type).toBe("prompt.completed");
     expect(synth.promptId).toBe(submit.prompt_id);
-    expect(synth.reason).toBe('completed');
+    expect(synth.reason).toBe("completed");
     expect(impl._activeForTest(SID)).toBeUndefined();
   });
 
-  it('preserves blocked reason when synthesizing prompt.completed', async () => {
+  it("preserves blocked reason when synthesizing prompt.completed", async () => {
     const { bridge } = makeBridge();
     const { bus, events, triggerSubscribers } = makeBus();
     const impl = newSvc(bridge, bus);
     const submit = await impl.submit(SID, mkBody());
     triggerSubscribers({
-      type: 'turn.started',
+      type: "turn.started",
       turnId: 7,
-      origin: { kind: 'user' },
+      origin: { kind: "user" },
       sessionId: SID,
-      agentId: 'main',
+      agentId: "main",
     } as unknown as Event);
     events.length = 0;
     triggerSubscribers({
-      type: 'turn.ended',
+      type: "turn.ended",
       turnId: 7,
-      reason: 'blocked',
+      reason: "blocked",
       sessionId: SID,
-      agentId: 'main',
+      agentId: "main",
     } as unknown as Event);
     expect(events).toHaveLength(1);
     const synth = events[0] as unknown as {
@@ -727,23 +766,23 @@ describe('PromptService lifecycle synthesis (via IEventService.onDidPublish)', (
       promptId: string;
       reason: string;
     };
-    expect(synth.type).toBe('prompt.completed');
+    expect(synth.type).toBe("prompt.completed");
     expect(synth.promptId).toBe(submit.prompt_id);
-    expect(synth.reason).toBe('blocked');
+    expect(synth.reason).toBe("blocked");
     expect(impl._activeForTest(SID)).toBeUndefined();
   });
 
-  it('fires onDidComplete listener before bus.publish', async () => {
+  it("fires onDidComplete listener before bus.publish", async () => {
     const { bridge } = makeBridge();
     const { bus, events, triggerSubscribers } = makeBus();
     const impl = newSvc(bridge, bus);
     const submit = await impl.submit(SID, mkBody());
     triggerSubscribers({
-      type: 'turn.started',
+      type: "turn.started",
       turnId: 7,
-      origin: { kind: 'user' },
+      origin: { kind: "user" },
       sessionId: SID,
-      agentId: 'main',
+      agentId: "main",
     } as unknown as Event);
     const handlerArgs: unknown[] = [];
     const handlerCalledBeforePublish: boolean[] = [];
@@ -751,107 +790,112 @@ describe('PromptService lifecycle synthesis (via IEventService.onDidPublish)', (
       handlerArgs.push(e);
       handlerCalledBeforePublish.push(
         events.filter(
-          (ev) => (ev as unknown as { type?: string }).type === 'prompt.completed',
+          (ev) =>
+            (ev as unknown as { type?: string }).type === "prompt.completed",
         ).length === 0,
       );
     });
     events.length = 0;
     triggerSubscribers({
-      type: 'turn.ended',
+      type: "turn.ended",
       turnId: 7,
-      reason: 'completed',
+      reason: "completed",
       sessionId: SID,
-      agentId: 'main',
+      agentId: "main",
     } as unknown as Event);
     expect(handlerArgs).toHaveLength(1);
-    expect((handlerArgs[0] as { promptId: string }).promptId).toBe(submit.prompt_id);
+    expect((handlerArgs[0] as { promptId: string }).promptId).toBe(
+      submit.prompt_id,
+    );
     expect(handlerCalledBeforePublish[0]).toBe(true);
   });
 
-  it('synthesizes prompt.aborted on top-level turn.ended (reason=cancelled)', async () => {
+  it("synthesizes prompt.aborted on top-level turn.ended (reason=cancelled)", async () => {
     const { bridge } = makeBridge();
     const { bus, events, triggerSubscribers } = makeBus();
     const impl = newSvc(bridge, bus);
     await impl.submit(SID, mkBody());
     triggerSubscribers({
-      type: 'turn.started',
+      type: "turn.started",
       turnId: 8,
-      origin: { kind: 'user' },
+      origin: { kind: "user" },
       sessionId: SID,
-      agentId: 'main',
+      agentId: "main",
     } as unknown as Event);
     events.length = 0;
     triggerSubscribers({
-      type: 'turn.ended',
+      type: "turn.ended",
       turnId: 8,
-      reason: 'cancelled',
+      reason: "cancelled",
       sessionId: SID,
-      agentId: 'main',
+      agentId: "main",
     } as unknown as Event);
     expect(events).toHaveLength(1);
-    expect((events[0] as unknown as { type: string }).type).toBe('prompt.aborted');
+    expect((events[0] as unknown as { type: string }).type).toBe(
+      "prompt.aborted",
+    );
   });
 
-  it('ignores nested turn.ended (different turnId) so prompt stays active', async () => {
+  it("ignores nested turn.ended (different turnId) so prompt stays active", async () => {
     const { bridge } = makeBridge();
     const { bus, events, triggerSubscribers } = makeBus();
     const impl = newSvc(bridge, bus);
     await impl.submit(SID, mkBody());
     triggerSubscribers({
-      type: 'turn.started',
+      type: "turn.started",
       turnId: 1,
-      origin: { kind: 'user' },
+      origin: { kind: "user" },
       sessionId: SID,
-      agentId: 'main',
+      agentId: "main",
     } as unknown as Event);
     events.length = 0;
     triggerSubscribers({
-      type: 'turn.ended',
+      type: "turn.ended",
       turnId: 99,
-      reason: 'completed',
+      reason: "completed",
       sessionId: SID,
-      agentId: 'main',
+      agentId: "main",
     } as unknown as Event);
     expect(events).toEqual([]);
     expect(impl._activeForTest(SID)?.completed).toBe(false);
   });
 
-  it('is a no-op for events on a session with no active prompt', async () => {
+  it("is a no-op for events on a session with no active prompt", async () => {
     const { bridge } = makeBridge();
     const { bus, events, triggerSubscribers } = makeBus();
     newSvc(bridge, bus);
     triggerSubscribers({
-      type: 'turn.ended',
+      type: "turn.ended",
       turnId: 1,
-      reason: 'completed',
+      reason: "completed",
       sessionId: SID,
-      agentId: 'main',
+      agentId: "main",
     } as unknown as Event);
     expect(events).toEqual([]);
   });
 });
 
-describe('PromptService.abort', () => {
-  it('throws PromptNotFoundError when no active prompt for the session', async () => {
+describe("PromptService.abort", () => {
+  it("throws PromptNotFoundError when no active prompt for the session", async () => {
     const { bridge } = makeBridge();
     const { bus } = makeBus();
     const impl = newSvc(bridge, bus);
-    await expect(impl.abort(SID, 'prompt_xyz')).rejects.toBeInstanceOf(
+    await expect(impl.abort(SID, "prompt_xyz")).rejects.toBeInstanceOf(
       PromptNotFoundError,
     );
   });
 
-  it('returns {aborted: true} and publishes prompt.aborted', async () => {
+  it("returns {aborted: true} and publishes prompt.aborted", async () => {
     const { bridge, record } = makeBridge();
     const { bus, events, triggerSubscribers } = makeBus();
     const impl = newSvc(bridge, bus);
     const submit = await impl.submit(SID, mkBody());
     triggerSubscribers({
-      type: 'turn.started',
+      type: "turn.started",
       turnId: 5,
-      origin: { kind: 'user' },
+      origin: { kind: "user" },
       sessionId: SID,
-      agentId: 'main',
+      agentId: "main",
     } as unknown as Event);
     events.length = 0;
     const result = await impl.abort(SID, submit.prompt_id);
@@ -859,14 +903,16 @@ describe('PromptService.abort', () => {
     expect(record.cancelCalls).toHaveLength(1);
     expect(record.cancelCalls[0]).toEqual({
       sessionId: SID,
-      agentId: 'main',
+      agentId: "main",
       turnId: 5,
     });
     expect(events).toHaveLength(1);
-    expect((events[0] as unknown as { type: string }).type).toBe('prompt.aborted');
+    expect((events[0] as unknown as { type: string }).type).toBe(
+      "prompt.aborted",
+    );
   });
 
-  it('throws PromptAlreadyCompletedError on the second abort', async () => {
+  it("throws PromptAlreadyCompletedError on the second abort", async () => {
     const { bridge } = makeBridge();
     const { bus } = makeBus();
     const impl = newSvc(bridge, bus);
@@ -877,7 +923,7 @@ describe('PromptService.abort', () => {
     );
   });
 
-  it('aborts a queued prompt without calling core.rpc.cancel', async () => {
+  it("aborts a queued prompt without calling core.rpc.cancel", async () => {
     const { bridge, record } = makeBridge();
     const { bus, events } = makeBus();
     const impl = newSvc(bridge, bus);
@@ -885,9 +931,9 @@ describe('PromptService.abort', () => {
     const first = await impl.submit(SID, mkBody());
     const second = await impl.submit(
       SID,
-      mkBodyMinimal({ content: [{ type: 'text', text: 'queued' }] }),
+      mkBodyMinimal({ content: [{ type: "text", text: "queued" }] }),
     );
-    expect(second.status).toBe('queued');
+    expect(second.status).toBe("queued");
 
     events.length = 0;
     const result = await impl.abort(SID, second.prompt_id);
@@ -899,13 +945,13 @@ describe('PromptService.abort', () => {
     expect(listed.queued).toHaveLength(0);
     expect(events).toHaveLength(1);
     const ev = events[0] as unknown as { type: string; promptId?: string };
-    expect(ev.type).toBe('prompt.aborted');
+    expect(ev.type).toBe("prompt.aborted");
     expect(ev.promptId).toBe(second.prompt_id);
   });
 });
 
-describe('PromptService.getCurrentPromptId', () => {
-  it('returns the active prompt id while running', async () => {
+describe("PromptService.getCurrentPromptId", () => {
+  it("returns the active prompt id while running", async () => {
     const { bridge } = makeBridge();
     const { bus } = makeBus();
     const impl = newSvc(bridge, bus);
@@ -913,48 +959,48 @@ describe('PromptService.getCurrentPromptId', () => {
     expect(impl.getCurrentPromptId(SID)).toBe(submit.prompt_id);
   });
 
-  it('returns undefined when idle', async () => {
+  it("returns undefined when idle", async () => {
     const { bridge } = makeBridge();
     const { bus } = makeBus();
     const impl = newSvc(bridge, bus);
     expect(impl.getCurrentPromptId(SID)).toBeUndefined();
   });
 
-  it('returns undefined after the prompt completes', async () => {
+  it("returns undefined after the prompt completes", async () => {
     const { bridge } = makeBridge();
     const { bus, triggerSubscribers } = makeBus();
     const impl = newSvc(bridge, bus);
     const submit = await impl.submit(SID, mkBody());
     triggerSubscribers({
-      type: 'turn.started',
+      type: "turn.started",
       turnId: 1,
-      origin: { kind: 'user' },
+      origin: { kind: "user" },
       sessionId: SID,
-      agentId: 'main',
+      agentId: "main",
     } as unknown as Event);
     triggerSubscribers({
-      type: 'turn.ended',
+      type: "turn.ended",
       turnId: 1,
-      reason: 'completed',
+      reason: "completed",
       sessionId: SID,
-      agentId: 'main',
+      agentId: "main",
     } as unknown as Event);
     expect(impl.getCurrentPromptId(SID)).toBeUndefined();
   });
 });
 
-describe('PromptService.abortBySession', () => {
-  it('delegates to abort when a daemon prompt is active', async () => {
+describe("PromptService.abortBySession", () => {
+  it("delegates to abort when a daemon prompt is active", async () => {
     const { bridge, record } = makeBridge();
     const { bus, events, triggerSubscribers } = makeBus();
     const impl = newSvc(bridge, bus);
     const submit = await impl.submit(SID, mkBody());
     triggerSubscribers({
-      type: 'turn.started',
+      type: "turn.started",
       turnId: 7,
-      origin: { kind: 'user' },
+      origin: { kind: "user" },
       sessionId: SID,
-      agentId: 'main',
+      agentId: "main",
     } as unknown as Event);
     events.length = 0;
 
@@ -964,14 +1010,16 @@ describe('PromptService.abortBySession', () => {
     expect(record.cancelCalls).toHaveLength(1);
     expect(record.cancelCalls[0]).toEqual({
       sessionId: SID,
-      agentId: 'main',
+      agentId: "main",
       turnId: 7,
     });
     expect(events).toHaveLength(1);
-    expect((events[0] as unknown as { type: string }).type).toBe('prompt.aborted');
+    expect((events[0] as unknown as { type: string }).type).toBe(
+      "prompt.aborted",
+    );
   });
 
-  it('calls core.rpc.cancel without turnId when no daemon prompt is active', async () => {
+  it("calls core.rpc.cancel without turnId when no daemon prompt is active", async () => {
     const { bridge, record } = makeBridge();
     const { bus } = makeBus();
     const impl = newSvc(bridge, bus);
@@ -982,18 +1030,24 @@ describe('PromptService.abortBySession', () => {
     expect(record.cancelCalls).toHaveLength(1);
     expect(record.cancelCalls[0]).toEqual({
       sessionId: SID,
-      agentId: 'main',
+      agentId: "main",
     });
   });
 });
 
-describe('PromptService queue steer', () => {
-  it('steers a queued prompt into the active turn without starting a new prompt', async () => {
+describe("PromptService queue steer", () => {
+  it("steers a queued prompt into the active turn without starting a new prompt", async () => {
     const { bridge, record } = makeBridge();
     const { bus, events } = makeBus();
     const impl = newSvc(bridge, bus);
-    const active = await impl.submit(SID, mkBodyMinimal({ content: [{ type: 'text', text: 'active' }] }));
-    const queued = await impl.submit(SID, mkBodyMinimal({ content: [{ type: 'text', text: 'queued' }] }));
+    const active = await impl.submit(
+      SID,
+      mkBodyMinimal({ content: [{ type: "text", text: "active" }] }),
+    );
+    const queued = await impl.submit(
+      SID,
+      mkBodyMinimal({ content: [{ type: "text", text: "queued" }] }),
+    );
 
     const result = await impl.steer(SID, [queued.prompt_id]);
 
@@ -1002,8 +1056,8 @@ describe('PromptService queue steer', () => {
     expect(record.steerCalls).toEqual([
       {
         sessionId: SID,
-        agentId: 'main',
-        input: [{ type: 'text', text: 'queued' }],
+        agentId: "main",
+        input: [{ type: "text", text: "queued" }],
       },
     ]);
     expect((await impl.list(SID)).queued).toHaveLength(0);
@@ -1015,7 +1069,7 @@ describe('PromptService queue steer', () => {
           promptIds?: readonly string[];
         };
         return (
-          payload.type === 'prompt.steered' &&
+          payload.type === "prompt.steered" &&
           payload.activePromptId === active.prompt_id &&
           payload.promptIds?.[0] === queued.prompt_id
         );
@@ -1023,51 +1077,70 @@ describe('PromptService queue steer', () => {
     ).toBe(true);
   });
 
-  it('joins multiple queued text prompts with blank lines when steering', async () => {
+  it("joins multiple queued text prompts with blank lines when steering", async () => {
     const { bridge, record } = makeBridge();
     const { bus } = makeBus();
     const impl = newSvc(bridge, bus);
-    await impl.submit(SID, mkBodyMinimal({ content: [{ type: 'text', text: 'active' }] }));
-    const first = await impl.submit(SID, mkBodyMinimal({ content: [{ type: 'text', text: 'first' }] }));
-    const second = await impl.submit(SID, mkBodyMinimal({ content: [{ type: 'text', text: 'second' }] }));
+    await impl.submit(
+      SID,
+      mkBodyMinimal({ content: [{ type: "text", text: "active" }] }),
+    );
+    const first = await impl.submit(
+      SID,
+      mkBodyMinimal({ content: [{ type: "text", text: "first" }] }),
+    );
+    const second = await impl.submit(
+      SID,
+      mkBodyMinimal({ content: [{ type: "text", text: "second" }] }),
+    );
 
     await impl.steer(SID, [first.prompt_id, second.prompt_id]);
 
     expect(record.steerCalls).toEqual([
       {
         sessionId: SID,
-        agentId: 'main',
-        input: [{ type: 'text', text: 'first\n\nsecond' }],
+        agentId: "main",
+        input: [{ type: "text", text: "first\n\nsecond" }],
       },
     ]);
     expect((await impl.list(SID)).queued).toHaveLength(0);
   });
 
-  it('keeps queued prompts when core steer fails', async () => {
+  it("keeps queued prompts when core steer fails", async () => {
     const { bridge } = makeBridge();
     const { bus } = makeBus();
-    vi.mocked(bridge.rpc.steer).mockRejectedValueOnce(new Error('steer failed'));
+    vi.mocked(bridge.rpc.steer).mockRejectedValueOnce(
+      new Error("steer failed"),
+    );
     const impl = newSvc(bridge, bus);
-    await impl.submit(SID, mkBodyMinimal({ content: [{ type: 'text', text: 'active' }] }));
+    await impl.submit(
+      SID,
+      mkBodyMinimal({ content: [{ type: "text", text: "active" }] }),
+    );
     const queued = await impl.submit(
       SID,
-      mkBodyMinimal({ content: [{ type: 'text', text: 'queued' }] }),
+      mkBodyMinimal({ content: [{ type: "text", text: "queued" }] }),
     );
 
-    await expect(impl.steer(SID, [queued.prompt_id])).rejects.toThrow('steer failed');
+    await expect(impl.steer(SID, [queued.prompt_id])).rejects.toThrow(
+      "steer failed",
+    );
 
-    expect((await impl.list(SID)).queued.map((prompt) => prompt.prompt_id)).toEqual([
-      queued.prompt_id,
-    ]);
+    expect(
+      (await impl.list(SID)).queued.map((prompt) => prompt.prompt_id),
+    ).toEqual([queued.prompt_id]);
   });
 
-  it('throws PromptNotFoundError when steering a prompt that is not queued', async () => {
+  it("throws PromptNotFoundError when steering a prompt that is not queued", async () => {
     const { bridge } = makeBridge();
     const { bus } = makeBus();
     const impl = newSvc(bridge, bus);
-    await impl.submit(SID, mkBodyMinimal({ content: [{ type: 'text', text: 'active' }] }));
+    await impl.submit(
+      SID,
+      mkBodyMinimal({ content: [{ type: "text", text: "active" }] }),
+    );
 
-    await expect(impl.steer(SID, ['prompt_missing'])).rejects.toBeInstanceOf(
+    await expect(impl.steer(SID, ["prompt_missing"])).rejects.toBeInstanceOf(
       PromptNotFoundError,
     );
   });
@@ -1078,21 +1151,24 @@ describe('PromptService queue steer', () => {
 // plan_mode)
 // ─────────────────────────────────────────────────────────────────────────────
 
-describe('PromptService stateless controls — bootstrap + shadow', () => {
-  it('bootstraps shadow from getConfig/getPermission/getPlan on first submit', async () => {
+describe("PromptService stateless controls — bootstrap + shadow", () => {
+  it("bootstraps shadow from getConfig/getPermission/getPlan on first submit", async () => {
     const { bridge, record } = makeBridge({
-      config: { modelAlias: 'kimi-code/k2', thinkingEffort: 'medium' },
-      permission: { mode: 'yolo' },
-      plan: { id: 'plan_abc', content: '', path: '/tmp/p' },
+      config: { modelAlias: "kimi-code/k2", thinkingEffort: "medium" },
+      permission: { mode: "yolo" },
+      plan: { id: "plan_abc", content: "", path: "/tmp/p" },
     });
     const { bus } = makeBus();
     const impl = newSvc(bridge, bus);
-    await impl.submit(SID, mkBody({ thinking: 'medium', permission_mode: 'yolo', plan_mode: true }));
+    await impl.submit(
+      SID,
+      mkBody({ thinking: "medium", permission_mode: "yolo", plan_mode: true }),
+    );
     const snap = impl._agentStateForTest(SID);
     expect(snap).toEqual({
-      model: 'kimi-code/k2',
-      thinking: 'medium',
-      permissionMode: 'yolo',
+      model: "kimi-code/k2",
+      thinking: "medium",
+      permissionMode: "yolo",
       planMode: true,
       swarmMode: false,
     });
@@ -1109,180 +1185,196 @@ describe('PromptService stateless controls — bootstrap + shadow', () => {
     expect(record.cancelPlanCalls).toEqual([]);
   });
 
-  it('does not re-bootstrap on subsequent submits in the same session', async () => {
+  it("does not re-bootstrap on subsequent submits in the same session", async () => {
     const { bridge, record } = makeBridge();
     const { bus, triggerSubscribers } = makeBus();
     const impl = newSvc(bridge, bus);
     await impl.submit(SID, mkBody());
     // Complete the first prompt so the second can start.
     triggerSubscribers({
-      type: 'turn.started',
+      type: "turn.started",
       turnId: 1,
-      origin: { kind: 'user' },
+      origin: { kind: "user" },
       sessionId: SID,
-      agentId: 'main',
+      agentId: "main",
     } as unknown as Event);
     triggerSubscribers({
-      type: 'turn.ended',
+      type: "turn.ended",
       turnId: 1,
-      reason: 'completed',
+      reason: "completed",
       sessionId: SID,
-      agentId: 'main',
+      agentId: "main",
     } as unknown as Event);
 
-    await impl.submit(SID, mkBody({ content: [{ type: 'text', text: 'again' }] }));
+    await impl.submit(
+      SID,
+      mkBody({ content: [{ type: "text", text: "again" }] }),
+    );
     expect(record.getConfigCalls).toBe(1);
     expect(record.getPermissionCalls).toBe(1);
     expect(record.getPlanCalls).toBe(1);
   });
 
-  it('re-bootstraps after the session closes', async () => {
+  it("re-bootstraps after the session closes", async () => {
     const { bridge, record } = makeBridge();
     const { bus, triggerSubscribers } = makeBus();
     const { sessionService, triggerClose } = makeSessionService();
-    const impl = new PromptService(bridge, bus, makeAuth(), sessionService, new NoopLogService());
+    const impl = new PromptService(
+      bridge,
+      bus,
+      makeAuth(),
+      sessionService,
+      new NoopLogService(),
+    );
     await impl.submit(SID, mkBody());
     expect(record.getConfigCalls).toBe(1);
     // First prompt cleared on completion so the second submit isn't busy.
     triggerSubscribers({
-      type: 'turn.started',
+      type: "turn.started",
       turnId: 1,
-      origin: { kind: 'user' },
+      origin: { kind: "user" },
       sessionId: SID,
-      agentId: 'main',
+      agentId: "main",
     } as unknown as Event);
     triggerSubscribers({
-      type: 'turn.ended',
+      type: "turn.ended",
       turnId: 1,
-      reason: 'completed',
+      reason: "completed",
       sessionId: SID,
-      agentId: 'main',
+      agentId: "main",
     } as unknown as Event);
 
     triggerClose(SID);
     expect(impl._agentStateForTest(SID)).toBeUndefined();
 
-    await impl.submit(SID, mkBody({ content: [{ type: 'text', text: 'after-close' }] }));
+    await impl.submit(
+      SID,
+      mkBody({ content: [{ type: "text", text: "after-close" }] }),
+    );
     expect(record.getConfigCalls).toBe(2);
     expect(record.getPermissionCalls).toBe(2);
     expect(record.getPlanCalls).toBe(2);
   });
 });
 
-describe('PromptService stateless controls — diff dispatch', () => {
-  it('issues setModel only when the body model differs from the shadow', async () => {
-    const { bridge, record } = makeBridge({ config: { modelAlias: 'kimi-code/k2' } });
+describe("PromptService stateless controls — diff dispatch", () => {
+  it("issues setModel only when the body model differs from the shadow", async () => {
+    const { bridge, record } = makeBridge({
+      config: { modelAlias: "kimi-code/k2" },
+    });
     const { bus, triggerSubscribers } = makeBus();
     const impl = newSvc(bridge, bus);
-    await impl.submit(SID, mkBody({ model: 'kimi-code/k2' }));
+    await impl.submit(SID, mkBody({ model: "kimi-code/k2" }));
     expect(record.setModelCalls).toEqual([]);
 
     triggerSubscribers({
-      type: 'turn.started',
+      type: "turn.started",
       turnId: 1,
-      origin: { kind: 'user' },
+      origin: { kind: "user" },
       sessionId: SID,
-      agentId: 'main',
+      agentId: "main",
     } as unknown as Event);
     triggerSubscribers({
-      type: 'turn.ended',
+      type: "turn.ended",
       turnId: 1,
-      reason: 'completed',
+      reason: "completed",
       sessionId: SID,
-      agentId: 'main',
+      agentId: "main",
     } as unknown as Event);
 
-    await impl.submit(SID, mkBody({ model: 'kimi-code/k1' }));
+    await impl.submit(SID, mkBody({ model: "kimi-code/k1" }));
     expect(record.setModelCalls).toEqual([
-      { sessionId: SID, agentId: 'main', model: 'kimi-code/k1' },
+      { sessionId: SID, agentId: "main", model: "kimi-code/k1" },
     ]);
-    expect(impl._agentStateForTest(SID)?.model).toBe('kimi-code/k1');
+    expect(impl._agentStateForTest(SID)?.model).toBe("kimi-code/k1");
   });
 
-  it('issues setThinking only when the body effort differs from the shadow', async () => {
-    const { bridge, record } = makeBridge({ config: { thinkingEffort: 'off' } });
+  it("issues setThinking only when the body effort differs from the shadow", async () => {
+    const { bridge, record } = makeBridge({
+      config: { thinkingEffort: "off" },
+    });
     const { bus, triggerSubscribers } = makeBus();
     const impl = newSvc(bridge, bus);
-    await impl.submit(SID, mkBody({ thinking: 'off' }));
+    await impl.submit(SID, mkBody({ thinking: "off" }));
     expect(record.setThinkingCalls).toEqual([]);
 
     triggerSubscribers({
-      type: 'turn.started',
+      type: "turn.started",
       turnId: 1,
-      origin: { kind: 'user' },
+      origin: { kind: "user" },
       sessionId: SID,
-      agentId: 'main',
+      agentId: "main",
     } as unknown as Event);
     triggerSubscribers({
-      type: 'turn.ended',
+      type: "turn.ended",
       turnId: 1,
-      reason: 'completed',
+      reason: "completed",
       sessionId: SID,
-      agentId: 'main',
+      agentId: "main",
     } as unknown as Event);
 
-    await impl.submit(SID, mkBody({ thinking: 'high' }));
+    await impl.submit(SID, mkBody({ thinking: "high" }));
     expect(record.setThinkingCalls).toEqual([
-      { sessionId: SID, agentId: 'main', effort: 'high' },
+      { sessionId: SID, agentId: "main", effort: "high" },
     ]);
-    expect(impl._agentStateForTest(SID)?.thinking).toBe('high');
+    expect(impl._agentStateForTest(SID)?.thinking).toBe("high");
   });
 
-  it('issues setPermission only when the mode differs from the shadow', async () => {
-    const { bridge, record } = makeBridge({ permission: { mode: 'manual' } });
+  it("issues setPermission only when the mode differs from the shadow", async () => {
+    const { bridge, record } = makeBridge({ permission: { mode: "manual" } });
     const { bus, triggerSubscribers } = makeBus();
     const impl = newSvc(bridge, bus);
-    await impl.submit(SID, mkBody({ permission_mode: 'manual' }));
+    await impl.submit(SID, mkBody({ permission_mode: "manual" }));
     expect(record.setPermissionCalls).toEqual([]);
 
     triggerSubscribers({
-      type: 'turn.started',
+      type: "turn.started",
       turnId: 1,
-      origin: { kind: 'user' },
+      origin: { kind: "user" },
       sessionId: SID,
-      agentId: 'main',
+      agentId: "main",
     } as unknown as Event);
     triggerSubscribers({
-      type: 'turn.ended',
+      type: "turn.ended",
       turnId: 1,
-      reason: 'completed',
+      reason: "completed",
       sessionId: SID,
-      agentId: 'main',
+      agentId: "main",
     } as unknown as Event);
 
-    await impl.submit(SID, mkBody({ permission_mode: 'yolo' }));
+    await impl.submit(SID, mkBody({ permission_mode: "yolo" }));
     expect(record.setPermissionCalls).toEqual([
-      { sessionId: SID, agentId: 'main', mode: 'yolo' },
+      { sessionId: SID, agentId: "main", mode: "yolo" },
     ]);
   });
 
-  it('enters plan mode when plan_mode goes false→true', async () => {
+  it("enters plan mode when plan_mode goes false→true", async () => {
     const { bridge, record } = makeBridge({ plan: null });
     const { bus } = makeBus();
     const impl = newSvc(bridge, bus);
     await impl.submit(SID, mkBody({ plan_mode: true }));
     expect(record.enterPlanCalls).toEqual([
-      { sessionId: SID, agentId: 'main' },
+      { sessionId: SID, agentId: "main" },
     ]);
     expect(record.cancelPlanCalls).toEqual([]);
     expect(impl._agentStateForTest(SID)?.planMode).toBe(true);
   });
 
-  it('cancels plan mode when plan_mode goes true→false', async () => {
+  it("cancels plan mode when plan_mode goes true→false", async () => {
     const { bridge, record } = makeBridge({
-      plan: { id: 'plan_xyz', content: '', path: '/tmp/p' },
+      plan: { id: "plan_xyz", content: "", path: "/tmp/p" },
     });
     const { bus } = makeBus();
     const impl = newSvc(bridge, bus);
     await impl.submit(SID, mkBody({ plan_mode: false }));
     expect(record.cancelPlanCalls).toEqual([
-      { sessionId: SID, agentId: 'main' },
+      { sessionId: SID, agentId: "main" },
     ]);
     expect(record.enterPlanCalls).toEqual([]);
     expect(impl._agentStateForTest(SID)?.planMode).toBe(false);
   });
 
-  it('no-ops on repeated identical submissions (no extra setter RPCs)', async () => {
+  it("no-ops on repeated identical submissions (no extra setter RPCs)", async () => {
     const { bridge, record } = makeBridge();
     const { bus, triggerSubscribers } = makeBus();
     const impl = newSvc(bridge, bus);
@@ -1290,22 +1382,22 @@ describe('PromptService stateless controls — diff dispatch', () => {
     for (let i = 0; i < 3; i++) {
       await impl.submit(
         SID,
-        mkBody({ content: [{ type: 'text', text: `t${i}` }] }),
+        mkBody({ content: [{ type: "text", text: `t${i}` }] }),
       );
       // Run the turn to completion so the next iteration's submit isn't busy.
       triggerSubscribers({
-        type: 'turn.started',
+        type: "turn.started",
         turnId: i + 1,
-        origin: { kind: 'user' },
+        origin: { kind: "user" },
         sessionId: SID,
-        agentId: 'main',
+        agentId: "main",
       } as unknown as Event);
       triggerSubscribers({
-        type: 'turn.ended',
+        type: "turn.ended",
         turnId: i + 1,
-        reason: 'completed',
+        reason: "completed",
         sessionId: SID,
-        agentId: 'main',
+        agentId: "main",
       } as unknown as Event);
     }
     expect(record.setModelCalls).toEqual([]);
@@ -1316,75 +1408,75 @@ describe('PromptService stateless controls — diff dispatch', () => {
   });
 });
 
-describe('PromptService stateless controls — live shadow updates', () => {
-  it('mirrors agent.status.updated into the shadow', async () => {
+describe("PromptService stateless controls — live shadow updates", () => {
+  it("mirrors agent.status.updated into the shadow", async () => {
     const { bridge } = makeBridge();
     const { bus, triggerSubscribers } = makeBus();
     const impl = newSvc(bridge, bus);
     await impl.submit(SID, mkBody());
     triggerSubscribers({
-      type: 'agent.status.updated',
-      model: 'kimi-code/k1',
-      permission: 'yolo',
+      type: "agent.status.updated",
+      model: "kimi-code/k1",
+      permission: "yolo",
       planMode: true,
       sessionId: SID,
-      agentId: 'main',
+      agentId: "main",
     } as unknown as Event);
     expect(impl._agentStateForTest(SID)).toMatchObject({
-      model: 'kimi-code/k1',
-      permissionMode: 'yolo',
+      model: "kimi-code/k1",
+      permissionMode: "yolo",
       planMode: true,
     });
   });
 
-  it('shadow update suppresses diff dispatch when body matches the new state', async () => {
+  it("shadow update suppresses diff dispatch when body matches the new state", async () => {
     const { bridge, record } = makeBridge();
     const { bus, triggerSubscribers } = makeBus();
     const impl = newSvc(bridge, bus);
     await impl.submit(SID, mkBody());
     // Out-of-band mutation lands on the bus.
     triggerSubscribers({
-      type: 'agent.status.updated',
-      permission: 'yolo',
+      type: "agent.status.updated",
+      permission: "yolo",
       sessionId: SID,
-      agentId: 'main',
+      agentId: "main",
     } as unknown as Event);
     triggerSubscribers({
-      type: 'turn.started',
+      type: "turn.started",
       turnId: 1,
-      origin: { kind: 'user' },
+      origin: { kind: "user" },
       sessionId: SID,
-      agentId: 'main',
+      agentId: "main",
     } as unknown as Event);
     triggerSubscribers({
-      type: 'turn.ended',
+      type: "turn.ended",
       turnId: 1,
-      reason: 'completed',
+      reason: "completed",
       sessionId: SID,
-      agentId: 'main',
+      agentId: "main",
     } as unknown as Event);
 
     record.setPermissionCalls.length = 0;
-    await impl.submit(SID, mkBody({ permission_mode: 'yolo' }));
+    await impl.submit(SID, mkBody({ permission_mode: "yolo" }));
     expect(record.setPermissionCalls).toEqual([]);
   });
 
-  it('is a no-op on agent.status.updated for sessions without a shadow yet', async () => {
+  it("is a no-op on agent.status.updated for sessions without a shadow yet", async () => {
     const { bridge } = makeBridge();
     const { bus, triggerSubscribers } = makeBus();
     const impl = newSvc(bridge, bus);
     triggerSubscribers({
-      type: 'agent.status.updated',
-      model: 'kimi-code/k1',
+      type: "agent.status.updated",
+      model: "kimi-code/k1",
       sessionId: SID,
-      agentId: 'main',
+      agentId: "main",
     } as unknown as Event);
     expect(impl._agentStateForTest(SID)).toBeUndefined();
   });
 });
 
-describe('PromptService stateless controls — dispatch log', () => {
-  it('is undefined before any submit and stays empty when the body matches bootstrap', async () => {
+describe("PromptService stateless controls — dispatch log", () => {
+  it("is undefined before any submit and stays empty when the body matches bootstrap", async () => {
     const { bridge } = makeBridge();
     const { bus } = makeBus();
     const impl = newSvc(bridge, bus);
@@ -1396,10 +1488,10 @@ describe('PromptService stateless controls — dispatch log', () => {
     expect(impl._dispatchLogForTest(SID)).toBeUndefined();
   });
 
-  it('appends one entry per setter dispatched, in the order setModel/setThinking/setPermission/(enter|cancel)Plan', async () => {
+  it("appends one entry per setter dispatched, in the order setModel/setThinking/setPermission/(enter|cancel)Plan", async () => {
     const { bridge } = makeBridge({
-      config: { modelAlias: 'kimi-code/k2', thinkingEffort: 'off' },
-      permission: { mode: 'manual' },
+      config: { modelAlias: "kimi-code/k2", thinkingEffort: "off" },
+      permission: { mode: "manual" },
       plan: null,
     });
     const { bus } = makeBus();
@@ -1407,51 +1499,56 @@ describe('PromptService stateless controls — dispatch log', () => {
     await impl.submit(
       SID,
       mkBody({
-        model: 'kimi-code/k1',
-        thinking: 'high',
-        permission_mode: 'yolo',
+        model: "kimi-code/k1",
+        thinking: "high",
+        permission_mode: "yolo",
         plan_mode: true,
       }),
     );
     const log = impl._dispatchLogForTest(SID);
     expect(log).toBeDefined();
     const kinds = (log ?? []).map((e) => e.kind);
-    expect(kinds).toEqual(['setModel', 'setThinking', 'setPermission', 'enterPlan']);
+    expect(kinds).toEqual([
+      "setModel",
+      "setThinking",
+      "setPermission",
+      "enterPlan",
+    ]);
     expect(log?.[0]?.payload).toEqual({
       sessionId: SID,
-      agentId: 'main',
-      model: 'kimi-code/k1',
+      agentId: "main",
+      model: "kimi-code/k1",
     });
-    expect(log?.[3]?.payload).toEqual({ sessionId: SID, agentId: 'main' });
+    expect(log?.[3]?.payload).toEqual({ sessionId: SID, agentId: "main" });
     // Every entry from a prompt-body override path is tagged source='prompt'.
-    expect((log ?? []).every((e) => e.source === 'prompt')).toBe(true);
+    expect((log ?? []).every((e) => e.source === "prompt")).toBe(true);
     // Each entry should be attributed to the prompt id returned by submit;
     // they all share the same id within a single submit.
     expect(new Set((log ?? []).map((e) => e.promptId)).size).toBe(1);
   });
 
-  it('does NOT append entries when a repeat submit matches the shadow', async () => {
+  it("does NOT append entries when a repeat submit matches the shadow", async () => {
     const { bridge } = makeBridge({ plan: null });
     const { bus, triggerSubscribers } = makeBus();
     const impl = newSvc(bridge, bus);
     // First submit toggles plan_mode on -> 1 entry.
     await impl.submit(SID, mkBody({ plan_mode: true }));
     triggerSubscribers({
-      type: 'turn.started',
+      type: "turn.started",
       turnId: 1,
-      origin: { kind: 'user' },
+      origin: { kind: "user" },
       sessionId: SID,
-      agentId: 'main',
+      agentId: "main",
     } as unknown as Event);
     triggerSubscribers({
-      type: 'turn.ended',
+      type: "turn.ended",
       turnId: 1,
-      reason: 'completed',
+      reason: "completed",
       sessionId: SID,
-      agentId: 'main',
+      agentId: "main",
     } as unknown as Event);
     expect(impl._dispatchLogForTest(SID)?.length).toBe(1);
-    expect(impl._dispatchLogForTest(SID)?.[0]?.kind).toBe('enterPlan');
+    expect(impl._dispatchLogForTest(SID)?.[0]?.kind).toBe("enterPlan");
 
     // Second submit with the same plan_mode -> shadow suppresses dispatch.
     // This is the property scenario 04 cannot observe over WS frames alone.
@@ -1459,33 +1556,39 @@ describe('PromptService stateless controls — dispatch log', () => {
     expect(impl._dispatchLogForTest(SID)?.length).toBe(1);
   });
 
-  it('clears the buffer when the session closes (re-bootstrap on next submit)', async () => {
+  it("clears the buffer when the session closes (re-bootstrap on next submit)", async () => {
     const { bridge } = makeBridge({ plan: null });
     const { bus } = makeBus();
     const { sessionService, triggerClose } = makeSessionService();
-    const impl = new PromptService(bridge, bus, makeAuth(), sessionService, new NoopLogService());
+    const impl = new PromptService(
+      bridge,
+      bus,
+      makeAuth(),
+      sessionService,
+      new NoopLogService(),
+    );
     await impl.submit(SID, mkBody({ plan_mode: true }));
     expect(impl._dispatchLogForTest(SID)?.length).toBe(1);
     triggerClose(SID);
     expect(impl._dispatchLogForTest(SID)).toBeUndefined();
   });
 
-  it('bootstraps swarmMode from getSwarmMode', async () => {
+  it("bootstraps swarmMode from getSwarmMode", async () => {
     const { bridge, record } = makeBridge({
-      config: { modelAlias: 'kimi-code/k2', thinkingEffort: 'off' },
-      permission: { mode: 'manual' },
+      config: { modelAlias: "kimi-code/k2", thinkingEffort: "off" },
+      permission: { mode: "manual" },
       plan: null,
     });
     const { bus } = makeBus();
     const impl = newSvc(bridge, bus);
-    await impl.submit(SID, mkBody({ model: 'kimi-code/k1' }));
+    await impl.submit(SID, mkBody({ model: "kimi-code/k1" }));
     expect(record.getSwarmModeCalls).toBe(1);
   });
 
-  it('dispatches enterSwarm/exitSwarm and records them in the log', async () => {
+  it("dispatches enterSwarm/exitSwarm and records them in the log", async () => {
     const { bridge, record } = makeBridge({
-      config: { modelAlias: 'kimi-code/k2', thinkingEffort: 'off' },
-      permission: { mode: 'manual' },
+      config: { modelAlias: "kimi-code/k2", thinkingEffort: "off" },
+      permission: { mode: "manual" },
       plan: null,
     });
     const { bus, triggerSubscribers } = makeBus();
@@ -1495,38 +1598,41 @@ describe('PromptService stateless controls — dispatch log', () => {
     expect(record.enterSwarmCalls.length).toBe(1);
     expect(record.enterSwarmCalls[0]).toEqual({
       sessionId: SID,
-      agentId: 'main',
-      trigger: 'manual',
+      agentId: "main",
+      trigger: "manual",
     });
     let log = impl._dispatchLogForTest(SID);
-    expect(log?.some((e) => e.kind === 'enterSwarm')).toBe(true);
+    expect(log?.some((e) => e.kind === "enterSwarm")).toBe(true);
 
     triggerSubscribers({
-      type: 'turn.started',
+      type: "turn.started",
       turnId: 1,
-      origin: { kind: 'user' },
+      origin: { kind: "user" },
       sessionId: SID,
-      agentId: 'main',
+      agentId: "main",
     } as unknown as Event);
     triggerSubscribers({
-      type: 'turn.ended',
+      type: "turn.ended",
       turnId: 1,
-      reason: 'completed',
+      reason: "completed",
       sessionId: SID,
-      agentId: 'main',
+      agentId: "main",
     } as unknown as Event);
 
     await impl.submit(SID, mkBody({ swarm_mode: false }));
     expect(record.exitSwarmCalls.length).toBe(1);
-    expect(record.exitSwarmCalls[0]).toEqual({ sessionId: SID, agentId: 'main' });
+    expect(record.exitSwarmCalls[0]).toEqual({
+      sessionId: SID,
+      agentId: "main",
+    });
     log = impl._dispatchLogForTest(SID);
-    expect(log?.some((e) => e.kind === 'exitSwarm')).toBe(true);
+    expect(log?.some((e) => e.kind === "exitSwarm")).toBe(true);
   });
 
-  it('does not re-dispatch swarm_mode when it matches the shadow', async () => {
+  it("does not re-dispatch swarm_mode when it matches the shadow", async () => {
     const { bridge, record } = makeBridge({
-      config: { modelAlias: 'kimi-code/k2', thinkingEffort: 'off' },
-      permission: { mode: 'manual' },
+      config: { modelAlias: "kimi-code/k2", thinkingEffort: "off" },
+      permission: { mode: "manual" },
       plan: null,
     });
     const { bus, triggerSubscribers } = makeBus();
@@ -1535,67 +1641,70 @@ describe('PromptService stateless controls — dispatch log', () => {
     expect(record.enterSwarmCalls.length).toBe(1);
 
     triggerSubscribers({
-      type: 'turn.started',
+      type: "turn.started",
       turnId: 1,
-      origin: { kind: 'user' },
+      origin: { kind: "user" },
       sessionId: SID,
-      agentId: 'main',
+      agentId: "main",
     } as unknown as Event);
     triggerSubscribers({
-      type: 'turn.ended',
+      type: "turn.ended",
       turnId: 1,
-      reason: 'completed',
+      reason: "completed",
       sessionId: SID,
-      agentId: 'main',
+      agentId: "main",
     } as unknown as Event);
 
     await impl.submit(SID, mkBody({ swarm_mode: true }));
     expect(record.enterSwarmCalls.length).toBe(1);
   });
 
-  it('dispatches createGoal and records it in the log', async () => {
+  it("dispatches createGoal and records it in the log", async () => {
     const { bridge, record } = makeBridge({
-      config: { modelAlias: 'kimi-code/k2', thinkingEffort: 'off' },
-      permission: { mode: 'manual' },
+      config: { modelAlias: "kimi-code/k2", thinkingEffort: "off" },
+      permission: { mode: "manual" },
       plan: null,
     });
     const { bus } = makeBus();
     const impl = newSvc(bridge, bus);
-    await impl.submit(SID, mkBody({ goal_objective: 'Refactor the auth module' }));
+    await impl.submit(
+      SID,
+      mkBody({ goal_objective: "Refactor the auth module" }),
+    );
     expect(record.createGoalCalls.length).toBe(1);
     expect(record.createGoalCalls[0]).toEqual({
       sessionId: SID,
-      agentId: 'main',
-      objective: 'Refactor the auth module',
+      agentId: "main",
+      objective: "Refactor the auth module",
       replace: false,
     });
     const log = impl._dispatchLogForTest(SID);
-    expect(log?.some((e) => e.kind === 'createGoal')).toBe(true);
+    expect(log?.some((e) => e.kind === "createGoal")).toBe(true);
   });
 
-  it('dispatches goal control actions and records them in the log', async () => {
+  it("dispatches goal control actions and records them in the log", async () => {
     const { bridge, record } = makeBridge({
-      config: { modelAlias: 'kimi-code/k2', thinkingEffort: 'off' },
-      permission: { mode: 'manual' },
+      config: { modelAlias: "kimi-code/k2", thinkingEffort: "off" },
+      permission: { mode: "manual" },
       plan: null,
     });
     const { bus } = makeBus();
     const impl = newSvc(bridge, bus);
-    await impl.applyAgentState(SID, { goal_control: 'pause' }, 'meta');
+    await impl.applyAgentState(SID, { goal_control: "pause" }, "meta");
     expect(record.pauseGoalCalls.length).toBe(1);
-    await impl.applyAgentState(SID, { goal_control: 'resume' }, 'meta');
+    await impl.applyAgentState(SID, { goal_control: "resume" }, "meta");
     expect(record.resumeGoalCalls.length).toBe(1);
-    await impl.applyAgentState(SID, { goal_control: 'cancel' }, 'meta');
+    await impl.applyAgentState(SID, { goal_control: "cancel" }, "meta");
     expect(record.cancelGoalCalls.length).toBe(1);
     const log = impl._dispatchLogForTest(SID);
-    expect(log?.filter((e) => e.kind === 'pauseGoal').length).toBe(1);
-    expect(log?.filter((e) => e.kind === 'resumeGoal').length).toBe(1);
-    expect(log?.filter((e) => e.kind === 'cancelGoal').length).toBe(1);
+    expect(log?.filter((e) => e.kind === "pauseGoal").length).toBe(1);
+    expect(log?.filter((e) => e.kind === "resumeGoal").length).toBe(1);
+    expect(log?.filter((e) => e.kind === "cancelGoal").length).toBe(1);
   });
 });
 
-describe('PromptService stateful session — content-only path', () => {
-  it('issues zero bootstrap RPCs and zero setters when the body carries no controls', async () => {
+describe("PromptService stateful session — content-only path", () => {
+  it("issues zero bootstrap RPCs and zero setters when the body carries no controls", async () => {
     const { bridge, record } = makeBridge();
     const { bus } = makeBus();
     const impl = newSvc(bridge, bus);
@@ -1619,82 +1728,89 @@ describe('PromptService stateful session — content-only path', () => {
     expect(record.promptCalls).toHaveLength(1);
   });
 
-  it('reuses the shadow established by a prior submit for subsequent content-only submits', async () => {
-    const { bridge, record } = makeBridge({ config: { modelAlias: 'kimi-code/k2' } });
+  it("reuses the shadow established by a prior submit for subsequent content-only submits", async () => {
+    const { bridge, record } = makeBridge({
+      config: { modelAlias: "kimi-code/k2" },
+    });
     const { bus, triggerSubscribers } = makeBus();
     const impl = newSvc(bridge, bus);
     // First submit carries an override → bootstrap + dispatch.
-    await impl.submit(SID, mkBody({ model: 'kimi-code/k9' }));
+    await impl.submit(SID, mkBody({ model: "kimi-code/k9" }));
     expect(record.setModelCalls).toHaveLength(1);
     triggerSubscribers({
-      type: 'turn.started',
+      type: "turn.started",
       turnId: 1,
-      origin: { kind: 'user' },
+      origin: { kind: "user" },
       sessionId: SID,
-      agentId: 'main',
+      agentId: "main",
     } as unknown as Event);
     triggerSubscribers({
-      type: 'turn.ended',
+      type: "turn.ended",
       turnId: 1,
-      reason: 'completed',
+      reason: "completed",
       sessionId: SID,
-      agentId: 'main',
+      agentId: "main",
     } as unknown as Event);
     record.setModelCalls.length = 0;
     // Second submit content-only — uses the shadow, no setter re-fires.
-    await impl.submit(SID, mkBodyMinimal({ content: [{ type: 'text', text: 'follow-up' }] }));
+    await impl.submit(
+      SID,
+      mkBodyMinimal({ content: [{ type: "text", text: "follow-up" }] }),
+    );
     expect(record.setModelCalls).toEqual([]);
-    expect(impl._agentStateForTest(SID)?.model).toBe('kimi-code/k9');
+    expect(impl._agentStateForTest(SID)?.model).toBe("kimi-code/k9");
   });
 });
 
-describe('PromptService.applyAgentState (POST /sessions/{sid}/profile path)', () => {
-  it('throws SessionNotFoundError on unknown sid', async () => {
+describe("PromptService.applyAgentState (POST /sessions/{sid}/profile path)", () => {
+  it("throws SessionNotFoundError on unknown sid", async () => {
     const { bridge } = makeBridge();
     const { bus } = makeBus();
     const impl = newSvc(bridge, bus);
     await expect(
-      impl.applyAgentState('sess_missing', { model: 'kimi-code/k1' }, 'meta'),
+      impl.applyAgentState("sess_missing", { model: "kimi-code/k1" }, "meta"),
     ).rejects.toBeInstanceOf(SessionNotFoundError);
   });
 
-  it('is a no-op when the patch carries no fields (no bootstrap, no setter)', async () => {
+  it("is a no-op when the patch carries no fields (no bootstrap, no setter)", async () => {
     const { bridge, record } = makeBridge();
     const { bus } = makeBus();
     const impl = newSvc(bridge, bus);
-    await impl.applyAgentState(SID, {}, 'meta');
+    await impl.applyAgentState(SID, {}, "meta");
     expect(record.getConfigCalls).toBe(0);
     expect(record.setModelCalls).toEqual([]);
     expect(impl._agentStateForTest(SID)).toBeUndefined();
   });
 
   it('dispatches setThinking and records source="meta" when patch differs from shadow', async () => {
-    const { bridge, record } = makeBridge({ config: { thinkingEffort: 'off' } });
+    const { bridge, record } = makeBridge({
+      config: { thinkingEffort: "off" },
+    });
     const { bus } = makeBus();
     const impl = newSvc(bridge, bus);
-    await impl.applyAgentState(SID, { thinking: 'high' }, 'meta');
+    await impl.applyAgentState(SID, { thinking: "high" }, "meta");
     expect(record.setThinkingCalls).toEqual([
-      { sessionId: SID, agentId: 'main', effort: 'high' },
+      { sessionId: SID, agentId: "main", effort: "high" },
     ]);
-    expect(impl._agentStateForTest(SID)?.thinking).toBe('high');
+    expect(impl._agentStateForTest(SID)?.thinking).toBe("high");
     const log = impl._dispatchLogForTest(SID);
     expect(log).toHaveLength(1);
-    expect(log?.[0]?.source).toBe('meta');
+    expect(log?.[0]?.source).toBe("meta");
     // No prompt minted → entry's promptId is the empty string.
-    expect(log?.[0]?.promptId).toBe('');
+    expect(log?.[0]?.promptId).toBe("");
   });
 
-  it('subsequent content-only submit observes the shadow set via /profile and dispatches nothing', async () => {
+  it("subsequent content-only submit observes the shadow set via /profile and dispatches nothing", async () => {
     const { bridge, record } = makeBridge({
-      config: { thinkingEffort: 'off' },
-      permission: { mode: 'manual' },
+      config: { thinkingEffort: "off" },
+      permission: { mode: "manual" },
     });
     const { bus } = makeBus();
     const impl = newSvc(bridge, bus);
     await impl.applyAgentState(
       SID,
-      { thinking: 'high', permission_mode: 'yolo' },
-      'meta',
+      { thinking: "high", permission_mode: "yolo" },
+      "meta",
     );
     record.setThinkingCalls.length = 0;
     record.setPermissionCalls.length = 0;
@@ -1702,8 +1818,8 @@ describe('PromptService.applyAgentState (POST /sessions/{sid}/profile path)', ()
     expect(record.setThinkingCalls).toEqual([]);
     expect(record.setPermissionCalls).toEqual([]);
     expect(impl._agentStateForTest(SID)).toMatchObject({
-      thinking: 'high',
-      permissionMode: 'yolo',
+      thinking: "high",
+      permissionMode: "yolo",
     });
   });
 });

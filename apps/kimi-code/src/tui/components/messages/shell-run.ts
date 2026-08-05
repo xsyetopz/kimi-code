@@ -1,8 +1,11 @@
-import { Container, Text } from '@moonshot-ai/pi-tui';
+import { Container, Text } from "@moonshot-ai/pi-tui";
 
-import { currentTheme } from '#/tui/theme';
+import { currentTheme } from "#/tui/theme";
 
-import { formatBashOutputForDisplay, sanitizeShellOutput } from '#/tui/utils/shell-output';
+import {
+  formatBashOutputForDisplay,
+  sanitizeShellOutput,
+} from "#/tui/utils/shell-output";
 
 const RUNNING_TAIL_LINES = 5;
 const TIMER_INTERVAL_MS = 1000;
@@ -28,12 +31,12 @@ const KEEP_COMBINED_CHARS = 64 * 1024;
  */
 export class ShellRunComponent extends Container {
   private readonly textComponent: Text;
-  private combined = '';
+  private combined = "";
   private running = true;
   private backgrounded = false;
   private disposed = false;
-  private finalStdout = '';
-  private finalStderr = '';
+  private finalStdout = "";
+  private finalStderr = "";
   private finalIsError?: boolean;
   private readonly startedAt = Date.now();
   private timer: ReturnType<typeof setInterval> | undefined;
@@ -103,32 +106,36 @@ export class ShellRunComponent extends Container {
   private renderText(): string {
     try {
       if (this.backgrounded) {
-        return `  ${currentTheme.fg('textDim', 'Moved to background.')}`;
+        return `  ${currentTheme.fg("textDim", "Moved to background.")}`;
       }
       if (!this.running) {
-        return formatBashOutputForDisplay(this.finalStdout, this.finalStderr, this.finalIsError)
-          .split('\n')
+        return formatBashOutputForDisplay(
+          this.finalStdout,
+          this.finalStderr,
+          this.finalIsError,
+        )
+          .split("\n")
           .map((line) => `  ${line}`)
-          .join('\n');
+          .join("\n");
       }
       const elapsed = Math.floor((Date.now() - this.startedAt) / 1000);
-      const dim = (s: string): string => currentTheme.fg('textDim', s);
+      const dim = (s: string): string => currentTheme.fg("textDim", s);
       const trimmed = sanitizeShellOutput(this.combined).trimEnd();
       let body: string;
       let extra = 0;
       if (trimmed.length === 0) {
-        body = `  ${dim('Running…')}`;
+        body = `  ${dim("Running…")}`;
       } else {
-        const lines = trimmed.split('\n');
+        const lines = trimmed.split("\n");
         const tail = lines.slice(-RUNNING_TAIL_LINES);
         extra = Math.max(0, lines.length - RUNNING_TAIL_LINES);
-        body = tail.map((line) => `  ${dim(line)}`).join('\n');
+        body = tail.map((line) => `  ${dim(line)}`).join("\n");
       }
-      const timing = `  ${dim(`${extra > 0 ? `+${extra} lines ` : ''}(${elapsed}s)`)}`;
-      const hint = `  ${dim('(ctrl+b to run in background)')}`;
+      const timing = `  ${dim(`${extra > 0 ? `+${extra} lines ` : ""}(${elapsed}s)`)}`;
+      const hint = `  ${dim("(ctrl+b to run in background)")}`;
       return `${body}\n${timing}\n${hint}`;
     } catch {
-      return '  (output unavailable)';
+      return "  (output unavailable)";
     }
   }
 }

@@ -17,26 +17,55 @@ import { VSCodeSettings } from "../config/vscode-settings";
 import type { Handler } from "./types";
 
 const SLASH_COMMANDS: SlashCommandInfo[] = [
-  { name: "init", aliases: [], description: "Analyze the codebase and generate AGENTS.md" },
-  { name: "compact", aliases: [], description: "Compact the conversation context" },
+  {
+    name: "init",
+    aliases: [],
+    description: "Analyze the codebase and generate AGENTS.md",
+  },
+  {
+    name: "compact",
+    aliases: [],
+    description: "Compact the conversation context",
+  },
   { name: "clear", aliases: ["reset"], description: "Clear the context" },
-  { name: "yolo", aliases: [], description: "Toggle YOLO mode (auto-approve tool actions; may still ask questions)" },
+  {
+    name: "yolo",
+    aliases: [],
+    description:
+      "Toggle YOLO mode (auto-approve tool actions; may still ask questions)",
+  },
   {
     name: "auto",
     aliases: ["afk"],
-    description: "Toggle Auto mode (fully autonomous; the agent will not ask questions)",
+    description:
+      "Toggle Auto mode (fully autonomous; the agent will not ask questions)",
   },
-  { name: "plan", aliases: [], description: "Toggle plan mode. Usage: /plan [on|off|view|clear]" },
+  {
+    name: "plan",
+    aliases: [],
+    description: "Toggle plan mode. Usage: /plan [on|off|view|clear]",
+  },
   {
     name: "add-dir",
     aliases: [],
     description: "Add a directory to the workspace. Usage: /add-dir <path>",
   },
-  { name: "export", aliases: [], description: "Export current session context to a markdown file" },
-  { name: "import", aliases: [], description: "Import context from a file or session ID" },
+  {
+    name: "export",
+    aliases: [],
+    description: "Export current session context to a markdown file",
+  },
+  {
+    name: "import",
+    aliases: [],
+    description: "Import context from a file or session ID",
+  },
 ];
 
-const saveConfig: Handler<SessionConfig, { ok: boolean }> = async (params, ctx) => {
+const saveConfig: Handler<SessionConfig, { ok: boolean }> = async (
+  params,
+  ctx,
+) => {
   const effort = sessionConfigEffort(params);
   const effortChanged = params.effortChanged !== false;
   const config = await ctx.harness.getConfig({ reload: true });
@@ -50,9 +79,9 @@ const saveConfig: Handler<SessionConfig, { ok: boolean }> = async (params, ctx) 
   // persistModelSelection rule).
   const patch = effortChanged ? full : { enabled: full.enabled };
   if (
-    config.defaultModel !== params.model
-    || config.thinking?.enabled !== patch.enabled
-    || (effortChanged && config.thinking?.effort !== patch.effort)
+    config.defaultModel !== params.model ||
+    config.thinking?.enabled !== patch.enabled ||
+    (effortChanged && config.thinking?.effort !== patch.effort)
   ) {
     await ctx.harness.setConfig({
       defaultModel: params.model,
@@ -63,8 +92,10 @@ const saveConfig: Handler<SessionConfig, { ok: boolean }> = async (params, ctx) 
   const runtime = ctx.getSession();
   if (runtime !== undefined) {
     const status = await runtime.session.getStatus();
-    if (status.model !== params.model) await runtime.session.setModel(params.model);
-    if (status.thinkingEffort !== effort) await runtime.session.setThinking(effort);
+    if (status.model !== params.model)
+      await runtime.session.setModel(params.model);
+    if (status.thinkingEffort !== effort)
+      await runtime.session.setThinking(effort);
   }
   return { ok: true };
 };
@@ -145,7 +176,9 @@ function toWebviewModel(id: string, model: ModelAlias): ModelConfig {
     capabilities: [...(effective.capabilities ?? [])],
     adaptive_thinking: effective.adaptiveThinking,
     support_efforts:
-      effective.supportEfforts === undefined ? undefined : [...effective.supportEfforts],
+      effective.supportEfforts === undefined
+        ? undefined
+        : [...effective.supportEfforts],
     default_effort: effective.defaultEffort,
   };
 }
@@ -177,5 +210,10 @@ function thinkingConfig(
 }
 
 function isUserActivatableSkill(type: string | undefined): boolean {
-  return type === undefined || type === "prompt" || type === "inline" || type === "flow";
+  return (
+    type === undefined ||
+    type === "prompt" ||
+    type === "inline" ||
+    type === "flow"
+  );
 }

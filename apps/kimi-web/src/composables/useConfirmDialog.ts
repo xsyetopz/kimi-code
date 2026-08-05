@@ -3,9 +3,9 @@
 // request; ConfirmDialogHost (mounted once in App.vue) renders it. Callers
 // `await confirm(...)` from anywhere — components or composables — which is
 // what lets it replace native `confirm()` inside composables too.
-import { ref } from 'vue';
+import { ref } from "vue";
 
-export type ConfirmVariant = 'primary' | 'danger';
+export type ConfirmVariant = "primary" | "danger";
 
 export type ConfirmOptions = {
   title: string;

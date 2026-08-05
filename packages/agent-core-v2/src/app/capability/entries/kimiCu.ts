@@ -20,25 +20,27 @@
  * blocking the replacement.
  */
 
-import { constants } from 'node:fs';
-import { mkdtemp, readFile, rm, access } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
+import { constants } from "node:fs";
+import { mkdtemp, readFile, rm, access } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
 
-import { downloadToFile, runCommand } from '../host';
+import { downloadToFile, runCommand } from "../host";
 import type {
   CapabilityDetectResult,
   CapabilityEntry,
   CapabilityInstallReporter,
   CapabilityStep,
-} from '../types';
-import type { CapabilityEntryContext } from './context';
+} from "../types";
+import type { CapabilityEntryContext } from "./context";
 
-const PLUGIN_ID = 'kimi-cu';
-const PLUGIN_ZIP_URL = 'https://cdn.kimi.com/kimi-computer-use/latest/kimi-cu-plugin.zip';
-const APP_ZIP_URL = 'https://cdn.kimi.com/kimi-computer-use/latest/KimiCU.app.zip';
-const APP_BUNDLE = 'KimiCU.app';
-const LAUNCHD_LABEL = 'ai.kimi.cu.service';
+const PLUGIN_ID = "kimi-cu";
+const PLUGIN_ZIP_URL =
+  "https://cdn.kimi.com/kimi-computer-use/latest/kimi-cu-plugin.zip";
+const APP_ZIP_URL =
+  "https://cdn.kimi.com/kimi-computer-use/latest/KimiCU.app.zip";
+const APP_BUNDLE = "KimiCU.app";
+const LAUNCHD_LABEL = "ai.kimi.cu.service";
 const COMMAND_TIMEOUT_MS = 30_000;
 const PERMISSIONS_TIMEOUT_MS = 15_000;
 const DETECT_PROBE_TIMEOUT_MS = 3_000;
@@ -48,19 +50,29 @@ interface PermissionStatus {
   readonly screenRecording: boolean;
 }
 
-export function parsePermissionStatus(output: string): PermissionStatus | undefined {
+export function parsePermissionStatus(
+  output: string,
+): PermissionStatus | undefined {
   const match =
     /(?:permissions|permissionStatus):\s*accessibility=(true|false)\s+screenRecording=(true|false)/.exec(
       output,
     );
   if (match === null) return undefined;
-  return { accessibility: match[1] === 'true', screenRecording: match[2] === 'true' };
+  return {
+    accessibility: match[1] === "true",
+    screenRecording: match[2] === "true",
+  };
 }
 
-export async function readAppBundleVersion(infoPlistPath: string): Promise<string | undefined> {
+export async function readAppBundleVersion(
+  infoPlistPath: string,
+): Promise<string | undefined> {
   try {
-    const xml = await readFile(infoPlistPath, 'utf-8');
-    const match = /<key>CFBundleShortVersionString<\/key>\s*<string>([^<]+)<\/string>/.exec(xml);
+    const xml = await readFile(infoPlistPath, "utf-8");
+    const match =
+      /<key>CFBundleShortVersionString<\/key>\s*<string>([^<]+)<\/string>/.exec(
+        xml,
+      );
     return match?.[1];
   } catch {
     return undefined;
@@ -68,7 +80,7 @@ export async function readAppBundleVersion(infoPlistPath: string): Promise<strin
 }
 
 function appleScriptQuote(script: string): string {
-  return script.replaceAll('\\', '\\\\').replaceAll('"', '\\"');
+  return script.replaceAll("\\", "\\\\").replaceAll('"', '\\"');
 }
 
 function errorMessage(error: unknown): string {
@@ -83,14 +95,16 @@ export function elevatedDittoScript(from: string, to: string): string {
   return `/usr/bin/ditto ${shQuote(from)} ${shQuote(to)}`;
 }
 
-export function createKimiCuEntry(ctx: CapabilityEntryContext): CapabilityEntry {
-  const applicationsDir = ctx.applicationsDir ?? '/Applications';
+export function createKimiCuEntry(
+  ctx: CapabilityEntryContext,
+): CapabilityEntry {
+  const applicationsDir = ctx.applicationsDir ?? "/Applications";
   const appPath = path.join(applicationsDir, APP_BUNDLE);
-  const appBin = path.join(appPath, 'Contents', 'MacOS', 'kimi-cu');
-  const infoPlist = path.join(appPath, 'Contents', 'Info.plist');
+  const appBin = path.join(appPath, "Contents", "MacOS", "kimi-cu");
+  const infoPlist = path.join(appPath, "Contents", "Info.plist");
   const probeTimeoutMs = ctx.detectProbeTimeoutMs ?? DETECT_PROBE_TIMEOUT_MS;
   const commandTimeoutMs = ctx.commandTimeoutMs ?? COMMAND_TIMEOUT_MS;
-  const supported = ctx.platform === 'darwin';
+  const supported = ctx.platform === "darwin";
 
   async function exists(p: string): Promise<boolean> {
     return access(p).then(
@@ -108,15 +122,20 @@ export function createKimiCuEntry(ctx: CapabilityEntryContext): CapabilityEntry 
 
   async function serviceRunning(): Promise<boolean> {
     if (!(await exists(appBin))) return false;
-    const result = await runCommand(ctx.hostProcess, appBin, ['service-status'], {
-      timeout: probeTimeoutMs,
-    });
+    const result = await runCommand(
+      ctx.hostProcess,
+      appBin,
+      ["service-status"],
+      {
+        timeout: probeTimeoutMs,
+      },
+    );
     return /status=1\b/.test(result.stdout);
   }
 
   async function permissionStatus(): Promise<PermissionStatus | undefined> {
     if (!(await exists(appBin))) return undefined;
-    const result = await runCommand(ctx.hostProcess, appBin, ['xpc-ping'], {
+    const result = await runCommand(ctx.hostProcess, appBin, ["xpc-ping"], {
       timeout: probeTimeoutMs,
     });
     return parsePermissionStatus(result.stdout);
@@ -128,33 +147,42 @@ export function createKimiCuEntry(ctx: CapabilityEntryContext): CapabilityEntry 
     const installed = await ctx.plugins.listPlugins();
     const plugin = installed.find((p) => p.id === PLUGIN_ID);
     const mcpGap =
-      plugin !== undefined && plugin.enabledMcpServerCount < plugin.mcpServerCount
+      plugin !== undefined &&
+      plugin.enabledMcpServerCount < plugin.mcpServerCount
         ? `mcp ${plugin.enabledMcpServerCount}/${plugin.mcpServerCount} enabled`
         : undefined;
     const pluginOk =
       plugin !== undefined &&
       plugin.enabled &&
-      plugin.state === 'ok' &&
+      plugin.state === "ok" &&
       plugin.enabledMcpServerCount === plugin.mcpServerCount;
     steps.push({
-      id: 'plugin',
-      state: pluginOk ? 'ok' : 'missing',
+      id: "plugin",
+      state: pluginOk ? "ok" : "missing",
       detail: mcpGap ?? plugin?.version,
     });
 
     const version = await readAppBundleVersion(infoPlist);
     const appExists = await exists(appBin);
-    const appUsable = appExists && (await executable(appBin)) && (await exists(infoPlist));
+    const appUsable =
+      appExists && (await executable(appBin)) && (await exists(infoPlist));
     steps.push({
-      id: 'app',
-      state: appUsable ? 'ok' : 'missing',
-      detail: appExists && !appUsable ? 'not executable' : version,
+      id: "app",
+      state: appUsable ? "ok" : "missing",
+      detail: appExists && !appUsable ? "not executable" : version,
     });
 
     try {
-      steps.push({ id: 'service', state: (await serviceRunning()) ? 'ok' : 'missing' });
+      steps.push({
+        id: "service",
+        state: (await serviceRunning()) ? "ok" : "missing",
+      });
     } catch (error) {
-      steps.push({ id: 'service', state: 'failed', detail: errorMessage(error) });
+      steps.push({
+        id: "service",
+        state: "failed",
+        detail: errorMessage(error),
+      });
     }
 
     let permissions: PermissionStatus | undefined;
@@ -165,21 +193,30 @@ export function createKimiCuEntry(ctx: CapabilityEntryContext): CapabilityEntry 
       permissionsProbeError = errorMessage(error);
     }
     if (permissionsProbeError !== undefined) {
-      steps.push({ id: 'permissions', state: 'failed', detail: permissionsProbeError });
+      steps.push({
+        id: "permissions",
+        state: "failed",
+        detail: permissionsProbeError,
+      });
     } else {
       const granted =
-        permissions !== undefined && permissions.accessibility && permissions.screenRecording;
-      const missingPermissions = permissions === undefined
-        ? undefined
-        : [
-            ...(permissions.accessibility ? [] : ['accessibility']),
-            ...(permissions.screenRecording ? [] : ['screenRecording']),
-          ].join(',');
+        permissions !== undefined &&
+        permissions.accessibility &&
+        permissions.screenRecording;
+      const missingPermissions =
+        permissions === undefined
+          ? undefined
+          : [
+              ...(permissions.accessibility ? [] : ["accessibility"]),
+              ...(permissions.screenRecording ? [] : ["screenRecording"]),
+            ].join(",");
       steps.push({
-        id: 'permissions',
-        state: granted ? 'ok' : 'missing',
+        id: "permissions",
+        state: granted ? "ok" : "missing",
         detail:
-          granted || missingPermissions === undefined || missingPermissions.length === 0
+          granted ||
+          missingPermissions === undefined ||
+          missingPermissions.length === 0
             ? undefined
             : missingPermissions,
       });
@@ -191,20 +228,27 @@ export function createKimiCuEntry(ctx: CapabilityEntryContext): CapabilityEntry 
     };
   }
 
-  async function bestEffort(command: string, args: readonly string[]): Promise<void> {
-    await runCommand(ctx.hostProcess, command, args, { timeout: commandTimeoutMs }).catch(
-      () => undefined,
-    );
+  async function bestEffort(
+    command: string,
+    args: readonly string[],
+  ): Promise<void> {
+    await runCommand(ctx.hostProcess, command, args, {
+      timeout: commandTimeoutMs,
+    }).catch(() => undefined);
   }
 
   async function stopOldProcesses(): Promise<void> {
-    const uid = typeof process.getuid === 'function' ? String(process.getuid()) : '501';
+    const uid =
+      typeof process.getuid === "function" ? String(process.getuid()) : "501";
     if (await exists(appBin)) {
-      await bestEffort(appBin, ['uninstall']);
+      await bestEffort(appBin, ["uninstall"]);
     }
-    await bestEffort('launchctl', ['bootout', `gui/${uid}/${LAUNCHD_LABEL}`]);
-    for (const mode of ['mcp', 'service', 'overlay']) {
-      await bestEffort('pkill', ['-f', `${APP_BUNDLE}/Contents/MacOS/kimi-cu[[:space:]]+${mode}`]);
+    await bestEffort("launchctl", ["bootout", `gui/${uid}/${LAUNCHD_LABEL}`]);
+    for (const mode of ["mcp", "service", "overlay"]) {
+      await bestEffort("pkill", [
+        "-f",
+        `${APP_BUNDLE}/Contents/MacOS/kimi-cu[[:space:]]+${mode}`,
+      ]);
     }
     await new Promise((resolve) => {
       setTimeout(resolve, 1_000);
@@ -213,15 +257,20 @@ export function createKimiCuEntry(ctx: CapabilityEntryContext): CapabilityEntry 
 
   async function moveAppIntoPlace(unzippedApp: string): Promise<void> {
     await rm(appPath, { recursive: true, force: true }).catch(() => undefined);
-    const direct = await runCommand(ctx.hostProcess, 'ditto', [unzippedApp, appPath], {
-      timeout: commandTimeoutMs,
-    });
+    const direct = await runCommand(
+      ctx.hostProcess,
+      "ditto",
+      [unzippedApp, appPath],
+      {
+        timeout: commandTimeoutMs,
+      },
+    );
     if (direct.code === 0) return;
     const script = appleScriptQuote(elevatedDittoScript(unzippedApp, appPath));
     const elevated = await runCommand(
       ctx.hostProcess,
-      'osascript',
-      ['-e', `do shell script "${script}" with administrator privileges`],
+      "osascript",
+      ["-e", `do shell script "${script}" with administrator privileges`],
       { timeout: 120_000 },
     );
     if (elevated.code !== 0) {
@@ -234,18 +283,24 @@ export function createKimiCuEntry(ctx: CapabilityEntryContext): CapabilityEntry 
 
   async function install(report: CapabilityInstallReporter): Promise<void> {
     if (!supported) {
-      throw new Error(`kimi-cu is only supported on macOS (current: ${ctx.platform})`);
+      throw new Error(
+        `kimi-cu is only supported on macOS (current: ${ctx.platform})`,
+      );
     }
 
     const before = await detect();
-    const stepStates = new Map(before.steps.map((step) => [step.id, step.state]));
+    const stepStates = new Map(
+      before.steps.map((step) => [step.id, step.state]),
+    );
     const readyBefore = before.steps
       .filter((step) => step.optional !== true)
-      .every((step) => step.state === 'ok');
+      .every((step) => step.state === "ok");
 
-    if (stepStates.get('plugin') !== 'ok' || readyBefore) {
-      report('plugin');
-      const summary = await ctx.plugins.installPlugin({ source: PLUGIN_ZIP_URL });
+    if (stepStates.get("plugin") !== "ok" || readyBefore) {
+      report("plugin");
+      const summary = await ctx.plugins.installPlugin({
+        source: PLUGIN_ZIP_URL,
+      });
       if (!summary.enabled) {
         await ctx.plugins.setPluginEnabled({ id: PLUGIN_ID, enabled: true });
       }
@@ -263,72 +318,95 @@ export function createKimiCuEntry(ctx: CapabilityEntryContext): CapabilityEntry 
       }
     }
 
-    const installApp = stepStates.get('app') !== 'ok' || readyBefore;
+    const installApp = stepStates.get("app") !== "ok" || readyBefore;
     if (installApp) {
-      const workDir = await mkdtemp(path.join(tmpdir(), 'kimi-cu-install-'));
+      const workDir = await mkdtemp(path.join(tmpdir(), "kimi-cu-install-"));
       try {
-        report('download', 0);
-        const zipPath = path.join(workDir, 'KimiCU.app.zip');
+        report("download", 0);
+        const zipPath = path.join(workDir, "KimiCU.app.zip");
         await downloadToFile(
           APP_ZIP_URL,
           zipPath,
           (percent) => {
-            report('download', percent);
+            report("download", percent);
           },
           ctx.fetchImpl,
         );
 
-        report('app');
-        const unzipDir = path.join(workDir, 'unzipped');
-        const unzipped = await runCommand(ctx.hostProcess, 'ditto', ['-x', '-k', zipPath, unzipDir], {
-          timeout: 120_000,
-        });
+        report("app");
+        const unzipDir = path.join(workDir, "unzipped");
+        const unzipped = await runCommand(
+          ctx.hostProcess,
+          "ditto",
+          ["-x", "-k", zipPath, unzipDir],
+          {
+            timeout: 120_000,
+          },
+        );
         if (unzipped.code !== 0) {
-          throw new Error(`Failed to unzip KimiCU.app: ${unzipped.stderr || unzipped.stdout}`);
+          throw new Error(
+            `Failed to unzip KimiCU.app: ${unzipped.stderr || unzipped.stdout}`,
+          );
         }
         await stopOldProcesses();
         await moveAppIntoPlace(path.join(unzipDir, APP_BUNDLE));
-        await runCommand(ctx.hostProcess, 'xattr', ['-dr', 'com.apple.quarantine', appPath], {
-          timeout: commandTimeoutMs,
-        });
+        await runCommand(
+          ctx.hostProcess,
+          "xattr",
+          ["-dr", "com.apple.quarantine", appPath],
+          {
+            timeout: commandTimeoutMs,
+          },
+        );
       } finally {
-        await rm(workDir, { recursive: true, force: true }).catch(() => undefined);
+        await rm(workDir, { recursive: true, force: true }).catch(
+          () => undefined,
+        );
       }
     }
 
-    if (installApp || stepStates.get('service') !== 'ok') {
-      report('service');
-      const registered = await runCommand(ctx.hostProcess, appBin, ['install'], {
-        timeout: commandTimeoutMs,
-      });
+    if (installApp || stepStates.get("service") !== "ok") {
+      report("service");
+      const registered = await runCommand(
+        ctx.hostProcess,
+        appBin,
+        ["install"],
+        {
+          timeout: commandTimeoutMs,
+        },
+      );
       if (registered.code !== 0) {
-        throw new Error(`kimi-cu install failed: ${registered.stderr || registered.stdout}`);
+        throw new Error(
+          `kimi-cu install failed: ${registered.stderr || registered.stdout}`,
+        );
       }
       await new Promise((resolve) => {
         setTimeout(resolve, 1_000);
       });
       const running = await serviceRunning().catch(() => false);
       if (!running) {
-        throw new Error('kimi-cu background service is not running after install');
+        throw new Error(
+          "kimi-cu background service is not running after install",
+        );
       }
     }
 
-    if (stepStates.get('permissions') !== 'ok') {
-      report('permissions');
+    if (stepStates.get("permissions") !== "ok") {
+      report("permissions");
       await runCommand(
         ctx.hostProcess,
         appBin,
-        ['request-permissions', '--ax', '--screen'],
+        ["request-permissions", "--ax", "--screen"],
         { timeout: PERMISSIONS_TIMEOUT_MS },
       ).catch(() => undefined);
     }
   }
 
   return {
-    id: 'kimi-cu',
-    displayName: 'Kimi Computer Use',
+    id: "kimi-cu",
+    displayName: "Kimi Computer Use",
     description:
-      'macOS GUI automation in the background — read app UIs and click, type, scroll, and drag without taking over your mouse or foregrounding apps.',
+      "macOS GUI automation in the background — read app UIs and click, type, scroll, and drag without taking over your mouse or foregrounding apps.",
     supported,
     detect,
     install,

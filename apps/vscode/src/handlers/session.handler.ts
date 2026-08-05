@@ -31,7 +31,9 @@ interface ForkSessionParams {
 export const sessionHandlers: Record<string, Handler<any, any>> = {
   [Methods.GetKimiSessions]: async (_, ctx): Promise<SessionInfo[]> => {
     if (!ctx.workDir) return [];
-    return (await ctx.harness.listSessions({ workDir: ctx.workDir })).map(toSessionInfo);
+    return (await ctx.harness.listSessions({ workDir: ctx.workDir })).map(
+      toSessionInfo,
+    );
   },
 
   [Methods.GetAllKimiSessions]: async (_, ctx): Promise<SessionInfo[]> => {
@@ -57,8 +59,15 @@ export const sessionHandlers: Record<string, Handler<any, any>> = {
     if (!ctx.workspaceRoot || !ctx.workspaceRootUri) return { ok: false };
     const target = params.workDir;
     if (target) {
-      const targetUri = workDirUriFromPath(ctx.workspaceRootUri, ctx.workspaceRoot, target);
-      if (targetUri === undefined || !(await isWorkspacePathContained(ctx.workspaceRootUri, targetUri))) {
+      const targetUri = workDirUriFromPath(
+        ctx.workspaceRootUri,
+        ctx.workspaceRoot,
+        target,
+      );
+      if (
+        targetUri === undefined ||
+        !(await isWorkspacePathContained(ctx.workspaceRootUri, targetUri))
+      ) {
         return { ok: false };
       }
     }
@@ -71,13 +80,17 @@ export const sessionHandlers: Record<string, Handler<any, any>> = {
   },
 
   [Methods.BrowseWorkDir]: async (_, ctx) => {
-    if (!ctx.workspaceRoot || !ctx.workspaceRootUri) return { ok: false, workDir: null };
+    if (!ctx.workspaceRoot || !ctx.workspaceRootUri)
+      return { ok: false, workDir: null };
     const workspaceUri = ctx.workspaceRootUri;
     let subdirectories: string[] = [];
     try {
       const entries = await vscode.workspace.fs.readDirectory(workspaceUri);
       subdirectories = entries
-        .filter(([name, type]) => type === vscode.FileType.Directory && !name.startsWith("."))
+        .filter(
+          ([name, type]) =>
+            type === vscode.FileType.Directory && !name.startsWith("."),
+        )
         .map(([name]) => name)
         .toSorted();
     } catch {
@@ -86,14 +99,21 @@ export const sessionHandlers: Record<string, Handler<any, any>> = {
 
     const picked = await vscode.window.showQuickPick(
       [
-        { label: "$(folder) Browse...", description: "Open folder picker", alwaysShow: true },
+        {
+          label: "$(folder) Browse...",
+          description: "Open folder picker",
+          alwaysShow: true,
+        },
         { label: "", kind: vscode.QuickPickItemKind.Separator },
         ...subdirectories.map((name) => ({
           label: `$(folder) ${name}`,
           description: path.join(ctx.workspaceRoot!, name),
         })),
       ],
-      { placeHolder: "Select a subdirectory or browse...", title: "Working Directory" },
+      {
+        placeHolder: "Select a subdirectory or browse...",
+        title: "Working Directory",
+      },
     );
     if (!picked) return { ok: false, workDir: null };
 
@@ -109,7 +129,11 @@ export const sessionHandlers: Record<string, Handler<any, any>> = {
       if (!result?.[0]) return { ok: false, workDir: null };
       selectedUri = result[0];
     } else if (picked.description) {
-      const pickedUri = workDirUriFromPath(workspaceUri, ctx.workspaceRoot, picked.description);
+      const pickedUri = workDirUriFromPath(
+        workspaceUri,
+        ctx.workspaceRoot,
+        picked.description,
+      );
       if (pickedUri === undefined) return { ok: false, workDir: null };
       selectedUri = pickedUri;
     } else {
@@ -117,11 +141,15 @@ export const sessionHandlers: Record<string, Handler<any, any>> = {
     }
 
     if (!(await isWorkspacePathContained(workspaceUri, selectedUri))) {
-      await vscode.window.showWarningMessage("Selected directory must be within the workspace.");
+      await vscode.window.showWarningMessage(
+        "Selected directory must be within the workspace.",
+      );
       return { ok: false, workDir: null };
     }
     const selected = selectedUri.fsPath;
-    await ctx.setCustomWorkDir(selected === ctx.workspaceRoot ? null : selected);
+    await ctx.setCustomWorkDir(
+      selected === ctx.workspaceRoot ? null : selected,
+    );
     return { ok: true, workDir: selected };
   },
 
@@ -130,7 +158,9 @@ export const sessionHandlers: Record<string, Handler<any, any>> = {
     const runtime = await ctx.resumeSession(params.kimiSessionId);
     if (!areSameFsPath(runtime.session.workDir, ctx.workDir)) {
       await ctx.closeSession();
-      throw new Error("The selected session belongs to a different working directory.");
+      throw new Error(
+        "The selected session belongs to a different working directory.",
+      );
     }
 
     let history: ReturnType<typeof replaySessionToWebviewEvents>;
@@ -146,14 +176,19 @@ export const sessionHandlers: Record<string, Handler<any, any>> = {
     }
 
     ctx.fileManager.clearTracked(ctx.webviewId);
-    const baseline = baselineSession(runtime.summary ?? {
-      id: runtime.id,
-      workDir: runtime.session.workDir,
-    });
+    const baseline = baselineSession(
+      runtime.summary ?? {
+        id: runtime.id,
+        workDir: runtime.session.workDir,
+      },
+    );
     try {
       const changes = await ctx.baselineManager.getChanges(baseline);
       for (const change of changes) {
-        ctx.fileManager.trackFile(ctx.webviewId, path.join(baseline.workDir, change.path));
+        ctx.fileManager.trackFile(
+          ctx.webviewId,
+          path.join(baseline.workDir, change.path),
+        );
       }
       ctx.broadcast(Events.FileChangesUpdated, changes, ctx.webviewId);
     } catch (error) {
@@ -175,13 +210,23 @@ export const sessionHandlers: Record<string, Handler<any, any>> = {
     return history;
   },
 
-  [Methods.DeleteKimiSession]: async (params: DeleteSessionParams, ctx): Promise<{ ok: boolean }> => {
-    if (!isSessionId(params.sessionId) || !ctx.workspaceRoot) return { ok: false };
-    const summary = (await ctx.harness.listSessions({ sessionId: params.sessionId }))[0];
-    if (summary === undefined || !isInsideOrEqual(ctx.workspaceRoot, summary.workDir)) {
+  [Methods.DeleteKimiSession]: async (
+    params: DeleteSessionParams,
+    ctx,
+  ): Promise<{ ok: boolean }> => {
+    if (!isSessionId(params.sessionId) || !ctx.workspaceRoot)
+      return { ok: false };
+    const summary = (
+      await ctx.harness.listSessions({ sessionId: params.sessionId })
+    )[0];
+    if (
+      summary === undefined ||
+      !isInsideOrEqual(ctx.workspaceRoot, summary.workDir)
+    ) {
       return { ok: false };
     }
-    const affectedViews = ctx.runtime.getSession(params.sessionId)?.subscribers ?? [];
+    const affectedViews =
+      ctx.runtime.getSession(params.sessionId)?.subscribers ?? [];
     await ctx.runtime.deleteSession(params.sessionId);
     await ctx.baselineManager.deleteSession(params.sessionId);
     for (const webviewId of affectedViews) {
@@ -195,19 +240,30 @@ export const sessionHandlers: Record<string, Handler<any, any>> = {
   },
 
   [Methods.ForkKimiSession]: async (params: ForkSessionParams, ctx) => {
-    if (!ctx.workDir || !isSessionId(params.sessionId) || !Number.isInteger(params.turnIndex) || params.turnIndex < 0) {
+    if (
+      !ctx.workDir ||
+      !isSessionId(params.sessionId) ||
+      !Number.isInteger(params.turnIndex) ||
+      params.turnIndex < 0
+    ) {
       return null;
     }
-    const summaries = await ctx.harness.listSessions({ sessionId: params.sessionId });
+    const summaries = await ctx.harness.listSessions({
+      sessionId: params.sessionId,
+    });
     const sourceSummary = summaries[0];
     if (
       sourceSummary === undefined ||
       !ctx.workspaceRoot ||
       !isInsideOrEqual(ctx.workspaceRoot, sourceSummary.workDir)
-    ) return null;
+    )
+      return null;
 
     const forkSettledSession = async () => {
-      const fork = await ctx.harness.forkSession({ id: params.sessionId, turnIndex: params.turnIndex });
+      const fork = await ctx.harness.forkSession({
+        id: params.sessionId,
+        turnIndex: params.turnIndex,
+      });
       const targetSummary = fork.summary;
       if (targetSummary === undefined) {
         await fork.close();
@@ -230,12 +286,22 @@ export const sessionHandlers: Record<string, Handler<any, any>> = {
         ctx.logError("Unable to close a forked session", error);
       }
       if (materializeError !== undefined) {
-        await ctx.harness.deleteSession(targetSummary.id).catch((error: unknown) => {
-          ctx.logError(`Unable to remove failed fork "${targetSummary.id}"`, error);
-        });
-        await ctx.baselineManager.deleteSession(targetSummary.id).catch((error: unknown) => {
-          ctx.logError(`Unable to remove failed fork baseline "${targetSummary.id}"`, error);
-        });
+        await ctx.harness
+          .deleteSession(targetSummary.id)
+          .catch((error: unknown) => {
+            ctx.logError(
+              `Unable to remove failed fork "${targetSummary.id}"`,
+              error,
+            );
+          });
+        await ctx.baselineManager
+          .deleteSession(targetSummary.id)
+          .catch((error: unknown) => {
+            ctx.logError(
+              `Unable to remove failed fork baseline "${targetSummary.id}"`,
+              error,
+            );
+          });
         throw materializeError instanceof Error
           ? materializeError
           : new Error("Unable to materialize the forked session baseline.", {
@@ -261,8 +327,14 @@ function toSessionInfo(summary: SessionSummary): SessionInfo {
   };
 }
 
-function baselineSession(summary: Pick<SessionSummary, "id" | "workDir" | "metadata">): BaselineSession {
-  return { id: summary.id, workDir: summary.workDir, metadata: summary.metadata };
+function baselineSession(
+  summary: Pick<SessionSummary, "id" | "workDir" | "metadata">,
+): BaselineSession {
+  return {
+    id: summary.id,
+    workDir: summary.workDir,
+    metadata: summary.metadata,
+  };
 }
 
 function isInsideOrEqual(root: string, candidate: string): boolean {

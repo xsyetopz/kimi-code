@@ -1,5 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
-import { api } from '../api';
+import { useQuery } from "@tanstack/react-query";
+import { api } from "../api";
 
 export function useWire(
   sessionId: string | undefined,
@@ -7,7 +7,7 @@ export function useWire(
   enabled = true,
 ) {
   return useQuery({
-    queryKey: ['session', sessionId, 'wire', agentId] as const,
+    queryKey: ["session", sessionId, "wire", agentId] as const,
     queryFn: () => api.getWire(sessionId!, agentId!),
     enabled: !!sessionId && !!agentId && enabled,
   });

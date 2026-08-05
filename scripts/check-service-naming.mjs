@@ -58,11 +58,11 @@ scanServicesSrc(SERVER_SERVICES_SRC);
 
 if (violations.length > 0) {
   console.error(
-    "Service naming violations (no kebab-case allowed for service files/dirs):"
+    "Service naming violations (no kebab-case allowed for service files/dirs):",
   );
   for (const v of violations) console.error(`  [${v.kind}] ${v.path}`);
   console.error(
-    "\nRename to camelCase per VS Code convention: <domain>.ts + <domain>Service.ts."
+    "\nRename to camelCase per VS Code convention: <domain>.ts + <domain>Service.ts.",
   );
   process.exit(1);
 }

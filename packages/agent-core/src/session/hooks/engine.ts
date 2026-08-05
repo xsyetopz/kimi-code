@@ -1,4 +1,4 @@
-import { runHook } from './runner';
+import { runHook } from "./runner";
 import type {
   HookBlockDecision,
   HookDef,
@@ -6,7 +6,7 @@ import type {
   HookEngineTriggerArgs,
   HookMatcherValue,
   HookResult,
-} from './types';
+} from "./types";
 
 const DEFAULT_HOOK_TIMEOUT_SECONDS = 30;
 
@@ -33,7 +33,10 @@ export class HookEngine {
     return result;
   }
 
-  trigger(event: string, args: HookEngineTriggerArgs = {}): Promise<HookResult[]> {
+  trigger(
+    event: string,
+    args: HookEngineTriggerArgs = {},
+  ): Promise<HookResult[]> {
     try {
       return this.triggerInner(event, args).catch((): HookResult[] => []);
     } catch {
@@ -72,8 +75,8 @@ export class HookEngine {
     const matcherValue = matcherValueText(args.matcherValue);
     const inputData = toHookInputData({
       hookEventName: event,
-      sessionId: this.options.sessionId ?? '',
-      cwd: this.options.cwd ?? '',
+      sessionId: this.options.sessionId ?? "",
+      cwd: this.options.cwd ?? "",
       ...args.inputData,
     });
     const matched = this.matchingHooks(event, matcherValue);
@@ -85,14 +88,22 @@ export class HookEngine {
       matched.map((hook) =>
         runHook(hook.command, inputData, {
           timeout: hook.timeout ?? DEFAULT_HOOK_TIMEOUT_SECONDS,
-          cwd: hook.cwd ?? (this.options.cwd === '' ? undefined : this.options.cwd),
+          cwd:
+            hook.cwd ??
+            (this.options.cwd === "" ? undefined : this.options.cwd),
           env: hook.env,
           signal: args.signal,
         }),
       ),
     );
     const { action, reason } = aggregateResults(event, results);
-    this.emitResolved(event, matcherValue, action, reason, Date.now() - startedAt);
+    this.emitResolved(
+      event,
+      matcherValue,
+      action,
+      reason,
+      Date.now() - startedAt,
+    );
     return results;
   }
 
@@ -101,8 +112,8 @@ export class HookEngine {
     const matched: HookDef[] = [];
 
     for (const hook of this.byEvent.get(event) ?? []) {
-      if (!matches(hook.matcher ?? '', matcherValue)) continue;
-      const key = (hook.cwd ?? '') + '\0' + hook.command;
+      if (!matches(hook.matcher ?? "", matcherValue)) continue;
+      const key = (hook.cwd ?? "") + "\0" + hook.command;
       if (seen.has(key)) continue;
       seen.add(key);
       matched.push(hook);
@@ -140,42 +151,47 @@ function matches(pattern: string, value: string): boolean {
 }
 
 function matcherValueText(value: HookMatcherValue | undefined): string {
-  if (value === undefined) return '';
-  if (typeof value === 'string') return value;
+  if (value === undefined) return "";
+  if (typeof value === "string") return value;
   return value
-    .filter((part) => part.type === 'text')
+    .filter((part) => part.type === "text")
     .map((part) => part.text)
-    .join(' ');
+    .join(" ");
 }
 
 function aggregateResults(
   event: string,
   results: readonly HookResult[],
 ): {
-  readonly action: 'allow' | 'block';
+  readonly action: "allow" | "block";
   readonly reason?: string;
 } {
   const block = blockDecision(event, results);
   if (block !== undefined) {
-    return { action: 'block', reason: block.reason };
+    return { action: "block", reason: block.reason };
   }
-  return { action: 'allow' };
+  return { action: "allow" };
 }
 
 function blockDecision(
   event: string,
   results: readonly HookResult[],
 ): HookBlockDecision | undefined {
-  const block = results.find((result) => result.action === 'block');
+  const block = results.find((result) => result.action === "block");
   if (block === undefined) return undefined;
   const reason = block.reason?.trim();
   return {
     block: true,
-    reason: reason === undefined || reason.length === 0 ? `Blocked by ${event} hook` : reason,
+    reason:
+      reason === undefined || reason.length === 0
+        ? `Blocked by ${event} hook`
+        : reason,
   };
 }
 
-function toHookInputData(input: Record<string, unknown>): Record<string, unknown> {
+function toHookInputData(
+  input: Record<string, unknown>,
+): Record<string, unknown> {
   const result: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(input)) {
     result[camelToSnake(key)] = value;

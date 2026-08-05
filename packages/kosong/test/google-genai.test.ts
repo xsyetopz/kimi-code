@@ -5,24 +5,24 @@ import {
   APIStatusError,
   APITimeoutError,
   ChatProviderError,
-} from '#/errors';
-import type { Message, StreamedMessagePart, ToolCall } from '#/message';
+} from "#/errors";
+import type { Message, StreamedMessagePart, ToolCall } from "#/message";
 import {
   convertGoogleGenAIError,
   GoogleGenAIChatProvider,
   GoogleGenAIStreamedMessage,
   messagesToGoogleGenAIContents,
-} from '#/providers/google-genai';
-import type { GenerateOptions } from '#/provider';
-import type { Tool } from '#/tool';
-import { describe, it, expect, vi } from 'vitest';
+} from "#/providers/google-genai";
+import type { GenerateOptions } from "#/provider";
+import type { Tool } from "#/tool";
+import { describe, it, expect, vi } from "vitest";
 
 function makeGenerateContentResponse() {
   return {
     candidates: [
       {
-        content: { parts: [{ text: 'Hello' }], role: 'model' },
-        finishReason: 'STOP',
+        content: { parts: [{ text: "Hello" }], role: "model" },
+        finishReason: "STOP",
       },
     ],
     usageMetadata: {
@@ -30,7 +30,7 @@ function makeGenerateContentResponse() {
       candidatesTokenCount: 5,
       totalTokenCount: 15,
     },
-    modelVersion: 'gemini-2.5-flash',
+    modelVersion: "gemini-2.5-flash",
   };
 }
 
@@ -38,8 +38,8 @@ function createProvider(
   options?: Partial<{ model: string; vertexai: boolean; stream: boolean }>,
 ): GoogleGenAIChatProvider {
   return new GoogleGenAIChatProvider({
-    model: options?.model ?? 'gemini-2.5-flash',
-    apiKey: 'test-key',
+    model: options?.model ?? "gemini-2.5-flash",
+    apiKey: "test-key",
     vertexai: options?.vertexai,
     stream: options?.stream,
   });
@@ -55,21 +55,28 @@ async function captureRequestBody(
 ): Promise<Record<string, unknown>> {
   let capturedBody: Record<string, unknown> | undefined;
 
-  const mockModels = (provider as any)._client.models as Record<string, unknown>;
+  const mockModels = (provider as any)._client.models as Record<
+    string,
+    unknown
+  >;
 
   async function* mockStream() {
     yield makeGenerateContentResponse();
   }
 
-  mockModels['generateContentStream'] = vi.fn().mockImplementation((params: unknown) => {
-    capturedBody = params as Record<string, unknown>;
-    return Promise.resolve(mockStream());
-  });
+  mockModels["generateContentStream"] = vi
+    .fn()
+    .mockImplementation((params: unknown) => {
+      capturedBody = params as Record<string, unknown>;
+      return Promise.resolve(mockStream());
+    });
 
-  mockModels['generateContent'] = vi.fn().mockImplementation((params: unknown) => {
-    capturedBody = params as Record<string, unknown>;
-    return Promise.resolve(makeGenerateContentResponse());
-  });
+  mockModels["generateContent"] = vi
+    .fn()
+    .mockImplementation((params: unknown) => {
+      capturedBody = params as Record<string, unknown>;
+      return Promise.resolve(makeGenerateContentResponse());
+    });
 
   const stream = await provider.generate(systemPrompt, tools, history, options);
   for await (const part of stream) {
@@ -77,7 +84,9 @@ async function captureRequestBody(
   }
 
   if (capturedBody === undefined) {
-    throw new Error('Expected provider.generate() to call a Google GenAI model endpoint');
+    throw new Error(
+      "Expected provider.generate() to call a Google GenAI model endpoint",
+    );
   }
   return capturedBody;
 }
@@ -94,126 +103,149 @@ async function collectParts(msg: {
 }
 
 const ADD_TOOL: Tool = {
-  name: 'add',
-  description: 'Add two integers.',
+  name: "add",
+  description: "Add two integers.",
   parameters: {
-    type: 'object',
+    type: "object",
     properties: {
-      a: { type: 'integer', description: 'First number' },
-      b: { type: 'integer', description: 'Second number' },
+      a: { type: "integer", description: "First number" },
+      b: { type: "integer", description: "Second number" },
     },
-    required: ['a', 'b'],
+    required: ["a", "b"],
   },
 };
 
 const MUL_TOOL: Tool = {
-  name: 'multiply',
-  description: 'Multiply two integers.',
+  name: "multiply",
+  description: "Multiply two integers.",
   parameters: {
-    type: 'object',
+    type: "object",
     properties: {
-      a: { type: 'integer', description: 'First number' },
-      b: { type: 'integer', description: 'Second number' },
+      a: { type: "integer", description: "First number" },
+      b: { type: "integer", description: "Second number" },
     },
-    required: ['a', 'b'],
+    required: ["a", "b"],
   },
 };
 
-describe('GoogleGenAIChatProvider', () => {
-  describe('message conversion', () => {
-    it('simple user message with system prompt', async () => {
+describe("GoogleGenAIChatProvider", () => {
+  describe("message conversion", () => {
+    it("simple user message with system prompt", async () => {
       const provider = createProvider();
       const history: Message[] = [
-        { role: 'user', content: [{ type: 'text', text: 'Hello!' }], toolCalls: [] },
+        {
+          role: "user",
+          content: [{ type: "text", text: "Hello!" }],
+          toolCalls: [],
+        },
       ];
-      const body = await captureRequestBody(provider, 'You are helpful.', [], history);
+      const body = await captureRequestBody(
+        provider,
+        "You are helpful.",
+        [],
+        history,
+      );
 
-      expect(body['contents']).toEqual([{ parts: [{ text: 'Hello!' }], role: 'user' }]);
-      const config = body['config'] as Record<string, unknown>;
-      expect(config['systemInstruction']).toBe('You are helpful.');
+      expect(body["contents"]).toEqual([
+        { parts: [{ text: "Hello!" }], role: "user" },
+      ]);
+      const config = body["config"] as Record<string, unknown>;
+      expect(config["systemInstruction"]).toBe("You are helpful.");
     });
 
-    it('serializes an explicitly empty ThinkPart as a Google thought part', async () => {
+    it("serializes an explicitly empty ThinkPart as a Google thought part", async () => {
       const provider = createProvider({ stream: false });
       const history: Message[] = [
         {
-          role: 'assistant',
-          content: [{ type: 'think', think: '', encrypted: 'thought-signature' }],
+          role: "assistant",
+          content: [
+            { type: "think", think: "", encrypted: "thought-signature" },
+          ],
           toolCalls: [],
         },
       ];
 
-      const body = await captureRequestBody(provider, '', [], history);
+      const body = await captureRequestBody(provider, "", [], history);
 
-      expect(body['contents']).toEqual([
+      expect(body["contents"]).toEqual([
         {
-          role: 'model',
-          parts: [{ text: '', thought: true, thoughtSignature: 'thought-signature' }],
+          role: "model",
+          parts: [
+            { text: "", thought: true, thoughtSignature: "thought-signature" },
+          ],
         },
       ]);
     });
 
-    it('maps json_schema response format to response config', async () => {
+    it("maps json_schema response format to response config", async () => {
       const provider = createProvider();
       const history: Message[] = [
-        { role: 'user', content: [{ type: 'text', text: 'Extract contact' }], toolCalls: [] },
+        {
+          role: "user",
+          content: [{ type: "text", text: "Extract contact" }],
+          toolCalls: [],
+        },
       ];
       const schema = {
-        type: 'object',
-        properties: { name: { type: 'string' } },
-        required: ['name'],
+        type: "object",
+        properties: { name: { type: "string" } },
+        required: ["name"],
         additionalProperties: false,
       };
-      const body = await captureRequestBody(provider, '', [], history, {
+      const body = await captureRequestBody(provider, "", [], history, {
         responseFormat: {
-          type: 'json_schema',
+          type: "json_schema",
           jsonSchema: {
-            name: 'contact',
+            name: "contact",
             schema,
             strict: true,
           },
         },
       });
 
-      const config = body['config'] as Record<string, unknown>;
-      expect(config['responseMimeType']).toBe('application/json');
-      expect(config['responseJsonSchema']).toEqual(schema);
+      const config = body["config"] as Record<string, unknown>;
+      expect(config["responseMimeType"]).toBe("application/json");
+      expect(config["responseJsonSchema"]).toEqual(schema);
     });
 
-    it('replaces native responseSchema when applying json_schema response format', async () => {
+    it("replaces native responseSchema when applying json_schema response format", async () => {
       const provider = createProvider().withGenerationKwargs({
         responseSchema: {
-          type: 'object',
-          properties: { old: { type: 'string' } },
+          type: "object",
+          properties: { old: { type: "string" } },
         },
       });
       const history: Message[] = [
-        { role: 'user', content: [{ type: 'text', text: 'Extract contact' }], toolCalls: [] },
+        {
+          role: "user",
+          content: [{ type: "text", text: "Extract contact" }],
+          toolCalls: [],
+        },
       ];
       const schema = {
-        type: 'object',
-        properties: { name: { type: 'string' } },
-        required: ['name'],
+        type: "object",
+        properties: { name: { type: "string" } },
+        required: ["name"],
         additionalProperties: false,
       };
 
-      const body = await captureRequestBody(provider, '', [], history, {
+      const body = await captureRequestBody(provider, "", [], history, {
         responseFormat: {
-          type: 'json_schema',
+          type: "json_schema",
           jsonSchema: {
-            name: 'contact',
+            name: "contact",
             schema,
             strict: true,
           },
         },
       });
 
-      const config = body['config'] as Record<string, unknown>;
-      expect(config['responseSchema']).toBeUndefined();
-      expect(config['responseJsonSchema']).toEqual(schema);
+      const config = body["config"] as Record<string, unknown>;
+      expect(config["responseSchema"]).toBeUndefined();
+      expect(config["responseJsonSchema"]).toEqual(schema);
     });
 
-    it('system messages in history are wrapped and emitted as user content', () => {
+    it("system messages in history are wrapped and emitted as user content", () => {
       // Regression: Google GenAI's Content.role only accepts "user" or
       // "model", so a `system` message sitting in the replay history (from
       // session restore or cross-provider migration) would be rejected by
@@ -222,13 +254,13 @@ describe('GoogleGenAIChatProvider', () => {
       // survives without provoking a 400.
       const messages: Message[] = [
         {
-          role: 'system',
-          content: [{ type: 'text', text: 'You are helpful.' }],
+          role: "system",
+          content: [{ type: "text", text: "You are helpful." }],
           toolCalls: [],
         },
         {
-          role: 'user',
-          content: [{ type: 'text', text: 'Hi' }],
+          role: "user",
+          content: [{ type: "text", text: "Hi" }],
           toolCalls: [],
         },
       ];
@@ -245,211 +277,281 @@ describe('GoogleGenAIChatProvider', () => {
         role: string;
         parts: Array<{ text?: string }>;
       };
-      expect(merged.role).toBe('user');
+      expect(merged.role).toBe("user");
       expect(merged.parts).toHaveLength(2);
-      expect(merged.parts[0]!.text).toBe('<system>You are helpful.</system>');
-      expect(merged.parts[1]!.text).toBe('Hi');
+      expect(merged.parts[0]!.text).toBe("<system>You are helpful.</system>");
+      expect(merged.parts[1]!.text).toBe("Hi");
       // No emitted content carries the unsupported "system" role.
       for (const c of contents) {
-        expect((c as unknown as { role: string }).role).not.toBe('system');
+        expect((c as unknown as { role: string }).role).not.toBe("system");
       }
     });
 
-    it('empty system messages in history are dropped', () => {
+    it("empty system messages in history are dropped", () => {
       // A system message with no textual content contributes nothing; it
       // would be pointless (and arguably confusing to models) to emit an
       // empty <system></system> user turn, so we skip it entirely.
       const messages: Message[] = [
         {
-          role: 'system',
+          role: "system",
           content: [],
           toolCalls: [],
         },
         {
-          role: 'user',
-          content: [{ type: 'text', text: 'Hi' }],
+          role: "user",
+          content: [{ type: "text", text: "Hi" }],
           toolCalls: [],
         },
       ];
 
       const contents = messagesToGoogleGenAIContents(messages);
       expect(contents).toHaveLength(1);
-      expect((contents[0] as unknown as { role: string }).role).toBe('user');
+      expect((contents[0] as unknown as { role: string }).role).toBe("user");
     });
 
-    it('multi-turn conversation with assistant mapped to model', async () => {
+    it("multi-turn conversation with assistant mapped to model", async () => {
       const provider = createProvider();
       const history: Message[] = [
-        { role: 'user', content: [{ type: 'text', text: 'What is 2+2?' }], toolCalls: [] },
-        { role: 'assistant', content: [{ type: 'text', text: '2+2 equals 4.' }], toolCalls: [] },
-        { role: 'user', content: [{ type: 'text', text: 'And 3+3?' }], toolCalls: [] },
+        {
+          role: "user",
+          content: [{ type: "text", text: "What is 2+2?" }],
+          toolCalls: [],
+        },
+        {
+          role: "assistant",
+          content: [{ type: "text", text: "2+2 equals 4." }],
+          toolCalls: [],
+        },
+        {
+          role: "user",
+          content: [{ type: "text", text: "And 3+3?" }],
+          toolCalls: [],
+        },
       ];
-      const body = await captureRequestBody(provider, '', [], history);
+      const body = await captureRequestBody(provider, "", [], history);
 
-      expect(body['contents']).toEqual([
-        { parts: [{ text: 'What is 2+2?' }], role: 'user' },
-        { parts: [{ text: '2+2 equals 4.' }], role: 'model' },
-        { parts: [{ text: 'And 3+3?' }], role: 'user' },
+      expect(body["contents"]).toEqual([
+        { parts: [{ text: "What is 2+2?" }], role: "user" },
+        { parts: [{ text: "2+2 equals 4." }], role: "model" },
+        { parts: [{ text: "And 3+3?" }], role: "user" },
       ]);
     });
 
-    it('merges consecutive user messages into one Content (post-compaction shape)', () => {
+    it("merges consecutive user messages into one Content (post-compaction shape)", () => {
       // After compaction the history is `[kept user prompts, user-role summary,
       // injected reminders]` — all role 'user'. Gemini/Vertex require strictly
       // alternating user/model turns and reject consecutive user Contents, so
       // the converter must collapse them into a single user Content.
       const contents = messagesToGoogleGenAIContents([
-        { role: 'user', content: [{ type: 'text', text: 'Earlier prompt' }], toolCalls: [] },
-        { role: 'user', content: [{ type: 'text', text: 'Conversation summary' }], toolCalls: [] },
-        { role: 'user', content: [{ type: 'text', text: 'A reminder' }], toolCalls: [] },
+        {
+          role: "user",
+          content: [{ type: "text", text: "Earlier prompt" }],
+          toolCalls: [],
+        },
+        {
+          role: "user",
+          content: [{ type: "text", text: "Conversation summary" }],
+          toolCalls: [],
+        },
+        {
+          role: "user",
+          content: [{ type: "text", text: "A reminder" }],
+          toolCalls: [],
+        },
       ]);
 
       expect(contents).toEqual([
         {
-          role: 'user',
+          role: "user",
           parts: [
-            { text: 'Earlier prompt' },
-            { text: 'Conversation summary' },
-            { text: 'A reminder' },
+            { text: "Earlier prompt" },
+            { text: "Conversation summary" },
+            { text: "A reminder" },
           ],
         },
       ]);
     });
 
-    it('merges a trailing user turn into the preceding tool-result Content', () => {
+    it("merges a trailing user turn into the preceding tool-result Content", () => {
       // A user turn arriving right after a tool result (e.g. steering) would
       // otherwise produce two consecutive user Contents (the function-response
       // turn and the steer text), which Gemini/Vertex rejects.
       const toolCall: ToolCall = {
-        type: 'function',
-        id: 'call_1',
-        name: 'add',
+        type: "function",
+        id: "call_1",
+        name: "add",
         arguments: '{"a": 2, "b": 3}',
       };
       const contents = messagesToGoogleGenAIContents([
-        { role: 'user', content: [{ type: 'text', text: 'Add 2 and 3' }], toolCalls: [] },
-        { role: 'assistant', content: [], toolCalls: [toolCall] },
-        { role: 'tool', content: [{ type: 'text', text: '5' }], toolCallId: 'call_1', toolCalls: [] },
-        { role: 'user', content: [{ type: 'text', text: 'Now multiply' }], toolCalls: [] },
+        {
+          role: "user",
+          content: [{ type: "text", text: "Add 2 and 3" }],
+          toolCalls: [],
+        },
+        { role: "assistant", content: [], toolCalls: [toolCall] },
+        {
+          role: "tool",
+          content: [{ type: "text", text: "5" }],
+          toolCallId: "call_1",
+          toolCalls: [],
+        },
+        {
+          role: "user",
+          content: [{ type: "text", text: "Now multiply" }],
+          toolCalls: [],
+        },
       ]);
 
-      expect(contents.map((c) => c.role)).toEqual(['user', 'model', 'user']);
+      expect(contents.map((c) => c.role)).toEqual(["user", "model", "user"]);
       const last = contents.at(-1)!;
-      expect(last.parts.some((p) => p.functionResponse !== undefined)).toBe(true);
-      expect(last.parts.some((p) => p.text === 'Now multiply')).toBe(true);
+      expect(last.parts.some((p) => p.functionResponse !== undefined)).toBe(
+        true,
+      );
+      expect(last.parts.some((p) => p.text === "Now multiply")).toBe(true);
     });
 
-    it('multi-turn conversation with system prompt sets systemInstruction', async () => {
+    it("multi-turn conversation with system prompt sets systemInstruction", async () => {
       const provider = createProvider();
       const history: Message[] = [
-        { role: 'user', content: [{ type: 'text', text: 'What is 2+2?' }], toolCalls: [] },
-        { role: 'assistant', content: [{ type: 'text', text: '2+2 equals 4.' }], toolCalls: [] },
-        { role: 'user', content: [{ type: 'text', text: 'And 3+3?' }], toolCalls: [] },
-      ];
-      const body = await captureRequestBody(provider, 'You are a math tutor.', [], history);
-
-      expect(body['contents']).toEqual([
-        { parts: [{ text: 'What is 2+2?' }], role: 'user' },
-        { parts: [{ text: '2+2 equals 4.' }], role: 'model' },
-        { parts: [{ text: 'And 3+3?' }], role: 'user' },
-      ]);
-
-      const config = body['config'] as Record<string, unknown>;
-      expect(config['systemInstruction']).toBe('You are a math tutor.');
-    });
-
-    it('tool definitions use parametersJsonSchema', async () => {
-      const provider = createProvider();
-      const history: Message[] = [
-        { role: 'user', content: [{ type: 'text', text: 'Add 2 and 3' }], toolCalls: [] },
-      ];
-      const body = await captureRequestBody(provider, '', [ADD_TOOL, MUL_TOOL], history);
-
-      const config = body['config'] as Record<string, unknown>;
-      expect(config['tools']).toEqual([
         {
-          functionDeclarations: [
-            {
-              name: 'add',
-              description: 'Add two integers.',
-              parametersJsonSchema: {
-                type: 'object',
-                properties: {
-                  a: { type: 'integer', description: 'First number' },
-                  b: { type: 'integer', description: 'Second number' },
-                },
-                required: ['a', 'b'],
-              },
-            },
-          ],
+          role: "user",
+          content: [{ type: "text", text: "What is 2+2?" }],
+          toolCalls: [],
         },
         {
-          functionDeclarations: [
-            {
-              name: 'multiply',
-              description: 'Multiply two integers.',
-              parametersJsonSchema: {
-                type: 'object',
-                properties: {
-                  a: { type: 'integer', description: 'First number' },
-                  b: { type: 'integer', description: 'Second number' },
-                },
-                required: ['a', 'b'],
-              },
-            },
-          ],
-        },
-      ]);
-    });
-
-    it('tool call and tool result packed into user Content', async () => {
-      const provider = createProvider();
-      const toolCall: ToolCall = {
-        type: 'function',
-        id: 'call_abc123',
-        name: 'add', arguments: '{"a": 2, "b": 3}',
-      };
-      const history: Message[] = [
-        { role: 'user', content: [{ type: 'text', text: 'Add 2 and 3' }], toolCalls: [] },
-        {
-          role: 'assistant',
-          content: [{ type: 'text', text: "I'll add those numbers for you." }],
-          toolCalls: [toolCall],
+          role: "assistant",
+          content: [{ type: "text", text: "2+2 equals 4." }],
+          toolCalls: [],
         },
         {
-          role: 'tool',
-          content: [{ type: 'text', text: '5' }],
-          toolCallId: 'call_abc123',
+          role: "user",
+          content: [{ type: "text", text: "And 3+3?" }],
           toolCalls: [],
         },
       ];
-      const body = await captureRequestBody(provider, '', [], history);
+      const body = await captureRequestBody(
+        provider,
+        "You are a math tutor.",
+        [],
+        history,
+      );
 
-      expect(body['contents']).toEqual([
-        { parts: [{ text: 'Add 2 and 3' }], role: 'user' },
+      expect(body["contents"]).toEqual([
+        { parts: [{ text: "What is 2+2?" }], role: "user" },
+        { parts: [{ text: "2+2 equals 4." }], role: "model" },
+        { parts: [{ text: "And 3+3?" }], role: "user" },
+      ]);
+
+      const config = body["config"] as Record<string, unknown>;
+      expect(config["systemInstruction"]).toBe("You are a math tutor.");
+    });
+
+    it("tool definitions use parametersJsonSchema", async () => {
+      const provider = createProvider();
+      const history: Message[] = [
+        {
+          role: "user",
+          content: [{ type: "text", text: "Add 2 and 3" }],
+          toolCalls: [],
+        },
+      ];
+      const body = await captureRequestBody(
+        provider,
+        "",
+        [ADD_TOOL, MUL_TOOL],
+        history,
+      );
+
+      const config = body["config"] as Record<string, unknown>;
+      expect(config["tools"]).toEqual([
+        {
+          functionDeclarations: [
+            {
+              name: "add",
+              description: "Add two integers.",
+              parametersJsonSchema: {
+                type: "object",
+                properties: {
+                  a: { type: "integer", description: "First number" },
+                  b: { type: "integer", description: "Second number" },
+                },
+                required: ["a", "b"],
+              },
+            },
+          ],
+        },
+        {
+          functionDeclarations: [
+            {
+              name: "multiply",
+              description: "Multiply two integers.",
+              parametersJsonSchema: {
+                type: "object",
+                properties: {
+                  a: { type: "integer", description: "First number" },
+                  b: { type: "integer", description: "Second number" },
+                },
+                required: ["a", "b"],
+              },
+            },
+          ],
+        },
+      ]);
+    });
+
+    it("tool call and tool result packed into user Content", async () => {
+      const provider = createProvider();
+      const toolCall: ToolCall = {
+        type: "function",
+        id: "call_abc123",
+        name: "add",
+        arguments: '{"a": 2, "b": 3}',
+      };
+      const history: Message[] = [
+        {
+          role: "user",
+          content: [{ type: "text", text: "Add 2 and 3" }],
+          toolCalls: [],
+        },
+        {
+          role: "assistant",
+          content: [{ type: "text", text: "I'll add those numbers for you." }],
+          toolCalls: [toolCall],
+        },
+        {
+          role: "tool",
+          content: [{ type: "text", text: "5" }],
+          toolCallId: "call_abc123",
+          toolCalls: [],
+        },
+      ];
+      const body = await captureRequestBody(provider, "", [], history);
+
+      expect(body["contents"]).toEqual([
+        { parts: [{ text: "Add 2 and 3" }], role: "user" },
         {
           parts: [
             { text: "I'll add those numbers for you." },
-            { functionCall: { name: 'add', args: { a: 2, b: 3 } } },
+            { functionCall: { name: "add", args: { a: 2, b: 3 } } },
           ],
-          role: 'model',
+          role: "model",
         },
         {
           parts: [
             {
               functionResponse: {
-                name: 'add',
-                response: { output: '5' },
+                name: "add",
+                response: { output: "5" },
                 parts: [],
               },
             },
           ],
-          role: 'user',
+          role: "user",
         },
       ]);
     });
 
-    it('tool call with thought_signature_b64 emits thoughtSignature on outbound functionCall', async () => {
+    it("tool call with thought_signature_b64 emits thoughtSignature on outbound functionCall", async () => {
       // Round-trip: a previous turn returned a tool call with thoughtSignature
       // (decoded into ToolCall.extras.thought_signature_b64). When we send
       // the assistant message back, the converter must put the original
@@ -457,54 +559,70 @@ describe('GoogleGenAIChatProvider', () => {
       // reasoning chain.
       const provider = createProvider();
       const history: Message[] = [
-        { role: 'user', content: [{ type: 'text', text: 'Add 2 and 3' }], toolCalls: [] },
         {
-          role: 'assistant',
-          content: [{ type: 'text', text: "I'll add those." }],
+          role: "user",
+          content: [{ type: "text", text: "Add 2 and 3" }],
+          toolCalls: [],
+        },
+        {
+          role: "assistant",
+          content: [{ type: "text", text: "I'll add those." }],
           toolCalls: [
             {
-              type: 'function',
-              id: 'add_call_sig',
-              name: 'add', arguments: '{"a": 2, "b": 3}',
-              extras: { thought_signature_b64: 'dGhvdWdodF9zaWduYXR1cmVfZGF0YQ==' },
+              type: "function",
+              id: "add_call_sig",
+              name: "add",
+              arguments: '{"a": 2, "b": 3}',
+              extras: {
+                thought_signature_b64: "dGhvdWdodF9zaWduYXR1cmVfZGF0YQ==",
+              },
             },
           ],
         },
       ];
-      const body = await captureRequestBody(provider, '', [], history);
+      const body = await captureRequestBody(provider, "", [], history);
 
-      const contents = body['contents'] as Array<{ parts: unknown[]; role: string }>;
-      const assistantParts = contents.find((c) => c.role === 'model')!.parts;
+      const contents = body["contents"] as Array<{
+        parts: unknown[];
+        role: string;
+      }>;
+      const assistantParts = contents.find((c) => c.role === "model")!.parts;
       const fnCallPart = assistantParts.find(
-        (p) => (p as Record<string, unknown>)['functionCall'] !== undefined,
-      ) as { functionCall: Record<string, unknown>; thoughtSignature?: unknown } | undefined;
+        (p) => (p as Record<string, unknown>)["functionCall"] !== undefined,
+      ) as
+        | { functionCall: Record<string, unknown>; thoughtSignature?: unknown }
+        | undefined;
       expect(fnCallPart).toMatchObject({
-        functionCall: { name: 'add', args: { a: 2, b: 3 } },
-        thoughtSignature: 'dGhvdWdodF9zaWduYXR1cmVfZGF0YQ==',
+        functionCall: { name: "add", args: { a: 2, b: 3 } },
+        thoughtSignature: "dGhvdWdodF9zaWduYXR1cmVfZGF0YQ==",
       });
     });
 
-    it('tool message with image_url result yields functionResponse + inline data part', () => {
+    it("tool message with image_url result yields functionResponse + inline data part", () => {
       const messages: Message[] = [
         {
-          role: 'assistant',
+          role: "assistant",
           content: [],
           toolCalls: [
             {
-              type: 'function',
-              id: 'tc_001',
-              name: 'fetch_image', arguments: '{}',
+              type: "function",
+              id: "tc_001",
+              name: "fetch_image",
+              arguments: "{}",
             },
           ],
         },
         {
-          role: 'tool',
+          role: "tool",
           content: [
-            { type: 'text', text: 'Found image:' },
-            { type: 'image_url', imageUrl: { url: 'data:image/png;base64,iVBORw0KGgo=' } },
+            { type: "text", text: "Found image:" },
+            {
+              type: "image_url",
+              imageUrl: { url: "data:image/png;base64,iVBORw0KGgo=" },
+            },
           ],
           toolCalls: [],
-          toolCallId: 'tc_001',
+          toolCallId: "tc_001",
         },
       ];
 
@@ -516,49 +634,56 @@ describe('GoogleGenAIChatProvider', () => {
         role: string;
         parts: Array<Record<string, unknown>>;
       };
-      expect(userContent.role).toBe('user');
+      expect(userContent.role).toBe("user");
       expect(userContent.parts.length).toBeGreaterThanOrEqual(2);
 
-      const fnResp = userContent.parts.find((p) => 'functionResponse' in p) as
+      const fnResp = userContent.parts.find((p) => "functionResponse" in p) as
         | { functionResponse: { name: string; response: { output: string } } }
         | undefined;
       expect(fnResp).toMatchObject({
         functionResponse: {
-          name: 'fetch_image',
-          response: { output: 'Found image:' },
+          name: "fetch_image",
+          response: { output: "Found image:" },
         },
       });
 
-      const inlineData = userContent.parts.find((p) => 'inlineData' in p) as
+      const inlineData = userContent.parts.find((p) => "inlineData" in p) as
         | { inlineData: { mimeType: string; data: string } }
         | undefined;
       expect(inlineData).toMatchObject({
-        inlineData: { mimeType: 'image/png', data: 'iVBORw0KGgo=' },
+        inlineData: { mimeType: "image/png", data: "iVBORw0KGgo=" },
       });
     });
 
-    it('tool message with audio_url and video_url results yields independent parts', () => {
+    it("tool message with audio_url and video_url results yields independent parts", () => {
       const messages: Message[] = [
         {
-          role: 'assistant',
+          role: "assistant",
           content: [],
           toolCalls: [
             {
-              type: 'function',
-              id: 'tc_002',
-              name: 'fetch_media', arguments: '{}',
+              type: "function",
+              id: "tc_002",
+              name: "fetch_media",
+              arguments: "{}",
             },
           ],
         },
         {
-          role: 'tool',
+          role: "tool",
           content: [
-            { type: 'text', text: 'Got audio and video:' },
-            { type: 'audio_url', audioUrl: { url: 'https://example.com/sound.mp3' } },
-            { type: 'video_url', videoUrl: { url: 'https://example.com/clip.mp4' } },
+            { type: "text", text: "Got audio and video:" },
+            {
+              type: "audio_url",
+              audioUrl: { url: "https://example.com/sound.mp3" },
+            },
+            {
+              type: "video_url",
+              videoUrl: { url: "https://example.com/clip.mp4" },
+            },
           ],
           toolCalls: [],
-          toolCallId: 'tc_002',
+          toolCallId: "tc_002",
         },
       ];
 
@@ -569,32 +694,39 @@ describe('GoogleGenAIChatProvider', () => {
         role: string;
         parts: Array<Record<string, unknown>>;
       };
-      expect(userContent.role).toBe('user');
+      expect(userContent.role).toBe("user");
       // functionResponse + audio + video
       expect(userContent.parts).toHaveLength(3);
 
-      const fnResp = userContent.parts.find((p) => 'functionResponse' in p) as
+      const fnResp = userContent.parts.find((p) => "functionResponse" in p) as
         | { functionResponse: { response: { output: string } } }
         | undefined;
       expect(fnResp).toMatchObject({
-        functionResponse: { response: { output: 'Got audio and video:' } },
+        functionResponse: { response: { output: "Got audio and video:" } },
       });
 
-      const fileDataParts = userContent.parts.filter((p) => 'fileData' in p) as Array<{
+      const fileDataParts = userContent.parts.filter(
+        (p) => "fileData" in p,
+      ) as Array<{
         fileData: { fileUri: string; mimeType: string };
       }>;
       expect(fileDataParts).toHaveLength(2);
-      const mimeTypes = fileDataParts.map((p) => p.fileData.mimeType).toSorted();
-      expect(mimeTypes).toEqual(['audio/mpeg', 'video/mp4']);
+      const mimeTypes = fileDataParts
+        .map((p) => p.fileData.mimeType)
+        .toSorted();
+      expect(mimeTypes).toEqual(["audio/mpeg", "video/mp4"]);
     });
 
-    it('forwards video_url parts in regular messages as fileData', () => {
+    it("forwards video_url parts in regular messages as fileData", () => {
       const messages: Message[] = [
         {
-          role: 'user',
+          role: "user",
           content: [
-            { type: 'text', text: 'Please inspect this clip.' },
-            { type: 'video_url', videoUrl: { url: 'https://example.com/demo.mp4' } },
+            { type: "text", text: "Please inspect this clip." },
+            {
+              type: "video_url",
+              videoUrl: { url: "https://example.com/demo.mp4" },
+            },
           ],
           toolCalls: [],
         },
@@ -604,152 +736,189 @@ describe('GoogleGenAIChatProvider', () => {
 
       expect(contents).toHaveLength(1);
       expect(contents[0]).toEqual({
-        role: 'user',
+        role: "user",
         parts: [
-          { text: 'Please inspect this clip.' },
-          { fileData: { fileUri: 'https://example.com/demo.mp4', mimeType: 'video/mp4' } },
+          { text: "Please inspect this clip." },
+          {
+            fileData: {
+              fileUri: "https://example.com/demo.mp4",
+              mimeType: "video/mp4",
+            },
+          },
         ],
       });
     });
 
-    it('parallel tool calls packed into single user Content', async () => {
+    it("parallel tool calls packed into single user Content", async () => {
       const provider = createProvider();
       // Mirror Python COMMON_CASES.parallel_tool_calls: multi-ContentPart
       // tool results with a <system-reminder> prefix proving the provider
       // concatenates text parts into `response.output`.
       const history: Message[] = [
-        { role: 'user', content: [{ type: 'text', text: 'Calculate 2+3 and 4*5' }], toolCalls: [] },
         {
-          role: 'assistant',
-          content: [{ type: 'text', text: "I'll calculate both." }],
-          toolCalls: [
-            {
-              type: 'function',
-              id: 'call_add',
-              name: 'add', arguments: '{"a": 2, "b": 3}',
-            },
-            {
-              type: 'function',
-              id: 'call_mul',
-              name: 'multiply', arguments: '{"a": 4, "b": 5}',
-            },
-          ],
-        },
-        {
-          role: 'tool',
-          content: [
-            {
-              type: 'text',
-              text: '<system-reminder>This is a system reminder</system-reminder>',
-            },
-            { type: 'text', text: '5' },
-          ],
-          toolCallId: 'call_add',
+          role: "user",
+          content: [{ type: "text", text: "Calculate 2+3 and 4*5" }],
           toolCalls: [],
         },
         {
-          role: 'tool',
+          role: "assistant",
+          content: [{ type: "text", text: "I'll calculate both." }],
+          toolCalls: [
+            {
+              type: "function",
+              id: "call_add",
+              name: "add",
+              arguments: '{"a": 2, "b": 3}',
+            },
+            {
+              type: "function",
+              id: "call_mul",
+              name: "multiply",
+              arguments: '{"a": 4, "b": 5}',
+            },
+          ],
+        },
+        {
+          role: "tool",
           content: [
             {
-              type: 'text',
-              text: '<system-reminder>This is a system reminder</system-reminder>',
+              type: "text",
+              text: "<system-reminder>This is a system reminder</system-reminder>",
             },
-            { type: 'text', text: '20' },
+            { type: "text", text: "5" },
           ],
-          toolCallId: 'call_mul',
+          toolCallId: "call_add",
+          toolCalls: [],
+        },
+        {
+          role: "tool",
+          content: [
+            {
+              type: "text",
+              text: "<system-reminder>This is a system reminder</system-reminder>",
+            },
+            { type: "text", text: "20" },
+          ],
+          toolCallId: "call_mul",
           toolCalls: [],
         },
       ];
-      const body = await captureRequestBody(provider, '', [ADD_TOOL, MUL_TOOL], history);
+      const body = await captureRequestBody(
+        provider,
+        "",
+        [ADD_TOOL, MUL_TOOL],
+        history,
+      );
 
       // Snapshot of the expected wire format:
       // - exactly 3 contents in order (user, model with 2 functionCalls, user with 2 functionResponses bundled)
       // - both tool results are N:1 packed into ONE user Content
       // - text parts are concatenated into `response.output` (system-reminder + result)
       // - functionCall / functionResponse never include an `id` field
-      expect(body['contents']).toEqual([
-        { parts: [{ text: 'Calculate 2+3 and 4*5' }], role: 'user' },
+      expect(body["contents"]).toEqual([
+        { parts: [{ text: "Calculate 2+3 and 4*5" }], role: "user" },
         {
           parts: [
             { text: "I'll calculate both." },
-            { functionCall: { name: 'add', args: { a: 2, b: 3 } } },
-            { functionCall: { name: 'multiply', args: { a: 4, b: 5 } } },
+            { functionCall: { name: "add", args: { a: 2, b: 3 } } },
+            { functionCall: { name: "multiply", args: { a: 4, b: 5 } } },
           ],
-          role: 'model',
+          role: "model",
         },
         {
           parts: [
             {
               functionResponse: {
-                name: 'add',
+                name: "add",
                 response: {
-                  output: '<system-reminder>This is a system reminder</system-reminder>5',
+                  output:
+                    "<system-reminder>This is a system reminder</system-reminder>5",
                 },
                 parts: [],
               },
             },
             {
               functionResponse: {
-                name: 'multiply',
+                name: "multiply",
                 response: {
-                  output: '<system-reminder>This is a system reminder</system-reminder>20',
+                  output:
+                    "<system-reminder>This is a system reminder</system-reminder>20",
                 },
                 parts: [],
               },
             },
           ],
-          role: 'user',
+          role: "user",
         },
       ]);
     });
   });
 
-  describe('vertexai message conversion', () => {
-    it('vertexai provider converts messages the same way', async () => {
+  describe("vertexai message conversion", () => {
+    it("vertexai provider converts messages the same way", async () => {
       const provider = createProvider({ vertexai: true });
       const history: Message[] = [
-        { role: 'user', content: [{ type: 'text', text: 'Hello!' }], toolCalls: [] },
+        {
+          role: "user",
+          content: [{ type: "text", text: "Hello!" }],
+          toolCalls: [],
+        },
       ];
-      const body = await captureRequestBody(provider, 'You are helpful.', [], history);
+      const body = await captureRequestBody(
+        provider,
+        "You are helpful.",
+        [],
+        history,
+      );
 
-      expect(body['contents']).toEqual([{ parts: [{ text: 'Hello!' }], role: 'user' }]);
-      const config = body['config'] as Record<string, unknown>;
-      expect(config['systemInstruction']).toBe('You are helpful.');
+      expect(body["contents"]).toEqual([
+        { parts: [{ text: "Hello!" }], role: "user" },
+      ]);
+      const config = body["config"] as Record<string, unknown>;
+      expect(config["systemInstruction"]).toBe("You are helpful.");
     });
   });
 
-  describe('generation kwargs', () => {
-    it('applies temperature and maxOutputTokens', async () => {
+  describe("generation kwargs", () => {
+    it("applies temperature and maxOutputTokens", async () => {
       const provider = createProvider().withGenerationKwargs({
         temperature: 0.7,
         maxOutputTokens: 2048,
       });
       const history: Message[] = [
-        { role: 'user', content: [{ type: 'text', text: 'Hi' }], toolCalls: [] },
+        {
+          role: "user",
+          content: [{ type: "text", text: "Hi" }],
+          toolCalls: [],
+        },
       ];
-      const body = await captureRequestBody(provider, '', [], history);
+      const body = await captureRequestBody(provider, "", [], history);
 
-      const config = body['config'] as Record<string, unknown>;
-      expect(config['temperature']).toBe(0.7);
-      expect(config['maxOutputTokens']).toBe(2048);
+      const config = body["config"] as Record<string, unknown>;
+      expect(config["temperature"]).toBe(0.7);
+      expect(config["maxOutputTokens"]).toBe(2048);
     });
 
-    it('withMaxCompletionTokens sets maxOutputTokens on the cloned provider', async () => {
+    it("withMaxCompletionTokens sets maxOutputTokens on the cloned provider", async () => {
       const original = createProvider();
       const provider = original.withMaxCompletionTokens(1024);
       const history: Message[] = [
-        { role: 'user', content: [{ type: 'text', text: 'Hi' }], toolCalls: [] },
+        {
+          role: "user",
+          content: [{ type: "text", text: "Hi" }],
+          toolCalls: [],
+        },
       ];
-      const body = await captureRequestBody(provider, '', [], history);
+      const body = await captureRequestBody(provider, "", [], history);
 
-      const config = body['config'] as Record<string, unknown>;
+      const config = body["config"] as Record<string, unknown>;
       expect(provider).not.toBe(original);
-      expect(config['maxOutputTokens']).toBe(1024);
+      expect(config["maxOutputTokens"]).toBe(1024);
       expect(provider.maxCompletionTokens).toBe(1024);
     });
   });
 
-  describe('tool name inference from tool_call_id (orphan tool messages)', () => {
+  describe("tool name inference from tool_call_id (orphan tool messages)", () => {
     // When a tool message arrives without a preceding assistant message
     // carrying the tool_call (e.g. after history compaction), the provider
     // falls back to parsing the name out of the tool_call_id. Google IDs
@@ -767,98 +936,103 @@ describe('GoogleGenAIChatProvider', () => {
       return undefined;
     }
 
-    it('preserves underscores in multi-word tool names like fetch_image', () => {
+    it("preserves underscores in multi-word tool names like fetch_image", () => {
       const history: Message[] = [
         {
-          role: 'tool',
-          content: [{ type: 'text', text: 'ok' }],
-          toolCallId: 'fetch_image_abc123',
+          role: "tool",
+          content: [{ type: "text", text: "ok" }],
+          toolCallId: "fetch_image_abc123",
           toolCalls: [],
         },
       ];
-      expect(firstFunctionResponseName(history)).toBe('fetch_image');
+      expect(firstFunctionResponseName(history)).toBe("fetch_image");
     });
 
-    it('preserves underscores in read_file_<id>', () => {
+    it("preserves underscores in read_file_<id>", () => {
       const history: Message[] = [
         {
-          role: 'tool',
-          content: [{ type: 'text', text: 'ok' }],
-          toolCallId: 'read_file_xyz',
+          role: "tool",
+          content: [{ type: "text", text: "ok" }],
+          toolCallId: "read_file_xyz",
           toolCalls: [],
         },
       ];
-      expect(firstFunctionResponseName(history)).toBe('read_file');
+      expect(firstFunctionResponseName(history)).toBe("read_file");
     });
 
-    it('handles single-word tool names with a trailing suffix', () => {
+    it("handles single-word tool names with a trailing suffix", () => {
       const history: Message[] = [
         {
-          role: 'tool',
-          content: [{ type: 'text', text: 'ok' }],
-          toolCallId: 'simple_abc',
+          role: "tool",
+          content: [{ type: "text", text: "ok" }],
+          toolCallId: "simple_abc",
           toolCalls: [],
         },
       ];
-      expect(firstFunctionResponseName(history)).toBe('simple');
+      expect(firstFunctionResponseName(history)).toBe("simple");
     });
 
-    it('returns the whole id when there is no underscore to split on', () => {
+    it("returns the whole id when there is no underscore to split on", () => {
       const history: Message[] = [
         {
-          role: 'tool',
-          content: [{ type: 'text', text: 'ok' }],
-          toolCallId: 'bareid',
+          role: "tool",
+          content: [{ type: "text", text: "ok" }],
+          toolCallId: "bareid",
           toolCalls: [],
         },
       ];
-      expect(firstFunctionResponseName(history)).toBe('bareid');
+      expect(firstFunctionResponseName(history)).toBe("bareid");
     });
 
-    it('strips both the entropy suffix and the upstream id', () => {
+    it("strips both the entropy suffix and the upstream id", () => {
       const history: Message[] = [
         {
-          role: 'tool',
-          content: [{ type: 'text', text: 'ok' }],
-          toolCallId: 'AgentSwarm_0_ab12cd34',
+          role: "tool",
+          content: [{ type: "text", text: "ok" }],
+          toolCallId: "AgentSwarm_0_ab12cd34",
           toolCalls: [],
         },
       ];
-      expect(firstFunctionResponseName(history)).toBe('AgentSwarm');
+      expect(firstFunctionResponseName(history)).toBe("AgentSwarm");
     });
 
-    it('strips entropy and upstream id from multi-word tool names', () => {
+    it("strips entropy and upstream id from multi-word tool names", () => {
       const history: Message[] = [
         {
-          role: 'tool',
-          content: [{ type: 'text', text: 'ok' }],
-          toolCallId: 'fetch_image_abc123_a1b2c3d4',
+          role: "tool",
+          content: [{ type: "text", text: "ok" }],
+          toolCallId: "fetch_image_abc123_a1b2c3d4",
           toolCalls: [],
         },
       ];
-      expect(firstFunctionResponseName(history)).toBe('fetch_image');
+      expect(firstFunctionResponseName(history)).toBe("fetch_image");
     });
   });
 
-  describe('no id in functionCall or functionResponse', () => {
-    it('does not include id in functionCall or functionResponse parts', () => {
+  describe("no id in functionCall or functionResponse", () => {
+    it("does not include id in functionCall or functionResponse parts", () => {
       const history: Message[] = [
-        { role: 'user', content: [{ type: 'text', text: 'Add 2 and 3' }], toolCalls: [] },
         {
-          role: 'assistant',
-          content: [{ type: 'text', text: 'Sure.' }],
+          role: "user",
+          content: [{ type: "text", text: "Add 2 and 3" }],
+          toolCalls: [],
+        },
+        {
+          role: "assistant",
+          content: [{ type: "text", text: "Sure." }],
           toolCalls: [
             {
-              type: 'function',
-              id: 'call_xyz',
-              name: 'add', arguments: '{"a": 2, "b": 3}',
+              type: "function",
+              id: "call_xyz",
+              name: "add",
+              arguments: '{"a": 2, "b": 3}',
             },
           ],
         },
         {
-          role: 'tool',
-          content: [{ type: 'text', text: '5' }],
-          toolCallId: 'call_xyz',
+          role: "tool",
+          content: [{ type: "text", text: "5" }],
+          toolCallId: "call_xyz",
           toolCalls: [],
         },
       ];
@@ -868,140 +1042,166 @@ describe('GoogleGenAIChatProvider', () => {
       for (const content of contents) {
         for (const part of content.parts) {
           if (part.functionCall) {
-            expect(part.functionCall).not.toHaveProperty('id');
+            expect(part.functionCall).not.toHaveProperty("id");
           }
           if (part.functionResponse) {
-            expect(part.functionResponse).not.toHaveProperty('id');
+            expect(part.functionResponse).not.toHaveProperty("id");
           }
         }
       }
     });
   });
 
-  describe('with thinking', () => {
-    it('non-gemini-3 model uses thinkingBudget', async () => {
-      const provider = createProvider({ model: 'gemini-2.5-flash' }).withThinking('high');
+  describe("with thinking", () => {
+    it("non-gemini-3 model uses thinkingBudget", async () => {
+      const provider = createProvider({
+        model: "gemini-2.5-flash",
+      }).withThinking("high");
       const history: Message[] = [
-        { role: 'user', content: [{ type: 'text', text: 'Think' }], toolCalls: [] },
+        {
+          role: "user",
+          content: [{ type: "text", text: "Think" }],
+          toolCalls: [],
+        },
       ];
-      const body = await captureRequestBody(provider, '', [], history);
+      const body = await captureRequestBody(provider, "", [], history);
 
-      const config = body['config'] as Record<string, unknown>;
-      expect(config['thinkingConfig']).toEqual({
+      const config = body["config"] as Record<string, unknown>;
+      expect(config["thinkingConfig"]).toEqual({
         includeThoughts: true,
         thinkingBudget: 32_000,
       });
     });
 
-    it('gemini-3 model uses thinkingLevel', async () => {
-      const provider = createProvider({ model: 'gemini-3-pro-preview' }).withThinking('high');
+    it("gemini-3 model uses thinkingLevel", async () => {
+      const provider = createProvider({
+        model: "gemini-3-pro-preview",
+      }).withThinking("high");
       const history: Message[] = [
-        { role: 'user', content: [{ type: 'text', text: 'Think' }], toolCalls: [] },
+        {
+          role: "user",
+          content: [{ type: "text", text: "Think" }],
+          toolCalls: [],
+        },
       ];
-      const body = await captureRequestBody(provider, '', [], history);
+      const body = await captureRequestBody(provider, "", [], history);
 
-      const config = body['config'] as Record<string, unknown>;
-      expect(config['thinkingConfig']).toEqual({
+      const config = body["config"] as Record<string, unknown>;
+      expect(config["thinkingConfig"]).toEqual({
         includeThoughts: true,
-        thinkingLevel: 'HIGH',
+        thinkingLevel: "HIGH",
       });
     });
 
-    it('thinking effort off for non-gemini-3 disables thinking', async () => {
-      const provider = createProvider({ model: 'gemini-2.5-flash' }).withThinking('off');
+    it("thinking effort off for non-gemini-3 disables thinking", async () => {
+      const provider = createProvider({
+        model: "gemini-2.5-flash",
+      }).withThinking("off");
       const history: Message[] = [
-        { role: 'user', content: [{ type: 'text', text: 'Think' }], toolCalls: [] },
+        {
+          role: "user",
+          content: [{ type: "text", text: "Think" }],
+          toolCalls: [],
+        },
       ];
-      const body = await captureRequestBody(provider, '', [], history);
+      const body = await captureRequestBody(provider, "", [], history);
 
-      const config = body['config'] as Record<string, unknown>;
-      expect(config['thinkingConfig']).toEqual({
+      const config = body["config"] as Record<string, unknown>;
+      expect(config["thinkingConfig"]).toEqual({
         includeThoughts: false,
         thinkingBudget: 0,
       });
     });
 
-    describe('Gemini 3 thinking effort mapping', () => {
+    describe("Gemini 3 thinking effort mapping", () => {
       async function captureThinkingConfig(
-        effort: 'off' | 'low' | 'medium' | 'high',
+        effort: "off" | "low" | "medium" | "high",
       ): Promise<Record<string, unknown> | undefined> {
-        const provider = createProvider({ model: 'gemini-3-pro-preview' }).withThinking(effort);
+        const provider = createProvider({
+          model: "gemini-3-pro-preview",
+        }).withThinking(effort);
         const history: Message[] = [
-          { role: 'user', content: [{ type: 'text', text: 'Think' }], toolCalls: [] },
+          {
+            role: "user",
+            content: [{ type: "text", text: "Think" }],
+            toolCalls: [],
+          },
         ];
-        const body = await captureRequestBody(provider, '', [], history);
-        const config = body['config'] as Record<string, unknown>;
-        return config['thinkingConfig'] as Record<string, unknown> | undefined;
+        const body = await captureRequestBody(provider, "", [], history);
+        const config = body["config"] as Record<string, unknown>;
+        return config["thinkingConfig"] as Record<string, unknown> | undefined;
       }
 
-      it('off minimizes thinking and hides thoughts (not just default config)', async () => {
-        const thinkingConfig = await captureThinkingConfig('off');
+      it("off minimizes thinking and hides thoughts (not just default config)", async () => {
+        const thinkingConfig = await captureThinkingConfig("off");
         // Gemini 3 cannot be fully disabled, but we should request the lowest
         // available level (MINIMAL) and suppress thought output.
         expect(thinkingConfig).toEqual({
           includeThoughts: false,
-          thinkingLevel: 'MINIMAL',
+          thinkingLevel: "MINIMAL",
         });
       });
 
-      it('low maps to LOW', async () => {
-        const thinkingConfig = await captureThinkingConfig('low');
+      it("low maps to LOW", async () => {
+        const thinkingConfig = await captureThinkingConfig("low");
         expect(thinkingConfig).toEqual({
           includeThoughts: true,
-          thinkingLevel: 'LOW',
+          thinkingLevel: "LOW",
         });
       });
 
-      it('medium maps to MEDIUM (not HIGH)', async () => {
-        const thinkingConfig = await captureThinkingConfig('medium');
+      it("medium maps to MEDIUM (not HIGH)", async () => {
+        const thinkingConfig = await captureThinkingConfig("medium");
         expect(thinkingConfig).toEqual({
           includeThoughts: true,
-          thinkingLevel: 'MEDIUM',
+          thinkingLevel: "MEDIUM",
         });
       });
 
-      it('high maps to HIGH', async () => {
-        const thinkingConfig = await captureThinkingConfig('high');
+      it("high maps to HIGH", async () => {
+        const thinkingConfig = await captureThinkingConfig("high");
         expect(thinkingConfig).toEqual({
           includeThoughts: true,
-          thinkingLevel: 'HIGH',
+          thinkingLevel: "HIGH",
         });
       });
     });
   });
 
-  describe('provider properties', () => {
-    it('has correct name and model', () => {
+  describe("provider properties", () => {
+    it("has correct name and model", () => {
       const provider = createProvider();
-      expect(provider.name).toBe('google_genai');
-      expect(provider.modelName).toBe('gemini-2.5-flash');
+      expect(provider.name).toBe("google_genai");
+      expect(provider.modelName).toBe("gemini-2.5-flash");
     });
 
-    it('thinkingEffort is null by default', () => {
+    it("thinkingEffort is null by default", () => {
       const provider = createProvider();
       expect(provider.thinkingEffort).toBeNull();
     });
 
-    it('thinkingEffort reflects budget for non-gemini-3', () => {
-      const provider = createProvider().withThinking('high');
-      expect(provider.thinkingEffort).toBe('high');
+    it("thinkingEffort reflects budget for non-gemini-3", () => {
+      const provider = createProvider().withThinking("high");
+      expect(provider.thinkingEffort).toBe("high");
     });
 
-    it('withThinking returns a new instance', () => {
+    it("withThinking returns a new instance", () => {
       const provider = createProvider();
-      const newProvider = provider.withThinking('high');
+      const newProvider = provider.withThinking("high");
       expect(newProvider).toBeInstanceOf(GoogleGenAIChatProvider);
       expect(newProvider).not.toBe(provider);
     });
   });
 
-  describe('base URL forwarding', () => {
+  describe("base URL forwarding", () => {
     // The @google/genai SDK exposes the effective endpoint through its internal
     // ApiClient. `getCustomBaseUrl()` returns exactly the `httpOptions.baseUrl`
     // handed to the client, so it is the most direct signal that a configured
     // base URL survived provider construction — the alternative being a silent
     // fallback to generativelanguage.googleapis.com.
-    function customBaseUrl(provider: GoogleGenAIChatProvider): string | undefined {
+    function customBaseUrl(
+      provider: GoogleGenAIChatProvider,
+    ): string | undefined {
       const client = (
         provider as unknown as {
           _client: { apiClient: { getCustomBaseUrl(): string | undefined } };
@@ -1010,29 +1210,29 @@ describe('GoogleGenAIChatProvider', () => {
       return client.apiClient.getCustomBaseUrl();
     }
 
-    it('forwards baseUrl to the Google GenAI SDK client', () => {
+    it("forwards baseUrl to the Google GenAI SDK client", () => {
       const provider = new GoogleGenAIChatProvider({
-        model: 'gemini-2.5-flash',
-        apiKey: 'test-key',
-        baseUrl: 'https://qianxun.example/v1beta',
+        model: "gemini-2.5-flash",
+        apiKey: "test-key",
+        baseUrl: "https://qianxun.example/v1beta",
       });
-      expect(customBaseUrl(provider)).toBe('https://qianxun.example/v1beta');
+      expect(customBaseUrl(provider)).toBe("https://qianxun.example/v1beta");
     });
 
-    it('leaves the SDK default endpoint in place when no baseUrl is set', () => {
+    it("leaves the SDK default endpoint in place when no baseUrl is set", () => {
       const provider = new GoogleGenAIChatProvider({
-        model: 'gemini-2.5-flash',
-        apiKey: 'test-key',
+        model: "gemini-2.5-flash",
+        apiKey: "test-key",
       });
       expect(customBaseUrl(provider)).toBeUndefined();
     });
 
-    it('forwards baseUrl and defaultHeaders together without dropping either', () => {
+    it("forwards baseUrl and defaultHeaders together without dropping either", () => {
       const provider = new GoogleGenAIChatProvider({
-        model: 'gemini-2.5-flash',
-        apiKey: 'test-key',
-        baseUrl: 'https://qianxun.example/v1beta',
-        defaultHeaders: { 'User-Agent': 'kimi-code-cli/test' },
+        model: "gemini-2.5-flash",
+        apiKey: "test-key",
+        baseUrl: "https://qianxun.example/v1beta",
+        defaultHeaders: { "User-Agent": "kimi-code-cli/test" },
       });
       const client = (
         provider as unknown as {
@@ -1044,39 +1244,47 @@ describe('GoogleGenAIChatProvider', () => {
           };
         }
       )._client;
-      expect(client.apiClient.getCustomBaseUrl()).toBe('https://qianxun.example/v1beta');
+      expect(client.apiClient.getCustomBaseUrl()).toBe(
+        "https://qianxun.example/v1beta",
+      );
       expect(client.apiClient.getHeaders()).toMatchObject({
-        'User-Agent': 'kimi-code-cli/test',
+        "User-Agent": "kimi-code-cli/test",
       });
     });
 
-    it('forwards baseUrl in vertexai mode', () => {
+    it("forwards baseUrl in vertexai mode", () => {
       const provider = new GoogleGenAIChatProvider({
-        model: 'gemini-1.5-pro',
-        apiKey: 'test-key',
+        model: "gemini-1.5-pro",
+        apiKey: "test-key",
         vertexai: true,
-        baseUrl: 'https://qianxun.example/vertex',
+        baseUrl: "https://qianxun.example/vertex",
       });
-      expect(customBaseUrl(provider)).toBe('https://qianxun.example/vertex');
+      expect(customBaseUrl(provider)).toBe("https://qianxun.example/vertex");
     });
   });
 
-  describe('response parsing (non-stream)', () => {
-    it('yields text from non-stream response', async () => {
+  describe("response parsing (non-stream)", () => {
+    it("yields text from non-stream response", async () => {
       const provider = createProvider({ stream: false });
-      ((provider as any)._client.models as Record<string, unknown>)['generateContent'] = vi
-        .fn()
-        .mockResolvedValue(makeGenerateContentResponse());
+      ((provider as any)._client.models as Record<string, unknown>)[
+        "generateContent"
+      ] = vi.fn().mockResolvedValue(makeGenerateContentResponse());
 
       const stream = await provider.generate(
-        '',
+        "",
         [],
-        [{ role: 'user', content: [{ type: 'text', text: 'Hi' }], toolCalls: [] }],
+        [
+          {
+            role: "user",
+            content: [{ type: "text", text: "Hi" }],
+            toolCalls: [],
+          },
+        ],
       );
 
       const parts = await collectParts(stream);
 
-      expect(parts).toEqual([{ type: 'text', text: 'Hello' }]);
+      expect(parts).toEqual([{ type: "text", text: "Hello" }]);
       expect(stream.usage).toEqual({
         inputOther: 10,
         output: 5,
@@ -1085,68 +1293,83 @@ describe('GoogleGenAIChatProvider', () => {
       });
     });
 
-    it('yields an empty ThinkPart from an explicitly empty thought part', async () => {
+    it("yields an empty ThinkPart from an explicitly empty thought part", async () => {
       const provider = createProvider({ stream: false });
-      ((provider as any)._client.models as Record<string, unknown>)['generateContent'] = vi
-        .fn()
-        .mockResolvedValue({
-          candidates: [
-            {
-              content: {
-                role: 'model',
-                parts: [
-                  { text: '', thought: true, thoughtSignature: 'thought-signature' },
-                  { functionCall: { name: 'lookup', args: {} } },
-                ],
-              },
+      ((provider as any)._client.models as Record<string, unknown>)[
+        "generateContent"
+      ] = vi.fn().mockResolvedValue({
+        candidates: [
+          {
+            content: {
+              role: "model",
+              parts: [
+                {
+                  text: "",
+                  thought: true,
+                  thoughtSignature: "thought-signature",
+                },
+                { functionCall: { name: "lookup", args: {} } },
+              ],
             },
-          ],
-        });
+          },
+        ],
+      });
 
-      const stream = await provider.generate('', [], []);
+      const stream = await provider.generate("", [], []);
       const parts = await collectParts(stream);
 
       expect(parts).toEqual([
-        { type: 'think', think: '', encrypted: 'thought-signature' },
+        { type: "think", think: "", encrypted: "thought-signature" },
         {
-          type: 'function',
+          type: "function",
           id: expect.stringMatching(/^lookup_/),
-          name: 'lookup',
-          arguments: '{}',
+          name: "lookup",
+          arguments: "{}",
         },
       ]);
     });
   });
 
-  describe('streaming', () => {
-    it('defaults to stream mode', () => {
+  describe("streaming", () => {
+    it("defaults to stream mode", () => {
       const provider = createProvider();
       expect((provider as any)._stream).toBe(true);
     });
 
-    it('can be set to non-stream mode', () => {
+    it("can be set to non-stream mode", () => {
       const provider = createProvider({ stream: false });
       expect((provider as any)._stream).toBe(false);
     });
 
-    it('calls generateContentStream when stream is true', async () => {
+    it("calls generateContentStream when stream is true", async () => {
       const provider = createProvider({ stream: true });
-      const mockModels = (provider as any)._client.models as Record<string, unknown>;
+      const mockModels = (provider as any)._client.models as Record<
+        string,
+        unknown
+      >;
 
       async function* mockStream() {
         yield makeGenerateContentResponse();
       }
 
-      const streamFn = vi.fn().mockImplementation(() => Promise.resolve(mockStream()));
+      const streamFn = vi
+        .fn()
+        .mockImplementation(() => Promise.resolve(mockStream()));
       const nonStreamFn = vi.fn();
 
-      mockModels['generateContentStream'] = streamFn;
-      mockModels['generateContent'] = nonStreamFn;
+      mockModels["generateContentStream"] = streamFn;
+      mockModels["generateContent"] = nonStreamFn;
 
       const result = await provider.generate(
-        '',
+        "",
         [],
-        [{ role: 'user', content: [{ type: 'text', text: 'Hi' }], toolCalls: [] }],
+        [
+          {
+            role: "user",
+            content: [{ type: "text", text: "Hi" }],
+            toolCalls: [],
+          },
+        ],
       );
       await collectParts(result);
 
@@ -1154,20 +1377,31 @@ describe('GoogleGenAIChatProvider', () => {
       expect(nonStreamFn).not.toHaveBeenCalled();
     });
 
-    it('calls generateContent when stream is false', async () => {
+    it("calls generateContent when stream is false", async () => {
       const provider = createProvider({ stream: false });
-      const mockModels = (provider as any)._client.models as Record<string, unknown>;
+      const mockModels = (provider as any)._client.models as Record<
+        string,
+        unknown
+      >;
 
       const streamFn = vi.fn();
-      const nonStreamFn = vi.fn().mockResolvedValue(makeGenerateContentResponse());
+      const nonStreamFn = vi
+        .fn()
+        .mockResolvedValue(makeGenerateContentResponse());
 
-      mockModels['generateContentStream'] = streamFn;
-      mockModels['generateContent'] = nonStreamFn;
+      mockModels["generateContentStream"] = streamFn;
+      mockModels["generateContent"] = nonStreamFn;
 
       const result = await provider.generate(
-        '',
+        "",
         [],
-        [{ role: 'user', content: [{ type: 'text', text: 'Hi' }], toolCalls: [] }],
+        [
+          {
+            role: "user",
+            content: [{ type: "text", text: "Hi" }],
+            toolCalls: [],
+          },
+        ],
       );
       await collectParts(result);
 
@@ -1175,28 +1409,30 @@ describe('GoogleGenAIChatProvider', () => {
       expect(streamFn).not.toHaveBeenCalled();
     });
 
-    it('yields text chunks from stream', async () => {
+    it("yields text chunks from stream", async () => {
       async function* mockStream() {
-        yield { candidates: [{ content: { parts: [{ text: 'Hello' }] } }] };
-        yield { candidates: [{ content: { parts: [{ text: ' world' }] } }] };
+        yield { candidates: [{ content: { parts: [{ text: "Hello" }] } }] };
+        yield { candidates: [{ content: { parts: [{ text: " world" }] } }] };
       }
 
       const msg = new GoogleGenAIStreamedMessage(mockStream(), true);
       const parts = await collectParts(msg);
 
       expect(parts).toEqual([
-        { type: 'text', text: 'Hello' },
-        { type: 'text', text: ' world' },
+        { type: "text", text: "Hello" },
+        { type: "text", text: " world" },
       ]);
     });
 
-    it('yields think parts from stream', async () => {
+    it("yields think parts from stream", async () => {
       async function* mockStream() {
         yield {
-          candidates: [{ content: { parts: [{ text: 'thinking...', thought: true }] } }],
+          candidates: [
+            { content: { parts: [{ text: "thinking...", thought: true }] } },
+          ],
         };
         yield {
-          candidates: [{ content: { parts: [{ text: 'visible answer' }] } }],
+          candidates: [{ content: { parts: [{ text: "visible answer" }] } }],
         };
       }
 
@@ -1204,24 +1440,24 @@ describe('GoogleGenAIChatProvider', () => {
       const parts = await collectParts(msg);
 
       expect(parts).toEqual([
-        { type: 'think', think: 'thinking...' },
-        { type: 'text', text: 'visible answer' },
+        { type: "think", think: "thinking..." },
+        { type: "text", text: "visible answer" },
       ]);
     });
 
-    it('yields an empty ThinkPart from an explicitly empty thought part', async () => {
+    it("yields an empty ThinkPart from an explicitly empty thought part", async () => {
       async function* mockStream() {
         yield {
-          candidates: [{ content: { parts: [{ text: '', thought: true }] } }],
+          candidates: [{ content: { parts: [{ text: "", thought: true }] } }],
         };
       }
 
       const msg = new GoogleGenAIStreamedMessage(mockStream(), true);
 
-      expect(await collectParts(msg)).toEqual([{ type: 'think', think: '' }]);
+      expect(await collectParts(msg)).toEqual([{ type: "think", think: "" }]);
     });
 
-    it('yields function call from stream', async () => {
+    it("yields function call from stream", async () => {
       async function* mockStream() {
         yield {
           candidates: [
@@ -1230,8 +1466,8 @@ describe('GoogleGenAIChatProvider', () => {
                 parts: [
                   {
                     functionCall: {
-                      name: 'add',
-                      id: 'call_1',
+                      name: "add",
+                      id: "call_1",
                       args: { a: 2, b: 3 },
                     },
                   },
@@ -1247,14 +1483,15 @@ describe('GoogleGenAIChatProvider', () => {
 
       expect(parts).toEqual([
         {
-          type: 'function',
+          type: "function",
           id: expect.stringMatching(/^add_call_1_[0-9a-f]{8}$/),
-          name: 'add', arguments: '{"a":2,"b":3}',
+          name: "add",
+          arguments: '{"a":2,"b":3}',
         },
       ]);
     });
 
-    it('yields function call with thought signature from stream', async () => {
+    it("yields function call with thought signature from stream", async () => {
       async function* mockStream() {
         yield {
           candidates: [
@@ -1262,8 +1499,12 @@ describe('GoogleGenAIChatProvider', () => {
               content: {
                 parts: [
                   {
-                    functionCall: { name: 'search', id: 'fc_1', args: { q: 'test' } },
-                    thoughtSignature: 'sig_abc123',
+                    functionCall: {
+                      name: "search",
+                      id: "fc_1",
+                      args: { q: "test" },
+                    },
+                    thoughtSignature: "sig_abc123",
                   },
                 ],
               },
@@ -1277,19 +1518,20 @@ describe('GoogleGenAIChatProvider', () => {
 
       expect(parts).toEqual([
         {
-          type: 'function',
+          type: "function",
           id: expect.stringMatching(/^search_fc_1_[0-9a-f]{8}$/),
-          name: 'search', arguments: '{"q":"test"}',
-          extras: { thought_signature_b64: 'sig_abc123' },
+          name: "search",
+          arguments: '{"q":"test"}',
+          extras: { thought_signature_b64: "sig_abc123" },
         },
       ]);
     });
 
-    it('accumulates usage from last chunk', async () => {
+    it("accumulates usage from last chunk", async () => {
       async function* mockStream() {
-        yield { candidates: [{ content: { parts: [{ text: 'chunk1' }] } }] };
+        yield { candidates: [{ content: { parts: [{ text: "chunk1" }] } }] };
         yield {
-          candidates: [{ content: { parts: [{ text: 'chunk2' }] } }],
+          candidates: [{ content: { parts: [{ text: "chunk2" }] } }],
           usageMetadata: {
             promptTokenCount: 20,
             candidatesTokenCount: 10,
@@ -1309,31 +1551,31 @@ describe('GoogleGenAIChatProvider', () => {
       });
     });
 
-    it('extracts responseId from stream chunk', async () => {
+    it("extracts responseId from stream chunk", async () => {
       async function* mockStream() {
         yield {
-          responseId: 'resp-abc',
-          candidates: [{ content: { parts: [{ text: 'hi' }] } }],
+          responseId: "resp-abc",
+          candidates: [{ content: { parts: [{ text: "hi" }] } }],
         };
       }
 
       const msg = new GoogleGenAIStreamedMessage(mockStream(), true);
       await collectParts(msg);
 
-      expect(msg.id).toBe('resp-abc');
+      expect(msg.id).toBe("resp-abc");
     });
 
-    it('handles multiple parts in a single stream chunk', async () => {
+    it("handles multiple parts in a single stream chunk", async () => {
       async function* mockStream() {
         yield {
           candidates: [
             {
               content: {
                 parts: [
-                  { text: 'thinking step', thought: true },
-                  { text: 'answer' },
+                  { text: "thinking step", thought: true },
+                  { text: "answer" },
                   {
-                    functionCall: { name: 'calc', id: 'fc_1', args: { x: 1 } },
+                    functionCall: { name: "calc", id: "fc_1", args: { x: 1 } },
                   },
                 ],
               },
@@ -1346,15 +1588,15 @@ describe('GoogleGenAIChatProvider', () => {
       const parts = await collectParts(msg);
 
       expect(parts).toHaveLength(3);
-      expect(parts[0]).toEqual({ type: 'think', think: 'thinking step' });
-      expect(parts[1]).toEqual({ type: 'text', text: 'answer' });
+      expect(parts[0]).toEqual({ type: "think", think: "thinking step" });
+      expect(parts[1]).toEqual({ type: "text", text: "answer" });
       expect(parts[2]).toMatchObject({
-        type: 'function',
-        name: 'calc',
+        type: "function",
+        name: "calc",
       });
     });
 
-    it('yields unique ids for parallel function calls without id in same chunk', async () => {
+    it("yields unique ids for parallel function calls without id in same chunk", async () => {
       async function* mockStream() {
         yield {
           candidates: [
@@ -1363,14 +1605,14 @@ describe('GoogleGenAIChatProvider', () => {
                 parts: [
                   {
                     functionCall: {
-                      name: 'read_file',
-                      args: { path: '/a.txt' },
+                      name: "read_file",
+                      args: { path: "/a.txt" },
                     },
                   },
                   {
                     functionCall: {
-                      name: 'read_file',
-                      args: { path: '/b.txt' },
+                      name: "read_file",
+                      args: { path: "/b.txt" },
                     },
                   },
                 ],
@@ -1389,7 +1631,7 @@ describe('GoogleGenAIChatProvider', () => {
       expect(ids[0]).not.toBe(ids[1]);
     });
 
-    it('handles empty stream gracefully', async () => {
+    it("handles empty stream gracefully", async () => {
       async function* mockStream() {
         // no chunks
       }
@@ -1402,29 +1644,34 @@ describe('GoogleGenAIChatProvider', () => {
       expect(msg.usage).toBeNull();
     });
 
-    it('handles chunk with no candidates', async () => {
+    it("handles chunk with no candidates", async () => {
       async function* mockStream() {
-        yield { usageMetadata: { promptTokenCount: 5, candidatesTokenCount: 0 } };
-        yield { candidates: [{ content: { parts: [{ text: 'ok' }] } }] };
+        yield {
+          usageMetadata: { promptTokenCount: 5, candidatesTokenCount: 0 },
+        };
+        yield { candidates: [{ content: { parts: [{ text: "ok" }] } }] };
       }
 
       const msg = new GoogleGenAIStreamedMessage(mockStream(), true);
       const parts = await collectParts(msg);
 
-      expect(parts).toEqual([{ type: 'text', text: 'ok' }]);
+      expect(parts).toEqual([{ type: "text", text: "ok" }]);
     });
 
-    it('end-to-end: provider.generate returns streaming response', async () => {
+    it("end-to-end: provider.generate returns streaming response", async () => {
       const provider = createProvider({ stream: true });
-      const mockModels = (provider as any)._client.models as Record<string, unknown>;
+      const mockModels = (provider as any)._client.models as Record<
+        string,
+        unknown
+      >;
 
       async function* mockStream() {
         yield {
-          responseId: 'resp-e2e',
-          candidates: [{ content: { parts: [{ text: 'Hello' }] } }],
+          responseId: "resp-e2e",
+          candidates: [{ content: { parts: [{ text: "Hello" }] } }],
         };
         yield {
-          candidates: [{ content: { parts: [{ text: ' World' }] } }],
+          candidates: [{ content: { parts: [{ text: " World" }] } }],
           usageMetadata: {
             promptTokenCount: 8,
             candidatesTokenCount: 4,
@@ -1432,23 +1679,29 @@ describe('GoogleGenAIChatProvider', () => {
         };
       }
 
-      mockModels['generateContentStream'] = vi
+      mockModels["generateContentStream"] = vi
         .fn()
         .mockImplementation(() => Promise.resolve(mockStream()));
 
       const result = await provider.generate(
-        'system',
+        "system",
         [],
-        [{ role: 'user', content: [{ type: 'text', text: 'Hi' }], toolCalls: [] }],
+        [
+          {
+            role: "user",
+            content: [{ type: "text", text: "Hi" }],
+            toolCalls: [],
+          },
+        ],
       );
 
       const parts = await collectParts(result);
 
       expect(parts).toEqual([
-        { type: 'text', text: 'Hello' },
-        { type: 'text', text: ' World' },
+        { type: "text", text: "Hello" },
+        { type: "text", text: " World" },
       ]);
-      expect(result.id).toBe('resp-e2e');
+      expect(result.id).toBe("resp-e2e");
       expect(result.usage).toEqual({
         inputOther: 8,
         output: 4,
@@ -1458,139 +1711,159 @@ describe('GoogleGenAIChatProvider', () => {
     });
   });
 
-  describe('tool result validation for assistant tool calls', () => {
-    it('throws on unexpected extra tool results', () => {
+  describe("tool result validation for assistant tool calls", () => {
+    it("throws on unexpected extra tool results", () => {
       const messages: Message[] = [
         {
-          role: 'assistant',
-          content: [{ type: 'text', text: 'Running tools' }],
+          role: "assistant",
+          content: [{ type: "text", text: "Running tools" }],
           toolCalls: [
             {
-              type: 'function',
-              id: 'call_known',
-              name: 'add', arguments: '{"a":1,"b":2}',
+              type: "function",
+              id: "call_known",
+              name: "add",
+              arguments: '{"a":1,"b":2}',
             },
           ],
         },
         // A tool result that matches the assistant's known tool call
         {
-          role: 'tool',
-          content: [{ type: 'text', text: '3' }],
-          toolCallId: 'call_known',
+          role: "tool",
+          content: [{ type: "text", text: "3" }],
+          toolCallId: "call_known",
           toolCalls: [],
         },
         // An "extra" tool result whose id is NOT in expectedToolCallIds.
         // Previously dropped by the buggy be-tolerant branch; must now be
         // preserved.
         {
-          role: 'tool',
-          content: [{ type: 'text', text: '42' }],
-          toolCallId: 'call_extra_unknown',
+          role: "tool",
+          content: [{ type: "text", text: "42" }],
+          toolCallId: "call_extra_unknown",
           toolCalls: [],
         },
       ];
 
-      expect(() => messagesToGoogleGenAIContents(messages)).toThrow(/Unexpected tool responses/);
+      expect(() => messagesToGoogleGenAIContents(messages)).toThrow(
+        /Unexpected tool responses/,
+      );
     });
 
-    it('throws on missing tool results', () => {
+    it("throws on missing tool results", () => {
       const messages: Message[] = [
         {
-          role: 'assistant',
+          role: "assistant",
           content: [],
           toolCalls: [
             {
-              type: 'function',
-              id: 'call_a',
-              name: 'tool_a', arguments: '{}',
+              type: "function",
+              id: "call_a",
+              name: "tool_a",
+              arguments: "{}",
             },
             {
-              type: 'function',
-              id: 'call_b',
-              name: 'tool_b', arguments: '{}',
+              type: "function",
+              id: "call_b",
+              name: "tool_b",
+              arguments: "{}",
             },
           ],
         },
         {
-          role: 'tool',
-          content: [{ type: 'text', text: 'A' }],
-          toolCallId: 'call_a',
+          role: "tool",
+          content: [{ type: "text", text: "A" }],
+          toolCallId: "call_a",
           toolCalls: [],
         },
         {
-          role: 'tool',
-          content: [{ type: 'text', text: 'orphaned' }],
-          toolCallId: 'call_missing_elsewhere',
+          role: "tool",
+          content: [{ type: "text", text: "orphaned" }],
+          toolCallId: "call_missing_elsewhere",
           toolCalls: [],
         },
       ];
 
-      expect(() => messagesToGoogleGenAIContents(messages)).toThrow(/Missing tool responses/);
+      expect(() => messagesToGoogleGenAIContents(messages)).toThrow(
+        /Missing tool responses/,
+      );
     });
 
-    it('throws on duplicate tool results', () => {
+    it("throws on duplicate tool results", () => {
       const messages: Message[] = [
         {
-          role: 'assistant',
+          role: "assistant",
           content: [],
           toolCalls: [
             {
-              type: 'function',
-              id: 'call_a',
-              name: 'tool_a', arguments: '{}',
+              type: "function",
+              id: "call_a",
+              name: "tool_a",
+              arguments: "{}",
             },
           ],
         },
         {
-          role: 'tool',
-          content: [{ type: 'text', text: 'A1' }],
-          toolCallId: 'call_a',
+          role: "tool",
+          content: [{ type: "text", text: "A1" }],
+          toolCallId: "call_a",
           toolCalls: [],
         },
         {
-          role: 'tool',
-          content: [{ type: 'text', text: 'A2' }],
-          toolCallId: 'call_a',
+          role: "tool",
+          content: [{ type: "text", text: "A2" }],
+          toolCallId: "call_a",
           toolCalls: [],
         },
       ];
 
-      expect(() => messagesToGoogleGenAIContents(messages)).toThrow(/Duplicate tool response/);
+      expect(() => messagesToGoogleGenAIContents(messages)).toThrow(
+        /Duplicate tool response/,
+      );
     });
   });
 
-  describe('abort signal handling', () => {
-    it('throws AbortError synchronously when signal is already aborted on entry', async () => {
+  describe("abort signal handling", () => {
+    it("throws AbortError synchronously when signal is already aborted on entry", async () => {
       const provider = createProvider({ stream: true });
-      const mockModels = (provider as any)._client.models as Record<string, unknown>;
+      const mockModels = (provider as any)._client.models as Record<
+        string,
+        unknown
+      >;
 
       // If the provider forwards to the SDK at all despite a pre-aborted
       // signal, this spy will flag the regression.
       const streamFn = vi.fn();
-      mockModels['generateContentStream'] = streamFn;
+      mockModels["generateContentStream"] = streamFn;
 
       const controller = new AbortController();
       controller.abort();
 
       await expect(
         provider.generate(
-          '',
+          "",
           [],
-          [{ role: 'user', content: [{ type: 'text', text: 'Hi' }], toolCalls: [] }],
+          [
+            {
+              role: "user",
+              content: [{ type: "text", text: "Hi" }],
+              toolCalls: [],
+            },
+          ],
           { signal: controller.signal },
         ),
-      ).rejects.toMatchObject({ name: 'AbortError' });
+      ).rejects.toMatchObject({ name: "AbortError" });
 
       expect(streamFn).not.toHaveBeenCalled();
     });
 
-    it('rejects promptly if the signal aborts before the first stream response resolves', async () => {
+    it("rejects promptly if the signal aborts before the first stream response resolves", async () => {
       const provider = createProvider({ stream: true });
-      const mockModels = (provider as unknown as { _client: { models: Record<string, unknown> } })
-        ._client.models;
+      const mockModels = (
+        provider as unknown as { _client: { models: Record<string, unknown> } }
+      )._client.models;
       const controller = new AbortController();
 
-      mockModels['generateContentStream'] = vi.fn().mockImplementation(
+      mockModels["generateContentStream"] = vi.fn().mockImplementation(
         () =>
           new Promise<AsyncGenerator>(() => {
             // Intentionally never resolves: reproduces the "stuck before first
@@ -1599,9 +1872,15 @@ describe('GoogleGenAIChatProvider', () => {
       );
 
       const pending = provider.generate(
-        '',
+        "",
         [],
-        [{ role: 'user', content: [{ type: 'text', text: 'Hi' }], toolCalls: [] }],
+        [
+          {
+            role: "user",
+            content: [{ type: "text", text: "Hi" }],
+            toolCalls: [],
+          },
+        ],
         { signal: controller.signal },
       );
 
@@ -1609,43 +1888,52 @@ describe('GoogleGenAIChatProvider', () => {
 
       const result = await Promise.race([
         pending.then(
-          () => ({ settled: 'resolved' as const }),
-          (error: unknown) => ({ settled: 'rejected' as const, error }),
+          () => ({ settled: "resolved" as const }),
+          (error: unknown) => ({ settled: "rejected" as const, error }),
         ),
-        new Promise<{ settled: 'timeout' }>((resolve) =>
+        new Promise<{ settled: "timeout" }>((resolve) =>
           setTimeout(() => {
-            resolve({ settled: 'timeout' });
+            resolve({ settled: "timeout" });
           }, 100),
         ),
       ]);
 
-      expect(result.settled).toBe('rejected');
-      if (result.settled === 'rejected') {
+      expect(result.settled).toBe("rejected");
+      if (result.settled === "rejected") {
         expect(result.error).toBeInstanceOf(DOMException);
-        expect((result.error as DOMException).name).toBe('AbortError');
+        expect((result.error as DOMException).name).toBe("AbortError");
       }
     });
 
-    it('throws AbortError at the next chunk boundary when aborted mid-stream', async () => {
+    it("throws AbortError at the next chunk boundary when aborted mid-stream", async () => {
       const provider = createProvider({ stream: true });
-      const mockModels = (provider as any)._client.models as Record<string, unknown>;
+      const mockModels = (provider as any)._client.models as Record<
+        string,
+        unknown
+      >;
       const controller = new AbortController();
 
       async function* mockStream() {
-        yield { candidates: [{ content: { parts: [{ text: 'chunk-1' }] } }] };
+        yield { candidates: [{ content: { parts: [{ text: "chunk-1" }] } }] };
         // Simulate the caller aborting between chunks
         controller.abort();
-        yield { candidates: [{ content: { parts: [{ text: 'chunk-2' }] } }] };
+        yield { candidates: [{ content: { parts: [{ text: "chunk-2" }] } }] };
       }
 
-      mockModels['generateContentStream'] = vi
+      mockModels["generateContentStream"] = vi
         .fn()
         .mockImplementation(() => Promise.resolve(mockStream()));
 
       const result = await provider.generate(
-        '',
+        "",
         [],
-        [{ role: 'user', content: [{ type: 'text', text: 'Hi' }], toolCalls: [] }],
+        [
+          {
+            role: "user",
+            content: [{ type: "text", text: "Hi" }],
+            toolCalls: [],
+          },
+        ],
         { signal: controller.signal },
       );
 
@@ -1660,27 +1948,36 @@ describe('GoogleGenAIChatProvider', () => {
       }
 
       // The first chunk should have been yielded before the abort triggered.
-      expect(received).toEqual([{ type: 'text', text: 'chunk-1' }]);
+      expect(received).toEqual([{ type: "text", text: "chunk-1" }]);
       // The post-abort chunk must never be observed — the second loop
       // iteration checks the signal and throws AbortError.
       expect(caught).toBeInstanceOf(DOMException);
-      expect((caught as DOMException).name).toBe('AbortError');
+      expect((caught as DOMException).name).toBe("AbortError");
     });
 
-    it('non-stream path throws AbortError if signal fires before iteration', async () => {
+    it("non-stream path throws AbortError if signal fires before iteration", async () => {
       const provider = createProvider({ stream: false });
-      const mockModels = (provider as any)._client.models as Record<string, unknown>;
+      const mockModels = (provider as any)._client.models as Record<
+        string,
+        unknown
+      >;
 
-      mockModels['generateContent'] = vi.fn().mockResolvedValue({
-        candidates: [{ content: { parts: [{ text: 'done' }] } }],
+      mockModels["generateContent"] = vi.fn().mockResolvedValue({
+        candidates: [{ content: { parts: [{ text: "done" }] } }],
         usageMetadata: { promptTokenCount: 1, candidatesTokenCount: 1 },
       });
 
       const controller = new AbortController();
       const result = await provider.generate(
-        '',
+        "",
         [],
-        [{ role: 'user', content: [{ type: 'text', text: 'Hi' }], toolCalls: [] }],
+        [
+          {
+            role: "user",
+            content: [{ type: "text", text: "Hi" }],
+            toolCalls: [],
+          },
+        ],
         { signal: controller.signal },
       );
 
@@ -1697,46 +1994,48 @@ describe('GoogleGenAIChatProvider', () => {
       }
 
       expect(caught).toBeInstanceOf(DOMException);
-      expect((caught as DOMException).name).toBe('AbortError');
+      expect((caught as DOMException).name).toBe("AbortError");
     });
   });
 });
 
-describe('convertGoogleGenAIError (unit)', () => {
-  it('maps a network-keyword Error to APIConnectionError', () => {
-    const result = convertGoogleGenAIError(new Error('network connection lost'));
+describe("convertGoogleGenAIError (unit)", () => {
+  it("maps a network-keyword Error to APIConnectionError", () => {
+    const result = convertGoogleGenAIError(
+      new Error("network connection lost"),
+    );
     expect(result).toBeInstanceOf(APIConnectionError);
   });
 
   it('maps a "fetch failed" TypeError to APIConnectionError', () => {
-    const result = convertGoogleGenAIError(new TypeError('fetch failed'));
+    const result = convertGoogleGenAIError(new TypeError("fetch failed"));
     expect(result).toBeInstanceOf(APIConnectionError);
   });
 
-  it('maps a timeout-keyword Error to APITimeoutError (priority over network)', () => {
-    const result = convertGoogleGenAIError(new Error('connection timed out'));
+  it("maps a timeout-keyword Error to APITimeoutError (priority over network)", () => {
+    const result = convertGoogleGenAIError(new Error("connection timed out"));
     expect(result).toBeInstanceOf(APITimeoutError);
   });
 
-  it('extracts numeric code property as APIStatusError', () => {
-    const error = new Error('api failure');
+  it("extracts numeric code property as APIStatusError", () => {
+    const error = new Error("api failure");
     (error as Error & { code: number }).code = 503;
     const result = convertGoogleGenAIError(error);
     expect(result).toBeInstanceOf(APIStatusError);
     expect((result as APIStatusError).statusCode).toBe(503);
   });
 
-  it('normalizes numeric 429 code property as APIProviderRateLimitError', () => {
-    const error = new Error('too many requests');
+  it("normalizes numeric 429 code property as APIProviderRateLimitError", () => {
+    const error = new Error("too many requests");
     (error as Error & { code: number }).code = 429;
     const result = convertGoogleGenAIError(error);
     expect(result).toBeInstanceOf(APIProviderRateLimitError);
     expect((result as APIProviderRateLimitError).statusCode).toBe(429);
   });
 
-  it('normalizes numeric context overflow errors', () => {
+  it("normalizes numeric context overflow errors", () => {
     const error = new Error(
-      'input token count 131072 exceeds the maximum number of tokens allowed',
+      "input token count 131072 exceeds the maximum number of tokens allowed",
     );
     (error as Error & { code: number }).code = 422;
     const result = convertGoogleGenAIError(error);
@@ -1744,30 +2043,31 @@ describe('convertGoogleGenAIError (unit)', () => {
     expect((result as APIContextOverflowError).statusCode).toBe(422);
   });
 
-  it('falls through to ChatProviderError for plain Error without keywords or code', () => {
-    const result = convertGoogleGenAIError(new Error('something obscure'));
+  it("falls through to ChatProviderError for plain Error without keywords or code", () => {
+    const result = convertGoogleGenAIError(new Error("something obscure"));
     expect(result.constructor).toBe(ChatProviderError);
-    expect(result.message).toContain('something obscure');
+    expect(result.message).toContain("something obscure");
   });
 
-  it('handles non-Error values by stringifying them', () => {
-    const result = convertGoogleGenAIError('a bare string failure');
+  it("handles non-Error values by stringifying them", () => {
+    const result = convertGoogleGenAIError("a bare string failure");
     expect(result.constructor).toBe(ChatProviderError);
-    expect(result.message).toContain('a bare string failure');
+    expect(result.message).toContain("a bare string failure");
   });
 });
 
-describe('messagesToGoogleGenAIContents - error branches', () => {
-  it('throws when toolCall arguments is a JSON array (not object)', () => {
+describe("messagesToGoogleGenAIContents - error branches", () => {
+  it("throws when toolCall arguments is a JSON array (not object)", () => {
     const messages: Message[] = [
       {
-        role: 'assistant',
-        content: [{ type: 'text', text: 'hi' }],
+        role: "assistant",
+        content: [{ type: "text", text: "hi" }],
         toolCalls: [
           {
-            type: 'function',
-            id: 'tc_arr',
-            name: 'foo', arguments: '[1,2,3]',
+            type: "function",
+            id: "tc_arr",
+            name: "foo",
+            arguments: "[1,2,3]",
           },
         ],
       },
@@ -1777,22 +2077,23 @@ describe('messagesToGoogleGenAIContents - error branches', () => {
     );
   });
 
-  it('throws when tool response is missing toolCallId', () => {
+  it("throws when tool response is missing toolCallId", () => {
     const messages: Message[] = [
       {
-        role: 'assistant',
+        role: "assistant",
         content: [],
         toolCalls: [
           {
-            type: 'function',
-            id: 'tc_1',
-            name: 'foo', arguments: '{}',
+            type: "function",
+            id: "tc_1",
+            name: "foo",
+            arguments: "{}",
           },
         ],
       },
       {
-        role: 'tool',
-        content: [{ type: 'text', text: 'result' }],
+        role: "tool",
+        content: [{ type: "text", text: "result" }],
         toolCalls: [],
         // toolCallId missing!
       },
@@ -1802,171 +2103,207 @@ describe('messagesToGoogleGenAIContents - error branches', () => {
     );
   });
 
-  it('throws on duplicate tool responses for same id', () => {
+  it("throws on duplicate tool responses for same id", () => {
     const messages: Message[] = [
       {
-        role: 'assistant',
+        role: "assistant",
         content: [],
         toolCalls: [
           {
-            type: 'function',
-            id: 'tc_dup',
-            name: 'foo', arguments: '{}',
+            type: "function",
+            id: "tc_dup",
+            name: "foo",
+            arguments: "{}",
           },
         ],
       },
       {
-        role: 'tool',
-        content: [{ type: 'text', text: 'r1' }],
-        toolCallId: 'tc_dup',
+        role: "tool",
+        content: [{ type: "text", text: "r1" }],
+        toolCallId: "tc_dup",
         toolCalls: [],
       },
       {
-        role: 'tool',
-        content: [{ type: 'text', text: 'r2' }],
-        toolCallId: 'tc_dup',
+        role: "tool",
+        content: [{ type: "text", text: "r2" }],
+        toolCallId: "tc_dup",
         toolCalls: [],
       },
     ];
-    expect(() => messagesToGoogleGenAIContents(messages)).toThrow(/Duplicate tool response/);
+    expect(() => messagesToGoogleGenAIContents(messages)).toThrow(
+      /Duplicate tool response/,
+    );
   });
 
-  it('throws when expected tool response is missing', () => {
+  it("throws when expected tool response is missing", () => {
     const messages: Message[] = [
       {
-        role: 'assistant',
+        role: "assistant",
         content: [],
         toolCalls: [
           {
-            type: 'function',
-            id: 'tc_expected',
-            name: 'foo', arguments: '{}',
+            type: "function",
+            id: "tc_expected",
+            name: "foo",
+            arguments: "{}",
           },
           {
-            type: 'function',
-            id: 'tc_missing',
-            name: 'bar', arguments: '{}',
+            type: "function",
+            id: "tc_missing",
+            name: "bar",
+            arguments: "{}",
           },
         ],
       },
       {
-        role: 'tool',
-        content: [{ type: 'text', text: 'only one' }],
-        toolCallId: 'tc_expected',
+        role: "tool",
+        content: [{ type: "text", text: "only one" }],
+        toolCallId: "tc_expected",
         toolCalls: [],
       },
     ];
-    expect(() => messagesToGoogleGenAIContents(messages)).toThrow(/Missing tool responses for ids/);
+    expect(() => messagesToGoogleGenAIContents(messages)).toThrow(
+      /Missing tool responses for ids/,
+    );
   });
 
-  it('throws on unexpected tool response for unknown id', () => {
+  it("throws on unexpected tool response for unknown id", () => {
     const messages: Message[] = [
       {
-        role: 'assistant',
+        role: "assistant",
         content: [],
         toolCalls: [
           {
-            type: 'function',
-            id: 'tc_known',
-            name: 'foo', arguments: '{}',
+            type: "function",
+            id: "tc_known",
+            name: "foo",
+            arguments: "{}",
           },
         ],
       },
       {
-        role: 'tool',
-        content: [{ type: 'text', text: 'r' }],
-        toolCallId: 'tc_known',
+        role: "tool",
+        content: [{ type: "text", text: "r" }],
+        toolCallId: "tc_known",
         toolCalls: [],
       },
       {
-        role: 'tool',
-        content: [{ type: 'text', text: 'stray' }],
-        toolCallId: 'tc_unexpected',
+        role: "tool",
+        content: [{ type: "text", text: "stray" }],
+        toolCallId: "tc_unexpected",
         toolCalls: [],
       },
     ];
-    expect(() => messagesToGoogleGenAIContents(messages)).toThrow(/Unexpected tool responses/);
+    expect(() => messagesToGoogleGenAIContents(messages)).toThrow(
+      /Unexpected tool responses/,
+    );
   });
 });
 
-describe('messagesToGoogleGenAIContents - extra branches', () => {
-  it('throws when assistant tool_call has malformed JSON arguments', () => {
+describe("messagesToGoogleGenAIContents - extra branches", () => {
+  it("throws when assistant tool_call has malformed JSON arguments", () => {
     const messages: Message[] = [
       {
-        role: 'assistant',
-        content: [{ type: 'text', text: 'hi' }],
+        role: "assistant",
+        content: [{ type: "text", text: "hi" }],
         toolCalls: [
           {
-            type: 'function',
-            id: 'tc_bad',
-            name: 'foo', arguments: 'not valid {json',
+            type: "function",
+            id: "tc_bad",
+            name: "foo",
+            arguments: "not valid {json",
           },
         ],
       },
     ];
     // Provider rejects malformed JSON arguments rather than silently sending
     // garbage to Gemini.
-    expect(() => messagesToGoogleGenAIContents(messages)).toThrow(/Tool call arguments/);
+    expect(() => messagesToGoogleGenAIContents(messages)).toThrow(
+      /Tool call arguments/,
+    );
   });
 
-  it('media URL with png extension picks image/png mime type', async () => {
+  it("media URL with png extension picks image/png mime type", async () => {
     const provider = createProvider();
     const history: Message[] = [
       {
-        role: 'user',
-        content: [{ type: 'image_url', imageUrl: { url: 'https://example.com/photo.png' } }],
+        role: "user",
+        content: [
+          {
+            type: "image_url",
+            imageUrl: { url: "https://example.com/photo.png" },
+          },
+        ],
         toolCalls: [],
       },
     ];
-    const body = await captureRequestBody(provider, '', [], history);
-    const contents = body['contents'] as Array<{ parts: Array<Record<string, unknown>> }>;
-    const fileData = contents[0]!.parts[0]!['fileData'] as { mimeType: string };
-    expect(fileData.mimeType).toBe('image/png');
+    const body = await captureRequestBody(provider, "", [], history);
+    const contents = body["contents"] as Array<{
+      parts: Array<Record<string, unknown>>;
+    }>;
+    const fileData = contents[0]!.parts[0]!["fileData"] as { mimeType: string };
+    expect(fileData.mimeType).toBe("image/png");
   });
 
-  it('media URL with jpg extension picks image/jpeg mime type', async () => {
+  it("media URL with jpg extension picks image/jpeg mime type", async () => {
     const provider = createProvider();
     const history: Message[] = [
       {
-        role: 'user',
-        content: [{ type: 'image_url', imageUrl: { url: 'https://example.com/photo.jpg' } }],
+        role: "user",
+        content: [
+          {
+            type: "image_url",
+            imageUrl: { url: "https://example.com/photo.jpg" },
+          },
+        ],
         toolCalls: [],
       },
     ];
-    const body = await captureRequestBody(provider, '', [], history);
-    const contents = body['contents'] as Array<{ parts: Array<Record<string, unknown>> }>;
-    const fileData = contents[0]!.parts[0]!['fileData'] as { mimeType: string };
-    expect(fileData.mimeType).toBe('image/jpeg');
+    const body = await captureRequestBody(provider, "", [], history);
+    const contents = body["contents"] as Array<{
+      parts: Array<Record<string, unknown>>;
+    }>;
+    const fileData = contents[0]!.parts[0]!["fileData"] as { mimeType: string };
+    expect(fileData.mimeType).toBe("image/jpeg");
   });
 
-  it('media URL with mp3 extension picks audio/mpeg mime type', async () => {
+  it("media URL with mp3 extension picks audio/mpeg mime type", async () => {
     const provider = createProvider();
     const history: Message[] = [
       {
-        role: 'user',
-        content: [{ type: 'audio_url', audioUrl: { url: 'https://example.com/song.mp3' } }],
+        role: "user",
+        content: [
+          {
+            type: "audio_url",
+            audioUrl: { url: "https://example.com/song.mp3" },
+          },
+        ],
         toolCalls: [],
       },
     ];
-    const body = await captureRequestBody(provider, '', [], history);
-    const contents = body['contents'] as Array<{ parts: Array<Record<string, unknown>> }>;
-    const fileData = contents[0]!.parts[0]!['fileData'] as { mimeType: string };
-    expect(fileData.mimeType).toBe('audio/mpeg');
+    const body = await captureRequestBody(provider, "", [], history);
+    const contents = body["contents"] as Array<{
+      parts: Array<Record<string, unknown>>;
+    }>;
+    const fileData = contents[0]!.parts[0]!["fileData"] as { mimeType: string };
+    expect(fileData.mimeType).toBe("audio/mpeg");
   });
 
-  it('data: URL without comma falls back to file data with full URL', async () => {
+  it("data: URL without comma falls back to file data with full URL", async () => {
     const provider = createProvider();
     const history: Message[] = [
       {
-        role: 'user',
-        content: [{ type: 'image_url', imageUrl: { url: 'data:image/png' } }],
+        role: "user",
+        content: [{ type: "image_url", imageUrl: { url: "data:image/png" } }],
         toolCalls: [],
       },
     ];
-    const body = await captureRequestBody(provider, '', [], history);
-    const contents = body['contents'] as Array<{ parts: Array<Record<string, unknown>> }>;
+    const body = await captureRequestBody(provider, "", [], history);
+    const contents = body["contents"] as Array<{
+      parts: Array<Record<string, unknown>>;
+    }>;
     expect(contents[0]!.parts[0]).toMatchObject({
-      fileData: { fileUri: 'data:image/png' },
+      fileData: { fileUri: "data:image/png" },
     });
   });
 });

@@ -37,30 +37,30 @@
  *   data that was compacted away during the session.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { ErrorCodes, Error2 } from '#/errors';
-import type { ContentPart } from '#/kosong/contract/message';
-import { defineModel, type PartsTransformer } from '#/wire/model';
-import type { WireRecord } from '#/wire/record';
+import { ErrorCodes, Error2 } from "#/errors";
+import type { ContentPart } from "#/kosong/contract/message";
+import { defineModel, type PartsTransformer } from "#/wire/model";
+import type { WireRecord } from "#/wire/record";
 
 import {
   buildContextCompactionShape,
   createCompactionSummaryMessage,
   type ContextCompactionShapeInput,
-} from './compactionHandoff';
+} from "./compactionHandoff";
 import {
   isPromptOwnedInjection,
   isUndoAnchor,
   isValidUndoCount,
-} from './conversationTime';
+} from "./conversationTime";
 import {
   foldAppendMessage,
   foldLoopEvent,
   resetFold,
   type LoopRecordedEvent,
-} from './loopEventFold';
-import type { ContextMessage } from './types';
+} from "./loopEventFold";
+import type { ContextMessage } from "./types";
 
 async function dehydrateMessages(
   messages: readonly ContextMessage[],
@@ -84,80 +84,99 @@ async function dehydrateRecord(
   record: WireRecord,
   transform: PartsTransformer,
 ): Promise<WireRecord> {
-  if (record.type === 'context.append_message') {
-    const message = record['message'] as ContextMessage | undefined;
+  if (record.type === "context.append_message") {
+    const message = record["message"] as ContextMessage | undefined;
     if (message === undefined) return record;
     const parts = await transform(message.content);
     if (parts === message.content) return record;
     return { ...record, message: { ...message, content: [...parts] } };
   }
-  if (record.type === 'context.append_loop_event') {
-    const event = record['event'] as LoopRecordedEvent | undefined;
+  if (record.type === "context.append_loop_event") {
+    const event = record["event"] as LoopRecordedEvent | undefined;
     if (event === undefined) return record;
-    if (event.type === 'content.part') {
+    if (event.type === "content.part") {
       const parts = await transform([event.part]);
       if (parts[0] === event.part) return record;
       return { ...record, event: { ...event, part: parts[0] } };
     }
-    if (event.type === 'tool.result') {
+    if (event.type === "tool.result") {
       const output = event.result.output;
       if (!Array.isArray(output)) return record;
       const parts = await transform(output);
       if (parts === output) return record;
-      return { ...record, event: { ...event, result: { ...event.result, output: [...parts] } } };
+      return {
+        ...record,
+        event: { ...event, result: { ...event.result, output: [...parts] } },
+      };
     }
     return record;
   }
   return record;
 }
 
-export const ContextModel = defineModel<ContextMessage[]>('contextMemory', () => [], {
-  blobs: {
-    dehydrate: dehydrateRecord,
-    rehydrate: async (state, transform) => {
-      const { changed, result } = await dehydrateMessages(state, transform);
-      return changed ? result : state;
+export const ContextModel = defineModel<ContextMessage[]>(
+  "contextMemory",
+  () => [],
+  {
+    blobs: {
+      dehydrate: dehydrateRecord,
+      rehydrate: async (state, transform) => {
+        const { changed, result } = await dehydrateMessages(state, transform);
+        return changed ? result : state;
+      },
+    },
+    reducers: {
+      "swarm_mode.exit": popSwarmModeReminder,
     },
   },
-  reducers: {
-    'swarm_mode.exit': popSwarmModeReminder,
-  },
-});
+);
 
-function popSwarmModeReminder(state: ContextMessage[], _payload: unknown): ContextMessage[] {
+function popSwarmModeReminder(
+  state: ContextMessage[],
+  _payload: unknown,
+): ContextMessage[] {
   const last = state[state.length - 1];
   if (last === undefined) return state;
   const origin = last.origin;
-  if (origin?.kind !== 'injection' || origin.variant !== 'swarm_mode') return state;
+  if (origin?.kind !== "injection" || origin.variant !== "swarm_mode")
+    return state;
   return resetFold(state.slice(0, -1)) as ContextMessage[];
 }
 
-declare module '#/wire/types' {
+declare module "#/wire/types" {
   interface PersistedOpMap {
-    'context.append_message': typeof contextAppendMessage;
-    'context.append_loop_event': typeof contextAppendLoopEvent;
-    'context.clear': typeof contextClear;
-    'context.apply_compaction': typeof contextApplyCompaction;
-    'context.undo': typeof contextUndo;
+    "context.append_message": typeof contextAppendMessage;
+    "context.append_loop_event": typeof contextAppendLoopEvent;
+    "context.clear": typeof contextClear;
+    "context.apply_compaction": typeof contextApplyCompaction;
+    "context.undo": typeof contextUndo;
   }
 }
 
 const contextMessageSchema = z.custom<ContextMessage>();
 const loopRecordedEventSchema = z.custom<LoopRecordedEvent>();
 
-export const contextAppendMessage = ContextModel.defineOp('context.append_message', {
-  schema: z.object({ message: contextMessageSchema }),
-  apply: (state, p) => foldAppendMessage(state, p.message) as ContextMessage[],
-});
+export const contextAppendMessage = ContextModel.defineOp(
+  "context.append_message",
+  {
+    schema: z.object({ message: contextMessageSchema }),
+    apply: (state, p) =>
+      foldAppendMessage(state, p.message) as ContextMessage[],
+  },
+);
 
-export const contextAppendLoopEvent = ContextModel.defineOp('context.append_loop_event', {
-  schema: z.object({ event: loopRecordedEventSchema }),
-  apply: (state, p) => foldLoopEvent(state, p.event) as ContextMessage[],
-});
+export const contextAppendLoopEvent = ContextModel.defineOp(
+  "context.append_loop_event",
+  {
+    schema: z.object({ event: loopRecordedEventSchema }),
+    apply: (state, p) => foldLoopEvent(state, p.event) as ContextMessage[],
+  },
+);
 
-export const contextClear = ContextModel.defineOp('context.clear', {
+export const contextClear = ContextModel.defineOp("context.clear", {
   schema: z.object({}),
-  apply: (state) => (state.length === 0 ? state : (resetFold([]) as ContextMessage[])),
+  apply: (state) =>
+    state.length === 0 ? state : (resetFold([]) as ContextMessage[]),
 });
 
 const contextCompactionBaseShape = {
@@ -193,13 +212,19 @@ const contextApplyCompactionSchema = z.union([
 
 type ContextCompactionPayload = z.infer<typeof contextApplyCompactionSchema>;
 
-export const contextApplyCompaction = ContextModel.defineOp('context.apply_compaction', {
-  schema: contextApplyCompactionSchema,
-  apply: (state, p) => {
-    const result = buildContextCompactionShape(state, readContextCompactionShapeInput(p));
-    return resetFold([...result.messages]) as ContextMessage[];
+export const contextApplyCompaction = ContextModel.defineOp(
+  "context.apply_compaction",
+  {
+    schema: contextApplyCompactionSchema,
+    apply: (state, p) => {
+      const result = buildContextCompactionShape(
+        state,
+        readContextCompactionShapeInput(p),
+      );
+      return resetFold([...result.messages]) as ContextMessage[];
+    },
   },
-});
+);
 
 interface UnknownRecord {
   readonly [key: string]: unknown;
@@ -211,7 +236,10 @@ export function applyContextCompactionRecord(
   state: readonly ContextMessage[],
   record: ContextCompactionRecord,
 ): ContextMessage[] {
-  const result = buildContextCompactionShape(state, readContextCompactionShapeInput(record));
+  const result = buildContextCompactionShape(
+    state,
+    readContextCompactionShapeInput(record),
+  );
   return resetFold([...result.messages]) as ContextMessage[];
 }
 
@@ -219,31 +247,41 @@ export function readContextCompactionShapeInput(
   record: ContextCompactionRecord,
 ): ContextCompactionShapeInput {
   const fields = record as UnknownRecord;
-  const keptUserMessageCount = readOptionalNumber(fields, 'keptUserMessageCount');
+  const keptUserMessageCount = readOptionalNumber(
+    fields,
+    "keptUserMessageCount",
+  );
   return {
     summary: readContextCompactionRawSummary(fields),
     legacySummaryMessage: readLegacySummaryMessage(fields),
-    contextSummary: readOptionalString(fields, 'contextSummary'),
+    contextSummary: readOptionalString(fields, "contextSummary"),
     compactedCount: readContextCompactedCount(fields),
-    tokensBefore: readOptionalNumber(fields, 'tokensBefore') ?? 0,
-    tokensAfter: readOptionalNumber(fields, 'tokensAfter'),
-    summaryOutputTokens: readOptionalNumber(fields, 'summaryOutputTokens'),
+    tokensBefore: readOptionalNumber(fields, "tokensBefore") ?? 0,
+    tokensAfter: readOptionalNumber(fields, "tokensAfter"),
+    summaryOutputTokens: readOptionalNumber(fields, "summaryOutputTokens"),
     keptUserMessageCount,
-    keptHeadUserMessageCount: readOptionalNumber(fields, 'keptHeadUserMessageCount'),
-    droppedCount: readOptionalNumber(fields, 'droppedCount'),
-    legacyTail: readOptionalBoolean(fields, 'legacyTail') ?? keptUserMessageCount === undefined,
+    keptHeadUserMessageCount: readOptionalNumber(
+      fields,
+      "keptHeadUserMessageCount",
+    ),
+    droppedCount: readOptionalNumber(fields, "droppedCount"),
+    legacyTail:
+      readOptionalBoolean(fields, "legacyTail") ??
+      keptUserMessageCount === undefined,
   };
 }
 
-export function readContextCompactedCount(record: ContextCompactionRecord): number {
+export function readContextCompactedCount(
+  record: ContextCompactionRecord,
+): number {
   const fields = record as UnknownRecord;
-  const compactedCount = fields['compactedCount'];
-  if (typeof compactedCount === 'number') return compactedCount;
-  const legacyCount = fields['count'];
-  if (typeof legacyCount === 'number') return legacyCount;
+  const compactedCount = fields["compactedCount"];
+  if (typeof compactedCount === "number") return compactedCount;
+  const legacyCount = fields["count"];
+  if (typeof legacyCount === "number") return legacyCount;
   throw new Error2(
     ErrorCodes.STORAGE_DECODE_FAILED,
-    'Invalid context.apply_compaction record: missing compactedCount',
+    "Invalid context.apply_compaction record: missing compactedCount",
     {
       details: {
         recordKeys: Object.keys(record),
@@ -254,16 +292,20 @@ export function readContextCompactedCount(record: ContextCompactionRecord): numb
   );
 }
 
-export function readContextCompactionSummary(record: ContextCompactionRecord): ContextMessage {
+export function readContextCompactionSummary(
+  record: ContextCompactionRecord,
+): ContextMessage {
   const fields = record as UnknownRecord;
-  const contextSummary = fields['contextSummary'];
-  if (typeof contextSummary === 'string') return createCompactionSummaryMessage(contextSummary);
-  const summary = fields['summary'];
-  if (typeof summary === 'string') return createCompactionSummaryMessage(summary);
+  const contextSummary = fields["contextSummary"];
+  if (typeof contextSummary === "string")
+    return createCompactionSummaryMessage(contextSummary);
+  const summary = fields["summary"];
+  if (typeof summary === "string")
+    return createCompactionSummaryMessage(summary);
   if (isContextMessage(summary)) return summary;
   throw new Error2(
     ErrorCodes.STORAGE_DECODE_FAILED,
-    'Invalid context.apply_compaction record: missing summary',
+    "Invalid context.apply_compaction record: missing summary",
     {
       details: {
         recordKeys: Object.keys(record),
@@ -275,16 +317,16 @@ export function readContextCompactionSummary(record: ContextCompactionRecord): C
 }
 
 function readContextCompactionRawSummary(record: UnknownRecord): string {
-  const summary = record['summary'];
-  if (typeof summary === 'string') return summary;
-  const contextSummary = record['contextSummary'];
-  if (typeof contextSummary === 'string') return contextSummary;
+  const summary = record["summary"];
+  if (typeof summary === "string") return summary;
+  const contextSummary = record["contextSummary"];
+  if (typeof contextSummary === "string") return contextSummary;
   if (isContextMessage(summary)) {
     return textOf(summary);
   }
   throw new Error2(
     ErrorCodes.STORAGE_DECODE_FAILED,
-    'Invalid context.apply_compaction record: missing summary',
+    "Invalid context.apply_compaction record: missing summary",
     {
       details: {
         recordKeys: Object.keys(record),
@@ -295,38 +337,49 @@ function readContextCompactionRawSummary(record: UnknownRecord): string {
   );
 }
 
-function readLegacySummaryMessage(record: UnknownRecord): ContextMessage | undefined {
-  const summary = record['summary'];
+function readLegacySummaryMessage(
+  record: UnknownRecord,
+): ContextMessage | undefined {
+  const summary = record["summary"];
   return isContextMessage(summary) ? summary : undefined;
 }
 
-function readOptionalNumber(record: UnknownRecord, key: string): number | undefined {
+function readOptionalNumber(
+  record: UnknownRecord,
+  key: string,
+): number | undefined {
   const value = record[key];
-  return typeof value === 'number' ? value : undefined;
+  return typeof value === "number" ? value : undefined;
 }
 
-function readOptionalString(record: UnknownRecord, key: string): string | undefined {
+function readOptionalString(
+  record: UnknownRecord,
+  key: string,
+): string | undefined {
   const value = record[key];
-  return typeof value === 'string' ? value : undefined;
+  return typeof value === "string" ? value : undefined;
 }
 
-function readOptionalBoolean(record: UnknownRecord, key: string): boolean | undefined {
+function readOptionalBoolean(
+  record: UnknownRecord,
+  key: string,
+): boolean | undefined {
   const value = record[key];
-  return typeof value === 'boolean' ? value : undefined;
+  return typeof value === "boolean" ? value : undefined;
 }
 
 function textOf(message: ContextMessage): string {
-  let text = '';
+  let text = "";
   for (const part of message.content) {
-    if (part.type === 'text') text += part.text;
+    if (part.type === "text") text += part.text;
   }
   return text;
 }
 
 function isContextMessage(value: unknown): value is ContextMessage {
-  if (value === null || typeof value !== 'object') return false;
+  if (value === null || typeof value !== "object") return false;
   const message = value as { role?: unknown; content?: unknown };
-  return typeof message.role === 'string' && Array.isArray(message.content);
+  return typeof message.role === "string" && Array.isArray(message.content);
 }
 
 export interface UndoCut {
@@ -335,15 +388,18 @@ export interface UndoCut {
   readonly stoppedAtCompaction: boolean;
 }
 
-export function computeUndoCut(state: readonly ContextMessage[], count: number): UndoCut {
+export function computeUndoCut(
+  state: readonly ContextMessage[],
+  count: number,
+): UndoCut {
   let remaining = count;
   let cutIndex = -1;
   let removedCount = 0;
   let stoppedAtCompaction = false;
   for (let i = state.length - 1; i >= 0 && remaining > 0; i--) {
     const message = state[i];
-    if (message === undefined || message.origin?.kind === 'injection') continue;
-    if (message.origin?.kind === 'compaction_summary') {
+    if (message === undefined || message.origin?.kind === "injection") continue;
+    if (message.origin?.kind === "compaction_summary") {
       stoppedAtCompaction = true;
       break;
     }
@@ -367,10 +423,10 @@ export function isFullyUndoable(cut: UndoCut, count: number): boolean {
 }
 
 export type UndoUnavailableReason =
-  | 'empty'
-  | 'compaction_boundary'
-  | 'insufficient'
-  | 'checkpoint_lost';
+  | "empty"
+  | "compaction_boundary"
+  | "insufficient"
+  | "checkpoint_lost";
 
 export type UndoPrecheck =
   | { readonly ok: true }
@@ -381,14 +437,17 @@ export type UndoPrecheck =
       readonly undoable: number;
     };
 
-export function precheckUndo(history: readonly ContextMessage[], count: number): UndoPrecheck {
+export function precheckUndo(
+  history: readonly ContextMessage[],
+  count: number,
+): UndoPrecheck {
   const cut = computeUndoCut(history, count);
   if (isFullyUndoable(cut, count)) return { ok: true };
   const reason: UndoUnavailableReason = cut.stoppedAtCompaction
-    ? 'compaction_boundary'
+    ? "compaction_boundary"
     : cut.removedCount === 0
-      ? 'empty'
-      : 'insufficient';
+      ? "empty"
+      : "insufficient";
   return { ok: false, reason, requested: count, undoable: cut.removedCount };
 }
 
@@ -396,18 +455,18 @@ export function formatUndoUnavailableMessage(
   precheck: Extract<UndoPrecheck, { ok: false }>,
 ): string {
   switch (precheck.reason) {
-    case 'empty':
-      return 'Nothing to undo: no user message to undo';
-    case 'compaction_boundary':
-      return 'Nothing to undo: would cross a compaction boundary';
-    case 'insufficient':
+    case "empty":
+      return "Nothing to undo: no user message to undo";
+    case "compaction_boundary":
+      return "Nothing to undo: would cross a compaction boundary";
+    case "insufficient":
       return `Nothing to undo: only ${precheck.undoable} of ${precheck.requested} requested turn(s) available`;
-    case 'checkpoint_lost':
-      return 'Nothing to undo: conversation state checkpoints are incomplete';
+    case "checkpoint_lost":
+      return "Nothing to undo: conversation state checkpoints are incomplete";
   }
 }
 
-export const contextUndo = ContextModel.defineOp('context.undo', {
+export const contextUndo = ContextModel.defineOp("context.undo", {
   schema: z.object({
     count: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
   }),

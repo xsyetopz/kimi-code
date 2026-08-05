@@ -1,14 +1,20 @@
-import { createDecorator } from '../../di';
-import { effectiveModelAlias, type KimiConfig, type ModelAlias, type ProviderConfig, type ProviderType } from '../../config';
+import { createDecorator } from "../../di";
+import {
+  effectiveModelAlias,
+  type KimiConfig,
+  type ModelAlias,
+  type ProviderConfig,
+  type ProviderType,
+} from "../../config";
 import type {
   ModelCatalogItem,
   ProviderCatalogItem,
   RefreshOAuthProviderModelsResponse,
   RefreshProviderModelsResponse,
   SetDefaultModelResponse,
-} from '@moonshot-ai/protocol';
+} from "@moonshot-ai/protocol";
 
-export type RefreshProviderModelsScope = 'all' | 'oauth';
+export type RefreshProviderModelsScope = "all" | "oauth";
 
 export interface RefreshProviderModelsOptions {
   readonly scope?: RefreshProviderModelsScope;
@@ -31,7 +37,7 @@ export interface IModelCatalogService {
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const IModelCatalogService = createDecorator<IModelCatalogService>(
-  'modelCatalogService',
+  "modelCatalogService",
 );
 
 export class ProviderNotFoundError extends Error {
@@ -39,7 +45,7 @@ export class ProviderNotFoundError extends Error {
 
   constructor(providerId: string) {
     super(`provider ${providerId} does not exist`);
-    this.name = 'ProviderNotFoundError';
+    this.name = "ProviderNotFoundError";
     this.providerId = providerId;
   }
 }
@@ -49,7 +55,7 @@ export class ModelNotFoundError extends Error {
 
   constructor(modelId: string) {
     super(`model ${modelId} does not exist`);
-    this.name = 'ModelNotFoundError';
+    this.name = "ModelNotFoundError";
     this.modelId = modelId;
   }
 }
@@ -83,14 +89,18 @@ export function toProtocolProvider(
   credential: ProviderCredentialState,
 ): ProviderCatalogItem {
   const models = modelIdsForProvider(config, providerId);
-  const defaultModel = provider.defaultModel ?? globalDefaultForProvider(config, providerId);
+  const defaultModel =
+    provider.defaultModel ?? globalDefaultForProvider(config, providerId);
   return {
     id: providerId,
     type: provider.type,
     base_url: provider.baseUrl,
     default_model: defaultModel,
     has_api_key: credential.hasApiKey,
-    status: credential.hasApiKey || credential.hasOAuthToken ? 'connected' : 'unconfigured',
+    status:
+      credential.hasApiKey || credential.hasOAuthToken
+        ? "connected"
+        : "unconfigured",
     models,
   };
 }

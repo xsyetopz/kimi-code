@@ -16,11 +16,18 @@
  * these are plain runtime objects, not DI services.
  */
 
-import { USER_PROMPT_ORIGIN, type ContextMessage } from '#/agent/contextMemory/types';
-import { newMessageId } from '#/agent/contextMemory/messageId';
-import { StepRequest, type StepRequestOptions, type TurnSeed } from '#/agent/loop/stepRequest';
-import { gateImageFormatParts } from '#/agent/media/image-compress';
-import type { IAgentSystemReminderService } from '#/agent/systemReminder/systemReminder';
+import {
+  USER_PROMPT_ORIGIN,
+  type ContextMessage,
+} from "#/agent/contextMemory/types";
+import { newMessageId } from "#/agent/contextMemory/messageId";
+import {
+  StepRequest,
+  type StepRequestOptions,
+  type TurnSeed,
+} from "#/agent/loop/stepRequest";
+import { gateImageFormatParts } from "#/agent/media/image-compress";
+import type { IAgentSystemReminderService } from "#/agent/systemReminder/systemReminder";
 
 abstract class UserMessageStepRequest extends StepRequest {
   protected readonly message: ContextMessage;
@@ -42,14 +49,17 @@ abstract class UserMessageStepRequest extends StepRequest {
   }
 
   override get turnSeed(): TurnSeed {
-    return { input: this.message.content, origin: this.message.origin ?? USER_PROMPT_ORIGIN };
+    return {
+      input: this.message.content,
+      origin: this.message.origin ?? USER_PROMPT_ORIGIN,
+    };
   }
 
   override onWillMaterialize(): void {
     for (const caption of this.captions) {
       this.reminders.appendSystemReminder(caption, {
-        kind: 'injection',
-        variant: 'image_compression',
+        kind: "injection",
+        variant: "image_compression",
         ownerPromptId: this.ownerPromptId,
       });
     }
@@ -61,23 +71,26 @@ abstract class UserMessageStepRequest extends StepRequest {
 }
 
 export class PromptStepRequest extends UserMessageStepRequest {
-  readonly kind = 'prompt';
+  readonly kind = "prompt";
 
   constructor(
     message: ContextMessage,
     captions: readonly string[],
     reminders: IAgentSystemReminderService,
   ) {
-    super(message, captions, reminders, { admission: 'newTurn' });
+    super(message, captions, reminders, { admission: "newTurn" });
   }
 
   override get turnSeed(): TurnSeed {
-    return { input: this.message.content, origin: this.message.origin ?? USER_PROMPT_ORIGIN };
+    return {
+      input: this.message.content,
+      origin: this.message.origin ?? USER_PROMPT_ORIGIN,
+    };
   }
 }
 
 export class SteerStepRequest extends UserMessageStepRequest {
-  readonly kind = 'steer';
+  readonly kind = "steer";
 
   constructor(
     message: ContextMessage,
@@ -85,7 +98,7 @@ export class SteerStepRequest extends UserMessageStepRequest {
     reminders: IAgentSystemReminderService,
     private readonly recordSteer: (message: ContextMessage) => void,
     private readonly forgetSteer: (request: SteerStepRequest) => void,
-    admission: 'activeTurnOnly' | 'activeOrNewTurn' = 'activeTurnOnly',
+    admission: "activeTurnOnly" | "activeOrNewTurn" = "activeTurnOnly",
   ) {
     super(message, captions, reminders, {
       mergeable: true,
@@ -105,14 +118,14 @@ export class SteerStepRequest extends UserMessageStepRequest {
 }
 
 export class RetryStepRequest extends StepRequest {
-  readonly kind = 'retry';
+  readonly kind = "retry";
 
   constructor() {
-    super({ admission: 'newTurn' });
+    super({ admission: "newTurn" });
   }
 
   override get turnSeed(): TurnSeed {
-    return { input: [], origin: { kind: 'retry' } };
+    return { input: [], origin: { kind: "retry" } };
   }
 
   resolveContextMessages(): readonly ContextMessage[] {

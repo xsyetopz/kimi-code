@@ -54,9 +54,9 @@
  * URL that v1 404s on and rejects the single-colon URL v1 serves.
  */
 
-import { createReadStream, type ReadStream } from 'node:fs';
-import { mkdir } from 'node:fs/promises';
-import { isAbsolute } from 'node:path';
+import { createReadStream, type ReadStream } from "node:fs";
+import { mkdir } from "node:fs/promises";
+import { isAbsolute } from "node:path";
 
 import {
   ErrorCodes,
@@ -68,25 +68,25 @@ import {
   isError2,
   type HostFileStat,
   type Scope,
-} from '@moonshot-ai/agent-core-v2';
+} from "@moonshot-ai/agent-core-v2";
 import {
   fsBrowseQuerySchema,
   fsBrowseResponseSchema,
   fsHomeResponseSchema,
-} from '@moonshot-ai/agent-core-v2/app/hostFolderBrowser/hostFolderBrowser';
+} from "@moonshot-ai/agent-core-v2/app/hostFolderBrowser/hostFolderBrowser";
 import {
   buildEtag,
   detectBinary,
   FS_BINARY_SAMPLE_BYTES,
   guessMime,
-} from '@moonshot-ai/agent-core-v2/_base/utils/fileMeta';
-import { z } from 'zod';
+} from "@moonshot-ai/agent-core-v2/_base/utils/fileMeta";
+import { z } from "zod";
 
-import { errEnvelope, okEnvelope } from '../envelope';
-import { parseRangeHeader, pickHeader } from '../lib/httpRange';
-import { requestLog } from '../lib/requestLog';
-import { defineRoute } from '../middleware/defineRoute';
-import { ErrorCode } from '../protocol/error-codes';
+import { errEnvelope, okEnvelope } from "../envelope";
+import { parseRangeHeader, pickHeader } from "../lib/httpRange";
+import { requestLog } from "../lib/requestLog";
+import { defineRoute } from "../middleware/defineRoute";
+import { ErrorCode } from "../protocol/error-codes";
 
 interface FsContentReply {
   type(mime: string): FsContentReply;
@@ -98,15 +98,23 @@ interface FsContentReply {
 interface WorkspaceFsRouteHost {
   get(
     path: string,
-    options: { preHandler: unknown[]; schema?: Record<string, unknown> } | undefined,
+    options:
+      | { preHandler: unknown[]; schema?: Record<string, unknown> }
+      | undefined,
     handler: (
-      req: { id: string; query: { path?: string }; headers: Record<string, unknown> },
+      req: {
+        id: string;
+        query: { path?: string };
+        headers: Record<string, unknown>;
+      },
       reply: FsContentReply,
     ) => Promise<void> | void,
   ): unknown;
   post(
     path: string,
-    options: { preHandler: unknown[]; schema?: Record<string, unknown> } | undefined,
+    options:
+      | { preHandler: unknown[]; schema?: Record<string, unknown> }
+      | undefined,
     handler: (
       req: { id: string; body: unknown },
       reply: { send(payload: unknown): unknown },
@@ -114,20 +122,25 @@ interface WorkspaceFsRouteHost {
   ): unknown;
 }
 
-export function registerWorkspaceFsRoutes(app: WorkspaceFsRouteHost, core: Scope): void {
+export function registerWorkspaceFsRoutes(
+  app: WorkspaceFsRouteHost,
+  core: Scope,
+): void {
   const browseRoute = defineRoute(
     {
-      method: 'GET',
-      path: '/fs::browse',
+      method: "GET",
+      path: "/fs::browse",
       querystring: fsBrowseQuerySchema,
       success: { data: fsBrowseResponseSchema },
-      description: 'Browse local directories (server folder picker backend)',
-      tags: ['workspaces'],
-      operationId: 'fsBrowse',
+      description: "Browse local directories (server folder picker backend)",
+      tags: ["workspaces"],
+      operationId: "fsBrowse",
     },
     async (req, reply) => {
       try {
-        const data = await core.accessor.get(IHostFolderBrowser).browse(req.query.path);
+        const data = await core.accessor
+          .get(IHostFolderBrowser)
+          .browse(req.query.path);
         reply.send(okEnvelope(data, req.id));
       } catch (err) {
         sendMappedError(reply, req.id, err);
@@ -137,17 +150,20 @@ export function registerWorkspaceFsRoutes(app: WorkspaceFsRouteHost, core: Scope
   app.get(
     browseRoute.path,
     browseRoute.options,
-    browseRoute.handler as unknown as Parameters<WorkspaceFsRouteHost['get']>[2],
+    browseRoute.handler as unknown as Parameters<
+      WorkspaceFsRouteHost["get"]
+    >[2],
   );
 
   const homeRoute = defineRoute(
     {
-      method: 'GET',
-      path: '/fs::home',
+      method: "GET",
+      path: "/fs::home",
       success: { data: fsHomeResponseSchema },
-      description: 'Folder picker landing payload: $HOME + recent workspace roots',
-      tags: ['workspaces'],
-      operationId: 'fsHome',
+      description:
+        "Folder picker landing payload: $HOME + recent workspace roots",
+      tags: ["workspaces"],
+      operationId: "fsHome",
     },
     async (req, reply) => {
       try {
@@ -161,17 +177,17 @@ export function registerWorkspaceFsRoutes(app: WorkspaceFsRouteHost, core: Scope
   app.get(
     homeRoute.path,
     homeRoute.options,
-    homeRoute.handler as unknown as Parameters<WorkspaceFsRouteHost['get']>[2],
+    homeRoute.handler as unknown as Parameters<WorkspaceFsRouteHost["get"]>[2],
   );
 
   const contentRoute = defineRoute(
     {
-      method: 'GET',
-      path: '/fs::content',
+      method: "GET",
+      path: "/fs::content",
       querystring: fsContentQuerySchema,
       rawResponse: {
-        200: { type: 'string', format: 'binary' },
-        206: { type: 'string', format: 'binary' },
+        200: { type: "string", format: "binary" },
+        206: { type: "string", format: "binary" },
       },
       errors: {
         [ErrorCode.VALIDATION_FAILED]: {},
@@ -180,9 +196,9 @@ export function registerWorkspaceFsRoutes(app: WorkspaceFsRouteHost, core: Scope
         [ErrorCode.FS_IS_DIRECTORY]: {},
       },
       description:
-        'Serve the raw content of any file on the host filesystem by absolute path. Supports ETag caching and single-range requests.',
-      tags: ['workspaces'],
-      operationId: 'fsContent',
+        "Serve the raw content of any file on the host filesystem by absolute path. Supports ETag caching and single-range requests.",
+      tags: ["workspaces"],
+      operationId: "fsContent",
     },
     async (req, reply) => {
       return handleFsContent(core, req, reply as unknown as FsContentReply);
@@ -191,13 +207,15 @@ export function registerWorkspaceFsRoutes(app: WorkspaceFsRouteHost, core: Scope
   app.get(
     contentRoute.path,
     contentRoute.options,
-    contentRoute.handler as unknown as Parameters<WorkspaceFsRouteHost['get']>[2],
+    contentRoute.handler as unknown as Parameters<
+      WorkspaceFsRouteHost["get"]
+    >[2],
   );
 
   const mkdirRoute = defineRoute(
     {
-      method: 'POST',
-      path: '/fs::mkdir',
+      method: "POST",
+      path: "/fs::mkdir",
       body: fsMkdirBodySchema,
       success: { data: fsMkdirResponseSchema },
       errors: {
@@ -208,8 +226,8 @@ export function registerWorkspaceFsRoutes(app: WorkspaceFsRouteHost, core: Scope
       },
       description:
         'Create a directory on the host filesystem by absolute path (folder-picker "new folder" backend). Non-recursive: the parent directory must already exist.',
-      tags: ['workspaces'],
-      operationId: 'fsMkdir',
+      tags: ["workspaces"],
+      operationId: "fsMkdir",
     },
     async (req, reply) => {
       return handleFsMkdir(req, reply);
@@ -218,7 +236,9 @@ export function registerWorkspaceFsRoutes(app: WorkspaceFsRouteHost, core: Scope
   app.post(
     mkdirRoute.path,
     mkdirRoute.options,
-    mkdirRoute.handler as unknown as Parameters<WorkspaceFsRouteHost['post']>[2],
+    mkdirRoute.handler as unknown as Parameters<
+      WorkspaceFsRouteHost["post"]
+    >[2],
   );
 }
 
@@ -245,7 +265,11 @@ async function handleFsContent(
   const { path } = req.query;
   if (!isAbsolute(path)) {
     reply.send(
-      errEnvelope(ErrorCode.VALIDATION_FAILED, `path must be absolute: ${path}`, requestId),
+      errEnvelope(
+        ErrorCode.VALIDATION_FAILED,
+        `path must be absolute: ${path}`,
+        requestId,
+      ),
     );
     return;
   }
@@ -264,7 +288,11 @@ async function handleFsContent(
 
   if (st.isDirectory) {
     reply.send(
-      errEnvelope(ErrorCode.FS_IS_DIRECTORY, `path is a directory: ${path}`, requestId),
+      errEnvelope(
+        ErrorCode.FS_IS_DIRECTORY,
+        `path is a directory: ${path}`,
+        requestId,
+      ),
     );
     return;
   }
@@ -288,7 +316,9 @@ async function handleFsContent(
   try {
     const sampleSize = Math.min(FS_BINARY_SAMPLE_BYTES, st.size);
     const sample =
-      sampleSize === 0 ? new Uint8Array() : await hostFs.readBytes(abs, sampleSize);
+      sampleSize === 0
+        ? new Uint8Array()
+        : await hostFs.readBytes(abs, sampleSize);
     isBinary = detectBinary(sample);
   } catch (err) {
     sendOsFsError(reply, requestId, err, path);
@@ -296,19 +326,19 @@ async function handleFsContent(
   }
 
   const etag = buildEtag(st);
-  const ifNoneMatch = pickHeader(req.headers, 'if-none-match');
+  const ifNoneMatch = pickHeader(req.headers, "if-none-match");
   if (ifNoneMatch !== undefined && ifNoneMatch === etag) {
-    reply.code(304).header('etag', etag).send('');
+    reply.code(304).header("etag", etag).send("");
     return;
   }
 
-  reply.header('etag', etag);
-  reply.header('last-modified', new Date(st.mtimeMs ?? 0).toUTCString());
+  reply.header("etag", etag);
+  reply.header("last-modified", new Date(st.mtimeMs ?? 0).toUTCString());
   reply.type(guessMime(abs, isBinary));
 
   const log = requestLog(req);
   const onStreamError = (stream: ReadStream) => (error: unknown) => {
-    log?.warn({ path, err: error }, 'fs content stream error');
+    log?.warn({ path, err: error }, "fs content stream error");
     try {
       stream.destroy();
     } catch {
@@ -316,20 +346,23 @@ async function handleFsContent(
     }
   };
 
-  const range = parseRangeHeader(pickHeader(req.headers, 'range'), st.size);
+  const range = parseRangeHeader(pickHeader(req.headers, "range"), st.size);
   if (range !== null) {
     reply
       .code(206)
-      .header('content-length', String(range.length))
-      .header('content-range', `bytes ${range.start}-${range.end}/${st.size}`);
-    const stream = createReadStream(abs, { start: range.start, end: range.end });
-    stream.on('error', onStreamError(stream));
+      .header("content-length", String(range.length))
+      .header("content-range", `bytes ${range.start}-${range.end}/${st.size}`);
+    const stream = createReadStream(abs, {
+      start: range.start,
+      end: range.end,
+    });
+    stream.on("error", onStreamError(stream));
     return reply.send(stream) as unknown as void;
   }
 
-  reply.code(200).header('content-length', String(st.size));
+  reply.code(200).header("content-length", String(st.size));
   const stream = createReadStream(abs);
-  stream.on('error', onStreamError(stream));
+  stream.on("error", onStreamError(stream));
   return reply.send(stream) as unknown as void;
 }
 
@@ -358,7 +391,11 @@ async function handleFsMkdir(
   const { path } = req.body;
   if (!isAbsolute(path)) {
     reply.send(
-      errEnvelope(ErrorCode.VALIDATION_FAILED, `path must be absolute: ${path}`, requestId),
+      errEnvelope(
+        ErrorCode.VALIDATION_FAILED,
+        `path must be absolute: ${path}`,
+        requestId,
+      ),
     );
     return;
   }
@@ -371,21 +408,33 @@ async function handleFsMkdir(
   } catch (err) {
     const code = (err as NodeJS.ErrnoException | undefined)?.code;
     switch (code) {
-      case 'EEXIST':
+      case "EEXIST":
         reply.send(
-          errEnvelope(ErrorCode.FS_ALREADY_EXISTS, `path already exists: ${path}`, requestId),
+          errEnvelope(
+            ErrorCode.FS_ALREADY_EXISTS,
+            `path already exists: ${path}`,
+            requestId,
+          ),
         );
         return;
-      case 'ENOENT':
-      case 'ENOTDIR':
+      case "ENOENT":
+      case "ENOTDIR":
         reply.send(
-          errEnvelope(ErrorCode.FS_PATH_NOT_FOUND, `parent path not found: ${path}`, requestId),
+          errEnvelope(
+            ErrorCode.FS_PATH_NOT_FOUND,
+            `parent path not found: ${path}`,
+            requestId,
+          ),
         );
         return;
-      case 'EACCES':
-      case 'EPERM':
+      case "EACCES":
+      case "EPERM":
         reply.send(
-          errEnvelope(ErrorCode.FS_PERMISSION_DENIED, `permission denied: ${path}`, requestId),
+          errEnvelope(
+            ErrorCode.FS_PERMISSION_DENIED,
+            `permission denied: ${path}`,
+            requestId,
+          ),
         );
         return;
     }
@@ -407,12 +456,20 @@ function sendOsFsError(
       case ErrorCodes.OS_FS_NOT_FOUND:
       case ErrorCodes.OS_FS_NOT_DIRECTORY:
         reply.send(
-          errEnvelope(ErrorCode.FS_PATH_NOT_FOUND, `path not found: ${path}`, requestId),
+          errEnvelope(
+            ErrorCode.FS_PATH_NOT_FOUND,
+            `path not found: ${path}`,
+            requestId,
+          ),
         );
         return;
       case ErrorCodes.OS_FS_PERMISSION_DENIED:
         reply.send(
-          errEnvelope(ErrorCode.FS_PERMISSION_DENIED, `permission denied: ${path}`, requestId),
+          errEnvelope(
+            ErrorCode.FS_PERMISSION_DENIED,
+            `permission denied: ${path}`,
+            requestId,
+          ),
         );
         return;
     }
@@ -426,15 +483,36 @@ function sendMappedError(
   err: unknown,
 ): void {
   if (err instanceof HostFolderNotAbsoluteError) {
-    reply.send(errEnvelope(ErrorCode.VALIDATION_FAILED, err.message, requestId, err.stack));
+    reply.send(
+      errEnvelope(
+        ErrorCode.VALIDATION_FAILED,
+        err.message,
+        requestId,
+        err.stack,
+      ),
+    );
     return;
   }
   if (err instanceof HostFolderNotFoundError) {
-    reply.send(errEnvelope(ErrorCode.FS_PATH_NOT_FOUND, err.message, requestId, err.stack));
+    reply.send(
+      errEnvelope(
+        ErrorCode.FS_PATH_NOT_FOUND,
+        err.message,
+        requestId,
+        err.stack,
+      ),
+    );
     return;
   }
   if (err instanceof HostFolderPermissionError) {
-    reply.send(errEnvelope(ErrorCode.FS_PERMISSION_DENIED, err.message, requestId, err.stack));
+    reply.send(
+      errEnvelope(
+        ErrorCode.FS_PERMISSION_DENIED,
+        err.message,
+        requestId,
+        err.stack,
+      ),
+    );
     return;
   }
   throw err;

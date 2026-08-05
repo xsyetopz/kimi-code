@@ -1,8 +1,8 @@
-import { writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { writeFileSync } from "node:fs";
+import { join } from "node:path";
 
-import type { DeviceAuthorization } from '@moonshot-ai/kimi-code-oauth';
-import { effectiveModelAlias, log } from '@moonshot-ai/kimi-code-sdk';
+import type { DeviceAuthorization } from "@moonshot-ai/kimi-code-oauth";
+import { effectiveModelAlias, log } from "@moonshot-ai/kimi-code-sdk";
 import type {
   ApprovalRequest,
   ApprovalResponse,
@@ -15,29 +15,38 @@ import type {
   Session,
   SkillSummary,
   WorkspaceTrustInfo,
-} from '@moonshot-ai/kimi-code-sdk';
-import type { MigrationPlan } from '@moonshot-ai/migration-legacy';
+} from "@moonshot-ai/kimi-code-sdk";
+import type { MigrationPlan } from "@moonshot-ai/migration-legacy";
 import {
   deleteAllKittyImages,
   type Component,
   type Focusable,
   getCapabilities,
   Spacer,
-} from '@moonshot-ai/pi-tui';
-import { resolve } from 'pathe';
+} from "@moonshot-ai/pi-tui";
+import { resolve } from "pathe";
 
-import type { CLIOptions } from '#/cli/options';
-import { MigrationScreenComponent, type MigrationScreenResult } from '#/migration/index';
-import { copyTextToClipboard } from '#/utils/clipboard/clipboard-text';
-import { appendInputHistory, loadInputHistory } from '#/utils/history/input-history';
-import { openUrl } from '#/utils/open-url';
-import { getInputHistoryFile } from '#/utils/paths';
-import { detectFdPath, ensureFdPath } from '#/utils/process/fd-detect';
-import { quoteShellArg } from '#/utils/shell-quote';
-import { restoreTerminalModes } from '#/utils/terminal-restore';
+import type { CLIOptions } from "#/cli/options";
+import {
+  MigrationScreenComponent,
+  type MigrationScreenResult,
+} from "#/migration/index";
+import { copyTextToClipboard } from "#/utils/clipboard/clipboard-text";
+import {
+  appendInputHistory,
+  loadInputHistory,
+} from "#/utils/history/input-history";
+import { openUrl } from "#/utils/open-url";
+import { getInputHistoryFile } from "#/utils/paths";
+import { detectFdPath, ensureFdPath } from "#/utils/process/fd-detect";
+import { quoteShellArg } from "#/utils/shell-quote";
+import { restoreTerminalModes } from "#/utils/terminal-restore";
 
-import { BannerProvider } from './banner/banner-provider';
-import { readBannerDisplayState, writeBannerDisplayState } from './banner/state';
+import { BannerProvider } from "./banner/banner-provider";
+import {
+  readBannerDisplayState,
+  writeBannerDisplayState,
+} from "./banner/state";
 import {
   BUILTIN_SLASH_COMMANDS,
   buildPluginSlashCommands,
@@ -47,85 +56,99 @@ import {
   sortSlashCommands,
   type KimiSlashCommand,
   type SkillListSession,
-} from './commands';
-import * as slashCommands from './commands/dispatch';
-import { BannerComponent } from './components/chrome/banner';
-import { DeviceCodeBoxComponent } from './components/chrome/device-code-box';
-import { GutterContainer } from './components/chrome/gutter-container';
-import { MoonLoader, type SpinnerStyle } from './components/chrome/moon-loader';
-import { WelcomeComponent } from './components/chrome/welcome';
-import { pickRandomWorkingTip } from './components/chrome/working-tips';
+} from "./commands";
+import * as slashCommands from "./commands/dispatch";
+import { BannerComponent } from "./components/chrome/banner";
+import { DeviceCodeBoxComponent } from "./components/chrome/device-code-box";
+import { GutterContainer } from "./components/chrome/gutter-container";
+import { MoonLoader, type SpinnerStyle } from "./components/chrome/moon-loader";
+import { WelcomeComponent } from "./components/chrome/welcome";
+import { pickRandomWorkingTip } from "./components/chrome/working-tips";
 import {
   ApprovalPanelComponent,
   type ApprovalPanelResponse,
-} from './components/dialogs/approval-panel';
+} from "./components/dialogs/approval-panel";
 import {
   ApprovalPreviewViewer,
   type ApprovalPreviewBlock,
-} from './components/dialogs/approval-preview';
-import { CompactionComponent } from './components/dialogs/compaction';
-import { HelpPanelComponent } from './components/dialogs/help-panel';
-import { defaultThinkingEffortFor } from './components/dialogs/model-selector';
-import { QuestionDialogComponent } from './components/dialogs/question-dialog';
-import { SessionPickerComponent, type SessionRow } from './components/dialogs/session-picker';
-import { TrustPromptComponent, type TrustPromptChoice } from './components/dialogs/trust-prompt';
+} from "./components/dialogs/approval-preview";
+import { CompactionComponent } from "./components/dialogs/compaction";
+import { HelpPanelComponent } from "./components/dialogs/help-panel";
+import { defaultThinkingEffortFor } from "./components/dialogs/model-selector";
+import { QuestionDialogComponent } from "./components/dialogs/question-dialog";
+import {
+  SessionPickerComponent,
+  type SessionRow,
+} from "./components/dialogs/session-picker";
+import {
+  TrustPromptComponent,
+  type TrustPromptChoice,
+} from "./components/dialogs/trust-prompt";
 import {
   FileMentionProvider,
   type SlashAutocompleteCommand,
-} from './components/editor/file-mention-provider';
-import { AssistantMessageComponent } from './components/messages/assistant-message';
-import { BackgroundAgentStatusComponent } from './components/messages/background-agent-status';
-import { CronMessageComponent } from './components/messages/cron-message';
-import { buildGoalMarker } from './components/messages/goal-markers';
+} from "./components/editor/file-mention-provider";
+import { AssistantMessageComponent } from "./components/messages/assistant-message";
+import { BackgroundAgentStatusComponent } from "./components/messages/background-agent-status";
+import { CronMessageComponent } from "./components/messages/cron-message";
+import { buildGoalMarker } from "./components/messages/goal-markers";
 import {
   GoalCompletionMessageComponent,
   GoalSetMessageComponent,
-} from './components/messages/goal-panel';
-import { PluginCommandComponent } from './components/messages/plugin-command';
-import { ShellRunComponent } from './components/messages/shell-run';
-import { SkillActivationComponent } from './components/messages/skill-activation';
+} from "./components/messages/goal-panel";
+import { PluginCommandComponent } from "./components/messages/plugin-command";
+import { ShellRunComponent } from "./components/messages/shell-run";
+import { SkillActivationComponent } from "./components/messages/skill-activation";
 import {
   NoticeMessageComponent,
   StatusMessageComponent,
-} from './components/messages/status-message';
-import { StepSummaryComponent } from './components/messages/step-summary';
-import { ThinkingComponent } from './components/messages/thinking';
-import { ToolCallComponent } from './components/messages/tool-call';
+} from "./components/messages/status-message";
+import { StepSummaryComponent } from "./components/messages/step-summary";
+import { ThinkingComponent } from "./components/messages/thinking";
+import { ToolCallComponent } from "./components/messages/tool-call";
 import {
   ReplayTurnBoundaryComponent,
   UserMessageComponent,
-} from './components/messages/user-message';
-import { ActivityPaneComponent, type ActivityPaneMode } from './components/panes/activity-pane';
-import { QueuePaneComponent } from './components/panes/queue-pane';
-import type { TuiConfig } from './config';
+} from "./components/messages/user-message";
+import {
+  ActivityPaneComponent,
+  type ActivityPaneMode,
+} from "./components/panes/activity-pane";
+import { QueuePaneComponent } from "./components/panes/queue-pane";
+import type { TuiConfig } from "./config";
 import {
   LLM_NOT_SET_MESSAGE,
   MAIN_AGENT_ID,
   NO_ACTIVE_SESSION_MESSAGE,
   PRODUCT_NAME,
   SESSIONLESS_STARTUP_NOTICE,
-} from './constant/kimi-tui';
-import { CHROME_GUTTER } from './constant/rendering';
-import { MAX_TERMINAL_TITLE_LENGTH } from './constant/terminal';
-import { AuthFlowController } from './controllers/auth-flow';
-import { BtwPanelController } from './controllers/btw-panel';
-import { ClipboardImageHintController } from './controllers/clipboard-image-hint';
-import { EditorKeyboardController } from './controllers/editor-keyboard';
-import { SessionEventHandler } from './controllers/session-event-handler';
-import { SessionReplayRenderer } from './controllers/session-replay';
-import { StreamingUIController } from './controllers/streaming-ui';
-import { TasksBrowserController } from './controllers/tasks-browser';
-import { installRainbowDance } from './easter-eggs/dance';
-import { adaptPanelResponse } from './reverse-rpc/approval/adapter';
-import { ApprovalController } from './reverse-rpc/approval/controller';
-import { createApprovalRequestHandler } from './reverse-rpc/approval/handler';
-import { registerReverseRPCHandlers } from './reverse-rpc/index';
-import { QuestionController } from './reverse-rpc/question/controller';
-import { createQuestionAskHandler } from './reverse-rpc/question/handler';
-import type { ApprovalPanelData, QuestionPanelData } from './reverse-rpc/types';
-import { currentTheme, getColorPalette, getBuiltInPalette, isBuiltInTheme } from './theme';
-import type { ColorToken, ResolvedTheme, ThemeName } from './theme';
-import { createTUIState, type TUIState } from './tui-state';
+} from "./constant/kimi-tui";
+import { CHROME_GUTTER } from "./constant/rendering";
+import { MAX_TERMINAL_TITLE_LENGTH } from "./constant/terminal";
+import { AuthFlowController } from "./controllers/auth-flow";
+import { BtwPanelController } from "./controllers/btw-panel";
+import { ClipboardImageHintController } from "./controllers/clipboard-image-hint";
+import { EditorKeyboardController } from "./controllers/editor-keyboard";
+import { SessionEventHandler } from "./controllers/session-event-handler";
+import { SessionReplayRenderer } from "./controllers/session-replay";
+import { StreamingUIController } from "./controllers/streaming-ui";
+import { TasksBrowserController } from "./controllers/tasks-browser";
+import { installRainbowDance } from "./easter-eggs/dance";
+import { adaptPanelResponse } from "./reverse-rpc/approval/adapter";
+import { ApprovalController } from "./reverse-rpc/approval/controller";
+import { createApprovalRequestHandler } from "./reverse-rpc/approval/handler";
+import { registerReverseRPCHandlers } from "./reverse-rpc/index";
+import { QuestionController } from "./reverse-rpc/question/controller";
+import { createQuestionAskHandler } from "./reverse-rpc/question/handler";
+import type { ApprovalPanelData, QuestionPanelData } from "./reverse-rpc/types";
+import {
+  currentTheme,
+  getColorPalette,
+  getBuiltInPalette,
+  isBuiltInTheme,
+} from "./theme";
+import type { ColorToken, ResolvedTheme, ThemeName } from "./theme";
+import { createTUIState, type TUIState } from "./tui-state";
 import {
   INITIAL_LIVE_PANE,
   type AppState,
@@ -137,30 +160,39 @@ import {
   type TranscriptEntry,
   type TUIStartupOptions,
   type TUIStartupState,
-} from './types';
-import { hasDispose, isExpandable } from './utils/component-capabilities';
-import { isDeadTerminalError } from './utils/dead-terminal';
-import { formatErrorMessage } from './utils/event-payload';
-import { pickForegroundTasks } from './utils/foreground-task';
-import { ImageAttachmentStore, type ImageAttachment } from './utils/image-attachment-store';
-import { extractMediaAttachments, rewriteMediaPlaceholders } from './utils/image-placeholder';
-import { installInputLatencyProbe } from './utils/input-latency';
-import { startupTrace } from '#/utils/startup-trace';
-import { REPLAY_TURN_LIMIT } from './utils/message-replay';
-import { hasPatchChanges } from './utils/object-patch';
-import { sessionRowsForPicker } from './utils/session-picker-rows';
-import { formatBashOutputForDisplay } from './utils/shell-output';
-import { thinkingEffortFromConfig } from './utils/thinking-config';
-import { combineStartupNotice, isOAuthLoginRequiredError } from './utils/startup';
-import { installTerminalFocusTracking } from './utils/terminal-focus';
-import { notifyTerminalOnce } from './utils/terminal-notification';
-import { installTerminalThemeTracking } from './utils/terminal-theme';
-import { detectTmuxKeyboardWarning } from './utils/tmux-keyboard';
+} from "./types";
+import { hasDispose, isExpandable } from "./utils/component-capabilities";
+import { isDeadTerminalError } from "./utils/dead-terminal";
+import { formatErrorMessage } from "./utils/event-payload";
+import { pickForegroundTasks } from "./utils/foreground-task";
+import {
+  ImageAttachmentStore,
+  type ImageAttachment,
+} from "./utils/image-attachment-store";
+import {
+  extractMediaAttachments,
+  rewriteMediaPlaceholders,
+} from "./utils/image-placeholder";
+import { installInputLatencyProbe } from "./utils/input-latency";
+import { startupTrace } from "#/utils/startup-trace";
+import { REPLAY_TURN_LIMIT } from "./utils/message-replay";
+import { hasPatchChanges } from "./utils/object-patch";
+import { sessionRowsForPicker } from "./utils/session-picker-rows";
+import { formatBashOutputForDisplay } from "./utils/shell-output";
+import { thinkingEffortFromConfig } from "./utils/thinking-config";
+import {
+  combineStartupNotice,
+  isOAuthLoginRequiredError,
+} from "./utils/startup";
+import { installTerminalFocusTracking } from "./utils/terminal-focus";
+import { notifyTerminalOnce } from "./utils/terminal-notification";
+import { installTerminalThemeTracking } from "./utils/terminal-theme";
+import { detectTmuxKeyboardWarning } from "./utils/tmux-keyboard";
 import {
   getTranscriptComponentEntry,
   markTranscriptComponent,
-} from './utils/transcript-component-metadata';
-import { nextTranscriptId } from './utils/transcript-id';
+} from "./utils/transcript-component-metadata";
+import { nextTranscriptId } from "./utils/transcript-id";
 import {
   TRANSCRIPT_EXPAND_TURNS,
   TRANSCRIPT_HYSTERESIS,
@@ -171,16 +203,16 @@ import {
   TRANSCRIPT_WINDOW_ENABLED,
   groupTurns,
   turnsToTrim,
-} from './utils/transcript-window';
+} from "./utils/transcript-window";
 
-export type { TUIState } from './tui-state';
-export { createTUIState } from './tui-state';
+export type { TUIState } from "./tui-state";
+export { createTUIState } from "./tui-state";
 export type {
   KimiTUIOptions,
   LoginProgressSpinnerHandle,
   TUIStartupOptions,
   TUIStartupState,
-} from './types';
+} from "./types";
 
 export interface KimiTUIStartupInput {
   readonly cliOptions: CLIOptions;
@@ -198,12 +230,14 @@ export interface KimiTUIStartupInput {
   readonly engineV2?: boolean;
 }
 
-type EffectiveActivityPaneMode = ActivityPaneMode | 'idle' | 'session';
-type LoadingTipKind = 'moon' | 'composing';
+type EffectiveActivityPaneMode = ActivityPaneMode | "idle" | "session";
+type LoadingTipKind = "moon" | "composing";
 
-function loadingTipKind(mode: EffectiveActivityPaneMode): LoadingTipKind | undefined {
-  if (mode === 'waiting' || mode === 'tool') return 'moon';
-  if (mode === 'composing') return 'composing';
+function loadingTipKind(
+  mode: EffectiveActivityPaneMode,
+): LoadingTipKind | undefined {
+  if (mode === "waiting" || mode === "tool") return "moon";
+  if (mode === "composing") return "composing";
   return undefined;
 }
 
@@ -217,26 +251,26 @@ type MutableCreateSessionOptions = {
 
 function createInitialAppState(input: KimiTUIStartupInput): AppState {
   const startupPermission: PermissionMode = input.cliOptions.auto
-    ? 'auto'
+    ? "auto"
     : input.cliOptions.yolo
-      ? 'yolo'
-      : 'manual';
+      ? "yolo"
+      : "manual";
   return {
-    model: '',
+    model: "",
     workDir: input.workDir,
     additionalDirs: [...(input.additionalDirs ?? [])],
-    sessionId: '',
+    sessionId: "",
     permissionMode: startupPermission,
     planMode: input.cliOptions.plan,
-    inputMode: 'prompt',
+    inputMode: "prompt",
     swarmMode: false,
-    thinkingEffort: 'off',
+    thinkingEffort: "off",
     contextUsage: 0,
     contextTokens: 0,
     maxContextTokens: 0,
     isCompacting: false,
     isReplaying: false,
-    streamingPhase: 'idle',
+    streamingPhase: "idle",
     streamingStartTime: 0,
     theme: input.tuiConfig.theme,
     version: input.version,
@@ -272,20 +306,26 @@ interface SendMessageOptions {
  * by `normalizePromptInput` as an empty text part, so the separator is
  * dropped there (media parts are self-delimiting anyway).
  */
-function combineSteerInput(items: readonly SteerInputItem[]): string | PromptPart[] {
-  const hasMedia = items.some((item) => item.parts !== undefined && item.parts.length > 0);
-  if (!hasMedia) return items.map((item) => item.text).join('\n\n');
+function combineSteerInput(
+  items: readonly SteerInputItem[],
+): string | PromptPart[] {
+  const hasMedia = items.some(
+    (item) => item.parts !== undefined && item.parts.length > 0,
+  );
+  if (!hasMedia) return items.map((item) => item.text).join("\n\n");
   const parts: PromptPart[] = [];
   for (const item of items) {
     const startsWithMedia =
-      item.parts !== undefined && item.parts.length > 0 && item.parts[0]?.type !== 'text';
-    const lastIsMedia = parts.length > 0 && parts.at(-1)?.type !== 'text';
+      item.parts !== undefined &&
+      item.parts.length > 0 &&
+      item.parts[0]?.type !== "text";
+    const lastIsMedia = parts.length > 0 && parts.at(-1)?.type !== "text";
     if (parts.length > 0 && !(lastIsMedia && startsWithMedia)) {
-      appendSteerText(parts, '\n\n');
+      appendSteerText(parts, "\n\n");
     }
     if (item.parts !== undefined && item.parts.length > 0) {
       for (const part of item.parts) {
-        if (part.type === 'text') appendSteerText(parts, part.text);
+        if (part.type === "text") appendSteerText(parts, part.text);
         else parts.push(part);
       }
     } else {
@@ -297,11 +337,11 @@ function combineSteerInput(items: readonly SteerInputItem[]): string | PromptPar
 
 function appendSteerText(parts: PromptPart[], text: string): void {
   const last = parts.at(-1);
-  if (last?.type === 'text') {
-    parts[parts.length - 1] = { type: 'text', text: last.text + text };
+  if (last?.type === "text") {
+    parts[parts.length - 1] = { type: "text", text: last.text + text };
     return;
   }
-  parts.push({ type: 'text', text });
+  parts.push({ type: "text", text });
 }
 
 /** How long the one-shot "moved to background" footer hint stays visible. */
@@ -330,7 +370,9 @@ export class KimiTUI {
   aborted = false;
   private terminalFocusTrackingDispose: (() => void) | undefined;
   private terminalThemeTrackingDispose: (() => void) | undefined;
-  private clipboardImageHintController: ClipboardImageHintController | undefined;
+  private clipboardImageHintController:
+    | ClipboardImageHintController
+    | undefined;
   private uninstallRainbowDance: () => void;
   private signalCleanupHandlers: Array<() => void> = [];
   private isShuttingDown = false;
@@ -341,8 +383,9 @@ export class KimiTUI {
   readonly engineV2: boolean;
   private startupNotice: string | undefined;
   private lastActivityMode: string | undefined;
-  private currentLoadingTip: { kind: LoadingTipKind; tip: string | undefined } | undefined =
-    undefined;
+  private currentLoadingTip:
+    | { kind: LoadingTipKind; tip: string | undefined }
+    | undefined = undefined;
   private lastHistoryContent: string | undefined;
   // Live `!` shell output entries, keyed by commandId so concurrent commands
   // each update their own card and stale events are dropped. Mutated in place
@@ -389,7 +432,7 @@ export class KimiTUI {
    */
   public exitForegroundTask: ((exitCode: number) => Promise<void>) | undefined;
 
-  track(event: string, properties?: Parameters<KimiHarness['track']>[1]): void {
+  track(event: string, properties?: Parameters<KimiHarness["track"]>[1]): void {
     this.harness.track(event, properties);
   }
 
@@ -420,20 +463,24 @@ export class KimiTUI {
     });
 
     this.reverseRpcDisposers.push(
-      ...registerReverseRPCHandlers(this.approvalController, this.questionController, {
-        showApprovalPanel: (payload) => {
-          this.showApprovalPanel(payload);
+      ...registerReverseRPCHandlers(
+        this.approvalController,
+        this.questionController,
+        {
+          showApprovalPanel: (payload) => {
+            this.showApprovalPanel(payload);
+          },
+          hideApprovalPanel: () => {
+            this.hideApprovalPanel();
+          },
+          showQuestionDialog: (payload) => {
+            this.showQuestionDialog(payload);
+          },
+          hideQuestionDialog: () => {
+            this.hideQuestionDialog();
+          },
         },
-        hideApprovalPanel: () => {
-          this.hideApprovalPanel();
-        },
-        showQuestionDialog: (payload) => {
-          this.showQuestionDialog(payload);
-        },
-        hideQuestionDialog: () => {
-          this.hideQuestionDialog();
-        },
-      }),
+      ),
     );
     this.streamingUI = new StreamingUIController(this);
     this.authFlow = new AuthFlowController(this);
@@ -451,25 +498,28 @@ export class KimiTUI {
   // =========================================================================
 
   private getSlashCommands(): readonly KimiSlashCommand[] {
-    const builtins = sortSlashCommands(BUILTIN_SLASH_COMMANDS).filter((command) =>
-      isExperimentalFlagEnabled(command.experimentalFlag),
+    const builtins = sortSlashCommands(BUILTIN_SLASH_COMMANDS).filter(
+      (command) => isExperimentalFlagEnabled(command.experimentalFlag),
     );
     return [...builtins, ...this.skillCommands, ...this.pluginCommands];
   }
 
   private setupAutocomplete(): void {
-    const slashCommands: SlashAutocompleteCommand[] = this.getSlashCommands().map((cmd) => {
-      const completer = cmd.completeArgs;
-      return {
-        name: cmd.name,
-        aliases: cmd.aliases,
-        description: cmd.description,
-        ...(cmd.argumentHint !== undefined ? { argumentHint: cmd.argumentHint } : {}),
-        ...(completer !== undefined
-          ? { getArgumentCompletions: (prefix: string) => completer(prefix) }
-          : {}),
-      };
-    });
+    const slashCommands: SlashAutocompleteCommand[] =
+      this.getSlashCommands().map((cmd) => {
+        const completer = cmd.completeArgs;
+        return {
+          name: cmd.name,
+          aliases: cmd.aliases,
+          description: cmd.description,
+          ...(cmd.argumentHint !== undefined
+            ? { argumentHint: cmd.argumentHint }
+            : {}),
+          ...(completer !== undefined
+            ? { getArgumentCompletions: (prefix: string) => completer(prefix) }
+            : {}),
+        };
+      });
     const provider = new FileMentionProvider(
       slashCommands,
       this.state.appState.workDir,
@@ -501,7 +551,9 @@ export class KimiTUI {
       // workspace catalog is the same merged view a session would serve.
       if (this.engineV2) {
         try {
-          const skills = await this.harness.listWorkspaceSkills(this.state.appState.workDir);
+          const skills = await this.harness.listWorkspaceSkills(
+            this.state.appState.workDir,
+          );
           this.applySkillCommands(skills);
           return;
         } catch {
@@ -576,7 +628,7 @@ export class KimiTUI {
   // =========================================================================
 
   async start(): Promise<void> {
-    startupTrace('tui:start');
+    startupTrace("tui:start");
     // Signal handlers must be installed before raw mode to avoid EIO loops.
     this.registerSignalHandlers();
     // Outer try rolls back signal listeners on startup failure.
@@ -585,9 +637,13 @@ export class KimiTUI {
         // Migration needs the event loop running first (pi-tui component).
         this.startEventLoop();
         try {
-          const migrationResult = await this.runMigrationScreen(this.migrationPlan);
+          const migrationResult = await this.runMigrationScreen(
+            this.migrationPlan,
+          );
           if (this.migrateOnly) {
-            const failed = migrationResult.decision === 'now' && migrationResult.migrated === false;
+            const failed =
+              migrationResult.decision === "now" &&
+              migrationResult.migrated === false;
             this.disposeTerminalTracking();
             this.state.ui.stop();
             await this.onExit?.(failed ? 1 : 0);
@@ -604,25 +660,26 @@ export class KimiTUI {
         return;
       }
 
-      startupTrace('trustPrompt:begin');
+      startupTrace("trustPrompt:begin");
       const trustPromptStartedLoop = await this.maybeRunWorkspaceTrustPrompt();
-      startupTrace('trustPrompt:end');
-      startupTrace('initMainTui:begin');
+      startupTrace("trustPrompt:end");
+      startupTrace("initMainTui:begin");
       const shouldReplayHistory = await this.initMainTui();
-      startupTrace('initMainTui:end');
+      startupTrace("initMainTui:end");
       // Debug-only input→render latency overlay (KIMI_TUI_INPUT_LATENCY=1).
-      if (process.env['KIMI_TUI_INPUT_LATENCY']) installInputLatencyProbe(this.state.ui);
+      if (process.env["KIMI_TUI_INPUT_LATENCY"])
+        installInputLatencyProbe(this.state.ui);
       // When the trust prompt already started the event loop, starting it
       // again would re-run pi-tui's terminal.start() — stacking a second
       // Kitty keyboard-protocol push (leaking CSI-u mode past exit) and
       // duplicate stdin listeners.
       if (!trustPromptStartedLoop) this.startEventLoop();
-      startupTrace('eventLoop:started');
+      startupTrace("eventLoop:started");
       try {
         this.startBackgroundFdAutocomplete();
-        startupTrace('finishStartup:begin');
+        startupTrace("finishStartup:begin");
         await this.finishStartup(shouldReplayHistory);
-        startupTrace('finishStartup:end');
+        startupTrace("finishStartup:end");
       } catch (error) {
         this.disposeTerminalTracking();
         this.state.ui.stop();
@@ -648,7 +705,7 @@ export class KimiTUI {
     this.renderBanner();
     this.state.ui.requestRender();
 
-    if (banner.display === 'always') return;
+    if (banner.display === "always") return;
     try {
       await writeBannerDisplayState({
         version: 1,
@@ -663,10 +720,17 @@ export class KimiTUI {
   }
 
   private renderBanner(): void {
-    if (this.state.appState.banner === null || this.state.appState.banner === undefined) {
+    if (
+      this.state.appState.banner === null ||
+      this.state.appState.banner === undefined
+    ) {
       return;
     }
-    if (this.state.transcriptContainer.children.some((child) => child instanceof BannerComponent)) {
+    if (
+      this.state.transcriptContainer.children.some(
+        (child) => child instanceof BannerComponent,
+      )
+    ) {
       return;
     }
     const welcomeIndex = this.state.transcriptContainer.children.findIndex(
@@ -674,7 +738,11 @@ export class KimiTUI {
     );
     const banner = new BannerComponent(this.state.appState.banner);
     if (welcomeIndex >= 0) {
-      this.state.transcriptContainer.children.splice(welcomeIndex + 1, 0, banner);
+      this.state.transcriptContainer.children.splice(
+        welcomeIndex + 1,
+        0,
+        banner,
+      );
     } else {
       this.state.transcriptContainer.children.unshift(banner);
     }
@@ -702,7 +770,9 @@ export class KimiTUI {
     this.disposeTerminalTracking();
     this.state.ui.start();
     this.startClipboardImageHintController();
-    this.terminalFocusTrackingDispose = installTerminalFocusTracking(this.state);
+    this.terminalFocusTrackingDispose = installTerminalFocusTracking(
+      this.state,
+    );
     this.refreshTerminalThemeTracking();
   }
 
@@ -710,7 +780,8 @@ export class KimiTUI {
     this.clipboardImageHintController = new ClipboardImageHintController({
       ui: this.state.ui,
       footer: this.state.footer,
-      getModelSupportsImage: () => this.supportsCurrentModelCapability('image_in'),
+      getModelSupportsImage: () =>
+        this.supportsCurrentModelCapability("image_in"),
       requestRender: () => {
         this.state.ui.requestRender();
       },
@@ -738,10 +809,15 @@ export class KimiTUI {
       const result = await this.authFlow.refreshProviderModels();
       for (const c of result.changed) {
         if (c.added <= 0) continue;
-        this.showStatus(`${c.providerName} · +${String(c.added)} model${c.added > 1 ? 's' : ''}.`);
+        this.showStatus(
+          `${c.providerName} · +${String(c.added)} model${c.added > 1 ? "s" : ""}.`,
+        );
       }
       for (const f of result.failed) {
-        this.showStatus(`Skipped refreshing ${f.provider}: ${f.reason}`, 'warning');
+        this.showStatus(
+          `Skipped refreshing ${f.provider}: ${f.reason}`,
+          "warning",
+        );
       }
     } catch {
       // Best-effort: startup must not crash on background refresh failures.
@@ -758,7 +834,7 @@ export class KimiTUI {
     // warning yellow at boot; `run-prompt`/`run-v2-print` print them to
     // stderr for non-interactive runs.
     void this.showConfigWarningsIfAny();
-    if (this.state.startupState === 'picker') {
+    if (this.state.startupState === "picker") {
       void this.bootstrapFromPicker();
       return;
     }
@@ -768,7 +844,7 @@ export class KimiTUI {
     }
     const resumeState = this.session?.getResumeState();
     if (resumeState?.warning !== undefined) {
-      this.showStatus(`Warning: ${resumeState.warning}`, 'warning');
+      this.showStatus(`Warning: ${resumeState.warning}`, "warning");
     }
     if (this.session !== undefined) {
       this.sessionEventHandler.startSubscription();
@@ -787,7 +863,7 @@ export class KimiTUI {
       const warnings = await session.getSessionWarnings();
       if (this.session !== session) return;
       for (const warning of warnings) {
-        const severity = warning.severity === 'error' ? 'error' : 'warning';
+        const severity = warning.severity === "error" ? "error" : "warning";
         this.showStatus(`Warning: ${warning.message}`, severity);
       }
     } catch {
@@ -798,7 +874,7 @@ export class KimiTUI {
   private async showTmuxKeyboardWarningIfNeeded(): Promise<void> {
     const warning = await detectTmuxKeyboardWarning();
     if (warning === undefined || this.aborted) return;
-    this.showStatus(warning, 'warning');
+    this.showStatus(warning, "warning");
   }
 
   private async init(): Promise<boolean> {
@@ -810,25 +886,30 @@ export class KimiTUI {
     const { workDir } = this.state.appState;
     let session: Session | undefined;
     let shouldReplayHistory = false;
-    const isResumeStartup = startup.sessionFlag !== undefined || startup.continueLast;
+    const isResumeStartup =
+      startup.sessionFlag !== undefined || startup.continueLast;
     const createSessionOptions: MutableCreateSessionOptions = {
       workDir,
       model: startup.model,
-      permission: startup.auto ? 'auto' : startup.yolo ? 'yolo' : undefined,
+      permission: startup.auto ? "auto" : startup.yolo ? "yolo" : undefined,
       planMode: startup.plan ? true : undefined,
       // --agent/--agent-file bind the startup session only; sessions created
       // later in this process fall back to the default profile.
       agentProfile: startup.agentProfile,
-      agentFiles: startup.agentFiles?.length ? [...startup.agentFiles] : undefined,
+      agentFiles: startup.agentFiles?.length
+        ? [...startup.agentFiles]
+        : undefined,
     };
     if (this.state.appState.additionalDirs.length > 0) {
-      createSessionOptions.additionalDirs = [...this.state.appState.additionalDirs];
+      createSessionOptions.additionalDirs = [
+        ...this.state.appState.additionalDirs,
+      ];
     }
 
     try {
       if (isResumeStartup) {
-        if (startup.sessionFlag === '') {
-          this.state.startupState = 'picker';
+        if (startup.sessionFlag === "") {
+          this.state.startupState = "picker";
           return false;
         }
 
@@ -845,7 +926,7 @@ export class KimiTUI {
             this.state.ui.stop();
             process.stderr.write(
               `${currentTheme.fg(
-                'warning',
+                "warning",
                 `Session "${startup.sessionFlag}" was created under a different directory.\n` +
                   `  cd "${target.workDir}" && kimi -r ${startup.sessionFlag}`,
               )}\n\n`,
@@ -902,14 +983,14 @@ export class KimiTUI {
     }
 
     if (!this.engineV2 && session === undefined) {
-      throw new Error('Startup session was not initialized.');
+      throw new Error("Startup session was not initialized.");
     }
     if (session !== undefined) {
       await this.setSession(session);
       await this.syncRuntimeState(session);
     }
     this.applyStartupPermissionAndPlanToAppState();
-    this.state.startupState = 'ready';
+    this.state.startupState = "ready";
     return shouldReplayHistory;
   }
 
@@ -949,7 +1030,7 @@ export class KimiTUI {
     // SIGTERM during a network or MCP shutdown must not leave the user stuck in
     // raw mode with a hidden cursor.
     try {
-      await this.closeSession('shutting down');
+      await this.closeSession("shutting down");
       await this.harness.close();
     } finally {
       this.sessionEventHandler.stopAllMcpServerStatusSpinners();
@@ -975,14 +1056,14 @@ export class KimiTUI {
   private registerSignalHandlers(): void {
     this.unregisterSignalHandlers();
 
-    const signals: NodeJS.Signals[] = ['SIGTERM'];
-    if (process.platform !== 'win32') {
-      signals.push('SIGHUP');
+    const signals: NodeJS.Signals[] = ["SIGTERM"];
+    if (process.platform !== "win32") {
+      signals.push("SIGHUP");
     }
 
     for (const signal of signals) {
       const handler = (): void => {
-        if (signal === 'SIGHUP') {
+        if (signal === "SIGHUP") {
           this.emergencyTerminalExit();
           return;
         }
@@ -1008,13 +1089,13 @@ export class KimiTUI {
         this.emergencyTerminalExit();
       }
     };
-    process.stdout.on('error', terminalErrorHandler);
-    process.stderr.on('error', terminalErrorHandler);
+    process.stdout.on("error", terminalErrorHandler);
+    process.stderr.on("error", terminalErrorHandler);
     this.signalCleanupHandlers.push(() => {
-      process.stdout.off('error', terminalErrorHandler);
+      process.stdout.off("error", terminalErrorHandler);
     });
     this.signalCleanupHandlers.push(() => {
-      process.stderr.off('error', terminalErrorHandler);
+      process.stderr.off("error", terminalErrorHandler);
     });
   }
 
@@ -1071,24 +1152,24 @@ export class KimiTUI {
   // =========================================================================
 
   handlePlanToggle(next: boolean): void {
-    void slashCommands.handlePlanCommand(this, next ? 'on' : 'off');
+    void slashCommands.handlePlanCommand(this, next ? "on" : "off");
   }
 
-  handleInputModeChange(mode: 'prompt' | 'bash'): void {
+  handleInputModeChange(mode: "prompt" | "bash"): void {
     this.setAppState({ inputMode: mode });
     this.updateEditorBorderHighlight();
   }
 
   handleUserInput(text: string): void {
-    const wasBashMode = this.state.appState.inputMode === 'bash';
+    const wasBashMode = this.state.appState.inputMode === "bash";
     if (wasBashMode) {
       // A submit always exits bash mode (the `!` is consumed by this command).
-      this.state.editor.inputMode = 'prompt';
-      this.handleInputModeChange('prompt');
+      this.state.editor.inputMode = "prompt";
+      this.handleInputModeChange("prompt");
     }
     if (text.trim().length === 0) return;
     if (this.state.appState.isReplaying) {
-      this.showError('Cannot send input while session history is replaying.');
+      this.showError("Cannot send input while session history is replaying.");
       return;
     }
     // Shell commands are stored with a leading `!` so ↑ recall can tell them
@@ -1099,8 +1180,8 @@ export class KimiTUI {
     if (wasBashMode) {
       // Only one foreground action at a time: queue the shell command while
       // another shell command is running or an agent turn is in progress.
-      if (this.state.appState.streamingPhase !== 'idle') {
-        this.enqueueMessage(text, undefined, 'bash');
+      if (this.state.appState.streamingPhase !== "idle") {
+        this.enqueueMessage(text, undefined, "bash");
         this.updateQueueDisplay();
         this.state.ui.requestRender();
         return;
@@ -1115,7 +1196,7 @@ export class KimiTUI {
     let session = this.session;
     if (session === undefined) {
       if (!this.engineV2) {
-        this.showError('No active session for shell command.');
+        this.showError("No active session for shell command.");
         return;
       }
       session = await this.ensureSession();
@@ -1124,8 +1205,8 @@ export class KimiTUI {
       // creation was in flight (both inputs share the same creation promise);
       // honor the busy gate here, like handleUserInput does before the await,
       // instead of running the shell command concurrently with an agent turn.
-      if (this.state.appState.streamingPhase !== 'idle') {
-        this.enqueueMessage(command, undefined, 'bash');
+      if (this.state.appState.streamingPhase !== "idle") {
+        this.enqueueMessage(command, undefined, "bash");
         this.updateQueueDisplay();
         this.state.ui.requestRender();
         return;
@@ -1135,11 +1216,11 @@ export class KimiTUI {
     // records it for resume; this is the live view.
     this.appendTranscriptEntry({
       id: nextTranscriptId(),
-      kind: 'user',
+      kind: "user",
       turnId: undefined,
-      renderMode: 'plain',
-      content: currentTheme.fg('shellMode', `$ ${command}`),
-      bullet: '',
+      renderMode: "plain",
+      content: currentTheme.fg("shellMode", `$ ${command}`),
+      bullet: "",
     });
     // Create the live output entry up front. ShellRunComponent owns its own
     // rendering (running card → final view) and is mutated in place as output
@@ -1147,39 +1228,53 @@ export class KimiTUI {
     const commandId = nextTranscriptId();
     const outputEntry: TranscriptEntry = {
       id: commandId,
-      kind: 'status',
+      kind: "status",
       turnId: undefined,
-      renderMode: 'plain',
-      content: '',
+      renderMode: "plain",
+      content: "",
     };
-    const outputComponent = new ShellRunComponent(() => this.state.ui.requestRender());
-    this.shellOutputStreams.set(commandId, { entry: outputEntry, component: outputComponent });
+    const outputComponent = new ShellRunComponent(() =>
+      this.state.ui.requestRender(),
+    );
+    this.shellOutputStreams.set(commandId, {
+      entry: outputEntry,
+      component: outputComponent,
+    });
     this.state.transcriptEntries.push(outputEntry);
     markTranscriptComponent(outputComponent, outputEntry);
     this.state.transcriptContainer.addChild(outputComponent);
     // Treat command execution as a streaming phase so input queues, the activity
     // pane shows the moon spinner, and ctrl+b is enabled while it runs.
-    this.setAppState({ streamingPhase: 'shell' });
+    this.setAppState({ streamingPhase: "shell" });
     this.state.ui.requestRender();
 
-    this.track('shell_command');
+    this.track("shell_command");
 
     void session.runShellCommand(command, { commandId }).then(
       ({ stdout, stderr, isError, backgrounded }) => {
-        this.finishShellOutput(commandId, stdout, stderr, isError, backgrounded);
+        this.finishShellOutput(
+          commandId,
+          stdout,
+          stderr,
+          isError,
+          backgrounded,
+        );
       },
       (error: unknown) => {
         const message = formatErrorMessage(error);
-        this.finishShellOutput(commandId, '', message, true);
+        this.finishShellOutput(commandId, "", message, true);
         this.showError(`Shell command failed: ${message}`);
       },
     );
   }
 
-  handleShellOutput(event: { commandId: string; update: { kind: string; text?: string } }): void {
+  handleShellOutput(event: {
+    commandId: string;
+    update: { kind: string; text?: string };
+  }): void {
     const stream = this.shellOutputStreams.get(event.commandId);
     if (stream === undefined) return;
-    const text = event.update.text ?? '';
+    const text = event.update.text ?? "";
     if (text.length === 0) return;
     stream.component.append(text);
   }
@@ -1195,7 +1290,9 @@ export class KimiTUI {
     if (session === undefined) return;
     for (const commandId of this.shellOutputStreams.keys()) {
       void session.cancelShellCommand(commandId).catch((error: unknown) => {
-        this.showError(`Failed to cancel shell command: ${formatErrorMessage(error)}`);
+        this.showError(
+          `Failed to cancel shell command: ${formatErrorMessage(error)}`,
+        );
       });
     }
   }
@@ -1222,7 +1319,7 @@ export class KimiTUI {
     // When the last shell command finishes, leave the shell streaming phase,
     // release one queued message (if any), and refresh the activity pane.
     if (this.shellOutputStreams.size === 0) {
-      this.setAppState({ streamingPhase: 'idle' });
+      this.setAppState({ streamingPhase: "idle" });
       this.drainOneQueuedMessage();
     }
   }
@@ -1232,7 +1329,7 @@ export class KimiTUI {
     if (item === undefined) return;
     const session = this.session;
     if (session === undefined) return;
-    if (item.mode === 'bash') {
+    if (item.mode === "bash") {
       void this.runShellCommandFromInput(item.text);
     } else {
       this.sendQueuedMessage(session, item);
@@ -1255,7 +1352,9 @@ export class KimiTUI {
     } catch (error) {
       // A video cache copy failed (unwritable cache dir, vanished source…);
       // nothing was dispatched.
-      this.showError(`Failed to prepare media attachment: ${formatErrorMessage(error)}`);
+      this.showError(
+        `Failed to prepare media attachment: ${formatErrorMessage(error)}`,
+      );
       return;
     }
     if (!this.validateMediaCapabilities(extraction)) return;
@@ -1289,16 +1388,16 @@ export class KimiTUI {
     if (!extraction.hasMedia) return true;
     if (
       extraction.imageAttachmentIds.length > 0 &&
-      !this.supportsCurrentModelCapability('image_in')
+      !this.supportsCurrentModelCapability("image_in")
     ) {
-      this.showError('Current model does not support image input.');
+      this.showError("Current model does not support image input.");
       return false;
     }
     if (
       extraction.videoAttachmentIds.length > 0 &&
-      !this.supportsCurrentModelCapability('video_in')
+      !this.supportsCurrentModelCapability("video_in")
     ) {
-      this.showError('Current model does not support video input.');
+      this.showError("Current model does not support video input.");
       return false;
     }
     return true;
@@ -1306,7 +1405,8 @@ export class KimiTUI {
 
   private supportsCurrentModelCapability(capability: string): boolean {
     const capabilities =
-      this.state.appState.availableModels[this.state.appState.model]?.capabilities;
+      this.state.appState.availableModels[this.state.appState.model]
+        ?.capabilities;
     if (capabilities === undefined) return true;
     return capabilities.includes(capability);
   }
@@ -1331,7 +1431,11 @@ export class KimiTUI {
     this.state.editor.addToHistory(trimmed);
     try {
       const file = getInputHistoryFile(this.state.appState.workDir);
-      const written = await appendInputHistory(file, trimmed, this.lastHistoryContent);
+      const written = await appendInputHistory(
+        file,
+        trimmed,
+        this.lastHistoryContent,
+      );
       if (written) this.lastHistoryContent = trimmed;
     } catch {
       this.lastHistoryContent = trimmed;
@@ -1352,19 +1456,20 @@ export class KimiTUI {
   private enqueueMessage(
     text: string,
     options?: SendMessageOptions,
-    mode?: 'prompt' | 'bash',
+    mode?: "prompt" | "bash",
   ): void {
     this.state.queuedMessages.push({
       text,
       agentId: this.harness.interactiveAgentId,
       parts: options?.parts,
       imageAttachmentIds:
-        options?.imageAttachmentIds !== undefined && options.imageAttachmentIds.length > 0
+        options?.imageAttachmentIds !== undefined &&
+        options.imageAttachmentIds.length > 0
           ? options.imageAttachmentIds
           : undefined,
       mode,
     });
-    this.track('input_queue');
+    this.track("input_queue");
   }
 
   beginSessionRequest(): void {
@@ -1374,24 +1479,24 @@ export class KimiTUI {
     this.streamingUI.resetToolCallState();
 
     this.patchLivePane({
-      mode: 'waiting',
+      mode: "waiting",
       pendingApproval: null,
       pendingQuestion: null,
     });
     this.setAppState({
-      streamingPhase: 'waiting',
+      streamingPhase: "waiting",
       streamingStartTime: Date.now(),
     });
   }
 
   failSessionRequest(message: string): void {
-    this.setAppState({ streamingPhase: 'idle' });
+    this.setAppState({ streamingPhase: "idle" });
     this.resetLivePane();
     this.showError(message);
   }
 
   sendQueuedMessage(session: Session, item: QueuedMessage): void {
-    if (item.mode === 'bash') {
+    if (item.mode === "bash") {
       void this.runShellCommandFromInput(item.text);
       return;
     }
@@ -1407,16 +1512,21 @@ export class KimiTUI {
     this.sessionEventHandler.requestQueuedGoalPromotion();
   }
 
-  private sendMessageInternal(session: Session, input: string, options?: SendMessageOptions): void {
+  private sendMessageInternal(
+    session: Session,
+    input: string,
+    options?: SendMessageOptions,
+  ): void {
     const imageAttachmentIds =
-      options?.imageAttachmentIds !== undefined && options.imageAttachmentIds.length > 0
+      options?.imageAttachmentIds !== undefined &&
+      options.imageAttachmentIds.length > 0
         ? options.imageAttachmentIds
         : undefined;
     this.appendTranscriptEntry({
       id: nextTranscriptId(),
-      kind: 'user',
+      kind: "user",
       turnId: undefined,
-      renderMode: 'plain',
+      renderMode: "plain",
       content: input,
       imageAttachmentIds,
     });
@@ -1429,7 +1539,7 @@ export class KimiTUI {
     // continuation boundary and is rejected with `turn.agent_busy`, dropping
     // the message. Steer instead: the engine buffers it into the running goal
     // turn, or launches a turn of its own if the loop just ended.
-    if (this.state.appState.goal?.status === 'active') {
+    if (this.state.appState.goal?.status === "active") {
       void session.steer(sdkInput).catch((error: unknown) => {
         const message = formatErrorMessage(error);
         // Same reset as the prompt path: beginSessionRequest already moved the
@@ -1446,26 +1556,34 @@ export class KimiTUI {
     });
   }
 
-  sendSkillActivation(session: Session, skillName: string, skillArgs: string): void {
+  sendSkillActivation(
+    session: Session,
+    skillName: string,
+    skillArgs: string,
+  ): void {
     // Args are a plain-text channel, so pasted media can't ride along as
     // inline parts. Skill args are XML-escaped on render (renderSkillAttributes
     // + expandSkillParameters), so rewrite placeholders into escape-proof
     // plain-text file references the model can open with ReadMediaFile.
     let rewrite: ReturnType<typeof rewriteMediaPlaceholders>;
     try {
-      rewrite = rewriteMediaPlaceholders(skillArgs, this.imageStore, 'plain');
+      rewrite = rewriteMediaPlaceholders(skillArgs, this.imageStore, "plain");
     } catch (error) {
       // Cache copy failed (unwritable cache dir, vanished video source…);
       // nothing has been dispatched yet, so just report and keep the input.
-      this.showError(`Failed to prepare media attachment: ${formatErrorMessage(error)}`);
+      this.showError(
+        `Failed to prepare media attachment: ${formatErrorMessage(error)}`,
+      );
       return;
     }
     if (!this.validateMediaCapabilities(rewrite)) return;
     this.beginSessionRequest();
-    void session.activateSkill(skillName, rewrite.text).catch((error: unknown) => {
-      const message = formatErrorMessage(error);
-      this.failSessionRequest(`Skill "${skillName}" failed: ${message}`);
-    });
+    void session
+      .activateSkill(skillName, rewrite.text)
+      .catch((error: unknown) => {
+        const message = formatErrorMessage(error);
+        this.failSessionRequest(`Skill "${skillName}" failed: ${message}`);
+      });
   }
 
   activatePluginCommand(
@@ -1479,9 +1597,11 @@ export class KimiTUI {
     // sendSkillActivation for the escaped-channel variant.
     let rewrite: ReturnType<typeof rewriteMediaPlaceholders>;
     try {
-      rewrite = rewriteMediaPlaceholders(args, this.imageStore, 'tag');
+      rewrite = rewriteMediaPlaceholders(args, this.imageStore, "tag");
     } catch (error) {
-      this.showError(`Failed to prepare media attachment: ${formatErrorMessage(error)}`);
+      this.showError(
+        `Failed to prepare media attachment: ${formatErrorMessage(error)}`,
+      );
       return;
     }
     if (!this.validateMediaCapabilities(rewrite)) return;
@@ -1490,14 +1610,20 @@ export class KimiTUI {
       .activatePluginCommand(pluginId, commandName, rewrite.text)
       .catch((error: unknown) => {
         const message = formatErrorMessage(error);
-        this.failSessionRequest(`Command "${pluginId}:${commandName}" failed: ${message}`);
+        this.failSessionRequest(
+          `Command "${pluginId}:${commandName}" failed: ${message}`,
+        );
       });
   }
 
-  private sendMessage(session: Session, input: string, options?: SendMessageOptions): void {
+  private sendMessage(
+    session: Session,
+    input: string,
+    options?: SendMessageOptions,
+  ): void {
     if (
       this.deferUserMessages ||
-      this.state.appState.streamingPhase !== 'idle' ||
+      this.state.appState.streamingPhase !== "idle" ||
       this.state.appState.isCompacting
     ) {
       this.enqueueMessage(input, options);
@@ -1513,7 +1639,7 @@ export class KimiTUI {
       }
       return;
     }
-    if (this.state.appState.streamingPhase === 'idle') {
+    if (this.state.appState.streamingPhase === "idle") {
       for (const item of input) {
         this.sendMessageInternal(session, item.text, item);
       }
@@ -1523,12 +1649,13 @@ export class KimiTUI {
     for (const item of input) {
       this.appendTranscriptEntry({
         id: nextTranscriptId(),
-        kind: 'user',
+        kind: "user",
         turnId: this.streamingUI.getTurnContext().turnId,
-        renderMode: 'plain',
+        renderMode: "plain",
         content: item.text,
         imageAttachmentIds:
-          item.imageAttachmentIds !== undefined && item.imageAttachmentIds.length > 0
+          item.imageAttachmentIds !== undefined &&
+          item.imageAttachmentIds.length > 0
             ? item.imageAttachmentIds
             : undefined,
       });
@@ -1545,7 +1672,7 @@ export class KimiTUI {
   // =========================================================================
 
   setStartupReady(): void {
-    this.state.startupState = 'ready';
+    this.state.startupState = "ready";
   }
 
   clearQueuedMessages(): void {
@@ -1567,7 +1694,7 @@ export class KimiTUI {
     this.state.externalEditorRunning = running;
   }
 
-  setTasksBrowser(value: TUIState['tasksBrowser']): void {
+  setTasksBrowser(value: TUIState["tasksBrowser"]): void {
     this.state.tasksBrowser = value;
   }
 
@@ -1609,11 +1736,14 @@ export class KimiTUI {
   setAppState(patch: Partial<AppState>): void {
     if (!hasPatchChanges(this.state.appState, patch)) return;
     const additionalDirsChanged =
-      'additionalDirs' in patch &&
-      !sameStringArrays(this.state.appState.additionalDirs, patch.additionalDirs ?? []);
-    const busyChanged = 'streamingPhase' in patch || 'isCompacting' in patch;
+      "additionalDirs" in patch &&
+      !sameStringArrays(
+        this.state.appState.additionalDirs,
+        patch.additionalDirs ?? [],
+      );
+    const busyChanged = "streamingPhase" in patch || "isCompacting" in patch;
     Object.assign(this.state.appState, patch);
-    if ('planMode' in patch) this.updateEditorBorderHighlight();
+    if ("planMode" in patch) this.updateEditorBorderHighlight();
     this.state.footer.setState(this.state.appState);
     this.updateActivityPane();
     if (busyChanged) {
@@ -1639,7 +1769,8 @@ export class KimiTUI {
 
   private syncAdditionalDirs(session: Session): void {
     const additionalDirs = session.summary?.additionalDirs ?? [];
-    if (sameStringArrays(this.state.appState.additionalDirs, additionalDirs)) return;
+    if (sameStringArrays(this.state.appState.additionalDirs, additionalDirs))
+      return;
     this.setAppState({ additionalDirs: [...additionalDirs] });
   }
 
@@ -1677,7 +1808,7 @@ export class KimiTUI {
       // The default disappeared from config (edited externally): clear the
       // previously hydrated value instead of passing a stale explicit model
       // to the first lazy-created session.
-      patch.model = '';
+      patch.model = "";
       patch.maxContextTokens = 0;
     }
     // CLI --auto/--yolo/--plan win over config defaults; the flags are
@@ -1685,7 +1816,7 @@ export class KimiTUI {
     if (!startup.auto && !startup.yolo) {
       // Reset to manual when the default was removed from config — a stale
       // elevated mode must not be passed to the first lazy-created session.
-      patch.permissionMode = config.defaultPermissionMode ?? 'manual';
+      patch.permissionMode = config.defaultPermissionMode ?? "manual";
     }
     // Track the config default itself (vs an explicit CLI --plan) so the lazy
     // create path can tell which one would activate plan mode; a removed
@@ -1708,14 +1839,21 @@ export class KimiTUI {
         );
       }
     }
-    if (startup.agentProfile !== undefined || startup.agentFiles !== undefined) {
+    if (
+      startup.agentProfile !== undefined ||
+      startup.agentFiles !== undefined
+    ) {
       patch.agentProfile = startup.agentProfile;
-      patch.agentFiles = startup.agentFiles?.length ? [...startup.agentFiles] : undefined;
+      patch.agentFiles = startup.agentFiles?.length
+        ? [...startup.agentFiles]
+        : undefined;
     }
     this.setAppState(patch);
   }
 
-  private async createSessionFromCurrentState(bindStartupAgent = false): Promise<Session> {
+  private async createSessionFromCurrentState(
+    bindStartupAgent = false,
+  ): Promise<Session> {
     const model = this.state.appState.model.trim();
     if (model.length === 0) {
       throw new Error(LLM_NOT_SET_MESSAGE);
@@ -1729,7 +1867,8 @@ export class KimiTUI {
     const explicitPlanMode =
       this.session !== undefined || !this.engineV2
         ? this.state.appState.planMode
-        : this.options.startup.plan && this.state.appState.configDefaultPlanMode !== true;
+        : this.options.startup.plan &&
+          this.state.appState.configDefaultPlanMode !== true;
     const options: MutableCreateSessionOptions = {
       workDir: this.state.appState.workDir,
       model,
@@ -1830,7 +1969,7 @@ export class KimiTUI {
   }
 
   async setSession(session: Session): Promise<void> {
-    const previous = this.unloadCurrentSession('switching session');
+    const previous = this.unloadCurrentSession("switching session");
     await previous?.close();
     this.session = session;
     this.harness.setTelemetryContext({ sessionId: session.id });
@@ -1838,11 +1977,16 @@ export class KimiTUI {
     this.syncAdditionalDirs(session);
   }
 
-  async syncRuntimeState(session: Session = this.requireSession()): Promise<void> {
-    const [status, goalResult] = await Promise.all([session.getStatus(), session.getGoal()]);
+  async syncRuntimeState(
+    session: Session = this.requireSession(),
+  ): Promise<void> {
+    const [status, goalResult] = await Promise.all([
+      session.getStatus(),
+      session.getGoal(),
+    ]);
     this.setAppState({
       sessionId: session.id,
-      model: status.model ?? '',
+      model: status.model ?? "",
       thinkingEffort: status.thinkingEffort,
       permissionMode: status.permission,
       planMode: status.planMode,
@@ -1860,12 +2004,14 @@ export class KimiTUI {
   // session may already be in plan mode from its persisted records, and
   // re-entering plan mode throws, so only enable it when it is not active yet.
   // setPermission is idempotent and needs no such guard.
-  private async applyStartupModesToResumedSession(session: Session): Promise<void> {
+  private async applyStartupModesToResumedSession(
+    session: Session,
+  ): Promise<void> {
     const { startup } = this.options;
     if (startup.auto) {
-      await session.setPermission('auto');
+      await session.setPermission("auto");
     } else if (startup.yolo) {
-      await session.setPermission('yolo');
+      await session.setPermission("yolo");
     }
     if (startup.plan) {
       const status = await session.getStatus();
@@ -1881,9 +2027,9 @@ export class KimiTUI {
   private applyStartupPermissionAndPlanToAppState(): void {
     const { startup } = this.options;
     if (startup.auto) {
-      this.setAppState({ permissionMode: 'auto' });
+      this.setAppState({ permissionMode: "auto" });
     } else if (startup.yolo) {
-      this.setAppState({ permissionMode: 'yolo' });
+      this.setAppState({ permissionMode: "yolo" });
     }
     if (startup.plan) {
       this.setAppState({ planMode: true });
@@ -1927,21 +2073,30 @@ export class KimiTUI {
 
   private registerSessionHandlers(session: Session): void {
     session.setApprovalHandler(
-      createApprovalRequestHandler(this.approvalController, (request, response) => {
-        this.appendApprovalTranscriptEntry(request, response);
-      }),
+      createApprovalRequestHandler(
+        this.approvalController,
+        (request, response) => {
+          this.appendApprovalTranscriptEntry(request, response);
+        },
+      ),
     );
-    session.setQuestionHandler(createQuestionAskHandler(this.questionController));
+    session.setQuestionHandler(
+      createQuestionAskHandler(this.questionController),
+    );
   }
 
-  async fetchSessions(scope: 'cwd' | 'all' = this.state.sessionsScope): Promise<void> {
+  async fetchSessions(
+    scope: "cwd" | "all" = this.state.sessionsScope,
+  ): Promise<void> {
     this.state.loadingSessions = true;
     this.state.sessionsScope = scope;
     try {
       const sessions =
-        scope === 'all'
+        scope === "all"
           ? await this.harness.listSessions({})
-          : await this.harness.listSessions({ workDir: this.state.appState.workDir });
+          : await this.harness.listSessions({
+              workDir: this.state.appState.workDir,
+            });
       this.state.sessions = sessionRowsForPicker(
         sessions,
         this.state.appState.sessionId,
@@ -1951,15 +2106,18 @@ export class KimiTUI {
       // The picker must keep working (it renders the empty state), but a
       // swallowed failure surfaces as a misleading "No sessions found." —
       // keep a log trail so the real error stays discoverable.
-      log.warn('failed to fetch sessions for picker', { error: String(error) });
+      log.warn("failed to fetch sessions for picker", { error: String(error) });
     } finally {
       this.state.loadingSessions = false;
     }
   }
 
   updateTerminalTitle(): void {
-    const trimmed = this.state.appState.sessionTitle?.trim() ?? '';
-    const label = trimmed.length > 0 ? trimmed.slice(0, MAX_TERMINAL_TITLE_LENGTH) : PRODUCT_NAME;
+    const trimmed = this.state.appState.sessionTitle?.trim() ?? "";
+    const label =
+      trimmed.length > 0
+        ? trimmed.slice(0, MAX_TERMINAL_TITLE_LENGTH)
+        : PRODUCT_NAME;
     this.state.terminal.setTitle(label);
   }
 
@@ -1988,9 +2146,12 @@ export class KimiTUI {
     const message = `Current session is in a different working directory.\n  To resume, run: ${command}`;
     try {
       await copyTextToClipboard(command);
-      this.showStatus(`${message}\n  Command copied to clipboard`, 'warning');
+      this.showStatus(`${message}\n  Command copied to clipboard`, "warning");
     } catch {
-      this.showStatus(`${message}\n  Failed to copy command to clipboard`, 'warning');
+      this.showStatus(
+        `${message}\n  Failed to copy command to clipboard`,
+        "warning",
+      );
     }
   }
 
@@ -2000,15 +2161,17 @@ export class KimiTUI {
     // replace the resumed session when creation completes.
     await this.waitForLazyCreation();
     if (targetSessionId === this.state.appState.sessionId) {
-      this.showStatus('Already on this session.');
+      this.showStatus("Already on this session.");
       return true;
     }
-    if (this.state.appState.streamingPhase !== 'idle') {
-      this.showError('Cannot switch sessions while streaming — press Esc or Ctrl-C first.');
+    if (this.state.appState.streamingPhase !== "idle") {
+      this.showError(
+        "Cannot switch sessions while streaming — press Esc or Ctrl-C first.",
+      );
       return false;
     }
     if (this.state.appState.isReplaying) {
-      this.showError('Cannot switch sessions while history is replaying.');
+      this.showError("Cannot switch sessions while history is replaying.");
       return false;
     }
 
@@ -2028,7 +2191,10 @@ export class KimiTUI {
     return true;
   }
 
-  async switchToSession(session: Session, statusMessage: string): Promise<void> {
+  async switchToSession(
+    session: Session,
+    statusMessage: string,
+  ): Promise<void> {
     this.resetSessionRuntime();
     await this.setSession(session);
     await this.syncRuntimeState(session);
@@ -2050,20 +2216,23 @@ export class KimiTUI {
     }
     const resumeState = session.getResumeState();
     if (resumeState?.warning !== undefined) {
-      this.showStatus(`Warning: ${resumeState.warning}`, 'warning');
+      this.showStatus(`Warning: ${resumeState.warning}`, "warning");
     }
     this.showStatus(statusMessage);
     void this.showSessionWarnings(session);
   }
 
-  async reloadCurrentSessionView(session: Session, statusMessage: string): Promise<void> {
+  async reloadCurrentSessionView(
+    session: Session,
+    statusMessage: string,
+  ): Promise<void> {
     this.sessionEventUnsubscribe?.();
     this.sessionEventUnsubscribe = undefined;
     this.clearReverseRpcPanels();
     session.setApprovalHandler(undefined);
     session.setQuestionHandler(undefined);
-    this.approvalController.cancelAll('reloading session');
-    this.questionController.cancelAll('reloading session');
+    this.approvalController.cancelAll("reloading session");
+    this.questionController.cancelAll("reloading session");
 
     this.resetSessionRuntime();
     this.session = session;
@@ -2080,7 +2249,7 @@ export class KimiTUI {
     this.sessionEventHandler.startSubscription();
     const resumeState = session.getResumeState();
     if (resumeState?.warning !== undefined) {
-      this.showStatus(`Warning: ${resumeState.warning}`, 'warning');
+      this.showStatus(`Warning: ${resumeState.warning}`, "warning");
     }
     this.showStatus(statusMessage);
     void this.showSessionWarnings(session);
@@ -2088,7 +2257,7 @@ export class KimiTUI {
 
   async createNewSession(): Promise<void> {
     if (this.state.appState.isReplaying) {
-      this.showError('Cannot start a new session while history is replaying.');
+      this.showError("Cannot start a new session while history is replaying.");
       return;
     }
 
@@ -2131,7 +2300,7 @@ export class KimiTUI {
     try {
       const { warnings } = await this.harness.getConfigDiagnostics();
       for (const warning of warnings) {
-        this.showStatus(warning, 'warning');
+        this.showStatus(warning, "warning");
       }
     } catch {
       /* diagnostics are best-effort */
@@ -2146,7 +2315,7 @@ export class KimiTUI {
     if (entry.compactionData !== undefined) {
       const data = entry.compactionData;
       const block = new CompactionComponent(this.state.ui, data.instruction);
-      if (data.result === 'cancelled') {
+      if (data.result === "cancelled") {
         block.markCanceled();
       } else {
         block.markDone(data.tokensBefore, data.tokensAfter, data.summary);
@@ -2158,47 +2327,54 @@ export class KimiTUI {
     }
 
     switch (entry.kind) {
-      case 'user': {
+      case "user": {
         const images = entry.imageAttachmentIds
           ?.map((id) => this.imageStore.get(id))
-          .filter((a): a is ImageAttachment => a?.kind === 'image');
+          .filter((a): a is ImageAttachment => a?.kind === "image");
         return new UserMessageComponent(entry.content, images, entry.bullet);
       }
-      case 'skill_activation':
+      case "skill_activation":
         return new SkillActivationComponent(
           entry.skillName ?? entry.content,
           entry.skillArgs,
           entry.skillTrigger,
         );
-      case 'plugin_command': {
+      case "plugin_command": {
         const data = entry.pluginCommandData;
         if (data === undefined) return null;
-        return new PluginCommandComponent(data.pluginId, data.commandName, data.args);
+        return new PluginCommandComponent(
+          data.pluginId,
+          data.commandName,
+          data.args,
+        );
       }
-      case 'cron':
+      case "cron":
         return new CronMessageComponent(entry.content, entry.cronData ?? {});
-      case 'goal':
-        if (entry.goalData?.kind === 'created') {
+      case "goal":
+        if (entry.goalData?.kind === "created") {
           return new GoalSetMessageComponent();
         }
-        if (entry.goalData?.kind === 'lifecycle') {
-          return buildGoalMarker(entry.goalData.change, this.state.toolOutputExpanded);
+        if (entry.goalData?.kind === "lifecycle") {
+          return buildGoalMarker(
+            entry.goalData.change,
+            this.state.toolOutputExpanded,
+          );
         }
         return null;
-      case 'assistant': {
-        if (entry.content.trimStart().startsWith('✓ Goal complete')) {
+      case "assistant": {
+        if (entry.content.trimStart().startsWith("✓ Goal complete")) {
           return new GoalCompletionMessageComponent(entry.content);
         }
         const component = new AssistantMessageComponent();
         component.updateContent(entry.content);
         return component;
       }
-      case 'thinking': {
+      case "thinking": {
         const thinking = new ThinkingComponent(entry.content, true);
         if (this.state.toolOutputExpanded) thinking.setExpanded(true);
         return thinking;
       }
-      case 'tool_call':
+      case "tool_call":
         if (entry.toolCallData) {
           const tc = new ToolCallComponent(
             entry.toolCallData,
@@ -2210,19 +2386,23 @@ export class KimiTUI {
           return tc;
         }
         if (entry.backgroundAgentStatus !== undefined) {
-          return new BackgroundAgentStatusComponent(entry.backgroundAgentStatus);
+          return new BackgroundAgentStatusComponent(
+            entry.backgroundAgentStatus,
+          );
         }
-        return entry.renderMode === 'notice'
+        return entry.renderMode === "notice"
           ? new NoticeMessageComponent(entry.content, entry.detail)
           : new StatusMessageComponent(entry.content, entry.color);
-      case 'status':
+      case "status":
         if (entry.backgroundAgentStatus !== undefined) {
-          return new BackgroundAgentStatusComponent(entry.backgroundAgentStatus);
+          return new BackgroundAgentStatusComponent(
+            entry.backgroundAgentStatus,
+          );
         }
-        return entry.renderMode === 'notice'
+        return entry.renderMode === "notice"
           ? new NoticeMessageComponent(entry.content, entry.detail)
           : new StatusMessageComponent(entry.content, entry.color);
-      case 'welcome':
+      case "welcome":
         return null;
       default:
         return null;
@@ -2248,21 +2428,23 @@ export class KimiTUI {
     response: ApprovalResponse,
   ): void {
     if (
-      request.toolName === 'ExitPlanMode' ||
-      request.display.kind === 'plan_review' ||
-      request.display.kind === 'goal_start'
+      request.toolName === "ExitPlanMode" ||
+      request.display.kind === "plan_review" ||
+      request.display.kind === "goal_start"
     )
       return;
     const parts: string[] = [];
     switch (response.decision) {
-      case 'approved':
-        parts.push(response.scope === 'session' ? 'Approved for session' : 'Approved');
+      case "approved":
+        parts.push(
+          response.scope === "session" ? "Approved for session" : "Approved",
+        );
         break;
-      case 'rejected':
-        parts.push('Rejected');
+      case "rejected":
+        parts.push("Rejected");
         break;
-      case 'cancelled':
-        parts.push('Cancelled');
+      case "cancelled":
+        parts.push("Cancelled");
         break;
     }
     parts.push(`: ${request.action}`);
@@ -2271,16 +2453,18 @@ export class KimiTUI {
     }
     this.appendTranscriptEntry({
       id: nextTranscriptId(),
-      kind: 'status',
+      kind: "status",
       turnId: request.turnId === undefined ? undefined : String(request.turnId),
-      renderMode: 'notice',
-      content: parts.join(''),
+      renderMode: "notice",
+      content: parts.join(""),
     });
   }
 
   private renderWelcome(): void {
     if (
-      this.state.transcriptContainer.children.some((child) => child instanceof WelcomeComponent)
+      this.state.transcriptContainer.children.some(
+        (child) => child instanceof WelcomeComponent,
+      )
     ) {
       return;
     }
@@ -2289,7 +2473,7 @@ export class KimiTUI {
   }
 
   private clearTerminalInlineImages(): void {
-    if (getCapabilities().images !== 'kitty') return;
+    if (getCapabilities().images !== "kitty") return;
     this.state.terminal.write(deleteAllKittyImages());
   }
 
@@ -2338,7 +2522,7 @@ export class KimiTUI {
     // Live user messages / slash activations have an undefined turnId; replayed
     // ones get a `replay:N` turnId. Both start a new turn. Steer messages carry
     // a defined non-replay turnId and are not boundaries.
-    return entry.turnId === undefined || entry.turnId.startsWith('replay:');
+    return entry.turnId === undefined || entry.turnId.startsWith("replay:");
   }
 
   private trimTranscriptWindow(): boolean {
@@ -2359,14 +2543,18 @@ export class KimiTUI {
 
     const turns = groupTurns(this.state.transcriptEntries);
 
-    const toRemove = turnsToTrim(turns, TRANSCRIPT_MAX_TURNS, TRANSCRIPT_HYSTERESIS);
+    const toRemove = turnsToTrim(
+      turns,
+      TRANSCRIPT_MAX_TURNS,
+      TRANSCRIPT_HYSTERESIS,
+    );
     if (toRemove.size === 0) return false;
 
     // Reclaim image bytes referenced by trimmed user messages. The transcript
     // renders historical thumbnails via imageStore.get(id), so an attachment can
     // only be dropped once its owning user message leaves the transcript.
     for (const entry of toRemove) {
-      if (entry.kind === 'user' && entry.imageAttachmentIds !== undefined) {
+      if (entry.kind === "user" && entry.imageAttachmentIds !== undefined) {
         this.imageStore.removeMany(entry.imageAttachmentIds);
       }
     }
@@ -2374,16 +2562,18 @@ export class KimiTUI {
     let boundariesToRemove = 0;
     for (const entry of toRemove) {
       if (
-        (entry.kind === 'user' ||
-          entry.kind === 'skill_activation' ||
-          entry.kind === 'plugin_command') &&
+        (entry.kind === "user" ||
+          entry.kind === "skill_activation" ||
+          entry.kind === "plugin_command") &&
         entry.turnId === undefined
       ) {
         boundariesToRemove++;
       }
     }
     if (boundariesToRemove === 0) {
-      this.state.transcriptEntries = this.state.transcriptEntries.filter((e) => !toRemove.has(e));
+      this.state.transcriptEntries = this.state.transcriptEntries.filter(
+        (e) => !toRemove.has(e),
+      );
       return true;
     }
 
@@ -2412,7 +2602,9 @@ export class KimiTUI {
       if (hasDispose(child)) child.dispose();
     }
 
-    this.state.transcriptEntries = this.state.transcriptEntries.filter((e) => !toRemove.has(e));
+    this.state.transcriptEntries = this.state.transcriptEntries.filter(
+      (e) => !toRemove.has(e),
+    );
     return true;
   }
 
@@ -2437,7 +2629,10 @@ export class KimiTUI {
     );
   }
 
-  private foldCurrentTurnContent(keepSteps: number, keepAssistants: number): boolean {
+  private foldCurrentTurnContent(
+    keepSteps: number,
+    keepAssistants: number,
+  ): boolean {
     if (keepSteps <= 0 && keepAssistants <= 0) return false;
     const children = this.state.transcriptContainer.children;
 
@@ -2471,9 +2666,12 @@ export class KimiTUI {
     // Fold the oldest steps / assistant messages beyond their respective caps;
     // the most recent ones stay mounted. Children are chronological, so the
     // oldest of each kind sit at the front of their index lists.
-    const stepMergeCount = keepSteps > 0 ? Math.max(0, stepIndices.length - keepSteps) : 0;
+    const stepMergeCount =
+      keepSteps > 0 ? Math.max(0, stepIndices.length - keepSteps) : 0;
     const assistantMergeCount =
-      keepAssistants > 0 ? Math.max(0, assistantIndices.length - keepAssistants) : 0;
+      keepAssistants > 0
+        ? Math.max(0, assistantIndices.length - keepAssistants)
+        : 0;
     if (stepMergeCount === 0 && assistantMergeCount === 0) return false;
     const toMergeIndices = [
       ...stepIndices.slice(0, stepMergeCount),
@@ -2487,7 +2685,8 @@ export class KimiTUI {
       if (child instanceof ThinkingComponent) thinkingCount++;
       else if (child instanceof ToolCallComponent) toolCount++;
     }
-    if (thinkingCount === 0 && toolCount === 0 && assistantMergeCount === 0) return false;
+    if (thinkingCount === 0 && toolCount === 0 && assistantMergeCount === 0)
+      return false;
 
     let summary: StepSummaryComponent;
     if (summaryIndex >= 0) {
@@ -2520,7 +2719,10 @@ export class KimiTUI {
   }
 
   mergeAllTurnSteps(): void {
-    if (TRANSCRIPT_KEEP_RECENT_STEPS <= 0 && TRANSCRIPT_KEEP_RECENT_ASSISTANT_COMPLETED <= 0)
+    if (
+      TRANSCRIPT_KEEP_RECENT_STEPS <= 0 &&
+      TRANSCRIPT_KEEP_RECENT_ASSISTANT_COMPLETED <= 0
+    )
       return;
     const children = this.state.transcriptContainer.children;
 
@@ -2536,7 +2738,8 @@ export class KimiTUI {
 
     for (let t = 0; t < boundaries.length; t++) {
       const turnStart = boundaries[t]!;
-      const turnEnd = t + 1 < boundaries.length ? boundaries[t + 1]! : children.length;
+      const turnEnd =
+        t + 1 < boundaries.length ? boundaries[t + 1]! : children.length;
       newChildren.push(children[turnStart]!);
 
       let summaryIndex = -1;
@@ -2545,7 +2748,8 @@ export class KimiTUI {
       for (let i = turnStart + 1; i < turnEnd; i++) {
         const child = children[i]!;
         if (child instanceof StepSummaryComponent) summaryIndex = i;
-        else if (child instanceof AssistantMessageComponent) assistantIndices.push(i);
+        else if (child instanceof AssistantMessageComponent)
+          assistantIndices.push(i);
         else stepIndices.push(i);
       }
 
@@ -2557,7 +2761,11 @@ export class KimiTUI {
       // assistant cap applies (matching what live turns fold to on turn end).
       const assistantMergeCount =
         TRANSCRIPT_KEEP_RECENT_ASSISTANT_COMPLETED > 0
-          ? Math.max(0, assistantIndices.length - TRANSCRIPT_KEEP_RECENT_ASSISTANT_COMPLETED)
+          ? Math.max(
+              0,
+              assistantIndices.length -
+                TRANSCRIPT_KEEP_RECENT_ASSISTANT_COMPLETED,
+            )
           : 0;
       if (stepMergeCount > 0 || assistantMergeCount > 0) {
         const toMergeIndices = [
@@ -2588,7 +2796,8 @@ export class KimiTUI {
           newChildren.push(children[i]!);
         }
       } else {
-        for (let i = turnStart + 1; i < turnEnd; i++) newChildren.push(children[i]!);
+        for (let i = turnStart + 1; i < turnEnd; i++)
+          newChildren.push(children[i]!);
       }
     }
 
@@ -2599,17 +2808,21 @@ export class KimiTUI {
   }
 
   showStatus(message: string, color?: ColorToken): void {
-    this.state.transcriptContainer.addChild(new StatusMessageComponent(message, color));
+    this.state.transcriptContainer.addChild(
+      new StatusMessageComponent(message, color),
+    );
     this.state.ui.requestRender();
   }
 
   showNotice(title: string, detail?: string): void {
-    this.state.transcriptContainer.addChild(new NoticeMessageComponent(title, detail));
+    this.state.transcriptContainer.addChild(
+      new NoticeMessageComponent(title, detail),
+    );
     this.state.ui.requestRender();
   }
 
   showError(message: string): void {
-    this.showStatus(`Error: ${message}`, 'error');
+    this.showStatus(`Error: ${message}`, "error");
   }
 
   showLoginProgressSpinner(label: string): LoginProgressSpinnerHandle {
@@ -2617,16 +2830,16 @@ export class KimiTUI {
   }
 
   showProgressSpinner(label: string): LoginProgressSpinnerHandle {
-    const tint = (s: string): string => currentTheme.fg('primary', s);
-    const spinner = new MoonLoader(this.state.ui, 'braille', tint, label);
+    const tint = (s: string): string => currentTheme.fg("primary", s);
+    const spinner = new MoonLoader(this.state.ui, "braille", tint, label);
     this.state.transcriptContainer.addChild(new Spacer(1));
     this.state.transcriptContainer.addChild(spinner);
     this.state.ui.requestRender();
     return {
       stop: ({ ok, label: finalLabel }) => {
         spinner.stop();
-        const tone = ok ? 'success' : 'error';
-        const symbol = ok ? '✓' : '✗';
+        const tone = ok ? "success" : "error";
+        const symbol = ok ? "✓" : "✗";
         spinner.setText(currentTheme.fg(tone, `${symbol} ${finalLabel}`));
         this.state.ui.requestRender();
       },
@@ -2636,18 +2849,20 @@ export class KimiTUI {
     };
   }
 
-  showLoginAuthorizationPrompt(auth: DeviceAuthorization): LoginProgressSpinnerHandle {
+  showLoginAuthorizationPrompt(
+    auth: DeviceAuthorization,
+  ): LoginProgressSpinnerHandle {
     openUrl(auth.verificationUriComplete);
     this.state.transcriptContainer.addChild(
       new DeviceCodeBoxComponent({
-        title: 'Sign in to Kimi Code',
+        title: "Sign in to Kimi Code",
         url: auth.verificationUriComplete,
         code: auth.userCode,
-        hint: 'Press Ctrl-C to cancel',
+        hint: "Press Ctrl-C to cancel",
       }),
     );
     this.state.ui.requestRender();
-    return this.showLoginProgressSpinner('Waiting for authorization…');
+    return this.showLoginProgressSpinner("Waiting for authorization…");
   }
 
   // =========================================================================
@@ -2661,11 +2876,16 @@ export class KimiTUI {
     // covers waiting/tool (both moon spinners) and any intermediate thinking
     // phase, so a continuous burst of tool calls does not flip tips. Clear the
     // cache only when there is no loading UI at all.
-    if (effectiveMode === 'idle' || effectiveMode === 'session' || effectiveMode === 'hidden') {
+    if (
+      effectiveMode === "idle" ||
+      effectiveMode === "session" ||
+      effectiveMode === "hidden"
+    ) {
       this.currentLoadingTip = undefined;
     } else if (
       tipKind !== undefined &&
-      (this.currentLoadingTip === undefined || this.currentLoadingTip.kind !== tipKind)
+      (this.currentLoadingTip === undefined ||
+        this.currentLoadingTip.kind !== tipKind)
     ) {
       const previousTip = this.currentLoadingTip?.tip;
       this.currentLoadingTip = {
@@ -2674,15 +2894,20 @@ export class KimiTUI {
       };
     }
     this.syncTerminalProgress(this.shouldShowTerminalProgress(effectiveMode));
-    const placeSpinnerInAgentSwarm = this.shouldPlaceActivitySpinnerInAgentSwarm(effectiveMode);
-    const activityModeKey = `${effectiveMode}:${placeSpinnerInAgentSwarm ? 'swarm' : 'pane'}`;
+    const placeSpinnerInAgentSwarm =
+      this.shouldPlaceActivitySpinnerInAgentSwarm(effectiveMode);
+    const activityModeKey = `${effectiveMode}:${placeSpinnerInAgentSwarm ? "swarm" : "pane"}`;
 
     if (
       activityModeKey === this.lastActivityMode &&
-      (effectiveMode === 'waiting' || effectiveMode === 'thinking' || effectiveMode === 'tool')
+      (effectiveMode === "waiting" ||
+        effectiveMode === "thinking" ||
+        effectiveMode === "tool")
     ) {
       if (placeSpinnerInAgentSwarm) {
-        this.syncAgentSwarmActivitySpinner(this.state.activitySpinner?.instance);
+        this.syncAgentSwarmActivitySpinner(
+          this.state.activitySpinner?.instance,
+        );
       }
       return;
     }
@@ -2691,58 +2916,64 @@ export class KimiTUI {
     this.state.activityContainer.clear();
 
     switch (effectiveMode) {
-      case 'hidden':
+      case "hidden":
         this.stopActivitySpinner();
         this.syncAgentSwarmActivitySpinner(undefined);
         this.state.ui.requestRender();
         return;
-      case 'waiting': {
-        const spinner = this.ensureActivitySpinner('moon');
-        this.syncAgentSwarmActivitySpinner(placeSpinnerInAgentSwarm ? spinner : undefined);
+      case "waiting": {
+        const spinner = this.ensureActivitySpinner("moon");
+        this.syncAgentSwarmActivitySpinner(
+          placeSpinnerInAgentSwarm ? spinner : undefined,
+        );
         if (placeSpinnerInAgentSwarm) break;
         this.state.activityContainer.addChild(
           new ActivityPaneComponent({
-            mode: 'waiting',
+            mode: "waiting",
             spinner,
             tip: this.currentLoadingTip?.tip,
           }),
         );
         break;
       }
-      case 'thinking': {
+      case "thinking": {
         this.stopActivitySpinner();
         this.syncAgentSwarmActivitySpinner(undefined);
         break;
       }
-      case 'composing': {
-        const spinner = this.ensureActivitySpinner('braille', 'working...', (s) =>
-          currentTheme.fg('primary', s),
+      case "composing": {
+        const spinner = this.ensureActivitySpinner(
+          "braille",
+          "working...",
+          (s) => currentTheme.fg("primary", s),
         );
         this.syncAgentSwarmActivitySpinner(undefined);
         this.state.activityContainer.addChild(
           new ActivityPaneComponent({
-            mode: 'composing',
+            mode: "composing",
             spinner,
             tip: this.currentLoadingTip?.tip,
           }),
         );
         break;
       }
-      case 'tool': {
-        const spinner = this.ensureActivitySpinner('moon');
-        this.syncAgentSwarmActivitySpinner(placeSpinnerInAgentSwarm ? spinner : undefined);
+      case "tool": {
+        const spinner = this.ensureActivitySpinner("moon");
+        this.syncAgentSwarmActivitySpinner(
+          placeSpinnerInAgentSwarm ? spinner : undefined,
+        );
         if (placeSpinnerInAgentSwarm) break;
         this.state.activityContainer.addChild(
           new ActivityPaneComponent({
-            mode: 'tool',
+            mode: "tool",
             spinner,
             tip: this.currentLoadingTip?.tip,
           }),
         );
         break;
       }
-      case 'idle':
-      case 'session': {
+      case "idle":
+      case "session": {
         this.stopActivitySpinner();
         this.syncAgentSwarmActivitySpinner(undefined);
         // Keep a placeholder row so the activity area does not fully shrink
@@ -2756,19 +2987,19 @@ export class KimiTUI {
   }
 
   private resolveActivityPaneMode(): EffectiveActivityPaneMode {
-    if (this.state.activeDialog === 'session-picker') return 'hidden';
-    if (this.state.livePane.pendingApproval !== null) return 'hidden';
-    if (this.state.appState.isCompacting) return 'hidden';
-    if (this.state.livePane.pendingQuestion !== null) return 'hidden';
+    if (this.state.activeDialog === "session-picker") return "hidden";
+    if (this.state.livePane.pendingApproval !== null) return "hidden";
+    if (this.state.appState.isCompacting) return "hidden";
+    if (this.state.livePane.pendingQuestion !== null) return "hidden";
 
     const streamingPhase = this.state.appState.streamingPhase;
 
     // A running `!` shell command shows the moon spinner (same as `waiting`)
     // until it finishes, signalling that input is busy / queued.
-    if (streamingPhase === 'shell') return 'waiting';
+    if (streamingPhase === "shell") return "waiting";
 
-    if (this.state.livePane.mode === 'idle') {
-      if (streamingPhase === 'thinking' || streamingPhase === 'composing') {
+    if (this.state.livePane.mode === "idle") {
+      if (streamingPhase === "thinking" || streamingPhase === "composing") {
         return streamingPhase;
       }
     }
@@ -2785,7 +3016,7 @@ export class KimiTUI {
       new QueuePaneComponent({
         messages: queued,
         isCompacting: this.state.appState.isCompacting,
-        isStreaming: this.state.appState.streamingPhase !== 'idle',
+        isStreaming: this.state.appState.streamingPhase !== "idle",
         canSteerImmediately: !this.deferUserMessages,
       }),
     );
@@ -2830,12 +3061,12 @@ export class KimiTUI {
     // Only one `!` command runs at a time (input is queued while busy).
     const next = this.shellOutputStreams.entries().next();
     if (next.done) {
-      this.showDetachHint('No shell command running.');
+      this.showDetachHint("No shell command running.");
       return;
     }
     const [commandId, stream] = next.value;
     if (stream.taskId === undefined) {
-      this.showDetachHint('Command is still starting — try again.');
+      this.showDetachHint("Command is still starting — try again.");
       return;
     }
     const session = this.session;
@@ -2843,23 +3074,25 @@ export class KimiTUI {
     try {
       const info = await session.detachBackgroundTask(stream.taskId);
       if (info === undefined) {
-        this.showDetachHint('Command already finished.');
+        this.showDetachHint("Command already finished.");
         return;
       }
     } catch (error) {
-      this.showError(`Failed to move to background: ${formatErrorMessage(error)}`);
+      this.showError(
+        `Failed to move to background: ${formatErrorMessage(error)}`,
+      );
       return;
     }
     // Finalize the card as backgrounded and drop the stream so the eventual
     // runShellCommand resolution (which carries background metadata) is a no-op
     // instead of overwriting this view.
     stream.component.finishBackgrounded();
-    stream.entry.content = 'Moved to background.';
+    stream.entry.content = "Moved to background.";
     this.shellOutputStreams.delete(commandId);
     // The backgrounded command's notification turn (started by agent-core via
     // appendSystemReminderAndNotify) owns the streaming phase and drains the
     // queue when it completes, so we intentionally leave both untouched here.
-    this.showDetachHint('Moved to background. /tasks to view.');
+    this.showDetachHint("Moved to background. /tasks to view.");
   }
 
   async detachCurrentForegroundTask(): Promise<void> {
@@ -2887,7 +3120,7 @@ export class KimiTUI {
 
     const targets = pickForegroundTasks(tasks);
     if (targets.length === 0) {
-      this.showDetachHint('No foreground task running.');
+      this.showDetachHint("No foreground task running.");
       return;
     }
 
@@ -2899,16 +3132,23 @@ export class KimiTUI {
         if (info === undefined) alreadyFinished++;
         else detached++;
       } catch (error) {
-        this.showError(`Failed to detach ${target.taskId}: ${formatErrorMessage(error)}`);
+        this.showError(
+          `Failed to detach ${target.taskId}: ${formatErrorMessage(error)}`,
+        );
       }
     }
 
     let hint: string;
     if (detached === 0 && alreadyFinished > 0) {
-      hint = alreadyFinished === 1 ? 'Task already finished.' : 'Tasks already finished.';
+      hint =
+        alreadyFinished === 1
+          ? "Task already finished."
+          : "Tasks already finished.";
     } else if (detached === targets.length) {
       hint =
-        detached === 1 ? 'Moved 1 task to background.' : `Moved ${detached} tasks to background.`;
+        detached === 1
+          ? "Moved 1 task to background."
+          : `Moved ${detached} tasks to background.`;
     } else {
       hint = `Moved ${detached} of ${targets.length} tasks to background.`;
     }
@@ -2936,17 +3176,28 @@ export class KimiTUI {
 
   updateEditorBorderHighlight(text?: string): void {
     const trimmed = (text ?? this.state.editor.getText()).trimStart();
-    const isBash = this.state.appState.inputMode === 'bash';
-    const highlighted = this.state.appState.planMode || isBash || trimmed.startsWith('/');
+    const isBash = this.state.appState.inputMode === "bash";
+    const highlighted =
+      this.state.appState.planMode || isBash || trimmed.startsWith("/");
     this.state.editor.borderHighlighted = highlighted;
     // Shell mode gets its own hue; plan-mode and slash context stay primary.
-    const borderToken = isBash ? 'shellMode' : highlighted ? 'primary' : 'border';
-    this.state.editor.borderColor = (s: string) => currentTheme.fg(borderToken, s);
+    const borderToken = isBash
+      ? "shellMode"
+      : highlighted
+        ? "primary"
+        : "border";
+    this.state.editor.borderColor = (s: string) =>
+      currentTheme.fg(borderToken, s);
     this.state.ui.requestRender();
   }
 
-  async applyTheme(themeName: ThemeName, resolved?: ResolvedTheme): Promise<void> {
-    const palette = await getColorPalette(themeName === 'auto' ? (resolved ?? 'dark') : themeName);
+  async applyTheme(
+    themeName: ThemeName,
+    resolved?: ResolvedTheme,
+  ): Promise<void> {
+    const palette = await getColorPalette(
+      themeName === "auto" ? (resolved ?? "dark") : themeName,
+    );
     currentTheme.setPalette(palette);
     this.setAppState({ theme: themeName });
     this.updateEditorBorderHighlight();
@@ -2958,11 +3209,18 @@ export class KimiTUI {
 
   refreshTerminalThemeTracking(): void {
     this.stopTerminalThemeTracking();
-    if (!isBuiltInTheme(this.state.appState.theme) || this.state.appState.theme !== 'auto') return;
+    if (
+      !isBuiltInTheme(this.state.appState.theme) ||
+      this.state.appState.theme !== "auto"
+    )
+      return;
 
-    this.terminalThemeTrackingDispose = installTerminalThemeTracking(this.state, (resolved) => {
-      void this.applyResolvedAutoTheme(resolved);
-    });
+    this.terminalThemeTrackingDispose = installTerminalThemeTracking(
+      this.state,
+      (resolved) => {
+        void this.applyResolvedAutoTheme(resolved);
+      },
+    );
   }
 
   private stopTerminalThemeTracking(): void {
@@ -2971,7 +3229,7 @@ export class KimiTUI {
   }
 
   private async applyResolvedAutoTheme(resolved: ResolvedTheme): Promise<void> {
-    if (this.state.appState.theme !== 'auto') return;
+    if (this.state.appState.theme !== "auto") return;
     const palette = getBuiltInPalette(resolved);
     if (currentTheme.palette === palette) return;
     currentTheme.setPalette(palette);
@@ -2982,13 +3240,15 @@ export class KimiTUI {
     this.state.ui.requestRender(true);
   }
 
-  private shouldShowTerminalProgress(effectiveMode: EffectiveActivityPaneMode): boolean {
+  private shouldShowTerminalProgress(
+    effectiveMode: EffectiveActivityPaneMode,
+  ): boolean {
     if (this.state.appState.isCompacting) return true;
     return (
-      effectiveMode === 'waiting' ||
-      effectiveMode === 'thinking' ||
-      effectiveMode === 'composing' ||
-      effectiveMode === 'tool'
+      effectiveMode === "waiting" ||
+      effectiveMode === "thinking" ||
+      effectiveMode === "composing" ||
+      effectiveMode === "tool"
     );
   }
 
@@ -2997,7 +3257,7 @@ export class KimiTUI {
   ): boolean {
     return (
       this.sessionEventHandler.hasActiveAgentSwarmToolCall() &&
-      (effectiveMode === 'waiting' || effectiveMode === 'tool')
+      (effectiveMode === "waiting" || effectiveMode === "tool")
     );
   }
 
@@ -3014,7 +3274,7 @@ export class KimiTUI {
 
   private ensureActivitySpinner(
     style: SpinnerStyle,
-    label = '',
+    label = "",
     colorFn?: (s: string) => string,
   ): MoonLoader {
     if (this.state.activitySpinner?.style !== style) {
@@ -3069,7 +3329,9 @@ export class KimiTUI {
     this.state.ui.requestRender();
   }
 
-  private async runMigrationScreen(plan: MigrationPlan): Promise<MigrationScreenResult> {
+  private async runMigrationScreen(
+    plan: MigrationPlan,
+  ): Promise<MigrationScreenResult> {
     const result = await new Promise<MigrationScreenResult>((resolve) => {
       const screen = new MigrationScreenComponent({
         plan,
@@ -3086,11 +3348,15 @@ export class KimiTUI {
       this.mountEditorReplacement(screen);
     });
     this.restoreEditor();
-    if (result.decision === 'never') {
+    if (result.decision === "never") {
       // Persist the skip marker `detectPendingMigration` checks, so "Never ask
       // again" actually stops the prompt from reappearing every launch.
       try {
-        writeFileSync(join(this.harness.homeDir, '.skip-migration-from-kimi-cli'), '', 'utf-8');
+        writeFileSync(
+          join(this.harness.homeDir, ".skip-migration-from-kimi-cli"),
+          "",
+          "utf-8",
+        );
       } catch {
         // Non-blocking: a failed marker write must never crash startup.
       }
@@ -3120,7 +3386,7 @@ export class KimiTUI {
     if (info.trusted) return false;
     this.startEventLoop();
     const choice = await new Promise<TrustPromptChoice>((resolve) => {
-      this.state.activeDialog = 'trust-prompt';
+      this.state.activeDialog = "trust-prompt";
       this.mountEditorReplacement(
         new TrustPromptComponent({
           workDir,
@@ -3132,7 +3398,7 @@ export class KimiTUI {
       );
     });
     this.state.activeDialog = null;
-    if (choice !== 'trust') {
+    if (choice !== "trust") {
       // Declining trust exits the program (Claude Code's "No, exit" semantics):
       // stop() runs the standard shutdown path and ends in process.exit. The
       // editor is NOT restored first — its frame would linger as an orphaned
@@ -3150,7 +3416,7 @@ export class KimiTUI {
   }
 
   showHelpPanel(): void {
-    this.state.activeDialog = 'help';
+    this.state.activeDialog = "help";
     this.mountEditorReplacement(
       new HelpPanelComponent({
         commands: this.getSlashCommands(),
@@ -3199,7 +3465,7 @@ export class KimiTUI {
     readonly forwardEditorExit: boolean;
   }): Promise<void> {
     this.sessionPickerOptions = options;
-    await this.fetchSessions('cwd');
+    await this.fetchSessions("cwd");
     this.mountSessionPicker({
       applyStartupModes: options.applyStartupModes,
       onCancel: () => {
@@ -3219,12 +3485,14 @@ export class KimiTUI {
     });
   }
 
-  private async toggleSessionPickerScope(selectedSessionId: string): Promise<void> {
+  private async toggleSessionPickerScope(
+    selectedSessionId: string,
+  ): Promise<void> {
     const requestToken = ++this.sessionPickerScopeRequestToken;
-    const nextScope = this.state.sessionsScope === 'cwd' ? 'all' : 'cwd';
+    const nextScope = this.state.sessionsScope === "cwd" ? "all" : "cwd";
     await this.fetchSessions(nextScope);
     if (requestToken !== this.sessionPickerScopeRequestToken) return;
-    if (this.state.activeDialog !== 'session-picker') return;
+    if (this.state.activeDialog !== "session-picker") return;
     this.mountSessionPicker({
       initialSelectedSessionId: selectedSessionId,
       applyStartupModes: this.sessionPickerOptions.applyStartupModes,
@@ -3253,7 +3521,7 @@ export class KimiTUI {
   }
 
   openUndoSelector(): void {
-    void slashCommands.handleUndoCommand(this, '');
+    void slashCommands.handleUndoCommand(this, "");
   }
 
   private mountSessionPicker(options: {
@@ -3266,7 +3534,7 @@ export class KimiTUI {
     // session's own persisted modes.
     readonly applyStartupModes?: boolean;
   }): void {
-    this.state.activeDialog = 'session-picker';
+    this.state.activeDialog = "session-picker";
     this.mountEditorReplacement(
       new SessionPickerComponent({
         sessions: this.state.sessions,
@@ -3276,11 +3544,14 @@ export class KimiTUI {
         initialSelectedSessionId: options.initialSelectedSessionId,
         pageSize: 50,
         onSelect: (session: SessionRow) => {
-          void this.handleSessionPickerSelect(session, options.applyStartupModes === true).catch(
-            (error) => {
-              this.showError(`Failed to apply startup flags: ${formatErrorMessage(error)}`);
-            },
-          );
+          void this.handleSessionPickerSelect(
+            session,
+            options.applyStartupModes === true,
+          ).catch((error) => {
+            this.showError(
+              `Failed to apply startup flags: ${formatErrorMessage(error)}`,
+            );
+          });
         },
         onCancel: options.onCancel,
         onCtrlC: options.onCtrlC,
@@ -3314,7 +3585,7 @@ export class KimiTUI {
   private showApprovalPanel(payload: ApprovalPanelData): void {
     this.patchLivePane({ pendingApproval: { data: payload } });
     notifyTerminalOnce(this.state, `approval:${payload.id}`, {
-      title: 'Kimi Code approval required',
+      title: "Kimi Code approval required",
       body: payload.tool_name,
     });
     const panel = new ApprovalPanelComponent(
@@ -3347,7 +3618,10 @@ export class KimiTUI {
   // openTaskOutputViewer: we snapshot the root container's children, swap
   // in the viewer, and restore on close. The approval panel instance is
   // kept around in `activeApprovalPanel` so its selection state survives.
-  private openApprovalPreview(panel: ApprovalPanelComponent, block: ApprovalPreviewBlock): void {
+  private openApprovalPreview(
+    panel: ApprovalPanelComponent,
+    block: ApprovalPreviewBlock,
+  ): void {
     if (this.approvalPreview !== undefined) return;
     const savedChildren = [...this.state.ui.children];
     const viewer = new ApprovalPreviewViewer(
@@ -3381,7 +3655,7 @@ export class KimiTUI {
   private showQuestionDialog(payload: QuestionPanelData): void {
     this.patchLivePane({ pendingQuestion: { data: payload } });
     notifyTerminalOnce(this.state, `question:${payload.id}`, {
-      title: 'Kimi Code needs your answer',
+      title: "Kimi Code needs your answer",
       body: payload.questions[0]?.question,
     });
     const dialog = new QuestionDialogComponent(

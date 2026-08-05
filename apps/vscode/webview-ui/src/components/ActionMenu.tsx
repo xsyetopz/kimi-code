@@ -1,6 +1,19 @@
 import { useState } from "react";
-import { IconSettings, IconServer, IconLogout, IconLogin, IconLoader2, IconRefresh, IconFileText, IconFolder } from "@tabler/icons-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  IconSettings,
+  IconServer,
+  IconLogout,
+  IconLogin,
+  IconLoader2,
+  IconRefresh,
+  IconFileText,
+  IconFolder,
+} from "@tabler/icons-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useSettingsStore } from "@/stores";
@@ -13,19 +26,39 @@ interface ActionMenuProps {
   onAuthAction?: () => void;
 }
 
-function MenuSection({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
+function MenuSection({
+  title,
+  subtitle,
+  children,
+}: {
+  title: string;
+  subtitle?: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="py-1">
       <div className="px-2.5 py-1 text-[10px] font-medium text-muted-foreground uppercase tracking-wider flex items-center justify-between">
         <span>{title}</span>
-        {subtitle && <span className="normal-case tracking-normal">{subtitle}</span>}
+        {subtitle && (
+          <span className="normal-case tracking-normal">{subtitle}</span>
+        )}
       </div>
       {children}
     </div>
   );
 }
 
-function MenuItem({ onClick, disabled, danger, children }: { onClick: () => void; disabled?: boolean; danger?: boolean; children: React.ReactNode }) {
+function MenuItem({
+  onClick,
+  disabled,
+  danger,
+  children,
+}: {
+  onClick: () => void;
+  disabled?: boolean;
+  danger?: boolean;
+  children: React.ReactNode;
+}) {
   return (
     <button
       onClick={onClick}
@@ -44,7 +77,8 @@ function MenuItem({ onClick, disabled, danger, children }: { onClick: () => void
 export function ActionMenu({ className, onAuthAction }: ActionMenuProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { setMCPModalOpen, isLoggedIn, setIsLoggedIn, extensionConfig } = useSettingsStore();
+  const { setMCPModalOpen, isLoggedIn, setIsLoggedIn, extensionConfig } =
+    useSettingsStore();
 
   const handleOpenSettings = () => {
     void bridge.openSettings();
@@ -82,7 +116,9 @@ export function ActionMenu({ className, onAuthAction }: ActionMenuProps) {
         if (result.success) {
           setIsLoggedIn(true);
         } else {
-          toast.error(result.error ?? "Sign-in failed. Check the logs for details.");
+          toast.error(
+            result.error ?? "Sign-in failed. Check the logs for details.",
+          );
         }
       }
     } finally {
@@ -95,11 +131,19 @@ export function ActionMenu({ className, onAuthAction }: ActionMenuProps) {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon-xs" className={cn("text-muted-foreground", className)}>
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          className={cn("text-muted-foreground", className)}
+        >
           <IconSettings className="size-3.5" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[calc(100vw-1rem)] max-w-72 p-1.5 gap-0!" align="end" side="top">
+      <PopoverContent
+        className="w-[calc(100vw-1rem)] max-w-72 p-1.5 gap-0!"
+        align="end"
+        side="top"
+      >
         <MenuSection title="Settings">
           <MenuItem onClick={handleChangeWorkDir}>
             <IconFolder className="size-4 text-muted-foreground" />
@@ -118,7 +162,12 @@ export function ActionMenu({ className, onAuthAction }: ActionMenuProps) {
 
         <Separator className="my-px" />
 
-        <MenuSection title="Support" subtitle={extensionConfig.version ? `v${extensionConfig.version}` : undefined}>
+        <MenuSection
+          title="Support"
+          subtitle={
+            extensionConfig.version ? `v${extensionConfig.version}` : undefined
+          }
+        >
           <MenuItem onClick={handleShowLogs}>
             <IconFileText className="size-4 text-muted-foreground" />
             <span className="flex-1">Show Logs</span>
@@ -139,8 +188,16 @@ export function ActionMenu({ className, onAuthAction }: ActionMenuProps) {
             disabled={loading}
             danger={isLoggedIn}
           >
-            {loading ? <IconLoader2 className="size-4 animate-spin" /> : isLoggedIn ? <IconLogout className="size-4" /> : <IconLogin className="size-4 text-muted-foreground" />}
-            <span className="flex-1">{loading ? "Processing..." : isLoggedIn ? "Sign out" : "Sign in"}</span>
+            {loading ? (
+              <IconLoader2 className="size-4 animate-spin" />
+            ) : isLoggedIn ? (
+              <IconLogout className="size-4" />
+            ) : (
+              <IconLogin className="size-4 text-muted-foreground" />
+            )}
+            <span className="flex-1">
+              {loading ? "Processing..." : isLoggedIn ? "Sign out" : "Sign in"}
+            </span>
           </MenuItem>
         </MenuSection>
       </PopoverContent>

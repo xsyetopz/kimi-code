@@ -48,15 +48,22 @@
  * happens for question.
  */
 
-import { createDecorator } from '../../di';
-import type { QuestionAnswers as InProcessQuestionAnswers, QuestionItem as InProcessQuestionItem, QuestionRequest as InProcessQuestionRequest, QuestionRequest, QuestionResponse as InProcessQuestionResponse, QuestionResult } from '../../rpc';
+import { createDecorator } from "../../di";
+import type {
+  QuestionAnswers as InProcessQuestionAnswers,
+  QuestionItem as InProcessQuestionItem,
+  QuestionRequest as InProcessQuestionRequest,
+  QuestionRequest,
+  QuestionResponse as InProcessQuestionResponse,
+  QuestionResult,
+} from "../../rpc";
 import type {
   QuestionItem as ProtocolQuestionItem,
   QuestionOption as ProtocolQuestionOption,
   QuestionRequest as ProtocolQuestionRequest,
   QuestionResponse as ProtocolQuestionResponse,
-} from '@moonshot-ai/protocol';
-import type {} from '@moonshot-ai/protocol'; // type-only marker — keep protocol dep referenced
+} from "@moonshot-ai/protocol";
+import type {} from "@moonshot-ai/protocol"; // type-only marker — keep protocol dep referenced
 
 // Re-export for service-side consumers.
 export type { QuestionRequest, QuestionResult };
@@ -97,7 +104,8 @@ export interface IQuestionService {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
-export const IQuestionService = createDecorator<IQuestionService>('questionService');
+export const IQuestionService =
+  createDecorator<IQuestionService>("questionService");
 
 // ---------------------------------------------------------------------------
 // Adapter helpers (moved from adapter/question-adapter.ts)
@@ -126,7 +134,9 @@ function buildOption(
     id: `opt_${parentIdx}_${optIdx}`,
     label: opt.label,
   };
-  return opt.description === undefined ? base : { ...base, description: opt.description };
+  return opt.description === undefined
+    ? base
+    : { ...base, description: opt.description };
 }
 
 /**
@@ -149,7 +159,8 @@ function buildItem(
   // SDK has no allowOther field; always advertise the free-text Other option on the wire.
   out.allow_other = true;
   if (item.otherLabel !== undefined) out.other_label = item.otherLabel;
-  if (item.otherDescription !== undefined) out.other_description = item.otherDescription;
+  if (item.otherDescription !== undefined)
+    out.other_description = item.otherDescription;
   return out;
 }
 
@@ -216,19 +227,22 @@ export function toAgentCoreResponse(
     const optionText = (id: string): string =>
       item?.options.find((o) => o.id === id)?.label ?? id;
     switch (ans.kind) {
-      case 'single':
+      case "single":
         flattened[key] = optionText(ans.option_id);
         break;
-      case 'multi':
-        flattened[key] = ans.option_ids.map(optionText).join(', ');
+      case "multi":
+        flattened[key] = ans.option_ids.map(optionText).join(", ");
         break;
-      case 'other':
+      case "other":
         flattened[key] = ans.text;
         break;
-      case 'multi_with_other':
-        flattened[key] = [...ans.option_ids.map(optionText), ans.other_text].join(', ');
+      case "multi_with_other":
+        flattened[key] = [
+          ...ans.option_ids.map(optionText),
+          ans.other_text,
+        ].join(", ");
         break;
-      case 'skipped':
+      case "skipped":
         // Omitted from the record — skipped questions carry no answer.
         break;
       default: {
@@ -245,7 +259,7 @@ export function toAgentCoreResponse(
     // `QuestionAnswerMethod` is `'enter' | 'space' | 'number_key'` (NO 'click').
     // Drop 'click' on the in-process side to preserve type safety; the wire
     // form keeps it for clients that want to surface the affordance used.
-    if (resp.method !== 'click') {
+    if (resp.method !== "click") {
       (out as { method?: typeof resp.method }).method = resp.method;
     }
   }

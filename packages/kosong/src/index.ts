@@ -8,7 +8,7 @@ export {
   isToolCall,
   isToolCallPart,
   mergeInPlace,
-} from './message';
+} from "./message";
 export type {
   AudioURLPart,
   ContentPart,
@@ -21,22 +21,27 @@ export type {
   ToolCall,
   ToolCallPart,
   VideoURLPart,
-} from './message';
+} from "./message";
 
 // Provider interfaces
-export * from './provider';
-export { createProvider, getModelCapability } from './providers';
-export type { ProviderConfig, ProviderType } from './providers';
+export * from "./provider";
+export { createProvider, getModelCapability } from "./providers";
+export type { ProviderConfig, ProviderType } from "./providers";
 // Kimi provider: exported so callers can narrow a `ChatProvider` to the Kimi
 // backend (instanceof) and apply Kimi-specific request params (generation
 // kwargs, `thinking.keep` extra body).
-export { KimiChatProvider } from './providers/kimi';
-export type { ExtraBody, GenerationKwargs, KimiOptions, ThinkingConfig } from './providers/kimi';
-export { classifyKimiQuotaError } from './providers/kimi-errors';
+export { KimiChatProvider } from "./providers/kimi";
+export type {
+  ExtraBody,
+  GenerationKwargs,
+  KimiOptions,
+  ThinkingConfig,
+} from "./providers/kimi";
+export { classifyKimiQuotaError } from "./providers/kimi-errors";
 
 // Model capability matrix
-export { isUnknownCapability, UNKNOWN_CAPABILITY } from './capability';
-export type { ModelCapability } from './capability';
+export { isUnknownCapability, UNKNOWN_CAPABILITY } from "./capability";
+export type { ModelCapability } from "./capability";
 
 // Model catalog (models.dev-style) metadata
 export {
@@ -45,7 +50,7 @@ export {
   catalogProviderModels,
   inferWireType,
   resolveCatalogImport,
-} from './catalog';
+} from "./catalog";
 export type {
   Catalog,
   CatalogModel,
@@ -53,18 +58,18 @@ export type {
   CatalogProviderEntry,
   CatalogImportInvalidReason,
   CatalogImportResolution,
-} from './catalog';
+} from "./catalog";
 
 // Core functions
-export { generate } from './generate';
-export type { GenerateCallbacks, GenerateResult } from './generate';
+export { generate } from "./generate";
+export type { GenerateCallbacks, GenerateResult } from "./generate";
 
 // Tool wire schema
-export type { Tool } from './tool';
+export type { Tool } from "./tool";
 
 // Token usage
-export { addUsage, emptyUsage, grandTotal, inputTotal } from './usage';
-export type { TokenUsage } from './usage';
+export { addUsage, emptyUsage, grandTotal, inputTotal } from "./usage";
+export type { TokenUsage } from "./usage";
 
 // Errors
 export {
@@ -87,7 +92,7 @@ export {
   isRetryableGenerateError,
   isToolExchangeAdjacencyError,
   throwIfAbortError,
-} from './errors';
+} from "./errors";
 
 /**
  * Concrete provider adapters stay off the root barrel because their SDK type

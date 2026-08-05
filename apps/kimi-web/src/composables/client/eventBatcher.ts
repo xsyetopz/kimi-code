@@ -4,16 +4,13 @@
 // Pure logic (no Vue) so the queue, ordering, and scheduler fallback can be
 // tested directly. See useKimiWebClient.ts for the WS pipeline wiring.
 
-import type { AppEvent, KimiEventMeta } from '../../api/types';
+import type { AppEvent, KimiEventMeta } from "../../api/types";
 
 // Events that merely append a chunk to something already streaming. They can
 // arrive dozens to hundreds of times per second, so they are worth batching.
-const RENDER_EVENT_TYPES: ReadonlySet<AppEvent['type']> = new Set<AppEvent['type']>([
-  'assistantDelta',
-  'agentDelta',
-  'toolOutput',
-  'taskProgress',
-]);
+const RENDER_EVENT_TYPES: ReadonlySet<AppEvent["type"]> = new Set<
+  AppEvent["type"]
+>(["assistantDelta", "agentDelta", "toolOutput", "taskProgress"]);
 
 /** True for high-frequency render events. Lifecycle / control events remain
     ordering barriers and are never merged with render events. */
@@ -39,12 +36,13 @@ const MAX_COALESCED_STREAM_CHARS = 32 * 1024;
 
 const defaultScheduler: EventBatcherScheduler = {
   requestFrame(callback) {
-    return typeof requestAnimationFrame === 'function'
+    return typeof requestAnimationFrame === "function"
       ? requestAnimationFrame(callback)
       : null;
   },
   cancelFrame(handle) {
-    if (typeof cancelAnimationFrame === 'function') cancelAnimationFrame(handle);
+    if (typeof cancelAnimationFrame === "function")
+      cancelAnimationFrame(handle);
   },
   requestTask(callback) {
     return setTimeout(callback, FALLBACK_TASK_DELAY_MS) as unknown as number;
@@ -155,7 +153,8 @@ export function createEventBatcher<T>(
     if (disposed) return;
     if (isBatchable(item)) {
       const previous = pending.length > head ? pending.at(-1) : undefined;
-      const merged = previous === undefined ? undefined : options.coalesce?.(previous, item);
+      const merged =
+        previous === undefined ? undefined : options.coalesce?.(previous, item);
       if (merged === undefined) pending.push(item);
       else pending[pending.length - 1] = merged;
       scheduleDrain();
@@ -209,17 +208,17 @@ export interface PendingAppEvent {
 }
 
 interface AssistantChunk {
-  kind: 'text' | 'thinking';
+  kind: "text" | "thinking";
   value: string;
 }
 
 function assistantChunk(event: AppEvent): AssistantChunk | undefined {
-  if (event.type !== 'assistantDelta') return undefined;
+  if (event.type !== "assistantDelta") return undefined;
   if (event.delta.text !== undefined && event.delta.thinking === undefined) {
-    return { kind: 'text', value: event.delta.text };
+    return { kind: "text", value: event.delta.text };
   }
   if (event.delta.thinking !== undefined && event.delta.text === undefined) {
-    return { kind: 'thinking', value: event.delta.thinking };
+    return { kind: "thinking", value: event.delta.thinking };
   }
   return undefined;
 }
@@ -232,7 +231,7 @@ function assistantChunk(event: AppEvent): AssistantChunk | undefined {
 export function splitOversizedAppRenderEvent(
   item: PendingAppEvent,
 ): readonly PendingAppEvent[] {
-  if (item.appEvent.type !== 'assistantDelta') return [item];
+  if (item.appEvent.type !== "assistantDelta") return [item];
   const appEvent = item.appEvent;
   const stream = item.meta.stream;
   const chunk = assistantChunk(appEvent);
@@ -264,7 +263,7 @@ export function splitOversizedAppRenderEvent(
     parts.push({
       appEvent: {
         ...appEvent,
-        delta: chunk.kind === 'text' ? { text: value } : { thinking: value },
+        delta: chunk.kind === "text" ? { text: value } : { thinking: value },
       },
       meta: {
         ...item.meta,
@@ -287,7 +286,10 @@ export function coalesceAppRenderEvents(
   previous: PendingAppEvent,
   next: PendingAppEvent,
 ): PendingAppEvent | undefined {
-  if (previous.appEvent.type !== 'assistantDelta' || next.appEvent.type !== 'assistantDelta') {
+  if (
+    previous.appEvent.type !== "assistantDelta" ||
+    next.appEvent.type !== "assistantDelta"
+  ) {
     return undefined;
   }
   const previousStream = previous.meta.stream;
@@ -309,7 +311,8 @@ export function coalesceAppRenderEvents(
     previousStream.kind !== previousChunk.kind ||
     nextStream.kind !== nextChunk.kind ||
     nextStream.offset !== previousStream.offset + previousChunk.value.length ||
-    previousChunk.value.length + nextChunk.value.length > MAX_COALESCED_STREAM_CHARS
+    previousChunk.value.length + nextChunk.value.length >
+      MAX_COALESCED_STREAM_CHARS
   ) {
     return undefined;
   }
@@ -318,7 +321,8 @@ export function coalesceAppRenderEvents(
   return {
     appEvent: {
       ...previous.appEvent,
-      delta: previousChunk.kind === 'text' ? { text: value } : { thinking: value },
+      delta:
+        previousChunk.kind === "text" ? { text: value } : { thinking: value },
     },
     // Advance the durable watermark with the newest frame while preserving the
     // first offset of the merged chunk for the next continuity check.

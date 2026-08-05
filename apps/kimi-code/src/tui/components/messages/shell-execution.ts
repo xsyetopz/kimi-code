@@ -1,12 +1,12 @@
-import type { Component } from '@moonshot-ai/pi-tui';
-import { Container, Text } from '@moonshot-ai/pi-tui';
+import type { Component } from "@moonshot-ai/pi-tui";
+import { Container, Text } from "@moonshot-ai/pi-tui";
 
-import { currentTheme } from '#/tui/theme';
-import type { ToolCallBlockData, ToolResultBlockData } from '#/tui/types';
+import { currentTheme } from "#/tui/theme";
+import type { ToolCallBlockData, ToolResultBlockData } from "#/tui/types";
 
-import type { ResultRenderer } from './tool-renderers/types';
-import { PREVIEW_LINES } from './tool-renderers/types';
-import { TruncatedOutputComponent } from './tool-renderers/truncated';
+import type { ResultRenderer } from "./tool-renderers/types";
+import { PREVIEW_LINES } from "./tool-renderers/types";
+import { TruncatedOutputComponent } from "./tool-renderers/truncated";
 
 export interface ShellExecutionOptions {
   readonly command?: string;
@@ -29,7 +29,10 @@ export class ShellExecutionComponent extends Container {
     super();
 
     if (options.showCommand === true) {
-      this.addCommandPreview(options.command ?? '', options.commandPreviewLines);
+      this.addCommandPreview(
+        options.command ?? "",
+        options.commandPreviewLines,
+      );
     }
 
     if (options.result !== undefined) {
@@ -43,10 +46,14 @@ export class ShellExecutionComponent extends Container {
     }
   }
 
-  private addCommandPreview(command: string, previewLines: number | undefined): void {
+  private addCommandPreview(
+    command: string,
+    previewLines: number | undefined,
+  ): void {
     if (command.length === 0) return;
-    const allLines = command.split('\n');
-    const lines = previewLines === undefined ? allLines : allLines.slice(0, previewLines);
+    const allLines = command.split("\n");
+    const lines =
+      previewLines === undefined ? allLines : allLines.slice(0, previewLines);
     for (const [i, line] of lines.entries()) {
       // Distinguish the command (input) from the result (output): the `$`
       // prompt uses the dedicated shell-mode hue, the command body uses
@@ -54,7 +61,7 @@ export class ShellExecutionComponent extends Container {
       // `textMuted` so the two stay separable without a connecting glyph.
       const text =
         i === 0
-          ? currentTheme.fg('shellMode', '$ ') + currentTheme.dim(line)
+          ? currentTheme.fg("shellMode", "$ ") + currentTheme.dim(line)
           : `  ${currentTheme.dim(line)}`;
       this.addChild(new Text(text, 2, 0));
     }
@@ -75,7 +82,7 @@ export class ShellExecutionComponent extends Container {
         maxLines: previewLines,
         tail: tailOutput,
         expandHint,
-        color: 'textMuted',
+        color: "textMuted",
       }),
     );
   }

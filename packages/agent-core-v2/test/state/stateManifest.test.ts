@@ -8,29 +8,33 @@
  * `pnpm --filter @moonshot-ai/agent-core-v2 gen:state-manifest`.
  */
 
-import { readFileSync } from 'node:fs';
+import { readFileSync } from "node:fs";
 
-import { Project } from 'ts-morph';
-import { describe, expect, it } from 'vitest';
+import { Project } from "ts-morph";
+import { describe, expect, it } from "vitest";
 
-import { buildStateManifest, MANIFEST_PATH } from '../../scripts/gen-state-manifest.mts';
+import {
+  buildStateManifest,
+  MANIFEST_PATH,
+} from "../../scripts/gen-state-manifest.mts";
 
-describe('state manifest', () => {
-  it('docs/state-manifest.d.ts is up to date', () => {
+describe("state manifest", () => {
+  it("docs/state-manifest.d.ts is up to date", () => {
     const expected = buildStateManifest();
-    const actual = readFileSync(MANIFEST_PATH, 'utf-8');
+    const actual = readFileSync(MANIFEST_PATH, "utf-8");
     expect(actual).toBe(expected);
   }, 120_000);
 
-  it('docs/state-manifest.d.ts parses as TypeScript', () => {
+  it("docs/state-manifest.d.ts parses as TypeScript", () => {
     const project = new Project({ useInMemoryFileSystem: true });
     const sourceFile = project.createSourceFile(
-      'state-manifest.d.ts',
-      readFileSync(MANIFEST_PATH, 'utf-8'),
+      "state-manifest.d.ts",
+      readFileSync(MANIFEST_PATH, "utf-8"),
     );
     // `parseDiagnostics` is internal in the compiler typings but populated at runtime.
-    const diagnostics = (sourceFile.compilerNode as { parseDiagnostics?: readonly unknown[] })
-      .parseDiagnostics;
+    const diagnostics = (
+      sourceFile.compilerNode as { parseDiagnostics?: readonly unknown[] }
+    ).parseDiagnostics;
     expect(diagnostics ?? []).toEqual([]);
   });
 });

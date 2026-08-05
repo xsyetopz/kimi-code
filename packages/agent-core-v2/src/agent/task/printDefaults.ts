@@ -14,11 +14,15 @@
  * stay visible. Explicit user config always wins over these defaults.
  */
 
-import { ConfigTarget, type ConfigInspectValue, type IConfigService } from '#/app/config/config';
-import { LOOP_CONTROL_SECTION } from '#/agent/loop/configSection';
-import { SUBAGENT_SECTION } from '#/session/subagent/configSection';
+import {
+  ConfigTarget,
+  type ConfigInspectValue,
+  type IConfigService,
+} from "#/app/config/config";
+import { LOOP_CONTROL_SECTION } from "#/agent/loop/configSection";
+import { SUBAGENT_SECTION } from "#/session/subagent/configSection";
 
-import { LEGACY_BACKGROUND_SECTION, TASK_SECTION } from './configSection';
+import { LEGACY_BACKGROUND_SECTION, TASK_SECTION } from "./configSection";
 
 export const PRINT_WAIT_CEILING_S_DEFAULT = 315_360_000;
 
@@ -30,7 +34,10 @@ export const PRINT_SUBAGENT_TIMEOUT_MS_DEFAULT = 0;
 
 type SectionValue = Record<string, unknown>;
 
-function isUnset(inspected: ConfigInspectValue<SectionValue>, key: string): boolean {
+function isUnset(
+  inspected: ConfigInspectValue<SectionValue>,
+  key: string,
+): boolean {
   if (inspected.userValue?.[key] !== undefined) return false;
   if (inspected.memoryValue?.[key] !== undefined) return false;
   const effective = inspected.value?.[key];
@@ -48,22 +55,28 @@ async function fillSectionDefault(
   const inspected = config.inspect<SectionValue>(domain);
   if (!isUnset(inspected, key)) return;
   if (legacyUserValue?.[key] !== undefined) return;
-  await config.set(domain, { ...inspected.value, [key]: value }, ConfigTarget.Memory);
+  await config.set(
+    domain,
+    { ...inspected.value, [key]: value },
+    ConfigTarget.Memory,
+  );
 }
 
-export async function applyPrintModeConfigDefaults(config: IConfigService): Promise<void> {
+export async function applyPrintModeConfigDefaults(
+  config: IConfigService,
+): Promise<void> {
   await fillSectionDefault(
     config,
     TASK_SECTION,
-    'bashTaskTimeoutS',
+    "bashTaskTimeoutS",
     PRINT_BASH_TASK_TIMEOUT_S_DEFAULT,
     config.inspect<SectionValue>(LEGACY_BACKGROUND_SECTION).userValue,
   );
-  await fillSectionDefault(config, LOOP_CONTROL_SECTION, 'maxStepsPerTurn', 0);
+  await fillSectionDefault(config, LOOP_CONTROL_SECTION, "maxStepsPerTurn", 0);
   await fillSectionDefault(
     config,
     SUBAGENT_SECTION,
-    'timeoutMs',
+    "timeoutMs",
     PRINT_SUBAGENT_TIMEOUT_MS_DEFAULT,
   );
 }

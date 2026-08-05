@@ -18,20 +18,23 @@ import type {
   KimiOAuthLoginResult,
   KimiOAuthLogoutResult,
   KimiOAuthTokenRef,
-} from '@moonshot-ai/kimi-code-oauth';
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
-import { Error2 } from '#/_base/errors/errors';
+} from "@moonshot-ai/kimi-code-oauth";
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
+import { Error2 } from "#/_base/errors/errors";
 
-import type { OAuthRef } from '#/kosong/provider/provider';
+import type { OAuthRef } from "#/kosong/provider/provider";
 
-import { AuthErrors } from './errors';
+import { AuthErrors } from "./errors";
 import type {
   OAuthFlowSnapshot,
   OAuthFlowStart,
   OAuthLoginCancelResponse,
   OAuthLogoutResponse,
   RefreshOAuthProviderModelsResponse,
-} from './oauthProtocol';
+} from "./oauthProtocol";
 
 export interface AuthStatus {
   readonly loggedIn: boolean;
@@ -49,35 +52,56 @@ export interface IOAuthService {
   refreshOAuthProviderModels(): Promise<RefreshOAuthProviderModelsResponse>;
   getManagedUsage(provider?: string): Promise<AuthManagedUsageResult>;
   getManagedUserInfo(provider?: string): Promise<AuthManagedUserInfoResult>;
-  resolveTokenProvider(provider: string, oauthRef?: OAuthRef): BearerTokenProvider | undefined;
-  getCachedAccessToken(provider: string, oauthRef?: OAuthRef): Promise<string | undefined>;
+  resolveTokenProvider(
+    provider: string,
+    oauthRef?: OAuthRef,
+  ): BearerTokenProvider | undefined;
+  getCachedAccessToken(
+    provider: string,
+    oauthRef?: OAuthRef,
+  ): Promise<string | undefined>;
 }
 
 export const IOAuthService: ServiceIdentifier<IOAuthService> =
-  createDecorator<IOAuthService>('oauthService');
+  createDecorator<IOAuthService>("oauthService");
 
 export interface IOAuthToolkit {
   readonly _serviceBrand: undefined;
 
-  login(providerName?: string, options?: KimiOAuthLoginOptions): Promise<KimiOAuthLoginResult>;
-  logout(providerName?: string, oauthRef?: KimiOAuthTokenRef): Promise<KimiOAuthLogoutResult>;
+  login(
+    providerName?: string,
+    options?: KimiOAuthLoginOptions,
+  ): Promise<KimiOAuthLoginResult>;
+  logout(
+    providerName?: string,
+    oauthRef?: KimiOAuthTokenRef,
+  ): Promise<KimiOAuthLogoutResult>;
   getCachedAccessToken(
     providerName?: string,
     oauthRef?: KimiOAuthTokenRef,
   ): Promise<string | undefined>;
-  tokenProvider(providerName?: string, oauthRef?: KimiOAuthTokenRef): BearerTokenProvider;
+  tokenProvider(
+    providerName?: string,
+    oauthRef?: KimiOAuthTokenRef,
+  ): BearerTokenProvider;
   getManagedUsage(
     providerName?: string,
-    options?: { readonly oauthRef?: KimiOAuthTokenRef; readonly baseUrl?: string },
+    options?: {
+      readonly oauthRef?: KimiOAuthTokenRef;
+      readonly baseUrl?: string;
+    },
   ): Promise<AuthManagedUsageResult>;
   getManagedUserInfo(
     providerName?: string,
-    options?: { readonly oauthRef?: KimiOAuthTokenRef; readonly baseUrl?: string },
+    options?: {
+      readonly oauthRef?: KimiOAuthTokenRef;
+      readonly baseUrl?: string;
+    },
   ): Promise<AuthManagedUserInfoResult>;
 }
 
 export const IOAuthToolkit: ServiceIdentifier<IOAuthToolkit> =
-  createDecorator<IOAuthToolkit>('oauthToolkit');
+  createDecorator<IOAuthToolkit>("oauthToolkit");
 
 export interface IAuthSummaryService {
   readonly _serviceBrand: undefined;
@@ -87,14 +111,14 @@ export interface IAuthSummaryService {
 }
 
 export const IAuthSummaryService: ServiceIdentifier<IAuthSummaryService> =
-  createDecorator<IAuthSummaryService>('authSummaryService');
+  createDecorator<IAuthSummaryService>("authSummaryService");
 
 export class AuthProvisioningRequiredError extends Error2 {
   constructor() {
     super(
       AuthErrors.codes.AUTH_PROVISIONING_REQUIRED,
-      'no provider configured; complete onboarding via /login or the providers endpoint',
-      { name: 'AuthProvisioningRequiredError' },
+      "no provider configured; complete onboarding via /login or the providers endpoint",
+      { name: "AuthProvisioningRequiredError" },
     );
   }
 }
@@ -106,7 +130,7 @@ export class AuthTokenMissingError extends Error2 {
     super(
       AuthErrors.codes.AUTH_TOKEN_MISSING,
       `provider ${providerId} has no credential configured`,
-      { details: { provider_id: providerId }, name: 'AuthTokenMissingError' },
+      { details: { provider_id: providerId }, name: "AuthTokenMissingError" },
     );
     this.providerId = providerId;
   }
@@ -118,16 +142,16 @@ export class AuthModelNotResolvedError extends Error2 {
 
   constructor(modelId: string | undefined, providerId?: string) {
     const details: Record<string, unknown> = {};
-    if (modelId !== undefined) details['model_id'] = modelId;
-    if (providerId !== undefined) details['provider_id'] = providerId;
+    if (modelId !== undefined) details["model_id"] = modelId;
+    if (providerId !== undefined) details["provider_id"] = providerId;
     super(
       AuthErrors.codes.AUTH_MODEL_NOT_RESOLVED,
       modelId === undefined
-        ? 'no default model configured'
+        ? "no default model configured"
         : `model ${modelId} does not resolve to a configured provider`,
       {
         details: Object.keys(details).length === 0 ? undefined : details,
-        name: 'AuthModelNotResolvedError',
+        name: "AuthModelNotResolvedError",
       },
     );
     this.modelId = modelId;

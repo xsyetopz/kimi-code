@@ -17,28 +17,36 @@
  * bag (defaulting to `process.env`).
  */
 
-import { BugIndicatingError } from '#/_base/errors/errors';
-import type { Protocol, ProtocolAdapterConfig } from '#/kosong/protocol/protocol';
+import { BugIndicatingError } from "#/_base/errors/errors";
+import type {
+  Protocol,
+  ProtocolAdapterConfig,
+} from "#/kosong/protocol/protocol";
 import type {
   ProtocolEndpoint,
   ProtocolTrait,
   TraitContext,
-} from '#/kosong/protocol/protocolTrait';
+} from "#/kosong/protocol/protocolTrait";
 
-import type { ModelSource } from './provider';
+import type { ModelSource } from "./provider";
 
 export interface ProviderDefinition {
   readonly id: string;
   readonly baseProtocol: Protocol;
   readonly traits: readonly ProtocolTrait[];
   readonly endpoint?: ProtocolEndpoint;
-  readonly hostHeaders?: 'full' | 'user-agent';
+  readonly hostHeaders?: "full" | "user-agent";
   readonly modelSource?: ModelSource;
 }
 
-const providerDefinitions = new Map<string, Map<Protocol, ProviderDefinition>>();
+const providerDefinitions = new Map<
+  string,
+  Map<Protocol, ProviderDefinition>
+>();
 
-export function registerProviderDefinition(definition: ProviderDefinition): void {
+export function registerProviderDefinition(
+  definition: ProviderDefinition,
+): void {
   let byProtocol = providerDefinitions.get(definition.id);
   if (byProtocol === undefined) {
     byProtocol = new Map();
@@ -62,7 +70,9 @@ export function getProviderDefinition(
   return byProtocol.values().next().value;
 }
 
-export function getProviderDefinitions(id: string): readonly ProviderDefinition[] {
+export function getProviderDefinitions(
+  id: string,
+): readonly ProviderDefinition[] {
   const byProtocol = providerDefinitions.get(id);
   return byProtocol === undefined ? [] : [...byProtocol.values()];
 }
@@ -74,12 +84,14 @@ export function hasProviderDefinition(id: string): boolean {
 export function isOAuthCatalogVendor(id: string | undefined): boolean {
   if (id === undefined) return false;
   return getProviderDefinitions(id).some(
-    (definition) => definition.modelSource === 'oauth-catalog',
+    (definition) => definition.modelSource === "oauth-catalog",
   );
 }
 
 export function listProviderDefinitions(): readonly ProviderDefinition[] {
-  return [...providerDefinitions.values()].flatMap((byProtocol) => [...byProtocol.values()]);
+  return [...providerDefinitions.values()].flatMap((byProtocol) => [
+    ...byProtocol.values(),
+  ]);
 }
 
 export interface ResolvedProviderEndpoint {
@@ -102,7 +114,8 @@ export function explainProviderEndpoint(
   const definition = getProviderDefinition(providerType);
   if (definition === undefined) return {};
   const endpoint =
-    normalizeEndpointDeclaration(definition.endpoint) ?? aggregateTraitEndpoints(definition);
+    normalizeEndpointDeclaration(definition.endpoint) ??
+    aggregateTraitEndpoints(definition);
   if (endpoint === undefined) return {};
   const apiKeyHit = firstEnvHit(endpoint.apiKeyEnv, env);
   const baseUrlHit = firstEnvHit(endpoint.baseUrlEnv, env);
@@ -152,7 +165,7 @@ function aggregateTraitEndpoints(
   const config: ProtocolAdapterConfig = {
     protocol: definition.baseProtocol,
     providerType: definition.id,
-    modelName: '',
+    modelName: "",
   };
   const context: TraitContext = { config, providerId: definition.id };
   const apiKeyEnv: string[] = [];
@@ -166,7 +179,8 @@ function aggregateTraitEndpoints(
     declared = true;
     if (endpoint.apiKeyEnv !== undefined) apiKeyEnv.push(endpoint.apiKeyEnv);
     if (endpoint.baseUrlEnv !== undefined) baseUrlEnv.push(endpoint.baseUrlEnv);
-    if (endpoint.defaultBaseUrl !== undefined) defaultBaseUrl = endpoint.defaultBaseUrl;
+    if (endpoint.defaultBaseUrl !== undefined)
+      defaultBaseUrl = endpoint.defaultBaseUrl;
   }
   return declared ? { apiKeyEnv, baseUrlEnv, defaultBaseUrl } : undefined;
 }

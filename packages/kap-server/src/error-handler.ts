@@ -17,9 +17,9 @@
  * we never bleed it into the JSON response.
  */
 
-import { errEnvelope } from './envelope';
-import { ErrorCode } from './protocol/error-codes';
-import type { FastifyError } from 'fastify';
+import { errEnvelope } from "./envelope";
+import { ErrorCode } from "./protocol/error-codes";
+import type { FastifyError } from "fastify";
 
 /**
  * Loose Fastify-instance shape so this helper accepts both the default
@@ -31,7 +31,10 @@ interface ErrorHandlerHost {
   setErrorHandler(
     handler: (
       err: FastifyError,
-      req: { id: string; log: { error: (obj: object | string, msg?: string) => void } },
+      req: {
+        id: string;
+        log: { error: (obj: object | string, msg?: string) => void };
+      },
       reply: { status(code: number): { send(payload: unknown): void } },
     ) => void,
   ): unknown;
@@ -40,14 +43,18 @@ interface ErrorHandlerHost {
 export function installErrorHandler(app: ErrorHandlerHost): void {
   app.setErrorHandler((err, req, reply) => {
     const requestId = req.id;
-    req.log.error({ err, request_id: requestId }, 'unhandled error');
-    reply.status(200).send(
-      errEnvelope(
-        ErrorCode.INTERNAL_ERROR,
-        err.message !== undefined && err.message !== '' ? err.message : 'internal error',
-        requestId,
-        err.stack,
-      ),
-    );
+    req.log.error({ err, request_id: requestId }, "unhandled error");
+    reply
+      .status(200)
+      .send(
+        errEnvelope(
+          ErrorCode.INTERNAL_ERROR,
+          err.message !== undefined && err.message !== ""
+            ? err.message
+            : "internal error",
+          requestId,
+          err.stack,
+        ),
+      );
   });
 }

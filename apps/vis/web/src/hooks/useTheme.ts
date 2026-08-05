@@ -1,25 +1,25 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from "react";
 
-export type ThemeChoice = 'light' | 'dark' | 'auto';
-export type ResolvedTheme = 'light' | 'dark';
+export type ThemeChoice = "light" | "dark" | "auto";
+export type ResolvedTheme = "light" | "dark";
 
-const STORAGE_KEY = 'vis.theme';
+const STORAGE_KEY = "vis.theme";
 
 function systemTheme(): ResolvedTheme {
-  if (typeof window === 'undefined') return 'dark';
-  return window.matchMedia('(prefers-color-scheme: light)').matches
-    ? 'light'
-    : 'dark';
+  if (typeof window === "undefined") return "dark";
+  return window.matchMedia("(prefers-color-scheme: light)").matches
+    ? "light"
+    : "dark";
 }
 
 function readStored(): ThemeChoice {
   try {
     const v = localStorage.getItem(STORAGE_KEY);
-    if (v === 'light' || v === 'dark' || v === 'auto') return v;
+    if (v === "light" || v === "dark" || v === "auto") return v;
   } catch {
     /* ignore quota/permission errors */
   }
-  return 'auto';
+  return "auto";
 }
 
 function apply(resolved: ResolvedTheme): void {
@@ -27,9 +27,11 @@ function apply(resolved: ResolvedTheme): void {
   root.dataset.theme = resolved;
   // Sync the address-bar theme-color so native chrome (URL bar, title bar)
   // transitions too.
-  const meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+  const meta = document.querySelector<HTMLMetaElement>(
+    'meta[name="theme-color"]',
+  );
   if (meta) {
-    meta.content = resolved === 'light' ? '#fafbfc' : '#0b0d12';
+    meta.content = resolved === "light" ? "#fafbfc" : "#0b0d12";
   }
 }
 
@@ -49,13 +51,17 @@ export function useTheme(): {
 
   // Listen to system changes when in auto mode.
   useEffect(() => {
-    const m = window.matchMedia('(prefers-color-scheme: light)');
-    const handler = () =>{  setSys(m.matches ? 'light' : 'dark'); };
-    m.addEventListener('change', handler);
-    return () =>{  m.removeEventListener('change', handler); };
+    const m = window.matchMedia("(prefers-color-scheme: light)");
+    const handler = () => {
+      setSys(m.matches ? "light" : "dark");
+    };
+    m.addEventListener("change", handler);
+    return () => {
+      m.removeEventListener("change", handler);
+    };
   }, []);
 
-  const resolved: ResolvedTheme = choice === 'auto' ? sys : choice;
+  const resolved: ResolvedTheme = choice === "auto" ? sys : choice;
 
   useEffect(() => {
     apply(resolved);
@@ -64,7 +70,7 @@ export function useTheme(): {
   const set = useCallback((c: ThemeChoice) => {
     setChoice(c);
     try {
-      if (c === 'auto') localStorage.removeItem(STORAGE_KEY);
+      if (c === "auto") localStorage.removeItem(STORAGE_KEY);
       else localStorage.setItem(STORAGE_KEY, c);
     } catch {
       /* ignore */
@@ -74,7 +80,7 @@ export function useTheme(): {
   // Cycle: auto → light → dark → auto
   const cycle = useCallback(() => {
     const next: ThemeChoice =
-      choice === 'auto' ? 'light' : choice === 'light' ? 'dark' : 'auto';
+      choice === "auto" ? "light" : choice === "light" ? "dark" : "auto";
     set(next);
   }, [choice, set]);
 

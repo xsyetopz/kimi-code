@@ -1,7 +1,7 @@
-import { z } from 'zod';
+import { z } from "zod";
 
-import { getPluginUpdateNoticeStateFile } from '#/utils/paths';
-import { readJsonFile, writeJsonFile } from '#/utils/persistence';
+import { getPluginUpdateNoticeStateFile } from "#/utils/paths";
+import { readJsonFile, writeJsonFile } from "#/utils/persistence";
 
 /**
  * Records, per plugin, the newest marketplace version an update notice was
@@ -16,19 +16,23 @@ export type PluginUpdateNoticeState = {
 
 const PluginUpdateNoticeStateSchema = z.preprocess(
   (value) => {
-    if (typeof value !== 'object' || value === null) return value;
+    if (typeof value !== "object" || value === null) return value;
     const notified = (value as { notified?: unknown }).notified;
-    if (typeof notified !== 'object' || notified === null) {
+    if (typeof notified !== "object" || notified === null) {
       return { ...(value as Record<string, unknown>), notified: {} };
     }
 
     const normalizedNotified: Record<string, string> = {};
     for (const [key, record] of Object.entries(notified)) {
-      if (key.length === 0 || typeof record !== 'string' || record.length === 0) continue;
+      if (key.length === 0 || typeof record !== "string" || record.length === 0)
+        continue;
       normalizedNotified[key] = record;
     }
 
-    return { ...(value as Record<string, unknown>), notified: normalizedNotified };
+    return {
+      ...(value as Record<string, unknown>),
+      notified: normalizedNotified,
+    };
   },
   z
     .object({

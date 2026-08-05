@@ -4,9 +4,9 @@
 // `useKimiWebClient` composable so the merge is unit-testable without a Vue
 // reactivity harness.
 
-import type { AppSession, AppWorkspace } from '../api/types';
-import { basename } from './pathBasename';
-import { workspaceRootKey } from './rootKey';
+import type { AppSession, AppWorkspace } from "../api/types";
+import { basename } from "./pathBasename";
+import { workspaceRootKey } from "./rootKey";
 
 /** The workspace id a session belongs to: prefer the registered workspace whose
  *  root matches the session cwd; otherwise the daemon-provided workspaceId;
@@ -17,14 +17,18 @@ function workspaceIdForSession(
   s: { workspaceId?: string; cwd: string },
 ): string {
   const cwdKey = workspaceRootKey(s.cwd);
-  return workspaces.find((w) => workspaceRootKey(w.root) === cwdKey)?.id ?? s.workspaceId ?? s.cwd;
+  return (
+    workspaces.find((w) => workspaceRootKey(w.root) === cwdKey)?.id ??
+    s.workspaceId ??
+    s.cwd
+  );
 }
 
 export interface MergeWorkspacesInput {
   /** Registered workspaces from the daemon (listWorkspaces). */
   workspaces: AppWorkspace[];
   /** Currently loaded sessions (only id/cwd/workspaceId are read). */
-  sessions: Pick<AppSession, 'id' | 'cwd' | 'workspaceId'>[];
+  sessions: Pick<AppSession, "id" | "cwd" | "workspaceId">[];
   /** Root paths the user removed from the sidebar. */
   hiddenWorkspaceRoots: string[];
   /** Per-workspace "server has more sessions" flag; false means the local
@@ -104,7 +108,9 @@ export function mergeWorkspaces(input: MergeWorkspacesInput): AppWorkspace[] {
     if (!hidden.has(key) && !realKeys.includes(key)) realKeys.push(key);
   }
   const derivedKeys = [...byRoot.keys()].filter((k) => !realKeys.includes(k));
-  derivedKeys.sort((a, b) => byRoot.get(a)!.root.localeCompare(byRoot.get(b)!.root));
+  derivedKeys.sort((a, b) =>
+    byRoot.get(a)!.root.localeCompare(byRoot.get(b)!.root),
+  );
 
   const result: AppWorkspace[] = [];
   for (const key of [...realKeys, ...derivedKeys]) {

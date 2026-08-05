@@ -17,14 +17,14 @@
 // troubleshooting log (Settings → Advanced → Export log), so a user can report
 // exactly why a sound did or didn't play.
 
-import { ref } from 'vue';
-import { safeGetString, safeSetString, STORAGE_KEYS } from '../../lib/storage';
-import { traceClientEvent } from '../../debug/trace';
+import { ref } from "vue";
+import { safeGetString, safeSetString, STORAGE_KEYS } from "../../lib/storage";
+import { traceClientEvent } from "../../debug/trace";
 
 function loadSound(): boolean {
   // Off by default — a completion sound is easy to opt into via Settings, and
   // an unexpected chime is more surprising than a missing one.
-  return safeGetString(STORAGE_KEYS.soundOnComplete) === '1';
+  return safeGetString(STORAGE_KEYS.soundOnComplete) === "1";
 }
 
 const soundOnComplete = ref(loadSound());
@@ -32,7 +32,7 @@ const soundOnComplete = ref(loadSound());
 type AudioContextCtor = new () => AudioContext;
 
 function getAudioContextCtor(): AudioContextCtor | undefined {
-  if (typeof window === 'undefined') return undefined;
+  if (typeof window === "undefined") return undefined;
   const w = window as Window & { webkitAudioContext?: AudioContextCtor };
   return window.AudioContext ?? w.webkitAudioContext;
 }
@@ -59,13 +59,15 @@ function ensureAudioUnlocked(): void {
   if (!soundOnComplete.value) return;
   const ctx = getAudioContext();
   if (ctx === null) return;
-  if (ctx.state === 'suspended') {
+  if (ctx.state === "suspended") {
     void ctx.resume().then(
       () => {
-        traceClientEvent('sound: audio context resumed', { state: ctx.state });
+        traceClientEvent("sound: audio context resumed", { state: ctx.state });
       },
       (error) => {
-        traceClientEvent('sound: audio context resume rejected', { error: String(error) });
+        traceClientEvent("sound: audio context resume rejected", {
+          error: String(error),
+        });
       },
     );
   }
@@ -76,14 +78,14 @@ let unlockInstalled = false;
 /** Register once: on the first pointer/key gesture, unlock audio so a later
     completion (even in a background tab) can play. */
 function installGestureUnlock(): void {
-  if (unlockInstalled || typeof window === 'undefined') return;
+  if (unlockInstalled || typeof window === "undefined") return;
   unlockInstalled = true;
   const handler = (): void => {
     ensureAudioUnlocked();
   };
   // capture so we still run if a component calls stopPropagation.
-  window.addEventListener('pointerdown', handler, { capture: true });
-  window.addEventListener('keydown', handler, { capture: true });
+  window.addEventListener("pointerdown", handler, { capture: true });
+  window.addEventListener("keydown", handler, { capture: true });
 }
 
 installGestureUnlock();
@@ -92,14 +94,20 @@ installGestureUnlock();
     unlocks audio immediately, because the toggle click is a user gesture. */
 function setSoundOnComplete(on: boolean): void {
   soundOnComplete.value = on;
-  safeSetString(STORAGE_KEYS.soundOnComplete, on ? '1' : '0');
+  safeSetString(STORAGE_KEYS.soundOnComplete, on ? "1" : "0");
   if (on) ensureAudioUnlocked();
 }
 
-function tone(ctx: AudioContext, freq: number, start: number, duration: number, peak: number): void {
+function tone(
+  ctx: AudioContext,
+  freq: number,
+  start: number,
+  duration: number,
+  peak: number,
+): void {
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
-  osc.type = 'sine';
+  osc.type = "sine";
   osc.frequency.value = freq;
   osc.connect(gain);
   gain.connect(ctx.destination);
@@ -116,22 +124,26 @@ function tone(ctx: AudioContext, freq: number, start: number, duration: number, 
 function playChime(): void {
   const ctx = getAudioContext();
   if (ctx === null) {
-    traceClientEvent('sound: skipped, AudioContext unavailable');
+    traceClientEvent("sound: skipped, AudioContext unavailable");
     return;
   }
   // Never queue tones on a suspended context: its clock is frozen, so a chime
   // scheduled now would play stale when the context later resumes (e.g. on the
   // next click) rather than at completion time. If it isn't running yet, try to
   // unlock it for next time and skip this one.
-  if (ctx.state !== 'running') {
-    traceClientEvent('sound: skipped, context not running', { state: ctx.state });
-    if (ctx.state === 'suspended') {
+  if (ctx.state !== "running") {
+    traceClientEvent("sound: skipped, context not running", {
+      state: ctx.state,
+    });
+    if (ctx.state === "suspended") {
       void ctx.resume().then(
         () => {
-          traceClientEvent('sound: context resumed for next time', { state: ctx.state });
+          traceClientEvent("sound: context resumed for next time", {
+            state: ctx.state,
+          });
         },
         (error) => {
-          traceClientEvent('sound: resume rejected', { error: String(error) });
+          traceClientEvent("sound: resume rejected", { error: String(error) });
         },
       );
     }
@@ -141,9 +153,9 @@ function playChime(): void {
     // A short two-note "ding": a soft lower note followed by a brighter one.
     tone(ctx, 880, 0, 0.16, 0.18);
     tone(ctx, 1320, 0.1, 0.22, 0.16);
-    traceClientEvent('sound: chime scheduled', { state: ctx.state });
+    traceClientEvent("sound: chime scheduled", { state: ctx.state });
   } catch (error) {
-    traceClientEvent('sound: failed to play', { error: String(error) });
+    traceClientEvent("sound: failed to play", { error: String(error) });
   }
 }
 

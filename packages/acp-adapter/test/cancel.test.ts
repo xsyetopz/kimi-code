@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   AgentSideConnection,
@@ -12,25 +12,41 @@ import {
   type SessionNotification,
   type WriteTextFileRequest,
   type WriteTextFileResponse,
-} from '@agentclientprotocol/sdk';
-import { log, type KimiHarness, type Session } from '@moonshot-ai/kimi-code-sdk';
-import { Jimp } from 'jimp';
+} from "@agentclientprotocol/sdk";
+import {
+  log,
+  type KimiHarness,
+  type Session,
+} from "@moonshot-ai/kimi-code-sdk";
+import { Jimp } from "jimp";
 
-import { AcpServer } from '../src/server';
-import { AUTHED_STATUS } from './_helpers/harness-stubs';
+import { AcpServer } from "../src/server";
+import { AUTHED_STATUS } from "./_helpers/harness-stubs";
 
 class StubClient implements Client {
-  async requestPermission(_p: RequestPermissionRequest): Promise<RequestPermissionResponse> {
-    throw new Error('StubClient.requestPermission should not be called in cancel test');
+  async requestPermission(
+    _p: RequestPermissionRequest,
+  ): Promise<RequestPermissionResponse> {
+    throw new Error(
+      "StubClient.requestPermission should not be called in cancel test",
+    );
   }
   async sessionUpdate(_n: SessionNotification): Promise<void> {
-    throw new Error('StubClient.sessionUpdate should not be called in cancel test');
+    throw new Error(
+      "StubClient.sessionUpdate should not be called in cancel test",
+    );
   }
-  async writeTextFile(_p: WriteTextFileRequest): Promise<WriteTextFileResponse> {
-    throw new Error('StubClient.writeTextFile should not be called in cancel test');
+  async writeTextFile(
+    _p: WriteTextFileRequest,
+  ): Promise<WriteTextFileResponse> {
+    throw new Error(
+      "StubClient.writeTextFile should not be called in cancel test",
+    );
   }
   async readTextFile(_p: ReadTextFileRequest): Promise<ReadTextFileResponse> {
-    throw new Error('StubClient.readTextFile should not be called in cancel test');
+    throw new Error(
+      "StubClient.readTextFile should not be called in cancel test",
+    );
   }
 }
 
@@ -40,26 +56,32 @@ function makeInMemoryStreamPair(): {
 } {
   const clientToAgent = new TransformStream<Uint8Array, Uint8Array>();
   const agentToClient = new TransformStream<Uint8Array, Uint8Array>();
-  const agentStream = ndJsonStream(agentToClient.writable, clientToAgent.readable);
-  const clientStream = ndJsonStream(clientToAgent.writable, agentToClient.readable);
+  const agentStream = ndJsonStream(
+    agentToClient.writable,
+    clientToAgent.readable,
+  );
+  const clientStream = ndJsonStream(
+    clientToAgent.writable,
+    agentToClient.readable,
+  );
   return { agentStream, clientStream };
 }
 
-describe('AcpServer cancel', () => {
+describe("AcpServer cancel", () => {
   let warnSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
-    warnSpy = vi.spyOn(log, 'warn').mockImplementation(() => undefined);
+    warnSpy = vi.spyOn(log, "warn").mockImplementation(() => undefined);
   });
 
   afterEach(() => {
     warnSpy.mockRestore();
   });
 
-  it('forwards session/cancel to the underlying Session.cancel() for a known sessionId', async () => {
+  it("forwards session/cancel to the underlying Session.cancel() for a known sessionId", async () => {
     let cancelCalls = 0;
     const fakeSession = {
-      id: 'sess-known',
+      id: "sess-known",
       prompt: async () => undefined,
       cancel: async () => {
         cancelCalls += 1;
@@ -73,12 +95,15 @@ describe('AcpServer cancel', () => {
 
     const { agentStream, clientStream } = makeInMemoryStreamPair();
     new AgentSideConnection((c) => new AcpServer(harness, c), agentStream);
-    const client = new ClientSideConnection((_a) => new StubClient(), clientStream);
+    const client = new ClientSideConnection(
+      (_a) => new StubClient(),
+      clientStream,
+    );
 
-    await client.newSession({ cwd: '/tmp/x', mcpServers: [] });
+    await client.newSession({ cwd: "/tmp/x", mcpServers: [] });
 
     // session/cancel is a notification — `client.cancel` is fire-and-forget.
-    await client.cancel({ sessionId: 'sess-known' });
+    await client.cancel({ sessionId: "sess-known" });
 
     // Give the agent side a tick to process the notification.
     await new Promise((resolve) => setTimeout(resolve, 10));
@@ -87,37 +112,42 @@ describe('AcpServer cancel', () => {
     expect(warnSpy).not.toHaveBeenCalled();
   });
 
-  it('does not throw and logs a warning when sessionId is unknown', async () => {
+  it("does not throw and logs a warning when sessionId is unknown", async () => {
     const harness = {
       auth: { status: async () => AUTHED_STATUS },
       createSession: async () => {
-        throw new Error('createSession should not be called when no session is created');
+        throw new Error(
+          "createSession should not be called when no session is created",
+        );
       },
     } as unknown as KimiHarness;
 
     const { agentStream, clientStream } = makeInMemoryStreamPair();
     new AgentSideConnection((c) => new AcpServer(harness, c), agentStream);
-    const client = new ClientSideConnection((_a) => new StubClient(), clientStream);
+    const client = new ClientSideConnection(
+      (_a) => new StubClient(),
+      clientStream,
+    );
 
     // Notification: no response, no throw.
-    await client.cancel({ sessionId: 'sess-unknown' });
+    await client.cancel({ sessionId: "sess-unknown" });
 
     // Give the agent side a tick to process the notification.
     await new Promise((resolve) => setTimeout(resolve, 10));
 
     expect(warnSpy).toHaveBeenCalledTimes(1);
     expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining('cancel for unknown sessionId'),
-      expect.objectContaining({ sessionId: 'sess-unknown' }),
+      expect.stringContaining("cancel for unknown sessionId"),
+      expect.objectContaining({ sessionId: "sess-unknown" }),
     );
   });
 
-  it('swallows and warns when Session.cancel() throws (notifications must not error)', async () => {
+  it("swallows and warns when Session.cancel() throws (notifications must not error)", async () => {
     const fakeSession = {
-      id: 'sess-erroring',
+      id: "sess-erroring",
       prompt: async () => undefined,
       cancel: async () => {
-        throw new Error('boom inside cancel');
+        throw new Error("boom inside cancel");
       },
       onEvent: () => () => undefined,
     } as unknown as Session;
@@ -128,23 +158,26 @@ describe('AcpServer cancel', () => {
 
     const { agentStream, clientStream } = makeInMemoryStreamPair();
     new AgentSideConnection((c) => new AcpServer(harness, c), agentStream);
-    const client = new ClientSideConnection((_a) => new StubClient(), clientStream);
+    const client = new ClientSideConnection(
+      (_a) => new StubClient(),
+      clientStream,
+    );
 
-    await client.newSession({ cwd: '/tmp/x', mcpServers: [] });
-    await client.cancel({ sessionId: 'sess-erroring' });
+    await client.newSession({ cwd: "/tmp/x", mcpServers: [] });
+    await client.cancel({ sessionId: "sess-erroring" });
     await new Promise((resolve) => setTimeout(resolve, 10));
 
     expect(warnSpy).toHaveBeenCalledTimes(1);
     expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining('error while cancelling'),
-      expect.objectContaining({ sessionId: 'sess-erroring' }),
+      expect.stringContaining("error while cancelling"),
+      expect.objectContaining({ sessionId: "sess-erroring" }),
     );
   });
 
-  it('returns cancelled without launching when cancel arrives during image compression', async () => {
+  it("returns cancelled without launching when cancel arrives during image compression", async () => {
     let promptCalls = 0;
     const fakeSession = {
-      id: 'sess-cancel-compress',
+      id: "sess-cancel-compress",
       prompt: async () => {
         promptCalls += 1;
         return undefined;
@@ -159,32 +192,42 @@ describe('AcpServer cancel', () => {
 
     const { agentStream, clientStream } = makeInMemoryStreamPair();
     new AgentSideConnection((c) => new AcpServer(harness, c), agentStream);
-    const client = new ClientSideConnection((_a) => new StubClient(), clientStream);
+    const client = new ClientSideConnection(
+      (_a) => new StubClient(),
+      clientStream,
+    );
 
-    const { sessionId } = await client.newSession({ cwd: '/tmp/x', mcpServers: [] });
+    const { sessionId } = await client.newSession({
+      cwd: "/tmp/x",
+      mcpServers: [],
+    });
 
     // A solid 3600×1800 image is small in bytes but slow enough to compress
     // that the cancel below reliably lands mid-compression, before any turn
     // — while staying safely inside the 5s test timeout on slow CI runners.
     const data = Buffer.from(
-      await new Jimp({ width: 3600, height: 1800, color: 0x3366ccff }).getBuffer('image/png'),
-    ).toString('base64');
+      await new Jimp({
+        width: 3600,
+        height: 1800,
+        color: 0x3366ccff,
+      }).getBuffer("image/png"),
+    ).toString("base64");
 
     const promptP = client.prompt({
       sessionId,
-      prompt: [{ type: 'image', data, mimeType: 'image/png' }],
+      prompt: [{ type: "image", data, mimeType: "image/png" }],
     });
     await client.cancel({ sessionId });
     const res = await promptP;
 
-    expect(res.stopReason).toBe('cancelled');
+    expect(res.stopReason).toBe("cancelled");
     expect(promptCalls).toBe(0); // the turn was never launched
   });
 
-  it('cancels every prompt compressing concurrently, not just the most recent', async () => {
+  it("cancels every prompt compressing concurrently, not just the most recent", async () => {
     let promptCalls = 0;
     const fakeSession = {
-      id: 'sess-cancel-concurrent',
+      id: "sess-cancel-concurrent",
       prompt: async () => {
         promptCalls += 1;
         return undefined;
@@ -199,14 +242,24 @@ describe('AcpServer cancel', () => {
 
     const { agentStream, clientStream } = makeInMemoryStreamPair();
     new AgentSideConnection((c) => new AcpServer(harness, c), agentStream);
-    const client = new ClientSideConnection((_a) => new StubClient(), clientStream);
+    const client = new ClientSideConnection(
+      (_a) => new StubClient(),
+      clientStream,
+    );
 
-    const { sessionId } = await client.newSession({ cwd: '/tmp/x', mcpServers: [] });
+    const { sessionId } = await client.newSession({
+      cwd: "/tmp/x",
+      mcpServers: [],
+    });
 
     const data = Buffer.from(
-      await new Jimp({ width: 3600, height: 1800, color: 0x3366ccff }).getBuffer('image/png'),
-    ).toString('base64');
-    const imageBlock = { type: 'image' as const, data, mimeType: 'image/png' };
+      await new Jimp({
+        width: 3600,
+        height: 1800,
+        color: 0x3366ccff,
+      }).getBuffer("image/png"),
+    ).toString("base64");
+    const imageBlock = { type: "image" as const, data, mimeType: "image/png" };
 
     // Two prompts compressing at once; a single cancel must cover both.
     const p1 = client.prompt({ sessionId, prompt: [imageBlock] });
@@ -214,8 +267,8 @@ describe('AcpServer cancel', () => {
     await client.cancel({ sessionId });
     const [r1, r2] = await Promise.all([p1, p2]);
 
-    expect(r1.stopReason).toBe('cancelled');
-    expect(r2.stopReason).toBe('cancelled');
+    expect(r1.stopReason).toBe("cancelled");
+    expect(r2.stopReason).toBe("cancelled");
     expect(promptCalls).toBe(0);
   });
 });

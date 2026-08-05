@@ -13,7 +13,7 @@
  *   3. the model id is on the {@link TOGGLEABLE_THINKING_MODELS} allow-list.
  */
 
-import type { ModelCatalogItem } from '@moonshot-ai/klient';
+import type { ModelCatalogItem } from "@moonshot-ai/klient";
 
 /**
  * One catalog row per configured model, suitable for an ACP picker.
@@ -42,13 +42,17 @@ export interface AcpModelEntry {
  * Models that support thinking by toggle (not by name match or capability
  * declaration). ACP-picker-specific UX.
  */
-const TOGGLEABLE_THINKING_MODELS = new Set(['kimi-for-coding', 'kimi-code']);
+const TOGGLEABLE_THINKING_MODELS = new Set(["kimi-for-coding", "kimi-code"]);
 
 export function deriveThinkingSupported(item: ModelCatalogItem): boolean {
   const capabilities = item.capabilities ?? [];
-  if (capabilities.includes('thinking') || capabilities.includes('always_thinking')) return true;
+  if (
+    capabilities.includes("thinking") ||
+    capabilities.includes("always_thinking")
+  )
+    return true;
   const lower = item.model.toLowerCase();
-  if (lower.includes('thinking') || lower.includes('reason')) return true;
+  if (lower.includes("thinking") || lower.includes("reason")) return true;
   if (TOGGLEABLE_THINKING_MODELS.has(item.model)) return true;
   return false;
 }
@@ -58,7 +62,7 @@ export function deriveThinkingSupported(item: ModelCatalogItem): boolean {
  * be disabled, so the ACP toggle must lock to on. Capability-only by design.
  */
 export function deriveAlwaysThinking(item: ModelCatalogItem): boolean {
-  return (item.capabilities ?? []).includes('always_thinking');
+  return (item.capabilities ?? []).includes("always_thinking");
 }
 
 /**
@@ -70,7 +74,7 @@ export function deriveDefaultThinkingEffort(item: ModelCatalogItem): string {
   if (efforts !== undefined && efforts.length > 0) {
     return item.default_effort ?? efforts[Math.floor(efforts.length / 2)]!;
   }
-  return 'on';
+  return "on";
 }
 
 /**

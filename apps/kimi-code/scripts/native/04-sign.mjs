@@ -1,60 +1,71 @@
-import { createHash } from 'node:crypto';
-import { createReadStream } from 'node:fs';
-import { writeFile } from 'node:fs/promises';
-import { basename, resolve } from 'node:path';
+import { createHash } from "node:crypto";
+import { createReadStream } from "node:fs";
+import { writeFile } from "node:fs/promises";
+import { basename, resolve } from "node:path";
 
-import { run } from './exec.mjs';
-import { nativeBinPath, targetTriple } from './paths.mjs';
+import { run } from "./exec.mjs";
+import { nativeBinPath, targetTriple } from "./paths.mjs";
 
-const ENTITLEMENTS_PATH = resolve(import.meta.dirname, 'entitlements.plist');
+const ENTITLEMENTS_PATH = resolve(import.meta.dirname, "entitlements.plist");
 
-export function buildCodesignArgs({ identity, executable, entitlementsPath, keychainPath }) {
-  if (identity === '-') {
-    return ['--sign', '-', executable];
+export function buildCodesignArgs({
+  identity,
+  executable,
+  entitlementsPath,
+  keychainPath,
+}) {
+  if (identity === "-") {
+    return ["--sign", "-", executable];
   }
   const args = [
-    '--sign',
+    "--sign",
     identity,
-    '--options',
-    'runtime',
-    '--entitlements',
+    "--options",
+    "runtime",
+    "--entitlements",
     entitlementsPath,
-    '--timestamp',
+    "--timestamp",
   ];
   if (keychainPath) {
-    args.push('--keychain', keychainPath);
+    args.push("--keychain", keychainPath);
   }
-  args.push('--force', executable);
+  args.push("--force", executable);
   return args;
 }
 
 async function sha256(path) {
   return await new Promise((resolveHash, reject) => {
-    const hash = createHash('sha256');
+    const hash = createHash("sha256");
     const stream = createReadStream(path);
-    stream.on('error', reject);
-    stream.on('data', (chunk) => hash.update(chunk));
-    stream.on('end', () => resolveHash(hash.digest('hex')));
+    stream.on("error", reject);
+    stream.on("data", (chunk) => hash.update(chunk));
+    stream.on("end", () => resolveHash(hash.digest("hex")));
   });
 }
 
 async function writeChecksum(executable) {
   const digest = await sha256(executable);
-  await writeFile(`${executable}.sha256`, `${digest}  ${basename(executable)}\n`);
+  await writeFile(
+    `${executable}.sha256`,
+    `${digest}  ${basename(executable)}\n`,
+  );
 }
 
-export async function runSignStep({ identity = '-', keychainPath = null } = {}) {
+export async function runSignStep({
+  identity = "-",
+  keychainPath = null,
+} = {}) {
   const target = targetTriple();
   const executable = nativeBinPath(target);
 
-  if (process.platform === 'darwin') {
+  if (process.platform === "darwin") {
     const args = buildCodesignArgs({
       identity,
       executable,
       entitlementsPath: ENTITLEMENTS_PATH,
       keychainPath,
     });
-    await run('codesign', args);
+    await run("codesign", args);
   }
 
   await writeChecksum(executable);
@@ -62,7 +73,7 @@ export async function runSignStep({ identity = '-', keychainPath = null } = {}) 
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  const identity = process.env.APPLE_SIGNING_IDENTITY ?? '-';
+  const identity = process.env.APPLE_SIGNING_IDENTITY ?? "-";
   const keychainPath = process.env.APPLE_KEYCHAIN_PATH ?? null;
   await runSignStep({ identity, keychainPath });
 }

@@ -6,23 +6,23 @@ import {
   type OAuthRef,
   type Session,
   type ThinkingEffort,
-} from '@moonshot-ai/kimi-code-sdk';
+} from "@moonshot-ai/kimi-code-sdk";
 
-import { createKimiCodeUserAgent } from '#/cli/version';
+import { createKimiCodeUserAgent } from "#/cli/version";
 
-import type { SkillListSession } from '../commands';
+import type { SkillListSession } from "../commands";
 
-import { OAUTH_LOGIN_REQUIRED_STARTUP_NOTICE } from '../constant/kimi-tui';
+import { OAUTH_LOGIN_REQUIRED_STARTUP_NOTICE } from "../constant/kimi-tui";
 import {
   refreshAllProviderModels,
   type RefreshProviderHost,
   type RefreshProviderScope,
   type RefreshResult,
-} from '../utils/refresh-providers';
-import { thinkingEffortFromConfig } from '../utils/thinking-config';
-import type { SessionEventHandler } from './session-event-handler';
-import type { AppState, KimiTUIOptions } from '../types';
-import type { TUIState } from '../tui-state';
+} from "../utils/refresh-providers";
+import { thinkingEffortFromConfig } from "../utils/thinking-config";
+import type { SessionEventHandler } from "./session-event-handler";
+import type { AppState, KimiTUIOptions } from "../types";
+import type { TUIState } from "../tui-state";
 
 type MutableCreateSessionOptions = {
   -readonly [P in keyof CreateSessionOptions]: CreateSessionOptions[P];
@@ -64,9 +64,9 @@ export class AuthFlowController {
   enterLoginRequiredStartupState(): void {
     this.host.resetSessionRuntime();
     this.host.setAppState({
-      sessionId: '',
-      model: '',
-      thinkingEffort: 'off',
+      sessionId: "",
+      model: "",
+      thinkingEffort: "off",
       contextTokens: 0,
       maxContextTokens: 0,
       contextUsage: 0,
@@ -105,9 +105,9 @@ export class AuthFlowController {
       model,
       thinking: effort,
       permission: host.options.startup.auto
-        ? 'auto'
+        ? "auto"
         : host.options.startup.yolo
-          ? 'yolo'
+          ? "yolo"
           : undefined,
       planMode: host.state.appState.planMode ? true : undefined,
       // The post-login session is still the startup session: carry the
@@ -135,11 +135,11 @@ export class AuthFlowController {
   }
 
   async clearActiveSessionAfterLogout(): Promise<void> {
-    await this.host.closeSession('logged out');
+    await this.host.closeSession("logged out");
     this.host.resetSessionRuntime();
     this.host.setAppState({
-      sessionId: '',
-      model: '',
+      sessionId: "",
+      model: "",
       sessionTitle: null,
     });
     await this.host.refreshSkillCommands();
@@ -152,7 +152,8 @@ export class AuthFlowController {
     const availableModels = config.models ?? {};
     const availableProviders = config.providers ?? {};
     const defaultModel = host.options.startup.model ?? config.defaultModel;
-    const selected = defaultModel !== undefined ? availableModels[defaultModel] : undefined;
+    const selected =
+      defaultModel !== undefined ? availableModels[defaultModel] : undefined;
 
     if (defaultModel === undefined || selected === undefined) {
       if (host.session === undefined && host.engineV2) {
@@ -164,7 +165,10 @@ export class AuthFlowController {
       return;
     }
 
-    await this.activateModelAfterLogin(defaultModel, thinkingEffortFromConfig(config.thinking));
+    await this.activateModelAfterLogin(
+      defaultModel,
+      thinkingEffortFromConfig(config.thinking),
+    );
     if (host.session === undefined && host.engineV2) {
       // Session-less v2: also hydrate permission/plan defaults from the
       // refreshed config, same as startup.
@@ -186,8 +190,8 @@ export class AuthFlowController {
     this.host.setAppState({
       availableModels: config.models ?? {},
       availableProviders: config.providers ?? {},
-      model: '',
-      thinkingEffort: 'off',
+      model: "",
+      thinkingEffort: "off",
       maxContextTokens: 0,
       contextUsage: 0,
       contextTokens: 0,
@@ -201,15 +205,19 @@ export class AuthFlowController {
    * and returned instead of thrown.
    */
   async refreshProviderModels(): Promise<RefreshResult> {
-    return this.refreshProviderModelsWithScope('all');
+    return this.refreshProviderModelsWithScope("all");
   }
 
   async refreshOAuthProviderModels(): Promise<RefreshResult> {
-    return this.refreshProviderModelsWithScope('oauth');
+    return this.refreshProviderModelsWithScope("oauth");
   }
 
-  private async refreshProviderModelsWithScope(scope: RefreshProviderScope): Promise<RefreshResult> {
-    const result = await refreshAllProviderModels(this.buildRefreshHost(), { scope });
+  private async refreshProviderModelsWithScope(
+    scope: RefreshProviderScope,
+  ): Promise<RefreshResult> {
+    const result = await refreshAllProviderModels(this.buildRefreshHost(), {
+      scope,
+    });
     if (result.changed.length > 0) {
       await this.refreshAvailableModels();
     }
@@ -229,8 +237,14 @@ export class AuthFlowController {
    */
   private buildRefreshHost(): RefreshProviderHost {
     const { host } = this;
-    const resolveOAuthToken = async (providerName: string, oauthRef?: OAuthRef): Promise<string> => {
-      const tokenProvider = host.harness.auth.resolveOAuthTokenProvider(providerName, oauthRef);
+    const resolveOAuthToken = async (
+      providerName: string,
+      oauthRef?: OAuthRef,
+    ): Promise<string> => {
+      const tokenProvider = host.harness.auth.resolveOAuthTokenProvider(
+        providerName,
+        oauthRef,
+      );
       return tokenProvider.getAccessToken();
     };
     const userAgent = createKimiCodeUserAgent();
@@ -246,7 +260,7 @@ export class AuthFlowController {
     let staged: KimiConfig | undefined;
     const requireStaged = (): KimiConfig => {
       if (staged === undefined) {
-        throw new Error('refresh host: getConfig must be called before writes');
+        throw new Error("refresh host: getConfig must be called before writes");
       }
       return staged;
     };
@@ -266,7 +280,9 @@ export class AuthFlowController {
         // Object.entries keeps keys whose value is `undefined`, so a cleared
         // section (e.g. a dangling defaultModel) is expressed as a removal in
         // the atomic write; sections absent from the patch stay untouched.
-        await host.harness.replaceConfigSections(Object.fromEntries(Object.entries(patch)));
+        await host.harness.replaceConfigSections(
+          Object.fromEntries(Object.entries(patch)),
+        );
         return staged;
       },
       resolveOAuthToken,

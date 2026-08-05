@@ -11,7 +11,7 @@
  *   - 40411 fs.permission_denied    (EACCES)
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
 export const fsBrowseQuerySchema = z.object({
   path: z.string().min(1).optional(),

@@ -9,13 +9,13 @@ const MIN_RATE_FACTOR = 0.25;
 const HALF_TICK = 0.5;
 
 export type AgentSwarmProgressEstimatorPhase =
-  | 'pending'
-  | 'queued'
-  | 'suspended'
-  | 'running'
-  | 'completed'
-  | 'failed'
-  | 'cancelled';
+  | "pending"
+  | "queued"
+  | "suspended"
+  | "running"
+  | "completed"
+  | "failed"
+  | "cancelled";
 
 export interface AgentSwarmProgressEstimatorOptions {
   readonly rateWindowMs?: number;
@@ -49,7 +49,7 @@ interface MemberProgressState {
   pausedAtMs?: number;
   pausedDurationMs: number;
   terminalAtMs?: number;
-  terminalKind?: 'completed' | 'failed' | 'cancelled';
+  terminalKind?: "completed" | "failed" | "cancelled";
   rawTicks: number;
   readonly seenToolCallIds: Set<string>;
   toolCallActiveTimesMs: number[];
@@ -80,9 +80,17 @@ export class AgentSwarmProgressEstimator {
   private readonly maxBoostGain: number;
 
   constructor(options: AgentSwarmProgressEstimatorOptions = {}) {
-    this.rateWindowMs = positiveOrDefault(options.rateWindowMs, DEFAULT_RATE_WINDOW_MS);
-    this.catchupTimeMs = positiveOrDefault(options.catchupTimeMs, DEFAULT_CATCHUP_TIME_MS);
-    this.maxCatchupTicksPerSecond = positiveOrUndefined(options.maxCatchupTicksPerSecond);
+    this.rateWindowMs = positiveOrDefault(
+      options.rateWindowMs,
+      DEFAULT_RATE_WINDOW_MS,
+    );
+    this.catchupTimeMs = positiveOrDefault(
+      options.catchupTimeMs,
+      DEFAULT_CATCHUP_TIME_MS,
+    );
+    this.maxCatchupTicksPerSecond = positiveOrUndefined(
+      options.maxCatchupTicksPerSecond,
+    );
     this.workloadSpreadFactor = spreadFactorOrDefault(
       options.workloadSpreadFactor,
       DEFAULT_WORKLOAD_SPREAD_FACTOR,
@@ -91,7 +99,10 @@ export class AgentSwarmProgressEstimator {
       options.unfinishedProgressCap,
       DEFAULT_UNFINISHED_PROGRESS_CAP,
     );
-    this.maxBoostGain = clampPositiveRatio(options.maxBoostGain, DEFAULT_MAX_BOOST_GAIN);
+    this.maxBoostGain = clampPositiveRatio(
+      options.maxBoostGain,
+      DEFAULT_MAX_BOOST_GAIN,
+    );
   }
 
   ensureMember(memberKey: string, nowMs: number): void {
@@ -119,7 +130,8 @@ export class AgentSwarmProgressEstimator {
 
   markQueued(memberKey: string, nowMs: number): void {
     const state = this.getOrCreateMember(memberKey);
-    if (state.startedAtMs === undefined || state.terminalKind !== undefined) return;
+    if (state.startedAtMs === undefined || state.terminalKind !== undefined)
+      return;
     state.pausedAtMs ??= nowMs;
     state.lastEstimateAtMs = nowMs;
     delete state.lastTargetTicks;
@@ -145,15 +157,15 @@ export class AgentSwarmProgressEstimator {
   }
 
   markCompleted(memberKey: string, nowMs: number): void {
-    this.markTerminal(memberKey, nowMs, 'completed');
+    this.markTerminal(memberKey, nowMs, "completed");
   }
 
   markFailed(memberKey: string, nowMs: number): void {
-    this.markTerminal(memberKey, nowMs, 'failed');
+    this.markTerminal(memberKey, nowMs, "failed");
   }
 
   markCancelled(memberKey: string, nowMs: number): void {
-    this.markTerminal(memberKey, nowMs, 'cancelled');
+    this.markTerminal(memberKey, nowMs, "cancelled");
   }
 
   estimate(input: AgentSwarmProgressEstimateInput): AgentSwarmProgressEstimate {
@@ -168,14 +180,16 @@ export class AgentSwarmProgressEstimator {
       boosted: false,
     };
 
-    if (input.phase !== 'running' || rawTicks <= 0 || prior === undefined) {
+    if (input.phase !== "running" || rawTicks <= 0 || prior === undefined) {
       state.displayTicks = previousDisplayTicks;
       state.lastEstimateAtMs = input.nowMs;
       delete state.lastTargetTicks;
       return baseEstimate;
     }
 
-    const completedConfidence = this.completedSampleConfidence(prior.completedCount);
+    const completedConfidence = this.completedSampleConfidence(
+      prior.completedCount,
+    );
     const estimatedTotalToolCalls = this.estimateTotalToolCalls(
       state,
       prior,
@@ -202,7 +216,8 @@ export class AgentSwarmProgressEstimator {
     const toolConfidence = confidence(rawTicks, BOOST_TOOL_CONFIDENCE_SCALE);
     const boostConfidence = completedConfidence * toolConfidence;
     const boostGain = this.maxBoostGain * boostConfidence;
-    const targetProgress = rawProgress + boostGain * (estimatedProgress - rawProgress);
+    const targetProgress =
+      rawProgress + boostGain * (estimatedProgress - rawProgress);
     const targetTicks = Math.max(rawTicks, targetProgress * capacityTicks);
     const displayTicks = this.catchUpDisplayTicks(
       state,
@@ -239,14 +254,16 @@ export class AgentSwarmProgressEstimator {
 
   hasPendingCatchup(): boolean {
     return Array.from(this.members.values()).some(
-      (state) => state.lastTargetTicks !== undefined && state.lastTargetTicks > state.displayTicks + 0.1,
+      (state) =>
+        state.lastTargetTicks !== undefined &&
+        state.lastTargetTicks > state.displayTicks + 0.1,
     );
   }
 
   private markTerminal(
     memberKey: string,
     nowMs: number,
-    terminalKind: 'completed' | 'failed' | 'cancelled',
+    terminalKind: "completed" | "failed" | "cancelled",
   ): void {
     const state = this.getOrCreateMember(memberKey);
     this.finishPausedInterval(state, nowMs);
@@ -257,7 +274,8 @@ export class AgentSwarmProgressEstimator {
   }
 
   private startWork(state: MemberProgressState, nowMs: number): void {
-    const wasQueued = state.startedAtMs === undefined || state.pausedAtMs !== undefined;
+    const wasQueued =
+      state.startedAtMs === undefined || state.pausedAtMs !== undefined;
     state.startedAtMs ??= nowMs;
     this.finishPausedInterval(state, nowMs);
     if (!wasQueued) return;
@@ -265,7 +283,10 @@ export class AgentSwarmProgressEstimator {
     delete state.lastTargetTicks;
   }
 
-  private finishPausedInterval(state: MemberProgressState, nowMs: number): void {
+  private finishPausedInterval(
+    state: MemberProgressState,
+    nowMs: number,
+  ): void {
     if (state.pausedAtMs === undefined) return;
     state.pausedDurationMs += Math.max(0, nowMs - state.pausedAtMs);
     delete state.pausedAtMs;
@@ -274,8 +295,13 @@ export class AgentSwarmProgressEstimator {
   private activeElapsedMs(state: MemberProgressState, nowMs: number): number {
     if (state.startedAtMs === undefined) return 0;
     const currentPausedMs =
-      state.pausedAtMs === undefined ? 0 : Math.max(0, nowMs - state.pausedAtMs);
-    return Math.max(0, nowMs - state.startedAtMs - state.pausedDurationMs - currentPausedMs);
+      state.pausedAtMs === undefined
+        ? 0
+        : Math.max(0, nowMs - state.pausedAtMs);
+    return Math.max(
+      0,
+      nowMs - state.startedAtMs - state.pausedDurationMs - currentPausedMs,
+    );
   }
 
   private getOrCreateMember(memberKey: string): MemberProgressState {
@@ -306,8 +332,9 @@ export class AgentSwarmProgressEstimator {
   private completedSamples(): CompletedSample[] {
     const samples: CompletedSample[] = [];
     for (const state of this.members.values()) {
-      if (state.terminalKind !== 'completed') continue;
-      if (state.startedAtMs === undefined || state.terminalAtMs === undefined) continue;
+      if (state.terminalKind !== "completed") continue;
+      if (state.startedAtMs === undefined || state.terminalAtMs === undefined)
+        continue;
       if (state.rawTicks <= 0) continue;
       const totalMs = this.activeElapsedMs(state, state.terminalAtMs);
       if (totalMs <= 0) continue;
@@ -334,7 +361,10 @@ export class AgentSwarmProgressEstimator {
       clampedLocalRatePerMs,
       rateWeight,
     );
-    const totalMs = Math.max(prior.typicalTotalMs, elapsedMs / this.unfinishedProgressCap);
+    const totalMs = Math.max(
+      prior.typicalTotalMs,
+      elapsedMs / this.unfinishedProgressCap,
+    );
     const estimatedTotalToolCalls = ratePerMs * totalMs;
     const boundedTotalToolCalls = this.softBoundTotalToolCalls(
       estimatedTotalToolCalls,
@@ -367,9 +397,12 @@ export class AgentSwarmProgressEstimator {
     if (elapsedMs <= 0 || state.toolCallActiveTimesMs.length === 0) return 0;
     let decayedToolCalls = 0;
     for (const timeMs of state.toolCallActiveTimesMs) {
-      decayedToolCalls += Math.exp(-Math.max(0, elapsedMs - timeMs) / this.rateWindowMs);
+      decayedToolCalls += Math.exp(
+        -Math.max(0, elapsedMs - timeMs) / this.rateWindowMs,
+      );
     }
-    const decayedElapsedMs = this.rateWindowMs * (1 - Math.exp(-elapsedMs / this.rateWindowMs));
+    const decayedElapsedMs =
+      this.rateWindowMs * (1 - Math.exp(-elapsedMs / this.rateWindowMs));
     if (decayedElapsedMs <= 0) return 0;
     return decayedToolCalls / decayedElapsedMs;
   }
@@ -387,8 +420,12 @@ export class AgentSwarmProgressEstimator {
     if (elapsedMs <= 0) return previousDisplayTicks;
     const alpha = 1 - Math.exp(-elapsedMs / this.catchupTimeMs);
     const desiredDelta = (targetTicks - previousDisplayTicks) * alpha;
-    const maxCatchupTicksPerSecond = this.maxCatchupTicksPerSecond ?? capacityTicks / 2;
-    const maxDelta = Math.max(0, maxCatchupTicksPerSecond * (elapsedMs / 1_000));
+    const maxCatchupTicksPerSecond =
+      this.maxCatchupTicksPerSecond ?? capacityTicks / 2;
+    const maxDelta = Math.max(
+      0,
+      maxCatchupTicksPerSecond * (elapsedMs / 1_000),
+    );
     return previousDisplayTicks + Math.min(desiredDelta, maxDelta);
   }
 
@@ -397,19 +434,34 @@ export class AgentSwarmProgressEstimator {
   }
 }
 
-function positiveOrDefault(value: number | undefined, fallback: number): number {
-  return value !== undefined && Number.isFinite(value) && value > 0 ? value : fallback;
+function positiveOrDefault(
+  value: number | undefined,
+  fallback: number,
+): number {
+  return value !== undefined && Number.isFinite(value) && value > 0
+    ? value
+    : fallback;
 }
 
 function positiveOrUndefined(value: number | undefined): number | undefined {
-  return value !== undefined && Number.isFinite(value) && value > 0 ? value : undefined;
+  return value !== undefined && Number.isFinite(value) && value > 0
+    ? value
+    : undefined;
 }
 
-function spreadFactorOrDefault(value: number | undefined, fallback: number): number {
-  return value !== undefined && Number.isFinite(value) && value > 1 ? value : fallback;
+function spreadFactorOrDefault(
+  value: number | undefined,
+  fallback: number,
+): number {
+  return value !== undefined && Number.isFinite(value) && value > 1
+    ? value
+    : fallback;
 }
 
-function clampPositiveRatio(value: number | undefined, fallback: number): number {
+function clampPositiveRatio(
+  value: number | undefined,
+  fallback: number,
+): number {
   const ratio = positiveOrDefault(value, fallback);
   return Math.max(0.01, Math.min(0.99, ratio));
 }
@@ -418,10 +470,16 @@ function confidence(count: number, scale: number): number {
   return 1 - Math.exp(-Math.max(0, count) / scale);
 }
 
-function geometricInterpolate(low: number, high: number, weight: number): number {
+function geometricInterpolate(
+  low: number,
+  high: number,
+  weight: number,
+): number {
   const safeLow = Math.max(Number.EPSILON, low);
   const safeHigh = Math.max(Number.EPSILON, high);
-  return Math.exp((1 - weight) * Math.log(safeLow) + weight * Math.log(safeHigh));
+  return Math.exp(
+    (1 - weight) * Math.log(safeLow) + weight * Math.log(safeHigh),
+  );
 }
 
 function logMedian(values: readonly number[]): number {

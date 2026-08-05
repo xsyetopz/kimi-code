@@ -10,7 +10,10 @@
  * offending file is fixed. Workspace-scoped.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
 
 export interface IExplicitAgentProfileLoader {
   readonly _serviceBrand: undefined;
@@ -19,4 +22,4 @@ export interface IExplicitAgentProfileLoader {
 }
 
 export const IExplicitAgentProfileLoader: ServiceIdentifier<IExplicitAgentProfileLoader> =
-  createDecorator<IExplicitAgentProfileLoader>('explicitAgentProfileLoader');
+  createDecorator<IExplicitAgentProfileLoader>("explicitAgentProfileLoader");

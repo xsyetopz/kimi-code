@@ -1,20 +1,33 @@
 import { bridge } from "@/services";
 
 // Color Regex
-const HEX_COLOR = /#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})(?![0-9a-fA-F\w])/;
-const RGB_COLOR = /rgba?\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}(?:\s*,\s*[\d.]+)?\s*\)/;
-const HSL_COLOR = /hsla?\(\s*\d{1,3}\s*,\s*[\d.]+%\s*,\s*[\d.]+%(?:\s*,\s*[\d.]+)?\s*\)/;
+const HEX_COLOR =
+  /#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})(?![0-9a-fA-F\w])/;
+const RGB_COLOR =
+  /rgba?\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}(?:\s*,\s*[\d.]+)?\s*\)/;
+const HSL_COLOR =
+  /hsla?\(\s*\d{1,3}\s*,\s*[\d.]+%\s*,\s*[\d.]+%(?:\s*,\s*[\d.]+)?\s*\)/;
 
 // File Path Regex
-const FILE_PATH = /(?:@|\.\/)?(?:[a-zA-Z_][\w-]*\/)*[a-zA-Z_][\w-]*\.[a-zA-Z0-9]+/;
+const FILE_PATH =
+  /(?:@|\.\/)?(?:[a-zA-Z_][\w-]*\/)*[a-zA-Z_][\w-]*\.[a-zA-Z0-9]+/;
 
 // Combined Regex
-const ENRICHMENT_PATTERN = new RegExp(`(${HEX_COLOR.source}|${RGB_COLOR.source}|${HSL_COLOR.source})|(${FILE_PATH.source})`, "g");
+const ENRICHMENT_PATTERN = new RegExp(
+  `(${HEX_COLOR.source}|${RGB_COLOR.source}|${HSL_COLOR.source})|(${FILE_PATH.source})`,
+  "g",
+);
 
 // Color Regex for recognizing colors only within code tags
-const COLOR_ONLY_PATTERN = new RegExp(`(${HEX_COLOR.source}|${RGB_COLOR.source}|${HSL_COLOR.source})`, "g");
+const COLOR_ONLY_PATTERN = new RegExp(
+  `(${HEX_COLOR.source}|${RGB_COLOR.source}|${HSL_COLOR.source})`,
+  "g",
+);
 
-export type Segment = { type: "text"; value: string } | { type: "color"; value: string } | { type: "file"; value: string; path: string };
+export type Segment =
+  | { type: "text"; value: string }
+  | { type: "color"; value: string }
+  | { type: "file"; value: string; path: string };
 
 function normalizePath(raw: string): string {
   let p = raw;
@@ -40,7 +53,10 @@ export function extractPaths(text: string): string[] {
   return [...seen];
 }
 
-export function parseSegments(text: string, fileExistsMap: Record<string, boolean>): Segment[] {
+export function parseSegments(
+  text: string,
+  fileExistsMap: Record<string, boolean>,
+): Segment[] {
   if (!text) {
     return [];
   }
@@ -61,7 +77,11 @@ export function parseSegments(text: string, fileExistsMap: Record<string, boolea
       segments.push({ type: "color", value: colorMatch });
     } else if (fileMatch) {
       const path = normalizePath(fileMatch);
-      segments.push(fileExistsMap[path] ? { type: "file", value: fileMatch, path } : { type: "text", value: fileMatch });
+      segments.push(
+        fileExistsMap[path]
+          ? { type: "file", value: fileMatch, path }
+          : { type: "text", value: fileMatch },
+      );
     }
 
     lastIndex = m.index + full.length;
@@ -107,7 +127,9 @@ export function hasColors(text: string): boolean {
 const CACHE_TTL = 10_000;
 const fileExistsCache = new Map<string, { exists: boolean; ts: number }>();
 
-export async function checkFilesExist(paths: string[]): Promise<Record<string, boolean>> {
+export async function checkFilesExist(
+  paths: string[],
+): Promise<Record<string, boolean>> {
   if (!paths.length) {
     return {};
   }
@@ -144,5 +166,11 @@ export async function checkFilesExist(paths: string[]): Promise<Record<string, b
 }
 
 export function isLocalPath(src: string): boolean {
-  return !!src && !src.startsWith("data:") && !src.startsWith("http://") && !src.startsWith("https://") && !src.startsWith("blob:");
+  return (
+    !!src &&
+    !src.startsWith("data:") &&
+    !src.startsWith("http://") &&
+    !src.startsWith("https://") &&
+    !src.startsWith("blob:")
+  );
 }

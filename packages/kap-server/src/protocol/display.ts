@@ -1,16 +1,16 @@
-import { z } from 'zod';
+import { z } from "zod";
 
-export const ToolInputDisplaySchema = z.discriminatedUnion('kind', [
+export const ToolInputDisplaySchema = z.discriminatedUnion("kind", [
   z.object({
-    kind: z.literal('command'),
+    kind: z.literal("command"),
     command: z.string(),
     cwd: z.string().optional(),
     description: z.string().optional(),
-    language: z.literal('bash').optional(),
+    language: z.literal("bash").optional(),
   }),
   z.object({
-    kind: z.literal('file_io'),
-    operation: z.enum(['read', 'write', 'edit', 'glob', 'grep']),
+    kind: z.literal("file_io"),
+    operation: z.enum(["read", "write", "edit", "glob", "grep"]),
     path: z.string(),
     detail: z.string().optional(),
     content: z.string().optional(),
@@ -18,51 +18,51 @@ export const ToolInputDisplaySchema = z.discriminatedUnion('kind', [
     after: z.string().optional(),
   }),
   z.object({
-    kind: z.literal('diff'),
+    kind: z.literal("diff"),
     path: z.string(),
     before: z.string(),
     after: z.string(),
     hunks: z.number().optional(),
   }),
   z.object({
-    kind: z.literal('search'),
+    kind: z.literal("search"),
     query: z.string(),
     scope: z.string().optional(),
   }),
   z.object({
-    kind: z.literal('url_fetch'),
+    kind: z.literal("url_fetch"),
     url: z.string(),
     method: z.string().optional(),
   }),
   z.object({
-    kind: z.literal('agent_call'),
+    kind: z.literal("agent_call"),
     agent_name: z.string(),
     prompt: z.string(),
     background: z.boolean().optional(),
   }),
   z.object({
-    kind: z.literal('skill_call'),
+    kind: z.literal("skill_call"),
     skill_name: z.string(),
     args: z.string().optional(),
   }),
   z.object({
-    kind: z.literal('todo_list'),
+    kind: z.literal("todo_list"),
     items: z.array(z.object({ title: z.string(), status: z.string() })),
   }),
   z.object({
-    kind: z.literal('task'),
+    kind: z.literal("task"),
     task_id: z.string(),
     status: z.string(),
     description: z.string(),
     task_kind: z.string().optional(),
   }),
   z.object({
-    kind: z.literal('task_stop'),
+    kind: z.literal("task_stop"),
     task_id: z.string(),
     task_description: z.string(),
   }),
   z.object({
-    kind: z.literal('plan_review'),
+    kind: z.literal("plan_review"),
     plan: z.string(),
     path: z.string().optional(),
     options: z
@@ -76,83 +76,85 @@ export const ToolInputDisplaySchema = z.discriminatedUnion('kind', [
       .optional(),
   }),
   z.object({
-    kind: z.literal('goal_start'),
+    kind: z.literal("goal_start"),
     objective: z.string(),
     completionCriterion: z.string().optional(),
     // Current permission mode at approval time. The client uses it to pick the
     // start menu (manual vs yolo); `auto` never reaches this display because it
     // auto-approves the goal without a prompt.
-    mode: z.enum(['manual', 'yolo']),
+    mode: z.enum(["manual", "yolo"]),
   }),
   z.object({
-    kind: z.literal('generic'),
+    kind: z.literal("generic"),
     summary: z.string(),
     detail: z.unknown().optional(),
   }),
 ]);
 
-export const ToolResultDisplaySchema = z.discriminatedUnion('kind', [
+export const ToolResultDisplaySchema = z.discriminatedUnion("kind", [
   z.object({
-    kind: z.literal('command_output'),
+    kind: z.literal("command_output"),
     exit_code: z.number(),
     stdout: z.string().optional(),
     stderr: z.string().optional(),
   }),
   z.object({
-    kind: z.literal('file_content'),
+    kind: z.literal("file_content"),
     path: z.string(),
     content: z.string(),
     range: z.object({ start: z.number(), end: z.number() }).optional(),
     truncated: z.boolean().optional(),
   }),
   z.object({
-    kind: z.literal('diff'),
+    kind: z.literal("diff"),
     path: z.string(),
     before: z.string(),
     after: z.string(),
     hunks: z.number().optional(),
   }),
   z.object({
-    kind: z.literal('search_results'),
+    kind: z.literal("search_results"),
     query: z.string(),
-    matches: z.array(z.object({ file: z.string(), line: z.number(), text: z.string() })),
+    matches: z.array(
+      z.object({ file: z.string(), line: z.number(), text: z.string() }),
+    ),
   }),
   z.object({
-    kind: z.literal('url_content'),
+    kind: z.literal("url_content"),
     url: z.string(),
     status: z.number(),
     preview: z.string().optional(),
     content_type: z.string().optional(),
   }),
   z.object({
-    kind: z.literal('agent_summary'),
+    kind: z.literal("agent_summary"),
     agent_name: z.string(),
     result: z.string().optional(),
     steps: z.number().optional(),
   }),
   z.object({
-    kind: z.literal('task'),
+    kind: z.literal("task"),
     task_id: z.string(),
     status: z.string(),
     description: z.string(),
   }),
   z.object({
-    kind: z.literal('todo_list'),
+    kind: z.literal("todo_list"),
     items: z.array(z.object({ title: z.string(), status: z.string() })),
   }),
-  z.object({ kind: z.literal('structured'), data: z.unknown() }),
+  z.object({ kind: z.literal("structured"), data: z.unknown() }),
   z.object({
-    kind: z.literal('text'),
+    kind: z.literal("text"),
     text: z.string(),
     truncated: z.boolean().optional(),
   }),
   z.object({
-    kind: z.literal('error'),
+    kind: z.literal("error"),
     message: z.string(),
     code: z.string().optional(),
   }),
   z.object({
-    kind: z.literal('generic'),
+    kind: z.literal("generic"),
     summary: z.string(),
     detail: z.unknown().optional(),
   }),

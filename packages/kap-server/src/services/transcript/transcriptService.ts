@@ -40,8 +40,8 @@
  * (debounced per agent) and merged back live-first — see `healTurnOps`.
  */
 
-import { join } from 'node:path';
-import { readFile } from 'node:fs/promises';
+import { join } from "node:path";
+import { readFile } from "node:fs/promises";
 
 import {
   IAgentLifecycleService,
@@ -54,7 +54,7 @@ import {
   type IDisposable,
   type Scope,
   type SessionMeta,
-} from '@moonshot-ai/agent-core-v2';
+} from "@moonshot-ai/agent-core-v2";
 import {
   TranscriptStore,
   foldWireRecordFacts,
@@ -68,21 +68,21 @@ import {
   type TranscriptOperation,
   type TranscriptTaskRef,
   type TranscriptTurn,
-} from '@moonshot-ai/transcript';
+} from "@moonshot-ai/transcript";
 
-import { readWireRecords } from './wireRecords';
+import { readWireRecords } from "./wireRecords";
 import {
   bindSessionTranscript,
   descriptorFromMeta,
   type TranscriptBinding,
   type TranscriptBindingLogger,
-} from './coreBinding';
+} from "./coreBinding";
 
-const SESSIONS_ROOT = 'sessions';
-const AGENTS_DIR = 'agents';
-const MAIN_AGENT_ID = 'main';
-const WIRE_FILE = 'wire.jsonl';
-const STATE_FILE = 'state.json';
+const SESSIONS_ROOT = "sessions";
+const AGENTS_DIR = "agents";
+const MAIN_AGENT_ID = "main";
+const WIRE_FILE = "wire.jsonl";
+const STATE_FILE = "state.json";
 
 export interface TranscriptServiceDeps {
   readonly homeDir: string;
@@ -117,7 +117,10 @@ export const TRANSCRIPT_OPS_JOURNAL_CAPACITY = 2000;
 
 /** Catch-up view over one agent's journal: batches with seq > sinceSeq, oldest first. */
 export interface TranscriptOpsCatchup {
-  readonly batches: readonly { seq: number; ops: readonly TranscriptOperation[] }[];
+  readonly batches: readonly {
+    seq: number;
+    ops: readonly TranscriptOperation[];
+  }[];
   readonly latestSeq: number;
   /** false when the journal no longer reaches back to sinceSeq — the caller must do a full refresh. */
   readonly complete: boolean;
@@ -130,7 +133,10 @@ export class TranscriptService {
     Set<(event: TranscriptChangeEvent, seq: number) => void>
   >();
   /** Debounced post-turn heals: `${sessionId}:${agentId}` → pending ordinals + timer. */
-  private readonly healTimers = new Map<string, { ordinals: Set<number>; timer: NodeJS.Timeout }>();
+  private readonly healTimers = new Map<
+    string,
+    { ordinals: Set<number>; timer: NodeJS.Timeout }
+  >();
 
   constructor(private readonly deps: TranscriptServiceDeps) {
     // Live entries must not outlive their session: once it closes or archives,
@@ -138,8 +144,12 @@ export class TranscriptService {
     // events are per-handler (Workspace scope), so follow every handler —
     // present and future — through the App-scope registry.
     followWorkspaceHandlers(deps.core.accessor, (service) => {
-      const d1 = service.onDidCloseSession(({ sessionId }) => this.dropSession(sessionId));
-      const d2 = service.onDidArchiveSession(({ sessionId }) => this.dropSession(sessionId));
+      const d1 = service.onDidCloseSession(({ sessionId }) =>
+        this.dropSession(sessionId),
+      );
+      const d2 = service.onDidArchiveSession(({ sessionId }) =>
+        this.dropSession(sessionId),
+      );
       return {
         dispose: () => {
           d1.dispose();
@@ -156,7 +166,9 @@ export class TranscriptService {
   forSessionLive(sessionId: string): TranscriptStore | undefined {
     const existing = this.live.get(sessionId);
     if (existing !== undefined) {
-      if (getLiveSessionById(this.deps.core.accessor, sessionId) !== undefined) {
+      if (
+        getLiveSessionById(this.deps.core.accessor, sessionId) !== undefined
+      ) {
         return existing.store;
       }
       // Stale entry for a session already closed/archived (the drop event may
@@ -169,13 +181,19 @@ export class TranscriptService {
     const store = new TranscriptStore(sessionId);
     let binding: TranscriptBinding;
     try {
-      binding = bindSessionTranscript(store, session, this.deps.logger, (event) =>
-        this.handleLiveOps(sessionId, event),
+      binding = bindSessionTranscript(
+        store,
+        session,
+        this.deps.logger,
+        (event) => this.handleLiveOps(sessionId, event),
       );
     } catch (error) {
       // The session's core scope can be disposed mid-bind during shutdown
       // (same guard as the broadcaster's `ensureState`).
-      if (error instanceof Error && error.message === 'InstantiationService has been disposed') {
+      if (
+        error instanceof Error &&
+        error.message === "InstantiationService has been disposed"
+      ) {
         return undefined;
       }
       throw error;
@@ -236,7 +254,10 @@ export class TranscriptService {
   }
 
   /** Initial backfill: main-agent history + the full roster from session metadata. */
-  private async backfillMain(sessionId: string, store: TranscriptStore): Promise<void> {
+  private async backfillMain(
+    sessionId: string,
+    store: TranscriptStore,
+  ): Promise<void> {
     await this.backfillAgent(sessionId, store, MAIN_AGENT_ID);
     if (this.live.get(sessionId)?.store !== store) return;
     // Seed the roster from the session's persisted agent registry, so full
@@ -260,14 +281,22 @@ export class TranscriptService {
    * the rebuild are 0-based like the engine's, so future live turns continue
    * without colliding.
    */
-  private async backfillAgent(sessionId: string, store: TranscriptStore, agentId: string): Promise<void> {
+  private async backfillAgent(
+    sessionId: string,
+    store: TranscriptStore,
+    agentId: string,
+  ): Promise<void> {
     let snapshot: AgentTranscriptSnapshot | undefined;
     try {
       snapshot = await this.readColdSnapshot(sessionId, agentId);
     } catch (error) {
       this.deps.logger?.warn(
-        { sessionId, agentId, err: error instanceof Error ? error.message : error },
-        'transcript: history backfill failed, continuing without it',
+        {
+          sessionId,
+          agentId,
+          err: error instanceof Error ? error.message : error,
+        },
+        "transcript: history backfill failed, continuing without it",
       );
     }
     // The entry may have been dropped (session closed) while reading from disk.
@@ -281,11 +310,19 @@ export class TranscriptService {
       const ops = snapshotToOps(snapshot, (turn) =>
         healTurnOps(turn, transcript.getTurn(turn.turnId)),
       );
-      const overlay = this.liveTurnOverlay(sessionId, agentId, transcript, snapshot);
+      const overlay = this.liveTurnOverlay(
+        sessionId,
+        agentId,
+        transcript,
+        snapshot,
+      );
       if (overlay !== undefined) ops.push(overlay);
       const result = transcript.apply(ops);
       if (result.gap !== undefined) {
-        this.deps.logger?.warn({ sessionId, agentId, gap: result.gap }, 'transcript: backfill append gap');
+        this.deps.logger?.warn(
+          { sessionId, agentId, gap: result.gap },
+          "transcript: backfill append gap",
+        );
       }
       // Fan the backfill out like any mapped-op batch so attached subscribers
       // converge; later resets carry it wholesale anyway.
@@ -298,11 +335,12 @@ export class TranscriptService {
     // nonexistent agent id must not conjure a ghost roster entry.
     const existing = store.agents().find((d) => d.agentId === agentId);
     const hasContent =
-      snapshot !== undefined && (snapshot.items.length > 0 || snapshot.tasks.length > 0);
+      snapshot !== undefined &&
+      (snapshot.items.length > 0 || snapshot.tasks.length > 0);
     if (existing !== undefined || hasContent) {
       store.describeAgent({
         agentId,
-        type: existing?.type ?? (agentId === MAIN_AGENT_ID ? 'main' : 'sub'),
+        type: existing?.type ?? (agentId === MAIN_AGENT_ID ? "main" : "sub"),
         parentAgentId: existing?.parentAgentId,
         label: existing?.label,
         createdAt: existing?.createdAt,
@@ -369,7 +407,8 @@ export class TranscriptService {
     }
     const seq = journal.nextSeq++;
     journal.batches.push({ seq, ops: [...event.ops] });
-    if (journal.batches.length > TRANSCRIPT_OPS_JOURNAL_CAPACITY) journal.batches.shift();
+    if (journal.batches.length > TRANSCRIPT_OPS_JOURNAL_CAPACITY)
+      journal.batches.shift();
     return seq;
   }
 
@@ -400,11 +439,14 @@ export class TranscriptService {
     if (this.forSessionLive(sessionId) === undefined) return undefined;
     const journal = this.live.get(sessionId)?.opsJournals.get(agentId);
     const latestSeq = journal === undefined ? 0 : journal.nextSeq - 1;
-    if (sinceSeq > latestSeq) return { batches: [], latestSeq, complete: false };
-    const batches = journal?.batches.filter((batch) => batch.seq > sinceSeq) ?? [];
+    if (sinceSeq > latestSeq)
+      return { batches: [], latestSeq, complete: false };
+    const batches =
+      journal?.batches.filter((batch) => batch.seq > sinceSeq) ?? [];
     // Batches are consecutive, so coverage reduces to the oldest retained seq.
     const oldest = journal?.batches[0]?.seq;
-    const complete = batches.length === 0 || (oldest !== undefined && oldest <= sinceSeq + 1);
+    const complete =
+      batches.length === 0 || (oldest !== undefined && oldest <= sinceSeq + 1);
     return { batches, latestSeq, complete };
   }
 
@@ -416,13 +458,17 @@ export class TranscriptService {
   private handleLiveOps(sessionId: string, event: TranscriptChangeEvent): void {
     this.dispatchOps(sessionId, event);
     for (const op of event.ops) {
-      if (op.op === 'turn.upsert' && TERMINAL_TURN_STATES.has(op.turn.state)) {
+      if (op.op === "turn.upsert" && TERMINAL_TURN_STATES.has(op.turn.state)) {
         this.scheduleTurnHeal(sessionId, event.agentId, op.turn.ordinal);
       }
     }
   }
 
-  private scheduleTurnHeal(sessionId: string, agentId: string, ordinal: number): void {
+  private scheduleTurnHeal(
+    sessionId: string,
+    agentId: string,
+    ordinal: number,
+  ): void {
     const key = `${sessionId}:${agentId}`;
     const existing = this.healTimers.get(key);
     if (existing !== undefined) {
@@ -456,21 +502,23 @@ export class TranscriptService {
     const session = getLiveSessionById(this.deps.core.accessor, sessionId);
     const agent = session?.accessor.get(IAgentLifecycleService).get(agentId);
     const status = agent?.accessor.get(IAgentLoopService).status();
-    if (status?.state !== 'running' || status.activeTurnId === undefined) return undefined;
+    if (status?.state !== "running" || status.activeTurnId === undefined)
+      return undefined;
     const ordinal = status.activeTurnId;
     const turnId = `t${ordinal}`;
     const existing = transcript.getTurn(turnId);
     const snapshotTurn = snapshot.items.find(
-      (item): item is TranscriptTurn => item.kind === 'turn' && item.ordinal === ordinal,
+      (item): item is TranscriptTurn =>
+        item.kind === "turn" && item.ordinal === ordinal,
     );
     return {
-      op: 'turn.upsert',
+      op: "turn.upsert",
       turn: {
-        kind: 'turn',
+        kind: "turn",
         turnId,
         ordinal,
-        state: 'running',
-        origin: existing?.origin ?? snapshotTurn?.origin ?? { kind: 'other' },
+        state: "running",
+        origin: existing?.origin ?? snapshotTurn?.origin ?? { kind: "other" },
         prompt: existing?.prompt ?? snapshotTurn?.prompt,
         startedAt: existing?.startedAt ?? snapshotTurn?.startedAt,
       },
@@ -497,18 +545,26 @@ export class TranscriptService {
       snapshot = await this.readColdSnapshot(sessionId, agentId);
     } catch (error) {
       this.deps.logger?.warn(
-        { sessionId, agentId, err: error instanceof Error ? error.message : error },
-        'transcript: post-turn heal failed, continuing without it',
+        {
+          sessionId,
+          agentId,
+          err: error instanceof Error ? error.message : error,
+        },
+        "transcript: post-turn heal failed, continuing without it",
       );
       return;
     }
     // The entry may have been dropped (session closed) while reading from disk.
-    if (snapshot === undefined || this.live.get(sessionId)?.store !== entry.store) return;
+    if (
+      snapshot === undefined ||
+      this.live.get(sessionId)?.store !== entry.store
+    )
+      return;
     const transcript = entry.store.getAgent(agentId);
     if (transcript === undefined) return;
     const ops: TranscriptOperation[] = [];
     for (const item of snapshot.items) {
-      if (item.kind !== 'turn' || !ordinals.has(item.ordinal)) continue;
+      if (item.kind !== "turn" || !ordinals.has(item.ordinal)) continue;
       ops.push(...healTurnOps(item, transcript.getTurn(item.turnId)));
     }
     if (ops.length === 0) return;
@@ -525,14 +581,24 @@ export class TranscriptService {
    * to the index; an unreadable or missing metadata file yields an empty
    * roster (best-effort — transcripts work without descriptors).
    */
-  async readColdRoster(sessionId: string): Promise<AgentDescriptor[] | undefined> {
-    const summary = await this.deps.core.accessor.get(ISessionIndex).get(sessionId);
+  async readColdRoster(
+    sessionId: string,
+  ): Promise<AgentDescriptor[] | undefined> {
+    const summary = await this.deps.core.accessor
+      .get(ISessionIndex)
+      .get(sessionId);
     if (summary === undefined) return undefined;
     let meta: SessionMeta;
     try {
       const raw = await readFile(
-        join(this.deps.homeDir, SESSIONS_ROOT, summary.workspaceId, sessionId, STATE_FILE),
-        'utf-8',
+        join(
+          this.deps.homeDir,
+          SESSIONS_ROOT,
+          summary.workspaceId,
+          sessionId,
+          STATE_FILE,
+        ),
+        "utf-8",
       );
       meta = JSON.parse(raw) as SessionMeta;
     } catch {
@@ -553,7 +619,9 @@ export class TranscriptService {
     sessionId: string,
     agentId: string = MAIN_AGENT_ID,
   ): Promise<AgentTranscriptSnapshot | undefined> {
-    const summary = await this.deps.core.accessor.get(ISessionIndex).get(sessionId);
+    const summary = await this.deps.core.accessor
+      .get(ISessionIndex)
+      .get(sessionId);
     if (summary === undefined) return undefined;
     // Path-hostile ids never map to a real agent directory — answer empty
     // instead of letting the id traverse outside `<sessionDir>/agents/`.
@@ -573,7 +641,7 @@ export class TranscriptService {
     try {
       records = await readWireRecords(wirePath);
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
         return groupMessagesIntoSnapshot([]);
       }
       throw error;
@@ -629,15 +697,15 @@ export function snapshotToOps(
   const flushPending = (beforeTurn?: number): void => {
     for (const item of pending) {
       ops.push(
-        item.kind === 'marker'
-          ? { op: 'marker.upsert', item, beforeTurn }
-          : { op: 'taskref.upsert', item, beforeTurn },
+        item.kind === "marker"
+          ? { op: "marker.upsert", item, beforeTurn }
+          : { op: "taskref.upsert", item, beforeTurn },
       );
     }
     pending.length = 0;
   };
   for (const item of snapshot.items) {
-    if (item.kind === 'turn') {
+    if (item.kind === "turn") {
       flushPending(item.ordinal);
       lastTurnOrdinal = item.ordinal;
       ops.push(...turnOps(item));
@@ -650,9 +718,9 @@ export function snapshotToOps(
   // robustly by the reducer's `>=` placement when ordinals drift).
   flushPending(lastTurnOrdinal === undefined ? undefined : lastTurnOrdinal + 1);
   for (const task of snapshot.tasks) {
-    ops.push({ op: 'task.upsert', task });
+    ops.push({ op: "task.upsert", task });
   }
-  ops.push({ op: 'meta.merge', meta: snapshot.meta });
+  ops.push({ op: "meta.merge", meta: snapshot.meta });
   return ops;
 }
 
@@ -660,12 +728,17 @@ export function snapshotToOps(
 export function snapshotTurnOps(turn: TranscriptTurn): TranscriptOperation[] {
   const ops: TranscriptOperation[] = [];
   const { steps, ...header } = turn;
-  ops.push({ op: 'turn.upsert', turn: header });
+  ops.push({ op: "turn.upsert", turn: header });
   for (const step of steps) {
     const { frames, ...stepHeader } = step;
-    ops.push({ op: 'step.upsert', turnId: turn.turnId, step: stepHeader });
+    ops.push({ op: "step.upsert", turnId: turn.turnId, step: stepHeader });
     for (const frame of frames) {
-      ops.push({ op: 'frame.upsert', turnId: turn.turnId, stepId: step.stepId, frame });
+      ops.push({
+        op: "frame.upsert",
+        turnId: turn.turnId,
+        stepId: step.stepId,
+        frame,
+      });
     }
   }
   return ops;
@@ -673,10 +746,10 @@ export function snapshotTurnOps(turn: TranscriptTurn): TranscriptOperation[] {
 
 /** Post-turn heals fire this long after the last terminal turn of an agent. */
 const TURN_HEAL_DEBOUNCE_MS = 250;
-const TERMINAL_TURN_STATES: ReadonlySet<TranscriptTurn['state']> = new Set([
-  'completed',
-  'failed',
-  'cancelled',
+const TERMINAL_TURN_STATES: ReadonlySet<TranscriptTurn["state"]> = new Set([
+  "completed",
+  "failed",
+  "cancelled",
 ]);
 
 /**
@@ -705,18 +778,27 @@ export function healTurnOps(
   const { steps, ...header } = snapshotTurn;
   const ops: TranscriptOperation[] = [];
   if (liveTurn === undefined) {
-    ops.push({ op: 'turn.upsert', turn: header });
+    ops.push({ op: "turn.upsert", turn: header });
     for (const step of steps) {
       const { frames, ...stepHeader } = step;
-      ops.push({ op: 'step.upsert', turnId: snapshotTurn.turnId, step: stepHeader });
+      ops.push({
+        op: "step.upsert",
+        turnId: snapshotTurn.turnId,
+        step: stepHeader,
+      });
       for (const frame of frames) {
-        ops.push({ op: 'frame.upsert', turnId: snapshotTurn.turnId, stepId: step.stepId, frame });
+        ops.push({
+          op: "frame.upsert",
+          turnId: snapshotTurn.turnId,
+          stepId: step.stepId,
+          frame,
+        });
       }
     }
     return ops;
   }
   ops.push({
-    op: 'turn.upsert',
+    op: "turn.upsert",
     turn: {
       ...header,
       state: liveTurn.state,
@@ -726,29 +808,45 @@ export function healTurnOps(
     },
   });
   for (const step of steps) {
-    const liveStep = liveTurn.steps.find((entry) => entry.stepId === step.stepId);
+    const liveStep = liveTurn.steps.find(
+      (entry) => entry.stepId === step.stepId,
+    );
     const { frames, ...stepHeader } = step;
     if (liveStep === undefined) {
-      ops.push({ op: 'step.upsert', turnId: snapshotTurn.turnId, step: stepHeader });
+      ops.push({
+        op: "step.upsert",
+        turnId: snapshotTurn.turnId,
+        step: stepHeader,
+      });
       for (const frame of frames) {
-        ops.push({ op: 'frame.upsert', turnId: snapshotTurn.turnId, stepId: step.stepId, frame });
+        ops.push({
+          op: "frame.upsert",
+          turnId: snapshotTurn.turnId,
+          stepId: step.stepId,
+          frame,
+        });
       }
       continue;
     }
     for (const frame of frames) {
-      const liveFrame = liveStep.frames.find((entry) => entry.frameId === frame.frameId);
-      if (frame.kind === 'tool') {
+      const liveFrame = liveStep.frames.find(
+        (entry) => entry.frameId === frame.frameId,
+      );
+      if (frame.kind === "tool") {
         // Recover frames the live step never saw and results missed in the
         // attach race (a dropped tool.result is unrecoverable live). Live
         // frames that already carry the outcome stay untouched, and live-only
         // extras (display / agentRefs / approvalId) ride the emitted frame.
-        const liveTool = liveFrame?.kind === 'tool' ? liveFrame : undefined;
+        const liveTool = liveFrame?.kind === "tool" ? liveFrame : undefined;
         const liveHasOutcome =
-          liveTool !== undefined && (liveTool.output !== undefined || liveTool.error !== undefined);
-        const snapshotHasOutcome = frame.output !== undefined || frame.error !== undefined;
-        if (liveTool !== undefined && (liveHasOutcome || !snapshotHasOutcome)) continue;
+          liveTool !== undefined &&
+          (liveTool.output !== undefined || liveTool.error !== undefined);
+        const snapshotHasOutcome =
+          frame.output !== undefined || frame.error !== undefined;
+        if (liveTool !== undefined && (liveHasOutcome || !snapshotHasOutcome))
+          continue;
         ops.push({
-          op: 'frame.upsert',
+          op: "frame.upsert",
           turnId: snapshotTurn.turnId,
           stepId: step.stepId,
           frame:
@@ -763,19 +861,24 @@ export function healTurnOps(
         });
         continue;
       }
-      if (frame.kind !== 'text' && frame.kind !== 'thinking') continue;
+      if (frame.kind !== "text" && frame.kind !== "thinking") continue;
       // The length shortcut only applies to the SAME frame kind: a
       // kind-mismatched live frame (the projector guessed the stream kind
       // wrong mid-turn) must be replaced by the persisted one, not skipped.
       if (
         liveFrame !== undefined &&
         liveFrame.kind === frame.kind &&
-        (liveFrame.kind === 'text' || liveFrame.kind === 'thinking') &&
+        (liveFrame.kind === "text" || liveFrame.kind === "thinking") &&
         liveFrame.text.length >= frame.text.length
       ) {
         continue;
       }
-      ops.push({ op: 'frame.upsert', turnId: snapshotTurn.turnId, stepId: step.stepId, frame });
+      ops.push({
+        op: "frame.upsert",
+        turnId: snapshotTurn.turnId,
+        stepId: step.stepId,
+        frame,
+      });
     }
   }
   return ops;

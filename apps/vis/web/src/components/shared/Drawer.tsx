@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, type ReactNode } from "react";
 
 interface DrawerProps {
   open: boolean;
@@ -8,14 +8,22 @@ interface DrawerProps {
   width?: number;
 }
 
-export function Drawer({ open, onClose, title, children, width = 560 }: DrawerProps) {
+export function Drawer({
+  open,
+  onClose,
+  title,
+  children,
+  width = 560,
+}: DrawerProps) {
   useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === "Escape") onClose();
     };
-    window.addEventListener('keydown', handler);
-    return () =>{  window.removeEventListener('keydown', handler); };
+    window.addEventListener("keydown", handler);
+    return () => {
+      window.removeEventListener("keydown", handler);
+    };
   }, [open, onClose]);
 
   if (!open) return null;

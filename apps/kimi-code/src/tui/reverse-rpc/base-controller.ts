@@ -57,7 +57,10 @@ export abstract class ReverseRpcController<TPayload, TResponse> {
 
   /** Cancels all pending requests during shutdown or session switches. */
   cancelAll(reason: string): void {
-    const all = [...(this.current === null ? [] : [this.current]), ...this.queue];
+    const all = [
+      ...(this.current === null ? [] : [this.current]),
+      ...this.queue,
+    ];
     this.current = null;
     this.queue = [];
     this.uiHooks?.hidePanel();
@@ -80,10 +83,17 @@ export abstract class ReverseRpcController<TPayload, TResponse> {
     this.uiHooks?.showPanel(next.payload);
   }
 
-  private drainAutoResolved(resolvedPayload: TPayload, response: TResponse): void {
+  private drainAutoResolved(
+    resolvedPayload: TPayload,
+    response: TResponse,
+  ): void {
     const remaining: Array<Pending<TPayload, TResponse>> = [];
     for (const entry of this.queue) {
-      const auto = this.autoResolveFor(resolvedPayload, response, entry.payload);
+      const auto = this.autoResolveFor(
+        resolvedPayload,
+        response,
+        entry.payload,
+      );
       if (auto === undefined) {
         remaining.push(entry);
       } else {

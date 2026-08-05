@@ -8,8 +8,11 @@
  * lexical path confinement symlink-aware. App-scoped — one shared instance.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
-import type { TextDecodeErrors } from '#/_base/execEnv/decodeText';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
+import type { TextDecodeErrors } from "#/_base/execEnv/decodeText";
 
 export interface HostFileStat {
   readonly isFile: boolean;
@@ -46,10 +49,13 @@ export interface IHostFileSystem {
   stat(path: string): Promise<HostFileStat>;
   lstat(path: string): Promise<HostFileStat>;
   readdir(path: string): Promise<readonly HostDirEntry[]>;
-  mkdir(path: string, options?: { readonly recursive?: boolean }): Promise<void>;
+  mkdir(
+    path: string,
+    options?: { readonly recursive?: boolean },
+  ): Promise<void>;
   remove(path: string): Promise<void>;
   realpath(path: string): Promise<string>;
 }
 
 export const IHostFileSystem: ServiceIdentifier<IHostFileSystem> =
-  createDecorator<IHostFileSystem>('hostFileSystem');
+  createDecorator<IHostFileSystem>("hostFileSystem");

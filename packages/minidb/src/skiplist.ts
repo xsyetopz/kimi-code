@@ -10,7 +10,8 @@ const P = 0.25;
 export type Comparator<T> = (a: T, b: T) => number;
 
 export const cmpNumber: Comparator<number> = (a, b) => a - b;
-export const cmpString: Comparator<string> = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
+export const cmpString: Comparator<string> = (a, b) =>
+  a < b ? -1 : a > b ? 1 : 0;
 
 function randomLevel(): number {
   let lvl = 1;
@@ -32,7 +33,10 @@ class SkipNode<K, V> {
   constructor(key: K, val: V, level: number) {
     this.key = key;
     this.val = val;
-    this.level = Array.from({ length: level }, () => ({ forward: null, span: 0 }));
+    this.level = Array.from({ length: level }, () => ({
+      forward: null,
+      span: 0,
+    }));
   }
 }
 
@@ -67,7 +71,11 @@ export class SkipList<K = number, V = string> {
   constructor(opts: SkipListOptions<K, V> = {}) {
     this.cmpK = opts.compareKey ?? (cmpNumber as unknown as Comparator<K>);
     this.cmpV = opts.compareVal ?? (cmpString as unknown as Comparator<V>);
-    this.header = new SkipNode<K, V>(undefined as unknown as K, undefined as unknown as V, MAX_LEVEL);
+    this.header = new SkipNode<K, V>(
+      undefined as unknown as K,
+      undefined as unknown as V,
+      MAX_LEVEL,
+    );
   }
 
   /** Deterministic O(N) construction from entries already sorted by (key, val)
@@ -79,7 +87,10 @@ export class SkipList<K = number, V = string> {
    *  invariants insert()/delete() maintain; later mutations re-randomize
    *  locally through the normal paths. Duplicate (key, val) pairs are skipped
    *  (insert() would never create them either). */
-  static bulkLoad<K, V>(entries: readonly RangeEntry<K, V>[], opts: SkipListOptions<K, V> = {}): SkipList<K, V> {
+  static bulkLoad<K, V>(
+    entries: readonly RangeEntry<K, V>[],
+    opts: SkipListOptions<K, V> = {},
+  ): SkipList<K, V> {
     const list = new SkipList<K, V>(opts);
     const n = entries.length;
     if (n === 0) return list;
@@ -88,7 +99,11 @@ export class SkipList<K = number, V = string> {
       const e = entries[i]!;
       if (nodes.length > 0) {
         const prev = nodes[nodes.length - 1]!;
-        if (list.cmpK(prev.key, e.key) === 0 && list.cmpV(prev.val, e.val) === 0) continue;
+        if (
+          list.cmpK(prev.key, e.key) === 0 &&
+          list.cmpV(prev.val, e.val) === 0
+        )
+          continue;
       }
       // Balanced tower: index i (0-based) reaches level 1 + v4(i+1), capped.
       let lvl = 1;
@@ -97,11 +112,13 @@ export class SkipList<K = number, V = string> {
     }
     const count = nodes.length;
     list.level = 1;
-    for (const node of nodes) if (node.level.length > list.level) list.level = node.level.length;
+    for (const node of nodes)
+      if (node.level.length > list.level) list.level = node.level.length;
     // Link every level: forward pointers + spans (level-0 distance to the
     // forward node; 0 for a tail's null forward, matching insert()).
     const lastAt: { node: SkipNode<K, V>; index: number }[] = [];
-    for (let l = 0; l < list.level; l++) lastAt.push({ node: list.header, index: -1 });
+    for (let l = 0; l < list.level; l++)
+      lastAt.push({ node: list.header, index: -1 });
     for (let i = 0; i < count; i++) {
       const node = nodes[i]!;
       for (let l = 0; l < node.level.length; l++) {
@@ -182,7 +199,11 @@ export class SkipList<K = number, V = string> {
     }
     if (x.level[0]!.forward) x.level[0]!.forward.backward = x.backward;
     else this.tail = x.backward;
-    while (this.level > 1 && this.header.level[this.level - 1]!.forward === null) this.level--;
+    while (
+      this.level > 1 &&
+      this.header.level[this.level - 1]!.forward === null
+    )
+      this.level--;
     this.length--;
   }
 
@@ -199,7 +220,11 @@ export class SkipList<K = number, V = string> {
       update[i] = x;
     }
     const last = x.level[0]!.forward;
-    if (last && this.cmpK(last.key, key) === 0 && this.cmpV(last.val, val) === 0) {
+    if (
+      last &&
+      this.cmpK(last.key, key) === 0 &&
+      this.cmpV(last.val, val) === 0
+    ) {
       this.deleteNode(last, update);
       return true;
     }
@@ -207,7 +232,10 @@ export class SkipList<K = number, V = string> {
   }
 
   /** First node with key >= bound (or > bound if strict). */
-  lowerBound(bound: K, { strict = false }: { strict?: boolean } = {}): SkipNode<K, V> | null {
+  lowerBound(
+    bound: K,
+    { strict = false }: { strict?: boolean } = {},
+  ): SkipNode<K, V> | null {
     let x: SkipNode<K, V> = this.header;
     for (let i = this.level - 1; i >= 0; i--) {
       let f: SkipNode<K, V> | null;
@@ -228,13 +256,22 @@ export class SkipList<K = number, V = string> {
     const target = { key, val };
     for (let i = this.level - 1; i >= 0; i--) {
       let f = x.level[i]!.forward;
-      while (f && (this.nodeLess(f, target) || (this.cmpK(f.key, key) === 0 && this.cmpV(f.val, val) === 0))) {
+      while (
+        f &&
+        (this.nodeLess(f, target) ||
+          (this.cmpK(f.key, key) === 0 && this.cmpV(f.val, val) === 0))
+      ) {
         rank += x.level[i]!.span;
         x = f;
         f = x.level[i]!.forward;
       }
     }
-    if (x !== this.header && this.cmpK(x.key, key) === 0 && this.cmpV(x.val, val) === 0) return rank - 1;
+    if (
+      x !== this.header &&
+      this.cmpK(x.key, key) === 0 &&
+      this.cmpV(x.val, val) === 0
+    )
+      return rank - 1;
     return null;
   }
 
@@ -288,7 +325,9 @@ export class SkipList<K = number, V = string> {
 
     const hasLower = opts.gte !== undefined || opts.gt !== undefined;
     let x = hasLower
-      ? this.lowerBound(opts.gte !== undefined ? opts.gte : (opts.gt as K), { strict: opts.gt !== undefined })
+      ? this.lowerBound(opts.gte !== undefined ? opts.gte : (opts.gt as K), {
+          strict: opts.gt !== undefined,
+        })
       : this.header.level[0]!.forward;
     while (x) {
       if (opts.lte !== undefined && this.cmpK(x.key, opts.lte) > 0) break;
@@ -336,7 +375,9 @@ export class SkipList<K = number, V = string> {
 
     const hasLower = opts.gte !== undefined || opts.gt !== undefined;
     let x = hasLower
-      ? this.lowerBound(opts.gte !== undefined ? opts.gte : (opts.gt as K), { strict: opts.gt !== undefined })
+      ? this.lowerBound(opts.gte !== undefined ? opts.gte : (opts.gt as K), {
+          strict: opts.gt !== undefined,
+        })
       : this.header.level[0]!.forward;
     while (x) {
       if (opts.lte !== undefined && this.cmpK(x.key, opts.lte) > 0) break;

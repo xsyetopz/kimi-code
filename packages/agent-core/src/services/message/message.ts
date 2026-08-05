@@ -43,8 +43,8 @@
  * at the route layer. This impl receives a fully-validated query.
  */
 
-import { createDecorator } from '../../di';
-import type { ContextMessage } from '../../agent/context';
+import { createDecorator } from "../../di";
+import type { ContextMessage } from "../../agent/context";
 import type {
   CursorQuery,
   Message,
@@ -52,7 +52,7 @@ import type {
   MessageRole,
   PageResponse,
   ToolUseContent,
-} from '@moonshot-ai/protocol';
+} from "@moonshot-ai/protocol";
 
 /**
  * Listing query — `before_id`/`after_id` + `page_size` mutex is enforced
@@ -90,7 +90,8 @@ export interface IMessageService {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
-export const IMessageService = createDecorator<IMessageService>('messageService');
+export const IMessageService =
+  createDecorator<IMessageService>("messageService");
 
 /**
  * Sentinel error — daemon's route layer catches and maps to
@@ -101,7 +102,7 @@ export class MessageNotFoundError extends Error {
   readonly messageId: string;
   constructor(sessionId: string, messageId: string) {
     super(`message ${messageId} does not exist in session ${sessionId}`);
-    this.name = 'MessageNotFoundError';
+    this.name = "MessageNotFoundError";
     this.sessionId = sessionId;
     this.messageId = messageId;
   }
@@ -112,7 +113,7 @@ export class MessageNotFoundError extends Error {
  * documented in the module header.
  */
 export function deriveMessageId(sessionId: string, index: number): string {
-  const padded = String(index).padStart(6, '0');
+  const padded = String(index).padStart(6, "0");
   return `msg_${sessionId}_${padded}`;
 }
 
@@ -124,11 +125,11 @@ export function deriveMessageId(sessionId: string, index: number): string {
 export function parseMessageId(
   messageId: string,
 ): { sessionId: string; index: number } | undefined {
-  if (!messageId.startsWith('msg_')) return undefined;
-  const rest = messageId.slice('msg_'.length);
+  if (!messageId.startsWith("msg_")) return undefined;
+  const rest = messageId.slice("msg_".length);
   // sessionId may itself contain underscores (sess_01HZZZ...), so split from
   // the RIGHT on '_'.
-  const lastUnderscore = rest.lastIndexOf('_');
+  const lastUnderscore = rest.lastIndexOf("_");
   if (lastUnderscore <= 0) return undefined;
   const sessionId = rest.slice(0, lastUnderscore);
   const indexStr = rest.slice(lastUnderscore + 1);
@@ -142,7 +143,7 @@ export function parseMessageId(
  * kosong's `Message.role` is `'system' | 'user' | 'assistant' | 'tool'` —
  * already aligned with SCHEMAS §3's `MessageRole`. We pass-through.
  */
-function toProtocolRole(role: ContextMessage['role']): MessageRole {
+function toProtocolRole(role: ContextMessage["role"]): MessageRole {
   return role as MessageRole;
 }
 
@@ -150,31 +151,33 @@ function toProtocolRole(role: ContextMessage['role']): MessageRole {
  * Translate kosong content parts to SCHEMAS §3 content parts. See header
  * for the full mapping table.
  */
-function mapContentPart(part: ContextMessage['content'][number]): MessageContent {
+function mapContentPart(
+  part: ContextMessage["content"][number],
+): MessageContent {
   switch (part.type) {
-    case 'text':
-      return { type: 'text', text: part.text };
-    case 'think': {
+    case "text":
+      return { type: "text", text: part.text };
+    case "think": {
       const sig = part.encrypted;
       return sig !== undefined
-        ? { type: 'thinking', thinking: part.think, signature: sig }
-        : { type: 'thinking', thinking: part.think };
+        ? { type: "thinking", thinking: part.think, signature: sig }
+        : { type: "thinking", thinking: part.think };
     }
-    case 'image_url':
+    case "image_url":
       return {
-        type: 'image',
-        source: { kind: 'url', url: part.imageUrl.url },
+        type: "image",
+        source: { kind: "url", url: part.imageUrl.url },
       };
-    case 'audio_url':
+    case "audio_url":
       // SCHEMAS §3 has no audio content variant; flatten to a `text` marker
       // so the wire shape stays well-typed without inventing new schema.
       return {
-        type: 'text',
+        type: "text",
         text: `[audio:${part.audioUrl.url}]`,
       };
-    case 'video_url':
+    case "video_url":
       return {
-        type: 'text',
+        type: "text",
         text: `[video:${part.videoUrl.url}]`,
       };
   }
@@ -195,39 +198,43 @@ function mapContentPart(part: ContextMessage['content'][number]): MessageContent
  *      THEN append one `tool_use` part per `ToolCall` (assistant only).
  */
 function buildProtocolContent(msg: ContextMessage): MessageContent[] {
-  if (msg.role === 'tool') {
+  if (msg.role === "tool") {
     if (msg.toolCallId === undefined) {
       // Defensive — kosong tool messages always carry toolCallId. If absent,
       // fall back to text passthrough so we don't lose user-visible content.
       return msg.content.map((p) => mapContentPart(p));
     }
     const hasMediaPart = msg.content.some(
-      (p) => p.type === 'image_url' || p.type === 'video_url' || p.type === 'audio_url',
+      (p) =>
+        p.type === "image_url" ||
+        p.type === "video_url" ||
+        p.type === "audio_url",
     );
     const output: unknown = hasMediaPart
       ? msg.content
-      : msg.content.map((p) => (p.type === 'text' ? p.text : '')).join('');
-    const part: MessageContent = msg.isError === true
-      ? {
-          type: 'tool_result',
-          tool_call_id: msg.toolCallId,
-          output,
-          is_error: true,
-        }
-      : {
-          type: 'tool_result',
-          tool_call_id: msg.toolCallId,
-          output,
-        };
+      : msg.content.map((p) => (p.type === "text" ? p.text : "")).join("");
+    const part: MessageContent =
+      msg.isError === true
+        ? {
+            type: "tool_result",
+            tool_call_id: msg.toolCallId,
+            output,
+            is_error: true,
+          }
+        : {
+            type: "tool_result",
+            tool_call_id: msg.toolCallId,
+            output,
+          };
     return [part];
   }
 
   const base = msg.content.map((p) => mapContentPart(p));
 
-  if (msg.role === 'assistant' && msg.toolCalls.length > 0) {
+  if (msg.role === "assistant" && msg.toolCalls.length > 0) {
     for (const call of msg.toolCalls) {
       let parsedInput: unknown = call.arguments;
-      if (typeof call.arguments === 'string') {
+      if (typeof call.arguments === "string") {
         try {
           parsedInput = JSON.parse(call.arguments);
         } catch {
@@ -235,7 +242,7 @@ function buildProtocolContent(msg: ContextMessage): MessageContent[] {
         }
       }
       const part: ToolUseContent = {
-        type: 'tool_use',
+        type: "tool_use",
         tool_call_id: call.id,
         tool_name: call.name,
         input: parsedInput,
@@ -272,7 +279,8 @@ export function toProtocolMessage(
   // the same way the TUI does (see isAgentReplayUserTurnRecord in
   // agent/replay/turns.ts). Absent for plain user/assistant/tool messages with
   // no origin.
-  const metadata = msg.origin !== undefined ? { origin: msg.origin } : undefined;
+  const metadata =
+    msg.origin !== undefined ? { origin: msg.origin } : undefined;
   return {
     id,
     session_id: sessionId,

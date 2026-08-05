@@ -20,17 +20,17 @@
  * frame's `display` payload.
  */
 
-import type { InteractionId } from './ids';
+import type { InteractionId } from "./ids";
 
-export type InteractionKind = 'approval' | 'question';
+export type InteractionKind = "approval" | "question";
 
 export type InteractionState =
-  | 'pending'
-  | 'approved'
-  | 'rejected'
-  | 'cancelled'
-  | 'answered'
-  | 'dismissed';
+  | "pending"
+  | "approved"
+  | "rejected"
+  | "cancelled"
+  | "answered"
+  | "dismissed";
 
 export interface TranscriptInteraction {
   readonly interactionId: InteractionId;

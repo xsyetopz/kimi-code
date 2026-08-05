@@ -1,4 +1,4 @@
-import type { Agent } from '..';
+import type { Agent } from "..";
 
 export abstract class DynamicInjector {
   protected injectedAt: number | null = null;
@@ -27,7 +27,7 @@ export abstract class DynamicInjector {
     if (injection) {
       this.injectedAt = this.agent.context.history.length;
       this.agent.context.appendSystemReminder(injection, {
-        kind: 'injection',
+        kind: "injection",
         variant: this.injectionVariant,
       });
     }
@@ -35,5 +35,8 @@ export abstract class DynamicInjector {
 
   protected abstract readonly injectionVariant: string;
 
-  protected abstract getInjection(): string | Promise<string | undefined> | undefined;
+  protected abstract getInjection():
+    | string
+    | Promise<string | undefined>
+    | undefined;
 }

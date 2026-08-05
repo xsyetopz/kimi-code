@@ -13,9 +13,9 @@
  *     Errors: 40408 mcp.server_not_found
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { mcpServerSchema, toolDescriptorSchema } from '../tool';
+import { mcpServerSchema, toolDescriptorSchema } from "../tool";
 
 export const listToolsQuerySchema = z.object({
   session_id: z.string().min(1).optional(),
@@ -30,9 +30,13 @@ export type ListToolsResponse = z.infer<typeof listToolsResponseSchema>;
 export const listMcpServersResponseSchema = z.object({
   servers: z.array(mcpServerSchema),
 });
-export type ListMcpServersResponse = z.infer<typeof listMcpServersResponseSchema>;
+export type ListMcpServersResponse = z.infer<
+  typeof listMcpServersResponseSchema
+>;
 
 export const restartMcpServerResultSchema = z.object({
   restarting: z.literal(true),
 });
-export type RestartMcpServerResult = z.infer<typeof restartMcpServerResultSchema>;
+export type RestartMcpServerResult = z.infer<
+  typeof restartMcpServerResultSchema
+>;

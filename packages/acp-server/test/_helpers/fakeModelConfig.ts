@@ -10,12 +10,12 @@
  * removed from the enum — use `'openai'`) — the scripted registry ignores it.
  */
 
-import { mkdir, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { mkdir, writeFile } from "node:fs/promises";
+import { join } from "node:path";
 
-export const FAKE_MODEL_ID = 'fake';
+export const FAKE_MODEL_ID = "fake";
 /** Second configured model — lets tests assert an actual model switch. */
-export const FAKE_MODEL_ALT_ID = 'fake-alt';
+export const FAKE_MODEL_ALT_ID = "fake-alt";
 
 export interface FakeModelConfigOptions {
   /**
@@ -48,13 +48,13 @@ protocol = "openai"
 baseUrl = "http://localhost"
 apiKey = "test-token"
 maxContextSize = 8192
-${thinking ? 'capabilities = ["thinking"]\n' : ''}${efforts !== undefined ? `supportEfforts = [${efforts.map((e) => `"${e}"`).join(', ')}]\n` : ''}${defaultEffort !== undefined ? `defaultEffort = "${defaultEffort}"\n` : ''}[models.${FAKE_MODEL_ALT_ID}]
+${thinking ? 'capabilities = ["thinking"]\n' : ""}${efforts !== undefined ? `supportEfforts = [${efforts.map((e) => `"${e}"`).join(", ")}]\n` : ""}${defaultEffort !== undefined ? `defaultEffort = "${defaultEffort}"\n` : ""}[models.${FAKE_MODEL_ALT_ID}]
 name = "fake-model-alt"
 protocol = "openai"
 baseUrl = "http://localhost"
 apiKey = "test-token"
 maxContextSize = 8192
-${altThinking ? 'capabilities = ["thinking"]\n' : ''}${altEfforts !== undefined ? `supportEfforts = [${altEfforts.map((e) => `"${e}"`).join(', ')}]\n` : ''}${altDefaultEffort !== undefined ? `defaultEffort = "${altDefaultEffort}"\n` : ''}`;
+${altThinking ? 'capabilities = ["thinking"]\n' : ""}${altEfforts !== undefined ? `supportEfforts = [${altEfforts.map((e) => `"${e}"`).join(", ")}]\n` : ""}${altDefaultEffort !== undefined ? `defaultEffort = "${altDefaultEffort}"\n` : ""}`;
 };
 
 /**
@@ -66,5 +66,5 @@ export async function writeFakeModelConfig(
   options?: FakeModelConfigOptions,
 ): Promise<void> {
   await mkdir(homeDir, { recursive: true });
-  await writeFile(join(homeDir, 'config.toml'), configToml(options), 'utf8');
+  await writeFile(join(homeDir, "config.toml"), configToml(options), "utf8");
 }

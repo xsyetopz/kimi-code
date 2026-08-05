@@ -9,10 +9,10 @@
  * validated against the known scope/kind vocabularies; unknown tokens are
  * dropped rather than crashing the viewer.
  */
-import type { EdgeKind, ServiceScope } from '../../analyzer/types';
-import { EDGE_KINDS } from './style';
+import type { EdgeKind, ServiceScope } from "../../analyzer/types";
+import { EDGE_KINDS } from "./style";
 
-const ALL_SCOPES: readonly ServiceScope[] = ['App', 'Session', 'Agent'];
+const ALL_SCOPES: readonly ServiceScope[] = ["App", "Session", "Agent"];
 
 export interface QueryParams {
   domains?: string[];
@@ -28,23 +28,25 @@ export function readQueryParams(search: string): QueryParams {
   const params = new URLSearchParams(search);
   const out: QueryParams = {};
 
-  const domains = parseList(params.get('domain'));
+  const domains = parseList(params.get("domain"));
   if (domains !== undefined) out.domains = domains;
 
-  const scopes = filterValid(parseList(params.get('scope')), isScope);
+  const scopes = filterValid(parseList(params.get("scope")), isScope);
   if (scopes !== undefined) out.scopes = scopes;
 
-  const kinds = filterValid(parseList(params.get('kind')), isKind);
+  const kinds = filterValid(parseList(params.get("kind")), isKind);
   if (kinds !== undefined) out.kinds = kinds;
 
-  const searchValue = params.get('search');
-  if (searchValue !== null && searchValue !== '') out.search = searchValue;
+  const searchValue = params.get("search");
+  if (searchValue !== null && searchValue !== "") out.search = searchValue;
 
-  if (params.has('hideOrphans')) out.hideOrphans = parseBool(params.get('hideOrphans'));
-  if (params.has('groupByScope')) out.groupByScope = parseBool(params.get('groupByScope'));
+  if (params.has("hideOrphans"))
+    out.hideOrphans = parseBool(params.get("hideOrphans"));
+  if (params.has("groupByScope"))
+    out.groupByScope = parseBool(params.get("groupByScope"));
 
-  const focus = params.get('focus');
-  if (focus !== null && focus !== '') out.focus = focus;
+  const focus = params.get("focus");
+  if (focus !== null && focus !== "") out.focus = focus;
 
   return out;
 }
@@ -52,7 +54,12 @@ export function readQueryParams(search: string): QueryParams {
 function parseList(raw: string | null): string[] | undefined {
   if (raw === null) return undefined;
   const items = [
-    ...new Set(raw.split(',').map((s) => s.trim()).filter((s) => s.length > 0)),
+    ...new Set(
+      raw
+        .split(",")
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0),
+    ),
   ];
   return items.length > 0 ? items : undefined;
 }
@@ -75,6 +82,6 @@ function isKind(s: string): s is EdgeKind {
 }
 
 function parseBool(raw: string | null): boolean {
-  if (raw === null || raw === '') return true;
+  if (raw === null || raw === "") return true;
   return !/^(false|0|no|off)$/i.test(raw.trim());
 }

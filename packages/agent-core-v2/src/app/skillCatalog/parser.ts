@@ -6,21 +6,21 @@
  * like and pass the decoded text in.
  */
 
-import path from 'pathe';
+import path from "pathe";
 
-import { Error2 } from '#/_base/errors/errors';
-import { FrontmatterError, parseFrontmatter } from '#/_base/text/frontmatter';
+import { Error2 } from "#/_base/errors/errors";
+import { FrontmatterError, parseFrontmatter } from "#/_base/text/frontmatter";
 
-import { SkillErrors } from './errors';
-import type { SkillDefinition, SkillMetadata, SkillSource } from './types';
-import { isSupportedSkillType } from './types';
+import { SkillErrors } from "./errors";
+import type { SkillDefinition, SkillMetadata, SkillSource } from "./types";
+import { isSupportedSkillType } from "./types";
 
 export class SkillParseError extends Error2 {
   readonly reason?: unknown;
 
   constructor(message: string, cause?: unknown) {
     super(SkillErrors.codes.SKILL_PARSE_FAILED, message, { cause });
-    this.name = 'SkillParseError';
+    this.name = "SkillParseError";
     if (cause !== undefined) this.reason = cause;
   }
 }
@@ -34,7 +34,7 @@ export class UnsupportedSkillTypeError extends Error2 {
       `Skill type "${skillType}" is not supported; only "prompt", "inline", and "flow" are supported.`,
       { details: { skillType } },
     );
-    this.name = 'UnsupportedSkillTypeError';
+    this.name = "UnsupportedSkillTypeError";
     this.skillType = skillType;
   }
 }
@@ -49,16 +49,18 @@ export interface ParseSkillTextOptions extends ParseSkillOptions {
   readonly text: string;
 }
 
-const FENCE = '---';
+const FENCE = "---";
 const METADATA_ALIASES: Readonly<Record<string, string>> = {
-  'when-to-use': 'whenToUse',
-  when_to_use: 'whenToUse',
-  'disable-model-invocation': 'disableModelInvocation',
-  disable_model_invocation: 'disableModelInvocation',
+  "when-to-use": "whenToUse",
+  when_to_use: "whenToUse",
+  "disable-model-invocation": "disableModelInvocation",
+  disable_model_invocation: "disableModelInvocation",
 };
 
-export function parseSkillText(options: ParseSkillTextOptions): SkillDefinition {
-  const isDirectorySkill = path.basename(options.skillMdPath) === 'SKILL.md';
+export function parseSkillText(
+  options: ParseSkillTextOptions,
+): SkillDefinition {
+  const isDirectorySkill = path.basename(options.skillMdPath) === "SKILL.md";
   if (isDirectorySkill && options.text.split(/\r?\n/, 1)[0]?.trim() !== FENCE) {
     throw new SkillParseError(`Missing frontmatter in ${options.skillMdPath}`);
   }
@@ -85,7 +87,9 @@ export function parseSkillText(options: ParseSkillTextOptions): SkillDefinition 
 
   const metadata = normalizeMetadata(frontmatter);
   if (!isSupportedSkillType(metadata.type)) {
-    throw new UnsupportedSkillTypeError(metadata.type ?? String(frontmatter['type']));
+    throw new UnsupportedSkillTypeError(
+      metadata.type ?? String(frontmatter["type"]),
+    );
   }
 
   const name = nonEmptyString(metadata.name);
@@ -123,10 +127,12 @@ export function parseD2Flowchart(markdown: string): string | undefined {
 export function skillArgumentNames(metadata: SkillMetadata): readonly string[] {
   const value = metadata.arguments;
   const isValidName = (name: string): boolean =>
-    name.trim() !== '' && !/^\d+$/.test(name);
-  if (typeof value === 'string') return value.split(/\s+/).filter(isValidName);
+    name.trim() !== "" && !/^\d+$/.test(name);
+  if (typeof value === "string") return value.split(/\s+/).filter(isValidName);
   if (!Array.isArray(value)) return [];
-  return value.filter((item): item is string => typeof item === 'string' && isValidName(item));
+  return value.filter(
+    (item): item is string => typeof item === "string" && isValidName(item),
+  );
 }
 
 function normalizeMetadata(raw: Record<string, unknown>): SkillMetadata {
@@ -136,14 +142,14 @@ function normalizeMetadata(raw: Record<string, unknown>): SkillMetadata {
     out[key] = value;
   }
 
-  const type = nonEmptyString(out['type']);
-  if (type !== undefined) out['type'] = type;
+  const type = nonEmptyString(out["type"]);
+  if (type !== undefined) out["type"] = type;
 
-  const name = nonEmptyString(out['name']);
-  if (name !== undefined) out['name'] = name;
+  const name = nonEmptyString(out["name"]);
+  if (name !== undefined) out["name"] = name;
 
-  const description = nonEmptyString(out['description']);
-  if (description !== undefined) out['description'] = description;
+  const description = nonEmptyString(out["description"]);
+  if (description !== undefined) out["description"] = description;
 
   return out as SkillMetadata;
 }
@@ -153,14 +159,16 @@ function descriptionFromBody(body: string): string {
     .split(/\r?\n/)
     .map((line) => line.trim())
     .find((line) => line.length > 0);
-  if (firstLine === undefined) return 'No description provided.';
+  if (firstLine === undefined) return "No description provided.";
   return firstLine.length > 240 ? `${firstLine.slice(0, 239)}…` : firstLine;
 }
 
 function nonEmptyString(value: unknown): string | undefined {
-  return typeof value === 'string' && value.trim() !== '' ? value.trim() : undefined;
+  return typeof value === "string" && value.trim() !== ""
+    ? value.trim()
+    : undefined;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

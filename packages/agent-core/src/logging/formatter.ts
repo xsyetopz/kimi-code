@@ -1,4 +1,4 @@
-import type { LogContext, LogEntry } from './types';
+import type { LogContext, LogEntry } from "./types";
 
 export const MSG_MAX_CHARS = 200;
 export const CTX_VALUE_MAX_CHARS = 2048;
@@ -7,56 +7,56 @@ export const ENTRY_MAX_BYTES = 4096;
 export const REDACT_MAX_DEPTH = 10;
 
 const REDACTED_KEYS: ReadonlySet<string> = new Set([
-  'authorization',
-  'apikey',
-  'token',
-  'refreshtoken',
-  'accesstoken',
-  'idtoken',
-  'password',
-  'secret',
-  'clientsecret',
-  'apisecret',
-  'cookie',
-  'setcookie',
-  'bearer',
+  "authorization",
+  "apikey",
+  "token",
+  "refreshtoken",
+  "accesstoken",
+  "idtoken",
+  "password",
+  "secret",
+  "clientsecret",
+  "apisecret",
+  "cookie",
+  "setcookie",
+  "bearer",
 ]);
 
 const SAFE_KEY_RE = /^[\w.-]+$/;
-const ELLIPSIS = '…';
+const ELLIPSIS = "…";
 const TRUNCATED_TAIL = ` …truncated`;
-const REDACTED = '[REDACTED]';
+const REDACTED = "[REDACTED]";
 const RAW_SECRET_PATTERNS: readonly RegExp[] = [
   /\b(authorization\s*[:=]\s*bearer\s+)[^\s"'`]+/gi,
   /\b((?:api[_-]?key|access[_-]?token|refresh[_-]?token|id[_-]?token|token|password|secret)\s*[:=]\s*)[^\s"'`]+/gi,
   /\b(cookie\s*[:=]\s*)[^\r\n]+/gi,
 ];
 
-const LEVEL_LABEL: Record<Exclude<LogEntry['level'], never>, string> = {
-  error: 'ERROR',
-  warn: 'WARN ',
-  info: 'INFO ',
-  debug: 'DEBUG',
+const LEVEL_LABEL: Record<Exclude<LogEntry["level"], never>, string> = {
+  error: "ERROR",
+  warn: "WARN ",
+  info: "INFO ",
+  debug: "DEBUG",
 };
 
-const ANSI_LEVEL: Record<Exclude<LogEntry['level'], never>, string> = {
-  error: '\u001B[31m',
-  warn: '\u001B[33m',
-  info: '\u001B[36m',
-  debug: '\u001B[90m',
+const ANSI_LEVEL: Record<Exclude<LogEntry["level"], never>, string> = {
+  error: "\u001B[31m",
+  warn: "\u001B[33m",
+  info: "\u001B[36m",
+  debug: "\u001B[90m",
 };
-const ANSI_RESET = '\u001B[0m';
+const ANSI_RESET = "\u001B[0m";
 
 function normalizeKey(key: string): string {
-  return key.toLowerCase().replaceAll(/[_\-.]/g, '');
+  return key.toLowerCase().replaceAll(/[_\-.]/g, "");
 }
 
 export function redactCtx(ctx: LogContext): LogContext {
   const seen = new WeakSet<object>();
   const walk = (value: unknown, depth: number): unknown => {
-    if (depth > REDACT_MAX_DEPTH) return '[REDACTED:depth]';
-    if (value === null || typeof value !== 'object') return value;
-    if (seen.has(value)) return '[REDACTED:cycle]';
+    if (depth > REDACT_MAX_DEPTH) return "[REDACTED:depth]";
+    if (value === null || typeof value !== "object") return value;
+    if (seen.has(value)) return "[REDACTED:cycle]";
     seen.add(value);
     if (Array.isArray(value)) {
       return value.map((item) => walk(item, depth + 1));
@@ -87,14 +87,14 @@ function truncate(value: string, max: number): string {
 }
 
 function serializeValue(raw: unknown): string {
-  if (typeof raw === 'string') return redactString(raw);
-  if (raw === undefined) return 'undefined';
-  if (raw === null) return 'null';
+  if (typeof raw === "string") return redactString(raw);
+  if (raw === undefined) return "undefined";
+  if (raw === null) return "null";
   if (
-    typeof raw === 'number' ||
-    typeof raw === 'boolean' ||
-    typeof raw === 'bigint' ||
-    typeof raw === 'symbol'
+    typeof raw === "number" ||
+    typeof raw === "boolean" ||
+    typeof raw === "bigint" ||
+    typeof raw === "symbol"
   ) {
     return String(raw);
   }
@@ -104,7 +104,8 @@ function serializeValue(raw: unknown): string {
   } catch {
     // fall through to a stable non-contentful fallback
   }
-  if (typeof raw === 'function') return raw.name === '' ? '[Function]' : `[Function: ${raw.name}]`;
+  if (typeof raw === "function")
+    return raw.name === "" ? "[Function]" : `[Function: ${raw.name}]`;
   return Object.prototype.toString.call(raw);
 }
 
@@ -117,26 +118,27 @@ function redactString(value: string): string {
 }
 
 function quote(value: string): string {
-  return `"${value.replaceAll('\\', '\\\\').replaceAll('"', '\\"').replaceAll('\n', '\\n')}"`;
+  return `"${value.replaceAll("\\", "\\\\").replaceAll('"', '\\"').replaceAll("\n", "\\n")}"`;
 }
 
 function formatPair(key: string, raw: unknown): string {
   const limited = truncate(serializeValue(raw), CTX_VALUE_MAX_CHARS);
   const renderedKey = SAFE_KEY_RE.test(key) ? key : quote(key);
-  const renderedVal = /[\s="\\]/.test(limited) || limited.length === 0 ? quote(limited) : limited;
+  const renderedVal =
+    /[\s="\\]/.test(limited) || limited.length === 0 ? quote(limited) : limited;
   return `${renderedKey}=${renderedVal}`;
 }
 
 function clipBytes(text: string, maxBytes: number): string {
-  if (Buffer.byteLength(text, 'utf-8') <= maxBytes) return text;
+  if (Buffer.byteLength(text, "utf-8") <= maxBytes) return text;
   // Binary-search the longest prefix that fits.
   let lo = 0;
   let hi = text.length;
   while (lo < hi) {
     const mid = (lo + hi + 1) >> 1;
     if (
-      Buffer.byteLength(text.slice(0, mid), 'utf-8') <=
-      maxBytes - Buffer.byteLength(TRUNCATED_TAIL, 'utf-8')
+      Buffer.byteLength(text.slice(0, mid), "utf-8") <=
+      maxBytes - Buffer.byteLength(TRUNCATED_TAIL, "utf-8")
     ) {
       lo = mid;
     } else {
@@ -147,18 +149,21 @@ function clipBytes(text: string, maxBytes: number): string {
 }
 
 function clipStack(stack: string): string {
-  if (Buffer.byteLength(stack, 'utf-8') <= STACK_MAX_BYTES) return stack;
+  if (Buffer.byteLength(stack, "utf-8") <= STACK_MAX_BYTES) return stack;
   return clipBytes(stack, STACK_MAX_BYTES);
 }
 
 function indentStack(stack: string): string {
   return stack
-    .split('\n')
+    .split("\n")
     .map((line, i) => (i === 0 ? `  ${line}` : `    ${line.trimStart()}`))
-    .join('\n');
+    .join("\n");
 }
 
-export function formatEntry(entry: LogEntry, options: FormatOptions = {}): FormattedEntry {
+export function formatEntry(
+  entry: LogEntry,
+  options: FormatOptions = {},
+): FormattedEntry {
   const ctx = entry.ctx ? redactCtx(entry.ctx) : undefined;
   const omitContextKeys = new Set(options.omitContextKeys ?? []);
   const msg = truncate(entry.msg, MSG_MAX_CHARS);
@@ -172,13 +177,15 @@ export function formatEntry(entry: LogEntry, options: FormatOptions = {}): Forma
 
   const time = new Date(entry.t).toISOString();
   const label = LEVEL_LABEL[entry.level];
-  const rendered = pairs.length === 0
-    ? `${time} ${label} ${msg}`
-    : `${time} ${label} ${msg}  ${pairs.join(' ')}`;
+  const rendered =
+    pairs.length === 0
+      ? `${time} ${label} ${msg}`
+      : `${time} ${label} ${msg}  ${pairs.join(" ")}`;
 
-  let head = Buffer.byteLength(rendered, 'utf-8') > ENTRY_MAX_BYTES
-    ? clipBytes(rendered, ENTRY_MAX_BYTES)
-    : rendered;
+  let head =
+    Buffer.byteLength(rendered, "utf-8") > ENTRY_MAX_BYTES
+      ? clipBytes(rendered, ENTRY_MAX_BYTES)
+      : rendered;
 
   if (options.ansi === true) {
     head = `${ANSI_LEVEL[entry.level]}${head}${ANSI_RESET}`;
@@ -193,8 +200,11 @@ export function formatEntry(entry: LogEntry, options: FormatOptions = {}): Forma
   return { text: head, dropped: false };
 }
 
-export function extractError(value: Error): { message: string; stack?: string } {
-  return typeof value.stack === 'string'
+export function extractError(value: Error): {
+  message: string;
+  stack?: string;
+} {
+  return typeof value.stack === "string"
     ? { message: value.message, stack: value.stack }
     : { message: value.message };
 }

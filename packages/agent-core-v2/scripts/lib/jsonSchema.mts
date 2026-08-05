@@ -6,10 +6,10 @@
  * field/type sketches from their JSON Schema projection.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
 export function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 export function truncate(text: string, max = 100): string {
@@ -39,9 +39,9 @@ export function asJsonSchema(value: unknown): JsonSchema | undefined {
 /** Resolve a `#/$defs/<name>` reference against the root schema. */
 export function resolveRef(schema: unknown, root: JsonSchema): unknown {
   const s = asJsonSchema(schema);
-  if (typeof s?.$ref === 'string' && s.$ref.startsWith('#/$defs/')) {
+  if (typeof s?.$ref === "string" && s.$ref.startsWith("#/$defs/")) {
     const defs = asJsonSchema(root.$defs);
-    const name = s.$ref.slice('#/$defs/'.length);
+    const name = s.$ref.slice("#/$defs/".length);
     if (defs !== undefined && isRecord(defs) && name in defs) {
       return (defs as Record<string, unknown>)[name];
     }
@@ -55,38 +55,43 @@ export function describeType(
   quoteString: (raw: string) => string = (s) => JSON.stringify(s),
 ): string {
   const s = asJsonSchema(schema);
-  if (s === undefined) return 'any';
+  if (s === undefined) return "any";
   if (s.$ref !== undefined) {
-    return typeof s.$ref === 'string' ? (s.$ref.split('/').pop() ?? 'any') : 'any';
+    return typeof s.$ref === "string"
+      ? (s.$ref.split("/").pop() ?? "any")
+      : "any";
   }
   if (s.const !== undefined) {
     return truncate(
-      typeof s.const === 'string' ? quoteString(s.const) : JSON.stringify(s.const),
+      typeof s.const === "string"
+        ? quoteString(s.const)
+        : JSON.stringify(s.const),
       40,
     );
   }
   if (Array.isArray(s.enum)) {
     return s.enum
-      .map((v) => (typeof v === 'string' ? quoteString(v) : JSON.stringify(v)))
-      .join(' | ');
+      .map((v) => (typeof v === "string" ? quoteString(v) : JSON.stringify(v)))
+      .join(" | ");
   }
-  for (const combiner of ['anyOf', 'oneOf'] as const) {
+  for (const combiner of ["anyOf", "oneOf"] as const) {
     const subs = s[combiner];
-    if (Array.isArray(subs)) return subs.map((sub) => describeType(sub, quoteString)).join(' | ');
+    if (Array.isArray(subs))
+      return subs.map((sub) => describeType(sub, quoteString)).join(" | ");
   }
-  if (s.type === 'array') return `${describeType(s.items, quoteString)}[]`;
-  if (s.type === 'object') {
+  if (s.type === "array") return `${describeType(s.items, quoteString)}[]`;
+  if (s.type === "object") {
     // Named sub-tables (zod objects emit `additionalProperties: false`) are
     // rendered by the caller; only a schema-valued additionalProperties marks
     // a true record.
-    if (isRecord(s.properties)) return 'object';
+    if (isRecord(s.properties)) return "object";
     if (isRecord(s.additionalProperties)) {
       return `record<string, ${describeType(s.additionalProperties, quoteString)}>`;
     }
-    return 'object';
+    return "object";
   }
-  if (typeof s.type === 'string') return s.type;
-  return 'any';
+  if (typeof s.type === "string") return s.type;
+  return "any";
 }
 
 /** Project a zod schema to JSON Schema; `undefined` when it uses transforms. */

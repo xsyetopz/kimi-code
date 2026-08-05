@@ -1,20 +1,20 @@
-export type { StatResult } from './types';
-export type { KaosProcess } from './process';
-export type { Kaos } from './kaos';
+export type { StatResult } from "./types";
+export type { KaosProcess } from "./process";
+export type { Kaos } from "./kaos";
 export type {
   Environment,
   EnvironmentDeps,
   OsKind,
   ShellName,
-} from './environment';
-export { detectEnvironment, detectEnvironmentFromNode } from './environment';
+} from "./environment";
+export { detectEnvironment, detectEnvironmentFromNode } from "./environment";
 export {
   KaosError,
   KaosValueError,
   KaosFileExistsError,
   KaosShellNotFoundError,
-} from './errors';
-export { LocalKaos } from './local';
+} from "./errors";
+export { LocalKaos } from "./local";
 export {
   chdir,
   exec,
@@ -35,4 +35,4 @@ export {
   stat,
   writeBytes,
   writeText,
-} from './current';
+} from "./current";

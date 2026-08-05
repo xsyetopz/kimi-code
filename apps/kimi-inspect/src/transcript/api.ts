@@ -24,7 +24,7 @@ import {
   type TranscriptOperation,
   type TranscriptTask,
   type TranscriptTodo,
-} from '@moonshot-ai/transcript';
+} from "@moonshot-ai/transcript";
 
 /** One transcript page as merged by the chat store. */
 export interface TranscriptPage {
@@ -64,27 +64,34 @@ export async function fetchTranscriptPage(
     agent_id: opts.agentId,
     page_size: String(opts.pageSize ?? TRANSCRIPT_PAGE_SIZE),
   });
-  if (opts.beforeTurn !== undefined) params.set('before_turn', opts.beforeTurn);
+  if (opts.beforeTurn !== undefined) params.set("before_turn", opts.beforeTurn);
   const headers: Record<string, string> = {};
-  if (opts.token !== undefined && opts.token !== '') {
-    headers['authorization'] = `Bearer ${opts.token}`;
+  if (opts.token !== undefined && opts.token !== "") {
+    headers["authorization"] = `Bearer ${opts.token}`;
   }
   const doFetch = opts.fetchImpl ?? fetch;
   const res = await doFetch(
     `${opts.baseUrl}/api/v1/sessions/${encodeURIComponent(opts.sessionId)}/transcript?${params.toString()}`,
     { headers },
   );
-  const envelope = (await res.json()) as { code: number; msg: string; data: unknown };
+  const envelope = (await res.json()) as {
+    code: number;
+    msg: string;
+    data: unknown;
+  };
   if (envelope.code !== 0) {
-    throw new Error(`transcript page failed (${envelope.code}): ${envelope.msg}`);
+    throw new Error(
+      `transcript page failed (${envelope.code}): ${envelope.msg}`,
+    );
   }
   const parsed = transcriptResponseSchema.safeParse(envelope.data);
   if (!parsed.success) {
-    throw new Error('transcript page: unexpected response shape');
+    throw new Error("transcript page: unexpected response shape");
   }
   const items: readonly TranscriptItem[] = parsed.data.items;
   const tasks: readonly TranscriptTask[] = parsed.data.tasks;
-  const interactions: readonly TranscriptInteraction[] = parsed.data.interactions;
+  const interactions: readonly TranscriptInteraction[] =
+    parsed.data.interactions;
   const attachments: readonly TranscriptAttachment[] = parsed.data.attachments;
   const todos: readonly TranscriptTodo[] = parsed.data.todos;
   return {
@@ -139,21 +146,27 @@ export async function fetchTranscriptOps(
     since_seq: String(opts.sinceSeq),
   });
   const headers: Record<string, string> = {};
-  if (opts.token !== undefined && opts.token !== '') {
-    headers['authorization'] = `Bearer ${opts.token}`;
+  if (opts.token !== undefined && opts.token !== "") {
+    headers["authorization"] = `Bearer ${opts.token}`;
   }
   const doFetch = opts.fetchImpl ?? fetch;
   const res = await doFetch(
     `${opts.baseUrl}/api/v1/sessions/${encodeURIComponent(opts.sessionId)}/transcript/ops?${params.toString()}`,
     { headers },
   );
-  const envelope = (await res.json()) as { code: number; msg: string; data: unknown };
+  const envelope = (await res.json()) as {
+    code: number;
+    msg: string;
+    data: unknown;
+  };
   if (envelope.code !== 0) {
-    throw new Error(`transcript ops failed (${envelope.code}): ${envelope.msg}`);
+    throw new Error(
+      `transcript ops failed (${envelope.code}): ${envelope.msg}`,
+    );
   }
   const parsed = transcriptOpsCatchupResponseSchema.safeParse(envelope.data);
   if (!parsed.success) {
-    throw new Error('transcript ops: unexpected response shape');
+    throw new Error("transcript ops: unexpected response shape");
   }
   return {
     batches: parsed.data.batches,
@@ -166,7 +179,7 @@ export async function fetchTranscriptOps(
 
 /** The review round-trip of one ExitPlanMode call, from the plan endpoint. */
 export interface TranscriptPlanReview {
-  readonly state: 'pending' | 'approved' | 'rejected' | 'cancelled';
+  readonly state: "pending" | "approved" | "rejected" | "cancelled";
   readonly selectedOption?: string | undefined;
   readonly feedback?: string | undefined;
 }
@@ -176,10 +189,12 @@ export interface TranscriptPlanInfo {
   readonly toolCallId: string;
   readonly turnId: string;
   /** Which fact the content was projected from server-side. */
-  readonly source: 'interaction' | 'display' | 'output';
+  readonly source: "interaction" | "display" | "output";
   readonly plan: string;
   readonly path?: string | undefined;
-  readonly options?: readonly { label: string; description?: string | undefined }[] | undefined;
+  readonly options?:
+    | readonly { label: string; description?: string | undefined }[]
+    | undefined;
   readonly review?: TranscriptPlanReview | undefined;
 }
 
@@ -204,25 +219,31 @@ export async function fetchTranscriptPlan(
   opts: FetchTranscriptPlanOptions,
 ): Promise<TranscriptPlanInfo[]> {
   const params = new URLSearchParams({ agent_id: opts.agentId });
-  if (opts.toolCallId !== undefined && opts.toolCallId !== '') {
-    params.set('tool_call_id', opts.toolCallId);
+  if (opts.toolCallId !== undefined && opts.toolCallId !== "") {
+    params.set("tool_call_id", opts.toolCallId);
   }
   const headers: Record<string, string> = {};
-  if (opts.token !== undefined && opts.token !== '') {
-    headers['authorization'] = `Bearer ${opts.token}`;
+  if (opts.token !== undefined && opts.token !== "") {
+    headers["authorization"] = `Bearer ${opts.token}`;
   }
   const doFetch = opts.fetchImpl ?? fetch;
   const res = await doFetch(
     `${opts.baseUrl}/api/v1/sessions/${encodeURIComponent(opts.sessionId)}/transcript/plan?${params.toString()}`,
     { headers },
   );
-  const envelope = (await res.json()) as { code: number; msg: string; data: unknown };
+  const envelope = (await res.json()) as {
+    code: number;
+    msg: string;
+    data: unknown;
+  };
   if (envelope.code !== 0) {
-    throw new Error(`transcript plan failed (${envelope.code}): ${envelope.msg}`);
+    throw new Error(
+      `transcript plan failed (${envelope.code}): ${envelope.msg}`,
+    );
   }
   const parsed = transcriptPlanResponseSchema.safeParse(envelope.data);
   if (!parsed.success) {
-    throw new Error('transcript plan: unexpected response shape');
+    throw new Error("transcript plan: unexpected response shape");
   }
   return parsed.data.plans.map((entry) => ({
     toolCallId: entry.tool_call_id,

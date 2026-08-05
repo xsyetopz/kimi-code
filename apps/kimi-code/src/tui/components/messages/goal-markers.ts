@@ -7,17 +7,17 @@
  * the richer completion card (the `/goal` box), not this marker.
  */
 
-import { truncateToWidth, type Component } from '@moonshot-ai/pi-tui';
-import type { GoalChange } from '@moonshot-ai/kimi-code-sdk';
+import { truncateToWidth, type Component } from "@moonshot-ai/pi-tui";
+import type { GoalChange } from "@moonshot-ai/kimi-code-sdk";
 
-import { STATUS_BULLET } from '#/tui/constant/symbols';
-import { currentTheme } from '#/tui/theme';
-import type { ColorToken } from '#/tui/theme';
+import { STATUS_BULLET } from "#/tui/constant/symbols";
+import { currentTheme } from "#/tui/theme";
+import type { ColorToken } from "#/tui/theme";
 
-const HEAD_INDENT = '  ';
-const DETAIL_INDENT = '    ';
+const HEAD_INDENT = "  ";
+const DETAIL_INDENT = "    ";
 
-type GoalMarkerActor = 'user' | 'model' | 'runtime' | 'system';
+type GoalMarkerActor = "user" | "model" | "runtime" | "system";
 
 interface GoalMarkerOptions {
   readonly marker?: string;
@@ -41,8 +41,8 @@ export class GoalMarkerComponent implements Component {
     private readonly accentToken: ColorToken,
     options: GoalMarkerOptions = {},
   ) {
-    this.marker = options.marker ?? '◦';
-    this.textToken = options.textToken ?? 'textDim';
+    this.marker = options.marker ?? "◦";
+    this.textToken = options.textToken ?? "textDim";
     this.expandable = options.expandable ?? true;
     this.indent = options.indent ?? HEAD_INDENT;
     this.leadingBlank = options.leadingBlank ?? false;
@@ -58,33 +58,36 @@ export class GoalMarkerComponent implements Component {
     const dot = currentTheme.fg(this.accentToken, this.marker);
     const head = currentTheme.fg(this.textToken, this.headline);
     const hasDetail = this.detail !== undefined && this.detail.length > 0;
-    if (!hasDetail) return this.clampToWidth([`${this.indent}${dot} ${head}`], width);
+    if (!hasDetail)
+      return this.clampToWidth([`${this.indent}${dot} ${head}`], width);
 
     if (!this.expandable) {
       return this.clampToWidth([`${this.indent}${dot} ${head}`], width);
     }
     if (!this.expanded) {
       return this.clampToWidth(
-        [`${this.indent}${dot} ${head} ${currentTheme.fg('textMuted', '(ctrl+o)')}`],
+        [
+          `${this.indent}${dot} ${head} ${currentTheme.fg("textMuted", "(ctrl+o)")}`,
+        ],
         width,
       );
     }
     const out = [`${this.indent}${dot} ${head}`];
     const wrapWidth = Math.max(20, width - DETAIL_INDENT.length);
     for (const line of wrap(this.detail!, wrapWidth)) {
-      out.push(DETAIL_INDENT + currentTheme.fg('textDim', line));
+      out.push(DETAIL_INDENT + currentTheme.fg("textDim", line));
     }
     return this.clampToWidth(out, width);
   }
 
   private clampToWidth(lines: string[], width: number): string[] {
     const withBlank = this.withLeadingBlank(lines);
-    if (width <= 0) return withBlank.map(() => '');
+    if (width <= 0) return withBlank.map(() => "");
     return withBlank.map((line) => truncateToWidth(line, width));
   }
 
   private withLeadingBlank(lines: string[]): string[] {
-    return this.leadingBlank ? ['', ...lines] : lines;
+    return this.leadingBlank ? ["", ...lines] : lines;
   }
 }
 
@@ -119,15 +122,15 @@ function markerSpec(
   detail?: string | undefined;
   options?: GoalMarkerOptions | undefined;
 } | null {
-  if (change.kind === 'lifecycle') {
+  if (change.kind === "lifecycle") {
     switch (change.status) {
-      case 'paused':
-        return prominentMarker(pausedHeadline(change.reason, actor), 'warning');
-      case 'active':
-        return prominentMarker(resumedHeadline(actor), 'primary');
-      case 'blocked':
+      case "paused":
+        return prominentMarker(pausedHeadline(change.reason, actor), "warning");
+      case "active":
+        return prominentMarker(resumedHeadline(actor), "primary");
+      case "blocked":
         // The system stopped pursuing the goal; resumable via `/goal resume`.
-        return { headline: 'Goal blocked', accentToken: 'warning' };
+        return { headline: "Goal blocked", accentToken: "warning" };
       default:
         return null;
     }
@@ -144,25 +147,31 @@ function prominentMarker(headline: string, accentToken: ColorToken) {
       marker: STATUS_BULLET.trimEnd(),
       textToken: accentToken,
       expandable: false,
-      indent: '',
+      indent: "",
       leadingBlank: true,
     },
   };
 }
 
-function pausedHeadline(reason: string | undefined, actor: GoalMarkerActor | undefined): string {
-  if (reason === 'Paused after interruption') return "Goal paused due to user's interruption";
-  if (actor === 'user') return 'Goal paused by the user.';
-  if (reason?.startsWith('Paused ') === true) return `Goal ${lowercaseFirst(reason)}`;
-  if (reason !== undefined && reason.length > 0) return `Goal paused: ${reason}`;
-  if (actor === 'model') return 'Goal paused by the agent.';
-  return 'Goal paused';
+function pausedHeadline(
+  reason: string | undefined,
+  actor: GoalMarkerActor | undefined,
+): string {
+  if (reason === "Paused after interruption")
+    return "Goal paused due to user's interruption";
+  if (actor === "user") return "Goal paused by the user.";
+  if (reason?.startsWith("Paused ") === true)
+    return `Goal ${lowercaseFirst(reason)}`;
+  if (reason !== undefined && reason.length > 0)
+    return `Goal paused: ${reason}`;
+  if (actor === "model") return "Goal paused by the agent.";
+  return "Goal paused";
 }
 
 function resumedHeadline(actor: GoalMarkerActor | undefined): string {
-  if (actor === 'user') return 'Goal resumed by the user.';
-  if (actor === 'model') return 'Goal resumed by the agent.';
-  return 'Goal resumed';
+  if (actor === "user") return "Goal resumed by the user.";
+  if (actor === "model") return "Goal resumed by the agent.";
+  return "Goal resumed";
 }
 
 function lowercaseFirst(text: string): string {
@@ -170,9 +179,9 @@ function lowercaseFirst(text: string): string {
 }
 
 function wrap(text: string, width: number): string[] {
-  const words = text.replaceAll(/\s+/g, ' ').trim().split(' ');
+  const words = text.replaceAll(/\s+/g, " ").trim().split(" ");
   const lines: string[] = [];
-  let current = '';
+  let current = "";
   for (const word of words) {
     const candidate = current.length === 0 ? word : `${current} ${word}`;
     if (candidate.length > width && current.length > 0) {
@@ -183,5 +192,5 @@ function wrap(text: string, width: number): string[] {
     }
   }
   if (current.length > 0) lines.push(current);
-  return lines.length > 0 ? lines : [''];
+  return lines.length > 0 ? lines : [""];
 }

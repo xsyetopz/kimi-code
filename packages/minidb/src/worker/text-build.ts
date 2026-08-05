@@ -4,24 +4,27 @@
 // bounded core, while crashes after ready remain fatal. Every terminal path
 // waits for the worker's exit before settling or starting an inline fallback.
 
-import fsSync from 'node:fs';
-import { Worker } from 'node:worker_threads';
-import { crc32 } from '../crc32.ts';
+import fsSync from "node:fs";
+import { Worker } from "node:worker_threads";
+import { crc32 } from "../crc32.ts";
 import {
   getTextBuildWorkerRuntimeState,
   TEXT_BUILD_WORKER_PROTOCOL_VERSION,
   type TextBuildWorkerRuntimeEntry,
-} from '../worker-runtime.ts';
-import { buildTextArtifacts } from './text-build-core.ts';
-import type { TextBuildCoreResult, TextBuildCoreSpec } from './text-build-core.ts';
+} from "../worker-runtime.ts";
+import { buildTextArtifacts } from "./text-build-core.ts";
+import type {
+  TextBuildCoreResult,
+  TextBuildCoreSpec,
+} from "./text-build-core.ts";
 
 export type WorkerTextBuildFallbackReason =
-  | 'runtime-unavailable'
-  | 'slot-pressure'
-  | 'disabled'
-  | 'constructor-failure'
-  | 'bootstrap-failure'
-  | 'protocol-mismatch';
+  | "runtime-unavailable"
+  | "slot-pressure"
+  | "disabled"
+  | "constructor-failure"
+  | "bootstrap-failure"
+  | "protocol-mismatch";
 
 export interface WorkerTextBuildHandle {
   readonly promise: Promise<TextBuildCoreResult>;
@@ -52,11 +55,11 @@ export interface WorkerTextBuildOptions {
 }
 
 export class WorkerTextBuildError extends Error {
-  readonly code = 'WORKER_TEXT_BUILD_FAILED';
+  readonly code = "WORKER_TEXT_BUILD_FAILED";
   readonly aborted: boolean;
   constructor(message: string, aborted = false) {
     super(message);
-    this.name = aborted ? 'AbortError' : 'WorkerTextBuildError';
+    this.name = aborted ? "AbortError" : "WorkerTextBuildError";
     this.aborted = aborted;
   }
 }
@@ -68,22 +71,34 @@ export async function verifyFileCrcAsync(
   filePath: string,
   expected: { bytes: number; crc32: number },
 ): Promise<void> {
-  const fh = await import('node:fs/promises').then((m) => m.open(filePath, 'r'));
+  const fh = await import("node:fs/promises").then((m) =>
+    m.open(filePath, "r"),
+  );
   try {
     const st = await fh.stat();
     if (st.size !== expected.bytes) {
-      throw new Error(`worker artifact ${filePath}: size ${st.size} != manifest ${expected.bytes}`);
+      throw new Error(
+        `worker artifact ${filePath}: size ${st.size} != manifest ${expected.bytes}`,
+      );
     }
     let crc = 0;
     const buf = Buffer.allocUnsafe(1 << 20);
     let pos = 0;
     while (pos < st.size) {
-      const { bytesRead } = await fh.read(buf, 0, Math.min(buf.length, st.size - pos), pos);
-      if (bytesRead === 0) throw new Error(`worker artifact ${filePath}: shrank during verification`);
+      const { bytesRead } = await fh.read(
+        buf,
+        0,
+        Math.min(buf.length, st.size - pos),
+        pos,
+      );
+      if (bytesRead === 0)
+        throw new Error(
+          `worker artifact ${filePath}: shrank during verification`,
+        );
       crc = crc32(buf.subarray(0, bytesRead), crc);
       pos += bytesRead;
     }
-    if ((crc >>> 0) !== expected.crc32) {
+    if (crc >>> 0 !== expected.crc32) {
       throw new Error(`worker artifact ${filePath}: crc mismatch`);
     }
   } finally {
@@ -92,9 +107,9 @@ export async function verifyFileCrcAsync(
 }
 
 function siblingWorkerEntry(): TextBuildWorkerRuntimeEntry | null {
-  const url = new URL('./text-build-worker.ts', import.meta.url);
+  const url = new URL("./text-build-worker.ts", import.meta.url);
   try {
-    return fsSync.statSync(url).isFile() ? { kind: 'source', url } : null;
+    return fsSync.statSync(url).isFile() ? { kind: "source", url } : null;
   } catch {
     return null;
   }
@@ -115,14 +130,19 @@ function spawnWorker(
   entry: TextBuildWorkerRuntimeEntry,
 ): Worker {
   const resourceLimits = {
-    maxOldGenerationSizeMb: opts.workerMaxOldSpaceMb ?? DEFAULT_MAX_OLD_SPACE_MB,
+    maxOldGenerationSizeMb:
+      opts.workerMaxOldSpaceMb ?? DEFAULT_MAX_OLD_SPACE_MB,
   };
-  if (entry.kind === 'packaged') {
-    return new Worker(entry.path, { workerData: spec, execArgv: [], resourceLimits });
+  if (entry.kind === "packaged") {
+    return new Worker(entry.path, {
+      workerData: spec,
+      execArgv: [],
+      resourceLimits,
+    });
   }
   return new Worker(entry.url, {
     workerData: spec,
-    execArgv: ['--experimental-transform-types'],
+    execArgv: ["--experimental-transform-types"],
     resourceLimits,
   });
 }
@@ -139,28 +159,29 @@ type WorkerMessage = {
 };
 
 type WorkerEvent =
-  | { type: 'message'; message: WorkerMessage }
-  | { type: 'error'; error: Error }
-  | { type: 'exit'; code: number };
+  | { type: "message"; message: WorkerMessage }
+  | { type: "error"; error: Error }
+  | { type: "exit"; code: number };
 
 export function startWorkerTextBuild(
   spec: TextBuildCoreSpec,
   opts: WorkerTextBuildOptions = {},
 ): WorkerTextBuildHandle {
   if (opts.inline) {
-    return startInline(spec, opts, opts.inlineReason ?? 'disabled');
+    return startInline(spec, opts, opts.inlineReason ?? "disabled");
   }
 
   const entry = workerRuntimeEntry();
   if (entry === null && opts.workerFactory === undefined) {
-    return startInline(spec, opts, 'runtime-unavailable');
+    return startInline(spec, opts, "runtime-unavailable");
   }
 
   let activeWorker: Worker;
   try {
-    activeWorker = opts.workerFactory?.(spec) ?? spawnWorker(spec, opts, entry!);
+    activeWorker =
+      opts.workerFactory?.(spec) ?? spawnWorker(spec, opts, entry!);
   } catch {
-    return startInline(spec, opts, 'constructor-failure');
+    return startInline(spec, opts, "constructor-failure");
   }
 
   let worker: Worker | null = activeWorker;
@@ -199,20 +220,20 @@ export function startWorkerTextBuild(
   };
 
   const onMessage = (message: WorkerMessage): void => {
-    pushEvent({ type: 'message', message });
+    pushEvent({ type: "message", message });
   };
   const onError = (error: Error): void => {
-    pushEvent({ type: 'error', error });
+    pushEvent({ type: "error", error });
   };
   const onExit = (code: number): void => {
     exitCode = code;
     worker = null;
     resolveExit(code);
-    pushEvent({ type: 'exit', code });
+    pushEvent({ type: "exit", code });
   };
-  activeWorker.on('message', onMessage);
-  activeWorker.on('error', onError);
-  activeWorker.on('exit', onExit);
+  activeWorker.on("message", onMessage);
+  activeWorker.on("error", onError);
+  activeWorker.on("exit", onExit);
 
   const stopWorker = async (): Promise<number> => {
     if (exitCode !== null) return exitCode;
@@ -233,7 +254,9 @@ export function startWorkerTextBuild(
     if (terminateError !== undefined) {
       throw terminateError instanceof Error
         ? terminateError
-        : new Error('text build worker termination failed', { cause: terminateError });
+        : new Error("text build worker termination failed", {
+            cause: terminateError,
+          });
     }
     return confirmedExitCode;
   };
@@ -241,16 +264,17 @@ export function startWorkerTextBuild(
   const cleanup = (): void => {
     if (abortPoll !== null) clearInterval(abortPoll);
     abortPoll = null;
-    if (opts.signal && onOwnerAbort) opts.signal.removeEventListener('abort', onOwnerAbort);
+    if (opts.signal && onOwnerAbort)
+      opts.signal.removeEventListener("abort", onOwnerAbort);
     if (terminateTimer !== null) clearTimeout(terminateTimer);
     terminateTimer = null;
-    activeWorker.off('message', onMessage);
-    activeWorker.off('error', onError);
-    activeWorker.off('exit', onExit);
+    activeWorker.off("message", onMessage);
+    activeWorker.off("error", onError);
+    activeWorker.off("exit", onExit);
   };
 
   const abortError = (): WorkerTextBuildError =>
-    new WorkerTextBuildError('text build worker was cancelled', true);
+    new WorkerTextBuildError("text build worker was cancelled", true);
 
   const startFallback = async (
     reason: WorkerTextBuildFallbackReason,
@@ -269,17 +293,17 @@ export function startWorkerTextBuild(
     let ready = false;
     while (true) {
       const event = await nextEvent();
-      if (event.type === 'message') {
+      if (event.type === "message") {
         const message = event.message;
-        if (message.type === 'ready') {
+        if (message.type === "ready") {
           if (message.version !== TEXT_BUILD_WORKER_PROTOCOL_VERSION) {
-            return startFallback('protocol-mismatch');
+            return startFallback("protocol-mismatch");
           }
           ready = true;
           continue;
         }
         if (!ready) continue;
-        if (message.type === 'progress') {
+        if (message.type === "progress") {
           opts.onProgress?.({
             docs: message.docs ?? 0,
             terms: message.terms ?? 0,
@@ -287,31 +311,32 @@ export function startWorkerTextBuild(
           });
           continue;
         }
-        if (message.type === 'done') {
+        if (message.type === "done") {
           await stopWorker();
           if (cancelRequested) throw abortError();
           return message.result!;
         }
-        if (message.type === 'failed') {
+        if (message.type === "failed") {
           await stopWorker();
           throw new WorkerTextBuildError(
-            message.error ?? 'text build failed in the worker',
+            message.error ?? "text build failed in the worker",
             message.aborted ?? cancelRequested,
           );
         }
         continue;
       }
 
-      if (event.type === 'error') {
+      if (event.type === "error") {
         await stopWorker();
-        if (!ready && !cancelRequested) return startFallback('bootstrap-failure');
+        if (!ready && !cancelRequested)
+          return startFallback("bootstrap-failure");
         throw new WorkerTextBuildError(
           `text build worker errored: ${event.error.message}`,
           cancelRequested,
         );
       }
 
-      if (!ready && !cancelRequested) return startFallback('bootstrap-failure');
+      if (!ready && !cancelRequested) return startFallback("bootstrap-failure");
       throw new WorkerTextBuildError(
         `text build worker exited early (code ${event.code})`,
         cancelRequested,
@@ -333,7 +358,7 @@ export function startWorkerTextBuild(
       return;
     }
     try {
-      activeWorker.postMessage({ type: 'cancel' }, []);
+      activeWorker.postMessage({ type: "cancel" }, []);
     } catch {
       // The exit/error event drives final settlement.
     }
@@ -346,7 +371,7 @@ export function startWorkerTextBuild(
   if (opts.signal) {
     onOwnerAbort = requestCancel;
     if (opts.signal.aborted) requestCancel();
-    else opts.signal.addEventListener('abort', onOwnerAbort, { once: true });
+    else opts.signal.addEventListener("abort", onOwnerAbort, { once: true });
   }
   if (opts.shouldAbort) {
     abortPoll = setInterval(() => {
@@ -388,7 +413,7 @@ function startInline(
       controller.abort();
     };
     if (opts.signal.aborted) controller.abort();
-    else opts.signal.addEventListener('abort', onOwnerAbort, { once: true });
+    else opts.signal.addEventListener("abort", onOwnerAbort, { once: true });
   }
   if (opts.shouldAbort) {
     poll = setInterval(() => {
@@ -403,7 +428,8 @@ function startInline(
   };
   const promise = buildTextArtifacts(inner).finally(() => {
     if (poll !== null) clearInterval(poll);
-    if (opts.signal && onOwnerAbort) opts.signal.removeEventListener('abort', onOwnerAbort);
+    if (opts.signal && onOwnerAbort)
+      opts.signal.removeEventListener("abort", onOwnerAbort);
   });
   return {
     promise,

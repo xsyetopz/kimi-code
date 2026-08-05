@@ -1,6 +1,6 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from "vitest";
 
-import type { TUIState } from '#/tui/kimi-tui';
+import type { TUIState } from "#/tui/kimi-tui";
 import {
   DISABLE_TERMINAL_FOCUS_REPORTING,
   ENABLE_TERMINAL_FOCUS_REPORTING,
@@ -8,23 +8,28 @@ import {
   TERMINAL_FOCUS_OUT,
   handleTerminalFocusInput,
   installTerminalFocusTracking,
-} from '#/tui/utils/terminal-focus';
+} from "#/tui/utils/terminal-focus";
 
-describe('terminal focus tracking', () => {
-  it('updates focus state from terminal focus reporting sequences', () => {
+describe("terminal focus tracking", () => {
+  it("updates focus state from terminal focus reporting sequences", () => {
     const state = { focused: true };
 
-    expect(handleTerminalFocusInput(state, TERMINAL_FOCUS_OUT)).toEqual({ consume: true });
+    expect(handleTerminalFocusInput(state, TERMINAL_FOCUS_OUT)).toEqual({
+      consume: true,
+    });
     expect(state.focused).toBe(false);
 
-    expect(handleTerminalFocusInput(state, TERMINAL_FOCUS_IN)).toEqual({ consume: true });
+    expect(handleTerminalFocusInput(state, TERMINAL_FOCUS_IN)).toEqual({
+      consume: true,
+    });
     expect(state.focused).toBe(true);
 
-    expect(handleTerminalFocusInput(state, 'x')).toBeUndefined();
+    expect(handleTerminalFocusInput(state, "x")).toBeUndefined();
   });
 
-  it('enables focus reporting and removes the listener on dispose', () => {
-    const listeners: Array<(data: string) => { consume: true } | undefined> = [];
+  it("enables focus reporting and removes the listener on dispose", () => {
+    const listeners: Array<(data: string) => { consume: true } | undefined> =
+      [];
     const removeInputListener = vi.fn();
     const state = {
       terminalState: {
@@ -44,7 +49,9 @@ describe('terminal focus tracking', () => {
     const dispose = installTerminalFocusTracking(state);
 
     expect(state.terminalState.focused).toBe(true);
-    expect(state.terminal.write).toHaveBeenCalledWith(ENABLE_TERMINAL_FOCUS_REPORTING);
+    expect(state.terminal.write).toHaveBeenCalledWith(
+      ENABLE_TERMINAL_FOCUS_REPORTING,
+    );
     expect(listeners).toHaveLength(1);
 
     listeners[0]?.(TERMINAL_FOCUS_OUT);
@@ -53,7 +60,9 @@ describe('terminal focus tracking', () => {
     dispose();
 
     expect(removeInputListener).toHaveBeenCalledOnce();
-    expect(state.terminal.write).toHaveBeenCalledWith(DISABLE_TERMINAL_FOCUS_REPORTING);
+    expect(state.terminal.write).toHaveBeenCalledWith(
+      DISABLE_TERMINAL_FOCUS_REPORTING,
+    );
     expect(state.terminalState.focused).toBe(true);
   });
 });

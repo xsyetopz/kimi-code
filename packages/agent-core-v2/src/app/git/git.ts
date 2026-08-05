@@ -10,29 +10,32 @@
  * already-resolved absolute `cwd` and repo-relative paths.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
 
-import type { GitWorkTree } from './workTree';
+import type { GitWorkTree } from "./workTree";
 
-export type { GitWorkTree } from './workTree';
+export type { GitWorkTree } from "./workTree";
 
 export const fsGitStatusSchema = z.enum([
-  'clean',
-  'modified',
-  'added',
-  'deleted',
-  'renamed',
-  'untracked',
-  'ignored',
-  'conflicted',
+  "clean",
+  "modified",
+  "added",
+  "deleted",
+  "renamed",
+  "untracked",
+  "ignored",
+  "conflicted",
 ]);
 export type FsGitStatus = z.infer<typeof fsGitStatusSchema>;
 
 export const fsPullRequestSchema = z.object({
   number: z.number().int().positive(),
-  state: z.enum(['open', 'merged', 'closed', 'draft']),
+  state: z.enum(["open", "merged", "closed", "draft"]),
   url: z.string().url(),
 });
 export type FsPullRequest = z.infer<typeof fsPullRequestSchema>;
@@ -68,10 +71,13 @@ export type FsDiffResponse = z.infer<typeof fsDiffResponseSchema>;
 export interface IGitService {
   readonly _serviceBrand: undefined;
 
-  status(cwd: string, pathFilter?: ReadonlySet<string>): Promise<FsGitStatusResponse>;
+  status(
+    cwd: string,
+    pathFilter?: ReadonlySet<string>,
+  ): Promise<FsGitStatusResponse>;
   diff(cwd: string, relPath: string, absPath: string): Promise<FsDiffResponse>;
   findWorkTree(cwd: string): Promise<GitWorkTree | null>;
 }
 
 export const IGitService: ServiceIdentifier<IGitService> =
-  createDecorator<IGitService>('gitService');
+  createDecorator<IGitService>("gitService");

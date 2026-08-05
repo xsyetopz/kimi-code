@@ -1,12 +1,12 @@
-import { sleep } from '@antfu/utils';
+import { sleep } from "@antfu/utils";
 
-import { APIStatusError } from '@moonshot-ai/kosong';
-import type { Logger } from '#/logging/types';
+import { APIStatusError } from "@moonshot-ai/kosong";
+import type { Logger } from "#/logging/types";
 
-import { abortable } from '../utils/abort';
-import type { LoopEventDispatcher } from './events';
-import { isAbortError } from './errors';
-import type { LLM, LLMChatParams, LLMChatResponse } from './llm';
+import { abortable } from "../utils/abort";
+import type { LoopEventDispatcher } from "./events";
+import { isAbortError } from "./errors";
+import type { LLM, LLMChatParams, LLMChatResponse } from "./llm";
 
 // Default retry budget per step: 10 attempts (9 retries). With the
 // exponential ramp below the backoff climbs 0.5s, 1s, 2s … up to the 32s
@@ -35,14 +35,18 @@ export interface ChatWithRetryInput {
   readonly log?: Logger | undefined;
 }
 
-export async function chatWithRetry(input: ChatWithRetryInput): Promise<LLMChatResponse> {
+export async function chatWithRetry(
+  input: ChatWithRetryInput,
+): Promise<LLMChatResponse> {
   const maxAttempts = input.maxAttempts ?? DEFAULT_MAX_RETRY_ATTEMPTS;
 
   if (input.llm.isRetryableError === undefined || maxAttempts <= 1) {
     const effectiveMaxAttempts = Math.max(maxAttempts, 1);
     input.params.trace?.reset();
     try {
-      const response = await input.llm.chat(paramsForAttempt(input, 1, effectiveMaxAttempts));
+      const response = await input.llm.chat(
+        paramsForAttempt(input, 1, effectiveMaxAttempts),
+      );
       input.params.trace?.capture(response.traceId);
       return response;
     } catch (error) {
@@ -57,7 +61,9 @@ export async function chatWithRetry(input: ChatWithRetryInput): Promise<LLMChatR
   for (let attempt = 1; ; attempt += 1) {
     input.params.trace?.reset();
     try {
-      const response = await input.llm.chat(paramsForAttempt(input, attempt, maxAttempts));
+      const response = await input.llm.chat(
+        paramsForAttempt(input, attempt, maxAttempts),
+      );
       input.params.trace?.capture(response.traceId);
       return response;
     } catch (error) {
@@ -73,7 +79,7 @@ export async function chatWithRetry(input: ChatWithRetryInput): Promise<LLMChatR
       const delayMs = readRetryAfterMs(error) ?? delays[attempt - 1] ?? 0;
       input.params.signal.throwIfAborted();
       input.dispatchEvent({
-        type: 'step.retrying',
+        type: "step.retrying",
         turnId: input.turnId,
         step: input.currentStep,
         stepUuid: input.stepUuid,
@@ -95,7 +101,7 @@ function logRequestFailure(
   maxAttempts: number,
 ): void {
   if (isAbortError(error) || input.params.signal.aborted) return;
-  input.log?.warn('llm request failed', {
+  input.log?.warn("llm request failed", {
     turnStep: `${input.turnId}.${String(input.currentStep)}`,
     attempt: `${String(attempt)}/${String(maxAttempts)}`,
     model: input.llm.modelName,
@@ -113,7 +119,10 @@ function logRequestFailure(
  * already captured by the attempt's request trace; failures before any
  * response (network errors, local aborts) keep the attempt-start reset.
  */
-function captureAttemptTraceId(input: ChatWithRetryInput, error: unknown): void {
+function captureAttemptTraceId(
+  input: ChatWithRetryInput,
+  error: unknown,
+): void {
   const statusError = findAPIStatusError(error);
   if (statusError?.traceId !== null && statusError?.traceId !== undefined) {
     input.params.trace?.capture(statusError.traceId);
@@ -123,7 +132,11 @@ function captureAttemptTraceId(input: ChatWithRetryInput, error: unknown): void 
 export function findAPIStatusError(error: unknown): APIStatusError | undefined {
   let current = error;
   const visited = new Set<unknown>();
-  while (current !== null && typeof current === 'object' && !visited.has(current)) {
+  while (
+    current !== null &&
+    typeof current === "object" &&
+    !visited.has(current)
+  ) {
     if (current instanceof APIStatusError) return current;
     visited.add(current);
     current = (current as { cause?: unknown }).cause;
@@ -158,7 +171,10 @@ export function retryBackoffDelays(maxAttempts: number): number[] {
   const count = Math.max(maxAttempts - 1, 0);
   const delays: number[] = [];
   for (let i = 0; i < count; i += 1) {
-    const base = Math.min(BASE_DELAY_MS * Math.pow(RETRY_FACTOR, i), MAX_DELAY_MS);
+    const base = Math.min(
+      BASE_DELAY_MS * Math.pow(RETRY_FACTOR, i),
+      MAX_DELAY_MS,
+    );
     delays.push(base + Math.random() * JITTER_FACTOR * base);
   }
   return delays;
@@ -171,12 +187,15 @@ export function retryBackoffDelays(maxAttempts: number): number[] {
  * over the local exponential delay.
  */
 function readRetryAfterMs(error: unknown): number | null {
-  if (typeof error !== 'object' || error === null) return null;
+  if (typeof error !== "object" || error === null) return null;
   const value = (error as { retryAfterMs?: unknown }).retryAfterMs;
-  return typeof value === 'number' && value > 0 ? value : null;
+  return typeof value === "number" && value > 0 ? value : null;
 }
 
-export async function sleepForRetry(delayMs: number, signal: AbortSignal): Promise<void> {
+export async function sleepForRetry(
+  delayMs: number,
+  signal: AbortSignal,
+): Promise<void> {
   signal.throwIfAborted();
   await abortable(sleep(delayMs), signal);
 }
@@ -196,7 +215,7 @@ function retryErrorFields(error: unknown): RetryErrorFields {
 }
 
 function maybeStatusCode(error: unknown): number | undefined {
-  if (typeof error !== 'object' || error === null) return undefined;
+  if (typeof error !== "object" || error === null) return undefined;
   const statusCode = (error as { statusCode?: unknown }).statusCode;
-  return typeof statusCode === 'number' ? statusCode : undefined;
+  return typeof statusCode === "number" ? statusCode : undefined;
 }

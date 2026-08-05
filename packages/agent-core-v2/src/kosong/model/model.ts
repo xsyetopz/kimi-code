@@ -27,11 +27,14 @@
  * `type`, never as a protocol).
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
-import type { Event, IWaitUntil } from '#/_base/event';
-import type { Protocol } from '#/kosong/protocol/protocol';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
+import type { Event, IWaitUntil } from "#/_base/event";
+import type { Protocol } from "#/kosong/protocol/protocol";
 
-import type { OAuthRef } from '../provider/provider';
+import type { OAuthRef } from "../provider/provider";
 
 export interface ModelOverride {
   maxContextSize?: number;
@@ -94,7 +97,9 @@ export interface IModelService {
 
   readonly ready: Promise<void>;
   readonly onDidChangeModels: Event<ModelsChangedEvent & IWaitUntil>;
-  readonly onDidChangeDefaultModel: Event<DefaultModelChangedEvent & IWaitUntil>;
+  readonly onDidChangeDefaultModel: Event<
+    DefaultModelChangedEvent & IWaitUntil
+  >;
   get(id: string): ModelRecord | undefined;
   list(): Readonly<Record<string, ModelRecord>>;
   getDefaultModel(): string | undefined;
@@ -106,4 +111,4 @@ export interface IModelService {
 }
 
 export const IModelService: ServiceIdentifier<IModelService> =
-  createDecorator<IModelService>('modelService');
+  createDecorator<IModelService>("modelService");

@@ -24,21 +24,24 @@
  * must land in both engines.
  */
 
-import type { ResolvedAgentProfile, SystemPromptContext } from '../types';
+import type { ResolvedAgentProfile, SystemPromptContext } from "../types";
 import {
   ADDITIONAL_DIRS_SECTION_PROSE,
   SKILLS_SECTION_PROSE,
   WINDOWS_NOTES,
-} from '../prompt-sections';
+} from "../prompt-sections";
 
-import type { AgentFileDefinition } from './types';
+import type { AgentFileDefinition } from "./types";
 
 const PROMPT_VARIABLE = /\$\{([A-Za-z_][A-Za-z0-9_]*)\}/g;
 
-function renderTemplateVars(template: string, vars: Record<string, string>): string {
+function renderTemplateVars(
+  template: string,
+  vars: Record<string, string>,
+): string {
   return template.replace(PROMPT_VARIABLE, (match: string, name: string) => {
     const value = vars[name];
-    return typeof value === 'string' ? value : match;
+    return typeof value === "string" ? value : match;
   });
 }
 
@@ -46,35 +49,38 @@ export function agentFilePromptVars(
   context: SystemPromptContext,
   options: { readonly skillActive: boolean },
 ): Record<string, string> {
-  const shellName = context.osEnv.shellName ?? '';
-  const shellPath = context.osEnv.shellPath ?? '';
+  const shellName = context.osEnv.shellName ?? "";
+  const shellPath = context.osEnv.shellPath ?? "";
   const skills = options.skillActive
-    ? typeof context.skills === 'string'
+    ? typeof context.skills === "string"
       ? context.skills
-      : (context.skills?.getModelSkillListing() ?? '')
-    : '';
-  const additionalDirsInfo = context.additionalDirsInfo ?? '';
+      : (context.skills?.getModelSkillListing() ?? "")
+    : "";
+  const additionalDirsInfo = context.additionalDirsInfo ?? "";
   const now =
     context.now instanceof Date
       ? context.now.toISOString()
       : (context.now ?? new Date().toISOString());
   return {
-    role_additional: context.roleAdditional ?? '',
-    os: context.osEnv.osKind ?? '',
-    windows_notes: context.osEnv.osKind === 'Windows' ? `\n\n${WINDOWS_NOTES}\n\n` : '',
-    shell: shellName.length > 0 ? `${shellName} (\`${shellPath}\`)` : '',
+    role_additional: context.roleAdditional ?? "",
+    os: context.osEnv.osKind ?? "",
+    windows_notes:
+      context.osEnv.osKind === "Windows" ? `\n\n${WINDOWS_NOTES}\n\n` : "",
+    shell: shellName.length > 0 ? `${shellName} (\`${shellPath}\`)` : "",
     now,
     cwd: context.cwd,
-    cwd_listing: context.cwdListing ?? '',
-    agents_md: context.agentsMd ?? '',
+    cwd_listing: context.cwdListing ?? "",
+    agents_md: context.agentsMd ?? "",
     additional_dirs_info: additionalDirsInfo,
     additional_dirs_section:
       additionalDirsInfo.length > 0
         ? `\n\n## Additional Directories\n\n${ADDITIONAL_DIRS_SECTION_PROSE}\n\n${additionalDirsInfo}\n\n`
-        : '',
+        : "",
     skills,
     skills_section:
-      skills.length > 0 ? `\n\n# Skills\n\n${SKILLS_SECTION_PROSE}\n\n${skills}\n\n` : '',
+      skills.length > 0
+        ? `\n\n# Skills\n\n${SKILLS_SECTION_PROSE}\n\n${skills}\n\n`
+        : "",
   };
 }
 
@@ -85,16 +91,18 @@ export function renderAgentFileTemplate(
   basePrompt?: (context: SystemPromptContext) => string,
 ): string {
   const vars = agentFilePromptVars(context, options);
-  if (basePrompt !== undefined && template.includes('${base_prompt}')) {
-    vars['base_prompt'] = basePrompt(context);
+  if (basePrompt !== undefined && template.includes("${base_prompt}")) {
+    vars["base_prompt"] = basePrompt(context);
   }
   return renderTemplateVars(template, vars);
 }
 
-export function skillActiveForAgentFile(definition: AgentFileDefinition): boolean {
+export function skillActiveForAgentFile(
+  definition: AgentFileDefinition,
+): boolean {
   return (
-    (definition.tools === undefined || definition.tools.includes('Skill')) &&
-    !(definition.disallowedTools ?? []).includes('Skill')
+    (definition.tools === undefined || definition.tools.includes("Skill")) &&
+    !(definition.disallowedTools ?? []).includes("Skill")
   );
 }
 
@@ -108,7 +116,9 @@ export function agentFileTools(
   definition: AgentFileDefinition,
   defaultTools: readonly string[],
 ): string[] {
-  return definition.tools === undefined ? [...defaultTools] : [...definition.tools];
+  return definition.tools === undefined
+    ? [...defaultTools]
+    : [...definition.tools];
 }
 
 export function agentProfileFromFile(
@@ -121,10 +131,17 @@ export function agentProfileFromFile(
     name: definition.name,
     description: definition.description,
     systemPrompt: (context) =>
-      renderAgentFileTemplate(definition.prompt, context, { skillActive }, basePrompt),
+      renderAgentFileTemplate(
+        definition.prompt,
+        context,
+        { skillActive },
+        basePrompt,
+      ),
     tools: agentFileTools(definition, defaultTools),
     disallowedTools:
-      definition.disallowedTools === undefined ? undefined : [...definition.disallowedTools],
+      definition.disallowedTools === undefined
+        ? undefined
+        : [...definition.disallowedTools],
     whenToUse: definition.whenToUse,
     modelPreference: definition.modelPreference,
   };

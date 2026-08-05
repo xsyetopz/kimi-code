@@ -1,10 +1,10 @@
-import { Text, truncateToWidth, type Component } from '@moonshot-ai/pi-tui';
+import { Text, truncateToWidth, type Component } from "@moonshot-ai/pi-tui";
 
-import { currentTheme } from '#/tui/theme';
-import type { ColorPalette } from '#/tui/theme/colors';
+import { currentTheme } from "#/tui/theme";
+import type { ColorPalette } from "#/tui/theme/colors";
 
-import type { ResultRenderer } from './types';
-import { PREVIEW_LINES } from './types';
+import type { ResultRenderer } from "./types";
+import { PREVIEW_LINES } from "./types";
 
 const DEFAULT_INDENT = 2;
 
@@ -56,10 +56,12 @@ export class TruncatedOutputComponent implements Component {
     this.indent = options.indent ?? DEFAULT_INDENT;
     this.expandHint = options.expandHint ?? true;
     this.tail = options.tail ?? false;
-    const cleaned = trimTrailingEmptyLines(output.split('\n')).join('\n');
-    const successColor = options.color ?? 'textDim';
+    const cleaned = trimTrailingEmptyLines(output.split("\n")).join("\n");
+    const successColor = options.color ?? "textDim";
     this.textComponent = new Text(
-      options.isError ? currentTheme.fg('error', cleaned) : currentTheme.fg(successColor, cleaned),
+      options.isError
+        ? currentTheme.fg("error", cleaned)
+        : currentTheme.fg(successColor, cleaned),
       this.indent,
       0,
     );
@@ -73,7 +75,10 @@ export class TruncatedOutputComponent implements Component {
   private renderHint(width: number, hint: string): string {
     const indentWidth = Math.min(this.indent, Math.max(0, width));
     const hintWidth = Math.max(0, width - indentWidth);
-    return ' '.repeat(indentWidth) + currentTheme.dim(truncateToWidth(hint, hintWidth, '…'));
+    return (
+      " ".repeat(indentWidth) +
+      currentTheme.dim(truncateToWidth(hint, hintWidth, "…"))
+    );
   }
 
   render(width: number): string[] {

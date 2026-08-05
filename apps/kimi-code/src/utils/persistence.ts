@@ -6,21 +6,30 @@
  * these helpers.
  */
 
-import { appendFile, mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises';
-import { basename, dirname, join } from 'node:path';
+import {
+  appendFile,
+  mkdir,
+  readFile,
+  rename,
+  unlink,
+  writeFile,
+} from "node:fs/promises";
+import { basename, dirname, join } from "node:path";
 
-import type { z } from 'zod';
+import type { z } from "zod";
 
 function isNotFound(error: unknown): boolean {
   return (
-    typeof error === 'object' && error !== null && (error as { code?: string }).code === 'ENOENT'
+    typeof error === "object" &&
+    error !== null &&
+    (error as { code?: string }).code === "ENOENT"
   );
 }
 
 function assertNonConfigWrite(filePath: string): void {
-  if (basename(filePath) === 'config.toml') {
+  if (basename(filePath) === "config.toml") {
     throw new Error(
-      'CLI persistence helpers must not write config.toml; use core/SDK config APIs.',
+      "CLI persistence helpers must not write config.toml; use core/SDK config APIs.",
     );
   }
 }
@@ -39,7 +48,7 @@ export async function readJsonFile<T>(
 ): Promise<T> {
   let raw: string;
   try {
-    raw = await readFile(filePath, 'utf-8');
+    raw = await readFile(filePath, "utf-8");
   } catch (error) {
     if (isNotFound(error)) return fallback;
     throw error;
@@ -58,7 +67,7 @@ export async function writeJsonFile<T>(
   await mkdir(dirname(filePath), { recursive: true });
   const tmpPath = tempPathFor(filePath);
   try {
-    await writeFile(tmpPath, `${JSON.stringify(parsed, null, 2)}\n`, 'utf-8');
+    await writeFile(tmpPath, `${JSON.stringify(parsed, null, 2)}\n`, "utf-8");
     await rename(tmpPath, filePath);
   } catch (error) {
     await unlink(tmpPath).catch(() => {});
@@ -72,14 +81,14 @@ export async function readJsonlFile<T>(
 ): Promise<T[]> {
   let raw: string;
   try {
-    raw = await readFile(filePath, 'utf-8');
+    raw = await readFile(filePath, "utf-8");
   } catch (error) {
     if (isNotFound(error)) return [];
     throw error;
   }
 
   const entries: T[] = [];
-  for (const line of raw.split('\n')) {
+  for (const line of raw.split("\n")) {
     const trimmed = line.trim();
     if (trimmed.length === 0) continue;
     try {
@@ -101,5 +110,5 @@ export async function appendJsonlLine<T>(
   assertNonConfigWrite(filePath);
   const parsed = lineSchema.parse(value);
   await mkdir(dirname(filePath), { recursive: true });
-  await appendFile(filePath, `${JSON.stringify(parsed)}\n`, 'utf-8');
+  await appendFile(filePath, `${JSON.stringify(parsed)}\n`, "utf-8");
 }

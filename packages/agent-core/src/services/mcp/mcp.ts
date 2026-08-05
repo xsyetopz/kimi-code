@@ -32,44 +32,44 @@
  * name-as-id at the wire boundary. Both are 1:1 within a daemon process.
  */
 
-import { createDecorator } from '../../di';
-import type { McpServerInfo } from '../../rpc';
+import { createDecorator } from "../../di";
+import type { McpServerInfo } from "../../rpc";
 import type {
   McpServer,
   McpServerStatus,
   McpServerTransport,
-} from '@moonshot-ai/protocol';
+} from "@moonshot-ai/protocol";
 
 // ---------------------------------------------------------------------------
 // Adapter helpers (MCP side of former adapter/tool-adapter.ts)
 // ---------------------------------------------------------------------------
 
-function mapMcpStatus(s: McpServerInfo['status']): McpServerStatus {
+function mapMcpStatus(s: McpServerInfo["status"]): McpServerStatus {
   switch (s) {
-    case 'connected':
-      return 'connected';
-    case 'pending':
-      return 'connecting';
-    case 'failed':
-      return 'error';
-    case 'disabled':
-      return 'disconnected';
-    case 'needs-auth':
+    case "connected":
+      return "connected";
+    case "pending":
+      return "connecting";
+    case "failed":
+      return "error";
+    case "disabled":
+      return "disconnected";
+    case "needs-auth":
       // Closest wire literal; `last_error` carries the explanatory message.
-      return 'error';
+      return "error";
   }
 }
 
-function mapMcpTransport(t: McpServerInfo['transport']): McpServerTransport {
+function mapMcpTransport(t: McpServerInfo["transport"]): McpServerTransport {
   // SCHEMAS §8 transport is a superset (adds 'sse'); agent-core literals
   // pass through unchanged, and 'sse' is already a valid wire value.
   switch (t) {
-    case 'stdio':
-      return 'stdio';
-    case 'http':
-      return 'http';
-    case 'sse':
-      return 'sse';
+    case "stdio":
+      return "stdio";
+    case "http":
+      return "http";
+    case "sse":
+      return "sse";
   }
 }
 
@@ -112,7 +112,7 @@ export interface IMcpService {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
-export const IMcpService = createDecorator<IMcpService>('mcpService');
+export const IMcpService = createDecorator<IMcpService>("mcpService");
 
 /**
  * Sentinel — daemon's route layer catches this and maps to envelope `code:
@@ -123,7 +123,7 @@ export class McpServerNotFoundError extends Error {
   readonly serverId: string;
   constructor(serverId: string) {
     super(`mcp server ${serverId} does not exist`);
-    this.name = 'McpServerNotFoundError';
+    this.name = "McpServerNotFoundError";
     this.serverId = serverId;
   }
 }

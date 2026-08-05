@@ -5,20 +5,20 @@
  * `interactions:resolved`).
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
 import type {
   Interaction,
   InteractionResolution,
-} from '@moonshot-ai/agent-core-v2/session/interaction/interaction';
-import type { SessionMetadataChangedEvent } from '@moonshot-ai/agent-core-v2/session/sessionMetadata/sessionMetadata';
+} from "@moonshot-ai/agent-core-v2/session/interaction/interaction";
+import type { SessionMetadataChangedEvent } from "@moonshot-ai/agent-core-v2/session/sessionMetadata/sessionMetadata";
 
-import type { EventRegistration } from '../types.js';
+import type { EventRegistration } from "../types.js";
 import {
   interactionResolutionSchema,
   interactionSchema,
-} from './interaction.js';
-import { sessionMetadataChangedEventSchema } from './metadata.js';
+} from "./interaction.js";
+import { sessionMetadataChangedEventSchema } from "./metadata.js";
 
 /**
  * Scope-stream registration (`kind: 'stream'`). Declared structurally here
@@ -26,7 +26,7 @@ import { sessionMetadataChangedEventSchema } from './metadata.js';
  * compatible with `src/core/events/hub.ts`, which already switches on it.
  */
 interface StreamEventRegistration {
-  readonly kind: 'stream';
+  readonly kind: "stream";
   readonly name: string;
   readonly type?: string;
   readonly schema: z.ZodType;
@@ -36,39 +36,39 @@ type SessionEventRegistration = EventRegistration | StreamEventRegistration;
 
 /** Public event name → payload type. Keys must stay in sync with `sessionEvents`. */
 export interface SessionEventPayloads {
-  'metadata.changed': SessionMetadataChangedEvent;
-  'interactions.changed': readonly Interaction[];
-  'interactions.resolved': InteractionResolution;
+  "metadata.changed": SessionMetadataChangedEvent;
+  "interactions.changed": readonly Interaction[];
+  "interactions.resolved": InteractionResolution;
   /** The merged skill catalog changed; the payload is the changed source id. */
-  'skills.changed': string;
+  "skills.changed": string;
 }
 
 export type SessionEventName = keyof SessionEventPayloads;
 
 /** Public event name → source binding + payload schema. */
 export const sessionEvents = {
-  'metadata.changed': {
-    kind: 'emitter',
-    service: 'sessionMetadata',
-    event: 'onDidChangeMetadata',
+  "metadata.changed": {
+    kind: "emitter",
+    service: "sessionMetadata",
+    event: "onDidChangeMetadata",
     schema: sessionMetadataChangedEventSchema,
   },
-  'skills.changed': {
-    kind: 'emitter',
-    service: 'sessionSkillCatalog',
-    event: 'onDidChange',
+  "skills.changed": {
+    kind: "emitter",
+    service: "sessionSkillCatalog",
+    event: "onDidChange",
     schema: z.string(),
   },
   // Passthrough stream (no `type` filter): the source pushes the full
   // pending interaction set on every change.
-  'interactions.changed': {
-    kind: 'stream',
-    name: 'interactions',
+  "interactions.changed": {
+    kind: "stream",
+    name: "interactions",
     schema: z.array(interactionSchema),
   },
-  'interactions.resolved': {
-    kind: 'stream',
-    name: 'interactions:resolved',
+  "interactions.resolved": {
+    kind: "stream",
+    name: "interactions:resolved",
     schema: interactionResolutionSchema,
   },
 } satisfies Record<SessionEventName, SessionEventRegistration>;

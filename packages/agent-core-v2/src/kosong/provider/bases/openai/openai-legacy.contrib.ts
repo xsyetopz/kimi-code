@@ -13,20 +13,23 @@
  * silently pick up an unrelated OpenAI key.
  */
 
-import { registerProtocolBase } from '#/kosong/protocol/protocolBase';
-import { traitDefaultHeaders } from '#/kosong/protocol/protocolTrait';
+import { registerProtocolBase } from "#/kosong/protocol/protocolBase";
+import { traitDefaultHeaders } from "#/kosong/protocol/protocolTrait";
 
-import { getOpenAILegacyModelCapability, OpenAILegacyChatProvider } from './openai-legacy';
+import {
+  getOpenAILegacyModelCapability,
+  OpenAILegacyChatProvider,
+} from "./openai-legacy";
 import {
   compactObject,
   composeOpenAIChatHooks,
   firstProcessEnv,
   traitEndpoint,
   traitProvides,
-} from './openaiHooks';
+} from "./openaiHooks";
 
 registerProtocolBase({
-  id: 'openai',
+  id: "openai",
   capability: getOpenAILegacyModelCapability,
   createChatProvider({ config, traits }) {
     const endpoint = traitEndpoint(traits);
@@ -39,9 +42,11 @@ registerProtocolBase({
         apiKey:
           config.apiKey ??
           firstProcessEnv(endpoint?.apiKeyEnv) ??
-          (endpoint === undefined ? undefined : ''),
+          (endpoint === undefined ? undefined : ""),
         baseUrl:
-          config.baseUrl ?? firstProcessEnv(endpoint?.baseUrlEnv) ?? endpoint?.defaultBaseUrl,
+          config.baseUrl ??
+          firstProcessEnv(endpoint?.baseUrlEnv) ??
+          endpoint?.defaultBaseUrl,
         defaultHeaders: traitDefaultHeaders(traits),
         maxTokens: config.providerOptions?.defaultMaxTokens,
         reasoningKey: config.providerOptions?.reasoningKey,

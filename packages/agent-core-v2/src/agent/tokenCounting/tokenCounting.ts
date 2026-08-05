@@ -16,12 +16,15 @@
  *     providers whose usage reporting is absent or unreliable).
  */
 
-import { createDecorator } from '#/_base/di/instantiation';
-import type { Message } from '#/kosong/contract/message';
-import type { Tool } from '#/kosong/contract/tool';
-import type { TokenUsage } from '#/kosong/contract/usage';
+import { createDecorator } from "#/_base/di/instantiation";
+import type { Message } from "#/kosong/contract/message";
+import type { Tool } from "#/kosong/contract/tool";
+import type { TokenUsage } from "#/kosong/contract/usage";
 
-export type TokenCountingStrategy = 'measured+estimated' | 'measured' | 'estimated';
+export type TokenCountingStrategy =
+  | "measured+estimated"
+  | "measured"
+  | "estimated";
 
 export interface ContextSize {
   readonly size: number;
@@ -41,7 +44,11 @@ export interface IAgentTokenCountingService {
   readonly strategy: TokenCountingStrategy;
 
   get(start?: number, end?: number): ContextSize;
-  measured(input: readonly Message[], output: readonly Message[], usage: TokenUsage): void;
+  measured(
+    input: readonly Message[],
+    output: readonly Message[],
+    usage: TokenUsage,
+  ): void;
   /** Tokens of the most recent measured anchor (0 when none) — a real reading
    *  that stays valid across transient uncascaded context rewrites. */
   latestMeasured(): number;
@@ -61,4 +68,4 @@ export interface IAgentTokenCountingService {
 }
 
 export const IAgentTokenCountingService =
-  createDecorator<IAgentTokenCountingService>('agentTokenCountingService');
+  createDecorator<IAgentTokenCountingService>("agentTokenCountingService");

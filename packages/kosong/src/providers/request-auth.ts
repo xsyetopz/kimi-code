@@ -1,5 +1,5 @@
-import { ChatProviderError } from '#/errors';
-import type { ProviderRequestAuth } from '#/provider';
+import { ChatProviderError } from "#/errors";
+import type { ProviderRequestAuth } from "#/provider";
 
 export function requireProviderApiKey(
   providerName: string,
@@ -54,7 +54,9 @@ export function mergeRequestHeaders(
 export function resolveAuthBackedClient<TClient>(
   state: {
     readonly cachedClient: TClient | undefined;
-    readonly clientFactory: ((auth: ProviderRequestAuth) => TClient) | undefined;
+    readonly clientFactory:
+      | ((auth: ProviderRequestAuth) => TClient)
+      | undefined;
   },
   auth: ProviderRequestAuth | undefined,
   build: (auth: ProviderRequestAuth | undefined) => TClient,

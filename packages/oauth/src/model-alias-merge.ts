@@ -1,27 +1,30 @@
-import { isRecord } from './utils';
-import type { ManagedKimiModelAlias, ManagedKimiModelAliasOverrides } from './managed-kimi-code';
+import { isRecord } from "./utils";
+import type {
+  ManagedKimiModelAlias,
+  ManagedKimiModelAliasOverrides,
+} from "./managed-kimi-code";
 
 export const MANAGED_KIMI_MODEL_FIELDS: ReadonlySet<string> = new Set([
-  'provider',
-  'model',
-  'maxContextSize',
-  'capabilities',
-  'displayName',
-  'protocol',
-  'betaApi',
-  'adaptiveThinking',
-  'supportEfforts',
-  'defaultEffort',
+  "provider",
+  "model",
+  "maxContextSize",
+  "capabilities",
+  "displayName",
+  "protocol",
+  "betaApi",
+  "adaptiveThinking",
+  "supportEfforts",
+  "defaultEffort",
 ]);
 
 export const CUSTOM_REGISTRY_MODEL_FIELDS: ReadonlySet<string> = new Set([
-  'provider',
-  'model',
-  'maxContextSize',
-  'capabilities',
-  'displayName',
-  'supportEfforts',
-  'defaultEffort',
+  "provider",
+  "model",
+  "maxContextSize",
+  "capabilities",
+  "displayName",
+  "supportEfforts",
+  "defaultEffort",
 ]);
 
 function cloneOverrides(
@@ -37,7 +40,7 @@ function userExtras(
 ): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(existing)) {
-    if (key === 'overrides') continue;
+    if (key === "overrides") continue;
     if (!remoteOwnedFields.has(key)) out[key] = value;
   }
   return out;
@@ -50,8 +53,8 @@ export function mergeRefreshedModelAlias(
 ): ManagedKimiModelAlias {
   const current = isRecord(existing) ? existing : {};
   const overrides = cloneOverrides(
-    isRecord(current['overrides'])
-      ? (current['overrides'] as ManagedKimiModelAliasOverrides)
+    isRecord(current["overrides"])
+      ? (current["overrides"] as ManagedKimiModelAliasOverrides)
       : undefined,
   );
   return {

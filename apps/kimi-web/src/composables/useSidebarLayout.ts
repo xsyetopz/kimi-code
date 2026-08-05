@@ -2,10 +2,14 @@
 // Layout: resizable session column. ResizeHandle owns the column width (with
 // localStorage persistence); we mirror it here to drive the App grid.
 
-import { computed, ref, toValue, type MaybeRefOrGetter } from 'vue';
-import { safeGetString, safeSetString, STORAGE_KEYS } from '../lib/storage';
-import { PREVIEW_MIN } from './useDetailPanel';
-import { clampPanelWidth, panelMaxWidth, useViewportWidth } from './useViewportWidth';
+import { computed, ref, toValue, type MaybeRefOrGetter } from "vue";
+import { safeGetString, safeSetString, STORAGE_KEYS } from "../lib/storage";
+import { PREVIEW_MIN } from "./useDetailPanel";
+import {
+  clampPanelWidth,
+  panelMaxWidth,
+  useViewportWidth,
+} from "./useViewportWidth";
 
 const SIDEBAR_WIDTH_KEY = STORAGE_KEYS.sidebarWidth;
 const SIDEBAR_COLLAPSED_KEY = STORAGE_KEYS.sidebarCollapsed;
@@ -40,8 +44,12 @@ export function useSidebarLayout(options: UseSidebarLayoutOptions = {}) {
   // displays. When the right-side panel is open, also reserves its minimum
   // width so the conversation column can never be squeezed to nothing.
   const sidebarMax = computed(() => {
-    const reserve = CONVERSATION_MIN + (toValue(options.previewOpen) ? PREVIEW_MIN : 0);
-    return Math.min(SIDEBAR_MAX, panelMaxWidth(viewportWidth.value, SIDEBAR_MIN, reserve));
+    const reserve =
+      CONVERSATION_MIN + (toValue(options.previewOpen) ? PREVIEW_MIN : 0);
+    return Math.min(
+      SIDEBAR_MAX,
+      panelMaxWidth(viewportWidth.value, SIDEBAR_MIN, reserve),
+    );
   });
 
   // Expanded width of the sidebar. Collapsing does NOT change this value: the
@@ -53,7 +61,7 @@ export function useSidebarLayout(options: UseSidebarLayoutOptions = {}) {
 
   function loadSidebarCollapsed(): void {
     try {
-      sidebarCollapsed.value = safeGetString(SIDEBAR_COLLAPSED_KEY) === 'true';
+      sidebarCollapsed.value = safeGetString(SIDEBAR_COLLAPSED_KEY) === "true";
     } catch {
       sidebarCollapsed.value = false;
     }

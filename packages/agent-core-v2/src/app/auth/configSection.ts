@@ -21,7 +21,7 @@
  * same section. Bound at App scope.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
 import {
   type ConfigEffectiveOverlay,
@@ -29,9 +29,9 @@ import {
   type EnvBindings,
   envBindings,
   stripEnvBoundFields,
-} from '#/app/config/config';
-import { registerConfigOverlay } from '#/app/config/configOverlayContributions';
-import { registerConfigSection } from '#/app/config/configSectionContributions';
+} from "#/app/config/config";
+import { registerConfigOverlay } from "#/app/config/configOverlayContributions";
+import { registerConfigSection } from "#/app/config/configSectionContributions";
 import {
   camelToSnake,
   cloneRecord,
@@ -40,21 +40,23 @@ import {
   setDefined,
   snakeToCamel,
   transformPlainObject,
-} from '#/app/config/toml';
-import { type AssertExact, type Equal } from '#/_base/utils/typeEquality';
-import type { OAuthRef } from '#/kosong/provider/provider';
+} from "#/app/config/toml";
+import { type AssertExact, type Equal } from "#/_base/utils/typeEquality";
+import type { OAuthRef } from "#/kosong/provider/provider";
 
-export const SERVICES_SECTION = 'services';
+export const SERVICES_SECTION = "services";
 
 const StringRecordSchema = z.record(z.string(), z.string());
 
 const OAuthRefSchema = z.object({
-  storage: z.enum(['file', 'keyring']),
+  storage: z.enum(["file", "keyring"]),
   key: z.string().min(1),
   oauthHost: z.string().min(1).optional(),
 });
 
-type _AssertOAuthRef = AssertExact<Equal<z.infer<typeof OAuthRefSchema>, OAuthRef>>;
+type _AssertOAuthRef = AssertExact<
+  Equal<z.infer<typeof OAuthRefSchema>, OAuthRef>
+>;
 
 export const MoonshotServiceConfigSchema = z.object({
   baseUrl: z.string().optional(),
@@ -74,10 +76,10 @@ export const ServicesConfigSchema = z
 
 export type ServicesConfig = z.infer<typeof ServicesConfigSchema>;
 
-export const WEB_SEARCH_BASE_URL_ENV = 'KIMI_WEB_SEARCH_BASE_URL';
-export const WEB_SEARCH_API_KEY_ENV = 'KIMI_WEB_SEARCH_API_KEY';
-export const WEB_FETCH_BASE_URL_ENV = 'KIMI_WEB_FETCH_BASE_URL';
-export const WEB_FETCH_API_KEY_ENV = 'KIMI_WEB_FETCH_API_KEY';
+export const WEB_SEARCH_BASE_URL_ENV = "KIMI_WEB_SEARCH_BASE_URL";
+export const WEB_SEARCH_API_KEY_ENV = "KIMI_WEB_SEARCH_API_KEY";
+export const WEB_FETCH_BASE_URL_ENV = "KIMI_WEB_FETCH_BASE_URL";
+export const WEB_FETCH_API_KEY_ENV = "KIMI_WEB_FETCH_API_KEY";
 
 const nonBlankEnv = (raw: string): string | undefined => {
   const trimmed = raw.trim();
@@ -107,20 +109,20 @@ const servicesCredentialEnvOverlay: ConfigEffectiveOverlay = {
     const services = effective[SERVICES_SECTION];
     if (!isPlainObject(services)) return [];
     const moonshotSearch = isolateEnvServiceCredentials(
-      services['moonshotSearch'],
+      services["moonshotSearch"],
       getEnv,
       WEB_SEARCH_BASE_URL_ENV,
       WEB_SEARCH_API_KEY_ENV,
     );
     const moonshotFetch = isolateEnvServiceCredentials(
-      services['moonshotFetch'],
+      services["moonshotFetch"],
       getEnv,
       WEB_FETCH_BASE_URL_ENV,
       WEB_FETCH_API_KEY_ENV,
     );
     if (
-      moonshotSearch === services['moonshotSearch'] &&
-      moonshotFetch === services['moonshotFetch']
+      moonshotSearch === services["moonshotSearch"] &&
+      moonshotFetch === services["moonshotFetch"]
     ) {
       return [];
     }
@@ -139,8 +141,8 @@ function isolateEnvServiceCredentials(
   baseUrlEnv: string,
   apiKeyEnv: string,
 ): unknown {
-  const baseUrl = nonBlankEnv(getEnv(baseUrlEnv) ?? '');
-  const apiKey = nonBlankEnv(getEnv(apiKeyEnv) ?? '');
+  const baseUrl = nonBlankEnv(getEnv(baseUrlEnv) ?? "");
+  const apiKey = nonBlankEnv(getEnv(apiKeyEnv) ?? "");
   if (baseUrl !== undefined) return { baseUrl, apiKey };
   if (apiKey === undefined) return service;
   if (!isPlainObject(service)) return { apiKey };
@@ -151,16 +153,24 @@ function isolateEnvServiceCredentials(
 const stripMoonshotSearchEnv = stripEnvBoundFields(moonshotSearchEnvBindings);
 const stripMoonshotFetchEnv = stripEnvBoundFields(moonshotFetchEnvBindings);
 
-export const stripServicesEnv: ConfigStripEnv<ServicesConfig> = (value, raw, getEnv) => {
+export const stripServicesEnv: ConfigStripEnv<ServicesConfig> = (
+  value,
+  raw,
+  getEnv,
+) => {
   if (!isPlainObject(value)) return value;
   let out: ServicesConfig | undefined;
   for (const [key, strip] of [
-    ['moonshotSearch', stripMoonshotSearchEnv],
-    ['moonshotFetch', stripMoonshotFetchEnv],
+    ["moonshotSearch", stripMoonshotSearchEnv],
+    ["moonshotFetch", stripMoonshotFetchEnv],
   ] as const) {
     const entry = value[key];
     if (entry === undefined) continue;
-    const stripped = strip(entry, isPlainObject(raw) ? raw[key] : undefined, getEnv);
+    const stripped = strip(
+      entry,
+      isPlainObject(raw) ? raw[key] : undefined,
+      getEnv,
+    );
     if (stripped === entry) continue;
     out ??= { ...value };
     if (stripped === undefined) {
@@ -176,18 +186,24 @@ export const servicesFromToml = (rawSnake: unknown): unknown => {
   if (!isPlainObject(rawSnake)) return rawSnake;
   const out: Record<string, unknown> = {};
   for (const [name, entry] of Object.entries(rawSnake)) {
-    out[snakeToCamel(name)] = isPlainObject(entry) ? serviceEntryFromToml(entry) : entry;
+    out[snakeToCamel(name)] = isPlainObject(entry)
+      ? serviceEntryFromToml(entry)
+      : entry;
   }
   return out;
 };
 
-function serviceEntryFromToml(data: Record<string, unknown>): Record<string, unknown> {
+function serviceEntryFromToml(
+  data: Record<string, unknown>,
+): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(data)) {
     const targetKey = snakeToCamel(key);
-    if (targetKey === 'oauth') {
-      out[targetKey] = isPlainObject(value) ? transformPlainObject(value) : value;
-    } else if (targetKey === 'customHeaders') {
+    if (targetKey === "oauth") {
+      out[targetKey] = isPlainObject(value)
+        ? transformPlainObject(value)
+        : value;
+    } else if (targetKey === "customHeaders") {
       out[targetKey] = isPlainObject(value) ? cloneRecord(value) : value;
     } else {
       out[targetKey] = value;
@@ -199,12 +215,16 @@ function serviceEntryFromToml(data: Record<string, unknown>): Record<string, unk
 export const servicesToToml = (value: unknown, rawSnake: unknown): unknown => {
   if (!isPlainObject(value)) return value;
   const out = cloneRecord(rawSnake);
-  writeService(out, 'moonshot_search', value['moonshotSearch']);
-  writeService(out, 'moonshot_fetch', value['moonshotFetch']);
+  writeService(out, "moonshot_search", value["moonshotSearch"]);
+  writeService(out, "moonshot_fetch", value["moonshotFetch"]);
   return out;
 };
 
-function writeService(out: Record<string, unknown>, snakeKey: string, service: unknown): void {
+function writeService(
+  out: Record<string, unknown>,
+  snakeKey: string,
+  service: unknown,
+): void {
   if (isPlainObject(service)) {
     out[snakeKey] = serviceEntryToToml(service);
   } else {
@@ -212,12 +232,14 @@ function writeService(out: Record<string, unknown>, snakeKey: string, service: u
   }
 }
 
-function serviceEntryToToml(service: Record<string, unknown>): Record<string, unknown> {
+function serviceEntryToToml(
+  service: Record<string, unknown>,
+): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(service)) {
-    if (key === 'oauth' && isPlainObject(value)) {
+    if (key === "oauth" && isPlainObject(value)) {
       out[camelToSnake(key)] = plainObjectToToml(value, undefined);
-    } else if (key === 'customHeaders' && value !== undefined) {
+    } else if (key === "customHeaders" && value !== undefined) {
       out[camelToSnake(key)] = cloneRecord(value);
     } else {
       setDefined(out, camelToSnake(key), value);

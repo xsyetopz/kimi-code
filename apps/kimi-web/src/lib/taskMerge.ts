@@ -1,4 +1,4 @@
-import type { AppTask } from '../api/types';
+import type { AppTask } from "../api/types";
 
 /**
  * Append the live-only swarm subagents that a fresh REST `/tasks` list does not
@@ -22,32 +22,40 @@ import type { AppTask } from '../api/types';
  * not surface as two rows; REST still corrects a terminal status the WS row
  * may have missed while disconnected.
  */
-export function keepLiveSubagents(restBased: AppTask[], existing: AppTask[]): AppTask[] {
+export function keepLiveSubagents(
+  restBased: AppTask[],
+  existing: AppTask[],
+): AppTask[] {
   const restIds = new Set(restBased.map((t) => t.id));
-  const liveSubagents = existing.filter((t) => t.kind === 'subagent' && !restIds.has(t.id));
+  const liveSubagents = existing.filter(
+    (t) => t.kind === "subagent" && !restIds.has(t.id),
+  );
   if (liveSubagents.length === 0) return restBased;
   const restById = new Map(restBased.map((t) => [t.id, t] as const));
   const foldedRestIds = new Set<string>();
   const merged = liveSubagents.map((live) => {
     const rest =
-      live.backgroundTaskId !== undefined ? restById.get(live.backgroundTaskId) : undefined;
+      live.backgroundTaskId !== undefined
+        ? restById.get(live.backgroundTaskId)
+        : undefined;
     if (rest === undefined) return live;
     foldedRestIds.add(rest.id);
     // True when the fold — not the event stream — is what makes the row terminal.
-    const restCompletesLiveRow = live.status === 'running' && rest.status !== 'running';
+    const restCompletesLiveRow =
+      live.status === "running" && rest.status !== "running";
     return {
       ...live,
       // Terminal-stickiness: never let a lagging poll flip a finished row back
       // to running, but let REST complete a row whose finish event was missed.
-      status: live.status === 'running' ? rest.status : live.status,
+      status: live.status === "running" ? rest.status : live.status,
       // toAgentMember prefers subagentPhase over status, so sync it too —
       // otherwise the detail panel badge keeps showing a stale Working/Queued.
       // The phase enum has no 'cancelled'; the dock already styles cancelled
       // rows as failed.
       subagentPhase: restCompletesLiveRow
-        ? rest.status === 'completed'
-          ? 'completed'
-          : 'failed'
+        ? rest.status === "completed"
+          ? "completed"
+          : "failed"
         : live.subagentPhase,
       completedAt: live.completedAt ?? rest.completedAt,
       // REST output is authoritative once present: agent tasks persist their
@@ -67,7 +75,10 @@ export function keepLiveSubagents(restBased: AppTask[], existing: AppTask[]): Ap
  * output (outputLines/text) from any already-live task, and keep tasks the
  * roster does not know about (background bash tasks from REST).
  */
-export function mergeSnapshotSubagents(roster: AppTask[], existing: AppTask[]): AppTask[] {
+export function mergeSnapshotSubagents(
+  roster: AppTask[],
+  existing: AppTask[],
+): AppTask[] {
   if (roster.length === 0) return existing;
   const existingById = new Map(existing.map((t) => [t.id, t] as const));
   const rosterIds = new Set(roster.map((t) => t.id));

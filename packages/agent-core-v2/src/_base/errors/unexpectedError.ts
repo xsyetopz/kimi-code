@@ -7,12 +7,14 @@ export type UnexpectedErrorHandler = (err: unknown) => void;
 
 const defaultHandler: UnexpectedErrorHandler = (err) => {
   // eslint-disable-next-line no-console
-  console.error('[unexpected]', err);
+  console.error("[unexpected]", err);
 };
 
 let currentHandler: UnexpectedErrorHandler = defaultHandler;
 
-export function setUnexpectedErrorHandler(handler: UnexpectedErrorHandler): void {
+export function setUnexpectedErrorHandler(
+  handler: UnexpectedErrorHandler,
+): void {
   currentHandler = handler;
 }
 
@@ -25,7 +27,12 @@ export function onUnexpectedError(err: unknown): void {
     currentHandler(err);
   } catch (handlerErr) {
     // eslint-disable-next-line no-console
-    console.error('[unexpected] handler threw', handlerErr, 'while reporting', err);
+    console.error(
+      "[unexpected] handler threw",
+      handlerErr,
+      "while reporting",
+      err,
+    );
   }
 }
 

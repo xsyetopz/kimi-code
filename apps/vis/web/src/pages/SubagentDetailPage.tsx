@@ -1,27 +1,32 @@
-import { Link, useParams } from 'react-router-dom';
-import { useSession } from '../hooks/useSession';
-import { TabBar, useActiveTab } from '../components/layout/TabBar';
-import { ContextTab } from '../components/context/ContextTab';
-import { WireTab } from '../components/wire/WireTab';
-import { Pill, type PillTone } from '../components/shared/Pill';
-import type { AgentInfo } from '../types';
+import { Link, useParams } from "react-router-dom";
+import { useSession } from "../hooks/useSession";
+import { TabBar, useActiveTab } from "../components/layout/TabBar";
+import { ContextTab } from "../components/context/ContextTab";
+import { WireTab } from "../components/wire/WireTab";
+import { Pill, type PillTone } from "../components/shared/Pill";
+import type { AgentInfo } from "../types";
 
-type TabId = 'wire' | 'context';
+type TabId = "wire" | "context";
 
-const TYPE_TONE: Record<AgentInfo['type'], PillTone> = {
-  main: 'conversation',
-  sub: 'subagent',
-  independent: 'tools',
+const TYPE_TONE: Record<AgentInfo["type"], PillTone> = {
+  main: "conversation",
+  sub: "subagent",
+  independent: "tools",
 };
 
 export function SubagentDetailPage() {
-  const { sessionId, agentId } = useParams<{ sessionId: string; agentId: string }>();
-  const active = useActiveTab('wire') as TabId;
+  const { sessionId, agentId } = useParams<{
+    sessionId: string;
+    agentId: string;
+  }>();
+  const active = useActiveTab("wire") as TabId;
   const { data: detail, isLoading, error } = useSession(sessionId);
 
   if (!sessionId || !agentId) return null;
   if (isLoading) {
-    return <div className="p-6 font-mono text-[12px] text-fg-3">loading agent…</div>;
+    return (
+      <div className="p-6 font-mono text-[12px] text-fg-3">loading agent…</div>
+    );
   }
   if (error) {
     return (
@@ -61,7 +66,7 @@ export function SubagentDetailPage() {
               </Pill>
               {agent.parentAgentId !== null ? (
                 <span className="font-mono text-[11px] text-fg-3">
-                  parent ·{' '}
+                  parent ·{" "}
                   <Link
                     to={`/sessions/${sessionId}/agents/${agent.parentAgentId}`}
                     className="text-fg-1 hover:text-fg-0"
@@ -72,10 +77,10 @@ export function SubagentDetailPage() {
               ) : null}
               <span className="font-mono text-[11px] text-fg-3 tabular">
                 {agent.wireRecordCount} record
-                {agent.wireRecordCount === 1 ? '' : 's'}
+                {agent.wireRecordCount === 1 ? "" : "s"}
                 {agent.wireProtocolVersion !== null
                   ? ` · v${agent.wireProtocolVersion}`
-                  : ''}
+                  : ""}
               </span>
               {!agent.wireExists ? (
                 <Pill tone="warning" variant="outline">
@@ -94,13 +99,13 @@ export function SubagentDetailPage() {
       <TabBar
         defaultTab="wire"
         tabs={[
-          { id: 'wire', label: 'Wire', count: agent?.wireRecordCount ?? null },
-          { id: 'context', label: 'Context', count: null },
+          { id: "wire", label: "Wire", count: agent?.wireRecordCount ?? null },
+          { id: "context", label: "Context", count: null },
         ]}
       />
 
       <div className="flex min-h-0 flex-1 flex-col">
-        {active === 'wire' ? (
+        {active === "wire" ? (
           agent === null || !agent.wireExists ? (
             <Centered>no wire records for this agent</Centered>
           ) : (
@@ -108,7 +113,7 @@ export function SubagentDetailPage() {
           )
         ) : null}
 
-        {active === 'context' ? (
+        {active === "context" ? (
           agent === null || !agent.wireExists ? (
             <Centered>no context for this agent</Centered>
           ) : (
@@ -120,7 +125,7 @@ export function SubagentDetailPage() {
   );
 }
 
-function Centered({ children }: { children: import('react').ReactNode }) {
+function Centered({ children }: { children: import("react").ReactNode }) {
   return (
     <div className="flex flex-1 items-center justify-center p-6 font-mono text-[12px] text-fg-3">
       {children}

@@ -25,9 +25,9 @@
  * (e.g. `PromptService.onDidComplete`, `SessionService.onDidCreate`).
  */
 
-import { createDecorator } from '../../di';
-import type { Event } from '../../base/common/event';
-import type { Event as ProtocolEvent } from '@moonshot-ai/protocol';
+import { createDecorator } from "../../di";
+import type { Event } from "../../base/common/event";
+import type { Event as ProtocolEvent } from "@moonshot-ai/protocol";
 
 /**
  * Naming convention inside this file:
@@ -63,4 +63,4 @@ export interface IEventService {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
-export const IEventService = createDecorator<IEventService>('eventService');
+export const IEventService = createDecorator<IEventService>("eventService");

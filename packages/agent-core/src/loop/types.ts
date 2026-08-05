@@ -10,11 +10,17 @@
  * `exactOptionalPropertyTypes: true`.
  */
 
-import type { ContentPart, Message, TokenUsage, Tool, ToolCall } from '@moonshot-ai/kosong';
+import type {
+  ContentPart,
+  Message,
+  TokenUsage,
+  Tool,
+  ToolCall,
+} from "@moonshot-ai/kosong";
 
-import type { ToolInputDisplay } from '../tools/display';
-import type { ToolAccesses } from './tool-access';
-import type { LLM } from './llm';
+import type { ToolInputDisplay } from "../tools/display";
+import type { ToolAccesses } from "./tool-access";
+import type { LLM } from "./llm";
 
 export type { ToolCall };
 
@@ -28,14 +34,17 @@ export type LoopMessageBuilder = () => Message[] | Promise<Message[]>;
  * turn unless a host hook explicitly asks the loop to continue.
  */
 export type LoopStepStopReason =
-  | 'end_turn'
-  | 'max_tokens'
-  | 'tool_use'
-  | 'filtered'
-  | 'paused'
-  | 'unknown';
+  | "end_turn"
+  | "max_tokens"
+  | "tool_use"
+  | "filtered"
+  | "paused"
+  | "unknown";
 
-export type LoopTerminalStepStopReason = Exclude<LoopStepStopReason, 'tool_use'>;
+export type LoopTerminalStepStopReason = Exclude<
+  LoopStepStopReason,
+  "tool_use"
+>;
 
 /**
  * Stop reasons that can be returned in a normal `TurnResult`.
@@ -45,13 +54,13 @@ export type LoopTerminalStepStopReason = Exclude<LoopStepStopReason, 'tool_use'>
  * errors, not by this union. Compaction is a host-level retry concern rather
  * than a stop reason.
  */
-export type LoopTurnStopReason = LoopTerminalStepStopReason | 'aborted';
+export type LoopTurnStopReason = LoopTerminalStepStopReason | "aborted";
 
 /**
  * @deprecated Legacy umbrella union. Use `LoopStepStopReason` for per-step
  * model responses and `LoopTurnStopReason` for `TurnResult`.
  */
-export type StopReason = LoopStepStopReason | 'aborted';
+export type StopReason = LoopStepStopReason | "aborted";
 
 export interface TurnResult {
   stopReason: LoopTurnStopReason;
@@ -107,10 +116,12 @@ export interface ExecutableToolErrorResult {
   readonly truncated?: boolean | undefined;
 }
 
-export type ExecutableToolResult = ExecutableToolSuccessResult | ExecutableToolErrorResult;
+export type ExecutableToolResult =
+  | ExecutableToolSuccessResult
+  | ExecutableToolErrorResult;
 
 export interface ToolUpdate {
-  kind: 'stdout' | 'stderr' | 'progress' | 'status' | 'custom';
+  kind: "stdout" | "stderr" | "progress" | "status" | "custom";
   text?: string | undefined;
   percent?: number | undefined;
   /** Vendor-defined event identifier when `kind === 'custom'`. */
@@ -149,7 +160,9 @@ export interface RunnableToolExecution {
   readonly stopBatchAfterThis?: boolean | undefined;
   readonly approvalRule: string;
   readonly matchesRule?: ((ruleArgs: string) => boolean) | undefined;
-  readonly execute: (ctx: ExecutableToolContext) => Promise<ExecutableToolResult>;
+  readonly execute: (
+    ctx: ExecutableToolContext,
+  ) => Promise<ExecutableToolResult>;
 }
 
 export type ToolExecution = RunnableToolExecution | ExecutableToolErrorResult;
@@ -178,7 +191,8 @@ export interface ToolExecutionHookContext extends LoopStepHookContext {
   readonly args: unknown;
 }
 
-export interface ResolvedToolExecutionHookContext extends ToolExecutionHookContext {
+export interface ResolvedToolExecutionHookContext
+  extends ToolExecutionHookContext {
   readonly execution: RunnableToolExecution;
 }
 
@@ -189,7 +203,8 @@ export interface AuthorizeToolExecutionResult {
   readonly executionMetadata?: unknown;
 }
 
-export interface PrepareToolExecutionResult extends AuthorizeToolExecutionResult {
+export interface PrepareToolExecutionResult
+  extends AuthorizeToolExecutionResult {
   readonly updatedArgs?: unknown;
 }
 
@@ -228,9 +243,13 @@ export interface ShouldContinueAfterStopResult {
   readonly continue: boolean;
 }
 
-export type BeforeStepHook = (ctx: LoopStepHookContext) => Promise<BeforeStepResult | undefined>;
+export type BeforeStepHook = (
+  ctx: LoopStepHookContext,
+) => Promise<BeforeStepResult | undefined>;
 
-export type AfterStepHook = (ctx: LoopAfterStepContext) => Promise<AfterStepResult | void>;
+export type AfterStepHook = (
+  ctx: LoopAfterStepContext,
+) => Promise<AfterStepResult | void>;
 
 export type PrepareToolExecutionHook = (
   ctx: ToolExecutionHookContext,

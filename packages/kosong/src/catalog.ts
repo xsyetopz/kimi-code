@@ -1,5 +1,5 @@
-import type { ModelCapability } from './capability';
-import type { ProviderType } from './providers';
+import type { ModelCapability } from "./capability";
+import type { ProviderType } from "./providers";
 
 /**
  * models.dev-style catalog: a public map of provider/model metadata. Callers
@@ -10,7 +10,11 @@ export interface CatalogModelEntry {
   readonly id?: string;
   readonly name?: string;
   readonly family?: string;
-  readonly limit?: { readonly context?: number; readonly input?: number; readonly output?: number };
+  readonly limit?: {
+    readonly context?: number;
+    readonly input?: number;
+    readonly output?: number;
+  };
   readonly tool_call?: boolean;
   readonly reasoning?: boolean;
   /**
@@ -88,39 +92,45 @@ export interface CatalogModel {
    * Per-model protocol override from the catalog entry's `provider` field
    * (gateway providers serving this model over the Anthropic protocol).
    */
-  readonly protocol?: 'anthropic';
+  readonly protocol?: "anthropic";
   /** Endpoint paired with {@link protocol}, adapted to the wire's SDK convention. */
   readonly baseUrl?: string;
   readonly capability: ModelCapability;
 }
 
 const KNOWN_WIRE_TYPES = [
-  'anthropic',
-  'openai',
-  'kimi',
-  'google-genai',
-  'openai_responses',
-  'vertexai',
+  "anthropic",
+  "openai",
+  "kimi",
+  "google-genai",
+  "openai_responses",
+  "vertexai",
 ] as const satisfies readonly ProviderType[];
 
 function isWireType(value: unknown): value is ProviderType {
-  return typeof value === 'string' && (KNOWN_WIRE_TYPES as readonly string[]).includes(value);
+  return (
+    typeof value === "string" &&
+    (KNOWN_WIRE_TYPES as readonly string[]).includes(value)
+  );
 }
 
 function hasEmbeddingMarker(value: string | undefined): boolean {
   if (value === undefined) return false;
   const lower = value.toLowerCase();
-  return lower.includes('embedding') || /(?:^|[-_/])embed(?:$|[-_/])/.test(lower);
+  return (
+    lower.includes("embedding") || /(?:^|[-_/])embed(?:$|[-_/])/.test(lower)
+  );
 }
 
 function isUsableChatModel(model: CatalogModelEntry): boolean {
   const outputModalities = model.modalities?.output;
-  if (outputModalities !== undefined && !outputModalities.includes('text')) return false;
+  if (outputModalities !== undefined && !outputModalities.includes("text"))
+    return false;
   // Deprecated models are shut down or scheduled for removal upstream, and
   // alpha models are pre-release (the reference consumer hides both by
   // default); do not offer them for new imports. Existing configs are
   // cleaned up on refresh because the alias is no longer listed upstream.
-  if (model.status === 'deprecated' || model.status === 'alpha') return false;
+  if (model.status === "deprecated" || model.status === "alpha") return false;
   return (
     !hasEmbeddingMarker(model.family) &&
     !hasEmbeddingMarker(model.id) &&
@@ -131,13 +141,13 @@ function isUsableChatModel(model: CatalogModelEntry): boolean {
 /** Why a catalog import cannot proceed at all. */
 export type CatalogImportInvalidReason =
   /** `type` is present but names a protocol this client version does not know. */
-  | 'unknown-explicit-type'
+  | "unknown-explicit-type"
   /** SDK known to be non-OpenAI proprietary (Amazon Bedrock, Cohere). */
-  | 'proprietary-sdk'
+  | "proprietary-sdk"
   /** A base URL was supplied but is blank. */
-  | 'empty-base-url'
+  | "empty-base-url"
   /** The endpoint contains an env placeholder (`${VAR}`) the config cannot express. */
-  | 'placeholder-base-url';
+  | "placeholder-base-url";
 
 /**
  * The outcome of resolving a catalog provider for import — the single
@@ -153,18 +163,18 @@ export type CatalogImportInvalidReason =
  */
 export type CatalogImportResolution =
   | {
-      readonly kind: 'ok';
+      readonly kind: "ok";
       readonly wire: ProviderType;
       readonly guessed: boolean;
       readonly baseUrl?: string;
     }
   | {
-      readonly kind: 'needs-base-url';
+      readonly kind: "needs-base-url";
       readonly wire: ProviderType;
       readonly guessed: boolean;
     }
   | {
-      readonly kind: 'invalid';
+      readonly kind: "invalid";
       readonly reason: CatalogImportInvalidReason;
     };
 
@@ -192,26 +202,35 @@ export function resolveCatalogImport(
   const wire = resolveCatalogWire(entry);
   if (wire === undefined) {
     return {
-      kind: 'invalid',
+      kind: "invalid",
       reason:
-        typeof entry.type === 'string' && entry.type.length > 0
-          ? 'unknown-explicit-type'
-          : 'proprietary-sdk',
+        typeof entry.type === "string" && entry.type.length > 0
+          ? "unknown-explicit-type"
+          : "proprietary-sdk",
     };
   }
   const guessed = inferDeclaredWireType(entry) === undefined;
 
   if (userBaseUrl !== undefined) {
     const trimmed = userBaseUrl.trim();
-    if (trimmed.length === 0) return { kind: 'invalid', reason: 'empty-base-url' };
-    if (trimmed.includes('${')) return { kind: 'invalid', reason: 'placeholder-base-url' };
-    return { kind: 'ok', wire, guessed, baseUrl: adaptBaseUrlForWire(trimmed, wire) };
+    if (trimmed.length === 0)
+      return { kind: "invalid", reason: "empty-base-url" };
+    if (trimmed.includes("${"))
+      return { kind: "invalid", reason: "placeholder-base-url" };
+    return {
+      kind: "ok",
+      wire,
+      guessed,
+      baseUrl: adaptBaseUrlForWire(trimmed, wire),
+    };
   }
 
   const catalogUrl = catalogBaseUrl(entry, wire);
-  if (catalogUrl !== undefined) return { kind: 'ok', wire, guessed, baseUrl: catalogUrl };
-  if (catalogEndpointRequired(entry, wire)) return { kind: 'needs-base-url', wire, guessed };
-  return { kind: 'ok', wire, guessed };
+  if (catalogUrl !== undefined)
+    return { kind: "ok", wire, guessed, baseUrl: catalogUrl };
+  if (catalogEndpointRequired(entry, wire))
+    return { kind: "needs-base-url", wire, guessed };
+  return { kind: "ok", wire, guessed };
 }
 
 /**
@@ -220,14 +239,17 @@ export function resolveCatalogImport(
  * the entry is not importable: an explicit type this client does not know,
  * or a proprietary non-OpenAI SDK (Bedrock, Cohere).
  */
-function resolveCatalogWire(entry: CatalogProviderEntry): ProviderType | undefined {
+function resolveCatalogWire(
+  entry: CatalogProviderEntry,
+): ProviderType | undefined {
   if (isWireType(entry.type)) return entry.type;
-  if (typeof entry.type === 'string' && entry.type.length > 0) return undefined;
+  if (typeof entry.type === "string" && entry.type.length > 0) return undefined;
   const declared = inferDeclaredWireType(entry);
   if (declared !== undefined) return declared;
-  const npm = (entry.npm ?? '').toLowerCase();
-  if (npm.includes('amazon-bedrock') || npm.includes('cohere')) return undefined;
-  return 'openai';
+  const npm = (entry.npm ?? "").toLowerCase();
+  if (npm.includes("amazon-bedrock") || npm.includes("cohere"))
+    return undefined;
+  return "openai";
 }
 
 /**
@@ -236,22 +258,34 @@ function resolveCatalogWire(entry: CatalogProviderEntry): ProviderType | undefin
  * is kept until the next major release for downstream consumers of the
  * previous public API.
  */
-export function inferWireType(entry: CatalogProviderEntry): ProviderType | undefined {
+export function inferWireType(
+  entry: CatalogProviderEntry,
+): ProviderType | undefined {
   return resolveCatalogWire(entry);
 }
 
-function inferDeclaredWireType(entry: CatalogProviderEntry): ProviderType | undefined {
+function inferDeclaredWireType(
+  entry: CatalogProviderEntry,
+): ProviderType | undefined {
   if (isWireType(entry.type)) return entry.type;
-  const npm = (entry.npm ?? '').toLowerCase();
-  const id = (entry.id ?? '').toLowerCase();
-  if (npm.includes('anthropic') || id.includes('anthropic') || id.includes('claude')) {
-    return 'anthropic';
+  const npm = (entry.npm ?? "").toLowerCase();
+  const id = (entry.id ?? "").toLowerCase();
+  if (
+    npm.includes("anthropic") ||
+    id.includes("anthropic") ||
+    id.includes("claude")
+  ) {
+    return "anthropic";
   }
-  if (id.includes('vertex')) return 'vertexai';
-  if (npm.includes('google') || id.includes('google') || id.includes('gemini')) {
-    return 'google-genai';
+  if (id.includes("vertex")) return "vertexai";
+  if (
+    npm.includes("google") ||
+    id.includes("google") ||
+    id.includes("gemini")
+  ) {
+    return "google-genai";
   }
-  if (npm.includes('openai') || id.includes('openai')) return 'openai';
+  if (npm.includes("openai") || id.includes("openai")) return "openai";
   return undefined;
 }
 
@@ -273,7 +307,8 @@ export function catalogBaseUrl(
   wire: ProviderType,
 ): string | undefined {
   const api = entry.api;
-  if (typeof api !== 'string' || api.length === 0 || api.includes('${')) return undefined;
+  if (typeof api !== "string" || api.length === 0 || api.includes("${"))
+    return undefined;
   return adaptBaseUrlForWire(api, wire);
 }
 
@@ -283,8 +318,11 @@ export function catalogBaseUrl(
  * land on `/v1/v1/messages`); other wires pass through unchanged. Applied to
  * catalog-declared and user-supplied URLs alike.
  */
-export function adaptBaseUrlForWire(baseUrl: string, wire: ProviderType): string {
-  return wire === 'anthropic' ? baseUrl.replace(/\/v1\/?$/, '') : baseUrl;
+export function adaptBaseUrlForWire(
+  baseUrl: string,
+  wire: ProviderType,
+): string {
+  return wire === "anthropic" ? baseUrl.replace(/\/v1\/?$/, "") : baseUrl;
 }
 
 /**
@@ -299,19 +337,26 @@ export function adaptBaseUrlForWire(baseUrl: string, wire: ProviderType): string
  * Vertex/google wires resolve their endpoint from env coordinates and
  * official SDKs, so they never need the prompt.
  */
-function catalogEndpointRequired(entry: CatalogProviderEntry, wire: ProviderType): boolean {
-  if (typeof entry.api === 'string' && entry.api.length > 0) return true;
-  const npm = (entry.npm ?? '').toLowerCase();
-  if (wire === 'openai' || wire === 'openai_responses') return npm !== '@ai-sdk/openai';
-  if (wire === 'anthropic') return npm !== '@ai-sdk/anthropic';
+function catalogEndpointRequired(
+  entry: CatalogProviderEntry,
+  wire: ProviderType,
+): boolean {
+  if (typeof entry.api === "string" && entry.api.length > 0) return true;
+  const npm = (entry.npm ?? "").toLowerCase();
+  if (wire === "openai" || wire === "openai_responses")
+    return npm !== "@ai-sdk/openai";
+  if (wire === "anthropic") return npm !== "@ai-sdk/anthropic";
   return false;
 }
 
 /** Normalizes one catalog model entry into a {@link CatalogModel}; skips invalid entries. */
-export function catalogModelToCapability(model: CatalogModelEntry): CatalogModel | undefined {
-  if (typeof model.id !== 'string' || model.id.length === 0) return undefined;
+export function catalogModelToCapability(
+  model: CatalogModelEntry,
+): CatalogModel | undefined {
+  if (typeof model.id !== "string" || model.id.length === 0) return undefined;
   const context = model.limit?.context;
-  if (typeof context !== 'number' || !Number.isInteger(context) || context <= 0) return undefined;
+  if (typeof context !== "number" || !Number.isInteger(context) || context <= 0)
+    return undefined;
   if (!isUsableChatModel(model)) return undefined;
   const inputs = model.modalities?.input ?? [];
   const output = model.limit?.output;
@@ -322,26 +367,32 @@ export function catalogModelToCapability(model: CatalogModelEntry): CatalogModel
   // completion budgeting keeps the full window.
   const input = model.limit?.input;
   const maxInputTokens =
-    typeof input === 'number' && Number.isInteger(input) && input > 0
+    typeof input === "number" && Number.isInteger(input) && input > 0
       ? Math.min(input, context)
       : undefined;
   return {
     id: model.id,
-    name: typeof model.name === 'string' && model.name.length > 0 ? model.name : undefined,
-    maxOutputSize: typeof output === 'number' && output > 0 ? output : undefined,
+    name:
+      typeof model.name === "string" && model.name.length > 0
+        ? model.name
+        : undefined,
+    maxOutputSize:
+      typeof output === "number" && output > 0 ? output : undefined,
     reasoningKey: catalogReasoningKey(model.interleaved),
     supportEfforts: thinking.efforts,
     offEffort: thinking.offEffort,
     alwaysThinking: thinking.alwaysThinking,
     capability: {
-      image_in: inputs.includes('image'),
-      video_in: inputs.includes('video'),
-      audio_in: inputs.includes('audio'),
+      image_in: inputs.includes("image"),
+      video_in: inputs.includes("video"),
+      audio_in: inputs.includes("audio"),
       // Declaring concrete effort levels (or a toggle) implies thinking
       // support even when the `reasoning` boolean is absent (mirrors the
       // api.json importer).
       thinking:
-        Boolean(model.reasoning) || thinking.efforts !== undefined || thinking.hasToggle,
+        Boolean(model.reasoning) ||
+        thinking.efforts !== undefined ||
+        thinking.hasToggle,
       tool_use: model.tool_call ?? true,
       max_context_tokens: context,
       max_input_tokens: maxInputTokens,
@@ -358,59 +409,82 @@ export function catalogModelToCapability(model: CatalogModelEntry): CatalogModel
  * the UI keeps using its own `off` entry for it. A model that declares levels
  * with neither a toggle nor `'none'` always reasons — it cannot be turned off.
  */
-function catalogThinkingOptions(options: CatalogModelEntry['reasoning_options']): {
+function catalogThinkingOptions(
+  options: CatalogModelEntry["reasoning_options"],
+): {
   readonly efforts: readonly string[] | undefined;
   readonly offEffort: string | undefined;
   readonly hasToggle: boolean;
   readonly alwaysThinking: boolean | undefined;
 } {
   if (!Array.isArray(options)) {
-    return { efforts: undefined, offEffort: undefined, hasToggle: false, alwaysThinking: undefined };
+    return {
+      efforts: undefined,
+      offEffort: undefined,
+      hasToggle: false,
+      alwaysThinking: undefined,
+    };
   }
   let efforts: readonly string[] | undefined;
   let offEffort: string | undefined;
   let hasToggle = false;
   for (const option of options) {
-    if (option?.type === 'toggle') {
+    if (option?.type === "toggle") {
       hasToggle = true;
       continue;
     }
-    if (option?.type !== 'effort' || !Array.isArray(option.values)) continue;
+    if (option?.type !== "effort" || !Array.isArray(option.values)) continue;
     // models.dev writes the disable tier either as the string 'none' or as
     // JSON null (the TOML source spells it "null"); both encode the same
     // wire value (`reasoning_effort: 'none'`).
-    const hasNullTier = (option.values as unknown[]).some((value) => value === null);
-    const levels = (option.values as unknown[]).filter(
-      (value: unknown): value is string => typeof value === 'string' && value.length > 0,
+    const hasNullTier = (option.values as unknown[]).some(
+      (value) => value === null,
     );
-    const off = levels.find((value) => value.toLowerCase() === 'none');
+    const levels = (option.values as unknown[]).filter(
+      (value: unknown): value is string =>
+        typeof value === "string" && value.length > 0,
+    );
+    const off = levels.find((value) => value.toLowerCase() === "none");
     if (off !== undefined) offEffort = off;
-    else if (hasNullTier) offEffort = 'none';
-    const selectable = levels.filter((value) => value.toLowerCase() !== 'none');
+    else if (hasNullTier) offEffort = "none";
+    const selectable = levels.filter((value) => value.toLowerCase() !== "none");
     if (selectable.length > 0) efforts = selectable;
   }
   const alwaysThinking =
-    efforts !== undefined && offEffort === undefined && !hasToggle ? true : undefined;
+    efforts !== undefined && offEffort === undefined && !hasToggle
+      ? true
+      : undefined;
   return { efforts, offEffort, hasToggle, alwaysThinking };
 }
 
-function catalogReasoningKey(interleaved: CatalogModelEntry['interleaved']): string | undefined {
+function catalogReasoningKey(
+  interleaved: CatalogModelEntry["interleaved"],
+): string | undefined {
   // Only the object form carries a field name. `interleaved: true` is just
   // "general support": the provider already defaults to scanning
   // `reasoning_content` / `reasoning_details` / `reasoning` inbound and to
   // `reasoning_content` outbound, so pinning a key here would only narrow the
   // inbound scan to one field — strictly worse for gateways that answer with
   // one of the other names.
-  if (typeof interleaved !== 'object' || interleaved === null) return undefined;
+  if (typeof interleaved !== "object" || interleaved === null) return undefined;
   const field = interleaved.field?.trim();
   return field !== undefined && field.length > 0 ? field : undefined;
 }
 
 /** Extracts the valid, normalized models from a catalog provider entry. */
-export function catalogProviderModels(entry: CatalogProviderEntry): CatalogModel[] {
+export function catalogProviderModels(
+  entry: CatalogProviderEntry,
+): CatalogModel[] {
   const providerWire = resolveCatalogWire(entry);
   return Object.values(entry.models ?? {})
-    .map((raw) => applyModelProviderOverride(catalogModelToCapability(raw), raw, entry, providerWire))
+    .map((raw) =>
+      applyModelProviderOverride(
+        catalogModelToCapability(raw),
+        raw,
+        entry,
+        providerWire,
+      ),
+    )
     .filter((model): model is CatalogModel => model !== undefined)
     .map((model) => {
       // The always-thinking inference ("effort levels, no toggle, no 'none'
@@ -426,7 +500,7 @@ export function catalogProviderModels(entry: CatalogProviderEntry): CatalogModel
       const protocol = model.protocol ?? providerWire;
       if (
         model.alwaysThinking === true &&
-        (protocol === 'anthropic' || protocol === 'kimi')
+        (protocol === "anthropic" || protocol === "kimi")
       ) {
         const { alwaysThinking: _dropped, ...rest } = model;
         return rest as CatalogModel;
@@ -459,29 +533,37 @@ function applyModelProviderOverride(
   // a (possibly different) one. Known proprietary SDKs are refused like at
   // top level; other unrecognized npm gets the same OpenAI-compatible
   // fallback so a concretely declared endpoint is not silently dropped.
-  const overrideNpm = typeof override.npm === 'string' ? override.npm.toLowerCase() : undefined;
+  const overrideNpm =
+    typeof override.npm === "string" ? override.npm.toLowerCase() : undefined;
   if (
     overrideNpm !== undefined &&
-    (overrideNpm.includes('amazon-bedrock') || overrideNpm.includes('cohere'))
+    (overrideNpm.includes("amazon-bedrock") || overrideNpm.includes("cohere"))
   ) {
     return undefined;
   }
   const overrideWire =
-    overrideNpm !== undefined ? (inferOverrideWire(overrideNpm) ?? 'openai') : providerWire;
+    overrideNpm !== undefined
+      ? (inferOverrideWire(overrideNpm) ?? "openai")
+      : providerWire;
   if (overrideWire === undefined) return model;
   const rawApi = override.api;
   const api = rawApi ?? entry.api;
   const usableApi =
-    typeof api === 'string' && api.length > 0 && !api.includes('${') ? api : undefined;
+    typeof api === "string" && api.length > 0 && !api.includes("${")
+      ? api
+      : undefined;
 
   if (overrideWire === providerWire) {
     // An explicitly declared endpoint the config cannot express (env
     // placeholder): the model belongs elsewhere we cannot persist or prompt
     // for — skip it rather than silently reroute to the provider endpoint.
-    if (typeof rawApi === 'string' && rawApi.includes('${')) return undefined;
+    if (typeof rawApi === "string" && rawApi.includes("${")) return undefined;
     // A distinct usable endpoint applies to this model specifically.
     if (usableApi !== undefined && usableApi !== entry.api) {
-      return { ...model, baseUrl: adaptBaseUrlForWire(usableApi, overrideWire) };
+      return {
+        ...model,
+        baseUrl: adaptBaseUrlForWire(usableApi, overrideWire),
+      };
     }
     return model;
   }
@@ -493,17 +575,21 @@ function applyModelProviderOverride(
   // freemodel's gpt entries on an Anthropic provider, Claude models on
   // google-vertex (whose wire here is Gemini-mode Vertex), or a google-genai
   // override on an OpenAI gateway.
-  if (overrideWire === 'anthropic' && usableApi !== undefined) {
-    return { ...model, protocol: 'anthropic', baseUrl: adaptBaseUrlForWire(usableApi, 'anthropic') };
+  if (overrideWire === "anthropic" && usableApi !== undefined) {
+    return {
+      ...model,
+      protocol: "anthropic",
+      baseUrl: adaptBaseUrlForWire(usableApi, "anthropic"),
+    };
   }
   return undefined;
 }
 
 function inferOverrideWire(npm: string): ProviderType | undefined {
   const normalized = npm.toLowerCase();
-  if (normalized.includes('anthropic')) return 'anthropic';
-  if (normalized.includes('vertex')) return 'vertexai';
-  if (normalized.includes('google')) return 'google-genai';
-  if (normalized.includes('openai')) return 'openai';
+  if (normalized.includes("anthropic")) return "anthropic";
+  if (normalized.includes("vertex")) return "vertexai";
+  if (normalized.includes("google")) return "google-genai";
+  if (normalized.includes("openai")) return "openai";
   return undefined;
 }

@@ -1,58 +1,58 @@
-import type { McpServerInfo } from '@moonshot-ai/kimi-code-sdk';
+import type { McpServerInfo } from "@moonshot-ai/kimi-code-sdk";
 
-import { currentTheme } from '#/tui/theme';
+import { currentTheme } from "#/tui/theme";
 
 export interface McpStatusReportOptions {
   readonly servers: readonly McpServerInfo[];
 }
 
-const STATUS_PRIORITY: Record<McpServerInfo['status'], number> = {
+const STATUS_PRIORITY: Record<McpServerInfo["status"], number> = {
   failed: 0,
-  'needs-auth': 1,
+  "needs-auth": 1,
   pending: 2,
   connected: 3,
   disabled: 4,
 };
 
-const STATUS_LABEL: Record<McpServerInfo['status'], string> = {
-  connected: 'connected',
-  pending: 'pending',
-  'needs-auth': 'needs auth',
-  failed: 'failed',
-  disabled: 'disabled',
+const STATUS_LABEL: Record<McpServerInfo["status"], string> = {
+  connected: "connected",
+  pending: "pending",
+  "needs-auth": "needs auth",
+  failed: "failed",
+  disabled: "disabled",
 };
 
-const SUMMARY_ORDER: readonly McpServerInfo['status'][] = [
-  'connected',
-  'pending',
-  'needs-auth',
-  'failed',
-  'disabled',
+const SUMMARY_ORDER: readonly McpServerInfo["status"][] = [
+  "connected",
+  "pending",
+  "needs-auth",
+  "failed",
+  "disabled",
 ];
 
 function statusPainter(
-  status: McpServerInfo['status'],
+  status: McpServerInfo["status"],
 ): (text: string) => string {
   switch (status) {
-    case 'connected':
-      return (text) => currentTheme.fg('success', text);
-    case 'failed':
-      return (text) => currentTheme.fg('error', text);
-    case 'needs-auth':
-    case 'pending':
-      return (text) => currentTheme.fg('warning', text);
-    case 'disabled':
-      return (text) => currentTheme.fg('textDim', text);
+    case "connected":
+      return (text) => currentTheme.fg("success", text);
+    case "failed":
+      return (text) => currentTheme.fg("error", text);
+    case "needs-auth":
+    case "pending":
+      return (text) => currentTheme.fg("warning", text);
+    case "disabled":
+      return (text) => currentTheme.fg("textDim", text);
   }
 }
 
 function formatToolCount(server: McpServerInfo): string {
-  if (server.status === 'disabled') return '—';
-  return `${server.toolCount} tool${server.toolCount === 1 ? '' : 's'}`;
+  if (server.status === "disabled") return "—";
+  return `${server.toolCount} tool${server.toolCount === 1 ? "" : "s"}`;
 }
 
 function formatToolsAvailable(count: number): string {
-  return `${count} tool${count === 1 ? '' : 's'} available`;
+  return `${count} tool${count === 1 ? "" : "s"} available`;
 }
 
 /**
@@ -65,22 +65,23 @@ function formatToolsAvailable(count: number): string {
  * panel then truncates to the available width.
  */
 function formatErrorLine(error: string): string {
-  return error.trim().replaceAll(/\s+/g, ' ');
+  return error.trim().replaceAll(/\s+/g, " ");
 }
 
 function sortedServers(servers: readonly McpServerInfo[]): McpServerInfo[] {
   return servers.toSorted(
     (a, b) =>
-      STATUS_PRIORITY[a.status] - STATUS_PRIORITY[b.status] || a.name.localeCompare(b.name),
+      STATUS_PRIORITY[a.status] - STATUS_PRIORITY[b.status] ||
+      a.name.localeCompare(b.name),
   );
 }
 
 function buildSummary(servers: readonly McpServerInfo[]): string {
-  const counts: Partial<Record<McpServerInfo['status'], number>> = {};
+  const counts: Partial<Record<McpServerInfo["status"], number>> = {};
   let toolsAvailable = 0;
   for (const server of servers) {
     counts[server.status] = (counts[server.status] ?? 0) + 1;
-    if (server.status === 'connected') toolsAvailable += server.toolCount;
+    if (server.status === "connected") toolsAvailable += server.toolCount;
   }
   const parts: string[] = [];
   for (const status of SUMMARY_ORDER) {
@@ -89,43 +90,50 @@ function buildSummary(servers: readonly McpServerInfo[]): string {
     parts.push(`${n} ${STATUS_LABEL[status]}`);
   }
   parts.push(formatToolsAvailable(toolsAvailable));
-  return parts.join(' · ');
+  return parts.join(" · ");
 }
 
-export function buildMcpStatusReportLines(options: McpStatusReportOptions): string[] {
+export function buildMcpStatusReportLines(
+  options: McpStatusReportOptions,
+): string[] {
   const servers = sortedServers(options.servers);
-  const accent = (text: string) => currentTheme.boldFg('primary', text);
-  const muted = (text: string) => currentTheme.fg('textDim', text);
-  const value = (text: string) => currentTheme.fg('text', text);
-  const error = (text: string) => currentTheme.fg('error', text);
+  const accent = (text: string) => currentTheme.boldFg("primary", text);
+  const muted = (text: string) => currentTheme.fg("textDim", text);
+  const value = (text: string) => currentTheme.fg("text", text);
+  const error = (text: string) => currentTheme.fg("error", text);
 
-  const lines: string[] = [accent('Servers')];
+  const lines: string[] = [accent("Servers")];
 
   if (servers.length === 0) {
-    lines.push(muted('  No MCP servers configured. Run /mcp-config to add one.'));
+    lines.push(
+      muted("  No MCP servers configured. Run /mcp-config to add one."),
+    );
     return lines;
   }
 
-  const nameWidth = Math.max('Name'.length, ...servers.map((server) => server.name.length));
+  const nameWidth = Math.max(
+    "Name".length,
+    ...servers.map((server) => server.name.length),
+  );
   const statusWidth = Math.max(
-    'Status'.length,
+    "Status".length,
     ...servers.map((server) => STATUS_LABEL[server.status].length),
   );
   const transportWidth = Math.max(
-    'Transport'.length,
+    "Transport".length,
     ...servers.map((server) => server.transport.length),
   );
 
   lines.push(
-    `  ${muted('Name'.padEnd(nameWidth))}  ${muted('Status'.padEnd(statusWidth))}  ${muted(
-      'Transport'.padEnd(transportWidth),
-    )}  ${muted('Tools')}`,
+    `  ${muted("Name".padEnd(nameWidth))}  ${muted("Status".padEnd(statusWidth))}  ${muted(
+      "Transport".padEnd(transportWidth),
+    )}  ${muted("Tools")}`,
   );
 
   for (const server of servers) {
-    const status = statusPainter(
-      server.status,
-    )(STATUS_LABEL[server.status].padEnd(statusWidth));
+    const status = statusPainter(server.status)(
+      STATUS_LABEL[server.status].padEnd(statusWidth),
+    );
     lines.push(
       `  ${value(server.name.padEnd(nameWidth))}  ${status}  ${muted(
         server.transport.padEnd(transportWidth),
@@ -133,20 +141,24 @@ export function buildMcpStatusReportLines(options: McpStatusReportOptions): stri
     );
 
     if (
-      server.status === 'failed' &&
+      server.status === "failed" &&
       server.error !== undefined &&
       server.error.trim().length > 0
     ) {
-      lines.push(`    ${muted('error:')} ${error(formatErrorLine(server.error))}`);
+      lines.push(
+        `    ${muted("error:")} ${error(formatErrorLine(server.error))}`,
+      );
     }
-    if (server.status === 'needs-auth') {
-      lines.push(`    ${muted('action:')} ${value(`run /mcp-config login ${server.name}`)}`);
+    if (server.status === "needs-auth") {
+      lines.push(
+        `    ${muted("action:")} ${value(`run /mcp-config login ${server.name}`)}`,
+      );
     }
   }
 
-  lines.push('');
+  lines.push("");
   lines.push(`  ${value(buildSummary(servers))}`);
-  lines.push(`  ${muted('Configure with')} ${value('/mcp-config')}`);
+  lines.push(`  ${muted("Configure with")} ${value("/mcp-config")}`);
 
   return lines;
 }

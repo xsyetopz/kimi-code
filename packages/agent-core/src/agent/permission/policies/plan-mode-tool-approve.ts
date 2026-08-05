@@ -1,44 +1,50 @@
-import type { Agent } from '../..';
-import type { PermissionPolicy, PermissionPolicyContext, PermissionPolicyResult } from '../types';
-import { writeFileAccesses } from './file-access-ask';
+import type { Agent } from "../..";
+import type {
+  PermissionPolicy,
+  PermissionPolicyContext,
+  PermissionPolicyResult,
+} from "../types";
+import { writeFileAccesses } from "./file-access-ask";
 
 export class PlanModeToolApprovePermissionPolicy implements PermissionPolicy {
-  readonly name = 'plan-mode-tool-approve';
+  readonly name = "plan-mode-tool-approve";
 
   constructor(private readonly agent: Agent) {}
 
-  evaluate(context: PermissionPolicyContext): PermissionPolicyResult | undefined {
+  evaluate(
+    context: PermissionPolicyContext,
+  ): PermissionPolicyResult | undefined {
     const toolName = context.toolCall.name;
-    if (toolName === 'EnterPlanMode') {
+    if (toolName === "EnterPlanMode") {
       return {
-        kind: 'approve',
+        kind: "approve",
       };
     }
 
     if (
-      (toolName === 'Write' || toolName === 'Edit') &&
+      (toolName === "Write" || toolName === "Edit") &&
       this.agent.planMode.isActive &&
       writesOnlyPlanFile(context, this.agent.planMode.planFilePath)
     ) {
       return {
-        kind: 'approve',
+        kind: "approve",
       };
     }
 
-    if (toolName === 'ExitPlanMode') {
+    if (toolName === "ExitPlanMode") {
       if (!this.agent.planMode.isActive) {
         return {
-          kind: 'approve',
+          kind: "approve",
         };
       }
-      if (context.execution.display?.kind !== 'plan_review') {
+      if (context.execution.display?.kind !== "plan_review") {
         return {
-          kind: 'approve',
+          kind: "approve",
         };
       }
       if (context.execution.display.plan.trim().length > 0) return;
       return {
-        kind: 'approve',
+        kind: "approve",
       };
     }
   }

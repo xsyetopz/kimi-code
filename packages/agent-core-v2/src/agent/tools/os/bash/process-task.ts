@@ -1,28 +1,28 @@
-import type { Readable } from 'node:stream';
+import type { Readable } from "node:stream";
 
-import type { IProcess } from '#/session/process/processRunner';
+import type { IProcess } from "#/session/process/processRunner";
 
 import type {
   AgentTask,
   AgentTaskInfoBase,
   AgentTaskSink,
   AgentTaskSettlement,
-} from '#/agent/task/types';
+} from "#/agent/task/types";
 
 export interface ProcessTaskInfo extends AgentTaskInfoBase {
-  readonly kind: 'process';
+  readonly kind: "process";
   readonly command: string;
   readonly pid: number;
   readonly exitCode: number | null;
 }
 
-declare module '#/agent/task/types' {
+declare module "#/agent/task/types" {
   interface AgentTaskInfoByKind {
     readonly process: ProcessTaskInfo;
   }
 }
 
-export type ProcessTaskOutputKind = 'stdout' | 'stderr';
+export type ProcessTaskOutputKind = "stdout" | "stderr";
 
 export type ProcessTaskOutputCallback = (
   kind: ProcessTaskOutputKind,
@@ -32,8 +32,8 @@ export type ProcessTaskOutputCallback = (
 const STREAM_DRAIN_GRACE_MS = 250;
 
 export class ProcessTask implements AgentTask {
-  readonly kind = 'process' as const;
-  readonly idPrefix = 'bash';
+  readonly kind = "process" as const;
+  readonly idPrefix = "bash";
   private exitCode: number | null = null;
 
   constructor(
@@ -45,18 +45,18 @@ export class ProcessTask implements AgentTask {
 
   async start(sink: AgentTaskSink): Promise<void> {
     const streamDrained = Promise.all([
-      observeProcessStream(this.proc.stdout, 'stdout', sink, this.onOutput),
-      observeProcessStream(this.proc.stderr, 'stderr', sink, this.onOutput),
+      observeProcessStream(this.proc.stdout, "stdout", sink, this.onOutput),
+      observeProcessStream(this.proc.stderr, "stderr", sink, this.onOutput),
     ]).then(() => undefined);
     void streamDrained.catch(() => {});
 
     const requestStop = (): void => {
-      void this.proc.kill('SIGTERM').catch(() => {});
+      void this.proc.kill("SIGTERM").catch(() => {});
     };
     if (sink.signal.aborted) {
       requestStop();
     } else {
-      sink.signal.addEventListener('abort', requestStop, { once: true });
+      sink.signal.addEventListener("abort", requestStop, { once: true });
     }
 
     let settlement: AgentTaskSettlement;
@@ -65,17 +65,21 @@ export class ProcessTask implements AgentTask {
       await waitForStreamDrain(streamDrained);
       this.exitCode = exitCode;
       settlement = {
-        status: sink.signal.aborted ? 'killed' : exitCode === 0 ? 'completed' : 'failed',
+        status: sink.signal.aborted
+          ? "killed"
+          : exitCode === 0
+            ? "completed"
+            : "failed",
       };
     } catch (error: unknown) {
       await waitForStreamDrainSettled(streamDrained);
       this.exitCode = this.proc.exitCode;
       settlement = {
-        status: sink.signal.aborted ? 'killed' : 'failed',
+        status: sink.signal.aborted ? "killed" : "failed",
         stopReason: sink.signal.aborted ? undefined : errorMessage(error),
       };
     } finally {
-      sink.signal.removeEventListener('abort', requestStop);
+      sink.signal.removeEventListener("abort", requestStop);
       await this.disposeProcess();
     }
     await sink.settle(settlement);
@@ -84,7 +88,7 @@ export class ProcessTask implements AgentTask {
   async forceStop(): Promise<void> {
     try {
       if (this.proc.exitCode === null) {
-        await this.proc.kill('SIGKILL');
+        await this.proc.kill("SIGKILL");
       }
     } finally {
       await this.disposeProcess();
@@ -94,7 +98,7 @@ export class ProcessTask implements AgentTask {
   toInfo(base: AgentTaskInfoBase): ProcessTaskInfo {
     return {
       ...base,
-      kind: 'process',
+      kind: "process",
       command: this.command,
       pid: this.proc.pid,
       exitCode: this.exitCode,
@@ -104,8 +108,7 @@ export class ProcessTask implements AgentTask {
   private async disposeProcess(): Promise<void> {
     try {
       await this.proc.dispose();
-    } catch {
-    }
+    } catch {}
   }
 }
 
@@ -124,11 +127,12 @@ async function waitForStreamDrain(streamDrained: Promise<void>): Promise<void> {
   }
 }
 
-async function waitForStreamDrainSettled(streamDrained: Promise<void>): Promise<void> {
+async function waitForStreamDrainSettled(
+  streamDrained: Promise<void>,
+): Promise<void> {
   try {
     await waitForStreamDrain(streamDrained);
-  } catch {
-  }
+  } catch {}
 }
 
 function observeProcessStream(
@@ -137,14 +141,14 @@ function observeProcessStream(
   sink: AgentTaskSink,
   onOutput?: ProcessTaskOutputCallback,
 ): Promise<void> {
-  stream.setEncoding('utf8');
+  stream.setEncoding("utf8");
   const onData = (chunk: string): void => {
     if (chunk.length === 0) return;
     sink.appendOutput(chunk);
     if (sink.signal.aborted) return;
     onOutput?.(kind, chunk);
   };
-  stream.on('data', onData);
+  stream.on("data", onData);
 
   return new Promise<void>((resolve, reject) => {
     let ended = false;
@@ -178,14 +182,14 @@ function observeProcessStream(
       }
     };
     const cleanup = (): void => {
-      stream.removeListener('data', onData);
-      stream.removeListener('end', onEnd);
-      stream.removeListener('close', onClose);
-      stream.removeListener('error', onError);
+      stream.removeListener("data", onData);
+      stream.removeListener("end", onEnd);
+      stream.removeListener("close", onClose);
+      stream.removeListener("error", onError);
     };
-    stream.once('end', onEnd);
-    stream.once('close', onClose);
-    stream.once('error', onError);
+    stream.once("end", onEnd);
+    stream.once("close", onClose);
+    stream.once("error", onError);
   });
 }
 
@@ -196,9 +200,15 @@ export interface ProcessTaskResult {
 export function createProcessExecutor(
   proc: IProcess,
   onOutput?: ProcessTaskOutputCallback,
-): (signal: AbortSignal, output: (data: string) => void) => Promise<ProcessTaskResult> {
+): (
+  signal: AbortSignal,
+  output: (data: string) => void,
+) => Promise<ProcessTaskResult> {
   return async (signal, output) => {
-    const forwardOutput = (chunk: string, kind: ProcessTaskOutputKind): void => {
+    const forwardOutput = (
+      chunk: string,
+      kind: ProcessTaskOutputKind,
+    ): void => {
       if (chunk.length === 0) return;
       output(chunk);
       if (signal.aborted) return;
@@ -206,24 +216,24 @@ export function createProcessExecutor(
     };
 
     const streamDrained = Promise.all([
-      observeProcessStreamRaw(proc.stdout, 'stdout', signal, forwardOutput),
-      observeProcessStreamRaw(proc.stderr, 'stderr', signal, forwardOutput),
+      observeProcessStreamRaw(proc.stdout, "stdout", signal, forwardOutput),
+      observeProcessStreamRaw(proc.stderr, "stderr", signal, forwardOutput),
     ]).then(() => undefined);
     void streamDrained.catch(() => {});
 
     const requestStop = (): void => {
-      void proc.kill('SIGTERM').catch(() => {});
+      void proc.kill("SIGTERM").catch(() => {});
     };
     if (signal.aborted) {
       requestStop();
     } else {
-      signal.addEventListener('abort', requestStop, { once: true });
+      signal.addEventListener("abort", requestStop, { once: true });
     }
 
     try {
       const exitCode = await proc.wait();
       await waitForStreamDrain(streamDrained);
-      signal.removeEventListener('abort', requestStop);
+      signal.removeEventListener("abort", requestStop);
       await disposeProcess(proc);
       if (signal.aborted) throw signal.reason;
       if (exitCode !== 0) {
@@ -233,7 +243,7 @@ export function createProcessExecutor(
       return { exitCode };
     } catch (error: unknown) {
       await waitForStreamDrainSettled(streamDrained);
-      signal.removeEventListener('abort', requestStop);
+      signal.removeEventListener("abort", requestStop);
       await disposeProcess(proc);
       throw error;
     }
@@ -243,7 +253,7 @@ export function createProcessExecutor(
 export class ProcessExitError extends Error {
   constructor(readonly exitCode: number | null) {
     super(`Process exited with code ${exitCode}`);
-    this.name = 'ProcessExitError';
+    this.name = "ProcessExitError";
   }
 }
 
@@ -253,43 +263,61 @@ function observeProcessStreamRaw(
   signal: AbortSignal,
   onChunk: (chunk: string, kind: ProcessTaskOutputKind) => void,
 ): Promise<void> {
-  stream.setEncoding('utf8');
+  stream.setEncoding("utf8");
   const onData = (chunk: string): void => {
     onChunk(chunk, kind);
   };
-  stream.on('data', onData);
+  stream.on("data", onData);
 
   return new Promise<void>((resolve, reject) => {
     let ended = false;
     const cleanup = (): void => {
-      stream.removeListener('data', onData);
-      stream.removeListener('end', onEnd);
-      stream.removeListener('close', onClose);
-      stream.removeListener('error', onError);
+      stream.removeListener("data", onData);
+      stream.removeListener("end", onEnd);
+      stream.removeListener("close", onClose);
+      stream.removeListener("error", onError);
     };
-    const done = (): void => { cleanup(); resolve(); };
-    const fail = (error: unknown): void => { cleanup(); reject(error); };
-    const onEnd = (): void => { ended = true; done(); };
+    const done = (): void => {
+      cleanup();
+      resolve();
+    };
+    const fail = (error: unknown): void => {
+      cleanup();
+      reject(error);
+    };
+    const onEnd = (): void => {
+      ended = true;
+      done();
+    };
     const onClose = (): void => {
-      if (ended || signal.aborted) { done(); return; }
+      if (ended || signal.aborted) {
+        done();
+        return;
+      }
       fail(createPrematureCloseError());
     };
     const onError = (error: Error): void => {
-      if (signal.aborted) { done(); } else { fail(error); }
+      if (signal.aborted) {
+        done();
+      } else {
+        fail(error);
+      }
     };
-    stream.once('end', onEnd);
-    stream.once('close', onClose);
-    stream.once('error', onError);
+    stream.once("end", onEnd);
+    stream.once("close", onClose);
+    stream.once("error", onError);
   });
 }
 
 async function disposeProcess(proc: IProcess): Promise<void> {
-  try { await proc.dispose(); } catch {   }
+  try {
+    await proc.dispose();
+  } catch {}
 }
 
 function createPrematureCloseError(): Error {
-  const error = new Error('Premature close') as NodeJS.ErrnoException;
-  error.code = 'ERR_STREAM_PREMATURE_CLOSE';
+  const error = new Error("Premature close") as NodeJS.ErrnoException;
+  error.code = "ERR_STREAM_PREMATURE_CLOSE";
   return error;
 }
 

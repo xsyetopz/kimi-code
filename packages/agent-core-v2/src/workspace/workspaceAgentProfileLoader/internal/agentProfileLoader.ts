@@ -17,11 +17,15 @@
  * `ready` keeps an un-awaited rejection from crashing the process.
  */
 
-import { Disposable, MutableDisposable, type IDisposable } from '#/_base/di/lifecycle';
-import type { ILogService } from '#/_base/log/log';
-import type { IAgentProfileRegistry } from '#/app/agentProfileCatalog/agentProfileRegistry';
+import {
+  Disposable,
+  MutableDisposable,
+  type IDisposable,
+} from "#/_base/di/lifecycle";
+import type { ILogService } from "#/_base/log/log";
+import type { IAgentProfileRegistry } from "#/app/agentProfileCatalog/agentProfileRegistry";
 
-import type { AgentProfileContribution } from '#/app/agentProfileCatalog/agentProfileContribution';
+import type { AgentProfileContribution } from "#/app/agentProfileCatalog/agentProfileContribution";
 
 export abstract class AgentProfileLoaderBase extends Disposable {
   protected abstract readonly sourceId: string;
@@ -30,7 +34,9 @@ export abstract class AgentProfileLoaderBase extends Disposable {
 
   private readyPromise: Promise<void> = Promise.resolve();
   private tail: Promise<void> = Promise.resolve();
-  private readonly registrationHandle = this._register(new MutableDisposable<IDisposable>());
+  private readonly registrationHandle = this._register(
+    new MutableDisposable<IDisposable>(),
+  );
 
   constructor(
     protected readonly registry: IAgentProfileRegistry,
@@ -61,7 +67,9 @@ export abstract class AgentProfileLoaderBase extends Disposable {
   }
 
   private enqueue(): Promise<void> {
-    const current = this.tail.catch(() => undefined).then(() => this.loadAndRegister());
+    const current = this.tail
+      .catch(() => undefined)
+      .then(() => this.loadAndRegister());
     this.tail = current;
     return current;
   }
@@ -69,13 +77,19 @@ export abstract class AgentProfileLoaderBase extends Disposable {
   private async loadAndRegister(): Promise<void> {
     try {
       const contribution = await this.load();
-      this.registrationHandle.value = this.registry.register(this.sourceId, contribution, {
-        priority: this.priority,
-        workspaceKey: this.workspaceKey,
-      });
+      this.registrationHandle.value = this.registry.register(
+        this.sourceId,
+        contribution,
+        {
+          priority: this.priority,
+          workspaceKey: this.workspaceKey,
+        },
+      );
     } catch (error) {
       if (this.fatal) throw error;
-      this.log.warn(`agent profile loader "${this.sourceId}" load failed: ${String(error)}`);
+      this.log.warn(
+        `agent profile loader "${this.sourceId}" load failed: ${String(error)}`,
+      );
     }
   }
 }

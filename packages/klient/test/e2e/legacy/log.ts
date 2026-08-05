@@ -1,29 +1,31 @@
-import { onTestFailed, onTestFinished } from 'vitest';
+import { onTestFailed, onTestFinished } from "vitest";
 
-import { recordReportEvent, setActiveReportCase } from '../harness/report.js';
+import { recordReportEvent, setActiveReportCase } from "../harness/report.js";
 
-export function createCaseLogger(caseName: string): (label: string, value?: unknown) => void {
+export function createCaseLogger(
+  caseName: string,
+): (label: string, value?: unknown) => void {
   setActiveReportCase(caseName);
   let failed = false;
   onTestFailed((error) => {
     failed = true;
     recordReportEvent({
-      kind: 'test-result',
+      kind: "test-result",
       caseName,
-      state: 'failed',
+      state: "failed",
       error: errorForLog(error),
     });
   });
   onTestFinished(() => {
     if (failed) return;
     recordReportEvent({
-      kind: 'test-result',
+      kind: "test-result",
       caseName,
-      state: 'passed',
+      state: "passed",
     });
   });
   return (label, value) => {
-    recordReportEvent({ kind: 'log', caseName, label, value });
+    recordReportEvent({ kind: "log", caseName, label, value });
     const prefix = `[server-e2e] ${caseName} :: ${label}`;
     if (value === undefined) {
       writeLogLine(prefix);

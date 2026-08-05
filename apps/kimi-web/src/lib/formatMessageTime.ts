@@ -4,13 +4,16 @@
 // - This year:    06-15 14:32
 // - Older years:  2025-06-15 14:32
 // Invalid input falls back to the original string.
-export function formatMessageTime(iso: string, yesterdayLabel = '昨天'): string {
+export function formatMessageTime(
+  iso: string,
+  yesterdayLabel = "昨天",
+): string {
   try {
     const d = new Date(iso);
     if (Number.isNaN(d.getTime())) return iso;
 
     const now = new Date();
-    const pad2 = (n: number) => String(n).padStart(2, '0');
+    const pad2 = (n: number) => String(n).padStart(2, "0");
     const timeStr = `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
 
     const sameYear = d.getFullYear() === now.getFullYear();

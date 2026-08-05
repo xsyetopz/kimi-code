@@ -1,5 +1,5 @@
-import { readApiErrorMessage } from './api-error';
-import { kimiCodeBaseUrl } from './managed-usage';
+import { readApiErrorMessage } from "./api-error";
+import { kimiCodeBaseUrl } from "./managed-usage";
 
 export interface CreateFeedbackUploadUrlBody {
   readonly file_hash: string;
@@ -31,17 +31,17 @@ export interface CompleteFeedbackUploadBody {
 }
 
 export interface FetchFeedbackUploadError {
-  readonly kind: 'error';
+  readonly kind: "error";
   readonly status?: number;
   readonly message: string;
 }
 
 export interface FetchCompleteFeedbackUploadOk {
-  readonly kind: 'ok';
+  readonly kind: "ok";
 }
 
 export type FetchCreateFeedbackUploadUrlResult =
-  | ({ readonly kind: 'ok' } & CreateFeedbackUploadUrlResponse)
+  | ({ readonly kind: "ok" } & CreateFeedbackUploadUrlResponse)
   | FetchFeedbackUploadError;
 
 export type FetchCompleteFeedbackUploadResult =
@@ -61,13 +61,21 @@ export async function fetchCreateFeedbackUploadUrl(
   body: CreateFeedbackUploadUrlBody,
   opts: { timeoutMs?: number; baseUrl?: string } = {},
 ): Promise<FetchCreateFeedbackUploadUrlResult> {
-  const result = await postJson(kimiCodeFeedbackUploadUrl(opts.baseUrl), accessToken, body, opts);
-  if (result.kind === 'error') return result;
+  const result = await postJson(
+    kimiCodeFeedbackUploadUrl(opts.baseUrl),
+    accessToken,
+    body,
+    opts,
+  );
+  if (result.kind === "error") return result;
   const parsed = readUpload(result.payload);
   if (parsed === undefined) {
-    return { kind: 'error', message: 'Feedback upload request failed: missing upload id or parts.' };
+    return {
+      kind: "error",
+      message: "Feedback upload request failed: missing upload id or parts.",
+    };
   }
-  return { kind: 'ok', upload_id: parsed.uploadId, parts: parsed.parts };
+  return { kind: "ok", upload_id: parsed.uploadId, parts: parsed.parts };
 }
 
 export async function fetchCompleteFeedbackUpload(
@@ -75,9 +83,14 @@ export async function fetchCompleteFeedbackUpload(
   body: CompleteFeedbackUploadBody,
   opts: { timeoutMs?: number; baseUrl?: string } = {},
 ): Promise<FetchCompleteFeedbackUploadResult> {
-  const result = await postJson(kimiCodeFeedbackUploadCompleteUrl(opts.baseUrl), accessToken, body, opts);
-  if (result.kind === 'error') return result;
-  return { kind: 'ok' };
+  const result = await postJson(
+    kimiCodeFeedbackUploadCompleteUrl(opts.baseUrl),
+    accessToken,
+    body,
+    opts,
+  );
+  if (result.kind === "error") return result;
+  return { kind: "ok" };
 }
 
 async function postJson(
@@ -85,54 +98,61 @@ async function postJson(
   accessToken: string,
   body: unknown,
   opts: { timeoutMs?: number },
-): Promise<{ readonly kind: 'ok'; readonly payload: unknown } | FetchFeedbackUploadError> {
+): Promise<
+  { readonly kind: "ok"; readonly payload: unknown } | FetchFeedbackUploadError
+> {
   const controller = new AbortController();
   const timer = setTimeout(() => {
     controller.abort();
   }, opts.timeoutMs ?? 8000);
   try {
     const res = await fetch(url, {
-      method: 'POST',
+      method: "POST",
       headers: {
         Authorization: `Bearer ${accessToken}`,
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
+        Accept: "application/json",
+        "Content-Type": "application/json",
       },
       body: JSON.stringify(body),
       signal: controller.signal,
     });
     if (!res.ok) {
       return {
-        kind: 'error',
+        kind: "error",
         status: res.status,
-        message: await readApiErrorMessage(res, `Feedback upload request failed: HTTP ${res.status}`),
+        message: await readApiErrorMessage(
+          res,
+          `Feedback upload request failed: HTTP ${res.status}`,
+        ),
       };
     }
     const text = await res.text();
-    return { kind: 'ok', payload: text.length > 0 ? JSON.parse(text) : {} };
+    return { kind: "ok", payload: text.length > 0 ? JSON.parse(text) : {} };
   } catch (error) {
-    if (error instanceof Error && error.name === 'AbortError') {
-      return { kind: 'error', message: 'Feedback upload request timed out.' };
+    if (error instanceof Error && error.name === "AbortError") {
+      return { kind: "error", message: "Feedback upload request timed out." };
     }
     const msg = error instanceof Error ? error.message : String(error);
-    return { kind: 'error', message: `Feedback upload request failed: ${msg}` };
+    return { kind: "error", message: `Feedback upload request failed: ${msg}` };
   } finally {
     clearTimeout(timer);
   }
 }
 
 function feedbackBaseUrl(baseUrl?: string): string {
-  return (baseUrl ?? kimiCodeBaseUrl()).replace(/\/+$/, '');
+  return (baseUrl ?? kimiCodeBaseUrl()).replace(/\/+$/, "");
 }
 
 function readUpload(
   payload: unknown,
-): { readonly uploadId: number; readonly parts: FeedbackUploadPart[] } | undefined {
-  const upload = readRecord(payload, 'upload');
-  if (typeof upload !== 'object' || upload === null) return undefined;
+):
+  | { readonly uploadId: number; readonly parts: FeedbackUploadPart[] }
+  | undefined {
+  const upload = readRecord(payload, "upload");
+  if (typeof upload !== "object" || upload === null) return undefined;
   const record = upload as Record<string, unknown>;
-  const uploadId = readNumberField(record, 'id');
-  const partsRaw = record['parts'];
+  const uploadId = readNumberField(record, "id");
+  const partsRaw = record["parts"];
   if (!Array.isArray(partsRaw) || partsRaw.length === 0) return undefined;
   const parts: FeedbackUploadPart[] = [];
   for (const item of partsRaw) {
@@ -144,28 +164,36 @@ function readUpload(
 }
 
 function readPart(item: unknown): FeedbackUploadPart | undefined {
-  if (typeof item !== 'object' || item === null) return undefined;
+  if (typeof item !== "object" || item === null) return undefined;
   const record = item as Record<string, unknown>;
-  const partNumber = readNumberField(record, 'part_number');
-  const url = readStringField(record, 'url');
-  const size = readNumberField(record, 'size');
-  if (partNumber === undefined || url === undefined || size === undefined) return undefined;
-  return { part_number: partNumber, url, method: readStringField(record, 'method') ?? 'PUT', size };
+  const partNumber = readNumberField(record, "part_number");
+  const url = readStringField(record, "url");
+  const size = readNumberField(record, "size");
+  if (partNumber === undefined || url === undefined || size === undefined)
+    return undefined;
+  return {
+    part_number: partNumber,
+    url,
+    method: readStringField(record, "method") ?? "PUT",
+    size,
+  };
 }
 
 function readRecord(payload: unknown, key: string): unknown {
-  if (typeof payload !== 'object' || payload === null) return undefined;
+  if (typeof payload !== "object" || payload === null) return undefined;
   return (payload as Record<string, unknown>)[key];
 }
 
 function readNumberField(payload: unknown, key: string): number | undefined {
-  if (typeof payload !== 'object' || payload === null) return undefined;
+  if (typeof payload !== "object" || payload === null) return undefined;
   const value = (payload as Record<string, unknown>)[key];
-  return typeof value === 'number' && Number.isInteger(value) ? value : undefined;
+  return typeof value === "number" && Number.isInteger(value)
+    ? value
+    : undefined;
 }
 
 function readStringField(payload: unknown, key: string): string | undefined {
-  if (typeof payload !== 'object' || payload === null) return undefined;
+  if (typeof payload !== "object" || payload === null) return undefined;
   const value = (payload as Record<string, unknown>)[key];
-  return typeof value === 'string' && value.length > 0 ? value : undefined;
+  return typeof value === "string" && value.length > 0 ? value : undefined;
 }

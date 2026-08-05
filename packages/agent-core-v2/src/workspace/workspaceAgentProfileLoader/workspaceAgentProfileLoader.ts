@@ -10,7 +10,10 @@
  * Workspace-scoped.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
 
 export interface IWorkspaceAgentProfileLoader {
   readonly _serviceBrand: undefined;
@@ -19,4 +22,4 @@ export interface IWorkspaceAgentProfileLoader {
 }
 
 export const IWorkspaceAgentProfileLoader: ServiceIdentifier<IWorkspaceAgentProfileLoader> =
-  createDecorator<IWorkspaceAgentProfileLoader>('workspaceAgentProfileLoader');
+  createDecorator<IWorkspaceAgentProfileLoader>("workspaceAgentProfileLoader");

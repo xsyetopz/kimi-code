@@ -5,7 +5,7 @@ import {
   type Logger,
   type ModelProvider,
   type ResolvedRuntimeProvider,
-} from '@moonshot-ai/agent-core';
+} from "@moonshot-ai/agent-core";
 import {
   createKimiDefaultHeaders,
   KIMI_CODE_FLOW_CONFIG,
@@ -16,14 +16,14 @@ import {
   resolveKimiCodeOAuthRef,
   type KimiHostIdentity,
   type ManagedKimiOAuthRef,
-} from '@moonshot-ai/kimi-code-oauth';
+} from "@moonshot-ai/kimi-code-oauth";
 import type {
   ProviderConfig as KosongProviderConfig,
   ProviderRequestAuth,
-} from '@moonshot-ai/kosong';
-import { APIStatusError, UNKNOWN_CAPABILITY } from '@moonshot-ai/kosong';
+} from "@moonshot-ai/kosong";
+import { APIStatusError, UNKNOWN_CAPABILITY } from "@moonshot-ai/kosong";
 
-import { mapOAuthTokenError } from '#/oauth-error';
+import { mapOAuthTokenError } from "#/oauth-error";
 
 export interface KimiForCodingProviderOptions extends KimiHostIdentity {
   readonly homeDir?: string;
@@ -44,7 +44,7 @@ export class KimiForCodingProvider implements ModelProvider {
   private readonly oauthRef: ManagedKimiOAuthRef;
 
   constructor(options: KimiForCodingProviderOptions) {
-    this.model = options.model ?? 'kimi-for-coding';
+    this.model = options.model ?? "kimi-for-coding";
     this.baseUrl = options.baseUrl ?? kimiCodeBaseUrl();
     this.promptCacheKey = options.promptCacheKey;
     this.defaultHeaders = options.defaultHeaders;
@@ -78,7 +78,7 @@ export class KimiForCodingProvider implements ModelProvider {
     }
 
     const provider: KosongProviderConfig = {
-      type: 'kimi',
+      type: "kimi",
       model: this.model,
       baseUrl: this.baseUrl,
       generationKwargs: this.promptCacheKey
@@ -95,27 +95,30 @@ export class KimiForCodingProvider implements ModelProvider {
     };
 
     return {
-      providerName: 'kimi-for-coding',
+      providerName: "kimi-for-coding",
       provider,
       modelCapabilities: UNKNOWN_CAPABILITY,
-      type: 'kimi',
+      type: "kimi",
       protocol: undefined,
     };
   }
 
   resolveAuth(_model: string, _options?: { readonly log?: Logger }) {
-    return async <T>(request: (auth: ProviderRequestAuth) => Promise<T>): Promise<T> => {
+    return async <T>(
+      request: (auth: ProviderRequestAuth) => Promise<T>,
+    ): Promise<T> => {
       let auth = await this.buildAuth(false);
       for (let refreshed = false; ; refreshed = true) {
         try {
           return await request(auth);
         } catch (error) {
-          const is401 = error instanceof APIStatusError && error.statusCode === 401;
+          const is401 =
+            error instanceof APIStatusError && error.statusCode === 401;
           if (!is401) throw error;
           if (refreshed) {
             throw new KimiError(
               ErrorCodes.AUTH_LOGIN_REQUIRED,
-              'OAuth token was rejected after refresh. Run /login to re-authenticate.',
+              "OAuth token was rejected after refresh. Run /login to re-authenticate.",
               { cause: error },
             );
           }

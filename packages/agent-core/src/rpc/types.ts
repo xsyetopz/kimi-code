@@ -1,4 +1,4 @@
-import type { RPCMethods } from './client';
+import type { RPCMethods } from "./client";
 
 type Prettify<T> = {
   [K in keyof T]: T[K];
@@ -11,7 +11,10 @@ type WithExtraPayload<T, U> = {
 };
 
 export type WithAgentId<T> = WithExtraPayload<T, { readonly agentId: string }>;
-export type WithSessionId<T> = WithExtraPayload<T, { readonly sessionId: string }>;
+export type WithSessionId<T> = WithExtraPayload<
+  T,
+  { readonly sessionId: string }
+>;
 
 export function proxyWithExtraPayload<T, U>(
   methods: RPCMethods<WithExtraPayload<T, U>>,
@@ -20,10 +23,11 @@ export function proxyWithExtraPayload<T, U>(
   return new Proxy(methods as any, {
     get(target, prop) {
       const origMethod = target[prop as keyof typeof target];
-      if (typeof origMethod !== 'function') {
+      if (typeof origMethod !== "function") {
         return origMethod;
       }
-      return (payload: any, ...args: any) => origMethod({ ...payload, ...extraPayload }, ...args);
+      return (payload: any, ...args: any) =>
+        origMethod({ ...payload, ...extraPayload }, ...args);
     },
   });
 }

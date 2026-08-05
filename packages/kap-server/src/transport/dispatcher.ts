@@ -15,19 +15,21 @@ import {
   type IScopeHandle,
   type Scope,
   type ServiceIdentifier,
-} from '@moonshot-ai/agent-core-v2';
+} from "@moonshot-ai/agent-core-v2";
 
-import type { ScopeKind } from './channel';
-import { resolveAnyScopedServiceId } from './channelRegistry';
-import { assertSerializable } from './errors';
-import { MAIN_AGENT_ID, ensureMainAgent } from './mainAgent';
+import type { ScopeKind } from "./channel";
+import { resolveAnyScopedServiceId } from "./channelRegistry";
+import { assertSerializable } from "./errors";
+import { MAIN_AGENT_ID, ensureMainAgent } from "./mainAgent";
 
 /**
  * Channel name → identifier resolution used to gate which Services are
  * reachable. The single RPC surface (`/api/v1/debug`) resolves against the
  * full scoped DI registry (default).
  */
-export type ChannelLookup = (name: string) => ServiceIdentifier<unknown> | undefined;
+export type ChannelLookup = (
+  name: string,
+) => ServiceIdentifier<unknown> | undefined;
 
 /**
  * Resolve the scope a request targets. Throws `Error2` when the referenced
@@ -43,26 +45,34 @@ export async function resolveScope(
   params: Record<string, string>,
 ): Promise<Scope | IScopeHandle> {
   switch (scopeKind) {
-    case 'core':
+    case "core":
       return core;
-    case 'workspace': {
-      const workspaceId = params['workspace_id'] ?? '';
-      return core.accessor.get(IWorkspaceLifecycleService).handlerFor({ workspaceId });
+    case "workspace": {
+      const workspaceId = params["workspace_id"] ?? "";
+      return core.accessor
+        .get(IWorkspaceLifecycleService)
+        .handlerFor({ workspaceId });
     }
-    case 'session': {
-      const sessionId = params['session_id'] ?? '';
+    case "session": {
+      const sessionId = params["session_id"] ?? "";
       const session = getLiveSessionById(core.accessor, sessionId);
       if (session === undefined) {
-        throw new Error2(ErrorCodes.SESSION_NOT_FOUND, `session ${sessionId} not found`);
+        throw new Error2(
+          ErrorCodes.SESSION_NOT_FOUND,
+          `session ${sessionId} not found`,
+        );
       }
       return session;
     }
-    case 'agent': {
-      const sessionId = params['session_id'] ?? '';
-      const agentId = params['agent_id'] ?? '';
+    case "agent": {
+      const sessionId = params["session_id"] ?? "";
+      const agentId = params["agent_id"] ?? "";
       const session = getLiveSessionById(core.accessor, sessionId);
       if (session === undefined) {
-        throw new Error2(ErrorCodes.SESSION_NOT_FOUND, `session ${sessionId} not found`);
+        throw new Error2(
+          ErrorCodes.SESSION_NOT_FOUND,
+          `session ${sessionId} not found`,
+        );
       }
       if (agentId === MAIN_AGENT_ID) return ensureMainAgent(session);
       const agent = session.accessor.get(IAgentLifecycleService).get(agentId);
@@ -93,22 +103,25 @@ export async function resolveService(
   if (scope === undefined) {
     throw new Error2(
       ErrorCodes.SESSION_NOT_FOUND,
-      `session ${params['session_id'] ?? ''} not found`,
+      `session ${params["session_id"] ?? ""} not found`,
     );
   }
   const id = lookup(serviceName);
   if (id === undefined) {
-    throw new Error2(ErrorCodes.REQUEST_INVALID, `unknown service: ${serviceName}`);
+    throw new Error2(
+      ErrorCodes.REQUEST_INVALID,
+      `unknown service: ${serviceName}`,
+    );
   }
   if (
-    scopeKind === 'agent' &&
+    scopeKind === "agent" &&
     id === IAgentGoalService &&
-    params['agent_id'] !== MAIN_AGENT_ID
+    params["agent_id"] !== MAIN_AGENT_ID
   ) {
     throw new Error2(
       ErrorCodes.GOAL_UNSUPPORTED_AGENT,
-      'Goals are only supported by the main agent',
-      { details: { agentId: params['agent_id'] ?? '' } },
+      "Goals are only supported by the main agent",
+      { details: { agentId: params["agent_id"] ?? "" } },
     );
   }
   try {
@@ -130,18 +143,30 @@ export async function dispatch(
   arg: unknown,
   lookup: ChannelLookup = resolveAnyScopedServiceId,
 ): Promise<unknown> {
-  const service = await resolveService(core, scopeKind, params, serviceName, lookup);
+  const service = await resolveService(
+    core,
+    scopeKind,
+    params,
+    serviceName,
+    lookup,
+  );
   const member = (service as Record<string, unknown>)[method];
   if (member === undefined) {
-    throw new Error2(ErrorCodes.REQUEST_INVALID, `method not found: ${serviceName}.${method}`);
+    throw new Error2(
+      ErrorCodes.REQUEST_INVALID,
+      `method not found: ${serviceName}.${method}`,
+    );
   }
 
   // Property read (e.g. `mode`, `rules`, `isActive`) — return as-is.
-  if (typeof member !== 'function') {
+  if (typeof member !== "function") {
     return assertSerializable(member);
   }
 
   const args = Array.isArray(arg) ? arg : arg === undefined ? [] : [arg];
-  const result = await (member as (...a: unknown[]) => unknown).apply(service, args);
+  const result = await (member as (...a: unknown[]) => unknown).apply(
+    service,
+    args,
+  );
   return assertSerializable(result);
 }

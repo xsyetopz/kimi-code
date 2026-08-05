@@ -1,18 +1,23 @@
-import { EchoChatProvider, ScriptedEchoChatProvider } from '../fixtures/echo-provider';
-import { generate } from '#/generate';
-import type { Message, StreamedMessagePart, TextPart } from '#/message';
-import { createUserMessage, extractText } from '#/message';
-import { MockChatProvider } from '../fixtures/mock-provider';
-import type { ChatProvider, ThinkingEffort } from '#/provider';
-import { describe, expect, it } from 'vitest';
+import {
+  EchoChatProvider,
+  ScriptedEchoChatProvider,
+} from "../fixtures/echo-provider";
+import { generate } from "#/generate";
+import type { Message, StreamedMessagePart, TextPart } from "#/message";
+import { createUserMessage, extractText } from "#/message";
+import { MockChatProvider } from "../fixtures/mock-provider";
+import type { ChatProvider, ThinkingEffort } from "#/provider";
+import { describe, expect, it } from "vitest";
 
 /**
  * Verifies that MockChatProvider, EchoChatProvider, and
  * ScriptedEchoChatProvider conform to the same ChatProvider contract.
  */
 /** Build a one-text-part mock provider that emits "hello world". */
-function buildMockProvider(text: string = 'hello world'): MockChatProvider {
-  const parts: StreamedMessagePart[] = [{ type: 'text', text } satisfies TextPart];
+function buildMockProvider(text: string = "hello world"): MockChatProvider {
+  const parts: StreamedMessagePart[] = [
+    { type: "text", text } satisfies TextPart,
+  ];
   return new MockChatProvider(parts);
 }
 
@@ -20,42 +25,46 @@ function buildEchoProvider(): EchoChatProvider {
   return new EchoChatProvider();
 }
 
-function buildScriptedEchoProvider(scripts: string[]): ScriptedEchoChatProvider {
+function buildScriptedEchoProvider(
+  scripts: string[],
+): ScriptedEchoChatProvider {
   return new ScriptedEchoChatProvider(scripts);
 }
-describe('e2e: cross-provider consistency', () => {
-  describe('interface compatibility', () => {
-    it('all test providers are assignable to ChatProvider', () => {
+describe("e2e: cross-provider consistency", () => {
+  describe("interface compatibility", () => {
+    it("all test providers are assignable to ChatProvider", () => {
       const mock: ChatProvider = buildMockProvider();
       const echo: ChatProvider = buildEchoProvider();
-      const scripted: ChatProvider = buildScriptedEchoProvider(['text: hi']);
+      const scripted: ChatProvider = buildScriptedEchoProvider(["text: hi"]);
 
       // Sanity: identity fields exist on all of them.
       for (const p of [mock, echo, scripted]) {
-        expect(typeof p.name).toBe('string');
-        expect(typeof p.modelName).toBe('string');
-        expect(p.thinkingEffort === null || typeof p.thinkingEffort === 'string').toBe(true);
+        expect(typeof p.name).toBe("string");
+        expect(typeof p.modelName).toBe("string");
+        expect(
+          p.thinkingEffort === null || typeof p.thinkingEffort === "string",
+        ).toBe(true);
       }
     });
 
-    it('all test providers expose the same ChatProvider method shape', () => {
+    it("all test providers expose the same ChatProvider method shape", () => {
       const providers: ChatProvider[] = [
         buildMockProvider(),
         buildEchoProvider(),
-        buildScriptedEchoProvider(['text: hi']),
+        buildScriptedEchoProvider(["text: hi"]),
       ];
 
       for (const p of providers) {
-        expect(typeof p.generate).toBe('function');
-        expect(typeof p.withThinking).toBe('function');
+        expect(typeof p.generate).toBe("function");
+        expect(typeof p.withThinking).toBe("function");
       }
     });
   });
 
-  describe('withThinking returns a new, independent instance', () => {
-    const efforts: ThinkingEffort[] = ['off', 'low', 'medium', 'high'];
+  describe("withThinking returns a new, independent instance", () => {
+    const efforts: ThinkingEffort[] = ["off", "low", "medium", "high"];
 
-    it('MockChatProvider.withThinking returns a distinct instance', () => {
+    it("MockChatProvider.withThinking returns a distinct instance", () => {
       const base = buildMockProvider();
       for (const effort of efforts) {
         const clone = base.withThinking(effort);
@@ -65,7 +74,7 @@ describe('e2e: cross-provider consistency', () => {
       }
     });
 
-    it('EchoChatProvider.withThinking returns a distinct instance', () => {
+    it("EchoChatProvider.withThinking returns a distinct instance", () => {
       const base = buildEchoProvider();
       for (const effort of efforts) {
         const clone = base.withThinking(effort);
@@ -74,14 +83,14 @@ describe('e2e: cross-provider consistency', () => {
       }
     });
 
-    it('ScriptedEchoChatProvider.withThinking returns a distinct instance', () => {
-      const base = buildScriptedEchoProvider(['text: a', 'text: b', 'text: c']);
-      const clone = base.withThinking('high');
+    it("ScriptedEchoChatProvider.withThinking returns a distinct instance", () => {
+      const base = buildScriptedEchoProvider(["text: a", "text: b", "text: c"]);
+      const clone = base.withThinking("high");
       expect(clone).not.toBe(base);
       expect(base.thinkingEffort).toBeNull();
     });
 
-    it('withThinking does not touch the original provider across multiple effort values', () => {
+    it("withThinking does not touch the original provider across multiple effort values", () => {
       const base = buildMockProvider();
       const clones = efforts.map((e) => base.withThinking(e));
       // All clones are distinct from each other and from base.
@@ -91,50 +100,66 @@ describe('e2e: cross-provider consistency', () => {
     });
   });
 
-  describe('generate() consumes all test providers identically', () => {
-    it('MockChatProvider + EchoChatProvider + ScriptedEchoChatProvider produce the same text via generate', async () => {
-      const text = 'consistent hello world';
+  describe("generate() consumes all test providers identically", () => {
+    it("MockChatProvider + EchoChatProvider + ScriptedEchoChatProvider produce the same text via generate", async () => {
+      const text = "consistent hello world";
 
       // Mock
-      const mock = new MockChatProvider([{ type: 'text', text } satisfies TextPart]);
-      const mockResult = await generate(mock, '', [], [createUserMessage('noop')]);
+      const mock = new MockChatProvider([
+        { type: "text", text } satisfies TextPart,
+      ]);
+      const mockResult = await generate(
+        mock,
+        "",
+        [],
+        [createUserMessage("noop")],
+      );
 
       // Echo: text lives in the last user message
       const echo = buildEchoProvider();
       const echoHistory: Message[] = [createUserMessage(`text: ${text}`)];
-      const echoResult = await generate(echo, '', [], echoHistory);
+      const echoResult = await generate(echo, "", [], echoHistory);
 
       // Scripted echo: provider ignores history, consumes its queue
       const scripted = buildScriptedEchoProvider([`text: ${text}`]);
-      const scriptedResult = await generate(scripted, '', [], [createUserMessage('go')]);
+      const scriptedResult = await generate(
+        scripted,
+        "",
+        [],
+        [createUserMessage("go")],
+      );
 
       for (const r of [mockResult, echoResult, scriptedResult]) {
-        expect(r.message.role).toBe('assistant');
+        expect(r.message.role).toBe("assistant");
         expect(extractText(r.message)).toBe(text);
         expect(r.message.toolCalls).toEqual([]);
       }
     });
   });
 
-  describe('all test providers honor AbortSignal before the provider call', () => {
-    it('pre-aborted signal rejects through generate() for every test provider', async () => {
-      const providers: { name: string; provider: ChatProvider; history: Message[] }[] = [
+  describe("all test providers honor AbortSignal before the provider call", () => {
+    it("pre-aborted signal rejects through generate() for every test provider", async () => {
+      const providers: {
+        name: string;
+        provider: ChatProvider;
+        history: Message[];
+      }[] = [
         {
-          name: 'mock',
+          name: "mock",
           provider: new MockChatProvider([
-            { type: 'text', text: 'should not emit' } satisfies TextPart,
+            { type: "text", text: "should not emit" } satisfies TextPart,
           ]),
-          history: [createUserMessage('noop')],
+          history: [createUserMessage("noop")],
         },
         {
-          name: 'echo',
+          name: "echo",
           provider: buildEchoProvider(),
-          history: [createUserMessage('text: should not emit')],
+          history: [createUserMessage("text: should not emit")],
         },
         {
-          name: 'scripted',
-          provider: buildScriptedEchoProvider(['text: should not emit']),
-          history: [createUserMessage('go')],
+          name: "scripted",
+          provider: buildScriptedEchoProvider(["text: should not emit"]),
+          history: [createUserMessage("go")],
         },
       ];
 
@@ -142,32 +167,38 @@ describe('e2e: cross-provider consistency', () => {
         const controller = new AbortController();
         controller.abort();
         await expect(
-          generate(provider, '', [], history, undefined, { signal: controller.signal }),
+          generate(provider, "", [], history, undefined, {
+            signal: controller.signal,
+          }),
         ).rejects.toThrow();
       }
     });
   });
 
-  describe('ScriptedEchoChatProvider respects withThinking queue semantics', () => {
-    it('withThinking returns a new instance sharing the remaining script queue', async () => {
-      const base = buildScriptedEchoProvider(['text: first', 'text: second', 'text: third']);
+  describe("ScriptedEchoChatProvider respects withThinking queue semantics", () => {
+    it("withThinking returns a new instance sharing the remaining script queue", async () => {
+      const base = buildScriptedEchoProvider([
+        "text: first",
+        "text: second",
+        "text: third",
+      ]);
 
       // Advance the base cursor by one call.
-      const first = await generate(base, '', [], [createUserMessage('go')]);
-      expect(extractText(first.message)).toBe('first');
+      const first = await generate(base, "", [], [createUserMessage("go")]);
+      expect(extractText(first.message)).toBe("first");
 
-      const clone = base.withThinking('low');
+      const clone = base.withThinking("low");
       expect(clone).not.toBe(base);
 
       // Clone should see the REMAINING scripts (second, third).
-      const c1 = await generate(clone, '', [], [createUserMessage('go')]);
-      expect(extractText(c1.message)).toBe('second');
-      const c2 = await generate(clone, '', [], [createUserMessage('go')]);
-      expect(extractText(c2.message)).toBe('third');
+      const c1 = await generate(clone, "", [], [createUserMessage("go")]);
+      expect(extractText(c1.message)).toBe("second");
+      const c2 = await generate(clone, "", [], [createUserMessage("go")]);
+      expect(extractText(c2.message)).toBe("third");
 
       // The base queue advances independently of the clone.
-      const second = await generate(base, '', [], [createUserMessage('go')]);
-      expect(extractText(second.message)).toBe('second');
+      const second = await generate(base, "", [], [createUserMessage("go")]);
+      expect(extractText(second.message)).toBe("second");
     });
   });
 });

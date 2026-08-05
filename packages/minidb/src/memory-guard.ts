@@ -7,17 +7,17 @@
 // callback — the WAL commit machinery behind an eviction stays in MiniDb), so
 // this module never imports the MiniDb class itself.
 
-import { TYPE_SET } from './codec.js';
-import type { Store } from './store.js';
-import type { ValueMode } from './recovery.js';
-import type { PreparedOp } from './types.js';
+import { TYPE_SET } from "./codec.js";
+import type { Store } from "./store.js";
+import type { ValueMode } from "./recovery.js";
+import type { PreparedOp } from "./types.js";
 
 /** The owner-injected surface the guard needs (see the header). */
 export interface MemoryGuardDeps {
   store: () => Store;
   valueMode: () => ValueMode;
   maxMemoryBytes: () => number | null;
-  maxMemoryPolicy: () => 'reject' | 'evict-lru';
+  maxMemoryPolicy: () => "reject" | "evict-lru";
   /** The owner's stats object (the guard increments maxMemoryRejections). */
   stats: { maxMemoryRejections: number };
   /** Evict one live key through the owner's write path (a committed DEL). */
@@ -50,11 +50,15 @@ export class MemoryGuard<V> {
     const considered = new Map<string, number>();
     let projected = store.bytes;
     for (const op of ops) {
-      const cur = considered.has(op.pk) ? considered.get(op.pk)! : store.recordBytes(op.pk);
+      const cur = considered.has(op.pk)
+        ? considered.get(op.pk)!
+        : store.recordBytes(op.pk);
       projected -= cur;
       const next =
         op.type === TYPE_SET
-          ? store.estimateSetBytes(op.key, op.value!, op.dtNorm, { countValue: this.deps.valueMode() === 'memory' })
+          ? store.estimateSetBytes(op.key, op.value!, op.dtNorm, {
+              countValue: this.deps.valueMode() === "memory",
+            })
           : 0;
       projected += next;
       considered.set(op.pk, next);
@@ -84,7 +88,7 @@ export class MemoryGuard<V> {
     let projected = this.projectedBytesForOps(ops);
     if (projected <= maxMemoryBytes) return;
 
-    if (this.deps.maxMemoryPolicy() === 'evict-lru') {
+    if (this.deps.maxMemoryPolicy() === "evict-lru") {
       const skip = new Set(ops.map((o) => o.pk));
       while (projected > maxMemoryBytes) {
         const victim = this.pickEvictionVictim(skip);
@@ -96,7 +100,9 @@ export class MemoryGuard<V> {
 
     if (projected > maxMemoryBytes) {
       this.deps.stats.maxMemoryRejections++;
-      throw new Error(`maxMemory exceeded: projected ${projected} bytes > ${maxMemoryBytes} bytes`);
+      throw new Error(
+        `maxMemory exceeded: projected ${projected} bytes > ${maxMemoryBytes} bytes`,
+      );
     }
   }
 }

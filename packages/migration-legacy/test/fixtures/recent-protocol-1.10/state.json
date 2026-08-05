@@ -3,9 +3,7 @@
   "approval": {
     "yolo": false,
     "afk": false,
-    "auto_approve_actions": [
-      "run command"
-    ]
+    "auto_approve_actions": ["run command"]
   },
   "additional_dirs": [],
   "custom_title": "hi",

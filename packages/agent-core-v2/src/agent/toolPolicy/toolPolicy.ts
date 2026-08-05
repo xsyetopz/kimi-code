@@ -5,10 +5,10 @@
  * one policy used by both provider schema projection and executor preflight.
  */
 
-import { createDecorator } from '#/_base/di/instantiation';
-import type { ToolSource } from '#/tool/toolContract';
+import { createDecorator } from "#/_base/di/instantiation";
+import type { ToolSource } from "#/tool/toolContract";
 
-import type { ToolActivationPolicy } from './evaluate';
+import type { ToolActivationPolicy } from "./evaluate";
 
 export interface IAgentToolPolicyService {
   readonly _serviceBrand: undefined;
@@ -23,5 +23,6 @@ export interface IAgentToolPolicyService {
   setSessionDisabledTools(names: readonly string[]): Promise<void>;
 }
 
-export const IAgentToolPolicyService =
-  createDecorator<IAgentToolPolicyService>('agentToolPolicyService');
+export const IAgentToolPolicyService = createDecorator<IAgentToolPolicyService>(
+  "agentToolPolicyService",
+);

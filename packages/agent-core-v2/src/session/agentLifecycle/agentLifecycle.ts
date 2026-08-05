@@ -21,13 +21,16 @@
  *   not branch on it.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
-import type { IAgentScopeHandle } from '#/_base/di/scope';
-import type { Event } from '#/_base/event';
-import type { PermissionMode } from '#/agent/permissionPolicy/types';
-import type { BindAgentInput } from '#/agent/profile/profile';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
+import type { IAgentScopeHandle } from "#/_base/di/scope";
+import type { Event } from "#/_base/event";
+import type { PermissionMode } from "#/agent/permissionPolicy/types";
+import type { BindAgentInput } from "#/agent/profile/profile";
 
-export const MAIN_AGENT_ID = 'main';
+export const MAIN_AGENT_ID = "main";
 
 export interface CreateAgentOptions {
   readonly agentId?: string;
@@ -53,7 +56,10 @@ export interface IAgentLifecycleService {
 
   create(opts?: CreateAgentOptions): Promise<IAgentScopeHandle>;
 
-  fork(sourceAgentId: string, opts?: ForkAgentOptions): Promise<IAgentScopeHandle>;
+  fork(
+    sourceAgentId: string,
+    opts?: ForkAgentOptions,
+  ): Promise<IAgentScopeHandle>;
 
   get(agentId: string): IAgentScopeHandle | undefined;
   list(filter?: AgentListFilter): readonly IAgentScopeHandle[];
@@ -62,4 +68,4 @@ export interface IAgentLifecycleService {
 }
 
 export const IAgentLifecycleService: ServiceIdentifier<IAgentLifecycleService> =
-  createDecorator<IAgentLifecycleService>('agentLifecycleService');
+  createDecorator<IAgentLifecycleService>("agentLifecycleService");

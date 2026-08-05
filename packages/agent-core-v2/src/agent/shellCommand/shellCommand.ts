@@ -7,7 +7,10 @@
  * background. Bound at Agent scope.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
 
 export interface RunShellCommandInput {
   readonly command: string;
@@ -29,4 +32,4 @@ export interface IAgentShellCommandService {
 }
 
 export const IAgentShellCommandService: ServiceIdentifier<IAgentShellCommandService> =
-  createDecorator<IAgentShellCommandService>('agentShellCommandService');
+  createDecorator<IAgentShellCommandService>("agentShellCommandService");

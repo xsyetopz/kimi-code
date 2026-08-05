@@ -1,6 +1,6 @@
-import { readFile } from 'node:fs/promises';
-import { join } from 'node:path';
-import { parseArgs } from 'node:util';
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
+import { parseArgs } from "node:util";
 
 import {
   createKimiHarness,
@@ -8,9 +8,9 @@ import {
   log,
   resolveGlobalLogPath,
   resolveKimiHome,
-} from '@moonshot-ai/kimi-code-sdk';
+} from "@moonshot-ai/kimi-code-sdk";
 
-type MarkerLevel = 'error' | 'warn';
+type MarkerLevel = "error" | "warn";
 
 interface CliValues {
   readonly help?: boolean | undefined;
@@ -42,7 +42,11 @@ async function main(): Promise<void> {
   const options = parseCliArgs();
   const resolvedHome = resolveKimiHome(options.homeDir);
   const harness = createKimiHarness({
-    identity: { productName: 'kimi-code-cli', version: 'log-marker', platform: 'kimi_code_cli' },
+    identity: {
+      productName: "kimi-code-cli",
+      version: "log-marker",
+      platform: "kimi_code_cli",
+    },
     homeDir: options.homeDir,
   });
 
@@ -51,16 +55,18 @@ async function main(): Promise<void> {
     const session = await harness.resumeSession({ id: options.sessionId });
     const sessionDir = session.summary?.sessionDir;
     if (sessionDir === undefined) {
-      throw new Error(`Session "${session.id}" resumed without a sessionDir summary`);
+      throw new Error(
+        `Session "${session.id}" resumed without a sessionDir summary`,
+      );
     }
 
-    sessionLogPath = join(sessionDir, 'logs', 'kimi-code.log');
+    sessionLogPath = join(sessionDir, "logs", "kimi-code.log");
     const payload = {
       sessionId: session.id,
-      purpose: 'manual-log-marker',
+      purpose: "manual-log-marker",
       marker: options.marker,
     };
-    if (options.level === 'error') {
+    if (options.level === "error") {
       log.error(options.marker, payload);
     } else {
       log.warn(options.marker, payload);
@@ -88,10 +94,10 @@ async function main(): Promise<void> {
   if (!sessionMatched) {
     process.stderr.write(
       [
-        'error: marker was not found in the session log.',
+        "error: marker was not found in the session log.",
         'Check that KIMI_LOG_LEVEL is not "off" and that the session id exists in this KIMI_CODE_HOME.',
-        '',
-      ].join('\n'),
+        "",
+      ].join("\n"),
     );
     process.exitCode = 1;
   }
@@ -104,11 +110,11 @@ function parseCliArgs(): Options {
       args: process.argv.slice(2),
       allowPositionals: true,
       options: {
-        help: { type: 'boolean', short: 'h' },
-        home: { type: 'string' },
-        level: { type: 'string' },
-        message: { type: 'string', short: 'm' },
-        session: { type: 'string', short: 's' },
+        help: { type: "boolean", short: "h" },
+        home: { type: "string" },
+        level: { type: "string" },
+        message: { type: "string", short: "m" },
+        session: { type: "string", short: "s" },
       },
     });
   } catch (error) {
@@ -124,20 +130,22 @@ function parseCliArgs(): Options {
 
   const positionals = parsed.positionals;
   const sessionId = values.session ?? positionals[0];
-  if (sessionId === undefined || sessionId.trim() === '') {
+  if (sessionId === undefined || sessionId.trim() === "") {
     process.stderr.write(`error: --session is required\n\n${USAGE}`);
     process.exit(1);
   }
   if (positionals.length > (values.session === undefined ? 1 : 0)) {
     process.stderr.write(
-      `error: unexpected positional arguments: ${positionals.join(' ')}\n\n${USAGE}`,
+      `error: unexpected positional arguments: ${positionals.join(" ")}\n\n${USAGE}`,
     );
     process.exit(1);
   }
 
-  const level = values.level ?? 'error';
-  if (level !== 'error' && level !== 'warn') {
-    process.stderr.write(`error: --level must be "error" or "warn"\n\n${USAGE}`);
+  const level = values.level ?? "error";
+  if (level !== "error" && level !== "warn") {
+    process.stderr.write(
+      `error: --level must be "error" or "warn"\n\n${USAGE}`,
+    );
     process.exit(1);
   }
 
@@ -145,15 +153,16 @@ function parseCliArgs(): Options {
     sessionId,
     homeDir: values.home,
     level,
-    marker: values.message ?? `MANUAL_SESSION_LOG_MARKER_${Date.now().toString(36)}`,
+    marker:
+      values.message ?? `MANUAL_SESSION_LOG_MARKER_${Date.now().toString(36)}`,
   };
 }
 
 async function readOptionalText(path: string): Promise<string | undefined> {
   try {
-    return await readFile(path, 'utf-8');
+    return await readFile(path, "utf-8");
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined;
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
     throw error;
   }
 }

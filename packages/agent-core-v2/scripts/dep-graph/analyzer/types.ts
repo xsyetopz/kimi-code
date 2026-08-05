@@ -4,15 +4,15 @@
  * Node (analyzer, Vite plugin) and the browser (React app).
  */
 
-export type ServiceScope = 'App' | 'Session' | 'Agent';
+export type ServiceScope = "App" | "Session" | "Agent";
 
 export type EdgeKind =
-  | 'ctor'
-  | 'accessor'
-  | 'publish'
-  | 'subscribe'
-  | 'emit'
-  | 'on';
+  | "ctor"
+  | "accessor"
+  | "publish"
+  | "subscribe"
+  | "emit"
+  | "on";
 
 export interface ServiceNode {
   id: string;

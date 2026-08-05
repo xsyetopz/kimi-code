@@ -5,36 +5,44 @@
  * to the chat view at the hit's session / agent / turn / step.
  */
 
-import { useState } from 'react';
+import { useState } from "react";
 
-import { useConnection } from '../connection';
-import { fetchSearchPage, type SearchHit, type SearchIndexState } from '../search/api';
-import { ActionButton, Badge, ErrorLine, relTime } from '../ui';
+import { useConnection } from "../connection";
+import {
+  fetchSearchPage,
+  type SearchHit,
+  type SearchIndexState,
+} from "../search/api";
+import { ActionButton, Badge, ErrorLine, relTime } from "../ui";
 
-type RoleFilter = 'all' | 'user' | 'assistant' | 'title';
-type SortOrder = 'score' | 'time_desc' | 'time_asc';
-type SearchMode = 'terms' | 'literal';
+type RoleFilter = "all" | "user" | "assistant" | "title";
+type SortOrder = "score" | "time_desc" | "time_asc";
+type SearchMode = "terms" | "literal";
 
 const PAGE_SIZE = 20;
 
 interface ExecutedSearch {
   readonly query: string;
-  readonly role?: 'user' | 'assistant' | 'title' | undefined;
+  readonly role?: "user" | "assistant" | "title" | undefined;
   readonly sort: SortOrder;
   readonly mode: SearchMode;
   readonly items: readonly SearchHit[];
   readonly hasMore: boolean;
   readonly pageToken?: string | undefined;
-  readonly incomplete?: 'candidate_cap' | undefined;
-  readonly source?: 'live' | 'index' | undefined;
+  readonly incomplete?: "candidate_cap" | undefined;
+  readonly source?: "live" | "index" | undefined;
   readonly indexState: SearchIndexState;
 }
 
-export function SearchView({ onOpenResult }: { onOpenResult: (hit: SearchHit) => void }) {
+export function SearchView({
+  onOpenResult,
+}: {
+  onOpenResult: (hit: SearchHit) => void;
+}) {
   const { baseUrl, config } = useConnection();
-  const [input, setInput] = useState('');
-  const [role, setRole] = useState<RoleFilter>('all');
-  const [sort, setSort] = useState<SortOrder>('score');
+  const [input, setInput] = useState("");
+  const [role, setRole] = useState<RoleFilter>("all");
+  const [sort, setSort] = useState<SortOrder>("score");
   const [exact, setExact] = useState(false);
   const [result, setResult] = useState<ExecutedSearch | null>(null);
   const [searching, setSearching] = useState(false);
@@ -43,24 +51,24 @@ export function SearchView({ onOpenResult }: { onOpenResult: (hit: SearchHit) =>
 
   const runSearch = async () => {
     const query = input.trim();
-    if (query === '' || searching) return;
+    if (query === "" || searching) return;
     setSearching(true);
     setError(null);
     try {
       const token = config.token.trim();
-      const mode: SearchMode = exact ? 'literal' : 'terms';
+      const mode: SearchMode = exact ? "literal" : "terms";
       const page = await fetchSearchPage({
         baseUrl,
-        token: token === '' ? undefined : token,
+        token: token === "" ? undefined : token,
         query,
-        role: role === 'all' ? undefined : role,
+        role: role === "all" ? undefined : role,
         sort,
         mode,
         pageSize: PAGE_SIZE,
       });
       setResult({
         query,
-        role: role === 'all' ? undefined : role,
+        role: role === "all" ? undefined : role,
         sort,
         mode,
         items: page.items,
@@ -85,7 +93,7 @@ export function SearchView({ onOpenResult }: { onOpenResult: (hit: SearchHit) =>
       const token = config.token.trim();
       const page = await fetchSearchPage({
         baseUrl,
-        token: token === '' ? undefined : token,
+        token: token === "" ? undefined : token,
         query: result.query,
         role: result.role,
         sort: result.sort,
@@ -118,7 +126,7 @@ export function SearchView({ onOpenResult }: { onOpenResult: (hit: SearchHit) =>
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === 'Enter') {
+            if (e.key === "Enter") {
               e.preventDefault();
               void runSearch();
             }
@@ -139,7 +147,9 @@ export function SearchView({ onOpenResult }: { onOpenResult: (hit: SearchHit) =>
           className="rounded border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-[12px] text-neutral-300 outline-none disabled:opacity-40"
           value={sort}
           onChange={(e) => setSort(e.target.value as SortOrder)}
-          title={exact ? 'Exact match always sorts by newest first' : 'Sort order'}
+          title={
+            exact ? "Exact match always sorts by newest first" : "Sort order"
+          }
           disabled={exact}
         >
           <option value="score">relevance</option>
@@ -158,12 +168,15 @@ export function SearchView({ onOpenResult }: { onOpenResult: (hit: SearchHit) =>
           />
           exact match
         </label>
-        <ActionButton onClick={() => void runSearch()} disabled={searching || input.trim() === ''}>
-          {searching ? 'Searching…' : 'Search'}
+        <ActionButton
+          onClick={() => void runSearch()}
+          disabled={searching || input.trim() === ""}
+        >
+          {searching ? "Searching…" : "Search"}
         </ActionButton>
         {result !== null ? (
           <span className="ml-2 text-[11px] text-neutral-600">
-            {result.indexState.state === 'building'
+            {result.indexState.state === "building"
               ? `index building (${result.indexState.indexedSessions}/${result.indexState.totalSessions} sessions) — results may be incomplete`
               : `${result.indexState.documents} documents indexed (${result.indexState.state})`}
           </span>
@@ -172,12 +185,12 @@ export function SearchView({ onOpenResult }: { onOpenResult: (hit: SearchHit) =>
           <span
             className="ml-2"
             title={
-              result.source === 'live'
-                ? 'searched the in-memory session transcript'
-                : 'searched the persisted search index'
+              result.source === "live"
+                ? "searched the in-memory session transcript"
+                : "searched the persisted search index"
             }
           >
-            <Badge tone={result.source === 'live' ? 'green' : 'neutral'}>
+            <Badge tone={result.source === "live" ? "green" : "neutral"}>
               source: {result.source}
             </Badge>
           </span>
@@ -192,15 +205,19 @@ export function SearchView({ onOpenResult }: { onOpenResult: (hit: SearchHit) =>
         ) : null}
         {result === null ? (
           <div className="text-[12px] text-neutral-600 italic">
-            Search user prompts, assistant replies and session titles across every session.
+            Search user prompts, assistant replies and session titles across
+            every session.
           </div>
         ) : result.items.length === 0 && !searching ? (
-          <div className="text-[12px] text-neutral-600 italic">No hits for “{result.query}”.</div>
+          <div className="text-[12px] text-neutral-600 italic">
+            No hits for “{result.query}”.
+          </div>
         ) : (
           <div className="flex flex-col gap-2">
-            {result.incomplete === 'candidate_cap' ? (
+            {result.incomplete === "candidate_cap" ? (
               <div className="text-[11px] text-neutral-600">
-                too many matches — the candidate set was truncated, results may be incomplete
+                too many matches — the candidate set was truncated, results may
+                be incomplete
               </div>
             ) : null}
             {result.items.map((hit, i) => (
@@ -212,8 +229,11 @@ export function SearchView({ onOpenResult }: { onOpenResult: (hit: SearchHit) =>
             ))}
             {result.hasMore ? (
               <div className="mt-1 flex justify-center">
-                <ActionButton onClick={() => void loadMore()} disabled={loadingMore}>
-                  {loadingMore ? 'Loading…' : 'Load more'}
+                <ActionButton
+                  onClick={() => void loadMore()}
+                  disabled={loadingMore}
+                >
+                  {loadingMore ? "Loading…" : "Load more"}
                 </ActionButton>
               </div>
             ) : null}
@@ -224,7 +244,13 @@ export function SearchView({ onOpenResult }: { onOpenResult: (hit: SearchHit) =>
   );
 }
 
-function HitCard({ hit, onOpen }: { hit: SearchHit; onOpen: (hit: SearchHit) => void }) {
+function HitCard({
+  hit,
+  onOpen,
+}: {
+  hit: SearchHit;
+  onOpen: (hit: SearchHit) => void;
+}) {
   return (
     <button
       type="button"
@@ -234,15 +260,29 @@ function HitCard({ hit, onOpen }: { hit: SearchHit; onOpen: (hit: SearchHit) => 
     >
       <div className="mb-1 flex flex-wrap items-center gap-2">
         <span className="text-[12px] font-medium text-neutral-200">
-          {hit.sessionTitle !== '' ? hit.sessionTitle : '(untitled session)'}
+          {hit.sessionTitle !== "" ? hit.sessionTitle : "(untitled session)"}
         </span>
-        <Badge tone={hit.role === 'user' ? 'sky' : hit.role === 'assistant' ? 'green' : 'violet'}>
+        <Badge
+          tone={
+            hit.role === "user"
+              ? "sky"
+              : hit.role === "assistant"
+                ? "green"
+                : "violet"
+          }
+        >
           {hit.role}
         </Badge>
-        {hit.agentId !== '' ? <Badge tone="neutral">agent: {hit.agentId}</Badge> : null}
-        <span className="ml-auto text-[10px] text-neutral-600">{relTime(hit.time)}</span>
+        {hit.agentId !== "" ? (
+          <Badge tone="neutral">agent: {hit.agentId}</Badge>
+        ) : null}
+        <span className="ml-auto text-[10px] text-neutral-600">
+          {relTime(hit.time)}
+        </span>
       </div>
-      <div className="mb-1 whitespace-pre-wrap text-[12px] text-neutral-300">{hit.snippet}</div>
+      <div className="mb-1 whitespace-pre-wrap text-[12px] text-neutral-300">
+        {hit.snippet}
+      </div>
       <div className="flex flex-wrap items-center gap-2 font-mono text-[10px] text-neutral-600">
         <span>{hit.sessionId}</span>
         {hit.turn !== undefined ? <span>t{hit.turn}</span> : null}

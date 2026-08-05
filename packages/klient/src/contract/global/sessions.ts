@@ -3,10 +3,10 @@
  * `agent-core-v2/app/sessionIndex/sessionIndex.ts`.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { maybe, pageOf } from '../helpers.js';
-import type { ServiceContract } from '../types.js';
+import { maybe, pageOf } from "../helpers.js";
+import type { ServiceContract } from "../types.js";
 
 export const sessionSummarySchema = z.object({
   id: z.string(),
@@ -36,7 +36,10 @@ export const sessionCountQuerySchema = z.object({
 });
 
 export const sessionsContract = {
-  listRecent: { input: z.tuple([sessionListQuerySchema]), output: pageOf(sessionSummarySchema) },
+  listRecent: {
+    input: z.tuple([sessionListQuerySchema]),
+    output: pageOf(sessionSummarySchema),
+  },
   get: { input: z.tuple([z.string()]), output: maybe(sessionSummarySchema) },
   count: { input: z.tuple([sessionCountQuerySchema]), output: z.number() },
 } satisfies ServiceContract;

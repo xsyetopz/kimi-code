@@ -1,9 +1,14 @@
-import { createHash } from 'node:crypto';
+import { createHash } from "node:crypto";
 
-import type { Logger } from '#/logging/types';
-import type { ChatProvider, GenerateOptions, Message, Tool } from '@moonshot-ai/kosong';
+import type { Logger } from "#/logging/types";
+import type {
+  ChatProvider,
+  GenerateOptions,
+  Message,
+  Tool,
+} from "@moonshot-ai/kosong";
 
-import type { LLMRequestLogFields } from '../loop';
+import type { LLMRequestLogFields } from "../loop";
 
 export type GenerateOptionsWithRequestLogFields = GenerateOptions & {
   readonly requestLogFields?: LLMRequestLogFields;
@@ -22,7 +27,8 @@ export class LlmRequestLogger {
     readonly messages: readonly Message[];
     readonly fields: LLMRequestLogFields | undefined;
   }): void {
-    const { provider, modelAlias, systemPrompt, tools, messages, fields } = input;
+    const { provider, modelAlias, systemPrompt, tools, messages, fields } =
+      input;
     const requestLogFields = fields ?? {};
     // This logs the outbound request; deferred tools are stripped by kosong
     // generate() before the provider sees them, so mirror that here or the
@@ -43,21 +49,26 @@ export class LlmRequestLogger {
     });
     if (signature !== this.lastConfigLogSignature) {
       this.lastConfigLogSignature = signature;
-      this.log.info('llm config', { ...requestLogFields, ...config });
+      this.log.info("llm config", { ...requestLogFields, ...config });
     }
 
-    const partialMessageCount = messages.filter((message) => message.partial === true).length;
+    const partialMessageCount = messages.filter(
+      (message) => message.partial === true,
+    ).length;
     const requestFields: {
       turnStep?: string;
       attempt?: string;
       partialMessageCount?: number;
     } = { ...requestLogFields };
-    if (partialMessageCount > 0) requestFields.partialMessageCount = partialMessageCount;
-    this.log.info('llm request', requestFields);
+    if (partialMessageCount > 0)
+      requestFields.partialMessageCount = partialMessageCount;
+    this.log.info("llm request", requestFields);
   }
 }
 
-export function splitGenerateOptions(options: GenerateOptionsWithRequestLogFields | undefined): {
+export function splitGenerateOptions(
+  options: GenerateOptionsWithRequestLogFields | undefined,
+): {
   readonly requestLogFields: LLMRequestLogFields | undefined;
   readonly generateOptions: GenerateOptions | undefined;
 } {
@@ -69,9 +80,13 @@ export function splitGenerateOptions(options: GenerateOptionsWithRequestLogField
 }
 
 export function toolSignature(tools: readonly Tool[]) {
-  return tools.map(({ name, description, parameters }) => ({ name, description, parameters }));
+  return tools.map(({ name, description, parameters }) => ({
+    name,
+    description,
+    parameters,
+  }));
 }
 
 export function fingerprint(content: string): string {
-  return createHash('sha256').update(content).digest('hex');
+  return createHash("sha256").update(content).digest("hex");
 }

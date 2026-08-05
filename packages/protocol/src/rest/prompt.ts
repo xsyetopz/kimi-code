@@ -29,10 +29,10 @@
  *            { aborted: false, at_seq: number }  (envelope code 40903, idempotent)
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { messageContentSchema } from '../message';
-import { isoDateTimeSchema } from '../time';
+import { messageContentSchema } from "../message";
+import { isoDateTimeSchema } from "../time";
 
 // Accept any non-empty, model-declared effort string. Providers normalize
 // unrecognized efforts on the wire, so the REST layer must not reject a value
@@ -40,7 +40,7 @@ import { isoDateTimeSchema } from '../time';
 export const promptThinkingSchema = z.string().min(1);
 export type PromptThinking = z.infer<typeof promptThinkingSchema>;
 
-export const promptPermissionModeSchema = z.enum(['manual', 'yolo', 'auto']);
+export const promptPermissionModeSchema = z.enum(["manual", "yolo", "auto"]);
 export type PromptPermissionMode = z.infer<typeof promptPermissionModeSchema>;
 
 export const promptSubmissionSchema = z.object({
@@ -56,7 +56,7 @@ export const promptSubmissionSchema = z.object({
   plan_mode: z.boolean().optional(),
   swarm_mode: z.boolean().optional(),
   goal_objective: z.string().optional(),
-  goal_control: z.enum(['pause', 'resume', 'cancel']).optional(),
+  goal_control: z.enum(["pause", "resume", "cancel"]).optional(),
   // Client-managed session tool denylist: full-replace on every submit; the
   // bound profile's own deny always survives. Omit to keep the persisted
   // value, send `[]` to clear the client portion.
@@ -64,7 +64,7 @@ export const promptSubmissionSchema = z.object({
 });
 export type PromptSubmission = z.infer<typeof promptSubmissionSchema>;
 
-export const promptStatusSchema = z.enum(['running', 'queued', 'blocked']);
+export const promptStatusSchema = z.enum(["running", "queued", "blocked"]);
 export type PromptStatus = z.infer<typeof promptStatusSchema>;
 
 export const promptItemSchema = z.object({
@@ -103,16 +103,16 @@ export const promptAbortResponseSchema = z.object({
 export type PromptAbortResponse = z.infer<typeof promptAbortResponseSchema>;
 
 export interface PromptCompletedEventPayload {
-  readonly type: 'prompt.completed';
+  readonly type: "prompt.completed";
   readonly agentId: string;
   readonly sessionId: string;
   readonly promptId: string;
   readonly finishedAt: string;
-  readonly reason?: 'completed' | 'failed' | 'blocked';
+  readonly reason?: "completed" | "failed" | "blocked";
 }
 
 export interface PromptAbortedEventPayload {
-  readonly type: 'prompt.aborted';
+  readonly type: "prompt.aborted";
   readonly agentId: string;
   readonly sessionId: string;
   readonly promptId: string;
@@ -120,11 +120,11 @@ export interface PromptAbortedEventPayload {
 }
 
 export interface PromptSteeredEventPayload {
-  readonly type: 'prompt.steered';
+  readonly type: "prompt.steered";
   readonly agentId: string;
   readonly sessionId: string;
   readonly activePromptId: string;
   readonly promptIds: readonly string[];
-  readonly content: PromptSubmission['content'];
+  readonly content: PromptSubmission["content"];
   readonly steeredAt: string;
 }

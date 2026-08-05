@@ -18,10 +18,10 @@
  * Bound at Agent scope.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { createDecorator } from '#/_base/di/instantiation';
-import { type AgentTool } from '#/tool/toolContract';
+import { createDecorator } from "#/_base/di/instantiation";
+import { type AgentTool } from "#/tool/toolContract";
 
 export const MAX_LINES: number = 1000;
 export const MAX_LINE_LENGTH: number = 2000;
@@ -34,7 +34,7 @@ export const ReadInputSchema = z.object({
   path: z
     .string()
     .describe(
-      'Path to a text file. Relative paths resolve against the working directory; a path outside the working directory must be absolute. Directories are not supported; use `ls` via Bash for a known directory, or Glob for pattern search.',
+      "Path to a text file. Relative paths resolve against the working directory; a path outside the working directory must be absolute. Directories are not supported; use `ls` via Bash for a known directory, or Glob for pattern search.",
     ),
   line_offset: z
     .union([PositiveLineOffsetSchema, TailLineOffsetSchema])
@@ -60,5 +60,7 @@ export const ReadOutputSchema = z.object({
 export type ReadInput = z.infer<typeof ReadInputSchema>;
 export type ReadOutput = z.infer<typeof ReadOutputSchema>;
 
-export interface IReadTool extends AgentTool<ReadInput> { readonly _serviceBrand: undefined }
-export const IReadTool = createDecorator<IReadTool>('readTool');
+export interface IReadTool extends AgentTool<ReadInput> {
+  readonly _serviceBrand: undefined;
+}
+export const IReadTool = createDecorator<IReadTool>("readTool");

@@ -1,16 +1,16 @@
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 
-const server = new McpServer({ name: 'cwd-stdio', version: '0.0.1' });
+const server = new McpServer({ name: "cwd-stdio", version: "0.0.1" });
 
 server.registerTool(
-  'get_cwd',
+  "get_cwd",
   {
-    description: 'Returns the server process cwd',
+    description: "Returns the server process cwd",
     inputSchema: {},
   },
   () => ({
-    content: [{ type: 'text', text: process.cwd() }],
+    content: [{ type: "text", text: process.cwd() }],
   }),
 );
 

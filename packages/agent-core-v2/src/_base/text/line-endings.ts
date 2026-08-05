@@ -5,7 +5,7 @@
  * model sees a consistent view while the on-disk bytes stay faithful.
  */
 
-export type LineEndingStyle = 'lf' | 'crlf' | 'mixed';
+export type LineEndingStyle = "lf" | "crlf" | "mixed";
 
 export interface ModelTextView {
   text: string;
@@ -31,28 +31,31 @@ export function detectLineEndingStyle(text: string): LineEndingStyle {
     }
   }
 
-  if (hasLoneCr || (hasCrLf && hasLf)) return 'mixed';
-  if (hasCrLf) return 'crlf';
-  return 'lf';
+  if (hasLoneCr || (hasCrLf && hasLf)) return "mixed";
+  if (hasCrLf) return "crlf";
+  return "lf";
 }
 
 export function toModelTextView(raw: string): ModelTextView {
   const lineEndingStyle = detectLineEndingStyle(raw);
-  if (lineEndingStyle !== 'crlf') {
+  if (lineEndingStyle !== "crlf") {
     return { text: raw, lineEndingStyle };
   }
 
   return {
-    text: raw.replaceAll('\r\n', '\n'),
+    text: raw.replaceAll("\r\n", "\n"),
     lineEndingStyle,
   };
 }
 
-export function materializeModelText(text: string, lineEndingStyle: LineEndingStyle): string {
-  if (lineEndingStyle !== 'crlf') return text;
-  return text.replaceAll('\r\n', '\n').replaceAll('\n', '\r\n');
+export function materializeModelText(
+  text: string,
+  lineEndingStyle: LineEndingStyle,
+): string {
+  if (lineEndingStyle !== "crlf") return text;
+  return text.replaceAll("\r\n", "\n").replaceAll("\n", "\r\n");
 }
 
 export function makeCarriageReturnsVisible(text: string): string {
-  return text.replaceAll('\r', '\\r');
+  return text.replaceAll("\r", "\\r");
 }

@@ -13,9 +13,9 @@
  * fields pass through") and avoiding double-work since the server emits the
  * shapes already.
  */
-import { WebSocket as WsWebSocket } from 'ws';
+import { WebSocket as WsWebSocket } from "ws";
 
-import { recordReportEvent } from './report.js';
+import { recordReportEvent } from "./report.js";
 
 /** Wire frame shape — kept loose because the server adds new event types. */
 export interface AnyFrame {
@@ -32,7 +32,11 @@ export interface AnyFrame {
 export interface WsClientOptions {
   url: string;
   wsImpl: typeof WsWebSocket;
-  logger: (level: 'info' | 'warn' | 'error' | 'debug', msg: string, meta?: unknown) => void;
+  logger: (
+    level: "info" | "warn" | "error" | "debug",
+    msg: string,
+    meta?: unknown,
+  ) => void;
   reportDir?: string;
 }
 
@@ -63,7 +67,8 @@ export class WsClient {
   private readonly _subscribers = new Set<(f: AnyFrame) => void>();
   private _closed = false;
   private _closeReason: { code: number; reason: string } | null = null;
-  private _closeWaiters: Array<(v: { code: number; reason: string }) => void> = [];
+  private _closeWaiters: Array<(v: { code: number; reason: string }) => void> =
+    [];
 
   constructor(private readonly opts: WsClientOptions) {}
 
@@ -73,38 +78,45 @@ export class WsClient {
     await new Promise<void>((resolve, reject) => {
       const ws = new this.opts.wsImpl(this.opts.url);
       this.ws = ws;
-      ws.once('open', () => {
+      ws.once("open", () => {
         recordReportEvent(
-          { kind: 'ws', direction: 'lifecycle', url: this.opts.url, message: 'open' },
+          {
+            kind: "ws",
+            direction: "lifecycle",
+            url: this.opts.url,
+            message: "open",
+          },
           { reportDir: this.opts.reportDir },
         );
         resolve();
       });
-      ws.once('error', (err) => {
+      ws.once("error", (err) => {
         if (this._closed) return;
         recordReportEvent(
           {
-            kind: 'ws',
-            direction: 'lifecycle',
+            kind: "ws",
+            direction: "lifecycle",
             url: this.opts.url,
-            message: 'error',
+            message: "error",
             error: errorForReport(err),
           },
           { reportDir: this.opts.reportDir },
         );
         reject(err as Error);
       });
-      ws.on('message', (data) => this._onMessage(data));
-      ws.on('close', (code, reason) => this._onClose(code, String(reason ?? '')));
+      ws.on("message", (data) => this._onMessage(data));
+      ws.on("close", (code, reason) =>
+        this._onClose(code, String(reason ?? "")),
+      );
     });
   }
 
   /** JSON-stringifies and sends a frame. */
   send(frame: object): void {
-    if (!this.ws) throw new Error('ws not open');
+    if (!this.ws) throw new Error("ws not open");
     this.ws.send(JSON.stringify(frame));
     recordReportEvent(
-      { kind: 'ws', direction: 'out', url: this.opts.url, frame },
+      { kind: "ws", direction: "out", url: this.opts.url, frame },
       { reportDir: this.opts.reportDir },
     );
   }
@@ -134,7 +146,11 @@ export class WsClient {
         }
       }
       if (this._closed) {
-        reject(new Error(`ws closed before matching frame arrived (code=${this._closeReason?.code})`));
+        reject(
+          new Error(
+            `ws closed before matching frame arrived (code=${this._closeReason?.code})`,
+          ),
+        );
         return;
       }
       const waiter: PendingWaiter = {
@@ -159,10 +175,13 @@ export class WsClient {
   }
 
   /** Send a control message and wait for its `ack` (matched by `id`). */
-  async sendAndAwaitAck(frame: { type: string; id: string; payload: unknown }, timeoutMs: number): Promise<AnyFrame> {
+  async sendAndAwaitAck(
+    frame: { type: string; id: string; payload: unknown },
+    timeoutMs: number,
+  ): Promise<AnyFrame> {
     this.send(frame);
     return this.waitForFrame(
-      (f) => f.type === 'ack' && f.id === frame.id,
+      (f) => f.type === "ack" && f.id === frame.id,
       timeoutMs,
     );
   }
@@ -185,16 +204,18 @@ export class WsClient {
   private _onMessage(data: unknown): void {
     let frame: AnyFrame;
     try {
-      const raw = typeof data === 'string' ? data : String(data);
+      const raw = typeof data === "string" ? data : String(data);
       frame = JSON.parse(raw) as AnyFrame;
     } catch (err) {
-      this.opts.logger('warn', 'ws: dropped non-JSON frame', { err: String(err) });
+      this.opts.logger("warn", "ws: dropped non-JSON frame", {
+        err: String(err),
+      });
       recordReportEvent(
         {
-          kind: 'ws',
-          direction: 'in',
+          kind: "ws",
+          direction: "in",
           url: this.opts.url,
-          message: 'dropped non-JSON frame',
+          message: "dropped non-JSON frame",
           error: errorForReport(err),
         },
         { reportDir: this.opts.reportDir },
@@ -202,12 +223,12 @@ export class WsClient {
       return;
     }
     recordReportEvent(
-      { kind: 'ws', direction: 'in', url: this.opts.url, frame },
+      { kind: "ws", direction: "in", url: this.opts.url, frame },
       { reportDir: this.opts.reportDir },
     );
 
-    if (frame.type === 'ping') {
-      this.send({ type: 'pong', payload: { nonce: pingNonce(frame) } });
+    if (frame.type === "ping") {
+      this.send({ type: "pong", payload: { nonce: pingNonce(frame) } });
     }
 
     // Dispatch to subscribers first — they observe every frame, regardless of
@@ -216,7 +237,7 @@ export class WsClient {
       try {
         sub(frame);
       } catch (err) {
-        this.opts.logger('warn', 'ws: subscriber threw', { err: String(err) });
+        this.opts.logger("warn", "ws: subscriber threw", { err: String(err) });
       }
     }
 
@@ -228,7 +249,9 @@ export class WsClient {
       try {
         matches = w.match(frame);
       } catch (err) {
-        this.opts.logger('warn', 'ws: waiter predicate threw', { err: String(err) });
+        this.opts.logger("warn", "ws: waiter predicate threw", {
+          err: String(err),
+        });
       }
       if (matches) {
         this._waiters.splice(i, 1);
@@ -244,16 +267,18 @@ export class WsClient {
     this._closeReason = { code, reason };
     recordReportEvent(
       {
-        kind: 'ws',
-        direction: 'lifecycle',
+        kind: "ws",
+        direction: "lifecycle",
         url: this.opts.url,
-        message: 'close',
+        message: "close",
         frame: { code, reason },
       },
       { reportDir: this.opts.reportDir },
     );
     for (const w of this._waiters.splice(0)) {
-      w.reject(new Error(`ws closed (code=${code}) before matching frame arrived`));
+      w.reject(
+        new Error(`ws closed (code=${code}) before matching frame arrived`),
+      );
     }
     for (const w of this._closeWaiters.splice(0)) w(this._closeReason);
   }
@@ -261,7 +286,7 @@ export class WsClient {
 
 function pingNonce(frame: AnyFrame): string {
   const payload = frame.payload as { nonce?: unknown } | undefined;
-  return typeof payload?.nonce === 'string' ? payload.nonce : '';
+  return typeof payload?.nonce === "string" ? payload.nonce : "";
 }
 
 function errorForReport(error: unknown): unknown {

@@ -9,7 +9,7 @@
 import type {
   AgentProfile,
   AgentProfilePromptPrefixContext,
-} from './agentProfileCatalog';
+} from "./agentProfileCatalog";
 
 export async function applyProfilePromptPrefix(
   profile: AgentProfile,

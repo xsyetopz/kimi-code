@@ -7,16 +7,19 @@
  * config section.
  */
 
-import { type FlagDefinitionInput, registerFlagDefinition } from '#/app/flag/flagRegistry';
+import {
+  type FlagDefinitionInput,
+  registerFlagDefinition,
+} from "#/app/flag/flagRegistry";
 
 export const persistenceMiniDbReadModelFlag: FlagDefinitionInput = {
-  id: 'persistence_minidb_readmodel',
-  title: 'minidb read model',
+  id: "persistence_minidb_readmodel",
+  title: "minidb read model",
   description:
-    'Use the minidb-backed IQueryStore as a derived read model for session indexing and wire replay.',
-  env: 'KIMI_CODE_EXPERIMENTAL_PERSISTENCE_MINIDB_READMODEL',
+    "Use the minidb-backed IQueryStore as a derived read model for session indexing and wire replay.",
+  env: "KIMI_CODE_EXPERIMENTAL_PERSISTENCE_MINIDB_READMODEL",
   default: false,
-  surface: 'core',
+  surface: "core",
 };
 
 registerFlagDefinition(persistenceMiniDbReadModelFlag);

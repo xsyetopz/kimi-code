@@ -1,6 +1,18 @@
-import { Fragment, useRef, useMemo, useState, useEffect, useCallback } from "react";
+import {
+  Fragment,
+  useRef,
+  useMemo,
+  useState,
+  useEffect,
+  useCallback,
+} from "react";
 import { useMemoizedFn } from "ahooks";
-import { IconSend, IconPlayerStop, IconChevronDown, IconPlus } from "@tabler/icons-react";
+import {
+  IconSend,
+  IconPlayerStop,
+  IconChevronDown,
+  IconPlus,
+} from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -10,7 +22,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { ActionMenu } from "../ActionMenu";
 import { SlashCommandMenu } from "../SlashCommandMenu";
 import { FilePickerMenu } from "../FilePickerMenu";
@@ -53,14 +69,36 @@ export function InputArea({ onAuthAction }: InputAreaProps) {
   const [cursorPos, setCursorPos] = useState(0);
   const [previewMedia, setPreviewMedia] = useState<string | null>(null);
 
-  const { isStreaming, sendMessage, abort, draftMedia, removeDraftMedia, hasProcessingMedia, getMediaInConversation, pendingInput, planMode, messages } = useChatStore();
-  const { currentModel, thinkingEffort, updateModel, toggleThinking, selectThinkingEffort, models, extensionConfig, getCurrentThinkingMode } = useSettingsStore();
+  const {
+    isStreaming,
+    sendMessage,
+    abort,
+    draftMedia,
+    removeDraftMedia,
+    hasProcessingMedia,
+    getMediaInConversation,
+    pendingInput,
+    planMode,
+    messages,
+  } = useChatStore();
+  const {
+    currentModel,
+    thinkingEffort,
+    updateModel,
+    toggleThinking,
+    selectThinkingEffort,
+    models,
+    extensionConfig,
+    getCurrentThinkingMode,
+  } = useSettingsStore();
 
   const isProcessing = hasProcessingMedia();
   const thinkingMode = getCurrentThinkingMode();
   // A switch from a non-empty conversation resends the accumulated context,
   // losing the prompt cache — surface the cost note in the switcher dropdowns.
-  const hasConversationHistory = messages.some((message) => message.role === "user");
+  const hasConversationHistory = messages.some(
+    (message) => message.role === "user",
+  );
 
   const [showPlanModeConfirm, setShowPlanModeConfirm] = useState(false);
 
@@ -86,30 +124,49 @@ export function InputArea({ onAuthAction }: InputAreaProps) {
     return { image: media.hasImage, video: media.hasVideo };
   }, [getMediaInConversation, draftMedia]);
 
-  const availableModels = useMemo(() => getModelsForMedia(models, mediaReq), [models, mediaReq]);
+  const availableModels = useMemo(
+    () => getModelsForMedia(models, mediaReq),
+    [models, mediaReq],
+  );
   const currentModelConfig = getModelById(models, currentModel);
-  const modelGroups = useMemo(() => groupModelsByProvider(availableModels), [availableModels]);
+  const modelGroups = useMemo(
+    () => groupModelsByProvider(availableModels),
+    [availableModels],
+  );
   const showProviderGroups = modelGroups.length > 1;
-  const currentModelLabel = currentModelConfig === undefined
-    ? "No models available"
-    : showProviderGroups
-      ? `${currentModelConfig.name} · ${providerDisplayName(currentModelConfig.provider)}`
-      : currentModelConfig.name;
+  const currentModelLabel =
+    currentModelConfig === undefined
+      ? "No models available"
+      : showProviderGroups
+        ? `${currentModelConfig.name} · ${providerDisplayName(currentModelConfig.provider)}`
+        : currentModelConfig.name;
 
   // Auto-switch model if current model doesn't support required media
   useEffect(() => {
     if (!mediaReq.image && !mediaReq.video) {
       return;
     }
-    const isCurrentModelValid = availableModels.some((m) => m.id === currentModel);
+    const isCurrentModelValid = availableModels.some(
+      (m) => m.id === currentModel,
+    );
     if (isCurrentModelValid) {
       return;
     }
-    const fallbackModel = getMediaFallbackModel(availableModels, currentModelConfig);
+    const fallbackModel = getMediaFallbackModel(
+      availableModels,
+      currentModelConfig,
+    );
     if (fallbackModel !== undefined) {
       updateModel(fallbackModel.id);
     }
-  }, [mediaReq.image, mediaReq.video, currentModel, currentModelConfig, availableModels, updateModel]);
+  }, [
+    mediaReq.image,
+    mediaReq.video,
+    currentModel,
+    currentModelConfig,
+    availableModels,
+    updateModel,
+  ]);
 
   // Restore pending input
   useEffect(() => {
@@ -132,7 +189,10 @@ export function InputArea({ onAuthAction }: InputAreaProps) {
     }
   }, [pendingInput, isStreaming]);
 
-  const activeToken = useMemo(() => findActiveToken(text, cursorPos), [text, cursorPos]);
+  const activeToken = useMemo(
+    () => findActiveToken(text, cursorPos),
+    [text, cursorPos],
+  );
 
   const { handlePaste, handlePickMedia } = useMediaUpload();
 
@@ -242,7 +302,11 @@ export function InputArea({ onAuthAction }: InputAreaProps) {
     }
   }, [showSlashMenu, showFileMenu, removeActiveToken]);
 
-  useClickOutside([textareaRef, menuRef], showSlashMenu || showFileMenu, closeMenus);
+  useClickOutside(
+    [textareaRef, menuRef],
+    showSlashMenu || showFileMenu,
+    closeMenus,
+  );
 
   useEffect(() => {
     resetSlashMenu();
@@ -255,47 +319,52 @@ export function InputArea({ onAuthAction }: InputAreaProps) {
   }, [showFileMenu, resetFilePicker]);
 
   useEffect(() => {
-    const unsub = bridge.on<{ mention: string }>(Events.InsertMention, ({ mention }) => {
-      setText((prev) => prev + mention + " ");
+    const unsub = bridge.on<{ mention: string }>(
+      Events.InsertMention,
+      ({ mention }) => {
+        setText((prev) => prev + mention + " ");
 
-      setTimeout(() => {
-        textareaRef.current?.focus();
-        adjustHeight();
-      }, 0);
-    });
+        setTimeout(() => {
+          textareaRef.current?.focus();
+          adjustHeight();
+        }, 0);
+      },
+    );
 
     return unsub;
   }, [adjustHeight]);
 
-  const handleKeyDown = useMemoizedFn((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.nativeEvent.isComposing) {
-      return;
-    }
-
-    if (handleSlashMenuKey(e)) {
-      return;
-    }
-
-    if (handleFileMenuKey(e)) {
-      return;
-    }
-
-    if (handleHistoryKey(e)) {
-      return;
-    }
-
-    if (extensionConfig.useCtrlEnterToSend) {
-      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
-        e.preventDefault();
-        handleSend();
+  const handleKeyDown = useMemoizedFn(
+    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (e.nativeEvent.isComposing) {
+        return;
       }
-    } else {
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        handleSend();
+
+      if (handleSlashMenuKey(e)) {
+        return;
       }
-    }
-  });
+
+      if (handleFileMenuKey(e)) {
+        return;
+      }
+
+      if (handleHistoryKey(e)) {
+        return;
+      }
+
+      if (extensionConfig.useCtrlEnterToSend) {
+        if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+          e.preventDefault();
+          handleSend();
+        }
+      } else {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          handleSend();
+        }
+      }
+    },
+  );
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setText(e.target.value);
@@ -327,7 +396,10 @@ export function InputArea({ onAuthAction }: InputAreaProps) {
       <BottomToolbar />
       <div className="relative shrink-0">
         {showSlashMenu && filteredCommands.length > 0 && (
-          <div ref={menuRef} className="absolute bottom-full left-0 right-0 mb-2 z-10">
+          <div
+            ref={menuRef}
+            className="absolute bottom-full left-0 right-0 mb-2 z-10"
+          >
             <SlashCommandMenu
               commands={filteredCommands}
               query={activeToken?.query || ""}
@@ -339,7 +411,10 @@ export function InputArea({ onAuthAction }: InputAreaProps) {
         )}
 
         {showFileMenu && (
-          <div ref={menuRef} className="absolute bottom-full left-0 right-0 mb-2 z-10">
+          <div
+            ref={menuRef}
+            className="absolute bottom-full left-0 right-0 mb-2 z-10"
+          >
             <FilePickerMenu
               mode={filePickerMode}
               items={fileItems}
@@ -383,7 +458,11 @@ export function InputArea({ onAuthAction }: InputAreaProps) {
                   key={item.id}
                   src={item.dataUri}
                   size="sm"
-                  onClick={item.dataUri ? () => setPreviewMedia(item.dataUri!) : undefined}
+                  onClick={
+                    item.dataUri
+                      ? () => setPreviewMedia(item.dataUri!)
+                      : undefined
+                  }
                   onRemove={() => removeDraftMedia(item.id)}
                 />
               ))}
@@ -397,7 +476,11 @@ export function InputArea({ onAuthAction }: InputAreaProps) {
             onKeyDown={handleKeyDown}
             onSelect={handleSelect}
             onPaste={handlePaste}
-            placeholder={isStreaming ? "Add a follow-up..." : "Ask Kimi Code... (/ commands · @ files · Alt+K code)"}
+            placeholder={
+              isStreaming
+                ? "Add a follow-up..."
+                : "Ask Kimi Code... (/ commands · @ files · Alt+K code)"
+            }
             className={cn(
               "w-full min-h-12 max-h-35 px-2.5 py-1.5 text-xs leading-relaxed",
               "bg-transparent resize-none outline-none border-none overflow-y-auto",
@@ -424,14 +507,22 @@ export function InputArea({ onAuthAction }: InputAreaProps) {
                             the tooltip and the dropdown) — a narrow sidebar
                             has no room for both. */}
                         <span className="flex min-w-0 items-center text-xs">
-                          <span className="truncate">{currentModelConfig?.name ?? "No models available"}</span>
-                          {currentModelConfig !== undefined && showProviderGroups && (
-                            <span className="shrink-[3] truncate text-muted-foreground max-[520px]:hidden">
-                              {" · "}{providerDisplayName(currentModelConfig.provider)}
-                            </span>
-                          )}
+                          <span className="truncate">
+                            {currentModelConfig?.name ?? "No models available"}
+                          </span>
+                          {currentModelConfig !== undefined &&
+                            showProviderGroups && (
+                              <span className="shrink-[3] truncate text-muted-foreground max-[520px]:hidden">
+                                {" · "}
+                                {providerDisplayName(
+                                  currentModelConfig.provider,
+                                )}
+                              </span>
+                            )}
                         </span>
-                        {hasModels && <IconChevronDown className="size-3.5 shrink-0" />}
+                        {hasModels && (
+                          <IconChevronDown className="size-3.5 shrink-0" />
+                        )}
                       </Button>
                     </DropdownMenuTrigger>
                   </TooltipTrigger>
@@ -440,17 +531,25 @@ export function InputArea({ onAuthAction }: InputAreaProps) {
                 <DropdownMenuContent className="w-52!" align="start">
                   {modelGroups.map((group, groupIndex) => (
                     <Fragment key={group.provider}>
-                      {showProviderGroups && <DropdownMenuLabel>{group.label}</DropdownMenuLabel>}
+                      {showProviderGroups && (
+                        <DropdownMenuLabel>{group.label}</DropdownMenuLabel>
+                      )}
                       {group.models.map((model) => (
                         <DropdownMenuItem
                           key={model.id}
                           onClick={() => updateModel(model.id)}
-                          className={cn("text-xs px-3 py-1.5 cursor-pointer", currentModel === model.id && "bg-accent")}
+                          className={cn(
+                            "text-xs px-3 py-1.5 cursor-pointer",
+                            currentModel === model.id && "bg-accent",
+                          )}
                         >
                           {model.name}
                         </DropdownMenuItem>
                       ))}
-                      {showProviderGroups && groupIndex < modelGroups.length - 1 && <DropdownMenuSeparator />}
+                      {showProviderGroups &&
+                        groupIndex < modelGroups.length - 1 && (
+                          <DropdownMenuSeparator />
+                        )}
                     </Fragment>
                   ))}
                   {hasConversationHistory && (
@@ -468,19 +567,31 @@ export function InputArea({ onAuthAction }: InputAreaProps) {
                 mode={thinkingMode}
                 effort={thinkingEffort}
                 efforts={currentModelConfig?.support_efforts}
-                alwaysOn={currentModelConfig?.capabilities.includes("always_thinking")}
+                alwaysOn={currentModelConfig?.capabilities.includes(
+                  "always_thinking",
+                )}
                 disabled={isStreaming}
-                cacheNote={hasConversationHistory ? SWITCH_CACHE_NOTE : undefined}
+                cacheNote={
+                  hasConversationHistory ? SWITCH_CACHE_NOTE : undefined
+                }
                 onToggle={toggleThinking}
                 onSelectEffort={selectThinkingEffort}
               />
-              <PlanModeButton active={planMode} onToggle={handleTogglePlanMode} />
+              <PlanModeButton
+                active={planMode}
+                onToggle={handleTogglePlanMode}
+              />
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon-xs" onClick={handleAddButtonClick} className="text-muted-foreground">
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
+                    onClick={handleAddButtonClick}
+                    className="text-muted-foreground"
+                  >
                     <IconPlus className="size-3.5" />
                   </Button>
                 </TooltipTrigger>
@@ -494,7 +605,12 @@ export function InputArea({ onAuthAction }: InputAreaProps) {
                   <IconPlayerStop className="size-3.5" />
                 </Button>
               ) : (
-                <Button variant="default" size="icon-xs" onClick={handleSend} disabled={!canSend}>
+                <Button
+                  variant="default"
+                  size="icon-xs"
+                  onClick={handleSend}
+                  disabled={!canSend}
+                >
                   <IconSend className="size-3.5" />
                 </Button>
               )}
@@ -502,7 +618,10 @@ export function InputArea({ onAuthAction }: InputAreaProps) {
           </div>
         </div>
       </div>
-      <MediaPreviewModal src={previewMedia} onClose={() => setPreviewMedia(null)} />
+      <MediaPreviewModal
+        src={previewMedia}
+        onClose={() => setPreviewMedia(null)}
+      />
       <StreamingConfirmDialog
         open={showPlanModeConfirm}
         onOpenChange={setShowPlanModeConfirm}

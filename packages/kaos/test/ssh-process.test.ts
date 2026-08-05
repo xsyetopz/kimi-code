@@ -1,9 +1,9 @@
-import { spawn } from 'node:child_process';
-import { PassThrough } from 'node:stream';
+import { spawn } from "node:child_process";
+import { PassThrough } from "node:stream";
 
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test } from "vitest";
 
-import { SSHProcess } from '#/ssh';
+import { SSHProcess } from "#/ssh";
 
 /**
  * Build a minimal fake ssh2 ClientChannel that satisfies SSHProcess's needs:
@@ -39,7 +39,7 @@ function createFakeChannel(): {
     // Override .on to capture lifecycle listeners ('close', 'exit') while
     // still letting the underlying Readable receive 'data'/'end'/'error'.
     on(event: string, cb: (...args: unknown[]) => void): unknown {
-      if (event === 'close' || event === 'exit') {
+      if (event === "close" || event === "exit") {
         let arr = listeners.get(event);
         if (!arr) {
           arr = [];
@@ -67,25 +67,25 @@ function createFakeChannel(): {
       return closeCalls;
     },
     emitClose: () => {
-      emit('close');
+      emit("close");
     },
     emitExit: (code: number) => {
-      emit('exit', code);
+      emit("exit", code);
     },
   };
 }
 
 function createChildBackedChannel(): { channel: unknown } {
   const child = spawn(process.execPath, [
-    '-e',
+    "-e",
     [
       "process.on('SIGTERM', () => {",
       "  console.log('cleanup done');",
-      '  process.exit(42);',
-      '});',
+      "  process.exit(42);",
+      "});",
       "console.log('ready');",
-      'setInterval(() => {}, 1000);',
-    ].join('\n'),
+      "setInterval(() => {}, 1000);",
+    ].join("\n"),
   ]);
 
   const stdout = new PassThrough();
@@ -97,10 +97,10 @@ function createChildBackedChannel(): { channel: unknown } {
       child.kill(`SIG${name}` as NodeJS.Signals);
     },
     close(): void {
-      child.kill('SIGTERM');
+      child.kill("SIGTERM");
     },
     on(event: string, listener: (...args: unknown[]) => void): unknown {
-      if (event === 'exit' || event === 'close') {
+      if (event === "exit" || event === "close") {
         child.on(event, listener as (...args: [number | null]) => void);
         return channel;
       }
@@ -111,14 +111,14 @@ function createChildBackedChannel(): { channel: unknown } {
   return { channel };
 }
 
-describe('SSHProcess.kill()', () => {
+describe("SSHProcess.kill()", () => {
   test('kill("SIGTERM") sends "TERM" to channel.signal (strips SIG prefix)', async () => {
     const fake = createFakeChannel();
     const proc = new SSHProcess(fake.channel as never);
 
-    await proc.kill('SIGTERM');
+    await proc.kill("SIGTERM");
 
-    expect(fake.signalCalls).toEqual(['TERM']);
+    expect(fake.signalCalls).toEqual(["TERM"]);
     expect(fake.closeCalls).toBe(0);
   });
 
@@ -126,18 +126,18 @@ describe('SSHProcess.kill()', () => {
     const fake = createFakeChannel();
     const proc = new SSHProcess(fake.channel as never);
 
-    await proc.kill('SIGINT');
+    await proc.kill("SIGINT");
 
-    expect(fake.signalCalls).toEqual(['INT']);
+    expect(fake.signalCalls).toEqual(["INT"]);
   });
 
   test('kill("SIGKILL") sends "KILL"', async () => {
     const fake = createFakeChannel();
     const proc = new SSHProcess(fake.channel as never);
 
-    await proc.kill('SIGKILL');
+    await proc.kill("SIGKILL");
 
-    expect(fake.signalCalls).toEqual(['KILL']);
+    expect(fake.signalCalls).toEqual(["KILL"]);
   });
 
   test('kill() with no signal defaults to "TERM"', async () => {
@@ -146,7 +146,7 @@ describe('SSHProcess.kill()', () => {
 
     await proc.kill();
 
-    expect(fake.signalCalls).toEqual(['TERM']);
+    expect(fake.signalCalls).toEqual(["TERM"]);
   });
 
   test('kill() with a signal that does not start with "SIG" is passed through unchanged', async () => {
@@ -154,12 +154,12 @@ describe('SSHProcess.kill()', () => {
     const proc = new SSHProcess(fake.channel as never);
 
     // Cast through unknown because NodeJS.Signals is a string-literal type.
-    await proc.kill('USR1' as unknown as NodeJS.Signals);
+    await proc.kill("USR1" as unknown as NodeJS.Signals);
 
-    expect(fake.signalCalls).toEqual(['USR1']);
+    expect(fake.signalCalls).toEqual(["USR1"]);
   });
 
-  test('wait() resolves with the exit code emitted before close', async () => {
+  test("wait() resolves with the exit code emitted before close", async () => {
     const fake = createFakeChannel();
     const proc = new SSHProcess(fake.channel as never);
 
@@ -172,7 +172,7 @@ describe('SSHProcess.kill()', () => {
     expect(proc.exitCode).toBe(42);
   });
 
-  test('wait() resolves with 1 (abnormal) when close arrives without exit', async () => {
+  test("wait() resolves with 1 (abnormal) when close arrives without exit", async () => {
     const fake = createFakeChannel();
     const proc = new SSHProcess(fake.channel as never);
 
@@ -183,41 +183,45 @@ describe('SSHProcess.kill()', () => {
     expect(proc.exitCode).toBe(1);
   });
 
-  test.skipIf(process.platform === 'win32')('kill(SIGTERM) preserves cleanup output and the real exit status', async () => {
-    const { channel } = createChildBackedChannel();
-    const proc = new SSHProcess(channel as never);
-    const stdoutChunks: Buffer[] = [];
+  test.skipIf(process.platform === "win32")(
+    "kill(SIGTERM) preserves cleanup output and the real exit status",
+    async () => {
+      const { channel } = createChildBackedChannel();
+      const proc = new SSHProcess(channel as never);
+      const stdoutChunks: Buffer[] = [];
 
-    proc.stdout.on('data', (chunk: Buffer) => {
-      stdoutChunks.push(Buffer.from(chunk));
-    });
-    const stdoutEnded = new Promise<void>((resolve) => {
-      proc.stdout.on('end', () => {
-        resolve();
+      proc.stdout.on("data", (chunk: Buffer) => {
+        stdoutChunks.push(Buffer.from(chunk));
       });
-    });
-
-    const firstChunk = await new Promise<Buffer>((resolve) => {
-      proc.stdout.once('data', (chunk: Buffer) => {
-        resolve(chunk);
+      const stdoutEnded = new Promise<void>((resolve) => {
+        proc.stdout.on("end", () => {
+          resolve();
+        });
       });
-    });
-    expect(firstChunk.toString()).toContain('ready');
 
-    await proc.kill('SIGTERM');
+      const firstChunk = await new Promise<Buffer>((resolve) => {
+        proc.stdout.once("data", (chunk: Buffer) => {
+          resolve(chunk);
+        });
+      });
+      expect(firstChunk.toString()).toContain("ready");
 
-    const exitCode = await proc.wait();
-    await Promise.race([
-      stdoutEnded,
-      new Promise<void>((resolve) => {
-        setTimeout(resolve, 250);
-      }),
-    ]);
-    const stdout = Buffer.concat(stdoutChunks).toString('utf-8');
+      await proc.kill("SIGTERM");
 
-    expect(exitCode).toBe(42);
-    expect(proc.exitCode).toBe(42);
-    expect(stdout).toContain('ready');
-    expect(stdout).toContain('cleanup done');
-  }, 10000);
+      const exitCode = await proc.wait();
+      await Promise.race([
+        stdoutEnded,
+        new Promise<void>((resolve) => {
+          setTimeout(resolve, 250);
+        }),
+      ]);
+      const stdout = Buffer.concat(stdoutChunks).toString("utf-8");
+
+      expect(exitCode).toBe(42);
+      expect(proc.exitCode).toBe(42);
+      expect(stdout).toContain("ready");
+      expect(stdout).toContain("cleanup done");
+    },
+    10000,
+  );
 });

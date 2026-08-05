@@ -9,7 +9,7 @@
  * event-filtering / completion flow intact.
  */
 
-import type { PromptOutputFormat } from './options';
+import type { PromptOutputFormat } from "./options";
 
 /**
  * Structural hook-result shape the renderer reads. Both the v1 SDK
@@ -45,8 +45,8 @@ export interface PromptOutput {
   write(chunk: string): boolean;
 }
 
-const PROMPT_BLOCK_BULLET = '• ';
-const PROMPT_BLOCK_INDENT = '  ';
+const PROMPT_BLOCK_BULLET = "• ";
+const PROMPT_BLOCK_INDENT = "  ";
 
 export interface PromptTurnWriter {
   writeAssistantDelta(delta: string): void;
@@ -66,7 +66,7 @@ export interface PromptTurnWriter {
 }
 
 interface PromptJsonToolCall {
-  type: 'function';
+  type: "function";
   id: string;
   function: {
     name: string;
@@ -75,20 +75,20 @@ interface PromptJsonToolCall {
 }
 
 interface PromptJsonAssistantMessage {
-  role: 'assistant';
+  role: "assistant";
   content?: string;
   tool_calls?: PromptJsonToolCall[];
 }
 
 interface PromptJsonToolMessage {
-  role: 'tool';
+  role: "tool";
   tool_call_id: string;
   content: string;
 }
 
 interface PromptJsonRetryMetaMessage {
-  role: 'meta';
-  type: 'turn.step.retrying';
+  role: "meta";
+  type: "turn.step.retrying";
   failed_attempt: number;
   next_attempt: number;
   max_attempts: number;
@@ -147,7 +147,7 @@ export class PromptTranscriptWriter implements PromptTurnWriter {
 }
 
 export class PromptJsonWriter implements PromptTurnWriter {
-  private assistantText = '';
+  private assistantText = "";
   private readonly toolCalls: PromptJsonToolCall[] = [];
 
   constructor(private readonly stdout: PromptOutput) {}
@@ -159,7 +159,7 @@ export class PromptJsonWriter implements PromptTurnWriter {
   writeHookResult(event: HookResultEventLike): void {
     this.flushAssistant();
     this.writeJsonLine({
-      role: 'assistant',
+      role: "assistant",
       content: formatHookResultPlain(event),
     });
   }
@@ -167,14 +167,16 @@ export class PromptJsonWriter implements PromptTurnWriter {
   writeThinkingDelta(): void {}
 
   writeToolCall(toolCallId: string, name: string, args: unknown): void {
-    const existing = this.toolCalls.find((toolCall) => toolCall.id === toolCallId);
+    const existing = this.toolCalls.find(
+      (toolCall) => toolCall.id === toolCallId,
+    );
     if (existing !== undefined) {
       existing.function.name = name;
       existing.function.arguments = stringifyJsonValue(args);
       return;
     }
     this.toolCalls.push({
-      type: 'function',
+      type: "function",
       id: toolCallId,
       function: {
         name,
@@ -188,7 +190,7 @@ export class PromptJsonWriter implements PromptTurnWriter {
     name: string | undefined,
     argumentsPart: string | undefined,
   ): void {
-    const toolCall = this.findOrCreateToolCall(toolCallId, name ?? '');
+    const toolCall = this.findOrCreateToolCall(toolCallId, name ?? "");
     if (name !== undefined) {
       toolCall.function.name = name;
     }
@@ -200,7 +202,7 @@ export class PromptJsonWriter implements PromptTurnWriter {
   writeToolResult(toolCallId: string, output: unknown): void {
     this.flushAssistant();
     this.writeJsonLine({
-      role: 'tool',
+      role: "tool",
       tool_call_id: toolCallId,
       content: stringifyToolOutput(output),
     });
@@ -211,8 +213,8 @@ export class PromptJsonWriter implements PromptTurnWriter {
     // provider retries. The failed attempt's partial assistant text was already
     // discarded by the caller, so no half-formed assistant message leaks.
     const message: PromptJsonRetryMetaMessage = {
-      role: 'meta',
-      type: 'turn.step.retrying',
+      role: "meta",
+      type: "turn.step.retrying",
       failed_attempt: event.failedAttempt,
       next_attempt: event.nextAttempt,
       max_attempts: event.maxAttempts,
@@ -227,7 +229,7 @@ export class PromptJsonWriter implements PromptTurnWriter {
   flushAssistant(): void {
     if (this.assistantText.length === 0 && this.toolCalls.length === 0) return;
     const message: PromptJsonAssistantMessage = {
-      role: 'assistant',
+      role: "assistant",
       content: this.assistantText.length > 0 ? this.assistantText : undefined,
       tool_calls: this.toolCalls.length > 0 ? [...this.toolCalls] : undefined,
     };
@@ -236,7 +238,7 @@ export class PromptJsonWriter implements PromptTurnWriter {
   }
 
   discardAssistant(): void {
-    this.assistantText = '';
+    this.assistantText = "";
     this.toolCalls.length = 0;
   }
 
@@ -244,15 +246,20 @@ export class PromptJsonWriter implements PromptTurnWriter {
     this.flushAssistant();
   }
 
-  private findOrCreateToolCall(toolCallId: string, name: string): PromptJsonToolCall {
-    const existing = this.toolCalls.find((toolCall) => toolCall.id === toolCallId);
+  private findOrCreateToolCall(
+    toolCallId: string,
+    name: string,
+  ): PromptJsonToolCall {
+    const existing = this.toolCalls.find(
+      (toolCall) => toolCall.id === toolCallId,
+    );
     if (existing !== undefined) return existing;
     const toolCall: PromptJsonToolCall = {
-      type: 'function',
+      type: "function",
       id: toolCallId,
       function: {
         name,
-        arguments: '',
+        arguments: "",
       },
     };
     this.toolCalls.push(toolCall);
@@ -260,7 +267,10 @@ export class PromptJsonWriter implements PromptTurnWriter {
   }
 
   private writeJsonLine(
-    message: PromptJsonAssistantMessage | PromptJsonToolMessage | PromptJsonRetryMetaMessage,
+    message:
+      | PromptJsonAssistantMessage
+      | PromptJsonToolMessage
+      | PromptJsonRetryMetaMessage,
   ): void {
     this.stdout.write(`${JSON.stringify(message)}\n`);
   }
@@ -274,7 +284,8 @@ class PromptBlockWriter {
 
   constructor(private readonly output: PromptOutput) {
     this.wrapWidth =
-      typeof output.columns === 'number' && output.columns > PROMPT_BLOCK_INDENT.length + 1
+      typeof output.columns === "number" &&
+      output.columns > PROMPT_BLOCK_INDENT.length + 1
         ? output.columns
         : undefined;
   }
@@ -283,7 +294,7 @@ class PromptBlockWriter {
     if (chunk.length === 0) return;
     let rendered = this.start();
     for (const char of chunk) {
-      if (this.atLineStart && char !== '\n') {
+      if (this.atLineStart && char !== "\n") {
         rendered += PROMPT_BLOCK_INDENT;
         this.atLineStart = false;
         this.lineWidth = PROMPT_BLOCK_INDENT.length;
@@ -292,14 +303,14 @@ class PromptBlockWriter {
       if (
         this.wrapWidth !== undefined &&
         !this.atLineStart &&
-        char !== '\n' &&
+        char !== "\n" &&
         this.lineWidth + charWidth > this.wrapWidth
       ) {
         rendered += `\n${PROMPT_BLOCK_INDENT}`;
         this.lineWidth = PROMPT_BLOCK_INDENT.length;
       }
       rendered += char;
-      if (char === '\n') {
+      if (char === "\n") {
         this.atLineStart = true;
         this.lineWidth = 0;
       } else {
@@ -311,14 +322,14 @@ class PromptBlockWriter {
 
   finish(): void {
     if (!this.started) return;
-    this.output.write(this.atLineStart ? '\n' : '\n\n');
+    this.output.write(this.atLineStart ? "\n" : "\n\n");
     this.started = false;
     this.atLineStart = false;
     this.lineWidth = 0;
   }
 
   private start(): string {
-    if (this.started) return '';
+    if (this.started) return "";
     this.started = true;
     this.atLineStart = false;
     this.lineWidth = PROMPT_BLOCK_BULLET.length;
@@ -327,7 +338,7 @@ class PromptBlockWriter {
 }
 
 function visibleCharWidth(char: string): number {
-  return char === '\t' ? 4 : 1;
+  return char === "\t" ? 4 : 1;
 }
 
 function formatHookResultPlain(event: HookResultEventLike): string {
@@ -335,37 +346,37 @@ function formatHookResultPlain(event: HookResultEventLike): string {
 }
 
 function formatHookResultTitle(event: HookResultEventLike): string {
-  return `${event.hookEvent} hook${event.blocked === true ? ' blocked' : ''}`;
+  return `${event.hookEvent} hook${event.blocked === true ? " blocked" : ""}`;
 }
 
 function formatHookResultBody(event: HookResultEventLike): string {
   const content = event.content.trim();
-  return content.length === 0 ? '(empty)' : content;
+  return content.length === 0 ? "(empty)" : content;
 }
 
 function stringifyJsonValue(value: unknown): string {
-  if (typeof value === 'string') return value;
+  if (typeof value === "string") return value;
   const json = JSON.stringify(value);
-  return json ?? '';
+  return json ?? "";
 }
 
 function stringifyToolOutput(output: unknown): string {
-  if (typeof output === 'string') return output;
+  if (typeof output === "string") return output;
   const json = JSON.stringify(output);
   return json ?? String(output);
 }
 
 interface PromptJsonResumeMetaMessage {
-  role: 'meta';
-  type: 'session.resume_hint';
+  role: "meta";
+  type: "session.resume_hint";
   session_id: string;
   command: string;
   content: string;
 }
 
 interface PromptJsonVersionMetaMessage {
-  role: 'meta';
-  type: 'system.version';
+  role: "meta";
+  type: "system.version";
   version: string;
 }
 
@@ -375,10 +386,10 @@ export function writeExperimentalVersion(
   stdout: PromptOutput,
   stderr: PromptOutput,
 ): void {
-  if (outputFormat === 'stream-json') {
+  if (outputFormat === "stream-json") {
     const message: PromptJsonVersionMetaMessage = {
-      role: 'meta',
-      type: 'system.version',
+      role: "meta",
+      type: "system.version",
       version,
     };
     stdout.write(`${JSON.stringify(message)}\n`);
@@ -395,10 +406,10 @@ export function writeResumeHint(
 ): void {
   const command = `kimi -r ${sessionId}`;
   const content = `To resume this session: ${command}`;
-  if (outputFormat === 'stream-json') {
+  if (outputFormat === "stream-json") {
     const message: PromptJsonResumeMetaMessage = {
-      role: 'meta',
-      type: 'session.resume_hint',
+      role: "meta",
+      type: "session.resume_hint",
       session_id: sessionId,
       command,
       content,

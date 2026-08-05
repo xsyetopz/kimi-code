@@ -28,19 +28,28 @@
  * optionally without breaking existing callers.
  */
 
-import type { ServiceIdentifier, ServicesAccessor } from '#/_base/di/instantiation';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
+import type {
+  ServiceIdentifier,
+  ServicesAccessor,
+} from "#/_base/di/instantiation";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
 import type {
   AgentTool,
   ToolDisclosure,
   ToolSource,
-} from '#/tool/toolContract';
+} from "#/tool/toolContract";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type AnyAgentTool = AgentTool<any>;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type AgentToolCtor<T extends AnyAgentTool = AnyAgentTool> = new (...args: any[]) => T;
+export type AgentToolCtor<T extends AnyAgentTool = AnyAgentTool> = new (
+  ...args: any[]
+) => T;
 
 export interface AgentToolContributionOptions {
   readonly name: string;
@@ -68,7 +77,7 @@ export function registerAgentToolService<T extends AnyAgentTool>(
     id,
     ctor,
     ScopeActivation.OnDemand,
-    options.domain ?? 'unknown',
+    options.domain ?? "unknown",
   );
   _agentToolContributions.push({ id, ctor, options });
 }

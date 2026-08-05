@@ -1,13 +1,13 @@
-import { createKimiHarness } from '@moonshot-ai/kimi-code-sdk';
+import { createKimiHarness } from "@moonshot-ai/kimi-code-sdk";
 
 import {
   smokeIdentityFromEnv,
   createConfiguredSession,
   startPromptAndWaitForDelta,
-} from './runtime-smoke-helpers';
+} from "./runtime-smoke-helpers";
 
 const PROMPT =
-  'Write a detailed multi-paragraph explanation of how cancellation should work in an SDK streaming session.';
+  "Write a detailed multi-paragraph explanation of how cancellation should work in an SDK streaming session.";
 
 async function main(): Promise<void> {
   const harness = createKimiHarness({ identity: smokeIdentityFromEnv() });
@@ -18,7 +18,7 @@ async function main(): Promise<void> {
 
     await session.cancel();
     const endedEvent = await stream.ended;
-    if (endedEvent.type !== 'turn.ended' || endedEvent.reason !== 'cancelled') {
+    if (endedEvent.type !== "turn.ended" || endedEvent.reason !== "cancelled") {
       throw new Error(`Expected cancelled turn, got ${endedEvent.type}`);
     }
 

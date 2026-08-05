@@ -1,5 +1,5 @@
-import type { KaosProcess } from '@moonshot-ai/kaos';
-import { vi } from 'vitest';
+import type { KaosProcess } from "@moonshot-ai/kaos";
+import { vi } from "vitest";
 
 import {
   AgentBackgroundTask,
@@ -7,9 +7,12 @@ import {
   BackgroundTaskPersistence,
   ProcessBackgroundTask,
   type BackgroundTaskInfo,
-} from '../../../src/agent/background';
-import type { SessionSubagentHost, SubagentHandle } from '../../../src/session/subagent-host';
-import type { AgentEvent } from '../../../src/rpc/events';
+} from "../../../src/agent/background";
+import type {
+  SessionSubagentHost,
+  SubagentHandle,
+} from "../../../src/session/subagent-host";
+import type { AgentEvent } from "../../../src/rpc/events";
 
 export interface FakeBackgroundAgent {
   emitEvent: ReturnType<typeof vi.fn>;
@@ -27,11 +30,13 @@ export interface BackgroundManagerFixture {
   persistence?: BackgroundTaskPersistence;
 }
 
-export function createBackgroundManager(options: {
-  sessionDir?: string;
-  maxRunningTasks?: number;
-  hooks?: FakeBackgroundAgent['hooks'];
-} = {}): BackgroundManagerFixture {
+export function createBackgroundManager(
+  options: {
+    sessionDir?: string;
+    maxRunningTasks?: number;
+    hooks?: FakeBackgroundAgent["hooks"];
+  } = {},
+): BackgroundManagerFixture {
   const emittedEvents: AgentEvent[] = [];
   const agent: FakeBackgroundAgent = {
     emittedEvents,
@@ -64,7 +69,9 @@ export function registerProcess(
   command: string,
   description: string,
 ): string {
-  return manager.registerTask(new ProcessBackgroundTask(proc, command, description));
+  return manager.registerTask(
+    new ProcessBackgroundTask(proc, command, description),
+  );
 }
 
 export function agentTask(
@@ -73,13 +80,16 @@ export function agentTask(
   options: {
     readonly agentId?: string;
     readonly subagentType?: string;
-    readonly subagentHost?: Pick<SessionSubagentHost, 'markActiveChildDetached'>;
+    readonly subagentHost?: Pick<
+      SessionSubagentHost,
+      "markActiveChildDetached"
+    >;
     readonly abortController?: AbortController;
   } = {},
 ): AgentBackgroundTask {
   const handle: SubagentHandle = {
-    agentId: options.agentId ?? 'agent-child',
-    profileName: options.subagentType ?? 'coder',
+    agentId: options.agentId ?? "agent-child",
+    profileName: options.subagentType ?? "coder",
     resumed: false,
     completion,
   };
@@ -100,11 +110,11 @@ export async function waitForTerminal(
   while (Date.now() <= deadline) {
     const info = await manager.wait(taskId, 5);
     if (
-      info?.status === 'completed' ||
-      info?.status === 'failed' ||
-      info?.status === 'timed_out' ||
-      info?.status === 'killed' ||
-      info?.status === 'lost'
+      info?.status === "completed" ||
+      info?.status === "failed" ||
+      info?.status === "timed_out" ||
+      info?.status === "killed" ||
+      info?.status === "lost"
     ) {
       return info;
     }

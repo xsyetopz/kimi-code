@@ -17,9 +17,9 @@ import {
   truncateToWidth,
   visibleWidth,
   type Focusable,
-} from '@moonshot-ai/pi-tui';
+} from "@moonshot-ai/pi-tui";
 
-import { currentTheme } from '#/tui/theme';
+import { currentTheme } from "#/tui/theme";
 
 export interface CustomRegistryImportValue {
   readonly url: string;
@@ -27,25 +27,26 @@ export interface CustomRegistryImportValue {
 }
 
 export type CustomRegistryImportResult =
-  | { readonly kind: 'ok'; readonly value: CustomRegistryImportValue }
-  | { readonly kind: 'cancel' };
+  | { readonly kind: "ok"; readonly value: CustomRegistryImportValue }
+  | { readonly kind: "cancel" };
 
-const TITLE = 'Import custom provider registry';
-const SUBTITLE_DEFAULT = 'Paste an api.json URL and its Bearer token.';
-const SUBTITLE_URL_EMPTY = 'Registry URL cannot be empty.';
-const SUBTITLE_TOKEN_EMPTY = 'Bearer token cannot be empty.';
-const FOOTER_NOT_LAST = 'Tab / ↑↓ to switch  ·  Enter for next field  ·  Esc to cancel';
-const FOOTER_LAST = 'Tab / ↑↓ to switch  ·  Enter to submit  ·  Esc to cancel';
+const TITLE = "Import custom provider registry";
+const SUBTITLE_DEFAULT = "Paste an api.json URL and its Bearer token.";
+const SUBTITLE_URL_EMPTY = "Registry URL cannot be empty.";
+const SUBTITLE_TOKEN_EMPTY = "Bearer token cannot be empty.";
+const FOOTER_NOT_LAST =
+  "Tab / ↑↓ to switch  ·  Enter for next field  ·  Esc to cancel";
+const FOOTER_LAST = "Tab / ↑↓ to switch  ·  Enter to submit  ·  Esc to cancel";
 
-type FieldId = 'url' | 'token';
+type FieldId = "url" | "token";
 
 function maskInputLine(raw: string): string {
-  const prefix = '> ';
+  const prefix = "> ";
   if (!raw.startsWith(prefix)) return raw;
 
   // Strip trailing padding spaces so they stay as spaces.
   let end = raw.length;
-  while (end > prefix.length && raw[end - 1] === ' ') {
+  while (end > prefix.length && raw[end - 1] === " ") {
     end--;
   }
   const padding = raw.slice(end);
@@ -57,26 +58,29 @@ function maskInputLine(raw: string): string {
   const maskedContent = parts
     .map((part, index) => {
       if (index % 2 === 1) return part; // ANSI sequence
-      return part.replaceAll(/[^ ]/g, '•');
+      return part.replaceAll(/[^ ]/g, "•");
     })
-    .join('');
+    .join("");
 
   return prefix + maskedContent + padding;
 }
 
-export class CustomRegistryImportDialogComponent extends Container implements Focusable {
+export class CustomRegistryImportDialogComponent
+  extends Container
+  implements Focusable
+{
   focused = false;
 
   private readonly urlInput = new Input();
   private readonly tokenInput = new Input();
   private readonly onDone: (result: CustomRegistryImportResult) => void;
-  private activeField: FieldId = 'url';
+  private activeField: FieldId = "url";
   private done = false;
-  private hint: 'none' | 'url-empty' | 'token-empty' = 'none';
+  private hint: "none" | "url-empty" | "token-empty" = "none";
 
   constructor(
     onDone: (result: CustomRegistryImportResult) => void,
-    defaultUrl: string = '',
+    defaultUrl: string = "",
   ) {
     super();
     this.onDone = onDone;
@@ -84,7 +88,7 @@ export class CustomRegistryImportDialogComponent extends Container implements Fo
     // Enter on the URL field advances to the token field; Enter on the token
     // (last) field submits.
     this.urlInput.onSubmit = () => {
-      this.focusField('token');
+      this.focusField("token");
     };
     this.tokenInput.onSubmit = () => {
       this.handleSubmit();
@@ -95,31 +99,31 @@ export class CustomRegistryImportDialogComponent extends Container implements Fo
     if (this.done) return;
     if (
       matchesKey(data, Key.escape) ||
-      matchesKey(data, Key.ctrl('c')) ||
-      matchesKey(data, Key.ctrl('d'))
+      matchesKey(data, Key.ctrl("c")) ||
+      matchesKey(data, Key.ctrl("d"))
     ) {
       this.cancel();
       return;
     }
 
-    if (matchesKey(data, Key.tab) || matchesKey(data, Key.shift('tab'))) {
+    if (matchesKey(data, Key.tab) || matchesKey(data, Key.shift("tab"))) {
       this.toggleField();
       return;
     }
     if (matchesKey(data, Key.down)) {
-      this.focusField('token');
+      this.focusField("token");
       return;
     }
     if (matchesKey(data, Key.up)) {
-      this.focusField('url');
+      this.focusField("url");
       return;
     }
 
-    if (this.hint !== 'none') {
-      this.hint = 'none';
+    if (this.hint !== "none") {
+      this.hint = "none";
     }
 
-    if (this.activeField === 'url') {
+    if (this.activeField === "url") {
       this.urlInput.handleInput(data);
     } else {
       this.tokenInput.handleInput(data);
@@ -134,91 +138,96 @@ export class CustomRegistryImportDialogComponent extends Container implements Fo
 
   override render(width: number): string[] {
     const dialogActive = this.focused && !this.done;
-    this.urlInput.focused = dialogActive && this.activeField === 'url';
-    this.tokenInput.focused = dialogActive && this.activeField === 'token';
+    this.urlInput.focused = dialogActive && this.activeField === "url";
+    this.tokenInput.focused = dialogActive && this.activeField === "token";
 
     const safeWidth = Math.max(0, width);
-    if (safeWidth <= 0) return [''];
+    if (safeWidth <= 0) return [""];
     const innerWidth = Math.max(1, safeWidth - 4);
-    const pad = '  ';
+    const pad = "  ";
 
-    const border = (s: string): string => currentTheme.fg('primary', s);
-    const titleStyled = currentTheme.boldFg('textStrong', TITLE);
+    const border = (s: string): string => currentTheme.fg("primary", s);
+    const titleStyled = currentTheme.boldFg("textStrong", TITLE);
     const subtitleText =
-      this.hint === 'url-empty'
+      this.hint === "url-empty"
         ? SUBTITLE_URL_EMPTY
-        : this.hint === 'token-empty'
+        : this.hint === "token-empty"
           ? SUBTITLE_TOKEN_EMPTY
           : SUBTITLE_DEFAULT;
-    const subtitleStyled = currentTheme.fg('textDim', subtitleText);
+    const subtitleStyled = currentTheme.fg("textDim", subtitleText);
     const footerStyled = currentTheme.fg(
-      'textDim',
-      this.activeField === 'url' ? FOOTER_NOT_LAST : FOOTER_LAST,
+      "textDim",
+      this.activeField === "url" ? FOOTER_NOT_LAST : FOOTER_LAST,
     );
 
-    const urlLabelText = 'Registry URL';
-    const tokenLabelText = 'Bearer token';
+    const urlLabelText = "Registry URL";
+    const tokenLabelText = "Bearer token";
     const urlLabelStyled =
-      this.activeField === 'url'
-        ? currentTheme.boldFg('accent', urlLabelText)
-        : currentTheme.fg('textDim', urlLabelText);
+      this.activeField === "url"
+        ? currentTheme.boldFg("accent", urlLabelText)
+        : currentTheme.fg("textDim", urlLabelText);
     const tokenLabelStyled =
-      this.activeField === 'token'
-        ? currentTheme.boldFg('accent', tokenLabelText)
-        : currentTheme.fg('textDim', tokenLabelText);
+      this.activeField === "token"
+        ? currentTheme.boldFg("accent", tokenLabelText)
+        : currentTheme.fg("textDim", tokenLabelText);
 
-    const titleLine = truncateToWidth(titleStyled, innerWidth, '…');
-    const subtitleLine = truncateToWidth(subtitleStyled, innerWidth, '…');
-    const footerLine = truncateToWidth(footerStyled, innerWidth, '…');
-    const urlLabelLine = truncateToWidth(urlLabelStyled, innerWidth, '…');
-    const tokenLabelLine = truncateToWidth(tokenLabelStyled, innerWidth, '…');
-    const urlInputLine = this.urlInput.render(innerWidth)[0] ?? '> ';
-    const rawTokenInputLine = this.tokenInput.render(innerWidth)[0] ?? '> ';
+    const titleLine = truncateToWidth(titleStyled, innerWidth, "…");
+    const subtitleLine = truncateToWidth(subtitleStyled, innerWidth, "…");
+    const footerLine = truncateToWidth(footerStyled, innerWidth, "…");
+    const urlLabelLine = truncateToWidth(urlLabelStyled, innerWidth, "…");
+    const tokenLabelLine = truncateToWidth(tokenLabelStyled, innerWidth, "…");
+    const urlInputLine = this.urlInput.render(innerWidth)[0] ?? "> ";
+    const rawTokenInputLine = this.tokenInput.render(innerWidth)[0] ?? "> ";
     const tokenInputLine = maskInputLine(rawTokenInputLine);
 
     const contentLines: string[] = [
       titleLine,
-      '',
+      "",
       subtitleLine,
-      '',
+      "",
       urlLabelLine,
       urlInputLine,
-      '',
+      "",
       tokenLabelLine,
       tokenInputLine,
-      '',
+      "",
       footerLine,
     ];
 
     if (safeWidth < 4) {
-      return ['', ...contentLines.map((line) => truncateToWidth(line, safeWidth, '…'))];
+      return [
+        "",
+        ...contentLines.map((line) => truncateToWidth(line, safeWidth, "…")),
+      ];
     }
 
     const lines: string[] = [
-      '',
-      border('╭' + '─'.repeat(safeWidth - 2) + '╮'),
-      border('│') + ' '.repeat(safeWidth - 2) + border('│'),
+      "",
+      border("╭" + "─".repeat(safeWidth - 2) + "╮"),
+      border("│") + " ".repeat(safeWidth - 2) + border("│"),
     ];
 
     for (const content of contentLines) {
       const vis = visibleWidth(content);
       const rightPad = Math.max(0, innerWidth - vis);
-      lines.push(border('│') + pad + content + ' '.repeat(rightPad) + border('│'));
+      lines.push(
+        border("│") + pad + content + " ".repeat(rightPad) + border("│"),
+      );
     }
 
-    lines.push(border('│') + ' '.repeat(safeWidth - 2) + border('│'));
-    lines.push(border('╰' + '─'.repeat(safeWidth - 2) + '╯'));
-    lines.push('');
+    lines.push(border("│") + " ".repeat(safeWidth - 2) + border("│"));
+    lines.push(border("╰" + "─".repeat(safeWidth - 2) + "╯"));
+    lines.push("");
 
-    return lines.map((line) => truncateToWidth(line, safeWidth, '…'));
+    return lines.map((line) => truncateToWidth(line, safeWidth, "…"));
   }
 
   private toggleField(): void {
-    this.focusField(this.activeField === 'url' ? 'token' : 'url');
+    this.focusField(this.activeField === "url" ? "token" : "url");
   }
 
   private focusField(field: FieldId): void {
-    this.hint = 'none';
+    this.hint = "none";
     this.activeField = field;
   }
 
@@ -229,23 +238,23 @@ export class CustomRegistryImportDialogComponent extends Container implements Fo
     const tokenValue = this.tokenInput.getValue().trim();
 
     if (urlValue.length === 0) {
-      this.hint = 'url-empty';
-      this.activeField = 'url';
+      this.hint = "url-empty";
+      this.activeField = "url";
       return;
     }
     if (tokenValue.length === 0) {
-      this.hint = 'token-empty';
-      this.activeField = 'token';
+      this.hint = "token-empty";
+      this.activeField = "token";
       return;
     }
 
     this.done = true;
-    this.onDone({ kind: 'ok', value: { url: urlValue, apiKey: tokenValue } });
+    this.onDone({ kind: "ok", value: { url: urlValue, apiKey: tokenValue } });
   }
 
   private cancel(): void {
     if (this.done) return;
     this.done = true;
-    this.onDone({ kind: 'cancel' });
+    this.onDone({ kind: "cancel" });
   }
 }

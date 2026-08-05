@@ -4,7 +4,7 @@
  * (tool input/output/display, payloads) validate as `z.unknown()`.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
 // ------------------------------------------------------------------ ids
 
@@ -30,23 +30,27 @@ const AGENT_ID_PATTERN = /^[A-Za-z0-9._-]{1,128}$/;
  * or crash the read.
  */
 export function isPlainAgentId(agentId: string): boolean {
-  return AGENT_ID_PATTERN.test(agentId) && agentId !== '.' && agentId !== '..';
+  return AGENT_ID_PATTERN.test(agentId) && agentId !== "." && agentId !== "..";
 }
 
 // ---------------------------------------------------------------- model
 
-export const turnOriginSchema = z.discriminatedUnion('kind', [
-  z.object({ kind: z.literal('user'), payload: z.unknown().optional() }),
+export const turnOriginSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("user"), payload: z.unknown().optional() }),
   z.object({
-    kind: z.literal('cron'),
+    kind: z.literal("cron"),
     taskId: taskIdSchema.optional(),
     payload: z.unknown().optional(),
   }),
-  z.object({ kind: z.literal('task'), taskId: taskIdSchema, payload: z.unknown().optional() }),
-  z.object({ kind: z.literal('hook'), payload: z.unknown().optional() }),
-  z.object({ kind: z.literal('compaction'), payload: z.unknown().optional() }),
-  z.object({ kind: z.literal('side'), payload: z.unknown().optional() }),
-  z.object({ kind: z.literal('other'), payload: z.unknown().optional() }),
+  z.object({
+    kind: z.literal("task"),
+    taskId: taskIdSchema,
+    payload: z.unknown().optional(),
+  }),
+  z.object({ kind: z.literal("hook"), payload: z.unknown().optional() }),
+  z.object({ kind: z.literal("compaction"), payload: z.unknown().optional() }),
+  z.object({ kind: z.literal("side"), payload: z.unknown().optional() }),
+  z.object({ kind: z.literal("other"), payload: z.unknown().optional() }),
 ]);
 
 export const transcriptUsageSchema = z.object({
@@ -83,31 +87,42 @@ export const stepRetrySchema = z.object({
   statusCode: z.number().optional(),
 });
 
-export const turnStateSchema = z.enum(['queued', 'running', 'completed', 'failed', 'cancelled']);
-export const stepStateSchema = z.enum(['running', 'completed', 'interrupted', 'failed']);
+export const turnStateSchema = z.enum([
+  "queued",
+  "running",
+  "completed",
+  "failed",
+  "cancelled",
+]);
+export const stepStateSchema = z.enum([
+  "running",
+  "completed",
+  "interrupted",
+  "failed",
+]);
 
 export const textFrameSchema = z.object({
-  kind: z.literal('text'),
+  kind: z.literal("text"),
   frameId: frameIdSchema,
-  role: z.enum(['assistant', 'user']),
+  role: z.enum(["assistant", "user"]),
   text: z.string(),
   attachmentIds: z.array(z.string()).optional(),
   taskId: taskIdSchema.optional(),
 });
 
 export const thinkingFrameSchema = z.object({
-  kind: z.literal('thinking'),
+  kind: z.literal("thinking"),
   frameId: frameIdSchema,
   text: z.string(),
 });
 
 export const agentRefSchema = z.object({
   agentId: agentIdSchema,
-  role: z.enum(['child', 'member']).optional(),
+  role: z.enum(["child", "member"]).optional(),
 });
 
 export const toolFrameProgressSchema = z.object({
-  kind: z.enum(['stdout', 'stderr', 'progress', 'status', 'custom']),
+  kind: z.enum(["stdout", "stderr", "progress", "status", "custom"]),
   text: z.string().optional(),
   percent: z.number().optional(),
   customKind: z.string().optional(),
@@ -115,12 +130,12 @@ export const toolFrameProgressSchema = z.object({
 });
 
 export const toolCallFrameSchema = z.object({
-  kind: z.literal('tool'),
+  kind: z.literal("tool"),
   frameId: frameIdSchema,
   toolCallId: z.string(),
   name: z.string(),
   view: z.string().optional(),
-  state: z.enum(['running', 'done', 'error']),
+  state: z.enum(["running", "done", "error"]),
   input: z.unknown().optional(),
   output: z.unknown().optional(),
   display: z.unknown().optional(),
@@ -135,23 +150,30 @@ export const toolCallFrameSchema = z.object({
 
 export const interactionSchema = z.object({
   interactionId: z.string(),
-  interactionKind: z.enum(['approval', 'question']),
+  interactionKind: z.enum(["approval", "question"]),
   toolCallId: z.string().optional(),
-  state: z.enum(['pending', 'approved', 'rejected', 'cancelled', 'answered', 'dismissed']),
+  state: z.enum([
+    "pending",
+    "approved",
+    "rejected",
+    "cancelled",
+    "answered",
+    "dismissed",
+  ]),
   request: z.unknown().optional(),
   response: z.unknown().optional(),
 });
 
 export const noticeFrameSchema = z.object({
-  kind: z.literal('notice'),
+  kind: z.literal("notice"),
   frameId: frameIdSchema,
-  level: z.enum(['error', 'warning', 'info']),
+  level: z.enum(["error", "warning", "info"]),
   source: z.string().optional(),
   message: z.string(),
   detail: z.unknown().optional(),
 });
 
-export const transcriptFrameSchema = z.discriminatedUnion('kind', [
+export const transcriptFrameSchema = z.discriminatedUnion("kind", [
   textFrameSchema,
   thinkingFrameSchema,
   toolCallFrameSchema,
@@ -159,7 +181,7 @@ export const transcriptFrameSchema = z.discriminatedUnion('kind', [
 ]);
 
 export const transcriptStepSchema = z.object({
-  kind: z.literal('step'),
+  kind: z.literal("step"),
   stepId: stepIdSchema,
   turnId: turnIdSchema,
   ordinal: z.number().int(),
@@ -176,7 +198,7 @@ export const transcriptStepSchema = z.object({
 });
 
 export const transcriptTurnSchema = z.object({
-  kind: z.literal('turn'),
+  kind: z.literal("turn"),
   turnId: turnIdSchema,
   ordinal: z.number().int(),
   state: turnStateSchema,
@@ -192,7 +214,7 @@ export const transcriptTurnSchema = z.object({
 });
 
 export const transcriptMarkerSchema = z.object({
-  kind: z.literal('marker'),
+  kind: z.literal("marker"),
   markerId: z.string(),
   marker: z.string(),
   payload: z.unknown().optional(),
@@ -200,13 +222,13 @@ export const transcriptMarkerSchema = z.object({
 });
 
 export const transcriptTaskRefSchema = z.object({
-  kind: z.literal('taskref'),
+  kind: z.literal("taskref"),
   refId: z.string(),
   taskId: taskIdSchema,
   at: z.string().optional(),
 });
 
-export const transcriptItemSchema = z.discriminatedUnion('kind', [
+export const transcriptItemSchema = z.discriminatedUnion("kind", [
   transcriptTurnSchema,
   transcriptMarkerSchema,
   transcriptTaskRefSchema,
@@ -214,8 +236,15 @@ export const transcriptItemSchema = z.discriminatedUnion('kind', [
 
 export const transcriptTaskSchema = z.object({
   taskId: taskIdSchema,
-  kind: z.enum(['shell', 'subagent', 'tool', 'other']),
-  state: z.enum(['running', 'completed', 'failed', 'timed_out', 'killed', 'lost']),
+  kind: z.enum(["shell", "subagent", "tool", "other"]),
+  state: z.enum([
+    "running",
+    "completed",
+    "failed",
+    "timed_out",
+    "killed",
+    "lost",
+  ]),
   detached: z.boolean(),
   description: z.string().optional(),
   agentId: agentIdSchema.optional(),
@@ -230,48 +259,56 @@ export const transcriptTaskSchema = z.object({
 
 export const goalMetaSchema = z.object({
   objective: z.string(),
-  status: z.enum(['active', 'paused', 'blocked', 'complete']),
+  status: z.enum(["active", "paused", "blocked", "complete"]),
   completionCriterion: z.string().optional(),
   budgetUsed: z.number().optional(),
   budgetLimit: z.number().optional(),
 });
 
 export const modesMetaSchema = z.object({
-  plan: z.object({ reviewPath: z.string().optional(), version: z.number().optional() }).optional(),
+  plan: z
+    .object({
+      reviewPath: z.string().optional(),
+      version: z.number().optional(),
+    })
+    .optional(),
   swarm: z.object({ trigger: z.string().optional() }).optional(),
 });
 
 /** `meta.merge` contract shape: a mode key set to `null` clears that badge. */
 export const modesMetaMergeSchema = z.object({
   plan: z
-    .object({ reviewPath: z.string().optional(), version: z.number().optional() })
+    .object({
+      reviewPath: z.string().optional(),
+      version: z.number().optional(),
+    })
     .nullable()
     .optional(),
   swarm: z.object({ trigger: z.string().optional() }).nullable().optional(),
 });
 
 /** Same shape as the wire `agentPhaseSchema`, re-declared (this package must not import the server). */
-export const agentPhaseMetaSchema = z.discriminatedUnion('kind', [
-  z.object({ kind: z.literal('idle') }),
+export const agentPhaseMetaSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("idle") }),
   z.object({
-    kind: z.literal('running'),
+    kind: z.literal("running"),
     turnId: z.number(),
     step: z.number(),
     stepId: z.string(),
     since: z.number(),
   }),
   z.object({
-    kind: z.literal('streaming'),
+    kind: z.literal("streaming"),
     turnId: z.number(),
     step: z.number(),
     stepId: z.string(),
-    stream: z.enum(['assistant', 'thinking', 'tool_call']),
+    stream: z.enum(["assistant", "thinking", "tool_call"]),
     toolCallId: z.string().optional(),
     toolName: z.string().optional(),
     since: z.number(),
   }),
   z.object({
-    kind: z.literal('tool_call'),
+    kind: z.literal("tool_call"),
     turnId: z.number(),
     step: z.number(),
     toolCallId: z.string(),
@@ -279,7 +316,7 @@ export const agentPhaseMetaSchema = z.discriminatedUnion('kind', [
     since: z.number(),
   }),
   z.object({
-    kind: z.literal('retrying'),
+    kind: z.literal("retrying"),
     turnId: z.number(),
     step: z.number(),
     stepId: z.string(),
@@ -292,24 +329,24 @@ export const agentPhaseMetaSchema = z.discriminatedUnion('kind', [
     since: z.number(),
   }),
   z.object({
-    kind: z.literal('awaiting_approval'),
+    kind: z.literal("awaiting_approval"),
     turnId: z.number(),
     step: z.number().optional(),
     approval: z.unknown().optional(),
     since: z.number(),
   }),
   z.object({
-    kind: z.literal('interrupted'),
+    kind: z.literal("interrupted"),
     turnId: z.number(),
     step: z.number().optional(),
-    reason: z.enum(['aborted', 'max_steps', 'error']),
+    reason: z.enum(["aborted", "max_steps", "error"]),
     message: z.string().optional(),
     at: z.number(),
   }),
   z.object({
-    kind: z.literal('ended'),
+    kind: z.literal("ended"),
     turnId: z.number(),
-    reason: z.enum(['completed', 'cancelled', 'failed', 'blocked']),
+    reason: z.enum(["completed", "cancelled", "failed", "blocked"]),
     durationMs: z.number().optional(),
     at: z.number(),
   }),
@@ -328,14 +365,14 @@ export const agentStatusMetaSchema = z.object({
   contextTokens: z.number().optional(),
   maxContextTokens: z.number().optional(),
   contextUsage: z.number().optional(),
-  permission: z.enum(['manual', 'yolo', 'auto']).optional(),
+  permission: z.enum(["manual", "yolo", "auto"]).optional(),
   phase: agentPhaseMetaSchema.optional(),
 });
 
 export const transcriptMetaSchema = z.object({
   goal: goalMetaSchema.optional(),
   modes: modesMetaSchema.optional(),
-  activity: z.enum(['idle', 'turn', 'disposing', 'unknown']).optional(),
+  activity: z.enum(["idle", "turn", "disposing", "unknown"]).optional(),
   agent: agentStatusMetaSchema.optional(),
 });
 
@@ -351,9 +388,9 @@ export const attachmentSchema = z.object({
   name: z.string().optional(),
   size: z.number().optional(),
   source: z
-    .discriminatedUnion('kind', [
-      z.object({ kind: z.literal('url'), url: z.string() }),
-      z.object({ kind: z.literal('file'), fileId: z.string() }),
+    .discriminatedUnion("kind", [
+      z.object({ kind: z.literal("url"), url: z.string() }),
+      z.object({ kind: z.literal("file"), fileId: z.string() }),
     ])
     .optional(),
   placeholder: z.string().optional(),
@@ -361,7 +398,7 @@ export const attachmentSchema = z.object({
 
 export const todoItemSchema = z.object({
   title: z.string(),
-  status: z.enum(['pending', 'in_progress', 'done']),
+  status: z.enum(["pending", "in_progress", "done"]),
 });
 
 export const todoSchema = z.object({
@@ -372,7 +409,14 @@ export const todoSchema = z.object({
 
 export const transcriptPromptSchema = z.object({
   promptId: z.string(),
-  status: z.enum(['running', 'queued', 'blocked', 'completed', 'failed', 'aborted']),
+  status: z.enum([
+    "running",
+    "queued",
+    "blocked",
+    "completed",
+    "failed",
+    "aborted",
+  ]),
   userMessageId: z.string().optional(),
   content: z.unknown().optional(),
   createdAt: z.string(),
@@ -395,49 +439,63 @@ export const agentTranscriptSnapshotSchema = z.object({
 export const turnHeaderSchema = transcriptTurnSchema.omit({ steps: true });
 export const stepHeaderSchema = transcriptStepSchema.omit({ frames: true });
 
-export const appendTargetSchema = z.discriminatedUnion('type', [
+export const appendTargetSchema = z.discriminatedUnion("type", [
   z.object({
-    type: z.literal('frame'),
+    type: z.literal("frame"),
     turnId: turnIdSchema,
     stepId: stepIdSchema,
     frameId: frameIdSchema,
   }),
-  z.object({ type: z.literal('task'), taskId: taskIdSchema }),
+  z.object({ type: z.literal("task"), taskId: taskIdSchema }),
 ]);
 
-export const transcriptOperationSchema = z.discriminatedUnion('op', [
-  z.object({ op: z.literal('reset'), agentId: agentIdSchema, snapshot: agentTranscriptSnapshotSchema }),
-  z.object({ op: z.literal('turn.upsert'), turn: turnHeaderSchema }),
-  z.object({ op: z.literal('step.upsert'), turnId: turnIdSchema, step: stepHeaderSchema }),
+export const transcriptOperationSchema = z.discriminatedUnion("op", [
   z.object({
-    op: z.literal('frame.upsert'),
+    op: z.literal("reset"),
+    agentId: agentIdSchema,
+    snapshot: agentTranscriptSnapshotSchema,
+  }),
+  z.object({ op: z.literal("turn.upsert"), turn: turnHeaderSchema }),
+  z.object({
+    op: z.literal("step.upsert"),
+    turnId: turnIdSchema,
+    step: stepHeaderSchema,
+  }),
+  z.object({
+    op: z.literal("frame.upsert"),
     turnId: turnIdSchema,
     stepId: stepIdSchema,
     frame: transcriptFrameSchema,
   }),
   z.object({
-    op: z.literal('append'),
+    op: z.literal("append"),
     target: appendTargetSchema,
     offset: z.number().int().nonnegative(),
     text: z.string(),
   }),
   z.object({
-    op: z.literal('marker.upsert'),
+    op: z.literal("marker.upsert"),
     item: transcriptMarkerSchema,
     beforeTurn: z.number().int().optional(),
   }),
   z.object({
-    op: z.literal('taskref.upsert'),
+    op: z.literal("taskref.upsert"),
     item: transcriptTaskRefSchema,
     beforeTurn: z.number().int().optional(),
   }),
-  z.object({ op: z.literal('task.upsert'), task: transcriptTaskSchema }),
-  z.object({ op: z.literal('interaction.upsert'), interaction: interactionSchema }),
-  z.object({ op: z.literal('attachment.upsert'), attachment: attachmentSchema }),
-  z.object({ op: z.literal('todo.upsert'), todo: todoSchema }),
-  z.object({ op: z.literal('prompt.upsert'), prompt: transcriptPromptSchema }),
-  z.object({ op: z.literal('meta.merge'), meta: transcriptMetaMergeSchema }),
-  z.object({ op: z.literal('items.remove'), ids: z.array(z.string()) }),
+  z.object({ op: z.literal("task.upsert"), task: transcriptTaskSchema }),
+  z.object({
+    op: z.literal("interaction.upsert"),
+    interaction: interactionSchema,
+  }),
+  z.object({
+    op: z.literal("attachment.upsert"),
+    attachment: attachmentSchema,
+  }),
+  z.object({ op: z.literal("todo.upsert"), todo: todoSchema }),
+  z.object({ op: z.literal("prompt.upsert"), prompt: transcriptPromptSchema }),
+  z.object({ op: z.literal("meta.merge"), meta: transcriptMetaMergeSchema }),
+  z.object({ op: z.literal("items.remove"), ids: z.array(z.string()) }),
 ]);
 
 export const transcriptOpBatchSchema = z.object({
@@ -447,7 +505,7 @@ export const transcriptOpBatchSchema = z.object({
 
 // ---------------------------------------------------------------- subscription
 
-export const transcriptGradeSchema = z.enum(['off', 'turn', 'block', 'delta']);
+export const transcriptGradeSchema = z.enum(["off", "turn", "block", "delta"]);
 
 /**
  * Transcript op-batch sequence number. Semantics (the protocol contract all
@@ -471,7 +529,10 @@ export const transcriptSeqSchema = z.number().int().nonnegative();
  * Per-session grade map: `'*'` is the default, explicit agent ids override.
  * Record<agentId|'*', grade>.
  */
-export const transcriptGradeSpecSchema = z.record(z.string(), transcriptGradeSchema);
+export const transcriptGradeSpecSchema = z.record(
+  z.string(),
+  transcriptGradeSchema,
+);
 
 /**
  * Wire payload of the v1 WS `subscribe_v2` control frame — the ONLY carrier of
@@ -492,7 +553,9 @@ export const transcriptSubscribeV2PayloadSchema = z.object({
   transcript_since: z.record(z.string(), transcriptSeqSchema).optional(),
 });
 
-export type TranscriptSubscribeV2Payload = z.infer<typeof transcriptSubscribeV2PayloadSchema>;
+export type TranscriptSubscribeV2Payload = z.infer<
+  typeof transcriptSubscribeV2PayloadSchema
+>;
 
 // ---------------------------------------------------------------- REST
 
@@ -514,23 +577,23 @@ export const transcriptQuerySchema = z
   .superRefine((value, ctx) => {
     if (value.before_turn !== undefined && value.after_turn !== undefined) {
       ctx.addIssue({
-        code: 'custom',
-        message: 'before_turn and after_turn are mutually exclusive',
-        path: ['before_turn'],
+        code: "custom",
+        message: "before_turn and after_turn are mutually exclusive",
+        path: ["before_turn"],
       });
     }
     if (!isPlainAgentId(value.agent_id)) {
       ctx.addIssue({
-        code: 'custom',
-        message: 'agent_id must be a plain agent id (no path separators)',
-        path: ['agent_id'],
+        code: "custom",
+        message: "agent_id must be a plain agent id (no path separators)",
+        path: ["agent_id"],
       });
     }
   });
 
 export const agentDescriptorSchema = z.object({
   agentId: agentIdSchema,
-  type: z.enum(['main', 'sub', 'independent']).optional(),
+  type: z.enum(["main", "sub", "independent"]).optional(),
   parentAgentId: agentIdSchema.optional(),
   label: z.string().optional(),
   createdAt: z.string().optional(),
@@ -563,7 +626,10 @@ export const transcriptResponseSchema = z.object({
 export const transcriptOpsCatchupResponseSchema = z.object({
   agent_id: agentIdSchema,
   batches: z.array(
-    z.object({ seq: transcriptSeqSchema, ops: z.array(transcriptOperationSchema) }),
+    z.object({
+      seq: transcriptSeqSchema,
+      ops: z.array(transcriptOperationSchema),
+    }),
   ),
   latest_seq: transcriptSeqSchema,
   complete: z.boolean(),
@@ -608,7 +674,7 @@ export const transcriptUserMessagesResponseSchema = z.object({
  * interactive review (auto permission mode, or a configured allow rule).
  */
 export const transcriptPlanReviewSchema = z.object({
-  state: z.enum(['pending', 'approved', 'rejected', 'cancelled']),
+  state: z.enum(["pending", "approved", "rejected", "cancelled"]),
   /** `response.selectedLabel` — a plan option label, or a reserved one ('Revise' / 'Reject and Exit'). */
   selected_option: z.string().optional(),
   /** `response.feedback` — the user's revision / rejection feedback. */
@@ -624,7 +690,7 @@ export const transcriptPlanReviewSchema = z.object({
 export const transcriptPlanEntrySchema = z.object({
   tool_call_id: z.string(),
   turn_id: turnIdSchema,
-  source: z.enum(['interaction', 'display', 'output']),
+  source: z.enum(["interaction", "display", "output"]),
   /** Full plan content as submitted for review. */
   plan: z.string(),
   /** The plan file path, when known. */

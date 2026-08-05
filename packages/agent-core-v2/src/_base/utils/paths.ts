@@ -3,7 +3,7 @@
  */
 
 function normalizeSlashes(p: string): string {
-  return p.replaceAll('\\', '/');
+  return p.replaceAll("\\", "/");
 }
 
 export function subtreeWatchFilter(

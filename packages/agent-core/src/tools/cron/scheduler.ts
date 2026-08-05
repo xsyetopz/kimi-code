@@ -43,11 +43,11 @@
  *     expression cannot starve the other tasks.
  */
 
-import type { ParsedCronExpression } from './cron-expr';
-import { computeNextCronRun, parseCronExpression } from './cron-expr';
-import type { ClockSources } from './clock';
-import { jitteredNextCronRunMs, oneShotJitteredNextCronRunMs } from './jitter';
-import type { CronTask } from './types';
+import type { ParsedCronExpression } from "./cron-expr";
+import { computeNextCronRun, parseCronExpression } from "./cron-expr";
+import type { ClockSources } from "./clock";
+import { jitteredNextCronRunMs, oneShotJitteredNextCronRunMs } from "./jitter";
+import type { CronTask } from "./types";
 
 export interface CronSchedulerOptions {
   /** Required. Wall + monotonic clock source. */
@@ -63,7 +63,10 @@ export interface CronSchedulerOptions {
    * Required. Called when a task fires. `coalescedCount >= 1`; > 1
    * when the scheduler slept past multiple ideal fires.
    */
-  readonly onFire: (task: CronTask, ctx: { readonly coalescedCount: number }) => void;
+  readonly onFire: (
+    task: CronTask,
+    ctx: { readonly coalescedCount: number },
+  ) => void;
 
   /**
    * Required. Returns true when the REPL is idle and the scheduler
@@ -203,7 +206,7 @@ export function createCronScheduler(opts: CronSchedulerOptions): CronScheduler {
   }
 
   function debugLog(message: string): void {
-    if (process.env['KIMI_CRON_DEBUG'] === '1') {
+    if (process.env["KIMI_CRON_DEBUG"] === "1") {
       process.stderr.write(`[cron/scheduler] ${message}\n`);
     }
   }
@@ -433,7 +436,7 @@ export function createCronScheduler(opts: CronSchedulerOptions): CronScheduler {
     const handle = setInterval(tick, interval);
     // Don't keep the event loop alive on the scheduler alone — the
     // user's REPL / agent owns lifetime.
-    if (typeof handle === 'object' && handle !== null && 'unref' in handle) {
+    if (typeof handle === "object" && handle !== null && "unref" in handle) {
       (handle as { unref: () => void }).unref();
     }
     timerHandle = handle;
@@ -474,7 +477,9 @@ export function createCronScheduler(opts: CronSchedulerOptions): CronScheduler {
             ? persistedCursor
             : undefined;
       const baseFromMs =
-        cursor !== undefined && cursor > task.createdAt ? cursor : task.createdAt;
+        cursor !== undefined && cursor > task.createdAt
+          ? cursor
+          : task.createdAt;
       return computeJitteredNext(task, parsed, baseFromMs);
     } catch (error) {
       debugLog(

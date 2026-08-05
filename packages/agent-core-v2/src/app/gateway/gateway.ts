@@ -5,7 +5,10 @@
  * `IWSGateway` entry points. App-scoped — shared across the application.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
 
 export interface IRestGateway {
   readonly _serviceBrand: undefined;
@@ -27,7 +30,7 @@ export interface IRestGateway {
 }
 
 export const IRestGateway: ServiceIdentifier<IRestGateway> =
-  createDecorator<IRestGateway>('restGateway');
+  createDecorator<IRestGateway>("restGateway");
 
 export interface IWSGateway {
   readonly _serviceBrand: undefined;
@@ -37,4 +40,4 @@ export interface IWSGateway {
 }
 
 export const IWSGateway: ServiceIdentifier<IWSGateway> =
-  createDecorator<IWSGateway>('wsGateway');
+  createDecorator<IWSGateway>("wsGateway");

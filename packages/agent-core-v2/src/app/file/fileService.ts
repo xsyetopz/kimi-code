@@ -6,14 +6,17 @@
  * on download. Bound at App scope.
  */
 
-import type { Readable } from 'node:stream';
+import type { Readable } from "node:stream";
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
-import { registerErrorDomain, type ErrorDomain } from '#/_base/errors/codes';
-import { Error2 } from '#/_base/errors/errors';
-import { isoDateTimeSchema } from '#/_base/utils/isoDateTime';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
+import { registerErrorDomain, type ErrorDomain } from "#/_base/errors/codes";
+import { Error2 } from "#/_base/errors/errors";
+import { isoDateTimeSchema } from "#/_base/utils/isoDateTime";
 
 export const fileMetaSchema = z.object({
   id: z.string().min(1),
@@ -44,24 +47,28 @@ export interface FileReadRange {
 export interface IFileService {
   readonly _serviceBrand: undefined;
 
-  save(source: Readable, filename: string, options?: SaveOptions): Promise<FileMeta>;
+  save(
+    source: Readable,
+    filename: string,
+    options?: SaveOptions,
+  ): Promise<FileMeta>;
   get(fileId: string): Promise<GetResult>;
   delete(fileId: string): Promise<void>;
 }
 
-export const IFileService: ServiceIdentifier<IFileService> = createDecorator<IFileService>('fileService');
-
+export const IFileService: ServiceIdentifier<IFileService> =
+  createDecorator<IFileService>("fileService");
 
 export const FileErrors = {
   codes: {
-    FILE_NOT_FOUND: 'file.not_found',
+    FILE_NOT_FOUND: "file.not_found",
   },
   info: {
-    'file.not_found': {
-      title: 'File not found',
+    "file.not_found": {
+      title: "File not found",
       retryable: false,
       public: true,
-      action: 'Check the file_id or upload the file again.',
+      action: "Check the file_id or upload the file again.",
     },
   },
 } as const satisfies ErrorDomain;
@@ -75,14 +82,21 @@ export class FileError extends Error2 {
     details?: Record<string, unknown>,
   ) {
     super(code, message, { details });
-    this.name = 'FileError';
+    this.name = "FileError";
   }
 }
 
 export function fileNotFoundError(fileId: string): FileError {
-  return new FileError(FileErrors.codes.FILE_NOT_FOUND, `file not found: ${fileId}`, { fileId });
+  return new FileError(
+    FileErrors.codes.FILE_NOT_FOUND,
+    `file not found: ${fileId}`,
+    { fileId },
+  );
 }
 
-export function isFileError(error: unknown, code: (typeof FileErrors.codes)[keyof typeof FileErrors.codes]): boolean {
+export function isFileError(
+  error: unknown,
+  code: (typeof FileErrors.codes)[keyof typeof FileErrors.codes],
+): boolean {
   return error instanceof Error2 && error.code === code;
 }

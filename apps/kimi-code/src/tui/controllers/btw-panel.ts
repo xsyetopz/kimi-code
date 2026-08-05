@@ -1,19 +1,20 @@
-import { Spacer } from '@moonshot-ai/pi-tui';
+import { Spacer } from "@moonshot-ai/pi-tui";
 import type {
   Event,
   KimiHarness,
   Session,
   TurnEndedEvent,
-} from '@moonshot-ai/kimi-code-sdk';
+} from "@moonshot-ai/kimi-code-sdk";
 
-import { NO_ACTIVE_SESSION_MESSAGE } from '../constant/kimi-tui';
-import { BtwPanelComponent } from '../components/panes/btw-panel';
-import { formatErrorMessage } from '../utils/event-payload';
-import { formatHookResultPlain } from '../utils/hook-result-format';
-import { createMarkdownTheme } from '../theme/pi-tui-theme';
-import type { TUIState } from '../tui-state';
+import { NO_ACTIVE_SESSION_MESSAGE } from "../constant/kimi-tui";
+import { BtwPanelComponent } from "../components/panes/btw-panel";
+import { formatErrorMessage } from "../utils/event-payload";
+import { formatHookResultPlain } from "../utils/hook-result-format";
+import { createMarkdownTheme } from "../theme/pi-tui-theme";
+import type { TUIState } from "../tui-state";
 
-const BTW_BUSY_NOTICE = 'Wait for /btw to finish before sending another question.';
+const BTW_BUSY_NOTICE =
+  "Wait for /btw to finish before sending another question.";
 
 export interface BtwPanelHost {
   state: TUIState;
@@ -92,7 +93,7 @@ export class BtwPanelController {
     return true;
   }
 
-  scroll(direction: 'up' | 'down'): boolean {
+  scroll(direction: "up" | "down"): boolean {
     const panel = this.active?.panel;
     if (panel === undefined || !panel.scroll(direction)) return false;
     this.host.state.ui.requestRender();
@@ -104,20 +105,20 @@ export class BtwPanelController {
     if (panel === undefined) return false;
 
     switch (event.type) {
-      case 'assistant.delta':
+      case "assistant.delta":
         panel.appendAnswer(event.delta);
         this.host.state.ui.requestRender();
         return true;
-      case 'thinking.delta':
+      case "thinking.delta":
         panel.appendThinking(event.delta);
         this.host.state.ui.requestRender();
         return true;
-      case 'hook.result':
+      case "hook.result":
         panel.appendAnswer(formatHookResultPlain(event));
         this.host.state.ui.requestRender();
         return true;
-      case 'turn.ended':
-        if (event.reason === 'completed') {
+      case "turn.ended":
+        if (event.reason === "completed") {
           panel.markDone();
         } else {
           panel.markFailed(formatBtwTurnEnd(event));
@@ -165,48 +166,63 @@ export class BtwPanelController {
     this.host.state.ui.requestRender();
   }
 
-  private promptAgent(agentId: string, prompt: string, panel: BtwPanelComponent): void {
+  private promptAgent(
+    agentId: string,
+    prompt: string,
+    panel: BtwPanelComponent,
+  ): void {
     const session = this.host.session;
     if (session === undefined) {
       panel.markFailed(NO_ACTIVE_SESSION_MESSAGE);
       this.host.state.ui.requestRender();
       return;
     }
-    void this.withInteractiveAgent(agentId, () => session.prompt(prompt)).catch((error: unknown) => {
-      panel.markFailed(`Failed to send /btw prompt: ${formatErrorMessage(error)}`);
-      this.host.state.ui.requestRender();
-    });
+    void this.withInteractiveAgent(agentId, () => session.prompt(prompt)).catch(
+      (error: unknown) => {
+        panel.markFailed(
+          `Failed to send /btw prompt: ${formatErrorMessage(error)}`,
+        );
+        this.host.state.ui.requestRender();
+      },
+    );
   }
 
   private async cancelAgent(agentId: string): Promise<void> {
     const session = this.host.session;
     if (session === undefined) return;
-    await this.withInteractiveAgent(agentId, () => session.cancel()).catch((error: unknown) => {
-      this.host.showError(`Failed to cancel /btw: ${formatErrorMessage(error)}`);
-    });
+    await this.withInteractiveAgent(agentId, () => session.cancel()).catch(
+      (error: unknown) => {
+        this.host.showError(
+          `Failed to cancel /btw: ${formatErrorMessage(error)}`,
+        );
+      },
+    );
   }
 
   private shouldCancelOnUnmount(panel: BtwPanelComponent): boolean {
     return panel.isRunning() || panel.isEmpty();
   }
 
-  private withInteractiveAgent<T>(agentId: string, fn: () => Promise<T>): Promise<T> {
+  private withInteractiveAgent<T>(
+    agentId: string,
+    fn: () => Promise<T>,
+  ): Promise<T> {
     return this.host.harness.withInteractiveAgent(agentId, fn);
   }
 }
 
 function formatBtwTurnEnd(event: TurnEndedEvent): string {
-  if (event.reason === 'cancelled') {
-    return 'Interrupted by user';
+  if (event.reason === "cancelled") {
+    return "Interrupted by user";
   }
-  if (event.error?.code === 'provider.filtered') {
-    return 'Provider safety policy blocked the response.';
+  if (event.error?.code === "provider.filtered") {
+    return "Provider safety policy blocked the response.";
   }
   if (event.error !== undefined) {
     return `[${event.error.code}] ${event.error.message}`;
   }
-  if (event.reason === 'blocked') {
-    return 'Prompt hook blocked the request.';
+  if (event.reason === "blocked") {
+    return "Prompt hook blocked the request.";
   }
   return `BTW turn ended with reason: ${event.reason}`;
 }

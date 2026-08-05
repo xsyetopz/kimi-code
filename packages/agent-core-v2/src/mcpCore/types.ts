@@ -6,7 +6,7 @@
  * fake transport without pulling in the MCP SDK type graph.
  */
 
-import { ErrorCodes, Error2 } from '#/errors';
+import { ErrorCodes, Error2 } from "#/errors";
 
 /**
  * Inline resource contents nested under an EmbeddedResource block.
@@ -58,7 +58,11 @@ export function assertMcpInputSchema(
   toolName: string,
   inputSchema: unknown,
 ): Record<string, unknown> {
-  if (typeof inputSchema === 'object' && inputSchema !== null && !Array.isArray(inputSchema)) {
+  if (
+    typeof inputSchema === "object" &&
+    inputSchema !== null &&
+    !Array.isArray(inputSchema)
+  ) {
     return inputSchema as Record<string, unknown>;
   }
   throw new Error2(

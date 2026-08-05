@@ -13,59 +13,77 @@
  * is not surfaced to the model.
  */
 
-import type { Readable } from 'node:stream';
+import type { Readable } from "node:stream";
 
-import type { ILogger } from '#/_base/log/log';
-import type { IProcess, ISessionProcessRunner } from '#/session/process/processRunner';
+import type { ILogger } from "#/_base/log/log";
+import type {
+  IProcess,
+  ISessionProcessRunner,
+} from "#/session/process/processRunner";
 
 const GIT_TIMEOUT_MS = 5_000;
 const MAX_DIRTY_FILES = 20;
 const MAX_COMMIT_LINE_LENGTH = 200;
 
 const ALLOWED_HOSTS = [
-  'github.com',
-  'gitlab.com',
-  'gitee.com',
-  'bitbucket.org',
-  'codeberg.org',
-  'git.sr.ht',
+  "github.com",
+  "gitlab.com",
+  "gitee.com",
+  "bitbucket.org",
+  "codeberg.org",
+  "git.sr.ht",
 ] as const;
 
 type GitFailure =
-  | { readonly kind: 'timeout' }
-  | { readonly kind: 'spawn-error' }
-  | { readonly kind: 'command-failed'; readonly exitCode?: number; readonly stderr?: string };
+  | { readonly kind: "timeout" }
+  | { readonly kind: "spawn-error" }
+  | {
+      readonly kind: "command-failed";
+      readonly exitCode?: number;
+      readonly stderr?: string;
+    };
 
 type GitResult =
   | { readonly ok: true; readonly stdout: string }
   | ({ readonly ok: false } & GitFailure);
 
-type TaggedGitResult = { readonly args: readonly string[]; readonly result: GitResult };
+type TaggedGitResult = {
+  readonly args: readonly string[];
+  readonly result: GitResult;
+};
 
 export async function collectGitContext(
   runner: ISessionProcessRunner,
   cwd: string,
   log?: ILogger,
 ): Promise<string> {
-  const revParseArgs = ['rev-parse', '--is-inside-work-tree'] as const;
+  const revParseArgs = ["rev-parse", "--is-inside-work-tree"] as const;
   const revParse = await runGit(runner, cwd, revParseArgs);
   if (!revParse.ok) {
-    if (revParse.kind === 'command-failed' && isNotARepo(revParse.stderr)) {
+    if (revParse.kind === "command-failed" && isNotARepo(revParse.stderr)) {
       return `<git-context status="unavailable" reason="not-a-repo"/>`;
     }
     logGitFailure(cwd, revParseArgs, revParse, log);
-    return '';
+    return "";
   }
 
   const commandArgs = [
-    ['remote', 'get-url', 'origin'],
-    ['symbolic-ref', '--short', 'HEAD'],
-    ['status', '--porcelain'],
-    ['log', '-3', '--format=%h %s'],
+    ["remote", "get-url", "origin"],
+    ["symbolic-ref", "--short", "HEAD"],
+    ["status", "--porcelain"],
+    ["log", "-3", "--format=%h %s"],
   ] as const;
   const [remote, branch, status, gitLog] = (await Promise.all(
-    commandArgs.map(async (args) => ({ args, result: await runGit(runner, cwd, args) })),
-  )) as unknown as [TaggedGitResult, TaggedGitResult, TaggedGitResult, TaggedGitResult];
+    commandArgs.map(async (args) => ({
+      args,
+      result: await runGit(runner, cwd, args),
+    })),
+  )) as unknown as [
+    TaggedGitResult,
+    TaggedGitResult,
+    TaggedGitResult,
+    TaggedGitResult,
+  ];
 
   for (const { args, result } of [remote, branch, status, gitLog]) {
     if (!result.ok) logGitFailure(cwd, args, result, log);
@@ -89,11 +107,13 @@ export async function collectGitContext(
 
   if (branchName) sections.push(`Branch: ${branchName}`);
 
-  const dirtyLines = dirtyRaw.split('\n').filter((line) => line.trim().length > 0);
+  const dirtyLines = dirtyRaw
+    .split("\n")
+    .filter((line) => line.trim().length > 0);
   if (dirtyLines.length > 0) {
     const total = dirtyLines.length;
     const shown = dirtyLines.slice(0, MAX_DIRTY_FILES);
-    let body = shown.map((line) => `  ${line}`).join('\n');
+    let body = shown.map((line) => `  ${line}`).join("\n");
     if (total > MAX_DIRTY_FILES) {
       body += `\n  ... and ${String(total - MAX_DIRTY_FILES)} more`;
     }
@@ -101,15 +121,19 @@ export async function collectGitContext(
   }
 
   if (logRaw) {
-    const logLines = logRaw.split('\n').filter((line) => line.trim().length > 0);
+    const logLines = logRaw
+      .split("\n")
+      .filter((line) => line.trim().length > 0);
     if (logLines.length > 0) {
-      const body = logLines.map((line) => `  ${line.slice(0, MAX_COMMIT_LINE_LENGTH)}`).join('\n');
+      const body = logLines
+        .map((line) => `  ${line.slice(0, MAX_COMMIT_LINE_LENGTH)}`)
+        .join("\n");
       sections.push(`Recent commits:\n${body}`);
     }
   }
 
-  if (sections.length <= 1) return '';
-  return `<git-context>\n${sections.join('\n')}\n</git-context>`;
+  if (sections.length <= 1) return "";
+  return `<git-context>\n${sections.join("\n")}\n</git-context>`;
 }
 
 export function sanitizeRemoteUrl(remoteUrl: string): string | null {
@@ -124,7 +148,7 @@ export function sanitizeRemoteUrl(remoteUrl: string): string | null {
     return null;
   }
   if ((ALLOWED_HOSTS as readonly string[]).includes(parsed.hostname)) {
-    const port = parsed.port ? `:${parsed.port}` : '';
+    const port = parsed.port ? `:${parsed.port}` : "";
     return `https://${parsed.hostname}${port}${parsed.pathname}`;
   }
 
@@ -136,9 +160,9 @@ export function parseProjectName(remoteUrl: string): string | null {
   const rawPath = scp?.[1] ?? tryUrlPath(remoteUrl);
   if (rawPath === null) return null;
   const project = rawPath
-    .replace(/^\/+/, '')
-    .replace(/\/+$/, '')
-    .replace(/\.git$/, '');
+    .replace(/^\/+/, "")
+    .replace(/\/+$/, "")
+    .replace(/\.git$/, "");
   return project.length > 0 ? project : null;
 }
 
@@ -151,11 +175,11 @@ function tryUrlPath(remoteUrl: string): string | null {
 }
 
 function stdoutOf(result: GitResult): string {
-  return result.ok ? result.stdout : '';
+  return result.ok ? result.stdout : "";
 }
 
 function isNotARepo(stderr: string | undefined): boolean {
-  return stderr !== undefined && stderr.includes('not a git repository');
+  return stderr !== undefined && stderr.includes("not a git repository");
 }
 
 function logGitFailure(
@@ -165,13 +189,13 @@ function logGitFailure(
   log?: ILogger,
 ): void {
   if (log === undefined) return;
-  const command = `git ${args.join(' ')}`;
-  if (failure.kind === 'timeout') {
-    log.debug('git context command timed out', { cwd, command });
-  } else if (failure.kind === 'spawn-error') {
-    log.warn('git context command failed to spawn', { cwd, command });
+  const command = `git ${args.join(" ")}`;
+  if (failure.kind === "timeout") {
+    log.debug("git context command timed out", { cwd, command });
+  } else if (failure.kind === "spawn-error") {
+    log.warn("git context command failed to spawn", { cwd, command });
   } else {
-    log.debug('git context command failed', {
+    log.debug("git context command failed", {
       cwd,
       command,
       exitCode: failure.exitCode,
@@ -187,17 +211,20 @@ async function runGit(
 ): Promise<GitResult> {
   let proc: IProcess | undefined;
   try {
-    proc = await runner.exec(['git', '-C', cwd, ...args]);
+    proc = await runner.exec(["git", "-C", cwd, ...args]);
   } catch {
-    return { ok: false, kind: 'spawn-error' };
+    return { ok: false, kind: "spawn-error" };
   }
 
   try {
     proc.stdin.end();
-  } catch {
-  }
+  } catch {}
 
-  const work = Promise.all([collectStream(proc.stdout), collectStream(proc.stderr), proc.wait()]);
+  const work = Promise.all([
+    collectStream(proc.stdout),
+    collectStream(proc.stderr),
+    proc.wait(),
+  ]);
   work.catch(() => {});
   let timer: ReturnType<typeof setTimeout> | undefined;
   let timedOut = false;
@@ -205,22 +232,26 @@ async function runGit(
     const timeout = new Promise<never>((_resolve, reject) => {
       timer = setTimeout(() => {
         timedOut = true;
-        reject(new Error(`git ${args.join(' ')} timed out`));
+        reject(new Error(`git ${args.join(" ")} timed out`));
       }, GIT_TIMEOUT_MS);
     });
     const [stdout, stderr, exitCode] = await Promise.race([work, timeout]);
     if (exitCode !== 0) {
-      return { ok: false, kind: 'command-failed', exitCode, stderr: stderr.trim() };
+      return {
+        ok: false,
+        kind: "command-failed",
+        exitCode,
+        stderr: stderr.trim(),
+      };
     }
     return { ok: true, stdout: stdout.trim() };
   } catch {
     try {
-      await proc.kill('SIGKILL');
-    } catch {
-    }
+      await proc.kill("SIGKILL");
+    } catch {}
     await work.catch(() => {});
-    if (timedOut) return { ok: false, kind: 'timeout' };
-    return { ok: false, kind: 'command-failed' };
+    if (timedOut) return { ok: false, kind: "timeout" };
+    return { ok: false, kind: "command-failed" };
   } finally {
     if (timer !== undefined) clearTimeout(timer);
     if (proc !== undefined) await disposeProcess(proc);
@@ -232,12 +263,11 @@ async function collectStream(stream: Readable): Promise<string> {
   for await (const chunk of stream) {
     chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as string));
   }
-  return Buffer.concat(chunks).toString('utf-8');
+  return Buffer.concat(chunks).toString("utf-8");
 }
 
 async function disposeProcess(proc: IProcess): Promise<void> {
   try {
     await proc.dispose();
-  } catch {
-  }
+  } catch {}
 }

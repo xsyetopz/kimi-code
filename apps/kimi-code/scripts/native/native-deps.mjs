@@ -10,33 +10,35 @@
  */
 
 export const SUPPORTED_TARGETS = Object.freeze([
-  'darwin-arm64',
-  'darwin-x64',
-  'linux-arm64',
-  'linux-x64',
-  'win32-arm64',
-  'win32-x64',
+  "darwin-arm64",
+  "darwin-x64",
+  "linux-arm64",
+  "linux-x64",
+  "win32-arm64",
+  "win32-x64",
 ]);
 
 const clipboardSubpackageByTarget = Object.freeze({
-  'darwin-arm64': '@mariozechner/clipboard-darwin-arm64',
-  'darwin-x64': '@mariozechner/clipboard-darwin-x64',
-  'linux-arm64': '@mariozechner/clipboard-linux-arm64-gnu',
-  'linux-x64': '@mariozechner/clipboard-linux-x64-gnu',
-  'win32-arm64': '@mariozechner/clipboard-win32-arm64-msvc',
-  'win32-x64': '@mariozechner/clipboard-win32-x64-msvc',
+  "darwin-arm64": "@mariozechner/clipboard-darwin-arm64",
+  "darwin-x64": "@mariozechner/clipboard-darwin-x64",
+  "linux-arm64": "@mariozechner/clipboard-linux-arm64-gnu",
+  "linux-x64": "@mariozechner/clipboard-linux-x64-gnu",
+  "win32-arm64": "@mariozechner/clipboard-win32-arm64-msvc",
+  "win32-x64": "@mariozechner/clipboard-win32-x64-msvc",
 });
 
 // pi-tui ships platform-specific native helpers (no Linux build):
 // - darwin: Shift-modifier detection for Terminal.app Shift+Enter
 // - win32: enable ENABLE_VIRTUAL_TERMINAL_INPUT so Shift+Tab is distinguishable
 const piTuiNativeFileByTarget = Object.freeze({
-  'darwin-arm64': ['native/darwin/prebuilds/darwin-arm64/darwin-modifiers.node'],
-  'darwin-x64': ['native/darwin/prebuilds/darwin-x64/darwin-modifiers.node'],
-  'linux-arm64': [],
-  'linux-x64': [],
-  'win32-arm64': ['native/win32/prebuilds/win32-arm64/win32-console-mode.node'],
-  'win32-x64': ['native/win32/prebuilds/win32-x64/win32-console-mode.node'],
+  "darwin-arm64": [
+    "native/darwin/prebuilds/darwin-arm64/darwin-modifiers.node",
+  ],
+  "darwin-x64": ["native/darwin/prebuilds/darwin-x64/darwin-modifiers.node"],
+  "linux-arm64": [],
+  "linux-x64": [],
+  "win32-arm64": ["native/win32/prebuilds/win32-arm64/win32-console-mode.node"],
+  "win32-x64": ["native/win32/prebuilds/win32-x64/win32-console-mode.node"],
 });
 
 export function isSupportedTarget(target) {
@@ -62,25 +64,25 @@ export function isSupportedTarget(target) {
 /** @type {readonly NativeDepDescriptor[]} */
 export const nativeDeps = Object.freeze([
   {
-    id: 'clipboard-host',
-    name: () => '@mariozechner/clipboard',
-    collect: 'js-only',
+    id: "clipboard-host",
+    name: () => "@mariozechner/clipboard",
+    collect: "js-only",
     parent: null,
   },
   {
-    id: 'clipboard-target',
+    id: "clipboard-target",
     name: (target) => clipboardSubpackageByTarget[target],
-    collect: 'native-files',
-    parent: 'clipboard-host',
+    collect: "native-files",
+    parent: "clipboard-host",
   },
   {
-    id: 'pi-tui',
-    name: () => '@moonshot-ai/pi-tui',
+    id: "pi-tui",
+    name: () => "@moonshot-ai/pi-tui",
     // pi-tui's JS is bundled into main.cjs, so only the platform-specific
     // native helper (.node under native/) ships alongside the binary — its
     // dist/ JS is intentionally NOT collected (it stays in the bundle). This
     // keeps the SEA native-asset payload small. Linux has no native helper.
-    collect: 'native-file-only',
+    collect: "native-file-only",
     parent: null,
     nativeFileRelatives: (target) => piTuiNativeFileByTarget[target] ?? [],
   },
@@ -94,11 +96,13 @@ export function resolveTargetDeps(target) {
     throw new Error(`Unsupported native asset target: ${target}`);
   }
   return nativeDeps
-    .filter((d) => d.collect !== 'virtual')
+    .filter((d) => d.collect !== "virtual")
     .map((d) => ({
       ...d,
       resolvedName: d.name(target),
       nativeFileRelatives: d.nativeFileRelatives?.(target) ?? [],
-      parentName: d.parent ? nativeDeps.find((p) => p.id === d.parent)?.name(target) ?? null : null,
+      parentName: d.parent
+        ? (nativeDeps.find((p) => p.id === d.parent)?.name(target) ?? null)
+        : null,
     }));
 }

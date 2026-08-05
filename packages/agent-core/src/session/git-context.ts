@@ -13,11 +13,11 @@
  * is not surfaced to the model.
  */
 
-import type { Readable } from 'node:stream';
+import type { Readable } from "node:stream";
 
-import type { Kaos, KaosProcess } from '@moonshot-ai/kaos';
+import type { Kaos, KaosProcess } from "@moonshot-ai/kaos";
 
-import { log } from '../logging/logger';
+import { log } from "../logging/logger";
 
 const GIT_TIMEOUT_MS = 5_000;
 const MAX_DIRTY_FILES = 20;
@@ -26,12 +26,12 @@ const MAX_COMMIT_LINE_LENGTH = 200;
 // Well-known public hosts whose remote URLs are safe to surface. Self-hosted
 // or unrecognized hosts are excluded to avoid leaking internal infrastructure.
 const ALLOWED_HOSTS = [
-  'github.com',
-  'gitlab.com',
-  'gitee.com',
-  'bitbucket.org',
-  'codeberg.org',
-  'git.sr.ht',
+  "github.com",
+  "gitlab.com",
+  "gitee.com",
+  "bitbucket.org",
+  "codeberg.org",
+  "git.sr.ht",
 ] as const;
 
 async function disposeProcess(proc: KaosProcess): Promise<void> {
@@ -48,14 +48,17 @@ async function disposeProcess(proc: KaosProcess): Promise<void> {
  * Returns a formatted `<git-context>` block, or an empty string if the
  * directory is not a git repository or no useful information was collected.
  */
-export async function collectGitContext(kaos: Kaos, cwd: string): Promise<string> {
+export async function collectGitContext(
+  kaos: Kaos,
+  cwd: string,
+): Promise<string> {
   // Step 1: is this a git repo? `rev-parse` is the authoritative probe — it
   // handles `.git` files (worktrees/submodules), subdirectories, bare repos,
   // and `$GIT_DIR` redirection, none of which a plain FS check covers.
-  const revParseArgs = ['rev-parse', '--is-inside-work-tree'] as const;
+  const revParseArgs = ["rev-parse", "--is-inside-work-tree"] as const;
   const revParse = await runGit(kaos, cwd, revParseArgs);
   if (!revParse.ok) {
-    if (revParse.kind === 'command-failed' && isNotARepo(revParse.stderr)) {
+    if (revParse.kind === "command-failed" && isNotARepo(revParse.stderr)) {
       // Definitive "not a repo" — tell the subagent so it doesn't waste turns
       // probing git history. All other failures are logged but surface as an
       // empty block (the subagent works without git context, same as before):
@@ -63,7 +66,7 @@ export async function collectGitContext(kaos: Kaos, cwd: string): Promise<string
       return `<git-context status="unavailable" reason="not-a-repo"/>`;
     }
     logGitFailure(cwd, revParseArgs, revParse);
-    return '';
+    return "";
   }
 
   // Step 2: collect context in parallel. Every probe is optional — git
@@ -76,14 +79,22 @@ export async function collectGitContext(kaos: Kaos, cwd: string): Promise<string
   // repositories and on older Git; it fails in detached-HEAD state, in which
   // case the Branch section is just omitted.
   const commandArgs = [
-    ['remote', 'get-url', 'origin'],
-    ['symbolic-ref', '--short', 'HEAD'],
-    ['status', '--porcelain'],
-    ['log', '-3', '--format=%h %s'],
+    ["remote", "get-url", "origin"],
+    ["symbolic-ref", "--short", "HEAD"],
+    ["status", "--porcelain"],
+    ["log", "-3", "--format=%h %s"],
   ] as const;
   const [remote, branch, status, gitLog] = (await Promise.all(
-    commandArgs.map(async (args) => ({ args, result: await runGit(kaos, cwd, args) })),
-  )) as unknown as [TaggedGitResult, TaggedGitResult, TaggedGitResult, TaggedGitResult];
+    commandArgs.map(async (args) => ({
+      args,
+      result: await runGit(kaos, cwd, args),
+    })),
+  )) as unknown as [
+    TaggedGitResult,
+    TaggedGitResult,
+    TaggedGitResult,
+    TaggedGitResult,
+  ];
 
   for (const { args, result } of [remote, branch, status, gitLog]) {
     if (!result.ok) logGitFailure(cwd, args, result);
@@ -109,11 +120,13 @@ export async function collectGitContext(kaos: Kaos, cwd: string): Promise<string
 
   if (branchName) sections.push(`Branch: ${branchName}`);
 
-  const dirtyLines = dirtyRaw.split('\n').filter((line) => line.trim().length > 0);
+  const dirtyLines = dirtyRaw
+    .split("\n")
+    .filter((line) => line.trim().length > 0);
   if (dirtyLines.length > 0) {
     const total = dirtyLines.length;
     const shown = dirtyLines.slice(0, MAX_DIRTY_FILES);
-    let body = shown.map((line) => `  ${line}`).join('\n');
+    let body = shown.map((line) => `  ${line}`).join("\n");
     if (total > MAX_DIRTY_FILES) {
       body += `\n  ... and ${String(total - MAX_DIRTY_FILES)} more`;
     }
@@ -121,19 +134,23 @@ export async function collectGitContext(kaos: Kaos, cwd: string): Promise<string
   }
 
   if (logRaw) {
-    const logLines = logRaw.split('\n').filter((line) => line.trim().length > 0);
+    const logLines = logRaw
+      .split("\n")
+      .filter((line) => line.trim().length > 0);
     if (logLines.length > 0) {
-      const body = logLines.map((line) => `  ${line.slice(0, MAX_COMMIT_LINE_LENGTH)}`).join('\n');
+      const body = logLines
+        .map((line) => `  ${line.slice(0, MAX_COMMIT_LINE_LENGTH)}`)
+        .join("\n");
       sections.push(`Recent commits:\n${body}`);
     }
   }
 
   if (sections.length <= 1) {
     // Only the working directory line — nothing useful collected.
-    return '';
+    return "";
   }
 
-  return `<git-context>\n${sections.join('\n')}\n</git-context>`;
+  return `<git-context>\n${sections.join("\n")}\n</git-context>`;
 }
 
 /**
@@ -154,7 +171,7 @@ export function sanitizeRemoteUrl(remoteUrl: string): string | null {
     return null;
   }
   if ((ALLOWED_HOSTS as readonly string[]).includes(parsed.hostname)) {
-    const port = parsed.port ? `:${parsed.port}` : '';
+    const port = parsed.port ? `:${parsed.port}` : "";
     return `https://${parsed.hostname}${port}${parsed.pathname}`;
   }
 
@@ -174,9 +191,9 @@ export function parseProjectName(remoteUrl: string): string | null {
   const rawPath = scp?.[1] ?? tryUrlPath(remoteUrl);
   if (rawPath === null) return null;
   const project = rawPath
-    .replace(/^\/+/, '')
-    .replace(/\/+$/, '')
-    .replace(/\.git$/, '');
+    .replace(/^\/+/, "")
+    .replace(/\/+$/, "")
+    .replace(/\.git$/, "");
   return project.length > 0 ? project : null;
 }
 
@@ -198,32 +215,43 @@ function tryUrlPath(remoteUrl: string): string | null {
  *   `exitCode`/`stderr` are populated for the non-zero-exit case.
  */
 type GitFailure =
-  | { readonly kind: 'timeout' }
-  | { readonly kind: 'spawn-error' }
-  | { readonly kind: 'command-failed'; readonly exitCode?: number; readonly stderr?: string };
+  | { readonly kind: "timeout" }
+  | { readonly kind: "spawn-error" }
+  | {
+      readonly kind: "command-failed";
+      readonly exitCode?: number;
+      readonly stderr?: string;
+    };
 
 type GitResult =
   | { readonly ok: true; readonly stdout: string }
   | ({ readonly ok: false } & GitFailure);
 
-type TaggedGitResult = { readonly args: readonly string[]; readonly result: GitResult };
+type TaggedGitResult = {
+  readonly args: readonly string[];
+  readonly result: GitResult;
+};
 
 function stdoutOf(result: GitResult): string {
-  return result.ok ? result.stdout : '';
+  return result.ok ? result.stdout : "";
 }
 
 function isNotARepo(stderr: string | undefined): boolean {
-  return stderr !== undefined && stderr.includes('not a git repository');
+  return stderr !== undefined && stderr.includes("not a git repository");
 }
 
-function logGitFailure(cwd: string, args: readonly string[], failure: GitFailure): void {
-  const command = `git ${args.join(' ')}`;
-  if (failure.kind === 'timeout') {
-    log.debug('git context command timed out', { cwd, command });
-  } else if (failure.kind === 'spawn-error') {
-    log.warn('git context command failed to spawn', { cwd, command });
+function logGitFailure(
+  cwd: string,
+  args: readonly string[],
+  failure: GitFailure,
+): void {
+  const command = `git ${args.join(" ")}`;
+  if (failure.kind === "timeout") {
+    log.debug("git context command timed out", { cwd, command });
+  } else if (failure.kind === "spawn-error") {
+    log.warn("git context command failed to spawn", { cwd, command });
   } else {
-    log.debug('git context command failed', {
+    log.debug("git context command failed", {
       cwd,
       command,
       exitCode: failure.exitCode,
@@ -238,12 +266,16 @@ function logGitFailure(cwd: string, args: readonly string[], failure: GitFailure
  * backend. Both stdout and stderr are captured so callers can tell "not a
  * git repository" (exit 128 + telltale stderr) apart from other failures.
  */
-async function runGit(kaos: Kaos, cwd: string, args: readonly string[]): Promise<GitResult> {
+async function runGit(
+  kaos: Kaos,
+  cwd: string,
+  args: readonly string[],
+): Promise<GitResult> {
   let proc: KaosProcess | undefined;
   try {
-    proc = await kaos.exec('git', '-C', cwd, ...args);
+    proc = await kaos.exec("git", "-C", cwd, ...args);
   } catch {
-    return { ok: false, kind: 'spawn-error' };
+    return { ok: false, kind: "spawn-error" };
   }
 
   try {
@@ -252,7 +284,11 @@ async function runGit(kaos: Kaos, cwd: string, args: readonly string[]): Promise
     /* stdin already closed */
   }
 
-  const work = Promise.all([collectStream(proc.stdout), collectStream(proc.stderr), proc.wait()]);
+  const work = Promise.all([
+    collectStream(proc.stdout),
+    collectStream(proc.stderr),
+    proc.wait(),
+  ]);
   // Attach a rejection handler up front: if `work` rejects during the
   // timeout-handling window (before the catch block re-awaits it), Node must
   // not flag it as an unhandled rejection.
@@ -263,25 +299,30 @@ async function runGit(kaos: Kaos, cwd: string, args: readonly string[]): Promise
     const timeout = new Promise<never>((_resolve, reject) => {
       timer = setTimeout(() => {
         timedOut = true;
-        reject(new Error(`git ${args.join(' ')} timed out`));
+        reject(new Error(`git ${args.join(" ")} timed out`));
       }, GIT_TIMEOUT_MS);
     });
     const [stdout, stderr, exitCode] = await Promise.race([work, timeout]);
     if (exitCode !== 0) {
-      return { ok: false, kind: 'command-failed', exitCode, stderr: stderr.trim() };
+      return {
+        ok: false,
+        kind: "command-failed",
+        exitCode,
+        stderr: stderr.trim(),
+      };
     }
     return { ok: true, stdout: stdout.trim() };
   } catch {
     try {
-      await proc.kill('SIGKILL');
+      await proc.kill("SIGKILL");
     } catch {
       /* process already gone */
     }
     // Let the streams drain so process resources are released, even though
     // the timed-out/errored output is discarded.
     await work.catch(() => {});
-    if (timedOut) return { ok: false, kind: 'timeout' };
-    return { ok: false, kind: 'command-failed' };
+    if (timedOut) return { ok: false, kind: "timeout" };
+    return { ok: false, kind: "command-failed" };
   } finally {
     if (timer !== undefined) clearTimeout(timer);
     if (proc !== undefined) await disposeProcess(proc);
@@ -293,5 +334,5 @@ async function collectStream(stream: Readable): Promise<string> {
   for await (const chunk of stream) {
     chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as string));
   }
-  return Buffer.concat(chunks).toString('utf-8');
+  return Buffer.concat(chunks).toString("utf-8");
 }

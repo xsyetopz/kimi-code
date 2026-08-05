@@ -4,7 +4,7 @@
  * has no cross-domain collaborators.
  */
 
-import type { ITelemetryAppender, TelemetryProperties } from './telemetry';
+import type { ITelemetryAppender, TelemetryProperties } from "./telemetry";
 
 export interface ConsoleAppenderOptions {
   readonly prefix?: string;
@@ -12,7 +12,7 @@ export interface ConsoleAppenderOptions {
   readonly log?: (message: string) => void;
 }
 
-const DEFAULT_PREFIX = '[telemetry]';
+const DEFAULT_PREFIX = "[telemetry]";
 
 export class ConsoleAppender implements ITelemetryAppender {
   private readonly prefix: string;
@@ -27,12 +27,17 @@ export class ConsoleAppender implements ITelemetryAppender {
 
   track(event: string, properties?: TelemetryProperties): void {
     const payload =
-      properties === undefined ? '' : ` ${stringifyProperties(properties, this.pretty)}`;
+      properties === undefined
+        ? ""
+        : ` ${stringifyProperties(properties, this.pretty)}`;
     this.log(`${this.prefix} ${event}${payload}`);
   }
 }
 
-function stringifyProperties(properties: TelemetryProperties, pretty: boolean): string {
+function stringifyProperties(
+  properties: TelemetryProperties,
+  pretty: boolean,
+): string {
   if (pretty) {
     return JSON.stringify(properties, null, 2);
   }

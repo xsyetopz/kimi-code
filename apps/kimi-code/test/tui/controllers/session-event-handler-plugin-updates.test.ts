@@ -1,10 +1,11 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from "vitest";
 
-import type { PluginUpdateNotifier } from '#/tui/controllers/plugin-update-notifier';
-import { SessionEventHandler } from '#/tui/controllers/session-event-handler';
-import { getBuiltInPalette } from '#/tui/theme';
+import type { PluginUpdateNotifier } from "#/tui/controllers/plugin-update-notifier";
+import { SessionEventHandler } from "#/tui/controllers/session-event-handler";
+import { getBuiltInPalette } from "#/tui/theme";
 
-const DATASOURCE_TOOL = 'mcp__plugin-kimi-datasource_data__call_data_source_tool';
+const DATASOURCE_TOOL =
+  "mcp__plugin-kimi-datasource_data__call_data_source_tool";
 
 function makeHost() {
   const streamingUI = {
@@ -21,14 +22,14 @@ function makeHost() {
   const host = {
     state: {
       appState: {
-        sessionId: 's1',
-        streamingPhase: 'waiting',
-        model: 'kimi-model',
-        permissionMode: 'auto',
+        sessionId: "s1",
+        streamingPhase: "waiting",
+        model: "kimi-model",
+        permissionMode: "auto",
       },
       queuedMessages: [],
       queuedMessageDispatchPending: false,
-      theme: { palette: getBuiltInPalette('dark') },
+      theme: { palette: getBuiltInPalette("dark") },
       toolOutputExpanded: false,
       todoPanel: { getTodos: vi.fn(() => []) },
       transcriptContainer: { addChild: vi.fn() },
@@ -69,11 +70,11 @@ function makeNotifier() {
 
 function toolCallStarted(name: string) {
   return {
-    type: 'tool.call.started',
-    sessionId: 's1',
-    agentId: 'main',
+    type: "tool.call.started",
+    sessionId: "s1",
+    agentId: "main",
     turnId: 1,
-    toolCallId: 't1',
+    toolCallId: "t1",
     name,
     args: {},
   } as never;
@@ -81,20 +82,20 @@ function toolCallStarted(name: string) {
 
 function toolResult() {
   return {
-    type: 'tool.result',
-    sessionId: 's1',
-    agentId: 'main',
+    type: "tool.result",
+    sessionId: "s1",
+    agentId: "main",
     turnId: 1,
-    toolCallId: 't1',
-    output: 'ok',
+    toolCallId: "t1",
+    output: "ok",
   } as never;
 }
 
 function turnEnded(reason: string, turnId = 1) {
   return {
-    type: 'turn.ended',
-    sessionId: 's1',
-    agentId: 'main',
+    type: "turn.ended",
+    sessionId: "s1",
+    agentId: "main",
     turnId,
     reason,
   } as never;
@@ -102,85 +103,110 @@ function turnEnded(reason: string, turnId = 1) {
 
 function pluginCommandTurnStarted() {
   return {
-    type: 'turn.started',
-    sessionId: 's1',
-    agentId: 'main',
+    type: "turn.started",
+    sessionId: "s1",
+    agentId: "main",
     turnId: 2,
     origin: {
-      kind: 'plugin_command',
-      activationId: 'a1',
-      pluginId: 'kimi-datasource',
-      commandName: 'setup',
-      trigger: 'user-slash',
+      kind: "plugin_command",
+      activationId: "a1",
+      pluginId: "kimi-datasource",
+      commandName: "setup",
+      trigger: "user-slash",
     },
   } as never;
 }
 
 const sendQueued = (): void => {};
 
-describe('SessionEventHandler plugin update notices', () => {
-  it('reports plugin MCP usage only when the turn ends', () => {
+describe("SessionEventHandler plugin update notices", () => {
+  it("reports plugin MCP usage only when the turn ends", () => {
     const { host, streamingUI } = makeHost();
     const notifier = makeNotifier();
-    streamingUI.completeToolResult.mockReturnValue({ name: DATASOURCE_TOOL, args: {} });
-    const handler = new SessionEventHandler(host, notifier as unknown as PluginUpdateNotifier);
+    streamingUI.completeToolResult.mockReturnValue({
+      name: DATASOURCE_TOOL,
+      args: {},
+    });
+    const handler = new SessionEventHandler(
+      host,
+      notifier as unknown as PluginUpdateNotifier,
+    );
 
     handler.handleEvent(toolCallStarted(DATASOURCE_TOOL), sendQueued);
     handler.handleEvent(toolResult(), sendQueued);
     // The tool result alone must not trigger the notice mid-turn.
     expect(notifier.handleMcpToolCompleted).not.toHaveBeenCalled();
 
-    handler.handleEvent(turnEnded('completed'), sendQueued);
+    handler.handleEvent(turnEnded("completed"), sendQueued);
     expect(notifier.handleMcpToolCompleted).toHaveBeenCalledTimes(1);
-    expect(notifier.handleMcpToolCompleted).toHaveBeenCalledWith(DATASOURCE_TOOL);
+    expect(notifier.handleMcpToolCompleted).toHaveBeenCalledWith(
+      DATASOURCE_TOOL,
+    );
   });
 
-  it('skips the notice for a cancelled turn and clears the buffer', () => {
+  it("skips the notice for a cancelled turn and clears the buffer", () => {
     const { host, streamingUI } = makeHost();
     const notifier = makeNotifier();
-    streamingUI.completeToolResult.mockReturnValue({ name: DATASOURCE_TOOL, args: {} });
-    const handler = new SessionEventHandler(host, notifier as unknown as PluginUpdateNotifier);
+    streamingUI.completeToolResult.mockReturnValue({
+      name: DATASOURCE_TOOL,
+      args: {},
+    });
+    const handler = new SessionEventHandler(
+      host,
+      notifier as unknown as PluginUpdateNotifier,
+    );
 
     handler.handleEvent(toolCallStarted(DATASOURCE_TOOL), sendQueued);
     handler.handleEvent(toolResult(), sendQueued);
-    handler.handleEvent(turnEnded('cancelled'), sendQueued);
+    handler.handleEvent(turnEnded("cancelled"), sendQueued);
     expect(notifier.handleMcpToolCompleted).not.toHaveBeenCalled();
 
     // A later completed turn must not replay the cancelled turn's usage.
-    handler.handleEvent(turnEnded('completed', 3), sendQueued);
+    handler.handleEvent(turnEnded("completed", 3), sendQueued);
     expect(notifier.handleMcpToolCompleted).not.toHaveBeenCalled();
   });
 
-  it('ignores non-plugin tools', () => {
+  it("ignores non-plugin tools", () => {
     const { host, streamingUI } = makeHost();
     const notifier = makeNotifier();
-    streamingUI.completeToolResult.mockReturnValue({ name: 'Bash', args: {} });
-    const handler = new SessionEventHandler(host, notifier as unknown as PluginUpdateNotifier);
+    streamingUI.completeToolResult.mockReturnValue({ name: "Bash", args: {} });
+    const handler = new SessionEventHandler(
+      host,
+      notifier as unknown as PluginUpdateNotifier,
+    );
 
-    handler.handleEvent(toolCallStarted('Bash'), sendQueued);
+    handler.handleEvent(toolCallStarted("Bash"), sendQueued);
     handler.handleEvent(toolResult(), sendQueued);
-    handler.handleEvent(turnEnded('completed'), sendQueued);
+    handler.handleEvent(turnEnded("completed"), sendQueued);
     expect(notifier.handleMcpToolCompleted).not.toHaveBeenCalled();
   });
 
-  it('reports a finished plugin command turn', () => {
+  it("reports a finished plugin command turn", () => {
     const { host } = makeHost();
     const notifier = makeNotifier();
-    const handler = new SessionEventHandler(host, notifier as unknown as PluginUpdateNotifier);
+    const handler = new SessionEventHandler(
+      host,
+      notifier as unknown as PluginUpdateNotifier,
+    );
 
     handler.handleEvent(pluginCommandTurnStarted(), sendQueued);
-    handler.handleEvent(turnEnded('completed', 2), sendQueued);
+    handler.handleEvent(turnEnded("completed", 2), sendQueued);
     expect(notifier.handlePluginCommandCompleted).toHaveBeenCalledTimes(1);
-    expect(notifier.handlePluginCommandCompleted).toHaveBeenCalledWith('kimi-datasource');
+    expect(notifier.handlePluginCommandCompleted).toHaveBeenCalledWith(
+      "kimi-datasource",
+    );
   });
 
-  it('skips a cancelled plugin command turn', () => {
+  it("skips a cancelled plugin command turn", () => {
     const { host } = makeHost();
     const notifier = makeNotifier();
-    const handler = new SessionEventHandler(host, notifier as unknown as PluginUpdateNotifier);
+    const handler = new SessionEventHandler(
+      host,
+      notifier as unknown as PluginUpdateNotifier,
+    );
 
     handler.handleEvent(pluginCommandTurnStarted(), sendQueued);
-    handler.handleEvent(turnEnded('cancelled', 2), sendQueued);
+    handler.handleEvent(turnEnded("cancelled", 2), sendQueued);
     expect(notifier.handlePluginCommandCompleted).not.toHaveBeenCalled();
   });
 });

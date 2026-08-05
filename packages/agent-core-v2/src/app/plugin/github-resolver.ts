@@ -5,13 +5,13 @@
  * through GitHub's Atom feed so installs and update checks use exact content.
  */
 
-import { Error2, ErrorCodes } from '#/errors';
+import { Error2, ErrorCodes } from "#/errors";
 
-import type { GithubRef } from './source';
-import type { PluginGithubRef } from './types';
+import type { GithubRef } from "./source";
+import type { PluginGithubRef } from "./types";
 
 export interface GithubSourceInput {
-  readonly kind: 'github';
+  readonly kind: "github";
   readonly owner: string;
   readonly repo: string;
   readonly ref?: GithubRef;
@@ -31,7 +31,7 @@ export async function resolveGithubCommitSha(
   const encodedRef = encodeCodeloadRefPath(ref);
   const url = `https://github.com/${owner}/${repo}/commits/${encodedRef}.atom`;
   const resp = await fetch(url, {
-    headers: { accept: 'application/atom+xml', range: 'bytes=0-4095' },
+    headers: { accept: "application/atom+xml", range: "bytes=0-4095" },
     signal: AbortSignal.timeout(10_000),
   });
   if (!resp.ok) {
@@ -69,16 +69,19 @@ export async function resolveGithubSource(
   const latestTag = await tryResolveLatestReleaseTag(owner, repo);
   if (latestTag !== undefined) {
     return {
-      tarballUrl: codeloadUrl(owner, repo, { kind: 'tag', value: latestTag }),
+      tarballUrl: codeloadUrl(owner, repo, { kind: "tag", value: latestTag }),
       displayVersion: latestTag,
-      ref: { kind: 'tag', value: latestTag },
+      ref: { kind: "tag", value: latestTag },
     };
   }
 
-  const headProbe = await fetch(`https://codeload.github.com/${owner}/${repo}/zip/HEAD`, {
-    method: 'HEAD',
-    signal: AbortSignal.timeout(10_000),
-  });
+  const headProbe = await fetch(
+    `https://codeload.github.com/${owner}/${repo}/zip/HEAD`,
+    {
+      method: "HEAD",
+      signal: AbortSignal.timeout(10_000),
+    },
+  );
   if (headProbe.status === 404) {
     throw new Error2(
       ErrorCodes.PLUGIN_LOAD_FAILED,
@@ -95,15 +98,18 @@ export async function resolveGithubSource(
   }
   return {
     tarballUrl: `https://codeload.github.com/${owner}/${repo}/zip/HEAD`,
-    displayVersion: 'HEAD',
-    ref: { kind: 'branch', value: 'HEAD' },
+    displayVersion: "HEAD",
+    ref: { kind: "branch", value: "HEAD" },
   };
 }
 
-async function tryResolveLatestReleaseTag(owner: string, repo: string): Promise<string | undefined> {
+async function tryResolveLatestReleaseTag(
+  owner: string,
+  repo: string,
+): Promise<string | undefined> {
   const url = `https://github.com/${owner}/${repo}/releases/latest`;
   const resp = await fetch(url, {
-    redirect: 'manual',
+    redirect: "manual",
     signal: AbortSignal.timeout(10_000),
   });
 
@@ -119,7 +125,7 @@ async function tryResolveLatestReleaseTag(owner: string, repo: string): Promise<
     );
   }
 
-  const location = resp.headers.get('location');
+  const location = resp.headers.get("location");
   if (location === null) return undefined;
 
   const match = /\/releases\/tag\/([^/?#]+)/.exec(location);
@@ -134,11 +140,11 @@ async function tryResolveLatestReleaseTag(owner: string, repo: string): Promise<
 function codeloadUrl(owner: string, repo: string, ref: GithubRef): string {
   const base = `https://codeload.github.com/${owner}/${repo}/zip`;
   const encoded = encodeCodeloadRefPath(ref.value);
-  if (ref.kind === 'sha') return `${base}/${encoded}`;
-  if (ref.kind === 'tag') return `${base}/refs/tags/${encoded}`;
+  if (ref.kind === "sha") return `${base}/${encoded}`;
+  if (ref.kind === "tag") return `${base}/refs/tags/${encoded}`;
   return `${base}/${encoded}`;
 }
 
 function encodeCodeloadRefPath(value: string): string {
-  return value.split('/').map(encodeURIComponent).join('/');
+  return value.split("/").map(encodeURIComponent).join("/");
 }

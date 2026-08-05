@@ -72,7 +72,8 @@ export const ERROR_MESSAGES: Record<string, string> = {
   [LEGACY.INTERNAL_ERROR]: "Internal error occurred.",
 
   "config.invalid": "Kimi Code configuration is invalid.",
-  "model.not_configured": "No model is configured. Please sign in or configure a provider.",
+  "model.not_configured":
+    "No model is configured. Please sign in or configure a provider.",
   "auth.login_required": "Authentication failed. Please sign in.",
   "session.not_found": "Session was not found.",
   "session.state_not_found": "Session data is missing.",

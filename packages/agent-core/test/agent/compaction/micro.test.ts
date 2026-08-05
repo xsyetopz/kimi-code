@@ -1,20 +1,23 @@
-import type { ContentPart, Message } from '@moonshot-ai/kosong';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { ContentPart, Message } from "@moonshot-ai/kosong";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { AgentRecord } from '../../../src/agent';
+import type { AgentRecord } from "../../../src/agent";
 import {
   AGENT_WIRE_PROTOCOL_VERSION,
   InMemoryAgentRecordPersistence,
-} from '../../../src/agent/records';
-import { FLAG_DEFINITIONS, FlagResolver, MASTER_ENV } from '../../../src/flags';
-import { estimateTokensForMessages } from '../../../src/utils/tokens';
-import { recordingTelemetry, type TelemetryRecord } from '../../fixtures/telemetry';
-import { testAgent, type TestAgentContext } from '../harness/agent';
+} from "../../../src/agent/records";
+import { FLAG_DEFINITIONS, FlagResolver, MASTER_ENV } from "../../../src/flags";
+import { estimateTokensForMessages } from "../../../src/utils/tokens";
+import {
+  recordingTelemetry,
+  type TelemetryRecord,
+} from "../../fixtures/telemetry";
+import { testAgent, type TestAgentContext } from "../harness/agent";
 
 const CATALOGUED_PROVIDER = {
-  type: 'kimi',
-  apiKey: 'test-key',
-  model: 'kimi-code',
+  type: "kimi",
+  apiKey: "test-key",
+  model: "kimi-code",
 } as const;
 const CATALOGUED_MODEL_CAPABILITIES = {
   image_in: true,
@@ -26,15 +29,15 @@ const CATALOGUED_MODEL_CAPABILITIES = {
 } as const;
 
 const MINUTE = 60 * 1000;
-const DEFAULT_MARKER = '[Old tool result content cleared]';
+const DEFAULT_MARKER = "[Old tool result content cleared]";
 const MICRO_COMPACTION_FLAG_ENV = getMicroCompactionFlagEnv();
 
 // Micro compaction is disabled and its flag has been removed; the suite is
 // skipped because the feature can no longer be enabled.
-describe.skip('MicroCompaction', () => {
+describe.skip("MicroCompaction", () => {
   beforeEach(() => {
-    vi.stubEnv(MASTER_ENV, '0');
-    vi.stubEnv(MICRO_COMPACTION_FLAG_ENV, '1');
+    vi.stubEnv(MASTER_ENV, "0");
+    vi.stubEnv(MICRO_COMPACTION_FLAG_ENV, "1");
   });
 
   // The micro_compaction flag no longer exists, so there is no default to assert.
@@ -42,7 +45,7 @@ describe.skip('MicroCompaction', () => {
   //   expect(new FlagResolver({}, FLAG_DEFINITIONS).enabled('micro_compaction')).toBe(false);
   // });
 
-  it('truncates old tool results after cache miss', () => {
+  it("truncates old tool results after cache miss", () => {
     vi.useFakeTimers();
     const ctx = testAgent({
       microCompaction: {
@@ -65,20 +68,20 @@ describe.skip('MicroCompaction', () => {
     ctx.agent.microCompaction.detect();
     const messages = ctx.agent.context.messages;
     expect(messages[2]).toMatchObject({
-      role: 'tool',
-      content: [{ type: 'text', text: DEFAULT_MARKER }],
+      role: "tool",
+      content: [{ type: "text", text: DEFAULT_MARKER }],
     });
     expect(messages[5]).toMatchObject({
-      role: 'tool',
-      content: [{ type: 'text', text: 'lookup result' }],
+      role: "tool",
+      content: [{ type: "text", text: "lookup result" }],
     });
     expect(messages[8]).toMatchObject({
-      role: 'tool',
-      content: [{ type: 'text', text: 'lookup result' }],
+      role: "tool",
+      content: [{ type: "text", text: "lookup result" }],
     });
   });
 
-  it('does nothing before cache miss threshold', () => {
+  it("does nothing before cache miss threshold", () => {
     vi.useFakeTimers();
     const ctx = testAgent({
       microCompaction: {
@@ -99,7 +102,7 @@ describe.skip('MicroCompaction', () => {
     expect(hasMarker(messages)).toBe(false);
   });
 
-  it('persists cutoff across calls until cache miss resets it', () => {
+  it("persists cutoff across calls until cache miss resets it", () => {
     vi.useFakeTimers();
     const ctx = testAgent({
       microCompaction: {
@@ -119,8 +122,8 @@ describe.skip('MicroCompaction', () => {
     ctx.agent.microCompaction.detect();
     const first = ctx.agent.context.messages;
     expect(first[2]).toMatchObject({
-      role: 'tool',
-      content: [{ type: 'text', text: DEFAULT_MARKER }],
+      role: "tool",
+      content: [{ type: "text", text: DEFAULT_MARKER }],
     });
 
     vi.setSystemTime(62 * 60 * 1000);
@@ -128,12 +131,12 @@ describe.skip('MicroCompaction', () => {
     ctx.agent.microCompaction.detect();
     const second = ctx.agent.context.messages;
     expect(second[2]).toMatchObject({
-      role: 'tool',
-      content: [{ type: 'text', text: DEFAULT_MARKER }],
+      role: "tool",
+      content: [{ type: "text", text: DEFAULT_MARKER }],
     });
   });
 
-  it('clears cutoff on reset', () => {
+  it("clears cutoff on reset", () => {
     vi.useFakeTimers();
     const ctx = testAgent({
       microCompaction: {
@@ -155,7 +158,7 @@ describe.skip('MicroCompaction', () => {
     expect(hasMarker(messages)).toBe(false);
   });
 
-  it('skips tool results below minContentTokens', () => {
+  it("skips tool results below minContentTokens", () => {
     vi.useFakeTimers();
     const ctx = testAgent({
       microCompaction: {
@@ -175,7 +178,7 @@ describe.skip('MicroCompaction', () => {
     expect(hasMarker(messages)).toBe(false);
   });
 
-  it('skips non-tool messages', () => {
+  it("skips non-tool messages", () => {
     vi.useFakeTimers();
     const ctx = testAgent({
       microCompaction: {
@@ -186,18 +189,20 @@ describe.skip('MicroCompaction', () => {
     });
 
     vi.setSystemTime(0);
-    ctx.appendExchange(1, 'user one', 'assistant one', 10);
-    ctx.appendExchange(2, 'user two', 'assistant two', 10);
-    ctx.appendExchange(3, 'user three', 'assistant three', 10);
+    ctx.appendExchange(1, "user one", "assistant one", 10);
+    ctx.appendExchange(2, "user two", "assistant two", 10);
+    ctx.appendExchange(3, "user three", "assistant three", 10);
 
     vi.setSystemTime(61 * 60 * 1000);
 
     const messages = ctx.agent.context.messages;
-    expect(messages.every((m) => m.role === 'user' || m.role === 'assistant')).toBe(true);
+    expect(
+      messages.every((m) => m.role === "user" || m.role === "assistant"),
+    ).toBe(true);
     expect(hasMarker(messages)).toBe(false);
   });
 
-  it('clears cutoff on context clear', () => {
+  it("clears cutoff on context clear", () => {
     vi.useFakeTimers();
     const ctx = testAgent({
       microCompaction: {
@@ -219,7 +224,7 @@ describe.skip('MicroCompaction', () => {
     expect(ctx.agent.context.lastAssistantAt).toBeNull();
   });
 
-  it('sends truncated old tool results to the next model request without mutating history', async () => {
+  it("sends truncated old tool results to the next model request without mutating history", async () => {
     vi.useFakeTimers();
     const ctx = testAgent({
       microCompaction: {
@@ -235,28 +240,28 @@ describe.skip('MicroCompaction', () => {
     });
 
     vi.setSystemTime(0);
-    appendMicroToolExchange(ctx, 1, { output: 'old result one' });
-    appendMicroToolExchange(ctx, 2, { output: 'middle result two' });
-    appendMicroToolExchange(ctx, 3, { output: 'recent result three' });
+    appendMicroToolExchange(ctx, 1, { output: "old result one" });
+    appendMicroToolExchange(ctx, 2, { output: "middle result two" });
+    appendMicroToolExchange(ctx, 3, { output: "recent result three" });
 
     vi.setSystemTime(61 * MINUTE);
 
-    ctx.mockNextResponse({ type: 'text', text: 'done after micro compaction' });
-    await ctx.rpc.prompt({ input: [{ type: 'text', text: 'continue' }] });
+    ctx.mockNextResponse({ type: "text", text: "done after micro compaction" });
+    await ctx.rpc.prompt({ input: [{ type: "text", text: "continue" }] });
     await ctx.untilTurnEnd();
 
     const call = ctx.llmCalls.at(-1);
     expect(textOf(call?.history[2])).toBe(DEFAULT_MARKER);
     expect(textOf(call?.history[5])).toBe(DEFAULT_MARKER);
-    expect(textOf(call?.history[8])).toBe('recent result three');
+    expect(textOf(call?.history[8])).toBe("recent result three");
 
-    expect(textOf(ctx.agent.context.history[2])).toBe('old result one');
-    expect(textOf(ctx.agent.context.history[5])).toBe('middle result two');
-    expect(textOf(ctx.agent.context.history[8])).toBe('recent result three');
+    expect(textOf(ctx.agent.context.history[2])).toBe("old result one");
+    expect(textOf(ctx.agent.context.history[5])).toBe("middle result two");
+    expect(textOf(ctx.agent.context.history[8])).toBe("recent result three");
     await ctx.expectResumeMatches();
   });
 
-  it('restores lastAssistantAt from record time before applying cache-miss rules', async () => {
+  it("restores lastAssistantAt from record time before applying cache-miss rules", async () => {
     vi.useFakeTimers();
     const assistantRecordTime = 2_000;
     const ctx = testAgent({
@@ -284,7 +289,7 @@ describe.skip('MicroCompaction', () => {
     expect(toolTexts(ctx.agent.context.messages)).toEqual([DEFAULT_MARKER]);
   });
 
-  it('preserves the restored cutoff when resuming before the next cache miss', async () => {
+  it("preserves the restored cutoff when resuming before the next cache miss", async () => {
     vi.useFakeTimers();
     const persistence = new InMemoryAgentRecordPersistence();
     const config = {
@@ -299,20 +304,25 @@ describe.skip('MicroCompaction', () => {
     });
 
     vi.setSystemTime(0);
-    appendMicroToolExchange(ctx, 1, { output: 'result one' });
-    appendMicroToolExchange(ctx, 2, { output: 'result two' });
+    appendMicroToolExchange(ctx, 1, { output: "result one" });
+    appendMicroToolExchange(ctx, 2, { output: "result two" });
 
     vi.setSystemTime(61 * MINUTE);
     ctx.agent.microCompaction.detect();
-    expect(toolTexts(ctx.agent.context.messages)).toEqual([DEFAULT_MARKER, 'result two']);
+    expect(toolTexts(ctx.agent.context.messages)).toEqual([
+      DEFAULT_MARKER,
+      "result two",
+    ]);
     expect(lastMicroCompactionCutoff(persistence.records)).toBe(4);
 
     vi.setSystemTime(62 * MINUTE);
-    appendMicroToolExchange(ctx, 3, { output: 'result three' });
+    appendMicroToolExchange(ctx, 3, { output: "result three" });
 
     const resumed = testAgent({
       microCompaction: config,
-      persistence: new InMemoryAgentRecordPersistence(cloneRecords(persistence.records)),
+      persistence: new InMemoryAgentRecordPersistence(
+        cloneRecords(persistence.records),
+      ),
     });
 
     vi.setSystemTime(63 * MINUTE);
@@ -321,12 +331,12 @@ describe.skip('MicroCompaction', () => {
     expect(resumed.agent.context.lastAssistantAt).toBe(62 * MINUTE);
     expect(toolTexts(resumed.agent.context.messages)).toEqual([
       DEFAULT_MARKER,
-      'result two',
-      'result three',
+      "result two",
+      "result three",
     ]);
   });
 
-  it('recomputes the restored cutoff when resuming after the cache-miss threshold', async () => {
+  it("recomputes the restored cutoff when resuming after the cache-miss threshold", async () => {
     vi.useFakeTimers();
     const persistence = new InMemoryAgentRecordPersistence();
     const config = {
@@ -341,16 +351,19 @@ describe.skip('MicroCompaction', () => {
     });
 
     vi.setSystemTime(0);
-    appendMicroToolExchange(ctx, 1, { output: 'result one' });
-    appendMicroToolExchange(ctx, 2, { output: 'result two' });
+    appendMicroToolExchange(ctx, 1, { output: "result one" });
+    appendMicroToolExchange(ctx, 2, { output: "result two" });
 
     vi.setSystemTime(61 * MINUTE);
     ctx.agent.microCompaction.detect();
-    expect(toolTexts(ctx.agent.context.messages)).toEqual([DEFAULT_MARKER, 'result two']);
+    expect(toolTexts(ctx.agent.context.messages)).toEqual([
+      DEFAULT_MARKER,
+      "result two",
+    ]);
     expect(lastMicroCompactionCutoff(persistence.records)).toBe(4);
 
     vi.setSystemTime(62 * MINUTE);
-    appendMicroToolExchange(ctx, 3, { output: 'result three' });
+    appendMicroToolExchange(ctx, 3, { output: "result three" });
 
     const resumedPersistence = new InMemoryAgentRecordPersistence(
       cloneRecords(persistence.records),
@@ -368,12 +381,12 @@ describe.skip('MicroCompaction', () => {
     expect(toolTexts(resumed.agent.context.messages)).toEqual([
       DEFAULT_MARKER,
       DEFAULT_MARKER,
-      'result three',
+      "result three",
     ]);
     expect(lastMicroCompactionCutoff(resumedPersistence.records)).toBe(7);
   });
 
-  it('keeps an old cutoff while cache is warm and advances it on the next miss', () => {
+  it("keeps an old cutoff while cache is warm and advances it on the next miss", () => {
     vi.useFakeTimers();
     const ctx = testAgent({
       microCompaction: {
@@ -385,22 +398,25 @@ describe.skip('MicroCompaction', () => {
     });
 
     vi.setSystemTime(0);
-    appendMicroToolExchange(ctx, 1, { output: 'result one' });
-    appendMicroToolExchange(ctx, 2, { output: 'result two' });
+    appendMicroToolExchange(ctx, 1, { output: "result one" });
+    appendMicroToolExchange(ctx, 2, { output: "result two" });
 
     vi.setSystemTime(61 * MINUTE);
     ctx.agent.microCompaction.detect();
-    expect(toolTexts(ctx.agent.context.messages)).toEqual([DEFAULT_MARKER, 'result two']);
+    expect(toolTexts(ctx.agent.context.messages)).toEqual([
+      DEFAULT_MARKER,
+      "result two",
+    ]);
 
     vi.setSystemTime(62 * MINUTE);
-    appendMicroToolExchange(ctx, 3, { output: 'result three' });
+    appendMicroToolExchange(ctx, 3, { output: "result three" });
 
     vi.setSystemTime(63 * MINUTE);
     ctx.agent.microCompaction.detect();
     expect(toolTexts(ctx.agent.context.messages)).toEqual([
       DEFAULT_MARKER,
-      'result two',
-      'result three',
+      "result two",
+      "result three",
     ]);
 
     vi.setSystemTime(123 * MINUTE);
@@ -408,11 +424,11 @@ describe.skip('MicroCompaction', () => {
     expect(toolTexts(ctx.agent.context.messages)).toEqual([
       DEFAULT_MARKER,
       DEFAULT_MARKER,
-      'result three',
+      "result three",
     ]);
   });
 
-  it('clamps cutoff when undo shortens the context', () => {
+  it("clamps cutoff when undo shortens the context", () => {
     vi.useFakeTimers();
     const ctx = testAgent({
       microCompaction: {
@@ -424,28 +440,28 @@ describe.skip('MicroCompaction', () => {
     });
 
     vi.setSystemTime(0);
-    appendMicroToolExchange(ctx, 1, { output: 'result one' });
-    appendMicroToolExchange(ctx, 2, { output: 'result two' });
-    appendMicroToolExchange(ctx, 3, { output: 'result three' });
+    appendMicroToolExchange(ctx, 1, { output: "result one" });
+    appendMicroToolExchange(ctx, 2, { output: "result two" });
+    appendMicroToolExchange(ctx, 3, { output: "result three" });
 
     vi.setSystemTime(61 * MINUTE);
     ctx.agent.microCompaction.detect();
     expect(toolTexts(ctx.agent.context.messages)).toEqual([
       DEFAULT_MARKER,
       DEFAULT_MARKER,
-      'result three',
+      "result three",
     ]);
 
     ctx.agent.context.undo(2);
-    appendMicroToolExchange(ctx, 4, { output: 'result four' });
+    appendMicroToolExchange(ctx, 4, { output: "result four" });
 
     expect(toolTexts(ctx.agent.context.messages)).toEqual([
       DEFAULT_MARKER,
-      'result four',
+      "result four",
     ]);
   });
 
-  it('tracks telemetry when a cache miss advances the micro_compaction cutoff', () => {
+  it("tracks telemetry when a cache miss advances the micro_compaction cutoff", () => {
     vi.useFakeTimers();
     const records: TelemetryRecord[] = [];
     const microCompaction = {
@@ -460,19 +476,19 @@ describe.skip('MicroCompaction', () => {
     });
 
     vi.setSystemTime(0);
-    appendMicroToolExchange(ctx, 1, { output: 'result one '.repeat(20) });
-    appendMicroToolExchange(ctx, 2, { output: 'result two '.repeat(20) });
-    appendMicroToolExchange(ctx, 3, { output: 'result three' });
+    appendMicroToolExchange(ctx, 1, { output: "result one ".repeat(20) });
+    appendMicroToolExchange(ctx, 2, { output: "result two ".repeat(20) });
+    appendMicroToolExchange(ctx, 3, { output: "result three" });
 
     vi.setSystemTime(61 * MINUTE);
     ctx.agent.microCompaction.detect();
     expect(toolTexts(ctx.agent.context.messages)).toEqual([
       DEFAULT_MARKER,
       DEFAULT_MARKER,
-      'result three',
+      "result three",
     ]);
 
-    const event = singleTelemetryEvent(records, 'micro_compaction_finished');
+    const event = singleTelemetryEvent(records, "micro_compaction_finished");
     expect(event.properties).toMatchObject({
       keep_recent_messages: microCompaction.keepRecentMessages,
       min_content_tokens: microCompaction.minContentTokens,
@@ -488,20 +504,24 @@ describe.skip('MicroCompaction', () => {
       truncated_tool_result_tokens_after: expect.any(Number),
       tokens_before: expect.any(Number),
       tokens_after: expect.any(Number),
-      thinking_effort: 'off',
+      thinking_effort: "off",
     });
-    expect(numberProperty(event, 'truncated_tool_result_tokens_before')).toBeGreaterThan(
-      numberProperty(event, 'truncated_tool_result_tokens_after'),
+    expect(
+      numberProperty(event, "truncated_tool_result_tokens_before"),
+    ).toBeGreaterThan(
+      numberProperty(event, "truncated_tool_result_tokens_after"),
     );
-    expect(numberProperty(event, 'tokens_before')).toBeGreaterThan(
-      numberProperty(event, 'tokens_after'),
+    expect(numberProperty(event, "tokens_before")).toBeGreaterThan(
+      numberProperty(event, "tokens_after"),
     );
 
     expect(ctx.agent.context.messages).toHaveLength(9);
-    expect(records.filter((record) => record.event === 'micro_compaction_finished')).toHaveLength(1);
+    expect(
+      records.filter((record) => record.event === "micro_compaction_finished"),
+    ).toHaveLength(1);
   });
 
-  it('reports context token deltas from the previously compacted projection', () => {
+  it("reports context token deltas from the previously compacted projection", () => {
     vi.useFakeTimers();
     const records: TelemetryRecord[] = [];
     const microCompaction = {
@@ -516,24 +536,28 @@ describe.skip('MicroCompaction', () => {
     });
 
     vi.setSystemTime(0);
-    appendMicroToolExchange(ctx, 1, { output: 'result one '.repeat(20) });
-    appendMicroToolExchange(ctx, 2, { output: 'result two '.repeat(20) });
+    appendMicroToolExchange(ctx, 1, { output: "result one ".repeat(20) });
+    appendMicroToolExchange(ctx, 2, { output: "result two ".repeat(20) });
 
     vi.setSystemTime(61 * MINUTE);
     ctx.agent.microCompaction.detect();
     expect(toolTexts(ctx.agent.context.messages)).toEqual([
       DEFAULT_MARKER,
-      'result two '.repeat(20),
+      "result two ".repeat(20),
     ]);
 
     vi.setSystemTime(62 * MINUTE);
-    appendMicroToolExchange(ctx, 3, { output: 'result three' });
-    const expectedContextTokensBefore = estimateTokensForMessages(ctx.agent.context.messages);
+    appendMicroToolExchange(ctx, 3, { output: "result three" });
+    const expectedContextTokensBefore = estimateTokensForMessages(
+      ctx.agent.context.messages,
+    );
 
     vi.setSystemTime(123 * MINUTE);
     ctx.agent.microCompaction.detect();
 
-    const events = records.filter((record) => record.event === 'micro_compaction_finished');
+    const events = records.filter(
+      (record) => record.event === "micro_compaction_finished",
+    );
     expect(events).toHaveLength(2);
     const secondEvent = events[1]!;
     expect(secondEvent.properties).toMatchObject({
@@ -545,8 +569,8 @@ describe.skip('MicroCompaction', () => {
     });
   });
 
-  it('leaves context unchanged when the micro_compaction flag is disabled', () => {
-    vi.stubEnv(MICRO_COMPACTION_FLAG_ENV, '0');
+  it("leaves context unchanged when the micro_compaction flag is disabled", () => {
+    vi.stubEnv(MICRO_COMPACTION_FLAG_ENV, "0");
     vi.useFakeTimers();
     const persistence = new InMemoryAgentRecordPersistence();
     const ctx = testAgent({
@@ -560,18 +584,18 @@ describe.skip('MicroCompaction', () => {
     });
 
     vi.setSystemTime(0);
-    appendMicroToolExchange(ctx, 1, { output: 'result one' });
+    appendMicroToolExchange(ctx, 1, { output: "result one" });
 
     vi.setSystemTime(61 * MINUTE);
     ctx.agent.microCompaction.detect();
 
-    expect(toolTexts(ctx.agent.context.messages)).toEqual(['result one']);
+    expect(toolTexts(ctx.agent.context.messages)).toEqual(["result one"]);
     expect(lastMicroCompactionCutoff(persistence.records)).toBeUndefined();
   });
 
-  it('uses the custom marker at the minContentTokens boundary', () => {
+  it("uses the custom marker at the minContentTokens boundary", () => {
     vi.useFakeTimers();
-    const marker = '[tool output removed for test]';
+    const marker = "[tool output removed for test]";
     const ctx = testAgent({
       microCompaction: {
         keepRecentMessages: 0,
@@ -583,16 +607,16 @@ describe.skip('MicroCompaction', () => {
     });
 
     vi.setSystemTime(0);
-    appendMicroToolExchange(ctx, 1, { output: 'abcd' });
+    appendMicroToolExchange(ctx, 1, { output: "abcd" });
 
     vi.setSystemTime(61 * MINUTE);
 
     ctx.agent.microCompaction.detect();
     expect(toolTexts(ctx.agent.context.messages)).toEqual([marker]);
-    expect(textOf(ctx.agent.context.history[2])).toBe('abcd');
+    expect(textOf(ctx.agent.context.history[2])).toBe("abcd");
   });
 
-  it('keeps raw pending token accounting even when projection truncates tool output', () => {
+  it("keeps raw pending token accounting even when projection truncates tool output", () => {
     vi.useFakeTimers();
     const ctx = testAgent({
       microCompaction: {
@@ -606,7 +630,7 @@ describe.skip('MicroCompaction', () => {
 
     vi.setSystemTime(0);
     appendMicroToolExchange(ctx, 1, {
-      output: 'x'.repeat(400),
+      output: "x".repeat(400),
       usageTokens: 50,
     });
 
@@ -620,11 +644,12 @@ describe.skip('MicroCompaction', () => {
       ctx.agent.context.tokenCount + estimateTokensForMessages(rawPending),
     );
     expect(ctx.agent.context.tokenCountWithPending).toBeGreaterThan(
-      ctx.agent.context.tokenCount + estimateTokensForMessages(projectedPending),
+      ctx.agent.context.tokenCount +
+        estimateTokensForMessages(projectedPending),
     );
   });
 
-  it('replaces rich error tool content while preserving context metadata before projection', () => {
+  it("replaces rich error tool content while preserving context metadata before projection", () => {
     vi.useFakeTimers();
     const ctx = testAgent({
       microCompaction: {
@@ -638,8 +663,8 @@ describe.skip('MicroCompaction', () => {
     vi.setSystemTime(0);
     appendMicroToolExchange(ctx, 1, {
       output: [
-        { type: 'text', text: 'large rich output' },
-        { type: 'video_url', videoUrl: { url: 'ms://video-1', id: 'video-1' } },
+        { type: "text", text: "large rich output" },
+        { type: "video_url", videoUrl: { url: "ms://video-1", id: "video-1" } },
       ],
       isError: true,
     });
@@ -647,18 +672,20 @@ describe.skip('MicroCompaction', () => {
     vi.setSystemTime(61 * MINUTE);
 
     ctx.agent.microCompaction.detect();
-    const compacted = ctx.agent.microCompaction.compact(ctx.agent.context.history);
-    const tool = compacted.find((message) => message.role === 'tool');
+    const compacted = ctx.agent.microCompaction.compact(
+      ctx.agent.context.history,
+    );
+    const tool = compacted.find((message) => message.role === "tool");
     expect(tool).toMatchObject({
-      role: 'tool',
-      toolCallId: 'call_micro_1',
+      role: "tool",
+      toolCallId: "call_micro_1",
       isError: true,
-      content: [{ type: 'text', text: DEFAULT_MARKER }],
+      content: [{ type: "text", text: DEFAULT_MARKER }],
     });
     expect(tool?.content).toHaveLength(1);
   });
 
-  it('does not truncate tool-shaped messages without a toolCallId', () => {
+  it("does not truncate tool-shaped messages without a toolCallId", () => {
     vi.useFakeTimers();
     const ctx = testAgent({
       microCompaction: {
@@ -670,15 +697,17 @@ describe.skip('MicroCompaction', () => {
 
     vi.setSystemTime(61 * MINUTE);
     ctx.agent.context.appendMessage({
-      role: 'tool',
-      content: [{ type: 'text', text: 'orphan tool-like output' }],
+      role: "tool",
+      content: [{ type: "text", text: "orphan tool-like output" }],
       toolCalls: [],
     });
 
-    expect(toolTexts(ctx.agent.context.messages)).toEqual(['orphan tool-like output']);
+    expect(toolTexts(ctx.agent.context.messages)).toEqual([
+      "orphan tool-like output",
+    ]);
   });
 
-  it('clears cutoff on full compaction', async () => {
+  it("clears cutoff on full compaction", async () => {
     vi.useFakeTimers();
     const ctx = testAgent({
       microCompaction: {
@@ -693,24 +722,24 @@ describe.skip('MicroCompaction', () => {
     });
 
     vi.setSystemTime(0);
-    ctx.appendExchange(1, 'old user', 'old assistant', 20);
-    ctx.appendExchange(2, 'recent user', 'recent assistant', 80);
+    ctx.appendExchange(1, "old user", "old assistant", 20);
+    ctx.appendExchange(2, "recent user", "recent assistant", 80);
 
     vi.setSystemTime(61 * 60 * 1000);
 
-    const compacted = ctx.once('context.apply_compaction');
-    ctx.mockNextResponse({ type: 'text', text: 'Summary.' });
+    const compacted = ctx.once("context.apply_compaction");
+    ctx.mockNextResponse({ type: "text", text: "Summary." });
     await ctx.rpc.beginCompaction({});
     await compacted;
 
     expect(ctx.agent.context.messages).toHaveLength(2);
     expect(ctx.agent.context.messages[1]).toMatchObject({
-      role: 'user',
-      content: [{ type: 'text', text: expect.stringContaining('Summary.') }],
+      role: "user",
+      content: [{ type: "text", text: expect.stringContaining("Summary.") }],
     });
   });
 
-  it('does not apply when context usage is below minContextUsageRatio', () => {
+  it("does not apply when context usage is below minContextUsageRatio", () => {
     vi.useFakeTimers();
     const ctx = testAgent({
       microCompaction: {
@@ -726,7 +755,7 @@ describe.skip('MicroCompaction', () => {
     });
 
     vi.setSystemTime(0);
-    appendMicroToolExchange(ctx, 1, { output: 'result one' });
+    appendMicroToolExchange(ctx, 1, { output: "result one" });
 
     vi.setSystemTime(61 * MINUTE);
 
@@ -734,7 +763,7 @@ describe.skip('MicroCompaction', () => {
     expect(hasMarker(messages)).toBe(false);
   });
 
-  it('applies when context usage is above minContextUsageRatio', () => {
+  it("applies when context usage is above minContextUsageRatio", () => {
     vi.useFakeTimers();
     const ctx = testAgent({
       microCompaction: {
@@ -757,7 +786,7 @@ describe.skip('MicroCompaction', () => {
     });
 
     vi.setSystemTime(0);
-    appendMicroToolExchange(ctx, 1, { output: 'x'.repeat(300) });
+    appendMicroToolExchange(ctx, 1, { output: "x".repeat(300) });
 
     vi.setSystemTime(61 * MINUTE);
 
@@ -766,7 +795,7 @@ describe.skip('MicroCompaction', () => {
     expect(hasMarker(messages)).toBe(true);
   });
 
-  it('does not truncate when messages are fewer than keepRecentMessages', () => {
+  it("does not truncate when messages are fewer than keepRecentMessages", () => {
     vi.useFakeTimers();
     const ctx = testAgent({
       microCompaction: {
@@ -816,50 +845,52 @@ function appendMicroToolExchange(
           inputCacheCreation: 0,
         };
 
-  ctx.agent.context.appendUserMessage([{ type: 'text', text: `lookup ${String(index)}` }]);
+  ctx.agent.context.appendUserMessage([
+    { type: "text", text: `lookup ${String(index)}` },
+  ]);
   ctx.dispatch({
-    type: 'context.append_loop_event',
-    event: { type: 'step.begin', uuid: stepUuid, turnId: '', step: index },
+    type: "context.append_loop_event",
+    event: { type: "step.begin", uuid: stepUuid, turnId: "", step: index },
   });
   ctx.dispatch({
-    type: 'context.append_loop_event',
+    type: "context.append_loop_event",
     event: {
-      type: 'content.part',
+      type: "content.part",
       uuid: `micro-tool-part-${String(index)}`,
-      turnId: '',
+      turnId: "",
       step: index,
       stepUuid,
-      part: { type: 'text', text: `calling Lookup ${String(index)}` },
+      part: { type: "text", text: `calling Lookup ${String(index)}` },
     },
   });
   ctx.dispatch({
-    type: 'context.append_loop_event',
+    type: "context.append_loop_event",
     event: {
-      type: 'tool.call',
+      type: "tool.call",
       uuid: toolCallId,
-      turnId: '',
+      turnId: "",
       step: index,
       stepUuid,
       toolCallId,
-      name: 'Lookup',
+      name: "Lookup",
       args: { query: `item-${String(index)}` },
     },
   });
   ctx.dispatch({
-    type: 'context.append_loop_event',
+    type: "context.append_loop_event",
     event: {
-      type: 'step.end',
+      type: "step.end",
       uuid: stepUuid,
-      turnId: '',
+      turnId: "",
       step: index,
       usage,
-      finishReason: 'tool_use',
+      finishReason: "tool_use",
     },
   });
   ctx.dispatch({
-    type: 'context.append_loop_event',
+    type: "context.append_loop_event",
     event: {
-      type: 'tool.result',
+      type: "tool.result",
       parentUuid: toolCallId,
       toolCallId,
       result: { output, isError: options.isError },
@@ -870,70 +901,75 @@ function appendMicroToolExchange(
 function resumeToolExchangeRecords(assistantRecordTime: number): AgentRecord[] {
   return [
     {
-      type: 'metadata',
+      type: "metadata",
       protocol_version: AGENT_WIRE_PROTOCOL_VERSION,
       created_at: 1,
     },
     {
-      type: 'context.append_message',
+      type: "context.append_message",
       time: 1_000,
       message: {
-        role: 'user',
-        content: [{ type: 'text', text: 'lookup from restored session' }],
+        role: "user",
+        content: [{ type: "text", text: "lookup from restored session" }],
         toolCalls: [],
-        origin: { kind: 'user' },
+        origin: { kind: "user" },
       },
     },
     {
-      type: 'context.append_loop_event',
+      type: "context.append_loop_event",
       time: assistantRecordTime,
-      event: { type: 'step.begin', uuid: 'resume-micro-step', turnId: '0', step: 1 },
+      event: {
+        type: "step.begin",
+        uuid: "resume-micro-step",
+        turnId: "0",
+        step: 1,
+      },
     },
     {
-      type: 'context.append_loop_event',
+      type: "context.append_loop_event",
       time: assistantRecordTime + 1,
       event: {
-        type: 'content.part',
-        uuid: 'resume-micro-part',
-        turnId: '0',
+        type: "content.part",
+        uuid: "resume-micro-part",
+        turnId: "0",
         step: 1,
-        stepUuid: 'resume-micro-step',
-        part: { type: 'text', text: 'calling restored Lookup' },
+        stepUuid: "resume-micro-step",
+        part: { type: "text", text: "calling restored Lookup" },
       },
     },
     {
-      type: 'context.append_loop_event',
+      type: "context.append_loop_event",
       time: assistantRecordTime + 2,
       event: {
-        type: 'tool.call',
-        uuid: 'resume-micro-call',
-        turnId: '0',
+        type: "tool.call",
+        uuid: "resume-micro-call",
+        turnId: "0",
         step: 1,
-        stepUuid: 'resume-micro-step',
-        toolCallId: 'resume_micro_call',
-        name: 'Lookup',
-        args: { query: 'restored' },
+        stepUuid: "resume-micro-step",
+        toolCallId: "resume_micro_call",
+        name: "Lookup",
+        args: { query: "restored" },
       },
     },
     {
-      type: 'context.append_loop_event',
+      type: "context.append_loop_event",
       time: assistantRecordTime + 3,
       event: {
-        type: 'step.end',
-        uuid: 'resume-micro-step',
-        turnId: '0',
+        type: "step.end",
+        uuid: "resume-micro-step",
+        turnId: "0",
         step: 1,
-        finishReason: 'tool_use',
+        finishReason: "tool_use",
       },
     },
     {
-      type: 'context.append_loop_event',
+      type: "context.append_loop_event",
       time: assistantRecordTime + 4,
       event: {
-        type: 'tool.result',
-        parentUuid: 'resume-micro-call',
-        toolCallId: 'resume_micro_call',
-        result: { output: 'restored lookup result' },
+        type: "tool.result",
+        parentUuid: "resume-micro-call",
+        toolCallId: "resume_micro_call",
+        result: { output: "restored lookup result" },
       },
     },
   ];
@@ -943,13 +979,16 @@ function cloneRecords(records: readonly AgentRecord[]): AgentRecord[] {
   return records.map((record) => structuredClone(record));
 }
 
-function lastMicroCompactionCutoff(records: readonly AgentRecord[]): number | undefined {
-  return records.findLast((record) => record.type === 'micro_compaction.apply')?.cutoff;
+function lastMicroCompactionCutoff(
+  records: readonly AgentRecord[],
+): number | undefined {
+  return records.findLast((record) => record.type === "micro_compaction.apply")
+    ?.cutoff;
 }
 
 function toolTexts(messages: readonly Message[]): string[] {
   return messages
-    .filter((message) => message.role === 'tool')
+    .filter((message) => message.role === "tool")
     .map((message) => textOf(message));
 }
 
@@ -957,10 +996,10 @@ function textOf(message: Message | undefined): string {
   return (
     message?.content
       .map((part) => {
-        if (part.type === 'text') return part.text;
-        return '';
+        if (part.type === "text") return part.text;
+        return "";
       })
-      .join('') ?? ''
+      .join("") ?? ""
   );
 }
 
@@ -971,7 +1010,7 @@ function hasMarker(messages: readonly Message[]): boolean {
 function getMicroCompactionFlagEnv(): string {
   // Micro compaction is disabled and its flag has been removed from the registry;
   // the env var name is kept so the (skipped) suite still type-checks.
-  return 'KIMI_CODE_EXPERIMENTAL_MICRO_COMPACTION';
+  return "KIMI_CODE_EXPERIMENTAL_MICRO_COMPACTION";
 }
 
 function singleTelemetryEvent(
@@ -985,6 +1024,6 @@ function singleTelemetryEvent(
 
 function numberProperty(record: TelemetryRecord, key: string): number {
   const value = record.properties?.[key];
-  expect(typeof value).toBe('number');
+  expect(typeof value).toBe("number");
   return value as number;
 }

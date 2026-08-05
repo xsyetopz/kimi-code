@@ -6,8 +6,11 @@
  * repo-relative paths only, never a `cwd`. Workspace-scoped.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
-import type { FsDiffResponse, FsGitStatusResponse } from '#/app/git/git';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
+import type { FsDiffResponse, FsGitStatusResponse } from "#/app/git/git";
 
 export interface IWorkspaceGitService {
   readonly _serviceBrand: undefined;
@@ -17,4 +20,4 @@ export interface IWorkspaceGitService {
 }
 
 export const IWorkspaceGitService: ServiceIdentifier<IWorkspaceGitService> =
-  createDecorator<IWorkspaceGitService>('workspaceGitService');
+  createDecorator<IWorkspaceGitService>("workspaceGitService");

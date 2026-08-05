@@ -1,10 +1,13 @@
-import { onUnexpectedError, safelyCallListener } from '../../errors/unexpectedError';
+import {
+  onUnexpectedError,
+  safelyCallListener,
+} from "../../errors/unexpectedError";
 import {
   Disposable,
   DisposableStore,
   combinedDisposable,
   type IDisposable,
-} from '../../di/lifecycle';
+} from "../../di/lifecycle";
 
 export interface Event<T> {
   (
@@ -108,14 +111,13 @@ export namespace Event {
 
   export function map<I, O>(event: Event<I>, map: (i: I) => O): Event<O> {
     return (listener, thisArg, disposables) =>
-      event(
-        (i) => listener.call(thisArg, map(i)),
-        undefined,
-        disposables,
-      );
+      event((i) => listener.call(thisArg, map(i)), undefined, disposables);
   }
 
-  export function filter<T>(event: Event<T>, filter: (e: T) => boolean): Event<T> {
+  export function filter<T>(
+    event: Event<T>,
+    filter: (e: T) => boolean,
+  ): Event<T> {
     return (listener, thisArg, disposables) =>
       event(
         (e) => {

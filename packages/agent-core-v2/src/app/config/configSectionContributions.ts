@@ -10,7 +10,7 @@
  * whether the consuming Service is instantiated.
  */
 
-import type { ConfigSchema, RegisterSectionOptions } from './config';
+import type { ConfigSchema, RegisterSectionOptions } from "./config";
 
 export interface ConfigSectionContribution {
   readonly domain: string;

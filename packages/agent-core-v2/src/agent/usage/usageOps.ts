@@ -14,18 +14,18 @@
  * each dispatch (never on replay).
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { addUsage, type TokenUsage } from '#/kosong/contract/usage';
-import { defineModel } from '#/wire/model';
+import { addUsage, type TokenUsage } from "#/kosong/contract/usage";
+import { defineModel } from "#/wire/model";
 
-import type { UsageStatus } from './usage';
+import type { UsageStatus } from "./usage";
 
-export type UsageRecordScope = 'session' | 'turn';
+export type UsageRecordScope = "session" | "turn";
 
-declare module '#/app/event/eventBus' {
+declare module "#/app/event/eventBus" {
   interface DomainEventMap {
-    'agent.status.updated': {
+    "agent.status.updated": {
       usage?: UsageStatus;
       swarmMode?: boolean;
       planMode?: boolean;
@@ -41,15 +41,17 @@ export interface UsageModelState {
   readonly byModel: Record<string, TokenUsage>;
 }
 
-export const UsageModel = defineModel<UsageModelState>('usage', () => ({ byModel: {} }));
+export const UsageModel = defineModel<UsageModelState>("usage", () => ({
+  byModel: {},
+}));
 
-declare module '#/wire/types' {
+declare module "#/wire/types" {
   interface PersistedOpMap {
-    'usage.record': typeof recordUsage;
+    "usage.record": typeof recordUsage;
   }
 }
 
-export const recordUsage = UsageModel.defineOp('usage.record', {
+export const recordUsage = UsageModel.defineOp("usage.record", {
   schema: z.object({
     model: z.string(),
     usage: z.custom<TokenUsage>(),
@@ -60,7 +62,10 @@ export const recordUsage = UsageModel.defineOp('usage.record', {
     return {
       byModel: {
         ...s.byModel,
-        [p.model]: current === undefined ? copyUsage(p.usage) : addUsage(current, p.usage),
+        [p.model]:
+          current === undefined
+            ? copyUsage(p.usage)
+            : addUsage(current, p.usage),
       },
     };
   },
@@ -83,13 +88,17 @@ export function usageStatusFromState(
   };
 }
 
-function byModelSnapshot(byModel: Record<string, TokenUsage>): Record<string, TokenUsage> {
+function byModelSnapshot(
+  byModel: Record<string, TokenUsage>,
+): Record<string, TokenUsage> {
   return Object.fromEntries(
     Object.entries(byModel).map(([model, usage]) => [model, copyUsage(usage)]),
   );
 }
 
-function totalUsage(byModel: Record<string, TokenUsage>): TokenUsage | undefined {
+function totalUsage(
+  byModel: Record<string, TokenUsage>,
+): TokenUsage | undefined {
   let total: TokenUsage | undefined;
   for (const usage of Object.values(byModel)) {
     total = total === undefined ? copyUsage(usage) : addUsage(total, usage);

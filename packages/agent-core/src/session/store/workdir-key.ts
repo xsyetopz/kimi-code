@@ -1,15 +1,15 @@
-import { createHash } from 'node:crypto';
-import { win32 } from 'node:path';
-import { basename, resolve } from 'pathe';
+import { createHash } from "node:crypto";
+import { win32 } from "node:path";
+import { basename, resolve } from "pathe";
 
-import { slugifyWorkDirName } from '#/utils/workdir-slug';
+import { slugifyWorkDirName } from "#/utils/workdir-slug";
 
-const WORKDIR_KEY_PREFIX = 'wd_';
+const WORKDIR_KEY_PREFIX = "wd_";
 const HASH_LENGTH = 12;
 
 export function normalizeWorkDir(workDir: string): string {
   if (isWindowsAbsolutePath(workDir)) {
-    return win32.resolve(workDir).replaceAll('\\', '/');
+    return win32.resolve(workDir).replaceAll("\\", "/");
   }
   return resolve(workDir);
 }
@@ -17,12 +17,17 @@ export function normalizeWorkDir(workDir: string): string {
 export function encodeWorkDirKey(workDir: string): string {
   const normalized = normalizeWorkDir(workDir);
   const slug = slugifyWorkDirName(basename(normalized));
-  const hash = createHash('sha256').update(normalized).digest('hex').slice(0, HASH_LENGTH);
+  const hash = createHash("sha256")
+    .update(normalized)
+    .digest("hex")
+    .slice(0, HASH_LENGTH);
   return `${WORKDIR_KEY_PREFIX}${slug}_${hash}`;
 }
 
 function isWindowsAbsolutePath(value: string): boolean {
-  return /^[A-Za-z]:[\\/]/.test(value) || /^[\\/]{2}[^\\/]+[\\/][^\\/]+/.test(value);
+  return (
+    /^[A-Za-z]:[\\/]/.test(value) || /^[\\/]{2}[^\\/]+[\\/][^\\/]+/.test(value)
+  );
 }
 
 // Windows-shaped: drive-letter (C:\, C:/) or UNC (\\host\share, //host/share).
@@ -42,11 +47,11 @@ const WIN_SHAPED = /^(?:[A-Za-z]:[\\/]|\\\\|\/\/)/;
  * paths are a documented non-goal; POSIX paths never fold.
  */
 export function workspaceRootKey(root: string): string {
-  const slashed = root.replaceAll('\\', '/');
+  const slashed = root.replaceAll("\\", "/");
   // Test the shape BEFORE stripping trailing separators: a drive root
   // (`C:\`) loses its only separator to the strip (`C:`) and would no
   // longer read as Windows-shaped, escaping the case-fold.
   const shaped = WIN_SHAPED.test(slashed);
-  const normalized = slashed.replace(/\/+$/, '');
+  const normalized = slashed.replace(/\/+$/, "");
   return shaped ? normalized.toLowerCase() : normalized;
 }

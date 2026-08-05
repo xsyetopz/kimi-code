@@ -1,5 +1,5 @@
-import { readFile } from 'node:fs/promises';
-import { join } from 'pathe';
+import { readFile } from "node:fs/promises";
+import { join } from "pathe";
 
 export interface SessionWireScan {
   readonly firstActivityMs?: number | undefined;
@@ -8,10 +8,12 @@ export interface SessionWireScan {
   readonly firstUserInput?: string | undefined;
 }
 
-export async function scanSessionWire(sessionDir: string): Promise<SessionWireScan> {
+export async function scanSessionWire(
+  sessionDir: string,
+): Promise<SessionWireScan> {
   let raw: string;
   try {
-    raw = await readFile(join(sessionDir, 'wire.jsonl'), 'utf-8');
+    raw = await readFile(join(sessionDir, "wire.jsonl"), "utf-8");
   } catch {
     return {};
   }
@@ -21,7 +23,7 @@ export async function scanSessionWire(sessionDir: string): Promise<SessionWireSc
   let lastUserMessageMs: number | undefined;
   let firstUserInput: string | undefined;
 
-  for (const line of raw.split('\n')) {
+  for (const line of raw.split("\n")) {
     const trimmed = line.trim();
     if (trimmed.length === 0) continue;
     let parsed: unknown;
@@ -30,24 +32,27 @@ export async function scanSessionWire(sessionDir: string): Promise<SessionWireSc
     } catch {
       continue;
     }
-    if (typeof parsed !== 'object' || parsed === null) continue;
+    if (typeof parsed !== "object" || parsed === null) continue;
     const record = parsed as {
       type?: unknown;
       time?: unknown;
       userInput?: unknown;
     };
-    const timeMs = typeof record.time === 'number' ? normalizeTimestampMs(record.time) : undefined;
+    const timeMs =
+      typeof record.time === "number"
+        ? normalizeTimestampMs(record.time)
+        : undefined;
     if (timeMs !== undefined) {
       firstActivityMs ??= timeMs;
       lastActivityMs = timeMs;
     }
-    if (record.type === 'turn_begin') {
+    if (record.type === "turn_begin") {
       if (timeMs !== undefined) {
         lastUserMessageMs = timeMs;
       }
       if (
         firstUserInput === undefined &&
-        typeof record.userInput === 'string' &&
+        typeof record.userInput === "string" &&
         record.userInput.trim().length > 0
       ) {
         firstUserInput = record.userInput;

@@ -1,11 +1,11 @@
-import type { ToolCall } from '#/kosong/contract/message';
-import type { DomainEvent } from '#/app/event/eventBus';
-import type { ToolInputDisplay } from '#/tool/toolInputDisplay';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { ToolCall } from "#/kosong/contract/message";
+import type { DomainEvent } from "#/app/event/eventBus";
+import type { ToolInputDisplay } from "#/tool/toolInputDisplay";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { SyncDescriptor } from '#/_base/di/descriptors';
-import { DisposableStore } from '#/_base/di/lifecycle';
-import { createServices, type TestInstantiationService } from '#/_base/di/test';
+import { SyncDescriptor } from "#/_base/di/descriptors";
+import { DisposableStore } from "#/_base/di/lifecycle";
+import { createServices, type TestInstantiationService } from "#/_base/di/test";
 import {
   ToolAccesses,
   type ExecutableTool,
@@ -14,28 +14,37 @@ import {
   type ToolExecution,
   type ToolResult,
   type ToolUpdate,
-} from '#/tool/toolContract';
-import { IAgentToolExecutorService } from '#/agent/toolExecutor/toolExecutor';
+} from "#/tool/toolContract";
+import { IAgentToolExecutorService } from "#/agent/toolExecutor/toolExecutor";
 import type {
   BeforeToolExecuteEvent,
   ToolExecutionOutcome,
-} from '#/agent/toolExecutor/toolHooks';
-import { AgentToolExecutorService } from '#/agent/toolExecutor/toolExecutorService';
-import { parseToolCallArguments } from '#/tool/tool-args-parse';
-import { IAgentToolResultTruncationService } from '#/agent/toolResultTruncation/toolResultTruncation';
-import { makeAgentScopeContext, IAgentScopeContext } from '#/agent/scopeContext/scopeContext';
-import { IAgentToolRegistryService } from '#/agent/toolRegistry/toolRegistry';
-import { AgentToolRegistryService } from '#/agent/toolRegistry/toolRegistryService';
-import { IEventBus } from '#/app/event/eventBus';
-import type { LLMRequestTrace } from '#/kosong/contract/requestTrace';
-import { ITelemetryService } from '#/app/telemetry/telemetry';
-import { registerLogServices } from '../../_base/log/stubs';
-import { recordingTelemetry, type TelemetryRecord } from '../../app/telemetry/stubs';
-import { registerStateServices } from '../../state/stubs';
-import { registerTestAgentWireServices } from '../../wire/stubs';
+} from "#/agent/toolExecutor/toolHooks";
+import { AgentToolExecutorService } from "#/agent/toolExecutor/toolExecutorService";
+import { parseToolCallArguments } from "#/tool/tool-args-parse";
+import { IAgentToolResultTruncationService } from "#/agent/toolResultTruncation/toolResultTruncation";
+import {
+  makeAgentScopeContext,
+  IAgentScopeContext,
+} from "#/agent/scopeContext/scopeContext";
+import { IAgentToolRegistryService } from "#/agent/toolRegistry/toolRegistry";
+import { AgentToolRegistryService } from "#/agent/toolRegistry/toolRegistryService";
+import { IEventBus } from "#/app/event/eventBus";
+import type { LLMRequestTrace } from "#/kosong/contract/requestTrace";
+import { ITelemetryService } from "#/app/telemetry/telemetry";
+import { registerLogServices } from "../../_base/log/stubs";
+import {
+  recordingTelemetry,
+  type TelemetryRecord,
+} from "../../app/telemetry/stubs";
+import { registerStateServices } from "../../state/stubs";
+import { registerTestAgentWireServices } from "../../wire/stubs";
 
-type ToolExecutorEvent =
-  | { readonly type: 'tool.result'; readonly toolCallId: string; readonly result: ToolResult };
+type ToolExecutorEvent = {
+  readonly type: "tool.result";
+  readonly toolCallId: string;
+  readonly result: ToolResult;
+};
 
 let disposables: DisposableStore;
 let ix: TestInstantiationService;
@@ -44,7 +53,7 @@ let registry: IAgentToolRegistryService;
 let events: ToolExecutorEvent[];
 let protocolEvents: DomainEvent[];
 let telemetryEvents: TelemetryRecord[];
-let truncateForModel: IAgentToolResultTruncationService['truncateForModel'];
+let truncateForModel: IAgentToolResultTruncationService["truncateForModel"];
 
 beforeEach(() => {
   disposables = new DisposableStore();
@@ -55,18 +64,24 @@ beforeEach(() => {
   ix = createServices(disposables, {
     additionalServices: (reg) => {
       registerStateServices(reg);
-      registerTestAgentWireServices(reg, 'wire/tool-executor');
+      registerTestAgentWireServices(reg, "wire/tool-executor");
       reg.define(IAgentToolRegistryService, AgentToolRegistryService);
       reg.define(IAgentToolExecutorService, AgentToolExecutorService);
-      reg.defineInstance(IAgentScopeContext, makeAgentScopeContext({ agentId: 'main', agentScope: '' }));
-      reg.defineInstance(ITelemetryService, recordingTelemetry(telemetryEvents));
+      reg.defineInstance(
+        IAgentScopeContext,
+        makeAgentScopeContext({ agentId: "main", agentScope: "" }),
+      );
+      reg.defineInstance(
+        ITelemetryService,
+        recordingTelemetry(telemetryEvents),
+      );
       reg.defineInstance(IAgentToolResultTruncationService, {
         _serviceBrand: undefined,
         truncateForModel: (input) => truncateForModel(input),
       });
       reg.defineInstance(IEventBus, {
         publish: (event: { type: string }) => {
-          if (event.type.startsWith('tool.')) {
+          if (event.type.startsWith("tool.")) {
             protocolEvents.push(event as unknown as DomainEvent);
           }
         },
@@ -84,49 +99,55 @@ afterEach(() => {
   disposables.dispose();
 });
 
-describe('AgentToolExecutorService', () => {
-  it('resolves by interface and routes a successful tool call through execute', async () => {
-    const tool = new TestTool('echo');
+describe("AgentToolExecutorService", () => {
+  it("resolves by interface and routes a successful tool call through execute", async () => {
+    const tool = new TestTool("echo");
     registry.register(tool);
 
-    const results = await execute([toolCall('call_echo', 'echo', { text: 'hi' })]);
+    const results = await execute([
+      toolCall("call_echo", "echo", { text: "hi" }),
+    ]);
 
     expect(results).toEqual([
       expect.objectContaining({
-        output: 'hi',
+        output: "hi",
         stopTurn: false,
       }),
     ]);
     expect(tool.calls).toEqual([
       expect.objectContaining({
-        toolCallId: 'call_echo',
+        toolCallId: "call_echo",
         turnId: 0,
-        args: { text: 'hi' },
+        args: { text: "hi" },
       }),
     ]);
-    expect(eventTypes()).toEqual(['tool.result']);
-    expect(protocolEventTypes()).toEqual(['tool.call.started', 'tool.result']);
+    expect(eventTypes()).toEqual(["tool.result"]);
+    expect(protocolEventTypes()).toEqual(["tool.call.started", "tool.result"]);
     expect(telemetryEvents).toContainEqual({
-      event: 'tool_call',
+      event: "tool_call",
       properties: expect.objectContaining({
         turn_id: 0,
-        tool_call_id: 'call_echo',
-        tool_name: 'echo',
-        outcome: 'success',
+        tool_call_id: "call_echo",
+        tool_name: "echo",
+        outcome: "success",
         duration_ms: expect.any(Number),
       }),
     });
   });
 
-  it('rejects by policy before dynamic availability when a tool-call guard denies it', async () => {
-    const tool = new TestTool('blocked');
-    registry.register(tool, { source: 'mcp' });
-    executor.registerUnavailableToolDescriber(() => 'Tool "blocked" is not loaded');
+  it("rejects by policy before dynamic availability when a tool-call guard denies it", async () => {
+    const tool = new TestTool("blocked");
+    registry.register(tool, { source: "mcp" });
+    executor.registerUnavailableToolDescriber(
+      () => 'Tool "blocked" is not loaded',
+    );
     executor.registerToolCallGuard(({ name, source }) =>
-      name === 'blocked' && source === 'mcp' ? 'Tool "blocked" is disabled' : undefined,
+      name === "blocked" && source === "mcp"
+        ? 'Tool "blocked" is disabled'
+        : undefined,
     );
 
-    const results = await execute([toolCall('call_blocked', 'blocked', {})]);
+    const results = await execute([toolCall("call_blocked", "blocked", {})]);
 
     expect(results).toEqual([
       expect.objectContaining({
@@ -137,125 +158,147 @@ describe('AgentToolExecutorService', () => {
     expect(tool.calls).toEqual([]);
   });
 
-  it('tags tool_call telemetry with recorded dup types, defaulting to normal', async () => {
-    const tool = new TestTool('echo');
+  it("tags tool_call telemetry with recorded dup types, defaulting to normal", async () => {
+    const tool = new TestTool("echo");
     registry.register(tool);
     let tag = true;
     executor.onBeforeExecuteTool((event) => {
-      if (tag && event.toolCall.id === 'call_dup') executor.recordDupType('call_dup', 'cross_step');
+      if (tag && event.toolCall.id === "call_dup")
+        executor.recordDupType("call_dup", "cross_step");
     });
 
     await execute([
-      toolCall('call_ok', 'echo', { text: 'a' }),
-      toolCall('call_dup', 'echo', { text: 'b' }),
+      toolCall("call_ok", "echo", { text: "a" }),
+      toolCall("call_dup", "echo", { text: "b" }),
     ]);
 
     expect(telemetryEvents).toContainEqual({
-      event: 'tool_call',
-      properties: expect.objectContaining({ tool_call_id: 'call_ok', dup_type: 'normal' }),
+      event: "tool_call",
+      properties: expect.objectContaining({
+        tool_call_id: "call_ok",
+        dup_type: "normal",
+      }),
     });
     expect(telemetryEvents).toContainEqual({
-      event: 'tool_call',
-      properties: expect.objectContaining({ tool_call_id: 'call_dup', dup_type: 'cross_step' }),
+      event: "tool_call",
+      properties: expect.objectContaining({
+        tool_call_id: "call_dup",
+        dup_type: "cross_step",
+      }),
     });
 
     tag = false;
-    await execute([toolCall('call_dup', 'echo', { text: 'c' })]);
+    await execute([toolCall("call_dup", "echo", { text: "c" })]);
     expect(telemetryEvents).toContainEqual({
-      event: 'tool_call',
-      properties: expect.objectContaining({ tool_call_id: 'call_dup', dup_type: 'normal' }),
-    });
-  });
-
-  it('merges the request trace id into tool_call telemetry', async () => {
-    const tool = new TestTool('echo');
-    registry.register(tool);
-
-    await execute(
-      [toolCall('call_traced', 'echo', { text: 'hi' })],
-      undefined,
-      { traceId: 'trace-tool-1' },
-    );
-
-    expect(telemetryEvents).toContainEqual({
-      event: 'tool_call',
+      event: "tool_call",
       properties: expect.objectContaining({
-        tool_call_id: 'call_traced',
-        trace_id: 'trace-tool-1',
+        tool_call_id: "call_dup",
+        dup_type: "normal",
       }),
     });
   });
 
-  it('truncates final tool results before publishing protocol events', async () => {
-    truncateForModel = async (input) => ({
-      ...input.result,
-      output: 'truncated output',
-      truncated: true,
-    });
-    const tool = new TestTool('large', { result: { output: 'raw output' } });
+  it("merges the request trace id into tool_call telemetry", async () => {
+    const tool = new TestTool("echo");
     registry.register(tool);
 
-    const results = await execute([toolCall('call_large', 'large', {})]);
+    await execute(
+      [toolCall("call_traced", "echo", { text: "hi" })],
+      undefined,
+      { traceId: "trace-tool-1" },
+    );
+
+    expect(telemetryEvents).toContainEqual({
+      event: "tool_call",
+      properties: expect.objectContaining({
+        tool_call_id: "call_traced",
+        trace_id: "trace-tool-1",
+      }),
+    });
+  });
+
+  it("truncates final tool results before publishing protocol events", async () => {
+    truncateForModel = async (input) => ({
+      ...input.result,
+      output: "truncated output",
+      truncated: true,
+    });
+    const tool = new TestTool("large", { result: { output: "raw output" } });
+    registry.register(tool);
+
+    const results = await execute([toolCall("call_large", "large", {})]);
 
     expect(results[0]).toMatchObject({
-      output: 'truncated output',
+      output: "truncated output",
       truncated: true,
     });
     expect(protocolEvents).toContainEqual(
       expect.objectContaining({
-        type: 'tool.result',
-        toolCallId: 'call_large',
-        output: 'truncated output',
+        type: "tool.result",
+        toolCallId: "call_large",
+        output: "truncated output",
       }),
     );
   });
 
-  it('preserves internal result notes without exposing them on protocol tool.result events', async () => {
-    const tool = new TestTool('captioned', {
+  it("preserves internal result notes without exposing them on protocol tool.result events", async () => {
+    const tool = new TestTool("captioned", {
       result: {
-        output: 'image sent',
-        note: '<system>Image compressed.</system>',
+        output: "image sent",
+        note: "<system>Image compressed.</system>",
       },
     });
     registry.register(tool);
 
-    const results = await execute([toolCall('call_captioned', 'captioned', {})]);
+    const results = await execute([
+      toolCall("call_captioned", "captioned", {}),
+    ]);
 
     expect(results[0]).toMatchObject({
-      output: 'image sent',
-      note: '<system>Image compressed.</system>',
+      output: "image sent",
+      note: "<system>Image compressed.</system>",
     });
     const protocolResult = protocolEvents.find(
-      (event): event is Extract<DomainEvent, { type: 'tool.result' }> =>
-        event.type === 'tool.result',
+      (event): event is Extract<DomainEvent, { type: "tool.result" }> =>
+        event.type === "tool.result",
     );
     expect(protocolResult).toMatchObject({
-      type: 'tool.result',
-      toolCallId: 'call_captioned',
-      output: 'image sent',
+      type: "tool.result",
+      toolCallId: "call_captioned",
+      output: "image sent",
     });
-    expect(protocolResult as unknown as Record<string, unknown>).not.toHaveProperty('note');
+    expect(
+      protocolResult as unknown as Record<string, unknown>,
+    ).not.toHaveProperty("note");
   });
 
-  it('drops malformed notes and non-true truncated flags from internal results', async () => {
-    const tool = new TestTool('malformed-meta', {
+  it("drops malformed notes and non-true truncated flags from internal results", async () => {
+    const tool = new TestTool("malformed-meta", {
       result: {
-        output: 'image sent',
+        output: "image sent",
         note: 123,
         truncated: false,
       } as unknown as ExecutableToolResult,
     });
     registry.register(tool);
 
-    const results = await execute([toolCall('call_malformed_meta', 'malformed-meta', {})]);
+    const results = await execute([
+      toolCall("call_malformed_meta", "malformed-meta", {}),
+    ]);
 
-    expect(results[0]).toMatchObject({ output: 'image sent' });
-    expect(results[0] as unknown as Record<string, unknown>).not.toHaveProperty('note');
-    expect(results[0] as unknown as Record<string, unknown>).not.toHaveProperty('truncated');
+    expect(results[0]).toMatchObject({ output: "image sent" });
+    expect(results[0] as unknown as Record<string, unknown>).not.toHaveProperty(
+      "note",
+    );
+    expect(results[0] as unknown as Record<string, unknown>).not.toHaveProperty(
+      "truncated",
+    );
   });
 
-  it('records an error tool.result when the tool name is unknown', async () => {
-    const results = await execute([toolCall('call_missing', 'missing', { text: 'hi' })]);
+  it("records an error tool.result when the tool name is unknown", async () => {
+    const results = await execute([
+      toolCall("call_missing", "missing", { text: "hi" }),
+    ]);
 
     expect(results).toEqual([
       expect.objectContaining({
@@ -264,66 +307,35 @@ describe('AgentToolExecutorService', () => {
       }),
     ]);
     expect(pairedToolCallIds()).toEqual({
-      calls: ['call_missing'],
-      results: ['call_missing'],
+      calls: ["call_missing"],
+      results: ["call_missing"],
     });
     expect(telemetryEvents).toContainEqual({
-      event: 'tool_call',
+      event: "tool_call",
       properties: expect.objectContaining({
         turn_id: 0,
-        tool_call_id: 'call_missing',
-        tool_name: 'missing',
-        outcome: 'error',
+        tool_call_id: "call_missing",
+        tool_name: "missing",
+        outcome: "error",
         duration_ms: expect.any(Number),
-        error_type: 'error',
+        error_type: "error",
       }),
     });
   });
 
-  it('records an error tool.result when args fail tool parameter validation', async () => {
-    const tool = new TestTool('strict', {
+  it("records an error tool.result when args fail tool parameter validation", async () => {
+    const tool = new TestTool("strict", {
       parameters: {
-        type: 'object',
-        properties: { value: { type: 'number' } },
-        required: ['value'],
-        additionalProperties: false,
-      },
-    });
-    registry.register(tool);
-
-    const results = await execute([toolCall('call_strict', 'strict', { value: 'bad' })]);
-
-    expect(results).toEqual([
-      expect.objectContaining({
-        output: expect.stringContaining('Invalid args for tool "strict"'),
-        isError: true,
-      }),
-    ]);
-    expect(tool.calls).toEqual([]);
-    expect(pairedToolCallIds()).toEqual({
-      calls: ['call_strict'],
-      results: ['call_strict'],
-    });
-  });
-
-  it('routes malformed JSON args through schema validation', async () => {
-    const tool = new TestTool('strict', {
-      parameters: {
-        type: 'object',
-        properties: { value: { type: 'number' } },
-        required: ['value'],
+        type: "object",
+        properties: { value: { type: "number" } },
+        required: ["value"],
         additionalProperties: false,
       },
     });
     registry.register(tool);
 
     const results = await execute([
-      {
-        type: 'function',
-        id: 'call_malformed',
-        name: 'strict',
-        arguments: '{not valid json',
-      },
+      toolCall("call_strict", "strict", { value: "bad" }),
     ]);
 
     expect(results).toEqual([
@@ -334,17 +346,17 @@ describe('AgentToolExecutorService', () => {
     ]);
     expect(tool.calls).toEqual([]);
     expect(pairedToolCallIds()).toEqual({
-      calls: ['call_malformed'],
-      results: ['call_malformed'],
+      calls: ["call_strict"],
+      results: ["call_strict"],
     });
   });
 
-  it('does not repair malformed tool args JSON with a trailing comma', async () => {
-    const tool = new TestTool('strict', {
+  it("routes malformed JSON args through schema validation", async () => {
+    const tool = new TestTool("strict", {
       parameters: {
-        type: 'object',
-        properties: { text: { type: 'string' } },
-        required: ['text'],
+        type: "object",
+        properties: { value: { type: "number" } },
+        required: ["value"],
         additionalProperties: false,
       },
     });
@@ -352,9 +364,42 @@ describe('AgentToolExecutorService', () => {
 
     const results = await execute([
       {
-        type: 'function',
-        id: 'call_trailing_comma',
-        name: 'strict',
+        type: "function",
+        id: "call_malformed",
+        name: "strict",
+        arguments: "{not valid json",
+      },
+    ]);
+
+    expect(results).toEqual([
+      expect.objectContaining({
+        output: expect.stringContaining('Invalid args for tool "strict"'),
+        isError: true,
+      }),
+    ]);
+    expect(tool.calls).toEqual([]);
+    expect(pairedToolCallIds()).toEqual({
+      calls: ["call_malformed"],
+      results: ["call_malformed"],
+    });
+  });
+
+  it("does not repair malformed tool args JSON with a trailing comma", async () => {
+    const tool = new TestTool("strict", {
+      parameters: {
+        type: "object",
+        properties: { text: { type: "string" } },
+        required: ["text"],
+        additionalProperties: false,
+      },
+    });
+    registry.register(tool);
+
+    const results = await execute([
+      {
+        type: "function",
+        id: "call_trailing_comma",
+        name: "strict",
         arguments: '{"text":"hi",}',
       },
     ]);
@@ -367,13 +412,15 @@ describe('AgentToolExecutorService', () => {
       }),
     ]);
     expect(pairedToolCallIds()).toEqual({
-      calls: ['call_trailing_comma'],
-      results: ['call_trailing_comma'],
+      calls: ["call_trailing_comma"],
+      results: ["call_trailing_comma"],
     });
   });
 
-  it('preserves an unknown tool\'s valid args in the tool.call.started event', async () => {
-    const results = await execute([toolCall('call_unknown', 'missing', { x: 1 })]);
+  it("preserves an unknown tool's valid args in the tool.call.started event", async () => {
+    const results = await execute([
+      toolCall("call_unknown", "missing", { x: 1 }),
+    ]);
 
     expect(results).toEqual([
       expect.objectContaining({
@@ -382,96 +429,103 @@ describe('AgentToolExecutorService', () => {
       }),
     ]);
     const toolCallEvent = protocolEvents.find(
-      (event): event is Extract<DomainEvent, { type: 'tool.call.started' }> =>
-        event.type === 'tool.call.started',
+      (event): event is Extract<DomainEvent, { type: "tool.call.started" }> =>
+        event.type === "tool.call.started",
     );
     expect(toolCallEvent?.args).toEqual({ x: 1 });
   });
 
-  it('onBeforeExecuteTool veto with an error result does not invoke execute', async () => {
-    const tool = new TestTool('echo');
+  it("onBeforeExecuteTool veto with an error result does not invoke execute", async () => {
+    const tool = new TestTool("echo");
     registry.register(tool);
     executor.onBeforeExecuteTool((event) => {
-      event.veto({ output: 'forbidden', isError: true });
+      event.veto({ output: "forbidden", isError: true });
     });
 
-    const results = await execute([toolCall('call_echo', 'echo', { text: 'hi' })]);
+    const results = await execute([
+      toolCall("call_echo", "echo", { text: "hi" }),
+    ]);
 
     expect(results).toEqual([
       expect.objectContaining({
-        output: 'forbidden',
+        output: "forbidden",
         isError: true,
       }),
     ]);
     expect(tool.calls).toEqual([]);
   });
 
-  it('onBeforeExecuteTool veto with a plain result bypasses execute', async () => {
-    const first = new TestTool('first');
-    const second = new TestTool('second');
+  it("onBeforeExecuteTool veto with a plain result bypasses execute", async () => {
+    const first = new TestTool("first");
+    const second = new TestTool("second");
     registry.register(first);
     registry.register(second);
     executor.onBeforeExecuteTool((event) => {
-      if (event.toolCall.id !== 'call_first') return;
-      event.veto({ output: 'synthetic' });
+      if (event.toolCall.id !== "call_first") return;
+      event.veto({ output: "synthetic" });
     });
 
     const results = await execute([
-      toolCall('call_first', 'first', {}),
-      toolCall('call_second', 'second', {}),
+      toolCall("call_first", "first", {}),
+      toolCall("call_second", "second", {}),
     ]);
 
     expect(results).toEqual([
-      expect.objectContaining({ output: 'synthetic' }),
-      expect.objectContaining({ output: 'second result' }),
+      expect.objectContaining({ output: "synthetic" }),
+      expect.objectContaining({ output: "second result" }),
     ]);
     expect(first.calls).toEqual([]);
     expect(second.calls).toHaveLength(1);
   });
 
-  it('skips later tool calls after an execution requests stopBatchAfterThis', async () => {
-    const first = new TestTool('first', { stopBatchAfterThis: true });
-    const second = new TestTool('second');
+  it("skips later tool calls after an execution requests stopBatchAfterThis", async () => {
+    const first = new TestTool("first", { stopBatchAfterThis: true });
+    const second = new TestTool("second");
     registry.register(first);
     registry.register(second);
 
     const results = await execute([
-      toolCall('call_first', 'first', {}),
-      toolCall('call_second', 'second', {}),
+      toolCall("call_first", "first", {}),
+      toolCall("call_second", "second", {}),
     ]);
 
     expect(results).toHaveLength(2);
-    expect(results).toEqual(expect.arrayContaining([
-      expect.objectContaining({ output: 'first result', stopBatchAfterThis: true }),
-      expect.objectContaining({
-        output: 'Tool skipped because a previous tool call stopped the turn.',
-        isError: true,
-      }),
-    ]));
+    expect(results).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          output: "first result",
+          stopBatchAfterThis: true,
+        }),
+        expect.objectContaining({
+          output: "Tool skipped because a previous tool call stopped the turn.",
+          isError: true,
+        }),
+      ]),
+    );
     expect(first.calls).toHaveLength(1);
     expect(second.calls).toEqual([]);
   });
 
-  it('yields independent tool results as each call finishes', async () => {
+  it("yields independent tool results as each call finishes", async () => {
     const slowRelease = deferred();
     const fastRelease = deferred();
     const slowStarted = deferred();
     const fastStarted = deferred();
     const firstYielded = deferred();
-    const slow = new TestTool('slow', {
-      accesses: ToolAccesses.readFile('/repo/slow.txt'),
+    const slow = new TestTool("slow", {
+      accesses: ToolAccesses.readFile("/repo/slow.txt"),
       execute: async () => {
         slowStarted.resolve();
         await slowRelease.promise;
-        return { output: 'slow' };
+        return { output: "slow" };
       },
     });
-    const fast = new TestTool('fast', {
-      accesses: ToolAccesses.readFile('/repo/fast.txt'),
+    const fast = new TestTool("fast", {
+      accesses: ToolAccesses.readFile("/repo/fast.txt"),
       execute: async () => {
         fastStarted.resolve();
         await fastRelease.promise;
-        return { output: 'fast' };
+        return { output: "fast" };
       },
     });
     registry.register(slow);
@@ -480,14 +534,13 @@ describe('AgentToolExecutorService', () => {
     const yielded: string[] = [];
     const execution = (async () => {
       for await (const item of executor.execute(
-        [
-          toolCall('call_slow', 'slow', {}),
-          toolCall('call_fast', 'fast', {}),
-        ],
+        [toolCall("call_slow", "slow", {}), toolCall("call_fast", "fast", {})],
         { turnId: 0, signal: new AbortController().signal },
       )) {
         const output = item.result.output;
-        yielded.push(typeof output === 'string' ? output : JSON.stringify(output));
+        yielded.push(
+          typeof output === "string" ? output : JSON.stringify(output),
+        );
         if (yielded.length === 1) firstYielded.resolve();
       }
     })();
@@ -496,47 +549,49 @@ describe('AgentToolExecutorService', () => {
     fastRelease.resolve();
     await firstYielded.promise;
 
-    expect(yielded).toEqual(['fast']);
+    expect(yielded).toEqual(["fast"]);
 
     slowRelease.resolve();
     await execution;
 
-    expect(yielded).toEqual(['fast', 'slow']);
+    expect(yielded).toEqual(["fast", "slow"]);
   });
 
-  it('writes resolveExecution description and display onto tool.call.started events', async () => {
-    const tool = new TestTool('display', {
-      description: 'Prepared display description',
+  it("writes resolveExecution description and display onto tool.call.started events", async () => {
+    const tool = new TestTool("display", {
+      description: "Prepared display description",
       display: {
-        kind: 'generic',
-        summary: 'Display summary',
+        kind: "generic",
+        summary: "Display summary",
         detail: { value: 1 },
       },
     });
     registry.register(tool);
 
-    await execute([toolCall('call_display', 'display', {})]);
+    await execute([toolCall("call_display", "display", {})]);
 
-    expect(protocolEvents.find((event) => event.type === 'tool.call.started')).toMatchObject({
-      type: 'tool.call.started',
-      description: 'Prepared display description',
+    expect(
+      protocolEvents.find((event) => event.type === "tool.call.started"),
+    ).toMatchObject({
+      type: "tool.call.started",
+      description: "Prepared display description",
       display: {
-        kind: 'generic',
-        summary: 'Display summary',
+        kind: "generic",
+        summary: "Display summary",
         detail: { value: 1 },
       },
     });
   });
 
-  it('captures tool execution failures as error results', async () => {
-    const tool = new TestTool('fail', {
+  it("captures tool execution failures as error results", async () => {
+    const tool = new TestTool("fail", {
       execute: async () => {
-        throw new Error('tool blew up');
+        throw new Error("tool blew up");
       },
     });
     registry.register(tool);
 
-    const results = await execute([toolCall('call_fail', 'fail', {})]);
+    const results = await execute([toolCall("call_fail", "fail", {})]);
 
     expect(results).toEqual([
       expect.objectContaining({
@@ -546,13 +601,13 @@ describe('AgentToolExecutorService', () => {
     ]);
   });
 
-  it('coerces an undefined tool return into an error result without breaking pairing', async () => {
-    const tool = new TestTool('corrupt', {
+  it("coerces an undefined tool return into an error result without breaking pairing", async () => {
+    const tool = new TestTool("corrupt", {
       execute: async () => undefined as unknown as ExecutableToolResult,
     });
     registry.register(tool);
 
-    const results = await execute([toolCall('call_corrupt', 'corrupt', {})]);
+    const results = await execute([toolCall("call_corrupt", "corrupt", {})]);
 
     expect(results).toEqual([
       expect.objectContaining({
@@ -561,46 +616,70 @@ describe('AgentToolExecutorService', () => {
       }),
     ]);
     expect(pairedToolCallIds()).toEqual({
-      calls: ['call_corrupt'],
-      results: ['call_corrupt'],
+      calls: ["call_corrupt"],
+      results: ["call_corrupt"],
     });
   });
 
-  it('forwards onUpdate calls as tool.progress events', async () => {
+  it("forwards onUpdate calls as tool.progress events", async () => {
     const updates: ToolUpdate[] = [
-      { kind: 'stdout', text: 'working' },
-      { kind: 'progress', percent: 50 },
+      { kind: "stdout", text: "working" },
+      { kind: "progress", percent: 50 },
     ];
-    const tool = new TestTool('progress', {
+    const tool = new TestTool("progress", {
       execute: async (ctx) => {
         for (const update of updates) ctx.onUpdate?.(update);
-        return { output: 'done' };
+        return { output: "done" };
       },
     });
     registry.register(tool);
 
-    await execute([toolCall('call_progress', 'progress', {})]);
+    await execute([toolCall("call_progress", "progress", {})]);
 
-    expect(protocolEvents.filter((event) => event.type === 'tool.progress')).toEqual([
-      { type: 'tool.progress', turnId: 0, toolCallId: 'call_progress', update: updates[0] },
-      { type: 'tool.progress', turnId: 0, toolCallId: 'call_progress', update: updates[1] },
+    expect(
+      protocolEvents.filter((event) => event.type === "tool.progress"),
+    ).toEqual([
+      {
+        type: "tool.progress",
+        turnId: 0,
+        toolCallId: "call_progress",
+        update: updates[0],
+      },
+      {
+        type: "tool.progress",
+        turnId: 0,
+        toolCallId: "call_progress",
+        update: updates[1],
+      },
     ]);
   });
 
-  it('does not start a queued conflicting tool after abort', async () => {
+  it("does not start a queued conflicting tool after abort", async () => {
     const controller = new AbortController();
-    const first = new ControlledTool('first', ToolAccesses.writeFile('/repo/a.ts'));
-    const second = new ControlledTool('second', ToolAccesses.writeFile('/repo/a.ts'));
+    const first = new ControlledTool(
+      "first",
+      ToolAccesses.writeFile("/repo/a.ts"),
+    );
+    const second = new ControlledTool(
+      "second",
+      ToolAccesses.writeFile("/repo/a.ts"),
+    );
     const outcomes = new Map<string, ToolExecutionOutcome>();
     registry.register(first);
     registry.register(second);
-    executor.hooks.onDidExecuteTool.register('capture-outcomes', async (ctx, next) => {
-      outcomes.set(ctx.toolCall.id, ctx.outcome);
-      await next();
-    });
+    executor.hooks.onDidExecuteTool.register(
+      "capture-outcomes",
+      async (ctx, next) => {
+        outcomes.set(ctx.toolCall.id, ctx.outcome);
+        await next();
+      },
+    );
 
     const execution = execute(
-      [toolCall('call_first', 'first', {}), toolCall('call_second', 'second', {})],
+      [
+        toolCall("call_first", "first", {}),
+        toolCall("call_second", "second", {}),
+      ],
       controller.signal,
     );
     await first.started;
@@ -611,30 +690,44 @@ describe('AgentToolExecutorService', () => {
     expect(second.calls).toHaveLength(0);
     expect(outcomes).toEqual(
       new Map([
-        ['call_first', 'executed'],
-        ['call_second', 'aborted'],
+        ["call_first", "executed"],
+        ["call_second", "aborted"],
       ]),
     );
     expect(results).toEqual([
-      expect.objectContaining({ output: 'Tool "first" was aborted', isError: true }),
-      expect.objectContaining({ output: 'Tool "second" was aborted', isError: true }),
+      expect.objectContaining({
+        output: 'Tool "first" was aborted',
+        isError: true,
+      }),
+      expect.objectContaining({
+        output: 'Tool "second" was aborted',
+        isError: true,
+      }),
     ]);
   });
 
-  it('every tool.call.started still has a matching tool.result when aborted mid-batch', async () => {
+  it("every tool.call.started still has a matching tool.result when aborted mid-batch", async () => {
     const controller = new AbortController();
-    const first = new ControlledTool('first', ToolAccesses.writeFile('/repo/a.ts'));
-    const second = new ControlledTool('second', ToolAccesses.writeFile('/repo/a.ts'));
-    const third = new TestTool('third', { accesses: ToolAccesses.readFile('/repo/b.ts') });
+    const first = new ControlledTool(
+      "first",
+      ToolAccesses.writeFile("/repo/a.ts"),
+    );
+    const second = new ControlledTool(
+      "second",
+      ToolAccesses.writeFile("/repo/a.ts"),
+    );
+    const third = new TestTool("third", {
+      accesses: ToolAccesses.readFile("/repo/b.ts"),
+    });
     registry.register(first);
     registry.register(second);
     registry.register(third);
 
     const execution = execute(
       [
-        toolCall('call_first', 'first', {}),
-        toolCall('call_second', 'second', {}),
-        toolCall('call_third', 'third', {}),
+        toolCall("call_first", "first", {}),
+        toolCall("call_second", "second", {}),
+        toolCall("call_third", "third", {}),
       ],
       controller.signal,
     );
@@ -643,41 +736,51 @@ describe('AgentToolExecutorService', () => {
     await execution;
 
     const paired = pairedToolCallIds();
-    expect(paired.calls).toEqual(['call_first', 'call_second', 'call_third']);
+    expect(paired.calls).toEqual(["call_first", "call_second", "call_third"]);
     expect(paired.results).toHaveLength(3);
     expect(paired.results).toEqual(
-      expect.arrayContaining(['call_first', 'call_second', 'call_third']),
+      expect.arrayContaining(["call_first", "call_second", "call_third"]),
     );
   });
 
-  it('preserves media-only image output with a text companion', async () => {
-    const tool = new TestTool('image', {
+  it("preserves media-only image output with a text companion", async () => {
+    const tool = new TestTool("image", {
       result: {
-        output: [{ type: 'image_url', imageUrl: { url: 'ms://image-1', id: 'image-1' } }],
+        output: [
+          {
+            type: "image_url",
+            imageUrl: { url: "ms://image-1", id: "image-1" },
+          },
+        ],
       },
     });
     registry.register(tool);
 
-    const results = await execute([toolCall('call_image', 'image', {})]);
+    const results = await execute([toolCall("call_image", "image", {})]);
 
     expect(results).toEqual([
       expect.objectContaining({
         output: [
-          { type: 'text', text: 'Tool returned non-text content.' },
-          { type: 'image_url', imageUrl: { url: 'ms://image-1', id: 'image-1' } },
+          { type: "text", text: "Tool returned non-text content." },
+          {
+            type: "image_url",
+            imageUrl: { url: "ms://image-1", id: "image-1" },
+          },
         ],
       }),
     ]);
   });
 
-  it('onDidExecuteTool failures replace the raw output with a hook error', async () => {
-    const tool = new TestTool('echo');
+  it("onDidExecuteTool failures replace the raw output with a hook error", async () => {
+    const tool = new TestTool("echo");
     registry.register(tool);
-    executor.hooks.onDidExecuteTool.register('fail-finalize', async () => {
-      throw new Error('finalize crashed');
+    executor.hooks.onDidExecuteTool.register("fail-finalize", async () => {
+      throw new Error("finalize crashed");
     });
 
-    const results = await execute([toolCall('call_echo', 'echo', { text: 'raw output' })]);
+    const results = await execute([
+      toolCall("call_echo", "echo", { text: "raw output" }),
+    ]);
 
     expect(results).toEqual([
       expect.objectContaining({
@@ -685,96 +788,110 @@ describe('AgentToolExecutorService', () => {
         isError: true,
       }),
     ]);
-    const toolResultEvents = events.filter((event) => event.type === 'tool.result');
-    expect(JSON.stringify(toolResultEvents)).not.toContain('raw output');
+    const toolResultEvents = events.filter(
+      (event) => event.type === "tool.result",
+    );
+    expect(JSON.stringify(toolResultEvents)).not.toContain("raw output");
   });
 
-  it('onDidExecuteTool can stop the turn without marking the tool failed', async () => {
-    const tool = new TestTool('echo');
+  it("onDidExecuteTool can stop the turn without marking the tool failed", async () => {
+    const tool = new TestTool("echo");
     registry.register(tool);
-    executor.hooks.onDidExecuteTool.register('stop', async (ctx) => {
+    executor.hooks.onDidExecuteTool.register("stop", async (ctx) => {
       ctx.stopTurn = true;
     });
 
-    const results = await execute([toolCall('call_echo', 'echo', { text: 'done' })]);
+    const results = await execute([
+      toolCall("call_echo", "echo", { text: "done" }),
+    ]);
 
     expect(results).toEqual([
       expect.objectContaining({
-        output: 'done',
+        output: "done",
         stopTurn: true,
       }),
     ]);
   });
 
-  it('onDidExecuteTool can replace the final tool result', async () => {
-    const tool = new TestTool('echo');
+  it("onDidExecuteTool can replace the final tool result", async () => {
+    const tool = new TestTool("echo");
     registry.register(tool);
-    executor.hooks.onDidExecuteTool.register('replace-result', async (ctx) => {
-      ctx.result = { output: 'hook output', isError: true };
+    executor.hooks.onDidExecuteTool.register("replace-result", async (ctx) => {
+      ctx.result = { output: "hook output", isError: true };
     });
 
-    const results = await execute([toolCall('call_echo', 'echo', { text: 'raw output' })]);
+    const results = await execute([
+      toolCall("call_echo", "echo", { text: "raw output" }),
+    ]);
 
     expect(results).toEqual([
       expect.objectContaining({
-        output: 'hook output',
+        output: "hook output",
         isError: true,
       }),
     ]);
     expect(events).toContainEqual({
-      type: 'tool.result',
-      toolCallId: 'call_echo',
+      type: "tool.result",
+      toolCallId: "call_echo",
       result: expect.objectContaining({
-        output: 'hook output',
+        output: "hook output",
         isError: true,
       }),
     });
   });
-  it('threads a declared delivery onto the yielded result for the agent layer to consume', async () => {
+  it("threads a declared delivery onto the yielded result for the agent layer to consume", async () => {
     const message = {
-      role: 'user' as const,
-      content: [{ type: 'text' as const, text: 'injected' }],
+      role: "user" as const,
+      content: [{ type: "text" as const, text: "injected" }],
       toolCalls: [],
-      origin: { kind: 'skill_activation', skillName: 'commit', trigger: 'model-tool' },
+      origin: {
+        kind: "skill_activation",
+        skillName: "commit",
+        trigger: "model-tool",
+      },
     };
-    const tool = new TestTool('skillish', {
-      result: { output: 'ack', delivery: { kind: 'steer', message } },
+    const tool = new TestTool("skillish", {
+      result: { output: "ack", delivery: { kind: "steer", message } },
     });
     registry.register(tool);
 
-    const results = await execute([toolCall('call_skillish', 'skillish', {})]);
+    const results = await execute([toolCall("call_skillish", "skillish", {})]);
 
     expect(results).toHaveLength(1);
-    expect(results[0]!.output).toBe('ack');
+    expect(results[0]!.output).toBe("ack");
     expect(results[0]!.delivery).toMatchObject({
-      kind: 'steer',
-      message: { content: [{ type: 'text', text: 'injected' }] },
+      kind: "steer",
+      message: { content: [{ type: "text", text: "injected" }] },
     });
   });
 });
 
-describe('onBeforeExecuteTool veto semantics', () => {
-  it('applies the first veto and does not run later listeners', async () => {
-    const tool = new TestTool('echo');
+describe("onBeforeExecuteTool veto semantics", () => {
+  it("applies the first veto and does not run later listeners", async () => {
+    const tool = new TestTool("echo");
     registry.register(tool);
     const later = vi.fn();
     executor.onBeforeExecuteTool((event) => {
-      event.veto({ output: 'first', isError: true });
+      event.veto({ output: "first", isError: true });
     });
     executor.onBeforeExecuteTool((event) => {
       later();
-      event.veto({ output: 'second', isError: true });
+      event.veto({ output: "second", isError: true });
     });
 
-    const results = await execute([toolCall('call_echo', 'echo', { text: 'hi' })]);
+    const results = await execute([
+      toolCall("call_echo", "echo", { text: "hi" }),
+    ]);
 
-    expect(results).toEqual([expect.objectContaining({ output: 'first', isError: true })]);
+    expect(results).toEqual([
+      expect.objectContaining({ output: "first", isError: true }),
+    ]);
     expect(later).not.toHaveBeenCalled();
     expect(tool.calls).toEqual([]);
   });
 
-  it('lets an allow end adjudication before later listeners run', async () => {
-    const tool = new TestTool('echo');
+  it("lets an allow end adjudication before later listeners run", async () => {
+    const tool = new TestTool("echo");
     registry.register(tool);
     const later = vi.fn();
     executor.onBeforeExecuteTool((event) => {
@@ -782,25 +899,27 @@ describe('onBeforeExecuteTool veto semantics', () => {
     });
     executor.onBeforeExecuteTool((event) => {
       later();
-      event.veto({ output: 'denied', isError: true });
+      event.veto({ output: "denied", isError: true });
     });
 
-    const results = await execute([toolCall('call_echo', 'echo', { text: 'hi' })]);
+    const results = await execute([
+      toolCall("call_echo", "echo", { text: "hi" }),
+    ]);
 
-    expect(results).toEqual([expect.objectContaining({ output: 'hi' })]);
+    expect(results).toEqual([expect.objectContaining({ output: "hi" })]);
     expect(later).not.toHaveBeenCalled();
     expect(tool.calls).toHaveLength(1);
   });
 
-  it('threads pass metadata into the execution context', async () => {
-    const tool = new TestTool('echo');
+  it("threads pass metadata into the execution context", async () => {
+    const tool = new TestTool("echo");
     registry.register(tool);
     const metadata = { marker: true };
     executor.onBeforeExecuteTool((event) => {
       event.pass(metadata);
     });
 
-    await execute([toolCall('call_echo', 'echo', { text: 'hi' })]);
+    await execute([toolCall("call_echo", "echo", { text: "hi" })]);
 
     expect(tool.calls[0]).toEqual(expect.objectContaining({ metadata }));
   });
@@ -809,139 +928,157 @@ describe('onBeforeExecuteTool veto semantics', () => {
   // deny-all) registered after an ask-style listener (permission) must win
   // without the ask's Interaction ever starting — the waitUntil factory
   // stays cold because the veto lands in the immediate pass.
-  it('never invokes waitUntil factories when an immediate veto decides the call', async () => {
-    const tool = new TestTool('echo');
+  it("never invokes waitUntil factories when an immediate veto decides the call", async () => {
+    const tool = new TestTool("echo");
     registry.register(tool);
     const askFactory = vi.fn(async () => undefined);
     executor.onBeforeExecuteTool((event) => {
       event.waitUntil(askFactory);
     });
     executor.onBeforeExecuteTool((event) => {
-      event.veto({ output: 'disabled', isError: true });
+      event.veto({ output: "disabled", isError: true });
     });
 
-    const results = await execute([toolCall('call_echo', 'echo', { text: 'hi' })]);
+    const results = await execute([
+      toolCall("call_echo", "echo", { text: "hi" }),
+    ]);
 
-    expect(results).toEqual([expect.objectContaining({ output: 'disabled', isError: true })]);
+    expect(results).toEqual([
+      expect.objectContaining({ output: "disabled", isError: true }),
+    ]);
     expect(askFactory).not.toHaveBeenCalled();
     expect(tool.calls).toEqual([]);
   });
 
-  it('fulfills waitUntil factories in registration order when no listener decides immediately', async () => {
-    const tool = new TestTool('echo');
+  it("fulfills waitUntil factories in registration order when no listener decides immediately", async () => {
+    const tool = new TestTool("echo");
     registry.register(tool);
     const fulfilled: string[] = [];
     executor.onBeforeExecuteTool((event) => {
       event.waitUntil(async () => {
-        fulfilled.push('first');
+        fulfilled.push("first");
         return undefined;
       });
     });
     executor.onBeforeExecuteTool((event) => {
       event.waitUntil(async () => {
-        fulfilled.push('second');
-        return { veto: { output: 'second-denied', isError: true } };
+        fulfilled.push("second");
+        return { veto: { output: "second-denied", isError: true } };
       });
     });
     executor.onBeforeExecuteTool((event) => {
       event.waitUntil(async () => {
-        fulfilled.push('third');
+        fulfilled.push("third");
         return undefined;
       });
     });
 
-    const results = await execute([toolCall('call_echo', 'echo', { text: 'hi' })]);
+    const results = await execute([
+      toolCall("call_echo", "echo", { text: "hi" }),
+    ]);
 
-    expect(fulfilled).toEqual(['first', 'second']);
+    expect(fulfilled).toEqual(["first", "second"]);
     expect(results).toEqual([
-      expect.objectContaining({ output: 'second-denied', isError: true }),
+      expect.objectContaining({ output: "second-denied", isError: true }),
     ]);
     expect(tool.calls).toEqual([]);
   });
 
-  it('lets a call through when every waitUntil factory returns undefined', async () => {
-    const tool = new TestTool('echo');
+  it("lets a call through when every waitUntil factory returns undefined", async () => {
+    const tool = new TestTool("echo");
     registry.register(tool);
     executor.onBeforeExecuteTool((event) => {
       event.waitUntil(async () => undefined);
     });
 
-    const results = await execute([toolCall('call_echo', 'echo', { text: 'hi' })]);
+    const results = await execute([
+      toolCall("call_echo", "echo", { text: "hi" }),
+    ]);
 
-    expect(results).toEqual([expect.objectContaining({ output: 'hi' })]);
+    expect(results).toEqual([expect.objectContaining({ output: "hi" })]);
     expect(tool.calls).toHaveLength(1);
   });
 
-  it('throws when a statement is made after the statement window closed', async () => {
-    const tool = new TestTool('echo');
+  it("throws when a statement is made after the statement window closed", async () => {
+    const tool = new TestTool("echo");
     registry.register(tool);
     let captured: BeforeToolExecuteEvent | undefined;
     executor.onBeforeExecuteTool((event) => {
       captured = event;
     });
 
-    await execute([toolCall('call_echo', 'echo', { text: 'hi' })]);
+    await execute([toolCall("call_echo", "echo", { text: "hi" })]);
 
     expect(captured).toBeDefined();
     const closed = captured!;
     expect(() => closed.waitUntil(async () => undefined)).toThrow(
-      'waitUntil can NOT be called asynchronously',
+      "waitUntil can NOT be called asynchronously",
     );
-    expect(() => closed.veto({ output: 'x', isError: true })).toThrow(
-      'veto can NOT be called asynchronously',
+    expect(() => closed.veto({ output: "x", isError: true })).toThrow(
+      "veto can NOT be called asynchronously",
     );
   });
 });
 
-describe('onWillExecuteTool', () => {
-  it('awaits registered waitUntil work before executing the tool', async () => {
-    const tool = new TestTool('echo');
+describe("onWillExecuteTool", () => {
+  it("awaits registered waitUntil work before executing the tool", async () => {
+    const tool = new TestTool("echo");
     registry.register(tool);
     const gate = deferred<void>();
     executor.onWillExecuteTool((event) => {
       event.waitUntil(gate.promise);
     });
 
-    const pending = execute([toolCall('call_echo', 'echo', { text: 'hi' })]);
+    const pending = execute([toolCall("call_echo", "echo", { text: "hi" })]);
     await new Promise((resolve) => setTimeout(resolve, 10));
     expect(tool.calls).toEqual([]);
 
     gate.resolve();
     const results = await pending;
-    expect(results).toEqual([expect.objectContaining({ output: 'hi' })]);
+    expect(results).toEqual([expect.objectContaining({ output: "hi" })]);
     expect(tool.calls).toHaveLength(1);
   });
 
-  it('does not fire for a vetoed call', async () => {
-    const tool = new TestTool('echo');
+  it("does not fire for a vetoed call", async () => {
+    const tool = new TestTool("echo");
     registry.register(tool);
     const willListener = vi.fn();
     executor.onWillExecuteTool(willListener);
     executor.onBeforeExecuteTool((event) => {
-      event.veto({ output: 'nope', isError: true });
+      event.veto({ output: "nope", isError: true });
     });
 
-    const results = await execute([toolCall('call_echo', 'echo', { text: 'hi' })]);
+    const results = await execute([
+      toolCall("call_echo", "echo", { text: "hi" }),
+    ]);
 
-    expect(results).toEqual([expect.objectContaining({ output: 'nope', isError: true })]);
+    expect(results).toEqual([
+      expect.objectContaining({ output: "nope", isError: true }),
+    ]);
     expect(willListener).not.toHaveBeenCalled();
   });
 });
 
-describe('parseToolCallArguments', () => {
-  it('treats null or empty arguments as an empty object', () => {
-    expect(parseToolCallArguments(null)).toEqual({ data: {}, parseFailed: false });
-    expect(parseToolCallArguments('')).toEqual({ data: {}, parseFailed: false });
-  });
-
-  it('parses valid JSON', () => {
-    expect(parseToolCallArguments('{"text":"hi"}')).toEqual({
-      data: { text: 'hi' },
+describe("parseToolCallArguments", () => {
+  it("treats null or empty arguments as an empty object", () => {
+    expect(parseToolCallArguments(null)).toEqual({
+      data: {},
+      parseFailed: false,
+    });
+    expect(parseToolCallArguments("")).toEqual({
+      data: {},
       parseFailed: false,
     });
   });
 
-  it('falls back to an empty object when JSON is malformed', () => {
+  it("parses valid JSON", () => {
+    expect(parseToolCallArguments('{"text":"hi"}')).toEqual({
+      data: { text: "hi" },
+      parseFailed: false,
+    });
+  });
+
+  it("falls back to an empty object when JSON is malformed", () => {
     expect(parseToolCallArguments('{"text":"hi",}')).toEqual({
       data: {},
       parseFailed: true,
@@ -949,8 +1086,8 @@ describe('parseToolCallArguments', () => {
     });
   });
 
-  it('falls back to an empty object for unrecoverable JSON', () => {
-    expect(parseToolCallArguments('{}{')).toEqual({
+  it("falls back to an empty object for unrecoverable JSON", () => {
+    expect(parseToolCallArguments("{}{")).toEqual({
       data: {},
       parseFailed: true,
       error: expect.any(String),
@@ -970,40 +1107,47 @@ async function execute(
     trace,
   })) {
     results.push(item.result);
-    events.push({ type: 'tool.result', toolCallId: item.toolCallId, result: item.result });
+    events.push({
+      type: "tool.result",
+      toolCallId: item.toolCallId,
+      result: item.result,
+    });
   }
   return results;
 }
 
 function toolCall(id: string, name: string, args: unknown): ToolCall {
   return {
-    type: 'function',
+    type: "function",
     id,
     name,
     arguments: JSON.stringify(args),
   };
 }
 
-function eventTypes(): ToolExecutorEvent['type'][] {
+function eventTypes(): ToolExecutorEvent["type"][] {
   return events.map((event) => event.type);
 }
 
-function protocolEventTypes(): DomainEvent['type'][] {
+function protocolEventTypes(): DomainEvent["type"][] {
   return protocolEvents.map((event) => event.type);
 }
 
-function pairedToolCallIds(): { readonly calls: string[]; readonly results: string[] } {
+function pairedToolCallIds(): {
+  readonly calls: string[];
+  readonly results: string[];
+} {
   return {
     calls: protocolEvents
       .filter(
-        (event): event is Extract<DomainEvent, { type: 'tool.call.started' }> =>
-          event.type === 'tool.call.started',
+        (event): event is Extract<DomainEvent, { type: "tool.call.started" }> =>
+          event.type === "tool.call.started",
       )
       .map((event) => event.toolCallId),
     results: protocolEvents
       .filter(
-        (event): event is Extract<DomainEvent, { type: 'tool.result' }> =>
-          event.type === 'tool.result',
+        (event): event is Extract<DomainEvent, { type: "tool.result" }> =>
+          event.type === "tool.result",
       )
       .map((event) => event.toolCallId),
   };
@@ -1024,9 +1168,11 @@ function deferred<T = void>(): {
 }
 
 class TestTool implements ExecutableTool<Record<string, unknown>> {
-  readonly description = 'Test tool.';
+  readonly description = "Test tool.";
   readonly parameters: Record<string, unknown>;
-  readonly calls: Array<ExecutableToolContext & { readonly args: Record<string, unknown> }> = [];
+  readonly calls: Array<
+    ExecutableToolContext & { readonly args: Record<string, unknown> }
+  > = [];
 
   constructor(
     readonly name: string,
@@ -1043,7 +1189,10 @@ class TestTool implements ExecutableTool<Record<string, unknown>> {
       ) => Promise<ExecutableToolResult>;
     } = {},
   ) {
-    this.parameters = options.parameters ?? { type: 'object', additionalProperties: true };
+    this.parameters = options.parameters ?? {
+      type: "object",
+      additionalProperties: true,
+    };
   }
 
   resolveExecution(args: Record<string, unknown>): ToolExecution {
@@ -1058,17 +1207,22 @@ class TestTool implements ExecutableTool<Record<string, unknown>> {
         if (this.options.execute !== undefined) {
           return this.options.execute(ctx, args);
         }
-        return this.options.result ?? {
-          output: typeof args['text'] === 'string' ? args['text'] : `${this.name} result`,
-        };
+        return (
+          this.options.result ?? {
+            output:
+              typeof args["text"] === "string"
+                ? args["text"]
+                : `${this.name} result`,
+          }
+        );
       },
     };
   }
 }
 
 class ControlledTool implements ExecutableTool<Record<string, unknown>> {
-  readonly description = 'Controlled tool.';
-  readonly parameters = { type: 'object', additionalProperties: true };
+  readonly description = "Controlled tool.";
+  readonly parameters = { type: "object", additionalProperties: true };
   readonly calls: ExecutableToolContext[] = [];
   readonly started: Promise<void>;
   private resolveStarted: () => void = () => {};
@@ -1091,18 +1245,18 @@ class ControlledTool implements ExecutableTool<Record<string, unknown>> {
         this.resolveStarted();
         return new Promise<ExecutableToolResult>((resolve, reject) => {
           const onAbort = (): void => {
-            ctx.signal.removeEventListener('abort', onAbort);
+            ctx.signal.removeEventListener("abort", onAbort);
             const error = new Error(`${this.name} aborted`);
-            error.name = 'AbortError';
+            error.name = "AbortError";
             reject(error);
           };
           if (ctx.signal.aborted) {
             onAbort();
             return;
           }
-          ctx.signal.addEventListener('abort', onAbort);
+          ctx.signal.addEventListener("abort", onAbort);
           setTimeout(() => {
-            ctx.signal.removeEventListener('abort', onAbort);
+            ctx.signal.removeEventListener("abort", onAbort);
             resolve({ output: `${this.name} result` });
           }, 50);
         });

@@ -7,7 +7,7 @@
  * footer rendering.
  */
 
-import { execFile, spawnSync } from 'node:child_process';
+import { execFile, spawnSync } from "node:child_process";
 
 const BRANCH_TTL_MS = 5_000;
 const STATUS_TTL_MS = 15_000;
@@ -107,14 +107,16 @@ export function createGitStatusCache(
         behind: status.behind,
         diffAdded: status.diffAdded,
         diffDeleted: status.diffDeleted,
-        pullRequest: pullRequest.branch === branch.value ? pullRequest.value : null,
+        pullRequest:
+          pullRequest.branch === branch.value ? pullRequest.value : null,
       };
     },
   };
 
   function refreshPullRequestIfNeeded(branchName: string, now: number): void {
     if (pullRequest.pendingBranch === branchName) return;
-    const fetchedAt = pullRequest.branch === branchName ? pullRequest.fetchedAt : 0;
+    const fetchedAt =
+      pullRequest.branch === branchName ? pullRequest.fetchedAt : 0;
     if (now - fetchedAt < PULL_REQUEST_TTL_MS) return;
 
     const requestId = pullRequest.requestId + 1;
@@ -129,7 +131,8 @@ export function createGitStatusCache(
     void readPullRequest(workDir).then((value) => {
       if (pullRequest.requestId !== requestId) return;
 
-      const previous = pullRequest.branch === branchName ? pullRequest.value : null;
+      const previous =
+        pullRequest.branch === branchName ? pullRequest.value : null;
       const changed = !samePullRequest(previous, value);
       pullRequest = {
         value,
@@ -145,11 +148,15 @@ export function createGitStatusCache(
 
 function detectGitRepo(workDir: string): boolean {
   try {
-    const result = spawnSync('git', ['-C', workDir, 'rev-parse', '--is-inside-work-tree'], {
-      encoding: 'utf8',
-      timeout: SPAWN_TIMEOUT_MS,
-    });
-    return result.status === 0 && result.stdout.trim() === 'true';
+    const result = spawnSync(
+      "git",
+      ["-C", workDir, "rev-parse", "--is-inside-work-tree"],
+      {
+        encoding: "utf8",
+        timeout: SPAWN_TIMEOUT_MS,
+      },
+    );
+    return result.status === 0 && result.stdout.trim() === "true";
   } catch {
     return false;
   }
@@ -157,10 +164,14 @@ function detectGitRepo(workDir: string): boolean {
 
 function readBranch(workDir: string): string | null {
   try {
-    const result = spawnSync('git', ['-C', workDir, 'branch', '--show-current'], {
-      encoding: 'utf8',
-      timeout: SPAWN_TIMEOUT_MS,
-    });
+    const result = spawnSync(
+      "git",
+      ["-C", workDir, "branch", "--show-current"],
+      {
+        encoding: "utf8",
+        timeout: SPAWN_TIMEOUT_MS,
+      },
+    );
     if (result.status !== 0) return null;
     const name = result.stdout.trim();
     return name.length > 0 ? name : null;
@@ -177,24 +188,34 @@ function readStatus(workDir: string): {
   diffDeleted: number;
 } {
   try {
-    const result = spawnSync('git', ['-C', workDir, 'status', '--porcelain', '-b'], {
-      encoding: 'utf8',
-      timeout: SPAWN_TIMEOUT_MS,
-      maxBuffer: 4 * 1024 * 1024,
-    });
+    const result = spawnSync(
+      "git",
+      ["-C", workDir, "status", "--porcelain", "-b"],
+      {
+        encoding: "utf8",
+        timeout: SPAWN_TIMEOUT_MS,
+        maxBuffer: 4 * 1024 * 1024,
+      },
+    );
     if (result.status !== 0) {
-      return { dirty: false, ahead: 0, behind: 0, diffAdded: 0, diffDeleted: 0 };
+      return {
+        dirty: false,
+        ahead: 0,
+        behind: 0,
+        diffAdded: 0,
+        diffDeleted: 0,
+      };
     }
 
     let dirty = false;
     let ahead = 0;
     let behind = 0;
-    for (const line of result.stdout.split('\n')) {
-      if (line.startsWith('## ')) {
+    for (const line of result.stdout.split("\n")) {
+      if (line.startsWith("## ")) {
         const m = AHEAD_BEHIND_RE.exec(line);
         if (m) {
-          ahead = Number.parseInt(m[1] ?? '0', 10) || 0;
-          behind = Number.parseInt(m[2] ?? '0', 10) || 0;
+          ahead = Number.parseInt(m[1] ?? "0", 10) || 0;
+          behind = Number.parseInt(m[2] ?? "0", 10) || 0;
         }
       } else if (line.trim().length > 0) {
         dirty = true;
@@ -215,18 +236,22 @@ function readStatus(workDir: string): {
 
 function readDiffStats(workDir: string): { added: number; deleted: number } {
   try {
-    const result = spawnSync('git', ['-C', workDir, 'diff', '--numstat', 'HEAD', '--'], {
-      encoding: 'utf8',
-      timeout: SPAWN_TIMEOUT_MS,
-      maxBuffer: 4 * 1024 * 1024,
-    });
+    const result = spawnSync(
+      "git",
+      ["-C", workDir, "diff", "--numstat", "HEAD", "--"],
+      {
+        encoding: "utf8",
+        timeout: SPAWN_TIMEOUT_MS,
+        maxBuffer: 4 * 1024 * 1024,
+      },
+    );
     if (result.status !== 0) return { added: 0, deleted: 0 };
 
     let added = 0;
     let deleted = 0;
-    for (const line of result.stdout.split('\n')) {
+    for (const line of result.stdout.split("\n")) {
       if (!line) continue;
-      const [addedText, deletedText] = line.split('\t');
+      const [addedText, deletedText] = line.split("\t");
       added += parseDiffNumstatCount(addedText);
       deleted += parseDiffNumstatCount(deletedText);
     }
@@ -237,7 +262,7 @@ function readDiffStats(workDir: string): { added: number; deleted: number } {
 }
 
 function parseDiffNumstatCount(value: string | undefined): number {
-  if (value === undefined || value === '-') return 0;
+  if (value === undefined || value === "-") return 0;
   const n = Number.parseInt(value, 10);
   return Number.isFinite(n) && n > 0 ? n : 0;
 }
@@ -246,15 +271,15 @@ function readPullRequest(workDir: string): Promise<PullRequestInfo | null> {
   return new Promise((resolve) => {
     try {
       execFile(
-        'gh',
-        ['pr', 'view', '--json', 'number,url'],
+        "gh",
+        ["pr", "view", "--json", "number,url"],
         {
           cwd: workDir,
-          encoding: 'utf8',
+          encoding: "utf8",
           env: {
             ...process.env,
-            GH_NO_UPDATE_NOTIFIER: '1',
-            GH_PROMPT_DISABLED: '1',
+            GH_NO_UPDATE_NOTIFIER: "1",
+            GH_PROMPT_DISABLED: "1",
           },
           timeout: PR_SPAWN_TIMEOUT_MS,
           maxBuffer: 256 * 1024,
@@ -273,7 +298,10 @@ function readPullRequest(workDir: string): Promise<PullRequestInfo | null> {
   });
 }
 
-function samePullRequest(a: PullRequestInfo | null, b: PullRequestInfo | null): boolean {
+function samePullRequest(
+  a: PullRequestInfo | null,
+  b: PullRequestInfo | null,
+): boolean {
   if (a === null || b === null) return a === b;
   return a.number === b.number && a.url === b.url;
 }
@@ -281,12 +309,13 @@ function samePullRequest(a: PullRequestInfo | null, b: PullRequestInfo | null): 
 function parsePullRequest(stdout: string): PullRequestInfo | null {
   try {
     const raw = JSON.parse(stdout) as unknown;
-    if (typeof raw !== 'object' || raw === null) return null;
+    if (typeof raw !== "object" || raw === null) return null;
     const record = raw as Record<string, unknown>;
-    const number = record['number'];
-    const url = record['url'];
-    if (typeof number !== 'number' || !Number.isInteger(number) || number <= 0) return null;
-    if (typeof url !== 'string' || !isSafeHttpUrl(url)) return null;
+    const number = record["number"];
+    const url = record["url"];
+    if (typeof number !== "number" || !Number.isInteger(number) || number <= 0)
+      return null;
+    if (typeof url !== "string" || !isSafeHttpUrl(url)) return null;
     return { number, url };
   } catch {
     return null;
@@ -297,7 +326,7 @@ function isSafeHttpUrl(value: string): boolean {
   if (hasControlChars(value)) return false;
   try {
     const url = new URL(value);
-    return url.protocol === 'https:' || url.protocol === 'http:';
+    return url.protocol === "https:" || url.protocol === "http:";
   } catch {
     return false;
   }
@@ -319,11 +348,13 @@ export function formatGitBadgeBase(status: GitStatus): string {
   const parts: string[] = [];
   const diff = formatDiffStats(status);
   if (diff) parts.push(diff);
-  let sync = '';
+  let sync = "";
   if (status.ahead > 0) sync += `↑${status.ahead}`;
   if (status.behind > 0) sync += `↓${status.behind}`;
   if (sync) parts.push(sync);
-  return parts.length === 0 ? status.branch : `${status.branch} [${parts.join(' ')}]`;
+  return parts.length === 0
+    ? status.branch
+    : `${status.branch} [${parts.join(" ")}]`;
 }
 
 export function formatPullRequestBadge(
@@ -331,10 +362,15 @@ export function formatPullRequestBadge(
   options: FormatGitBadgeOptions = {},
 ): string {
   const prText = `[PR#${String(pullRequest.number)}]`;
-  return options.linkPullRequest ? toTerminalHyperlink(prText, pullRequest.url) : prText;
+  return options.linkPullRequest
+    ? toTerminalHyperlink(prText, pullRequest.url)
+    : prText;
 }
 
-export function formatGitBadge(status: GitStatus, options: FormatGitBadgeOptions = {}): string {
+export function formatGitBadge(
+  status: GitStatus,
+  options: FormatGitBadgeOptions = {},
+): string {
   const base = formatGitBadgeBase(status);
   if (status.pullRequest === null) return base;
 
@@ -345,8 +381,8 @@ function formatDiffStats(status: GitStatus): string | null {
   const parts: string[] = [];
   if (status.diffAdded > 0) parts.push(`+${String(status.diffAdded)}`);
   if (status.diffDeleted > 0) parts.push(`-${String(status.diffDeleted)}`);
-  if (parts.length > 0) return parts.join(' ');
-  return status.dirty ? '±' : null;
+  if (parts.length > 0) return parts.join(" ");
+  return status.dirty ? "±" : null;
 }
 
 function toTerminalHyperlink(text: string, url: string): string {

@@ -1,9 +1,9 @@
-import { renderPrompt } from '../utils/render-prompt';
+import { renderPrompt } from "../utils/render-prompt";
 import {
   ADDITIONAL_DIRS_SECTION_PROSE,
   SKILLS_SECTION_PROSE,
   WINDOWS_NOTES,
-} from './prompt-sections';
+} from "./prompt-sections";
 import type {
   AgentModelPreference,
   RawAgentProfile,
@@ -11,7 +11,7 @@ import type {
   ResolvedAgentProfile,
   SystemPromptContext,
   SystemPromptRenderer,
-} from './types';
+} from "./types";
 
 interface MergedAgentProfile {
   readonly name: string;
@@ -49,7 +49,12 @@ export function resolveAgentProfiles(
   }
 
   for (const profile of raw) {
-    const merged = resolveMergedProfile(profile.name, profileMap, mergedCache, []);
+    const merged = resolveMergedProfile(
+      profile.name,
+      profileMap,
+      mergedCache,
+      [],
+    );
     resolvedCache.set(profile.name, toResolvedProfile(merged));
   }
 
@@ -77,7 +82,7 @@ function resolveMergedProfile(
 
   const cycleIndex = stack.indexOf(name);
   if (cycleIndex !== -1) {
-    const cycle = [...stack.slice(cycleIndex), name].join(' -> ');
+    const cycle = [...stack.slice(cycleIndex), name].join(" -> ");
     throw new Error(`Agent profile extends cycle detected: ${cycle}`);
   }
 
@@ -93,18 +98,25 @@ function resolveMergedProfile(
         `Agent profile "${profile.name}" extends "${profile.extends}" but parent profile was not found`,
       );
     }
-    parent = resolveMergedProfile(profile.extends, profileMap, cache, [...stack, name]);
+    parent = resolveMergedProfile(profile.extends, profileMap, cache, [
+      ...stack,
+      name,
+    ]);
   }
 
   const merged: MergedAgentProfile = {
     name: profile.name,
     description: profile.description,
-    systemPromptTemplate: profile.systemPromptTemplate ?? parent?.systemPromptTemplate ?? '',
+    systemPromptTemplate:
+      profile.systemPromptTemplate ?? parent?.systemPromptTemplate ?? "",
     promptVars: {
       ...parent?.promptVars,
       ...profile.promptVars,
     },
-    tools: profile.tools !== undefined ? [...profile.tools] : [...(parent?.tools ?? [])],
+    tools:
+      profile.tools !== undefined
+        ? [...profile.tools]
+        : [...(parent?.tools ?? [])],
     whenToUse: profile.whenToUse ?? parent?.whenToUse,
     subagents: cloneSubagents(profile.subagents),
     modelPreference: profile.modelPreference ?? parent?.modelPreference,
@@ -130,7 +142,9 @@ function toResolvedProfile(merged: MergedAgentProfile): ResolvedAgentProfile {
  * The runtime SystemPromptContext is mapped to the template variables
  * (KIMI_OS, KIMI_AGENTS_MD, ...) at render time.
  */
-function createSystemPromptRenderer(merged: MergedAgentProfile): SystemPromptRenderer {
+function createSystemPromptRenderer(
+  merged: MergedAgentProfile,
+): SystemPromptRenderer {
   return (context: SystemPromptContext): string => {
     const vars = buildTemplateVars(context, merged.promptVars, merged.tools);
     try {
@@ -152,9 +166,9 @@ function buildTemplateVars(
   tools: readonly string[],
 ): Record<string, string> {
   const skills =
-    typeof context.skills === 'string'
+    typeof context.skills === "string"
       ? context.skills
-      : (context.skills?.getModelSkillListing() ?? '');
+      : (context.skills?.getModelSkillListing() ?? "");
   const now =
     context.now instanceof Date
       ? context.now.toISOString()
@@ -166,18 +180,21 @@ function buildTemplateVars(
     KIMI_SHELL: `${context.osEnv.shellName} (\`${context.osEnv.shellPath}\`)`,
     KIMI_NOW: now,
     KIMI_WORK_DIR: context.cwd,
-    KIMI_WORK_DIR_LS: context.cwdListing ?? '',
-    KIMI_AGENTS_MD: context.agentsMd ?? '',
-    KIMI_SKILLS: tools.includes('Skill') ? skills : '',
-    KIMI_PLUGIN_SECTIONS: context.pluginSections ?? '',
-    KIMI_ADDITIONAL_DIRS_INFO: context.additionalDirsInfo ?? '',
+    KIMI_WORK_DIR_LS: context.cwdListing ?? "",
+    KIMI_AGENTS_MD: context.agentsMd ?? "",
+    KIMI_SKILLS: tools.includes("Skill") ? skills : "",
+    KIMI_PLUGIN_SECTIONS: context.pluginSections ?? "",
+    KIMI_ADDITIONAL_DIRS_INFO: context.additionalDirsInfo ?? "",
     // Shared prose sections (single source: profile/prompt-sections.ts) so the
     // builtin template and the agent-file renderer can never drift apart.
     KIMI_WINDOWS_NOTES: WINDOWS_NOTES,
     KIMI_ADDITIONAL_DIRS_SECTION_PROSE: ADDITIONAL_DIRS_SECTION_PROSE,
     KIMI_SKILLS_SECTION_PROSE: SKILLS_SECTION_PROSE,
     ROLE_ADDITIONAL:
-      context.roleAdditional ?? promptVars['ROLE_ADDITIONAL'] ?? promptVars['roleAdditional'] ?? '',
+      context.roleAdditional ??
+      promptVars["ROLE_ADDITIONAL"] ??
+      promptVars["roleAdditional"] ??
+      "",
   };
 }
 
@@ -192,7 +209,10 @@ function applySubagentDescriptions(
       if (target === undefined) {
         throwMissingSubagent(ownerName, subagentName);
       }
-      if (target.description === undefined && subagent.description !== undefined) {
+      if (
+        target.description === undefined &&
+        subagent.description !== undefined
+      ) {
         target.description = subagent.description;
       }
     }
@@ -233,6 +253,9 @@ function cloneSubagents(
 ): Record<string, RawSubagentProfile> | undefined {
   if (subagents === undefined) return undefined;
   return Object.fromEntries(
-    Object.entries(subagents).map(([name, subagent]) => [name, { ...subagent }]),
+    Object.entries(subagents).map(([name, subagent]) => [
+      name,
+      { ...subagent },
+    ]),
   );
 }

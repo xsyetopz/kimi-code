@@ -7,8 +7,17 @@ import {
   type RpcResult,
 } from "../shared/bridge";
 import { VSCodeSettings } from "./config/vscode-settings";
-import { handlers, type BroadcastFn, type HandlerContext, type ReloadWebviewFn, type ShowLogsFn } from "./handlers";
-import { BaselineManager, type BaselineSession } from "./managers/baseline.manager";
+import {
+  handlers,
+  type BroadcastFn,
+  type HandlerContext,
+  type ReloadWebviewFn,
+  type ShowLogsFn,
+} from "./handlers";
+import {
+  BaselineManager,
+  type BaselineSession,
+} from "./managers/baseline.manager";
 import { FileManager } from "./managers/file.manager";
 import { KimiRuntime } from "./runtime/kimi-runtime";
 import type { SessionRuntime } from "./runtime/session-runtime";
@@ -45,7 +54,10 @@ export class BridgeHandler {
       },
       log: (message, error) => this.logRuntimeError(message, error),
     });
-    this.baselineManager = new BaselineManager(globalStoragePath, this.runtime.harness.homeDir);
+    this.baselineManager = new BaselineManager(
+      globalStoragePath,
+      this.runtime.harness.homeDir,
+    );
     this.fileManager = new FileManager(this.baselineManager, broadcast);
   }
 
@@ -53,8 +65,16 @@ export class BridgeHandler {
     const startedAt = Date.now();
     const validation = validateRpcMessage(value);
     if (!validation.ok) {
-      this.trace(validation.id, validation.method, Date.now() - startedAt, false);
-      this.logRuntimeError(`Bridge request rejected: ${validation.method}`, validation.error);
+      this.trace(
+        validation.id,
+        validation.method,
+        Date.now() - startedAt,
+        false,
+      );
+      this.logRuntimeError(
+        `Bridge request rejected: ${validation.method}`,
+        validation.error,
+      );
       return { id: validation.id, error: validation.error };
     }
 
@@ -89,17 +109,29 @@ export class BridgeHandler {
     const workspaceRoot = this.workspaceRoot;
     const workspaceRootUri = this.workspaceRootUri;
     const workDir = this.getWorkDir(webviewId);
-    if (workspaceRoot === null || workspaceRootUri === null || workDir === null) return null;
+    if (workspaceRoot === null || workspaceRootUri === null || workDir === null)
+      return null;
     return workDirUriFromPath(workspaceRootUri, workspaceRoot, workDir) ?? null;
   }
 
-  private async setCustomWorkDir(webviewId: string, workDir: string | null): Promise<void> {
+  private async setCustomWorkDir(
+    webviewId: string,
+    workDir: string | null,
+  ): Promise<void> {
     const workspaceRoot = this.workspaceRoot;
     const workspaceRootUri = this.workspaceRootUri;
-    if (workspaceRoot === null || workspaceRootUri === null) throw new Error("No workspace folder open");
+    if (workspaceRoot === null || workspaceRootUri === null)
+      throw new Error("No workspace folder open");
     if (workDir !== null) {
-      const workDirUri = workDirUriFromPath(workspaceRootUri, workspaceRoot, workDir);
-      if (workDirUri === undefined || !(await isWorkspacePathContained(workspaceRootUri, workDirUri))) {
+      const workDirUri = workDirUriFromPath(
+        workspaceRootUri,
+        workspaceRoot,
+        workDir,
+      );
+      if (
+        workDirUri === undefined ||
+        !(await isWorkspacePathContained(workspaceRootUri, workDirUri))
+      ) {
         throw new Error("Working directory must be within the workspace");
       }
     }
@@ -124,8 +156,13 @@ export class BridgeHandler {
     return workDirUri;
   }
 
-  private async dispatch(method: RpcMethod, params: unknown, webviewId: string): Promise<unknown> {
-    if (!Object.hasOwn(handlers, method)) throw new Error(`Unknown method: ${method}`);
+  private async dispatch(
+    method: RpcMethod,
+    params: unknown,
+    webviewId: string,
+  ): Promise<unknown> {
+    if (!Object.hasOwn(handlers, method))
+      throw new Error(`Unknown method: ${method}`);
     const handler = handlers[method];
     if (!handler) throw new Error(`Unknown method: ${method}`);
     return handler(params, this.createContext(webviewId));
@@ -167,14 +204,19 @@ export class BridgeHandler {
         const current = this.runtime.getSession(sessionId);
         const session =
           current?.session ??
-          (await this.runtime.harness.resumeSession({ id: sessionId, includeSubagents: true }));
+          (await this.runtime.harness.resumeSession({
+            id: sessionId,
+            includeSubagents: true,
+          }));
         if (!areSameFsPath(session.workDir, this.requireWorkDir(webviewId))) {
           if (current === undefined) {
             await session.close().catch((error: unknown) => {
               this.logRuntimeError("Unable to close a rejected session", error);
             });
           }
-          throw new Error("The selected session belongs to a different working directory.");
+          throw new Error(
+            "The selected session belongs to a different working directory.",
+          );
         }
         const runtime = await this.runtime.attachResumedSession(
           webviewId,
@@ -194,7 +236,9 @@ export class BridgeHandler {
   }
 
   private async saveAllDirty(): Promise<void> {
-    const dirty = vscode.workspace.textDocuments.filter((document) => document.isDirty && !document.isUntitled);
+    const dirty = vscode.workspace.textDocuments.filter(
+      (document) => document.isDirty && !document.isUntitled,
+    );
     await Promise.all(dirty.map((document) => document.save()));
   }
 
@@ -215,8 +259,10 @@ export class BridgeHandler {
     // file under the session's additionalDirs) it falls back to the absolute
     // path, and the session's tool layer decides readability. Virtual
     // documents (untitled:, git:, ...) have no meaningful path to mention.
-    if (workDirUri === null || documentUri.scheme !== workDirUri.scheme) return null;
-    const filePath = relativeWorkspacePath(workDirUri, documentUri) ?? documentUri.fsPath;
+    if (workDirUri === null || documentUri.scheme !== workDirUri.scheme)
+      return null;
+    const filePath =
+      relativeWorkspacePath(workDirUri, documentUri) ?? documentUri.fsPath;
     // Quote paths containing spaces, as the CLI/TUI mention completers do, so
     // whitespace cannot split the path; any line range goes after the quote.
     const mentionTarget = filePath.includes(" ") ? `"${filePath}"` : filePath;
@@ -236,7 +282,11 @@ export class BridgeHandler {
     const workspaceRootUri = this.workspaceRootUri;
     if (workspaceRoot === null || workspaceRootUri === null) return;
 
-    const workDirUri = workDirUriFromPath(workspaceRootUri, workspaceRoot, session.workDir);
+    const workDirUri = workDirUriFromPath(
+      workspaceRootUri,
+      workspaceRoot,
+      session.workDir,
+    );
     if (
       workDirUri === undefined ||
       !isWorkspacePathContainedSync(workspaceRootUri, workDirUri)
@@ -248,10 +298,16 @@ export class BridgeHandler {
       return;
     }
 
-    const resolved = resolveSessionFilePath(workDirUri, session.workDir, filePath);
+    const resolved = resolveSessionFilePath(
+      workDirUri,
+      session.workDir,
+      filePath,
+    );
     if (
       resolved === undefined ||
-      !isWorkspacePathContainedSync(workDirUri, resolved.uri, { allowMissing: true })
+      !isWorkspacePathContainedSync(workDirUri, resolved.uri, {
+        allowMissing: true,
+      })
     ) {
       this.logRuntimeError(
         "Unable to capture a file baseline",
@@ -280,14 +336,23 @@ export class BridgeHandler {
     await this.runtime.dispose();
   }
 
-  async getBaselineContent(sessionId: string, filePath: string): Promise<string> {
+  async getBaselineContent(
+    sessionId: string,
+    filePath: string,
+  ): Promise<string> {
     const active = this.runtime.getSession(sessionId)?.summary;
-    const summary = active ?? (await this.runtime.harness.listSessions({ sessionId }))[0];
+    const summary =
+      active ?? (await this.runtime.harness.listSessions({ sessionId }))[0];
     if (summary === undefined) throw new Error("Session was not found.");
     return this.baselineManager.getContent(baselineSummary(summary), filePath);
   }
 
-  private trace(id: string, method: string, durationMs: number, ok: boolean): void {
+  private trace(
+    id: string,
+    method: string,
+    durationMs: number,
+    ok: boolean,
+  ): void {
     // Deliberately exclude params, prompt text, file paths, and credentials.
     const line = `[bridge] id=${id} method=${method} ok=${String(ok)} durationMs=${durationMs}`;
     console.debug(`[kimi-vscode] ${line}`);
@@ -306,7 +371,11 @@ function errorDetail(error: unknown): string {
   if (error === undefined) return "";
   if (error instanceof Error) return `${error.name}: ${error.message}`;
   if (typeof error === "string") return error;
-  if (typeof error === "number" || typeof error === "bigint" || typeof error === "boolean") {
+  if (
+    typeof error === "number" ||
+    typeof error === "bigint" ||
+    typeof error === "boolean"
+  ) {
     return String(error);
   }
   return "Unknown error";
@@ -320,7 +389,9 @@ function baselineSession(runtime: SessionRuntime): BaselineSession {
   });
 }
 
-function baselineSummary(summary: Pick<BaselineSession, "id" | "workDir" | "metadata">): BaselineSession {
+function baselineSummary(
+  summary: Pick<BaselineSession, "id" | "workDir" | "metadata">,
+): BaselineSession {
   return {
     id: summary.id,
     workDir: summary.workDir,

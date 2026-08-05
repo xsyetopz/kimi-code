@@ -9,11 +9,14 @@
  * before any session catalog exists. App-scoped.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
 
-import type { AgentProfile } from './agentProfileCatalog';
+import type { AgentProfile } from "./agentProfileCatalog";
 
-export const BUILTIN_AGENT_PROFILE_SOURCE_ID = 'builtin';
+export const BUILTIN_AGENT_PROFILE_SOURCE_ID = "builtin";
 
 export interface IBuiltinAgentProfileLoader {
   readonly _serviceBrand: undefined;
@@ -24,4 +27,4 @@ export interface IBuiltinAgentProfileLoader {
 }
 
 export const IBuiltinAgentProfileLoader: ServiceIdentifier<IBuiltinAgentProfileLoader> =
-  createDecorator<IBuiltinAgentProfileLoader>('builtinAgentProfileLoader');
+  createDecorator<IBuiltinAgentProfileLoader>("builtinAgentProfileLoader");

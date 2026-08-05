@@ -28,7 +28,9 @@ export function registerErrorDomain(domain: ErrorDomain): void {
   for (const code of Object.values(domain.codes)) {
     const owner = registeredCodes.get(code);
     if (owner !== undefined && owner !== domain.codes) {
-      throw new Error(`error code '${code}' is registered by two different domains`);
+      throw new Error(
+        `error code '${code}' is registered by two different domains`,
+      );
     }
     registeredCodes.set(code, domain.codes);
   }
@@ -41,7 +43,7 @@ export function registerErrorDomain(domain: ErrorDomain): void {
 }
 
 export function isErrorCode(code: unknown): code is string {
-  return typeof code === 'string' && registeredCodes.has(code);
+  return typeof code === "string" && registeredCodes.has(code);
 }
 
 export function errorInfo(code: string): ErrorInfo {
@@ -56,22 +58,22 @@ export function errorInfo(code: string): ErrorInfo {
 
 export const CoreErrors = {
   codes: {
-    INTERNAL: 'internal',
-    NOT_IMPLEMENTED: 'not_implemented',
-    VALIDATION_FAILED: 'validation.failed',
+    INTERNAL: "internal",
+    NOT_IMPLEMENTED: "not_implemented",
+    VALIDATION_FAILED: "validation.failed",
   },
   info: {
     internal: {
-      title: 'Internal error',
+      title: "Internal error",
       retryable: false,
       public: true,
-      action: 'Inspect logs or report the issue with diagnostics.',
+      action: "Inspect logs or report the issue with diagnostics.",
     },
     not_implemented: {
-      title: 'Not implemented',
+      title: "Not implemented",
       retryable: false,
       public: true,
-      action: 'This feature is not implemented yet.',
+      action: "This feature is not implemented yet.",
     },
   },
 } as const satisfies ErrorDomain;

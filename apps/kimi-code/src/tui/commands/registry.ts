@@ -1,56 +1,70 @@
-import { readdirSync, statSync } from 'node:fs';
-import { homedir } from 'node:os';
-import { basename, dirname, join, relative, resolve } from 'pathe';
+import { readdirSync, statSync } from "node:fs";
+import { homedir } from "node:os";
+import { basename, dirname, join, relative, resolve } from "pathe";
 
-import type { AutocompleteItem } from '@moonshot-ai/pi-tui';
+import type { AutocompleteItem } from "@moonshot-ai/pi-tui";
 
-import { completeLeadingArg, type ArgCompletionSpec } from './complete-args';
-import type { KimiSlashCommand, SlashCommandAvailability } from './types';
+import { completeLeadingArg, type ArgCompletionSpec } from "./complete-args";
+import type { KimiSlashCommand, SlashCommandAvailability } from "./types";
 
 /** Subcommands offered when autocompleting `/goal <…>`. */
 const GOAL_ARG_COMPLETIONS: readonly ArgCompletionSpec[] = [
-  { value: 'status', description: 'Show the current goal' },
-  { value: 'pause', description: 'Pause the active goal' },
-  { value: 'resume', description: 'Resume a paused goal' },
-  { value: 'cancel', description: 'Cancel and remove the current goal' },
-  { value: 'replace', description: 'Replace the current goal with a new objective' },
-  { value: 'next', description: 'Queue an upcoming goal' },
+  { value: "status", description: "Show the current goal" },
+  { value: "pause", description: "Pause the active goal" },
+  { value: "resume", description: "Resume a paused goal" },
+  { value: "cancel", description: "Cancel and remove the current goal" },
+  {
+    value: "replace",
+    description: "Replace the current goal with a new objective",
+  },
+  { value: "next", description: "Queue an upcoming goal" },
 ];
 
 const GOAL_NEXT_ARG_COMPLETIONS: readonly ArgCompletionSpec[] = [
-  { value: 'manage', description: 'Manage upcoming goals' },
+  { value: "manage", description: "Manage upcoming goals" },
 ];
 
 const SWARM_ARG_COMPLETIONS: readonly ArgCompletionSpec[] = [
-  { value: 'on', description: 'Turn swarm mode on' },
-  { value: 'off', description: 'Turn swarm mode off' },
+  { value: "on", description: "Turn swarm mode on" },
+  { value: "off", description: "Turn swarm mode off" },
 ];
 
 const ADD_DIR_ARG_COMPLETIONS: readonly ArgCompletionSpec[] = [
-  { value: 'list', description: 'Show configured additional workspace directories' },
+  {
+    value: "list",
+    description: "Show configured additional workspace directories",
+  },
 ];
 
 /** Argument autocompletion for the `/goal` command (subcommands). */
-export function goalArgumentCompletions(argumentPrefix: string): AutocompleteItem[] | null {
+export function goalArgumentCompletions(
+  argumentPrefix: string,
+): AutocompleteItem[] | null {
   const nextMatch = argumentPrefix.match(/^next\s+(\S*)$/i);
   if (nextMatch !== null) {
     return (
-      completeLeadingArg(GOAL_NEXT_ARG_COMPLETIONS, nextMatch[1] ?? '')?.map((item) => ({
-        ...item,
-        value: `next ${item.value}`,
-      })) ?? null
+      completeLeadingArg(GOAL_NEXT_ARG_COMPLETIONS, nextMatch[1] ?? "")?.map(
+        (item) => ({
+          ...item,
+          value: `next ${item.value}`,
+        }),
+      ) ?? null
     );
   }
   return completeLeadingArg(GOAL_ARG_COMPLETIONS, argumentPrefix);
 }
 
 /** Argument autocompletion for the `/swarm` command (subcommands). */
-export function swarmArgumentCompletions(argumentPrefix: string): AutocompleteItem[] | null {
+export function swarmArgumentCompletions(
+  argumentPrefix: string,
+): AutocompleteItem[] | null {
   return completeLeadingArg(SWARM_ARG_COMPLETIONS, argumentPrefix);
 }
 
 /** Argument autocompletion for the `/add-dir` command. */
-export function addDirArgumentCompletions(argumentPrefix: string): AutocompleteItem[] | null {
+export function addDirArgumentCompletions(
+  argumentPrefix: string,
+): AutocompleteItem[] | null {
   if (isPathLikeAddDirArgument(argumentPrefix)) {
     return completeAddDirPath(argumentPrefix);
   }
@@ -58,14 +72,26 @@ export function addDirArgumentCompletions(argumentPrefix: string): AutocompleteI
 }
 
 function isPathLikeAddDirArgument(argumentPrefix: string): boolean {
-  return argumentPrefix === '.' || argumentPrefix === '..' || argumentPrefix.startsWith('./') || argumentPrefix.startsWith('../') || argumentPrefix.startsWith('/') || argumentPrefix.startsWith('~');
+  return (
+    argumentPrefix === "." ||
+    argumentPrefix === ".." ||
+    argumentPrefix.startsWith("./") ||
+    argumentPrefix.startsWith("../") ||
+    argumentPrefix.startsWith("/") ||
+    argumentPrefix.startsWith("~")
+  );
 }
 
 function completeAddDirPath(argumentPrefix: string): AutocompleteItem[] | null {
-  const normalizedPrefix = argumentPrefix === '~' ? '~/' : argumentPrefix;
+  const normalizedPrefix = argumentPrefix === "~" ? "~/" : argumentPrefix;
   const expandedPrefix = expandHomePrefix(normalizedPrefix);
-  const parentInput = getDirectoryCompletionParentInput(normalizedPrefix, expandedPrefix);
-  const partialName = normalizedPrefix.endsWith('/') ? '' : basename(expandedPrefix);
+  const parentInput = getDirectoryCompletionParentInput(
+    normalizedPrefix,
+    expandedPrefix,
+  );
+  const partialName = normalizedPrefix.endsWith("/")
+    ? ""
+    : basename(expandedPrefix);
   const parentDir = resolveDirectoryCompletionParent(parentInput);
   let entries;
   try {
@@ -76,11 +102,27 @@ function completeAddDirPath(argumentPrefix: string): AutocompleteItem[] | null {
 
   const items: AutocompleteItem[] = [];
   for (const entry of entries) {
-    if (entry.name === '.' || entry.name === '..' || entry.name.startsWith('.')) continue;
-    if (partialName.length > 0 && !entry.name.toLowerCase().startsWith(partialName.toLowerCase())) continue;
+    if (entry.name === "." || entry.name === ".." || entry.name.startsWith("."))
+      continue;
+    if (
+      partialName.length > 0 &&
+      !entry.name.toLowerCase().startsWith(partialName.toLowerCase())
+    )
+      continue;
     const absolutePath = join(parentDir, entry.name);
-    if (!isDirectoryPath(absolutePath, entry.isDirectory(), entry.isSymbolicLink())) continue;
-    const value = formatDirectoryCompletionValue(normalizedPrefix, parentInput, entry.name);
+    if (
+      !isDirectoryPath(
+        absolutePath,
+        entry.isDirectory(),
+        entry.isSymbolicLink(),
+      )
+    )
+      continue;
+    const value = formatDirectoryCompletionValue(
+      normalizedPrefix,
+      parentInput,
+      entry.name,
+    );
     items.push({
       value,
       label: `${entry.name}/`,
@@ -92,25 +134,34 @@ function completeAddDirPath(argumentPrefix: string): AutocompleteItem[] | null {
 }
 
 function expandHomePrefix(argumentPrefix: string): string {
-  if (argumentPrefix === '~') return homedir();
-  if (argumentPrefix.startsWith('~/')) return join(homedir(), argumentPrefix.slice(2));
+  if (argumentPrefix === "~") return homedir();
+  if (argumentPrefix.startsWith("~/"))
+    return join(homedir(), argumentPrefix.slice(2));
   return argumentPrefix;
 }
 
-function getDirectoryCompletionParentInput(argumentPrefix: string, expandedPrefix: string): string {
-  if (argumentPrefix === '/') return '/';
-  if (argumentPrefix === '~/') return homedir();
-  if (argumentPrefix.endsWith('/')) return expandedPrefix.slice(0, -1);
+function getDirectoryCompletionParentInput(
+  argumentPrefix: string,
+  expandedPrefix: string,
+): string {
+  if (argumentPrefix === "/") return "/";
+  if (argumentPrefix === "~/") return homedir();
+  if (argumentPrefix.endsWith("/")) return expandedPrefix.slice(0, -1);
   return dirname(expandedPrefix);
 }
 
 function resolveDirectoryCompletionParent(parentInput: string): string {
-  if (parentInput === '~') return homedir();
-  if (parentInput.startsWith('~/')) return join(homedir(), parentInput.slice(2));
+  if (parentInput === "~") return homedir();
+  if (parentInput.startsWith("~/"))
+    return join(homedir(), parentInput.slice(2));
   return resolve(parentInput);
 }
 
-function isDirectoryPath(path: string, isDirectory: boolean, isSymlink: boolean): boolean {
+function isDirectoryPath(
+  path: string,
+  isDirectory: boolean,
+  isSymlink: boolean,
+): boolean {
   if (isDirectory) return true;
   if (!isSymlink) return false;
   try {
@@ -120,13 +171,17 @@ function isDirectoryPath(path: string, isDirectory: boolean, isSymlink: boolean)
   }
 }
 
-function formatDirectoryCompletionValue(argumentPrefix: string, parentInput: string, entryName: string): string {
-  if (argumentPrefix.startsWith('~/')) {
+function formatDirectoryCompletionValue(
+  argumentPrefix: string,
+  parentInput: string,
+  entryName: string,
+): string {
+  if (argumentPrefix.startsWith("~/")) {
     const home = homedir();
     const homeRelative = relative(home, parentInput);
-    return `~${homeRelative.length > 0 ? `/${homeRelative}` : ''}/${entryName}/`;
+    return `~${homeRelative.length > 0 ? `/${homeRelative}` : ""}/${entryName}/`;
   }
-  if (argumentPrefix.startsWith('/')) {
+  if (argumentPrefix.startsWith("/")) {
     return `${join(parentInput, entryName)}/`;
   }
   return `${join(parentInput, entryName)}/`;
@@ -134,299 +189,311 @@ function formatDirectoryCompletionValue(argumentPrefix: string, parentInput: str
 
 export const BUILTIN_SLASH_COMMANDS = [
   {
-    name: 'yolo',
-    aliases: ['yes'],
-    description: 'Toggle YOLO mode: auto-approve tool actions, but the agent may still ask questions.',
+    name: "yolo",
+    aliases: ["yes"],
+    description:
+      "Toggle YOLO mode: auto-approve tool actions, but the agent may still ask questions.",
     priority: 101,
-    availability: 'always',
+    availability: "always",
   },
   {
-    name: 'auto',
+    name: "auto",
     aliases: [],
-    description: 'Toggle Auto mode: fully autonomous, agent decides everything without asking.',
+    description:
+      "Toggle Auto mode: fully autonomous, agent decides everything without asking.",
     priority: 99,
-    availability: 'always',
+    availability: "always",
   },
   {
-    name: 'permission',
+    name: "permission",
     aliases: [],
-    description: 'Select permission mode',
+    description: "Select permission mode",
     priority: 100,
-    availability: 'always',
+    availability: "always",
   },
   {
-    name: 'settings',
-    aliases: ['config'],
-    description: 'Open TUI settings',
+    name: "settings",
+    aliases: ["config"],
+    description: "Open TUI settings",
     priority: 100,
-    availability: 'always',
+    availability: "always",
   },
   {
-    name: 'plan',
+    name: "plan",
     aliases: [],
-    description: 'Toggle plan mode',
+    description: "Toggle plan mode",
     priority: 100,
-    availability: (args) => (args.trim().toLowerCase() === 'clear' ? 'idle-only' : 'always'),
+    availability: (args) =>
+      args.trim().toLowerCase() === "clear" ? "idle-only" : "always",
   },
   {
-    name: 'swarm',
+    name: "swarm",
     aliases: [],
-    description: 'Toggle swarm mode or run one task in swarm mode',
+    description: "Toggle swarm mode or run one task in swarm mode",
     priority: 100,
-    argumentHint: '[on|off] | <task>',
+    argumentHint: "[on|off] | <task>",
     completeArgs: swarmArgumentCompletions,
-    availability: 'idle-only',
+    availability: "idle-only",
   },
   {
-    name: 'model',
+    name: "model",
     aliases: [],
-    description: 'Switch LLM model',
+    description: "Switch LLM model",
     priority: 100,
-    availability: 'always',
+    availability: "always",
   },
   {
-    name: 'secondary_model',
+    name: "secondary_model",
     aliases: [],
-    description: 'Configure the secondary model for subagents',
+    description: "Configure the secondary model for subagents",
     priority: 90,
-    availability: 'always',
-    experimentalFlag: 'secondary-model',
+    availability: "always",
+    experimentalFlag: "secondary-model",
   },
   {
-    name: 'effort',
-    aliases: ['thinking'],
-    description: 'Switch thinking effort',
+    name: "effort",
+    aliases: ["thinking"],
+    description: "Switch thinking effort",
     priority: 95,
-    availability: 'always',
+    availability: "always",
   },
   {
-    name: 'provider',
-    aliases: ['providers'],
-    description: 'Manage AI providers (add / delete / refresh)',
+    name: "provider",
+    aliases: ["providers"],
+    description: "Manage AI providers (add / delete / refresh)",
     priority: 95,
-    availability: 'always',
+    availability: "always",
   },
   {
-    name: 'btw',
+    name: "btw",
     aliases: [],
-    description: 'Ask a forked side agent a question',
+    description: "Ask a forked side agent a question",
     priority: 90,
-    availability: 'always',
+    availability: "always",
   },
   {
-    name: 'help',
-    aliases: ['h', '?'],
-    description: 'Show available commands and shortcuts',
+    name: "help",
+    aliases: ["h", "?"],
+    description: "Show available commands and shortcuts",
     priority: 80,
-    availability: 'always',
+    availability: "always",
   },
   {
-    name: 'new',
-    aliases: ['clear'],
-    description: 'Start a fresh session in the current workspace',
-    priority: 80,
-  },
-  {
-    name: 'sessions',
-    aliases: ['resume'],
-    description: 'Browse and resume sessions',
+    name: "new",
+    aliases: ["clear"],
+    description: "Start a fresh session in the current workspace",
     priority: 80,
   },
   {
-    name: 'tasks',
-    aliases: ['task'],
-    description: 'Browse background tasks',
+    name: "sessions",
+    aliases: ["resume"],
+    description: "Browse and resume sessions",
     priority: 80,
-    availability: 'always',
   },
   {
-    name: 'mcp',
+    name: "tasks",
+    aliases: ["task"],
+    description: "Browse background tasks",
+    priority: 80,
+    availability: "always",
+  },
+  {
+    name: "mcp",
     aliases: [],
-    description: 'Show MCP server status',
+    description: "Show MCP server status",
     priority: 60,
-    availability: 'always',
+    availability: "always",
   },
   {
-    name: 'plugins',
+    name: "plugins",
     aliases: [],
-    description: 'Manage plugins',
+    description: "Manage plugins",
     priority: 60,
-    availability: 'always',
+    availability: "always",
   },
   {
-    name: 'add-dir',
+    name: "add-dir",
     aliases: [],
-    description: 'Add or list an additional workspace directory',
+    description: "Add or list an additional workspace directory",
     priority: 60,
-    availability: 'idle-only',
-    argumentHint: '[list] | <path>',
+    availability: "idle-only",
+    argumentHint: "[list] | <path>",
     completeArgs: addDirArgumentCompletions,
   },
   {
-    name: 'experiments',
-    aliases: ['experimental'],
-    description: 'Manage experimental features',
+    name: "experiments",
+    aliases: ["experimental"],
+    description: "Manage experimental features",
     priority: 60,
-    availability: 'idle-only',
+    availability: "idle-only",
   },
   {
-    name: 'reload',
+    name: "reload",
     aliases: [],
-    description: 'Reload session and apply config.toml settings plus tui.toml UI preferences',
+    description:
+      "Reload session and apply config.toml settings plus tui.toml UI preferences",
     priority: 60,
-    availability: 'idle-only',
+    availability: "idle-only",
   },
   {
-    name: 'reload-tui',
+    name: "reload-tui",
     aliases: [],
-    description: 'Reload only tui.toml UI preferences',
+    description: "Reload only tui.toml UI preferences",
     priority: 60,
-    availability: 'always',
+    availability: "always",
   },
   {
-    name: 'compact',
+    name: "compact",
     aliases: [],
-    description: 'Compact the conversation context',
+    description: "Compact the conversation context",
     priority: 80,
-    argumentHint: '<instruction>',
+    argumentHint: "<instruction>",
   },
   {
-    name: 'goal',
+    name: "goal",
     aliases: [],
-    description: 'Start or manage an autonomous goal',
+    description: "Start or manage an autonomous goal",
     priority: 80,
-    argumentHint: '[status|pause|resume|cancel|replace|next] | <objective>',
+    argumentHint: "[status|pause|resume|cancel|replace|next] | <objective>",
     completeArgs: goalArgumentCompletions,
     // status / pause / cancel are always available; creation, replacement, and
     // resume start (or restart) a turn and so are idle-only.
     availability: (args) => {
       const trimmed = args.trim();
-      if (trimmed === 'next' || trimmed.startsWith('next ')) return 'always';
-      return trimmed === '' || trimmed === 'status' || trimmed === 'pause' || trimmed === 'cancel'
-        ? 'always'
-        : 'idle-only';
+      if (trimmed === "next" || trimmed.startsWith("next ")) return "always";
+      return trimmed === "" ||
+        trimmed === "status" ||
+        trimmed === "pause" ||
+        trimmed === "cancel"
+        ? "always"
+        : "idle-only";
     },
   },
   {
-    name: 'init',
+    name: "init",
     aliases: [],
-    description: 'Analyze the codebase and generate AGENTS.md',
+    description: "Analyze the codebase and generate AGENTS.md",
   },
   {
-    name: 'fork',
+    name: "fork",
     aliases: [],
-    description: 'Fork the current session into a copy without switching to it',
+    description: "Fork the current session into a copy without switching to it",
     priority: 80,
   },
   {
-    name: 'title',
-    aliases: ['rename'],
-    description: 'Set or show session title',
+    name: "title",
+    aliases: ["rename"],
+    description: "Set or show session title",
     priority: 60,
-    argumentHint: '<title>',
-    availability: 'always',
+    argumentHint: "<title>",
+    availability: "always",
   },
   {
-    name: 'usage',
+    name: "usage",
     aliases: [],
-    description: 'Show session tokens + context window + plan quotas',
+    description: "Show session tokens + context window + plan quotas",
     priority: 60,
-    availability: 'always',
+    availability: "always",
   },
   {
-    name: 'status',
+    name: "status",
     aliases: [],
-    description: 'Show current session and runtime status',
+    description: "Show current session and runtime status",
     priority: 60,
-    availability: 'always',
+    availability: "always",
   },
   {
-    name: 'feedback',
-    aliases: ['bug'],
-    description: 'Send feedback to make Kimi Code better',
+    name: "feedback",
+    aliases: ["bug"],
+    description: "Send feedback to make Kimi Code better",
     priority: 60,
-    availability: 'always',
+    availability: "always",
   },
   {
-    name: 'undo',
+    name: "undo",
     aliases: [],
-    description: 'Withdraw the last prompt from the transcript',
+    description: "Withdraw the last prompt from the transcript",
     priority: 80,
-    availability: 'idle-only',
+    availability: "idle-only",
   },
   {
-    name: 'editor',
+    name: "editor",
     aliases: [],
-    description: 'Set the external editor for Ctrl-G',
+    description: "Set the external editor for Ctrl-G",
     priority: 60,
-    availability: 'always',
+    availability: "always",
   },
   {
-    name: 'theme',
+    name: "theme",
     aliases: [],
-    description: 'Set the terminal UI theme',
+    description: "Set the terminal UI theme",
     priority: 60,
-    availability: 'always',
+    availability: "always",
   },
   {
-    name: 'logout',
-    aliases: ['disconnect'],
-    description: 'Log out of a configured provider',
+    name: "logout",
+    aliases: ["disconnect"],
+    description: "Log out of a configured provider",
     priority: 40,
   },
   {
-    name: 'login',
+    name: "login",
     aliases: [],
-    description: 'Select a platform and authenticate',
+    description: "Select a platform and authenticate",
     priority: 40,
   },
   {
-    name: 'export-md',
-    aliases: ['export'],
-    description: 'Export current session as a Markdown file',
+    name: "export-md",
+    aliases: ["export"],
+    description: "Export current session as a Markdown file",
     priority: 40,
   },
   {
-    name: 'export-debug-zip',
+    name: "export-debug-zip",
     aliases: [],
-    description: 'Export current session as a debug ZIP archive',
+    description: "Export current session as a debug ZIP archive",
     priority: 40,
   },
   {
-    name: 'copy',
+    name: "copy",
     aliases: [],
-    description: 'Copy the last assistant message to the clipboard',
+    description: "Copy the last assistant message to the clipboard",
     priority: 40,
   },
   {
-    name: 'web',
+    name: "web",
     aliases: [],
-    description: 'Open the current session in the Web UI by starting a new server',
+    description:
+      "Open the current session in the Web UI by starting a new server",
     priority: 40,
-    availability: 'always',
+    availability: "always",
   },
   {
-    name: 'exit',
-    aliases: ['quit', 'q'],
-    description: 'Exit the application',
+    name: "exit",
+    aliases: ["quit", "q"],
+    description: "Exit the application",
     priority: 20,
   },
   {
-    name: 'version',
+    name: "version",
     aliases: [],
-    description: 'Show version information',
+    description: "Show version information",
     priority: 20,
-    availability: 'always',
+    availability: "always",
   },
 ] as const satisfies readonly KimiSlashCommand[];
 
 export type BuiltinSlashCommand = (typeof BUILTIN_SLASH_COMMANDS)[number];
-export type BuiltinSlashCommandName = BuiltinSlashCommand['name'];
+export type BuiltinSlashCommandName = BuiltinSlashCommand["name"];
 
-export function findBuiltInSlashCommand(commandName: string): BuiltinSlashCommand | undefined {
-  const commands = BUILTIN_SLASH_COMMANDS as readonly KimiSlashCommand<BuiltinSlashCommandName>[];
+export function findBuiltInSlashCommand(
+  commandName: string,
+): BuiltinSlashCommand | undefined {
+  const commands =
+    BUILTIN_SLASH_COMMANDS as readonly KimiSlashCommand<BuiltinSlashCommandName>[];
   return commands.find(
-    (command) => command.name === commandName || command.aliases.includes(commandName),
+    (command) =>
+      command.name === commandName || command.aliases.includes(commandName),
   ) as BuiltinSlashCommand | undefined;
 }
 
@@ -434,12 +501,15 @@ export function resolveSlashCommandAvailability(
   command: KimiSlashCommand,
   args: string,
 ): SlashCommandAvailability {
-  const availability = command.availability ?? 'idle-only';
-  return typeof availability === 'function' ? availability(args) : availability;
+  const availability = command.availability ?? "idle-only";
+  return typeof availability === "function" ? availability(args) : availability;
 }
 
-export function sortSlashCommands(commands: readonly KimiSlashCommand[]): KimiSlashCommand[] {
+export function sortSlashCommands(
+  commands: readonly KimiSlashCommand[],
+): KimiSlashCommand[] {
   return [...commands].toSorted(
-    (a, b) => (b.priority ?? 0) - (a.priority ?? 0) || a.name.localeCompare(b.name),
+    (a, b) =>
+      (b.priority ?? 0) - (a.priority ?? 0) || a.name.localeCompare(b.name),
   );
 }

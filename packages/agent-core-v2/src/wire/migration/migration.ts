@@ -1,12 +1,12 @@
-import type { WireRecord } from '#/wire/record';
+import type { WireRecord } from "#/wire/record";
 
-import { WireError, WireErrors } from '../errors';
+import { WireError, WireErrors } from "../errors";
 
-import { migrateV1_0ToV1_1 } from './v1.1';
-import { migrateV1_1ToV1_2 } from './v1.2';
-import { migrateV1_2ToV1_3 } from './v1.3';
-import { migrateV1_3ToV1_4 } from './v1.4';
-import { migrateV1_4ToV1_5 } from './v1.5';
+import { migrateV1_0ToV1_1 } from "./v1.1";
+import { migrateV1_1ToV1_2 } from "./v1.2";
+import { migrateV1_2ToV1_3 } from "./v1.3";
+import { migrateV1_3ToV1_4 } from "./v1.4";
+import { migrateV1_4ToV1_5 } from "./v1.5";
 
 export {
   migrateV1_0ToV1_1,
@@ -16,7 +16,7 @@ export {
   migrateV1_4ToV1_5,
 };
 
-export const WIRE_PROTOCOL_VERSION = '1.5';
+export const WIRE_PROTOCOL_VERSION = "1.5";
 
 export type WireMigrationRecord = WireRecord;
 
@@ -38,7 +38,9 @@ export function isNewerWireVersion(readVersion: string): boolean {
   return compareWireVersions(readVersion, WIRE_PROTOCOL_VERSION) > 0;
 }
 
-export function resolveWireMigrations(readVersion: string): readonly WireMigration[] {
+export function resolveWireMigrations(
+  readVersion: string,
+): readonly WireMigration[] {
   if (compareWireVersions(readVersion, WIRE_PROTOCOL_VERSION) >= 0) {
     return [];
   }
@@ -94,12 +96,12 @@ function findMigration(sourceVersion: string): WireMigration | undefined {
 }
 
 function compareWireVersions(a: string, b: string): number {
-  const partsA = a.split('.');
-  const partsB = b.split('.');
+  const partsA = a.split(".");
+  const partsB = b.split(".");
   const maxLength = Math.max(partsA.length, partsB.length);
 
   for (let i = 0; i < maxLength; i++) {
-    const diff = Number(partsA[i] ?? '0') - Number(partsB[i] ?? '0');
+    const diff = Number(partsA[i] ?? "0") - Number(partsB[i] ?? "0");
     if (diff !== 0) return diff;
   }
 

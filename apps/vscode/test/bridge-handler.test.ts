@@ -8,7 +8,15 @@ import { mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type Mock,
+} from "vitest";
 import type * as vscode from "vscode";
 
 import { Methods } from "../shared/bridge";
@@ -66,7 +74,9 @@ vi.mock("vscode", () => ({
     get workspaceFolders() {
       return host.workspaceFolders;
     },
-    getConfiguration: () => ({ get: (_key: string, fallback: unknown) => fallback }),
+    getConfiguration: () => ({
+      get: (_key: string, fallback: unknown) => fallback,
+    }),
     createFileSystemWatcher: () => host.watcher,
     textDocuments: [],
   },
@@ -74,7 +84,8 @@ vi.mock("vscode", () => ({
 }));
 
 vi.mock("@moonshot-ai/kimi-code-sdk", async (importOriginal) => {
-  const original = await importOriginal<typeof import("@moonshot-ai/kimi-code-sdk")>();
+  const original =
+    await importOriginal<typeof import("@moonshot-ai/kimi-code-sdk")>();
   return { ...original, createKimiHarness: () => host.harness };
 });
 
@@ -82,11 +93,16 @@ let bridge: BridgeHandler;
 let root: string;
 let showLogs: Mock<() => void>;
 let writeLog: Mock<(message: string) => void>;
-let workspaceState: { get: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn> };
+let workspaceState: {
+  get: ReturnType<typeof vi.fn>;
+  update: ReturnType<typeof vi.fn>;
+};
 
 beforeEach(async () => {
   root = await mkdtemp(join(tmpdir(), "kimi-vscode-bridge-"));
-  host.workspaceFolders.splice(0, host.workspaceFolders.length, { uri: new host.Uri(root) });
+  host.workspaceFolders.splice(0, host.workspaceFolders.length, {
+    uri: new host.Uri(root),
+  });
   showLogs = vi.fn();
   writeLog = vi.fn();
   host.harness.resumeSession.mockReset();
@@ -94,7 +110,10 @@ beforeEach(async () => {
   host.harness.getConfig.mockResolvedValue({ models: {} });
   host.showWarningMessage.mockReset();
   host.showWarningMessage.mockResolvedValue(undefined);
-  workspaceState = { get: vi.fn((_key, fallback) => fallback), update: vi.fn() };
+  workspaceState = {
+    get: vi.fn((_key, fallback) => fallback),
+    update: vi.fn(),
+  };
   bridge = new BridgeHandler(
     vi.fn(),
     workspaceState as unknown as vscode.Memento,
@@ -122,7 +141,10 @@ describe("Webview RPC boundary (validates requests before host dispatch)", () =>
   });
 
   it("does not execute a known handler when the request id is blank", async () => {
-    const result = await bridge.handle({ id: " ", method: Methods.ShowLogs }, "view-1");
+    const result = await bridge.handle(
+      { id: " ", method: Methods.ShowLogs },
+      "view-1",
+    );
 
     expect(result).toEqual({
       id: "",
@@ -132,16 +154,24 @@ describe("Webview RPC boundary (validates requests before host dispatch)", () =>
   });
 
   it("reports aborted: false when the view has no runtime to cancel", async () => {
-    const result = await bridge.handle({ id: "rpc-1", method: Methods.AbortChat }, "view-1");
+    const result = await bridge.handle(
+      { id: "rpc-1", method: Methods.AbortChat },
+      "view-1",
+    );
 
     expect(result).toEqual({ id: "rpc-1", result: { aborted: false } });
   });
 
   it("cancels the view's runtime when aborting a chat", async () => {
     const cancel = vi.fn(async () => undefined);
-    vi.spyOn(bridge.runtime, "getSessionForView").mockReturnValue({ cancel } as never);
+    vi.spyOn(bridge.runtime, "getSessionForView").mockReturnValue({
+      cancel,
+    } as never);
 
-    const result = await bridge.handle({ id: "rpc-1", method: Methods.AbortChat }, "view-1");
+    const result = await bridge.handle(
+      { id: "rpc-1", method: Methods.AbortChat },
+      "view-1",
+    );
 
     expect(result).toEqual({ id: "rpc-1", result: { aborted: true } });
     expect(cancel).toHaveBeenCalledOnce();
@@ -152,7 +182,10 @@ describe("Webview RPC boundary (validates requests before host dispatch)", () =>
     async (method) => {
       const result = await bridge.handle({ id: "rpc-1", method }, "view-1");
 
-      expect(result).toEqual({ id: "rpc-1", error: `Unknown bridge method: ${method}` });
+      expect(result).toEqual({
+        id: "rpc-1",
+        error: `Unknown bridge method: ${method}`,
+      });
       expect(showLogs).not.toHaveBeenCalled();
     },
   );
@@ -184,7 +217,10 @@ describe("Webview RPC boundary (validates requests before host dispatch)", () =>
   });
 
   it("dispatches a valid request through the existing bridge surface", async () => {
-    const result = await bridge.handle({ id: "rpc-1", method: Methods.ShowLogs }, "view-1");
+    const result = await bridge.handle(
+      { id: "rpc-1", method: Methods.ShowLogs },
+      "view-1",
+    );
 
     expect(result).toEqual({ id: "rpc-1", result: { ok: true } });
     expect(showLogs).toHaveBeenCalledOnce();
@@ -209,7 +245,10 @@ describe("Webview RPC boundary (validates requests before host dispatch)", () =>
       },
     });
 
-    const result = await bridge.handle({ id: "rpc-models", method: Methods.GetModels }, "view-1");
+    const result = await bridge.handle(
+      { id: "rpc-models", method: Methods.GetModels },
+      "view-1",
+    );
 
     expect(result).toMatchObject({
       id: "rpc-models",
@@ -236,16 +275,21 @@ describe("Webview RPC boundary (validates requests before host dispatch)", () =>
       },
     });
 
-    const result = await bridge.handle({ id: "rpc-models", method: Methods.GetModels }, "view-1");
+    const result = await bridge.handle(
+      { id: "rpc-models", method: Methods.GetModels },
+      "view-1",
+    );
 
     expect(result).toMatchObject({
       result: {
-        models: [{
-          id: "anthropic/claude",
-          name: "claude-sonnet",
-          provider: "anthropic",
-          adaptive_thinking: true,
-        }],
+        models: [
+          {
+            id: "anthropic/claude",
+            name: "claude-sonnet",
+            provider: "anthropic",
+            adaptive_thinking: true,
+          },
+        ],
       },
     });
   });
@@ -268,7 +312,14 @@ describe("Webview RPC boundary (validates requests before host dispatch)", () =>
 
     expect(result).toEqual({
       id: "rpc-1",
-      result: [{ id: "session-1", workDir: root, updatedAt: 123, brief: "Visible title" }],
+      result: [
+        {
+          id: "session-1",
+          workDir: root,
+          updatedAt: 123,
+          brief: "Visible title",
+        },
+      ],
     });
     expect(JSON.stringify(result)).not.toContain("/private/kimi/sessions");
   });
@@ -287,7 +338,10 @@ describe("Webview RPC boundary (validates requests before host dispatch)", () =>
       updatedAt: 124,
     };
     host.harness.listSessions.mockResolvedValueOnce([source] as never);
-    host.harness.forkSession.mockResolvedValueOnce({ summary: target, close: vi.fn() });
+    host.harness.forkSession.mockResolvedValueOnce({
+      summary: target,
+      close: vi.fn(),
+    });
 
     const result = await bridge.handle(
       {
@@ -315,12 +369,17 @@ describe("Webview RPC boundary (validates requests before host dispatch)", () =>
       sessionDir: "/private/kimi/sessions/session-2",
       updatedAt: 124,
     };
-    const runExclusiveAfterCancelling = vi.fn(async <T>(action: () => Promise<T>) => action());
+    const runExclusiveAfterCancelling = vi.fn(
+      async <T>(action: () => Promise<T>) => action(),
+    );
     vi.spyOn(bridge.runtime, "getSession").mockReturnValue({
       runExclusiveAfterCancelling,
     } as never);
     host.harness.listSessions.mockResolvedValueOnce([source] as never);
-    host.harness.forkSession.mockResolvedValueOnce({ summary: target, close: vi.fn() });
+    host.harness.forkSession.mockResolvedValueOnce({
+      summary: target,
+      close: vi.fn(),
+    });
 
     const result = await bridge.handle(
       {
@@ -371,7 +430,9 @@ describe("Webview RPC boundary (validates requests before host dispatch)", () =>
     await bridge.baselineManager.capture(session.summary, sourcePath);
     const baselinesRoot = join(root, "global-storage", "baselines");
     const [homeDirectory] = await readdir(baselinesRoot);
-    const [sessionDirectory] = await readdir(join(baselinesRoot, homeDirectory!));
+    const [sessionDirectory] = await readdir(
+      join(baselinesRoot, homeDirectory!),
+    );
     const snapshotsDirectory = join(
       baselinesRoot,
       homeDirectory!,
@@ -393,11 +454,16 @@ describe("Webview RPC boundary (validates requests before host dispatch)", () =>
     expect(result).toEqual({
       id: "rpc-1",
       result: expect.arrayContaining([
-        expect.objectContaining({ type: "StatusUpdate", _sessionId: "session-1" }),
+        expect.objectContaining({
+          type: "StatusUpdate",
+          _sessionId: "session-1",
+        }),
       ]),
     });
     expect(writeLog).toHaveBeenCalledWith(
-      expect.stringMatching(/Unable to restore session file changes.*Unable to read baseline snapshot/),
+      expect.stringMatching(
+        /Unable to restore session file changes.*Unable to read baseline snapshot/,
+      ),
     );
     await vi.waitFor(() => expect(showLogs).toHaveBeenCalledOnce());
   });
@@ -415,7 +481,10 @@ describe("Webview RPC boundary (validates requests before host dispatch)", () =>
       },
       "view-1",
     );
-    const next = await bridge.handle({ id: "rpc-2", method: Methods.ShowLogs }, "view-1");
+    const next = await bridge.handle(
+      { id: "rpc-2", method: Methods.ShowLogs },
+      "view-1",
+    );
 
     expect(failed).toEqual({
       id: "rpc-1",
@@ -448,7 +517,11 @@ describe("Webview config saves (thinking effort persistence parity with the TUI)
     mockConfig();
 
     const result = await bridge.handle(
-      { id: "rpc-1", method: Methods.SaveConfig, params: { model: "kimi/reasoning", thinking: true, effort: "high" } },
+      {
+        id: "rpc-1",
+        method: Methods.SaveConfig,
+        params: { model: "kimi/reasoning", thinking: true, effort: "high" },
+      },
       "view-1",
     );
 
@@ -463,7 +536,11 @@ describe("Webview config saves (thinking effort persistence parity with the TUI)
     mockConfig();
 
     await bridge.handle(
-      { id: "rpc-1", method: Methods.SaveConfig, params: { model: "kimi/reasoning", thinking: true, effort: "max" } },
+      {
+        id: "rpc-1",
+        method: Methods.SaveConfig,
+        params: { model: "kimi/reasoning", thinking: true, effort: "max" },
+      },
       "view-1",
     );
 
@@ -474,10 +551,17 @@ describe("Webview config saves (thinking effort persistence parity with the TUI)
   });
 
   it("persists the concrete effort when the model's levels are unknown", async () => {
-    host.harness.getConfig.mockResolvedValue({ defaultModel: "other/model", models: {} });
+    host.harness.getConfig.mockResolvedValue({
+      defaultModel: "other/model",
+      models: {},
+    });
 
     await bridge.handle(
-      { id: "rpc-1", method: Methods.SaveConfig, params: { model: "custom/model", thinking: true, effort: "max" } },
+      {
+        id: "rpc-1",
+        method: Methods.SaveConfig,
+        params: { model: "custom/model", thinking: true, effort: "max" },
+      },
       "view-1",
     );
 
@@ -491,7 +575,16 @@ describe("Webview config saves (thinking effort persistence parity with the TUI)
     mockConfig({ enabled: false, effort: "low" });
 
     await bridge.handle(
-      { id: "rpc-1", method: Methods.SaveConfig, params: { model: "kimi/reasoning", thinking: true, effort: "high", effortChanged: false } },
+      {
+        id: "rpc-1",
+        method: Methods.SaveConfig,
+        params: {
+          model: "kimi/reasoning",
+          thinking: true,
+          effort: "high",
+          effortChanged: false,
+        },
+      },
       "view-1",
     );
 
@@ -505,7 +598,11 @@ describe("Webview config saves (thinking effort persistence parity with the TUI)
     mockConfig({ enabled: true, effort: "high" });
 
     await bridge.handle(
-      { id: "rpc-1", method: Methods.SaveConfig, params: { model: "kimi/reasoning", thinking: true, effort: "high" } },
+      {
+        id: "rpc-1",
+        method: Methods.SaveConfig,
+        params: { model: "kimi/reasoning", thinking: true, effort: "high" },
+      },
       "view-1",
     );
 

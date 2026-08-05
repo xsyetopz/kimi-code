@@ -1,8 +1,8 @@
-import type { ThinkingEffort } from '@moonshot-ai/kimi-code-sdk';
+import type { ThinkingEffort } from "@moonshot-ai/kimi-code-sdk";
 
 /** Whether a thinking effort represents "thinking enabled" (anything but 'off'). */
 export function isThinkingOn(effort: ThinkingEffort): boolean {
-  return effort !== 'off';
+  return effort !== "off";
 }
 
 /**
@@ -25,8 +25,8 @@ export function thinkingEffortToConfig(
   enabled: boolean;
   effort?: string;
 } {
-  if (effort === 'off') return { enabled: false };
-  if (effort === 'on') return { enabled: true };
+  if (effort === "off") return { enabled: false };
+  if (effort === "on") return { enabled: true };
   const top = supportEfforts?.at(-1);
   if (top !== undefined && effort === top) return { enabled: true };
   return { enabled: true, effort };
@@ -42,6 +42,6 @@ export function thinkingEffortToConfig(
 export function thinkingEffortFromConfig(
   config: { enabled?: boolean; effort?: string } | undefined,
 ): ThinkingEffort | undefined {
-  if (config?.enabled === false) return 'off';
+  if (config?.enabled === false) return "off";
   return config?.effort;
 }

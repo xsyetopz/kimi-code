@@ -31,11 +31,14 @@
  * for `'select'`, boolean for `'boolean'`).
  */
 
-import type { SessionConfigOption, SessionConfigSelectOption } from '@agentclientprotocol/sdk';
-import type { KimiHarness } from '@moonshot-ai/kimi-code-sdk';
+import type {
+  SessionConfigOption,
+  SessionConfigSelectOption,
+} from "@agentclientprotocol/sdk";
+import type { KimiHarness } from "@moonshot-ai/kimi-code-sdk";
 
-import { ACP_MODES, type AcpModeId } from './modes';
-import { listModelsFromHarness, type AcpModelEntry } from './model-catalog';
+import { ACP_MODES, type AcpModeId } from "./modes";
+import { listModelsFromHarness, type AcpModelEntry } from "./model-catalog";
 
 /**
  * Project the catalog into the `SessionConfigOption` `model` arm.
@@ -63,13 +66,15 @@ export function buildModelOption(
   const options: SessionConfigSelectOption[] = models.map((model) => ({
     value: model.id,
     name: model.name,
-    ...(model.description !== undefined ? { description: model.description } : {}),
+    ...(model.description !== undefined
+      ? { description: model.description }
+      : {}),
   }));
   return {
-    type: 'select',
-    id: 'model',
-    name: 'Model',
-    category: 'model',
+    type: "select",
+    id: "model",
+    name: "Model",
+    category: "model",
     currentValue: currentBaseModelId,
     options,
   };
@@ -115,31 +120,31 @@ export function buildThinkingOption(
     // Boolean model — the engine speaks `on`/`off`, so the picker keeps
     // the legacy two-row shape.
     return {
-      type: 'select',
-      id: 'thinking',
-      name: 'Thinking',
-      category: 'thought_level',
-      currentValue: alwaysThinking || currentEffort !== 'off' ? 'on' : 'off',
+      type: "select",
+      id: "thinking",
+      name: "Thinking",
+      category: "thought_level",
+      currentValue: alwaysThinking || currentEffort !== "off" ? "on" : "off",
       options: alwaysThinking
-        ? [{ value: 'on', name: effortDisplayName('on') }]
+        ? [{ value: "on", name: effortDisplayName("on") }]
         : [
-            { value: 'off', name: effortDisplayName('off') },
-            { value: 'on', name: effortDisplayName('on') },
+            { value: "off", name: effortDisplayName("off") },
+            { value: "on", name: effortDisplayName("on") },
           ],
     };
   }
-  const values = alwaysThinking ? [...efforts] : ['off', ...efforts];
+  const values = alwaysThinking ? [...efforts] : ["off", ...efforts];
   const currentValue =
-    !alwaysThinking && currentEffort === 'off'
-      ? 'off'
+    !alwaysThinking && currentEffort === "off"
+      ? "off"
       : efforts.includes(currentEffort)
         ? currentEffort
         : defaultEffort;
   return {
-    type: 'select',
-    id: 'thinking',
-    name: 'Thinking',
-    category: 'thought_level',
+    type: "select",
+    id: "thinking",
+    name: "Thinking",
+    category: "thought_level",
     currentValue,
     options: values.map((value) => ({ value, name: effortDisplayName(value) })),
   };
@@ -163,10 +168,10 @@ export function buildModeOption(currentModeId: AcpModeId): SessionConfigOption {
     description: mode.description,
   }));
   return {
-    type: 'select',
-    id: 'mode',
-    name: 'Mode',
-    category: 'mode',
+    type: "select",
+    id: "mode",
+    name: "Mode",
+    category: "mode",
     currentValue: currentModeId,
     options,
   };
@@ -215,7 +220,9 @@ export async function buildSessionConfigOptions(
   const models = await listModelsFromHarness(harness);
   const currentModelEntry = models.find((m) => m.id === currentBaseModelId);
   const showThinking = currentModelEntry?.thinkingSupported === true;
-  const out: SessionConfigOption[] = [buildModelOption(models, currentBaseModelId)];
+  const out: SessionConfigOption[] = [
+    buildModelOption(models, currentBaseModelId),
+  ];
   if (showThinking && currentModelEntry !== undefined) {
     out.push(
       buildThinkingOption(

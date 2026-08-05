@@ -21,22 +21,22 @@ import {
   resumeSessionById,
   type IAgentScopeHandle,
   type Scope,
-} from '@moonshot-ai/agent-core-v2';
-import { z } from 'zod';
+} from "@moonshot-ai/agent-core-v2";
+import { z } from "zod";
 
-import { errEnvelope, okEnvelope } from '../envelope';
-import { defineRoute } from '../middleware/defineRoute';
-import { ErrorCode } from '../protocol/error-codes';
+import { errEnvelope, okEnvelope } from "../envelope";
+import { defineRoute } from "../middleware/defineRoute";
+import { ErrorCode } from "../protocol/error-codes";
 import {
   sessionSnapshotResponseSchema,
   type InFlightTurn,
   type SessionSnapshotResponse,
-} from '../protocol/rest-snapshot';
-import { loadMessageHistory } from '../services/messages/messageHistory';
-import { type SessionEventBroadcaster } from '../transport/ws/v1/sessionEventBroadcaster';
-import { toWireApproval } from './approvals';
-import { toWireQuestion } from './questions';
-import { resolveSessionFacts, toWireSession } from './sessions';
+} from "../protocol/rest-snapshot";
+import { loadMessageHistory } from "../services/messages/messageHistory";
+import { type SessionEventBroadcaster } from "../transport/ws/v1/sessionEventBroadcaster";
+import { toWireApproval } from "./approvals";
+import { toWireQuestion } from "./questions";
+import { resolveSessionFacts, toWireSession } from "./sessions";
 
 /** Most-recent messages included in the snapshot page. */
 const SNAPSHOT_MESSAGE_PAGE_SIZE = 100;
@@ -45,7 +45,7 @@ const SNAPSHOT_MESSAGE_PAGE_SIZE = 100;
 class SnapshotNotFoundError extends Error {
   constructor(sessionId: string) {
     super(`session ${sessionId} does not exist`);
-    this.name = 'SnapshotNotFoundError';
+    this.name = "SnapshotNotFoundError";
   }
 }
 
@@ -56,7 +56,9 @@ const sessionIdParamSchema = z.object({
 interface SnapshotRouteHost {
   get(
     path: string,
-    options: { preHandler: unknown[]; schema?: Record<string, unknown> } | undefined,
+    options:
+      | { preHandler: unknown[]; schema?: Record<string, unknown> }
+      | undefined,
     handler: (
       req: { id: string; params: { session_id: string } },
       reply: { send(payload: unknown): unknown },
@@ -69,13 +71,16 @@ export interface SnapshotRouteDeps {
   readonly broadcaster: SessionEventBroadcaster;
 }
 
-export function registerSnapshotRoutes(app: SnapshotRouteHost, deps: SnapshotRouteDeps): void {
+export function registerSnapshotRoutes(
+  app: SnapshotRouteHost,
+  deps: SnapshotRouteDeps,
+): void {
   const { core, broadcaster } = deps;
 
   const route = defineRoute(
     {
-      method: 'GET',
-      path: '/sessions/{session_id}/snapshot',
+      method: "GET",
+      path: "/sessions/{session_id}/snapshot",
       params: sessionIdParamSchema,
       success: { data: sessionSnapshotResponseSchema },
       errors: {
@@ -83,8 +88,8 @@ export function registerSnapshotRoutes(app: SnapshotRouteHost, deps: SnapshotRou
         [ErrorCode.INTERNAL_ERROR]: {},
       },
       description:
-        'Atomic session snapshot for client rebuild: state + as_of_seq watermark + epoch',
-      tags: ['sessions'],
+        "Atomic session snapshot for client rebuild: state + as_of_seq watermark + epoch",
+      tags: ["sessions"],
     },
     async (req, reply) => {
       const { session_id } = req.params;
@@ -93,14 +98,25 @@ export function registerSnapshotRoutes(app: SnapshotRouteHost, deps: SnapshotRou
         reply.send(okEnvelope(data, req.id));
       } catch (err) {
         if (err instanceof SnapshotNotFoundError) {
-          reply.send(errEnvelope(ErrorCode.SESSION_NOT_FOUND, err.message, req.id, err.stack));
+          reply.send(
+            errEnvelope(
+              ErrorCode.SESSION_NOT_FOUND,
+              err.message,
+              req.id,
+              err.stack,
+            ),
+          );
           return;
         }
         throw err;
       }
     },
   );
-  app.get(route.path, route.options, route.handler as Parameters<SnapshotRouteHost['get']>[2]);
+  app.get(
+    route.path,
+    route.options,
+    route.handler as Parameters<SnapshotRouteHost["get"]>[2],
+  );
 }
 
 async function assembleSnapshot(
@@ -125,7 +141,7 @@ async function assembleSnapshot(
   // metadata read here is always v2-shaped and safe to project.
   const workspaceId = handle.accessor.get(ISessionContext).workspaceId;
   const workspace = await core.accessor.get(IWorkspaceService).get(workspaceId);
-  const cwd = workspace?.root ?? '';
+  const cwd = workspace?.root ?? "";
   const meta = await handle.accessor.get(ISessionMetadata).read();
   const session = toWireSession(
     { ...meta, workspaceId },
@@ -140,16 +156,20 @@ async function assembleSnapshot(
   const hasMore = all.length > SNAPSHOT_MESSAGE_PAGE_SIZE;
   const items = all.slice(-SNAPSHOT_MESSAGE_PAGE_SIZE);
 
-  const currentPromptId = snapState.inFlightTurn === null ? undefined : readCurrentPromptId(main);
-  const inFlightTurn = attachCurrentPromptIdToInFlight(snapState.inFlightTurn, currentPromptId);
+  const currentPromptId =
+    snapState.inFlightTurn === null ? undefined : readCurrentPromptId(main);
+  const inFlightTurn = attachCurrentPromptIdToInFlight(
+    snapState.inFlightTurn,
+    currentPromptId,
+  );
 
   // Pending approvals / questions.
   const interaction = handle.accessor.get(ISessionInteractionService);
   const pendingApprovals = interaction
-    .listPending('approval')
+    .listPending("approval")
     .map((i) => toWireApproval(i, sessionId));
   const pendingQuestions = interaction
-    .listPending('question')
+    .listPending("question")
     .map((i) => toWireQuestion(i, sessionId));
 
   return {
@@ -164,7 +184,9 @@ async function assembleSnapshot(
   };
 }
 
-function readCurrentPromptId(main: IAgentScopeHandle | undefined): string | undefined {
+function readCurrentPromptId(
+  main: IAgentScopeHandle | undefined,
+): string | undefined {
   if (main === undefined) return undefined;
   try {
     return main.accessor.get(IAgentPromptService).list().active?.id;
@@ -178,6 +200,7 @@ function attachCurrentPromptIdToInFlight(
   inFlightTurn: InFlightTurn | null,
   currentPromptId: string | undefined,
 ): InFlightTurn | null {
-  if (inFlightTurn === null || currentPromptId === undefined) return inFlightTurn;
+  if (inFlightTurn === null || currentPromptId === undefined)
+    return inFlightTurn;
   return { ...inFlightTurn, current_prompt_id: currentPromptId };
 }

@@ -1,19 +1,17 @@
-import { Readable } from 'node:stream';
-import type { Writable } from 'node:stream';
+import { Readable } from "node:stream";
+import type { Writable } from "node:stream";
 
-import type { IProcess } from '#/session/process/processRunner';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { IProcess } from "#/session/process/processRunner";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import {
-  IAgentTaskService,
-} from '#/agent/task/task';
+import { IAgentTaskService } from "#/agent/task/task";
 import {
   SubagentTask,
   type SubagentHandle,
-} from '#/agent/tools/agent/subagent-task';
-import { ProcessTask } from '#/agent/tools/os/bash/process-task';
-import { createTestAgent, type TestAgentContext } from '../../harness';
-import { createAgentTaskPersistence } from './stubs';
+} from "#/agent/tools/agent/subagent-task";
+import { ProcessTask } from "#/agent/tools/os/bash/process-task";
+import { createTestAgent, type TestAgentContext } from "../../harness";
+import { createAgentTaskPersistence } from "./stubs";
 
 function registerProcess(
   manager: IAgentTaskService,
@@ -29,15 +27,11 @@ function agentTask(
   description: string,
 ): SubagentTask {
   const handle: SubagentHandle = {
-    agentId: 'agent-child',
-    profileName: 'coder',
+    agentId: "agent-child",
+    profileName: "coder",
     completion,
   };
-  return new SubagentTask(
-    handle,
-    description,
-    new AbortController(),
-  );
+  return new SubagentTask(handle, description, new AbortController());
 }
 
 function pendingProcess(): IProcess & { resolve(code: number): void } {
@@ -55,8 +49,8 @@ function pendingProcess(): IProcess & { resolve(code: number): void } {
       return currentExitCode;
     },
     wait: () => waitPromise,
-    kill: vi.fn().mockResolvedValue(undefined) as IProcess['kill'],
-    dispose: vi.fn().mockResolvedValue(undefined) as IProcess['dispose'],
+    kill: vi.fn().mockResolvedValue(undefined) as IProcess["kill"],
+    dispose: vi.fn().mockResolvedValue(undefined) as IProcess["dispose"],
     resolve(code: number): void {
       currentExitCode = code;
       resolveWait(code);
@@ -64,7 +58,7 @@ function pendingProcess(): IProcess & { resolve(code: number): void } {
   };
 }
 
-describe('background task id format', () => {
+describe("background task id format", () => {
   let ctx: TestAgentContext;
   let background: IAgentTaskService;
 
@@ -81,45 +75,46 @@ describe('background task id format', () => {
     }
   });
 
-  it('assigns bash-prefixed ids to process tasks', async () => {
+  it("assigns bash-prefixed ids to process tasks", async () => {
     const proc = pendingProcess();
-    const id = registerProcess(background, proc, 'sleep 60', 'process task');
+    const id = registerProcess(background, proc, "sleep 60", "process task");
 
     expect(id).toMatch(/^bash-[0-9a-z]{8}$/);
-    expect(background.getTask(id)).toMatchObject({ taskId: id, kind: 'process' });
+    expect(background.getTask(id)).toMatchObject({
+      taskId: id,
+      kind: "process",
+    });
     proc.resolve(0);
     await background.wait(id);
   });
 
-  it('assigns agent-prefixed ids to agent tasks', async () => {
+  it("assigns agent-prefixed ids to agent tasks", async () => {
     let resolveCompletion!: (value: { result: string }) => void;
     const completion = new Promise<{ result: string }>((resolve) => {
       resolveCompletion = resolve;
     });
-    const id = background.registerTask(
-      agentTask(completion, 'agent task'),
-    );
+    const id = background.registerTask(agentTask(completion, "agent task"));
 
     expect(id).toMatch(/^agent-[0-9a-z]{8}$/);
-    expect(background.getTask(id)).toMatchObject({ taskId: id, kind: 'agent' });
-    resolveCompletion({ result: 'done' });
+    expect(background.getTask(id)).toMatchObject({ taskId: id, kind: "agent" });
+    resolveCompletion({ result: "done" });
     await background.wait(id);
   });
 
-  it('rejects malformed ids at the persistence path boundary', () => {
-    const persistence = createAgentTaskPersistence('/tmp/kimi-bg-id-test');
+  it("rejects malformed ids at the persistence path boundary", () => {
+    const persistence = createAgentTaskPersistence("/tmp/kimi-bg-id-test");
     const rejected = [
-      '',
-      'x',
-      '-bash',
-      'BASH-12345678',
-      'bash_12345678',
-      '../escape',
-      'bash-1234567',
-      'bash-123456789',
-      'agent-ABCDEFGH',
-      'bg_12345678',
-      'a'.repeat(26),
+      "",
+      "x",
+      "-bash",
+      "BASH-12345678",
+      "bash_12345678",
+      "../escape",
+      "bash-1234567",
+      "bash-123456789",
+      "agent-ABCDEFGH",
+      "bg_12345678",
+      "a".repeat(26),
     ];
 
     for (const bad of rejected) {

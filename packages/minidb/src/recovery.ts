@@ -32,17 +32,25 @@
 // scan runs only as the fallback — for legacy databases, a missing/invalid
 // generation, or a rotated-away WAL anchor.
 
-import fs from 'node:fs/promises';
-import fsSync from 'node:fs';
-import path from 'node:path';
-import { scanFrameRefsFd, scanFrameRefsFdAsync, scanBatchOpRefs, TYPE_SET, TYPE_DEL, TYPE_BATCH, MAGIC } from './codec.js';
-import type { FrameRef } from './codec.js';
-import { SNAPSHOT_FILE, WAL_FILE } from './generation.js';
-import { yieldToLoop } from './text-index/tokenize.js';
-import type { Store, ValueLoc, ValueRef } from './store.js';
+import fs from "node:fs/promises";
+import fsSync from "node:fs";
+import path from "node:path";
+import {
+  scanFrameRefsFd,
+  scanFrameRefsFdAsync,
+  scanBatchOpRefs,
+  TYPE_SET,
+  TYPE_DEL,
+  TYPE_BATCH,
+  MAGIC,
+} from "./codec.js";
+import type { FrameRef } from "./codec.js";
+import { SNAPSHOT_FILE, WAL_FILE } from "./generation.js";
+import { yieldToLoop } from "./text-index/tokenize.js";
+import type { Store, ValueLoc, ValueRef } from "./store.js";
 
-export type RecoveryMode = 'resync' | 'strict';
-export type ValueMode = 'memory' | 'disk';
+export type RecoveryMode = "resync" | "strict";
+export type ValueMode = "memory" | "disk";
 
 export interface RecoveryInfo {
   snapshotFrames: number;
@@ -90,7 +98,7 @@ function readAtSync(fd: number, off: number, len: number): Buffer {
   let got = 0;
   while (got < len) {
     const r = fsSync.readSync(fd, buf, got, len - got, off + got);
-    if (r === 0) throw new Error('recovery: short read past EOF');
+    if (r === 0) throw new Error("recovery: short read past EOF");
     got += r;
   }
   return buf;
@@ -98,7 +106,9 @@ function readAtSync(fd: number, off: number, len: number): Buffer {
 
 function parseMeta(meta: Buffer | null): Record<string, number> | null {
   if (!meta) return null;
-  const parsed = JSON.parse(meta.toString('utf8')) as { dt?: Record<string, number> };
+  const parsed = JSON.parse(meta.toString("utf8")) as {
+    dt?: Record<string, number>;
+  };
   return parsed.dt ?? null;
 }
 
@@ -113,8 +123,14 @@ export interface RecoveredOp {
 }
 
 function* setRefToOps(
-  f: { key: Buffer; valueOff: number; valLen: number; meta: Buffer | null; expireAt: number },
-  file: ValueLoc['file'],
+  f: {
+    key: Buffer;
+    valueOff: number;
+    valLen: number;
+    meta: Buffer | null;
+    expireAt: number;
+  },
+  file: ValueLoc["file"],
   fd: number,
   valueMode: ValueMode,
 ): Generator<RecoveredOp> {
@@ -135,9 +151,9 @@ function* setRefToOps(
   }
   const dt = parseMeta(f.meta);
   const ref: ValueRef =
-    valueMode === 'disk'
-      ? { kind: 'disk', loc: { file, off: f.valueOff, len: f.valLen } }
-      : { kind: 'memory', value: readAtSync(fd, f.valueOff, f.valLen) };
+    valueMode === "disk"
+      ? { kind: "disk", loc: { file, off: f.valueOff, len: f.valLen } }
+      : { kind: "memory", value: readAtSync(fd, f.valueOff, f.valLen) };
   yield { type: TYPE_SET, key: f.key, ref, expireAt: f.expireAt, dt };
 }
 
@@ -149,7 +165,7 @@ function* setRefToOps(
  *  `onCorruptBatch` so recovery can account it). Unknown frame types yield nothing. */
 export function* frameToOps(
   f: FrameRef,
-  file: ValueLoc['file'],
+  file: ValueLoc["file"],
   fd: number,
   valueMode: ValueMode,
   onCorruptBatch?: () => void,
@@ -171,7 +187,8 @@ export function* frameToOps(
     }
     for (const op of ops) {
       if (op.type === TYPE_SET) yield* setRefToOps(op, file, fd, valueMode);
-      else if (op.type === TYPE_DEL) yield { type: TYPE_DEL, key: op.key, ref: null, expireAt: 0, dt: null };
+      else if (op.type === TYPE_DEL)
+        yield { type: TYPE_DEL, key: op.key, ref: null, expireAt: 0, dt: null };
     }
   }
 }
@@ -187,7 +204,7 @@ const APPLY_YIELD_FRAMES = 4096;
  *  nothing can observe a half-applied pass. */
 async function applyFrames(
   frames: FrameRef[],
-  file: ValueLoc['file'],
+  file: ValueLoc["file"],
   fd: number,
   store: Store,
   valueMode: ValueMode,
@@ -196,7 +213,8 @@ async function applyFrames(
   let applied = 0;
   for (const f of frames) {
     for (const op of frameToOps(f, file, fd, valueMode, onCorruptBatch)) {
-      if (op.type === TYPE_SET) store.setRef(op.key, op.ref!, op.expireAt, op.dt);
+      if (op.type === TYPE_SET)
+        store.setRef(op.key, op.ref!, op.expireAt, op.dt);
       else if (op.type === TYPE_DEL) store.del(op.key);
     }
     if (++applied % APPLY_YIELD_FRAMES === 0) await yieldToLoop();
@@ -222,23 +240,26 @@ export interface GenerationAnchors {
  *  consistent pair can be scanned. Callers with a refresh loop (kap-server's
  *  readonly degrade path, the cluster shard reader) treat it as transient. */
 export class RecoveryGenerationChurnError extends Error {
-  readonly code = 'RECOVERY_GENERATION_CHURN';
+  readonly code = "RECOVERY_GENERATION_CHURN";
   constructor(readonly attempts: number) {
-    super(`recovery: snapshot/WAL generation kept changing across ${attempts} attempt(s)`);
-    this.name = 'RecoveryGenerationChurnError';
+    super(
+      `recovery: snapshot/WAL generation kept changing across ${attempts} attempt(s)`,
+    );
+    this.name = "RecoveryGenerationChurnError";
   }
 }
 
 const GENERATION_RETRY_BASE_MS = 5;
 
-const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
+const sleep = (ms: number): Promise<void> =>
+  new Promise((r) => setTimeout(r, ms));
 
 function statIdentity(p: string): FileIdentity | null {
   try {
     const st = fsSync.statSync(p);
     return { dev: st.dev, ino: st.ino, size: st.size };
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === 'ENOENT') return null;
+    if ((e as NodeJS.ErrnoException).code === "ENOENT") return null;
     throw e;
   }
 }
@@ -249,8 +270,13 @@ function statIdentity(p: string): FileIdentity | null {
  *  inode is safe: the extra bytes are a staleness window catch-up covers).
  *  A null↔non-null transition (the file appeared or vanished mid-pass) cannot
  *  be verified and is treated as a generation switch. */
-function sameGeneration(scanned: FileIdentity | null, after: FileIdentity | null, sizeFloor: number): boolean {
-  if (scanned === null || after === null) return scanned === null && after === null;
+function sameGeneration(
+  scanned: FileIdentity | null,
+  after: FileIdentity | null,
+  sizeFloor: number,
+): boolean {
+  if (scanned === null || after === null)
+    return scanned === null && after === null;
   if (scanned.dev !== after.dev || scanned.ino !== after.ino) return false;
   return after.size >= sizeFloor;
 }
@@ -266,9 +292,9 @@ function resetStore(store: Store): void {
 export async function recover({
   dir,
   store,
-  mode = 'resync',
+  mode = "resync",
   truncate = true,
-  valueMode = 'memory',
+  valueMode = "memory",
   maxGenerationRetries = 4,
   attachValueReader,
   signal,
@@ -299,15 +325,26 @@ export async function recover({
   for (let attempt = 0; ; attempt++) {
     let pass: RecoverPassResult;
     try {
-      pass = await recoverPass({ snapPath, walPath, store, mode, truncate, valueMode, signal });
+      pass = await recoverPass({
+        snapPath,
+        walPath,
+        store,
+        mode,
+        truncate,
+        valueMode,
+        signal,
+      });
     } catch (e) {
       // A cancelled scan may have applied a prefix of the pass's frames:
       // discard the partial application so the error never carries state
       // into a caller that retries with the same Store.
-      if ((e as Error).name === 'AbortError') resetStore(store);
+      if ((e as Error).name === "AbortError") resetStore(store);
       throw e;
     }
-    if (pass.consistent && (!attachValueReader || attachValueReader(pass.anchors))) {
+    if (
+      pass.consistent &&
+      (!attachValueReader || attachValueReader(pass.anchors))
+    ) {
       pass.info.generationRetries = attempt;
       return pass.info;
     }
@@ -315,13 +352,16 @@ export async function recover({
     // retrying, so no partial application state leaks into a later pass (or
     // survives inside the thrown error).
     resetStore(store);
-    if (attempt >= maxGenerationRetries) throw new RecoveryGenerationChurnError(attempt + 1);
+    if (attempt >= maxGenerationRetries)
+      throw new RecoveryGenerationChurnError(attempt + 1);
     await sleep(delay);
     delay *= 2;
   }
 }
 
-type RecoverPassResult = { consistent: false } | { consistent: true; info: RecoveryInfo; anchors: GenerationAnchors };
+type RecoverPassResult =
+  | { consistent: false }
+  | { consistent: true; info: RecoveryInfo; anchors: GenerationAnchors };
 
 /** One recovery pass: scan + apply the snapshot then the WAL, recording the
  *  identity of each opened fd BEFORE scanning it (forensics round 1), then
@@ -354,7 +394,7 @@ async function recoverPass({
   let snapshotCorrupt: [number, number][] = [];
   let snapScanned: FileIdentity | null = null;
   if (fsSync.existsSync(snapPath)) {
-    const fd = fsSync.openSync(snapPath, 'r');
+    const fd = fsSync.openSync(snapPath, "r");
     try {
       const st = fsSync.fstatSync(fd);
       snapScanned = { dev: st.dev, ino: st.ino, size: st.size };
@@ -363,7 +403,14 @@ async function recoverPass({
       // slices, periodic yields, abortable); only the in-memory apply below
       // runs on the event loop.
       const r = await scanFrameRefsFdAsync(fd, { onCorrupt: mode, signal });
-      await applyFrames(r.frames, 'snapshot', fd, store, valueMode, countCorruptBatch);
+      await applyFrames(
+        r.frames,
+        "snapshot",
+        fd,
+        store,
+        valueMode,
+        countCorruptBatch,
+      );
       snapshotFrames = r.frames.length;
       snapshotCorrupt = r.corruptRanges;
     } finally {
@@ -382,14 +429,21 @@ async function recoverPass({
   // not against the pre-scan size.
   let walSizeFloor = 0;
   if (fsSync.existsSync(walPath)) {
-    const fd = fsSync.openSync(walPath, 'r');
+    const fd = fsSync.openSync(walPath, "r");
     try {
       const st = fsSync.fstatSync(fd);
       walScanned = { dev: st.dev, ino: st.ino, size: st.size };
       walSizeFloor = st.size;
       walBytes = st.size;
       const r = await scanFrameRefsFdAsync(fd, { onCorrupt: mode, signal });
-      await applyFrames(r.frames, 'wal', fd, store, valueMode, countCorruptBatch);
+      await applyFrames(
+        r.frames,
+        "wal",
+        fd,
+        store,
+        valueMode,
+        countCorruptBatch,
+      );
       walFrames = r.frames.length;
       walCorrupt = r.corruptRanges;
       walScanEnd = r.eofOffset;
@@ -413,8 +467,10 @@ async function recoverPass({
   // Forensics round 2: re-stat both paths after every byte was read.
   const snapAfter = statIdentity(snapPath);
   const walAfter = statIdentity(walPath);
-  if (!sameGeneration(snapScanned, snapAfter, snapScanned?.size ?? 0)) return { consistent: false };
-  if (!sameGeneration(walScanned, walAfter, walSizeFloor)) return { consistent: false };
+  if (!sameGeneration(snapScanned, snapAfter, snapScanned?.size ?? 0))
+    return { consistent: false };
+  if (!sameGeneration(walScanned, walAfter, walSizeFloor))
+    return { consistent: false };
 
   return {
     consistent: true,
@@ -426,7 +482,10 @@ async function recoverPass({
       truncatedWal,
       corruptRanges: walCorrupt,
       snapshotCorruptRanges: snapshotCorrupt,
-      lostBytes: [...walCorrupt, ...snapshotCorrupt].reduce((a, [s, e]) => a + (e - s), 0),
+      lostBytes: [...walCorrupt, ...snapshotCorrupt].reduce(
+        (a, [s, e]) => a + (e - s),
+        0,
+      ),
       walScanEnd,
       walDev: walScanned?.dev ?? 0,
       walIno: walScanned?.ino ?? 0,
@@ -436,7 +495,9 @@ async function recoverPass({
       generationRetries: 0, // recover() overwrites with the real attempt count
     },
     anchors: {
-      snapshot: snapScanned ? { dev: snapScanned.dev, ino: snapScanned.ino } : null,
+      snapshot: snapScanned
+        ? { dev: snapScanned.dev, ino: snapScanned.ino }
+        : null,
       wal: walScanned ? { dev: walScanned.dev, ino: walScanned.ino } : null,
     },
   };
@@ -462,9 +523,9 @@ export function catchUpWal(
 ): { offset: number; appliedFrames: number } | null {
   let fd: number;
   try {
-    fd = fsSync.openSync(walPath, 'r');
+    fd = fsSync.openSync(walPath, "r");
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === 'ENOENT') return null;
+    if ((e as NodeJS.ErrnoException).code === "ENOENT") return null;
     throw e;
   }
   try {
@@ -472,7 +533,7 @@ export function catchUpWal(
     if (st.dev !== anchor.dev || st.ino !== anchor.ino) return null;
     const size = st.size;
     if (offset < 0 || offset > size) return null;
-    const r = scanFrameRefsFd(fd, { onCorrupt: 'strict', startOffset: offset });
+    const r = scanFrameRefsFd(fd, { onCorrupt: "strict", startOffset: offset });
     if (r.frames.length === 0 && r.eofOffset < size) {
       // Bytes at `offset` start no valid frame. An append-only file grows
       // whole frames sequentially, so a torn tail is always a frame PREFIX

@@ -1,8 +1,8 @@
-import { readFile, readdir, stat } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { readFile, readdir, stat } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 
-import { OldKimiJsonSchema, OldSessionStateSchema } from './kimi-cli-schema.js';
+import { OldKimiJsonSchema, OldSessionStateSchema } from "./kimi-cli-schema.js";
 import {
   sourceConfigToml,
   sourceMcpJson,
@@ -12,15 +12,15 @@ import {
   sourceMcpOauthDir,
   sourceSessionsDir,
   sourceKimiJson,
-} from './paths.js';
+} from "./paths.js";
 import type {
   MigrationPlan,
   SessionEntry,
   SessionMigrationFailure,
   WorkDirEntry,
-} from './types.js';
-import { classifySessionDir } from './sessions/classify.js';
-import { oldMd5BucketName } from './sessions/workdir-bucket.js';
+} from "./types.js";
+import { classifySessionDir } from "./sessions/classify.js";
+import { oldMd5BucketName } from "./sessions/workdir-bucket.js";
 
 const MD5_HEX_RE = /^[0-9a-f]{32}$/;
 
@@ -29,7 +29,9 @@ interface WorkdirMeta {
   readonly kaos: string;
 }
 
-export async function detectMigration(opts: { sourcePath: string }): Promise<MigrationPlan> {
+export async function detectMigration(opts: {
+  sourcePath: string;
+}): Promise<MigrationPlan> {
   const src = opts.sourcePath;
 
   const hasConfig = existsSync(sourceConfigToml(src));
@@ -37,18 +39,24 @@ export async function detectMigration(opts: { sourcePath: string }): Promise<Mig
   const hasUserHistory = existsSync(sourceUserHistoryDir(src));
 
   const oauthCredentials = await listDirSafe(sourceCredentialsDir(src), (n) =>
-    n.endsWith('.json'),
+    n.endsWith(".json"),
   );
   const detectedPlugins = await listDirSafe(sourcePluginsDir(src), () => true);
-  const detectedMcpOauthServers = await listDirSafe(sourceMcpOauthDir(src), () => true);
+  const detectedMcpOauthServers = await listDirSafe(
+    sourceMcpOauthDir(src),
+    () => true,
+  );
 
   // Reverse-lookup workdir from kimi.json
   const workdirMap = new Map<string, WorkdirMeta>();
   try {
-    const text = await readFile(sourceKimiJson(src), 'utf-8');
+    const text = await readFile(sourceKimiJson(src), "utf-8");
     const parsed = OldKimiJsonSchema.parse(JSON.parse(text));
     for (const wd of parsed.work_dirs) {
-      workdirMap.set(oldMd5BucketName(wd.path), { path: wd.path, kaos: wd.kaos });
+      workdirMap.set(oldMd5BucketName(wd.path), {
+        path: wd.path,
+        kaos: wd.kaos,
+      });
     }
   } catch {
     // no kimi.json or unparseable — sessions list will be empty
@@ -67,8 +75,9 @@ export async function detectMigration(opts: { sourcePath: string }): Promise<Mig
       // represented by the local Kimi Code runtime. Every other unknown
       // bucket is user data we failed to map and must remain visible.
       if (!MD5_HEX_RE.test(bucketName)) {
-        const separator = bucketName.lastIndexOf('_');
-        if (separator > 0 && MD5_HEX_RE.test(bucketName.slice(separator + 1))) continue;
+        const separator = bucketName.lastIndexOf("_");
+        if (separator > 0 && MD5_HEX_RE.test(bucketName.slice(separator + 1)))
+          continue;
         sessionScanFailures.push({
           sourcePath: bucketPath,
           reason: unknownWorkdirReason(),
@@ -83,7 +92,7 @@ export async function detectMigration(opts: { sourcePath: string }): Promise<Mig
         });
         continue;
       }
-      if (wd.kaos !== 'local') continue;
+      if (wd.kaos !== "local") continue;
 
       let uuids: string[];
       try {
@@ -100,21 +109,25 @@ export async function detectMigration(opts: { sourcePath: string }): Promise<Mig
       for (const uuid of uuids) {
         const sessionDir = join(bucketPath, uuid);
         const cls = await classifySessionDir(sessionDir);
-        if (cls === 'malformed') {
+        if (cls === "malformed") {
           sessionScanFailures.push({
             sourcePath: sessionDir,
             reason: unreadableSessionReason(),
           });
           continue;
         }
-        if (cls !== 'real') continue;
+        if (cls !== "real") continue;
         const wireMtime = await readWireMtime(sessionDir);
         sessions.push({ uuid, oldDir: sessionDir, wireMtime });
         totalSessions++;
       }
 
       if (sessions.length > 0) {
-        workdirs.push({ oldHashDir: bucketPath, workdirPath: wd.path, sessions });
+        workdirs.push({
+          oldHashDir: bucketPath,
+          workdirPath: wd.path,
+          sessions,
+        });
       }
     }
   } catch (error) {
@@ -141,19 +154,19 @@ export async function detectMigration(opts: { sourcePath: string }): Promise<Mig
 }
 
 function unknownWorkdirReason(): string {
-  return 'No local workdir mapping was found for this legacy session bucket; kimi.json may be missing, unreadable, or not list the workdir.';
+  return "No local workdir mapping was found for this legacy session bucket; kimi.json may be missing, unreadable, or not list the workdir.";
 }
 
 function unreadableSessionReason(): string {
-  return 'Legacy session could not be inspected because context.jsonl is missing or unreadable.';
+  return "Legacy session could not be inspected because context.jsonl is missing or unreadable.";
 }
 
 function isMissingError(error: unknown): boolean {
   return (
-    typeof error === 'object' &&
+    typeof error === "object" &&
     error !== null &&
-    'code' in error &&
-    (error as { readonly code?: unknown }).code === 'ENOENT'
+    "code" in error &&
+    (error as { readonly code?: unknown }).code === "ENOENT"
   );
 }
 
@@ -175,7 +188,7 @@ async function listDirSafe(
 
 async function readWireMtime(sessionDir: string): Promise<number> {
   try {
-    const text = await readFile(join(sessionDir, 'state.json'), 'utf-8');
+    const text = await readFile(join(sessionDir, "state.json"), "utf-8");
     const parsed = OldSessionStateSchema.parse(JSON.parse(text));
     if (parsed.wire_mtime !== null && parsed.wire_mtime !== undefined) {
       return parsed.wire_mtime * 1000;
@@ -184,7 +197,7 @@ async function readWireMtime(sessionDir: string): Promise<number> {
     // fall through to wire.jsonl mtime
   }
   try {
-    const st = await stat(join(sessionDir, 'wire.jsonl'));
+    const st = await stat(join(sessionDir, "wire.jsonl"));
     return st.mtimeMs;
   } catch {
     return 0;

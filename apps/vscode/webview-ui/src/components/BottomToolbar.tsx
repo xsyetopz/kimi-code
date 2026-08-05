@@ -38,7 +38,13 @@ export function BottomToolbar() {
     setActiveTab((prev) => (prev === tab ? null : tab));
   };
 
-  const fileStats = fileChanges.reduce((a, c) => ({ additions: a.additions + c.additions, deletions: a.deletions + c.deletions }), { additions: 0, deletions: 0 });
+  const fileStats = fileChanges.reduce(
+    (a, c) => ({
+      additions: a.additions + c.additions,
+      deletions: a.deletions + c.deletions,
+    }),
+    { additions: 0, deletions: 0 },
+  );
 
   return (
     <div className="flex flex-col min-h-0 flex-1 overflow-hidden">
@@ -50,7 +56,9 @@ export function BottomToolbar() {
       {activeTab && (
         <div className="flex-1 min-h-16 max-h-32 overflow-y-auto mb-0.5 border border-border/60 rounded-md bg-card">
           {activeTab === "queue" && <QueuedMessagesPanel />}
-          {activeTab === "changes" && <FileChangesPanel changes={fileChanges} />}
+          {activeTab === "changes" && (
+            <FileChangesPanel changes={fileChanges} />
+          )}
         </div>
       )}
 
@@ -63,12 +71,19 @@ export function BottomToolbar() {
                 onClick={() => toggleTab("queue")}
                 className={cn(
                   "flex items-center gap-1.5 px-2 py-0.5 rounded text-xs transition-colors",
-                  activeTab === "queue" ? "bg-accent text-accent-foreground" : "hover:bg-muted/50 text-muted-foreground",
+                  activeTab === "queue"
+                    ? "bg-accent text-accent-foreground"
+                    : "hover:bg-muted/50 text-muted-foreground",
                 )}
               >
                 <IconStack2 className="size-3.5" />
                 <span>{queue.length} Queued</span>
-                <IconChevronUp className={cn("size-3 transition-transform", activeTab === "queue" && "rotate-180")} />
+                <IconChevronUp
+                  className={cn(
+                    "size-3 transition-transform",
+                    activeTab === "queue" && "rotate-180",
+                  )}
+                />
               </button>
             )}
 
@@ -77,15 +92,27 @@ export function BottomToolbar() {
                 onClick={() => toggleTab("changes")}
                 className={cn(
                   "flex items-center gap-1.5 px-2 py-0.5 rounded text-xs transition-colors",
-                  activeTab === "changes" ? "bg-accent text-accent-foreground" : "hover:bg-muted/50 text-muted-foreground",
+                  activeTab === "changes"
+                    ? "bg-accent text-accent-foreground"
+                    : "hover:bg-muted/50 text-muted-foreground",
                 )}
               >
                 <IconFileCode className="size-3.5" />
                 <span>{fileChanges.length} Changed</span>
                 <span className="text-[10px] tabular-nums">
-                  <span className="text-green-600 dark:text-green-400">+{fileStats.additions}</span> <span className="text-red-600 dark:text-red-400">-{fileStats.deletions}</span>
+                  <span className="text-green-600 dark:text-green-400">
+                    +{fileStats.additions}
+                  </span>{" "}
+                  <span className="text-red-600 dark:text-red-400">
+                    -{fileStats.deletions}
+                  </span>
                 </span>
-                <IconChevronUp className={cn("size-3 transition-transform", activeTab === "changes" && "rotate-180")} />
+                <IconChevronUp
+                  className={cn(
+                    "size-3 transition-transform",
+                    activeTab === "changes" && "rotate-180",
+                  )}
+                />
               </button>
             )}
           </div>

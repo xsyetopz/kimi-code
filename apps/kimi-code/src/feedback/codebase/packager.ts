@@ -1,12 +1,12 @@
-import { createHash } from 'node:crypto';
-import { createWriteStream } from 'node:fs';
-import { mkdir, rm, stat } from 'node:fs/promises';
-import { dirname } from 'node:path';
+import { createHash } from "node:crypto";
+import { createWriteStream } from "node:fs";
+import { mkdir, rm, stat } from "node:fs/promises";
+import { dirname } from "node:path";
 
-import { ZipFile } from 'yazl';
+import { ZipFile } from "yazl";
 
-import type { FeedbackArchive } from '../archive';
-import type { FeedbackCodebaseScanResult } from './types';
+import type { FeedbackArchive } from "../archive";
+import type { FeedbackCodebaseScanResult } from "./types";
 
 interface PackageEntry {
   readonly absolutePath: string;
@@ -36,22 +36,22 @@ async function packageEntries(
   archivePath: string,
 ): Promise<FeedbackArchive> {
   if (entries.length === 0) {
-    throw new Error('Cannot package an empty feedback archive.');
+    throw new Error("Cannot package an empty feedback archive.");
   }
   await mkdir(dirname(archivePath), { recursive: true });
 
   const zip = new ZipFile();
-  const hash = createHash('sha256');
+  const hash = createHash("sha256");
   const output = createWriteStream(archivePath);
 
   try {
     const done = new Promise<void>((resolvePromise, rejectPromise) => {
-      output.on('finish', resolvePromise);
-      output.on('error', rejectPromise);
-      zip.outputStream.on('error', rejectPromise);
+      output.on("finish", resolvePromise);
+      output.on("error", rejectPromise);
+      zip.outputStream.on("error", rejectPromise);
     });
 
-    zip.outputStream.on('data', (chunk: Buffer) => {
+    zip.outputStream.on("data", (chunk: Buffer) => {
       hash.update(chunk);
     });
     zip.outputStream.pipe(output);
@@ -69,7 +69,7 @@ async function packageEntries(
     return {
       path: archivePath,
       size: archiveStat.size,
-      sha256: hash.digest('hex'),
+      sha256: hash.digest("hex"),
       fingerprint: fingerprintEntries(entries),
       fileCount: entries.length,
     };
@@ -85,14 +85,14 @@ async function packageEntries(
 }
 
 function fingerprintEntries(entries: readonly PackageEntry[]): string {
-  const hash = createHash('sha256');
+  const hash = createHash("sha256");
   for (const entry of entries) {
     hash.update(entry.archivePath);
-    hash.update('\0');
+    hash.update("\0");
     hash.update(String(entry.size));
-    hash.update('\0');
+    hash.update("\0");
     hash.update(String(Math.trunc(entry.mtimeMs)));
-    hash.update('\n');
+    hash.update("\n");
   }
-  return hash.digest('hex');
+  return hash.digest("hex");
 }

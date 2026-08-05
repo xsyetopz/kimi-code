@@ -32,10 +32,14 @@ describe("terminal theme tracking", () => {
     const terminal = { write: vi.fn() };
     const onTheme = vi.fn();
 
-    expect(handleTerminalThemeInput(TERMINAL_THEME_DARK, terminal, onTheme)).toEqual({
+    expect(
+      handleTerminalThemeInput(TERMINAL_THEME_DARK, terminal, onTheme),
+    ).toEqual({
       consume: true,
     });
-    expect(handleTerminalThemeInput(TERMINAL_THEME_LIGHT, terminal, onTheme)).toEqual({
+    expect(
+      handleTerminalThemeInput(TERMINAL_THEME_LIGHT, terminal, onTheme),
+    ).toEqual({
       consume: true,
     });
 
@@ -48,7 +52,9 @@ describe("terminal theme tracking", () => {
     const terminal = { write: vi.fn() };
     const onTheme = vi.fn();
 
-    expect(handleTerminalThemeInput(`a${TERMINAL_THEME_LIGHT}b`, terminal, onTheme)).toEqual({
+    expect(
+      handleTerminalThemeInput(`a${TERMINAL_THEME_LIGHT}b`, terminal, onTheme),
+    ).toEqual({
       data: "ab",
     });
 
@@ -60,12 +66,16 @@ describe("terminal theme tracking", () => {
     const terminal = { write: vi.fn() };
     const onTheme = vi.fn();
 
-    expect(handleTerminalThemeInput(DARK_OSC11_REPORT, terminal, onTheme)).toEqual({
+    expect(
+      handleTerminalThemeInput(DARK_OSC11_REPORT, terminal, onTheme),
+    ).toEqual({
       consume: true,
     });
     expect(onTheme).toHaveBeenLastCalledWith("dark");
 
-    expect(handleTerminalThemeInput(LIGHT_OSC11_REPORT, terminal, onTheme)).toEqual({
+    expect(
+      handleTerminalThemeInput(LIGHT_OSC11_REPORT, terminal, onTheme),
+    ).toEqual({
       consume: true,
     });
     expect(onTheme).toHaveBeenLastCalledWith("light");
@@ -80,7 +90,9 @@ describe("terminal theme tracking", () => {
     const terminal = { write: vi.fn() };
     const onTheme = vi.fn();
 
-    expect(handleTerminalThemeInput(`a${DARK_OSC11_REPORT}b`, terminal, onTheme)).toEqual({
+    expect(
+      handleTerminalThemeInput(`a${DARK_OSC11_REPORT}b`, terminal, onTheme),
+    ).toEqual({
       data: "ab",
     });
 
@@ -94,11 +106,18 @@ describe("terminal theme tracking", () => {
     const inputState = createTerminalThemeInputState();
 
     expect(
-      handleTerminalThemeInput("\u001B]11;rgb:2828/2c2c/3", terminal, onTheme, inputState),
+      handleTerminalThemeInput(
+        "\u001B]11;rgb:2828/2c2c/3",
+        terminal,
+        onTheme,
+        inputState,
+      ),
     ).toEqual({ consume: true });
     expect(onTheme).not.toHaveBeenCalled();
 
-    expect(handleTerminalThemeInput("434\u0007", terminal, onTheme, inputState)).toEqual({
+    expect(
+      handleTerminalThemeInput("434\u0007", terminal, onTheme, inputState),
+    ).toEqual({
       consume: true,
     });
     expect(onTheme).toHaveBeenCalledWith("dark");
@@ -111,10 +130,17 @@ describe("terminal theme tracking", () => {
     const inputState = createTerminalThemeInputState();
 
     expect(
-      handleTerminalThemeInput("\u001B]11;rgb:2828/2c2c/3", terminal, onTheme, inputState),
+      handleTerminalThemeInput(
+        "\u001B]11;rgb:2828/2c2c/3",
+        terminal,
+        onTheme,
+        inputState,
+      ),
     ).toEqual({ consume: true });
 
-    expect(handleTerminalThemeInput("434\u0007x", terminal, onTheme, inputState)).toEqual({
+    expect(
+      handleTerminalThemeInput("434\u0007x", terminal, onTheme, inputState),
+    ).toEqual({
       data: "x",
     });
     expect(onTheme).toHaveBeenCalledWith("dark");
@@ -139,7 +165,9 @@ describe("terminal theme tracking", () => {
 
     const dispose = installTerminalThemeTracking(state, onTheme);
 
-    expect(state.terminal.write).toHaveBeenCalledWith(ENABLE_TERMINAL_THEME_REPORTING);
+    expect(state.terminal.write).toHaveBeenCalledWith(
+      ENABLE_TERMINAL_THEME_REPORTING,
+    );
     expect(state.terminal.write).toHaveBeenCalledWith(OSC11_QUERY);
     expect(state.terminal.write).toHaveBeenCalledWith(QUERY_TERMINAL_THEME);
     expect(listeners).toHaveLength(1);
@@ -148,7 +176,9 @@ describe("terminal theme tracking", () => {
     expect(state.terminal.write).toHaveBeenCalledWith(OSC11_QUERY);
     expect(onTheme).not.toHaveBeenCalled();
 
-    expect(listeners[0]?.("\u001B]11;rgb:2828/2c2c/3")).toEqual({ consume: true });
+    expect(listeners[0]?.("\u001B]11;rgb:2828/2c2c/3")).toEqual({
+      consume: true,
+    });
     expect(onTheme).not.toHaveBeenCalled();
 
     expect(listeners[0]?.("434\u0007")).toEqual({ consume: true });
@@ -157,19 +187,21 @@ describe("terminal theme tracking", () => {
     dispose();
 
     expect(removeInputListener).toHaveBeenCalledOnce();
-    expect(state.terminal.write).toHaveBeenCalledWith(DISABLE_TERMINAL_THEME_REPORTING);
+    expect(state.terminal.write).toHaveBeenCalledWith(
+      DISABLE_TERMINAL_THEME_REPORTING,
+    );
   });
 });
 
-describe('ColorPalette warning token', () => {
-  it('has a defined warning color in both themes', () => {
+describe("ColorPalette warning token", () => {
+  it("has a defined warning color in both themes", () => {
     expect(darkColors.warning).toBeTruthy();
     expect(lightColors.warning).toBeTruthy();
     expect(darkColors.warning).not.toBe(lightColors.warning);
   });
 
-  it('resolves the correct palette by theme name', () => {
-    expect(getBuiltInPalette('dark')).toBe(darkColors);
-    expect(getBuiltInPalette('light')).toBe(lightColors);
+  it("resolves the correct palette by theme name", () => {
+    expect(getBuiltInPalette("dark")).toBe(darkColors);
+    expect(getBuiltInPalette("light")).toBe(lightColors);
   });
 });

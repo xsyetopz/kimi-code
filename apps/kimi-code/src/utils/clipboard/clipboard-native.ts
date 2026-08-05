@@ -8,9 +8,9 @@
  * fallbacks (wl-paste / xclip / PowerShell) in `clipboard-image.ts`.
  */
 
-import { createRequire } from 'node:module';
+import { createRequire } from "node:module";
 
-import { loadNativePackage } from '#/native/native-require';
+import { loadNativePackage } from "#/native/native-require";
 
 declare const __KIMI_CODE_NATIVE_BUNDLE__: boolean | undefined;
 
@@ -25,25 +25,29 @@ export interface ClipboardModule {
 
 const nodeRequire = createRequire(import.meta.url);
 const isNativeBundle =
-  typeof __KIMI_CODE_NATIVE_BUNDLE__ === 'boolean' && __KIMI_CODE_NATIVE_BUNDLE__;
+  typeof __KIMI_CODE_NATIVE_BUNDLE__ === "boolean" &&
+  __KIMI_CODE_NATIVE_BUNDLE__;
 
 // The native module uses X11/Wayland on Linux; if no display is
 // available, skip the load attempt so headless environments don't pay
 // the binding cost just to fail later.
 const hasDisplay =
-  process.platform !== 'linux' || Boolean(process.env['DISPLAY'] ?? process.env['WAYLAND_DISPLAY']);
+  process.platform !== "linux" ||
+  Boolean(process.env["DISPLAY"] ?? process.env["WAYLAND_DISPLAY"]);
 
 const clipboard: ClipboardModule | null = (() => {
-  if (process.env['TERMUX_VERSION'] !== undefined || !hasDisplay) return null;
+  if (process.env["TERMUX_VERSION"] !== undefined || !hasDisplay) return null;
   try {
-    const bundledClipboard = loadNativePackage<ClipboardModule>('@mariozechner/clipboard');
+    const bundledClipboard = loadNativePackage<ClipboardModule>(
+      "@mariozechner/clipboard",
+    );
     if (bundledClipboard !== null) return bundledClipboard;
   } catch {
     return null;
   }
   if (isNativeBundle) return null;
   try {
-    return nodeRequire('@mariozechner/clipboard') as ClipboardModule;
+    return nodeRequire("@mariozechner/clipboard") as ClipboardModule;
   } catch {
     return null;
   }

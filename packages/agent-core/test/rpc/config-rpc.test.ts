@@ -1,10 +1,10 @@
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from "vitest";
 
-import { KimiCore } from '../../src/rpc/core-impl';
+import { KimiCore } from "../../src/rpc/core-impl";
 
 const tempDirs: string[] = [];
 
@@ -15,10 +15,10 @@ afterEach(async () => {
 });
 
 async function makeHome(configToml?: string): Promise<string> {
-  const home = await mkdtemp(path.join(tmpdir(), 'kimi-home-'));
+  const home = await mkdtemp(path.join(tmpdir(), "kimi-home-"));
   tempDirs.push(home);
   if (configToml !== undefined) {
-    await writeFile(path.join(home, 'config.toml'), configToml, 'utf-8');
+    await writeFile(path.join(home, "config.toml"), configToml, "utf-8");
   }
   return home;
 }
@@ -40,22 +40,24 @@ model = "kimi-for-coding"
 max_context_size = 128000
 `;
 
-describe('KimiCore degraded config loading', () => {
-  it('reports no diagnostics for a valid config', async () => {
+describe("KimiCore degraded config loading", () => {
+  it("reports no diagnostics for a valid config", async () => {
     const core = makeCore(await makeHome(VALID_TOML));
     const config = await core.getKimiConfig({});
-    expect(config.providers['kimi']).toBeDefined();
-    await expect(core.getConfigDiagnostics({})).resolves.toEqual({ warnings: [] });
+    expect(config.providers["kimi"]).toBeDefined();
+    await expect(core.getConfigDiagnostics({})).resolves.toEqual({
+      warnings: [],
+    });
   });
 
-  it('refuses to start when the TOML cannot be parsed at all', async () => {
-    const home = await makeHome('[[[');
+  it("refuses to start when the TOML cannot be parsed at all", async () => {
+    const home = await makeHome("[[[");
     // A fully unusable file means defaults-only (looks logged out), which is
     // worse than failing fast with the parse location.
     expect(() => makeCore(home)).toThrow(/Invalid TOML/);
   });
 
-  it('starts with a partially invalid config, keeping the valid sections', async () => {
+  it("starts with a partially invalid config, keeping the valid sections", async () => {
     const core = makeCore(
       await makeHome(`${VALID_TOML}
 [loop_control]
@@ -63,20 +65,20 @@ max_steps_per_turn = "nope"
 `),
     );
     const config = await core.getKimiConfig({});
-    expect(config.providers['kimi']).toBeDefined();
+    expect(config.providers["kimi"]).toBeDefined();
     expect(config.loopControl).toBeUndefined();
     const diagnostics = await core.getConfigDiagnostics({});
     expect(diagnostics.warnings).toHaveLength(1);
-    expect(diagnostics.warnings[0]).toContain('loop_control');
+    expect(diagnostics.warnings[0]).toContain("loop_control");
   });
 
-  it('rejects config writes with an actionable error while the file is invalid', async () => {
+  it("rejects config writes with an actionable error while the file is invalid", async () => {
     const home = await makeHome(`${VALID_TOML}
 [loop_control]
 max_steps_per_turn = "nope"
 `);
     const core = makeCore(home);
-    const before = await readFile(path.join(home, 'config.toml'), 'utf-8');
+    const before = await readFile(path.join(home, "config.toml"), "utf-8");
 
     // Write paths stay strict: changing settings on top of a broken file
     // must fail with a short, actionable message — not raw validation JSON —
@@ -86,31 +88,39 @@ max_steps_per_turn = "nope"
     await expect(write).rejects.toThrow(/kimi doctor/);
     await expect(write).rejects.not.toThrow(/invalid_type/);
 
-    const after = await readFile(path.join(home, 'config.toml'), 'utf-8');
+    const after = await readFile(path.join(home, "config.toml"), "utf-8");
     expect(after).toBe(before);
   });
 
-  it('keeps the last good config when the file breaks mid-run', async () => {
+  it("keeps the last good config when the file breaks mid-run", async () => {
     const home = await makeHome(VALID_TOML);
     const core = makeCore(home);
-    const configPath = path.join(home, 'config.toml');
+    const configPath = path.join(home, "config.toml");
 
-    await writeFile(configPath, '[[[', 'utf-8');
+    await writeFile(configPath, "[[[", "utf-8");
     const kept = await core.getKimiConfig({ reload: true });
-    expect(kept.providers['kimi']).toBeDefined();
+    expect(kept.providers["kimi"]).toBeDefined();
     const degraded = await core.getConfigDiagnostics({});
-    expect(degraded.warnings.some((w) => w.includes('Invalid TOML'))).toBe(true);
-    expect(degraded.warnings.some((w) => w.includes('previous'))).toBe(true);
+    expect(degraded.warnings.some((w) => w.includes("Invalid TOML"))).toBe(
+      true,
+    );
+    expect(degraded.warnings.some((w) => w.includes("previous"))).toBe(true);
 
-    await writeFile(configPath, `[thinking]\nenabled = true\n${VALID_TOML}`, 'utf-8');
+    await writeFile(
+      configPath,
+      `[thinking]\nenabled = true\n${VALID_TOML}`,
+      "utf-8",
+    );
     const adopted = await core.getKimiConfig({ reload: true });
     expect(adopted.thinking?.enabled).toBe(true);
-    await expect(core.getConfigDiagnostics({})).resolves.toEqual({ warnings: [] });
+    await expect(core.getConfigDiagnostics({})).resolves.toEqual({
+      warnings: [],
+    });
   });
 });
 
-describe('KimiCore imageLimits scoping', () => {
-  it('two cores keep independent [image] limits and only follow their own reloads', async () => {
+describe("KimiCore imageLimits scoping", () => {
+  it("two cores keep independent [image] limits and only follow their own reloads", async () => {
     const homeA = await makeHome(`${VALID_TOML}
 [image]
 max_edge_px = 800
@@ -131,13 +141,13 @@ max_edge_px = 1600
 
     // Reloading B must not restamp A (the module-global regression).
     await writeFile(
-      path.join(homeB, 'config.toml'),
+      path.join(homeB, "config.toml"),
       `${VALID_TOML}
 [image]
 max_edge_px = 1000
 read_byte_budget = 32768
 `,
-      'utf-8',
+      "utf-8",
     );
     await coreB.getKimiConfig({ reload: true });
     expect(coreB.imageLimits.maxEdgePx()).toBe(1000);
@@ -146,26 +156,26 @@ read_byte_budget = 32768
     expect(coreA.imageLimits.readByteBudget()).toBe(65536);
   });
 
-  it('reloading [image] takes effect on the core instance immediately', async () => {
+  it("reloading [image] takes effect on the core instance immediately", async () => {
     const home = await makeHome(VALID_TOML);
     const core = makeCore(home);
     expect(core.imageLimits.maxEdgePx()).toBe(2000);
 
     await writeFile(
-      path.join(home, 'config.toml'),
+      path.join(home, "config.toml"),
       `${VALID_TOML}
 [image]
 max_edge_px = 1400
 read_byte_budget = 131072
 `,
-      'utf-8',
+      "utf-8",
     );
     await core.getKimiConfig({ reload: true });
     expect(core.imageLimits.maxEdgePx()).toBe(1400);
     expect(core.imageLimits.readByteBudget()).toBe(131072);
 
     // Removing the section clears back to built-ins.
-    await writeFile(path.join(home, 'config.toml'), VALID_TOML, 'utf-8');
+    await writeFile(path.join(home, "config.toml"), VALID_TOML, "utf-8");
     await core.getKimiConfig({ reload: true });
     expect(core.imageLimits.maxEdgePx()).toBe(2000);
     expect(core.imageLimits.readByteBudget()).toBe(256 * 1024);

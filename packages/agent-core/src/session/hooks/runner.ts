@@ -1,8 +1,12 @@
-import { spawn, type ChildProcessWithoutNullStreams, type SpawnOptionsWithoutStdio } from 'node:child_process';
+import {
+  spawn,
+  type ChildProcessWithoutNullStreams,
+  type SpawnOptionsWithoutStdio,
+} from "node:child_process";
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import type { HookResult } from './types';
+import type { HookResult } from "./types";
 
 export interface RunHookOptions {
   readonly timeout: number;
@@ -18,8 +22,8 @@ export function buildHookSpawnOptions(options: {
   return {
     shell: true,
     cwd: options.cwd,
-    stdio: 'pipe',
-    detached: process.platform !== 'win32',
+    stdio: "pipe",
+    detached: process.platform !== "win32",
     // Hide the console Windows would otherwise allocate for the shell child.
     // Without `windowsHide:true`, each hook flashes a visible console window —
     // the same regression the Bash tool path already guards against in KAOS
@@ -31,17 +35,18 @@ export function buildHookSpawnOptions(options: {
 
 const DEFAULT_TIMEOUT_SECONDS = 30;
 const KILL_GRACE_MS = 100;
-const OptionalStringSchema = z.preprocess(
-  (value) => {
-    if (value === undefined || value === null) return undefined;
-    if (typeof value === 'string') return value;
-    if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') {
-      return String(value);
-    }
-    return undefined;
-  },
-  z.string().optional(),
-);
+const OptionalStringSchema = z.preprocess((value) => {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value === "string") return value;
+  if (
+    typeof value === "number" ||
+    typeof value === "boolean" ||
+    typeof value === "bigint"
+  ) {
+    return String(value);
+  }
+  return undefined;
+}, z.string().optional());
 const HookSpecificOutputSchema = z.preprocess(
   (value) => (isRecord(value) ? value : undefined),
   z
@@ -64,20 +69,23 @@ export async function runHook(
 ): Promise<HookResult> {
   let child: ChildProcessWithoutNullStreams;
   try {
-    child = spawn(command, buildHookSpawnOptions({ cwd: options.cwd, env: options.env }));
+    child = spawn(
+      command,
+      buildHookSpawnOptions({ cwd: options.cwd, env: options.env }),
+    );
   } catch (error) {
     return allowResult({ stderr: errorMessage(error) });
   }
 
   return new Promise<HookResult>((resolve) => {
-    let stdout = '';
-    let stderr = '';
+    let stdout = "";
+    let stderr = "";
     let settled = false;
     const timeoutMs = timeoutSeconds(options.timeout) * 1000;
 
     const cleanup = () => {
       clearTimeout(timeout);
-      options.signal?.removeEventListener('abort', onAbort);
+      options.signal?.removeEventListener("abort", onAbort);
     };
 
     const settle = (result: HookResult): void => {
@@ -97,41 +105,47 @@ export async function runHook(
       settle(allowResult({ stdout, stderr }));
     };
 
-    options.signal?.addEventListener('abort', onAbort, { once: true });
+    options.signal?.addEventListener("abort", onAbort, { once: true });
     if (options.signal?.aborted === true) {
       onAbort();
       return;
     }
 
-    child.stdout.setEncoding('utf8');
-    child.stderr.setEncoding('utf8');
-    child.stdout.on('data', (chunk: string) => {
+    child.stdout.setEncoding("utf8");
+    child.stderr.setEncoding("utf8");
+    child.stdout.on("data", (chunk: string) => {
       stdout += chunk;
     });
-    child.stderr.on('data', (chunk: string) => {
+    child.stderr.on("data", (chunk: string) => {
       stderr += chunk;
     });
-    child.on('error', (error) => {
+    child.on("error", (error) => {
       settle(allowResult({ stdout, stderr: stderr + errorMessage(error) }));
     });
-    child.on('close', (code) => {
+    child.on("close", (code) => {
       settle(resultFromExitCode(code ?? 0, stdout, stderr));
     });
 
-    child.stdin.on('error', () => {});
+    child.stdin.on("error", () => {});
     child.stdin.end(JSON.stringify(input));
   });
 }
 
 function timeoutSeconds(timeout: number): number {
-  return Number.isFinite(timeout) && timeout > 0 ? timeout : DEFAULT_TIMEOUT_SECONDS;
+  return Number.isFinite(timeout) && timeout > 0
+    ? timeout
+    : DEFAULT_TIMEOUT_SECONDS;
 }
 
-function resultFromExitCode(exitCode: number, stdout: string, stderr: string): HookResult {
+function resultFromExitCode(
+  exitCode: number,
+  stdout: string,
+  stderr: string,
+): HookResult {
   if (exitCode === 2) {
     const message = stderr.trim();
     return {
-      action: 'block',
+      action: "block",
       message,
       reason: message,
       stdout,
@@ -141,9 +155,9 @@ function resultFromExitCode(exitCode: number, stdout: string, stderr: string): H
   }
 
   const structured = exitCode === 0 ? structuredOutput(stdout) : undefined;
-  if (structured?.action === 'block') {
+  if (structured?.action === "block") {
     return {
-      action: 'block',
+      action: "block",
       message: structured.message ?? structured.reason,
       reason: structured.reason,
       stdout,
@@ -164,7 +178,14 @@ function resultFromExitCode(exitCode: number, stdout: string, stderr: string): H
 
 function structuredOutput(
   stdout: string,
-): { action?: 'block'; reason?: string; message?: string; structuredOutput: true } | undefined {
+):
+  | {
+      action?: "block";
+      reason?: string;
+      message?: string;
+      structuredOutput: true;
+    }
+  | undefined {
   const text = stdout.trim();
   if (text.length === 0) return undefined;
 
@@ -178,11 +199,11 @@ function structuredOutput(
       message: message ?? hookSpecificOutput?.message,
       structuredOutput: true as const,
     };
-    if (hookSpecificOutput?.permissionDecision !== 'deny') {
+    if (hookSpecificOutput?.permissionDecision !== "deny") {
       return result;
     }
     return {
-      action: 'block',
+      action: "block",
       message: result.message,
       reason: hookSpecificOutput.permissionDecisionReason,
       structuredOutput: true,
@@ -201,7 +222,7 @@ function allowResult(input: {
   readonly structuredOutput?: boolean;
 }): HookResult {
   return {
-    action: 'allow',
+    action: "allow",
     message: input.message,
     stdout: input.stdout,
     stderr: input.stderr,
@@ -212,19 +233,22 @@ function allowResult(input: {
 }
 
 function killProcess(child: ChildProcessWithoutNullStreams): void {
-  tryKillProcess(child, 'SIGTERM');
+  tryKillProcess(child, "SIGTERM");
   const killTimer = setTimeout(() => {
-    tryKillProcess(child, 'SIGKILL');
+    tryKillProcess(child, "SIGKILL");
   }, KILL_GRACE_MS);
   killTimer.unref();
 }
 
-function tryKillProcess(child: ChildProcessWithoutNullStreams, signal: NodeJS.Signals): void {
-  if (process.platform === 'win32') {
+function tryKillProcess(
+  child: ChildProcessWithoutNullStreams,
+  signal: NodeJS.Signals,
+): void {
+  if (process.platform === "win32") {
     // On Windows, `ChildProcess.kill()` only signals the shell spawned by
     // `shell: true`, leaving grandchildren (the actual hook command) alive
     // and holding the cwd. `taskkill /T` terminates the whole process tree.
-    killProcessTreeWindows(child, signal === 'SIGKILL');
+    killProcessTreeWindows(child, signal === "SIGKILL");
     return;
   }
   try {
@@ -240,23 +264,29 @@ function tryKillProcess(child: ChildProcessWithoutNullStreams, signal: NodeJS.Si
   }
 }
 
-function killProcessTreeWindows(child: ChildProcessWithoutNullStreams, force: boolean): void {
+function killProcessTreeWindows(
+  child: ChildProcessWithoutNullStreams,
+  force: boolean,
+): void {
   if (child.pid === undefined) return;
   const args = force
-    ? ['/T', '/F', '/PID', String(child.pid)]
-    : ['/T', '/PID', String(child.pid)];
+    ? ["/T", "/F", "/PID", String(child.pid)]
+    : ["/T", "/PID", String(child.pid)];
   try {
-    const killer = spawn('taskkill', args, { stdio: 'ignore', windowsHide: true });
-    killer.once('error', () => {});
+    const killer = spawn("taskkill", args, {
+      stdio: "ignore",
+      windowsHide: true,
+    });
+    killer.once("error", () => {});
   } catch {
     try {
-      child.kill('SIGTERM');
+      child.kill("SIGTERM");
     } catch {}
   }
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function errorMessage(error: unknown): string {

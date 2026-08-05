@@ -11,20 +11,20 @@
  * without bound.
  */
 
-import { randomUUID } from 'node:crypto';
+import { randomUUID } from "node:crypto";
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import type { Agent } from '../../../agent';
-import type { SkillActivationOrigin } from '../../../agent/context';
-import { renderModelToolSkillPrompt } from '../../../agent/skill/prompt';
-import type { BuiltinTool } from '../../../agent/tool';
-import type { ExecutableToolResult, ToolExecution } from '../../../loop/types';
-import { isInlineSkillType, type SkillDefinition } from '../../../skill';
-import { renderPrompt } from '../../../utils/render-prompt';
-import { toInputJsonSchema } from '../../support/input-schema';
-import { matchesGlobRuleSubject } from '../../support/rule-match';
-import skillDescriptionTemplate from './skill-tool.md?raw';
+import type { Agent } from "../../../agent";
+import type { SkillActivationOrigin } from "../../../agent/context";
+import { renderModelToolSkillPrompt } from "../../../agent/skill/prompt";
+import type { BuiltinTool } from "../../../agent/tool";
+import type { ExecutableToolResult, ToolExecution } from "../../../loop/types";
+import { isInlineSkillType, type SkillDefinition } from "../../../skill";
+import { renderPrompt } from "../../../utils/render-prompt";
+import { toInputJsonSchema } from "../../support/input-schema";
+import { matchesGlobRuleSubject } from "../../support/rule-match";
+import skillDescriptionTemplate from "./skill-tool.md?raw";
 
 export const MAX_SKILL_QUERY_DEPTH = 3;
 
@@ -33,11 +33,11 @@ export class NestedSkillTooDeepError extends Error {
   readonly depth: number;
 
   constructor(depth: number, skillName?: string) {
-    const label = skillName !== undefined ? ` "${skillName}"` : '';
+    const label = skillName !== undefined ? ` "${skillName}"` : "";
     super(
       `Nested skill invocation${label} exceeded the maximum depth of ${String(depth)} — refusing to recurse further.`,
     );
-    this.name = 'NestedSkillTooDeepError';
+    this.name = "NestedSkillTooDeepError";
     this.depth = depth;
     if (skillName !== undefined) this.skillName = skillName;
   }
@@ -75,9 +75,10 @@ export interface SkillToolOptions {
 }
 
 export class SkillTool implements BuiltinTool<SkillToolInput> {
-  readonly name = 'Skill';
+  readonly name = "Skill";
   readonly description: string = renderPrompt(skillDescriptionTemplate, {});
-  readonly parameters: Record<string, unknown> = toInputJsonSchema(SkillToolInputSchema);
+  readonly parameters: Record<string, unknown> =
+    toInputJsonSchema(SkillToolInputSchema);
 
   constructor(
     private readonly agent: Agent,
@@ -87,7 +88,7 @@ export class SkillTool implements BuiltinTool<SkillToolInput> {
   resolveExecution(args: SkillToolInput): ToolExecution {
     return {
       description: `Invoke skill ${args.skill}`,
-      display: { kind: 'skill_call', skill_name: args.skill, args: args.args },
+      display: { kind: "skill_call", skill_name: args.skill, args: args.args },
       approvalRule: this.name,
       matchesRule: (ruleArgs) => matchesGlobRuleSubject(ruleArgs, args.skill),
       execute: () => this.execution(args),
@@ -107,18 +108,23 @@ export class SkillTool implements BuiltinTool<SkillToolInput> {
     // child to depth+1 which violates the invariant. Throw a structured
     // error (rather than a soft tool-error) so Runtime can distinguish
     // "LLM mis-dispatched" from "safety net fired".
-    const currentDepth = this.options.initialQueryDepth ?? this.options.queryDepth ?? 0;
+    const currentDepth =
+      this.options.initialQueryDepth ?? this.options.queryDepth ?? 0;
     if (currentDepth >= MAX_SKILL_QUERY_DEPTH) {
       throw new NestedSkillTooDeepError(MAX_SKILL_QUERY_DEPTH, args.skill);
     }
 
     const skills = this.agent.skills;
     if (skills === null) {
-      return errorResult(`Skill "${args.skill}" not found in the current skill listing.`);
+      return errorResult(
+        `Skill "${args.skill}" not found in the current skill listing.`,
+      );
     }
     const skill = skills.registry.getSkill(args.skill);
     if (skill === undefined) {
-      return errorResult(`Skill "${args.skill}" not found in the current skill listing.`);
+      return errorResult(
+        `Skill "${args.skill}" not found in the current skill listing.`,
+      );
     }
     if (skill.metadata.disableModelInvocation === true) {
       // Keep the exact wording "can only be triggered by the user" so
@@ -128,7 +134,7 @@ export class SkillTool implements BuiltinTool<SkillToolInput> {
       );
     }
 
-    const skillArgs = args.args ?? '';
+    const skillArgs = args.args ?? "";
     if (!isInlineSkillType(skill.metadata.type)) {
       return errorResult(
         `Skill "${skill.name}" is not an inline skill and cannot be invoked by the model in v1.`,
@@ -136,13 +142,14 @@ export class SkillTool implements BuiltinTool<SkillToolInput> {
     }
 
     const origin = skillOrigin(skill, skillArgs, currentDepth);
-    const promptTrigger = origin.trigger === 'nested-skill' ? 'nested-skill' : 'model-tool';
+    const promptTrigger =
+      origin.trigger === "nested-skill" ? "nested-skill" : "model-tool";
     skills.recordActivation(origin);
     const skillContent = skills.registry.renderSkillPrompt(skill, skillArgs);
     this.agent.context.appendUserMessage(
       [
         {
-          type: 'text' as const,
+          type: "text" as const,
           text: renderModelToolSkillPrompt({
             skillName: skill.name,
             skillArgs,
@@ -171,11 +178,11 @@ function skillOrigin(
   currentDepth: number,
 ): SkillActivationOrigin {
   return {
-    kind: 'skill_activation',
+    kind: "skill_activation",
     activationId: randomUUID(),
     skillName: skill.name,
     skillArgs: skillArgs.length > 0 ? skillArgs : undefined,
-    trigger: currentDepth > 0 ? 'nested-skill' : 'model-tool',
+    trigger: currentDepth > 0 ? "nested-skill" : "model-tool",
     skillType: skill.metadata.type,
     skillPath: skill.path,
     skillSource: skill.source,

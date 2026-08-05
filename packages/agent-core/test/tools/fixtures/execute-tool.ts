@@ -3,8 +3,8 @@ import type {
   ExecutableToolContext,
   ExecutableToolResult,
   ToolExecution,
-} from '../../../src/loop';
-import { PathSecurityError } from '../../../src/tools/policies/path-access';
+} from "../../../src/loop";
+import { PathSecurityError } from "../../../src/tools/policies/path-access";
 
 export type TestExecutableToolContext<Input> = ExecutableToolContext & {
   readonly args: Input;
@@ -32,6 +32,8 @@ export async function executeTool<Input>(
   return execution.execute(executionContext);
 }
 
-function isPromiseLike(value: ToolExecution | Promise<ToolExecution>): value is Promise<ToolExecution> {
-  return typeof (value as Promise<ToolExecution>).then === 'function';
+function isPromiseLike(
+  value: ToolExecution | Promise<ToolExecution>,
+): value is Promise<ToolExecution> {
+  return typeof (value as Promise<ToolExecution>).then === "function";
 }

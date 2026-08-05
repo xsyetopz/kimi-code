@@ -1,8 +1,8 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { IntervalTimer } from '#/_base/utils/timer';
+import { IntervalTimer } from "#/_base/utils/timer";
 
-describe('IntervalTimer', () => {
+describe("IntervalTimer", () => {
   beforeEach(() => {
     vi.useFakeTimers();
   });
@@ -11,7 +11,7 @@ describe('IntervalTimer', () => {
     vi.useRealTimers();
   });
 
-  it('fires the runner repeatedly on the interval', () => {
+  it("fires the runner repeatedly on the interval", () => {
     const timer = new IntervalTimer();
     let count = 0;
     timer.cancelAndSet(() => {
@@ -24,7 +24,7 @@ describe('IntervalTimer', () => {
     timer.dispose();
   });
 
-  it('stops firing after cancel', () => {
+  it("stops firing after cancel", () => {
     const timer = new IntervalTimer();
     let count = 0;
     timer.cancelAndSet(() => {
@@ -39,7 +39,7 @@ describe('IntervalTimer', () => {
     expect(count).toBe(1);
   });
 
-  it('cancelAndSet replaces a previously scheduled handle', () => {
+  it("cancelAndSet replaces a previously scheduled handle", () => {
     const timer = new IntervalTimer();
     let a = 0;
     let b = 0;
@@ -56,7 +56,7 @@ describe('IntervalTimer', () => {
     timer.dispose();
   });
 
-  it('dispose is idempotent and stops the loop', () => {
+  it("dispose is idempotent and stops the loop", () => {
     const timer = new IntervalTimer();
     let count = 0;
     timer.cancelAndSet(() => {
@@ -69,7 +69,7 @@ describe('IntervalTimer', () => {
     expect(count).toBe(0);
   });
 
-  it('cancel on a fresh timer is a no-op', () => {
+  it("cancel on a fresh timer is a no-op", () => {
     const timer = new IntervalTimer();
     expect(() => timer.cancel()).not.toThrow();
     expect(timer.isSet()).toBe(false);

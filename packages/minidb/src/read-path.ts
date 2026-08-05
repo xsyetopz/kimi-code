@@ -7,13 +7,13 @@
 // the store / value reader / dt index / memory guard (LRU touch) are
 // injected, never the MiniDb class itself.
 
-import { canonRange, fromKStr, toKStr } from './value-codec.js';
-import type { Store } from './store.js';
-import type { ValueReader } from './value-reader.js';
-import type { DtIndex, DtRangeEntry } from './dt-index.js';
-import type { MemoryGuard } from './memory-guard.js';
-import type { RangeOptions } from './skiplist.js';
-import type { DocRecord, ScanEntry } from './types.js';
+import { canonRange, fromKStr, toKStr } from "./value-codec.js";
+import type { Store } from "./store.js";
+import type { ValueReader } from "./value-reader.js";
+import type { DtIndex, DtRangeEntry } from "./dt-index.js";
+import type { MemoryGuard } from "./memory-guard.js";
+import type { RangeOptions } from "./skiplist.js";
+import type { DocRecord, ScanEntry } from "./types.js";
 
 /** The owner-injected surface the read path needs (see the header). */
 export interface ReadPathDeps<V> {
@@ -29,7 +29,11 @@ export interface ReadPathDeps<V> {
 export class ReadPath<V> {
   constructor(private readonly deps: ReadPathDeps<V>) {}
 
-  *liveRecords(): Generator<{ key: Buffer; value: V | undefined; dt: Record<string, number> | null }> {
+  *liveRecords(): Generator<{
+    key: Buffer;
+    value: V | undefined;
+    dt: Record<string, number> | null;
+  }> {
     for (const { key, value, dt } of this.deps.store().entries()) {
       yield { key, value: this.deps.decode(value), dt };
     }
@@ -63,9 +67,9 @@ export class ReadPath<V> {
   async readValueAsync(kstr: string): Promise<Buffer | undefined> {
     const rec = this.deps.store().getRecord(kstr);
     if (!rec) return undefined;
-    if (rec.ref.kind === 'memory') return rec.ref.value;
+    if (rec.ref.kind === "memory") return rec.ref.value;
     const valueReader = this.deps.getValueReader();
-    if (!valueReader) throw new Error('ValueReader is not open');
+    if (!valueReader) throw new Error("ValueReader is not open");
     return valueReader.readAsync(rec.ref.loc);
   }
 
@@ -86,7 +90,11 @@ export class ReadPath<V> {
     if (value === undefined) return undefined;
     const r = this.deps.store().map.get(k);
     this.deps.memoryGuard.touchAccess(k);
-    return { key: fromKStr(toKStr(key)), value: this.deps.decode(value)!, dt: r?.dt ?? undefined };
+    return {
+      key: fromKStr(toKStr(key)),
+      value: this.deps.decode(value)!,
+      dt: r?.dt ?? undefined,
+    };
   }
 
   has(key: string | Buffer): boolean {
@@ -112,7 +120,11 @@ export class ReadPath<V> {
     const count = (opts as { limit?: number }).limit ?? Infinity;
     const out: ScanEntry<V>[] = [];
     for (const r of this.deps.store().scan({ ...canonRange(opts), count })) {
-      out.push({ key: r.key.toString(), value: this.deps.decode(r.value)!, dt: r.dt ?? undefined });
+      out.push({
+        key: r.key.toString(),
+        value: this.deps.decode(r.value)!,
+        dt: r.dt ?? undefined,
+      });
     }
     return out;
   }
@@ -121,7 +133,11 @@ export class ReadPath<V> {
     this.deps.ensureOpen();
     const out: ScanEntry<V>[] = [];
     for (const r of this.deps.store().prefix(toKStr(p), limit)) {
-      out.push({ key: r.key.toString(), value: this.deps.decode(r.value)!, dt: r.dt ?? undefined });
+      out.push({
+        key: r.key.toString(),
+        value: this.deps.decode(r.value)!,
+        dt: r.dt ?? undefined,
+      });
     }
     return out;
   }
@@ -130,15 +146,26 @@ export class ReadPath<V> {
     return this.deps.dt.columns();
   }
 
-  dtRange(col: string, opts: RangeOptions<number> & { limit?: number } = {}): (ScanEntry<V> & { dtValue: number })[] {
+  dtRange(
+    col: string,
+    opts: RangeOptions<number> & { limit?: number } = {},
+  ): (ScanEntry<V> & { dtValue: number })[] {
     this.deps.ensureOpen();
-    const rows = this.deps.dt.range(col, { ...opts, count: opts.limit ?? opts.count });
+    const rows = this.deps.dt.range(col, {
+      ...opts,
+      count: opts.limit ?? opts.count,
+    });
     const out: (ScanEntry<V> & { dtValue: number })[] = [];
     for (const { key, value: dtValue } of rows as DtRangeEntry[]) {
       const value = this.deps.store().get(key);
       if (value === undefined) continue;
       const r = this.deps.store().map.get(key);
-      out.push({ key: fromKStr(key), value: this.deps.decode(value)!, dt: r?.dt ?? undefined, dtValue });
+      out.push({
+        key: fromKStr(key),
+        value: this.deps.decode(value)!,
+        dt: r?.dt ?? undefined,
+        dtValue,
+      });
     }
     return out;
   }

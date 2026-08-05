@@ -8,8 +8,11 @@
  * mutating request continues.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
-import type { Event, IWaitUntil } from '#/_base/event';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
+import type { Event, IWaitUntil } from "#/_base/event";
 
 export type SessionToolPolicyChangedEvent = IWaitUntil;
 
@@ -23,4 +26,4 @@ export interface ISessionToolPolicy {
 }
 
 export const ISessionToolPolicy: ServiceIdentifier<ISessionToolPolicy> =
-  createDecorator<ISessionToolPolicy>('sessionToolPolicy');
+  createDecorator<ISessionToolPolicy>("sessionToolPolicy");

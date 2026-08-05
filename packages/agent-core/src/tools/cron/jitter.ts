@@ -27,8 +27,8 @@
  * of cheap arithmetic ops for a guarantee that there is no hidden
  * state to invalidate when a task is rescheduled.
  */
-import type { ParsedCronExpression } from './cron-expr';
-import { computeNextCronRun } from './cron-expr';
+import type { ParsedCronExpression } from "./cron-expr";
+import { computeNextCronRun } from "./cron-expr";
 
 /** Tunables for {@link jitteredNextCronRunMs} / {@link oneShotJitteredNextCronRunMs}. */
 export interface JitterConfig {
@@ -76,7 +76,7 @@ function fractionFromId(id: string): number {
 }
 
 function jitterDisabledByEnv(): boolean {
-  return process.env['KIMI_CRON_NO_JITTER'] === '1';
+  return process.env["KIMI_CRON_NO_JITTER"] === "1";
 }
 
 /**

@@ -1,6 +1,6 @@
 import { createDecorator } from "#/_base/di/instantiation";
 
-export type SwarmModeTrigger = 'manual' | 'task' | 'tool';
+export type SwarmModeTrigger = "manual" | "task" | "tool";
 
 export interface IAgentSwarmService {
   readonly _serviceBrand: undefined;
@@ -10,4 +10,5 @@ export interface IAgentSwarmService {
   exit(): void;
 }
 
-export const IAgentSwarmService = createDecorator<IAgentSwarmService>('agentSwarmService');
+export const IAgentSwarmService =
+  createDecorator<IAgentSwarmService>("agentSwarmService");

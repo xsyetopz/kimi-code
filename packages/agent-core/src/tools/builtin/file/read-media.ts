@@ -24,22 +24,29 @@
  * Read/Write/Edit.
  */
 
-import type { Kaos } from '@moonshot-ai/kaos';
+import type { Kaos } from "@moonshot-ai/kaos";
 import type {
   ContentPart,
   ModelCapability,
   VideoUploadInput as ProviderVideoUploadInput,
-} from '@moonshot-ai/kosong';
-import { z } from 'zod';
+} from "@moonshot-ai/kosong";
+import { z } from "zod";
 
-import type { BuiltinTool } from '../../../agent/tool';
-import { ToolAccesses } from '../../../loop/tool-access';
-import type { ExecutableToolResult, ToolExecution } from '../../../loop/types';
-import type { TelemetryClient } from '../../../telemetry';
-import { renderPrompt } from '../../../utils/render-prompt';
-import { resolvePathAccessPath } from '../../policies/path-access';
-import { MEDIA_SNIFF_BYTES, detectFileType, sniffImageDimensions } from '../../support/file-type';
-import { deliverVideoContent, type VideoUploader } from '../../support/video-delivery';
+import type { BuiltinTool } from "../../../agent/tool";
+import { ToolAccesses } from "../../../loop/tool-access";
+import type { ExecutableToolResult, ToolExecution } from "../../../loop/types";
+import type { TelemetryClient } from "../../../telemetry";
+import { renderPrompt } from "../../../utils/render-prompt";
+import { resolvePathAccessPath } from "../../policies/path-access";
+import {
+  MEDIA_SNIFF_BYTES,
+  detectFileType,
+  sniffImageDimensions,
+} from "../../support/file-type";
+import {
+  deliverVideoContent,
+  type VideoUploader,
+} from "../../support/video-delivery";
 import {
   IMAGE_BYTE_BUDGET,
   MAX_IMAGE_DECODE_BYTES,
@@ -48,16 +55,19 @@ import {
   formatByteSize,
   type ImageCompressionTelemetry,
   type ImageCropRegion,
-} from '../../support/image-compress';
+} from "../../support/image-compress";
 import {
   buildImageConversionGuidance,
   isModelAcceptedImageMime,
-} from '../../support/image-format-policy';
-import { ImageLimits } from '../../support/image-limits';
-import { toInputJsonSchema } from '../../support/input-schema';
-import { literalRulePattern, matchesPathRuleSubject } from '../../support/rule-match';
-import type { WorkspaceConfig } from '../../support/workspace';
-import readMediaDescriptionHead from './read-media.md?raw';
+} from "../../support/image-format-policy";
+import { ImageLimits } from "../../support/image-limits";
+import { toInputJsonSchema } from "../../support/input-schema";
+import {
+  literalRulePattern,
+  matchesPathRuleSubject,
+} from "../../support/rule-match";
+import type { WorkspaceConfig } from "../../support/workspace";
+import readMediaDescriptionHead from "./read-media.md?raw";
 
 // ── Constants ────────────────────────────────────────────────────────
 
@@ -72,9 +82,9 @@ function buildImageDeliveryLimitError(input: {
   return (
     `Image is too large to send safely after compression (${String(input.finalBytes)} bytes; ` +
     `limit ${String(input.readByteBudget)} bytes and ${String(input.maxEdge)}px on the longest edge). ` +
-    'The original image was not sent to the model. Do not retry the same file unchanged. ' +
-    'Use Bash or an available image-processing tool to create a smaller copy within both limits, ' +
-    'then call ReadMediaFile on the smaller copy.'
+    "The original image was not sent to the model. Do not retry the same file unchanged. " +
+    "Use Bash or an available image-processing tool to create a smaller copy within both limits, " +
+    "then call ReadMediaFile on the smaller copy."
   );
 }
 
@@ -82,18 +92,21 @@ function buildImageDecodeLimitError(finalBytes: number): string {
   return (
     `Image is too large to process safely for region or full_resolution (${String(finalBytes)} bytes; ` +
     `safe decode limit ${String(MAX_IMAGE_DECODE_BYTES)} bytes). ` +
-    'The original image was not sent to the model. Do not retry the same file unchanged. ' +
-    'Use Bash or an available image-processing tool to create a smaller copy or crop the needed ' +
-    'region into a separate image, then call ReadMediaFile on the resulting file.'
+    "The original image was not sent to the model. Do not retry the same file unchanged. " +
+    "Use Bash or an available image-processing tool to create a smaller copy or crop the needed " +
+    "region into a separate image, then call ReadMediaFile on the resulting file."
   );
 }
 
-function buildFullResolutionLimitError(path: string, finalBytes: number): string {
+function buildFullResolutionLimitError(
+  path: string,
+  finalBytes: number,
+): string {
   return (
     `"${path}" is ${String(finalBytes)} bytes (${formatByteSize(finalBytes)}), ` +
     `over the ${String(IMAGE_BYTE_BUDGET)}-byte (${formatByteSize(IMAGE_BYTE_BUDGET)}) ` +
-    'per-image limit, so full_resolution cannot be honored. ' +
-    'Use region to view a crop at full fidelity instead.'
+    "per-image limit, so full_resolution cannot be honored. " +
+    "Use region to view a crop at full fidelity instead."
   );
 }
 
@@ -107,30 +120,46 @@ export const ReadMediaFileInputSchema = z.object({
   path: z
     .string()
     .describe(
-      'Path to an image or video file. Relative paths resolve against the working directory; ' +
-        'a path outside the working directory must be absolute. ' +
-        'Directories and text files are not supported.',
+      "Path to an image or video file. Relative paths resolve against the working directory; " +
+        "a path outside the working directory must be absolute. " +
+        "Directories and text files are not supported.",
     ),
   region: z
     .object({
-      x: z.number().int().min(0).describe('Left edge of the crop, in original-image pixels.'),
-      y: z.number().int().min(0).describe('Top edge of the crop, in original-image pixels.'),
-      width: z.number().int().min(1).describe('Crop width, in original-image pixels.'),
-      height: z.number().int().min(1).describe('Crop height, in original-image pixels.'),
+      x: z
+        .number()
+        .int()
+        .min(0)
+        .describe("Left edge of the crop, in original-image pixels."),
+      y: z
+        .number()
+        .int()
+        .min(0)
+        .describe("Top edge of the crop, in original-image pixels."),
+      width: z
+        .number()
+        .int()
+        .min(1)
+        .describe("Crop width, in original-image pixels."),
+      height: z
+        .number()
+        .int()
+        .min(1)
+        .describe("Crop height, in original-image pixels."),
     })
     .optional()
     .describe(
-      'Images only: view just this rectangle of the image (original-image pixel coordinates). ' +
-        'Use after a downsampled full view to inspect fine detail — a region within the size ' +
-        'limits is delivered at full fidelity.',
+      "Images only: view just this rectangle of the image (original-image pixel coordinates). " +
+        "Use after a downsampled full view to inspect fine detail — a region within the size " +
+        "limits is delivered at full fidelity.",
     ),
   full_resolution: z
     .boolean()
     .optional()
     .describe(
-      'Images only: skip the default downscaling and view at native resolution. Fails with an ' +
-        'explicit error when the payload would exceed the per-image byte limit; use region for ' +
-        'files that large.',
+      "Images only: skip the default downscaling and view at native resolution. Fails with an " +
+        "explicit error when the payload would exceed the per-image byte limit; use region for " +
+        "files that large.",
     ),
 });
 
@@ -144,21 +173,23 @@ function buildDescription(capabilities: ModelCapability): string {
   const hasImage = capabilities.image_in;
   const hasVideo = capabilities.video_in;
   if (hasImage && hasVideo) {
-    lines.push('- This tool supports image and video files for the current model.');
+    lines.push(
+      "- This tool supports image and video files for the current model.",
+    );
   } else if (hasImage) {
     lines.push(
-      '- This tool supports image files for the current model.',
-      '- Video files are not supported by the current model.',
+      "- This tool supports image files for the current model.",
+      "- Video files are not supported by the current model.",
     );
   } else if (hasVideo) {
     lines.push(
-      '- This tool supports video files for the current model.',
-      '- Image files are not supported by the current model.',
+      "- This tool supports video files for the current model.",
+      "- Image files are not supported by the current model.",
     );
   } else {
-    lines.push('- The current model does not support image or video input.');
+    lines.push("- The current model does not support image or video input.");
   }
-  return lines.join('\n');
+  return lines.join("\n");
 }
 
 // ── System summary ───────────────────────────────────────────────────
@@ -170,7 +201,7 @@ function buildDescription(capabilities: ModelCapability): string {
  * as "the image is just blurry" and quietly degrades the model's work.
  */
 interface ImageDelivery {
-  readonly kind: 'untouched' | 'downsampled' | 'crop' | 'full';
+  readonly kind: "untouched" | "downsampled" | "crop" | "full";
   /** Pixel size of the payload actually sent; 0 when unknown. */
   readonly width: number;
   readonly height: number;
@@ -194,10 +225,13 @@ interface ImageDelivery {
  * model to re-read any media it generates or edits.
  */
 function buildMediaNote(input: {
-  readonly kind: 'image' | 'video';
+  readonly kind: "image" | "video";
   readonly mimeType: string;
   readonly byteSize: number;
-  readonly dimensions: { readonly width: number; readonly height: number } | null;
+  readonly dimensions: {
+    readonly width: number;
+    readonly height: number;
+  } | null;
   readonly delivery?: ImageDelivery | undefined;
 }): string {
   const parts: string[] = [
@@ -208,54 +242,56 @@ function buildMediaNote(input: {
   // Coordinate guidance is only emitted when the original size is actually
   // known — sniffing fails for some image formats (TIFF/ICO/HEIC/…), and
   // telling the model to use a size that is not in the block would mislead it.
-  if (input.kind === 'image' && input.dimensions) {
+  if (input.kind === "image" && input.dimensions) {
     parts.push(
       `Original dimensions: ${String(input.dimensions.width)}x${String(input.dimensions.height)} pixels.`,
     );
   }
   const delivery = input.delivery;
-  if (delivery?.kind === 'downsampled') {
+  if (delivery?.kind === "downsampled") {
     parts.push(
       `The attached image was downsampled to ${String(delivery.width)}x${String(delivery.height)} pixels ` +
         `(${delivery.mimeType}, ${formatByteSize(delivery.byteLength)}) to fit model limits; ` +
-        'fine detail may be lost.',
-      'To inspect fine detail, call ReadMediaFile again with the region parameter ' +
-        '(original-image pixel coordinates) to view a crop at full fidelity.',
+        "fine detail may be lost.",
+      "To inspect fine detail, call ReadMediaFile again with the region parameter " +
+        "(original-image pixel coordinates) to view a crop at full fidelity.",
     );
-  } else if (delivery?.kind === 'crop' && delivery.region) {
+  } else if (delivery?.kind === "crop" && delivery.region) {
     const { x, y, width, height } = delivery.region;
     parts.push(
       `Showing region (x=${String(x)}, y=${String(y)}, width=${String(width)}, height=${String(height)}) ` +
         `of the original image${
           delivery.resized === true
             ? `, downsampled to ${String(delivery.width)}x${String(delivery.height)} pixels`
-            : ' at native resolution'
+            : " at native resolution"
         }.`,
-      'To output coordinates in original-image pixels, locate them within this crop and add ' +
+      "To output coordinates in original-image pixels, locate them within this crop and add " +
         `the region offset (x=${String(x)}, y=${String(y)}).`,
     );
-  } else if (delivery?.kind === 'full') {
-    parts.push('Shown at native resolution; no downscaling applied.');
+  } else if (delivery?.kind === "full") {
+    parts.push("Shown at native resolution; no downscaling applied.");
   }
-  if (input.kind === 'image' && input.dimensions && delivery?.kind !== 'crop') {
+  if (input.kind === "image" && input.dimensions && delivery?.kind !== "crop") {
     parts.push(
-      'If you need to output coordinates, output relative coordinates first ' +
-        'and compute absolute coordinates using the original image size.',
+      "If you need to output coordinates, output relative coordinates first " +
+        "and compute absolute coordinates using the original image size.",
     );
   }
   parts.push(
-    'If you generate or edit images or videos via commands or scripts, ' +
-      'read the result back immediately before continuing.',
+    "If you generate or edit images or videos via commands or scripts, " +
+      "read the result back immediately before continuing.",
   );
-  return `<system>${parts.join(' ')}</system>`;
+  return `<system>${parts.join(" ")}</system>`;
 }
 
 // ── Implementation ───────────────────────────────────────────────────
 
 export class ReadMediaFileTool implements BuiltinTool<ReadMediaFileInput> {
-  readonly name = 'ReadMediaFile' as const;
+  readonly name = "ReadMediaFile" as const;
   readonly description: string;
-  readonly parameters: Record<string, unknown> = toInputJsonSchema(ReadMediaFileInputSchema);
+  readonly parameters: Record<string, unknown> = toInputJsonSchema(
+    ReadMediaFileInputSchema,
+  );
   private readonly compressTelemetry: ImageCompressionTelemetry | undefined;
   private readonly imageLimits: ImageLimits;
   constructor(
@@ -267,13 +303,17 @@ export class ReadMediaFileTool implements BuiltinTool<ReadMediaFileInput> {
     imageLimits?: ImageLimits,
   ) {
     if (!capabilities.image_in && !capabilities.video_in) {
-      const skip = new Error('ReadMediaFile requires image_in or video_in capability');
-      skip.name = 'SkipThisTool';
+      const skip = new Error(
+        "ReadMediaFile requires image_in or video_in capability",
+      );
+      skip.name = "SkipThisTool";
       throw skip;
     }
     this.description = buildDescription(capabilities);
     this.compressTelemetry =
-      telemetry === undefined ? undefined : { client: telemetry, source: 'read_media' };
+      telemetry === undefined
+        ? undefined
+        : { client: telemetry, source: "read_media" };
     this.imageLimits = imageLimits ?? new ImageLimits();
   }
 
@@ -301,12 +341,12 @@ export class ReadMediaFileTool implements BuiltinTool<ReadMediaFileInput> {
     const path = resolvePathAccessPath(args.path, {
       kaos: this.kaos,
       workspace: this.workspace,
-      operation: 'read',
+      operation: "read",
     });
     return {
       accesses: ToolAccesses.readFile(path),
       description: `Reading media: ${args.path}`,
-      display: { kind: 'file_io', operation: 'read', path },
+      display: { kind: "file_io", operation: "read", path },
       approvalRule: literalRulePattern(this.name, path),
       matchesRule: (ruleArgs) =>
         matchesPathRuleSubject(ruleArgs, path, {
@@ -323,36 +363,36 @@ export class ReadMediaFileTool implements BuiltinTool<ReadMediaFileInput> {
     safePath: string,
   ): Promise<ExecutableToolResult> {
     if (!args.path) {
-      return { isError: true, output: 'File path cannot be empty.' };
+      return { isError: true, output: "File path cannot be empty." };
     }
 
     try {
       // For media input, the bytes are authoritative; the extension is only
       // a fallback for formats that cannot be sniffed from the header.
       const header = await this.kaos.readBytes(safePath, MEDIA_SNIFF_BYTES);
-      const fileType = detectFileType(safePath, header, 'media');
+      const fileType = detectFileType(safePath, header, "media");
 
-      if (fileType.kind === 'text') {
+      if (fileType.kind === "text") {
         return {
           isError: true,
           output: `"${args.path}" is a text file. Use Read to read text files.`,
         };
       }
-      if (fileType.kind === 'unknown') {
+      if (fileType.kind === "unknown") {
         return {
           isError: true,
           output:
             `"${args.path}" is not a supported image or video file. ` +
-            'Use Read for text files, or Bash or an MCP tool for other binary formats.',
+            "Use Read for text files, or Bash or an MCP tool for other binary formats.",
         };
       }
 
-      if (fileType.kind === 'image' && !this.capabilities.image_in) {
+      if (fileType.kind === "image" && !this.capabilities.image_in) {
         return {
           isError: true,
           output:
-            'The current model does not support image input. ' +
-            'Tell the user to use a model with image input capability.',
+            "The current model does not support image input. " +
+            "Tell the user to use a model with image input capability.",
         };
       }
       // Formats outside the provider-accepted set (AVIF, HEIC, BMP, TIFF,
@@ -363,7 +403,10 @@ export class ReadMediaFileTool implements BuiltinTool<ReadMediaFileInput> {
       // and read the converted file. The accepted set and guidance live in
       // support/image-format-policy, the single source of truth every
       // ingestion point shares.
-      if (fileType.kind === 'image' && !isModelAcceptedImageMime(fileType.mimeType)) {
+      if (
+        fileType.kind === "image" &&
+        !isModelAcceptedImageMime(fileType.mimeType)
+      ) {
         return {
           isError: true,
           output: buildImageConversionGuidance(
@@ -373,12 +416,12 @@ export class ReadMediaFileTool implements BuiltinTool<ReadMediaFileInput> {
           ),
         };
       }
-      if (fileType.kind === 'video' && !this.capabilities.video_in) {
+      if (fileType.kind === "video" && !this.capabilities.video_in) {
         return {
           isError: true,
           output:
-            'The current model does not support video input. ' +
-            'Tell the user to use a model with video input capability.',
+            "The current model does not support video input. " +
+            "Tell the user to use a model with video input capability.",
         };
       }
 
@@ -395,15 +438,18 @@ export class ReadMediaFileTool implements BuiltinTool<ReadMediaFileInput> {
         };
       }
 
-      if (fileType.kind === 'video' && (args.region !== undefined || args.full_resolution === true)) {
+      if (
+        fileType.kind === "video" &&
+        (args.region !== undefined || args.full_resolution === true)
+      ) {
         return {
           isError: true,
-          output: 'region and full_resolution apply only to image files.',
+          output: "region and full_resolution apply only to image files.",
         };
       }
 
       if (
-        fileType.kind === 'image' &&
+        fileType.kind === "image" &&
         stat.stSize > MAX_IMAGE_DECODE_BYTES &&
         (args.region !== undefined || args.full_resolution === true)
       ) {
@@ -414,7 +460,7 @@ export class ReadMediaFileTool implements BuiltinTool<ReadMediaFileInput> {
       }
 
       if (
-        fileType.kind === 'image' &&
+        fileType.kind === "image" &&
         args.region === undefined &&
         args.full_resolution === true &&
         stat.stSize > IMAGE_BYTE_BUDGET
@@ -426,7 +472,9 @@ export class ReadMediaFileTool implements BuiltinTool<ReadMediaFileInput> {
       }
 
       const defaultImageLimits =
-        fileType.kind === 'image' && args.region === undefined && args.full_resolution !== true
+        fileType.kind === "image" &&
+        args.region === undefined &&
+        args.full_resolution !== true
           ? {
               maxEdge: this.imageLimits.maxEdgePx(),
               readByteBudget: this.imageLimits.readByteBudget(),
@@ -452,28 +500,37 @@ export class ReadMediaFileTool implements BuiltinTool<ReadMediaFileInput> {
       // model derives relative coordinates and scales them by the original
       // dimensions, so it must see the pre-compression size even when the
       // image_url below carries a downsampled copy.
-      let dimensions = fileType.kind === 'image' ? sniffImageDimensions(data) : null;
+      let dimensions =
+        fileType.kind === "image" ? sniffImageDimensions(data) : null;
       let mediaPart: ContentPart;
       let delivery: ImageDelivery | undefined;
-      if (fileType.kind === 'image') {
+      if (fileType.kind === "image") {
         if (args.region !== undefined) {
           // Explicit crop: read a rectangle of the original back, typically at
           // full fidelity, so a prior downsampled view can be zoomed into.
-          const outcome = await cropImageForModel(data, fileType.mimeType, args.region, {
-            skipResize: args.full_resolution === true,
-            maxEdge: this.imageLimits.maxEdgePx(),
-            telemetry: this.compressTelemetry,
-          });
+          const outcome = await cropImageForModel(
+            data,
+            fileType.mimeType,
+            args.region,
+            {
+              skipResize: args.full_resolution === true,
+              maxEdge: this.imageLimits.maxEdgePx(),
+              telemetry: this.compressTelemetry,
+            },
+          );
           if (!outcome.ok) {
-            return { isError: true, output: `Cannot read region from "${args.path}": ${outcome.error}` };
+            return {
+              isError: true,
+              output: `Cannot read region from "${args.path}": ${outcome.error}`,
+            };
           }
-          const base64 = Buffer.from(outcome.data).toString('base64');
+          const base64 = Buffer.from(outcome.data).toString("base64");
           mediaPart = {
-            type: 'image_url',
+            type: "image_url",
             imageUrl: { url: `data:${outcome.mimeType};base64,${base64}` },
           };
           delivery = {
-            kind: 'crop',
+            kind: "crop",
             width: outcome.width,
             height: outcome.height,
             byteLength: outcome.finalByteLength,
@@ -484,7 +541,10 @@ export class ReadMediaFileTool implements BuiltinTool<ReadMediaFileInput> {
           // The decode is authoritative: it covers formats and nonconforming
           // EXIF the header sniff cannot read, and region coordinates live
           // in the decoded space, so the note must report it.
-          dimensions = { width: outcome.originalWidth, height: outcome.originalHeight };
+          dimensions = {
+            width: outcome.originalWidth,
+            height: outcome.originalHeight,
+          };
         } else if (args.full_resolution === true) {
           // Native resolution on request — but the provider's per-image byte
           // ceiling is a hard limit, so refuse explicitly rather than degrade.
@@ -496,13 +556,13 @@ export class ReadMediaFileTool implements BuiltinTool<ReadMediaFileInput> {
               output: buildFullResolutionLimitError(args.path, data.length),
             };
           }
-          const base64 = Buffer.from(data).toString('base64');
+          const base64 = Buffer.from(data).toString("base64");
           mediaPart = {
-            type: 'image_url',
+            type: "image_url",
             imageUrl: { url: `data:${fileType.mimeType};base64,${base64}` },
           };
           delivery = {
-            kind: 'full',
+            kind: "full",
             width: dimensions?.width ?? 0,
             height: dimensions?.height ?? 0,
             byteLength: data.length,
@@ -518,11 +578,15 @@ export class ReadMediaFileTool implements BuiltinTool<ReadMediaFileInput> {
           // or codec failure, so enforce both delivery limits before creating
           // any model-visible media part.
           const { maxEdge, readByteBudget } = defaultImageLimits!;
-          const compressed = await compressImageForModel(data, fileType.mimeType, {
-            maxEdge,
-            byteBudget: readByteBudget,
-            telemetry: this.compressTelemetry,
-          });
+          const compressed = await compressImageForModel(
+            data,
+            fileType.mimeType,
+            {
+              maxEdge,
+              byteBudget: readByteBudget,
+              telemetry: this.compressTelemetry,
+            },
+          );
           if (
             compressed.finalByteLength > readByteBudget ||
             Math.max(compressed.width, compressed.height) > maxEdge
@@ -536,13 +600,13 @@ export class ReadMediaFileTool implements BuiltinTool<ReadMediaFileInput> {
               }),
             };
           }
-          const base64 = Buffer.from(compressed.data).toString('base64');
+          const base64 = Buffer.from(compressed.data).toString("base64");
           mediaPart = {
-            type: 'image_url',
+            type: "image_url",
             imageUrl: { url: `data:${compressed.mimeType};base64,${base64}` },
           };
           delivery = {
-            kind: compressed.changed ? 'downsampled' : 'untouched',
+            kind: compressed.changed ? "downsampled" : "untouched",
             width: compressed.width,
             height: compressed.height,
             byteLength: compressed.finalByteLength,
@@ -551,14 +615,21 @@ export class ReadMediaFileTool implements BuiltinTool<ReadMediaFileInput> {
           if (compressed.changed) {
             // Same as the crop path: once a decode happened, its dimensions
             // are authoritative over the header sniff.
-            dimensions = { width: compressed.originalWidth, height: compressed.originalHeight };
+            dimensions = {
+              width: compressed.originalWidth,
+              height: compressed.originalHeight,
+            };
           }
         }
       } else {
-        mediaPart = await this.videoContentPart(data, fileType.mimeType, safePath);
+        mediaPart = await this.videoContentPart(
+          data,
+          fileType.mimeType,
+          safePath,
+        );
       }
 
-      const tag = fileType.kind === 'image' ? 'image' : 'video';
+      const tag = fileType.kind === "image" ? "image" : "video";
       const openText = `<${tag} path="${safePath}">`;
       const closeText = `</${tag}>`;
 
@@ -571,9 +642,9 @@ export class ReadMediaFileTool implements BuiltinTool<ReadMediaFileInput> {
       });
 
       const output: ContentPart[] = [
-        { type: 'text', text: openText },
+        { type: "text", text: openText },
         mediaPart,
-        { type: 'text', text: closeText },
+        { type: "text", text: closeText },
       ];
 
       return { output, note, isError: false };

@@ -1,5 +1,5 @@
-import { createDecorator } from '#/_base/di/instantiation';
-import type { ToolDisclosure } from '#/tool/toolContract';
+import { createDecorator } from "#/_base/di/instantiation";
+import type { ToolDisclosure } from "#/tool/toolContract";
 
 export interface UserToolRegistration {
   readonly name: string;
@@ -17,4 +17,6 @@ export interface IAgentUserToolService {
   unregister(name: string): void;
 }
 
-export const IAgentUserToolService = createDecorator<IAgentUserToolService>('agentUserToolService');
+export const IAgentUserToolService = createDecorator<IAgentUserToolService>(
+  "agentUserToolService",
+);

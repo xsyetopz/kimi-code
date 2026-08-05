@@ -1,4 +1,4 @@
-import type { FinishReason } from './provider';
+import type { FinishReason } from "./provider";
 
 /**
  * Base error for all chat provider errors.
@@ -6,7 +6,7 @@ import type { FinishReason } from './provider';
 export class ChatProviderError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = 'ChatProviderError';
+    this.name = "ChatProviderError";
   }
 }
 
@@ -16,7 +16,7 @@ export class ChatProviderError extends Error {
 export class APIConnectionError extends ChatProviderError {
   constructor(message: string) {
     super(message);
-    this.name = 'APIConnectionError';
+    this.name = "APIConnectionError";
   }
 }
 
@@ -26,7 +26,7 @@ export class APIConnectionError extends ChatProviderError {
 export class APITimeoutError extends ChatProviderError {
   constructor(message: string) {
     super(message);
-    this.name = 'APITimeoutError';
+    this.name = "APITimeoutError";
   }
 }
 
@@ -59,7 +59,7 @@ export class APIStatusError extends ChatProviderError {
     traceId?: string | null,
   ) {
     super(message);
-    this.name = 'APIStatusError';
+    this.name = "APIStatusError";
     this.statusCode = statusCode;
     this.requestId = requestId ?? null;
     this.retryAfterMs = retryAfterMs ?? null;
@@ -80,7 +80,7 @@ export class APIContextOverflowError extends APIStatusError {
     traceId?: string | null,
   ) {
     super(statusCode, message, requestId, retryAfterMs, traceId);
-    this.name = 'APIContextOverflowError';
+    this.name = "APIContextOverflowError";
   }
 }
 
@@ -99,7 +99,7 @@ export class APIRequestTooLargeError extends APIStatusError {
     traceId?: string | null,
   ) {
     super(statusCode, message, requestId, retryAfterMs, traceId);
-    this.name = 'APIRequestTooLargeError';
+    this.name = "APIRequestTooLargeError";
   }
 }
 
@@ -115,7 +115,7 @@ export class APIProviderRateLimitError extends APIStatusError {
     traceId?: string | null,
   ) {
     super(429, message, requestId, retryAfterMs, traceId);
-    this.name = 'APIProviderRateLimitError';
+    this.name = "APIProviderRateLimitError";
   }
 }
 
@@ -142,7 +142,7 @@ export class APIProviderQuotaExhaustedError extends APIStatusError {
     traceId?: string | null,
   ) {
     super(429, message, requestId, retryAfterMs, traceId);
-    this.name = 'APIProviderQuotaExhaustedError';
+    this.name = "APIProviderQuotaExhaustedError";
   }
 }
 
@@ -161,7 +161,7 @@ export class APIEmptyResponseError extends ChatProviderError {
     } = {},
   ) {
     super(message);
-    this.name = 'APIEmptyResponseError';
+    this.name = "APIEmptyResponseError";
     this.finishReason = options.finishReason ?? null;
     this.rawFinishReason = options.rawFinishReason ?? null;
   }
@@ -175,7 +175,7 @@ export class APIEmptyResponseError extends ChatProviderError {
  * upstream code can recognize cancellation without SDK knowledge.
  */
 export function createAbortError(): DOMException {
-  return new DOMException('The operation was aborted.', 'AbortError');
+  return new DOMException("The operation was aborted.", "AbortError");
 }
 
 /**
@@ -188,12 +188,12 @@ export function createAbortError(): DOMException {
  *    stays SDK-free.
  */
 export function isAbortError(error: unknown): boolean {
-  if (error instanceof DOMException && error.name === 'AbortError') return true;
-  if (error instanceof Error && error.name === 'AbortError') return true;
+  if (error instanceof DOMException && error.name === "AbortError") return true;
+  if (error instanceof Error && error.name === "AbortError") return true;
   return (
-    typeof error === 'object' &&
+    typeof error === "object" &&
     error !== null &&
-    error.constructor?.name === 'APIUserAbortError'
+    error.constructor?.name === "APIUserAbortError"
   );
 }
 
@@ -307,13 +307,18 @@ export function isImageFormatError(error: unknown): boolean {
     if (error.statusCode !== 400) return false;
     const lowerMessage = error.message.toLowerCase();
     return (
-      IMAGE_FORMAT_STATUS_MESSAGE_PATTERNS.some((pattern) => pattern.test(lowerMessage)) ||
-      (MEDIA_TYPE_FIELD_PATTERN.test(lowerMessage) && lowerMessage.includes('image'))
+      IMAGE_FORMAT_STATUS_MESSAGE_PATTERNS.some((pattern) =>
+        pattern.test(lowerMessage),
+      ) ||
+      (MEDIA_TYPE_FIELD_PATTERN.test(lowerMessage) &&
+        lowerMessage.includes("image"))
     );
   }
   if (error instanceof ChatProviderError) {
     const lowerMessage = error.message.toLowerCase();
-    return IMAGE_FORMAT_PROVIDER_MESSAGE_PATTERNS.some((pattern) => pattern.test(lowerMessage));
+    return IMAGE_FORMAT_PROVIDER_MESSAGE_PATTERNS.some((pattern) =>
+      pattern.test(lowerMessage),
+    );
   }
   return false;
 }
@@ -390,7 +395,7 @@ const REQUEST_TOO_LARGE_MESSAGE_PATTERNS = [
 ] as const;
 
 const THINKING_EFFORT_CONFIG_DOCS_URL =
-  'https://moonshotai.github.io/kimi-code/en/configuration/config-files.html#thinking';
+  "https://moonshotai.github.io/kimi-code/en/configuration/config-files.html#thinking";
 
 const THINKING_EFFORT_STATUS_MESSAGE_PATTERNS = [
   /reasoning[_ .-]?effort/,
@@ -400,10 +405,17 @@ const THINKING_EFFORT_STATUS_MESSAGE_PATTERNS = [
   /invalid[\s\S]*effort/,
 ] as const;
 
-function appendThinkingEffortConfigHint(statusCode: number, message: string): string {
+function appendThinkingEffortConfigHint(
+  statusCode: number,
+  message: string,
+): string {
   if (statusCode !== 400 && statusCode !== 422) return message;
   const lowerMessage = message.toLowerCase();
-  if (!THINKING_EFFORT_STATUS_MESSAGE_PATTERNS.some((pattern) => pattern.test(lowerMessage))) {
+  if (
+    !THINKING_EFFORT_STATUS_MESSAGE_PATTERNS.some((pattern) =>
+      pattern.test(lowerMessage),
+    )
+  ) {
     return message;
   }
   if (message.includes(THINKING_EFFORT_CONFIG_DOCS_URL)) return message;
@@ -412,8 +424,10 @@ function appendThinkingEffortConfigHint(statusCode: number, message: string): st
 The provider rejected the configured thinking effort. Non-Kimi providers receive effort strings without client-side mapping; choose an effort supported by the selected model. For Kimi models, check support_efforts and default_effort. See ${THINKING_EFFORT_CONFIG_DOCS_URL}`;
 }
 
-export function isContextOverflowErrorCode(code: string | null | undefined): boolean {
-  return code === 'context_length_exceeded';
+export function isContextOverflowErrorCode(
+  code: string | null | undefined,
+): boolean {
+  return code === "context_length_exceeded";
 }
 
 export function normalizeAPIStatusError(
@@ -424,15 +438,32 @@ export function normalizeAPIStatusError(
   traceId?: string | null,
 ): APIStatusError {
   if (statusCode === 429) {
-    return new APIProviderRateLimitError(message, requestId, retryAfterMs, traceId);
+    return new APIProviderRateLimitError(
+      message,
+      requestId,
+      retryAfterMs,
+      traceId,
+    );
   }
   // Context overflow first: Vertex returns prompt-too-long as a 413, and a
   // token overflow must keep routing to compaction even on that status.
   if (isContextOverflowStatusError(statusCode, message)) {
-    return new APIContextOverflowError(statusCode, message, requestId, retryAfterMs, traceId);
+    return new APIContextOverflowError(
+      statusCode,
+      message,
+      requestId,
+      retryAfterMs,
+      traceId,
+    );
   }
   if (isRequestTooLargeStatusError(statusCode, message)) {
-    return new APIRequestTooLargeError(statusCode, message, requestId, retryAfterMs, traceId);
+    return new APIRequestTooLargeError(
+      statusCode,
+      message,
+      requestId,
+      retryAfterMs,
+      traceId,
+    );
   }
   return new APIStatusError(
     statusCode,
@@ -451,8 +482,8 @@ export function normalizeAPIStatusError(
  */
 function readResponseHeader(headers: unknown, name: string): string | null {
   return headers !== null &&
-    typeof headers === 'object' &&
-    typeof (headers as { get?: unknown }).get === 'function'
+    typeof headers === "object" &&
+    typeof (headers as { get?: unknown }).get === "function"
     ? (headers as { get(name: string): string | null }).get(name)
     : null;
 }
@@ -462,7 +493,7 @@ function readResponseHeader(headers: unknown, name: string): string | null {
  * (Kimi/KFC only). Returns `null` when the header is absent or empty.
  */
 export function parseTraceId(headers: unknown): string | null {
-  const raw = readResponseHeader(headers, 'x-trace-id');
+  const raw = readResponseHeader(headers, "x-trace-id");
   if (raw === null || raw === undefined || raw.length === 0) return null;
   return raw;
 }
@@ -475,23 +506,34 @@ export function parseTraceId(headers: unknown): string | null {
  * backoff directive.
  */
 export function parseRetryAfterMs(headers: unknown): number | null {
-  const raw = readResponseHeader(headers, 'retry-after');
+  const raw = readResponseHeader(headers, "retry-after");
   if (raw === null || raw === undefined) return null;
   const seconds = Number.parseInt(raw, 10);
   if (!Number.isFinite(seconds) || seconds < 0) return null;
   return seconds * 1000;
 }
 
-export function isContextOverflowStatusError(statusCode: number, message: string): boolean {
-  if (statusCode !== 400 && statusCode !== 413 && statusCode !== 422) return false;
+export function isContextOverflowStatusError(
+  statusCode: number,
+  message: string,
+): boolean {
+  if (statusCode !== 400 && statusCode !== 413 && statusCode !== 422)
+    return false;
   const lowerMessage = message.toLowerCase();
-  return CONTEXT_OVERFLOW_MESSAGE_PATTERNS.some((pattern) => pattern.test(lowerMessage));
+  return CONTEXT_OVERFLOW_MESSAGE_PATTERNS.some((pattern) =>
+    pattern.test(lowerMessage),
+  );
 }
 
-export function isRequestTooLargeStatusError(statusCode: number, message: string): boolean {
+export function isRequestTooLargeStatusError(
+  statusCode: number,
+  message: string,
+): boolean {
   if (statusCode !== 413) return false;
   const lowerMessage = message.toLowerCase();
-  return REQUEST_TOO_LARGE_MESSAGE_PATTERNS.some((pattern) => pattern.test(lowerMessage));
+  return REQUEST_TOO_LARGE_MESSAGE_PATTERNS.some((pattern) =>
+    pattern.test(lowerMessage),
+  );
 }
 
 // Strict providers reject a request whose assistant `tool_use`/`tool_calls` and
@@ -544,7 +586,9 @@ export function isToolExchangeAdjacencyError(error: unknown): boolean {
   if (error instanceof APIContextOverflowError) return false;
   if (error.statusCode !== 400 && error.statusCode !== 422) return false;
   const lowerMessage = error.message.toLowerCase();
-  return TOOL_EXCHANGE_ADJACENCY_MESSAGE_PATTERNS.some((pattern) => pattern.test(lowerMessage));
+  return TOOL_EXCHANGE_ADJACENCY_MESSAGE_PATTERNS.some((pattern) =>
+    pattern.test(lowerMessage),
+  );
 }
 
 // The broader family of structural request rejections a strict provider returns
@@ -580,7 +624,9 @@ export function isRecoverableRequestStructureError(error: unknown): boolean {
   if (error instanceof APIContextOverflowError) return false;
   if (error.statusCode !== 400 && error.statusCode !== 422) return false;
   const lowerMessage = error.message.toLowerCase();
-  return STRUCTURAL_REQUEST_MESSAGE_PATTERNS.some((pattern) => pattern.test(lowerMessage));
+  return STRUCTURAL_REQUEST_MESSAGE_PATTERNS.some((pattern) =>
+    pattern.test(lowerMessage),
+  );
 }
 
 export function isProviderRateLimitError(error: unknown): boolean {
@@ -593,25 +639,27 @@ export function isProviderRateLimitError(error: unknown): boolean {
   if (statusCode !== undefined) return statusCode === 429;
 
   const lowerMessage = errorMessage(error).toLowerCase();
-  return PROVIDER_RATE_LIMIT_MESSAGE_PATTERNS.some((pattern) => pattern.test(lowerMessage));
+  return PROVIDER_RATE_LIMIT_MESSAGE_PATTERNS.some((pattern) =>
+    pattern.test(lowerMessage),
+  );
 }
 
 function getStatusCode(error: unknown): number | undefined {
-  if (typeof error !== 'object' || error === null) return undefined;
+  if (typeof error !== "object" || error === null) return undefined;
 
   const record = error as Record<string, unknown>;
-  const statusCode = record['statusCode'];
-  if (typeof statusCode === 'number') return statusCode;
-  const status = record['status'];
-  if (typeof status === 'number') return status;
+  const statusCode = record["statusCode"];
+  if (typeof statusCode === "number") return statusCode;
+  const status = record["status"];
+  if (typeof status === "number") return status;
 
-  const response = record['response'];
-  if (typeof response !== 'object' || response === null) return undefined;
+  const response = record["response"];
+  if (typeof response !== "object" || response === null) return undefined;
   const responseRecord = response as Record<string, unknown>;
-  const responseStatusCode = responseRecord['statusCode'];
-  if (typeof responseStatusCode === 'number') return responseStatusCode;
-  const responseStatus = responseRecord['status'];
-  return typeof responseStatus === 'number' ? responseStatus : undefined;
+  const responseStatusCode = responseRecord["statusCode"];
+  if (typeof responseStatusCode === "number") return responseStatusCode;
+  const responseStatus = responseRecord["status"];
+  return typeof responseStatus === "number" ? responseStatus : undefined;
 }
 
 function errorMessage(error: unknown): string {

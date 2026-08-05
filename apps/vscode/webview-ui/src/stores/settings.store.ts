@@ -2,7 +2,12 @@ import { create } from "zustand";
 import { bridge } from "@/services";
 import { toast } from "@/components/ui/sonner";
 import type { ExtensionConfig } from "shared/types";
-import type { MCPServerConfig, ModelConfig, ThinkingMode, SlashCommandInfo } from "shared/legacy-sdk";
+import type {
+  MCPServerConfig,
+  ModelConfig,
+  ThinkingMode,
+  SlashCommandInfo,
+} from "shared/legacy-sdk";
 
 let settingsSaveRevision = 0;
 const MANAGED_KIMI_CODE_PROVIDER = "managed:kimi-code";
@@ -18,7 +23,9 @@ function saveConfigWithRollback(
     // would overwrite the user's latest choice.
     if (revision !== settingsSaveRevision) return;
     set(rollback);
-    toast.error(`Failed to save model settings: ${error instanceof Error ? error.message : String(error)}`);
+    toast.error(
+      `Failed to save model settings: ${error instanceof Error ? error.message : String(error)}`,
+    );
   });
 }
 
@@ -40,7 +47,10 @@ export function getModelThinkingMode(model: ModelConfig): ThinkingMode {
   if (model.capabilities.includes("always_thinking")) {
     return "always";
   }
-  if (model.capabilities.includes("thinking") || model.adaptive_thinking === true) {
+  if (
+    model.capabilities.includes("thinking") ||
+    model.adaptive_thinking === true
+  ) {
     return "switch";
   }
   return "none";
@@ -58,7 +68,9 @@ export interface ModelProviderGroup {
   models: ModelConfig[];
 }
 
-export function groupModelsByProvider(models: ModelConfig[]): ModelProviderGroup[] {
+export function groupModelsByProvider(
+  models: ModelConfig[],
+): ModelProviderGroup[] {
   const grouped = new Map<string, ModelConfig[]>();
   for (const model of models) {
     const group = grouped.get(model.provider);
@@ -72,7 +84,9 @@ export function groupModelsByProvider(models: ModelConfig[]): ModelProviderGroup
     .map(([provider, providerModels]) => ({
       provider,
       label: providerDisplayName(provider),
-      models: providerModels.toSorted((left, right) => left.name.localeCompare(right.name)),
+      models: providerModels.toSorted((left, right) =>
+        left.name.localeCompare(right.name),
+      ),
     }))
     .toSorted((left, right) => left.label.localeCompare(right.label));
 }
@@ -87,15 +101,21 @@ export function requiresManagedProviderLogin(
   return activeModel?.provider === MANAGED_KIMI_CODE_PROVIDER;
 }
 
-function defaultEffortForModel(model: ModelConfig, defaultThinking: boolean, configuredEffort?: string): string {
+function defaultEffortForModel(
+  model: ModelConfig,
+  defaultThinking: boolean,
+  configuredEffort?: string,
+): string {
   const mode = getModelThinkingMode(model);
   if (mode === "none") return "off";
   const efforts = model.support_efforts ?? [];
   if (efforts.length > 0) {
     const alwaysOn = model.capabilities.includes("always_thinking");
     if (!defaultThinking && !alwaysOn) return "off";
-    if (configuredEffort && efforts.includes(configuredEffort)) return configuredEffort;
-    if (model.default_effort && efforts.includes(model.default_effort)) return model.default_effort;
+    if (configuredEffort && efforts.includes(configuredEffort))
+      return configuredEffort;
+    if (model.default_effort && efforts.includes(model.default_effort))
+      return model.default_effort;
     return efforts[Math.floor(efforts.length / 2)] ?? "off";
   }
   if (mode === "always") return "on";
@@ -110,7 +130,10 @@ export function isVideoModel(model: ModelConfig): boolean {
   return model.capabilities.includes("video_in");
 }
 
-export function getModelById(models: ModelConfig[], id: string): ModelConfig | undefined {
+export function getModelById(
+  models: ModelConfig[],
+  id: string,
+): ModelConfig | undefined {
   return models.find((m) => m.id === id);
 }
 
@@ -119,7 +142,10 @@ export interface MediaRequirements {
   video: boolean;
 }
 
-export function getModelsForMedia(models: ModelConfig[], mediaReq: MediaRequirements): ModelConfig[] {
+export function getModelsForMedia(
+  models: ModelConfig[],
+  mediaReq: MediaRequirements,
+): ModelConfig[] {
   return models.filter((m) => {
     if (mediaReq.image && !isImageModel(m)) {
       return false;
@@ -135,8 +161,11 @@ export function getMediaFallbackModel(
   compatibleModels: ModelConfig[],
   currentModel?: ModelConfig,
 ): ModelConfig | undefined {
-  return compatibleModels.find((model) => model.provider === currentModel?.provider)
-    ?? compatibleModels[0];
+  return (
+    compatibleModels.find(
+      (model) => model.provider === currentModel?.provider,
+    ) ?? compatibleModels[0]
+  );
 }
 
 interface SettingsState {
@@ -168,7 +197,12 @@ interface SettingsState {
   setWorkDirModalOpen: (open: boolean) => void;
   setCurrentWorkDir: (workDir: string | null) => void;
   setWorkspaceRoot: (root: string | null) => void;
-  initModels: (models: ModelConfig[], defaultModel: string | null, defaultThinking: boolean, defaultThinkingEffort?: string) => void;
+  initModels: (
+    models: ModelConfig[],
+    defaultModel: string | null,
+    defaultThinking: boolean,
+    defaultThinkingEffort?: string,
+  ) => void;
   setWireSlashCommands: (commands: SlashCommandInfo[]) => void;
   setIsLoggedIn: (loggedIn: boolean) => void;
   getCurrentThinkingMode: () => ThinkingMode;
@@ -196,13 +230,23 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   setThinkingEffort: (thinkingEffort) => set({ thinkingEffort }),
 
   updateModel: (modelId) => {
-    const { models, defaultThinking, defaultThinkingEffort, currentModel, thinkingEffort: previousEffort } = get();
+    const {
+      models,
+      defaultThinking,
+      defaultThinkingEffort,
+      currentModel,
+      thinkingEffort: previousEffort,
+    } = get();
     const model = getModelById(models, modelId);
     if (!model) {
       return;
     }
 
-    const thinkingEffort = defaultEffortForModel(model, defaultThinking, defaultThinkingEffort);
+    const thinkingEffort = defaultEffortForModel(
+      model,
+      defaultThinking,
+      defaultThinkingEffort,
+    );
     set({ currentModel: modelId, thinkingEffort });
     saveConfigWithRollback(
       {
@@ -238,7 +282,13 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   },
 
   selectThinkingEffort: (effort) => {
-    const { models, currentModel, thinkingEffort: previousEffort, defaultThinking, defaultThinkingEffort } = get();
+    const {
+      models,
+      currentModel,
+      thinkingEffort: previousEffort,
+      defaultThinking,
+      defaultThinkingEffort,
+    } = get();
     const model = getModelById(models, currentModel);
     if (!model) return;
     // Match the TUI's commitEffort rule: a boolean "on" never reaches the
@@ -246,11 +296,20 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     // effort first. "on" remains valid only for genuine boolean models.
     let thinkingEffort = effort;
     if (thinkingEffort === "on" && getModelThinkingMode(model) === "effort") {
-      thinkingEffort = defaultEffortForModel(model, true, defaultThinkingEffort);
+      thinkingEffort = defaultEffortForModel(
+        model,
+        true,
+        defaultThinkingEffort,
+      );
     }
     const allowed = model.support_efforts ?? [];
     const alwaysOn = model.capabilities.includes("always_thinking");
-    if (thinkingEffort !== "off" && thinkingEffort !== "on" && !allowed.includes(thinkingEffort)) return;
+    if (
+      thinkingEffort !== "off" &&
+      thinkingEffort !== "on" &&
+      !allowed.includes(thinkingEffort)
+    )
+      return;
     if (alwaysOn && thinkingEffort === "off") return;
     // Re-confirming the effort already shown is not an explicit choice —
     // skip the state update and the config write entirely.
@@ -262,13 +321,23 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       // toggle is persisted), so it must not become the configured-effort
       // seed for future sessions.
       defaultThinkingEffort:
-        thinkingEffort !== "off" && thinkingEffort !== "on" && thinkingEffort !== allowed.at(-1)
+        thinkingEffort !== "off" &&
+        thinkingEffort !== "on" &&
+        thinkingEffort !== allowed.at(-1)
           ? thinkingEffort
           : defaultThinkingEffort,
     });
     saveConfigWithRollback(
-      { model: currentModel, thinking: thinkingEffort !== "off", effort: thinkingEffort },
-      { thinkingEffort: previousEffort, defaultThinking, defaultThinkingEffort },
+      {
+        model: currentModel,
+        thinking: thinkingEffort !== "off",
+        effort: thinkingEffort,
+      },
+      {
+        thinkingEffort: previousEffort,
+        defaultThinking,
+        defaultThinkingEffort,
+      },
       set,
     );
   },
@@ -285,12 +354,19 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
 
   setWorkspaceRoot: (workspaceRoot) => set({ workspaceRoot }),
 
-  initModels: (models, defaultModel, defaultThinking, defaultThinkingEffort) => {
+  initModels: (
+    models,
+    defaultModel,
+    defaultThinking,
+    defaultThinkingEffort,
+  ) => {
     settingsSaveRevision += 1;
     const initialModel = defaultModel || models[0]?.id || "";
     const model = getModelById(models, initialModel);
 
-    const thinkingEffort = model ? defaultEffortForModel(model, defaultThinking, defaultThinkingEffort) : "off";
+    const thinkingEffort = model
+      ? defaultEffortForModel(model, defaultThinking, defaultThinkingEffort)
+      : "off";
 
     set({
       models,

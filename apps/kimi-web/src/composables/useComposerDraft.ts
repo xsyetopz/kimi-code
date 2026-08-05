@@ -1,6 +1,11 @@
 // apps/kimi-web/src/composables/useComposerDraft.ts
-import { nextTick, ref, watch } from 'vue';
-import { draftStorageKey, safeGetString, safeRemove, safeSetString } from '../lib/storage';
+import { nextTick, ref, watch } from "vue";
+import {
+  draftStorageKey,
+  safeGetString,
+  safeRemove,
+  safeSetString,
+} from "../lib/storage";
 
 export interface ComposerDraftDeps {
   /** Active session id — scopes the persisted draft (getter for reactivity). */
@@ -20,7 +25,7 @@ export function useComposerDraft(deps: ComposerDraftDeps) {
   const { sessionId } = deps;
 
   function loadDraft(sid: string | undefined): string {
-    return safeGetString(draftStorageKey(sid)) ?? '';
+    return safeGetString(draftStorageKey(sid)) ?? "";
   }
   function saveDraft(sid: string | undefined, value: string): void {
     const key = draftStorageKey(sid);
@@ -38,7 +43,7 @@ export function useComposerDraft(deps: ComposerDraftDeps) {
     // The resting height and the upper cap live in CSS (`min-height` /
     // `max-height`); once the content outgrows the cap, `overflow-y: auto`
     // scrolls internally. This keeps a single source of truth for the bounds.
-    el.style.height = 'auto';
+    el.style.height = "auto";
     el.style.height = `${el.scrollHeight}px`;
   }
 
@@ -80,7 +85,7 @@ export function useComposerDraft(deps: ComposerDraftDeps) {
    * composer), causing the next mount to reload the stale draft.
    */
   function clearDraft(): void {
-    saveDraft(sessionId(), '');
+    saveDraft(sessionId(), "");
   }
 
   return { text, textareaRef, autosize, loadForEdit, clearDraft };

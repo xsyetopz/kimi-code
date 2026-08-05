@@ -5,9 +5,9 @@
  * files are owned by Core/SDK and intentionally do not live behind this module.
  */
 
-import { createHash } from 'node:crypto';
-import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { createHash } from "node:crypto";
+import { homedir } from "node:os";
+import { join } from "node:path";
 
 import {
   KIMI_CODE_BANNER_DIR_NAME,
@@ -24,7 +24,7 @@ import {
   KIMI_CODE_UPDATE_DIR_NAME,
   KIMI_CODE_UPDATE_ROLLOUT_LOG_FILE_NAME,
   KIMI_CODE_UPDATE_STATE_FILE_NAME,
-} from '#/constant/app';
+} from "#/constant/app";
 
 /**
  * Return the root data directory for Kimi Code.
@@ -64,28 +64,44 @@ export function getBinDir(): string {
  * Return the update cache file: `<dataDir>/updates/latest.json`.
  */
 export function getUpdateStateFile(): string {
-  return join(getDataDir(), KIMI_CODE_UPDATE_DIR_NAME, KIMI_CODE_UPDATE_STATE_FILE_NAME);
+  return join(
+    getDataDir(),
+    KIMI_CODE_UPDATE_DIR_NAME,
+    KIMI_CODE_UPDATE_STATE_FILE_NAME,
+  );
 }
 
 /**
  * Return the update install state file: `<dataDir>/updates/install.json`.
  */
 export function getUpdateInstallStateFile(): string {
-  return join(getDataDir(), KIMI_CODE_UPDATE_DIR_NAME, KIMI_CODE_UPDATE_INSTALL_STATE_FILE_NAME);
+  return join(
+    getDataDir(),
+    KIMI_CODE_UPDATE_DIR_NAME,
+    KIMI_CODE_UPDATE_INSTALL_STATE_FILE_NAME,
+  );
 }
 
 /**
  * Return the update install lock file: `<dataDir>/updates/install.lock`.
  */
 export function getUpdateInstallLockFile(): string {
-  return join(getDataDir(), KIMI_CODE_UPDATE_DIR_NAME, KIMI_CODE_UPDATE_INSTALL_LOCK_FILE_NAME);
+  return join(
+    getDataDir(),
+    KIMI_CODE_UPDATE_DIR_NAME,
+    KIMI_CODE_UPDATE_INSTALL_LOCK_FILE_NAME,
+  );
 }
 
 /**
  * Return the rollout decision log: `<dataDir>/updates/rollout.log`.
  */
 export function getUpdateRolloutLogFile(): string {
-  return join(getDataDir(), KIMI_CODE_UPDATE_DIR_NAME, KIMI_CODE_UPDATE_ROLLOUT_LOG_FILE_NAME);
+  return join(
+    getDataDir(),
+    KIMI_CODE_UPDATE_DIR_NAME,
+    KIMI_CODE_UPDATE_ROLLOUT_LOG_FILE_NAME,
+  );
 }
 
 /**
@@ -103,7 +119,11 @@ export function getPluginUpdateNoticeStateFile(): string {
  * Return the banner display state file: `<dataDir>/cache/banner/state.json`.
  */
 export function getBannerStateFile(): string {
-  return join(getCacheDir(), KIMI_CODE_BANNER_DIR_NAME, KIMI_CODE_BANNER_STATE_FILE_NAME);
+  return join(
+    getCacheDir(),
+    KIMI_CODE_BANNER_DIR_NAME,
+    KIMI_CODE_BANNER_STATE_FILE_NAME,
+  );
 }
 
 /**
@@ -111,6 +131,6 @@ export function getBannerStateFile(): string {
  * Layout: `<share_dir>/user-history/<md5(cwd)>.jsonl`.
  */
 export function getInputHistoryFile(workDir: string): string {
-  const hash = createHash('md5').update(workDir, 'utf-8').digest('hex');
+  const hash = createHash("md5").update(workDir, "utf-8").digest("hex");
   return join(getDataDir(), KIMI_CODE_INPUT_HISTORY_DIR_NAME, `${hash}.jsonl`);
 }

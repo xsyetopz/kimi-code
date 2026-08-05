@@ -1,10 +1,10 @@
-import { mkdir, readFile } from 'node:fs/promises';
-import { dirname, join } from 'pathe';
+import { mkdir, readFile } from "node:fs/promises";
+import { dirname, join } from "pathe";
 
-import { resolveKimiHome } from '#/config/path';
-import { McpServerConfigSchema, type McpServerConfig } from '#/config/schema';
-import { ErrorCodes, KimiError } from '#/errors';
-import { atomicWrite } from '#/utils/fs';
+import { resolveKimiHome } from "#/config/path";
+import { McpServerConfigSchema, type McpServerConfig } from "#/config/schema";
+import { ErrorCodes, KimiError } from "#/errors";
+import { atomicWrite } from "#/utils/fs";
 
 export type GlobalMcpServerConfig = McpServerConfig & { readonly name: string };
 
@@ -18,7 +18,7 @@ export class GlobalMcpConfigStore {
   readonly path: string;
 
   constructor(homeDir?: string) {
-    this.path = join(resolveKimiHome(homeDir), 'mcp.json');
+    this.path = join(resolveKimiHome(homeDir), "mcp.json");
   }
 
   async list(): Promise<readonly GlobalMcpServerConfig[]> {
@@ -27,12 +27,16 @@ export class GlobalMcpConfigStore {
 
   async get(name: string): Promise<GlobalMcpServerConfig> {
     const normalizedName = normalizeServerName(name);
-    const server = (await this.read()).servers.find((entry) => entry.name === normalizedName);
+    const server = (await this.read()).servers.find(
+      (entry) => entry.name === normalizedName,
+    );
     if (server !== undefined) return server;
     throw serverNotFound(normalizedName);
   }
 
-  async add(server: GlobalMcpServerConfig): Promise<readonly GlobalMcpServerConfig[]> {
+  async add(
+    server: GlobalMcpServerConfig,
+  ): Promise<readonly GlobalMcpServerConfig[]> {
     const normalized = parseServerInput(server);
     const file = await this.read();
     if (Object.hasOwn(file.rawServers, normalized.name)) {
@@ -48,7 +52,9 @@ export class GlobalMcpConfigStore {
     return this.list();
   }
 
-  async update(server: GlobalMcpServerConfig): Promise<readonly GlobalMcpServerConfig[]> {
+  async update(
+    server: GlobalMcpServerConfig,
+  ): Promise<readonly GlobalMcpServerConfig[]> {
     const normalized = parseServerInput(server);
     const file = await this.read();
     if (!Object.hasOwn(file.rawServers, normalized.name)) {
@@ -66,7 +72,9 @@ export class GlobalMcpConfigStore {
     const file = await this.read();
     if (!Object.hasOwn(file.rawServers, normalizedName)) return file.servers;
     const nextServers = Object.fromEntries(
-      Object.entries(file.rawServers).filter(([entryName]) => entryName !== normalizedName),
+      Object.entries(file.rawServers).filter(
+        ([entryName]) => entryName !== normalizedName,
+      ),
     );
     await this.write(file, nextServers);
     return this.list();
@@ -75,12 +83,15 @@ export class GlobalMcpConfigStore {
   private async read(): Promise<GlobalMcpConfigFile> {
     let text: string;
     try {
-      text = await readFile(this.path, 'utf-8');
+      text = await readFile(this.path, "utf-8");
     } catch (error: unknown) {
-      if (errorCode(error) === 'ENOENT') {
+      if (errorCode(error) === "ENOENT") {
         return { raw: {}, rawServers: {}, servers: [] };
       }
-      throw configError(`Failed to read ${this.path}: ${describeError(error)}`, error);
+      throw configError(
+        `Failed to read ${this.path}: ${describeError(error)}`,
+        error,
+      );
     }
 
     if (text.trim().length === 0) {
@@ -91,17 +102,26 @@ export class GlobalMcpConfigStore {
     try {
       parsed = JSON.parse(text) as unknown;
     } catch (error: unknown) {
-      throw configError(`Invalid JSON in ${this.path}: ${describeError(error)}`, error);
+      throw configError(
+        `Invalid JSON in ${this.path}: ${describeError(error)}`,
+        error,
+      );
     }
     if (!isRecord(parsed)) {
-      throw configError(`Invalid MCP config in ${this.path}: expected a JSON object`);
+      throw configError(
+        `Invalid MCP config in ${this.path}: expected a JSON object`,
+      );
     }
-    const rawServersValue = parsed['mcpServers'];
+    const rawServersValue = parsed["mcpServers"];
     if (rawServersValue !== undefined && !isRecord(rawServersValue)) {
-      throw configError(`Invalid MCP config in ${this.path}: "mcpServers" must be an object`);
+      throw configError(
+        `Invalid MCP config in ${this.path}: "mcpServers" must be an object`,
+      );
     }
     const rawServers = rawServersValue ?? {};
-    const servers = Object.entries(rawServers).map(([name, value]) => parseServer(name, value));
+    const servers = Object.entries(rawServers).map(([name, value]) =>
+      parseServer(name, value),
+    );
     return { raw: parsed, rawServers, servers };
   }
 
@@ -117,7 +137,9 @@ export class GlobalMcpConfigStore {
   }
 }
 
-function parseServerInput(server: GlobalMcpServerConfig): GlobalMcpServerConfig {
+function parseServerInput(
+  server: GlobalMcpServerConfig,
+): GlobalMcpServerConfig {
   return parseServer(normalizeServerName(server.name), server);
 }
 
@@ -140,11 +162,17 @@ function persistedEntry(server: GlobalMcpServerConfig): McpServerConfig {
 function normalizeServerName(name: string): string {
   const normalized = name.trim();
   if (normalized.length > 0) return normalized;
-  throw new KimiError(ErrorCodes.REQUEST_INVALID, 'MCP server name cannot be empty');
+  throw new KimiError(
+    ErrorCodes.REQUEST_INVALID,
+    "MCP server name cannot be empty",
+  );
 }
 
 function serverNotFound(name: string): KimiError {
-  return new KimiError(ErrorCodes.MCP_SERVER_NOT_FOUND, `MCP server "${name}" was not found`);
+  return new KimiError(
+    ErrorCodes.MCP_SERVER_NOT_FOUND,
+    `MCP server "${name}" was not found`,
+  );
 }
 
 function configError(message: string, cause?: unknown): KimiError {
@@ -153,7 +181,7 @@ function configError(message: string, cause?: unknown): KimiError {
 
 function errorCode(error: unknown): unknown {
   if (!isRecord(error)) return undefined;
-  return error['code'];
+  return error["code"];
 }
 
 function describeError(error: unknown): string {
@@ -161,5 +189,5 @@ function describeError(error: unknown): string {
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

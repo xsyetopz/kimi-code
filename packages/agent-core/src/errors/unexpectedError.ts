@@ -22,7 +22,7 @@ export type UnexpectedErrorHandler = (err: unknown) => void;
  */
 const defaultHandler: UnexpectedErrorHandler = (err) => {
   // eslint-disable-next-line no-console
-  console.error('[unexpected]', err);
+  console.error("[unexpected]", err);
 };
 
 let currentHandler: UnexpectedErrorHandler = defaultHandler;
@@ -32,7 +32,9 @@ let currentHandler: UnexpectedErrorHandler = defaultHandler;
  * `startServer` calls this once after the DI container is fully wired so
  * later exceptions route through `ILogService` instead of stderr.
  */
-export function setUnexpectedErrorHandler(handler: UnexpectedErrorHandler): void {
+export function setUnexpectedErrorHandler(
+  handler: UnexpectedErrorHandler,
+): void {
   currentHandler = handler;
 }
 
@@ -55,7 +57,12 @@ export function onUnexpectedError(err: unknown): void {
     currentHandler(err);
   } catch (handlerErr) {
     // eslint-disable-next-line no-console
-    console.error('[unexpected] handler threw', handlerErr, 'while reporting', err);
+    console.error(
+      "[unexpected] handler threw",
+      handlerErr,
+      "while reporting",
+      err,
+    );
   }
 }
 

@@ -1,9 +1,9 @@
-const ESC = '\u001B';
-const BEL = '\u0007';
-const ST = '\\';
+const ESC = "\u001B";
+const BEL = "\u0007";
+const ST = "\\";
 
 function isInsideTmux(): boolean {
-  return (process.env['TMUX'] ?? '').length > 0;
+  return (process.env["TMUX"] ?? "").length > 0;
 }
 
 /**
@@ -17,8 +17,11 @@ function isInsideTmux(): boolean {
  * a DCS passthrough with doubled ESC bytes (same convention as
  * `buildTerminalNotificationSequences`).
  */
-export function buildClipboardOSC52(text: string, insideTmux = isInsideTmux()): string {
-  const payload = Buffer.from(text, 'utf8').toString('base64');
+export function buildClipboardOSC52(
+  text: string,
+  insideTmux = isInsideTmux(),
+): string {
+  const payload = Buffer.from(text, "utf8").toString("base64");
   const sequence = `${ESC}]52;c;${payload}${BEL}`;
   if (!insideTmux) return sequence;
   const escaped = sequence.replaceAll(ESC, `${ESC}${ESC}`);

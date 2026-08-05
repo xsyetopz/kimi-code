@@ -1,13 +1,16 @@
-import { mkdtemp, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
-import { ISessionApprovalService, getLiveSessionById } from '@moonshot-ai/agent-core-v2';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import {
+  ISessionApprovalService,
+  getLiveSessionById,
+} from "@moonshot-ai/agent-core-v2";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { type RunningServer, startServer } from '../src/start';
-import { TEST_HOST_IDENTITY } from './helpers/hostIdentity';
-import { authHeaders } from './helpers/auth';
+import { type RunningServer, startServer } from "../src/start";
+import { TEST_HOST_IDENTITY } from "./helpers/hostIdentity";
+import { authHeaders } from "./helpers/auth";
 
 interface Envelope<T> {
   code: number;
@@ -38,19 +41,19 @@ interface ResolveWire {
   resolved_at: string;
 }
 
-describe('server-v2 /api/v1/sessions/{sid}/approvals', () => {
+describe("server-v2 /api/v1/sessions/{sid}/approvals", () => {
   let server: RunningServer | undefined;
   let home: string | undefined;
   let base: string;
 
   beforeEach(async () => {
-    home = await mkdtemp(join(tmpdir(), 'kimi-server-v2-approvals-'));
+    home = await mkdtemp(join(tmpdir(), "kimi-server-v2-approvals-"));
     server = await startServer({
       hostIdentity: TEST_HOST_IDENTITY,
-      host: '127.0.0.1',
+      host: "127.0.0.1",
       port: 0,
       homeDir: home,
-      logLevel: 'silent',
+      logLevel: "silent",
     });
     base = `http://127.0.0.1:${server.port}`;
   });
@@ -72,17 +75,19 @@ describe('server-v2 /api/v1/sessions/{sid}/approvals', () => {
   ): Promise<{ status: number; body: Envelope<T> }> {
     const hasBody = body !== undefined;
     const res = await fetch(`${base}${path}`, {
-      method: 'POST',
+      method: "POST",
       headers: authHeaders(
         server as RunningServer,
-        hasBody ? { 'content-type': 'application/json' } : {},
+        hasBody ? { "content-type": "application/json" } : {},
       ),
       body: hasBody ? JSON.stringify(body) : undefined,
     } as never);
     return { status: res.status, body: (await res.json()) as Envelope<T> };
   }
 
-  async function getJson<T>(path: string): Promise<{ status: number; body: Envelope<T> }> {
+  async function getJson<T>(
+    path: string,
+  ): Promise<{ status: number; body: Envelope<T> }> {
     const res = await fetch(`${base}${path}`, {
       headers: authHeaders(server as RunningServer),
     } as never);
@@ -90,7 +95,7 @@ describe('server-v2 /api/v1/sessions/{sid}/approvals', () => {
   }
 
   async function createSession(): Promise<string> {
-    const { body } = await postJson<{ id: string }>('/api/v1/sessions', {
+    const { body } = await postJson<{ id: string }>("/api/v1/sessions", {
       metadata: { cwd: home as string },
     });
     expect(body.code).toBe(0);
@@ -103,70 +108,88 @@ describe('server-v2 /api/v1/sessions/{sid}/approvals', () => {
     expect(handle).toBeDefined();
     const parked = handle!.accessor.get(ISessionApprovalService).enqueue({
       toolCallId,
-      toolName: 'Bash',
-      action: 'run',
-      display: { kind: 'command', command: 'echo hi' },
+      toolName: "Bash",
+      action: "run",
+      display: { kind: "command", command: "echo hi" },
     });
     return parked.id;
   }
 
-  it('lists a pending approval projected onto the wire shape', async () => {
+  it("lists a pending approval projected onto the wire shape", async () => {
     const sid = await createSession();
-    const aid = enqueueApproval(sid, 'tc-1');
+    const aid = enqueueApproval(sid, "tc-1");
 
-    const { body } = await getJson<ListWire>(`/api/v1/sessions/${sid}/approvals?status=pending`);
+    const { body } = await getJson<ListWire>(
+      `/api/v1/sessions/${sid}/approvals?status=pending`,
+    );
     expect(body.code).toBe(0);
     expect(body.data.items).toHaveLength(1);
     const item = body.data.items[0]!;
     expect(item.approval_id).toBe(aid);
     expect(item.session_id).toBe(sid);
-    expect(item.tool_call_id).toBe('tc-1');
-    expect(item.tool_name).toBe('Bash');
-    expect(item.action).toBe('run');
-    expect(item.tool_input_display).toEqual({ kind: 'command', command: 'echo hi' });
+    expect(item.tool_call_id).toBe("tc-1");
+    expect(item.tool_name).toBe("Bash");
+    expect(item.action).toBe("run");
+    expect(item.tool_input_display).toEqual({
+      kind: "command",
+      command: "echo hi",
+    });
     expect(Number.isNaN(Date.parse(item.created_at))).toBe(false);
     expect(Number.isNaN(Date.parse(item.expires_at))).toBe(false);
   });
 
-  it('resolves a pending approval', async () => {
+  it("resolves a pending approval", async () => {
     const sid = await createSession();
-    const aid = enqueueApproval(sid, 'tc-2');
+    const aid = enqueueApproval(sid, "tc-2");
 
-    const { body } = await postJson<ResolveWire>(`/api/v1/sessions/${sid}/approvals/${aid}`, {
-      decision: 'approved',
-    });
+    const { body } = await postJson<ResolveWire>(
+      `/api/v1/sessions/${sid}/approvals/${aid}`,
+      {
+        decision: "approved",
+      },
+    );
     expect(body.code).toBe(0);
     expect(body.data.resolved).toBe(true);
     expect(Number.isNaN(Date.parse(body.data.resolved_at))).toBe(false);
 
-    const listed = await getJson<ListWire>(`/api/v1/sessions/${sid}/approvals?status=pending`);
+    const listed = await getJson<ListWire>(
+      `/api/v1/sessions/${sid}/approvals?status=pending`,
+    );
     expect(listed.body.data.items).toHaveLength(0);
   });
 
-  it('returns 40902 on a duplicate resolve (recently-resolved window)', async () => {
+  it("returns 40902 on a duplicate resolve (recently-resolved window)", async () => {
     const sid = await createSession();
-    const aid = enqueueApproval(sid, 'tc-3');
+    const aid = enqueueApproval(sid, "tc-3");
     await postJson<ResolveWire>(`/api/v1/sessions/${sid}/approvals/${aid}`, {
-      decision: 'approved',
+      decision: "approved",
     });
 
-    const dup = await postJson<{ resolved: false }>(`/api/v1/sessions/${sid}/approvals/${aid}`, {
-      decision: 'approved',
-    });
+    const dup = await postJson<{ resolved: false }>(
+      `/api/v1/sessions/${sid}/approvals/${aid}`,
+      {
+        decision: "approved",
+      },
+    );
     expect(dup.body.code).toBe(40902);
     expect(dup.body.data).toEqual({ resolved: false });
   });
 
-  it('returns 40404 for an unknown approval id', async () => {
+  it("returns 40404 for an unknown approval id", async () => {
     const sid = await createSession();
-    const { body } = await postJson<null>(`/api/v1/sessions/${sid}/approvals/nope`, {
-      decision: 'rejected',
-    });
+    const { body } = await postJson<null>(
+      `/api/v1/sessions/${sid}/approvals/nope`,
+      {
+        decision: "rejected",
+      },
+    );
     expect(body.code).toBe(40404);
   });
 
-  it('returns 40401 for an unknown session', async () => {
-    const { body } = await getJson<null>('/api/v1/sessions/nope/approvals?status=pending');
+  it("returns 40401 for an unknown session", async () => {
+    const { body } = await getJson<null>(
+      "/api/v1/sessions/nope/approvals?status=pending",
+    );
     expect(body.code).toBe(40401);
   });
 });

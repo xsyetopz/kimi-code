@@ -7,7 +7,12 @@ import { toast } from "@/components/ui/sonner";
 
 import { useSettingsStore } from "./settings.store";
 import { processEvent } from "./event-handlers";
-import type { StatusUpdate, ContentPart, QuestionRequest, ToolResult } from "shared/legacy-sdk";
+import type {
+  StatusUpdate,
+  ContentPart,
+  QuestionRequest,
+  ToolResult,
+} from "shared/legacy-sdk";
 import type { UIStreamEvent } from "shared/types";
 
 const HANDSHAKE_TIMEOUT_MS = 30_000;
@@ -63,7 +68,12 @@ export interface TokenUsage {
 }
 
 function createEmptyTokenUsage(): TokenUsage {
-  return { input_other: 0, output: 0, input_cache_read: 0, input_cache_creation: 0 };
+  return {
+    input_other: 0,
+    output: 0,
+    input_cache_read: 0,
+    input_cache_creation: 0,
+  };
 }
 
 export interface MediaInConversation {
@@ -141,7 +151,11 @@ function clearAllInlineErrors(draft: ChatState): void {
   }
 }
 
-function doSend(state: ChatState, content: string | ContentPart[], model: string) {
+function doSend(
+  state: ChatState,
+  content: string | ContentPart[],
+  model: string,
+) {
   const { sessionId, planMode } = state;
   const { thinkingEffort } = useSettingsStore.getState();
 
@@ -160,7 +174,13 @@ function doSend(state: ChatState, content: string | ContentPart[], model: string
   }, HANDSHAKE_TIMEOUT_MS);
 
   void bridge
-    .streamChat(content, model, thinkingEffort, planMode, sessionId ?? undefined)
+    .streamChat(
+      content,
+      model,
+      thinkingEffort,
+      planMode,
+      sessionId ?? undefined,
+    )
     .catch((error: unknown) => {
       const detail = error instanceof Error ? error.message : String(error);
       useChatStore.getState().processEvent({
@@ -192,8 +212,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
     const { draftMedia, isStreaming } = get();
     const { currentModel } = useSettingsStore.getState();
 
-    const readyMedia = draftMedia.filter((m) => m.dataUri).map((m) => m.dataUri!);
-    const content = readyMedia.length > 0 ? Content.build(text, readyMedia) : text;
+    const readyMedia = draftMedia
+      .filter((m) => m.dataUri)
+      .map((m) => m.dataUri!);
+    const content =
+      readyMedia.length > 0 ? Content.build(text, readyMedia) : text;
 
     if (Content.isEmpty(content)) {
       return;
@@ -252,13 +275,21 @@ export const useChatStore = create<ChatState>((set, get) => ({
     // Mid-turn warnings (terminal === false) leave the turn, the composer, and
     // the queued messages untouched — the engine is still streaming, so they
     // are surfaced as a transient toast only.
-    if (event.type === "error" && "terminal" in event && event.terminal === false) {
+    if (
+      event.type === "error" &&
+      "terminal" in event &&
+      event.terminal === false
+    ) {
       clearHandshakeTimer();
       toast.warning(event.message);
       return;
     }
     // Clear handshake timeout on receiving valid response
-    if (event.type === "TurnBegin" || event.type === "StepBegin" || event.type === "ContentPart") {
+    if (
+      event.type === "TurnBegin" ||
+      event.type === "StepBegin" ||
+      event.type === "ContentPart"
+    ) {
       clearHandshakeTimer();
       set({ handshakeReceived: true });
     } else if (event.type === "stream_complete" || event.type === "error") {
@@ -374,7 +405,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   updateDraftMedia: (id, dataUri) => {
     set((s) => ({
-      draftMedia: s.draftMedia.map((m) => (m.id === id ? { ...m, dataUri } : m)),
+      draftMedia: s.draftMedia.map((m) =>
+        m.id === id ? { ...m, dataUri } : m,
+      ),
     }));
   },
 
@@ -430,7 +463,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
   respondQuestion: async (answers) => {
     const { pendingQuestion } = get();
     if (!pendingQuestion) return;
-    await bridge.respondQuestion(pendingQuestion.id, pendingQuestion.id, answers);
+    await bridge.respondQuestion(
+      pendingQuestion.id,
+      pendingQuestion.id,
+      answers,
+    );
     set({ pendingQuestion: null });
   },
 

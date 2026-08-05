@@ -1,7 +1,7 @@
-import { cp, mkdir, readdir, rename, rm, stat } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
-import { join } from 'node:path';
-import { sourceSkillsDir, targetSkillsDir } from '../paths.js';
+import { cp, mkdir, readdir, rename, rm, stat } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+import { sourceSkillsDir, targetSkillsDir } from "../paths.js";
 
 export interface SkillsStepInput {
   readonly sourceHome: string;
@@ -22,7 +22,9 @@ export interface SkillsStepResult {
  * ignores anything it cannot parse, so passing it through preserves
  * arbitrary user assets without imposing a schema here.
  */
-export async function migrateSkillsStep(input: SkillsStepInput): Promise<SkillsStepResult> {
+export async function migrateSkillsStep(
+  input: SkillsStepInput,
+): Promise<SkillsStepResult> {
   const srcDir = sourceSkillsDir(input.sourceHome);
   const tgtDir = targetSkillsDir(input.targetHome);
 
@@ -65,7 +67,11 @@ export async function migrateSkillsStep(input: SkillsStepInput): Promise<SkillsS
     // re-run would then `existsSync` and skip.
     const tmpPath = `${tgtPath}.${process.pid}.tmp`;
     try {
-      await cp(srcPath, tmpPath, { recursive: true, errorOnExist: false, force: true });
+      await cp(srcPath, tmpPath, {
+        recursive: true,
+        errorOnExist: false,
+        force: true,
+      });
       await rename(tmpPath, tgtPath);
     } catch (err) {
       await rm(tmpPath, { recursive: true, force: true }).catch(() => {});

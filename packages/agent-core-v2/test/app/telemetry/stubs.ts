@@ -6,12 +6,12 @@
  * `../telemetry/stubs`).
  */
 
-import type { ServiceRegistration } from '#/_base/di/test';
+import type { ServiceRegistration } from "#/_base/di/test";
 import {
   ITelemetryService,
   type TelemetryContextPatch,
   type TelemetryProperties,
-} from '#/app/telemetry/telemetry';
+} from "#/app/telemetry/telemetry";
 
 export interface TelemetryRecord {
   readonly event: string;
@@ -36,7 +36,8 @@ export function recordingTelemetry(
             : { ...currentContext, ...properties },
       });
     },
-    track2: (event, properties) => service.track(event, properties as TelemetryProperties),
+    track2: (event, properties) =>
+      service.track(event, properties as TelemetryProperties),
     withContext(patch: TelemetryContextPatch) {
       return recordingTelemetry(records, { ...currentContext, ...patch });
     },

@@ -15,12 +15,21 @@
  * NOT here. The peer-service interfaces stay SDK-shaped.
  */
 
-import type { ApprovalRequest, ApprovalResponse, Event, QuestionRequest, QuestionResult, SDKAPI, ToolCallRequest, ToolCallResponse } from '../../rpc';
+import type {
+  ApprovalRequest,
+  ApprovalResponse,
+  Event,
+  QuestionRequest,
+  QuestionResult,
+  SDKAPI,
+  ToolCallRequest,
+  ToolCallResponse,
+} from "../../rpc";
 
-import type { IApprovalService } from '../approval/approval';
-import type { IEventService } from '../event/event';
-import type { ILogService } from '../logger/logger';
-import type { IQuestionService } from '../question/question';
+import type { IApprovalService } from "../approval/approval";
+import type { IEventService } from "../event/event";
+import type { ILogService } from "../logger/logger";
+import type { IQuestionService } from "../question/question";
 
 export interface CoreProcessClientDeps {
   readonly eventService: IEventService;
@@ -40,7 +49,7 @@ export class BridgeClientAPI implements SDKAPI {
     const e = event as { type?: string; sessionId?: string; agentId?: string };
     this.deps.logService.debug(
       { type: e.type, sessionId: e.sessionId, agentId: e.agentId },
-      '[DBG coreProcessClient.emitEvent]',
+      "[DBG coreProcessClient.emitEvent]",
     );
     this.deps.eventService.publish(event);
   }

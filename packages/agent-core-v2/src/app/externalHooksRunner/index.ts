@@ -5,5 +5,5 @@
  * App-scope runner binding into the scope registry.
  */
 
-export * from './externalHooksRunner';
-export * from './externalHooksRunnerService';
+export * from "./externalHooksRunner";
+export * from "./externalHooksRunnerService";

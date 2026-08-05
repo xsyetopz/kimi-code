@@ -14,28 +14,28 @@
 // (acquire/renew/release) are serialized through a per-instance promise
 // chain, so no interleaving can re-publish the lock after it was released.
 
-import fs from 'node:fs/promises';
-import fsSync from 'node:fs';
-import path from 'node:path';
-import { randomUUID } from 'node:crypto';
-import { renameReplace } from './rename-replace.js';
-import { createSerializer } from './serialize.js';
+import fs from "node:fs/promises";
+import fsSync from "node:fs";
+import path from "node:path";
+import { randomUUID } from "node:crypto";
+import { renameReplace } from "./rename-replace.js";
+import { createSerializer } from "./serialize.js";
 
 export class LockError extends Error {
-  readonly code = 'ELOCKED';
+  readonly code = "ELOCKED";
   constructor(message: string) {
     super(message);
-    this.name = 'LockError';
+    this.name = "LockError";
   }
 }
 
 function pidAlive(pid: unknown): boolean {
-  if (!pid || typeof pid !== 'number') return false;
+  if (!pid || typeof pid !== "number") return false;
   try {
     process.kill(pid, 0);
     return true;
   } catch (e) {
-    return (e as NodeJS.ErrnoException).code === 'EPERM';
+    return (e as NodeJS.ErrnoException).code === "EPERM";
   }
 }
 
@@ -66,7 +66,7 @@ const TAKEOVER_SETTLE_MAX_MS = 2_000;
 function hookExit(): void {
   if (exitHooked) return;
   exitHooked = true;
-  process.on('beforeExit', () => {
+  process.on("beforeExit", () => {
     for (const lock of HELD) lock.releaseSync();
   });
 }
@@ -90,7 +90,11 @@ export class LockFile {
 
   /** File body for every file this instance publishes (lock, bid, watch). */
   private payload(): string {
-    return JSON.stringify({ pid: process.pid, ts: Date.now(), token: this.token });
+    return JSON.stringify({
+      pid: process.pid,
+      ts: Date.now(),
+      token: this.token,
+    });
   }
 
   /** Try to acquire the lock exactly once. Returns true when this call created
@@ -161,17 +165,19 @@ export class LockFile {
           } catch (e) {
             const code = (e as NodeJS.ErrnoException).code;
             const epermRetryable =
-              code === 'EPERM' && process.platform === 'win32' && attempt < 50;
+              code === "EPERM" && process.platform === "win32" && attempt < 50;
             if (!epermRetryable) {
               await fs.unlink(bid).catch(() => {});
               // EEXIST races another creator; a persistent EPERM (Windows
               // retries exhausted) means some holder kept the path pinned —
               // either way the corpse could not be displaced this round, so
               // decline like a live lock and let callers retry higher up.
-              if (code === 'EEXIST' || code === 'EPERM') return false;
+              if (code === "EEXIST" || code === "EPERM") return false;
               throw e;
             }
-            await new Promise((r) => setTimeout(r, 20 + Math.floor(Math.random() * 30)));
+            await new Promise((r) =>
+              setTimeout(r, 20 + Math.floor(Math.random() * 30)),
+            );
           }
         }
       } catch (e) {
@@ -182,7 +188,10 @@ export class LockFile {
       // Adaptive settle: scale with how long our own attempt took (a stalled
       // machine stalls every bidder), floored and capped (see the constants).
       const elapsedMs = Date.now() - attemptStart;
-      let settleMs = Math.min(TAKEOVER_SETTLE_MAX_MS, Math.max(TAKEOVER_SETTLE_BASE_MS, elapsedMs * 4));
+      let settleMs = Math.min(
+        TAKEOVER_SETTLE_MAX_MS,
+        Math.max(TAKEOVER_SETTLE_BASE_MS, elapsedMs * 4),
+      );
       for (;;) {
         await new Promise((resolve) => setTimeout(resolve, settleMs));
         const cur = await this.inspect();
@@ -207,7 +216,7 @@ export class LockFile {
     const prefix = `${path.basename(this.path)}.watch-`;
     for (const f of await fs.readdir(dir).catch(() => [] as string[])) {
       if (!f.startsWith(prefix)) continue;
-      const pid = Number(f.slice(prefix.length).split('-')[0]);
+      const pid = Number(f.slice(prefix.length).split("-")[0]);
       if (Number.isInteger(pid) && pid !== process.pid && !pidAlive(pid)) {
         await fs.unlink(path.join(dir, f)).catch(() => {});
       }
@@ -225,15 +234,20 @@ export class LockFile {
     const prefix = `${path.basename(this.path)}.watch-`;
     for (const f of await fs.readdir(dir).catch(() => [] as string[])) {
       if (!f.startsWith(prefix)) continue;
-      const pid = Number(f.slice(prefix.length).split('-')[0]);
+      const pid = Number(f.slice(prefix.length).split("-")[0]);
       if (!Number.isInteger(pid)) continue;
       let token: string | undefined;
       try {
-        token = (JSON.parse(await fs.readFile(path.join(dir, f), 'utf8')) as { token?: string }).token;
+        token = (
+          JSON.parse(await fs.readFile(path.join(dir, f), "utf8")) as {
+            token?: string;
+          }
+        ).token;
       } catch {
         token = undefined; // unreadable/partial line: fall back to the pid in the name
       }
-      if (token !== undefined ? token === this.token : pid === process.pid) continue;
+      if (token !== undefined ? token === this.token : pid === process.pid)
+        continue;
       if (pidAlive(pid)) return true;
       await fs.unlink(path.join(dir, f)).catch(() => {});
     }
@@ -249,7 +263,7 @@ export class LockFile {
       this.markHeld();
       return true;
     } catch (e) {
-      if ((e as NodeJS.ErrnoException).code !== 'EEXIST') throw e;
+      if ((e as NodeJS.ErrnoException).code !== "EEXIST") throw e;
       return false;
     } finally {
       await fs.unlink(tmp).catch(() => {});
@@ -259,13 +273,20 @@ export class LockFile {
   /** Read the lock file and decide its state. null = the file vanished.
    *  `mine` is decided by the owner token, `alive` still by pid liveness: a
    *  legacy tokenless line is never mine and follows the stale rules. */
-  private async inspect(): Promise<{ ino: number | bigint; alive: boolean; mine: boolean } | null> {
+  private async inspect(): Promise<{
+    ino: number | bigint;
+    alive: boolean;
+    mine: boolean;
+  } | null> {
     let raw: string;
     let st: { ino: number | bigint };
     try {
-      [raw, st] = await Promise.all([fs.readFile(this.path, 'utf8'), fs.stat(this.path)]);
+      [raw, st] = await Promise.all([
+        fs.readFile(this.path, "utf8"),
+        fs.stat(this.path),
+      ]);
     } catch (e) {
-      if ((e as NodeJS.ErrnoException).code === 'ENOENT') return null;
+      if ((e as NodeJS.ErrnoException).code === "ENOENT") return null;
       throw e;
     }
     let pid: number | undefined;
@@ -277,17 +298,25 @@ export class LockFile {
     } catch {
       pid = undefined; // unparsable content looks abandoned, same as a dead PID
     }
-    return { ino: st.ino, alive: pidAlive(pid), mine: this.token !== null && token === this.token };
+    return {
+      ino: st.ino,
+      alive: pidAlive(pid),
+      mine: this.token !== null && token === this.token,
+    };
   }
 
-  private inspectSync(): { ino: number | bigint; alive: boolean; mine: boolean } | null {
+  private inspectSync(): {
+    ino: number | bigint;
+    alive: boolean;
+    mine: boolean;
+  } | null {
     let raw: string;
     let st: { ino: number | bigint };
     try {
-      raw = fsSync.readFileSync(this.path, 'utf8');
+      raw = fsSync.readFileSync(this.path, "utf8");
       st = fsSync.statSync(this.path);
     } catch (e) {
-      if ((e as NodeJS.ErrnoException).code === 'ENOENT') return null;
+      if ((e as NodeJS.ErrnoException).code === "ENOENT") return null;
       throw e;
     }
     let pid: number | undefined;
@@ -299,7 +328,11 @@ export class LockFile {
     } catch {
       pid = undefined;
     }
-    return { ino: st.ino, alive: pidAlive(pid), mine: this.token !== null && token === this.token };
+    return {
+      ino: st.ino,
+      alive: pidAlive(pid),
+      mine: this.token !== null && token === this.token,
+    };
   }
 
   /** Refresh the lock timestamp (proves liveness to processes inspecting the

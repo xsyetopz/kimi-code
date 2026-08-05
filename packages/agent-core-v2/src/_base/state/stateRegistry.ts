@@ -30,9 +30,9 @@
  * Persistence and replay are out of scope here. Scope-agnostic.
  */
 
-import { Disposable } from '../di/lifecycle';
-import { BugIndicatingError } from '../errors/errors';
-import { Emitter, type Event } from '../event';
+import { Disposable } from "../di/lifecycle";
+import { BugIndicatingError } from "../errors/errors";
+import { Emitter, type Event } from "../event";
 
 export interface StateKey<T> {
   readonly name: string;
@@ -72,12 +72,14 @@ export class StateRegistry extends Disposable implements IStateRegistry {
   private readonly anyEmitter = this._register(new Emitter<StateChange>());
   readonly onDidChangeAny: Event<StateChange> = this.anyEmitter.event;
 
-  protected readonly inspectScope: string = 'unknown';
+  protected readonly inspectScope: string = "unknown";
   protected inspectParent?: IStateRegistry;
 
   register<T>(key: StateKey<T>): void {
     if (this.values.has(key.name)) {
-      throw new BugIndicatingError(`state key '${key.name}' is already registered`);
+      throw new BugIndicatingError(
+        `state key '${key.name}' is already registered`,
+      );
     }
     this.values.set(key.name, key.initial());
   }
@@ -134,23 +136,29 @@ export class StateRegistry extends Disposable implements IStateRegistry {
 
 function toJsonSafe(value: unknown, seen: WeakSet<object>): unknown {
   if (value === undefined || value === null) return null;
-  if (typeof value === 'function') return '(function)';
-  if (typeof value === 'bigint') return value.toString();
-  if (typeof value !== 'object') return value;
-  if (seen.has(value)) return '(circular)';
+  if (typeof value === "function") return "(function)";
+  if (typeof value === "bigint") return value.toString();
+  if (typeof value !== "object") return value;
+  if (seen.has(value)) return "(circular)";
   seen.add(value);
   try {
     if (value instanceof Date) return value.toJSON();
-    if (Array.isArray(value)) return value.map((item) => toJsonSafe(item, seen));
+    if (Array.isArray(value))
+      return value.map((item) => toJsonSafe(item, seen));
     if (value instanceof Map) {
       const entries = [...value.entries()];
-      const objectKeys = entries.every(([key]) => ['string', 'number'].includes(typeof key));
+      const objectKeys = entries.every(([key]) =>
+        ["string", "number"].includes(typeof key),
+      );
       if (objectKeys) {
         return Object.fromEntries(
           entries.map(([key, item]) => [key, toJsonSafe(item, seen)] as const),
         );
       }
-      return entries.map(([key, item]) => [toJsonSafe(key, seen), toJsonSafe(item, seen)]);
+      return entries.map(([key, item]) => [
+        toJsonSafe(key, seen),
+        toJsonSafe(item, seen),
+      ]);
     }
     if (value instanceof Set) {
       return [...value.values()].map((item) => toJsonSafe(item, seen));
@@ -158,11 +166,11 @@ function toJsonSafe(value: unknown, seen: WeakSet<object>): unknown {
     const proto: unknown = Object.getPrototypeOf(value);
     if (proto !== Object.prototype && proto !== null) {
       const ctor = (value as { constructor?: { name?: string } }).constructor;
-      return `(${ctor?.name ?? 'object'})`;
+      return `(${ctor?.name ?? "object"})`;
     }
     const out: Record<string, unknown> = {};
     for (const [key, item] of Object.entries(value)) {
-      if (typeof item === 'function') continue;
+      if (typeof item === "function") continue;
       out[key] = toJsonSafe(item, seen);
     }
     return out;

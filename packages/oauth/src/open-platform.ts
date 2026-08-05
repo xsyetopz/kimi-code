@@ -1,13 +1,19 @@
-import { readApiErrorMessage } from './api-error';
-import { isRecord } from './utils';
-import { parseKimiCodeCustomHeaders } from './identity';
-import { parseSupportsThinkingType, parseThinkEfforts } from './managed-kimi-code';
-import { MANAGED_KIMI_MODEL_FIELDS, mergeRefreshedModelAlias } from './model-alias-merge';
+import { readApiErrorMessage } from "./api-error";
+import { isRecord } from "./utils";
+import { parseKimiCodeCustomHeaders } from "./identity";
+import {
+  parseSupportsThinkingType,
+  parseThinkEfforts,
+} from "./managed-kimi-code";
+import {
+  MANAGED_KIMI_MODEL_FIELDS,
+  mergeRefreshedModelAlias,
+} from "./model-alias-merge";
 import type {
   ManagedKimiCodeModelInfo,
   ManagedKimiConfigShape,
   ManagedKimiModelAlias,
-} from './managed-kimi-code';
+} from "./managed-kimi-code";
 
 export type { ManagedKimiConfigShape };
 
@@ -21,22 +27,24 @@ export interface OpenPlatformDefinition {
 
 export const OPEN_PLATFORMS: readonly OpenPlatformDefinition[] = [
   {
-    id: 'moonshot-cn',
-    name: 'Kimi Platform (API key · platform.kimi.com)',
-    baseUrl: 'https://api.moonshot.cn/v1',
-    consoleUrl: 'https://platform.kimi.com',
-    allowedPrefixes: ['kimi-k'],
+    id: "moonshot-cn",
+    name: "Kimi Platform (API key · platform.kimi.com)",
+    baseUrl: "https://api.moonshot.cn/v1",
+    consoleUrl: "https://platform.kimi.com",
+    allowedPrefixes: ["kimi-k"],
   },
   {
-    id: 'moonshot-ai',
-    name: 'Kimi Platform (API key · platform.kimi.ai)',
-    baseUrl: 'https://api.moonshot.ai/v1',
-    consoleUrl: 'https://platform.kimi.ai',
-    allowedPrefixes: ['kimi-k'],
+    id: "moonshot-ai",
+    name: "Kimi Platform (API key · platform.kimi.ai)",
+    baseUrl: "https://api.moonshot.ai/v1",
+    consoleUrl: "https://platform.kimi.ai",
+    allowedPrefixes: ["kimi-k"],
   },
 ];
 
-export function getOpenPlatformById(id: string): OpenPlatformDefinition | undefined {
+export function getOpenPlatformById(
+  id: string,
+): OpenPlatformDefinition | undefined {
   return OPEN_PLATFORMS.find((p) => p.id === id);
 }
 
@@ -45,57 +53,69 @@ export function isOpenPlatformId(id: string): boolean {
 }
 
 function toModelInfo(item: unknown): ManagedKimiCodeModelInfo | undefined {
-  if (!isRecord(item) || typeof item['id'] !== 'string' || item['id'].length === 0) {
+  if (
+    !isRecord(item) ||
+    typeof item["id"] !== "string" ||
+    item["id"].length === 0
+  ) {
     return undefined;
   }
-  const contextLength = Number(item['context_length']);
+  const contextLength = Number(item["context_length"]);
   if (!Number.isInteger(contextLength) || contextLength <= 0) {
-    throw new Error(`Model "${item['id']}" must include a positive context_length.`);
+    throw new Error(
+      `Model "${item["id"]}" must include a positive context_length.`,
+    );
   }
-  const displayName = item['display_name'];
+  const displayName = item["display_name"];
   const normalizedDisplayName =
-    typeof displayName === 'string' && displayName.length > 0 ? displayName : undefined;
-  const supportsToolUse = Object.hasOwn(item, 'supports_tool_use')
-    ? Boolean(item['supports_tool_use'])
+    typeof displayName === "string" && displayName.length > 0
+      ? displayName
+      : undefined;
+  const supportsToolUse = Object.hasOwn(item, "supports_tool_use")
+    ? Boolean(item["supports_tool_use"])
     : true;
   // Effort levels come from the nested `think_efforts` object
   // ({ support, valid_efforts, default_effort }) returned by /models.
-  const thinkEfforts = parseThinkEfforts(item['think_efforts']);
+  const thinkEfforts = parseThinkEfforts(item["think_efforts"]);
   return {
-    id: item['id'],
+    id: item["id"],
     contextLength,
-    supportsReasoning: Boolean(item['supports_reasoning']),
-    supportsImageIn: Boolean(item['supports_image_in']),
-    supportsVideoIn: Boolean(item['supports_video_in']),
+    supportsReasoning: Boolean(item["supports_reasoning"]),
+    supportsImageIn: Boolean(item["supports_image_in"]),
+    supportsVideoIn: Boolean(item["supports_video_in"]),
     supportsToolUse,
-    supportsThinkingType: parseSupportsThinkingType(item['supports_thinking_type']),
+    supportsThinkingType: parseSupportsThinkingType(
+      item["supports_thinking_type"],
+    ),
     supportEfforts: thinkEfforts.supportEfforts,
     defaultEffort: thinkEfforts.defaultEffort,
     displayName: normalizedDisplayName,
   };
 }
 
-export function capabilitiesForModel(model: ManagedKimiCodeModelInfo): string[] | undefined {
+export function capabilitiesForModel(
+  model: ManagedKimiCodeModelInfo,
+): string[] | undefined {
   const caps = new Set<string>();
   // supports_thinking_type is the full three-state declaration and wins over
   // the legacy supports_reasoning boolean; absent (older servers) falls back.
   switch (model.supportsThinkingType) {
-    case 'only':
-      caps.add('thinking');
-      caps.add('always_thinking');
+    case "only":
+      caps.add("thinking");
+      caps.add("always_thinking");
       break;
-    case 'both':
-      caps.add('thinking');
+    case "both":
+      caps.add("thinking");
       break;
-    case 'no':
+    case "no":
       break;
     case undefined:
-      if (model.supportsReasoning) caps.add('thinking');
+      if (model.supportsReasoning) caps.add("thinking");
       break;
   }
-  if (model.supportsImageIn) caps.add('image_in');
-  if (model.supportsVideoIn) caps.add('video_in');
-  if (model.supportsToolUse ?? true) caps.add('tool_use');
+  if (model.supportsImageIn) caps.add("image_in");
+  if (model.supportsVideoIn) caps.add("video_in");
+  if (model.supportsToolUse ?? true) caps.add("tool_use");
   return caps.size > 0 ? [...caps] : undefined;
 }
 
@@ -114,25 +134,31 @@ export async function fetchOpenPlatformModels(
   fetchImpl: typeof fetch = fetch,
   signal?: AbortSignal,
 ): Promise<ManagedKimiCodeModelInfo[]> {
-  const res = await fetchImpl(`${platform.baseUrl.replace(/\/+$/, '')}/models`, {
-    headers: {
-      ...parseKimiCodeCustomHeaders(),
-      Authorization: `Bearer ${apiKey}`,
-      Accept: 'application/json',
+  const res = await fetchImpl(
+    `${platform.baseUrl.replace(/\/+$/, "")}/models`,
+    {
+      headers: {
+        ...parseKimiCodeCustomHeaders(),
+        Authorization: `Bearer ${apiKey}`,
+        Accept: "application/json",
+      },
+      signal,
     },
-    signal,
-  });
+  );
   if (!res.ok) {
     throw new OpenPlatformApiError(
-      await readApiErrorMessage(res, `Failed to list models (HTTP ${res.status}).`),
+      await readApiErrorMessage(
+        res,
+        `Failed to list models (HTTP ${res.status}).`,
+      ),
       res.status,
     );
   }
   const payload: unknown = await res.json();
-  if (!isRecord(payload) || !Array.isArray(payload['data'])) {
+  if (!isRecord(payload) || !Array.isArray(payload["data"])) {
     throw new Error(`Unexpected models response for ${platform.baseUrl}.`);
   }
-  return payload['data']
+  return payload["data"]
     .map((item) => toModelInfo(item))
     .filter((item): item is ManagedKimiCodeModelInfo => item !== undefined);
 }
@@ -170,7 +196,7 @@ export function applyOpenPlatformConfig(
   const modelKey = `${providerKey}/${options.selectedModel.id}`;
 
   config.providers[providerKey] = {
-    type: 'kimi',
+    type: "kimi",
     baseUrl: options.platform.baseUrl,
     apiKey: options.apiKey,
   };
@@ -180,24 +206,38 @@ export function applyOpenPlatformConfig(
   // the user added by hand (or that upstream does not declare) survive a
   // refresh. Models that upstream no longer lists are removed; the rest are
   // merged field-by-field.
-  const upstreamKeys = new Set(options.models.map((m) => `${providerKey}/${m.id}`));
+  const upstreamKeys = new Set(
+    options.models.map((m) => `${providerKey}/${m.id}`),
+  );
   for (const [key, model] of Object.entries(existingModels)) {
-    if (isRecord(model) && model['provider'] === providerKey && !upstreamKeys.has(key)) {
+    if (
+      isRecord(model) &&
+      model["provider"] === providerKey &&
+      !upstreamKeys.has(key)
+    ) {
       delete existingModels[key];
     }
   }
 
   for (const model of options.models) {
     const aliasKey = `${providerKey}/${model.id}`;
-    const existing = isRecord(existingModels[aliasKey]) ? existingModels[aliasKey] : {};
+    const existing = isRecord(existingModels[aliasKey])
+      ? existingModels[aliasKey]
+      : {};
     const remoteAlias: ManagedKimiModelAlias = {
       provider: providerKey,
       model: model.id,
       maxContextSize: model.contextLength,
       capabilities: capabilitiesForModel(model),
-      ...(model.displayName !== undefined ? { displayName: model.displayName } : {}),
-      ...(model.supportEfforts !== undefined ? { supportEfforts: model.supportEfforts } : {}),
-      ...(model.defaultEffort !== undefined ? { defaultEffort: model.defaultEffort } : {}),
+      ...(model.displayName !== undefined
+        ? { displayName: model.displayName }
+        : {}),
+      ...(model.supportEfforts !== undefined
+        ? { supportEfforts: model.supportEfforts }
+        : {}),
+      ...(model.defaultEffort !== undefined
+        ? { defaultEffort: model.defaultEffort }
+        : {}),
     };
     existingModels[aliasKey] = mergeRefreshedModelAlias(
       existing,
@@ -226,7 +266,7 @@ export function removeOpenPlatformConfig(
   let removedDefault = false;
   const existingModels = config.models ?? {};
   for (const [key, model] of Object.entries(existingModels)) {
-    if (!isRecord(model) || model['provider'] !== platformId) continue;
+    if (!isRecord(model) || model["provider"] !== platformId) continue;
     delete existingModels[key];
     if (config.defaultModel === key) removedDefault = true;
   }
@@ -236,7 +276,7 @@ export function removeOpenPlatformConfig(
     config.defaultModel = undefined;
   }
 
-  if (config['defaultProvider'] === platformId) {
-    config['defaultProvider'] = undefined;
+  if (config["defaultProvider"] === platformId) {
+    config["defaultProvider"] = undefined;
   }
 }

@@ -13,10 +13,13 @@
  * live in handler memory only. Bound at Workspace scope.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
-import type { Event } from '#/_base/event';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
+import type { Event } from "#/_base/event";
 
-import type { ISessionWorkspaceInfo } from '#/session/workspaceInfo/workspaceInfo';
+import type { ISessionWorkspaceInfo } from "#/session/workspaceInfo/workspaceInfo";
 
 export interface WorkspaceAddDirInput {
   readonly path: string;
@@ -42,4 +45,4 @@ export interface IWorkspaceDirs {
 }
 
 export const IWorkspaceDirs: ServiceIdentifier<IWorkspaceDirs> =
-  createDecorator<IWorkspaceDirs>('workspaceDirs');
+  createDecorator<IWorkspaceDirs>("workspaceDirs");

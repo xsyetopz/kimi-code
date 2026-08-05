@@ -29,25 +29,33 @@
  * `ModelCatalog.notifyConfigChanged()` to drop the cache.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
-import type { ModelCapability } from '#/kosong/contract/capability';
-import type { ProviderRequestAuth } from '#/kosong/contract/provider';
-import type { TokenUsage } from '#/kosong/contract/usage';
-import type { Protocol, ProtocolProviderOptions } from '#/kosong/protocol/protocol';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
+import type { ModelCapability } from "#/kosong/contract/capability";
+import type { ProviderRequestAuth } from "#/kosong/contract/provider";
+import type { TokenUsage } from "#/kosong/contract/usage";
+import type {
+  Protocol,
+  ProtocolProviderOptions,
+} from "#/kosong/protocol/protocol";
 
-import type { ProviderConfig } from '../provider/provider';
+import type { ProviderConfig } from "../provider/provider";
 
-import type { ModelInspection } from './inspection';
-import type { ModelRecord } from './model';
-import { effectiveModelConfig } from './modelAuth';
-import type { ModelRequester } from './modelRequester';
+import type { ModelInspection } from "./inspection";
+import type { ModelRecord } from "./model";
+import { effectiveModelConfig } from "./modelAuth";
+import type { ModelRequester } from "./modelRequester";
 
 export interface AuthProvider {
   readonly canRefresh?: boolean;
 
-  getAuth(options?: { readonly force?: boolean }): Promise<ProviderRequestAuth | undefined>;
+  getAuth(options?: {
+    readonly force?: boolean;
+  }): Promise<ProviderRequestAuth | undefined>;
 }
 
 export class StaticAuthProvider implements AuthProvider {
@@ -55,7 +63,8 @@ export class StaticAuthProvider implements AuthProvider {
 
   constructor(private readonly apiKey: string | undefined) {}
   async getAuth(): Promise<ProviderRequestAuth | undefined> {
-    if (this.apiKey === undefined || this.apiKey.trim().length === 0) return undefined;
+    if (this.apiKey === undefined || this.apiKey.trim().length === 0)
+      return undefined;
     return { apiKey: this.apiKey };
   }
 }
@@ -105,9 +114,9 @@ export const modelCatalogItemSchema = z.object({
 export type ModelCatalogItem = z.infer<typeof modelCatalogItemSchema>;
 
 export const providerCatalogStatusSchema = z.enum([
-  'connected',
-  'error',
-  'unconfigured',
+  "connected",
+  "error",
+  "unconfigured",
 ]);
 export type ProviderCatalogStatus = z.infer<typeof providerCatalogStatusSchema>;
 
@@ -126,7 +135,9 @@ export const setDefaultModelResponseSchema = z.object({
   default_model: z.string().min(1),
   model: modelCatalogItemSchema,
 });
-export type SetDefaultModelResponse = z.infer<typeof setDefaultModelResponseSchema>;
+export type SetDefaultModelResponse = z.infer<
+  typeof setDefaultModelResponseSchema
+>;
 
 export interface ProviderCredentialState {
   readonly hasApiKey: boolean;
@@ -143,8 +154,14 @@ export function toProtocolModel(
     model: model.id,
     display_name: model.displayName ?? model.name ?? model.id,
     max_context_size: model.maxContextSize,
-    capabilities: effectiveModelConfig(record, providerType ?? model.providerType).capabilities,
-    support_efforts: model.supportEfforts === undefined ? undefined : [...model.supportEfforts],
+    capabilities: effectiveModelConfig(
+      record,
+      providerType ?? model.providerType,
+    ).capabilities,
+    support_efforts:
+      model.supportEfforts === undefined
+        ? undefined
+        : [...model.supportEfforts],
     default_effort: model.defaultEffort,
   };
 }
@@ -156,7 +173,7 @@ export function toProtocolModelFallback(
 ): ModelCatalogItem {
   const effective = effectiveModelConfig(record, providerType);
   return {
-    provider: effective.provider ?? '',
+    provider: effective.provider ?? "",
     model: modelId,
     display_name: effective.displayName ?? effective.model ?? modelId,
     max_context_size: effective.maxContextSize ?? 0,
@@ -175,14 +192,18 @@ export function toProtocolProvider(
 ): ProviderCatalogItem {
   const providerModels = modelIdsForProvider(models, providerId);
   const defaultModel =
-    provider.defaultModel ?? globalDefaultForProvider(models, globalDefaultModel, providerId);
+    provider.defaultModel ??
+    globalDefaultForProvider(models, globalDefaultModel, providerId);
   return {
     id: providerId,
-    type: provider.type ?? 'openai',
+    type: provider.type ?? "openai",
     base_url: provider.baseUrl,
     default_model: defaultModel,
     has_api_key: credential.hasApiKey,
-    status: credential.hasApiKey || credential.hasOAuthToken ? 'connected' : 'unconfigured',
+    status:
+      credential.hasApiKey || credential.hasOAuthToken
+        ? "connected"
+        : "unconfigured",
     models: providerModels,
   };
 }
@@ -222,4 +243,4 @@ export interface IModelCatalog {
 }
 
 export const IModelCatalog: ServiceIdentifier<IModelCatalog> =
-  createDecorator<IModelCatalog>('modelResolver');
+  createDecorator<IModelCatalog>("modelResolver");

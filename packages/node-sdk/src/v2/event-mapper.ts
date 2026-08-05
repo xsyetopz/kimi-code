@@ -14,8 +14,8 @@
  * `IEventService` (`session.meta.updated`) is unwrapped from its
  * `{type, payload}` envelope.
  */
-import type { Event } from '@moonshot-ai/agent-core';
-import type { DomainEvent } from '@moonshot-ai/agent-core-v2';
+import type { Event } from "@moonshot-ai/agent-core";
+import type { DomainEvent } from "@moonshot-ai/agent-core-v2";
 
 /**
  * DomainEvent types the v1 SDK event stream never carries:
@@ -29,16 +29,16 @@ import type { DomainEvent } from '@moonshot-ai/agent-core-v2';
  *   `IEventService` — the in-process SDK client never sees them.
  */
 const DROPPED_DOMAIN_EVENT_TYPES: ReadonlySet<string> = new Set([
-  'agent.activity.updated',
-  'context.spliced',
-  'task.notified',
-  'plan.revision',
-  'permission.approval.requested',
-  'permission.approval.resolved',
-  'prompt.submitted',
-  'prompt.completed',
-  'prompt.aborted',
-  'prompt.steered',
+  "agent.activity.updated",
+  "context.spliced",
+  "task.notified",
+  "plan.revision",
+  "permission.approval.requested",
+  "permission.approval.resolved",
+  "prompt.submitted",
+  "prompt.completed",
+  "prompt.aborted",
+  "prompt.steered",
 ]);
 
 /**
@@ -48,8 +48,8 @@ const DROPPED_DOMAIN_EVENT_TYPES: ReadonlySet<string> = new Set([
  * spellings; the v1 SDK client only ever saw the legacy one).
  */
 const RENAMED_DOMAIN_EVENT_TYPES: Readonly<Record<string, string>> = {
-  'task.started': 'background.task.started',
-  'task.terminated': 'background.task.terminated',
+  "task.started": "background.task.started",
+  "task.terminated": "background.task.terminated",
 };
 
 /**
@@ -82,7 +82,10 @@ export function translateGlobalEvent(event: {
   readonly type: string;
   readonly payload: unknown;
 }): Event | undefined {
-  if (event.type !== 'session.meta.updated' || typeof event.payload !== 'object') {
+  if (
+    event.type !== "session.meta.updated" ||
+    typeof event.payload !== "object"
+  ) {
     return undefined;
   }
   return { type: event.type, ...event.payload } as unknown as Event;

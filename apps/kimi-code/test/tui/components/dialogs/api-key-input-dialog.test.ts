@@ -1,13 +1,13 @@
-import { visibleWidth } from '@moonshot-ai/pi-tui';
-import { describe, expect, it } from 'vitest';
+import { visibleWidth } from "@moonshot-ai/pi-tui";
+import { describe, expect, it } from "vitest";
 
-import { ApiKeyInputDialogComponent } from '#/tui/components/dialogs/api-key-input-dialog';
+import { ApiKeyInputDialogComponent } from "#/tui/components/dialogs/api-key-input-dialog";
 
-describe('ApiKeyInputDialogComponent', () => {
-  it('keeps every line within narrow widths', () => {
+describe("ApiKeyInputDialogComponent", () => {
+  it("keeps every line within narrow widths", () => {
     const dialog = new ApiKeyInputDialogComponent(
-      'Kimi Code',
-      ['Paste your API key below.', 'It will be stored locally.'],
+      "Kimi Code",
+      ["Paste your API key below.", "It will be stored locally."],
       () => {},
     );
     dialog.focused = true;

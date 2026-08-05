@@ -1,6 +1,6 @@
-import Dagre from '@dagrejs/dagre';
+import Dagre from "@dagrejs/dagre";
 
-import type { Edge, ServiceNode, ServiceScope } from '../../analyzer/types';
+import type { Edge, ServiceNode, ServiceScope } from "../../analyzer/types";
 
 const NODE_WIDTH = 220;
 const NODE_HEIGHT = 48;
@@ -8,7 +8,7 @@ const NODE_HEIGHT = 48;
 const BAND_GAP = 120;
 
 export interface LayoutOptions {
-  direction?: 'LR' | 'RL' | 'TB' | 'BT';
+  direction?: "LR" | "RL" | "TB" | "BT";
   ranksep?: number;
   nodesep?: number;
   groupByScope?: boolean;
@@ -30,7 +30,7 @@ export interface LayoutResult {
   bands?: ScopeBand[];
 }
 
-const BAND_ORDER: ServiceScope[] = ['App', 'Session', 'Agent'];
+const BAND_ORDER: ServiceScope[] = ["App", "Session", "Agent"];
 
 export function layoutDagre(
   services: ServiceNode[],
@@ -62,12 +62,20 @@ function layoutByScope(
     const scoped = byScope.get(scope);
     if (!scoped || scoped.length === 0) continue;
     const scopedIds = new Set(scoped.map((s) => s.id));
-    const scopedEdges = edges.filter((e) => scopedIds.has(e.from) && scopedIds.has(e.to));
+    const scopedEdges = edges.filter(
+      (e) => scopedIds.has(e.from) && scopedIds.has(e.to),
+    );
     const sub = runDagre(scoped, scopedEdges, options);
     for (const [id, pos] of sub.positions) {
       positions.set(id, { x: pos.x + xCursor, y: pos.y });
     }
-    bands.push({ scope, x: xCursor, y: 0, width: sub.width, height: sub.height });
+    bands.push({
+      scope,
+      x: xCursor,
+      y: 0,
+      width: sub.width,
+      height: sub.height,
+    });
     xCursor += sub.width + BAND_GAP;
     if (sub.height > totalHeight) totalHeight = sub.height;
   }
@@ -87,7 +95,7 @@ function runDagre(
 ): LayoutResult {
   const g = new Dagre.graphlib.Graph({ multigraph: true });
   g.setGraph({
-    rankdir: options.direction ?? 'RL',
+    rankdir: options.direction ?? "RL",
     ranksep: options.ranksep ?? 90,
     nodesep: options.nodesep ?? 20,
     edgesep: 10,
@@ -107,11 +115,14 @@ function runDagre(
   const known = new Set<string>();
   for (const s of services) {
     const isolated = (degree.get(s.id) ?? 0) === 0;
-    const size = options.nodeSize?.(s.id) ?? { width: NODE_WIDTH, height: NODE_HEIGHT };
+    const size = options.nodeSize?.(s.id) ?? {
+      width: NODE_WIDTH,
+      height: NODE_HEIGHT,
+    };
     g.setNode(s.id, {
       width: size.width,
       height: size.height,
-      ...(isolated ? { rank: 'max' } : {}),
+      ...(isolated ? { rank: "max" } : {}),
     });
     known.add(s.id);
   }
@@ -126,7 +137,10 @@ function runDagre(
   for (const s of services) {
     const n = g.node(s.id);
     if (!n) continue;
-    const size = options.nodeSize?.(s.id) ?? { width: NODE_WIDTH, height: NODE_HEIGHT };
+    const size = options.nodeSize?.(s.id) ?? {
+      width: NODE_WIDTH,
+      height: NODE_HEIGHT,
+    };
     positions.set(s.id, { x: n.x - size.width / 2, y: n.y - size.height / 2 });
   }
   const { width = 0, height = 0 } = g.graph();

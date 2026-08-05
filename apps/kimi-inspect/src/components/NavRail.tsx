@@ -4,9 +4,15 @@
  * render branch in `App`.
  */
 
-import type { ReactNode } from 'react';
+import type { ReactNode } from "react";
 
-export type AppView = 'chat' | 'search' | 'models' | 'services' | 'workspace' | 'bash';
+export type AppView =
+  | "chat"
+  | "search"
+  | "models"
+  | "services"
+  | "workspace"
+  | "bash";
 
 interface ViewDef {
   readonly id: AppView;
@@ -17,18 +23,18 @@ interface ViewDef {
 const iconProps = {
   width: 18,
   height: 18,
-  viewBox: '0 0 24 24',
-  fill: 'none',
-  stroke: 'currentColor',
+  viewBox: "0 0 24 24",
+  fill: "none",
+  stroke: "currentColor",
   strokeWidth: 2,
-  strokeLinecap: 'round',
-  strokeLinejoin: 'round',
+  strokeLinecap: "round",
+  strokeLinejoin: "round",
 } as const;
 
 const VIEWS: readonly ViewDef[] = [
   {
-    id: 'chat',
-    title: 'Chat',
+    id: "chat",
+    title: "Chat",
     icon: (
       <svg {...iconProps}>
         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
@@ -36,8 +42,8 @@ const VIEWS: readonly ViewDef[] = [
     ),
   },
   {
-    id: 'search',
-    title: 'Search',
+    id: "search",
+    title: "Search",
     icon: (
       <svg {...iconProps}>
         <circle cx="11" cy="11" r="8" />
@@ -46,8 +52,8 @@ const VIEWS: readonly ViewDef[] = [
     ),
   },
   {
-    id: 'models',
-    title: 'Model Catalog',
+    id: "models",
+    title: "Model Catalog",
     icon: (
       <svg {...iconProps}>
         <path d="M12 2 2 7l10 5 10-5-10-5z" />
@@ -57,8 +63,8 @@ const VIEWS: readonly ViewDef[] = [
     ),
   },
   {
-    id: 'services',
-    title: 'App Services',
+    id: "services",
+    title: "App Services",
     icon: (
       <svg {...iconProps}>
         <rect x="2" y="2" width="20" height="8" rx="2" />
@@ -69,8 +75,8 @@ const VIEWS: readonly ViewDef[] = [
     ),
   },
   {
-    id: 'workspace',
-    title: 'Workspace Services',
+    id: "workspace",
+    title: "Workspace Services",
     icon: (
       <svg {...iconProps}>
         <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" />
@@ -78,8 +84,8 @@ const VIEWS: readonly ViewDef[] = [
     ),
   },
   {
-    id: 'bash',
-    title: 'Bash Parser',
+    id: "bash",
+    title: "Bash Parser",
     icon: (
       <svg {...iconProps}>
         <polyline points="4 17 10 11 4 5" />
@@ -109,8 +115,8 @@ export function NavRail({
           }}
           className={`rounded-md p-2 transition-colors ${
             view === v.id
-              ? 'bg-neutral-800 text-sky-400'
-              : 'text-neutral-500 hover:bg-neutral-800/60 hover:text-neutral-300'
+              ? "bg-neutral-800 text-sky-400"
+              : "text-neutral-500 hover:bg-neutral-800/60 hover:text-neutral-300"
           }`}
         >
           {v.icon}

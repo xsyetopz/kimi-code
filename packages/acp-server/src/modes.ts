@@ -12,8 +12,8 @@
  * mode + permission mode) each ACP mode maps to.
  */
 
-import type { SessionMode } from '@agentclientprotocol/sdk';
-import type { PermissionMode } from '@moonshot-ai/agent-core-v2';
+import type { SessionMode } from "@agentclientprotocol/sdk";
+import type { PermissionMode } from "@moonshot-ai/agent-core-v2";
 
 /**
  * Canonical 4-mode taxonomy. Order matters: the array is rendered as-is by the
@@ -21,36 +21,41 @@ import type { PermissionMode } from '@moonshot-ai/agent-core-v2';
  */
 export const ACP_MODES = [
   {
-    id: 'default',
-    name: 'Default',
-    description: 'Manual approvals; tools execute normally.',
+    id: "default",
+    name: "Default",
+    description: "Manual approvals; tools execute normally.",
   },
   {
-    id: 'plan',
-    name: 'Plan',
-    description: 'Read-only planning; no tool execution.',
+    id: "plan",
+    name: "Plan",
+    description: "Read-only planning; no tool execution.",
   },
   {
-    id: 'auto',
-    name: 'Auto',
-    description: 'Auto-approve safe operations.',
+    id: "auto",
+    name: "Auto",
+    description: "Auto-approve safe operations.",
   },
   {
-    id: 'yolo',
-    name: 'YOLO',
-    description: 'Auto-approve everything.',
+    id: "yolo",
+    name: "YOLO",
+    description: "Auto-approve everything.",
   },
 ] as const satisfies readonly SessionMode[];
 
 /** Initial `currentModeId` for every freshly created ACP session. */
-export const DEFAULT_MODE_ID = 'default' as const;
+export const DEFAULT_MODE_ID = "default" as const;
 
 /** The four wire-level mode ids understood by this host. */
-export type AcpModeId = 'default' | 'plan' | 'auto' | 'yolo';
+export type AcpModeId = "default" | "plan" | "auto" | "yolo";
 
 /** Narrow an unknown wire string to {@link AcpModeId}. */
 export function isAcpModeId(value: unknown): value is AcpModeId {
-  return value === 'default' || value === 'plan' || value === 'auto' || value === 'yolo';
+  return (
+    value === "default" ||
+    value === "plan" ||
+    value === "auto" ||
+    value === "yolo"
+  );
 }
 
 /**
@@ -71,14 +76,14 @@ export interface AcpModeToggles {
  */
 export function acpModeToToggles(id: AcpModeId): AcpModeToggles {
   switch (id) {
-    case 'default':
-      return { plan: false, permission: 'manual' };
-    case 'plan':
-      return { plan: true, permission: 'manual' };
-    case 'auto':
-      return { plan: false, permission: 'auto' };
-    case 'yolo':
-      return { plan: false, permission: 'yolo' };
+    case "default":
+      return { plan: false, permission: "manual" };
+    case "plan":
+      return { plan: true, permission: "manual" };
+    case "auto":
+      return { plan: false, permission: "auto" };
+    case "yolo":
+      return { plan: false, permission: "yolo" };
     default: {
       const _exhaustive: never = id;
       throw new Error(`Unhandled AcpModeId: ${String(_exhaustive)}`);

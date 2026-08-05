@@ -1,19 +1,19 @@
-import { z } from 'zod';
+import { z } from "zod";
 
-import { isoDateTimeSchema } from './time';
+import { isoDateTimeSchema } from "./time";
 
-export const fsKindSchema = z.enum(['file', 'directory', 'symlink']);
+export const fsKindSchema = z.enum(["file", "directory", "symlink"]);
 export type FsKind = z.infer<typeof fsKindSchema>;
 
 export const fsGitStatusSchema = z.enum([
-  'clean',
-  'modified',
-  'added',
-  'deleted',
-  'renamed',
-  'untracked',
-  'ignored',
-  'conflicted',
+  "clean",
+  "modified",
+  "added",
+  "deleted",
+  "renamed",
+  "untracked",
+  "ignored",
+  "conflicted",
 ]);
 export type FsGitStatus = z.infer<typeof fsGitStatusSchema>;
 
@@ -64,10 +64,10 @@ export const fsGitStatusEntrySchema = z.object({
 });
 export type FsGitStatusEntry = z.infer<typeof fsGitStatusEntrySchema>;
 
-export const fsChangeKindSchema = z.enum(['file', 'directory', 'symlink']);
+export const fsChangeKindSchema = z.enum(["file", "directory", "symlink"]);
 export type FsChangeKind = z.infer<typeof fsChangeKindSchema>;
 
-export const fsChangeActionSchema = z.enum(['created', 'modified', 'deleted']);
+export const fsChangeActionSchema = z.enum(["created", "modified", "deleted"]);
 export type FsChangeAction = z.infer<typeof fsChangeActionSchema>;
 
 export const fsChangeEntrySchema = z.object({

@@ -9,16 +9,16 @@
  *   where the v1 `SessionMeta` keeps ISO strings and `workDir`.
  * Everything else is a field rename (`custom` ↔ `metadata`).
  */
-import type { AgentMeta, SessionMeta } from '@moonshot-ai/agent-core';
+import type { AgentMeta, SessionMeta } from "@moonshot-ai/agent-core";
 import type {
   AgentMeta as V2AgentMeta,
   SessionMeta as V2SessionMeta,
   SessionSummary as V2SessionSummary,
-} from '@moonshot-ai/agent-core-v2';
+} from "@moonshot-ai/agent-core-v2";
 
-import { resolve, win32 } from 'node:path';
+import { resolve, win32 } from "node:path";
 
-import type { JsonObject, SessionSummary } from '#/types';
+import type { JsonObject, SessionSummary } from "#/types";
 
 /**
  * Mirror of v1's `normalizeWorkDir` (`agent-core/session/store/workdir-key`):
@@ -28,8 +28,11 @@ import type { JsonObject, SessionSummary } from '#/types';
  * blocks the deep import — keep it byte-identical to the v1 original.
  */
 export function normalizeWorkDir(workDir: string): string {
-  if (/^[A-Za-z]:[\\/]/.test(workDir) || /^[\\/]{2}[^\\/]+[\\/][^\\/]+/.test(workDir)) {
-    return win32.resolve(workDir).replaceAll('\\', '/');
+  if (
+    /^[A-Za-z]:[\\/]/.test(workDir) ||
+    /^[\\/]{2}[^\\/]+[\\/][^\\/]+/.test(workDir)
+  ) {
+    return win32.resolve(workDir).replaceAll("\\", "/");
   }
   return resolve(workDir);
 }
@@ -68,7 +71,7 @@ export function v2MetaToSessionMeta(meta: V2SessionMeta): SessionMeta {
   return {
     createdAt: new Date(meta.createdAt).toISOString(),
     updatedAt: new Date(meta.updatedAt).toISOString(),
-    title: meta.title ?? '',
+    title: meta.title ?? "",
     isCustomTitle: meta.isCustomTitle ?? false,
     lastPrompt: meta.lastPrompt,
     forkedFrom: meta.forkedFrom,
@@ -78,14 +81,16 @@ export function v2MetaToSessionMeta(meta: V2SessionMeta): SessionMeta {
   };
 }
 
-function v2AgentsToV1(agents: Readonly<Record<string, V2AgentMeta>>): Record<string, AgentMeta> {
+function v2AgentsToV1(
+  agents: Readonly<Record<string, V2AgentMeta>>,
+): Record<string, AgentMeta> {
   const mapped: Record<string, AgentMeta> = {};
   for (const [agentId, agent] of Object.entries(agents)) {
     mapped[agentId] = {
       homedir: agent.homedir,
       // v2 registers every agent with a type; the fallbacks only cover
       // documents written before that registration existed.
-      type: agent.type ?? (agentId === 'main' ? 'main' : 'sub'),
+      type: agent.type ?? (agentId === "main" ? "main" : "sub"),
       // v1 persists an explicit null for a parentless agent where v2 leaves
       // the field unset.
       parentAgentId: agent.parentAgentId ?? null,

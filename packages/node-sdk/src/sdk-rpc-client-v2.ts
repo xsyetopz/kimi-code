@@ -124,9 +124,9 @@
  *   surfaces the v2 secondary-model warning next to the AGENTS.md one,
  *   matching v1's aggregate.
  */
-import { randomUUID } from 'node:crypto';
-import { readdir } from 'node:fs/promises';
-import { join } from 'node:path';
+import { randomUUID } from "node:crypto";
+import { readdir } from "node:fs/promises";
+import { join } from "node:path";
 
 import {
   ensureConfigFile,
@@ -138,21 +138,24 @@ import {
   type AgentContextData,
   type BeginGlobalMcpServerAuthResult,
   type ExperimentalFeatureState,
-} from '@moonshot-ai/agent-core';
-import { encodeWorkDirKey } from '@moonshot-ai/agent-core-v2/_base/utils/workdir-slug';
-import { MCP_SECTION, type McpSection } from '@moonshot-ai/agent-core-v2/app/mcpConfig/configSection';
-import { IAgentIdentity } from '@moonshot-ai/agent-core-v2/app/agentIdentity/agentIdentity';
-import { McpConnectionManager } from '@moonshot-ai/agent-core-v2/mcpCore/connection-manager';
+} from "@moonshot-ai/agent-core";
+import { encodeWorkDirKey } from "@moonshot-ai/agent-core-v2/_base/utils/workdir-slug";
+import {
+  MCP_SECTION,
+  type McpSection,
+} from "@moonshot-ai/agent-core-v2/app/mcpConfig/configSection";
+import { IAgentIdentity } from "@moonshot-ai/agent-core-v2/app/agentIdentity/agentIdentity";
+import { McpConnectionManager } from "@moonshot-ai/agent-core-v2/mcpCore/connection-manager";
 import {
   AlreadyAuthorizedError,
   McpOAuthService,
   type BeginAuthorizationResult,
-} from '@moonshot-ai/agent-core-v2/mcpCore/oauth/service';
-import { createMcpOAuthStore } from '@moonshot-ai/agent-core-v2/app/mcpConfig/oauthStore';
-import { SECONDARY_MODEL_SECTION } from '@moonshot-ai/agent-core-v2/app/kosongConfig/configSection';
-import { IAtomicDocumentStore } from '@moonshot-ai/agent-core-v2/persistence/interface/atomicDocumentStore';
-import { wrapSubagentModelError } from '@moonshot-ai/agent-core-v2/session/subagent/configSection';
-import { loadMcpServers } from '@moonshot-ai/agent-core-v2/workspace/workspaceMcpConfig/internal/config-loader';
+} from "@moonshot-ai/agent-core-v2/mcpCore/oauth/service";
+import { createMcpOAuthStore } from "@moonshot-ai/agent-core-v2/app/mcpConfig/oauthStore";
+import { SECONDARY_MODEL_SECTION } from "@moonshot-ai/agent-core-v2/app/kosongConfig/configSection";
+import { IAtomicDocumentStore } from "@moonshot-ai/agent-core-v2/persistence/interface/atomicDocumentStore";
+import { wrapSubagentModelError } from "@moonshot-ai/agent-core-v2/session/subagent/configSection";
+import { loadMcpServers } from "@moonshot-ai/agent-core-v2/workspace/workspaceMcpConfig/internal/config-loader";
 import {
   applyPromptMetadataUpdate,
   bootstrap,
@@ -227,13 +230,16 @@ import {
   type Scope,
   type SecondaryModelConfig,
   type ServicesAccessor,
-} from '@moonshot-ai/agent-core-v2';
-import type { AgentHandle, Klient } from '@moonshot-ai/klient';
-import { createKlient } from '@moonshot-ai/klient/memory';
-import { assertKimiHostIdentity, createKimiDefaultHeaders } from '@moonshot-ai/kimi-code-oauth';
+} from "@moonshot-ai/agent-core-v2";
+import type { AgentHandle, Klient } from "@moonshot-ai/klient";
+import { createKlient } from "@moonshot-ai/klient/memory";
+import {
+  assertKimiHostIdentity,
+  createKimiDefaultHeaders,
+} from "@moonshot-ai/kimi-code-oauth";
 
-import { KimiAuthFacade } from '#/auth';
-import { KimiHarness } from '#/kimi-harness';
+import { KimiAuthFacade } from "#/auth";
+import { KimiHarness } from "#/kimi-harness";
 import {
   SDKRpcClientBase,
   type ActivatePluginCommandRpcInput,
@@ -250,7 +256,7 @@ import {
   type SetSessionSwarmModeRpcInput,
   type SetSessionThinkingRpcInput,
   type UpdateSessionMetadataRpcInput,
-} from '#/rpc';
+} from "#/rpc";
 import type {
   AddAdditionalDirInput,
   AddAdditionalDirResult,
@@ -293,28 +299,31 @@ import type {
   SkillSummary,
   TelemetryClient,
   WorkspaceTrustInfo,
-} from '#/types';
+} from "#/types";
 import {
   diagnosticsToConfigDiagnostics,
   planProviderRemoval,
   resolvedConfigToKimiConfig,
-} from '#/v2/config-mapper';
-import { translateGlobalEvent } from '#/v2/event-mapper';
-import { assertImportFits, buildImportContextMessage } from '#/v2/import-context';
-import { foldAgentWireReplay } from '#/v2/resume-replay';
+} from "#/v2/config-mapper";
+import { translateGlobalEvent } from "#/v2/event-mapper";
+import {
+  assertImportFits,
+  buildImportContextMessage,
+} from "#/v2/import-context";
+import { foldAgentWireReplay } from "#/v2/resume-replay";
 import {
   GlobalMcpConfigStore,
   mcpConfigWithoutName,
   requireOAuthMcpServer,
   requireRemoteMcpServer,
   standaloneMcpTestResult,
-} from '#/v2/global-mcp';
+} from "#/v2/global-mcp";
 import {
   normalizeWorkDir,
   v2MetaToSessionMeta,
   v2SummaryToSessionSummary,
-} from '#/v2/session-mapper';
-import { SessionEventWiring } from '#/v2/session-wiring';
+} from "#/v2/session-mapper";
+import { SessionEventWiring } from "#/v2/session-wiring";
 
 export interface SDKRpcClientV2Options {
   readonly homeDir?: string;
@@ -366,7 +375,10 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
    * when the session closes (a resume builds a fresh `Session`); mirrored
    * here by deleting the entry in `closeSession` / `reloadSession`.
    */
-  private readonly printSteerStates = new Map<string, { deadline?: number; turns: number }>();
+  private readonly printSteerStates = new Map<
+    string,
+    { deadline?: number; turns: number }
+  >();
   /**
    * The model/provider registries (`IModelService` / `IProviderService`)
    * share the config service's ready trap: their `get`/`list` reads are
@@ -389,7 +401,10 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
    */
   private globalMcpOAuth: McpOAuthService | undefined;
   /** In-flight OAuth flows keyed by the flowId handed to the host (v1 shape). */
-  private readonly globalMcpOAuthFlows = new Map<string, { flow: BeginAuthorizationResult }>();
+  private readonly globalMcpOAuthFlows = new Map<
+    string,
+    { flow: BeginAuthorizationResult }
+  >();
   /**
    * Per-live-session event/interaction wirings (`src/v2/session-wiring.ts`):
    * created when a session materializes through this client (create / resume /
@@ -405,7 +420,9 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
   constructor(options: SDKRpcClientV2Options = {}) {
     super();
     this.identity =
-      options.identity === undefined ? undefined : assertKimiHostIdentity(options.identity);
+      options.identity === undefined
+        ? undefined
+        : assertKimiHostIdentity(options.identity);
     this.homeDir = resolveKimiHome(options.homeDir);
     this.configPath = resolveConfigPath({
       homeDir: this.homeDir,
@@ -430,13 +447,20 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
           // Host identity headers for the engine's outbound requests (model,
           // WebSearch, registry refresh). Without them the managed vendors go
           // out with the SDK's default User-Agent and no X-Msh-* at all.
-          requestHeaders: createKimiDefaultHeaders({ homeDir: this.homeDir, ...identity }),
+          requestHeaders: createKimiDefaultHeaders({
+            homeDir: this.homeDir,
+            ...identity,
+          }),
           // `--skills-dir` (v1 parity): explicit skill dirs replace default
           // user / project discovery for every session this client hosts.
           skillDirs: options.skillDirs,
         },
       },
-      [...logSeed(resolveLoggingConfig({ homeDir: this.homeDir, env: process.env }))],
+      [
+        ...logSeed(
+          resolveLoggingConfig({ homeDir: this.homeDir, env: process.env }),
+        ),
+      ],
     );
     this.app = app;
     this.klient = createKlient({ scope: app });
@@ -501,7 +525,9 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
     const telemetry = this.app.accessor.get(ITelemetryService);
     telemetry.setAppender(client);
     void this.configReady.then(() => {
-      telemetry.setEnabled(this.engineAccessor.get(IConfigService).get('telemetry') !== false);
+      telemetry.setEnabled(
+        this.engineAccessor.get(IConfigService).get("telemetry") !== false,
+      );
     });
   }
 
@@ -525,11 +551,13 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
   protected getRpc(): Promise<never> {
     throw new KimiError(
       ErrorCodes.NOT_IMPLEMENTED,
-      'This SDK method is not wired to agent-core-v2 yet.',
+      "This SDK method is not wired to agent-core-v2 yet.",
     );
   }
 
-  override async getExperimentalFeatures(): Promise<readonly ExperimentalFeatureState[]> {
+  override async getExperimentalFeatures(): Promise<
+    readonly ExperimentalFeatureState[]
+  > {
     return this.klient.global.flags.list();
   }
 
@@ -540,10 +568,14 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
    * `handlerFor` is create-or-get: session creation materializes the handler
    * anyway.
    */
-  override async listWorkspaceSkills(workDir: string): Promise<readonly SkillSummary[]> {
+  override async listWorkspaceSkills(
+    workDir: string,
+  ): Promise<readonly SkillSummary[]> {
     const handler = await this.engineAccessor
       .get(IWorkspaceLifecycleService)
-      .handlerFor({ root: normalizeRequiredWorkDir('listWorkspaceSkills', workDir) });
+      .handlerFor({
+        root: normalizeRequiredWorkDir("listWorkspaceSkills", workDir),
+      });
     const catalog = handler.accessor.get(IWorkspaceSkillCatalog);
     await catalog.ready;
     return catalog.catalog.listSkills().map(summarizeSkill);
@@ -559,7 +591,9 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
    * computed best-effort: an unreadable/invalid project file degrades to an
    * empty list rather than failing the caller.
    */
-  override async getWorkspaceTrustInfo(workDir: string): Promise<WorkspaceTrustInfo> {
+  override async getWorkspaceTrustInfo(
+    workDir: string,
+  ): Promise<WorkspaceTrustInfo> {
     const handler = await this.engineAccessor
       .get(IWorkspaceLifecycleService)
       .handlerFor({ root: workDir });
@@ -568,8 +602,18 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
     try {
       const fs = this.engineAccessor.get(IHostFileSystem);
       const [withProject, userOnly] = await Promise.all([
-        loadMcpServers({ fs, cwd: workDir, homeDir: this.homeDir, includeProject: true }),
-        loadMcpServers({ fs, cwd: workDir, homeDir: this.homeDir, includeProject: false }),
+        loadMcpServers({
+          fs,
+          cwd: workDir,
+          homeDir: this.homeDir,
+          includeProject: true,
+        }),
+        loadMcpServers({
+          fs,
+          cwd: workDir,
+          homeDir: this.homeDir,
+          includeProject: false,
+        }),
       ]);
       const gatedMcpServers = Object.keys(withProject)
         .filter((name) => !(name in userOnly))
@@ -610,7 +654,9 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
 
   override async getConfigDiagnostics(): Promise<ConfigDiagnostics> {
     await this.configReady;
-    return diagnosticsToConfigDiagnostics(await this.klient.global.config.diagnostics());
+    return diagnosticsToConfigDiagnostics(
+      await this.klient.global.config.diagnostics(),
+    );
   }
 
   /**
@@ -640,12 +686,15 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
    */
   override async removeProvider(providerId: string): Promise<KimiConfig> {
     await this.configReady;
-    const [providers, models, defaultModel, defaultProvider] = await Promise.all([
-      this.klient.global.config.inspect<Record<string, unknown>>('providers'),
-      this.klient.global.config.inspect<Record<string, Record<string, unknown>>>('models'),
-      this.klient.global.config.inspect<string>('defaultModel'),
-      this.klient.global.config.inspect<string>('defaultProvider'),
-    ]);
+    const [providers, models, defaultModel, defaultProvider] =
+      await Promise.all([
+        this.klient.global.config.inspect<Record<string, unknown>>("providers"),
+        this.klient.global.config.inspect<
+          Record<string, Record<string, unknown>>
+        >("models"),
+        this.klient.global.config.inspect<string>("defaultModel"),
+        this.klient.global.config.inspect<string>("defaultProvider"),
+      ]);
     const plan = planProviderRemoval({
       providers: providers.userValue,
       models: models.userValue,
@@ -658,10 +707,10 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
       models: plan.models,
     };
     if (plan.clearDefaultModel) {
-      sections['defaultModel'] = undefined;
+      sections["defaultModel"] = undefined;
     }
     if (plan.clearDefaultProvider) {
-      sections['defaultProvider'] = undefined;
+      sections["defaultProvider"] = undefined;
     }
     await this.klient.global.config.replaceSections({ sections });
     return this.getConfig();
@@ -671,7 +720,9 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
     return true;
   }
 
-  override async replaceConfigSections(sections: Record<string, unknown>): Promise<void> {
+  override async replaceConfigSections(
+    sections: Record<string, unknown>,
+  ): Promise<void> {
     await this.configReady;
     await this.klient.global.config.replaceSections({ sections });
   }
@@ -693,7 +744,11 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
     server: string,
     enabled: boolean,
   ): Promise<void> {
-    return this.klient.global.plugins.setMcpServerEnabled({ id, server, enabled });
+    return this.klient.global.plugins.setMcpServerEnabled({
+      id,
+      server,
+      enabled,
+    });
   }
 
   override async removePlugin(id: string): Promise<void> {
@@ -717,8 +772,10 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
         : {
             ...info.manifest,
             hooks: info.manifest.hooks?.filter((hook) =>
-              (HookDefSchema.shape.event.options as readonly string[]).includes(hook.event),
-            ) as NonNullable<PluginInfo['manifest']>['hooks'],
+              (HookDefSchema.shape.event.options as readonly string[]).includes(
+                hook.event,
+              ),
+            ) as NonNullable<PluginInfo["manifest"]>["hooks"],
           };
     return { ...info, manifest };
   }
@@ -757,7 +814,9 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
   }
 
   /** App-global live view of the enabled plugin commands, no session required. */
-  override async listPluginCommandsGlobal(): Promise<readonly PluginCommandDef[]> {
+  override async listPluginCommandsGlobal(): Promise<
+    readonly PluginCommandDef[]
+  > {
     return this.klient.global.plugins.listCommands();
   }
 
@@ -789,9 +848,13 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
 
   /** v1's `requireSession` / store lookup failure shape. */
   private static sessionNotFound(sessionId: string): KimiError {
-    return new KimiError(ErrorCodes.SESSION_NOT_FOUND, `Session "${sessionId}" was not found`, {
-      details: { sessionId },
-    });
+    return new KimiError(
+      ErrorCodes.SESSION_NOT_FOUND,
+      `Session "${sessionId}" was not found`,
+      {
+        details: { sessionId },
+      },
+    );
   }
 
   /** The live session handle, or the error v1 raises for a non-active session. */
@@ -825,7 +888,9 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
    * additional dirs) rather than the index — no disk round-trip, and the
    * additional dirs only exist on the live session in both engines.
    */
-  private async liveSessionSummary(handle: ISessionScopeHandle): Promise<SessionSummary> {
+  private async liveSessionSummary(
+    handle: ISessionScopeHandle,
+  ): Promise<SessionSummary> {
     const meta = await handle.accessor.get(ISessionMetadata).read();
     const ctx = handle.accessor.get(ISessionContext);
     const workspace = handle.accessor.get(ISessionWorkspaceContext);
@@ -854,7 +919,10 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
    */
   private async resumedSessionSummary(
     handle: ISessionScopeHandle,
-    replay?: { readonly includeSubagents?: boolean; readonly replayTurnLimit?: number },
+    replay?: {
+      readonly includeSubagents?: boolean;
+      readonly replayTurnLimit?: number;
+    },
   ): Promise<ResumedSessionSummary> {
     const meta = await handle.accessor.get(ISessionMetadata).read();
     const agents: Record<string, ResumedAgentState> = {};
@@ -864,15 +932,20 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
     agents[MAIN_AGENT_ID] = await this.resumedAgentState(
       handle,
       main,
-      'main',
+      "main",
       replay?.replayTurnLimit,
     );
     if (replay?.includeSubagents === true) {
-      const agentsDir = join(handle.accessor.get(ISessionContext).sessionDir, 'agents');
+      const agentsDir = join(
+        handle.accessor.get(ISessionContext).sessionDir,
+        "agents",
+      );
       let subagentIds: readonly string[] = [];
       try {
         subagentIds = (await readdir(agentsDir, { withFileTypes: true }))
-          .filter((entry) => entry.isDirectory() && entry.name !== MAIN_AGENT_ID)
+          .filter(
+            (entry) => entry.isDirectory() && entry.name !== MAIN_AGENT_ID,
+          )
           .map((entry) => entry.name);
       } catch {
         // No agents directory at all → the main agent is the whole roster.
@@ -880,11 +953,13 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
       for (const agentId of subagentIds) {
         try {
           // `create` is create-or-get and cold-restores the persisted wire.
-          const agent = await handle.accessor.get(IAgentLifecycleService).create({ agentId });
+          const agent = await handle.accessor
+            .get(IAgentLifecycleService)
+            .create({ agentId });
           agents[agentId] = await this.resumedAgentState(
             handle,
             agent,
-            'sub',
+            "sub",
             replay.replayTurnLimit,
           );
         } catch {
@@ -914,7 +989,7 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
   private async resumedAgentState(
     session: ISessionScopeHandle,
     agent: IAgentScopeHandle,
-    type: 'main' | 'sub',
+    type: "main" | "sub",
     replayTurnLimit?: number,
   ): Promise<ResumedAgentState> {
     const facade = this.klient.session(session.id).agent(agent.id);
@@ -924,7 +999,9 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
       facade.getPlan(),
       facade.getUsage(),
       facade.getTasks({ activeOnly: false }),
-      foldAgentWireReplay(join(ctx.sessionDir, 'agents', agent.id, 'wire.jsonl')),
+      foldAgentWireReplay(
+        join(ctx.sessionDir, "agents", agent.id, "wire.jsonl"),
+      ),
     ]);
     const profile = agent.accessor.get(IAgentProfileService).data();
     return {
@@ -943,11 +1020,13 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
       permission: {
         mode: agent.accessor.get(IAgentPermissionModeService).mode,
         rules: [...agent.accessor.get(IAgentPermissionRulesService).rules],
-      } as ResumedAgentState['permission'],
-      plan: plan as ResumedAgentState['plan'],
+      } as ResumedAgentState["permission"],
+      plan: plan as ResumedAgentState["plan"],
       swarmMode: agent.accessor.get(IAgentSwarmService).isActive,
-      usage: usage as ResumedAgentState['usage'],
-      tools: agent.accessor.get(IAgentRPCService).getTools({}) as ResumedAgentState['tools'],
+      usage: usage as ResumedAgentState["usage"],
+      tools: agent.accessor
+        .get(IAgentRPCService)
+        .getTools({}) as ResumedAgentState["tools"],
       toolStore: folded.toolStore,
       background: background as readonly BackgroundTaskInfo[],
     };
@@ -961,25 +1040,34 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
    */
   private async workspaceIdsFor(workDir: string): Promise<readonly string[]> {
     const workspaces = await this.klient.global.workspaces.list();
-    const match = workspaces.find((workspace) => normalizeWorkDir(workspace.root) === workDir);
+    const match = workspaces.find(
+      (workspace) => normalizeWorkDir(workspace.root) === workDir,
+    );
     if (match === undefined) return [encodeWorkDirKey(workDir)];
     return this.engineAccessor.get(IWorkspaceAliases).resolveAliasIds(match.id);
   }
 
-  override async listSessions(input: ListSessionsOptions = {}): Promise<readonly SessionSummary[]> {
+  override async listSessions(
+    input: ListSessionsOptions = {},
+  ): Promise<readonly SessionSummary[]> {
     // v1 rejects an empty workDir and bucket-filters by the normalized path;
     // the v2 index filters by workspace-id set instead.
     const workspaceIds =
       input.workDir === undefined
         ? undefined
-        : await this.workspaceIdsFor(normalizeRequiredWorkDir('listSessions', input.workDir));
+        : await this.workspaceIdsFor(
+            normalizeRequiredWorkDir("listSessions", input.workDir),
+          );
     const page = await this.klient.global.sessions.list({
       workspaceIds,
       sessionId: input.sessionId,
     });
     const bootstrapService = this.engineAccessor.get(IBootstrapService);
     const workspacesById = new Map(
-      (await this.klient.global.workspaces.list()).map((workspace) => [workspace.id, workspace]),
+      (await this.klient.global.workspaces.list()).map((workspace) => [
+        workspace.id,
+        workspace,
+      ]),
     );
     const summaries: SessionSummary[] = [];
     for (const item of page.items) {
@@ -993,7 +1081,10 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
           workDir,
           sessionDir: sessionDirOf(
             bootstrapService.homeDir,
-            workspacePersistenceScope(bootstrapService.scope('sessions'), item.workspaceId),
+            workspacePersistenceScope(
+              bootstrapService.scope("sessions"),
+              item.workspaceId,
+            ),
             item.id,
           ),
         }),
@@ -1016,8 +1107,10 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
    * that still leak through (unknown alias → `config.invalid`, no configured
    * default model → `model.not_configured`) are pinned in the parity tests.
    */
-  override async createSession(input: CreateSessionOptions): Promise<SessionSummary> {
-    const workDir = normalizeRequiredWorkDir('createSession', input.workDir);
+  override async createSession(
+    input: CreateSessionOptions,
+  ): Promise<SessionSummary> {
+    const workDir = normalizeRequiredWorkDir("createSession", input.workDir);
     if (input.id !== undefined) {
       const existing =
         this.liveSession(input.id) ??
@@ -1050,15 +1143,22 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
         thinking: input.thinking,
       });
       if (input.permission !== undefined) {
-        agent.accessor.get(IAgentPermissionModeService).setMode(input.permission);
+        agent.accessor
+          .get(IAgentPermissionModeService)
+          .setMode(input.permission);
       }
     }
     if (input.metadata !== undefined) {
-      await this.klient.session(handle.id).update({ custom: { ...input.metadata } });
+      await this.klient
+        .session(handle.id)
+        .update({ custom: { ...input.metadata } });
     }
     // v1 returns the caller's metadata verbatim on create (not the merged
     // custom map a later listing would report), so override it here too.
-    return { ...(await this.liveSessionSummary(handle)), metadata: input.metadata };
+    return {
+      ...(await this.liveSessionSummary(handle)),
+      metadata: input.metadata,
+    };
   }
 
   /**
@@ -1072,7 +1172,10 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
   override async renameSession(input: RenameSessionInput): Promise<void> {
     const title = input.title.trim();
     if (title.length === 0) {
-      throw new KimiError(ErrorCodes.SESSION_TITLE_EMPTY, 'Session title cannot be empty');
+      throw new KimiError(
+        ErrorCodes.SESSION_TITLE_EMPTY,
+        "Session title cannot be empty",
+      );
     }
     if (this.liveSession(input.id) !== undefined) {
       await this.klient.session(input.id).setTitle(title);
@@ -1100,17 +1203,20 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
     if (input.turnIndex !== undefined) {
       throw new KimiError(
         ErrorCodes.NOT_IMPLEMENTED,
-        'forkSession turnIndex truncation is not wired to agent-core-v2 yet.',
+        "forkSession turnIndex truncation is not wired to agent-core-v2 yet.",
       );
     }
     const forkHandler = await handlerForSession(this.engineAccessor, input.id);
-    if (forkHandler === undefined) throw SDKRpcClientV2.sessionNotFound(input.id);
-    const handle = await forkHandler.accessor.get(ISessionLifecycleService).fork({
-      sourceSessionId: input.id,
-      newSessionId: input.forkId,
-      title: input.title,
-      metadata: input.metadata,
-    });
+    if (forkHandler === undefined)
+      throw SDKRpcClientV2.sessionNotFound(input.id);
+    const handle = await forkHandler.accessor
+      .get(ISessionLifecycleService)
+      .fork({
+        sourceSessionId: input.id,
+        newSessionId: input.forkId,
+        title: input.title,
+        metadata: input.metadata,
+      });
     this.wireSession(handle);
     return this.resumedSessionSummary(handle);
   }
@@ -1130,7 +1236,9 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
    * each persisted agent wire, and every agent's replay is trimmed to the
    * most recent N user turns via the shared `limitAgentReplayByTurns`.
    */
-  override async resumeSession(input: ResumeSessionInput): Promise<ResumedSessionSummary> {
+  override async resumeSession(
+    input: ResumeSessionInput,
+  ): Promise<ResumedSessionSummary> {
     // v1 re-resolves caller-provided additional dirs on every resume and
     // merges them over the workspace-local set; the engine's resume options
     // union them into the handler's shared in-memory set while the session
@@ -1156,7 +1264,9 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
    * v2 channel (the engine owns plugin session-start injection) and is
    * ignored.
    */
-  override async reloadSession(input: ReloadSessionRpcInput): Promise<ResumedSessionSummary> {
+  override async reloadSession(
+    input: ReloadSessionRpcInput,
+  ): Promise<ResumedSessionSummary> {
     const sessionId = input.sessionId;
     const live = this.liveSession(sessionId);
     if (live !== undefined) {
@@ -1169,7 +1279,10 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
           );
         }
       }
-    } else if ((await this.engineAccessor.get(ISessionIndex).get(sessionId)) === undefined) {
+    } else if (
+      (await this.engineAccessor.get(ISessionIndex).get(sessionId)) ===
+      undefined
+    ) {
       throw SDKRpcClientV2.sessionNotFound(sessionId);
     }
     await this.configReady;
@@ -1192,7 +1305,9 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
    * (v1 routes through the live session and 404s on a closed one; mirrored
    * here by {@link requireLiveSession}).
    */
-  override async updateSessionMetadata(input: UpdateSessionMetadataRpcInput): Promise<void> {
+  override async updateSessionMetadata(
+    input: UpdateSessionMetadataRpcInput,
+  ): Promise<void> {
     this.requireLiveSession(input.sessionId);
     const current = await this.klient.session(input.sessionId).get();
     const custom = { ...current.custom, ...input.metadata };
@@ -1209,7 +1324,9 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
    * every session of the workspace until the process exits). Returns the
    * same `{additionalDirs, projectRoot, configPath, persisted}` shape as v1.
    */
-  override async addAdditionalDir(input: AddAdditionalDirInput): Promise<AddAdditionalDirResult> {
+  override async addAdditionalDir(
+    input: AddAdditionalDirInput,
+  ): Promise<AddAdditionalDirResult> {
     const handle = this.requireLiveSession(input.id);
     return handle.accessor
       .get(IWorkspaceDirs)
@@ -1231,7 +1348,9 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
    * not part of the parity surface: the two engines lay their session
    * directories out differently by design.
    */
-  override async exportSession(input: ExportSessionInput): Promise<ExportSessionResult> {
+  override async exportSession(
+    input: ExportSessionInput,
+  ): Promise<ExportSessionResult> {
     return this.engineAccessor.get(ISessionExportService).export({
       sessionId: input.id,
       outputPath: input.outputPath,
@@ -1251,8 +1370,12 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
    * re-merges on source changes mid-session; the two agree for any session
    * created after the last skill change.
    */
-  override async listSkills(input: SessionIdRpcInput): Promise<readonly SkillSummary[]> {
-    const catalog = this.requireLiveSession(input.sessionId).accessor.get(ISessionSkillCatalog);
+  override async listSkills(
+    input: SessionIdRpcInput,
+  ): Promise<readonly SkillSummary[]> {
+    const catalog = this.requireLiveSession(input.sessionId).accessor.get(
+      ISessionSkillCatalog,
+    );
     await catalog.ready;
     return catalog.catalog.listSkills().map(summarizeSkill);
   }
@@ -1316,7 +1439,10 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
     if (agentId === MAIN_AGENT_ID) return this.materializeMainAgent(session);
     const agent = session.accessor.get(IAgentLifecycleService).get(agentId);
     if (agent === undefined) {
-      throw new KimiError(ErrorCodes.AGENT_NOT_FOUND, `Agent "${agentId}" was not found`);
+      throw new KimiError(
+        ErrorCodes.AGENT_NOT_FOUND,
+        `Agent "${agentId}" was not found`,
+      );
     }
     return agent;
   }
@@ -1337,7 +1463,9 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
    * up front, report the resolved provider name, and reject an unknown alias
    * with `config.invalid` (only the trailing message wording differs).
    */
-  override async setModel(input: SetSessionModelRpcInput): Promise<SetSessionModelRpcResult> {
+  override async setModel(
+    input: SetSessionModelRpcInput,
+  ): Promise<SetSessionModelRpcResult> {
     const agent = await this.agentFacade(input.sessionId);
     return agent.setModel(input.model);
   }
@@ -1367,7 +1495,9 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
    * flag-gated, mirroring v1's `setSecondaryModelConfig` (the experiment
    * gate lives at the spawn binding on both engines).
    */
-  override async applyPersistedSecondaryModel(input: SessionIdRpcInput): Promise<void> {
+  override async applyPersistedSecondaryModel(
+    input: SessionIdRpcInput,
+  ): Promise<void> {
     const session = this.requireLiveSession(input.sessionId);
     await this.klient.global.config.reload();
     await this.configReady;
@@ -1378,7 +1508,7 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
     if (secondary?.model === undefined) {
       throw new KimiError(
         ErrorCodes.CONFIG_INVALID,
-        'Cannot set the secondary model: persist its recipe before applying it to a session.',
+        "Cannot set the secondary model: persist its recipe before applying it to a session.",
       );
     }
     try {
@@ -1391,7 +1521,9 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
       .recheckSecondaryModelWarning();
   }
 
-  override async setPermission(input: SetSessionPermissionRpcInput): Promise<void> {
+  override async setPermission(
+    input: SetSessionPermissionRpcInput,
+  ): Promise<void> {
     const agent = await this.agentFacade(input.sessionId);
     return agent.setPermission(input.mode);
   }
@@ -1422,7 +1554,9 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
    * v2 the provider-measured prefix (`0` until the first LLM round) — pinned
    * in the parity KNOWN_DIFFS.
    */
-  override async getContext(input: SessionIdRpcInput): Promise<AgentContextData> {
+  override async getContext(
+    input: SessionIdRpcInput,
+  ): Promise<AgentContextData> {
     const agent = await this.agentFacade(input.sessionId);
     return agent.getContext() as Promise<AgentContextData>;
   }
@@ -1442,7 +1576,9 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
    */
   override async getStatus(input: SessionIdRpcInput): Promise<SessionStatus> {
     const agent = await this.agentScope(input.sessionId);
-    const facade = this.klient.session(input.sessionId).agent(this.interactiveAgentId);
+    const facade = this.klient
+      .session(input.sessionId)
+      .agent(this.interactiveAgentId);
     const [context, plan, usage] = await Promise.all([
       facade.getContext(),
       facade.getPlan(),
@@ -1450,13 +1586,17 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
     ]);
     const profile = agent.accessor.get(IAgentProfileService).data();
     const capability = profile.modelCapabilities;
-    const maxContextTokens = capability.max_input_tokens ?? capability.max_context_tokens;
+    const maxContextTokens =
+      capability.max_input_tokens ?? capability.max_context_tokens;
     const contextTokens = context.tokenCount;
     // Deliberately unclamped, same as the base class (>100% is the documented
     // overflow signal on this path).
-    const contextUsage = maxContextTokens > 0 ? contextTokens / maxContextTokens : 0;
+    const contextUsage =
+      maxContextTokens > 0 ? contextTokens / maxContextTokens : 0;
     const hasUsage =
-      usage.byModel !== undefined || usage.total !== undefined || usage.currentTurn !== undefined;
+      usage.byModel !== undefined ||
+      usage.total !== undefined ||
+      usage.currentTurn !== undefined;
     return {
       model: profile.modelAlias,
       thinkingEffort: profile.thinkingLevel,
@@ -1482,10 +1622,12 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
    * silent no-op while one is already running, and rejects with
    * `compaction.unable` on an empty history or an active turn.
    */
-  override async compact(input: SessionIdRpcInput & CompactOptions): Promise<void> {
+  override async compact(
+    input: SessionIdRpcInput & CompactOptions,
+  ): Promise<void> {
     const agent = await this.agentScope(input.sessionId);
     agent.accessor.get(IAgentFullCompactionService).begin({
-      source: 'manual',
+      source: "manual",
       instruction: input.instruction,
     });
   }
@@ -1508,9 +1650,13 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
    * v1 splices a partial suffix out of the live history and then throws
    * `request.invalid` — pinned in the parity KNOWN_DIFFS.
    */
-  override async undoHistory(input: SessionIdRpcInput & { count: number }): Promise<void> {
+  override async undoHistory(
+    input: SessionIdRpcInput & { count: number },
+  ): Promise<void> {
     const agent = await this.agentScope(input.sessionId);
-    await agent.accessor.get(IAgentRPCService).undoHistory({ count: input.count });
+    await agent.accessor
+      .get(IAgentRPCService)
+      .undoHistory({ count: input.count });
   }
 
   /**
@@ -1538,17 +1684,21 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
   override async importContext(input: ImportContextRpcInput): Promise<void> {
     const agent = await this.agentScope(input.sessionId);
     if (
-      agent.accessor.get(IAgentLoopService).status().state === 'running' ||
+      agent.accessor.get(IAgentLoopService).status().state === "running" ||
       agent.accessor.get(IAgentFullCompactionService).compacting !== null
     ) {
       throw new KimiError(
         ErrorCodes.TURN_AGENT_BUSY,
-        'Cannot import context while the agent is busy',
+        "Cannot import context while the agent is busy",
       );
     }
     const message = buildImportContextMessage(input.content, input.source);
-    const capability = agent.accessor.get(IAgentProfileService).data().modelCapabilities;
-    const currentTokenCount = agent.accessor.get(IAgentTokenCountingService).get().size;
+    const capability = agent.accessor
+      .get(IAgentProfileService)
+      .data().modelCapabilities;
+    const currentTokenCount = agent.accessor
+      .get(IAgentTokenCountingService)
+      .get().size;
     assertImportFits(
       message,
       currentTokenCount,
@@ -1571,7 +1721,10 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
    */
   override async prompt(input: SessionPromptRpcInput): Promise<void> {
     const agent = await this.agentFacade(input.sessionId);
-    await agent.prompt({ input: input.input, disabledTools: input.disabledTools });
+    await agent.prompt({
+      input: input.input,
+      disabledTools: input.disabledTools,
+    });
   }
 
   /**
@@ -1601,9 +1754,17 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
     sessionId: string;
     command: string;
     commandId?: string;
-  }): Promise<{ stdout: string; stderr: string; isError?: boolean; backgrounded?: boolean }> {
+  }): Promise<{
+    stdout: string;
+    stderr: string;
+    isError?: boolean;
+    backgrounded?: boolean;
+  }> {
     const agent = await this.agentFacade(input.sessionId);
-    return agent.runShellCommand({ command: input.command, commandId: input.commandId });
+    return agent.runShellCommand({
+      command: input.command,
+      commandId: input.commandId,
+    });
   }
 
   /** Facade (`agentShellCommandService.cancel`) — an unknown id is a silent no-op on both engines. */
@@ -1629,9 +1790,14 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
    */
   override async activateSkill(input: ActivateSkillRpcInput): Promise<void> {
     const agent = await this.agentScope(input.sessionId);
-    await agent.accessor.get(IAgentSkillService).activate({ name: input.name, args: input.args });
+    await agent.accessor
+      .get(IAgentSkillService)
+      .activate({ name: input.name, args: input.args });
     if (this.interactiveAgentId === MAIN_AGENT_ID) {
-      await this.updatePromptMetadata(input.sessionId, promptMetadataTextFromSkill(input));
+      await this.updatePromptMetadata(
+        input.sessionId,
+        promptMetadataTextFromSkill(input),
+      );
     }
   }
 
@@ -1647,7 +1813,9 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
    * it unconditionally — only observable through a non-main
    * `interactiveAgentId`.
    */
-  override async activatePluginCommand(input: ActivatePluginCommandRpcInput): Promise<void> {
+  override async activatePluginCommand(
+    input: ActivatePluginCommandRpcInput,
+  ): Promise<void> {
     const agent = await this.agentScope(input.sessionId);
     await agent.accessor.get(IAgentRPCService).activatePluginCommand({
       pluginId: input.pluginId,
@@ -1703,19 +1871,32 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
         },
         session.accessor.get(ISessionContext).cwd,
         this.engineAccessor.get(IBootstrapService).homeDir,
-        { additionalDirs: session.accessor.get(ISessionWorkspaceContext).additionalDirs },
+        {
+          additionalDirs: session.accessor.get(ISessionWorkspaceContext)
+            .additionalDirs,
+        },
       );
       warning = prepared.agentsMdWarning;
     }
-    const warnings: { code: string; message: string; severity: 'warning' }[] =
+    const warnings: { code: string; message: string; severity: "warning" }[] =
       warning === undefined
         ? []
-        : [{ code: 'agents-md-oversized', message: warning, severity: 'warning' as const }];
+        : [
+            {
+              code: "agents-md-oversized",
+              message: warning,
+              severity: "warning" as const,
+            },
+          ];
     const secondary = this.requireLiveSession(input.sessionId)
       .accessor.get(ISessionSecondaryModelWarningService)
       .getSecondaryModelWarning();
     if (secondary !== undefined) {
-      warnings.push({ code: secondary.code, message: secondary.message, severity: 'warning' });
+      warnings.push({
+        code: secondary.code,
+        message: secondary.message,
+        severity: "warning",
+      });
     }
     return warnings;
   }
@@ -1725,7 +1906,10 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
    * over the engine's shared helper so skill/plugin-command activations land
    * on the same metadata the native v2 prompt path writes.
    */
-  private async updatePromptMetadata(sessionId: string, text: string | undefined): Promise<void> {
+  private async updatePromptMetadata(
+    sessionId: string,
+    text: string | undefined,
+  ): Promise<void> {
     const session = this.requireLiveSession(sessionId);
     await applyPromptMetadataUpdate(
       {
@@ -1764,7 +1948,9 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
    * auto-exit on turn end. The base class's private enter/exit pair is
    * replaced wholesale; `swarm()` below recomposes it over this override.
    */
-  override async setSwarmMode(input: SetSessionSwarmModeRpcInput): Promise<void> {
+  override async setSwarmMode(
+    input: SetSessionSwarmModeRpcInput,
+  ): Promise<void> {
     const agent = await this.agentScope(input.sessionId);
     const swarm = agent.accessor.get(IAgentSwarmService);
     if (input.enabled) {
@@ -1776,7 +1962,11 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
 
   /** v1's `swarm()` composition: enter with the one-shot `task` trigger, then prompt. */
   override async swarm(input: SessionPromptRpcInput): Promise<void> {
-    await this.setSwarmMode({ sessionId: input.sessionId, enabled: true, trigger: 'task' });
+    await this.setSwarmMode({
+      sessionId: input.sessionId,
+      enabled: true,
+      trigger: "task",
+    });
     return this.prompt(input);
   }
 
@@ -1800,7 +1990,9 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
    * on every agent; only reachable through a non-main `interactiveAgentId`
    * (tracked in the migration tracker).
    */
-  override async createGoal(input: SessionIdRpcInput & CreateGoalInput): Promise<GoalSnapshot> {
+  override async createGoal(
+    input: SessionIdRpcInput & CreateGoalInput,
+  ): Promise<GoalSnapshot> {
     const agent = await this.agentScope(input.sessionId);
     return agent.accessor
       .get(IAgentGoalService)
@@ -1837,10 +2029,14 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
    * post-jitter `nextFireAt` comes from the same scheduler read v1's
    * `listTaskSnapshots` forwards to.
    */
-  override async getCronTasks(input: SessionIdRpcInput): Promise<GetCronTasksResult> {
+  override async getCronTasks(
+    input: SessionIdRpcInput,
+  ): Promise<GetCronTasksResult> {
     await this.agentScope(input.sessionId);
     if (this.interactiveAgentId !== MAIN_AGENT_ID) return { tasks: [] };
-    const cron = this.requireLiveSession(input.sessionId).accessor.get(ISessionCronService);
+    const cron = this.requireLiveSession(input.sessionId).accessor.get(
+      ISessionCronService,
+    );
     return {
       tasks: cron.list().map((task) => ({
         id: task.id,
@@ -1865,9 +2061,10 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
     input: SessionIdRpcInput & { activeOnly?: boolean; limit?: number },
   ): Promise<readonly BackgroundTaskInfo[]> {
     const agent = await this.agentFacade(input.sessionId);
-    return agent.getTasks({ activeOnly: input.activeOnly, limit: input.limit }) as Promise<
-      readonly BackgroundTaskInfo[]
-    >;
+    return agent.getTasks({
+      activeOnly: input.activeOnly,
+      limit: input.limit,
+    }) as Promise<readonly BackgroundTaskInfo[]>;
   }
 
   /**
@@ -1894,7 +2091,9 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
     input: SessionIdRpcInput & { taskId: string; reason?: string },
   ): Promise<void> {
     const agent = await this.agentScope(input.sessionId);
-    await agent.accessor.get(IAgentTaskService).stop(input.taskId, input.reason);
+    await agent.accessor
+      .get(IAgentTaskService)
+      .stop(input.taskId, input.reason);
   }
 
   /**
@@ -1922,13 +2121,16 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
    * config (the `[task]` section layered over `[background]`) — identical
    * unless the config changes mid-session.
    */
-  override async waitForBackgroundTasksOnPrint(input: SessionIdRpcInput): Promise<void> {
+  override async waitForBackgroundTasksOnPrint(
+    input: SessionIdRpcInput,
+  ): Promise<void> {
     const session = this.requireLiveSession(input.sessionId);
     await this.configReady;
     const config = this.engineAccessor.get(IConfigService);
-    if (resolvePrintBackgroundMode(config) !== 'drain') return;
+    if (resolvePrintBackgroundMode(config) !== "drain") return;
     const ceilingS =
-      resolveAgentTaskConfig(config)?.printWaitCeilingS ?? PRINT_WAIT_CEILING_S_DEFAULT;
+      resolveAgentTaskConfig(config)?.printWaitCeilingS ??
+      PRINT_WAIT_CEILING_S_DEFAULT;
     await this.drainBackgroundTasksOnPrint(session, ceilingS);
   }
 
@@ -1943,29 +2145,33 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
    */
   override async handlePrintMainTurnCompleted(
     input: SessionIdRpcInput,
-  ): Promise<'finish' | 'continue'> {
+  ): Promise<"finish" | "continue"> {
     const session = this.requireLiveSession(input.sessionId);
     await this.configReady;
     const config = this.engineAccessor.get(IConfigService);
     const taskConfig = resolveAgentTaskConfig(config);
-    const ceilingS = taskConfig?.printWaitCeilingS ?? PRINT_WAIT_CEILING_S_DEFAULT;
+    const ceilingS =
+      taskConfig?.printWaitCeilingS ?? PRINT_WAIT_CEILING_S_DEFAULT;
     const mode = resolvePrintBackgroundMode(config);
-    if (mode === 'exit') return 'finish';
-    if (mode === 'drain') {
+    if (mode === "exit") return "finish";
+    if (mode === "drain") {
       await this.drainBackgroundTasksOnPrint(session, ceilingS);
-      return 'finish';
+      return "finish";
     }
     // 'steer'
     const maxTurns = taskConfig?.printMaxTurns ?? PRINT_MAX_TURNS_DEFAULT;
-    const state = this.printSteerStates.get(input.sessionId) ?? { deadline: undefined, turns: 0 };
+    const state = this.printSteerStates.get(input.sessionId) ?? {
+      deadline: undefined,
+      turns: 0,
+    };
     this.printSteerStates.set(input.sessionId, state);
     const now = Date.now();
     state.deadline ??= now + ceilingS * 1000;
     state.turns += 1;
-    if (now >= state.deadline) return 'finish';
-    if (state.turns > maxTurns) return 'finish';
-    if (this.countActiveBackgroundTasks(session) > 0) return 'continue';
-    return 'finish';
+    if (now >= state.deadline) return "finish";
+    if (state.turns > maxTurns) return "finish";
+    if (this.countActiveBackgroundTasks(session) > 0) return "continue";
+    return "finish";
   }
 
   /**
@@ -1999,7 +2205,10 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
           // resolve (v1's `timeoutOutcome` clamps to the same bound) — the
           // default print ceiling is 10 years, so clamp here. The outer loop
           // re-enumerates after an early return, so semantics are unchanged.
-          const remaining = Math.min(Math.max(1, deadline - Date.now()), MAX_TIMER_DELAY_MS);
+          const remaining = Math.min(
+            Math.max(1, deadline - Date.now()),
+            MAX_TIMER_DELAY_MS,
+          );
           const waiter = tasks.wait(task.taskId, remaining);
           batch.push(waiter);
           allWaiters.push(waiter);
@@ -2051,7 +2260,9 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
     await this.engineAccessor.get(IAgentIdentity).resolved();
     if (this.globalMcpOAuth === undefined) {
       this.globalMcpOAuth = new McpOAuthService({
-        store: createMcpOAuthStore(this.engineAccessor.get(IAtomicDocumentStore)),
+        store: createMcpOAuthStore(
+          this.engineAccessor.get(IAtomicDocumentStore),
+        ),
         resolveClientName: () => this.resolveMcpClientName(),
       });
     }
@@ -2074,7 +2285,9 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
     return this.globalMcpConfig.update(server);
   }
 
-  override async removeGlobalMcpServer(name: string): Promise<readonly McpServerConfig[]> {
+  override async removeGlobalMcpServer(
+    name: string,
+  ): Promise<readonly McpServerConfig[]> {
     return this.globalMcpConfig.remove(name);
   }
 
@@ -2085,7 +2298,9 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
    * a flowId. The OAuth work itself is the v2 engine's `McpOAuthService`
    * (same begin/complete/cancel contract as v1's).
    */
-  override async beginGlobalMcpServerAuth(name: string): Promise<BeginGlobalMcpServerAuthResult> {
+  override async beginGlobalMcpServerAuth(
+    name: string,
+  ): Promise<BeginGlobalMcpServerAuthResult> {
     const server = await this.globalMcpConfig.get(name);
     const config = requireOAuthMcpServer(server);
     try {
@@ -2094,13 +2309,13 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
       const flowId = randomUUID();
       this.globalMcpOAuthFlows.set(flowId, { flow });
       return {
-        status: 'authorization-required',
+        status: "authorization-required",
         flowId,
         authorizationUrl: flow.authorizationUrl.toString(),
       };
     } catch (error) {
       if (error instanceof AlreadyAuthorizedError) {
-        return { status: 'already-authorized' };
+        return { status: "already-authorized" };
       }
       throw error;
     }
@@ -2112,7 +2327,10 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
   ): Promise<void> {
     const active = this.globalMcpOAuthFlows.get(input.flowId);
     if (active === undefined) {
-      throw new KimiError(ErrorCodes.REQUEST_INVALID, `Unknown MCP OAuth flow: ${input.flowId}`);
+      throw new KimiError(
+        ErrorCodes.REQUEST_INVALID,
+        `Unknown MCP OAuth flow: ${input.flowId}`,
+      );
     }
     try {
       await active.flow.complete({
@@ -2153,7 +2371,9 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
     const server = await this.globalMcpConfig.get(name);
     const config = mcpConfigWithoutName(server);
     await this.configReady;
-    const section = this.engineAccessor.get(IConfigService).get<McpSection | undefined>(MCP_SECTION);
+    const section = this.engineAccessor
+      .get(IConfigService)
+      .get<McpSection | undefined>(MCP_SECTION);
     const manager = new McpConnectionManager({
       stdioCwd: options.cwd,
       oauthService: await this.globalMcpOAuthService(),
@@ -2178,8 +2398,12 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
    * pending. The v2 `McpServerEntry` is field-identical with v1's
    * `McpServerInfo` (the cast bridges the two packages' type declarations).
    */
-  override async listMcpServers(input: SessionIdRpcInput): Promise<readonly McpServerInfo[]> {
-    const mcp = this.requireLiveSession(input.sessionId).accessor.get(ISessionMcpHandle);
+  override async listMcpServers(
+    input: SessionIdRpcInput,
+  ): Promise<readonly McpServerInfo[]> {
+    const mcp = this.requireLiveSession(input.sessionId).accessor.get(
+      ISessionMcpHandle,
+    );
     return mcp.connectionManager.list() as readonly McpServerInfo[];
   }
 
@@ -2190,17 +2414,25 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
    * before the list is read.
    * Same `McpServerEntry`-as-`McpServerInfo` cast as listMcpServers.
    */
-  override async listWorkspaceMcpServers(workDir: string): Promise<readonly McpServerInfo[]> {
+  override async listWorkspaceMcpServers(
+    workDir: string,
+  ): Promise<readonly McpServerInfo[]> {
     const handler = await this.engineAccessor
       .get(IWorkspaceLifecycleService)
-      .handlerFor({ root: normalizeRequiredWorkDir('listWorkspaceMcpServers', workDir) });
+      .handlerFor({
+        root: normalizeRequiredWorkDir("listWorkspaceMcpServers", workDir),
+      });
     const mcp = handler.accessor.get(IWorkspaceMcpService);
     await mcp.ready;
     return mcp.connectionManager().list() as readonly McpServerInfo[];
   }
 
-  override async getMcpStartupMetrics(input: SessionIdRpcInput): Promise<McpStartupMetrics> {
-    const mcp = this.requireLiveSession(input.sessionId).accessor.get(ISessionMcpHandle);
+  override async getMcpStartupMetrics(
+    input: SessionIdRpcInput,
+  ): Promise<McpStartupMetrics> {
+    const mcp = this.requireLiveSession(input.sessionId).accessor.get(
+      ISessionMcpHandle,
+    );
     await mcp.ready;
     return { durationMs: mcp.connectionManager.initialLoadDurationMs() };
   }
@@ -2210,8 +2442,12 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
    * same `mcp.server_not_found` / `mcp.server_disabled` errors, and the tool
    * re-registration rides on the status listeners in both engines.
    */
-  override async reconnectMcpServer(input: ReconnectMcpServerRpcInput): Promise<void> {
-    const mcp = this.requireLiveSession(input.sessionId).accessor.get(ISessionMcpHandle);
+  override async reconnectMcpServer(
+    input: ReconnectMcpServerRpcInput,
+  ): Promise<void> {
+    const mcp = this.requireLiveSession(input.sessionId).accessor.get(
+      ISessionMcpHandle,
+    );
     await mcp.connectionManager.reconnect(input.name);
   }
 }
@@ -2236,8 +2472,11 @@ export function createKimiHarnessV2(options: KimiHarnessOptions): KimiHarness {
 
 /** v1's `requiredWorkDir`: reject blank and normalize to the canonical spelling. */
 function normalizeRequiredWorkDir(operation: string, workDir: string): string {
-  if (typeof workDir !== 'string' || workDir.trim() === '') {
-    throw new KimiError(ErrorCodes.REQUEST_WORK_DIR_REQUIRED, `${operation} requires workDir`);
+  if (typeof workDir !== "string" || workDir.trim() === "") {
+    throw new KimiError(
+      ErrorCodes.REQUEST_WORK_DIR_REQUIRED,
+      `${operation} requires workDir`,
+    );
   }
   return normalizeWorkDir(workDir);
 }

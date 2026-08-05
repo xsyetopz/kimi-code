@@ -43,14 +43,14 @@
  * intentionally not persisted and are re-derived on resume.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import type { EnvironmentDisclosureSnapshot } from '#/app/agentProfileCatalog/agentProfileCatalog';
-import type { ThinkingEffort } from '#/kosong/contract/provider';
-import { defineModel } from '#/wire/model';
-import type { PayloadOf } from '#/wire/types';
+import type { EnvironmentDisclosureSnapshot } from "#/app/agentProfileCatalog/agentProfileCatalog";
+import type { ThinkingEffort } from "#/kosong/contract/provider";
+import { defineModel } from "#/wire/model";
+import type { PayloadOf } from "#/wire/types";
 
-import { ProfileError, ProfileErrors } from './profile';
+import { ProfileError, ProfileErrors } from "./profile";
 
 export interface ProfileModelState {
   readonly modelAlias?: string;
@@ -64,13 +64,13 @@ export interface ProfileModelState {
   readonly subagents?: readonly string[];
 }
 
-export const ProfileModel = defineModel<ProfileModelState>('profile', () => ({
-  thinkingLevel: 'off',
-  systemPrompt: '',
+export const ProfileModel = defineModel<ProfileModelState>("profile", () => ({
+  thinkingLevel: "off",
+  systemPrompt: "",
   renderGeneration: 0,
 }));
 
-export const profileBind = ProfileModel.defineOp('profile.bind', {
+export const profileBind = ProfileModel.defineOp("profile.bind", {
   schema: z.object({
     modelAlias: z.string().optional(),
     profileName: z.string().optional(),
@@ -96,7 +96,7 @@ export const profileBind = ProfileModel.defineOp('profile.bind', {
   }),
 });
 
-export const configUpdate = ProfileModel.defineOp('config.update', {
+export const configUpdate = ProfileModel.defineOp("config.update", {
   schema: z.object({
     modelAlias: z.string().optional(),
     profileName: z.string().optional(),
@@ -167,7 +167,7 @@ function configUpdateThinkingLevel(
         ProfileErrors.codes.THINKING_ALIAS_CONFLICT,
         `config.update has conflicting thinkingEffort (${p.thinkingEffort}) and legacy thinkingLevel (${p.thinkingLevel})`,
         {
-          type: 'config.update',
+          type: "config.update",
           thinkingEffort: p.thinkingEffort,
           thinkingLevel: p.thinkingLevel,
         },
@@ -182,26 +182,34 @@ function configUpdateThinkingLevel(
 export type ActiveToolsState = readonly string[] | undefined;
 
 export const ActiveToolsModel = defineModel<ActiveToolsState>(
-  'profile.activeTools',
+  "profile.activeTools",
   () => undefined,
-  { reducers: { 'profile.bind': (_state, payload) => payload.activeToolNames } },
+  {
+    reducers: { "profile.bind": (_state, payload) => payload.activeToolNames },
+  },
 );
 
-declare module '#/wire/types' {
+declare module "#/wire/types" {
   interface PersistedOpMap {
-    'profile.bind': typeof profileBind;
-    'config.update': typeof configUpdate;
-    'tools.set_active_tools': typeof setActiveTools;
-    'tools.reset_active_tools': typeof resetActiveTools;
+    "profile.bind": typeof profileBind;
+    "config.update": typeof configUpdate;
+    "tools.set_active_tools": typeof setActiveTools;
+    "tools.reset_active_tools": typeof resetActiveTools;
   }
 }
 
-export const setActiveTools = ActiveToolsModel.defineOp('tools.set_active_tools', {
-  schema: z.object({ names: z.array(z.string()).readonly() }),
-  apply: (s, p) => (p.names === s ? s : p.names),
-});
+export const setActiveTools = ActiveToolsModel.defineOp(
+  "tools.set_active_tools",
+  {
+    schema: z.object({ names: z.array(z.string()).readonly() }),
+    apply: (s, p) => (p.names === s ? s : p.names),
+  },
+);
 
-export const resetActiveTools = ActiveToolsModel.defineOp('tools.reset_active_tools', {
-  schema: z.object({}),
-  apply: (s) => (s === undefined ? s : undefined),
-});
+export const resetActiveTools = ActiveToolsModel.defineOp(
+  "tools.reset_active_tools",
+  {
+    schema: z.object({}),
+    apply: (s) => (s === undefined ? s : undefined),
+  },
+);

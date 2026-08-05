@@ -1,5 +1,12 @@
 #!/usr/bin/env node
-import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import {
+  access,
+  mkdir,
+  mkdtemp,
+  readFile,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -14,7 +21,9 @@ const defaultCachePath = join(tmpdir(), "kimi-vscode-test-cache");
 
 export async function runExtensionHostSmoke(options = {}) {
   const version = options.version ?? "stable";
-  const cacheRoot = resolve(options.cachePath ?? process.env.VSCODE_TEST_CACHE ?? defaultCachePath);
+  const cacheRoot = resolve(
+    options.cachePath ?? process.env.VSCODE_TEST_CACHE ?? defaultCachePath,
+  );
   const vsixPath = resolve(options.vsixPath ?? defaultVsixPath());
   await access(vsixPath);
   await mkdir(cacheRoot, { recursive: true });
@@ -41,16 +50,22 @@ export async function runExtensionHostSmoke(options = {}) {
   };
 
   try {
-    await Promise.all([
-      paths.extensions,
-      paths.installUserData,
-      paths.userData,
-      paths.kimiHome,
-      paths.osHome,
-      paths.workspace,
-      paths.harness,
-    ].map((path) => mkdir(path, { recursive: true })));
-    await writeFile(join(paths.workspace, "README.md"), "# Kimi VSIX Extension Host smoke\n", "utf8");
+    await Promise.all(
+      [
+        paths.extensions,
+        paths.installUserData,
+        paths.userData,
+        paths.kimiHome,
+        paths.osHome,
+        paths.workspace,
+        paths.harness,
+      ].map((path) => mkdir(path, { recursive: true })),
+    );
+    await writeFile(
+      join(paths.workspace, "README.md"),
+      "# Kimi VSIX Extension Host smoke\n",
+      "utf8",
+    );
     await writeHarnessManifest(paths.harness);
 
     const installProfileArgs = [
@@ -67,8 +82,12 @@ export async function runExtensionHostSmoke(options = {}) {
       downloadOptions,
     );
     const installOutput = `${install.stdout}\n${install.stderr}`;
-    if (!/successfully installed|was successfully installed/i.test(installOutput)) {
-      throw new Error(`VSIX installation did not report success:\n${installOutput.trim()}`);
+    if (
+      !/successfully installed|was successfully installed/i.test(installOutput)
+    ) {
+      throw new Error(
+        `VSIX installation did not report success:\n${installOutput.trim()}`,
+      );
     }
 
     await runTests({
@@ -92,7 +111,9 @@ export async function runExtensionHostSmoke(options = {}) {
 
     const report = JSON.parse(await readFile(paths.report, "utf8"));
     if (typeof report.vscode !== "string" || report.vscode.length === 0) {
-      throw new Error("Extension Host smoke did not report its actual VS Code version");
+      throw new Error(
+        "Extension Host smoke did not report its actual VS Code version",
+      );
     }
     if (version !== "stable" && report.vscode !== version) {
       throw new Error(
@@ -104,14 +125,26 @@ export async function runExtensionHostSmoke(options = {}) {
   } finally {
     await Promise.all([
       rm(root, { recursive: true, force: true }),
-      disposableCache ? rm(cachePath, { recursive: true, force: true }) : Promise.resolve(),
+      disposableCache
+        ? rm(cachePath, { recursive: true, force: true })
+        : Promise.resolve(),
     ]);
   }
 }
 
 function defaultVsixPath() {
-  const arch = process.arch === "arm64" ? "arm64" : process.arch === "x64" ? "x64" : process.arch;
-  return join(appDir, "artifacts", "vsix", `kimi-code-${process.platform}-${arch}.vsix`);
+  const arch =
+    process.arch === "arm64"
+      ? "arm64"
+      : process.arch === "x64"
+        ? "x64"
+        : process.arch;
+  return join(
+    appDir,
+    "artifacts",
+    "vsix",
+    `kimi-code-${process.platform}-${arch}.vsix`,
+  );
 }
 
 async function writeHarnessManifest(directory) {
@@ -156,14 +189,17 @@ function parseArguments(argv) {
 }
 
 function requiredValue(value, flag) {
-  if (value === undefined || value.startsWith("-")) throw new Error(`${flag} requires a value`);
+  if (value === undefined || value.startsWith("-"))
+    throw new Error(`${flag} requires a value`);
   return value;
 }
 
 async function main() {
   const options = parseArguments(process.argv.slice(2));
   if (options.help) {
-    console.log("Usage: node scripts/extension-host-smoke.mjs [--version <stable|x.y.z>] [--vsix <path>] [--cache-path <path>]");
+    console.log(
+      "Usage: node scripts/extension-host-smoke.mjs [--version <stable|x.y.z>] [--vsix <path>] [--cache-path <path>]",
+    );
     return;
   }
   const result = await runExtensionHostSmoke(options);
@@ -174,7 +210,9 @@ async function main() {
 
 if (isMainModule(import.meta.url)) {
   main().catch((error) => {
-    console.error(`VSIX Extension Host smoke failed: ${error instanceof Error ? error.stack ?? error.message : String(error)}`);
+    console.error(
+      `VSIX Extension Host smoke failed: ${error instanceof Error ? (error.stack ?? error.message) : String(error)}`,
+    );
     process.exitCode = 1;
   });
 }

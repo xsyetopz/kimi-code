@@ -8,14 +8,25 @@
  * endpoint.
  */
 
-import { registerProtocolBase } from '#/kosong/protocol/protocolBase';
-import { traitConvertError, traitDefaultHeaders } from '#/kosong/protocol/protocolTrait';
+import { registerProtocolBase } from "#/kosong/protocol/protocolBase";
+import {
+  traitConvertError,
+  traitDefaultHeaders,
+} from "#/kosong/protocol/protocolTrait";
 
-import { getOpenAIResponsesModelCapability, OpenAIResponsesChatProvider } from './openai-responses';
-import { compactObject, firstProcessEnv, traitEndpoint, traitProvides } from './openaiHooks';
+import {
+  getOpenAIResponsesModelCapability,
+  OpenAIResponsesChatProvider,
+} from "./openai-responses";
+import {
+  compactObject,
+  firstProcessEnv,
+  traitEndpoint,
+  traitProvides,
+} from "./openaiHooks";
 
 registerProtocolBase({
-  id: 'openai_responses',
+  id: "openai_responses",
   capability: getOpenAIResponsesModelCapability,
   createChatProvider({ config, traits }) {
     const endpoint = traitEndpoint(traits);
@@ -28,9 +39,11 @@ registerProtocolBase({
         apiKey:
           config.apiKey ??
           firstProcessEnv(endpoint?.apiKeyEnv) ??
-          (endpoint === undefined ? undefined : ''),
+          (endpoint === undefined ? undefined : ""),
         baseUrl:
-          config.baseUrl ?? firstProcessEnv(endpoint?.baseUrlEnv) ?? endpoint?.defaultBaseUrl,
+          config.baseUrl ??
+          firstProcessEnv(endpoint?.baseUrlEnv) ??
+          endpoint?.defaultBaseUrl,
         defaultHeaders: traitDefaultHeaders(traits),
         maxOutputTokens: config.providerOptions?.defaultMaxTokens,
         offEffort: config.providerOptions?.offEffort,

@@ -1,17 +1,25 @@
-import { cp, mkdir, mkdtemp, realpath, rename, rm, stat } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
+import {
+  cp,
+  mkdir,
+  mkdtemp,
+  realpath,
+  rename,
+  rm,
+  stat,
+} from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
 
-import type { McpServerConfig } from '../config/schema';
-import type { AgentFileRoot } from '../profile/agentfile/types';
-import { discoverSkills, type SkillRoot } from '../skill';
-import type { HookDef } from '../session/hooks';
-import { loadPluginCommand } from './commands';
-import { downloadZip, extractZip } from './archive';
-import { resolveGithubSource } from './github-resolver';
-import { parseManifest, type ParsedManifestResult } from './manifest';
-import { readInstalled, writeInstalled, type InstalledRecord } from './store';
-import { resolveInstallSource } from './source';
+import type { McpServerConfig } from "../config/schema";
+import type { AgentFileRoot } from "../profile/agentfile/types";
+import { discoverSkills, type SkillRoot } from "../skill";
+import type { HookDef } from "../session/hooks";
+import { loadPluginCommand } from "./commands";
+import { downloadZip, extractZip } from "./archive";
+import { resolveGithubSource } from "./github-resolver";
+import { parseManifest, type ParsedManifestResult } from "./manifest";
+import { readInstalled, writeInstalled, type InstalledRecord } from "./store";
+import { resolveInstallSource } from "./source";
 import {
   type EnabledPluginSessionStart,
   type EnabledPluginSystemPrompt,
@@ -25,12 +33,12 @@ import {
   type PluginSummary,
   type ReloadSummary,
   normalizePluginId,
-} from './types';
+} from "./types";
 
 // Hidden Kimi CLI subcommand that re-enters as a Node interpreter.
 // Used as fallback when an MCP server declares `"command": "node"` but the
 // user is running a single-binary Kimi build that doesn't have `node` on PATH.
-const KIMI_NODE_FALLBACK_SUBCOMMAND = '__plugin_run_node';
+const KIMI_NODE_FALLBACK_SUBCOMMAND = "__plugin_run_node";
 
 export interface PluginManagerOptions {
   readonly kimiHomeDir: string;
@@ -54,7 +62,9 @@ export class PluginManager {
   }
 
   list(): readonly PluginRecord[] {
-    return [...this.records.values()].toSorted((a, b) => a.id.localeCompare(b.id));
+    return [...this.records.values()].toSorted((a, b) =>
+      a.id.localeCompare(b.id),
+    );
   }
 
   get(id: string): PluginRecord | undefined {
@@ -71,25 +81,31 @@ export class PluginManager {
     let id: string;
     let github: PluginGithubMetadata | undefined;
 
-    if (resolved.kind === 'local-path') {
+    if (resolved.kind === "local-path") {
       const sourceRoot = await normalizeInstallRoot(resolved.path);
       originalSource = resolved.path;
-      sourceType = 'local-path';
+      sourceType = "local-path";
       parsed = await parseManifest(sourceRoot);
       if (parsed.manifest === undefined) {
-        const msg = parsed.diagnostics.find((d) => d.severity === 'error')?.message ?? 'no manifest';
+        const msg =
+          parsed.diagnostics.find((d) => d.severity === "error")?.message ??
+          "no manifest";
         throw new Error(`Cannot install plugin at ${sourceRoot}: ${msg}`);
       }
       id = normalizePluginId(parsed.manifest.name);
-      normalizedRoot = await copyPluginToManagedRoot(this.kimiHomeDir, id, sourceRoot);
+      normalizedRoot = await copyPluginToManagedRoot(
+        this.kimiHomeDir,
+        id,
+        sourceRoot,
+      );
       parsed = await parseManifest(normalizedRoot);
     } else {
       let zipUrl: string;
-      if (resolved.kind === 'github') {
+      if (resolved.kind === "github") {
         const githubResolution = await resolveGithubSource(resolved);
         zipUrl = githubResolution.tarballUrl;
         originalSource = source.trim();
-        sourceType = 'github';
+        sourceType = "github";
         github = {
           owner: resolved.owner,
           repo: resolved.repo,
@@ -98,19 +114,27 @@ export class PluginManager {
       } else {
         zipUrl = resolved.path;
         originalSource = resolved.path;
-        sourceType = 'zip-url';
+        sourceType = "zip-url";
       }
       const buffer = await downloadZip(zipUrl);
-      const tmpDir = await mkdtemp(path.join(tmpdir(), 'kimi-plugin-zip-'));
+      const tmpDir = await mkdtemp(path.join(tmpdir(), "kimi-plugin-zip-"));
       try {
         const detectedRoot = await extractZip(buffer, tmpDir);
         parsed = await parseManifest(detectedRoot);
         if (parsed.manifest === undefined) {
-          const msg = parsed.diagnostics.find((d) => d.severity === 'error')?.message ?? 'no manifest';
-          throw new Error(`Cannot install plugin from ${originalSource}: ${msg}`);
+          const msg =
+            parsed.diagnostics.find((d) => d.severity === "error")?.message ??
+            "no manifest";
+          throw new Error(
+            `Cannot install plugin from ${originalSource}: ${msg}`,
+          );
         }
         id = normalizePluginId(parsed.manifest.name);
-        normalizedRoot = await copyPluginToManagedRoot(this.kimiHomeDir, id, detectedRoot);
+        normalizedRoot = await copyPluginToManagedRoot(
+          this.kimiHomeDir,
+          id,
+          detectedRoot,
+        );
         parsed = await parseManifest(normalizedRoot);
       } finally {
         await rm(tmpDir, { recursive: true, force: true });
@@ -118,7 +142,9 @@ export class PluginManager {
     }
 
     if (parsed.manifest === undefined) {
-      const msg = parsed.diagnostics.find((d) => d.severity === 'error')?.message ?? 'no manifest';
+      const msg =
+        parsed.diagnostics.find((d) => d.severity === "error")?.message ??
+        "no manifest";
       throw new Error(`Cannot install plugin at ${normalizedRoot}: ${msg}`);
     }
     id = normalizePluginId(parsed.manifest.name);
@@ -144,17 +170,23 @@ export class PluginManager {
   async setEnabled(id: string, enabled: boolean): Promise<void> {
     const key = normalizePluginId(id);
     const current = this.records.get(key);
-    if (current === undefined) throw new Error(`Plugin "${id}" is not installed`);
+    if (current === undefined)
+      throw new Error(`Plugin "${id}" is not installed`);
     if (current.enabled === enabled) return;
     const now = new Date().toISOString();
     this.records.set(key, { ...current, enabled, updatedAt: now });
     await this.persist();
   }
 
-  async setMcpServerEnabled(id: string, server: string, enabled: boolean): Promise<void> {
+  async setMcpServerEnabled(
+    id: string,
+    server: string,
+    enabled: boolean,
+  ): Promise<void> {
     const key = normalizePluginId(id);
     const current = this.records.get(key);
-    if (current === undefined) throw new Error(`Plugin "${id}" is not installed`);
+    if (current === undefined)
+      throw new Error(`Plugin "${id}" is not installed`);
     if (current.manifest?.mcpServers?.[server] === undefined) {
       throw new Error(`Plugin "${id}" does not declare MCP server "${server}"`);
     }
@@ -205,11 +237,16 @@ export class PluginManager {
   pluginSkillRoots(): readonly SkillRoot[] {
     const roots: SkillRoot[] = [];
     for (const record of this.records.values()) {
-      if (!record.enabled || record.state !== 'ok' || record.manifest === undefined) continue;
+      if (
+        !record.enabled ||
+        record.state !== "ok" ||
+        record.manifest === undefined
+      )
+        continue;
       for (const dir of record.manifest.skills ?? []) {
         roots.push({
           path: dir,
-          source: 'extra',
+          source: "extra",
           plugin: { id: record.id, instructions: record.skillInstructions },
         });
       }
@@ -220,9 +257,14 @@ export class PluginManager {
   pluginAgentRoots(): readonly AgentFileRoot[] {
     const roots: AgentFileRoot[] = [];
     for (const record of this.records.values()) {
-      if (!record.enabled || record.state !== 'ok' || record.manifest === undefined) continue;
+      if (
+        !record.enabled ||
+        record.state !== "ok" ||
+        record.manifest === undefined
+      )
+        continue;
       for (const dir of record.manifest.agents ?? []) {
-        roots.push({ path: dir, source: 'plugin' });
+        roots.push({ path: dir, source: "plugin" });
       }
     }
     return roots;
@@ -231,7 +273,7 @@ export class PluginManager {
   enabledSessionStarts(): readonly EnabledPluginSessionStart[] {
     const out: EnabledPluginSessionStart[] = [];
     for (const record of this.records.values()) {
-      if (!record.enabled || record.state !== 'ok') continue;
+      if (!record.enabled || record.state !== "ok") continue;
       const skill = record.manifest?.sessionStart?.skill;
       if (skill === undefined) continue;
       out.push({ pluginId: record.id, skillName: skill });
@@ -242,7 +284,7 @@ export class PluginManager {
   enabledSystemPrompts(): readonly EnabledPluginSystemPrompt[] {
     const out: EnabledPluginSystemPrompt[] = [];
     for (const record of this.records.values()) {
-      if (!record.enabled || record.state !== 'ok') continue;
+      if (!record.enabled || record.state !== "ok") continue;
       const content = record.manifest?.systemPrompt;
       if (content === undefined) continue;
       out.push({ pluginId: record.id, content });
@@ -253,8 +295,15 @@ export class PluginManager {
   enabledMcpServers(): Record<string, McpServerConfig> {
     const out: Record<string, McpServerConfig> = {};
     for (const record of this.records.values()) {
-      if (!record.enabled || record.state !== 'ok' || record.manifest === undefined) continue;
-      for (const [name, config] of Object.entries(record.manifest.mcpServers ?? {})) {
+      if (
+        !record.enabled ||
+        record.state !== "ok" ||
+        record.manifest === undefined
+      )
+        continue;
+      for (const [name, config] of Object.entries(
+        record.manifest.mcpServers ?? {},
+      )) {
         if (!isMcpServerEnabled(record, name, config)) continue;
         out[pluginMcpRuntimeName(record.id, name)] = withPluginMcpRuntime(
           withMcpServerEnabled(config, true),
@@ -269,12 +318,20 @@ export class PluginManager {
   enabledHooks(): readonly HookDef[] {
     const out: HookDef[] = [];
     for (const record of this.records.values()) {
-      if (!record.enabled || record.state !== 'ok' || record.manifest === undefined) continue;
+      if (
+        !record.enabled ||
+        record.state !== "ok" ||
+        record.manifest === undefined
+      )
+        continue;
       for (const hook of record.manifest.hooks ?? []) {
         out.push({
           ...hook,
           cwd: record.root,
-          env: { KIMI_CODE_HOME: this.kimiHomeDir, KIMI_PLUGIN_ROOT: record.root },
+          env: {
+            KIMI_CODE_HOME: this.kimiHomeDir,
+            KIMI_PLUGIN_ROOT: record.root,
+          },
         });
       }
     }
@@ -284,7 +341,12 @@ export class PluginManager {
   async enabledCommands(): Promise<readonly PluginCommandDef[]> {
     const out: PluginCommandDef[] = [];
     for (const record of this.records.values()) {
-      if (!record.enabled || record.state !== 'ok' || record.manifest === undefined) continue;
+      if (
+        !record.enabled ||
+        record.state !== "ok" ||
+        record.manifest === undefined
+      )
+        continue;
       for (const entry of record.manifest.commands ?? []) {
         const def = await loadPluginCommand({
           commandPath: entry.path,
@@ -307,17 +369,19 @@ export class PluginManager {
   }
 
   private async persist(): Promise<void> {
-    const installed: InstalledRecord[] = [...this.records.values()].map((record) => ({
-      id: record.id,
-      root: record.root,
-      source: record.source,
-      enabled: record.enabled,
-      installedAt: record.installedAt,
-      updatedAt: record.updatedAt,
-      originalSource: record.originalSource,
-      capabilities: record.capabilities,
-      github: record.github,
-    }));
+    const installed: InstalledRecord[] = [...this.records.values()].map(
+      (record) => ({
+        id: record.id,
+        root: record.root,
+        source: record.source,
+        enabled: record.enabled,
+        installedAt: record.installedAt,
+        updatedAt: record.updatedAt,
+        originalSource: record.originalSource,
+        capabilities: record.capabilities,
+        github: record.github,
+      }),
+    );
     await writeInstalled(this.kimiHomeDir, { version: 1, plugins: installed });
   }
 
@@ -360,7 +424,7 @@ async function copyPluginToManagedRoot(
   id: string,
   sourceRoot: string,
 ): Promise<string> {
-  const managedRoot = path.join(kimiHomeDir, 'plugins', 'managed', id);
+  const managedRoot = path.join(kimiHomeDir, "plugins", "managed", id);
   const managedDir = path.dirname(managedRoot);
   await mkdir(managedDir, { recursive: true });
   const stagingRoot = await mkdtemp(path.join(managedDir, `${id}-`));
@@ -388,13 +452,13 @@ async function recordFrom(input: {
   parsed: ParsedManifestResult;
 }): Promise<PluginRecord> {
   const { parsed } = input;
-  const hasError = parsed.diagnostics.some((d) => d.severity === 'error');
+  const hasError = parsed.diagnostics.some((d) => d.severity === "error");
   return {
     id: input.id,
     root: input.root,
-    source: input.source ?? 'local-path',
+    source: input.source ?? "local-path",
     enabled: input.enabled,
-    state: hasError || parsed.manifest === undefined ? 'error' : 'ok',
+    state: hasError || parsed.manifest === undefined ? "error" : "ok",
     installedAt: input.installedAt,
     updatedAt: input.updatedAt,
     originalSource: input.originalSource,
@@ -419,10 +483,12 @@ function recordToSummary(record: PluginRecord): PluginSummary {
     state: record.state,
     skillCount: record.skillCount,
     mcpServerCount: Object.keys(record.manifest?.mcpServers ?? {}).length,
-    enabledMcpServerCount: pluginMcpServersInfo(record).filter((server) => server.enabled).length,
+    enabledMcpServerCount: pluginMcpServersInfo(record).filter(
+      (server) => server.enabled,
+    ).length,
     hookCount: record.manifest?.hooks?.length ?? 0,
     commandCount: record.manifest?.commands?.length ?? 0,
-    hasErrors: record.diagnostics.some((d) => d.severity === 'error'),
+    hasErrors: record.diagnostics.some((d) => d.severity === "error"),
     source: record.source,
     originalSource: record.originalSource,
     github: record.github,
@@ -431,13 +497,16 @@ function recordToSummary(record: PluginRecord): PluginSummary {
 
 async function countDiscoveredPluginSkills(
   pluginId: string,
-  manifest: PluginRecord['manifest'],
+  manifest: PluginRecord["manifest"],
 ): Promise<number> {
-  const roots = (manifest?.skills ?? []).map((dir) => ({
-    path: dir,
-    source: 'extra',
-    plugin: { id: pluginId, instructions: manifest?.skillInstructions },
-  }) satisfies SkillRoot);
+  const roots = (manifest?.skills ?? []).map(
+    (dir) =>
+      ({
+        path: dir,
+        source: "extra",
+        plugin: { id: pluginId, instructions: manifest?.skillInstructions },
+      }) satisfies SkillRoot,
+  );
   if (roots.length === 0) return 0;
   const skills = await discoverSkills({ roots });
   return skills.length;
@@ -463,10 +532,14 @@ function isMcpServerEnabled(
   name: string,
   config: McpServerConfig,
 ): boolean {
-  return record.capabilities?.mcpServers?.[name]?.enabled ?? config.enabled !== false;
+  return (
+    record.capabilities?.mcpServers?.[name]?.enabled ?? config.enabled !== false
+  );
 }
 
-function pluginMcpServersInfo(record: PluginRecord): readonly PluginMcpServerInfo[] {
+function pluginMcpServersInfo(
+  record: PluginRecord,
+): readonly PluginMcpServerInfo[] {
   return Object.entries(record.manifest?.mcpServers ?? {})
     .map(([name, config]) => pluginMcpServerInfo(record, name, config))
     .toSorted((a, b) => a.name.localeCompare(b.name));
@@ -477,29 +550,36 @@ function pluginMcpServerInfo(
   name: string,
   config: McpServerConfig,
 ): PluginMcpServerInfo {
-  if (config.transport === 'http' || config.transport === 'sse') {
+  if (config.transport === "http" || config.transport === "sse") {
     return {
       name,
       runtimeName: pluginMcpRuntimeName(record.id, name),
       enabled: isMcpServerEnabled(record, name, config),
       transport: config.transport,
       url: config.url,
-      headerKeys: config.headers === undefined ? undefined : Object.keys(config.headers).toSorted(),
+      headerKeys:
+        config.headers === undefined
+          ? undefined
+          : Object.keys(config.headers).toSorted(),
     };
   }
   return {
     name,
     runtimeName: pluginMcpRuntimeName(record.id, name),
     enabled: isMcpServerEnabled(record, name, config),
-    transport: 'stdio',
+    transport: "stdio",
     command: config.command,
     args: config.args,
     cwd: config.cwd,
-    envKeys: config.env === undefined ? undefined : Object.keys(config.env).toSorted(),
+    envKeys:
+      config.env === undefined ? undefined : Object.keys(config.env).toSorted(),
   };
 }
 
-function withMcpServerEnabled(config: McpServerConfig, enabled: boolean): McpServerConfig {
+function withMcpServerEnabled(
+  config: McpServerConfig,
+  enabled: boolean,
+): McpServerConfig {
   return { ...config, enabled };
 }
 
@@ -514,7 +594,7 @@ function withPluginMcpRuntime(
   pluginRoot: string,
   kimiHomeDir: string,
 ): McpServerConfig {
-  if (config.transport === 'http' || config.transport === 'sse') return config;
+  if (config.transport === "http" || config.transport === "sse") return config;
 
   const env = {
     ...config.env,
@@ -522,7 +602,7 @@ function withPluginMcpRuntime(
     KIMI_PLUGIN_ROOT: pluginRoot,
   };
 
-  if (config.command === 'node' && isKimiNativeBinary()) {
+  if (config.command === "node" && isKimiNativeBinary()) {
     return {
       ...config,
       command: process.execPath,
@@ -536,5 +616,5 @@ function withPluginMcpRuntime(
 }
 
 function isKimiNativeBinary(): boolean {
-  return !path.basename(process.execPath).toLowerCase().startsWith('node');
+  return !path.basename(process.execPath).toLowerCase().startsWith("node");
 }

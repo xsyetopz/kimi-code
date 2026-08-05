@@ -1,8 +1,8 @@
-import { createDecorator } from '../../di';
-import { encodeWorkDirKey } from '../../session/store';
-import type { Event } from '../../base/common/event';
-import type { SessionSummary } from '../../rpc';
-import type { SessionMeta } from '../../session';
+import { createDecorator } from "../../di";
+import { encodeWorkDirKey } from "../../session/store";
+import type { Event } from "../../base/common/event";
+import type { SessionSummary } from "../../rpc";
+import type { SessionMeta } from "../../session";
 import {
   emptySessionUsage,
   type CompactSessionRequest,
@@ -18,7 +18,7 @@ import {
   type SessionUpdate,
   type UndoSessionRequest,
   type UndoSessionResponse,
-} from '@moonshot-ai/protocol';
+} from "@moonshot-ai/protocol";
 
 export interface SessionListQuery extends CursorQuery {
   busy?: boolean;
@@ -48,7 +48,10 @@ export interface SessionCreateOptions {
 export interface ISessionService {
   readonly _serviceBrand: undefined;
 
-  create(input: SessionCreate, options?: SessionCreateOptions): Promise<Session>;
+  create(
+    input: SessionCreate,
+    options?: SessionCreateOptions,
+  ): Promise<Session>;
 
   list(query: SessionListQuery): Promise<PageResponse<Session>>;
 
@@ -58,7 +61,10 @@ export interface ISessionService {
 
   fork(id: string, input: SessionFork): Promise<Session>;
 
-  listChildren(id: string, query: SessionListQuery): Promise<PageResponse<Session>>;
+  listChildren(
+    id: string,
+    query: SessionListQuery,
+  ): Promise<PageResponse<Session>>;
 
   createChild(id: string, input: SessionChildCreate): Promise<Session>;
 
@@ -66,7 +72,10 @@ export interface ISessionService {
 
   getSessionWarnings(id: string): Promise<readonly SessionWarning[]>;
 
-  compact(id: string, input: CompactSessionRequest): Promise<CompactSessionResponse>;
+  compact(
+    id: string,
+    input: CompactSessionRequest,
+  ): Promise<CompactSessionResponse>;
 
   undo(id: string, input: UndoSessionRequest): Promise<UndoSessionResponse>;
 
@@ -77,13 +86,17 @@ export interface ISessionService {
   readonly onDidClose: Event<{ sessionId: string }>;
 }
 
-export const ISessionService = createDecorator<ISessionService>('sessionService');
+export const ISessionService =
+  createDecorator<ISessionService>("sessionService");
 
 export class SessionUndoUnavailableError extends Error {
   readonly sessionId: string;
-  constructor(sessionId: string, message = 'Nothing to undo in the active context.') {
+  constructor(
+    sessionId: string,
+    message = "Nothing to undo in the active context.",
+  ) {
     super(message);
-    this.name = 'SessionUndoUnavailableError';
+    this.name = "SessionUndoUnavailableError";
     this.sessionId = sessionId;
   }
 }
@@ -92,7 +105,7 @@ export class SessionNotFoundError extends Error {
   readonly sessionId: string;
   constructor(sessionId: string) {
     super(`session ${sessionId} does not exist`);
-    this.name = 'SessionNotFoundError';
+    this.name = "SessionNotFoundError";
     this.sessionId = sessionId;
   }
 }
@@ -105,20 +118,20 @@ export function toProtocolSession(
   const summaryMetadata = (summary.metadata ?? {}) as Record<string, unknown>;
   const customMetadata = (meta?.custom ?? {}) as Record<string, unknown>;
   const cwd =
-    (typeof customMetadata['cwd'] === 'string' && customMetadata['cwd']) ||
-    (typeof summaryMetadata['cwd'] === 'string' && summaryMetadata['cwd']) ||
+    (typeof customMetadata["cwd"] === "string" && customMetadata["cwd"]) ||
+    (typeof summaryMetadata["cwd"] === "string" && summaryMetadata["cwd"]) ||
     summary.workDir;
 
   const { goal: _dropSummaryGoal, ...summaryWithoutGoal } = summaryMetadata;
   const { goal: _dropCustomGoal, ...customWithoutGoal } = customMetadata;
 
-  const mergedMetadata: Session['metadata'] = {
+  const mergedMetadata: Session["metadata"] = {
     ...summaryWithoutGoal,
     ...customWithoutGoal,
     cwd,
   };
 
-  const title = meta?.title ?? summary.title ?? '';
+  const title = meta?.title ?? summary.title ?? "";
   // Prefer the registered workspace id (resolved by the caller from the
   // workspace registry via identity-key match) so the sidebar groups sessions
   // under the registered workspace even when the session's workDir string
@@ -137,7 +150,7 @@ export function toProtocolSession(
     last_prompt: summary.lastPrompt,
     metadata: mergedMetadata,
     agent_config: {
-      model: '',
+      model: "",
     },
     usage: emptySessionUsage(),
     permission_rules: [],

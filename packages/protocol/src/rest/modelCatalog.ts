@@ -1,11 +1,11 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 import {
   modelCatalogItemSchema,
   providerCatalogItemSchema,
   providerRefreshChangeSchema,
   providerRefreshFailureSchema,
-} from '../modelCatalog';
+} from "../modelCatalog";
 
 export const listModelsResponseSchema = z.object({
   items: z.array(modelCatalogItemSchema),
@@ -24,7 +24,9 @@ export const setDefaultModelResponseSchema = z.object({
   default_model: z.string().min(1),
   model: modelCatalogItemSchema,
 });
-export type SetDefaultModelResponse = z.infer<typeof setDefaultModelResponseSchema>;
+export type SetDefaultModelResponse = z.infer<
+  typeof setDefaultModelResponseSchema
+>;
 
 export const refreshOAuthProviderModelsResponseSchema = z.object({
   changed: z.array(providerRefreshChangeSchema),

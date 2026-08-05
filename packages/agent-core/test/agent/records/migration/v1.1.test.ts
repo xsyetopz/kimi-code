@@ -1,28 +1,28 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from "vitest";
 
-import { migrateV1_0ToV1_1 } from '../../../../src/agent/records/migration/v1.1';
-import { runMigration } from './utils';
+import { migrateV1_0ToV1_1 } from "../../../../src/agent/records/migration/v1.1";
+import { runMigration } from "./utils";
 
-describe('1.0 to 1.1', () => {
-  it('rewrites v1.0 records to the v1.1 wire shape', () => {
+describe("1.0 to 1.1", () => {
+  it("rewrites v1.0 records to the v1.1 wire shape", () => {
     expect(
       runMigration(migrateV1_0ToV1_1, [
         {
-          type: 'metadata',
-          protocol_version: '1.0',
+          type: "metadata",
+          protocol_version: "1.0",
           created_at: 1,
         },
         {
-          type: 'context.append_message',
+          type: "context.append_message",
           message: {
-            role: 'assistant',
+            role: "assistant",
             content: [],
             toolCalls: [
               {
-                type: 'function',
-                id: 'call_legacy_bash',
+                type: "function",
+                id: "call_legacy_bash",
                 function: {
-                  name: 'Bash',
+                  name: "Bash",
                   arguments: '{"command":"pwd"}',
                 },
               },
@@ -30,39 +30,39 @@ describe('1.0 to 1.1', () => {
           },
         },
         {
-          type: 'tools.register_user_tool',
-          name: 'schema_tool',
-          description: 'Tool with a schema field named function',
+          type: "tools.register_user_tool",
+          name: "schema_tool",
+          description: "Tool with a schema field named function",
           parameters: {
-            type: 'object',
+            type: "object",
             properties: {
               function: {
-                type: 'object',
+                type: "object",
                 properties: {
-                  name: { type: 'string' },
+                  name: { type: "string" },
                 },
               },
-              value: { type: 'string' },
+              value: { type: "string" },
             },
-            required: ['function'],
+            required: ["function"],
           },
         },
         {
-          type: 'context.append_loop_event',
+          type: "context.append_loop_event",
           event: {
-            type: 'tool.call',
-            uuid: 'call_payload',
-            turnId: '0',
+            type: "tool.call",
+            uuid: "call_payload",
+            turnId: "0",
             step: 1,
-            stepUuid: 'step_1',
-            toolCallId: 'call_payload',
-            name: 'PayloadTool',
+            stepUuid: "step_1",
+            toolCallId: "call_payload",
+            name: "PayloadTool",
             args: {
               payload: {
-                type: 'function',
-                id: 'user_payload',
+                type: "function",
+                id: "user_payload",
                 function: {
-                  name: 'do-not-migrate',
+                  name: "do-not-migrate",
                   arguments: '{"keep":true}',
                 },
               },

@@ -10,12 +10,12 @@
  * and synchronous append.
  */
 
-import { appendFileSync, mkdirSync } from 'node:fs';
-import { mkdir, open, rename, stat, unlink } from 'node:fs/promises';
-import { dirname } from 'pathe';
+import { appendFileSync, mkdirSync } from "node:fs";
+import { mkdir, open, rename, stat, unlink } from "node:fs/promises";
+import { dirname } from "pathe";
 
-import { formatEntry, type FormatOptions } from './formatter';
-import type { ILogWriter, LogEntry } from './log';
+import { formatEntry, type FormatOptions } from "./formatter";
+import type { ILogWriter, LogEntry } from "./log";
 
 export const PENDING_MAX = 1000;
 const STDERR_NOTICE_INTERVAL_MS = 30_000;
@@ -37,8 +37,8 @@ export interface RotatingFileWriterOptions {
 }
 
 async function syncDir(dirPath: string): Promise<void> {
-  if (process.platform === 'win32') return;
-  const dirFh = await open(dirPath, 'r');
+  if (process.platform === "win32") return;
+  const dirFh = await open(dirPath, "r");
   try {
     await dirFh.sync();
   } finally {
@@ -76,15 +76,14 @@ export class RotatingFileWriter {
     this.closed = true;
     try {
       await this.flush();
-    } catch {
-    }
+    } catch {}
   }
 
   flushSync(): void {
     if (this.closed || this.pending.length === 0) return;
     try {
       mkdirSync(dirname(this.options.path), { recursive: true });
-      const body = this.pending.join('') + this.takeDroppedNotice();
+      const body = this.pending.join("") + this.takeDroppedNotice();
       this.pending = [];
       appendFileSync(this.options.path, body);
     } catch (error) {
@@ -103,7 +102,8 @@ export class RotatingFileWriter {
   private async drain(): Promise<boolean> {
     if (this.pending.length === 0) return true;
     const droppedLine = this.takeDroppedNotice();
-    const lines = droppedLine === '' ? [...this.pending] : [...this.pending, droppedLine];
+    const lines =
+      droppedLine === "" ? [...this.pending] : [...this.pending, droppedLine];
     this.pending = [];
     try {
       await mkdir(dirname(this.options.path), { recursive: true });
@@ -137,17 +137,17 @@ export class RotatingFileWriter {
   }
 
   private async appendLines(lines: readonly string[]): Promise<void> {
-    let chunk = '';
+    let chunk = "";
     let chunkBytes = 0;
     for (const line of lines) {
-      const lineBytes = Buffer.byteLength(line, 'utf-8');
+      const lineBytes = Buffer.byteLength(line, "utf-8");
       if (
         chunkBytes > 0 &&
         (chunkBytes + lineBytes > this.options.maxBytes ||
           this.currentBytes + chunkBytes + lineBytes > this.options.maxBytes)
       ) {
         await this.appendChunk(chunk);
-        chunk = '';
+        chunk = "";
         chunkBytes = 0;
       }
 
@@ -168,14 +168,14 @@ export class RotatingFileWriter {
   }
 
   private async appendChunk(chunk: string): Promise<void> {
-    const fh = await open(this.options.path, 'a');
+    const fh = await open(this.options.path, "a");
     try {
-      await fh.appendFile(chunk, 'utf-8');
+      await fh.appendFile(chunk, "utf-8");
       await fh.sync();
     } finally {
       await fh.close();
     }
-    this.currentBytes += Buffer.byteLength(chunk, 'utf-8');
+    this.currentBytes += Buffer.byteLength(chunk, "utf-8");
     if (this.currentBytes >= this.options.maxBytes) {
       await this.rotate();
     }
@@ -189,18 +189,18 @@ export class RotatingFileWriter {
       try {
         await rename(from, to);
       } catch (error) {
-        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+        if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
       }
     }
     try {
       await rename(path, `${path}.1`);
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
     }
     try {
       await unlink(`${path}.${files}`);
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
     }
     this.currentBytes = 0;
     this.directorySynced = false;
@@ -211,13 +211,13 @@ export class RotatingFileWriter {
       const s = await stat(p);
       return s.size;
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return 0;
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return 0;
       throw error;
     }
   }
 
   private takeDroppedNotice(): string {
-    if (this.dropped === 0) return '';
+    if (this.dropped === 0) return "";
     const line = `... dropped ${this.dropped} entries ...\n`;
     this.dropped = 0;
     return line;
@@ -227,7 +227,7 @@ export class RotatingFileWriter {
     const now = Date.now();
     if (now - this.lastStderrNotice < STDERR_NOTICE_INTERVAL_MS) return;
     this.lastStderrNotice = now;
-    const code = (error as NodeJS.ErrnoException)?.code ?? 'UNKNOWN';
+    const code = (error as NodeJS.ErrnoException)?.code ?? "UNKNOWN";
     try {
       process.stderr.write(`[logger] write failed: ${code}\n`);
     } catch {}
@@ -250,7 +250,7 @@ export class FileLogWriter implements ILogWriter {
   write(entry: LogEntry): void {
     const { text, dropped } = formatEntry(entry, this.format);
     if (dropped) return;
-    this.sink.enqueue(text + '\n');
+    this.sink.enqueue(text + "\n");
   }
 
   async flush(): Promise<void> {
@@ -266,7 +266,9 @@ export class FileLogWriter implements ILogWriter {
   }
 }
 
-export function createFileLogWriter(options: FileLogWriterOptions): FileLogWriter {
+export function createFileLogWriter(
+  options: FileLogWriterOptions,
+): FileLogWriter {
   return new FileLogWriter(options);
 }
 
@@ -279,17 +281,19 @@ export class MemoryLogWriter implements ILogWriter {
 
 export class ConsoleLogWriter implements ILogWriter {
   write(entry: LogEntry): void {
-    const { text } = formatEntry(entry, { ansi: process.stderr.isTTY === true });
+    const { text } = formatEntry(entry, {
+      ansi: process.stderr.isTTY === true,
+    });
     switch (entry.level) {
-      case 'error':
+      case "error":
         // eslint-disable-next-line no-console
         console.error(text);
         break;
-      case 'warn':
+      case "warn":
         // eslint-disable-next-line no-console
         console.warn(text);
         break;
-      case 'debug':
+      case "debug":
         // eslint-disable-next-line no-console
         console.debug(text);
         break;

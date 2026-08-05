@@ -1,11 +1,11 @@
-import { mkdtemp, readFile, rm, stat } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { mkdtemp, readFile, rm, stat } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { type RunningServer, startServer } from '../src/start';
-import { TEST_HOST_IDENTITY } from './helpers/hostIdentity';
+import { type RunningServer, startServer } from "../src/start";
+import { TEST_HOST_IDENTITY } from "./helpers/hostIdentity";
 
 interface InjectResponse {
   statusCode: number;
@@ -44,24 +44,33 @@ function envelopeOf<T>(body: unknown): Envelope<T> {
 }
 
 function getItem(api: AppLike, key: string) {
-  return api.inject({ method: 'GET', url: `/api/v1/gui/store/getItem?key=${key}` });
+  return api.inject({
+    method: "GET",
+    url: `/api/v1/gui/store/getItem?key=${key}`,
+  });
 }
 
 function setItem(api: AppLike, key: string, value: string) {
   return api.inject({
-    method: 'POST',
-    url: '/api/v1/gui/store/setItem',
+    method: "POST",
+    url: "/api/v1/gui/store/setItem",
     payload: { key, value },
   });
 }
 
-describe('server-v2 gui store routes', () => {
+describe("server-v2 gui store routes", () => {
   let home: string | undefined;
   let server: RunningServer | undefined;
 
   beforeEach(async () => {
-    home = await mkdtemp(join(tmpdir(), 'kimi-server-v2-gui-store-'));
-    server = await startServer({ hostIdentity: TEST_HOST_IDENTITY, host: '127.0.0.1', port: 0, homeDir: home, logLevel: 'silent' });
+    home = await mkdtemp(join(tmpdir(), "kimi-server-v2-gui-store-"));
+    server = await startServer({
+      hostIdentity: TEST_HOST_IDENTITY,
+      host: "127.0.0.1",
+      port: 0,
+      homeDir: home,
+      logLevel: "silent",
+    });
   });
 
   afterEach(async () => {
@@ -75,122 +84,152 @@ describe('server-v2 gui store routes', () => {
     }
   });
 
-  it('getItem returns null when the file does not exist', async () => {
-    const res = await getItem(appOf(server as RunningServer), 'theme');
+  it("getItem returns null when the file does not exist", async () => {
+    const res = await getItem(appOf(server as RunningServer), "theme");
     expect(res.statusCode).toBe(200);
     const env = envelopeOf<{ value: string | null }>(res.json());
     expect(env.code).toBe(0);
     expect(env.data?.value).toBeNull();
   });
 
-  it('setItem then getItem round-trips and persists to gui.toml', async () => {
+  it("setItem then getItem round-trips and persists to gui.toml", async () => {
     const r = server as RunningServer;
     const api = appOf(r);
-    const setRes = await setItem(api, 'theme', 'modern');
+    const setRes = await setItem(api, "theme", "modern");
     expect(envelopeOf<null>(setRes.json()).code).toBe(0);
 
-    const getEnv = envelopeOf<{ value: string | null }>((await getItem(api, 'theme')).json());
-    expect(getEnv.data?.value).toBe('modern');
+    const getEnv = envelopeOf<{ value: string | null }>(
+      (await getItem(api, "theme")).json(),
+    );
+    expect(getEnv.data?.value).toBe("modern");
 
-    const text = await readFile(join(home as string, 'gui.toml'), 'utf-8');
+    const text = await readFile(join(home as string, "gui.toml"), "utf-8");
     expect(text).toContain('theme = "modern"');
   });
 
-  it('setItem overwrites an existing value', async () => {
+  it("setItem overwrites an existing value", async () => {
     const api = appOf(server as RunningServer);
-    await setItem(api, 'theme', 'modern');
-    await setItem(api, 'theme', 'terminal');
+    await setItem(api, "theme", "modern");
+    await setItem(api, "theme", "terminal");
 
-    const env = envelopeOf<{ value: string | null }>((await getItem(api, 'theme')).json());
-    expect(env.data?.value).toBe('terminal');
+    const env = envelopeOf<{ value: string | null }>(
+      (await getItem(api, "theme")).json(),
+    );
+    expect(env.data?.value).toBe("terminal");
   });
 
-  it('removeItem deletes a key and leaves others intact', async () => {
+  it("removeItem deletes a key and leaves others intact", async () => {
     const api = appOf(server as RunningServer);
-    await setItem(api, 'a', '1');
-    await setItem(api, 'b', '2');
+    await setItem(api, "a", "1");
+    await setItem(api, "b", "2");
     const rmRes = await api.inject({
-      method: 'POST',
-      url: '/api/v1/gui/store/removeItem',
-      payload: { key: 'a' },
+      method: "POST",
+      url: "/api/v1/gui/store/removeItem",
+      payload: { key: "a" },
     });
     expect(envelopeOf<null>(rmRes.json()).code).toBe(0);
 
-    expect(envelopeOf<{ value: string | null }>((await getItem(api, 'a')).json()).data?.value).toBeNull();
-    expect(envelopeOf<{ value: string | null }>((await getItem(api, 'b')).json()).data?.value).toBe('2');
+    expect(
+      envelopeOf<{ value: string | null }>((await getItem(api, "a")).json())
+        .data?.value,
+    ).toBeNull();
+    expect(
+      envelopeOf<{ value: string | null }>((await getItem(api, "b")).json())
+        .data?.value,
+    ).toBe("2");
   });
 
-  it('removeItem on a missing key is a no-op', async () => {
+  it("removeItem on a missing key is a no-op", async () => {
     const res = await appOf(server as RunningServer).inject({
-      method: 'POST',
-      url: '/api/v1/gui/store/removeItem',
-      payload: { key: 'nope' },
+      method: "POST",
+      url: "/api/v1/gui/store/removeItem",
+      payload: { key: "nope" },
     });
     expect(envelopeOf<null>(res.json()).code).toBe(0);
   });
 
-  it('length reports the count and clear empties the store', async () => {
+  it("length reports the count and clear empties the store", async () => {
     const api = appOf(server as RunningServer);
-    await setItem(api, 'a', '1');
-    await setItem(api, 'b', '2');
+    await setItem(api, "a", "1");
+    await setItem(api, "b", "2");
 
     const before = envelopeOf<{ length: number }>(
-      (await api.inject({ method: 'GET', url: '/api/v1/gui/store/length' })).json(),
+      (
+        await api.inject({ method: "GET", url: "/api/v1/gui/store/length" })
+      ).json(),
     );
     expect(before.data?.length).toBe(2);
 
-    const clearRes = await api.inject({ method: 'POST', url: '/api/v1/gui/store/clear' });
+    const clearRes = await api.inject({
+      method: "POST",
+      url: "/api/v1/gui/store/clear",
+    });
     expect(envelopeOf<null>(clearRes.json()).code).toBe(0);
 
     const after = envelopeOf<{ length: number }>(
-      (await api.inject({ method: 'GET', url: '/api/v1/gui/store/length' })).json(),
+      (
+        await api.inject({ method: "GET", url: "/api/v1/gui/store/length" })
+      ).json(),
     );
     expect(after.data?.length).toBe(0);
   });
 
-  it('quotes dotted keys in the persisted TOML and reads them back', async () => {
+  it("quotes dotted keys in the persisted TOML and reads them back", async () => {
     const api = appOf(server as RunningServer);
-    await setItem(api, 'kimi-web.theme', 'modern');
+    await setItem(api, "kimi-web.theme", "modern");
 
-    const text = await readFile(join(home as string, 'gui.toml'), 'utf-8');
+    const text = await readFile(join(home as string, "gui.toml"), "utf-8");
     expect(text).toContain('"kimi-web.theme" = "modern"');
 
-    const env = envelopeOf<{ value: string | null }>((await getItem(api, 'kimi-web.theme')).json());
-    expect(env.data?.value).toBe('modern');
+    const env = envelopeOf<{ value: string | null }>(
+      (await getItem(api, "kimi-web.theme")).json(),
+    );
+    expect(env.data?.value).toBe("modern");
   });
 
-  it('rejects an empty key', async () => {
+  it("rejects an empty key", async () => {
     const res = await appOf(server as RunningServer).inject({
-      method: 'POST',
-      url: '/api/v1/gui/store/setItem',
-      payload: { key: '', value: 'x' },
+      method: "POST",
+      url: "/api/v1/gui/store/setItem",
+      payload: { key: "", value: "x" },
     });
     expect(envelopeOf(res.json()).code).toBe(40001);
   });
 
-  it('treats Object.prototype keys as ordinary keys', async () => {
+  it("treats Object.prototype keys as ordinary keys", async () => {
     const api = appOf(server as RunningServer);
     // On an empty store, prototype keys must not resolve to inherited members.
     expect(
-      envelopeOf<{ value: string | null }>((await getItem(api, 'toString')).json()).data?.value,
+      envelopeOf<{ value: string | null }>(
+        (await getItem(api, "toString")).json(),
+      ).data?.value,
     ).toBeNull();
     expect(
-      envelopeOf<{ value: string | null }>((await getItem(api, 'constructor')).json()).data?.value,
+      envelopeOf<{ value: string | null }>(
+        (await getItem(api, "constructor")).json(),
+      ).data?.value,
     ).toBeNull();
 
-    await setItem(api, 'hasOwnProperty', 'x');
-    await setItem(api, '__proto__', 'y');
+    await setItem(api, "hasOwnProperty", "x");
+    await setItem(api, "__proto__", "y");
     expect(
-      envelopeOf<{ value: string | null }>((await getItem(api, 'hasOwnProperty')).json()).data?.value,
-    ).toBe('x');
+      envelopeOf<{ value: string | null }>(
+        (await getItem(api, "hasOwnProperty")).json(),
+      ).data?.value,
+    ).toBe("x");
     expect(
-      envelopeOf<{ value: string | null }>((await getItem(api, '__proto__')).json()).data?.value,
-    ).toBe('y');
+      envelopeOf<{ value: string | null }>(
+        (await getItem(api, "__proto__")).json(),
+      ).data?.value,
+    ).toBe("y");
   });
 
-  it.skipIf(process.platform === 'win32')('writes gui.toml with 0600 permissions', async () => {
-    await setItem(appOf(server as RunningServer), 'theme', 'modern');
-    const mode = (await stat(join(home as string, 'gui.toml'))).mode & 0o777;
-    expect(mode).toBe(0o600);
-  });
+  it.skipIf(process.platform === "win32")(
+    "writes gui.toml with 0600 permissions",
+    async () => {
+      await setItem(appOf(server as RunningServer), "theme", "modern");
+      const mode = (await stat(join(home as string, "gui.toml"))).mode & 0o777;
+      expect(mode).toBe(0o600);
+    },
+  );
 });

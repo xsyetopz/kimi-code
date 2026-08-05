@@ -1,56 +1,71 @@
-import { spawn } from 'node:child_process';
-import { existsSync } from 'node:fs';
-import { mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
-import { createRequire } from 'node:module';
-import path from 'node:path';
+import { spawn } from "node:child_process";
+import { existsSync } from "node:fs";
+import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { createRequire } from "node:module";
+import path from "node:path";
 
 const require = createRequire(import.meta.url);
-const packageRoot = path.resolve(import.meta.dirname, '..');
-const tempDir = path.join(packageRoot, '.tmp-api-extractor');
-const dtsRoot = path.join(tempDir, 'dts');
-const providerClientShimPath = path.join(dtsRoot, 'provider-clients.d.ts');
-const tscBinPath = packageBinPath('typescript', 'bin/tsc');
-const apiExtractorBinPath = packageBinPath('@microsoft/api-extractor', 'bin/api-extractor');
+const packageRoot = path.resolve(import.meta.dirname, "..");
+const tempDir = path.join(packageRoot, ".tmp-api-extractor");
+const dtsRoot = path.join(tempDir, "dts");
+const providerClientShimPath = path.join(dtsRoot, "provider-clients.d.ts");
+const tscBinPath = packageBinPath("typescript", "bin/tsc");
+const apiExtractorBinPath = packageBinPath(
+  "@microsoft/api-extractor",
+  "bin/api-extractor",
+);
 
-const packageDirs = new Set(['agent-core', 'agent-core-v2', 'kaos', 'klient', 'kosong', 'node-sdk', 'oauth']);
+const packageDirs = new Set([
+  "agent-core",
+  "agent-core-v2",
+  "kaos",
+  "klient",
+  "kosong",
+  "node-sdk",
+  "oauth",
+]);
 const workspacePackages = new Map([
-  ['@moonshot-ai/agent-core-v2', 'agent-core-v2'],
-  ['@moonshot-ai/agent-core', 'agent-core'],
-  ['@moonshot-ai/kaos', 'kaos'],
-  ['@moonshot-ai/kimi-code-oauth', 'oauth'],
-  ['@moonshot-ai/klient', 'klient'],
-  ['@moonshot-ai/kosong', 'kosong'],
+  ["@moonshot-ai/agent-core-v2", "agent-core-v2"],
+  ["@moonshot-ai/agent-core", "agent-core"],
+  ["@moonshot-ai/kaos", "kaos"],
+  ["@moonshot-ai/kimi-code-oauth", "oauth"],
+  ["@moonshot-ai/klient", "klient"],
+  ["@moonshot-ai/kosong", "kosong"],
 ]);
 
 try {
   await rm(tempDir, { recursive: true, force: true });
-  await run('tsc', tscBinPath, ['-p', 'tsconfig.dts.json']);
+  await run("tsc", tscBinPath, ["-p", "tsconfig.dts.json"]);
   await writeProviderClientShim();
   await rewriteWorkspaceSpecifiers();
-  await run('api-extractor', apiExtractorBinPath, ['run', '--local']);
+  await run("api-extractor", apiExtractorBinPath, ["run", "--local"]);
 } finally {
   await rm(tempDir, { recursive: true, force: true });
 }
 
 function packageBinPath(packageName, binPath) {
-  return path.join(path.dirname(require.resolve(`${packageName}/package.json`)), binPath);
+  return path.join(
+    path.dirname(require.resolve(`${packageName}/package.json`)),
+    binPath,
+  );
 }
 
 function run(command, binPath, args) {
   return new Promise((resolve, reject) => {
     const child = spawn(process.execPath, [binPath, ...args], {
       cwd: packageRoot,
-      stdio: 'inherit',
+      stdio: "inherit",
     });
 
-    child.once('error', reject);
-    child.once('exit', (code, signal) => {
+    child.once("error", reject);
+    child.once("exit", (code, signal) => {
       if (code === 0) {
         resolve();
         return;
       }
 
-      const detail = signal === null ? `exit code ${String(code)}` : `signal ${signal}`;
+      const detail =
+        signal === null ? `exit code ${String(code)}` : `signal ${signal}`;
       reject(new Error(`${command} failed with ${detail}`));
     });
   });
@@ -61,18 +76,18 @@ async function writeProviderClientShim() {
   await writeFile(
     providerClientShimPath,
     [
-      'export interface Anthropic {}',
-      'export interface GoogleGenAI {}',
-      'export interface OpenAI {}',
-      'export namespace OpenAI {',
-      '  export namespace Chat {',
-      '    export type ChatCompletion = unknown;',
-      '    export type ChatCompletionChunk = unknown;',
-      '    export type ChatCompletionCreateParamsNonStreaming = unknown;',
-      '  }',
-      '}',
-      '',
-    ].join('\n'),
+      "export interface Anthropic {}",
+      "export interface GoogleGenAI {}",
+      "export interface OpenAI {}",
+      "export namespace OpenAI {",
+      "  export namespace Chat {",
+      "    export type ChatCompletion = unknown;",
+      "    export type ChatCompletionChunk = unknown;",
+      "    export type ChatCompletionCreateParamsNonStreaming = unknown;",
+      "  }",
+      "}",
+      "",
+    ].join("\n"),
   );
 }
 
@@ -87,8 +102,11 @@ async function rewriteWorkspaceSpecifiers() {
         return;
       }
 
-      const text = await readFile(file, 'utf8');
-      const providerClientSpecifier = relativeSpecifier(file, providerClientShimPath);
+      const text = await readFile(file, "utf8");
+      const providerClientSpecifier = relativeSpecifier(
+        file,
+        providerClientShimPath,
+      );
       const providerClientText = text
         .replaceAll(
           "import Anthropic from '@anthropic-ai/sdk';",
@@ -135,7 +153,7 @@ async function findDtsFiles(dir) {
       if (entry.isDirectory()) {
         return findDtsFiles(entryPath);
       }
-      return entry.name.endsWith('.d.ts') ? [entryPath] : [];
+      return entry.name.endsWith(".d.ts") ? [entryPath] : [];
     }),
   );
 
@@ -146,15 +164,24 @@ function packageDirForFile(file) {
   const parts = path.relative(dtsRoot, file).split(path.sep);
   const [packageDir, firstDir] = parts;
 
-  if (packageDir === undefined || firstDir !== 'src' || !packageDirs.has(packageDir)) {
+  if (
+    packageDir === undefined ||
+    firstDir !== "src" ||
+    !packageDirs.has(packageDir)
+  ) {
     return undefined;
   }
 
   return packageDir;
 }
 
-function resolveSpecifier({ currentFile, emittedFiles, packageDir, specifier }) {
-  if (specifier.startsWith('#/')) {
+function resolveSpecifier({
+  currentFile,
+  emittedFiles,
+  packageDir,
+  specifier,
+}) {
+  if (specifier.startsWith("#/")) {
     return resolvePackageSubpath({
       emittedFiles,
       packageDir,
@@ -165,7 +192,9 @@ function resolveSpecifier({ currentFile, emittedFiles, packageDir, specifier }) 
 
   const workspacePackage = workspacePackageForSpecifier(specifier);
   if (workspacePackage === undefined) {
-    throw new Error(`Unexpected workspace specifier in ${currentFile}: ${specifier}`);
+    throw new Error(
+      `Unexpected workspace specifier in ${currentFile}: ${specifier}`,
+    );
   }
 
   return resolvePackageSubpath({
@@ -179,7 +208,7 @@ function resolveSpecifier({ currentFile, emittedFiles, packageDir, specifier }) 
 function workspacePackageForSpecifier(specifier) {
   for (const [packageName, packageDir] of workspacePackages) {
     if (specifier === packageName) {
-      return { packageDir, subpath: 'index' };
+      return { packageDir, subpath: "index" };
     }
 
     const prefix = `${packageName}/`;
@@ -191,27 +220,36 @@ function workspacePackageForSpecifier(specifier) {
   return undefined;
 }
 
-function resolvePackageSubpath({ emittedFiles, packageDir, subpath, originalSpecifier }) {
-  const srcRoot = path.join(dtsRoot, packageDir, 'src');
+function resolvePackageSubpath({
+  emittedFiles,
+  packageDir,
+  subpath,
+  originalSpecifier,
+}) {
+  const srcRoot = path.join(dtsRoot, packageDir, "src");
   const directFile = path.resolve(srcRoot, `${subpath}.d.ts`);
   if (emittedFiles.has(directFile) || existsSync(directFile)) {
     return directFile;
   }
 
-  const indexFile = path.resolve(srcRoot, subpath, 'index.d.ts');
+  const indexFile = path.resolve(srcRoot, subpath, "index.d.ts");
   if (emittedFiles.has(indexFile) || existsSync(indexFile)) {
     return indexFile;
   }
 
-  throw new Error(`Unable to resolve ${originalSpecifier} in emitted declarations`);
+  throw new Error(
+    `Unable to resolve ${originalSpecifier} in emitted declarations`,
+  );
 }
 
 function relativeSpecifier(fromFile, toFile) {
   const fromDir = path.dirname(fromFile);
-  const withoutExtension = toFile.slice(0, -'.d.ts'.length);
-  let relative = path.relative(fromDir, withoutExtension).replaceAll(path.sep, '/');
+  const withoutExtension = toFile.slice(0, -".d.ts".length);
+  let relative = path
+    .relative(fromDir, withoutExtension)
+    .replaceAll(path.sep, "/");
 
-  if (!relative.startsWith('.')) {
+  if (!relative.startsWith(".")) {
     relative = `./${relative}`;
   }
 

@@ -8,7 +8,7 @@
  * names and descriptions otherwise sit in the system prompt every turn.
  */
 
-export type SkillSource = 'project' | 'user' | 'extra' | 'builtin';
+export type SkillSource = "project" | "user" | "extra" | "builtin";
 
 export interface SkillMetadata {
   readonly name?: string | undefined;
@@ -83,15 +83,15 @@ export function normalizeSkillName(name: string): string {
 }
 
 export function isInlineSkillType(type: string | undefined): boolean {
-  return type === undefined || type === 'prompt' || type === 'inline';
+  return type === undefined || type === "prompt" || type === "inline";
 }
 
 export function isUserActivatableSkillType(type: string | undefined): boolean {
-  return isInlineSkillType(type) || type === 'flow';
+  return isInlineSkillType(type) || type === "flow";
 }
 
 export function isSupportedSkillType(type: string | undefined): boolean {
-  return isUserActivatableSkillType(type) || type === 'reference';
+  return isUserActivatableSkillType(type) || type === "reference";
 }
 
 export function summarizeSkill(skill: SkillDefinition): SkillSummary {

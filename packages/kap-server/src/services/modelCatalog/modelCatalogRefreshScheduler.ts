@@ -21,13 +21,13 @@ import {
   type IProviderDiscoveryService,
   type ModelCatalogConfig,
   MODEL_CATALOG_SECTION,
-} from '@moonshot-ai/agent-core-v2';
+} from "@moonshot-ai/agent-core-v2";
 
-import type { ServerLogger } from '../pinoLoggerService';
+import type { ServerLogger } from "../pinoLoggerService";
 
 const DEFAULT_REFRESH_INTERVAL_MS = 6 * 60 * 60 * 1000;
-const INTERVAL_ENV = 'KIMI_CODE_MODEL_CATALOG_REFRESH_INTERVAL_MS';
-const REFRESH_ON_START_ENV = 'KIMI_CODE_MODEL_CATALOG_REFRESH_ON_START';
+const INTERVAL_ENV = "KIMI_CODE_MODEL_CATALOG_REFRESH_INTERVAL_MS";
+const REFRESH_ON_START_ENV = "KIMI_CODE_MODEL_CATALOG_REFRESH_ON_START";
 
 export class ModelCatalogRefreshScheduler {
   private timer: ReturnType<typeof setInterval> | undefined;
@@ -37,7 +37,7 @@ export class ModelCatalogRefreshScheduler {
   constructor(
     private readonly discovery: IProviderDiscoveryService,
     private readonly config: IConfigService,
-    private readonly logger: Pick<ServerLogger, 'info' | 'warn'>,
+    private readonly logger: Pick<ServerLogger, "info" | "warn">,
     private readonly env: NodeJS.ProcessEnv = process.env,
   ) {}
 
@@ -47,18 +47,29 @@ export class ModelCatalogRefreshScheduler {
 
     await this.config.ready;
     if (this.disposed) return;
-    const catalogConfig = this.config.get<ModelCatalogConfig | undefined>(MODEL_CATALOG_SECTION);
-    const intervalMs = resolveIntervalMs(this.env, catalogConfig?.refreshIntervalMs);
-    const refreshOnStart = resolveRefreshOnStart(this.env, catalogConfig?.refreshOnStart);
+    const catalogConfig = this.config.get<ModelCatalogConfig | undefined>(
+      MODEL_CATALOG_SECTION,
+    );
+    const intervalMs = resolveIntervalMs(
+      this.env,
+      catalogConfig?.refreshIntervalMs,
+    );
+    const refreshOnStart = resolveRefreshOnStart(
+      this.env,
+      catalogConfig?.refreshOnStart,
+    );
 
     if (refreshOnStart) {
-      void this.refresh('startup');
+      void this.refresh("startup");
     }
 
     if (intervalMs > 0) {
-      this.timer = setInterval(() => void this.refresh('interval'), intervalMs);
+      this.timer = setInterval(() => void this.refresh("interval"), intervalMs);
       this.timer.unref?.();
-      this.logger.info({ intervalMs }, 'provider-model catalog auto-refresh enabled');
+      this.logger.info(
+        { intervalMs },
+        "provider-model catalog auto-refresh enabled",
+      );
     }
   }
 
@@ -70,26 +81,34 @@ export class ModelCatalogRefreshScheduler {
     }
   }
 
-  private async refresh(trigger: 'startup' | 'interval'): Promise<void> {
+  private async refresh(trigger: "startup" | "interval"): Promise<void> {
     try {
-      const result = await this.discovery.refreshProviderModels({ scope: 'all' });
+      const result = await this.discovery.refreshProviderModels({
+        scope: "all",
+      });
       if (result.failed.length > 0) {
         this.logger.warn(
           { trigger, failed: result.failed },
-          'provider-model catalog refresh completed with failures',
+          "provider-model catalog refresh completed with failures",
         );
       }
     } catch (error) {
       this.logger.warn(
-        { trigger, err: error instanceof Error ? error.message : String(error) },
-        'provider-model catalog refresh failed',
+        {
+          trigger,
+          err: error instanceof Error ? error.message : String(error),
+        },
+        "provider-model catalog refresh failed",
       );
     }
   }
 }
 
 /** Env wins when set and valid; otherwise the config value; otherwise the default. */
-function resolveIntervalMs(env: NodeJS.ProcessEnv, configValue: number | undefined): number {
+function resolveIntervalMs(
+  env: NodeJS.ProcessEnv,
+  configValue: number | undefined,
+): number {
   const raw = env[INTERVAL_ENV];
   if (raw !== undefined && raw.trim().length > 0) {
     const parsed = Number(raw);
@@ -99,11 +118,14 @@ function resolveIntervalMs(env: NodeJS.ProcessEnv, configValue: number | undefin
 }
 
 /** Env wins when set; otherwise the config value; otherwise refresh-on-start defaults to on. */
-function resolveRefreshOnStart(env: NodeJS.ProcessEnv, configValue: boolean | undefined): boolean {
+function resolveRefreshOnStart(
+  env: NodeJS.ProcessEnv,
+  configValue: boolean | undefined,
+): boolean {
   const raw = env[REFRESH_ON_START_ENV];
   if (raw !== undefined && raw.trim().length > 0) {
     const normalized = raw.trim().toLowerCase();
-    return normalized === '1' || normalized === 'true' || normalized === 'yes';
+    return normalized === "1" || normalized === "true" || normalized === "yes";
   }
   return configValue ?? true;
 }

@@ -7,9 +7,9 @@
  * endpoint on a static host) so the app falls back to the manual flow.
  */
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery } from "@tanstack/react-query";
 
-export type DiscoveredServerSource = 'instance' | 'lock' | 'proxy';
+export type DiscoveredServerSource = "instance" | "lock" | "proxy";
 
 export interface DiscoveredServer {
   readonly id: string;
@@ -29,7 +29,7 @@ export interface ServerDiscoveryResult {
 export async function fetchServerDiscovery(): Promise<ServerDiscoveryResult | null> {
   let res: Response;
   try {
-    res = await fetch('/__inspect/servers');
+    res = await fetch("/__inspect/servers");
   } catch {
     return null;
   }
@@ -45,7 +45,7 @@ export async function fetchServerDiscovery(): Promise<ServerDiscoveryResult | nu
 /** Poll discovery: instances come and go (the server-side heartbeat is 15 s). */
 export function useServerDiscovery() {
   return useQuery({
-    queryKey: ['local-server-discovery'],
+    queryKey: ["local-server-discovery"],
     queryFn: fetchServerDiscovery,
     refetchInterval: 10_000,
     retry: false,
@@ -62,9 +62,13 @@ export function pickDefaultServer(
 ): DiscoveredServer | undefined {
   const { servers } = discovery;
   if (servers.length === 0) return undefined;
-  if (rememberedUrl !== undefined && rememberedUrl !== null && rememberedUrl !== '') {
+  if (
+    rememberedUrl !== undefined &&
+    rememberedUrl !== null &&
+    rememberedUrl !== ""
+  ) {
     const remembered = servers.find((s) => s.url === rememberedUrl);
     if (remembered !== undefined) return remembered;
   }
-  return servers.find((s) => s.source === 'proxy') ?? servers[0];
+  return servers.find((s) => s.source === "proxy") ?? servers[0];
 }

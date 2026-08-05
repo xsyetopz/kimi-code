@@ -33,10 +33,10 @@ import {
   type IAgentScopeHandle,
   type Scope,
   type WireRecord,
-} from '@moonshot-ai/agent-core-v2';
+} from "@moonshot-ai/agent-core-v2";
 
-import type { Message, MessageRole } from '../../protocol/message';
-import { toProtocolMessage } from './messageProjection';
+import type { Message, MessageRole } from "../../protocol/message";
+import { toProtocolMessage } from "./messageProjection";
 
 const DEFAULT_PAGE_SIZE = 50;
 const MAX_PAGE_SIZE = 100;
@@ -46,7 +46,7 @@ export class SessionNotFoundError extends Error {
   readonly sessionId: string;
   constructor(sessionId: string) {
     super(`session ${sessionId} does not exist`);
-    this.name = 'SessionNotFoundError';
+    this.name = "SessionNotFoundError";
     this.sessionId = sessionId;
   }
 }
@@ -57,7 +57,7 @@ export class MessageNotFoundError extends Error {
   readonly messageId: string;
   constructor(sessionId: string, messageId: string) {
     super(`message ${messageId} does not exist in session ${sessionId}`);
-    this.name = 'MessageNotFoundError';
+    this.name = "MessageNotFoundError";
     this.sessionId = sessionId;
     this.messageId = messageId;
   }
@@ -104,7 +104,8 @@ export async function listMessages(
   const page = slice.slice(0, pageSize);
   const hasMore = slice.length > pageSize;
 
-  const filtered = query.role !== undefined ? page.filter((m) => m.role === query.role) : page;
+  const filtered =
+    query.role !== undefined ? page.filter((m) => m.role === query.role) : page;
 
   return { items: filtered, has_more: hasMore };
 }
@@ -122,7 +123,10 @@ export async function getMessage(
   return entry;
 }
 
-async function loadMessages(core: Scope, sessionId: string): Promise<Message[]> {
+async function loadMessages(
+  core: Scope,
+  sessionId: string,
+): Promise<Message[]> {
   const summary = await core.accessor.get(ISessionIndex).get(sessionId);
   if (summary === undefined) {
     throw new SessionNotFoundError(sessionId);
@@ -158,7 +162,13 @@ export async function loadMessageHistory(
     const baseMs = merged.times[index] ?? sessionCreatedAtMs + index;
     const createdAtMs = Math.max(previousMs + 1, baseMs);
     previousMs = createdAtMs;
-    return toProtocolMessage(sessionId, index, msg, sessionCreatedAtMs, createdAtMs);
+    return toProtocolMessage(
+      sessionId,
+      index,
+      msg,
+      sessionCreatedAtMs,
+      createdAtMs,
+    );
   });
 }
 
@@ -186,7 +196,10 @@ async function rehydrate(
   return changed ? out : messages;
 }
 
-async function readTranscript(core: Scope, agent: IAgentScopeHandle): Promise<ContextTranscript> {
+async function readTranscript(
+  core: Scope,
+  agent: IAgentScopeHandle,
+): Promise<ContextTranscript> {
   await agent.accessor.get(IWireService).flush();
   const scope = agent.accessor.get(IAgentScopeContext).scope();
   const reducer = createContextTranscriptReducer();

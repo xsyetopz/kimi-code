@@ -4,7 +4,7 @@
 // Drives the App.vue desktop/mobile branch. When window.matchMedia is
 // unavailable, it defaults to FALSE (desktop).
 
-import { onUnmounted, ref, type Ref } from 'vue';
+import { onUnmounted, ref, type Ref } from "vue";
 
 /** Phones / very narrow viewports use the single-column mobile shell. */
 export const MOBILE_MAX_WIDTH = 640;
@@ -18,7 +18,10 @@ export function useIsMobile(): Ref<boolean> {
   const isMobile = ref(false);
 
   // SSR / no-matchMedia guard: stay desktop (false).
-  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+  if (
+    typeof window === "undefined" ||
+    typeof window.matchMedia !== "function"
+  ) {
     return isMobile;
   }
 
@@ -31,10 +34,10 @@ export function useIsMobile(): Ref<boolean> {
 
   // addEventListener is the modern API; addListener is the deprecated fallback
   // for older Safari. Guard both so we never throw.
-  if (typeof mql.addEventListener === 'function') {
-    mql.addEventListener('change', onChange);
-    onUnmounted(() => mql.removeEventListener('change', onChange));
-  } else if (typeof mql.addListener === 'function') {
+  if (typeof mql.addEventListener === "function") {
+    mql.addEventListener("change", onChange);
+    onUnmounted(() => mql.removeEventListener("change", onChange));
+  } else if (typeof mql.addListener === "function") {
     // eslint-disable-next-line deprecation/deprecation
     mql.addListener(onChange);
     // eslint-disable-next-line deprecation/deprecation

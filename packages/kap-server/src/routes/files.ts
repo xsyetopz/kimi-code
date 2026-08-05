@@ -12,26 +12,26 @@
  * content-disposition) while resolving the store through `core.accessor.get`.
  */
 
-import multipart from '@fastify/multipart';
+import multipart from "@fastify/multipart";
 
 import {
   ErrorCodes,
   IFileService,
   Error2,
   type Scope,
-} from '@moonshot-ai/agent-core-v2';
-import { z } from 'zod';
+} from "@moonshot-ai/agent-core-v2";
+import { z } from "zod";
 
-import { requestLog } from '../lib/requestLog';
-import { defineRoute } from '../middleware/defineRoute';
-import { ErrorCode } from '../protocol/error-codes';
-import { errEnvelope, okEnvelope } from '../protocol/envelope';
+import { requestLog } from "../lib/requestLog";
+import { defineRoute } from "../middleware/defineRoute";
+import { ErrorCode } from "../protocol/error-codes";
+import { errEnvelope, okEnvelope } from "../protocol/envelope";
 import {
   deleteFileParamSchema,
   deleteFileResponseSchema,
   getFileParamSchema,
   uploadFileResponseSchema,
-} from '../protocol/rest-file';
+} from "../protocol/rest-file";
 
 interface FilesRouteHost {
   register(plugin: unknown, opts?: unknown): unknown;
@@ -87,34 +87,46 @@ export function registerFilesRoutes(app: FilesRouteHost, core: Scope): void {
 
   const uploadRoute = defineRoute(
     {
-      method: 'POST',
-      path: '/files',
+      method: "POST",
+      path: "/files",
       success: { data: uploadFileResponseSchema },
-      consumes: ['multipart/form-data'],
-      description: 'Upload a file',
-      tags: ['files'],
+      consumes: ["multipart/form-data"],
+      description: "Upload a file",
+      tags: ["files"],
     },
     async (req, reply) => {
       try {
         const fastifyReq = req as unknown as FastifyRequestLike;
         if (!fastifyReq.file) {
-          reply.send(errEnvelope(ErrorCode.VALIDATION_FAILED, 'multipart not initialized', req.id));
+          reply.send(
+            errEnvelope(
+              ErrorCode.VALIDATION_FAILED,
+              "multipart not initialized",
+              req.id,
+            ),
+          );
           return;
         }
         const part = await fastifyReq.file();
         if (!part) {
-          reply.send(errEnvelope(ErrorCode.VALIDATION_FAILED, 'missing `file` field', req.id));
+          reply.send(
+            errEnvelope(
+              ErrorCode.VALIDATION_FAILED,
+              "missing `file` field",
+              req.id,
+            ),
+          );
           return;
         }
 
-        const nameOverride = readFieldString(part.fields['name']);
-        const expiresInSec = readFieldNumber(part.fields['expires_in_sec']);
+        const nameOverride = readFieldString(part.fields["name"]);
+        const expiresInSec = readFieldNumber(part.fields["expires_in_sec"]);
 
         const store = core.accessor.get(IFileService);
 
         try {
           const meta = await store.save(
-            part.file as unknown as import('node:stream').Readable,
+            part.file as unknown as import("node:stream").Readable,
             part.filename,
             {
               name: nameOverride ?? part.filename,
@@ -134,22 +146,22 @@ export function registerFilesRoutes(app: FilesRouteHost, core: Scope): void {
   app.post(
     uploadRoute.path,
     uploadRoute.options,
-    uploadRoute.handler as unknown as Parameters<FilesRouteHost['post']>[2],
+    uploadRoute.handler as unknown as Parameters<FilesRouteHost["post"]>[2],
   );
 
   const downloadRoute = defineRoute(
     {
-      method: 'GET',
-      path: '/files/{file_id}',
+      method: "GET",
+      path: "/files/{file_id}",
       params: getFileParamSchema,
       rawResponse: {
-        200: { type: 'string', format: 'binary' },
+        200: { type: "string", format: "binary" },
       },
       errors: {
         [ErrorCode.FILE_NOT_FOUND]: {},
       },
-      description: 'Download a file by ID',
-      tags: ['files'],
+      description: "Download a file by ID",
+      tags: ["files"],
     },
     async (req, reply) => {
       try {
@@ -160,25 +172,30 @@ export function registerFilesRoutes(app: FilesRouteHost, core: Scope): void {
         const { meta } = file;
         const size = meta.size;
         r.type(meta.media_type)
-          .header('content-disposition', buildContentDisposition(meta.name, meta.media_type))
-          .header('accept-ranges', 'bytes')
-          .header('etag', `"${meta.id}-${size}"`);
+          .header(
+            "content-disposition",
+            buildContentDisposition(meta.name, meta.media_type),
+          )
+          .header("accept-ranges", "bytes")
+          .header("etag", `"${meta.id}-${size}"`);
 
         // Browsers load <video>/<audio> via byte-range requests (Range: bytes=…).
         // Without 206 Partial Content + Content-Range the media stalls at 0:00
         // and refuses to play or seek, so honor Range when the client sends one.
         const range = parseRange(
-          readRangeHeader((req as unknown as FastifyRequestLike).headers['range']),
+          readRangeHeader(
+            (req as unknown as FastifyRequestLike).headers["range"],
+          ),
           size,
         );
         if (range) {
-          r.header('content-range', `bytes ${range.start}-${range.end}/${size}`)
-            .header('content-length', range.end - range.start + 1)
+          r.header("content-range", `bytes ${range.start}-${range.end}/${size}`)
+            .header("content-length", range.end - range.start + 1)
             .code(206);
           return r.send(file.stream(range)) as unknown as void;
         }
 
-        r.header('content-length', size).code(200);
+        r.header("content-length", size).code(200);
         return r.send(file.stream()) as unknown as void;
       } catch (error) {
         sendMappedError(reply as unknown as FilesReply, req, error);
@@ -189,24 +206,24 @@ export function registerFilesRoutes(app: FilesRouteHost, core: Scope): void {
   app.get(
     downloadRoute.path,
     downloadRoute.options,
-    downloadRoute.handler as unknown as Parameters<FilesRouteHost['get']>[2],
+    downloadRoute.handler as unknown as Parameters<FilesRouteHost["get"]>[2],
   );
 
   const deleteRoute = defineRoute(
     {
-      method: 'DELETE',
-      path: '/files/{file_id}',
+      method: "DELETE",
+      path: "/files/{file_id}",
       params: deleteFileParamSchema,
       success: { data: deleteFileResponseSchema },
-      description: 'Delete a file by ID',
-      tags: ['files'],
+      description: "Delete a file by ID",
+      tags: ["files"],
     },
     async (req, reply) => {
       try {
         const { file_id } = req.params;
         const store = core.accessor.get(IFileService);
         await store.delete(file_id);
-        requestLog(req)?.info({ file_id }, 'file deleted');
+        requestLog(req)?.info({ file_id }, "file deleted");
         reply.send(okEnvelope({ deleted: true as const }, req.id));
       } catch (error) {
         sendMappedError(reply as unknown as FilesReply, req, error);
@@ -216,23 +233,29 @@ export function registerFilesRoutes(app: FilesRouteHost, core: Scope): void {
   app.delete(
     deleteRoute.path,
     deleteRoute.options,
-    deleteRoute.handler as unknown as Parameters<FilesRouteHost['delete']>[2],
+    deleteRoute.handler as unknown as Parameters<FilesRouteHost["delete"]>[2],
   );
 }
 
-function sendMappedError(reply: FilesReply, req: { id: string }, err: unknown): void {
+function sendMappedError(
+  reply: FilesReply,
+  req: { id: string },
+  err: unknown,
+): void {
   const requestId = req.id;
   if (err instanceof Error2 && err.code === ErrorCodes.FILE_NOT_FOUND) {
-    reply.code(404).send(errEnvelope(ErrorCode.FILE_NOT_FOUND, 'file not found', requestId));
+    reply
+      .code(404)
+      .send(errEnvelope(ErrorCode.FILE_NOT_FOUND, "file not found", requestId));
     return;
   }
-  requestLog(req)?.error({ err }, 'file request failed');
+  requestLog(req)?.error({ err }, "file request failed");
   reply
     .code(500)
     .send(
       errEnvelope(
         ErrorCode.INTERNAL_ERROR,
-        err instanceof Error ? err.message : 'internal error',
+        err instanceof Error ? err.message : "internal error",
         requestId,
       ),
     );
@@ -244,27 +267,32 @@ function readFieldString(field: unknown): string | undefined {
   const parsed = fieldValueSchema.safeParse(field);
   if (!parsed.success) return undefined;
   const v = parsed.data.value;
-  return typeof v === 'string' && v.length > 0 ? v : undefined;
+  return typeof v === "string" && v.length > 0 ? v : undefined;
 }
 
 function readFieldNumber(field: unknown): number | undefined {
   const parsed = fieldValueSchema.safeParse(field);
   if (!parsed.success) return undefined;
   const v = parsed.data.value;
-  if (typeof v === 'number' && Number.isFinite(v) && v >= 0) return Math.floor(v);
-  if (typeof v === 'string') {
+  if (typeof v === "number" && Number.isFinite(v) && v >= 0)
+    return Math.floor(v);
+  if (typeof v === "string") {
     const n = Number(v);
     if (Number.isFinite(n) && n >= 0) return Math.floor(n);
   }
   return undefined;
 }
 
-function readRangeHeader(value: string | string[] | undefined): string | undefined {
+function readRangeHeader(
+  value: string | string[] | undefined,
+): string | undefined {
   return Array.isArray(value) ? value[0] : value;
 }
 
 function buildContentDisposition(name: string, mediaType?: string): string {
-  const disposition = /^(image|video|audio)\//.test(mediaType ?? '') ? 'inline' : 'attachment';
+  const disposition = /^(image|video|audio)\//.test(mediaType ?? "")
+    ? "inline"
+    : "attachment";
   if (/^[\w. ()+[\]-]+$/.test(name)) {
     return `${disposition}; filename="${name}"`;
   }
@@ -279,17 +307,20 @@ interface ByteRange {
 /** Parse a `Range: bytes=start-end` header against the file size. Returns
  *  undefined for a missing / malformed / unsatisfiable range, in which case the
  *  caller serves the whole file with 200 (browsers accept that response). */
-function parseRange(header: string | undefined, size: number): ByteRange | undefined {
+function parseRange(
+  header: string | undefined,
+  size: number,
+): ByteRange | undefined {
   if (!header || size <= 0) return undefined;
   const m = /^bytes=(\d*)-(\d*)$/i.exec(header.trim());
   if (!m) return undefined;
   const startStr = m[1]!;
   const endStr = m[2]!;
-  if (startStr === '' && endStr === '') return undefined;
+  if (startStr === "" && endStr === "") return undefined;
 
   let start: number;
   let end: number;
-  if (startStr === '') {
+  if (startStr === "") {
     // Suffix range: `bytes=-N` -> the last N bytes.
     const suffix = Number(endStr);
     if (!Number.isFinite(suffix) || suffix <= 0) return undefined;
@@ -298,7 +329,7 @@ function parseRange(header: string | undefined, size: number): ByteRange | undef
   } else {
     start = Number(startStr);
     if (!Number.isFinite(start) || start < 0 || start >= size) return undefined;
-    end = endStr === '' ? size - 1 : Number(endStr);
+    end = endStr === "" ? size - 1 : Number(endStr);
     if (!Number.isFinite(end) || end < 0) return undefined;
   }
   if (start > end) return undefined;

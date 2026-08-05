@@ -1,4 +1,4 @@
-import { formatTokenCount } from './usage-format';
+import { formatTokenCount } from "./usage-format";
 
 interface DebugTokenUsage {
   readonly inputOther?: number;
@@ -35,7 +35,9 @@ export interface StepTimingInput {
 // instead of a meaningless ratio.
 const MIN_STREAM_MS_FOR_TPS = 50;
 
-export function formatStepDebugTiming(input: StepTimingInput): string | undefined {
+export function formatStepDebugTiming(
+  input: StepTimingInput,
+): string | undefined {
   const latency = input.llmFirstTokenLatencyMs;
   const streamMs = input.llmStreamDurationMs;
   if (latency === undefined || streamMs === undefined) return undefined;
@@ -64,21 +66,28 @@ export function formatStepDebugTiming(input: StepTimingInput): string | undefine
   if (hasInputUsage && (inputTokens > 0 || (outputTokens ?? 0) > 0)) {
     const cacheReadTokens = input.usage.inputCacheRead ?? 0;
     const cacheCreationTokens = input.usage.inputCacheCreation ?? 0;
-    const cacheHitRate = inputTokens > 0 ? Math.round((cacheReadTokens / inputTokens) * 100) : 0;
-    const cacheParts = [`cache read ${formatTokenCount(cacheReadTokens)} (${cacheHitRate}%)`];
+    const cacheHitRate =
+      inputTokens > 0 ? Math.round((cacheReadTokens / inputTokens) * 100) : 0;
+    const cacheParts = [
+      `cache read ${formatTokenCount(cacheReadTokens)} (${cacheHitRate}%)`,
+    ];
     if (cacheCreationTokens > 0) {
       cacheParts.push(`write ${formatTokenCount(cacheCreationTokens)}`);
     }
     parts.push(`tokens in ${formatTokenCount(inputTokens)}`);
-    parts.push(cacheParts.join(' / '));
+    parts.push(cacheParts.join(" / "));
   }
 
-  return `[Debug] ${parts.join(' | ')}`;
+  return `[Debug] ${parts.join(" | ")}`;
 }
 
 function usageInputTotal(usage: DebugTokenUsage | undefined): number {
   if (usage === undefined) return 0;
-  return (usage.inputOther ?? 0) + (usage.inputCacheRead ?? 0) + (usage.inputCacheCreation ?? 0);
+  return (
+    (usage.inputOther ?? 0) +
+    (usage.inputCacheRead ?? 0) +
+    (usage.inputCacheCreation ?? 0)
+  );
 }
 
 // Render TTFT, splitting the latency into the network + API-server portion and
@@ -98,7 +107,7 @@ function formatTtft(input: StepTimingInput): string {
 function formatDecodeSplit(input: StepTimingInput): string {
   const server = input.llmServerDecodeMs;
   const client = input.llmClientConsumeMs;
-  if (server === undefined || client === undefined) return '';
+  if (server === undefined || client === undefined) return "";
   return `; server ${formatDuration(server)} + client ${formatDuration(client)}`;
 }
 

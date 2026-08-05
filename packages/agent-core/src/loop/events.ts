@@ -1,20 +1,29 @@
-import type { FinishReason, TextPart, ThinkPart, TokenUsage } from '@moonshot-ai/kosong';
+import type {
+  FinishReason,
+  TextPart,
+  ThinkPart,
+  TokenUsage,
+} from "@moonshot-ai/kosong";
 
-import type { ToolInputDisplay } from '../tools/display';
-import type { ExecutableToolResult, LoopStepStopReason, ToolUpdate } from './types';
+import type { ToolInputDisplay } from "../tools/display";
+import type {
+  ExecutableToolResult,
+  LoopStepStopReason,
+  ToolUpdate,
+} from "./types";
 
-export type LoopInterruptReason = 'aborted' | 'max_steps' | 'error';
-export type LoopInterruptCause = LoopInterruptReason | 'user_cancelled';
+export type LoopInterruptReason = "aborted" | "max_steps" | "error";
+export type LoopInterruptCause = LoopInterruptReason | "user_cancelled";
 
 export interface LoopStepBeginEvent {
-  readonly type: 'step.begin';
+  readonly type: "step.begin";
   readonly uuid: string;
   readonly turnId: string;
   readonly step: number;
 }
 
 export interface LoopStepEndEvent {
-  readonly type: 'step.end';
+  readonly type: "step.end";
   readonly uuid: string;
   readonly turnId: string;
   readonly step: number;
@@ -52,7 +61,7 @@ export interface LoopStepEndEvent {
 }
 
 export interface LoopStepRetryingEvent {
-  readonly type: 'step.retrying';
+  readonly type: "step.retrying";
   readonly turnId: string;
   readonly step: number;
   readonly stepUuid: string;
@@ -66,7 +75,7 @@ export interface LoopStepRetryingEvent {
 }
 
 export interface LoopContentPartEvent {
-  readonly type: 'content.part';
+  readonly type: "content.part";
   readonly uuid: string;
   readonly turnId: string;
   readonly step: number;
@@ -75,7 +84,7 @@ export interface LoopContentPartEvent {
 }
 
 export interface LoopToolCallEvent {
-  readonly type: 'tool.call';
+  readonly type: "tool.call";
   readonly uuid: string;
   readonly turnId: string;
   readonly step: number;
@@ -90,7 +99,7 @@ export interface LoopToolCallEvent {
 }
 
 export interface LoopToolResultEvent {
-  readonly type: 'tool.result';
+  readonly type: "tool.result";
   readonly parentUuid: string;
   readonly toolCallId: string;
   readonly result: ExecutableToolResult;
@@ -98,7 +107,7 @@ export interface LoopToolResultEvent {
 }
 
 export interface LoopTurnInterruptedEvent {
-  readonly type: 'turn.interrupted';
+  readonly type: "turn.interrupted";
   readonly reason: LoopInterruptReason;
   readonly attemptedSteps: number;
   readonly activeStep?: number | undefined;
@@ -112,24 +121,24 @@ export interface LoopTurnInterruptedEvent {
 }
 
 export interface LoopTextDeltaEvent {
-  readonly type: 'text.delta';
+  readonly type: "text.delta";
   readonly delta: string;
 }
 
 export interface LoopThinkingDeltaEvent {
-  readonly type: 'thinking.delta';
+  readonly type: "thinking.delta";
   readonly delta: string;
 }
 
 export interface LoopToolCallDeltaEvent {
-  readonly type: 'tool.call.delta';
+  readonly type: "tool.call.delta";
   readonly toolCallId: string;
   readonly name?: string | undefined;
   readonly argumentsPart?: string | undefined;
 }
 
 export interface LoopToolProgressEvent {
-  readonly type: 'tool.progress';
+  readonly type: "tool.progress";
   readonly toolCallId: string;
   readonly update: ToolUpdate;
 }
@@ -178,11 +187,11 @@ export function createLoopEventDispatcher(
 
 function isRecordedEvent(event: LoopEvent): event is LoopRecordedEvent {
   return (
-    event.type === 'step.begin' ||
-    event.type === 'step.end' ||
-    event.type === 'content.part' ||
-    event.type === 'tool.call' ||
-    event.type === 'tool.result'
+    event.type === "step.begin" ||
+    event.type === "step.end" ||
+    event.type === "content.part" ||
+    event.type === "tool.call" ||
+    event.type === "tool.result"
   );
 }
 
@@ -194,7 +203,10 @@ async function recordEvent(
   safeEmitLive(input.emitLiveEvent, event);
 }
 
-function safeEmitLive(emit: LoopLiveEventEmitter | undefined, event: LoopEvent): void {
+function safeEmitLive(
+  emit: LoopLiveEventEmitter | undefined,
+  event: LoopEvent,
+): void {
   if (emit === undefined) return;
   let maybePromise: unknown;
   try {
@@ -205,8 +217,8 @@ function safeEmitLive(emit: LoopLiveEventEmitter | undefined, event: LoopEvent):
   if (
     maybePromise !== undefined &&
     maybePromise !== null &&
-    typeof (maybePromise as { then?: unknown }).then === 'function' &&
-    typeof (maybePromise as { catch?: unknown }).catch === 'function'
+    typeof (maybePromise as { then?: unknown }).then === "function" &&
+    typeof (maybePromise as { catch?: unknown }).catch === "function"
   ) {
     (maybePromise as Promise<unknown>).catch(() => {
       // Live listeners are best-effort; their failures must not affect the turn.

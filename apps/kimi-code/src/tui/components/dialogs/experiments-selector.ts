@@ -5,40 +5,46 @@ import {
   truncateToWidth,
   visibleWidth,
   type Focusable,
-} from '@moonshot-ai/pi-tui';
-import type { ExperimentalFeatureState } from '@moonshot-ai/kimi-code-sdk';
+} from "@moonshot-ai/pi-tui";
+import type { ExperimentalFeatureState } from "@moonshot-ai/kimi-code-sdk";
 
-import { SELECT_POINTER } from '#/tui/constant/symbols';
-import { currentTheme } from '#/tui/theme';
-import { printableChar } from '#/tui/utils/printable-key';
-import { SearchableList } from '#/tui/utils/searchable-list';
+import { SELECT_POINTER } from "#/tui/constant/symbols";
+import { currentTheme } from "#/tui/theme";
+import { printableChar } from "#/tui/utils/printable-key";
+import { SearchableList } from "#/tui/utils/searchable-list";
 
-const ELLIPSIS = '…';
+const ELLIPSIS = "…";
 
 export interface ExperimentalFeatureDraftChange {
-  readonly id: ExperimentalFeatureState['id'];
+  readonly id: ExperimentalFeatureState["id"];
   readonly enabled: boolean;
 }
 
 export interface ExperimentsSelectorOptions {
   readonly features: readonly ExperimentalFeatureState[];
-  readonly onApply: (changes: readonly ExperimentalFeatureDraftChange[]) => void;
+  readonly onApply: (
+    changes: readonly ExperimentalFeatureDraftChange[],
+  ) => void;
   readonly onCancel: () => void;
 }
 
-export class ExperimentsSelectorComponent extends Container implements Focusable {
+export class ExperimentsSelectorComponent
+  extends Container
+  implements Focusable
+{
   focused = false;
 
   private readonly opts: ExperimentsSelectorOptions;
   private readonly list: SearchableList<ExperimentalFeatureState>;
-  private readonly draft = new Map<ExperimentalFeatureState['id'], boolean>();
+  private readonly draft = new Map<ExperimentalFeatureState["id"], boolean>();
 
   constructor(opts: ExperimentsSelectorOptions) {
     super();
     this.opts = opts;
     this.list = new SearchableList({
       items: opts.features,
-      toSearchText: (feature) => `${feature.title} ${feature.id} ${feature.description}`,
+      toSearchText: (feature) =>
+        `${feature.title} ${feature.id} ${feature.description}`,
       searchable: true,
     });
   }
@@ -55,7 +61,7 @@ export class ExperimentsSelectorComponent extends Container implements Focusable
       return;
     }
     const decoded = printableChar(data);
-    if (matchesKey(data, Key.space) || decoded === ' ') {
+    if (matchesKey(data, Key.space) || decoded === " ") {
       const selected = this.list.selected();
       if (selected !== undefined) this.toggleDraft(selected);
       return;
@@ -66,25 +72,30 @@ export class ExperimentsSelectorComponent extends Container implements Focusable
   override render(width: number): string[] {
     const view = this.list.view();
     const titleSuffix =
-      view.query.length === 0 ? currentTheme.fg('textMuted', '  (type to search)') : '';
-    const hintParts = ['↑↓ navigate'];
-    if (view.page.pageCount > 1) hintParts.push('PgUp/PgDn page');
-    hintParts.push('Space toggle', 'Enter apply', 'Esc cancel');
-    if (view.query.length > 0) hintParts.push('Backspace clear');
+      view.query.length === 0
+        ? currentTheme.fg("textMuted", "  (type to search)")
+        : "";
+    const hintParts = ["↑↓ navigate"];
+    if (view.page.pageCount > 1) hintParts.push("PgUp/PgDn page");
+    hintParts.push("Space toggle", "Enter apply", "Esc cancel");
+    if (view.query.length > 0) hintParts.push("Backspace clear");
 
     const lines: string[] = [
-      currentTheme.fg('primary', '─'.repeat(width)),
-      currentTheme.boldFg('primary', ' Experimental features') + titleSuffix,
-      currentTheme.fg('textMuted', ` ${hintParts.join(' · ')}`),
-      '',
+      currentTheme.fg("primary", "─".repeat(width)),
+      currentTheme.boldFg("primary", " Experimental features") + titleSuffix,
+      currentTheme.fg("textMuted", ` ${hintParts.join(" · ")}`),
+      "",
     ];
 
     if (view.query.length > 0) {
-      lines.push(currentTheme.fg('primary', ` Search: `) + currentTheme.fg('text', view.query));
+      lines.push(
+        currentTheme.fg("primary", ` Search: `) +
+          currentTheme.fg("text", view.query),
+      );
     }
 
     if (view.items.length === 0) {
-      lines.push(currentTheme.fg('textMuted', '   No matches'));
+      lines.push(currentTheme.fg("textMuted", "   No matches"));
     }
 
     for (let i = view.page.start; i < view.page.end; i++) {
@@ -93,24 +104,24 @@ export class ExperimentsSelectorComponent extends Container implements Focusable
       lines.push(...this.renderFeature(feature, selected, width));
     }
 
-    lines.push('');
+    lines.push("");
     if (view.query.length > 0) {
       lines.push(
         currentTheme.fg(
-          'textMuted',
+          "textMuted",
           ` ${String(view.items.length)} / ${String(this.opts.features.length)}`,
         ),
       );
     } else if (view.page.end < view.items.length) {
       lines.push(
         currentTheme.fg(
-          'textMuted',
+          "textMuted",
           ` ▼ ${String(view.items.length - view.page.end)} more`,
         ),
       );
     }
     lines.push(this.renderApplyButton());
-    lines.push(currentTheme.fg('primary', '─'.repeat(width)));
+    lines.push(currentTheme.fg("primary", "─".repeat(width)));
     return lines.map((line) => truncateToWidth(line, width, ELLIPSIS));
   }
 
@@ -137,7 +148,10 @@ export class ExperimentsSelectorComponent extends Container implements Focusable
     const changes: ExperimentalFeatureDraftChange[] = [];
     for (const feature of this.opts.features) {
       if (this.isDraftChanged(feature)) {
-        changes.push({ id: feature.id, enabled: this.effectiveEnabled(feature) });
+        changes.push({
+          id: feature.id,
+          enabled: this.effectiveEnabled(feature),
+        });
       }
     }
     return changes;
@@ -146,15 +160,19 @@ export class ExperimentsSelectorComponent extends Container implements Focusable
   private renderApplyButton(): string {
     const changes = this.draftChanges();
     const count = changes.length;
-    const label = '[ Apply changes and reload ]';
+    const label = "[ Apply changes and reload ]";
     const summary =
-      count === 0 ? 'no changes' : `${String(count)} ${count === 1 ? 'change' : 'changes'}`;
-    const button = count === 0
-      ? currentTheme.fg('textDim', label)
-      : currentTheme.boldFg('primary', label);
-    const summaryText = count === 0
-      ? currentTheme.fg('textMuted', summary)
-      : currentTheme.fg('success', summary);
+      count === 0
+        ? "no changes"
+        : `${String(count)} ${count === 1 ? "change" : "changes"}`;
+    const button =
+      count === 0
+        ? currentTheme.fg("textDim", label)
+        : currentTheme.boldFg("primary", label);
+    const summaryText =
+      count === 0
+        ? currentTheme.fg("textMuted", summary)
+        : currentTheme.fg("success", summary);
     return ` ${button}  ${summaryText}`;
   }
 
@@ -163,34 +181,41 @@ export class ExperimentsSelectorComponent extends Container implements Focusable
     selected: boolean,
     width: number,
   ): string[] {
-    const pointer = selected ? SELECT_POINTER : ' ';
-    const prefix = currentTheme.fg(selected ? 'primary' : 'textDim', `  ${pointer} `);
-    const label = selected ? currentTheme.boldFg('primary', feature.title) : currentTheme.fg('text', feature.title);
+    const pointer = selected ? SELECT_POINTER : " ";
+    const prefix = currentTheme.fg(
+      selected ? "primary" : "textDim",
+      `  ${pointer} `,
+    );
+    const label = selected
+      ? currentTheme.boldFg("primary", feature.title)
+      : currentTheme.fg("text", feature.title);
     const enabled = this.effectiveEnabled(feature);
-    const status = enabled ? 'enabled' : 'disabled';
-    const statusText = enabled ? currentTheme.fg('success', status) : currentTheme.fg('textDim', status);
+    const status = enabled ? "enabled" : "disabled";
+    const statusText = enabled
+      ? currentTheme.fg("success", status)
+      : currentTheme.fg("textDim", status);
     const detail = this.isDraftChanged(feature)
       ? `${featureDetail(feature)} · modified`
       : featureDetail(feature);
     const lines = [
       `${prefix}${label}  ${statusText}`,
-      currentTheme.fg('textMuted', `    ${detail}`),
+      currentTheme.fg("textMuted", `    ${detail}`),
     ];
     const descriptionWidth = Math.max(1, width - 4);
     for (const line of wrapText(feature.description, descriptionWidth)) {
-      lines.push(currentTheme.fg('textMuted', `    ${line}`));
+      lines.push(currentTheme.fg("textMuted", `    ${line}`));
     }
     return lines;
   }
 }
 
 function isLocked(feature: ExperimentalFeatureState): boolean {
-  return feature.source === 'env' || feature.source === 'master-env';
+  return feature.source === "env" || feature.source === "master-env";
 }
 
 function featureDetail(feature: ExperimentalFeatureState): string {
   const source = sourceLabel(feature);
-  if (feature.source === 'env' || feature.source === 'master-env') {
+  if (feature.source === "env" || feature.source === "master-env") {
     return `id ${feature.id} · ${source}`;
   }
   return `id ${feature.id} · ${source} · ${feature.env}`;
@@ -198,14 +223,14 @@ function featureDetail(feature: ExperimentalFeatureState): string {
 
 function sourceLabel(feature: ExperimentalFeatureState): string {
   switch (feature.source) {
-    case 'master-env':
-      return 'locked by KIMI_CODE_EXPERIMENTAL_FLAG';
-    case 'env':
+    case "master-env":
+      return "locked by KIMI_CODE_EXPERIMENTAL_FLAG";
+    case "env":
       return `locked by ${feature.env}`;
-    case 'config':
-      return 'config';
-    case 'default':
-      return 'default';
+    case "config":
+      return "config";
+    case "default":
+      return "default";
   }
 }
 
@@ -216,7 +241,7 @@ function wrapText(text: string, width: number): string[] {
     .split(/\s+/)
     .filter((word) => word.length > 0);
   const lines: string[] = [];
-  let current = '';
+  let current = "";
 
   for (const word of words) {
     const candidate = current.length === 0 ? word : `${current} ${word}`;
@@ -225,7 +250,10 @@ function wrapText(text: string, width: number): string[] {
       continue;
     }
     if (current.length > 0) lines.push(current);
-    current = visibleWidth(word) <= maxWidth ? word : truncateToWidth(word, maxWidth, ELLIPSIS);
+    current =
+      visibleWidth(word) <= maxWidth
+        ? word
+        : truncateToWidth(word, maxWidth, ELLIPSIS);
   }
 
   if (current.length > 0) lines.push(current);

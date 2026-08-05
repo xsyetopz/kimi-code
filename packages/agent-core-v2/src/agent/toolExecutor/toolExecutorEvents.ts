@@ -3,11 +3,11 @@
  * event payloads published through `IEventBus` as tool calls execute.
  */
 
-import type { ToolUpdate } from '#/tool/toolContract';
-import type { ToolInputDisplay } from '#/tool/toolInputDisplay';
+import type { ToolUpdate } from "#/tool/toolContract";
+import type { ToolInputDisplay } from "#/tool/toolInputDisplay";
 
 export interface ToolCallStartedEvent {
-  readonly type: 'tool.call.started';
+  readonly type: "tool.call.started";
   readonly turnId: number;
   readonly toolCallId: string;
   readonly name: string;
@@ -17,14 +17,14 @@ export interface ToolCallStartedEvent {
 }
 
 export interface ToolProgressEvent {
-  readonly type: 'tool.progress';
+  readonly type: "tool.progress";
   readonly turnId: number;
   readonly toolCallId: string;
   readonly update: ToolUpdate;
 }
 
 export interface ToolResultEvent {
-  readonly type: 'tool.result';
+  readonly type: "tool.result";
   readonly turnId: number;
   readonly toolCallId: string;
   readonly output: unknown;
@@ -32,10 +32,10 @@ export interface ToolResultEvent {
   readonly synthetic?: boolean;
 }
 
-declare module '#/app/event/eventBus' {
+declare module "#/app/event/eventBus" {
   interface DomainEventMap {
-    'tool.call.started': ToolCallStartedEvent;
-    'tool.result': ToolResultEvent;
-    'tool.progress': ToolProgressEvent;
+    "tool.call.started": ToolCallStartedEvent;
+    "tool.result": ToolResultEvent;
+    "tool.progress": ToolProgressEvent;
   }
 }

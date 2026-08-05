@@ -12,11 +12,15 @@
  * App-scoped.
  */
 
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
 
-import type { SkillDiscoveryResult } from './skillDiscovery';
-import { ISkillDiscovery } from './skillDiscovery';
-import type { SkillDefinition, SkillRoot } from './types';
+import type { SkillDiscoveryResult } from "./skillDiscovery";
+import { ISkillDiscovery } from "./skillDiscovery";
+import type { SkillDefinition, SkillRoot } from "./types";
 
 export class InMemorySkillDiscovery implements ISkillDiscovery {
   declare readonly _serviceBrand: undefined;
@@ -47,10 +51,14 @@ export class InMemorySkillDiscovery implements ISkillDiscovery {
     if (roots.length === 0) {
       skills.push(...this.userSkills, ...this.projectSkills);
     } else {
-      if (roots.some((root) => root.plugin !== undefined)) skills.push(...this.pluginSkills);
-      if (roots.some((root) => root.source === 'extra')) skills.push(...this.extraSkills);
-      if (roots.some((root) => root.source === 'user')) skills.push(...this.userSkills);
-      if (roots.some((root) => root.source === 'project')) skills.push(...this.projectSkills);
+      if (roots.some((root) => root.plugin !== undefined))
+        skills.push(...this.pluginSkills);
+      if (roots.some((root) => root.source === "extra"))
+        skills.push(...this.extraSkills);
+      if (roots.some((root) => root.source === "user"))
+        skills.push(...this.userSkills);
+      if (roots.some((root) => root.source === "project"))
+        skills.push(...this.projectSkills);
     }
     return { skills, skipped: [], scannedRoots: [] };
   }
@@ -61,5 +69,5 @@ registerScopedService(
   ISkillDiscovery,
   InMemorySkillDiscovery,
   ScopeActivation.OnScopeCreated,
-  'skillCatalog',
+  "skillCatalog",
 );

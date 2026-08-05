@@ -6,7 +6,7 @@ import {
   type SelectItem,
   type SelectListLayoutOptions,
   type SelectListTheme,
-} from '@moonshot-ai/pi-tui';
+} from "@moonshot-ai/pi-tui";
 
 // Mirror pi-tui's private select-list layout constants
 // (dist/components/select-list.js); keep in sync when bumping pi-tui.
@@ -15,7 +15,7 @@ const PRIMARY_COLUMN_GAP = 2;
 const MIN_DESCRIPTION_WIDTH = 10;
 
 const DESCRIPTION_MAX_LINES = 2;
-const ELLIPSIS = '…';
+const ELLIPSIS = "…";
 const ELLIPSIS_WIDTH = visibleWidth(ELLIPSIS);
 
 // truncateToWidth appends an ANSI reset whenever it actually truncates.
@@ -27,7 +27,7 @@ const ELLIPSIS_WIDTH = visibleWidth(ELLIPSIS);
 const TRAILING_ANSI_RESET = /(?:\u001B\[0m)+$/;
 
 function truncatePlainToWidth(text: string, maxWidth: number): string {
-  return truncateToWidth(text, maxWidth, '').replace(TRAILING_ANSI_RESET, '');
+  return truncateToWidth(text, maxWidth, "").replace(TRAILING_ANSI_RESET, "");
 }
 
 interface SelectListInternals {
@@ -50,15 +50,19 @@ interface SelectListInternals {
  */
 export class WrappingSelectList extends SelectList {
   override render(width: number): string[] {
-    const { filteredItems, selectedIndex, maxVisible, theme } = this.internals();
+    const { filteredItems, selectedIndex, maxVisible, theme } =
+      this.internals();
     if (filteredItems.length === 0) {
-      return [theme.noMatch('  No matching commands')];
+      return [theme.noMatch("  No matching commands")];
     }
 
     const primaryColumnWidth = this.primaryColumnWidth();
     const startIndex = Math.max(
       0,
-      Math.min(selectedIndex - Math.floor(maxVisible / 2), filteredItems.length - maxVisible),
+      Math.min(
+        selectedIndex - Math.floor(maxVisible / 2),
+        filteredItems.length - maxVisible,
+      ),
     );
     const endIndex = Math.min(startIndex + maxVisible, filteredItems.length);
 
@@ -66,7 +70,14 @@ export class WrappingSelectList extends SelectList {
     for (let i = startIndex; i < endIndex; i++) {
       const item = filteredItems[i];
       if (!item) continue;
-      lines.push(...this.renderItemLines(item, i === selectedIndex, width, primaryColumnWidth));
+      lines.push(
+        ...this.renderItemLines(
+          item,
+          i === selectedIndex,
+          width,
+          primaryColumnWidth,
+        ),
+      );
     }
 
     if (startIndex > 0 || endIndex < filteredItems.length) {
@@ -83,10 +94,10 @@ export class WrappingSelectList extends SelectList {
     primaryColumnWidth: number,
   ): string[] {
     const { theme } = this.internals();
-    const prefix = isSelected ? '→ ' : '  ';
+    const prefix = isSelected ? "→ " : "  ";
     const prefixWidth = visibleWidth(prefix);
     const description = item.description
-      ? item.description.replaceAll(/[\r\n]+/g, ' ').trim()
+      ? item.description.replaceAll(/[\r\n]+/g, " ").trim()
       : undefined;
 
     if (description && width > 40) {
@@ -94,7 +105,10 @@ export class WrappingSelectList extends SelectList {
         1,
         Math.min(primaryColumnWidth, width - prefixWidth - 4),
       );
-      const maxPrimaryWidth = Math.max(1, effectivePrimaryColumnWidth - PRIMARY_COLUMN_GAP);
+      const maxPrimaryWidth = Math.max(
+        1,
+        effectivePrimaryColumnWidth - PRIMARY_COLUMN_GAP,
+      );
       const truncatedValue = this.truncatePrimaryValue(
         item,
         isSelected,
@@ -102,15 +116,22 @@ export class WrappingSelectList extends SelectList {
         effectivePrimaryColumnWidth,
       );
       const truncatedValueWidth = visibleWidth(truncatedValue);
-      const spacing = ' '.repeat(Math.max(1, effectivePrimaryColumnWidth - truncatedValueWidth));
-      const descriptionStart = prefixWidth + truncatedValueWidth + spacing.length;
+      const spacing = " ".repeat(
+        Math.max(1, effectivePrimaryColumnWidth - truncatedValueWidth),
+      );
+      const descriptionStart =
+        prefixWidth + truncatedValueWidth + spacing.length;
       const remainingWidth = width - descriptionStart - 2; // -2 for safety, as upstream
       if (remainingWidth > MIN_DESCRIPTION_WIDTH) {
         const descriptionLines = wrapDescription(description, remainingWidth);
-        const indent = ' '.repeat(descriptionStart);
+        const indent = " ".repeat(descriptionStart);
         if (isSelected) {
           return descriptionLines.map((line, index) =>
-            theme.selectedText(index === 0 ? `${prefix}${truncatedValue}${spacing}${line}` : indent + line),
+            theme.selectedText(
+              index === 0
+                ? `${prefix}${truncatedValue}${spacing}${line}`
+                : indent + line,
+            ),
           );
         }
         return descriptionLines.map((line, index) =>
@@ -122,8 +143,17 @@ export class WrappingSelectList extends SelectList {
     }
 
     const maxWidth = width - prefixWidth - 2;
-    const truncatedValue = this.truncatePrimaryValue(item, isSelected, maxWidth, maxWidth);
-    return [isSelected ? theme.selectedText(`${prefix}${truncatedValue}`) : prefix + truncatedValue];
+    const truncatedValue = this.truncatePrimaryValue(
+      item,
+      isSelected,
+      maxWidth,
+      maxWidth,
+    );
+    return [
+      isSelected
+        ? theme.selectedText(`${prefix}${truncatedValue}`)
+        : prefix + truncatedValue,
+    ];
   }
 
   private truncatePrimaryValue(
@@ -135,7 +165,13 @@ export class WrappingSelectList extends SelectList {
     const { layout } = this.internals();
     const displayValue = item.label || item.value;
     const truncated = layout.truncatePrimary
-      ? layout.truncatePrimary({ text: displayValue, maxWidth, columnWidth, item, isSelected })
+      ? layout.truncatePrimary({
+          text: displayValue,
+          maxWidth,
+          columnWidth,
+          item,
+          isSelected,
+        })
       : displayValue;
     return truncatePlainToWidth(truncated, maxWidth);
   }
@@ -143,13 +179,21 @@ export class WrappingSelectList extends SelectList {
   private primaryColumnWidth(): number {
     const { filteredItems, layout } = this.internals();
     const rawMin =
-      layout.minPrimaryColumnWidth ?? layout.maxPrimaryColumnWidth ?? DEFAULT_PRIMARY_COLUMN_WIDTH;
+      layout.minPrimaryColumnWidth ??
+      layout.maxPrimaryColumnWidth ??
+      DEFAULT_PRIMARY_COLUMN_WIDTH;
     const rawMax =
-      layout.maxPrimaryColumnWidth ?? layout.minPrimaryColumnWidth ?? DEFAULT_PRIMARY_COLUMN_WIDTH;
+      layout.maxPrimaryColumnWidth ??
+      layout.minPrimaryColumnWidth ??
+      DEFAULT_PRIMARY_COLUMN_WIDTH;
     const min = Math.max(1, Math.min(rawMin, rawMax));
     const max = Math.max(1, Math.max(rawMin, rawMax));
     const widest = filteredItems.reduce(
-      (acc, item) => Math.max(acc, visibleWidth(item.label || item.value) + PRIMARY_COLUMN_GAP),
+      (acc, item) =>
+        Math.max(
+          acc,
+          visibleWidth(item.label || item.value) + PRIMARY_COLUMN_GAP,
+        ),
       0,
     );
     return Math.max(min, Math.min(widest, max));
@@ -171,7 +215,7 @@ function wrapDescription(text: string, width: number): string[] {
     return wrapped;
   }
   const kept = wrapped.slice(0, DESCRIPTION_MAX_LINES - 1);
-  const rest = wrapped.slice(DESCRIPTION_MAX_LINES - 1).join(' ');
+  const rest = wrapped.slice(DESCRIPTION_MAX_LINES - 1).join(" ");
   const clipped = truncatePlainToWidth(rest, width - ELLIPSIS_WIDTH).trimEnd();
   return [...kept, `${clipped}${ELLIPSIS}`];
 }

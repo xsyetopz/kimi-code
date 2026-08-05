@@ -8,48 +8,48 @@
 
 export const STORAGE_KEYS = {
   // useKimiWebClient
-  permission: 'kimi-web.permission',
-  activeWorkspace: 'kimi-active-workspace',
-  planMode: 'kimi-web.plan-mode',
-  swarmMode: 'kimi-web.swarm-mode',
-  goalMode: 'kimi-web.goal-mode',
-  uiFontSize: 'kimi-web.ui-font-size',
-  starredModels: 'kimi-web.starred-models',
-  unread: 'kimi-web.unread',
-  onboarded: 'kimi-web.onboarded',
-  accent: 'kimi-web.accent',
-  colorScheme: 'kimi-web.color-scheme',
-  hiddenWorkspaces: 'kimi-web.hidden-workspaces',
-  collapsedWorkspaces: 'kimi-web.collapsed-workspaces',
-  workspaceOrder: 'kimi-web.workspace-order',
-  workspaceNameOverrides: 'kimi-web.workspace-name-overrides',
-  workspaceSort: 'kimi-web.workspace-sort',
+  permission: "kimi-web.permission",
+  activeWorkspace: "kimi-active-workspace",
+  planMode: "kimi-web.plan-mode",
+  swarmMode: "kimi-web.swarm-mode",
+  goalMode: "kimi-web.goal-mode",
+  uiFontSize: "kimi-web.ui-font-size",
+  starredModels: "kimi-web.starred-models",
+  unread: "kimi-web.unread",
+  onboarded: "kimi-web.onboarded",
+  accent: "kimi-web.accent",
+  colorScheme: "kimi-web.color-scheme",
+  hiddenWorkspaces: "kimi-web.hidden-workspaces",
+  collapsedWorkspaces: "kimi-web.collapsed-workspaces",
+  workspaceOrder: "kimi-web.workspace-order",
+  workspaceNameOverrides: "kimi-web.workspace-name-overrides",
+  workspaceSort: "kimi-web.workspace-sort",
   // Conversation outline (TOC). The value keeps the legacy `beta-toc` name so
   // users who explicitly turned it off while it was experimental keep their
   // preference after it became on-by-default.
-  conversationToc: 'kimi-web.beta-toc',
-  notifyOnComplete: 'kimi-web.notify-on-complete',
-  notifyOnQuestion: 'kimi-web.notify-on-question',
-  notifyOnApproval: 'kimi-web.notify-on-approval',
-  soundOnComplete: 'kimi-web.sound-on-complete',
-  inputHistory: 'kimi-web.input-history',
+  conversationToc: "kimi-web.beta-toc",
+  notifyOnComplete: "kimi-web.notify-on-complete",
+  notifyOnQuestion: "kimi-web.notify-on-question",
+  notifyOnApproval: "kimi-web.notify-on-approval",
+  soundOnComplete: "kimi-web.sound-on-complete",
+  inputHistory: "kimi-web.input-history",
   // cross-file
-  locale: 'kimi-locale',
-  clientId: 'kimi-web.client-id',
-  debug: 'kimi-web.debug',
-  openInLastTarget: 'kimi-web.open-in.last-target',
-  sidebarCollapsed: 'kimi-web.sidebar-collapsed',
-  sidebarWidth: 'kimi-web.sidebar-width',
+  locale: "kimi-locale",
+  clientId: "kimi-web.client-id",
+  debug: "kimi-web.debug",
+  openInLastTarget: "kimi-web.open-in.last-target",
+  sidebarCollapsed: "kimi-web.sidebar-collapsed",
+  sidebarWidth: "kimi-web.sidebar-width",
   // deprecated cleanups (kept so the removals still fire for old users)
-  codeFont: 'kimi-web.code-font',
-  contentAlign: 'kimi-web.content-align',
-  theme: 'kimi-web.theme',
-  thinking: 'kimi-web.thinking',
+  codeFont: "kimi-web.code-font",
+  contentAlign: "kimi-web.content-align",
+  theme: "kimi-web.theme",
+  thinking: "kimi-web.thinking",
 } as const;
 
 /** Per-session composer draft key. */
 export function draftStorageKey(sid: string | undefined): string {
-  return `kimi-web.draft.${sid && sid.length > 0 ? sid : '__new__'}`;
+  return `kimi-web.draft.${sid && sid.length > 0 ? sid : "__new__"}`;
 }
 
 export function safeGetString(key: string): string | null {
@@ -105,9 +105,11 @@ export function loadUnread(): Record<string, boolean> {
   if (!raw) return {};
   try {
     const parsed = JSON.parse(raw) as unknown;
-    if (!parsed || typeof parsed !== 'object') return {};
+    if (!parsed || typeof parsed !== "object") return {};
     const out: Record<string, boolean> = {};
-    for (const [id, value] of Object.entries(parsed as Record<string, unknown>)) {
+    for (const [id, value] of Object.entries(
+      parsed as Record<string, unknown>,
+    )) {
       if (value === true) out[id] = true;
     }
     return out;
@@ -141,7 +143,7 @@ export function saveUnread(changes: Record<string, boolean>): void {
 export function loadCollapsedWorkspaces(): string[] {
   const parsed = safeGetJson<unknown>(STORAGE_KEYS.collapsedWorkspaces);
   if (!Array.isArray(parsed)) return [];
-  return parsed.filter((id): id is string => typeof id === 'string');
+  return parsed.filter((id): id is string => typeof id === "string");
 }
 
 export function saveCollapsedWorkspaces(ids: Iterable<string>): void {
@@ -158,7 +160,7 @@ export function saveCollapsedWorkspaces(ids: Iterable<string>): void {
 export function loadWorkspaceOrder(): string[] {
   const parsed = safeGetJson<unknown>(STORAGE_KEYS.workspaceOrder);
   if (!Array.isArray(parsed)) return [];
-  return parsed.filter((id): id is string => typeof id === 'string');
+  return parsed.filter((id): id is string => typeof id === "string");
 }
 
 export function saveWorkspaceOrder(ids: Iterable<string>): void {
@@ -175,15 +177,19 @@ export function saveWorkspaceOrder(ids: Iterable<string>): void {
  */
 export function loadWorkspaceNameOverrides(): Record<string, string> {
   const parsed = safeGetJson<unknown>(STORAGE_KEYS.workspaceNameOverrides);
-  if (!parsed || typeof parsed !== 'object') return {};
+  if (!parsed || typeof parsed !== "object") return {};
   const out: Record<string, string> = {};
-  for (const [root, name] of Object.entries(parsed as Record<string, unknown>)) {
-    if (typeof name === 'string') out[root] = name;
+  for (const [root, name] of Object.entries(
+    parsed as Record<string, unknown>,
+  )) {
+    if (typeof name === "string") out[root] = name;
   }
   return out;
 }
 
-export function saveWorkspaceNameOverrides(overrides: Record<string, string>): void {
+export function saveWorkspaceNameOverrides(
+  overrides: Record<string, string>,
+): void {
   safeSetJson(STORAGE_KEYS.workspaceNameOverrides, overrides);
 }
 

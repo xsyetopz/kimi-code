@@ -6,7 +6,7 @@ export interface FeedbackCodebaseFile {
 }
 
 export interface FeedbackCodebaseLimitExceeded {
-  readonly reason: 'file-count' | 'total-size';
+  readonly reason: "file-count" | "total-size";
   readonly limit: number;
 }
 

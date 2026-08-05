@@ -1,4 +1,4 @@
-import type { SkillDefinition } from '../../skill';
+import type { SkillDefinition } from "../../skill";
 
 export interface SkillRegistry {
   getSkill(name: string): SkillDefinition | undefined;

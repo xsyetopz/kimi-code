@@ -11,21 +11,21 @@
  * their own `WorkspaceConfig` with narrower bounds.
  */
 
-import type { Environment, Kaos } from '@moonshot-ai/kaos';
-import type { ExecutableToolResult } from '#/loop';
+import type { Environment, Kaos } from "@moonshot-ai/kaos";
+import type { ExecutableToolResult } from "#/loop";
 
-import type { WorkspaceConfig } from '../../../src/tools/support/workspace';
+import type { WorkspaceConfig } from "../../../src/tools/support/workspace";
 
 function notImplemented(method: string): never {
   throw new Error(`FakeKaos.${method} not implemented — override in test`);
 }
 
 export const FAKE_OS_ENV: Environment = {
-  osKind: 'Linux',
-  osArch: 'x86_64',
-  osVersion: 'test',
-  shellName: 'bash',
-  shellPath: '/bin/bash',
+  osKind: "Linux",
+  osArch: "x86_64",
+  osVersion: "test",
+  shellName: "bash",
+  shellPath: "/bin/bash",
 };
 
 export function createFakeKaos(
@@ -35,34 +35,35 @@ export function createFakeKaos(
   // Hold cwd in a closure so tests that call `chdir` directly can mutate it
   // and later `getcwd()` calls see the update — mirroring real-kaos semantics
   // without needing a backing fs.
-  let cwd = overrides?.getcwd?.() ?? '/workspace';
+  let cwd = overrides?.getcwd?.() ?? "/workspace";
   const base: Kaos = {
-    name: 'fake',
+    name: "fake",
     osEnv: FAKE_OS_ENV,
-    pathClass: () => 'posix',
+    pathClass: () => "posix",
     normpath: (p: string) => p,
-    gethome: () => '/home/test',
+    gethome: () => "/home/test",
     getcwd: () => cwd,
-    withCwd: (next: string) => createFakeKaos({ ...overrides, getcwd: () => next }, envLayers),
+    withCwd: (next: string) =>
+      createFakeKaos({ ...overrides, getcwd: () => next }, envLayers),
     withEnv: (env: Record<string, string>) =>
       createFakeKaos({ ...overrides, getcwd: () => cwd }, [...envLayers, env]),
     chdir: async (next: string) => {
       cwd = next;
     },
-    stat: () => notImplemented('stat'),
-    iterdir: () => notImplemented('iterdir'),
-    glob: () => notImplemented('glob'),
-    readBytes: () => notImplemented('readBytes'),
-    readText: () => notImplemented('readText'),
-    readLines: () => notImplemented('readLines'),
-    writeBytes: () => notImplemented('writeBytes'),
-    writeText: () => notImplemented('writeText'),
-    mkdir: () => notImplemented('mkdir'),
-    exec: () => notImplemented('exec'),
+    stat: () => notImplemented("stat"),
+    iterdir: () => notImplemented("iterdir"),
+    glob: () => notImplemented("glob"),
+    readBytes: () => notImplemented("readBytes"),
+    readText: () => notImplemented("readText"),
+    readLines: () => notImplemented("readLines"),
+    writeBytes: () => notImplemented("writeBytes"),
+    writeText: () => notImplemented("writeText"),
+    mkdir: () => notImplemented("mkdir"),
+    exec: () => notImplemented("exec"),
     execWithEnv: (args, invocationEnv) => {
       const mergedEnv = mergeEnvLayers(invocationEnv, envLayers);
       if (overrides?.execWithEnv) return overrides.execWithEnv(args, mergedEnv);
-      return notImplemented('execWithEnv');
+      return notImplemented("execWithEnv");
     },
   };
   return {
@@ -87,7 +88,7 @@ function mergeEnvLayers(
 }
 
 export const PERMISSIVE_WORKSPACE: WorkspaceConfig = {
-  workspaceDir: '/',
+  workspaceDir: "/",
   additionalDirs: [],
 };
 
@@ -98,7 +99,7 @@ export const PERMISSIVE_WORKSPACE: WorkspaceConfig = {
  */
 export function toolContentString(result: ExecutableToolResult): string {
   const c = result.output;
-  if (typeof c !== 'string') {
+  if (typeof c !== "string") {
     throw new TypeError(`expected string content, got ${typeof c}`);
   }
   return c;

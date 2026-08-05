@@ -6,27 +6,30 @@
  * subscription stream.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import type { ProcedureContract, StreamingProcedureContract } from '#/contract/types';
+import type {
+  ProcedureContract,
+  StreamingProcedureContract,
+} from "#/contract/types";
 
-export type ValidationPhase = 'input' | 'output' | 'event' | 'chunk';
+export type ValidationPhase = "input" | "output" | "event" | "chunk";
 
 export class KlientValidationError extends Error {
   constructor(
     readonly phase: ValidationPhase,
     /** `service.method` for calls, the klient event name for events. */
     readonly procedure: string,
-    readonly issues: z.ZodError['issues'],
+    readonly issues: z.ZodError["issues"],
     /** The offending raw payload (input args, output data, or event data). */
     readonly payload: unknown,
   ) {
     super(
       `${phase} validation failed for ${procedure}: ${issues
-        .map((issue) => `${issue.path.join('.') || '(root)'}: ${issue.message}`)
-        .join('; ')}`,
+        .map((issue) => `${issue.path.join(".") || "(root)"}: ${issue.message}`)
+        .join("; ")}`,
     );
-    this.name = 'KlientValidationError';
+    this.name = "KlientValidationError";
   }
 }
 
@@ -38,7 +41,12 @@ export function parseInput(
 ): unknown[] {
   const result = contract.input.safeParse(args);
   if (!result.success) {
-    throw new KlientValidationError('input', procedure, result.error.issues, args);
+    throw new KlientValidationError(
+      "input",
+      procedure,
+      result.error.issues,
+      args,
+    );
   }
   return result.data as unknown[];
 }
@@ -51,7 +59,12 @@ export function parseOutput(
 ): unknown {
   const result = contract.output.safeParse(data);
   if (!result.success) {
-    throw new KlientValidationError('output', procedure, result.error.issues, data);
+    throw new KlientValidationError(
+      "output",
+      procedure,
+      result.error.issues,
+      data,
+    );
   }
   return result.data;
 }
@@ -64,7 +77,12 @@ export function parseChunk(
 ): unknown {
   const result = contract.chunk.safeParse(data);
   if (!result.success) {
-    throw new KlientValidationError('chunk', procedure, result.error.issues, data);
+    throw new KlientValidationError(
+      "chunk",
+      procedure,
+      result.error.issues,
+      data,
+    );
   }
   return result.data;
 }
@@ -77,7 +95,15 @@ export function parseEvent(
 ): { ok: true; data: unknown } | { ok: false; error: KlientValidationError } {
   const result = schema.safeParse(data);
   if (!result.success) {
-    return { ok: false, error: new KlientValidationError('event', event, result.error.issues, data) };
+    return {
+      ok: false,
+      error: new KlientValidationError(
+        "event",
+        event,
+        result.error.issues,
+        data,
+      ),
+    };
   }
   return { ok: true, data: result.data };
 }

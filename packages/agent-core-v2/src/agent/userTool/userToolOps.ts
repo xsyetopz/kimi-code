@@ -18,24 +18,30 @@
  * describe.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { defineModel } from '#/wire/model';
+import { defineModel } from "#/wire/model";
 
-import type { UserToolRegistration } from './userTool';
+import type { UserToolRegistration } from "./userTool";
 
 export type UserToolModelState = Map<string, UserToolRegistration>;
 
-export const UserToolModel = defineModel<UserToolModelState>('userTool', () => new Map());
+export const UserToolModel = defineModel<UserToolModelState>(
+  "userTool",
+  () => new Map(),
+);
 
-declare module '#/wire/types' {
+declare module "#/wire/types" {
   interface PersistedOpMap {
-    'tools.register_user_tool': typeof registerUserTool;
-    'tools.unregister_user_tool': typeof unregisterUserTool;
+    "tools.register_user_tool": typeof registerUserTool;
+    "tools.unregister_user_tool": typeof unregisterUserTool;
   }
 }
 
-function equalRegistration(a: UserToolRegistration, b: UserToolRegistration): boolean {
+function equalRegistration(
+  a: UserToolRegistration,
+  b: UserToolRegistration,
+): boolean {
   return (
     a.name === b.name &&
     a.description === b.description &&
@@ -44,23 +50,29 @@ function equalRegistration(a: UserToolRegistration, b: UserToolRegistration): bo
   );
 }
 
-export const registerUserTool = UserToolModel.defineOp('tools.register_user_tool', {
-  schema: z.custom<UserToolRegistration>(),
-  apply: (s, p) => {
-    const existing = s.get(p.name);
-    if (existing !== undefined && equalRegistration(existing, p)) return s;
-    const next = new Map(s);
-    next.set(p.name, p);
-    return next;
+export const registerUserTool = UserToolModel.defineOp(
+  "tools.register_user_tool",
+  {
+    schema: z.custom<UserToolRegistration>(),
+    apply: (s, p) => {
+      const existing = s.get(p.name);
+      if (existing !== undefined && equalRegistration(existing, p)) return s;
+      const next = new Map(s);
+      next.set(p.name, p);
+      return next;
+    },
   },
-});
+);
 
-export const unregisterUserTool = UserToolModel.defineOp('tools.unregister_user_tool', {
-  schema: z.object({ name: z.string() }),
-  apply: (s, p) => {
-    if (!s.has(p.name)) return s;
-    const next = new Map(s);
-    next.delete(p.name);
-    return next;
+export const unregisterUserTool = UserToolModel.defineOp(
+  "tools.unregister_user_tool",
+  {
+    schema: z.object({ name: z.string() }),
+    apply: (s, p) => {
+      if (!s.has(p.name)) return s;
+      const next = new Map(s);
+      next.delete(p.name);
+      return next;
+    },
   },
-});
+);

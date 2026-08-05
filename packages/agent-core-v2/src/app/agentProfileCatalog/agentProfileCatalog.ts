@@ -37,12 +37,12 @@
  * binding) resolve profiles through.
  */
 
-import type { ILogger } from '#/_base/log/log';
-import type { ISessionProcessRunner } from '#/session/process/processRunner';
+import type { ILogger } from "#/_base/log/log";
+import type { ISessionProcessRunner } from "#/session/process/processRunner";
 
-export const DEFAULT_AGENT_PROFILE_NAME = 'agent';
+export const DEFAULT_AGENT_PROFILE_NAME = "agent";
 
-export type AgentModelPreference = 'primary' | 'secondary';
+export type AgentModelPreference = "primary" | "secondary";
 
 export interface AgentProfilePromptPrefixContext {
   readonly cwd: string;
@@ -77,7 +77,13 @@ export interface AgentProfileContext {
 export interface EnvironmentDisclosureSnapshot {
   readonly cwd: string;
   readonly date:
-    | { readonly disclosed: true; readonly value: { readonly localDate: string; readonly timeZone: string } }
+    | {
+        readonly disclosed: true;
+        readonly value: {
+          readonly localDate: string;
+          readonly timeZone: string;
+        };
+      }
     | { readonly disclosed: false };
 }
 
@@ -96,8 +102,12 @@ export interface AgentProfile {
   readonly subagents?: readonly string[];
   readonly modelPreference?: AgentModelPreference;
   readonly systemPrompt: (context: AgentProfileContext) => string;
-  readonly renderSystemPrompt: (context: AgentProfileContext) => SystemPromptRenderResult;
-  readonly promptPrefix?: (ctx: AgentProfilePromptPrefixContext) => Promise<string>;
+  readonly renderSystemPrompt: (
+    context: AgentProfileContext,
+  ) => SystemPromptRenderResult;
+  readonly promptPrefix?: (
+    ctx: AgentProfilePromptPrefixContext,
+  ) => Promise<string>;
   readonly summaryPolicy?: AgentProfileSummaryPolicy;
 }
 
@@ -115,7 +125,10 @@ export interface AgentProfile {
  * input object at runtime, so method-style definitions relying on `this`
  * keep working.
  */
-export type AgentProfileInput = Omit<AgentProfile, 'systemPrompt' | 'renderSystemPrompt'> &
+export type AgentProfileInput = Omit<
+  AgentProfile,
+  "systemPrompt" | "renderSystemPrompt"
+> &
   (
     | {
         readonly systemPrompt: (context: AgentProfileContext) => string;
@@ -125,7 +138,9 @@ export type AgentProfileInput = Omit<AgentProfile, 'systemPrompt' | 'renderSyste
       }
     | {
         readonly systemPrompt?: (context: AgentProfileContext) => string;
-        readonly renderSystemPrompt: (context: AgentProfileContext) => SystemPromptRenderResult;
+        readonly renderSystemPrompt: (
+          context: AgentProfileContext,
+        ) => SystemPromptRenderResult;
       }
   );
 
@@ -145,7 +160,7 @@ export function normalizeAgentProfile(input: AgentProfileInput): AgentProfile {
       systemPrompt,
       renderSystemPrompt: (context) => ({
         text: systemPrompt(context),
-        environment: { cwd: context.cwd ?? '', date: { disclosed: false } },
+        environment: { cwd: context.cwd ?? "", date: { disclosed: false } },
       }),
     };
   }

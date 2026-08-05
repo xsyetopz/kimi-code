@@ -1,8 +1,8 @@
 import type {
   PermissionOption,
   RequestPermissionResponse,
-} from '@agentclientprotocol/sdk';
-import type { QuestionAnswers, QuestionItem } from '@moonshot-ai/kimi-code-sdk';
+} from "@agentclientprotocol/sdk";
+import type { QuestionAnswers, QuestionItem } from "@moonshot-ai/kimi-code-sdk";
 
 /**
  * `optionId` namespace for the AskUserQuestion bridge.
@@ -54,12 +54,12 @@ export function questionItemToPermissionOptions(
   const options: PermissionOption[] = question.options.map((opt, i) => ({
     optionId: optOptionId(questionIndex, i),
     name: opt.label,
-    kind: 'allow_once' as const,
+    kind: "allow_once" as const,
   }));
   options.push({
     optionId: skipOptionId(questionIndex),
-    name: 'Skip',
-    kind: 'reject_once' as const,
+    name: "Skip",
+    kind: "reject_once" as const,
   });
   return options;
 }
@@ -82,7 +82,7 @@ export function outcomeToQuestionAnswer(
   question: QuestionItem,
   response: RequestPermissionResponse,
 ): QuestionAnswers | null {
-  if (response.outcome.outcome === 'cancelled') return null;
+  if (response.outcome.outcome === "cancelled") return null;
   const optionId = response.outcome.optionId;
   // Skip — explicit dismissal path; treat the same as `cancelled`.
   if (optionId === skipOptionId(0)) return null;

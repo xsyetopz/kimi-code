@@ -24,9 +24,13 @@ import {
   type SessionNotification,
   type TerminalOutputResponse,
   type WaitForTerminalExitResponse,
-} from '@agentclientprotocol/sdk';
+} from "@agentclientprotocol/sdk";
 
-import type { IAcpFsClient, IAcpTerminalClient, IAcpTerminalHandle } from './acp-fs';
+import type {
+  IAcpFsClient,
+  IAcpTerminalClient,
+  IAcpTerminalHandle,
+} from "./acp-fs";
 
 /**
  * The outbound ACP client surface used across the server. Structurally
@@ -37,9 +41,13 @@ export interface AcpClient extends IAcpFsClient, IAcpTerminalClient {
   /** Send a `session/update` notification to the client. */
   sessionUpdate(params: SessionNotification): Promise<void>;
   /** Reverse-RPC `session/request_permission` (approval / ask-user bridge). */
-  requestPermission(params: RequestPermissionRequest): Promise<RequestPermissionResponse>;
+  requestPermission(
+    params: RequestPermissionRequest,
+  ): Promise<RequestPermissionResponse>;
   /** Reverse-RPC `elicitation/create` (ask-user bridge for form-capable clients). */
-  createElicitation(params: CreateElicitationRequest): Promise<CreateElicitationResponse>;
+  createElicitation(
+    params: CreateElicitationRequest,
+  ): Promise<CreateElicitationResponse>;
 }
 
 /**
@@ -48,20 +56,24 @@ export interface AcpClient extends IAcpFsClient, IAcpTerminalClient {
  */
 export function acpClientFromContext(client: AgentContext): AcpClient {
   return {
-    sessionUpdate: (params) => client.notify(methods.client.session.update, params),
+    sessionUpdate: (params) =>
+      client.notify(methods.client.session.update, params),
     requestPermission: (params) =>
       client.request(methods.client.session.requestPermission, params),
-    createElicitation: (params) => client.request(methods.client.elicitation.create, params),
-    readTextFile: (params) => client.request(methods.client.fs.readTextFile, params),
-    writeTextFile: (params) => client.request(methods.client.fs.writeTextFile, params),
+    createElicitation: (params) =>
+      client.request(methods.client.elicitation.create, params),
+    readTextFile: (params) =>
+      client.request(methods.client.fs.readTextFile, params),
+    writeTextFile: (params) =>
+      client.request(methods.client.fs.writeTextFile, params),
     createTerminal: async (params) => {
       // Explicit generics: the literal-method overload does not reduce for
       // this params shape (nullable optionals), so the call is pinned to the
       // typed `terminal/create` request/response here.
-      const { terminalId } = await client.request<CreateTerminalResponse, CreateTerminalRequest>(
-        methods.client.terminal.create,
-        params,
-      );
+      const { terminalId } = await client.request<
+        CreateTerminalResponse,
+        CreateTerminalRequest
+      >(methods.client.terminal.create, params);
       return new ContextTerminalHandle(terminalId, params.sessionId, client);
     },
   };

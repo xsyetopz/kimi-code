@@ -1,8 +1,8 @@
-import type { CronTask } from '../../types';
-import { formatAbsoluteTime, formatRelativeTime } from '../../util/time';
-import { useCron } from '../../hooks/useTasks';
-import { CopyButton } from '../shared/CopyButton';
-import { Pill } from '../shared/Pill';
+import type { CronTask } from "../../types";
+import { formatAbsoluteTime, formatRelativeTime } from "../../util/time";
+import { useCron } from "../../hooks/useTasks";
+import { CopyButton } from "../shared/CopyButton";
+import { Pill } from "../shared/Pill";
 
 interface CronTabProps {
   sessionId: string;
@@ -15,7 +15,9 @@ export function CronTab({ sessionId }: CronTabProps) {
   const { data, isLoading, error } = useCron(sessionId);
 
   if (isLoading) {
-    return <div className="p-6 font-mono text-[12px] text-fg-3">loading cron…</div>;
+    return (
+      <div className="p-6 font-mono text-[12px] text-fg-3">loading cron…</div>
+    );
   }
   if (error) {
     return (
@@ -28,7 +30,7 @@ export function CronTab({ sessionId }: CronTabProps) {
   return (
     <div className="min-h-0 flex-1 overflow-y-auto p-4">
       <div className="font-mono text-[11px] uppercase tracking-[0.12em] text-fg-3">
-        cron jobs{cron.length > 0 ? ` · ${cron.length}` : ''}
+        cron jobs{cron.length > 0 ? ` · ${cron.length}` : ""}
       </div>
       {cron.length === 0 ? (
         <div className="mt-3 border border-border bg-surface-0 px-3 py-6 text-center font-mono text-[12px] text-fg-3">
@@ -51,8 +53,8 @@ function CronCard({ job }: { job: CronTask }) {
   return (
     <div className="border border-border bg-surface-0">
       <div className="flex flex-wrap items-center gap-2 border-b border-border px-3 py-2">
-        <Pill tone={oneShot ? 'ephemeral' : 'lifecycle'} variant="outline">
-          {oneShot ? 'one-shot' : 'recurring'}
+        <Pill tone={oneShot ? "ephemeral" : "lifecycle"} variant="outline">
+          {oneShot ? "one-shot" : "recurring"}
         </Pill>
         <code className="font-mono text-[12px] text-fg-0">{job.cron}</code>
         <span className="font-mono text-[11px] text-fg-3">{job.id}</span>
@@ -65,7 +67,9 @@ function CronCard({ job }: { job: CronTask }) {
         </span>
       </div>
       <div className="px-3 py-2">
-        <div className="text-[10px] uppercase tracking-[0.1em] text-fg-3">prompt</div>
+        <div className="text-[10px] uppercase tracking-[0.1em] text-fg-3">
+          prompt
+        </div>
         <div className="mt-1 whitespace-pre-wrap break-words font-mono text-[12px] text-fg-1">
           {job.prompt}
         </div>
@@ -76,7 +80,8 @@ function CronCard({ job }: { job: CronTask }) {
             <span className="text-fg-3">(never fired)</span>
           ) : (
             <span title={formatAbsoluteTime(job.lastFiredAt)}>
-              {formatAbsoluteTime(job.lastFiredAt)} ({formatRelativeTime(job.lastFiredAt)})
+              {formatAbsoluteTime(job.lastFiredAt)} (
+              {formatRelativeTime(job.lastFiredAt)})
             </span>
           )}
         </Field>
@@ -86,10 +91,18 @@ function CronCard({ job }: { job: CronTask }) {
   );
 }
 
-function Field({ label, children }: { label: string; children: import('react').ReactNode }) {
+function Field({
+  label,
+  children,
+}: {
+  label: string;
+  children: import("react").ReactNode;
+}) {
   return (
     <div className="flex items-baseline gap-2 font-mono text-[12px]">
-      <span className="w-28 shrink-0 text-[10px] uppercase tracking-[0.1em] text-fg-3">{label}</span>
+      <span className="w-28 shrink-0 text-[10px] uppercase tracking-[0.1em] text-fg-3">
+        {label}
+      </span>
       <span className="min-w-0 break-words text-fg-1">{children}</span>
     </div>
   );

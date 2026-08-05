@@ -7,14 +7,18 @@
  * `inspectParent`. Bound at App scope.
  */
 
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { StateRegistry } from '#/_base/state/stateRegistry';
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { StateRegistry } from "#/_base/state/stateRegistry";
 
-import { IAppStateService } from './appState';
+import { IAppStateService } from "./appState";
 
 export class AppStateService extends StateRegistry implements IAppStateService {
   declare readonly _serviceBrand: undefined;
-  protected override readonly inspectScope = 'app';
+  protected override readonly inspectScope = "app";
 }
 
 registerScopedService(
@@ -22,5 +26,5 @@ registerScopedService(
   IAppStateService,
   AppStateService,
   ScopeActivation.OnScopeCreated,
-  'state',
+  "state",
 );

@@ -1,14 +1,16 @@
 import {
   type WireMigration,
   type WireMigrationRecord,
-} from '#/wire/migration/migration';
-import { eventSnapshot } from '../../harness/snapshots';
+} from "#/wire/migration/migration";
+import { eventSnapshot } from "../../harness/snapshots";
 
 export function runMigration(
   migration: WireMigration,
   records: readonly WireMigrationRecord[],
 ) {
-  return wireSnapshot(records.map((record) => migrateRecord(migration, record)));
+  return wireSnapshot(
+    records.map((record) => migrateRecord(migration, record)),
+  );
 }
 
 function migrateRecord(
@@ -16,11 +18,15 @@ function migrateRecord(
   record: WireMigrationRecord,
 ): WireMigrationRecord {
   if (migration.migrateRecord === undefined) {
-    throw new Error(`Migration ${migration.sourceVersion} requires batch migration`);
+    throw new Error(
+      `Migration ${migration.sourceVersion} requires batch migration`,
+    );
   }
   const migrated = migration.migrateRecord(record);
   if (isWireMigrationRecordArray(migrated)) {
-    throw new Error(`Migration ${migration.sourceVersion} returned multiple records`);
+    throw new Error(
+      `Migration ${migration.sourceVersion} returned multiple records`,
+    );
   }
   return updateMetadata(migration, migrated);
 }
@@ -29,7 +35,7 @@ function updateMetadata(
   migration: WireMigration,
   record: WireMigrationRecord,
 ): WireMigrationRecord {
-  if (record.type !== 'metadata') return record;
+  if (record.type !== "metadata") return record;
   return {
     ...record,
     protocol_version: migration.targetVersion,
@@ -47,7 +53,7 @@ export function wireSnapshot(records: readonly WireMigrationRecord[]) {
     records.map((record) => {
       const { type: event, ...args } = record;
       return {
-        type: '[wire]' as const,
+        type: "[wire]" as const,
         event,
         args,
       };

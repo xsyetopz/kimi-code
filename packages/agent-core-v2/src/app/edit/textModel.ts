@@ -11,7 +11,7 @@ import {
   type LineEndingStyle,
   materializeModelText,
   toModelTextView,
-} from '#/_base/text/line-endings';
+} from "#/_base/text/line-endings";
 
 export class TextModel {
   readonly lineEndingStyle: LineEndingStyle;
@@ -38,10 +38,17 @@ export class TextModel {
   replaceOnce(needle: string, replacement: string): string {
     const index = this.text.indexOf(needle);
     if (index === -1) return this.text;
-    return this.text.slice(0, index) + replacement + this.text.slice(index + needle.length);
+    return (
+      this.text.slice(0, index) +
+      replacement +
+      this.text.slice(index + needle.length)
+    );
   }
 
-  replaceAll(needle: string, replacement: string): { text: string; count: number } {
+  replaceAll(
+    needle: string,
+    replacement: string,
+  ): { text: string; count: number } {
     const parts = this.text.split(needle);
     return { text: parts.join(replacement), count: parts.length - 1 };
   }

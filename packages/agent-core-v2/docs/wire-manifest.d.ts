@@ -76,18 +76,20 @@
  * owner: src/agent/profile/profileOps.ts
  */
 interface ConfigUpdatePayload {
-  _name: 'config.update';
+  _name: "config.update";
   modelAlias?: string;
   profileName?: string;
   /** ThinkingEffort */
-  thinkingEffort?: 'off' | 'on' | (string & {});
+  thinkingEffort?: "off" | "on" | (string & {});
   /** ThinkingEffort */
-  thinkingLevel?: 'off' | 'on' | (string & {});
+  thinkingLevel?: "off" | "on" | (string & {});
   systemPrompt?: string;
   /** EnvironmentDisclosureSnapshot */
   environmentDisclosure?: {
     cwd: string;
-    date: { disclosed: true, value: { localDate: string, timeZone: string } } | { disclosed: false };
+    date:
+      | { disclosed: true; value: { localDate: string; timeZone: string } }
+      | { disclosed: false };
   };
   renderGeneration?: number;
   agentsMdPaths?: string[];
@@ -99,9 +101,14 @@ interface ConfigUpdatePayload {
  * owner: src/agent/contextMemory/contextOps.ts
  */
 interface ContextAppendLoopEventPayload {
-  _name: 'context.append_loop_event';
+  _name: "context.append_loop_event";
   /** LoopRecordedEvent */
-  event: 'step.begin' | 'step.end' | 'content.part' | 'tool.call' | 'tool.result';
+  event:
+    | "step.begin"
+    | "step.end"
+    | "content.part"
+    | "tool.call"
+    | "tool.result";
 }
 
 /**
@@ -109,14 +116,14 @@ interface ContextAppendLoopEventPayload {
  * owner: src/agent/contextMemory/contextOps.ts
  */
 interface ContextAppendMessagePayload {
-  _name: 'context.append_message';
+  _name: "context.append_message";
   /** ContextMessage */
   message: {
-    role: 'system' | 'user' | 'assistant' | 'tool';
+    role: "system" | "user" | "assistant" | "tool";
     name?: string;
-    content: ('text' | 'think' | 'image_url' | 'audio_url' | 'video_url')[];
+    content: ("text" | "think" | "image_url" | "audio_url" | "video_url")[];
     toolCalls: {
-      type: 'function';
+      type: "function";
       id: string;
       name: string;
       arguments: string | null;
@@ -133,7 +140,20 @@ interface ContextAppendMessagePayload {
     }[];
     id?: string;
     providerMessageId?: string;
-    origin?: 'user' | 'skill_activation' | 'plugin_command' | 'injection' | 'shell_command' | 'compaction_summary' | 'system_trigger' | 'task' | 'cron_job' | 'cron_missed' | 'hook_result' | 'retry' | undefined;
+    origin?:
+      | "user"
+      | "skill_activation"
+      | "plugin_command"
+      | "injection"
+      | "shell_command"
+      | "compaction_summary"
+      | "system_trigger"
+      | "task"
+      | "cron_job"
+      | "cron_missed"
+      | "hook_result"
+      | "retry"
+      | undefined;
     isError?: boolean;
     note?: string;
   };
@@ -144,14 +164,18 @@ interface ContextAppendMessagePayload {
  * owner: src/agent/contextMemory/contextOps.ts
  * shared base: ...contextCompactionBaseShape
  */
-type ContextApplyCompactionPayload = { _name: 'context.apply_compaction'; } & ({ summary: string, compactedCount: number, contextSummary?: string } | { contextSummary: string, compactedCount: number, summary?: string } | { summary: ContextMessage, count: number, compactedCount?: number });
+type ContextApplyCompactionPayload = { _name: "context.apply_compaction" } & (
+  | { summary: string; compactedCount: number; contextSummary?: string }
+  | { contextSummary: string; compactedCount: number; summary?: string }
+  | { summary: ContextMessage; count: number; compactedCount?: number }
+);
 
 /**
  * model: contextMemory · persisted · blobs · cross-reducers: plan, task.notificationDelivery, todo
  * owner: src/agent/contextMemory/contextOps.ts
  */
 interface ContextClearPayload {
-  _name: 'context.clear';
+  _name: "context.clear";
 }
 
 /**
@@ -159,7 +183,7 @@ interface ContextClearPayload {
  * owner: src/agent/contextMemory/contextOps.ts
  */
 interface ContextUndoPayload {
-  _name: 'context.undo';
+  _name: "context.undo";
   count: number;
 }
 
@@ -168,7 +192,7 @@ interface ContextUndoPayload {
  * owner: src/session/cron/cronOps.ts
  */
 interface CronAddPayload {
-  _name: 'cron.add';
+  _name: "cron.add";
   /** CronTask */
   task: {
     id: string;
@@ -186,7 +210,7 @@ interface CronAddPayload {
  * owner: src/session/cron/cronOps.ts
  */
 interface CronCursorPayload {
-  _name: 'cron.cursor';
+  _name: "cron.cursor";
   id: string;
   lastFiredAt: number;
 }
@@ -196,7 +220,7 @@ interface CronCursorPayload {
  * owner: src/session/cron/cronOps.ts
  */
 interface CronDeletePayload {
-  _name: 'cron.delete';
+  _name: "cron.delete";
   ids: string[];
 }
 
@@ -205,7 +229,7 @@ interface CronDeletePayload {
  * owner: src/agent/goal/goalOps.ts
  */
 interface ForkedPayload {
-  _name: 'forked';
+  _name: "forked";
 }
 
 /**
@@ -214,9 +238,9 @@ interface ForkedPayload {
  * payload type: CompactionBeginData
  */
 interface FullCompactionBeginPayload {
-  _name: 'full_compaction.begin';
+  _name: "full_compaction.begin";
   instruction?: string;
-  source: 'manual' | 'auto';
+  source: "manual" | "auto";
 }
 
 /**
@@ -224,7 +248,7 @@ interface FullCompactionBeginPayload {
  * owner: src/agent/fullCompaction/compactionOps.ts
  */
 interface FullCompactionCancelPayload {
-  _name: 'full_compaction.cancel';
+  _name: "full_compaction.cancel";
 }
 
 /**
@@ -232,7 +256,7 @@ interface FullCompactionCancelPayload {
  * owner: src/agent/fullCompaction/compactionOps.ts
  */
 interface FullCompactionCompletePayload {
-  _name: 'full_compaction.complete';
+  _name: "full_compaction.complete";
 }
 
 /**
@@ -240,7 +264,7 @@ interface FullCompactionCompletePayload {
  * owner: src/agent/goal/goalOps.ts
  */
 interface GoalClearPayload {
-  _name: 'goal.clear';
+  _name: "goal.clear";
 }
 
 /**
@@ -248,13 +272,13 @@ interface GoalClearPayload {
  * owner: src/agent/goal/goalOps.ts
  */
 interface GoalCreatePayload {
-  _name: 'goal.create';
+  _name: "goal.create";
   goalId: string;
   objective: string;
   completionCriterion?: string;
   wallClockResumedAt?: number;
-  status?: 'active' | 'paused' | 'blocked' | 'complete';
-  actor?: 'user' | 'model' | 'runtime' | 'system';
+  status?: "active" | "paused" | "blocked" | "complete";
+  actor?: "user" | "model" | "runtime" | "system";
   budgetLimits?: {
     tokenBudget?: number;
     turnBudget?: number;
@@ -267,9 +291,9 @@ interface GoalCreatePayload {
  * owner: src/agent/goal/goalOps.ts
  */
 interface GoalUpdatePayload {
-  _name: 'goal.update';
+  _name: "goal.update";
   goalId?: string;
-  status?: 'active' | 'paused' | 'blocked' | 'complete';
+  status?: "active" | "paused" | "blocked" | "complete";
   reason?: string;
   turnsUsed?: number;
   tokensUsed?: number;
@@ -280,7 +304,7 @@ interface GoalUpdatePayload {
     turnBudget?: number;
     wallClockBudgetMs?: number;
   };
-  actor?: 'user' | 'model' | 'runtime' | 'system';
+  actor?: "user" | "model" | "runtime" | "system";
 }
 
 /**
@@ -288,9 +312,9 @@ interface GoalUpdatePayload {
  * owner: src/session/interaction/interactionOps.ts
  */
 interface InteractionRequestPayload {
-  _name: 'interaction.request';
+  _name: "interaction.request";
   id: string;
-  kind: 'approval' | 'question' | 'user_tool';
+  kind: "approval" | "question" | "user_tool";
   toolCallId?: string;
   agentId?: string;
   request: any;
@@ -301,7 +325,7 @@ interface InteractionRequestPayload {
  * owner: src/session/interaction/interactionOps.ts
  */
 interface InteractionResolvedPayload {
-  _name: 'interaction.resolved';
+  _name: "interaction.resolved";
   id: string;
   response: any;
 }
@@ -311,7 +335,7 @@ interface InteractionResolvedPayload {
  * owner: src/agent/interruptionReminder/interruptionReminderOps.ts
  */
 interface InterruptionReminderRecordedPayload {
-  _name: 'interruptionReminder.recorded';
+  _name: "interruptionReminder.recorded";
   turnId: number;
 }
 
@@ -320,13 +344,13 @@ interface InterruptionReminderRecordedPayload {
  * owner: src/agent/llmRequester/llmRequestOps.ts
  */
 interface LlmRequestPayload {
-  _name: 'llm.request';
-  kind: 'loop' | 'compaction';
+  _name: "llm.request";
+  kind: "loop" | "compaction";
   provider: string;
   model: string;
   modelAlias?: string;
   /** ThinkingEffort */
-  thinkingEffort?: 'off' | 'on' | (string & {});
+  thinkingEffort?: "off" | "on" | (string & {});
   thinkingKeep?: string;
   temperature?: number;
   topP?: number;
@@ -339,7 +363,7 @@ interface LlmRequestPayload {
   messageCount: number;
   turnStep?: string;
   attempt?: string;
-  projection?: 'strict' | 'media-degraded' | 'media-stripped';
+  projection?: "strict" | "media-degraded" | "media-stripped";
   droppedCount?: number;
 }
 
@@ -348,7 +372,7 @@ interface LlmRequestPayload {
  * owner: src/agent/llmRequester/llmRequestOps.ts
  */
 interface LlmToolsSnapshotPayload {
-  _name: 'llm.tools_snapshot';
+  _name: "llm.tools_snapshot";
   hash: string;
   tools: {
     name: string;
@@ -362,7 +386,7 @@ interface LlmToolsSnapshotPayload {
  * owner: src/agent/mcp/mcpDiscoveryOps.ts
  */
 interface McpToolsDiscoveredPayload {
-  _name: 'mcp.tools_discovered';
+  _name: "mcp.tools_discovered";
   serverName: string;
   hash: string;
   tools: readonly MCPToolDefinition[];
@@ -370,7 +394,9 @@ interface McpToolsDiscoveredPayload {
   collisions?: {
     qualified: string;
     toolName: string;
-    collidesWith: { kind: 'same_server', toolName: string } | { kind: 'other_server', serverName: string };
+    collidesWith:
+      | { kind: "same_server"; toolName: string }
+      | { kind: "other_server"; serverName: string };
   }[];
 }
 
@@ -380,7 +406,7 @@ interface McpToolsDiscoveredPayload {
  * payload type: PermissionApprovalResultRecord
  */
 interface PermissionRecordApprovalResultPayload {
-  _name: 'permission.record_approval_result';
+  _name: "permission.record_approval_result";
   turnId: number;
   toolCallId: string;
   toolName: string;
@@ -394,7 +420,7 @@ interface PermissionRecordApprovalResultPayload {
  * owner: src/agent/permissionRules/permissionRulesOps.ts
  */
 interface PermissionRulesAddPayload {
-  _name: 'permission.rules.add';
+  _name: "permission.rules.add";
   rules: readonly PermissionRule[];
 }
 
@@ -403,9 +429,9 @@ interface PermissionRulesAddPayload {
  * owner: src/agent/permissionMode/permissionModeOps.ts
  */
 interface PermissionSetModePayload {
-  _name: 'permission.set_mode';
+  _name: "permission.set_mode";
   /** PermissionMode */
-  mode: 'manual' | 'yolo' | 'auto';
+  mode: "manual" | "yolo" | "auto";
 }
 
 /**
@@ -413,7 +439,7 @@ interface PermissionSetModePayload {
  * owner: src/agent/plan/planOps.ts
  */
 interface PlanModeCancelPayload {
-  _name: 'plan_mode.cancel';
+  _name: "plan_mode.cancel";
   id?: string;
 }
 
@@ -422,7 +448,7 @@ interface PlanModeCancelPayload {
  * owner: src/agent/plan/planOps.ts
  */
 interface PlanModeEnterPayload {
-  _name: 'plan_mode.enter';
+  _name: "plan_mode.enter";
   id: string;
 }
 
@@ -431,7 +457,7 @@ interface PlanModeEnterPayload {
  * owner: src/agent/plan/planOps.ts
  */
 interface PlanModeExitPayload {
-  _name: 'plan_mode.exit';
+  _name: "plan_mode.exit";
   id?: string;
 }
 
@@ -440,7 +466,7 @@ interface PlanModeExitPayload {
  * owner: src/agent/plan/planOps.ts
  */
 interface PlanRevisionPayload {
-  _name: 'plan.revision';
+  _name: "plan.revision";
   id: string;
   version: number;
   path: string;
@@ -453,16 +479,18 @@ interface PlanRevisionPayload {
  * owner: src/agent/profile/profileOps.ts
  */
 interface ProfileBindPayload {
-  _name: 'profile.bind';
+  _name: "profile.bind";
   modelAlias?: string;
   profileName?: string;
   /** ThinkingEffort */
-  thinkingEffort: 'off' | 'on' | (string & {});
+  thinkingEffort: "off" | "on" | (string & {});
   systemPrompt: string;
   /** EnvironmentDisclosureSnapshot */
   environmentDisclosure?: {
     cwd: string;
-    date: { disclosed: true, value: { localDate: string, timeZone: string } } | { disclosed: false };
+    date:
+      | { disclosed: true; value: { localDate: string; timeZone: string } }
+      | { disclosed: false };
   };
   renderGeneration?: number;
   agentsMdPaths?: string[];
@@ -476,17 +504,17 @@ interface ProfileBindPayload {
  * owner: src/agent/skill/skillOps.ts
  */
 interface SkillActivatePayload {
-  _name: 'skill.activate';
+  _name: "skill.activate";
   /** SkillActivationOrigin */
   origin: {
-    kind: 'skill_activation';
+    kind: "skill_activation";
     activationId: string;
     skillName: string;
     skillArgs?: string | undefined;
-    trigger: 'user-slash' | 'model-tool' | 'nested-skill';
+    trigger: "user-slash" | "model-tool" | "nested-skill";
     skillType?: string | undefined;
     skillPath?: string | undefined;
-    skillSource?: 'project' | 'user' | 'extra' | 'builtin' | undefined;
+    skillSource?: "project" | "user" | "extra" | "builtin" | undefined;
   };
 }
 
@@ -495,9 +523,9 @@ interface SkillActivatePayload {
  * owner: src/agent/swarm/swarmOps.ts
  */
 interface SwarmModeEnterPayload {
-  _name: 'swarm_mode.enter';
+  _name: "swarm_mode.enter";
   /** SwarmModeTrigger */
-  trigger: 'manual' | 'task' | 'tool';
+  trigger: "manual" | "task" | "tool";
 }
 
 /**
@@ -505,7 +533,7 @@ interface SwarmModeEnterPayload {
  * owner: src/agent/swarm/swarmOps.ts
  */
 interface SwarmModeExitPayload {
-  _name: 'swarm_mode.exit';
+  _name: "swarm_mode.exit";
 }
 
 /**
@@ -513,7 +541,7 @@ interface SwarmModeExitPayload {
  * owner: src/agent/task/taskOps.ts
  */
 interface TaskStartedPayload {
-  _name: 'task.started';
+  _name: "task.started";
   /** AgentTaskInfo */
   info: AgentTaskInfoByKind[AgentTaskKind];
 }
@@ -523,7 +551,7 @@ interface TaskStartedPayload {
  * owner: src/agent/task/taskOps.ts
  */
 interface TaskTerminatedPayload {
-  _name: 'task.terminated';
+  _name: "task.terminated";
   /** AgentTaskInfo */
   info: AgentTaskInfoByKind[AgentTaskKind];
   outputTail?: string;
@@ -534,7 +562,7 @@ interface TaskTerminatedPayload {
  * owner: src/agent/tokenCounting/tokenCountingOps.ts
  */
 interface TokenCountingMeasuredPayload {
-  _name: 'token_counting.measured';
+  _name: "token_counting.measured";
   length: number;
   tokens: number;
 }
@@ -544,7 +572,7 @@ interface TokenCountingMeasuredPayload {
  * owner: src/agent/tokenCounting/tokenCountingOps.ts
  */
 interface TokenCountingRebasedPayload {
-  _name: 'token_counting.rebased';
+  _name: "token_counting.rebased";
   length: number;
   tokens: number;
   measured: boolean;
@@ -555,7 +583,7 @@ interface TokenCountingRebasedPayload {
  * owner: src/agent/tokenCounting/tokenCountingOps.ts
  */
 interface TokenCountingTruncatedPayload {
-  _name: 'token_counting.truncated';
+  _name: "token_counting.truncated";
   length: number;
   tokens: number;
 }
@@ -566,11 +594,11 @@ interface TokenCountingTruncatedPayload {
  * payload type: UserToolRegistration
  */
 interface ToolsRegisterUserToolPayload {
-  _name: 'tools.register_user_tool';
+  _name: "tools.register_user_tool";
   name: string;
   description: string;
   parameters: Record<string, unknown>;
-  disclosure?: 'inline' | 'deferred';
+  disclosure?: "inline" | "deferred";
 }
 
 /**
@@ -578,7 +606,7 @@ interface ToolsRegisterUserToolPayload {
  * owner: src/agent/profile/profileOps.ts
  */
 interface ToolsResetActiveToolsPayload {
-  _name: 'tools.reset_active_tools';
+  _name: "tools.reset_active_tools";
 }
 
 /**
@@ -586,7 +614,7 @@ interface ToolsResetActiveToolsPayload {
  * owner: src/agent/profile/profileOps.ts
  */
 interface ToolsSetActiveToolsPayload {
-  _name: 'tools.set_active_tools';
+  _name: "tools.set_active_tools";
   names: string[];
 }
 
@@ -595,7 +623,7 @@ interface ToolsSetActiveToolsPayload {
  * owner: src/agent/userTool/userToolOps.ts
  */
 interface ToolsUnregisterUserToolPayload {
-  _name: 'tools.unregister_user_tool';
+  _name: "tools.unregister_user_tool";
   name: string;
 }
 
@@ -604,7 +632,7 @@ interface ToolsUnregisterUserToolPayload {
  * owner: src/session/todo/todoOps.ts
  */
 interface ToolsUpdateStorePayload {
-  _name: 'tools.update_store';
+  _name: "tools.update_store";
   key: string;
   value: any;
 }
@@ -614,10 +642,10 @@ interface ToolsUpdateStorePayload {
  * owner: src/agent/loop/turnOps.ts
  */
 interface TurnCancelPayload {
-  _name: 'turn.cancel';
+  _name: "turn.cancel";
   turnId?: number;
-  target?: 'active' | 'queued';
-  reason?: 'user_cancelled' | 'aborted';
+  target?: "active" | "queued";
+  reason?: "user_cancelled" | "aborted";
 }
 
 /**
@@ -625,9 +653,9 @@ interface TurnCancelPayload {
  * owner: src/agent/loop/turnOps.ts
  */
 interface TurnEndedPayload {
-  _name: 'turn.ended';
+  _name: "turn.ended";
   turnId: number;
-  reason: 'completed' | 'cancelled' | 'failed' | 'blocked';
+  reason: "completed" | "cancelled" | "failed" | "blocked";
   /** KimiErrorPayload */
   error?: {
     code: (typeof ErrorCodes)[keyof typeof ErrorCodes];
@@ -680,10 +708,22 @@ interface TurnEndedPayload {
  * owner: src/agent/loop/turnOps.ts
  */
 interface TurnPromptPayload {
-  _name: 'turn.prompt';
+  _name: "turn.prompt";
   input: readonly ContentPart[];
   /** PromptOrigin */
-  origin: 'user' | 'skill_activation' | 'plugin_command' | 'injection' | 'shell_command' | 'compaction_summary' | 'system_trigger' | 'task' | 'cron_job' | 'cron_missed' | 'hook_result' | 'retry';
+  origin:
+    | "user"
+    | "skill_activation"
+    | "plugin_command"
+    | "injection"
+    | "shell_command"
+    | "compaction_summary"
+    | "system_trigger"
+    | "task"
+    | "cron_job"
+    | "cron_missed"
+    | "hook_result"
+    | "retry";
 }
 
 /**
@@ -691,10 +731,22 @@ interface TurnPromptPayload {
  * owner: src/agent/loop/turnOps.ts
  */
 interface TurnSteerPayload {
-  _name: 'turn.steer';
+  _name: "turn.steer";
   input: readonly ContentPart[];
   /** PromptOrigin */
-  origin: 'user' | 'skill_activation' | 'plugin_command' | 'injection' | 'shell_command' | 'compaction_summary' | 'system_trigger' | 'task' | 'cron_job' | 'cron_missed' | 'hook_result' | 'retry';
+  origin:
+    | "user"
+    | "skill_activation"
+    | "plugin_command"
+    | "injection"
+    | "shell_command"
+    | "compaction_summary"
+    | "system_trigger"
+    | "task"
+    | "cron_job"
+    | "cron_missed"
+    | "hook_result"
+    | "retry";
 }
 
 /**
@@ -702,7 +754,7 @@ interface TurnSteerPayload {
  * owner: src/agent/usage/usageOps.ts
  */
 interface UsageRecordPayload {
-  _name: 'usage.record';
+  _name: "usage.record";
   model: string;
   /** TokenUsage */
   usage: {
@@ -712,7 +764,7 @@ interface UsageRecordPayload {
     inputCacheCreation: number;
   };
   /** UsageRecordScope */
-  usageScope?: 'session' | 'turn';
+  usageScope?: "session" | "turn";
 }
 
 /** Record type → payload sketch. */
@@ -726,7 +778,7 @@ interface WirePayloadMap {
   "cron.add": CronAddPayload;
   "cron.cursor": CronCursorPayload;
   "cron.delete": CronDeletePayload;
-  "forked": ForkedPayload;
+  forked: ForkedPayload;
   "full_compaction.begin": FullCompactionBeginPayload;
   "full_compaction.cancel": FullCompactionCancelPayload;
   "full_compaction.complete": FullCompactionCompletePayload;

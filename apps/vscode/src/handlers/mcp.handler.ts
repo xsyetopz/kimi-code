@@ -1,5 +1,8 @@
 import * as vscode from "vscode";
-import type { McpServerConfig as SdkMcpServerConfig, McpTestResult } from "@moonshot-ai/kimi-code-sdk";
+import type {
+  McpServerConfig as SdkMcpServerConfig,
+  McpTestResult,
+} from "@moonshot-ai/kimi-code-sdk";
 
 import { Events, Methods } from "../../shared/bridge";
 import {
@@ -21,16 +24,23 @@ const SENSITIVE_MCP_KEY_WORDS = new Set([
   "token",
 ]);
 
-interface NameParams { name: string }
+interface NameParams {
+  name: string;
+}
 
 export const mcpHandlers: Record<string, Handler<any, any>> = {
   [Methods.GetMCPServers]: async (_, ctx): Promise<MCPServerConfig[]> => {
     return toWebviewServers(await ctx.harness.listMcpServers());
   },
 
-  [Methods.AddMCPServer]: async (params: MCPServerConfig, ctx): Promise<MCPServerConfig[]> => {
+  [Methods.AddMCPServer]: async (
+    params: MCPServerConfig,
+    ctx,
+  ): Promise<MCPServerConfig[]> => {
     const server = restoreMaskedSecrets(undefined, params);
-    const servers = toWebviewServers(await ctx.harness.addMcpServer(toSdkServer(server)));
+    const servers = toWebviewServers(
+      await ctx.harness.addMcpServer(toSdkServer(server)),
+    );
     ctx.broadcast(Events.MCPServersChanged, servers);
     return servers;
   },
@@ -44,15 +54,27 @@ export const mcpHandlers: Record<string, Handler<any, any>> = {
       (server) => server.name === request.originalName,
     );
     const edited = restoreMaskedSecrets(current, request.server);
-    const next = mergeEditableServer(current, edited, request.replaceEditableFields);
+    const next = mergeEditableServer(
+      current,
+      edited,
+      request.replaceEditableFields,
+    );
     const servers = toWebviewServers(
-      await updateOrRenameServer(ctx.harness, request.originalName, current, next),
+      await updateOrRenameServer(
+        ctx.harness,
+        request.originalName,
+        current,
+        next,
+      ),
     );
     ctx.broadcast(Events.MCPServersChanged, servers);
     return servers;
   },
 
-  [Methods.RemoveMCPServer]: async ({ name }: NameParams, ctx): Promise<MCPServerConfig[]> => {
+  [Methods.RemoveMCPServer]: async (
+    { name }: NameParams,
+    ctx,
+  ): Promise<MCPServerConfig[]> => {
     const servers = toWebviewServers(await ctx.harness.removeMcpServer(name));
     ctx.broadcast(Events.MCPServersChanged, servers);
     return servers;
@@ -68,12 +90,18 @@ export const mcpHandlers: Record<string, Handler<any, any>> = {
       async () => {
         try {
           await ctx.harness.authenticateMcpServer(name, {
-            onAuthorizationUrl: async (url) => vscode.env.openExternal(vscode.Uri.parse(url)),
+            onAuthorizationUrl: async (url) =>
+              vscode.env.openExternal(vscode.Uri.parse(url)),
           });
-          await vscode.window.showInformationMessage(`Kimi: OAuth completed for "${name}"`);
+          await vscode.window.showInformationMessage(
+            `Kimi: OAuth completed for "${name}"`,
+          );
         } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
-          await vscode.window.showErrorMessage(`Kimi: OAuth failed for "${name}": ${message}`);
+          const message =
+            error instanceof Error ? error.message : String(error);
+          await vscode.window.showErrorMessage(
+            `Kimi: OAuth failed for "${name}": ${message}`,
+          );
           throw error;
         }
       },
@@ -91,10 +119,15 @@ export const mcpHandlers: Record<string, Handler<any, any>> = {
       async () => {
         try {
           await ctx.harness.resetMcpServerAuth(name);
-          await vscode.window.showInformationMessage(`Kimi: Auth reset for "${name}"`);
+          await vscode.window.showInformationMessage(
+            `Kimi: Auth reset for "${name}"`,
+          );
         } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
-          await vscode.window.showErrorMessage(`Kimi: Reset auth failed for "${name}": ${message}`);
+          const message =
+            error instanceof Error ? error.message : String(error);
+          await vscode.window.showErrorMessage(
+            `Kimi: Reset auth failed for "${name}": ${message}`,
+          );
           throw error;
         }
       },
@@ -102,35 +135,59 @@ export const mcpHandlers: Record<string, Handler<any, any>> = {
     return { ok: true };
   },
 
-  [Methods.TestMCP]: async ({ name }: NameParams, ctx): Promise<MCPTestResult> => {
-    void vscode.window.showInformationMessage(`Kimi: Testing MCP server "${name}"...`);
-    const result = toWebviewTestResult(await ctx.harness.testMcpServer(name, {
-      cwd: ctx.workDir ?? undefined,
-    }));
+  [Methods.TestMCP]: async (
+    { name }: NameParams,
+    ctx,
+  ): Promise<MCPTestResult> => {
+    void vscode.window.showInformationMessage(
+      `Kimi: Testing MCP server "${name}"...`,
+    );
+    const result = toWebviewTestResult(
+      await ctx.harness.testMcpServer(name, {
+        cwd: ctx.workDir ?? undefined,
+      }),
+    );
     if (!result.success) {
-      ctx.logError(`MCP server test failed for "${name}"`, new Error(result.output));
+      ctx.logError(
+        `MCP server test failed for "${name}"`,
+        new Error(result.output),
+      );
     }
     return result;
   },
 };
 
-function toWebviewServers(servers: readonly SdkMcpServerConfig[]): MCPServerConfig[] {
+function toWebviewServers(
+  servers: readonly SdkMcpServerConfig[],
+): MCPServerConfig[] {
   return servers
-    .filter((server) => server.transport === "stdio" || server.transport === "http")
+    .filter(
+      (server) => server.transport === "stdio" || server.transport === "http",
+    )
     .map((server) => {
       if (server.transport === "stdio") {
-        return { ...server, env: maskSecretValues(server.env) } as MCPServerConfig;
+        return {
+          ...server,
+          env: maskSecretValues(server.env),
+        } as MCPServerConfig;
       }
-      return { ...server, headers: maskSecretValues(server.headers) } as MCPServerConfig;
+      return {
+        ...server,
+        headers: maskSecretValues(server.headers),
+      } as MCPServerConfig;
     });
 }
 
-function maskSecretValues(values: Record<string, string> | undefined): Record<string, string> | undefined {
+function maskSecretValues(
+  values: Record<string, string> | undefined,
+): Record<string, string> | undefined {
   if (values === undefined) return undefined;
-  return Object.fromEntries(Object.entries(values).map(([key, value]) => [
-    key,
-    isSensitiveMcpKey(key) ? MCP_SECRET_MASK : value,
-  ]));
+  return Object.fromEntries(
+    Object.entries(values).map(([key, value]) => [
+      key,
+      isSensitiveMcpKey(key) ? MCP_SECRET_MASK : value,
+    ]),
+  );
 }
 
 function isSensitiveMcpKey(key: string): boolean {
@@ -140,13 +197,15 @@ function isSensitiveMcpKey(key: string): boolean {
     .split(/[^a-z0-9]+/)
     .filter(Boolean);
   const compact = words.join("");
-  return words.some((word) => SENSITIVE_MCP_KEY_WORDS.has(word))
-    || words.includes("key")
-    || compact === "proxyauthorization"
-    || compact === "setcookie"
-    || compact.endsWith("apikey")
-    || compact.endsWith("accesskey")
-    || compact.endsWith("privatekey");
+  return (
+    words.some((word) => SENSITIVE_MCP_KEY_WORDS.has(word)) ||
+    words.includes("key") ||
+    compact === "proxyauthorization" ||
+    compact === "setcookie" ||
+    compact.endsWith("apikey") ||
+    compact.endsWith("accesskey") ||
+    compact.endsWith("privatekey")
+  );
 }
 
 function restoreMaskedSecrets(
@@ -157,13 +216,24 @@ function restoreMaskedSecrets(
     const currentEnv = current?.transport === "stdio" ? current.env : undefined;
     return {
       ...edited,
-      env: restoreMaskedRecord("environment variable", currentEnv, edited.env, false),
+      env: restoreMaskedRecord(
+        "environment variable",
+        currentEnv,
+        edited.env,
+        false,
+      ),
     };
   }
-  const currentHeaders = current?.transport === "http" ? current.headers : undefined;
+  const currentHeaders =
+    current?.transport === "http" ? current.headers : undefined;
   return {
     ...edited,
-    headers: restoreMaskedRecord("header", currentHeaders, edited.headers, true),
+    headers: restoreMaskedRecord(
+      "header",
+      currentHeaders,
+      edited.headers,
+      true,
+    ),
   };
 }
 
@@ -174,14 +244,18 @@ function restoreMaskedRecord(
   caseInsensitiveKeys: boolean,
 ): Record<string, string> | undefined {
   if (edited === undefined) return undefined;
-  return Object.fromEntries(Object.entries(edited).map(([key, value]) => {
-    if (value !== MCP_SECRET_MASK) return [key, value];
-    const stored = findStoredSecret(current, key, caseInsensitiveKeys);
-    if (stored === undefined) {
-      throw new Error(`Cannot preserve masked MCP ${label} "${key}" because no stored value exists`);
-    }
-    return [key, stored];
-  }));
+  return Object.fromEntries(
+    Object.entries(edited).map(([key, value]) => {
+      if (value !== MCP_SECRET_MASK) return [key, value];
+      const stored = findStoredSecret(current, key, caseInsensitiveKeys);
+      if (stored === undefined) {
+        throw new Error(
+          `Cannot preserve masked MCP ${label} "${key}" because no stored value exists`,
+        );
+      }
+      return [key, stored];
+    }),
+  );
 }
 
 function findStoredSecret(
@@ -193,7 +267,9 @@ function findStoredSecret(
   if (Object.hasOwn(current, key)) return current[key];
   if (!caseInsensitiveKeys) return undefined;
   const normalized = key.toLowerCase();
-  const match = Object.entries(current).find(([storedKey]) => storedKey.toLowerCase() === normalized);
+  const match = Object.entries(current).find(
+    ([storedKey]) => storedKey.toLowerCase() === normalized,
+  );
   return match?.[1];
 }
 
@@ -224,7 +300,8 @@ function mergeEditableServer(
   replaceEditableFields: boolean,
 ): SdkMcpServerConfig {
   const next = toSdkServer(edited);
-  if (current === undefined || current.transport !== next.transport) return next;
+  if (current === undefined || current.transport !== next.transport)
+    return next;
   if (!replaceEditableFields) {
     return mergeReleasedFormUpdate(current, next);
   }
@@ -288,7 +365,10 @@ async function updateOrRenameServer(
 }
 
 function toWebviewTestResult(result: McpTestResult): MCPTestResult {
-  return { success: result.success, output: sanitizeMcpDiagnostic(result.output) };
+  return {
+    success: result.success,
+    output: sanitizeMcpDiagnostic(result.output),
+  };
 }
 
 function sanitizeMcpDiagnostic(output: string): string {

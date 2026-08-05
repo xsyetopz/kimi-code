@@ -10,14 +10,18 @@
  * `listen` throws and panels fetch on demand instead.
  */
 
-import type { ServiceIdentifier } from '@moonshot-ai/agent-core-v2/_base/di/instantiation';
+import type { ServiceIdentifier } from "@moonshot-ai/agent-core-v2/_base/di/instantiation";
 
 export interface IDisposable {
   dispose(): void;
 }
 
 export interface Event<T> {
-  (listener: (event: T) => unknown, thisArg?: unknown, disposables?: IDisposable[]): IDisposable;
+  (
+    listener: (event: T) => unknown,
+    thisArg?: unknown,
+    disposables?: IDisposable[],
+  ): IDisposable;
 }
 
 /** The client-facing channel contract. Calls always carry the complete argument array. */

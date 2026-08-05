@@ -7,33 +7,33 @@
  * exec vitest run test/wire/persistence.test.ts`.
  */
 
-import { randomBytes } from 'node:crypto';
-import { mkdir, readFile, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'pathe';
+import { randomBytes } from "node:crypto";
+import { mkdir, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "pathe";
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from "vitest";
 
-import { SyncDescriptor } from '#/_base/di/descriptors';
-import { DisposableStore } from '#/_base/di/lifecycle';
-import { TestInstantiationService } from '#/_base/di/test';
+import { SyncDescriptor } from "#/_base/di/descriptors";
+import { DisposableStore } from "#/_base/di/lifecycle";
+import { TestInstantiationService } from "#/_base/di/test";
 import {
   AppendLogStore,
   WIRE_PROTOCOL_VERSION,
   IFileSystemStorageService,
   IAppendLogStore,
   type WireRecord,
-} from '#/index';
-import { IWireService } from '#/wire/wire';
-import { FileStorageService } from '#/persistence/backends/node-fs/fileStorageService';
-import { InMemoryStorageService } from '#/persistence/backends/memory/inMemoryStorageService';
+} from "#/index";
+import { IWireService } from "#/wire/wire";
+import { FileStorageService } from "#/persistence/backends/node-fs/fileStorageService";
+import { InMemoryStorageService } from "#/persistence/backends/memory/inMemoryStorageService";
 
-import { registerTestAgentWire } from './stubs';
+import { registerTestAgentWire } from "./stubs";
 
 const cleanups: string[] = [];
 const disposables: DisposableStore[] = [];
-const SCOPE = 'wire-test';
-const KEY = 'wire.jsonl';
+const SCOPE = "wire-test";
+const KEY = "wire.jsonl";
 
 afterEach(async () => {
   for (const store of disposables.splice(0)) {
@@ -45,18 +45,20 @@ afterEach(async () => {
 });
 
 async function makeDir(prefix: string): Promise<string> {
-  const dir = join(tmpdir(), `${prefix}-${randomBytes(6).toString('hex')}`);
+  const dir = join(tmpdir(), `${prefix}-${randomBytes(6).toString("hex")}`);
   await mkdir(dir, { recursive: true });
   cleanups.push(dir);
   return dir;
 }
 
 async function readLines(path: string): Promise<string[]> {
-  const raw = await readFile(path, 'utf8');
-  return raw.split('\n').filter((line) => line.length > 0);
+  const raw = await readFile(path, "utf8");
+  return raw.split("\n").filter((line) => line.length > 0);
 }
 
-function createAppendLogHarness(storage: IFileSystemStorageService): IAppendLogStore {
+function createAppendLogHarness(
+  storage: IFileSystemStorageService,
+): IAppendLogStore {
   const disposable = new DisposableStore();
   disposables.push(disposable);
 
@@ -78,14 +80,18 @@ async function createFileAppendLogHarness(): Promise<{
   readonly dir: string;
   readonly log: IAppendLogStore;
 }> {
-  const dir = await makeDir('wire-jsonl-test');
+  const dir = await makeDir("wire-jsonl-test");
   return {
     dir,
     log: createAppendLogHarness(new FileStorageService(dir)),
   };
 }
 
-async function collect<R>(log: IAppendLogStore, scope = SCOPE, key = KEY): Promise<R[]> {
+async function collect<R>(
+  log: IAppendLogStore,
+  scope = SCOPE,
+  key = KEY,
+): Promise<R[]> {
   const records: R[] = [];
   for await (const record of log.read<R>(scope, key)) {
     records.push(record);
@@ -93,183 +99,183 @@ async function collect<R>(log: IAppendLogStore, scope = SCOPE, key = KEY): Promi
   return records;
 }
 
-describe('AppendLogStore file persistence', () => {
-  it('writes only the appended record', async () => {
+describe("AppendLogStore file persistence", () => {
+  it("writes only the appended record", async () => {
     const { dir, log } = await createFileAppendLogHarness();
 
     log.append(SCOPE, KEY, {
-      type: 'turn.prompt',
-      input: [{ type: 'text', text: 'hello' }],
-      origin: { kind: 'user' },
+      type: "turn.prompt",
+      input: [{ type: "text", text: "hello" }],
+      origin: { kind: "user" },
     });
     await log.close();
 
     const lines = await readLines(join(dir, SCOPE, KEY));
     expect(lines).toHaveLength(1);
-    expect(JSON.parse(lines[0]!)['type']).toBe('turn.prompt');
+    expect(JSON.parse(lines[0]!)["type"]).toBe("turn.prompt");
   });
 
-  it('appends to an existing file without injecting records', async () => {
-    const dir = await makeDir('wire-jsonl-test');
+  it("appends to an existing file without injecting records", async () => {
+    const dir = await makeDir("wire-jsonl-test");
     const first = createAppendLogHarness(new FileStorageService(dir));
     first.append(SCOPE, KEY, {
-      type: 'turn.prompt',
-      input: [{ type: 'text', text: 'one' }],
-      origin: { kind: 'user' },
+      type: "turn.prompt",
+      input: [{ type: "text", text: "one" }],
+      origin: { kind: "user" },
     });
     await first.close();
 
     const second = createAppendLogHarness(new FileStorageService(dir));
     second.append(SCOPE, KEY, {
-      type: 'turn.prompt',
-      input: [{ type: 'text', text: 'two' }],
-      origin: { kind: 'user' },
+      type: "turn.prompt",
+      input: [{ type: "text", text: "two" }],
+      origin: { kind: "user" },
     });
     await second.close();
 
     const lines = await readLines(join(dir, SCOPE, KEY));
     expect(lines).toHaveLength(2);
-    expect(lines.map((line) => JSON.parse(line)['type'])).toEqual([
-      'turn.prompt',
-      'turn.prompt',
+    expect(lines.map((line) => JSON.parse(line)["type"])).toEqual([
+      "turn.prompt",
+      "turn.prompt",
     ]);
   });
 
-  it('returns appended metadata records from read() output', async () => {
+  it("returns appended metadata records from read() output", async () => {
     const { log } = await createFileAppendLogHarness();
     log.append(SCOPE, KEY, {
-      type: 'metadata',
+      type: "metadata",
       protocol_version: WIRE_PROTOCOL_VERSION,
       created_at: 1,
     });
     log.append(SCOPE, KEY, {
-      type: 'turn.prompt',
-      input: [{ type: 'text', text: 'hi' }],
-      origin: { kind: 'user' },
+      type: "turn.prompt",
+      input: [{ type: "text", text: "hi" }],
+      origin: { kind: "user" },
     });
     await log.close();
 
     const records = await collect<WireRecord>(log);
     expect(records).toHaveLength(2);
     expect(records[0]).toMatchObject({
-      type: 'metadata',
+      type: "metadata",
       protocol_version: WIRE_PROTOCOL_VERSION,
     });
-    expect(records[1]!.type).toBe('turn.prompt');
+    expect(records[1]!.type).toBe("turn.prompt");
   });
 
-  it('rewrites records from the beginning and then appends after them', async () => {
+  it("rewrites records from the beginning and then appends after them", async () => {
     const { dir, log } = await createFileAppendLogHarness();
     log.append(SCOPE, KEY, {
-      type: 'turn.prompt',
-      input: [{ type: 'text', text: 'old' }],
-      origin: { kind: 'user' },
+      type: "turn.prompt",
+      input: [{ type: "text", text: "old" }],
+      origin: { kind: "user" },
     });
     await log.flush();
     await log.rewrite(SCOPE, KEY, [
       {
-        type: 'metadata',
+        type: "metadata",
         protocol_version: WIRE_PROTOCOL_VERSION,
         created_at: 1,
       },
       {
-        type: 'turn.prompt',
-        input: [{ type: 'text', text: 'new' }],
-        origin: { kind: 'user' },
+        type: "turn.prompt",
+        input: [{ type: "text", text: "new" }],
+        origin: { kind: "user" },
       },
     ]);
     log.append(SCOPE, KEY, {
-      type: 'turn.prompt',
-      input: [{ type: 'text', text: 'later' }],
-      origin: { kind: 'user' },
+      type: "turn.prompt",
+      input: [{ type: "text", text: "later" }],
+      origin: { kind: "user" },
     });
     await log.flush();
 
     const lines = await readLines(join(dir, SCOPE, KEY));
-    expect(lines.map((line) => JSON.parse(line)['type'])).toEqual([
-      'metadata',
-      'turn.prompt',
-      'turn.prompt',
+    expect(lines.map((line) => JSON.parse(line)["type"])).toEqual([
+      "metadata",
+      "turn.prompt",
+      "turn.prompt",
     ]);
-    expect(JSON.parse(lines[1]!)['input'][0]['text']).toBe('new');
-    expect(JSON.parse(lines[2]!)['input'][0]['text']).toBe('later');
+    expect(JSON.parse(lines[1]!)["input"][0]["text"]).toBe("new");
+    expect(JSON.parse(lines[2]!)["input"][0]["text"]).toBe("later");
   });
 
-  it('rewrites already flushed records from the beginning', async () => {
+  it("rewrites already flushed records from the beginning", async () => {
     const { dir, log } = await createFileAppendLogHarness();
     log.append(SCOPE, KEY, {
-      type: 'turn.prompt',
-      input: [{ type: 'text', text: 'old' }],
-      origin: { kind: 'user' },
+      type: "turn.prompt",
+      input: [{ type: "text", text: "old" }],
+      origin: { kind: "user" },
     });
     await log.flush();
 
     await log.rewrite(SCOPE, KEY, [
       {
-        type: 'metadata',
+        type: "metadata",
         protocol_version: WIRE_PROTOCOL_VERSION,
         created_at: 1,
       },
       {
-        type: 'turn.prompt',
-        input: [{ type: 'text', text: 'new' }],
-        origin: { kind: 'user' },
+        type: "turn.prompt",
+        input: [{ type: "text", text: "new" }],
+        origin: { kind: "user" },
       },
     ]);
     await log.flush();
 
     const lines = await readLines(join(dir, SCOPE, KEY));
-    expect(lines.map((line) => JSON.parse(line)['type'])).toEqual([
-      'metadata',
-      'turn.prompt',
+    expect(lines.map((line) => JSON.parse(line)["type"])).toEqual([
+      "metadata",
+      "turn.prompt",
     ]);
-    expect(JSON.parse(lines[1]!)['input'][0]['text']).toBe('new');
+    expect(JSON.parse(lines[1]!)["input"][0]["text"]).toBe("new");
   });
 
-  it('flushes pending records on close', async () => {
+  it("flushes pending records on close", async () => {
     const { dir, log } = await createFileAppendLogHarness();
 
     log.append(SCOPE, KEY, {
-      type: 'turn.prompt',
-      input: [{ type: 'text', text: 'late' }],
-      origin: { kind: 'user' },
+      type: "turn.prompt",
+      input: [{ type: "text", text: "late" }],
+      origin: { kind: "user" },
     });
     await log.close();
 
     const lines = await readLines(join(dir, SCOPE, KEY));
     expect(lines).toHaveLength(1);
-    expect(JSON.parse(lines[0]!)['type']).toBe('turn.prompt');
+    expect(JSON.parse(lines[0]!)["type"]).toBe("turn.prompt");
   });
 
-  it('propagates write failures from flush', async () => {
-    const dir = await makeDir('wire-jsonl-test');
+  it("propagates write failures from flush", async () => {
+    const dir = await makeDir("wire-jsonl-test");
     await mkdir(join(dir, SCOPE, KEY), { recursive: true });
     const log = createAppendLogHarness(new FileStorageService(dir));
 
     log.append(SCOPE, KEY, {
-      type: 'turn.prompt',
-      input: [{ type: 'text', text: 'first' }],
-      origin: { kind: 'user' },
+      type: "turn.prompt",
+      input: [{ type: "text", text: "first" }],
+      origin: { kind: "user" },
     });
 
     await expect(log.flush()).rejects.toBeInstanceOf(Error);
   });
 });
 
-describe('wire record append-log persistence', () => {
-  it('can be backed by the same IAppendLogStore contract as file persistence', async () => {
+describe("wire record append-log persistence", () => {
+  it("can be backed by the same IAppendLogStore contract as file persistence", async () => {
     const storage = new InMemoryStorageService();
     const log = createAppendLogHarness(storage);
 
     log.append<WireRecord>(SCOPE, KEY, {
-      type: 'turn.prompt',
-      input: [{ type: 'text', text: 'one' }],
-      origin: { kind: 'user' },
+      type: "turn.prompt",
+      input: [{ type: "text", text: "one" }],
+      origin: { kind: "user" },
     });
     await log.flush();
     await log.rewrite<WireRecord>(SCOPE, KEY, [
       {
-        type: 'metadata',
+        type: "metadata",
         protocol_version: WIRE_PROTOCOL_VERSION,
         created_at: 1,
       },
@@ -277,7 +283,7 @@ describe('wire record append-log persistence', () => {
 
     expect(await collect<WireRecord>(log)).toEqual([
       {
-        type: 'metadata',
+        type: "metadata",
         protocol_version: WIRE_PROTOCOL_VERSION,
         created_at: 1,
       },
@@ -285,8 +291,8 @@ describe('wire record append-log persistence', () => {
   });
 });
 
-describe('WireService seal', () => {
-  it('appends the metadata envelope to an empty log', async () => {
+describe("WireService seal", () => {
+  it("appends the metadata envelope to an empty log", async () => {
     const { dir, log } = await createFileAppendLogHarness();
     const svc = createAgentWireHarness(log);
 
@@ -296,17 +302,17 @@ describe('WireService seal', () => {
     const lines = await readLines(join(dir, SCOPE, KEY));
     expect(lines).toHaveLength(1);
     expect(JSON.parse(lines[0]!)).toMatchObject({
-      type: 'metadata',
+      type: "metadata",
       protocol_version: WIRE_PROTOCOL_VERSION,
     });
   });
 
-  it('is a no-op on a non-empty log', async () => {
+  it("is a no-op on a non-empty log", async () => {
     const { dir, log } = await createFileAppendLogHarness();
     log.append(SCOPE, KEY, {
-      type: 'turn.prompt',
-      input: [{ type: 'text', text: 'existing' }],
-      origin: { kind: 'user' },
+      type: "turn.prompt",
+      input: [{ type: "text", text: "existing" }],
+      origin: { kind: "user" },
     });
     await log.flush();
     const svc = createAgentWireHarness(log);
@@ -316,10 +322,10 @@ describe('WireService seal', () => {
 
     const lines = await readLines(join(dir, SCOPE, KEY));
     expect(lines).toHaveLength(1);
-    expect(JSON.parse(lines[0]!)['type']).toBe('turn.prompt');
+    expect(JSON.parse(lines[0]!)["type"]).toBe("turn.prompt");
   });
 
-  it('seals only once across repeated calls', async () => {
+  it("seals only once across repeated calls", async () => {
     const { dir, log } = await createFileAppendLogHarness();
     const svc = createAgentWireHarness(log);
 
@@ -331,7 +337,7 @@ describe('WireService seal', () => {
     expect(lines).toHaveLength(1);
   });
 
-  it('restore after seal keeps the sealed log untouched', async () => {
+  it("restore after seal keeps the sealed log untouched", async () => {
     const { dir, log } = await createFileAppendLogHarness();
     const svc = createAgentWireHarness(log);
 
@@ -342,30 +348,32 @@ describe('WireService seal', () => {
     const lines = await readLines(join(dir, SCOPE, KEY));
     expect(lines).toHaveLength(1);
     expect(JSON.parse(lines[0]!)).toMatchObject({
-      type: 'metadata',
+      type: "metadata",
       protocol_version: WIRE_PROTOCOL_VERSION,
     });
   });
 });
 
-describe('WireService migration rewrite', () => {
-  async function seedLegacyLog(storage: InMemoryStorageService): Promise<IAppendLogStore> {
+describe("WireService migration rewrite", () => {
+  async function seedLegacyLog(
+    storage: InMemoryStorageService,
+  ): Promise<IAppendLogStore> {
     const log = createAppendLogHarness(storage);
     log.append<WireRecord>(SCOPE, KEY, {
-      type: 'metadata',
-      protocol_version: '1.0',
+      type: "metadata",
+      protocol_version: "1.0",
       created_at: 1,
     });
     log.append<WireRecord>(SCOPE, KEY, {
-      type: 'turn.prompt',
-      input: [{ type: 'text', text: 'hi' }],
-      origin: { kind: 'user' },
+      type: "turn.prompt",
+      input: [{ type: "text", text: "hi" }],
+      origin: { kind: "user" },
     });
     await log.flush();
     return log;
   }
 
-  it('restore resolves only after the migration rewrite is durable', async () => {
+  it("restore resolves only after the migration rewrite is durable", async () => {
     const storage = new InMemoryStorageService();
     const log = await seedLegacyLog(storage);
     let markWriteStarted!: () => void;
@@ -396,20 +404,20 @@ describe('WireService migration rewrite', () => {
 
     const records = await collect<WireRecord>(log);
     expect(records[0]).toMatchObject({
-      type: 'metadata',
+      type: "metadata",
       protocol_version: WIRE_PROTOCOL_VERSION,
     });
   });
 
-  it('restore propagates a migration rewrite failure', async () => {
+  it("restore propagates a migration rewrite failure", async () => {
     const storage = new InMemoryStorageService();
     const log = await seedLegacyLog(storage);
     storage.write = async () => {
-      throw new Error('disk full');
+      throw new Error("disk full");
     };
 
     const svc = createAgentWireHarness(log);
 
-    await expect(svc.restore()).rejects.toThrow('disk full');
+    await expect(svc.restore()).rejects.toThrow("disk full");
   });
 });

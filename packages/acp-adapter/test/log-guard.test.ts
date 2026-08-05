@@ -1,8 +1,8 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { redirectConsoleToStderr } from '../src/log-guard';
+import { redirectConsoleToStderr } from "../src/log-guard";
 
-describe('redirectConsoleToStderr', () => {
+describe("redirectConsoleToStderr", () => {
   const restorers: Array<() => void> = [];
 
   afterEach(() => {
@@ -12,31 +12,35 @@ describe('redirectConsoleToStderr', () => {
     vi.restoreAllMocks();
   });
 
-  it('routes console.log / info / warn to stderr and leaves stdout untouched', () => {
-    const stdoutSpy = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
-    const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+  it("routes console.log / info / warn to stderr and leaves stdout untouched", () => {
+    const stdoutSpy = vi
+      .spyOn(process.stdout, "write")
+      .mockImplementation(() => true);
+    const stderrSpy = vi
+      .spyOn(process.stderr, "write")
+      .mockImplementation(() => true);
 
     const restore = redirectConsoleToStderr();
     restorers.push(restore);
 
-    console.log('hello-log');
-    console.info('hello-info');
-    console.warn('hello-warn');
+    console.log("hello-log");
+    console.info("hello-info");
+    console.warn("hello-warn");
 
     expect(stdoutSpy).not.toHaveBeenCalled();
-    expect(stderrSpy).toHaveBeenCalledWith('hello-log\n');
-    expect(stderrSpy).toHaveBeenCalledWith('hello-info\n');
-    expect(stderrSpy).toHaveBeenCalledWith('hello-warn\n');
+    expect(stderrSpy).toHaveBeenCalledWith("hello-log\n");
+    expect(stderrSpy).toHaveBeenCalledWith("hello-info\n");
+    expect(stderrSpy).toHaveBeenCalledWith("hello-warn\n");
   });
 
-  it('does not redirect console.error (which already targets stderr)', () => {
+  it("does not redirect console.error (which already targets stderr)", () => {
     const origError = console.error;
     const restore = redirectConsoleToStderr();
     restorers.push(restore);
     expect(console.error).toBe(origError);
   });
 
-  it('restores the original console sinks when the returned function is called', () => {
+  it("restores the original console sinks when the returned function is called", () => {
     const origLog = console.log;
     const origInfo = console.info;
     const origWarn = console.warn;

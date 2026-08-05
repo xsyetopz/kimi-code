@@ -1,21 +1,21 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from "vitest";
 
-import type { Agent } from '../../src/agent';
+import type { Agent } from "../../src/agent";
 import {
   ExitPlanModeInputSchema,
   ExitPlanModeTool,
   type ExitPlanModeInput,
-} from '../../src/tools/builtin/planning/exit-plan-mode';
-import DESCRIPTION from '../../src/tools/builtin/planning/exit-plan-mode.md?raw';
-import { executeTool } from './fixtures/execute-tool';
-import { toolContentString } from './fixtures/fake-kaos';
+} from "../../src/tools/builtin/planning/exit-plan-mode";
+import DESCRIPTION from "../../src/tools/builtin/planning/exit-plan-mode.md?raw";
+import { executeTool } from "./fixtures/execute-tool";
+import { toolContentString } from "./fixtures/fake-kaos";
 
 const signal = new AbortController().signal;
 
 const options = [
-  { label: 'Approach A', description: 'Use the smaller refactor.' },
-  { label: 'Approach B', description: 'Use the more complete refactor.' },
-] satisfies NonNullable<ExitPlanModeInput['options']>;
+  { label: "Approach A", description: "Use the smaller refactor." },
+  { label: "Approach B", description: "Use the more complete refactor." },
+] satisfies NonNullable<ExitPlanModeInput["options"]>;
 
 function makeAgent(
   input: {
@@ -23,15 +23,19 @@ function makeAgent(
     readonly plan?: string | null | undefined;
     readonly path?: string | undefined;
     readonly planFilePath?: string | null | undefined;
-    readonly mode?: 'manual' | 'yolo' | 'auto' | undefined;
+    readonly mode?: "manual" | "yolo" | "auto" | undefined;
     readonly emit?: ((event: unknown) => void) | undefined;
   } = {},
-): { agent: Agent; requestApproval: ReturnType<typeof vi.fn>; emit: ReturnType<typeof vi.fn> } {
+): {
+  agent: Agent;
+  requestApproval: ReturnType<typeof vi.fn>;
+  emit: ReturnType<typeof vi.fn>;
+} {
   let active = input.active ?? true;
-  const requestApproval = vi.fn(async () => ({ decision: 'approved' }));
+  const requestApproval = vi.fn(async () => ({ decision: "approved" }));
   const emit = vi.fn((event: unknown) => {
     input.emit?.(event);
-    if ((event as { type?: string }).type === 'plan_mode.exit') active = false;
+    if ((event as { type?: string }).type === "plan_mode.exit") active = false;
   });
   const agent = {
     planMode: {
@@ -44,15 +48,15 @@ function makeAgent(
       data: vi.fn(async () => {
         if (input.plan === null) return null;
         return {
-          content: input.plan ?? 'plan from file',
-          path: input.path ?? '/tmp/plan.md',
+          content: input.plan ?? "plan from file",
+          path: input.path ?? "/tmp/plan.md",
         };
       }),
       exit: () => {
-        emit({ type: 'plan_mode.exit' });
+        emit({ type: "plan_mode.exit" });
       },
     },
-    permission: { mode: input.mode ?? 'auto' },
+    permission: { mode: input.mode ?? "auto" },
     rpc: { requestApproval },
     telemetry: { track: vi.fn() },
     emit,
@@ -66,120 +70,124 @@ function execute(
   metadata?: unknown,
 ) {
   return executeTool(tool, {
-    turnId: '7',
-    toolCallId: 'call_exit_plan',
+    turnId: "7",
+    toolCallId: "call_exit_plan",
     args,
     metadata,
     signal,
   });
 }
 
-describe('ExitPlanMode options schema', () => {
-  it('accepts 1-3 options and rejects inline plan fallback', () => {
+describe("ExitPlanMode options schema", () => {
+  it("accepts 1-3 options and rejects inline plan fallback", () => {
     expect(
       ExitPlanModeInputSchema.safeParse({
-        options: [{ label: 'A', description: 'do A' }],
+        options: [{ label: "A", description: "do A" }],
       }).success,
     ).toBe(true);
     expect(
       ExitPlanModeInputSchema.safeParse({
         options: [
-          { label: 'A', description: 'do A' },
-          { label: 'B', description: 'do B' },
-          { label: 'C', description: 'do C' },
+          { label: "A", description: "do A" },
+          { label: "B", description: "do B" },
+          { label: "C", description: "do C" },
         ],
       }).success,
     ).toBe(true);
     expect(ExitPlanModeInputSchema.safeParse({}).success).toBe(true);
-    expect(ExitPlanModeInputSchema.safeParse({ plan: 'Plan' }).success).toBe(false);
+    expect(ExitPlanModeInputSchema.safeParse({ plan: "Plan" }).success).toBe(
+      false,
+    );
   });
 
-  it('rejects too many options, duplicate labels, reserved labels, and invalid labels', () => {
+  it("rejects too many options, duplicate labels, reserved labels, and invalid labels", () => {
     expect(
       ExitPlanModeInputSchema.safeParse({
         options: [
-          { label: 'A', description: 'x' },
-          { label: 'B', description: 'x' },
-          { label: 'C', description: 'x' },
-          { label: 'D', description: 'x' },
+          { label: "A", description: "x" },
+          { label: "B", description: "x" },
+          { label: "C", description: "x" },
+          { label: "D", description: "x" },
         ],
       }).success,
     ).toBe(false);
     expect(
       ExitPlanModeInputSchema.safeParse({
-        options: [{ label: '', description: 'x' }],
+        options: [{ label: "", description: "x" }],
       }).success,
     ).toBe(false);
     expect(
       ExitPlanModeInputSchema.safeParse({
-        options: [{ label: 'a'.repeat(81), description: 'x' }],
+        options: [{ label: "a".repeat(81), description: "x" }],
       }).success,
     ).toBe(false);
     expect(
       ExitPlanModeInputSchema.safeParse({
         options: [
-          { label: 'A', description: 'x' },
-          { label: 'A', description: 'y' },
+          { label: "A", description: "x" },
+          { label: "A", description: "y" },
         ],
       }).success,
     ).toBe(false);
     expect(
       ExitPlanModeInputSchema.safeParse({
-        options: [{ label: 'Reject', description: 'reserved' }],
+        options: [{ label: "Reject", description: "reserved" }],
       }).success,
     ).toBe(false);
     expect(
       ExitPlanModeInputSchema.safeParse({
-        options: [{ label: 'reject', description: 'reserved' }],
+        options: [{ label: "reject", description: "reserved" }],
       }).success,
     ).toBe(false);
     expect(
       ExitPlanModeInputSchema.safeParse({
-        options: [{ label: '  Reject  ', description: 'reserved' }],
+        options: [{ label: "  Reject  ", description: "reserved" }],
       }).success,
     ).toBe(false);
     expect(
       ExitPlanModeInputSchema.safeParse({
         options: [
-          { label: 'Patch config', description: 'x' },
-          { label: '  patch CONFIG  ', description: 'y' },
+          { label: "Patch config", description: "x" },
+          { label: "  patch CONFIG  ", description: "y" },
         ],
       }).success,
     ).toBe(false);
   });
 });
 
-describe('ExitPlanMode option output', () => {
-  it('treats a single option as plain plan approval', async () => {
+describe("ExitPlanMode option output", () => {
+  it("treats a single option as plain plan approval", async () => {
     const { agent, requestApproval, emit } = makeAgent({
-      plan: 'single option plan',
+      plan: "single option plan",
     });
 
     const result = await execute(new ExitPlanModeTool(agent), {
-      options: [{ label: 'Approach A', description: 'Only path' }],
+      options: [{ label: "Approach A", description: "Only path" }],
     });
 
     expect(requestApproval).not.toHaveBeenCalled();
-    expect(emit).toHaveBeenCalledWith({ type: 'plan_mode.exit' });
-    expect(result.output).toContain('Exited plan mode');
+    expect(emit).toHaveBeenCalledWith({ type: "plan_mode.exit" });
+    expect(result.output).toContain("Exited plan mode");
   });
 
-  it('marks the direct-execution output as auto-approved, not user-reviewed, in auto mode', async () => {
-    const { agent } = makeAgent({ plan: '# Plan', mode: 'auto' });
+  it("marks the direct-execution output as auto-approved, not user-reviewed, in auto mode", async () => {
+    const { agent } = makeAgent({ plan: "# Plan", mode: "auto" });
 
     const result = await execute(new ExitPlanModeTool(agent), {});
 
     expect(result.isError).toBeFalsy();
     // In auto permission mode no interactive review can happen, so the
     // output must not read as if the user had approved the plan.
-    expect(result.output).toContain('## Plan (auto-approved, not user-reviewed):');
-    expect(result.output).not.toContain('## Approved Plan:');
-    expect(result.output).toContain('the user has NOT explicitly approved it');
-    expect(result.output).toContain('# Plan');
+    expect(result.output).toContain(
+      "## Plan (auto-approved, not user-reviewed):",
+    );
+    expect(result.output).not.toContain("## Approved Plan:");
+    expect(result.output).toContain("the user has NOT explicitly approved it");
+    expect(result.output).toContain("# Plan");
   });
 
-  it('keeps the user-approved output when a rule lets the call through outside auto mode', async () => {
-    const { agent } = makeAgent({ plan: '# Plan', mode: 'manual' });
+  it("keeps the user-approved output when a rule lets the call through outside auto mode", async () => {
+    const { agent } = makeAgent({ plan: "# Plan", mode: "manual" });
 
     const result = await execute(new ExitPlanModeTool(agent), {});
 
@@ -187,11 +195,11 @@ describe('ExitPlanMode option output', () => {
     // Outside auto mode the direct-execution path means a configured or
     // session allow/ask rule approved the call — an explicit user decision,
     // so the output keeps the user-approved wording.
-    expect(result.output).toContain('## Approved Plan:');
-    expect(result.output).not.toContain('auto-approved');
+    expect(result.output).toContain("## Approved Plan:");
+    expect(result.output).not.toContain("auto-approved");
   });
 
-  it('does not use inline plan fallback for option approval when no plan file exists', async () => {
+  it("does not use inline plan fallback for option approval when no plan file exists", async () => {
     const { agent, requestApproval, emit } = makeAgent({
       plan: null,
     });
@@ -203,83 +211,83 @@ describe('ExitPlanMode option output', () => {
     expect(requestApproval).not.toHaveBeenCalled();
     expect(emit).not.toHaveBeenCalled();
     expect(result).toMatchObject({ isError: true });
-    expect(result.output).toContain('No plan file found');
+    expect(result.output).toContain("No plan file found");
   });
 
   it('returns success without a "User feedback:" prefix when revise has no feedback', async () => {
-    const { agent } = makeAgent({ plan: 'draft plan' });
+    const { agent } = makeAgent({ plan: "draft plan" });
 
     const result = await execute(new ExitPlanModeTool(agent), { options });
 
     expect(result.isError).toBeFalsy();
-    expect(toolContentString(result)).not.toContain('User feedback:');
+    expect(toolContentString(result)).not.toContain("User feedback:");
   });
 });
 
-describe('ExitPlanMode reserved-label validation', () => {
+describe("ExitPlanMode reserved-label validation", () => {
   it('rejects reserved label "Reject"', () => {
     const parsed = ExitPlanModeInputSchema.safeParse({
-      options: [{ label: 'Reject', description: 'x' }],
+      options: [{ label: "Reject", description: "x" }],
     });
     expect(parsed.success).toBe(false);
   });
 
   it('rejects reserved label "reject" case-insensitively', () => {
     const parsed = ExitPlanModeInputSchema.safeParse({
-      options: [{ label: 'reject', description: 'x' }],
+      options: [{ label: "reject", description: "x" }],
     });
     expect(parsed.success).toBe(false);
   });
 
   it('rejects reserved label "Revise"', () => {
     const parsed = ExitPlanModeInputSchema.safeParse({
-      options: [{ label: 'Revise', description: 'x' }],
+      options: [{ label: "Revise", description: "x" }],
     });
     expect(parsed.success).toBe(false);
   });
 
   it('rejects reserved label "Approve"', () => {
     const parsed = ExitPlanModeInputSchema.safeParse({
-      options: [{ label: 'Approve', description: 'x' }],
+      options: [{ label: "Approve", description: "x" }],
     });
     expect(parsed.success).toBe(false);
   });
 
   it('rejects reserved label after whitespace trim ("  Reject  ")', () => {
     const parsed = ExitPlanModeInputSchema.safeParse({
-      options: [{ label: '  Reject  ', description: 'x' }],
+      options: [{ label: "  Reject  ", description: "x" }],
     });
     expect(parsed.success).toBe(false);
   });
 
-  it('rejects duplicate option labels (case-insensitive uniqueness)', () => {
+  it("rejects duplicate option labels (case-insensitive uniqueness)", () => {
     const parsed = ExitPlanModeInputSchema.safeParse({
       options: [
-        { label: 'Patch config', description: '' },
-        { label: 'patch config', description: 'different desc' },
+        { label: "Patch config", description: "" },
+        { label: "patch config", description: "different desc" },
       ],
     });
     expect(parsed.success).toBe(false);
   });
 });
 
-describe('ExitPlanMode options documentation consistency', () => {
+describe("ExitPlanMode options documentation consistency", () => {
   function optionsParamDescription(): string {
     const tool = new ExitPlanModeTool({} as Agent);
     const parameters = tool.parameters as {
       properties?: { options?: { description?: string } };
     };
     const description = parameters.properties?.options?.description;
-    expect(typeof description).toBe('string');
+    expect(typeof description).toBe("string");
     return description as string;
   }
 
-  it('does not advertise a 2-3 option minimum that contradicts the minItems:1 schema', () => {
+  it("does not advertise a 2-3 option minimum that contradicts the minItems:1 schema", () => {
     expect(DESCRIPTION).not.toMatch(/2-3 options/);
     expect(optionsParamDescription()).not.toMatch(/2-3 options/);
   });
 
-  it('keeps single-option / plain-approval semantics in the options param only, not duplicated in the .md', () => {
+  it("keeps single-option / plain-approval semantics in the options param only, not duplicated in the .md", () => {
     // Field mechanics are the options param describe's job (single source of
     // truth). The tool description routes to the param instead of repeating
     // them, so the two surfaces cannot drift.

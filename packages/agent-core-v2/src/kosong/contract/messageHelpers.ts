@@ -20,4 +20,4 @@ export {
   isToolCallPart,
   isToolDeclarationOnlyMessage,
   mergeInPlace,
-} from './message';
+} from "./message";

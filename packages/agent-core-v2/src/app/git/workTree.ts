@@ -10,9 +10,9 @@
  * pathe-normalized (Windows-aware, forward slashes). Pure functions.
  */
 
-import { dirname, isAbsolute, join, normalize } from 'pathe';
+import { dirname, isAbsolute, join, normalize } from "pathe";
 
-import type { IHostFileSystem } from '#/os/interface/hostFileSystem';
+import type { IHostFileSystem } from "#/os/interface/hostFileSystem";
 
 export interface GitWorkTree {
   readonly root: string;
@@ -28,9 +28,10 @@ export async function findGitWorkTree(
 
   let current = normalize(cwd);
   while (true) {
-    const dotGitPath = join(current, '.git');
+    const dotGitPath = join(current, ".git");
     const controlDirPath = await probeGitControlDir(fs, dotGitPath, current);
-    if (controlDirPath !== null) return { root: current, dotGitPath, controlDirPath };
+    if (controlDirPath !== null)
+      return { root: current, dotGitPath, controlDirPath };
 
     const parent = dirname(current);
     if (parent === current) return null;
@@ -55,12 +56,16 @@ async function probeGitControlDir(
   }
 }
 
-function parseGitDirPointer(content: string, markerParent: string): string | undefined {
-  const stripped = content.codePointAt(0) === 0xfeff ? content.slice(1) : content;
+function parseGitDirPointer(
+  content: string,
+  markerParent: string,
+): string | undefined {
+  const stripped =
+    content.codePointAt(0) === 0xfeff ? content.slice(1) : content;
   const line = stripped.trimStart().split(/\r?\n/, 1)[0]?.trim();
-  if (line === undefined || !line.startsWith('gitdir:')) return undefined;
+  if (line === undefined || !line.startsWith("gitdir:")) return undefined;
 
-  const rawPath = line.slice('gitdir:'.length).trim();
+  const rawPath = line.slice("gitdir:".length).trim();
   if (rawPath.length === 0) return undefined;
   return normalize(isAbsolute(rawPath) ? rawPath : join(markerParent, rawPath));
 }

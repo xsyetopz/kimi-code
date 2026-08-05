@@ -1,31 +1,33 @@
-import type { Agent } from '../..';
-import type { PermissionPolicy } from '../types';
-import { AgentSwarmExclusiveDenyPermissionPolicy } from './agent-swarm-exclusive-deny';
-import { AutoModeApprovePermissionPolicy } from './auto-mode-approve';
-import { AutoModeAskUserQuestionDenyPermissionPolicy } from './auto-mode-ask-user-question-deny';
-import { DefaultToolApprovePermissionPolicy } from './default-tool-approve';
-import { ExitPlanModeReviewAskPermissionPolicy } from './exit-plan-mode-review-ask';
-import { FallbackAskPermissionPolicy } from './fallback-ask';
+import type { Agent } from "../..";
+import type { PermissionPolicy } from "../types";
+import { AgentSwarmExclusiveDenyPermissionPolicy } from "./agent-swarm-exclusive-deny";
+import { AutoModeApprovePermissionPolicy } from "./auto-mode-approve";
+import { AutoModeAskUserQuestionDenyPermissionPolicy } from "./auto-mode-ask-user-question-deny";
+import { DefaultToolApprovePermissionPolicy } from "./default-tool-approve";
+import { ExitPlanModeReviewAskPermissionPolicy } from "./exit-plan-mode-review-ask";
+import { FallbackAskPermissionPolicy } from "./fallback-ask";
 import {
   GitControlPathAccessAskPermissionPolicy,
   SensitiveFileAccessAskPermissionPolicy,
-} from './file-access-ask';
-import { GitCwdWriteApprovePermissionPolicy } from './git-cwd-write-approve';
-import { GoalStartReviewAskPermissionPolicy } from './goal-start-review-ask';
-import { PlanModeGuardDenyPermissionPolicy } from './plan-mode-guard-deny';
-import { PlanModeToolApprovePermissionPolicy } from './plan-mode-tool-approve';
-import { PreToolCallHookPermissionPolicy } from './pre-tool-call-hook';
-import { SessionApprovalHistoryPermissionPolicy } from './session-approval-history';
-import { SwarmModeAgentSwarmApprovePermissionPolicy } from './swarm-mode-agent-swarm-approve';
+} from "./file-access-ask";
+import { GitCwdWriteApprovePermissionPolicy } from "./git-cwd-write-approve";
+import { GoalStartReviewAskPermissionPolicy } from "./goal-start-review-ask";
+import { PlanModeGuardDenyPermissionPolicy } from "./plan-mode-guard-deny";
+import { PlanModeToolApprovePermissionPolicy } from "./plan-mode-tool-approve";
+import { PreToolCallHookPermissionPolicy } from "./pre-tool-call-hook";
+import { SessionApprovalHistoryPermissionPolicy } from "./session-approval-history";
+import { SwarmModeAgentSwarmApprovePermissionPolicy } from "./swarm-mode-agent-swarm-approve";
 import {
   UserConfiguredAllowPermissionPolicy,
   UserConfiguredAskPermissionPolicy,
   UserConfiguredDenyPermissionPolicy,
-} from './user-configured-rules';
-import { YoloModeApprovePermissionPolicy } from './yolo-mode-approve';
+} from "./user-configured-rules";
+import { YoloModeApprovePermissionPolicy } from "./yolo-mode-approve";
 
 /** Permission policies run in order; the first non-undefined result wins. */
-export function createPermissionDecisionPolicies(agent: Agent): PermissionPolicy[] {
+export function createPermissionDecisionPolicies(
+  agent: Agent,
+): PermissionPolicy[] {
   return [
     // PreToolUse hook returned a block → deny.
     new PreToolCallHookPermissionPolicy(agent),

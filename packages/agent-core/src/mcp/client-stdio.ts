@@ -1,10 +1,10 @@
-import { ErrorCodes, KimiError } from '#/errors';
-import type { McpServerStdioConfig } from '#/config/schema';
-import { proxyEnvForChild, reconcileChildNoProxy } from '#/utils/proxy';
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
-import { win32 } from 'node:path';
-import { isAbsolute, resolve } from 'pathe';
+import { ErrorCodes, KimiError } from "#/errors";
+import type { McpServerStdioConfig } from "#/config/schema";
+import { proxyEnvForChild, reconcileChildNoProxy } from "#/utils/proxy";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { win32 } from "node:path";
+import { isAbsolute, resolve } from "pathe";
 
 import {
   buildRequestOptions,
@@ -14,8 +14,8 @@ import {
   toMcpToolResult,
   type UnexpectedCloseListener,
   type UnexpectedCloseReason,
-} from './client-shared';
-import type { MCPClient, MCPToolDefinition, MCPToolResult } from './types';
+} from "./client-shared";
+import type { MCPClient, MCPToolDefinition, MCPToolResult } from "./types";
 
 export interface StdioMcpClientOptions {
   readonly clientName?: string;
@@ -58,23 +58,31 @@ export class StdioMcpClient implements MCPClient {
   /** Capacity (in characters) of the stderr tail captured for diagnostics. */
   static readonly stderrBufferCapacity = STDERR_BUFFER_CAPACITY;
 
-  constructor(config: McpServerStdioConfig, options: StdioMcpClientOptions = {}) {
-    if (config.executor !== undefined && config.executor !== 'local') {
-      throw new KimiError(ErrorCodes.NOT_IMPLEMENTED, `MCP stdio executor '${config.executor}' is not yet implemented`);
+  constructor(
+    config: McpServerStdioConfig,
+    options: StdioMcpClientOptions = {},
+  ) {
+    if (config.executor !== undefined && config.executor !== "local") {
+      throw new KimiError(
+        ErrorCodes.NOT_IMPLEMENTED,
+        `MCP stdio executor '${config.executor}' is not yet implemented`,
+      );
     }
     this.transport = new StdioClientTransport({
       command: config.command,
       args: config.args,
       env: mergeStdioEnv(config.env),
       cwd: resolveStdioCwd(config.cwd, options.defaultCwd),
-      stderr: 'pipe',
+      stderr: "pipe",
     });
     // `stderr: 'pipe'` means we MUST drain the stream — otherwise the child
     // can block on a full pipe. We also keep the last few KB around so the
     // connection manager can attach it to user-facing failure messages
     // (`Timed out after 30000ms` on its own tells the user nothing).
-    this.transport.stderr?.on('data', (chunk: Buffer | string) => {
-      this.stderrBuffer.push(typeof chunk === 'string' ? chunk : chunk.toString('utf8'));
+    this.transport.stderr?.on("data", (chunk: Buffer | string) => {
+      this.stderrBuffer.push(
+        typeof chunk === "string" ? chunk : chunk.toString("utf8"),
+      );
     });
     this.client = new Client({
       name: options.clientName ?? KIMI_MCP_CLIENT_NAME,
@@ -86,7 +94,7 @@ export class StdioMcpClient implements MCPClient {
 
   async connect(): Promise<void> {
     if (this.closed) {
-      throw new Error('MCP stdio client is closed');
+      throw new Error("MCP stdio client is closed");
     }
     if (this.started) return;
     this.started = true;
@@ -106,7 +114,7 @@ export class StdioMcpClient implements MCPClient {
     }
     if (this.closed) {
       await this.closeStartedClient();
-      throw new Error('MCP stdio client was closed during startup');
+      throw new Error("MCP stdio client was closed during startup");
     }
     this.ready = true;
   }
@@ -158,7 +166,11 @@ export class StdioMcpClient implements MCPClient {
     signal?: AbortSignal,
   ): Promise<MCPToolResult> {
     const requestOptions = buildRequestOptions(this.toolCallTimeoutMs, signal);
-    const result = await this.client.callTool({ name, arguments: args }, undefined, requestOptions);
+    const result = await this.client.callTool(
+      { name, arguments: args },
+      undefined,
+      requestOptions,
+    );
     return toMcpToolResult(result);
   }
 
@@ -213,7 +225,7 @@ export class StdioMcpClient implements MCPClient {
  * stderr around without unbounded growth.
  */
 class BoundedTail {
-  private buffer = '';
+  private buffer = "";
   constructor(private readonly capacity: number) {}
 
   push(chunk: string): void {
@@ -228,20 +240,26 @@ class BoundedTail {
   }
 }
 
-export function resolveStdioCwd(configCwd: string | undefined, defaultCwd: string | undefined): string | undefined {
+export function resolveStdioCwd(
+  configCwd: string | undefined,
+  defaultCwd: string | undefined,
+): string | undefined {
   if (configCwd === undefined) return defaultCwd;
   if (defaultCwd !== undefined && isWindowsAbsolutePath(defaultCwd)) {
-    return win32.resolve(defaultCwd, configCwd).replaceAll('\\', '/');
+    return win32.resolve(defaultCwd, configCwd).replaceAll("\\", "/");
   }
   if (isWindowsAbsolutePath(configCwd)) {
-    return win32.resolve(configCwd).replaceAll('\\', '/');
+    return win32.resolve(configCwd).replaceAll("\\", "/");
   }
-  if (defaultCwd !== undefined && !isAbsolute(configCwd)) return resolve(defaultCwd, configCwd);
+  if (defaultCwd !== undefined && !isAbsolute(configCwd))
+    return resolve(defaultCwd, configCwd);
   return configCwd;
 }
 
 function isWindowsAbsolutePath(value: string): boolean {
-  return /^[A-Za-z]:[\\/]/.test(value) || /^[\\/]{2}[^\\/]+[\\/][^\\/]+/.test(value);
+  return (
+    /^[A-Za-z]:[\\/]/.test(value) || /^[\\/]{2}[^\\/]+[\\/][^\\/]+/.test(value)
+  );
 }
 
 // Inherit the parent's env so PATH/HOME/etc. survive — otherwise `npx`/`uvx`

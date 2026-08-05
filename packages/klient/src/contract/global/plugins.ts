@@ -8,14 +8,14 @@
  * klient wire surface).
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { noResult } from '../helpers.js';
-import { mcpServerConfigSchema } from '../mcp.js';
-import type { ServiceContract } from '../types.js';
+import { noResult } from "../helpers.js";
+import { mcpServerConfigSchema } from "../mcp.js";
+import type { ServiceContract } from "../types.js";
 
 export const pluginDiagnosticSchema = z.object({
-  severity: z.enum(['error', 'warn', 'info']),
+  severity: z.enum(["error", "warn", "info"]),
   message: z.string(),
 });
 
@@ -38,26 +38,26 @@ const pluginInterfaceSchema = z.object({
 
 const hookDefSchema = z.object({
   event: z.enum([
-    'PreToolUse',
-    'PostToolUse',
-    'PostToolUseFailure',
-    'PermissionRequest',
-    'PermissionResult',
-    'UserPromptSubmit',
-    'UserPromptQueued',
-    'TurnStarted',
-    'Stop',
-    'StopFailure',
-    'Interrupt',
-    'SessionStart',
-    'SessionEnd',
-    'SessionHeartbeat',
-    'SubagentStart',
-    'SubagentStop',
-    'TaskStarted',
-    'PreCompact',
-    'PostCompact',
-    'Notification',
+    "PreToolUse",
+    "PostToolUse",
+    "PostToolUseFailure",
+    "PermissionRequest",
+    "PermissionResult",
+    "UserPromptSubmit",
+    "UserPromptQueued",
+    "TurnStarted",
+    "Stop",
+    "StopFailure",
+    "Interrupt",
+    "SessionStart",
+    "SessionEnd",
+    "SessionHeartbeat",
+    "SubagentStart",
+    "SubagentStop",
+    "TaskStarted",
+    "PreCompact",
+    "PostCompact",
+    "Notification",
   ]),
   matcher: z.string().optional(),
   command: z.string().min(1),
@@ -69,14 +69,17 @@ const pluginCommandEntrySchema = z.object({
   name: z.string(),
 });
 
-const pluginManifestKindSchema = z.enum(['kimi-plugin-root', 'kimi-plugin-dir']);
+const pluginManifestKindSchema = z.enum([
+  "kimi-plugin-root",
+  "kimi-plugin-dir",
+]);
 
-const pluginSourceSchema = z.enum(['local-path', 'zip-url', 'github']);
+const pluginSourceSchema = z.enum(["local-path", "zip-url", "github"]);
 
-const pluginStateSchema = z.enum(['ok', 'error']);
+const pluginStateSchema = z.enum(["ok", "error"]);
 
 const pluginGithubRefSchema = z.object({
-  kind: z.enum(['branch', 'tag', 'sha']),
+  kind: z.enum(["branch", "tag", "sha"]),
   value: z.string(),
 });
 
@@ -103,7 +106,7 @@ export const pluginMcpServerInfoSchema = z.object({
   name: z.string(),
   runtimeName: z.string(),
   enabled: z.boolean(),
-  transport: z.enum(['stdio', 'http', 'sse']),
+  transport: z.enum(["stdio", "http", "sse"]),
   command: z.string().optional(),
   args: z.array(z.string()).optional(),
   cwd: z.string().optional(),
@@ -197,15 +200,30 @@ export const getPluginInfoInputSchema = z.object({
 
 export const pluginsContract = {
   listPlugins: { input: z.tuple([]), output: z.array(pluginSummarySchema) },
-  installPlugin: { input: z.tuple([installPluginInputSchema]), output: pluginSummarySchema },
-  setPluginEnabled: { input: z.tuple([setPluginEnabledInputSchema]), output: noResult },
+  installPlugin: {
+    input: z.tuple([installPluginInputSchema]),
+    output: pluginSummarySchema,
+  },
+  setPluginEnabled: {
+    input: z.tuple([setPluginEnabledInputSchema]),
+    output: noResult,
+  },
   setPluginMcpServerEnabled: {
     input: z.tuple([setPluginMcpServerEnabledInputSchema]),
     output: noResult,
   },
   removePlugin: { input: z.tuple([removePluginInputSchema]), output: noResult },
   reloadPlugins: { input: z.tuple([]), output: reloadSummarySchema },
-  getPluginInfo: { input: z.tuple([getPluginInfoInputSchema]), output: pluginInfoSchema },
-  listPluginCommands: { input: z.tuple([]), output: z.array(pluginCommandDefSchema) },
-  checkUpdates: { input: z.tuple([]), output: z.array(pluginUpdateStatusSchema) },
+  getPluginInfo: {
+    input: z.tuple([getPluginInfoInputSchema]),
+    output: pluginInfoSchema,
+  },
+  listPluginCommands: {
+    input: z.tuple([]),
+    output: z.array(pluginCommandDefSchema),
+  },
+  checkUpdates: {
+    input: z.tuple([]),
+    output: z.array(pluginUpdateStatusSchema),
+  },
 } satisfies ServiceContract;

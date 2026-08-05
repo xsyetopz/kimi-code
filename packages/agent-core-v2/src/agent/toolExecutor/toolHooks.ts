@@ -27,16 +27,16 @@
  * Pure contract (types only); no scoped service.
  */
 
-import type { IWaitUntil } from '#/_base/event';
-import type { ToolCall } from '#/kosong/contract/message';
-import type { LLMRequestTrace } from '#/kosong/contract/requestTrace';
+import type { IWaitUntil } from "#/_base/event";
+import type { ToolCall } from "#/kosong/contract/message";
+import type { LLMRequestTrace } from "#/kosong/contract/requestTrace";
 
 import type {
   ExecutableTool,
   ExecutableToolResult,
   RunnableToolExecution,
   ToolAccesses,
-} from '#/tool/toolContract';
+} from "#/tool/toolContract";
 
 export interface ToolExecutionHookContext {
   readonly turnId: number;
@@ -48,7 +48,8 @@ export interface ToolExecutionHookContext {
   readonly args: unknown;
 }
 
-export interface ResolvedToolExecutionHookContext extends ToolExecutionHookContext {
+export interface ResolvedToolExecutionHookContext
+  extends ToolExecutionHookContext {
   readonly execution: RunnableToolExecution;
 }
 
@@ -57,7 +58,8 @@ export interface BeforeExecuteDecision {
   readonly executionMetadata?: unknown;
 }
 
-export interface BeforeToolExecuteEvent extends ResolvedToolExecutionHookContext {
+export interface BeforeToolExecuteEvent
+  extends ResolvedToolExecutionHookContext {
   veto(result: ExecutableToolResult): void;
   allow(): void;
   pass(metadata?: unknown): void;
@@ -72,13 +74,13 @@ export interface WillExecuteToolEvent extends IWaitUntil {
 }
 
 export type ToolExecutionOutcome =
-  | 'executed'
-  | 'preflight-rejected'
-  | 'resolution-failed'
-  | 'vetoed'
-  | 'aborted'
-  | 'synthetic'
-  | 'skipped';
+  | "executed"
+  | "preflight-rejected"
+  | "resolution-failed"
+  | "vetoed"
+  | "aborted"
+  | "synthetic"
+  | "skipped";
 
 export interface ToolDidExecuteContext extends ToolExecutionHookContext {
   readonly outcome: ToolExecutionOutcome;

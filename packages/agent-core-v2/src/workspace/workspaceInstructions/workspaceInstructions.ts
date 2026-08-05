@@ -13,9 +13,12 @@
  * at Workspace scope.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
-import type { Event } from '#/_base/event';
-import type { ISessionInstructionsProvider } from '#/session/sessionInstructions/instructionsProvider';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
+import type { Event } from "#/_base/event";
+import type { ISessionInstructionsProvider } from "#/session/sessionInstructions/instructionsProvider";
 
 export interface WorkspaceInstructionsSnapshot {
   readonly agentsMd: string | undefined;
@@ -34,4 +37,6 @@ export interface IWorkspaceInstructionsService {
 }
 
 export const IWorkspaceInstructionsService: ServiceIdentifier<IWorkspaceInstructionsService> =
-  createDecorator<IWorkspaceInstructionsService>('workspaceInstructionsService');
+  createDecorator<IWorkspaceInstructionsService>(
+    "workspaceInstructionsService",
+  );

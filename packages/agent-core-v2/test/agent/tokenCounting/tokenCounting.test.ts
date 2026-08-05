@@ -1,21 +1,29 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { IAgentContextMemoryService, IAgentProfileService } from '#/index';
-import { IAgentTokenCountingService } from '#/agent/tokenCounting/tokenCounting';
-import { TokenCountingModel, tokenCountingMeasured } from '#/agent/tokenCounting/tokenCountingOps';
-import { estimateTokensForMessages } from '#/kosong/contract/tokens';
-import type { TokenUsage } from '#/kosong/contract/usage';
-import { IAgentUsageService } from '#/agent/usage/usage';
-import { IWireService } from '#/wire/wire';
+import { IAgentContextMemoryService, IAgentProfileService } from "#/index";
+import { IAgentTokenCountingService } from "#/agent/tokenCounting/tokenCounting";
+import {
+  TokenCountingModel,
+  tokenCountingMeasured,
+} from "#/agent/tokenCounting/tokenCountingOps";
+import { estimateTokensForMessages } from "#/kosong/contract/tokens";
+import type { TokenUsage } from "#/kosong/contract/usage";
+import { IAgentUsageService } from "#/agent/usage/usage";
+import { IWireService } from "#/wire/wire";
 
-import { createTestAgent, type TestAgentContext } from '../../harness';
+import { createTestAgent, type TestAgentContext } from "../../harness";
 
 function totalOf(usage: TokenUsage | undefined): number {
   if (usage === undefined) return 0;
-  return usage.inputOther + usage.output + usage.inputCacheRead + usage.inputCacheCreation;
+  return (
+    usage.inputOther +
+    usage.output +
+    usage.inputCacheRead +
+    usage.inputCacheCreation
+  );
 }
 
-describe('Agent token counting', () => {
+describe("Agent token counting", () => {
   let ctx: TestAgentContext;
   let context: IAgentContextMemoryService;
   let tokenCounting: IAgentTokenCountingService;
@@ -40,11 +48,11 @@ describe('Agent token counting', () => {
     }
   });
 
-  it('adopts the exchange totals as the measured context size after a turn', async () => {
+  it("adopts the exchange totals as the measured context size after a turn", async () => {
     profile.update({ activeToolNames: [] });
 
-    ctx.mockNextResponse({ type: 'text', text: 'Hi there!' });
-    await ctx.rpc.prompt({ input: [{ type: 'text', text: 'hi' }] });
+    ctx.mockNextResponse({ type: "text", text: "Hi there!" });
+    await ctx.rpc.prompt({ input: [{ type: "text", text: "hi" }] });
     await ctx.untilTurnEnd();
 
     const exchangeTotal = totalOf(usage.status().total);
@@ -57,7 +65,9 @@ describe('Agent token counting', () => {
     // per-message estimate branch (found as `tokenCount` reading ~50 while
     // the provider reported ~29k for a system-prompt-heavy "hi").
     expect(wire.getModel(TokenCountingModel)).toEqual({
-      anchors: [{ length: context.get().length, tokens: exchangeTotal, measured: true }],
+      anchors: [
+        { length: context.get().length, tokens: exchangeTotal, measured: true },
+      ],
       tokens: exchangeTotal,
     });
 
@@ -68,15 +78,15 @@ describe('Agent token counting', () => {
     expect((await ctx.rpc.getContext({})).tokenCount).toBe(exchangeTotal);
   });
 
-  it('repoints the measured size at the last exchange across turns', async () => {
+  it("repoints the measured size at the last exchange across turns", async () => {
     profile.update({ activeToolNames: [] });
 
-    ctx.mockNextResponse({ type: 'text', text: 'first' });
-    await ctx.rpc.prompt({ input: [{ type: 'text', text: 'hi' }] });
+    ctx.mockNextResponse({ type: "text", text: "first" });
+    await ctx.rpc.prompt({ input: [{ type: "text", text: "hi" }] });
     await ctx.untilTurnEnd();
 
-    ctx.mockNextResponse({ type: 'text', text: 'second reply, a longer one' });
-    await ctx.rpc.prompt({ input: [{ type: 'text', text: 'again' }] });
+    ctx.mockNextResponse({ type: "text", text: "second reply, a longer one" });
+    await ctx.rpc.prompt({ input: [{ type: "text", text: "again" }] });
     await ctx.untilTurnEnd();
 
     const lastExchangeTotal = totalOf(usage.status().currentTurn);
@@ -93,8 +103,10 @@ describe('Agent token counting', () => {
     expect((await ctx.rpc.getContext({})).tokenCount).toBe(lastExchangeTotal);
   });
 
-  it('estimates the not-yet-measured tail instead of dropping it', () => {
-    ctx.appendUserMessage([{ type: 'text', text: 'hello world, not measured yet' }]);
+  it("estimates the not-yet-measured tail instead of dropping it", () => {
+    ctx.appendUserMessage([
+      { type: "text", text: "hello world, not measured yet" },
+    ]);
 
     const size = tokenCounting.get();
     expect(size.measured).toBe(0);
@@ -102,8 +114,8 @@ describe('Agent token counting', () => {
     expect(size.size).toBe(size.estimated);
   });
 
-  it('ignores a stored anchor that overshoots the live context', () => {
-    ctx.appendUserMessage([{ type: 'text', text: 'only one message' }]);
+  it("ignores a stored anchor that overshoots the live context", () => {
+    ctx.appendUserMessage([{ type: "text", text: "only one message" }]);
 
     // A corrupt/overshooting anchor is stale: reads must not trust it and
     // fall back to the per-message estimate of the live context instead.
@@ -113,41 +125,55 @@ describe('Agent token counting', () => {
     expect(size.size).toBe(estimateTokensForMessages(context.get()));
   });
 
-  it('restores the REAL size of the surviving prefix when undo truncates the ledger', async () => {
-    ctx.appendTurnExchange('u1', 'a1', 1_000);
-    ctx.appendTurnExchange('u2', 'a2', 2_000);
-    expect(tokenCounting.get()).toEqual({ size: 2_000, measured: 2_000, estimated: 0 });
+  it("restores the REAL size of the surviving prefix when undo truncates the ledger", async () => {
+    ctx.appendTurnExchange("u1", "a1", 1_000);
+    ctx.appendTurnExchange("u2", "a2", 2_000);
+    expect(tokenCounting.get()).toEqual({
+      size: 2_000,
+      measured: 2_000,
+      estimated: 0,
+    });
 
     await ctx.undoHistory(1);
 
-    expect(context.get().map((m) => m.role)).toEqual(['user', 'assistant']);
+    expect(context.get().map((m) => m.role)).toEqual(["user", "assistant"]);
     // The first exchange's anchor survives the cut, so the measured value is
     // the real LLM-reported count — not a re-estimate.
-    expect(tokenCounting.get()).toEqual({ size: 1_000, measured: 1_000, estimated: 0 });
+    expect(tokenCounting.get()).toEqual({
+      size: 1_000,
+      measured: 1_000,
+      estimated: 0,
+    });
     expect(tokenCounting.latestMeasured()).toBe(1_000);
   });
 
-  it('rebases the ledger on compaction and blends in the measured summary tokens', () => {
-    ctx.appendTurnExchange('u1', 'a1', 1_000);
+  it("rebases the ledger on compaction and blends in the measured summary tokens", () => {
+    ctx.appendTurnExchange("u1", "a1", 1_000);
 
     context.applyCompaction({
-      summary: 'summary of u1',
+      summary: "summary of u1",
       compactedCount: 2,
       tokensBefore: 1_000,
       summaryOutputTokens: 500,
     });
 
     const history = context.get();
-    const kept = estimateTokensForMessages(history.filter((m) => m.origin?.kind === 'user'));
+    const kept = estimateTokensForMessages(
+      history.filter((m) => m.origin?.kind === "user"),
+    );
     const expected = 500 + kept;
     expect(wire.getModel(TokenCountingModel).anchors).toEqual([
       { length: history.length, tokens: expected, measured: false },
     ]);
-    expect(tokenCounting.get()).toEqual({ size: expected, measured: expected, estimated: 0 });
+    expect(tokenCounting.get()).toEqual({
+      size: expected,
+      measured: expected,
+      estimated: 0,
+    });
   });
 
-  it('resets the ledger when the context is cleared', () => {
-    ctx.appendAssistantTextWithUsage(1, 'answer', 1_000);
+  it("resets the ledger when the context is cleared", () => {
+    ctx.appendAssistantTextWithUsage(1, "answer", 1_000);
     expect(tokenCounting.get().measured).toBe(1_000);
 
     context.clear();
@@ -158,56 +184,70 @@ describe('Agent token counting', () => {
     ]);
   });
 
-  it('keeps estimates and anchors live for internal reads under the measured strategy', () => {
-    const measured = createTestAgent({ initialConfig: { tokenCounting: { strategy: 'measured' } } });
+  it("keeps estimates and anchors live for internal reads under the measured strategy", () => {
+    const measured = createTestAgent({
+      initialConfig: { tokenCounting: { strategy: "measured" } },
+    });
     try {
       const counting = measured.get(IAgentTokenCountingService);
-      expect(counting.strategy).toBe('measured');
+      expect(counting.strategy).toBe("measured");
       // Internal estimates are never gated: triggers, budgets, and overflow
       // backoff always see the raw heuristics.
-      expect(counting.estimateText('abcd')).toBeGreaterThan(0);
+      expect(counting.estimateText("abcd")).toBeGreaterThan(0);
 
-      measured.appendUserMessage([{ type: 'text', text: 'hello world, not measured yet' }]);
+      measured.appendUserMessage([
+        { type: "text", text: "hello world, not measured yet" },
+      ]);
       const tailEstimate = estimateTokensForMessages(
         measured.get(IAgentContextMemoryService).get(),
       );
       expect(tailEstimate).toBeGreaterThan(0);
-      expect(counting.get()).toEqual({ size: tailEstimate, measured: 0, estimated: tailEstimate });
+      expect(counting.get()).toEqual({
+        size: tailEstimate,
+        measured: 0,
+        estimated: tailEstimate,
+      });
 
-      measured.appendTurnExchange('u1', 'a1', 1_000);
+      measured.appendTurnExchange("u1", "a1", 1_000);
       expect(counting.get().measured).toBe(1_000);
     } finally {
       void measured.dispose();
     }
   });
 
-  it('keeps anchors in internal reads under the estimated strategy', () => {
+  it("keeps anchors in internal reads under the estimated strategy", () => {
     const estimated = createTestAgent({
-      initialConfig: { tokenCounting: { strategy: 'estimated' } },
+      initialConfig: { tokenCounting: { strategy: "estimated" } },
     });
     try {
       const counting = estimated.get(IAgentTokenCountingService);
-      expect(counting.strategy).toBe('estimated');
+      expect(counting.strategy).toBe("estimated");
 
-      estimated.appendTurnExchange('u1', 'a1', 1_000);
+      estimated.appendTurnExchange("u1", "a1", 1_000);
       // Internal reads always trust the measured anchor; only the externally
       // reported `statusSize` ignores it.
-      expect(counting.get()).toEqual({ size: 1_000, measured: 1_000, estimated: 0 });
+      expect(counting.get()).toEqual({
+        size: 1_000,
+        measured: 1_000,
+        estimated: 0,
+      });
     } finally {
       void estimated.dispose();
     }
   });
 
-  it('statusSize reports the strategy-selected reading', () => {
+  it("statusSize reports the strategy-selected reading", () => {
     // `measured`: only the provider-reported anchor is reported, even with an
     // unmeasured tail.
-    const measured = createTestAgent({ initialConfig: { tokenCounting: { strategy: 'measured' } } });
+    const measured = createTestAgent({
+      initialConfig: { tokenCounting: { strategy: "measured" } },
+    });
     try {
       const counting = measured.get(IAgentTokenCountingService);
       expect(counting.statusSize()).toBe(0);
 
-      measured.appendTurnExchange('u1', 'a1', 1_000);
-      measured.appendUserMessage([{ type: 'text', text: 'not measured yet' }]);
+      measured.appendTurnExchange("u1", "a1", 1_000);
+      measured.appendUserMessage([{ type: "text", text: "not measured yet" }]);
       expect(counting.statusSize()).toBe(1_000);
     } finally {
       void measured.dispose();
@@ -215,12 +255,14 @@ describe('Agent token counting', () => {
 
     // `estimated`: a bogus inflated anchor never leaks into the reported size.
     const estimated = createTestAgent({
-      initialConfig: { tokenCounting: { strategy: 'estimated' } },
+      initialConfig: { tokenCounting: { strategy: "estimated" } },
     });
     try {
       const counting = estimated.get(IAgentTokenCountingService);
-      estimated.appendTurnExchange('u1', 'a1', 1_000_000);
-      const estimate = estimateTokensForMessages(estimated.get(IAgentContextMemoryService).get());
+      estimated.appendTurnExchange("u1", "a1", 1_000_000);
+      const estimate = estimateTokensForMessages(
+        estimated.get(IAgentContextMemoryService).get(),
+      );
       expect(counting.latestMeasured()).toBe(1_000_000);
       expect(counting.statusSize()).toBe(estimate);
     } finally {
@@ -228,7 +270,7 @@ describe('Agent token counting', () => {
     }
 
     // Default: the live size floored by the last measured total.
-    ctx.appendTurnExchange('u1', 'a1', 1_000);
+    ctx.appendTurnExchange("u1", "a1", 1_000);
     expect(tokenCounting.statusSize()).toBe(
       Math.max(tokenCounting.get().size, tokenCounting.latestMeasured()),
     );

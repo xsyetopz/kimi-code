@@ -1,10 +1,13 @@
-import { type SpawnOptionsWithoutStdio } from 'node:child_process';
+import { type SpawnOptionsWithoutStdio } from "node:child_process";
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { type IHostProcess, IHostProcessService } from '#/os/interface/hostProcess';
+import {
+  type IHostProcess,
+  IHostProcessService,
+} from "#/os/interface/hostProcess";
 
-import type { HookResult } from './types';
+import type { HookResult } from "./types";
 
 export interface RunHookOptions {
   readonly timeout: number;
@@ -20,26 +23,30 @@ export function buildHookSpawnOptions(options: {
   return {
     shell: true,
     cwd: options.cwd,
-    stdio: 'pipe',
-    detached: process.platform !== 'win32',
+    stdio: "pipe",
+    detached: process.platform !== "win32",
     windowsHide: true,
-    env: options.env === undefined ? undefined : { ...process.env, ...options.env },
+    env:
+      options.env === undefined
+        ? undefined
+        : { ...process.env, ...options.env },
   };
 }
 
 const DEFAULT_TIMEOUT_SECONDS = 30;
 const KILL_GRACE_MS = 100;
-const OptionalStringSchema = z.preprocess(
-  (value) => {
-    if (value === undefined || value === null) return undefined;
-    if (typeof value === 'string') return value;
-    if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') {
-      return String(value);
-    }
-    return undefined;
-  },
-  z.string().optional(),
-);
+const OptionalStringSchema = z.preprocess((value) => {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value === "string") return value;
+  if (
+    typeof value === "number" ||
+    typeof value === "boolean" ||
+    typeof value === "bigint"
+  ) {
+    return String(value);
+  }
+  return undefined;
+}, z.string().optional());
 const HookSpecificOutputSchema = z.preprocess(
   (value) => (isRecord(value) ? value : undefined),
   z
@@ -73,14 +80,14 @@ export async function runHook(
   }
 
   return new Promise<HookResult>((resolve) => {
-    let stdout = '';
-    let stderr = '';
+    let stdout = "";
+    let stderr = "";
     let settled = false;
     const timeoutMs = timeoutSeconds(options.timeout) * 1000;
 
     const cleanup = (): void => {
       clearTimeout(timeout);
-      options.signal?.removeEventListener('abort', onAbort);
+      options.signal?.removeEventListener("abort", onAbort);
     };
 
     const settle = (result: HookResult): void => {
@@ -90,17 +97,21 @@ export async function runHook(
       resolve(result);
     };
 
-    proc.stdout.setEncoding('utf8');
-    proc.stderr.setEncoding('utf8');
-    proc.stdout.on('data', (chunk: string) => {
+    proc.stdout.setEncoding("utf8");
+    proc.stderr.setEncoding("utf8");
+    proc.stdout.on("data", (chunk: string) => {
       stdout += chunk;
     });
-    proc.stderr.on('data', (chunk: string) => {
+    proc.stderr.on("data", (chunk: string) => {
       stderr += chunk;
     });
 
-    const stdoutDone = new Promise<void>((done) => proc.stdout.once('end', done));
-    const stderrDone = new Promise<void>((done) => proc.stderr.once('end', done));
+    const stdoutDone = new Promise<void>((done) =>
+      proc.stdout.once("end", done),
+    );
+    const stderrDone = new Promise<void>((done) =>
+      proc.stderr.once("end", done),
+    );
     void Promise.all([proc.wait(), stdoutDone, stderrDone]).then(
       ([code]) => {
         proc.dispose();
@@ -122,26 +133,32 @@ export async function runHook(
       settle(allowResult({ stdout, stderr }));
     };
 
-    options.signal?.addEventListener('abort', onAbort, { once: true });
+    options.signal?.addEventListener("abort", onAbort, { once: true });
     if (options.signal?.aborted === true) {
       onAbort();
       return;
     }
 
-    proc.stdin.on('error', () => {});
+    proc.stdin.on("error", () => {});
     proc.stdin.end(JSON.stringify(input));
   });
 }
 
 function timeoutSeconds(timeout: number): number {
-  return Number.isFinite(timeout) && timeout > 0 ? timeout : DEFAULT_TIMEOUT_SECONDS;
+  return Number.isFinite(timeout) && timeout > 0
+    ? timeout
+    : DEFAULT_TIMEOUT_SECONDS;
 }
 
-function resultFromExitCode(exitCode: number, stdout: string, stderr: string): HookResult {
+function resultFromExitCode(
+  exitCode: number,
+  stdout: string,
+  stderr: string,
+): HookResult {
   if (exitCode === 2) {
     const message = stderr.trim();
     return {
-      action: 'block',
+      action: "block",
       message,
       reason: message,
       stdout,
@@ -151,9 +168,9 @@ function resultFromExitCode(exitCode: number, stdout: string, stderr: string): H
   }
 
   const structured = exitCode === 0 ? structuredOutput(stdout) : undefined;
-  if (structured?.action === 'block') {
+  if (structured?.action === "block") {
     return {
-      action: 'block',
+      action: "block",
       message: structured.message ?? structured.reason,
       reason: structured.reason,
       stdout,
@@ -174,7 +191,14 @@ function resultFromExitCode(exitCode: number, stdout: string, stderr: string): H
 
 function structuredOutput(
   stdout: string,
-): { action?: 'block'; reason?: string; message?: string; structuredOutput: true } | undefined {
+):
+  | {
+      action?: "block";
+      reason?: string;
+      message?: string;
+      structuredOutput: true;
+    }
+  | undefined {
   const text = stdout.trim();
   if (text.length === 0) return undefined;
 
@@ -188,14 +212,14 @@ function structuredOutput(
       message: message ?? hookSpecificOutput?.message,
       structuredOutput: true as const,
     };
-    if (hookSpecificOutput?.permissionDecision !== 'deny') {
+    if (hookSpecificOutput?.permissionDecision !== "deny") {
       return result;
     }
     return {
-      action: 'block',
+      action: "block",
       message: result.message,
       reason:
-        typeof hookSpecificOutput.permissionDecisionReason === 'string'
+        typeof hookSpecificOutput.permissionDecisionReason === "string"
           ? hookSpecificOutput.permissionDecisionReason
           : undefined,
       structuredOutput: true as const,
@@ -214,7 +238,7 @@ function allowResult(input: {
   readonly structuredOutput?: boolean;
 }): HookResult {
   return {
-    action: 'allow',
+    action: "allow",
     message: input.message,
     stdout: input.stdout,
     stderr: input.stderr,
@@ -225,15 +249,15 @@ function allowResult(input: {
 }
 
 function killProcess(proc: IHostProcess): void {
-  void proc.kill('SIGTERM');
+  void proc.kill("SIGTERM");
   const killTimer = setTimeout(() => {
-    void proc.kill('SIGKILL');
+    void proc.kill("SIGKILL");
   }, KILL_GRACE_MS);
   killTimer.unref();
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function errorMessage(error: unknown): string {

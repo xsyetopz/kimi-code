@@ -1,6 +1,11 @@
-import { normalizeKimiToolSchema } from './kimi-schema';
-import { parseTraceId } from '#/errors';
-import type { ContentPart, Message, StreamedMessagePart, ToolCall } from '#/message';
+import { normalizeKimiToolSchema } from "./kimi-schema";
+import { parseTraceId } from "#/errors";
+import type {
+  ContentPart,
+  Message,
+  StreamedMessagePart,
+  ToolCall,
+} from "#/message";
 import type {
   ChatProvider,
   FinishReason,
@@ -11,17 +16,17 @@ import type {
   StreamedMessage,
   ThinkingEffort,
   VideoUploadInput,
-} from '#/provider';
-import type { Tool } from '#/tool';
-import type { TokenUsage } from '#/usage';
-import OpenAI from 'openai';
+} from "#/provider";
+import type { Tool } from "#/tool";
+import type { TokenUsage } from "#/usage";
+import OpenAI from "openai";
 
-import { classifyKimiQuotaError } from './kimi-errors';
-import { KimiFiles } from './kimi-files';
+import { classifyKimiQuotaError } from "./kimi-errors";
+import { KimiFiles } from "./kimi-files";
 import {
   convertChatCompletionStreamToolCall,
   type BufferedChatCompletionToolCall,
-} from './chat-completions-stream';
+} from "./chat-completions-stream";
 import {
   convertContentPart,
   convertOpenAIError,
@@ -31,18 +36,18 @@ import {
   type OpenAIContentPart,
   type OpenAIToolParam,
   toolToOpenAI,
-} from './openai-common';
-import { ReasoningKeyDialect, type ReasoningKey } from './reasoning-key';
+} from "./openai-common";
+import { ReasoningKeyDialect, type ReasoningKey } from "./reasoning-key";
 import {
   mergeRequestHeaders,
   requireProviderApiKey,
   resolveAuthBackedClient,
-} from './request-auth';
+} from "./request-auth";
 import {
   normalizeToolCallIdsForProvider,
   sanitizeToolCallId,
   type ToolCallIdPolicy,
-} from './tool-call-id';
+} from "./tool-call-id";
 export interface KimiOptions {
   apiKey?: string | undefined;
   baseUrl?: string | undefined;
@@ -75,7 +80,7 @@ export interface GenerationKwargs {
 }
 
 export interface ThinkingConfig {
-  type?: 'enabled' | 'disabled';
+  type?: "enabled" | "disabled";
   effort?: string;
   keep?: unknown;
   [key: string]: unknown;
@@ -111,8 +116,8 @@ interface OpenAIToolCallOut {
 
 function isEffectivelyEmptyContent(parts: ContentPart[]): boolean {
   for (const part of parts) {
-    if (part.type !== 'text') return false;
-    if (part.text.trim() !== '') return false;
+    if (part.type !== "text") return false;
+    if (part.text.trim() !== "") return false;
   }
   return true;
 }
@@ -122,12 +127,12 @@ function convertMessage(
   preservedThinkingEnabled: boolean,
   reasoningKey: ReasoningKey,
 ): OpenAIMessage {
-  let reasoningContent = '';
+  let reasoningContent = "";
   let hasReasoningPart = false;
   const nonThinkParts: ContentPart[] = [];
 
   for (const part of message.content) {
-    if (part.type === 'think') {
+    if (part.type === "think") {
       hasReasoningPart = true;
       reasoningContent += part.think;
     } else {
@@ -139,12 +144,14 @@ function convertMessage(
   const result: OpenAIMessage = { role: message.role };
   const hasToolCalls = message.toolCalls.length > 0;
   const shouldOmitContent =
-    message.role === 'assistant' && hasToolCalls && isEffectivelyEmptyContent(nonThinkParts);
+    message.role === "assistant" &&
+    hasToolCalls &&
+    isEffectivelyEmptyContent(nonThinkParts);
 
   if (!shouldOmitContent) {
     // content: serialize to string if single text, array otherwise
     const firstPart = nonThinkParts[0];
-    if (nonThinkParts.length === 1 && firstPart?.type === 'text') {
+    if (nonThinkParts.length === 1 && firstPart?.type === "text") {
       result.content = firstPart.text;
     } else if (nonThinkParts.length > 0) {
       result.content = nonThinkParts
@@ -175,7 +182,10 @@ function convertMessage(
     result.tool_call_id = message.toolCallId;
   }
 
-  if (hasReasoningPart || (preservedThinkingEnabled && message.role === 'assistant')) {
+  if (
+    hasReasoningPart ||
+    (preservedThinkingEnabled && message.role === "assistant")
+  ) {
     // Echo thinking back under the dialect the endpoint spoke (detected from
     // inbound responses; defaults to `reasoning_content`). Newer vLLM dropped
     // `reasoning_content` on its request side and only honors `reasoning`.
@@ -195,10 +205,10 @@ function convertMessage(
   return result;
 }
 function convertTool(tool: Tool): OpenAIToolParam {
-  if (tool.name.startsWith('$')) {
+  if (tool.name.startsWith("$")) {
     // Kimi builtin functions start with `$`
     return {
-      type: 'builtin_function',
+      type: "builtin_function",
       function: { name: tool.name },
     };
   }
@@ -212,12 +222,14 @@ function convertTool(tool: Tool): OpenAIToolParam {
   };
 }
 
-function responseFormatToOpenAI(format: ResponseFormat): Record<string, unknown> {
-  if (format.type === 'json_object') {
-    return { type: 'json_object' };
+function responseFormatToOpenAI(
+  format: ResponseFormat,
+): Record<string, unknown> {
+  if (format.type === "json_object") {
+    return { type: "json_object" };
   }
   return {
-    type: 'json_schema',
+    type: "json_schema",
     json_schema: {
       name: format.jsonSchema.name,
       schema: format.jsonSchema.schema,
@@ -235,14 +247,14 @@ export function extractUsageFromChunk(
 ): Record<string, unknown> | null {
   // Top-level usage
   if (
-    chunk['usage'] !== null &&
-    chunk['usage'] !== undefined &&
-    typeof chunk['usage'] === 'object'
+    chunk["usage"] !== null &&
+    chunk["usage"] !== undefined &&
+    typeof chunk["usage"] === "object"
   ) {
-    return chunk['usage'] as Record<string, unknown>;
+    return chunk["usage"] as Record<string, unknown>;
   }
   // choices[0].usage (Moonshot proprietary)
-  const choices = chunk['choices'];
+  const choices = chunk["choices"];
   if (!Array.isArray(choices) || choices.length === 0) {
     return null;
   }
@@ -250,8 +262,12 @@ export function extractUsageFromChunk(
   if (firstChoice === undefined) {
     return null;
   }
-  const choiceUsage = firstChoice['usage'];
-  if (choiceUsage !== null && choiceUsage !== undefined && typeof choiceUsage === 'object') {
+  const choiceUsage = firstChoice["usage"];
+  if (
+    choiceUsage !== null &&
+    choiceUsage !== undefined &&
+    typeof choiceUsage === "object"
+  ) {
     return choiceUsage as Record<string, unknown>;
   }
   return null;
@@ -265,7 +281,9 @@ class KimiStreamedMessage implements StreamedMessage {
   private readonly _iter: AsyncGenerator<StreamedMessagePart>;
 
   constructor(
-    response: OpenAI.Chat.ChatCompletion | AsyncIterable<OpenAI.Chat.ChatCompletionChunk>,
+    response:
+      | OpenAI.Chat.ChatCompletion
+      | AsyncIterable<OpenAI.Chat.ChatCompletionChunk>,
     isStream: boolean,
     private readonly _traceId: string | null,
     private readonly _reasoningKeyDialect: ReasoningKeyDialect,
@@ -275,7 +293,9 @@ class KimiStreamedMessage implements StreamedMessage {
         response as AsyncIterable<OpenAI.Chat.ChatCompletionChunk>,
       );
     } else {
-      this._iter = this._convertNonStreamResponse(response as OpenAI.Chat.ChatCompletion);
+      this._iter = this._convertNonStreamResponse(
+        response as OpenAI.Chat.ChatCompletion,
+      );
     }
   }
 
@@ -326,18 +346,21 @@ class KimiStreamedMessage implements StreamedMessage {
     // field (newer vLLM renamed `reasoning_content` to `reasoning`).
     const reasoning = this._reasoningKeyDialect.observe(message);
     if (reasoning !== undefined) {
-      yield { type: 'think', think: reasoning } satisfies StreamedMessagePart;
+      yield { type: "think", think: reasoning } satisfies StreamedMessagePart;
     }
 
     if (message.content) {
-      yield { type: 'text', text: message.content } satisfies StreamedMessagePart;
+      yield {
+        type: "text",
+        text: message.content,
+      } satisfies StreamedMessagePart;
     }
 
     if (message.tool_calls) {
       for (const toolCall of message.tool_calls) {
         if (!isFunctionToolCall(toolCall)) continue;
         yield {
-          type: 'function',
+          type: "function",
           id: toolCall.id || crypto.randomUUID(),
           name: toolCall.function.name,
           arguments: toolCall.function.arguments,
@@ -349,7 +372,10 @@ class KimiStreamedMessage implements StreamedMessage {
   private async *_convertStreamResponse(
     response: AsyncIterable<OpenAI.Chat.ChatCompletionChunk>,
   ): AsyncGenerator<StreamedMessagePart> {
-    const bufferedToolCalls = new Map<number | string, BufferedChatCompletionToolCall>();
+    const bufferedToolCalls = new Map<
+      number | string,
+      BufferedChatCompletionToolCall
+    >();
 
     try {
       for await (const chunk of response) {
@@ -375,7 +401,10 @@ class KimiStreamedMessage implements StreamedMessage {
         // Completions API only sets it on the final chunk for a given
         // choice, but defensively re-capturing on every non-null value
         // keeps the latest signal available even if upstream re-emits.
-        if (choice.finish_reason !== null && choice.finish_reason !== undefined) {
+        if (
+          choice.finish_reason !== null &&
+          choice.finish_reason !== undefined
+        ) {
           this._captureFinishReason(choice.finish_reason);
         }
 
@@ -384,18 +413,27 @@ class KimiStreamedMessage implements StreamedMessage {
         // Reasoning dialect: same detection as the non-stream path.
         const reasoning = this._reasoningKeyDialect.observe(delta);
         if (reasoning !== undefined) {
-          yield { type: 'think', think: reasoning } satisfies StreamedMessagePart;
+          yield {
+            type: "think",
+            think: reasoning,
+          } satisfies StreamedMessagePart;
         }
 
         // text content
         if (delta.content) {
-          yield { type: 'text', text: delta.content } satisfies StreamedMessagePart;
+          yield {
+            type: "text",
+            text: delta.content,
+          } satisfies StreamedMessagePart;
         }
 
         // tool calls — preserve `index` on every yielded part so the generate
         // loop can route interleaved argument deltas from parallel tool calls.
         for (const toolCall of delta.tool_calls ?? []) {
-          for (const part of convertChatCompletionStreamToolCall(toolCall, bufferedToolCalls)) {
+          for (const part of convertChatCompletionStreamToolCall(
+            toolCall,
+            bufferedToolCalls,
+          )) {
             yield part;
           }
         }
@@ -406,7 +444,7 @@ class KimiStreamedMessage implements StreamedMessage {
   }
 }
 export class KimiChatProvider implements ChatProvider {
-  readonly name: string = 'kimi';
+  readonly name: string = "kimi";
 
   /**
    * See {@link ChatProvider.maxCompletionTokens}. Mirrors the request-time
@@ -414,7 +452,10 @@ export class KimiChatProvider implements ChatProvider {
    * alias.
    */
   get maxCompletionTokens(): number | undefined {
-    return this._generationKwargs.max_completion_tokens ?? this._generationKwargs.max_tokens;
+    return (
+      this._generationKwargs.max_completion_tokens ??
+      this._generationKwargs.max_tokens
+    );
   }
 
   private _model: string;
@@ -429,9 +470,13 @@ export class KimiChatProvider implements ChatProvider {
   private _reasoningKeyDialect: ReasoningKeyDialect;
 
   constructor(options: KimiOptions) {
-    const apiKey = options.apiKey ?? process.env['KIMI_API_KEY'];
-    this._apiKey = apiKey === undefined || apiKey.length === 0 ? undefined : apiKey;
-    this._baseUrl = options.baseUrl ?? process.env['KIMI_BASE_URL'] ?? 'https://api.moonshot.ai/v1';
+    const apiKey = options.apiKey ?? process.env["KIMI_API_KEY"];
+    this._apiKey =
+      apiKey === undefined || apiKey.length === 0 ? undefined : apiKey;
+    this._baseUrl =
+      options.baseUrl ??
+      process.env["KIMI_BASE_URL"] ??
+      "https://api.moonshot.ai/v1";
     this._defaultHeaders = options.defaultHeaders;
     this._clientFactory = options.clientFactory;
     this._model = options.model;
@@ -476,9 +521,9 @@ export class KimiChatProvider implements ChatProvider {
   get thinkingEffort(): ThinkingEffort | null {
     const thinking = this._generationKwargs.extra_body?.thinking;
     if (thinking === undefined) return null;
-    if (thinking.type === 'disabled') return 'off';
+    if (thinking.type === "disabled") return "off";
     // A model that enables thinking without an effort is treated as boolean ("on").
-    return thinking.effort ?? 'on';
+    return thinking.effort ?? "on";
   }
 
   get modelParameters(): Record<string, unknown> {
@@ -497,17 +542,23 @@ export class KimiChatProvider implements ChatProvider {
   ): Promise<StreamedMessage> {
     const messages: OpenAIMessage[] = [];
     if (systemPrompt) {
-      messages.push({ role: 'system', content: systemPrompt });
+      messages.push({ role: "system", content: systemPrompt });
     }
     const thinking = this._generationKwargs.extra_body?.thinking;
     const preservedThinkingEnabled =
-      thinking?.keep === 'all' && thinking.type !== 'disabled';
+      thinking?.keep === "all" && thinking.type !== "disabled";
     // The kimi provider never pins an explicit reasoning key, so the dialect
     // always resolves to one of the known wire keys.
-    const reasoningKey = this._reasoningKeyDialect.outboundKey() as ReasoningKey;
-    const normalizedHistory = normalizeToolCallIdsForProvider(history, KIMI_TOOL_CALL_ID_POLICY);
+    const reasoningKey =
+      this._reasoningKeyDialect.outboundKey() as ReasoningKey;
+    const normalizedHistory = normalizeToolCallIdsForProvider(
+      history,
+      KIMI_TOOL_CALL_ID_POLICY,
+    );
     for (const msg of normalizedHistory) {
-      messages.push(convertMessage(msg, preservedThinkingEnabled, reasoningKey));
+      messages.push(
+        convertMessage(msg, preservedThinkingEnabled, reasoningKey),
+      );
     }
 
     const kwargs: Record<string, unknown> = {
@@ -528,13 +579,13 @@ export class KimiChatProvider implements ChatProvider {
     // set, send no cap — the upstream loop is responsible for clamping
     // against the current input size and model context window.
     if (
-      kwargs['max_completion_tokens'] === undefined &&
-      kwargs['max_tokens'] !== undefined
+      kwargs["max_completion_tokens"] === undefined &&
+      kwargs["max_tokens"] !== undefined
     ) {
-      kwargs['max_completion_tokens'] = kwargs['max_tokens'];
+      kwargs["max_completion_tokens"] = kwargs["max_tokens"];
     }
     // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
-    delete kwargs['max_tokens'];
+    delete kwargs["max_tokens"];
 
     const { extra_body: extraBody, ...requestKwargs } = kwargs;
 
@@ -546,15 +597,17 @@ export class KimiChatProvider implements ChatProvider {
       ...(extraBody as Record<string, unknown> | undefined),
     };
     if (options?.responseFormat !== undefined) {
-      createParams['response_format'] = responseFormatToOpenAI(options.responseFormat);
+      createParams["response_format"] = responseFormatToOpenAI(
+        options.responseFormat,
+      );
     }
 
     if (tools.length > 0) {
-      createParams['tools'] = tools.map((t) => convertTool(t));
+      createParams["tools"] = tools.map((t) => convertTool(t));
     }
 
     if (this._stream) {
-      createParams['stream_options'] = { include_usage: true };
+      createParams["stream_options"] = { include_usage: true };
     }
 
     try {
@@ -586,10 +639,11 @@ export class KimiChatProvider implements ChatProvider {
 
   withThinking(effort: ThinkingEffort): KimiChatProvider {
     let thinking: ThinkingConfig;
-    if (effort === 'off') {
-      thinking = { type: 'disabled' };
+    if (effort === "off") {
+      thinking = { type: "disabled" };
     } else {
-      thinking = effort === 'on' ? { type: 'enabled' } : { type: 'enabled', effort };
+      thinking =
+        effort === "on" ? { type: "enabled" } : { type: "enabled", effort };
     }
     // Replace extra_body.thinking wholesale so a stale `effort` from a previous
     // withThinking call can never linger on a disabled or non-effort thinking
@@ -622,7 +676,9 @@ export class KimiChatProvider implements ChatProvider {
     ) {
       cap = Math.min(cap, options.maxContextTokens - options.usedContextTokens);
     }
-    return this._withGenerationKwargs({ max_completion_tokens: Math.max(1, cap) });
+    return this._withGenerationKwargs({
+      max_completion_tokens: Math.max(1, cap),
+    });
   }
 
   withExtraBody(extraBody: ExtraBody): KimiChatProvider {
@@ -641,9 +697,12 @@ export class KimiChatProvider implements ChatProvider {
       { cachedClient: this._client, clientFactory: this._clientFactory },
       auth,
       (a) => {
-        const defaultHeaders = mergeRequestHeaders(this._defaultHeaders, a?.headers);
+        const defaultHeaders = mergeRequestHeaders(
+          this._defaultHeaders,
+          a?.headers,
+        );
         return new OpenAI({
-          apiKey: requireProviderApiKey('KimiChatProvider', a, this._apiKey),
+          apiKey: requireProviderApiKey("KimiChatProvider", a, this._apiKey),
           baseURL: this._baseUrl,
           defaultHeaders,
         });

@@ -22,11 +22,14 @@
  *     `reconnect` to swap the synthetic tool out for the real MCP tools.
  */
 
-import { auth, type OAuthClientProvider } from '@modelcontextprotocol/sdk/client/auth.js';
+import {
+  auth,
+  type OAuthClientProvider,
+} from "@modelcontextprotocol/sdk/client/auth.js";
 
-import { startCallbackServer, type CallbackServer } from './callback-server';
-import { McpOAuthClientProvider } from './provider';
-import { JsonFileStore, mcpCredentialsDir, mcpOAuthStoreKey } from './store';
+import { startCallbackServer, type CallbackServer } from "./callback-server";
+import { McpOAuthClientProvider } from "./provider";
+import { JsonFileStore, mcpCredentialsDir, mcpOAuthStoreKey } from "./store";
 
 export interface McpOAuthServiceOptions {
   /** Storage backend; overrides `kimiHomeDir` when supplied. */
@@ -67,13 +70,18 @@ export class McpOAuthService {
     this.store =
       options.store ??
       new JsonFileStore(
-        options.kimiHomeDir === undefined ? undefined : mcpCredentialsDir(options.kimiHomeDir),
+        options.kimiHomeDir === undefined
+          ? undefined
+          : mcpCredentialsDir(options.kimiHomeDir),
       );
     this.clientLabel = options.clientLabel;
   }
 
   /** Returns the cached provider for `serverName` + `serverUrl`, constructing it on first use. */
-  getProvider(serverName: string, serverUrl: string | URL): McpOAuthClientProvider {
+  getProvider(
+    serverName: string,
+    serverUrl: string | URL,
+  ): McpOAuthClientProvider {
     const storeKey = mcpOAuthStoreKey(serverName, serverUrl);
     let provider = this.providers.get(storeKey);
     if (provider === undefined) {
@@ -104,14 +112,15 @@ export class McpOAuthService {
     serverUrl: string | URL,
     options: BeginAuthorizationOptions = {},
   ): Promise<BeginAuthorizationResult> {
-    const provider = options.clientLabel === undefined
-      ? this.getProvider(serverName, serverUrl)
-      : new McpOAuthClientProvider({
-          serverName,
-          serverUrl,
-          store: this.store,
-          clientLabel: options.clientLabel,
-        });
+    const provider =
+      options.clientLabel === undefined
+        ? this.getProvider(serverName, serverUrl)
+        : new McpOAuthClientProvider({
+            serverName,
+            serverUrl,
+            store: this.store,
+            clientLabel: options.clientLabel,
+          });
     if (options.clientLabel !== undefined) {
       this.providers.set(provider.storeKey, provider);
     }
@@ -122,7 +131,7 @@ export class McpOAuthService {
     try {
       callbackServer = await startCallbackServer();
     } catch (error) {
-      throw wrapAuthError('failed to start OAuth callback listener', error);
+      throw wrapAuthError("failed to start OAuth callback listener", error);
     }
 
     provider.setRedirectUrl(new URL(callbackServer.redirectUri));
@@ -134,20 +143,23 @@ export class McpOAuthService {
     let authorizationUrl: URL | undefined;
     try {
       const result = await auth(provider as OAuthClientProvider, { serverUrl });
-      if (result !== 'REDIRECT') {
+      if (result !== "REDIRECT") {
         // Tokens already valid (e.g. unexpired refresh). Nothing to do.
         await callbackServer.close();
         throw new AlreadyAuthorizedError(serverName);
       }
       authorizationUrl = provider.takeAuthorizationUrl();
       if (authorizationUrl === undefined) {
-        throw new Error('OAuth provider did not capture an authorization URL');
+        throw new Error("OAuth provider did not capture an authorization URL");
       }
     } catch (error) {
       await callbackServer.close().catch(() => undefined);
       provider.resetFlow();
       if (error instanceof AlreadyAuthorizedError) throw error;
-      throw wrapAuthError(`failed to start OAuth flow for "${serverName}"`, error);
+      throw wrapAuthError(
+        `failed to start OAuth flow for "${serverName}"`,
+        error,
+      );
     }
 
     let settled = false;
@@ -158,9 +170,11 @@ export class McpOAuthService {
       provider.resetFlow();
     };
 
-    const complete: BeginAuthorizationResult['complete'] = async (opts = {}) => {
+    const complete: BeginAuthorizationResult["complete"] = async (
+      opts = {},
+    ) => {
       if (settled) {
-        throw new Error('OAuth flow already completed or cancelled');
+        throw new Error("OAuth flow already completed or cancelled");
       }
       try {
         const { code, state } = await callbackServer.waitForCode({
@@ -169,14 +183,18 @@ export class McpOAuthService {
         });
         const expectedState = provider.expectedState();
         if (expectedState !== undefined && state !== expectedState) {
-          throw new Error('OAuth state mismatch — possible CSRF; refusing token exchange');
+          throw new Error(
+            "OAuth state mismatch — possible CSRF; refusing token exchange",
+          );
         }
         const finalResult = await auth(provider as OAuthClientProvider, {
           serverUrl,
           authorizationCode: code,
         });
-        if (finalResult !== 'AUTHORIZED') {
-          throw new Error(`OAuth code exchange returned "${finalResult}" instead of AUTHORIZED`);
+        if (finalResult !== "AUTHORIZED") {
+          throw new Error(
+            `OAuth code exchange returned "${finalResult}" instead of AUTHORIZED`,
+          );
         }
       } catch (error) {
         await cancel();
@@ -198,7 +216,7 @@ export class McpOAuthService {
   invalidate(
     serverName: string,
     serverUrl: string | URL,
-    scope: 'all' | 'client' | 'tokens' | 'discovery' = 'all',
+    scope: "all" | "client" | "tokens" | "discovery" = "all",
   ): void {
     this.getProvider(serverName, serverUrl).invalidateCredentials(scope);
   }
@@ -208,7 +226,7 @@ export class McpOAuthService {
 export class AlreadyAuthorizedError extends Error {
   constructor(serverName: string) {
     super(`"${serverName}" is already authorized; no browser flow needed`);
-    this.name = 'AlreadyAuthorizedError';
+    this.name = "AlreadyAuthorizedError";
   }
 }
 

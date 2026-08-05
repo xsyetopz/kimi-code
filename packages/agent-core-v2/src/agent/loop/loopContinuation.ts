@@ -1,9 +1,10 @@
-import { createDecorator } from '#/_base/di/instantiation';
+import { createDecorator } from "#/_base/di/instantiation";
 
 export interface IAgentLoopContinuationService {
   readonly _serviceBrand: undefined;
 }
 
-export const IAgentLoopContinuationService = createDecorator<IAgentLoopContinuationService>(
-  'agentLoopContinuationService',
-);
+export const IAgentLoopContinuationService =
+  createDecorator<IAgentLoopContinuationService>(
+    "agentLoopContinuationService",
+  );

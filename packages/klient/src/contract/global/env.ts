@@ -5,9 +5,9 @@
  * host identity object (which replaced the flat `clientVersion` scalar).
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import type { ServiceContract } from '../types.js';
+import type { ServiceContract } from "../types.js";
 
 const stringRead = { input: z.tuple([]), output: z.string() };
 

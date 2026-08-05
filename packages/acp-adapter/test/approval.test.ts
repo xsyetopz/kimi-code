@@ -11,7 +11,7 @@ import {
   type SessionNotification,
   type WriteTextFileRequest,
   type WriteTextFileResponse,
-} from '@agentclientprotocol/sdk';
+} from "@agentclientprotocol/sdk";
 import type {
   ApprovalHandler,
   ApprovalRequest,
@@ -20,8 +20,8 @@ import type {
   KimiHarness,
   Session,
   ToolInputDisplay,
-} from '@moonshot-ai/kimi-code-sdk';
-import { describe, expect, it } from 'vitest';
+} from "@moonshot-ai/kimi-code-sdk";
+import { describe, expect, it } from "vitest";
 
 import {
   APPROVE_ALWAYS_OPTION_ID,
@@ -30,9 +30,9 @@ import {
   approvalRequestToPermissionOptions,
   buildPermissionToolCallUpdate,
   permissionResponseToApprovalResponse,
-} from '../src/approval';
-import { AcpServer } from '../src/server';
-import { AUTHED_STATUS } from './_helpers/harness-stubs';
+} from "../src/approval";
+import { AcpServer } from "../src/server";
+import { AUTHED_STATUS } from "./_helpers/harness-stubs";
 
 function makeInMemoryStreamPair(): {
   agentStream: ReturnType<typeof ndJsonStream>;
@@ -40,8 +40,14 @@ function makeInMemoryStreamPair(): {
 } {
   const clientToAgent = new TransformStream<Uint8Array, Uint8Array>();
   const agentToClient = new TransformStream<Uint8Array, Uint8Array>();
-  const agentStream = ndJsonStream(agentToClient.writable, clientToAgent.readable);
-  const clientStream = ndJsonStream(clientToAgent.writable, agentToClient.readable);
+  const agentStream = ndJsonStream(
+    agentToClient.writable,
+    clientToAgent.readable,
+  );
+  const clientStream = ndJsonStream(
+    clientToAgent.writable,
+    agentToClient.readable,
+  );
   return { agentStream, clientStream };
 }
 
@@ -55,7 +61,9 @@ function makeInMemoryStreamPair(): {
 function makeApprovalSession(sessionId: string): {
   session: Session;
   emit: (event: Event) => void;
-  invokeHandler: (req: ApprovalRequest) => Promise<ApprovalResponse> | ApprovalResponse;
+  invokeHandler: (
+    req: ApprovalRequest,
+  ) => Promise<ApprovalResponse> | ApprovalResponse;
   promptStarted: () => boolean;
   resolvePrompt: () => void;
 } {
@@ -94,7 +102,7 @@ function makeApprovalSession(sessionId: string): {
     },
     invokeHandler: (req: ApprovalRequest) => {
       if (!approvalHandler) {
-        throw new Error('approval handler was not registered by AcpSession');
+        throw new Error("approval handler was not registered by AcpSession");
       }
       return approvalHandler(req);
     },
@@ -107,7 +115,7 @@ class ApprovalClient implements Client {
   readonly updates: SessionNotification[] = [];
   readonly permissionRequests: RequestPermissionRequest[] = [];
   reply: RequestPermissionResponse = {
-    outcome: { outcome: 'selected', optionId: APPROVE_ONCE_OPTION_ID },
+    outcome: { outcome: "selected", optionId: APPROVE_ONCE_OPTION_ID },
   };
 
   async requestPermission(
@@ -119,117 +127,119 @@ class ApprovalClient implements Client {
   async sessionUpdate(n: SessionNotification): Promise<void> {
     this.updates.push(n);
   }
-  async writeTextFile(_p: WriteTextFileRequest): Promise<WriteTextFileResponse> {
-    throw new Error('not used in approval test');
+  async writeTextFile(
+    _p: WriteTextFileRequest,
+  ): Promise<WriteTextFileResponse> {
+    throw new Error("not used in approval test");
   }
   async readTextFile(_p: ReadTextFileRequest): Promise<ReadTextFileResponse> {
-    throw new Error('not used in approval test');
+    throw new Error("not used in approval test");
   }
 }
 
-const textBlock = (text: string): ContentBlock => ({ type: 'text', text });
+const textBlock = (text: string): ContentBlock => ({ type: "text", text });
 
-describe('approvalRequestToPermissionOptions', () => {
-  it('returns three options in the canonical order with documented kinds', () => {
+describe("approvalRequestToPermissionOptions", () => {
+  it("returns three options in the canonical order with documented kinds", () => {
     const options = approvalRequestToPermissionOptions();
     expect(options).toHaveLength(3);
 
     expect(options[0]).toEqual({
       optionId: APPROVE_ONCE_OPTION_ID,
-      name: 'Approve once',
-      kind: 'allow_once',
+      name: "Approve once",
+      kind: "allow_once",
     });
     expect(options[1]).toEqual({
       optionId: APPROVE_ALWAYS_OPTION_ID,
-      name: 'Approve for this session',
-      kind: 'allow_always',
+      name: "Approve for this session",
+      kind: "allow_always",
     });
     expect(options[2]).toEqual({
       optionId: REJECT_OPTION_ID,
-      name: 'Reject',
-      kind: 'reject_once',
+      name: "Reject",
+      kind: "reject_once",
     });
   });
 });
 
-describe('permissionResponseToApprovalResponse', () => {
-  it('maps approve_once → { decision: approved } with no scope', () => {
+describe("permissionResponseToApprovalResponse", () => {
+  it("maps approve_once → { decision: approved } with no scope", () => {
     const result = permissionResponseToApprovalResponse(undefined, {
-      outcome: { outcome: 'selected', optionId: APPROVE_ONCE_OPTION_ID },
+      outcome: { outcome: "selected", optionId: APPROVE_ONCE_OPTION_ID },
     });
-    expect(result).toEqual({ decision: 'approved' });
+    expect(result).toEqual({ decision: "approved" });
     expect(result.scope).toBeUndefined();
   });
 
-  it('maps approve_always → { decision: approved, scope: session }', () => {
+  it("maps approve_always → { decision: approved, scope: session }", () => {
     const result = permissionResponseToApprovalResponse(undefined, {
-      outcome: { outcome: 'selected', optionId: APPROVE_ALWAYS_OPTION_ID },
+      outcome: { outcome: "selected", optionId: APPROVE_ALWAYS_OPTION_ID },
     });
-    expect(result).toEqual({ decision: 'approved', scope: 'session' });
+    expect(result).toEqual({ decision: "approved", scope: "session" });
   });
 
-  it('maps reject → { decision: rejected }', () => {
+  it("maps reject → { decision: rejected }", () => {
     const result = permissionResponseToApprovalResponse(undefined, {
-      outcome: { outcome: 'selected', optionId: REJECT_OPTION_ID },
+      outcome: { outcome: "selected", optionId: REJECT_OPTION_ID },
     });
-    expect(result).toEqual({ decision: 'rejected' });
+    expect(result).toEqual({ decision: "rejected" });
   });
 
   it('maps legacy "approve" → { decision: approved } (Python kimi-cli compat)', () => {
     const result = permissionResponseToApprovalResponse(undefined, {
-      outcome: { outcome: 'selected', optionId: 'approve' },
+      outcome: { outcome: "selected", optionId: "approve" },
     });
-    expect(result).toEqual({ decision: 'approved' });
+    expect(result).toEqual({ decision: "approved" });
     expect(result.scope).toBeUndefined();
   });
 
   it('maps legacy "approve_for_session" → { decision: approved, scope: session } (Python kimi-cli compat)', () => {
     const result = permissionResponseToApprovalResponse(undefined, {
-      outcome: { outcome: 'selected', optionId: 'approve_for_session' },
+      outcome: { outcome: "selected", optionId: "approve_for_session" },
     });
-    expect(result).toEqual({ decision: 'approved', scope: 'session' });
+    expect(result).toEqual({ decision: "approved", scope: "session" });
   });
 
-  it('defensively maps an unknown optionId to { decision: rejected }', () => {
+  it("defensively maps an unknown optionId to { decision: rejected }", () => {
     const result = permissionResponseToApprovalResponse(undefined, {
-      outcome: { outcome: 'selected', optionId: 'unknown_option_id' },
+      outcome: { outcome: "selected", optionId: "unknown_option_id" },
     });
-    expect(result).toEqual({ decision: 'rejected' });
+    expect(result).toEqual({ decision: "rejected" });
   });
 
-  it('maps cancelled → { decision: cancelled }', () => {
+  it("maps cancelled → { decision: cancelled }", () => {
     const result = permissionResponseToApprovalResponse(undefined, {
-      outcome: { outcome: 'cancelled' },
+      outcome: { outcome: "cancelled" },
     });
-    expect(result).toEqual({ decision: 'cancelled' });
+    expect(result).toEqual({ decision: "cancelled" });
   });
 });
 
-describe('buildPermissionToolCallUpdate (Phase 5.1 minimal shape)', () => {
-  const fakeDisplay: ToolInputDisplay = { kind: 'command', command: 'ls -la' };
+describe("buildPermissionToolCallUpdate (Phase 5.1 minimal shape)", () => {
+  const fakeDisplay: ToolInputDisplay = { kind: "command", command: "ls -la" };
   const baseReq: ApprovalRequest = {
-    toolCallId: 'abc',
-    toolName: 'Bash',
-    action: 'run command',
+    toolCallId: "abc",
+    toolName: "Bash",
+    action: "run command",
     display: fakeDisplay,
   };
 
-  it('prefixes the toolCallId with the turnId when one is known', () => {
+  it("prefixes the toolCallId with the turnId when one is known", () => {
     const update = buildPermissionToolCallUpdate(42, baseReq);
-    expect(update.toolCallId).toBe('42:abc');
-    expect(update.title).toBe('Bash');
+    expect(update.toolCallId).toBe("42:abc");
+    expect(update.title).toBe("Bash");
   });
 
-  it('falls back to the raw SDK toolCallId when no turnId is tracked yet', () => {
+  it("falls back to the raw SDK toolCallId when no turnId is tracked yet", () => {
     const update = buildPermissionToolCallUpdate(undefined, baseReq);
-    expect(update.toolCallId).toBe('abc');
-    expect(update.title).toBe('Bash');
+    expect(update.toolCallId).toBe("abc");
+    expect(update.title).toBe("Bash");
   });
 });
 
-describe('AcpSession ↔ requestPermission bridge (end-to-end via wire)', () => {
-  it('emits a request_permission with options length 3 and prefixed toolCallId when the SDK invokes the registered handler, and resolves it to { decision: approved }', async () => {
-    const sessionId = 'sess-approval-wire';
+describe("AcpSession ↔ requestPermission bridge (end-to-end via wire)", () => {
+  it("emits a request_permission with options length 3 and prefixed toolCallId when the SDK invokes the registered handler, and resolves it to { decision: approved }", async () => {
+    const sessionId = "sess-approval-wire";
     const turnId = 7;
     const handle = makeApprovalSession(sessionId);
     const harness = {
@@ -241,20 +251,20 @@ describe('AcpSession ↔ requestPermission bridge (end-to-end via wire)', () => 
     new AgentSideConnection((c) => new AcpServer(harness, c), agentStream);
     const client = new ApprovalClient();
     client.reply = {
-      outcome: { outcome: 'selected', optionId: APPROVE_ONCE_OPTION_ID },
+      outcome: { outcome: "selected", optionId: APPROVE_ONCE_OPTION_ID },
     };
     const clientConn = new ClientSideConnection(() => client, clientStream);
 
     // Open the session so AcpServer constructs the AcpSession (which
     // registers our approval handler).
-    await clientConn.newSession({ cwd: '/tmp/x', mcpServers: [] });
+    await clientConn.newSession({ cwd: "/tmp/x", mcpServers: [] });
 
     // Kick off a prompt so the in-prompt onEvent subscription is live.
     // The scripted session's `prompt()` parks until we call
     // `resolvePrompt`, giving us a window to drive events + approval.
     const pending = clientConn.prompt({
       sessionId,
-      prompt: [textBlock('hi')],
+      prompt: [textBlock("hi")],
     });
 
     // Wait one tick for prompt() to subscribe via onEvent.
@@ -263,28 +273,28 @@ describe('AcpSession ↔ requestPermission bridge (end-to-end via wire)', () => 
     // Fire a tool-call-started event so the adapter learns the
     // current turnId (any event with `turnId` advances it).
     handle.emit({
-      type: 'tool.call.started',
+      type: "tool.call.started",
       sessionId,
-      agentId: 'main',
+      agentId: "main",
       turnId,
-      toolCallId: 'tc-1',
-      name: 'Bash',
-      args: { command: 'echo hi' },
+      toolCallId: "tc-1",
+      name: "Bash",
+      args: { command: "echo hi" },
     } as Event);
 
     // Now invoke the captured approval handler exactly as the SDK
     // reverse-RPC layer would.
     const approvalReq: ApprovalRequest = {
-      toolCallId: 'tc-1',
-      toolName: 'Bash',
-      action: 'run command',
-      display: { kind: 'command', command: 'echo hi' },
+      toolCallId: "tc-1",
+      toolName: "Bash",
+      action: "run command",
+      display: { kind: "command", command: "echo hi" },
     };
     const decision = await handle.invokeHandler(approvalReq);
 
     // Phase 5.2 lifts `selectedLabel` from the matched option name.
     // The 5.1 contract (decision discriminator) is preserved.
-    expect(decision.decision).toBe('approved');
+    expect(decision.decision).toBe("approved");
     expect(decision.scope).toBeUndefined();
     expect(client.permissionRequests).toHaveLength(1);
     const req = client.permissionRequests[0]!;
@@ -296,23 +306,23 @@ describe('AcpSession ↔ requestPermission bridge (end-to-end via wire)', () => 
       REJECT_OPTION_ID,
     ]);
     expect(req.toolCall.toolCallId).toBe(`${turnId}:tc-1`);
-    expect(req.toolCall.title).toBe('Bash');
+    expect(req.toolCall.title).toBe("Bash");
 
     // Settle the parked prompt with a turn.ended so the test exits
     // cleanly.
     handle.emit({
-      type: 'turn.ended',
+      type: "turn.ended",
       sessionId,
-      agentId: 'main',
+      agentId: "main",
       turnId,
-      reason: 'completed',
+      reason: "completed",
     } as Event);
     handle.resolvePrompt();
     await pending;
   });
 
-  it('returns { decision: rejected } when the client throws', async () => {
-    const sessionId = 'sess-approval-fail';
+  it("returns { decision: rejected } when the client throws", async () => {
+    const sessionId = "sess-approval-fail";
     const handle = makeApprovalSession(sessionId);
     const harness = {
       auth: { status: async () => AUTHED_STATUS },
@@ -324,31 +334,31 @@ describe('AcpSession ↔ requestPermission bridge (end-to-end via wire)', () => 
     const client = new ApprovalClient();
     // Override to throw so the bridge falls into the catch branch.
     client.requestPermission = async (_p: RequestPermissionRequest) => {
-      throw new Error('client unreachable');
+      throw new Error("client unreachable");
     };
     const clientConn = new ClientSideConnection(() => client, clientStream);
 
-    await clientConn.newSession({ cwd: '/tmp/x', mcpServers: [] });
+    await clientConn.newSession({ cwd: "/tmp/x", mcpServers: [] });
     const pending = clientConn.prompt({
       sessionId,
-      prompt: [textBlock('x')],
+      prompt: [textBlock("x")],
     });
     await new Promise((r) => setTimeout(r, 5));
 
     const decision = await handle.invokeHandler({
-      toolCallId: 'tc-x',
-      toolName: 'Bash',
-      action: 'run command',
-      display: { kind: 'command', command: 'echo x' },
+      toolCallId: "tc-x",
+      toolName: "Bash",
+      action: "run command",
+      display: { kind: "command", command: "echo x" },
     });
-    expect(decision).toEqual({ decision: 'rejected' });
+    expect(decision).toEqual({ decision: "rejected" });
 
     handle.emit({
-      type: 'turn.ended',
+      type: "turn.ended",
       sessionId,
-      agentId: 'main',
+      agentId: "main",
       turnId: 1,
-      reason: 'completed',
+      reason: "completed",
     } as Event);
     handle.resolvePrompt();
     await pending;

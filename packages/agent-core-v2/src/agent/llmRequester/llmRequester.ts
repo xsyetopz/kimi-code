@@ -1,23 +1,23 @@
-import { createDecorator } from '#/_base/di/instantiation';
-import type { FinishReason, ThinkingEffort } from '#/kosong/contract/provider';
-import type { Message, StreamedMessagePart } from '#/kosong/contract/message';
-import type { Tool } from '#/kosong/contract/tool';
-import type { TokenUsage } from '#/kosong/contract/usage';
-import type { LLMRequestTrace } from '#/kosong/contract/requestTrace';
-import type { ModelRequestTiming } from '#/kosong/model/modelRequester';
-import type { LogContext } from '#/_base/log/log';
+import { createDecorator } from "#/_base/di/instantiation";
+import type { FinishReason, ThinkingEffort } from "#/kosong/contract/provider";
+import type { Message, StreamedMessagePart } from "#/kosong/contract/message";
+import type { Tool } from "#/kosong/contract/tool";
+import type { TokenUsage } from "#/kosong/contract/usage";
+import type { LLMRequestTrace } from "#/kosong/contract/requestTrace";
+import type { ModelRequestTiming } from "#/kosong/model/modelRequester";
+import type { LogContext } from "#/_base/log/log";
 
 export type AgentLLMRequestLogFields = Readonly<LogContext>;
 
 export type AgentLLMRequestSource =
   | {
-      readonly type: 'turn';
+      readonly type: "turn";
       readonly turnId: number;
       readonly step?: number;
       readonly logFields?: AgentLLMRequestLogFields;
     }
   | {
-      readonly type: 'operation';
+      readonly type: "operation";
       readonly turnId?: number;
       readonly requestKind?: string;
       readonly logFields?: AgentLLMRequestLogFields;
@@ -34,7 +34,9 @@ export interface AgentLLMRequestFinish {
   traceId?: string;
 }
 
-export type AgentLLMRequestPartHandler = (part: StreamedMessagePart) => void | Promise<void>;
+export type AgentLLMRequestPartHandler = (
+  part: StreamedMessagePart,
+) => void | Promise<void>;
 
 export interface AgentLLMRequestOverrides {
   messages?: readonly Message[];
@@ -71,6 +73,5 @@ export interface IAgentLLMRequesterService {
   ): AgentLLMRequestTask;
 }
 
-export const IAgentLLMRequesterService = createDecorator<IAgentLLMRequesterService>(
-  'agentLLMRequesterService',
-);
+export const IAgentLLMRequesterService =
+  createDecorator<IAgentLLMRequesterService>("agentLLMRequesterService");

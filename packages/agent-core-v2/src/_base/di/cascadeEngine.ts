@@ -28,23 +28,28 @@
  * async disposers, a transaction completes within the tick.
  */
 
-import { onUnexpectedError } from '../errors/unexpectedError';
-import { isPromiseLike } from '../lifecycle/disposer';
-import type { SyncDescriptor } from './descriptors';
+import { onUnexpectedError } from "../errors/unexpectedError";
+import { isPromiseLike } from "../lifecycle/disposer";
+import type { SyncDescriptor } from "./descriptors";
 import {
   PairIndex,
   type DependencyGraph,
   type ScopedToken,
-} from './dependencyGraph';
-import { CascadeConflictError } from './errors';
-import type { ServiceIdentifier } from './instantiation';
+} from "./dependencyGraph";
+import { CascadeConflictError } from "./errors";
+import type { ServiceIdentifier } from "./instantiation";
 
-export type UnitState = 'Pending' | 'Activating' | 'Active' | 'Unloading' | 'Failed';
+export type UnitState =
+  | "Pending"
+  | "Activating"
+  | "Active"
+  | "Unloading"
+  | "Failed";
 
-export type CascadeAction = 'provide' | 'unprovide' | 'update';
+export type CascadeAction = "provide" | "unprovide" | "update";
 
 /** Eager units activate as soon as their dependencies are satisfied; on-demand units wait for their first resolution (but cascade-torn units always rebuild). */
-export type UnitActivation = 'eager' | 'ondemand';
+export type UnitActivation = "eager" | "ondemand";
 
 export interface CascadeChange {
   readonly action: CascadeAction;
@@ -265,7 +270,7 @@ export class CascadeEngine {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   unitFailure(token: ServiceIdentifier<any>): unknown {
     const unit = this._units.get(token);
-    return unit?.state === 'Failed' ? unit.error : undefined;
+    return unit?.state === "Failed" ? unit.error : undefined;
   }
 
   /** True while the scoped token sits inside the running transaction's contagion set. */
@@ -283,7 +288,7 @@ export class CascadeEngine {
   pendingSnapshot(): ReadonlyMap<string, readonly string[]> {
     const snapshot = new Map<string, readonly string[]>();
     for (const [token, unit] of this._units) {
-      if (unit.state !== 'Pending') continue;
+      if (unit.state !== "Pending") continue;
       snapshot.set(
         token.toString(),
         this._missingDeps(token).map((dep) => dep.toString()),
@@ -312,7 +317,7 @@ export class CascadeEngine {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   update(token: ServiceIdentifier<any>, reason?: string): Promise<void> {
     return this.submit({
-      action: 'update',
+      action: "update",
       token,
       reason: reason ?? `update ${String(token)}`,
     });
@@ -348,14 +353,19 @@ export class CascadeEngine {
       }
     }
     return new Promise<T>((resolve, reject) => {
-      const timer = setTimeout(() => {
-        reject(
-          new CascadeConflictError(
-            String(token),
-            'timed out waiting for the in-flight cascade to settle',
-          ),
-        );
-      }, timeoutMs ?? this._options.resolveTimeoutMs ?? DEFAULT_RESOLVE_TIMEOUT_MS);
+      const timer = setTimeout(
+        () => {
+          reject(
+            new CascadeConflictError(
+              String(token),
+              "timed out waiting for the in-flight cascade to settle",
+            ),
+          );
+        },
+        timeoutMs ??
+          this._options.resolveTimeoutMs ??
+          DEFAULT_RESOLVE_TIMEOUT_MS,
+      );
       this._tree.addSettleWaiter(() => {
         clearTimeout(timer);
         try {
@@ -371,8 +381,8 @@ export class CascadeEngine {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   observedMaterialization(token: ServiceIdentifier<any>): void {
     const unit = this._units.get(token);
-    if (unit !== undefined && unit.state === 'Pending') {
-      unit.state = 'Active';
+    if (unit !== undefined && unit.state === "Pending") {
+      unit.state = "Active";
       unit.everActive = true;
       unit.error = undefined;
     }
@@ -414,7 +424,7 @@ export class CascadeEngine {
     if (this._disposed || !this._host.isMaterialized(token)) {
       return undefined;
     }
-    this._unitFor(token).state = 'Unloading';
+    this._unitFor(token).state = "Unloading";
     const out = this._host.retire(token);
     tornDown.push(this._label({ scope: this._scope, token }));
     if (parkAsPending) {
@@ -439,25 +449,33 @@ export class CascadeEngine {
       return;
     }
     switch (change.action) {
-      case 'provide':
+      case "provide":
         if (change.descriptor !== undefined) {
-          this._host.applyProvide(change.token, change.descriptor, change.pinned);
-          this._markPending(change.token, change.activation ?? 'eager', false);
+          this._host.applyProvide(
+            change.token,
+            change.descriptor,
+            change.pinned,
+          );
+          this._markPending(change.token, change.activation ?? "eager", false);
         } else {
           // Pre-materialized instance: a new generation that is already
           // live — no activation to schedule, dependents rebuild below.
-          this._host.applyProvideInstance(change.token, change.instance, change.pinned);
+          this._host.applyProvideInstance(
+            change.token,
+            change.instance,
+            change.pinned,
+          );
           const unit = this._unitFor(change.token);
-          unit.state = 'Active';
+          unit.state = "Active";
           unit.everActive = true;
           unit.error = undefined;
         }
         break;
-      case 'unprovide':
+      case "unprovide":
         this._host.applyUnprovide(change.token);
         this._units.delete(change.token);
         break;
-      case 'update':
+      case "update":
         // Reload of a live-or-failed unit: it rebuilds like a torn one.
         this._markPending(change.token, undefined, true);
         break;
@@ -493,8 +511,12 @@ export class CascadeEngine {
       const out = orchestrator._transact(batch);
       if (isPromiseLike(out)) {
         Promise.resolve(out).then(
-          () => { finish(); },
-          (error: unknown) => { finish(error); },
+          () => {
+            finish();
+          },
+          (error: unknown) => {
+            finish(error);
+          },
         );
       } else {
         finish();
@@ -509,16 +531,22 @@ export class CascadeEngine {
   private _transact(batch: QueuedRequest[]): void | Promise<void> {
     const changes = mergeBatch(batch);
     const started = this._options.now?.() ?? Date.now();
-    const reason = changes.map(({ change }) => change.reason).join('; ');
+    const reason = changes.map(({ change }) => change.reason).join("; ");
     // ① contagion set from the tree-global graph (includes the changed tokens).
     const affected = this._tree.graph.affectedSet(
-      changes.map(({ engine, change }) => ({ scope: engine._scope, token: change.token })),
+      changes.map(({ engine, change }) => ({
+        scope: engine._scope,
+        token: change.token,
+      })),
     );
     for (const ref of affected) {
       this._tree.inFlightSet(ref, true);
     }
     this._tree.orchestrator = this._scope;
-    const complete = (abort: { waited: boolean; timedOut: boolean }): void | Promise<void> => {
+    const complete = (abort: {
+      waited: boolean;
+      timedOut: boolean;
+    }): void | Promise<void> => {
       const clear = (): void => {
         this._tree.inFlightClear(affected);
         this._tree.orchestrator = undefined;
@@ -551,7 +579,9 @@ export class CascadeEngine {
   private _waitForAbort(
     affected: readonly ScopedToken[],
     reason: string,
-  ): { waited: boolean; timedOut: boolean } | Promise<{ waited: boolean; timedOut: boolean }> {
+  ):
+    | { waited: boolean; timedOut: boolean }
+    | Promise<{ waited: boolean; timedOut: boolean }> {
     const hook = this._options.onWillCascade;
     if (hook === undefined) {
       return { waited: false, timedOut: false };
@@ -577,7 +607,9 @@ export class CascadeEngine {
         },
       ),
       new Promise<{ waited: boolean; timedOut: boolean }>((resolve) => {
-        setTimeout(() => { resolve({ waited: true, timedOut: true }); }, waitMs);
+        setTimeout(() => {
+          resolve({ waited: true, timedOut: true });
+        }, waitMs);
       }),
     ]);
   }
@@ -608,7 +640,9 @@ export class CascadeEngine {
         // The unprovide target itself is removed in ④, not parked as Pending.
         const removed = changes.some(
           ({ engine, change }) =>
-            engine === owner && change.token === ref.token && change.action === 'unprovide',
+            engine === owner &&
+            change.token === ref.token &&
+            change.action === "unprovide",
         );
         const out = owner._teardownForCascade(ref.token, tornDown, !removed);
         if (isPromiseLike(out)) {
@@ -675,7 +709,7 @@ export class CascadeEngine {
   private _unitFor(token: ServiceIdentifier<any>): UnitRecord {
     let unit = this._units.get(token);
     if (unit === undefined) {
-      unit = { state: 'Pending', activation: 'eager', everActive: false };
+      unit = { state: "Pending", activation: "eager", everActive: false };
       this._units.set(token, unit);
     }
     return unit;
@@ -689,7 +723,7 @@ export class CascadeEngine {
     everActive?: boolean,
   ): void {
     const unit = this._unitFor(token);
-    unit.state = 'Pending';
+    unit.state = "Pending";
     unit.error = undefined;
     if (activation !== undefined) {
       unit.activation = activation;
@@ -711,12 +745,12 @@ export class CascadeEngine {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const satisfied: ServiceIdentifier<any>[] = [];
       for (const [token, unit] of this._units) {
-        if (unit.state !== 'Pending') continue;
+        if (unit.state !== "Pending") continue;
         const missing = this._missingDeps(token);
         if (missing.length === 0) {
           // On-demand units that were never live wait for their first
           // resolution instead of auto-activating.
-          if (unit.everActive || unit.activation === 'eager') {
+          if (unit.everActive || unit.activation === "eager") {
             satisfied.push(token);
           }
         } else {
@@ -743,10 +777,10 @@ export class CascadeEngine {
       // units that became materialized as a side effect.
       for (const [token, unit] of this._units) {
         if (
-          (unit.state === 'Pending' || unit.state === 'Activating') &&
+          (unit.state === "Pending" || unit.state === "Activating") &&
           this._host.isMaterialized(token)
         ) {
-          unit.state = 'Active';
+          unit.state = "Active";
           unit.everActive = true;
         }
       }
@@ -754,18 +788,22 @@ export class CascadeEngine {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private _activate(token: ServiceIdentifier<any>, rebuilt: string[], failed: string[]): void {
+  private _activate(
+    token: ServiceIdentifier<any>,
+    rebuilt: string[],
+    failed: string[],
+  ): void {
     const unit = this._unitFor(token);
-    unit.state = 'Activating';
+    unit.state = "Activating";
     unit.error = undefined;
     try {
       this._host.materialize(token);
-      unit.state = 'Active';
+      unit.state = "Active";
       unit.everActive = true;
       rebuilt.push(this._label({ scope: this._scope, token }));
     } catch (error) {
       // D5: Failed is sticky — no automatic retry; explicit update() reloads.
-      unit.state = 'Failed';
+      unit.state = "Failed";
       unit.error = error;
       failed.push(this._label({ scope: this._scope, token }));
     }
@@ -773,7 +811,9 @@ export class CascadeEngine {
 
   /** Missing dependencies of a Pending unit (empty = ready to activate). */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private _missingDeps(token: ServiceIdentifier<any>): Array<ServiceIdentifier<any>> {
+  private _missingDeps(
+    token: ServiceIdentifier<any>,
+  ): Array<ServiceIdentifier<any>> {
     const recipe = this._host.recipeOf(token);
     if (recipe === undefined) {
       // No recipe to rebuild from (e.g. a foreign-seeded instance that was
@@ -793,9 +833,10 @@ export class CascadeEngine {
     // The dependency's state is owned by the engine of the scope that
     // registered it (an ancestor's engine for a cross-scope injection).
     const owner = this._host.ownerScopeOf(dep);
-    const engine = owner === undefined ? undefined : engineOf({ scope: owner, token: dep });
+    const engine =
+      owner === undefined ? undefined : engineOf({ scope: owner, token: dep });
     const state = engine?.unitState(dep);
-    return state === undefined || state === 'Active';
+    return state === undefined || state === "Active";
   }
 
   /** Render a scoped token for history: plain for the orchestrator's scope, `#n:token` for others. */

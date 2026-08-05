@@ -29,14 +29,14 @@
  *   pnpm dep-graph:lint --warn  # also fail on warnings
  */
 
-import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { join } from "node:path";
 
-import { SNAPSHOT_PATH, SRC_ROOT, analyze } from './analyzer/analyze';
-import type { Edge, Graph, ServiceNode } from './analyzer/types';
+import { SNAPSHOT_PATH, SRC_ROOT, analyze } from "./analyzer/analyze";
+import type { Edge, Graph, ServiceNode } from "./analyzer/types";
 
 interface Violation {
-  severity: 'error' | 'warning';
+  severity: "error" | "warning";
   edge: Edge;
   from: ServiceNode;
 }
@@ -46,10 +46,10 @@ function loadGraph(): Graph {
     const snapMtime = statSync(SNAPSHOT_PATH).mtimeMs;
     const srcMtime = latestMtime(SRC_ROOT);
     if (snapMtime >= srcMtime) {
-      return JSON.parse(readFileSync(SNAPSHOT_PATH, 'utf8')) as Graph;
+      return JSON.parse(readFileSync(SNAPSHOT_PATH, "utf8")) as Graph;
     }
   }
-  return analyze({ generatedAt: 'lint' });
+  return analyze({ generatedAt: "lint" });
 }
 
 function latestMtime(dir: string): number {
@@ -58,7 +58,7 @@ function latestMtime(dir: string): number {
     for (const entry of readdirSync(d, { withFileTypes: true })) {
       const abs = join(d, entry.name);
       if (entry.isDirectory()) walk(abs);
-      else if (entry.name.endsWith('.ts')) {
+      else if (entry.name.endsWith(".ts")) {
         const m = statSync(abs).mtimeMs;
         if (m > latest) latest = m;
       }
@@ -77,22 +77,22 @@ function lint(graph: Graph): Violation[] {
     if (!edge.unresolved) continue;
     const from = byId.get(edge.from);
     if (!from) continue;
-    if (edge.kind === 'ctor') {
-      violations.push({ severity: 'error', edge, from });
-    } else if (edge.kind === 'accessor') {
-      violations.push({ severity: 'warning', edge, from });
+    if (edge.kind === "ctor") {
+      violations.push({ severity: "error", edge, from });
+    } else if (edge.kind === "accessor") {
+      violations.push({ severity: "warning", edge, from });
     }
   }
   return violations;
 }
 
 function main(): number {
-  const failOnWarn = process.argv.includes('--warn');
+  const failOnWarn = process.argv.includes("--warn");
   const graph = loadGraph();
   const violations = lint(graph);
 
-  const errors = violations.filter((v) => v.severity === 'error');
-  const warnings = violations.filter((v) => v.severity === 'warning');
+  const errors = violations.filter((v) => v.severity === "error");
+  const warnings = violations.filter((v) => v.severity === "warning");
 
   const report = (v: Violation): void => {
     console.log(

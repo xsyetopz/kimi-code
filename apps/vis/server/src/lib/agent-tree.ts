@@ -1,4 +1,4 @@
-import type { AgentInfo } from './agent-record-types';
+import type { AgentInfo } from "./agent-record-types";
 
 export interface AgentNode extends AgentInfo {
   children: AgentNode[];
@@ -49,8 +49,8 @@ function sortAgents(a: AgentNode, b: AgentNode): number {
  */
 export function compareAgentIds(a: string, b: string): number {
   if (a === b) return 0;
-  if (a === 'main') return -1;
-  if (b === 'main') return 1;
+  if (a === "main") return -1;
+  if (b === "main") return 1;
   const na = /^agent-(\d+)$/.exec(a);
   const nb = /^agent-(\d+)$/.exec(b);
   if (na && nb) return Number(na[1]) - Number(nb[1]);

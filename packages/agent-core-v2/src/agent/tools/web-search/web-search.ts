@@ -10,10 +10,10 @@
  * time. Bound at Agent scope.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { createDecorator } from '#/_base/di/instantiation';
-import { type AgentTool } from '#/tool/toolContract';
+import { createDecorator } from "#/_base/di/instantiation";
+import { type AgentTool } from "#/tool/toolContract";
 
 export interface WebSearchResult {
   title: string;
@@ -33,15 +33,13 @@ export interface WebSearchProvider {
   ): Promise<WebSearchResult[]>;
 }
 
-
 export const WebSearchInputSchema = z.object({
-  query: z.string().describe('The query text to search for.'),
+  query: z.string().describe("The query text to search for."),
 });
 
 export type WebSearchInput = z.infer<typeof WebSearchInputSchema>;
 
-
 export interface IWebSearchTool extends AgentTool<WebSearchInput> {
   readonly _serviceBrand: undefined;
 }
-export const IWebSearchTool = createDecorator<IWebSearchTool>('webSearchTool');
+export const IWebSearchTool = createDecorator<IWebSearchTool>("webSearchTool");

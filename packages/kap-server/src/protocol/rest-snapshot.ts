@@ -13,14 +13,14 @@
  * recovers mid-turn assistant/thinking text and running tool calls).
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { messageSchema } from './message';
+import { messageSchema } from "./message";
 
-import { approvalRequestSchema } from './approval';
-import { questionRequestSchema } from './question';
-import { sessionSchema } from './session';
-import { taskSchema } from './task';
+import { approvalRequestSchema } from "./approval";
+import { questionRequestSchema } from "./question";
+import { sessionSchema } from "./session";
+import { taskSchema } from "./task";
 
 export const inFlightToolCallSchema = z.object({
   tool_call_id: z.string().min(1),
@@ -32,7 +32,7 @@ export const inFlightToolCallSchema = z.object({
   /** Most recent `tool.progress` update, if any. */
   last_progress: z
     .object({
-      kind: z.enum(['stdout', 'stderr', 'progress', 'status', 'custom']),
+      kind: z.enum(["stdout", "stderr", "progress", "status", "custom"]),
       text: z.string().optional(),
       percent: z.number().optional(),
     })
@@ -59,7 +59,9 @@ export type InFlightTurn = z.infer<typeof inFlightTurnSchema>;
  * (non-replayed) `subagent.spawned` WS event.
  */
 export const snapshotSubagentSchema = taskSchema.extend({
-  subagent_phase: z.enum(['queued', 'working', 'suspended', 'completed', 'failed']).optional(),
+  subagent_phase: z
+    .enum(["queued", "working", "suspended", "completed", "failed"])
+    .optional(),
   subagent_type: z.string().optional(),
   parent_tool_call_id: z.string().optional(),
   suspended_reason: z.string().optional(),
@@ -89,4 +91,6 @@ export const sessionSnapshotResponseSchema = z.object({
   pending_approvals: z.array(approvalRequestSchema),
   pending_questions: z.array(questionRequestSchema),
 });
-export type SessionSnapshotResponse = z.infer<typeof sessionSnapshotResponseSchema>;
+export type SessionSnapshotResponse = z.infer<
+  typeof sessionSnapshotResponseSchema
+>;

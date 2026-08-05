@@ -10,33 +10,33 @@
  * types.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { registerConfigSection } from '#/app/config/configSectionContributions';
+import { registerConfigSection } from "#/app/config/configSectionContributions";
 import {
   cloneRecord,
   isPlainObject,
   plainObjectToToml,
   transformPlainObject,
-} from '#/app/config/toml';
+} from "#/app/config/toml";
 
-import { parsePermissionPattern } from './matchesRule';
+import { parsePermissionPattern } from "./matchesRule";
 
-export const PERMISSION_SECTION = 'permission';
+export const PERMISSION_SECTION = "permission";
 
-export const PermissionRuleDecisionSchema = z.enum(['allow', 'deny', 'ask']);
+export const PermissionRuleDecisionSchema = z.enum(["allow", "deny", "ask"]);
 export const PermissionRuleScopeSchema = z.enum([
-  'turn-override',
-  'session-runtime',
-  'project',
-  'user',
+  "turn-override",
+  "session-runtime",
+  "project",
+  "user",
 ]);
 
 export const PermissionRuleSchema = z.object({
   decision: PermissionRuleDecisionSchema,
-  scope: PermissionRuleScopeSchema.default('user'),
+  scope: PermissionRuleScopeSchema.default("user"),
   pattern: z.string().min(1).refine(isValidPermissionPattern, {
-    message: 'Invalid permission rule pattern',
+    message: "Invalid permission rule pattern",
   }),
   reason: z.string().optional(),
 });
@@ -60,17 +60,17 @@ export const permissionFromToml = (rawSnake: unknown): unknown => {
   if (!isPlainObject(rawSnake)) return rawSnake;
   const raw = transformPlainObject(rawSnake);
   const rules: unknown[] = [];
-  appendPermissionRules(rules, raw['rules']);
-  appendPermissionRules(rules, raw['deny'], 'deny');
-  appendPermissionRules(rules, raw['allow'], 'allow');
-  appendPermissionRules(rules, raw['ask'], 'ask');
+  appendPermissionRules(rules, raw["rules"]);
+  appendPermissionRules(rules, raw["deny"], "deny");
+  appendPermissionRules(rules, raw["allow"], "allow");
+  appendPermissionRules(rules, raw["ask"], "ask");
   return rules.length > 0 ? { rules } : {};
 };
 
 function appendPermissionRules(
   target: unknown[],
   value: unknown,
-  decision?: 'allow' | 'deny' | 'ask',
+  decision?: "allow" | "deny" | "ask",
 ): void {
   if (value === undefined) return;
   const entries = Array.isArray(value) ? value : [value];
@@ -79,39 +79,46 @@ function appendPermissionRules(
   }
 }
 
-function transformPermissionRule(value: unknown, decision?: 'allow' | 'deny' | 'ask'): unknown {
+function transformPermissionRule(
+  value: unknown,
+  decision?: "allow" | "deny" | "ask",
+): unknown {
   if (!isPlainObject(value)) return value;
   const rule = transformPlainObject(value);
-  const tool = rule['tool'];
-  const match = rule['match'];
-  const pattern = rule['pattern'];
+  const tool = rule["tool"];
+  const match = rule["match"];
+  const pattern = rule["pattern"];
   const out: Record<string, unknown> = {
-    decision: decision !== undefined ? decision : rule['decision'],
-    scope: rule['scope'],
-    reason: rule['reason'],
+    decision: decision !== undefined ? decision : rule["decision"],
+    scope: rule["scope"],
+    reason: rule["reason"],
   };
-  if (typeof tool === 'string') {
-    const argPattern = typeof match === 'string' ? match : pattern;
-    out['pattern'] = typeof argPattern === 'string' ? `${tool}(${argPattern})` : tool;
+  if (typeof tool === "string") {
+    const argPattern = typeof match === "string" ? match : pattern;
+    out["pattern"] =
+      typeof argPattern === "string" ? `${tool}(${argPattern})` : tool;
   } else {
-    out['pattern'] = pattern;
+    out["pattern"] = pattern;
   }
   return out;
 }
 
-export const permissionToToml = (value: unknown, rawSnake: unknown): unknown => {
+export const permissionToToml = (
+  value: unknown,
+  rawSnake: unknown,
+): unknown => {
   if (!isPlainObject(value)) return value;
   const out = cloneRecord(rawSnake);
-  delete out['deny'];
-  delete out['allow'];
-  delete out['ask'];
-  const rules = value['rules'];
+  delete out["deny"];
+  delete out["allow"];
+  delete out["ask"];
+  const rules = value["rules"];
   if (Array.isArray(rules)) {
-    out['rules'] = rules.map((rule) =>
+    out["rules"] = rules.map((rule) =>
       isPlainObject(rule) ? plainObjectToToml(rule, undefined) : rule,
     );
   } else {
-    delete out['rules'];
+    delete out["rules"];
   }
   return out;
 };

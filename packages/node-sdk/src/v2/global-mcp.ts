@@ -16,8 +16,8 @@
  * (`sdk-rpc-client-v2.ts`); the v2 credential store persists to the same
  * on-disk layout as v1 (`<home>/credentials/mcp/<key>-*.json`).
  */
-import { mkdir, readFile } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
+import { mkdir, readFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
 
 import {
   ErrorCodes,
@@ -26,11 +26,11 @@ import {
   type GlobalMcpServerConfig,
   type McpRemoteServerConfig,
   type McpServerConfig,
-} from '@moonshot-ai/agent-core';
-import type { McpConnectionManager } from '@moonshot-ai/agent-core-v2/mcpCore/connection-manager';
-import { atomicWrite } from '@moonshot-ai/agent-core-v2/_base/utils/fs';
+} from "@moonshot-ai/agent-core";
+import type { McpConnectionManager } from "@moonshot-ai/agent-core-v2/mcpCore/connection-manager";
+import { atomicWrite } from "@moonshot-ai/agent-core-v2/_base/utils/fs";
 
-import type { McpTestResult } from '#/types';
+import type { McpTestResult } from "#/types";
 
 interface GlobalMcpConfigFile {
   readonly raw: Record<string, unknown>;
@@ -43,7 +43,7 @@ export class GlobalMcpConfigStore {
   readonly path: string;
 
   constructor(homeDir: string) {
-    this.path = join(homeDir, 'mcp.json');
+    this.path = join(homeDir, "mcp.json");
   }
 
   async list(): Promise<readonly GlobalMcpServerConfig[]> {
@@ -52,12 +52,16 @@ export class GlobalMcpConfigStore {
 
   async get(name: string): Promise<GlobalMcpServerConfig> {
     const normalizedName = normalizeServerName(name);
-    const server = (await this.read()).servers.find((entry) => entry.name === normalizedName);
+    const server = (await this.read()).servers.find(
+      (entry) => entry.name === normalizedName,
+    );
     if (server !== undefined) return server;
     throw serverNotFound(normalizedName);
   }
 
-  async add(server: GlobalMcpServerConfig): Promise<readonly GlobalMcpServerConfig[]> {
+  async add(
+    server: GlobalMcpServerConfig,
+  ): Promise<readonly GlobalMcpServerConfig[]> {
     const normalized = parseServerInput(server);
     const file = await this.read();
     if (Object.hasOwn(file.rawServers, normalized.name)) {
@@ -73,7 +77,9 @@ export class GlobalMcpConfigStore {
     return this.list();
   }
 
-  async update(server: GlobalMcpServerConfig): Promise<readonly GlobalMcpServerConfig[]> {
+  async update(
+    server: GlobalMcpServerConfig,
+  ): Promise<readonly GlobalMcpServerConfig[]> {
     const normalized = parseServerInput(server);
     const file = await this.read();
     if (!Object.hasOwn(file.rawServers, normalized.name)) {
@@ -91,7 +97,9 @@ export class GlobalMcpConfigStore {
     const file = await this.read();
     if (!Object.hasOwn(file.rawServers, normalizedName)) return file.servers;
     const nextServers = Object.fromEntries(
-      Object.entries(file.rawServers).filter(([entryName]) => entryName !== normalizedName),
+      Object.entries(file.rawServers).filter(
+        ([entryName]) => entryName !== normalizedName,
+      ),
     );
     await this.write(file, nextServers);
     return this.list();
@@ -100,12 +108,15 @@ export class GlobalMcpConfigStore {
   private async read(): Promise<GlobalMcpConfigFile> {
     let text: string;
     try {
-      text = await readFile(this.path, 'utf-8');
+      text = await readFile(this.path, "utf-8");
     } catch (error: unknown) {
-      if (errorCode(error) === 'ENOENT') {
+      if (errorCode(error) === "ENOENT") {
         return { raw: {}, rawServers: {}, servers: [] };
       }
-      throw configError(`Failed to read ${this.path}: ${describeError(error)}`, error);
+      throw configError(
+        `Failed to read ${this.path}: ${describeError(error)}`,
+        error,
+      );
     }
 
     if (text.trim().length === 0) {
@@ -116,17 +127,26 @@ export class GlobalMcpConfigStore {
     try {
       parsed = JSON.parse(text) as unknown;
     } catch (error: unknown) {
-      throw configError(`Invalid JSON in ${this.path}: ${describeError(error)}`, error);
+      throw configError(
+        `Invalid JSON in ${this.path}: ${describeError(error)}`,
+        error,
+      );
     }
     if (!isRecord(parsed)) {
-      throw configError(`Invalid MCP config in ${this.path}: expected a JSON object`);
+      throw configError(
+        `Invalid MCP config in ${this.path}: expected a JSON object`,
+      );
     }
-    const rawServersValue = parsed['mcpServers'];
+    const rawServersValue = parsed["mcpServers"];
     if (rawServersValue !== undefined && !isRecord(rawServersValue)) {
-      throw configError(`Invalid MCP config in ${this.path}: "mcpServers" must be an object`);
+      throw configError(
+        `Invalid MCP config in ${this.path}: "mcpServers" must be an object`,
+      );
     }
     const rawServers = rawServersValue ?? {};
-    const servers = Object.entries(rawServers).map(([name, value]) => parseServer(name, value));
+    const servers = Object.entries(rawServers).map(([name, value]) =>
+      parseServer(name, value),
+    );
     return { raw: parsed, rawServers, servers };
   }
 
@@ -143,9 +163,11 @@ export class GlobalMcpConfigStore {
 }
 
 /** Byte-identical port of v1's `requireRemoteMcpServer` guard. */
-export function requireRemoteMcpServer(server: GlobalMcpServerConfig): McpRemoteServerConfig {
+export function requireRemoteMcpServer(
+  server: GlobalMcpServerConfig,
+): McpRemoteServerConfig {
   const config = mcpConfigWithoutName(server);
-  if (config.transport !== 'stdio') return config;
+  if (config.transport !== "stdio") return config;
   throw new KimiError(
     ErrorCodes.REQUEST_INVALID,
     `MCP server "${server.name}" does not use a remote transport`,
@@ -153,7 +175,9 @@ export function requireRemoteMcpServer(server: GlobalMcpServerConfig): McpRemote
 }
 
 /** Byte-identical port of v1's `requireOAuthMcpServer` guard. */
-export function requireOAuthMcpServer(server: GlobalMcpServerConfig): McpRemoteServerConfig {
+export function requireOAuthMcpServer(
+  server: GlobalMcpServerConfig,
+): McpRemoteServerConfig {
   const config = requireRemoteMcpServer(server);
   if (config.bearerTokenEnvVar !== undefined) {
     throw new KimiError(
@@ -161,7 +185,7 @@ export function requireOAuthMcpServer(server: GlobalMcpServerConfig): McpRemoteS
       `MCP server "${server.name}" uses a static bearer token`,
     );
   }
-  if (config.headers !== undefined && config.auth !== 'oauth') {
+  if (config.headers !== undefined && config.auth !== "oauth") {
     throw new KimiError(
       ErrorCodes.REQUEST_INVALID,
       `MCP server "${server.name}" uses static headers and is not marked for OAuth`,
@@ -171,7 +195,9 @@ export function requireOAuthMcpServer(server: GlobalMcpServerConfig): McpRemoteS
 }
 
 /** Byte-identical port of v1's `mcpConfigWithoutName`. */
-export function mcpConfigWithoutName(server: GlobalMcpServerConfig): McpServerConfig {
+export function mcpConfigWithoutName(
+  server: GlobalMcpServerConfig,
+): McpServerConfig {
   const { name: _name, ...config } = server;
   return config;
 }
@@ -186,23 +212,29 @@ export function standaloneMcpTestResult(
   manager: McpConnectionManager,
 ): McpTestResult {
   const entry = manager.get(name);
-  if (entry?.status !== 'connected') {
+  if (entry?.status !== "connected") {
     return {
       success: false,
       output:
-        entry?.error ?? `MCP server "${name}" finished with status ${entry?.status ?? 'unknown'}`,
+        entry?.error ??
+        `MCP server "${name}" finished with status ${entry?.status ?? "unknown"}`,
     };
   }
   const tools = manager.resolved(name)?.rawTools ?? [];
   const lines = [
     `Connected to MCP server "${name}".`,
     `Available tools: ${tools.length}`,
-    ...tools.map((tool) => `- ${tool.name}${tool.description ? `: ${tool.description}` : ''}`),
+    ...tools.map(
+      (tool) =>
+        `- ${tool.name}${tool.description ? `: ${tool.description}` : ""}`,
+    ),
   ];
-  return { success: true, output: lines.join('\n') };
+  return { success: true, output: lines.join("\n") };
 }
 
-function parseServerInput(server: GlobalMcpServerConfig): GlobalMcpServerConfig {
+function parseServerInput(
+  server: GlobalMcpServerConfig,
+): GlobalMcpServerConfig {
   return parseServer(normalizeServerName(server.name), server);
 }
 
@@ -225,11 +257,17 @@ function persistedEntry(server: GlobalMcpServerConfig): McpServerConfig {
 function normalizeServerName(name: string): string {
   const normalized = name.trim();
   if (normalized.length > 0) return normalized;
-  throw new KimiError(ErrorCodes.REQUEST_INVALID, 'MCP server name cannot be empty');
+  throw new KimiError(
+    ErrorCodes.REQUEST_INVALID,
+    "MCP server name cannot be empty",
+  );
 }
 
 function serverNotFound(name: string): KimiError {
-  return new KimiError(ErrorCodes.MCP_SERVER_NOT_FOUND, `MCP server "${name}" was not found`);
+  return new KimiError(
+    ErrorCodes.MCP_SERVER_NOT_FOUND,
+    `MCP server "${name}" was not found`,
+  );
 }
 
 function configError(message: string, cause?: unknown): KimiError {
@@ -238,7 +276,7 @@ function configError(message: string, cause?: unknown): KimiError {
 
 function errorCode(error: unknown): unknown {
   if (!isRecord(error)) return undefined;
-  return error['code'];
+  return error["code"];
 }
 
 function describeError(error: unknown): string {
@@ -246,5 +284,5 @@ function describeError(error: unknown): string {
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

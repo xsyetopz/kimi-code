@@ -36,13 +36,13 @@
  *   reach for it without prompting from a system message.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import type { BuiltinTool } from '../../agent/tool';
-import type { CronManager } from '../../agent/cron';
-import type { ToolExecution } from '../../loop/types';
-import { toInputJsonSchema } from '../support/input-schema';
-import CRON_DELETE_DESCRIPTION from './cron-delete.md?raw';
+import type { BuiltinTool } from "../../agent/tool";
+import type { CronManager } from "../../agent/cron";
+import type { ToolExecution } from "../../loop/types";
+import { toInputJsonSchema } from "../support/input-schema";
+import CRON_DELETE_DESCRIPTION from "./cron-delete.md?raw";
 
 // ── Constants ────────────────────────────────────────────────────────
 
@@ -60,14 +60,14 @@ const ID_PATTERN = /^[0-9a-f]{8}$/;
 export const CronDeleteInputSchema = z.object({
   id: z
     .string()
-    .describe('The 8-hex cron job id returned by CronCreate / CronList.'),
+    .describe("The 8-hex cron job id returned by CronCreate / CronList."),
 });
 export type CronDeleteInput = z.infer<typeof CronDeleteInputSchema>;
 
 // ── Implementation ───────────────────────────────────────────────────
 
 export class CronDeleteTool implements BuiltinTool<CronDeleteInput> {
-  readonly name = 'CronDelete' as const;
+  readonly name = "CronDelete" as const;
   readonly description = CRON_DELETE_DESCRIPTION;
   readonly parameters: Record<string, unknown> = toInputJsonSchema(
     CronDeleteInputSchema,

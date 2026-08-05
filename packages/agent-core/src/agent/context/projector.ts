@@ -1,10 +1,10 @@
-import { createHash } from 'node:crypto';
+import { createHash } from "node:crypto";
 
-import type { ContentPart, Message, TextPart } from '@moonshot-ai/kosong';
+import type { ContentPart, Message, TextPart } from "@moonshot-ai/kosong";
 
-import { ErrorCodes, KimiError } from '../../errors';
-import { renderToolResultForModel } from './tool-result-render';
-import type { ContextMessage } from './types';
+import { ErrorCodes, KimiError } from "../../errors";
+import { renderToolResultForModel } from "./tool-result-render";
+import type { ContextMessage } from "./types";
 
 export interface ProjectOptions {
   /**
@@ -79,26 +79,36 @@ export interface ProjectOptions {
  */
 export type ProjectionAnomaly =
   /** A recorded result was not adjacent to its call and had to be moved up. */
-  | { readonly kind: 'tool_result_reordered'; readonly toolCallId: string }
+  | { readonly kind: "tool_result_reordered"; readonly toolCallId: string }
   /**
    * No result existed for a call, so a placeholder was synthesized. `trailing`
    * is true when it closed a still-open tail call (expected under
    * `synthesizeMissing`), false when it closed a mid-history orphan whose result
    * was lost (a genuine defect worth investigating).
    */
-  | { readonly kind: 'tool_result_synthesized'; readonly toolCallId: string; readonly trailing: boolean }
+  | {
+      readonly kind: "tool_result_synthesized";
+      readonly toolCallId: string;
+      readonly trailing: boolean;
+    }
   /** A result with no matching call anywhere was dropped (wire exits only). */
-  | { readonly kind: 'orphan_tool_result_dropped'; readonly toolCallId: string }
+  | { readonly kind: "orphan_tool_result_dropped"; readonly toolCallId: string }
   /** A tool call whose id already appeared earlier was dropped (strict-resend only). */
-  | { readonly kind: 'duplicate_tool_call_dropped'; readonly toolCallId: string }
+  | {
+      readonly kind: "duplicate_tool_call_dropped";
+      readonly toolCallId: string;
+    }
   /** A second result for an already-answered id was dropped (strict-resend only). */
-  | { readonly kind: 'duplicate_tool_result_dropped'; readonly toolCallId: string }
+  | {
+      readonly kind: "duplicate_tool_result_dropped";
+      readonly toolCallId: string;
+    }
   /** A leading non-user message was dropped so the first turn is user (strict). */
-  | { readonly kind: 'leading_non_user_dropped'; readonly role: string }
+  | { readonly kind: "leading_non_user_dropped"; readonly role: string }
   /** Two adjacent assistant turns were merged into one (strict). */
-  | { readonly kind: 'consecutive_assistants_merged' }
+  | { readonly kind: "consecutive_assistants_merged" }
   /** A non-empty but all-whitespace text block was dropped (always). */
-  | { readonly kind: 'whitespace_text_dropped'; readonly role: string }
+  | { readonly kind: "whitespace_text_dropped"; readonly role: string }
   /**
    * Every recorded part serialized to nothing on the wire (e.g. an assistant
    * step that recorded only an empty thinking part from a provider-filtered
@@ -106,9 +116,12 @@ export type ProjectionAnomaly =
    * empty-content drop: parts were recorded, yet none of them was sendable —
    * a genuine defect signal, not routine cleanup.
    */
-  | { readonly kind: 'vacuous_message_dropped'; readonly role: string };
+  | { readonly kind: "vacuous_message_dropped"; readonly role: string };
 
-export function project(history: readonly ContextMessage[], options?: ProjectOptions): Message[] {
+export function project(
+  history: readonly ContextMessage[],
+  options?: ProjectOptions,
+): Message[] {
   let result = mergeAdjacentUserMessages(history, options?.onAnomaly);
   if (options?.dedupeDuplicateToolCalls === true) {
     result = dedupeDuplicateToolCalls(result, options.onAnomaly);
@@ -154,7 +167,7 @@ export function project(history: readonly ContextMessage[], options?: ProjectOpt
 // history is left untouched, so replay and transcripts keep their original order,
 // while the model always sees a well-formed tool exchange.
 const SYNTHETIC_TOOL_RESULT_TEXT =
-  'Tool result is not available in the current context. Do not assume the tool completed successfully.';
+  "Tool result is not available in the current context. Do not assume the tool completed successfully.";
 
 function repairToolExchangeAdjacency(
   messages: readonly Message[],
@@ -166,7 +179,7 @@ function repairToolExchangeAdjacency(
   // non-tool message so an orphan can be classified as trailing (index >= it) or
   // mid-history (index < it).
   let lastNonToolIndex = messages.length - 1;
-  while (lastNonToolIndex >= 0 && messages[lastNonToolIndex]?.role === 'tool') {
+  while (lastNonToolIndex >= 0 && messages[lastNonToolIndex]?.role === "tool") {
     lastNonToolIndex -= 1;
   }
 
@@ -175,7 +188,7 @@ function repairToolExchangeAdjacency(
   for (let i = 0; i < messages.length; i++) {
     if (consumed.has(i)) continue;
     const message = messages[i]!;
-    if (message.role !== 'assistant' || message.toolCalls.length === 0) {
+    if (message.role !== "assistant" || message.toolCalls.length === 0) {
       out.push(message);
       continue;
     }
@@ -190,11 +203,16 @@ function repairToolExchangeAdjacency(
       if (consumed.has(j)) continue;
       const next = messages[j]!;
       const toolCallId = next.toolCallId;
-      if (next.role === 'tool' && toolCallId !== undefined && pending.has(toolCallId)) {
+      if (
+        next.role === "tool" &&
+        toolCallId !== undefined &&
+        pending.has(toolCallId)
+      ) {
         out.push(next);
         consumed.add(j);
         pending.delete(toolCallId);
-        if (foreignBetween) options?.onAnomaly?.({ kind: 'tool_result_reordered', toolCallId });
+        if (foreignBetween)
+          options?.onAnomaly?.({ kind: "tool_result_reordered", toolCallId });
       } else {
         foreignBetween = true;
       }
@@ -208,7 +226,7 @@ function repairToolExchangeAdjacency(
       for (const missingId of pending) {
         out.push(makeSyntheticToolResult(missingId));
         options?.onAnomaly?.({
-          kind: 'tool_result_synthesized',
+          kind: "tool_result_synthesized",
           toolCallId: missingId,
           trailing: !isMidHistory,
         });
@@ -241,10 +259,13 @@ function dedupeDuplicateToolCalls(
   const seenToolResultIds = new Set<string>();
   const out: Message[] = [];
   for (const message of messages) {
-    if (message.role === 'assistant' && message.toolCalls.length > 0) {
+    if (message.role === "assistant" && message.toolCalls.length > 0) {
       const kept = message.toolCalls.filter((toolCall) => {
         if (seenToolCallIds.has(toolCall.id)) {
-          onAnomaly?.({ kind: 'duplicate_tool_call_dropped', toolCallId: toolCall.id });
+          onAnomaly?.({
+            kind: "duplicate_tool_call_dropped",
+            toolCallId: toolCall.id,
+          });
           return false;
         }
         seenToolCallIds.add(toolCall.id);
@@ -252,20 +273,26 @@ function dedupeDuplicateToolCalls(
       });
       if (kept.length === message.toolCalls.length) {
         out.push(message);
-      } else if (kept.length > 0 || !message.content.every(isVacuousContentPart)) {
+      } else if (
+        kept.length > 0 ||
+        !message.content.every(isVacuousContentPart)
+      ) {
         out.push({ ...message, toolCalls: kept });
       } else if (message.content.length > 0) {
         // Every call this message carried was a later duplicate, and only
         // vacuous content remains: kept, it would serialize as an empty
         // assistant and be rejected again on the strict retry. Drop it with
         // a trace (a truly content-free message stays a silent drop).
-        onAnomaly?.({ kind: 'vacuous_message_dropped', role: message.role });
+        onAnomaly?.({ kind: "vacuous_message_dropped", role: message.role });
       }
       continue;
     }
-    if (message.role === 'tool' && message.toolCallId !== undefined) {
+    if (message.role === "tool" && message.toolCallId !== undefined) {
       if (seenToolResultIds.has(message.toolCallId)) {
-        onAnomaly?.({ kind: 'duplicate_tool_result_dropped', toolCallId: message.toolCallId });
+        onAnomaly?.({
+          kind: "duplicate_tool_result_dropped",
+          toolCallId: message.toolCallId,
+        });
         continue;
       }
       seenToolResultIds.add(message.toolCallId);
@@ -289,14 +316,18 @@ function dropOrphanToolResults(
 ): Message[] {
   const toolUseIds = new Set<string>();
   for (const message of messages) {
-    if (message.role === 'assistant') {
+    if (message.role === "assistant") {
       for (const toolCall of message.toolCalls) toolUseIds.add(toolCall.id);
     }
   }
   return messages.filter((message) => {
-    if (message.role !== 'tool' || message.toolCallId === undefined) return true;
+    if (message.role !== "tool" || message.toolCallId === undefined)
+      return true;
     if (toolUseIds.has(message.toolCallId)) return true;
-    onAnomaly?.({ kind: 'orphan_tool_result_dropped', toolCallId: message.toolCallId });
+    onAnomaly?.({
+      kind: "orphan_tool_result_dropped",
+      toolCallId: message.toolCallId,
+    });
     return false;
   });
 }
@@ -313,13 +344,17 @@ function mergeConsecutiveAssistantMessages(
   const out: Message[] = [];
   for (const message of messages) {
     const previous = out.at(-1);
-    if (previous !== undefined && previous.role === 'assistant' && message.role === 'assistant') {
+    if (
+      previous !== undefined &&
+      previous.role === "assistant" &&
+      message.role === "assistant"
+    ) {
       out[out.length - 1] = {
         ...previous,
         content: [...previous.content, ...message.content],
         toolCalls: [...previous.toolCalls, ...message.toolCalls],
       };
-      onAnomaly?.({ kind: 'consecutive_assistants_merged' });
+      onAnomaly?.({ kind: "consecutive_assistants_merged" });
       continue;
     }
     out.push(message);
@@ -336,8 +371,11 @@ function dropLeadingNonUserMessages(
   onAnomaly?: (anomaly: ProjectionAnomaly) => void,
 ): Message[] {
   let start = 0;
-  while (start < messages.length && messages[start]!.role !== 'user') {
-    onAnomaly?.({ kind: 'leading_non_user_dropped', role: messages[start]!.role });
+  while (start < messages.length && messages[start]!.role !== "user") {
+    onAnomaly?.({
+      kind: "leading_non_user_dropped",
+      role: messages[start]!.role,
+    });
     start += 1;
   }
   return start === 0 ? [...messages] : messages.slice(start);
@@ -345,8 +383,8 @@ function dropLeadingNonUserMessages(
 
 function makeSyntheticToolResult(toolCallId: string): Message {
   return {
-    role: 'tool',
-    content: [{ type: 'text', text: SYNTHETIC_TOOL_RESULT_TEXT }],
+    role: "tool",
+    content: [{ type: "text", text: SYNTHETIC_TOOL_RESULT_TEXT }],
     toolCalls: [],
     toolCallId,
   };
@@ -385,8 +423,15 @@ function prepareMessageForProjection(
   // Render the model-visible form — error status prefix, empty-output
   // placeholder, trailing note — exactly here, at the projection boundary.
   const source =
-    message.role === 'tool'
-      ? { ...message, content: renderToolResultForModel({ output: message.content, note: message.note, isError: message.isError }) }
+    message.role === "tool"
+      ? {
+          ...message,
+          content: renderToolResultForModel({
+            output: message.content,
+            note: message.note,
+            isError: message.isError,
+          }),
+        }
       : message;
 
   let content: ContentPart[] | undefined;
@@ -394,14 +439,14 @@ function prepareMessageForProjection(
     // Strict providers reject a text block that is empty OR whitespace-only
     // ("text content blocks must contain non-whitespace text"). Drop both; a
     // block with surrounding whitespace but real content is kept verbatim.
-    if (part.type === 'text' && part.text.trim().length === 0) {
+    if (part.type === "text" && part.text.trim().length === 0) {
       content ??= source.content.slice(0, index);
       // Report only whitespace-only (non-empty) blocks: a truly empty `''` block
       // is routine cleanup (e.g. a trailing empty text part after a tool call),
       // whereas a block that is non-empty yet all-whitespace signals something
       // upstream fed blank content and is worth surfacing for debugging.
       if (part.text.length > 0) {
-        onAnomaly?.({ kind: 'whitespace_text_dropped', role: source.role });
+        onAnomaly?.({ kind: "whitespace_text_dropped", role: source.role });
       }
       continue;
     }
@@ -409,10 +454,10 @@ function prepareMessageForProjection(
   }
 
   const next = content === undefined ? source : { ...source, content };
-  if (next.role === 'tool' && next.content.length === 0) {
+  if (next.role === "tool" && next.content.length === 0) {
     throw new KimiError(
       ErrorCodes.REQUEST_INVALID,
-      'Tool result message content cannot be empty after removing empty text blocks.',
+      "Tool result message content cannot be empty after removing empty text blocks.",
       {
         details: {
           toolCallId: next.toolCallId,
@@ -435,7 +480,7 @@ function prepareMessageForProjection(
   // that carries any real content keeps every part verbatim — including
   // empty thinking blocks, which preserved-thinking providers require back.
   if (next.content.every(isVacuousContentPart)) {
-    onAnomaly?.({ kind: 'vacuous_message_dropped', role: next.role });
+    onAnomaly?.({ kind: "vacuous_message_dropped", role: next.role });
     return null;
   }
   return next;
@@ -449,26 +494,30 @@ function prepareMessageForProjection(
  * carry content.
  */
 function isVacuousContentPart(part: ContentPart): boolean {
-  if (part.type === 'text') return part.text.trim().length === 0;
-  if (part.type === 'think') return part.encrypted === undefined && part.think.trim().length === 0;
+  if (part.type === "text") return part.text.trim().length === 0;
+  if (part.type === "think")
+    return part.encrypted === undefined && part.think.trim().length === 0;
   return false;
 }
 
 function canMergeUserMessage(message: ContextMessage): boolean {
-  return message.role === 'user' && message.origin?.kind === 'user';
+  return message.role === "user" && message.origin?.kind === "user";
 }
 
-function mergeTwoUserMessages(a: ContextMessage, b: ContextMessage): ContextMessage {
+function mergeTwoUserMessages(
+  a: ContextMessage,
+  b: ContextMessage,
+): ContextMessage {
   const aText = extractTextOnly(a);
   const bText = extractTextOnly(b);
   const nonTextParts = [
-    ...a.content.filter((p) => p.type !== 'text'),
-    ...b.content.filter((p) => p.type !== 'text'),
+    ...a.content.filter((p) => p.type !== "text"),
+    ...b.content.filter((p) => p.type !== "text"),
   ];
-  const mergedText: TextPart = { type: 'text', text: `${aText}\n\n${bText}` };
+  const mergedText: TextPart = { type: "text", text: `${aText}\n\n${bText}` };
   const content: ContentPart[] = [mergedText, ...nonTextParts];
   return {
-    role: 'user',
+    role: "user",
     content,
     toolCalls: [],
     origin: a.origin,
@@ -477,9 +526,9 @@ function mergeTwoUserMessages(a: ContextMessage, b: ContextMessage): ContextMess
 
 function extractTextOnly(message: Message): string {
   return message.content
-    .filter((p): p is TextPart => p.type === 'text')
+    .filter((p): p is TextPart => p.type === "text")
     .map((p) => p.text)
-    .join('');
+    .join("");
 }
 
 function stripContextMetadata(message: ContextMessage): Message {
@@ -494,23 +543,30 @@ function stripContextMetadata(message: ContextMessage): Message {
   };
 }
 
-export function trimTrailingOpenToolExchange(history: readonly Message[]): Message[] {
+export function trimTrailingOpenToolExchange(
+  history: readonly Message[],
+): Message[] {
   let lastNonToolIndex = history.length - 1;
-  while (lastNonToolIndex >= 0 && history[lastNonToolIndex]?.role === 'tool') {
+  while (lastNonToolIndex >= 0 && history[lastNonToolIndex]?.role === "tool") {
     lastNonToolIndex -= 1;
   }
 
   const assistant = history[lastNonToolIndex];
   if (assistant === undefined) return [];
-  if (assistant.role !== 'assistant' || assistant.toolCalls.length === 0) return [...history];
+  if (assistant.role !== "assistant" || assistant.toolCalls.length === 0)
+    return [...history];
 
   const trailingToolCallIds = new Set(
     history
       .slice(lastNonToolIndex + 1)
       .map((message) => message.toolCallId)
-      .filter((toolCallId): toolCallId is string => typeof toolCallId === 'string'),
+      .filter(
+        (toolCallId): toolCallId is string => typeof toolCallId === "string",
+      ),
   );
-  const closed = assistant.toolCalls.every((toolCall) => trailingToolCallIds.has(toolCall.id));
+  const closed = assistant.toolCalls.every((toolCall) =>
+    trailingToolCallIds.has(toolCall.id),
+  );
   return closed ? [...history] : history.slice(0, lastNonToolIndex);
 }
 
@@ -523,11 +579,11 @@ export const MEDIA_DEGRADE_KEEP_RECENT = 2;
 
 const MEDIA_DEGRADED_PLACEHOLDERS = {
   image_url:
-    '[image omitted: dropped to fit the provider request size limit; re-read the file to view it]',
+    "[image omitted: dropped to fit the provider request size limit; re-read the file to view it]",
   audio_url:
-    '[audio omitted: dropped to fit the provider request size limit; re-read the file to hear it]',
+    "[audio omitted: dropped to fit the provider request size limit; re-read the file to hear it]",
   video_url:
-    '[video omitted: dropped to fit the provider request size limit; re-read the file to view it]',
+    "[video omitted: dropped to fit the provider request size limit; re-read the file to view it]",
 } as const;
 
 /**
@@ -539,14 +595,16 @@ const MEDIA_DEGRADED_PLACEHOLDERS = {
  */
 export const MEDIA_STRIPPED_PLACEHOLDERS = {
   image_url:
-    '[image omitted for provider compatibility; re-read the file to view it or get conversion guidance]',
+    "[image omitted for provider compatibility; re-read the file to view it or get conversion guidance]",
   audio_url:
-    '[audio omitted for provider compatibility; re-read the file to hear it]',
+    "[audio omitted for provider compatibility; re-read the file to hear it]",
   video_url:
-    '[video omitted for provider compatibility; re-read the file to view it]',
+    "[video omitted for provider compatibility; re-read the file to view it]",
 } as const;
 
-type MediaPlaceholderSet = typeof MEDIA_DEGRADED_PLACEHOLDERS | typeof MEDIA_STRIPPED_PLACEHOLDERS;
+type MediaPlaceholderSet =
+  | typeof MEDIA_DEGRADED_PLACEHOLDERS
+  | typeof MEDIA_STRIPPED_PLACEHOLDERS;
 
 type DegradableMediaPart = Extract<
   ContentPart,
@@ -573,18 +631,16 @@ export type MediaStripSnapshot = ReadonlySet<string>;
  */
 const MEDIA_CONTAINER_KEY_CACHE = new WeakMap<
   MediaContainer,
-  Partial<Record<DegradableMediaPart['type'], string>>
+  Partial<Record<DegradableMediaPart["type"], string>>
 >();
 
-function isDegradableMediaPart(
-  part: ContentPart,
-): part is DegradableMediaPart {
+function isDegradableMediaPart(part: ContentPart): part is DegradableMediaPart {
   return part.type in MEDIA_DEGRADED_PLACEHOLDERS;
 }
 
 function mediaContainer(part: DegradableMediaPart): MediaContainer {
-  if (part.type === 'image_url') return part.imageUrl;
-  if (part.type === 'audio_url') return part.audioUrl;
+  if (part.type === "image_url") return part.imageUrl;
+  if (part.type === "audio_url") return part.audioUrl;
   return part.videoUrl;
 }
 
@@ -594,13 +650,13 @@ function mediaStripKey(part: DegradableMediaPart): string {
   const cached = keysByType?.[part.type];
   if (cached !== undefined) return cached;
 
-  const key = createHash('sha256')
+  const key = createHash("sha256")
     .update(part.type)
-    .update('\0')
-    .update(container.id ?? '')
-    .update('\0')
+    .update("\0")
+    .update(container.id ?? "")
+    .update("\0")
     .update(container.url)
-    .digest('hex');
+    .digest("hex");
   if (keysByType === undefined) {
     MEDIA_CONTAINER_KEY_CACHE.set(container, { [part.type]: key });
   } else {
@@ -610,7 +666,9 @@ function mediaStripKey(part: DegradableMediaPart): string {
 }
 
 /** Capture the provider-visible content identity of every current media part. */
-export function captureMediaStripSnapshot(messages: readonly Message[]): MediaStripSnapshot {
+export function captureMediaStripSnapshot(
+  messages: readonly Message[],
+): MediaStripSnapshot {
   const snapshot = new Set<string>();
   for (const message of messages) {
     for (const part of message.content) {
@@ -633,10 +691,11 @@ export function stripMediaPartsBySnapshot(
   const result = messages.map((message) => {
     let messageChanged = false;
     const content = message.content.map((part): ContentPart => {
-      if (!isDegradableMediaPart(part) || !snapshot.has(mediaStripKey(part))) return part;
+      if (!isDegradableMediaPart(part) || !snapshot.has(mediaStripKey(part)))
+        return part;
       changed = true;
       messageChanged = true;
-      return { type: 'text', text: MEDIA_STRIPPED_PLACEHOLDERS[part.type] };
+      return { type: "text", text: MEDIA_STRIPPED_PLACEHOLDERS[part.type] };
     });
     return messageChanged ? { ...message, content } : message;
   });
@@ -662,18 +721,20 @@ export function degradeOlderMediaParts(
   placeholders: MediaPlaceholderSet = MEDIA_DEGRADED_PLACEHOLDERS,
 ): Message[] {
   const mediaCount = messages.reduce(
-    (count, message) => count + message.content.filter(isDegradableMediaPart).length,
+    (count, message) =>
+      count + message.content.filter(isDegradableMediaPart).length,
     0,
   );
   let toDegrade = Math.max(0, mediaCount - keepRecent);
   if (toDegrade === 0) return messages as Message[];
 
   return messages.map((message) => {
-    if (toDegrade === 0 || !message.content.some(isDegradableMediaPart)) return message;
+    if (toDegrade === 0 || !message.content.some(isDegradableMediaPart))
+      return message;
     const content = message.content.map((part): ContentPart => {
       if (toDegrade === 0 || !isDegradableMediaPart(part)) return part;
       toDegrade -= 1;
-      return { type: 'text', text: placeholders[part.type] };
+      return { type: "text", text: placeholders[part.type] };
     });
     return { ...message, content };
   });

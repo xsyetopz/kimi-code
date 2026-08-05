@@ -13,7 +13,10 @@
  * the OSC reply gets eaten by the input loop.
  */
 
-import { OSC11_QUERY, TERMINAL_THEME_DETECT_TIMEOUT_MS } from "#/tui/constant/terminal";
+import {
+  OSC11_QUERY,
+  TERMINAL_THEME_DETECT_TIMEOUT_MS,
+} from "#/tui/constant/terminal";
 
 import type { ResolvedTheme } from "./colors";
 import { parseOsc11BackgroundTheme } from "./terminal-background";
@@ -22,7 +25,9 @@ export interface DetectOptions {
   readonly timeoutMs?: number;
 }
 
-export async function detectTerminalTheme(opts: DetectOptions = {}): Promise<ResolvedTheme> {
+export async function detectTerminalTheme(
+  opts: DetectOptions = {},
+): Promise<ResolvedTheme> {
   if (!isInteractiveTerminal()) return "dark";
   if (isColorOptOut()) return "dark";
 
@@ -45,7 +50,8 @@ function isColorOptOut(): boolean {
   const env = process.env;
   if (env["NO_COLOR"] !== undefined && env["NO_COLOR"] !== "") return true;
   if (env["FORCE_COLOR"] === "0") return true;
-  if (env["CI"] !== undefined && env["CI"] !== "" && env["CI"] !== "0") return true;
+  if (env["CI"] !== undefined && env["CI"] !== "" && env["CI"] !== "0")
+    return true;
   return false;
 }
 
@@ -56,7 +62,9 @@ interface RawModeStdin {
   off(event: "data", listener: (data: Buffer) => void): NodeJS.ReadStream;
 }
 
-async function queryOsc11(opts: { timeoutMs: number }): Promise<ResolvedTheme | null> {
+async function queryOsc11(opts: {
+  timeoutMs: number;
+}): Promise<ResolvedTheme | null> {
   const stdin = process.stdin as unknown as RawModeStdin;
   if (typeof stdin.setRawMode !== "function") return null;
   // If something else is already listening on stdin (e.g. another raw-mode
@@ -108,7 +116,9 @@ async function queryOsc11(opts: { timeoutMs: number }): Promise<ResolvedTheme | 
  * COLORFGBG is `"fg;bg"` (sometimes `"fg;default;bg"`). The last token is
  * the background ANSI 16-color index; 0–6 and 8 are dark, the rest light.
  */
-export function parseColorFgBg(value: string | undefined): ResolvedTheme | null {
+export function parseColorFgBg(
+  value: string | undefined,
+): ResolvedTheme | null {
   if (value === undefined || value === "") return null;
   const parts = value.split(";");
   const bgRaw = parts.at(-1);

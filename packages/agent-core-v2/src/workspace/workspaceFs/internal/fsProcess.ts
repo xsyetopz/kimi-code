@@ -7,9 +7,12 @@
  * helper so it can be unit-tested with a fake runner.
  */
 
-import { type Readable } from 'node:stream';
+import { type Readable } from "node:stream";
 
-import { type IProcess, type ISessionProcessRunner } from '#/session/process/processRunner';
+import {
+  type IProcess,
+  type ISessionProcessRunner,
+} from "#/session/process/processRunner";
 
 export interface RunResult {
   readonly exitCode: number;
@@ -35,11 +38,11 @@ export async function runCommand(
 
   const signal = options.signal;
   const onAbort = (): void => {
-    void proc.kill('SIGKILL');
+    void proc.kill("SIGKILL");
   };
   if (signal !== undefined) {
     if (signal.aborted) onAbort();
-    else signal.addEventListener('abort', onAbort, { once: true });
+    else signal.addEventListener("abort", onAbort, { once: true });
   }
 
   const [stdout, stderr, exitCode] = await Promise.all([
@@ -52,12 +55,12 @@ export async function runCommand(
 
 export function readStream(stream: Readable): Promise<string> {
   return new Promise((resolve, reject) => {
-    let data = '';
-    stream.setEncoding('utf-8');
-    stream.on('data', (chunk: string) => {
+    let data = "";
+    stream.setEncoding("utf-8");
+    stream.on("data", (chunk: string) => {
       data += chunk;
     });
-    stream.once('end', () => resolve(data));
-    stream.once('error', reject);
+    stream.once("end", () => resolve(data));
+    stream.once("error", reject);
   });
 }

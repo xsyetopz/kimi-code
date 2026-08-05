@@ -3,12 +3,12 @@
  * `agent-core-v2/app/config/config.ts`.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { noResult } from '../helpers.js';
-import type { ServiceContract } from '../types.js';
+import { noResult } from "../helpers.js";
+import type { ServiceContract } from "../types.js";
 
-export const configTargetSchema = z.enum(['user', 'memory']);
+export const configTargetSchema = z.enum(["user", "memory"]);
 
 export const configInspectValueSchema = z.object({
   value: z.unknown().optional(),
@@ -19,7 +19,7 @@ export const configInspectValueSchema = z.object({
 
 export const configDiagnosticSchema = z.object({
   domain: z.string().optional(),
-  severity: z.enum(['warning', 'error']),
+  severity: z.enum(["warning", "error"]),
   message: z.string(),
 });
 
@@ -36,7 +36,10 @@ export const configContract = {
     output: noResult,
   },
   replaceSections: {
-    input: z.tuple([z.record(z.string(), z.unknown()), configTargetSchema.optional()]),
+    input: z.tuple([
+      z.record(z.string(), z.unknown()),
+      configTargetSchema.optional(),
+    ]),
     output: noResult,
   },
   reload: { input: z.tuple([]), output: noResult },

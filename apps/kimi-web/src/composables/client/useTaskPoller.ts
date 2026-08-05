@@ -2,11 +2,11 @@
 // Background task output polling and the 1-second task clock used to keep
 // running-task elapsed timers live in the UI.
 
-import { computed, ref, watch, type ComputedRef, type Ref } from 'vue';
-import { getKimiWebApi } from '../../api';
-import type { AppTask } from '../../api/types';
-import { keepLiveSubagents } from '../../lib/taskMerge';
-import type { ExtendedState } from '../useKimiWebClient';
+import { computed, ref, watch, type ComputedRef, type Ref } from "vue";
+import { getKimiWebApi } from "../../api";
+import type { AppTask } from "../../api/types";
+import { keepLiveSubagents } from "../../lib/taskMerge";
+import type { ExtendedState } from "../useKimiWebClient";
 
 const TASK_OUTPUT_POLL_INTERVAL_MS = 1000;
 const TASK_OUTPUT_POLL_BYTES = 4096;
@@ -34,7 +34,10 @@ export function useTaskPoller(
       rawState.tasksBySession = {
         ...rawState.tasksBySession,
         // Keep WS-delivered swarm subagents that REST /tasks omits (see keepLiveSubagents).
-        [sessionId]: keepLiveSubagents(taskList, rawState.tasksBySession[sessionId] ?? []),
+        [sessionId]: keepLiveSubagents(
+          taskList,
+          rawState.tasksBySession[sessionId] ?? [],
+        ),
       };
       // Completed tasks may have real terminal output that never streamed over
       // WS. Fetch it once now so the rows are expandable when the session opens.
@@ -57,12 +60,17 @@ export function useTaskPoller(
 
     const tasks = taskList ?? rawState.tasksBySession[sessionId] ?? [];
     const api = getKimiWebApi();
-    const outputByTaskId = new Map<string, { preview: string; bytes?: number }>();
+    const outputByTaskId = new Map<
+      string,
+      { preview: string; bytes?: number }
+    >();
 
     await Promise.all(
       tasks.map(async (task) => {
         const isTerminal =
-          task.status === 'completed' || task.status === 'failed' || task.status === 'cancelled';
+          task.status === "completed" ||
+          task.status === "failed" ||
+          task.status === "cancelled";
         if (!isTerminal) return;
         if (fetchedTerminalTaskOutputIds.has(task.id)) return;
         if ((task.outputLines?.length ?? 0) > 0) return;
@@ -103,7 +111,11 @@ export function useTaskPoller(
             ? outputByTaskId.get(t.backgroundTaskId)
             : undefined);
         if (!polled) return t;
-        return { ...t, outputPreview: polled.preview, outputBytes: polled.bytes };
+        return {
+          ...t,
+          outputPreview: polled.preview,
+          outputBytes: polled.bytes,
+        };
       }),
     };
   }
@@ -124,13 +136,18 @@ export function useTaskPoller(
       return;
     }
 
-    const outputByTaskId = new Map<string, { preview: string; bytes?: number }>();
+    const outputByTaskId = new Map<
+      string,
+      { preview: string; bytes?: number }
+    >();
 
     await Promise.all(
       taskList.map(async (task) => {
-        const isRunning = task.status === 'running';
+        const isRunning = task.status === "running";
         const isTerminal =
-          task.status === 'completed' || task.status === 'failed' || task.status === 'cancelled';
+          task.status === "completed" ||
+          task.status === "failed" ||
+          task.status === "cancelled";
         if (!isRunning && !isTerminal) return;
 
         // Running tasks: poll tail continuously. Terminal tasks: fetch a final
@@ -146,7 +163,9 @@ export function useTaskPoller(
         try {
           const withOutput = await api.getTask(sessionId, task.id, {
             withOutput: true,
-            outputBytes: isRunning ? TASK_OUTPUT_POLL_BYTES : TASK_OUTPUT_FINAL_BYTES,
+            outputBytes: isRunning
+              ? TASK_OUTPUT_POLL_BYTES
+              : TASK_OUTPUT_FINAL_BYTES,
           });
           if (withOutput.outputPreview !== undefined) {
             outputByTaskId.set(task.id, {
@@ -196,7 +215,10 @@ export function useTaskPoller(
     lastPolledSessionId = sessionId;
     void pollTaskOutputForSession(sessionId);
     taskOutputPollTimer = setInterval(() => {
-      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+      if (
+        typeof document !== "undefined" &&
+        document.visibilityState === "hidden"
+      ) {
         return;
       }
       if (rawState.activeSessionId === sessionId) {
@@ -223,7 +245,7 @@ export function useTaskPoller(
   const taskClock = ref(0);
   let taskClockTimer: ReturnType<typeof setInterval> | null = null;
   watch(
-    () => activeAppTasks.value.some((tk) => tk.status === 'running'),
+    () => activeAppTasks.value.some((tk) => tk.status === "running"),
     (hasRunning) => {
       if (hasRunning && taskClockTimer === null) {
         taskClockTimer = setInterval(() => {
@@ -242,9 +264,10 @@ export function useTaskPoller(
   watch(
     () => {
       const sid = rawState.activeSessionId;
-      if (!sid) return { sid: undefined as string | undefined, hasRunning: false };
+      if (!sid)
+        return { sid: undefined as string | undefined, hasRunning: false };
       const tasks = rawState.tasksBySession[sid] ?? [];
-      return { sid, hasRunning: tasks.some((t) => t.status === 'running') };
+      return { sid, hasRunning: tasks.some((t) => t.status === "running") };
     },
     ({ sid, hasRunning }, _prev, onCleanup) => {
       let cleanupTimer: ReturnType<typeof setTimeout> | undefined;
@@ -254,7 +277,7 @@ export function useTaskPoller(
         // All tasks finished — wait a beat to catch final output, then stop.
         cleanupTimer = setTimeout(() => {
           const tasks = rawState.tasksBySession[sid] ?? [];
-          if (!tasks.some((t) => t.status === 'running')) {
+          if (!tasks.some((t) => t.status === "running")) {
             stopTaskOutputPolling();
           }
         }, 1500);

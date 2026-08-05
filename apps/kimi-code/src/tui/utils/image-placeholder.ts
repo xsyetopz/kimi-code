@@ -28,23 +28,24 @@
  *     noise between two media parts.
  */
 
-import { randomUUID } from 'node:crypto';
-import { copyFileSync, mkdirSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { randomUUID } from "node:crypto";
+import { copyFileSync, mkdirSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 
-import type { PromptPart } from '@moonshot-ai/kimi-code-sdk';
-import { buildImageCompressionCaption } from '@moonshot-ai/kimi-code-sdk';
+import type { PromptPart } from "@moonshot-ai/kimi-code-sdk";
+import { buildImageCompressionCaption } from "@moonshot-ai/kimi-code-sdk";
 
-import { getCacheDir } from '#/utils/paths';
+import { getCacheDir } from "#/utils/paths";
 
 import type {
   ImageAttachment,
   ImageAttachmentStore,
   VideoAttachment,
-} from './image-attachment-store';
+} from "./image-attachment-store";
 
-const PLACEHOLDER_REGEX = /\[(image|video) #(\d+) (?:(\(\d+×\d+\))|([^\]]+))\]/g;
+const PLACEHOLDER_REGEX =
+  /\[(image|video) #(\d+) (?:(\(\d+×\d+\))|([^\]]+))\]/g;
 
 export interface ExtractionResult {
   /** Flat list of parts in input order; empty array when no media matched. */
@@ -74,7 +75,7 @@ export function extractMediaAttachments(
   let match: RegExpExecArray | null;
   while ((match = PLACEHOLDER_REGEX.exec(text)) !== null) {
     const [literal, kind, idStr] = match;
-    if (kind !== 'image' && kind !== 'video') continue;
+    if (kind !== "image" && kind !== "video") continue;
     if (idStr === undefined) continue;
     const id = Number.parseInt(idStr, 10);
     const attachment = store.get(id);
@@ -82,7 +83,7 @@ export function extractMediaAttachments(
     if (attachment.kind !== kind) continue;
     const before = text.slice(cursor, match.index);
     pushText(parts, before);
-    if (attachment.kind === 'video') {
+    if (attachment.kind === "video") {
       // Copy the paste into the shared cache and reference it by a `file://`
       // url; the engine resolves (uploads or degrades) it inside the turn.
       const cachePath = materializeVideoToCache(attachment);
@@ -132,7 +133,7 @@ export interface MediaTagRewriteResult {
  *    args are escaped by both `renderSkillAttributes` and
  *    `expandSkillParameters`, which would mangle the tag form).
  */
-export type MediaReferenceStyle = 'tag' | 'plain';
+export type MediaReferenceStyle = "tag" | "plain";
 
 /**
  * Rewrite media placeholders in slash-command args (`/skill:foo …`,
@@ -148,31 +149,37 @@ export type MediaReferenceStyle = 'tag' | 'plain';
 export function rewriteMediaPlaceholders(
   text: string,
   store: ImageAttachmentStore,
-  style: MediaReferenceStyle = 'tag',
+  style: MediaReferenceStyle = "tag",
 ): MediaTagRewriteResult {
   const imageAttachmentIds: number[] = [];
   const videoAttachmentIds: number[] = [];
   let cursor = 0;
-  let out = '';
+  let out = "";
 
   PLACEHOLDER_REGEX.lastIndex = 0;
   let match: RegExpExecArray | null;
   while ((match = PLACEHOLDER_REGEX.exec(text)) !== null) {
     const [literal, kind, idStr] = match;
-    if (kind !== 'image' && kind !== 'video') continue;
+    if (kind !== "image" && kind !== "video") continue;
     if (idStr === undefined) continue;
     const id = Number.parseInt(idStr, 10);
     const attachment = store.get(id);
     if (attachment === undefined) continue; // stale / user-typed — leave as text
     if (attachment.kind !== kind) continue;
     out += text.slice(cursor, match.index);
-    if (attachment.kind === 'video') {
-      const path = materializeVideoToCache(attachment, style === 'plain');
-      out += style === 'plain' ? formatMediaReference('video', path) : formatMediaTag('video', path);
+    if (attachment.kind === "video") {
+      const path = materializeVideoToCache(attachment, style === "plain");
+      out +=
+        style === "plain"
+          ? formatMediaReference("video", path)
+          : formatMediaTag("video", path);
       videoAttachmentIds.push(id);
     } else {
       const path = materializeImageToCache(attachment);
-      out += style === 'plain' ? formatMediaReference('image', path) : formatMediaTag('image', path);
+      out +=
+        style === "plain"
+          ? formatMediaReference("image", path)
+          : formatMediaTag("image", path);
       imageAttachmentIds.push(id);
     }
     cursor = match.index + literal.length;
@@ -194,17 +201,17 @@ function pushText(parts: PromptPart[], segment: string): void {
   // is fine here because the LLM doesn't care about inter-image spaces.
   if (segment.trim().length === 0) return;
   const last = parts.at(-1);
-  if (last?.type === 'text') {
-    parts[parts.length - 1] = { type: 'text', text: last.text + segment };
+  if (last?.type === "text") {
+    parts[parts.length - 1] = { type: "text", text: last.text + segment };
     return;
   }
-  parts.push({ type: 'text', text: segment });
+  parts.push({ type: "text", text: segment });
 }
 
 function imagePartForAttachment(att: ImageAttachment): PromptPart {
-  const base64 = Buffer.from(att.bytes).toString('base64');
+  const base64 = Buffer.from(att.bytes).toString("base64");
   return {
-    type: 'image_url',
+    type: "image_url",
     imageUrl: { url: `data:${att.mime};base64,${base64}` },
   };
 }
@@ -216,30 +223,35 @@ function imagePartForAttachment(att: ImageAttachment): PromptPart {
  */
 function videoPartForCachePath(cachePath: string): PromptPart {
   return {
-    type: 'video_url',
+    type: "video_url",
     videoUrl: { url: pathToFileURL(cachePath).href },
   };
 }
 
-function materializeVideoToCache(att: VideoAttachment, escapeProofName = false): string {
+function materializeVideoToCache(
+  att: VideoAttachment,
+  escapeProofName = false,
+): string {
   const cacheDir = getCacheDir();
   mkdirSync(cacheDir, { recursive: true });
   // The label permits XML boundary chars (`<>&"`); plain references go
   // through skill-arg escaping, where they would no longer match the file
   // on disk, so strip them from the cache name in that mode.
-  const label = escapeProofName ? att.label.replaceAll(/[<>&"]/g, '_') : att.label;
+  const label = escapeProofName
+    ? att.label.replaceAll(/[<>&"]/g, "_")
+    : att.label;
   const target = join(cacheDir, `${randomUUID()}-${label}`);
   copyFileSync(att.sourcePath, target);
   return target;
 }
 
 const IMAGE_MIME_EXTENSION: Readonly<Record<string, string>> = {
-  'image/png': 'png',
-  'image/jpeg': 'jpg',
-  'image/gif': 'gif',
-  'image/webp': 'webp',
-  'image/bmp': 'bmp',
-  'image/tiff': 'tif',
+  "image/png": "png",
+  "image/jpeg": "jpg",
+  "image/gif": "gif",
+  "image/webp": "webp",
+  "image/bmp": "bmp",
+  "image/tiff": "tif",
 };
 
 function materializeImageToCache(att: ImageAttachment): string {
@@ -247,7 +259,7 @@ function materializeImageToCache(att: ImageAttachment): string {
   mkdirSync(cacheDir, { recursive: true });
   // ReadMediaFile sniffs the real format from the bytes, so the extension
   // only needs to be a reasonable hint.
-  const ext = IMAGE_MIME_EXTENSION[att.mime.trim().toLowerCase()] ?? 'img';
+  const ext = IMAGE_MIME_EXTENSION[att.mime.trim().toLowerCase()] ?? "img";
   const target = join(cacheDir, `${randomUUID()}.${ext}`);
   writeFileSync(target, att.bytes);
   return target;
@@ -255,7 +267,7 @@ function materializeImageToCache(att: ImageAttachment): string {
 
 function captionForCompressedImage(att: ImageAttachment): string {
   const original = att.original;
-  if (original === undefined) return '';
+  if (original === undefined) return "";
   return buildImageCompressionCaption({
     original: {
       width: original.width,
@@ -273,7 +285,7 @@ function captionForCompressedImage(att: ImageAttachment): string {
   });
 }
 
-function formatMediaTag(tag: 'image' | 'video', path: string): string {
+function formatMediaTag(tag: "image" | "video", path: string): string {
   return `<${tag} path="${escapeAttribute(path)}"></${tag}>`;
 }
 
@@ -283,14 +295,14 @@ function formatMediaTag(tag: 'image' | 'video', path: string): string {
  * cache names — see materializeVideoToCache) so it survives
  * `escapeXml`/`escapeXmlTags` untouched.
  */
-function formatMediaReference(kind: 'image' | 'video', path: string): string {
+function formatMediaReference(kind: "image" | "video", path: string): string {
   return `Attached ${kind} file: ${path} (open it with ReadMediaFile)`;
 }
 
 function escapeAttribute(value: string): string {
   return value
-    .replaceAll('&', '&amp;')
-    .replaceAll('"', '&quot;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;');
+    .replaceAll("&", "&amp;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
 }

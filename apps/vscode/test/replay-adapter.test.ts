@@ -42,7 +42,10 @@ function message(
   };
 }
 
-function record(messageValue: ReplayMessage, time: number = 1): AgentReplayRecord {
+function record(
+  messageValue: ReplayMessage,
+  time: number = 1,
+): AgentReplayRecord {
   return { type: "message", message: messageValue, time };
 }
 
@@ -164,7 +167,11 @@ describe("replay adapter (renders the public SDK resume state for the Webview)",
 
   it("opens one visible turn when replay contains a user prompt", () => {
     const events = replay([
-      record(message("user", [{ type: "text", text: "Fix the test" }], { origin: { kind: "user" } })),
+      record(
+        message("user", [{ type: "text", text: "Fix the test" }], {
+          origin: { kind: "user" },
+        }),
+      ),
     ]);
 
     expect(events.filter((event) => event.type !== "StatusUpdate")).toEqual([
@@ -187,9 +194,18 @@ describe("replay adapter (renders the public SDK resume state for the Webview)",
         message(
           "user",
           [
-            { type: "image_url", imageUrl: { url: "file:///workspace/a.png", id: "image-1" } },
-            { type: "audio_url", audioUrl: { url: "file:///workspace/a.mp3", id: "audio-1" } },
-            { type: "video_url", videoUrl: { url: "file:///workspace/a.mp4", id: "video-1" } },
+            {
+              type: "image_url",
+              imageUrl: { url: "file:///workspace/a.png", id: "image-1" },
+            },
+            {
+              type: "audio_url",
+              audioUrl: { url: "file:///workspace/a.mp3", id: "audio-1" },
+            },
+            {
+              type: "video_url",
+              videoUrl: { url: "file:///workspace/a.mp4", id: "video-1" },
+            },
           ],
           { origin: { kind: "user" } },
         ),
@@ -200,9 +216,18 @@ describe("replay adapter (renders the public SDK resume state for the Webview)",
       type: "TurnBegin",
       payload: {
         user_input: [
-          { type: "image_url", image_url: { url: "file:///workspace/a.png", id: "image-1" } },
-          { type: "audio_url", audio_url: { url: "file:///workspace/a.mp3", id: "audio-1" } },
-          { type: "video_url", video_url: { url: "file:///workspace/a.mp4", id: "video-1" } },
+          {
+            type: "image_url",
+            image_url: { url: "file:///workspace/a.png", id: "image-1" },
+          },
+          {
+            type: "audio_url",
+            audio_url: { url: "file:///workspace/a.mp3", id: "audio-1" },
+          },
+          {
+            type: "video_url",
+            video_url: { url: "file:///workspace/a.mp4", id: "video-1" },
+          },
         ],
       },
       _sessionId: "session-1",
@@ -211,8 +236,15 @@ describe("replay adapter (renders the public SDK resume state for the Webview)",
 
   it("renders assistant text inside the open turn", () => {
     const events = replay([
-      record(message("user", [{ type: "text", text: "Explain" }], { origin: { kind: "user" } })),
-      record(message("assistant", [{ type: "text", text: "Here is the answer" }]), 2),
+      record(
+        message("user", [{ type: "text", text: "Explain" }], {
+          origin: { kind: "user" },
+        }),
+      ),
+      record(
+        message("assistant", [{ type: "text", text: "Here is the answer" }]),
+        2,
+      ),
     ]);
 
     expect(events.filter((event) => event.type === "ContentPart")).toEqual([
@@ -226,9 +258,15 @@ describe("replay adapter (renders the public SDK resume state for the Webview)",
 
   it("renders signed thinking inside the open turn", () => {
     const events = replay([
-      record(message("user", [{ type: "text", text: "Explain" }], { origin: { kind: "user" } })),
       record(
-        message("assistant", [{ type: "think", think: "Reviewing", encrypted: "signature" }]),
+        message("user", [{ type: "text", text: "Explain" }], {
+          origin: { kind: "user" },
+        }),
+      ),
+      record(
+        message("assistant", [
+          { type: "think", think: "Reviewing", encrypted: "signature" },
+        ]),
         2,
       ),
     ]);
@@ -244,11 +282,21 @@ describe("replay adapter (renders the public SDK resume state for the Webview)",
 
   it("renders assistant media when a resumed answer contains media parts", () => {
     const events = replay([
-      record(message("user", [{ type: "text", text: "Show it" }], { origin: { kind: "user" } })),
+      record(
+        message("user", [{ type: "text", text: "Show it" }], {
+          origin: { kind: "user" },
+        }),
+      ),
       record(
         message("assistant", [
-          { type: "image_url", imageUrl: { url: "https://example.test/result.png" } },
-          { type: "video_url", videoUrl: { url: "https://example.test/result.mp4" } },
+          {
+            type: "image_url",
+            imageUrl: { url: "https://example.test/result.png" },
+          },
+          {
+            type: "video_url",
+            videoUrl: { url: "https://example.test/result.mp4" },
+          },
         ]),
         2,
       ),
@@ -257,12 +305,18 @@ describe("replay adapter (renders the public SDK resume state for the Webview)",
     expect(events.filter((event) => event.type === "ContentPart")).toEqual([
       {
         type: "ContentPart",
-        payload: { type: "image_url", image_url: { url: "https://example.test/result.png" } },
+        payload: {
+          type: "image_url",
+          image_url: { url: "https://example.test/result.png" },
+        },
         _sessionId: "session-1",
       },
       {
         type: "ContentPart",
-        payload: { type: "video_url", video_url: { url: "https://example.test/result.mp4" } },
+        payload: {
+          type: "video_url",
+          video_url: { url: "https://example.test/result.mp4" },
+        },
         _sessionId: "session-1",
       },
     ]);
@@ -270,7 +324,11 @@ describe("replay adapter (renders the public SDK resume state for the Webview)",
 
   it("maps an assistant tool call to the released tool name", () => {
     const events = replay([
-      record(message("user", [{ type: "text", text: "Read it" }], { origin: { kind: "user" } })),
+      record(
+        message("user", [{ type: "text", text: "Read it" }], {
+          origin: { kind: "user" },
+        }),
+      ),
       record(
         message("assistant", [], {
           toolCalls: [
@@ -299,7 +357,11 @@ describe("replay adapter (renders the public SDK resume state for the Webview)",
 
   it("renders a failed tool result in the open turn", () => {
     const events = replay([
-      record(message("user", [{ type: "text", text: "Run it" }], { origin: { kind: "user" } })),
+      record(
+        message("user", [{ type: "text", text: "Run it" }], {
+          origin: { kind: "user" },
+        }),
+      ),
       record(
         message("tool", [{ type: "text", text: "command failed" }], {
           toolCallId: "tool-1",
@@ -326,7 +388,11 @@ describe("replay adapter (renders the public SDK resume state for the Webview)",
 
   it("closes a completed compaction when its replay record has a result", () => {
     const events = replay([
-      record(message("user", [{ type: "text", text: "Continue" }], { origin: { kind: "user" } })),
+      record(
+        message("user", [{ type: "text", text: "Continue" }], {
+          origin: { kind: "user" },
+        }),
+      ),
       {
         type: "compaction",
         time: 2,
@@ -339,7 +405,9 @@ describe("replay adapter (renders the public SDK resume state for the Webview)",
       },
     ]);
 
-    expect(events.filter((event) => event.type.startsWith("Compaction"))).toEqual([
+    expect(
+      events.filter((event) => event.type.startsWith("Compaction")),
+    ).toEqual([
       { type: "CompactionBegin", payload: {}, _sessionId: "session-1" },
       { type: "CompactionEnd", payload: {}, _sessionId: "session-1" },
     ]);
@@ -347,18 +415,28 @@ describe("replay adapter (renders the public SDK resume state for the Webview)",
 
   it("leaves an unfinished compaction open when its replay record has no result", () => {
     const events = replay([
-      record(message("user", [{ type: "text", text: "Continue" }], { origin: { kind: "user" } })),
+      record(
+        message("user", [{ type: "text", text: "Continue" }], {
+          origin: { kind: "user" },
+        }),
+      ),
       { type: "compaction", time: 2, instruction: "Keep decisions" },
     ]);
 
-    expect(events.filter((event) => event.type.startsWith("Compaction"))).toEqual([
+    expect(
+      events.filter((event) => event.type.startsWith("Compaction")),
+    ).toEqual([
       { type: "CompactionBegin", payload: {}, _sessionId: "session-1" },
     ]);
   });
 
   it("renders plan mode when replay records a plan update inside a turn", () => {
     const events = replay([
-      record(message("user", [{ type: "text", text: "Make a plan" }], { origin: { kind: "user" } })),
+      record(
+        message("user", [{ type: "text", text: "Make a plan" }], {
+          origin: { kind: "user" },
+        }),
+      ),
       { type: "plan_updated", time: 2, enabled: true },
     ]);
 
@@ -371,13 +449,27 @@ describe("replay adapter (renders the public SDK resume state for the Webview)",
 
   it("separates consecutive user prompts into independently completed turns", () => {
     const events = replay([
-      record(message("user", [{ type: "text", text: "First" }], { origin: { kind: "user" } }), 1),
+      record(
+        message("user", [{ type: "text", text: "First" }], {
+          origin: { kind: "user" },
+        }),
+        1,
+      ),
       record(message("assistant", [{ type: "text", text: "One" }]), 2),
-      record(message("user", [{ type: "text", text: "Second" }], { origin: { kind: "user" } }), 3),
+      record(
+        message("user", [{ type: "text", text: "Second" }], {
+          origin: { kind: "user" },
+        }),
+        3,
+      ),
       record(message("assistant", [{ type: "text", text: "Two" }]), 4),
     ]);
 
-    expect(events.filter((event) => event.type !== "StatusUpdate").map((event) => event.type)).toEqual([
+    expect(
+      events
+        .filter((event) => event.type !== "StatusUpdate")
+        .map((event) => event.type),
+    ).toEqual([
       "TurnBegin",
       "StepBegin",
       "ContentPart",
@@ -392,11 +484,20 @@ describe("replay adapter (renders the public SDK resume state for the Webview)",
   it("does not expose an injected user message in resumed history", () => {
     const events = replay([
       record(
-        message("user", [{ type: "text", text: "<system>hidden reminder</system>" }], {
-          origin: { kind: "injection", variant: "system_reminder" },
-        }),
+        message(
+          "user",
+          [{ type: "text", text: "<system>hidden reminder</system>" }],
+          {
+            origin: { kind: "injection", variant: "system_reminder" },
+          },
+        ),
       ),
-      record(message("user", [{ type: "text", text: "Visible prompt" }], { origin: { kind: "user" } }), 2),
+      record(
+        message("user", [{ type: "text", text: "Visible prompt" }], {
+          origin: { kind: "user" },
+        }),
+        2,
+      ),
     ]);
 
     expect(events.filter((event) => event.type === "TurnBegin")).toEqual([
@@ -425,7 +526,9 @@ describe("replay adapter (renders the public SDK resume state for the Webview)",
 
     expect(events).toContainEqual({
       type: "TurnBegin",
-      payload: { user_input: [{ type: "text", text: "/skill:review focus on errors" }] },
+      payload: {
+        user_input: [{ type: "text", text: "/skill:review focus on errors" }],
+      },
       _sessionId: "session-1",
     });
   });
@@ -457,7 +560,10 @@ describe("replay adapter (renders the public SDK resume state for the Webview)",
     });
     expect(events).toContainEqual({
       type: "ContentPart",
-      payload: { type: "text", text: "Imported context from file 'notes.md' (15 chars)." },
+      payload: {
+        type: "text",
+        text: "Imported context from file 'notes.md' (15 chars).",
+      },
       _sessionId: "session-1",
     });
     expect(JSON.stringify(events)).not.toContain("Prior decision.");
@@ -478,12 +584,19 @@ describe("replay adapter (renders the public SDK resume state for the Webview)",
     ];
 
     expect(replayRecordTurnCount(records)).toBe(0);
-    expect(replay(records).filter((event) => event.type === "TurnBegin")).toEqual([]);
+    expect(
+      replay(records).filter((event) => event.type === "TurnBegin"),
+    ).toEqual([]);
   });
 
   it("counts only visible prompts when replay reports the number of turns", () => {
     const records: AgentReplayRecord[] = [
-      record(message("user", [{ type: "text", text: "First" }], { origin: { kind: "user" } }), 1),
+      record(
+        message("user", [{ type: "text", text: "First" }], {
+          origin: { kind: "user" },
+        }),
+        1,
+      ),
       record(
         message("user", [{ type: "text", text: "Hidden" }], {
           origin: { kind: "injection", variant: "system_reminder" },
@@ -509,31 +622,90 @@ describe("replay adapter (renders the public SDK resume state for the Webview)",
 
   it("routes repeated runs of one subagent to their corresponding Agent calls", () => {
     const main = resumedAgent([
-      record(message("user", [{ type: "text", text: "First" }], { origin: { kind: "user" } }), 1),
-      record(message("assistant", [], {
-        toolCalls: [{ type: "function", id: "agent-call-1", name: "Agent", arguments: "{}" }],
-      }), 2),
-      record(message("tool", [{ type: "text", text: "agent_id: sub-1\nstatus: completed" }], {
-        toolCallId: "agent-call-1",
-      }), 5),
-      record(message("user", [{ type: "text", text: "Second" }], { origin: { kind: "user" } }), 10),
-      record(message("assistant", [], {
-        toolCalls: [{ type: "function", id: "agent-call-2", name: "Agent", arguments: "{}" }],
-      }), 11),
-      record(message("tool", [{ type: "text", text: "agent_id: sub-1\nstatus: completed" }], {
-        toolCallId: "agent-call-2",
-      }), 14),
+      record(
+        message("user", [{ type: "text", text: "First" }], {
+          origin: { kind: "user" },
+        }),
+        1,
+      ),
+      record(
+        message("assistant", [], {
+          toolCalls: [
+            {
+              type: "function",
+              id: "agent-call-1",
+              name: "Agent",
+              arguments: "{}",
+            },
+          ],
+        }),
+        2,
+      ),
+      record(
+        message(
+          "tool",
+          [{ type: "text", text: "agent_id: sub-1\nstatus: completed" }],
+          {
+            toolCallId: "agent-call-1",
+          },
+        ),
+        5,
+      ),
+      record(
+        message("user", [{ type: "text", text: "Second" }], {
+          origin: { kind: "user" },
+        }),
+        10,
+      ),
+      record(
+        message("assistant", [], {
+          toolCalls: [
+            {
+              type: "function",
+              id: "agent-call-2",
+              name: "Agent",
+              arguments: "{}",
+            },
+          ],
+        }),
+        11,
+      ),
+      record(
+        message(
+          "tool",
+          [{ type: "text", text: "agent_id: sub-1\nstatus: completed" }],
+          {
+            toolCallId: "agent-call-2",
+          },
+        ),
+        14,
+      ),
     ]);
-    const child = resumedAgent([
-      record(message("user", [{ type: "text", text: "child one" }], {
-        origin: { kind: "system_trigger", name: "subagent" },
-      }), 3),
-      record(message("assistant", [{ type: "text", text: "first child answer" }]), 4),
-      record(message("user", [{ type: "text", text: "child two" }], {
-        origin: { kind: "system_trigger", name: "subagent" },
-      }), 12),
-      record(message("assistant", [{ type: "text", text: "second child answer" }]), 13),
-    ], { type: "sub" });
+    const child = resumedAgent(
+      [
+        record(
+          message("user", [{ type: "text", text: "child one" }], {
+            origin: { kind: "system_trigger", name: "subagent" },
+          }),
+          3,
+        ),
+        record(
+          message("assistant", [{ type: "text", text: "first child answer" }]),
+          4,
+        ),
+        record(
+          message("user", [{ type: "text", text: "child two" }], {
+            origin: { kind: "system_trigger", name: "subagent" },
+          }),
+          12,
+        ),
+        record(
+          message("assistant", [{ type: "text", text: "second child answer" }]),
+          13,
+        ),
+      ],
+      { type: "sub" },
+    );
     const state: ResumedSessionState = {
       sessionMetadata: {
         createdAt: "",
@@ -551,19 +723,29 @@ describe("replay adapter (renders the public SDK resume state for the Webview)",
 
     const events = replaySessionToWebviewEvents(state, "session-1");
 
-    expect(events).toContainEqual(expect.objectContaining({
-      type: "SubagentEvent",
-      payload: {
-        parent_tool_call_id: "agent-call-1",
-        event: { type: "ContentPart", payload: { type: "text", text: "first child answer" } },
-      },
-    }));
-    expect(events).toContainEqual(expect.objectContaining({
-      type: "SubagentEvent",
-      payload: {
-        parent_tool_call_id: "agent-call-2",
-        event: { type: "ContentPart", payload: { type: "text", text: "second child answer" } },
-      },
-    }));
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        type: "SubagentEvent",
+        payload: {
+          parent_tool_call_id: "agent-call-1",
+          event: {
+            type: "ContentPart",
+            payload: { type: "text", text: "first child answer" },
+          },
+        },
+      }),
+    );
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        type: "SubagentEvent",
+        payload: {
+          parent_tool_call_id: "agent-call-2",
+          event: {
+            type: "ContentPart",
+            payload: { type: "text", text: "second child answer" },
+          },
+        },
+      }),
+    );
   });
 });

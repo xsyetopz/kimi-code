@@ -1,11 +1,15 @@
-import { createToolMessage, type ContentPart, type Message } from '@moonshot-ai/kosong';
+import {
+  createToolMessage,
+  type ContentPart,
+  type Message,
+} from "@moonshot-ai/kosong";
 
-import type { Agent } from '..';
-import { ErrorCodes, KimiError } from '../../errors';
-import type { LoopRecordedEvent } from '../../loop';
-import { extractImageCompressionCaptions } from '../../tools/support/image-compress';
-import { estimateTokens, estimateTokensForMessages } from '../../utils/tokens';
-import { escapeXml, escapeXmlAttr } from '../../utils/xml-escape';
+import type { Agent } from "..";
+import { ErrorCodes, KimiError } from "../../errors";
+import type { LoopRecordedEvent } from "../../loop";
+import { extractImageCompressionCaptions } from "../../tools/support/image-compress";
+import { estimateTokens, estimateTokensForMessages } from "../../utils/tokens";
+import { escapeXml, escapeXmlAttr } from "../../utils/xml-escape";
 import {
   COMPACT_USER_MESSAGE_MAX_TOKENS,
   COMPACTION_ELISION_VARIANT,
@@ -16,7 +20,7 @@ import {
   selectRecentUserMessages,
   type CompactionInput,
   type CompactionResult,
-} from '../compaction';
+} from "../compaction";
 import {
   captureMediaStripSnapshot,
   degradeOlderMediaParts,
@@ -26,24 +30,24 @@ import {
   type ProjectionAnomaly,
   type ProjectOptions,
   trimTrailingOpenToolExchange,
-} from './projector';
-import { stripDynamicToolContext } from './dynamic-tools';
+} from "./projector";
+import { stripDynamicToolContext } from "./dynamic-tools";
 import {
   USER_PROMPT_ORIGIN,
   type AgentContextData,
   type ContextMessage,
   type PromptOrigin,
-} from './types';
+} from "./types";
 
-export * from './types';
-export * from './dynamic-tools';
+export * from "./types";
+export * from "./dynamic-tools";
 
 const TOOL_INTERRUPTED_ON_RESUME_OUTPUT =
-  'Tool execution was interrupted before its result was recorded. Do not assume the tool completed successfully.';
+  "Tool execution was interrupted before its result was recorded. Do not assume the tool completed successfully.";
 
 const IMPORT_CONTEXT_GUIDANCE =
-  'This is a prior conversation history that may be relevant to the current session. ' +
-  'Please review this context and use it to inform your responses.';
+  "This is a prior conversation history that may be relevant to the current session. " +
+  "Please review this context and use it to inform your responses.";
 
 // Invariant: _history must not contain an unresolved tool call exchange except
 // at the tail. When the tail is unresolved, pendingToolResultIds is exactly the
@@ -79,15 +83,18 @@ export class ContextMemory {
     // through the built-in system-reminder injection — hidden by its
     // `injection` origin — and keep only the real user content here.
     const { captions, parts } =
-      origin.kind === 'user'
+      origin.kind === "user"
         ? splitImageCompressionCaptions(content)
         : { captions: [], parts: [...content] };
     for (const caption of captions) {
-      this.appendSystemReminder(caption, { kind: 'injection', variant: 'image_compression' });
+      this.appendSystemReminder(caption, {
+        kind: "injection",
+        variant: "image_compression",
+      });
     }
     if (parts.length === 0) return;
     this.appendMessage({
-      role: 'user',
+      role: "user",
       content: parts,
       toolCalls: [],
       origin,
@@ -97,8 +104,8 @@ export class ContextMemory {
   appendSystemReminder(content: string, origin: PromptOrigin): void {
     const text = `<system-reminder>\n${content.trim()}\n</system-reminder>`;
     this.appendMessage({
-      role: 'user',
-      content: [{ type: 'text', text }],
+      role: "user",
+      content: [{ type: "text", text }],
       toolCalls: [],
       origin,
     });
@@ -114,18 +121,18 @@ export class ContextMemory {
    */
   injectAndNotify(content: string, origin?: PromptOrigin): void {
     this.agent.turn.steer(
-      [{ type: 'text', text: content }],
-      origin ?? { kind: 'injection', variant: 'system_reminder' },
+      [{ type: "text", text: content }],
+      origin ?? { kind: "injection", variant: "system_reminder" },
     );
   }
 
   appendLocalCommandStdout(content: string): void {
     const text = `<local-command-stdout>\n${content.trim()}\n</local-command-stdout>`;
     this.appendMessage({
-      role: 'user',
-      content: [{ type: 'text', text }],
+      role: "user",
+      content: [{ type: "text", text }],
       toolCalls: [],
-      origin: { kind: 'injection', variant: 'local-command-stdout' },
+      origin: { kind: "injection", variant: "local-command-stdout" },
     });
   }
 
@@ -136,27 +143,29 @@ export class ContextMemory {
   appendBashInput(command: string): void {
     const text = `<bash-input>\n${escapeXml(command)}\n</bash-input>`;
     this.appendMessage({
-      role: 'user',
-      content: [{ type: 'text', text }],
+      role: "user",
+      content: [{ type: "text", text }],
       toolCalls: [],
-      origin: { kind: 'shell_command', phase: 'input' },
+      origin: { kind: "shell_command", phase: "input" },
     });
   }
 
   appendBashOutput(stdout: string, stderr: string, isError?: boolean): void {
     const text = `<bash-stdout>${escapeXml(stdout)}</bash-stdout><bash-stderr>${escapeXml(stderr)}</bash-stderr>`;
     this.appendMessage({
-      role: 'user',
-      content: [{ type: 'text', text }],
+      role: "user",
+      content: [{ type: "text", text }],
       toolCalls: [],
       origin:
         isError === true
-          ? { kind: 'shell_command', phase: 'output', isError: true }
-          : { kind: 'shell_command', phase: 'output' },
+          ? { kind: "shell_command", phase: "output", isError: true }
+          : { kind: "shell_command", phase: "output" },
     });
   }
 
-  popMatchedMessage(matcher: (origin: PromptOrigin | undefined) => boolean): boolean {
+  popMatchedMessage(
+    matcher: (origin: PromptOrigin | undefined) => boolean,
+  ): boolean {
     const lastDeferred = this.deferredMessages.at(-1);
     const last = lastDeferred ?? this._history.at(-1);
     if (last === undefined) return false;
@@ -170,7 +179,7 @@ export class ContextMemory {
   }
 
   clear(): void {
-    this.agent.records.logRecord({ type: 'context.clear' });
+    this.agent.records.logRecord({ type: "context.clear" });
     this._history = [];
     this._tokenCount = 0;
     this.tokenCountCoveredMessageCount = 0;
@@ -186,28 +195,36 @@ export class ContextMemory {
 
   importContext(content: string, source: string): void {
     if (content.trim().length === 0) {
-      throw new KimiError(ErrorCodes.REQUEST_INVALID, 'Imported context cannot be empty', {
-        details: { reason: 'import_content_empty' },
-      });
+      throw new KimiError(
+        ErrorCodes.REQUEST_INVALID,
+        "Imported context cannot be empty",
+        {
+          details: { reason: "import_content_empty" },
+        },
+      );
     }
     const normalizedSource = source.trim();
     if (normalizedSource.length === 0) {
-      throw new KimiError(ErrorCodes.REQUEST_INVALID, 'Imported context source cannot be empty', {
-        details: { reason: 'import_source_empty' },
-      });
+      throw new KimiError(
+        ErrorCodes.REQUEST_INVALID,
+        "Imported context source cannot be empty",
+        {
+          details: { reason: "import_source_empty" },
+        },
+      );
     }
 
     const message: ContextMessage = {
-      role: 'user',
+      role: "user",
       content: [
         {
-          type: 'text',
+          type: "text",
           text:
             `<system>The user has imported context from ${escapeXml(normalizedSource)}. ` +
             `${IMPORT_CONTEXT_GUIDANCE}</system>`,
         },
         {
-          type: 'text',
+          type: "text",
           text:
             `<imported_context source="${escapeXmlAttr(normalizedSource)}">\n` +
             `${content}\n</imported_context>`,
@@ -220,17 +237,18 @@ export class ContextMemory {
     const importTokenCount = estimateTokensForMessages([message]);
     const totalTokenCount = currentTokenCount + importTokenCount;
     const capability = this.agent.config.modelCapabilities;
-    const maxContextTokens = capability.max_input_tokens ?? capability.max_context_tokens;
+    const maxContextTokens =
+      capability.max_input_tokens ?? capability.max_context_tokens;
     if (maxContextTokens > 0 && totalTokenCount > maxContextTokens) {
       throw new KimiError(
         ErrorCodes.CONTEXT_OVERFLOW,
-        'Imported content is too large for the current model context ' +
+        "Imported content is too large for the current model context " +
           `(~${String(importTokenCount)} import tokens + ${String(currentTokenCount)} existing ` +
           `= ~${String(totalTokenCount)} total > ${String(maxContextTokens)} token limit). ` +
-          'Please import a smaller file or session.',
+          "Please import a smaller file or session.",
         {
           details: {
-            reason: 'import_context_overflow',
+            reason: "import_context_overflow",
             importTokenCount,
             currentTokenCount,
             totalTokenCount,
@@ -245,7 +263,10 @@ export class ContextMemory {
   }
 
   updateTokenCount(tokenCount: number): void {
-    this.agent.records.logRecord({ type: 'context.update_token_count', tokenCount });
+    this.agent.records.logRecord({
+      type: "context.update_token_count",
+      tokenCount,
+    });
     this._tokenCount = tokenCount;
     this.tokenCountCoveredMessageCount = this._history.length;
     this.agent.emitStatusUpdated();
@@ -255,7 +276,7 @@ export class ContextMemory {
     if (count <= 0) return;
     if (this._history.length === 0) return;
 
-    this.agent.records.logRecord({ type: 'context.undo', count });
+    this.agent.records.logRecord({ type: "context.undo", count });
 
     let removedUserCount = 0;
     const removedMessages = new Set<ContextMessage>();
@@ -263,8 +284,8 @@ export class ContextMemory {
     for (let i = this._history.length - 1; i >= 0; i--) {
       const message = this._history[i];
       if (message === undefined) continue;
-      if (message.origin?.kind === 'injection') continue;
-      if (message.origin?.kind === 'compaction_summary') {
+      if (message.origin?.kind === "injection") continue;
+      if (message.origin?.kind === "compaction_summary") {
         stoppedAtBoundary = true;
         break;
       }
@@ -298,10 +319,14 @@ export class ContextMemory {
     ) {
       throw new KimiError(
         ErrorCodes.REQUEST_INVALID,
-        formatUndoUnavailableMessage(count, removedUserCount, stoppedAtBoundary),
+        formatUndoUnavailableMessage(
+          count,
+          removedUserCount,
+          stoppedAtBoundary,
+        ),
         {
           details: {
-            reason: 'undo_limit',
+            reason: "undo_limit",
             requestedCount: count,
             undoableCount: removedUserCount,
             stoppedAtCompaction: stoppedAtBoundary,
@@ -321,7 +346,9 @@ export class ContextMemory {
     // re-deriving them elsewhere (e.g. from the full transcript, which still
     // holds the untruncated originals of messages the live context truncated)
     // would diverge.
-    const compactableUserMessages = collectCompactableUserMessages(this._history);
+    const compactableUserMessages = collectCompactableUserMessages(
+      this._history,
+    );
     // Records written before the head/tail split carry `keptUserMessageCount`
     // but no `keptHeadUserMessageCount`; they were produced by the tail-only
     // selection, so restore must reproduce that exact selection or the rebuilt
@@ -329,21 +356,30 @@ export class ContextMemory {
     // relies on. (A new-code record without elision restores identically under
     // either selection, so gating on the head field alone is sufficient.)
     const restoreTailOnly =
-      this.agent.records.restoring !== null && input.keptHeadUserMessageCount === undefined;
+      this.agent.records.restoring !== null &&
+      input.keptHeadUserMessageCount === undefined;
     const selection = restoreTailOnly
       ? {
           head: [],
-          tail: selectRecentUserMessages(compactableUserMessages, COMPACT_USER_MESSAGE_MAX_TOKENS),
+          tail: selectRecentUserMessages(
+            compactableUserMessages,
+            COMPACT_USER_MESSAGE_MAX_TOKENS,
+          ),
           elided: false,
           omittedTokens: 0,
         }
       : selectCompactionUserMessages(compactableUserMessages);
     const elisionMessage: ContextMessage | null = selection.elided
       ? {
-          role: 'user',
-          content: [{ type: 'text', text: buildCompactionElisionText(selection.omittedTokens) }],
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: buildCompactionElisionText(selection.omittedTokens),
+            },
+          ],
           toolCalls: [],
-          origin: { kind: 'injection', variant: COMPACTION_ELISION_VARIANT },
+          origin: { kind: "injection", variant: COMPACTION_ELISION_VARIANT },
         }
       : null;
     const keptMessages: ContextMessage[] =
@@ -359,9 +395,11 @@ export class ContextMemory {
       input.tokensAfter ??
       estimateTokens(contextSummary) + estimateTokensForMessages(keptMessages);
     const keptUserMessageCount =
-      input.keptUserMessageCount ?? selection.head.length + selection.tail.length;
+      input.keptUserMessageCount ??
+      selection.head.length + selection.tail.length;
     const keptHeadUserMessageCount =
-      input.keptHeadUserMessageCount ?? (selection.elided ? selection.head.length : undefined);
+      input.keptHeadUserMessageCount ??
+      (selection.elided ? selection.head.length : undefined);
     const result: CompactionResult = {
       summary: input.summary,
       contextSummary,
@@ -373,10 +411,10 @@ export class ContextMemory {
       droppedCount: input.droppedCount,
     };
     this.agent.records.logRecord({
-      type: 'context.apply_compaction',
+      type: "context.apply_compaction",
       ...result,
     });
-    this.agent.replayBuilder.patchLast('compaction', {
+    this.agent.replayBuilder.patchLast("compaction", {
       result: {
         summary: result.summary,
         contextSummary: result.contextSummary,
@@ -389,10 +427,10 @@ export class ContextMemory {
       },
     });
     const summaryMessage: ContextMessage = {
-      role: 'user',
-      content: [{ type: 'text', text: contextSummary }],
+      role: "user",
+      content: [{ type: "text", text: contextSummary }],
       toolCalls: [],
-      origin: { kind: 'compaction_summary' },
+      origin: { kind: "compaction_summary" },
     };
     // Wire backward-compat: a pre-rework `context.apply_compaction` record (which
     // has no `keptUserMessageCount`) used `[summary, ...history.slice(compactedCount)]`
@@ -441,7 +479,9 @@ export class ContextMemory {
   }
 
   get tokenCountWithPending(): number {
-    const pendingMessages = this._history.slice(this.tokenCountCoveredMessageCount);
+    const pendingMessages = this._history.slice(
+      this.tokenCountCoveredMessageCount,
+    );
     return this._tokenCount + estimateTokensForMessages(pendingMessages);
   }
 
@@ -449,7 +489,10 @@ export class ContextMemory {
     return this._history;
   }
 
-  project(messages: readonly ContextMessage[], options?: ProjectOptions): Message[] {
+  project(
+    messages: readonly ContextMessage[],
+    options?: ProjectOptions,
+  ): Message[] {
     // Shape for the current model BEFORE projecting: a model without the
     // dynamically-loaded-tools capability must not see dynamic-tool schema
     // messages or loadable-tools announcements (the canonical history keeps
@@ -478,18 +521,25 @@ export class ContextMemory {
   // each turn) logs once, not per step. Trailing-tail synthesis is excluded — it
   // is the expected close of an in-flight call under `synthesizeMissing`
   // (compaction / strict resend), not a defect.
-  private reportProjectionRepairs(anomalies: readonly ProjectionAnomaly[]): void {
+  private reportProjectionRepairs(
+    anomalies: readonly ProjectionAnomaly[],
+  ): void {
     const notable = anomalies.filter(
-      (anomaly) => !(anomaly.kind === 'tool_result_synthesized' && anomaly.trailing),
+      (anomaly) =>
+        !(anomaly.kind === "tool_result_synthesized" && anomaly.trailing),
     );
     if (notable.length === 0) {
       this.lastProjectionRepairSignature = null;
       return;
     }
     const signature = notable
-      .map((anomaly) => ('toolCallId' in anomaly ? `${anomaly.kind}:${anomaly.toolCallId}` : anomaly.kind))
+      .map((anomaly) =>
+        "toolCallId" in anomaly
+          ? `${anomaly.kind}:${anomaly.toolCallId}`
+          : anomaly.kind,
+      )
       .toSorted()
-      .join('|');
+      .join("|");
     if (signature === this.lastProjectionRepairSignature) return;
     this.lastProjectionRepairSignature = signature;
 
@@ -503,22 +553,28 @@ export class ContextMemory {
     let whitespaceDropped = 0;
     let vacuousDropped = 0;
     for (const anomaly of notable) {
-      if (anomaly.kind === 'tool_result_reordered') reordered += 1;
-      else if (anomaly.kind === 'tool_result_synthesized') synthesized += 1;
-      else if (anomaly.kind === 'orphan_tool_result_dropped') droppedOrphan += 1;
-      else if (anomaly.kind === 'duplicate_tool_call_dropped') duplicateCallsDropped += 1;
-      else if (anomaly.kind === 'duplicate_tool_result_dropped') duplicateResultsDropped += 1;
-      else if (anomaly.kind === 'leading_non_user_dropped') leadingDropped += 1;
-      else if (anomaly.kind === 'consecutive_assistants_merged') assistantsMerged += 1;
-      else if (anomaly.kind === 'vacuous_message_dropped') vacuousDropped += 1;
+      if (anomaly.kind === "tool_result_reordered") reordered += 1;
+      else if (anomaly.kind === "tool_result_synthesized") synthesized += 1;
+      else if (anomaly.kind === "orphan_tool_result_dropped")
+        droppedOrphan += 1;
+      else if (anomaly.kind === "duplicate_tool_call_dropped")
+        duplicateCallsDropped += 1;
+      else if (anomaly.kind === "duplicate_tool_result_dropped")
+        duplicateResultsDropped += 1;
+      else if (anomaly.kind === "leading_non_user_dropped") leadingDropped += 1;
+      else if (anomaly.kind === "consecutive_assistants_merged")
+        assistantsMerged += 1;
+      else if (anomaly.kind === "vacuous_message_dropped") vacuousDropped += 1;
       else whitespaceDropped += 1;
     }
     const toolCallIds = [
       ...new Set(
-        notable.flatMap((anomaly) => ('toolCallId' in anomaly ? [anomaly.toolCallId] : [])),
+        notable.flatMap((anomaly) =>
+          "toolCallId" in anomaly ? [anomaly.toolCallId] : [],
+        ),
       ),
     ].slice(0, 5);
-    this.agent.log.warn('repaired the request to keep it wire-valid', {
+    this.agent.log.warn("repaired the request to keep it wire-valid", {
       reordered,
       synthesized,
       droppedOrphan,
@@ -530,7 +586,7 @@ export class ContextMemory {
       vacuousDropped,
       toolCallIds,
     });
-    this.agent.telemetry.track('context_projection_repaired', {
+    this.agent.telemetry.track("context_projection_repaired", {
       reordered,
       synthesized,
       dropped_orphan: droppedOrphan,
@@ -588,12 +644,17 @@ export class ContextMemory {
    */
   get mediaStrippedMessages(): Message[] {
     const messages = this.messages;
-    return stripMediaPartsBySnapshot(messages, captureMediaStripSnapshot(messages));
+    return stripMediaPartsBySnapshot(
+      messages,
+      captureMediaStripSnapshot(messages),
+    );
   }
 
   useProjectedHistoryFrom(source: ContextMemory): void {
     this.clear();
-    this.pushHistory(...trimTrailingOpenToolExchange(source.project(source.history)));
+    this.pushHistory(
+      ...trimTrailingOpenToolExchange(source.project(source.history)),
+    );
   }
 
   finishResume(): void {
@@ -602,7 +663,7 @@ export class ContextMemory {
     if (closed.length > 0) {
       // Routine end-of-resume close of a genuinely interrupted trailing call
       // (e.g. the process died mid-tool), logged for traceability.
-      this.agent.log.info('closed interrupted tool calls at end of resume', {
+      this.agent.log.info("closed interrupted tool calls at end of resume", {
         closed: closed.length,
         toolCallIds: closed.slice(0, 5),
       });
@@ -618,12 +679,14 @@ export class ContextMemory {
   // more to close a genuine trailing interruption at end of resume, and
   // `closeAbandonedToolExchange` reuses it (with a live-turn message) as the
   // turn-end teardown. Returns the ids it closed; callers own the logging.
-  private closePendingToolResults(output: string = TOOL_INTERRUPTED_ON_RESUME_OUTPUT): string[] {
+  private closePendingToolResults(
+    output: string = TOOL_INTERRUPTED_ON_RESUME_OUTPUT,
+  ): string[] {
     if (this.pendingToolResultIds.size === 0) return [];
     const interruptedToolCallIds = [...this.pendingToolResultIds];
     for (const toolCallId of interruptedToolCallIds) {
       this.appendLoopEvent({
-        type: 'tool.result',
+        type: "tool.result",
         parentUuid: toolCallId,
         toolCallId,
         result: {
@@ -650,11 +713,11 @@ export class ContextMemory {
 
   appendLoopEvent(event: LoopRecordedEvent): void {
     this.agent.records.logRecord({
-      type: 'context.append_loop_event',
+      type: "context.append_loop_event",
       event,
     });
     switch (event.type) {
-      case 'step.begin': {
+      case "step.begin": {
         // A new assistant step means any tool calls still pending from an
         // earlier step were interrupted (the invariant guarantees this never
         // happens live, so this is a no-op outside replay). Close them in place
@@ -664,13 +727,16 @@ export class ContextMemory {
           // A mid-history gap means results were lost before this boundary —
           // a genuine defect worth investigating, unlike the expected trailing
           // interruption `finishResume` closes.
-          this.agent.log.warn('closed unresolved tool calls at a step boundary', {
-            closed: closed.length,
-            toolCallIds: closed.slice(0, 5),
-          });
+          this.agent.log.warn(
+            "closed unresolved tool calls at a step boundary",
+            {
+              closed: closed.length,
+              toolCallIds: closed.slice(0, 5),
+            },
+          );
         }
         const message: ContextMessage = {
-          role: 'assistant',
+          role: "assistant",
           content: [],
           toolCalls: [],
         };
@@ -678,11 +744,12 @@ export class ContextMemory {
         this.openSteps.set(event.uuid, message);
         return;
       }
-      case 'step.end': {
+      case "step.end": {
         const openStep = this.openSteps.get(event.uuid);
         this.openSteps.delete(event.uuid);
         if (event.usage !== undefined) {
-          const openStepIndex = openStep === undefined ? -1 : this._history.indexOf(openStep);
+          const openStepIndex =
+            openStep === undefined ? -1 : this._history.indexOf(openStep);
           const coveredCount =
             openStepIndex === -1 ? this._history.length : openStepIndex + 1;
           const totalUsage =
@@ -707,7 +774,7 @@ export class ContextMemory {
         this.flushDeferredMessagesIfToolExchangeClosed();
         return;
       }
-      case 'content.part': {
+      case "content.part": {
         const openStep = this.openSteps.get(event.stepUuid);
         if (openStep === undefined) {
           throw new Error(
@@ -717,7 +784,7 @@ export class ContextMemory {
         openStep.content.push(event.part);
         return;
       }
-      case 'tool.call': {
+      case "tool.call": {
         const openStep = this.openSteps.get(event.stepUuid);
         if (openStep === undefined) {
           throw new Error(
@@ -725,10 +792,11 @@ export class ContextMemory {
           );
         }
         openStep.toolCalls.push({
-          type: 'function',
+          type: "function",
           id: event.toolCallId,
           name: event.name,
-          arguments: event.args === undefined ? null : JSON.stringify(event.args),
+          arguments:
+            event.args === undefined ? null : JSON.stringify(event.args),
           extras: event.extras,
         });
         if (event.display !== undefined) {
@@ -738,7 +806,7 @@ export class ContextMemory {
         this.pendingToolResultIds.add(event.toolCallId);
         return;
       }
-      case 'tool.result': {
+      case "tool.result": {
         // Drop a result for an id that is not awaiting one: it was already
         // closed in place at a step boundary (a stale duplicate from an older
         // tail-only finishResume), or its call is gone.
@@ -747,10 +815,13 @@ export class ContextMemory {
         // structured isError/note fields. Model-facing status text (error
         // prefix, empty placeholder) and the note are rendered only at LLM
         // projection time (see tool-result-render.ts).
-        const message = createToolMessage(event.toolCallId, event.result.output);
+        const message = createToolMessage(
+          event.toolCallId,
+          event.result.output,
+        );
         this.pushHistory({
           ...message,
-          role: 'tool',
+          role: "tool",
           isError: event.result.isError,
           note: event.result.note,
         });
@@ -763,7 +834,7 @@ export class ContextMemory {
 
   appendMessage(message: ContextMessage): void {
     this.agent.records.logRecord({
-      type: 'context.append_message',
+      type: "context.append_message",
       message,
     });
     if (this.hasOpenToolExchange()) {
@@ -774,7 +845,10 @@ export class ContextMemory {
   }
 
   private flushDeferredMessagesIfToolExchangeClosed(): void {
-    if (this.pendingToolResultIds.size > 0 || this.deferredMessages.length === 0) {
+    if (
+      this.pendingToolResultIds.size > 0 ||
+      this.deferredMessages.length === 0
+    ) {
       return;
     }
     this.pushHistory(...this.deferredMessages);
@@ -788,14 +862,15 @@ export class ContextMemory {
   private pushHistory(...messages: ContextMessage[]): void {
     this._history.push(...messages);
     for (const message of messages) {
-      if (message.role === 'assistant') {
-        this._lastAssistantAt = this.agent.records.restoring?.time ?? Date.now();
+      if (message.role === "assistant") {
+        this._lastAssistantAt =
+          this.agent.records.restoring?.time ?? Date.now();
       }
-      if (message.origin?.kind === 'background_task') {
+      if (message.origin?.kind === "background_task") {
         this.agent.background.markDeliveredNotification(message.origin);
       }
       this.agent.replayBuilder.push({
-        type: 'message',
+        type: "message",
         message,
       });
     }
@@ -814,7 +889,7 @@ function splitImageCompressionCaptions(content: readonly ContentPart[]): {
   const captions: string[] = [];
   const parts: ContentPart[] = [];
   for (const part of content) {
-    if (part.type !== 'text') {
+    if (part.type !== "text") {
       parts.push(part);
       continue;
     }
@@ -825,7 +900,7 @@ function splitImageCompressionCaptions(content: readonly ContentPart[]): {
     }
     captions.push(...extracted.captions);
     if (extracted.text.trim().length > 0) {
-      parts.push({ type: 'text', text: extracted.text });
+      parts.push({ type: "text", text: extracted.text });
     }
   }
   return { captions, parts };
@@ -836,10 +911,10 @@ function formatUndoUnavailableMessage(
   undoableCount: number,
   stoppedAtCompaction: boolean,
 ): string {
-  const reason = stoppedAtCompaction ? ' after the last compaction' : '';
+  const reason = stoppedAtCompaction ? " after the last compaction" : "";
   return `Cannot undo ${formatPromptCount(requestedCount)}; only ${formatPromptCount(undoableCount)} can be undone in the active context${reason}.`;
 
   function formatPromptCount(count: number): string {
-    return `${String(count)} ${count === 1 ? 'prompt' : 'prompts'}`;
+    return `${String(count)} ${count === 1 ? "prompt" : "prompts"}`;
   }
 }

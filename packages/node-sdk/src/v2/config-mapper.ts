@@ -13,7 +13,7 @@
  * passthrough document, v2's materialized section defaults) are pinned in
  * the parity test's `KNOWN_DIFFS`, not papered over here.
  */
-import type { ConfigDiagnostics, KimiConfig } from '#/types';
+import type { ConfigDiagnostics, KimiConfig } from "#/types";
 
 /**
  * Every top-level `KimiConfig` field except `raw` (a v1 write-path
@@ -21,28 +21,28 @@ import type { ConfigDiagnostics, KimiConfig } from '#/types';
  * field name and the v2 config domain name.
  */
 const KIMI_CONFIG_DOMAINS = [
-  'providers',
-  'defaultProvider',
-  'defaultModel',
-  'models',
-  'thinking',
-  'planMode',
-  'yolo',
-  'defaultPermissionMode',
-  'defaultPlanMode',
-  'permission',
-  'hooks',
-  'services',
-  'mergeAllAvailableSkills',
-  'extraSkillDirs',
-  'loopControl',
-  'background',
-  'subagent',
-  'mcp',
-  'image',
-  'modelCatalog',
-  'experimental',
-  'telemetry',
+  "providers",
+  "defaultProvider",
+  "defaultModel",
+  "models",
+  "thinking",
+  "planMode",
+  "yolo",
+  "defaultPermissionMode",
+  "defaultPlanMode",
+  "permission",
+  "hooks",
+  "services",
+  "mergeAllAvailableSkills",
+  "extraSkillDirs",
+  "loopControl",
+  "background",
+  "subagent",
+  "mcp",
+  "image",
+  "modelCatalog",
+  "experimental",
+  "telemetry",
 ] as const;
 
 /**
@@ -52,7 +52,9 @@ const KIMI_CONFIG_DOMAINS = [
  * (`cron`, `tools`, `secondaryModel`, `extraAgentDirs`, ...) are dropped,
  * mirroring how v1's schema strips unknown top-level keys.
  */
-export function resolvedConfigToKimiConfig(resolved: Record<string, unknown>): KimiConfig {
+export function resolvedConfigToKimiConfig(
+  resolved: Record<string, unknown>,
+): KimiConfig {
   const config: Record<string, unknown> = {};
   for (const domain of KIMI_CONFIG_DOMAINS) {
     const value = resolved[domain];
@@ -111,7 +113,7 @@ export function planProviderRemoval(input: {
   const models: Record<string, unknown> = {};
   let removedDefault = false;
   for (const [key, model] of Object.entries(input.models ?? {})) {
-    if (model['provider'] === input.providerId) {
+    if (model["provider"] === input.providerId) {
       if (input.defaultModel === key) removedDefault = true;
       continue;
     }
@@ -134,19 +136,26 @@ export function planProviderRemoval(input: {
  * this — the same role the v2 engine's `shapeWithoutProvider` plays for its
  * own refresh path.
  */
-export function removeProviderFromConfig(config: KimiConfig, providerId: string): KimiConfig {
+export function removeProviderFromConfig(
+  config: KimiConfig,
+  providerId: string,
+): KimiConfig {
   const plan = planProviderRemoval({
     providers: config.providers as Record<string, unknown> | undefined,
-    models: config.models as Record<string, Record<string, unknown>> | undefined,
+    models: config.models as
+      | Record<string, Record<string, unknown>>
+      | undefined,
     defaultModel: config.defaultModel,
     defaultProvider: config.defaultProvider,
     providerId,
   });
   return {
     ...config,
-    providers: plan.providers as KimiConfig['providers'],
-    models: plan.models as KimiConfig['models'],
+    providers: plan.providers as KimiConfig["providers"],
+    models: plan.models as KimiConfig["models"],
     defaultModel: plan.clearDefaultModel ? undefined : config.defaultModel,
-    defaultProvider: plan.clearDefaultProvider ? undefined : config.defaultProvider,
+    defaultProvider: plan.clearDefaultProvider
+      ? undefined
+      : config.defaultProvider,
   };
 }

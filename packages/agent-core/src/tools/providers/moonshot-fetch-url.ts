@@ -13,10 +13,16 @@
  *   4. If localFallback also throws → propagate that error.
  */
 
-import { HttpFetchError, type UrlFetcher, type UrlFetchResult } from '../builtin';
+import {
+  HttpFetchError,
+  type UrlFetcher,
+  type UrlFetchResult,
+} from "../builtin";
 
 export interface BearerTokenProvider {
-  getAccessToken(options?: { readonly force?: boolean | undefined }): Promise<string>;
+  getAccessToken(options?: {
+    readonly force?: boolean | undefined;
+  }): Promise<string>;
 }
 
 export interface MoonshotFetchURLProviderOptions {
@@ -48,11 +54,14 @@ export class MoonshotFetchURLProvider implements UrlFetcher {
     this.fetchImpl = options.fetchImpl ?? globalThis.fetch.bind(globalThis);
   }
 
-  async fetch(url: string, options?: { toolCallId?: string }): Promise<UrlFetchResult> {
+  async fetch(
+    url: string,
+    options?: { toolCallId?: string },
+  ): Promise<UrlFetchResult> {
     try {
       const content = await this.fetchViaMoonshot(url, options?.toolCallId);
       // The service returns text it has already extracted from the page.
-      return { content, kind: 'extracted' };
+      return { content, kind: "extracted" };
     } catch {
       // Forward an explicit options object even when the caller passed
       // none, so downstream consumers always see a defined second arg.
@@ -69,7 +78,7 @@ export class MoonshotFetchURLProvider implements UrlFetcher {
     const response = await this.post(bodyJson, toolCallId);
 
     if (response.status !== 200) {
-      let detail = '';
+      let detail = "";
       try {
         detail = await response.text();
       } catch {
@@ -85,17 +94,20 @@ export class MoonshotFetchURLProvider implements UrlFetcher {
     return response.text();
   }
 
-  private async post(bodyJson: string, toolCallId: string | undefined): Promise<Response> {
+  private async post(
+    bodyJson: string,
+    toolCallId: string | undefined,
+  ): Promise<Response> {
     const accessToken = await this.resolveApiKey();
     return this.fetchImpl(this.baseUrl, {
-      method: 'POST',
+      method: "POST",
       headers: {
         ...this.defaultHeaders,
         Authorization: `Bearer ${accessToken}`,
-        Accept: 'text/markdown',
-        'Content-Type': 'application/json',
+        Accept: "text/markdown",
+        "Content-Type": "application/json",
         ...(toolCallId !== undefined && toolCallId.length > 0
-          ? { 'X-Msh-Tool-Call-Id': toolCallId }
+          ? { "X-Msh-Tool-Call-Id": toolCallId }
           : {}),
         ...this.customHeaders,
       },
@@ -123,6 +135,8 @@ export class MoonshotFetchURLProvider implements UrlFetcher {
     if (this.apiKey !== undefined && this.apiKey.length > 0) {
       return this.apiKey;
     }
-    throw new Error('Moonshot fetch service is not configured: missing API key or token provider.');
+    throw new Error(
+      "Moonshot fetch service is not configured: missing API key or token provider.",
+    );
   }
 }

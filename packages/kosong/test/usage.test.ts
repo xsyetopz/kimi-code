@@ -1,9 +1,9 @@
-import type { TokenUsage } from '#/usage';
-import { addUsage, emptyUsage, grandTotal, inputTotal } from '#/usage';
-import { describe, expect, it } from 'vitest';
+import type { TokenUsage } from "#/usage";
+import { addUsage, emptyUsage, grandTotal, inputTotal } from "#/usage";
+import { describe, expect, it } from "vitest";
 
-describe('emptyUsage', () => {
-  it('returns all zeros', () => {
+describe("emptyUsage", () => {
+  it("returns all zeros", () => {
     const usage = emptyUsage();
     expect(usage.inputOther).toBe(0);
     expect(usage.output).toBe(0);
@@ -12,8 +12,8 @@ describe('emptyUsage', () => {
   });
 });
 
-describe('inputTotal', () => {
-  it('sums all input fields', () => {
+describe("inputTotal", () => {
+  it("sums all input fields", () => {
     const usage: TokenUsage = {
       inputOther: 100,
       output: 50,
@@ -23,13 +23,13 @@ describe('inputTotal', () => {
     expect(inputTotal(usage)).toBe(330);
   });
 
-  it('returns 0 for empty usage', () => {
+  it("returns 0 for empty usage", () => {
     expect(inputTotal(emptyUsage())).toBe(0);
   });
 });
 
-describe('grandTotal', () => {
-  it('sums input total and output', () => {
+describe("grandTotal", () => {
+  it("sums input total and output", () => {
     const usage: TokenUsage = {
       inputOther: 100,
       output: 50,
@@ -39,13 +39,13 @@ describe('grandTotal', () => {
     expect(grandTotal(usage)).toBe(380);
   });
 
-  it('returns 0 for empty usage', () => {
+  it("returns 0 for empty usage", () => {
     expect(grandTotal(emptyUsage())).toBe(0);
   });
 });
 
-describe('addUsage', () => {
-  it('sums two usage values', () => {
+describe("addUsage", () => {
+  it("sums two usage values", () => {
     const a: TokenUsage = {
       inputOther: 10,
       output: 20,
@@ -65,7 +65,7 @@ describe('addUsage', () => {
     expect(result.inputCacheCreation).toBe(75);
   });
 
-  it('adding empty usage returns the other', () => {
+  it("adding empty usage returns the other", () => {
     const usage: TokenUsage = {
       inputOther: 100,
       output: 200,

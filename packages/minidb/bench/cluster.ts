@@ -18,23 +18,28 @@
 //       CLUSTER_BENCH_KEYS=3000 CLUSTER_BENCH_VALUE_BYTES=64
 //       CLUSTER_BENCH_HOLD_MS=250
 
-import { spawn } from 'node:child_process';
-import fs from 'node:fs/promises';
-import os from 'node:os';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { MiniDb } from '../src/index.js';
+import { spawn } from "node:child_process";
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { MiniDb } from "../src/index.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const WORKER = path.join(__dirname, 'cluster-worker.ts');
+const WORKER = path.join(__dirname, "cluster-worker.ts");
 
-const PROCESSES = (process.env.CLUSTER_BENCH_PROCESSES ?? '1,2,4,8').split(',').map(Number);
-const SHARDS = (process.env.CLUSTER_BENCH_SHARDS ?? '1,4,16').split(',').map(Number);
+const PROCESSES = (process.env.CLUSTER_BENCH_PROCESSES ?? "1,2,4,8")
+  .split(",")
+  .map(Number);
+const SHARDS = (process.env.CLUSTER_BENCH_SHARDS ?? "1,4,16")
+  .split(",")
+  .map(Number);
 const KEYS = Number(process.env.CLUSTER_BENCH_KEYS ?? 3000); // per process
 const VALUE_BYTES = Number(process.env.CLUSTER_BENCH_VALUE_BYTES ?? 64);
 const HOLD_MS = Number(process.env.CLUSTER_BENCH_HOLD_MS ?? 250);
 
-const fmt = (n: number) => n.toLocaleString('en-US', { maximumFractionDigits: 0 });
+const fmt = (n: number) =>
+  n.toLocaleString("en-US", { maximumFractionDigits: 0 });
 
 interface Report {
   ok: number;
@@ -49,20 +54,34 @@ interface Report {
 
 function runWorker(args: string[]): Promise<Report> {
   return new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, ['--import', 'tsx', WORKER, ...args], { stdio: ['ignore', 'pipe', 'pipe'] });
-    let stdout = '';
-    let stderr = '';
-    child.stdout.on('data', (d) => (stdout += d));
-    child.stderr.on('data', (d) => (stderr += d));
-    child.on('error', reject);
-    child.on('exit', (code) => {
-      const lines = stdout.trim().split('\n').filter((l) => l.startsWith('{'));
+    const child = spawn(
+      process.execPath,
+      ["--import", "tsx", WORKER, ...args],
+      { stdio: ["ignore", "pipe", "pipe"] },
+    );
+    let stdout = "";
+    let stderr = "";
+    child.stdout.on("data", (d) => (stdout += d));
+    child.stderr.on("data", (d) => (stderr += d));
+    child.on("error", reject);
+    child.on("exit", (code) => {
+      const lines = stdout
+        .trim()
+        .split("\n")
+        .filter((l) => l.startsWith("{"));
       if (code !== 0 || lines.length === 0) {
-        reject(new Error(`worker failed (code=${code}) args=${args.join(' ')}\n${stderr}\n${stdout}`));
+        reject(
+          new Error(
+            `worker failed (code=${code}) args=${args.join(" ")}\n${stderr}\n${stdout}`,
+          ),
+        );
         return;
       }
       const report = JSON.parse(lines[lines.length - 1]!) as Report;
-      if (!report.ok) reject(new Error(`worker error args=${args.join(' ')}: ${report.error}`));
+      if (!report.ok)
+        reject(
+          new Error(`worker error args=${args.join(" ")}: ${report.error}`),
+        );
       else resolve(report);
     });
   });
@@ -78,7 +97,7 @@ function shardBlock(p: number, procs: number, shards: number): string {
   const e = Math.max(s + 1, Math.floor(((p + 1) * shards) / procs));
   const ids: number[] = [];
   for (let i = s; i < Math.min(e, shards); i++) ids.push(i);
-  return ids.join(',') || 'all';
+  return ids.join(",") || "all";
 }
 
 interface CellResult {
@@ -94,11 +113,11 @@ interface CellResult {
 }
 
 async function benchCell(procs: number, shards: number): Promise<CellResult> {
-  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'minidb-cluster-bench-'));
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "minidb-cluster-bench-"));
   try {
     // ---- phase 1: affinity writes ------------------------------------------
     const affinityArgs = Array.from({ length: procs }, (_, p) => [
-      'write',
+      "write",
       dir,
       String(shards),
       `w${p}`,
@@ -107,46 +126,55 @@ async function benchCell(procs: number, shards: number): Promise<CellResult> {
       String(HOLD_MS),
       shardBlock(p, procs, shards),
     ]);
-    const affinity = await Promise.all(affinityArgs.map((args) => runWorker(args)));
+    const affinity = await Promise.all(
+      affinityArgs.map((args) => runWorker(args)),
+    );
     const affinityTotal = affinity.reduce((s, r) => s + r.n, 0);
     const affinityWall = Math.max(...affinity.map((r) => r.ms));
 
     // ---- phase 2: scatter writes -------------------------------------------
     const scatterArgs = Array.from({ length: procs }, (_, p) => [
-      'write',
+      "write",
       dir,
       String(shards),
       `s${p}`,
       String(KEYS),
       String(VALUE_BYTES),
       String(HOLD_MS),
-      'all',
+      "all",
     ]);
-    const scatter = await Promise.all(scatterArgs.map((args) => runWorker(args)));
+    const scatter = await Promise.all(
+      scatterArgs.map((args) => runWorker(args)),
+    );
     const scatterTotal = scatter.reduce((s, r) => s + r.n, 0);
     const scatterWall = Math.max(...scatter.map((r) => r.ms));
-    const scatterRetries = scatter.reduce((s, r) => s + (r.lockWaits ?? r.retries), 0);
+    const scatterRetries = scatter.reduce(
+      (s, r) => s + (r.lockWaits ?? r.retries),
+      0,
+    );
 
     // ---- phase 3: cross-process reads of the scatter keyspace ---------------
     const readArgs = Array.from({ length: procs }, (_, p) => [
-      'read',
+      "read",
       dir,
       String(shards),
       `s${(p + 1) % procs}`,
       String(KEYS),
       String(VALUE_BYTES),
       String(HOLD_MS),
-      'all',
+      "all",
     ]);
     const reads = await Promise.all(readArgs.map((args) => runWorker(args)));
     for (const r of reads) {
-      if (r.found !== r.n) throw new Error(`read verification failed: found ${r.found}/${r.n}`);
+      if (r.found !== r.n)
+        throw new Error(`read verification failed: found ${r.found}/${r.n}`);
     }
     const readTotal = reads.reduce((s, r) => s + r.found!, 0);
     const readWall = Math.max(...reads.map((r) => r.ms));
 
     const agg = (total: number, wall: number) => (total / wall) * 1000;
-    const perProc = (reports: Report[]) => (KEYS / (reports.reduce((s, r) => s + r.ms, 0) / reports.length)) * 1000;
+    const perProc = (reports: Report[]) =>
+      (KEYS / (reports.reduce((s, r) => s + r.ms, 0) / reports.length)) * 1000;
     return {
       procs,
       shards,
@@ -164,12 +192,18 @@ async function benchCell(procs: number, shards: number): Promise<CellResult> {
 }
 
 async function baseline(): Promise<{ writeOps: number; readOps: number }> {
-  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'minidb-bench-baseline-'));
+  const dir = await fs.mkdtemp(
+    path.join(os.tmpdir(), "minidb-bench-baseline-"),
+  );
   try {
-    const db = await MiniDb.open({ dir, valueCodec: 'json', fsyncPolicy: 'everysec' });
-    const pad = 'x'.repeat(VALUE_BYTES);
+    const db = await MiniDb.open({
+      dir,
+      valueCodec: "json",
+      fsyncPolicy: "everysec",
+    });
+    const pad = "x".repeat(VALUE_BYTES);
     let t0 = performance.now();
-    for (let i = 0; i < KEYS; i++) await db.set(`w0:${i}`, { p: 'w0', i, pad });
+    for (let i = 0; i < KEYS; i++) await db.set(`w0:${i}`, { p: "w0", i, pad });
     const writeMs = performance.now() - t0;
     t0 = performance.now();
     let found = 0;
@@ -178,23 +212,37 @@ async function baseline(): Promise<{ writeOps: number; readOps: number }> {
       if (v?.i === i) found++;
     }
     const readMs = performance.now() - t0;
-    if (found !== KEYS) throw new Error(`baseline verification failed ${found}/${KEYS}`);
+    if (found !== KEYS)
+      throw new Error(`baseline verification failed ${found}/${KEYS}`);
     await db.close();
-    return { writeOps: (KEYS / writeMs) * 1000, readOps: (KEYS / readMs) * 1000 };
+    return {
+      writeOps: (KEYS / writeMs) * 1000,
+      readOps: (KEYS / readMs) * 1000,
+    };
   } finally {
     await rmrf(dir);
   }
 }
 
-function printMatrix(title: string, cells: CellResult[], pick: (c: CellResult) => number): void {
+function printMatrix(
+  title: string,
+  cells: CellResult[],
+  pick: (c: CellResult) => number,
+): void {
   console.log(`\n${title}`);
-  const header = ['P \\ S', ...SHARDS.map((s) => String(s).padStart(12))].join(' | ');
+  const header = ["P \\ S", ...SHARDS.map((s) => String(s).padStart(12))].join(
+    " | ",
+  );
   console.log(`  ${header}`);
   for (const p of PROCESSES) {
     const row = [
       String(p).padEnd(5),
-      ...SHARDS.map((s) => fmt(pick(cells.find((c) => c.procs === p && c.shards === s)!)).padStart(12)),
-    ].join(' | ');
+      ...SHARDS.map((s) =>
+        fmt(pick(cells.find((c) => c.procs === p && c.shards === s)!)).padStart(
+          12,
+        ),
+      ),
+    ].join(" | ");
     console.log(`  ${row}`);
   }
 }
@@ -206,7 +254,9 @@ async function main(): Promise<void> {
 
   const base = await baseline();
   console.log(`baseline raw MiniDb (1 process, in-process, awaited writes):`);
-  console.log(`  write ${fmt(base.writeOps)} ops/s | read ${fmt(base.readOps)} ops/s`);
+  console.log(
+    `  write ${fmt(base.writeOps)} ops/s | read ${fmt(base.readOps)} ops/s`,
+  );
 
   const cells: CellResult[] = [];
   for (const shards of SHARDS) {
@@ -222,12 +272,14 @@ async function main(): Promise<void> {
     }
   }
 
-  console.log(`\nall numbers are aggregate ops/s across processes (spawn/teardown excluded)`);
-  printMatrix('WRITE-AFFINITY', cells, (c) => c.affinityOps);
-  printMatrix('WRITE-SCATTER ', cells, (c) => c.scatterOps);
-  printMatrix('READ           ', cells, (c) => c.readOps);
-  printMatrix('SCATTER lock waits', cells, (c) => c.scatterRetries);
-  console.log('');
+  console.log(
+    `\nall numbers are aggregate ops/s across processes (spawn/teardown excluded)`,
+  );
+  printMatrix("WRITE-AFFINITY", cells, (c) => c.affinityOps);
+  printMatrix("WRITE-SCATTER ", cells, (c) => c.scatterOps);
+  printMatrix("READ           ", cells, (c) => c.readOps);
+  printMatrix("SCATTER lock waits", cells, (c) => c.scatterRetries);
+  console.log("");
 }
 
 main().catch((e) => {

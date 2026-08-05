@@ -8,9 +8,9 @@
  * reach this layer, so `_base/errors` never imports a business domain.
  */
 
-import { CoreErrors, errorInfo, isErrorCode } from './codes';
-import type { ErrorCode } from '#/errors';
-import { Error2 } from './errors';
+import { CoreErrors, errorInfo, isErrorCode } from "./codes";
+import type { ErrorCode } from "#/errors";
+import { Error2 } from "./errors";
 
 export interface ErrorPayload {
   readonly code: ErrorCode;
@@ -33,7 +33,7 @@ export interface CodedErrorShape {
 const MAX_CAUSE_DEPTH = 8;
 
 export function isCodedError(error: unknown): error is CodedErrorShape {
-  if (error === null || typeof error !== 'object') {
+  if (error === null || typeof error !== "object") {
     return false;
   }
   const code = (error as { readonly code?: unknown }).code;
@@ -84,13 +84,15 @@ function toShallowErrorPayload(error: unknown): ErrorPayload {
     };
   }
   if (error instanceof Error) {
-    return makeErrorPayload(CoreErrors.codes.INTERNAL, error.message, { name: error.name });
+    return makeErrorPayload(CoreErrors.codes.INTERNAL, error.message, {
+      name: error.name,
+    });
   }
   return makeErrorPayload(CoreErrors.codes.INTERNAL, String(error));
 }
 
 function readErrorCause(error: unknown): unknown {
-  if (error === null || typeof error !== 'object') {
+  if (error === null || typeof error !== "object") {
     return undefined;
   }
   return (error as { readonly cause?: unknown }).cause;
@@ -102,6 +104,7 @@ export function fromErrorPayload(payload: ErrorPayload): Error2 {
   return new Error2(payload.code, payload.message, {
     name: payload.name,
     details: payload.details,
-    cause: payload.cause === undefined ? undefined : fromErrorPayload(payload.cause),
+    cause:
+      payload.cause === undefined ? undefined : fromErrorPayload(payload.cause),
   });
 }

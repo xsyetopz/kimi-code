@@ -13,15 +13,18 @@
  * the caller. Pure functions — no scoped state.
  */
 
-import { dirname, isAbsolute, join, normalize, resolve } from 'pathe';
+import { dirname, isAbsolute, join, normalize, resolve } from "pathe";
 
-import { findGitWorkTree } from '#/app/git/workTree';
-import { resolveKimiHome } from '#/app/bootstrap/bootstrap';
-import { OsFsErrors, HostFsError } from '#/os/interface/hostFsErrors';
-import type { IHostFileSystem } from '#/os/interface/hostFileSystem';
-import { McpServerConfigSchema, type McpServerConfig } from '#/mcpCore/config-schema';
-import { ErrorCodes, Error2 } from '#/errors';
-import { z } from 'zod';
+import { findGitWorkTree } from "#/app/git/workTree";
+import { resolveKimiHome } from "#/app/bootstrap/bootstrap";
+import { OsFsErrors, HostFsError } from "#/os/interface/hostFsErrors";
+import type { IHostFileSystem } from "#/os/interface/hostFileSystem";
+import {
+  McpServerConfigSchema,
+  type McpServerConfig,
+} from "#/mcpCore/config-schema";
+import { ErrorCodes, Error2 } from "#/errors";
+import { z } from "zod";
 
 const McpJsonFileSchema = z.object({
   mcpServers: z.record(z.string(), McpServerConfigSchema).default({}),
@@ -39,14 +42,16 @@ export interface ResolveMcpJsonPathsInput {
   readonly homeDir?: string;
 }
 
-export async function resolveMcpJsonPaths(input: ResolveMcpJsonPathsInput): Promise<McpJsonPaths> {
+export async function resolveMcpJsonPaths(
+  input: ResolveMcpJsonPathsInput,
+): Promise<McpJsonPaths> {
   const start = normalize(input.cwd);
   const projectRoot = (await findGitWorkTree(input.fs, start))?.root ?? start;
 
   return {
-    user: join(resolveKimiHome(input.homeDir), 'mcp.json'),
-    projectRoot: join(projectRoot, '.mcp.json'),
-    project: join(input.cwd, '.kimi-code', 'mcp.json'),
+    user: join(resolveKimiHome(input.homeDir), "mcp.json"),
+    projectRoot: join(projectRoot, ".mcp.json"),
+    project: join(input.cwd, ".kimi-code", "mcp.json"),
   };
 }
 
@@ -66,7 +71,9 @@ export async function loadMcpServers(
   }
   const [user, projectRoot, project] = await Promise.all([
     readMcpJson(input.fs, paths.user),
-    readMcpJson(input.fs, paths.projectRoot, { stdioCwdBase: dirname(paths.projectRoot) }),
+    readMcpJson(input.fs, paths.projectRoot, {
+      stdioCwdBase: dirname(paths.projectRoot),
+    }),
     readMcpJson(input.fs, paths.project),
   ]);
   return { ...user, ...projectRoot, ...project };
@@ -86,9 +93,13 @@ async function readMcpJson(
     text = await fs.readText(filePath);
   } catch (error: unknown) {
     if (isFileNotFound(error)) return {};
-    throw new Error2(ErrorCodes.CONFIG_INVALID, `Failed to read ${filePath}: ${describeError(error)}`, {
-      cause: error,
-    });
+    throw new Error2(
+      ErrorCodes.CONFIG_INVALID,
+      `Failed to read ${filePath}: ${describeError(error)}`,
+      {
+        cause: error,
+      },
+    );
   }
 
   if (text.trim().length === 0) return {};
@@ -97,17 +108,28 @@ async function readMcpJson(
   try {
     data = JSON.parse(text);
   } catch (error: unknown) {
-    throw new Error2(ErrorCodes.CONFIG_INVALID, `Invalid JSON in ${filePath}: ${describeError(error)}`, {
-      cause: error,
-    });
+    throw new Error2(
+      ErrorCodes.CONFIG_INVALID,
+      `Invalid JSON in ${filePath}: ${describeError(error)}`,
+      {
+        cause: error,
+      },
+    );
   }
 
   try {
-    return normalizeMcpServers(McpJsonFileSchema.parse(data).mcpServers, options);
+    return normalizeMcpServers(
+      McpJsonFileSchema.parse(data).mcpServers,
+      options,
+    );
   } catch (error: unknown) {
-    throw new Error2(ErrorCodes.CONFIG_INVALID, `Invalid MCP server config in ${filePath}: ${describeError(error)}`, {
-      cause: error,
-    });
+    throw new Error2(
+      ErrorCodes.CONFIG_INVALID,
+      `Invalid MCP server config in ${filePath}: ${describeError(error)}`,
+      {
+        cause: error,
+      },
+    );
   }
 }
 
@@ -119,13 +141,20 @@ function normalizeMcpServers(
   if (stdioCwdBase === undefined) return servers;
 
   return Object.fromEntries(
-    Object.entries(servers).map(([name, config]) => [name, normalizeStdioCwd(config, stdioCwdBase)]),
+    Object.entries(servers).map(([name, config]) => [
+      name,
+      normalizeStdioCwd(config, stdioCwdBase),
+    ]),
   );
 }
 
-function normalizeStdioCwd(config: McpServerConfig, cwdBase: string): McpServerConfig {
-  if (config.transport !== 'stdio') return config;
-  const cwd = config.cwd === undefined ? cwdBase : resolvePath(cwdBase, config.cwd);
+function normalizeStdioCwd(
+  config: McpServerConfig,
+  cwdBase: string,
+): McpServerConfig {
+  if (config.transport !== "stdio") return config;
+  const cwd =
+    config.cwd === undefined ? cwdBase : resolvePath(cwdBase, config.cwd);
   return { ...config, cwd };
 }
 
@@ -134,7 +163,10 @@ function resolvePath(base: string, value: string): string {
 }
 
 function isFileNotFound(error: unknown): boolean {
-  return error instanceof HostFsError && error.code === OsFsErrors.codes.OS_FS_NOT_FOUND;
+  return (
+    error instanceof HostFsError &&
+    error.code === OsFsErrors.codes.OS_FS_NOT_FOUND
+  );
 }
 
 function describeError(error: unknown): string {

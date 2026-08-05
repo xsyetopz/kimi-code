@@ -1,4 +1,4 @@
-import type { WireMigration, WireMigrationRecord } from './index';
+import type { WireMigration, WireMigrationRecord } from "./index";
 
 /**
  * Wire records before v1.1 used a nested `function` wrapper for each tool call:
@@ -7,7 +7,7 @@ import type { WireMigration, WireMigrationRecord } from './index';
  *   { name: 'xxx', arguments: 'yyy' }
  */
 interface V1_0ContextAppendMessageRecord extends WireMigrationRecord {
-  readonly type: 'context.append_message';
+  readonly type: "context.append_message";
   readonly message: V1_0ContextMessage;
 }
 
@@ -17,7 +17,7 @@ interface V1_0ContextMessage {
 }
 
 interface V1_0ToolCall {
-  readonly type: 'function';
+  readonly type: "function";
   readonly id: string;
   readonly function: {
     readonly name?: string;
@@ -35,10 +35,10 @@ function migrateToolCall(toolCall: V1_0ToolCall): WireMigrationRecord {
 }
 
 export const migrateV1_0ToV1_1: WireMigration = {
-  sourceVersion: '1.0',
-  targetVersion: '1.1',
+  sourceVersion: "1.0",
+  targetVersion: "1.1",
   migrateRecord(record: WireMigrationRecord): WireMigrationRecord {
-    if (record.type !== 'context.append_message') return record;
+    if (record.type !== "context.append_message") return record;
     const appendMessageRecord = record as V1_0ContextAppendMessageRecord;
 
     return {

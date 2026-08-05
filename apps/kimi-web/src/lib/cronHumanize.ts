@@ -20,29 +20,37 @@ const isNum = (s: string): boolean => /^\d+$/.test(s);
 export function humanizeCron(expr: string, t: Translator): string {
   const fields = expr.trim().split(/\s+/);
   if (fields.length !== 5) return expr;
-  const [m, h, dom, mon, dow] = fields as [string, string, string, string, string];
-  const restWild = dom === '*' && mon === '*' && dow === '*';
-  const domMonWild = dom === '*' && mon === '*';
+  const [m, h, dom, mon, dow] = fields as [
+    string,
+    string,
+    string,
+    string,
+    string,
+  ];
+  const restWild = dom === "*" && mon === "*" && dow === "*";
+  const domMonWild = dom === "*" && mon === "*";
 
-  if (m === '*' && h === '*' && restWild) return t('conversation.cron.everyMinute');
+  if (m === "*" && h === "*" && restWild)
+    return t("conversation.cron.everyMinute");
 
   const everyNMin = /^\*\/(\d+)$/.exec(m);
-  if (everyNMin && h === '*' && restWild) {
-    if (everyNMin[1] === '1') return t('conversation.cron.everyMinute');
-    return t('conversation.cron.everyNMinutes', { n: everyNMin[1]! });
+  if (everyNMin && h === "*" && restWild) {
+    if (everyNMin[1] === "1") return t("conversation.cron.everyMinute");
+    return t("conversation.cron.everyNMinutes", { n: everyNMin[1]! });
   }
 
-  if (m === '0' && h === '*' && restWild) return t('conversation.cron.everyHour');
+  if (m === "0" && h === "*" && restWild)
+    return t("conversation.cron.everyHour");
 
   const everyNHour = /^\*\/(\d+)$/.exec(h);
-  if (m === '0' && everyNHour && restWild) {
-    return t('conversation.cron.everyNHours', { n: everyNHour[1]! });
+  if (m === "0" && everyNHour && restWild) {
+    return t("conversation.cron.everyNHours", { n: everyNHour[1]! });
   }
 
   if (isNum(m) && isNum(h) && domMonWild) {
     const time = clockTime(h, m);
-    if (dow === '1-5') return t('conversation.cron.weekdaysAt', { time });
-    if (dow === '*') return t('conversation.cron.dailyAt', { time });
+    if (dow === "1-5") return t("conversation.cron.weekdaysAt", { time });
+    if (dow === "*") return t("conversation.cron.dailyAt", { time });
   }
 
   return expr;
@@ -59,9 +67,11 @@ export function collapsePrompt(
   text: string,
   limit = 120,
 ): { text: string; hasMore: boolean } {
-  const firstLine = text.split('\n')[0] ?? '';
-  const hasMore = text.includes('\n') || text.length > limit;
+  const firstLine = text.split("\n")[0] ?? "";
+  const hasMore = text.includes("\n") || text.length > limit;
   const collapsed =
-    firstLine.length > limit ? `${firstLine.slice(0, limit).trimEnd()}…` : firstLine;
+    firstLine.length > limit
+      ? `${firstLine.slice(0, limit).trimEnd()}…`
+      : firstLine;
   return { text: collapsed, hasMore };
 }

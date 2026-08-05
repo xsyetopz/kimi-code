@@ -7,8 +7,8 @@
  * already drive runtime validation — no second source of truth.
  */
 
-import { envelopeSchema } from '../protocol/envelope';
-import { z } from 'zod';
+import { envelopeSchema } from "../protocol/envelope";
+import { z } from "zod";
 
 /**
  * Convert a Zod schema to a plain JSON Schema object suitable for
@@ -18,14 +18,16 @@ import { z } from 'zod';
  * schemas don't need it.
  */
 export function jsonSchema(schema: z.ZodTypeAny): Record<string, unknown> {
-  return jsonSchemaForTarget(schema, 'input', 'draft-7');
+  return jsonSchemaForTarget(schema, "input", "draft-7");
 }
 
 /**
  * Convert a Zod schema to a response-side Fastify JSON Schema object.
  */
-export function outputJsonSchema(schema: z.ZodTypeAny): Record<string, unknown> {
-  return jsonSchemaForTarget(schema, 'output', 'draft-7');
+export function outputJsonSchema(
+  schema: z.ZodTypeAny,
+): Record<string, unknown> {
+  return jsonSchemaForTarget(schema, "output", "draft-7");
 }
 
 /**
@@ -38,23 +40,23 @@ export function outputJsonSchema(schema: z.ZodTypeAny): Record<string, unknown> 
  */
 export function openApiDocumentJsonSchema(
   schema: z.ZodTypeAny,
-  io: 'input' | 'output' = 'input',
+  io: "input" | "output" = "input",
 ): Record<string, unknown> {
-  return jsonSchemaForTarget(schema, io, 'openapi-3.0');
+  return jsonSchemaForTarget(schema, io, "openapi-3.0");
 }
 
 function jsonSchemaForTarget(
   schema: z.ZodTypeAny,
-  io: 'input' | 'output',
-  target: 'draft-7' | 'openapi-3.0',
+  io: "input" | "output",
+  target: "draft-7" | "openapi-3.0",
 ): Record<string, unknown> {
   const converted = z.toJSONSchema(schema, {
     target,
     io,
-    unrepresentable: 'any',
+    unrepresentable: "any",
   }) as Record<string, unknown>;
-  if (converted['$schema'] !== undefined) {
-    delete converted['$schema'];
+  if (converted["$schema"] !== undefined) {
+    delete converted["$schema"];
   }
   return converted;
 }
@@ -72,7 +74,7 @@ export function envelopeJsonSchema(
 export function openApiDocumentEnvelopeJsonSchema(
   dataSchema: z.ZodTypeAny,
 ): Record<string, unknown> {
-  return openApiDocumentJsonSchema(envelopeSchema(dataSchema), 'output');
+  return openApiDocumentJsonSchema(envelopeSchema(dataSchema), "output");
 }
 
 /**
@@ -109,17 +111,19 @@ export interface RouteSchemaOptions {
   produces?: string[];
 }
 
-export function buildRouteSchema(options: RouteSchemaOptions): Record<string, unknown> {
+export function buildRouteSchema(
+  options: RouteSchemaOptions,
+): Record<string, unknown> {
   const schema: Record<string, unknown> = {};
 
   if (options.body) {
-    schema['body'] = jsonSchema(options.body);
+    schema["body"] = jsonSchema(options.body);
   }
   if (options.querystring) {
-    schema['querystring'] = jsonSchema(options.querystring);
+    schema["querystring"] = jsonSchema(options.querystring);
   }
   if (options.params) {
-    schema['params'] = jsonSchema(options.params);
+    schema["params"] = jsonSchema(options.params);
   }
   if (options.response || options.rawResponse) {
     const responses: Record<string, unknown> = {};
@@ -133,25 +137,25 @@ export function buildRouteSchema(options: RouteSchemaOptions): Record<string, un
         responses[String(code)] = rawSchema;
       }
     }
-    schema['response'] = responses;
+    schema["response"] = responses;
   }
   if (options.description) {
-    schema['description'] = options.description;
+    schema["description"] = options.description;
   }
   if (options.summary) {
-    schema['summary'] = options.summary;
+    schema["summary"] = options.summary;
   }
   if (options.tags) {
-    schema['tags'] = options.tags;
+    schema["tags"] = options.tags;
   }
   if (options.operationId) {
-    schema['operationId'] = options.operationId;
+    schema["operationId"] = options.operationId;
   }
   if (options.consumes) {
-    schema['consumes'] = options.consumes;
+    schema["consumes"] = options.consumes;
   }
   if (options.produces) {
-    schema['produces'] = options.produces;
+    schema["produces"] = options.produces;
   }
 
   return schema;

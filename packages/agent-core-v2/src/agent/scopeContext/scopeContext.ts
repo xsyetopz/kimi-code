@@ -10,7 +10,10 @@
  * registry.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
 
 export interface IAgentScopeContext {
   readonly _serviceBrand: undefined;
@@ -20,7 +23,7 @@ export interface IAgentScopeContext {
 }
 
 export const IAgentScopeContext: ServiceIdentifier<IAgentScopeContext> =
-  createDecorator<IAgentScopeContext>('agentScopeContext');
+  createDecorator<IAgentScopeContext>("agentScopeContext");
 
 export function makeAgentScopeContext(input: {
   readonly agentId: string;
@@ -31,8 +34,8 @@ export function makeAgentScopeContext(input: {
     _serviceBrand: undefined,
     agentId: input.agentId,
     scope: (subKey?: string): string => {
-      if (subKey === undefined || subKey === '') return agentScope;
-      if (agentScope === '') return subKey;
+      if (subKey === undefined || subKey === "") return agentScope;
+      if (agentScope === "") return subKey;
       return `${agentScope}/${subKey}`;
     },
   };

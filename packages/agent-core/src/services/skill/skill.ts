@@ -36,9 +36,9 @@
  * `createDecorator` value and the `SkillSummary` type.
  */
 
-import { createDecorator } from '../../di';
-import type { SkillSummary as AgentCoreSkillSummary } from '../../rpc';
-import type { SkillDescriptor } from '@moonshot-ai/protocol';
+import { createDecorator } from "../../di";
+import type { SkillSummary as AgentCoreSkillSummary } from "../../rpc";
+import type { SkillDescriptor } from "@moonshot-ai/protocol";
 
 // ---------------------------------------------------------------------------
 // Adapter helpers
@@ -90,7 +90,7 @@ export interface ISkillService {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
-export const ISkillService = createDecorator<ISkillService>('skillService');
+export const ISkillService = createDecorator<ISkillService>("skillService");
 
 /**
  * Sentinel — daemon's route layer catches this and maps to envelope `code:
@@ -101,7 +101,7 @@ export class SkillNotFoundError extends Error {
   readonly skillName: string;
   constructor(skillName: string, message?: string) {
     super(message ?? `skill ${skillName} does not exist`);
-    this.name = 'SkillNotFoundError';
+    this.name = "SkillNotFoundError";
     this.skillName = skillName;
   }
 }
@@ -114,7 +114,7 @@ export class SkillNotActivatableError extends Error {
   readonly skillName: string;
   constructor(skillName: string, message?: string) {
     super(message ?? `skill ${skillName} cannot be activated`);
-    this.name = 'SkillNotActivatableError';
+    this.name = "SkillNotActivatableError";
     this.skillName = skillName;
   }
 }

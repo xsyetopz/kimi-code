@@ -17,13 +17,22 @@ import "./styles/index.css";
 
 function MainContent({ onAuthAction }: { onAuthAction: () => void }) {
   const { processEvent, startNewConversation, sessionId } = useChatStore();
-  const { setMCPServers, setExtensionConfig, extensionConfig } = useSettingsStore();
+  const { setMCPServers, setExtensionConfig, extensionConfig } =
+    useSettingsStore();
 
   useEffect(() => {
     return bridge.on(Events.StreamEvent, (event: UIStreamEvent) => {
       // 只有当前已有 session 时才过滤，确保 session_start 能正常处理
-      if (sessionId && "_sessionId" in event && event._sessionId && event._sessionId !== sessionId) {
-        console.log("Ignored stream event from another session:", event._sessionId);
+      if (
+        sessionId &&
+        "_sessionId" in event &&
+        event._sessionId &&
+        event._sessionId !== sessionId
+      ) {
+        console.log(
+          "Ignored stream event from another session:",
+          event._sessionId,
+        );
         return;
       }
       processEvent(event);
@@ -39,8 +48,13 @@ function MainContent({ onAuthAction }: { onAuthAction: () => void }) {
   useEffect(() => {
     const unsubs = [
       bridge.on(Events.MCPServersChanged, setMCPServers),
-      bridge.on(Events.ExtensionConfigChanged, ({ config }: { config: ExtensionConfig }) => setExtensionConfig(config)),
-      bridge.on(Events.FocusInput, () => document.querySelector<HTMLTextAreaElement>("textarea")?.focus()),
+      bridge.on(
+        Events.ExtensionConfigChanged,
+        ({ config }: { config: ExtensionConfig }) => setExtensionConfig(config),
+      ),
+      bridge.on(Events.FocusInput, () =>
+        document.querySelector<HTMLTextAreaElement>("textarea")?.focus(),
+      ),
       bridge.on(Events.NewConversation, () => {
         void startNewConversation().catch((error: unknown) => {
           toast.error(error instanceof Error ? error.message : String(error));
@@ -105,7 +119,12 @@ export default function App() {
     refresh();
   }, [refresh]);
 
-  const resolution = resolveAppView({ status, modelsCount, skippedLogin, showLogin });
+  const resolution = resolveAppView({
+    status,
+    modelsCount,
+    skippedLogin,
+    showLogin,
+  });
 
   // 登录界面：未登录且未跳过，或用户从其他界面主动选择登录
   if (resolution.view === "login") {

@@ -1,5 +1,5 @@
-import type { PlanFilePath } from '../plan';
-import { DynamicInjector } from './injector';
+import type { PlanFilePath } from "../plan";
+import { DynamicInjector } from "./injector";
 
 const PLAN_MODE_DEDUP_MIN_TURNS = 2;
 const PLAN_MODE_FULL_REFRESH_TURNS = 5;
@@ -11,10 +11,10 @@ const PLAN_MODE_FULL_REFRESH_TURNS = 5;
  * content. `full` is used for the first reminder and periodic refreshes.
  * `sparse` keeps the read-only invariant visible between full reminders.
  */
-export type PlanModeVariant = 'full' | 'sparse' | 'reentry';
+export type PlanModeVariant = "full" | "sparse" | "reentry";
 
 export class PlanModeInjector extends DynamicInjector {
-  protected override readonly injectionVariant = 'plan_mode';
+  protected override readonly injectionVariant = "plan_mode";
   private wasActive = false;
 
   override onContextClear(): void {
@@ -42,30 +42,30 @@ export class PlanModeInjector extends DynamicInjector {
     const variant = this.getVariant();
     if (variant === null) return undefined;
 
-    return variant === 'full'
+    return variant === "full"
       ? fullReminder(planFilePath)
-      : variant === 'sparse'
+      : variant === "sparse"
         ? sparseReminder(planFilePath)
         : reentryReminder(planFilePath);
   }
 
   protected getVariant(): PlanModeVariant | null {
-    if (this.injectedAt === null) return 'full';
+    if (this.injectedAt === null) return "full";
     const history = this.agent.context.history;
     let assistantTurnsSince = 0;
     for (let i = this.injectedAt + 1; i < history.length; i++) {
       const msg = history[i];
       if (msg === undefined) continue;
-      if (msg.role === 'assistant') {
+      if (msg.role === "assistant") {
         assistantTurnsSince += 1;
         continue;
       }
-      if (msg.role === 'user') {
-        return 'full';
+      if (msg.role === "user") {
+        return "full";
       }
     }
-    if (assistantTurnsSince >= PLAN_MODE_FULL_REFRESH_TURNS) return 'full';
-    if (assistantTurnsSince >= PLAN_MODE_DEDUP_MIN_TURNS) return 'sparse';
+    if (assistantTurnsSince >= PLAN_MODE_FULL_REFRESH_TURNS) return "full";
+    if (assistantTurnsSince >= PLAN_MODE_DEDUP_MIN_TURNS) return "sparse";
     return null;
   }
 

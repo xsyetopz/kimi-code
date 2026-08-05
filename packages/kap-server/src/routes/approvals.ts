@@ -36,20 +36,20 @@ import {
   type ApprovalResponse,
   type Interaction,
   type Scope,
-} from '@moonshot-ai/agent-core-v2';
-import { ErrorCode } from '../protocol/error-codes';
+} from "@moonshot-ai/agent-core-v2";
+import { ErrorCode } from "../protocol/error-codes";
 import {
   approvalAlreadyResolvedDataSchema,
   approvalResolveRequestSchema,
   approvalResolveResultSchema,
   listPendingApprovalsQuerySchema,
   listPendingApprovalsResponseSchema,
-} from '../protocol/rest-approval';
-import { z } from 'zod';
+} from "../protocol/rest-approval";
+import { z } from "zod";
 
-import { errEnvelope, okEnvelope } from '../envelope';
-import { requestLog } from '../lib/requestLog';
-import { defineRoute } from '../middleware/defineRoute';
+import { errEnvelope, okEnvelope } from "../envelope";
+import { requestLog } from "../lib/requestLog";
+import { defineRoute } from "../middleware/defineRoute";
 
 interface ApprovalRouteHost {
   get(
@@ -79,16 +79,21 @@ const approvalParamsSchema = z.object({
   approval_id: z.string().min(1),
 });
 
-const detailsSchema = z.array(z.object({ path: z.string(), message: z.string() }));
+const detailsSchema = z.array(
+  z.object({ path: z.string(), message: z.string() }),
+);
 
 /** Stable, derived expiry horizon: v2 approvals do not expire. */
 const APPROVAL_EXPIRY_MS = 24 * 60 * 60 * 1000;
 
-export function registerApprovalsRoutes(app: ApprovalRouteHost, core: Scope): void {
+export function registerApprovalsRoutes(
+  app: ApprovalRouteHost,
+  core: Scope,
+): void {
   const listRoute = defineRoute(
     {
-      method: 'GET',
-      path: '/sessions/{session_id}/approvals',
+      method: "GET",
+      path: "/sessions/{session_id}/approvals",
       params: sessionIdParamSchema,
       querystring: listPendingApprovalsQuerySchema,
       success: { data: listPendingApprovalsResponseSchema },
@@ -96,29 +101,39 @@ export function registerApprovalsRoutes(app: ApprovalRouteHost, core: Scope): vo
         [ErrorCode.VALIDATION_FAILED]: { detailsSchema },
         [ErrorCode.SESSION_NOT_FOUND]: {},
       },
-      description: 'List pending approval requests for a session',
-      tags: ['approvals'],
+      description: "List pending approval requests for a session",
+      tags: ["approvals"],
     },
     async (req, reply) => {
       const { session_id } = req.params;
       const handle = await resumeSessionById(core.accessor, session_id);
       if (handle === undefined) {
         reply.send(
-          errEnvelope(ErrorCode.SESSION_NOT_FOUND, `session ${session_id} does not exist`, req.id),
+          errEnvelope(
+            ErrorCode.SESSION_NOT_FOUND,
+            `session ${session_id} does not exist`,
+            req.id,
+          ),
         );
         return;
       }
-      const pending = handle.accessor.get(ISessionInteractionService).listPending('approval');
+      const pending = handle.accessor
+        .get(ISessionInteractionService)
+        .listPending("approval");
       const items = pending.map((i) => toWireApproval(i, session_id));
       reply.send(okEnvelope({ items }, req.id));
     },
   );
-  app.get(listRoute.path, listRoute.options, listRoute.handler as Parameters<ApprovalRouteHost['get']>[2]);
+  app.get(
+    listRoute.path,
+    listRoute.options,
+    listRoute.handler as Parameters<ApprovalRouteHost["get"]>[2],
+  );
 
   const resolveRoute = defineRoute(
     {
-      method: 'POST',
-      path: '/sessions/{session_id}/approvals/{approval_id}',
+      method: "POST",
+      path: "/sessions/{session_id}/approvals/{approval_id}",
       params: approvalParamsSchema,
       body: approvalResolveRequestSchema,
       success: { data: approvalResolveResultSchema },
@@ -130,21 +145,25 @@ export function registerApprovalsRoutes(app: ApprovalRouteHost, core: Scope): vo
           dataSchema: approvalAlreadyResolvedDataSchema,
         },
       },
-      description: 'Resolve an approval request',
-      tags: ['approvals'],
+      description: "Resolve an approval request",
+      tags: ["approvals"],
     },
     async (req, reply) => {
       const { session_id, approval_id } = req.params;
       const handle = await resumeSessionById(core.accessor, session_id);
       if (handle === undefined) {
         reply.send(
-          errEnvelope(ErrorCode.SESSION_NOT_FOUND, `session ${session_id} does not exist`, req.id),
+          errEnvelope(
+            ErrorCode.SESSION_NOT_FOUND,
+            `session ${session_id} does not exist`,
+            req.id,
+          ),
         );
         return;
       }
       const interaction = handle.accessor.get(ISessionInteractionService);
       const isPending = interaction
-        .listPending('approval')
+        .listPending("approval")
         .some((i) => i.id === approval_id);
 
       if (!isPending) {
@@ -158,7 +177,11 @@ export function registerApprovalsRoutes(app: ApprovalRouteHost, core: Scope): vo
           return;
         }
         reply.send(
-          errEnvelope(ErrorCode.APPROVAL_NOT_FOUND, `approval ${approval_id} not found`, req.id),
+          errEnvelope(
+            ErrorCode.APPROVAL_NOT_FOUND,
+            `approval ${approval_id} not found`,
+            req.id,
+          ),
         );
         return;
       }
@@ -170,21 +193,31 @@ export function registerApprovalsRoutes(app: ApprovalRouteHost, core: Scope): vo
         feedback: body.feedback,
         selectedLabel: body.selected_label,
       };
-      handle.accessor.get(ISessionApprovalService).decide(approval_id, response);
+      handle.accessor
+        .get(ISessionApprovalService)
+        .decide(approval_id, response);
       // Security-sensitive: record who resolved what, and how.
       requestLog(req)?.info(
-        { session_id, approval_id, decision: response.decision, scope: response.scope },
-        'approval decided',
+        {
+          session_id,
+          approval_id,
+          decision: response.decision,
+          scope: response.scope,
+        },
+        "approval decided",
       );
       reply.send(
-        okEnvelope({ resolved: true as const, resolved_at: new Date().toISOString() }, req.id),
+        okEnvelope(
+          { resolved: true as const, resolved_at: new Date().toISOString() },
+          req.id,
+        ),
       );
     },
   );
   app.post(
     resolveRoute.path,
     resolveRoute.options,
-    resolveRoute.handler as Parameters<ApprovalRouteHost['post']>[2],
+    resolveRoute.handler as Parameters<ApprovalRouteHost["post"]>[2],
   );
 }
 
@@ -193,7 +226,10 @@ export function registerApprovalsRoutes(app: ApprovalRouteHost, core: Scope): vo
 // `approvalRequestSchema`.
 // ---------------------------------------------------------------------------
 
-export function toWireApproval(interaction: Interaction, sessionId: string): {
+export function toWireApproval(
+  interaction: Interaction,
+  sessionId: string,
+): {
   approval_id: string;
   session_id: string;
   turn_id?: number;
@@ -214,6 +250,8 @@ export function toWireApproval(interaction: Interaction, sessionId: string): {
     action: p.action,
     tool_input_display: p.display,
     created_at: new Date(interaction.createdAt).toISOString(),
-    expires_at: new Date(interaction.createdAt + APPROVAL_EXPIRY_MS).toISOString(),
+    expires_at: new Date(
+      interaction.createdAt + APPROVAL_EXPIRY_MS,
+    ).toISOString(),
   };
 }

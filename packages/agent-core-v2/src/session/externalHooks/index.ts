@@ -4,5 +4,5 @@
  * `ISessionExternalHooksService` binding into the scope registry.
  */
 
-export * from './externalHooks';
-export * from './externalHooksService';
+export * from "./externalHooks";
+export * from "./externalHooksService";

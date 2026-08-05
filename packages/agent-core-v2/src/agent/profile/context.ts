@@ -26,12 +26,12 @@
  * rendered source annotations.
  */
 
-import { basename, dirname, join, normalize } from 'pathe';
+import { basename, dirname, join, normalize } from "pathe";
 
-import { findGitWorkTree } from '#/app/git/workTree';
-import type { IHostFileSystem } from '#/os/interface/hostFileSystem';
+import { findGitWorkTree } from "#/app/git/workTree";
+import type { IHostFileSystem } from "#/os/interface/hostFileSystem";
 
-import type { SystemPromptContext } from './profile';
+import type { SystemPromptContext } from "./profile";
 
 export const AGENTS_MD_RECOMMENDED_MAX_BYTES = 32 * 1024;
 
@@ -104,17 +104,22 @@ export interface LoadedAgentsMd {
   readonly paths: readonly string[];
 }
 
-export const AGENTS_MD_PLAIN_NAMES = ['AGENTS.md', 'agents.md'] as const;
+export const AGENTS_MD_PLAIN_NAMES = ["AGENTS.md", "agents.md"] as const;
 
 export function dotKimiAgentsMdPath(dir: string): string {
-  return join(dir, '.kimi-code', 'AGENTS.md');
+  return join(dir, ".kimi-code", "AGENTS.md");
 }
 
 export function agentsMdCandidatePaths(dir: string): string[] {
-  return [dotKimiAgentsMdPath(dir), ...AGENTS_MD_PLAIN_NAMES.map((name) => join(dir, name))];
+  return [
+    dotKimiAgentsMdPath(dir),
+    ...AGENTS_MD_PLAIN_NAMES.map((name) => join(dir, name)),
+  ];
 }
 
-export function extractAgentsMdPathsFromSystemPrompt(systemPrompt: string): string[] {
+export function extractAgentsMdPathsFromSystemPrompt(
+  systemPrompt: string,
+): string[] {
   const paths: string[] = [];
   const seen = new Set<string>();
   for (const match of systemPrompt.matchAll(/^<!-- From: (.+) -->$/gm)) {
@@ -155,7 +160,7 @@ async function isNonEmptyFile(
   path: string,
 ): Promise<boolean> {
   try {
-    const content = await deps.fs.readText(path, { errors: 'ignore' });
+    const content = await deps.fs.readText(path, { errors: "ignore" });
     return content.trim().length > 0;
   } catch {
     return false;
@@ -185,10 +190,10 @@ export async function loadAgentsMdForRoots(
   };
 
   const realHome = deps.homeDir;
-  const brandDir = brandHome ?? join(realHome, '.kimi-code');
-  await collect(join(brandDir, 'AGENTS.md'));
+  const brandDir = brandHome ?? join(realHome, ".kimi-code");
+  await collect(join(brandDir, "AGENTS.md"));
 
-  const genericDirs = [join(realHome, '.agents')];
+  const genericDirs = [join(realHome, ".agents")];
   const genericFiles = genericDirs.flatMap((dir) =>
     AGENTS_MD_PLAIN_NAMES.map((name) => join(dir, name)),
   );
@@ -198,7 +203,8 @@ export async function loadAgentsMdForRoots(
 
   for (const workDir of workDirs) {
     const rootWorkDir = normalize(workDir);
-    const projectRoot = (await findGitWorkTree(deps.fs, rootWorkDir))?.root ?? rootWorkDir;
+    const projectRoot =
+      (await findGitWorkTree(deps.fs, rootWorkDir))?.root ?? rootWorkDir;
     const dirs = dirsRootToLeaf(rootWorkDir, projectRoot);
 
     for (const dir of dirs) {
@@ -218,7 +224,7 @@ export async function loadAgentsMdForRoots(
         `increase cost and may impact performance; consider trimming.`,
     );
   }
-  const warning = loadWarnings.length > 0 ? loadWarnings.join('\n') : undefined;
+  const warning = loadWarnings.length > 0 ? loadWarnings.join("\n") : undefined;
   const paths = discovered.map((file) => normalize(file.path));
   return { content, warning, paths };
 }
@@ -234,22 +240,26 @@ export async function agentsMdWatchRoots(
   brandHome?: string,
 ): Promise<readonly AgentsMdWatchRoot[]> {
   const realHome = deps.homeDir;
-  const brandDir = brandHome ?? join(realHome, '.kimi-code');
+  const brandDir = brandHome ?? join(realHome, ".kimi-code");
   const plan: AgentsMdWatchRoot[] = [
-    { root: brandDir, candidates: [join(brandDir, 'AGENTS.md')] },
+    { root: brandDir, candidates: [join(brandDir, "AGENTS.md")] },
     {
       root: realHome,
-      candidates: [join(realHome, '.agents', 'AGENTS.md'), join(realHome, '.agents', 'agents.md')],
+      candidates: [
+        join(realHome, ".agents", "AGENTS.md"),
+        join(realHome, ".agents", "agents.md"),
+      ],
     },
   ];
   const rootWorkDir = normalize(workDir);
-  const projectRoot = (await findGitWorkTree(deps.fs, rootWorkDir))?.root ?? rootWorkDir;
+  const projectRoot =
+    (await findGitWorkTree(deps.fs, rootWorkDir))?.root ?? rootWorkDir;
   const projectCandidates: string[] = [];
   for (const dir of dirsRootToLeaf(rootWorkDir, projectRoot)) {
     projectCandidates.push(
-      join(dir, '.kimi-code', 'AGENTS.md'),
-      join(dir, 'AGENTS.md'),
-      join(dir, 'agents.md'),
+      join(dir, ".kimi-code", "AGENTS.md"),
+      join(dir, "AGENTS.md"),
+      join(dir, "agents.md"),
     );
   }
   plan.push({ root: projectRoot, candidates: projectCandidates });
@@ -266,7 +276,7 @@ async function loadAdditionalDirsInfo(
       return `### ${dir}\n${listing}`;
     }),
   );
-  return sections.join('\n\n');
+  return sections.join("\n\n");
 }
 
 export async function findProjectRoot(
@@ -304,13 +314,15 @@ async function readAgentFile(
 ): Promise<AgentFile | undefined> {
   if (!(await isFile(deps, path))) {
     if (await entryExists(deps, path)) {
-      warn(`Instruction file at ${path} exists but is not a readable regular file; skipping.`);
+      warn(
+        `Instruction file at ${path} exists but is not a readable regular file; skipping.`,
+      );
     }
     return undefined;
   }
   let content: string;
   try {
-    content = (await deps.fs.readText(path, { errors: 'ignore' })).trim();
+    content = (await deps.fs.readText(path, { errors: "ignore" })).trim();
   } catch {
     warn(`Instruction file at ${path} could not be read; skipping.`);
     return undefined;
@@ -319,7 +331,10 @@ async function readAgentFile(
   return { path, content };
 }
 
-async function pathExists(deps: { readonly fs: IHostFileSystem }, path: string): Promise<boolean> {
+async function pathExists(
+  deps: { readonly fs: IHostFileSystem },
+  path: string,
+): Promise<boolean> {
   try {
     await deps.fs.lstat(path);
     return true;
@@ -328,11 +343,17 @@ async function pathExists(deps: { readonly fs: IHostFileSystem }, path: string):
   }
 }
 
-async function entryExists(deps: { readonly fs: IHostFileSystem }, path: string): Promise<boolean> {
+async function entryExists(
+  deps: { readonly fs: IHostFileSystem },
+  path: string,
+): Promise<boolean> {
   return pathExists(deps, path);
 }
 
-async function isFile(deps: { readonly fs: IHostFileSystem }, path: string): Promise<boolean> {
+async function isFile(
+  deps: { readonly fs: IHostFileSystem },
+  path: string,
+): Promise<boolean> {
   try {
     const stat = await deps.fs.stat(path);
     return stat.isFile;
@@ -342,12 +363,14 @@ async function isFile(deps: { readonly fs: IHostFileSystem }, path: string): Pro
 }
 
 function renderAgentFiles(files: readonly AgentFile[]): string {
-  if (files.length === 0) return '';
-  return files.map((file) => `${annotationFor(file.path)}${file.content}`).join('\n\n');
+  if (files.length === 0) return "";
+  return files
+    .map((file) => `${annotationFor(file.path)}${file.content}`)
+    .join("\n\n");
 }
 
 function byteLength(text: string): number {
-  return Buffer.byteLength(text, 'utf8');
+  return Buffer.byteLength(text, "utf8");
 }
 
 function formatKB(bytes: number): string {
@@ -363,7 +386,7 @@ function dedupeDirs(dirs: readonly string[]): string[] {
   const seen = new Set<string>();
   const result: string[] = [];
   for (const dir of dirs) {
-    if (typeof dir !== 'string') continue;
+    if (typeof dir !== "string") continue;
     const trimmed = dir.trim();
     if (trimmed.length === 0 || seen.has(trimmed)) continue;
     seen.add(trimmed);
@@ -371,7 +394,6 @@ function dedupeDirs(dirs: readonly string[]): string[] {
   }
   return result;
 }
-
 
 interface ListDirectoryOptions {
   readonly collapseHiddenDirs?: boolean;
@@ -403,8 +425,15 @@ async function collectEntries(
   return { entries: all.slice(0, maxWidth), total: all.length, readable: true };
 }
 
-function shouldCollapseDirectory(entry: Entry, options: ListDirectoryOptions): boolean {
-  return options.collapseHiddenDirs === true && entry.isDir && entry.name.startsWith('.');
+function shouldCollapseDirectory(
+  entry: Entry,
+  options: ListDirectoryOptions,
+): boolean {
+  return (
+    options.collapseHiddenDirs === true &&
+    entry.isDir &&
+    entry.name.startsWith(".")
+  );
 }
 
 async function listDirectory(
@@ -413,8 +442,12 @@ async function listDirectory(
   options: ListDirectoryOptions = {},
 ): Promise<string> {
   const lines: string[] = [];
-  const { entries, total, readable } = await collectEntries(deps, workDir, LIST_DIR_ROOT_WIDTH);
-  if (!readable) return '[not readable]';
+  const { entries, total, readable } = await collectEntries(
+    deps,
+    workDir,
+    LIST_DIR_ROOT_WIDTH,
+  );
+  if (!readable) return "[not readable]";
   const remaining = total - entries.length;
 
   for (let i = 0; i < entries.length; i++) {
@@ -422,12 +455,12 @@ async function listDirectory(
     if (entry === undefined) continue;
     const { name, isDir } = entry;
     const isLast = i === entries.length - 1 && remaining === 0;
-    const connector = isLast ? '└── ' : '├── ';
+    const connector = isLast ? "└── " : "├── ";
 
     if (isDir) {
       lines.push(`${connector}${name}/`);
       if (shouldCollapseDirectory(entry, options)) continue;
-      const childPrefix = isLast ? '    ' : '│   ';
+      const childPrefix = isLast ? "    " : "│   ";
       const childDir = join(workDir, name);
       const child = await collectEntries(deps, childDir, LIST_DIR_CHILD_WIDTH);
       if (!child.readable) {
@@ -439,8 +472,8 @@ async function listDirectory(
         const ce = child.entries[j];
         if (ce === undefined) continue;
         const cIsLast = j === child.entries.length - 1 && childRemaining === 0;
-        const cConnector = cIsLast ? '└── ' : '├── ';
-        const suffix = ce.isDir ? '/' : '';
+        const cConnector = cIsLast ? "└── " : "├── ";
+        const suffix = ce.isDir ? "/" : "";
         lines.push(`${childPrefix}${cConnector}${ce.name}${suffix}`);
       }
       if (childRemaining > 0) {
@@ -455,5 +488,5 @@ async function listDirectory(
     lines.push(`└── ... and ${String(remaining)} more entries`);
   }
 
-  return lines.length > 0 ? lines.join('\n') : '(empty directory)';
+  return lines.length > 0 ? lines.join("\n") : "(empty directory)";
 }

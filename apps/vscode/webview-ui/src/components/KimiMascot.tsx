@@ -2,7 +2,9 @@ import { useState, useEffect } from "react";
 import { useExtensionImageUrl } from "./hooks/useExtensionImageUrl";
 
 export function KimiMascot({ className }: { className?: string }) {
-  const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains("dark"));
+  const [isDark, setIsDark] = useState(() =>
+    document.documentElement.classList.contains("dark"),
+  );
 
   useEffect(() => {
     const checkTheme = () => {
@@ -25,5 +27,7 @@ export function KimiMascot({ className }: { className?: string }) {
     return null;
   }
 
-  return <img src={logoUrl} alt="KIMI" className={className} aria-label="KIMI" />;
+  return (
+    <img src={logoUrl} alt="KIMI" className={className} aria-label="KIMI" />
+  );
 }

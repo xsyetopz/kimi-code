@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 export const envelopeSchema = <T extends z.ZodTypeAny>(data: T) =>
   z.object({
@@ -20,7 +20,7 @@ export interface Envelope<T> {
 }
 
 export function okEnvelope<T>(data: T, requestId: string): Envelope<T> {
-  return { code: 0, msg: 'success', data, request_id: requestId };
+  return { code: 0, msg: "success", data, request_id: requestId };
 }
 
 /**

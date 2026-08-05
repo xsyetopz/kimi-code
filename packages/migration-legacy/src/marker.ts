@@ -1,7 +1,7 @@
-import { existsSync, readFileSync } from 'node:fs';
-import { readFile, writeFile } from 'node:fs/promises';
-import { resolve, win32 } from 'node:path';
-import { migratedMarker, skipMarker } from './paths.js';
+import { existsSync, readFileSync } from "node:fs";
+import { readFile, writeFile } from "node:fs/promises";
+import { resolve, win32 } from "node:path";
+import { migratedMarker, skipMarker } from "./paths.js";
 
 export interface MarkerRun {
   readonly startedAt: string;
@@ -34,28 +34,34 @@ export interface MigrationSuppressionInput {
  * Unreadable markers are treated conservatively as completed so upgrading does
  * not start prompting users who had already dismissed the migration.
  */
-export function shouldSuppressMigration(input: MigrationSuppressionInput): boolean {
+export function shouldSuppressMigration(
+  input: MigrationSuppressionInput,
+): boolean {
   if (existsSync(skipMarker(input.targetHome))) return true;
 
   const markerPath = migratedMarker(input.sourceHome);
   if (!existsSync(markerPath)) return false;
 
   try {
-    const parsed = JSON.parse(readFileSync(markerPath, 'utf-8')) as {
+    const parsed = JSON.parse(readFileSync(markerPath, "utf-8")) as {
       readonly target_path?: unknown;
       readonly target_paths?: unknown;
     };
     const targetPaths = markerTargetPaths(parsed);
     if (targetPaths.length === 0) return true;
-    return targetPaths.some((targetPath) => sameTargetPath(targetPath, input.targetHome));
+    return targetPaths.some((targetPath) =>
+      sameTargetPath(targetPath, input.targetHome),
+    );
   } catch {
     return true;
   }
 }
 
-export async function readMarker(sourceHome: string): Promise<MarkerData | undefined> {
+export async function readMarker(
+  sourceHome: string,
+): Promise<MarkerData | undefined> {
   try {
-    const text = await readFile(migratedMarker(sourceHome), 'utf-8');
+    const text = await readFile(migratedMarker(sourceHome), "utf-8");
     const parsed = JSON.parse(text) as Partial<MarkerData>;
     if (parsed.version !== 1) return undefined;
     // A partially-written or hand-edited marker may keep `version` but lack a
@@ -88,7 +94,11 @@ export async function writeMarker(
       },
     ],
   };
-  await writeFile(migratedMarker(sourceHome), JSON.stringify(data, null, 2), 'utf-8');
+  await writeFile(
+    migratedMarker(sourceHome),
+    JSON.stringify(data, null, 2),
+    "utf-8",
+  );
 }
 
 export async function appendMarkerRun(
@@ -96,7 +106,8 @@ export async function appendMarkerRun(
   run: MarkerRun & { readonly targetPath: string },
 ): Promise<void> {
   const existing = await readMarker(sourceHome);
-  if (existing === undefined) throw new Error('appendMarkerRun: no existing marker');
+  if (existing === undefined)
+    throw new Error("appendMarkerRun: no existing marker");
   const updated: MarkerData = {
     ...existing,
     last_migrated_at: run.completedAt,
@@ -116,7 +127,11 @@ export async function appendMarkerRun(
       },
     ],
   };
-  await writeFile(migratedMarker(sourceHome), JSON.stringify(updated, null, 2), 'utf-8');
+  await writeFile(
+    migratedMarker(sourceHome),
+    JSON.stringify(updated, null, 2),
+    "utf-8",
+  );
 }
 
 function markerTargetPaths(marker: {
@@ -124,15 +139,20 @@ function markerTargetPaths(marker: {
   readonly target_paths?: unknown;
 }): string[] {
   const targetPaths = Array.isArray(marker.target_paths)
-    ? marker.target_paths.filter((targetPath): targetPath is string => typeof targetPath === 'string')
+    ? marker.target_paths.filter(
+        (targetPath): targetPath is string => typeof targetPath === "string",
+      )
     : [];
-  if (typeof marker.target_path === 'string') {
+  if (typeof marker.target_path === "string") {
     return appendTargetPath(targetPaths, marker.target_path);
   }
   return targetPaths;
 }
 
-function appendTargetPath(targetPaths: readonly string[], targetPath: string): string[] {
+function appendTargetPath(
+  targetPaths: readonly string[],
+  targetPath: string,
+): string[] {
   if (targetPaths.some((existing) => sameTargetPath(existing, targetPath))) {
     return [...targetPaths];
   }
@@ -140,15 +160,19 @@ function appendTargetPath(targetPaths: readonly string[], targetPath: string): s
 }
 
 function sameTargetPath(left: string, right: string): boolean {
-  if (process.platform === 'win32') {
-    return win32.resolve(left).toLowerCase() === win32.resolve(right).toLowerCase();
+  if (process.platform === "win32") {
+    return (
+      win32.resolve(left).toLowerCase() === win32.resolve(right).toLowerCase()
+    );
   }
 
   const leftIsWindowsAbsolute = win32.isAbsolute(left);
   const rightIsWindowsAbsolute = win32.isAbsolute(right);
   if (leftIsWindowsAbsolute || rightIsWindowsAbsolute) {
     if (!leftIsWindowsAbsolute || !rightIsWindowsAbsolute) return false;
-    return win32.resolve(left).toLowerCase() === win32.resolve(right).toLowerCase();
+    return (
+      win32.resolve(left).toLowerCase() === win32.resolve(right).toLowerCase()
+    );
   }
 
   return resolve(left) === resolve(right);

@@ -1,6 +1,6 @@
-import type { ApprovalPanelData, QuestionPanelData } from './types';
+import type { ApprovalPanelData, QuestionPanelData } from "./types";
 
-export type ReverseRpcModalOwner = 'approval' | 'question';
+export type ReverseRpcModalOwner = "approval" | "question";
 
 export interface ReverseRpcModalUIHooks {
   readonly showApprovalPanel: (payload: ApprovalPanelData) => void;
@@ -23,7 +23,7 @@ export class ReverseRpcModalCoordinator {
 
   showApproval(payload: ApprovalPanelData): void {
     this.show({
-      owner: 'approval',
+      owner: "approval",
       show: () => {
         this.hooks.showApprovalPanel(payload);
       },
@@ -35,7 +35,7 @@ export class ReverseRpcModalCoordinator {
 
   showQuestion(payload: QuestionPanelData): void {
     this.show({
-      owner: 'question',
+      owner: "question",
       show: () => {
         this.hooks.showQuestionDialog(payload);
       },
@@ -79,7 +79,9 @@ export class ReverseRpcModalCoordinator {
       return;
     }
 
-    const queuedIndex = this.queued.findIndex((queued) => queued.owner === entry.owner);
+    const queuedIndex = this.queued.findIndex(
+      (queued) => queued.owner === entry.owner,
+    );
     if (queuedIndex >= 0) {
       this.queued[queuedIndex] = entry;
       return;

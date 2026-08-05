@@ -10,12 +10,15 @@
  * are translated to wire error codes at the transport boundary.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
-import { CoreErrors } from '#/_base/errors/codes';
-import { Error2 } from '#/_base/errors/errors';
-import { FsErrors } from '#/workspace/workspaceFs/internal/errors';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
+import { CoreErrors } from "#/_base/errors/codes";
+import { Error2 } from "#/_base/errors/errors";
+import { FsErrors } from "#/workspace/workspaceFs/internal/errors";
 
 export const fsBrowseQuerySchema = z.object({
   path: z.string().min(1).optional(),
@@ -45,10 +48,14 @@ export type FsHomeResponse = z.infer<typeof fsHomeResponseSchema>;
 export class HostFolderNotAbsoluteError extends Error2 {
   readonly path: string;
   constructor(path: string) {
-    super(CoreErrors.codes.VALIDATION_FAILED, `path must be absolute: ${path}`, {
-      details: { path },
-    });
-    this.name = 'HostFolderNotAbsoluteError';
+    super(
+      CoreErrors.codes.VALIDATION_FAILED,
+      `path must be absolute: ${path}`,
+      {
+        details: { path },
+      },
+    );
+    this.name = "HostFolderNotAbsoluteError";
     this.path = path;
   }
 }
@@ -56,8 +63,10 @@ export class HostFolderNotAbsoluteError extends Error2 {
 export class HostFolderNotFoundError extends Error2 {
   readonly path: string;
   constructor(path: string) {
-    super(FsErrors.codes.FS_PATH_NOT_FOUND, `path not found: ${path}`, { details: { path } });
-    this.name = 'HostFolderNotFoundError';
+    super(FsErrors.codes.FS_PATH_NOT_FOUND, `path not found: ${path}`, {
+      details: { path },
+    });
+    this.name = "HostFolderNotFoundError";
     this.path = path;
   }
 }
@@ -65,8 +74,10 @@ export class HostFolderNotFoundError extends Error2 {
 export class HostFolderPermissionError extends Error2 {
   readonly path: string;
   constructor(path: string) {
-    super(FsErrors.codes.FS_PERMISSION_DENIED, `permission denied: ${path}`, { details: { path } });
-    this.name = 'HostFolderPermissionError';
+    super(FsErrors.codes.FS_PERMISSION_DENIED, `permission denied: ${path}`, {
+      details: { path },
+    });
+    this.name = "HostFolderPermissionError";
     this.path = path;
   }
 }
@@ -79,6 +90,6 @@ export interface IHostFolderBrowser {
 }
 
 export const IHostFolderBrowser: ServiceIdentifier<IHostFolderBrowser> =
-  createDecorator<IHostFolderBrowser>('hostFolderBrowser');
+  createDecorator<IHostFolderBrowser>("hostFolderBrowser");
 
 export const RECENT_ROOTS_LIMIT = 8;

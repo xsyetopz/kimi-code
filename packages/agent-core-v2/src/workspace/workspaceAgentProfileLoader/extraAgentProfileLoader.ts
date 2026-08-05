@@ -10,7 +10,10 @@
  * re-discovers and re-registers. Workspace-scoped.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
 
 export interface IExtraAgentProfileLoader {
   readonly _serviceBrand: undefined;
@@ -19,4 +22,4 @@ export interface IExtraAgentProfileLoader {
 }
 
 export const IExtraAgentProfileLoader: ServiceIdentifier<IExtraAgentProfileLoader> =
-  createDecorator<IExtraAgentProfileLoader>('extraAgentProfileLoader');
+  createDecorator<IExtraAgentProfileLoader>("extraAgentProfileLoader");

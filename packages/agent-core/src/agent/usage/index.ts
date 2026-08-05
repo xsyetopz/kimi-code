@@ -1,9 +1,9 @@
-import type { UsageStatus } from '#/rpc';
-import { addUsage, type TokenUsage } from '@moonshot-ai/kosong';
+import type { UsageStatus } from "#/rpc";
+import { addUsage, type TokenUsage } from "@moonshot-ai/kosong";
 
-import type { Agent } from '..';
+import type { Agent } from "..";
 
-export type UsageRecordScope = 'session' | 'turn';
+export type UsageRecordScope = "session" | "turn";
 
 function copyUsage(usage: TokenUsage): TokenUsage {
   return { ...usage };
@@ -23,19 +23,26 @@ export class UsageRecorder {
     this.currentTurn = undefined;
   }
 
-  record(model: string, usage: TokenUsage, scope: UsageRecordScope = 'session'): void {
+  record(
+    model: string,
+    usage: TokenUsage,
+    scope: UsageRecordScope = "session",
+  ): void {
     this.agent?.records.logRecord({
-      type: 'usage.record',
+      type: "usage.record",
       model,
       usage,
       usageScope: scope,
     });
     const current = this.byModel[model];
-    this.byModel[model] = current === undefined ? copyUsage(usage) : addUsage(current, usage);
+    this.byModel[model] =
+      current === undefined ? copyUsage(usage) : addUsage(current, usage);
 
-    if (scope === 'turn') {
+    if (scope === "turn") {
       this.currentTurn =
-        this.currentTurn === undefined ? copyUsage(usage) : addUsage(this.currentTurn, usage);
+        this.currentTurn === undefined
+          ? copyUsage(usage)
+          : addUsage(this.currentTurn, usage);
     }
     this.agent?.emitStatusUpdated();
   }
@@ -47,7 +54,8 @@ export class UsageRecorder {
     return {
       byModel: hasByModel ? byModel : undefined,
       total: hasByModel ? totalUsage(byModel) : undefined,
-      currentTurn: currentTurn === undefined ? undefined : copyUsage(currentTurn),
+      currentTurn:
+        currentTurn === undefined ? undefined : copyUsage(currentTurn),
     };
   }
 
@@ -65,12 +73,17 @@ export class UsageRecorder {
 
   private byModelSnapshot(): Record<string, TokenUsage> {
     return Object.fromEntries(
-      Object.entries(this.byModel).map(([model, usage]) => [model, copyUsage(usage)]),
+      Object.entries(this.byModel).map(([model, usage]) => [
+        model,
+        copyUsage(usage),
+      ]),
     );
   }
 }
 
-function totalUsage(byModel: Record<string, TokenUsage>): TokenUsage | undefined {
+function totalUsage(
+  byModel: Record<string, TokenUsage>,
+): TokenUsage | undefined {
   let total: TokenUsage | undefined;
   for (const usage of Object.values(byModel)) {
     total = total === undefined ? copyUsage(usage) : addUsage(total, usage);

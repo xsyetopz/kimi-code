@@ -1,22 +1,22 @@
-import type { Message, Tool as LLMTool } from '@moonshot-ai/kosong';
-import { expect } from 'vitest';
+import type { Message, Tool as LLMTool } from "@moonshot-ai/kosong";
+import { expect } from "vitest";
 
-import { AGENT_WIRE_PROTOCOL_VERSION } from '../../../src/agent/records';
+import { AGENT_WIRE_PROTOCOL_VERSION } from "../../../src/agent/records";
 
-const IS_EVENT_ARRAY = Symbol('isEventArray');
-const IS_GENERATE_INPUT_SNAPSHOT = Symbol('isGenerateInputSnapshot');
-const IS_GENERATE_INPUTS_SNAPSHOT = Symbol('isGenerateInputsSnapshot');
+const IS_EVENT_ARRAY = Symbol("isEventArray");
+const IS_GENERATE_INPUT_SNAPSHOT = Symbol("isGenerateInputSnapshot");
+const IS_GENERATE_INPUTS_SNAPSHOT = Symbol("isGenerateInputsSnapshot");
 
-export const DEFAULT_TEST_SYSTEM_PROMPT = 'You are a deterministic test agent.';
+export const DEFAULT_TEST_SYSTEM_PROMPT = "You are a deterministic test agent.";
 
 export interface RpcSnapshotEntry {
-  readonly type: '[rpc]';
+  readonly type: "[rpc]";
   readonly event: string;
   readonly args: unknown;
 }
 
 export interface WireSnapshotEntry {
-  readonly type: '[wire]';
+  readonly type: "[wire]";
   readonly event: string;
   readonly args: unknown;
 }
@@ -25,7 +25,7 @@ export type EventSnapshotEntry = WireSnapshotEntry | RpcSnapshotEntry;
 
 export interface GenerateCall {
   readonly systemPrompt: string;
-  readonly tools: Array<Pick<LLMTool, 'name' | 'description' | 'parameters'>>;
+  readonly tools: Array<Pick<LLMTool, "name" | "description" | "parameters">>;
   readonly history: Message[];
 }
 
@@ -86,12 +86,14 @@ export function normalizeGenerateInput(input: GenerateCall): GenerateCall {
 }
 
 function stringifyCompact(obj: unknown) {
-  return JSON.stringify(obj, null, 1).replaceAll(/\n\s*/g, ' ').trim();
+  return JSON.stringify(obj, null, 1).replaceAll(/\n\s*/g, " ").trim();
 }
 
 function hasSnapshotSymbol(val: unknown, symbol: symbol): boolean {
   return (
-    val !== null && typeof val === 'object' && Boolean((val as Record<symbol, unknown>)[symbol])
+    val !== null &&
+    typeof val === "object" &&
+    Boolean((val as Record<symbol, unknown>)[symbol])
   );
 }
 
@@ -101,15 +103,16 @@ expect.addSnapshotSerializer({
   },
   serialize(val) {
     const events = val as Array<Record<string, unknown>>;
-    if (events.length === 0) return '[]';
+    if (events.length === 0) return "[]";
 
-    const maxEventLength = Math.max(...events.map((event) => String(event['event']).length), 0) + 2;
+    const maxEventLength =
+      Math.max(...events.map((event) => String(event["event"]).length), 0) + 2;
     return events
       .map((v) => {
-        const prefix = v['type'] === '[rpc]' ? '[emit]' : '[wire]';
-        return `${prefix} ${String(v['event']).padEnd(maxEventLength, ' ')} ${stringifyCompact(v['args'])}`;
+        const prefix = v["type"] === "[rpc]" ? "[emit]" : "[wire]";
+        return `${prefix} ${String(v["event"]).padEnd(maxEventLength, " ")} ${stringifyCompact(v["args"])}`;
       })
-      .join('\n');
+      .join("\n");
   },
 });
 
@@ -136,11 +139,14 @@ expect.addSnapshotSerializer({
         previous = input;
         return `call ${String(index + 1)}:\n${indentLines(formatted)}`;
       })
-      .join('\n\n');
+      .join("\n\n");
   },
 });
 
-function formatGenerateInput(input: GenerateCall, previous: GenerateCall | undefined): string {
+function formatGenerateInput(
+  input: GenerateCall,
+  previous: GenerateCall | undefined,
+): string {
   const lines: string[] = [];
 
   if (previous === undefined || previous.systemPrompt !== input.systemPrompt) {
@@ -151,91 +157,101 @@ function formatGenerateInput(input: GenerateCall, previous: GenerateCall | undef
     lines.push(`tools: ${formatToolNames(input.tools)}`);
   }
 
-  lines.push('messages:');
+  lines.push("messages:");
 
-  if (previous !== undefined && isMessagePrefix(previous.history, input.history)) {
+  if (
+    previous !== undefined &&
+    isMessagePrefix(previous.history, input.history)
+  ) {
     const addedMessages = input.history.slice(previous.history.length);
-    lines.push('  <last>');
+    lines.push("  <last>");
     if (addedMessages.length > 0) {
       lines.push(...formatMessages(addedMessages));
     }
-    return lines.join('\n');
+    return lines.join("\n");
   }
 
   lines.push(...formatMessages(input.history));
-  return lines.join('\n');
+  return lines.join("\n");
 }
 
 function indentLines(text: string): string {
   return text
-    .split('\n')
+    .split("\n")
     .map((line) => `  ${line}`)
-    .join('\n');
+    .join("\n");
 }
 
 function formatSystemPrompt(systemPrompt: string): string {
-  if (systemPrompt === DEFAULT_TEST_SYSTEM_PROMPT) return '<system-prompt>';
+  if (systemPrompt === DEFAULT_TEST_SYSTEM_PROMPT) return "<system-prompt>";
   return JSON.stringify(systemPrompt);
 }
 
-function formatToolNames(tools: GenerateCall['tools']): string {
-  if (tools.length === 0) return '[]';
-  return tools.map((tool) => tool.name).join(', ');
+function formatToolNames(tools: GenerateCall["tools"]): string {
+  if (tools.length === 0) return "[]";
+  return tools.map((tool) => tool.name).join(", ");
 }
 
-function isMessagePrefix(previous: readonly Message[], input: readonly Message[]): boolean {
+function isMessagePrefix(
+  previous: readonly Message[],
+  input: readonly Message[],
+): boolean {
   if (previous.length > input.length) return false;
   return previous.every((message, index) => isDeepEqual(message, input[index]));
 }
 
 function formatMessages(messages: readonly Message[]): string[] {
-  if (messages.length === 0) return ['  []'];
+  if (messages.length === 0) return ["  []"];
 
   return messages.map((message) => {
     const role =
-      message.toolCallId === undefined ? message.role : `${message.role}[${message.toolCallId}]`;
+      message.toolCallId === undefined
+        ? message.role
+        : `${message.role}[${message.toolCallId}]`;
     const parts = [formatContent(message.content)];
     if (message.toolCalls.length > 0) {
-      parts.push(`calls ${message.toolCalls.map((call) => formatToolCall(call)).join(', ')}`);
+      parts.push(
+        `calls ${message.toolCalls.map((call) => formatToolCall(call)).join(", ")}`,
+      );
     }
-    return `  ${role}: ${parts.join('  ')}`;
+    return `  ${role}: ${parts.join("  ")}`;
   });
 }
 
-function formatContent(content: Message['content']): string {
-  if (content.length === 0) return '[]';
+function formatContent(content: Message["content"]): string {
+  if (content.length === 0) return "[]";
 
   return content
     .map((part) => {
-      if (part.type === 'text') return `text ${formatText(part.text)}`;
-      if (part.type === 'think') return `think ${JSON.stringify(part.think)}`;
+      if (part.type === "text") return `text ${formatText(part.text)}`;
+      if (part.type === "think") return `think ${JSON.stringify(part.think)}`;
       return stringifyCompact(part);
     })
-    .join(' + ');
+    .join(" + ");
 }
 
 function formatText(text: string): string {
   if (isAutoModeEnterReminder(text)) {
-    return '<auto-mode-enter-reminder>';
+    return "<auto-mode-enter-reminder>";
   }
   if (isAutoModeExitReminder(text)) {
-    return '<auto-mode-exit-reminder>';
+    return "<auto-mode-exit-reminder>";
   }
   if (isPlanModeReminder(text)) {
-    return '<plan-mode-reminder>';
+    return "<plan-mode-reminder>";
   }
-  if (text.includes('<!-- Compression Priorities (in order) -->')) {
-    return '<compaction-instruction>';
+  if (text.includes("<!-- Compression Priorities (in order) -->")) {
+    return "<compaction-instruction>";
   }
   return JSON.stringify(text);
 }
 
-function formatToolCall(call: Message['toolCalls'][number]): string {
+function formatToolCall(call: Message["toolCalls"][number]): string {
   return `${call.id}:${call.name} ${formatToolCallArguments(call.arguments)}`;
 }
 
 function formatToolCallArguments(args: string | null): string {
-  if (args === null) return 'null';
+  if (args === null) return "null";
 
   try {
     return stringifyCompact(JSON.parse(args));
@@ -248,11 +264,14 @@ function isDeepEqual(left: unknown, right: unknown): boolean {
   return JSON.stringify(left) === JSON.stringify(right);
 }
 
-function normalizeValue(value: unknown, uuidLabels: Map<string, string>): unknown {
-  if (typeof value === 'string') {
-    if (isAutoModeEnterReminder(value)) return '<auto-mode-enter-reminder>';
-    if (isAutoModeExitReminder(value)) return '<auto-mode-exit-reminder>';
-    if (isPlanModeReminder(value)) return '<plan-mode-reminder>';
+function normalizeValue(
+  value: unknown,
+  uuidLabels: Map<string, string>,
+): unknown {
+  if (typeof value === "string") {
+    if (isAutoModeEnterReminder(value)) return "<auto-mode-enter-reminder>";
+    if (isAutoModeExitReminder(value)) return "<auto-mode-exit-reminder>";
+    if (isPlanModeReminder(value)) return "<plan-mode-reminder>";
     if (!isUuid(value)) return value;
     let label = uuidLabels.get(value);
     if (label === undefined) {
@@ -266,7 +285,7 @@ function normalizeValue(value: unknown, uuidLabels: Map<string, string>): unknow
     return value.map((item) => normalizeValue(item, uuidLabels));
   }
 
-  if (value !== null && typeof value === 'object') {
+  if (value !== null && typeof value === "object") {
     return Object.fromEntries(
       Object.entries(value)
         .filter(([key]) => !isVolatileDurationKey(key))
@@ -285,11 +304,12 @@ function normalizeObjectField(
   value: unknown,
   uuidLabels: Map<string, string>,
 ): unknown {
-  if ((key === 'time' || key === 'created_at') && typeof value === 'number') return '<time>';
-  if (key === 'protocol_version' && value === AGENT_WIRE_PROTOCOL_VERSION) {
-    return '<protocol-version>';
+  if ((key === "time" || key === "created_at") && typeof value === "number")
+    return "<time>";
+  if (key === "protocol_version" && value === AGENT_WIRE_PROTOCOL_VERSION) {
+    return "<protocol-version>";
   }
-  if (key === 'cwd' && typeof value === 'string') return '<cwd>';
+  if (key === "cwd" && typeof value === "string") return "<cwd>";
   return normalizeValue(value, uuidLabels);
 }
 
@@ -298,7 +318,7 @@ function stripUndefined(value: unknown): unknown {
     return value.map((item) => stripUndefined(item));
   }
 
-  if (value !== null && typeof value === 'object') {
+  if (value !== null && typeof value === "object") {
     return Object.fromEntries(
       Object.entries(value)
         .filter(([, nested]) => nested !== undefined)
@@ -310,32 +330,34 @@ function stripUndefined(value: unknown): unknown {
 }
 
 function isUuid(value: string): boolean {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value,
+  );
 }
 
 function isVolatileDurationKey(key: string): boolean {
   return (
-    key === 'llmFirstTokenLatencyMs' ||
-    key === 'llmStreamDurationMs' ||
-    key === 'llmRequestBuildMs' ||
-    key === 'llmServerFirstTokenMs' ||
-    key === 'llmServerDecodeMs' ||
-    key === 'llmClientConsumeMs' ||
-    key === 'durationMs'
+    key === "llmFirstTokenLatencyMs" ||
+    key === "llmStreamDurationMs" ||
+    key === "llmRequestBuildMs" ||
+    key === "llmServerFirstTokenMs" ||
+    key === "llmServerDecodeMs" ||
+    key === "llmClientConsumeMs" ||
+    key === "durationMs"
   );
 }
 
 function isPlanModeReminder(value: string): boolean {
   return (
-    value.includes('Plan mode is active. You MUST NOT make any edits') &&
-    value.includes('Plan file:')
+    value.includes("Plan mode is active. You MUST NOT make any edits") &&
+    value.includes("Plan file:")
   );
 }
 
 function isAutoModeEnterReminder(value: string): boolean {
-  return value.includes('Auto permission mode is active.');
+  return value.includes("Auto permission mode is active.");
 }
 
 function isAutoModeExitReminder(value: string): boolean {
-  return value.includes('Auto permission mode is no longer active.');
+  return value.includes("Auto permission mode is no longer active.");
 }

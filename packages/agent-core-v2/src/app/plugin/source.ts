@@ -1,16 +1,16 @@
-import path from 'node:path';
+import path from "node:path";
 
-import { Error2, ErrorCodes } from '#/errors';
+import { Error2, ErrorCodes } from "#/errors";
 
 export interface GithubRef {
-  readonly kind: 'branch' | 'tag' | 'sha';
+  readonly kind: "branch" | "tag" | "sha";
   readonly value: string;
 }
 
 export type ResolvedSource =
-  | { kind: 'local-path'; path: string }
-  | { kind: 'zip-url'; path: string }
-  | { kind: 'github'; owner: string; repo: string; ref?: GithubRef };
+  | { kind: "local-path"; path: string }
+  | { kind: "zip-url"; path: string }
+  | { kind: "github"; owner: string; repo: string; ref?: GithubRef };
 
 export type InstallSource = ResolvedSource;
 
@@ -22,8 +22,8 @@ export function resolveInstallSource(source: string): ResolvedSource {
   const github = parseGithubUrl(trimmed);
   if (github !== undefined) return github;
 
-  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
-    return { kind: 'zip-url', path: trimmed };
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+    return { kind: "zip-url", path: trimmed };
   }
   if (!path.isAbsolute(trimmed)) {
     throw new Error2(
@@ -32,7 +32,7 @@ export function resolveInstallSource(source: string): ResolvedSource {
       { details: { source } },
     );
   }
-  return { kind: 'local-path', path: trimmed };
+  return { kind: "local-path", path: trimmed };
 }
 
 function parseGithubUrl(raw: string): ResolvedSource | undefined {
@@ -42,38 +42,39 @@ function parseGithubUrl(raw: string): ResolvedSource | undefined {
   } catch {
     return undefined;
   }
-  if (url.protocol !== 'https:') return undefined;
-  if (url.hostname !== 'github.com' && url.hostname !== 'www.github.com') return undefined;
+  if (url.protocol !== "https:") return undefined;
+  if (url.hostname !== "github.com" && url.hostname !== "www.github.com")
+    return undefined;
 
-  const segments = url.pathname.split('/').filter((s) => s.length > 0);
+  const segments = url.pathname.split("/").filter((s) => s.length > 0);
   const owner = segments[0];
   const repoRaw = segments[1];
   if (owner === undefined || repoRaw === undefined) return undefined;
 
-  const repo = repoRaw.endsWith('.git') ? repoRaw.slice(0, -4) : repoRaw;
+  const repo = repoRaw.endsWith(".git") ? repoRaw.slice(0, -4) : repoRaw;
   const rest = segments.slice(2);
 
   if (rest.length === 0) {
-    return { kind: 'github', owner, repo };
+    return { kind: "github", owner, repo };
   }
 
   const head = rest[0];
   const second = rest[1];
 
-  if (head === 'tree' && rest.length >= 2) {
+  if (head === "tree" && rest.length >= 2) {
     const refValue = decodeRefSegments(rest.slice(1));
-    const kind: GithubRef['kind'] = SHA_RE.test(refValue) ? 'sha' : 'branch';
-    return { kind: 'github', owner, repo, ref: { kind, value: refValue } };
+    const kind: GithubRef["kind"] = SHA_RE.test(refValue) ? "sha" : "branch";
+    return { kind: "github", owner, repo, ref: { kind, value: refValue } };
   }
 
-  if (head === 'releases' && second === 'tag' && rest.length >= 3) {
+  if (head === "releases" && second === "tag" && rest.length >= 3) {
     const tag = decodeRefSegments(rest.slice(2));
-    return { kind: 'github', owner, repo, ref: { kind: 'tag', value: tag } };
+    return { kind: "github", owner, repo, ref: { kind: "tag", value: tag } };
   }
 
-  if (head === 'commit' && rest.length >= 2) {
+  if (head === "commit" && rest.length >= 2) {
     const sha = decodeRefSegments(rest.slice(1));
-    return { kind: 'github', owner, repo, ref: { kind: 'sha', value: sha } };
+    return { kind: "github", owner, repo, ref: { kind: "sha", value: sha } };
   }
 
   return undefined;
@@ -88,5 +89,5 @@ function decodeRefSegments(segments: readonly string[]): string {
         return segment;
       }
     })
-    .join('/');
+    .join("/");
 }

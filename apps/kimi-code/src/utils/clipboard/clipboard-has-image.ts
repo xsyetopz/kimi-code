@@ -1,7 +1,12 @@
-import { isFileLikeNativeFormat, safeAvailableFormats } from './clipboard-common';
-import { clipboard, type ClipboardModule } from './clipboard-native';
+import {
+  isFileLikeNativeFormat,
+  safeAvailableFormats,
+} from "./clipboard-common";
+import { clipboard, type ClipboardModule } from "./clipboard-native";
 
-async function hasImageViaNative(clip: ClipboardModule | null): Promise<boolean> {
+async function hasImageViaNative(
+  clip: ClipboardModule | null,
+): Promise<boolean> {
   if (clip === null) return false;
 
   // Finder exposes file icons/thumbnails as image data when a non-image file
@@ -26,7 +31,7 @@ export async function clipboardHasImage(options?: {
   const platform = options?.platform ?? process.platform;
   const clip = options?.clipboard ?? clipboard;
 
-  if (env['TERMUX_VERSION'] !== undefined) return false;
+  if (env["TERMUX_VERSION"] !== undefined) return false;
 
   // The focus-driven clipboard-image hint does not probe on Linux. The probe
   // would spawn wl-paste / xclip, which on Wayland perturbs seat focus and
@@ -38,7 +43,7 @@ export async function clipboardHasImage(options?: {
   //
   // Image *paste* is unaffected on all platforms: it reads the clipboard
   // through readClipboardMedia() on the explicit paste path, not here.
-  if (platform !== 'darwin' && platform !== 'win32') return false;
+  if (platform !== "darwin" && platform !== "win32") return false;
 
   return hasImageViaNative(clip);
 }

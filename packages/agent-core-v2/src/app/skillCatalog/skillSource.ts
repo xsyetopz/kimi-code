@@ -12,9 +12,9 @@
  * extending this contract.
  */
 
-import type { Event } from '#/_base/event';
+import type { Event } from "#/_base/event";
 
-import type { SkillDefinition, SkippedSkill } from './types';
+import type { SkillDefinition, SkippedSkill } from "./types";
 
 export interface SkillContribution {
   readonly skills: readonly SkillDefinition[];
@@ -30,8 +30,8 @@ export const SKILL_SOURCE_PRIORITY = {
   workspace: 30,
 } as const;
 
-export const PLUGIN_SKILL_SOURCE_ID = 'plugin';
-export const BUILTIN_SKILL_SOURCE_ID = 'builtin';
+export const PLUGIN_SKILL_SOURCE_ID = "plugin";
+export const BUILTIN_SKILL_SOURCE_ID = "builtin";
 
 export interface ISkillSource {
   readonly _serviceBrand: undefined;

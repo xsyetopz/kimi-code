@@ -7,12 +7,12 @@
  */
 
 export type LifecycleTransitionErrorReason =
-  | 'invalid_state'
-  | 'transition_conflict'
-  | 'missing_commit_state'
-  | 'missing_rollback_state'
-  | 'already_committed'
-  | 'already_rolled_back';
+  | "invalid_state"
+  | "transition_conflict"
+  | "missing_commit_state"
+  | "missing_rollback_state"
+  | "already_committed"
+  | "already_rolled_back";
 
 export interface LifecycleTransitionErrorOptions<TState extends string> {
   readonly reason: LifecycleTransitionErrorReason;
@@ -22,7 +22,9 @@ export interface LifecycleTransitionErrorOptions<TState extends string> {
   readonly activeOperation?: string;
 }
 
-export class LifecycleTransitionError<TState extends string = string> extends Error {
+export class LifecycleTransitionError<
+  TState extends string = string,
+> extends Error {
   readonly reason: LifecycleTransitionErrorReason;
   readonly operation: string;
   readonly state: TState;
@@ -31,7 +33,7 @@ export class LifecycleTransitionError<TState extends string = string> extends Er
 
   constructor(options: LifecycleTransitionErrorOptions<TState>) {
     super(formatTransitionError(options));
-    this.name = 'LifecycleTransitionError';
+    this.name = "LifecycleTransitionError";
     this.reason = options.reason;
     this.operation = options.operation;
     this.state = options.state;
@@ -104,7 +106,9 @@ export class LifecycleMachine<TState extends string> {
 
   async transaction<TResult>(
     options: LifecycleTransactionOptions<TState>,
-    callback: (transaction: LifecycleTransaction<TState>) => TResult | Promise<TResult>,
+    callback: (
+      transaction: LifecycleTransaction<TState>,
+    ) => TResult | Promise<TResult>,
   ): Promise<TResult> {
     this.assertIdle(options.operation);
     this.assertState(options.operation, options.from);
@@ -126,14 +130,14 @@ export class LifecycleMachine<TState extends string> {
       afterCommit: (action) => afterCommit.push(action),
       commit: (state) => {
         if (commitSelected) {
-          throw this.createError(options.operation, 'already_committed');
+          throw this.createError(options.operation, "already_committed");
         }
         commitSelected = true;
         commitState = state;
       },
       rollbackTo: (state) => {
         if (rollbackSelected) {
-          throw this.createError(options.operation, 'already_rolled_back');
+          throw this.createError(options.operation, "already_rolled_back");
         }
         rollbackSelected = true;
         rollbackState = state;
@@ -152,15 +156,20 @@ export class LifecycleMachine<TState extends string> {
         ];
 
         if (rollbackState === undefined) {
-          errors.push(this.createError(options.operation, 'missing_rollback_state'));
+          errors.push(
+            this.createError(options.operation, "missing_rollback_state"),
+          );
         } else {
           this._state = rollbackState;
         }
-        throw aggregateErrors(errors, `Lifecycle transaction "${options.operation}" failed`);
+        throw aggregateErrors(
+          errors,
+          `Lifecycle transaction "${options.operation}" failed`,
+        );
       }
 
       if (commitState === undefined) {
-        throw this.createError(options.operation, 'missing_commit_state');
+        throw this.createError(options.operation, "missing_commit_state");
       }
 
       const cleanupErrors = await runActions(deferred);
@@ -181,13 +190,21 @@ export class LifecycleMachine<TState extends string> {
 
   private assertIdle(operation: string): void {
     if (this.activeOperation === undefined) return;
-    throw this.createError(operation, 'transition_conflict', undefined, this.activeOperation);
+    throw this.createError(
+      operation,
+      "transition_conflict",
+      undefined,
+      this.activeOperation,
+    );
   }
 
-  private assertState(operation: string, expected: TState | readonly TState[]): void {
+  private assertState(
+    operation: string,
+    expected: TState | readonly TState[],
+  ): void {
     const states = Array.isArray(expected) ? expected : [expected];
     if (states.includes(this._state)) return;
-    throw this.createError(operation, 'invalid_state', expected);
+    throw this.createError(operation, "invalid_state", expected);
   }
 
   private createError(
@@ -206,7 +223,9 @@ export class LifecycleMachine<TState extends string> {
   }
 }
 
-async function runActions(actions: readonly LifecycleAction[]): Promise<unknown[]> {
+async function runActions(
+  actions: readonly LifecycleAction[],
+): Promise<unknown[]> {
   const errors: unknown[] = [];
   for (let index = actions.length - 1; index >= 0; index -= 1) {
     try {
@@ -227,17 +246,17 @@ function formatTransitionError<TState extends string>(
   options: LifecycleTransitionErrorOptions<TState>,
 ): string {
   switch (options.reason) {
-    case 'invalid_state':
+    case "invalid_state":
       return `Lifecycle operation "${options.operation}" is not allowed from state "${options.state}"`;
-    case 'transition_conflict':
+    case "transition_conflict":
       return `Lifecycle operation "${options.operation}" conflicts with active operation "${options.activeOperation}"`;
-    case 'missing_commit_state':
+    case "missing_commit_state":
       return `Lifecycle operation "${options.operation}" did not select a commit state`;
-    case 'missing_rollback_state':
+    case "missing_rollback_state":
       return `Lifecycle operation "${options.operation}" did not select a rollback state`;
-    case 'already_committed':
+    case "already_committed":
       return `Lifecycle operation "${options.operation}" already selected a commit state`;
-    case 'already_rolled_back':
+    case "already_rolled_back":
       return `Lifecycle operation "${options.operation}" already selected a rollback state`;
   }
 }

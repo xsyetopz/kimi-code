@@ -21,9 +21,9 @@
  * problem is specific to POSIX login-shell profiles.
  */
 
-import { userInfo } from 'node:os';
+import { userInfo } from "node:os";
 
-import { execFileText } from './environment';
+import { execFileText } from "./environment";
 
 export interface LoginShellPathDeps {
   readonly platform: string;
@@ -44,11 +44,16 @@ const LOGIN_SHELL_ENV_TIMEOUT_MS = 5_000;
  * probe does not apply (Windows, no resolvable shell) or fails (spawn
  * error, timeout, no PATH in the output).
  */
-export async function probeLoginShellPath(deps: LoginShellPathDeps): Promise<string | undefined> {
-  if (deps.platform === 'win32') return undefined;
+export async function probeLoginShellPath(
+  deps: LoginShellPathDeps,
+): Promise<string | undefined> {
+  if (deps.platform === "win32") return undefined;
   // A set-but-blank $SHELL (some daemon/launchd envs) must also fall back.
-  const envShell = deps.env['SHELL']?.trim();
-  const shell = envShell === undefined || envShell.length === 0 ? deps.userShell() : envShell;
+  const envShell = deps.env["SHELL"]?.trim();
+  const shell =
+    envShell === undefined || envShell.length === 0
+      ? deps.userShell()
+      : envShell;
   if (shell === undefined || shell.length === 0) return undefined;
 
   // `env` prints the resolved environment in every shell dialect, unlike
@@ -61,7 +66,7 @@ export async function probeLoginShellPath(deps: LoginShellPathDeps): Promise<str
   // system (it is the canonical shebang interpreter path).
   const stdout = await deps.execFileText(
     shell,
-    ['-l', '-c', '/usr/bin/env'],
+    ["-l", "-c", "/usr/bin/env"],
     LOGIN_SHELL_ENV_TIMEOUT_MS,
   );
   if (stdout === undefined) return undefined;
@@ -69,9 +74,9 @@ export async function probeLoginShellPath(deps: LoginShellPathDeps): Promise<str
   // Profile output lands on stdout before `env` runs, so keep the last
   // PATH= line.
   let path: string | undefined;
-  for (const line of stdout.split('\n')) {
-    if (line.startsWith('PATH=')) {
-      path = line.slice('PATH='.length).trim();
+  for (const line of stdout.split("\n")) {
+    if (line.startsWith("PATH=")) {
+      path = line.slice("PATH=".length).trim();
     }
   }
   if (path === undefined || path.length === 0) return undefined;
@@ -93,14 +98,14 @@ export function mergeLoginShellPath(
   currentPath: string | undefined,
   loginShellPath: string,
 ): string {
-  const current = currentPath ?? '';
-  const seen = new Set(current.split(':').filter((entry) => entry.length > 0));
+  const current = currentPath ?? "";
+  const seen = new Set(current.split(":").filter((entry) => entry.length > 0));
   const additions: string[] = [];
-  for (const entry of loginShellPath.split(':')) {
+  for (const entry of loginShellPath.split(":")) {
     // The probe only runs on POSIX (win32 bails before merging), so a
     // leading slash is a sufficient absoluteness test. Empty components
     // fail it too.
-    if (!entry.startsWith('/') || seen.has(entry)) continue;
+    if (!entry.startsWith("/") || seen.has(entry)) continue;
     seen.add(entry);
     additions.push(entry);
   }
@@ -108,21 +113,23 @@ export function mergeLoginShellPath(
   // `undefined` means "no PATH at all", so the additions stand alone; ''
   // is a real (cwd-only) PATH whose empty component must survive as a
   // leading colon.
-  if (currentPath === undefined) return additions.join(':');
-  return `${current}:${additions.join(':')}`;
+  if (currentPath === undefined) return additions.join(":");
+  return `${current}:${additions.join(":")}`;
 }
 
 /** Probe the login shell and merge its PATH into `deps.env['PATH']`. */
-export async function applyLoginShellPath(deps: LoginShellPathDeps): Promise<void> {
+export async function applyLoginShellPath(
+  deps: LoginShellPathDeps,
+): Promise<void> {
   const loginShellPath = await probeLoginShellPath(deps);
   if (loginShellPath === undefined) return;
-  const currentPath = deps.env['PATH'];
+  const currentPath = deps.env["PATH"];
   const merged = mergeLoginShellPath(currentPath, loginShellPath);
   // Only write when something was appended — an unset PATH must stay
   // unset (assigning '' would turn "implementation default search path"
   // into "cwd-only lookup"), and a set PATH must not be rewritten.
-  if (merged === (currentPath ?? '')) return;
-  deps.env['PATH'] = merged;
+  if (merged === (currentPath ?? "")) return;
+  deps.env["PATH"] = merged;
 }
 
 /**

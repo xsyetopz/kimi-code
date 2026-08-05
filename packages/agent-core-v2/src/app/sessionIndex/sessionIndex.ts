@@ -31,14 +31,17 @@
  * derived store. Bound at App scope.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
-import type { Page } from '#/persistence/interface/queryStore';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
+import type { Page } from "#/persistence/interface/queryStore";
 
-export const PARENT_SESSION_ID_KEY = 'parent_session_id';
+export const PARENT_SESSION_ID_KEY = "parent_session_id";
 
-export const CHILD_SESSION_KIND_KEY = 'child_session_kind';
+export const CHILD_SESSION_KIND_KEY = "child_session_kind";
 
-export const CHILD_SESSION_KIND = 'child';
+export const CHILD_SESSION_KIND = "child";
 
 export interface SessionSummary {
   readonly id: string;
@@ -76,7 +79,11 @@ export interface SessionCountQuery {
   readonly includeArchived?: boolean;
 }
 
-export type SessionIndexState = 'uninitialized' | 'preparing' | 'ready' | 'degraded';
+export type SessionIndexState =
+  | "uninitialized"
+  | "preparing"
+  | "ready"
+  | "degraded";
 
 export interface SessionIndexStatus {
   readonly state: SessionIndexState;
@@ -113,7 +120,7 @@ export interface ISessionIndex {
 }
 
 export const ISessionIndex: ServiceIdentifier<ISessionIndex> =
-  createDecorator<ISessionIndex>('sessionIndex');
+  createDecorator<ISessionIndex>("sessionIndex");
 
 export interface ISessionIndexMirror {
   readonly _serviceBrand: undefined;
@@ -132,4 +139,4 @@ export interface ISessionIndexMirror {
 }
 
 export const ISessionIndexMirror: ServiceIdentifier<ISessionIndexMirror> =
-  createDecorator<ISessionIndexMirror>('sessionIndexMirror');
+  createDecorator<ISessionIndexMirror>("sessionIndexMirror");

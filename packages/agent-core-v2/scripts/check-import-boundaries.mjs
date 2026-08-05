@@ -34,30 +34,38 @@
  * Run: `node scripts/check-import-boundaries.mjs`. Exits non-zero on violation.
  */
 
-import { readFileSync, readdirSync, statSync } from 'node:fs';
-import { dirname, join, relative, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { readFileSync, readdirSync, statSync } from "node:fs";
+import { dirname, join, relative, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const PKG_ROOT = resolve(__dirname, '..');
-export const SRC_ROOT = join(PKG_ROOT, 'src');
-const TEST_ROOT = join(PKG_ROOT, 'test');
+const PKG_ROOT = resolve(__dirname, "..");
+export const SRC_ROOT = join(PKG_ROOT, "src");
+const TEST_ROOT = join(PKG_ROOT, "test");
 
-const V1_PACKAGE = '@moonshot-ai/agent-core';
-const SELF_PACKAGE_PREFIX = '@moonshot-ai/agent-core-v2/';
+const V1_PACKAGE = "@moonshot-ai/agent-core";
+const SELF_PACKAGE_PREFIX = "@moonshot-ai/agent-core-v2/";
 
 /**
  * Scope directories introduced by the `src/{scope}/{domain}` layout. A path's
  * first segment is a scope tier, not a domain; the domain is the next segment.
  */
-const SCOPE_DIRS = new Set(['app', 'workspace', 'session', 'agent', 'persistence', 'os', 'kosong']);
+const SCOPE_DIRS = new Set([
+  "app",
+  "workspace",
+  "session",
+  "agent",
+  "persistence",
+  "os",
+  "kosong",
+]);
 
 /**
  * Two-level scope directories: `persistence` and `os` use `{scope}/{tier}`
  * (e.g. `persistence/interface`, `os/backends`) as the domain key; `kosong`
  * uses `{scope}/{layer}` (e.g. `kosong/contract`) the same way.
  */
-const TWO_LEVEL_SCOPES = new Set(['persistence', 'os', 'kosong']);
+const TWO_LEVEL_SCOPES = new Set(["persistence", "os", "kosong"]);
 
 /**
  * Kosong-internal layer order: contract ← protocol ← provider/model.
@@ -65,10 +73,10 @@ const TWO_LEVEL_SCOPES = new Set(['persistence', 'os', 'kosong']);
  * is the only allowed peer edge. Keyed by the segment under `src/kosong/`.
  */
 const KOSONG_LAYER = new Map([
-  ['contract', 0],
-  ['protocol', 1],
-  ['provider', 2],
-  ['model', 2],
+  ["contract", 0],
+  ["protocol", 1],
+  ["provider", 2],
+  ["model", 2],
 ]);
 
 /**
@@ -79,14 +87,23 @@ const KOSONG_LAYER = new Map([
  * and discovery orchestration all live in the upper `app/kosongConfig`
  * wrapper — kosong must never reach up to them.
  */
-const KOSONG_BASE_ONLY_SUBDOMAINS = new Set(['contract', 'protocol', 'provider', 'model']);
+const KOSONG_BASE_ONLY_SUBDOMAINS = new Set([
+  "contract",
+  "protocol",
+  "provider",
+  "model",
+]);
 
 /**
  * Wire SDK packages the pure kosong layers must never import — not even
  * types. `contract` in fact imports no external package at all; this list
  * covers the SDK ban for `protocol`.
  */
-const KOSONG_BANNED_SDK_PACKAGES = ['@anthropic-ai/sdk', '@google/genai', 'openai'];
+const KOSONG_BANNED_SDK_PACKAGES = [
+  "@anthropic-ai/sdk",
+  "@google/genai",
+  "openai",
+];
 
 /**
  * Parse an absolute path under `src/kosong/` into its subdomain info.
@@ -96,17 +113,17 @@ const KOSONG_BANNED_SDK_PACKAGES = ['@anthropic-ai/sdk', '@google/genai', 'opena
  */
 function kosongInfoOf(absPath) {
   const rel = relative(SRC_ROOT, absPath);
-  if (rel.startsWith('..') || rel === '') return undefined;
+  if (rel.startsWith("..") || rel === "") return undefined;
   const segments = rel.split(/[\\/]/);
-  if (segments[0] !== 'kosong') return undefined;
+  if (segments[0] !== "kosong") return undefined;
   const sub = segments[1];
-  const last = segments[segments.length - 1] ?? '';
+  const last = segments[segments.length - 1] ?? "";
   return {
     // A file directly under `src/kosong/` has no subdomain.
-    sub: sub === undefined || sub.endsWith('.ts') ? undefined : sub,
-    inBases: sub === 'provider' && segments[2] === 'bases',
-    isContrib: last.endsWith('.contrib.ts'),
-    isIndex: last === 'index.ts',
+    sub: sub === undefined || sub.endsWith(".ts") ? undefined : sub,
+    inBases: sub === "provider" && segments[2] === "bases",
+    isContrib: last.endsWith(".contrib.ts"),
+    isIndex: last === "index.ts",
   };
 }
 
@@ -121,9 +138,9 @@ function kosongInfoOf(absPath) {
  * @param {string} targetAbs
  */
 function isKosongBasesBannedTarget(targetAbs) {
-  const rel = relative(SRC_ROOT, targetAbs).split(/[\\/]/).join('/');
-  const stripped = rel.endsWith('.ts') ? rel.slice(0, -'.ts'.length) : rel;
-  if (stripped.endsWith('.contrib')) return true;
+  const rel = relative(SRC_ROOT, targetAbs).split(/[\\/]/).join("/");
+  const stripped = rel.endsWith(".ts") ? rel.slice(0, -".ts".length) : rel;
+  if (stripped.endsWith(".contrib")) return true;
   return (
     /(^|\/)kosong\/provider\/providerDefinition$/.test(stripped) ||
     /(^|\/)kosong\/provider\/protocolAdapterRegistry$/.test(stripped) ||
@@ -144,10 +161,12 @@ function domainFromRel(rel) {
     return segments[1] ? `${segments[0]}/${segments[1]}` : segments[0];
   }
   if (SCOPE_DIRS.has(segments[0])) {
-    if (segments.length === 2 && segments[1]?.endsWith('.ts')) return segments[0];
+    if (segments.length === 2 && segments[1]?.endsWith(".ts"))
+      return segments[0];
     // `src/{scope}/{domain}/…`
-    if (segments[0] === 'agent' && segments[1] === 'task') return 'agentTask';
-    if (segments[0] === 'agent' && segments[1] === 'plugin') return 'agentPlugin';
+    if (segments[0] === "agent" && segments[1] === "task") return "agentTask";
+    if (segments[0] === "agent" && segments[1] === "plugin")
+      return "agentPlugin";
     return segments[1];
   }
   return segments[0];
@@ -161,7 +180,7 @@ function domainFromRel(rel) {
  */
 function targetDomainOf(targetAbs) {
   const rel = relative(SRC_ROOT, targetAbs);
-  if (rel.startsWith('..') || rel === '') return undefined;
+  if (rel.startsWith("..") || rel === "") return undefined;
   return domainFromRel(rel);
 }
 
@@ -172,7 +191,7 @@ function targetDomainOf(targetAbs) {
  * @param {string} fromFile absolute path of the importing file
  */
 function resolveIntraV2(specifier, fromFile) {
-  if (specifier.startsWith('#/')) {
+  if (specifier.startsWith("#/")) {
     return join(SRC_ROOT, specifier.slice(2));
   }
   // The package's legal self-reference: `@moonshot-ai/agent-core-v2/x` maps
@@ -180,7 +199,7 @@ function resolveIntraV2(specifier, fromFile) {
   if (specifier.startsWith(SELF_PACKAGE_PREFIX)) {
     return join(SRC_ROOT, specifier.slice(SELF_PACKAGE_PREFIX.length));
   }
-  if (specifier.startsWith('.')) {
+  if (specifier.startsWith(".")) {
     return resolve(dirname(fromFile), specifier);
   }
   return undefined;
@@ -204,14 +223,14 @@ const IMPORT_RE =
  */
 export function checkSource(source, absFile) {
   const violations = [];
-  const inSrc = !relative(SRC_ROOT, absFile).startsWith('..');
+  const inSrc = !relative(SRC_ROOT, absFile).startsWith("..");
 
   let match;
   IMPORT_RE.lastIndex = 0;
   while ((match = IMPORT_RE.exec(source)) !== null) {
     const specifier = match[1] ?? match[2];
     if (!specifier) continue;
-    const line = source.slice(0, match.index).split('\n').length;
+    const line = source.slice(0, match.index).split("\n").length;
 
     // Rule 1: v2 must not import v1.
     if (specifier === V1_PACKAGE || specifier.startsWith(`${V1_PACKAGE}/`)) {
@@ -233,14 +252,14 @@ export function checkSource(source, absFile) {
     // imports no external package at all (no SDKs, not even types); the L1
     // protocol layer is SDK-free but may use general-purpose packages.
     if (targetAbs === undefined) {
-      if (sourceKosong.sub === 'contract') {
+      if (sourceKosong.sub === "contract") {
         violations.push({
           file: absFile,
           line,
           message: `kosong/contract must not import external package '${specifier}' — the L0 wire contract is pure (no SDK, no I/O, no third-party dependencies)`,
         });
       } else if (
-        sourceKosong.sub === 'protocol' &&
+        sourceKosong.sub === "protocol" &&
         KOSONG_BANNED_SDK_PACKAGES.some(
           (pkg) => specifier === pkg || specifier.startsWith(`${pkg}/`),
         )
@@ -268,7 +287,10 @@ export function checkSource(source, absFile) {
             line,
             message: `kosong layer violation: 'kosong/${sourceKosong.sub}' (L${sourceKosongLayer}) imports 'kosong/${targetKosong.sub}' (L${targetKosongLayer}) via '${specifier}' — kosong layers are contract(L0) ← protocol(L1) ← provider/model(L2)`,
           });
-        } else if (sourceKosong.sub === 'provider' && targetKosong.sub === 'model') {
+        } else if (
+          sourceKosong.sub === "provider" &&
+          targetKosong.sub === "model"
+        ) {
           violations.push({
             file: absFile,
             line,
@@ -297,7 +319,7 @@ export function checkSource(source, absFile) {
     // abstraction layer with no upward dependencies.
     if (KOSONG_BASE_ONLY_SUBDOMAINS.has(sourceKosong.sub)) {
       const targetDomain = targetDomainOf(targetAbs);
-      if (targetDomain !== '_base') {
+      if (targetDomain !== "_base") {
         violations.push({
           file: absFile,
           line,
@@ -316,18 +338,18 @@ export function checkSource(source, absFile) {
  * @returns {Violation[]}
  */
 export function checkFile(absFile) {
-  return checkSource(readFileSync(absFile, 'utf8'), absFile);
+  return checkSource(readFileSync(absFile, "utf8"), absFile);
 }
 
 function walk(dir) {
   /** @type {string[]} */
   const out = [];
   for (const entry of readdirSync(dir)) {
-    if (entry === 'node_modules' || entry === 'dist') continue;
+    if (entry === "node_modules" || entry === "dist") continue;
     const abs = join(dir, entry);
     const st = statSync(abs);
     if (st.isDirectory()) out.push(...walk(abs));
-    else if (abs.endsWith('.ts')) out.push(abs);
+    else if (abs.endsWith(".ts")) out.push(abs);
   }
   return out;
 }
@@ -346,7 +368,9 @@ function main() {
   return 1;
 }
 
-const isMain = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+const isMain =
+  process.argv[1] &&
+  resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (isMain) {
   process.exit(main());
 }

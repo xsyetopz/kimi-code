@@ -1,9 +1,9 @@
 // test/e2e/helpers/tmp.js
-import fs from 'node:fs/promises';
-import os from 'node:os';
-import path from 'node:path';
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 
-export async function tmpDir(prefix = 'minidb-e2e-') {
+export async function tmpDir(prefix = "minidb-e2e-") {
   return fs.mkdtemp(path.join(os.tmpdir(), prefix));
 }
 

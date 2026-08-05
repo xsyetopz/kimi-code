@@ -8,20 +8,20 @@
  * engine type is `ModelRecord` — the contract-parity test pins that pairing.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { maybe, noResult } from '../helpers.js';
-import type { ServiceContract } from '../types.js';
+import { maybe, noResult } from "../helpers.js";
+import type { ServiceContract } from "../types.js";
 
 const protocolSchema = z.enum([
-  'anthropic',
-  'openai',
-  'openai_responses',
-  'google-genai',
+  "anthropic",
+  "openai",
+  "openai_responses",
+  "google-genai",
 ]);
 
 const oAuthRefSchema = z.object({
-  storage: z.enum(['file', 'keyring']),
+  storage: z.enum(["file", "keyring"]),
   key: z.string().min(1),
   oauthHost: z.string().min(1).optional(),
 });

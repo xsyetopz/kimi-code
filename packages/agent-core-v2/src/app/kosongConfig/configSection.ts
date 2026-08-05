@@ -20,14 +20,14 @@
  * effects; tests import it on demand.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
 import {
   type ConfigStripEnv,
   envBindings,
   stripEnvBoundFields,
-} from '#/app/config/config';
-import { registerConfigSection } from '#/app/config/configSectionContributions';
+} from "#/app/config/config";
+import { registerConfigSection } from "#/app/config/configSectionContributions";
 import {
   camelToSnake,
   cloneRecord,
@@ -36,29 +36,40 @@ import {
   setDefined,
   snakeToCamel,
   transformPlainObject,
-} from '#/app/config/toml';
-import { type AssertExact, type Equal } from '#/_base/utils/typeEquality';
-import type { ModelOverride, ModelRecord, ModelsSection } from '#/kosong/model/model';
-import type { ThinkingConfig } from '#/kosong/model/thinking';
-import type { OAuthRef, ProviderConfig, ProvidersSection } from '#/kosong/provider/provider';
-import { ProtocolSchema } from '#/kosong/protocol/protocol';
+} from "#/app/config/toml";
+import { type AssertExact, type Equal } from "#/_base/utils/typeEquality";
+import type {
+  ModelOverride,
+  ModelRecord,
+  ModelsSection,
+} from "#/kosong/model/model";
+import type { ThinkingConfig } from "#/kosong/model/thinking";
+import type {
+  OAuthRef,
+  ProviderConfig,
+  ProvidersSection,
+} from "#/kosong/provider/provider";
+import { ProtocolSchema } from "#/kosong/protocol/protocol";
 
+export const PROVIDERS_SECTION = "providers";
 
-export const PROVIDERS_SECTION = 'providers';
+export const DEFAULT_PROVIDER_SECTION = "defaultProvider";
 
-export const DEFAULT_PROVIDER_SECTION = 'defaultProvider';
-
-export const ENV_MODEL_PROVIDER_KEY = '__kimi_env__';
+export const ENV_MODEL_PROVIDER_KEY = "__kimi_env__";
 
 export const ProviderTypeSchema = z.string();
 
 export const OAuthRefSchema = z.object({
-  storage: z.enum(['file', 'keyring']),
+  storage: z.enum(["file", "keyring"]),
   key: z.string().min(1),
   oauthHost: z.string().min(1).optional(),
 });
 
-export const ModelSourceSchema = z.enum(['static', 'discover', 'oauth-catalog']);
+export const ModelSourceSchema = z.enum([
+  "static",
+  "discover",
+  "oauth-catalog",
+]);
 
 const StringRecordSchema = z.record(z.string(), z.string());
 
@@ -76,9 +87,14 @@ export const ProviderConfigSchema = z.object({
   source: z.record(z.string(), z.unknown()).optional(),
 });
 
-export const ProvidersSectionSchema = z.record(z.string(), ProviderConfigSchema);
+export const ProvidersSectionSchema = z.record(
+  z.string(),
+  ProviderConfigSchema,
+);
 
-type _AssertOAuthRef = AssertExact<Equal<z.infer<typeof OAuthRefSchema>, OAuthRef>>;
+type _AssertOAuthRef = AssertExact<
+  Equal<z.infer<typeof OAuthRefSchema>, OAuthRef>
+>;
 type _AssertProviderConfig = AssertExact<
   Equal<z.infer<typeof ProviderConfigSchema>, ProviderConfig>
 >;
@@ -88,14 +104,17 @@ type _AssertProvidersSection = AssertExact<
 
 export const providersEnvBindings = envBindings(ProvidersSectionSchema, {
   [ENV_MODEL_PROVIDER_KEY]: envBindings(ProviderConfigSchema, {
-    apiKey: 'KIMI_MODEL_API_KEY',
-    type: 'KIMI_MODEL_PROVIDER_TYPE',
-    baseUrl: 'KIMI_MODEL_BASE_URL',
+    apiKey: "KIMI_MODEL_API_KEY",
+    type: "KIMI_MODEL_PROVIDER_TYPE",
+    baseUrl: "KIMI_MODEL_BASE_URL",
   }),
 });
 
-export const stripProvidersEnv: ConfigStripEnv<Record<string, unknown>> = (value) => {
-  if (value === undefined || value === null || typeof value !== 'object') return value;
+export const stripProvidersEnv: ConfigStripEnv<Record<string, unknown>> = (
+  value,
+) => {
+  if (value === undefined || value === null || typeof value !== "object")
+    return value;
   if (!(ENV_MODEL_PROVIDER_KEY in value)) return value;
   const out = { ...value };
   delete out[ENV_MODEL_PROVIDER_KEY];
@@ -111,13 +130,17 @@ export const providersFromToml = (rawSnake: unknown): unknown => {
   return out;
 };
 
-function providerEntryFromToml(data: Record<string, unknown>): Record<string, unknown> {
+function providerEntryFromToml(
+  data: Record<string, unknown>,
+): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(data)) {
     const targetKey = snakeToCamel(key);
-    if (targetKey === 'oauth') {
-      out[targetKey] = isPlainObject(value) ? transformPlainObject(value) : value;
-    } else if (targetKey === 'env' || targetKey === 'customHeaders') {
+    if (targetKey === "oauth") {
+      out[targetKey] = isPlainObject(value)
+        ? transformPlainObject(value)
+        : value;
+    } else if (targetKey === "env" || targetKey === "customHeaders") {
       out[targetKey] = isPlainObject(value) ? cloneRecord(value) : value;
     } else {
       out[targetKey] = value;
@@ -131,7 +154,9 @@ export const providersToToml = (value: unknown, rawSnake: unknown): unknown => {
   const rawSub = cloneRecord(rawSnake);
   const out: Record<string, unknown> = {};
   for (const [name, entry] of Object.entries(value)) {
-    out[name] = isPlainObject(entry) ? providerEntryToToml(entry, rawSub[name]) : entry;
+    out[name] = isPlainObject(entry)
+      ? providerEntryToToml(entry, rawSub[name])
+      : entry;
   }
   return out;
 };
@@ -142,9 +167,12 @@ function providerEntryToToml(
 ): Record<string, unknown> {
   const out = cloneRecord(rawProvider);
   for (const [key, value] of Object.entries(provider)) {
-    if (key === 'oauth' && isPlainObject(value)) {
+    if (key === "oauth" && isPlainObject(value)) {
       out[camelToSnake(key)] = plainObjectToToml(value, undefined);
-    } else if ((key === 'env' || key === 'customHeaders') && value !== undefined) {
+    } else if (
+      (key === "env" || key === "customHeaders") &&
+      value !== undefined
+    ) {
       out[camelToSnake(key)] = cloneRecord(value);
     } else {
       setDefined(out, camelToSnake(key), value);
@@ -161,10 +189,9 @@ registerConfigSection(PROVIDERS_SECTION, ProvidersSectionSchema, {
   toToml: providersToToml,
 });
 
+export const MODELS_SECTION = "models";
 
-export const MODELS_SECTION = 'models';
-
-export const DEFAULT_MODEL_SECTION = 'defaultModel';
+export const DEFAULT_MODEL_SECTION = "defaultModel";
 
 const ModelBaseSchema = z.object({
   providerId: z.string().optional(),
@@ -215,7 +242,9 @@ export const ModelsSectionSchema = z.record(z.string(), ModelRecordSchema);
 type _AssertModelOverride = AssertExact<
   Equal<z.infer<typeof ModelOverrideSchema>, ModelOverride>
 >;
-type _AssertModelRecord = AssertExact<Equal<z.infer<typeof ModelRecordSchema>, ModelRecord>>;
+type _AssertModelRecord = AssertExact<
+  Equal<z.infer<typeof ModelRecordSchema>, ModelRecord>
+>;
 type _AssertModelsSection = AssertExact<
   Equal<z.infer<typeof ModelsSectionSchema>, ModelsSection>
 >;
@@ -229,8 +258,8 @@ export const modelsFromToml = (rawSnake: unknown): unknown => {
       continue;
     }
     const converted = transformPlainObject(entry);
-    if (isPlainObject(converted['overrides'])) {
-      converted['overrides'] = transformPlainObject(converted['overrides']);
+    if (isPlainObject(converted["overrides"])) {
+      converted["overrides"] = transformPlainObject(converted["overrides"]);
     }
     out[id] = converted;
   }
@@ -248,10 +277,10 @@ export const modelsToToml = (value: unknown, rawSnake: unknown): unknown => {
     }
     const merged = cloneRecord(rawSub[id]);
     for (const [key, field] of Object.entries(entry)) {
-      if (key === 'capabilities' && Array.isArray(field)) {
+      if (key === "capabilities" && Array.isArray(field)) {
         merged[camelToSnake(key)] = [...field];
-      } else if (key === 'overrides' && isPlainObject(field)) {
-        merged['overrides'] = modelOverridesToToml(field, merged['overrides']);
+      } else if (key === "overrides" && isPlainObject(field)) {
+        merged["overrides"] = modelOverridesToToml(field, merged["overrides"]);
       } else {
         setDefined(merged, camelToSnake(key), field);
       }
@@ -267,7 +296,7 @@ function modelOverridesToToml(
 ): Record<string, unknown> {
   const out = cloneRecord(rawSnake);
   for (const [key, value] of Object.entries(overrides)) {
-    if (key === 'capabilities' && Array.isArray(value)) {
+    if (key === "capabilities" && Array.isArray(value)) {
       out[camelToSnake(key)] = [...value];
     } else {
       setDefined(out, camelToSnake(key), value);
@@ -282,8 +311,7 @@ registerConfigSection(MODELS_SECTION, ModelsSectionSchema, {
   toToml: modelsToToml,
 });
 
-
-export const THINKING_SECTION = 'thinking';
+export const THINKING_SECTION = "thinking";
 
 export const ThinkingConfigSchema = z.object({
   enabled: z.boolean().optional(),
@@ -297,7 +325,7 @@ type _AssertThinkingConfig = AssertExact<
 >;
 
 export const thinkingEnvBindings = envBindings(ThinkingConfigSchema, {
-  forcedEffort: 'KIMI_MODEL_THINKING_EFFORT',
+  forcedEffort: "KIMI_MODEL_THINKING_EFFORT",
 });
 
 export const stripThinkingEnv: ConfigStripEnv<ThinkingConfig> = (value) => {
@@ -311,10 +339,10 @@ registerConfigSection(THINKING_SECTION, ThinkingConfigSchema, {
   stripEnv: stripThinkingEnv,
 });
 
-export const SECONDARY_MODEL_SECTION = 'secondaryModel';
+export const SECONDARY_MODEL_SECTION = "secondaryModel";
 
-export const SECONDARY_MODEL_ENV = 'KIMI_SECONDARY_MODEL';
-export const SECONDARY_MODEL_EFFORT_ENV = 'KIMI_SECONDARY_EFFORT';
+export const SECONDARY_MODEL_ENV = "KIMI_SECONDARY_MODEL";
+export const SECONDARY_MODEL_EFFORT_ENV = "KIMI_SECONDARY_EFFORT";
 
 export const SecondaryModelConfigSchema = ModelOverrideSchema.extend({
   model: z.string().min(1).optional(),
@@ -327,18 +355,20 @@ function parseNonEmptyEnv(raw: string): string | undefined {
   return trimmed.length > 0 ? trimmed : undefined;
 }
 
-export const secondaryModelEnvBindings = envBindings(SecondaryModelConfigSchema, {
-  model: { env: SECONDARY_MODEL_ENV, parse: parseNonEmptyEnv },
-  defaultEffort: { env: SECONDARY_MODEL_EFFORT_ENV, parse: parseNonEmptyEnv },
-});
+export const secondaryModelEnvBindings = envBindings(
+  SecondaryModelConfigSchema,
+  {
+    model: { env: SECONDARY_MODEL_ENV, parse: parseNonEmptyEnv },
+    defaultEffort: { env: SECONDARY_MODEL_EFFORT_ENV, parse: parseNonEmptyEnv },
+  },
+);
 
 registerConfigSection(SECONDARY_MODEL_SECTION, SecondaryModelConfigSchema, {
   env: secondaryModelEnvBindings,
   stripEnv: stripEnvBoundFields(secondaryModelEnvBindings),
 });
 
-
-export const MODEL_CATALOG_SECTION = 'modelCatalog';
+export const MODEL_CATALOG_SECTION = "modelCatalog";
 
 export const ModelCatalogConfigSchema = z.object({
   refreshIntervalMs: z.number().int().min(0).optional(),

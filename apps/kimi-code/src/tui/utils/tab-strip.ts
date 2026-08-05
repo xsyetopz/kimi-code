@@ -8,10 +8,10 @@
  * visible, framed by `<`/`>` markers.
  */
 
-import { visibleWidth } from '@moonshot-ai/pi-tui';
-import chalk from 'chalk';
+import { visibleWidth } from "@moonshot-ai/pi-tui";
+import chalk from "chalk";
 
-import type { ColorPalette } from '#/tui/theme/colors';
+import type { ColorPalette } from "#/tui/theme/colors";
 
 export interface RenderTabStripOptions {
   readonly labels: readonly string[];
@@ -22,7 +22,11 @@ export interface RenderTabStripOptions {
 
 /** Style one tab cell. Active and inactive cells have the same visible width so
  * switching never shifts the layout. */
-function styleTab(label: string, isActive: boolean, colors: ColorPalette): string {
+function styleTab(
+  label: string,
+  isActive: boolean,
+  colors: ColorPalette,
+): string {
   const cell = ` ${label} `;
   return isActive
     ? chalk.bgHex(colors.primary).hex(colors.text).bold(cell)
@@ -31,16 +35,21 @@ function styleTab(label: string, isActive: boolean, colors: ColorPalette): strin
 
 export function renderTabStrip(opts: RenderTabStripOptions): string {
   const { labels, activeIndex, width, colors } = opts;
-  const segments = labels.map((label, i) => styleTab(label, i === activeIndex, colors));
+  const segments = labels.map((label, i) =>
+    styleTab(label, i === activeIndex, colors),
+  );
 
   // If everything fits with a leading space, show the whole strip. Account for
   // the single spaces `segments.join(' ')` inserts between tabs — otherwise the
   // strip is declared to fit at widths where the joined line is actually wider
   // and gets truncated instead of showing the `<`/`>` scroll markers.
-  const totalSegmentWidth = segments.reduce((sum, s) => sum + visibleWidth(s), 0);
+  const totalSegmentWidth = segments.reduce(
+    (sum, s) => sum + visibleWidth(s),
+    0,
+  );
   const fullSeparatorWidth = Math.max(0, segments.length - 1);
   if (1 + totalSegmentWidth + fullSeparatorWidth <= width) {
-    return ' ' + segments.join(' ');
+    return " " + segments.join(" ");
   }
 
   // Scrolling needed. Find the widest window that contains activeIndex.
@@ -85,10 +94,10 @@ export function renderTabStrip(opts: RenderTabStripOptions): string {
 
   const hasLeft = start > 0;
   const hasRight = end < segments.length;
-  let strip = hasLeft ? chalk.hex(colors.textMuted)('< ') : ' ';
-  strip += segments.slice(start, end).join(' ');
+  let strip = hasLeft ? chalk.hex(colors.textMuted)("< ") : " ";
+  strip += segments.slice(start, end).join(" ");
   if (hasRight) {
-    strip += chalk.hex(colors.textMuted)(' >');
+    strip += chalk.hex(colors.textMuted)(" >");
   }
   return strip;
 }

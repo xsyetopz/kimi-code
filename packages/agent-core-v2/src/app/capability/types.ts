@@ -9,11 +9,15 @@
  * `ready`; `install.note` is a machine key clients localize.
  */
 
-export type CapabilityId = 'kimi-cu' | 'kimi-webbridge';
+export type CapabilityId = "kimi-cu" | "kimi-webbridge";
 
-export type CapabilityReadiness = 'not_installed' | 'partial' | 'ready' | 'unsupported';
+export type CapabilityReadiness =
+  | "not_installed"
+  | "partial"
+  | "ready"
+  | "unsupported";
 
-export type CapabilityStepState = 'ok' | 'missing' | 'failed';
+export type CapabilityStepState = "ok" | "missing" | "failed";
 
 export interface CapabilityStep {
   readonly id: string;
@@ -45,7 +49,10 @@ export interface CapabilityStatus {
   readonly install: CapabilityInstallProgress;
 }
 
-export type CapabilityInstallReporter = (step: string, percent?: number) => void;
+export type CapabilityInstallReporter = (
+  step: string,
+  percent?: number,
+) => void;
 
 export interface CapabilityEntry {
   readonly id: CapabilityId;

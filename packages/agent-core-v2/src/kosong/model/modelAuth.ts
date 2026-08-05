@@ -20,21 +20,21 @@
  *    Anthropic protocol get no synthesized effort metadata.
  */
 
-import { Error2 } from '#/_base/errors/errors';
-import { CONFIG_INVALID_ERROR_CODE } from '#/kosong/contract/errors';
-import type { ResolutionTrace } from '#/kosong/contract/inspection';
+import { Error2 } from "#/_base/errors/errors";
+import { CONFIG_INVALID_ERROR_CODE } from "#/kosong/contract/errors";
+import type { ResolutionTrace } from "#/kosong/contract/inspection";
 
 import {
   BUDGET_THINKING_EFFORTS,
   matchKnownAnthropicModelProfile,
   matchUnknownClaudeProfile,
-} from '../provider/bases/anthropic/anthropic-profile';
-import type { ProviderConfig } from '../provider/provider';
-import { explainProviderEndpoint } from '../provider/providerDefinition';
+} from "../provider/bases/anthropic/anthropic-profile";
+import type { ProviderConfig } from "../provider/provider";
+import { explainProviderEndpoint } from "../provider/providerDefinition";
 
-import type { ModelRecord } from './model';
-import type { ResolvedModelAuthMaterial } from './model.types';
-import { drivesThinkingThroughTraits } from './thinking';
+import type { ModelRecord } from "./model";
+import type { ResolvedModelAuthMaterial } from "./model.types";
+import { drivesThinkingThroughTraits } from "./thinking";
 
 export function resolveModelAuthMaterial(
   args: {
@@ -47,14 +47,14 @@ export function resolveModelAuthMaterial(
 ): ResolvedModelAuthMaterial {
   const modelApiKey = nonEmpty(args.model.apiKey);
   if (modelApiKey !== undefined && args.model.oauth !== undefined) {
-    throw authConflictError('Model', args.modelId);
+    throw authConflictError("Model", args.modelId);
   }
   if (modelApiKey !== undefined) {
-    trace?.record('resolved.auth', { kind: 'config', detail: 'model.apiKey' });
+    trace?.record("resolved.auth", { kind: "config", detail: "model.apiKey" });
     return { apiKey: modelApiKey };
   }
   if (args.model.oauth !== undefined) {
-    trace?.record('resolved.auth', { kind: 'config', detail: 'model.oauth' });
+    trace?.record("resolved.auth", { kind: "config", detail: "model.oauth" });
     return {
       oauth: args.model.oauth,
       oauthProviderKey: args.model.providerId ?? args.model.provider,
@@ -66,25 +66,26 @@ export function resolveModelAuthMaterial(
     providerAuthType === undefined
       ? {}
       : explainProviderEndpoint(providerAuthType, args.provider?.env ?? {});
-  const providerApiKey = nonEmpty(args.provider?.apiKey) ?? nonEmpty(providerEndpoint.apiKey);
+  const providerApiKey =
+    nonEmpty(args.provider?.apiKey) ?? nonEmpty(providerEndpoint.apiKey);
   if (providerApiKey !== undefined && args.provider?.oauth !== undefined) {
-    throw authConflictError('Provider', args.providerName);
+    throw authConflictError("Provider", args.providerName);
   }
   if (providerApiKey !== undefined) {
     trace?.record(
-      'resolved.auth',
+      "resolved.auth",
       nonEmpty(args.provider?.apiKey) !== undefined
-        ? { kind: 'config', detail: `provider '${args.providerName}' apiKey` }
+        ? { kind: "config", detail: `provider '${args.providerName}' apiKey` }
         : {
-            kind: 'env',
-            detail: `${providerEndpoint.apiKeyEnvName ?? '?'} (provider '${args.providerName}' env bag)`,
+            kind: "env",
+            detail: `${providerEndpoint.apiKeyEnvName ?? "?"} (provider '${args.providerName}' env bag)`,
           },
     );
     return { apiKey: providerApiKey };
   }
   if (args.provider?.oauth !== undefined) {
-    trace?.record('resolved.auth', {
-      kind: 'config',
+    trace?.record("resolved.auth", {
+      kind: "config",
       detail: `provider '${args.providerName}' oauth`,
     });
     return {
@@ -92,9 +93,10 @@ export function resolveModelAuthMaterial(
       oauthProviderKey: args.model.providerId ?? args.model.provider,
     };
   }
-  trace?.record('resolved.auth', {
-    kind: 'none',
-    detail: 'no credential resolved at any layer (adapter construction may still read process.env)',
+  trace?.record("resolved.auth", {
+    kind: "none",
+    detail:
+      "no credential resolved at any layer (adapter construction may still read process.env)",
   });
   return {};
 }
@@ -104,7 +106,8 @@ export function effectiveModelConfig(
   providerType?: string,
 ): ModelRecord {
   const { overrides, ...base } = model;
-  const effective: ModelRecord = overrides === undefined ? model : { ...base, ...overrides };
+  const effective: ModelRecord =
+    overrides === undefined ? model : { ...base, ...overrides };
   if (
     overrides?.supportEfforts !== undefined &&
     overrides.defaultEffort === undefined &&
@@ -122,30 +125,41 @@ export function effectiveModelConfig(
   return withAnthropicProfile(clamped, providerType);
 }
 
-function withAnthropicProfile(model: ModelRecord, providerType?: string): ModelRecord {
+function withAnthropicProfile(
+  model: ModelRecord,
+  providerType?: string,
+): ModelRecord {
   const wireName = model.name ?? model.model;
   const protocol = model.protocol ?? providerType;
   const profile =
     wireName === undefined
       ? undefined
-      : providerType !== undefined && !drivesThinkingThroughTraits(providerType) && protocol === 'anthropic'
-        ? (matchKnownAnthropicModelProfile(wireName) ?? matchUnknownClaudeProfile(wireName))
+      : providerType !== undefined &&
+          !drivesThinkingThroughTraits(providerType) &&
+          protocol === "anthropic"
+        ? (matchKnownAnthropicModelProfile(wireName) ??
+          matchUnknownClaudeProfile(wireName))
         : matchKnownAnthropicModelProfile(wireName);
   if (profile === undefined) return model;
-  const capability = profile.canDisableThinking ? 'thinking' : 'always_thinking';
+  const capability = profile.canDisableThinking
+    ? "thinking"
+    : "always_thinking";
   const capabilities = model.capabilities ?? [];
   const hasCapability = capabilities.some(
     (candidate) => candidate.trim().toLowerCase() === capability,
   );
   const supportEfforts =
     model.supportEfforts ??
-    (model.adaptiveThinking === false ? [...BUDGET_THINKING_EFFORTS] : [...profile.efforts]);
+    (model.adaptiveThinking === false
+      ? [...BUDGET_THINKING_EFFORTS]
+      : [...profile.efforts]);
   return {
     ...model,
     capabilities: hasCapability ? capabilities : [...capabilities, capability],
     supportEfforts,
     defaultEffort:
-      model.defaultEffort ?? (supportEfforts.includes('high') ? 'high' : undefined),
+      model.defaultEffort ??
+      (supportEfforts.includes("high") ? "high" : undefined),
   };
 }
 

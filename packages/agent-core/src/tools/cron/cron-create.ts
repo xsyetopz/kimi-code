@@ -23,26 +23,23 @@
  *      does **not** reach into `manager.agent.telemetry` directly).
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import type { BuiltinTool } from '../../agent/tool';
-import type { CronManager } from '../../agent/cron';
-import type { ToolExecution } from '../../loop/types';
-import { toInputJsonSchema } from '../support/input-schema';
-import { literalRulePattern } from '../support/rule-match';
+import type { BuiltinTool } from "../../agent/tool";
+import type { CronManager } from "../../agent/cron";
+import type { ToolExecution } from "../../loop/types";
+import { toInputJsonSchema } from "../support/input-schema";
+import { literalRulePattern } from "../support/rule-match";
 import {
   computeNextCronRun,
   cronToHuman,
   hasFireWithinYears,
   parseCronExpression,
   type ParsedCronExpression,
-} from './cron-expr';
-import {
-  jitteredNextCronRunMs,
-  oneShotJitteredNextCronRunMs,
-} from './jitter';
-import { formatLocalIsoWithOffset } from './time-format';
-import CRON_CREATE_DESCRIPTION from './cron-create.md?raw';
+} from "./cron-expr";
+import { jitteredNextCronRunMs, oneShotJitteredNextCronRunMs } from "./jitter";
+import { formatLocalIsoWithOffset } from "./time-format";
+import CRON_CREATE_DESCRIPTION from "./cron-create.md?raw";
 
 // ── Constants ────────────────────────────────────────────────────────
 
@@ -89,7 +86,9 @@ export const CronCreateInputSchema = z.object({
     .string()
     .min(1)
     .max(MAX_PROMPT_BYTES)
-    .describe('The prompt to enqueue at each fire time. Limited to 8 KiB (UTF-8).'),
+    .describe(
+      "The prompt to enqueue at each fire time. Limited to 8 KiB (UTF-8).",
+    ),
   recurring: z
     .boolean()
     .optional()
@@ -114,7 +113,7 @@ interface CronCreateOutput {
 // ── Implementation ───────────────────────────────────────────────────
 
 export class CronCreateTool implements BuiltinTool<CronCreateInput> {
-  readonly name = 'CronCreate' as const;
+  readonly name = "CronCreate" as const;
   readonly description = CRON_CREATE_DESCRIPTION;
   readonly parameters: Record<string, unknown> = toInputJsonSchema(
     CronCreateInputSchema,
@@ -126,10 +125,10 @@ export class CronCreateTool implements BuiltinTool<CronCreateInput> {
     // 1. Global killswitch — checked first so a flipped env stops all
     //    further work, including the cron parse which can throw on
     //    legitimately-malformed input.
-    if (process.env['KIMI_DISABLE_CRON'] === '1') {
+    if (process.env["KIMI_DISABLE_CRON"] === "1") {
       return {
         isError: true,
-        output: 'Cron scheduling is disabled (KIMI_DISABLE_CRON=1).',
+        output: "Cron scheduling is disabled (KIMI_DISABLE_CRON=1).",
       };
     }
 
@@ -140,7 +139,7 @@ export class CronCreateTool implements BuiltinTool<CronCreateInput> {
     //    one-key-per-line tool output format. Parse errors still report
     //    against canonical field positions; only whitespace is
     //    degraded, not semantics.
-    const normalizedCron = args.cron.trim().split(/\s+/).join(' ');
+    const normalizedCron = args.cron.trim().split(/\s+/).join(" ");
 
     // 3. Parse the cron expression. Any parse failure is a user error
     //    rather than an internal one, so we surface the message
@@ -190,7 +189,7 @@ export class CronCreateTool implements BuiltinTool<CronCreateInput> {
     // 6. Byte-length cap. zod's `.max()` counts code units, which is
     //    not the budget we actually want for a multi-byte prompt; the
     //    Buffer.byteLength check makes the 8 KiB intent literal.
-    const byteLen = Buffer.byteLength(args.prompt, 'utf8');
+    const byteLen = Buffer.byteLength(args.prompt, "utf8");
     if (byteLen > MAX_PROMPT_BYTES) {
       return {
         isError: true,
@@ -321,8 +320,8 @@ function formatOutput(o: CronCreateOutput): string {
     `humanSchedule: ${o.humanSchedule}`,
     `recurring: ${String(o.recurring)}`,
     `nextFireAt: ${
-      o.nextFireAt === null ? 'null' : formatLocalIsoWithOffset(o.nextFireAt)
+      o.nextFireAt === null ? "null" : formatLocalIsoWithOffset(o.nextFireAt)
     }`,
   ];
-  return lines.join('\n');
+  return lines.join("\n");
 }

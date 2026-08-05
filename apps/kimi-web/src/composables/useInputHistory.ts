@@ -18,8 +18,8 @@
 // cursor, and the textarea caret/selection work needed to apply a recalled
 // entry.
 
-import { computed, nextTick, ref, watch, type Ref } from 'vue';
-import { STORAGE_KEYS, safeGetJson, safeSetJson } from '../lib/storage';
+import { computed, nextTick, ref, watch, type Ref } from "vue";
+import { STORAGE_KEYS, safeGetJson, safeSetJson } from "../lib/storage";
 
 /** Cap each session's persisted history so storage can't grow without bound. */
 const MAX_HISTORY = 100;
@@ -43,7 +43,9 @@ export interface InputHistoryDeps {
 function loadMap(sessionId: string | undefined): Record<string, string[]> {
   const raw = safeGetJson<unknown>(STORAGE_KEYS.inputHistory);
   if (Array.isArray(raw)) {
-    const list = raw.filter((s): s is string => typeof s === 'string' && s.length > 0);
+    const list = raw.filter(
+      (s): s is string => typeof s === "string" && s.length > 0,
+    );
     // No session yet (empty-session composer): leave the legacy value in place
     // so a later docked mount — which has a session id — can migrate it.
     if (!sessionId || list.length === 0) return {};
@@ -52,7 +54,7 @@ function loadMap(sessionId: string | undefined): Record<string, string[]> {
     safeSetJson(STORAGE_KEYS.inputHistory, map);
     return map;
   }
-  if (raw && typeof raw === 'object') {
+  if (raw && typeof raw === "object") {
     return raw as Record<string, string[]>;
   }
   return {};
@@ -62,10 +64,10 @@ export function useInputHistory(deps: InputHistoryDeps) {
   const { text, textareaRef, autosize, sessionId } = deps;
 
   const historyMap = ref<Record<string, string[]>>(loadMap(sessionId()));
-  const currentList = computed(() => historyMap.value[sessionId() ?? ''] ?? []);
+  const currentList = computed(() => historyMap.value[sessionId() ?? ""] ?? []);
   // -1 = browsing nothing (live draft). Otherwise an index into currentList.
   let historyIndex = -1;
-  let draftBeforeHistory = '';
+  let draftBeforeHistory = "";
 
   function push(entry: string): void {
     const sid = sessionId();

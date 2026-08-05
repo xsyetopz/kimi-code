@@ -5,21 +5,21 @@
  * context length while preserving undo/clear semantics. Scope-agnostic.
  */
 
-import { type ContentPart, type ToolCall } from '#/kosong/contract/message';
-import type { WireRecord } from '#/wire/record';
+import { type ContentPart, type ToolCall } from "#/kosong/contract/message";
+import type { WireRecord } from "#/wire/record";
 
 import {
   COMPACT_USER_MESSAGE_MAX_TOKENS,
   collectCompactableUserMessages,
   selectRecentUserMessages,
-} from './compactionHandoff';
-import { isPromptOwnedInjection, isUndoAnchor } from './conversationTime';
-import type { LoopRecordedEvent } from './loopEventFold';
-import type { ContextMessage } from './types';
-import { isVacuousContentPart } from './vacuousContent';
+} from "./compactionHandoff";
+import { isPromptOwnedInjection, isUndoAnchor } from "./conversationTime";
+import type { LoopRecordedEvent } from "./loopEventFold";
+import type { ContextMessage } from "./types";
+import { isVacuousContentPart } from "./vacuousContent";
 
 const TOOL_INTERRUPTED_ON_RESUME_OUTPUT =
-  'Tool execution was interrupted before its result was recorded. Do not assume the tool completed successfully.';
+  "Tool execution was interrupted before its result was recorded. Do not assume the tool completed successfully.";
 
 export interface ContextTranscript {
   readonly entries: readonly ContextMessage[];
@@ -34,12 +34,12 @@ export interface ContextTranscriptReducer {
 
 interface MutableMessage {
   id?: string;
-  role: ContextMessage['role'];
+  role: ContextMessage["role"];
   content: ContentPart[];
   toolCalls: ToolCall[];
   toolCallId?: string;
   isError?: boolean;
-  origin?: ContextMessage['origin'];
+  origin?: ContextMessage["origin"];
 }
 
 interface MutableEntry {
@@ -47,7 +47,9 @@ interface MutableEntry {
   time?: number;
 }
 
-export function reduceContextTranscript(records: Iterable<WireRecord>): ContextTranscript {
+export function reduceContextTranscript(
+  records: Iterable<WireRecord>,
+): ContextTranscript {
   const reducer = createContextTranscriptReducer();
   for (const record of records) reducer.add(record);
   return reducer.result();
@@ -77,8 +79,8 @@ export function createContextTranscriptReducer(): ContextTranscriptReducer {
     for (const toolCallId of interruptedToolCallIds) {
       push({
         message: {
-          role: 'tool',
-          content: [{ type: 'text', text: TOOL_INTERRUPTED_ON_RESUME_OUTPUT }],
+          role: "tool",
+          content: [{ type: "text", text: TOOL_INTERRUPTED_ON_RESUME_OUTPUT }],
           toolCalls: [],
           toolCallId,
           isError: true,
@@ -107,13 +109,16 @@ export function createContextTranscriptReducer(): ContextTranscriptReducer {
     foldedLength = Math.max(0, foldedLength - 1);
   };
 
-  const applyLoopEvent = (event: LoopRecordedEvent, time: number | undefined): void => {
+  const applyLoopEvent = (
+    event: LoopRecordedEvent,
+    time: number | undefined,
+  ): void => {
     switch (event.type) {
-      case 'step.begin': {
+      case "step.begin": {
         closePendingToolResults(time);
         if (lastOpenStepUuid !== undefined) settleStep(lastOpenStepUuid);
         const entry: MutableEntry = {
-          message: { role: 'assistant', content: [], toolCalls: [] },
+          message: { role: "assistant", content: [], toolCalls: [] },
           time,
         };
         push(entry);
@@ -121,35 +126,36 @@ export function createContextTranscriptReducer(): ContextTranscriptReducer {
         lastOpenStepUuid = event.uuid;
         return;
       }
-      case 'step.end': {
+      case "step.end": {
         settleStep(event.uuid);
         if (lastOpenStepUuid === event.uuid) lastOpenStepUuid = undefined;
         flushDeferredIfToolExchangeClosed();
         return;
       }
-      case 'content.part': {
+      case "content.part": {
         openSteps.get(event.stepUuid)?.message.content.push(event.part);
         return;
       }
-      case 'tool.call': {
+      case "tool.call": {
         const openStep = openSteps.get(event.stepUuid);
         if (openStep === undefined) return;
         const call: ToolCall = {
-          type: 'function',
+          type: "function",
           id: event.toolCallId,
           name: event.name,
-          arguments: event.args === undefined ? null : JSON.stringify(event.args),
+          arguments:
+            event.args === undefined ? null : JSON.stringify(event.args),
           ...(event.extras !== undefined ? { extras: event.extras } : {}),
         };
         openStep.message.toolCalls.push(call);
         pendingToolResultIds.add(event.toolCallId);
         return;
       }
-      case 'tool.result': {
+      case "tool.result": {
         if (!pendingToolResultIds.has(event.toolCallId)) return;
         push({
           message: {
-            role: 'tool',
+            role: "tool",
             content: rawToolResultContent(event.result.output),
             toolCalls: [],
             toolCallId: event.toolCallId,
@@ -169,8 +175,8 @@ export function createContextTranscriptReducer(): ContextTranscriptReducer {
     let removedUserCount = 0;
     for (let i = transcript.length - 1; i >= clearFloor; i--) {
       const message = transcript[i]!.message;
-      if (message.origin?.kind === 'injection') continue;
-      if (message.origin?.kind === 'compaction_summary') break;
+      if (message.origin?.kind === "injection") continue;
+      if (message.origin?.kind === "compaction_summary") break;
       transcript.splice(i, 1);
       foldedLength = Math.max(0, foldedLength - 1);
       if (isUndoAnchor(message)) {
@@ -193,33 +199,43 @@ export function createContextTranscriptReducer(): ContextTranscriptReducer {
 
   const add = (record: WireRecord): void => {
     switch (record.type) {
-      case 'context.append_message': {
-        const entry = toMutableEntry(record['message'] as ContextMessage, record.time);
+      case "context.append_message": {
+        const entry = toMutableEntry(
+          record["message"] as ContextMessage,
+          record.time,
+        );
         if (pendingToolResultIds.size > 0) deferred.push(entry);
         else push(entry);
         break;
       }
-      case 'context.append_loop_event':
-        applyLoopEvent(record['event'] as LoopRecordedEvent, record.time);
+      case "context.append_loop_event":
+        applyLoopEvent(record["event"] as LoopRecordedEvent, record.time);
         break;
-      case 'context.apply_compaction': {
+      case "context.apply_compaction": {
         transcript.push({
           message: {
-            role: 'user',
-            content: [{ type: 'text', text: readCompactionSummaryText(record) }],
+            role: "user",
+            content: [
+              { type: "text", text: readCompactionSummaryText(record) },
+            ],
             toolCalls: [],
-            origin: { kind: 'compaction_summary' },
+            origin: { kind: "compaction_summary" },
           },
           time: record.time,
         });
-        foldedLength = recoverFoldedLength(record, transcript, clearFloor, foldedLength);
+        foldedLength = recoverFoldedLength(
+          record,
+          transcript,
+          clearFloor,
+          foldedLength,
+        );
         resetOpenState();
         break;
       }
-      case 'context.undo':
-        applyUndo(record['count'] as number);
+      case "context.undo":
+        applyUndo(record["count"] as number);
         break;
-      case 'context.clear':
+      case "context.clear":
         clearFloor = transcript.length;
         foldedLength = 0;
         resetOpenState();
@@ -239,14 +255,19 @@ export function createContextTranscriptReducer(): ContextTranscriptReducer {
   };
 }
 
-function toMutableEntry(message: ContextMessage, time: number | undefined): MutableEntry {
+function toMutableEntry(
+  message: ContextMessage,
+  time: number | undefined,
+): MutableEntry {
   return {
     message: {
       ...(message.id !== undefined ? { id: message.id } : {}),
       role: message.role,
       content: [...message.content],
       toolCalls: [...message.toolCalls],
-      ...(message.toolCallId !== undefined ? { toolCallId: message.toolCallId } : {}),
+      ...(message.toolCallId !== undefined
+        ? { toolCallId: message.toolCallId }
+        : {}),
       ...(message.isError !== undefined ? { isError: message.isError } : {}),
       ...(message.origin !== undefined ? { origin: message.origin } : {}),
     },
@@ -260,50 +281,62 @@ function recoverFoldedLength(
   clearFloor: number,
   foldedLength: number,
 ): number {
-  const keptUserMessageCount = readNumber(record, 'keptUserMessageCount');
-  const keptHeadUserMessageCount = readNumber(record, 'keptHeadUserMessageCount');
-  const compactedCount = readNumber(record, 'compactedCount');
+  const keptUserMessageCount = readNumber(record, "keptUserMessageCount");
+  const keptHeadUserMessageCount = readNumber(
+    record,
+    "keptHeadUserMessageCount",
+  );
+  const compactedCount = readNumber(record, "compactedCount");
   if (keptUserMessageCount !== undefined) {
-    return keptUserMessageCount + (keptHeadUserMessageCount === undefined ? 1 : 2);
+    return (
+      keptUserMessageCount + (keptHeadUserMessageCount === undefined ? 1 : 2)
+    );
   }
   if (compactedCount !== undefined && compactedCount < foldedLength) {
     return 1 + (foldedLength - compactedCount);
   }
   const keptUserMessages = selectRecentUserMessages(
-    collectCompactableUserMessages(transcript.slice(clearFloor).map((e) => e.message)),
+    collectCompactableUserMessages(
+      transcript.slice(clearFloor).map((e) => e.message),
+    ),
     COMPACT_USER_MESSAGE_MAX_TOKENS,
   );
   return keptUserMessages.length + 1;
 }
 
 function readCompactionSummaryText(record: WireRecord): string {
-  const summary = record['summary'];
-  if (typeof summary === 'string') return summary;
-  const contextSummary = record['contextSummary'];
-  if (typeof contextSummary === 'string') return contextSummary;
+  const summary = record["summary"];
+  if (typeof summary === "string") return summary;
+  const contextSummary = record["contextSummary"];
+  if (typeof contextSummary === "string") return contextSummary;
   if (isContextMessageLike(summary)) return textOfParts(summary.content);
-  return '';
+  return "";
 }
 
 function isContextMessageLike(value: unknown): value is ContextMessage {
-  if (value === null || typeof value !== 'object' || Array.isArray(value)) return false;
+  if (value === null || typeof value !== "object" || Array.isArray(value))
+    return false;
   const message = value as { role?: unknown; content?: unknown };
-  return typeof message.role === 'string' && Array.isArray(message.content);
+  return typeof message.role === "string" && Array.isArray(message.content);
 }
 
 function textOfParts(content: readonly ContentPart[]): string {
-  let text = '';
+  let text = "";
   for (const part of content) {
-    if (part.type === 'text') text += part.text;
+    if (part.type === "text") text += part.text;
   }
   return text;
 }
 
 function readNumber(record: WireRecord, key: string): number | undefined {
   const value = record[key];
-  return typeof value === 'number' ? value : undefined;
+  return typeof value === "number" ? value : undefined;
 }
 
-function rawToolResultContent(output: string | readonly ContentPart[]): ContentPart[] {
-  return typeof output === 'string' ? [{ type: 'text', text: output }] : [...output];
+function rawToolResultContent(
+  output: string | readonly ContentPart[],
+): ContentPart[] {
+  return typeof output === "string"
+    ? [{ type: "text", text: output }]
+    : [...output];
 }

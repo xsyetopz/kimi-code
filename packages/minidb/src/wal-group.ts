@@ -9,9 +9,9 @@
 // field, parked by the recovery worker), and the in-place recovery worker
 // itself (it truncates the WAL path — see MiniDb.recoverWalInPlace).
 
-import type { StoreRecord } from './store.js';
-import type { WAL } from './wal.js';
-import type { WalPoison } from './wal.js';
+import type { StoreRecord } from "./store.js";
+import type { WAL } from "./wal.js";
+import type { WalPoison } from "./wal.js";
 
 /** Per-flush-group rollback state: the pre-group logical record of every key
  *  the group's ops touched, plus the count of the group's ops still awaiting
@@ -45,7 +45,8 @@ export class WalGroupTracker {
   /** The group groupFor returned most recently (see groupFor); invalidated
    *  when that group settles or rolls back. batchIds are monotonic per WAL,
    *  so a stale (wal, batchId) pair can never collide with a later group. */
-  private lastGroup: { wal: WAL; batchId: number; group: WalGroup } | null = null;
+  private lastGroup: { wal: WAL; batchId: number; group: WalGroup } | null =
+    null;
 
   /** Serializes in-place WAL recoveries (poison → truncate → resume), the same
    *  promise-chain style as uniqueWriteLock. Never rejects (a failed recovery
@@ -94,7 +95,11 @@ export class WalGroupTracker {
   }
 
   /** Record a key's pre-group record; the earliest capture per group wins. */
-  groupNoteKey(group: WalGroup | null, pk: string, prev: StoreRecord | undefined): void {
+  groupNoteKey(
+    group: WalGroup | null,
+    pk: string,
+    prev: StoreRecord | undefined,
+  ): void {
     if (group && !group.pre.has(pk)) group.pre.set(pk, prev);
   }
 
@@ -135,7 +140,11 @@ export class WalGroupTracker {
    *  write-disabled) carry no flag: those definitely had no effect.
    *  WAL_SEALED is excluded too: retryOnWalSeal transparently retries it. */
   markAmbiguous(err: unknown): unknown {
-    if (err && typeof err === 'object' && (err as { code?: string }).code !== 'WAL_SEALED') {
+    if (
+      err &&
+      typeof err === "object" &&
+      (err as { code?: string }).code !== "WAL_SEALED"
+    ) {
       (err as { ambiguous?: boolean }).ambiguous = true;
     }
     return err;
@@ -153,7 +162,9 @@ export class WalGroupTracker {
     if (!poison || poison === this.walRecoveryCovers) return;
     this.walRecoveryCovers = poison;
     this.walRecoveryIdle = false;
-    const run = this.walRecoveryChain.then(() => this.deps.recoverWalInPlace(wal));
+    const run = this.walRecoveryChain.then(() =>
+      this.deps.recoverWalInPlace(wal),
+    );
     const chain = run.catch(() => {});
     this.walRecoveryChain = chain;
     void chain.finally(() => {
@@ -185,7 +196,7 @@ export class WalGroupTracker {
       new Error(
         `MiniDb writes are disabled: in-place WAL recovery failed: ${cause instanceof Error ? cause.message : String(cause)}`,
       ),
-      { code: 'WAL_WRITE_DISABLED', cause },
+      { code: "WAL_WRITE_DISABLED", cause },
     );
   }
 }

@@ -4,9 +4,9 @@ import {
   loadBuiltInCatalog,
   type Catalog,
   type FetchCatalogOptions,
-} from '@moonshot-ai/kimi-code-sdk';
+} from "@moonshot-ai/kimi-code-sdk";
 
-import { BUILT_IN_CATALOG_JSON } from '#/built-in-catalog';
+import { BUILT_IN_CATALOG_JSON } from "#/built-in-catalog";
 
 export interface FetchCatalogOrBuiltInResult {
   readonly catalog: Catalog;
@@ -41,7 +41,9 @@ export async function fetchCatalogOrBuiltIn(
     if (options.signal?.aborted) throw error;
     if (isAbortError(error)) throw error;
     if (url !== DEFAULT_CATALOG_URL) throw error;
-    const builtIn = loadBuiltInCatalog(options.builtInJson ?? BUILT_IN_CATALOG_JSON);
+    const builtIn = loadBuiltInCatalog(
+      options.builtInJson ?? BUILT_IN_CATALOG_JSON,
+    );
     if (builtIn === undefined) throw error;
     return { catalog: builtIn, fromBuiltIn: true };
   }
@@ -49,9 +51,9 @@ export async function fetchCatalogOrBuiltIn(
 
 function isAbortError(error: unknown): boolean {
   return (
-    (typeof DOMException !== 'undefined' &&
+    (typeof DOMException !== "undefined" &&
       error instanceof DOMException &&
-      error.name === 'AbortError') ||
-    (error instanceof Error && error.name === 'AbortError')
+      error.name === "AbortError") ||
+    (error instanceof Error && error.name === "AbortError")
   );
 }

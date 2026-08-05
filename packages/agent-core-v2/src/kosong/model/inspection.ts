@@ -17,24 +17,29 @@
  * drift from what `get` served (same config generation, same cache entry).
  */
 
-import { parseKimiCodeCustomHeaders } from '@moonshot-ai/kimi-code-oauth';
+import { parseKimiCodeCustomHeaders } from "@moonshot-ai/kimi-code-oauth";
 
-import { BugIndicatingError } from '#/_base/errors/errors';
+import { BugIndicatingError } from "#/_base/errors/errors";
 
-import type { ModelCapability } from '#/kosong/contract/capability';
-import type { InspectionSource, ResolutionTrace } from '#/kosong/contract/inspection';
-import type { Protocol, ProtocolProviderOptions } from '#/kosong/protocol/protocol';
+import type { ModelCapability } from "#/kosong/contract/capability";
+import type {
+  InspectionSource,
+  ResolutionTrace,
+} from "#/kosong/contract/inspection";
+import type {
+  Protocol,
+  ProtocolProviderOptions,
+} from "#/kosong/protocol/protocol";
 
-import type { AnthropicModelProfile } from '../provider/bases/anthropic/anthropic-profile';
-import type { ProviderConfig } from '../provider/provider';
-import { getProviderDefinition } from '../provider/providerDefinition';
+import type { AnthropicModelProfile } from "../provider/bases/anthropic/anthropic-profile";
+import type { ProviderConfig } from "../provider/provider";
+import { getProviderDefinition } from "../provider/providerDefinition";
 
-import type { ModelRecord } from './model';
-import type { ResolvedModelAuthMaterial } from './model.types';
-
+import type { ModelRecord } from "./model";
+import type { ResolvedModelAuthMaterial } from "./model.types";
 
 export interface InspectedAuth {
-  readonly kind: 'apiKey' | 'oauth' | 'none';
+  readonly kind: "apiKey" | "oauth" | "none";
   readonly apiKey?: string;
   readonly oauthProviderKey?: string;
 }
@@ -83,20 +88,19 @@ export interface ModelInspection {
   readonly sources: Readonly<Record<string, InspectionSource>>;
 }
 
-
 export const TRACE = {
-  configuredModel: 'configuredModel',
-  effectiveModel: 'effectiveModel',
-  providerConfig: 'providerConfig',
-  providerName: 'providerName',
-  providerSynthesized: 'providerSynthesized',
-  rawBaseUrl: 'rawBaseUrl',
-  authMaterial: 'authMaterial',
-  detectedCapability: 'detectedCapability',
-  capabilitySource: 'capabilitySource',
-  hostHeaders: 'hostHeaders',
-  thirdPartyHeaders: 'thirdPartyHeaders',
-  identitySlug: 'identitySlug',
+  configuredModel: "configuredModel",
+  effectiveModel: "effectiveModel",
+  providerConfig: "providerConfig",
+  providerName: "providerName",
+  providerSynthesized: "providerSynthesized",
+  rawBaseUrl: "rawBaseUrl",
+  authMaterial: "authMaterial",
+  detectedCapability: "detectedCapability",
+  capabilitySource: "capabilitySource",
+  hostHeaders: "hostHeaders",
+  thirdPartyHeaders: "thirdPartyHeaders",
+  identitySlug: "identitySlug",
 } as const;
 
 export class ResolutionTraceCollector implements ResolutionTrace {
@@ -120,26 +124,28 @@ export class ResolutionTraceCollector implements ResolutionTrace {
   }
 }
 
-
 const SECRET_KEY_RE = /api[-_]?key|token|secret|password|authorization/i;
 
 export function maskSecret(value: string): string {
-  if (value.length <= 4) return '••••';
+  if (value.length <= 4) return "••••";
   return `••••${value.slice(-4)}`;
 }
 
 export function redactSecrets<T>(value: T): T {
-  if (Array.isArray(value)) return value.map((item) => redactSecrets(item)) as T;
-  if (value !== null && typeof value === 'object') {
+  if (Array.isArray(value))
+    return value.map((item) => redactSecrets(item)) as T;
+  if (value !== null && typeof value === "object") {
     const out: Record<string, unknown> = {};
     for (const [key, item] of Object.entries(value)) {
-      out[key] = typeof item === 'string' && SECRET_KEY_RE.test(key) ? maskSecret(item) : redactSecrets(item);
+      out[key] =
+        typeof item === "string" && SECRET_KEY_RE.test(key)
+          ? maskSecret(item)
+          : redactSecrets(item);
     }
     return out as T;
   }
   return value;
 }
-
 
 export function attributeEffectiveFields(
   trace: ResolutionTraceCollector,
@@ -153,57 +159,62 @@ export function attributeEffectiveFields(
   const profileDetail =
     profile === undefined
       ? undefined
-      : `anthropic profile (${profile.mode}, efforts: ${profile.efforts.join('/')}${profileInferred ? ', inferred fallback' : ''})`;
+      : `anthropic profile (${profile.mode}, efforts: ${profile.efforts.join("/")}${profileInferred ? ", inferred fallback" : ""})`;
   const keys = new Set([...Object.keys(base), ...Object.keys(effective)]);
   for (const key of keys) {
-    if (key === 'overrides') continue;
+    if (key === "overrides") continue;
     const path = `model.effective.${key}`;
     const before = (base as Record<string, unknown>)[key];
     const after = (effective as Record<string, unknown>)[key];
     if (before === undefined && after === undefined) continue;
-    if (key === 'maxInputSize') {
-      const rawValue = (overridden.has(key) ? overrides?.[key] : before) as number | undefined;
+    if (key === "maxInputSize") {
+      const rawValue = (overridden.has(key) ? overrides?.[key] : before) as
+        | number
+        | undefined;
       if (
         rawValue !== undefined &&
         effective.maxContextSize !== undefined &&
         rawValue > effective.maxContextSize
       ) {
         trace.record(path, {
-          kind: 'synthesized',
-          detail: 'clamped to the effective max_context_size',
+          kind: "synthesized",
+          detail: "clamped to the effective max_context_size",
         });
         continue;
       }
     }
     if (overridden.has(key)) {
-      trace.record(path, { kind: 'override', detail: 'models.*.overrides' });
+      trace.record(path, { kind: "override", detail: "models.*.overrides" });
       continue;
     }
     if (after === undefined) {
       trace.record(path, {
-        kind: 'synthesized',
-        detail: 'removed by the effective pass (defaultEffort not in override supportEfforts)',
+        kind: "synthesized",
+        detail:
+          "removed by the effective pass (defaultEffort not in override supportEfforts)",
       });
       continue;
     }
     const profileTouched =
-      (key === 'capabilities' || key === 'supportEfforts' || key === 'defaultEffort') &&
+      (key === "capabilities" ||
+        key === "supportEfforts" ||
+        key === "defaultEffort") &&
       profileDetail !== undefined &&
       JSON.stringify(before) !== JSON.stringify(after);
     if (profileTouched) {
-      trace.record(path, { kind: 'builtin', detail: profileDetail });
+      trace.record(path, { kind: "builtin", detail: profileDetail });
       continue;
     }
-    trace.record(path, { kind: 'config', detail: '[models.*] section' });
+    trace.record(path, { kind: "config", detail: "[models.*] section" });
   }
 }
 
 const PROVIDER_OPTION_FIELD: Readonly<Record<string, string>> = {
-  defaultMaxTokens: 'maxOutputSize',
-  supportEfforts: 'supportEfforts',
-  adaptiveThinking: 'adaptiveThinking',
-  betaApi: 'betaApi',
-  reasoningKey: 'reasoningKey',
+  defaultMaxTokens: "maxOutputSize",
+  supportEfforts: "supportEfforts",
+  adaptiveThinking: "adaptiveThinking",
+  betaApi: "betaApi",
+  reasoningKey: "reasoningKey",
 };
 
 export function attributeProviderOptions(
@@ -213,29 +224,40 @@ export function attributeProviderOptions(
 ): void {
   for (const key of Object.keys(options)) {
     const path = `resolved.providerOptions.${key}`;
-    if (key === 'vertexai') {
-      trace.record(path, { kind: 'env', detail: 'provider env bag supplies both vertex coordinates' });
+    if (key === "vertexai") {
+      trace.record(path, {
+        kind: "env",
+        detail: "provider env bag supplies both vertex coordinates",
+      });
       continue;
     }
-    if (key === 'project') {
-      trace.record(path, { kind: 'env', detail: 'GOOGLE_CLOUD_PROJECT (provider env bag)' });
+    if (key === "project") {
+      trace.record(path, {
+        kind: "env",
+        detail: "GOOGLE_CLOUD_PROJECT (provider env bag)",
+      });
       continue;
     }
-    if (key === 'location') {
+    if (key === "location") {
       trace.record(
         path,
-        providerEnv?.['GOOGLE_CLOUD_LOCATION'] !== undefined
-          ? { kind: 'env', detail: 'GOOGLE_CLOUD_LOCATION (provider env bag)' }
-          : { kind: 'synthesized', detail: 'parsed from the baseUrl host' },
+        providerEnv?.["GOOGLE_CLOUD_LOCATION"] !== undefined
+          ? { kind: "env", detail: "GOOGLE_CLOUD_LOCATION (provider env bag)" }
+          : { kind: "synthesized", detail: "parsed from the baseUrl host" },
       );
       continue;
     }
     const field = PROVIDER_OPTION_FIELD[key];
-    const source = field === undefined ? undefined : trace.sources.get(`model.effective.${field}`);
-    trace.record(path, source ?? { kind: 'config', detail: '[models.*] section' });
+    const source =
+      field === undefined
+        ? undefined
+        : trace.sources.get(`model.effective.${field}`);
+    trace.record(
+      path,
+      source ?? { kind: "config", detail: "[models.*] section" },
+    );
   }
 }
-
 
 interface ResolvedModelLike {
   readonly protocol: Protocol;
@@ -258,12 +280,12 @@ interface ResolvedModelLike {
 }
 
 const CAPABILITY_KEYS = [
-  'image_in',
-  'video_in',
-  'audio_in',
-  'thinking',
-  'tool_use',
-  'dynamically_loaded_tools',
+  "image_in",
+  "video_in",
+  "audio_in",
+  "thinking",
+  "tool_use",
+  "dynamically_loaded_tools",
 ] as const;
 
 export function assembleModelInspection(args: {
@@ -272,81 +294,110 @@ export function assembleModelInspection(args: {
   readonly trace: ResolutionTraceCollector;
 }): ModelInspection {
   const { id, model, trace } = args;
-  const configured = required<ModelRecord>(trace, TRACE.configuredModel, 'configured model');
-  const effective = required<ModelRecord>(trace, TRACE.effectiveModel, 'effective model');
+  const configured = required<ModelRecord>(
+    trace,
+    TRACE.configuredModel,
+    "configured model",
+  );
+  const effective = required<ModelRecord>(
+    trace,
+    TRACE.effectiveModel,
+    "effective model",
+  );
   const providerConfig = trace.captured<ProviderConfig>(TRACE.providerConfig);
-  const providerName = trace.captured<string>(TRACE.providerName) ?? model.providerName;
-  const providerSynthesized = trace.captured<boolean>(TRACE.providerSynthesized) === true;
+  const providerName =
+    trace.captured<string>(TRACE.providerName) ?? model.providerName;
+  const providerSynthesized =
+    trace.captured<boolean>(TRACE.providerSynthesized) === true;
   const rawBaseUrl = trace.captured<string>(TRACE.rawBaseUrl);
-  const authMaterial = trace.captured<ResolvedModelAuthMaterial>(TRACE.authMaterial) ?? {};
+  const authMaterial =
+    trace.captured<ResolvedModelAuthMaterial>(TRACE.authMaterial) ?? {};
 
   const sources = new Map<string, InspectionSource>([
     ...trace.sources,
     [
-      'model.effective',
+      "model.effective",
       {
-        kind: 'synthesized',
-        detail: 'overrides merged into the raw record, then the Anthropic profile pass fills gaps',
+        kind: "synthesized",
+        detail:
+          "overrides merged into the raw record, then the Anthropic profile pass fills gaps",
       } satisfies InspectionSource,
     ],
     [
-      'resolved',
+      "resolved",
       {
-        kind: 'synthesized',
-        detail: 'the assembled runtime view (Model) of this same resolution pass',
+        kind: "synthesized",
+        detail:
+          "the assembled runtime view (Model) of this same resolution pass",
       } satisfies InspectionSource,
     ],
   ]);
 
   for (const field of [
-    'maxContextSize',
-    'maxInputSize',
-    'maxOutputSize',
-    'displayName',
-    'reasoningKey',
-    'supportEfforts',
-    'defaultEffort',
-    'aliases',
+    "maxContextSize",
+    "maxInputSize",
+    "maxOutputSize",
+    "displayName",
+    "reasoningKey",
+    "supportEfforts",
+    "defaultEffort",
+    "aliases",
   ] as const) {
     const source = sources.get(`model.effective.${field}`);
     if (source !== undefined) sources.set(`resolved.${field}`, source);
   }
-  const wireNameField = effective.name !== undefined ? 'name' : 'model';
+  const wireNameField = effective.name !== undefined ? "name" : "model";
   sources.set(
-    'resolved.wireName',
-    sources.get(`model.effective.${wireNameField}`) ?? { kind: 'config', detail: '[models.*] section' },
+    "resolved.wireName",
+    sources.get(`model.effective.${wireNameField}`) ?? {
+      kind: "config",
+      detail: "[models.*] section",
+    },
   );
-  sources.set('resolved.alwaysThinking', {
-    kind: 'synthesized',
-    detail: "derived from the declared capabilities ('always_thinking' present)",
+  sources.set("resolved.alwaysThinking", {
+    kind: "synthesized",
+    detail:
+      "derived from the declared capabilities ('always_thinking' present)",
   });
   sources.set(
-    'resolved.providerType',
+    "resolved.providerType",
     providerConfig !== undefined
-      ? { kind: 'config', detail: `provider '${providerName}' type` }
-      : { kind: 'synthesized', detail: 'no provider — falls back to the resolved protocol' },
+      ? { kind: "config", detail: `provider '${providerName}' type` }
+      : {
+          kind: "synthesized",
+          detail: "no provider — falls back to the resolved protocol",
+        },
   );
   sources.set(
-    'resolved.providerName',
-    sources.get('provider') ?? { kind: 'config', detail: `provider '${providerName}'` },
+    "resolved.providerName",
+    sources.get("provider") ?? {
+      kind: "config",
+      detail: `provider '${providerName}'`,
+    },
   );
 
-  sources.set('model', { kind: 'config', detail: 'the [models.*] section entry' });
-  sources.set('model.id', { kind: 'config', detail: 'the [models.*] section key' });
-  sources.set('resolved.headers', {
-    kind: 'synthesized',
-    detail: 'env < host < provider customHeaders merge (later wins)',
+  sources.set("model", {
+    kind: "config",
+    detail: "the [models.*] section entry",
+  });
+  sources.set("model.id", {
+    kind: "config",
+    detail: "the [models.*] section key",
+  });
+  sources.set("resolved.headers", {
+    kind: "synthesized",
+    detail: "env < host < provider customHeaders merge (later wins)",
   });
 
-  const baseUrlSource = sources.get('resolved.baseUrl');
+  const baseUrlSource = sources.get("resolved.baseUrl");
   if (
     baseUrlSource !== undefined &&
-    model.protocol === 'anthropic' &&
+    model.protocol === "anthropic" &&
     rawBaseUrl !== undefined &&
     rawBaseUrl !== model.baseUrl
   ) {
-    sources.set('resolved.baseUrl', {
-      kind: 'synthesized',
+    sources.set("resolved.baseUrl", {
+      kind: "synthesized",
       detail: `${baseUrlSource.detail ?? baseUrlSource.kind} · trailing /v1 stripped`,
     });
   }
@@ -355,11 +406,17 @@ export function assembleModelInspection(args: {
   attributeHeaders(sources, model, providerConfig, trace);
 
   const providerType = providerConfig?.type;
-  const definition = providerType === undefined ? undefined : getProviderDefinition(providerType);
+  const definition =
+    providerType === undefined
+      ? undefined
+      : getProviderDefinition(providerType);
   if (providerConfig !== undefined) {
-    sources.set('provider.config', { kind: 'config', detail: '[providers.*] section' });
-    sources.set('provider.definition', {
-      kind: 'builtin',
+    sources.set("provider.config", {
+      kind: "config",
+      detail: "[providers.*] section",
+    });
+    sources.set("provider.definition", {
+      kind: "builtin",
       detail:
         definition === undefined
           ? `vendor '${providerType}' is not registered in the provider-definition registry`
@@ -369,10 +426,10 @@ export function assembleModelInspection(args: {
 
   const auth: InspectedAuth =
     authMaterial.apiKey !== undefined
-      ? { kind: 'apiKey', apiKey: maskSecret(authMaterial.apiKey) }
+      ? { kind: "apiKey", apiKey: maskSecret(authMaterial.apiKey) }
       : authMaterial.oauth !== undefined
-        ? { kind: 'oauth', oauthProviderKey: authMaterial.oauthProviderKey }
-        : { kind: 'none' };
+        ? { kind: "oauth", oauthProviderKey: authMaterial.oauthProviderKey }
+        : { kind: "none" };
 
   return {
     id,
@@ -384,7 +441,10 @@ export function assembleModelInspection(args: {
     provider: {
       id: providerName,
       synthesized: providerSynthesized,
-      config: providerConfig === undefined ? undefined : redactSecrets(providerConfig),
+      config:
+        providerConfig === undefined
+          ? undefined
+          : redactSecrets(providerConfig),
       definition:
         providerConfig === undefined
           ? undefined
@@ -430,23 +490,38 @@ function attributeCapabilities(
   effective: ModelRecord,
   trace: ResolutionTraceCollector,
 ): void {
-  const raw = new Set((configured.capabilities ?? []).map((c) => c.trim().toLowerCase()));
-  const added = new Set((effective.capabilities ?? []).map((c) => c.trim().toLowerCase()));
+  const raw = new Set(
+    (configured.capabilities ?? []).map((c) => c.trim().toLowerCase()),
+  );
+  const added = new Set(
+    (effective.capabilities ?? []).map((c) => c.trim().toLowerCase()),
+  );
   const detected = trace.captured<ModelCapability>(TRACE.detectedCapability);
-  const detectedSource = trace.captured<InspectionSource>(TRACE.capabilitySource) ?? {
-    kind: 'none' as const,
+  const detectedSource = trace.captured<InspectionSource>(
+    TRACE.capabilitySource,
+  ) ?? {
+    kind: "none" as const,
   };
-  const profileSource = sources.get('model.effective.capabilities');
+  const profileSource = sources.get("model.effective.capabilities");
   for (const key of CAPABILITY_KEYS) {
     const path = `resolved.capabilities.${key}`;
-    if (raw.has(key) || (key === 'thinking' && raw.has('always_thinking'))) {
-      sources.set(path, { kind: 'config', detail: 'declared in model capabilities' });
+    if (raw.has(key) || (key === "thinking" && raw.has("always_thinking"))) {
+      sources.set(path, {
+        kind: "config",
+        detail: "declared in model capabilities",
+      });
       continue;
     }
-    if (added.has(key) || (key === 'thinking' && added.has('always_thinking'))) {
+    if (
+      added.has(key) ||
+      (key === "thinking" && added.has("always_thinking"))
+    ) {
       sources.set(
         path,
-        profileSource ?? { kind: 'builtin', detail: 'added by the Anthropic profile pass' },
+        profileSource ?? {
+          kind: "builtin",
+          detail: "added by the Anthropic profile pass",
+        },
       );
       continue;
     }
@@ -454,18 +529,21 @@ function attributeCapabilities(
       sources.set(path, detectedSource);
       continue;
     }
-    sources.set(path, { kind: 'none', detail: 'neither declared nor detected' });
+    sources.set(path, {
+      kind: "none",
+      detail: "neither declared nor detected",
+    });
   }
-  sources.set('resolved.capabilities.max_context_tokens', {
-    kind: 'synthesized',
-    detail: 'forced to the resolved maxContextSize',
+  sources.set("resolved.capabilities.max_context_tokens", {
+    kind: "synthesized",
+    detail: "forced to the resolved maxContextSize",
   });
-  const maxInputSource = sources.get('model.effective.maxInputSize');
+  const maxInputSource = sources.get("model.effective.maxInputSize");
   sources.set(
-    'resolved.capabilities.max_input_tokens',
+    "resolved.capabilities.max_input_tokens",
     maxInputSource ?? {
-      kind: 'none',
-      detail: 'no declared input limit — the total window applies',
+      kind: "none",
+      detail: "no declared input limit — the total window applies",
     },
   );
 }
@@ -476,9 +554,9 @@ function hostHeaderDetail(
   identitySlug: string | undefined,
 ): string {
   if (forwardsAll) return "host request headers (hostHeaders: 'full')";
-  return identitySlug !== undefined && key === 'User-Agent'
+  return identitySlug !== undefined && key === "User-Agent"
     ? `host User-Agent, product token from [identity] (${identitySlug})`
-    : 'host User-Agent';
+    : "host User-Agent";
 }
 
 function attributeHeaders(
@@ -488,34 +566,43 @@ function attributeHeaders(
   trace: ResolutionTraceCollector,
 ): void {
   const envLayer = parseKimiCodeCustomHeaders();
-  const rawHost = trace.captured<Readonly<Record<string, string>>>(TRACE.hostHeaders) ?? {};
+  const rawHost =
+    trace.captured<Readonly<Record<string, string>>>(TRACE.hostHeaders) ?? {};
   const identitySlug = trace.captured<string | undefined>(TRACE.identitySlug);
   const forwardsAll =
     providerConfig?.type !== undefined &&
-    getProviderDefinition(providerConfig.type)?.hostHeaders === 'full';
+    getProviderDefinition(providerConfig.type)?.hostHeaders === "full";
   const hostLayer: Readonly<Record<string, string>> = forwardsAll
     ? rawHost
-    : trace.captured<Readonly<Record<string, string>>>(TRACE.thirdPartyHeaders) ?? {};
+    : (trace.captured<Readonly<Record<string, string>>>(
+        TRACE.thirdPartyHeaders,
+      ) ?? {});
   const customLayer = providerConfig?.customHeaders ?? {};
   for (const key of Object.keys(model.headers)) {
     const path = `resolved.headers.${key}`;
     if (key in customLayer) {
-      sources.set(path, { kind: 'config', detail: "provider's customHeaders" });
+      sources.set(path, { kind: "config", detail: "provider's customHeaders" });
     } else if (key in hostLayer) {
       sources.set(path, {
-        kind: 'builtin',
+        kind: "builtin",
         detail: hostHeaderDetail(forwardsAll, key, identitySlug),
       });
     } else if (key in envLayer) {
-      sources.set(path, { kind: 'env', detail: 'KIMI_CODE_CUSTOM_HEADERS' });
+      sources.set(path, { kind: "env", detail: "KIMI_CODE_CUSTOM_HEADERS" });
     }
   }
 }
 
-function required<T>(trace: ResolutionTraceCollector, key: string, what: string): T {
+function required<T>(
+  trace: ResolutionTraceCollector,
+  key: string,
+  what: string,
+): T {
   const value = trace.captured<T>(key);
   if (value === undefined) {
-    throw new BugIndicatingError(`resolution trace is missing the ${what} capture ('${key}')`);
+    throw new BugIndicatingError(
+      `resolution trace is missing the ${what} capture ('${key}')`,
+    );
   }
   return value;
 }

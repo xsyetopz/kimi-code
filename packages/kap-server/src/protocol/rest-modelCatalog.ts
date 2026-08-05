@@ -11,13 +11,13 @@
  * around them, plus the manual create/replace/delete write surface.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { PROVIDER_ID_PATTERN } from '@moonshot-ai/agent-core-v2';
+import { PROVIDER_ID_PATTERN } from "@moonshot-ai/agent-core-v2";
 import {
   modelCatalogItemSchema,
   providerCatalogItemSchema,
-} from '@moonshot-ai/agent-core-v2/kosong/model/catalog';
+} from "@moonshot-ai/agent-core-v2/kosong/model/catalog";
 
 export const listModelsResponseSchema = z.object({
   items: z.array(modelCatalogItemSchema),
@@ -46,12 +46,12 @@ export type GetProviderResponse = z.infer<typeof getProviderResponseSchema>;
  * (`vertexai` resolves through the google-genai base's vertex mode at runtime.)
  */
 export const providerWireTypeSchema = z.enum([
-  'kimi',
-  'openai',
-  'openai_responses',
-  'anthropic',
-  'google-genai',
-  'vertexai',
+  "kimi",
+  "openai",
+  "openai_responses",
+  "anthropic",
+  "google-genai",
+  "vertexai",
 ]);
 export type ProviderWireType = z.infer<typeof providerWireTypeSchema>;
 
@@ -76,20 +76,20 @@ function refineProviderForm(
   value: { base_url?: string | undefined; models: Array<{ model: string }> },
   ctx: z.RefinementCtx,
 ): void {
-  if (value.base_url !== undefined && value.base_url.includes('${')) {
+  if (value.base_url !== undefined && value.base_url.includes("${")) {
     ctx.addIssue({
-      code: 'custom',
-      message: 'base_url must not contain an environment variable placeholder',
-      path: ['base_url'],
+      code: "custom",
+      message: "base_url must not contain an environment variable placeholder",
+      path: ["base_url"],
     });
   }
   const seen = new Set<string>();
   for (const entry of value.models) {
     if (seen.has(entry.model)) {
       ctx.addIssue({
-        code: 'custom',
+        code: "custom",
         message: `duplicate model: ${entry.model}`,
-        path: ['models'],
+        path: ["models"],
       });
       return;
     }
@@ -121,16 +121,18 @@ export const createProviderRequestSchema = z
       !value.models.some((entry) => entry.model === value.default_model)
     ) {
       ctx.addIssue({
-        code: 'custom',
-        message: 'default_model must be one of models[].model',
-        path: ['default_model'],
+        code: "custom",
+        message: "default_model must be one of models[].model",
+        path: ["default_model"],
       });
     }
   });
 export type CreateProviderRequest = z.infer<typeof createProviderRequestSchema>;
 
 export const createProviderResponseSchema = providerCatalogItemSchema;
-export type CreateProviderResponse = z.infer<typeof createProviderResponseSchema>;
+export type CreateProviderResponse = z.infer<
+  typeof createProviderResponseSchema
+>;
 
 // ---------------------------------------------------------------------------
 // PUT /v1/providers/{provider_id} — replace-style provider edit
@@ -160,18 +162,22 @@ export const replaceProviderRequestSchema = z
       !value.models.some((entry) => entry.model === value.default_model)
     ) {
       ctx.addIssue({
-        code: 'custom',
-        message: 'default_model must be one of models[].model',
-        path: ['default_model'],
+        code: "custom",
+        message: "default_model must be one of models[].model",
+        path: ["default_model"],
       });
     }
   });
-export type ReplaceProviderRequest = z.infer<typeof replaceProviderRequestSchema>;
+export type ReplaceProviderRequest = z.infer<
+  typeof replaceProviderRequestSchema
+>;
 
 export const replaceProviderResponseSchema = z.object({
   provider: providerCatalogItemSchema,
 });
-export type ReplaceProviderResponse = z.infer<typeof replaceProviderResponseSchema>;
+export type ReplaceProviderResponse = z.infer<
+  typeof replaceProviderResponseSchema
+>;
 
 // ---------------------------------------------------------------------------
 // GET /v1/catalog/providers[{catalog_id}] — models.dev directory (proxied)
@@ -208,10 +214,14 @@ export type CatalogProviderItem = z.infer<typeof catalogProviderItemSchema>;
 export const listCatalogProvidersResponseSchema = z.object({
   items: z.array(catalogProviderItemSchema),
 });
-export type ListCatalogProvidersResponse = z.infer<typeof listCatalogProvidersResponseSchema>;
+export type ListCatalogProvidersResponse = z.infer<
+  typeof listCatalogProvidersResponseSchema
+>;
 
 export const getCatalogProviderResponseSchema = catalogProviderItemSchema;
-export type GetCatalogProviderResponse = z.infer<typeof getCatalogProviderResponseSchema>;
+export type GetCatalogProviderResponse = z.infer<
+  typeof getCatalogProviderResponseSchema
+>;
 
 /**
  * Body of the `/providers:action` collection route. Every field is optional
@@ -233,13 +243,17 @@ export const providerCollectionActionBodySchema = z.object({
   id: providerIdSchema.optional(),
   url: z.string().min(1).optional(),
 });
-export type ProviderCollectionActionBody = z.infer<typeof providerCollectionActionBodySchema>;
+export type ProviderCollectionActionBody = z.infer<
+  typeof providerCollectionActionBodySchema
+>;
 
 export const importCatalogProviderResponseSchema = z.object({
   provider: providerCatalogItemSchema,
   models_imported: z.number().int().min(0),
 });
-export type ImportCatalogProviderResponse = z.infer<typeof importCatalogProviderResponseSchema>;
+export type ImportCatalogProviderResponse = z.infer<
+  typeof importCatalogProviderResponseSchema
+>;
 
 // ---------------------------------------------------------------------------
 // POST /v1/providers:import_registry — import a custom registry (api.json)
@@ -256,4 +270,6 @@ export const importCustomRegistryResponseSchema = z.object({
   providers: z.array(providerCatalogItemSchema),
   models_imported: z.number().int().min(0),
 });
-export type ImportCustomRegistryResponse = z.infer<typeof importCustomRegistryResponseSchema>;
+export type ImportCustomRegistryResponse = z.infer<
+  typeof importCustomRegistryResponseSchema
+>;

@@ -1,12 +1,17 @@
-import { createHash } from 'node:crypto';
-import { createReadStream, createWriteStream } from 'node:fs';
-import { mkdir, stat, writeFile } from 'node:fs/promises';
-import { basename, resolve } from 'node:path';
-import { pipeline } from 'node:stream/promises';
+import { createHash } from "node:crypto";
+import { createReadStream, createWriteStream } from "node:fs";
+import { mkdir, stat, writeFile } from "node:fs/promises";
+import { basename, resolve } from "node:path";
+import { pipeline } from "node:stream/promises";
 
-import { ZipFile } from 'yazl';
+import { ZipFile } from "yazl";
 
-import { executableName, nativeArtifactsDir, nativeBinPath, targetTriple } from './paths.mjs';
+import {
+  executableName,
+  nativeArtifactsDir,
+  nativeBinPath,
+  targetTriple,
+} from "./paths.mjs";
 
 const target = targetTriple();
 const execName = executableName();
@@ -25,18 +30,20 @@ function fail(message) {
 
 async function sha256(path) {
   return await new Promise((resolveHash, reject) => {
-    const hash = createHash('sha256');
+    const hash = createHash("sha256");
     const stream = createReadStream(path);
-    stream.on('error', reject);
-    stream.on('data', (chunk) => hash.update(chunk));
-    stream.on('end', () => resolveHash(hash.digest('hex')));
+    stream.on("error", reject);
+    stream.on("data", (chunk) => hash.update(chunk));
+    stream.on("end", () => resolveHash(hash.digest("hex")));
   });
 }
 
 try {
   await stat(sourceBinary);
 } catch {
-  fail(`Native executable not found at ${sourceBinary}. Run build:native:sea first.`);
+  fail(
+    `Native executable not found at ${sourceBinary}. Run build:native:sea first.`,
+  );
 }
 
 await mkdir(artifactsDir, { recursive: true });

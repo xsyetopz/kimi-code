@@ -8,7 +8,7 @@
  * the engine's decoder.
  */
 
-import { deflateSync } from 'node:zlib';
+import { deflateSync } from "node:zlib";
 
 function crc32(buf: Buffer): number {
   let crc = ~0;
@@ -25,7 +25,7 @@ function crc32(buf: Buffer): number {
 function pngChunk(type: string, data: Buffer): Buffer {
   const length = Buffer.alloc(4);
   length.writeUInt32BE(data.length);
-  const body = Buffer.concat([Buffer.from(type, 'ascii'), data]);
+  const body = Buffer.concat([Buffer.from(type, "ascii"), data]);
   const crc = Buffer.alloc(4);
   crc.writeUInt32BE(crc32(body));
   return Buffer.concat([length, body, crc]);
@@ -42,13 +42,13 @@ export function solidPng(width: number, height: number): Buffer {
   const raw = Buffer.concat(Array.from({ length: height }, () => row));
   return Buffer.concat([
     Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
-    pngChunk('IHDR', ihdr),
-    pngChunk('IDAT', deflateSync(raw)),
-    pngChunk('IEND', Buffer.alloc(0)),
+    pngChunk("IHDR", ihdr),
+    pngChunk("IDAT", deflateSync(raw)),
+    pngChunk("IEND", Buffer.alloc(0)),
   ]);
 }
 
 /** Base64 form of {@link solidPng}, ready for an ACP image block. */
 export function solidPngBase64(width: number, height: number): string {
-  return solidPng(width, height).toString('base64');
+  return solidPng(width, height).toString("base64");
 }

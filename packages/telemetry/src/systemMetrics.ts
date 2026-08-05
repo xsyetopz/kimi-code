@@ -1,10 +1,10 @@
-import { cpus, freemem, loadavg, totalmem } from 'node:os';
+import { cpus, freemem, loadavg, totalmem } from "node:os";
 
-import type { TelemetryProperties } from './types';
+import type { TelemetryProperties } from "./types";
 
 const DEFAULT_INTERVAL_MS = 300_000;
 const DEFAULT_WARMUP_SAMPLE_MS = 1_500;
-const SYSTEM_METRICS_EVENT = 'system_metrics';
+const SYSTEM_METRICS_EVENT = "system_metrics";
 
 export interface SystemMetricsTrackClient {
   track(event: string, properties?: TelemetryProperties): void;
@@ -24,13 +24,17 @@ export class SystemMetricsCollector {
   private warmupTimer: ReturnType<typeof setTimeout> | null = null;
   private previousCpuUsage = process.cpuUsage();
   private previousHrtime = process.hrtime.bigint();
-  private readonly processStartedAtSeconds = Math.floor(Date.now() / 1000 - process.uptime());
+  private readonly processStartedAtSeconds = Math.floor(
+    Date.now() / 1000 - process.uptime(),
+  );
 
   constructor(options: SystemMetricsCollectorOptions) {
     this.client = options.client;
     this.intervalMs = options.intervalMs ?? DEFAULT_INTERVAL_MS;
     this.warmupSampleMs =
-      options.warmupSampleMs === undefined ? DEFAULT_WARMUP_SAMPLE_MS : options.warmupSampleMs;
+      options.warmupSampleMs === undefined
+        ? DEFAULT_WARMUP_SAMPLE_MS
+        : options.warmupSampleMs;
   }
 
   start(): void {
@@ -96,7 +100,7 @@ export class SystemMetricsCollector {
       cpu_count: cpus().length,
     };
     if (constrainedMemory !== undefined) {
-      properties['constrained_memory_bytes'] = constrainedMemory;
+      properties["constrained_memory_bytes"] = constrainedMemory;
     }
 
     this.client.track(SYSTEM_METRICS_EVENT, properties);
@@ -104,7 +108,7 @@ export class SystemMetricsCollector {
 }
 
 function getConstrainedMemoryBytes(): number | undefined {
-  if (typeof process.constrainedMemory !== 'function') return undefined;
+  if (typeof process.constrainedMemory !== "function") return undefined;
   const value = process.constrainedMemory();
   return Number.isSafeInteger(value) && value >= 0 ? value : undefined;
 }

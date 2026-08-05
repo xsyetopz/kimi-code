@@ -6,10 +6,10 @@
  * that content while preserving newly generated recovery media.
  */
 
-import { createDecorator } from '#/_base/di/instantiation';
-import type { Message } from '#/kosong/contract/message';
+import { createDecorator } from "#/_base/di/instantiation";
+import type { Message } from "#/kosong/contract/message";
 
-import type { ContextMessage } from '#/agent/contextMemory/types';
+import type { ContextMessage } from "#/agent/contextMemory/types";
 
 declare const mediaStripSnapshotBrand: unique symbol;
 
@@ -23,13 +23,16 @@ export interface IAgentContextProjectorService {
   project(messages: readonly ContextMessage[]): readonly Message[];
   projectStrict(messages: readonly ContextMessage[]): readonly Message[];
   projectMediaDegraded(messages: readonly ContextMessage[]): readonly Message[];
-  captureMediaStripSnapshot(messages: readonly ContextMessage[]): MediaStripSnapshot;
+  captureMediaStripSnapshot(
+    messages: readonly ContextMessage[],
+  ): MediaStripSnapshot;
   projectMediaStripped(
     messages: readonly ContextMessage[],
     snapshot?: MediaStripSnapshot,
   ): readonly Message[];
 }
 
-export const IAgentContextProjectorService = createDecorator<IAgentContextProjectorService>(
-  'agentContextProjectorService',
-);
+export const IAgentContextProjectorService =
+  createDecorator<IAgentContextProjectorService>(
+    "agentContextProjectorService",
+  );

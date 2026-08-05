@@ -5,8 +5,8 @@ import {
   parseConfigString,
   resolveConfigPath,
   type RPCMethods,
-} from '@moonshot-ai/agent-core';
-import { z } from 'zod';
+} from "@moonshot-ai/agent-core";
+import { z } from "zod";
 
 export type KimiConfigValidationPathSegment = string | number;
 
@@ -59,12 +59,17 @@ export class KimiConfigRpcClient implements KimiConfigRpc {
   private readonly ready: Promise<RPCMethods<KimiConfigCoreRpc>>;
 
   constructor() {
-    const [coreRpc, clientRpc] = createRPC<KimiConfigCoreRpc, KimiConfigClientRpc>();
+    const [coreRpc, clientRpc] = createRPC<
+      KimiConfigCoreRpc,
+      KimiConfigClientRpc
+    >();
     void coreRpc(new KimiConfigCoreRpcImpl());
     this.ready = clientRpc({});
   }
 
-  async resolveConfigPath(input: ResolveKimiConfigPathInput = {}): Promise<string> {
+  async resolveConfigPath(
+    input: ResolveKimiConfigPathInput = {},
+  ): Promise<string> {
     const rpc = await this.ready;
     return rpc.resolveConfigPath(input);
   }
@@ -96,12 +101,14 @@ function toConfigValidationError(
   return new KimiError(ErrorCodes.CONFIG_INVALID, message, { details });
 }
 
-function extractValidationIssues(error: unknown): readonly KimiConfigValidationIssue[] | undefined {
+function extractValidationIssues(
+  error: unknown,
+): readonly KimiConfigValidationIssue[] | undefined {
   const zodError = findZodError(error);
   if (zodError === undefined) return undefined;
   return zodError.issues.map((issue) => ({
     path: issue.path.map((segment) =>
-      typeof segment === 'number' ? segment : String(segment),
+      typeof segment === "number" ? segment : String(segment),
     ),
     message: issue.message,
   }));
@@ -109,6 +116,7 @@ function extractValidationIssues(error: unknown): readonly KimiConfigValidationI
 
 function findZodError(error: unknown): z.ZodError | undefined {
   if (error instanceof z.ZodError) return error;
-  if (error instanceof Error && error.cause instanceof z.ZodError) return error.cause;
+  if (error instanceof Error && error.cause instanceof z.ZodError)
+    return error.cause;
   return undefined;
 }

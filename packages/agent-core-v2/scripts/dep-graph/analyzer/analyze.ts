@@ -15,9 +15,9 @@
  * which field holds an event bus without asking the type checker.
  */
 
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join, relative, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join, relative, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import {
   type CallExpression,
@@ -28,42 +28,69 @@ import {
   Project,
   type SourceFile,
   SyntaxKind,
-} from 'ts-morph';
+} from "ts-morph";
 
-import type { Edge, EdgeKind, EdgeRef, Graph, ServiceNode, ServiceScope } from './types';
+import type {
+  Edge,
+  EdgeKind,
+  EdgeRef,
+  Graph,
+  ServiceNode,
+  ServiceScope,
+} from "./types";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-export const PKG_ROOT = resolve(__dirname, '..', '..', '..');
-export const REPO_ROOT = resolve(PKG_ROOT, '..', '..');
-export const SRC_ROOT = join(PKG_ROOT, 'src');
-export const SNAPSHOT_PATH = join(PKG_ROOT, '.local', 'dep-graph.json');
+export const PKG_ROOT = resolve(__dirname, "..", "..", "..");
+export const REPO_ROOT = resolve(PKG_ROOT, "..", "..");
+export const SRC_ROOT = join(PKG_ROOT, "src");
+export const SNAPSHOT_PATH = join(PKG_ROOT, ".local", "dep-graph.json");
 
-const EVENT_BUS_TOKENS = new Set(['IEventService', 'IAgentRecordService']);
+const EVENT_BUS_TOKENS = new Set(["IEventService", "IAgentRecordService"]);
 
 const EVENT_METHOD_KIND: Record<string, EdgeKind> = {
-  publish: 'publish',
-  subscribe: 'subscribe',
-  append: 'emit',
-  signal: 'emit',
-  on: 'on',
+  publish: "publish",
+  subscribe: "subscribe",
+  append: "emit",
+  signal: "emit",
+  on: "on",
 };
 
-const SCOPE_ORDER: ServiceScope[] = ['App', 'Session', 'Agent'];
-const SCOPE_LEVEL: Record<ServiceScope, number> = { App: 0, Session: 1, Agent: 2 };
+const SCOPE_ORDER: ServiceScope[] = ["App", "Session", "Agent"];
+const SCOPE_LEVEL: Record<ServiceScope, number> = {
+  App: 0,
+  Session: 1,
+  Agent: 2,
+};
 
-const FRAMEWORK_BINDINGS: readonly { token: string; scope: ServiceScope; impl: string }[] = [
-  { token: 'IInstantiationService', scope: 'App', impl: 'InstantiationService' },
-  { token: 'IKaos', scope: 'App', impl: 'Kaos' },
-  { token: 'ILogOptions', scope: 'App', impl: 'LogOptions' },
-  { token: 'IBootstrapOptions', scope: 'App', impl: 'BootstrapOptions' },
-  { token: 'ISessionContext', scope: 'Session', impl: 'SessionContext' },
-  { token: 'IAgentScopeContext', scope: 'Agent', impl: 'AgentScopeContext' },
+const FRAMEWORK_BINDINGS: readonly {
+  token: string;
+  scope: ServiceScope;
+  impl: string;
+}[] = [
+  {
+    token: "IInstantiationService",
+    scope: "App",
+    impl: "InstantiationService",
+  },
+  { token: "IKaos", scope: "App", impl: "Kaos" },
+  { token: "ILogOptions", scope: "App", impl: "LogOptions" },
+  { token: "IBootstrapOptions", scope: "App", impl: "BootstrapOptions" },
+  { token: "ISessionContext", scope: "Session", impl: "SessionContext" },
+  { token: "IAgentScopeContext", scope: "Agent", impl: "AgentScopeContext" },
 ];
 
-const PRODUCTION_OVERRIDES: readonly { token: string; scope: ServiceScope; impl: string }[] = [
-  { token: 'IFileSystemStorageService', scope: 'App', impl: 'FileStorageService' },
-  { token: 'ISkillDiscovery', scope: 'App', impl: 'FileSkillDiscovery' },
+const PRODUCTION_OVERRIDES: readonly {
+  token: string;
+  scope: ServiceScope;
+  impl: string;
+}[] = [
+  {
+    token: "IFileSystemStorageService",
+    scope: "App",
+    impl: "FileStorageService",
+  },
+  { token: "ISkillDiscovery", scope: "App", impl: "FileSkillDiscovery" },
 ];
 
 export function nodeId(scope: ServiceScope, token: string): string {
@@ -96,7 +123,7 @@ interface EdgeAccumulator {
 }
 
 function relFromRepo(absPath: string): string {
-  return relative(REPO_ROOT, absPath).replaceAll('\\', '/');
+  return relative(REPO_ROOT, absPath).replaceAll("\\", "/");
 }
 
 function edgeKey(fromId: string, toId: string, kind: EdgeKind): string {
@@ -112,10 +139,14 @@ function pushEdge(
   ref: EdgeRef,
   overrideScope?: ServiceScope,
 ): void {
-  const target = resolveFromScope(acc.bindings, token, overrideScope ?? source.scope);
+  const target = resolveFromScope(
+    acc.bindings,
+    token,
+    overrideScope ?? source.scope,
+  );
 
   let toId: string;
-  let extra: Pick<Edge, 'unresolved' | 'scopeMismatch' | 'actualScope'>;
+  let extra: Pick<Edge, "unresolved" | "scopeMismatch" | "actualScope">;
   if (target) {
     toId = target.id;
     extra = {};
@@ -151,7 +182,9 @@ function pushEdge(
   if (extra.unresolved) acc.unknownRefs.add(token);
 }
 
-function innermostScope(scopeMap: Map<ServiceScope, ServiceNode>): ServiceScope | undefined {
+function innermostScope(
+  scopeMap: Map<ServiceScope, ServiceNode>,
+): ServiceScope | undefined {
   let best: ServiceScope | undefined;
   let bestLevel = -1;
   for (const s of scopeMap.keys()) {
@@ -168,12 +201,14 @@ function sameRef(a: EdgeRef, b: EdgeRef): boolean {
   return (
     a.file === b.file &&
     a.line === b.line &&
-    (a.fromMethod ?? '') === (b.fromMethod ?? '') &&
-    (a.toMethod ?? '') === (b.toMethod ?? '')
+    (a.fromMethod ?? "") === (b.fromMethod ?? "") &&
+    (a.toMethod ?? "") === (b.toMethod ?? "")
   );
 }
 
-function collectInterfaces(sourceFiles: SourceFile[]): Map<string, InterfaceDeclaration> {
+function collectInterfaces(
+  sourceFiles: SourceFile[],
+): Map<string, InterfaceDeclaration> {
   const out = new Map<string, InterfaceDeclaration>();
   for (const file of sourceFiles) {
     for (const iface of file.getInterfaces()) {
@@ -194,7 +229,7 @@ function collectInterfaceMembers(iface: InterfaceDeclaration): string[] {
       names.add(name);
     } else if (kind === SyntaxKind.PropertySignature) {
       const name = member.asKindOrThrow(SyntaxKind.PropertySignature).getName();
-      if (name === '_serviceBrand') continue;
+      if (name === "_serviceBrand") continue;
       names.add(name);
     }
   }
@@ -203,7 +238,15 @@ function collectInterfaceMembers(iface: InterfaceDeclaration): string[] {
 
 function readRegistration(
   call: CallExpression,
-): { token: string; impl: string; scope: ServiceScope; domain: string; line: number } | undefined {
+):
+  | {
+      token: string;
+      impl: string;
+      scope: ServiceScope;
+      domain: string;
+      line: number;
+    }
+  | undefined {
   const args = call.getArguments();
   if (args.length < 3) return undefined;
 
@@ -212,15 +255,17 @@ function readRegistration(
   const implArg = args[2];
   const domainArg = args[4];
 
-  if (scopeArg.getKind() !== SyntaxKind.PropertyAccessExpression) return undefined;
+  if (scopeArg.getKind() !== SyntaxKind.PropertyAccessExpression)
+    return undefined;
   const scopeText = scopeArg.getText();
-  const scope = scopeText.split('.').at(-1);
-  if (scope !== 'App' && scope !== 'Session' && scope !== 'Agent') return undefined;
+  const scope = scopeText.split(".").at(-1);
+  if (scope !== "App" && scope !== "Session" && scope !== "Agent")
+    return undefined;
 
   if (tokenArg.getKind() !== SyntaxKind.Identifier) return undefined;
   if (implArg.getKind() !== SyntaxKind.Identifier) return undefined;
 
-  let domain = 'unknown';
+  let domain = "unknown";
   if (domainArg?.getKind() === SyntaxKind.StringLiteral) {
     domain = domainArg.getText().slice(1, -1);
   }
@@ -235,8 +280,8 @@ function readRegistration(
 }
 
 function domainOf(absPath: string): string {
-  const rel = relative(SRC_ROOT, absPath).replaceAll('\\', '/');
-  return rel.split('/')[0] ?? 'unknown';
+  const rel = relative(SRC_ROOT, absPath).replaceAll("\\", "/");
+  return rel.split("/")[0] ?? "unknown";
 }
 
 function collectServices(sourceFiles: SourceFile[]): {
@@ -258,10 +303,11 @@ function collectServices(sourceFiles: SourceFile[]): {
   for (const file of sourceFiles) {
     for (const call of file.getDescendantsOfKind(SyntaxKind.CallExpression)) {
       const expr = call.getExpression();
-      if (expr.getText() !== 'registerScopedService') continue;
+      if (expr.getText() !== "registerScopedService") continue;
       const reg = readRegistration(call);
       if (!reg) continue;
-      const domain = reg.domain !== 'unknown' ? reg.domain : domainOf(file.getFilePath());
+      const domain =
+        reg.domain !== "unknown" ? reg.domain : domainOf(file.getFilePath());
       const node: ServiceNode = {
         id: nodeId(reg.scope, reg.token),
         token: reg.token,
@@ -300,7 +346,7 @@ function readCtor(cls: ClassDeclaration): {
     let paramToken: string | undefined;
     for (const dec of decorators) {
       const decName = dec.getName();
-      if (!decName.startsWith('I')) continue;
+      if (!decName.startsWith("I")) continue;
       ctorDeps.push({ token: decName, line: dec.getStartLineNumber() });
       paramToken = decName;
     }
@@ -314,7 +360,11 @@ function readCtor(cls: ClassDeclaration): {
 
 function fieldNameOf(param: ParameterDeclaration): string | undefined {
   const modifiers = param.getModifiers().map((m) => m.getText());
-  if (modifiers.some((m) => m === 'private' || m === 'protected' || m === 'public')) {
+  if (
+    modifiers.some(
+      (m) => m === "private" || m === "protected" || m === "public",
+    )
+  ) {
     return param.getName();
   }
   return undefined;
@@ -328,7 +378,7 @@ function enclosingMethodName(node: Node): string | undefined {
       const m = cur.asKindOrThrow(SyntaxKind.MethodDeclaration);
       return m.getName();
     }
-    if (kind === SyntaxKind.Constructor) return '<ctor>';
+    if (kind === SyntaxKind.Constructor) return "<ctor>";
     if (kind === SyntaxKind.GetAccessor) {
       const g = cur.asKindOrThrow(SyntaxKind.GetAccessor);
       return `get ${g.getName()}`;
@@ -349,20 +399,22 @@ function enclosingMethodName(node: Node): string | undefined {
 
 function chainedMethodName(getCall: CallExpression): string | undefined {
   const parent = getCall.getParent();
-  if (!parent || parent.getKind() !== SyntaxKind.PropertyAccessExpression) return undefined;
+  if (!parent || parent.getKind() !== SyntaxKind.PropertyAccessExpression)
+    return undefined;
   const pae = parent.asKindOrThrow(SyntaxKind.PropertyAccessExpression);
   if (pae.getExpression() !== getCall) return undefined;
   const grandparent = pae.getParent();
-  if (!grandparent || grandparent.getKind() !== SyntaxKind.CallExpression) return undefined;
+  if (!grandparent || grandparent.getKind() !== SyntaxKind.CallExpression)
+    return undefined;
   const outer = grandparent.asKindOrThrow(SyntaxKind.CallExpression);
   if (outer.getExpression() !== pae) return undefined;
   return pae.getName();
 }
 
 const HANDLE_ALIAS_SCOPE: Record<string, ServiceScope> = {
-  IAppScopeHandle: 'App',
-  ISessionScopeHandle: 'Session',
-  IAgentScopeHandle: 'Agent',
+  IAppScopeHandle: "App",
+  ISessionScopeHandle: "Session",
+  IAgentScopeHandle: "Agent",
 };
 
 const FUNCTION_LIKE_KINDS = new Set<SyntaxKind>([
@@ -377,20 +429,23 @@ const FUNCTION_LIKE_KINDS = new Set<SyntaxKind>([
 
 function stripTypeWrappers(text: string): string {
   let t = text.trim();
-  t = t.replace(/\s*\|\s*(undefined|null)\s*/g, '').trim();
+  t = t.replace(/\s*\|\s*(undefined|null)\s*/g, "").trim();
   const promise = /^Promise\s*<\s*(.+?)\s*>$/.exec(t);
   if (promise) t = promise[1].trim();
-  t = t.replace(/\[\]\s*$/, '').trim();
-  t = t.replace(/^readonly\s+/, '').trim();
+  t = t.replace(/\[\]\s*$/, "").trim();
+  t = t.replace(/^readonly\s+/, "").trim();
   return t;
 }
 
-function handleScopeFromTypeText(text: string | undefined): ServiceScope | undefined {
+function handleScopeFromTypeText(
+  text: string | undefined,
+): ServiceScope | undefined {
   if (text === undefined) return undefined;
   const t = stripTypeWrappers(text);
   const alias = HANDLE_ALIAS_SCOPE[t];
   if (alias !== undefined) return alias;
-  const generic = /^IScopeHandle\s*<\s*LifecycleScope\.(App|Session|Agent)\s*>$/.exec(t);
+  const generic =
+    /^IScopeHandle\s*<\s*LifecycleScope\.(App|Session|Agent)\s*>$/.exec(t);
   if (generic) return generic[1] as ServiceScope;
   return undefined;
 }
@@ -405,12 +460,17 @@ function enclosingFunction(node: Node): Node | undefined {
 }
 
 function getParams(fn: Node): ParameterDeclaration[] {
-  return (fn as unknown as { getParameters(): ParameterDeclaration[] }).getParameters();
+  return (
+    fn as unknown as { getParameters(): ParameterDeclaration[] }
+  ).getParameters();
 }
 
 function isAccessorReceiver(node: Node): boolean {
   if (node.getKind() !== SyntaxKind.PropertyAccessExpression) return false;
-  return node.asKindOrThrow(SyntaxKind.PropertyAccessExpression).getName() === 'accessor';
+  return (
+    node.asKindOrThrow(SyntaxKind.PropertyAccessExpression).getName() ===
+    "accessor"
+  );
 }
 
 function collectInterfaceMethodReturns(
@@ -442,26 +502,35 @@ function inferExprTypeText(
   const kind = expr.getKind();
 
   if (kind === SyntaxKind.AwaitExpression) {
-    const inner = (expr as unknown as { getExpression(): Node }).getExpression();
+    const inner = (
+      expr as unknown as { getExpression(): Node }
+    ).getExpression();
     return inferExprTypeText(inner, cls, ifaceMethods, fn, depth + 1);
   }
 
-  if (kind === SyntaxKind.AsExpression || kind === SyntaxKind.NonNullExpression) {
-    const inner = (expr as unknown as { getExpression(): Node }).getExpression();
+  if (
+    kind === SyntaxKind.AsExpression ||
+    kind === SyntaxKind.NonNullExpression
+  ) {
+    const inner = (
+      expr as unknown as { getExpression(): Node }
+    ).getExpression();
     return inferExprTypeText(inner, cls, ifaceMethods, fn, depth + 1);
   }
 
   if (kind === SyntaxKind.CallExpression) {
     const call = expr.asKindOrThrow(SyntaxKind.CallExpression);
     const callee = call.getExpression();
-    if (callee.getKind() !== SyntaxKind.PropertyAccessExpression) return undefined;
+    if (callee.getKind() !== SyntaxKind.PropertyAccessExpression)
+      return undefined;
     const pae = callee.asKindOrThrow(SyntaxKind.PropertyAccessExpression);
     const methodName = pae.getName();
     const base = pae.getExpression();
 
-    if (methodName === 'get' && isAccessorReceiver(base)) {
+    if (methodName === "get" && isAccessorReceiver(base)) {
       const first = call.getArguments()[0];
-      if (first && first.getKind() === SyntaxKind.Identifier) return first.getText();
+      if (first && first.getKind() === SyntaxKind.Identifier)
+        return first.getText();
       return undefined;
     }
 
@@ -508,7 +577,10 @@ function inferExprTypeText(
   return undefined;
 }
 
-function thisFieldTypeText(cls: ClassDeclaration, fieldName: string): string | undefined {
+function thisFieldTypeText(
+  cls: ClassDeclaration,
+  fieldName: string,
+): string | undefined {
   const ctor = cls.getConstructors()[0];
   if (ctor) {
     for (const p of ctor.getParameters()) {
@@ -544,7 +616,13 @@ function resolveIdentifierTypeText(
     if (annotated) return annotated;
     const init = decl.getInitializer();
     if (init) {
-      const inferred = inferExprTypeText(init, cls, ifaceMethods, fn, depth + 1);
+      const inferred = inferExprTypeText(
+        init,
+        cls,
+        ifaceMethods,
+        fn,
+        depth + 1,
+      );
       if (inferred) return inferred;
     }
   }
@@ -557,10 +635,15 @@ function inferAccessorScope(
   ifaceMethods: Map<string, Map<string, string>>,
 ): ServiceScope | undefined {
   const getExpr = getCall.getExpression();
-  if (getExpr.getKind() !== SyntaxKind.PropertyAccessExpression) return undefined;
-  const receiver = getExpr.asKindOrThrow(SyntaxKind.PropertyAccessExpression).getExpression();
+  if (getExpr.getKind() !== SyntaxKind.PropertyAccessExpression)
+    return undefined;
+  const receiver = getExpr
+    .asKindOrThrow(SyntaxKind.PropertyAccessExpression)
+    .getExpression();
   if (!isAccessorReceiver(receiver)) return undefined;
-  const obj = receiver.asKindOrThrow(SyntaxKind.PropertyAccessExpression).getExpression();
+  const obj = receiver
+    .asKindOrThrow(SyntaxKind.PropertyAccessExpression)
+    .getExpression();
   const fn = enclosingFunction(getCall);
   if (fn === undefined) return undefined;
   return handleScopeFromTypeText(inferExprTypeText(obj, cls, ifaceMethods, fn));
@@ -585,19 +668,27 @@ function collectRuntimeEdges(
     const baseRef: EdgeRef = { file: filePath, line };
     if (fromMethod !== undefined) baseRef.fromMethod = fromMethod;
 
-    if (methodName === 'get') {
+    if (methodName === "get") {
       const args = call.getArguments();
       if (args.length === 0) continue;
       const first = args[0];
       if (first.getKind() !== SyntaxKind.Identifier) continue;
       const tokenName = first.getText();
-      if (!tokenName.startsWith('I')) continue;
+      if (!tokenName.startsWith("I")) continue;
       if (tokenName === source.token) continue;
       const toMethod = chainedMethodName(call);
       const ref: EdgeRef = { ...baseRef };
       if (toMethod !== undefined) ref.toMethod = toMethod;
       const accessorScope = inferAccessorScope(call, cls, ifaceMethods);
-      pushEdge(acc, source.id, source, tokenName, 'accessor', ref, accessorScope);
+      pushEdge(
+        acc,
+        source.id,
+        source,
+        tokenName,
+        "accessor",
+        ref,
+        accessorScope,
+      );
       continue;
     }
 
@@ -625,11 +716,13 @@ function collectRuntimeEdges(
     }
 
     const ref: EdgeRef = { ...baseRef, toMethod: methodName };
-    pushEdge(acc, source.id, source, fieldToken, 'ctor', ref);
+    pushEdge(acc, source.id, source, fieldToken, "ctor", ref);
   }
 }
 
-export function analyze(options: { srcRoot?: string; generatedAt?: string } = {}): Graph {
+export function analyze(
+  options: { srcRoot?: string; generatedAt?: string } = {},
+): Graph {
   const srcRoot = options.srcRoot ?? SRC_ROOT;
   const project = new Project({
     tsConfigFilePath: undefined,
@@ -643,7 +736,7 @@ export function analyze(options: { srcRoot?: string; generatedAt?: string } = {}
     },
   });
 
-  const globPattern = `${srcRoot.replaceAll('\\', '/')}/**/*.ts`;
+  const globPattern = `${srcRoot.replaceAll("\\", "/")}/**/*.ts`;
   project.addSourceFilesAtPaths(globPattern);
 
   const sourceFiles = project.getSourceFiles();
@@ -657,8 +750,8 @@ export function analyze(options: { srcRoot?: string; generatedAt?: string } = {}
     token: b.token,
     impl: b.impl,
     scope: b.scope,
-    domain: 'framework',
-    file: 'packages/agent-core-v2/src/_base',
+    domain: "framework",
+    file: "packages/agent-core-v2/src/_base",
     line: 0,
   }));
   for (const node of frameworkNodes) {
@@ -674,8 +767,12 @@ export function analyze(options: { srcRoot?: string; generatedAt?: string } = {}
   for (const override of PRODUCTION_OVERRIDES) {
     const id = nodeId(override.scope, override.token);
     const cls = implClasses.get(override.impl);
-    const file = cls ? relFromRepo(cls.getSourceFile().getFilePath()) : SRC_ROOT;
-    const domain = cls ? domainOf(cls.getSourceFile().getFilePath()) : 'unknown';
+    const file = cls
+      ? relFromRepo(cls.getSourceFile().getFilePath())
+      : SRC_ROOT;
+    const domain = cls
+      ? domainOf(cls.getSourceFile().getFilePath())
+      : "unknown";
     const line = cls ? cls.getStartLineNumber() : 0;
     const node: ServiceNode = {
       id,
@@ -721,7 +818,10 @@ export function analyze(options: { srcRoot?: string; generatedAt?: string } = {}
     const filePath = relFromRepo(cls.getSourceFile().getFilePath());
     for (const dep of ctorDeps) {
       if (dep.token === svc.token) continue;
-      pushEdge(acc, svc.id, svc, dep.token, 'ctor', { file: filePath, line: dep.line });
+      pushEdge(acc, svc.id, svc, dep.token, "ctor", {
+        file: filePath,
+        line: dep.line,
+      });
     }
     collectRuntimeEdges(cls, svc, injectedFields, acc, ifaceMethods);
   }
@@ -739,7 +839,7 @@ export function analyze(options: { srcRoot?: string; generatedAt?: string } = {}
     if (source) scopes.add(source.scope);
   }
   for (const [token, scopes] of unresolvedReferrers) {
-    let scope: ServiceScope = 'App';
+    let scope: ServiceScope = "App";
     let minLevel = Number.POSITIVE_INFINITY;
     for (const s of scopes) {
       const lvl = SCOPE_LEVEL[s];
@@ -753,8 +853,8 @@ export function analyze(options: { srcRoot?: string; generatedAt?: string } = {}
       token,
       impl: token,
       scope,
-      domain: 'unresolved',
-      file: '',
+      domain: "unresolved",
+      file: "",
       line: 0,
       unresolved: true,
     };
@@ -769,7 +869,8 @@ export function analyze(options: { srcRoot?: string; generatedAt?: string } = {}
   const mismatchTokens = new Map<string, ServiceScope>();
   for (const edge of acc.edges.values()) {
     if (!edge.scopeMismatch || edge.actualScope === undefined) continue;
-    if (!mismatchTokens.has(edge.token)) mismatchTokens.set(edge.token, edge.actualScope);
+    if (!mismatchTokens.has(edge.token))
+      mismatchTokens.set(edge.token, edge.actualScope);
   }
   for (const [token, scope] of mismatchTokens) {
     const registered = acc.bindings.get(token)?.get(scope);
@@ -778,8 +879,8 @@ export function analyze(options: { srcRoot?: string; generatedAt?: string } = {}
       token,
       impl: token,
       scope,
-      domain: registered?.domain ?? 'unknown',
-      file: '',
+      domain: registered?.domain ?? "unknown",
+      file: "",
       line: 0,
       scopeMismatch: true,
     };
@@ -801,7 +902,9 @@ export function analyze(options: { srcRoot?: string; generatedAt?: string } = {}
     ),
     edges: [...acc.edges.values()].sort(
       (a, b) =>
-        a.from.localeCompare(b.from) || a.kind.localeCompare(b.kind) || a.to.localeCompare(b.to),
+        a.from.localeCompare(b.from) ||
+        a.kind.localeCompare(b.kind) ||
+        a.to.localeCompare(b.to),
     ),
     unknownTokens: [...acc.unknownRefs].sort(),
   };
@@ -809,10 +912,10 @@ export function analyze(options: { srcRoot?: string; generatedAt?: string } = {}
 
 export function readHeadSha(): string | undefined {
   try {
-    const head = readFileSync(join(REPO_ROOT, '.git', 'HEAD'), 'utf8').trim();
-    if (head.startsWith('ref: ')) {
+    const head = readFileSync(join(REPO_ROOT, ".git", "HEAD"), "utf8").trim();
+    if (head.startsWith("ref: ")) {
       const ref = head.slice(5);
-      return readFileSync(join(REPO_ROOT, '.git', ref), 'utf8').trim();
+      return readFileSync(join(REPO_ROOT, ".git", ref), "utf8").trim();
     }
     return head;
   } catch {
@@ -820,17 +923,21 @@ export function readHeadSha(): string | undefined {
   }
 }
 
-export function writeSnapshot(graph: Graph, path: string = SNAPSHOT_PATH): void {
+export function writeSnapshot(
+  graph: Graph,
+  path: string = SNAPSHOT_PATH,
+): void {
   mkdirSync(dirname(path), { recursive: true });
   writeFileSync(path, `${JSON.stringify(graph, null, 2)}\n`);
 }
 
 export function summarize(graph: Graph): string {
   const byKind = new Map<string, number>();
-  for (const e of graph.edges) byKind.set(e.kind, (byKind.get(e.kind) ?? 0) + 1);
+  for (const e of graph.edges)
+    byKind.set(e.kind, (byKind.get(e.kind) ?? 0) + 1);
   const kindSummary = [...byKind.entries()]
     .sort((a, b) => a[0].localeCompare(b[0]))
     .map(([k, n]) => `${k}=${n}`)
-    .join(' ');
+    .join(" ");
   return `services=${graph.services.length} edges=${graph.edges.length} ${kindSummary}`;
 }

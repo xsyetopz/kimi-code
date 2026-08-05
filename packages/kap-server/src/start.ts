@@ -24,72 +24,85 @@ import {
   type ConfigDiagnostic,
   type Scope,
   type ScopeSeed,
-} from '@moonshot-ai/agent-core-v2';
+} from "@moonshot-ai/agent-core-v2";
 import {
   createKimiDefaultHeaders,
   type KimiHostIdentity,
-} from '@moonshot-ai/kimi-code-oauth';
-import { createAsyncApiDocument } from './protocol/asyncapi';
-import Fastify, { type FastifyInstance } from 'fastify';
+} from "@moonshot-ai/kimi-code-oauth";
+import { createAsyncApiDocument } from "./protocol/asyncapi";
+import Fastify, { type FastifyInstance } from "fastify";
 
-import { installErrorHandler } from './error-handler';
-import { createInstanceRegistry, type InstanceRegistration } from './instanceRegistry';
-import { transformOpenApiDocument } from './openapi/transforms';
-import { registerRequestLogging } from './requestLogging';
-import { resolveRequestId } from './request-id';
-import { registerApiV1Routes } from './routes/registerApiV1Routes';
-import { registerWebAssetRoutes } from './routes/webAssets';
+import { installErrorHandler } from "./error-handler";
+import {
+  createInstanceRegistry,
+  type InstanceRegistration,
+} from "./instanceRegistry";
+import { transformOpenApiDocument } from "./openapi/transforms";
+import { registerRequestLogging } from "./requestLogging";
+import { resolveRequestId } from "./request-id";
+import { registerApiV1Routes } from "./routes/registerApiV1Routes";
+import { registerWebAssetRoutes } from "./routes/webAssets";
 import {
   createServerLogger,
   type ServerLogger,
   type ServerLogLevel,
-} from './services/pinoLoggerService';
-import { join } from 'node:path';
-import type { Socket } from 'node:net';
-import type { IncomingMessage } from 'node:http';
-import type { Duplex } from 'node:stream';
+} from "./services/pinoLoggerService";
+import { join } from "node:path";
+import type { Socket } from "node:net";
+import type { IncomingMessage } from "node:http";
+import type { Duplex } from "node:stream";
 
 import {
   ConnectionRegistry,
   type IConnectionRegistry,
-} from './transport/ws/connectionRegistry';
-import { extractWsBearerToken } from './transport/ws/bearerProtocol';
-import { SessionEventBroadcaster } from './transport/ws/v1/sessionEventBroadcaster';
-import type { ConfigWarningItem } from './transport/ws/v1/events';
-import { FsWatchBridge } from './transport/ws/v1/fsWatchBridge';
-import { registerWsV1, WS_PATH as WS_PATH_V1 } from './transport/ws/v1/registerWsV1';
-import { getServerVersion } from './version';
-import { classify } from './security/bindClassify';
+} from "./transport/ws/connectionRegistry";
+import { extractWsBearerToken } from "./transport/ws/bearerProtocol";
+import { SessionEventBroadcaster } from "./transport/ws/v1/sessionEventBroadcaster";
+import type { ConfigWarningItem } from "./transport/ws/v1/events";
+import { FsWatchBridge } from "./transport/ws/v1/fsWatchBridge";
+import {
+  registerWsV1,
+  WS_PATH as WS_PATH_V1,
+} from "./transport/ws/v1/registerWsV1";
+import { getServerVersion } from "./version";
+import { classify } from "./security/bindClassify";
 import {
   createHostCheck,
   isHostCheckDisabled,
   parseAllowedHosts,
-} from './middleware/hostnames';
-import { createOriginHook, isOriginAllowed, parseCorsOrigins } from './middleware/origin';
-import { createSecurityHeadersHook } from './middleware/securityHeaders';
-import { createAuthHook } from './middleware/auth';
-import { GuiStoreService } from './services/guiStore/guiStoreService';
+} from "./middleware/hostnames";
+import {
+  createOriginHook,
+  isOriginAllowed,
+  parseCorsOrigins,
+} from "./middleware/origin";
+import { createSecurityHeadersHook } from "./middleware/securityHeaders";
+import { createAuthHook } from "./middleware/auth";
+import { GuiStoreService } from "./services/guiStore/guiStoreService";
 import {
   initializeServerTelemetry,
   type ServerTelemetry,
   shutdownServerTelemetry,
-} from './services/telemetry';
-import { TranscriptService } from './services/transcript/transcriptService';
-import { ModelCatalogRefreshScheduler } from './services/modelCatalog/modelCatalogRefreshScheduler';
-import { createAuthFailureLimiter } from './middleware/rateLimit';
+} from "./services/telemetry";
+import { TranscriptService } from "./services/transcript/transcriptService";
+import { ModelCatalogRefreshScheduler } from "./services/modelCatalog/modelCatalogRefreshScheduler";
+import { createAuthFailureLimiter } from "./middleware/rateLimit";
 import {
   createAuthTokenService,
   type IAuthTokenService,
-} from './services/auth/authTokenService';
-import { createCredentialValidator } from './services/auth/credentials';
-import { resolvePasswordHash } from './services/auth/password';
-import { createTokenStore } from './services/auth/tokenStore';
+} from "./services/auth/authTokenService";
+import { createCredentialValidator } from "./services/auth/credentials";
+import { resolvePasswordHash } from "./services/auth/password";
+import { createTokenStore } from "./services/auth/tokenStore";
 
 // Temporary feature: global message search. Importing this module registers
 // `IGlobalSearchService` (App scope) into the DI registry as a side effect, so
 // it MUST stay above any `bootstrap()` call — registration happens at module
 // evaluation time.
-import { drainGlobalSearchDisposals, IGlobalSearchService } from './search/searchService';
+import {
+  drainGlobalSearchDisposals,
+  IGlobalSearchService,
+} from "./search/searchService";
 
 export interface ServerHostIdentity extends KimiHostIdentity {
   /** Fills the `${product_name}` slot in the base system prompt. Defaults render the CLI text. */
@@ -112,7 +125,7 @@ export interface ServerStartOptions {
   readonly logLevel?: ServerLogLevel;
   readonly logger?: ServerLogger;
   readonly debugEndpoints?: boolean;
-  readonly bindClass?: 'lan' | 'public';
+  readonly bindClass?: "lan" | "public";
   readonly allowedHosts?: readonly string[];
   readonly corsOrigins?: readonly string[];
   readonly disableHostCheck?: boolean;
@@ -179,10 +192,12 @@ export interface RunningServer {
   close(): Promise<void>;
 }
 
-const DEFAULT_HOST = '127.0.0.1';
+const DEFAULT_HOST = "127.0.0.1";
 const DEFAULT_PORT = 58627;
 
-export async function startServer(opts: ServerStartOptions): Promise<RunningServer> {
+export async function startServer(
+  opts: ServerStartOptions,
+): Promise<RunningServer> {
   const host = opts.host ?? DEFAULT_HOST;
   const port = opts.port ?? DEFAULT_PORT;
   const homeDir = resolveKimiHome(opts.homeDir);
@@ -194,7 +209,7 @@ export async function startServer(opts: ServerStartOptions): Promise<RunningServ
   // on close and on any boot refusal below.
   const serverVersion = opts.serverVersion ?? getServerVersion();
   const registry = createInstanceRegistry({
-    instancesDir: opts.instancesDir ?? join(homeDir, 'server', 'instances'),
+    instancesDir: opts.instancesDir ?? join(homeDir, "server", "instances"),
   });
   const registration: InstanceRegistration = await registry.register({
     pid: process.pid,
@@ -204,20 +219,29 @@ export async function startServer(opts: ServerStartOptions): Promise<RunningServ
     serverVersion,
   });
   const exposureClass = classify(host, { bindClass: opts.bindClass });
-  if (exposureClass !== 'loopback' && opts.insecureNoTls !== true) {
+  if (exposureClass !== "loopback" && opts.insecureNoTls !== true) {
     await registration.release();
     throw new Error(
       `Refusing to bind ${host} (${exposureClass}) without TLS; terminate TLS at a reverse proxy or pass --insecure-no-tls.`,
     );
   }
-  const enableShutdown = exposureClass === 'loopback' || opts.allowRemoteShutdown === true;
-  const enableTerminals = exposureClass === 'loopback' || opts.allowRemoteTerminals === true;
-  const debugEndpoints = exposureClass === 'loopback' && opts.debugEndpoints === true;
-  const logger = opts.logger ?? createServerLogger({ level: opts.logLevel ?? 'info' });
+  const enableShutdown =
+    exposureClass === "loopback" || opts.allowRemoteShutdown === true;
+  const enableTerminals =
+    exposureClass === "loopback" || opts.allowRemoteTerminals === true;
+  const debugEndpoints =
+    exposureClass === "loopback" && opts.debugEndpoints === true;
+  const logger =
+    opts.logger ?? createServerLogger({ level: opts.logLevel ?? "info" });
   const authFailureLimiter =
-    exposureClass === 'loopback' ? undefined : createAuthFailureLimiter({ logger });
+    exposureClass === "loopback"
+      ? undefined
+      : createAuthFailureLimiter({ logger });
 
-  const configPath = resolveConfigPath({ homeDir, configPath: opts.configPath });
+  const configPath = resolveConfigPath({
+    homeDir,
+    configPath: opts.configPath,
+  });
   const guiStore = new GuiStoreService(homeDir, logger);
   let authTokenService: IAuthTokenService;
   // Whether a password credential is configured (only meaningful for the real,
@@ -236,7 +260,10 @@ export async function startServer(opts: ServerStartOptions): Promise<RunningServ
   // for the RPC surface. The same validator backs the HTTP auth hook,
   // the WS upgrade handler, and the post-connect handshakes so one credential
   // gates all surfaces and upgrade / handshake can never disagree.
-  const validateCredential = createCredentialValidator(authTokenService, opts.rpcToken);
+  const validateCredential = createCredentialValidator(
+    authTokenService,
+    opts.rpcToken,
+  );
   // `ILogOptions` (logSeed) is required by the Session-scoped log writer; any
   // route that creates a session (e.g. POST /sessions) would otherwise fail to
   // instantiate the Session scope. Resolve it from env + homeDir like the CLI.
@@ -254,7 +281,10 @@ export async function startServer(opts: ServerStartOptions): Promise<RunningServ
         // Default host identity headers derived from `hostIdentity`: outbound
         // requests (model, WebSearch, registry refresh) carry the host
         // product's User-Agent + X-Msh-* set.
-        requestHeaders: createKimiDefaultHeaders({ homeDir, ...opts.hostIdentity }),
+        requestHeaders: createKimiDefaultHeaders({
+          homeDir,
+          ...opts.hostIdentity,
+        }),
         skillDirs: opts.skillDirs,
         displayName: opts.hostIdentity.displayName,
         replyStyleGuide: opts.hostIdentity.replyStyleGuide,
@@ -275,20 +305,20 @@ export async function startServer(opts: ServerStartOptions): Promise<RunningServ
     } catch (error) {
       logger.warn(
         { err: error instanceof Error ? error.message : String(error) },
-        'telemetry initialization failed; continuing without telemetry',
+        "telemetry initialization failed; continuing without telemetry",
       );
     }
   }
 
-  if (exposureClass !== 'loopback') {
+  if (exposureClass !== "loopback") {
     logger.warn(
       { host, exposureClass },
-      'binding non-loopback host without TLS — use a reverse proxy or tunnel in production',
+      "binding non-loopback host without TLS — use a reverse proxy or tunnel in production",
     );
     if (!passwordConfigured) {
       logger.warn(
         { host, exposureClass },
-        'binding non-loopback host with token-only auth (no KIMI_CODE_PASSWORD) — the bearer token printed in the startup banner is the only credential protecting this server',
+        "binding non-loopback host with token-only auth (no KIMI_CODE_PASSWORD) — the bearer token printed in the startup banner is the only credential protecting this server",
       );
     }
   }
@@ -308,7 +338,7 @@ export async function startServer(opts: ServerStartOptions): Promise<RunningServ
   } catch (error) {
     logger.warn(
       { err: error instanceof Error ? error.message : String(error) },
-      'workspace catalog startup sync failed',
+      "workspace catalog startup sync failed",
     );
   }
 
@@ -322,7 +352,7 @@ export async function startServer(opts: ServerStartOptions): Promise<RunningServ
   } catch (error) {
     logger.warn(
       { err: error instanceof Error ? error.message : String(error) },
-      'session index prepare failed; falling back to on-demand reads',
+      "session index prepare failed; falling back to on-demand reads",
     );
   }
 
@@ -346,12 +376,15 @@ export async function startServer(opts: ServerStartOptions): Promise<RunningServ
     disable: opts.disableHostCheck ?? isHostCheckDisabled(),
   });
   const allowedOrigins = opts.corsOrigins ?? parseCorsOrigins();
-  app.addHook('onRequest', hostCheck.onRequest);
-  app.addHook('onRequest', createOriginHook({ allowedOrigins }));
+  app.addHook("onRequest", hostCheck.onRequest);
+  app.addHook("onRequest", createOriginHook({ allowedOrigins }));
   if (opts.disableAuth !== true) {
     app.addHook(
-      'onRequest',
-      createAuthHook(authTokenService, { limiter: authFailureLimiter, validateCredential }),
+      "onRequest",
+      createAuthHook(authTokenService, {
+        limiter: authFailureLimiter,
+        validateCredential,
+      }),
     );
   } else {
     // `--dangerous-bypass-auth`: the operator explicitly disabled the
@@ -362,11 +395,11 @@ export async function startServer(opts: ServerStartOptions): Promise<RunningServ
     // connect without a token.
     logger.warn(
       { host, exposureClass },
-      'DANGEROUS: bearer-token auth is DISABLED (--dangerous-bypass-auth) — every REST and WebSocket route accepts unauthenticated requests',
+      "DANGEROUS: bearer-token auth is DISABLED (--dangerous-bypass-auth) — every REST and WebSocket route accepts unauthenticated requests",
     );
   }
-  if (exposureClass !== 'loopback') {
-    app.addHook('onSend', createSecurityHeadersHook({ tls: false }));
+  if (exposureClass !== "loopback") {
+    app.addHook("onSend", createSecurityHeadersHook({ tls: false }));
   }
 
   const close = async (): Promise<void> => {
@@ -380,7 +413,7 @@ export async function startServer(opts: ServerStartOptions): Promise<RunningServ
     } catch (error) {
       logger.warn(
         { err: error instanceof Error ? error.message : String(error) },
-        'telemetry shutdown failed; continuing server cleanup',
+        "telemetry shutdown failed; continuing server cleanup",
       );
     }
     try {
@@ -406,9 +439,11 @@ export async function startServer(opts: ServerStartOptions): Promise<RunningServ
   // The global search service is DI-managed (App scope) while the transcript
   // service is constructed here by hand — wire the former to the latter so
   // container-scoped searches on live sessions scan the in-memory transcript.
-  core.accessor.get(IGlobalSearchService).setLiveTranscriptSource(transcriptService);
+  core.accessor
+    .get(IGlobalSearchService)
+    .setLiveTranscriptSource(transcriptService);
   const broadcaster = new SessionEventBroadcaster({
-    eventsDir: join(homeDir, 'server', 'events'),
+    eventsDir: join(homeDir, "server", "events"),
     core,
     logger,
     transcriptService,
@@ -422,23 +457,31 @@ export async function startServer(opts: ServerStartOptions): Promise<RunningServ
   // also published once config is ready for already-connected clients (an
   // empty initial set publishes nothing — silence already means no warnings).
   const configService = core.accessor.get(IConfigService);
-  const publishConfigWarnings = (diagnostics: readonly ConfigDiagnostic[]): void => {
+  const publishConfigWarnings = (
+    diagnostics: readonly ConfigDiagnostic[],
+  ): void => {
     const warnings: ConfigWarningItem[] = diagnostics
-      .filter((diagnostic) => diagnostic.severity === 'warning')
+      .filter((diagnostic) => diagnostic.severity === "warning")
       .map((diagnostic) =>
         diagnostic.domain === undefined
           ? { message: diagnostic.message }
           : { domain: diagnostic.domain, message: diagnostic.message },
       );
     core.accessor.get(IEventService).publish({
-      type: 'event.config.warning',
+      type: "event.config.warning",
       payload: { warnings },
     });
   };
-  const configWarningSubscription = configService.onDidChangeDiagnostics(publishConfigWarnings);
+  const configWarningSubscription = configService.onDidChangeDiagnostics(
+    publishConfigWarnings,
+  );
   void configService.ready
     .then(() => {
-      if (configService.diagnostics().some((diagnostic) => diagnostic.severity === 'warning')) {
+      if (
+        configService
+          .diagnostics()
+          .some((diagnostic) => diagnostic.severity === "warning")
+      ) {
         publishConfigWarnings(configService.diagnostics());
       }
     })
@@ -447,40 +490,48 @@ export async function startServer(opts: ServerStartOptions): Promise<RunningServ
     });
 
   async function registerOpenApi(): Promise<void> {
-    const { default: swagger } = await import('@fastify/swagger');
+    const { default: swagger } = await import("@fastify/swagger");
     await app.register(swagger, {
       openapi: {
         info: {
-          title: 'Kimi Code Server API',
+          title: "Kimi Code Server API",
           description:
-            'REST API for the Kimi Code local server. All JSON responses are wrapped in a uniform envelope `{ code, msg, data, request_id }`.',
+            "REST API for the Kimi Code local server. All JSON responses are wrapped in a uniform envelope `{ code, msg, data, request_id }`.",
           version: serverVersion,
         },
         tags: [
-          { name: 'meta', description: 'Server metadata' },
-          { name: 'auth', description: 'Auth readiness & login state' },
-          { name: 'models', description: 'Configured model aliases' },
-          { name: 'providers', description: 'Configured providers' },
-          { name: 'sessions', description: 'Session lifecycle' },
-          { name: 'workspaces', description: 'Workspace registry + folder picker' },
-          { name: 'messages', description: 'Message history' },
-          { name: 'search', description: 'Global message search' },
-          { name: 'transcript', description: 'Turn-granular session transcript' },
-          { name: 'prompts', description: 'Prompt submission & abort' },
-          { name: 'approvals', description: 'Approval resolution' },
-          { name: 'questions', description: 'Question resolution & dismiss' },
-          { name: 'tools', description: 'Tool & MCP server management' },
-          { name: 'tasks', description: 'Task management' },
-          { name: 'terminals', description: 'PTY terminal sessions' },
-          { name: 'fs', description: 'Filesystem operations' },
-          { name: 'files', description: 'File upload & download' },
+          { name: "meta", description: "Server metadata" },
+          { name: "auth", description: "Auth readiness & login state" },
+          { name: "models", description: "Configured model aliases" },
+          { name: "providers", description: "Configured providers" },
+          { name: "sessions", description: "Session lifecycle" },
+          {
+            name: "workspaces",
+            description: "Workspace registry + folder picker",
+          },
+          { name: "messages", description: "Message history" },
+          { name: "search", description: "Global message search" },
+          {
+            name: "transcript",
+            description: "Turn-granular session transcript",
+          },
+          { name: "prompts", description: "Prompt submission & abort" },
+          { name: "approvals", description: "Approval resolution" },
+          { name: "questions", description: "Question resolution & dismiss" },
+          { name: "tools", description: "Tool & MCP server management" },
+          { name: "tasks", description: "Task management" },
+          { name: "terminals", description: "PTY terminal sessions" },
+          { name: "fs", description: "Filesystem operations" },
+          { name: "files", description: "File upload & download" },
         ],
       },
       transformObject: (documentObject) => {
-        if (!('openapiObject' in documentObject)) {
+        if (!("openapiObject" in documentObject)) {
           return documentObject.swaggerObject;
         }
-        return transformOpenApiDocument(documentObject.openapiObject as Record<string, unknown>);
+        return transformOpenApiDocument(
+          documentObject.openapiObject as Record<string, unknown>,
+        );
       },
     });
   }
@@ -497,7 +548,9 @@ export async function startServer(opts: ServerStartOptions): Promise<RunningServ
     enableTerminals,
     guiStore,
     onShutdown: () => {
-      void close().catch((err: unknown) => logger.error({ err }, 'server close failed'));
+      void close().catch((err: unknown) =>
+        logger.error({ err }, "server close failed"),
+      );
     },
     connectionRegistry,
     broadcaster,
@@ -518,7 +571,7 @@ export async function startServer(opts: ServerStartOptions): Promise<RunningServ
     socket: Duplex,
     head: Buffer,
   ): Promise<void> => {
-    const url = req.url ?? '';
+    const url = req.url ?? "";
     const isV1 = url === WS_PATH_V1 || url.startsWith(`${WS_PATH_V1}?`);
     if (!isV1) {
       socket.destroy();
@@ -532,28 +585,49 @@ export async function startServer(opts: ServerStartOptions): Promise<RunningServ
     // client and allowed.
     if (!hostCheck.isAllowed(req.headers.host)) {
       logger.warn(
-        { remoteAddress: req.socket.remoteAddress, path: url, reason: 'host_not_allowed' },
-        'ws upgrade rejected',
+        {
+          remoteAddress: req.socket.remoteAddress,
+          path: url,
+          reason: "host_not_allowed",
+        },
+        "ws upgrade rejected",
       );
-      (socket as Socket).write('HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n');
+      (socket as Socket).write(
+        "HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n",
+      );
       (socket as Socket).destroy();
       return;
     }
-    if (!isOriginAllowed(req.headers.origin, req.headers.host, allowedOrigins)) {
+    if (
+      !isOriginAllowed(req.headers.origin, req.headers.host, allowedOrigins)
+    ) {
       logger.warn(
-        { remoteAddress: req.socket.remoteAddress, path: url, reason: 'origin_not_allowed' },
-        'ws upgrade rejected',
+        {
+          remoteAddress: req.socket.remoteAddress,
+          path: url,
+          reason: "origin_not_allowed",
+        },
+        "ws upgrade rejected",
       );
-      (socket as Socket).write('HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n');
+      (socket as Socket).write(
+        "HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n",
+      );
       (socket as Socket).destroy();
       return;
     }
 
     if (opts.disableAuth !== true) {
       const authHeader = req.headers.authorization;
-      const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice('Bearer '.length) : null;
-      const protocolToken = extractWsBearerToken(req.headers['sec-websocket-protocol']);
-      const candidate = bearerToken !== null && bearerToken.length > 0 ? bearerToken : protocolToken;
+      const bearerToken = authHeader?.startsWith("Bearer ")
+        ? authHeader.slice("Bearer ".length)
+        : null;
+      const protocolToken = extractWsBearerToken(
+        req.headers["sec-websocket-protocol"],
+      );
+      const candidate =
+        bearerToken !== null && bearerToken.length > 0
+          ? bearerToken
+          : protocolToken;
       // Require a valid credential at the upgrade: a token-less (or invalid)
       // upgrade is rejected with 401 for `/api/v1/ws`.
       let ok = false;
@@ -566,9 +640,9 @@ export async function startServer(opts: ServerStartOptions): Promise<RunningServ
               err: error,
               remoteAddress: req.socket.remoteAddress,
               path: url,
-              reason: 'credential_validation_error',
+              reason: "credential_validation_error",
             },
-            'ws upgrade rejected',
+            "ws upgrade rejected",
           );
           ok = false;
         }
@@ -578,43 +652,52 @@ export async function startServer(opts: ServerStartOptions): Promise<RunningServ
           {
             remoteAddress: req.socket.remoteAddress,
             path: url,
-            reason: candidate === null ? 'missing_credential' : 'invalid_credential',
+            reason:
+              candidate === null ? "missing_credential" : "invalid_credential",
           },
-          'ws upgrade rejected',
+          "ws upgrade rejected",
         );
-        (socket as Socket).write('HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n');
+        (socket as Socket).write(
+          "HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n",
+        );
         (socket as Socket).destroy();
         return;
       }
     }
 
     (socket as Socket).setNoDelay(true);
-    wssV1.handleUpgrade(req, socket, head, (ws) => wssV1.emit('connection', ws, req));
+    wssV1.handleUpgrade(req, socket, head, (ws) =>
+      wssV1.emit("connection", ws, req),
+    );
   };
-  app.server.on('upgrade', (req, socket, head) => {
+  app.server.on("upgrade", (req, socket, head) => {
     void handleUpgrade(req, socket, head).catch((error: unknown) =>
-      logger.error({ err: error }, 'ws upgrade handler failed'),
+      logger.error({ err: error }, "ws upgrade handler failed"),
     );
   });
 
-  app.addHook('onClose', async () => {
-    connectionRegistry.closeAll('server shutting down');
+  app.addHook("onClose", async () => {
+    connectionRegistry.closeAll("server shutting down");
     wssV1.close();
     await broadcaster.close();
   });
 
-  app.get('/asyncapi.json', async (_req, reply) => {
+  app.get("/asyncapi.json", async (_req, reply) => {
     // Reflect the bound host, never the caller-supplied `Host` header (Host
     // reflection is an information-leak / SSRF-adjacent hole once the server is
     // reachable beyond localhost). Gated by the global auth hook (meta doc).
     return reply
-      .type('application/json')
-      .send(createAsyncApiDocument({ version: serverVersion, serverHost: host }));
+      .type("application/json")
+      .send(
+        createAsyncApiDocument({ version: serverVersion, serverHost: host }),
+      );
   });
 
-  app.get('/openapi.json', async (_req, reply) => {
-    const openApiDocument = (app as unknown as { swagger(): unknown }).swagger();
-    return reply.type('application/json').send(openApiDocument);
+  app.get("/openapi.json", async (_req, reply) => {
+    const openApiDocument = (
+      app as unknown as { swagger(): unknown }
+    ).swagger();
+    return reply.type("application/json").send(openApiDocument);
   });
 
   // Web UI static assets (mirrors v1). Registered LAST so the `/*` SPA fallback
@@ -654,7 +737,8 @@ export async function startServer(opts: ServerStartOptions): Promise<RunningServ
   }
 
   const address = app.server.address();
-  const boundPort = typeof address === 'object' && address !== null ? address.port : port;
+  const boundPort =
+    typeof address === "object" && address !== null ? address.port : port;
   // Advertise the actually-bound port (e.g. ephemeral when `port: 0`, or the
   // `port + 1` retry winner) so a status/kill lookup against the instance
   // registry finds the real listener.
@@ -663,11 +747,19 @@ export async function startServer(opts: ServerStartOptions): Promise<RunningServ
   void modelCatalogRefreshScheduler.start().catch((error) => {
     logger.warn(
       { err: error instanceof Error ? error.message : String(error) },
-      'provider-model catalog auto-refresh failed to start',
+      "provider-model catalog auto-refresh failed to start",
     );
   });
 
-  return { app, core, connectionRegistry, authTokenService, host, port: boundPort, close };
+  return {
+    app,
+    core,
+    connectionRegistry,
+    authTokenService,
+    host,
+    port: boundPort,
+    close,
+  };
 }
 
 /**
@@ -722,19 +814,19 @@ export async function listenWithPortRetry(
       if (port !== opts.port) {
         opts.logger.warn(
           { requestedPort: opts.port, port, host: opts.host },
-          'requested port was busy; server bound to a higher port',
+          "requested port was busy; server bound to a higher port",
         );
       }
       return { address, port };
     } catch (error) {
       const code = (error as NodeJS.ErrnoException).code;
-      if (code !== 'EADDRINUSE' || attempt >= maxRetries || port >= 65535) {
+      if (code !== "EADDRINUSE" || attempt >= maxRetries || port >= 65535) {
         throw error;
       }
       const next = port + 1;
       opts.logger.warn(
         { host: opts.host, port, next },
-        'port in use by another process, trying next port',
+        "port in use by another process, trying next port",
       );
       port = next;
     }

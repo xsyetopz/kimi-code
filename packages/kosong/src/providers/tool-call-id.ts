@@ -1,20 +1,23 @@
-import type { Message, ToolCall } from '#/message';
+import type { Message, ToolCall } from "#/message";
 
 export interface ToolCallIdPolicy {
   normalize: (id: string) => string;
   maxLength?: number;
 }
 
-const EMPTY_TOOL_CALL_ID = 'tool_call';
+const EMPTY_TOOL_CALL_ID = "tool_call";
 const TOOL_CALL_ID_SAFE_CHARS = /[^a-zA-Z0-9_-]/g;
 
 export function sanitizeToolCallId(id: string, maxLength?: number): string {
-  const sanitized = id.replace(TOOL_CALL_ID_SAFE_CHARS, '_');
+  const sanitized = id.replace(TOOL_CALL_ID_SAFE_CHARS, "_");
   return maxLength === undefined ? sanitized : sanitized.slice(0, maxLength);
 }
 
-export function sanitizeOpenAIResponsesCallId(id: string, maxLength?: number): string {
-  const [callId] = id.split('|', 1);
+export function sanitizeOpenAIResponsesCallId(
+  id: string,
+  maxLength?: number,
+): string {
+  const [callId] = id.split("|", 1);
   return sanitizeToolCallId(callId ?? id, maxLength);
 }
 
@@ -41,7 +44,9 @@ export function normalizeToolCallIdsForProvider(
     }
 
     const toolCallId =
-      message.toolCallId === undefined ? undefined : mappedIds.get(message.toolCallId);
+      message.toolCallId === undefined
+        ? undefined
+        : mappedIds.get(message.toolCallId);
     const mappedToolCallId = toolCallId ?? message.toolCallId;
     if (mappedToolCallId !== message.toolCallId) {
       messageChanged = true;
@@ -108,7 +113,7 @@ function makeUniqueToolCallId(
   maxLength: number | undefined,
 ): string {
   const base = normalized.length > 0 ? normalized : EMPTY_TOOL_CALL_ID;
-  const candidate = truncateToolCallId(base, maxLength, '');
+  const candidate = truncateToolCallId(base, maxLength, "");
   if (!usedIds.has(candidate)) return candidate;
 
   for (let i = 2; ; i++) {
@@ -126,7 +131,9 @@ function truncateToolCallId(
   if (maxLength === undefined) return `${base}${suffix}`;
   const baseLength = maxLength - suffix.length;
   if (baseLength <= 0) {
-    throw new Error(`Tool call id maxLength ${maxLength} is too small for suffix ${suffix}.`);
+    throw new Error(
+      `Tool call id maxLength ${maxLength} is too small for suffix ${suffix}.`,
+    );
   }
   return `${base.slice(0, baseLength)}${suffix}`;
 }

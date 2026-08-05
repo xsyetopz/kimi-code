@@ -23,14 +23,14 @@
  * dead already), so the cleanup is complete after one run.
  */
 
-import { readFile, unlink } from 'node:fs/promises';
-import { join } from 'node:path';
+import { readFile, unlink } from "node:fs/promises";
+import { join } from "node:path";
 
-import type { Command } from 'commander';
+import type { Command } from "commander";
 
-import { getDataDir } from '#/utils/paths';
+import { getDataDir } from "#/utils/paths";
 
-import { authHeaders, serverOrigin, tryResolveServerToken } from './shared';
+import { authHeaders, serverOrigin, tryResolveServerToken } from "./shared";
 
 /** How long to wait for the graceful API shutdown request. */
 const API_TIMEOUT_MS = 2000;
@@ -46,11 +46,11 @@ const POLL_INTERVAL_MS = 100;
  * register under `server/instances/`. Servers from older builds are the only
  * ones this command can — and should — kill.
  */
-export const LEGACY_SERVER_MAX_VERSION = '0.28.0';
+export const LEGACY_SERVER_MAX_VERSION = "0.28.0";
 
 /** Deprecation notice printed on every `kimi server kill` run. */
 export const DEPRECATED_KILL_NOTICE =
-  '`kimi server kill` is deprecated: it only stops servers started by a version before 0.28.0. Servers started by `kimi web` run in the foreground — stop them with Ctrl+C.\n';
+  "`kimi server kill` is deprecated: it only stops servers started by a version before 0.28.0. Servers started by `kimi web` run in the foreground — stop them with Ctrl+C.\n";
 
 /**
  * The fields of the legacy `<home>/server/lock` this command needs. The full
@@ -74,16 +74,16 @@ export interface LegacyKillDeps {
   signalPid(pid: number, signal: NodeJS.Signals): boolean;
   pidAlive(pid: number): boolean;
   sleep(ms: number): Promise<void>;
-  stdout: Pick<NodeJS.WriteStream, 'write'>;
-  stderr: Pick<NodeJS.WriteStream, 'write'>;
+  stdout: Pick<NodeJS.WriteStream, "write">;
+  stderr: Pick<NodeJS.WriteStream, "write">;
   now(): number;
 }
 
 export function registerLegacyKillCommand(server: Command): void {
   server
-    .command('kill')
+    .command("kill")
     .description(
-      'Deprecated — stop a server started by a version before 0.28.0 (recorded in the legacy server lock). Servers started by `kimi web` run in the foreground — stop them with Ctrl+C.',
+      "Deprecated — stop a server started by a version before 0.28.0 (recorded in the legacy server lock). Servers started by `kimi web` run in the foreground — stop them with Ctrl+C.",
     )
     // Swallow legacy argument shapes (`kimi server kill <serverId>`, flags):
     // the legacy lock records a single server, so they carry no meaning here.
@@ -93,18 +93,22 @@ export function registerLegacyKillCommand(server: Command): void {
       try {
         await handleLegacyKillCommand(DEFAULT_LEGACY_KILL_DEPS);
       } catch (error) {
-        process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+        process.stderr.write(
+          `${error instanceof Error ? error.message : String(error)}\n`,
+        );
         process.exit(1);
       }
     });
 }
 
-export async function handleLegacyKillCommand(deps: LegacyKillDeps): Promise<void> {
+export async function handleLegacyKillCommand(
+  deps: LegacyKillDeps,
+): Promise<void> {
   deps.stderr.write(DEPRECATED_KILL_NOTICE);
 
   const lock = await deps.readLock();
   if (lock === undefined) {
-    deps.stdout.write('No running legacy Kimi server.\n');
+    deps.stdout.write("No running legacy Kimi server.\n");
     return;
   }
 
@@ -112,13 +116,15 @@ export async function handleLegacyKillCommand(deps: LegacyKillDeps): Promise<voi
     // Stale lock from a server that died without releasing it; sweep it so the
     // cleanup is done in one run.
     await deps.removeLock().catch(() => {});
-    deps.stdout.write('No running legacy Kimi server.\n');
+    deps.stdout.write("No running legacy Kimi server.\n");
     return;
   }
 
   const outcome = await killLegacyServer(lock, deps);
   await deps.removeLock().catch(() => {});
-  deps.stdout.write(`Legacy Kimi server (pid ${String(lock.pid)}) ${outcome}.\n`);
+  deps.stdout.write(
+    `Legacy Kimi server (pid ${String(lock.pid)}) ${outcome}.\n`,
+  );
 }
 
 /**
@@ -129,7 +135,7 @@ export async function handleLegacyKillCommand(deps: LegacyKillDeps): Promise<voi
 async function killLegacyServer(
   lock: LegacyServerLock,
   deps: LegacyKillDeps,
-): Promise<'stopped' | 'killed'> {
+): Promise<"stopped" | "killed"> {
   const { pid } = lock;
 
   // 1. API path — best-effort graceful shutdown. Ignore every outcome: an old
@@ -137,21 +143,21 @@ async function killLegacyServer(
   //    as it exits. The bearer token is best-effort too: if it can't be read
   //    the API call 401s and the PID path below still guarantees the kill.
   if (lock.port !== undefined) {
-    const origin = serverOrigin(lock.host ?? '127.0.0.1', lock.port);
+    const origin = serverOrigin(lock.host ?? "127.0.0.1", lock.port);
     await deps.requestShutdown(origin, deps.resolveToken()).catch(() => {});
   }
 
   // 2. PID path — SIGTERM, wait, then SIGKILL.
-  deps.signalPid(pid, 'SIGTERM');
+  deps.signalPid(pid, "SIGTERM");
 
   if (await waitForExit(pid, TERM_GRACE_MS, deps)) {
-    return 'stopped';
+    return "stopped";
   }
 
-  deps.signalPid(pid, 'SIGKILL');
+  deps.signalPid(pid, "SIGKILL");
 
   if (await waitForExit(pid, KILL_GRACE_MS, deps)) {
-    return 'killed';
+    return "killed";
   }
 
   throw new Error(
@@ -162,7 +168,7 @@ async function killLegacyServer(
 async function waitForExit(
   pid: number,
   timeoutMs: number,
-  deps: Pick<LegacyKillDeps, 'pidAlive' | 'sleep' | 'now'>,
+  deps: Pick<LegacyKillDeps, "pidAlive" | "sleep" | "now">,
 ): Promise<boolean> {
   const deadline = deps.now() + timeoutMs;
   do {
@@ -179,7 +185,7 @@ export function pidAlive(pid: number): boolean {
     return true;
   } catch (error) {
     const code = (error as NodeJS.ErrnoException).code;
-    if (code === 'ESRCH') return false;
+    if (code === "ESRCH") return false;
     // EPERM = process exists but we can't signal it. Treat as alive.
     return true;
   }
@@ -206,7 +212,7 @@ export async function requestShutdownViaApi(
   }, API_TIMEOUT_MS);
   try {
     await fetch(`${origin}/api/v1/shutdown`, {
-      method: 'POST',
+      method: "POST",
       headers: token !== undefined ? authHeaders(token) : undefined,
       signal: controller.signal,
     });
@@ -217,29 +223,39 @@ export async function requestShutdownViaApi(
 
 /** Path of the legacy single-instance lock under the CLI's data dir. */
 export function legacyLockPath(homeDir: string): string {
-  return join(homeDir, 'server', 'lock');
+  return join(homeDir, "server", "lock");
 }
 
 /** Read + decode the legacy lock; undefined on missing/unparseable input. */
-export async function readLegacyLock(lockPath: string): Promise<LegacyServerLock | undefined> {
+export async function readLegacyLock(
+  lockPath: string,
+): Promise<LegacyServerLock | undefined> {
   let raw: string;
   try {
-    raw = await readFile(lockPath, 'utf8');
+    raw = await readFile(lockPath, "utf8");
   } catch {
     return undefined;
   }
   try {
-    const parsed = JSON.parse(raw) as Partial<{ pid: unknown; host: unknown; port: unknown }>;
+    const parsed = JSON.parse(raw) as Partial<{
+      pid: unknown;
+      host: unknown;
+      port: unknown;
+    }>;
     // Only accept a positive safe-integer pid: on POSIX, 0 and negative pids
     // have process-GROUP semantics, so signaling a corrupt lock's pid could
     // hit this CLI's own group or an unrelated one.
-    if (typeof parsed.pid !== 'number' || !Number.isSafeInteger(parsed.pid) || parsed.pid <= 0) {
+    if (
+      typeof parsed.pid !== "number" ||
+      !Number.isSafeInteger(parsed.pid) ||
+      parsed.pid <= 0
+    ) {
       return undefined;
     }
     return {
       pid: parsed.pid,
-      host: typeof parsed.host === 'string' ? parsed.host : undefined,
-      port: typeof parsed.port === 'number' ? parsed.port : undefined,
+      host: typeof parsed.host === "string" ? parsed.host : undefined,
+      port: typeof parsed.port === "number" ? parsed.port : undefined,
     };
   } catch {
     return undefined;

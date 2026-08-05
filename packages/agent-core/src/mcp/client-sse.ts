@@ -1,7 +1,10 @@
-import type { McpServerSseConfig } from '#/config/schema';
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import type { OAuthClientProvider } from '@modelcontextprotocol/sdk/client/auth.js';
-import { SSEClientTransport, SseError } from '@modelcontextprotocol/sdk/client/sse.js';
+import type { McpServerSseConfig } from "#/config/schema";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import type { OAuthClientProvider } from "@modelcontextprotocol/sdk/client/auth.js";
+import {
+  SSEClientTransport,
+  SseError,
+} from "@modelcontextprotocol/sdk/client/sse.js";
 
 import {
   buildRequestOptions,
@@ -11,9 +14,9 @@ import {
   toMcpToolResult,
   type UnexpectedCloseListener,
   type UnexpectedCloseReason,
-} from './client-shared';
-import { buildMcpRemoteHeaders } from './client-remote';
-import type { MCPClient, MCPToolDefinition, MCPToolResult } from './types';
+} from "./client-shared";
+import { buildMcpRemoteHeaders } from "./client-remote";
+import type { MCPClient, MCPToolDefinition, MCPToolResult } from "./types";
 
 export interface SseMcpClientOptions {
   readonly clientName?: string;
@@ -77,7 +80,7 @@ export class SseMcpClient implements MCPClient {
 
   async connect(): Promise<void> {
     if (this.closed) {
-      throw new Error('MCP SSE client is closed');
+      throw new Error("MCP SSE client is closed");
     }
     if (this.started) return;
     this.started = true;
@@ -93,7 +96,7 @@ export class SseMcpClient implements MCPClient {
     }
     if (this.closed) {
       await this.closeStartedClient();
-      throw new Error('MCP SSE client was closed during startup');
+      throw new Error("MCP SSE client was closed during startup");
     }
     this.ready = true;
   }
@@ -132,7 +135,11 @@ export class SseMcpClient implements MCPClient {
     signal?: AbortSignal,
   ): Promise<MCPToolResult> {
     const requestOptions = buildRequestOptions(this.toolCallTimeoutMs, signal);
-    const result = await this.client.callTool({ name, arguments: args }, undefined, requestOptions);
+    const result = await this.client.callTool(
+      { name, arguments: args },
+      undefined,
+      requestOptions,
+    );
     return toMcpToolResult(result);
   }
 
@@ -173,6 +180,6 @@ export class SseMcpClient implements MCPClient {
 }
 
 export function isTerminalSseTransportError(error: Error): boolean {
-  if (error.name === 'UnauthorizedError') return true;
+  if (error.name === "UnauthorizedError") return true;
   return error instanceof SseError && error.code !== undefined;
 }

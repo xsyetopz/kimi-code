@@ -9,38 +9,38 @@
  * test/workspace/workspaceInstructions/instructions.test.ts`.
  */
 
-import { mkdtempSync } from 'node:fs';
-import { rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'pathe';
+import { mkdtempSync } from "node:fs";
+import { rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "pathe";
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { DisposableStore } from '#/_base/di/lifecycle';
-import { createServices } from '#/_base/di/test';
-import { Emitter } from '#/_base/event';
-import { ILogService } from '#/_base/log/log';
-import { IBootstrapService } from '#/app/bootstrap/bootstrap';
-import { HostFileSystem } from '#/os/backends/node-local/hostFsService';
-import { IHostEnvironment } from '#/os/interface/hostEnvironment';
-import { IHostFileSystem } from '#/os/interface/hostFileSystem';
+import { DisposableStore } from "#/_base/di/lifecycle";
+import { createServices } from "#/_base/di/test";
+import { Emitter } from "#/_base/event";
+import { ILogService } from "#/_base/log/log";
+import { IBootstrapService } from "#/app/bootstrap/bootstrap";
+import { HostFileSystem } from "#/os/backends/node-local/hostFsService";
+import { IHostEnvironment } from "#/os/interface/hostEnvironment";
+import { IHostFileSystem } from "#/os/interface/hostFileSystem";
 import {
   IHostFsWatchService,
   type HostFsChange,
   type IHostFsWatchHandle,
-} from '#/os/interface/hostFsWatch';
-import { IWorkspaceStateService } from '#/workspace/state/workspaceState';
-import { IWorkspaceContext } from '#/workspace/workspaceContext/workspaceContext';
-import { IWorkspaceInstructionsService } from '#/workspace/workspaceInstructions/workspaceInstructions';
+} from "#/os/interface/hostFsWatch";
+import { IWorkspaceStateService } from "#/workspace/state/workspaceState";
+import { IWorkspaceContext } from "#/workspace/workspaceContext/workspaceContext";
+import { IWorkspaceInstructionsService } from "#/workspace/workspaceInstructions/workspaceInstructions";
 import {
   WorkspaceInstructionsService,
   workspaceInstructionsCurrentKey,
-} from '#/workspace/workspaceInstructions/workspaceInstructionsService';
+} from "#/workspace/workspaceInstructions/workspaceInstructionsService";
 
-import { stubLog } from '../../_base/log/stubs';
-import { registerStateServices } from '../../state/stubs';
+import { stubLog } from "../../_base/log/stubs";
+import { registerStateServices } from "../../state/stubs";
 
-describe('WorkspaceInstructionsService', () => {
+describe("WorkspaceInstructionsService", () => {
   let workDir: string;
   let osHomeDir: string;
   let brandHomeDir: string;
@@ -48,9 +48,9 @@ describe('WorkspaceInstructionsService', () => {
   let watchFires: Map<string, Emitter<HostFsChange>>;
 
   beforeEach(() => {
-    workDir = mkdtempSync(join(tmpdir(), 'kimi-instructions-work-'));
-    osHomeDir = mkdtempSync(join(tmpdir(), 'kimi-instructions-os-'));
-    brandHomeDir = mkdtempSync(join(tmpdir(), 'kimi-instructions-brand-'));
+    workDir = mkdtempSync(join(tmpdir(), "kimi-instructions-work-"));
+    osHomeDir = mkdtempSync(join(tmpdir(), "kimi-instructions-os-"));
+    brandHomeDir = mkdtempSync(join(tmpdir(), "kimi-instructions-brand-"));
     disposables = new DisposableStore();
     watchFires = new Map();
   });
@@ -83,7 +83,7 @@ describe('WorkspaceInstructionsService', () => {
     // root) recursively — fire on the root that contains the changed file.
     for (const [root, emitter] of watchFires) {
       if (path === root || path.startsWith(`${root}/`)) {
-        emitter.fire({ path, action: 'modified', kind: 'file' });
+        emitter.fire({ path, action: "modified", kind: "file" });
       }
     }
   }
@@ -105,29 +105,36 @@ describe('WorkspaceInstructionsService', () => {
         reg.define(IWorkspaceInstructionsService, WorkspaceInstructionsService);
       },
     });
-    return { service: ix.get(IWorkspaceInstructionsService), states: ix.get(IWorkspaceStateService) };
+    return {
+      service: ix.get(IWorkspaceInstructionsService),
+      states: ix.get(IWorkspaceStateService),
+    };
   }
 
-  it('loads the AGENTS.md snapshot at build and projects it through the session provider', async () => {
-    await writeFile(join(workDir, 'AGENTS.md'), 'project instructions', 'utf8');
-    await writeFile(join(brandHomeDir, 'AGENTS.md'), 'brand instructions', 'utf8');
+  it("loads the AGENTS.md snapshot at build and projects it through the session provider", async () => {
+    await writeFile(join(workDir, "AGENTS.md"), "project instructions", "utf8");
+    await writeFile(
+      join(brandHomeDir, "AGENTS.md"),
+      "brand instructions",
+      "utf8",
+    );
 
     const { service } = createService();
     await service.ready;
 
-    expect(service.snapshot.agentsMd).toContain('brand instructions');
-    expect(service.snapshot.agentsMd).toContain('project instructions');
+    expect(service.snapshot.agentsMd).toContain("brand instructions");
+    expect(service.snapshot.agentsMd).toContain("project instructions");
     const provider = service.sessionProvider();
     expect(provider.agentsMd).toBe(service.snapshot.agentsMd);
     expect(provider.agentsMdWarning).toBeUndefined();
   });
 
-  it('refreshes the snapshot and fires onDidChange when a watched file changes', async () => {
-    const file = join(workDir, 'AGENTS.md');
-    await writeFile(file, 'old instructions', 'utf8');
+  it("refreshes the snapshot and fires onDidChange when a watched file changes", async () => {
+    const file = join(workDir, "AGENTS.md");
+    await writeFile(file, "old instructions", "utf8");
     const { service } = createService();
     await service.ready;
-    expect(service.snapshot.agentsMd).toContain('old instructions');
+    expect(service.snapshot.agentsMd).toContain("old instructions");
 
     const changed = new Promise<void>((resolvePromise) => {
       const d = service.onDidChange(() => {
@@ -135,36 +142,36 @@ describe('WorkspaceInstructionsService', () => {
         resolvePromise();
       });
     });
-    await writeFile(file, 'new instructions', 'utf8');
+    await writeFile(file, "new instructions", "utf8");
     fireWatch(file);
     await changed;
 
-    expect(service.snapshot.agentsMd).toContain('new instructions');
-    expect(service.snapshot.agentsMd).not.toContain('old instructions');
+    expect(service.snapshot.agentsMd).toContain("new instructions");
+    expect(service.snapshot.agentsMd).not.toContain("old instructions");
   });
 
-  it('picks up a newly created AGENTS.md through the watch', async () => {
+  it("picks up a newly created AGENTS.md through the watch", async () => {
     const { service } = createService();
     await service.ready;
-    expect(service.snapshot.agentsMd).toBe('');
+    expect(service.snapshot.agentsMd).toBe("");
 
-    const file = join(workDir, 'AGENTS.md');
+    const file = join(workDir, "AGENTS.md");
     const changed = new Promise<void>((resolvePromise) => {
       const d = service.onDidChange(() => {
         d.dispose();
         resolvePromise();
       });
     });
-    await writeFile(file, 'created later', 'utf8');
+    await writeFile(file, "created later", "utf8");
     fireWatch(file);
     await changed;
 
-    expect(service.snapshot.agentsMd).toContain('created later');
+    expect(service.snapshot.agentsMd).toContain("created later");
   });
 
-  it('does not fire when a reload produces identical content', async () => {
-    const file = join(workDir, 'AGENTS.md');
-    await writeFile(file, 'stable', 'utf8');
+  it("does not fire when a reload produces identical content", async () => {
+    const file = join(workDir, "AGENTS.md");
+    await writeFile(file, "stable", "utf8");
     const { service } = createService();
     await service.ready;
 
@@ -178,13 +185,15 @@ describe('WorkspaceInstructionsService', () => {
     expect(fired).toBe(0);
   });
 
-  it('registers the snapshot into the workspace state container and tracks reloads', async () => {
-    const file = join(workDir, 'AGENTS.md');
-    await writeFile(file, 'state instructions', 'utf8');
+  it("registers the snapshot into the workspace state container and tracks reloads", async () => {
+    const file = join(workDir, "AGENTS.md");
+    await writeFile(file, "state instructions", "utf8");
     const { service, states } = createService();
     await service.ready;
 
-    expect(states.get(workspaceInstructionsCurrentKey).agentsMd).toContain('state instructions');
+    expect(states.get(workspaceInstructionsCurrentKey).agentsMd).toContain(
+      "state instructions",
+    );
 
     const changed = new Promise<void>((resolvePromise) => {
       const d = service.onDidChange(() => {
@@ -192,10 +201,12 @@ describe('WorkspaceInstructionsService', () => {
         resolvePromise();
       });
     });
-    await writeFile(file, 'updated instructions', 'utf8');
+    await writeFile(file, "updated instructions", "utf8");
     fireWatch(file);
     await changed;
 
-    expect(states.get(workspaceInstructionsCurrentKey).agentsMd).toContain('updated instructions');
+    expect(states.get(workspaceInstructionsCurrentKey).agentsMd).toContain(
+      "updated instructions",
+    );
   });
 });

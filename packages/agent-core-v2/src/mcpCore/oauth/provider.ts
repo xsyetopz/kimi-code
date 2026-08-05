@@ -26,28 +26,32 @@
  * is ignored when `clientLabel` states the whole label explicitly.
  */
 
-import { randomBytes } from 'node:crypto';
+import { randomBytes } from "node:crypto";
 
-import { BugIndicatingError } from '#/errors';
+import { BugIndicatingError } from "#/errors";
 
 import type {
   OAuthClientProvider,
   OAuthDiscoveryState,
-} from '@modelcontextprotocol/sdk/client/auth.js';
+} from "@modelcontextprotocol/sdk/client/auth.js";
 import type {
   OAuthClientInformationFull,
   OAuthClientInformationMixed,
   OAuthClientMetadata,
   OAuthTokens,
-} from '@modelcontextprotocol/sdk/shared/auth.js';
+} from "@modelcontextprotocol/sdk/shared/auth.js";
 
-import { KIMI_MCP_CLIENT_NAME } from '../client-shared';
-import { canonicalMcpOAuthResource, mcpOAuthStoreKey, type McpOAuthStore } from './store';
+import { KIMI_MCP_CLIENT_NAME } from "../client-shared";
+import {
+  canonicalMcpOAuthResource,
+  mcpOAuthStoreKey,
+  type McpOAuthStore,
+} from "./store";
 
-const TOKENS_SUFFIX = '-tokens.json';
-const CLIENT_SUFFIX = '-client.json';
-const DISCOVERY_SUFFIX = '-discovery.json';
-const PASSIVE_REDIRECT_URI = 'http://127.0.0.1:3118/callback';
+const TOKENS_SUFFIX = "-tokens.json";
+const CLIENT_SUFFIX = "-client.json";
+const DISCOVERY_SUFFIX = "-discovery.json";
+const PASSIVE_REDIRECT_URI = "http://127.0.0.1:3118/callback";
 
 export interface McpOAuthProviderOptions {
   readonly serverName: string;
@@ -84,9 +88,13 @@ export class McpOAuthClientProvider implements OAuthClientProvider {
 
   private async load(): Promise<void> {
     const [client, tokens, discovery] = await Promise.all([
-      this.store.read<OAuthClientInformationFull>(`${this.storeKey}${CLIENT_SUFFIX}`),
+      this.store.read<OAuthClientInformationFull>(
+        `${this.storeKey}${CLIENT_SUFFIX}`,
+      ),
       this.store.read<OAuthTokens>(`${this.storeKey}${TOKENS_SUFFIX}`),
-      this.store.read<OAuthDiscoveryState>(`${this.storeKey}${DISCOVERY_SUFFIX}`),
+      this.store.read<OAuthDiscoveryState>(
+        `${this.storeKey}${DISCOVERY_SUFFIX}`,
+      ),
     ]);
     this.clientCache = client;
     this.tokensCache = tokens;
@@ -121,15 +129,15 @@ export class McpOAuthClientProvider implements OAuthClientProvider {
   get clientMetadata(): OAuthClientMetadata {
     return {
       redirect_uris: [this.effectiveRedirectUri()],
-      token_endpoint_auth_method: 'none',
-      grant_types: ['authorization_code', 'refresh_token'],
-      response_types: ['code'],
+      token_endpoint_auth_method: "none",
+      grant_types: ["authorization_code", "refresh_token"],
+      response_types: ["code"],
       client_name: this.clientLabel,
     };
   }
 
   state(): string {
-    this._state ??= randomBytes(16).toString('hex');
+    this._state ??= randomBytes(16).toString("hex");
     return this._state;
   }
 
@@ -138,7 +146,9 @@ export class McpOAuthClientProvider implements OAuthClientProvider {
     return this.clientCache;
   }
 
-  async saveClientInformation(info: OAuthClientInformationMixed): Promise<void> {
+  async saveClientInformation(
+    info: OAuthClientInformationMixed,
+  ): Promise<void> {
     this.clientCache = info;
     await this.store.write(`${this.storeKey}${CLIENT_SUFFIX}`, info);
   }
@@ -163,7 +173,9 @@ export class McpOAuthClientProvider implements OAuthClientProvider {
 
   codeVerifier(): string {
     if (this._codeVerifier === undefined) {
-      throw new BugIndicatingError('McpOAuthClientProvider: PKCE code verifier not initialized');
+      throw new BugIndicatingError(
+        "McpOAuthClientProvider: PKCE code verifier not initialized",
+      );
     }
     return this._codeVerifier;
   }
@@ -181,34 +193,34 @@ export class McpOAuthClientProvider implements OAuthClientProvider {
   async invalidateStaleRegistration(redirectUri: string): Promise<boolean> {
     await this.ready;
     const info = this.clientCache;
-    if (info === undefined || !('redirect_uris' in info)) return false;
+    if (info === undefined || !("redirect_uris" in info)) return false;
     const uris = info.redirect_uris;
     if (!Array.isArray(uris) || uris.length === 0) return false;
     if (uris.includes(redirectUri)) return false;
-    await this.invalidateCredentials('client');
+    await this.invalidateCredentials("client");
     return true;
   }
 
   async invalidateCredentials(
-    scope: 'all' | 'client' | 'tokens' | 'verifier' | 'discovery',
+    scope: "all" | "client" | "tokens" | "verifier" | "discovery",
   ): Promise<void> {
-    if (scope === 'verifier') {
+    if (scope === "verifier") {
       this._codeVerifier = undefined;
       return;
     }
-    if (scope === 'tokens' || scope === 'all') {
+    if (scope === "tokens" || scope === "all") {
       this.tokensCache = undefined;
       await this.store.remove(`${this.storeKey}${TOKENS_SUFFIX}`);
     }
-    if (scope === 'client' || scope === 'all') {
+    if (scope === "client" || scope === "all") {
       this.clientCache = undefined;
       await this.store.remove(`${this.storeKey}${CLIENT_SUFFIX}`);
     }
-    if (scope === 'discovery' || scope === 'all') {
+    if (scope === "discovery" || scope === "all") {
       this.discoveryCache = undefined;
       await this.store.remove(`${this.storeKey}${DISCOVERY_SUFFIX}`);
     }
-    if (scope === 'all') {
+    if (scope === "all") {
       this._codeVerifier = undefined;
     }
   }
@@ -222,8 +234,10 @@ export class McpOAuthClientProvider implements OAuthClientProvider {
   }
 }
 
-function registeredRedirectUri(info: OAuthClientInformationMixed | undefined): string | undefined {
-  if (info === undefined || !('redirect_uris' in info)) return undefined;
+function registeredRedirectUri(
+  info: OAuthClientInformationMixed | undefined,
+): string | undefined {
+  if (info === undefined || !("redirect_uris" in info)) return undefined;
   const [redirectUri] = info.redirect_uris;
   return redirectUri;
 }

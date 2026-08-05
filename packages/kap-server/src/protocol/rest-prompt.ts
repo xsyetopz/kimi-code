@@ -17,17 +17,20 @@
  *            { aborted: false, at_seq: number }  (envelope code 40903, idempotent)
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { isoDateTimeSchema } from '@moonshot-ai/agent-core-v2/_base/utils/isoDateTime';
-import { messageContentSchema } from './message';
+import { isoDateTimeSchema } from "@moonshot-ai/agent-core-v2/_base/utils/isoDateTime";
+import { messageContentSchema } from "./message";
 import {
   promptPermissionModeSchema,
   promptThinkingSchema,
-} from '@moonshot-ai/agent-core-v2/app/sessionLegacy/sessionProtocol';
+} from "@moonshot-ai/agent-core-v2/app/sessionLegacy/sessionProtocol";
 
 export { promptPermissionModeSchema, promptThinkingSchema };
-export type { PromptPermissionMode, PromptThinking } from '@moonshot-ai/agent-core-v2/app/sessionLegacy/sessionProtocol';
+export type {
+  PromptPermissionMode,
+  PromptThinking,
+} from "@moonshot-ai/agent-core-v2/app/sessionLegacy/sessionProtocol";
 
 export const promptSubmissionSchema = z.object({
   content: z.array(messageContentSchema).min(1),
@@ -42,7 +45,7 @@ export const promptSubmissionSchema = z.object({
   plan_mode: z.boolean().optional(),
   swarm_mode: z.boolean().optional(),
   goal_objective: z.string().optional(),
-  goal_control: z.enum(['pause', 'resume', 'cancel']).optional(),
+  goal_control: z.enum(["pause", "resume", "cancel"]).optional(),
   // Client-managed session tool denylist: full-replace on every submit; the
   // bound profile's own deny always survives. Omit to keep the persisted
   // value, send `[]` to clear the client portion.
@@ -50,7 +53,7 @@ export const promptSubmissionSchema = z.object({
 });
 export type PromptSubmission = z.infer<typeof promptSubmissionSchema>;
 
-export const promptStatusSchema = z.enum(['running', 'queued', 'blocked']);
+export const promptStatusSchema = z.enum(["running", "queued", "blocked"]);
 export type PromptStatus = z.infer<typeof promptStatusSchema>;
 
 export const promptItemSchema = z.object({

@@ -16,7 +16,11 @@ import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/sonner";
 import { useChatStore } from "@/stores";
 import { bridge } from "@/services";
-import type { ChatMessage as ChatMessageType, UIStep, UIStepItem } from "@/stores/chat.store";
+import type {
+  ChatMessage as ChatMessageType,
+  UIStep,
+  UIStepItem,
+} from "@/stores/chat.store";
 import type { ContentPart } from "shared/legacy-sdk";
 
 interface ChatMessageProps {
@@ -30,7 +34,9 @@ function ThinkingIndicator() {
   return (
     <div className="flex items-center gap-2 mt-1 text-blue-500/80 py-1">
       <IconLoader3 className="size-3.5 animate-spin" />
-      <span className="text-[11px] font-medium tracking-wide">Processing...</span>
+      <span className="text-[11px] font-medium tracking-wide">
+        Processing...
+      </span>
     </div>
   );
 }
@@ -51,9 +57,21 @@ function StepItemRenderer({ item }: { item: UIStepItem }) {
     case "thinking":
       return <ThinkingBlock content={item.content} finished={item.finished} />;
     case "text":
-      return <Markdown content={item.content} className="text-xs leading-relaxed" enableEnrichment={item.finished === true} />;
+      return (
+        <Markdown
+          content={item.content}
+          className="text-xs leading-relaxed"
+          enableEnrichment={item.finished === true}
+        />
+      );
     case "tool_use":
-      return <ToolCallCard call={item.call} result={item.result} subagentSteps={item.subagent_steps} />;
+      return (
+        <ToolCallCard
+          call={item.call}
+          result={item.result}
+          subagentSteps={item.subagent_steps}
+        />
+      );
     case "compaction":
       return <CompactionCard />;
     case "steer":
@@ -63,11 +81,25 @@ function StepItemRenderer({ item }: { item: UIStepItem }) {
   }
 }
 
-function StepContent({ step, showConnector }: { step: UIStep; showConnector?: boolean }) {
+function StepContent({
+  step,
+  showConnector,
+}: {
+  step: UIStep;
+  showConnector?: boolean;
+}) {
   const hasItems = step.items.length > 0;
-  const hasToolOrThinking = step.items.some((item) => item.type === "tool_use" || item.type === "thinking" || item.type === "compaction");
+  const hasToolOrThinking = step.items.some(
+    (item) =>
+      item.type === "tool_use" ||
+      item.type === "thinking" ||
+      item.type === "compaction",
+  );
   const showIndicator = hasToolOrThinking;
-  const hasActiveItem = step.items.some((item) => (item.type === "text" || item.type === "thinking") && !item.finished);
+  const hasActiveItem = step.items.some(
+    (item) =>
+      (item.type === "text" || item.type === "thinking") && !item.finished,
+  );
 
   if (!hasItems) {
     return null;
@@ -78,15 +110,26 @@ function StepContent({ step, showConnector }: { step: UIStep; showConnector?: bo
       {showIndicator ? (
         <div className="hidden @[420px]:flex shrink-0 w-5 flex-col items-center relative">
           <div
-            className={cn("size-1.5 rounded-full mt-2 shrink-0 relative z-10", hasActiveItem ? "bg-blue-400 shadow-[0_0_8px_rgba(59,130,246,0.6)] animate-pulse" : "bg-blue-400")}
+            className={cn(
+              "size-1.5 rounded-full mt-2 shrink-0 relative z-10",
+              hasActiveItem
+                ? "bg-blue-400 shadow-[0_0_8px_rgba(59,130,246,0.6)] animate-pulse"
+                : "bg-blue-400",
+            )}
           />
           {showConnector && (
             <div
               className={cn(
                 "absolute left-1/2 w-px",
-                hasActiveItem ? "bg-gradient-to-b from-zinc-300 to-transparent dark:from-zinc-600 dark:to-transparent" : "bg-zinc-300 dark:bg-zinc-600",
+                hasActiveItem
+                  ? "bg-gradient-to-b from-zinc-300 to-transparent dark:from-zinc-600 dark:to-transparent"
+                  : "bg-zinc-300 dark:bg-zinc-600",
               )}
-              style={{ top: "calc(0.5rem + 0.1875rem)", bottom: "calc(-0.75rem - 0.5rem - 0.1875rem)", transform: "translateX(-50%)" }}
+              style={{
+                top: "calc(0.5rem + 0.1875rem)",
+                bottom: "calc(-0.75rem - 0.5rem - 0.1875rem)",
+                transform: "translateX(-50%)",
+              }}
             />
           )}
         </div>
@@ -102,17 +145,35 @@ function StepContent({ step, showConnector }: { step: UIStep; showConnector?: bo
   );
 }
 
-function MessageMedia({ images, videos, onPreview }: { images: string[]; videos: string[]; onPreview: (src: string) => void }) {
+function MessageMedia({
+  images,
+  videos,
+  onPreview,
+}: {
+  images: string[];
+  videos: string[];
+  onPreview: (src: string) => void;
+}) {
   if (images.length === 0 && videos.length === 0) {
     return null;
   }
   return (
     <div className="flex flex-wrap gap-2 my-2">
       {images.map((src, idx) => (
-        <MediaThumbnail key={`img-${idx}`} src={src} size="md" onClick={() => onPreview(src)} />
+        <MediaThumbnail
+          key={`img-${idx}`}
+          src={src}
+          size="md"
+          onClick={() => onPreview(src)}
+        />
       ))}
       {videos.map((src, idx) => (
-        <MediaThumbnail key={`vid-${idx}`} src={src} size="md" onClick={() => onPreview(src)} />
+        <MediaThumbnail
+          key={`vid-${idx}`}
+          src={src}
+          size="md"
+          onClick={() => onPreview(src)}
+        />
       ))}
     </div>
   );
@@ -167,7 +228,9 @@ function ForkButton({ turnIndex, className }: ForkButtonProps) {
         await loadSession(result.sessionId, events);
       }
     } catch (error) {
-      toast.error(`Failed to fork conversation: ${error instanceof Error ? error.message : String(error)}`);
+      toast.error(
+        `Failed to fork conversation: ${error instanceof Error ? error.message : String(error)}`,
+      );
     } finally {
       setIsForking(false);
       setShowConfirm(false);
@@ -201,7 +264,9 @@ function ForkButton({ turnIndex, className }: ForkButtonProps) {
             : "This will create a new conversation branching from this point. All messages after this turn will be removed in the forked conversation. Continue?"
         }
         confirmLabel="Fork"
-        onConfirm={() => { void doFork(); }}
+        onConfirm={() => {
+          void doFork();
+        }}
         confirmLoading={isForking}
         confirmDisabled={isForking}
         cancelDisabled={isForking}
@@ -218,23 +283,48 @@ function UserMessage({ message }: { message: ChatMessageType }) {
 
   return (
     <div className="px-3 pt-3 pb-1 flex justify-end">
-      <div className={cn("max-w-[85%] px-3.5 py-1.5 rounded-2xl rounded-br-md", "bg-zinc-100 dark:bg-zinc-800", "text-foreground")}>
+      <div
+        className={cn(
+          "max-w-[85%] px-3.5 py-1.5 rounded-2xl rounded-br-md",
+          "bg-zinc-100 dark:bg-zinc-800",
+          "text-foreground",
+        )}
+      >
         {displayContent && (
           // FIX: removed whitespace-pre-wrap — it conflicted with ReactMarkdown's
           // block-level elements (<p>, <ol>, <li>), doubling vertical spacing.
           // ReactMarkdown already handles paragraph breaks from \n\n.
           <div className="text-xs leading-relaxed wrap-break-word">
-            <Markdown content={displayContent} enableEnrichment enableLocalImageRender={false} />
+            <Markdown
+              content={displayContent}
+              enableEnrichment
+              enableLocalImageRender={false}
+            />
           </div>
         )}
-        <MessageMedia images={images} videos={videos} onPreview={setPreviewMedia} />
+        <MessageMedia
+          images={images}
+          videos={videos}
+          onPreview={setPreviewMedia}
+        />
       </div>
-      <MediaPreviewModal src={previewMedia} onClose={() => setPreviewMedia(null)} />
+      <MediaPreviewModal
+        src={previewMedia}
+        onClose={() => setPreviewMedia(null)}
+      />
     </div>
   );
 }
 
-function AssistantMessage({ message, turnIndex, isStreaming }: { message: ChatMessageType; turnIndex?: number; isStreaming?: boolean }) {
+function AssistantMessage({
+  message,
+  turnIndex,
+  isStreaming,
+}: {
+  message: ChatMessageType;
+  turnIndex?: number;
+  isStreaming?: boolean;
+}) {
   const [previewMedia, setPreviewMedia] = useState<string | null>(null);
   const isCompacting = useChatStore((s) => s.isCompacting);
 
@@ -243,7 +333,14 @@ function AssistantMessage({ message, turnIndex, isStreaming }: { message: ChatMe
   const images = Content.getImages(message.content);
   const videos = Content.getVideos(message.content);
 
-  const stepHasIndicator = steps.map((step) => step.items.some((item) => item.type === "tool_use" || item.type === "thinking" || item.type === "compaction"));
+  const stepHasIndicator = steps.map((step) =>
+    step.items.some(
+      (item) =>
+        item.type === "tool_use" ||
+        item.type === "thinking" ||
+        item.type === "compaction",
+    ),
+  );
 
   const contentToCopy = (() => {
     if (!hasSteps) {
@@ -252,7 +349,9 @@ function AssistantMessage({ message, turnIndex, isStreaming }: { message: ChatMe
     const lastStep = steps[steps.length - 1];
     const textItems = lastStep.items.filter((item) => item.type === "text");
     if (textItems.length > 0) {
-      return textItems.map((item) => (item as { type: "text"; content: string }).content).join("\n");
+      return textItems
+        .map((item) => (item as { type: "text"; content: string }).content)
+        .join("\n");
     }
     return typeof message.content === "string" ? message.content : "";
   })();
@@ -261,15 +360,20 @@ function AssistantMessage({ message, turnIndex, isStreaming }: { message: ChatMe
     return null;
   }
 
-  const displayContent = typeof message.content === "string" ? message.content : "";
+  const displayContent =
+    typeof message.content === "string" ? message.content : "";
   const isShowingInlineError = message.inlineError && !isStreaming;
 
   return (
     <div className="@container px-3 py-3 group/message">
       <div className="flex gap-3 flex-col">
         <div className="flex flex-row items-center justify-start gap-2">
-          <div className="shrink-0 size-5 rounded flex items-center justify-center text-[10px] font-medium bg-blue-500 text-white">K</div>
-          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Kimi</div>
+          <div className="shrink-0 size-5 rounded flex items-center justify-center text-[10px] font-medium bg-blue-500 text-white">
+            K
+          </div>
+          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+            Kimi
+          </div>
         </div>
 
         <div className="flex-1 min-w-0">
@@ -283,20 +387,46 @@ function AssistantMessage({ message, turnIndex, isStreaming }: { message: ChatMe
                     const isLastInGroup = i === group.steps.length - 1;
                     const isLastOverall = globalIndex === totalSteps - 1;
                     const hasIndicator = stepHasIndicator[globalIndex];
-                    const hasNextIndicator = stepHasIndicator.slice(globalIndex + 1).some(Boolean);
-                    const showConnector = hasIndicator && hasNextIndicator && !isLastInGroup && !isLastOverall;
-                    return <StepContent key={step.n} step={step} showConnector={showConnector} />;
+                    const hasNextIndicator = stepHasIndicator
+                      .slice(globalIndex + 1)
+                      .some(Boolean);
+                    const showConnector =
+                      hasIndicator &&
+                      hasNextIndicator &&
+                      !isLastInGroup &&
+                      !isLastOverall;
+                    return (
+                      <StepContent
+                        key={step.n}
+                        step={step}
+                        showConnector={showConnector}
+                      />
+                    );
                   });
 
                   if (group.planMode) {
-                    return <PlanCard key={`plan-${gi}`}>{stepsContent}</PlanCard>;
+                    return (
+                      <PlanCard key={`plan-${gi}`}>{stepsContent}</PlanCard>
+                    );
                   }
-                  return <Fragment key={`normal-${gi}`}>{stepsContent}</Fragment>;
+                  return (
+                    <Fragment key={`normal-${gi}`}>{stepsContent}</Fragment>
+                  );
                 })}
-              {!hasSteps && displayContent && <Markdown content={displayContent} className="text-xs leading-relaxed @[420px]:pl-5" enableEnrichment={!isStreaming} />}
+              {!hasSteps && displayContent && (
+                <Markdown
+                  content={displayContent}
+                  className="text-xs leading-relaxed @[420px]:pl-5"
+                  enableEnrichment={!isStreaming}
+                />
+              )}
               {(images.length > 0 || videos.length > 0) && (
                 <div className="@[420px]:pl-5">
-                  <MessageMedia images={images} videos={videos} onPreview={setPreviewMedia} />
+                  <MessageMedia
+                    images={images}
+                    videos={videos}
+                    onPreview={setPreviewMedia}
+                  />
                 </div>
               )}
             </div>
@@ -308,19 +438,28 @@ function AssistantMessage({ message, turnIndex, isStreaming }: { message: ChatMe
               </div>
             )}
             <div className="flex flex-row items-center space-between">
-              <div className="inline-flex flex-1">{isStreaming && !isShowingInlineError && !isCompacting && <ThinkingIndicator />}</div>
+              <div className="inline-flex flex-1">
+                {isStreaming && !isShowingInlineError && !isCompacting && (
+                  <ThinkingIndicator />
+                )}
+              </div>
               <div className="inline-flex flex-1" />
               {!isStreaming && contentToCopy.trim().length > 0 && (
                 <div className="flex justify-start pt-1 gap-1 opacity-0 group-hover/message:opacity-100 transition-opacity duration-100">
                   <CopyButton content={contentToCopy} />
-                  {message.forkable !== false && turnIndex !== undefined && turnIndex >= 0 && <ForkButton turnIndex={turnIndex} />}
+                  {message.forkable !== false &&
+                    turnIndex !== undefined &&
+                    turnIndex >= 0 && <ForkButton turnIndex={turnIndex} />}
                 </div>
               )}
             </div>
           </div>
         </div>
       </div>
-      <MediaPreviewModal src={previewMedia} onClose={() => setPreviewMedia(null)} />
+      <MediaPreviewModal
+        src={previewMedia}
+        onClose={() => setPreviewMedia(null)}
+      />
     </div>
   );
 }
@@ -332,9 +471,19 @@ function hasMessageContent(message: ChatMessageType): boolean {
   return message.steps?.some((s) => s.items.length > 0) ?? false;
 }
 
-export const ChatMessage = memo(function ChatMessage({ message, turnIndex, isStreaming }: ChatMessageProps) {
+export const ChatMessage = memo(function ChatMessage({
+  message,
+  turnIndex,
+  isStreaming,
+}: ChatMessageProps) {
   if (message.role === "user") {
     return <UserMessage message={message} />;
   }
-  return <AssistantMessage message={message} turnIndex={turnIndex} isStreaming={isStreaming} />;
+  return (
+    <AssistantMessage
+      message={message}
+      turnIndex={turnIndex}
+      isStreaming={isStreaming}
+    />
+  );
 });

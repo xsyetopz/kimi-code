@@ -1,2 +1,2 @@
-export * from './agentPlugin';
-export * from './agentPluginService';
+export * from "./agentPlugin";
+export * from "./agentPluginService";

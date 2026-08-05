@@ -15,28 +15,28 @@ import {
   truncateToWidth,
   visibleWidth,
   wrapTextWithAnsi,
-} from '@moonshot-ai/pi-tui';
+} from "@moonshot-ai/pi-tui";
 
-import { currentTheme } from '#/tui/theme';
+import { currentTheme } from "#/tui/theme";
 import type {
   PendingQuestion,
   QuestionPanelResponse,
   QuestionSubmissionMethod,
-} from '#/tui/reverse-rpc/types';
+} from "#/tui/reverse-rpc/types";
 
-const NUMBER_KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
+const NUMBER_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9"];
 const MAX_BODY_LINES = 12;
-const DEFAULT_OTHER_LABEL = 'Other';
-const NOT_ANSWERED_LABEL = 'Not answered';
-const REVIEW_TITLE = 'Review your answer before submit';
-const SUBMIT_PROMPT = 'Ready to submit your answers?';
-const UNANSWERED_WARNING = 'Some questions are still unanswered.';
-const SUBMIT_ACTIONS = ['Submit', 'Cancel'] as const;
+const DEFAULT_OTHER_LABEL = "Other";
+const NOT_ANSWERED_LABEL = "Not answered";
+const REVIEW_TITLE = "Review your answer before submit";
+const SUBMIT_PROMPT = "Ready to submit your answers?";
+const UNANSWERED_WARNING = "Some questions are still unanswered.";
+const SUBMIT_ACTIONS = ["Submit", "Cancel"] as const;
 
 interface DisplayOption {
   readonly label: string;
   readonly description?: string | undefined;
-  readonly kind: 'preset' | 'other';
+  readonly kind: "preset" | "other";
 }
 
 /**
@@ -55,7 +55,10 @@ function appendWrapped(
   width: number,
   tone?: (s: string) => string,
 ): void {
-  const prefixWidth = Math.max(visibleWidth(firstPrefix), visibleWidth(continuationPrefix));
+  const prefixWidth = Math.max(
+    visibleWidth(firstPrefix),
+    visibleWidth(continuationPrefix),
+  );
   const contentWidth = Math.max(1, width - prefixWidth);
   const wrapped = wrapTextWithAnsi(content, contentWidth);
   const styleLine = tone ?? ((s: string) => s);
@@ -63,9 +66,9 @@ function appendWrapped(
     lines.push(styleLine(firstPrefix));
     return;
   }
-  lines.push(styleLine(`${firstPrefix}${wrapped[0] ?? ''}`));
+  lines.push(styleLine(`${firstPrefix}${wrapped[0] ?? ""}`));
   for (let i = 1; i < wrapped.length; i++) {
-    lines.push(styleLine(`${continuationPrefix}${wrapped[i] ?? ''}`));
+    lines.push(styleLine(`${continuationPrefix}${wrapped[i] ?? ""}`));
   }
 }
 
@@ -110,16 +113,28 @@ export class QuestionDialogComponent extends Container implements Focusable {
     this.maxVisibleOptions = maxVisibleOptions;
     this.onToggleToolOutput = onToggleToolOutput;
     this.otherInput.onSubmit = (value) => {
-      this.commitOtherInput(value, 'enter');
+      this.commitOtherInput(value, "enter");
     };
 
     const total = request.data.questions.length;
     this.cursors = Array.from({ length: total }, (): number => 0);
-    this.singleSelections = Array.from({ length: total }, (): number | undefined => undefined);
-    this.multiSelections = Array.from({ length: total }, () => new Set<number>());
-    this.otherDrafts = Array.from({ length: total }, (): string => '');
-    this.committedOtherValues = Array.from({ length: total }, (): string | undefined => undefined);
-    this.answers = Array.from({ length: total }, (): string | undefined => undefined);
+    this.singleSelections = Array.from(
+      { length: total },
+      (): number | undefined => undefined,
+    );
+    this.multiSelections = Array.from(
+      { length: total },
+      () => new Set<number>(),
+    );
+    this.otherDrafts = Array.from({ length: total }, (): string => "");
+    this.committedOtherValues = Array.from(
+      { length: total },
+      (): string | undefined => undefined,
+    );
+    this.answers = Array.from(
+      { length: total },
+      (): string | undefined => undefined,
+    );
   }
 
   // ── Input ─────────────────────────────────────────────────────────
@@ -130,12 +145,12 @@ export class QuestionDialogComponent extends Container implements Focusable {
       return;
     }
 
-    if (matchesKey(data, Key.ctrl('c')) || matchesKey(data, Key.ctrl('d'))) {
+    if (matchesKey(data, Key.ctrl("c")) || matchesKey(data, Key.ctrl("d"))) {
       this.onAnswer({ answers: [] });
       return;
     }
 
-    if (matchesKey(data, Key.ctrl('o'))) {
+    if (matchesKey(data, Key.ctrl("o"))) {
       this.onToggleToolOutput?.();
       return;
     }
@@ -177,7 +192,7 @@ export class QuestionDialogComponent extends Container implements Focusable {
     }
 
     if (matchesKey(data, Key.enter)) {
-      this.activateQuestionOption(this.currentCursor(), 'enter');
+      this.activateQuestionOption(this.currentCursor(), "enter");
       return;
     }
 
@@ -185,12 +200,15 @@ export class QuestionDialogComponent extends Container implements Focusable {
     const numIdx = NUMBER_KEYS.indexOf(printable);
     if (numIdx >= 0 && numIdx < optionCount) {
       this.cursors[questionIdx] = numIdx;
-      this.activateQuestionOption(numIdx, 'number_key');
+      this.activateQuestionOption(numIdx, "number_key");
       return;
     }
 
-    if ((printable === ' ' || matchesKey(data, Key.space)) && question.multi_select) {
-      this.activateQuestionOption(this.currentCursor(), 'space');
+    if (
+      (printable === " " || matchesKey(data, Key.space)) &&
+      question.multi_select
+    ) {
+      this.activateQuestionOption(this.currentCursor(), "space");
     }
   }
 
@@ -225,7 +243,8 @@ export class QuestionDialogComponent extends Container implements Focusable {
   private handleSubmitInput(data: string): void {
     if (matchesKey(data, Key.up)) {
       this.submitActionIdx =
-        (this.submitActionIdx - 1 + SUBMIT_ACTIONS.length) % SUBMIT_ACTIONS.length;
+        (this.submitActionIdx - 1 + SUBMIT_ACTIONS.length) %
+        SUBMIT_ACTIONS.length;
       this.reviewMessage = undefined;
       return;
     }
@@ -245,19 +264,19 @@ export class QuestionDialogComponent extends Container implements Focusable {
     }
 
     if (matchesKey(data, Key.enter)) {
-      this.executeSubmitAction(this.submitActionIdx, 'enter');
+      this.executeSubmitAction(this.submitActionIdx, "enter");
       return;
     }
 
     const printable = decodeKittyPrintable(data) ?? data;
-    if (printable === '1') {
+    if (printable === "1") {
       this.submitActionIdx = 0;
-      this.executeSubmitAction(0, 'number_key');
+      this.executeSubmitAction(0, "number_key");
       return;
     }
-    if (printable === '2') {
+    if (printable === "2") {
       this.submitActionIdx = 1;
-      this.executeSubmitAction(1, 'number_key');
+      this.executeSubmitAction(1, "number_key");
     }
   }
 
@@ -287,7 +306,10 @@ export class QuestionDialogComponent extends Container implements Focusable {
     this.reviewMessage = undefined;
   }
 
-  private activateQuestionOption(optionIdx: number, method: QuestionSubmissionMethod): void {
+  private activateQuestionOption(
+    optionIdx: number,
+    method: QuestionSubmissionMethod,
+  ): void {
     const questionIdx = this.currentQuestionIndex();
     if (questionIdx === undefined) return;
 
@@ -327,7 +349,10 @@ export class QuestionDialogComponent extends Container implements Focusable {
     this.reviewMessage = undefined;
   }
 
-  private commitOtherInput(rawValue: string | undefined, method: QuestionSubmissionMethod): void {
+  private commitOtherInput(
+    rawValue: string | undefined,
+    method: QuestionSubmissionMethod,
+  ): void {
     const questionIdx = this.currentQuestionIndex();
     if (questionIdx === undefined) return;
 
@@ -342,7 +367,9 @@ export class QuestionDialogComponent extends Container implements Focusable {
     this.committedOtherValues[questionIdx] = value;
 
     if (question.multi_select) {
-      this.multiSelections[questionIdx]?.add(this.otherOptionIndex(questionIdx));
+      this.multiSelections[questionIdx]?.add(
+        this.otherOptionIndex(questionIdx),
+      );
     } else {
       this.singleSelections[questionIdx] = this.otherOptionIndex(questionIdx);
     }
@@ -384,10 +411,15 @@ export class QuestionDialogComponent extends Container implements Focusable {
         if (label !== undefined && label.length > 0) labels.push(label);
       }
       const otherText = this.committedOtherValues[questionIdx];
-      if (set.has(otherIdx) && otherText !== undefined && otherText.length > 0) {
+      if (
+        set.has(otherIdx) &&
+        otherText !== undefined &&
+        otherText.length > 0
+      ) {
         labels.push(otherText);
       }
-      this.answers[questionIdx] = labels.length > 0 ? labels.join(', ') : undefined;
+      this.answers[questionIdx] =
+        labels.length > 0 ? labels.join(", ") : undefined;
       return;
     }
 
@@ -405,10 +437,14 @@ export class QuestionDialogComponent extends Container implements Focusable {
     }
 
     const label = question.options[selection]?.label;
-    this.answers[questionIdx] = label !== undefined && label.length > 0 ? label : undefined;
+    this.answers[questionIdx] =
+      label !== undefined && label.length > 0 ? label : undefined;
   }
 
-  private executeSubmitAction(actionIdx: number, method: QuestionSubmissionMethod): void {
+  private executeSubmitAction(
+    actionIdx: number,
+    method: QuestionSubmissionMethod,
+  ): void {
     if (actionIdx === 1) {
       this.onAnswer({ answers: [] });
       return;
@@ -431,7 +467,9 @@ export class QuestionDialogComponent extends Container implements Focusable {
 
   override render(width: number): string[] {
     this.otherInput.focused = this.focused && this.isEditingOther();
-    return this.isSubmitTab() ? this.renderSubmitTab(width) : this.renderQuestionTab(width);
+    return this.isSubmitTab()
+      ? this.renderSubmitTab(width)
+      : this.renderQuestionTab(width);
   }
 
   private renderQuestionTab(width: number): string[] {
@@ -441,38 +479,49 @@ export class QuestionDialogComponent extends Container implements Focusable {
     const question = this.request.data.questions[questionIdx];
     if (question === undefined) return [];
 
-    const accent = (text: string) => currentTheme.fg('primary', text);
-    const dim = (text: string) => currentTheme.fg('textDim', text);
-    const success = (text: string) => currentTheme.fg('success', text);
+    const accent = (text: string) => currentTheme.fg("primary", text);
+    const dim = (text: string) => currentTheme.fg("textDim", text);
+    const success = (text: string) => currentTheme.fg("success", text);
 
     const renderWidth = Math.max(1, width);
-    const lines: string[] = [accent('─'.repeat(renderWidth)), currentTheme.boldFg('primary', ' question'), ''];
+    const lines: string[] = [
+      accent("─".repeat(renderWidth)),
+      currentTheme.boldFg("primary", " question"),
+      "",
+    ];
     this.pushTabs(lines);
-    lines.push('');
+    lines.push("");
 
-    appendWrapped(lines, ' ? ', '   ', question.question, renderWidth, accent);
+    appendWrapped(lines, " ? ", "   ", question.question, renderWidth, accent);
     if (this.isEditingOther()) {
-      lines.push(dim('   Type your answer, then press Enter to save.'));
+      lines.push(dim("   Type your answer, then press Enter to save."));
     }
 
     if (question.body !== undefined && question.body.trim().length > 0) {
-      lines.push('');
-      const bodyLines = question.body.trim().split('\n');
+      lines.push("");
+      const bodyLines = question.body.trim().split("\n");
       const visibleBodyLines = bodyLines.slice(0, MAX_BODY_LINES);
       for (const bodyLine of visibleBodyLines) {
-        appendWrapped(lines, '   ', '   ', bodyLine, renderWidth, dim);
+        appendWrapped(lines, "   ", "   ", bodyLine, renderWidth, dim);
       }
       if (bodyLines.length > visibleBodyLines.length) {
-        lines.push(dim(`   ... ${String(bodyLines.length - visibleBodyLines.length)} more lines`));
+        lines.push(
+          dim(
+            `   ... ${String(bodyLines.length - visibleBodyLines.length)} more lines`,
+          ),
+        );
       }
     }
 
-    lines.push('');
+    lines.push("");
 
     const options = this.displayOptions(questionIdx);
     const cursor = this.currentCursor();
     const visibleStart = this.computeVisibleStart(cursor, options.length);
-    const visibleEnd = Math.min(options.length, visibleStart + this.maxVisibleOptions);
+    const visibleEnd = Math.min(
+      options.length,
+      visibleStart + this.maxVisibleOptions,
+    );
     const multiSet = this.multiSelections[questionIdx] ?? new Set<number>();
     const singleSelection = this.singleSelections[questionIdx];
 
@@ -481,11 +530,21 @@ export class QuestionDialogComponent extends Container implements Focusable {
       if (option === undefined) continue;
       const num = i + 1;
       const isCursor = i === cursor;
-      const isOther = option.kind === 'other';
-      const isSelected = question.multi_select ? multiSet.has(i) : singleSelection === i;
+      const isOther = option.kind === "other";
+      const isSelected = question.multi_select
+        ? multiSet.has(i)
+        : singleSelection === i;
 
       if (this.isEditingOther() && isCursor && isOther) {
-        lines.push(this.renderEditingOtherLine(renderWidth, questionIdx, option, num, isSelected));
+        lines.push(
+          this.renderEditingOtherLine(
+            renderWidth,
+            questionIdx,
+            option,
+            num,
+            isSelected,
+          ),
+        );
         continue;
       }
 
@@ -494,15 +553,16 @@ export class QuestionDialogComponent extends Container implements Focusable {
       let tone: (s: string) => string;
       let prefix: string;
       if (question.multi_select) {
-        const checked = isSelected ? '✓' : ' ';
+        const checked = isSelected ? "✓" : " ";
         prefix = `  [${checked}] `;
-        if (isSelected && isCursor) tone = (s) => currentTheme.boldFg('success', s);
+        if (isSelected && isCursor)
+          tone = (s) => currentTheme.boldFg("success", s);
         else if (isSelected) tone = success;
         else if (isCursor) tone = accent;
         else tone = dim;
       } else if (isSelected && this.isAnswered(questionIdx)) {
         prefix = isCursor ? `  → [${String(num)}] ` : `    [${String(num)}] `;
-        tone = isCursor ? (s) => currentTheme.boldFg('success', s) : success;
+        tone = isCursor ? (s) => currentTheme.boldFg("success", s) : success;
       } else if (isCursor) {
         prefix = `  → [${String(num)}] `;
         tone = accent;
@@ -510,7 +570,7 @@ export class QuestionDialogComponent extends Container implements Focusable {
         prefix = `    [${String(num)}] `;
         tone = dim;
       }
-      const continuation = ' '.repeat(visibleWidth(prefix));
+      const continuation = " ".repeat(visibleWidth(prefix));
       appendWrapped(lines, prefix, continuation, label, renderWidth, tone);
 
       if (
@@ -518,7 +578,14 @@ export class QuestionDialogComponent extends Container implements Focusable {
         option.description.length > 0 &&
         !(this.isEditingOther() && isCursor && isOther)
       ) {
-        appendWrapped(lines, '        ', '        ', option.description, renderWidth, dim);
+        appendWrapped(
+          lines,
+          "        ",
+          "        ",
+          option.description,
+          renderWidth,
+          dim,
+        );
       }
     }
 
@@ -530,30 +597,35 @@ export class QuestionDialogComponent extends Container implements Focusable {
       );
     }
 
-    lines.push('');
+    lines.push("");
     lines.push(this.buildQuestionHint(dim, questionIdx));
-    lines.push(accent('─'.repeat(renderWidth)));
+    lines.push(accent("─".repeat(renderWidth)));
 
     return lines.map((line) => truncateToWidth(line, width));
   }
 
   private renderSubmitTab(width: number): string[] {
-    const accent = (text: string) => currentTheme.fg('primary', text);
-    const dim = (text: string) => currentTheme.fg('textDim', text);
-    const text = (t: string) => currentTheme.fg('text', t);
-    const warning = (text: string) => currentTheme.fg('warning', text);
+    const accent = (text: string) => currentTheme.fg("primary", text);
+    const dim = (text: string) => currentTheme.fg("textDim", text);
+    const text = (t: string) => currentTheme.fg("text", t);
+    const warning = (text: string) => currentTheme.fg("warning", text);
 
     const renderWidth = Math.max(1, width);
-    const lines: string[] = [accent('─'.repeat(renderWidth)), currentTheme.boldFg('primary', ' question'), ''];
+    const lines: string[] = [
+      accent("─".repeat(renderWidth)),
+      currentTheme.boldFg("primary", " question"),
+      "",
+    ];
     this.pushTabs(lines);
-    lines.push('');
-    lines.push(currentTheme.boldFg('text', ` ${REVIEW_TITLE}`));
+    lines.push("");
+    lines.push(currentTheme.boldFg("text", ` ${REVIEW_TITLE}`));
     const reviewWarning =
-      this.reviewMessage ?? (this.hasUnansweredQuestions() ? UNANSWERED_WARNING : undefined);
+      this.reviewMessage ??
+      (this.hasUnansweredQuestions() ? UNANSWERED_WARNING : undefined);
     if (reviewWarning !== undefined) {
       lines.push(warning(`  ${reviewWarning}`));
     }
-    lines.push('');
+    lines.push("");
 
     for (let i = 0; i < this.request.data.questions.length; i++) {
       const question = this.request.data.questions[i];
@@ -561,27 +633,27 @@ export class QuestionDialogComponent extends Container implements Focusable {
       const answer = this.answers[i];
       appendWrapped(
         lines,
-        `  ${dim('Q')}  `,
-        '       ',
+        `  ${dim("Q")}  `,
+        "       ",
         question.question,
         renderWidth,
       );
       if (answer !== undefined && answer.length > 0) {
         appendWrapped(
           lines,
-          `  ${accent('→')}  `,
-          '       ',
+          `  ${accent("→")}  `,
+          "       ",
           text(answer),
           renderWidth,
         );
       } else {
-        lines.push(`  ${dim('→')}  ${dim(NOT_ANSWERED_LABEL)}`);
+        lines.push(`  ${dim("→")}  ${dim(NOT_ANSWERED_LABEL)}`);
       }
     }
 
-    lines.push('');
+    lines.push("");
     lines.push(text(` ${SUBMIT_PROMPT}`));
-    lines.push('');
+    lines.push("");
 
     for (let i = 0; i < SUBMIT_ACTIONS.length; i++) {
       const label = SUBMIT_ACTIONS[i];
@@ -594,17 +666,17 @@ export class QuestionDialogComponent extends Container implements Focusable {
       }
     }
 
-    lines.push('');
+    lines.push("");
     lines.push(this.buildSubmitHint(dim));
-    lines.push(accent('─'.repeat(renderWidth)));
+    lines.push(accent("─".repeat(renderWidth)));
 
     return lines.map((line) => truncateToWidth(line, width));
   }
 
   private pushTabs(lines: string[]): void {
-    const dim = (text: string) => currentTheme.fg('textDim', text);
+    const dim = (text: string) => currentTheme.fg("textDim", text);
     const active = (text: string) =>
-      currentTheme.bg('primary', currentTheme.boldFg('text', text));
+      currentTheme.bg("primary", currentTheme.boldFg("text", text));
 
     const tabs: string[] = [];
     for (let i = 0; i < this.request.data.questions.length; i++) {
@@ -615,47 +687,54 @@ export class QuestionDialogComponent extends Container implements Focusable {
           ? question.header
           : `Q${String(i + 1)}`;
       if (i === this.currentTab) tabs.push(active(` ${label} `));
-      else if (this.isAnswered(i)) tabs.push(currentTheme.fg('success', `(✓) ${label}`));
+      else if (this.isAnswered(i))
+        tabs.push(currentTheme.fg("success", `(✓) ${label}`));
       else tabs.push(dim(`(○) ${label}`));
     }
 
-    const submitLabel = 'Submit';
+    const submitLabel = "Submit";
     if (this.isSubmitTab()) tabs.push(active(` ${submitLabel} `));
     else tabs.push(dim(` ${submitLabel} `));
 
-    lines.push(` ${tabs.join('  ')}`);
+    lines.push(` ${tabs.join("  ")}`);
   }
 
-  private buildQuestionHint(dim: (s: string) => string, questionIdx: number): string {
+  private buildQuestionHint(
+    dim: (s: string) => string,
+    questionIdx: number,
+  ): string {
     if (this.isEditingOther()) {
       const parts: string[] = [
-        'type answer',
-        '↵ save',
-        ...(this.totalTabs() > 1 ? ['tab switch'] : []),
-        'esc cancel',
+        "type answer",
+        "↵ save",
+        ...(this.totalTabs() > 1 ? ["tab switch"] : []),
+        "esc cancel",
       ];
-      return dim(`  ${parts.join('  ')}`);
+      return dim(`  ${parts.join("  ")}`);
     }
 
-    const optionCount = Math.min(this.displayOptions(questionIdx).length, NUMBER_KEYS.length);
-    const numberHint = optionCount <= 1 ? '1' : `1-${String(optionCount)}`;
+    const optionCount = Math.min(
+      this.displayOptions(questionIdx).length,
+      NUMBER_KEYS.length,
+    );
+    const numberHint = optionCount <= 1 ? "1" : `1-${String(optionCount)}`;
     const question = this.request.data.questions[questionIdx];
-    if (question === undefined) return dim('  esc cancel');
+    if (question === undefined) return dim("  esc cancel");
 
     const parts: string[] = [
-      '↑↓ select',
-      `${numberHint} / ↵ ${question.multi_select ? 'toggle' : 'choose'}`,
+      "↑↓ select",
+      `${numberHint} / ↵ ${question.multi_select ? "toggle" : "choose"}`,
     ];
-    if (this.totalTabs() > 1) parts.push('←/→/tab switch');
-    parts.push('esc cancel');
-    return dim(`  ${parts.join('  ')}`);
+    if (this.totalTabs() > 1) parts.push("←/→/tab switch");
+    parts.push("esc cancel");
+    return dim(`  ${parts.join("  ")}`);
   }
 
   private buildSubmitHint(dim: (s: string) => string): string {
-    const parts: string[] = ['↑↓ select', '1/2 choose', '↵ confirm'];
-    if (this.totalTabs() > 1) parts.push('←/→/tab switch');
-    parts.push('esc cancel');
-    return dim(`  ${parts.join('  ')}`);
+    const parts: string[] = ["↑↓ select", "1/2 choose", "↵ confirm"];
+    if (this.totalTabs() > 1) parts.push("←/→/tab switch");
+    parts.push("esc cancel");
+    return dim(`  ${parts.join("  ")}`);
   }
 
   private computeVisibleStart(cursor: number, total: number): number {
@@ -701,12 +780,16 @@ export class QuestionDialogComponent extends Container implements Focusable {
       ...question.options.map((option) => ({
         label: option.label,
         description: option.description,
-        kind: 'preset' as const,
+        kind: "preset" as const,
       })),
       {
-        label: question.other_label?.length ? question.other_label : DEFAULT_OTHER_LABEL,
-        description: question.other_description?.length ? question.other_description : undefined,
-        kind: 'other' as const,
+        label: question.other_label?.length
+          ? question.other_label
+          : DEFAULT_OTHER_LABEL,
+        description: question.other_description?.length
+          ? question.other_description
+          : undefined,
+        kind: "other" as const,
       },
     ];
   }
@@ -719,14 +802,19 @@ export class QuestionDialogComponent extends Container implements Focusable {
     return optionIdx === this.otherOptionIndex(questionIdx);
   }
 
-  private renderOptionLabel(questionIdx: number, option: DisplayOption, isCursor: boolean): string {
-    if (option.kind !== 'other') return option.label;
+  private renderOptionLabel(
+    questionIdx: number,
+    option: DisplayOption,
+    isCursor: boolean,
+  ): string {
+    if (option.kind !== "other") return option.label;
 
     const value = this.otherDraftValue(questionIdx);
     if (this.isEditingOther() && isCursor) {
-      return `${option.label}: ${value ?? ''}█`;
+      return `${option.label}: ${value ?? ""}█`;
     }
-    if (value !== undefined && value.length > 0) return `${option.label}: ${value}`;
+    if (value !== undefined && value.length > 0)
+      return `${option.label}: ${value}`;
     return option.label;
   }
 
@@ -742,27 +830,33 @@ export class QuestionDialogComponent extends Container implements Focusable {
 
     let prefix: string;
     if (question.multi_select) {
-      const checked = isSelected ? '✓' : ' ';
+      const checked = isSelected ? "✓" : " ";
       const body = `  [${checked}] ${option.label}: `;
       prefix = isSelected
-        ? currentTheme.boldFg('success', body)
-        : currentTheme.fg('primary', body);
+        ? currentTheme.boldFg("success", body)
+        : currentTheme.fg("primary", body);
     } else {
       const body = `  → [${String(num)}] ${option.label}: `;
       prefix =
         isSelected && this.isAnswered(questionIdx)
-          ? currentTheme.boldFg('success', body)
-          : currentTheme.fg('primary', body);
+          ? currentTheme.boldFg("success", body)
+          : currentTheme.fg("primary", body);
     }
 
     const inputWidth = Math.max(4, width - visibleWidth(prefix) + 2);
-    const inputLine = this.otherInput.render(inputWidth)[0] ?? '> ';
-    const inlineInput = inputLine.startsWith('> ') ? inputLine.slice(2) : inputLine;
+    const inputLine = this.otherInput.render(inputWidth)[0] ?? "> ";
+    const inlineInput = inputLine.startsWith("> ")
+      ? inputLine.slice(2)
+      : inputLine;
     return prefix + inlineInput;
   }
 
   private otherDraftValue(questionIdx: number): string {
-    return (this.otherDrafts[questionIdx] ?? this.committedOtherValues[questionIdx]) ?? '';
+    return (
+      this.otherDrafts[questionIdx] ??
+      this.committedOtherValues[questionIdx] ??
+      ""
+    );
   }
 
   private syncOtherDraft(questionIdx: number): void {

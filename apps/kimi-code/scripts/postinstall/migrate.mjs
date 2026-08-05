@@ -37,13 +37,13 @@
  * detect dangling symlinks at the target so we don't clobber them.
  */
 
-import { constants as fsConstants, promises as fs } from 'node:fs';
-import { delimiter, dirname, extname, join, sep } from 'node:path';
+import { constants as fsConstants, promises as fs } from "node:fs";
+import { delimiter, dirname, extname, join, sep } from "node:path";
 
-const LEGACY_BIN = 'kimi';
-const LEGACY_RENAME = 'kimi-legacy';
-const PYTHON_MARKER = 'kimi_cli';
-const IS_WINDOWS = process.platform === 'win32';
+const LEGACY_BIN = "kimi";
+const LEGACY_RENAME = "kimi-legacy";
+const PYTHON_MARKER = "kimi_cli";
+const IS_WINDOWS = process.platform === "win32";
 
 // Read window for the marker sniff.
 //   POSIX: setuptools entry-point scripts are a few hundred bytes —
@@ -76,9 +76,9 @@ function pathEntries(pathString) {
  */
 function executableCandidates(basename) {
   if (!IS_WINDOWS) return [basename];
-  const pathext = (process.env['PATHEXT'] ?? '.EXE;.CMD;.BAT;.COM')
+  const pathext = (process.env["PATHEXT"] ?? ".EXE;.CMD;.BAT;.COM")
     .toLowerCase()
-    .split(';')
+    .split(";")
     .map((e) => e.trim())
     .filter(Boolean);
   return [basename, ...pathext.map((ext) => basename + ext)];
@@ -101,16 +101,18 @@ async function isExecutableFile(filePath) {
 async function readShimHead(filePath) {
   let handle;
   try {
-    handle = await fs.open(filePath, 'r');
+    handle = await fs.open(filePath, "r");
     const stat = await handle.stat();
-    const limit = IS_WINDOWS ? SHIM_SNIFF_BYTES_WINDOWS_MAX : SHIM_SNIFF_BYTES_POSIX;
+    const limit = IS_WINDOWS
+      ? SHIM_SNIFF_BYTES_WINDOWS_MAX
+      : SHIM_SNIFF_BYTES_POSIX;
     const target = Math.min(stat.size, limit);
     const buffer = Buffer.alloc(target);
     const { bytesRead } = await handle.read(buffer, 0, target, 0);
     // `latin1` is a 1-to-1 byte→char mapping; we're searching for an
     // ASCII substring, so we don't want UTF-8 decoding to mangle the
     // bytes around the marker.
-    return buffer.subarray(0, bytesRead).toString('latin1');
+    return buffer.subarray(0, bytesRead).toString("latin1");
   } catch {
     return null;
   } finally {
@@ -212,7 +214,7 @@ async function pathExists(p) {
  * shells won't run.
  */
 function renameTargetFor(shimPath) {
-  const ext = extname(shimPath);  // "" on POSIX, ".exe" on Windows
+  const ext = extname(shimPath); // "" on POSIX, ".exe" on Windows
   return join(dirname(shimPath), LEGACY_RENAME + ext);
 }
 
@@ -237,13 +239,13 @@ async function isSystemOwnedDir(shimPath) {
   if (IS_WINDOWS) {
     const dir = dirname(shimPath).toLowerCase();
     const systemRoots = [
-      'c:\\program files',
-      'c:\\program files (x86)',
-      'c:\\programdata',
-      'c:\\windows',
+      "c:\\program files",
+      "c:\\program files (x86)",
+      "c:\\programdata",
+      "c:\\windows",
     ];
     return systemRoots.some(
-      (root) => dir === root || dir.startsWith(root + '\\'),
+      (root) => dir === root || dir.startsWith(root + "\\"),
     );
   }
   try {
@@ -298,7 +300,7 @@ export async function classifyShim(shimPath) {
 
   if (!(await canWriteDir(dir))) {
     return {
-      kind: 'blocked',
+      kind: "blocked",
       shimPath,
       target,
       isSystemPath: await isSystemOwnedDir(shimPath),
@@ -307,12 +309,12 @@ export async function classifyShim(shimPath) {
 
   if (await pathExists(target)) {
     if (await isLegacyShim(target)) {
-      return { kind: 'consolidate', shimPath, target };
+      return { kind: "consolidate", shimPath, target };
     }
-    return { kind: 'delete-only', shimPath, target };
+    return { kind: "delete-only", shimPath, target };
   }
 
-  return { kind: 'renameable', shimPath, target };
+  return { kind: "renameable", shimPath, target };
 }
 
 /**
@@ -325,7 +327,7 @@ export async function renameInPlace(shimPath, target) {
     await fs.rename(shimPath, target);
     return { success: true };
   } catch (err) {
-    const code = err && typeof err === 'object' ? err.code : undefined;
+    const code = err && typeof err === "object" ? err.code : undefined;
     const message = err instanceof Error ? err.message : String(err);
     return { success: false, code, message };
   }
@@ -344,7 +346,7 @@ export async function deleteShim(shimPath) {
     await fs.unlink(shimPath);
     return { success: true };
   } catch (err) {
-    const code = err && typeof err === 'object' ? err.code : undefined;
+    const code = err && typeof err === "object" ? err.code : undefined;
     const message = err instanceof Error ? err.message : String(err);
     return { success: false, code, message };
   }

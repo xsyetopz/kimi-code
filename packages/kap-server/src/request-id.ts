@@ -8,9 +8,9 @@
  *     attacker-controlled strings verbatim.
  */
 
-import { parseOrGenerateRequestId } from './protocol/request-id';
+import { parseOrGenerateRequestId } from "./protocol/request-id";
 
-const REQUEST_ID_HEADER = 'x-request-id';
+const REQUEST_ID_HEADER = "x-request-id";
 
 export function resolveRequestId(
   headers: Record<string, string | string[] | undefined>,

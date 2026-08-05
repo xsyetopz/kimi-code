@@ -8,8 +8,11 @@
  * implementation owns persistence through the storage backend.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
-import type { ExecutableToolResult } from '#/tool/toolContract';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
+import type { ExecutableToolResult } from "#/tool/toolContract";
 
 export interface ToolResultTruncationInput<
   T extends ExecutableToolResult = ExecutableToolResult,
@@ -27,6 +30,7 @@ export interface IAgentToolResultTruncationService {
   ): Promise<T>;
 }
 
-export const IAgentToolResultTruncationService: ServiceIdentifier<
-  IAgentToolResultTruncationService
-> = createDecorator<IAgentToolResultTruncationService>('agentToolResultTruncationService');
+export const IAgentToolResultTruncationService: ServiceIdentifier<IAgentToolResultTruncationService> =
+  createDecorator<IAgentToolResultTruncationService>(
+    "agentToolResultTruncationService",
+  );

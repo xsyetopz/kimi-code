@@ -10,9 +10,13 @@ export interface PermissionApprovalResultRecord {
   readonly result: ApprovalResponse;
 }
 
-export type PermissionRuleDecision = 'allow' | 'deny' | 'ask';
+export type PermissionRuleDecision = "allow" | "deny" | "ask";
 
-export type PermissionRuleScope = 'turn-override' | 'session-runtime' | 'project' | 'user';
+export type PermissionRuleScope =
+  | "turn-override"
+  | "session-runtime"
+  | "project"
+  | "user";
 
 export interface PermissionRule {
   readonly decision: PermissionRuleDecision;
@@ -31,4 +35,4 @@ export interface IAgentPermissionRulesService {
 }
 
 export const IAgentPermissionRulesService =
-  createDecorator<IAgentPermissionRulesService>('agentPermissionRulesService');
+  createDecorator<IAgentPermissionRulesService>("agentPermissionRulesService");

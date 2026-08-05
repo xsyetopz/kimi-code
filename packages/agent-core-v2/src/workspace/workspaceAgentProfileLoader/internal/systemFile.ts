@@ -15,23 +15,23 @@
  * state.
  */
 
-import { join } from 'pathe';
+import { join } from "pathe";
 
 import {
   DEFAULT_AGENT_PROFILE_NAME,
   normalizeAgentProfile,
   type AgentProfile,
-} from '#/app/agentProfileCatalog/agentProfileCatalog';
+} from "#/app/agentProfileCatalog/agentProfileCatalog";
 import {
   renderPromptTemplateResult,
   skillActiveFor,
-} from '#/app/agentProfileCatalog/profile-shared';
-import type { IHostFileSystem } from '#/os/interface/hostFileSystem';
-import { HostFsError, OsFsErrors } from '#/os/interface/hostFsErrors';
+} from "#/app/agentProfileCatalog/profile-shared";
+import type { IHostFileSystem } from "#/os/interface/hostFileSystem";
+import { HostFsError, OsFsErrors } from "#/os/interface/hostFsErrors";
 
-import { isFilePath } from './paths';
+import { isFilePath } from "./paths";
 
-export const SYSTEM_MD_FILENAME = 'SYSTEM.md';
+export const SYSTEM_MD_FILENAME = "SYSTEM.md";
 
 export async function loadSystemMdProfile(
   fs: IHostFileSystem,
@@ -56,8 +56,9 @@ export async function loadSystemMdProfile(
   }
   if (text.trim().length === 0) return undefined;
   const skillActive =
-    (builtinDefault.tools === undefined || skillActiveFor(builtinDefault.tools)) &&
-    !(builtinDefault.disallowedTools ?? []).includes('Skill');
+    (builtinDefault.tools === undefined ||
+      skillActiveFor(builtinDefault.tools)) &&
+    !(builtinDefault.disallowedTools ?? []).includes("Skill");
   return normalizeAgentProfile({
     name: DEFAULT_AGENT_PROFILE_NAME,
     description: builtinDefault.description,

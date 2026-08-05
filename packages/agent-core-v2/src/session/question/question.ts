@@ -15,7 +15,10 @@
  * 'main' (a subagent's question must not land there).
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
 
 export interface QuestionOption {
   readonly label: string;
@@ -32,7 +35,7 @@ export interface QuestionItem {
   readonly otherDescription?: string;
 }
 
-export type QuestionAnswerMethod = 'enter' | 'space' | 'number_key';
+export type QuestionAnswerMethod = "enter" | "space" | "number_key";
 
 export type QuestionAnswers = Record<string, string | true>;
 
@@ -64,4 +67,4 @@ export interface ISessionQuestionService {
 }
 
 export const ISessionQuestionService: ServiceIdentifier<ISessionQuestionService> =
-  createDecorator<ISessionQuestionService>('sessionQuestionService');
+  createDecorator<ISessionQuestionService>("sessionQuestionService");

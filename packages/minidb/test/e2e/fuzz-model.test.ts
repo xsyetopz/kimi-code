@@ -4,20 +4,32 @@
 // reference model, and assert they always agree. Seeded so any failure is
 // reproducible by re-running with the same seed.
 
-import { expect, test } from 'vitest';
-import assert from 'node:assert/strict';
-import { MiniDb } from '../../src/index.js';
-import { Model } from './helpers/model.js';
-import { mulberry32, randInt, pick } from './helpers/prng.js';
-import { tmpDir, rmrf } from './helpers/tmp.js';
+import { expect, test } from "vitest";
+import assert from "node:assert/strict";
+import { MiniDb } from "../../src/index.js";
+import { Model } from "./helpers/model.js";
+import { mulberry32, randInt, pick } from "./helpers/prng.js";
+import { tmpDir, rmrf } from "./helpers/tmp.js";
 
-const KEYS = Array.from({ length: 24 }, (_, i) => 'k' + i);
-const VALUES = [{ a: 1 }, { b: [1, 2, 3] }, { s: 'hello' }, { n: 42 }, null, { nested: { x: 1, y: [2] } }];
+const KEYS = Array.from({ length: 24 }, (_, i) => "k" + i);
+const VALUES = [
+  { a: 1 },
+  { b: [1, 2, 3] },
+  { s: "hello" },
+  { n: 42 },
+  null,
+  { nested: { x: 1, y: [2] } },
+];
 
 async function runSeed(seed, steps) {
   const rng = mulberry32(seed >>> 0);
   const dir = await tmpDir();
-  let db = await MiniDb.open({ dir, valueCodec: 'json', fsyncPolicy: 'no', autoCompact: false });
+  let db = await MiniDb.open({
+    dir,
+    valueCodec: "json",
+    fsyncPolicy: "no",
+    autoCompact: false,
+  });
   const model = new Model();
   const ctx = () => `seed=${seed} step`;
   try {
@@ -35,7 +47,11 @@ async function runSeed(seed, steps) {
         await db.del(key);
         model.del(key);
       } else if (op === 2) {
-        assert.deepEqual(db.get(key), model.get(key), `${ctx()} ${i}: get(${key})`);
+        assert.deepEqual(
+          db.get(key),
+          model.get(key),
+          `${ctx()} ${i}: get(${key})`,
+        );
       } else if (op === 3) {
         const ttl = 60000;
         const a = await db.expire(key, ttl);
@@ -44,21 +60,33 @@ async function runSeed(seed, steps) {
       } else {
         // reopen, then compare everything
         await db.close();
-        db = await MiniDb.open({ dir, valueCodec: 'json', fsyncPolicy: 'no', autoCompact: false });
+        db = await MiniDb.open({
+          dir,
+          valueCodec: "json",
+          fsyncPolicy: "no",
+          autoCompact: false,
+        });
         for (const k of KEYS) {
-          assert.deepEqual(db.get(k), model.get(k), `${ctx()} ${i}: after reopen get(${k})`);
+          assert.deepEqual(
+            db.get(k),
+            model.get(k),
+            `${ctx()} ${i}: after reopen get(${k})`,
+          );
         }
       }
     }
     // final full compare
-    for (const k of KEYS) assert.deepEqual(db.get(k), model.get(k), `final get(${k}) seed=${seed}`);
+    for (const k of KEYS)
+      assert.deepEqual(db.get(k), model.get(k), `final get(${k}) seed=${seed}`);
   } finally {
     await db.close().catch(() => {});
     await rmrf(dir);
   }
 }
 
-test('fuzz-model: random op sequences match a reference model (many seeds)', { timeout: 60_000 }, async () => {
+test("fuzz-model: random op sequences match a reference model (many seeds)", {
+  timeout: 60_000,
+}, async () => {
   // Mix of small and large seeds. 6 seeds × 250 steps ≈ 1.5k ops total, still
   // hitting every op branch (including reopen + full compare) many times per seed.
   const seeds = [1, 2, 3, 99999, 0xdeadbeef, 20240625];

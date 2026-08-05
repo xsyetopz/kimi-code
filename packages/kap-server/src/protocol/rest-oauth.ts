@@ -7,12 +7,14 @@
  * owned by the engine (`app/auth/oauthProtocol`).
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
 export const oauthLoginStartRequestSchema = z.object({
   provider: z.string().min(1).optional(),
 });
-export type OAuthLoginStartRequest = z.infer<typeof oauthLoginStartRequestSchema>;
+export type OAuthLoginStartRequest = z.infer<
+  typeof oauthLoginStartRequestSchema
+>;
 
 export const oauthLoginQuerySchema = z.object({
   provider: z.string().min(1).optional(),

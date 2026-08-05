@@ -2,11 +2,11 @@
  * GET /v1/meta
  *   Reply: MetaResponse { server_version, capabilities, server_id, started_at }
  */
-import { z } from 'zod';
+import { z } from "zod";
 
-import { isoDateTimeSchema } from '@moonshot-ai/agent-core-v2/_base/utils/isoDateTime';
+import { isoDateTimeSchema } from "@moonshot-ai/agent-core-v2/_base/utils/isoDateTime";
 
-import { fsOpenInAppIdSchema } from './rest-fs';
+import { fsOpenInAppIdSchema } from "./rest-fs";
 
 export const metaCapabilitiesSchema = z.object({
   websocket: z.literal(true),
@@ -49,7 +49,7 @@ export const metaResponseSchema = z.object({
    * the field (treat absence as v1). Lets clients identify the backend without
    * probing routes.
    */
-  backend: z.enum(['v1', 'v2']).optional(),
+  backend: z.enum(["v1", "v2"]).optional(),
 });
 
 export type MetaResponse = z.infer<typeof metaResponseSchema>;

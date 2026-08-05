@@ -5,11 +5,11 @@
  * may be supplied by the client and is added to the archive by sessionExport.
  */
 
-import { createReadStream, type ReadStream } from 'node:fs';
-import { mkdtemp, rm, stat } from 'node:fs/promises';
-import type { ServerResponse } from 'node:http';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { createReadStream, type ReadStream } from "node:fs";
+import { mkdtemp, rm, stat } from "node:fs/promises";
+import type { ServerResponse } from "node:http";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 import {
   ErrorCodes,
@@ -17,17 +17,17 @@ import {
   ISessionExportService,
   isError2,
   type Scope,
-} from '@moonshot-ai/agent-core-v2';
-import type { KimiHostIdentity } from '@moonshot-ai/kimi-code-oauth';
+} from "@moonshot-ai/agent-core-v2";
+import type { KimiHostIdentity } from "@moonshot-ai/kimi-code-oauth";
 
-import { requestLog } from '../lib/requestLog';
-import { defineRoute } from '../middleware/defineRoute';
-import { ErrorCode } from '../protocol/error-codes';
-import { errEnvelope } from '../protocol/envelope';
+import { requestLog } from "../lib/requestLog";
+import { defineRoute } from "../middleware/defineRoute";
+import { ErrorCode } from "../protocol/error-codes";
+import { errEnvelope } from "../protocol/envelope";
 import {
   exportSessionParamsSchema,
   exportSessionRequestSchema,
-} from '../protocol/rest-session';
+} from "../protocol/rest-session";
 
 const MAX_WEB_SESSION_EXPORT_BYTES = 64 * 1024 * 1024;
 
@@ -54,12 +54,12 @@ export function registerSessionExportRoute(
   const log = core.accessor.get(ILogService);
   const route = defineRoute(
     {
-      method: 'POST',
-      path: '/sessions/{session_id}/export',
+      method: "POST",
+      path: "/sessions/{session_id}/export",
       params: exportSessionParamsSchema,
       body: exportSessionRequestSchema,
       rawResponse: {
-        200: { type: 'string', format: 'binary' },
+        200: { type: "string", format: "binary" },
       },
       errors: {
         [ErrorCode.VALIDATION_FAILED]: {},
@@ -67,8 +67,8 @@ export function registerSessionExportRoute(
         [ErrorCode.FILE_TOO_LARGE]: {},
         [ErrorCode.INTERNAL_ERROR]: {},
       },
-      description: 'Export a session and diagnostic logs as a zip archive',
-      tags: ['sessions'],
+      description: "Export a session and diagnostic logs as a zip archive",
+      tags: ["sessions"],
     },
     async (req, reply) => {
       const response = reply as unknown as SessionExportReply;
@@ -85,7 +85,7 @@ export function registerSessionExportRoute(
         exportAbort.abort();
         responseStream?.destroy();
       };
-      response.raw.once('close', onResponseClose);
+      response.raw.once("close", onResponseClose);
 
       const cleanup = async (): Promise<void> => {
         if (tempDir === undefined) return;
@@ -95,7 +95,7 @@ export function registerSessionExportRoute(
           maxRetries: 3,
           retryDelay: 50,
         }).catch((error: unknown) => {
-          log.warn('session export temporary directory cleanup failed', {
+          log.warn("session export temporary directory cleanup failed", {
             error,
             requestId: req.id,
             tempDir,
@@ -108,13 +108,15 @@ export function registerSessionExportRoute(
         if (aborted) return;
 
         const safeSessionId = sanitizeSessionId(req.params.session_id);
-        tempDir = await mkdtemp(join(tmpdir(), `kimi-session-export-${safeSessionId}-`));
+        tempDir = await mkdtemp(
+          join(tmpdir(), `kimi-session-export-${safeSessionId}-`),
+        );
         if (aborted) {
           await cleanup();
           return;
         }
 
-        const outputPath = join(tempDir, 'session.zip');
+        const outputPath = join(tempDir, "session.zip");
         await core.accessor.get(ISessionExportService).export(
           {
             sessionId: req.params.session_id,
@@ -127,7 +129,9 @@ export function registerSessionExportRoute(
             includeDesktopLog: req.body.desktop === true,
             version: options.hostIdentity.version,
             desktopVersion:
-              req.body.desktop === true ? options.hostIdentity.version : undefined,
+              req.body.desktop === true
+                ? options.hostIdentity.version
+                : undefined,
           },
           {
             webLog: req.body.web_log,
@@ -147,19 +151,19 @@ export function registerSessionExportRoute(
         }
 
         responseStream = createReadStream(outputPath);
-        responseStream.once('close', () => {
-          response.raw.off('close', onResponseClose);
+        responseStream.once("close", () => {
+          response.raw.off("close", onResponseClose);
           void cleanup();
         });
 
         const sent = response
-          .type('application/zip')
+          .type("application/zip")
           .header(
-            'content-disposition',
+            "content-disposition",
             `attachment; filename="kimi-session-${safeSessionId}.zip"`,
           )
-          .header('content-length', archive.size)
-          .header('cache-control', 'no-store')
+          .header("content-length", archive.size)
+          .header("cache-control", "no-store")
           .send(responseStream);
         streaming = true;
         return sent as void;
@@ -167,7 +171,7 @@ export function registerSessionExportRoute(
         const stream = responseStream;
         if (stream !== undefined && !stream.closed) {
           const closed = new Promise<void>((resolve) => {
-            stream.once('close', resolve);
+            stream.once("close", resolve);
           });
           stream.destroy();
           await closed;
@@ -177,7 +181,7 @@ export function registerSessionExportRoute(
         await cleanup();
         if (!aborted) sendMappedError(response, req, error);
       } finally {
-        if (!streaming) response.raw.off('close', onResponseClose);
+        if (!streaming) response.raw.off("close", onResponseClose);
       }
     },
   );
@@ -185,37 +189,43 @@ export function registerSessionExportRoute(
   app.post(
     route.path,
     route.options,
-    route.handler as unknown as Parameters<SessionExportRouteHost['post']>[2],
+    route.handler as unknown as Parameters<SessionExportRouteHost["post"]>[2],
   );
 }
 
 function sanitizeSessionId(sessionId: string): string {
-  return sessionId.replaceAll(/[^A-Za-z0-9_-]/g, '_').slice(0, 48) || 'session';
+  return sessionId.replaceAll(/[^A-Za-z0-9_-]/g, "_").slice(0, 48) || "session";
 }
 
-function sendMappedError(reply: SessionExportReply, req: { id: string }, error: unknown): void {
+function sendMappedError(
+  reply: SessionExportReply,
+  req: { id: string },
+  error: unknown,
+): void {
   const requestId = req.id;
   if (isError2(error)) {
     if (error.code === ErrorCodes.SESSION_NOT_FOUND) {
-      reply.send(errEnvelope(ErrorCode.SESSION_NOT_FOUND, error.message, requestId));
+      reply.send(
+        errEnvelope(ErrorCode.SESSION_NOT_FOUND, error.message, requestId),
+      );
       return;
     }
     if (error.code === ErrorCodes.SESSION_EXPORT_TOO_LARGE) {
       reply.send(
         errEnvelope(
           ErrorCode.FILE_TOO_LARGE,
-          'session export exceeds the 64 MiB web limit',
+          "session export exceeds the 64 MiB web limit",
           requestId,
         ),
       );
       return;
     }
   }
-  requestLog(req)?.error({ err: error }, 'session export failed');
+  requestLog(req)?.error({ err: error }, "session export failed");
   reply.send(
     errEnvelope(
       ErrorCode.INTERNAL_ERROR,
-      error instanceof Error ? error.message : 'internal error',
+      error instanceof Error ? error.message : "internal error",
       requestId,
     ),
   );

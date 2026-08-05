@@ -14,7 +14,7 @@
 
 /** Reserved daemon code for rate-limited auth (not in the protocol enum). */
 export const AUTH_RATE_LIMIT_CODE = 42901;
-export const AUTH_RATE_LIMIT_MSG = 'Too many failed auth attempts';
+export const AUTH_RATE_LIMIT_MSG = "Too many failed auth attempts";
 
 export interface AuthFailureLimiterOptions {
   /** Failures within {@link windowMs} that trigger a ban. Default `10`. */
@@ -75,7 +75,7 @@ export function createAuthFailureLimiter(
       }
     }
   }, windowMs);
-  if (typeof sweep.unref === 'function') {
+  if (typeof sweep.unref === "function") {
     sweep.unref();
   }
 
@@ -94,7 +94,7 @@ export function createAuthFailureLimiter(
         if (!wasBanned) {
           opts?.logger?.warn(
             { ip, bannedUntil: entry.bannedUntil },
-            'too many failed auth attempts; source temporarily banned',
+            "too many failed auth attempts; source temporarily banned",
           );
         }
       }

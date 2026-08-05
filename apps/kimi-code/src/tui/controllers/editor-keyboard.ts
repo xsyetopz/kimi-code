@@ -1,9 +1,19 @@
-import type { KimiHarness, Session } from '@moonshot-ai/kimi-code-sdk';
-import { compressImageForModel, persistOriginalImage, sessionMediaOriginalsDir } from '@moonshot-ai/kimi-code-sdk';
+import type { KimiHarness, Session } from "@moonshot-ai/kimi-code-sdk";
+import {
+  compressImageForModel,
+  persistOriginalImage,
+  sessionMediaOriginalsDir,
+} from "@moonshot-ai/kimi-code-sdk";
 
-import { ClipboardMediaError, readClipboardMedia } from '#/utils/clipboard/clipboard-image';
-import { parseImageMeta } from '#/utils/image/image-mime';
-import { editInExternalEditor, resolveEditorCommand } from '#/utils/process/external-editor';
+import {
+  ClipboardMediaError,
+  readClipboardMedia,
+} from "#/utils/clipboard/clipboard-image";
+import { parseImageMeta } from "#/utils/image/image-mime";
+import {
+  editInExternalEditor,
+  resolveEditorCommand,
+} from "#/utils/process/external-editor";
 
 import {
   CTRL_C_HINT,
@@ -12,13 +22,13 @@ import {
   EXIT_CONFIRM_WINDOW_MS,
   LLM_NOT_SET_MESSAGE,
   NO_ACTIVE_SESSION_MESSAGE,
-} from '../constant/kimi-tui';
-import { formatErrorMessage } from '../utils/event-payload';
-import type { ImageAttachmentStore } from '../utils/image-attachment-store';
-import { extractMediaAttachments } from '../utils/image-placeholder';
-import type { PendingExit, QueuedMessage, SteerInputItem } from '../types';
-import type { TUIState } from '../tui-state';
-import type { BtwPanelController } from './btw-panel';
+} from "../constant/kimi-tui";
+import { formatErrorMessage } from "../utils/event-payload";
+import type { ImageAttachmentStore } from "../utils/image-attachment-store";
+import { extractMediaAttachments } from "../utils/image-placeholder";
+import type { PendingExit, QueuedMessage, SteerInputItem } from "../types";
+import type { TUIState } from "../tui-state";
+import type { BtwPanelController } from "./btw-panel";
 
 export interface EditorKeyboardHost {
   state: TUIState;
@@ -54,14 +64,16 @@ export interface EditorKeyboardHost {
   stop(exitCode?: number): Promise<void>;
   ensureSession(): Promise<Session | undefined>;
   handlePlanToggle(next: boolean): void;
-  handleInputModeChange(mode: 'prompt' | 'bash'): void;
+  handleInputModeChange(mode: "prompt" | "bash"): void;
   clearQueuedMessages(): void;
   setExternalEditorRunning(running: boolean): void;
 }
 
 export class EditorKeyboardController {
   private pendingExit: PendingExit | null = null;
-  private pendingUndoEsc: { readonly timer: ReturnType<typeof setTimeout> } | null = null;
+  private pendingUndoEsc: {
+    readonly timer: ReturnType<typeof setTimeout>;
+  } | null = null;
 
   constructor(
     private readonly host: EditorKeyboardHost,
@@ -85,10 +97,10 @@ export class EditorKeyboardController {
     // recalls everything. The filter is locked to the mode captured when the
     // user first enters history browsing (see onHistoryDraftSave), so landing on
     // a shell entry mid-browse doesn't switch the filter to shell-only.
-    let browseMode: 'prompt' | 'bash' | null = null;
+    let browseMode: "prompt" | "bash" | null = null;
     editor.setHistoryFilter((entry: string) => {
       const mode = browseMode ?? editor.inputMode;
-      return mode === 'bash' ? entry.startsWith('!') : true;
+      return mode === "bash" ? entry.startsWith("!") : true;
     });
 
     // Recalling a `!`-prefixed entry strips the marker and returns to bash
@@ -96,11 +108,11 @@ export class EditorKeyboardController {
     // guarantees bash mode only ever lands on `!` entries, so this never
     // misfires on commands typed in bash mode.
     editor.onRecall = (entry: string) => {
-      if (entry.startsWith('!')) {
-        editor.setInputMode('bash');
+      if (entry.startsWith("!")) {
+        editor.setInputMode("bash");
         return entry.slice(1);
       }
-      editor.setInputMode('prompt');
+      editor.setInputMode("prompt");
       return undefined;
     };
 
@@ -114,7 +126,7 @@ export class EditorKeyboardController {
       return editor.inputMode;
     };
     editor.onHistoryDraftRestore = (state: unknown) => {
-      editor.setInputMode(state as 'prompt' | 'bash');
+      editor.setInputMode(state as "prompt" | "bash");
       browseMode = null;
     };
 
@@ -151,7 +163,7 @@ export class EditorKeyboardController {
         return;
       }
 
-      if (host.state.appState.streamingPhase !== 'idle') {
+      if (host.state.appState.streamingPhase !== "idle") {
         this.clearPendingExit();
 
         if (this.clearEditorTextIfPresent()) return;
@@ -160,30 +172,30 @@ export class EditorKeyboardController {
         return;
       }
 
-      if (this.pendingExit?.kind === 'ctrl-c') {
+      if (this.pendingExit?.kind === "ctrl-c") {
         this.clearPendingExit();
         void host.stop();
         return;
       }
 
       if (editor.getText().length > 0) {
-        editor.setText('');
+        editor.setText("");
       }
-      this.armPendingExit('ctrl-c', CTRL_C_HINT);
+      this.armPendingExit("ctrl-c", CTRL_C_HINT);
     };
 
     editor.onCtrlD = () => {
-      if (this.pendingExit?.kind === 'ctrl-d') {
+      if (this.pendingExit?.kind === "ctrl-d") {
         this.clearPendingExit();
         void host.stop();
         return;
       }
-      this.armPendingExit('ctrl-d', CTRL_D_HINT);
+      this.armPendingExit("ctrl-d", CTRL_D_HINT);
     };
 
     editor.onEscape = () => {
       if (this.pendingExit) this.clearPendingExit();
-      if (host.state.activeDialog === 'session-picker') {
+      if (host.state.activeDialog === "session-picker") {
         host.hideSessionPicker();
         this.clearPendingUndoEsc();
         return;
@@ -199,7 +211,7 @@ export class EditorKeyboardController {
         this.clearPendingUndoEsc();
         return;
       }
-      if (host.state.appState.streamingPhase !== 'idle') {
+      if (host.state.appState.streamingPhase !== "idle") {
         this.cancelCurrentStream();
         this.clearPendingUndoEsc();
         return;
@@ -216,8 +228,10 @@ export class EditorKeyboardController {
     editor.onShiftTab = () => {
       const togglePlan = (): void => {
         const next = !host.state.appState.planMode;
-        host.track('shortcut_plan_toggle', { enabled: next });
-        host.track('shortcut_mode_switch', { to_mode: next ? 'plan' : 'agent' });
+        host.track("shortcut_plan_toggle", { enabled: next });
+        host.track("shortcut_mode_switch", {
+          to_mode: next ? "plan" : "agent",
+        });
         host.handlePlanToggle(next);
       };
       if (host.session === undefined) {
@@ -240,12 +254,12 @@ export class EditorKeyboardController {
     };
 
     editor.onOpenExternalEditor = () => {
-      host.track('shortcut_editor');
+      host.track("shortcut_editor");
       void this.openExternalEditor();
     };
 
     editor.onToggleToolExpand = () => {
-      host.track('shortcut_expand');
+      host.track("shortcut_expand");
       host.toggleToolOutputExpansion();
     };
 
@@ -254,25 +268,25 @@ export class EditorKeyboardController {
       // Disarm a pending double-press exit confirmation so expanding the
       // todo list in between two Ctrl-C presses does not accidentally exit.
       this.clearPendingExit();
-      host.track('shortcut_todo_expand');
+      host.track("shortcut_todo_expand");
       host.toggleTodoPanelExpansion();
       return true;
     };
 
     editor.onCtrlS = () => {
       if (
-        host.state.appState.streamingPhase === 'idle' ||
-        host.state.appState.streamingPhase === 'shell' ||
+        host.state.appState.streamingPhase === "idle" ||
+        host.state.appState.streamingPhase === "shell" ||
         host.state.appState.isCompacting
       )
         return;
       const text = editor.getText().trim();
-      const editorIsBash = editor.inputMode === 'bash';
+      const editorIsBash = editor.inputMode === "bash";
 
       // Bash commands (`! …`) are not steerable: keep them queued so they run
       // after the current task instead of being injected into the turn as text.
       const queued = host.state.queuedMessages;
-      const steerable = queued.filter((m) => m.mode !== 'bash');
+      const steerable = queued.filter((m) => m.mode !== "bash");
 
       const items: SteerInputItem[] = [];
       for (const m of steerable) {
@@ -280,17 +294,25 @@ export class EditorKeyboardController {
         if (trimmed.length > 0) {
           // Queued items carry the parts extracted when they were submitted
           // (and were already capability-validated then).
-          items.push({ text: trimmed, parts: m.parts, imageAttachmentIds: m.imageAttachmentIds });
+          items.push({
+            text: trimmed,
+            parts: m.parts,
+            imageAttachmentIds: m.imageAttachmentIds,
+          });
         }
       }
-      let editorExtraction: ReturnType<typeof extractMediaAttachments> | undefined;
+      let editorExtraction:
+        | ReturnType<typeof extractMediaAttachments>
+        | undefined;
       if (!editorIsBash && text.length > 0) {
         try {
           editorExtraction = extractMediaAttachments(text, this.imageStore);
         } catch (error) {
           // Cache copy failed (e.g. the pasted video's source vanished) —
           // leave the queue and the editor draft untouched.
-          host.showError(`Failed to prepare media attachment: ${formatErrorMessage(error)}`);
+          host.showError(
+            `Failed to prepare media attachment: ${formatErrorMessage(error)}`,
+          );
           return;
         }
         items.push({
@@ -313,10 +335,13 @@ export class EditorKeyboardController {
         ) {
           return;
         }
-        host.state.queuedMessages = queued.filter((m) => m.mode === 'bash');
-        if (!editorIsBash) editor.setText('');
+        host.state.queuedMessages = queued.filter((m) => m.mode === "bash");
+        if (!editorIsBash) editor.setText("");
         const session = host.session;
-        if (host.state.appState.model.trim().length === 0 || session === undefined) {
+        if (
+          host.state.appState.model.trim().length === 0 ||
+          session === undefined
+        ) {
           host.showError(LLM_NOT_SET_MESSAGE);
         } else {
           host.steerMessage(session, items);
@@ -329,31 +354,38 @@ export class EditorKeyboardController {
     editor.onCtrlB = (): boolean => {
       // Shell command execution is treated as a streaming phase ('shell'), so
       // this gate already covers it; only idle + not-compacting falls through.
-      if (host.state.appState.streamingPhase === 'idle' || host.state.appState.isCompacting) {
+      if (
+        host.state.appState.streamingPhase === "idle" ||
+        host.state.appState.isCompacting
+      ) {
         return false;
       }
-      host.track('shortcut_background_task');
+      host.track("shortcut_background_task");
       host.detachCurrentForegroundTask();
       return true;
     };
 
     editor.onUndo = () => {
-      host.track('undo');
+      host.track("undo");
     };
 
     editor.onTextPaste = () => {
-      host.track('shortcut_paste', { kind: 'text' });
+      host.track("shortcut_paste", { kind: "text" });
     };
 
     editor.onUpArrowEmpty = () => {
-      if (host.btwPanelController.scroll('up')) return true;
-      if (host.state.appState.streamingPhase === 'idle' && !host.state.appState.isCompacting) return false;
+      if (host.btwPanelController.scroll("up")) return true;
+      if (
+        host.state.appState.streamingPhase === "idle" &&
+        !host.state.appState.isCompacting
+      )
+        return false;
       const recalled = host.recallLastQueued();
       if (recalled !== undefined) {
         editor.setText(recalled.text);
         // Restore the queued item's mode so a recalled `!` command runs as a
         // shell command again instead of being submitted as a normal prompt.
-        const mode = recalled.mode ?? 'prompt';
+        const mode = recalled.mode ?? "prompt";
         if (editor.inputMode !== mode) {
           editor.inputMode = mode;
           editor.onInputModeChange?.(mode);
@@ -365,7 +397,7 @@ export class EditorKeyboardController {
       return false;
     };
 
-    editor.onDownArrowEmpty = () => host.btwPanelController.scroll('down');
+    editor.onDownArrowEmpty = () => host.btwPanelController.scroll("down");
 
     editor.onPasteImage = async () => this.handleClipboardImagePaste();
   }
@@ -398,7 +430,7 @@ export class EditorKeyboardController {
     this.pendingUndoEsc = null;
   }
 
-  private armPendingExit(kind: 'ctrl-c' | 'ctrl-d', hint: string): void {
+  private armPendingExit(kind: "ctrl-c" | "ctrl-d", hint: string): void {
     this.clearPendingExit();
     this.host.state.footer.setTransientHint(hint);
 
@@ -416,7 +448,7 @@ export class EditorKeyboardController {
   private clearEditorTextIfPresent(): boolean {
     const editor = this.host.state.editor;
     if (editor.getText().length === 0) return false;
-    editor.setText('');
+    editor.setText("");
     return true;
   }
 
@@ -449,11 +481,15 @@ export class EditorKeyboardController {
     }
     if (media === null) return false;
 
-    if (media.kind === 'video') {
-      const attachment = this.imageStore.addVideo(media.mimeType, media.sourcePath, media.filename);
+    if (media.kind === "video") {
+      const attachment = this.imageStore.addVideo(
+        media.mimeType,
+        media.sourcePath,
+        media.filename,
+      );
       this.host.state.editor.insertTextAtCursor?.(`${attachment.placeholder} `);
       this.host.state.ui.requestRender();
-      this.host.track('shortcut_paste', { kind: 'video' });
+      this.host.track("shortcut_paste", { kind: "video" });
       return true;
     }
 
@@ -475,9 +511,12 @@ export class EditorKeyboardController {
       telemetry: {
         client: {
           track: (event, properties) =>
-            this.host.track(event, properties === undefined ? undefined : { ...properties }),
+            this.host.track(
+              event,
+              properties === undefined ? undefined : { ...properties },
+            ),
         },
-        source: 'tui_paste',
+        source: "tui_paste",
       },
     });
     const sessionDir = this.host.session?.summary?.sessionDir;
@@ -495,7 +534,9 @@ export class EditorKeyboardController {
             path: await persistOriginalImage(
               media.bytes,
               meta.mime,
-              sessionDir === undefined ? {} : { dir: sessionMediaOriginalsDir(sessionDir) },
+              sessionDir === undefined
+                ? {}
+                : { dir: sessionMediaOriginalsDir(sessionDir) },
             ),
             width: compressed.originalWidth,
             height: compressed.originalHeight,
@@ -511,7 +552,7 @@ export class EditorKeyboardController {
         );
     this.host.state.editor.insertTextAtCursor?.(`${attachment.placeholder} `);
     this.host.state.ui.requestRender();
-    this.host.track('shortcut_paste', { kind: 'image' });
+    this.host.track("shortcut_paste", { kind: "image" });
     return true;
   }
 
@@ -520,7 +561,9 @@ export class EditorKeyboardController {
     if (state.externalEditorRunning) return;
     const cmd = resolveEditorCommand(state.appState.editorCommand);
     if (cmd === undefined) {
-      this.host.showError('No editor configured. Set $VISUAL / $EDITOR, or run /editor <command>.');
+      this.host.showError(
+        "No editor configured. Set $VISUAL / $EDITOR, or run /editor <command>.",
+      );
       return;
     }
     this.host.setExternalEditorRunning(true);
@@ -532,13 +575,15 @@ export class EditorKeyboardController {
     try {
       const result = await editInExternalEditor(seed, cmd);
       if (result !== undefined) {
-        state.editor.setText(result.replaceAll('\r\n', '\n').replace(/\n$/, ''));
+        state.editor.setText(
+          result.replaceAll("\r\n", "\n").replace(/\n$/, ""),
+        );
       }
     } catch (error) {
       const msg = formatErrorMessage(error);
       this.host.showError(`External editor failed: ${msg}`);
     } finally {
-      if (typeof process.stdin.pause === 'function') {
+      if (typeof process.stdin.pause === "function") {
         process.stdin.pause();
       }
       state.ui.start();

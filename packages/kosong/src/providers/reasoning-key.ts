@@ -17,9 +17,9 @@
 // before any observation. Both arms can be pinned by an explicit key (see
 // ReasoningKeyDialect).
 export const KNOWN_REASONING_KEYS = [
-  'reasoning_content',
-  'reasoning_details',
-  'reasoning',
+  "reasoning_content",
+  "reasoning_details",
+  "reasoning",
 ] as const;
 
 export type ReasoningKey = (typeof KNOWN_REASONING_KEYS)[number];
@@ -37,12 +37,13 @@ export function extractReasoning(
   source: unknown,
   explicitKey?: string,
 ): { key: string; value: string } | undefined {
-  if (typeof source !== 'object' || source === null) return undefined;
+  if (typeof source !== "object" || source === null) return undefined;
   const record = source as Record<string, unknown>;
-  const keys: readonly string[] = explicitKey !== undefined ? [explicitKey] : KNOWN_REASONING_KEYS;
+  const keys: readonly string[] =
+    explicitKey !== undefined ? [explicitKey] : KNOWN_REASONING_KEYS;
   for (const key of keys) {
     const value = record[key];
-    if (typeof value === 'string') return { key, value };
+    if (typeof value === "string") return { key, value };
   }
   return undefined;
 }

@@ -5,22 +5,22 @@
  * error reporting, and delegation to the session export implementation.
  */
 
-import { mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
-import type { createKimiDeviceId as createKimiDeviceIdFn } from '@moonshot-ai/kimi-code-oauth';
-import { Command } from 'commander';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { createKimiDeviceId as createKimiDeviceIdFn } from "@moonshot-ai/kimi-code-oauth";
+import { Command } from "commander";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { handleExport, registerExportCommand } from '#/cli/sub/export';
-import type { ExportDeps } from '#/cli/sub/export';
+import { handleExport, registerExportCommand } from "#/cli/sub/export";
+import type { ExportDeps } from "#/cli/sub/export";
 import type {
   ExportSessionInput,
   ExportSessionManifest,
   ExportSessionResult,
   SessionSummary,
-} from '@moonshot-ai/kimi-code-sdk';
+} from "@moonshot-ai/kimi-code-sdk";
 
 let tmp: string;
 
@@ -31,30 +31,33 @@ const mocks = vi.hoisted(() => ({
   harnessEnsureConfigFile: vi.fn(),
   harnessGetConfig: vi.fn(async () => ({
     providers: {},
-    defaultModel: 'k2',
+    defaultModel: "k2",
     telemetry: true,
   })),
   harnessGetCachedAccessToken: vi.fn(),
   harnessExportSession: vi.fn(),
   harnessTrack: vi.fn(),
-  createKimiDeviceId: vi.fn<CreateKimiDeviceId>(() => 'device-1'),
+  createKimiDeviceId: vi.fn<CreateKimiDeviceId>(() => "device-1"),
   initializeTelemetry: vi.fn(),
   shutdownTelemetry: vi.fn(),
   telemetryTrack: vi.fn(),
   setTelemetryContext: vi.fn(),
   withTelemetryContext: vi.fn(),
-  resolveKimiHome: vi.fn((homeDir?: string) => homeDir ?? '/tmp/kimi-export-home'),
+  resolveKimiHome: vi.fn(
+    (homeDir?: string) => homeDir ?? "/tmp/kimi-export-home",
+  ),
   harnessCreatesDeviceIdOnConstruction: false,
 }));
 
-vi.mock('@moonshot-ai/kimi-code-sdk', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@moonshot-ai/kimi-code-sdk')>();
+vi.mock("@moonshot-ai/kimi-code-sdk", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@moonshot-ai/kimi-code-sdk")>();
   return {
     ...actual,
     resolveKimiHome: mocks.resolveKimiHome,
     createKimiHarness: (...args: unknown[]) => {
       const options = args[0] as { readonly homeDir?: string } | undefined;
-      const homeDir = options?.homeDir ?? '/tmp/kimi-export-home';
+      const homeDir = options?.homeDir ?? "/tmp/kimi-export-home";
       if (mocks.harnessCreatesDeviceIdOnConstruction) {
         mocks.createKimiDeviceId(homeDir);
       }
@@ -73,18 +76,18 @@ vi.mock('@moonshot-ai/kimi-code-sdk', async (importOriginal) => {
   };
 });
 
-vi.mock('@moonshot-ai/kimi-code-oauth', async () => {
-  const actual = await vi.importActual<typeof import('@moonshot-ai/kimi-code-oauth')>(
-    '@moonshot-ai/kimi-code-oauth',
-  );
+vi.mock("@moonshot-ai/kimi-code-oauth", async () => {
+  const actual = await vi.importActual<
+    typeof import("@moonshot-ai/kimi-code-oauth")
+  >("@moonshot-ai/kimi-code-oauth");
   return {
     ...actual,
     createKimiDeviceId: mocks.createKimiDeviceId,
-    KIMI_CODE_PROVIDER_NAME: 'kimi-code',
+    KIMI_CODE_PROVIDER_NAME: "kimi-code",
   };
 });
 
-vi.mock('@moonshot-ai/kimi-telemetry', () => ({
+vi.mock("@moonshot-ai/kimi-telemetry", () => ({
   initializeTelemetry: mocks.initializeTelemetry,
   shutdownTelemetry: mocks.shutdownTelemetry,
   track: mocks.telemetryTrack,
@@ -93,7 +96,7 @@ vi.mock('@moonshot-ai/kimi-telemetry', () => ({
 }));
 
 beforeEach(() => {
-  tmp = mkdtempSync(join(tmpdir(), 'kimi-export-'));
+  tmp = mkdtempSync(join(tmpdir(), "kimi-export-"));
 });
 
 afterEach(() => {
@@ -101,21 +104,24 @@ afterEach(() => {
   vi.clearAllMocks();
   mocks.harnessGetConfig.mockResolvedValue({
     providers: {},
-    defaultModel: 'k2',
+    defaultModel: "k2",
     telemetry: true,
   });
-  mocks.createKimiDeviceId.mockImplementation(() => 'device-1');
+  mocks.createKimiDeviceId.mockImplementation(() => "device-1");
   mocks.resolveKimiHome.mockImplementation(
-    (homeDir?: string) => homeDir ?? '/tmp/kimi-export-home',
+    (homeDir?: string) => homeDir ?? "/tmp/kimi-export-home",
   );
   mocks.harnessCreatesDeviceIdOnConstruction = false;
 });
 
-function makeSummary(id: string, overrides: Partial<SessionSummary> = {}): SessionSummary {
+function makeSummary(
+  id: string,
+  overrides: Partial<SessionSummary> = {},
+): SessionSummary {
   return {
     id,
     workDir: tmp,
-    sessionDir: join(tmp, 'sessions', id),
+    sessionDir: join(tmp, "sessions", id),
     createdAt: 1,
     updatedAt: 2,
     ...overrides,
@@ -125,17 +131,17 @@ function makeSummary(id: string, overrides: Partial<SessionSummary> = {}): Sessi
 function makeResult(id: string, zipPath: string): ExportSessionResult {
   const manifest: ExportSessionManifest = {
     sessionId: id,
-    exportedAt: '2026-04-18T12:00:00.000Z',
-    kimiCodeVersion: '1.27.0',
-    wireProtocolVersion: '1.0',
-    os: 'test',
-    nodejsVersion: '22.0.0',
+    exportedAt: "2026-04-18T12:00:00.000Z",
+    kimiCodeVersion: "1.27.0",
+    wireProtocolVersion: "1.0",
+    os: "test",
+    nodejsVersion: "22.0.0",
     workspaceDir: tmp,
   };
   return {
     zipPath,
-    entries: ['manifest.json', 'wire.jsonl'],
-    sessionDir: join(tmp, 'sessions', id),
+    entries: ["manifest.json", "wire.jsonl"],
+    sessionDir: join(tmp, "sessions", id),
     manifest,
   };
 }
@@ -160,12 +166,15 @@ function makeDeps(overrides: Partial<ExportDeps> = {}): {
     },
     exportSession: async (input) => {
       exportInputs.push(input);
-      return makeResult(input.id, input.outputPath ?? join(tmp, `${input.id}.zip`));
+      return makeResult(
+        input.id,
+        input.outputPath ?? join(tmp, `${input.id}.zip`),
+      );
     },
     confirmPreviousSession: async () => true,
-    getInstallSource: async () => 'npm-global',
-    getShellEnv: () => ({ term: 'xterm-256color', shell: '/bin/zsh' }),
-    version: '1.0.0-test',
+    getInstallSource: async () => "npm-global",
+    getShellEnv: () => ({ term: "xterm-256color", shell: "/bin/zsh" }),
+    version: "1.0.0-test",
     cwd: () => tmp,
     stdout: {
       write: (chunk: string) => {
@@ -182,7 +191,7 @@ function makeDeps(overrides: Partial<ExportDeps> = {}): {
     exit: ((code: number) => {
       exitCodes.push(code);
       throw new ExitCalled(code);
-    }) as ExportDeps['exit'],
+    }) as ExportDeps["exit"],
     ...overrides,
   };
   return { deps, stdout, stderr, exitCodes, exportInputs, listedWorkDirs };
@@ -214,56 +223,77 @@ async function runExport(
   }
 }
 
-describe('kimi export', () => {
-  it('delegates a named session export and prints the resulting zip path', async () => {
-    const output = join(tmp, 'out.zip');
-    const { deps, stdout, stderr, exitCodes, exportInputs, listedWorkDirs } = makeDeps();
+describe("kimi export", () => {
+  it("delegates a named session export and prints the resulting zip path", async () => {
+    const output = join(tmp, "out.zip");
+    const { deps, stdout, stderr, exitCodes, exportInputs, listedWorkDirs } =
+      makeDeps();
 
-    await runExport(deps, { sessionId: 'ses_test123456', output });
+    await runExport(deps, { sessionId: "ses_test123456", output });
 
     expect(exitCodes).toEqual([]);
     expect(stderr).toEqual([]);
     expect(listedWorkDirs).toEqual([]);
-    expect(exportInputs).toEqual([{ id: 'ses_test123456', outputPath: output, includeGlobalLog: true, version: '1.0.0-test', installSource: 'npm-global', shellEnv: { term: 'xterm-256color', shell: '/bin/zsh' } }]);
-    expect(stdout.join('').trim()).toBe(output);
+    expect(exportInputs).toEqual([
+      {
+        id: "ses_test123456",
+        outputPath: output,
+        includeGlobalLog: true,
+        version: "1.0.0-test",
+        installSource: "npm-global",
+        shellEnv: { term: "xterm-256color", shell: "/bin/zsh" },
+      },
+    ]);
+    expect(stdout.join("").trim()).toBe(output);
   });
 
-  it('omits outputPath when the caller does not provide --output', async () => {
+  it("omits outputPath when the caller does not provide --output", async () => {
     const { deps, stdout, exportInputs } = makeDeps();
 
-    await runExport(deps, { sessionId: 'session_default_output' });
+    await runExport(deps, { sessionId: "session_default_output" });
 
-    expect(exportInputs).toEqual([{ id: 'session_default_output', includeGlobalLog: true, version: '1.0.0-test', installSource: 'npm-global', shellEnv: { term: 'xterm-256color', shell: '/bin/zsh' } }]);
-    expect(stdout.join('').trim()).toBe(join(tmp, 'session_default_output.zip'));
+    expect(exportInputs).toEqual([
+      {
+        id: "session_default_output",
+        includeGlobalLog: true,
+        version: "1.0.0-test",
+        installSource: "npm-global",
+        shellEnv: { term: "xterm-256color", shell: "/bin/zsh" },
+      },
+    ]);
+    expect(stdout.join("").trim()).toBe(
+      join(tmp, "session_default_output.zip"),
+    );
   });
 
-  it('exits 1 when no session-id is provided and no previous session exists', async () => {
-    const { deps, stderr, exitCodes, exportInputs, listedWorkDirs } = makeDeps();
+  it("exits 1 when no session-id is provided and no previous session exists", async () => {
+    const { deps, stderr, exitCodes, exportInputs, listedWorkDirs } =
+      makeDeps();
 
     await runExport(deps);
 
     expect(listedWorkDirs).toEqual([tmp]);
     expect(exportInputs).toEqual([]);
     expect(exitCodes).toContain(1);
-    expect(stderr.join('').toLowerCase()).toContain('no previous session');
+    expect(stderr.join("").toLowerCase()).toContain("no previous session");
   });
 
-  it('surfaces export errors for a named session', async () => {
+  it("surfaces export errors for a named session", async () => {
     const { deps, stderr, exitCodes } = makeDeps({
       exportSession: async () => {
         throw new Error('Session "ses_does_not_exist" was not found');
       },
     });
 
-    await runExport(deps, { sessionId: 'ses_does_not_exist' });
+    await runExport(deps, { sessionId: "ses_does_not_exist" });
 
     expect(exitCodes).toContain(1);
-    expect(stderr.join('').toLowerCase()).toContain('not found');
+    expect(stderr.join("").toLowerCase()).toContain("not found");
   });
 
-  it('falls back to the most-recent session when no id is supplied', async () => {
-    const previous = makeSummary('ses_fallback');
-    const output = join(tmp, 'fallback.zip');
+  it("falls back to the most-recent session when no id is supplied", async () => {
+    const previous = makeSummary("ses_fallback");
+    const output = join(tmp, "fallback.zip");
     const { deps, stdout, exitCodes, exportInputs } = makeDeps({
       listSessions: async () => [previous],
     });
@@ -271,12 +301,21 @@ describe('kimi export', () => {
     await runExport(deps, { output });
 
     expect(exitCodes).toEqual([]);
-    expect(exportInputs).toEqual([{ id: 'ses_fallback', outputPath: output, includeGlobalLog: true, version: '1.0.0-test', installSource: 'npm-global', shellEnv: { term: 'xterm-256color', shell: '/bin/zsh' } }]);
-    expect(stdout.join('').trim()).toBe(output);
+    expect(exportInputs).toEqual([
+      {
+        id: "ses_fallback",
+        outputPath: output,
+        includeGlobalLog: true,
+        version: "1.0.0-test",
+        installSource: "npm-global",
+        shellEnv: { term: "xterm-256color", shell: "/bin/zsh" },
+      },
+    ]);
+    expect(stdout.join("").trim()).toBe(output);
   });
 
-  it('confirms before exporting the previous session when no id is supplied', async () => {
-    const previous = makeSummary('ses_confirm', { title: 'Prod debug' });
+  it("confirms before exporting the previous session when no id is supplied", async () => {
+    const previous = makeSummary("ses_confirm", { title: "Prod debug" });
     const summaries: unknown[] = [];
     const { deps, stdout, exitCodes, exportInputs } = makeDeps({
       listSessions: async () => [previous],
@@ -286,90 +325,120 @@ describe('kimi export', () => {
       },
     });
 
-    await runExport(deps, { output: join(tmp, 'cancelled.zip') });
+    await runExport(deps, { output: join(tmp, "cancelled.zip") });
 
     expect(exitCodes).toEqual([]);
     expect(exportInputs).toEqual([]);
-    expect(stdout.join('')).toContain('Export cancelled.');
+    expect(stdout.join("")).toContain("Export cancelled.");
     expect(summaries).toEqual([
       {
         workDir: tmp,
-        sessionId: 'ses_confirm',
-        sessionDir: join(tmp, 'sessions', 'ses_confirm'),
-        title: 'Prod debug',
+        sessionId: "ses_confirm",
+        sessionDir: join(tmp, "sessions", "ses_confirm"),
+        title: "Prod debug",
       },
     ]);
   });
 
-  it('skips previous-session confirmation with --yes', async () => {
-    const previous = makeSummary('ses_yes');
+  it("skips previous-session confirmation with --yes", async () => {
+    const previous = makeSummary("ses_yes");
     const { deps, exitCodes, exportInputs } = makeDeps({
       listSessions: async () => [previous],
       confirmPreviousSession: async () => {
-        throw new Error('confirm should not be called');
+        throw new Error("confirm should not be called");
       },
     });
 
-    await runExport(deps, { output: join(tmp, 'yes.zip'), yes: true });
+    await runExport(deps, { output: join(tmp, "yes.zip"), yes: true });
 
     expect(exitCodes).toEqual([]);
-    expect(exportInputs).toEqual([{ id: 'ses_yes', outputPath: join(tmp, 'yes.zip'), includeGlobalLog: true, version: '1.0.0-test', installSource: 'npm-global', shellEnv: { term: 'xterm-256color', shell: '/bin/zsh' } }]);
+    expect(exportInputs).toEqual([
+      {
+        id: "ses_yes",
+        outputPath: join(tmp, "yes.zip"),
+        includeGlobalLog: true,
+        version: "1.0.0-test",
+        installSource: "npm-global",
+        shellEnv: { term: "xterm-256color", shell: "/bin/zsh" },
+      },
+    ]);
   });
 
-  it('describes the user-facing command without implementation details', () => {
-    const program = new Command('kimi');
+  it("describes the user-facing command without implementation details", () => {
+    const program = new Command("kimi");
     const { deps } = makeDeps();
 
     registerExportCommand(program, deps);
 
-    const command = program.commands.find((item) => item.name() === 'export');
-    expect(command?.description()).toBe('Export a session as a ZIP archive.');
+    const command = program.commands.find((item) => item.name() === "export");
+    expect(command?.description()).toBe("Export a session as a ZIP archive.");
     expect(command?.description()).not.toMatch(/sdk/i);
   });
 
-  it('parses --no-include-global-log as an option when no session id is given', async () => {
-    const previous = makeSummary('ses_global_log');
+  it("parses --no-include-global-log as an option when no session id is given", async () => {
+    const previous = makeSummary("ses_global_log");
     const { deps, stdout, exitCodes, exportInputs } = makeDeps({
       listSessions: async () => [previous],
       confirmPreviousSession: async () => true,
     });
-    const program = new Command('kimi');
-    registerExportCommand(program, deps);
-
-    await program.parseAsync(['node', 'kimi', 'export', '--no-include-global-log', '-y']);
-
-    expect(exitCodes).toEqual([]);
-    expect(exportInputs).toEqual([{ id: 'ses_global_log', version: '1.0.0-test', installSource: 'npm-global', shellEnv: { term: 'xterm-256color', shell: '/bin/zsh' } }]);
-    expect(stdout.join('').trim()).toBe(join(tmp, 'ses_global_log.zip'));
-  });
-
-  it('parses options after an explicit session id', async () => {
-    const output = join(tmp, 'after-id.zip');
-    const { deps, exitCodes, exportInputs } = makeDeps();
-    const program = new Command('kimi');
+    const program = new Command("kimi");
     registerExportCommand(program, deps);
 
     await program.parseAsync([
-      'node',
-      'kimi',
-      'export',
-      'ses_after_id',
-      '-o',
-      output,
-      '-y',
-      '--no-include-global-log',
+      "node",
+      "kimi",
+      "export",
+      "--no-include-global-log",
+      "-y",
     ]);
 
     expect(exitCodes).toEqual([]);
     expect(exportInputs).toEqual([
-      { id: 'ses_after_id', outputPath: output, version: '1.0.0-test', installSource: 'npm-global', shellEnv: { term: 'xterm-256color', shell: '/bin/zsh' } },
+      {
+        id: "ses_global_log",
+        version: "1.0.0-test",
+        installSource: "npm-global",
+        shellEnv: { term: "xterm-256color", shell: "/bin/zsh" },
+      },
+    ]);
+    expect(stdout.join("").trim()).toBe(join(tmp, "ses_global_log.zip"));
+  });
+
+  it("parses options after an explicit session id", async () => {
+    const output = join(tmp, "after-id.zip");
+    const { deps, exitCodes, exportInputs } = makeDeps();
+    const program = new Command("kimi");
+    registerExportCommand(program, deps);
+
+    await program.parseAsync([
+      "node",
+      "kimi",
+      "export",
+      "ses_after_id",
+      "-o",
+      output,
+      "-y",
+      "--no-include-global-log",
+    ]);
+
+    expect(exitCodes).toEqual([]);
+    expect(exportInputs).toEqual([
+      {
+        id: "ses_after_id",
+        outputPath: output,
+        version: "1.0.0-test",
+        installSource: "npm-global",
+        shellEnv: { term: "xterm-256color", shell: "/bin/zsh" },
+      },
     ]);
   });
 
-  it('initializes and flushes telemetry around default export tracking', async () => {
-    const program = new Command('kimi');
-    const output = join(tmp, 'telemetry.zip');
-    mocks.harnessExportSession.mockResolvedValue(makeResult('ses_telemetry', output));
+  it("initializes and flushes telemetry around default export tracking", async () => {
+    const program = new Command("kimi");
+    const output = join(tmp, "telemetry.zip");
+    mocks.harnessExportSession.mockResolvedValue(
+      makeResult("ses_telemetry", output),
+    );
 
     registerExportCommand(program, {
       cwd: () => tmp,
@@ -381,13 +450,16 @@ describe('kimi export', () => {
       },
       exit: ((code: number) => {
         throw new ExitCalled(code);
-      }) as ExportDeps['exit'],
-      getShellEnv: () => ({ term: 'xterm-256color', shell: '/bin/zsh' }),
+      }) as ExportDeps["exit"],
+      getShellEnv: () => ({ term: "xterm-256color", shell: "/bin/zsh" }),
     });
 
-    await program.parseAsync(['node', 'kimi', 'export', 'ses_telemetry', '--output', output], {
-      from: 'node',
-    });
+    await program.parseAsync(
+      ["node", "kimi", "export", "ses_telemetry", "--output", output],
+      {
+        from: "node",
+      },
+    );
 
     expect(mocks.kimiHarnessConstructor).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -401,17 +473,17 @@ describe('kimi export', () => {
     expect(mocks.harnessEnsureConfigFile).toHaveBeenCalledOnce();
     expect(mocks.harnessGetConfig).toHaveBeenCalledOnce();
     expect(mocks.createKimiDeviceId).toHaveBeenCalledWith(
-      '/tmp/kimi-export-home',
+      "/tmp/kimi-export-home",
       expect.objectContaining({ onFirstLaunch: expect.any(Function) }),
     );
     expect(mocks.initializeTelemetry).toHaveBeenCalledWith({
-      homeDir: '/tmp/kimi-export-home',
-      deviceId: 'device-1',
+      homeDir: "/tmp/kimi-export-home",
+      deviceId: "device-1",
       enabled: true,
-      appName: 'kimi-code-cli',
+      appName: "kimi-code-cli",
       version: expect.any(String),
-      uiMode: 'shell',
-      model: 'k2',
+      uiMode: "shell",
+      model: "k2",
       sessionId: undefined,
       getAccessToken: expect.any(Function),
     });
@@ -419,7 +491,7 @@ describe('kimi export', () => {
       mocks.harnessExportSession.mock.invocationCallOrder[0]!,
     );
     expect(mocks.harnessExportSession).toHaveBeenCalledWith({
-      id: 'ses_telemetry',
+      id: "ses_telemetry",
       outputPath: output,
       version: expect.any(String),
       includeGlobalLog: true,
@@ -432,15 +504,17 @@ describe('kimi export', () => {
     );
   });
 
-  it('passes enabled false when default export config disables telemetry', async () => {
-    const program = new Command('kimi');
-    const output = join(tmp, 'telemetry-disabled.zip');
+  it("passes enabled false when default export config disables telemetry", async () => {
+    const program = new Command("kimi");
+    const output = join(tmp, "telemetry-disabled.zip");
     mocks.harnessGetConfig.mockResolvedValue({
       providers: {},
-      defaultModel: 'k2',
+      defaultModel: "k2",
       telemetry: false,
     });
-    mocks.harnessExportSession.mockResolvedValue(makeResult('ses_disabled', output));
+    mocks.harnessExportSession.mockResolvedValue(
+      makeResult("ses_disabled", output),
+    );
 
     registerExportCommand(program, {
       cwd: () => tmp,
@@ -452,12 +526,15 @@ describe('kimi export', () => {
       },
       exit: ((code: number) => {
         throw new ExitCalled(code);
-      }) as ExportDeps['exit'],
+      }) as ExportDeps["exit"],
     });
 
-    await program.parseAsync(['node', 'kimi', 'export', 'ses_disabled', '--output', output], {
-      from: 'node',
-    });
+    await program.parseAsync(
+      ["node", "kimi", "export", "ses_disabled", "--output", output],
+      {
+        from: "node",
+      },
+    );
 
     expect(mocks.initializeTelemetry).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -467,9 +544,9 @@ describe('kimi export', () => {
     expect(mocks.shutdownTelemetry).toHaveBeenCalledWith({ timeoutMs: 3000 });
   });
 
-  it('tracks first launch around default export telemetry before harness construction can create the device id', async () => {
-    const program = new Command('kimi');
-    const output = join(tmp, 'telemetry-first-launch.zip');
+  it("tracks first launch around default export telemetry before harness construction can create the device id", async () => {
+    const program = new Command("kimi");
+    const output = join(tmp, "telemetry-first-launch.zip");
     mocks.harnessCreatesDeviceIdOnConstruction = true;
     const createdHomes = new Set<string>();
     mocks.createKimiDeviceId.mockImplementation((homeDir, options) => {
@@ -480,7 +557,9 @@ describe('kimi export', () => {
       }
       return deviceId;
     });
-    mocks.harnessExportSession.mockResolvedValue(makeResult('ses_first_launch', output));
+    mocks.harnessExportSession.mockResolvedValue(
+      makeResult("ses_first_launch", output),
+    );
 
     registerExportCommand(program, {
       cwd: () => tmp,
@@ -492,25 +571,28 @@ describe('kimi export', () => {
       },
       exit: ((code: number) => {
         throw new ExitCalled(code);
-      }) as ExportDeps['exit'],
+      }) as ExportDeps["exit"],
     });
 
-    await program.parseAsync(['node', 'kimi', 'export', 'ses_first_launch', '--output', output], {
-      from: 'node',
-    });
+    await program.parseAsync(
+      ["node", "kimi", "export", "ses_first_launch", "--output", output],
+      {
+        from: "node",
+      },
+    );
 
     expect(mocks.createKimiDeviceId).toHaveBeenNthCalledWith(
       1,
-      '/tmp/kimi-export-home',
+      "/tmp/kimi-export-home",
       expect.objectContaining({ onFirstLaunch: expect.any(Function) }),
     );
     expect(mocks.createKimiDeviceId.mock.invocationCallOrder[0]).toBeLessThan(
       mocks.kimiHarnessConstructor.mock.invocationCallOrder[0]!,
     );
     expect(mocks.kimiHarnessConstructor).toHaveBeenCalledWith(
-      expect.objectContaining({ homeDir: '/tmp/kimi-export-home' }),
+      expect.objectContaining({ homeDir: "/tmp/kimi-export-home" }),
     );
-    expect(mocks.harnessTrack).toHaveBeenCalledWith('first_launch');
+    expect(mocks.harnessTrack).toHaveBeenCalledWith("first_launch");
     expect(mocks.initializeTelemetry.mock.invocationCallOrder[0]).toBeLessThan(
       mocks.harnessTrack.mock.invocationCallOrder[0]!,
     );

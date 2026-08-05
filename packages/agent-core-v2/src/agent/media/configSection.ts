@@ -14,15 +14,19 @@
  * back through a config write can never leak into `config.toml`.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { type EnvBindings, envBindings, stripEnvBoundFields } from '#/app/config/config';
-import { registerConfigSection } from '#/app/config/configSectionContributions';
+import {
+  type EnvBindings,
+  envBindings,
+  stripEnvBoundFields,
+} from "#/app/config/config";
+import { registerConfigSection } from "#/app/config/configSectionContributions";
 
-export const IMAGE_SECTION = 'image';
+export const IMAGE_SECTION = "image";
 
-export const IMAGE_MAX_EDGE_ENV = 'KIMI_IMAGE_MAX_EDGE_PX';
-export const IMAGE_READ_BYTE_BUDGET_ENV = 'KIMI_IMAGE_READ_BYTE_BUDGET';
+export const IMAGE_MAX_EDGE_ENV = "KIMI_IMAGE_MAX_EDGE_PX";
+export const IMAGE_READ_BYTE_BUDGET_ENV = "KIMI_IMAGE_READ_BYTE_BUDGET";
 
 export const ImageConfigSchema = z.object({
   maxEdgePx: z.number().int().min(1).optional(),
@@ -38,10 +42,16 @@ function parsePositiveInt(raw: string): number | undefined {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined;
 }
 
-export const imageEnvBindings: EnvBindings<ImageConfig> = envBindings(ImageConfigSchema, {
-  maxEdgePx: { env: IMAGE_MAX_EDGE_ENV, parse: parsePositiveInt },
-  readByteBudget: { env: IMAGE_READ_BYTE_BUDGET_ENV, parse: parsePositiveInt },
-});
+export const imageEnvBindings: EnvBindings<ImageConfig> = envBindings(
+  ImageConfigSchema,
+  {
+    maxEdgePx: { env: IMAGE_MAX_EDGE_ENV, parse: parsePositiveInt },
+    readByteBudget: {
+      env: IMAGE_READ_BYTE_BUDGET_ENV,
+      parse: parsePositiveInt,
+    },
+  },
+);
 
 export const stripImageEnv = stripEnvBoundFields(imageEnvBindings);
 

@@ -10,12 +10,12 @@
  * sees the actual error message, not a synthetic summary.
  */
 
-import type { Component } from '@moonshot-ai/pi-tui';
-import { Text } from '@moonshot-ai/pi-tui';
-import chalk from 'chalk';
+import type { Component } from "@moonshot-ai/pi-tui";
+import { Text } from "@moonshot-ai/pi-tui";
+import chalk from "chalk";
 
-import { renderTruncated } from './truncated';
-import type { ResultRenderer } from './types';
+import { renderTruncated } from "./truncated";
+import type { ResultRenderer } from "./types";
 
 const GLANCE_SAMPLES = 3;
 
@@ -44,35 +44,35 @@ function withGlance(glance: GlanceFn | null): ResultRenderer {
 
 function nonEmptyLines(text: string): string[] {
   if (text.length === 0) return [];
-  return text.split('\n').filter((line) => line.length > 0);
+  return text.split("\n").filter((line) => line.length > 0);
 }
 
 // Strip a trailing `:line:col:text` so the glance shows the file path
 // only, even when grep is in `content` mode (`src/foo.ts:42:    foo()`).
 function pathFromGrepLine(line: string): string {
-  const idx = line.indexOf(':');
+  const idx = line.indexOf(":");
   if (idx <= 0) return line;
-  const second = line.indexOf(':', idx + 1);
+  const second = line.indexOf(":", idx + 1);
   if (second <= 0) return line;
   return line.slice(0, second);
 }
 
 const grepGlance: GlanceFn = (_toolCall, result) => {
   const lines = nonEmptyLines(result.output);
-  if (lines.length === 0) return '';
+  if (lines.length === 0) return "";
   const samples = lines.slice(0, GLANCE_SAMPLES).map(pathFromGrepLine);
   const remaining = lines.length - samples.length;
-  const tail = remaining > 0 ? `, +${String(remaining)} more` : '';
-  return `${samples.join(', ')}${tail}`;
+  const tail = remaining > 0 ? `, +${String(remaining)} more` : "";
+  return `${samples.join(", ")}${tail}`;
 };
 
 const globGlance: GlanceFn = (_toolCall, result) => {
   const lines = nonEmptyLines(result.output);
-  if (lines.length === 0) return '';
+  if (lines.length === 0) return "";
   const samples = lines.slice(0, GLANCE_SAMPLES);
   const remaining = lines.length - samples.length;
-  const tail = remaining > 0 ? `, +${String(remaining)} more` : '';
-  return `${samples.join(', ')}${tail}`;
+  const tail = remaining > 0 ? `, +${String(remaining)} more` : "";
+  return `${samples.join(", ")}${tail}`;
 };
 
 // ── Exports ──────────────────────────────────────────────────────────

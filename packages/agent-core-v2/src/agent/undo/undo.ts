@@ -5,7 +5,10 @@
  * undo entry point. Bound at Agent scope.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
 
 export interface UndoAvailability {
   readonly maxTurns: number;
@@ -20,4 +23,6 @@ export interface IAgentConversationUndoService {
 }
 
 export const IAgentConversationUndoService: ServiceIdentifier<IAgentConversationUndoService> =
-  createDecorator<IAgentConversationUndoService>('agentConversationUndoService');
+  createDecorator<IAgentConversationUndoService>(
+    "agentConversationUndoService",
+  );

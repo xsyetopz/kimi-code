@@ -1,6 +1,6 @@
 import { createDecorator } from "#/_base/di/instantiation";
-import type { SkillActivationOrigin } from '#/agent/contextMemory/types';
-import type { Turn } from '#/agent/loop/loop';
+import type { SkillActivationOrigin } from "#/agent/contextMemory/types";
+import type { Turn } from "#/agent/loop/loop";
 
 export interface SkillActivationInput {
   readonly name: string;
@@ -15,4 +15,4 @@ export interface IAgentSkillService {
 }
 
 export const IAgentSkillService =
-  createDecorator<IAgentSkillService>('agentSkillService');
+  createDecorator<IAgentSkillService>("agentSkillService");

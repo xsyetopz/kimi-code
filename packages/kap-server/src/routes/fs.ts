@@ -26,8 +26,8 @@
  * wire compatibility.
  */
 
-import { createReadStream } from 'node:fs';
-import { isAbsolute } from 'node:path';
+import { createReadStream } from "node:fs";
+import { isAbsolute } from "node:path";
 
 import {
   ErrorCodes,
@@ -39,7 +39,7 @@ import {
   isError2,
   Error2,
   type Scope,
-} from '@moonshot-ai/agent-core-v2';
+} from "@moonshot-ai/agent-core-v2";
 import {
   fsDiffRequestSchema,
   fsGitStatusRequestSchema,
@@ -52,25 +52,25 @@ import {
   fsSearchResponseSchema,
   fsStatManyRequestSchema,
   fsStatRequestSchema,
-} from '@moonshot-ai/agent-core-v2/workspace/workspaceFs/fs';
-import { z } from 'zod';
+} from "@moonshot-ai/agent-core-v2/workspace/workspaceFs/fs";
+import { z } from "zod";
 
-import { errEnvelope, okEnvelope } from '../envelope';
+import { errEnvelope, okEnvelope } from "../envelope";
 import {
   launchDetached,
   openFileCommandFor,
   openInAppCommandFor,
   revealFileCommandFor,
-} from '../lib/fileLaunch';
-import { parseRangeHeader, pickHeader } from '../lib/httpRange';
-import { requestLog } from '../lib/requestLog';
-import { defineRoute } from '../middleware/defineRoute';
-import { ErrorCode } from '../protocol/error-codes';
+} from "../lib/fileLaunch";
+import { parseRangeHeader, pickHeader } from "../lib/httpRange";
+import { requestLog } from "../lib/requestLog";
+import { defineRoute } from "../middleware/defineRoute";
+import { ErrorCode } from "../protocol/error-codes";
 import {
   fsOpenInRequestSchema,
   fsOpenRequestSchema,
   fsRevealRequestSchema,
-} from '../protocol/rest-fs';
+} from "../protocol/rest-fs";
 
 interface FsRouteHost {
   post(
@@ -112,30 +112,35 @@ const workspaceFsSearchBodySchema = fsSearchRequestSchema.extend({
   workspace: z.string().min(1),
 });
 
-const detailsSchema = z.array(z.object({ path: z.string(), message: z.string() }));
+const detailsSchema = z.array(
+  z.object({ path: z.string(), message: z.string() }),
+);
 
 const FS_ACTIONS = [
-  'list',
-  'read',
-  'list_many',
-  'stat',
-  'stat_many',
-  'mkdir',
-  'search',
-  'grep',
-  'git_status',
-  'diff',
-  'open',
-  'open-in',
-  'reveal',
+  "list",
+  "read",
+  "list_many",
+  "stat",
+  "stat_many",
+  "mkdir",
+  "search",
+  "grep",
+  "git_status",
+  "diff",
+  "open",
+  "open-in",
+  "reveal",
 ] as const;
 type FsAction = (typeof FS_ACTIONS)[number];
-const FS_TAIL_PREFIX = 'fs:';
+const FS_TAIL_PREFIX = "fs:";
 
 function resolveFs(core: Scope, sessionId: string): IWorkspaceFsService {
   const session = getLiveSessionById(core.accessor, sessionId);
   if (session === undefined) {
-    throw new Error2(ErrorCodes.SESSION_NOT_FOUND, `session ${sessionId} does not exist`);
+    throw new Error2(
+      ErrorCodes.SESSION_NOT_FOUND,
+      `session ${sessionId} does not exist`,
+    );
   }
   // The fs service lives on the session's parent Workspace scope (the
   // handler): one instance per workspace, pinned to the handler root.
@@ -171,8 +176,8 @@ async function resolveWorkspaceFs(
 export function registerFsRoutes(app: FsRouteHost, core: Scope): void {
   const fsActionRoute = defineRoute(
     {
-      method: 'POST',
-      path: '/sessions/{session_id}/{tail}',
+      method: "POST",
+      path: "/sessions/{session_id}/{tail}",
       params: sessionIdAndTailParamSchema,
       errors: {
         [ErrorCode.VALIDATION_FAILED]: {},
@@ -188,16 +193,23 @@ export function registerFsRoutes(app: FsRouteHost, core: Scope): void {
         [ErrorCode.FS_ALREADY_EXISTS]: {},
       },
       description:
-        'Filesystem action dispatcher. Supported actions: list, read, list_many, stat, stat_many, mkdir, search, grep, git_status, diff, open, open-in, reveal.',
-      tags: ['fs'],
-      operationId: 'fsAction',
+        "Filesystem action dispatcher. Supported actions: list, read, list_many, stat, stat_many, mkdir, search, grep, git_status, diff, open, open-in, reveal.",
+      tags: ["fs"],
+      operationId: "fsAction",
     },
     async (req, reply) => {
-      const { session_id, tail } = req.params as { session_id: string; tail: string };
+      const { session_id, tail } = req.params as {
+        session_id: string;
+        tail: string;
+      };
 
       if (!tail.startsWith(FS_TAIL_PREFIX)) {
         reply.send(
-          errEnvelope(ErrorCode.VALIDATION_FAILED, `unsupported action: ${tail}`, req.id),
+          errEnvelope(
+            ErrorCode.VALIDATION_FAILED,
+            `unsupported action: ${tail}`,
+            req.id,
+          ),
         );
         return;
       }
@@ -205,7 +217,11 @@ export function registerFsRoutes(app: FsRouteHost, core: Scope): void {
       const action = tail.slice(FS_TAIL_PREFIX.length);
       if (!(FS_ACTIONS as readonly string[]).includes(action)) {
         reply.send(
-          errEnvelope(ErrorCode.VALIDATION_FAILED, `unsupported action: ${tail}`, req.id),
+          errEnvelope(
+            ErrorCode.VALIDATION_FAILED,
+            `unsupported action: ${tail}`,
+            req.id,
+          ),
         );
         return;
       }
@@ -219,55 +235,63 @@ export function registerFsRoutes(app: FsRouteHost, core: Scope): void {
       // Draft-session fallback (file header): no session yet, but the client
       // addressed a workspace — `fs:search` resolves it directly.
       const workspaceFs =
-        session === undefined && fsAction === 'search'
+        session === undefined && fsAction === "search"
           ? await resolveWorkspaceFs(core, session_id)
           : undefined;
       if (session === undefined && workspaceFs === undefined) {
         reply.send(
-          errEnvelope(ErrorCode.SESSION_NOT_FOUND, `session ${session_id} does not exist`, req.id),
+          errEnvelope(
+            ErrorCode.SESSION_NOT_FOUND,
+            `session ${session_id} does not exist`,
+            req.id,
+          ),
         );
         return;
       }
 
       try {
         switch (fsAction) {
-          case 'list':
+          case "list":
             await handleList(core, session_id, req, reply);
             return;
-          case 'read':
+          case "read":
             await handleRead(core, session_id, req, reply);
             return;
-          case 'list_many':
+          case "list_many":
             await handleListMany(core, session_id, req, reply);
             return;
-          case 'stat':
+          case "stat":
             await handleStat(core, session_id, req, reply);
             return;
-          case 'stat_many':
+          case "stat_many":
             await handleStatMany(core, session_id, req, reply);
             return;
-          case 'mkdir':
+          case "mkdir":
             await handleMkdir(core, session_id, req, reply);
             return;
-          case 'search':
-            await handleSearch(workspaceFs ?? resolveFs(core, session_id), req, reply);
+          case "search":
+            await handleSearch(
+              workspaceFs ?? resolveFs(core, session_id),
+              req,
+              reply,
+            );
             return;
-          case 'grep':
+          case "grep":
             await handleGrep(core, session_id, req, reply);
             return;
-          case 'git_status':
+          case "git_status":
             await handleGitStatus(core, session_id, req, reply);
             return;
-          case 'diff':
+          case "diff":
             await handleDiff(core, session_id, req, reply);
             return;
-          case 'open':
+          case "open":
             await handleOpen(core, session_id, req, reply);
             return;
-          case 'open-in':
+          case "open-in":
             await handleOpenIn(core, session_id, req, reply);
             return;
-          case 'reveal':
+          case "reveal":
             await handleReveal(core, session_id, req, reply);
             return;
         }
@@ -279,7 +303,7 @@ export function registerFsRoutes(app: FsRouteHost, core: Scope): void {
   app.post(
     fsActionRoute.path,
     fsActionRoute.options,
-    fsActionRoute.handler as unknown as Parameters<FsRouteHost['post']>[2],
+    fsActionRoute.handler as unknown as Parameters<FsRouteHost["post"]>[2],
   );
 
   // Session-less workspace file search (file header): the `@` file mention of
@@ -289,8 +313,8 @@ export function registerFsRoutes(app: FsRouteHost, core: Scope): void {
   // (same convention as `/fs::browse` in `workspaceFs.ts`).
   const workspaceSearchRoute = defineRoute(
     {
-      method: 'POST',
-      path: '/workspace/fs::search',
+      method: "POST",
+      path: "/workspace/fs::search",
       body: workspaceFsSearchBodySchema,
       success: { data: fsSearchResponseSchema },
       errors: {
@@ -299,9 +323,9 @@ export function registerFsRoutes(app: FsRouteHost, core: Scope): void {
         [ErrorCode.FS_TOO_MANY_RESULTS]: {},
       },
       description:
-        'Search files in a workspace without a session. `workspace` accepts a registered workspace id or an absolute root (registered on the spot).',
-      tags: ['fs'],
-      operationId: 'workspaceFsSearch',
+        "Search files in a workspace without a session. `workspace` accepts a registered workspace id or an absolute root (registered on the spot).",
+      tags: ["fs"],
+      operationId: "workspaceFsSearch",
     },
     async (req, reply) => {
       const { workspace, ...searchRequest } = req.body;
@@ -327,15 +351,17 @@ export function registerFsRoutes(app: FsRouteHost, core: Scope): void {
   app.post(
     workspaceSearchRoute.path,
     workspaceSearchRoute.options,
-    workspaceSearchRoute.handler as unknown as Parameters<FsRouteHost['post']>[2],
+    workspaceSearchRoute.handler as unknown as Parameters<
+      FsRouteHost["post"]
+    >[2],
   );
 
   const downloadRoute = defineRoute(
     {
-      method: 'GET',
-      path: '/sessions/{session_id}/fs/*',
+      method: "GET",
+      path: "/sessions/{session_id}/fs/*",
       rawResponse: {
-        200: { type: 'string', format: 'binary' },
+        200: { type: "string", format: "binary" },
       },
       errors: {
         [ErrorCode.VALIDATION_FAILED]: {},
@@ -343,24 +369,30 @@ export function registerFsRoutes(app: FsRouteHost, core: Scope): void {
         [ErrorCode.FS_PATH_NOT_FOUND]: {},
         [ErrorCode.FS_PATH_ESCAPES_SESSION]: {},
       },
-      description: 'Download a file from the session workspace',
-      tags: ['fs'],
-      operationId: 'downloadFile',
+      description: "Download a file from the session workspace",
+      tags: ["fs"],
+      operationId: "downloadFile",
     },
     async (req, reply) => {
       const { session_id } = req.params as { session_id: string };
-      const wildcard = (req.params as Record<string, unknown>)['*'] as string;
+      const wildcard = (req.params as Record<string, unknown>)["*"] as string;
 
-      const DOWNLOAD_SUFFIX = ':download';
+      const DOWNLOAD_SUFFIX = ":download";
       if (!wildcard.endsWith(DOWNLOAD_SUFFIX)) {
         reply.send(
-          errEnvelope(ErrorCode.VALIDATION_FAILED, `unsupported action: ${wildcard}`, req.id),
+          errEnvelope(
+            ErrorCode.VALIDATION_FAILED,
+            `unsupported action: ${wildcard}`,
+            req.id,
+          ),
         );
         return;
       }
       const relPath = wildcard.slice(0, -DOWNLOAD_SUFFIX.length);
       if (relPath.length === 0) {
-        reply.send(errEnvelope(ErrorCode.VALIDATION_FAILED, 'path is empty', req.id));
+        reply.send(
+          errEnvelope(ErrorCode.VALIDATION_FAILED, "path is empty", req.id),
+        );
         return;
       }
 
@@ -369,12 +401,16 @@ export function registerFsRoutes(app: FsRouteHost, core: Scope): void {
       const session = await resumeSessionById(core.accessor, session_id);
       if (session === undefined) {
         reply.send(
-          errEnvelope(ErrorCode.SESSION_NOT_FOUND, `session ${session_id} does not exist`, req.id),
+          errEnvelope(
+            ErrorCode.SESSION_NOT_FOUND,
+            `session ${session_id} does not exist`,
+            req.id,
+          ),
         );
         return;
       }
 
-      let resolved: Awaited<ReturnType<IWorkspaceFsService['resolveDownload']>>;
+      let resolved: Awaited<ReturnType<IWorkspaceFsService["resolveDownload"]>>;
       try {
         resolved = await resolveFs(core, session_id).resolveDownload(relPath);
       } catch (err) {
@@ -385,34 +421,37 @@ export function registerFsRoutes(app: FsRouteHost, core: Scope): void {
       const r = reply as unknown as FsDownloadReply;
       const headers = req.headers;
 
-      const ifNoneMatch = pickHeader(headers, 'if-none-match');
+      const ifNoneMatch = pickHeader(headers, "if-none-match");
       if (ifNoneMatch !== undefined && ifNoneMatch === resolved.etag) {
-        r.code(304).header('etag', resolved.etag).send('');
+        r.code(304).header("etag", resolved.etag).send("");
         return;
       }
 
-      r.header('etag', resolved.etag);
-      r.header('last-modified', resolved.modifiedAt.toUTCString());
+      r.header("etag", resolved.etag);
+      r.header("last-modified", resolved.modifiedAt.toUTCString());
       r.header(
-        'content-disposition',
+        "content-disposition",
         `attachment; filename="${sanitizeFilename(resolved.relative)}"`,
       );
       r.type(resolved.mime);
 
-      const rangeHeader = pickHeader(headers, 'range');
+      const rangeHeader = pickHeader(headers, "range");
       const range = parseRangeHeader(rangeHeader, resolved.size);
       if (range !== null) {
         r.code(206)
-          .header('content-length', String(range.length))
-          .header('content-range', `bytes ${range.start}-${range.end}/${resolved.size}`);
+          .header("content-length", String(range.length))
+          .header(
+            "content-range",
+            `bytes ${range.start}-${range.end}/${resolved.size}`,
+          );
         const stream = createReadStream(resolved.absolute, {
           start: range.start,
           end: range.end,
         });
-        stream.on('error', (error: unknown) => {
+        stream.on("error", (error: unknown) => {
           requestLog(req)?.warn(
             { session_id, path: relPath, err: error },
-            'fs download stream error',
+            "fs download stream error",
           );
           try {
             stream.destroy();
@@ -423,12 +462,12 @@ export function registerFsRoutes(app: FsRouteHost, core: Scope): void {
         return r.send(stream) as unknown as void;
       }
 
-      r.code(200).header('content-length', String(resolved.size));
+      r.code(200).header("content-length", String(resolved.size));
       const stream = createReadStream(resolved.absolute);
-      stream.on('error', (error: unknown) => {
+      stream.on("error", (error: unknown) => {
         requestLog(req)?.warn(
           { session_id, path: relPath, err: error },
-          'fs download stream error',
+          "fs download stream error",
         );
         try {
           stream.destroy();
@@ -442,7 +481,7 @@ export function registerFsRoutes(app: FsRouteHost, core: Scope): void {
   app.get(
     downloadRoute.path,
     downloadRoute.options,
-    downloadRoute.handler as unknown as Parameters<FsRouteHost['get']>[2],
+    downloadRoute.handler as unknown as Parameters<FsRouteHost["get"]>[2],
   );
 }
 
@@ -453,7 +492,12 @@ export function registerFsRoutes(app: FsRouteHost, core: Scope): void {
 type Req = { id: string; body: unknown };
 type Reply = { send(payload: unknown): unknown };
 
-async function handleList(core: Scope, sessionId: string, req: Req, reply: Reply): Promise<void> {
+async function handleList(
+  core: Scope,
+  sessionId: string,
+  req: Req,
+  reply: Reply,
+): Promise<void> {
   const parsed = fsListRequestSchema.safeParse(req.body ?? {});
   if (!parsed.success) {
     reply.send(buildValidationEnvelope(parsed.error.issues, req.id));
@@ -463,7 +507,12 @@ async function handleList(core: Scope, sessionId: string, req: Req, reply: Reply
   reply.send(okEnvelope(data, req.id));
 }
 
-async function handleRead(core: Scope, sessionId: string, req: Req, reply: Reply): Promise<void> {
+async function handleRead(
+  core: Scope,
+  sessionId: string,
+  req: Req,
+  reply: Reply,
+): Promise<void> {
   const parsed = fsReadRequestSchema.safeParse(req.body ?? {});
   if (!parsed.success) {
     reply.send(buildValidationEnvelope(parsed.error.issues, req.id));
@@ -473,7 +522,12 @@ async function handleRead(core: Scope, sessionId: string, req: Req, reply: Reply
   reply.send(okEnvelope(data, req.id));
 }
 
-async function handleListMany(core: Scope, sessionId: string, req: Req, reply: Reply): Promise<void> {
+async function handleListMany(
+  core: Scope,
+  sessionId: string,
+  req: Req,
+  reply: Reply,
+): Promise<void> {
   const parsed = fsListManyRequestSchema.safeParse(req.body ?? {});
   if (!parsed.success) {
     reply.send(buildValidationEnvelope(parsed.error.issues, req.id));
@@ -483,7 +537,12 @@ async function handleListMany(core: Scope, sessionId: string, req: Req, reply: R
   reply.send(okEnvelope(data, req.id));
 }
 
-async function handleStat(core: Scope, sessionId: string, req: Req, reply: Reply): Promise<void> {
+async function handleStat(
+  core: Scope,
+  sessionId: string,
+  req: Req,
+  reply: Reply,
+): Promise<void> {
   const parsed = fsStatRequestSchema.safeParse(req.body ?? {});
   if (!parsed.success) {
     reply.send(buildValidationEnvelope(parsed.error.issues, req.id));
@@ -493,7 +552,12 @@ async function handleStat(core: Scope, sessionId: string, req: Req, reply: Reply
   reply.send(okEnvelope(data, req.id));
 }
 
-async function handleStatMany(core: Scope, sessionId: string, req: Req, reply: Reply): Promise<void> {
+async function handleStatMany(
+  core: Scope,
+  sessionId: string,
+  req: Req,
+  reply: Reply,
+): Promise<void> {
   const parsed = fsStatManyRequestSchema.safeParse(req.body ?? {});
   if (!parsed.success) {
     reply.send(buildValidationEnvelope(parsed.error.issues, req.id));
@@ -503,7 +567,12 @@ async function handleStatMany(core: Scope, sessionId: string, req: Req, reply: R
   reply.send(okEnvelope(data, req.id));
 }
 
-async function handleMkdir(core: Scope, sessionId: string, req: Req, reply: Reply): Promise<void> {
+async function handleMkdir(
+  core: Scope,
+  sessionId: string,
+  req: Req,
+  reply: Reply,
+): Promise<void> {
   const parsed = fsMkdirRequestSchema.safeParse(req.body ?? {});
   if (!parsed.success) {
     reply.send(buildValidationEnvelope(parsed.error.issues, req.id));
@@ -513,7 +582,11 @@ async function handleMkdir(core: Scope, sessionId: string, req: Req, reply: Repl
   reply.send(okEnvelope(data, req.id));
 }
 
-async function handleSearch(fs: IWorkspaceFsService, req: Req, reply: Reply): Promise<void> {
+async function handleSearch(
+  fs: IWorkspaceFsService,
+  req: Req,
+  reply: Reply,
+): Promise<void> {
   const parsed = fsSearchRequestSchema.safeParse(req.body ?? {});
   if (!parsed.success) {
     reply.send(buildValidationEnvelope(parsed.error.issues, req.id));
@@ -523,7 +596,12 @@ async function handleSearch(fs: IWorkspaceFsService, req: Req, reply: Reply): Pr
   reply.send(okEnvelope(data, req.id));
 }
 
-async function handleGrep(core: Scope, sessionId: string, req: Req, reply: Reply): Promise<void> {
+async function handleGrep(
+  core: Scope,
+  sessionId: string,
+  req: Req,
+  reply: Reply,
+): Promise<void> {
   const parsed = fsGrepRequestSchema.safeParse(req.body ?? {});
   if (!parsed.success) {
     reply.send(buildValidationEnvelope(parsed.error.issues, req.id));
@@ -533,7 +611,12 @@ async function handleGrep(core: Scope, sessionId: string, req: Req, reply: Reply
   reply.send(okEnvelope(data, req.id));
 }
 
-async function handleGitStatus(core: Scope, sessionId: string, req: Req, reply: Reply): Promise<void> {
+async function handleGitStatus(
+  core: Scope,
+  sessionId: string,
+  req: Req,
+  reply: Reply,
+): Promise<void> {
   const parsed = fsGitStatusRequestSchema.safeParse(req.body ?? {});
   if (!parsed.success) {
     reply.send(buildValidationEnvelope(parsed.error.issues, req.id));
@@ -543,7 +626,12 @@ async function handleGitStatus(core: Scope, sessionId: string, req: Req, reply: 
   reply.send(okEnvelope(data, req.id));
 }
 
-async function handleDiff(core: Scope, sessionId: string, req: Req, reply: Reply): Promise<void> {
+async function handleDiff(
+  core: Scope,
+  sessionId: string,
+  req: Req,
+  reply: Reply,
+): Promise<void> {
   const parsed = fsDiffRequestSchema.safeParse(req.body ?? {});
   if (!parsed.success) {
     reply.send(buildValidationEnvelope(parsed.error.issues, req.id));
@@ -553,29 +641,48 @@ async function handleDiff(core: Scope, sessionId: string, req: Req, reply: Reply
   reply.send(okEnvelope(data, req.id));
 }
 
-async function handleOpen(core: Scope, sessionId: string, req: Req, reply: Reply): Promise<void> {
+async function handleOpen(
+  core: Scope,
+  sessionId: string,
+  req: Req,
+  reply: Reply,
+): Promise<void> {
   const parsed = fsOpenRequestSchema.safeParse(req.body ?? {});
   if (!parsed.success) {
     reply.send(buildValidationEnvelope(parsed.error.issues, req.id));
     return;
   }
-  const resolved = await resolveFs(core, sessionId).resolvePath(parsed.data.path);
+  const resolved = await resolveFs(core, sessionId).resolvePath(
+    parsed.data.path,
+  );
   await launchDetached(openFileCommandFor(resolved.absolute, parsed.data.line));
   reply.send(okEnvelope({ opened: true as const }, req.id));
 }
 
-async function handleReveal(core: Scope, sessionId: string, req: Req, reply: Reply): Promise<void> {
+async function handleReveal(
+  core: Scope,
+  sessionId: string,
+  req: Req,
+  reply: Reply,
+): Promise<void> {
   const parsed = fsRevealRequestSchema.safeParse(req.body ?? {});
   if (!parsed.success) {
     reply.send(buildValidationEnvelope(parsed.error.issues, req.id));
     return;
   }
-  const resolved = await resolveFs(core, sessionId).resolvePath(parsed.data.path);
+  const resolved = await resolveFs(core, sessionId).resolvePath(
+    parsed.data.path,
+  );
   await launchDetached(revealFileCommandFor(resolved.absolute));
   reply.send(okEnvelope({ revealed: true as const }, req.id));
 }
 
-async function handleOpenIn(core: Scope, sessionId: string, req: Req, reply: Reply): Promise<void> {
+async function handleOpenIn(
+  core: Scope,
+  sessionId: string,
+  req: Req,
+  reply: Reply,
+): Promise<void> {
   const parsed = fsOpenInRequestSchema.safeParse(req.body ?? {});
   if (!parsed.success) {
     reply.send(buildValidationEnvelope(parsed.error.issues, req.id));
@@ -593,7 +700,7 @@ async function handleOpenIn(core: Scope, sessionId: string, req: Req, reply: Rep
   } catch (err) {
     requestLog(req)?.warn(
       { session_id: sessionId, app_id: body.app_id, err },
-      'fs open-in launch failed',
+      "fs open-in launch failed",
     );
     reply.send(
       errEnvelope(
@@ -611,60 +718,162 @@ async function handleOpenIn(core: Scope, sessionId: string, req: Req, reply: Rep
 // Error mapping — domain Error2 codes → protocol wire codes.
 // ---------------------------------------------------------------------------
 
-function sendMappedError(reply: Reply, req: { id: string }, err: unknown): void {
+function sendMappedError(
+  reply: Reply,
+  req: { id: string },
+  err: unknown,
+): void {
   const requestId = req.id;
   const log = requestLog(req);
   if (isError2(err)) {
     switch (err.code) {
       case ErrorCodes.FS_PATH_ESCAPES:
-        reply.send(errEnvelope(ErrorCode.FS_PATH_ESCAPES_SESSION, err.message, requestId, err.stack));
+        reply.send(
+          errEnvelope(
+            ErrorCode.FS_PATH_ESCAPES_SESSION,
+            err.message,
+            requestId,
+            err.stack,
+          ),
+        );
         return;
       case ErrorCodes.FS_PATH_NOT_FOUND:
-        reply.send(errEnvelope(ErrorCode.FS_PATH_NOT_FOUND, err.message, requestId, err.stack));
+        reply.send(
+          errEnvelope(
+            ErrorCode.FS_PATH_NOT_FOUND,
+            err.message,
+            requestId,
+            err.stack,
+          ),
+        );
         return;
       case ErrorCodes.FS_IS_DIRECTORY:
-        reply.send(errEnvelope(ErrorCode.FS_IS_DIRECTORY, err.message, requestId, err.stack));
+        reply.send(
+          errEnvelope(
+            ErrorCode.FS_IS_DIRECTORY,
+            err.message,
+            requestId,
+            err.stack,
+          ),
+        );
         return;
       case ErrorCodes.FS_ALREADY_EXISTS:
-        reply.send(errEnvelope(ErrorCode.FS_ALREADY_EXISTS, err.message, requestId, err.stack));
+        reply.send(
+          errEnvelope(
+            ErrorCode.FS_ALREADY_EXISTS,
+            err.message,
+            requestId,
+            err.stack,
+          ),
+        );
         return;
       case ErrorCodes.FS_IS_BINARY:
-        reply.send(errEnvelope(ErrorCode.FS_IS_BINARY, err.message, requestId, err.stack));
+        reply.send(
+          errEnvelope(
+            ErrorCode.FS_IS_BINARY,
+            err.message,
+            requestId,
+            err.stack,
+          ),
+        );
         return;
       case ErrorCodes.FS_TOO_LARGE:
-        reply.send(errEnvelope(ErrorCode.FS_TOO_LARGE, err.message, requestId, err.stack));
+        reply.send(
+          errEnvelope(
+            ErrorCode.FS_TOO_LARGE,
+            err.message,
+            requestId,
+            err.stack,
+          ),
+        );
         return;
       case ErrorCodes.FS_TOO_MANY_RESULTS:
-        reply.send(errEnvelope(ErrorCode.FS_TOO_MANY_RESULTS, err.message, requestId, err.stack));
+        reply.send(
+          errEnvelope(
+            ErrorCode.FS_TOO_MANY_RESULTS,
+            err.message,
+            requestId,
+            err.stack,
+          ),
+        );
         return;
       case ErrorCodes.FS_GREP_TIMEOUT:
-        reply.send(errEnvelope(ErrorCode.FS_GREP_TIMEOUT, err.message, requestId, err.stack));
+        reply.send(
+          errEnvelope(
+            ErrorCode.FS_GREP_TIMEOUT,
+            err.message,
+            requestId,
+            err.stack,
+          ),
+        );
         return;
       case ErrorCodes.FS_GIT_UNAVAILABLE:
-        reply.send(errEnvelope(ErrorCode.FS_GIT_UNAVAILABLE, err.message, requestId, err.stack));
+        reply.send(
+          errEnvelope(
+            ErrorCode.FS_GIT_UNAVAILABLE,
+            err.message,
+            requestId,
+            err.stack,
+          ),
+        );
         return;
       case ErrorCodes.SESSION_NOT_FOUND:
-        reply.send(errEnvelope(ErrorCode.SESSION_NOT_FOUND, err.message, requestId, err.stack));
+        reply.send(
+          errEnvelope(
+            ErrorCode.SESSION_NOT_FOUND,
+            err.message,
+            requestId,
+            err.stack,
+          ),
+        );
         return;
       // hostFs errors that escaped the workspaceFs layer keep their `os.fs.*`
       // code; map them onto the closest v1 wire code (ENOTDIR collapses into
       // path-not-found, matching `mapFsError`).
       case ErrorCodes.OS_FS_NOT_FOUND:
       case ErrorCodes.OS_FS_NOT_DIRECTORY:
-        reply.send(errEnvelope(ErrorCode.FS_PATH_NOT_FOUND, err.message, requestId, err.stack));
+        reply.send(
+          errEnvelope(
+            ErrorCode.FS_PATH_NOT_FOUND,
+            err.message,
+            requestId,
+            err.stack,
+          ),
+        );
         return;
       case ErrorCodes.OS_FS_IS_DIRECTORY:
-        reply.send(errEnvelope(ErrorCode.FS_IS_DIRECTORY, err.message, requestId, err.stack));
+        reply.send(
+          errEnvelope(
+            ErrorCode.FS_IS_DIRECTORY,
+            err.message,
+            requestId,
+            err.stack,
+          ),
+        );
         return;
       case ErrorCodes.OS_FS_ALREADY_EXISTS:
-        reply.send(errEnvelope(ErrorCode.FS_ALREADY_EXISTS, err.message, requestId, err.stack));
+        reply.send(
+          errEnvelope(
+            ErrorCode.FS_ALREADY_EXISTS,
+            err.message,
+            requestId,
+            err.stack,
+          ),
+        );
         return;
       case ErrorCodes.OS_FS_PERMISSION_DENIED:
-        reply.send(errEnvelope(ErrorCode.FS_PERMISSION_DENIED, err.message, requestId, err.stack));
+        reply.send(
+          errEnvelope(
+            ErrorCode.FS_PERMISSION_DENIED,
+            err.message,
+            requestId,
+            err.stack,
+          ),
+        );
         return;
     }
   }
-  log?.error({ err }, 'fs request failed');
+  log?.error({ err }, "fs request failed");
   reply.send(
     errEnvelope(
       ErrorCode.INTERNAL_ERROR,
@@ -686,14 +895,14 @@ function buildValidationEnvelope(
   details: { path: string; message: string }[];
 } {
   const details = issues.map((i) => ({
-    path: i.path.map((p) => String(p)).join('.'),
+    path: i.path.map((p) => String(p)).join("."),
     message: i.message,
   }));
   const first = details[0];
   const msg =
     first === undefined
-      ? 'validation failed'
-      : first.path === ''
+      ? "validation failed"
+      : first.path === ""
         ? first.message
         : `${first.path}: ${first.message}`;
   return {
@@ -706,7 +915,7 @@ function buildValidationEnvelope(
 }
 
 function sanitizeFilename(rel: string): string {
-  const segs = rel.split('/');
+  const segs = rel.split("/");
   const base = segs[segs.length - 1] ?? rel;
   return base.replace(/"/g, '\\"');
 }

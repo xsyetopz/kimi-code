@@ -9,9 +9,9 @@ export interface WebAsset {
 export function serveWebAsset(asset: WebAsset): Response {
   return new Response(asset.gzipped, {
     headers: {
-      'content-type': 'text/html; charset=utf-8',
-      'content-encoding': 'gzip',
-      'cache-control': 'no-store',
+      "content-type": "text/html; charset=utf-8",
+      "content-encoding": "gzip",
+      "cache-control": "no-store",
     },
   });
 }

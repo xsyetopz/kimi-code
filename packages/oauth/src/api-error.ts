@@ -1,7 +1,13 @@
-import { isRecord } from './utils';
+import { isRecord } from "./utils";
 
-const DIRECT_ERROR_KEYS = ['error_description', 'message', 'detail'] as const;
-const NESTED_ERROR_KEYS = ['message', 'error_description', 'detail', 'code', 'type'] as const;
+const DIRECT_ERROR_KEYS = ["error_description", "message", "detail"] as const;
+const NESTED_ERROR_KEYS = [
+  "message",
+  "error_description",
+  "detail",
+  "code",
+  "type",
+] as const;
 
 export function extractApiErrorMessage(value: unknown): string | undefined {
   if (Array.isArray(value)) {
@@ -19,7 +25,7 @@ export function extractApiErrorMessage(value: unknown): string | undefined {
     if (message !== undefined) return message;
   }
 
-  const error = value['error'];
+  const error = value["error"];
   const errorString = nonEmptyString(error);
   if (errorString !== undefined) return errorString;
 
@@ -30,7 +36,7 @@ export function extractApiErrorMessage(value: unknown): string | undefined {
     }
   }
 
-  const errors = value['errors'];
+  const errors = value["errors"];
   if (Array.isArray(errors)) {
     for (const item of errors) {
       const message = extractApiErrorMessage(item);
@@ -55,12 +61,15 @@ export async function readApiErrorMessage(
   return extractApiErrorMessage(parsed) ?? fallback;
 }
 
-function stringField(record: Record<string, unknown>, key: string): string | undefined {
+function stringField(
+  record: Record<string, unknown>,
+  key: string,
+): string | undefined {
   return nonEmptyString(record[key]);
 }
 
 function nonEmptyString(value: unknown): string | undefined {
-  if (typeof value !== 'string') return undefined;
+  if (typeof value !== "string") return undefined;
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : undefined;
 }

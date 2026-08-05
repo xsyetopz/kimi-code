@@ -9,29 +9,32 @@
  * `applyExit` and `resume` facets.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { defineModel } from '#/wire/model';
+import { defineModel } from "#/wire/model";
 
-import type { SwarmModeTrigger } from './swarm';
+import type { SwarmModeTrigger } from "./swarm";
 
-export const SwarmModel = defineModel<SwarmModeTrigger | null>('swarm', () => null);
+export const SwarmModel = defineModel<SwarmModeTrigger | null>(
+  "swarm",
+  () => null,
+);
 
-declare module '#/wire/types' {
+declare module "#/wire/types" {
   interface PersistedOpMap {
-    'swarm_mode.enter': typeof swarmEnter;
-    'swarm_mode.exit': typeof swarmExit;
+    "swarm_mode.enter": typeof swarmEnter;
+    "swarm_mode.exit": typeof swarmExit;
   }
 }
 
-export const swarmEnter = SwarmModel.defineOp('swarm_mode.enter', {
+export const swarmEnter = SwarmModel.defineOp("swarm_mode.enter", {
   schema: z.object({ trigger: z.custom<SwarmModeTrigger>() }),
   apply: (_s, p) => p.trigger,
-  toEvent: () => ({ type: 'agent.status.updated' as const, swarmMode: true }),
+  toEvent: () => ({ type: "agent.status.updated" as const, swarmMode: true }),
 });
 
-export const swarmExit = SwarmModel.defineOp('swarm_mode.exit', {
+export const swarmExit = SwarmModel.defineOp("swarm_mode.exit", {
   schema: z.object({}),
   apply: () => null,
-  toEvent: () => ({ type: 'agent.status.updated' as const, swarmMode: false }),
+  toEvent: () => ({ type: "agent.status.updated" as const, swarmMode: false }),
 });

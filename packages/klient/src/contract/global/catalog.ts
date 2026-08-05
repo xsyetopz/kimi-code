@@ -7,9 +7,9 @@
  * (snake_case fields).
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import type { ServiceContract, StreamingProcedureContract } from '../types.js';
+import type { ServiceContract, StreamingProcedureContract } from "../types.js";
 
 export const modelCatalogItemSchema = z.object({
   provider: z.string(),
@@ -21,7 +21,11 @@ export const modelCatalogItemSchema = z.object({
   default_effort: z.string().optional(),
 });
 
-export const providerCatalogStatusSchema = z.enum(['connected', 'error', 'unconfigured']);
+export const providerCatalogStatusSchema = z.enum([
+  "connected",
+  "error",
+  "unconfigured",
+]);
 
 export const providerCatalogItemSchema = z.object({
   id: z.string(),
@@ -45,23 +49,36 @@ const generateInputSchema = z.object({
   responseFormat: z.unknown().optional(),
 });
 
-const generateParamsSchema = z.object({
-  cacheKey: z.string().optional(),
-  temperature: z.number().optional(),
-  topP: z.number().optional(),
-  thinkingEffort: z.string().optional(),
-  maxCompletionTokens: z.number().optional(),
-}).optional();
+const generateParamsSchema = z
+  .object({
+    cacheKey: z.string().optional(),
+    temperature: z.number().optional(),
+    topP: z.number().optional(),
+    thinkingEffort: z.string().optional(),
+    maxCompletionTokens: z.number().optional(),
+  })
+  .optional();
 
-const generateEventSchema = z.object({
-  type: z.string(),
-}).passthrough();
+const generateEventSchema = z
+  .object({
+    type: z.string(),
+  })
+  .passthrough();
 
 export const catalogContract = {
   listModels: { input: z.tuple([]), output: z.array(modelCatalogItemSchema) },
-  listProviders: { input: z.tuple([]), output: z.array(providerCatalogItemSchema) },
-  getProvider: { input: z.tuple([z.string()]), output: providerCatalogItemSchema },
-  setDefaultModel: { input: z.tuple([z.string()]), output: setDefaultModelResponseSchema },
+  listProviders: {
+    input: z.tuple([]),
+    output: z.array(providerCatalogItemSchema),
+  },
+  getProvider: {
+    input: z.tuple([z.string()]),
+    output: providerCatalogItemSchema,
+  },
+  setDefaultModel: {
+    input: z.tuple([z.string()]),
+    output: setDefaultModelResponseSchema,
+  },
   generate: {
     input: z.tuple([z.string(), generateInputSchema, generateParamsSchema]),
     chunk: generateEventSchema,

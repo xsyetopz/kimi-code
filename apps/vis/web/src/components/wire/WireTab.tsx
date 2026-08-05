@@ -1,12 +1,12 @@
-import { useVirtualizer } from '@tanstack/react-virtual';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useVirtualizer } from "@tanstack/react-virtual";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { useSession } from '../../hooks/useSession';
-import { useWire } from '../../hooks/useWire';
-import { computeIssues, topSeverity } from '../../lib/issues';
-import type { AgentRecord, WireEntry } from '../../types';
-import { IssuesDrawer } from './IssuesDrawer';
-import { WireRow, type PairHint } from './WireRow';
+import { useSession } from "../../hooks/useSession";
+import { useWire } from "../../hooks/useWire";
+import { computeIssues, topSeverity } from "../../lib/issues";
+import type { AgentRecord, WireEntry } from "../../types";
+import { IssuesDrawer } from "./IssuesDrawer";
+import { WireRow, type PairHint } from "./WireRow";
 
 interface PairRecord {
   callLineNo: number | null;
@@ -19,24 +19,31 @@ interface PairRecord {
  *  by `toolCallId`. Used to render the inline "→ #N" / "← #N" cross-
  *  references, the call→result duration, and to drive the hover-pair
  *  highlight. */
-function computePairMap(entries: readonly WireEntry[]): Map<string, PairRecord> {
+function computePairMap(
+  entries: readonly WireEntry[],
+): Map<string, PairRecord> {
   const map = new Map<string, PairRecord>();
   const ensure = (id: string): PairRecord => {
     const existing = map.get(id);
     if (existing) return existing;
-    const fresh: PairRecord = { callLineNo: null, resultLineNo: null, callTime: null, resultTime: null };
+    const fresh: PairRecord = {
+      callLineNo: null,
+      resultLineNo: null,
+      callTime: null,
+      resultTime: null,
+    };
     map.set(id, fresh);
     return fresh;
   };
   for (const entry of entries) {
-    if (entry.data.type !== 'context.append_loop_event') continue;
+    if (entry.data.type !== "context.append_loop_event") continue;
     const ev = entry.data.event;
     const time = entry.data.time ?? null;
-    if (ev.type === 'tool.call') {
+    if (ev.type === "tool.call") {
       const rec = ensure(ev.toolCallId);
       rec.callLineNo = entry.lineNo;
       rec.callTime = time;
-    } else if (ev.type === 'tool.result') {
+    } else if (ev.type === "tool.result") {
       const rec = ensure(ev.toolCallId);
       rec.resultLineNo = entry.lineNo;
       rec.resultTime = time;
@@ -45,17 +52,22 @@ function computePairMap(entries: readonly WireEntry[]): Map<string, PairRecord> 
   return map;
 }
 
-function pairInfoFor(record: AgentRecord, map: Map<string, PairRecord>): PairHint | undefined {
-  if (record.type !== 'context.append_loop_event') return undefined;
+function pairInfoFor(
+  record: AgentRecord,
+  map: Map<string, PairRecord>,
+): PairHint | undefined {
+  if (record.type !== "context.append_loop_event") return undefined;
   const ev = record.event;
-  if (ev.type !== 'tool.call' && ev.type !== 'tool.result') return undefined;
+  if (ev.type !== "tool.call" && ev.type !== "tool.result") return undefined;
   const entry = map.get(ev.toolCallId);
   if (entry === undefined) return undefined;
   const durationMs =
-    entry.callTime !== null && entry.resultTime !== null ? entry.resultTime - entry.callTime : null;
+    entry.callTime !== null && entry.resultTime !== null
+      ? entry.resultTime - entry.callTime
+      : null;
   return {
     toolCallId: ev.toolCallId,
-    kind: ev.type === 'tool.call' ? 'call' : 'result',
+    kind: ev.type === "tool.call" ? "call" : "result",
     callLineNo: entry.callLineNo,
     resultLineNo: entry.resultLineNo,
     durationMs,
@@ -68,7 +80,7 @@ interface WireTabProps {
   initialAgentId?: string;
 }
 
-export function WireTab({ sessionId, initialAgentId = 'main' }: WireTabProps) {
+export function WireTab({ sessionId, initialAgentId = "main" }: WireTabProps) {
   const [agentId, setAgentId] = useState<string>(initialAgentId);
   // Re-sync when the route changes either the session or the agent id
   // while this component stays mounted. Without `sessionId` in the deps,
@@ -82,7 +94,7 @@ export function WireTab({ sessionId, initialAgentId = 'main' }: WireTabProps) {
   const { data: wire, isLoading, error } = useWire(sessionId, agentId);
   const parentRef = useRef<HTMLDivElement>(null);
 
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState("");
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [hoveredPairId, setHoveredPairId] = useState<string | null>(null);
@@ -121,7 +133,10 @@ export function WireTab({ sessionId, initialAgentId = 'main' }: WireTabProps) {
     });
   }, [entries, search]);
 
-  const issues = useMemo(() => computeIssues(entries, warnings), [entries, warnings]);
+  const issues = useMemo(
+    () => computeIssues(entries, warnings),
+    [entries, warnings],
+  );
   const issuesSeverity = topSeverity(issues);
 
   const virt = useVirtualizer({
@@ -154,8 +169,10 @@ export function WireTab({ sessionId, initialAgentId = 'main' }: WireTabProps) {
     (lineNo: number) => {
       const idx = filteredLineIdx.get(lineNo);
       if (idx === undefined) return;
-      virt.scrollToIndex(idx, { align: 'center' });
-      setExpanded((prev) => (prev.has(lineNo) ? prev : new Set(prev).add(lineNo)));
+      virt.scrollToIndex(idx, { align: "center" });
+      setExpanded((prev) =>
+        prev.has(lineNo) ? prev : new Set(prev).add(lineNo),
+      );
     },
     [filteredLineIdx, virt],
   );
@@ -182,11 +199,13 @@ export function WireTab({ sessionId, initialAgentId = 'main' }: WireTabProps) {
             }}
             className="border border-border bg-surface-0 px-2 py-1 font-mono text-[12px] text-fg-0 focus:border-border-strong focus:outline-none"
           >
-            {agents.length === 0 ? <option value={agentId}>{agentId}</option> : null}
+            {agents.length === 0 ? (
+              <option value={agentId}>{agentId}</option>
+            ) : null}
             {agents.map((a) => (
               <option key={a.agentId} value={a.agentId}>
                 {a.agentId} ({a.type}
-                {a.parentAgentId ? ` ← ${a.parentAgentId}` : ''})
+                {a.parentAgentId ? ` ← ${a.parentAgentId}` : ""})
               </option>
             ))}
           </select>
@@ -209,7 +228,7 @@ export function WireTab({ sessionId, initialAgentId = 'main' }: WireTabProps) {
               onClick={() => {
                 setDrawerOpen(true);
               }}
-              title={`${issues.length} issue${issues.length > 1 ? 's' : ''} — click to inspect`}
+              title={`${issues.length} issue${issues.length > 1 ? "s" : ""} — click to inspect`}
               className="flex items-center gap-1 border px-2 py-0.5"
               style={{
                 borderColor: `var(--color-sev-${issuesSeverity})`,
@@ -218,7 +237,11 @@ export function WireTab({ sessionId, initialAgentId = 'main' }: WireTabProps) {
               }}
             >
               <span>
-                {issuesSeverity === 'error' ? '⚠' : issuesSeverity === 'warning' ? '⚠' : 'ℹ'}
+                {issuesSeverity === "error"
+                  ? "⚠"
+                  : issuesSeverity === "warning"
+                    ? "⚠"
+                    : "ℹ"}
               </span>
               <span className="tabular">{issues.length}</span>
             </button>
@@ -240,7 +263,8 @@ export function WireTab({ sessionId, initialAgentId = 'main' }: WireTabProps) {
 
       {warnings.length > 0 ? (
         <div className="shrink-0 border-b border-[var(--color-sev-warning)] bg-[color-mix(in_oklab,var(--color-sev-warning)_8%,transparent)] px-3 py-1 font-mono text-[11px] text-[var(--color-sev-warning)]">
-          {warnings.length} warning{warnings.length > 1 ? 's' : ''} · first: {warnings[0]}
+          {warnings.length} warning{warnings.length > 1 ? "s" : ""} · first:{" "}
+          {warnings[0]}
         </div>
       ) : null}
 
@@ -260,7 +284,7 @@ export function WireTab({ sessionId, initialAgentId = 'main' }: WireTabProps) {
             <div
               style={{
                 height: virt.getTotalSize(),
-                position: 'relative',
+                position: "relative",
               }}
             >
               {virt.getVirtualItems().map((vi) => {
@@ -275,10 +299,10 @@ export function WireTab({ sessionId, initialAgentId = 'main' }: WireTabProps) {
                     data-index={vi.index}
                     ref={virt.measureElement}
                     style={{
-                      position: 'absolute',
+                      position: "absolute",
                       top: 0,
                       left: 0,
-                      width: '100%',
+                      width: "100%",
                       transform: `translateY(${vi.start}px)`,
                     }}
                   >

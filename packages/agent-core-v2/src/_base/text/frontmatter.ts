@@ -7,14 +7,17 @@
  * fence is a `FrontmatterError`.
  */
 
-import { load as loadYaml } from 'js-yaml';
+import { load as loadYaml } from "js-yaml";
 
 export class FrontmatterError extends Error {
   constructor(message: string, cause?: unknown) {
     super(message);
-    this.name = 'FrontmatterError';
+    this.name = "FrontmatterError";
     if (cause !== undefined) {
-      Object.defineProperty(this, 'cause', { value: cause, configurable: true });
+      Object.defineProperty(this, "cause", {
+        value: cause,
+        configurable: true,
+      });
     }
   }
 }
@@ -24,7 +27,7 @@ export interface ParsedFrontmatter {
   readonly body: string;
 }
 
-const FENCE = '---';
+const FENCE = "---";
 
 export function parseFrontmatter(text: string): ParsedFrontmatter {
   const lines = text.split(/\r?\n/);
@@ -32,14 +35,16 @@ export function parseFrontmatter(text: string): ParsedFrontmatter {
     return { data: null, body: text };
   }
 
-  const close = lines.findIndex((line, index) => index > 0 && line.trim() === FENCE);
+  const close = lines.findIndex(
+    (line, index) => index > 0 && line.trim() === FENCE,
+  );
   if (close === -1) {
-    throw new FrontmatterError('Missing closing frontmatter fence');
+    throw new FrontmatterError("Missing closing frontmatter fence");
   }
 
-  const yamlText = lines.slice(1, close).join('\n').trim();
-  const body = lines.slice(close + 1).join('\n');
-  if (yamlText === '') {
+  const yamlText = lines.slice(1, close).join("\n").trim();
+  const body = lines.slice(close + 1).join("\n");
+  if (yamlText === "") {
     return { data: {}, body };
   }
 

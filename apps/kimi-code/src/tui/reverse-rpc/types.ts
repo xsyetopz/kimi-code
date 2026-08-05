@@ -6,17 +6,17 @@
  * core payloads into these shapes for panel components.
  */
 
-import type { QuestionAnswerMethod } from '@moonshot-ai/kimi-code-sdk';
+import type { QuestionAnswerMethod } from "@moonshot-ai/kimi-code-sdk";
 
 // ── Display blocks (approval panel) ──────────────────────────────────
 
 export interface BriefDisplayBlock {
-  type: 'brief';
+  type: "brief";
   text: string;
 }
 
 export interface DiffDisplayBlock {
-  type: 'diff';
+  type: "diff";
   path: string;
   old_text: string;
   new_text: string;
@@ -26,7 +26,7 @@ export interface DiffDisplayBlock {
 }
 
 export interface ShellDisplayBlock {
-  type: 'shell';
+  type: "shell";
   language: string;
   command: string;
   cwd?: string | undefined;
@@ -35,51 +35,51 @@ export interface ShellDisplayBlock {
 }
 
 export interface FileOpDisplayBlock {
-  type: 'file_op';
-  operation: 'read' | 'write' | 'edit' | 'glob' | 'grep';
+  type: "file_op";
+  operation: "read" | "write" | "edit" | "glob" | "grep";
   path: string;
   detail?: string | undefined;
 }
 
 /** Full file content preview for Write — a code block, not a diff. */
 export interface FileContentDisplayBlock {
-  type: 'file_content';
+  type: "file_content";
   path: string;
   content: string;
   language?: string | undefined;
 }
 
 export interface UrlFetchDisplayBlock {
-  type: 'url_fetch';
+  type: "url_fetch";
   url: string;
   method?: string | undefined;
 }
 
 export interface SearchDisplayBlock {
-  type: 'search';
+  type: "search";
   query: string;
   scope?: string | undefined;
 }
 
 export interface InvocationDisplayBlock {
-  type: 'invocation';
-  kind: 'agent' | 'skill';
+  type: "invocation";
+  kind: "agent" | "skill";
   name: string;
   description?: string | undefined;
 }
 
 export interface TodoDisplayItem {
   title: string;
-  status: 'pending' | 'in_progress' | 'done';
+  status: "pending" | "in_progress" | "done";
 }
 
 export interface TodoDisplayBlock {
-  type: 'todo';
+  type: "todo";
   items: TodoDisplayItem[];
 }
 
 export interface BackgroundTaskDisplayBlock {
-  type: 'background_task';
+  type: "background_task";
   task_id: string;
   kind: string;
   status: string;
@@ -100,7 +100,7 @@ export type DisplayBlock =
 
 export interface ApprovalPanelChoice {
   label: string;
-  response: 'approved' | 'approved_for_session' | 'rejected' | 'cancelled';
+  response: "approved" | "approved_for_session" | "rejected" | "cancelled";
   selected_label?: string | undefined;
   requires_feedback?: boolean | undefined;
   // Optional helper text shown dim beneath the label. Omitted/empty renders

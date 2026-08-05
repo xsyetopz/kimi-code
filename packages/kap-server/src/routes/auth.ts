@@ -12,11 +12,11 @@
  * — its `AuthStatus[]` model is the v2 shape, not the v1 contract.
  */
 
-import { IAuthLegacyService, type Scope } from '@moonshot-ai/agent-core-v2';
-import { authSummarySchema } from '@moonshot-ai/agent-core-v2/app/authLegacy/authLegacy';
+import { IAuthLegacyService, type Scope } from "@moonshot-ai/agent-core-v2";
+import { authSummarySchema } from "@moonshot-ai/agent-core-v2/app/authLegacy/authLegacy";
 
-import { okEnvelope } from '../envelope';
-import { defineRoute } from '../middleware/defineRoute';
+import { okEnvelope } from "../envelope";
+import { defineRoute } from "../middleware/defineRoute";
 
 interface RouteHost {
   get(
@@ -32,16 +32,20 @@ interface RouteHost {
 export function registerAuthRoute(app: RouteHost, core: Scope): void {
   const route = defineRoute(
     {
-      method: 'GET',
-      path: '/auth',
+      method: "GET",
+      path: "/auth",
       success: { data: authSummarySchema },
-      description: 'Get server auth readiness snapshot',
-      tags: ['auth'],
+      description: "Get server auth readiness snapshot",
+      tags: ["auth"],
     },
     async (req, reply) => {
       const summary = await core.accessor.get(IAuthLegacyService).get();
       reply.send(okEnvelope(summary, req.id));
     },
   );
-  app.get(route.path, route.options, route.handler as Parameters<RouteHost['get']>[2]);
+  app.get(
+    route.path,
+    route.options,
+    route.handler as Parameters<RouteHost["get"]>[2],
+  );
 }

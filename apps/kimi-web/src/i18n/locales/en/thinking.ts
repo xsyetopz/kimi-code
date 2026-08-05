@@ -1,4 +1,4 @@
 export default {
-  panelTitle: 'Thinking',
-  close: 'Close',
+  panelTitle: "Thinking",
+  close: "Close",
 } as const;

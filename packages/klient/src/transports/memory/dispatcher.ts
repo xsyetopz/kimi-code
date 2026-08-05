@@ -13,17 +13,21 @@
  * memory behave identically by construction.
  */
 
-import type { ServiceIdentifier } from '@moonshot-ai/agent-core-v2/_base/di/instantiation';
-import { IWorkspaceLifecycleService } from '@moonshot-ai/agent-core-v2/app/workspaceLifecycle/workspaceLifecycle';
-import { getLiveSessionById } from '@moonshot-ai/agent-core-v2/app/workspaceLifecycle/sessionLookup';
-import { IAgentLifecycleService } from '@moonshot-ai/agent-core-v2/session/agentLifecycle/agentLifecycle';
-import { ensureMainAgent } from '@moonshot-ai/agent-core-v2/session/agentLifecycle/mainAgent';
-import { ISessionInteractionService } from '@moonshot-ai/agent-core-v2/session/interaction/interaction';
-import { IEventBus } from '@moonshot-ai/agent-core-v2/app/event/eventBus';
+import type { ServiceIdentifier } from "@moonshot-ai/agent-core-v2/_base/di/instantiation";
+import { IWorkspaceLifecycleService } from "@moonshot-ai/agent-core-v2/app/workspaceLifecycle/workspaceLifecycle";
+import { getLiveSessionById } from "@moonshot-ai/agent-core-v2/app/workspaceLifecycle/sessionLookup";
+import { IAgentLifecycleService } from "@moonshot-ai/agent-core-v2/session/agentLifecycle/agentLifecycle";
+import { ensureMainAgent } from "@moonshot-ai/agent-core-v2/session/agentLifecycle/mainAgent";
+import { ISessionInteractionService } from "@moonshot-ai/agent-core-v2/session/interaction/interaction";
+import { IEventBus } from "@moonshot-ai/agent-core-v2/app/event/eventBus";
 
-import type { EventSourceRef, IDisposable, ScopeRef } from '../../core/channel.js';
-import { RPCError } from '../../core/errors.js';
-import { IEventService, serviceTokens } from './serviceRegistry.js';
+import type {
+  EventSourceRef,
+  IDisposable,
+  ScopeRef,
+} from "../../core/channel.js";
+import { RPCError } from "../../core/errors.js";
+import { IEventService, serviceTokens } from "./serviceRegistry.js";
 
 /** Structural minimum of an engine `Scope` / `IScopeHandle`. */
 export interface ScopeLike {
@@ -39,8 +43,18 @@ export function wireClone<T>(value: T): T {
 }
 
 export interface MemoryDispatcher {
-  call(scope: ScopeRef, service: string, method: string, args: unknown[]): Promise<unknown>;
-  stream(scope: ScopeRef, service: string, method: string, args: unknown[]): AsyncIterable<unknown>;
+  call(
+    scope: ScopeRef,
+    service: string,
+    method: string,
+    args: unknown[],
+  ): Promise<unknown>;
+  stream(
+    scope: ScopeRef,
+    service: string,
+    method: string,
+    args: unknown[],
+  ): AsyncIterable<unknown>;
   listen(
     scope: ScopeRef,
     source: EventSourceRef,
@@ -52,7 +66,7 @@ export interface MemoryDispatcher {
 const REQUEST_INVALID = 40001;
 const NOT_FOUND = 40404;
 
-type ScopeKind = 'core' | 'workspace' | 'session' | 'agent';
+type ScopeKind = "core" | "workspace" | "session" | "agent";
 
 interface ResolvedScope {
   readonly kind: ScopeKind;
@@ -66,25 +80,30 @@ export function createMemoryDispatcher(root: ScopeLike): MemoryDispatcher {
       const handler = await root.accessor
         .get(IWorkspaceLifecycleService)
         .handlerFor({ workspaceId: scope.workspaceId });
-      return { kind: 'workspace', like: handler };
+      return { kind: "workspace", like: handler };
     }
-    if (scope.sessionId === undefined) return { kind: 'core', like: root };
+    if (scope.sessionId === undefined) return { kind: "core", like: root };
     const session = getLiveSessionById(root.accessor, scope.sessionId);
     if (session === undefined) {
       throw new RPCError(NOT_FOUND, `session not found: ${scope.sessionId}`);
     }
-    if (scope.agentId === undefined) return { kind: 'session', like: session };
-    if (scope.agentId === 'main') {
-      return { kind: 'agent', like: await ensureMainAgent(session) };
+    if (scope.agentId === undefined) return { kind: "session", like: session };
+    if (scope.agentId === "main") {
+      return { kind: "agent", like: await ensureMainAgent(session) };
     }
-    const agent = session.accessor.get(IAgentLifecycleService).get(scope.agentId);
+    const agent = session.accessor
+      .get(IAgentLifecycleService)
+      .get(scope.agentId);
     if (agent === undefined) {
       throw new RPCError(NOT_FOUND, `agent not found: ${scope.agentId}`);
     }
-    return { kind: 'agent', like: agent };
+    return { kind: "agent", like: agent };
   }
 
-  function resolveService(resolved: ResolvedScope, service: string): Record<string, unknown> {
+  function resolveService(
+    resolved: ResolvedScope,
+    service: string,
+  ): Record<string, unknown> {
     const token = serviceTokens[service];
     if (token === undefined) {
       throw new RPCError(REQUEST_INVALID, `unknown service: ${service}`);
@@ -98,31 +117,38 @@ export function createMemoryDispatcher(root: ScopeLike): MemoryDispatcher {
     name: string,
     handler: (data: unknown) => void,
   ): IDisposable {
-    if (resolved.kind === 'core' && name === 'events') {
+    if (resolved.kind === "core" && name === "events") {
       const bus = resolved.like.accessor.get(IEventService);
       return bus.subscribe((event) => {
         handler(wireClone(event));
       });
     }
-    if (resolved.kind === 'session' && name === 'interactions') {
-      const interaction = resolved.like.accessor.get(ISessionInteractionService);
+    if (resolved.kind === "session" && name === "interactions") {
+      const interaction = resolved.like.accessor.get(
+        ISessionInteractionService,
+      );
       return interaction.onDidChangePending(() => {
         handler(wireClone(interaction.listPending()));
       });
     }
-    if (resolved.kind === 'session' && name === 'interactions:resolved') {
-      const interaction = resolved.like.accessor.get(ISessionInteractionService);
+    if (resolved.kind === "session" && name === "interactions:resolved") {
+      const interaction = resolved.like.accessor.get(
+        ISessionInteractionService,
+      );
       return interaction.onDidResolve((resolution) => {
         handler(wireClone(resolution));
       });
     }
-    if (resolved.kind === 'agent' && name === 'events') {
+    if (resolved.kind === "agent" && name === "events") {
       const bus = resolved.like.accessor.get(IEventBus);
       return bus.subscribe((event) => {
         handler(wireClone(event));
       });
     }
-    throw new RPCError(REQUEST_INVALID, `unknown event stream: ${name} (${resolved.kind})`);
+    throw new RPCError(
+      REQUEST_INVALID,
+      `unknown event stream: ${name} (${resolved.kind})`,
+    );
   }
 
   function subscribeSource(
@@ -130,16 +156,22 @@ export function createMemoryDispatcher(root: ScopeLike): MemoryDispatcher {
     source: EventSourceRef,
     handler: (data: unknown) => void,
   ): IDisposable {
-    if (source.kind === 'stream') {
+    if (source.kind === "stream") {
       return subscribeStream(resolved, source.name, handler);
     }
     if (!/^on[A-Z]/.test(source.event)) {
-      throw new RPCError(REQUEST_INVALID, `not an event property: ${source.event}`);
+      throw new RPCError(
+        REQUEST_INVALID,
+        `not an event property: ${source.event}`,
+      );
     }
     const instance = resolveService(resolved, source.service);
     const emitter = instance[source.event];
-    if (typeof emitter !== 'function') {
-      throw new RPCError(REQUEST_INVALID, `event not found: ${source.service}.${source.event}`);
+    if (typeof emitter !== "function") {
+      throw new RPCError(
+        REQUEST_INVALID,
+        `event not found: ${source.service}.${source.event}`,
+      );
     }
     return (emitter as (listener: (data: unknown) => void) => IDisposable).call(
       instance,
@@ -155,13 +187,19 @@ export function createMemoryDispatcher(root: ScopeLike): MemoryDispatcher {
       const instance = resolveService(resolved, service);
       const member = instance[method];
       if (member === undefined) {
-        throw new RPCError(REQUEST_INVALID, `method not found: ${service}.${method}`);
+        throw new RPCError(
+          REQUEST_INVALID,
+          `method not found: ${service}.${method}`,
+        );
       }
-      if (typeof member !== 'function') {
+      if (typeof member !== "function") {
         return wireClone(member);
       }
       const clonedArgs = args.map(wireClone);
-      const result = await (member as (...a: unknown[]) => unknown).apply(instance, clonedArgs);
+      const result = await (member as (...a: unknown[]) => unknown).apply(
+        instance,
+        clonedArgs,
+      );
       return wireClone(result);
     },
 
@@ -169,7 +207,7 @@ export function createMemoryDispatcher(root: ScopeLike): MemoryDispatcher {
       // Special case: modelResolver.generate routes to
       // getRequester(modelId).request(input, signal, params) because the
       // catalog has no `generate` method — the facade synthesises the call.
-      if (service === 'modelResolver' && method === 'generate') {
+      if (service === "modelResolver" && method === "generate") {
         return {
           [Symbol.asyncIterator]() {
             let source: AsyncIterator<unknown> | undefined;
@@ -179,10 +217,15 @@ export function createMemoryDispatcher(root: ScopeLike): MemoryDispatcher {
             const ensureStarted = (): Promise<void> => {
               started ??= (async () => {
                 const resolved = await resolveScope(scope);
-                const catalog = resolveService(resolved, 'modelResolver');
+                const catalog = resolveService(resolved, "modelResolver");
                 const [modelId, input, params] = args;
-                const requester = (catalog as { getRequester(id: string): { request(...a: unknown[]): AsyncIterable<unknown> } })
-                  .getRequester(modelId as string);
+                const requester = (
+                  catalog as {
+                    getRequester(id: string): {
+                      request(...a: unknown[]): AsyncIterable<unknown>;
+                    };
+                  }
+                ).getRequester(modelId as string);
                 const iterable = requester.request(
                   wireClone(input),
                   controller.signal,
@@ -224,10 +267,16 @@ export function createMemoryDispatcher(root: ScopeLike): MemoryDispatcher {
               const instance = resolveService(resolved, service);
               const member = instance[method];
               if (member === undefined) {
-                throw new RPCError(REQUEST_INVALID, `method not found: ${service}.${method}`);
+                throw new RPCError(
+                  REQUEST_INVALID,
+                  `method not found: ${service}.${method}`,
+                );
               }
-              if (typeof member !== 'function') {
-                throw new RPCError(REQUEST_INVALID, `not a streaming method: ${service}.${method}`);
+              if (typeof member !== "function") {
+                throw new RPCError(
+                  REQUEST_INVALID,
+                  `not a streaming method: ${service}.${method}`,
+                );
               }
               const clonedArgs = args.map(wireClone);
               const iterable = (member as (...a: unknown[]) => unknown).apply(
@@ -266,7 +315,9 @@ export function createMemoryDispatcher(root: ScopeLike): MemoryDispatcher {
           try {
             inner = subscribeSource(resolved, source, handler);
           } catch (error) {
-            onError?.(error instanceof Error ? error : new Error(String(error)));
+            onError?.(
+              error instanceof Error ? error : new Error(String(error)),
+            );
           }
         },
         (error: unknown) => {

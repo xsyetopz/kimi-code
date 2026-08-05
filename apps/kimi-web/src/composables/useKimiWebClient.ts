@@ -2,22 +2,22 @@
 // Vue state composable — the only place that imports both src/api/* and src/types.ts.
 // Components consume computed view props and call actions; they never touch the API or reducer.
 
-import { computed, reactive, ref, watch } from 'vue';
-import { i18n } from '../i18n';
-import { traceClientEvent, traceKeyEvent } from '../debug/trace';
-import { getKimiWebApi } from '../api';
-import { isDaemonApiError, isDaemonNetworkError } from '../api/errors';
+import { computed, reactive, ref, watch } from "vue";
+import { i18n } from "../i18n";
+import { traceClientEvent, traceKeyEvent } from "../debug/trace";
+import { getKimiWebApi } from "../api";
+import { isDaemonApiError, isDaemonNetworkError } from "../api/errors";
 import {
   reconcileWorkspaceOrder,
   sortByWorkspaceOrder,
   sortWorkspacesByRecent,
   type WorkspaceSortMode,
-} from '../lib/workspaceOrder';
-import { mergeWorkspaces } from '../lib/mergeWorkspaces';
-import { workspaceRootKey } from '../lib/rootKey';
-import { mergeSnapshotMessages } from '../lib/snapshotMessages';
-import { mergeSnapshotSubagents } from '../lib/taskMerge';
-import { createCoalescedAsyncRunner } from '../lib/snapshotSync';
+} from "../lib/workspaceOrder";
+import { mergeWorkspaces } from "../lib/mergeWorkspaces";
+import { workspaceRootKey } from "../lib/rootKey";
+import { mergeSnapshotMessages } from "../lib/snapshotMessages";
+import { mergeSnapshotSubagents } from "../lib/taskMerge";
+import { createCoalescedAsyncRunner } from "../lib/snapshotSync";
 import {
   loadUnread,
   loadWorkspaceOrder,
@@ -29,25 +29,28 @@ import {
   saveWorkspaceOrder,
   saveWorkspaceSort,
   STORAGE_KEYS,
-} from '../lib/storage';
+} from "../lib/storage";
 import {
   coalesceAppRenderEvents,
   createEventBatcher,
   isRenderEvent,
   splitOversizedAppRenderEvent,
   type PendingAppEvent,
-} from './client/eventBatcher';
-import { useAppearance } from './client/useAppearance';
-import { useNotification, shouldNotifyCompletion } from './client/useNotification';
-import { useSoundNotification } from './client/useSoundNotification';
-import { useTaskPoller } from './client/useTaskPoller';
-import { useModelProviderState } from './client/useModelProviderState';
-import { useSideChat } from './client/useSideChat';
+} from "./client/eventBatcher";
+import { useAppearance } from "./client/useAppearance";
+import {
+  useNotification,
+  shouldNotifyCompletion,
+} from "./client/useNotification";
+import { useSoundNotification } from "./client/useSoundNotification";
+import { useTaskPoller } from "./client/useTaskPoller";
+import { useModelProviderState } from "./client/useModelProviderState";
+import { useSideChat } from "./client/useSideChat";
 import {
   forgetLocalTurnState,
   SESSIONS_INITIAL_PAGE_SIZE,
   useWorkspaceState,
-} from './client/useWorkspaceState';
+} from "./client/useWorkspaceState";
 
 const appearance = useAppearance();
 const notification = useNotification();
@@ -73,14 +76,23 @@ import type {
   KimiEventConnection,
   KimiEventMeta,
   ThinkingLevel,
-} from '../api/types';
-import { createInitialState, reduceAppEvent, type CompactionStatus, type KimiClientState } from '../api/daemon/eventReducer';
-import { isPlaceholderSessionUsage, toAppEvent } from '../api/daemon/mappers';
+} from "../api/types";
+import {
+  createInitialState,
+  reduceAppEvent,
+  type CompactionStatus,
+  type KimiClientState,
+} from "../api/daemon/eventReducer";
+import { isPlaceholderSessionUsage, toAppEvent } from "../api/daemon/mappers";
 
-import { messagesToTurns } from './messagesToTurns';
-import { latestTodos } from './latestTodos';
-import { buildSwarmGroups, countSwarmMembers, swarmMembersByToolCall } from './swarmGroups';
-import type { SwarmGroup, SwarmMember } from './swarmGroups';
+import { messagesToTurns } from "./messagesToTurns";
+import { latestTodos } from "./latestTodos";
+import {
+  buildSwarmGroups,
+  countSwarmMembers,
+  swarmMembersByToolCall,
+} from "./swarmGroups";
+import type { SwarmGroup, SwarmMember } from "./swarmGroups";
 import type {
   ActivityState,
   ActivationBadges,
@@ -100,7 +112,7 @@ import type {
   Workspace,
   WorkspaceGroup,
   WorkspaceView,
-} from '../types';
+} from "../types";
 
 // ---------------------------------------------------------------------------
 // Internal reactive state (plain object wrapped in reactive())
@@ -117,7 +129,7 @@ const ONBOARDED_STORAGE_KEY = STORAGE_KEYS.onboarded;
 // Appearance types + logic live in ./client/useAppearance; re-exported here so
 // existing `import type { ColorScheme, Accent } from './useKimiWebClient'`
 // callers keep working.
-export type { Accent, ColorScheme } from './client/useAppearance';
+export type { Accent, ColorScheme } from "./client/useAppearance";
 
 // The code-font setting was removed with its UI (b8a9e83). Clear the old
 // persisted key so users who once picked a font aren't frozen on it forever.
@@ -133,11 +145,11 @@ safeRemove(STORAGE_KEYS.thinking);
 function loadPermissionFromStorage(): PermissionMode {
   try {
     const v = safeGetString(PERMISSION_STORAGE_KEY);
-    if (v === 'auto' || v === 'yolo' || v === 'manual') return v;
+    if (v === "auto" || v === "yolo" || v === "manual") return v;
   } catch {
     // localStorage not available (e.g. jsdom without config)
   }
-  return 'manual';
+  return "manual";
 }
 
 function savePermissionToStorage(mode: PermissionMode): void {
@@ -159,9 +171,12 @@ function loadModeMapFromStorage(key: string): Record<string, boolean> {
   if (!raw) return {};
   try {
     const parsed = JSON.parse(raw) as unknown;
-    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed))
+      return {};
     const out: Record<string, boolean> = {};
-    for (const [id, value] of Object.entries(parsed as Record<string, unknown>)) {
+    for (const [id, value] of Object.entries(
+      parsed as Record<string, unknown>,
+    )) {
       if (value === true) out[id] = true;
     }
     return out;
@@ -214,7 +229,9 @@ function loadHiddenWorkspacesFromStorage(): string[] {
     const v = safeGetString(HIDDEN_WORKSPACES_KEY);
     if (!v) return [];
     const parsed = JSON.parse(v);
-    return Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === 'string') : [];
+    return Array.isArray(parsed)
+      ? parsed.filter((x): x is string => typeof x === "string")
+      : [];
   } catch {
     return [];
   }
@@ -240,11 +257,11 @@ function saveActiveWorkspaceToStorage(id: string): void {
 function shortenHome(path: string, home: string | null): string {
   if (home && path.startsWith(home)) {
     const rest = path.slice(home.length);
-    return rest ? `~${rest}` : '~';
+    return rest ? `~${rest}` : "~";
   }
   // Heuristic when we don't know $HOME: collapse /Users/<x> or /home/<x>.
   const m = path.match(/^\/(?:Users|home)\/[^/]+(\/.*)?$/);
-  if (m) return `~${m[1] ?? ''}`;
+  if (m) return `~${m[1] ?? ""}`;
   return path;
 }
 
@@ -265,7 +282,7 @@ interface GitStatusEntry {
     stays authoritative, so a chip reloaded from history may omit them). */
 export type PromptAttachment = {
   fileId: string;
-  kind: 'image' | 'video' | 'file';
+  kind: "image" | "video" | "file";
   name?: string;
   mediaType?: string;
   size?: number;
@@ -295,7 +312,7 @@ export interface ExtendedState extends KimiClientState {
    * (`backend` field; older servers omit it ⇒ v1). Drives the dev-mode
    * backend badge in the Sidebar.
    */
-  backend: 'v1' | 'v2';
+  backend: "v1" | "v2";
   workspaceName: string;
   connection: ConnectionState;
   permission: PermissionMode;
@@ -382,11 +399,11 @@ export interface ExtendedState extends KimiClientState {
 const rawState: ExtendedState = reactive({
   ...createInitialState(),
   connected: false,
-  serverVersion: '',
+  serverVersion: "",
   dangerousBypassAuth: false,
-  backend: 'v1',
-  workspaceName: 'kimi-web',
-  connection: 'disconnected' as ConnectionState,
+  backend: "v1",
+  workspaceName: "kimi-web",
+  connection: "disconnected" as ConnectionState,
   permission: loadPermissionFromStorage(),
   // Resolved per session/model once the catalog/session is known (loadModels
   // and the active-session watcher in useModelProviderState) — the per-session
@@ -434,7 +451,11 @@ const rawState: ExtendedState = reactive({
 // first prompt is sent (see startSessionAndSendPrompt), then cleared. Not
 // persisted — the draft is ephemeral.
 // ---------------------------------------------------------------------------
-const draftModes = reactive<{ planMode: boolean; swarmMode: boolean; goalMode: boolean }>({
+const draftModes = reactive<{
+  planMode: boolean;
+  swarmMode: boolean;
+  goalMode: boolean;
+}>({
   planMode: false,
   swarmMode: false,
   goalMode: false,
@@ -451,12 +472,20 @@ function setSessions(next: AppSession[]): void {
   rawState.sessions = next;
 }
 /** Replace one session in place (matched by id); no-op if it isn't loaded. */
-function updateSession(id: string, update: (session: AppSession) => AppSession): void {
-  rawState.sessions = rawState.sessions.map((s) => (s.id === id ? update(s) : s));
+function updateSession(
+  id: string,
+  update: (session: AppSession) => AppSession,
+): void {
+  rawState.sessions = rawState.sessions.map((s) =>
+    s.id === id ? update(s) : s,
+  );
 }
 /** Add or move a session to the front (recency order), de-duped by id. */
 function upsertSessionFront(session: AppSession): void {
-  rawState.sessions = [session, ...rawState.sessions.filter((s) => s.id !== session.id)];
+  rawState.sessions = [
+    session,
+    ...rawState.sessions.filter((s) => s.id !== session.id),
+  ];
 }
 /** Append a session to the end (e.g. a deep-linked older session). */
 function appendSession(session: AppSession): void {
@@ -480,16 +509,16 @@ function clearActiveUnread(): void {
   if (
     active &&
     rawState.unreadBySession[active] &&
-    typeof document !== 'undefined' &&
-    document.visibilityState === 'visible'
+    typeof document !== "undefined" &&
+    document.visibilityState === "visible"
   ) {
     rawState.unreadBySession = { ...rawState.unreadBySession, [active]: false };
     saveUnread({ [active]: false });
   }
 }
 
-if (typeof window !== 'undefined') {
-  window.addEventListener('storage', (event) => {
+if (typeof window !== "undefined") {
+  window.addEventListener("storage", (event) => {
     if (event.key === STORAGE_KEYS.unread) {
       rawState.unreadBySession = loadUnread();
       clearActiveUnread();
@@ -512,11 +541,11 @@ if (typeof window !== 'undefined') {
 function recoverStaleConnection(): void {
   if (eventConn === null) return;
   if (!eventConn.health().stale) return;
-  traceKeyEvent('ws:stale-reconnect', {
+  traceKeyEvent("ws:stale-reconnect", {
     sessionId: rawState.activeSessionId,
-    status: 'stale',
+    status: "stale",
   });
-  traceClientEvent('ws: stale socket on focus, reconnecting', {
+  traceClientEvent("ws: stale socket on focus, reconnecting", {
     activeSessionId: rawState.activeSessionId,
   });
   eventConn.reconnect();
@@ -524,17 +553,17 @@ function recoverStaleConnection(): void {
   if (active) snapshotSyncRunner.request(active);
 }
 
-if (typeof document !== 'undefined') {
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') {
+if (typeof document !== "undefined") {
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
       clearActiveUnread();
       recoverStaleConnection();
     }
   });
 }
-if (typeof window !== 'undefined') {
-  window.addEventListener('focus', recoverStaleConnection);
-  window.addEventListener('online', recoverStaleConnection);
+if (typeof window !== "undefined") {
+  window.addEventListener("focus", recoverStaleConnection);
+  window.addEventListener("online", recoverStaleConnection);
 }
 
 // ---------------------------------------------------------------------------
@@ -554,7 +583,10 @@ function setMessagesBySession(next: Record<string, AppMessage[]>): void {
 }
 /** Set one session's message list. */
 function setSessionMessages(sessionId: string, messages: AppMessage[]): void {
-  rawState.messagesBySession = { ...rawState.messagesBySession, [sessionId]: messages };
+  rawState.messagesBySession = {
+    ...rawState.messagesBySession,
+    [sessionId]: messages,
+  };
 }
 /** Update one session's message list via a function of the current list. */
 function updateSessionMessages(
@@ -665,8 +697,14 @@ async function refreshSessionStatus(sessionId: string): Promise<void> {
       contextLimit: st.maxContextTokens,
     },
   }));
-  rawState.swarmModeBySession = { ...rawState.swarmModeBySession, [sessionId]: st.swarmMode };
-  rawState.planModeBySession = { ...rawState.planModeBySession, [sessionId]: st.planMode };
+  rawState.swarmModeBySession = {
+    ...rawState.swarmModeBySession,
+    [sessionId]: st.swarmMode,
+  };
+  rawState.planModeBySession = {
+    ...rawState.planModeBySession,
+    [sessionId]: st.planMode,
+  };
   // Fold the session's own thinking level too — per-session state wins over the
   // per-model storage pick (see thinkingBySession on ExtendedState).
   if (st.thinkingEffort.length > 0) {
@@ -704,7 +742,7 @@ async function refreshSessionGoal(sessionId: string): Promise<void> {
   // Mirror the reducer's goalUpdated branch: null (or a completed goal) clears
   // the card, anything else replaces it.
   const nextGoals = { ...rawState.goalBySession };
-  if (goal === null || goal.status === 'complete') delete nextGoals[sessionId];
+  if (goal === null || goal.status === "complete") delete nextGoals[sessionId];
   else nextGoals[sessionId] = goal;
   rawState.goalBySession = nextGoals;
 }
@@ -721,15 +759,18 @@ async function refreshSessionGoal(sessionId: string): Promise<void> {
  *  after the profile (e.g. a skill activation that can't carry its own modes)
  *  await it and must NOT proceed on false — awaiting alone enforces nothing,
  *  since the promise never rejects. */
-function persistSessionProfile(patch: {
-  model?: string;
-  permissionMode?: string;
-  planMode?: boolean;
-  swarmMode?: boolean;
-  goalObjective?: string;
-  goalControl?: 'pause' | 'resume' | 'cancel';
-  thinking?: string;
-}, sessionId?: string): Promise<boolean> {
+function persistSessionProfile(
+  patch: {
+    model?: string;
+    permissionMode?: string;
+    planMode?: boolean;
+    swarmMode?: boolean;
+    goalObjective?: string;
+    goalControl?: "pause" | "resume" | "cancel";
+    thinking?: string;
+  },
+  sessionId?: string,
+): Promise<boolean> {
   const sid = sessionId ?? rawState.activeSessionId;
   if (!sid) return Promise.resolve(false);
   // Promise.resolve wrap: tolerate a sync/undefined return (e.g. test mocks).
@@ -739,7 +780,7 @@ function persistSessionProfile(patch: {
     .catch((err) => {
       // Local state already reflects the change; tell the user (and the log)
       // that the daemon did not persist it.
-      pushOperationFailure('persistSessionProfile', err, { sessionId: sid });
+      pushOperationFailure("persistSessionProfile", err, { sessionId: sid });
       return false;
     });
 }
@@ -753,14 +794,14 @@ const CONVERSATION_TOC_STORAGE_KEY = STORAGE_KEYS.conversationToc;
 function loadConversationTocFromStorage(): boolean {
   try {
     const raw = safeGetString(CONVERSATION_TOC_STORAGE_KEY);
-    return raw === null ? true : raw === 'true';
+    return raw === null ? true : raw === "true";
   } catch {
     return true;
   }
 }
 function saveConversationTocToStorage(v: boolean): void {
   try {
-    safeSetString(CONVERSATION_TOC_STORAGE_KEY, v ? 'true' : 'false');
+    safeSetString(CONVERSATION_TOC_STORAGE_KEY, v ? "true" : "false");
   } catch {
     // ignore
   }
@@ -778,16 +819,18 @@ function setConversationToc(v: boolean): void {
 // ---------------------------------------------------------------------------
 function loadStringFromStorage(key: string): string {
   try {
-    return safeGetString(key) ?? '';
+    return safeGetString(key) ?? "";
   } catch {
-    return '';
+    return "";
   }
 }
-const onboarded = ref<boolean>(loadStringFromStorage(ONBOARDED_STORAGE_KEY) === '1');
+const onboarded = ref<boolean>(
+  loadStringFromStorage(ONBOARDED_STORAGE_KEY) === "1",
+);
 function setOnboarded(done: boolean): void {
   onboarded.value = done;
   try {
-    safeSetString(ONBOARDED_STORAGE_KEY, done ? '1' : '0');
+    safeSetString(ONBOARDED_STORAGE_KEY, done ? "1" : "0");
   } catch {
     /* ignore */
   }
@@ -808,7 +851,11 @@ function nextOptimisticMsgId(): string {
 }
 
 // Helper: mutate rawState by applying a reducer on a snapshot then re-assigning fields
-function applyEvent(event: ReturnType<typeof toAppEvent>, sessionId: string, seq: number): void {
+function applyEvent(
+  event: ReturnType<typeof toAppEvent>,
+  sessionId: string,
+  seq: number,
+): void {
   const snapshot: KimiClientState = {
     sessions: rawState.sessions,
     activeSessionId: rawState.activeSessionId,
@@ -842,11 +889,11 @@ function applyEvent(event: ReturnType<typeof toAppEvent>, sessionId: string, seq
   rawState.config = next.config ?? null;
   rawState.warnings = next.warnings;
 
-  if (event.type === 'configChanged') {
+  if (event.type === "configChanged") {
     rawState.defaultModel = event.config.defaultModel ?? null;
   }
 
-  if (event.type === 'modelCatalogChanged') {
+  if (event.type === "modelCatalogChanged") {
     void modelProvider.loadModels();
     void modelProvider.loadProviders();
   }
@@ -854,12 +901,18 @@ function applyEvent(event: ReturnType<typeof toAppEvent>, sessionId: string, seq
   // Reflect the agent's live plan/swarm state per session (e.g. it auto-entered
   // plan mode). Applied to the event's own session — not gated on the active
   // session — so a background session keeps its own independent toggle state.
-  if (event.type === 'sessionUsageUpdated') {
+  if (event.type === "sessionUsageUpdated") {
     if (event.swarmMode !== undefined) {
-      rawState.swarmModeBySession = { ...rawState.swarmModeBySession, [event.sessionId]: event.swarmMode };
+      rawState.swarmModeBySession = {
+        ...rawState.swarmModeBySession,
+        [event.sessionId]: event.swarmMode,
+      };
     }
     if (event.planMode !== undefined) {
-      rawState.planModeBySession = { ...rawState.planModeBySession, [event.sessionId]: event.planMode };
+      rawState.planModeBySession = {
+        ...rawState.planModeBySession,
+        [event.sessionId]: event.planMode,
+      };
     }
     if (event.thinking !== undefined) {
       rawState.thinkingBySession = {
@@ -891,7 +944,8 @@ function processEvent(appEvent: AppEvent, meta: KimiEventMeta): void {
   // forward. A late duplicate idle (e.g. replayed after a snapshot already
   // advanced past it) must not drain a second queued message.
   const prevSeq = rawState.lastSeqBySession[meta.sessionId] ?? 0;
-  const wasMainTurnActive = rawState.turnActiveBySession[meta.sessionId] ?? false;
+  const wasMainTurnActive =
+    rawState.turnActiveBySession[meta.sessionId] ?? false;
   // meta carries wire-level seq/sessionId so the reducer can advance
   // lastSeqBySession[sessionId] = seq. Compaction completion appends a
   // persistent divider marker in the reducer (TUI parity: the scrollback
@@ -902,15 +956,32 @@ function processEvent(appEvent: AppEvent, meta: KimiEventMeta): void {
   if (sideTarget) {
     const { agentId } = sideTarget;
     const parentId = meta.sessionId;
-    if (appEvent.type === 'agentDelta' && appEvent.agentId === agentId) {
+    if (appEvent.type === "agentDelta" && appEvent.agentId === agentId) {
       if (appEvent.delta.text) {
-        sideChat.appendSideChatAssistantText(agentId, parentId, appEvent.delta.text);
+        sideChat.appendSideChatAssistantText(
+          agentId,
+          parentId,
+          appEvent.delta.text,
+        );
       }
-    } else if (appEvent.type === 'agentTurnEnded' && appEvent.agentId === agentId) {
+    } else if (
+      appEvent.type === "agentTurnEnded" &&
+      appEvent.agentId === agentId
+    ) {
       sideChat.finishSideChatAgent(agentId, parentId);
-    } else if (appEvent.type === 'taskProgress' && appEvent.taskId === agentId) {
-      sideChat.appendSideChatAssistantText(agentId, parentId, appEvent.outputChunk);
-    } else if (appEvent.type === 'taskCompleted' && appEvent.taskId === agentId) {
+    } else if (
+      appEvent.type === "taskProgress" &&
+      appEvent.taskId === agentId
+    ) {
+      sideChat.appendSideChatAssistantText(
+        agentId,
+        parentId,
+        appEvent.outputChunk,
+      );
+    } else if (
+      appEvent.type === "taskCompleted" &&
+      appEvent.taskId === agentId
+    ) {
       sideChat.finishSideChatAgent(agentId, parentId, appEvent.outputPreview);
     }
   }
@@ -919,8 +990,8 @@ function processEvent(appEvent: AppEvent, meta: KimiEventMeta): void {
   // carrying the real prompt_id. When the HTTP submit response is lost
   // (timeout / network error) this is the fallback that lets Stop work.
   if (
-    appEvent.type === 'messageCreated' &&
-    appEvent.message.role === 'user' &&
+    appEvent.type === "messageCreated" &&
+    appEvent.message.role === "user" &&
     appEvent.message.promptId !== undefined
   ) {
     const sid = appEvent.message.sessionId;
@@ -932,8 +1003,14 @@ function processEvent(appEvent: AppEvent, meta: KimiEventMeta): void {
     }
   }
 
-  if (appEvent.type === 'assistantDelta' && meta.sessionId === rawState.activeSessionId) {
-    appearance.recordMoonDelta((appEvent.delta.text?.length ?? 0) + (appEvent.delta.thinking?.length ?? 0));
+  if (
+    appEvent.type === "assistantDelta" &&
+    meta.sessionId === rawState.activeSessionId
+  ) {
+    appearance.recordMoonDelta(
+      (appEvent.delta.text?.length ?? 0) +
+        (appEvent.delta.thinking?.length ?? 0),
+    );
   }
 
   // Prompt-end cleanup. The MAIN agent's turn boundary is the authoritative
@@ -946,7 +1023,7 @@ function processEvent(appEvent: AppEvent, meta: KimiEventMeta): void {
   // turn-boundary path. Both are gated on the durable cursor advancing so a
   // late duplicate cannot fire twice.
   if (
-    appEvent.type === 'turnActiveChanged' &&
+    appEvent.type === "turnActiveChanged" &&
     !appEvent.active &&
     meta.seq > prevSeq
   ) {
@@ -958,13 +1035,15 @@ function processEvent(appEvent: AppEvent, meta: KimiEventMeta): void {
     // actually watched (including one started by another client).
     onMainTurnEnd(
       appEvent.sessionId,
-      reason === 'cancelled' || reason === 'failed' || reason === 'blocked' ? 'aborted' : 'idle',
+      reason === "cancelled" || reason === "failed" || reason === "blocked"
+        ? "aborted"
+        : "idle",
       wasMainTurnActive,
     );
   }
 
   if (
-    appEvent.type === 'sessionWorkChanged' &&
+    appEvent.type === "sessionWorkChanged" &&
     ((appEvent.mainTurnActive === false && wasMainTurnActive) ||
       (appEvent.mainTurnActive === undefined && !appEvent.busy)) &&
     meta.seq > prevSeq
@@ -982,8 +1061,8 @@ function processEvent(appEvent: AppEvent, meta: KimiEventMeta): void {
   // matches. Only fires when the event moves the durable cursor forward, same
   // as the status path above.
   if (
-    (appEvent.type === 'promptAborted' ||
-      (appEvent.type === 'promptCompleted' && appEvent.reason === 'blocked')) &&
+    (appEvent.type === "promptAborted" ||
+      (appEvent.type === "promptCompleted" && appEvent.reason === "blocked")) &&
     meta.seq > prevSeq &&
     rawState.promptIdBySession[appEvent.sessionId] === appEvent.promptId
   ) {
@@ -994,12 +1073,12 @@ function processEvent(appEvent: AppEvent, meta: KimiEventMeta): void {
   // the user comes back. Hooked on the request event (fires once per new
   // question, and not for questions restored from a snapshot) rather than the
   // awaitingQuestion status flip, which can arrive in any order relative to it.
-  if (appEvent.type === 'questionRequested') {
+  if (appEvent.type === "questionRequested") {
     onQuestionRequested(appEvent.sessionId, appEvent.question);
   }
 
   // The agent needs approval for a tool call — surface it so the user comes back.
-  if (appEvent.type === 'approvalRequested') {
+  if (appEvent.type === "approvalRequested") {
     onApprovalRequested(appEvent.sessionId, appEvent.approval);
   }
 }
@@ -1017,10 +1096,10 @@ const enqueueEvent = createEventBatcher<PendingAppEvent>(
 function connectEventsIfNeeded(): void {
   if (eventConn !== null) return;
   // Guard: jsdom and some environments have no WebSocket
-  if (typeof WebSocket === 'undefined') return;
+  if (typeof WebSocket === "undefined") return;
 
-  traceKeyEvent('ws:connection', { status: 'connecting' });
-  rawState.connection = 'connecting';
+  traceKeyEvent("ws:connection", { status: "connecting" });
+  rawState.connection = "connecting";
 
   const api = getKimiWebApi();
 
@@ -1030,9 +1109,9 @@ function connectEventsIfNeeded(): void {
       // rawState.workspaces directly — they bypass the reducer, which has no
       // workspace state.
       if (
-        appEvent.type === 'workspaceCreated' ||
-        appEvent.type === 'workspaceUpdated' ||
-        appEvent.type === 'workspaceDeleted'
+        appEvent.type === "workspaceCreated" ||
+        appEvent.type === "workspaceUpdated" ||
+        appEvent.type === "workspaceDeleted"
       ) {
         workspaceState.applyWorkspaceEvent(appEvent);
         return;
@@ -1040,15 +1119,18 @@ function connectEventsIfNeeded(): void {
 
       // Merge safe streaming chunks, then process the ordered queue in bounded
       // slices. See createEventBatcher / processEvent above.
-      for (const pendingEvent of splitOversizedAppRenderEvent({ appEvent, meta })) {
+      for (const pendingEvent of splitOversizedAppRenderEvent({
+        appEvent,
+        meta,
+      })) {
         enqueueEvent(pendingEvent);
       }
     },
 
     onResync(sessionId: string, currentSeq: number, epoch?: string) {
-      traceKeyEvent('ws:resync', {
+      traceKeyEvent("ws:resync", {
         sessionId,
-        status: 'required',
+        status: "required",
         seq: currentSeq,
       });
       // Flush streaming deltas already queued so they render on the
@@ -1068,27 +1150,27 @@ function connectEventsIfNeeded(): void {
     },
 
     onError(code: number, msg: string, fatal: boolean) {
-      traceKeyEvent('ws:error', {
-        status: 'failed',
+      traceKeyEvent("ws:error", {
+        status: "failed",
         errorCode: code,
         fatal,
       });
       pushWarning({
-        severity: 'error',
-        title: i18n.global.t('warnings.wsTitle'),
+        severity: "error",
+        title: i18n.global.t("warnings.wsTitle"),
         message: msg,
-        details: [warningDetail('message', msg)].filter(
+        details: [warningDetail("message", msg)].filter(
           (detail): detail is AppNoticeDetail => detail !== undefined,
         ),
       });
     },
 
     onConnectionChange(connected: boolean) {
-      traceKeyEvent('ws:connection', {
-        status: connected ? 'connected' : 'disconnected',
+      traceKeyEvent("ws:connection", {
+        status: connected ? "connected" : "disconnected",
       });
       rawState.connected = connected;
-      rawState.connection = connected ? 'connected' : 'disconnected';
+      rawState.connection = connected ? "connected" : "disconnected";
       // The data channel is healthy again (server_hello received). Clear any
       // stale "Realtime connection error" toast instead of relying on its
       // auto-dismiss timer: iOS Safari freezes timers while a tab is
@@ -1127,31 +1209,41 @@ const sessionsKnownEmpty = new Set<string>();
  * WS at the snapshot's `{seq: asOfSeq, epoch}` cursor. The watermark ties
  * the REST snapshot to the event stream — no gap, no duplication.
  */
-type SyncSessionResult = 'ok' | 'not-found' | 'failed';
+type SyncSessionResult = "ok" | "not-found" | "failed";
 
 function isSessionNotFoundError(err: unknown): boolean {
   if (isDaemonApiError(err) && err.code === SESSION_NOT_FOUND_CODE) return true;
   return (
-    typeof err === 'object' &&
+    typeof err === "object" &&
     err !== null &&
     (err as { code?: unknown }).code === SESSION_NOT_FOUND_CODE
   );
 }
 
-function warningDetail(labelKey: string, value: unknown): AppNoticeDetail | undefined {
-  if (value === undefined || value === null || value === '') return undefined;
-  return { label: i18n.global.t(`warnings.details.${labelKey}`), value: formatDetailValue(value) };
+function warningDetail(
+  labelKey: string,
+  value: unknown,
+): AppNoticeDetail | undefined {
+  if (value === undefined || value === null || value === "") return undefined;
+  return {
+    label: i18n.global.t(`warnings.details.${labelKey}`),
+    value: formatDetailValue(value),
+  };
 }
 
 function formatDetailValue(value: unknown): string {
   if (value instanceof Error) {
     // A stack already starts with "Name: message" and carries the frames the
     // plain name/message would throw away, so prefer it when present.
-    if (typeof value.stack === 'string' && value.stack) return value.stack;
+    if (typeof value.stack === "string" && value.stack) return value.stack;
     return value.message ? `${value.name}: ${value.message}` : value.name;
   }
-  if (typeof value === 'string') return value;
-  if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') {
+  if (typeof value === "string") return value;
+  if (
+    typeof value === "number" ||
+    typeof value === "boolean" ||
+    typeof value === "bigint"
+  ) {
     return String(value);
   }
   try {
@@ -1164,7 +1256,9 @@ function formatDetailValue(value: unknown): string {
 function errorName(err: unknown): string | undefined {
   return err instanceof Error
     ? err.name
-    : typeof err === 'object' && err !== null && typeof (err as { name?: unknown }).name === 'string'
+    : typeof err === "object" &&
+        err !== null &&
+        typeof (err as { name?: unknown }).name === "string"
       ? (err as { name: string }).name
       : undefined;
 }
@@ -1172,26 +1266,34 @@ function errorName(err: unknown): string | undefined {
 function errorMessage(err: unknown): string | undefined {
   return err instanceof Error
     ? err.message
-    : typeof err === 'object' && err !== null && typeof (err as { message?: unknown }).message === 'string'
+    : typeof err === "object" &&
+        err !== null &&
+        typeof (err as { message?: unknown }).message === "string"
       ? (err as { message: string }).message
       : undefined;
 }
 
 function errorStack(err: unknown): string | undefined {
-  return err instanceof Error && typeof err.stack === 'string' && err.stack ? err.stack : undefined;
+  return err instanceof Error && typeof err.stack === "string" && err.stack
+    ? err.stack
+    : undefined;
 }
 
 function formatTimestamp(ms: number | undefined): string | undefined {
-  if (typeof ms !== 'number' || !Number.isFinite(ms)) return undefined;
+  if (typeof ms !== "number" || !Number.isFinite(ms)) return undefined;
   return new Date(ms).toISOString();
 }
 
 function formatDuration(ms: number | undefined): string | undefined {
-  if (typeof ms !== 'number' || !Number.isFinite(ms)) return undefined;
+  if (typeof ms !== "number" || !Number.isFinite(ms)) return undefined;
   return `${Math.round(ms)}ms`;
 }
 
-function errorDetails(operation: string, err: unknown, sessionId?: string): AppNoticeDetail[] {
+function errorDetails(
+  operation: string,
+  err: unknown,
+  sessionId?: string,
+): AppNoticeDetail[] {
   const network = isDaemonNetworkError(err);
   const api = isDaemonApiError(err);
   // Daemon errors carry the failure moment + round-trip time captured in the
@@ -1200,44 +1302,51 @@ function errorDetails(operation: string, err: unknown, sessionId?: string): AppN
   const durationMs = network || api ? err.durationMs : undefined;
 
   const details: Array<AppNoticeDetail | undefined> = [
-    warningDetail('operation', operation),
+    warningDetail("operation", operation),
     // Many call sites don't pass a session id; the active session is the best
     // guess and is what the user was looking at when the failure happened.
-    warningDetail('sessionId', sessionId ?? rawState.activeSessionId),
-    warningDetail('connection', rawState.connection),
-    warningDetail('timestamp', formatTimestamp(timestamp ?? Date.now())),
+    warningDetail("sessionId", sessionId ?? rawState.activeSessionId),
+    warningDetail("connection", rawState.connection),
+    warningDetail("timestamp", formatTimestamp(timestamp ?? Date.now())),
   ];
 
   if (network) {
     details.push(
-      warningDetail('duration', formatDuration(durationMs)),
-      warningDetail('request', `${err.method} ${err.path}`),
-      warningDetail('endpoint', err.url),
-      warningDetail('requestId', err.requestId),
-      warningDetail('phase', err.phase),
-      warningDetail('timeout', `${err.timeoutMs}ms`),
-      warningDetail('status', err.status === undefined ? undefined : `${err.status} ${err.statusText ?? ''}`.trim()),
-      warningDetail('contentType', err.contentType),
-      warningDetail('responsePreview', err.bodyPreview),
-      warningDetail('cause', err.cause),
+      warningDetail("duration", formatDuration(durationMs)),
+      warningDetail("request", `${err.method} ${err.path}`),
+      warningDetail("endpoint", err.url),
+      warningDetail("requestId", err.requestId),
+      warningDetail("phase", err.phase),
+      warningDetail("timeout", `${err.timeoutMs}ms`),
+      warningDetail(
+        "status",
+        err.status === undefined
+          ? undefined
+          : `${err.status} ${err.statusText ?? ""}`.trim(),
+      ),
+      warningDetail("contentType", err.contentType),
+      warningDetail("responsePreview", err.bodyPreview),
+      warningDetail("cause", err.cause),
     );
   } else if (api) {
     details.push(
-      warningDetail('duration', formatDuration(durationMs)),
-      warningDetail('code', err.code),
-      warningDetail('requestId', err.requestId),
-      warningDetail('message', err.message),
-      warningDetail('details', err.details),
+      warningDetail("duration", formatDuration(durationMs)),
+      warningDetail("code", err.code),
+      warningDetail("requestId", err.requestId),
+      warningDetail("message", err.message),
+      warningDetail("details", err.details),
     );
   } else {
     details.push(
-      warningDetail('errorName', errorName(err)),
-      warningDetail('message', errorMessage(err) ?? formatDetailValue(err)),
-      warningDetail('stack', errorStack(err)),
+      warningDetail("errorName", errorName(err)),
+      warningDetail("message", errorMessage(err) ?? formatDetailValue(err)),
+      warningDetail("stack", errorStack(err)),
     );
   }
 
-  return details.filter((detail): detail is AppNoticeDetail => detail !== undefined);
+  return details.filter(
+    (detail): detail is AppNoticeDetail => detail !== undefined,
+  );
 }
 
 function operationFailureNotice(
@@ -1250,19 +1359,19 @@ function operationFailureNotice(
   const title =
     opts.title ??
     (network
-      ? i18n.global.t('warnings.daemonNetworkTitle')
+      ? i18n.global.t("warnings.daemonNetworkTitle")
       : api
-        ? i18n.global.t('warnings.daemonApiTitle')
-        : i18n.global.t('warnings.operationFailedTitle'));
+        ? i18n.global.t("warnings.daemonApiTitle")
+        : i18n.global.t("warnings.operationFailedTitle"));
   const message =
     opts.message ??
     (network
-      ? i18n.global.t('warnings.daemonNetworkMessage')
+      ? i18n.global.t("warnings.daemonNetworkMessage")
       : api
         ? err.message
-        : i18n.global.t('warnings.operationFailedMessage'));
+        : i18n.global.t("warnings.operationFailedMessage"));
   return {
-    severity: 'error',
+    severity: "error",
     title,
     message,
     details: errorDetails(operation, err, opts.sessionId),
@@ -1277,9 +1386,15 @@ function pushWarning(warning: AppWarning): void {
 // handler. Matched by severity + the localized wsTitle (the same i18n instance
 // used to push it), so other errors are left untouched.
 function dismissWsError(): void {
-  const title = i18n.global.t('warnings.wsTitle');
+  const title = i18n.global.t("warnings.wsTitle");
   const next = rawState.warnings.filter(
-    (w) => !(typeof w === 'object' && w !== null && w.severity === 'error' && w.title === title),
+    (w) =>
+      !(
+        typeof w === "object" &&
+        w !== null &&
+        w.severity === "error" &&
+        w.title === title
+      ),
   );
   if (next.length !== rawState.warnings.length) {
     rawState.warnings = next;
@@ -1296,9 +1411,9 @@ function pushOperationFailure(
   console.error(`[kimi-web] operation failed: ${operation}`, err);
   const api = isDaemonApiError(err);
   const network = isDaemonNetworkError(err);
-  traceKeyEvent('operation:failed', {
+  traceKeyEvent("operation:failed", {
     sessionId: opts?.sessionId,
-    status: 'failed',
+    status: "failed",
     operation,
     errorName: err instanceof Error ? err.name : typeof err,
     errorCode: api ? err.code : undefined,
@@ -1313,11 +1428,11 @@ function pushOperationFailure(
 // these instead of a bare 500, so map them to a friendly explanation rather
 // than dumping the raw envelope message on the user.
 const GOAL_ERROR_KEYS: Record<number, string> = {
-  40913: 'warnings.goal.alreadyExists',
-  40914: 'warnings.goal.notFound',
-  40915: 'warnings.goal.statusInvalid',
-  40916: 'warnings.goal.notResumable',
-  40918: 'warnings.goal.objectiveTooLong',
+  40913: "warnings.goal.alreadyExists",
+  40914: "warnings.goal.notFound",
+  40915: "warnings.goal.statusInvalid",
+  40916: "warnings.goal.notResumable",
+  40918: "warnings.goal.objectiveTooLong",
 };
 
 function goalErrorMessage(err: unknown): string | undefined {
@@ -1333,11 +1448,11 @@ async function handleSessionNotFound(sessionId: string): Promise<void> {
 
   const next = rawState.sessions[0];
   if (next) {
-    await workspaceState.selectSession(next.id, { urlMode: 'replace' });
+    await workspaceState.selectSession(next.id, { urlMode: "replace" });
   } else {
     setActiveSessionId(undefined);
     rawState.sessionLoading = false;
-    workspaceState.writeSessionUrl(undefined, 'replace');
+    workspaceState.writeSessionUrl(undefined, "replace");
   }
 }
 
@@ -1348,7 +1463,7 @@ async function pullSessionWarnings(sessionId: string): Promise<void> {
   sessionWarningsPulled.add(sessionId);
   try {
     const warnings = await getKimiWebApi().getSessionWarnings(sessionId);
-    const label = i18n.global.t('warnings.noteLabel');
+    const label = i18n.global.t("warnings.noteLabel");
     for (const warning of warnings) {
       pushWarning(`${label}: ${warning.message}`);
     }
@@ -1357,13 +1472,16 @@ async function pullSessionWarnings(sessionId: string): Promise<void> {
   }
 }
 
-async function syncSessionFromSnapshot(sessionId: string): Promise<SyncSessionResult> {
+async function syncSessionFromSnapshot(
+  sessionId: string,
+): Promise<SyncSessionResult> {
   // A snapshot that races a local turn start must not overwrite that turn.
   const turnStartAtRequest = workspaceState.localTurnStartState(sessionId);
   try {
     const api = getKimiWebApi();
     const snap = await api.getSessionSnapshot(sessionId);
-    if (!rawState.sessions.some((session) => session.id === sessionId)) return 'ok';
+    if (!rawState.sessions.some((session) => session.id === sessionId))
+      return "ok";
 
     // Drain any queued streaming deltas before the snapshot replaces
     // messagesBySession[sessionId]. The snapshot is authoritative (it already
@@ -1379,23 +1497,26 @@ async function syncSessionFromSnapshot(sessionId: string): Promise<SyncSessionRe
     const currentSeq = rawState.lastSeqBySession[sessionId] ?? 0;
     const knownEpoch = epochBySession[sessionId];
     const mustApplySnapshot =
-      sessionsRequiringSnapshot.has(sessionId) || sessionsWithStaleCursor.has(sessionId);
+      sessionsRequiringSnapshot.has(sessionId) ||
+      sessionsWithStaleCursor.has(sessionId);
     if (
       !mustApplySnapshot &&
       knownEpoch !== undefined &&
       knownEpoch === snap.epoch &&
       currentSeq > snap.asOfSeq
     ) {
-      if (sessionsRetryingStaleSnapshot.delete(sessionId)) return 'ok';
+      if (sessionsRetryingStaleSnapshot.delete(sessionId)) return "ok";
       sessionsRetryingStaleSnapshot.add(sessionId);
       snapshotSyncRunner.request(sessionId);
-      return 'ok';
+      return "ok";
     }
-    if (!workspaceState.isLocalTurnSnapshotCurrent(sessionId, turnStartAtRequest)) {
+    if (
+      !workspaceState.isLocalTurnSnapshotCurrent(sessionId, turnStartAtRequest)
+    ) {
       workspaceState.afterLocalTurnStartsSettle(sessionId, () => {
         snapshotSyncRunner.request(sessionId);
       });
-      return 'ok';
+      return "ok";
     }
 
     const snapUsagePlaceholder = isPlaceholderSessionUsage(snap.session.usage);
@@ -1414,7 +1535,10 @@ async function syncSessionFromSnapshot(sessionId: string): Promise<SyncSessionRe
     // user already loaded so reopening does not reset scrollback.
     setSessionMessages(
       sessionId,
-      mergeSnapshotMessages(rawState.messagesBySession[sessionId] ?? [], snap.messages),
+      mergeSnapshotMessages(
+        rawState.messagesBySession[sessionId] ?? [],
+        snap.messages,
+      ),
     );
     // Seed the live subagent roster so swarm cards survive a page refresh
     // (their member rows otherwise only exist from non-replayed WS events).
@@ -1438,13 +1562,20 @@ async function syncSessionFromSnapshot(sessionId: string): Promise<SyncSessionRe
     // Preserve plan_review paths from the snapshot so the ExitPlanMode tool
     // card can link to the plan file even after a reload.
     for (const a of snap.pendingApprovals) {
-      const display = a.display as { kind?: unknown; plan?: unknown; path?: unknown } | null | undefined;
-      if (display?.kind === 'plan_review' && typeof display.plan === 'string' && display.plan.length > 0) {
+      const display = a.display as
+        | { kind?: unknown; plan?: unknown; path?: unknown }
+        | null
+        | undefined;
+      if (
+        display?.kind === "plan_review" &&
+        typeof display.plan === "string" &&
+        display.plan.length > 0
+      ) {
         rawState.planReviewByToolCallId = {
           ...rawState.planReviewByToolCallId,
           [a.toolCallId]: {
             plan: display.plan,
-            path: typeof display.path === 'string' ? display.path : undefined,
+            path: typeof display.path === "string" ? display.path : undefined,
           },
         };
       }
@@ -1463,10 +1594,10 @@ async function syncSessionFromSnapshot(sessionId: string): Promise<SyncSessionRe
 
     // Resync replaces the missed event stream, so a terminal snapshot must
     // also clear the local in-flight flag that normally ends with the turn.
-    workspaceState.handleSessionSnapshot(
-      sessionId,
-      { inFlightTurn: snap.inFlightTurn, busy: snap.session.busy },
-    );
+    workspaceState.handleSessionSnapshot(sessionId, {
+      inFlightTurn: snap.inFlightTurn,
+      busy: snap.session.busy,
+    });
 
     // The snapshot's inFlightTurn is main-agent-only — seed the moon's
     // liveness flag from it (the projector was reset by the resync, so no
@@ -1477,7 +1608,8 @@ async function syncSessionFromSnapshot(sessionId: string): Promise<SyncSessionRe
     {
       const next = { ...rawState.turnActiveBySession };
       const mainTurnActive =
-        snap.session.mainTurnActive ?? (snap.inFlightTurn !== null && snap.session.busy);
+        snap.session.mainTurnActive ??
+        (snap.inFlightTurn !== null && snap.session.busy);
       if (mainTurnActive) next[sessionId] = true;
       else delete next[sessionId];
       rawState.turnActiveBySession = next;
@@ -1499,25 +1631,28 @@ async function syncSessionFromSnapshot(sessionId: string): Promise<SyncSessionRe
     // so the ring converges on the live value.
     if (snapUsagePlaceholder) void refreshSessionStatus(sessionId);
     void pullSessionWarnings(sessionId);
-    return 'ok';
+    return "ok";
   } catch (err) {
     if (isSessionNotFoundError(err)) {
       await handleSessionNotFound(sessionId);
-      return 'not-found';
+      return "not-found";
     }
-    pushOperationFailure('getSessionSnapshot', err, {
-      title: i18n.global.t('warnings.sessionSnapshotTitle'),
-      message: i18n.global.t('warnings.sessionSnapshotMessage'),
+    pushOperationFailure("getSessionSnapshot", err, {
+      title: i18n.global.t("warnings.sessionSnapshotTitle"),
+      message: i18n.global.t("warnings.sessionSnapshotMessage"),
       sessionId,
     });
-    return 'failed';
+    return "failed";
   }
 }
 
 const snapshotSyncRunner = createCoalescedAsyncRunner(syncSessionFromSnapshot);
 
 function hasLoadedMessages(sessionId: string): boolean {
-  return Object.prototype.hasOwnProperty.call(rawState.messagesBySession, sessionId);
+  return Object.prototype.hasOwnProperty.call(
+    rawState.messagesBySession,
+    sessionId,
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -1610,7 +1745,8 @@ function isMainTurnActive(sessionId: string, listed?: boolean): boolean {
     (rawState.inFlightBySession[sessionId] ?? false) ||
     (rawState.turnActiveBySession[sessionId] ?? false) ||
     (listed ??
-      rawState.sessions.find((session) => session.id === sessionId)?.mainTurnActive ??
+      rawState.sessions.find((session) => session.id === sessionId)
+        ?.mainTurnActive ??
       false)
   );
 }
@@ -1622,7 +1758,7 @@ function formatTime(iso: string): string {
     const now = Date.now();
     const diffMs = now - d.getTime();
     const diffH = diffMs / 3600000;
-    if (diffMs < 60000) return i18n.global.t('sessions.justNow');
+    if (diffMs < 60000) return i18n.global.t("sessions.justNow");
     if (diffH < 1) return `${Math.round(diffMs / 60000)}m`;
     if (diffH < 24) return `${Math.round(diffH)}h`;
     const diffD = diffMs / 86400000;
@@ -1642,7 +1778,8 @@ let sessionTimeClockTimer: ReturnType<typeof setInterval> | null = null;
 function ensureSessionTimeClock(): void {
   if (sessionTimeClockTimer !== null) return;
   sessionTimeClockTimer = setInterval(() => {
-    sessionTimeClock.value = (sessionTimeClock.value + 1) % Number.MAX_SAFE_INTEGER;
+    sessionTimeClock.value =
+      (sessionTimeClock.value + 1) % Number.MAX_SAFE_INTEGER;
   }, SESSION_TIME_CLOCK_INTERVAL_MS);
   (sessionTimeClockTimer as { unref?: () => void }).unref?.();
 }
@@ -1662,14 +1799,14 @@ if (import.meta.hot) {
 
 /** Build DiffLine[] from old_text/new_text strings */
 function buildDiffLines(oldText: string, newText: string): DiffLine[] {
-  const removed = oldText.split('\n');
-  const added = newText.split('\n');
+  const removed = oldText.split("\n");
+  const added = newText.split("\n");
   const lines: DiffLine[] = [];
   removed.forEach((text, i) => {
-    lines.push({ kind: 'rem', gutter: String(i + 1), text: `- ${text}` });
+    lines.push({ kind: "rem", gutter: String(i + 1), text: `- ${text}` });
   });
   added.forEach((text, i) => {
-    lines.push({ kind: 'add', gutter: String(i + 1), text: `+ ${text}` });
+    lines.push({ kind: "add", gutter: String(i + 1), text: `+ ${text}` });
   });
   return lines;
 }
@@ -1678,98 +1815,114 @@ function buildDiffLines(oldText: string, newText: string): DiffLine[] {
 function buildApprovalBlock(a: AppApprovalRequest): ApprovalBlock {
   // Cast display to a loose dict for defensive reading
   const d = (a.display ?? {}) as Record<string, unknown>;
-  const kind = typeof d.kind === 'string' ? d.kind : '';
+  const kind = typeof d.kind === "string" ? d.kind : "";
 
   // diff
-  if (kind === 'diff') {
-    const path = typeof d.path === 'string' ? d.path : '';
+  if (kind === "diff") {
+    const path = typeof d.path === "string" ? d.path : "";
     if (Array.isArray(d.diff)) {
-      return { kind: 'diff', path, diff: d.diff as DiffLine[] };
+      return { kind: "diff", path, diff: d.diff as DiffLine[] };
     }
-    if (typeof d.old_text === 'string' && typeof d.new_text === 'string') {
-      return { kind: 'diff', path, diff: buildDiffLines(d.old_text, d.new_text) };
+    if (typeof d.old_text === "string" && typeof d.new_text === "string") {
+      return {
+        kind: "diff",
+        path,
+        diff: buildDiffLines(d.old_text, d.new_text),
+      };
     }
-    return { kind: 'diff', path, diff: [] };
+    return { kind: "diff", path, diff: [] };
   }
 
   // shell / command
-  if (kind === 'shell' || kind === 'command') {
-    const command = typeof d.command === 'string' ? d.command : a.action;
-    const cwd = typeof d.cwd === 'string' ? d.cwd : undefined;
-    const danger = typeof d.danger === 'string' ? d.danger : undefined;
-    return { kind: 'shell', command, cwd, danger };
+  if (kind === "shell" || kind === "command") {
+    const command = typeof d.command === "string" ? d.command : a.action;
+    const cwd = typeof d.cwd === "string" ? d.cwd : undefined;
+    const danger = typeof d.danger === "string" ? d.danger : undefined;
+    return { kind: "shell", command, cwd, danger };
   }
 
   // file_content / file
-  if (kind === 'file_content' || kind === 'file') {
-    const path = typeof d.path === 'string' ? d.path : '';
-    const content = typeof d.content === 'string' ? d.content : '';
-    const language = typeof d.language === 'string' ? d.language : undefined;
-    return { kind: 'file', path, content, language };
+  if (kind === "file_content" || kind === "file") {
+    const path = typeof d.path === "string" ? d.path : "";
+    const content = typeof d.content === "string" ? d.content : "";
+    const language = typeof d.language === "string" ? d.language : undefined;
+    return { kind: "file", path, content, language };
   }
 
   // file_op / fileop
-  if (kind === 'file_op' || kind === 'fileop') {
-    const op = typeof d.operation === 'string' ? d.operation : (typeof d.op === 'string' ? d.op : kind);
-    const path = typeof d.path === 'string' ? d.path : '';
-    const detail = typeof d.detail === 'string' ? d.detail : undefined;
-    return { kind: 'fileop', op, path, detail };
+  if (kind === "file_op" || kind === "fileop") {
+    const op =
+      typeof d.operation === "string"
+        ? d.operation
+        : typeof d.op === "string"
+          ? d.op
+          : kind;
+    const path = typeof d.path === "string" ? d.path : "";
+    const detail = typeof d.detail === "string" ? d.detail : undefined;
+    return { kind: "fileop", op, path, detail };
   }
 
   // url_fetch / url
-  if (kind === 'url_fetch' || kind === 'url') {
-    const url = typeof d.url === 'string' ? d.url : a.action;
-    const method = typeof d.method === 'string' ? d.method : undefined;
-    return { kind: 'url', method, url };
+  if (kind === "url_fetch" || kind === "url") {
+    const url = typeof d.url === "string" ? d.url : a.action;
+    const method = typeof d.method === "string" ? d.method : undefined;
+    return { kind: "url", method, url };
   }
 
   // search
-  if (kind === 'search') {
-    const query = typeof d.query === 'string' ? d.query : a.action;
-    const scope = typeof d.scope === 'string' ? d.scope : undefined;
-    return { kind: 'search', query, scope };
+  if (kind === "search") {
+    const query = typeof d.query === "string" ? d.query : a.action;
+    const scope = typeof d.scope === "string" ? d.scope : undefined;
+    return { kind: "search", query, scope };
   }
 
   // invocation / agent_call / skill_call
-  if (kind === 'invocation' || kind === 'agent_call' || kind === 'skill_call') {
-    const kind2 = typeof d.kind === 'string' ? d.kind : kind;
-    const name = typeof d.name === 'string' ? d.name : a.toolName;
-    const description = typeof d.description === 'string' ? d.description : undefined;
-    return { kind: 'invocation', kind2, name, description };
+  if (kind === "invocation" || kind === "agent_call" || kind === "skill_call") {
+    const kind2 = typeof d.kind === "string" ? d.kind : kind;
+    const name = typeof d.name === "string" ? d.name : a.toolName;
+    const description =
+      typeof d.description === "string" ? d.description : undefined;
+    return { kind: "invocation", kind2, name, description };
   }
 
   // todo / todo_list
-  if (kind === 'todo' || kind === 'todo_list') {
+  if (kind === "todo" || kind === "todo_list") {
     const rawItems = Array.isArray(d.items) ? d.items : [];
     const items = rawItems.map((item: unknown) => {
       const it = (item ?? {}) as Record<string, unknown>;
       return {
-        title: typeof it.title === 'string' ? it.title : '',
-        status: typeof it.status === 'string' ? it.status : 'pending',
+        title: typeof it.title === "string" ? it.title : "",
+        status: typeof it.status === "string" ? it.status : "pending",
       };
     });
-    return { kind: 'todo', items };
+    return { kind: "todo", items };
   }
 
   // plan_review — finalised plan presented at plan-mode exit
-  if (kind === 'plan_review') {
-    const plan = typeof d.plan === 'string' ? d.plan : '';
-    const path = typeof d.path === 'string' ? d.path : undefined;
+  if (kind === "plan_review") {
+    const plan = typeof d.plan === "string" ? d.plan : "";
+    const path = typeof d.path === "string" ? d.path : undefined;
     const rawOptions = Array.isArray(d.options) ? d.options : [];
     const options = rawOptions
       .map((item: unknown): { label: string; description?: string } | null => {
         const it = (item ?? {}) as Record<string, unknown>;
-        const label = typeof it.label === 'string' ? it.label : '';
+        const label = typeof it.label === "string" ? it.label : "";
         if (!label) return null;
-        const description = typeof it.description === 'string' ? it.description : undefined;
+        const description =
+          typeof it.description === "string" ? it.description : undefined;
         return { label, description };
       })
       .filter((o): o is { label: string; description?: string } => o !== null);
-    return { kind: 'plan_review', plan, path, options: options.length > 0 ? options : undefined };
+    return {
+      kind: "plan_review",
+      plan,
+      path,
+      options: options.length > 0 ? options : undefined,
+    };
   }
 
   // Unknown daemon display.kind → 'generic' with summary = action
-  return { kind: 'generic', summary: a.action };
+  return { kind: "generic", summary: a.action };
 }
 
 /** Map AppQuestionRequest to UIQuestion */
@@ -1809,12 +1962,13 @@ function findBashCommandForTask(task: AppTask): string | undefined {
 
   const bashCommandsByToolCallId = new Map<string, string>();
   for (const msg of messages) {
-    if (msg.role !== 'assistant') continue;
+    if (msg.role !== "assistant") continue;
     for (const part of msg.content) {
-      if (part.type !== 'toolUse') continue;
-      if (part.toolName !== 'Bash' && part.toolName !== 'bash') continue;
+      if (part.type !== "toolUse") continue;
+      if (part.toolName !== "Bash" && part.toolName !== "bash") continue;
       const input = part.input as { command?: unknown } | undefined;
-      const command = input && typeof input.command === 'string' ? input.command : undefined;
+      const command =
+        input && typeof input.command === "string" ? input.command : undefined;
       if (command) {
         bashCommandsByToolCallId.set(part.toolCallId, command);
       }
@@ -1824,15 +1978,15 @@ function findBashCommandForTask(task: AppTask): string | undefined {
 
   const taskIdMarker = `task_id: ${task.id}`;
   for (const msg of messages) {
-    if (msg.role !== 'tool') continue;
+    if (msg.role !== "tool") continue;
     for (const part of msg.content) {
-      if (part.type !== 'toolResult') continue;
+      if (part.type !== "toolResult") continue;
       const outputText =
-        typeof part.output === 'string'
+        typeof part.output === "string"
           ? part.output
           : part.output !== undefined
             ? JSON.stringify(part.output)
-            : '';
+            : "";
       if (outputText.includes(taskIdMarker)) {
         const command = bashCommandsByToolCallId.get(part.toolCallId);
         if (command) return command;
@@ -1845,24 +1999,32 @@ function findBashCommandForTask(task: AppTask): string | undefined {
 /** Map AppTask to UI TaskItem */
 function toUiTask(task: AppTask): TaskItem {
   let state: TaskState;
-  if (task.status === 'running') {
-    state = 'run';
-  } else if (task.status === 'completed') {
-    state = 'done';
+  if (task.status === "running") {
+    state = "run";
+  } else if (task.status === "completed") {
+    state = "done";
   } else {
-    state = 'fail';
+    state = "fail";
   }
 
   // Compute timing string
-  let timing = '';
-  if (task.status === 'running' && task.startedAt) {
-    const elapsed = Math.round((Date.now() - new Date(task.startedAt).getTime()) / 1000);
+  let timing = "";
+  if (task.status === "running" && task.startedAt) {
+    const elapsed = Math.round(
+      (Date.now() - new Date(task.startedAt).getTime()) / 1000,
+    );
     const m = Math.floor(elapsed / 60);
     const s = elapsed % 60;
-    timing = i18n.global.t('tasks.timingRunning', { time: `${m}:${String(s).padStart(2, '0')}` });
+    timing = i18n.global.t("tasks.timingRunning", {
+      time: `${m}:${String(s).padStart(2, "0")}`,
+    });
   } else if (task.completedAt && task.startedAt) {
-    const elapsed = Math.round((new Date(task.completedAt).getTime() - new Date(task.startedAt).getTime()) / 1000);
-    timing = i18n.global.t('tasks.timingDone', { sec: elapsed });
+    const elapsed = Math.round(
+      (new Date(task.completedAt).getTime() -
+        new Date(task.startedAt).getTime()) /
+        1000,
+    );
+    timing = i18n.global.t("tasks.timingDone", { sec: elapsed });
   } else {
     timing = task.status;
   }
@@ -1878,7 +2040,7 @@ function toUiTask(task: AppTask): TaskItem {
   // running without expanding the row. Fall back to the matching Bash tool_use
   // message when the task itself does not carry the command field.
   const command = task.command ?? findBashCommandForTask(task);
-  const meta = task.kind === 'bash' && command ? `$ ${command}` : undefined;
+  const meta = task.kind === "bash" && command ? `$ ${command}` : undefined;
 
   return {
     id: task.id,
@@ -1898,8 +2060,12 @@ function toUiTask(task: AppTask): TaskItem {
 // ---------------------------------------------------------------------------
 
 const workspace = computed<Workspace>(() => {
-  const activeSession = rawState.sessions.find((s) => s.id === rawState.activeSessionId);
-  const branch = activeSession ? activeSession.cwd.split('/').pop() ?? activeSession.cwd : 'main';
+  const activeSession = rawState.sessions.find(
+    (s) => s.id === rawState.activeSessionId,
+  );
+  const branch = activeSession
+    ? (activeSession.cwd.split("/").pop() ?? activeSession.cwd)
+    : "main";
   return {
     name: rawState.workspaceName,
     branch,
@@ -1909,7 +2075,10 @@ const workspace = computed<Workspace>(() => {
 const sessions = computed<Session[]>(() => {
   void sessionTimeClock.value;
   return rawState.sessions
-    .toSorted((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+    .toSorted(
+      (a, b) =>
+        new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+    )
     .map((s) => ({
       id: s.id,
       title: s.title,
@@ -1920,7 +2089,7 @@ const sessions = computed<Session[]>(() => {
     }));
 });
 
-const activeSessionId = computed<string>(() => rawState.activeSessionId ?? '');
+const activeSessionId = computed<string>(() => rawState.activeSessionId ?? "");
 
 /** Slash-invocable skills for the composer `/` menu — the active session's skills,
  *  or, before a session exists, the active workspace's skills. */
@@ -1940,7 +2109,9 @@ const inFlight = computed<boolean>(() => {
 // True while the empty-composer first prompt for the active workspace is being
 // created + submitted (before the session id exists). Drives the empty-session
 // "starting conversation…" loading state in ConversationPane / Composer.
-const isStartingFirstPrompt = computed<boolean>(() => workspaceState.isStartingFirstPrompt());
+const isStartingFirstPrompt = computed<boolean>(() =>
+  workspaceState.isStartingFirstPrompt(),
+);
 
 const sideChat = useSideChat(rawState, {
   pushOperationFailure,
@@ -1956,7 +2127,9 @@ const activeAppTasks = computed<AppTask[]>(() => {
   const sid = rawState.activeSessionId;
   if (!sid) return [];
   const hiddenBtwAgentId = sideChat.sideChatTargetBySession.value[sid]?.agentId;
-  return (rawState.tasksBySession[sid] ?? []).filter((task) => task.id !== hiddenBtwAgentId);
+  return (rawState.tasksBySession[sid] ?? []).filter(
+    (task) => task.id !== hiddenBtwAgentId,
+  );
 });
 
 const taskPoller = useTaskPoller(rawState, activeAppTasks);
@@ -1964,8 +2137,12 @@ const taskPoller = useTaskPoller(rawState, activeAppTasks);
 const turns = computed<ChatTurn[]>(() => {
   const sid = rawState.activeSessionId;
   if (!sid) return [];
-  const hiddenIds = new Set(rawState.sideChatUserMessageIdsBySession[sid] ?? []);
-  const messages = (rawState.messagesBySession[sid] ?? []).filter((m) => !hiddenIds.has(m.id));
+  const hiddenIds = new Set(
+    rawState.sideChatUserMessageIdsBySession[sid] ?? [],
+  );
+  const messages = (rawState.messagesBySession[sid] ?? []).filter(
+    (m) => !hiddenIds.has(m.id),
+  );
   const approvals = rawState.approvalsBySession[sid] ?? [];
   return messagesToTurns(
     messages,
@@ -1985,7 +2162,8 @@ const turnActive = computed<boolean>(() => {
   if (!sid) return false;
   return (
     (rawState.turnActiveBySession[sid] ?? false) ||
-    (rawState.sessions.find((session) => session.id === sid)?.mainTurnActive ?? false)
+    (rawState.sessions.find((session) => session.id === sid)?.mainTurnActive ??
+      false)
   );
 });
 
@@ -2000,7 +2178,9 @@ const tasks = computed<TaskItem[]>(() => {
   return activeAppTasks.value.map(toUiTask);
 });
 
-const swarms = computed<SwarmGroup[]>(() => buildSwarmGroups(activeAppTasks.value));
+const swarms = computed<SwarmGroup[]>(() =>
+  buildSwarmGroups(activeAppTasks.value),
+);
 // Foreground/background subagents keyed by their spawning tool call id — used by
 // the inline AgentSwarm tool card to stream each subagent's live progress.
 const swarmMembersByToolCallId = computed<Map<string, SwarmMember[]>>(() =>
@@ -2033,19 +2213,21 @@ const loading = computed<boolean>(() => rawState.loading);
 const sessionLoading = computed<boolean>(() => rawState.sessionLoading);
 const loadingMoreMessages = computed<boolean>(() => {
   const sid = rawState.activeSessionId;
-  return sid ? rawState.messagesLoadingMoreBySession[sid] ?? false : false;
+  return sid ? (rawState.messagesLoadingMoreBySession[sid] ?? false) : false;
 });
 const hasMoreMessages = computed<boolean>(() => {
   const sid = rawState.activeSessionId;
-  return sid ? rawState.messagesHasMoreBySession[sid] ?? false : false;
+  return sid ? (rawState.messagesHasMoreBySession[sid] ?? false) : false;
 });
 const loadMoreMessagesError = computed<boolean>(() => {
   const sid = rawState.activeSessionId;
-  return sid ? rawState.messagesLoadMoreErrorBySession[sid] ?? false : false;
+  return sid ? (rawState.messagesLoadMoreErrorBySession[sid] ?? false) : false;
 });
 const serverVersion = computed<string>(() => rawState.serverVersion);
-const backend = computed<'v1' | 'v2'>(() => rawState.backend);
-const dangerousBypassAuth = computed<boolean>(() => rawState.dangerousBypassAuth);
+const backend = computed<"v1" | "v2">(() => rawState.backend);
+const dangerousBypassAuth = computed<boolean>(
+  () => rawState.dangerousBypassAuth,
+);
 
 /**
  * Drop the cached `dangerous_bypass_auth` value read from `/meta`. Called when
@@ -2067,7 +2249,9 @@ const planMode = computed<boolean>(() => {
 });
 const swarmMode = computed<boolean>(() => {
   const sid = rawState.activeSessionId;
-  return sid ? (rawState.swarmModeBySession[sid] ?? false) : draftModes.swarmMode;
+  return sid
+    ? (rawState.swarmModeBySession[sid] ?? false)
+    : draftModes.swarmMode;
 });
 const goalMode = computed<boolean>(() => {
   const sid = rawState.activeSessionId;
@@ -2078,13 +2262,14 @@ const activationBadges = computed<ActivationBadges>(() => {
   const swarmCounts = countSwarmMembers(swarms.value);
   return {
     plan: planMode.value,
-    goal: goal.value && goal.value.status !== 'complete'
-      ? {
-          status: goal.value.status,
-          turnsUsed: goal.value.turnsUsed,
-          elapsedMs: goal.value.wallClockMs,
-        }
-      : null,
+    goal:
+      goal.value && goal.value.status !== "complete"
+        ? {
+            status: goal.value.status,
+            turnsUsed: goal.value.turnsUsed,
+            elapsedMs: goal.value.wallClockMs,
+          }
+        : null,
     swarm: swarmCounts.total > 0 ? swarmCounts : null,
   };
 });
@@ -2148,19 +2333,19 @@ const pendingApprovals = computed<
  */
 const activity = computed<ActivityState>(() => {
   const sid = rawState.activeSessionId;
-  if (!sid) return 'idle';
+  if (!sid) return "idle";
 
   const approvals = rawState.approvalsBySession[sid] ?? [];
-  if (approvals.length > 0) return 'awaiting-approval';
+  if (approvals.length > 0) return "awaiting-approval";
 
   const questionList = rawState.questionsBySession[sid] ?? [];
-  if (questionList.length > 0) return 'awaiting-question';
+  if (questionList.length > 0) return "awaiting-question";
 
   if (inFlight.value || turnActive.value) {
-    return 'running';
+    return "running";
   }
 
-  return 'idle';
+  return "idle";
 });
 
 const modelProvider = useModelProviderState(rawState, {
@@ -2173,7 +2358,11 @@ const modelProvider = useModelProviderState(rawState, {
 });
 
 /** Git info for the active session from the daemon's fs:git_status response */
-const gitInfo = computed<{ branch: string; ahead: number; behind: number } | null>(() => {
+const gitInfo = computed<{
+  branch: string;
+  ahead: number;
+  behind: number;
+} | null>(() => {
   const sid = rawState.activeSessionId;
   if (!sid) return null;
   const gs = rawState.gitStatusBySession[sid];
@@ -2183,7 +2372,11 @@ const gitInfo = computed<{ branch: string; ahead: number; behind: number } | nul
 
 /** GitHub pull request for the active session's current branch. Null when
     unknown, not a GitHub repo, or the branch has no PR — the header hides it. */
-const activePullRequest = computed<{ number: number; state: string; url: string } | null>(() => {
+const activePullRequest = computed<{
+  number: number;
+  state: string;
+  url: string;
+} | null>(() => {
   const sid = rawState.activeSessionId;
   if (!sid) return null;
   return rawState.gitStatusBySession[sid]?.pullRequest ?? null;
@@ -2202,7 +2395,10 @@ const changes = computed<{ path: string; status: string }[]>(() => {
 
 /** Aggregate working-tree line stats (vs HEAD) for the active session's header
     diff counter. Null when no git status is loaded, so the header hides it. */
-const gitDiffStats = computed<{ totalAdditions: number; totalDeletions: number } | null>(() => {
+const gitDiffStats = computed<{
+  totalAdditions: number;
+  totalDeletions: number;
+} | null>(() => {
   const sid = rawState.activeSessionId;
   if (!sid) return null;
   const gs = rawState.gitStatusBySession[sid];
@@ -2211,20 +2407,25 @@ const gitDiffStats = computed<{ totalAdditions: number; totalDeletions: number }
 });
 
 const status = computed<ConversationStatus>(() => {
-  const activeSession = rawState.sessions.find((s) => s.id === rawState.activeSessionId);
+  const activeSession = rawState.sessions.find(
+    (s) => s.id === rawState.activeSessionId,
+  );
   // Prefer real git branch from daemon; fall back to cwd basename
   const branch =
     gitInfo.value?.branch ??
-    (activeSession ? activeSession.cwd.split('/').pop() ?? activeSession.cwd : 'main');
+    (activeSession
+      ? (activeSession.cwd.split("/").pop() ?? activeSession.cwd)
+      : "main");
   // session.model is kept live by GET /status (on select/idle) and the WS
   // agent.status.updated event during a turn; fall back to the daemon default.
   // In the draft state (no active session) the user's draft pick wins, so the
   // composer dropdown reflects the selection before the session exists.
-  const draftPick = activeSession === undefined ? modelProvider.draftModel.value : null;
+  const draftPick =
+    activeSession === undefined ? modelProvider.draftModel.value : null;
   const rawModel =
     (activeSession?.model && activeSession.model.length > 0
       ? activeSession.model
-      : draftPick ?? rawState.defaultModel) ?? '—';
+      : (draftPick ?? rawState.defaultModel)) ?? "—";
 
   // Use the friendly displayName from the models list; fall back to stripping
   // the provider prefix (e.g. "moonshot/moonshot-v1-128k" → "moonshot-v1-128k").
@@ -2236,7 +2437,7 @@ const status = computed<ConversationStatus>(() => {
   const displayModel =
     matched?.displayName ||
     matched?.model ||
-    (rawModel.includes('/') ? rawModel.split('/').pop()! : rawModel);
+    (rawModel.includes("/") ? rawModel.split("/").pop()! : rawModel);
 
   return {
     model: displayModel,
@@ -2246,7 +2447,7 @@ const status = computed<ConversationStatus>(() => {
     ctxMax: activeSession?.usage.contextLimit ?? 0,
     permission: rawState.permission,
     branch,
-    cwd: activeSession?.cwd ?? '',
+    cwd: activeSession?.cwd ?? "",
     isGitRepo: gitInfo.value !== null,
   };
 });
@@ -2256,13 +2457,17 @@ const fileDiff = computed<DiffViewLine[]>(() => fileDiffLines.value);
 
 /** Cumulative cost (USD) for the active session, from daemon usage. 0 if unknown. */
 const sessionCost = computed<number>(() => {
-  const activeSession = rawState.sessions.find((s) => s.id === rawState.activeSessionId);
+  const activeSession = rawState.sessions.find(
+    (s) => s.id === rawState.activeSessionId,
+  );
   return activeSession?.usage.totalCostUsd ?? 0;
 });
 
 const authReady = computed<boolean>(() => rawState.authReady);
 const defaultModel = computed<string | null>(() => rawState.defaultModel);
-const managedProviderStatus = computed<string | null>(() => rawState.managedProviderStatus);
+const managedProviderStatus = computed<string | null>(
+  () => rawState.managedProviderStatus,
+);
 const config = computed<AppConfig | null>(() => rawState.config);
 
 /** path → status map for quick badge lookup in the file tree */
@@ -2285,7 +2490,10 @@ const changesByPath = computed<Record<string, string>>(() => {
  * out of the group the merge rendered); otherwise the daemon-provided
  * session.workspaceId; otherwise the cwd itself (derived/fallback mode).
  */
-function workspaceIdForSession(s: { workspaceId?: string; cwd: string }): string {
+function workspaceIdForSession(s: {
+  workspaceId?: string;
+  cwd: string;
+}): string {
   const cwdKey = workspaceRootKey(s.cwd);
   return (
     rawState.workspaces.find((w) => workspaceRootKey(w.root) === cwdKey)?.id ??
@@ -2322,7 +2530,7 @@ const workspaceOrder = ref<string[]>(loadWorkspaceOrder());
  * the persisted/dragged order. Persisted so the choice survives a refresh.
  */
 const workspaceSortMode = ref<WorkspaceSortMode>(
-  loadWorkspaceSort() === 'manual' ? 'manual' : 'recent',
+  loadWorkspaceSort() === "manual" ? "manual" : "recent",
 );
 
 // Reconcile the persisted order with the set of currently-known workspaces:
@@ -2341,10 +2549,14 @@ const workspaceSortMode = ref<WorkspaceSortMode>(
 // top — undoing the user's drag on refresh. Waiting until the load settles
 // means we always reconcile against the complete set.
 watch(
-  () => [mergedWorkspaces.value.map((w) => w.id).join('\0'), rawState.loading] as const,
+  () =>
+    [
+      mergedWorkspaces.value.map((w) => w.id).join("\0"),
+      rawState.loading,
+    ] as const,
   ([idsKey, loading]) => {
     if (loading) return;
-    const current = idsKey ? idsKey.split('\0') : [];
+    const current = idsKey ? idsKey.split("\0") : [];
     const next = reconcileWorkspaceOrder(current, workspaceOrder.value);
     if (next === null) return;
     workspaceOrder.value = next;
@@ -2365,7 +2577,7 @@ const workspacesView = computed<WorkspaceView[]>(() => {
     shortPath: shortenHome(w.root, rawState.fsHome),
     sessionCount: w.sessionCount,
   }));
-  if (workspaceSortMode.value === 'recent') {
+  if (workspaceSortMode.value === "recent") {
     const lastEditedAt = new Map<string, number>();
     for (const s of rawState.sessions) {
       if (s.parentSessionId) continue;
@@ -2398,7 +2610,12 @@ watch(
   activeWorkspaceId,
   (id) => {
     if (!id) return;
-    if (!Object.prototype.hasOwnProperty.call(modelProvider.skillsByWorkspace.value, id)) {
+    if (
+      !Object.prototype.hasOwnProperty.call(
+        modelProvider.skillsByWorkspace.value,
+        id,
+      )
+    ) {
       void modelProvider.loadSkillsForWorkspace(id);
     }
   },
@@ -2421,13 +2638,18 @@ const sessionsForView = computed<Session[]>(() => {
   // Join each session to its workspace name so the search dialog can show which
   // workspace a hit belongs to. Built once per recompute (O(n+m)) instead of a
   // per-session find.
-  const nameByWorkspaceId = new Map(workspacesView.value.map((w) => [w.id, w.name]));
+  const nameByWorkspaceId = new Map(
+    workspacesView.value.map((w) => [w.id, w.name]),
+  );
   // Child ("side chat") sessions never appear in the main list — they live in
   // the side-chat panel only. Sessions under a removed (hidden) workspace are
   // excluded too, so this flat list matches what the grouped sidebar renders
   // and sidebar search can't resurrect sessions from a removed workspace.
   return rawState.sessions
-    .filter((s) => !s.parentSessionId && visibleWorkspaceIds.has(workspaceIdForSession(s)))
+    .filter(
+      (s) =>
+        !s.parentSessionId && visibleWorkspaceIds.has(workspaceIdForSession(s)),
+    )
     .map((s) => {
       const workspaceId = workspaceIdForSession(s);
       return {
@@ -2471,7 +2693,9 @@ const workspaceGroups = computed<WorkspaceGroup[]>(() => {
     sessions: byId.get(w.id) ?? [],
     hasMore: rawState.sessionsHasMoreByWorkspace[w.id] ?? false,
     loadingMore: rawState.sessionsLoadingMoreByWorkspace[w.id] ?? false,
-    initialCount: rawState.sessionsInitialCountByWorkspace[w.id] ?? SESSIONS_INITIAL_PAGE_SIZE,
+    initialCount:
+      rawState.sessionsInitialCountByWorkspace[w.id] ??
+      SESSIONS_INITIAL_PAGE_SIZE,
   }));
 });
 
@@ -2485,9 +2709,9 @@ function reorderWorkspaces(ids: string[]): void {
   saveWorkspaceOrder(ids);
   // A drag is an explicit manual ordering, so drop out of `recent` mode — the
   // dragged order would otherwise be overwritten by the live recency sort.
-  if (workspaceSortMode.value !== 'manual') {
-    workspaceSortMode.value = 'manual';
-    saveWorkspaceSort('manual');
+  if (workspaceSortMode.value !== "manual") {
+    workspaceSortMode.value = "manual";
+    saveWorkspaceSort("manual");
   }
 }
 
@@ -2521,13 +2745,17 @@ const attentionBySession = computed<Record<string, number>>(() => {
  * "awaiting your approval" (permission request). The merged count above stays
  * for the workspace rail / dialogs that only need a single number.
  */
-const pendingBySession = computed<Record<string, { approvals: number; questions: number }>>(() => {
+const pendingBySession = computed<
+  Record<string, { approvals: number; questions: number }>
+>(() => {
   const out: Record<string, { approvals: number; questions: number }> = {};
   for (const [sid, list] of Object.entries(rawState.approvalsBySession)) {
-    if (list.length > 0) (out[sid] ??= { approvals: 0, questions: 0 }).approvals = list.length;
+    if (list.length > 0)
+      (out[sid] ??= { approvals: 0, questions: 0 }).approvals = list.length;
   }
   for (const [sid, list] of Object.entries(rawState.questionsBySession)) {
-    if (list.length > 0) (out[sid] ??= { approvals: 0, questions: 0 }).questions = list.length;
+    if (list.length > 0)
+      (out[sid] ??= { approvals: 0, questions: 0 }).questions = list.length;
   }
   return out;
 });
@@ -2561,7 +2789,9 @@ const attentionByWorkspace = computed<Record<string, number>>(() => {
 const recentRoots = computed<string[]>(() => rawState.recentRoots);
 
 /** Installed external apps the "Open in app" menu may offer for this host. */
-const availableOpenInApps = computed<string[]>(() => rawState.availableOpenInApps);
+const availableOpenInApps = computed<string[]>(
+  () => rawState.availableOpenInApps,
+);
 
 // ---------------------------------------------------------------------------
 // Per-session turn-end cleanup + queue auto-flush.
@@ -2625,8 +2855,8 @@ const workspaceState = useWorkspaceState(rawState, {
 function isUserWatching(sid: string): boolean {
   return (
     sid === rawState.activeSessionId &&
-    typeof document !== 'undefined' &&
-    document.visibilityState === 'visible' &&
+    typeof document !== "undefined" &&
+    document.visibilityState === "visible" &&
     document.hasFocus()
   );
 }
@@ -2649,11 +2879,18 @@ function clearWorkingFlags(sid: string): void {
     rawState.turnActiveBySession = next;
   }
   if (rawState.inFlightBySession[sid]) {
-    rawState.inFlightBySession = { ...rawState.inFlightBySession, [sid]: false };
+    rawState.inFlightBySession = {
+      ...rawState.inFlightBySession,
+      [sid]: false,
+    };
   }
 }
 
-function onMainTurnEnd(sid: string, status: 'idle' | 'aborted', turnWasActive: boolean): void {
+function onMainTurnEnd(
+  sid: string,
+  status: "idle" | "aborted",
+  turnWasActive: boolean,
+): void {
   // Capture before finishPromptLocal drops it — it keys the completion
   // notification's dedup tag so each finished turn alerts once.
   const finishedPromptId = rawState.promptIdBySession[sid];
@@ -2668,7 +2905,7 @@ function onMainTurnEnd(sid: string, status: 'idle' | 'aborted', turnWasActive: b
   if (sid === rawState.activeSessionId) {
     void workspaceState.loadGitStatus(sid);
     void refreshSessionStatus(sid);
-  } else if (status === 'idle') {
+  } else if (status === "idle") {
     // A background session finished a turn the user hasn't seen — light up its
     // unread dot until they open it. Aborted (cancelled/failed) turns are
     // excluded on purpose: there is no fresh result to read, and counting them
@@ -2680,12 +2917,14 @@ function onMainTurnEnd(sid: string, status: 'idle' | 'aborted', turnWasActive: b
   // Browser notification when the user isn't watching this session.
   // Only real completions notify; aborted turns and turns that ended up
   // blocked on approval/question do not fire the generic "Turn finished" alert.
-  const hasPendingApproval = (rawState.approvalsBySession[sid] ?? []).length > 0;
-  const hasPendingQuestion = (rawState.questionsBySession[sid] ?? []).length > 0;
+  const hasPendingApproval =
+    (rawState.approvalsBySession[sid] ?? []).length > 0;
+  const hasPendingQuestion =
+    (rawState.questionsBySession[sid] ?? []).length > 0;
   if (shouldNotifyCompletion(status, hasPendingApproval, hasPendingQuestion)) {
     notification.maybeNotifyCompletion(sid, {
       isUserWatching: isUserWatching(sid),
-      sessionTitle: rawState.sessions.find((s) => s.id === sid)?.title ?? '',
+      sessionTitle: rawState.sessions.find((s) => s.id === sid)?.title ?? "",
       promptId: finishedPromptId,
       onClick: () => {
         void workspaceState.selectSession(sid);
@@ -2695,7 +2934,7 @@ function onMainTurnEnd(sid: string, status: 'idle' | 'aborted', turnWasActive: b
 
   // Completion sound — only for real completions (aborted/cancelled turns stay
   // silent). Plays regardless of visibility so it also reaches a backgrounded tab.
-  if (status === 'idle') {
+  if (status === "idle") {
     sound.maybePlayCompletionSound();
   }
 }
@@ -2705,15 +2944,17 @@ function onQuestionRequested(sid: string, question: AppQuestionRequest): void {
   // Lead with the actionable question text; keep the short header as context
   // when both are present so the desktop notification actually says what is
   // being asked (e.g. "Storage: Which database?").
-  const header = first?.header?.trim() ?? '';
-  const questionText = first?.question?.trim() ?? '';
+  const header = first?.header?.trim() ?? "";
+  const questionText = first?.question?.trim() ?? "";
   const preview =
-    header && questionText ? `${header}: ${questionText}` : questionText || header;
+    header && questionText
+      ? `${header}: ${questionText}`
+      : questionText || header;
 
   // Browser notification when the user isn't watching this session.
   notification.maybeNotifyQuestion({
     isUserWatching: isUserWatching(sid),
-    sessionTitle: rawState.sessions.find((s) => s.id === sid)?.title ?? '',
+    sessionTitle: rawState.sessions.find((s) => s.id === sid)?.title ?? "",
     questionPreview: preview,
     questionId: question.questionId,
     onClick: () => {
@@ -2730,7 +2971,7 @@ function onApprovalRequested(sid: string, approval: AppApprovalRequest): void {
   // Browser notification when the user isn't watching this session.
   notification.maybeNotifyApproval({
     isUserWatching: isUserWatching(sid),
-    sessionTitle: rawState.sessions.find((s) => s.id === sid)?.title ?? '',
+    sessionTitle: rawState.sessions.find((s) => s.id === sid)?.title ?? "",
     toolName: approval.toolName,
     approvalId: approval.approvalId,
     onClick: () => {

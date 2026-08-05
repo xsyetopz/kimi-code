@@ -10,20 +10,26 @@ import {
   ReactFlow,
   type Edge as RFEdge,
   type Viewport,
-} from '@xyflow/react';
-import '@xyflow/react/dist/style.css';
-import { Fragment, useMemo, useState } from 'react';
+} from "@xyflow/react";
+import "@xyflow/react/dist/style.css";
+import { Fragment, useMemo, useState } from "react";
 
-import type { Edge, EdgeKind, EdgeRef, Graph, ServiceNode } from '../../analyzer/types';
-import type { FilterState } from './Filters';
-import { layoutDagre } from './layout-dagre';
+import type {
+  Edge,
+  EdgeKind,
+  EdgeRef,
+  Graph,
+  ServiceNode,
+} from "../../analyzer/types";
+import type { FilterState } from "./Filters";
+import { layoutDagre } from "./layout-dagre";
 import {
   EDGE_STYLE,
   SCOPE_MISMATCH_COLOR,
   SCOPE_STYLE,
   UNRESOLVED_COLOR,
-} from './style';
-import { tagColor, type TagMap } from './tags';
+} from "./style";
+import { tagColor, type TagMap } from "./tags";
 
 const NODE_WIDTH = 300;
 const HEADER_HEIGHT = 68;
@@ -55,9 +61,17 @@ interface ServiceNodeData extends Record<string, unknown> {
   tags: string[];
 }
 
-const EVENT_KINDS: Set<EdgeKind> = new Set(['publish', 'subscribe', 'emit', 'on']);
+const EVENT_KINDS: Set<EdgeKind> = new Set([
+  "publish",
+  "subscribe",
+  "emit",
+  "on",
+]);
 
-function effectiveToMethod(kind: EdgeKind, refTo: string | undefined): string | undefined {
+function effectiveToMethod(
+  kind: EdgeKind,
+  refTo: string | undefined,
+): string | undefined {
   if (refTo !== undefined) return refTo;
   if (EVENT_KINDS.has(kind)) return kind;
   return undefined;
@@ -107,11 +121,16 @@ function computeServicePorts(
 
 function nodeHeight(ports: ServicePortsInfo, hasTags: boolean): number {
   const rows = Math.max(ports.inPorts.length, ports.outPorts.length);
-  const base = rows === 0 ? HEADER_HEIGHT : HEADER_HEIGHT + PORTS_PAD_TOP + rows * PORT_ROW_HEIGHT + PORTS_PAD_TOP;
+  const base =
+    rows === 0
+      ? HEADER_HEIGHT
+      : HEADER_HEIGHT + PORTS_PAD_TOP + rows * PORT_ROW_HEIGHT + PORTS_PAD_TOP;
   return hasTags ? base + TAGS_ROW_HEIGHT : base;
 }
 
-function ServiceNodeView({ data }: NodeProps<Node<ServiceNodeData>>): JSX.Element {
+function ServiceNodeView({
+  data,
+}: NodeProps<Node<ServiceNodeData>>): JSX.Element {
   const { service, selected, matched, dim, ports, tags } = data;
   const bg = SCOPE_STYLE[service.scope].color;
   const rowCount = Math.max(ports.inPorts.length, ports.outPorts.length);
@@ -119,26 +138,27 @@ function ServiceNodeView({ data }: NodeProps<Node<ServiceNodeData>>): JSX.Elemen
   const isScopeMismatch = service.scopeMismatch === true;
   const specialBorder = isUnresolved || isScopeMismatch;
   const borderColor = selected
-    ? '#ffdf5d'
+    ? "#ffdf5d"
     : matched
-      ? '#79c0ff'
+      ? "#79c0ff"
       : isUnresolved
         ? UNRESOLVED_COLOR
         : isScopeMismatch
           ? SCOPE_MISMATCH_COLOR
-          : 'rgba(0,0,0,0.4)';
+          : "rgba(0,0,0,0.4)";
   const borderWidth = selected || matched || specialBorder ? 2 : 1;
-  const borderStyle = specialBorder && !selected && !matched ? 'dashed' : 'solid';
+  const borderStyle =
+    specialBorder && !selected && !matched ? "dashed" : "solid";
   const glow = selected
-    ? '0 0 0 3px rgba(255,223,93,0.25)'
+    ? "0 0 0 3px rgba(255,223,93,0.25)"
     : matched
-      ? '0 0 0 3px rgba(121,192,255,0.25)'
-      : 'none';
+      ? "0 0 0 3px rgba(121,192,255,0.25)"
+      : "none";
   return (
     <div
       style={{
         background: bg,
-        color: 'white',
+        color: "white",
         borderRadius: 6,
         border: `${borderWidth}px ${borderStyle} ${borderColor}`,
         boxShadow: glow,
@@ -147,29 +167,29 @@ function ServiceNodeView({ data }: NodeProps<Node<ServiceNodeData>>): JSX.Elemen
           'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace',
         opacity: dim ? 0.18 : 1,
         width: NODE_WIDTH,
-        position: 'relative',
+        position: "relative",
       }}
     >
       <Handle
         id="default-target"
         type="target"
         position={Position.Right}
-        style={{ background: '#555', top: HEADER_HEIGHT / 2 }}
+        style={{ background: "#555", top: HEADER_HEIGHT / 2 }}
       />
       <Handle
         id="default-source"
         type="source"
         position={Position.Left}
-        style={{ background: '#555', top: HEADER_HEIGHT / 2 }}
+        style={{ background: "#555", top: HEADER_HEIGHT / 2 }}
       />
 
-      <div style={{ padding: '6px 10px' }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+      <div style={{ padding: "6px 10px" }}>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
           <span
             style={{
               fontSize: 9,
-              padding: '1px 5px',
-              background: 'rgba(0,0,0,0.35)',
+              padding: "1px 5px",
+              background: "rgba(0,0,0,0.35)",
               borderRadius: 3,
             }}
           >
@@ -178,22 +198,31 @@ function ServiceNodeView({ data }: NodeProps<Node<ServiceNodeData>>): JSX.Elemen
           <span
             style={{
               fontWeight: 600,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
             }}
           >
             {service.impl}
           </span>
         </div>
-        <div style={{ fontSize: 10, opacity: 0.65, marginTop: 2, fontStyle: 'italic' }}>
+        <div
+          style={{
+            fontSize: 10,
+            opacity: 0.65,
+            marginTop: 2,
+            fontStyle: "italic",
+          }}
+        >
           {isUnresolved
-            ? 'no implementation registered'
+            ? "no implementation registered"
             : isScopeMismatch
               ? `registered at ${service.scope} · cross-scope ref`
               : service.token}
         </div>
-        <div style={{ fontSize: 10, opacity: 0.75, marginTop: 2 }}>{service.domain}</div>
+        <div style={{ fontSize: 10, opacity: 0.75, marginTop: 2 }}>
+          {service.domain}
+        </div>
       </div>
 
       {tags.length > 0 && <TagChips tags={tags} />}
@@ -201,8 +230,8 @@ function ServiceNodeView({ data }: NodeProps<Node<ServiceNodeData>>): JSX.Elemen
       {rowCount > 0 && (
         <div
           style={{
-            borderTop: '1px solid rgba(0,0,0,0.25)',
-            background: 'rgba(0,0,0,0.15)',
+            borderTop: "1px solid rgba(0,0,0,0.25)",
+            background: "rgba(0,0,0,0.15)",
             padding: `${PORTS_PAD_TOP}px 0`,
           }}
         >
@@ -213,7 +242,7 @@ function ServiceNodeView({ data }: NodeProps<Node<ServiceNodeData>>): JSX.Elemen
               <div
                 key={i}
                 style={{
-                  position: 'relative',
+                  position: "relative",
                   height: PORT_ROW_HEIGHT,
                 }}
               >
@@ -222,7 +251,7 @@ function ServiceNodeView({ data }: NodeProps<Node<ServiceNodeData>>): JSX.Elemen
                     id={`out:${out}`}
                     type="source"
                     position={Position.Left}
-                    style={{ background: '#f6c896' }}
+                    style={{ background: "#f6c896" }}
                   />
                 )}
                 {inn !== undefined && (
@@ -231,46 +260,48 @@ function ServiceNodeView({ data }: NodeProps<Node<ServiceNodeData>>): JSX.Elemen
                     type="target"
                     position={Position.Right}
                     style={{
-                      background: ports.connectedIn.has(inn) ? '#a8c8f6' : '#3d444d',
+                      background: ports.connectedIn.has(inn)
+                        ? "#a8c8f6"
+                        : "#3d444d",
                     }}
                   />
                 )}
                 <div
                   style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    height: '100%',
-                    padding: '0 10px',
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    height: "100%",
+                    padding: "0 10px",
                     fontSize: 10,
                   }}
                 >
                   <span
                     style={{
                       flex: 1,
-                      textAlign: 'left',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                      color: '#fbe4c8',
+                      textAlign: "left",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                      color: "#fbe4c8",
                     }}
                   >
-                    {out ?? ''}
+                    {out ?? ""}
                   </span>
                   <span
                     style={{
                       flex: 1,
-                      textAlign: 'right',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
+                      textAlign: "right",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
                       color:
                         inn !== undefined && !ports.connectedIn.has(inn)
-                          ? '#6e7681'
-                          : '#c8e0fb',
+                          ? "#6e7681"
+                          : "#c8e0fb",
                     }}
                   >
-                    {inn ?? ''}
+                    {inn ?? ""}
                   </span>
                 </div>
               </div>
@@ -282,24 +313,26 @@ function ServiceNodeView({ data }: NodeProps<Node<ServiceNodeData>>): JSX.Elemen
   );
 }
 
-function BandLabelView({ data }: NodeProps<Node<{ scope: string; width: number }>>): JSX.Element {
+function BandLabelView({
+  data,
+}: NodeProps<Node<{ scope: string; width: number }>>): JSX.Element {
   const { scope, width } = data;
   return (
     <div
       style={{
         width,
         height: 24,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: '#a5b0bc',
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        color: "#a5b0bc",
         fontSize: 11,
         fontWeight: 700,
         letterSpacing: 1.2,
-        textTransform: 'uppercase',
-        borderBottom: '1px dashed #30363d',
-        pointerEvents: 'none',
-        fontFamily: 'ui-monospace, monospace',
+        textTransform: "uppercase",
+        borderBottom: "1px dashed #30363d",
+        pointerEvents: "none",
+        fontFamily: "ui-monospace, monospace",
       }}
     >
       {scope}
@@ -313,10 +346,10 @@ function TagChips({ tags }: { tags: string[] }): JSX.Element {
   return (
     <div
       style={{
-        display: 'flex',
-        flexWrap: 'wrap',
+        display: "flex",
+        flexWrap: "wrap",
         gap: 3,
-        padding: '0 8px 5px',
+        padding: "0 8px 5px",
       }}
     >
       {tags.map((tag) => (
@@ -337,25 +370,25 @@ function TagChip({ tag, onRemove }: TagChipProps): JSX.Element {
     <span
       title={tag}
       style={{
-        display: 'inline-flex',
-        alignItems: 'center',
+        display: "inline-flex",
+        alignItems: "center",
         gap: 3,
         maxWidth: onRemove ? 150 : 120,
-        padding: '1px 5px',
+        padding: "1px 5px",
         fontSize: 9,
-        lineHeight: '14px',
+        lineHeight: "14px",
         color,
         background: bg,
         border: `1px solid ${color}`,
         borderRadius: 8,
-        overflow: 'hidden',
-        whiteSpace: 'nowrap',
+        overflow: "hidden",
+        whiteSpace: "nowrap",
       }}
     >
       <span
         style={{
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
+          overflow: "hidden",
+          textOverflow: "ellipsis",
         }}
       >
         {tag}
@@ -368,10 +401,10 @@ function TagChip({ tag, onRemove }: TagChipProps): JSX.Element {
           }}
           aria-label={`remove tag ${tag}`}
           style={{
-            background: 'transparent',
-            border: 'none',
+            background: "transparent",
+            border: "none",
             color,
-            cursor: 'pointer',
+            cursor: "pointer",
             padding: 0,
             fontSize: 11,
             lineHeight: 1,
@@ -392,17 +425,17 @@ interface TagEditorProps {
 }
 
 function TagEditor({ tags, allTags, onChange }: TagEditorProps): JSX.Element {
-  const [draft, setDraft] = useState('');
-  const listId = 'tag-suggestions';
+  const [draft, setDraft] = useState("");
+  const listId = "tag-suggestions";
 
   function commit(raw: string): void {
     const tag = raw.trim();
     if (!tag || tags.includes(tag)) {
-      setDraft('');
+      setDraft("");
       return;
     }
     onChange([...tags, tag]);
-    setDraft('');
+    setDraft("");
   }
 
   return (
@@ -411,17 +444,19 @@ function TagEditor({ tags, allTags, onChange }: TagEditorProps): JSX.Element {
         style={{
           fontSize: 10,
           fontWeight: 600,
-          textTransform: 'uppercase',
-          color: '#7d8590',
+          textTransform: "uppercase",
+          color: "#7d8590",
           marginBottom: 4,
           letterSpacing: 0.5,
         }}
       >
         tags
       </div>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 6 }}>
+      <div
+        style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 6 }}
+      >
         {tags.length === 0 ? (
-          <span style={{ color: '#6e7681', fontSize: 11 }}>no tags</span>
+          <span style={{ color: "#6e7681", fontSize: 11 }}>no tags</span>
         ) : (
           tags.map((tag) => (
             <TagChip
@@ -432,14 +467,14 @@ function TagEditor({ tags, allTags, onChange }: TagEditorProps): JSX.Element {
           ))
         )}
       </div>
-      <div style={{ display: 'flex', gap: 4 }}>
+      <div style={{ display: "flex", gap: 4 }}>
         <input
           value={draft}
           list={listId}
           placeholder="add tag…"
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === 'Enter') {
+            if (e.key === "Enter") {
               e.preventDefault();
               commit(draft);
             }
@@ -447,10 +482,10 @@ function TagEditor({ tags, allTags, onChange }: TagEditorProps): JSX.Element {
           style={{
             flex: 1,
             minWidth: 0,
-            padding: '4px 7px',
-            background: '#0e1116',
-            color: '#e6edf3',
-            border: '1px solid #30363d',
+            padding: "4px 7px",
+            background: "#0e1116",
+            color: "#e6edf3",
+            border: "1px solid #30363d",
             borderRadius: 4,
             fontSize: 11,
           }}
@@ -458,12 +493,12 @@ function TagEditor({ tags, allTags, onChange }: TagEditorProps): JSX.Element {
         <button
           onClick={() => commit(draft)}
           style={{
-            padding: '4px 10px',
-            background: '#21262d',
-            color: '#e6edf3',
-            border: '1px solid #30363d',
+            padding: "4px 10px",
+            background: "#21262d",
+            color: "#e6edf3",
+            border: "1px solid #30363d",
             borderRadius: 4,
-            cursor: 'pointer',
+            cursor: "pointer",
             fontSize: 11,
           }}
         >
@@ -481,7 +516,7 @@ function TagEditor({ tags, allTags, onChange }: TagEditorProps): JSX.Element {
   );
 }
 
-const VIEWPORT_STORAGE_KEY = 'agent-core-v2:dep-graph:viewport';
+const VIEWPORT_STORAGE_KEY = "agent-core-v2:dep-graph:viewport";
 
 function loadViewport(): Viewport | undefined {
   try {
@@ -490,9 +525,9 @@ function loadViewport(): Viewport | undefined {
     const parsed = JSON.parse(raw) as Partial<Viewport> | null;
     if (
       parsed === null ||
-      typeof parsed.x !== 'number' ||
-      typeof parsed.y !== 'number' ||
-      typeof parsed.zoom !== 'number'
+      typeof parsed.x !== "number" ||
+      typeof parsed.y !== "number" ||
+      typeof parsed.zoom !== "number"
     ) {
       return undefined;
     }
@@ -505,8 +540,7 @@ function loadViewport(): Viewport | undefined {
 function saveViewport(v: Viewport): void {
   try {
     sessionStorage.setItem(VIEWPORT_STORAGE_KEY, JSON.stringify(v));
-  } catch {
-  }
+  } catch {}
 }
 
 function passesFilter(
@@ -521,8 +555,11 @@ function passesFilter(
 }
 
 function matchesSearch(service: ServiceNode, query: string): boolean {
-  const members = service.publicMembers ? ` ${service.publicMembers.join(' ')}` : '';
-  const hay = `${service.token} ${service.impl} ${service.domain}${members}`.toLowerCase();
+  const members = service.publicMembers
+    ? ` ${service.publicMembers.join(" ")}`
+    : "";
+  const hay =
+    `${service.token} ${service.impl} ${service.domain}${members}`.toLowerCase();
   return hay.includes(query);
 }
 
@@ -537,7 +574,9 @@ export function GraphView({
   const initialViewport = useMemo(() => loadViewport(), []);
 
   const { nodes, edges, selectedService, selectedEdges } = useMemo(() => {
-    const survivingEdges: Edge[] = graph.edges.filter((e) => filters.kinds.has(e.kind));
+    const survivingEdges: Edge[] = graph.edges.filter((e) =>
+      filters.kinds.has(e.kind),
+    );
 
     const connected = new Set<string>();
     for (const e of survivingEdges) {
@@ -568,7 +607,8 @@ export function GraphView({
     if (filters.activeTags.size > 0) {
       for (const s of visibleServices) {
         const st = tags[s.id];
-        if (st && st.some((t) => filters.activeTags.has(t))) tagMatched.add(s.id);
+        if (st && st.some((t) => filters.activeTags.has(t)))
+          tagMatched.add(s.id);
       }
     }
 
@@ -604,7 +644,7 @@ export function GraphView({
     const rfNodes: Node[] = visibleServices.map(
       (service): Node<ServiceNodeData> => ({
         id: service.id,
-        type: 'service',
+        type: "service",
         position: pos.get(service.id) ?? { x: 0, y: 0 },
         data: {
           service,
@@ -627,7 +667,7 @@ export function GraphView({
       for (const band of layout.bands) {
         rfNodes.push({
           id: `band::${band.scope}`,
-          type: 'band',
+          type: "band",
           position: { x: band.x, y: minY - 40 },
           data: { scope: band.scope, width: Math.max(band.width, 120) },
           draggable: false,
@@ -640,19 +680,25 @@ export function GraphView({
     const rfEdges: RFEdge[] = [];
     for (const e of finalEdges) {
       const style = EDGE_STYLE[e.kind];
-      const isHighlighted = focusActive && focused.has(e.from) && focused.has(e.to);
+      const isHighlighted =
+        focusActive && focused.has(e.from) && focused.has(e.to);
       const pairs = new Map<
         string,
         { fromMethod: string | undefined; toMethod: string | undefined }
       >();
       for (const ref of e.refs) {
         const toMethod = effectiveToMethod(e.kind, ref.toMethod);
-        const key = `${ref.fromMethod ?? ''}|${toMethod ?? ''}`;
-        if (!pairs.has(key)) pairs.set(key, { fromMethod: ref.fromMethod, toMethod });
+        const key = `${ref.fromMethod ?? ""}|${toMethod ?? ""}`;
+        if (!pairs.has(key))
+          pairs.set(key, { fromMethod: ref.fromMethod, toMethod });
       }
       for (const [key, pair] of pairs) {
-        const sourceHandle = pair.fromMethod ? `out:${pair.fromMethod}` : 'default-source';
-        const targetHandle = pair.toMethod ? `in:${pair.toMethod}` : 'default-target';
+        const sourceHandle = pair.fromMethod
+          ? `out:${pair.fromMethod}`
+          : "default-source";
+        const targetHandle = pair.toMethod
+          ? `in:${pair.toMethod}`
+          : "default-target";
         rfEdges.push({
           id: `${e.from}::${e.kind}::${e.to}::${key}`,
           source: e.from,
@@ -662,7 +708,7 @@ export function GraphView({
           style: {
             stroke: style.color,
             strokeWidth: isHighlighted ? 2.2 : 1.2,
-            strokeDasharray: style.dashed ? '4 3' : undefined,
+            strokeDasharray: style.dashed ? "4 3" : undefined,
             opacity: focusActive ? (isHighlighted ? 1 : 0.1) : 0.75,
           },
           animated: false,
@@ -693,7 +739,7 @@ export function GraphView({
         minZoom={0.1}
         maxZoom={1.6}
         onNodeClick={(_, node) => {
-          if (node.id.startsWith('band::')) return;
+          if (node.id.startsWith("band::")) return;
           onSelect(node.id);
         }}
         onPaneClick={() => onSelect(undefined)}
@@ -703,11 +749,11 @@ export function GraphView({
         <MiniMap
           pannable
           zoomable
-          style={{ background: '#151b23' }}
+          style={{ background: "#151b23" }}
           nodeColor={(n) => {
-            if (n.id.startsWith('band::')) return 'transparent';
+            if (n.id.startsWith("band::")) return "transparent";
             const service = (n.data as ServiceNodeData | undefined)?.service;
-            if (!service) return '#7d8590';
+            if (!service) return "#7d8590";
             return service.unresolved
               ? UNRESOLVED_COLOR
               : service.scopeMismatch
@@ -715,7 +761,7 @@ export function GraphView({
                 : SCOPE_STYLE[service.scope].color;
           }}
         />
-        <Controls showInteractive={false} style={{ background: '#151b23' }} />
+        <Controls showInteractive={false} style={{ background: "#151b23" }} />
       </ReactFlow>
       {selectedService && (
         <ServicePanel
@@ -749,7 +795,9 @@ function ServicePanel({
   onEditTags,
 }: ServicePanelProps): JSX.Element {
   const outgoing = edges.filter((e) => e.from === service.id);
-  const incoming = edges.filter((e) => e.to === service.id && e.from !== service.id);
+  const incoming = edges.filter(
+    (e) => e.to === service.id && e.from !== service.id,
+  );
   const byId = new Map(graph.services.map((s) => [s.id, s]));
   const nodeTags = tags[service.id] ?? [];
   const allTags = useMemo(
@@ -759,39 +807,64 @@ function ServicePanel({
   return (
     <div
       style={{
-        position: 'absolute',
+        position: "absolute",
         top: 12,
         right: 12,
         width: 420,
-        maxHeight: 'calc(100vh - 24px)',
-        overflowY: 'auto',
-        background: 'rgba(21,27,35,0.96)',
-        border: '1px solid #30363d',
+        maxHeight: "calc(100vh - 24px)",
+        overflowY: "auto",
+        background: "rgba(21,27,35,0.96)",
+        border: "1px solid #30363d",
         borderRadius: 8,
         padding: 14,
         fontSize: 12,
-        boxShadow: '0 6px 24px rgba(0,0,0,0.5)',
+        boxShadow: "0 6px 24px rgba(0,0,0,0.5)",
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 8 }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          gap: 8,
+          marginBottom: 8,
+        }}
+      >
         <div style={{ flex: 1 }}>
           <div style={{ fontWeight: 600, fontSize: 13 }}>{service.impl}</div>
           {service.unresolved ? (
-            <div style={{ color: UNRESOLVED_COLOR, fontSize: 11, marginTop: 2 }}>
+            <div
+              style={{ color: UNRESOLVED_COLOR, fontSize: 11, marginTop: 2 }}
+            >
               No implementation registered
             </div>
           ) : service.scopeMismatch ? (
-            <div style={{ color: SCOPE_MISMATCH_COLOR, fontSize: 11, marginTop: 2 }}>
-              Registered at {service.scope} — not visible from the caller&apos;s scope
+            <div
+              style={{
+                color: SCOPE_MISMATCH_COLOR,
+                fontSize: 11,
+                marginTop: 2,
+              }}
+            >
+              Registered at {service.scope} — not visible from the caller&apos;s
+              scope
             </div>
           ) : (
-            <div style={{ color: '#a5b0bc', fontSize: 11 }}>{service.token}</div>
+            <div style={{ color: "#a5b0bc", fontSize: 11 }}>
+              {service.token}
+            </div>
           )}
-          <div style={{ color: '#7d8590', fontSize: 11 }}>
+          <div style={{ color: "#7d8590", fontSize: 11 }}>
             <b>{service.scope}</b> · {service.domain}
           </div>
           {!service.unresolved && !service.scopeMismatch && (
-            <div style={{ color: '#7d8590', fontSize: 10, marginTop: 4, wordBreak: 'break-all' }}>
+            <div
+              style={{
+                color: "#7d8590",
+                fontSize: 10,
+                marginTop: 4,
+                wordBreak: "break-all",
+              }}
+            >
               {service.file}:{service.line}
             </div>
           )}
@@ -799,10 +872,10 @@ function ServicePanel({
         <button
           onClick={onClose}
           style={{
-            background: 'transparent',
-            border: 'none',
-            color: '#7d8590',
-            cursor: 'pointer',
+            background: "transparent",
+            border: "none",
+            color: "#7d8590",
+            cursor: "pointer",
             fontSize: 16,
             lineHeight: 1,
           }}
@@ -838,7 +911,7 @@ function ServicePanel({
 interface EdgeListProps {
   title: string;
   edges: Edge[];
-  direction: 'in' | 'out';
+  direction: "in" | "out";
   byId: Map<string, ServiceNode>;
 }
 
@@ -852,11 +925,11 @@ interface EdgeGroup {
 
 function buildEdgeGroups(
   edges: Edge[],
-  direction: 'in' | 'out',
+  direction: "in" | "out",
   byId: Map<string, ServiceNode>,
 ): EdgeGroup[] {
   return edges.map((e) => {
-    const peerId = direction === 'out' ? e.to : e.from;
+    const peerId = direction === "out" ? e.to : e.from;
     const peer = byId.get(peerId);
     const peerLabel = peer ? peer.impl : peerId;
     const peerToken = peer?.token;
@@ -868,17 +941,22 @@ function buildEdgeGroups(
   });
 }
 
-function EdgeList({ title, edges, direction, byId }: EdgeListProps): JSX.Element {
+function EdgeList({
+  title,
+  edges,
+  direction,
+  byId,
+}: EdgeListProps): JSX.Element {
   const groups = buildEdgeGroups(edges, direction, byId);
-  const selfIsFrom = direction === 'out';
+  const selfIsFrom = direction === "out";
   return (
     <div style={{ marginTop: 12 }}>
       <div
         style={{
           fontSize: 10,
           fontWeight: 600,
-          textTransform: 'uppercase',
-          color: '#7d8590',
+          textTransform: "uppercase",
+          color: "#7d8590",
           marginBottom: 4,
           letterSpacing: 0.5,
         }}
@@ -886,7 +964,7 @@ function EdgeList({ title, edges, direction, byId }: EdgeListProps): JSX.Element
         {title}
       </div>
       {groups.length === 0 ? (
-        <div style={{ color: '#7d8590', fontSize: 11 }}>—</div>
+        <div style={{ color: "#7d8590", fontSize: 11 }}>—</div>
       ) : (
         <table style={tableStyle}>
           <colgroup>
@@ -900,7 +978,7 @@ function EdgeList({ title, edges, direction, byId }: EdgeListProps): JSX.Element
               <th style={thStyle}>kind</th>
               <th style={thStyle}>peer</th>
               <th style={thStyle}>from → to</th>
-              <th style={{ ...thStyle, textAlign: 'right' }}>line</th>
+              <th style={{ ...thStyle, textAlign: "right" }}>line</th>
             </tr>
           </thead>
           <tbody>
@@ -910,15 +988,15 @@ function EdgeList({ title, edges, direction, byId }: EdgeListProps): JSX.Element
                 <div style={cellClipStyle}>
                   <span
                     style={{
-                      display: 'inline-block',
+                      display: "inline-block",
                       width: 10,
                       height: 3,
-                      borderTop: `${kindStyle.dashed ? '2px dashed' : '2px solid'} ${kindStyle.color}`,
+                      borderTop: `${kindStyle.dashed ? "2px dashed" : "2px solid"} ${kindStyle.color}`,
                       marginRight: 4,
-                      verticalAlign: 'middle',
+                      verticalAlign: "middle",
                     }}
                   />
-                  <span style={{ color: '#a5b0bc' }}>{g.edge.kind}</span>
+                  <span style={{ color: "#a5b0bc" }}>{g.edge.kind}</span>
                 </div>
               );
               const peerCell = (
@@ -936,8 +1014,8 @@ function EdgeList({ title, edges, direction, byId }: EdgeListProps): JSX.Element
                       colSpan={2}
                       style={{
                         ...tdStyle,
-                        color: '#6e7681',
-                        fontStyle: 'italic',
+                        color: "#6e7681",
+                        fontStyle: "italic",
                       }}
                     >
                       — ×{g.edge.refs.length}
@@ -964,23 +1042,28 @@ function EdgeList({ title, edges, direction, byId }: EdgeListProps): JSX.Element
                             </td>
                           </>
                         )}
-                        <td style={tdCallStyle} title={`${r.fromMethod ?? '?'} → ${r.toMethod ?? '?'}`}>
+                        <td
+                          style={tdCallStyle}
+                          title={`${r.fromMethod ?? "?"} → ${r.toMethod ?? "?"}`}
+                        >
                           <span
                             style={{
                               fontWeight: selfIsFrom ? 600 : 400,
-                              color: selfIsFrom ? '#e6edf3' : '#a5b0bc',
+                              color: selfIsFrom ? "#e6edf3" : "#a5b0bc",
                             }}
                           >
-                            {r.fromMethod ?? '?'}
+                            {r.fromMethod ?? "?"}
                           </span>
-                          <span style={{ color: '#6e7681', margin: '0 4px' }}>→</span>
+                          <span style={{ color: "#6e7681", margin: "0 4px" }}>
+                            →
+                          </span>
                           <span
                             style={{
                               fontWeight: !selfIsFrom ? 600 : 400,
-                              color: !selfIsFrom ? '#e6edf3' : '#a5b0bc',
+                              color: !selfIsFrom ? "#e6edf3" : "#a5b0bc",
                             }}
                           >
-                            {r.toMethod ?? '?'}
+                            {r.toMethod ?? "?"}
                           </span>
                         </td>
                         <td style={tdLineStyle}>:{r.line}</td>
@@ -998,50 +1081,50 @@ function EdgeList({ title, edges, direction, byId }: EdgeListProps): JSX.Element
 }
 
 const tableStyle: React.CSSProperties = {
-  width: '100%',
-  borderCollapse: 'collapse',
-  tableLayout: 'fixed',
+  width: "100%",
+  borderCollapse: "collapse",
+  tableLayout: "fixed",
   fontFamily:
     'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace',
   fontSize: 10.5,
 };
 
 const thStyle: React.CSSProperties = {
-  textAlign: 'left',
+  textAlign: "left",
   fontWeight: 600,
-  color: '#7d8590',
+  color: "#7d8590",
   fontSize: 9,
-  textTransform: 'uppercase',
+  textTransform: "uppercase",
   letterSpacing: 0.5,
-  padding: '3px 6px',
-  borderBottom: '1px solid #30363d',
+  padding: "3px 6px",
+  borderBottom: "1px solid #30363d",
 };
 
 const tdStyle: React.CSSProperties = {
-  padding: '3px 6px',
-  verticalAlign: 'top',
+  padding: "3px 6px",
+  verticalAlign: "top",
 };
 
 const tdCallStyle: React.CSSProperties = {
   ...tdStyle,
-  whiteSpace: 'nowrap',
-  overflow: 'hidden',
-  textOverflow: 'ellipsis',
+  whiteSpace: "nowrap",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
 };
 
 const tdLineStyle: React.CSSProperties = {
   ...tdStyle,
-  textAlign: 'right',
-  color: '#6e7681',
-  whiteSpace: 'nowrap',
+  textAlign: "right",
+  color: "#6e7681",
+  whiteSpace: "nowrap",
 };
 
 const cellClipStyle: React.CSSProperties = {
-  overflow: 'hidden',
-  textOverflow: 'ellipsis',
-  whiteSpace: 'nowrap',
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
 };
 
 const groupBorderStyle: React.CSSProperties = {
-  borderTop: '1px solid #21262d',
+  borderTop: "1px solid #21262d",
 };

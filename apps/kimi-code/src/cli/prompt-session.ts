@@ -30,7 +30,7 @@ import type {
   SessionSummary,
   TelemetryProperties,
   Unsubscribe,
-} from '@moonshot-ai/kimi-code-sdk';
+} from "@moonshot-ai/kimi-code-sdk";
 
 export interface PromptHarness {
   readonly homeDir: string;
@@ -39,9 +39,11 @@ export interface PromptHarness {
   track(event: string, properties?: TelemetryProperties): void;
 
   ensureConfigFile(): Promise<void>;
-  getConfig(): Promise<Pick<KimiConfig, 'defaultModel' | 'telemetry'>>;
+  getConfig(): Promise<Pick<KimiConfig, "defaultModel" | "telemetry">>;
   getConfigDiagnostics(): Promise<ConfigDiagnostics>;
-  listSessions(options: ListSessionsOptions): Promise<readonly SessionSummary[]>;
+  listSessions(
+    options: ListSessionsOptions,
+  ): Promise<readonly SessionSummary[]>;
   createSession(options: CreateSessionOptions): Promise<PromptSession>;
   resumeSession(input: ResumeSessionInput): Promise<PromptSession>;
   close(): Promise<void>;
@@ -59,7 +61,7 @@ export interface PromptSession {
   onEvent(listener: (event: Event) => void): Unsubscribe;
   prompt(input: string | PromptInput): Promise<void>;
   waitForBackgroundTasksOnPrint(): Promise<void>;
-  handlePrintMainTurnCompleted?(): Promise<'finish' | 'continue'>;
+  handlePrintMainTurnCompleted?(): Promise<"finish" | "continue">;
   createGoal(input: CreateGoalInput): Promise<GoalSnapshot>;
   getGoal(): Promise<GoalToolResult>;
   getCronTasks(): Promise<GetCronTasksResult>;

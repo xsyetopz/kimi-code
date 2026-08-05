@@ -1,30 +1,30 @@
-import type { Tool } from './tool';
+import type { Tool } from "./tool";
 
-export type Role = 'system' | 'user' | 'assistant' | 'tool';
+export type Role = "system" | "user" | "assistant" | "tool";
 
 export interface TextPart {
-  type: 'text';
+  type: "text";
   text: string;
 }
 
 export interface ThinkPart {
-  type: 'think';
+  type: "think";
   think: string;
   encrypted?: string; // Provider-specific reasoning signature
 }
 
 export interface ImageURLPart {
-  type: 'image_url';
+  type: "image_url";
   imageUrl: { url: string; id?: string };
 }
 
 export interface AudioURLPart {
-  type: 'audio_url';
+  type: "audio_url";
   audioUrl: { url: string; id?: string };
 }
 
 export interface VideoURLPart {
-  type: 'video_url';
+  type: "video_url";
   videoUrl: { url: string; id?: string | undefined };
 }
 
@@ -35,10 +35,15 @@ export interface VideoURLPart {
  * Providers convert these to their native content-block format during
  * {@link ChatProvider.generate}.
  */
-export type ContentPart = TextPart | ThinkPart | ImageURLPart | AudioURLPart | VideoURLPart;
+export type ContentPart =
+  | TextPart
+  | ThinkPart
+  | ImageURLPart
+  | AudioURLPart
+  | VideoURLPart;
 
 export interface ToolCall {
-  type: 'function';
+  type: "function";
   id: string;
   name: string;
   arguments: string | null;
@@ -56,7 +61,7 @@ export interface ToolCall {
 
 /** Streaming delta for tool call arguments. */
 export interface ToolCallPart {
-  type: 'tool_call_part';
+  type: "tool_call_part";
   argumentsPart: string | null;
   /**
    * Provider-specific index for routing this streaming delta to the correct
@@ -118,7 +123,11 @@ export interface Message {
 export function isContentPart(part: StreamedMessagePart): part is ContentPart {
   const t = part.type;
   return (
-    t === 'text' || t === 'think' || t === 'image_url' || t === 'audio_url' || t === 'video_url'
+    t === "text" ||
+    t === "think" ||
+    t === "image_url" ||
+    t === "audio_url" ||
+    t === "video_url"
   );
 }
 
@@ -142,12 +151,14 @@ export function isToolDeclarationOnlyMessage(message: Message): boolean {
 
 /** Check if a streamed part is a ToolCall. */
 export function isToolCall(part: StreamedMessagePart): part is ToolCall {
-  return part.type === 'function';
+  return part.type === "function";
 }
 
 /** Check if a streamed part is a ToolCallPart (streaming argument delta). */
-export function isToolCallPart(part: StreamedMessagePart): part is ToolCallPart {
-  return part.type === 'tool_call_part';
+export function isToolCallPart(
+  part: StreamedMessagePart,
+): part is ToolCallPart {
+  return part.type === "tool_call_part";
 }
 
 /**
@@ -168,15 +179,18 @@ export function isToolCallPart(part: StreamedMessagePart): part is ToolCallPart 
  *
  * Returns `true` if the merge was performed, `false` otherwise.
  */
-export function mergeInPlace(target: StreamedMessagePart, source: StreamedMessagePart): boolean {
+export function mergeInPlace(
+  target: StreamedMessagePart,
+  source: StreamedMessagePart,
+): boolean {
   // TextPart + TextPart
-  if (target.type === 'text' && source.type === 'text') {
+  if (target.type === "text" && source.type === "text") {
     target.text += source.text;
     return true;
   }
 
   // ThinkPart + ThinkPart
-  if (target.type === 'think' && source.type === 'think') {
+  if (target.type === "think" && source.type === "think") {
     if (target.encrypted !== undefined) {
       return false;
     }
@@ -188,7 +202,7 @@ export function mergeInPlace(target: StreamedMessagePart, source: StreamedMessag
   }
 
   // ToolCall + ToolCallPart
-  if (target.type === 'function' && source.type === 'tool_call_part') {
+  if (target.type === "function" && source.type === "tool_call_part") {
     if (source.argumentsPart !== null) {
       target.arguments =
         target.arguments === null
@@ -207,9 +221,9 @@ export function mergeInPlace(target: StreamedMessagePart, source: StreamedMessag
  * @param message The message to extract text from.
  * @param sep Separator between text parts. Defaults to empty string.
  */
-export function extractText(message: Message, sep: string = ''): string {
+export function extractText(message: Message, sep: string = ""): string {
   return message.content
-    .filter((part): part is TextPart => part.type === 'text')
+    .filter((part): part is TextPart => part.type === "text")
     .map((part) => part.text)
     .join(sep);
 }
@@ -224,27 +238,33 @@ export function getTextContent(message: Message): string {
 /** Create a simple user message with a single text part. */
 export function createUserMessage(content: string): Message {
   return {
-    role: 'user',
-    content: [{ type: 'text', text: content }],
+    role: "user",
+    content: [{ type: "text", text: content }],
     toolCalls: [],
   };
 }
 
 /** Create an assistant message from content parts and optional tool calls. */
-export function createAssistantMessage(content: ContentPart[], toolCalls?: ToolCall[]): Message {
+export function createAssistantMessage(
+  content: ContentPart[],
+  toolCalls?: ToolCall[],
+): Message {
   return {
-    role: 'assistant',
+    role: "assistant",
     content,
     toolCalls: toolCalls ?? [],
   };
 }
 
 /** Create a tool result message. */
-export function createToolMessage(toolCallId: string, output: string | ContentPart[]): Message {
+export function createToolMessage(
+  toolCallId: string,
+  output: string | ContentPart[],
+): Message {
   const content: ContentPart[] =
-    typeof output === 'string' ? [{ type: 'text', text: output }] : output;
+    typeof output === "string" ? [{ type: "text", text: output }] : output;
   return {
-    role: 'tool',
+    role: "tool",
     content,
     toolCalls: [],
     toolCallId,

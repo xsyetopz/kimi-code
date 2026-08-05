@@ -1,7 +1,7 @@
-import type { ContentPart } from '@moonshot-ai/kosong';
-import { estimateTokensForMessage } from '../../utils/tokens';
-import type { PromptOrigin } from '../context/types';
-import summaryPrefixTemplate from './compaction-summary-prefix.md?raw';
+import type { ContentPart } from "@moonshot-ai/kosong";
+import { estimateTokensForMessage } from "../../utils/tokens";
+import type { PromptOrigin } from "../context/types";
+import summaryPrefixTemplate from "./compaction-summary-prefix.md?raw";
 
 /**
  * Compaction handoff helpers.
@@ -33,7 +33,7 @@ export const COMPACT_USER_MESSAGE_HEAD_TOKENS = 2_000;
  * `compactionUserMessageDisposition` at the next compaction (so markers never
  * stack or get re-summarized) and are skipped on replay/transcript rendering.
  */
-export const COMPACTION_ELISION_VARIANT = 'compaction_elision';
+export const COMPACTION_ELISION_VARIANT = "compaction_elision";
 
 /**
  * Structural subset of kosong's `Message` that the handoff helpers inspect.
@@ -48,7 +48,7 @@ interface MessageLike {
   readonly origin?: PromptOrigin | undefined;
 }
 
-export type CompactionUserDisposition = 'keep' | 'drop';
+export type CompactionUserDisposition = "keep" | "drop";
 
 /**
  * Single source of truth for whether a user-role message survives compaction as
@@ -61,35 +61,35 @@ export type CompactionUserDisposition = 'keep' | 'drop';
 export function compactionUserMessageDisposition(
   origin: PromptOrigin | undefined,
 ): CompactionUserDisposition {
-  if (origin === undefined) return 'keep';
+  if (origin === undefined) return "keep";
   switch (origin.kind) {
-    case 'user':
-      return 'keep';
-    case 'skill_activation':
-    case 'plugin_command':
-      return origin.trigger === 'user-slash' ? 'keep' : 'drop';
-    case 'injection':
-    case 'shell_command':
-    case 'compaction_summary':
-    case 'system_trigger':
-    case 'background_task':
-    case 'cron_job':
-    case 'cron_missed':
-    case 'hook_result':
-    case 'retry':
-      return 'drop';
+    case "user":
+      return "keep";
+    case "skill_activation":
+    case "plugin_command":
+      return origin.trigger === "user-slash" ? "keep" : "drop";
+    case "injection":
+    case "shell_command":
+    case "compaction_summary":
+    case "system_trigger":
+    case "background_task":
+    case "cron_job":
+    case "cron_missed":
+    case "hook_result":
+    case "retry":
+      return "drop";
     default: {
       const _exhaustive: never = origin;
       void _exhaustive;
-      return 'drop';
+      return "drop";
     }
   }
 }
 
 function extractText(content: readonly ContentPart[]): string {
-  let text = '';
+  let text = "";
   for (const part of content) {
-    if (part.type === 'text') {
+    if (part.type === "text") {
       text += part.text;
     }
   }
@@ -97,7 +97,7 @@ function extractText(content: readonly ContentPart[]): string {
 }
 
 export function isCompactionSummaryMessage(message: MessageLike): boolean {
-  return message.origin?.kind === 'compaction_summary';
+  return message.origin?.kind === "compaction_summary";
 }
 
 /**
@@ -106,17 +106,23 @@ export function isCompactionSummaryMessage(message: MessageLike): boolean {
  * policy and the rationale for each origin.
  */
 export function isRealUserInput(message: MessageLike): boolean {
-  return message.role === 'user' && compactionUserMessageDisposition(message.origin) === 'keep';
+  return (
+    message.role === "user" &&
+    compactionUserMessageDisposition(message.origin) === "keep"
+  );
 }
 
-export function collectCompactableUserMessages<T extends MessageLike>(messages: readonly T[]): T[] {
+export function collectCompactableUserMessages<T extends MessageLike>(
+  messages: readonly T[],
+): T[] {
   return messages.filter(
-    (message) => isRealUserInput(message) && !isCompactionSummaryMessage(message),
+    (message) =>
+      isRealUserInput(message) && !isCompactionSummaryMessage(message),
   );
 }
 
 function truncateTextToTokens(text: string, maxTokens: number): string {
-  if (maxTokens <= 0) return '';
+  if (maxTokens <= 0) return "";
   // Single pass: walk the string once, mirroring estimateTokens' heuristic
   // (ASCII ~4 chars/token, non-ASCII ~1 char/token) and stop at the first
   // code point that would push the running total over the budget. This keeps
@@ -142,7 +148,7 @@ function truncateTextToTokens(text: string, maxTokens: number): string {
  * at the first one that would push the running total over the budget.
  */
 function truncateTextToTokensFromEnd(text: string, maxTokens: number): string {
-  if (maxTokens <= 0) return '';
+  if (maxTokens <= 0) return "";
   let asciiCount = 0;
   let nonAsciiCount = 0;
   let start = text.length;
@@ -179,16 +185,25 @@ function truncateTextToTokensFromEnd(text: string, maxTokens: number): string {
  * user input never carries them). The cast back to `T` is unavoidable:
  * TypeScript cannot prove the spread-then-override still equals T.
  */
-function replaceMessageText<T extends MessageLike>(message: T, text: string): T {
+function replaceMessageText<T extends MessageLike>(
+  message: T,
+  text: string,
+): T {
   return {
     ...message,
-    content: [{ type: 'text', text }],
+    content: [{ type: "text", text }],
     toolCalls: [],
   } as unknown as T;
 }
 
-function truncateUserMessage<T extends MessageLike>(message: T, maxTokens: number): T {
-  return replaceMessageText(message, truncateTextToTokens(extractText(message.content), maxTokens));
+function truncateUserMessage<T extends MessageLike>(
+  message: T,
+  maxTokens: number,
+): T {
+  return replaceMessageText(
+    message,
+    truncateTextToTokens(extractText(message.content), maxTokens),
+  );
 }
 
 /**
@@ -291,7 +306,10 @@ export function selectCompactionUserMessages<T extends MessageLike>(
     tail.push(replaceMessageText(message, keptSuffix));
     headEndExclusive = i;
     // The cut-off beginning of the boundary message is still head-eligible.
-    const droppedPrefix = fullText.slice(0, fullText.length - keptSuffix.length);
+    const droppedPrefix = fullText.slice(
+      0,
+      fullText.length - keptSuffix.length,
+    );
     if (droppedPrefix.length > 0) {
       tailBoundaryDroppedPrefix = replaceMessageText(message, droppedPrefix);
     }
@@ -322,7 +340,12 @@ export function selectCompactionUserMessages<T extends MessageLike>(
   let keptTokens = 0;
   for (const message of head) keptTokens += estimateTokensForMessage(message);
   for (const message of tail) keptTokens += estimateTokensForMessage(message);
-  return { head, tail, elided: true, omittedTokens: Math.max(0, totalTokens - keptTokens) };
+  return {
+    head,
+    tail,
+    elided: true,
+    omittedTokens: Math.max(0, totalTokens - keptTokens),
+  };
 }
 
 /**
@@ -332,13 +355,13 @@ export function selectCompactionUserMessages<T extends MessageLike>(
  */
 export function buildCompactionElisionText(omittedTokens: number): string {
   return [
-    '<system-reminder>',
+    "<system-reminder>",
     `Some of this conversation's user messages were omitted here during compaction: the messages above this note are the oldest user input, the messages below are the most recent, and roughly ${String(omittedTokens)} tokens in between were dropped. The omitted content is covered by the compaction summary at the end of the conversation.`,
-    '</system-reminder>',
-  ].join('\n');
+    "</system-reminder>",
+  ].join("\n");
 }
 
 export function buildCompactionSummaryText(summary: string): string {
   const suffix = summary.trim();
-  return `${COMPACTION_SUMMARY_PREFIX}\n${suffix.length > 0 ? suffix : '(no summary available)'}`;
+  return `${COMPACTION_SUMMARY_PREFIX}\n${suffix.length > 0 ? suffix : "(no summary available)"}`;
 }

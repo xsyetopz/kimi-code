@@ -9,40 +9,55 @@
  * test/workspace/workspaceMcp/workspaceMcp.test.ts`.
  */
 
-import { mkdtempSync } from 'node:fs';
-import { rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'pathe';
+import { mkdtempSync } from "node:fs";
+import { rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "pathe";
 
-import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type Mock,
+} from "vitest";
 
-import { DisposableStore } from '#/_base/di/lifecycle';
-import { createServices } from '#/_base/di/test';
-import { Emitter } from '#/_base/event';
-import { ILogService } from '#/_base/log/log';
-import { McpConnectionManager } from '#/mcpCore/connection-manager';
-import type { McpServerConfig } from '#/mcpCore/config-schema';
-import { MergedMcpConnectionView } from '#/session/mcp/mergedConnectionView';
-import { IMcpOAuthStore } from '#/app/mcpConfig/oauthStore';
-import { ITelemetryService, noopTelemetryService } from '#/app/telemetry/telemetry';
-import { IWorkspaceContext } from '#/workspace/workspaceContext/workspaceContext';
+import { DisposableStore } from "#/_base/di/lifecycle";
+import { createServices } from "#/_base/di/test";
+import { Emitter } from "#/_base/event";
+import { ILogService } from "#/_base/log/log";
+import { McpConnectionManager } from "#/mcpCore/connection-manager";
+import type { McpServerConfig } from "#/mcpCore/config-schema";
+import { MergedMcpConnectionView } from "#/session/mcp/mergedConnectionView";
+import { IMcpOAuthStore } from "#/app/mcpConfig/oauthStore";
+import {
+  ITelemetryService,
+  noopTelemetryService,
+} from "#/app/telemetry/telemetry";
+import { IWorkspaceContext } from "#/workspace/workspaceContext/workspaceContext";
 import {
   IWorkspaceMcpConfigService,
   type McpServersChange,
   type McpTunables,
-} from '#/workspace/workspaceMcpConfig/workspaceMcpConfig';
-import { IWorkspaceMcpService } from '#/workspace/workspaceMcp/workspaceMcp';
-import { WorkspaceMcpService } from '#/workspace/workspaceMcp/workspaceMcpService';
+} from "#/workspace/workspaceMcpConfig/workspaceMcpConfig";
+import { IWorkspaceMcpService } from "#/workspace/workspaceMcp/workspaceMcp";
+import { WorkspaceMcpService } from "#/workspace/workspaceMcp/workspaceMcpService";
 
-import { stubLog } from '../../_base/log/stubs';
-import { createMemoryMcpOAuthStore, stdioFixture } from '../../mcpCore/stubs';
-import { registerAgentIdentityStub } from '../../app/agentIdentity/stubs';
+import { stubLog } from "../../_base/log/stubs";
+import { createMemoryMcpOAuthStore, stdioFixture } from "../../mcpCore/stubs";
+import { registerAgentIdentityStub } from "../../app/agentIdentity/stubs";
 
 function stdioServer(): McpServerConfig {
-  return { transport: 'stdio', command: process.execPath, args: [stdioFixture] };
+  return {
+    transport: "stdio",
+    command: process.execPath,
+    args: [stdioFixture],
+  };
 }
 
-describe('WorkspaceMcpService', () => {
+describe("WorkspaceMcpService", () => {
   let cwd: string;
   let disposables: DisposableStore;
   let current: Record<string, McpServerConfig>;
@@ -52,7 +67,7 @@ describe('WorkspaceMcpService', () => {
   let manager: InstanceType<typeof McpConnectionManager> | undefined;
 
   beforeEach(() => {
-    cwd = mkdtempSync(join(tmpdir(), 'kimi-workspace-mcp-cwd-'));
+    cwd = mkdtempSync(join(tmpdir(), "kimi-workspace-mcp-cwd-"));
     disposables = new DisposableStore();
     current = {};
     tunablesValue = {};
@@ -94,10 +109,10 @@ describe('WorkspaceMcpService', () => {
     return ix.get(IWorkspaceMcpService);
   }
 
-  it('connects the config snapshot in the initial load', async () => {
+  it("connects the config snapshot in the initial load", async () => {
     current = { alpha: stdioServer(), beta: stdioServer() };
     const connectAll = vi
-      .spyOn(McpConnectionManager.prototype, 'connectAll')
+      .spyOn(McpConnectionManager.prototype, "connectAll")
       .mockResolvedValue(undefined);
 
     const service = createService();
@@ -105,10 +120,12 @@ describe('WorkspaceMcpService', () => {
     await service.ready;
 
     expect(connectAll).toHaveBeenCalledTimes(1);
-    expect(Object.keys(connectAll.mock.calls[0]?.[0] ?? {}).toSorted()).toEqual(['alpha', 'beta']);
+    expect(Object.keys(connectAll.mock.calls[0]?.[0] ?? {}).toSorted()).toEqual(
+      ["alpha", "beta"],
+    );
   });
 
-  it('reads timeout tunables from the config domain at connect', async () => {
+  it("reads timeout tunables from the config domain at connect", async () => {
     tunablesValue = { startupTimeoutMs: 4321, toolTimeoutMs: 9876 };
     current = { alpha: stdioServer() };
 
@@ -116,48 +133,48 @@ describe('WorkspaceMcpService', () => {
     manager = service.connectionManager();
     await service.ready;
 
-    expect(manager.get('alpha')?.status).toBe('connected');
+    expect(manager.get("alpha")?.status).toBe("connected");
     expect(tunablesFn).toHaveBeenCalled();
   }, 20000);
 
-  it('applies upserts and removals from config change events', async () => {
+  it("applies upserts and removals from config change events", async () => {
     current = { alpha: stdioServer() };
     const service = createService();
     manager = service.connectionManager();
     await service.ready;
-    expect(manager.get('alpha')?.status).toBe('connected');
+    expect(manager.get("alpha")?.status).toBe("connected");
 
-    configChanges.fire({ upsert: { beta: stdioServer() }, remove: ['alpha'] });
+    configChanges.fire({ upsert: { beta: stdioServer() }, remove: ["alpha"] });
 
     await vi.waitFor(
       () => {
-        expect(manager?.get('alpha')).toBeUndefined();
-        expect(manager?.get('beta')?.status).toBe('connected');
+        expect(manager?.get("alpha")).toBeUndefined();
+        expect(manager?.get("beta")?.status).toBe("connected");
       },
       { timeout: 10000, interval: 50 },
     );
   }, 20000);
 
-  it('queues change events until the initial connect settles', async () => {
+  it("queues change events until the initial connect settles", async () => {
     current = { alpha: stdioServer() };
     let settleConnectAll: () => void = () => undefined;
-    vi.spyOn(McpConnectionManager.prototype, 'connectAll').mockImplementation(
+    vi.spyOn(McpConnectionManager.prototype, "connectAll").mockImplementation(
       () =>
         new Promise<void>((resolve) => {
           settleConnectAll = resolve;
         }),
     );
     const connect = vi
-      .spyOn(McpConnectionManager.prototype, 'connect')
+      .spyOn(McpConnectionManager.prototype, "connect")
       .mockResolvedValue(undefined as never);
     const remove = vi
-      .spyOn(McpConnectionManager.prototype, 'remove')
+      .spyOn(McpConnectionManager.prototype, "remove")
       .mockResolvedValue(undefined as never);
 
     const service = createService();
     manager = service.connectionManager();
 
-    configChanges.fire({ upsert: { beta: stdioServer() }, remove: ['alpha'] });
+    configChanges.fire({ upsert: { beta: stdioServer() }, remove: ["alpha"] });
     await new Promise((resolvePromise) => setTimeout(resolvePromise, 300));
     expect(connect).not.toHaveBeenCalled();
     expect(remove).not.toHaveBeenCalled();
@@ -166,14 +183,14 @@ describe('WorkspaceMcpService', () => {
     await service.ready;
     await vi.waitFor(
       () => {
-        expect(remove).toHaveBeenCalledWith('alpha');
-        expect(connect).toHaveBeenCalledWith('beta', stdioServer());
+        expect(remove).toHaveBeenCalledWith("alpha");
+        expect(connect).toHaveBeenCalledWith("beta", stdioServer());
       },
       { timeout: 10000, interval: 50 },
     );
   }, 20000);
 
-  it('sessionOverlay connects ephemeral servers on a session-owned manager, released by shutdown', async () => {
+  it("sessionOverlay connects ephemeral servers on a session-owned manager, released by shutdown", async () => {
     current = { base: stdioServer() };
     const service = createService();
     manager = service.connectionManager();
@@ -183,21 +200,21 @@ describe('WorkspaceMcpService', () => {
     await overlay.handle.ready;
 
     const view = overlay.handle.connectionManager;
-    expect(view.get('eph')?.status).toBe('connected');
-    expect(view.get('base')?.status).toBe('connected');
+    expect(view.get("eph")?.status).toBe("connected");
+    expect(view.get("base")?.status).toBe("connected");
     // Isolation: the shared manager (and thus the handler's other sessions)
     // never sees the ephemeral server, and the config domain's effective set
     // is untouched — nothing is persisted.
-    expect(manager?.get('eph')).toBeUndefined();
-    expect(Object.keys(current)).toEqual(['base']);
+    expect(manager?.get("eph")).toBeUndefined();
+    expect(Object.keys(current)).toEqual(["base"]);
 
     await overlay.shutdown();
-    expect(view.get('eph')).toBeUndefined();
-    expect(view.get('base')?.status).toBe('connected');
+    expect(view.get("eph")).toBeUndefined();
+    expect(view.get("base")?.status).toBe("connected");
   }, 20000);
 });
 
-describe('MergedMcpConnectionView', () => {
+describe("MergedMcpConnectionView", () => {
   let base: McpConnectionManager;
   let overlay: McpConnectionManager;
 
@@ -212,52 +229,66 @@ describe('MergedMcpConnectionView', () => {
   });
 
   function disabledStdio(command: string): McpServerConfig {
-    return { transport: 'stdio', command, enabled: false };
+    return { transport: "stdio", command, enabled: false };
   }
 
-  it('shadows same-named base entries with overlay entries and filters their statuses', async () => {
-    await base.connect('shared', disabledStdio('base-cmd'));
-    await base.connect('base-only', disabledStdio('base-cmd'));
-    await overlay.connect('shared', {
-      transport: 'http',
-      url: 'https://example.com/mcp',
+  it("shadows same-named base entries with overlay entries and filters their statuses", async () => {
+    await base.connect("shared", disabledStdio("base-cmd"));
+    await base.connect("base-only", disabledStdio("base-cmd"));
+    await overlay.connect("shared", {
+      transport: "http",
+      url: "https://example.com/mcp",
       enabled: false,
     });
-    await overlay.connect('eph', disabledStdio('eph-cmd'));
-    const view = new MergedMcpConnectionView(base, overlay, new Set(['shared', 'eph']));
+    await overlay.connect("eph", disabledStdio("eph-cmd"));
+    const view = new MergedMcpConnectionView(
+      base,
+      overlay,
+      new Set(["shared", "eph"]),
+    );
 
-    expect(view.list().map((entry) => entry.name).toSorted()).toEqual([
-      'base-only',
-      'eph',
-      'shared',
-    ]);
-    expect(view.get('shared')?.transport).toBe('http');
-    expect(view.get('base-only')?.transport).toBe('stdio');
+    expect(
+      view
+        .list()
+        .map((entry) => entry.name)
+        .toSorted(),
+    ).toEqual(["base-only", "eph", "shared"]);
+    expect(view.get("shared")?.transport).toBe("http");
+    expect(view.get("base-only")?.transport).toBe("stdio");
 
     const seen: string[] = [];
     const unsubscribe = view.onStatusChange((entry) => seen.push(entry.name));
-    await base.connect('shared', disabledStdio('base-cmd'));
-    await base.connect('base-only', disabledStdio('base-cmd'));
-    await overlay.connect('shared', {
-      transport: 'http',
-      url: 'https://example.com/mcp',
+    await base.connect("shared", disabledStdio("base-cmd"));
+    await base.connect("base-only", disabledStdio("base-cmd"));
+    await overlay.connect("shared", {
+      transport: "http",
+      url: "https://example.com/mcp",
       enabled: false,
     });
     unsubscribe();
 
-    expect(seen).toEqual(['base-only', 'shared']);
+    expect(seen).toEqual(["base-only", "shared"]);
   });
 
-  it('routes reconnect to the name owner and aggregates initial-load readiness', async () => {
-    await base.connect('shared', disabledStdio('base-cmd'));
+  it("routes reconnect to the name owner and aggregates initial-load readiness", async () => {
+    await base.connect("shared", disabledStdio("base-cmd"));
     // Enabled but unreachable: the entry exists with a failed status, so a
     // routed reconnect re-attempts instead of raising disabled/not-found.
-    await overlay.connect('shared', { transport: 'http', url: 'http://127.0.0.1:1/mcp' });
-    expect(overlay.get('shared')?.status).toBe('failed');
-    const view = new MergedMcpConnectionView(base, overlay, new Set(['shared']));
+    await overlay.connect("shared", {
+      transport: "http",
+      url: "http://127.0.0.1:1/mcp",
+    });
+    expect(overlay.get("shared")?.status).toBe("failed");
+    const view = new MergedMcpConnectionView(
+      base,
+      overlay,
+      new Set(["shared"]),
+    );
 
-    await expect(view.reconnect('shared')).resolves.toBeUndefined();
-    await expect(view.reconnect('unknown')).rejects.toThrow('Unknown MCP server: unknown');
+    await expect(view.reconnect("shared")).resolves.toBeUndefined();
+    await expect(view.reconnect("unknown")).rejects.toThrow(
+      "Unknown MCP server: unknown",
+    );
 
     await view.waitForInitialLoad();
     expect(view.initialLoadDurationMs()).toBe(0);

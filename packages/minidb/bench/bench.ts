@@ -11,18 +11,18 @@
 //
 // Knobs (env): N, NSMALL (throughput sizes), BENCH_SEED, BENCH_IDLE_MS.
 
-import fs from 'node:fs/promises';
-import os from 'node:os';
-import path from 'node:path';
-import { monitorEventLoopDelay } from 'node:perf_hooks';
-import { MiniDb } from '../src/index.js';
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import { monitorEventLoopDelay } from "node:perf_hooks";
+import { MiniDb } from "../src/index.js";
 
-const fmt = (n) => n.toLocaleString('en-US', { maximumFractionDigits: 0 });
+const fmt = (n) => n.toLocaleString("en-US", { maximumFractionDigits: 0 });
 const ops = (n, ms) => `${fmt((n / ms) * 1000)} ops/s`;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function tmpDir() {
-  return fs.mkdtemp(path.join(os.tmpdir(), 'minidb-bench-'));
+  return fs.mkdtemp(path.join(os.tmpdir(), "minidb-bench-"));
 }
 
 // ---- fixed-seed synthetic data ----------------------------------------------
@@ -39,15 +39,26 @@ function mulberry32(seed) {
 }
 
 const LATIN_VOCAB =
-  'wal sync snapshot compaction recovery index query cache buffer frame codec store delta merge rotate flush token parse schema server client socket thread worker queue stream ledger journal cursor segment batch commit'.split(
-    ' ',
+  "wal sync snapshot compaction recovery index query cache buffer frame codec store delta merge rotate flush token parse schema server client socket thread worker queue stream ledger journal cursor segment batch commit".split(
+    " ",
   );
-const CJK_VOCAB = ['持久化', '快照', '索引', '恢复', '压缩', '查询', '缓存', '日志', '事务', '复制'];
+const CJK_VOCAB = [
+  "持久化",
+  "快照",
+  "索引",
+  "恢复",
+  "压缩",
+  "查询",
+  "缓存",
+  "日志",
+  "事务",
+  "复制",
+];
 // Needles planted at deterministic intervals so query hit counts are stable.
 const NEEDLES = [
-  { term: 'walrus', every: 97 },
-  { term: '持久化', every: 131 },
-  { term: 'checkpoint', every: 257 },
+  { term: "walrus", every: 97 },
+  { term: "持久化", every: 131 },
+  { term: "checkpoint", every: 257 },
 ];
 
 /** Deterministic pseudo-message corpus: `count` docs of ~25 words each. */
@@ -58,9 +69,15 @@ function makeMessages(count, seed) {
   for (let i = 0; i < count; i++) {
     const words = [];
     const n = 20 + ((rng() * 15) | 0);
-    for (let w = 0; w < n; w++) words.push(rng() < 0.15 ? pick(CJK_VOCAB) : pick(LATIN_VOCAB));
-    for (const { term, every } of NEEDLES) if (i % every === 0) words.push(term);
-    docs.push({ key: `m${i}`, body: words.join(' '), ts: 1_700_000_000_000 + i * 1000 });
+    for (let w = 0; w < n; w++)
+      words.push(rng() < 0.15 ? pick(CJK_VOCAB) : pick(LATIN_VOCAB));
+    for (const { term, every } of NEEDLES)
+      if (i % every === 0) words.push(term);
+    docs.push({
+      key: `m${i}`,
+      body: words.join(" "),
+      ts: 1_700_000_000_000 + i * 1000,
+    });
   }
   return docs;
 }
@@ -71,7 +88,10 @@ const MIB = 1024 * 1024;
 
 function percentileOf(sorted, p) {
   if (sorted.length === 0) return 0;
-  const idx = Math.min(sorted.length - 1, Math.ceil((p / 100) * sorted.length) - 1);
+  const idx = Math.min(
+    sorted.length - 1,
+    Math.ceil((p / 100) * sorted.length) - 1,
+  );
   return sorted[Math.max(0, idx)];
 }
 
@@ -97,7 +117,8 @@ class MemSampler {
     const sample = () => {
       const mu = process.memoryUsage();
       if (mu.rss > this.peakRssBytes) this.peakRssBytes = mu.rss;
-      if (mu.heapUsed > this.peakHeapUsedBytes) this.peakHeapUsedBytes = mu.heapUsed;
+      if (mu.heapUsed > this.peakHeapUsedBytes)
+        this.peakHeapUsedBytes = mu.heapUsed;
     };
     sample();
     this.timer = setInterval(sample, 25);
@@ -106,7 +127,10 @@ class MemSampler {
   stop() {
     if (this.timer) clearInterval(this.timer);
     this.timer = null;
-    return { peakRssBytes: this.peakRssBytes, peakHeapUsedBytes: this.peakHeapUsedBytes };
+    return {
+      peakRssBytes: this.peakRssBytes,
+      peakHeapUsedBytes: this.peakHeapUsedBytes,
+    };
   }
 }
 
@@ -148,7 +172,7 @@ async function scenario(name, fn, { ops: opCount, extra } = {}) {
     extra: { ...extra, ...out.extra },
   };
   results.push(row);
-  const tail = opCount ? `   -> ${ops(opCount, durationMs)}` : '';
+  const tail = opCount ? `   -> ${ops(opCount, durationMs)}` : "";
   console.log(
     `  ${name.padEnd(46)} ${durationMs.toFixed(1).padStart(9)} ms${tail}` +
       `   [eld p95 ${row.eventLoopDelayMs.p95.toFixed(1)} ms, peak rss ${(row.peakRssBytes / MIB).toFixed(0)} MiB]`,
@@ -163,14 +187,14 @@ async function throughputScenarios({ N, NSMALL, VALUE }) {
   {
     const m = new Map();
     await scenario(
-      'baseline: raw Map set (in-memory)',
+      "baseline: raw Map set (in-memory)",
       () => {
         for (let i = 0; i < N; i++) m.set(`k${i}`, VALUE);
       },
       { ops: N },
     );
     await scenario(
-      'baseline: raw Map get (in-memory)',
+      "baseline: raw Map get (in-memory)",
       () => {
         let s = 0;
         for (let i = 0; i < N; i++) if (m.get(`k${i}`)) s++;
@@ -183,9 +207,14 @@ async function throughputScenarios({ N, NSMALL, VALUE }) {
   // --- DB writes, fsyncPolicy = no ---
   {
     const dir = await tmpDir();
-    const db = await MiniDb.open({ dir, valueCodec: 'string', fsyncPolicy: 'no', autoCompact: false });
+    const db = await MiniDb.open({
+      dir,
+      valueCodec: "string",
+      fsyncPolicy: "no",
+      autoCompact: false,
+    });
     await scenario(
-      'DB set concurrent, fsync=no (group commit)',
+      "DB set concurrent, fsync=no (group commit)",
       async () => {
         const p = [];
         for (let i = 0; i < N; i++) p.push(db.set(`k${i}`, VALUE));
@@ -207,9 +236,14 @@ async function throughputScenarios({ N, NSMALL, VALUE }) {
   // --- DB writes, fsyncPolicy = everysec ---
   {
     const dir = await tmpDir();
-    const db = await MiniDb.open({ dir, valueCodec: 'string', fsyncPolicy: 'everysec', autoCompact: false });
+    const db = await MiniDb.open({
+      dir,
+      valueCodec: "string",
+      fsyncPolicy: "everysec",
+      autoCompact: false,
+    });
     await scenario(
-      'DB set concurrent, fsync=everysec',
+      "DB set concurrent, fsync=everysec",
       async () => {
         const p = [];
         for (let i = 0; i < N; i++) p.push(db.set(`k${i}`, VALUE));
@@ -224,7 +258,12 @@ async function throughputScenarios({ N, NSMALL, VALUE }) {
   // --- DB writes, sequential await-each, fsync=always (worst case) ---
   {
     const dir = await tmpDir();
-    const db = await MiniDb.open({ dir, valueCodec: 'string', fsyncPolicy: 'always', autoCompact: false });
+    const db = await MiniDb.open({
+      dir,
+      valueCodec: "string",
+      fsyncPolicy: "always",
+      autoCompact: false,
+    });
     await scenario(
       `DB set sequential, fsync=always (N=${fmt(NSMALL)})`,
       async ({ lat }) => {
@@ -243,12 +282,17 @@ async function throughputScenarios({ N, NSMALL, VALUE }) {
   // --- DB reads (in-memory) ---
   {
     const dir = await tmpDir();
-    const db = await MiniDb.open({ dir, valueCodec: 'string', fsyncPolicy: 'no', autoCompact: false });
+    const db = await MiniDb.open({
+      dir,
+      valueCodec: "string",
+      fsyncPolicy: "no",
+      autoCompact: false,
+    });
     const p = [];
     for (let i = 0; i < N; i++) p.push(db.set(`k${i}`, VALUE));
     await Promise.all(p);
     await scenario(
-      'DB get (in-memory, after load)',
+      "DB get (in-memory, after load)",
       ({ lat }) => {
         let s = 0;
         for (let i = 0; i < N; i++) {
@@ -273,11 +317,17 @@ async function coldOpenScenarios({ sizes, VALUE }) {
     await scenario(
       `populate ${fmt(count)} keys (batch frames)`,
       async () => {
-        const db = await MiniDb.open({ dir, valueCodec: 'string', fsyncPolicy: 'no', autoCompact: false });
+        const db = await MiniDb.open({
+          dir,
+          valueCodec: "string",
+          fsyncPolicy: "no",
+          autoCompact: false,
+        });
         const CHUNK = 2000;
         for (let base = 0; base < count; base += CHUNK) {
           const ops = [];
-          for (let i = base; i < Math.min(base + CHUNK, count); i++) ops.push({ op: 'set', key: `k${i}`, value: VALUE });
+          for (let i = base; i < Math.min(base + CHUNK, count); i++)
+            ops.push({ op: "set", key: `k${i}`, value: VALUE });
           await db.batch(ops);
         }
         await db.close();
@@ -288,7 +338,12 @@ async function coldOpenScenarios({ sizes, VALUE }) {
     await scenario(
       `cold open ${fmt(count)} keys`,
       async () => {
-        const db = await MiniDb.open({ dir, valueCodec: 'string', fsyncPolicy: 'everysec', autoCompact: false });
+        const db = await MiniDb.open({
+          dir,
+          valueCodec: "string",
+          fsyncPolicy: "everysec",
+          autoCompact: false,
+        });
         const s = db.stats;
         await db.close();
         return {
@@ -312,7 +367,12 @@ async function coldOpenScenarios({ sizes, VALUE }) {
       await scenario(
         `compact ${fmt(count)} records`,
         async () => {
-          const db = await MiniDb.open({ dir, valueCodec: 'string', fsyncPolicy: 'no', autoCompact: false });
+          const db = await MiniDb.open({
+            dir,
+            valueCodec: "string",
+            fsyncPolicy: "no",
+            autoCompact: false,
+          });
           await db.compact();
           const s = db.stats;
           await db.close();
@@ -336,29 +396,46 @@ async function coldOpenScenarios({ sizes, VALUE }) {
 
 /** Word (default tokenizer) and n-gram searches over the seeded message corpus. */
 async function searchScenarios({ sizes, seed }) {
-  const WORD_QUERIES = ['walrus', '持久化', 'wal snapshot', 'nonexistentxyz123'];
-  const NGRAM_QUERIES = ['walru', '持久', 'heckpo'];
+  const WORD_QUERIES = [
+    "walrus",
+    "持久化",
+    "wal snapshot",
+    "nonexistentxyz123",
+  ];
+  const NGRAM_QUERIES = ["walru", "持久", "heckpo"];
   const RUNS = 7;
   for (const count of sizes) {
     const dir = await tmpDir();
     const docs = makeMessages(count, seed);
-    const db = await MiniDb.open({ dir, valueCodec: 'json', fsyncPolicy: 'no', autoCompact: false });
+    const db = await MiniDb.open({
+      dir,
+      valueCodec: "json",
+      fsyncPolicy: "no",
+      autoCompact: false,
+    });
     await scenario(
       `build ${fmt(count)} messages + word/ngram indexes`,
       async () => {
         const CHUNK = 1000;
         for (let base = 0; base < docs.length; base += CHUNK) {
-          await db.batch(docs.slice(base, base + CHUNK).map((d) => ({ op: 'set', key: d.key, value: d })));
+          await db.batch(
+            docs
+              .slice(base, base + CHUNK)
+              .map((d) => ({ op: "set", key: d.key, value: d })),
+          );
         }
-        await db.createTextIndex('word', { fields: ['body'] });
-        await db.createTextIndex('ngram', { fields: ['body'], tokenizer: 'ngram' });
+        await db.createTextIndex("word", { fields: ["body"] });
+        await db.createTextIndex("ngram", {
+          fields: ["body"],
+          tokenizer: "ngram",
+        });
       },
       { ops: count, extra: { docs: count } },
     );
 
     for (const [index, queries] of [
-      ['word', WORD_QUERIES],
-      ['ngram', NGRAM_QUERIES],
+      ["word", WORD_QUERIES],
+      ["ngram", NGRAM_QUERIES],
     ] as const) {
       await scenario(
         `search ${index} over ${fmt(count)} messages`,
@@ -375,7 +452,11 @@ async function searchScenarios({ sizes, seed }) {
               times.push(ms);
             }
             times.sort((a, b) => a - b);
-            perQuery.push({ q, hits, medianMs: Math.round(times[(times.length / 2) | 0] * 1000) / 1000 });
+            perQuery.push({
+              q,
+              hits,
+              medianMs: Math.round(times[(times.length / 2) | 0] * 1000) / 1000,
+            });
           }
           return { extra: { docs: count, runs: RUNS, queries: perQuery } };
         },
@@ -392,13 +473,24 @@ async function searchScenarios({ sizes, seed }) {
 async function walIdleScenarios({ idleMs }) {
   {
     const dir = await tmpDir();
-    const db = await MiniDb.open({ dir, valueCodec: 'string', fsyncPolicy: 'everysec', autoCompact: false });
+    const db = await MiniDb.open({
+      dir,
+      valueCodec: "string",
+      fsyncPolicy: "everysec",
+      autoCompact: false,
+    });
     const before = db.stats.walFsyncs;
     await scenario(
       `idle everysec ${idleMs / 1000}s: background fsyncs`,
       async () => {
         await sleep(idleMs);
-        return { extra: { idleMs, walFsyncs: db.stats.walFsyncs - before, walFsyncErrors: db.stats.walFsyncErrors } };
+        return {
+          extra: {
+            idleMs,
+            walFsyncs: db.stats.walFsyncs - before,
+            walFsyncErrors: db.stats.walFsyncErrors,
+          },
+        };
       },
     );
     await db.close();
@@ -408,13 +500,25 @@ async function walIdleScenarios({ idleMs }) {
     const dir = await tmpDir();
     // A short interval keeps the re-arm behavior visible in any mode: the
     // write dirties the WAL, the next tick syncs once, then it goes quiet.
-    const db = await MiniDb.open({ dir, valueCodec: 'string', fsyncPolicy: 'everysec', syncIntervalMs: 100, autoCompact: false });
-    await db.set('k', 'v');
+    const db = await MiniDb.open({
+      dir,
+      valueCodec: "string",
+      fsyncPolicy: "everysec",
+      syncIntervalMs: 100,
+      autoCompact: false,
+    });
+    await db.set("k", "v");
     const before = db.stats.walFsyncs;
     const windowMs = 500;
-    await scenario('write then idle: fsyncs in the dirty window', async () => {
+    await scenario("write then idle: fsyncs in the dirty window", async () => {
       await sleep(windowMs);
-      return { extra: { syncIntervalMs: 100, idleMs: windowMs, walFsyncs: db.stats.walFsyncs - before } };
+      return {
+        extra: {
+          syncIntervalMs: 100,
+          idleMs: windowMs,
+          walFsyncs: db.stats.walFsyncs - before,
+        },
+      };
     });
     await db.close();
     await fs.rm(dir, { recursive: true, force: true });
@@ -423,12 +527,12 @@ async function walIdleScenarios({ idleMs }) {
 
 async function main() {
   const argv = process.argv.slice(2);
-  const jsonIdx = argv.indexOf('--json');
+  const jsonIdx = argv.indexOf("--json");
   const jsonPath = jsonIdx !== -1 ? argv[jsonIdx + 1] : process.env.BENCH_JSON;
-  const quick = argv.includes('--quick') || process.env.BENCH_QUICK === '1';
+  const quick = argv.includes("--quick") || process.env.BENCH_QUICK === "1";
 
   const SEED = Number(process.env.BENCH_SEED || 42);
-  const VALUE = 'x'.repeat(100); // 100-byte values
+  const VALUE = "x".repeat(100); // 100-byte values
   const N = quick ? 5_000 : Number(process.env.N || 200_000);
   const NSMALL = quick ? 300 : Number(process.env.NSMALL || 3_000);
   const COLD_OPEN_SIZES = quick ? [1_000, 2_000] : [10_000, 50_000, 100_000];
@@ -436,7 +540,7 @@ async function main() {
   const IDLE_MS = quick ? 400 : Number(process.env.BENCH_IDLE_MS || 10_000);
 
   console.log(
-    `\nminidb benchmark  (N=${fmt(N)}, value=${VALUE.length}B, seed=${SEED}${quick ? ', QUICK' : ''}, node ${process.version})\n`,
+    `\nminidb benchmark  (N=${fmt(N)}, value=${VALUE.length}B, seed=${SEED}${quick ? ", QUICK" : ""}, node ${process.version})\n`,
   );
 
   await throughputScenarios({ N, NSMALL, VALUE });
@@ -446,7 +550,7 @@ async function main() {
 
   const report = {
     schemaVersion: 1,
-    tool: 'minidb/bench',
+    tool: "minidb/bench",
     quick,
     startedAt: new Date().toISOString(),
     node: process.version,
@@ -458,13 +562,13 @@ async function main() {
   const json = JSON.stringify(report, null, 2);
   if (jsonPath) {
     await fs.mkdir(path.dirname(path.resolve(jsonPath)), { recursive: true });
-    await fs.writeFile(jsonPath, json + '\n', 'utf8');
+    await fs.writeFile(jsonPath, json + "\n", "utf8");
     console.log(`\nJSON report written to ${jsonPath}`);
   } else {
-    console.log('\n--- bench JSON ---');
+    console.log("\n--- bench JSON ---");
     console.log(json);
   }
-  console.log('\ndone.\n');
+  console.log("\ndone.\n");
 }
 
 main().catch((e) => {

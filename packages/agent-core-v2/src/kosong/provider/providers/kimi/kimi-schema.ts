@@ -10,25 +10,40 @@
  * remaining local `$ref` pointers stay resolvable to a JSON Schema validator.
  */
 
-import { Error2 } from '#/_base/errors/errors';
-import { ProtocolErrors } from '#/kosong/protocol/errors';
+import { Error2 } from "#/_base/errors/errors";
+import { ProtocolErrors } from "#/kosong/protocol/errors";
 
-export function derefJsonSchema(schema: Record<string, unknown>): Record<string, unknown> {
+export function derefJsonSchema(
+  schema: Record<string, unknown>,
+): Record<string, unknown> {
   const visited = new Set<string>();
-  const result = resolveNode(schema, schema, visited) as Record<string, unknown>;
+  const result = resolveNode(schema, schema, visited) as Record<
+    string,
+    unknown
+  >;
 
-  if (!hasUnresolvedDefinitionRef(result, '$defs')) {
-    delete result['$defs'];
+  if (!hasUnresolvedDefinitionRef(result, "$defs")) {
+    delete result["$defs"];
   }
-  if (!hasUnresolvedDefinitionRef(result, 'definitions')) {
-    delete result['definitions'];
+  if (!hasUnresolvedDefinitionRef(result, "definitions")) {
+    delete result["definitions"];
   }
   return result;
 }
 
-type JsonSchemaType = 'string' | 'number' | 'integer' | 'boolean' | 'object' | 'array' | 'null';
-type SchemaSlotKind = 'single' | 'array' | 'map' | 'schema-or-array';
-type StructuralJsonSchemaType = Extract<JsonSchemaType, 'string' | 'object' | 'array'>;
+type JsonSchemaType =
+  | "string"
+  | "number"
+  | "integer"
+  | "boolean"
+  | "object"
+  | "array"
+  | "null";
+type SchemaSlotKind = "single" | "array" | "map" | "schema-or-array";
+type StructuralJsonSchemaType = Extract<
+  JsonSchemaType,
+  "string" | "object" | "array"
+>;
 
 interface ChildSchemaSlot {
   key: string;
@@ -37,86 +52,90 @@ interface ChildSchemaSlot {
 }
 
 const TYPE_COMPLETION_SKIP_KEYS = new Set([
-  '$ref',
-  'allOf',
-  'anyOf',
-  'else',
-  'if',
-  'not',
-  'oneOf',
-  'then',
+  "$ref",
+  "allOf",
+  "anyOf",
+  "else",
+  "if",
+  "not",
+  "oneOf",
+  "then",
 ]);
 
 const CHILD_SCHEMA_SLOTS = [
-  { key: '$defs', kind: 'map' },
-  { key: 'definitions', kind: 'map' },
-  { key: 'dependencies', kind: 'map', parentType: 'object' },
-  { key: 'dependentSchemas', kind: 'map', parentType: 'object' },
-  { key: 'patternProperties', kind: 'map', parentType: 'object' },
-  { key: 'properties', kind: 'map', parentType: 'object' },
-  { key: 'additionalItems', kind: 'single', parentType: 'array' },
-  { key: 'additionalProperties', kind: 'single', parentType: 'object' },
-  { key: 'contains', kind: 'single', parentType: 'array' },
-  { key: 'contentSchema', kind: 'single', parentType: 'string' },
-  { key: 'else', kind: 'single' },
-  { key: 'if', kind: 'single' },
-  { key: 'not', kind: 'single' },
-  { key: 'propertyNames', kind: 'single', parentType: 'object' },
-  { key: 'then', kind: 'single' },
-  { key: 'unevaluatedItems', kind: 'single', parentType: 'array' },
-  { key: 'unevaluatedProperties', kind: 'single', parentType: 'object' },
-  { key: 'allOf', kind: 'array' },
-  { key: 'anyOf', kind: 'array' },
-  { key: 'oneOf', kind: 'array' },
-  { key: 'prefixItems', kind: 'array', parentType: 'array' },
-  { key: 'items', kind: 'schema-or-array', parentType: 'array' },
+  { key: "$defs", kind: "map" },
+  { key: "definitions", kind: "map" },
+  { key: "dependencies", kind: "map", parentType: "object" },
+  { key: "dependentSchemas", kind: "map", parentType: "object" },
+  { key: "patternProperties", kind: "map", parentType: "object" },
+  { key: "properties", kind: "map", parentType: "object" },
+  { key: "additionalItems", kind: "single", parentType: "array" },
+  { key: "additionalProperties", kind: "single", parentType: "object" },
+  { key: "contains", kind: "single", parentType: "array" },
+  { key: "contentSchema", kind: "single", parentType: "string" },
+  { key: "else", kind: "single" },
+  { key: "if", kind: "single" },
+  { key: "not", kind: "single" },
+  { key: "propertyNames", kind: "single", parentType: "object" },
+  { key: "then", kind: "single" },
+  { key: "unevaluatedItems", kind: "single", parentType: "array" },
+  { key: "unevaluatedProperties", kind: "single", parentType: "object" },
+  { key: "allOf", kind: "array" },
+  { key: "anyOf", kind: "array" },
+  { key: "oneOf", kind: "array" },
+  { key: "prefixItems", kind: "array", parentType: "array" },
+  { key: "items", kind: "schema-or-array", parentType: "array" },
 ] as const satisfies readonly ChildSchemaSlot[];
 
 const OBJECT_STRUCTURE_KEYS = new Set([
-  ...childSchemaKeysForParentType('object'),
-  'dependentRequired',
-  'maxProperties',
-  'minProperties',
-  'required',
+  ...childSchemaKeysForParentType("object"),
+  "dependentRequired",
+  "maxProperties",
+  "minProperties",
+  "required",
 ]);
 
 const ARRAY_STRUCTURE_KEYS = new Set([
-  ...childSchemaKeysForParentType('array'),
-  'maxContains',
-  'maxItems',
-  'minContains',
-  'minItems',
-  'uniqueItems',
+  ...childSchemaKeysForParentType("array"),
+  "maxContains",
+  "maxItems",
+  "minContains",
+  "minItems",
+  "uniqueItems",
 ]);
 
 const STRING_STRUCTURE_KEYS = new Set([
-  ...childSchemaKeysForParentType('string'),
-  'contentEncoding',
-  'contentMediaType',
-  'format',
-  'maxLength',
-  'minLength',
-  'pattern',
+  ...childSchemaKeysForParentType("string"),
+  "contentEncoding",
+  "contentMediaType",
+  "format",
+  "maxLength",
+  "minLength",
+  "pattern",
 ]);
 
 const NUMERIC_STRUCTURE_KEYS = new Set([
-  'exclusiveMaximum',
-  'exclusiveMinimum',
-  'maximum',
-  'minimum',
-  'multipleOf',
+  "exclusiveMaximum",
+  "exclusiveMinimum",
+  "maximum",
+  "minimum",
+  "multipleOf",
 ]);
 
-export function normalizeKimiToolSchema(schema: Record<string, unknown>): Record<string, unknown> {
+export function normalizeKimiToolSchema(
+  schema: Record<string, unknown>,
+): Record<string, unknown> {
   return ensureKimiPropertyTypes(derefJsonSchema(schema));
 }
 
-function ensureKimiPropertyTypes(schema: Record<string, unknown>): Record<string, unknown> {
+function ensureKimiPropertyTypes(
+  schema: Record<string, unknown>,
+): Record<string, unknown> {
   const normalized = cloneJsonValue(schema);
   if (!isRecord(normalized)) {
     throw new Error2(
       ProtocolErrors.codes.PROVIDER_API_ERROR,
-      'JSON Schema root must normalize to an object.',
+      "JSON Schema root must normalize to an object.",
     );
   }
   recurseSchema(normalized);
@@ -127,10 +146,10 @@ function hasUnresolvedDefinitionRef(node: unknown, bucketKey: string): boolean {
   if (Array.isArray(node)) {
     return node.some((child) => hasUnresolvedDefinitionRef(child, bucketKey));
   }
-  if (typeof node === 'object' && node !== null) {
+  if (typeof node === "object" && node !== null) {
     const obj = node as Record<string, unknown>;
-    const ref = obj['$ref'];
-    if (typeof ref === 'string' && ref.startsWith(`#/${bucketKey}/`)) {
+    const ref = obj["$ref"];
+    if (typeof ref === "string" && ref.startsWith(`#/${bucketKey}/`)) {
       return true;
     }
     for (const [key, value] of Object.entries(obj)) {
@@ -142,16 +161,20 @@ function hasUnresolvedDefinitionRef(node: unknown, bucketKey: string): boolean {
   return false;
 }
 
-function resolveNode(node: unknown, root: Record<string, unknown>, visited: Set<string>): unknown {
+function resolveNode(
+  node: unknown,
+  root: Record<string, unknown>,
+  visited: Set<string>,
+): unknown {
   if (Array.isArray(node)) {
     return node.map((item) => resolveNode(item, root, visited));
   }
 
-  if (typeof node === 'object' && node !== null) {
+  if (typeof node === "object" && node !== null) {
     const obj = node as Record<string, unknown>;
 
-    if (typeof obj['$ref'] === 'string') {
-      const ref = obj['$ref'];
+    if (typeof obj["$ref"] === "string") {
+      const ref = obj["$ref"];
       if (isLocalJsonPointerRef(ref)) {
         if (visited.has(ref)) {
           return obj;
@@ -161,10 +184,16 @@ function resolveNode(node: unknown, root: Record<string, unknown>, visited: Set<
           visited.add(ref);
           const resolved = resolveNode(resolvedRef.value, root, visited);
           visited.delete(ref);
-          if (typeof resolved === 'object' && resolved !== null && !Array.isArray(resolved)) {
-            const merged: Record<string, unknown> = { ...(resolved as Record<string, unknown>) };
+          if (
+            typeof resolved === "object" &&
+            resolved !== null &&
+            !Array.isArray(resolved)
+          ) {
+            const merged: Record<string, unknown> = {
+              ...(resolved as Record<string, unknown>),
+            };
             for (const [key, value] of Object.entries(obj)) {
-              if (key === '$ref') continue;
+              if (key === "$ref") continue;
               merged[key] = resolveNode(value, root, visited);
             }
             return merged;
@@ -186,18 +215,18 @@ function resolveNode(node: unknown, root: Record<string, unknown>, visited: Set<
 }
 
 function isLocalJsonPointerRef(ref: string): boolean {
-  return ref === '#' || ref.startsWith('#/');
+  return ref === "#" || ref.startsWith("#/");
 }
 
 function resolveLocalJsonPointer(
   root: Record<string, unknown>,
   ref: string,
 ): { found: true; value: unknown } | { found: false } {
-  if (ref === '#') {
+  if (ref === "#") {
     return { found: true, value: root };
   }
   let current: unknown = root;
-  for (const rawPart of ref.slice(2).split('/')) {
+  for (const rawPart of ref.slice(2).split("/")) {
     const part = unescapeJsonPointerPart(rawPart);
     if (isRecord(current)) {
       if (!hasOwn(current, part)) {
@@ -218,7 +247,7 @@ function resolveLocalJsonPointer(
 }
 
 function unescapeJsonPointerPart(part: string): string {
-  return part.replaceAll('~1', '/').replaceAll('~0', '~');
+  return part.replaceAll("~1", "/").replaceAll("~0", "~");
 }
 
 function parseJsonPointerArrayIndex(part: string): number | null {
@@ -236,26 +265,29 @@ function recurseSchema(node: unknown): void {
   visitChildSchemas(node, normalizeProperty);
 }
 
-function visitChildSchemas(node: Record<string, unknown>, visit: (schema: unknown) => void): void {
+function visitChildSchemas(
+  node: Record<string, unknown>,
+  visit: (schema: unknown) => void,
+): void {
   for (const { key, kind } of CHILD_SCHEMA_SLOTS) {
     const value = node[key];
-    if (kind === 'single') {
+    if (kind === "single") {
       if (isRecord(value)) {
         visit(value);
       }
-    } else if (kind === 'array') {
+    } else if (kind === "array") {
       if (Array.isArray(value)) {
         for (const item of value) {
           visit(item);
         }
       }
-    } else if (kind === 'map') {
+    } else if (kind === "map") {
       if (isRecord(value)) {
         for (const item of Object.values(value)) {
           visit(item);
         }
       }
-    } else if (kind === 'schema-or-array') {
+    } else if (kind === "schema-or-array") {
       if (isRecord(value)) {
         visit(value);
       } else if (Array.isArray(value)) {
@@ -267,9 +299,11 @@ function visitChildSchemas(node: Record<string, unknown>, visit: (schema: unknow
   }
 }
 
-function childSchemaKeysForParentType(parentType: StructuralJsonSchemaType): string[] {
+function childSchemaKeysForParentType(
+  parentType: StructuralJsonSchemaType,
+): string[] {
   return CHILD_SCHEMA_SLOTS.flatMap((slot) => {
-    if (!('parentType' in slot) || slot.parentType !== parentType) {
+    if (!("parentType" in slot) || slot.parentType !== parentType) {
       return [];
     }
     return [slot.key];
@@ -281,30 +315,33 @@ function normalizeProperty(node: unknown): void {
     return;
   }
 
-  if (!hasOwn(node, 'type') && !hasAnyKey(node, TYPE_COMPLETION_SKIP_KEYS)) {
-    const enumValues = node['enum'];
+  if (!hasOwn(node, "type") && !hasAnyKey(node, TYPE_COMPLETION_SKIP_KEYS)) {
+    const enumValues = node["enum"];
     if (Array.isArray(enumValues) && enumValues.length > 0) {
-      node['type'] = inferTypeFromValues(enumValues);
-    } else if (hasOwn(node, 'const')) {
-      node['type'] = inferTypeFromValues([node['const']]);
+      node["type"] = inferTypeFromValues(enumValues);
+    } else if (hasOwn(node, "const")) {
+      node["type"] = inferTypeFromValues([node["const"]]);
     } else {
-      node['type'] = inferTypeFromStructure(node);
+      node["type"] = inferTypeFromStructure(node);
     }
-  } else if (!hasAnyKey(node, TYPE_COMPLETION_SKIP_KEYS) && typeof node['type'] === 'string') {
-    const enumValues = node['enum'];
+  } else if (
+    !hasAnyKey(node, TYPE_COMPLETION_SKIP_KEYS) &&
+    typeof node["type"] === "string"
+  ) {
+    const enumValues = node["enum"];
     if (Array.isArray(enumValues) && enumValues.length > 0) {
       try {
         const inferred = inferTypeFromValues(enumValues);
-        if (node['type'] !== inferred) {
-          node['type'] = inferred;
+        if (node["type"] !== inferred) {
+          node["type"] = inferred;
           removeIrrelevantStructureKeys(node, inferred);
         }
       } catch {}
-    } else if (hasOwn(node, 'const')) {
+    } else if (hasOwn(node, "const")) {
       try {
-        const inferred = inferTypeFromValues([node['const']]);
-        if (node['type'] !== inferred) {
-          node['type'] = inferred;
+        const inferred = inferTypeFromValues([node["const"]]);
+        if (node["type"] !== inferred) {
+          node["type"] = inferred;
           removeIrrelevantStructureKeys(node, inferred);
         }
       } catch {}
@@ -318,32 +355,34 @@ function removeIrrelevantStructureKeys(
   node: Record<string, unknown>,
   newType: JsonSchemaType,
 ): void {
-  if (newType !== 'object') {
+  if (newType !== "object") {
     for (const key of OBJECT_STRUCTURE_KEYS) {
       delete node[key];
     }
   }
-  if (newType !== 'array') {
+  if (newType !== "array") {
     for (const key of ARRAY_STRUCTURE_KEYS) {
       delete node[key];
     }
   }
 }
 
-function inferTypeFromStructure(schema: Record<string, unknown>): JsonSchemaType {
+function inferTypeFromStructure(
+  schema: Record<string, unknown>,
+): JsonSchemaType {
   if (hasAnyKey(schema, OBJECT_STRUCTURE_KEYS)) {
-    return 'object';
+    return "object";
   }
   if (hasAnyKey(schema, ARRAY_STRUCTURE_KEYS)) {
-    return 'array';
+    return "array";
   }
   if (hasAnyKey(schema, STRING_STRUCTURE_KEYS)) {
-    return 'string';
+    return "string";
   }
   if (hasAnyKey(schema, NUMERIC_STRUCTURE_KEYS)) {
-    return 'number';
+    return "number";
   }
-  return 'string';
+  return "string";
 }
 
 function inferTypeFromValues(values: unknown[]): JsonSchemaType {
@@ -353,7 +392,7 @@ function inferTypeFromValues(values: unknown[]): JsonSchemaType {
     if (valueType === undefined) {
       throw new Error2(
         ProtocolErrors.codes.PROVIDER_API_ERROR,
-        'Cannot infer JSON Schema type from non-JSON enum or const value.',
+        "Cannot infer JSON Schema type from non-JSON enum or const value.",
       );
     }
     inferred.add(valueType);
@@ -364,37 +403,37 @@ function inferTypeFromValues(values: unknown[]): JsonSchemaType {
     if (onlyType === undefined) {
       throw new Error2(
         ProtocolErrors.codes.PROVIDER_API_ERROR,
-        'Cannot infer JSON Schema type from an empty enum.',
+        "Cannot infer JSON Schema type from an empty enum.",
       );
     }
     return onlyType;
   }
   throw new Error2(
     ProtocolErrors.codes.PROVIDER_API_ERROR,
-    'Mixed JSON Schema enum or const types are not supported by Kimi tool schemas.',
+    "Mixed JSON Schema enum or const types are not supported by Kimi tool schemas.",
   );
 }
 
 function inferValueType(value: unknown): JsonSchemaType | undefined {
   if (value === null) {
-    return 'null';
+    return "null";
   }
   if (Array.isArray(value)) {
-    return 'array';
+    return "array";
   }
   switch (typeof value) {
-    case 'string':
-      return 'string';
-    case 'number':
-      return Number.isInteger(value) ? 'integer' : 'number';
-    case 'boolean':
-      return 'boolean';
-    case 'object':
-      return 'object';
-    case 'bigint':
-    case 'function':
-    case 'symbol':
-    case 'undefined':
+    case "string":
+      return "string";
+    case "number":
+      return Number.isInteger(value) ? "integer" : "number";
+    case "boolean":
+      return "boolean";
+    case "object":
+      return "object";
+    case "bigint":
+    case "function":
+    case "symbol":
+    case "undefined":
       return undefined;
   }
   return undefined;
@@ -402,17 +441,17 @@ function inferValueType(value: unknown): JsonSchemaType | undefined {
 
 function normalizeInferredTypes(types: Set<JsonSchemaType>): JsonSchemaType[] {
   const normalized = new Set(types);
-  if (normalized.has('number')) {
-    normalized.delete('integer');
+  if (normalized.has("number")) {
+    normalized.delete("integer");
   }
   const order: JsonSchemaType[] = [
-    'string',
-    'number',
-    'integer',
-    'boolean',
-    'object',
-    'array',
-    'null',
+    "string",
+    "number",
+    "integer",
+    "boolean",
+    "object",
+    "array",
+    "null",
   ];
   return order.filter((type) => normalized.has(type));
 }
@@ -441,7 +480,7 @@ function cloneJsonValue(value: unknown): unknown {
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function hasOwn(obj: Record<string, unknown>, key: string): boolean {

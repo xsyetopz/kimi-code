@@ -3,40 +3,36 @@
  * (see ./harness/stub) — only the three surfaces the manager touches
  * (turn.hasActiveTurn, turn.steer, telemetry.track) need to look real.
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { ContentPart } from '@moonshot-ai/kosong';
+import type { ContentPart } from "@moonshot-ai/kosong";
 
-import { CronManager } from '../../../src/agent/cron/manager';
-import type { ClockSources } from '../../../src/tools/cron/clock';
+import { CronManager } from "../../../src/agent/cron/manager";
+import type { ClockSources } from "../../../src/tools/cron/clock";
 import {
   CRON_FIRED,
   CRON_MISSED,
-} from '../../../src/tools/cron/telemetry-events';
-import type { CronTask } from '../../../src/tools/cron/types';
-import {
-  createAgentStub,
-  createClocks,
-  WALL_ANCHOR,
-} from './harness/stub';
+} from "../../../src/tools/cron/telemetry-events";
+import type { CronTask } from "../../../src/tools/cron/types";
+import { createAgentStub, createClocks, WALL_ANCHOR } from "./harness/stub";
 
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
-describe('CronManager', () => {
+describe("CronManager", () => {
   beforeEach(() => {
     // Pin jitter off so fire-count assertions are deterministic. Each
     // test that actually exercises fires resets the env via stubEnv,
     // but setting it here as well shields the construction-path tests
     // from any leaked state.
-    vi.stubEnv('KIMI_CRON_NO_JITTER', '1');
+    vi.stubEnv("KIMI_CRON_NO_JITTER", "1");
   });
 
   afterEach(() => {
     vi.unstubAllEnvs();
   });
 
-  describe('construction', () => {
-    it('does not throw with default clocks and supports start/stop', async () => {
+  describe("construction", () => {
+    it("does not throw with default clocks and supports start/stop", async () => {
       const { agent } = createAgentStub();
       // Disable the auto-tick timer so the test doesn't have to wait
       // for setInterval / clean it up; we just want start() and stop()
@@ -48,27 +44,31 @@ describe('CronManager', () => {
       await expect(manager.stop()).resolves.toBeUndefined();
     });
 
-    it('exposes the session store as an empty list on construction', () => {
+    it("exposes the session store as an empty list on construction", () => {
       const { agent } = createAgentStub();
       const manager = new CronManager(agent, { pollIntervalMs: null });
       expect(manager.store.list()).toEqual([]);
       expect(manager.getNextFireTime()).toBeNull();
     });
 
-    it('getNextFireForTask delegates to the scheduler', () => {
+    it("getNextFireForTask delegates to the scheduler", () => {
       const { agent } = createAgentStub();
       const manager = new CronManager(agent, { pollIntervalMs: null });
-      const scheduler = (manager as unknown as {
-        scheduler: { getNextFireForTask: (id: string) => number | null };
-      }).scheduler;
-      const spy = vi.spyOn(scheduler, 'getNextFireForTask').mockReturnValue(123);
-      expect(manager.getNextFireForTask('deadbeef')).toBe(123);
-      expect(spy).toHaveBeenCalledWith('deadbeef');
+      const scheduler = (
+        manager as unknown as {
+          scheduler: { getNextFireForTask: (id: string) => number | null };
+        }
+      ).scheduler;
+      const spy = vi
+        .spyOn(scheduler, "getNextFireForTask")
+        .mockReturnValue(123);
+      expect(manager.getNextFireForTask("deadbeef")).toBe(123);
+      expect(spy).toHaveBeenCalledWith("deadbeef");
     });
   });
 
-  describe('listTaskSnapshots', () => {
-    it('returns every task with its recurring flag and post-jitter next fire', () => {
+  describe("listTaskSnapshots", () => {
+    it("returns every task with its recurring flag and post-jitter next fire", () => {
       const { agent } = createAgentStub();
       const harness = createClocks();
       const manager = new CronManager(agent, {
@@ -77,15 +77,15 @@ describe('CronManager', () => {
       });
 
       const recurring = manager.store.add(
-        { cron: '*/5 * * * *', prompt: 'recurring job' },
+        { cron: "*/5 * * * *", prompt: "recurring job" },
         harness.now(),
       );
       const oneShot = manager.store.add(
-        { cron: '*/5 * * * *', prompt: 'one shot', recurring: false },
+        { cron: "*/5 * * * *", prompt: "one shot", recurring: false },
         harness.now(),
       );
       const neverFires = manager.store.add(
-        { cron: '0 0 31 2 *', prompt: 'impossible date' },
+        { cron: "0 0 31 2 *", prompt: "impossible date" },
         harness.now(),
       );
 
@@ -95,11 +95,11 @@ describe('CronManager', () => {
       const r = byId.get(recurring.id);
       expect(r).toMatchObject({
         id: recurring.id,
-        cron: '*/5 * * * *',
+        cron: "*/5 * * * *",
         recurring: true,
         createdAt: recurring.createdAt,
       });
-      expect(typeof r?.nextFireAt).toBe('number');
+      expect(typeof r?.nextFireAt).toBe("number");
 
       expect(byId.get(oneShot.id)).toMatchObject({ recurring: false });
 
@@ -109,15 +109,15 @@ describe('CronManager', () => {
       expect(byId.get(neverFires.id)?.nextFireAt).toBeNull();
     });
 
-    it('returns an empty list when no tasks are scheduled', () => {
+    it("returns an empty list when no tasks are scheduled", () => {
       const { agent } = createAgentStub();
       const manager = new CronManager(agent, { pollIntervalMs: null });
       expect(manager.listTaskSnapshots()).toEqual([]);
     });
   });
 
-  describe('handleFire — recurring', () => {
-    it('steers with cron_job origin and emits cron_fired telemetry', () => {
+  describe("handleFire — recurring", () => {
+    it("steers with cron_job origin and emits cron_fired telemetry", () => {
       const stub = createAgentStub({ steerReturns: 7 });
       const harness = createClocks();
       const manager = new CronManager(stub.agent, {
@@ -126,7 +126,7 @@ describe('CronManager', () => {
       });
 
       manager.store.add(
-        { cron: '*/5 * * * *', prompt: 'check the deploy' },
+        { cron: "*/5 * * * *", prompt: "check the deploy" },
         harness.now() - 1,
       );
       // `*/5 * * * *` lands every 5 minutes; bump 6 minutes so we are
@@ -136,18 +136,18 @@ describe('CronManager', () => {
 
       expect(stub.steerCalls.length).toBe(1);
       const call = stub.steerCalls[0]!;
-      expect(call.origin.kind).toBe('cron_job');
-      if (call.origin.kind !== 'cron_job') throw new Error('unreachable');
+      expect(call.origin.kind).toBe("cron_job");
+      if (call.origin.kind !== "cron_job") throw new Error("unreachable");
       expect(call.origin.recurring).toBe(true);
       expect(call.origin.stale).toBe(false);
       expect(call.origin.coalescedCount).toBeGreaterThanOrEqual(1);
-      expect(call.origin.cron).toBe('*/5 * * * *');
+      expect(call.origin.cron).toBe("*/5 * * * *");
       expect(call.origin.jobId).toMatch(/^[0-9a-f]{8}$/);
       // Content is wrapped in the cron-fire envelope (Bug A fix).
       expect(call.content).toHaveLength(1);
-      const text = (call.content[0] as { type: 'text'; text: string }).text;
-      expect(text).toContain('<cron-fire ');
-      expect(text).toContain('<prompt>\ncheck the deploy\n</prompt>');
+      const text = (call.content[0] as { type: "text"; text: string }).text;
+      expect(text).toContain("<cron-fire ");
+      expect(text).toContain("<prompt>\ncheck the deploy\n</prompt>");
       // Exactly one envelope — guards against an accidental double-wrap
       // (e.g. handleFire calling renderCronFireXml on already-rendered
       // content from a future refactor).
@@ -155,11 +155,11 @@ describe('CronManager', () => {
 
       expect(stub.eventCalls).toHaveLength(1);
       expect(stub.eventCalls[0]!.event).toMatchObject({
-        type: 'cron.fired',
-        prompt: 'check the deploy',
+        type: "cron.fired",
+        prompt: "check the deploy",
         origin: {
-          kind: 'cron_job',
-          cron: '*/5 * * * *',
+          kind: "cron_job",
+          cron: "*/5 * * * *",
           recurring: true,
           stale: false,
         },
@@ -176,8 +176,8 @@ describe('CronManager', () => {
     });
   });
 
-  describe('handleFire — one-shot', () => {
-    it('uses recurring=false in origin and telemetry', () => {
+  describe("handleFire — one-shot", () => {
+    it("uses recurring=false in origin and telemetry", () => {
       const stub = createAgentStub();
       const harness = createClocks();
       const manager = new CronManager(stub.agent, {
@@ -189,8 +189,8 @@ describe('CronManager', () => {
       // advance the wall clock past it.
       const task = manager.store.add(
         {
-          cron: '*/5 * * * *',
-          prompt: 'one-shot ping',
+          cron: "*/5 * * * *",
+          prompt: "one-shot ping",
           recurring: false,
         },
         harness.now() - 1,
@@ -200,16 +200,16 @@ describe('CronManager', () => {
 
       expect(stub.steerCalls.length).toBe(1);
       const origin = stub.steerCalls[0]!.origin;
-      expect(origin.kind).toBe('cron_job');
-      if (origin.kind !== 'cron_job') throw new Error('unreachable');
+      expect(origin.kind).toBe("cron_job");
+      if (origin.kind !== "cron_job") throw new Error("unreachable");
       expect(origin.recurring).toBe(false);
       expect(origin.stale).toBe(false);
       // Content carries the cron-fire envelope around the verbatim prompt.
       const content = stub.steerCalls[0]!.content;
-      const text = (content[0] as { type: 'text'; text: string }).text;
-      expect(text).toContain('<cron-fire ');
+      const text = (content[0] as { type: "text"; text: string }).text;
+      expect(text).toContain("<cron-fire ");
       expect(text).toContain('recurring="false"');
-      expect(text).toContain('<prompt>\none-shot ping\n</prompt>');
+      expect(text).toContain("<prompt>\none-shot ping\n</prompt>");
 
       const tc = stub.telemetryCalls[0]!;
       expect(tc.props).toMatchObject({ recurring: false });
@@ -219,8 +219,8 @@ describe('CronManager', () => {
     });
   });
 
-  describe('isStale', () => {
-    it('flags recurring tasks older than 7 days as stale', () => {
+  describe("isStale", () => {
+    it("flags recurring tasks older than 7 days as stale", () => {
       const { agent } = createAgentStub();
       const harness = createClocks();
       const manager = new CronManager(agent, {
@@ -229,16 +229,16 @@ describe('CronManager', () => {
       });
 
       const task: CronTask = {
-        id: 'deadbeef',
-        cron: '0 9 * * *',
-        prompt: 'morning report',
+        id: "deadbeef",
+        cron: "0 9 * * *",
+        prompt: "morning report",
         createdAt: harness.now() - 8 * ONE_DAY_MS,
         recurring: true,
       };
       expect(manager.isStale(task)).toBe(true);
     });
 
-    it('does not flag recurring tasks younger than 7 days', () => {
+    it("does not flag recurring tasks younger than 7 days", () => {
       const { agent } = createAgentStub();
       const harness = createClocks();
       const manager = new CronManager(agent, {
@@ -246,16 +246,16 @@ describe('CronManager', () => {
         pollIntervalMs: null,
       });
       const task: CronTask = {
-        id: 'deadbeef',
-        cron: '0 9 * * *',
-        prompt: 'morning report',
+        id: "deadbeef",
+        cron: "0 9 * * *",
+        prompt: "morning report",
         createdAt: harness.now() - 6 * ONE_DAY_MS,
         recurring: true,
       };
       expect(manager.isStale(task)).toBe(false);
     });
 
-    it('treats undefined recurring as recurring for stale purposes', () => {
+    it("treats undefined recurring as recurring for stale purposes", () => {
       const { agent } = createAgentStub();
       const harness = createClocks();
       const manager = new CronManager(agent, {
@@ -263,16 +263,16 @@ describe('CronManager', () => {
         pollIntervalMs: null,
       });
       const task: CronTask = {
-        id: 'deadbeef',
-        cron: '0 9 * * *',
-        prompt: 'morning report',
+        id: "deadbeef",
+        cron: "0 9 * * *",
+        prompt: "morning report",
         createdAt: harness.now() - 8 * ONE_DAY_MS,
         // recurring intentionally omitted
       };
       expect(manager.isStale(task)).toBe(true);
     });
 
-    it('one-shot tasks are never stale even if old', () => {
+    it("one-shot tasks are never stale even if old", () => {
       const { agent } = createAgentStub();
       const harness = createClocks();
       const manager = new CronManager(agent, {
@@ -280,17 +280,17 @@ describe('CronManager', () => {
         pollIntervalMs: null,
       });
       const task: CronTask = {
-        id: 'deadbeef',
-        cron: '0 9 * * *',
-        prompt: 'morning report',
+        id: "deadbeef",
+        cron: "0 9 * * *",
+        prompt: "morning report",
         createdAt: harness.now() - 8 * ONE_DAY_MS,
         recurring: false,
       };
       expect(manager.isStale(task)).toBe(false);
     });
 
-    it('KIMI_CRON_NO_STALE=1 disables stale judgment for recurring', () => {
-      vi.stubEnv('KIMI_CRON_NO_STALE', '1');
+    it("KIMI_CRON_NO_STALE=1 disables stale judgment for recurring", () => {
+      vi.stubEnv("KIMI_CRON_NO_STALE", "1");
       const { agent } = createAgentStub();
       const harness = createClocks();
       const manager = new CronManager(agent, {
@@ -298,16 +298,16 @@ describe('CronManager', () => {
         pollIntervalMs: null,
       });
       const task: CronTask = {
-        id: 'deadbeef',
-        cron: '0 9 * * *',
-        prompt: 'morning report',
+        id: "deadbeef",
+        cron: "0 9 * * *",
+        prompt: "morning report",
         createdAt: harness.now() - 8 * ONE_DAY_MS,
         recurring: true,
       };
       expect(manager.isStale(task)).toBe(false);
     });
 
-    it('non-finite age (broken clock) is treated as not stale', () => {
+    it("non-finite age (broken clock) is treated as not stale", () => {
       const { agent } = createAgentStub();
       const brokenClocks: ClockSources = {
         wallNow: () => Number.NaN,
@@ -318,9 +318,9 @@ describe('CronManager', () => {
         pollIntervalMs: null,
       });
       const task: CronTask = {
-        id: 'deadbeef',
-        cron: '0 9 * * *',
-        prompt: 'morning report',
+        id: "deadbeef",
+        cron: "0 9 * * *",
+        prompt: "morning report",
         createdAt: 0,
         recurring: true,
       };
@@ -328,8 +328,8 @@ describe('CronManager', () => {
     });
   });
 
-  describe('stale propagation into fire origin', () => {
-    it('origin.stale === true for a recurring task older than 7 days', () => {
+  describe("stale propagation into fire origin", () => {
+    it("origin.stale === true for a recurring task older than 7 days", () => {
       const stub = createAgentStub();
       const harness = createClocks();
       const manager = new CronManager(stub.agent, {
@@ -344,25 +344,27 @@ describe('CronManager', () => {
       // fine for this test — we only assert on `stale` (which is
       // computed from createdAt vs now) and `coalescedCount >= 1`.
       manager.store.add(
-        { cron: '0 9 * * *', prompt: 'morning report', recurring: true },
+        { cron: "0 9 * * *", prompt: "morning report", recurring: true },
         harness.now() - 8 * ONE_DAY_MS,
       );
       manager.tick();
 
       expect(stub.steerCalls.length).toBe(1);
       const origin = stub.steerCalls[0]!.origin;
-      if (origin.kind !== 'cron_job') throw new Error('expected cron_job');
+      if (origin.kind !== "cron_job") throw new Error("expected cron_job");
       expect(origin.stale).toBe(true);
       expect(stub.telemetryCalls[0]!.props).toMatchObject({ stale: true });
       // Rendered envelope carries the stale flag too.
-      const text = (stub.steerCalls[0]!.content[0] as {
-        type: 'text';
-        text: string;
-      }).text;
+      const text = (
+        stub.steerCalls[0]!.content[0] as {
+          type: "text";
+          text: string;
+        }
+      ).text;
       expect(text).toContain('stale="true"');
     });
 
-    it('stale recurring tasks get one final fire and are then removed', () => {
+    it("stale recurring tasks get one final fire and are then removed", () => {
       // Mirrors the documented contract on `CronCreate.description`:
       // recurring tasks auto-expire after 7 days — they fire one final
       // time, then are deleted. Without this branch a session that
@@ -375,7 +377,7 @@ describe('CronManager', () => {
         pollIntervalMs: null,
       });
       manager.store.add(
-        { cron: '*/5 * * * *', prompt: 'stale-recurring', recurring: true },
+        { cron: "*/5 * * * *", prompt: "stale-recurring", recurring: true },
         harness.now() - 8 * ONE_DAY_MS,
       );
       expect(manager.store.list()).toHaveLength(1);
@@ -387,8 +389,8 @@ describe('CronManager', () => {
       // A `cron_deleted` event closes the lifecycle in telemetry,
       // symmetric with manual `CronDelete` calls.
       const events = stub.telemetryCalls.map((c) => c.event);
-      expect(events).toContain('cron_fired');
-      expect(events).toContain('cron_deleted');
+      expect(events).toContain("cron_fired");
+      expect(events).toContain("cron_deleted");
 
       // No further fires after the task is gone.
       harness.advance(6 * 60_000);
@@ -397,8 +399,8 @@ describe('CronManager', () => {
     });
   });
 
-  describe('buffered semantics', () => {
-    it('reports buffered=true on the telemetry event when steer returns null', () => {
+  describe("buffered semantics", () => {
+    it("reports buffered=true on the telemetry event when steer returns null", () => {
       const stub = createAgentStub({ steerReturns: null });
       const harness = createClocks();
       const manager = new CronManager(stub.agent, {
@@ -406,7 +408,7 @@ describe('CronManager', () => {
         pollIntervalMs: null,
       });
       manager.store.add(
-        { cron: '*/5 * * * *', prompt: 'while-active' },
+        { cron: "*/5 * * * *", prompt: "while-active" },
         harness.now() - 1,
       );
       harness.advance(6 * 60_000);
@@ -417,8 +419,8 @@ describe('CronManager', () => {
     });
   });
 
-  describe('idle gating', () => {
-    it('does not fire while a turn is active', () => {
+  describe("idle gating", () => {
+    it("does not fire while a turn is active", () => {
       const stub = createAgentStub({ hasActiveTurn: true });
       const harness = createClocks();
       const manager = new CronManager(stub.agent, {
@@ -426,7 +428,7 @@ describe('CronManager', () => {
         pollIntervalMs: null,
       });
       manager.store.add(
-        { cron: '*/5 * * * *', prompt: 'ping' },
+        { cron: "*/5 * * * *", prompt: "ping" },
         harness.now() - 1,
       );
       harness.advance(6 * 60_000);
@@ -441,8 +443,8 @@ describe('CronManager', () => {
     });
   });
 
-  describe('end-to-end via scheduler', () => {
-    it('fires once with coalescedCount=1 after a 6-minute gap on */5', () => {
+  describe("end-to-end via scheduler", () => {
+    it("fires once with coalescedCount=1 after a 6-minute gap on */5", () => {
       const stub = createAgentStub();
       const harness = createClocks();
       const manager = new CronManager(stub.agent, {
@@ -450,7 +452,7 @@ describe('CronManager', () => {
         pollIntervalMs: null,
       });
       manager.store.add(
-        { cron: '*/5 * * * *', prompt: 'every five' },
+        { cron: "*/5 * * * *", prompt: "every five" },
         harness.now() - 1,
       );
       // Six minutes past the anchor — exactly one ideal fire in the gap.
@@ -459,50 +461,52 @@ describe('CronManager', () => {
 
       expect(stub.steerCalls.length).toBe(1);
       const origin = stub.steerCalls[0]!.origin;
-      if (origin.kind !== 'cron_job') throw new Error('expected cron_job');
+      if (origin.kind !== "cron_job") throw new Error("expected cron_job");
       expect(origin.coalescedCount).toBe(1);
     });
   });
 
-  describe('handleMissed', () => {
-    it('no-ops on an empty task list', () => {
+  describe("handleMissed", () => {
+    it("no-ops on an empty task list", () => {
       const stub = createAgentStub();
       const manager = new CronManager(stub.agent, { pollIntervalMs: null });
-      manager.handleMissed([], () => [{ type: 'text', text: 'should not run' }]);
+      manager.handleMissed([], () => [
+        { type: "text", text: "should not run" },
+      ]);
       expect(stub.steerCalls.length).toBe(0);
       expect(stub.telemetryCalls.length).toBe(0);
     });
 
-    it('steers cron_missed origin and emits cron_missed telemetry', () => {
+    it("steers cron_missed origin and emits cron_missed telemetry", () => {
       const stub = createAgentStub();
       const manager = new CronManager(stub.agent, { pollIntervalMs: null });
 
       const tasks: CronTask[] = [
         {
-          id: '11111111',
-          cron: '0 9 * * *',
-          prompt: 'a',
+          id: "11111111",
+          cron: "0 9 * * *",
+          prompt: "a",
           createdAt: 1,
           recurring: false,
         },
         {
-          id: '22222222',
-          cron: '0 10 * * *',
-          prompt: 'b',
+          id: "22222222",
+          cron: "0 10 * * *",
+          prompt: "b",
           createdAt: 2,
           recurring: false,
         },
       ];
       const rendered: ContentPart[] = [
-        { type: 'text', text: 'You missed 2 one-shot tasks.' },
+        { type: "text", text: "You missed 2 one-shot tasks." },
       ];
       manager.handleMissed(tasks, () => rendered);
 
       expect(stub.steerCalls.length).toBe(1);
       const call = stub.steerCalls[0]!;
       expect(call.content).toBe(rendered);
-      expect(call.origin.kind).toBe('cron_missed');
-      if (call.origin.kind !== 'cron_missed') throw new Error('unreachable');
+      expect(call.origin.kind).toBe("cron_missed");
+      if (call.origin.kind !== "cron_missed") throw new Error("unreachable");
       expect(call.origin.count).toBe(2);
 
       expect(stub.telemetryCalls.length).toBe(1);

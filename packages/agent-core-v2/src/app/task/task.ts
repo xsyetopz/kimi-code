@@ -13,22 +13,30 @@
  * handles.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
-import type { Event } from '#/_base/event';
-import type { IDisposable } from '#/_base/di/lifecycle';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
+import type { Event } from "#/_base/event";
+import type { IDisposable } from "#/_base/di/lifecycle";
 
-export type TaskState = 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
+export type TaskState =
+  | "pending"
+  | "running"
+  | "completed"
+  | "failed"
+  | "cancelled";
 
 export const TERMINAL_TASK_STATES: ReadonlySet<TaskState> = new Set([
-  'completed',
-  'failed',
-  'cancelled',
+  "completed",
+  "failed",
+  "cancelled",
 ]);
 
 export class TaskCancelledError extends Error {
   constructor(readonly taskId: string) {
     super(`Task ${taskId} was cancelled`);
-    this.name = 'TaskCancelledError';
+    this.name = "TaskCancelledError";
   }
 }
 
@@ -49,9 +57,11 @@ export interface IDeferredHandle<T = unknown> extends ITaskHandle<T> {
 export interface ITaskService {
   readonly _serviceBrand: undefined;
 
-  run<T>(fn: (signal: AbortSignal, output: (data: string) => void) => Promise<T>): ITaskHandle<T>;
+  run<T>(
+    fn: (signal: AbortSignal, output: (data: string) => void) => Promise<T>,
+  ): ITaskHandle<T>;
   defer<T>(): IDeferredHandle<T>;
 }
 
 export const ITaskService: ServiceIdentifier<ITaskService> =
-  createDecorator<ITaskService>('taskService');
+  createDecorator<ITaskService>("taskService");

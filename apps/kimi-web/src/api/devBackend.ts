@@ -7,7 +7,7 @@
 // production same-origin server) — every helper here degrades to a no-op
 // outside that environment so callers can stay unconditional in dev-only UI.
 
-export type BackendName = 'default' | 'multi';
+export type BackendName = "default" | "multi";
 
 export interface DevBackendState {
   /** Current upstream target of the dev proxy, e.g. `http://127.0.0.1:58627`. */
@@ -20,10 +20,11 @@ export interface DevBackendState {
 export function initialDevBackendState(): DevBackendState | null {
   if (!import.meta.env.DEV) return null;
   const presets =
-    typeof __KIMI_DEV_BACKENDS__ !== 'undefined' ? __KIMI_DEV_BACKENDS__ : null;
+    typeof __KIMI_DEV_BACKENDS__ !== "undefined" ? __KIMI_DEV_BACKENDS__ : null;
   if (!presets) return null;
   const current =
-    typeof __KIMI_DEV_PROXY_TARGET__ !== 'undefined' && __KIMI_DEV_PROXY_TARGET__
+    typeof __KIMI_DEV_PROXY_TARGET__ !== "undefined" &&
+    __KIMI_DEV_PROXY_TARGET__
       ? __KIMI_DEV_PROXY_TARGET__
       : presets.default;
   return { current, presets };
@@ -33,7 +34,7 @@ export function initialDevBackendState(): DevBackendState | null {
 export async function fetchDevBackendState(): Promise<DevBackendState | null> {
   if (!import.meta.env.DEV) return null;
   try {
-    const res = await fetch('/__kimi-dev/backend');
+    const res = await fetch("/__kimi-dev/backend");
     if (!res.ok) return null;
     return (await res.json()) as DevBackendState;
   } catch {
@@ -45,11 +46,13 @@ export async function fetchDevBackendState(): Promise<DevBackendState | null> {
  * Repoint the dev proxy at another backend preset. Returns the new state, or
  * null when the switch failed (caller keeps the old target).
  */
-export async function switchDevBackend(name: BackendName): Promise<DevBackendState | null> {
+export async function switchDevBackend(
+  name: BackendName,
+): Promise<DevBackendState | null> {
   try {
-    const res = await fetch('/__kimi-dev/backend', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    const res = await fetch("/__kimi-dev/backend", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name }),
     });
     if (!res.ok) return null;
@@ -61,5 +64,5 @@ export async function switchDevBackend(name: BackendName): Promise<DevBackendSta
 
 /** Strip the scheme for a compact display origin, mirroring api/config.ts. */
 export function shortOrigin(origin: string): string {
-  return origin.replace(/^https?:\/\//, '').replace(/\/$/, '');
+  return origin.replace(/^https?:\/\//, "").replace(/\/$/, "");
 }

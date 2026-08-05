@@ -4,28 +4,28 @@ import {
   type ChatProvider,
   type ModelCapability,
   type ProviderConfig,
-} from '@moonshot-ai/kosong';
+} from "@moonshot-ai/kosong";
 
 import {
   applyAnthropicThinkingKeep,
   applyKimiEnvSamplingParams,
   applyKimiEnvThinkingKeep,
   resolveKimiEnvThinkingEffort,
-} from '#/config/kimi-env-params';
+} from "#/config/kimi-env-params";
 
-import type { Agent } from '..';
-import { ErrorCodes, KimiError } from '../../errors';
-import type { AgentConfigData, AgentConfigUpdateData } from './types';
+import type { Agent } from "..";
+import { ErrorCodes, KimiError } from "../../errors";
+import type { AgentConfigData, AgentConfigUpdateData } from "./types";
 import {
   resolveThinkingEffort,
   supportsThinkingEffort,
   type ThinkingEffort,
-} from './thinking';
-import type { ModelAlias } from '../../config/schema';
-import type { ResolvedRuntimeProvider } from '../../session/provider-manager';
+} from "./thinking";
+import type { ModelAlias } from "../../config/schema";
+import type { ResolvedRuntimeProvider } from "../../session/provider-manager";
 
-export * from './types';
-export { resolveThinkingEffort, type ThinkingEffort } from './thinking';
+export * from "./types";
+export { resolveThinkingEffort, type ThinkingEffort } from "./thinking";
 
 export class ConfigState {
   private _cwd: string;
@@ -36,8 +36,8 @@ export class ConfigState {
   // update must then fall through to the model's own default instead of
   // treating the never-chosen initial "off" as an explicit user choice.
   private _unforcedThinkingEffort: ThinkingEffort | undefined;
-  private _thinkingEffort: ThinkingEffort = 'off';
-  private _systemPrompt: string = '';
+  private _thinkingEffort: ThinkingEffort = "off";
+  private _systemPrompt: string = "";
 
   constructor(protected readonly agent: Agent) {
     this._cwd = agent.kaos.getcwd();
@@ -58,14 +58,17 @@ export class ConfigState {
     this.applyUpdate(changed, false);
   }
 
-  private applyUpdate(changed: AgentConfigUpdateData, emitReplayRecord: boolean): void {
+  private applyUpdate(
+    changed: AgentConfigUpdateData,
+    emitReplayRecord: boolean,
+  ): void {
     if (Object.keys(changed).length === 0) return;
 
     const targetAlias = changed.modelAlias ?? this._modelAlias;
     const targetProvider = this.tryResolvedProviderConfigFor(targetAlias);
     const targetModel = this.modelForThinking(targetAlias, targetProvider);
-    const kimiProtocol = targetProvider?.provider.type === 'kimi';
-    const kimiProvider = targetProvider?.type === 'kimi';
+    const kimiProtocol = targetProvider?.provider.type === "kimi";
+    const kimiProvider = targetProvider?.type === "kimi";
     let unforcedThinkingEffort: ThinkingEffort | undefined;
     let thinkingEffort: ThinkingEffort | undefined;
     if (changed.thinkingEffort !== undefined) {
@@ -97,12 +100,12 @@ export class ConfigState {
       thinkingEffort === undefined ? changed : { ...changed, thinkingEffort };
 
     this.agent.records.logRecord({
-      type: 'config.update',
+      type: "config.update",
       ...effectiveChanged,
     });
     if (emitReplayRecord) {
       this.agent.replayBuilder.push({
-        type: 'config_updated',
+        type: "config_updated",
         config: effectiveChanged,
       });
     }
@@ -137,10 +140,12 @@ export class ConfigState {
 
   setThinkingEffort(effort: ThinkingEffort): void {
     const model = this.currentModel;
-    const kimiProtocol = this.tryResolvedProviderConfig()?.provider.type === 'kimi';
+    const kimiProtocol =
+      this.tryResolvedProviderConfig()?.provider.type === "kimi";
     if (!supportsThinkingEffort(effort, model, kimiProtocol)) {
       const efforts = model?.supportEfforts ?? [];
-      const supported = efforts.length === 0 ? 'off' : ['off', ...efforts].join(', ');
+      const supported =
+        efforts.length === 0 ? "off" : ["off", ...efforts].join(", ");
       throw new KimiError(
         ErrorCodes.MODEL_CONFIG_INVALID,
         `Thinking effort "${effort}" is not supported by model "${this.modelAlias}". Supported efforts: ${supported}.`,
@@ -178,7 +183,7 @@ export class ConfigState {
   get providerConfig(): ProviderConfig {
     const provider = this.resolvedProviderConfig?.provider;
     if (provider === undefined) {
-      throw new KimiError(ErrorCodes.MODEL_NOT_CONFIGURED, 'Provider not set');
+      throw new KimiError(ErrorCodes.MODEL_NOT_CONFIGURED, "Provider not set");
     }
     return provider;
   }
@@ -207,9 +212,14 @@ export class ConfigState {
     const providerConfig = this.providerConfig;
     const memoKey = JSON.stringify(providerConfig);
     if (this.providerMemo?.key !== memoKey) {
-      this.providerMemo = { key: memoKey, provider: createProvider(providerConfig) };
+      this.providerMemo = {
+        key: memoKey,
+        provider: createProvider(providerConfig),
+      };
     }
-    const provider = this.providerMemo.provider.withThinking(this.thinkingEffort);
+    const provider = this.providerMemo.provider.withThinking(
+      this.thinkingEffort,
+    );
     const withSampling = applyKimiEnvSamplingParams(provider);
     const configKeep = this.agent.kimiConfig?.thinking?.keep;
     const withKimiKeep = applyKimiEnvThinkingKeep(
@@ -218,12 +228,17 @@ export class ConfigState {
       undefined,
       configKeep,
     );
-    return applyAnthropicThinkingKeep(withKimiKeep, this.thinkingEffort, undefined, configKeep);
+    return applyAnthropicThinkingKeep(
+      withKimiKeep,
+      this.thinkingEffort,
+      undefined,
+      configKeep,
+    );
   }
 
   get model(): string {
     if (this._modelAlias === undefined) {
-      throw new KimiError(ErrorCodes.MODEL_NOT_CONFIGURED, 'Model not set');
+      throw new KimiError(ErrorCodes.MODEL_NOT_CONFIGURED, "Model not set");
     }
     return this._modelAlias;
   }
@@ -249,21 +264,28 @@ export class ConfigState {
   ): ModelAlias | undefined {
     if (resolved !== undefined) {
       const capabilities = resolved.alwaysThinking
-        ? ['always_thinking']
+        ? ["always_thinking"]
         : resolved.modelCapabilities.thinking
-          ? ['thinking']
+          ? ["thinking"]
           : [];
       return {
         provider: resolved.providerName,
         model: resolved.provider.model,
-        maxContextSize: Math.max(resolved.modelCapabilities.max_context_tokens, 1),
+        maxContextSize: Math.max(
+          resolved.modelCapabilities.max_context_tokens,
+          1,
+        ),
         capabilities,
         supportEfforts:
-          resolved.supportEfforts === undefined ? undefined : [...resolved.supportEfforts],
+          resolved.supportEfforts === undefined
+            ? undefined
+            : [...resolved.supportEfforts],
         defaultEffort: resolved.defaultEffort,
       };
     }
-    return alias === undefined ? undefined : this.agent.kimiConfig?.models?.[alias];
+    return alias === undefined
+      ? undefined
+      : this.agent.kimiConfig?.models?.[alias];
   }
 
   get profileName(): string | undefined {
@@ -279,7 +301,9 @@ export class ConfigState {
   }
 
   get modelCapabilities(): ModelCapability {
-    return this.tryResolvedProviderConfig()?.modelCapabilities ?? UNKNOWN_CAPABILITY;
+    return (
+      this.tryResolvedProviderConfig()?.modelCapabilities ?? UNKNOWN_CAPABILITY
+    );
   }
 
   get maxOutputSize(): number | undefined {
@@ -299,7 +323,9 @@ export class ConfigState {
     alias: string | undefined,
   ): ResolvedRuntimeProvider | undefined {
     try {
-      return alias === undefined ? undefined : this.agent.modelProvider?.resolveProviderConfig(alias);
+      return alias === undefined
+        ? undefined
+        : this.agent.modelProvider?.resolveProviderConfig(alias);
     } catch {
       return undefined;
     }

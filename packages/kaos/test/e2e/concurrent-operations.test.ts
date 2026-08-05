@@ -1,14 +1,14 @@
-import { mkdtemp, realpath, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'pathe';
+import { mkdtemp, realpath, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "pathe";
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { LocalKaos } from '#/local';
+import { LocalKaos } from "#/local";
 
 // ── Tests ─────────────────────────────────────────────────────────────
 
-describe('e2e: concurrent operations', () => {
+describe("e2e: concurrent operations", () => {
   let kaos: LocalKaos;
   let tempDir: string;
   let originalCwd: string;
@@ -16,7 +16,7 @@ describe('e2e: concurrent operations', () => {
   beforeEach(async () => {
     kaos = await LocalKaos.create();
     originalCwd = process.cwd();
-    tempDir = await realpath(await mkdtemp(join(tmpdir(), 'kaos-concurrent-')));
+    tempDir = await realpath(await mkdtemp(join(tmpdir(), "kaos-concurrent-")));
     process.chdir(tempDir);
   });
 
@@ -25,24 +25,27 @@ describe('e2e: concurrent operations', () => {
     await rm(tempDir, { recursive: true, force: true });
   });
 
-  describe('concurrent reads and writes on different files', () => {
-    it('10 concurrent writeText + readText on separate files → all consistent', async () => {
+  describe("concurrent reads and writes on different files", () => {
+    it("10 concurrent writeText + readText on separate files → all consistent", async () => {
       const count = 10;
-      const promises = Array.from({ length: count }, async (_, i): Promise<void> => {
-        const filePath = join(tempDir, `file-${i}.txt`);
-        const content = `content-${i}-${'data'.repeat(100)}`;
-        await kaos.writeText(filePath, content);
-        const readBack = await kaos.readText(filePath);
-        expect(readBack).toBe(content);
-      });
+      const promises = Array.from(
+        { length: count },
+        async (_, i): Promise<void> => {
+          const filePath = join(tempDir, `file-${i}.txt`);
+          const content = `content-${i}-${"data".repeat(100)}`;
+          await kaos.writeText(filePath, content);
+          const readBack = await kaos.readText(filePath);
+          expect(readBack).toBe(content);
+        },
+      );
 
       await Promise.all(promises);
     });
   });
 
-  describe('concurrent writes to the same file', () => {
-    it('sequential writes to same file → last write wins', async () => {
-      const filePath = join(tempDir, 'shared.txt');
+  describe("concurrent writes to the same file", () => {
+    it("sequential writes to same file → last write wins", async () => {
+      const filePath = join(tempDir, "shared.txt");
       const writes = 20;
 
       // Write sequentially to guarantee ordering
@@ -55,21 +58,21 @@ describe('e2e: concurrent operations', () => {
       expect(content).toBe(`version-${writes - 1}`);
     });
 
-    it('concurrent appends to same file → all data present', async () => {
-      const filePath = join(tempDir, 'append-target.txt');
-      await kaos.writeText(filePath, '');
+    it("concurrent appends to same file → all data present", async () => {
+      const filePath = join(tempDir, "append-target.txt");
+      await kaos.writeText(filePath, "");
 
       const count = 20;
       const promises: Promise<number>[] = [];
 
       for (let i = 0; i < count; i++) {
-        promises.push(kaos.writeText(filePath, `line-${i}\n`, { mode: 'a' }));
+        promises.push(kaos.writeText(filePath, `line-${i}\n`, { mode: "a" }));
       }
 
       await Promise.all(promises);
 
       const content = await kaos.readText(filePath);
-      const lines = content.trimEnd().split('\n');
+      const lines = content.trimEnd().split("\n");
 
       // All lines should be present (order may vary due to concurrency)
       expect(lines).toHaveLength(count);
@@ -80,21 +83,24 @@ describe('e2e: concurrent operations', () => {
     });
   });
 
-  describe('concurrent exec of multiple subprocesses', () => {
-    it('5 concurrent node processes → all complete independently', async () => {
+  describe("concurrent exec of multiple subprocesses", () => {
+    it("5 concurrent node processes → all complete independently", async () => {
       const count = 5;
       const promises = Array.from(
         { length: count },
-        async (_, i): Promise<{ index: number; exitCode: number; stdout: string }> => {
+        async (
+          _,
+          i,
+        ): Promise<{ index: number; exitCode: number; stdout: string }> => {
           const code = `process.stdout.write('proc-${i}');`;
-          const proc = await kaos.exec('node', '-e', code);
+          const proc = await kaos.exec("node", "-e", code);
           const exitCode = await proc.wait();
 
           const chunks: Buffer[] = [];
           for await (const chunk of proc.stdout) {
             chunks.push(Buffer.from(chunk as Buffer));
           }
-          const stdout = Buffer.concat(chunks).toString('utf-8');
+          const stdout = Buffer.concat(chunks).toString("utf-8");
 
           return { index: i, exitCode, stdout };
         },
@@ -108,10 +114,10 @@ describe('e2e: concurrent operations', () => {
       }
     });
 
-    it('concurrent processes with different exit codes', async () => {
+    it("concurrent processes with different exit codes", async () => {
       const exitCodes = [0, 1, 2, 42, 0];
       const promises = exitCodes.map(async (code) => {
-        const proc = await kaos.exec('node', '-e', `process.exit(${code})`);
+        const proc = await kaos.exec("node", "-e", `process.exit(${code})`);
         return proc.wait();
       });
 
@@ -120,8 +126,8 @@ describe('e2e: concurrent operations', () => {
     });
   });
 
-  describe('concurrent iterdir + file creation', () => {
-    it('iterdir does not crash when files are being created concurrently', async () => {
+  describe("concurrent iterdir + file creation", () => {
+    it("iterdir does not crash when files are being created concurrently", async () => {
       // Pre-create some files
       for (let i = 0; i < 5; i++) {
         await kaos.writeText(join(tempDir, `existing-${i}.txt`), `data-${i}`);
@@ -150,41 +156,45 @@ describe('e2e: concurrent operations', () => {
     });
   });
 
-  describe('concurrent glob operations', () => {
-    it('multiple concurrent globs return correct results', async () => {
+  describe("concurrent glob operations", () => {
+    it("multiple concurrent globs return correct results", async () => {
       // Create files with different extensions
-      await kaos.writeText(join(tempDir, 'a.ts'), 'ts');
-      await kaos.writeText(join(tempDir, 'b.ts'), 'ts');
-      await kaos.writeText(join(tempDir, 'c.js'), 'js');
-      await kaos.writeText(join(tempDir, 'd.js'), 'js');
-      await kaos.writeText(join(tempDir, 'e.json'), 'json');
+      await kaos.writeText(join(tempDir, "a.ts"), "ts");
+      await kaos.writeText(join(tempDir, "b.ts"), "ts");
+      await kaos.writeText(join(tempDir, "c.js"), "js");
+      await kaos.writeText(join(tempDir, "d.js"), "js");
+      await kaos.writeText(join(tempDir, "e.json"), "json");
 
       const [tsFiles, jsFiles, jsonFiles] = await Promise.all([
-        collectGlob(kaos, tempDir, '*.ts'),
-        collectGlob(kaos, tempDir, '*.js'),
-        collectGlob(kaos, tempDir, '*.json'),
+        collectGlob(kaos, tempDir, "*.ts"),
+        collectGlob(kaos, tempDir, "*.js"),
+        collectGlob(kaos, tempDir, "*.json"),
       ]);
 
-      expect(tsFiles.toSorted()).toEqual([join(tempDir, 'a.ts'), join(tempDir, 'b.ts')].toSorted());
-      expect(jsFiles.toSorted()).toEqual([join(tempDir, 'c.js'), join(tempDir, 'd.js')].toSorted());
-      expect(jsonFiles).toEqual([join(tempDir, 'e.json')]);
+      expect(tsFiles.toSorted()).toEqual(
+        [join(tempDir, "a.ts"), join(tempDir, "b.ts")].toSorted(),
+      );
+      expect(jsFiles.toSorted()).toEqual(
+        [join(tempDir, "c.js"), join(tempDir, "d.js")].toSorted(),
+      );
+      expect(jsonFiles).toEqual([join(tempDir, "e.json")]);
     });
 
-    it('10 concurrent glob(*.txt) on same directory → consistent results', async () => {
+    it("10 concurrent glob(*.txt) on same directory → consistent results", async () => {
       // Use a flat glob pattern to avoid ** duplication behavior
-      await kaos.writeText(join(tempDir, 'a.txt'), 'a');
-      await kaos.writeText(join(tempDir, 'b.txt'), 'b');
-      await kaos.writeText(join(tempDir, 'c.txt'), 'c');
+      await kaos.writeText(join(tempDir, "a.txt"), "a");
+      await kaos.writeText(join(tempDir, "b.txt"), "b");
+      await kaos.writeText(join(tempDir, "c.txt"), "c");
 
       const expected = [
-        join(tempDir, 'a.txt'),
-        join(tempDir, 'b.txt'),
-        join(tempDir, 'c.txt'),
+        join(tempDir, "a.txt"),
+        join(tempDir, "b.txt"),
+        join(tempDir, "c.txt"),
       ].toSorted();
 
       const promises: Promise<string[]>[] = [];
       for (let i = 0; i < 10; i++) {
-        promises.push(collectGlob(kaos, tempDir, '*.txt'));
+        promises.push(collectGlob(kaos, tempDir, "*.txt"));
       }
 
       const results = await Promise.all(promises);
@@ -195,20 +205,22 @@ describe('e2e: concurrent operations', () => {
     });
   });
 
-  describe('concurrent mixed operations', () => {
-    it('read + write + stat + iterdir concurrently on same directory', async () => {
-      const filePath = join(tempDir, 'mixed.txt');
-      await kaos.writeText(filePath, 'initial');
+  describe("concurrent mixed operations", () => {
+    it("read + write + stat + iterdir concurrently on same directory", async () => {
+      const filePath = join(tempDir, "mixed.txt");
+      await kaos.writeText(filePath, "initial");
 
-      const [readResult, _writeResult, statResult, entries] = await Promise.all([
-        kaos.readText(filePath),
-        kaos.writeText(join(tempDir, 'another.txt'), 'other'),
-        kaos.stat(filePath),
-        collectIterdir(kaos, tempDir),
-      ]);
+      const [readResult, _writeResult, statResult, entries] = await Promise.all(
+        [
+          kaos.readText(filePath),
+          kaos.writeText(join(tempDir, "another.txt"), "other"),
+          kaos.stat(filePath),
+          collectIterdir(kaos, tempDir),
+        ],
+      );
 
       // readResult might be 'initial' (read before write) or a valid string
-      expect(typeof readResult).toBe('string');
+      expect(typeof readResult).toBe("string");
       expect(statResult.stSize).toBeGreaterThan(0);
       expect(entries.length).toBeGreaterThanOrEqual(1);
     });
@@ -217,7 +229,11 @@ describe('e2e: concurrent operations', () => {
 
 // ── Helper functions ──────────────────────────────────────────────────
 
-async function collectGlob(kaos: LocalKaos, path: string, pattern: string): Promise<string[]> {
+async function collectGlob(
+  kaos: LocalKaos,
+  path: string,
+  pattern: string,
+): Promise<string[]> {
   const results: string[] = [];
   for await (const entry of kaos.glob(path, pattern)) {
     results.push(entry);
@@ -225,7 +241,10 @@ async function collectGlob(kaos: LocalKaos, path: string, pattern: string): Prom
   return results;
 }
 
-async function collectIterdir(kaos: LocalKaos, path: string): Promise<string[]> {
+async function collectIterdir(
+  kaos: LocalKaos,
+  path: string,
+): Promise<string[]> {
   const results: string[] = [];
   for await (const entry of kaos.iterdir(path)) {
     results.push(entry);

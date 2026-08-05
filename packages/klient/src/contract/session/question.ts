@@ -4,10 +4,10 @@
  * representation; the snake_case protocol shape is adapted at the edge).
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { noResult } from '../helpers.js';
-import type { ServiceContract } from '../types.js';
+import { noResult } from "../helpers.js";
+import type { ServiceContract } from "../types.js";
 
 export const questionOptionSchema = z.object({
   label: z.string(),
@@ -32,7 +32,7 @@ export const questionAnswersSchema = z.record(
 
 export const questionResponseSchema = z.object({
   answers: questionAnswersSchema,
-  method: z.enum(['enter', 'space', 'number_key']).optional(),
+  method: z.enum(["enter", "space", "number_key"]).optional(),
 });
 
 /** `QuestionResult = null | QuestionAnswers | QuestionResponse`. */
@@ -51,6 +51,9 @@ export const questionRequestSchema = z.object({
 
 export const sessionQuestionContract = {
   listPending: { input: z.tuple([]), output: z.array(questionRequestSchema) },
-  answer: { input: z.tuple([z.string(), questionResultSchema]), output: noResult },
+  answer: {
+    input: z.tuple([z.string(), questionResultSchema]),
+    output: noResult,
+  },
   dismiss: { input: z.tuple([z.string()]), output: noResult },
 } satisfies ServiceContract;

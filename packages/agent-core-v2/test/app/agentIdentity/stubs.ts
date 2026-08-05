@@ -10,12 +10,12 @@
  * does not derive a slug, so a suite can exercise one face in isolation.
  */
 
-import type { ServiceRegistration } from '#/_base/di/test';
+import type { ServiceRegistration } from "#/_base/di/test";
 import {
   buildAgentIdentitySnapshot,
   IAgentIdentity,
   type AgentIdentitySnapshot,
-} from '#/app/agentIdentity/agentIdentity';
+} from "#/app/agentIdentity/agentIdentity";
 
 export interface AgentIdentityStubOverrides {
   readonly displayName?: string;
@@ -23,7 +23,9 @@ export interface AgentIdentityStubOverrides {
   readonly hostRequestHeaders?: Readonly<Record<string, string>>;
 }
 
-export function stubAgentIdentity(overrides: AgentIdentityStubOverrides = {}): IAgentIdentity {
+export function stubAgentIdentity(
+  overrides: AgentIdentityStubOverrides = {},
+): IAgentIdentity {
   const products = buildAgentIdentitySnapshot({
     slug: overrides.slug,
     hostRequestHeaders: overrides.hostRequestHeaders ?? {},
@@ -46,7 +48,9 @@ export function registerAgentIdentityStub(
   reg.defineInstance(IAgentIdentity, stubAgentIdentity(overrides));
 }
 
-export function deferredAgentIdentityStub(overrides: AgentIdentityStubOverrides = {}): {
+export function deferredAgentIdentityStub(
+  overrides: AgentIdentityStubOverrides = {},
+): {
   identity: IAgentIdentity;
   freeze: () => void;
 } {
@@ -60,7 +64,8 @@ export function deferredAgentIdentityStub(overrides: AgentIdentityStubOverrides 
       _serviceBrand: undefined,
       resolved: () => frozen,
       current: () => {
-        if (snapshot === undefined) throw new Error('identity read before the test froze it');
+        if (snapshot === undefined)
+          throw new Error("identity read before the test froze it");
         return snapshot;
       },
     },

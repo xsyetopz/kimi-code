@@ -9,11 +9,14 @@
  * journal and model state through separate services.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
-import type { Hooks } from '#/hooks';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
+import type { Hooks } from "#/hooks";
 
-import type { DeepReadonly, ModelDef } from './model';
-import type { Op } from './op';
+import type { DeepReadonly, ModelDef } from "./model";
+import type { Op } from "./op";
 
 export type WireHooks = {
   readonly onDidRestore: Record<string, never>;
@@ -33,4 +36,4 @@ export interface IWireService {
 }
 
 export const IWireService: ServiceIdentifier<IWireService> =
-  createDecorator<IWireService>('wireService');
+  createDecorator<IWireService>("wireService");

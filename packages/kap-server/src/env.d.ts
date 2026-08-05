@@ -3,7 +3,7 @@
 // those transitive imports. Vite/Vitest handles `?raw` natively; tsdown uses the
 // shared `raw-text-plugin` for the same import shape.
 
-declare module '*?raw' {
+declare module "*?raw" {
   const content: string;
   export default content;
 }

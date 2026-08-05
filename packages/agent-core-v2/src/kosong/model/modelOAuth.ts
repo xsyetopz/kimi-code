@@ -9,9 +9,12 @@
  * contract.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
 
-import type { OAuthRef } from '../provider/provider';
+import type { OAuthRef } from "../provider/provider";
 
 export interface IModelOAuthTokens {
   readonly _serviceBrand: undefined;
@@ -25,4 +28,4 @@ export interface IModelOAuthTokens {
 }
 
 export const IModelOAuthTokens: ServiceIdentifier<IModelOAuthTokens> =
-  createDecorator<IModelOAuthTokens>('modelOAuthTokens');
+  createDecorator<IModelOAuthTokens>("modelOAuthTokens");

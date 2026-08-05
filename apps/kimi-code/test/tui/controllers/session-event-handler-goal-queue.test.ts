@@ -1,22 +1,33 @@
-import { describe, expect, it, beforeEach, vi } from 'vitest';
+import { describe, expect, it, beforeEach, vi } from "vitest";
 
-import { SessionEventHandler } from '#/tui/controllers/session-event-handler';
-import { getBuiltInPalette } from '#/tui/theme';
-import { readGoalQueue, removeGoalQueueItem, restoreGoalQueueItem } from '#/tui/goal-queue-store';
+import { SessionEventHandler } from "#/tui/controllers/session-event-handler";
+import { getBuiltInPalette } from "#/tui/theme";
+import {
+  readGoalQueue,
+  removeGoalQueueItem,
+  restoreGoalQueueItem,
+} from "#/tui/goal-queue-store";
 
-vi.mock('#/tui/goal-queue-store', () => ({
+vi.mock("#/tui/goal-queue-store", () => ({
   readGoalQueue: vi.fn(async () => ({
-    goals: [{ id: 'q1', objective: 'Ship queued goal', createdAt: '', updatedAt: '' }],
+    goals: [
+      { id: "q1", objective: "Ship queued goal", createdAt: "", updatedAt: "" },
+    ],
   })),
   removeGoalQueueItem: vi.fn(async () => ({ goals: [] })),
   restoreGoalQueueItem: vi.fn(async () => ({
-    goals: [{ id: 'q1', objective: 'Ship queued goal', createdAt: '', updatedAt: '' }],
+    goals: [
+      { id: "q1", objective: "Ship queued goal", createdAt: "", updatedAt: "" },
+    ],
   })),
 }));
 
-function fakeGoalSnapshot(objective: string, status: 'active' | 'blocked' | 'paused' | 'complete') {
+function fakeGoalSnapshot(
+  objective: string,
+  status: "active" | "blocked" | "paused" | "complete",
+) {
   return {
-    goalId: 'g1',
+    goalId: "g1",
     objective,
     status,
     turnsUsed: 1,
@@ -40,22 +51,24 @@ function fakeGoalSnapshot(objective: string, status: 'active' | 'blocked' | 'pau
 function makeHost(options: { createGoalRejects?: boolean } = {}) {
   const session = {
     createGoal: vi.fn(async () => {
-      if (options.createGoalRejects === true) throw new Error('create failed');
-      return fakeGoalSnapshot('Ship queued goal', 'active');
+      if (options.createGoalRejects === true) throw new Error("create failed");
+      return fakeGoalSnapshot("Ship queued goal", "active");
     }),
-    cancelGoal: vi.fn(async () => fakeGoalSnapshot('Ship queued goal', 'active')),
+    cancelGoal: vi.fn(async () =>
+      fakeGoalSnapshot("Ship queued goal", "active"),
+    ),
   };
   const host = {
     state: {
       appState: {
-        sessionId: 's1',
-        streamingPhase: 'waiting',
-        model: 'kimi-model',
-        permissionMode: 'auto',
+        sessionId: "s1",
+        streamingPhase: "waiting",
+        model: "kimi-model",
+        permissionMode: "auto",
       },
       queuedMessages: [],
       queuedMessageDispatchPending: false,
-      theme: { palette: getBuiltInPalette('dark') },
+      theme: { palette: getBuiltInPalette("dark") },
       toolOutputExpanded: false,
       todoPanel: { getTodos: vi.fn(() => []) },
       transcriptContainer: { addChild: vi.fn() },
@@ -100,12 +113,15 @@ function makeHost(options: { createGoalRejects?: boolean } = {}) {
     Object.assign(host.state.appState, patch);
   });
   host.streamingUI.finalizeTurn.mockImplementation(() => {
-    host.setAppState({ streamingPhase: 'idle' });
+    host.setAppState({ streamingPhase: "idle" });
   });
   return { host: host as any, session };
 }
 
-function sendQueuedViaHost(host: ReturnType<typeof makeHost>['host'], session: unknown) {
+function sendQueuedViaHost(
+  host: ReturnType<typeof makeHost>["host"],
+  session: unknown,
+) {
   return (item: unknown) => {
     host.sendQueuedMessage(session as never, item as never);
   };
@@ -113,13 +129,13 @@ function sendQueuedViaHost(host: ReturnType<typeof makeHost>['host'], session: u
 
 function completionEvent() {
   return {
-    type: 'goal.updated',
-    sessionId: 's1',
-    agentId: 'main',
-    snapshot: fakeGoalSnapshot('Current goal', 'complete'),
+    type: "goal.updated",
+    sessionId: "s1",
+    agentId: "main",
+    snapshot: fakeGoalSnapshot("Current goal", "complete"),
     change: {
-      kind: 'completion',
-      status: 'complete',
+      kind: "completion",
+      status: "complete",
       stats: { turnsUsed: 1, tokensUsed: 10, wallClockMs: 100 },
     },
   } as const;
@@ -127,30 +143,30 @@ function completionEvent() {
 
 function clearedEvent() {
   return {
-    type: 'goal.updated',
-    sessionId: 's1',
-    agentId: 'main',
+    type: "goal.updated",
+    sessionId: "s1",
+    agentId: "main",
     snapshot: null,
   } as const;
 }
 
 function turnEndedEvent() {
   return {
-    type: 'turn.ended',
-    sessionId: 's1',
-    agentId: 'main',
+    type: "turn.ended",
+    sessionId: "s1",
+    agentId: "main",
     turnId: 1,
-    reason: 'completed',
+    reason: "completed",
   } as const;
 }
 
 function compactionCompletedEvent() {
   return {
-    type: 'compaction.completed',
-    sessionId: 's1',
-    agentId: 'main',
+    type: "compaction.completed",
+    sessionId: "s1",
+    agentId: "main",
     result: {
-      summary: 'summary',
+      summary: "summary",
       tokensBefore: 100,
       tokensAfter: 10,
       compactedCount: 1,
@@ -160,27 +176,33 @@ function compactionCompletedEvent() {
 
 function modelBlockedEvent() {
   return {
-    type: 'goal.updated',
-    sessionId: 's1',
-    agentId: 'main',
-    snapshot: fakeGoalSnapshot('Blocked goal', 'blocked'),
-    change: { kind: 'lifecycle', status: 'blocked' },
+    type: "goal.updated",
+    sessionId: "s1",
+    agentId: "main",
+    snapshot: fakeGoalSnapshot("Blocked goal", "blocked"),
+    change: { kind: "lifecycle", status: "blocked" },
   } as const;
 }
 
-function addedTranscriptText(host: ReturnType<typeof makeHost>['host']): string {
-  const component = host.state.transcriptContainer.addChild.mock.calls.at(-1)?.[0];
-  return component.render(80).join('\n').replaceAll(/\[[0-9;]*m/g, '');
+function addedTranscriptText(
+  host: ReturnType<typeof makeHost>["host"],
+): string {
+  const component =
+    host.state.transcriptContainer.addChild.mock.calls.at(-1)?.[0];
+  return component
+    .render(80)
+    .join("\n")
+    .replaceAll(/\[[0-9;]*m/g, "");
 }
 
-describe('SessionEventHandler goal queue promotion', () => {
+describe("SessionEventHandler goal queue promotion", () => {
   beforeEach(() => {
     vi.mocked(readGoalQueue).mockClear();
     vi.mocked(removeGoalQueueItem).mockClear();
     vi.mocked(restoreGoalQueueItem).mockClear();
   });
 
-  it('starts the next queued goal after the completion turn ends', async () => {
+  it("starts the next queued goal after the completion turn ends", async () => {
     const { host, session } = makeHost();
     const handler = new SessionEventHandler(host);
 
@@ -195,40 +217,46 @@ describe('SessionEventHandler goal queue promotion', () => {
 
     await vi.waitFor(() => {
       expect(session.createGoal).toHaveBeenCalledWith({
-        objective: 'Ship queued goal',
+        objective: "Ship queued goal",
         replace: false,
       });
     });
-    expect(removeGoalQueueItem).toHaveBeenCalledWith(session, { goalId: 'q1' });
+    expect(removeGoalQueueItem).toHaveBeenCalledWith(session, { goalId: "q1" });
     expect(host.sendQueuedMessage).toHaveBeenCalledWith(session, {
-      text: 'Ship queued goal',
+      text: "Ship queued goal",
     });
     expect(host.sendNormalUserInput).not.toHaveBeenCalled();
   });
 
-  it('waits for queued user input to drain before promoting the next queued goal', async () => {
+  it("waits for queued user input to drain before promoting the next queued goal", async () => {
     const { host, session } = makeHost();
-    host.state.queuedMessages = [{ text: 'queued user turn' }];
+    host.state.queuedMessages = [{ text: "queued user turn" }];
     host.setAppState.mockImplementation((patch: Record<string, unknown>) => {
       Object.assign(host.state.appState, patch);
     });
-    host.shiftQueuedMessage.mockImplementation(() => host.state.queuedMessages.shift());
-    host.streamingUI.finalizeTurn.mockImplementation((sendQueued: (item: unknown) => void) => {
-      const next = host.shiftQueuedMessage();
-      if (next !== undefined) {
-        host.setAppState({ streamingPhase: 'idle' });
-        setTimeout(() => {
-          sendQueued(next);
-        }, 0);
-        return;
-      }
-      host.setAppState({ streamingPhase: 'idle' });
-    });
-    host.sendQueuedMessage.mockImplementation((_session: unknown, item: { text: string }) => {
-      if (item.text === 'queued user turn') {
-        host.setAppState({ streamingPhase: 'waiting' });
-      }
-    });
+    host.shiftQueuedMessage.mockImplementation(() =>
+      host.state.queuedMessages.shift(),
+    );
+    host.streamingUI.finalizeTurn.mockImplementation(
+      (sendQueued: (item: unknown) => void) => {
+        const next = host.shiftQueuedMessage();
+        if (next !== undefined) {
+          host.setAppState({ streamingPhase: "idle" });
+          setTimeout(() => {
+            sendQueued(next);
+          }, 0);
+          return;
+        }
+        host.setAppState({ streamingPhase: "idle" });
+      },
+    );
+    host.sendQueuedMessage.mockImplementation(
+      (_session: unknown, item: { text: string }) => {
+        if (item.text === "queued user turn") {
+          host.setAppState({ streamingPhase: "waiting" });
+        }
+      },
+    );
     const handler = new SessionEventHandler(host);
     const sendQueued = sendQueuedViaHost(host, session);
 
@@ -237,7 +265,9 @@ describe('SessionEventHandler goal queue promotion', () => {
     handler.handleEvent(turnEndedEvent(), sendQueued);
 
     await vi.waitFor(() => {
-      expect(host.sendQueuedMessage).toHaveBeenCalledWith(session, { text: 'queued user turn' });
+      expect(host.sendQueuedMessage).toHaveBeenCalledWith(session, {
+        text: "queued user turn",
+      });
     });
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(session.createGoal).not.toHaveBeenCalled();
@@ -246,16 +276,18 @@ describe('SessionEventHandler goal queue promotion', () => {
 
     await vi.waitFor(() => {
       expect(session.createGoal).toHaveBeenCalledWith({
-        objective: 'Ship queued goal',
+        objective: "Ship queued goal",
         replace: false,
       });
     });
-    expect(host.sendQueuedMessage).toHaveBeenLastCalledWith(session, { text: 'Ship queued goal' });
+    expect(host.sendQueuedMessage).toHaveBeenLastCalledWith(session, {
+      text: "Ship queued goal",
+    });
   });
 
-  it('defers queued-goal promotion while a queued message is mid-dispatch', async () => {
+  it("defers queued-goal promotion while a queued message is mid-dispatch", async () => {
     const { host, session } = makeHost();
-    host.state.appState.streamingPhase = 'idle';
+    host.state.appState.streamingPhase = "idle";
     host.state.queuedMessages = [];
     // The queue looks empty and the phase is idle, but a shifted queued message
     // is still awaiting its deferred send. Promotion must not jump ahead of it.
@@ -272,35 +304,41 @@ describe('SessionEventHandler goal queue promotion', () => {
     handler.retryQueuedGoalPromotion();
     await vi.waitFor(() => {
       expect(session.createGoal).toHaveBeenCalledWith({
-        objective: 'Ship queued goal',
+        objective: "Ship queued goal",
         replace: false,
       });
     });
   });
 
-  it('waits for a queued user input drained after compaction before promoting the next queued goal', async () => {
+  it("waits for a queued user input drained after compaction before promoting the next queued goal", async () => {
     const { host, session } = makeHost();
     host.state.appState.isCompacting = true;
-    host.state.queuedMessages = [{ text: 'queued user turn' }];
-    host.shiftQueuedMessage.mockImplementation(() => host.state.queuedMessages.shift());
+    host.state.queuedMessages = [{ text: "queued user turn" }];
+    host.shiftQueuedMessage.mockImplementation(() =>
+      host.state.queuedMessages.shift(),
+    );
     const handler = new SessionEventHandler(host);
     host.setAppState.mockImplementation((patch: Record<string, unknown>) => {
-      const busyChanged = 'streamingPhase' in patch || 'isCompacting' in patch;
+      const busyChanged = "streamingPhase" in patch || "isCompacting" in patch;
       Object.assign(host.state.appState, patch);
       if (busyChanged) handler.retryQueuedGoalPromotion();
     });
-    host.sendQueuedMessage.mockImplementation((_session: unknown, item: { text: string }) => {
-      if (item.text === 'queued user turn') {
-        host.setAppState({ streamingPhase: 'waiting' });
-      }
-    });
+    host.sendQueuedMessage.mockImplementation(
+      (_session: unknown, item: { text: string }) => {
+        if (item.text === "queued user turn") {
+          host.setAppState({ streamingPhase: "waiting" });
+        }
+      },
+    );
     const sendQueued = sendQueuedViaHost(host, session);
 
     handler.requestQueuedGoalPromotion();
     handler.handleEvent(compactionCompletedEvent(), sendQueued);
 
     await vi.waitFor(() => {
-      expect(host.sendQueuedMessage).toHaveBeenCalledWith(session, { text: 'queued user turn' });
+      expect(host.sendQueuedMessage).toHaveBeenCalledWith(session, {
+        text: "queued user turn",
+      });
     });
     expect(session.createGoal).not.toHaveBeenCalled();
 
@@ -308,22 +346,27 @@ describe('SessionEventHandler goal queue promotion', () => {
 
     await vi.waitFor(() => {
       expect(session.createGoal).toHaveBeenCalledWith({
-        objective: 'Ship queued goal',
+        objective: "Ship queued goal",
         replace: false,
       });
     });
-    const sendQueuedCalls = host.sendQueuedMessage.mock.calls as Array<[unknown, { text?: string }]>;
+    const sendQueuedCalls = host.sendQueuedMessage.mock.calls as Array<
+      [unknown, { text?: string }]
+    >;
     const userMessageIndex = sendQueuedCalls.findIndex(
-      ([, item]) => item.text === 'queued user turn',
+      ([, item]) => item.text === "queued user turn",
     );
     expect(userMessageIndex).toBeGreaterThanOrEqual(0);
-    expect(host.sendQueuedMessage).toHaveBeenLastCalledWith(session, { text: 'Ship queued goal' });
-    const userMessageOrder = host.sendQueuedMessage.mock.invocationCallOrder[userMessageIndex]!;
+    expect(host.sendQueuedMessage).toHaveBeenLastCalledWith(session, {
+      text: "Ship queued goal",
+    });
+    const userMessageOrder =
+      host.sendQueuedMessage.mock.invocationCallOrder[userMessageIndex]!;
     const goalCreateOrder = session.createGoal.mock.invocationCallOrder[0]!;
     expect(userMessageOrder).toBeLessThan(goalCreateOrder);
   });
 
-  it('leaves the queued goal in place when the next goal cannot start', async () => {
+  it("leaves the queued goal in place when the next goal cannot start", async () => {
     const { host, session } = makeHost({ createGoalRejects: true });
     const handler = new SessionEventHandler(host);
 
@@ -332,7 +375,9 @@ describe('SessionEventHandler goal queue promotion', () => {
     handler.handleEvent(turnEndedEvent(), vi.fn());
 
     await vi.waitFor(() => {
-      expect(host.showError).toHaveBeenCalledWith(expect.stringContaining('create failed'));
+      expect(host.showError).toHaveBeenCalledWith(
+        expect.stringContaining("create failed"),
+      );
     });
     expect(removeGoalQueueItem).not.toHaveBeenCalled();
     expect(host.sendNormalUserInput).not.toHaveBeenCalled();
@@ -340,9 +385,9 @@ describe('SessionEventHandler goal queue promotion', () => {
     expect(session.createGoal).toHaveBeenCalledOnce();
   });
 
-  it('retries the queued goal on a later idle event after startup fails', async () => {
+  it("retries the queued goal on a later idle event after startup fails", async () => {
     const { host, session } = makeHost();
-    session.createGoal.mockRejectedValueOnce(new Error('create failed'));
+    session.createGoal.mockRejectedValueOnce(new Error("create failed"));
     const handler = new SessionEventHandler(host);
     const sendQueued = sendQueuedViaHost(host, session);
 
@@ -351,7 +396,9 @@ describe('SessionEventHandler goal queue promotion', () => {
     handler.handleEvent(turnEndedEvent(), sendQueued);
 
     await vi.waitFor(() => {
-      expect(host.showError).toHaveBeenCalledWith(expect.stringContaining('create failed'));
+      expect(host.showError).toHaveBeenCalledWith(
+        expect.stringContaining("create failed"),
+      );
     });
     expect(removeGoalQueueItem).not.toHaveBeenCalled();
     expect(host.sendQueuedMessage).not.toHaveBeenCalled();
@@ -361,12 +408,16 @@ describe('SessionEventHandler goal queue promotion', () => {
     await vi.waitFor(() => {
       expect(session.createGoal).toHaveBeenCalledTimes(2);
     });
-    expect(removeGoalQueueItem).toHaveBeenCalledWith(session, { goalId: 'q1' });
-    expect(host.sendQueuedMessage).toHaveBeenCalledWith(session, { text: 'Ship queued goal' });
+    expect(removeGoalQueueItem).toHaveBeenCalledWith(session, { goalId: "q1" });
+    expect(host.sendQueuedMessage).toHaveBeenCalledWith(session, {
+      text: "Ship queued goal",
+    });
   });
 
-  it('does not send the queued objective when removal fails after goal creation', async () => {
-    vi.mocked(removeGoalQueueItem).mockRejectedValueOnce(new Error('remove failed'));
+  it("does not send the queued objective when removal fails after goal creation", async () => {
+    vi.mocked(removeGoalQueueItem).mockRejectedValueOnce(
+      new Error("remove failed"),
+    );
     const { host, session } = makeHost();
     const handler = new SessionEventHandler(host);
 
@@ -375,10 +426,12 @@ describe('SessionEventHandler goal queue promotion', () => {
     handler.handleEvent(turnEndedEvent(), vi.fn());
 
     await vi.waitFor(() => {
-      expect(host.showError).toHaveBeenCalledWith(expect.stringContaining('could not be removed'));
+      expect(host.showError).toHaveBeenCalledWith(
+        expect.stringContaining("could not be removed"),
+      );
     });
     expect(session.createGoal).toHaveBeenCalledWith({
-      objective: 'Ship queued goal',
+      objective: "Ship queued goal",
       replace: false,
     });
     expect(session.cancelGoal).toHaveBeenCalledOnce();
@@ -387,7 +440,7 @@ describe('SessionEventHandler goal queue promotion', () => {
     expect(host.sendQueuedMessage).not.toHaveBeenCalled();
   });
 
-  it('restores the queued goal and cancels the started goal when the session changes before send', async () => {
+  it("restores the queued goal and cancels the started goal when the session changes before send", async () => {
     const { host, session } = makeHost();
     vi.mocked(removeGoalQueueItem).mockImplementationOnce(async () => {
       host.session = undefined;
@@ -401,20 +454,20 @@ describe('SessionEventHandler goal queue promotion', () => {
 
     await vi.waitFor(() => {
       expect(restoreGoalQueueItem).toHaveBeenCalledWith(session, {
-        id: 'q1',
-        objective: 'Ship queued goal',
-        createdAt: '',
-        updatedAt: '',
+        id: "q1",
+        objective: "Ship queued goal",
+        createdAt: "",
+        updatedAt: "",
       });
     });
     expect(session.cancelGoal).toHaveBeenCalledOnce();
     expect(host.sendQueuedMessage).not.toHaveBeenCalled();
   });
 
-  it('restores and cancels when the host becomes busy before sending the promoted goal', async () => {
+  it("restores and cancels when the host becomes busy before sending the promoted goal", async () => {
     const { host, session } = makeHost();
     vi.mocked(removeGoalQueueItem).mockImplementationOnce(async () => {
-      host.setAppState({ streamingPhase: 'waiting' });
+      host.setAppState({ streamingPhase: "waiting" });
       return { goals: [] };
     });
     const handler = new SessionEventHandler(host);
@@ -425,39 +478,43 @@ describe('SessionEventHandler goal queue promotion', () => {
 
     await vi.waitFor(() => {
       expect(restoreGoalQueueItem).toHaveBeenCalledWith(session, {
-        id: 'q1',
-        objective: 'Ship queued goal',
-        createdAt: '',
-        updatedAt: '',
+        id: "q1",
+        objective: "Ship queued goal",
+        createdAt: "",
+        updatedAt: "",
       });
     });
     expect(session.cancelGoal).toHaveBeenCalledOnce();
     expect(host.sendQueuedMessage).not.toHaveBeenCalled();
   });
 
-  it('shows a notice when a blocked goal has queued goals', async () => {
+  it("shows a notice when a blocked goal has queued goals", async () => {
     const { host, session } = makeHost();
     const handler = new SessionEventHandler(host);
     const event = {
-      type: 'goal.updated',
-      sessionId: 's1',
-      agentId: 'main',
-      snapshot: fakeGoalSnapshot('Blocked goal', 'blocked'),
-      change: { kind: 'lifecycle', status: 'blocked', reason: 'waiting for access' },
+      type: "goal.updated",
+      sessionId: "s1",
+      agentId: "main",
+      snapshot: fakeGoalSnapshot("Blocked goal", "blocked"),
+      change: {
+        kind: "lifecycle",
+        status: "blocked",
+        reason: "waiting for access",
+      },
     } as const;
 
     handler.handleEvent(event, vi.fn());
 
     await vi.waitFor(() => {
       expect(host.showNotice).toHaveBeenCalledWith(
-        'Goal blocked.',
-        'The next queued goal will start only after this goal is complete.',
+        "Goal blocked.",
+        "The next queued goal will start only after this goal is complete.",
       );
     });
     expect(session.createGoal).not.toHaveBeenCalled();
   });
 
-  it('does not render a duplicate marker for a model-reported blocked goal', () => {
+  it("does not render a duplicate marker for a model-reported blocked goal", () => {
     const { host } = makeHost();
     const handler = new SessionEventHandler(host);
 
@@ -466,28 +523,28 @@ describe('SessionEventHandler goal queue promotion', () => {
     expect(host.state.transcriptContainer.addChild).not.toHaveBeenCalled();
   });
 
-  it('renders a blocked fallback when the model does not explain the blocked goal', () => {
+  it("renders a blocked fallback when the model does not explain the blocked goal", () => {
     const { host } = makeHost();
     const handler = new SessionEventHandler(host);
 
     handler.handleEvent(modelBlockedEvent(), vi.fn());
     handler.handleEvent(turnEndedEvent(), vi.fn());
 
-    expect(addedTranscriptText(host)).toBe('  ◦ Goal blocked');
+    expect(addedTranscriptText(host)).toBe("  ◦ Goal blocked");
   });
 
-  it('does not render a blocked fallback after the model explains the blocked goal', () => {
+  it("does not render a blocked fallback after the model explains the blocked goal", () => {
     const { host } = makeHost();
     const handler = new SessionEventHandler(host);
 
     handler.handleEvent(modelBlockedEvent(), vi.fn());
     handler.handleEvent(
       {
-        type: 'assistant.delta',
-        sessionId: 's1',
-        agentId: 'main',
+        type: "assistant.delta",
+        sessionId: "s1",
+        agentId: "main",
         turnId: 1,
-        delta: 'I am blocked because I need credentials.',
+        delta: "I am blocked because I need credentials.",
       },
       vi.fn(),
     );
@@ -496,17 +553,17 @@ describe('SessionEventHandler goal queue promotion', () => {
     expect(host.state.transcriptContainer.addChild).not.toHaveBeenCalled();
   });
 
-  it('does not render a blocked fallback after earlier assistant text in the same turn', () => {
+  it("does not render a blocked fallback after earlier assistant text in the same turn", () => {
     const { host } = makeHost();
     const handler = new SessionEventHandler(host);
 
     handler.handleEvent(
       {
-        type: 'assistant.delta',
-        sessionId: 's1',
-        agentId: 'main',
+        type: "assistant.delta",
+        sessionId: "s1",
+        agentId: "main",
         turnId: 1,
-        delta: 'I am blocked because I need credentials.',
+        delta: "I am blocked because I need credentials.",
       },
       vi.fn(),
     );
@@ -516,15 +573,15 @@ describe('SessionEventHandler goal queue promotion', () => {
     expect(host.state.transcriptContainer.addChild).not.toHaveBeenCalled();
   });
 
-  it('does not promote on paused or cancelled updates', async () => {
+  it("does not promote on paused or cancelled updates", async () => {
     const { host, session } = makeHost();
     const handler = new SessionEventHandler(host);
     const paused = {
-      type: 'goal.updated',
-      sessionId: 's1',
-      agentId: 'main',
-      snapshot: fakeGoalSnapshot('Paused goal', 'paused'),
-      change: { kind: 'lifecycle', status: 'paused' },
+      type: "goal.updated",
+      sessionId: "s1",
+      agentId: "main",
+      snapshot: fakeGoalSnapshot("Paused goal", "paused"),
+      change: { kind: "lifecycle", status: "paused" },
     } as const;
 
     handler.handleEvent(paused, vi.fn());

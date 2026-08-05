@@ -25,21 +25,21 @@
  *    fill the disk.
  */
 
-import { createHash } from 'node:crypto';
-import { mkdir, readdir, stat, unlink, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { createHash } from "node:crypto";
+import { mkdir, readdir, stat, unlink, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 const DEFAULT_MAX_TOTAL_BYTES = 1024 * 1024 * 1024;
 
 const MIME_EXTENSION: Readonly<Record<string, string>> = {
-  'image/png': 'png',
-  'image/jpeg': 'jpg',
-  'image/jpg': 'jpg',
-  'image/gif': 'gif',
-  'image/webp': 'webp',
-  'image/bmp': 'bmp',
-  'image/tiff': 'tif',
+  "image/png": "png",
+  "image/jpeg": "jpg",
+  "image/jpg": "jpg",
+  "image/gif": "gif",
+  "image/webp": "webp",
+  "image/bmp": "bmp",
+  "image/tiff": "tif",
 };
 
 export interface PersistOriginalImageOptions {
@@ -48,11 +48,11 @@ export interface PersistOriginalImageOptions {
 }
 
 export function originalImageCacheDir(): string {
-  return join(tmpdir(), 'kimi-code-original-images');
+  return join(tmpdir(), "kimi-code-original-images");
 }
 
 export function sessionMediaOriginalsDir(sessionDir: string): string {
-  return join(sessionDir, 'media-originals');
+  return join(sessionDir, "media-originals");
 }
 
 export async function persistOriginalImage(
@@ -64,8 +64,8 @@ export async function persistOriginalImage(
   const dir = options.dir ?? originalImageCacheDir();
   const maxTotalBytes = options.maxTotalBytes ?? DEFAULT_MAX_TOTAL_BYTES;
   try {
-    const hash = createHash('sha256').update(bytes).digest('hex').slice(0, 32);
-    const extension = MIME_EXTENSION[mimeType.trim().toLowerCase()] ?? 'img';
+    const hash = createHash("sha256").update(bytes).digest("hex").slice(0, 32);
+    const extension = MIME_EXTENSION[mimeType.trim().toLowerCase()] ?? "img";
     const path = join(dir, `${hash}.${extension}`);
     await mkdir(dir, { recursive: true });
 

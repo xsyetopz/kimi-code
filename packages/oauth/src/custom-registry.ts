@@ -1,7 +1,13 @@
-import { readApiErrorMessage } from './api-error';
-import { CUSTOM_REGISTRY_MODEL_FIELDS, mergeRefreshedModelAlias } from './model-alias-merge';
-import { isRecord } from './utils';
-import type { ManagedKimiConfigShape, ManagedKimiModelAlias } from './managed-kimi-code';
+import { readApiErrorMessage } from "./api-error";
+import {
+  CUSTOM_REGISTRY_MODEL_FIELDS,
+  mergeRefreshedModelAlias,
+} from "./model-alias-merge";
+import { isRecord } from "./utils";
+import type {
+  ManagedKimiConfigShape,
+  ManagedKimiModelAlias,
+} from "./managed-kimi-code";
 
 export type { ManagedKimiConfigShape };
 
@@ -13,7 +19,7 @@ export type { ManagedKimiConfigShape };
  * rotation.
  */
 export interface CustomRegistrySource {
-  readonly kind: 'apiJson';
+  readonly kind: "apiJson";
   readonly url: string;
   readonly apiKey: string;
 }
@@ -30,10 +36,10 @@ export interface FetchCustomRegistryOptions {
  * permits it even though kokub itself only emits the other three.
  */
 export type CustomRegistryProviderType =
-  | 'anthropic'
-  | 'openai'
-  | 'openai_responses'
-  | 'kimi';
+  | "anthropic"
+  | "openai"
+  | "openai_responses"
+  | "kimi";
 
 export interface CustomRegistryModelEntry {
   readonly id: string;
@@ -64,35 +70,39 @@ export interface CustomRegistryProviderEntry {
  * by editing `~/.kimi-code/config.toml`.
  */
 export const CUSTOM_REGISTRY_DEFAULT_MAX_CONTEXT = 131072;
-export const CUSTOM_REGISTRY_DEFAULT_CAPABILITIES = ['tool_use'] as const;
+export const CUSTOM_REGISTRY_DEFAULT_CAPABILITIES = ["tool_use"] as const;
 
-const ALLOWED_PROVIDER_TYPES: ReadonlySet<CustomRegistryProviderType> = new Set([
-  'anthropic',
-  'openai',
-  'openai_responses',
-  'kimi',
-]);
+const ALLOWED_PROVIDER_TYPES: ReadonlySet<CustomRegistryProviderType> = new Set(
+  ["anthropic", "openai", "openai_responses", "kimi"],
+);
 
 export class CustomRegistryApiError extends Error {
   readonly status: number;
 
   constructor(message: string, status: number) {
     super(message);
-    this.name = 'CustomRegistryApiError';
+    this.name = "CustomRegistryApiError";
     this.status = status;
   }
 }
 
-function isAllowedProviderType(value: unknown): value is CustomRegistryProviderType {
-  return typeof value === 'string' && ALLOWED_PROVIDER_TYPES.has(value as CustomRegistryProviderType);
+function isAllowedProviderType(
+  value: unknown,
+): value is CustomRegistryProviderType {
+  return (
+    typeof value === "string" &&
+    ALLOWED_PROVIDER_TYPES.has(value as CustomRegistryProviderType)
+  );
 }
 
-function toStringArrayOrUndefined(value: unknown): readonly string[] | undefined {
+function toStringArrayOrUndefined(
+  value: unknown,
+): readonly string[] | undefined {
   if (value === undefined || value === null) return undefined;
   if (!Array.isArray(value)) return undefined;
   const out: string[] = [];
   for (const item of value) {
-    if (typeof item !== 'string') return undefined;
+    if (typeof item !== "string") return undefined;
     out.push(item);
   }
   return out;
@@ -100,8 +110,8 @@ function toStringArrayOrUndefined(value: unknown): readonly string[] | undefined
 
 function toModelEntry(value: unknown): CustomRegistryModelEntry | undefined {
   if (!isRecord(value)) return undefined;
-  const id = value['id'];
-  if (typeof id !== 'string' || id.length === 0) return undefined;
+  const id = value["id"];
+  if (typeof id !== "string" || id.length === 0) return undefined;
 
   const entry: {
     id: string;
@@ -114,18 +124,22 @@ function toModelEntry(value: unknown): CustomRegistryModelEntry | undefined {
     default_effort?: string;
   } = { id };
 
-  const name = value['name'];
-  if (typeof name === 'string' && name.length > 0) entry.name = name;
+  const name = value["name"];
+  if (typeof name === "string" && name.length > 0) entry.name = name;
 
-  const limit = value['limit'];
+  const limit = value["limit"];
   if (isRecord(limit)) {
-    const context = limit['context'];
-    const output = limit['output'];
+    const context = limit["context"];
+    const output = limit["output"];
     const parsedLimit: { context?: number; output?: number } = {};
-    if (typeof context === 'number' && Number.isFinite(context) && context > 0) {
+    if (
+      typeof context === "number" &&
+      Number.isFinite(context) &&
+      context > 0
+    ) {
       parsedLimit.context = Math.floor(context);
     }
-    if (typeof output === 'number' && Number.isFinite(output) && output > 0) {
+    if (typeof output === "number" && Number.isFinite(output) && output > 0) {
       parsedLimit.output = Math.floor(output);
     }
     if (parsedLimit.context !== undefined || parsedLimit.output !== undefined) {
@@ -133,20 +147,22 @@ function toModelEntry(value: unknown): CustomRegistryModelEntry | undefined {
     }
   }
 
-  if (typeof value['tool_call'] === 'boolean') entry.tool_call = value['tool_call'];
-  if (typeof value['reasoning'] === 'boolean') entry.reasoning = value['reasoning'];
+  if (typeof value["tool_call"] === "boolean")
+    entry.tool_call = value["tool_call"];
+  if (typeof value["reasoning"] === "boolean")
+    entry.reasoning = value["reasoning"];
 
-  const supportEfforts = toStringArrayOrUndefined(value['support_efforts']);
+  const supportEfforts = toStringArrayOrUndefined(value["support_efforts"]);
   if (supportEfforts !== undefined) entry.support_efforts = supportEfforts;
-  const defaultEffort = value['default_effort'];
-  if (typeof defaultEffort === 'string' && defaultEffort.length > 0) {
+  const defaultEffort = value["default_effort"];
+  if (typeof defaultEffort === "string" && defaultEffort.length > 0) {
     entry.default_effort = defaultEffort;
   }
 
-  const modalities = value['modalities'];
+  const modalities = value["modalities"];
   if (isRecord(modalities)) {
-    const input = toStringArrayOrUndefined(modalities['input']);
-    const output = toStringArrayOrUndefined(modalities['output']);
+    const input = toStringArrayOrUndefined(modalities["input"]);
+    const output = toStringArrayOrUndefined(modalities["output"]);
     if (input !== undefined || output !== undefined) {
       entry.modalities = {
         ...(input !== undefined ? { input } : {}),
@@ -158,17 +174,19 @@ function toModelEntry(value: unknown): CustomRegistryModelEntry | undefined {
   return entry;
 }
 
-function toProviderEntry(value: unknown): CustomRegistryProviderEntry | undefined {
+function toProviderEntry(
+  value: unknown,
+): CustomRegistryProviderEntry | undefined {
   if (!isRecord(value)) return undefined;
-  const id = value['id'];
-  const name = value['name'];
-  const api = value['api'];
-  const type = value['type'];
-  const models = value['models'];
+  const id = value["id"];
+  const name = value["name"];
+  const api = value["api"];
+  const type = value["type"];
+  const models = value["models"];
 
-  if (typeof id !== 'string' || id.length === 0) return undefined;
-  if (typeof name !== 'string' || name.length === 0) return undefined;
-  if (typeof api !== 'string' || api.length === 0) return undefined;
+  if (typeof id !== "string" || id.length === 0) return undefined;
+  if (typeof name !== "string" || name.length === 0) return undefined;
+  if (typeof api !== "string" || api.length === 0) return undefined;
   if (!isAllowedProviderType(type)) return undefined;
   if (!isRecord(models)) return undefined;
 
@@ -179,7 +197,7 @@ function toProviderEntry(value: unknown): CustomRegistryProviderEntry | undefine
     parsedModels[key] = modelEntry;
   }
 
-  const env = toStringArrayOrUndefined(value['env']);
+  const env = toStringArrayOrUndefined(value["env"]);
 
   return {
     id,
@@ -205,13 +223,13 @@ export async function fetchCustomRegistry(
 ): Promise<Record<string, CustomRegistryProviderEntry>> {
   const { signal, fetchImpl = fetch, userAgent } = options;
   const headers: Record<string, string> = {
-    Accept: 'application/json',
+    Accept: "application/json",
   };
   if (userAgent !== undefined) {
-    headers['User-Agent'] = userAgent;
+    headers["User-Agent"] = userAgent;
   }
   if (source.apiKey.length > 0) {
-    headers['Authorization'] = `Bearer ${source.apiKey}`;
+    headers["Authorization"] = `Bearer ${source.apiKey}`;
   }
 
   const init: RequestInit = { headers };
@@ -258,25 +276,29 @@ export async function fetchCustomRegistry(
  * fields are present; callers are responsible for substituting the default
  * (`CUSTOM_REGISTRY_DEFAULT_CAPABILITIES`) when this returns `[]`.
  */
-export function capabilitiesFromCustomEntry(model: CustomRegistryModelEntry): string[] {
+export function capabilitiesFromCustomEntry(
+  model: CustomRegistryModelEntry,
+): string[] {
   const caps = new Set<string>();
-  if (model.tool_call === true) caps.add('tool_use');
+  if (model.tool_call === true) caps.add("tool_use");
   // Declaring concrete effort levels implies thinking support even when the
   // legacy `reasoning` boolean is absent.
   if (model.reasoning === true || (model.support_efforts?.length ?? 0) > 0) {
-    caps.add('thinking');
+    caps.add("thinking");
   }
-  if (model.modalities?.input?.includes('image') === true) caps.add('image_in');
-  if (model.modalities?.input?.includes('video') === true) caps.add('video_in');
-  if (model.modalities?.output?.includes('image') === true) caps.add('image_out');
-  if (model.modalities?.output?.includes('audio') === true) caps.add('audio_out');
+  if (model.modalities?.input?.includes("image") === true) caps.add("image_in");
+  if (model.modalities?.input?.includes("video") === true) caps.add("video_in");
+  if (model.modalities?.output?.includes("image") === true)
+    caps.add("image_out");
+  if (model.modalities?.output?.includes("audio") === true)
+    caps.add("audio_out");
   return [...caps];
 }
 
 function hasRichCapabilityHints(model: CustomRegistryModelEntry): boolean {
   return (
-    typeof model.tool_call === 'boolean' ||
-    typeof model.reasoning === 'boolean' ||
+    typeof model.tool_call === "boolean" ||
+    typeof model.reasoning === "boolean" ||
     model.modalities !== undefined ||
     model.support_efforts !== undefined
   );
@@ -285,10 +307,10 @@ function hasRichCapabilityHints(model: CustomRegistryModelEntry): boolean {
 function resolveMaxContextSize(model: CustomRegistryModelEntry): number {
   const context = model.limit?.context;
   const output = model.limit?.output;
-  if (typeof context === 'number' && Number.isInteger(context) && context > 0) {
+  if (typeof context === "number" && Number.isInteger(context) && context > 0) {
     return context;
   }
-  if (typeof output === 'number' && Number.isInteger(output) && output > 0) {
+  if (typeof output === "number" && Number.isInteger(output) && output > 0) {
     return output;
   }
   return CUSTOM_REGISTRY_DEFAULT_MAX_CONTEXT;
@@ -332,7 +354,11 @@ export function applyCustomRegistryProvider(
     Object.keys(entry.models).map((modelKey) => `${providerKey}/${modelKey}`),
   );
   for (const [key, alias] of Object.entries(existingModels)) {
-    if (isRecord(alias) && alias['provider'] === providerKey && !upstreamKeys.has(key)) {
+    if (
+      isRecord(alias) &&
+      alias["provider"] === providerKey &&
+      !upstreamKeys.has(key)
+    ) {
       delete existingModels[key];
     }
   }
@@ -342,8 +368,12 @@ export function applyCustomRegistryProvider(
     const maxContextSize = resolveMaxContextSize(model);
     const capabilities = resolveCapabilities(model);
     const displayName =
-      typeof model.name === 'string' && model.name.length > 0 ? model.name : model.id;
-    const existing = isRecord(existingModels[aliasKey]) ? existingModels[aliasKey] : {};
+      typeof model.name === "string" && model.name.length > 0
+        ? model.name
+        : model.id;
+    const existing = isRecord(existingModels[aliasKey])
+      ? existingModels[aliasKey]
+      : {};
 
     const remoteAlias: ManagedKimiModelAlias = {
       provider: providerKey,
@@ -351,8 +381,12 @@ export function applyCustomRegistryProvider(
       maxContextSize,
       capabilities,
       displayName,
-      ...(model.support_efforts !== undefined ? { supportEfforts: model.support_efforts } : {}),
-      ...(model.default_effort !== undefined ? { defaultEffort: model.default_effort } : {}),
+      ...(model.support_efforts !== undefined
+        ? { supportEfforts: model.support_efforts }
+        : {}),
+      ...(model.default_effort !== undefined
+        ? { defaultEffort: model.default_effort }
+        : {}),
     };
     existingModels[aliasKey] = mergeRefreshedModelAlias(
       existing,
@@ -378,7 +412,7 @@ export function removeCustomRegistryProvider(
   let removedDefault = false;
   const existingModels = config.models ?? {};
   for (const [key, alias] of Object.entries(existingModels)) {
-    if (!isRecord(alias) || alias['provider'] !== providerId) continue;
+    if (!isRecord(alias) || alias["provider"] !== providerId) continue;
     delete existingModels[key];
     if (config.defaultModel === key) removedDefault = true;
   }
@@ -388,8 +422,8 @@ export function removeCustomRegistryProvider(
     config.defaultModel = undefined;
   }
 
-  if (config['defaultProvider'] === providerId) {
-    config['defaultProvider'] = undefined;
+  if (config["defaultProvider"] === providerId) {
+    config["defaultProvider"] = undefined;
   }
 }
 
@@ -422,11 +456,11 @@ export function applyCustomRegistryEntries(
   for (const [providerId, provider] of Object.entries(config.providers)) {
     if (surviving.has(providerId)) continue;
     if (!isRecord(provider)) continue;
-    const existingSource = provider['source'];
+    const existingSource = provider["source"];
     if (
       isRecord(existingSource) &&
-      existingSource['kind'] === 'apiJson' &&
-      existingSource['url'] === source.url
+      existingSource["kind"] === "apiJson" &&
+      existingSource["url"] === source.url
     ) {
       removeCustomRegistryProvider(config, providerId);
     }

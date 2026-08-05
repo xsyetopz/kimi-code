@@ -1,21 +1,21 @@
-import type { WireMigration, WireMigrationRecord } from './index';
+import type { WireMigration, WireMigrationRecord } from "./index";
 
-type V1_3GoalStatus = 'active' | 'paused' | 'blocked' | 'complete';
-type V1_3GoalActor = 'user' | 'model' | 'runtime' | 'system';
+type V1_3GoalStatus = "active" | "paused" | "blocked" | "complete";
+type V1_3GoalActor = "user" | "model" | "runtime" | "system";
 
 interface TimedWireMigrationRecord extends WireMigrationRecord {
   readonly time?: number;
 }
 
 interface V1_3GoalCreateRecord extends TimedWireMigrationRecord {
-  readonly type: 'goal.create';
+  readonly type: "goal.create";
   readonly goalId: string;
   readonly objective: string;
   readonly completionCriterion?: string;
 }
 
 interface V1_3GoalUpdateRecord extends TimedWireMigrationRecord {
-  readonly type: 'goal.update';
+  readonly type: "goal.update";
   readonly goalId: string;
   readonly status: V1_3GoalStatus;
   readonly reason?: string;
@@ -26,37 +26,37 @@ interface V1_3GoalUpdateRecord extends TimedWireMigrationRecord {
 }
 
 interface V1_3GoalAccountUsageRecord extends TimedWireMigrationRecord {
-  readonly type: 'goal.account_usage';
+  readonly type: "goal.account_usage";
   readonly goalId: string;
   readonly tokensUsed?: number;
   readonly wallClockMs?: number;
 }
 
 interface V1_3GoalContinuationRecord extends TimedWireMigrationRecord {
-  readonly type: 'goal.continuation';
+  readonly type: "goal.continuation";
   readonly goalId: string;
   readonly turnsUsed?: number;
 }
 
 interface V1_3GoalClearRecord extends TimedWireMigrationRecord {
-  readonly type: 'goal.clear';
+  readonly type: "goal.clear";
   readonly goalId: string;
 }
 
 export const migrateV1_3ToV1_4: WireMigration = {
-  sourceVersion: '1.3',
-  targetVersion: '1.4',
+  sourceVersion: "1.3",
+  targetVersion: "1.4",
   migrateRecord(record: WireMigrationRecord): WireMigrationRecord {
     switch (record.type) {
-      case 'goal.create':
+      case "goal.create":
         return migrateGoalCreate(record as V1_3GoalCreateRecord);
-      case 'goal.update':
+      case "goal.update":
         return migrateGoalUpdate(record as V1_3GoalUpdateRecord);
-      case 'goal.account_usage':
+      case "goal.account_usage":
         return migrateGoalAccountUsage(record as V1_3GoalAccountUsageRecord);
-      case 'goal.continuation':
+      case "goal.continuation":
         return migrateGoalContinuation(record as V1_3GoalContinuationRecord);
-      case 'goal.clear':
+      case "goal.clear":
         return migrateGoalClear(record as V1_3GoalClearRecord);
       default:
         return record;
@@ -66,7 +66,7 @@ export const migrateV1_3ToV1_4: WireMigration = {
 
 function migrateGoalCreate(record: V1_3GoalCreateRecord): WireMigrationRecord {
   return {
-    type: 'goal.create',
+    type: "goal.create",
     goalId: record.goalId,
     objective: record.objective,
     completionCriterion: record.completionCriterion,
@@ -76,7 +76,7 @@ function migrateGoalCreate(record: V1_3GoalCreateRecord): WireMigrationRecord {
 
 function migrateGoalUpdate(record: V1_3GoalUpdateRecord): WireMigrationRecord {
   return {
-    type: 'goal.update',
+    type: "goal.update",
     status: record.status,
     reason: record.reason,
     turnsUsed: record.turnsUsed,
@@ -87,18 +87,22 @@ function migrateGoalUpdate(record: V1_3GoalUpdateRecord): WireMigrationRecord {
   };
 }
 
-function migrateGoalAccountUsage(record: V1_3GoalAccountUsageRecord): WireMigrationRecord {
+function migrateGoalAccountUsage(
+  record: V1_3GoalAccountUsageRecord,
+): WireMigrationRecord {
   return {
-    type: 'goal.update',
+    type: "goal.update",
     tokensUsed: record.tokensUsed,
     wallClockMs: record.wallClockMs,
     time: record.time,
   };
 }
 
-function migrateGoalContinuation(record: V1_3GoalContinuationRecord): WireMigrationRecord {
+function migrateGoalContinuation(
+  record: V1_3GoalContinuationRecord,
+): WireMigrationRecord {
   return {
-    type: 'goal.update',
+    type: "goal.update",
     turnsUsed: record.turnsUsed,
     time: record.time,
   };
@@ -106,7 +110,7 @@ function migrateGoalContinuation(record: V1_3GoalContinuationRecord): WireMigrat
 
 function migrateGoalClear(record: V1_3GoalClearRecord): WireMigrationRecord {
   return {
-    type: 'goal.clear',
+    type: "goal.clear",
     time: record.time,
   };
 }

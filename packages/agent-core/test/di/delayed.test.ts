@@ -1,9 +1,13 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from "vitest";
 
-import { SyncDescriptor } from '#/di/descriptors';
-import { InstantiationService } from '#/di/instantiationService';
-import { IInstantiationService, createDecorator, type IInstantiationService as IInstantiationServiceType } from '#/di/instantiation';
-import { ServiceCollection } from '#/di/serviceCollection';
+import { SyncDescriptor } from "#/di/descriptors";
+import { InstantiationService } from "#/di/instantiationService";
+import {
+  IInstantiationService,
+  createDecorator,
+  type IInstantiationService as IInstantiationServiceType,
+} from "#/di/instantiation";
+import { ServiceCollection } from "#/di/serviceCollection";
 
 /**
  * P1.2 — `supportsDelayedInstantiation: true` returns a Proxy that defers
@@ -17,19 +21,19 @@ import { ServiceCollection } from '#/di/serviceCollection';
  * synchronous behavior.
  */
 
-describe('Delayed instantiation Proxy (P1.2)', () => {
-  it('does NOT construct the real instance at container.get(IFoo)', () => {
+describe("Delayed instantiation Proxy (P1.2)", () => {
+  it("does NOT construct the real instance at container.get(IFoo)", () => {
     let ctorCount = 0;
     interface IFoo {
-      kind: 'foo';
+      kind: "foo";
     }
     class Foo implements IFoo {
-      kind = 'foo' as const;
+      kind = "foo" as const;
       constructor() {
         ctorCount += 1;
       }
     }
-    const IFoo = createDecorator<IFoo>('p1.2-IFoo-noctor');
+    const IFoo = createDecorator<IFoo>("p1.2-IFoo-noctor");
     const ix = new InstantiationService(
       new ServiceCollection([
         IFoo,
@@ -42,40 +46,40 @@ describe('Delayed instantiation Proxy (P1.2)', () => {
     expect(ctorCount).toBe(0);
   });
 
-  it('reading a non-event property triggers real construction', () => {
+  it("reading a non-event property triggers real construction", () => {
     let ctorCount = 0;
     interface IFoo {
-      kind: 'foo';
+      kind: "foo";
       describe(): string;
     }
     class Foo implements IFoo {
-      kind = 'foo' as const;
+      kind = "foo" as const;
       constructor() {
         ctorCount += 1;
       }
       describe(): string {
-        return 'real-foo';
+        return "real-foo";
       }
     }
-    const IFoo = createDecorator<IFoo>('p1.2-IFoo-trigger');
+    const IFoo = createDecorator<IFoo>("p1.2-IFoo-trigger");
     const ix = new InstantiationService(
       new ServiceCollection([IFoo, new SyncDescriptor(Foo, [], true)]),
     );
     const proxy = ix.invokeFunction((a) => a.get(IFoo));
     expect(ctorCount).toBe(0);
     const result = proxy.describe();
-    expect(result).toBe('real-foo');
+    expect(result).toBe("real-foo");
     expect(ctorCount).toBe(1);
   });
 
-  it('`instance instanceof Foo` returns true even before materialisation', () => {
+  it("`instance instanceof Foo` returns true even before materialisation", () => {
     interface IFoo {
-      kind: 'foo';
+      kind: "foo";
     }
     class Foo implements IFoo {
-      kind = 'foo' as const;
+      kind = "foo" as const;
     }
-    const IFoo = createDecorator<IFoo>('p1.2-IFoo-instanceof');
+    const IFoo = createDecorator<IFoo>("p1.2-IFoo-instanceof");
     const ix = new InstantiationService(
       new ServiceCollection([IFoo, new SyncDescriptor(Foo, [], true)]),
     );
@@ -85,7 +89,7 @@ describe('Delayed instantiation Proxy (P1.2)', () => {
     expect(proxy instanceof Foo).toBe(true);
   });
 
-  it('parked onDid* listeners fire after the proxy materialises', () => {
+  it("parked onDid* listeners fire after the proxy materialises", () => {
     type Listener<E> = (e: E) => void;
     type EventLike<E> = (cb: Listener<E>) => { dispose(): void };
     interface IFoo {
@@ -105,13 +109,13 @@ describe('Delayed instantiation Proxy (P1.2)', () => {
         };
       };
       describe(): string {
-        return 'materialised';
+        return "materialised";
       }
       fire(payload: string): void {
         for (const cb of [...this._listeners]) cb(payload);
       }
     }
-    const IFoo = createDecorator<IFoo>('p1.2-IFoo-events');
+    const IFoo = createDecorator<IFoo>("p1.2-IFoo-events");
     const ix = new InstantiationService(
       new ServiceCollection([IFoo, new SyncDescriptor(Foo, [], true)]),
     );
@@ -121,17 +125,17 @@ describe('Delayed instantiation Proxy (P1.2)', () => {
     // earlyListeners LinkedList keyed by 'onDidChange'.
     const received: string[] = [];
     const sub = proxy.onDidChange((p) => received.push(p));
-    expect(typeof sub.dispose).toBe('function');
+    expect(typeof sub.dispose).toBe("function");
 
     // Trigger materialisation by reading a non-event method, then fire
     // the real event — the parked listener was replayed against the real
     // event during materialisation, so it must receive the payload.
-    expect(proxy.describe()).toBe('materialised');
-    proxy.fire('hello-world');
-    expect(received).toEqual(['hello-world']);
+    expect(proxy.describe()).toBe("materialised");
+    proxy.fire("hello-world");
+    expect(received).toEqual(["hello-world"]);
   });
 
-  it('materialises delayed services in a child scope and records implicit dependency cycles', () => {
+  it("materialises delayed services in a child scope and records implicit dependency cycles", () => {
     interface IA {
       _serviceBrand: undefined;
       doIt(): boolean;
@@ -140,8 +144,8 @@ describe('Delayed instantiation Proxy (P1.2)', () => {
       _serviceBrand: undefined;
       b(): boolean;
     }
-    const IA = createDecorator<IA>('delayed-graph-A');
-    const IB = createDecorator<IB>('delayed-graph-B');
+    const IA = createDecorator<IA>("delayed-graph-A");
+    const IB = createDecorator<IB>("delayed-graph-B");
 
     class BConsumer {
       constructor(private readonly b: IB) {}
@@ -151,7 +155,7 @@ describe('Delayed instantiation Proxy (P1.2)', () => {
     }
     (IB as unknown as (t: unknown, k: string, i: number) => void)(
       BConsumer,
-      '',
+      "",
       0,
     );
 
@@ -165,11 +169,13 @@ describe('Delayed instantiation Proxy (P1.2)', () => {
         return this.consumer.doIt();
       }
     }
-    (IInstantiationService as unknown as (t: unknown, k: string, i: number) => void)(
-      AService,
-      '',
-      0,
-    );
+    (
+      IInstantiationService as unknown as (
+        t: unknown,
+        k: string,
+        i: number,
+      ) => void
+    )(AService, "", 0);
 
     class BService implements IB {
       _serviceBrand: undefined;
@@ -180,7 +186,7 @@ describe('Delayed instantiation Proxy (P1.2)', () => {
     }
     (IA as unknown as (t: unknown, k: string, i: number) => void)(
       BService,
-      '',
+      "",
       0,
     );
 
@@ -202,6 +208,8 @@ describe('Delayed instantiation Proxy (P1.2)', () => {
 
     const a = ix.invokeFunction((accessor) => accessor.get(IA));
     expect(a.doIt()).toBe(true);
-    expect(ix.cycle()).toBe('delayed-graph-A -> delayed-graph-B -> delayed-graph-A');
+    expect(ix.cycle()).toBe(
+      "delayed-graph-A -> delayed-graph-B -> delayed-graph-A",
+    );
   });
 });

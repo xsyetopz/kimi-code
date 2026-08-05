@@ -32,12 +32,17 @@ export function resolveWorkspacePath(
     path.posix.isAbsolute(normalized) ||
     path.win32.isAbsolute(input) ||
     /^[A-Za-z]:/.test(input)
-  ) return undefined;
+  )
+    return undefined;
 
-  const segments = normalized.split("/").filter((segment) => segment !== "" && segment !== ".");
+  const segments = normalized
+    .split("/")
+    .filter((segment) => segment !== "" && segment !== ".");
   if (segments.includes("..")) return undefined;
   if (segments.length === 0) {
-    return options.allowRoot === true ? { uri: workDirUri, relativePath: "" } : undefined;
+    return options.allowRoot === true
+      ? { uri: workDirUri, relativePath: "" }
+      : undefined;
   }
 
   return {
@@ -46,7 +51,10 @@ export function resolveWorkspacePath(
   };
 }
 
-export function relativeWorkspacePath(rootUri: vscode.Uri, candidateUri: vscode.Uri): string | undefined {
+export function relativeWorkspacePath(
+  rootUri: vscode.Uri,
+  candidateUri: vscode.Uri,
+): string | undefined {
   if (rootUri.scheme !== candidateUri.scheme) return undefined;
 
   // VS Code exposes native Windows file paths through `fsPath`, while URI
@@ -60,7 +68,10 @@ export function relativeWorkspacePath(rootUri: vscode.Uri, candidateUri: vscode.
 
   if (rootUri.authority !== candidateUri.authority) return undefined;
 
-  const relativePath = path.posix.relative(normalizeUriPath(rootUri.path), normalizeUriPath(candidateUri.path));
+  const relativePath = path.posix.relative(
+    normalizeUriPath(rootUri.path),
+    normalizeUriPath(candidateUri.path),
+  );
   if (
     relativePath === "" ||
     relativePath === ".." ||
@@ -77,7 +88,10 @@ export async function isWorkspacePathContained(
   candidateUri: vscode.Uri,
   options: { allowMissing?: boolean } = {},
 ): Promise<boolean> {
-  if (rootUri.toString() !== candidateUri.toString() && relativeWorkspacePath(rootUri, candidateUri) === undefined) {
+  if (
+    rootUri.toString() !== candidateUri.toString() &&
+    relativeWorkspacePath(rootUri, candidateUri) === undefined
+  ) {
     return false;
   }
   if (rootUri.scheme !== "file" || candidateUri.scheme !== "file") return true;
@@ -85,7 +99,9 @@ export async function isWorkspacePathContained(
   try {
     const [realRoot, realCandidate] = await Promise.all([
       realpath(rootUri.fsPath),
-      options.allowMissing === true ? realExistingPath(candidateUri.fsPath) : realpath(candidateUri.fsPath),
+      options.allowMissing === true
+        ? realExistingPath(candidateUri.fsPath)
+        : realpath(candidateUri.fsPath),
     ]);
     return relativeFsPath(realRoot, realCandidate) !== undefined;
   } catch {
@@ -98,7 +114,10 @@ export function isWorkspacePathContainedSync(
   candidateUri: vscode.Uri,
   options: { allowMissing?: boolean } = {},
 ): boolean {
-  if (rootUri.toString() !== candidateUri.toString() && relativeWorkspacePath(rootUri, candidateUri) === undefined) {
+  if (
+    rootUri.toString() !== candidateUri.toString() &&
+    relativeWorkspacePath(rootUri, candidateUri) === undefined
+  ) {
     return false;
   }
   if (rootUri.scheme !== "file" || candidateUri.scheme !== "file") return true;
@@ -158,7 +177,12 @@ function realExistingPathSync(candidate: string): string {
 }
 
 function isMissingPathError(error: unknown): boolean {
-  return typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT";
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    error.code === "ENOENT"
+  );
 }
 
 function toPathSegments(value: string): string[] {

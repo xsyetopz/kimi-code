@@ -3,9 +3,19 @@ import { bridge, Events } from "@/services";
 import { requiresManagedProviderLogin, useSettingsStore } from "@/stores";
 import type { ExtensionConfig } from "shared/types";
 
-export type AppStatus = "loading" | "no-workspace" | "runtime-error" | "not-logged-in" | "no-models" | "ready";
+export type AppStatus =
+  | "loading"
+  | "no-workspace"
+  | "runtime-error"
+  | "not-logged-in"
+  | "no-models"
+  | "ready";
 
-export type ConfigErrorStatus = "loading" | "no-workspace" | "runtime-error" | "no-models";
+export type ConfigErrorStatus =
+  | "loading"
+  | "no-workspace"
+  | "runtime-error"
+  | "no-models";
 
 export type AppViewResolution =
   | { readonly view: "login" }
@@ -58,7 +68,14 @@ export function useAppInit(): AppInitState {
     modelsCount: 0,
   });
   const [initKey, setInitKey] = useState(0);
-  const { initModels, setExtensionConfig, setMCPServers, setWireSlashCommands, setIsLoggedIn, setWorkspaceRoot } = useSettingsStore();
+  const {
+    initModels,
+    setExtensionConfig,
+    setMCPServers,
+    setWireSlashCommands,
+    setIsLoggedIn,
+    setWorkspaceRoot,
+  } = useSettingsStore();
 
   const refresh = useCallback(() => {
     setState({ status: "loading", errorMessage: null, modelsCount: 0 });
@@ -66,9 +83,12 @@ export function useAppInit(): AppInitState {
   }, []);
 
   useEffect(() => {
-    return bridge.on<{ config: ExtensionConfig; changedKeys: string[] }>(Events.ExtensionConfigChanged, ({ config }) => {
-      setExtensionConfig(config);
-    });
+    return bridge.on<{ config: ExtensionConfig; changedKeys: string[] }>(
+      Events.ExtensionConfigChanged,
+      ({ config }) => {
+        setExtensionConfig(config);
+      },
+    );
   }, [setExtensionConfig, refresh]);
 
   useEffect(() => {
@@ -82,7 +102,11 @@ export function useAppInit(): AppInitState {
         }
 
         if (!workspace.hasWorkspace) {
-          setState({ status: "no-workspace", errorMessage: null, modelsCount: 0 });
+          setState({
+            status: "no-workspace",
+            errorMessage: null,
+            modelsCount: 0,
+          });
           return;
         }
 
@@ -101,20 +125,37 @@ export function useAppInit(): AppInitState {
         setMCPServers(mcpServers);
         setWireSlashCommands(slashCommands);
 
-        const [loginStatus, kimiConfig] = await Promise.all([bridge.checkLoginStatus(), bridge.getModels()]);
+        const [loginStatus, kimiConfig] = await Promise.all([
+          bridge.checkLoginStatus(),
+          bridge.getModels(),
+        ]);
         if (cancelled) {
           return;
         }
 
-        console.log("[AppInit] Login status:", loginStatus, "kimiConfig:", kimiConfig);
+        console.log(
+          "[AppInit] Login status:",
+          loginStatus,
+          "kimiConfig:",
+          kimiConfig,
+        );
 
         setIsLoggedIn(loginStatus.loggedIn);
-        initModels(kimiConfig.models, kimiConfig.defaultModel, kimiConfig.defaultThinking, kimiConfig.defaultThinkingEffort);
+        initModels(
+          kimiConfig.models,
+          kimiConfig.defaultModel,
+          kimiConfig.defaultThinking,
+          kimiConfig.defaultThinkingEffort,
+        );
 
         const modelsCount = kimiConfig.models?.length ?? 0;
 
         if (modelsCount === 0 && !loginStatus.loggedIn) {
-          setState({ status: "not-logged-in", errorMessage: null, modelsCount });
+          setState({
+            status: "not-logged-in",
+            errorMessage: null,
+            modelsCount,
+          });
           return;
         }
 
@@ -123,8 +164,18 @@ export function useAppInit(): AppInitState {
           return;
         }
 
-        if (requiresManagedProviderLogin(kimiConfig.models, kimiConfig.defaultModel, loginStatus.loggedIn)) {
-          setState({ status: "not-logged-in", errorMessage: null, modelsCount });
+        if (
+          requiresManagedProviderLogin(
+            kimiConfig.models,
+            kimiConfig.defaultModel,
+            loginStatus.loggedIn,
+          )
+        ) {
+          setState({
+            status: "not-logged-in",
+            errorMessage: null,
+            modelsCount,
+          });
           return;
         }
 
@@ -133,7 +184,8 @@ export function useAppInit(): AppInitState {
         if (!cancelled) {
           setState({
             status: "runtime-error",
-            errorMessage: err instanceof Error ? err.message : "Failed to initialize",
+            errorMessage:
+              err instanceof Error ? err.message : "Failed to initialize",
             modelsCount: 0,
           });
         }
@@ -144,7 +196,14 @@ export function useAppInit(): AppInitState {
     return () => {
       cancelled = true;
     };
-  }, [initKey, initModels, setExtensionConfig, setMCPServers, setWireSlashCommands, setIsLoggedIn]);
+  }, [
+    initKey,
+    initModels,
+    setExtensionConfig,
+    setMCPServers,
+    setWireSlashCommands,
+    setIsLoggedIn,
+  ]);
 
   return { ...state, refresh };
 }

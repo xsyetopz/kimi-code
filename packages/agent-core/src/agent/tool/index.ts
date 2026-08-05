@@ -1,34 +1,32 @@
-import { uniq } from '@antfu/utils';
-import type { ChatProvider, Tool } from '@moonshot-ai/kosong';
-import picomatch from 'picomatch';
+import { uniq } from "@antfu/utils";
+import type { ChatProvider, Tool } from "@moonshot-ai/kosong";
+import picomatch from "picomatch";
 
-import type { Agent } from '..';
-import {
-  collectLoadedDynamicToolNames,
-} from '../context/dynamic-tools';
-import type { ContextMessage } from '../context/types';
-import { makeErrorPayload } from '../../errors';
-import type { ExecutableTool, ToolUpdate } from '../../loop';
-import { createMcpAuthTool } from '../../mcp/auth-tool';
-import type { McpConnectionManager, McpServerEntry } from '../../mcp';
-import { mcpResultToExecutableOutput } from '../../mcp/output';
-import { isMcpToolName, qualifyMcpToolName } from '../../mcp/tool-naming';
-import type { MCPClient, MCPToolDefinition } from '../../mcp/types';
-import { resolveSubagentTimeoutMs } from '../../session/subagent-host';
-import { buildSubagentModelDescriptions } from '../../session/subagent-binding';
-import { extendWorkspaceWithSkillRoots } from '../../skill';
-import { fingerprint } from '../llm-request-logger';
-import * as b from '../../tools/builtin';
-import type { ToolStore, ToolStoreData, ToolStoreKey } from '../../tools/store';
+import type { Agent } from "..";
+import { collectLoadedDynamicToolNames } from "../context/dynamic-tools";
+import type { ContextMessage } from "../context/types";
+import { makeErrorPayload } from "../../errors";
+import type { ExecutableTool, ToolUpdate } from "../../loop";
+import { createMcpAuthTool } from "../../mcp/auth-tool";
+import type { McpConnectionManager, McpServerEntry } from "../../mcp";
+import { mcpResultToExecutableOutput } from "../../mcp/output";
+import { isMcpToolName, qualifyMcpToolName } from "../../mcp/tool-naming";
+import type { MCPClient, MCPToolDefinition } from "../../mcp/types";
+import { resolveSubagentTimeoutMs } from "../../session/subagent-host";
+import { buildSubagentModelDescriptions } from "../../session/subagent-binding";
+import { extendWorkspaceWithSkillRoots } from "../../skill";
+import { fingerprint } from "../llm-request-logger";
+import * as b from "../../tools/builtin";
+import type { ToolStore, ToolStoreData, ToolStoreKey } from "../../tools/store";
 import type {
   BuiltinTool,
   McpServerRegistrationResult,
   McpToolCollision,
   ToolInfo,
   UserToolRegistration,
-} from './types';
+} from "./types";
 
-export * from './types';
+export * from "./types";
 
 /** Foreground timeout (seconds) for a user-initiated `!` shell command. */
 const SHELL_FOREGROUND_TIMEOUT_S = 2 * 60;
@@ -113,9 +111,9 @@ export class ToolManager {
     if (mcp === undefined) return;
     if (this.mcpToolStatusUnsubscribe !== undefined) return;
     for (const entry of mcp.list()) {
-      if (entry.status === 'connected') {
+      if (entry.status === "connected") {
         this.registerConnectedMcpServer(mcp, entry);
-      } else if (entry.status === 'needs-auth') {
+      } else if (entry.status === "needs-auth") {
         this.registerNeedsAuthMcpServer(mcp, entry);
       }
     }
@@ -126,7 +124,7 @@ export class ToolManager {
 
   updateStore<K extends ToolStoreKey>(key: K, value: ToolStoreData[K]): void {
     this.agent.records.logRecord({
-      type: 'tools.update_store',
+      type: "tools.update_store",
       key,
       value,
     });
@@ -142,45 +140,56 @@ export class ToolManager {
   async runShellCommand(
     command: string,
     commandId?: string,
-  ): Promise<{ stdout: string; stderr: string; isError?: boolean; backgrounded?: boolean }> {
+  ): Promise<{
+    stdout: string;
+    stderr: string;
+    isError?: boolean;
+    backgrounded?: boolean;
+  }> {
     this.agent.context.appendBashInput(command);
-    const bash = this.builtinTools.get('Bash');
+    const bash = this.builtinTools.get("Bash");
     if (bash === undefined) {
-      const error = 'Bash tool is not available.';
-      this.agent.context.appendBashOutput('', error);
-      return { stdout: '', stderr: error, isError: true };
+      const error = "Bash tool is not available.";
+      this.agent.context.appendBashOutput("", error);
+      return { stdout: "", stderr: error, isError: true };
     }
-    let stdout = '';
-    let stderr = '';
+    let stdout = "";
+    let stderr = "";
     let isError: boolean | undefined;
     const controller = new AbortController();
-    if (commandId !== undefined) this.shellCommandControllers.set(commandId, controller);
+    if (commandId !== undefined)
+      this.shellCommandControllers.set(commandId, controller);
     try {
-      const execution = await bash.resolveExecution({ command, timeout: SHELL_FOREGROUND_TIMEOUT_S });
-      if (!('execute' in execution)) {
+      const execution = await bash.resolveExecution({
+        command,
+        timeout: SHELL_FOREGROUND_TIMEOUT_S,
+      });
+      if (!("execute" in execution)) {
         const output =
-          typeof execution.output === 'string' ? execution.output : 'Command failed.';
-        this.agent.context.appendBashOutput('', output);
-        return { stdout: '', stderr: output, isError: true };
+          typeof execution.output === "string"
+            ? execution.output
+            : "Command failed.";
+        this.agent.context.appendBashOutput("", output);
+        return { stdout: "", stderr: output, isError: true };
       }
       const result = await execution.execute({
-        turnId: '',
-        toolCallId: 'shell-command',
+        turnId: "",
+        toolCallId: "shell-command",
         signal: controller.signal,
         onUpdate: (update: ToolUpdate) => {
-          if (update.kind === 'stdout') stdout += update.text ?? '';
-          else if (update.kind === 'stderr') stderr += update.text ?? '';
+          if (update.kind === "stdout") stdout += update.text ?? "";
+          else if (update.kind === "stderr") stderr += update.text ?? "";
           else return;
           // Stream the chunk live to the TUI. Transient event — the final
           // output is still recorded once below for resume.
           if (commandId !== undefined) {
-            this.agent.emitEvent({ type: 'shell.output', commandId, update });
+            this.agent.emitEvent({ type: "shell.output", commandId, update });
           }
         },
         onForegroundTaskStart: (taskId: string) => {
           // Surface the background-task id so the TUI can detach (ctrl+b) it.
           if (commandId !== undefined) {
-            this.agent.emitEvent({ type: 'shell.started', commandId, taskId });
+            this.agent.emitEvent({ type: "shell.started", commandId, taskId });
           }
         },
       });
@@ -191,12 +200,20 @@ export class ToolManager {
       // foreground Bash call returns as its tool result when backgrounded.
       // Inject it as a user-invisible message and immediately send it to the
       // model (mirrors the background-task completion notification, but hidden).
-      if (typeof result.output === 'string' && result.output.startsWith('task_id: ')) {
+      if (
+        typeof result.output === "string" &&
+        result.output.startsWith("task_id: ")
+      ) {
         this.agent.context.injectAndNotify(result.output, {
-          kind: 'injection',
-          variant: 'shell_command_backgrounded',
+          kind: "injection",
+          variant: "shell_command_backgrounded",
         });
-        return { stdout: result.output, stderr: '', isError: false, backgrounded: true };
+        return {
+          stdout: result.output,
+          stderr: "",
+          isError: false,
+          backgrounded: true,
+        };
       }
 
       // When the command fails with no captured stdout/stderr, the failure
@@ -207,7 +224,7 @@ export class ToolManager {
         isError &&
         stdout.length === 0 &&
         stderr.length === 0 &&
-        typeof result.output === 'string' &&
+        typeof result.output === "string" &&
         result.output.length > 0
       ) {
         stderr = result.output;
@@ -216,7 +233,8 @@ export class ToolManager {
       stderr += error instanceof Error ? error.message : String(error);
       isError = true;
     } finally {
-      if (commandId !== undefined) this.shellCommandControllers.delete(commandId);
+      if (commandId !== undefined)
+        this.shellCommandControllers.delete(commandId);
     }
     this.agent.context.appendBashOutput(stdout, stderr, isError);
     return { stdout, stderr, isError };
@@ -228,7 +246,7 @@ export class ToolManager {
 
   registerUserTool(input: UserToolRegistration): void {
     this.agent.records.logRecord({
-      type: 'tools.register_user_tool',
+      type: "tools.register_user_tool",
       ...input,
     });
     const { name, description, parameters } = input;
@@ -253,7 +271,7 @@ export class ToolManager {
       },
     };
     this.userTools.set(name, tool);
-    if (input.disclosure === 'deferred') {
+    if (input.disclosure === "deferred") {
       this.deferredUserTools.add(name);
     } else {
       this.deferredUserTools.delete(name);
@@ -263,7 +281,7 @@ export class ToolManager {
 
   unregisterUserTool(name: string): void {
     this.agent.records.logRecord({
-      type: 'tools.unregister_user_tool',
+      type: "tools.unregister_user_tool",
       name,
     });
     this.userTools.delete(name);
@@ -279,7 +297,9 @@ export class ToolManager {
         name: tool.name,
         description: tool.description,
         parameters: tool.parameters,
-        disclosure: parent.deferredUserTools.has(tool.name) ? 'deferred' : undefined,
+        disclosure: parent.deferredUserTools.has(tool.name)
+          ? "deferred"
+          : undefined,
       });
     }
   }
@@ -302,7 +322,7 @@ export class ToolManager {
         collisions.push({
           qualified,
           toolName: tool.name,
-          collidesWith: { kind: 'same_server', toolName: firstInThisCall },
+          collidesWith: { kind: "same_server", toolName: firstInThisCall },
         });
         continue;
       }
@@ -311,7 +331,10 @@ export class ToolManager {
         collisions.push({
           qualified,
           toolName: tool.name,
-          collidesWith: { kind: 'other_server', serverName: existingEntry.serverName },
+          collidesWith: {
+            kind: "other_server",
+            serverName: existingEntry.serverName,
+          },
         });
         continue;
       }
@@ -359,37 +382,43 @@ export class ToolManager {
     return true;
   }
 
-  private handleMcpServerStatusChange(mcp: McpConnectionManager, entry: McpServerEntry): void {
-    if (entry.status === 'connected') {
+  private handleMcpServerStatusChange(
+    mcp: McpConnectionManager,
+    entry: McpServerEntry,
+  ): void {
+    if (entry.status === "connected") {
       this.registerConnectedMcpServer(mcp, entry);
       return;
     }
-    if (entry.status === 'needs-auth') {
+    if (entry.status === "needs-auth") {
       this.registerNeedsAuthMcpServer(mcp, entry);
       return;
     }
-    if (entry.status === 'failed') {
+    if (entry.status === "failed") {
       this.unregisterMcpServer(entry.name);
       this.agent.emitEvent({
-        type: 'tool.list.updated',
-        reason: 'mcp.failed',
+        type: "tool.list.updated",
+        reason: "mcp.failed",
         serverName: entry.name,
       });
       return;
     }
-    if (entry.status === 'disabled' || entry.status === 'pending') {
+    if (entry.status === "disabled" || entry.status === "pending") {
       const removed = this.unregisterMcpServer(entry.name);
       if (removed) {
         this.agent.emitEvent({
-          type: 'tool.list.updated',
-          reason: 'mcp.disconnected',
+          type: "tool.list.updated",
+          reason: "mcp.disconnected",
           serverName: entry.name,
         });
       }
     }
   }
 
-  private registerNeedsAuthMcpServer(mcp: McpConnectionManager, entry: McpServerEntry): void {
+  private registerNeedsAuthMcpServer(
+    mcp: McpConnectionManager,
+    entry: McpServerEntry,
+  ): void {
     // Replace whatever tools (real or synthetic) were registered before; a
     // server flipping to needs-auth means previous tokens were invalidated.
     this.unregisterMcpServer(entry.name);
@@ -414,13 +443,16 @@ export class ToolManager {
     // The synthetic auth tool is now in the tool list; surface it the same way
     // a real toolset would show up so the model picks it up.
     this.agent.emitEvent({
-      type: 'tool.list.updated',
-      reason: 'mcp.connected',
+      type: "tool.list.updated",
+      reason: "mcp.connected",
       serverName: entry.name,
     });
   }
 
-  private registerConnectedMcpServer(mcp: McpConnectionManager, entry: McpServerEntry): void {
+  private registerConnectedMcpServer(
+    mcp: McpConnectionManager,
+    entry: McpServerEntry,
+  ): void {
     const resolved = mcp.resolved(entry.name);
     if (resolved === undefined) return;
     const result = this.registerMcpServer(
@@ -437,8 +469,8 @@ export class ToolManager {
     );
     this.emitMcpToolCollisions(entry.name, result.collisions);
     this.agent.emitEvent({
-      type: 'tool.list.updated',
-      reason: 'mcp.connected',
+      type: "tool.list.updated",
+      reason: "mcp.connected",
       serverName: entry.name,
     });
   }
@@ -494,12 +526,14 @@ export class ToolManager {
     // other servers hold a qualified name at registration time, so the same
     // server can re-register with identical tools but a different outcome;
     // that change must produce a new record.
-    const hash = fingerprint(JSON.stringify({ tools: rawTools, enabledNames, collisions }));
+    const hash = fingerprint(
+      JSON.stringify({ tools: rawTools, enabledNames, collisions }),
+    );
     const key = `${serverName}\n${hash}`;
     if (this.seenMcpDiscoveries.has(key)) return;
     this.seenMcpDiscoveries.add(key);
     this.agent.records.logRecord({
-      type: 'mcp.tools_discovered',
+      type: "mcp.tools_discovered",
       serverName,
       hash,
       tools: rawTools,
@@ -508,30 +542,38 @@ export class ToolManager {
     });
   }
 
-  private emitMcpToolCollisions(serverName: string, collisions: readonly McpToolCollision[]): void {
+  private emitMcpToolCollisions(
+    serverName: string,
+    collisions: readonly McpToolCollision[],
+  ): void {
     if (collisions.length === 0) return;
     const summary = collisions
       .map((c) =>
-        c.collidesWith.kind === 'same_server'
+        c.collidesWith.kind === "same_server"
           ? `"${c.toolName}" -> ${c.qualified} (collides with "${c.collidesWith.toolName}" from the same server)`
           : `"${c.toolName}" -> ${c.qualified} (collides with server "${c.collidesWith.serverName}")`,
       )
-      .join('; ');
+      .join("; ");
     this.agent.emitEvent({
-      type: 'error',
+      type: "error",
       ...makeErrorPayload(
-        'mcp.tool_name_collision',
+        "mcp.tool_name_collision",
         `MCP server "${serverName}" registered ${collisions.length} tool name` +
-          `${collisions.length === 1 ? '' : 's'} ` +
+          `${collisions.length === 1 ? "" : "s"} ` +
           `that collide with existing qualified names; the losing tools were dropped: ${summary}`,
-        { details: { serverName, collisions: collisions as readonly unknown[] } },
+        {
+          details: { serverName, collisions: collisions as readonly unknown[] },
+        },
       ),
     });
   }
 
-  setActiveTools(names: readonly string[], disallowedNames?: readonly string[]): void {
+  setActiveTools(
+    names: readonly string[],
+    disallowedNames?: readonly string[],
+  ): void {
     this.agent.records.logRecord({
-      type: 'tools.set_active_tools',
+      type: "tools.set_active_tools",
       names,
       disallowedNames,
     });
@@ -539,8 +581,12 @@ export class ToolManager {
     // builtin/user tool names. The split keeps every caller on one string[].
     this.enabledTools = new Set(names.filter((name) => !isMcpToolName(name)));
     this.mcpAccessPatterns = names.filter((name) => isMcpToolName(name));
-    this.disabledTools = new Set((disallowedNames ?? []).filter((name) => !isMcpToolName(name)));
-    this.mcpDenyPatterns = (disallowedNames ?? []).filter((name) => isMcpToolName(name));
+    this.disabledTools = new Set(
+      (disallowedNames ?? []).filter((name) => !isMcpToolName(name)),
+    );
+    this.mcpDenyPatterns = (disallowedNames ?? []).filter((name) =>
+      isMcpToolName(name),
+    );
     // Builtin construction reads the enabled set (Bash/Agent bake
     // `allowBackground` from the Task* trio), and the constructor may already
     // have built the map while the enabled set was still empty. The lazy
@@ -558,7 +604,9 @@ export class ToolManager {
 
   private isMcpToolEnabled(name: string): boolean {
     return (
-      this.mcpAccessPatterns.some((pattern) => picomatch.isMatch(name, pattern)) &&
+      this.mcpAccessPatterns.some((pattern) =>
+        picomatch.isMatch(name, pattern),
+      ) &&
       !this.mcpDenyPatterns.some((pattern) => picomatch.isMatch(name, pattern))
     );
   }
@@ -589,7 +637,8 @@ export class ToolManager {
       [...this.mcpTools.keys()].filter((name) => this.isMcpToolEnabled(name)),
     );
     for (const name of this.deferredUserTools) {
-      if (this.userTools.has(name) && this.isExactToolEnabled(name)) names.add(name);
+      if (this.userTools.has(name) && this.isExactToolEnabled(name))
+        names.add(name);
     }
     return [...names].toSorted((a, b) => a.localeCompare(b));
   }
@@ -611,7 +660,9 @@ export class ToolManager {
     return names;
   }
 
-  shapeDynamicToolHistory(messages: readonly ContextMessage[]): readonly ContextMessage[] {
+  shapeDynamicToolHistory(
+    messages: readonly ContextMessage[],
+  ): readonly ContextMessage[] {
     let shaped: ContextMessage[] | undefined;
     for (let i = 0; i < messages.length; i += 1) {
       const message = messages[i]!;
@@ -621,7 +672,9 @@ export class ToolManager {
         continue;
       }
 
-      const kept = tools.filter((tool) => this.isLoadedDynamicToolActive(tool.name));
+      const kept = tools.filter((tool) =>
+        this.isLoadedDynamicToolActive(tool.name),
+      );
       if (kept.length === tools.length) {
         if (shaped !== undefined) shaped.push(message);
         continue;
@@ -634,7 +687,8 @@ export class ToolManager {
 
       const { tools: _tools, ...rest } = message;
       void _tools;
-      if (rest.content.length > 0 || rest.toolCalls.length > 0) shaped.push(rest);
+      if (rest.content.length > 0 || rest.toolCalls.length > 0)
+        shaped.push(rest);
     }
     return shaped ?? messages;
   }
@@ -689,7 +743,9 @@ export class ToolManager {
       this.deferredUserTools.has(name) && this.isExactToolEnabled(name)
         ? this.userTools.get(name)
         : undefined;
-    const mcpTool = this.isMcpToolEnabled(name) ? this.mcpTools.get(name)?.tool : undefined;
+    const mcpTool = this.isMcpToolEnabled(name)
+      ? this.mcpTools.get(name)?.tool
+      : undefined;
     const tool = userTool ?? mcpTool;
     if (tool === undefined) return undefined;
     return {
@@ -718,13 +774,13 @@ export class ToolManager {
     if (!registered && loaded && isMcpToolName(name)) {
       return (
         `Tool "${name}" was loaded but its MCP server is currently disconnected. ` +
-        'It may become available again when the server reconnects; do not retry immediately.'
+        "It may become available again when the server reconnects; do not retry immediately."
       );
     }
     if (!registered && loaded) {
       return (
         `Tool "${name}" was loaded but is no longer registered or active. ` +
-        'Do not retry it unless it becomes available again.'
+        "Do not retry it unless it becomes available again."
       );
     }
     return undefined;
@@ -743,7 +799,7 @@ export class ToolManager {
           (tool.name === b.SELECT_TOOLS_TOOL_NAME &&
             this.agent.toolSelectEnabled &&
             !this.disabledTools.has(tool.name)),
-        source: 'builtin',
+        source: "builtin",
       };
     }
     for (const tool of this.userTools.values()) {
@@ -751,7 +807,7 @@ export class ToolManager {
         name: tool.name,
         description: tool.description,
         active: this.isExactToolEnabled(tool.name),
-        source: 'user',
+        source: "user",
       };
     }
     for (const entry of this.mcpTools.values()) {
@@ -759,7 +815,7 @@ export class ToolManager {
         name: entry.tool.name,
         description: entry.tool.description,
         active: this.isMcpToolEnabled(entry.tool.name),
-        source: 'mcp',
+        source: "mcp",
       };
     }
   }
@@ -788,10 +844,10 @@ export class ToolManager {
       this.agent.skills?.registry.getSkillRoots() ?? [],
     );
     const allowBackground =
-      this.isExactToolEnabled('TaskList') &&
-      this.isExactToolEnabled('TaskOutput') &&
-      this.isExactToolEnabled('TaskStop');
-    const goalToolsEnabled = this.agent.type === 'main';
+      this.isExactToolEnabled("TaskList") &&
+      this.isExactToolEnabled("TaskOutput") &&
+      this.isExactToolEnabled("TaskStop");
+    const goalToolsEnabled = this.agent.type === "main";
     this.builtinTools = new Map(
       [
         new b.ReadTool(kaos, workspace),
@@ -802,8 +858,10 @@ export class ToolManager {
         new b.BashTool(kaos, cwd, background, {
           allowBackground,
           autoBackgroundOnTimeout:
-            this.agent.kimiConfig?.background?.bashAutoBackgroundOnTimeout ?? true,
-          backgroundTimeoutS: this.agent.kimiConfig?.background?.bashTaskTimeoutS,
+            this.agent.kimiConfig?.background?.bashAutoBackgroundOnTimeout ??
+            true,
+          backgroundTimeoutS:
+            this.agent.kimiConfig?.background?.bashTaskTimeoutS,
         }),
         (modelCapabilities.image_in || modelCapabilities.video_in) &&
           new b.ReadMediaFileTool(
@@ -828,7 +886,8 @@ export class ToolManager {
         goalToolsEnabled && new b.GetGoalTool(this.agent),
         goalToolsEnabled && new b.SetGoalBudgetTool(this.agent),
         goalToolsEnabled && new b.UpdateGoalTool(this.agent),
-        this.agent.rpc?.requestQuestion && new b.AskUserQuestionTool(this.agent),
+        this.agent.rpc?.requestQuestion &&
+          new b.AskUserQuestionTool(this.agent),
         new b.TodoListTool(this.toolStore),
         new b.TaskListTool(background),
         new b.TaskOutputTool(background),
@@ -842,13 +901,19 @@ export class ToolManager {
           new b.AgentTool(
             this.agent.subagentHost,
             background,
-            this.agent.subagentHost.delegatableSubagents(this.agent.config.profileName),
+            this.agent.subagentHost.delegatableSubagents(
+              this.agent.config.profileName,
+            ),
             {
               allowBackground,
               log: this.agent.log,
-              subagentTimeoutMs: resolveSubagentTimeoutMs(this.agent.kimiConfig?.subagent?.timeoutMs),
-              showModelPreferences: this.agent.experimentalFlags.enabled('secondary-model'),
-              modelChoiceEnabled: this.agent.experimentalFlags.enabled('secondary-model'),
+              subagentTimeoutMs: resolveSubagentTimeoutMs(
+                this.agent.kimiConfig?.subagent?.timeoutMs,
+              ),
+              showModelPreferences:
+                this.agent.experimentalFlags.enabled("secondary-model"),
+              modelChoiceEnabled:
+                this.agent.experimentalFlags.enabled("secondary-model"),
               subagentModelDescription: buildSubagentModelDescriptions(
                 this.agent.kimiConfig,
                 this.agent.experimentalFlags,
@@ -860,15 +925,18 @@ export class ToolManager {
           new b.AgentSwarmTool(
             this.agent.subagentHost,
             this.agent.swarmMode,
-            resolveSubagentTimeoutMs(this.agent.kimiConfig?.subagent?.timeoutMs),
+            resolveSubagentTimeoutMs(
+              this.agent.kimiConfig?.subagent?.timeoutMs,
+            ),
             buildSubagentModelDescriptions(
               this.agent.kimiConfig,
               this.agent.experimentalFlags,
               this.agent.config.modelAlias,
             ),
-            this.agent.experimentalFlags.enabled('secondary-model'),
+            this.agent.experimentalFlags.enabled("secondary-model"),
           ),
-        toolServices?.webSearcher && new b.WebSearchTool(toolServices.webSearcher),
+        toolServices?.webSearcher &&
+          new b.WebSearchTool(toolServices.webSearcher),
         toolServices?.urlFetcher && new b.FetchURLTool(toolServices.urlFetcher),
       ]
         .filter((tool) => !!tool)
@@ -890,7 +958,9 @@ export class ToolManager {
     return this.createVideoUploader(this.agent.config.provider);
   }
 
-  private createVideoUploader(provider: ChatProvider): b.VideoUploader | undefined {
+  private createVideoUploader(
+    provider: ChatProvider,
+  ): b.VideoUploader | undefined {
     const uploadVideo = provider.uploadVideo?.bind(provider);
     if (uploadVideo === undefined) return undefined;
 
@@ -901,7 +971,8 @@ export class ToolManager {
     const baseProps = this.videoUploadTelemetryProps(modelAlias);
     const upload =
       withAuth === undefined
-        ? (input: b.VideoUploadInput, signal?: AbortSignal) => uploadVideo(input, { signal })
+        ? (input: b.VideoUploadInput, signal?: AbortSignal) =>
+            uploadVideo(input, { signal })
         : (input: b.VideoUploadInput, signal?: AbortSignal) =>
             withAuth((auth) => uploadVideo(input, { auth, signal }));
 
@@ -912,23 +983,29 @@ export class ToolManager {
         mime_type: input.mimeType,
         size_bytes: input.data.length,
       };
-      const track = (props: Record<string, string | number | boolean | undefined>): void => {
+      const track = (
+        props: Record<string, string | number | boolean | undefined>,
+      ): void => {
         try {
-          this.agent.telemetry.track('video_upload', props);
+          this.agent.telemetry.track("video_upload", props);
         } catch {
           // Telemetry must never affect the upload outcome.
         }
       };
       try {
         const part = await upload(input, options?.signal);
-        track({ ...base, outcome: 'success', duration_ms: Date.now() - startedAt });
+        track({
+          ...base,
+          outcome: "success",
+          duration_ms: Date.now() - startedAt,
+        });
         return part;
       } catch (error) {
         track({
           ...base,
-          outcome: 'error',
+          outcome: "error",
           duration_ms: Date.now() - startedAt,
-          error_type: error instanceof Error ? error.name : 'Unknown',
+          error_type: error instanceof Error ? error.name : "Unknown",
         });
         throw error;
       }
@@ -941,7 +1018,8 @@ export class ToolManager {
     model: string;
   } {
     try {
-      const resolved = this.agent.modelProvider?.resolveProviderConfig(modelAlias);
+      const resolved =
+        this.agent.modelProvider?.resolveProviderConfig(modelAlias);
       if (resolved === undefined) return { model: modelAlias };
       return {
         model: modelAlias,
@@ -967,9 +1045,12 @@ export class ToolManager {
       try {
         this.initializeBuiltinTools();
       } catch (error) {
-        this.agent.log.warn('lazy initializeBuiltinTools failed; will retry on next read', {
-          error: error instanceof Error ? error.message : String(error),
-        });
+        this.agent.log.warn(
+          "lazy initializeBuiltinTools failed; will retry on next read",
+          {
+            error: error instanceof Error ? error.message : String(error),
+          },
+        );
       }
     }
     const disclosure = this.progressiveDisclosure;
@@ -1003,25 +1084,28 @@ export class ToolManager {
       disclosure && !this.disabledTools.has(b.SELECT_TOOLS_TOOL_NAME)
         ? [b.SELECT_TOOLS_TOOL_NAME]
         : [];
-    return uniq([...enabledNames, ...selectToolsName, ...mcpNames])
-      .toSorted((a, b) => a.localeCompare(b))
-      // select_tools is exposed exclusively through the disclosure gate — a
-      // profile or setActiveTools listing the name explicitly must not
-      // surface it in inline mode (it was silently dropped back when
-      // registration itself was gated; keep that contract).
-      .filter((name) => disclosure || name !== b.SELECT_TOOLS_TOOL_NAME)
-      .map((name) => {
-        const tool =
-          this.userTools.get(name) ??
-          this.mcpTools.get(name)?.tool ??
-          this.builtinTools.get(name);
-        if (tool === undefined) return undefined;
-        const deferred =
-          disclosure && (this.mcpTools.has(name) || this.deferredUserTools.has(name));
-        // Dynamic entries are plain object literals, so the spread keeps the
-        // execution closure intact while adding the wire-strip marker.
-        return deferred ? { ...tool, deferred: true as const } : tool;
-      })
-      .filter((tool) => !!tool);
+    return (
+      uniq([...enabledNames, ...selectToolsName, ...mcpNames])
+        .toSorted((a, b) => a.localeCompare(b))
+        // select_tools is exposed exclusively through the disclosure gate — a
+        // profile or setActiveTools listing the name explicitly must not
+        // surface it in inline mode (it was silently dropped back when
+        // registration itself was gated; keep that contract).
+        .filter((name) => disclosure || name !== b.SELECT_TOOLS_TOOL_NAME)
+        .map((name) => {
+          const tool =
+            this.userTools.get(name) ??
+            this.mcpTools.get(name)?.tool ??
+            this.builtinTools.get(name);
+          if (tool === undefined) return undefined;
+          const deferred =
+            disclosure &&
+            (this.mcpTools.has(name) || this.deferredUserTools.has(name));
+          // Dynamic entries are plain object literals, so the spread keeps the
+          // execution closure intact while adding the wire-strip marker.
+          return deferred ? { ...tool, deferred: true as const } : tool;
+        })
+        .filter((tool) => !!tool)
+    );
   }
 }

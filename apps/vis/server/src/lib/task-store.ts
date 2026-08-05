@@ -12,13 +12,13 @@
 //   - the same legacy snake_case → current camelCase normalization, so old
 //     sessions list identically to how the CLI would list them.
 
-import { open, readdir, readFile, stat } from 'node:fs/promises';
-import { join } from 'node:path';
+import { open, readdir, readFile, stat } from "node:fs/promises";
+import { join } from "node:path";
 
 import type {
   BackgroundTaskInfo,
   BackgroundTaskStatus,
-} from './agent-record-types';
+} from "./agent-record-types";
 
 /** Task id format: `{prefix}-{8 chars of [0-9a-z]}`. Mirror of agent-core's
  *  `VALID_TASK_ID` (background/persist.ts). Enforced before deriving any
@@ -30,14 +30,14 @@ export function isSafeTaskId(id: string): boolean {
 }
 
 function tasksDirOf(agentDir: string): string {
-  return join(agentDir, 'tasks');
+  return join(agentDir, "tasks");
 }
 
 function taskOutputFile(agentDir: string, taskId: string): string {
   if (!VALID_TASK_ID.test(taskId)) {
     throw new Error(`Invalid task id: "${taskId}"`);
   }
-  return join(tasksDirOf(agentDir), taskId, 'output.log');
+  return join(tasksDirOf(agentDir), taskId, "output.log");
 }
 
 /**
@@ -52,7 +52,7 @@ export async function listBackgroundTasks(
   agentDir: string,
 ): Promise<BackgroundTaskInfo[]> {
   const dir = tasksDirOf(agentDir);
-  let entries: import('node:fs').Dirent[];
+  let entries: import("node:fs").Dirent[];
   try {
     entries = await readdir(dir, { withFileTypes: true });
   } catch {
@@ -60,12 +60,12 @@ export async function listBackgroundTasks(
   }
   const out: BackgroundTaskInfo[] = [];
   for (const entry of entries) {
-    if (!entry.isFile() || !entry.name.endsWith('.json')) continue;
-    const id = entry.name.slice(0, -'.json'.length);
+    if (!entry.isFile() || !entry.name.endsWith(".json")) continue;
+    const id = entry.name.slice(0, -".json".length);
     if (!VALID_TASK_ID.test(id)) continue;
     let parsed: unknown;
     try {
-      parsed = JSON.parse(await readFile(join(dir, entry.name), 'utf8'));
+      parsed = JSON.parse(await readFile(join(dir, entry.name), "utf8"));
     } catch {
       continue;
     }
@@ -128,23 +128,47 @@ export async function readTaskOutput(
   const limit = Math.max(0, Math.trunc(maxBytes));
   let handle;
   try {
-    handle = await open(taskOutputFile(agentDir, taskId), 'r');
+    handle = await open(taskOutputFile(agentDir, taskId), "r");
   } catch {
-    return { offset: start, nextOffset: start, size: 0, content: '', eof: true };
+    return {
+      offset: start,
+      nextOffset: start,
+      size: 0,
+      content: "",
+      eof: true,
+    };
   }
   try {
     const size = (await handle.stat()).size;
     if (limit === 0 || start >= size) {
-      return { offset: start, nextOffset: start, size, content: '', eof: start >= size };
+      return {
+        offset: start,
+        nextOffset: start,
+        size,
+        content: "",
+        eof: start >= size,
+      };
     }
     const length = Math.min(limit, size - start);
     const buffer = Buffer.allocUnsafe(length);
     const { bytesRead } = await handle.read(buffer, 0, length, start);
-    const content = buffer.toString('utf-8', 0, bytesRead);
+    const content = buffer.toString("utf-8", 0, bytesRead);
     const nextOffset = start + bytesRead;
-    return { offset: start, nextOffset, size, content, eof: nextOffset >= size };
+    return {
+      offset: start,
+      nextOffset,
+      size,
+      content,
+      eof: nextOffset >= size,
+    };
   } catch {
-    return { offset: start, nextOffset: start, size: 0, content: '', eof: true };
+    return {
+      offset: start,
+      nextOffset: start,
+      size: 0,
+      content: "",
+      eof: true,
+    };
   } finally {
     await handle.close();
   }
@@ -153,12 +177,12 @@ export async function readTaskOutput(
 // ── normalization (ported from agent-core/agent/background/persist.ts) ───────
 
 type LegacyBackgroundTaskStatus =
-  | 'running'
-  | 'awaiting_approval'
-  | 'completed'
-  | 'failed'
-  | 'killed'
-  | 'lost';
+  | "running"
+  | "awaiting_approval"
+  | "completed"
+  | "failed"
+  | "killed"
+  | "lost";
 
 interface LegacyPersistedTask {
   readonly task_id: string;
@@ -183,7 +207,9 @@ function normalizePersistedTask(task: DiskPersistedTask): BackgroundTaskInfo {
   return { ...task, detached: task.detached ?? true };
 }
 
-function legacyPersistedTaskToInfo(task: LegacyPersistedTask): BackgroundTaskInfo {
+function legacyPersistedTaskToInfo(
+  task: LegacyPersistedTask,
+): BackgroundTaskInfo {
   const status = legacyStatusToCurrent(task);
   const base = {
     taskId: task.task_id,
@@ -193,48 +219,53 @@ function legacyPersistedTaskToInfo(task: LegacyPersistedTask): BackgroundTaskInf
     startedAt: task.started_at,
     endedAt: task.ended_at,
     stopReason: optionalNonEmptyString(task.stop_reason),
-    timeoutMs: typeof task.timeout_ms === 'number' ? task.timeout_ms : undefined,
+    timeoutMs:
+      typeof task.timeout_ms === "number" ? task.timeout_ms : undefined,
   };
-  if (task.task_id.startsWith('agent-')) {
+  if (task.task_id.startsWith("agent-")) {
     return {
       ...base,
-      kind: 'agent',
+      kind: "agent",
       agentId: optionalNonEmptyString(task.agent_id),
       subagentType: optionalNonEmptyString(task.subagent_type),
     };
   }
   return {
     ...base,
-    kind: 'process',
+    kind: "process",
     command: task.command,
     pid: task.pid,
     exitCode: task.exit_code,
   };
 }
 
-function legacyStatusToCurrent(task: LegacyPersistedTask): BackgroundTaskStatus {
-  if (task.status === 'awaiting_approval') return 'running';
-  if (task.status === 'failed' && task.timed_out === true) return 'timed_out';
+function legacyStatusToCurrent(
+  task: LegacyPersistedTask,
+): BackgroundTaskStatus {
+  if (task.status === "awaiting_approval") return "running";
+  if (task.status === "failed" && task.timed_out === true) return "timed_out";
   return task.status;
 }
 
 function isReadablePersistedTask(obj: unknown): obj is DiskPersistedTask {
   return (
     isRecord(obj) &&
-    (typeof obj['taskId'] === 'string' || typeof obj['task_id'] === 'string')
+    (typeof obj["taskId"] === "string" || typeof obj["task_id"] === "string")
   );
 }
 
-function isLegacyPersistedTask(task: DiskPersistedTask): task is LegacyPersistedTask {
-  return 'task_id' in task;
+function isLegacyPersistedTask(
+  task: DiskPersistedTask,
+): task is LegacyPersistedTask {
+  return "task_id" in task;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
+  return typeof value === "object" && value !== null;
 }
 
 function optionalNonEmptyString(value: unknown): string | undefined {
-  if (typeof value !== 'string') return undefined;
+  if (typeof value !== "string") return undefined;
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : undefined;
 }

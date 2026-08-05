@@ -2,7 +2,7 @@
  * Shared stubs for goal tests.
  */
 
-import type { IAgentSwarmService } from '#/agent/swarm/swarm';
+import type { IAgentSwarmService } from "#/agent/swarm/swarm";
 
 /**
  * Inert stand-in for `IAgentSwarmService`.

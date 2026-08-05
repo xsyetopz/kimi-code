@@ -3,8 +3,8 @@
  * control-flow errors.
  */
 
-import { CoreErrors } from './codes';
-import type { ErrorCode } from '#/errors';
+import { CoreErrors } from "./codes";
+import type { ErrorCode } from "#/errors";
 
 export class ExpectedError extends Error {
   readonly isExpected = true;
@@ -13,7 +13,7 @@ export class ExpectedError extends Error {
 export class ErrorNoTelemetry extends Error {
   constructor(message?: string) {
     super(message);
-    this.name = 'CodeExpectedError';
+    this.name = "CodeExpectedError";
   }
 
   static fromError(error: Error): ErrorNoTelemetry {
@@ -23,14 +23,14 @@ export class ErrorNoTelemetry extends Error {
   }
 
   static isErrorNoTelemetry(error: unknown): error is ErrorNoTelemetry {
-    return error instanceof Error && error.name === 'CodeExpectedError';
+    return error instanceof Error && error.name === "CodeExpectedError";
   }
 }
 
 export class BugIndicatingError extends Error {
   constructor(message?: string) {
-    super(message ?? 'An unexpected bug occurred.');
-    this.name = 'BugIndicatingError';
+    super(message ?? "An unexpected bug occurred.");
+    this.name = "BugIndicatingError";
   }
 }
 
@@ -45,8 +45,11 @@ export class Error2 extends Error {
   readonly details?: Readonly<Record<string, unknown>>;
 
   constructor(code: ErrorCode, message: string, options?: Error2Options) {
-    super(message, options?.cause === undefined ? undefined : { cause: options.cause });
-    this.name = options?.name ?? 'Error2';
+    super(
+      message,
+      options?.cause === undefined ? undefined : { cause: options.cause },
+    );
+    this.name = options?.name ?? "Error2";
     this.code = code;
     this.details = options?.details;
   }
@@ -68,8 +71,8 @@ export class NotImplementedError extends Error2 {
   constructor(feature?: string) {
     super(
       CoreErrors.codes.NOT_IMPLEMENTED,
-      feature ? `Not implemented: ${feature}` : 'Not implemented',
+      feature ? `Not implemented: ${feature}` : "Not implemented",
     );
-    this.name = 'NotImplementedError';
+    this.name = "NotImplementedError";
   }
 }

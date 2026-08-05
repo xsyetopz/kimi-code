@@ -14,20 +14,27 @@
  * originating step flushed, so they do not live inside the paginated timeline.
  */
 
-import type { AgentId, AttachmentId, FrameId, InteractionId, TaskId, TodoId } from './ids';
+import type {
+  AgentId,
+  AttachmentId,
+  FrameId,
+  InteractionId,
+  TaskId,
+  TodoId,
+} from "./ids";
 
-export type { InteractionKind, InteractionState } from './interaction';
+export type { InteractionKind, InteractionState } from "./interaction";
 
 export type FrameRef = {
-  readonly target: 'frame';
+  readonly target: "frame";
   readonly frameId: FrameId;
 };
 
 /** Assistant / user visible text. L1 always holds the full text so far. */
 export interface TextFrame {
-  readonly kind: 'text';
+  readonly kind: "text";
   readonly frameId: FrameId;
-  readonly role: 'assistant' | 'user';
+  readonly role: "assistant" | "user";
   readonly text: string;
   /** Attachments carried by this message (entities in `attachments`). */
   readonly attachmentIds?: readonly AttachmentId[];
@@ -42,19 +49,19 @@ export interface TextFrame {
 
 /** Model thinking chain. Same full-text invariant as TextFrame. */
 export interface ThinkingFrame {
-  readonly kind: 'thinking';
+  readonly kind: "thinking";
   readonly frameId: FrameId;
   readonly text: string;
 }
 
-export type ToolFrameState = 'running' | 'done' | 'error';
+export type ToolFrameState = "running" | "done" | "error";
 
 /**
  * The latest progress update of a running tool call (`tool.progress`),
  * overwrite semantics — only the newest rides the frame.
  */
 export interface ToolFrameProgress {
-  readonly kind: 'stdout' | 'stderr' | 'progress' | 'status' | 'custom';
+  readonly kind: "stdout" | "stderr" | "progress" | "status" | "custom";
   readonly text?: string;
   readonly percent?: number;
   readonly customKind?: string;
@@ -64,11 +71,11 @@ export interface ToolFrameProgress {
 export interface AgentRef {
   readonly agentId: AgentId;
   /** 'member' marks one child of an agent group (swarm); default is 'child'. */
-  readonly role?: 'child' | 'member';
+  readonly role?: "child" | "member";
 }
 
 export interface ToolCallFrame {
-  readonly kind: 'tool';
+  readonly kind: "tool";
   readonly frameId: FrameId;
   readonly toolCallId: string;
   /** Engine tool name, e.g. 'Read' / 'Bash' / 'Agent' / 'AgentSwarm'. */
@@ -104,9 +111,9 @@ export interface ToolCallFrame {
 
 /** Errors / warnings / informational notices attached to a step. */
 export interface NoticeFrame {
-  readonly kind: 'notice';
+  readonly kind: "notice";
   readonly frameId: FrameId;
-  readonly level: 'error' | 'warning' | 'info';
+  readonly level: "error" | "warning" | "info";
   /** Origin subsystem, e.g. 'mcp', 'hook', 'compaction'. */
   readonly source?: string;
   readonly message: string;

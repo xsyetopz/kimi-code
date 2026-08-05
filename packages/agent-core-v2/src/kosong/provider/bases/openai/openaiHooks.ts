@@ -16,18 +16,26 @@
  *    hook logic.
  */
 
-import type { GenerateOptions, VideoUploadInput } from '#/kosong/contract/provider';
-import type { Tool } from '#/kosong/contract/tool';
-import type { ProtocolEndpoint, ResolvedTrait } from '#/kosong/protocol/protocolTrait';
+import type {
+  GenerateOptions,
+  VideoUploadInput,
+} from "#/kosong/contract/provider";
+import type { Tool } from "#/kosong/contract/tool";
+import type {
+  ProtocolEndpoint,
+  ResolvedTrait,
+} from "#/kosong/protocol/protocolTrait";
 
-import type { OpenAIChatCompletionsHooks } from './openai-legacy';
+import type { OpenAIChatCompletionsHooks } from "./openai-legacy";
 
 export function composeOpenAIChatHooks(
   traits: readonly ResolvedTrait[],
 ): OpenAIChatCompletionsHooks | undefined {
   const hooks: OpenAIChatCompletionsHooks = {};
 
-  const messageShapers = traits.filter(({ trait }) => trait.convertMessage !== undefined);
+  const messageShapers = traits.filter(
+    ({ trait }) => trait.convertMessage !== undefined,
+  );
   if (messageShapers.length > 0) {
     hooks.convertMessage = (message, converted) => {
       let current: Record<string, unknown> | null = converted;
@@ -39,7 +47,9 @@ export function composeOpenAIChatHooks(
     };
   }
 
-  const historyMergers = traits.filter(({ trait }) => trait.mergeHistory !== undefined);
+  const historyMergers = traits.filter(
+    ({ trait }) => trait.mergeHistory !== undefined,
+  );
   if (historyMergers.length > 0) {
     hooks.mergeHistory = (messages) => {
       let current: readonly Record<string, unknown>[] = messages;
@@ -51,7 +61,9 @@ export function composeOpenAIChatHooks(
     };
   }
 
-  const paramsBuilders = traits.filter(({ trait }) => trait.buildParams !== undefined);
+  const paramsBuilders = traits.filter(
+    ({ trait }) => trait.buildParams !== undefined,
+  );
   if (paramsBuilders.length > 0) {
     hooks.buildParams = (params) => {
       let current = params;
@@ -68,7 +80,8 @@ export function composeOpenAIChatHooks(
       hooks.convertTool = (tool: Tool) => trait.convertTool!(tool, context);
     }
     if (trait.convertError !== undefined) {
-      hooks.convertError = (error: unknown) => trait.convertError!(error, context);
+      hooks.convertError = (error: unknown) =>
+        trait.convertError!(error, context);
     }
     if (trait.toolCallIdPolicy !== undefined) {
       hooks.toolCallIdPolicy = () => trait.toolCallIdPolicy!(context);
@@ -95,8 +108,10 @@ export function composeOpenAIChatHooks(
       hooks.reasoningKey = () => trait.reasoningKey!(context);
     }
     if (trait.uploadVideo !== undefined) {
-      hooks.uploadVideo = (input: string | VideoUploadInput, options?: GenerateOptions) =>
-        trait.uploadVideo!(input, options, context);
+      hooks.uploadVideo = (
+        input: string | VideoUploadInput,
+        options?: GenerateOptions,
+      ) => trait.uploadVideo!(input, options, context);
     }
   }
 
@@ -109,7 +124,9 @@ export interface AggregatedEndpoint {
   readonly defaultBaseUrl?: string;
 }
 
-export function traitEndpoint(traits: readonly ResolvedTrait[]): AggregatedEndpoint | undefined {
+export function traitEndpoint(
+  traits: readonly ResolvedTrait[],
+): AggregatedEndpoint | undefined {
   const apiKeyEnv: string[] = [];
   const baseUrlEnv: string[] = [];
   let defaultBaseUrl: string | undefined;
@@ -121,12 +138,15 @@ export function traitEndpoint(traits: readonly ResolvedTrait[]): AggregatedEndpo
     declared = true;
     if (endpoint.apiKeyEnv !== undefined) apiKeyEnv.push(endpoint.apiKeyEnv);
     if (endpoint.baseUrlEnv !== undefined) baseUrlEnv.push(endpoint.baseUrlEnv);
-    if (endpoint.defaultBaseUrl !== undefined) defaultBaseUrl = endpoint.defaultBaseUrl;
+    if (endpoint.defaultBaseUrl !== undefined)
+      defaultBaseUrl = endpoint.defaultBaseUrl;
   }
   return declared ? { apiKeyEnv, baseUrlEnv, defaultBaseUrl } : undefined;
 }
 
-export function firstProcessEnv(names: readonly string[] | undefined): string | undefined {
+export function firstProcessEnv(
+  names: readonly string[] | undefined,
+): string | undefined {
   if (names === undefined) return undefined;
   for (const name of names) {
     const value = process.env[name];
@@ -148,7 +168,9 @@ export function traitProvides(
   return provides;
 }
 
-export function compactObject<T extends Record<string, unknown>>(obj: T): Partial<T> {
+export function compactObject<T extends Record<string, unknown>>(
+  obj: T,
+): Partial<T> {
   const out: Partial<T> = {};
   for (const [key, value] of Object.entries(obj)) {
     if (value !== undefined) {

@@ -1,41 +1,44 @@
-import { derefJsonSchema, normalizeKimiToolSchema } from '#/providers/kimi-schema';
-import { describe, expect, it, vi } from 'vitest';
+import {
+  derefJsonSchema,
+  normalizeKimiToolSchema,
+} from "#/providers/kimi-schema";
+import { describe, expect, it, vi } from "vitest";
 
-describe('derefJsonSchema', () => {
-  it('returns schema unchanged when there are no $ref', () => {
+describe("derefJsonSchema", () => {
+  it("returns schema unchanged when there are no $ref", () => {
     const schema = {
-      type: 'object',
+      type: "object",
       properties: {
-        name: { type: 'string' },
-        age: { type: 'number' },
+        name: { type: "string" },
+        age: { type: "number" },
       },
-      required: ['name'],
+      required: ["name"],
     };
 
     const result = derefJsonSchema(schema);
 
     expect(result).toEqual({
-      type: 'object',
+      type: "object",
       properties: {
-        name: { type: 'string' },
-        age: { type: 'number' },
+        name: { type: "string" },
+        age: { type: "number" },
       },
-      required: ['name'],
+      required: ["name"],
     });
   });
 
-  it('resolves a simple $ref from $defs', () => {
+  it("resolves a simple $ref from $defs", () => {
     const schema = {
-      type: 'object',
+      type: "object",
       properties: {
-        address: { $ref: '#/$defs/Address' },
+        address: { $ref: "#/$defs/Address" },
       },
       $defs: {
         Address: {
-          type: 'object',
+          type: "object",
           properties: {
-            street: { type: 'string' },
-            city: { type: 'string' },
+            street: { type: "string" },
+            city: { type: "string" },
           },
         },
       },
@@ -44,35 +47,35 @@ describe('derefJsonSchema', () => {
     const result = derefJsonSchema(schema);
 
     expect(result).toEqual({
-      type: 'object',
+      type: "object",
       properties: {
         address: {
-          type: 'object',
+          type: "object",
           properties: {
-            street: { type: 'string' },
-            city: { type: 'string' },
+            street: { type: "string" },
+            city: { type: "string" },
           },
         },
       },
     });
     // $defs should be removed from the result.
-    expect(result['$defs']).toBeUndefined();
+    expect(result["$defs"]).toBeUndefined();
   });
 
-  it('preserves sibling keywords alongside $ref (e.g. description)', () => {
+  it("preserves sibling keywords alongside $ref (e.g. description)", () => {
     const schema = {
-      type: 'object',
+      type: "object",
       properties: {
         user: {
-          $ref: '#/$defs/User',
-          description: 'Custom description on the ref site',
+          $ref: "#/$defs/User",
+          description: "Custom description on the ref site",
         },
       },
       $defs: {
         User: {
-          type: 'object',
+          type: "object",
           properties: {
-            name: { type: 'string' },
+            name: { type: "string" },
           },
         },
       },
@@ -80,96 +83,102 @@ describe('derefJsonSchema', () => {
 
     const result = derefJsonSchema(schema);
 
-    const user = (result['properties'] as Record<string, Record<string, unknown>>)['user']!;
+    const user = (
+      result["properties"] as Record<string, Record<string, unknown>>
+    )["user"]!;
     // Resolved definition fields are present.
-    expect(user['type']).toBe('object');
-    expect(user['properties']).toEqual({ name: { type: 'string' } });
+    expect(user["type"]).toBe("object");
+    expect(user["properties"]).toEqual({ name: { type: "string" } });
     // Local sibling "description" is preserved.
-    expect(user['description']).toBe('Custom description on the ref site');
+    expect(user["description"]).toBe("Custom description on the ref site");
   });
 
-  it('local sibling fields override same-named fields from $defs', () => {
+  it("local sibling fields override same-named fields from $defs", () => {
     const schema = {
-      type: 'object',
+      type: "object",
       properties: {
         field: {
-          $ref: '#/$defs/Widget',
+          $ref: "#/$defs/Widget",
           // Local override must win over the def's description.
-          description: 'local override wins',
+          description: "local override wins",
         },
       },
       $defs: {
         Widget: {
-          type: 'string',
-          description: 'description from $defs',
-          default: 'hello',
+          type: "string",
+          description: "description from $defs",
+          default: "hello",
         },
       },
     };
 
     const result = derefJsonSchema(schema);
 
-    const field = (result['properties'] as Record<string, Record<string, unknown>>)['field']!;
-    expect(field['type']).toBe('string');
+    const field = (
+      result["properties"] as Record<string, Record<string, unknown>>
+    )["field"]!;
+    expect(field["type"]).toBe("string");
     // Local sibling wins.
-    expect(field['description']).toBe('local override wins');
+    expect(field["description"]).toBe("local override wins");
     // Non-overlapping def fields still flow through.
-    expect(field['default']).toBe('hello');
+    expect(field["default"]).toBe("hello");
   });
 
-  it('preserves sibling $ref keywords that themselves contain $ref (recursively resolved)', () => {
+  it("preserves sibling $ref keywords that themselves contain $ref (recursively resolved)", () => {
     const schema = {
-      type: 'object',
+      type: "object",
       properties: {
         entry: {
-          $ref: '#/$defs/Wrapper',
-          extra: { $ref: '#/$defs/Inner' },
+          $ref: "#/$defs/Wrapper",
+          extra: { $ref: "#/$defs/Inner" },
         },
       },
       $defs: {
         Wrapper: {
-          type: 'object',
-          properties: { a: { type: 'number' } },
+          type: "object",
+          properties: { a: { type: "number" } },
         },
         Inner: {
-          type: 'object',
-          properties: { b: { type: 'boolean' } },
+          type: "object",
+          properties: { b: { type: "boolean" } },
         },
       },
     };
 
     const result = derefJsonSchema(schema);
 
-    const entry = (result['properties'] as Record<string, Record<string, unknown>>)['entry']!;
-    expect(entry['type']).toBe('object');
-    expect(entry['properties']).toEqual({ a: { type: 'number' } });
+    const entry = (
+      result["properties"] as Record<string, Record<string, unknown>>
+    )["entry"]!;
+    expect(entry["type"]).toBe("object");
+    expect(entry["properties"]).toEqual({ a: { type: "number" } });
     // Sibling `extra` must have been recursively resolved (not left as a $ref).
-    expect(entry['extra']).toEqual({
-      type: 'object',
-      properties: { b: { type: 'boolean' } },
+    expect(entry["extra"]).toEqual({
+      type: "object",
+      properties: { b: { type: "boolean" } },
     });
   });
 
-  it('preserves $defs when cyclic refs remain unresolved', () => {
+  it("preserves $defs when cyclic refs remain unresolved", () => {
     // A references B, B references A — classic cycle. resolveNode() leaves
     // a `#/$defs/...` pointer on at least one side; the validator will need
     // $defs to stay around to resolve those dangling pointers.
     const schema = {
-      type: 'object',
+      type: "object",
       properties: {
-        a: { $ref: '#/$defs/A' },
+        a: { $ref: "#/$defs/A" },
       },
       $defs: {
         A: {
-          type: 'object',
+          type: "object",
           properties: {
-            next: { $ref: '#/$defs/B' },
+            next: { $ref: "#/$defs/B" },
           },
         },
         B: {
-          type: 'object',
+          type: "object",
           properties: {
-            back: { $ref: '#/$defs/A' },
+            back: { $ref: "#/$defs/A" },
           },
         },
       },
@@ -190,43 +199,43 @@ describe('derefJsonSchema', () => {
     expect(jsonText).toContain('"$ref":"#/$defs/');
   });
 
-  it('still deletes $defs when there are no cyclic refs', () => {
+  it("still deletes $defs when there are no cyclic refs", () => {
     // Sanity: a non-cyclic schema with $defs should have its $defs removed
     // after dereferencing (existing behavior must not regress).
     const schema = {
-      type: 'object',
+      type: "object",
       properties: {
-        name: { $ref: '#/$defs/Name' },
+        name: { $ref: "#/$defs/Name" },
       },
       $defs: {
-        Name: { type: 'string' },
+        Name: { type: "string" },
       },
     };
 
     const result = derefJsonSchema(schema);
-    expect(result['$defs']).toBeUndefined();
-    expect(result['properties']).toEqual({ name: { type: 'string' } });
+    expect(result["$defs"]).toBeUndefined();
+    expect(result["properties"]).toEqual({ name: { type: "string" } });
   });
 
-  it('resolves nested $ref from $defs', () => {
+  it("resolves nested $ref from $defs", () => {
     const schema = {
-      type: 'object',
+      type: "object",
       properties: {
-        person: { $ref: '#/$defs/Person' },
+        person: { $ref: "#/$defs/Person" },
       },
       $defs: {
         Person: {
-          type: 'object',
+          type: "object",
           properties: {
-            name: { type: 'string' },
-            address: { $ref: '#/$defs/Address' },
+            name: { type: "string" },
+            address: { $ref: "#/$defs/Address" },
           },
         },
         Address: {
-          type: 'object',
+          type: "object",
           properties: {
-            street: { type: 'string' },
-            city: { type: 'string' },
+            street: { type: "string" },
+            city: { type: "string" },
           },
         },
       },
@@ -235,106 +244,106 @@ describe('derefJsonSchema', () => {
     const result = derefJsonSchema(schema);
 
     expect(result).toEqual({
-      type: 'object',
+      type: "object",
       properties: {
         person: {
-          type: 'object',
+          type: "object",
           properties: {
-            name: { type: 'string' },
+            name: { type: "string" },
             address: {
-              type: 'object',
+              type: "object",
               properties: {
-                street: { type: 'string' },
-                city: { type: 'string' },
+                street: { type: "string" },
+                city: { type: "string" },
               },
             },
           },
         },
       },
     });
-    expect(result['$defs']).toBeUndefined();
+    expect(result["$defs"]).toBeUndefined();
   });
 
-  it('resolves a local $ref from draft-7 definitions', () => {
+  it("resolves a local $ref from draft-7 definitions", () => {
     const schema = {
-      type: 'object',
+      type: "object",
       properties: {
-        mode: { $ref: '#/definitions/Mode' },
+        mode: { $ref: "#/definitions/Mode" },
       },
       definitions: {
-        Mode: { enum: ['fast', 'safe'] },
+        Mode: { enum: ["fast", "safe"] },
       },
     };
 
     const result = derefJsonSchema(schema);
 
     expect(result).toEqual({
-      type: 'object',
+      type: "object",
       properties: {
-        mode: { enum: ['fast', 'safe'] },
+        mode: { enum: ["fast", "safe"] },
       },
     });
-    expect(result['definitions']).toBeUndefined();
+    expect(result["definitions"]).toBeUndefined();
   });
 });
 
-describe('normalizeKimiToolSchema', () => {
+describe("normalizeKimiToolSchema", () => {
   it.each([
     {
-      name: 'string enum',
-      property: { enum: ['none', 'start', 'end'] },
-      expectedType: 'string',
+      name: "string enum",
+      property: { enum: ["none", "start", "end"] },
+      expectedType: "string",
     },
     {
-      name: 'integer enum',
+      name: "integer enum",
       property: { enum: [1, 2, 3] },
-      expectedType: 'integer',
+      expectedType: "integer",
     },
     {
-      name: 'mixed integer and float enum collapses to number',
+      name: "mixed integer and float enum collapses to number",
       property: { enum: [1.5, 2] },
-      expectedType: 'number',
+      expectedType: "number",
     },
     {
-      name: 'boolean enum',
+      name: "boolean enum",
       property: { enum: [true, false] },
-      expectedType: 'boolean',
+      expectedType: "boolean",
     },
     {
-      name: 'single boolean enum',
+      name: "single boolean enum",
       property: { enum: [true] },
-      expectedType: 'boolean',
+      expectedType: "boolean",
     },
     {
-      name: 'null-only enum',
+      name: "null-only enum",
       property: { enum: [null] },
-      expectedType: 'null',
+      expectedType: "null",
     },
     {
-      name: 'string const',
-      property: { const: 'event' },
-      expectedType: 'string',
+      name: "string const",
+      property: { const: "event" },
+      expectedType: "string",
     },
     {
-      name: 'integer const',
+      name: "integer const",
       property: { const: 3 },
-      expectedType: 'integer',
+      expectedType: "integer",
     },
     {
-      name: 'number const',
+      name: "number const",
       property: { const: 1.25 },
-      expectedType: 'number',
+      expectedType: "number",
     },
     {
-      name: 'boolean const',
+      name: "boolean const",
       property: { const: true },
-      expectedType: 'boolean',
+      expectedType: "boolean",
     },
   ])(
-    'infers $name property type without mutating the original schema',
+    "infers $name property type without mutating the original schema",
     ({ property, expectedType }) => {
       const schema = {
-        type: 'object',
+        type: "object",
         properties: {
           target: property,
         },
@@ -344,7 +353,7 @@ describe('normalizeKimiToolSchema', () => {
       const result = normalizeKimiToolSchema(schema);
 
       expect(result).toEqual({
-        type: 'object',
+        type: "object",
         properties: {
           target: { ...property, type: expectedType },
         },
@@ -354,40 +363,40 @@ describe('normalizeKimiToolSchema', () => {
     },
   );
 
-  it('leaves explicitly typed enum properties untouched', () => {
+  it("leaves explicitly typed enum properties untouched", () => {
     const schema = {
-      type: 'object',
+      type: "object",
       properties: {
-        explicit: { type: 'string', enum: ['already-typed'] },
+        explicit: { type: "string", enum: ["already-typed"] },
       },
     };
 
     const result = normalizeKimiToolSchema(schema);
 
     expect(result).toEqual({
-      type: 'object',
+      type: "object",
       properties: {
-        explicit: { type: 'string', enum: ['already-typed'] },
+        explicit: { type: "string", enum: ["already-typed"] },
       },
     });
   });
 
-  it('repairs mismatched explicit type when enum values contradict it', () => {
+  it("repairs mismatched explicit type when enum values contradict it", () => {
     // Regression: Xcode MCP (xcrun mcpbridge) Version 26.5 (17F42) and later
     // generates schemas where String-backed Swift enums incorrectly carry
     // type: 'object' alongside string enum values. We overwrite the contradictory
     // type and strip object/array structure keys that are no longer relevant.
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     const schema = {
-      type: 'object',
+      type: "object",
       properties: {
         operation: {
-          type: 'object',
-          enum: ['move', 'copy'],
+          type: "object",
+          enum: ["move", "copy"],
           properties: {
-            rawValue: { type: 'string' },
+            rawValue: { type: "string" },
           },
-          required: ['rawValue'],
+          required: ["rawValue"],
         },
       },
     };
@@ -396,11 +405,11 @@ describe('normalizeKimiToolSchema', () => {
       const result = normalizeKimiToolSchema(schema);
 
       expect(result).toEqual({
-        type: 'object',
+        type: "object",
         properties: {
           operation: {
-            type: 'string',
-            enum: ['move', 'copy'],
+            type: "string",
+            enum: ["move", "copy"],
           },
         },
       });
@@ -410,29 +419,29 @@ describe('normalizeKimiToolSchema', () => {
     }
   });
 
-  it('repairs mismatched explicit type when const value contradicts it', () => {
+  it("repairs mismatched explicit type when const value contradicts it", () => {
     const schema = {
-      type: 'object',
+      type: "object",
       properties: {
-        mode: { type: 'object', const: 'fast' },
+        mode: { type: "object", const: "fast" },
       },
     };
 
     const result = normalizeKimiToolSchema(schema);
 
     expect(result).toEqual({
-      type: 'object',
+      type: "object",
       properties: {
-        mode: { type: 'string', const: 'fast' },
+        mode: { type: "string", const: "fast" },
       },
     });
   });
 
-  it('leaves mixed enum types with explicit type untouched to surface provider error', () => {
+  it("leaves mixed enum types with explicit type untouched to surface provider error", () => {
     const schema = {
-      type: 'object',
+      type: "object",
       properties: {
-        bad: { type: 'object', enum: ['move', 1] },
+        bad: { type: "object", enum: ["move", 1] },
       },
     };
 
@@ -441,20 +450,20 @@ describe('normalizeKimiToolSchema', () => {
     expect(() => normalizeKimiToolSchema(schema)).not.toThrow();
     const result = normalizeKimiToolSchema(schema);
     expect(result).toEqual({
-      type: 'object',
+      type: "object",
       properties: {
-        bad: { type: 'object', enum: ['move', 1] },
+        bad: { type: "object", enum: ["move", 1] },
       },
     });
   });
 
-  it('infers object and array property types from container enum/const values', () => {
+  it("infers object and array property types from container enum/const values", () => {
     const schema = {
-      type: 'object',
+      type: "object",
       properties: {
         object_enum: { enum: [{ a: 1 }, { a: 2 }] },
         array_enum: { enum: [[1, 2], [3]] },
-        object_const: { const: { kind: 'default' } },
+        object_const: { const: { kind: "default" } },
         array_const: { const: [] },
       },
     };
@@ -462,21 +471,21 @@ describe('normalizeKimiToolSchema', () => {
     const result = normalizeKimiToolSchema(schema);
 
     expect(result).toEqual({
-      type: 'object',
+      type: "object",
       properties: {
-        object_enum: { enum: [{ a: 1 }, { a: 2 }], type: 'object' },
-        array_enum: { enum: [[1, 2], [3]], type: 'array' },
-        object_const: { const: { kind: 'default' }, type: 'object' },
-        array_const: { const: [], type: 'array' },
+        object_enum: { enum: [{ a: 1 }, { a: 2 }], type: "object" },
+        array_enum: { enum: [[1, 2], [3]], type: "array" },
+        object_const: { const: { kind: "default" }, type: "object" },
+        array_const: { const: [], type: "array" },
       },
     });
   });
 
-  it('fails fast for mixed enum types instead of emitting an unsupported Kimi type array', () => {
+  it("fails fast for mixed enum types instead of emitting an unsupported Kimi type array", () => {
     const schema = {
-      type: 'object',
+      type: "object",
       properties: {
-        mixedEnum: { enum: ['auto', 1] },
+        mixedEnum: { enum: ["auto", 1] },
       },
     };
     const original = structuredClone(schema);
@@ -487,22 +496,22 @@ describe('normalizeKimiToolSchema', () => {
     expect(schema).toEqual(original);
   });
 
-  it('infers object and array structure recursively', () => {
+  it("infers object and array structure recursively", () => {
     const schema = {
       properties: {
         filters: {
           properties: {
-            language: { enum: ['typescript', 'python'] },
+            language: { enum: ["typescript", "python"] },
             tags: {
-              items: { enum: ['bug', 'feature'] },
+              items: { enum: ["bug", "feature"] },
             },
           },
-          required: ['language'],
+          required: ["language"],
         },
         edits: {
           items: {
             properties: {
-              path: { const: 'src/index.ts' },
+              path: { const: "src/index.ts" },
               lineNumbers: {
                 items: { const: 42 },
               },
@@ -517,25 +526,25 @@ describe('normalizeKimiToolSchema', () => {
     expect(result).toEqual({
       properties: {
         filters: {
-          type: 'object',
+          type: "object",
           properties: {
-            language: { enum: ['typescript', 'python'], type: 'string' },
+            language: { enum: ["typescript", "python"], type: "string" },
             tags: {
-              type: 'array',
-              items: { enum: ['bug', 'feature'], type: 'string' },
+              type: "array",
+              items: { enum: ["bug", "feature"], type: "string" },
             },
           },
-          required: ['language'],
+          required: ["language"],
         },
         edits: {
-          type: 'array',
+          type: "array",
           items: {
-            type: 'object',
+            type: "object",
             properties: {
-              path: { const: 'src/index.ts', type: 'string' },
+              path: { const: "src/index.ts", type: "string" },
               lineNumbers: {
-                type: 'array',
-                items: { const: 42, type: 'integer' },
+                type: "array",
+                items: { const: 42, type: "integer" },
               },
             },
           },
@@ -544,12 +553,12 @@ describe('normalizeKimiToolSchema', () => {
     });
   });
 
-  it('uses structural hints before falling back to string on nested typeless schemas', () => {
+  it("uses structural hints before falling back to string on nested typeless schemas", () => {
     const schema = {
       properties: {
-        path: { pattern: '^src/' },
+        path: { pattern: "^src/" },
         limit: { minimum: 1 },
-        freeform: { description: 'Unconstrained external MCP field.' },
+        freeform: { description: "Unconstrained external MCP field." },
         empty: {},
       },
     };
@@ -558,27 +567,30 @@ describe('normalizeKimiToolSchema', () => {
 
     expect(result).toEqual({
       properties: {
-        path: { pattern: '^src/', type: 'string' },
-        limit: { minimum: 1, type: 'number' },
-        freeform: { description: 'Unconstrained external MCP field.', type: 'string' },
-        empty: { type: 'string' },
+        path: { pattern: "^src/", type: "string" },
+        limit: { minimum: 1, type: "number" },
+        freeform: {
+          description: "Unconstrained external MCP field.",
+          type: "string",
+        },
+        empty: { type: "string" },
       },
     });
   });
 
-  it('does not default the root schema itself to string', () => {
+  it("does not default the root schema itself to string", () => {
     expect(normalizeKimiToolSchema({})).toEqual({});
   });
 
-  it('dereferences and normalizes local definition buckets', () => {
+  it("dereferences and normalizes local definition buckets", () => {
     const schema = {
-      type: 'object',
+      type: "object",
       properties: {
-        mode: { $ref: '#/$defs/Mode' },
-        retryCount: { $ref: '#/definitions/RetryCount' },
+        mode: { $ref: "#/$defs/Mode" },
+        retryCount: { $ref: "#/definitions/RetryCount" },
       },
       $defs: {
-        Mode: { enum: ['fast', 'safe'] },
+        Mode: { enum: ["fast", "safe"] },
       },
       definitions: {
         RetryCount: { const: 3 },
@@ -588,33 +600,33 @@ describe('normalizeKimiToolSchema', () => {
     const result = normalizeKimiToolSchema(schema);
 
     expect(result).toEqual({
-      type: 'object',
+      type: "object",
       properties: {
-        mode: { enum: ['fast', 'safe'], type: 'string' },
-        retryCount: { const: 3, type: 'integer' },
+        mode: { enum: ["fast", "safe"], type: "string" },
+        retryCount: { const: 3, type: "integer" },
       },
     });
   });
 
-  it('normalizes nested child schema positions', () => {
-    const thenKeyword = ['th', 'en'].join('');
+  it("normalizes nested child schema positions", () => {
+    const thenKeyword = ["th", "en"].join("");
     const schema = {
       properties: {
         labels: {
           patternProperties: {
-            '^x-': { enum: ['yes', 'no'] },
+            "^x-": { enum: ["yes", "no"] },
           },
-          propertyNames: { pattern: '^x-' },
+          propertyNames: { pattern: "^x-" },
           additionalProperties: { const: false },
         },
         tuple: {
-          prefixItems: [{ enum: ['left', 'right'] }, { const: 2 }],
-          contains: { enum: ['needle'] },
+          prefixItems: [{ enum: ["left", "right"] }, { const: 2 }],
+          contains: { enum: ["needle"] },
         },
         conditional: {
-          if: { properties: { kind: { const: 'file' } } },
-          [thenKeyword]: { properties: { path: { pattern: '^src/' } } },
-          else: { properties: { url: { format: 'uri' } } },
+          if: { properties: { kind: { const: "file" } } },
+          [thenKeyword]: { properties: { path: { pattern: "^src/" } } },
+          else: { properties: { url: { format: "uri" } } },
           not: { properties: { blocked: { const: true } } },
         },
       },
@@ -625,51 +637,51 @@ describe('normalizeKimiToolSchema', () => {
     expect(result).toEqual({
       properties: {
         labels: {
-          type: 'object',
+          type: "object",
           patternProperties: {
-            '^x-': { enum: ['yes', 'no'], type: 'string' },
+            "^x-": { enum: ["yes", "no"], type: "string" },
           },
-          propertyNames: { pattern: '^x-', type: 'string' },
-          additionalProperties: { const: false, type: 'boolean' },
+          propertyNames: { pattern: "^x-", type: "string" },
+          additionalProperties: { const: false, type: "boolean" },
         },
         tuple: {
-          type: 'array',
+          type: "array",
           prefixItems: [
-            { enum: ['left', 'right'], type: 'string' },
-            { const: 2, type: 'integer' },
+            { enum: ["left", "right"], type: "string" },
+            { const: 2, type: "integer" },
           ],
-          contains: { enum: ['needle'], type: 'string' },
+          contains: { enum: ["needle"], type: "string" },
         },
         conditional: {
           if: {
-            type: 'object',
-            properties: { kind: { const: 'file', type: 'string' } },
+            type: "object",
+            properties: { kind: { const: "file", type: "string" } },
           },
           [thenKeyword]: {
-            type: 'object',
-            properties: { path: { pattern: '^src/', type: 'string' } },
+            type: "object",
+            properties: { path: { pattern: "^src/", type: "string" } },
           },
           else: {
-            type: 'object',
-            properties: { url: { format: 'uri', type: 'string' } },
+            type: "object",
+            properties: { url: { format: "uri", type: "string" } },
           },
           not: {
-            type: 'object',
-            properties: { blocked: { const: true, type: 'boolean' } },
+            type: "object",
+            properties: { blocked: { const: true, type: "boolean" } },
           },
         },
       },
     });
   });
 
-  it('infers parent types from every walked child-schema keyword', () => {
+  it("infers parent types from every walked child-schema keyword", () => {
     const schema = {
       properties: {
         dependentSchemasOnly: {
           dependentSchemas: {
             kind: {
               properties: {
-                value: { enum: ['file', 'url'] },
+                value: { enum: ["file", "url"] },
               },
             },
           },
@@ -684,7 +696,7 @@ describe('normalizeKimiToolSchema', () => {
           },
         },
         unevaluatedPropertiesOnly: {
-          unevaluatedProperties: { enum: ['allowed'] },
+          unevaluatedProperties: { enum: ["allowed"] },
         },
         additionalItemsOnly: {
           additionalItems: { const: 1 },
@@ -695,7 +707,7 @@ describe('normalizeKimiToolSchema', () => {
         contentSchemaOnly: {
           contentSchema: {
             properties: {
-              decoded: { enum: ['payload'] },
+              decoded: { enum: ["payload"] },
             },
           },
         },
@@ -707,45 +719,45 @@ describe('normalizeKimiToolSchema', () => {
     expect(result).toEqual({
       properties: {
         dependentSchemasOnly: {
-          type: 'object',
+          type: "object",
           dependentSchemas: {
             kind: {
-              type: 'object',
+              type: "object",
               properties: {
-                value: { enum: ['file', 'url'], type: 'string' },
+                value: { enum: ["file", "url"], type: "string" },
               },
             },
           },
         },
         dependenciesOnly: {
-          type: 'object',
+          type: "object",
           dependencies: {
             kind: {
-              type: 'object',
+              type: "object",
               properties: {
-                enabled: { const: true, type: 'boolean' },
+                enabled: { const: true, type: "boolean" },
               },
             },
           },
         },
         unevaluatedPropertiesOnly: {
-          type: 'object',
-          unevaluatedProperties: { enum: ['allowed'], type: 'string' },
+          type: "object",
+          unevaluatedProperties: { enum: ["allowed"], type: "string" },
         },
         additionalItemsOnly: {
-          type: 'array',
-          additionalItems: { const: 1, type: 'integer' },
+          type: "array",
+          additionalItems: { const: 1, type: "integer" },
         },
         unevaluatedItemsOnly: {
-          type: 'array',
-          unevaluatedItems: { const: 2, type: 'integer' },
+          type: "array",
+          unevaluatedItems: { const: 2, type: "integer" },
         },
         contentSchemaOnly: {
-          type: 'string',
+          type: "string",
           contentSchema: {
-            type: 'object',
+            type: "object",
             properties: {
-              decoded: { enum: ['payload'], type: 'string' },
+              decoded: { enum: ["payload"], type: "string" },
             },
           },
         },
@@ -753,13 +765,13 @@ describe('normalizeKimiToolSchema', () => {
     });
   });
 
-  it('preserves combinators while normalizing their schema branches', () => {
+  it("preserves combinators while normalizing their schema branches", () => {
     const schema = {
-      anyOf: [{ enum: ['auto', 'manual'] }, { const: false }],
+      anyOf: [{ enum: ["auto", "manual"] }, { const: false }],
       oneOf: [
         {
           properties: {
-            strategy: { enum: ['replace', 'insert'] },
+            strategy: { enum: ["replace", "insert"] },
           },
         },
       ],
@@ -774,24 +786,24 @@ describe('normalizeKimiToolSchema', () => {
 
     expect(result).toEqual({
       anyOf: [
-        { enum: ['auto', 'manual'], type: 'string' },
-        { const: false, type: 'boolean' },
+        { enum: ["auto", "manual"], type: "string" },
+        { const: false, type: "boolean" },
       ],
       oneOf: [
         {
-          type: 'object',
+          type: "object",
           properties: {
-            strategy: { enum: ['replace', 'insert'], type: 'string' },
+            strategy: { enum: ["replace", "insert"], type: "string" },
           },
         },
       ],
       allOf: [
         {
-          type: 'array',
-          items: { const: 1, type: 'integer' },
+          type: "array",
+          items: { const: 1, type: "integer" },
         },
       ],
     });
-    expect(result).not.toHaveProperty('type');
+    expect(result).not.toHaveProperty("type");
   });
 });

@@ -2,16 +2,23 @@
 // File preview: download / path normalization / request-sequence guard. Claims
 // the 'file' slot of the shared right-side detail layer.
 
-import { computed, ref, watch, type Ref } from 'vue';
-import { useI18n } from 'vue-i18n';
-import { getKimiWebApi } from '../api';
-import type { FileData, FilePreviewRequest, ToolMedia } from '../types';
-import type { useKimiWebClient } from './useKimiWebClient';
+import { computed, ref, watch, type Ref } from "vue";
+import { useI18n } from "vue-i18n";
+import { getKimiWebApi } from "../api";
+import type { FileData, FilePreviewRequest, ToolMedia } from "../types";
+import type { useKimiWebClient } from "./useKimiWebClient";
 
 type KimiWebClient = ReturnType<typeof useKimiWebClient>;
 
 /** Which occupant currently owns the shared right-side detail layer. */
-export type DetailTarget = 'file' | 'diff' | 'thinking' | 'compaction' | 'agent' | 'toolDiff' | 'btw';
+export type DetailTarget =
+  | "file"
+  | "diff"
+  | "thinking"
+  | "compaction"
+  | "agent"
+  | "toolDiff"
+  | "btw";
 
 /** Whether a url can feed a native <video>/<img> src. A provider reference like
  *  `ms://…` has no local bytes and only yields a broken player, so it's treated
@@ -25,7 +32,10 @@ export interface UseFilePreviewOptions {
   detailTarget: Ref<DetailTarget | null>;
 }
 
-export function useFilePreview({ client, detailTarget }: UseFilePreviewOptions) {
+export function useFilePreview({
+  client,
+  detailTarget,
+}: UseFilePreviewOptions) {
   const { t } = useI18n();
 
   const previewTarget = ref<FilePreviewRequest | null>(null);
@@ -57,58 +67,60 @@ export function useFilePreview({ client, detailTarget }: UseFilePreviewOptions) 
   const previewExternalActions = computed(() => previewTarget.value !== null);
 
   function trimTrailingSlash(path: string): string {
-    return path.length > 1 ? path.replace(/\/+$/, '') : path;
+    return path.length > 1 ? path.replace(/\/+$/, "") : path;
   }
 
   function normalizeRelativePath(path: string): string {
     const out: string[] = [];
     for (const part of path.split(/[\\/]+/)) {
-      if (!part || part === '.') continue;
-      if (part === '..') {
+      if (!part || part === ".") continue;
+      if (part === "..") {
         out.pop();
         continue;
       }
       out.push(part);
     }
-    return out.join('/');
+    return out.join("/");
   }
 
-  function normalizePreviewPath(inputPath: string): { path: string } | { error: string } {
+  function normalizePreviewPath(
+    inputPath: string,
+  ): { path: string } | { error: string } {
     const raw = inputPath.trim();
-    if (!raw) return { error: t('filePreview.errors.emptyPath') };
+    if (!raw) return { error: t("filePreview.errors.emptyPath") };
     if (/^[a-z][a-z0-9+.-]*:\/\//i.test(raw)) {
-      return { error: t('filePreview.errors.unsupportedPath') };
+      return { error: t("filePreview.errors.unsupportedPath") };
     }
-    if (raw.startsWith('~')) {
-      return { error: t('filePreview.errors.outsideWorkspace') };
+    if (raw.startsWith("~")) {
+      return { error: t("filePreview.errors.outsideWorkspace") };
     }
 
     const cwd = trimTrailingSlash(client.status.value.cwd);
-    if (raw.startsWith('/')) {
+    if (raw.startsWith("/")) {
       if (!cwd || (raw !== cwd && !raw.startsWith(`${cwd}/`))) {
-        return { error: t('filePreview.errors.outsideWorkspace') };
+        return { error: t("filePreview.errors.outsideWorkspace") };
       }
-      const relative = raw === cwd ? '' : raw.slice(cwd.length + 1);
-      if (relative.split(/[\\/]+/).includes('..')) {
-        return { error: t('filePreview.errors.outsideWorkspace') };
+      const relative = raw === cwd ? "" : raw.slice(cwd.length + 1);
+      if (relative.split(/[\\/]+/).includes("..")) {
+        return { error: t("filePreview.errors.outsideWorkspace") };
       }
       const path = normalizeRelativePath(relative);
-      return path ? { path } : { error: t('filePreview.errors.isDirectory') };
+      return path ? { path } : { error: t("filePreview.errors.isDirectory") };
     }
 
-    if (raw.split(/[\\/]+/).includes('..')) {
-      return { error: t('filePreview.errors.outsideWorkspace') };
+    if (raw.split(/[\\/]+/).includes("..")) {
+      return { error: t("filePreview.errors.outsideWorkspace") };
     }
 
     const path = normalizeRelativePath(raw);
-    return path ? { path } : { error: t('filePreview.errors.emptyPath') };
+    return path ? { path } : { error: t("filePreview.errors.emptyPath") };
   }
 
   async function openFilePreview(target: FilePreviewRequest): Promise<void> {
     // Clicking the link for the already-open file toggles the panel closed.
     const current = previewTarget.value;
     if (
-      detailTarget.value === 'file' &&
+      detailTarget.value === "file" &&
       current &&
       current.path === target.path &&
       current.line === target.line
@@ -118,7 +130,7 @@ export function useFilePreview({ client, detailTarget }: UseFilePreviewOptions) 
     }
     const requestSeq = ++previewRequestSeq;
     revokeMediaObjectUrl();
-    detailTarget.value = 'file';
+    detailTarget.value = "file";
     previewFile.value = null;
     previewError.value = null;
     previewLoading.value = true;
@@ -126,7 +138,7 @@ export function useFilePreview({ client, detailTarget }: UseFilePreviewOptions) 
     previewNormalizedPath.value = null;
 
     const normalized = normalizePreviewPath(target.path);
-    if ('error' in normalized) {
+    if ("error" in normalized) {
       previewLoading.value = false;
       previewError.value = normalized.error;
       return;
@@ -144,11 +156,12 @@ export function useFilePreview({ client, detailTarget }: UseFilePreviewOptions) 
         // readFileContent swallows daemon failures into null — show the error
         // state instead of a misleading 0-byte "empty file" (the cause is
         // already console.warn'd in readFileContent).
-        previewError.value = t('filePreview.errors.loadFailed');
+        previewError.value = t("filePreview.errors.loadFailed");
       }
     } catch (err) {
       if (requestSeq !== previewRequestSeq) return;
-      previewError.value = err instanceof Error ? err.message : t('filePreview.errors.loadFailed');
+      previewError.value =
+        err instanceof Error ? err.message : t("filePreview.errors.loadFailed");
     } finally {
       if (requestSeq === previewRequestSeq) {
         previewLoading.value = false;
@@ -162,19 +175,22 @@ export function useFilePreview({ client, detailTarget }: UseFilePreviewOptions) 
   }
 
   function openMediaPreview(media: ToolMedia): void {
-    if (media.kind !== 'image' && media.kind !== 'video') return;
+    if (media.kind !== "image" && media.kind !== "video") return;
     const seq = ++previewRequestSeq;
     revokeMediaObjectUrl();
-    detailTarget.value = 'file';
+    detailTarget.value = "file";
     previewTarget.value = null;
     previewNormalizedPath.value = null;
     previewError.value = null;
-    const isVideo = media.kind === 'video';
+    const isVideo = media.kind === "video";
     const base = {
-      path: media.path ?? (isVideo ? 'Video' : 'ReadMediaFile image'),
-      content: '',
-      encoding: 'utf-8' as const,
-      mime: media.mimeType ?? mimeFromDataUrl(media.url) ?? (isVideo ? 'video/*' : 'image/*'),
+      path: media.path ?? (isVideo ? "Video" : "ReadMediaFile image"),
+      content: "",
+      encoding: "utf-8" as const,
+      mime:
+        media.mimeType ??
+        mimeFromDataUrl(media.url) ??
+        (isVideo ? "video/*" : "image/*"),
       isBinary: true,
       size: media.bytes ?? 0,
     };
@@ -183,29 +199,38 @@ export function useFilePreview({ client, detailTarget }: UseFilePreviewOptions) 
     if (media.fileId) {
       previewLoading.value = true;
       previewFile.value = base;
-      void getKimiWebApi().getFileBlob(media.fileId).then((blob) => {
-        if (seq !== previewRequestSeq) return;
-        // The user may have switched to another detail panel while this was in
-        // flight — don't create (and leak) a blob URL for a hidden panel.
-        if (detailTarget.value !== 'file' || !previewFile.value) {
+      void getKimiWebApi()
+        .getFileBlob(media.fileId)
+        .then((blob) => {
+          if (seq !== previewRequestSeq) return;
+          // The user may have switched to another detail panel while this was in
+          // flight — don't create (and leak) a blob URL for a hidden panel.
+          if (detailTarget.value !== "file" || !previewFile.value) {
+            previewLoading.value = false;
+            return;
+          }
+          mediaObjectUrl = URL.createObjectURL(blob);
+          previewFile.value = {
+            ...previewFile.value,
+            sourceUrl: mediaObjectUrl,
+          };
           previewLoading.value = false;
-          return;
-        }
-        mediaObjectUrl = URL.createObjectURL(blob);
-        previewFile.value = { ...previewFile.value, sourceUrl: mediaObjectUrl };
-        previewLoading.value = false;
-      }).catch(() => {
-        if (seq !== previewRequestSeq) return;
-        // Fall back to the raw URL so the user sees an honest broken state.
-        if (previewFile.value) previewFile.value = { ...previewFile.value, sourceUrl: media.url };
-        previewLoading.value = false;
-      });
+        })
+        .catch(() => {
+          if (seq !== previewRequestSeq) return;
+          // Fall back to the raw URL so the user sees an honest broken state.
+          if (previewFile.value)
+            previewFile.value = { ...previewFile.value, sourceUrl: media.url };
+          previewLoading.value = false;
+        });
     } else {
       previewLoading.value = false;
       // A non-loadable url (e.g. a provider `ms://` reference with no local
       // bytes) can't feed a <video>/<img> src — leave sourceUrl unset so the
       // preview shows the no-preview card instead of a broken player.
-      previewFile.value = isPlayableMediaUrl(media.url) ? { ...base, sourceUrl: media.url } : base;
+      previewFile.value = isPlayableMediaUrl(media.url)
+        ? { ...base, sourceUrl: media.url }
+        : base;
     }
   }
 
@@ -223,7 +248,7 @@ export function useFilePreview({ client, detailTarget }: UseFilePreviewOptions) 
 
   function closeFilePreview(): void {
     resetFilePreview();
-    if (detailTarget.value === 'file') detailTarget.value = null;
+    if (detailTarget.value === "file") detailTarget.value = null;
   }
 
   // Revoke/close the preview when the user switches to another detail panel
@@ -231,7 +256,7 @@ export function useFilePreview({ client, detailTarget }: UseFilePreviewOptions) 
   // so an in-flight or already-shown blob URL isn't held while the file panel
   // is hidden.
   watch(detailTarget, (target, oldTarget) => {
-    if (oldTarget === 'file' && target !== 'file') resetFilePreview();
+    if (oldTarget === "file" && target !== "file") resetFilePreview();
   });
 
   function openPreviewInEditor(): void {

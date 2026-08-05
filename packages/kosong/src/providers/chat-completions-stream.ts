@@ -1,4 +1,4 @@
-import type { StreamedMessagePart, ToolCall } from '#/message';
+import type { StreamedMessagePart, ToolCall } from "#/message";
 
 export interface ChatCompletionStreamToolFunctionDelta {
   readonly name?: string;
@@ -37,14 +37,16 @@ export function convertChatCompletionStreamToolCall(
   const streamIndex = toolCall.index;
   const functionName = toolCall.function.name;
   const functionArguments = toolCall.function.arguments;
-  const hasConcreteName = typeof functionName === 'string' && functionName.length > 0;
-  const hasArguments = typeof functionArguments === 'string' && functionArguments.length > 0;
+  const hasConcreteName =
+    typeof functionName === "string" && functionName.length > 0;
+  const hasArguments =
+    typeof functionArguments === "string" && functionArguments.length > 0;
 
   if (streamIndex === undefined) {
     if (hasConcreteName) {
       return [
         {
-          type: 'function',
+          type: "function",
           id: toolCall.id ?? crypto.randomUUID(),
           name: functionName,
           arguments: functionArguments ?? null,
@@ -54,14 +56,20 @@ export function convertChatCompletionStreamToolCall(
 
     if (hasArguments) {
       return [
-        { type: 'tool_call_part', argumentsPart: functionArguments } satisfies StreamedMessagePart,
+        {
+          type: "tool_call_part",
+          argumentsPart: functionArguments,
+        } satisfies StreamedMessagePart,
       ];
     }
 
     return [];
   }
 
-  const buffered = bufferedByIndex.get(streamIndex) ?? { arguments: '', emitted: false };
+  const buffered = bufferedByIndex.get(streamIndex) ?? {
+    arguments: "",
+    emitted: false,
+  };
   if (toolCall.id !== undefined) {
     buffered.id = toolCall.id;
   }
@@ -78,13 +86,13 @@ export function convertChatCompletionStreamToolCall(
     buffered.emitted = true;
     const initialArguments =
       buffered.arguments.length > 0
-        ? buffered.arguments + (functionArguments ?? '')
+        ? buffered.arguments + (functionArguments ?? "")
         : (functionArguments ?? null);
-    buffered.arguments = '';
+    buffered.arguments = "";
     bufferedByIndex.set(streamIndex, buffered);
 
     const toolCallHeader: ToolCall = {
-      type: 'function',
+      type: "function",
       id: buffered.id ?? toolCall.id ?? crypto.randomUUID(),
       name: functionName,
       arguments: initialArguments,
@@ -98,7 +106,7 @@ export function convertChatCompletionStreamToolCall(
   }
 
   const part: StreamedMessagePart & { index: number | string } = {
-    type: 'tool_call_part',
+    type: "tool_call_part",
     argumentsPart: functionArguments,
     index: streamIndex,
   };

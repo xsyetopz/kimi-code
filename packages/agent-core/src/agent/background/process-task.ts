@@ -1,22 +1,22 @@
-import type { KaosProcess } from '@moonshot-ai/kaos';
-import type { Readable } from 'node:stream';
+import type { KaosProcess } from "@moonshot-ai/kaos";
+import type { Readable } from "node:stream";
 
-import { errorMessage } from '../../loop/errors';
+import { errorMessage } from "../../loop/errors";
 import type {
   BackgroundTask,
   BackgroundTaskInfoBase,
   BackgroundTaskSink,
   BackgroundTaskSettlement,
-} from './task';
+} from "./task";
 
 export interface ProcessBackgroundTaskInfo extends BackgroundTaskInfoBase {
-  readonly kind: 'process';
+  readonly kind: "process";
   readonly command: string;
   readonly pid: number;
   readonly exitCode: number | null;
 }
 
-export type ProcessBackgroundTaskOutputKind = 'stdout' | 'stderr';
+export type ProcessBackgroundTaskOutputKind = "stdout" | "stderr";
 
 export type ProcessBackgroundTaskOutputCallback = (
   kind: ProcessBackgroundTaskOutputKind,
@@ -26,8 +26,8 @@ export type ProcessBackgroundTaskOutputCallback = (
 const STREAM_DRAIN_GRACE_MS = 250;
 
 export class ProcessBackgroundTask implements BackgroundTask {
-  readonly kind = 'process' as const;
-  readonly idPrefix = 'bash';
+  readonly kind = "process" as const;
+  readonly idPrefix = "bash";
   private exitCode: number | null = null;
 
   constructor(
@@ -39,20 +39,20 @@ export class ProcessBackgroundTask implements BackgroundTask {
 
   async start(sink: BackgroundTaskSink): Promise<void> {
     const streamDrained = Promise.all([
-      observeProcessStream(this.proc.stdout, 'stdout', sink, this.onOutput),
-      observeProcessStream(this.proc.stderr, 'stderr', sink, this.onOutput),
+      observeProcessStream(this.proc.stdout, "stdout", sink, this.onOutput),
+      observeProcessStream(this.proc.stderr, "stderr", sink, this.onOutput),
     ]).then(() => undefined);
     // Attach a rejection handler immediately; start() still awaits the same
     // promise after proc.wait() so stream errors keep failing the task.
     void streamDrained.catch(() => {});
 
     const requestStop = (): void => {
-      void this.proc.kill('SIGTERM').catch(() => {});
+      void this.proc.kill("SIGTERM").catch(() => {});
     };
     if (sink.signal.aborted) {
       requestStop();
     } else {
-      sink.signal.addEventListener('abort', requestStop, { once: true });
+      sink.signal.addEventListener("abort", requestStop, { once: true });
     }
 
     let settlement: BackgroundTaskSettlement;
@@ -61,17 +61,21 @@ export class ProcessBackgroundTask implements BackgroundTask {
       await waitForStreamDrain(streamDrained);
       this.exitCode = exitCode;
       settlement = {
-        status: sink.signal.aborted ? 'killed' : exitCode === 0 ? 'completed' : 'failed',
+        status: sink.signal.aborted
+          ? "killed"
+          : exitCode === 0
+            ? "completed"
+            : "failed",
       };
     } catch (error: unknown) {
       await waitForStreamDrainSettled(streamDrained);
       this.exitCode = this.proc.exitCode;
       settlement = {
-        status: sink.signal.aborted ? 'killed' : 'failed',
+        status: sink.signal.aborted ? "killed" : "failed",
         stopReason: sink.signal.aborted ? undefined : errorMessage(error),
       };
     } finally {
-      sink.signal.removeEventListener('abort', requestStop);
+      sink.signal.removeEventListener("abort", requestStop);
       await this.disposeProcess();
     }
     await sink.settle(settlement);
@@ -80,7 +84,7 @@ export class ProcessBackgroundTask implements BackgroundTask {
   async forceStop(): Promise<void> {
     try {
       if (this.proc.exitCode === null) {
-        await this.proc.kill('SIGKILL');
+        await this.proc.kill("SIGKILL");
       }
     } finally {
       await this.disposeProcess();
@@ -90,7 +94,7 @@ export class ProcessBackgroundTask implements BackgroundTask {
   toInfo(base: BackgroundTaskInfoBase): ProcessBackgroundTaskInfo {
     return {
       ...base,
-      kind: 'process',
+      kind: "process",
       command: this.command,
       pid: this.proc.pid,
       exitCode: this.exitCode,
@@ -121,7 +125,9 @@ async function waitForStreamDrain(streamDrained: Promise<void>): Promise<void> {
   }
 }
 
-async function waitForStreamDrainSettled(streamDrained: Promise<void>): Promise<void> {
+async function waitForStreamDrainSettled(
+  streamDrained: Promise<void>,
+): Promise<void> {
   try {
     await waitForStreamDrain(streamDrained);
   } catch {
@@ -135,7 +141,7 @@ function observeProcessStream(
   sink: BackgroundTaskSink,
   onOutput?: ProcessBackgroundTaskOutputCallback,
 ): Promise<void> {
-  stream.setEncoding('utf8');
+  stream.setEncoding("utf8");
   const onData = (chunk: string): void => {
     if (chunk.length === 0) return;
     sink.appendOutput(chunk);
@@ -147,7 +153,7 @@ function observeProcessStream(
     if (sink.signal.aborted) return;
     onOutput?.(kind, chunk);
   };
-  stream.on('data', onData);
+  stream.on("data", onData);
 
   return new Promise<void>((resolve, reject) => {
     let ended = false;
@@ -183,19 +189,19 @@ function observeProcessStream(
       }
     };
     const cleanup = (): void => {
-      stream.removeListener('data', onData);
-      stream.removeListener('end', onEnd);
-      stream.removeListener('close', onClose);
-      stream.removeListener('error', onError);
+      stream.removeListener("data", onData);
+      stream.removeListener("end", onEnd);
+      stream.removeListener("close", onClose);
+      stream.removeListener("error", onError);
     };
-    stream.once('end', onEnd);
-    stream.once('close', onClose);
-    stream.once('error', onError);
+    stream.once("end", onEnd);
+    stream.once("close", onClose);
+    stream.once("error", onError);
   });
 }
 
 function createPrematureCloseError(): Error {
-  const error = new Error('Premature close') as NodeJS.ErrnoException;
-  error.code = 'ERR_STREAM_PREMATURE_CLOSE';
+  const error = new Error("Premature close") as NodeJS.ErrnoException;
+  error.code = "ERR_STREAM_PREMATURE_CLOSE";
   return error;
 }

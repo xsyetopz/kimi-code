@@ -8,15 +8,15 @@
  * no scoped state.
  */
 
-import { promises as fs } from 'node:fs';
-import path from 'pathe';
+import { promises as fs } from "node:fs";
+import path from "pathe";
 
-import type { SkillRoot, SkillSource } from './types';
+import type { SkillRoot, SkillSource } from "./types";
 
-const USER_BRAND_DIRS = ['skills'] as const;
-const USER_GENERIC_DIRS = ['.agents/skills'] as const;
-const PROJECT_BRAND_DIRS = ['.kimi-code/skills'] as const;
-const PROJECT_GENERIC_DIRS = ['.agents/skills'] as const;
+const USER_BRAND_DIRS = ["skills"] as const;
+const USER_GENERIC_DIRS = [".agents/skills"] as const;
+const PROJECT_BRAND_DIRS = [".kimi-code/skills"] as const;
+const PROJECT_GENERIC_DIRS = [".agents/skills"] as const;
 
 export interface SkillRootsOptions {
   readonly mergeAllAvailableSkills?: boolean;
@@ -29,8 +29,14 @@ export async function userRoots(
 ): Promise<readonly SkillRoot[]> {
   const roots: SkillRoot[] = [];
   const mergeAllAvailableSkills = options.mergeAllAvailableSkills ?? true;
-  await pushBrandGroup(roots, USER_BRAND_DIRS, homeDir, 'user', mergeAllAvailableSkills);
-  await pushFirstExisting(roots, USER_GENERIC_DIRS, osHomeDir, 'user');
+  await pushBrandGroup(
+    roots,
+    USER_BRAND_DIRS,
+    homeDir,
+    "user",
+    mergeAllAvailableSkills,
+  );
+  await pushFirstExisting(roots, USER_GENERIC_DIRS, osHomeDir, "user");
   return roots;
 }
 
@@ -41,8 +47,14 @@ export async function projectRoots(
   const projectRoot = await findProjectRoot(workDir);
   const roots: SkillRoot[] = [];
   const mergeAllAvailableSkills = options.mergeAllAvailableSkills ?? true;
-  await pushBrandGroup(roots, PROJECT_BRAND_DIRS, projectRoot, 'project', mergeAllAvailableSkills);
-  await pushFirstExisting(roots, PROJECT_GENERIC_DIRS, projectRoot, 'project');
+  await pushBrandGroup(
+    roots,
+    PROJECT_BRAND_DIRS,
+    projectRoot,
+    "project",
+    mergeAllAvailableSkills,
+  );
+  await pushFirstExisting(roots, PROJECT_GENERIC_DIRS, projectRoot, "project");
   return roots;
 }
 
@@ -72,7 +84,11 @@ export async function configuredRoots(
   const projectRoot = await findProjectRoot(workDir);
   const roots: SkillRoot[] = [];
   for (const dir of dirs) {
-    await pushExistingRoot(roots, resolveConfiguredDir(dir, projectRoot, osHomeDir), source);
+    await pushExistingRoot(
+      roots,
+      resolveConfiguredDir(dir, projectRoot, osHomeDir),
+      source,
+    );
   }
   return roots;
 }
@@ -81,7 +97,7 @@ async function findProjectRoot(workDir: string): Promise<string> {
   const start = path.resolve(workDir);
   let current = start;
   while (true) {
-    if (await exists(path.join(current, '.git'))) return current;
+    if (await exists(path.join(current, ".git"))) return current;
     const parent = path.dirname(current);
     if (parent === current) return start;
     current = parent;
@@ -122,13 +138,18 @@ async function pushExistingRoot(
 ): Promise<boolean> {
   if (!(await isDir(dir))) return false;
   const resolved = await realpath(dir);
-  if (!out.some((root) => root.path === resolved)) out.push({ path: resolved, source });
+  if (!out.some((root) => root.path === resolved))
+    out.push({ path: resolved, source });
   return true;
 }
 
-function resolveConfiguredDir(dir: string, projectRoot: string, osHomeDir: string): string {
-  if (dir === '~') return osHomeDir;
-  if (dir.startsWith('~/')) return path.join(osHomeDir, dir.slice(2));
+function resolveConfiguredDir(
+  dir: string,
+  projectRoot: string,
+  osHomeDir: string,
+): string {
+  if (dir === "~") return osHomeDir;
+  if (dir.startsWith("~/")) return path.join(osHomeDir, dir.slice(2));
   if (path.isAbsolute(dir)) return dir;
   return path.resolve(projectRoot, dir);
 }
@@ -142,7 +163,7 @@ async function isDir(p: string): Promise<boolean> {
 }
 
 async function realpath(p: string): Promise<string> {
-  return (await fs.realpath(p)).replaceAll('\\', '/');
+  return (await fs.realpath(p)).replaceAll("\\", "/");
 }
 
 async function exists(p: string): Promise<boolean> {

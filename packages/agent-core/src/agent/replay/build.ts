@@ -1,9 +1,9 @@
-import { LocalKaos } from '@moonshot-ai/kaos';
+import { LocalKaos } from "@moonshot-ai/kaos";
 
-import type { AgentReplayRecord } from '../../rpc/resumed';
-import { Agent } from '../index';
-import type { AgentRecordPersistence } from '../records';
-import type { ReplayRangeOptions } from '.';
+import type { AgentReplayRecord } from "../../rpc/resumed";
+import { Agent } from "../index";
+import type { AgentRecordPersistence } from "../records";
+import type { ReplayRangeOptions } from ".";
 
 export async function buildReplay(
   persistence: AgentRecordPersistence,
@@ -12,7 +12,7 @@ export async function buildReplay(
   const agent = new Agent({
     kaos: await LocalKaos.create(),
     persistence,
-    type: 'sub',
+    type: "sub",
     replay: { range },
   });
   await agent.resume({ rewriteMigratedRecords: false });

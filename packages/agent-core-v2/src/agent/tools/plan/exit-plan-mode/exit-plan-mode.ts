@@ -9,10 +9,10 @@
  * at Agent scope.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { createDecorator } from '#/_base/di/instantiation';
-import type { AgentTool } from '#/tool/toolContract';
+import { createDecorator } from "#/_base/di/instantiation";
+import type { AgentTool } from "#/tool/toolContract";
 
 export interface ExitPlanModeOption {
   label: string;
@@ -24,7 +24,7 @@ export interface ExitPlanModeInput {
 }
 
 const RESERVED_OPTION_LABELS = new Set(
-  ['Approve', 'Reject', 'Reject and Exit', 'Revise'].map(normalizeOptionLabel),
+  ["Approve", "Reject", "Reject and Exit", "Revise"].map(normalizeOptionLabel),
 );
 
 const ExitPlanModeOptionSchema = z
@@ -38,8 +38,8 @@ const ExitPlanModeOptionSchema = z
       ),
     description: z
       .string()
-      .default('')
-      .describe('Brief summary of this approach and its trade-offs.'),
+      .default("")
+      .describe("Brief summary of this approach and its trade-offs."),
   })
   .strict();
 
@@ -49,8 +49,11 @@ export const ExitPlanModeInputSchema: z.ZodType<ExitPlanModeInput> = z
       .array(ExitPlanModeOptionSchema)
       .min(1)
       .max(3)
-      .refine(hasUniqueOptionLabels, 'Option labels must be unique.')
-      .refine(hasNoReservedOptionLabels, 'Option labels must not use reserved approval labels.')
+      .refine(hasUniqueOptionLabels, "Option labels must be unique.")
+      .refine(
+        hasNoReservedOptionLabels,
+        "Option labels must not use reserved approval labels.",
+      )
       .optional()
       .describe(
         'When the plan contains multiple alternative approaches, list them here so the user can choose which one to execute. Provide up to 3 options; 2-3 distinct approaches work best when the plan offers a real choice. Passing a single option is allowed and is equivalent to a plain plan approval. Each option represents a distinct approach from the plan. Do not use "Reject", "Revise", "Approve", or "Reject and Exit" as labels.',
@@ -66,9 +69,12 @@ export interface ExitPlanModePlanSource {
 export interface IExitPlanModeTool extends AgentTool<ExitPlanModeInput> {
   readonly _serviceBrand: undefined;
 }
-export const IExitPlanModeTool = createDecorator<IExitPlanModeTool>('exitPlanModeTool');
+export const IExitPlanModeTool =
+  createDecorator<IExitPlanModeTool>("exitPlanModeTool");
 
-function hasUniqueOptionLabels(options: readonly ExitPlanModeOption[]): boolean {
+function hasUniqueOptionLabels(
+  options: readonly ExitPlanModeOption[],
+): boolean {
   const labels = new Set<string>();
   for (const option of options) {
     const label = normalizeOptionLabel(option.label);
@@ -78,8 +84,12 @@ function hasUniqueOptionLabels(options: readonly ExitPlanModeOption[]): boolean 
   return true;
 }
 
-function hasNoReservedOptionLabels(options: readonly ExitPlanModeOption[]): boolean {
-  return options.every((option) => !RESERVED_OPTION_LABELS.has(normalizeOptionLabel(option.label)));
+function hasNoReservedOptionLabels(
+  options: readonly ExitPlanModeOption[],
+): boolean {
+  return options.every(
+    (option) => !RESERVED_OPTION_LABELS.has(normalizeOptionLabel(option.label)),
+  );
 }
 
 function normalizeOptionLabel(label: string): string {

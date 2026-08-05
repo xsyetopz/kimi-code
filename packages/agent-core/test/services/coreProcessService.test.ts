@@ -1,8 +1,8 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   SyncDescriptor,
@@ -13,8 +13,8 @@ import {
   type Event,
   type QuestionRequest,
   type QuestionResult,
-} from '../../src';
-import { TestInstantiationService } from '../../src/di/test';
+} from "../../src";
+import { TestInstantiationService } from "../../src/di/test";
 
 import {
   BridgeClientAPI,
@@ -26,7 +26,7 @@ import {
   ICoreProcessService,
   IQuestionService,
   IWorkspaceRegistry,
-} from '../../src/services';
+} from "../../src/services";
 
 class RecordingEventService implements IEventService {
   readonly _serviceBrand: undefined;
@@ -49,12 +49,12 @@ class RecordingApprovalService implements IApprovalService {
     req: ApprovalRequest & { sessionId: string; agentId: string },
   ): Promise<ApprovalResponse> {
     this.received.push(req);
-    return { decision: 'approved' };
+    return { decision: "approved" };
   }
   resolve(id: string, response: ApprovalResponse): void {
     this.resolveCalls.push({ id, response });
   }
-  listPending(): ReturnType<IApprovalService['listPending']> {
+  listPending(): ReturnType<IApprovalService["listPending"]> {
     return [];
   }
 }
@@ -77,7 +77,7 @@ class RecordingQuestionService implements IQuestionService {
   dismiss(id: string): void {
     this.dismissCalls.push(id);
   }
-  listPending(): ReturnType<IQuestionService['listPending']> {
+  listPending(): ReturnType<IQuestionService["listPending"]> {
     return [];
   }
 }
@@ -97,21 +97,21 @@ class NoopLogService implements ILogService {
 class NoopWorkspaceRegistry implements IWorkspaceRegistry {
   readonly _serviceBrand: undefined;
 
-  async list(): ReturnType<IWorkspaceRegistry['list']> {
+  async list(): ReturnType<IWorkspaceRegistry["list"]> {
     return [];
   }
-  async get(): ReturnType<IWorkspaceRegistry['get']> {
-    throw new Error('not implemented');
+  async get(): ReturnType<IWorkspaceRegistry["get"]> {
+    throw new Error("not implemented");
   }
-  async createOrTouch(): ReturnType<IWorkspaceRegistry['createOrTouch']> {
-    throw new Error('not implemented');
+  async createOrTouch(): ReturnType<IWorkspaceRegistry["createOrTouch"]> {
+    throw new Error("not implemented");
   }
-  async update(): ReturnType<IWorkspaceRegistry['update']> {
-    throw new Error('not implemented');
+  async update(): ReturnType<IWorkspaceRegistry["update"]> {
+    throw new Error("not implemented");
   }
   async delete(): Promise<void> {}
   async resolveRoot(): Promise<string> {
-    throw new Error('not implemented');
+    throw new Error("not implemented");
   }
   async findWorkspaceIdByRoot(): Promise<string | undefined> {
     return undefined;
@@ -125,22 +125,21 @@ let tmpHome: string;
 let prevHome: string | undefined;
 
 beforeEach(() => {
-  tmpHome = mkdtempSync(join(tmpdir(), 'kimi-services-test-'));
-  prevHome = process.env['KIMI_HOME'];
-  process.env['KIMI_HOME'] = tmpHome;
+  tmpHome = mkdtempSync(join(tmpdir(), "kimi-services-test-"));
+  prevHome = process.env["KIMI_HOME"];
+  process.env["KIMI_HOME"] = tmpHome;
 });
 
 afterEach(() => {
   vi.unstubAllGlobals();
   if (prevHome === undefined) {
-    delete process.env['KIMI_HOME'];
+    delete process.env["KIMI_HOME"];
   } else {
-    process.env['KIMI_HOME'] = prevHome;
+    process.env["KIMI_HOME"] = prevHome;
   }
   try {
     rmSync(tmpHome, { recursive: true, force: true });
-  } catch {
-  }
+  } catch {}
 });
 
 function makePeers() {
@@ -157,59 +156,74 @@ function makeEnv(homeDir: string): IEnvironmentService {
   return {
     _serviceBrand: undefined,
     homeDir,
-    configPath: join(homeDir, 'config.toml'),
+    configPath: join(homeDir, "config.toml"),
   };
 }
 
-describe('BridgeClientAPI', () => {
-  it('routes emitEvent / requestApproval / requestQuestion / toolCall to peer services', async () => {
-    const { eventService, approvalService, questionService, logService } = makePeers();
-    const api = new BridgeClientAPI({ eventService, approvalService, questionService, logService });
+describe("BridgeClientAPI", () => {
+  it("routes emitEvent / requestApproval / requestQuestion / toolCall to peer services", async () => {
+    const { eventService, approvalService, questionService, logService } =
+      makePeers();
+    const api = new BridgeClientAPI({
+      eventService,
+      approvalService,
+      questionService,
+      logService,
+    });
 
     const ev: Event = {
-      type: 'agent_status_updated',
-      sessionId: 'sess-1',
-      agentId: 'main',
-      status: { state: 'idle' },
+      type: "agent_status_updated",
+      sessionId: "sess-1",
+      agentId: "main",
+      status: { state: "idle" },
     } as unknown as Event;
     api.emitEvent(ev);
     expect(eventService.events).toEqual([ev]);
 
     const approvalReq = {
-      toolCallId: 'tc-1',
-      toolName: 'shell.run',
-      action: 'execute',
-      display: { kind: 'generic', summary: 'do thing' } as ApprovalRequest['display'],
-      sessionId: 'sess-1',
-      agentId: 'main',
+      toolCallId: "tc-1",
+      toolName: "shell.run",
+      action: "execute",
+      display: {
+        kind: "generic",
+        summary: "do thing",
+      } as ApprovalRequest["display"],
+      sessionId: "sess-1",
+      agentId: "main",
     };
     const approvalResp = await api.requestApproval(approvalReq);
-    expect(approvalResp).toEqual({ decision: 'approved' });
+    expect(approvalResp).toEqual({ decision: "approved" });
     expect(approvalService.received).toHaveLength(1);
 
     const questionReq = {
-      questions: [{ question: '?', options: [{ label: 'A' }] }],
-      sessionId: 'sess-1',
-      agentId: 'main',
+      questions: [{ question: "?", options: [{ label: "A" }] }],
+      sessionId: "sess-1",
+      agentId: "main",
     };
     const questionResp = await api.requestQuestion(questionReq);
     expect(questionResp).toBeNull();
     expect(questionService.received).toHaveLength(1);
 
     const toolResp = await api.toolCall({
-      toolCallId: 'tc-2',
+      toolCallId: "tc-2",
       args: {},
-      sessionId: 'sess-1',
-      agentId: 'main',
+      sessionId: "sess-1",
+      agentId: "main",
     });
     expect(toolResp.isError).toBe(true);
     expect(toolResp.output).toMatch(/SDK custom tool calls are not supported/);
   });
 });
 
-describe('CoreProcessService direct construction', () => {
-  it('constructs, exposes a callable rpc proxy, and ready() resolves', async () => {
-    const { eventService, approvalService, questionService, logService, workspaceRegistry } = makePeers();
+describe("CoreProcessService direct construction", () => {
+  it("constructs, exposes a callable rpc proxy, and ready() resolves", async () => {
+    const {
+      eventService,
+      approvalService,
+      questionService,
+      logService,
+      workspaceRegistry,
+    } = makePeers();
     const core = new CoreProcessService(
       {},
       makeEnv(tmpHome),
@@ -221,14 +235,20 @@ describe('CoreProcessService direct construction', () => {
     );
     try {
       await expect(core.ready()).resolves.toBeUndefined();
-      expect(typeof core.rpc.getCoreInfo).toBe('function');
+      expect(typeof core.rpc.getCoreInfo).toBe("function");
     } finally {
       core.dispose();
     }
   });
 
-  it('rpc round-trip through createRPC reaches KimiCore (getCoreInfo smoke)', async () => {
-    const { eventService, approvalService, questionService, logService, workspaceRegistry } = makePeers();
+  it("rpc round-trip through createRPC reaches KimiCore (getCoreInfo smoke)", async () => {
+    const {
+      eventService,
+      approvalService,
+      questionService,
+      logService,
+      workspaceRegistry,
+    } = makePeers();
     const core = new CoreProcessService(
       {},
       makeEnv(tmpHome),
@@ -241,15 +261,21 @@ describe('CoreProcessService direct construction', () => {
     try {
       await core.ready();
       const info = await core.rpc.getCoreInfo({});
-      expect(info).toHaveProperty('version');
-      expect(typeof info.version).toBe('string');
+      expect(info).toHaveProperty("version");
+      expect(typeof info.version).toBe("string");
     } finally {
       core.dispose();
     }
   });
 
-  it('dispose is idempotent and short-circuits subsequent rpc calls', async () => {
-    const { eventService, approvalService, questionService, logService, workspaceRegistry } = makePeers();
+  it("dispose is idempotent and short-circuits subsequent rpc calls", async () => {
+    const {
+      eventService,
+      approvalService,
+      questionService,
+      logService,
+      workspaceRegistry,
+    } = makePeers();
     const core = new CoreProcessService(
       {},
       makeEnv(tmpHome),
@@ -266,86 +292,94 @@ describe('CoreProcessService direct construction', () => {
     await expect(core.rpc.getCoreInfo({})).rejects.toThrow(/disposed/);
   });
 
-  it('default-wires a resolveOAuthTokenProvider when caller omits one', () => {
-    const resolver = CoreProcessService._defaultOAuthTokenResolver(tmpHome, join(tmpHome, 'config.toml'));
-    expect(typeof resolver).toBe('function');
-    const tokenProvider = resolver('managed:kimi-code');
+  it("default-wires a resolveOAuthTokenProvider when caller omits one", () => {
+    const resolver = CoreProcessService._defaultOAuthTokenResolver(
+      tmpHome,
+      join(tmpHome, "config.toml"),
+    );
+    expect(typeof resolver).toBe("function");
+    const tokenProvider = resolver("managed:kimi-code");
     expect(tokenProvider).toBeDefined();
-    expect(typeof tokenProvider?.getAccessToken).toBe('function');
+    expect(typeof tokenProvider?.getAccessToken).toBe("function");
   });
 
-  it('threads identity into the default resolver so refreshes carry X-Msh-Platform', async () => {
-    const credentialsDir = join(tmpHome, 'credentials');
+  it("threads identity into the default resolver so refreshes carry X-Msh-Platform", async () => {
+    const credentialsDir = join(tmpHome, "credentials");
     mkdirSync(credentialsDir, { recursive: true });
     writeFileSync(
-      join(credentialsDir, 'kimi-code.json'),
+      join(credentialsDir, "kimi-code.json"),
       JSON.stringify({
-        access_token: 'expired-access',
-        refresh_token: 'refresh-1',
+        access_token: "expired-access",
+        refresh_token: "refresh-1",
         expires_at: 1,
-        scope: '',
-        token_type: 'Bearer',
+        scope: "",
+        token_type: "Bearer",
         expires_in: 3600,
       }),
     );
     const refreshHeaders: Record<string, string>[] = [];
-    vi.stubGlobal('fetch', async (_input: unknown, init?: RequestInit) => {
+    vi.stubGlobal("fetch", async (_input: unknown, init?: RequestInit) => {
       refreshHeaders.push((init?.headers ?? {}) as Record<string, string>);
       return new Response(
         JSON.stringify({
-          access_token: 'rotated-access',
-          refresh_token: 'rotated-refresh',
+          access_token: "rotated-access",
+          refresh_token: "rotated-refresh",
           expires_in: 3600,
-          scope: '',
-          token_type: 'Bearer',
+          scope: "",
+          token_type: "Bearer",
         }),
-        { status: 200, headers: { 'Content-Type': 'application/json' } },
+        { status: 200, headers: { "Content-Type": "application/json" } },
       );
     });
 
     const resolver = CoreProcessService._defaultOAuthTokenResolver(
       tmpHome,
-      join(tmpHome, 'config.toml'),
-      { productName: 'test', version: '0.0.0-test', platform: 'test_platform' },
+      join(tmpHome, "config.toml"),
+      { productName: "test", version: "0.0.0-test", platform: "test_platform" },
     );
-    const tokenProvider = resolver('managed:kimi-code');
-    await expect(tokenProvider?.getAccessToken()).resolves.toBe('rotated-access');
+    const tokenProvider = resolver("managed:kimi-code");
+    await expect(tokenProvider?.getAccessToken()).resolves.toBe(
+      "rotated-access",
+    );
     expect(refreshHeaders).toHaveLength(1);
-    expect(refreshHeaders[0]?.['X-Msh-Platform']).toBe('test_platform');
+    expect(refreshHeaders[0]?.["X-Msh-Platform"]).toBe("test_platform");
   });
 
-  it('default-wires kimiRequestHeaders from identity when caller omits headers', () => {
-    const headers = CoreProcessService._defaultKimiRequestHeaders(
-      tmpHome,
-      { productName: 'kimi-code-cli', version: '9.9.9', platform: 'kimi_code_cli' },
-    );
+  it("default-wires kimiRequestHeaders from identity when caller omits headers", () => {
+    const headers = CoreProcessService._defaultKimiRequestHeaders(tmpHome, {
+      productName: "kimi-code-cli",
+      version: "9.9.9",
+      platform: "kimi_code_cli",
+    });
     expect(headers).toBeDefined();
-    expect(headers!['User-Agent']).toMatch(/^kimi-code-cli\/9\.9\.9/);
-    expect(headers!['X-Msh-Platform']).toBe('kimi_code_cli');
-    expect(headers!['X-Msh-Version']).toBe('9.9.9');
-    expect(headers!['X-Msh-Device-Id']).toMatch(
+    expect(headers!["User-Agent"]).toMatch(/^kimi-code-cli\/9\.9\.9/);
+    expect(headers!["X-Msh-Platform"]).toBe("kimi_code_cli");
+    expect(headers!["X-Msh-Version"]).toBe("9.9.9");
+    expect(headers!["X-Msh-Device-Id"]).toMatch(
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
     );
   });
 
-  it('returns undefined headers when no identity is provided (back-compat)', () => {
+  it("returns undefined headers when no identity is provided (back-compat)", () => {
     const headers = CoreProcessService._defaultKimiRequestHeaders(tmpHome);
     expect(headers).toBeUndefined();
   });
 
-  it('caller-supplied kimiRequestHeaders win over identity-derived defaults', () => {
-    const explicit = { 'User-Agent': 'override/1.0' };
+  it("caller-supplied kimiRequestHeaders win over identity-derived defaults", () => {
+    const explicit = { "User-Agent": "override/1.0" };
     const picked =
-      explicit ?? CoreProcessService._defaultKimiRequestHeaders(
-        tmpHome,
-        { productName: 'kimi-code-cli', version: '9.9.9', platform: 'kimi_code_cli' },
-      );
+      explicit ??
+      CoreProcessService._defaultKimiRequestHeaders(tmpHome, {
+        productName: "kimi-code-cli",
+        version: "9.9.9",
+        platform: "kimi_code_cli",
+      });
     expect(picked).toBe(explicit);
   });
 });
 
-describe('singleton registry composition', () => {
-  it('returns a CoreProcessService descriptor that composes with the DI container', async () => {
+describe("singleton registry composition", () => {
+  it("returns a CoreProcessService descriptor that composes with the DI container", async () => {
     const { eventService, approvalService, questionService } = makePeers();
     const moduleEntries = getSingletonServiceDescriptors();
     expect(moduleEntries.length).toBeGreaterThanOrEqual(1);
@@ -367,7 +401,7 @@ describe('singleton registry composition', () => {
       const core = ix.createInstance(CoreProcessService, {});
       try {
         await core.ready();
-        expect(typeof core.rpc.getCoreInfo).toBe('function');
+        expect(typeof core.rpc.getCoreInfo).toBe("function");
       } finally {
         core.dispose();
       }

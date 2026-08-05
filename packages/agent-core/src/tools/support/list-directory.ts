@@ -11,9 +11,9 @@
  *   - Truncated levels show "... and N more" so the LLM knows more exists.
  */
 
-import { basename, join } from 'pathe';
+import { basename, join } from "pathe";
 
-import type { Kaos } from '@moonshot-ai/kaos';
+import type { Kaos } from "@moonshot-ai/kaos";
 
 export const LIST_DIR_ROOT_WIDTH = 30;
 export const LIST_DIR_CHILD_WIDTH = 10;
@@ -57,8 +57,15 @@ async function collectEntries(
   return { entries: all.slice(0, maxWidth), total: all.length, readable: true };
 }
 
-function shouldCollapseDirectory(entry: Entry, options: ListDirectoryOptions): boolean {
-  return options.collapseHiddenDirs === true && entry.isDir && entry.name.startsWith('.');
+function shouldCollapseDirectory(
+  entry: Entry,
+  options: ListDirectoryOptions,
+): boolean {
+  return (
+    options.collapseHiddenDirs === true &&
+    entry.isDir &&
+    entry.name.startsWith(".")
+  );
 }
 
 /**
@@ -77,7 +84,7 @@ export async function listDirectory(
     workDir,
     LIST_DIR_ROOT_WIDTH,
   );
-  if (!readable) return '[not readable]';
+  if (!readable) return "[not readable]";
   const remaining = total - entries.length;
 
   for (let i = 0; i < entries.length; i++) {
@@ -85,12 +92,12 @@ export async function listDirectory(
     if (entry === undefined) continue;
     const { name, isDir } = entry;
     const isLast = i === entries.length - 1 && remaining === 0;
-    const connector = isLast ? '└── ' : '├── ';
+    const connector = isLast ? "└── " : "├── ";
 
     if (isDir) {
       lines.push(`${connector}${name}/`);
       if (shouldCollapseDirectory(entry, options)) continue;
-      const childPrefix = isLast ? '    ' : '│   ';
+      const childPrefix = isLast ? "    " : "│   ";
       const childDir = join(workDir, name);
       const child = await collectEntries(kaos, childDir, LIST_DIR_CHILD_WIDTH);
       if (!child.readable) {
@@ -102,8 +109,8 @@ export async function listDirectory(
         const ce = child.entries[j];
         if (ce === undefined) continue;
         const cIsLast = j === child.entries.length - 1 && childRemaining === 0;
-        const cConnector = cIsLast ? '└── ' : '├── ';
-        const suffix = ce.isDir ? '/' : '';
+        const cConnector = cIsLast ? "└── " : "├── ";
+        const suffix = ce.isDir ? "/" : "";
         lines.push(`${childPrefix}${cConnector}${ce.name}${suffix}`);
       }
       if (childRemaining > 0) {
@@ -118,7 +125,5 @@ export async function listDirectory(
     lines.push(`└── ... and ${String(remaining)} more entries`);
   }
 
-  return lines.length > 0 ? lines.join('\n') : '(empty directory)';
+  return lines.length > 0 ? lines.join("\n") : "(empty directory)";
 }
-
-

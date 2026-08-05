@@ -4,9 +4,9 @@
 // `<agent_swarm_result>` payload (terminal result) — kept in plain TS so it can
 // be unit-tested without mounting the component.
 
-import type { AppSubagentPhase } from '../api/types';
-import type { SwarmMember } from '../composables/swarmGroups';
-import type { SwarmResult, SwarmResultSubagent } from './parseSwarmResult';
+import type { AppSubagentPhase } from "../api/types";
+import type { SwarmMember } from "../composables/swarmGroups";
+import type { SwarmResult, SwarmResultSubagent } from "./parseSwarmResult";
 
 export interface SwarmCardRow {
   id: string;
@@ -17,8 +17,14 @@ export interface SwarmCardRow {
 }
 
 function lastNonEmptyLine(text: string | undefined): string {
-  if (!text) return '';
-  return text.split('\n').map((l) => l.trimEnd()).filter(Boolean).at(-1) ?? '';
+  if (!text) return "";
+  return (
+    text
+      .split("\n")
+      .map((l) => l.trimEnd())
+      .filter(Boolean)
+      .at(-1) ?? ""
+  );
 }
 
 export function swarmMemberActivity(member: SwarmMember): string {
@@ -27,30 +33,31 @@ export function swarmMemberActivity(member: SwarmMember): string {
   return (
     member.suspendedReason ||
     lastNonEmptyLine(member.text) ||
-    lastNonEmptyLine(member.outputLines?.join('\n')) ||
+    lastNonEmptyLine(member.outputLines?.join("\n")) ||
     member.summary ||
-    ''
+    ""
   );
 }
 
 function swarmMemberBody(member: SwarmMember): string {
   if (member.suspendedReason) return member.suspendedReason;
   if (member.text) return member.text;
-  if (member.outputLines && member.outputLines.length > 0) return member.outputLines.join('\n');
-  return member.summary ?? '';
+  if (member.outputLines && member.outputLines.length > 0)
+    return member.outputLines.join("\n");
+  return member.summary ?? "";
 }
 
 function outcomeToPhase(outcome: string): AppSubagentPhase {
-  if (outcome === 'completed') return 'completed';
-  if (outcome === 'failed' || outcome === 'aborted') return 'failed';
-  return 'working';
+  if (outcome === "completed") return "completed";
+  if (outcome === "failed" || outcome === "aborted") return "failed";
+  return "working";
 }
 
 function resultRow(sub: SwarmResultSubagent, index: number): SwarmCardRow {
   return {
     id: sub.agentId ?? sub.item ?? `result-${index}`,
     name: sub.item ?? `subagent ${index + 1}`,
-    activity: sub.body.split('\n')[0] ?? '',
+    activity: sub.body.split("\n")[0] ?? "",
     phase: outcomeToPhase(sub.outcome),
     body: sub.body,
   };
@@ -62,7 +69,10 @@ function resultRow(sub: SwarmResultSubagent, index: number): SwarmCardRow {
  * agent_id / item; the two ids don't always match, so also treat item ⊆
  * description as a match.
  */
-function memberCoversResult(member: SwarmMember, sub: SwarmResultSubagent): boolean {
+function memberCoversResult(
+  member: SwarmMember,
+  sub: SwarmResultSubagent,
+): boolean {
   if (sub.agentId && member.id === sub.agentId) return true;
   if (sub.item && member.name.includes(sub.item)) return true;
   return false;
@@ -78,7 +88,10 @@ function memberCoversResult(member: SwarmMember, sub: SwarmResultSubagent): bool
  *   would otherwise be invisible until a refresh dropped the live tasks.
  * - When no members are present (post-refresh), fall back to result-only rows.
  */
-export function buildSwarmCardRows(members: SwarmMember[], result: SwarmResult | null): SwarmCardRow[] {
+export function buildSwarmCardRows(
+  members: SwarmMember[],
+  result: SwarmResult | null,
+): SwarmCardRow[] {
   const memberRows = members.map((m) => ({
     id: m.id,
     name: m.name,
@@ -91,10 +104,12 @@ export function buildSwarmCardRows(members: SwarmMember[], result: SwarmResult |
   const resultOnly = result.subagents
     .filter(
       (sub) =>
-        (sub.outcome === 'aborted' || sub.state === 'not_started') &&
+        (sub.outcome === "aborted" || sub.state === "not_started") &&
         !members.some((m) => memberCoversResult(m, sub)),
     )
     .map((sub, i) => resultRow(sub, i));
 
-  return memberRows.length > 0 ? [...memberRows, ...resultOnly] : result.subagents.map((s, i) => resultRow(s, i));
+  return memberRows.length > 0
+    ? [...memberRows, ...resultOnly]
+    : result.subagents.map((s, i) => resultRow(s, i));
 }

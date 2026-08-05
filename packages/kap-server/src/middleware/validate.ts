@@ -18,8 +18,8 @@
  * reach the generic error hook, which only emits 50001 for unknown exceptions.
  */
 
-import { ErrorCode } from '../protocol/error-codes';
-import type { z } from 'zod';
+import { ErrorCode } from "../protocol/error-codes";
+import type { z } from "zod";
 
 /**
  * Minimal Fastify request/reply shapes — keep our hook independent of the
@@ -50,7 +50,7 @@ interface ValidationDetailItem {
 
 function zodIssuesToDetails(error: z.ZodError): ValidationDetailItem[] {
   return error.issues.map((issue) => ({
-    path: issue.path.join('.'),
+    path: issue.path.join("."),
     message: issue.message,
   }));
 }
@@ -66,11 +66,12 @@ function buildValidationEnvelope(
   details: ValidationDetailItem[];
 } {
   const first = details[0];
-  const msg = first === undefined
-    ? 'validation failed'
-    : first.path === ''
-      ? first.message
-      : `${first.path}: ${first.message}`;
+  const msg =
+    first === undefined
+      ? "validation failed"
+      : first.path === ""
+        ? first.message
+        : `${first.path}: ${first.message}`;
   return {
     code: ErrorCode.VALIDATION_FAILED,
     msg,
@@ -88,7 +89,9 @@ export function validateBody<T>(schema: z.ZodType<T>): PreHandlerHook {
   return (req, reply, done) => {
     const result = schema.safeParse(req.body);
     if (!result.success) {
-      reply.send(buildValidationEnvelope(zodIssuesToDetails(result.error), req.id));
+      reply.send(
+        buildValidationEnvelope(zodIssuesToDetails(result.error), req.id),
+      );
       return;
     }
     req.body = result.data;
@@ -108,7 +111,9 @@ export function validateQuery<T>(schema: z.ZodType<T>): PreHandlerHook {
   return (req, reply, done) => {
     const result = schema.safeParse(req.query);
     if (!result.success) {
-      reply.send(buildValidationEnvelope(zodIssuesToDetails(result.error), req.id));
+      reply.send(
+        buildValidationEnvelope(zodIssuesToDetails(result.error), req.id),
+      );
       return;
     }
     req.query = result.data;
@@ -123,7 +128,9 @@ export function validateParams<T>(schema: z.ZodType<T>): PreHandlerHook {
   return (req, reply, done) => {
     const result = schema.safeParse(req.params);
     if (!result.success) {
-      reply.send(buildValidationEnvelope(zodIssuesToDetails(result.error), req.id));
+      reply.send(
+        buildValidationEnvelope(zodIssuesToDetails(result.error), req.id),
+      );
       return;
     }
     req.params = result.data;

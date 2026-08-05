@@ -19,12 +19,12 @@
  * lives in `src/transcript/` and is unrelated to this client.)
  */
 
-import type { ServiceProxy, ServiceRef } from './channel';
-import { makeProxy } from './proxy';
-import { ProxyChannel } from './proxyChannel';
+import type { ServiceProxy, ServiceRef } from "./channel";
+import { makeProxy } from "./proxy";
+import { ProxyChannel } from "./proxyChannel";
 
 /** The dev server's whitelist-free debug surface (`--debug-endpoints` + loopback). */
-export const DEBUG_RPC_BASE = '/api/v1/debug' as const;
+export const DEBUG_RPC_BASE = "/api/v1/debug" as const;
 
 export interface InspectAgentHandle {
   service<T extends object>(id: ServiceRef<T>): ServiceProxy<T>;
@@ -51,11 +51,16 @@ export interface InspectClientOptions {
   readonly token?: string;
 }
 
-export function createInspectClient(options: InspectClientOptions): InspectClient {
-  const url = options.url.replace(/\/$/, '');
+export function createInspectClient(
+  options: InspectClientOptions,
+): InspectClient {
+  const url = options.url.replace(/\/$/, "");
 
   /** Materialize a typed proxy for one Service on one scope binding. */
-  function proxy<T extends object>(scopePath: string, id: ServiceRef<T>): ServiceProxy<T> {
+  function proxy<T extends object>(
+    scopePath: string,
+    id: ServiceRef<T>,
+  ): ServiceProxy<T> {
     const service = String(id);
     return makeProxy<T>(
       new ProxyChannel({
@@ -68,16 +73,18 @@ export function createInspectClient(options: InspectClientOptions): InspectClien
   return {
     baseUrl: url,
     token: options.token,
-    core: (id) => proxy('', id),
+    core: (id) => proxy("", id),
     workspace: (workspaceId) => ({
-      service: (id) => proxy(`/workspace/${encodeURIComponent(workspaceId)}`, id),
+      service: (id) =>
+        proxy(`/workspace/${encodeURIComponent(workspaceId)}`, id),
     }),
     session: (sessionId) => {
       const scopePath = `/session/${encodeURIComponent(sessionId)}`;
       return {
         service: (id) => proxy(scopePath, id),
         agent: (agentId) => ({
-          service: (subId) => proxy(`${scopePath}/agent/${encodeURIComponent(agentId)}`, subId),
+          service: (subId) =>
+            proxy(`${scopePath}/agent/${encodeURIComponent(agentId)}`, subId),
         }),
       };
     },

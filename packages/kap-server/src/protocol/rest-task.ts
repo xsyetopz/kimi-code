@@ -4,9 +4,9 @@
  *   POST /v1/sessions/{session_id}/tasks/{task_id}:cancel
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { taskSchema, taskStatusSchema } from './task';
+import { taskSchema, taskStatusSchema } from "./task";
 
 export const listTasksQuerySchema = z.object({
   status: taskStatusSchema.optional(),
@@ -35,4 +35,6 @@ export type CancelTaskResult = z.infer<typeof cancelTaskResultSchema>;
 export const taskAlreadyFinishedDataSchema = z.object({
   cancelled: z.literal(false),
 });
-export type TaskAlreadyFinishedData = z.infer<typeof taskAlreadyFinishedDataSchema>;
+export type TaskAlreadyFinishedData = z.infer<
+  typeof taskAlreadyFinishedDataSchema
+>;

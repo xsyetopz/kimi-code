@@ -1,7 +1,11 @@
-import type { ApprovalHandler, ApprovalRequest, ApprovalResponse } from '@moonshot-ai/kimi-code-sdk';
+import type {
+  ApprovalHandler,
+  ApprovalRequest,
+  ApprovalResponse,
+} from "@moonshot-ai/kimi-code-sdk";
 
-import { adaptApprovalRequest } from './adapter';
-import type { ApprovalController } from './controller';
+import { adaptApprovalRequest } from "./adapter";
+import type { ApprovalController } from "./controller";
 
 export function createApprovalRequestHandler(
   controller: ApprovalController,
@@ -14,8 +18,8 @@ export function createApprovalRequestHandler(
       return response;
     } catch {
       const response: ApprovalResponse = {
-        decision: 'cancelled',
-        feedback: 'approval handler failed',
+        decision: "cancelled",
+        feedback: "approval handler failed",
       };
       onResponse?.(event, response);
       return response;

@@ -11,10 +11,18 @@
  * `it` keeps Vitest happy.
  */
 
-import type { ContentPart, ModelCapability, TokenUsage } from '@moonshot-ai/kosong';
-import { describe, expect, it } from 'vitest';
+import type {
+  ContentPart,
+  ModelCapability,
+  TokenUsage,
+} from "@moonshot-ai/kosong";
+import { describe, expect, it } from "vitest";
 
-import { createLoopEventDispatcher, runTurn, ToolAccesses } from '../../src/loop/index';
+import {
+  createLoopEventDispatcher,
+  runTurn,
+  ToolAccesses,
+} from "../../src/loop/index";
 import type {
   AfterStepHook,
   BeforeStepResult,
@@ -61,13 +69,15 @@ import type {
   FinalizeToolResultContext,
   FinalizeToolResultHook,
   TurnResult,
-} from '../../src/loop/index';
+} from "../../src/loop/index";
 
 // Compile-time fixtures (never executed).
 
 declare const _llm: LLM;
 declare const _buildMessages: LoopMessageBuilder;
-declare const _appendTranscriptRecord: (record: LoopRecordedEvent) => Promise<void>;
+declare const _appendTranscriptRecord: (
+  record: LoopRecordedEvent,
+) => Promise<void>;
 declare const _emit: LoopLiveEventEmitter;
 declare const _dispatchEvent: LoopEventDispatcher;
 declare const _signal: AbortSignal;
@@ -77,7 +87,7 @@ function _typeOnlyChecks(): void {
   // RunTurnInput names every external capability explicitly, using
   // function-shaped dependencies when the capability has exactly one method.
   const input: RunTurnInput = {
-    turnId: 't1',
+    turnId: "t1",
     signal: _signal,
     llm: _llm,
     buildMessages: _buildMessages,
@@ -90,7 +100,7 @@ function _typeOnlyChecks(): void {
 
   // Minimal input: tools / hooks / maxSteps are optional.
   const minimalInput: RunTurnInput = {
-    turnId: 't1',
+    turnId: "t1",
     signal: _signal,
     llm: _llm,
     buildMessages: _buildMessages,
@@ -148,8 +158,8 @@ function _typeOnlyChecks(): void {
 
   const chatResponse: LLMChatResponse = {
     toolCalls: [],
-    providerFinishReason: 'filtered',
-    rawFinishReason: 'content_filter',
+    providerFinishReason: "filtered",
+    rawFinishReason: "content_filter",
     usage: {} as TokenUsage,
   };
   void chatResponse;
@@ -157,7 +167,7 @@ function _typeOnlyChecks(): void {
     toolCalls: [],
     usage: {} as TokenUsage,
     // @ts-expect-error - LLM responses expose provider diagnostics; the loop derives stopReason.
-    stopReason: 'end_turn',
+    stopReason: "end_turn",
   };
   void _badChatResponseStopReason;
 
@@ -166,7 +176,10 @@ function _typeOnlyChecks(): void {
   void _badOldInput;
 
   // @ts-expect-error — old grouped turn shape is no longer accepted.
-  const _badGroupedTurn: RunTurnInput = { ...input, turn: { id: 't1', signal: _signal } };
+  const _badGroupedTurn: RunTurnInput = {
+    ...input,
+    turn: { id: "t1", signal: _signal },
+  };
   void _badGroupedTurn;
 
   // @ts-expect-error — old events array shape is no longer accepted.
@@ -201,7 +214,9 @@ function _typeOnlyChecks(): void {
   void _badMessages;
 
   // Transcript is one append-only recorded event function.
-  const appendTranscriptRecord = async (_record: LoopRecordedEvent): Promise<void> => {};
+  const appendTranscriptRecord = async (
+    _record: LoopRecordedEvent,
+  ): Promise<void> => {};
   void appendTranscriptRecord;
 
   const _badTranscript: (record: LoopRecordedEvent) => Promise<void> = {
@@ -214,45 +229,45 @@ function _typeOnlyChecks(): void {
   void emit;
 
   const stepBeginRecord: LoopStepBeginEvent = {
-    type: 'step.begin',
-    uuid: 's1',
-    turnId: 't1',
+    type: "step.begin",
+    uuid: "s1",
+    turnId: "t1",
     step: 1,
   };
   const stepEndRecord: LoopStepEndEvent = {
-    type: 'step.end',
-    uuid: 's1',
-    turnId: 't1',
+    type: "step.end",
+    uuid: "s1",
+    turnId: "t1",
     step: 1,
-    finishReason: 'filtered',
+    finishReason: "filtered",
     llmFirstTokenLatencyMs: 10,
     llmStreamDurationMs: 20,
-    providerFinishReason: 'filtered',
-    rawFinishReason: 'content_filter',
+    providerFinishReason: "filtered",
+    rawFinishReason: "content_filter",
   };
   const contentPartRecord: LoopContentPartEvent = {
-    type: 'content.part',
-    uuid: 'c1',
-    turnId: 't1',
+    type: "content.part",
+    uuid: "c1",
+    turnId: "t1",
     step: 1,
-    stepUuid: 's1',
-    part: { type: 'text', text: 'hi' },
+    stepUuid: "s1",
+    part: { type: "text", text: "hi" },
   };
   const toolCallRecord: LoopToolCallEvent = {
-    type: 'tool.call',
-    uuid: 'tc1',
-    turnId: 't1',
+    type: "tool.call",
+    uuid: "tc1",
+    turnId: "t1",
     step: 1,
-    stepUuid: 's1',
-    toolCallId: 'tc1',
-    name: 'echo',
+    stepUuid: "s1",
+    toolCallId: "tc1",
+    name: "echo",
     args: {},
   };
   const toolResultRecord: LoopToolResultEvent = {
-    type: 'tool.result',
-    parentUuid: 'tc1',
-    toolCallId: 'tc1',
-    result: { output: 'ok' },
+    type: "tool.result",
+    parentUuid: "tc1",
+    toolCallId: "tc1",
+    result: { output: "ok" },
   };
   const _records: LoopRecordedEvent[] = [
     stepBeginRecord,
@@ -265,7 +280,7 @@ function _typeOnlyChecks(): void {
 
   // Hook contexts receive the LLM directly and no prompt/transcript object.
   const stepHookContext: LoopStepHookContext = {
-    turnId: 't1',
+    turnId: "t1",
     stepNumber: 1,
     signal: _signal,
     llm: _llm,
@@ -273,41 +288,41 @@ function _typeOnlyChecks(): void {
   void stepHookContext;
 
   const _badStepHookContext: LoopStepHookContext = {
-    turnId: 't1',
+    turnId: "t1",
     stepNumber: 1,
     signal: _signal,
     llm: _llm,
     // @ts-expect-error — hooks receive `llm`, not a separate modelName field.
-    modelName: 'model',
+    modelName: "model",
   };
   void _badStepHookContext;
 
   const afterStepContext: LoopAfterStepContext = {
     ...stepHookContext,
     usage: {} as TokenUsage,
-    stopReason: 'tool_use',
+    stopReason: "tool_use",
   };
   void afterStepContext;
 
   const stoppedStepContext: LoopStoppedStepContext = {
     ...stepHookContext,
     usage: {} as TokenUsage,
-    stopReason: 'filtered',
+    stopReason: "filtered",
   };
   void stoppedStepContext;
 
   const toolCallHookContext: ToolExecutionHookContext = {
     ...stepHookContext,
-    toolCall: { type: 'function', id: 'tc1', name: 'echo', arguments: '{}' },
-    toolCalls: [{ type: 'function', id: 'tc1', name: 'echo', arguments: '{}' }],
+    toolCall: { type: "function", id: "tc1", name: "echo", arguments: "{}" },
+    toolCalls: [{ type: "function", id: "tc1", name: "echo", arguments: "{}" }],
     args: {},
   };
   void toolCallHookContext;
 
   const _badToolExecutionHookContext: ToolExecutionHookContext = {
     ...stepHookContext,
-    toolCall: { type: 'function', id: 'tc1', name: 'echo', arguments: '{}' },
-    toolCalls: [{ type: 'function', id: 'tc1', name: 'echo', arguments: '{}' }],
+    toolCall: { type: "function", id: "tc1", name: "echo", arguments: "{}" },
+    toolCalls: [{ type: "function", id: "tc1", name: "echo", arguments: "{}" }],
     // @ts-expect-error — tool hooks receive `args`, not the old `input` field.
     input: {},
   };
@@ -337,55 +352,55 @@ function _typeOnlyChecks(): void {
   // Step stop reasons include provider-visible terminal states and `tool_use`
   // as an intermediate loop-control state.
   const _validStepStops: LoopStepStopReason[] = [
-    'end_turn',
-    'max_tokens',
-    'tool_use',
-    'filtered',
-    'paused',
-    'unknown',
+    "end_turn",
+    "max_tokens",
+    "tool_use",
+    "filtered",
+    "paused",
+    "unknown",
   ];
   void _validStepStops;
 
   const _validTerminalStepStops: LoopTerminalStepStopReason[] = [
-    'end_turn',
-    'max_tokens',
-    'filtered',
-    'paused',
-    'unknown',
+    "end_turn",
+    "max_tokens",
+    "filtered",
+    "paused",
+    "unknown",
   ];
   void _validTerminalStepStops;
 
   // Turn stop reasons exclude `tool_use` because a completed turn never returns
   // while tools are still pending.
   const _validTurnStops: LoopTurnStopReason[] = [
-    'end_turn',
-    'max_tokens',
-    'filtered',
-    'paused',
-    'unknown',
-    'aborted',
+    "end_turn",
+    "max_tokens",
+    "filtered",
+    "paused",
+    "unknown",
+    "aborted",
   ];
   void _validTurnStops;
 
   const _deprecatedStopAlias: StopReason[] = [
-    'end_turn',
-    'max_tokens',
-    'tool_use',
-    'filtered',
-    'paused',
-    'unknown',
-    'aborted',
+    "end_turn",
+    "max_tokens",
+    "tool_use",
+    "filtered",
+    "paused",
+    "unknown",
+    "aborted",
   ];
   void _deprecatedStopAlias;
 
   // @ts-expect-error - stop reasons that flow through throws are not in the union
-  const _badStop1: LoopTurnStopReason = 'error';
+  const _badStop1: LoopTurnStopReason = "error";
   void _badStop1;
   // @ts-expect-error - max_steps is represented by a thrown KimiError, not StopReason.
-  const _badStop2: LoopTurnStopReason = 'max_steps';
+  const _badStop2: LoopTurnStopReason = "max_steps";
   void _badStop2;
   // @ts-expect-error - tool_use is step-local and cannot be a final turn result.
-  const _badStop3: LoopTurnStopReason = 'tool_use';
+  const _badStop3: LoopTurnStopReason = "tool_use";
   void _badStop3;
 
   // Capability metadata reuses Kosong's provider-facing shape.
@@ -403,34 +418,37 @@ function _typeOnlyChecks(): void {
 
   // ToolCall reuses Kosong's provider-facing function-call shape.
   const toolCall: ToolCall = {
-    type: 'function',
-    id: 'tc1',
-    name: 'echo', arguments: '{"text":"hi"}',
+    type: "function",
+    id: "tc1",
+    name: "echo",
+    arguments: '{"text":"hi"}',
   };
   void toolCall;
   const _badToolCall: ToolCall = {
-    name: 'echo',
+    name: "echo",
     // @ts-expect-error — ToolCall has `name` but no `args` property.
     args: {},
   };
   void _badToolCall;
 
   const toolResultContent: ContentPart[] = [
-    { type: 'text', text: 'see image:' },
-    { type: 'image_url', imageUrl: { url: 'data:image/png;base64,AAAA' } },
+    { type: "text", text: "see image:" },
+    { type: "image_url", imageUrl: { url: "data:image/png;base64,AAAA" } },
   ];
-  const structuredToolResult: ExecutableToolResult = { output: toolResultContent };
+  const structuredToolResult: ExecutableToolResult = {
+    output: toolResultContent,
+  };
   void structuredToolResult;
 
   const executeContext: ExecutableToolContext = {
-    turnId: 't1',
-    toolCallId: 'tc1',
+    turnId: "t1",
+    toolCallId: "tc1",
     signal: _signal,
   };
   void executeContext;
   const _badExecuteContext: ExecutableToolContext = {
-    turnId: 't1',
-    toolCallId: 'tc1',
+    turnId: "t1",
+    toolCallId: "tc1",
     signal: _signal,
     // @ts-expect-error — args are captured by resolveExecution(input), not passed in execute context.
     args: {},
@@ -439,34 +457,34 @@ function _typeOnlyChecks(): void {
 
   // ExecutableTool is one object: Kosong's model-visible definition plus resolveExecution().
   const _tool: ExecutableTool = {
-    name: 'x',
-    description: 'x',
-    parameters: { type: 'object' },
+    name: "x",
+    description: "x",
+    parameters: { type: "object" },
     resolveExecution: () => ({
-      approvalRule: 'x',
-      execute: async (_ctx: ExecutableToolContext) => ({ output: 'ok' }),
+      approvalRule: "x",
+      execute: async (_ctx: ExecutableToolContext) => ({ output: "ok" }),
     }),
   };
   void _tool;
   const _describableTool: ExecutableTool<{ text: string }> = {
-    name: 'x',
-    description: 'x',
-    parameters: { type: 'object' },
+    name: "x",
+    description: "x",
+    parameters: { type: "object" },
     resolveExecution: (args) => ({
       accesses: ToolAccesses.none(),
       description: `Running ${args.text}`,
-      approvalRule: 'x',
-      execute: async (_ctx: ExecutableToolContext) => ({ output: 'ok' }),
+      approvalRule: "x",
+      execute: async (_ctx: ExecutableToolContext) => ({ output: "ok" }),
     }),
   };
   void _describableTool;
   const _badTool: ExecutableTool = {
-    name: 'x',
-    description: 'x',
-    parameters: { type: 'object' },
+    name: "x",
+    description: "x",
+    parameters: { type: "object" },
     resolveExecution: () => ({
-      approvalRule: 'x',
-      execute: async (_ctx: ExecutableToolContext) => ({ output: 'ok' }),
+      approvalRule: "x",
+      execute: async (_ctx: ExecutableToolContext) => ({ output: "ok" }),
     }),
     // @ts-expect-error — there is no second Zod schema source on ExecutableTool.
     inputSchema: {},
@@ -488,11 +506,16 @@ function _typeOnlyChecks(): void {
     updatedArgs: ctx.args,
     executionMetadata: ctx.toolCalls,
   });
-  const finalizeToolResultHook: FinalizeToolResultHook = async (ctx) => ctx.result;
-  const shouldContinueAfterStopHook: ShouldContinueAfterStopHook = async (ctx) => ({
-    continue: ctx.stopReason === 'max_tokens',
+  const finalizeToolResultHook: FinalizeToolResultHook = async (ctx) =>
+    ctx.result;
+  const shouldContinueAfterStopHook: ShouldContinueAfterStopHook = async (
+    ctx,
+  ) => ({
+    continue: ctx.stopReason === "max_tokens",
   });
-  const shouldContinueAfterStopResult: ShouldContinueAfterStopResult = { continue: false };
+  const shouldContinueAfterStopResult: ShouldContinueAfterStopResult = {
+    continue: false,
+  };
   void shouldContinueAfterStopResult;
   const hookShapes: LoopHooks = {
     beforeStep: beforeStepHook,
@@ -505,39 +528,49 @@ function _typeOnlyChecks(): void {
 
   // LoopEvent is a closed union with the documented variants.
   const _evs: LoopEvent[] = [
-    { type: 'step.begin', uuid: 's1', turnId: 't1', step: 1 },
+    { type: "step.begin", uuid: "s1", turnId: "t1", step: 1 },
     {
-      type: 'step.end',
-      uuid: 's1',
-      turnId: 't1',
+      type: "step.end",
+      uuid: "s1",
+      turnId: "t1",
       step: 1,
       llmFirstTokenLatencyMs: 10,
       llmStreamDurationMs: 20,
     },
     {
-      type: 'content.part',
-      uuid: 'c1',
-      turnId: 't1',
+      type: "content.part",
+      uuid: "c1",
+      turnId: "t1",
       step: 1,
-      stepUuid: 's1',
-      part: { type: 'text', text: '' },
+      stepUuid: "s1",
+      part: { type: "text", text: "" },
     },
-    { type: 'turn.interrupted', attemptedSteps: 1, activeStep: 1, reason: 'aborted' },
-    { type: 'text.delta', delta: '' },
-    { type: 'thinking.delta', delta: '' },
-    { type: 'tool.call.delta', toolCallId: 'a' },
     {
-      type: 'tool.call',
-      uuid: 'a',
-      turnId: 't1',
+      type: "turn.interrupted",
+      attemptedSteps: 1,
+      activeStep: 1,
+      reason: "aborted",
+    },
+    { type: "text.delta", delta: "" },
+    { type: "thinking.delta", delta: "" },
+    { type: "tool.call.delta", toolCallId: "a" },
+    {
+      type: "tool.call",
+      uuid: "a",
+      turnId: "t1",
       step: 1,
-      stepUuid: 's1',
-      toolCallId: 'a',
-      name: 'x',
+      stepUuid: "s1",
+      toolCallId: "a",
+      name: "x",
       args: {},
     },
-    { type: 'tool.progress', toolCallId: 'a', update: { kind: 'stdout' } },
-    { type: 'tool.result', parentUuid: 'a', toolCallId: 'a', result: { output: '' } },
+    { type: "tool.progress", toolCallId: "a", update: { kind: "stdout" } },
+    {
+      type: "tool.result",
+      parentUuid: "a",
+      toolCallId: "a",
+      result: { output: "" },
+    },
   ];
   void _evs;
 
@@ -546,7 +579,11 @@ function _typeOnlyChecks(): void {
   void _contentPartLiveEvent;
 
   // TurnResult fields
-  const _tr: TurnResult = { stopReason: 'end_turn', steps: 1, usage: {} as TokenUsage };
+  const _tr: TurnResult = {
+    stopReason: "end_turn",
+    steps: 1,
+    usage: {} as TokenUsage,
+  };
   void _tr;
 
   // Cross-reference all named exports just to keep this list in sync
@@ -596,9 +633,9 @@ function _typeOnlyChecks(): void {
 }
 void _typeOnlyChecks;
 
-describe('loop public API shape', () => {
-  it('barrel exports the runtime entry points', () => {
-    expect(typeof runTurn).toBe('function');
-    expect(typeof createLoopEventDispatcher).toBe('function');
+describe("loop public API shape", () => {
+  it("barrel exports the runtime entry points", () => {
+    expect(typeof runTurn).toBe("function");
+    expect(typeof createLoopEventDispatcher).toBe("function");
   });
 });

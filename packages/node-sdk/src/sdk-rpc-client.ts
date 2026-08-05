@@ -12,13 +12,16 @@ import {
   type RPCMethods,
   type SDKAPI,
   type TelemetryClient,
-} from '@moonshot-ai/agent-core';
-import type { Kaos } from '@moonshot-ai/kaos';
-import { assertKimiHostIdentity, createKimiDefaultHeaders } from '@moonshot-ai/kimi-code-oauth';
+} from "@moonshot-ai/agent-core";
+import type { Kaos } from "@moonshot-ai/kaos";
+import {
+  assertKimiHostIdentity,
+  createKimiDefaultHeaders,
+} from "@moonshot-ai/kimi-code-oauth";
 
-import { KimiAuthFacade } from '#/auth';
-import { KimiHarness } from '#/kimi-harness';
-import { ClientAPI, SDKRpcClientBase } from '#/rpc';
+import { KimiAuthFacade } from "#/auth";
+import { KimiHarness } from "#/kimi-harness";
+import { ClientAPI, SDKRpcClientBase } from "#/rpc";
 import type {
   CreateSessionOptions,
   KimiHarnessOptions,
@@ -27,7 +30,7 @@ import type {
   ResumeSessionInput,
   ResumedSessionSummary,
   SessionSummary,
-} from '#/types';
+} from "#/types";
 
 export interface SDKRpcClientOptions {
   readonly homeDir?: string;
@@ -58,7 +61,9 @@ export class SDKRpcClient extends SDKRpcClientBase {
   constructor(options: SDKRpcClientOptions = {}) {
     super();
     this.identity =
-      options.identity === undefined ? undefined : assertKimiHostIdentity(options.identity);
+      options.identity === undefined
+        ? undefined
+        : assertKimiHostIdentity(options.identity);
     this.homeDir = resolveKimiHome(options.homeDir);
     this.configPath = resolveConfigPath({
       homeDir: this.homeDir,
@@ -72,7 +77,9 @@ export class SDKRpcClient extends SDKRpcClientBase {
       onRefresh: options.onOAuthRefresh,
     });
 
-    void getRootLogger().configure(resolveLoggingConfig({ homeDir: this.homeDir }));
+    void getRootLogger().configure(
+      resolveLoggingConfig({ homeDir: this.homeDir }),
+    );
 
     const [coreRpc, sdkRpc] = createRPC<CoreAPI, SDKAPI>();
     this.core = new KimiCore(coreRpc, {
@@ -80,7 +87,8 @@ export class SDKRpcClient extends SDKRpcClientBase {
       configPath: this.configPath,
       kimiRequestHeaders: this.createKimiRequestHeaders(),
       resolveOAuthTokenProvider:
-        options.resolveOAuthTokenProvider ?? this.auth.resolveOAuthTokenProvider,
+        options.resolveOAuthTokenProvider ??
+        this.auth.resolveOAuthTokenProvider,
       skillDirs: options.skillDirs,
       telemetry: this.telemetry,
       appVersion: this.identity?.version,
@@ -112,7 +120,10 @@ export class SDKRpcClient extends SDKRpcClientBase {
   ): Promise<SessionSummary> {
     const { planMode, ...coreInput } = input;
     void planMode;
-    return this.core.createSessionWithOverrides(coreInput, { kaos, persistenceKaos });
+    return this.core.createSessionWithOverrides(coreInput, {
+      kaos,
+      persistenceKaos,
+    });
   }
 
   override async resumeSessionWithKaos(

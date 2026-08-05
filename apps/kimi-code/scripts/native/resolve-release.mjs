@@ -1,15 +1,15 @@
-import { appendFile, readFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { appendFile, readFile } from "node:fs/promises";
+import { resolve } from "node:path";
 
-import { appRoot } from './paths.mjs';
+import { appRoot } from "./paths.mjs";
 
-const packageName = '@moonshot-ai/kimi-code';
+const packageName = "@moonshot-ai/kimi-code";
 const packageJson = JSON.parse(
-  await readFile(resolve(appRoot, 'package.json'), 'utf-8'),
+  await readFile(resolve(appRoot, "package.json"), "utf-8"),
 );
 
 function parsePublishedPackages() {
-  const raw = process.env['CHANGESETS_PUBLISHED_PACKAGES'];
+  const raw = process.env["CHANGESETS_PUBLISHED_PACKAGES"];
   if (raw === undefined || raw.trim().length === 0) {
     return [];
   }
@@ -28,25 +28,25 @@ function outputLine(name, value) {
 
 const publishedPackage = parsePublishedPackages().find(
   (entry) =>
-    typeof entry === 'object' &&
+    typeof entry === "object" &&
     entry !== null &&
     entry.name === packageName &&
-    typeof entry.version === 'string',
+    typeof entry.version === "string",
 );
 
 const version = publishedPackage?.version ?? packageJson.version;
 const shouldPublish = publishedPackage !== undefined;
 const tag = `${packageName}@${version}`;
-const githubOutput = process.env['GITHUB_OUTPUT'];
+const githubOutput = process.env["GITHUB_OUTPUT"];
 
 if (githubOutput !== undefined) {
   await appendFile(
     githubOutput,
     [
-      outputLine('should_publish', String(shouldPublish)),
-      outputLine('version', version),
-      outputLine('tag', tag),
-    ].join(''),
+      outputLine("should_publish", String(shouldPublish)),
+      outputLine("version", version),
+      outputLine("tag", tag),
+    ].join(""),
   );
 }
 

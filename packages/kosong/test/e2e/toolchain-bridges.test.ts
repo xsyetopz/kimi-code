@@ -1,16 +1,19 @@
-import { derefJsonSchema } from '#/providers/kimi-schema';
-import { createToolMessage, extractText } from '#/message';
-import type { Message, StreamedMessagePart } from '#/message';
-import type { ChatProvider, StreamedMessage, ThinkingEffort } from '#/provider';
-import { SimpleToolset, toolOk } from '../fixtures/simple-toolset';
-import type { ToolReturnValue } from '../fixtures/simple-toolset';
-import { step } from '../fixtures/step';
-import type { Tool } from '#/tool';
-import { createTypedTool } from '../fixtures/typed-tool';
-import { describe, expect, it } from 'vitest';
-import { z } from 'zod';
+import { derefJsonSchema } from "#/providers/kimi-schema";
+import { createToolMessage, extractText } from "#/message";
+import type { Message, StreamedMessagePart } from "#/message";
+import type { ChatProvider, StreamedMessage, ThinkingEffort } from "#/provider";
+import { SimpleToolset, toolOk } from "../fixtures/simple-toolset";
+import type { ToolReturnValue } from "../fixtures/simple-toolset";
+import { step } from "../fixtures/step";
+import type { Tool } from "#/tool";
+import { createTypedTool } from "../fixtures/typed-tool";
+import { describe, expect, it } from "vitest";
+import { z } from "zod";
 
-function createStream(parts: StreamedMessagePart[], opts?: { id?: string }): StreamedMessage {
+function createStream(
+  parts: StreamedMessagePart[],
+  opts?: { id?: string },
+): StreamedMessage {
   return {
     get id(): string | null {
       return opts?.id ?? null;
@@ -29,8 +32,8 @@ function createStream(parts: StreamedMessagePart[], opts?: { id?: string }): Str
 }
 
 class QueuedProvider implements ChatProvider {
-  readonly name: string = 'queued';
-  readonly modelName: string = 'queued-model';
+  readonly name: string = "queued";
+  readonly modelName: string = "queued-model";
   readonly thinkingEffort: ThinkingEffort | null = null;
   private readonly _queue: StreamedMessage[];
   private _cursor: number = 0;
@@ -59,28 +62,34 @@ class QueuedProvider implements ChatProvider {
 
 async function runTwoStepLoop(toolset: SimpleToolset, provider: ChatProvider) {
   const history: Message[] = [
-    { role: 'user', content: [{ type: 'text', text: 'run the tool chain' }], toolCalls: [] },
+    {
+      role: "user",
+      content: [{ type: "text", text: "run the tool chain" }],
+      toolCalls: [],
+    },
   ];
 
-  const first = await step(provider, '', toolset, history);
+  const first = await step(provider, "", toolset, history);
   history.push(first.message);
 
   const toolResults = await first.toolResults();
   for (const toolResult of toolResults) {
-    history.push(createToolMessage(toolResult.toolCallId, toolResult.returnValue.output));
+    history.push(
+      createToolMessage(toolResult.toolCallId, toolResult.returnValue.output),
+    );
   }
 
-  const second = await step(provider, '', toolset, history);
+  const second = await step(provider, "", toolset, history);
   history.push(second.message);
 
   return { first, second, toolResults, history };
 }
 
-describe('e2e: kosong toolchain bridges', () => {
-  it('typed-tool -> SimpleToolset -> step dispatches nested Zod args and completes the loop', async () => {
+describe("e2e: kosong toolchain bridges", () => {
+  it("typed-tool -> SimpleToolset -> step dispatches nested Zod args and completes the loop", async () => {
     const addressTool = createTypedTool({
-      name: 'route_address',
-      description: 'Routes a package to a nested address payload',
+      name: "route_address",
+      description: "Routes a package to a nested address payload",
       params: z.object({
         shipment: z.object({
           id: z.string(),
@@ -99,7 +108,7 @@ describe('e2e: kosong toolchain bridges', () => {
     });
 
     expect(addressTool.tool.parameters).toMatchObject({
-      type: 'object',
+      type: "object",
       additionalProperties: false,
       properties: expect.objectContaining({
         shipment: expect.any(Object),
@@ -108,69 +117,74 @@ describe('e2e: kosong toolchain bridges', () => {
 
     const provider = new QueuedProvider([
       createStream([
-        { type: 'text', text: 'I will route the shipment.' },
+        { type: "text", text: "I will route the shipment." },
         {
-          type: 'function',
-          id: 'tc-route',
-          name: 'route_address',
-            arguments: JSON.stringify({
-              shipment: {
-                id: 'pkg-42',
-                address: { city: 'Shanghai', zip: '200000' },
-              },
-              urgent: true,
-            }),
+          type: "function",
+          id: "tc-route",
+          name: "route_address",
+          arguments: JSON.stringify({
+            shipment: {
+              id: "pkg-42",
+              address: { city: "Shanghai", zip: "200000" },
+            },
+            urgent: true,
+          }),
         },
       ]),
-      createStream([{ type: 'text', text: 'Shipment routed.' }]),
+      createStream([{ type: "text", text: "Shipment routed." }]),
     ]);
 
     const toolset = new SimpleToolset();
     toolset.add(addressTool.tool, addressTool.handler);
 
-    const { first, second, toolResults } = await runTwoStepLoop(toolset, provider);
+    const { first, second, toolResults } = await runTwoStepLoop(
+      toolset,
+      provider,
+    );
 
-    expect(extractText(first.message)).toBe('I will route the shipment.');
+    expect(extractText(first.message)).toBe("I will route the shipment.");
     expect(first.toolCalls).toHaveLength(1);
     expect(toolResults).toHaveLength(1);
-    expect(toolResults[0]!.toolCallId).toBe('tc-route');
+    expect(toolResults[0]!.toolCallId).toBe("tc-route");
     expect(toolResults[0]!.returnValue.isError).toBe(false);
-    expect(toolResults[0]!.returnValue.output).toBe('pkg-42 -> Shanghai:200000');
-    expect(extractText(second.message)).toBe('Shipment routed.');
+    expect(toolResults[0]!.returnValue.output).toBe(
+      "pkg-42 -> Shanghai:200000",
+    );
+    expect(extractText(second.message)).toBe("Shipment routed.");
   });
 
-  it('json-schema-deref -> SimpleToolset -> step validates a flattened schema and completes the loop', async () => {
+  it("json-schema-deref -> SimpleToolset -> step validates a flattened schema and completes the loop", async () => {
     const rawSchema: Record<string, unknown> = {
-      type: 'object',
+      type: "object",
       $defs: {
         address: {
-          type: 'object',
+          type: "object",
           properties: {
-            city: { type: 'string' },
-            zip: { type: 'string' },
+            city: { type: "string" },
+            zip: { type: "string" },
           },
-          required: ['city', 'zip'],
+          required: ["city", "zip"],
           additionalProperties: false,
         },
       },
       properties: {
-        shipping: { $ref: '#/$defs/address' },
-        billing: { $ref: '#/$defs/address' },
+        shipping: { $ref: "#/$defs/address" },
+        billing: { $ref: "#/$defs/address" },
       },
-      required: ['shipping', 'billing'],
+      required: ["shipping", "billing"],
       additionalProperties: false,
     };
 
     const schema = derefJsonSchema(rawSchema);
-    expect(schema).not.toHaveProperty('$defs');
+    expect(schema).not.toHaveProperty("$defs");
     expect(schema).toMatchObject({
-      type: 'object',
+      type: "object",
       properties: expect.objectContaining({
         shipping: expect.objectContaining({
-          type: 'object',
+          type: "object",
           properties: expect.objectContaining({
-            city: { type: 'string' },
-            zip: { type: 'string' },
+            city: { type: "string" },
+            zip: { type: "string" },
           }),
         }),
       }),
@@ -180,14 +194,14 @@ describe('e2e: kosong toolchain bridges', () => {
     let receivedArgs: Record<string, unknown> | null = null;
     toolset.add(
       {
-        name: 'ship_package',
-        description: 'Ships a package with two addresses',
+        name: "ship_package",
+        description: "Ships a package with two addresses",
         parameters: schema,
       },
       async (args): Promise<ToolReturnValue> => {
         receivedArgs = args as Record<string, unknown>;
         return toolOk({
-          output: `ship:${(args as Record<string, unknown>)['shipping'] !== undefined ? 'ok' : 'missing'}`,
+          output: `ship:${(args as Record<string, unknown>)["shipping"] !== undefined ? "ok" : "missing"}`,
         });
       },
     );
@@ -195,26 +209,29 @@ describe('e2e: kosong toolchain bridges', () => {
     const provider = new QueuedProvider([
       createStream([
         {
-          type: 'function',
-          id: 'tc-ship',
-          name: 'ship_package',
-            arguments: JSON.stringify({
-              shipping: { city: 'Hangzhou', zip: '310000' },
-              billing: { city: 'Shenzhen', zip: '518000' },
-            }),
+          type: "function",
+          id: "tc-ship",
+          name: "ship_package",
+          arguments: JSON.stringify({
+            shipping: { city: "Hangzhou", zip: "310000" },
+            billing: { city: "Shenzhen", zip: "518000" },
+          }),
         },
       ]),
-      createStream([{ type: 'text', text: 'Shipment booked.' }]),
+      createStream([{ type: "text", text: "Shipment booked." }]),
     ]);
 
-    const { first, second, toolResults } = await runTwoStepLoop(toolset, provider);
+    const { first, second, toolResults } = await runTwoStepLoop(
+      toolset,
+      provider,
+    );
 
     expect(first.toolCalls).toHaveLength(1);
     expect(receivedArgs).toEqual({
-      shipping: { city: 'Hangzhou', zip: '310000' },
-      billing: { city: 'Shenzhen', zip: '518000' },
+      shipping: { city: "Hangzhou", zip: "310000" },
+      billing: { city: "Shenzhen", zip: "518000" },
     });
-    expect(toolResults[0]!.returnValue.output).toBe('ship:ok');
-    expect(extractText(second.message)).toBe('Shipment booked.');
+    expect(toolResults[0]!.returnValue.output).toBe("ship:ok");
+    expect(extractText(second.message)).toBe("Shipment booked.");
   });
 });

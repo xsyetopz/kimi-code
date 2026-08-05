@@ -1,14 +1,18 @@
-import { APIConnectionError, APIStatusError, ChatProviderError } from '#/errors';
-import { generate } from '#/generate';
-import type { Message, StreamedMessagePart, ToolCall } from '#/message';
-import type { ChatProvider, StreamedMessage, ThinkingEffort } from '#/provider';
-import { SimpleToolset, toolOk } from '../fixtures/simple-toolset';
-import type { ToolReturnValue } from '../fixtures/simple-toolset';
-import { step } from '../fixtures/step';
-import type { Tool } from '#/tool';
-import type { JsonValue } from '../fixtures/args-validator';
-import type { TokenUsage } from '#/usage';
-import { describe, expect, it } from 'vitest';
+import {
+  APIConnectionError,
+  APIStatusError,
+  ChatProviderError,
+} from "#/errors";
+import { generate } from "#/generate";
+import type { Message, StreamedMessagePart, ToolCall } from "#/message";
+import type { ChatProvider, StreamedMessage, ThinkingEffort } from "#/provider";
+import { SimpleToolset, toolOk } from "../fixtures/simple-toolset";
+import type { ToolReturnValue } from "../fixtures/simple-toolset";
+import { step } from "../fixtures/step";
+import type { Tool } from "#/tool";
+import type { JsonValue } from "../fixtures/args-validator";
+import type { TokenUsage } from "#/usage";
+import { describe, expect, it } from "vitest";
 function createMockStream(
   parts: StreamedMessagePart[],
   opts?: { id?: string; usage?: TokenUsage },
@@ -33,8 +37,8 @@ function createMockStream(
 /** Provider whose generate() throws the given error. */
 function createThrowingProvider(error: Error): ChatProvider {
   return {
-    name: 'throwing',
-    modelName: 'throwing',
+    name: "throwing",
+    modelName: "throwing",
     thinkingEffort: null,
     async generate(
       _systemPrompt: string,
@@ -50,10 +54,13 @@ function createThrowingProvider(error: Error): ChatProvider {
 }
 
 /** Provider whose generate() succeeds, but the stream throws mid-iteration. */
-function createStreamErrorProvider(partsBefore: StreamedMessagePart[], error: Error): ChatProvider {
+function createStreamErrorProvider(
+  partsBefore: StreamedMessagePart[],
+  error: Error,
+): ChatProvider {
   return {
-    name: 'stream-error',
-    modelName: 'stream-error',
+    name: "stream-error",
+    modelName: "stream-error",
     thinkingEffort: null,
     async generate(
       _systemPrompt: string,
@@ -85,8 +92,8 @@ function createStreamErrorProvider(partsBefore: StreamedMessagePart[], error: Er
 
 function createMockProvider(stream: StreamedMessage): ChatProvider {
   return {
-    name: 'mock',
-    modelName: 'mock',
+    name: "mock",
+    modelName: "mock",
     thinkingEffort: null,
     async generate(
       _systemPrompt: string,
@@ -100,136 +107,168 @@ function createMockProvider(stream: StreamedMessage): ChatProvider {
     },
   };
 }
-describe('e2e: error recovery', () => {
-  describe('provider generate() throws', () => {
-    it('APIStatusError propagates through step()', async () => {
-      const error = new APIStatusError(429, 'Rate limited', 'req-123');
+describe("e2e: error recovery", () => {
+  describe("provider generate() throws", () => {
+    it("APIStatusError propagates through step()", async () => {
+      const error = new APIStatusError(429, "Rate limited", "req-123");
       const provider = createThrowingProvider(error);
       const toolset = new SimpleToolset();
 
       await expect(
-        step(provider, '', toolset, [
-          { role: 'user', content: [{ type: 'text', text: 'hi' }], toolCalls: [] },
+        step(provider, "", toolset, [
+          {
+            role: "user",
+            content: [{ type: "text", text: "hi" }],
+            toolCalls: [],
+          },
         ]),
       ).rejects.toThrow(APIStatusError);
 
       try {
-        await step(provider, '', toolset, [
-          { role: 'user', content: [{ type: 'text', text: 'hi' }], toolCalls: [] },
+        await step(provider, "", toolset, [
+          {
+            role: "user",
+            content: [{ type: "text", text: "hi" }],
+            toolCalls: [],
+          },
         ]);
-        expect.unreachable('should have thrown');
+        expect.unreachable("should have thrown");
       } catch (error: unknown) {
         expect(error).toBeInstanceOf(APIStatusError);
         const apiError = error as APIStatusError;
         expect(apiError.statusCode).toBe(429);
-        expect(apiError.requestId).toBe('req-123');
+        expect(apiError.requestId).toBe("req-123");
       }
     });
 
-    it('APIConnectionError propagates through step()', async () => {
-      const error = new APIConnectionError('Connection reset');
+    it("APIConnectionError propagates through step()", async () => {
+      const error = new APIConnectionError("Connection reset");
       const provider = createThrowingProvider(error);
       const toolset = new SimpleToolset();
 
       await expect(
-        step(provider, '', toolset, [
-          { role: 'user', content: [{ type: 'text', text: 'hi' }], toolCalls: [] },
+        step(provider, "", toolset, [
+          {
+            role: "user",
+            content: [{ type: "text", text: "hi" }],
+            toolCalls: [],
+          },
         ]),
       ).rejects.toThrow(APIConnectionError);
     });
 
-    it('ChatProviderError propagates through generate()', async () => {
-      const error = new ChatProviderError('Unknown provider error');
+    it("ChatProviderError propagates through generate()", async () => {
+      const error = new ChatProviderError("Unknown provider error");
       const provider = createThrowingProvider(error);
 
-      await expect(generate(provider, '', [], [])).rejects.toThrow(ChatProviderError);
+      await expect(generate(provider, "", [], [])).rejects.toThrow(
+        ChatProviderError,
+      );
     });
 
-    it('non-ChatProviderError also propagates through step()', async () => {
-      const error = new TypeError('Something unexpected');
+    it("non-ChatProviderError also propagates through step()", async () => {
+      const error = new TypeError("Something unexpected");
       const provider = createThrowingProvider(error);
       const toolset = new SimpleToolset();
 
       await expect(
-        step(provider, '', toolset, [
-          { role: 'user', content: [{ type: 'text', text: 'hi' }], toolCalls: [] },
+        step(provider, "", toolset, [
+          {
+            role: "user",
+            content: [{ type: "text", text: "hi" }],
+            toolCalls: [],
+          },
         ]),
       ).rejects.toThrow(TypeError);
     });
   });
 
-  describe('stream throws mid-iteration', () => {
-    it('error after some text parts propagates correctly', async () => {
+  describe("stream throws mid-iteration", () => {
+    it("error after some text parts propagates correctly", async () => {
       const provider = createStreamErrorProvider(
-        [{ type: 'text', text: 'Partial response...' }],
-        new APIConnectionError('Stream disconnected'),
+        [{ type: "text", text: "Partial response..." }],
+        new APIConnectionError("Stream disconnected"),
       );
       const toolset = new SimpleToolset();
 
       await expect(
-        step(provider, '', toolset, [
-          { role: 'user', content: [{ type: 'text', text: 'hi' }], toolCalls: [] },
+        step(provider, "", toolset, [
+          {
+            role: "user",
+            content: [{ type: "text", text: "hi" }],
+            toolCalls: [],
+          },
         ]),
       ).rejects.toThrow(APIConnectionError);
     });
 
-    it('error after tool call part propagates and cleans up pending tool promises', async () => {
+    it("error after tool call part propagates and cleans up pending tool promises", async () => {
       // When the stream yields a ToolCall then immediately throws, the ToolCall
       // is still in the pending-part buffer and has NOT been flushed/dispatched
       // via onToolCall. This is correct behavior: generate() only fires
       // onToolCall when a new non-mergeable part arrives or at stream end.
       const tc: ToolCall = {
-        type: 'function',
-        id: 'tc-1',
-        name: 'slow_tool', arguments: '{}',
+        type: "function",
+        id: "tc-1",
+        name: "slow_tool",
+        arguments: "{}",
       };
 
       const provider = createStreamErrorProvider(
         [tc],
-        new APIConnectionError('Stream cut mid-tool'),
+        new APIConnectionError("Stream cut mid-tool"),
       );
 
       const toolset = new SimpleToolset();
       toolset.add(
-        { name: 'slow_tool', description: 'Slow', parameters: {} },
+        { name: "slow_tool", description: "Slow", parameters: {} },
         async (): Promise<ToolReturnValue> => {
-          return toolOk({ output: 'done' });
+          return toolOk({ output: "done" });
         },
       );
 
       await expect(
-        step(provider, '', toolset, [
-          { role: 'user', content: [{ type: 'text', text: 'hi' }], toolCalls: [] },
+        step(provider, "", toolset, [
+          {
+            role: "user",
+            content: [{ type: "text", text: "hi" }],
+            toolCalls: [],
+          },
         ]),
       ).rejects.toThrow(APIConnectionError);
     });
 
-    it('generic Error mid-stream propagates', async () => {
+    it("generic Error mid-stream propagates", async () => {
       const provider = createStreamErrorProvider(
-        [{ type: 'text', text: 'start' }],
-        new Error('Random network failure'),
+        [{ type: "text", text: "start" }],
+        new Error("Random network failure"),
       );
 
-      await expect(generate(provider, '', [], [])).rejects.toThrow('Random network failure');
+      await expect(generate(provider, "", [], [])).rejects.toThrow(
+        "Random network failure",
+      );
     });
   });
 
-  describe('tool execution errors', () => {
-    it('tool handler throws → toolRuntimeError in results, other tools unaffected', async () => {
+  describe("tool execution errors", () => {
+    it("tool handler throws → toolRuntimeError in results, other tools unaffected", async () => {
       const tc1: ToolCall = {
-        type: 'function',
-        id: 'tc-ok',
-        name: 'good_tool', arguments: '{}',
+        type: "function",
+        id: "tc-ok",
+        name: "good_tool",
+        arguments: "{}",
       };
       const tc2: ToolCall = {
-        type: 'function',
-        id: 'tc-fail',
-        name: 'bad_tool', arguments: '{}',
+        type: "function",
+        id: "tc-fail",
+        name: "bad_tool",
+        arguments: "{}",
       };
       const tc3: ToolCall = {
-        type: 'function',
-        id: 'tc-ok-2',
-        name: 'good_tool', arguments: '{}',
+        type: "function",
+        id: "tc-ok-2",
+        name: "good_tool",
+        arguments: "{}",
       };
 
       const stream = createMockStream([tc1, tc2, tc3]);
@@ -238,78 +277,80 @@ describe('e2e: error recovery', () => {
       const completionOrder: string[] = [];
       const toolset = new SimpleToolset();
       toolset.add(
-        { name: 'good_tool', description: 'Works', parameters: {} },
+        { name: "good_tool", description: "Works", parameters: {} },
         async (
           _args: JsonValue,
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
         ): Promise<ToolReturnValue> => {
-          completionOrder.push('good');
-          return toolOk({ output: 'success' });
+          completionOrder.push("good");
+          return toolOk({ output: "success" });
         },
       );
       toolset.add(
-        { name: 'bad_tool', description: 'Crashes', parameters: {} },
+        { name: "bad_tool", description: "Crashes", parameters: {} },
         async (): Promise<ToolReturnValue> => {
-          completionOrder.push('bad');
-          throw new Error('Tool timeout simulation');
+          completionOrder.push("bad");
+          throw new Error("Tool timeout simulation");
         },
       );
 
-      const result = await step(provider, '', toolset, []);
+      const result = await step(provider, "", toolset, []);
       const toolResults = await result.toolResults();
 
       expect(toolResults).toHaveLength(3);
       // First tool: success
       expect(toolResults[0]!.returnValue.isError).toBe(false);
-      expect(toolResults[0]!.returnValue.output).toBe('success');
+      expect(toolResults[0]!.returnValue.output).toBe("success");
       // Second tool: runtime error
       expect(toolResults[1]!.returnValue.isError).toBe(true);
       expect(toolResults[1]!.returnValue.message).toBe(
-        'Error running tool: Tool timeout simulation',
+        "Error running tool: Tool timeout simulation",
       );
       // Third tool: success
       expect(toolResults[2]!.returnValue.isError).toBe(false);
-      expect(toolResults[2]!.returnValue.output).toBe('success');
+      expect(toolResults[2]!.returnValue.output).toBe("success");
     });
 
-    it('tool not found → toolNotFoundError in results', async () => {
+    it("tool not found → toolNotFoundError in results", async () => {
       const tc: ToolCall = {
-        type: 'function',
-        id: 'tc-missing',
-        name: 'nonexistent_tool', arguments: '{}',
+        type: "function",
+        id: "tc-missing",
+        name: "nonexistent_tool",
+        arguments: "{}",
       };
 
-      const stream = createMockStream([{ type: 'text', text: 'calling' }, tc]);
+      const stream = createMockStream([{ type: "text", text: "calling" }, tc]);
       const provider = createMockProvider(stream);
 
       const toolset = new SimpleToolset();
       // No tools registered
 
-      const result = await step(provider, '', toolset, []);
+      const result = await step(provider, "", toolset, []);
       const toolResults = await result.toolResults();
 
       expect(toolResults).toHaveLength(1);
       expect(toolResults[0]!.returnValue.isError).toBe(true);
-      expect(toolResults[0]!.returnValue.message).toContain('nonexistent_tool');
+      expect(toolResults[0]!.returnValue.message).toContain("nonexistent_tool");
     });
 
-    it('tool with invalid JSON arguments → toolParseError', async () => {
+    it("tool with invalid JSON arguments → toolParseError", async () => {
       const tc: ToolCall = {
-        type: 'function',
-        id: 'tc-bad-json',
-        name: 'my_tool', arguments: '{invalid json',
+        type: "function",
+        id: "tc-bad-json",
+        name: "my_tool",
+        arguments: "{invalid json",
       };
 
-      const stream = createMockStream([{ type: 'text', text: 'calling' }, tc]);
+      const stream = createMockStream([{ type: "text", text: "calling" }, tc]);
       const provider = createMockProvider(stream);
 
       const toolset = new SimpleToolset();
       toolset.add(
-        { name: 'my_tool', description: 'A tool', parameters: {} },
-        async (): Promise<ToolReturnValue> => toolOk({ output: 'ok' }),
+        { name: "my_tool", description: "A tool", parameters: {} },
+        async (): Promise<ToolReturnValue> => toolOk({ output: "ok" }),
       );
 
-      const result = await step(provider, '', toolset, []);
+      const result = await step(provider, "", toolset, []);
       const toolResults = await result.toolResults();
 
       expect(toolResults).toHaveLength(1);
@@ -317,16 +358,17 @@ describe('e2e: error recovery', () => {
       // The message should describe a parse error
       expect(toolResults[0]!.returnValue.display).toEqual(
         expect.arrayContaining([
-          expect.objectContaining({ type: 'brief', text: 'Invalid arguments' }),
+          expect.objectContaining({ type: "brief", text: "Invalid arguments" }),
         ]),
       );
     });
 
-    it('tool throws non-Error value → still wrapped as runtime error', async () => {
+    it("tool throws non-Error value → still wrapped as runtime error", async () => {
       const tc: ToolCall = {
-        type: 'function',
-        id: 'tc-str-throw',
-        name: 'throws_string', arguments: '{}',
+        type: "function",
+        id: "tc-str-throw",
+        name: "throws_string",
+        arguments: "{}",
       };
 
       const stream = createMockStream([tc]);
@@ -334,46 +376,53 @@ describe('e2e: error recovery', () => {
 
       const toolset = new SimpleToolset();
       toolset.add(
-        { name: 'throws_string', description: 'Throws a string', parameters: {} },
+        {
+          name: "throws_string",
+          description: "Throws a string",
+          parameters: {},
+        },
         async (): Promise<ToolReturnValue> => {
           // eslint-disable-next-line @typescript-eslint/only-throw-error, no-throw-literal
-          throw 'a raw string error';
+          throw "a raw string error";
         },
       );
 
-      const result = await step(provider, '', toolset, []);
+      const result = await step(provider, "", toolset, []);
       const toolResults = await result.toolResults();
 
       expect(toolResults).toHaveLength(1);
       expect(toolResults[0]!.returnValue.isError).toBe(true);
-      expect(toolResults[0]!.returnValue.message).toBe('Error running tool: a raw string error');
+      expect(toolResults[0]!.returnValue.message).toBe(
+        "Error running tool: a raw string error",
+      );
     });
   });
 
-  describe('provider error before tool dispatch', () => {
-    it('tool handlers are never invoked when the stream errors mid-way', async () => {
+  describe("provider error before tool dispatch", () => {
+    it("tool handlers are never invoked when the stream errors mid-way", async () => {
       // Tool dispatch is deferred until after the stream has fully drained.
       // A mid-stream error therefore means zero tools are dispatched.
       const tc: ToolCall = {
-        type: 'function',
-        id: 'tc-cleanup',
-        name: 'cleanup_test', arguments: '{}',
+        type: "function",
+        id: "tc-cleanup",
+        name: "cleanup_test",
+        arguments: "{}",
       };
 
       let handlerInvoked = false;
       const toolset = new SimpleToolset();
       toolset.add(
-        { name: 'cleanup_test', description: 'Test cleanup', parameters: {} },
+        { name: "cleanup_test", description: "Test cleanup", parameters: {} },
         async (): Promise<ToolReturnValue> => {
           handlerInvoked = true;
-          return toolOk({ output: 'done' });
+          return toolOk({ output: "done" });
         },
       );
 
       // Custom provider: yields tc, then text, then throws mid-stream.
       const provider: ChatProvider = {
-        name: 'cleanup-test',
-        modelName: 'cleanup-test',
+        name: "cleanup-test",
+        modelName: "cleanup-test",
         thinkingEffort: null,
         async generate(
           _systemPrompt: string,
@@ -391,8 +440,8 @@ describe('e2e: error recovery', () => {
             rawFinishReason: null,
             async *[Symbol.asyncIterator](): AsyncIterator<StreamedMessagePart> {
               yield tc;
-              yield { type: 'text', text: 'some text' };
-              throw new ChatProviderError('Stream failure after tool dispatch');
+              yield { type: "text", text: "some text" };
+              throw new ChatProviderError("Stream failure after tool dispatch");
             },
           };
         },
@@ -402,8 +451,12 @@ describe('e2e: error recovery', () => {
       };
 
       await expect(
-        step(provider, '', toolset, [
-          { role: 'user', content: [{ type: 'text', text: 'go' }], toolCalls: [] },
+        step(provider, "", toolset, [
+          {
+            role: "user",
+            content: [{ type: "text", text: "go" }],
+            toolCalls: [],
+          },
         ]),
       ).rejects.toThrow(ChatProviderError);
 

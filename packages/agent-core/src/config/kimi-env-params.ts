@@ -3,10 +3,10 @@ import {
   type GenerationKwargs,
   KimiChatProvider,
   type ThinkingEffort,
-} from '@moonshot-ai/kosong';
-import { AnthropicChatProvider } from '@moonshot-ai/kosong/providers/anthropic';
+} from "@moonshot-ai/kosong";
+import { AnthropicChatProvider } from "@moonshot-ai/kosong/providers/anthropic";
 
-import { parseFloatEnv } from '#/config/resolve';
+import { parseFloatEnv } from "#/config/resolve";
 
 type Env = Readonly<Record<string, string | undefined>>;
 
@@ -29,12 +29,17 @@ export function applyKimiEnvSamplingParams(
   if (!(provider instanceof KimiChatProvider)) return provider;
 
   const kwargs: GenerationKwargs = {};
-  const temperature = parseFloatEnv(env['KIMI_MODEL_TEMPERATURE'], 'KIMI_MODEL_TEMPERATURE');
+  const temperature = parseFloatEnv(
+    env["KIMI_MODEL_TEMPERATURE"],
+    "KIMI_MODEL_TEMPERATURE",
+  );
   if (temperature !== undefined) kwargs.temperature = temperature;
-  const topP = parseFloatEnv(env['KIMI_MODEL_TOP_P'], 'KIMI_MODEL_TOP_P');
+  const topP = parseFloatEnv(env["KIMI_MODEL_TOP_P"], "KIMI_MODEL_TOP_P");
   if (topP !== undefined) kwargs.top_p = topP;
 
-  return Object.keys(kwargs).length > 0 ? provider.withGenerationKwargs(kwargs) : provider;
+  return Object.keys(kwargs).length > 0
+    ? provider.withGenerationKwargs(kwargs)
+    : provider;
 }
 
 /**
@@ -50,12 +55,12 @@ export function resolveKimiEnvThinkingEffort(
   kimiProvider: boolean,
   env: Env = process.env,
 ): ThinkingEffort | undefined {
-  if (!kimiProvider || thinkingEffort === 'off') return undefined;
-  const effort = env['KIMI_MODEL_THINKING_EFFORT']?.trim().toLowerCase();
+  if (!kimiProvider || thinkingEffort === "off") return undefined;
+  const effort = env["KIMI_MODEL_THINKING_EFFORT"]?.trim().toLowerCase();
   return effort === undefined || effort.length === 0 ? undefined : effort;
 }
 
-const KEEP_OFF_VALUES = new Set(['0', 'false', 'no', 'off', 'none', 'null']);
+const KEEP_OFF_VALUES = new Set(["0", "false", "no", "off", "none", "null"]);
 
 type KeepResolution =
   | { readonly specified: false }
@@ -69,8 +74,10 @@ type KeepResolution =
  */
 function parseKeepValue(raw: string | undefined): KeepResolution {
   const trimmed = raw?.trim();
-  if (trimmed === undefined || trimmed.length === 0) return { specified: false };
-  if (KEEP_OFF_VALUES.has(trimmed.toLowerCase())) return { specified: true, value: undefined };
+  if (trimmed === undefined || trimmed.length === 0)
+    return { specified: false };
+  if (KEEP_OFF_VALUES.has(trimmed.toLowerCase()))
+    return { specified: true, value: undefined };
   return { specified: true, value: trimmed };
 }
 
@@ -93,12 +100,12 @@ export function resolveThinkingKeep(
   configKeep: string | undefined,
   thinkingEffort: ThinkingEffort,
 ): string | undefined {
-  if (thinkingEffort === 'off') return undefined;
-  const fromEnv = parseKeepValue(env['KIMI_MODEL_THINKING_KEEP']);
+  if (thinkingEffort === "off") return undefined;
+  const fromEnv = parseKeepValue(env["KIMI_MODEL_THINKING_KEEP"]);
   if (fromEnv.specified) return fromEnv.value;
   const fromConfig = parseKeepValue(configKeep);
   if (fromConfig.specified) return fromConfig.value;
-  return 'all';
+  return "all";
 }
 
 /**

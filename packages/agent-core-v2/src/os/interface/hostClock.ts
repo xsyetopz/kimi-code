@@ -5,7 +5,10 @@
  * domains to observe the current instant and the host's local IANA time zone.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
 
 export interface IHostClock {
   readonly _serviceBrand: undefined;
@@ -15,4 +18,4 @@ export interface IHostClock {
 }
 
 export const IHostClock: ServiceIdentifier<IHostClock> =
-  createDecorator<IHostClock>('hostClock');
+  createDecorator<IHostClock>("hostClock");

@@ -1,33 +1,36 @@
-import { log, type Logger } from '@moonshot-ai/kimi-code-sdk';
-import { track as trackTelemetry, type TelemetryProperties } from '@moonshot-ai/kimi-telemetry';
+import { log, type Logger } from "@moonshot-ai/kimi-code-sdk";
+import {
+  track as trackTelemetry,
+  type TelemetryProperties,
+} from "@moonshot-ai/kimi-telemetry";
 
-import { refreshUpdateCache } from '#/cli/update/refresh';
-import { selectUpdateTarget } from '#/cli/update/select';
-import { detectInstallSource } from '#/cli/update/source';
+import { refreshUpdateCache } from "#/cli/update/refresh";
+import { selectUpdateTarget } from "#/cli/update/select";
+import { detectInstallSource } from "#/cli/update/source";
 import {
   canAutoInstall,
   installCommandFor,
   installUpdate as installUpdateForeground,
   renderInstallSuccessMessage,
   renderManualUpdateMessage,
-} from '#/cli/update/preflight';
+} from "#/cli/update/preflight";
 import {
   promptForInstallChoice,
   type InstallPromptChoiceValue,
   type InstallPromptOptions,
-} from '#/cli/update/prompt';
+} from "#/cli/update/prompt";
 import {
   NPM_PACKAGE_NAME,
   type InstallSource,
   type UpdateCache,
-} from '#/cli/update/types';
+} from "#/cli/update/types";
 
 interface WritableLike {
   write(chunk: string): boolean;
 }
 
 type UpgradeTrack = (event: string, properties?: TelemetryProperties) => void;
-type UpgradeLogger = Pick<Logger, 'info' | 'warn'>;
+type UpgradeLogger = Pick<Logger, "info" | "warn">;
 
 export interface UpgradeDeps {
   readonly refreshUpdateCache: () => Promise<UpdateCache>;
@@ -59,12 +62,12 @@ export async function handleUpgrade(
     cache = await deps.refreshUpdateCache();
   } catch (error) {
     const reason = formatErrorMessage(error);
-    trackUpgradeEvent(deps.track, 'upgrade_command_failed', {
+    trackUpgradeEvent(deps.track, "upgrade_command_failed", {
       current_version: currentVersion,
-      stage: 'refresh',
+      stage: "refresh",
       reason,
     });
-    logUpgradeWarn(deps.logger, 'manual upgrade check failed', {
+    logUpgradeWarn(deps.logger, "manual upgrade check failed", {
       currentVersion,
       error,
     });
@@ -74,39 +77,49 @@ export async function handleUpgrade(
 
   const target = selectUpdateTarget(currentVersion, cache.latest);
   if (target === null) {
-    trackUpgradeEvent(deps.track, 'upgrade_command_no_update', {
+    trackUpgradeEvent(deps.track, "upgrade_command_no_update", {
       current_version: currentVersion,
     });
-    logUpgradeInfo(deps.logger, 'manual upgrade no update', {
+    logUpgradeInfo(deps.logger, "manual upgrade no update", {
       currentVersion,
     });
-    deps.stdout.write(`Kimi Code is already up to date (${formatDisplayVersion(currentVersion)}).\n`);
+    deps.stdout.write(
+      `Kimi Code is already up to date (${formatDisplayVersion(currentVersion)}).\n`,
+    );
     return 0;
   }
 
-  const source = await deps.detectInstallSource().catch(() => 'unsupported' as const);
-  const installCommand = installCommandFor(source, target.version, deps.platform);
+  const source = await deps
+    .detectInstallSource()
+    .catch(() => "unsupported" as const);
+  const installCommand = installCommandFor(
+    source,
+    target.version,
+    deps.platform,
+  );
   if (!canAutoInstall(source, deps.platform) || !deps.isInteractive) {
-    trackUpgradeEvent(deps.track, 'upgrade_command_manual_command', {
+    trackUpgradeEvent(deps.track, "upgrade_command_manual_command", {
       current_version: currentVersion,
       target_version: target.version,
       source,
     });
-    logUpgradeInfo(deps.logger, 'manual upgrade command shown', {
+    logUpgradeInfo(deps.logger, "manual upgrade command shown", {
       currentVersion,
       targetVersion: target.version,
       source,
     });
-    deps.stdout.write(renderManualUpdateMessage(currentVersion, target, source, installCommand));
+    deps.stdout.write(
+      renderManualUpdateMessage(currentVersion, target, source, installCommand),
+    );
     return 0;
   }
 
-  trackUpgradeEvent(deps.track, 'upgrade_command_prompted', {
+  trackUpgradeEvent(deps.track, "upgrade_command_prompted", {
     current_version: currentVersion,
     target_version: target.version,
     source,
   });
-  logUpgradeInfo(deps.logger, 'manual upgrade prompted', {
+  logUpgradeInfo(deps.logger, "manual upgrade prompted", {
     currentVersion,
     targetVersion: target.version,
     source,
@@ -117,13 +130,13 @@ export async function handleUpgrade(
     installCommand,
     installSource: source,
   });
-  if (choice === 'skip') {
-    trackUpgradeEvent(deps.track, 'upgrade_command_skipped', {
+  if (choice === "skip") {
+    trackUpgradeEvent(deps.track, "upgrade_command_skipped", {
       current_version: currentVersion,
       target_version: target.version,
       source,
     });
-    logUpgradeInfo(deps.logger, 'manual upgrade skipped', {
+    logUpgradeInfo(deps.logger, "manual upgrade skipped", {
       currentVersion,
       targetVersion: target.version,
       source,
@@ -132,18 +145,18 @@ export async function handleUpgrade(
   }
 
   try {
-    trackUpgradeEvent(deps.track, 'upgrade_command_install_selected', {
+    trackUpgradeEvent(deps.track, "upgrade_command_install_selected", {
       current_version: currentVersion,
       target_version: target.version,
       source,
     });
     await deps.installUpdate(source, target.version, deps.platform);
-    trackUpgradeEvent(deps.track, 'upgrade_command_succeeded', {
+    trackUpgradeEvent(deps.track, "upgrade_command_succeeded", {
       current_version: currentVersion,
       target_version: target.version,
       source,
     });
-    logUpgradeInfo(deps.logger, 'manual upgrade install succeeded', {
+    logUpgradeInfo(deps.logger, "manual upgrade install succeeded", {
       currentVersion,
       targetVersion: target.version,
       source,
@@ -151,14 +164,14 @@ export async function handleUpgrade(
     deps.stdout.write(renderInstallSuccessMessage(target));
     return 0;
   } catch (error) {
-    trackUpgradeEvent(deps.track, 'upgrade_command_failed', {
+    trackUpgradeEvent(deps.track, "upgrade_command_failed", {
       current_version: currentVersion,
       target_version: target.version,
       source,
-      stage: 'install',
+      stage: "install",
       reason: formatErrorMessage(error),
     });
-    logUpgradeWarn(deps.logger, 'manual upgrade install failed', {
+    logUpgradeWarn(deps.logger, "manual upgrade install failed", {
       currentVersion,
       targetVersion: target.version,
       source,
@@ -172,23 +185,29 @@ export async function handleUpgrade(
   }
 }
 
-function createDefaultUpgradeDeps(overrides: Partial<UpgradeDeps>): UpgradeDeps {
+function createDefaultUpgradeDeps(
+  overrides: Partial<UpgradeDeps>,
+): UpgradeDeps {
   return {
-    refreshUpdateCache: overrides.refreshUpdateCache ?? (() => refreshUpdateCache()),
-    detectInstallSource: overrides.detectInstallSource ?? (() => detectInstallSource()),
+    refreshUpdateCache:
+      overrides.refreshUpdateCache ?? (() => refreshUpdateCache()),
+    detectInstallSource:
+      overrides.detectInstallSource ?? (() => detectInstallSource()),
     installUpdate: overrides.installUpdate ?? installUpdateForeground,
-    promptForInstallChoice: overrides.promptForInstallChoice ?? promptForInstallChoice,
+    promptForInstallChoice:
+      overrides.promptForInstallChoice ?? promptForInstallChoice,
     platform: overrides.platform ?? process.platform,
     stdout: overrides.stdout ?? process.stdout,
     stderr: overrides.stderr ?? process.stderr,
-    isInteractive: overrides.isInteractive ?? (process.stdin.isTTY && process.stdout.isTTY),
+    isInteractive:
+      overrides.isInteractive ?? (process.stdin.isTTY && process.stdout.isTTY),
     track: overrides.track ?? trackTelemetry,
     logger: overrides.logger ?? log,
   };
 }
 
 function formatDisplayVersion(version: string): string {
-  return version.startsWith('v') ? version : `v${version}`;
+  return version.startsWith("v") ? version : `v${version}`;
 }
 
 function formatErrorMessage(error: unknown): string {
@@ -207,7 +226,11 @@ function trackUpgradeEvent(
   }
 }
 
-function logUpgradeInfo(logger: UpgradeLogger, message: string, payload: Record<string, unknown>): void {
+function logUpgradeInfo(
+  logger: UpgradeLogger,
+  message: string,
+  payload: Record<string, unknown>,
+): void {
   try {
     logger.info(message, payload);
   } catch {
@@ -215,7 +238,11 @@ function logUpgradeInfo(logger: UpgradeLogger, message: string, payload: Record<
   }
 }
 
-function logUpgradeWarn(logger: UpgradeLogger, message: string, payload: Record<string, unknown>): void {
+function logUpgradeWarn(
+  logger: UpgradeLogger,
+  message: string,
+  payload: Record<string, unknown>,
+): void {
   try {
     logger.warn(message, payload);
   } catch {

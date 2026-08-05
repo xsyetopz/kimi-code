@@ -3,10 +3,10 @@
  *   Control: { type, id?, payload }
  *   Ack:     { type: 'ack', id, code, msg, payload }
  */
-import { z } from 'zod';
+import { z } from "zod";
 
-import { eventSchema } from './events';
-import { isoDateTimeSchema } from './time';
+import { eventSchema } from "./events";
+import { isoDateTimeSchema } from "./time";
 
 /**
  * WS protocol version. v2 (breaking, IM-style multi-device sync):
@@ -64,7 +64,7 @@ export const wsControlEnvelopeSchema = <T extends z.ZodTypeAny>(payload: T) =>
 
 export const wsAckEnvelopeSchema = <T extends z.ZodTypeAny>(payload: T) =>
   z.object({
-    type: z.literal('ack'),
+    type: z.literal("ack"),
     id: z.string(),
     code: z.number().int(),
     msg: z.string(),
@@ -88,7 +88,7 @@ export const serverHelloPayloadSchema = z.object({
 });
 
 export const serverHelloMessageSchema = z.object({
-  type: z.literal('server_hello'),
+  type: z.literal("server_hello"),
   timestamp: isoDateTimeSchema,
   payload: serverHelloPayloadSchema,
 });
@@ -102,7 +102,10 @@ export type ServerHelloMessage = z.infer<typeof serverHelloMessageSchema>;
  * whole field omitted) fall back to receiving every agent — the legacy
  * session-grained behavior.
  */
-export const agentFilterSchema = z.record(z.string(), z.array(z.string()).min(1));
+export const agentFilterSchema = z.record(
+  z.string(),
+  z.array(z.string()).min(1),
+);
 
 export type AgentFilter = z.infer<typeof agentFilterSchema>;
 
@@ -125,7 +128,7 @@ export const clientHelloPayloadSchema = z.object({
 });
 
 export const clientHelloMessageSchema = z.object({
-  type: z.literal('client_hello'),
+  type: z.literal("client_hello"),
   id: z.string(),
   payload: clientHelloPayloadSchema,
 });
@@ -141,7 +144,9 @@ export const clientHelloAckPayloadSchema = z.object({
 
 export const helloAckPayloadSchema = clientHelloAckPayloadSchema;
 
-export const clientHelloAckMessageSchema = wsAckEnvelopeSchema(clientHelloAckPayloadSchema);
+export const clientHelloAckMessageSchema = wsAckEnvelopeSchema(
+  clientHelloAckPayloadSchema,
+);
 
 export const watchFsConfigSchema = z.object({
   paths: z.array(z.string()),
@@ -156,7 +161,7 @@ export const subscribePayloadSchema = z.object({
 });
 
 export const subscribeMessageSchema = z.object({
-  type: z.literal('subscribe'),
+  type: z.literal("subscribe"),
   id: z.string(),
   payload: subscribePayloadSchema,
 });
@@ -171,14 +176,16 @@ export const subscribeAckPayloadSchema = z.object({
   cursors: cursorsBySessionSchema.optional(),
 });
 
-export const subscribeAckMessageSchema = wsAckEnvelopeSchema(subscribeAckPayloadSchema);
+export const subscribeAckMessageSchema = wsAckEnvelopeSchema(
+  subscribeAckPayloadSchema,
+);
 
 export const unsubscribePayloadSchema = z.object({
   session_ids: z.array(z.string()),
 });
 
 export const unsubscribeMessageSchema = z.object({
-  type: z.literal('unsubscribe'),
+  type: z.literal("unsubscribe"),
   id: z.string(),
   payload: unsubscribePayloadSchema,
 });
@@ -187,7 +194,9 @@ export type UnsubscribeMessage = z.infer<typeof unsubscribeMessageSchema>;
 
 export const unsubscribeAckPayloadSchema = subscribeAckPayloadSchema;
 
-export const unsubscribeAckMessageSchema = wsAckEnvelopeSchema(unsubscribeAckPayloadSchema);
+export const unsubscribeAckMessageSchema = wsAckEnvelopeSchema(
+  unsubscribeAckPayloadSchema,
+);
 
 export const watchFsAddPayloadSchema = z.object({
   session_id: z.string(),
@@ -196,7 +205,7 @@ export const watchFsAddPayloadSchema = z.object({
 });
 
 export const watchFsAddMessageSchema = z.object({
-  type: z.literal('watch_fs_add'),
+  type: z.literal("watch_fs_add"),
   id: z.string(),
   payload: watchFsAddPayloadSchema,
 });
@@ -209,7 +218,7 @@ export const watchFsRemovePayloadSchema = z.object({
 });
 
 export const watchFsRemoveMessageSchema = z.object({
-  type: z.literal('watch_fs_remove'),
+  type: z.literal("watch_fs_remove"),
   id: z.string(),
   payload: watchFsRemovePayloadSchema,
 });
@@ -221,7 +230,9 @@ export const watchFsAckPayloadSchema = z.object({
   current_count: z.number().int().nonnegative().optional(),
 });
 
-export const watchFsAckMessageSchema = wsAckEnvelopeSchema(watchFsAckPayloadSchema);
+export const watchFsAckMessageSchema = wsAckEnvelopeSchema(
+  watchFsAckPayloadSchema,
+);
 
 export const abortPayloadSchema = z.object({
   session_id: z.string(),
@@ -229,7 +240,7 @@ export const abortPayloadSchema = z.object({
 });
 
 export const abortMessageSchema = z.object({
-  type: z.literal('abort'),
+  type: z.literal("abort"),
   id: z.string(),
   payload: abortPayloadSchema,
 });
@@ -250,7 +261,7 @@ export const terminalAttachPayloadSchema = z.object({
 });
 
 export const terminalAttachMessageSchema = z.object({
-  type: z.literal('terminal_attach'),
+  type: z.literal("terminal_attach"),
   id: z.string(),
   payload: terminalAttachPayloadSchema,
 });
@@ -272,7 +283,7 @@ export const terminalDetachPayloadSchema = z.object({
 });
 
 export const terminalDetachMessageSchema = z.object({
-  type: z.literal('terminal_detach'),
+  type: z.literal("terminal_detach"),
   id: z.string(),
   payload: terminalDetachPayloadSchema,
 });
@@ -294,7 +305,7 @@ export const terminalInputPayloadSchema = z.object({
 });
 
 export const terminalInputMessageSchema = z.object({
-  type: z.literal('terminal_input'),
+  type: z.literal("terminal_input"),
   id: z.string(),
   payload: terminalInputPayloadSchema,
 });
@@ -317,7 +328,7 @@ export const terminalResizePayloadSchema = z.object({
 });
 
 export const terminalResizeMessageSchema = z.object({
-  type: z.literal('terminal_resize'),
+  type: z.literal("terminal_resize"),
   id: z.string(),
   payload: terminalResizePayloadSchema,
 });
@@ -338,7 +349,7 @@ export const terminalClosePayloadSchema = z.object({
 });
 
 export const terminalCloseMessageSchema = z.object({
-  type: z.literal('terminal_close'),
+  type: z.literal("terminal_close"),
   id: z.string(),
   payload: terminalClosePayloadSchema,
 });
@@ -358,7 +369,7 @@ export const pingPayloadSchema = z.object({
 });
 
 export const pingMessageSchema = z.object({
-  type: z.literal('ping'),
+  type: z.literal("ping"),
   timestamp: isoDateTimeSchema,
   payload: pingPayloadSchema,
 });
@@ -370,7 +381,7 @@ export const pongPayloadSchema = z.object({
 });
 
 export const pongMessageSchema = z.object({
-  type: z.literal('pong'),
+  type: z.literal("pong"),
   payload: pongPayloadSchema,
 });
 
@@ -378,14 +389,14 @@ export type PongMessage = z.infer<typeof pongMessageSchema>;
 
 export const resyncRequiredPayloadSchema = z.object({
   session_id: z.string(),
-  reason: z.enum(['buffer_overflow', 'session_recreated', 'epoch_changed']),
+  reason: z.enum(["buffer_overflow", "session_recreated", "epoch_changed"]),
   current_seq: z.number().int().nonnegative(),
   /** Current journal epoch — the client should adopt it after resyncing. */
   epoch: z.string().min(1).optional(),
 });
 
 export const resyncRequiredMessageSchema = z.object({
-  type: z.literal('resync_required'),
+  type: z.literal("resync_required"),
   timestamp: isoDateTimeSchema,
   payload: resyncRequiredPayloadSchema,
 });
@@ -401,7 +412,7 @@ export const wsErrorPayloadSchema = z.object({
 });
 
 export const wsErrorMessageSchema = z.object({
-  type: z.literal('error'),
+  type: z.literal("error"),
   timestamp: isoDateTimeSchema,
   payload: wsErrorPayloadSchema,
 });
@@ -415,7 +426,7 @@ export const terminalOutputPayloadSchema = z.object({
 });
 
 export const terminalOutputMessageSchema = z.object({
-  type: z.literal('terminal_output'),
+  type: z.literal("terminal_output"),
   seq: z.number().int().positive(),
   session_id: z.string().min(1),
   terminal_id: z.string().min(1),
@@ -430,7 +441,7 @@ export const terminalExitPayloadSchema = z.object({
 });
 
 export const terminalExitMessageSchema = z.object({
-  type: z.literal('terminal_exit'),
+  type: z.literal("terminal_exit"),
   session_id: z.string().min(1),
   terminal_id: z.string().min(1),
   timestamp: isoDateTimeSchema,
@@ -439,7 +450,7 @@ export const terminalExitMessageSchema = z.object({
 
 export type TerminalExitMessage = z.infer<typeof terminalExitMessageSchema>;
 
-export const clientControlMessageSchema = z.discriminatedUnion('type', [
+export const clientControlMessageSchema = z.discriminatedUnion("type", [
   clientHelloMessageSchema,
   subscribeMessageSchema,
   unsubscribeMessageSchema,
@@ -456,7 +467,7 @@ export const clientControlMessageSchema = z.discriminatedUnion('type', [
 
 export type ClientControlMessage = z.infer<typeof clientControlMessageSchema>;
 
-export const serverSystemMessageSchema = z.discriminatedUnion('type', [
+export const serverSystemMessageSchema = z.discriminatedUnion("type", [
   serverHelloMessageSchema,
   pingMessageSchema,
   resyncRequiredMessageSchema,
@@ -465,9 +476,9 @@ export const serverSystemMessageSchema = z.discriminatedUnion('type', [
 
 export type ServerSystemMessage = z.infer<typeof serverSystemMessageSchema>;
 
-export type WsOperationDirection = 'client_to_server' | 'server_to_client';
+export type WsOperationDirection = "client_to_server" | "server_to_client";
 
-export type WsOperationKind = 'control' | 'system' | 'event';
+export type WsOperationKind = "control" | "system" | "event";
 
 export interface WsOperationDefinition {
   readonly type: string;
@@ -480,139 +491,145 @@ export interface WsOperationDefinition {
 
 export const clientControlOperations = [
   {
-    type: 'client_hello',
-    direction: 'client_to_server',
-    kind: 'control',
+    type: "client_hello",
+    direction: "client_to_server",
+    kind: "control",
     messageSchema: clientHelloMessageSchema,
     ackSchema: clientHelloAckMessageSchema,
-    description: 'Start a client session and optionally subscribe to existing daemon sessions.',
+    description:
+      "Start a client session and optionally subscribe to existing daemon sessions.",
   },
   {
-    type: 'subscribe',
-    direction: 'client_to_server',
-    kind: 'control',
+    type: "subscribe",
+    direction: "client_to_server",
+    kind: "control",
     messageSchema: subscribeMessageSchema,
     ackSchema: subscribeAckMessageSchema,
-    description: 'Subscribe the connection to one or more session event streams.',
+    description:
+      "Subscribe the connection to one or more session event streams.",
   },
   {
-    type: 'unsubscribe',
-    direction: 'client_to_server',
-    kind: 'control',
+    type: "unsubscribe",
+    direction: "client_to_server",
+    kind: "control",
     messageSchema: unsubscribeMessageSchema,
     ackSchema: unsubscribeAckMessageSchema,
-    description: 'Remove one or more session event stream subscriptions.',
+    description: "Remove one or more session event stream subscriptions.",
   },
   {
-    type: 'watch_fs_add',
-    direction: 'client_to_server',
-    kind: 'control',
+    type: "watch_fs_add",
+    direction: "client_to_server",
+    kind: "control",
     messageSchema: watchFsAddMessageSchema,
     ackSchema: watchFsAckMessageSchema,
-    description: 'Add filesystem watch paths for a subscribed session.',
+    description: "Add filesystem watch paths for a subscribed session.",
   },
   {
-    type: 'watch_fs_remove',
-    direction: 'client_to_server',
-    kind: 'control',
+    type: "watch_fs_remove",
+    direction: "client_to_server",
+    kind: "control",
     messageSchema: watchFsRemoveMessageSchema,
     ackSchema: watchFsAckMessageSchema,
-    description: 'Remove filesystem watch paths for a subscribed session.',
+    description: "Remove filesystem watch paths for a subscribed session.",
   },
   {
-    type: 'abort',
-    direction: 'client_to_server',
-    kind: 'control',
+    type: "abort",
+    direction: "client_to_server",
+    kind: "control",
     messageSchema: abortMessageSchema,
     ackSchema: abortAckMessageSchema,
-    description: 'Abort a running prompt in a session.',
+    description: "Abort a running prompt in a session.",
   },
   {
-    type: 'terminal_attach',
-    direction: 'client_to_server',
-    kind: 'control',
+    type: "terminal_attach",
+    direction: "client_to_server",
+    kind: "control",
     messageSchema: terminalAttachMessageSchema,
     ackSchema: terminalAttachAckMessageSchema,
-    description: 'Attach this connection to a terminal stream.',
+    description: "Attach this connection to a terminal stream.",
   },
   {
-    type: 'terminal_detach',
-    direction: 'client_to_server',
-    kind: 'control',
+    type: "terminal_detach",
+    direction: "client_to_server",
+    kind: "control",
     messageSchema: terminalDetachMessageSchema,
     ackSchema: terminalDetachAckMessageSchema,
-    description: 'Detach this connection from a terminal stream.',
+    description: "Detach this connection from a terminal stream.",
   },
   {
-    type: 'terminal_input',
-    direction: 'client_to_server',
-    kind: 'control',
+    type: "terminal_input",
+    direction: "client_to_server",
+    kind: "control",
     messageSchema: terminalInputMessageSchema,
     ackSchema: terminalInputAckMessageSchema,
-    description: 'Write raw input bytes to a terminal.',
+    description: "Write raw input bytes to a terminal.",
   },
   {
-    type: 'terminal_resize',
-    direction: 'client_to_server',
-    kind: 'control',
+    type: "terminal_resize",
+    direction: "client_to_server",
+    kind: "control",
     messageSchema: terminalResizeMessageSchema,
     ackSchema: terminalResizeAckMessageSchema,
-    description: 'Resize a terminal.',
+    description: "Resize a terminal.",
   },
   {
-    type: 'terminal_close',
-    direction: 'client_to_server',
-    kind: 'control',
+    type: "terminal_close",
+    direction: "client_to_server",
+    kind: "control",
     messageSchema: terminalCloseMessageSchema,
     ackSchema: terminalCloseAckMessageSchema,
-    description: 'Close a terminal.',
+    description: "Close a terminal.",
   },
   {
-    type: 'pong',
-    direction: 'client_to_server',
-    kind: 'control',
+    type: "pong",
+    direction: "client_to_server",
+    kind: "control",
     messageSchema: pongMessageSchema,
-    description: 'Reply to a server ping with the same nonce.',
+    description: "Reply to a server ping with the same nonce.",
   },
 ] as const satisfies readonly WsOperationDefinition[];
 
 export const serverSystemOperations = [
   {
-    type: 'server_hello',
-    direction: 'server_to_client',
-    kind: 'system',
+    type: "server_hello",
+    direction: "server_to_client",
+    kind: "system",
     messageSchema: serverHelloMessageSchema,
-    description: 'Initial server greeting sent immediately after the socket opens.',
+    description:
+      "Initial server greeting sent immediately after the socket opens.",
   },
   {
-    type: 'ping',
-    direction: 'server_to_client',
-    kind: 'system',
+    type: "ping",
+    direction: "server_to_client",
+    kind: "system",
     messageSchema: pingMessageSchema,
-    description: 'Heartbeat ping sent by the server; clients must answer with pong.',
+    description:
+      "Heartbeat ping sent by the server; clients must answer with pong.",
   },
   {
-    type: 'resync_required',
-    direction: 'server_to_client',
-    kind: 'system',
+    type: "resync_required",
+    direction: "server_to_client",
+    kind: "system",
     messageSchema: resyncRequiredMessageSchema,
-    description: 'Signals that a client must rebuild local session state from REST history.',
+    description:
+      "Signals that a client must rebuild local session state from REST history.",
   },
   {
-    type: 'error',
-    direction: 'server_to_client',
-    kind: 'system',
+    type: "error",
+    direction: "server_to_client",
+    kind: "system",
     messageSchema: wsErrorMessageSchema,
-    description: 'Server-side WebSocket protocol or runtime error.',
+    description: "Server-side WebSocket protocol or runtime error.",
   },
 ] as const satisfies readonly WsOperationDefinition[];
 
 export const sessionEventOperation = {
-  type: 'session_event',
-  direction: 'server_to_client',
-  kind: 'event',
+  type: "session_event",
+  direction: "server_to_client",
+  kind: "event",
   messageSchema: sessionEventMessageSchema,
-  description: 'Session-scoped agent event envelope; frame type is the payload event type.',
+  description:
+    "Session-scoped agent event envelope; frame type is the payload event type.",
 } as const satisfies WsOperationDefinition;
 
 export const wsOperations = [

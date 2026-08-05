@@ -8,10 +8,10 @@
 // match (continuation lines, stack traces) is kept verbatim as a level-less,
 // time-less message so nothing is dropped.
 
-import { readdir, readFile } from 'node:fs/promises';
-import { basename, dirname, join } from 'node:path';
+import { readdir, readFile } from "node:fs/promises";
+import { basename, dirname, join } from "node:path";
 
-import type { LogLine } from './agent-record-types';
+import type { LogLine } from "./agent-record-types";
 
 /** Cap served lines so a multi-hundred-MB log cannot blow up the response.
  *  When exceeded we keep the TAIL (most recent), where failures usually are. */
@@ -79,14 +79,14 @@ export async function readLogs(
   for (const path of paths) {
     let raw: string;
     try {
-      raw = await readFile(path, 'utf8');
+      raw = await readFile(path, "utf8");
     } catch {
       continue;
     }
     read += 1;
     const lines = raw.split(/\r?\n/);
     // Drop a single trailing empty line from each file's final newline.
-    if (lines.length > 0 && lines.at(-1) === '') lines.pop();
+    if (lines.length > 0 && lines.at(-1) === "") lines.pop();
     for (const line of lines) allLines.push(line);
   }
   if (read === 0) return null;
@@ -95,7 +95,9 @@ export async function readLogs(
   const startLineNo = truncated ? allLines.length - maxLines : 0;
   const slice = truncated ? allLines.slice(startLineNo) : allLines;
 
-  const lines: LogLine[] = slice.map((text, i) => parseLogLine(text, startLineNo + i + 1));
+  const lines: LogLine[] = slice.map((text, i) =>
+    parseLogLine(text, startLineNo + i + 1),
+  );
   return { lines, truncated };
 }
 

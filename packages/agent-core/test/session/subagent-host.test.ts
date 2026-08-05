@@ -1,43 +1,50 @@
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'pathe';
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "pathe";
 
-import { testKaos } from '../fixtures/test-kaos';
-import { APIStatusError, type Message, type ToolCall } from '@moonshot-ai/kosong';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { testKaos } from "../fixtures/test-kaos";
+import {
+  APIStatusError,
+  type Message,
+  type ToolCall,
+} from "@moonshot-ai/kosong";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { Agent, AgentOptions } from '../../src/agent';
-import { AGENT_WIRE_PROTOCOL_VERSION } from '../../src/agent/records';
-import type { KimiConfig } from '../../src/config';
-import { ErrorCodes, KimiError } from '../../src/errors';
-import { FlagResolver } from '../../src/flags';
-import { SessionAgentProfileCatalog, type ResolvedAgentProfile } from '../../src/profile';
-import type { SDKSessionRPC } from '../../src/rpc';
-import { Session } from '../../src/session';
-import { collectGitContext } from '../../src/session/git-context';
-import { ProviderManager } from '../../src/session/provider-manager';
+import type { Agent, AgentOptions } from "../../src/agent";
+import { AGENT_WIRE_PROTOCOL_VERSION } from "../../src/agent/records";
+import type { KimiConfig } from "../../src/config";
+import { ErrorCodes, KimiError } from "../../src/errors";
+import { FlagResolver } from "../../src/flags";
+import {
+  SessionAgentProfileCatalog,
+  type ResolvedAgentProfile,
+} from "../../src/profile";
+import type { SDKSessionRPC } from "../../src/rpc";
+import { Session } from "../../src/session";
+import { collectGitContext } from "../../src/session/git-context";
+import { ProviderManager } from "../../src/session/provider-manager";
 import {
   DEFAULT_SUBAGENT_TIMEOUT_MS,
   SessionSubagentHost,
   formatSubagentTimeoutDescription,
   resolveSubagentTimeoutMs,
   type QueuedSubagentTask,
-} from '../../src/session/subagent-host';
-import { abortError, userCancellationReason } from '../../src/utils/abort';
-import { testAgent, type AgentTestContext } from '../agent/harness/agent';
-import { createFakeKaos } from '../tools/fixtures/fake-kaos';
-import { executeTool } from '../tools/fixtures/execute-tool';
+} from "../../src/session/subagent-host";
+import { abortError, userCancellationReason } from "../../src/utils/abort";
+import { testAgent, type AgentTestContext } from "../agent/harness/agent";
+import { createFakeKaos } from "../tools/fixtures/fake-kaos";
+import { executeTool } from "../tools/fixtures/execute-tool";
 
 // Git context collection is exercised in git-context.test.ts; here it is
 // mocked so subagent-host tests stay deterministic and assert only the
 // wiring (explore subagents get the block prepended, others do not).
-vi.mock('../../src/session/git-context', () => ({
-  collectGitContext: vi.fn(async () => ''),
+vi.mock("../../src/session/git-context", () => ({
+  collectGitContext: vi.fn(async () => ""),
 }));
 
 const signal = new AbortController().signal;
 const tempDirs: string[] = [];
-type GenerateFn = NonNullable<AgentOptions['generate']>;
+type GenerateFn = NonNullable<AgentOptions["generate"]>;
 
 afterEach(async () => {
   for (const dir of tempDirs.splice(0)) {
@@ -45,10 +52,12 @@ afterEach(async () => {
   }
 });
 
-const SUBAGENT_TIMEOUT_ENV = 'KIMI_SUBAGENT_TIMEOUT_MS';
+const SUBAGENT_TIMEOUT_ENV = "KIMI_SUBAGENT_TIMEOUT_MS";
 
-describe('resolveSubagentTimeoutMs', () => {
-  const saved: { value: string | undefined } = { value: process.env[SUBAGENT_TIMEOUT_ENV] };
+describe("resolveSubagentTimeoutMs", () => {
+  const saved: { value: string | undefined } = {
+    value: process.env[SUBAGENT_TIMEOUT_ENV],
+  };
   afterEach(() => {
     if (saved.value === undefined) {
       delete process.env[SUBAGENT_TIMEOUT_ENV];
@@ -57,105 +66,115 @@ describe('resolveSubagentTimeoutMs', () => {
     }
   });
 
-  it('returns the default when nothing is set', () => {
+  it("returns the default when nothing is set", () => {
     delete process.env[SUBAGENT_TIMEOUT_ENV];
     expect(resolveSubagentTimeoutMs()).toBe(DEFAULT_SUBAGENT_TIMEOUT_MS);
   });
 
-  it('uses the config value when set', () => {
+  it("uses the config value when set", () => {
     delete process.env[SUBAGENT_TIMEOUT_ENV];
     expect(resolveSubagentTimeoutMs(600000)).toBe(600000);
   });
 
-  it('lets the env override the config value', () => {
-    process.env[SUBAGENT_TIMEOUT_ENV] = '120000';
+  it("lets the env override the config value", () => {
+    process.env[SUBAGENT_TIMEOUT_ENV] = "120000";
     expect(resolveSubagentTimeoutMs(600000)).toBe(120000);
   });
 
-  it('ignores an invalid env and falls back to config/default', () => {
-    process.env[SUBAGENT_TIMEOUT_ENV] = 'not-a-number';
+  it("ignores an invalid env and falls back to config/default", () => {
+    process.env[SUBAGENT_TIMEOUT_ENV] = "not-a-number";
     expect(resolveSubagentTimeoutMs(600000)).toBe(600000);
-    process.env[SUBAGENT_TIMEOUT_ENV] = '-5';
+    process.env[SUBAGENT_TIMEOUT_ENV] = "-5";
     expect(resolveSubagentTimeoutMs()).toBe(DEFAULT_SUBAGENT_TIMEOUT_MS);
   });
 
-  it('treats 0 as no timeout from both config and env', () => {
+  it("treats 0 as no timeout from both config and env", () => {
     delete process.env[SUBAGENT_TIMEOUT_ENV];
     expect(resolveSubagentTimeoutMs(0)).toBe(0);
-    process.env[SUBAGENT_TIMEOUT_ENV] = '0';
+    process.env[SUBAGENT_TIMEOUT_ENV] = "0";
     expect(resolveSubagentTimeoutMs(600000)).toBe(0);
   });
 });
 
-describe('formatSubagentTimeoutDescription', () => {
-  it('formats hours, minutes, seconds and milliseconds', () => {
-    expect(formatSubagentTimeoutDescription(30 * 60 * 1000)).toBe('30 minutes');
-    expect(formatSubagentTimeoutDescription(2 * 60 * 60 * 1000)).toBe('2 hours');
-    expect(formatSubagentTimeoutDescription(45 * 1000)).toBe('45 seconds');
-    expect(formatSubagentTimeoutDescription(1500)).toBe('1500 ms');
+describe("formatSubagentTimeoutDescription", () => {
+  it("formats hours, minutes, seconds and milliseconds", () => {
+    expect(formatSubagentTimeoutDescription(30 * 60 * 1000)).toBe("30 minutes");
+    expect(formatSubagentTimeoutDescription(2 * 60 * 60 * 1000)).toBe(
+      "2 hours",
+    );
+    expect(formatSubagentTimeoutDescription(45 * 1000)).toBe("45 seconds");
+    expect(formatSubagentTimeoutDescription(1500)).toBe("1500 ms");
   });
 });
 
-describe('SessionSubagentHost', () => {
-  it('emits a suspended event for a requeued child', () => {
+describe("SessionSubagentHost", () => {
+  it("emits a suspended event for a requeued child", () => {
     const parent = testAgent();
     parent.configure();
     parent.newEvents();
     const child = testAgent();
     const session = fakeSession(parent.agent, child.agent);
-    const host = new SessionSubagentHost(session, 'main');
+    const host = new SessionSubagentHost(session, "main");
 
     host.suspended({
       task: queuedTask(1),
-      agentId: 'agent-0',
-      reason: 'Provider rate limit; subagent requeued for retry.',
+      agentId: "agent-0",
+      reason: "Provider rate limit; subagent requeued for retry.",
     });
 
     expect(parent.allEvents).toContainEqual(
       expect.objectContaining({
-        type: '[rpc]',
-        event: 'subagent.suspended',
+        type: "[rpc]",
+        event: "subagent.suspended",
         args: expect.objectContaining({
-          subagentId: 'agent-0',
-          reason: 'Provider rate limit; subagent requeued for retry.',
+          subagentId: "agent-0",
+          reason: "Provider rate limit; subagent requeued for retry.",
         }),
       }),
     );
   });
 
-  it('runQueued suppresses raw live Aborted failures from queued attempts', async () => {
+  it("runQueued suppresses raw live Aborted failures from queued attempts", async () => {
     const parent = testAgent();
     parent.configure();
     parent.newEvents();
 
     const controller = new AbortController();
     const child = testAgent();
-    child.mockNextResponse({ type: 'text', text: 'I will run Bash.' }, bashCall());
+    child.mockNextResponse(
+      { type: "text", text: "I will run Bash." },
+      bashCall(),
+    );
     const session = fakeSession(parent.agent, child.agent);
-    const host = new SessionSubagentHost(session, 'main');
+    const host = new SessionSubagentHost(session, "main");
 
-    const running = host.runQueued([{ ...queuedTask(1), signal: controller.signal }]);
+    const running = host.runQueued([
+      { ...queuedTask(1), signal: controller.signal },
+    ]);
     void running.catch(() => {});
 
     await child.untilApprovalRequest();
     controller.abort(abortError());
-    await expect(running).rejects.toThrow('Aborted');
+    await expect(running).rejects.toThrow("Aborted");
     await child.untilTurnEnd();
 
     expect(parent.allEvents).not.toContainEqual(
       expect.objectContaining({
-        type: '[rpc]',
-        event: 'subagent.failed',
+        type: "[rpc]",
+        event: "subagent.failed",
         args: expect.objectContaining({
-          error: 'Aborted',
+          error: "Aborted",
         }),
       }),
     );
   });
 
-  it('fires subagent lifecycle hooks around the child turn', async () => {
+  it("fires subagent lifecycle hooks around the child turn", async () => {
     const child = testAgent();
-    const calls: Array<{ readonly event: string; readonly childLlmCallCount: number }> = [];
+    const calls: Array<{
+      readonly event: string;
+      readonly childLlmCallCount: number;
+    }> = [];
     const trigger = vi.fn(async (event: string, _args?: unknown) => {
       calls.push({ event, childLlmCallCount: child.llmCalls.length });
       return [];
@@ -165,117 +184,130 @@ describe('SessionSubagentHost', () => {
       return Promise.resolve([]);
     });
     const parent = testAgent({
-      hookEngine: { trigger, fireAndForgetTrigger } as unknown as NonNullable<Agent['hooks']>,
+      hookEngine: { trigger, fireAndForgetTrigger } as unknown as NonNullable<
+        Agent["hooks"]
+      >,
     });
     parent.configure();
     parent.newEvents();
 
     const summary =
-      'Implemented the subagent task completely and returned a detailed enough summary for the parent agent to continue confidently without repeating the child agent work. '.repeat(
+      "Implemented the subagent task completely and returned a detailed enough summary for the parent agent to continue confidently without repeating the child agent work. ".repeat(
         2,
       );
-    child.mockNextResponse({ type: 'text', text: summary });
+    child.mockNextResponse({ type: "text", text: summary });
     const session = fakeSession(parent.agent, child.agent);
-    const host = new SessionSubagentHost(session, 'main');
+    const host = new SessionSubagentHost(session, "main");
 
     const handle = await host.spawn({
-      profileName: 'coder',
-      parentToolCallId: 'call_agent',
-      prompt: 'Implement the fix',
-      description: 'Fix bug',
+      profileName: "coder",
+      parentToolCallId: "call_agent",
+      prompt: "Implement the fix",
+      description: "Fix bug",
       runInBackground: false,
       signal,
     });
     await handle.completion;
 
     const startArgs = trigger.mock.calls[0]?.[1];
-    expect(trigger.mock.calls[0]?.[0]).toBe('SubagentStart');
+    expect(trigger.mock.calls[0]?.[0]).toBe("SubagentStart");
     expect(startArgs).toMatchObject({
-      matcherValue: 'coder',
+      matcherValue: "coder",
       inputData: {
-        agentName: 'coder',
-        prompt: 'Implement the fix',
+        agentName: "coder",
+        prompt: "Implement the fix",
       },
     });
-    expect((startArgs as { readonly signal?: unknown } | undefined)?.signal).toBeInstanceOf(
-      AbortSignal,
-    );
-    expect(fireAndForgetTrigger).toHaveBeenCalledWith('SubagentStop', {
-      matcherValue: 'coder',
+    expect(
+      (startArgs as { readonly signal?: unknown } | undefined)?.signal,
+    ).toBeInstanceOf(AbortSignal);
+    expect(fireAndForgetTrigger).toHaveBeenCalledWith("SubagentStop", {
+      matcherValue: "coder",
       inputData: {
-        agentName: 'coder',
+        agentName: "coder",
         response: summary.trim(),
       },
     });
     expect(calls).toEqual([
-      { event: 'SubagentStart', childLlmCallCount: 0 },
-      { event: 'SubagentStop', childLlmCallCount: 1 },
+      { event: "SubagentStart", childLlmCallCount: 0 },
+      { event: "SubagentStop", childLlmCallCount: 1 },
     ]);
   });
 
-  it('ignores blocking results from subagent lifecycle hooks', async () => {
-    const trigger = vi.fn(async () => [{ action: 'block', reason: 'observer only' }]);
-    const fireAndForgetTrigger = vi.fn(() => Promise.resolve([{ action: 'block' }]));
+  it("ignores blocking results from subagent lifecycle hooks", async () => {
+    const trigger = vi.fn(async () => [
+      { action: "block", reason: "observer only" },
+    ]);
+    const fireAndForgetTrigger = vi.fn(() =>
+      Promise.resolve([{ action: "block" }]),
+    );
     const parent = testAgent({
-      hookEngine: { trigger, fireAndForgetTrigger } as unknown as NonNullable<Agent['hooks']>,
+      hookEngine: { trigger, fireAndForgetTrigger } as unknown as NonNullable<
+        Agent["hooks"]
+      >,
     });
     parent.configure();
     parent.newEvents();
 
     const summary =
-      'Completed the subagent task with enough implementation detail and verification context for the parent agent to continue without repeating the work. '.repeat(
+      "Completed the subagent task with enough implementation detail and verification context for the parent agent to continue without repeating the work. ".repeat(
         2,
       );
     const child = testAgent();
-    child.mockNextResponse({ type: 'text', text: summary });
+    child.mockNextResponse({ type: "text", text: summary });
     const session = fakeSession(parent.agent, child.agent);
-    const host = new SessionSubagentHost(session, 'main');
+    const host = new SessionSubagentHost(session, "main");
 
     const handle = await host.spawn({
-      profileName: 'coder',
-      parentToolCallId: 'call_agent',
-      prompt: 'Implement the fix',
-      description: 'Fix bug',
+      profileName: "coder",
+      parentToolCallId: "call_agent",
+      prompt: "Implement the fix",
+      description: "Fix bug",
       runInBackground: false,
       signal,
     });
 
-    await expect(handle.completion).resolves.toMatchObject({ result: summary.trim() });
+    await expect(handle.completion).resolves.toMatchObject({
+      result: summary.trim(),
+    });
     expect(parent.allEvents).toContainEqual(
       expect.objectContaining({
-        type: '[rpc]',
-        event: 'subagent.completed',
-        args: expect.objectContaining({ subagentId: 'agent-0' }),
+        type: "[rpc]",
+        event: "subagent.completed",
+        args: expect.objectContaining({ subagentId: "agent-0" }),
       }),
     );
     expect(parent.allEvents).not.toContainEqual(
       expect.objectContaining({
-        type: '[rpc]',
-        event: 'subagent.failed',
+        type: "[rpc]",
+        event: "subagent.failed",
       }),
     );
   });
 
-  it('marks a queued child ready when the model emits thinking output', async () => {
+  it("marks a queued child ready when the model emits thinking output", async () => {
     const parent = testAgent();
     parent.configure();
     parent.newEvents();
 
     const child = testAgent();
     const summary =
-      'Completed the delegated subagent task with enough concrete detail for the parent agent to continue without repeating the work. '.repeat(
+      "Completed the delegated subagent task with enough concrete detail for the parent agent to continue without repeating the work. ".repeat(
         2,
       );
-    child.mockNextResponse({ type: 'think', think: 'I can start.' }, { type: 'text', text: summary });
+    child.mockNextResponse(
+      { type: "think", think: "I can start." },
+      { type: "text", text: summary },
+    );
     const session = fakeSession(parent.agent, child.agent);
-    const host = new SessionSubagentHost(session, 'main');
+    const host = new SessionSubagentHost(session, "main");
     const onReady = vi.fn();
 
     const handle = await host.spawn({
-      profileName: 'coder',
-      parentToolCallId: 'call_agent',
-      prompt: 'Implement the fix',
-      description: 'Fix bug',
+      profileName: "coder",
+      parentToolCallId: "call_agent",
+      prompt: "Implement the fix",
+      description: "Fix bug",
       runInBackground: false,
       signal,
       onReady,
@@ -284,122 +316,136 @@ describe('SessionSubagentHost', () => {
     await vi.waitFor(() => {
       expect(onReady).toHaveBeenCalledTimes(1);
     });
-    await expect(handle.completion).resolves.toMatchObject({ result: summary.trim() });
+    await expect(handle.completion).resolves.toMatchObject({
+      result: summary.trim(),
+    });
     expect(onReady).toHaveBeenCalledTimes(1);
   });
 
-  it('runs a child agent turn and returns the last assistant text', async () => {
+  it("runs a child agent turn and returns the last assistant text", async () => {
     const telemetryTrack = vi.fn();
     const parent = testAgent({ telemetry: { track: telemetryTrack } });
     parent.configure();
-    await parent.rpc.setPermission({ mode: 'yolo' });
-    parent.agent.permission.rules.splice(0, parent.agent.permission.rules.length, {
-      decision: 'allow',
-      scope: 'session-runtime',
-      pattern: 'Read',
-    });
+    await parent.rpc.setPermission({ mode: "yolo" });
+    parent.agent.permission.rules.splice(
+      0,
+      parent.agent.permission.rules.length,
+      {
+        decision: "allow",
+        scope: "session-runtime",
+        pattern: "Read",
+      },
+    );
     parent.newEvents();
 
     const child = testAgent({
-      type: 'sub',
+      type: "sub",
       permission: { parent: parent.agent.permission },
     });
-    child.mockNextResponse({ type: 'text', text: 'Investigated the request and completed the child task end to end. The relevant module was located, its behavior traced through every call site, and the requested change applied and verified against the existing test suite.' });
+    child.mockNextResponse({
+      type: "text",
+      text: "Investigated the request and completed the child task end to end. The relevant module was located, its behavior traced through every call site, and the requested change applied and verified against the existing test suite.",
+    });
     const session = fakeSession(parent.agent, child.agent);
-    const host = new SessionSubagentHost(session, 'main');
+    const host = new SessionSubagentHost(session, "main");
 
     const handle = await host.spawn({
-      profileName: 'explore',
-      parentToolCallId: 'call_agent',
-      prompt: 'Find the cause',
-      description: 'Find cause',
+      profileName: "explore",
+      parentToolCallId: "call_agent",
+      prompt: "Find the cause",
+      description: "Find cause",
       runInBackground: false,
       signal,
     });
 
     await expect(handle.completion).resolves.toMatchObject({
-      result: 'Investigated the request and completed the child task end to end. The relevant module was located, its behavior traced through every call site, and the requested change applied and verified against the existing test suite.',
+      result:
+        "Investigated the request and completed the child task end to end. The relevant module was located, its behavior traced through every call site, and the requested change applied and verified against the existing test suite.",
     });
-    expect(handle.agentId).toBe('agent-0');
-    expect(handle.profileName).toBe('explore');
+    expect(handle.agentId).toBe("agent-0");
+    expect(handle.profileName).toBe("explore");
 
     expect(parent.allEvents).toContainEqual(
       expect.objectContaining({
-        type: '[rpc]',
-        event: 'subagent.spawned',
+        type: "[rpc]",
+        event: "subagent.spawned",
         args: expect.objectContaining({
-          subagentId: 'agent-0',
-          subagentName: 'explore',
-          parentAgentId: 'main',
-          parentToolCallId: 'call_agent',
+          subagentId: "agent-0",
+          subagentName: "explore",
+          parentAgentId: "main",
+          parentToolCallId: "call_agent",
         }),
       }),
     );
-    expect(telemetryTrack).toHaveBeenCalledWith('subagent_created', {
-      subagent_name: 'explore',
+    expect(telemetryTrack).toHaveBeenCalledWith("subagent_created", {
+      subagent_name: "explore",
       run_in_background: false,
-      agent_id: 'agent-0',
-      parent_agent_id: 'main',
-      parent_tool_call_id: 'call_agent',
+      agent_id: "agent-0",
+      parent_agent_id: "main",
+      parent_tool_call_id: "call_agent",
     });
     expect(parent.allEvents).toContainEqual(
       expect.objectContaining({
-        type: '[rpc]',
-        event: 'subagent.completed',
+        type: "[rpc]",
+        event: "subagent.completed",
         args: expect.objectContaining({
-          subagentId: 'agent-0',
-          resultSummary: 'Investigated the request and completed the child task end to end. The relevant module was located, its behavior traced through every call site, and the requested change applied and verified against the existing test suite.',
+          subagentId: "agent-0",
+          resultSummary:
+            "Investigated the request and completed the child task end to end. The relevant module was located, its behavior traced through every call site, and the requested change applied and verified against the existing test suite.",
         }),
       }),
     );
     expect(child.agent.config.data()).toMatchObject({
       cwd: parent.agent.config.cwd,
       provider: parent.agent.config.data().provider,
-      profileName: 'explore',
+      profileName: "explore",
       thinkingEffort: parent.agent.config.thinkingEffort,
     });
-    expect(child.agent.config.systemPrompt).toContain('codebase exploration specialist');
-    expect(child.agent.permission.mode).toBe('yolo');
+    expect(child.agent.config.systemPrompt).toContain(
+      "codebase exploration specialist",
+    );
+    expect(child.agent.permission.mode).toBe("yolo");
     expect(child.agent.permission.rules).toEqual([]);
-    expect(child.agent.permission.data().rules).toEqual(parent.agent.permission.rules);
-    expect(child.llmCalls[0]?.systemPrompt).toContain('codebase exploration specialist');
-    expect(child.llmCalls[0]?.tools.map((tool) => tool.name).toSorted()).toEqual([
-      'Bash',
-      'Glob',
-      'Grep',
-      'Read',
-    ]);
+    expect(child.agent.permission.data().rules).toEqual(
+      parent.agent.permission.rules,
+    );
+    expect(child.llmCalls[0]?.systemPrompt).toContain(
+      "codebase exploration specialist",
+    );
+    expect(
+      child.llmCalls[0]?.tools.map((tool) => tool.name).toSorted(),
+    ).toEqual(["Bash", "Glob", "Grep", "Read"]);
     expect(child.llmCalls[0]?.history).toMatchObject([
       {
-        role: 'user',
-        content: [{ type: 'text', text: 'Find the cause' }],
+        role: "user",
+        content: [{ type: "text", text: "Find the cause" }],
       },
     ]);
   });
 
-  it('inherits active parent user tools when spawning a subagent', async () => {
+  it("inherits active parent user tools when spawning a subagent", async () => {
     const parent = testAgent();
     parent.configure();
     await parent.rpc.registerTool(lookupToolRegistration());
     parent.newEvents();
 
     const summary =
-      'Investigated the delegated task thoroughly, used the inherited custom lookup surface where appropriate, and returned a detailed summary that lets the parent agent continue without repeating the work. '.repeat(
+      "Investigated the delegated task thoroughly, used the inherited custom lookup surface where appropriate, and returned a detailed summary that lets the parent agent continue without repeating the work. ".repeat(
         2,
       );
     const child = testAgent();
     child.mockNextResponse({
-      type: 'text',
+      type: "text",
       text: summary,
     });
     const session = fakeSession(parent.agent, child.agent);
-    const host = new SessionSubagentHost(session, 'main');
+    const host = new SessionSubagentHost(session, "main");
 
     const handle = await host.spawn({
-      profileName: 'coder',
-      parentToolCallId: 'call_agent',
-      prompt: 'Use the available lookup tool',
-      description: 'Use lookup',
+      profileName: "coder",
+      parentToolCallId: "call_agent",
+      prompt: "Use the available lookup tool",
+      description: "Use lookup",
       runInBackground: false,
       signal,
     });
@@ -407,105 +453,118 @@ describe('SessionSubagentHost', () => {
     await expect(handle.completion).resolves.toMatchObject({
       result: summary.trim(),
     });
-    expect(child.llmCalls[0]?.tools.map((tool) => tool.name)).toContain('Lookup');
+    expect(child.llmCalls[0]?.tools.map((tool) => tool.name)).toContain(
+      "Lookup",
+    );
     expect(child.agent.tools.data()).toContainEqual({
-      name: 'Lookup',
-      description: 'Look up a short test value.',
+      name: "Lookup",
+      description: "Look up a short test value.",
       active: true,
-      source: 'user',
+      source: "user",
     });
 
-    const lookupTool = child.agent.tools.loopTools.find((tool) => tool.name === 'Lookup');
+    const lookupTool = child.agent.tools.loopTools.find(
+      (tool) => tool.name === "Lookup",
+    );
     expect(lookupTool).toBeDefined();
 
     const execution = executeTool(lookupTool!, {
-      turnId: '0',
-      toolCallId: 'call_lookup',
-      args: { query: 'moon' },
+      turnId: "0",
+      toolCallId: "call_lookup",
+      args: { query: "moon" },
       signal,
     });
     const routedTo = await Promise.race([
-      child.untilToolCall({ output: 'moon-result' }).then(() => 'child'),
-      parent.untilToolCall({ output: 'moon-result' }).then(() => 'parent'),
-      new Promise<'timeout'>((resolve) => setTimeout(() => {
-        resolve('timeout');
-      }, 50)),
+      child.untilToolCall({ output: "moon-result" }).then(() => "child"),
+      parent.untilToolCall({ output: "moon-result" }).then(() => "parent"),
+      new Promise<"timeout">((resolve) =>
+        setTimeout(() => {
+          resolve("timeout");
+        }, 50),
+      ),
     ]);
 
-    expect(routedTo).toBe('child');
-    await expect(execution).resolves.toMatchObject({ output: 'moon-result' });
+    expect(routedTo).toBe("child");
+    await expect(execution).resolves.toMatchObject({ output: "moon-result" });
   });
 
-  it('falls back to bundled subagent profiles when the parent profile is missing', async () => {
+  it("falls back to bundled subagent profiles when the parent profile is missing", async () => {
     const parent = testAgent();
     parent.configure();
     parent.newEvents();
 
     const child = testAgent();
-    child.mockNextResponse({ type: 'text', text: 'Implemented the requested fix in the target module, updated all affected call sites, and confirmed the change compiles cleanly and passes the existing test suite. No unrelated code paths were touched while making this change.' });
+    child.mockNextResponse({
+      type: "text",
+      text: "Implemented the requested fix in the target module, updated all affected call sites, and confirmed the change compiles cleanly and passes the existing test suite. No unrelated code paths were touched while making this change.",
+    });
     const session = fakeSession(parent.agent, child.agent);
-    const host = new SessionSubagentHost(session, 'main');
+    const host = new SessionSubagentHost(session, "main");
 
     const handle = await host.spawn({
-      profileName: 'coder',
-      parentToolCallId: 'call_agent',
-      prompt: 'Implement the fix',
-      description: 'Fix bug',
+      profileName: "coder",
+      parentToolCallId: "call_agent",
+      prompt: "Implement the fix",
+      description: "Fix bug",
       runInBackground: false,
       signal,
     });
 
     await expect(handle.completion).resolves.toMatchObject({
       result:
-        'Implemented the requested fix in the target module, updated all affected call sites, and confirmed the change compiles cleanly and passes the existing test suite. No unrelated code paths were touched while making this change.',
+        "Implemented the requested fix in the target module, updated all affected call sites, and confirmed the change compiles cleanly and passes the existing test suite. No unrelated code paths were touched while making this change.",
     });
-    expect(child.agent.config.profileName).toBe('coder');
-    expect(child.llmCalls[0]?.systemPrompt).toContain('You are now running as a subagent.');
-    expect(child.llmCalls[0]?.tools.map((tool) => tool.name).toSorted()).toEqual([
-      'Bash',
-      'CronCreate',
-      'CronDelete',
-      'CronList',
-      'Edit',
-      'EnterPlanMode',
-      'ExitPlanMode',
-      'Glob',
-      'Grep',
-      'Read',
-      'TaskList',
-      'TaskOutput',
-      'TaskStop',
-      'TodoList',
-      'Write',
+    expect(child.agent.config.profileName).toBe("coder");
+    expect(child.llmCalls[0]?.systemPrompt).toContain(
+      "You are now running as a subagent.",
+    );
+    expect(
+      child.llmCalls[0]?.tools.map((tool) => tool.name).toSorted(),
+    ).toEqual([
+      "Bash",
+      "CronCreate",
+      "CronDelete",
+      "CronList",
+      "Edit",
+      "EnterPlanMode",
+      "ExitPlanMode",
+      "Glob",
+      "Grep",
+      "Read",
+      "TaskList",
+      "TaskOutput",
+      "TaskStop",
+      "TodoList",
+      "Write",
     ]);
     expect(child.llmCalls[0]?.history).toMatchObject([
       {
-        role: 'user',
-        content: [{ type: 'text', text: 'Implement the fix' }],
+        role: "user",
+        content: [{ type: "text", text: "Implement the fix" }],
       },
     ]);
   });
 
-  it('rejects unknown subagent types before creating a child agent', async () => {
+  it("rejects unknown subagent types before creating a child agent", async () => {
     const parent = testAgent();
     parent.configure();
     const createAgent = vi.fn();
     const host = new SessionSubagentHost(
       {
-        agents: new Map([['main', parent.agent]]),
+        agents: new Map([["main", parent.agent]]),
         ensureAgentResumed: vi.fn(async () => parent.agent),
         createAgent,
         agentCatalog: testAgentCatalog(),
       } as never,
-      'main',
+      "main",
     );
 
     await expect(
       host.spawn({
-        profileName: 'missing',
-        parentToolCallId: 'call_agent',
-        prompt: 'Find the cause',
-        description: 'Find cause',
+        profileName: "missing",
+        parentToolCallId: "call_agent",
+        prompt: "Find the cause",
+        description: "Find cause",
         runInBackground: false,
         signal,
       }),
@@ -513,26 +572,26 @@ describe('SessionSubagentHost', () => {
     expect(createAgent).not.toHaveBeenCalled();
   });
 
-  it('rejects unavailable subagent profiles even when a same-named fork label exists', async () => {
+  it("rejects unavailable subagent profiles even when a same-named fork label exists", async () => {
     const parent = testAgent();
     parent.configure();
     const createAgent = vi.fn();
     const host = new SessionSubagentHost(
       {
-        agents: new Map([['main', parent.agent]]),
+        agents: new Map([["main", parent.agent]]),
         ensureAgentResumed: vi.fn(async () => parent.agent),
         createAgent,
         agentCatalog: testAgentCatalog(),
       } as never,
-      'main',
+      "main",
     );
 
     await expect(
       host.spawn({
-        profileName: 'btw',
-        parentToolCallId: 'call_agent',
-        prompt: 'Answer a side question',
-        description: 'Side question',
+        profileName: "btw",
+        parentToolCallId: "call_agent",
+        prompt: "Answer a side question",
+        description: "Side question",
         runInBackground: false,
         signal,
       }),
@@ -540,22 +599,25 @@ describe('SessionSubagentHost', () => {
     expect(createAgent).not.toHaveBeenCalled();
   });
 
-  it('cancels the child turn when the caller signal aborts', async () => {
+  it("cancels the child turn when the caller signal aborts", async () => {
     const parent = testAgent();
     parent.configure();
     parent.newEvents();
 
     const controller = new AbortController();
     const child = testAgent();
-    child.mockNextResponse({ type: 'text', text: 'I will run Bash.' }, bashCall());
+    child.mockNextResponse(
+      { type: "text", text: "I will run Bash." },
+      bashCall(),
+    );
     const session = fakeSession(parent.agent, child.agent);
-    const host = new SessionSubagentHost(session, 'main');
+    const host = new SessionSubagentHost(session, "main");
 
     const handle = await host.spawn({
-      profileName: 'explore',
-      parentToolCallId: 'call_agent',
-      prompt: 'Keep working',
-      description: 'Long task',
+      profileName: "explore",
+      parentToolCallId: "call_agent",
+      prompt: "Keep working",
+      description: "Long task",
       runInBackground: false,
       signal: controller.signal,
     });
@@ -563,41 +625,44 @@ describe('SessionSubagentHost', () => {
     await child.untilApprovalRequest();
     controller.abort();
 
-    await expect(handle.completion).rejects.toThrow('Aborted');
+    await expect(handle.completion).rejects.toThrow("Aborted");
     expect(child.allEvents).toContainEqual(
       expect.objectContaining({
-        type: '[wire]',
-        event: 'turn.cancel',
+        type: "[wire]",
+        event: "turn.cancel",
         args: expect.objectContaining({ turnId: 0 }),
       }),
     );
     expect(parent.allEvents).toContainEqual(
       expect.objectContaining({
-        type: '[rpc]',
-        event: 'subagent.failed',
+        type: "[rpc]",
+        event: "subagent.failed",
         args: expect.objectContaining({
-          subagentId: 'agent-0',
-          error: 'Aborted',
+          subagentId: "agent-0",
+          error: "Aborted",
         }),
       }),
     );
   });
 
-  it('cancelAll aborts foreground children', async () => {
+  it("cancelAll aborts foreground children", async () => {
     const parent = testAgent();
     parent.configure();
     parent.newEvents();
 
     const child = testAgent();
-    child.mockNextResponse({ type: 'text', text: 'I will run Bash.' }, bashCall());
+    child.mockNextResponse(
+      { type: "text", text: "I will run Bash." },
+      bashCall(),
+    );
     const session = fakeSession(parent.agent, child.agent);
-    const host = new SessionSubagentHost(session, 'main');
+    const host = new SessionSubagentHost(session, "main");
 
     const handle = await host.spawn({
-      profileName: 'explore',
-      parentToolCallId: 'call_agent',
-      prompt: 'Keep working',
-      description: 'Long task',
+      profileName: "explore",
+      parentToolCallId: "call_agent",
+      prompt: "Keep working",
+      description: "Long task",
       runInBackground: false,
       signal,
     });
@@ -605,11 +670,11 @@ describe('SessionSubagentHost', () => {
     await child.untilApprovalRequest();
     host.cancelAll();
 
-    await expect(handle.completion).rejects.toThrow('Aborted');
+    await expect(handle.completion).rejects.toThrow("Aborted");
     expect(child.allEvents).toContainEqual(
       expect.objectContaining({
-        type: '[wire]',
-        event: 'turn.cancel',
+        type: "[wire]",
+        event: "turn.cancel",
         args: expect.objectContaining({ turnId: 0 }),
       }),
     );
@@ -622,15 +687,18 @@ describe('SessionSubagentHost', () => {
 
     const controller = new AbortController();
     const child = testAgent();
-    child.mockNextResponse({ type: 'text', text: 'I will run Bash.' }, bashCall());
+    child.mockNextResponse(
+      { type: "text", text: "I will run Bash." },
+      bashCall(),
+    );
     const session = fakeSession(parent.agent, child.agent);
-    const host = new SessionSubagentHost(session, 'main');
+    const host = new SessionSubagentHost(session, "main");
 
     const handle = await host.spawn({
-      profileName: 'explore',
-      parentToolCallId: 'call_agent',
-      prompt: 'Keep working',
-      description: 'Long task',
+      profileName: "explore",
+      parentToolCallId: "call_agent",
+      prompt: "Keep working",
+      description: "Long task",
       runInBackground: false,
       signal: controller.signal,
     });
@@ -643,26 +711,29 @@ describe('SessionSubagentHost', () => {
     await child.untilTurnEnd();
 
     const output = childBashToolResultOutput(child);
-    expect(output).toContain('manually interrupted');
-    expect(output).toContain('not a system error');
+    expect(output).toContain("manually interrupted");
+    expect(output).toContain("not a system error");
   });
 
-  it('does not mislabel a non-user subagent abort (e.g. a deadline) as a user interruption', async () => {
+  it("does not mislabel a non-user subagent abort (e.g. a deadline) as a user interruption", async () => {
     const parent = testAgent();
     parent.configure();
     parent.newEvents();
 
     const controller = new AbortController();
     const child = testAgent();
-    child.mockNextResponse({ type: 'text', text: 'I will run Bash.' }, bashCall());
+    child.mockNextResponse(
+      { type: "text", text: "I will run Bash." },
+      bashCall(),
+    );
     const session = fakeSession(parent.agent, child.agent);
-    const host = new SessionSubagentHost(session, 'main');
+    const host = new SessionSubagentHost(session, "main");
 
     const handle = await host.spawn({
-      profileName: 'explore',
-      parentToolCallId: 'call_agent',
-      prompt: 'Keep working',
-      description: 'Long task',
+      profileName: "explore",
+      parentToolCallId: "call_agent",
+      prompt: "Keep working",
+      description: "Long task",
       runInBackground: false,
       signal: controller.signal,
     });
@@ -677,25 +748,28 @@ describe('SessionSubagentHost', () => {
 
     const output = childBashToolResultOutput(child);
     expect(output).toBe('Tool "Bash" was aborted');
-    expect(output).not.toContain('manually interrupted');
+    expect(output).not.toContain("manually interrupted");
   });
 
-  it('cancelAll leaves background children running until their task signal aborts', async () => {
+  it("cancelAll leaves background children running until their task signal aborts", async () => {
     const parent = testAgent();
     parent.configure();
     parent.newEvents();
 
     const backgroundController = new AbortController();
     const child = testAgent();
-    child.mockNextResponse({ type: 'text', text: 'I will run Bash.' }, bashCall());
+    child.mockNextResponse(
+      { type: "text", text: "I will run Bash." },
+      bashCall(),
+    );
     const session = fakeSession(parent.agent, child.agent);
-    const host = new SessionSubagentHost(session, 'main');
+    const host = new SessionSubagentHost(session, "main");
 
     const handle = await host.spawn({
-      profileName: 'explore',
-      parentToolCallId: 'call_agent',
-      prompt: 'Keep working',
-      description: 'Long task',
+      profileName: "explore",
+      parentToolCallId: "call_agent",
+      prompt: "Keep working",
+      description: "Long task",
       runInBackground: true,
       signal: backgroundController.signal,
     });
@@ -707,54 +781,56 @@ describe('SessionSubagentHost', () => {
     expect(child.agent.turn.hasActiveTurn).toBe(true);
     expect(child.allEvents).not.toContainEqual(
       expect.objectContaining({
-        type: '[wire]',
-        event: 'turn.cancel',
+        type: "[wire]",
+        event: "turn.cancel",
         args: expect.objectContaining({ turnId: 0 }),
       }),
     );
 
     backgroundController.abort();
 
-    await expect(handle.completion).rejects.toThrow('Aborted');
+    await expect(handle.completion).rejects.toThrow("Aborted");
     expect(child.allEvents).toContainEqual(
       expect.objectContaining({
-        type: '[wire]',
-        event: 'turn.cancel',
+        type: "[wire]",
+        event: "turn.cancel",
         args: expect.objectContaining({ turnId: 0 }),
       }),
     );
   });
 
-  it('re-prompts the child when the first summary is too short', async () => {
+  it("re-prompts the child when the first summary is too short", async () => {
     const parent = testAgent();
     parent.configure();
     parent.newEvents();
 
-    const longSummary = 'Detailed findings: '.repeat(20);
+    const longSummary = "Detailed findings: ".repeat(20);
     const child = testAgent();
-    child.mockNextResponse({ type: 'text', text: 'done' });
-    child.mockNextResponse({ type: 'text', text: longSummary });
+    child.mockNextResponse({ type: "text", text: "done" });
+    child.mockNextResponse({ type: "text", text: longSummary });
     const session = fakeSession(parent.agent, child.agent);
-    const host = new SessionSubagentHost(session, 'main');
+    const host = new SessionSubagentHost(session, "main");
 
     const handle = await host.spawn({
-      profileName: 'coder',
-      parentToolCallId: 'call_agent',
-      prompt: 'Investigate',
-      description: 'Investigate',
+      profileName: "coder",
+      parentToolCallId: "call_agent",
+      prompt: "Investigate",
+      description: "Investigate",
       runInBackground: false,
       signal,
     });
 
-    await expect(handle.completion).resolves.toMatchObject({ result: longSummary.trim() });
+    await expect(handle.completion).resolves.toMatchObject({
+      result: longSummary.trim(),
+    });
     expect(child.llmCalls).toHaveLength(2);
     expect(child.llmCalls[1]?.history.at(-1)).toMatchObject({
-      role: 'user',
-      content: [{ type: 'text', text: expect.stringContaining('too brief') }],
+      role: "user",
+      content: [{ type: "text", text: expect.stringContaining("too brief") }],
     });
   });
 
-  it('fails the child instead of re-prompting when the response is truncated', async () => {
+  it("fails the child instead of re-prompting when the response is truncated", async () => {
     const parent = testAgent();
     parent.configure();
     parent.newEvents();
@@ -762,183 +838,194 @@ describe('SessionSubagentHost', () => {
     const child = testAgent();
     child.mockNextProviderResponse({
       parts: [
-        { type: 'think', think: 'The child used its output budget before writing a summary.' },
+        {
+          type: "think",
+          think: "The child used its output budget before writing a summary.",
+        },
       ],
-      finishReason: 'truncated',
-      rawFinishReason: 'length',
+      finishReason: "truncated",
+      rawFinishReason: "length",
     });
     const session = fakeSession(parent.agent, child.agent);
-    const host = new SessionSubagentHost(session, 'main');
+    const host = new SessionSubagentHost(session, "main");
 
     const handle = await host.spawn({
-      profileName: 'coder',
-      parentToolCallId: 'call_agent',
-      prompt: 'Investigate',
-      description: 'Investigate',
+      profileName: "coder",
+      parentToolCallId: "call_agent",
+      prompt: "Investigate",
+      description: "Investigate",
       runInBackground: false,
       signal,
     });
 
     await expect(handle.completion).rejects.toThrow(
-      'Subagent turn failed before completing its final summary: reason=max_tokens',
+      "Subagent turn failed before completing its final summary: reason=max_tokens",
     );
     expect(child.llmCalls).toHaveLength(1);
     expect(parent.allEvents).toContainEqual(
       expect.objectContaining({
-        type: '[rpc]',
-        event: 'subagent.failed',
+        type: "[rpc]",
+        event: "subagent.failed",
         args: expect.objectContaining({
-          subagentId: 'agent-0',
+          subagentId: "agent-0",
           error: expect.stringContaining(
-            'Subagent turn failed before completing its final summary: reason=max_tokens',
+            "Subagent turn failed before completing its final summary: reason=max_tokens",
           ),
         }),
       }),
     );
     expect(parent.allEvents).not.toContainEqual(
       expect.objectContaining({
-        type: '[rpc]',
-        event: 'subagent.completed',
+        type: "[rpc]",
+        event: "subagent.completed",
       }),
     );
   });
 
-  it('does not re-prompt when the first summary is long enough', async () => {
+  it("does not re-prompt when the first summary is long enough", async () => {
     const parent = testAgent();
     parent.configure();
     parent.newEvents();
 
-    const longSummary = 'Comprehensive technical summary. '.repeat(10);
+    const longSummary = "Comprehensive technical summary. ".repeat(10);
     const child = testAgent();
-    child.mockNextResponse({ type: 'text', text: longSummary });
+    child.mockNextResponse({ type: "text", text: longSummary });
     const session = fakeSession(parent.agent, child.agent);
-    const host = new SessionSubagentHost(session, 'main');
+    const host = new SessionSubagentHost(session, "main");
 
     const handle = await host.spawn({
-      profileName: 'coder',
-      parentToolCallId: 'call_agent',
-      prompt: 'Investigate',
-      description: 'Investigate',
+      profileName: "coder",
+      parentToolCallId: "call_agent",
+      prompt: "Investigate",
+      description: "Investigate",
       runInBackground: false,
       signal,
     });
 
-    await expect(handle.completion).resolves.toMatchObject({ result: longSummary.trim() });
+    await expect(handle.completion).resolves.toMatchObject({
+      result: longSummary.trim(),
+    });
     expect(child.llmCalls).toHaveLength(1);
   });
 
-  it('prepends git context to the prompt for explore subagents', async () => {
+  it("prepends git context to the prompt for explore subagents", async () => {
     vi.mocked(collectGitContext).mockResolvedValueOnce(
-      '<git-context>\nWorking directory: /repo\nBranch: main\n</git-context>',
+      "<git-context>\nWorking directory: /repo\nBranch: main\n</git-context>",
     );
     const parent = testAgent();
     parent.configure();
     parent.newEvents();
 
     const summary =
-      'Explored the repository thoroughly and reported the findings in a complete and detailed summary that gives the parent agent everything it needs to continue the work without redoing the investigation all over again.';
+      "Explored the repository thoroughly and reported the findings in a complete and detailed summary that gives the parent agent everything it needs to continue the work without redoing the investigation all over again.";
     const child = testAgent();
-    child.mockNextResponse({ type: 'text', text: summary });
+    child.mockNextResponse({ type: "text", text: summary });
     const session = fakeSession(parent.agent, child.agent);
-    const host = new SessionSubagentHost(session, 'main');
+    const host = new SessionSubagentHost(session, "main");
 
     const handle = await host.spawn({
-      profileName: 'explore',
-      parentToolCallId: 'call_agent',
-      prompt: 'Find the cause',
-      description: 'Find cause',
+      profileName: "explore",
+      parentToolCallId: "call_agent",
+      prompt: "Find the cause",
+      description: "Find cause",
       runInBackground: false,
       signal,
     });
     await handle.completion;
 
     expect(child.llmCalls[0]?.history[0]).toMatchObject({
-      role: 'user',
+      role: "user",
       content: [
         {
-          type: 'text',
-          text: '<git-context>\nWorking directory: /repo\nBranch: main\n</git-context>\n\nFind the cause',
+          type: "text",
+          text: "<git-context>\nWorking directory: /repo\nBranch: main\n</git-context>\n\nFind the cause",
         },
       ],
     });
   });
 
-  it('does not prepend git context for non-explore subagents', async () => {
+  it("does not prepend git context for non-explore subagents", async () => {
     const parent = testAgent();
     parent.configure();
     parent.newEvents();
 
     const summary =
-      'Implemented the requested change in full and verified it against the existing test suite, leaving a thorough and complete summary so the parent agent can proceed without repeating any of the finished investigation work.';
+      "Implemented the requested change in full and verified it against the existing test suite, leaving a thorough and complete summary so the parent agent can proceed without repeating any of the finished investigation work.";
     const child = testAgent();
-    child.mockNextResponse({ type: 'text', text: summary });
+    child.mockNextResponse({ type: "text", text: summary });
     const session = fakeSession(parent.agent, child.agent);
-    const host = new SessionSubagentHost(session, 'main');
+    const host = new SessionSubagentHost(session, "main");
 
     const handle = await host.spawn({
-      profileName: 'coder',
-      parentToolCallId: 'call_agent',
-      prompt: 'Implement the fix',
-      description: 'Fix bug',
+      profileName: "coder",
+      parentToolCallId: "call_agent",
+      prompt: "Implement the fix",
+      description: "Fix bug",
       runInBackground: false,
       signal,
     });
     await handle.completion;
 
     expect(child.llmCalls[0]?.history[0]).toMatchObject({
-      role: 'user',
-      content: [{ type: 'text', text: 'Implement the fix' }],
+      role: "user",
+      content: [{ type: "text", text: "Implement the fix" }],
     });
   });
 
-  it('resumes an idle child agent by id', async () => {
+  it("resumes an idle child agent by id", async () => {
     const parent = testAgent();
     parent.configure();
-    parent.agent.permission.setMode('yolo');
+    parent.agent.permission.setMode("yolo");
 
     const child = testAgent({
-      type: 'sub',
+      type: "sub",
       permission: { parent: parent.agent.permission },
     });
-    child.configure({ tools: ['Read'] });
+    child.configure({ tools: ["Read"] });
     child.agent.useProfile(
-      profile({ name: 'explore', tools: ['Read'], systemPrompt: 'explore prompt' }),
+      profile({
+        name: "explore",
+        tools: ["Read"],
+        systemPrompt: "explore prompt",
+      }),
     );
-    child.agent.context.appendUserMessage([{ type: 'text', text: 'Earlier context' }]);
+    child.agent.context.appendUserMessage([
+      { type: "text", text: "Earlier context" },
+    ]);
     child.mockNextResponse({
-      type: 'text',
-      text: 'Resumed the subagent from its earlier context and carried the task through to completion, then reported a full and detailed technical summary so the parent agent can continue without repeating prior work.',
+      type: "text",
+      text: "Resumed the subagent from its earlier context and carried the task through to completion, then reported a full and detailed technical summary so the parent agent can continue without repeating prior work.",
     });
-    vi.mocked(collectGitContext).mockReset().mockResolvedValue('');
+    vi.mocked(collectGitContext).mockReset().mockResolvedValue("");
 
     const session = fakeSession(parent.agent, child.agent, {
-      'agent-0': {
-        homedir: '/tmp/kimi-session/agents/agent-0',
-        type: 'sub',
-        parentAgentId: 'main',
+      "agent-0": {
+        homedir: "/tmp/kimi-session/agents/agent-0",
+        type: "sub",
+        parentAgentId: "main",
       },
     });
-    const host = new SessionSubagentHost(session, 'main');
+    const host = new SessionSubagentHost(session, "main");
 
-    const handle = await host.resume('agent-0', {
-      parentToolCallId: 'call_agent',
-      prompt: 'Continue from context',
-      description: 'Continue work',
+    const handle = await host.resume("agent-0", {
+      parentToolCallId: "call_agent",
+      prompt: "Continue from context",
+      description: "Continue work",
       runInBackground: false,
       signal,
     });
 
     expect(handle).toMatchObject({
-      agentId: 'agent-0',
-      profileName: 'explore',
+      agentId: "agent-0",
+      profileName: "explore",
       resumed: true,
     });
     await expect(handle.completion).resolves.toMatchObject({
       result:
-        'Resumed the subagent from its earlier context and carried the task through to completion, then reported a full and detailed technical summary so the parent agent can continue without repeating prior work.',
+        "Resumed the subagent from its earlier context and carried the task through to completion, then reported a full and detailed technical summary so the parent agent can continue without repeating prior work.",
     });
     expect(session.createAgent).not.toHaveBeenCalled();
-    expect(child.agent.permission.mode).toBe('yolo');
+    expect(child.agent.permission.mode).toBe("yolo");
     expect(child.lastLlmInput()).toMatchInlineSnapshot(`
       system: "explore prompt"
       tools: Read
@@ -948,92 +1035,92 @@ describe('SessionSubagentHost', () => {
     `);
     expect(parent.allEvents).toContainEqual(
       expect.objectContaining({
-        type: '[rpc]',
-        event: 'subagent.spawned',
+        type: "[rpc]",
+        event: "subagent.spawned",
         args: expect.objectContaining({
-          subagentId: 'agent-0',
-          subagentName: 'explore',
-          parentToolCallId: 'call_agent',
+          subagentId: "agent-0",
+          subagentName: "explore",
+          parentToolCallId: "call_agent",
         }),
       }),
     );
   });
 
-  it('runQueued resumes tasks that carry an existing agent id', async () => {
+  it("runQueued resumes tasks that carry an existing agent id", async () => {
     const parent = testAgent();
     parent.configure();
 
-    const child = testAgent({ type: 'sub' });
+    const child = testAgent({ type: "sub" });
     child.configure();
     child.agent.useProfile(
-      profile({ name: 'coder', tools: [], systemPrompt: 'coder prompt' }),
+      profile({ name: "coder", tools: [], systemPrompt: "coder prompt" }),
     );
-    child.agent.context.appendUserMessage([{ type: 'text', text: 'Earlier swarm context' }]);
+    child.agent.context.appendUserMessage([
+      { type: "text", text: "Earlier swarm context" },
+    ]);
     const summary =
-      'Resumed the queued swarm subagent from its prior context, completed the missing work, and returned a detailed enough handoff for the parent to proceed without starting over. '.repeat(
+      "Resumed the queued swarm subagent from its prior context, completed the missing work, and returned a detailed enough handoff for the parent to proceed without starting over. ".repeat(
         2,
       );
-    child.mockNextResponse({ type: 'text', text: summary });
+    child.mockNextResponse({ type: "text", text: summary });
 
     const session = fakeSession(parent.agent, child.agent, {
-      'agent-0': {
-        homedir: '/tmp/kimi-session/agents/agent-0',
-        type: 'sub',
-        parentAgentId: 'main',
+      "agent-0": {
+        homedir: "/tmp/kimi-session/agents/agent-0",
+        type: "sub",
+        parentAgentId: "main",
       },
     });
-    const host = new SessionSubagentHost(session, 'main');
+    const host = new SessionSubagentHost(session, "main");
 
     await expect(
-      host.runQueued(
-        [
-          {
-            ...queuedTask(1),
-            kind: 'resume',
-            prompt: 'Continue the previous swarm task',
-            resumeAgentId: 'agent-0',
-            signal,
-          },
-        ],
-      ),
+      host.runQueued([
+        {
+          ...queuedTask(1),
+          kind: "resume",
+          prompt: "Continue the previous swarm task",
+          resumeAgentId: "agent-0",
+          signal,
+        },
+      ]),
     ).resolves.toMatchObject([
       {
-        agentId: 'agent-0',
-        status: 'completed',
+        agentId: "agent-0",
+        status: "completed",
         result: summary.trim(),
       },
     ]);
 
     expect(session.createAgent).not.toHaveBeenCalled();
     expect(userTextMessages(child.llmCalls[0]?.history ?? [])).toEqual([
-      'Earlier swarm context',
-      'Continue the previous swarm task',
+      "Earlier swarm context",
+      "Continue the previous swarm task",
     ]);
   });
 
-  it('runQueued persists swarm item metadata for spawned tasks', async () => {
+  it("runQueued persists swarm item metadata for spawned tasks", async () => {
     const parent = testAgent();
     parent.configure();
     parent.newEvents();
 
-    const child = testAgent({ type: 'sub' });
+    const child = testAgent({ type: "sub" });
     child.configure();
     const summary =
-      'Completed the queued swarm item and returned a detailed technical handoff so the parent can map the result back to the original swarm input. '.repeat(
+      "Completed the queued swarm item and returned a detailed technical handoff so the parent can map the result back to the original swarm input. ".repeat(
         2,
       );
-    child.mockNextResponse({ type: 'text', text: summary });
+    child.mockNextResponse({ type: "text", text: summary });
 
-    const metadataAgents: Session['metadata']['agents'] = {};
+    const metadataAgents: Session["metadata"]["agents"] = {};
     const session = fakeSession(parent.agent, child.agent, metadataAgents);
-    const host = new SessionSubagentHost(session, 'main');
+    const host = new SessionSubagentHost(session, "main");
 
     await expect(
-      host.runQueued([{ ...queuedTask(1), swarmItem: 'src/a.ts', signal }]),
+      host.runQueued([{ ...queuedTask(1), swarmItem: "src/a.ts", signal }]),
     ).resolves.toMatchObject([
       {
-        agentId: 'agent-0',
-        status: 'completed',
+        agentId: "agent-0",
+        status: "completed",
         result: summary.trim(),
       },
     ]);
@@ -1041,45 +1128,45 @@ describe('SessionSubagentHost', () => {
     expect(session.createAgent).toHaveBeenCalledWith(
       expect.any(Object),
       expect.objectContaining({
-        parentAgentId: 'main',
-        swarmItem: 'src/a.ts',
+        parentAgentId: "main",
+        swarmItem: "src/a.ts",
       }),
     );
-    expect(metadataAgents['agent-0']).toMatchObject({
-      type: 'sub',
-      parentAgentId: 'main',
-      swarmItem: 'src/a.ts',
+    expect(metadataAgents["agent-0"]).toMatchObject({
+      type: "sub",
+      parentAgentId: "main",
+      swarmItem: "src/a.ts",
     });
-    expect(host.getSwarmItem('agent-0')).toBe('src/a.ts');
+    expect(host.getSwarmItem("agent-0")).toBe("src/a.ts");
     expect(parent.allEvents).toContainEqual(
       expect.objectContaining({
-        type: '[rpc]',
-        event: 'subagent.spawned',
+        type: "[rpc]",
+        event: "subagent.spawned",
         args: expect.objectContaining({
-          subagentId: 'agent-0',
-          parentToolCallId: 'call_swarm',
+          subagentId: "agent-0",
+          parentToolCallId: "call_swarm",
           swarmIndex: 1,
         }),
       }),
     );
     expect(parent.allEvents).toContainEqual(
       expect.objectContaining({
-        type: '[rpc]',
-        event: 'subagent.started',
+        type: "[rpc]",
+        event: "subagent.started",
         args: expect.objectContaining({
-          subagentId: 'agent-0',
+          subagentId: "agent-0",
         }),
       }),
     );
   });
 
-  it('retries a rate-limited child turn without appending the original prompt again', async () => {
+  it("retries a rate-limited child turn without appending the original prompt again", async () => {
     const parent = testAgent();
     parent.configure();
     parent.newEvents();
 
     const summary =
-      'Recovered from a provider rate limit by retrying the latest subagent step with the original context intact, then completed the delegated work with a detailed enough summary for the parent to continue confidently. '.repeat(
+      "Recovered from a provider rate limit by retrying the latest subagent step with the original context intact, then completed the delegated work with a detailed enough summary for the parent to continue confidently. ".repeat(
         2,
       );
     const histories: Message[][] = [];
@@ -1094,9 +1181,9 @@ describe('SessionSubagentHost', () => {
       histories.push(structuredClone(history));
       generateCalls += 1;
       if (generateCalls === 1) {
-        throw new APIStatusError(429, 'Rate limited', 'req-429');
+        throw new APIStatusError(429, "Rate limited", "req-429");
       }
-      await callbacks?.onMessagePart?.({ type: 'text', text: summary });
+      await callbacks?.onMessagePart?.({ type: "text", text: summary });
       return textResult(summary);
     };
     const child = testAgent({
@@ -1109,63 +1196,73 @@ describe('SessionSubagentHost', () => {
     child.configure();
 
     const session = fakeSession(parent.agent, child.agent);
-    const host = new SessionSubagentHost(session, 'main');
+    const host = new SessionSubagentHost(session, "main");
 
     const handle = await host.spawn({
-      profileName: 'coder',
-      parentToolCallId: 'call_agent',
-      prompt: 'Implement the retry-safe change',
-      description: 'Fix rate-limit retry',
+      profileName: "coder",
+      parentToolCallId: "call_agent",
+      prompt: "Implement the retry-safe change",
+      description: "Fix rate-limit retry",
       runInBackground: false,
       signal,
     });
-    await expect(handle.completion).rejects.toThrow('Rate limited');
+    await expect(handle.completion).rejects.toThrow("Rate limited");
 
     const retryHandle = await host.retry(handle.agentId, {
-      parentToolCallId: 'call_agent',
-      prompt: 'Implement the retry-safe change',
-      description: 'Fix rate-limit retry',
+      parentToolCallId: "call_agent",
+      prompt: "Implement the retry-safe change",
+      description: "Fix rate-limit retry",
       runInBackground: false,
       signal,
     });
 
-    await expect(retryHandle.completion).resolves.toMatchObject({ result: summary.trim() });
+    await expect(retryHandle.completion).resolves.toMatchObject({
+      result: summary.trim(),
+    });
     expect(generateCalls).toBe(2);
-    expect(userTextMessages(histories[1] ?? [])).toEqual(['Implement the retry-safe change']);
+    expect(userTextMessages(histories[1] ?? [])).toEqual([
+      "Implement the retry-safe change",
+    ]);
   });
 
-  it('realigns a resumed subagent to the parent agent current model', async () => {
+  it("realigns a resumed subagent to the parent agent current model", async () => {
     const parent = testAgent();
     parent.configure();
-    parent.agent.permission.setMode('yolo');
+    parent.agent.permission.setMode("yolo");
 
     const child = testAgent();
-    child.configure({ tools: ['Read'] });
+    child.configure({ tools: ["Read"] });
     // The child was originally spawned with a model that no longer matches the
     // parent agent's current model (as if the parent ran setModel afterwards).
-    child.agent.config.update({ modelAlias: 'stale-model-from-initial-spawn' });
+    child.agent.config.update({ modelAlias: "stale-model-from-initial-spawn" });
     child.agent.useProfile(
-      profile({ name: 'explore', tools: ['Read'], systemPrompt: 'explore prompt' }),
+      profile({
+        name: "explore",
+        tools: ["Read"],
+        systemPrompt: "explore prompt",
+      }),
     );
-    child.agent.context.appendUserMessage([{ type: 'text', text: 'Earlier context' }]);
+    child.agent.context.appendUserMessage([
+      { type: "text", text: "Earlier context" },
+    ]);
     child.mockNextResponse({
-      type: 'text',
-      text: 'Resumed the subagent from its earlier context and carried the task through to completion, then reported a full and detailed technical summary so the parent agent can continue without repeating prior work.',
+      type: "text",
+      text: "Resumed the subagent from its earlier context and carried the task through to completion, then reported a full and detailed technical summary so the parent agent can continue without repeating prior work.",
     });
 
     const session = fakeSession(parent.agent, child.agent, {
-      'agent-0': {
-        homedir: '/tmp/kimi-session/agents/agent-0',
-        type: 'sub',
-        parentAgentId: 'main',
+      "agent-0": {
+        homedir: "/tmp/kimi-session/agents/agent-0",
+        type: "sub",
+        parentAgentId: "main",
       },
     });
-    const host = new SessionSubagentHost(session, 'main');
+    const host = new SessionSubagentHost(session, "main");
 
-    const handle = await host.resume('agent-0', {
-      parentToolCallId: 'call_agent',
-      prompt: 'Continue from context',
-      description: 'Continue work',
+    const handle = await host.resume("agent-0", {
+      parentToolCallId: "call_agent",
+      prompt: "Continue from context",
+      description: "Continue work",
       runInBackground: false,
       signal,
     });
@@ -1174,31 +1271,33 @@ describe('SessionSubagentHost', () => {
     // resume must realign the child to the parent agent's current model rather
     // than leave it on the stale model from its initial spawn.
     expect(child.agent.config.modelAlias).toBe(parent.agent.config.modelAlias);
-    expect(child.agent.config.modelAlias).not.toBe('stale-model-from-initial-spawn');
+    expect(child.agent.config.modelAlias).not.toBe(
+      "stale-model-from-initial-spawn",
+    );
   });
 
-  describe('secondary model binding', () => {
+  describe("secondary model binding", () => {
     const secondaryFlags = () =>
-      new FlagResolver({ KIMI_CODE_EXPERIMENTAL_SECONDARY_MODEL: '1' });
+      new FlagResolver({ KIMI_CODE_EXPERIMENTAL_SECONDARY_MODEL: "1" });
     const LONG_SUMMARY =
-      'Completed the delegated task end to end and reported a technically complete summary so the parent agent can continue without repeating prior work. ' +
-      'The report covers the investigation, the changes made, and the verification results in enough detail for the caller to act on directly.';
+      "Completed the delegated task end to end and reported a technically complete summary so the parent agent can continue without repeating prior work. " +
+      "The report covers the investigation, the changes made, and the verification results in enough detail for the caller to act on directly.";
     // Harness model registry entries resolvable through the child's
     // ProviderManager: the secondary alias and the synthesized derived entry
     // (in production `applySecondaryModelConfig` injects the latter into the
     // session runtime config).
     const withSecondaryModels = (config?: KimiConfig): KimiConfig => ({
-      providers: { 'test-provider': { type: 'kimi', apiKey: 'test-key' } },
+      providers: { "test-provider": { type: "kimi", apiKey: "test-key" } },
       ...config,
       models: {
-        'cheap-model': {
-          provider: 'test-provider',
-          model: 'cheap-model',
+        "cheap-model": {
+          provider: "test-provider",
+          model: "cheap-model",
           maxContextSize: 1_000_000,
         },
-        '__secondary__': {
-          provider: 'test-provider',
-          model: 'cheap-model',
+        __secondary__: {
+          provider: "test-provider",
+          model: "cheap-model",
           maxContextSize: 65536,
         },
       },
@@ -1207,43 +1306,51 @@ describe('SessionSubagentHost', () => {
     async function spawnChild(options: {
       config?: KimiConfig;
       experimentalFlags?: FlagResolver;
-      providerManager?: Session['options']['providerManager'];
-      modelChoice?: 'primary' | 'secondary';
-      profilePreference?: 'primary' | 'secondary';
+      providerManager?: Session["options"]["providerManager"];
+      modelChoice?: "primary" | "secondary";
+      profilePreference?: "primary" | "secondary";
     }) {
       const parent = testAgent();
       parent.configure();
       const child = testAgent({ initialConfig: withSecondaryModels() });
-      child.configure({ tools: ['Read'] });
-      child.mockNextResponse({ type: 'text', text: LONG_SUMMARY });
+      child.configure({ tools: ["Read"] });
+      child.mockNextResponse({ type: "text", text: LONG_SUMMARY });
 
-      const session = fakeSession(parent.agent, child.agent, {}, {
-        config: options.config,
-        experimentalFlags: options.experimentalFlags,
-        providerManager: options.providerManager,
-      });
-      const host = new SessionSubagentHost(session, 'main');
+      const session = fakeSession(
+        parent.agent,
+        child.agent,
+        {},
+        {
+          config: options.config,
+          experimentalFlags: options.experimentalFlags,
+          providerManager: options.providerManager,
+        },
+      );
+      const host = new SessionSubagentHost(session, "main");
       if (options.profilePreference !== undefined) {
         vi.spyOn(
           host as unknown as {
-            resolveProfile: (parent: Agent, name: string) => ResolvedAgentProfile;
+            resolveProfile: (
+              parent: Agent,
+              name: string,
+            ) => ResolvedAgentProfile;
           },
-          'resolveProfile',
+          "resolveProfile",
         ).mockReturnValue(
           profile({
-            name: 'coder',
-            tools: ['Read'],
-            systemPrompt: 'coder prompt',
+            name: "coder",
+            tools: ["Read"],
+            systemPrompt: "coder prompt",
             modelPreference: options.profilePreference,
           }),
         );
       }
       const handle = await host.spawn({
-        profileName: 'coder',
+        profileName: "coder",
         modelChoice: options.modelChoice,
-        parentToolCallId: 'call_agent',
-        prompt: 'Do work',
-        description: 'Do work',
+        parentToolCallId: "call_agent",
+        prompt: "Do work",
+        description: "Do work",
         runInBackground: false,
         signal,
       });
@@ -1251,190 +1358,224 @@ describe('SessionSubagentHost', () => {
       return { parent, child, handle };
     }
 
-    it('binds the secondary model when configured', async () => {
+    it("binds the secondary model when configured", async () => {
       const { parent, child } = await spawnChild({
         experimentalFlags: secondaryFlags(),
         config: {
           providers: {},
-          secondaryModel: { model: 'cheap-model' },
+          secondaryModel: { model: "cheap-model" },
         },
       });
-      expect(child.agent.config.modelAlias).toBe('cheap-model');
-      expect(child.agent.config.modelAlias).not.toBe(parent.agent.config.modelAlias);
+      expect(child.agent.config.modelAlias).toBe("cheap-model");
+      expect(child.agent.config.modelAlias).not.toBe(
+        parent.agent.config.modelAlias,
+      );
     });
 
-    it('binds the derived entry when the recipe carries patch fields', async () => {
+    it("binds the derived entry when the recipe carries patch fields", async () => {
       const { child } = await spawnChild({
         experimentalFlags: secondaryFlags(),
         config: {
           providers: {},
-          secondaryModel: { model: 'cheap-model', defaultEffort: 'low' },
+          secondaryModel: { model: "cheap-model", defaultEffort: "low" },
         },
       });
       // default_effort is part of the subagent-only patch, so the spawn binds
       // the synthesized derived entry rather than the pointed alias.
-      expect(child.agent.config.modelAlias).toBe('__secondary__');
+      expect(child.agent.config.modelAlias).toBe("__secondary__");
     });
 
-    it('inherits the parent model when the experiment is off', async () => {
+    it("inherits the parent model when the experiment is off", async () => {
       const { parent, child } = await spawnChild({
-        config: { providers: {}, secondaryModel: { model: 'cheap-model' } },
+        config: { providers: {}, secondaryModel: { model: "cheap-model" } },
       });
-      expect(child.agent.config.modelAlias).toBe(parent.agent.config.modelAlias);
+      expect(child.agent.config.modelAlias).toBe(
+        parent.agent.config.modelAlias,
+      );
     });
 
-    it('inherits the parent model for an explicit model: primary choice', async () => {
-      const { parent, child } = await spawnChild({
-        experimentalFlags: secondaryFlags(),
-        config: { providers: {}, secondaryModel: { model: 'cheap-model' } },
-        modelChoice: 'primary',
-      });
-      expect(child.agent.config.modelAlias).toBe(parent.agent.config.modelAlias);
-    });
-
-    it('honors the profile model_preference over the configured secondary model', async () => {
+    it("inherits the parent model for an explicit model: primary choice", async () => {
       const { parent, child } = await spawnChild({
         experimentalFlags: secondaryFlags(),
-        config: { providers: {}, secondaryModel: { model: 'cheap-model' } },
-        profilePreference: 'primary',
+        config: { providers: {}, secondaryModel: { model: "cheap-model" } },
+        modelChoice: "primary",
       });
-      expect(child.agent.config.modelAlias).toBe(parent.agent.config.modelAlias);
+      expect(child.agent.config.modelAlias).toBe(
+        parent.agent.config.modelAlias,
+      );
     });
 
-    it('fails the spawn with a wrapped error when the secondary model does not resolve', async () => {
+    it("honors the profile model_preference over the configured secondary model", async () => {
+      const { parent, child } = await spawnChild({
+        experimentalFlags: secondaryFlags(),
+        config: { providers: {}, secondaryModel: { model: "cheap-model" } },
+        profilePreference: "primary",
+      });
+      expect(child.agent.config.modelAlias).toBe(
+        parent.agent.config.modelAlias,
+      );
+    });
+
+    it("fails the spawn with a wrapped error when the secondary model does not resolve", async () => {
       const parent = testAgent();
       parent.configure();
       const child = testAgent();
-      child.configure({ tools: ['Read'] });
+      child.configure({ tools: ["Read"] });
       const config: KimiConfig = {
         providers: {},
-        secondaryModel: { model: 'missing-model' },
+        secondaryModel: { model: "missing-model" },
       };
-      const session = fakeSession(parent.agent, child.agent, {}, {
-        experimentalFlags: secondaryFlags(),
-        config,
-        providerManager: new ProviderManager({ config }),
-      });
-      const host = new SessionSubagentHost(session, 'main');
+      const session = fakeSession(
+        parent.agent,
+        child.agent,
+        {},
+        {
+          experimentalFlags: secondaryFlags(),
+          config,
+          providerManager: new ProviderManager({ config }),
+        },
+      );
+      const host = new SessionSubagentHost(session, "main");
 
       await expect(
-        host.spawn({
-          profileName: 'coder',
-          parentToolCallId: 'call_agent',
-          prompt: 'Do work',
-          description: 'Do work',
-          runInBackground: false,
-          signal,
-        }).then((handle) => handle.completion),
+        host
+          .spawn({
+            profileName: "coder",
+            parentToolCallId: "call_agent",
+            prompt: "Do work",
+            description: "Do work",
+            runInBackground: false,
+            signal,
+          })
+          .then((handle) => handle.completion),
       ).rejects.toThrow(/\[secondary_model\]\.model/);
     });
 
-    it('preserves a provider configuration error when the secondary alias exists', async () => {
+    it("preserves a provider configuration error when the secondary alias exists", async () => {
       const parent = testAgent();
       parent.configure();
       const child = testAgent();
-      child.configure({ tools: ['Read'] });
+      child.configure({ tools: ["Read"] });
       const config: KimiConfig = {
         providers: {},
         models: {
-          'cheap-model': {
-            provider: 'missing-provider',
-            model: 'cheap-model',
+          "cheap-model": {
+            provider: "missing-provider",
+            model: "cheap-model",
             maxContextSize: 1_000_000,
           },
         },
-        secondaryModel: { model: 'cheap-model' },
+        secondaryModel: { model: "cheap-model" },
       };
-      const session = fakeSession(parent.agent, child.agent, {}, {
-        experimentalFlags: secondaryFlags(),
-        config,
-        providerManager: new ProviderManager({ config }),
-      });
-      const host = new SessionSubagentHost(session, 'main');
+      const session = fakeSession(
+        parent.agent,
+        child.agent,
+        {},
+        {
+          experimentalFlags: secondaryFlags(),
+          config,
+          providerManager: new ProviderManager({ config }),
+        },
+      );
+      const host = new SessionSubagentHost(session, "main");
 
       await expect(
-        host.spawn({
-          profileName: 'coder',
-          parentToolCallId: 'call_agent',
-          prompt: 'Do work',
-          description: 'Do work',
-          runInBackground: false,
-          signal,
-        }).then((handle) => handle.completion),
+        host
+          .spawn({
+            profileName: "coder",
+            parentToolCallId: "call_agent",
+            prompt: "Do work",
+            description: "Do work",
+            runInBackground: false,
+            signal,
+          })
+          .then((handle) => handle.completion),
       ).rejects.toMatchObject({
-        message: 'Provider "missing-provider" for model "cheap-model" is not configured.',
+        message:
+          'Provider "missing-provider" for model "cheap-model" is not configured.',
       });
     });
 
-    it('keeps the spawned model on resume when the experiment is on', async () => {
+    it("keeps the spawned model on resume when the experiment is on", async () => {
       const parent = testAgent();
       parent.configure();
-      parent.agent.permission.setMode('yolo');
+      parent.agent.permission.setMode("yolo");
 
       const child = testAgent({ initialConfig: withSecondaryModels() });
-      child.configure({ tools: ['Read'] });
-      child.agent.config.update({ modelAlias: 'cheap-model' });
+      child.configure({ tools: ["Read"] });
+      child.agent.config.update({ modelAlias: "cheap-model" });
       child.agent.useProfile(
-        profile({ name: 'coder', tools: ['Read'], systemPrompt: 'coder prompt' }),
+        profile({
+          name: "coder",
+          tools: ["Read"],
+          systemPrompt: "coder prompt",
+        }),
       );
-      child.agent.context.appendUserMessage([{ type: 'text', text: 'Earlier context' }]);
-      child.mockNextResponse({ type: 'text', text: LONG_SUMMARY });
+      child.agent.context.appendUserMessage([
+        { type: "text", text: "Earlier context" },
+      ]);
+      child.mockNextResponse({ type: "text", text: LONG_SUMMARY });
 
-      const session = fakeSession(parent.agent, child.agent, {
-        'agent-0': {
-          homedir: '/tmp/kimi-session/agents/agent-0',
-          type: 'sub',
-          parentAgentId: 'main',
+      const session = fakeSession(
+        parent.agent,
+        child.agent,
+        {
+          "agent-0": {
+            homedir: "/tmp/kimi-session/agents/agent-0",
+            type: "sub",
+            parentAgentId: "main",
+          },
         },
-      }, {
-        experimentalFlags: secondaryFlags(),
-        config: { providers: {}, secondaryModel: { model: 'cheap-model' } },
-      });
-      const host = new SessionSubagentHost(session, 'main');
+        {
+          experimentalFlags: secondaryFlags(),
+          config: { providers: {}, secondaryModel: { model: "cheap-model" } },
+        },
+      );
+      const host = new SessionSubagentHost(session, "main");
 
-      const handle = await host.resume('agent-0', {
-        parentToolCallId: 'call_agent',
-        prompt: 'Continue from context',
-        description: 'Continue work',
+      const handle = await host.resume("agent-0", {
+        parentToolCallId: "call_agent",
+        prompt: "Continue from context",
+        description: "Continue work",
         runInBackground: false,
         signal,
       });
       await handle.completion;
       // With the experiment on, resume no longer realigns the child to the
       // parent's model: the subagent keeps the model it was bound to at spawn.
-      expect(child.agent.config.modelAlias).toBe('cheap-model');
+      expect(child.agent.config.modelAlias).toBe("cheap-model");
     });
   });
 });
 
-describe('Session resume permission parent chain', () => {
-  it('restores subagent live-derived permission when metadata lists the child first', async () => {
-    const dir = await mkdtemp(join(tmpdir(), 'kimi-permission-chain-'));
+describe("Session resume permission parent chain", () => {
+  it("restores subagent live-derived permission when metadata lists the child first", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "kimi-permission-chain-"));
     tempDirs.push(dir);
-    const sessionDir = join(dir, 'session');
-    const workDir = join(dir, 'work');
-    const mainDir = join(sessionDir, 'agents', 'main');
-    const childDir = join(sessionDir, 'agents', 'agent-0');
-    const sessionApprovalRule = 'Bash(printf parent)';
+    const sessionDir = join(dir, "session");
+    const workDir = join(dir, "work");
+    const mainDir = join(sessionDir, "agents", "main");
+    const childDir = join(sessionDir, "agents", "agent-0");
+    const sessionApprovalRule = "Bash(printf parent)";
     await mkdir(workDir, { recursive: true });
     await mkdir(sessionDir, { recursive: true });
     await writeFile(
-      join(sessionDir, 'state.json'),
+      join(sessionDir, "state.json"),
       JSON.stringify(
         {
-          createdAt: '2026-01-01T00:00:00.000Z',
-          updatedAt: '2026-01-01T00:00:00.000Z',
-          title: 'Permission Chain',
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:00.000Z",
+          title: "Permission Chain",
           isCustomTitle: false,
           agents: {
-            'agent-0': {
+            "agent-0": {
               homedir: childDir,
-              type: 'sub',
-              parentAgentId: 'main',
+              type: "sub",
+              parentAgentId: "main",
             },
             main: {
               homedir: mainDir,
-              type: 'main',
+              type: "main",
               parentAgentId: null,
             },
           },
@@ -1443,24 +1584,24 @@ describe('Session resume permission parent chain', () => {
         null,
         2,
       ),
-      'utf-8',
+      "utf-8",
     );
     await writeWire(mainDir, [
       {
-        type: 'permission.set_mode',
-        mode: 'yolo',
+        type: "permission.set_mode",
+        mode: "yolo",
       },
       {
-        type: 'permission.record_approval_result',
+        type: "permission.record_approval_result",
         turnId: 0,
-        toolCallId: 'call_parent_bash',
-        toolName: 'Bash',
-        action: 'run command',
+        toolCallId: "call_parent_bash",
+        toolName: "Bash",
+        action: "run command",
         sessionApprovalRule,
         result: {
-          decision: 'approved',
-          scope: 'session',
-          selectedLabel: 'Approve for this session',
+          decision: "approved",
+          scope: "session",
+          selectedLabel: "Approve for this session",
         },
       },
     ]);
@@ -1471,36 +1612,38 @@ describe('Session resume permission parent chain', () => {
       homedir: sessionDir,
       rpc: createSessionRpc(),
       initializeMainAgent: false,
-      skills: { explicitDirs: [join(workDir, 'missing-skills')] },
+      skills: { explicitDirs: [join(workDir, "missing-skills")] },
     });
 
     try {
       await session.resume();
 
-      const child = await session.ensureAgentResumed('agent-0');
-      expect(child?.permission.mode).toBe('yolo');
+      const child = await session.ensureAgentResumed("agent-0");
+      expect(child?.permission.mode).toBe("yolo");
       expect(child?.permission.rules).toEqual([]);
       expect(child?.permission.data().rules).toEqual([]);
-      expect(child?.permission.sessionApprovalRulePatterns).toContain(sessionApprovalRule);
+      expect(child?.permission.sessionApprovalRulePatterns).toContain(
+        sessionApprovalRule,
+      );
     } finally {
       await session.close();
     }
   });
 });
 
-describe('Session.createAgent', () => {
-  it('uses the Kaos current directory when the session cwd is omitted', async () => {
-    const workDir = '/remote/project';
+describe("Session.createAgent", () => {
+  it("uses the Kaos current directory when the session cwd is omitted", async () => {
+    const workDir = "/remote/project";
     const kaos = createFakeKaos({
       getcwd: () => workDir,
       mkdir: vi.fn(async () => {}),
       writeText: vi.fn().mockResolvedValue(0),
       stat: vi.fn(async (path: string) => {
         if ([workDir, `${workDir}/.git`].includes(path)) {
-          return stat('dir');
+          return stat("dir");
         }
         if ([`${workDir}/README.md`, `${workDir}/AGENTS.md`].includes(path)) {
-          return stat('file');
+          return stat("file");
         }
         throw new Error(`ENOENT ${path}`);
       }),
@@ -1512,36 +1655,41 @@ describe('Session.createAgent', () => {
         throw new Error(`ENOENT ${path}`);
       },
       readText: vi.fn(async (path: string) => {
-        if (path === `${workDir}/AGENTS.md`) return 'remote instructions';
+        if (path === `${workDir}/AGENTS.md`) return "remote instructions";
         throw new Error(`ENOENT ${path}`);
       }),
     });
     const session = new Session({
-      id: 'test-subagent-remote-context',
+      id: "test-subagent-remote-context",
       kaos,
-      homedir: '/tmp/kimi-session',
+      homedir: "/tmp/kimi-session",
       rpc: createSessionRpc(),
       initializeMainAgent: false,
     });
 
-    const created = await session.createAgent({ type: 'main' }, { profile: contextProfile() });
+    const created = await session.createAgent(
+      { type: "main" },
+      { profile: contextProfile() },
+    );
 
-    expect(created.agent.config.systemPrompt).toContain('cwd=/remote/project');
-    expect(created.agent.config.systemPrompt).toContain('listing=└── README.md');
-    expect(created.agent.config.systemPrompt).toContain('remote instructions');
+    expect(created.agent.config.systemPrompt).toContain("cwd=/remote/project");
+    expect(created.agent.config.systemPrompt).toContain(
+      "listing=└── README.md",
+    );
+    expect(created.agent.config.systemPrompt).toContain("remote instructions");
   });
 
-  it('renders profiles with the current directory listing and merged AGENTS.md files', async () => {
-    const workDir = '/repo/packages/app';
+  it("renders profiles with the current directory listing and merged AGENTS.md files", async () => {
+    const workDir = "/repo/packages/app";
     const kaos = createFakeKaos({
       mkdir: vi.fn(async () => {}),
       writeText: vi.fn().mockResolvedValue(0),
       stat: vi.fn(async (path: string) => {
         if (
           [
-            '/repo',
-            '/repo/.git',
-            '/repo/packages',
+            "/repo",
+            "/repo/.git",
+            "/repo/packages",
             workDir,
             `${workDir}/.agents`,
             `${workDir}/.github`,
@@ -1550,11 +1698,11 @@ describe('Session.createAgent', () => {
             `${workDir}/.kimi-code`,
           ].includes(path)
         ) {
-          return stat('dir');
+          return stat("dir");
         }
         if (
           [
-            '/repo/AGENTS.md',
+            "/repo/AGENTS.md",
             `${workDir}/.kimi-code/AGENTS.md`,
             `${workDir}/AGENTS.md`,
             `${workDir}/package.json`,
@@ -1563,7 +1711,7 @@ describe('Session.createAgent', () => {
             `${workDir}/.github/workflows/ci.yml`,
           ].includes(path)
         ) {
-          return stat('file');
+          return stat("file");
         }
         throw new Error(`ENOENT ${path}`);
       }),
@@ -1594,56 +1742,69 @@ describe('Session.createAgent', () => {
         throw new Error(`ENOENT ${path}`);
       },
       readText: vi.fn(async (path: string) => {
-        if (path === '/repo/AGENTS.md') return 'root instructions';
-        if (path === `${workDir}/.kimi-code/AGENTS.md`) return 'brand instructions';
-        if (path === `${workDir}/AGENTS.md`) return 'leaf instructions';
+        if (path === "/repo/AGENTS.md") return "root instructions";
+        if (path === `${workDir}/.kimi-code/AGENTS.md`)
+          return "brand instructions";
+        if (path === `${workDir}/AGENTS.md`) return "leaf instructions";
         throw new Error(`ENOENT ${path}`);
       }),
     });
     const session = new Session({
-      id: 'test-subagent-agents-md',
+      id: "test-subagent-agents-md",
       kaos: kaos.withCwd(workDir),
-      homedir: '/tmp/kimi-session',
+      homedir: "/tmp/kimi-session",
       rpc: createSessionRpc(),
       initializeMainAgent: false,
     });
 
-    const created = await session.createAgent({ type: 'main' }, { profile: contextProfile() });
+    const created = await session.createAgent(
+      { type: "main" },
+      { profile: contextProfile() },
+    );
 
-    expect(created.agent.config.systemPrompt).toContain('cwd=/repo/packages/app');
-    expect(created.agent.config.systemPrompt).toContain('listing=├── .agents/');
-    expect(created.agent.config.systemPrompt).toContain('├── .github/');
-    expect(created.agent.config.systemPrompt).toContain('├── src/');
-    expect(created.agent.config.systemPrompt).toContain('│   └── index.ts');
-    expect(created.agent.config.systemPrompt).toContain('└── package.json');
-    expect(created.agent.config.systemPrompt).not.toContain('hidden.md');
-    expect(created.agent.config.systemPrompt).not.toContain('ci.yml');
-    expect(created.agent.config.systemPrompt).toContain('<!-- From: /repo/AGENTS.md -->');
-    expect(created.agent.config.systemPrompt).toContain('root instructions');
     expect(created.agent.config.systemPrompt).toContain(
-      '<!-- From: /repo/packages/app/.kimi-code/AGENTS.md -->',
+      "cwd=/repo/packages/app",
     );
-    expect(created.agent.config.systemPrompt).toContain('brand instructions');
+    expect(created.agent.config.systemPrompt).toContain("listing=├── .agents/");
+    expect(created.agent.config.systemPrompt).toContain("├── .github/");
+    expect(created.agent.config.systemPrompt).toContain("├── src/");
+    expect(created.agent.config.systemPrompt).toContain("│   └── index.ts");
+    expect(created.agent.config.systemPrompt).toContain("└── package.json");
+    expect(created.agent.config.systemPrompt).not.toContain("hidden.md");
+    expect(created.agent.config.systemPrompt).not.toContain("ci.yml");
     expect(created.agent.config.systemPrompt).toContain(
-      '<!-- From: /repo/packages/app/AGENTS.md -->',
+      "<!-- From: /repo/AGENTS.md -->",
     );
-    expect(created.agent.config.systemPrompt).toContain('leaf instructions');
+    expect(created.agent.config.systemPrompt).toContain("root instructions");
+    expect(created.agent.config.systemPrompt).toContain(
+      "<!-- From: /repo/packages/app/.kimi-code/AGENTS.md -->",
+    );
+    expect(created.agent.config.systemPrompt).toContain("brand instructions");
+    expect(created.agent.config.systemPrompt).toContain(
+      "<!-- From: /repo/packages/app/AGENTS.md -->",
+    );
+    expect(created.agent.config.systemPrompt).toContain("leaf instructions");
   });
 
-  it('uses the kimi home for global branded AGENTS.md files', async () => {
-    const realHome = '/real-home';
-    const kimiHome = '/kimi-home';
-    const workDir = '/repo/packages/app';
+  it("uses the kimi home for global branded AGENTS.md files", async () => {
+    const realHome = "/real-home";
+    const kimiHome = "/kimi-home";
+    const workDir = "/repo/packages/app";
     const kaos = createFakeKaos({
       gethome: () => realHome,
       mkdir: vi.fn(async () => {}),
       writeText: vi.fn().mockResolvedValue(0),
       stat: vi.fn(async (path: string) => {
-        if (['/repo', '/repo/.git', '/repo/packages', workDir].includes(path)) {
-          return stat('dir');
+        if (["/repo", "/repo/.git", "/repo/packages", workDir].includes(path)) {
+          return stat("dir");
         }
-        if ([`${kimiHome}/AGENTS.md`, `${realHome}/.kimi-code/AGENTS.md`].includes(path)) {
-          return stat('file');
+        if (
+          [
+            `${kimiHome}/AGENTS.md`,
+            `${realHome}/.kimi-code/AGENTS.md`,
+          ].includes(path)
+        ) {
+          return stat("file");
         }
         throw new Error(`ENOENT ${path}`);
       }),
@@ -1652,36 +1813,44 @@ describe('Session.createAgent', () => {
         return;
       },
       readText: vi.fn(async (path: string) => {
-        if (path === `${kimiHome}/AGENTS.md`) return 'kimi home instructions';
-        if (path === `${realHome}/.kimi-code/AGENTS.md`) return 'stale real-home instructions';
+        if (path === `${kimiHome}/AGENTS.md`) return "kimi home instructions";
+        if (path === `${realHome}/.kimi-code/AGENTS.md`)
+          return "stale real-home instructions";
         throw new Error(`ENOENT ${path}`);
       }),
     });
     const session = new Session({
-      id: 'test-kimi-home-agents-md',
+      id: "test-kimi-home-agents-md",
       kaos: kaos.withCwd(workDir),
-      homedir: '/tmp/kimi-session',
+      homedir: "/tmp/kimi-session",
       kimiHomeDir: kimiHome,
       rpc: createSessionRpc(),
       initializeMainAgent: false,
     });
 
-    const created = await session.createAgent({ type: 'main' }, { profile: contextProfile() });
+    const created = await session.createAgent(
+      { type: "main" },
+      { profile: contextProfile() },
+    );
 
-    expect(created.agent.config.systemPrompt).toContain('kimi home instructions');
-    expect(created.agent.config.systemPrompt).not.toContain('stale real-home instructions');
+    expect(created.agent.config.systemPrompt).toContain(
+      "kimi home instructions",
+    );
+    expect(created.agent.config.systemPrompt).not.toContain(
+      "stale real-home instructions",
+    );
   });
 
-  it('inherits the parent agent cwd when creating a subagent', async () => {
-    const sessionWorkDir = '/session/work';
-    const parentWorkDir = '/parent/work';
+  it("inherits the parent agent cwd when creating a subagent", async () => {
+    const sessionWorkDir = "/session/work";
+    const parentWorkDir = "/parent/work";
 
     const kaos = createFakeKaos({
       mkdir: vi.fn().mockResolvedValue(undefined),
       writeText: vi.fn().mockResolvedValue(0),
       stat: vi.fn(async (path: string) => {
         if ([sessionWorkDir, parentWorkDir].includes(path)) {
-          return stat('dir');
+          return stat("dir");
         }
         throw new Error(`ENOENT ${path}`);
       }),
@@ -1693,15 +1862,18 @@ describe('Session.createAgent', () => {
     });
 
     const session = new Session({
-      id: 'test-subagent-parent-cwd',
+      id: "test-subagent-parent-cwd",
       kaos,
-      homedir: '/tmp/kimi-session',
+      homedir: "/tmp/kimi-session",
       rpc: createSessionRpc(),
       initializeMainAgent: false,
     });
 
     // Create a parent agent — it should start at the session workDir.
-    const parent = await session.createAgent({ type: 'main' }, { profile: contextProfile() });
+    const parent = await session.createAgent(
+      { type: "main" },
+      { profile: contextProfile() },
+    );
     expect(parent.agent.config.systemPrompt).toContain(`cwd=${sessionWorkDir}`);
 
     // Move the parent agent to a different cwd (e.g. after a config.update replay).
@@ -1709,36 +1881,38 @@ describe('Session.createAgent', () => {
 
     // Create a subagent from the moved parent.
     const child = await session.createAgent(
-      { type: 'sub' },
+      { type: "sub" },
       { profile: contextProfile(), parentAgentId: parent.id },
     );
 
     // The subagent should inherit the parent's current cwd, not the session default.
     expect(child.agent.config.systemPrompt).toContain(`cwd=${parentWorkDir}`);
-    expect(child.agent.config.systemPrompt).not.toContain(`cwd=${sessionWorkDir}`);
+    expect(child.agent.config.systemPrompt).not.toContain(
+      `cwd=${sessionWorkDir}`,
+    );
   });
 
-  it('passes session additional dirs to main and child agents', async () => {
-    const extraDir = '/extra/work';
-    const directories = new Set(['/workspace', extraDir]);
+  it("passes session additional dirs to main and child agents", async () => {
+    const extraDir = "/extra/work";
+    const directories = new Set(["/workspace", extraDir]);
     const files = new Map([
-      [join(extraDir, 'AGENTS.md'), 'extra agents instructions'],
-      [join(extraDir, 'extra-file.ts'), 'export const extra = 1;'],
+      [join(extraDir, "AGENTS.md"), "extra agents instructions"],
+      [join(extraDir, "extra-file.ts"), "export const extra = 1;"],
     ]);
     const session = new Session({
-      id: 'test-subagent-additional-dirs',
+      id: "test-subagent-additional-dirs",
       kaos: createFakeKaos({
         mkdir: vi.fn().mockResolvedValue(undefined),
         writeText: vi.fn().mockResolvedValue(0),
         stat: vi.fn(async (path: string) => {
-          if (directories.has(path)) return stat('dir');
-          if (files.has(path)) return stat('file');
+          if (directories.has(path)) return stat("dir");
+          if (files.has(path)) return stat("file");
           throw new Error(`ENOENT ${path}`);
         }),
         iterdir: async function* (path: string) {
           if (path === extraDir) {
-            yield join(extraDir, 'AGENTS.md');
-            yield join(extraDir, 'extra-file.ts');
+            yield join(extraDir, "AGENTS.md");
+            yield join(extraDir, "extra-file.ts");
           }
         },
         readText: vi.fn(async (path: string) => {
@@ -1747,7 +1921,7 @@ describe('Session.createAgent', () => {
           return content;
         }),
       }),
-      homedir: '/tmp/kimi-session',
+      homedir: "/tmp/kimi-session",
       rpc: createSessionRpc(),
       initializeMainAgent: false,
       additionalDirs: [extraDir],
@@ -1755,58 +1929,63 @@ describe('Session.createAgent', () => {
 
     const main = await session.createMain();
     const child = await session.createAgent(
-      { type: 'sub' },
-      { profile: contextProfile(), parentAgentId: 'main' },
+      { type: "sub" },
+      { profile: contextProfile(), parentAgentId: "main" },
     );
 
     expect(main.getAdditionalDirs()).toEqual([extraDir]);
     expect(child.agent.getAdditionalDirs()).toEqual([extraDir]);
-    expect(child.agent.config.systemPrompt).toContain(`additional=### ${extraDir}`);
-    expect(child.agent.config.systemPrompt).toContain('extra-file.ts');
+    expect(child.agent.config.systemPrompt).toContain(
+      `additional=### ${extraDir}`,
+    );
+    expect(child.agent.config.systemPrompt).toContain("extra-file.ts");
   });
 
-  it('allocates the next unused generated agent id', async () => {
+  it("allocates the next unused generated agent id", async () => {
     const session = new Session({
-      id: 'test-subagent-agent-id',
+      id: "test-subagent-agent-id",
       kaos: createFakeKaos({
         mkdir: vi.fn().mockResolvedValue(undefined),
         writeText: vi.fn().mockResolvedValue(0),
       }),
-      homedir: '/tmp/kimi-session',
+      homedir: "/tmp/kimi-session",
       rpc: createSessionRpc(),
       initializeMainAgent: false,
     });
-    session.metadata.agents['agent-0'] = {
-      homedir: '/tmp/kimi-session/agents/agent-0',
-      type: 'sub',
+    session.metadata.agents["agent-0"] = {
+      homedir: "/tmp/kimi-session/agents/agent-0",
+      type: "sub",
       parentAgentId: null,
     };
 
-    const created = await session.createAgent({ type: 'sub' });
+    const created = await session.createAgent({ type: "sub" });
 
-    expect(created.id).toBe('agent-1');
-    expect(session.agents.get('agent-1')).toBe(created.agent);
-    expect(session.metadata.agents['agent-1']).toMatchObject({
-      homedir: '/tmp/kimi-session/agents/agent-1',
-      type: 'sub',
+    expect(created.id).toBe("agent-1");
+    expect(session.agents.get("agent-1")).toBe(created.agent);
+    expect(session.metadata.agents["agent-1"]).toMatchObject({
+      homedir: "/tmp/kimi-session/agents/agent-1",
+      type: "sub",
     });
   });
 
-  it('shares the session McpConnectionManager with sub and main agents', async () => {
+  it("shares the session McpConnectionManager with sub and main agents", async () => {
     const session = new Session({
       kaos: createFakeKaos({
         mkdir: vi.fn().mockResolvedValue(undefined),
         writeText: vi.fn().mockResolvedValue(0),
       }),
-      homedir: '/tmp/kimi-session',
+      homedir: "/tmp/kimi-session",
       rpc: createSessionRpc(),
       initializeMainAgent: false,
     });
 
-    const main = await session.createAgent({ type: 'main' });
+    const main = await session.createAgent({ type: "main" });
     expect(main.agent.mcp).toBe(session.mcp);
 
-    const sub = await session.createAgent({ type: 'sub' }, { parentAgentId: main.id });
+    const sub = await session.createAgent(
+      { type: "sub" },
+      { parentAgentId: main.id },
+    );
     expect(sub.agent.mcp).toBe(session.mcp);
   });
 });
@@ -1815,25 +1994,25 @@ function testAgentCatalog(): SessionAgentProfileCatalog {
   // A real catalog seeded with the builtin profiles; discovery roots point
   // at nonexistent dirs so no file profiles leak into the merge.
   return new SessionAgentProfileCatalog({
-    workDir: '/nonexistent-kimi-test-workdir',
-    brandHomeDir: '/nonexistent-kimi-test-brandhome',
-    osHomeDir: '/nonexistent-kimi-test-oshome',
+    workDir: "/nonexistent-kimi-test-workdir",
+    brandHomeDir: "/nonexistent-kimi-test-brandhome",
+    osHomeDir: "/nonexistent-kimi-test-oshome",
   });
 }
 
 function fakeSession(
   parent: Agent,
   child: Agent,
-  metadataAgents: Session['metadata']['agents'] = {},
+  metadataAgents: Session["metadata"]["agents"] = {},
   sessionOptions?: {
     config?: KimiConfig;
     experimentalFlags?: FlagResolver;
-    providerManager?: Session['options']['providerManager'];
+    providerManager?: Session["options"]["providerManager"];
   },
 ) {
-  const agents = new Map<string, Agent>([['main', parent]]);
-  if (metadataAgents['agent-0'] !== undefined) {
-    agents.set('agent-0', child);
+  const agents = new Map<string, Agent>([["main", parent]]);
+  if (metadataAgents["agent-0"] !== undefined) {
+    agents.set("agent-0", child);
   }
   return {
     agents,
@@ -1845,12 +2024,13 @@ function fakeSession(
     get kimiConfig() {
       return sessionOptions?.config;
     },
-    experimentalFlags: sessionOptions?.experimentalFlags ?? new FlagResolver({}),
+    experimentalFlags:
+      sessionOptions?.experimentalFlags ?? new FlagResolver({}),
     agentCatalog: testAgentCatalog(),
     metadata: {
-      createdAt: '2026-01-01T00:00:00.000Z',
-      updatedAt: '2026-01-01T00:00:00.000Z',
-      title: 'Test Session',
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+      title: "Test Session",
       isCustomTitle: false,
       agents: metadataAgents,
       custom: {},
@@ -1867,15 +2047,15 @@ function fakeSession(
     }),
     createAgent: vi.fn(
       async (
-        config: Parameters<Session['createAgent']>[0],
-        options: Parameters<Session['createAgent']>[1] = {},
+        config: Parameters<Session["createAgent"]>[0],
+        options: Parameters<Session["createAgent"]>[1] = {},
       ) => {
-        agents.set('agent-0', child);
+        agents.set("agent-0", child);
         const parentAgentId = options.parentAgentId ?? null;
         if (options.persistMetadata !== false) {
-          metadataAgents['agent-0'] = {
-            homedir: '/tmp/kimi-session/agents/agent-0',
-            type: config.type ?? 'main',
+          metadataAgents["agent-0"] = {
+            homedir: "/tmp/kimi-session/agents/agent-0",
+            type: config.type ?? "main",
             parentAgentId,
             swarmItem: options.swarmItem,
           };
@@ -1883,7 +2063,7 @@ function fakeSession(
         if (options.profile !== undefined) {
           child.useProfile(options.profile);
         }
-        return { id: 'agent-0', agent: child };
+        return { id: "agent-0", agent: child };
       },
     ),
   } as unknown as Session;
@@ -1891,28 +2071,28 @@ function fakeSession(
 
 function contextProfile(): ResolvedAgentProfile {
   return {
-    name: 'context-profile',
+    name: "context-profile",
     systemPrompt: (context) =>
       [
         `cwd=${context.cwd}`,
-        `listing=${context.cwdListing ?? ''}`,
-        `agents=${context.agentsMd ?? ''}`,
-        `additional=${context.additionalDirsInfo ?? ''}`,
-      ].join('\n'),
+        `listing=${context.cwdListing ?? ""}`,
+        `agents=${context.agentsMd ?? ""}`,
+        `additional=${context.additionalDirsInfo ?? ""}`,
+      ].join("\n"),
     tools: [],
   };
 }
 
 function lookupToolRegistration() {
   return {
-    name: 'Lookup',
-    description: 'Look up a short test value.',
+    name: "Lookup",
+    description: "Look up a short test value.",
     parameters: {
-      type: 'object',
+      type: "object",
       properties: {
-        query: { type: 'string' },
+        query: { type: "string" },
       },
-      required: ['query'],
+      required: ["query"],
       additionalProperties: false,
     },
   };
@@ -1924,7 +2104,7 @@ function profile(input: {
   readonly systemPrompt: string;
   readonly description?: string | undefined;
   readonly subagents?: Record<string, ResolvedAgentProfile> | undefined;
-  readonly modelPreference?: 'primary' | 'secondary';
+  readonly modelPreference?: "primary" | "secondary";
 }): ResolvedAgentProfile {
   return {
     name: input.name,
@@ -1936,9 +2116,9 @@ function profile(input: {
   };
 }
 
-function stat(kind: 'dir' | 'file') {
+function stat(kind: "dir" | "file") {
   return {
-    stMode: kind === 'dir' ? 0o040000 : 0o100000,
+    stMode: kind === "dir" ? 0o040000 : 0o100000,
     stIno: 0,
     stDev: 0,
     stNlink: 1,
@@ -1953,10 +2133,10 @@ function stat(kind: 'dir' | 'file') {
 
 function queuedTask(index: number): QueuedSubagentTask<number> {
   return {
-    kind: 'spawn',
+    kind: "spawn",
     data: index,
-    profileName: 'coder',
-    parentToolCallId: 'call_swarm',
+    profileName: "coder",
+    parentToolCallId: "call_swarm",
     prompt: `Review item-${String(index)}`,
     description: `Review #${String(index)}`,
     swarmIndex: index,
@@ -1966,10 +2146,10 @@ function queuedTask(index: number): QueuedSubagentTask<number> {
 
 function textResult(text: string): Awaited<ReturnType<GenerateFn>> {
   return {
-    id: 'mock-text',
+    id: "mock-text",
     message: {
-      role: 'assistant',
-      content: [{ type: 'text', text }],
+      role: "assistant",
+      content: [{ type: "text", text }],
       toolCalls: [],
     },
     usage: {
@@ -1978,50 +2158,67 @@ function textResult(text: string): Awaited<ReturnType<GenerateFn>> {
       inputCacheRead: 0,
       inputCacheCreation: 0,
     },
-    finishReason: 'completed',
-    rawFinishReason: 'stop',
+    finishReason: "completed",
+    rawFinishReason: "stop",
   };
 }
 
 function userTextMessages(history: readonly Message[]): string[] {
   return history
-    .filter((message) => message.role === 'user')
+    .filter((message) => message.role === "user")
     .map((message) =>
       message.content
-        .filter((part) => part.type === 'text')
+        .filter((part) => part.type === "text")
         .map((part) => part.text)
-        .join(''),
+        .join(""),
     );
 }
 
-async function writeWire(homedir: string, records: readonly Record<string, unknown>[]) {
+async function writeWire(
+  homedir: string,
+  records: readonly Record<string, unknown>[],
+) {
   await mkdir(homedir, { recursive: true });
   const wireRecords =
     records.length === 0
       ? []
       : [
           {
-            type: 'metadata',
+            type: "metadata",
             protocol_version: AGENT_WIRE_PROTOCOL_VERSION,
             created_at: 1,
           },
           ...records,
         ];
-  const text = wireRecords.map((record) => JSON.stringify(record)).join('\n');
-  await writeFile(join(homedir, 'wire.jsonl'), text.length === 0 ? '' : `${text}\n`, 'utf-8');
+  const text = wireRecords.map((record) => JSON.stringify(record)).join("\n");
+  await writeFile(
+    join(homedir, "wire.jsonl"),
+    text.length === 0 ? "" : `${text}\n`,
+    "utf-8",
+  );
 }
 
-function childBashToolResultOutput(child: AgentTestContext): string | undefined {
+function childBashToolResultOutput(
+  child: AgentTestContext,
+): string | undefined {
   for (const entry of child.allEvents) {
-    if (entry.type !== '[wire]' || entry.event !== 'context.append_loop_event') continue;
+    if (entry.type !== "[wire]" || entry.event !== "context.append_loop_event")
+      continue;
     const loopEvent = (
       entry.args as {
-        event?: { type?: string; toolCallId?: string; result?: { output?: unknown } };
+        event?: {
+          type?: string;
+          toolCallId?: string;
+          result?: { output?: unknown };
+        };
       }
     ).event;
-    if (loopEvent?.type === 'tool.result' && loopEvent.toolCallId === 'call_bash') {
+    if (
+      loopEvent?.type === "tool.result" &&
+      loopEvent.toolCallId === "call_bash"
+    ) {
       const output = loopEvent.result?.output;
-      return typeof output === 'string' ? output : undefined;
+      return typeof output === "string" ? output : undefined;
     }
   }
   return undefined;
@@ -2029,10 +2226,10 @@ function childBashToolResultOutput(child: AgentTestContext): string | undefined 
 
 function bashCall(): ToolCall {
   return {
-    type: 'function',
-    id: 'call_bash',
-    name: 'Bash',
-      arguments: '{"command":"printf should-not-run","timeout":60}',
+    type: "function",
+    id: "call_bash",
+    name: "Bash",
+    arguments: '{"command":"printf should-not-run","timeout":60}',
   };
 }
 

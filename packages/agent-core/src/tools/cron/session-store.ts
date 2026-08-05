@@ -19,15 +19,15 @@
  * added first comes first".
  */
 
-import { randomBytes } from 'node:crypto';
+import { randomBytes } from "node:crypto";
 
-import type { CronTask } from './types';
+import type { CronTask } from "./types";
 
 /**
  * Input to {@link SessionCronStore.add}: everything the caller supplies,
  * minus `id` and `createdAt` which the store generates.
  */
-export type SessionCronTaskInit = Omit<CronTask, 'id' | 'createdAt'>;
+export type SessionCronTaskInit = Omit<CronTask, "id" | "createdAt">;
 
 /** Matches the canonical cron task id shape (8 lower-hex chars). */
 const ID_REGEX = /^[0-9a-f]{8}$/;
@@ -137,7 +137,7 @@ export class SessionCronStore {
 
   private generateUniqueId(): string {
     for (let attempt = 0; attempt < MAX_ID_ATTEMPTS; attempt++) {
-      const candidate = randomBytes(4).toString('hex');
+      const candidate = randomBytes(4).toString("hex");
       // randomBytes(4).toString('hex') is always 8 lowercase hex chars,
       // so the regex check is belt-and-braces against future refactors
       // that swap the id source.

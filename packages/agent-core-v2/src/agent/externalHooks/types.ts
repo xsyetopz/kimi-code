@@ -1,26 +1,26 @@
-import type { ContentPart } from '#/kosong/contract/message';
+import type { ContentPart } from "#/kosong/contract/message";
 
 export const HOOK_EVENT_TYPES = [
-  'PreToolUse',
-  'PostToolUse',
-  'PostToolUseFailure',
-  'PermissionRequest',
-  'PermissionResult',
-  'UserPromptSubmit',
-  'UserPromptQueued',
-  'TurnStarted',
-  'Stop',
-  'StopFailure',
-  'Interrupt',
-  'SessionStart',
-  'SessionEnd',
-  'SessionHeartbeat',
-  'SubagentStart',
-  'SubagentStop',
-  'TaskStarted',
-  'PreCompact',
-  'PostCompact',
-  'Notification',
+  "PreToolUse",
+  "PostToolUse",
+  "PostToolUseFailure",
+  "PermissionRequest",
+  "PermissionResult",
+  "UserPromptSubmit",
+  "UserPromptQueued",
+  "TurnStarted",
+  "Stop",
+  "StopFailure",
+  "Interrupt",
+  "SessionStart",
+  "SessionEnd",
+  "SessionHeartbeat",
+  "SubagentStart",
+  "SubagentStop",
+  "TaskStarted",
+  "PreCompact",
+  "PostCompact",
+  "Notification",
 ] as const;
 
 export type HookEventType = (typeof HOOK_EVENT_TYPES)[number];
@@ -35,7 +35,7 @@ export interface HookDef {
 }
 
 export interface HookResult {
-  readonly action: 'allow' | 'block';
+  readonly action: "allow" | "block";
   readonly message?: string;
   readonly reason?: string;
   readonly stdout?: string;

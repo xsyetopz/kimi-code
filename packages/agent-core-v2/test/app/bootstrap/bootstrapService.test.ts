@@ -1,20 +1,25 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from "vitest";
 
-import { LifecycleScope, ScopeActivation, _clearScopedRegistryForTests, registerScopedService } from '#/_base/di/scope';
-import { createScopedTestHost } from '#/_base/di/test';
+import {
+  LifecycleScope,
+  ScopeActivation,
+  _clearScopedRegistryForTests,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { createScopedTestHost } from "#/_base/di/test";
 import {
   IBootstrapService,
   bootstrap,
   bootstrapSeed,
   resolveBootstrapOptions,
-} from '#/app/bootstrap/bootstrap';
-import { BootstrapService } from '#/app/bootstrap/bootstrapService';
-import { FileStorageService } from '#/persistence/backends/node-fs/fileStorageService';
-import { IFileSystemStorageService } from '#/persistence/interface/storage';
+} from "#/app/bootstrap/bootstrap";
+import { BootstrapService } from "#/app/bootstrap/bootstrapService";
+import { FileStorageService } from "#/persistence/backends/node-fs/fileStorageService";
+import { IFileSystemStorageService } from "#/persistence/interface/storage";
 
-import { stubClientIdentity } from './stubs';
+import { stubClientIdentity } from "./stubs";
 
-describe('BootstrapService (scoped)', () => {
+describe("BootstrapService (scoped)", () => {
   beforeEach(() => {
     // Keep the registry minimal so unrelated OnScopeCreated services do not run.
     _clearScopedRegistryForTests();
@@ -23,69 +28,90 @@ describe('BootstrapService (scoped)', () => {
       IBootstrapService,
       BootstrapService,
       ScopeActivation.OnScopeCreated,
-      'bootstrap',
+      "bootstrap",
     );
   });
 
-  it('resolves homeDir/configPath from the seeded context token', () => {
+  it("resolves homeDir/configPath from the seeded context token", () => {
     const host = createScopedTestHost(
-      bootstrapSeed({ homeDir: '/tmp/kimi-home', clientIdentity: stubClientIdentity }),
+      bootstrapSeed({
+        homeDir: "/tmp/kimi-home",
+        clientIdentity: stubClientIdentity,
+      }),
     );
     const svc = host.app.accessor.get(IBootstrapService);
-    expect(svc.homeDir).toBe('/tmp/kimi-home');
-    expect(svc.configPath).toBe('/tmp/kimi-home/config.toml');
-    expect(svc.scope('sessions')).toBe('sessions');
+    expect(svc.homeDir).toBe("/tmp/kimi-home");
+    expect(svc.configPath).toBe("/tmp/kimi-home/config.toml");
+    expect(svc.scope("sessions")).toBe("sessions");
     host.dispose();
   });
 
-  it('exposes the seeded client identity', () => {
+  it("exposes the seeded client identity", () => {
     const host = createScopedTestHost(
-      bootstrapSeed({ homeDir: '/tmp/kimi-home', clientIdentity: stubClientIdentity }),
+      bootstrapSeed({
+        homeDir: "/tmp/kimi-home",
+        clientIdentity: stubClientIdentity,
+      }),
     );
     const svc = host.app.accessor.get(IBootstrapService);
     expect(svc.clientIdentity).toEqual(stubClientIdentity);
     host.dispose();
   });
 
-  it('getEnv reads from the seeded env bag', () => {
+  it("getEnv reads from the seeded env bag", () => {
     const host = createScopedTestHost(
-      bootstrapSeed({ env: { FOO: 'bar' }, clientIdentity: stubClientIdentity }),
+      bootstrapSeed({
+        env: { FOO: "bar" },
+        clientIdentity: stubClientIdentity,
+      }),
     );
     const svc = host.app.accessor.get(IBootstrapService);
-    expect(svc.getEnv('FOO')).toBe('bar');
-    expect(svc.getEnv('MISSING')).toBeUndefined();
+    expect(svc.getEnv("FOO")).toBe("bar");
+    expect(svc.getEnv("MISSING")).toBeUndefined();
     host.dispose();
   });
 });
 
-describe('resolveBootstrapOptions', () => {
-  it('prefers explicit homeDir over KIMI_CODE_HOME over osHomeDir', () => {
-    expect(
-      resolveBootstrapOptions({ homeDir: '/a', osHomeDir: '/b', env: {}, clientIdentity: stubClientIdentity })
-        .homeDir,
-    ).toBe('/a');
+describe("resolveBootstrapOptions", () => {
+  it("prefers explicit homeDir over KIMI_CODE_HOME over osHomeDir", () => {
     expect(
       resolveBootstrapOptions({
-        osHomeDir: '/b',
-        env: { KIMI_CODE_HOME: '/c' },
+        homeDir: "/a",
+        osHomeDir: "/b",
+        env: {},
         clientIdentity: stubClientIdentity,
       }).homeDir,
-    ).toBe('/c');
+    ).toBe("/a");
     expect(
-      resolveBootstrapOptions({ osHomeDir: '/b', env: {}, clientIdentity: stubClientIdentity }).homeDir,
-    ).toBe('/b/.kimi-code');
+      resolveBootstrapOptions({
+        osHomeDir: "/b",
+        env: { KIMI_CODE_HOME: "/c" },
+        clientIdentity: stubClientIdentity,
+      }).homeDir,
+    ).toBe("/c");
+    expect(
+      resolveBootstrapOptions({
+        osHomeDir: "/b",
+        env: {},
+        clientIdentity: stubClientIdentity,
+      }).homeDir,
+    ).toBe("/b/.kimi-code");
   });
 
-  it('passes through an explicit clientIdentity', () => {
+  it("passes through an explicit clientIdentity", () => {
     expect(
-      resolveBootstrapOptions({ env: {}, clientIdentity: stubClientIdentity }).clientIdentity,
+      resolveBootstrapOptions({ env: {}, clientIdentity: stubClientIdentity })
+        .clientIdentity,
     ).toEqual(stubClientIdentity);
   });
 });
 
-describe('bootstrap() storage seeding', () => {
-  it('seeds IFileSystemStorageService as a FileStorageService instance', () => {
-    const { app } = bootstrap({ homeDir: '/tmp/kimi-home', clientIdentity: stubClientIdentity });
+describe("bootstrap() storage seeding", () => {
+  it("seeds IFileSystemStorageService as a FileStorageService instance", () => {
+    const { app } = bootstrap({
+      homeDir: "/tmp/kimi-home",
+      clientIdentity: stubClientIdentity,
+    });
     try {
       const storage = app.accessor.get(IFileSystemStorageService);
       expect(storage).toBeInstanceOf(FileStorageService);

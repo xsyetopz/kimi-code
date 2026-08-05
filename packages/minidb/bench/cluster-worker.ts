@@ -9,13 +9,13 @@
 //     shards are skipped (shard-affinity workloads).
 //   read  <dir> <shards> <prefix> <n>
 
-import { ClusterDb } from '../src/cluster/index.js';
-import { LockError } from '../src/lockfile.js';
+import { ClusterDb } from "../src/cluster/index.js";
+import { LockError } from "../src/lockfile.js";
 
 const [, , mode, ...rest] = process.argv;
 
 function out(report: Record<string, unknown>): void {
-  process.stdout.write(JSON.stringify(report) + '\n');
+  process.stdout.write(JSON.stringify(report) + "\n");
 }
 
 function sleep(ms: number): Promise<void> {
@@ -23,9 +23,18 @@ function sleep(ms: number): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  const [dir, shards, prefix, n, valueBytes = '64', lockHoldMs = '250', allow = 'all'] = rest;
+  const [
+    dir,
+    shards,
+    prefix,
+    n,
+    valueBytes = "64",
+    lockHoldMs = "250",
+    allow = "all",
+  ] = rest;
   const shardCount = Number(shards);
-  const allowed = allow === 'all' ? null : new Set(allow.split(',').map(Number));
+  const allowed =
+    allow === "all" ? null : new Set(allow.split(",").map(Number));
   const want = Number(n);
 
   let retries = 0;
@@ -34,22 +43,26 @@ async function main(): Promise<void> {
       try {
         return await fn();
       } catch (e) {
-        if ((e as { code?: string }).code !== 'ELOCKED' && !(e instanceof LockError)) throw e;
+        if (
+          (e as { code?: string }).code !== "ELOCKED" &&
+          !(e instanceof LockError)
+        )
+          throw e;
         retries++;
         await sleep(15 + Math.floor(Math.random() * 45));
       }
     }
   };
 
-  if (mode === 'write') {
+  if (mode === "write") {
     const db = await ClusterDb.open({
       dir: dir!,
       shardCount,
-      valueCodec: 'json',
-      fsyncPolicy: 'everysec',
+      valueCodec: "json",
+      fsyncPolicy: "everysec",
       lockHoldMs: Number(lockHoldMs),
     });
-    const pad = 'x'.repeat(Number(valueBytes));
+    const pad = "x".repeat(Number(valueBytes));
     let written = 0;
     const t0 = performance.now();
     for (let i = 0; written < want; i++) {
@@ -59,17 +72,30 @@ async function main(): Promise<void> {
       written++;
     }
     const ms = performance.now() - t0;
-    out({ ok: 1, mode, n: written, ms, retries, lockWaits: db.stats().lockWaits });
+    out({
+      ok: 1,
+      mode,
+      n: written,
+      ms,
+      retries,
+      lockWaits: db.stats().lockWaits,
+    });
     await db.close();
     return;
   }
 
-  if (mode === 'read') {
-    const db = await ClusterDb.open({ dir: dir!, shardCount, valueCodec: 'json', readOnly: true });
+  if (mode === "read") {
+    const db = await ClusterDb.open({
+      dir: dir!,
+      shardCount,
+      valueCodec: "json",
+      readOnly: true,
+    });
     let found = 0;
     const t0 = performance.now();
     for (let i = 0; found < want; i++) {
-      if (i > want * shardCount * 8 + 1000) throw new Error(`read found only ${found}/${want} keys`);
+      if (i > want * shardCount * 8 + 1000)
+        throw new Error(`read found only ${found}/${want} keys`);
       const key = `${prefix}:${i}`;
       if (allowed && !allowed.has(db.shardOf(key))) continue;
       const v = (await db.get(key)) as { i?: number } | undefined;
@@ -86,6 +112,10 @@ async function main(): Promise<void> {
 }
 
 main().catch((e) => {
-  out({ ok: 0, mode, error: String(e && (e as Error).stack ? (e as Error).stack : e) });
+  out({
+    ok: 0,
+    mode,
+    error: String(e && (e as Error).stack ? (e as Error).stack : e),
+  });
   process.exit(1);
 });

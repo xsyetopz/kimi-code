@@ -1,13 +1,13 @@
-import { isProviderRateLimitError, type TokenUsage } from '@moonshot-ai/kosong';
-import * as retry from 'retry';
+import { isProviderRateLimitError, type TokenUsage } from "@moonshot-ai/kosong";
+import * as retry from "retry";
 
 import type {
   RunSubagentOptions,
   SpawnSubagentOptions,
   SubagentHandle,
-} from './subagent-host';
-import type { SubagentModelChoice } from './subagent-binding';
-import { isUserCancellation } from '../utils/abort';
+} from "./subagent-host";
+import type { SubagentModelChoice } from "./subagent-binding";
+import { isUserCancellation } from "../utils/abort";
 
 /*
 Subagent batch scheduling contract:
@@ -36,9 +36,10 @@ const RATE_LIMIT_RETRY_BASE_MS = 3000;
 const RATE_LIMIT_RETRY_FACTOR = 2;
 const RATE_LIMIT_CAPACITY_SHRINK_INTERVAL_MS = 2000;
 const RATE_LIMIT_CAPACITY_RECOVERY_INTERVAL_MS = 3 * 60 * 1000;
-const RATE_LIMIT_SUSPENDED_REASON = 'Provider rate limit; subagent requeued for retry.';
+const RATE_LIMIT_SUSPENDED_REASON =
+  "Provider rate limit; subagent requeued for retry.";
 
-const AGENT_SWARM_MAX_CONCURRENCY_ENV = 'KIMI_CODE_AGENT_SWARM_MAX_CONCURRENCY';
+const AGENT_SWARM_MAX_CONCURRENCY_ENV = "KIMI_CODE_AGENT_SWARM_MAX_CONCURRENCY";
 
 type BaseQueuedSubagentTask<T> = {
   readonly data: T;
@@ -56,14 +57,15 @@ type BaseQueuedSubagentTask<T> = {
 };
 
 export type SpawnQueuedSubagentTask<T = unknown> = BaseQueuedSubagentTask<T> & {
-  readonly kind: 'spawn';
+  readonly kind: "spawn";
   readonly resumeAgentId?: undefined;
 };
 
-export type ResumeQueuedSubagentTask<T = unknown> = BaseQueuedSubagentTask<T> & {
-  readonly kind: 'resume';
-  readonly resumeAgentId: string;
-};
+export type ResumeQueuedSubagentTask<T = unknown> =
+  BaseQueuedSubagentTask<T> & {
+    readonly kind: "resume";
+    readonly resumeAgentId: string;
+  };
 
 export type QueuedSubagentTask<T = unknown> =
   | SpawnQueuedSubagentTask<T>
@@ -72,8 +74,8 @@ export type QueuedSubagentTask<T = unknown> =
 export type SubagentResult<T = unknown> = {
   readonly task: QueuedSubagentTask<T>;
   readonly agentId?: string;
-  readonly status: 'completed' | 'failed' | 'aborted';
-  readonly state?: 'started' | 'not_started';
+  readonly status: "completed" | "failed" | "aborted";
+  readonly state?: "started" | "not_started";
   readonly result?: string;
   readonly usage?: TokenUsage;
   readonly error?: string;
@@ -93,7 +95,7 @@ export type SubagentBatchLauncher = {
 };
 
 type RateLimitedOutcome = {
-  readonly type: 'rate_limited';
+  readonly type: "rate_limited";
   readonly agentId: string;
   readonly error: string;
 };
@@ -173,14 +175,14 @@ export class SubagentBatch<T> {
       if (isUserCancellation(this.batchSignal?.reason)) {
         this.finishWithUserCancellation();
       } else {
-        this.fail(this.batchSignal?.reason ?? new Error('Aborted'));
+        this.fail(this.batchSignal?.reason ?? new Error("Aborted"));
       }
     };
   }
 
   run(): Promise<Array<SubagentResult<T>>> {
     if (this.started) {
-      throw new Error('SubagentBatch.run() can only be called once.');
+      throw new Error("SubagentBatch.run() can only be called once.");
     }
     this.started = true;
 
@@ -198,7 +200,9 @@ export class SubagentBatch<T> {
         return;
       }
 
-      this.batchSignal?.addEventListener('abort', this.batchAbortListener, { once: true });
+      this.batchSignal?.addEventListener("abort", this.batchAbortListener, {
+        once: true,
+      });
       this.schedule();
     });
   }
@@ -237,7 +241,8 @@ export class SubagentBatch<T> {
 
     this.normalLaunchTimer = setTimeout(() => {
       this.normalLaunchTimer = undefined;
-      if (this.finished || this.rateLimitMode || this.pending.length === 0) return;
+      if (this.finished || this.rateLimitMode || this.pending.length === 0)
+        return;
       if (this.isAtConcurrencyLimit()) return;
       this.startAttempt(this.pending.shift()!);
       this.normalLaunchCount += 1;
@@ -246,7 +251,10 @@ export class SubagentBatch<T> {
   }
 
   private isAtConcurrencyLimit(): boolean {
-    return this.maxConcurrency !== undefined && this.active.size >= this.maxConcurrency;
+    return (
+      this.maxConcurrency !== undefined &&
+      this.active.size >= this.maxConcurrency
+    );
   }
 
   private scheduleRateLimitLaunch(): void {
@@ -260,14 +268,22 @@ export class SubagentBatch<T> {
       return;
     }
 
-    const nextAllowedAt = Math.max(this.nextRateLimitLaunchAt, this.nextPendingReadyAt());
-    const nextWakeupAt = Math.min(nextAllowedAt, this.nextRateLimitCapacityRecoveryAt());
+    const nextAllowedAt = Math.max(
+      this.nextRateLimitLaunchAt,
+      this.nextPendingReadyAt(),
+    );
+    const nextWakeupAt = Math.min(
+      nextAllowedAt,
+      this.nextRateLimitCapacityRecoveryAt(),
+    );
     if (nextWakeupAt > now) {
       this.scheduleRateLimitWakeup(nextWakeupAt, now);
       return;
     }
 
-    const pendingIndex = this.pending.findIndex((state) => state.retryReadyAt <= now);
+    const pendingIndex = this.pending.findIndex(
+      (state) => state.retryReadyAt <= now,
+    );
     if (pendingIndex === -1) return;
 
     const [state] = this.pending.splice(pendingIndex, 1);
@@ -299,7 +315,9 @@ export class SubagentBatch<T> {
     );
   }
 
-  private async runAttempt(attempt: ActiveAttempt<T>): Promise<AttemptOutcome<T>> {
+  private async runAttempt(
+    attempt: ActiveAttempt<T>,
+  ): Promise<AttemptOutcome<T>> {
     const task = attempt.state.task;
     const runOptions: RunSubagentOptions = {
       parentToolCallId: task.parentToolCallId,
@@ -319,8 +337,11 @@ export class SubagentBatch<T> {
     try {
       attempt.controller.signal.throwIfAborted();
       if (attempt.state.retryAgentId !== undefined) {
-        handle = await this.launcher.retry(attempt.state.retryAgentId, runOptions);
-      } else if (task.kind === 'resume') {
+        handle = await this.launcher.retry(
+          attempt.state.retryAgentId,
+          runOptions,
+        );
+      } else if (task.kind === "resume") {
         handle = await this.launcher.resume(task.resumeAgentId, runOptions);
       } else {
         const spawnOptions: SpawnSubagentOptions = {
@@ -341,16 +362,16 @@ export class SubagentBatch<T> {
       return {
         task,
         agentId: handle.agentId,
-        status: 'completed',
+        status: "completed",
         result: completion.result,
         usage: completion.usage,
       };
     } catch (error) {
       if (isProviderRateLimitError(error)) {
         return {
-          type: 'rate_limited',
+          type: "rate_limited",
           agentId: handle.agentId,
-          error: this.attemptErrorMessage(attempt, error, 'failed'),
+          error: this.attemptErrorMessage(attempt, error, "failed"),
         };
       }
 
@@ -358,16 +379,20 @@ export class SubagentBatch<T> {
     }
   }
 
-  private failedAttemptOutcome(attempt: ActiveAttempt<T>, error: unknown): SubagentResult<T> {
+  private failedAttemptOutcome(
+    attempt: ActiveAttempt<T>,
+    error: unknown,
+  ): SubagentResult<T> {
     const status =
-      attempt.controller.signal.aborted && isUserCancellation(attempt.controller.signal.reason)
-        ? 'aborted'
-        : 'failed';
+      attempt.controller.signal.aborted &&
+      isUserCancellation(attempt.controller.signal.reason)
+        ? "aborted"
+        : "failed";
     return {
       task: attempt.state.task,
       agentId: attempt.state.agentId,
       status,
-      state: attempt.state.agentId === undefined ? 'not_started' : 'started',
+      state: attempt.state.agentId === undefined ? "not_started" : "started",
       error: this.attemptErrorMessage(attempt, error, status),
     };
   }
@@ -388,18 +413,21 @@ export class SubagentBatch<T> {
     }
   }
 
-  private handleAttemptOutcome(attempt: ActiveAttempt<T>, outcome: AttemptOutcome<T>): void {
+  private handleAttemptOutcome(
+    attempt: ActiveAttempt<T>,
+    outcome: AttemptOutcome<T>,
+  ): void {
     if (!this.releaseAttempt(attempt)) return;
     if (this.finished) return;
 
-    if ('status' in outcome) {
+    if ("status" in outcome) {
       this.results[attempt.state.index] = outcome;
     } else if (this.isOnlyUnfinishedTask(attempt.state)) {
       this.results[attempt.state.index] = {
         task: attempt.state.task,
         agentId: outcome.agentId,
-        status: 'failed',
-        state: 'started',
+        status: "failed",
+        state: "started",
         error: outcome.error,
       };
     } else {
@@ -414,7 +442,7 @@ export class SubagentBatch<T> {
     this.results[attempt.state.index] = {
       task: attempt.state.task,
       agentId: attempt.state.agentId,
-      status: 'failed',
+      status: "failed",
       error: error instanceof Error ? error.message : String(error),
     };
     this.schedule();
@@ -450,7 +478,10 @@ export class SubagentBatch<T> {
     this.enterRateLimitMode(now);
 
     if (!attempt.ready) {
-      this.globalRetryIntervalMs = Math.max(this.globalRetryIntervalMs * 2, retryDelay);
+      this.globalRetryIntervalMs = Math.max(
+        this.globalRetryIntervalMs * 2,
+        retryDelay,
+      );
       this.nextRateLimitLaunchAt = Math.max(
         this.nextRateLimitLaunchAt,
         now + this.globalRetryIntervalMs,
@@ -550,7 +581,9 @@ export class SubagentBatch<T> {
   }
 
   private isOnlyUnfinishedTask(state: TaskState<T>): boolean {
-    return this.results.every((result, index) => index === state.index || result !== undefined);
+    return this.results.every(
+      (result, index) => index === state.index || result !== undefined,
+    );
   }
 
   private finishWithUserCancellation(): void {
@@ -565,19 +598,19 @@ export class SubagentBatch<T> {
           return {
             task: state.task,
             agentId: state.agentId,
-            status: 'aborted',
-            state: 'started',
+            status: "aborted",
+            state: "started",
             error:
-              'The user manually interrupted this subagent batch before this subagent finished.',
+              "The user manually interrupted this subagent batch before this subagent finished.",
           };
         }
 
         return {
           task: state.task,
-          status: 'aborted',
-          state: 'not_started',
+          status: "aborted",
+          state: "not_started",
           error:
-            'The user manually interrupted this subagent batch before this subagent was started.',
+            "The user manually interrupted this subagent batch before this subagent was started.",
         };
       }),
     );
@@ -598,7 +631,7 @@ export class SubagentBatch<T> {
   }
 
   private cleanup(): void {
-    this.batchSignal?.removeEventListener('abort', this.batchAbortListener);
+    this.batchSignal?.removeEventListener("abort", this.batchAbortListener);
     this.clearNormalTimer();
     this.clearRateLimitTimer();
     for (const attempt of this.active.values()) {
@@ -608,16 +641,21 @@ export class SubagentBatch<T> {
   }
 
   private clearNormalTimer(): void {
-    if (this.normalLaunchTimer !== undefined) clearTimeout(this.normalLaunchTimer);
+    if (this.normalLaunchTimer !== undefined)
+      clearTimeout(this.normalLaunchTimer);
     this.normalLaunchTimer = undefined;
   }
 
   private clearRateLimitTimer(): void {
-    if (this.rateLimitLaunchTimer !== undefined) clearTimeout(this.rateLimitLaunchTimer);
+    if (this.rateLimitLaunchTimer !== undefined)
+      clearTimeout(this.rateLimitLaunchTimer);
     this.rateLimitLaunchTimer = undefined;
   }
 
-  private linkAttemptSignals(attempt: ActiveAttempt<T>, task: QueuedSubagentTask<T>): () => void {
+  private linkAttemptSignals(
+    attempt: ActiveAttempt<T>,
+    task: QueuedSubagentTask<T>,
+  ): () => void {
     const abortFromBatch = () => {
       attempt.controller.abort(this.controller.signal.reason);
     };
@@ -629,7 +667,7 @@ export class SubagentBatch<T> {
         ? undefined
         : setTimeout(() => {
             attempt.timedOut = true;
-            attempt.controller.abort(new Error('Aborted'));
+            attempt.controller.abort(new Error("Aborted"));
           }, task.timeout);
 
     if (this.controller.signal.aborted) {
@@ -637,26 +675,29 @@ export class SubagentBatch<T> {
     } else if (task.signal?.aborted === true) {
       abortFromTask();
     } else {
-      this.controller.signal.addEventListener('abort', abortFromBatch, { once: true });
-      task.signal?.addEventListener('abort', abortFromTask, { once: true });
+      this.controller.signal.addEventListener("abort", abortFromBatch, {
+        once: true,
+      });
+      task.signal?.addEventListener("abort", abortFromTask, { once: true });
     }
 
     return () => {
       if (timeout !== undefined) clearTimeout(timeout);
-      this.controller.signal.removeEventListener('abort', abortFromBatch);
-      task.signal?.removeEventListener('abort', abortFromTask);
+      this.controller.signal.removeEventListener("abort", abortFromBatch);
+      task.signal?.removeEventListener("abort", abortFromTask);
     };
   }
 
   private attemptErrorMessage(
     attempt: ActiveAttempt<T>,
     error: unknown,
-    status: SubagentResult<T>['status'],
+    status: SubagentResult<T>["status"],
   ): string {
     if (attempt.timedOut && attempt.state.task.timeout !== undefined) {
-      return 'Subagent timed out.';
+      return "Subagent timed out.";
     }
-    if (status === 'aborted') return 'The user manually interrupted this subagent batch.';
+    if (status === "aborted")
+      return "The user manually interrupted this subagent batch.";
     return error instanceof Error ? error.message : String(error);
   }
 }
@@ -672,7 +713,7 @@ export function resolveSwarmMaxConcurrency(
   env: Readonly<Record<string, string | undefined>> = process.env,
 ): number | undefined {
   const raw = env[AGENT_SWARM_MAX_CONCURRENCY_ENV];
-  if (raw === undefined || raw.trim() === '') return undefined;
+  if (raw === undefined || raw.trim() === "") return undefined;
   const value = Number(raw);
   if (!Number.isInteger(value) || value <= 0) {
     throw new Error(

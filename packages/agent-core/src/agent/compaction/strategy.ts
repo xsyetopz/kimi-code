@@ -1,4 +1,4 @@
-import type { CompactionSource } from './types';
+import type { CompactionSource } from "./types";
 
 export interface CompactionConfig {
   /** Fraction of the model context window that triggers auto-compaction. */
@@ -66,7 +66,11 @@ export class DefaultCompactionStrategy implements CompactionStrategy {
 
   private shouldUseReservedContext(usedSize: number): boolean {
     const reservedSize = this.config.reservedContextSize;
-    return reservedSize > 0 && reservedSize < this.maxSize && usedSize + reservedSize >= this.maxSize;
+    return (
+      reservedSize > 0 &&
+      reservedSize < this.maxSize &&
+      usedSize + reservedSize >= this.maxSize
+    );
   }
 
   get checkAfterStep(): boolean {

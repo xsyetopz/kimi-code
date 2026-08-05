@@ -32,20 +32,35 @@
 // module under Node's native type stripping with `execArgv: []` — no tsx or
 // bundler required inside the worker.
 
-import fsSync from 'node:fs';
-import fsp from 'node:fs/promises';
-import path from 'node:path';
-import { crc32 } from '../crc32.ts';
-import { scanFrameRefsFdAsync, scanBatchOpRefs, TYPE_SET, TYPE_DEL, TYPE_BATCH } from '../codec.ts';
-import type { FrameRef } from '../codec.ts';
-import { tokenize, extractText } from '../text-index/tokenize.ts';
-import { createNgramTokenizer } from '../trigram.ts';
-import { encodeRecord, encodePostingList, decodeRecord, decodePostingList } from '../text-postings.ts';
-import { GenFileWriter, ByteReader, writeTextDictionaryImage } from '../gen-codec.ts';
+import fsSync from "node:fs";
+import fsp from "node:fs/promises";
+import path from "node:path";
+import { crc32 } from "../crc32.ts";
+import {
+  scanFrameRefsFdAsync,
+  scanBatchOpRefs,
+  TYPE_SET,
+  TYPE_DEL,
+  TYPE_BATCH,
+} from "../codec.ts";
+import type { FrameRef } from "../codec.ts";
+import { tokenize, extractText } from "../text-index/tokenize.ts";
+import { createNgramTokenizer } from "../trigram.ts";
+import {
+  encodeRecord,
+  encodePostingList,
+  decodeRecord,
+  decodePostingList,
+} from "../text-postings.ts";
+import {
+  GenFileWriter,
+  ByteReader,
+  writeTextDictionaryImage,
+} from "../gen-codec.ts";
 
 // ---- spec / result ------------------------------------------------------------
 
-export type WorkerTokenizerName = 'default' | 'ngram';
+export type WorkerTokenizerName = "default" | "ngram";
 
 export interface WorkerTextIndexSpec {
   name: string;
@@ -106,8 +121,8 @@ export interface TextBuildCoreResult {
 }
 
 function abortError(): Error {
-  const err = new Error('text build aborted');
-  err.name = 'AbortError';
+  const err = new Error("text build aborted");
+  err.name = "AbortError";
   return err;
 }
 
@@ -128,7 +143,7 @@ const AGG_TERM_BYTES = 96;
 // ---- live-set reconstruction ----------------------------------------------------
 
 interface LiveLoc {
-  file: 'snapshot' | 'wal';
+  file: "snapshot" | "wal";
   off: number;
   len: number;
 }
@@ -139,7 +154,7 @@ function readAtSync(fd: number, off: number, len: number): Buffer {
   let got = 0;
   while (got < len) {
     const r = fsSync.readSync(fd, buf, got, len - got, off + got);
-    if (r === 0) throw new Error('text build: short read past EOF');
+    if (r === 0) throw new Error("text build: short read past EOF");
     got += r;
   }
   return buf;
@@ -149,10 +164,21 @@ function readAtSync(fd: number, off: number, len: number): Buffer {
  *  (expired SET → DEL, BATCH unrolled with whole-batch skip on a malformed
  *  body). Value bytes are never copied — only their locations. Returns true
  *  when the frame was an expired-SET drop. */
-function applyFrame(f: FrameRef, file: 'snapshot' | 'wal', fd: number, live: Map<string, LiveLoc>, now: number): boolean {
+function applyFrame(
+  f: FrameRef,
+  file: "snapshot" | "wal",
+  fd: number,
+  live: Map<string, LiveLoc>,
+  now: number,
+): boolean {
   let droppedExpired = false;
-  const applySet = (key: Buffer, valueOff: number, valLen: number, expireAt: number): void => {
-    const k = key.toString('binary');
+  const applySet = (
+    key: Buffer,
+    valueOff: number,
+    valLen: number,
+    expireAt: number,
+  ): void => {
+    const k = key.toString("binary");
     if (expireAt && expireAt <= now) {
       live.delete(k);
       droppedExpired = true;
@@ -161,7 +187,7 @@ function applyFrame(f: FrameRef, file: 'snapshot' | 'wal', fd: number, live: Map
     live.set(k, { file, off: valueOff, len: valLen });
   };
   const applyDel = (key: Buffer): void => {
-    live.delete(key.toString('binary'));
+    live.delete(key.toString("binary"));
   };
   if (f.type === TYPE_SET) {
     applySet(f.key, f.valueOff, f.valLen, f.expireAt);
@@ -175,7 +201,8 @@ function applyFrame(f: FrameRef, file: 'snapshot' | 'wal', fd: number, live: Map
       return false; // malformed batch with a valid outer CRC: skip whole (frameToOps)
     }
     for (const op of ops) {
-      if (op.type === TYPE_SET) applySet(op.key, op.valueOff, op.valLen, op.expireAt);
+      if (op.type === TYPE_SET)
+        applySet(op.key, op.valueOff, op.valLen, op.expireAt);
       else if (op.type === TYPE_DEL) applyDel(op.key);
     }
   }
@@ -188,9 +215,13 @@ function applyFrame(f: FrameRef, file: 'snapshot' | 'wal', fd: number, live: Map
  *  records in the native postings record framing). `syncIo` selects
  *  writeSync (worker thread) over thread-pool writes (inline fallback) —
  *  see TextBuildCoreSpec.syncIo. */
-async function flushSegment(segPath: string, agg: Map<string, Map<number, number>>, syncIo: boolean): Promise<void> {
+async function flushSegment(
+  segPath: string,
+  agg: Map<string, Map<number, number>>,
+  syncIo: boolean,
+): Promise<void> {
   const terms = [...agg.keys()].sort();
-  const fh = await fsp.open(segPath, 'w');
+  const fh = await fsp.open(segPath, "w");
   let batch: Buffer[] = [];
   let batchBytes = 0;
   const flush = async (): Promise<void> => {
@@ -200,8 +231,11 @@ async function flushSegment(segPath: string, agg: Map<string, Map<number, number
     batchBytes = 0;
     let written = 0;
     while (written < buf.length) {
-      const n = syncIo ? fsSync.writeSync(fh.fd, buf, written) : (await fh.write(buf, written)).bytesWritten;
-      if (n === 0) throw new Error('text build: segment write made no progress');
+      const n = syncIo
+        ? fsSync.writeSync(fh.fd, buf, written)
+        : (await fh.write(buf, written)).bytesWritten;
+      if (n === 0)
+        throw new Error("text build: segment write made no progress");
       written += n;
     }
   };
@@ -232,7 +266,7 @@ class SegmentReader {
   current: { term: string; df: number; payload: Buffer } | null = null;
 
   private constructor(segPath: string) {
-    this.fd = fsSync.openSync(segPath, 'r');
+    this.fd = fsSync.openSync(segPath, "r");
     this.size = fsSync.fstatSync(this.fd).size;
   }
 
@@ -252,8 +286,20 @@ class SegmentReader {
       this.bufStart = this.pos;
       this.bufLen = 0;
     }
-    while (this.bufLen < this.buf.length && this.bufStart + this.bufLen < this.size) {
-      const n = fsSync.readSync(this.fd, this.buf, this.bufLen, Math.min(this.buf.length - this.bufLen, this.size - this.bufStart - this.bufLen), this.bufStart + this.bufLen);
+    while (
+      this.bufLen < this.buf.length &&
+      this.bufStart + this.bufLen < this.size
+    ) {
+      const n = fsSync.readSync(
+        this.fd,
+        this.buf,
+        this.bufLen,
+        Math.min(
+          this.buf.length - this.bufLen,
+          this.size - this.bufStart - this.bufLen,
+        ),
+        this.bufStart + this.bufLen,
+      );
       if (n === 0) break;
       this.bufLen += n;
     }
@@ -273,13 +319,20 @@ class SegmentReader {
           if (avail >= recLen) {
             const recBuf = Buffer.from(this.buf.subarray(o, o + recLen));
             const rec = decodeRecord(recBuf);
-            this.current = { term: rec.term, df: rec.df, payload: Buffer.from(rec.payload) };
+            this.current = {
+              term: rec.term,
+              df: rec.df,
+              payload: Buffer.from(rec.payload),
+            };
             this.pos += recLen;
             return;
           }
         }
       }
-      if (this.bufStart + this.bufLen >= this.size && this.pos >= this.bufStart + this.bufLen) {
+      if (
+        this.bufStart + this.bufLen >= this.size &&
+        this.pos >= this.bufStart + this.bufLen
+      ) {
         this.current = null;
         return;
       }
@@ -309,9 +362,12 @@ class RawPostingsWriter {
     private readonly syncIo: boolean,
   ) {}
 
-  static async open(filePath: string, opts: { syncIo?: boolean } = {}): Promise<RawPostingsWriter> {
+  static async open(
+    filePath: string,
+    opts: { syncIo?: boolean } = {},
+  ): Promise<RawPostingsWriter> {
     const w = new RawPostingsWriter(filePath, opts.syncIo ?? false);
-    w.fh = await fsp.open(filePath, 'w');
+    w.fh = await fsp.open(filePath, "w");
     return w;
   }
 
@@ -323,8 +379,11 @@ class RawPostingsWriter {
     this.crc = crc32(buf, this.crc);
     let written = 0;
     while (written < buf.length) {
-      const n = this.syncIo ? fsSync.writeSync(this.fh!.fd, buf, written) : (await this.fh!.write(buf, written)).bytesWritten;
-      if (n === 0) throw new Error('text build: postings write made no progress');
+      const n = this.syncIo
+        ? fsSync.writeSync(this.fh!.fd, buf, written)
+        : (await this.fh!.write(buf, written)).bytesWritten;
+      if (n === 0)
+        throw new Error("text build: postings write made no progress");
       written += n;
     }
   }
@@ -356,7 +415,7 @@ class RawPostingsWriter {
 
 // ---- base docs image (worker-produced doc table) ---------------------------------
 
-const BASE_DOCS_MAGIC = 'MDTB';
+const BASE_DOCS_MAGIC = "MDTB";
 const BASE_DOCS_VERSION = 1;
 
 /** The base doc table produced by the worker: docID -> key (undefined = the
@@ -369,7 +428,11 @@ async function writeBaseDocsImage(
   keys: (string | undefined)[],
   docLens: Map<number, number>,
 ): Promise<{ bytes: number; crc32: number }> {
-  const w = await GenFileWriter.open(filePath, BASE_DOCS_MAGIC, BASE_DOCS_VERSION);
+  const w = await GenFileWriter.open(
+    filePath,
+    BASE_DOCS_MAGIC,
+    BASE_DOCS_VERSION,
+  );
   try {
     await w.writeRecord((b) => b.u64(keys.length));
     for (let i = 0; i < keys.length; i++) {
@@ -392,7 +455,10 @@ async function writeBaseDocsImage(
 }
 
 /** Read back a base docs image (main thread, at rebase attach time). */
-export function readBaseDocsImage(r: ByteReader): { keys: (string | undefined)[]; docLens: Map<number, number> } {
+export function readBaseDocsImage(r: ByteReader): {
+  keys: (string | undefined)[];
+  docLens: Map<number, number>;
+} {
   const count = r.u64();
   const keys: (string | undefined)[] = [];
   const docLens = new Map<number, number>();
@@ -409,7 +475,7 @@ export function readBaseDocsImage(r: ByteReader): { keys: (string | undefined)[]
       throw new Error(`base docs image: unknown presence tag ${present}`);
     }
   }
-  if (!r.done) throw new Error('base docs image: trailing bytes');
+  if (!r.done) throw new Error("base docs image: trailing bytes");
   return { keys, docLens };
 }
 
@@ -435,9 +501,10 @@ export async function readBaseDocsImageAsync(
     } else {
       throw new Error(`base docs image: unknown presence tag ${present}`);
     }
-    if (i % yieldEvery === yieldEvery - 1) await new Promise((res) => setImmediate(res));
+    if (i % yieldEvery === yieldEvery - 1)
+      await new Promise((res) => setImmediate(res));
   }
-  if (!r.done) throw new Error('base docs image: trailing bytes');
+  if (!r.done) throw new Error("base docs image: trailing bytes");
   return { keys, docLens };
 }
 
@@ -461,7 +528,7 @@ function tokenizerFor(name: WorkerTokenizerName): (text: string) => string[] {
   // Mirrors MiniDb's textIndexTokenizers mapping for the BUILT-IN tokenizers
   // (custom function tokenizers cannot cross the worker boundary — such
   // indexes stay on the main-thread staged build).
-  if (name === 'ngram') return createNgramTokenizer();
+  if (name === "ngram") return createNgramTokenizer();
   return tokenize;
 }
 
@@ -469,7 +536,9 @@ function tokenizerFor(name: WorkerTokenizerName): (text: string) => string[] {
 
 /** Run the whole pinned-source text build (see the file header). Async; the
  *  caller hosts it in a worker thread or inline. */
-export async function buildTextArtifacts(spec: TextBuildCoreSpec): Promise<TextBuildCoreResult> {
+export async function buildTextArtifacts(
+  spec: TextBuildCoreSpec,
+): Promise<TextBuildCoreResult> {
   const throwIfAborted = (): void => {
     if (spec.signal?.aborted) throw abortError();
   };
@@ -481,33 +550,44 @@ export async function buildTextArtifacts(spec: TextBuildCoreSpec): Promise<TextB
   // source. Both fds are identity-checked against the anchors — a rotation
   // that raced the main thread's checkpoint fails the build here.
   if (spec.snapshotPath !== null) {
-    const fd = fsSync.openSync(spec.snapshotPath, 'r');
+    const fd = fsSync.openSync(spec.snapshotPath, "r");
     try {
       const st = fsSync.fstatSync(fd);
       if (st.dev !== spec.snapshotDev || st.ino !== spec.snapshotIno) {
-        throw new Error('text build: snapshot anchor mismatch (rotated)');
+        throw new Error("text build: snapshot anchor mismatch (rotated)");
       }
-      const r = await scanFrameRefsFdAsync(fd, { onCorrupt: 'resync', signal: spec.signal });
-      for (const f of r.frames) if (applyFrame(f, 'snapshot', fd, live, now)) expiredSkipped++;
+      const r = await scanFrameRefsFdAsync(fd, {
+        onCorrupt: "resync",
+        signal: spec.signal,
+      });
+      for (const f of r.frames)
+        if (applyFrame(f, "snapshot", fd, live, now)) expiredSkipped++;
     } finally {
       fsSync.closeSync(fd);
     }
   }
   {
-    const fd = fsSync.openSync(spec.walPath, 'r');
+    const fd = fsSync.openSync(spec.walPath, "r");
     try {
       const st = fsSync.fstatSync(fd);
       if (st.dev !== spec.walDev || st.ino !== spec.walIno) {
-        throw new Error('text build: WAL anchor mismatch (rotated)');
+        throw new Error("text build: WAL anchor mismatch (rotated)");
       }
-      const r = await scanFrameRefsFdAsync(fd, { onCorrupt: 'resync', endOffset: spec.walOffset, signal: spec.signal });
+      const r = await scanFrameRefsFdAsync(fd, {
+        onCorrupt: "resync",
+        endOffset: spec.walOffset,
+        signal: spec.signal,
+      });
       // The pinned prefix must scan clean to exactly the checkpoint: a torn
       // or truncated WAL below the checkpoint means the checkpoint moved
       // under us (in-place recovery) — fail the build, never guess.
       if (r.eofOffset !== spec.walOffset) {
-        throw new Error(`text build: WAL prefix does not reach the checkpoint (${r.eofOffset} != ${spec.walOffset})`);
+        throw new Error(
+          `text build: WAL prefix does not reach the checkpoint (${r.eofOffset} != ${spec.walOffset})`,
+        );
       }
-      for (const f of r.frames) if (applyFrame(f, 'wal', fd, live, now)) expiredSkipped++;
+      for (const f of r.frames)
+        if (applyFrame(f, "wal", fd, live, now)) expiredSkipped++;
     } finally {
       fsSync.closeSync(fd);
     }
@@ -526,7 +606,11 @@ export async function buildTextArtifacts(spec: TextBuildCoreSpec): Promise<TextB
   // objects, the MiniDb rule) get a docID, exactly like the main-thread
   // staged build.
   const ordered = [...live.entries()].sort((a, b) =>
-    a[1].file < b[1].file ? -1 : a[1].file > b[1].file ? 1 : a[1].off - b[1].off,
+    a[1].file < b[1].file
+      ? -1
+      : a[1].file > b[1].file
+        ? 1
+        : a[1].off - b[1].off,
   );
   const states = spec.indexes.map((indexSpec) => ({
     spec: indexSpec,
@@ -542,11 +626,14 @@ export async function buildTextArtifacts(spec: TextBuildCoreSpec): Promise<TextB
   let docsIndexed = 0;
   let progressDocs = 0;
 
-  const fds = new Map<'snapshot' | 'wal', number>();
-  const fdFor = (file: 'snapshot' | 'wal'): number => {
+  const fds = new Map<"snapshot" | "wal", number>();
+  const fdFor = (file: "snapshot" | "wal"): number => {
     let fd = fds.get(file);
     if (fd === undefined) {
-      fd = fsSync.openSync(file === 'snapshot' ? spec.snapshotPath! : spec.walPath, 'r');
+      fd = fsSync.openSync(
+        file === "snapshot" ? spec.snapshotPath! : spec.walPath,
+        "r",
+      );
       fds.set(file, fd);
     }
     return fd;
@@ -554,7 +641,7 @@ export async function buildTextArtifacts(spec: TextBuildCoreSpec): Promise<TextB
 
   const flushState = async (st: IndexBuildState): Promise<void> => {
     if (st.aggEntries === 0) return;
-    const segPath = `${st.spec.postingsPath}.seg-${String(st.seq++).padStart(4, '0')}`;
+    const segPath = `${st.spec.postingsPath}.seg-${String(st.seq++).padStart(4, "0")}`;
     await flushSegment(segPath, st.agg, spec.syncIo ?? false);
     st.segments.push(segPath);
     st.agg.clear();
@@ -567,8 +654,8 @@ export async function buildTextArtifacts(spec: TextBuildCoreSpec): Promise<TextB
   // one per document. A run stops at a file switch, a gap, or the cap.
   const READ_RUN_GAP = 4096;
   const READ_RUN_CAP = 1 << 20;
-  const fileSizes = new Map<'snapshot' | 'wal', number>();
-  const sizeOf = (file: 'snapshot' | 'wal'): number => {
+  const fileSizes = new Map<"snapshot" | "wal", number>();
+  const sizeOf = (file: "snapshot" | "wal"): number => {
     let s = fileSizes.get(file);
     if (s === undefined) {
       s = fsSync.fstatSync(fdFor(file)).size;
@@ -577,13 +664,26 @@ export async function buildTextArtifacts(spec: TextBuildCoreSpec): Promise<TextB
     return s;
   };
   let runBuf: Buffer | null = null;
-  let runFile: 'snapshot' | 'wal' | null = null;
+  let runFile: "snapshot" | "wal" | null = null;
   let runStart = 0; // absolute offset of runBuf[0]
-  const valueAt = (file: 'snapshot' | 'wal', off: number, len: number): Buffer => {
-    if (runBuf === null || runFile !== file || off < runStart || off + len > runStart + runBuf.length) {
+  const valueAt = (
+    file: "snapshot" | "wal",
+    off: number,
+    len: number,
+  ): Buffer => {
+    if (
+      runBuf === null ||
+      runFile !== file ||
+      off < runStart ||
+      off + len > runStart + runBuf.length
+    ) {
       // Start a new run: cover this value plus whatever follows contiguously
       // (capped at EOF — the pinned WAL may be shorter than the cap).
-      const runLen = Math.min(READ_RUN_CAP, Math.max(len, READ_RUN_GAP), sizeOf(file) - off);
+      const runLen = Math.min(
+        READ_RUN_CAP,
+        Math.max(len, READ_RUN_GAP),
+        sizeOf(file) - off,
+      );
       runBuf = readAtSync(fdFor(file), off, runLen);
       runFile = file;
       runStart = off;
@@ -596,11 +696,11 @@ export async function buildTextArtifacts(spec: TextBuildCoreSpec): Promise<TextB
       const raw = valueAt(loc.file, loc.off, loc.len);
       let doc: unknown;
       try {
-        doc = JSON.parse(raw.toString('utf8'));
+        doc = JSON.parse(raw.toString("utf8"));
       } catch {
         doc = undefined; // not a JSON value: not indexable (mirrors MiniDb)
       }
-      if (doc === null || typeof doc !== 'object') continue;
+      if (doc === null || typeof doc !== "object") continue;
       const docID = keys.length;
       keys.push(kstr);
       for (const st of states) {
@@ -614,7 +714,7 @@ export async function buildTextArtifacts(spec: TextBuildCoreSpec): Promise<TextB
           let m = st.agg.get(t);
           if (!m) {
             st.agg.set(t, (m = new Map()));
-            st.aggBytes += AGG_TERM_BYTES + Buffer.byteLength(t, 'utf8');
+            st.aggBytes += AGG_TERM_BYTES + Buffer.byteLength(t, "utf8");
           }
           m.set(docID, c); // docIDs ascend -> insertion order is sorted
           st.aggEntries++;
@@ -652,14 +752,20 @@ export async function buildTextArtifacts(spec: TextBuildCoreSpec): Promise<TextB
       if (st.segments.length > 0) await flushState(st);
 
       const dict = new Map<string, { off: number; len: number; df: number }>();
-      const writer = await RawPostingsWriter.open(st.spec.postingsPath, { syncIo: spec.syncIo ?? false });
+      const writer = await RawPostingsWriter.open(st.spec.postingsPath, {
+        syncIo: spec.syncIo ?? false,
+      });
       let postingsInfo: { bytes: number; crc32: number };
       try {
         if (st.segments.length === 0) {
           const terms = [...st.agg.keys()].sort();
           for (const term of terms) {
             const entries = st.agg.get(term)!;
-            const rec = encodeRecord(term, entries.size, encodePostingList(entries));
+            const rec = encodeRecord(
+              term,
+              entries.size,
+              encodePostingList(entries),
+            );
             const at = await writer.write(rec);
             dict.set(term, { off: at, len: rec.length, df: entries.size });
           }
@@ -671,17 +777,28 @@ export async function buildTextArtifacts(spec: TextBuildCoreSpec): Promise<TextB
         await writer.abort();
         throw e;
       } finally {
-        for (const segPath of st.segments) await fsp.rm(segPath, { force: true }).catch(() => {});
+        for (const segPath of st.segments)
+          await fsp.rm(segPath, { force: true }).catch(() => {});
       }
       throwIfAborted();
 
       const dictionaryInfo = await writeTextDictionaryImage(
         st.spec.dictionaryPath,
-        (function* (): Generator<{ term: string; off: number; len: number; df: number }> {
-          for (const [term, e] of dict) yield { term, off: e.off, len: e.len, df: e.df };
+        (function* (): Generator<{
+          term: string;
+          off: number;
+          len: number;
+          df: number;
+        }> {
+          for (const [term, e] of dict)
+            yield { term, off: e.off, len: e.len, df: e.df };
         })(),
       );
-      const baseDocsInfo = await writeBaseDocsImage(st.spec.baseDocsPath, keys, st.docLens);
+      const baseDocsInfo = await writeBaseDocsImage(
+        st.spec.baseDocsPath,
+        keys,
+        st.docLens,
+      );
       results.push({
         name: st.spec.name,
         liveCount: docsIndexed,
@@ -691,7 +808,11 @@ export async function buildTextArtifacts(spec: TextBuildCoreSpec): Promise<TextB
         baseDocsInfo,
         segmentsFlushed: st.segments.length,
       });
-      spec.onProgress?.({ docs: keys.length, terms: dict.size, segments: st.segments.length });
+      spec.onProgress?.({
+        docs: keys.length,
+        terms: dict.size,
+        segments: st.segments.length,
+      });
     }
 
     return {
@@ -720,7 +841,8 @@ async function mergeSegments(
       let minTerm: string | null = null;
       for (const r of readers) {
         const cur = r.current;
-        if (cur !== null && (minTerm === null || cur.term < minTerm)) minTerm = cur.term;
+        if (cur !== null && (minTerm === null || cur.term < minTerm))
+          minTerm = cur.term;
       }
       if (minTerm === null) break;
       // Collect every segment's list for this term (segment order = docID
@@ -734,7 +856,11 @@ async function mergeSegments(
         for (const p of pairs) merged.push(p);
         await r.advance();
       }
-      const rec = encodeRecord(minTerm, merged.length, encodePostingList(merged));
+      const rec = encodeRecord(
+        minTerm,
+        merged.length,
+        encodePostingList(merged),
+      );
       const at = await writer.write(rec);
       dict.set(minTerm, { off: at, len: rec.length, df: merged.length });
     }

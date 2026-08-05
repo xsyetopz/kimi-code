@@ -31,7 +31,7 @@ import type {
   ToolCallRequest,
   ToolCallResponse,
   ToolInputDisplay,
-} from '@moonshot-ai/agent-core';
+} from "@moonshot-ai/agent-core";
 import {
   IAgentLifecycleService,
   IAgentProfileService,
@@ -49,9 +49,9 @@ import {
   type IDisposable,
   type Interaction,
   type ISessionScopeHandle,
-} from '@moonshot-ai/agent-core-v2';
+} from "@moonshot-ai/agent-core-v2";
 
-import { translateDomainEvent } from '#/v2/event-mapper';
+import { translateDomainEvent } from "#/v2/event-mapper";
 
 /**
  * The client surface the wiring drives — the base class's own public methods,
@@ -90,7 +90,7 @@ interface QuestionInteractionPayload {
   readonly id?: string;
   readonly turnId?: number;
   readonly toolCallId?: string;
-  readonly questions: QuestionRequest['questions'];
+  readonly questions: QuestionRequest["questions"];
 }
 
 /** The v2 user-tool execution payload (`agent-core-v2/src/agent/userTool/userToolService.ts`). */
@@ -152,7 +152,9 @@ export class SessionEventWiring {
       agentId,
       agent.accessor.get(IEventBus).subscribe((event) => {
         const enriched =
-          event.type === 'agent.status.updated' ? withStatusSnapshot(agent, event) : event;
+          event.type === "agent.status.updated"
+            ? withStatusSnapshot(agent, event)
+            : event;
         const translated = translateDomainEvent(enriched, sessionId, agentId);
         if (translated !== undefined) this.sink.receiveEvent(translated);
       }),
@@ -168,18 +170,20 @@ export class SessionEventWiring {
 
   private bridgeNewPendingInteractions(): void {
     if (this.disposed) return;
-    const pending = this.session.accessor.get(ISessionInteractionService).listPending();
+    const pending = this.session.accessor
+      .get(ISessionInteractionService)
+      .listPending();
     for (const interaction of pending) {
       if (this.bridgedInteractionIds.has(interaction.id)) continue;
       this.bridgedInteractionIds.add(interaction.id);
       switch (interaction.kind) {
-        case 'approval':
+        case "approval":
           void this.bridgeApproval(interaction);
           break;
-        case 'question':
+        case "question":
           void this.bridgeQuestion(interaction);
           break;
-        case 'user_tool':
+        case "user_tool":
           void this.bridgeUserTool(interaction);
           break;
       }
@@ -205,7 +209,9 @@ export class SessionEventWiring {
         sessionId: this.session.id,
         agentId: payload.agentId ?? interaction.origin.agentId ?? MAIN_AGENT_ID,
       });
-      this.session.accessor.get(ISessionApprovalService).decide(interaction.id, response);
+      this.session.accessor
+        .get(ISessionApprovalService)
+        .decide(interaction.id, response);
     } catch {
       // The session scope died mid-bridge (close/reload): the parked engine
       // request died with it, and `respond` no-ops on an unknown id anyway.
@@ -252,7 +258,9 @@ export class SessionEventWiring {
         toolCallId: payload.toolCallId,
         args: payload.args,
       });
-      this.session.accessor.get(ISessionInteractionService).respond(interaction.id, result);
+      this.session.accessor
+        .get(ISessionInteractionService)
+        .respond(interaction.id, result);
     } catch {
       // See bridgeApproval.
     }
@@ -270,20 +278,32 @@ export class SessionEventWiring {
  * two client-facing packages so the core engine stays free of v1
  * wire-compatibility concerns.
  */
-function withStatusSnapshot(agent: IAgentScopeHandle, event: DomainEvent): DomainEvent {
-  const profile = agent.accessor.get(IAgentProfileService) as IAgentProfileService | undefined;
-  const usageService = agent.accessor.get(IAgentUsageService) as IAgentUsageService | undefined;
+function withStatusSnapshot(
+  agent: IAgentScopeHandle,
+  event: DomainEvent,
+): DomainEvent {
+  const profile = agent.accessor.get(IAgentProfileService) as
+    | IAgentProfileService
+    | undefined;
+  const usageService = agent.accessor.get(IAgentUsageService) as
+    | IAgentUsageService
+    | undefined;
   const tokenCounting = agent.accessor.get(IAgentTokenCountingService) as
     | IAgentTokenCountingService
     | undefined;
-  if (profile === undefined || usageService === undefined || tokenCounting === undefined) {
+  if (
+    profile === undefined ||
+    usageService === undefined ||
+    tokenCounting === undefined
+  ) {
     return event;
   }
   // Externally reported context size, resolved by the `[token_counting]`
   // strategy inside the service (`IAgentTokenCountingService.statusSize`).
   const contextTokens = tokenCounting.statusSize();
   const capabilities = profile.getModelCapabilities();
-  const maxContextTokens = capabilities.max_input_tokens ?? capabilities.max_context_tokens;
+  const maxContextTokens =
+    capabilities.max_input_tokens ?? capabilities.max_context_tokens;
   return {
     ...event,
     usage: usageService.status(),
@@ -303,7 +323,9 @@ function withStatusSnapshot(agent: IAgentScopeHandle, event: DomainEvent): Domai
  */
 function displayModelAlias(agent: IAgentScopeHandle, alias: string): string {
   if (alias !== SECONDARY_DERIVED_MODEL_ID) return alias;
-  const catalog = agent.accessor.get(IModelCatalog) as IModelCatalog | undefined;
+  const catalog = agent.accessor.get(IModelCatalog) as
+    | IModelCatalog
+    | undefined;
   if (catalog === undefined) return alias;
   try {
     const model = catalog.get(alias);

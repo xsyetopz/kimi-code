@@ -14,8 +14,8 @@
  * `useSyncExternalStore`.
  */
 
-import type { WsLikeCtor } from '../channel/wsLike';
-import { GlobalEventsWs, type SessionWorkFacts } from './ws';
+import type { WsLikeCtor } from "../channel/wsLike";
+import { GlobalEventsWs, type SessionWorkFacts } from "./ws";
 
 export type { SessionWorkFacts };
 
@@ -82,7 +82,7 @@ export class SessionActivityHub {
   private readonly fetchImpl: typeof fetch;
 
   constructor(opts: SessionActivityHubOptions) {
-    this.baseUrl = opts.url.replace(/\/$/, '');
+    this.baseUrl = opts.url.replace(/\/$/, "");
     this.token = opts.token;
     // Bind the default: `this.fetchImpl(...)` is a member call, and the
     // browser's `fetch` throws Illegal invocation when its receiver is not
@@ -93,7 +93,8 @@ export class SessionActivityHub {
       token: opts.token,
       WebSocketImpl: opts.WebSocketImpl,
       handlers: {
-        onWorkChanged: (sessionId, facts) => this.store.applyWorkChanged(sessionId, facts),
+        onWorkChanged: (sessionId, facts) =>
+          this.store.applyWorkChanged(sessionId, facts),
         onSessionCreated: () => opts.onListChanged(),
         onMetaUpdated: () => opts.onListChanged(),
         onReconnected: () => void this.seed(),
@@ -108,10 +109,12 @@ export class SessionActivityHub {
   private async seed(): Promise<void> {
     const headers: Record<string, string> = {};
     if (this.token !== undefined && this.token.length > 0) {
-      headers['authorization'] = `Bearer ${this.token}`;
+      headers["authorization"] = `Bearer ${this.token}`;
     }
     try {
-      const res = await this.fetchImpl(`${this.baseUrl}/api/v1/sessions`, { headers });
+      const res = await this.fetchImpl(`${this.baseUrl}/api/v1/sessions`, {
+        headers,
+      });
       const envelope = (await res.json()) as {
         code: number;
         data?: { items?: Record<string, unknown>[] };
@@ -119,18 +122,24 @@ export class SessionActivityHub {
       if (envelope.code !== 0 || envelope.data?.items === undefined) return;
       const entries: [string, SessionWorkFacts][] = [];
       for (const item of envelope.data.items) {
-        const id = item['id'];
-        if (typeof id !== 'string' || typeof item['busy'] !== 'boolean') continue;
-        const pending = item['pending_interaction'];
-        const reason = item['last_turn_reason'];
+        const id = item["id"];
+        if (typeof id !== "string" || typeof item["busy"] !== "boolean")
+          continue;
+        const pending = item["pending_interaction"];
+        const reason = item["last_turn_reason"];
         entries.push([
           id,
           {
-            busy: item['busy'],
-            mainTurnActive: item['main_turn_active'] === true,
-            pendingInteraction: pending === 'approval' || pending === 'question' ? pending : 'none',
+            busy: item["busy"],
+            mainTurnActive: item["main_turn_active"] === true,
+            pendingInteraction:
+              pending === "approval" || pending === "question"
+                ? pending
+                : "none",
             lastTurnReason:
-              reason === 'completed' || reason === 'cancelled' || reason === 'failed'
+              reason === "completed" ||
+              reason === "cancelled" ||
+              reason === "failed"
                 ? reason
                 : undefined,
           },

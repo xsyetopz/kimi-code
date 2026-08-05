@@ -10,49 +10,52 @@
  * a RegExp. `*` matches any run of non-`/` characters; `?` matches any single
  * non-`/` character; `[abc]` matches one of a set (leading `!` negates).
  */
-export function globPatternToRegex(pattern: string, caseSensitive: boolean): RegExp {
-  let regex = '^';
+export function globPatternToRegex(
+  pattern: string,
+  caseSensitive: boolean,
+): RegExp {
+  let regex = "^";
   for (let i = 0; i < pattern.length; i++) {
     const ch = pattern[i];
     if (ch === undefined) break;
     switch (ch) {
-      case '*':
-        regex += '[^/]*';
+      case "*":
+        regex += "[^/]*";
         break;
-      case '?':
-        regex += '[^/]';
+      case "?":
+        regex += "[^/]";
         break;
-      case '[': {
-        const end = pattern.indexOf(']', i + 1);
+      case "[": {
+        const end = pattern.indexOf("]", i + 1);
         if (end === -1) {
-          regex += '\\[';
+          regex += "\\[";
         } else {
           let charClass = pattern.slice(i + 1, end);
-          charClass = charClass.replace(/\\/g, '\\\\');
-          if (charClass.startsWith('!')) {
-            charClass = '^' + charClass.slice(1);
-          } else if (charClass.startsWith('^')) {
-            charClass = '\\' + charClass;
+          charClass = charClass.replace(/\\/g, "\\\\");
+          if (charClass.startsWith("!")) {
+            charClass = "^" + charClass.slice(1);
+          } else if (charClass.startsWith("^")) {
+            charClass = "\\" + charClass;
           }
-          regex += '[' + charClass + ']';
+          regex += "[" + charClass + "]";
           i = end;
         }
         break;
       }
-      case '\\': {
+      case "\\": {
         if (i + 1 < pattern.length) {
           const next = pattern.charAt(i + 1);
-          regex += next.replaceAll(/[{}()+.\\[\]^$|]/g, '\\$&');
+          regex += next.replaceAll(/[{}()+.\\[\]^$|]/g, "\\$&");
           i++;
         } else {
-          regex += '\\\\';
+          regex += "\\\\";
         }
         break;
       }
       default:
-        regex += ch.replaceAll(/[{}()+.\\[\]^$|]/g, '\\$&');
+        regex += ch.replaceAll(/[{}()+.\\[\]^$|]/g, "\\$&");
     }
   }
-  regex += '$';
-  return new RegExp(regex, caseSensitive ? '' : 'i');
+  regex += "$";
+  return new RegExp(regex, caseSensitive ? "" : "i");
 }

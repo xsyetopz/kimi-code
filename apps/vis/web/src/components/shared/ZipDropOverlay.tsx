@@ -1,12 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
-import { useImportZip } from '../../hooks/useSession';
+import { useImportZip } from "../../hooks/useSession";
 
 /** True for the file-like drag payloads we care about; filters out text /
  *  link drags so the overlay doesn't hijack ordinary in-page drags. */
 function isFileDrag(dt: DataTransfer | null): boolean {
-  return dt !== null && Array.from(dt.types).includes('Files');
+  return dt !== null && Array.from(dt.types).includes("Files");
 }
 
 /** Cheap client-side zip check for immediate feedback. The server still
@@ -14,9 +14,9 @@ function isFileDrag(dt: DataTransfer | null): boolean {
 export function isZipFile(file: { name: string; type: string }): boolean {
   const name = file.name.toLowerCase();
   return (
-    name.endsWith('.zip') ||
-    file.type === 'application/zip' ||
-    file.type === 'application/x-zip-compressed'
+    name.endsWith(".zip") ||
+    file.type === "application/zip" ||
+    file.type === "application/x-zip-compressed"
   );
 }
 
@@ -59,7 +59,7 @@ export function ZipDropOverlay() {
       // Required — without preventDefault the browser cancels the drag and
       // never fires `drop`.
       e.preventDefault();
-      if (e.dataTransfer !== null) e.dataTransfer.dropEffect = 'copy';
+      if (e.dataTransfer !== null) e.dataTransfer.dropEffect = "copy";
     }
     function onDragLeave(e: DragEvent) {
       if (!isFileDrag(e.dataTransfer)) return;
@@ -77,21 +77,23 @@ export function ZipDropOverlay() {
       const file = e.dataTransfer?.files[0];
       if (file === undefined) return;
       if (!isZipFile(file)) {
-        window.alert('Please drop a .zip bundle exported from kimi-code (/export-debug-zip).');
+        window.alert(
+          "Please drop a .zip bundle exported from kimi-code (/export-debug-zip).",
+        );
         return;
       }
       void importFile(file);
     }
 
-    window.addEventListener('dragenter', onDragEnter);
-    window.addEventListener('dragover', onDragOver);
-    window.addEventListener('dragleave', onDragLeave);
-    window.addEventListener('drop', onDrop);
+    window.addEventListener("dragenter", onDragEnter);
+    window.addEventListener("dragover", onDragOver);
+    window.addEventListener("dragleave", onDragLeave);
+    window.addEventListener("drop", onDrop);
     return () => {
-      window.removeEventListener('dragenter', onDragEnter);
-      window.removeEventListener('dragover', onDragOver);
-      window.removeEventListener('dragleave', onDragLeave);
-      window.removeEventListener('drop', onDrop);
+      window.removeEventListener("dragenter", onDragEnter);
+      window.removeEventListener("dragover", onDragOver);
+      window.removeEventListener("dragleave", onDragLeave);
+      window.removeEventListener("drop", onDrop);
     };
   }, [importZip, navigate]);
 
@@ -101,7 +103,7 @@ export function ZipDropOverlay() {
     <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <div className="border-2 border-dashed border-border-strong bg-surface-1 px-10 py-8 text-center">
         <div className="font-mono text-[13px] text-fg-0">
-          {importing ? 'importing debug zip…' : 'drop debug zip to import'}
+          {importing ? "importing debug zip…" : "drop debug zip to import"}
         </div>
         <div className="mt-2 font-mono text-[11px] text-fg-3">
           from kimi-code /export-debug-zip

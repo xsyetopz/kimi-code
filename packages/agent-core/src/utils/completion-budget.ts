@@ -1,4 +1,4 @@
-import type { ChatProvider, ModelCapability } from '@moonshot-ai/kosong';
+import type { ChatProvider, ModelCapability } from "@moonshot-ai/kosong";
 
 /** Completion-token budget for the next LLM request. */
 export interface CompletionBudgetConfig {
@@ -21,13 +21,13 @@ export function resolveCompletionBudget(args: {
   readonly env?: NodeJS.ProcessEnv;
 }): CompletionBudgetConfig | undefined {
   const env = args.env ?? process.env;
-  const fromNew = parseEnvBudget(env['KIMI_MODEL_MAX_COMPLETION_TOKENS']);
-  if (fromNew !== 'absent') {
-    return fromNew === 'disabled' ? undefined : { hardCap: fromNew };
+  const fromNew = parseEnvBudget(env["KIMI_MODEL_MAX_COMPLETION_TOKENS"]);
+  if (fromNew !== "absent") {
+    return fromNew === "disabled" ? undefined : { hardCap: fromNew };
   }
-  const fromLegacy = parseEnvBudget(env['KIMI_MODEL_MAX_TOKENS']);
-  if (fromLegacy !== 'absent') {
-    return fromLegacy === 'disabled' ? undefined : { hardCap: fromLegacy };
+  const fromLegacy = parseEnvBudget(env["KIMI_MODEL_MAX_TOKENS"]);
+  if (fromLegacy !== "absent") {
+    return fromLegacy === "disabled" ? undefined : { hardCap: fromLegacy };
   }
   if (args.maxOutputSize !== undefined && args.maxOutputSize > 0) {
     return { hardCap: args.maxOutputSize };
@@ -38,13 +38,13 @@ export function resolveCompletionBudget(args: {
   return { fallback: DEFAULT_UNKNOWN_CONTEXT_FALLBACK };
 }
 
-type EnvBudget = number | 'disabled' | 'absent';
+type EnvBudget = number | "disabled" | "absent";
 
 function parseEnvBudget(raw: string | undefined): EnvBudget {
-  if (raw === undefined || raw === '') return 'absent';
+  if (raw === undefined || raw === "") return "absent";
   const n = Number(raw);
-  if (!Number.isFinite(n) || !Number.isInteger(n)) return 'absent';
-  if (n <= 0) return 'disabled';
+  if (!Number.isFinite(n) || !Number.isInteger(n)) return "absent";
+  if (n <= 0) return "disabled";
   return n;
 }
 
@@ -61,7 +61,9 @@ export function computeCompletionBudgetCap(args: {
   // thinking before the model produces a summary.
   const cap =
     args.budget.hardCap ??
-    (maxCtx > 0 ? maxCtx : args.budget.fallback ?? DEFAULT_UNKNOWN_CONTEXT_FALLBACK);
+    (maxCtx > 0
+      ? maxCtx
+      : (args.budget.fallback ?? DEFAULT_UNKNOWN_CONTEXT_FALLBACK));
   return Math.max(MIN_FLOOR, cap);
 }
 

@@ -1,22 +1,22 @@
-import type { ContentPart } from '@moonshot-ai/kosong';
+import type { ContentPart } from "@moonshot-ai/kosong";
 
 export const HOOK_EVENT_TYPES = [
-  'PreToolUse',
-  'PostToolUse',
-  'PostToolUseFailure',
-  'PermissionRequest',
-  'PermissionResult',
-  'UserPromptSubmit',
-  'Stop',
-  'StopFailure',
-  'Interrupt',
-  'SessionStart',
-  'SessionEnd',
-  'SubagentStart',
-  'SubagentStop',
-  'PreCompact',
-  'PostCompact',
-  'Notification',
+  "PreToolUse",
+  "PostToolUse",
+  "PostToolUseFailure",
+  "PermissionRequest",
+  "PermissionResult",
+  "UserPromptSubmit",
+  "Stop",
+  "StopFailure",
+  "Interrupt",
+  "SessionStart",
+  "SessionEnd",
+  "SubagentStart",
+  "SubagentStop",
+  "PreCompact",
+  "PostCompact",
+  "Notification",
 ] as const;
 
 export type HookEventType = (typeof HOOK_EVENT_TYPES)[number];
@@ -31,7 +31,7 @@ export interface HookDef {
 }
 
 export interface HookResult {
-  readonly action: 'allow' | 'block';
+  readonly action: "allow" | "block";
   readonly message?: string;
   readonly reason?: string;
   readonly stdout?: string;
@@ -54,7 +54,11 @@ export interface HookEngineTriggerArgs {
   readonly signal?: AbortSignal;
 }
 
-export type HookTriggeredCallback = (event: string, target: string, count: number) => void;
+export type HookTriggeredCallback = (
+  event: string,
+  target: string,
+  count: number,
+) => void;
 
 export type HookResolvedCallback = (
   event: string,

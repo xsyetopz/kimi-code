@@ -6,11 +6,14 @@
  * announcements.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
-import type { ContextMessage } from '#/agent/contextMemory/types';
-import type { ToolInfo } from '#/tool/toolContract';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
+import type { ContextMessage } from "#/agent/contextMemory/types";
+import type { ToolInfo } from "#/tool/toolContract";
 
-export const SELECT_TOOLS_TOOL_NAME = 'select_tools';
+export const SELECT_TOOLS_TOOL_NAME = "select_tools";
 
 export interface ShapedToolEntry extends ToolInfo {
   readonly deferred?: true;
@@ -37,4 +40,4 @@ export interface IAgentToolSelectService {
 }
 
 export const IAgentToolSelectService: ServiceIdentifier<IAgentToolSelectService> =
-  createDecorator<IAgentToolSelectService>('agentToolSelectService');
+  createDecorator<IAgentToolSelectService>("agentToolSelectService");

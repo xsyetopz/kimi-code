@@ -1,6 +1,6 @@
-import type { SessionSummary } from '@moonshot-ai/kimi-code-sdk';
+import type { SessionSummary } from "@moonshot-ai/kimi-code-sdk";
 
-import type { SessionRow } from '#/tui/components/dialogs/session-picker';
+import type { SessionRow } from "#/tui/components/dialogs/session-picker";
 
 export function sessionRowsForPicker(
   sessions: readonly SessionSummary[],
@@ -8,7 +8,9 @@ export function sessionRowsForPicker(
   currentSessionHasContent: boolean,
 ): SessionRow[] {
   return sessions
-    .filter((session) => currentSessionHasContent || session.id !== currentSessionId)
+    .filter(
+      (session) => currentSessionHasContent || session.id !== currentSessionId,
+    )
     .map((session) => ({
       id: session.id,
       title: session.title ?? null,

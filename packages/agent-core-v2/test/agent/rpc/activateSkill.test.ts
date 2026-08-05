@@ -9,14 +9,18 @@
  * exec vitest run test/agent/rpc/activateSkill.test.ts`.
  */
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from "vitest";
 
-import { InMemorySkillCatalog } from '#/app/skillCatalog/registry';
+import { InMemorySkillCatalog } from "#/app/skillCatalog/registry";
 
-import { stubSkill } from '../../app/skillCatalog/stubs';
-import { createTestAgent, skillServices, type TestAgentContext } from '../../harness';
+import { stubSkill } from "../../app/skillCatalog/stubs";
+import {
+  createTestAgent,
+  skillServices,
+  type TestAgentContext,
+} from "../../harness";
 
-describe('activateSkill RPC', () => {
+describe("activateSkill RPC", () => {
   let ctx: TestAgentContext;
 
   afterEach(async () => {
@@ -29,15 +33,18 @@ describe('activateSkill RPC', () => {
 
   function agentWithCommitSkill(): TestAgentContext {
     const catalog = new InMemorySkillCatalog();
-    catalog.register(stubSkill('commit', { content: '# Commit body' }));
+    catalog.register(stubSkill("commit", { content: "# Commit body" }));
     return createTestAgent(skillServices(catalog));
   }
 
-  it('launches a turn with the rendered skill prompt and returns its id', async () => {
+  it("launches a turn with the rendered skill prompt and returns its id", async () => {
     ctx = agentWithCommitSkill();
-    ctx.mockNextResponse({ type: 'text', text: 'committed' });
+    ctx.mockNextResponse({ type: "text", text: "committed" });
 
-    const launched = await ctx.rpc.activateSkill({ name: 'commit', args: '-m fix' });
+    const launched = await ctx.rpc.activateSkill({
+      name: "commit",
+      args: "-m fix",
+    });
     // Turn ids are 0-based; the point is the launch result came back at all.
     expect(launched?.turn_id).toBe(0);
 
@@ -45,14 +52,16 @@ describe('activateSkill RPC', () => {
     // JSON.stringify escapes the block's attribute quotes — assert on the
     // quote-free fragments.
     const llmInput = JSON.stringify(ctx.llmInputs());
-    expect(llmInput).toContain('skill-loaded');
-    expect(llmInput).toContain('# Commit body');
-    expect(llmInput).toContain('ARGUMENTS: -m fix');
+    expect(llmInput).toContain("skill-loaded");
+    expect(llmInput).toContain("# Commit body");
+    expect(llmInput).toContain("ARGUMENTS: -m fix");
   });
 
-  it('rejects for an unknown skill instead of failing silently', async () => {
+  it("rejects for an unknown skill instead of failing silently", async () => {
     ctx = agentWithCommitSkill();
 
-    await expect(ctx.rpc.activateSkill({ name: 'missing' })).rejects.toThrow(/not found/i);
+    await expect(ctx.rpc.activateSkill({ name: "missing" })).rejects.toThrow(
+      /not found/i,
+    );
   });
 });

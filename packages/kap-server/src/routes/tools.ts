@@ -58,32 +58,34 @@ import {
   type Scope,
   type ToolInfo,
   type ToolSource,
-} from '@moonshot-ai/agent-core-v2';
+} from "@moonshot-ai/agent-core-v2";
 
-import { errEnvelope, okEnvelope } from '../envelope';
-import { defineRoute } from '../middleware/defineRoute';
-import { ensureMainAgent } from '../transport/mainAgent';
-import { ErrorCode } from '../protocol/error-codes';
+import { errEnvelope, okEnvelope } from "../envelope";
+import { defineRoute } from "../middleware/defineRoute";
+import { ensureMainAgent } from "../transport/mainAgent";
+import { ErrorCode } from "../protocol/error-codes";
 import {
   listMcpServersResponseSchema,
   listToolsQuerySchema,
   listToolsResponseSchema,
   restartMcpServerResultSchema,
-} from '../protocol/rest-tool';
-import type { McpServer, ToolDescriptor } from '../protocol/tool';
-import { parseActionSuffix } from './action-suffix';
+} from "../protocol/rest-tool";
+import type { McpServer, ToolDescriptor } from "../protocol/tool";
+import { parseActionSuffix } from "./action-suffix";
 
 /** v2 MCP tool-name prefix / separator (see `mcp/tool-naming.ts`). */
-const MCP_NAME_PREFIX = 'mcp__';
-const MCP_NAME_SEPARATOR = '__';
+const MCP_NAME_PREFIX = "mcp__";
+const MCP_NAME_SEPARATOR = "__";
 
 /** One entry from the agent's MCP server list (type not re-exported publicly). */
-type McpEntry = ReturnType<IAgentMcpService['list']>[number];
+type McpEntry = ReturnType<IAgentMcpService["list"]>[number];
 
 interface ToolsRouteHost {
   get(
     path: string,
-    options: { preHandler: unknown[]; schema?: Record<string, unknown> } | undefined,
+    options:
+      | { preHandler: unknown[]; schema?: Record<string, unknown> }
+      | undefined,
     handler: (
       req: { id: string; query: unknown; params: unknown },
       reply: { send(payload: unknown): unknown },
@@ -103,12 +105,12 @@ export function registerToolsRoutes(app: ToolsRouteHost, core: Scope): void {
   // GET /tools ----------------------------------------------------------
   const listToolsRoute = defineRoute(
     {
-      method: 'GET',
-      path: '/tools',
+      method: "GET",
+      path: "/tools",
       querystring: listToolsQuerySchema,
       success: { data: listToolsResponseSchema },
-      description: 'List available tools',
-      tags: ['tools'],
+      description: "List available tools",
+      tags: ["tools"],
     },
     async (req, reply) => {
       const agent = await resolveEffectiveAgent(core, req.query.session_id);
@@ -120,68 +122,79 @@ export function registerToolsRoutes(app: ToolsRouteHost, core: Scope): void {
       const policy = agent.accessor.get(IAgentToolPolicyService);
       const tools = registry
         .list()
-        .map((info) => toProtocolTool(info, policy.isToolActive(info.name, info.source)));
+        .map((info) =>
+          toProtocolTool(info, policy.isToolActive(info.name, info.source)),
+        );
       reply.send(okEnvelope({ tools }, req.id));
     },
   );
   app.get(
     listToolsRoute.path,
     listToolsRoute.options,
-    listToolsRoute.handler as Parameters<ToolsRouteHost['get']>[2],
+    listToolsRoute.handler as Parameters<ToolsRouteHost["get"]>[2],
   );
 
   // GET /mcp/servers ----------------------------------------------------
   const listMcpServersRoute = defineRoute(
     {
-      method: 'GET',
-      path: '/mcp/servers',
+      method: "GET",
+      path: "/mcp/servers",
       success: { data: listMcpServersResponseSchema },
-      description: 'List configured MCP servers',
-      tags: ['tools'],
+      description: "List configured MCP servers",
+      tags: ["tools"],
     },
     async (req, reply) => {
       const agent = await resolveEffectiveAgent(core, undefined);
       const servers =
         agent === undefined
           ? []
-          : agent.accessor.get(IAgentMcpService).list().map(toProtocolMcpServer);
+          : agent.accessor
+              .get(IAgentMcpService)
+              .list()
+              .map(toProtocolMcpServer);
       reply.send(okEnvelope({ servers }, req.id));
     },
   );
   app.get(
     listMcpServersRoute.path,
     listMcpServersRoute.options,
-    listMcpServersRoute.handler as Parameters<ToolsRouteHost['get']>[2],
+    listMcpServersRoute.handler as Parameters<ToolsRouteHost["get"]>[2],
   );
 
   // POST /mcp/servers/{mcp_server_id}:restart ---------------------------
   const restartMcpServerRoute = defineRoute(
     {
-      method: 'POST',
-      path: '/mcp/servers/{tail}',
+      method: "POST",
+      path: "/mcp/servers/{tail}",
       success: { data: restartMcpServerResultSchema },
       errors: {
         [ErrorCode.MCP_SERVER_NOT_FOUND]: {},
       },
-      description: 'Restart an MCP server by ID',
-      tags: ['tools'],
-      operationId: 'restartMcpServer',
+      description: "Restart an MCP server by ID",
+      tags: ["tools"],
+      operationId: "restartMcpServer",
     },
     async (req, reply) => {
       const { tail } = req.params as { tail: string };
       const parsed = parseActionSuffix({
         tail,
-        allowedActions: ['restart'] as const,
-        resourceLabel: 'mcp_server',
+        allowedActions: ["restart"] as const,
+        resourceLabel: "mcp_server",
       });
-      if (parsed.kind === 'invalid') {
-        reply.send(errEnvelope(ErrorCode.VALIDATION_FAILED, parsed.reason, req.id));
+      if (parsed.kind === "invalid") {
+        reply.send(
+          errEnvelope(ErrorCode.VALIDATION_FAILED, parsed.reason, req.id),
+        );
         return;
       }
-      if (parsed.kind === 'bare') {
+      if (parsed.kind === "bare") {
         // No bare form for /mcp/servers/{id} — only :restart.
         reply.send(
-          errEnvelope(ErrorCode.VALIDATION_FAILED, `unsupported action: ${tail}`, req.id),
+          errEnvelope(
+            ErrorCode.VALIDATION_FAILED,
+            `unsupported action: ${tail}`,
+            req.id,
+          ),
         );
         return;
       }
@@ -209,7 +222,7 @@ export function registerToolsRoutes(app: ToolsRouteHost, core: Scope): void {
   app.post(
     restartMcpServerRoute.path,
     restartMcpServerRoute.options,
-    restartMcpServerRoute.handler as Parameters<ToolsRouteHost['post']>[2],
+    restartMcpServerRoute.handler as Parameters<ToolsRouteHost["post"]>[2],
   );
 }
 
@@ -219,7 +232,10 @@ export function registerToolsRoutes(app: ToolsRouteHost, core: Scope): void {
 // callers translate that into an empty list (GETs) or 40408 (restart).
 // ---------------------------------------------------------------------------
 
-async function resolveEffectiveAgent(core: Scope, sessionId: string | undefined) {
+async function resolveEffectiveAgent(
+  core: Scope,
+  sessionId: string | undefined,
+) {
   const sid = sessionId ?? (await mostRecentSessionId(core));
   if (sid === undefined) return undefined;
   const session = getLiveSessionById(core.accessor, sid);
@@ -243,14 +259,14 @@ async function mostRecentSessionId(core: Scope): Promise<string | undefined> {
 // Projection — v2 models → protocol wire shapes (see module header).
 // ---------------------------------------------------------------------------
 
-function mapToolSource(source: ToolSource): ToolDescriptor['source'] {
+function mapToolSource(source: ToolSource): ToolDescriptor["source"] {
   switch (source) {
-    case 'builtin':
-      return 'builtin';
-    case 'user':
-      return 'skill';
-    case 'mcp':
-      return 'mcp';
+    case "builtin":
+      return "builtin";
+    case "user":
+      return "skill";
+    case "mcp":
+      return "mcp";
   }
 }
 
@@ -272,25 +288,25 @@ function toProtocolTool(info: ToolInfo, active: boolean): ToolDescriptor {
     source,
     active,
   };
-  if (source === 'mcp') {
+  if (source === "mcp") {
     const serverId = parseMcpServerId(info.name);
     if (serverId !== undefined) return { ...base, mcp_server_id: serverId };
   }
   return base;
 }
 
-function mapMcpStatus(status: McpEntry['status']): McpServer['status'] {
+function mapMcpStatus(status: McpEntry["status"]): McpServer["status"] {
   switch (status) {
-    case 'pending':
-      return 'connecting';
-    case 'connected':
-      return 'connected';
-    case 'disabled':
-      return 'disconnected';
-    case 'failed':
-      return 'error';
-    case 'needs-auth':
-      return 'error';
+    case "pending":
+      return "connecting";
+    case "connected":
+      return "connected";
+    case "disabled":
+      return "disconnected";
+    case "failed":
+      return "error";
+    case "needs-auth":
+      return "error";
   }
 }
 
@@ -331,7 +347,14 @@ function sendMappedError(
   err: unknown,
 ): void {
   if (err instanceof Error2 && err.code === ErrorCodes.MCP_SERVER_NOT_FOUND) {
-    reply.send(errEnvelope(ErrorCode.MCP_SERVER_NOT_FOUND, err.message, requestId, err.stack));
+    reply.send(
+      errEnvelope(
+        ErrorCode.MCP_SERVER_NOT_FOUND,
+        err.message,
+        requestId,
+        err.stack,
+      ),
+    );
     return;
   }
   throw err;

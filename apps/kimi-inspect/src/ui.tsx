@@ -3,45 +3,53 @@
  * relative time. Deliberately minimal — this is an internal devtool.
  */
 
-import { useState } from 'react';
+import { useState } from "react";
 
 export function JsonView({ data, empty }: { data: unknown; empty?: string }) {
   const [open, setOpen] = useState(false);
   if (data === undefined || data === null) {
-    return <div className="text-[11px] text-neutral-600 italic">{empty ?? 'no data'}</div>;
+    return (
+      <div className="text-[11px] text-neutral-600 italic">
+        {empty ?? "no data"}
+      </div>
+    );
   }
   const text = JSON.stringify(data, null, 2);
   const long = text.length > 500;
   return (
     <pre
       className={`cursor-text overflow-auto rounded bg-neutral-950/70 p-2 font-mono text-[11px] leading-relaxed text-neutral-300 ${
-        long && !open ? 'max-h-48' : 'max-h-[28rem]'
+        long && !open ? "max-h-48" : "max-h-[28rem]"
       }`}
       onClick={() => long && setOpen((v) => !v)}
-      title={long ? 'click to expand / collapse' : undefined}
+      title={long ? "click to expand / collapse" : undefined}
     >
-      {long && !open ? `${text.slice(0, 500)}\n… (${text.length} chars, click to expand)` : text}
+      {long && !open
+        ? `${text.slice(0, 500)}\n… (${text.length} chars, click to expand)`
+        : text}
     </pre>
   );
 }
 
 export function Badge({
   children,
-  tone = 'neutral',
+  tone = "neutral",
 }: {
   children: React.ReactNode;
-  tone?: 'neutral' | 'green' | 'amber' | 'red' | 'sky' | 'violet';
+  tone?: "neutral" | "green" | "amber" | "red" | "sky" | "violet";
 }) {
   const tones: Record<string, string> = {
-    neutral: 'bg-neutral-800 text-neutral-300',
-    green: 'bg-emerald-900/60 text-emerald-300',
-    amber: 'bg-amber-900/60 text-amber-300',
-    red: 'bg-red-900/60 text-red-300',
-    sky: 'bg-sky-900/60 text-sky-300',
-    violet: 'bg-violet-900/60 text-violet-300',
+    neutral: "bg-neutral-800 text-neutral-300",
+    green: "bg-emerald-900/60 text-emerald-300",
+    amber: "bg-amber-900/60 text-amber-300",
+    red: "bg-red-900/60 text-red-300",
+    sky: "bg-sky-900/60 text-sky-300",
+    violet: "bg-violet-900/60 text-violet-300",
   };
   return (
-    <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${tones[tone]}`}>
+    <span
+      className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${tones[tone]}`}
+    >
       {children}
     </span>
   );
@@ -62,8 +70,8 @@ export function ActionButton({
     <button
       className={`rounded border px-2 py-1 text-[11px] transition-colors disabled:opacity-40 ${
         danger
-          ? 'border-red-900/70 text-red-400 hover:bg-red-950/60'
-          : 'border-neutral-700 text-neutral-300 hover:bg-neutral-800'
+          ? "border-red-900/70 text-red-400 hover:bg-red-950/60"
+          : "border-neutral-700 text-neutral-300 hover:bg-neutral-800"
       }`}
       disabled={disabled}
       onClick={() => {
@@ -76,7 +84,7 @@ export function ActionButton({
 }
 
 export function relTime(epochMs: number | undefined): string {
-  if (epochMs === undefined) return '';
+  if (epochMs === undefined) return "";
   const diff = Date.now() - epochMs;
   if (diff < 60_000) return `${Math.max(0, Math.round(diff / 1000))}s ago`;
   if (diff < 3_600_000) return `${Math.round(diff / 60_000)}m ago`;
@@ -87,15 +95,19 @@ export function relTime(epochMs: number | undefined): string {
 /** Render an unknown thrown value as display text (never "[object Object]"). */
 export function errorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
-  if (typeof error === 'string') return error;
-  if (error === null || typeof error !== 'object') return String(error);
-  return JSON.stringify(error) ?? 'unknown error';
+  if (typeof error === "string") return error;
+  if (error === null || typeof error !== "object") return String(error);
+  return JSON.stringify(error) ?? "unknown error";
 }
 
 export function ErrorLine({ error }: { error: unknown }) {
   if (error === null || error === undefined) return null;
   const msg = errorMessage(error);
-  return <div className="rounded bg-red-950/50 px-2 py-1 text-[11px] text-red-400">{msg}</div>;
+  return (
+    <div className="rounded bg-red-950/50 px-2 py-1 text-[11px] text-red-400">
+      {msg}
+    </div>
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -152,11 +164,11 @@ function TreeNode({
   readonly rowClassName?: (path: string) => string | undefined;
 }) {
   const [open, setOpen] = useState(depth < defaultDepth);
-  const expandable = value !== null && typeof value === 'object';
+  const expandable = value !== null && typeof value === "object";
   const pathClass = rowClassName?.(path);
 
   // The root renders its entries directly (no row of its own).
-  if (path === '' && name === undefined && expandable) {
+  if (path === "" && name === undefined && expandable) {
     const entries = Array.isArray(value)
       ? value.map((item, index) => [String(index), item] as const)
       : Object.entries(value);
@@ -189,7 +201,7 @@ function TreeNode({
         rowClass={pathClass}
       >
         {name !== undefined ? (
-          <span className={pathClass ?? 'text-neutral-400'}>{name}: </span>
+          <span className={pathClass ?? "text-neutral-400"}>{name}: </span>
         ) : null}
         <LeafValue value={value} className={pathClass} />
       </TreeRow>
@@ -201,8 +213,10 @@ function TreeNode({
   // undefined — skip them entirely instead of rendering source-less noise.
   const entries = isArray
     ? value.map((item, index) => [String(index), item] as const)
-    : Object.entries(value as Record<string, unknown>).filter(([, item]) => item !== undefined);
-  const [openBrace, closeBrace] = isArray ? ['[', ']'] : ['{', '}'];
+    : Object.entries(value as Record<string, unknown>).filter(
+        ([, item]) => item !== undefined,
+      );
+  const [openBrace, closeBrace] = isArray ? ["[", "]"] : ["{", "}"];
   return (
     <div>
       <TreeRow
@@ -219,10 +233,10 @@ function TreeNode({
             setOpen((v) => !v);
           }}
         >
-          {open ? '▾ ' : '▸ '}
+          {open ? "▾ " : "▸ "}
         </span>
         {name !== undefined ? (
-          <span className={pathClass ?? 'text-neutral-400'}>{name}: </span>
+          <span className={pathClass ?? "text-neutral-400"}>{name}: </span>
         ) : null}
         <span
           className="cursor-pointer select-none text-neutral-600"
@@ -240,7 +254,7 @@ function TreeNode({
               key={key}
               name={key}
               value={item}
-              path={path === '' ? key : `${path}.${key}`}
+              path={path === "" ? key : `${path}.${key}`}
               depth={depth + 1}
               defaultDepth={defaultDepth}
               selectedPath={selectedPath}
@@ -268,12 +282,12 @@ function TreeRow({
   readonly rowClass?: string;
   readonly children: React.ReactNode;
 }) {
-  const selected = path !== '' && path === selectedPath;
+  const selected = path !== "" && path === selectedPath;
   return (
     <div
       className={`cursor-pointer truncate border-l-2 px-1 hover:bg-neutral-800/70 ${
-        rowClass ?? 'border-transparent'
-      } ${selected ? 'bg-sky-950/70 text-neutral-100' : ''}`}
+        rowClass ?? "border-transparent"
+      } ${selected ? "bg-sky-950/70 text-neutral-100" : ""}`}
       style={{ paddingLeft: `${depth * 14 + 4}px` }}
       onClick={() => {
         onSelect(path);
@@ -285,22 +299,37 @@ function TreeRow({
   );
 }
 
-function LeafValue({ value, className }: { readonly value: unknown; readonly className?: string }) {
-  if (value === null) return <span className={className ?? 'text-neutral-600'}>null</span>;
+function LeafValue({
+  value,
+  className,
+}: {
+  readonly value: unknown;
+  readonly className?: string;
+}) {
+  if (value === null)
+    return <span className={className ?? "text-neutral-600"}>null</span>;
   if (value === undefined) {
-    return <span className={className ?? 'text-neutral-600'}>undefined</span>;
+    return <span className={className ?? "text-neutral-600"}>undefined</span>;
   }
-  if (typeof value === 'string') {
+  if (typeof value === "string") {
     const shown = value.length > 80 ? `${value.slice(0, 80)}…` : value;
-    return <span className={className ?? 'text-emerald-300/80'}>"{shown}"</span>;
+    return (
+      <span className={className ?? "text-emerald-300/80"}>"{shown}"</span>
+    );
   }
-  if (typeof value === 'number') {
-    return <span className={className ?? 'text-amber-300/80'}>{String(value)}</span>;
+  if (typeof value === "number") {
+    return (
+      <span className={className ?? "text-amber-300/80"}>{String(value)}</span>
+    );
   }
-  if (typeof value === 'boolean') {
-    return <span className={className ?? 'text-violet-300/80'}>{String(value)}</span>;
+  if (typeof value === "boolean") {
+    return (
+      <span className={className ?? "text-violet-300/80"}>{String(value)}</span>
+    );
   }
   return (
-    <span className={className ?? 'text-neutral-500'}>{JSON.stringify(value) ?? 'unknown'}</span>
+    <span className={className ?? "text-neutral-500"}>
+      {JSON.stringify(value) ?? "unknown"}
+    </span>
   );
 }

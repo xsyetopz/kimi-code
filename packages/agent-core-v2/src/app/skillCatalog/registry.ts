@@ -7,7 +7,7 @@
  * scoped service.
  */
 
-import { escapeXmlAttr, escapeXmlTags } from '#/_base/utils/xml-escape';
+import { escapeXmlAttr, escapeXmlTags } from "#/_base/utils/xml-escape";
 
 import type {
   SkillCatalog,
@@ -15,8 +15,8 @@ import type {
   SkillMetadata,
   SkillSource,
   SkippedSkill,
-} from './types';
-import { isInlineSkillType, normalizeSkillName } from './types';
+} from "./types";
+import { isInlineSkillType, normalizeSkillName } from "./types";
 
 const LISTING_DESC_MAX = 250;
 
@@ -25,7 +25,7 @@ export class SkillNotFoundError extends Error {
 
   constructor(skillName: string) {
     super(`Skill "${skillName}" is not registered`);
-    this.name = 'SkillNotFoundError';
+    this.name = "SkillNotFoundError";
     this.skillName = skillName;
   }
 }
@@ -37,10 +37,15 @@ export class InMemorySkillCatalog implements SkillCatalog {
   private readonly skipped: SkippedSkill[] = [];
 
   registerBuiltinSkill(skill: SkillDefinition): void {
-    this.register(skill.source === 'builtin' ? skill : { ...skill, source: 'builtin' });
+    this.register(
+      skill.source === "builtin" ? skill : { ...skill, source: "builtin" },
+    );
   }
 
-  register(skill: SkillDefinition, options: { readonly replace?: boolean } = {}): void {
+  register(
+    skill: SkillDefinition,
+    options: { readonly replace?: boolean } = {},
+  ): void {
     const key = normalizeSkillName(skill.name);
     if (options.replace === true || !this.byName.has(key)) {
       this.byName.set(key, skill);
@@ -80,7 +85,8 @@ export class InMemorySkillCatalog implements SkillCatalog {
     const plugin = skill.plugin;
     if (plugin === undefined) return content;
     const instructions = plugin.instructions;
-    if (instructions === undefined || instructions.trim().length === 0) return content;
+    if (instructions === undefined || instructions.trim().length === 0)
+      return content;
     return (
       `<plugin-instructions plugin="${escapeXmlAttr(plugin.id)}">\n` +
       `${instructions}\n` +
@@ -89,13 +95,16 @@ export class InMemorySkillCatalog implements SkillCatalog {
   }
 
   listSkills(): readonly SkillDefinition[] {
-    return [...this.byName.values()].toSorted((a, b) => a.name.localeCompare(b.name));
+    return [...this.byName.values()].toSorted((a, b) =>
+      a.name.localeCompare(b.name),
+    );
   }
 
   listInvocableSkills(): readonly SkillDefinition[] {
     return this.listSkills().filter(
       (skill) =>
-        skill.metadata.disableModelInvocation !== true && isInlineSkillType(skill.metadata.type),
+        skill.metadata.disableModelInvocation !== true &&
+        isInlineSkillType(skill.metadata.type),
     );
   }
 
@@ -109,19 +118,23 @@ export class InMemorySkillCatalog implements SkillCatalog {
 
   getKimiSkillsDescription(): string {
     const rendered = renderGroupedSkills(this.listSkills(), formatFullSkill);
-    return rendered.length === 0 ? 'No skills' : rendered;
+    return rendered.length === 0 ? "No skills" : rendered;
   }
 
   getModelSkillListing(): string {
-    const lines = ['DISREGARD any earlier skill listings. Current available skills:'];
+    const lines = [
+      "DISREGARD any earlier skill listings. Current available skills:",
+    ];
     const listing = renderGroupedSkills(
-      this.listInvocableSkills().filter((skill) => skill.metadata.isSubSkill !== true),
+      this.listInvocableSkills().filter(
+        (skill) => skill.metadata.isSubSkill !== true,
+      ),
       formatModelSkill,
     );
     if (listing.length > 0) {
       lines.push(listing);
     }
-    return lines.length === 1 ? '' : lines.join('\n');
+    return lines.length === 1 ? "" : lines.join("\n");
   }
 
   private indexPluginSkill(
@@ -155,26 +168,26 @@ function expandSkillParameters(
     if (name === undefined) continue;
     const escaped = escapeRegExp(name);
     content = content.replaceAll(
-      new RegExp(`\\$${escaped}(?![\\[\\w])`, 'g'),
-      escapeXmlTags(tokens[index] ?? ''),
+      new RegExp(`\\$${escaped}(?![\\[\\w])`, "g"),
+      escapeXmlTags(tokens[index] ?? ""),
     );
   }
 
   content = content
     .replaceAll(/\$ARGUMENTS\[(\d+)\]/g, (_match, indexText: string) => {
       const index = Number.parseInt(indexText, 10);
-      return escapeXmlTags(tokens[index] ?? '');
+      return escapeXmlTags(tokens[index] ?? "");
     })
     .replaceAll(/\$(\d+)(?!\w)/g, (_match, indexText: string) => {
       const index = Number.parseInt(indexText, 10);
-      return escapeXmlTags(tokens[index] ?? '');
+      return escapeXmlTags(tokens[index] ?? "");
     })
-    .replaceAll('$ARGUMENTS', escapeXmlTags(rawArgs));
+    .replaceAll("$ARGUMENTS", escapeXmlTags(rawArgs));
 
   const hasArgumentPlaceholder = content !== body;
   content = content
-    .replaceAll('${KIMI_SKILL_DIR}', context.skillDir)
-    .replaceAll('${KIMI_SESSION_ID}', context.sessionId ?? '');
+    .replaceAll("${KIMI_SKILL_DIR}", context.skillDir)
+    .replaceAll("${KIMI_SESSION_ID}", context.sessionId ?? "");
 
   if (!hasArgumentPlaceholder && rawArgs.length > 0) {
     return `${content}\n\nARGUMENTS: ${escapeXmlTags(rawArgs)}`;
@@ -185,21 +198,26 @@ function expandSkillParameters(
 function skillArgumentNames(metadata: SkillMetadata): readonly string[] {
   const value = metadata.arguments;
   const isValidName = (name: string): boolean =>
-    name.trim() !== '' && !/^\d+$/.test(name);
-  if (typeof value === 'string') return value.split(/\s+/).filter(isValidName);
+    name.trim() !== "" && !/^\d+$/.test(name);
+  if (typeof value === "string") return value.split(/\s+/).filter(isValidName);
   if (!Array.isArray(value)) return [];
-  return value.filter((item): item is string => typeof item === 'string' && isValidName(item));
+  return value.filter(
+    (item): item is string => typeof item === "string" && isValidName(item),
+  );
 }
 
 function pluginSkillKey(pluginId: string, skillName: string): string {
   return `${pluginId}\0${normalizeSkillName(skillName)}`;
 }
 
-const SOURCE_GROUPS: ReadonlyArray<{ readonly source: SkillSource; readonly label: string }> = [
-  { source: 'project', label: 'Project' },
-  { source: 'user', label: 'User' },
-  { source: 'extra', label: 'Extra' },
-  { source: 'builtin', label: 'Built-in' },
+const SOURCE_GROUPS: ReadonlyArray<{
+  readonly source: SkillSource;
+  readonly label: string;
+}> = [
+  { source: "project", label: "Project" },
+  { source: "user", label: "User" },
+  { source: "extra", label: "Extra" },
+  { source: "builtin", label: "Built-in" },
 ];
 
 function renderGroupedSkills(
@@ -215,28 +233,39 @@ function renderGroupedSkills(
       lines.push(...format(skill));
     }
   }
-  return lines.join('\n');
+  return lines.join("\n");
 }
 
 function formatFullSkill(skill: SkillDefinition): readonly string[] {
-  return [`- ${skill.name}`, `  - Path: ${skill.path}`, `  - Description: ${skill.description}`];
+  return [
+    `- ${skill.name}`,
+    `  - Path: ${skill.path}`,
+    `  - Description: ${skill.description}`,
+  ];
 }
 
 function formatModelSkill(skill: SkillDefinition): readonly string[] {
-  const lines = [`- ${skill.name}: ${truncate(skill.description, LISTING_DESC_MAX)}`];
-  if (typeof skill.metadata.whenToUse === 'string' && skill.metadata.whenToUse.length > 0) {
+  const lines = [
+    `- ${skill.name}: ${truncate(skill.description, LISTING_DESC_MAX)}`,
+  ];
+  if (
+    typeof skill.metadata.whenToUse === "string" &&
+    skill.metadata.whenToUse.length > 0
+  ) {
     lines.push(`  When to use: ${skill.metadata.whenToUse}`);
   }
   lines.push(`  Path: ${skill.path}`);
   return lines;
 }
 
-const graphemeSegmenter = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
+const graphemeSegmenter = new Intl.Segmenter(undefined, {
+  granularity: "grapheme",
+});
 
 function truncate(value: string, max: number): string {
   if (value.length <= max) return value;
   let length = 0;
-  let result = '';
+  let result = "";
   for (const { segment } of graphemeSegmenter.segment(value)) {
     if (length + segment.length > max - 3) break;
     result += segment;
@@ -247,7 +276,7 @@ function truncate(value: string, max: number): string {
 
 function tokenizeArgs(raw: string): string[] {
   const out: string[] = [];
-  let current = '';
+  let current = "";
   let quote: '"' | "'" | undefined;
   let hasContent = false;
 
@@ -269,7 +298,7 @@ function tokenizeArgs(raw: string): string[] {
     if (/\s/.test(char)) {
       if (hasContent) {
         out.push(current);
-        current = '';
+        current = "";
         hasContent = false;
       }
       continue;
@@ -283,5 +312,5 @@ function tokenizeArgs(raw: string): string[] {
 }
 
 function escapeRegExp(value: string): string {
-  return value.replace(/[\\^$.*+?()[\]{}|]/g, '\\$&');
+  return value.replace(/[\\^$.*+?()[\]{}|]/g, "\\$&");
 }

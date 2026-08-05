@@ -6,9 +6,9 @@
  * server's only stateful client concept — REST is stateless, and agent sessions
  * are a separate resource (`/sessions`).
  */
-import { z } from 'zod';
+import { z } from "zod";
 
-import { isoDateTimeSchema } from '@moonshot-ai/agent-core-v2/_base/utils/isoDateTime';
+import { isoDateTimeSchema } from "@moonshot-ai/agent-core-v2/_base/utils/isoDateTime";
 
 export const connectionSchema = z.object({
   /** Server-assigned connection id (`conn_<ulid>`). */
@@ -31,4 +31,6 @@ export const connectionsListResponseSchema = z.object({
   connections: z.array(connectionSchema),
 });
 
-export type ConnectionsListResponse = z.infer<typeof connectionsListResponseSchema>;
+export type ConnectionsListResponse = z.infer<
+  typeof connectionsListResponseSchema
+>;

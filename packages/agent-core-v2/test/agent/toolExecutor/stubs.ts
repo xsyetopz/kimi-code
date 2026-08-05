@@ -7,16 +7,16 @@
  * semantics under test are the production ones.
  */
 
-import { AsyncEmitter, type IWaitUntilData } from '#/_base/event';
-import type { IAgentToolExecutorService } from '#/agent/toolExecutor/toolExecutor';
-import { BeforeToolExecuteEmitter } from '#/agent/toolExecutor/beforeToolExecuteEvent';
+import { AsyncEmitter, type IWaitUntilData } from "#/_base/event";
+import type { IAgentToolExecutorService } from "#/agent/toolExecutor/toolExecutor";
+import { BeforeToolExecuteEmitter } from "#/agent/toolExecutor/beforeToolExecuteEvent";
 import type {
   BeforeExecuteDecision,
   ResolvedToolExecutionHookContext,
   ToolDidExecuteContext,
   WillExecuteToolEvent,
-} from '#/agent/toolExecutor/toolHooks';
-import { OrderedHookSlot } from '#/hooks';
+} from "#/agent/toolExecutor/toolHooks";
+import { OrderedHookSlot } from "#/hooks";
 
 export interface ToolExecutorEventStubs {
   readonly executor: IAgentToolExecutorService;

@@ -3,15 +3,15 @@
  * directory fsync helpers.
  */
 
-import { randomBytes } from 'node:crypto';
-import { closeSync, fsyncSync, openSync } from 'node:fs';
-import * as nodeFs from 'node:fs';
-import { open, rename, unlink } from 'node:fs/promises';
-import { dirname } from 'pathe';
+import { randomBytes } from "node:crypto";
+import { closeSync, fsyncSync, openSync } from "node:fs";
+import * as nodeFs from "node:fs";
+import { open, rename, unlink } from "node:fs/promises";
+import { dirname } from "pathe";
 
 export async function syncDir(dirPath: string): Promise<void> {
-  if (process.platform === 'win32') return;
-  const dirFh = await open(dirPath, 'r');
+  if (process.platform === "win32") return;
+  const dirFh = await open(dirPath, "r");
   try {
     await dirFh.sync();
   } finally {
@@ -20,8 +20,8 @@ export async function syncDir(dirPath: string): Promise<void> {
 }
 
 export function syncDirSync(dirPath: string): void {
-  if (process.platform === 'win32') return;
-  const fd = openSync(dirPath, 'r');
+  if (process.platform === "win32") return;
+  const fd = openSync(dirPath, "r");
   try {
     fsyncSync(fd);
   } finally {
@@ -33,22 +33,22 @@ export async function writeFileAtomicDurable(
   filePath: string,
   content: string | Uint8Array,
 ): Promise<void> {
-  const tmpPath = filePath + '.tmp';
+  const tmpPath = filePath + ".tmp";
   let renamed = false;
   try {
-    const fh = await open(tmpPath, 'w');
+    const fh = await open(tmpPath, "w");
     try {
       await fh.writeFile(content);
       await fh.sync();
     } finally {
       await fh.close();
     }
-    if (process.platform === 'win32') {
+    if (process.platform === "win32") {
       try {
         await unlink(filePath);
       } catch (error) {
         const code = (error as NodeJS.ErrnoException).code;
-        if (code !== 'ENOENT') throw error;
+        if (code !== "ENOENT") throw error;
       }
     }
     await rename(tmpPath, filePath);
@@ -58,8 +58,7 @@ export async function writeFileAtomicDurable(
     if (!renamed) {
       try {
         await unlink(tmpPath);
-      } catch {
-      }
+      } catch {}
     }
   }
 }
@@ -82,23 +81,23 @@ export async function atomicWrite(
   _syncOverride?: (fd: number) => Promise<void>,
   mode?: number,
 ): Promise<void> {
-  const hex = randomBytes(4).toString('hex');
+  const hex = randomBytes(4).toString("hex");
   const tmpPath = `${filePath}.tmp.${process.pid}.${hex}`;
   let renamed = false;
   try {
-    const fh = await open(tmpPath, 'w', mode);
+    const fh = await open(tmpPath, "w", mode);
     try {
       await fh.writeFile(content);
       await (_syncOverride ?? syncFd)(fh.fd);
     } finally {
       await fh.close();
     }
-    if (process.platform === 'win32') {
+    if (process.platform === "win32") {
       try {
         await unlink(filePath);
       } catch (error) {
         const code = (error as NodeJS.ErrnoException).code;
-        if (code !== 'ENOENT') throw error;
+        if (code !== "ENOENT") throw error;
       }
     }
     await rename(tmpPath, filePath);
@@ -107,8 +106,7 @@ export async function atomicWrite(
     if (!renamed) {
       try {
         await unlink(tmpPath);
-      } catch {
-      }
+      } catch {}
     }
   }
 }
@@ -118,11 +116,11 @@ export async function atomicWriteStream(
   source: AsyncIterable<Uint8Array>,
   mode?: number,
 ): Promise<void> {
-  const hex = randomBytes(4).toString('hex');
+  const hex = randomBytes(4).toString("hex");
   const tmpPath = `${filePath}.tmp.${process.pid}.${hex}`;
   let renamed = false;
   try {
-    const fh = await open(tmpPath, 'w', mode);
+    const fh = await open(tmpPath, "w", mode);
     try {
       for await (const chunk of source) {
         if (chunk.byteLength > 0) {
@@ -133,12 +131,12 @@ export async function atomicWriteStream(
     } finally {
       await fh.close();
     }
-    if (process.platform === 'win32') {
+    if (process.platform === "win32") {
       try {
         await unlink(filePath);
       } catch (error) {
         const code = (error as NodeJS.ErrnoException).code;
-        if (code !== 'ENOENT') throw error;
+        if (code !== "ENOENT") throw error;
       }
     }
     await rename(tmpPath, filePath);
@@ -147,8 +145,7 @@ export async function atomicWriteStream(
     if (!renamed) {
       try {
         await unlink(tmpPath);
-      } catch {
-      }
+      } catch {}
     }
   }
 }

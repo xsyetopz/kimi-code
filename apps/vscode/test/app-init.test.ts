@@ -18,11 +18,18 @@ vi.mock("@/components/ui/sonner", () => ({
   toast: { error: vi.fn(), warning: vi.fn() },
 }));
 
-import { resolveAppView, type AppStatus } from "../webview-ui/src/hooks/useAppInit";
+import {
+  resolveAppView,
+  type AppStatus,
+} from "../webview-ui/src/hooks/useAppInit";
 
 function resolve(
   status: AppStatus,
-  options: { modelsCount?: number; skippedLogin?: boolean; showLogin?: boolean } = {},
+  options: {
+    modelsCount?: number;
+    skippedLogin?: boolean;
+    showLogin?: boolean;
+  } = {},
 ) {
   return resolveAppView({
     status,
@@ -46,7 +53,9 @@ describe("resolveAppView", () => {
   });
 
   it("routes a skipped login with models to the main view", () => {
-    expect(resolve("not-logged-in", { skippedLogin: true, modelsCount: 2 })).toEqual({
+    expect(
+      resolve("not-logged-in", { skippedLogin: true, modelsCount: 2 }),
+    ).toEqual({
       view: "main",
     });
   });
@@ -62,8 +71,12 @@ describe("resolveAppView", () => {
   });
 
   it("routes to the login screen when the user asks for it from any state", () => {
-    expect(resolve("no-models", { showLogin: true })).toEqual({ view: "login" });
-    expect(resolve("ready", { showLogin: true, modelsCount: 1 })).toEqual({ view: "login" });
+    expect(resolve("no-models", { showLogin: true })).toEqual({
+      view: "login",
+    });
+    expect(resolve("ready", { showLogin: true, modelsCount: 1 })).toEqual({
+      view: "login",
+    });
   });
 
   it("routes a no-models user who skips again back to no-models with a sign-in path", () => {
@@ -79,8 +92,16 @@ describe("resolveAppView", () => {
   });
 
   it("routes non-login error statuses to status screens without a sign-in path", () => {
-    for (const status of ["loading", "no-workspace", "runtime-error"] as const) {
-      expect(resolve(status)).toEqual({ view: "status", status, canGoToLogin: false });
+    for (const status of [
+      "loading",
+      "no-workspace",
+      "runtime-error",
+    ] as const) {
+      expect(resolve(status)).toEqual({
+        view: "status",
+        status,
+        canGoToLogin: false,
+      });
     }
   });
 });

@@ -13,9 +13,12 @@
  * (`sessionGate()`), a live read view over this service. Workspace-scoped.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
-import type { Event } from '#/_base/event';
-import type { ISessionToolPolicyGate } from '#/session/sessionToolPolicyGate/sessionToolPolicyGate';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
+import type { Event } from "#/_base/event";
+import type { ISessionToolPolicyGate } from "#/session/sessionToolPolicyGate/sessionToolPolicyGate";
 
 export interface IWorkspaceToolPolicy {
   readonly _serviceBrand: undefined;
@@ -27,4 +30,4 @@ export interface IWorkspaceToolPolicy {
 }
 
 export const IWorkspaceToolPolicy: ServiceIdentifier<IWorkspaceToolPolicy> =
-  createDecorator<IWorkspaceToolPolicy>('workspaceToolPolicy');
+  createDecorator<IWorkspaceToolPolicy>("workspaceToolPolicy");

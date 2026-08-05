@@ -52,14 +52,14 @@
 // cannot fsync a directory degrade explicitly instead — a one-time warning and
 // stats.dirFsyncUnsupported = true.
 
-import fs from 'node:fs/promises';
-import type { FileHandle } from 'node:fs/promises';
-import path from 'node:path';
-import { WAL } from './wal.js';
-import { renameReplace } from './rename-replace.js';
-import { writeSnapshot } from './snapshot.js';
-import type { Store, ValueLoc } from './store.js';
-import type { FsyncPolicy, WalStats } from './wal.js';
+import fs from "node:fs/promises";
+import type { FileHandle } from "node:fs/promises";
+import path from "node:path";
+import { WAL } from "./wal.js";
+import { renameReplace } from "./rename-replace.js";
+import { writeSnapshot } from "./snapshot.js";
+import type { Store, ValueLoc } from "./store.js";
+import type { FsyncPolicy, WalStats } from "./wal.js";
 
 /** Structural interface of the bits compaction needs from a MiniDb. */
 export interface CompactionTarget {
@@ -109,7 +109,7 @@ export interface CompactionTarget {
    *  shutdown instead of cancelling mid-rotation. Called with 'publishing'
    *  as the rotation starts and 'running' as it ends (both in the failure
    *  path and the success path). */
-  onMaintenancePhase?: (phase: 'running' | 'publishing') => void;
+  onMaintenancePhase?: (phase: "running" | "publishing") => void;
 }
 
 export function shouldCompact(db: CompactionTarget): boolean {
@@ -123,7 +123,8 @@ const SMALL_DELTA = 64 * 1024; // 64 KiB
 
 // Windows cannot rename over an open destination; rotation uses the shared
 // retrying replace helper (see rename-replace.ts).
-const rotateReplace = (src: string, dst: string): Promise<void> => renameReplace(src, dst);
+const rotateReplace = (src: string, dst: string): Promise<void> =>
+  renameReplace(src, dst);
 // Pre-copy convergence bounds: each pass costs roughly `gap / copyRate` and
 // appends `gap * (appendRate / copyRate)` new bytes during the copy. Give up
 // when a pass fails to shrink the gap meaningfully (appendRate ≳ copyRate),
@@ -136,7 +137,11 @@ export function isUnsupportedDirectoryFsyncError(
   code: string | undefined,
   platform: NodeJS.Platform = process.platform,
 ): boolean {
-  return code === 'EINVAL' || code === 'ENOTSUP' || (platform === 'win32' && code === 'EPERM');
+  return (
+    code === "EINVAL" ||
+    code === "ENOTSUP" ||
+    (platform === "win32" && code === "EPERM")
+  );
 }
 
 export async function fsyncDir(
@@ -145,7 +150,7 @@ export async function fsyncDir(
 ): Promise<void> {
   let fh: FileHandle | null = null;
   try {
-    fh = await fs.open(dir, 'r');
+    fh = await fs.open(dir, "r");
     await fh.sync();
   } catch (e) {
     const code = (e as NodeJS.ErrnoException).code;
@@ -178,11 +183,12 @@ export async function copyFileRange(
   end: number,
   opts: { append?: boolean } = {},
 ): Promise<void> {
-  if (end < start) throw new RangeError(`copyFileRange: end (${end}) < start (${start})`);
-  const dst = await fs.open(dstPath, opts.append ? 'a' : 'w');
+  if (end < start)
+    throw new RangeError(`copyFileRange: end (${end}) < start (${start})`);
+  const dst = await fs.open(dstPath, opts.append ? "a" : "w");
   try {
     if (end > start) {
-      const src = await fs.open(srcPath, 'r');
+      const src = await fs.open(srcPath, "r");
       try {
         const buf = Buffer.allocUnsafe(COPY_CHUNK);
         let pos = start;
@@ -192,8 +198,15 @@ export async function copyFileRange(
           if (bytesRead === 0) break; // reached EOF earlier than expected
           let written = 0;
           while (written < bytesRead) {
-            const { bytesWritten } = await dst.write(buf, written, bytesRead - written);
-            if (bytesWritten === 0) throw new Error('copyFileRange: write made no progress (short write)');
+            const { bytesWritten } = await dst.write(
+              buf,
+              written,
+              bytesRead - written,
+            );
+            if (bytesWritten === 0)
+              throw new Error(
+                "copyFileRange: write made no progress (short write)",
+              );
             written += bytesWritten;
           }
           pos += bytesRead;
@@ -220,7 +233,8 @@ export async function compact(db: CompactionTarget): Promise<void> {
       // throws is counted as a compactError, not a successful compaction.
       await db.onCompacted?.();
       db.stats.compactions++;
-      db.stats.compactionDurationMs = (db.stats.compactionDurationMs ?? 0) + (performance.now() - t0);
+      db.stats.compactionDurationMs =
+        (db.stats.compactionDurationMs ?? 0) + (performance.now() - t0);
       db.lastCompactError = null;
     } catch (err) {
       db.stats.compactErrors = (db.stats.compactErrors ?? 0) + 1;
@@ -236,9 +250,9 @@ export async function compact(db: CompactionTarget): Promise<void> {
 }
 
 async function runCompaction(db: CompactionTarget): Promise<void> {
-  const tmp = path.join(db.dir, 'db.snapshot.tmp');
-  const snap = path.join(db.dir, 'db.snapshot');
-  const walTmp = path.join(db.dir, 'db.wal.tmp');
+  const tmp = path.join(db.dir, "db.snapshot.tmp");
+  const snap = path.join(db.dir, "db.snapshot");
+  const walTmp = path.join(db.dir, "db.wal.tmp");
 
   // Phase 1: fence. Every write durable at/before baseOffset is already
   // reflected in the store, because applyOp() runs synchronously in the same
@@ -253,10 +267,13 @@ async function runCompaction(db: CompactionTarget): Promise<void> {
   // synchronous positioned read per record on the event loop.
   const snapT0 = performance.now();
   const snapRes = await writeSnapshot(db.store, tmp, {
-    readValueAsync: db.valueReader?.readAsync ? (loc) => db.valueReader!.readAsync!(loc) : undefined,
+    readValueAsync: db.valueReader?.readAsync
+      ? (loc) => db.valueReader!.readAsync!(loc)
+      : undefined,
   });
   db.stats.snapshotBytesWritten += snapRes.bytes;
-  db.stats.compactionSnapshotDurationMs = (db.stats.compactionSnapshotDurationMs ?? 0) + (performance.now() - snapT0);
+  db.stats.compactionSnapshotDurationMs =
+    (db.stats.compactionSnapshotDurationMs ?? 0) + (performance.now() - snapT0);
 
   // Phase 2.5: pre-copy the post-fence WAL tail into db.wal.tmp. NON-BLOCKING.
   // Each pass flushes to get a stable `head`, then copies the bytes that landed
@@ -276,7 +293,9 @@ async function runCompaction(db: CompactionTarget): Promise<void> {
     const gap = head - copiedUpTo;
     if (gap <= SMALL_DELTA) break;
     if (pass > 0 && gap > prevGap * CONVERGE_RATIO) break; // not converging: rotate with a parked writer set
-    await copyFileRange(db.walPath, walTmp, copiedUpTo, head, { append: appended });
+    await copyFileRange(db.walPath, walTmp, copiedUpTo, head, {
+      append: appended,
+    });
     appended = true;
     copiedUpTo = head;
     prevGap = gap;
@@ -313,7 +332,7 @@ async function runCompaction(db: CompactionTarget): Promise<void> {
   const rotateT0 = performance.now();
   // Stage 6: from here to the remap/reader reopen, a shutdown must wait for
   // the rotation rather than cancelling it mid-flight.
-  db.onMaintenancePhase?.('publishing');
+  db.onMaintenancePhase?.("publishing");
   let rotated = false;
   let remapped = false;
   // Remap disk-backed value pointers to the new snapshot/WAL files. Guarded
@@ -322,8 +341,8 @@ async function runCompaction(db: CompactionTarget): Promise<void> {
     if (remapped) return;
     const snapLocs = snapRes.locs;
     db.store.remapLocs((k: string, loc: ValueLoc) => {
-      if (loc.file === 'wal' && loc.off >= baseOffset) {
-        return { file: 'wal', off: loc.off - baseOffset, len: loc.len };
+      if (loc.file === "wal" && loc.off >= baseOffset) {
+        return { file: "wal", off: loc.off - baseOffset, len: loc.len };
       }
       return snapLocs.get(k);
     });
@@ -337,7 +356,9 @@ async function runCompaction(db: CompactionTarget): Promise<void> {
       // `!appended` guarantees the (possibly empty) new WAL file is created
       // even when there is no post-fence tail to copy.
       if (endOffset === copiedUpTo && appended) break;
-      await copyFileRange(db.walPath, walTmp, copiedUpTo, endOffset, { append: appended });
+      await copyFileRange(db.walPath, walTmp, copiedUpTo, endOffset, {
+        append: appended,
+      });
       appended = true;
       copiedUpTo = endOffset;
     }
@@ -349,7 +370,7 @@ async function runCompaction(db: CompactionTarget): Promise<void> {
     // keeps the handles across the rotation (old fd reads the unlinked old
     // inode) — no close needed there; after the remap segment below,
     // reopenBoth() re-attaches both handles on every platform.
-    if (process.platform === 'win32') db.valueReader?.close?.();
+    if (process.platform === "win32") db.valueReader?.close?.();
 
     // Snapshot first, then WAL — see the crash-safety note in the file header.
     // That argument assumes each rename is durable before the next one lands,
@@ -362,7 +383,11 @@ async function runCompaction(db: CompactionTarget): Promise<void> {
     rotated = true;
     await fsyncDir(db.dir, { strict: true, stats: db.stats });
 
-    const fresh = new WAL(db.walPath, { fsyncPolicy: db.fsyncPolicy, syncIntervalMs: db.syncIntervalMs, stats: db.stats });
+    const fresh = new WAL(db.walPath, {
+      fsyncPolicy: db.fsyncPolicy,
+      syncIntervalMs: db.syncIntervalMs,
+      stats: db.stats,
+    });
     db.wal = fresh;
     await fresh.open();
 
@@ -377,7 +402,11 @@ async function runCompaction(db: CompactionTarget): Promise<void> {
       // comes first: it both restores appendability and stops late in-flight
       // writers from publishing old-file value pointers against the fresh WAL.
       await db.wal.close().catch(() => {});
-      const fresh = new WAL(db.walPath, { fsyncPolicy: db.fsyncPolicy, syncIntervalMs: db.syncIntervalMs, stats: db.stats });
+      const fresh = new WAL(db.walPath, {
+        fsyncPolicy: db.fsyncPolicy,
+        syncIntervalMs: db.syncIntervalMs,
+        stats: db.stats,
+      });
       await fresh.open();
       db.wal = fresh;
       if (rotated) {
@@ -391,10 +420,12 @@ async function runCompaction(db: CompactionTarget): Promise<void> {
   } finally {
     releaseRotation();
     db._rotateLock = null;
-    db.onMaintenancePhase?.('running');
+    db.onMaintenancePhase?.("running");
     // Wall time of the rotation critical section — the window writers were
     // parked (their per-op waits accumulate separately in MiniDb's
     // compactionRotationPauseMs).
-    db.stats.compactionRotationDurationMs = (db.stats.compactionRotationDurationMs ?? 0) + (performance.now() - rotateT0);
+    db.stats.compactionRotationDurationMs =
+      (db.stats.compactionRotationDurationMs ?? 0) +
+      (performance.now() - rotateT0);
   }
 }

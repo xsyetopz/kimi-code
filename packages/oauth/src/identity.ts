@@ -7,15 +7,15 @@
  * production state.
  */
 
-import { execFileSync } from 'node:child_process';
-import { randomUUID } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { arch, hostname, release, type } from 'node:os';
-import { join } from 'node:path';
+import { execFileSync } from "node:child_process";
+import { randomUUID } from "node:crypto";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { arch, hostname, release, type } from "node:os";
+import { join } from "node:path";
 
-import type { DeviceHeaders } from './types';
+import type { DeviceHeaders } from "./types";
 
-export const KIMI_CODE_PLATFORM = 'kimi_code_cli';
+export const KIMI_CODE_PLATFORM = "kimi_code_cli";
 
 export interface KimiHostIdentity {
   readonly productName: string;
@@ -40,10 +40,10 @@ export interface CreateKimiDeviceIdOptions {
 }
 
 export function readKimiDeviceId(homeDir: string): string | null {
-  const deviceIdPath = join(homeDir, 'device_id');
+  const deviceIdPath = join(homeDir, "device_id");
   if (!existsSync(deviceIdPath)) return null;
   try {
-    const text = readFileSync(deviceIdPath, 'utf-8').trim();
+    const text = readFileSync(deviceIdPath, "utf-8").trim();
     return text.length > 0 ? text : null;
   } catch {
     return null;
@@ -60,7 +60,10 @@ export function createKimiDeviceId(
   const id = randomUUID();
   try {
     mkdirSync(homeDir, { recursive: true, mode: 0o700 });
-    writeFileSync(join(homeDir, 'device_id'), id, { encoding: 'utf-8', mode: 0o600 });
+    writeFileSync(join(homeDir, "device_id"), id, {
+      encoding: "utf-8",
+      mode: 0o600,
+    });
   } catch {
     // Best-effort: requests can still use the in-memory id.
   }
@@ -82,12 +85,18 @@ export function createKimiDeviceHeaders(options: {
   readonly platform: string;
 }): DeviceHeaders {
   return {
-    'X-Msh-Platform': requiredAsciiHeader(options.platform, 'Kimi identity platform'),
-    'X-Msh-Version': requiredAsciiHeader(options.version, 'Kimi identity version'),
-    'X-Msh-Device-Name': asciiHeader(hostname()),
-    'X-Msh-Device-Model': asciiHeader(deviceModel()),
-    'X-Msh-Os-Version': asciiHeader(release()),
-    'X-Msh-Device-Id': createKimiDeviceId(options.homeDir),
+    "X-Msh-Platform": requiredAsciiHeader(
+      options.platform,
+      "Kimi identity platform",
+    ),
+    "X-Msh-Version": requiredAsciiHeader(
+      options.version,
+      "Kimi identity version",
+    ),
+    "X-Msh-Device-Name": asciiHeader(hostname()),
+    "X-Msh-Device-Model": asciiHeader(deviceModel()),
+    "X-Msh-Os-Version": asciiHeader(release()),
+    "X-Msh-Device-Id": createKimiDeviceId(options.homeDir),
   };
 }
 
@@ -96,10 +105,15 @@ export function createKimiUserAgent(options: {
   readonly version: string;
   readonly userAgentSuffix?: string | undefined;
 }): string {
-  const product = requiredAsciiHeader(options.productName, 'Kimi identity product');
-  const version = requiredAsciiHeader(options.version, 'Kimi identity version');
+  const product = requiredAsciiHeader(
+    options.productName,
+    "Kimi identity product",
+  );
+  const version = requiredAsciiHeader(options.version, "Kimi identity version");
   const suffix =
-    options.userAgentSuffix === undefined ? undefined : asciiHeader(options.userAgentSuffix, '');
+    options.userAgentSuffix === undefined
+      ? undefined
+      : asciiHeader(options.userAgentSuffix, "");
   return suffix === undefined || suffix.length === 0
     ? `${product}/${version}`
     : `${product}/${version} (${suffix})`;
@@ -119,15 +133,20 @@ export function createKimiUserAgent(options: {
  * A value that does not carry a `/` is treated as a bare product token and
  * replaced wholesale.
  */
-export function replaceUserAgentProduct(userAgent: string, product: string): string {
-  const cleaned = requiredAsciiHeader(product, 'Kimi identity product');
-  const separator = userAgent.indexOf('/');
+export function replaceUserAgentProduct(
+  userAgent: string,
+  product: string,
+): string {
+  const cleaned = requiredAsciiHeader(product, "Kimi identity product");
+  const separator = userAgent.indexOf("/");
   return separator < 0 ? cleaned : `${cleaned}${userAgent.slice(separator)}`;
 }
 
-export function createKimiDefaultHeaders(options: KimiIdentityOptions): Record<string, string> {
+export function createKimiDefaultHeaders(
+  options: KimiIdentityOptions,
+): Record<string, string> {
   return {
-    'User-Agent': createKimiUserAgent(options),
+    "User-Agent": createKimiUserAgent(options),
     ...createKimiDeviceHeaders({
       homeDir: options.homeDir,
       version: options.version,
@@ -150,7 +169,7 @@ export function createKimiDefaultHeaders(options: KimiIdentityOptions): Record<s
  * environment-derived and stateless (re-read on every call) so callers can
  * apply it uniformly without plumbing the value through every host layer.
  */
-export const KIMI_CODE_CUSTOM_HEADERS_ENV = 'KIMI_CODE_CUSTOM_HEADERS';
+export const KIMI_CODE_CUSTOM_HEADERS_ENV = "KIMI_CODE_CUSTOM_HEADERS";
 
 export function parseKimiCodeCustomHeaders(
   env: NodeJS.ProcessEnv = process.env,
@@ -158,8 +177,8 @@ export function parseKimiCodeCustomHeaders(
   const raw = env[KIMI_CODE_CUSTOM_HEADERS_ENV]?.trim();
   if (raw === undefined || raw.length === 0) return {};
   const headers: Record<string, string> = {};
-  for (const line of raw.split('\n')) {
-    const colon = line.indexOf(':');
+  for (const line of raw.split("\n")) {
+    const colon = line.indexOf(":");
     if (colon < 0) continue;
     const name = line.slice(0, colon).trim();
     if (name.length === 0) continue;
@@ -168,12 +187,16 @@ export function parseKimiCodeCustomHeaders(
   return headers;
 }
 
-export function assertKimiHostIdentity(identity: KimiHostIdentity | undefined): KimiHostIdentity {
+export function assertKimiHostIdentity(
+  identity: KimiHostIdentity | undefined,
+): KimiHostIdentity {
   if (identity === undefined) {
-    throw new Error('Kimi host identity is required. Pass the host product name and version.');
+    throw new Error(
+      "Kimi host identity is required. Pass the host product name and version.",
+    );
   }
-  requiredAsciiHeader(identity.productName, 'Kimi identity product');
-  requiredAsciiHeader(identity.version, 'Kimi identity version');
+  requiredAsciiHeader(identity.productName, "Kimi identity product");
+  requiredAsciiHeader(identity.version, "Kimi identity version");
   return identity;
 }
 
@@ -181,15 +204,16 @@ function deviceModel(): string {
   const os = type();
   const version = release();
   const osArch = arch();
-  if (os === 'Darwin') return `macOS ${macOsProductVersion() ?? version} ${osArch}`;
-  if (os === 'Windows_NT') return `Windows ${version} ${osArch}`;
+  if (os === "Darwin")
+    return `macOS ${macOsProductVersion() ?? version} ${osArch}`;
+  if (os === "Windows_NT") return `Windows ${version} ${osArch}`;
   return `${os} ${version} ${osArch}`.trim();
 }
 
 function macOsProductVersion(): string | undefined {
   try {
-    const version = execFileSync('/usr/bin/sw_vers', ['-productVersion'], {
-      encoding: 'utf-8',
+    const version = execFileSync("/usr/bin/sw_vers", ["-productVersion"], {
+      encoding: "utf-8",
       timeout: 1000,
     }).trim();
     return version.length > 0 ? version : undefined;
@@ -198,13 +222,13 @@ function macOsProductVersion(): string | undefined {
   }
 }
 
-function asciiHeader(value: string, fallback = 'unknown'): string {
-  const cleaned = value.replaceAll(/[^\u0020-\u007E]/g, '').trim();
+function asciiHeader(value: string, fallback = "unknown"): string {
+  const cleaned = value.replaceAll(/[^\u0020-\u007E]/g, "").trim();
   return cleaned.length > 0 ? cleaned : fallback;
 }
 
 function requiredAsciiHeader(value: string, fieldName: string): string {
-  const cleaned = asciiHeader(value, '');
+  const cleaned = asciiHeader(value, "");
   if (cleaned.length === 0) {
     throw new Error(`${fieldName} must be a non-empty ASCII string.`);
   }

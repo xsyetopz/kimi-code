@@ -7,6 +7,6 @@
  * built.
  */
 
-import './acpTerminalRunner';
+import "./acpTerminalRunner";
 
-export { AcpProcessRunner } from './acpTerminalRunner';
+export { AcpProcessRunner } from "./acpTerminalRunner";

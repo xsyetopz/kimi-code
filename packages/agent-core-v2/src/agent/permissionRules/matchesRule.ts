@@ -1,8 +1,8 @@
-import picomatch from 'picomatch';
+import picomatch from "picomatch";
 
-import { Error2, ErrorCodes } from '#/errors';
-import type { RunnableToolExecution } from '#/tool/toolContract';
-import type { PermissionRule } from './permissionRules';
+import { Error2, ErrorCodes } from "#/errors";
+import type { RunnableToolExecution } from "#/tool/toolContract";
+import type { PermissionRule } from "./permissionRules";
 
 export interface ParsedPattern {
   readonly toolName: string;
@@ -12,10 +12,10 @@ export interface ParsedPattern {
 export type ParsedPermissionPattern = ParsedPattern;
 
 export interface PermissionRuleMatchExecution {
-  readonly matchesRule?: RunnableToolExecution['matchesRule'];
+  readonly matchesRule?: RunnableToolExecution["matchesRule"];
 }
 
-export type PermissionRuleMatchStrategy = 'tool_name_only' | 'matches_rule';
+export type PermissionRuleMatchStrategy = "tool_name_only" | "matches_rule";
 
 export interface PermissionRuleMatch {
   readonly rule: PermissionRule;
@@ -32,22 +32,31 @@ export interface PermissionRuleMatchInput {
 export function parsePattern(pattern: string): ParsedPattern {
   const trimmed = pattern.trim();
   if (trimmed.length === 0) {
-    throw new Error2(ErrorCodes.VALIDATION_FAILED, 'permission pattern: empty string');
+    throw new Error2(
+      ErrorCodes.VALIDATION_FAILED,
+      "permission pattern: empty string",
+    );
   }
 
-  const openIdx = trimmed.indexOf('(');
+  const openIdx = trimmed.indexOf("(");
   if (openIdx === -1) {
     return { toolName: trimmed };
   }
 
-  if (!trimmed.endsWith(')')) {
-    throw new Error2(ErrorCodes.VALIDATION_FAILED, `permission pattern: missing closing paren in "${pattern}"`);
+  if (!trimmed.endsWith(")")) {
+    throw new Error2(
+      ErrorCodes.VALIDATION_FAILED,
+      `permission pattern: missing closing paren in "${pattern}"`,
+    );
   }
 
   const toolName = trimmed.slice(0, openIdx);
   const argPattern = trimmed.slice(openIdx + 1, -1);
   if (toolName.length === 0) {
-    throw new Error2(ErrorCodes.VALIDATION_FAILED, `permission pattern: empty tool name in "${pattern}"`);
+    throw new Error2(
+      ErrorCodes.VALIDATION_FAILED,
+      `permission pattern: empty tool name in "${pattern}"`,
+    );
   }
   if (argPattern.length === 0) {
     return { toolName };
@@ -69,15 +78,18 @@ export function matchPermissionRule({
     return undefined;
   }
 
-  if (parsed.toolName !== '*' && !picomatch.isMatch(toolName, parsed.toolName)) {
+  if (
+    parsed.toolName !== "*" &&
+    !picomatch.isMatch(toolName, parsed.toolName)
+  ) {
     return undefined;
   }
 
   if (parsed.argPattern === undefined) {
-    return { rule, strategy: 'tool_name_only', hasRuleArgs: false };
+    return { rule, strategy: "tool_name_only", hasRuleArgs: false };
   }
 
   return execution.matchesRule?.(parsed.argPattern) === true
-    ? { rule, strategy: 'matches_rule', hasRuleArgs: true }
+    ? { rule, strategy: "matches_rule", hasRuleArgs: true }
     : undefined;
 }

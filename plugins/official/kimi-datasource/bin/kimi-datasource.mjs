@@ -12,98 +12,98 @@
 // Business logic is kept self-contained so the plugin can run from a zipped
 // marketplace install without workspace package dependencies.
 
-import { createHash, randomUUID } from 'node:crypto';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import { arch, homedir, hostname, release, type } from 'node:os';
-import path from 'node:path';
-import readline from 'node:readline';
+import { createHash, randomUUID } from "node:crypto";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { arch, homedir, hostname, release, type } from "node:os";
+import path from "node:path";
+import readline from "node:readline";
 
-const VERSION = '3.3.0';
-const DEFAULT_KIMI_CODE_OAUTH_HOST = 'https://auth.kimi.com';
-const DEFAULT_KIMI_CODE_BASE_URL = 'https://api.kimi.com/coding/v1';
+const VERSION = "3.3.0";
+const DEFAULT_KIMI_CODE_OAUTH_HOST = "https://auth.kimi.com";
+const DEFAULT_KIMI_CODE_BASE_URL = "https://api.kimi.com/coding/v1";
 const API_URL = datasourceApiUrl();
 const REQUEST_TIMEOUT_MS = 30_000;
-const PROTOCOL_VERSION = '2025-06-18';
+const PROTOCOL_VERSION = "2025-06-18";
 
 const TOOLS = [
   {
-    name: 'call_data_source_tool',
+    name: "call_data_source_tool",
     description:
       "Dispatch one call to the data source selected for the user's request. Always call get_data_source_desc(name) first, then use an api_name and params from that description. For a simple lookup, use one specialized source and stop after its first successful result; do not query fallback or comparison sources unless the user explicitly asks for a cross-source comparison. When the user names a data source, use that source.",
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
         data_source_name: {
-          type: 'string',
+          type: "string",
           description:
-            'The data source selected via get_data_source_desc. When the user names a source, pass that source.',
+            "The data source selected via get_data_source_desc. When the user names a source, pass that source.",
         },
         api_name: {
-          type: 'string',
-          description: 'API name from the data source description.',
+          type: "string",
+          description: "API name from the data source description.",
         },
         params: {
-          type: 'object',
-          description: 'API parameters that match the data source description.',
+          type: "object",
+          description: "API parameters that match the data source description.",
         },
       },
-      required: ['data_source_name', 'api_name', 'params'],
+      required: ["data_source_name", "api_name", "params"],
     },
   },
   {
-    name: 'get_data_source_desc',
+    name: "get_data_source_desc",
     description:
-      'Get the current API documentation for one Kimi data source before calling a specific API. For a simple lookup, choose exactly one specialized source; do not inspect fallback or comparison sources unless the user explicitly asks for a cross-source comparison.',
+      "Get the current API documentation for one Kimi data source before calling a specific API. For a simple lookup, choose exactly one specialized source; do not inspect fallback or comparison sources unless the user explicitly asks for a cross-source comparison.",
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
         name: {
-          type: 'string',
+          type: "string",
           enum: [
-            'stock_finance_data',
-            'yahoo_finance',
-            'world_bank_open_data',
-            'tianyancha',
-            'arxiv',
-            'scholar',
-            'yuandian_law',
-            'wind',
-            'imf',
-            'gildata',
-            'sec_edgar',
-            'sp_data',
+            "stock_finance_data",
+            "yahoo_finance",
+            "world_bank_open_data",
+            "tianyancha",
+            "arxiv",
+            "scholar",
+            "yuandian_law",
+            "wind",
+            "imf",
+            "gildata",
+            "sec_edgar",
+            "sp_data",
           ],
           description:
-            'Data source name. Capabilities: stock_finance_data / yahoo_finance = general quotes and financials ' +
-            '(yahoo_finance FX history is limited to about 2 years); world_bank_open_data = historical macro; ' +
-            'imf = FX rates, CPI, GDP forecasts, balance of payments; tianyancha = CN company registry; ' +
-            'arxiv / scholar = papers; yuandian_law = CN laws and cases; ' +
-            'wind = A-share intraday minute series, funds, bonds (map PE/PB/ROE-style field names via wind_search_fields first); ' +
-            'gildata = natural-language stock/fund screening; ' +
-            'sec_edgar = US filings (10-K/10-Q, S-1, Form 4, 13F, 8-K); ' +
-            'sp_data = S&P fundamentals (consensus estimates, valuation ratios, transcripts).',
+            "Data source name. Capabilities: stock_finance_data / yahoo_finance = general quotes and financials " +
+            "(yahoo_finance FX history is limited to about 2 years); world_bank_open_data = historical macro; " +
+            "imf = FX rates, CPI, GDP forecasts, balance of payments; tianyancha = CN company registry; " +
+            "arxiv / scholar = papers; yuandian_law = CN laws and cases; " +
+            "wind = A-share intraday minute series, funds, bonds (map PE/PB/ROE-style field names via wind_search_fields first); " +
+            "gildata = natural-language stock/fund screening; " +
+            "sec_edgar = US filings (10-K/10-Q, S-1, Form 4, 13F, 8-K); " +
+            "sp_data = S&P fundamentals (consensus estimates, valuation ratios, transcripts).",
         },
       },
-      required: ['name'],
+      required: ["name"],
     },
   },
 ];
 
 const HANDLERS = {
   call_data_source_tool: {
-    method: 'call_data_source_tool',
+    method: "call_data_source_tool",
     buildParams(args) {
       return {
-        data_source_name: requiredString(args, 'data_source_name'),
-        api_name: requiredString(args, 'api_name'),
-        params: requiredObject(args, 'params'),
+        data_source_name: requiredString(args, "data_source_name"),
+        api_name: requiredString(args, "api_name"),
+        params: requiredObject(args, "params"),
       };
     },
   },
   get_data_source_desc: {
-    method: 'get_data_source_desc',
+    method: "get_data_source_desc",
     buildParams(args) {
-      return { name: requiredString(args, 'name') };
+      return { name: requiredString(args, "name") };
     },
   },
 };
@@ -111,17 +111,17 @@ const HANDLERS = {
 async function handleRequest(message) {
   const { method, id, params } = message;
   switch (method) {
-    case 'initialize':
+    case "initialize":
       return {
         protocolVersion: PROTOCOL_VERSION,
         capabilities: { tools: {} },
-        serverInfo: { name: 'kimi-datasource', version: VERSION },
+        serverInfo: { name: "kimi-datasource", version: VERSION },
       };
-    case 'ping':
+    case "ping":
       return {};
-    case 'tools/list':
+    case "tools/list":
       return { tools: TOOLS };
-    case 'tools/call':
+    case "tools/call":
       return runTool(params);
     default:
       throw jsonRpcError(-32601, `Method not found: ${method}`, { id });
@@ -134,7 +134,7 @@ async function runTool(params) {
   const handler = HANDLERS[name];
   if (handler === undefined) {
     return {
-      content: [{ type: 'text', text: `Unknown tool: ${String(name)}` }],
+      content: [{ type: "text", text: `Unknown tool: ${String(name)}` }],
       isError: true,
     };
   }
@@ -142,14 +142,24 @@ async function runTool(params) {
   try {
     const built = handler.buildParams(args);
     const response = await callKimiTool(handler.method, built, trace);
-    const fileWarnings = await writeResponseFiles(response, expectedResponseFilePath(built));
+    const fileWarnings = await writeResponseFiles(
+      response,
+      expectedResponseFilePath(built),
+    );
     const text = extractText(response);
     const formatted = (handler.format?.(text, built) ?? text).trim();
-    return { content: [{ type: 'text', text: appendTrace(appendWarnings(formatted, fileWarnings), trace) }] };
+    return {
+      content: [
+        {
+          type: "text",
+          text: appendTrace(appendWarnings(formatted, fileWarnings), trace),
+        },
+      ],
+    };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     return {
-      content: [{ type: 'text', text: appendTrace(message, trace) }],
+      content: [{ type: "text", text: appendTrace(message, trace) }],
       isError: true,
     };
   }
@@ -161,21 +171,28 @@ async function writeResponseFiles(response, expectedOutputPath) {
 
   for (const file of response.files) {
     if (!isRecord(file)) continue;
-    const name = typeof file.name === 'string' ? file.name.trim() : '';
-    if (name.length === 0 || file.content === undefined || file.content === null) continue;
+    const name = typeof file.name === "string" ? file.name.trim() : "";
+    if (
+      name.length === 0 ||
+      file.content === undefined ||
+      file.content === null
+    )
+      continue;
 
     const writePath = allowedResponseFilePath(name, expectedOutputPath);
     if (writePath === undefined) {
-      warnings.push(`Warning: skipped returned file ${name} because it is outside the requested output path.`);
+      warnings.push(
+        `Warning: skipped returned file ${name} because it is outside the requested output path.`,
+      );
       continue;
     }
 
     try {
       await mkdir(path.dirname(writePath), { recursive: true });
-      if (file.encoding === 'base64') {
-        await writeFile(writePath, Buffer.from(String(file.content), 'base64'));
+      if (file.encoding === "base64") {
+        await writeFile(writePath, Buffer.from(String(file.content), "base64"));
       } else {
-        await writeFile(writePath, String(file.content), 'utf8');
+        await writeFile(writePath, String(file.content), "utf8");
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -187,14 +204,17 @@ async function writeResponseFiles(response, expectedOutputPath) {
 }
 
 function expectedResponseFilePath(params) {
-  return outputPathField(params) ?? (isRecord(params) ? outputPathField(params.params) : undefined);
+  return (
+    outputPathField(params) ??
+    (isRecord(params) ? outputPathField(params.params) : undefined)
+  );
 }
 
 function outputPathField(value) {
   if (!isRecord(value)) return undefined;
-  for (const field of ['file_path', 'filepath']) {
+  for (const field of ["file_path", "filepath"]) {
     const pathValue = value[field];
-    if (typeof pathValue !== 'string') continue;
+    if (typeof pathValue !== "string") continue;
     const trimmed = pathValue.trim();
     if (trimmed.length > 0) return trimmed;
   }
@@ -219,14 +239,21 @@ function allowedResponseFilePath(name, expectedOutputPath) {
 
 function appendWarnings(text, warnings) {
   if (warnings.length === 0) return text;
-  return `${text}\n\n${warnings.join('\n')}`;
+  return `${text}\n\n${warnings.join("\n")}`;
 }
 
 // Pick the backend request id from the response headers, if the gateway sends one.
 function extractRequestId(headers) {
-  for (const key of ['x-request-id', 'x-trace-id', 'x-msh-request-id', 'x-msh-trace-id', 'request-id']) {
+  for (const key of [
+    "x-request-id",
+    "x-trace-id",
+    "x-msh-request-id",
+    "x-msh-trace-id",
+    "request-id",
+  ]) {
     const value = headers.get(key);
-    if (typeof value === 'string' && value.trim().length > 0) return value.trim();
+    if (typeof value === "string" && value.trim().length > 0)
+      return value.trim();
   }
   return undefined;
 }
@@ -236,14 +263,17 @@ function extractRequestId(headers) {
 function appendTrace(text, trace) {
   if (trace === undefined || trace.toolCallId === undefined) return text;
   const parts = [];
-  if (trace.requestId !== undefined) parts.push(`request-id: ${trace.requestId}`);
+  if (trace.requestId !== undefined)
+    parts.push(`request-id: ${trace.requestId}`);
   parts.push(`tool-call-id: ${trace.toolCallId}`);
-  return `${text}\n\n[kimi-datasource] ${parts.join(' · ')}`;
+  return `${text}\n\n[kimi-datasource] ${parts.join(" · ")}`;
 }
 
 function resolveKimiHome() {
   const explicit = process.env.KIMI_CODE_HOME?.trim();
-  return explicit && explicit.length > 0 ? explicit : path.join(homedir(), '.kimi-code');
+  return explicit && explicit.length > 0
+    ? explicit
+    : path.join(homedir(), ".kimi-code");
 }
 
 function datasourceApiUrl() {
@@ -253,7 +283,10 @@ function datasourceApiUrl() {
 }
 
 function kimiCodeBaseUrl() {
-  return (process.env.KIMI_CODE_BASE_URL ?? DEFAULT_KIMI_CODE_BASE_URL).replace(/\/+$/, '');
+  return (process.env.KIMI_CODE_BASE_URL ?? DEFAULT_KIMI_CODE_BASE_URL).replace(
+    /\/+$/,
+    "",
+  );
 }
 
 function kimiCodeOAuthHost() {
@@ -265,7 +298,7 @@ function kimiCodeOAuthHost() {
 }
 
 function normalizeEndpoint(value) {
-  return value.trim().replace(/\/+$/, '');
+  return value.trim().replace(/\/+$/, "");
 }
 
 function resolveKimiCodeCredentialName() {
@@ -275,13 +308,13 @@ function resolveKimiCodeCredentialName() {
     oauthHost === normalizeEndpoint(DEFAULT_KIMI_CODE_OAUTH_HOST) &&
     baseUrl === DEFAULT_KIMI_CODE_BASE_URL
   ) {
-    return 'kimi-code';
+    return "kimi-code";
   }
 
   // Keep this in sync with packages/oauth/src/managed-kimi-code.ts.
-  const digest = createHash('sha256')
+  const digest = createHash("sha256")
     .update(JSON.stringify({ oauthHost, baseUrl }))
-    .digest('hex')
+    .digest("hex")
     .slice(0, 16);
   return `kimi-code-env-${digest}`;
 }
@@ -290,12 +323,12 @@ async function loadAccessToken() {
   const kimiHome = resolveKimiHome();
   const credentialsFile = path.join(
     kimiHome,
-    'credentials',
+    "credentials",
     `${resolveKimiCodeCredentialName()}.json`,
   );
   let parsed;
   try {
-    parsed = JSON.parse(await readFile(credentialsFile, 'utf8'));
+    parsed = JSON.parse(await readFile(credentialsFile, "utf8"));
   } catch (err) {
     if (isNotFound(err)) {
       throw new Error(
@@ -303,7 +336,9 @@ async function loadAccessToken() {
       );
     }
     if (err instanceof SyntaxError) {
-      throw new Error(`Failed to parse Kimi Code credentials file: ${err.message}`);
+      throw new Error(
+        `Failed to parse Kimi Code credentials file: ${err.message}`,
+      );
     }
     throw err;
   }
@@ -311,9 +346,12 @@ async function loadAccessToken() {
   if (!isRecord(parsed)) {
     throw new Error(`Invalid Kimi Code credentials file: ${credentialsFile}`);
   }
-  const token = typeof parsed.access_token === 'string' ? parsed.access_token : '';
+  const token =
+    typeof parsed.access_token === "string" ? parsed.access_token : "";
   if (token.length === 0) {
-    throw new Error('Kimi Code credentials do not contain access_token. Run /login again.');
+    throw new Error(
+      "Kimi Code credentials do not contain access_token. Run /login again.",
+    );
   }
   return { kimiHome, token };
 }
@@ -330,7 +368,7 @@ async function callKimiTool(method, params, trace = {}) {
   try {
     const request = async (accessToken) => {
       const response = await fetch(API_URL, {
-        method: 'POST',
+        method: "POST",
         headers: await buildHeaders(kimiHome, accessToken, toolCallId),
         body: JSON.stringify({ method, params }),
         signal: controller.signal,
@@ -349,7 +387,9 @@ async function callKimiTool(method, params, trace = {}) {
     trace.requestId = extractRequestId(response.headers);
     if (!response.ok) {
       if (response.status === 401) {
-        throw new Error('Kimi Code access_token was rejected. Run /login again and retry.');
+        throw new Error(
+          "Kimi Code access_token was rejected. Run /login again and retry.",
+        );
       }
       throw new Error(`HTTP ${response.status} error: ${text}`);
     }
@@ -359,8 +399,10 @@ async function callKimiTool(method, params, trace = {}) {
       return text;
     }
   } catch (err) {
-    if (err instanceof DOMException && err.name === 'AbortError') {
-      throw new Error(`Request timed out after ${REQUEST_TIMEOUT_MS / 1000} seconds.`);
+    if (err instanceof DOMException && err.name === "AbortError") {
+      throw new Error(
+        `Request timed out after ${REQUEST_TIMEOUT_MS / 1000} seconds.`,
+      );
     }
     throw err;
   } finally {
@@ -371,22 +413,32 @@ async function callKimiTool(method, params, trace = {}) {
 async function buildHeaders(kimiHome, token, toolCallId) {
   return {
     Authorization: `Bearer ${token}`,
-    'Content-Type': 'application/json',
-    'X-Msh-Tool-Call-Id': toolCallId,
-    'X-Msh-Platform': asciiHeader(process.env.KIMI_MSH_PLATFORM ?? 'kimi-code-cli'),
-    'X-Msh-Version': asciiHeader(process.env.KIMI_MSH_VERSION ?? VERSION),
-    'X-Msh-Device-Name': asciiHeader(process.env.KIMI_MSH_DEVICE_NAME ?? hostname()),
-    'X-Msh-Device-Model': asciiHeader(process.env.KIMI_MSH_DEVICE_MODEL ?? deviceModel()),
-    'X-Msh-Os-Version': asciiHeader(process.env.KIMI_MSH_OS_VERSION ?? release()),
-    'X-Msh-Device-Id': asciiHeader(process.env.KIMI_MSH_DEVICE_ID ?? (await createDeviceId(kimiHome))),
-    'User-Agent': `kimi-datasource/${VERSION}`,
+    "Content-Type": "application/json",
+    "X-Msh-Tool-Call-Id": toolCallId,
+    "X-Msh-Platform": asciiHeader(
+      process.env.KIMI_MSH_PLATFORM ?? "kimi-code-cli",
+    ),
+    "X-Msh-Version": asciiHeader(process.env.KIMI_MSH_VERSION ?? VERSION),
+    "X-Msh-Device-Name": asciiHeader(
+      process.env.KIMI_MSH_DEVICE_NAME ?? hostname(),
+    ),
+    "X-Msh-Device-Model": asciiHeader(
+      process.env.KIMI_MSH_DEVICE_MODEL ?? deviceModel(),
+    ),
+    "X-Msh-Os-Version": asciiHeader(
+      process.env.KIMI_MSH_OS_VERSION ?? release(),
+    ),
+    "X-Msh-Device-Id": asciiHeader(
+      process.env.KIMI_MSH_DEVICE_ID ?? (await createDeviceId(kimiHome)),
+    ),
+    "User-Agent": `kimi-datasource/${VERSION}`,
   };
 }
 
 async function createDeviceId(kimiHome) {
-  const deviceIdPath = path.join(kimiHome, 'device_id');
+  const deviceIdPath = path.join(kimiHome, "device_id");
   try {
-    const existing = (await readFile(deviceIdPath, 'utf8')).trim();
+    const existing = (await readFile(deviceIdPath, "utf8")).trim();
     if (existing.length > 0) return existing;
   } catch {
     // Fall through to create a best-effort local device id.
@@ -395,7 +447,7 @@ async function createDeviceId(kimiHome) {
   const id = randomUUID();
   try {
     await mkdir(kimiHome, { recursive: true, mode: 0o700 });
-    await writeFile(deviceIdPath, `${id}\n`, { encoding: 'utf8', mode: 0o600 });
+    await writeFile(deviceIdPath, `${id}\n`, { encoding: "utf8", mode: 0o600 });
   } catch {
     // Headers can still use the in-memory id if the file cannot be written.
   }
@@ -406,17 +458,18 @@ function deviceModel() {
   const os = type();
   const osVersion = release();
   const osArch = arch();
-  if (os === 'Darwin') return `macOS ${osVersion} ${osArch}`;
-  if (os === 'Windows_NT') return `Windows ${osVersion} ${osArch}`;
+  if (os === "Darwin") return `macOS ${osVersion} ${osArch}`;
+  if (os === "Windows_NT") return `Windows ${osVersion} ${osArch}`;
   return `${os} ${osVersion} ${osArch}`.trim();
 }
 
 function extractText(response) {
-  if (typeof response === 'string') return response;
+  if (typeof response === "string") return response;
   if (!isRecord(response)) return String(response);
 
   if (response.is_success === false) {
-    const message = extractChannelText(response.error) ?? JSON.stringify(response);
+    const message =
+      extractChannelText(response.error) ?? JSON.stringify(response);
     throw new Error(`Tool API returned an error: ${message}`);
   }
 
@@ -427,14 +480,19 @@ function extractText(response) {
 
 function extractChannelText(value) {
   if (!isRecord(value)) return undefined;
-  for (const channel of ['assistant', 'user']) {
+  for (const channel of ["assistant", "user"]) {
     const items = value[channel];
     if (!Array.isArray(items)) continue;
     const text = items
-      .filter((item) => isRecord(item) && item.type === 'text' && typeof item.text === 'string')
+      .filter(
+        (item) =>
+          isRecord(item) &&
+          item.type === "text" &&
+          typeof item.text === "string",
+      )
       .map((item) => item.text)
       .filter(Boolean)
-      .join('\n\n')
+      .join("\n\n")
       .trim();
     if (text.length > 0) return text;
   }
@@ -443,7 +501,8 @@ function extractChannelText(value) {
 
 function requiredString(args, field) {
   const value = optionalString(args, field);
-  if (value === undefined) throw new Error(`Missing required argument: ${field}.`);
+  if (value === undefined)
+    throw new Error(`Missing required argument: ${field}.`);
   return value;
 }
 
@@ -451,7 +510,7 @@ function optionalString(args, field) {
   if (!isRecord(args)) return undefined;
   const value = args[field];
   if (value === undefined || value === null) return undefined;
-  if (typeof value !== 'string') throw new Error(`${field} must be a string.`);
+  if (typeof value !== "string") throw new Error(`${field} must be a string.`);
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : undefined;
 }
@@ -464,15 +523,17 @@ function requiredObject(args, field) {
 }
 
 function isRecord(value) {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function isNotFound(err) {
-  return isRecord(err) && err.code === 'ENOENT';
+  return isRecord(err) && err.code === "ENOENT";
 }
 
-function asciiHeader(value, fallback = 'unknown') {
-  const cleaned = String(value).replaceAll(/[^ -~]/g, '').trim();
+function asciiHeader(value, fallback = "unknown") {
+  const cleaned = String(value)
+    .replaceAll(/[^ -~]/g, "")
+    .trim();
   return cleaned.length > 0 ? cleaned : fallback;
 }
 
@@ -487,18 +548,21 @@ function send(message) {
 }
 
 function sendResult(id, result) {
-  send({ jsonrpc: '2.0', id, result });
+  send({ jsonrpc: "2.0", id, result });
 }
 
 function sendError(id, error) {
-  send({ jsonrpc: '2.0', id, error });
+  send({ jsonrpc: "2.0", id, error });
 }
 
 async function dispatch(message) {
-  if (message?.jsonrpc !== '2.0') return;
+  if (message?.jsonrpc !== "2.0") return;
   // Notifications carry no id and never expect a response.
   if (message.id === undefined || message.id === null) {
-    if (message.method === 'notifications/initialized' || message.method === 'notifications/cancelled') {
+    if (
+      message.method === "notifications/initialized" ||
+      message.method === "notifications/cancelled"
+    ) {
       return;
     }
     return;
@@ -508,7 +572,7 @@ async function dispatch(message) {
     const result = await handleRequest(message);
     sendResult(id, result ?? {});
   } catch (err) {
-    if (err && typeof err === 'object' && err.jsonRpc !== undefined) {
+    if (err && typeof err === "object" && err.jsonRpc !== undefined) {
       sendError(id, err.jsonRpc);
       return;
     }
@@ -521,7 +585,7 @@ async function dispatch(message) {
 
 function start() {
   const rl = readline.createInterface({ input: process.stdin });
-  rl.on('line', (line) => {
+  rl.on("line", (line) => {
     const trimmed = line.trim();
     if (trimmed.length === 0) return;
     let message;
@@ -536,7 +600,7 @@ function start() {
     }
     void dispatch(message);
   });
-  rl.on('close', () => {
+  rl.on("close", () => {
     process.exit(0);
   });
 }

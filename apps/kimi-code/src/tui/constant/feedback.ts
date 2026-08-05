@@ -7,24 +7,26 @@
  * visual contract.
  */
 
-import { FEEDBACK_VERSION_PREFIX } from '#/constant/app';
+import { FEEDBACK_VERSION_PREFIX } from "#/constant/app";
 
 export {
   FEEDBACK_ISSUE_URL,
   FEEDBACK_TELEMETRY_EVENT,
   FEEDBACK_VERSION_PREFIX,
-} from '#/constant/app';
+} from "#/constant/app";
 
-export const FEEDBACK_STATUS_SUBMITTING = 'Submitting feedback…';
-export const FEEDBACK_STATUS_UPLOADING = 'Uploading attachments, this could take a few minutes…';
-export const FEEDBACK_STATUS_SUCCESS = 'Feedback submitted, thank you!';
-export const FEEDBACK_STATUS_CANCELLED = 'Feedback cancelled.';
-export const FEEDBACK_STATUS_NETWORK_ERROR = 'Network error, failed to submit feedback.';
-export const FEEDBACK_STATUS_FALLBACK = 'Opening GitHub Issues as fallback…';
+export const FEEDBACK_STATUS_SUBMITTING = "Submitting feedback…";
+export const FEEDBACK_STATUS_UPLOADING =
+  "Uploading attachments, this could take a few minutes…";
+export const FEEDBACK_STATUS_SUCCESS = "Feedback submitted, thank you!";
+export const FEEDBACK_STATUS_CANCELLED = "Feedback cancelled.";
+export const FEEDBACK_STATUS_NETWORK_ERROR =
+  "Network error, failed to submit feedback.";
+export const FEEDBACK_STATUS_FALLBACK = "Opening GitHub Issues as fallback…";
 export const FEEDBACK_STATUS_NOT_SIGNED_IN =
   "You're not signed in. Opening GitHub Issues for feedback…";
 export const FEEDBACK_STATUS_UPLOAD_FAILED =
-  'Feedback sent; attachment upload failed — see feedback-upload.log.';
+  "Feedback sent; attachment upload failed — see feedback-upload.log.";
 
 export function feedbackHttpErrorMessage(status: number): string {
   return `Failed to submit feedback (HTTP ${String(status)}).`;

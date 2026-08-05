@@ -22,17 +22,17 @@ export function parseRangeHeader(
   size: number,
 ): { start: number; end: number; length: number } | null {
   if (raw === undefined) return null;
-  if (!raw.startsWith('bytes=')) return null;
-  const spec = raw.slice('bytes='.length);
-  if (spec.includes(',')) return null;
-  const dash = spec.indexOf('-');
+  if (!raw.startsWith("bytes=")) return null;
+  const spec = raw.slice("bytes=".length);
+  if (spec.includes(",")) return null;
+  const dash = spec.indexOf("-");
   if (dash < 0) return null;
   const leftRaw = spec.slice(0, dash);
   const rightRaw = spec.slice(dash + 1);
-  if (leftRaw === '' && rightRaw === '') return null;
+  if (leftRaw === "" && rightRaw === "") return null;
   let start: number;
   let end: number;
-  if (leftRaw === '') {
+  if (leftRaw === "") {
     const suffix = Number.parseInt(rightRaw, 10);
     if (!Number.isFinite(suffix) || suffix <= 0) return null;
     start = Math.max(0, size - suffix);
@@ -41,7 +41,7 @@ export function parseRangeHeader(
     const a = Number.parseInt(leftRaw, 10);
     if (!Number.isFinite(a) || a < 0) return null;
     start = a;
-    if (rightRaw === '') {
+    if (rightRaw === "") {
       end = size - 1;
     } else {
       const b = Number.parseInt(rightRaw, 10);

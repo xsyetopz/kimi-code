@@ -10,9 +10,9 @@
  *             40912 skill.not_activatable
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { skillDescriptorSchema } from '../skill';
+import { skillDescriptorSchema } from "../skill";
 
 export const listSkillsResponseSchema = z.object({
   skills: z.array(skillDescriptorSchema),

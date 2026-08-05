@@ -1,4 +1,4 @@
-import type { Readable, Writable } from 'node:stream';
+import type { Readable, Writable } from "node:stream";
 
 /**
  * A running process spawned by a {@link Kaos} environment.

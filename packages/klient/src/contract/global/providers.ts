@@ -6,22 +6,22 @@
  * packages can register new vendors without touching this schema.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { maybe, noResult } from '../helpers.js';
-import type { ServiceContract } from '../types.js';
+import { maybe, noResult } from "../helpers.js";
+import type { ServiceContract } from "../types.js";
 
 const providerTypeSchema = z.string();
 
 const oAuthRefSchema = z.object({
-  storage: z.enum(['file', 'keyring']),
+  storage: z.enum(["file", "keyring"]),
   key: z.string().min(1),
   oauthHost: z.string().min(1).optional(),
 });
 
 const stringRecordSchema = z.record(z.string(), z.string());
 
-const modelSourceSchema = z.enum(['static', 'discover', 'oauth-catalog']);
+const modelSourceSchema = z.enum(["static", "discover", "oauth-catalog"]);
 
 export const providerConfigSchema = z.object({
   modelSource: modelSourceSchema.optional(),
@@ -39,7 +39,10 @@ export const providerConfigSchema = z.object({
 
 export const providersContract = {
   get: { input: z.tuple([z.string()]), output: maybe(providerConfigSchema) },
-  list: { input: z.tuple([]), output: z.record(z.string(), providerConfigSchema) },
+  list: {
+    input: z.tuple([]),
+    output: z.record(z.string(), providerConfigSchema),
+  },
   set: { input: z.tuple([z.string(), providerConfigSchema]), output: noResult },
   delete: { input: z.tuple([z.string()]), output: noResult },
 } satisfies ServiceContract;

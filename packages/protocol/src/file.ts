@@ -1,6 +1,6 @@
-import { z } from 'zod';
+import { z } from "zod";
 
-import { isoDateTimeSchema } from './time';
+import { isoDateTimeSchema } from "./time";
 
 export const fileMetaSchema = z.object({
   id: z.string().min(1),

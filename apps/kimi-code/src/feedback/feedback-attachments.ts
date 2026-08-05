@@ -1,19 +1,23 @@
-import { createHash } from 'node:crypto';
-import { appendFile, mkdir, readFile, rm, stat } from 'node:fs/promises';
-import { join } from 'node:path';
+import { createHash } from "node:crypto";
+import { appendFile, mkdir, readFile, rm, stat } from "node:fs/promises";
+import { join } from "node:path";
 
-import { detectInstallSource } from '#/cli/update/source';
-import type { SlashCommandHost } from '#/tui/commands/dispatch';
-import type { FeedbackAttachmentLevel } from '#/tui/commands/prompts';
-import { getLogDir } from '#/utils/paths';
-import { detectShellEnvironment } from '#/utils/process/shell-env';
+import { detectInstallSource } from "#/cli/update/source";
+import type { SlashCommandHost } from "#/tui/commands/dispatch";
+import type { FeedbackAttachmentLevel } from "#/tui/commands/prompts";
+import { getLogDir } from "#/utils/paths";
+import { detectShellEnvironment } from "#/utils/process/shell-env";
 
-import { createFeedbackArchivePath, type FeedbackArchive } from './archive';
-import { packageCodebase, scanCodebase, type FeedbackCodebaseScanResult } from './codebase';
-import { uploadArchive, type FeedbackUploadUrlApi } from './upload';
+import { createFeedbackArchivePath, type FeedbackArchive } from "./archive";
+import {
+  packageCodebase,
+  scanCodebase,
+  type FeedbackCodebaseScanResult,
+} from "./codebase";
+import { uploadArchive, type FeedbackUploadUrlApi } from "./upload";
 
-export const CODEBASE_ARCHIVE_FILENAME = 'repo.zip';
-export const SESSION_ARCHIVE_FILENAME = 'session.zip';
+export const CODEBASE_ARCHIVE_FILENAME = "repo.zip";
+export const SESSION_ARCHIVE_FILENAME = "session.zip";
 
 const CODEBASE_SCAN_TIMEOUT_MS = 3000;
 
@@ -34,11 +38,15 @@ export async function submitFeedbackWithAttachments(
 ): Promise<boolean> {
   const api = createFeedbackUploadApi(host);
 
-  if (level === 'logs') {
-    const uploaded = await prepareAndUploadSessionArchive(host, api, feedbackId);
+  if (level === "logs") {
+    const uploaded = await prepareAndUploadSessionArchive(
+      host,
+      api,
+      feedbackId,
+    );
     return !uploaded;
   }
-  if (level === 'logs+codebase') {
+  if (level === "logs+codebase") {
     const [sessionDir, scan] = await Promise.all([
       resolveCurrentSessionDir(host),
       scanCodebaseForFeedback(host.state.appState.workDir),
@@ -60,20 +68,27 @@ async function prepareAndUploadSessionArchive(
 ): Promise<boolean> {
   const sessionDir = knownSessionDir ?? (await resolveCurrentSessionDir(host));
   if (sessionDir === undefined) {
-    await logFeedbackUploadError(new Error('cannot locate the current session directory'));
+    await logFeedbackUploadError(
+      new Error("cannot locate the current session directory"),
+    );
     return false;
   }
-  return uploadProducedArchive(api, feedbackId, SESSION_ARCHIVE_FILENAME, async (archivePath) => {
-    const exported = await host.harness.exportSession({
-      id: host.state.appState.sessionId,
-      outputPath: archivePath,
-      includeGlobalLog: true,
-      version: host.state.appState.version,
-      installSource: await detectInstallSource(),
-      shellEnv: detectShellEnvironment(),
-    });
-    return archiveFromExportedSession(exported.zipPath);
-  });
+  return uploadProducedArchive(
+    api,
+    feedbackId,
+    SESSION_ARCHIVE_FILENAME,
+    async (archivePath) => {
+      const exported = await host.harness.exportSession({
+        id: host.state.appState.sessionId,
+        outputPath: archivePath,
+        includeGlobalLog: true,
+        version: host.state.appState.version,
+        installSource: await detectInstallSource(),
+        shellEnv: detectShellEnvironment(),
+      });
+      return archiveFromExportedSession(exported.zipPath);
+    },
+  );
 }
 
 async function prepareAndUploadCodebaseArchive(
@@ -82,8 +97,11 @@ async function prepareAndUploadCodebaseArchive(
   scan: FeedbackCodebaseScanResult | undefined,
 ): Promise<boolean> {
   if (scan === undefined) return false;
-  return uploadProducedArchive(api, feedbackId, CODEBASE_ARCHIVE_FILENAME, (archivePath) =>
-    packageCodebase(scan, archivePath),
+  return uploadProducedArchive(
+    api,
+    feedbackId,
+    CODEBASE_ARCHIVE_FILENAME,
+    (archivePath) => packageCodebase(scan, archivePath),
   );
 }
 
@@ -103,7 +121,9 @@ async function uploadProducedArchive(
   const { archivePath, cleanupDir } = await createFeedbackArchivePath(filename);
   try {
     const archive = await produce(archivePath);
-    await uploadArchive(api, { ...archive, cleanupDir }, feedbackId, { filename });
+    await uploadArchive(api, { ...archive, cleanupDir }, feedbackId, {
+      filename,
+    });
     return true;
   } catch (error) {
     await logFeedbackUploadError(error);
@@ -113,22 +133,30 @@ async function uploadProducedArchive(
   }
 }
 
-async function archiveFromExportedSession(zipPath: string): Promise<FeedbackArchive> {
+async function archiveFromExportedSession(
+  zipPath: string,
+): Promise<FeedbackArchive> {
   const data = await readFile(zipPath);
   const archiveStat = await stat(zipPath);
   return {
     path: zipPath,
     size: archiveStat.size,
-    sha256: createHash('sha256').update(data).digest('hex'),
-    fingerprint: createHash('sha256').update(data).digest('hex'),
+    sha256: createHash("sha256").update(data).digest("hex"),
+    fingerprint: createHash("sha256").update(data).digest("hex"),
     fileCount: 1,
   };
 }
 
-async function resolveCurrentSessionDir(host: SlashCommandHost): Promise<string | undefined> {
+async function resolveCurrentSessionDir(
+  host: SlashCommandHost,
+): Promise<string | undefined> {
   try {
-    const sessions = await host.harness.listSessions({ workDir: host.state.appState.workDir });
-    return sessions.find((session) => session.id === host.state.appState.sessionId)?.sessionDir;
+    const sessions = await host.harness.listSessions({
+      workDir: host.state.appState.workDir,
+    });
+    return sessions.find(
+      (session) => session.id === host.state.appState.sessionId,
+    )?.sessionDir;
   } catch {
     return undefined;
   }
@@ -155,8 +183,12 @@ async function logFeedbackUploadError(error: unknown): Promise<void> {
   try {
     const logDir = getLogDir();
     await mkdir(logDir, { recursive: true });
-    const message = error instanceof Error ? (error.stack ?? error.message) : String(error);
-    await appendFile(join(logDir, 'feedback-upload.log'), `${new Date().toISOString()} ${message}\n`);
+    const message =
+      error instanceof Error ? (error.stack ?? error.message) : String(error);
+    await appendFile(
+      join(logDir, "feedback-upload.log"),
+      `${new Date().toISOString()} ${message}\n`,
+    );
   } catch {
     // best-effort logging only
   }
@@ -166,7 +198,7 @@ function createFeedbackUploadApi(host: SlashCommandHost): FeedbackUploadUrlApi {
   return {
     async createUploadUrl(input) {
       const res = await host.harness.auth.createFeedbackUploadUrl(input);
-      if (res.kind !== 'ok') throw new Error(res.message);
+      if (res.kind !== "ok") throw new Error(res.message);
       return {
         uploadId: res.uploadId,
         parts: res.parts,
@@ -175,9 +207,12 @@ function createFeedbackUploadApi(host: SlashCommandHost): FeedbackUploadUrlApi {
     async completeUpload(input) {
       const res = await host.harness.auth.completeFeedbackUpload({
         uploadId: input.uploadId,
-        parts: input.parts.map((part) => ({ partNumber: part.partNumber, etag: part.etag })),
+        parts: input.parts.map((part) => ({
+          partNumber: part.partNumber,
+          etag: part.etag,
+        })),
       });
-      if (res.kind !== 'ok') throw new Error(res.message);
+      if (res.kind !== "ok") throw new Error(res.message);
     },
   };
 }

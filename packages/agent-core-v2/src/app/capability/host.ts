@@ -10,13 +10,13 @@
  * fails the background install instead of wedging it.
  */
 
-import { createWriteStream } from 'node:fs';
-import { mkdir } from 'node:fs/promises';
-import path from 'node:path';
-import { Readable, Transform } from 'node:stream';
-import { pipeline } from 'node:stream/promises';
+import { createWriteStream } from "node:fs";
+import { mkdir } from "node:fs/promises";
+import path from "node:path";
+import { Readable, Transform } from "node:stream";
+import { pipeline } from "node:stream/promises";
 
-import type { IHostProcessService } from '#/os/interface/hostProcess';
+import type { IHostProcessService } from "#/os/interface/hostProcess";
 
 export interface CommandResult {
   readonly code: number;
@@ -27,9 +27,11 @@ export interface CommandResult {
 async function collect(stream: Readable): Promise<string> {
   const chunks: Buffer[] = [];
   for await (const chunk of stream) {
-    chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : (chunk as Buffer));
+    chunks.push(
+      typeof chunk === "string" ? Buffer.from(chunk) : (chunk as Buffer),
+    );
   }
-  return Buffer.concat(chunks).toString('utf-8');
+  return Buffer.concat(chunks).toString("utf-8");
 }
 
 export async function runCommand(
@@ -38,12 +40,21 @@ export async function runCommand(
   args: readonly string[],
   options: { timeout?: number } = {},
 ): Promise<CommandResult> {
-  const spawned = await hostProcess.spawn(command, args, { windowsHide: true }).then(
-    (proc) => ({ ok: true as const, proc }),
-    (error: unknown) => ({ ok: false as const, error }),
-  );
+  const spawned = await hostProcess
+    .spawn(command, args, { windowsHide: true })
+    .then(
+      (proc) => ({ ok: true as const, proc }),
+      (error: unknown) => ({ ok: false as const, error }),
+    );
   if (!spawned.ok) {
-    return { code: -1, stdout: '', stderr: spawned.error instanceof Error ? spawned.error.message : String(spawned.error) };
+    return {
+      code: -1,
+      stdout: "",
+      stderr:
+        spawned.error instanceof Error
+          ? spawned.error.message
+          : String(spawned.error),
+    };
   }
   const { proc } = spawned;
   try {
@@ -53,18 +64,23 @@ export async function runCommand(
       proc.wait().catch(() => -1),
     ] as const);
     let timer: NodeJS.Timeout | undefined;
-    const timed = options.timeout === undefined
-      ? work
-      : Promise.race([
-          work,
-          new Promise<never>((_resolve, reject) => {
-            timer = setTimeout(() => {
-              void proc.kill().catch(() => {});
-              reject(new Error(`command timed out after ${options.timeout}ms: ${command}`));
-            }, options.timeout);
-            timer.unref?.();
-          }),
-        ]);
+    const timed =
+      options.timeout === undefined
+        ? work
+        : Promise.race([
+            work,
+            new Promise<never>((_resolve, reject) => {
+              timer = setTimeout(() => {
+                void proc.kill().catch(() => {});
+                reject(
+                  new Error(
+                    `command timed out after ${options.timeout}ms: ${command}`,
+                  ),
+                );
+              }, options.timeout);
+              timer.unref?.();
+            }),
+          ]);
     try {
       const [stdout, stderr, code] = await timed;
       return { code, stdout, stderr };
@@ -83,7 +99,7 @@ export type FetchLike = (
   ok: boolean;
   status: number;
   headers: { get(name: string): string | null };
-  body: import('node:stream/web').ReadableStream | null;
+  body: import("node:stream/web").ReadableStream | null;
 }>;
 
 export async function downloadToFile(
@@ -103,10 +119,16 @@ export async function downloadToFile(
   try {
     resp = await fetchImpl(url, { signal: headerController.signal });
   } catch (error) {
-    if (error instanceof Error && (error.name === 'AbortError' || error.name === 'TimeoutError')) {
-      throw new Error(`Failed to download ${url}: no response within ${idleTimeoutMs}ms`, {
-        cause: error,
-      });
+    if (
+      error instanceof Error &&
+      (error.name === "AbortError" || error.name === "TimeoutError")
+    ) {
+      throw new Error(
+        `Failed to download ${url}: no response within ${idleTimeoutMs}ms`,
+        {
+          cause: error,
+        },
+      );
     }
     throw error;
   } finally {
@@ -115,7 +137,7 @@ export async function downloadToFile(
   if (!resp.ok || resp.body === null) {
     throw new Error(`Failed to download ${url}: HTTP ${resp.status}`);
   }
-  const total = Number(resp.headers.get('content-length') ?? 0);
+  const total = Number(resp.headers.get("content-length") ?? 0);
   await mkdir(path.dirname(destPath), { recursive: true });
   let received = 0;
   let idleTimer: NodeJS.Timeout | undefined;
@@ -132,13 +154,19 @@ export async function downloadToFile(
   function armIdleWatchdog(): void {
     if (idleTimer !== undefined) clearTimeout(idleTimer);
     idleTimer = setTimeout(() => {
-      meter.destroy(new Error(`Download stalled for ${idleTimeoutMs}ms: ${url}`));
+      meter.destroy(
+        new Error(`Download stalled for ${idleTimeoutMs}ms: ${url}`),
+      );
     }, idleTimeoutMs);
     idleTimer.unref?.();
   }
   armIdleWatchdog();
   try {
-    await pipeline(Readable.fromWeb(resp.body), meter, createWriteStream(destPath));
+    await pipeline(
+      Readable.fromWeb(resp.body),
+      meter,
+      createWriteStream(destPath),
+    );
   } finally {
     if (idleTimer !== undefined) clearTimeout(idleTimer);
   }

@@ -1,11 +1,11 @@
 // apps/kimi-web/src/api/config.ts
 // Reads Vite env, builds REST/WS URLs, manages stable clientId.
 
-import { safeGetString, safeSetString, STORAGE_KEYS } from '../lib/storage';
+import { safeGetString, safeSetString, STORAGE_KEYS } from "../lib/storage";
 
 const CLIENT_ID_KEY = STORAGE_KEYS.clientId;
-const WEB_CLIENT_NAME = 'kimi-code-web';
-const WEB_CLIENT_UI_MODE = 'web';
+const WEB_CLIENT_NAME = "kimi-code-web";
+const WEB_CLIENT_UI_MODE = "web";
 
 export interface KimiApiConfig {
   serverHttpUrl: string;
@@ -17,7 +17,9 @@ export interface KimiApiConfig {
 
 export function readKimiApiConfig(): KimiApiConfig {
   return {
-    serverHttpUrl: normalizeServerOrigin(import.meta.env.VITE_KIMI_SERVER_HTTP_URL),
+    serverHttpUrl: normalizeServerOrigin(
+      import.meta.env.VITE_KIMI_SERVER_HTTP_URL,
+    ),
     clientId: getClientId(),
     clientName: WEB_CLIENT_NAME,
     clientVersion: webClientVersion(),
@@ -34,24 +36,24 @@ export function readKimiApiConfig(): KimiApiConfig {
 // Set VITE_KIMI_SERVER_HTTP_URL to connect directly to an absolute server
 // origin instead (that path does require the server to send CORS headers).
 function defaultServerOrigin(): string {
-  if (typeof window !== 'undefined' && window.location?.origin) {
+  if (typeof window !== "undefined" && window.location?.origin) {
     return window.location.origin;
   }
-  return 'http://127.0.0.1:58627';
+  return "http://127.0.0.1:58627";
 }
 
 export function normalizeServerOrigin(value: string | undefined): string {
   const raw = value && value.trim() ? value : defaultServerOrigin();
   const url = new URL(raw);
-  url.pathname = url.pathname.replace(/\/v1\/?$/, '').replace(/\/$/, '');
-  url.search = '';
-  url.hash = '';
-  return url.toString().replace(/\/$/, '');
+  url.pathname = url.pathname.replace(/\/v1\/?$/, "").replace(/\/$/, "");
+  url.search = "";
+  url.hash = "";
+  return url.toString().replace(/\/$/, "");
 }
 
 /** Strip the scheme for a compact display origin: `http://127.0.0.1:58627` → `127.0.0.1:58627`. */
 function shortOrigin(origin: string): string {
-  return origin.replace(/^https?:\/\//, '').replace(/\/$/, '');
+  return origin.replace(/^https?:\/\//, "").replace(/\/$/, "");
 }
 
 /**
@@ -64,26 +66,31 @@ function shortOrigin(origin: string): string {
  */
 export function serverEndpointLabel(): string {
   const direct = import.meta.env.VITE_KIMI_SERVER_HTTP_URL;
-  if (direct && direct.trim()) return shortOrigin(normalizeServerOrigin(direct));
+  if (direct && direct.trim())
+    return shortOrigin(normalizeServerOrigin(direct));
 
   const proxy =
-    typeof __KIMI_DEV_PROXY_TARGET__ !== 'undefined' ? __KIMI_DEV_PROXY_TARGET__ : '';
+    typeof __KIMI_DEV_PROXY_TARGET__ !== "undefined"
+      ? __KIMI_DEV_PROXY_TARGET__
+      : "";
   if (import.meta.env.DEV && proxy) return shortOrigin(proxy);
 
   const origin =
-    typeof window !== 'undefined' && window.location?.origin ? window.location.origin : '';
+    typeof window !== "undefined" && window.location?.origin
+      ? window.location.origin
+      : "";
   return shortOrigin(origin);
 }
 
 // The real server serves everything (incl. healthz + ws) under the /api/v1 prefix.
 export function buildRestUrl(origin: string, path: string): string {
-  return `${origin}/api/v1${path.startsWith('/') ? path : `/${path}`}`;
+  return `${origin}/api/v1${path.startsWith("/") ? path : `/${path}`}`;
 }
 
 export function buildWsUrl(origin: string, clientId: string): string {
   const url = new URL(`${origin}/api/v1/ws`);
-  url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
-  url.searchParams.set('client_id', clientId);
+  url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+  url.searchParams.set("client_id", clientId);
   return url.toString();
 }
 
@@ -96,7 +103,7 @@ function getClientId(): string {
 }
 
 function webClientVersion(): string {
-  return typeof __KIMI_WEB_VERSION__ === 'string' && __KIMI_WEB_VERSION__.trim()
+  return typeof __KIMI_WEB_VERSION__ === "string" && __KIMI_WEB_VERSION__.trim()
     ? __KIMI_WEB_VERSION__
-    : '0.0.0-dev';
+    : "0.0.0-dev";
 }

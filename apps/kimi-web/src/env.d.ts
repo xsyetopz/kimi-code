@@ -19,10 +19,14 @@ declare const __KIMI_WEB_VERSION__: string;
 // Desktop app. Gates the internal-build banner (see InternalBuildBanner.vue).
 declare const __KIMI_WEB_DESKTOP__: boolean;
 
-declare module '*.vue' {
-  import type { DefineComponent } from 'vue';
+declare module "*.vue" {
+  import type { DefineComponent } from "vue";
 
-  const component: DefineComponent<Record<string, never>, Record<string, never>, unknown>;
+  const component: DefineComponent<
+    Record<string, never>,
+    Record<string, never>,
+    unknown
+  >;
   export default component;
 }
 
@@ -30,7 +34,7 @@ declare module '*.vue' {
 // which only covers `?worker`, `?worker&inline`, and `?worker&url` for classic
 // workers. ES module workers need this additional declaration so TypeScript
 // can resolve the import without errors.
-declare module '*?worker&type=module' {
+declare module "*?worker&type=module" {
   const WorkerFactory: new () => Worker;
   export default WorkerFactory;
 }
@@ -41,7 +45,7 @@ declare module '*?worker&type=module' {
 // this more-specific pattern overrides the component declaration for `?raw`
 // imports only (e.g. `~icons/ri/add-line?raw`), leaving component imports
 // (`~icons/ri/add-line`) typed as components.
-declare module '~icons/*?raw' {
+declare module "~icons/*?raw" {
   const src: string;
   export default src;
 }

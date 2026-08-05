@@ -21,12 +21,12 @@
  * the index drives it single-flight and owns the state machine around it.
  */
 
-import { ILogService } from '#/_base/log/log';
-import { IAtomicDocumentStore } from '#/persistence/interface/atomicDocumentStore';
-import { IQueryStore, type WriteOp } from '#/persistence/interface/queryStore';
-import { IFileSystemStorageService } from '#/persistence/interface/storage';
+import { ILogService } from "#/_base/log/log";
+import { IAtomicDocumentStore } from "#/persistence/interface/atomicDocumentStore";
+import { IQueryStore, type WriteOp } from "#/persistence/interface/queryStore";
+import { IFileSystemStorageService } from "#/persistence/interface/storage";
 
-import { PARENT_SESSION_ID_KEY, type SessionSummary } from './sessionIndex';
+import { PARENT_SESSION_ID_KEY, type SessionSummary } from "./sessionIndex";
 import {
   PARENT_INDEX_NAME,
   SESSION_INDEX_MANIFEST,
@@ -35,14 +35,14 @@ import {
   sessionCountersCollection,
   withRecencyField,
   type SessionWorkspaceCounts,
-} from './sessionIndexModel';
+} from "./sessionIndexModel";
 import {
   listSessionIds,
   listWorkspaceIds,
   mapBounded,
   readSessionSummary,
   summaryEquals,
-} from './sessionIndexSource';
+} from "./sessionIndexSource";
 
 const WRITE_CHUNK = 500;
 const SCAN_CONCURRENCY = 16;
@@ -78,7 +78,7 @@ export class SessionIndexProjector {
     await queryStore.dropCollection(collection);
     await queryStore.dropCollection(counters);
     await queryStore.ensureIndex(collection, {
-      kind: 'value',
+      kind: "value",
       name: PARENT_INDEX_NAME,
       field: `custom.${PARENT_SESSION_ID_KEY}`,
     });
@@ -86,7 +86,7 @@ export class SessionIndexProjector {
     const { summaries, counts } = await this.scanAuthoritative();
     await this.batchChunks(
       summaries.map((summary) => ({
-        kind: 'put' as const,
+        kind: "put" as const,
         collection,
         key: summary.id,
         value: withRecencyField(generation, summary),
@@ -95,7 +95,7 @@ export class SessionIndexProjector {
     );
     await this.writeCounters(counters, counts);
     await queryStore.setCheckpoint(SESSION_INDEX_MANIFEST, { seq: generation });
-    log.info('session index generation published', {
+    log.info("session index generation published", {
       generation,
       sessions: summaries.length,
     });
@@ -107,7 +107,7 @@ export class SessionIndexProjector {
         .dropCollection(staleSession)
         .then(() => queryStore.dropCollection(staleCounters))
         .catch((error) => {
-          log.warn('failed to drop previous session index generation', {
+          log.warn("failed to drop previous session index generation", {
             generation: generation - 1,
             error: String(error),
           });
@@ -135,7 +135,7 @@ export class SessionIndexProjector {
       const existing = stored.get(summary.id);
       if (existing === undefined || !summaryEquals(existing, summary)) {
         upserts.push({
-          kind: 'put',
+          kind: "put",
           collection,
           key: summary.id,
           value: withRecencyField(generation, summary),
@@ -145,13 +145,20 @@ export class SessionIndexProjector {
     }
     const removals: WriteOp[] = storedKeys
       .filter((key) => !authoritativeIds.has(key))
-      .map((key) => ({ kind: 'delete' as const, collection, key }));
+      .map((key) => ({ kind: "delete" as const, collection, key }));
 
     await this.batchChunks([...upserts, ...removals]);
     await this.writeCounters(counters, counts);
-    const result = { sessions: summaries.length, upserted: upserts.length, removed: removals.length };
+    const result = {
+      sessions: summaries.length,
+      upserted: upserts.length,
+      removed: removals.length,
+    };
     if (result.upserted > 0 || result.removed > 0) {
-      log.info('session index reconciliation repaired drift', { generation, ...result });
+      log.info("session index reconciliation repaired drift", {
+        generation,
+        ...result,
+      });
     }
     return result;
   }
@@ -164,9 +171,16 @@ export class SessionIndexProjector {
     const summaries: SessionSummary[] = [];
     const counts = new Map<string, { active: number; archived: number }>();
     for (const workspaceId of await listWorkspaceIds(storage, sessionsScope)) {
-      const sessionIds = await listSessionIds(storage, sessionsScope, workspaceId);
-      const found = await mapBounded(sessionIds, SCAN_CONCURRENCY, (sessionId) =>
-        readSessionSummary(docs, sessionsScope, workspaceId, sessionId),
+      const sessionIds = await listSessionIds(
+        storage,
+        sessionsScope,
+        workspaceId,
+      );
+      const found = await mapBounded(
+        sessionIds,
+        SCAN_CONCURRENCY,
+        (sessionId) =>
+          readSessionSummary(docs, sessionsScope, workspaceId, sessionId),
       );
       const entry = counts.get(workspaceId) ?? { active: 0, archived: 0 };
       for (const summary of found) {
@@ -184,16 +198,22 @@ export class SessionIndexProjector {
     counts: Map<string, { active: number; archived: number }>,
   ): Promise<void> {
     const { queryStore } = this.deps;
-    const ops: WriteOp[] = [...counts.entries()].map(([workspaceId, value]) => ({
-      kind: 'put',
-      collection: counters,
-      key: workspaceId,
-      value: { active: value.active, archived: value.archived } satisfies SessionWorkspaceCounts,
-    }));
+    const ops: WriteOp[] = [...counts.entries()].map(
+      ([workspaceId, value]) => ({
+        kind: "put",
+        collection: counters,
+        key: workspaceId,
+        value: {
+          active: value.active,
+          archived: value.archived,
+        } satisfies SessionWorkspaceCounts,
+      }),
+    );
     // Workspaces that vanished entirely lose their counter document.
     const existing = await queryStore.listKeys(counters);
     for (const key of existing) {
-      if (!counts.has(key)) ops.push({ kind: 'delete', collection: counters, key });
+      if (!counts.has(key))
+        ops.push({ kind: "delete", collection: counters, key });
     }
     await this.batchChunks(ops);
   }

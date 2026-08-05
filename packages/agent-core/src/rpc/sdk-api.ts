@@ -1,11 +1,11 @@
-import type { ContentPart } from '@moonshot-ai/kosong';
+import type { ContentPart } from "@moonshot-ai/kosong";
 
-import type { RPCMethods } from './client';
-import type { AgentEvent, ToolInputDisplay } from './events';
-import type { WithAgentId, WithSessionId } from './types';
+import type { RPCMethods } from "./client";
+import type { AgentEvent, ToolInputDisplay } from "./events";
+import type { WithAgentId, WithSessionId } from "./types";
 
-export type ApprovalDecision = 'approved' | 'rejected' | 'cancelled';
-export type ApprovalScope = 'session';
+export type ApprovalDecision = "approved" | "rejected" | "cancelled";
+export type ApprovalScope = "session";
 
 export interface ApprovalResponse {
   readonly decision: ApprovalDecision;
@@ -37,7 +37,7 @@ export interface QuestionItem {
   readonly otherDescription?: string;
 }
 
-export type QuestionAnswerMethod = 'enter' | 'space' | 'number_key';
+export type QuestionAnswerMethod = "enter" | "space" | "number_key";
 /**
  * Flattened answers keyed by question text; values are the chosen option
  * label(s) (comma-joined for multi-select) or free-form "Other" text.

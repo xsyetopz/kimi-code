@@ -7,7 +7,7 @@
  * the replacement count, or a ready-to-surface error message. No IO.
  */
 
-import type { TextModel } from './textModel';
+import type { TextModel } from "./textModel";
 
 export interface EditApplyInput {
   readonly path: string;
@@ -28,21 +28,25 @@ function notFoundMessage(path: string): string {
 function notUniqueMessage(path: string, count: number): string {
   return (
     `old_string is not unique in ${path} (found ${String(count)} occurrences). ` +
-    'To replace every occurrence, set replace_all=true. To replace only one occurrence, include more surrounding context in old_string.'
+    "To replace every occurrence, set replace_all=true. To replace only one occurrence, include more surrounding context in old_string."
   );
 }
 
 export class EditService {
   apply(model: TextModel, input: EditApplyInput): EditApplyResult {
     if (input.replace_all) {
-      const { text, count } = model.replaceAll(input.old_string, input.new_string);
+      const { text, count } = model.replaceAll(
+        input.old_string,
+        input.new_string,
+      );
       if (count === 0) return { ok: false, error: notFoundMessage(input.path) };
       return { ok: true, rawContent: model.materialize(text), count };
     }
 
     const count = model.countOccurrences(input.old_string);
     if (count === 0) return { ok: false, error: notFoundMessage(input.path) };
-    if (count > 1) return { ok: false, error: notUniqueMessage(input.path, count) };
+    if (count > 1)
+      return { ok: false, error: notUniqueMessage(input.path, count) };
 
     const text = model.replaceOnce(input.old_string, input.new_string);
     return { ok: true, rawContent: model.materialize(text), count: 1 };

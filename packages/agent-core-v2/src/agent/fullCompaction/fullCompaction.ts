@@ -1,10 +1,7 @@
-import type {
-  CompactionResult,
-  CompactionSource,
-} from './types';
+import type { CompactionResult, CompactionSource } from "./types";
 import { createDecorator } from "#/_base/di/instantiation";
-import type { Event } from '#/_base/event';
-import type { Hooks } from '#/hooks';
+import type { Event } from "#/_base/event";
+import type { Hooks } from "#/hooks";
 
 export interface FullCompactionInput {
   readonly source: CompactionSource;
@@ -32,4 +29,5 @@ export interface IAgentFullCompactionService {
   readonly onDidFinishCompaction: Event<FullCompactionTask>;
 }
 
-export const IAgentFullCompactionService = createDecorator<IAgentFullCompactionService>('agentFullCompactionService');
+export const IAgentFullCompactionService =
+  createDecorator<IAgentFullCompactionService>("agentFullCompactionService");

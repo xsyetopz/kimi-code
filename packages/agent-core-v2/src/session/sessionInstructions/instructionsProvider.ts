@@ -8,9 +8,12 @@
  * contract carries no IO. Session-scoped.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
-import type { ScopeSeed } from '#/_base/di/scope';
-import type { Event } from '#/_base/event';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
+import type { ScopeSeed } from "#/_base/di/scope";
+import type { Event } from "#/_base/event";
 
 export interface ISessionInstructionsProvider {
   readonly _serviceBrand: undefined;
@@ -23,10 +26,12 @@ export interface ISessionInstructionsProvider {
 }
 
 export const ISessionInstructionsProvider: ServiceIdentifier<ISessionInstructionsProvider> =
-  createDecorator<ISessionInstructionsProvider>('sessionInstructionsProvider');
+  createDecorator<ISessionInstructionsProvider>("sessionInstructionsProvider");
 
 export function sessionInstructionsProviderSeed(
   provider: ISessionInstructionsProvider,
 ): ScopeSeed {
-  return [[ISessionInstructionsProvider as ServiceIdentifier<unknown>, provider]];
+  return [
+    [ISessionInstructionsProvider as ServiceIdentifier<unknown>, provider],
+  ];
 }

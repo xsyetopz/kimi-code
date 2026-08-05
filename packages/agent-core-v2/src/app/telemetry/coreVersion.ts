@@ -9,12 +9,12 @@
  * App-scoped, no collaborators.
  */
 
-import { existsSync, readFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const PACKAGE_NAME = '@moonshot-ai/agent-core-v2';
-const UNKNOWN_VERSION = 'unknown';
+const PACKAGE_NAME = "@moonshot-ai/agent-core-v2";
+const UNKNOWN_VERSION = "unknown";
 const MAX_WALK_UP = 8;
 
 let cachedCoreVersion: string | undefined;
@@ -28,13 +28,13 @@ function walkForPackageVersion(): string {
   try {
     let dir = dirname(fileURLToPath(import.meta.url));
     for (let i = 0; i < MAX_WALK_UP; i++) {
-      const candidate = resolve(dir, 'package.json');
+      const candidate = resolve(dir, "package.json");
       if (existsSync(candidate)) {
-        const pkg = JSON.parse(readFileSync(candidate, 'utf-8')) as {
+        const pkg = JSON.parse(readFileSync(candidate, "utf-8")) as {
           name?: string;
           version?: string;
         };
-        if (pkg.name === PACKAGE_NAME && typeof pkg.version === 'string') {
+        if (pkg.name === PACKAGE_NAME && typeof pkg.version === "string") {
           return pkg.version;
         }
       }
@@ -42,7 +42,6 @@ function walkForPackageVersion(): string {
       if (parent === dir) break;
       dir = parent;
     }
-  } catch {
-  }
+  } catch {}
   return UNKNOWN_VERSION;
 }

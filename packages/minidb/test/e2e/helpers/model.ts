@@ -18,7 +18,10 @@ export class Model {
   }
 
   set(key, value, ttl) {
-    this.map.set(key, { value: clone(value), expireAt: ttl ? Date.now() + ttl : 0 });
+    this.map.set(key, {
+      value: clone(value),
+      expireAt: ttl ? Date.now() + ttl : 0,
+    });
   }
 
   get(key) {

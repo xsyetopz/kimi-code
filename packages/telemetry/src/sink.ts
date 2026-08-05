@@ -1,4 +1,4 @@
-import { arch, platform, release } from 'node:os';
+import { arch, platform, release } from "node:os";
 
 import type {
   EnrichedTelemetryEvent,
@@ -6,7 +6,7 @@ import type {
   TelemetryEvent,
   TelemetryPrimitive,
   TelemetryTransport,
-} from './types';
+} from "./types";
 
 export interface EventSinkContextOptions {
   readonly appName: string;
@@ -101,18 +101,18 @@ function buildContext(options: EventSinkContextOptions): TelemetryContext {
   const context: TelemetryContext = {
     app_name: options.appName,
     version: options.version,
-    runtime: 'node',
+    runtime: "node",
     platform: platform(),
     arch: arch(),
     node_version: process.versions.node,
     os_version: release(),
-    ci: env['CI'] !== undefined,
-    locale: options.locale ?? env['LANG'] ?? '',
-    terminal: options.terminal ?? env['TERM_PROGRAM'] ?? '',
-    ui_mode: options.uiMode ?? 'shell',
+    ci: env["CI"] !== undefined,
+    locale: options.locale ?? env["LANG"] ?? "",
+    terminal: options.terminal ?? env["TERM_PROGRAM"] ?? "",
+    ui_mode: options.uiMode ?? "shell",
   };
-  setPrimitive(context, 'model', options.model);
-  setPrimitive(context, 'build_sha', options.buildSha);
+  setPrimitive(context, "model", options.model);
+  setPrimitive(context, "build_sha", options.buildSha);
   return context;
 }
 
@@ -122,6 +122,6 @@ function setPrimitive(
   value: TelemetryPrimitive | undefined,
 ): void {
   if (value === undefined) return;
-  if (typeof value === 'string' && value.length === 0) return;
+  if (typeof value === "string" && value.length === 0) return;
   target[key] = value;
 }

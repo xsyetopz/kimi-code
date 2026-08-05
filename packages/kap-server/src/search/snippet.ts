@@ -8,7 +8,7 @@
  */
 
 function collapseWs(s: string): string {
-  return s.replaceAll(/\s+/g, ' ').trim();
+  return s.replaceAll(/\s+/g, " ").trim();
 }
 
 /** Query terms for locating: whitespace-split words plus the whole query. */
@@ -62,5 +62,5 @@ export function makeSnippet(
   const start = Math.max(0, hitAt - radius);
   const end = Math.min(text.length, hitAt + hitLen + radius);
   const window = collapseWs(text.slice(start, end));
-  return `${start > 0 ? '…' : ''}${window}${end < text.length ? '…' : ''}`;
+  return `${start > 0 ? "…" : ""}${window}${end < text.length ? "…" : ""}`;
 }

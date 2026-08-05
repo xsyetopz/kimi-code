@@ -4,7 +4,10 @@ import { Checkbox as CheckboxPrimitive } from "radix-ui";
 import { cn } from "@/lib/utils";
 import { IconCheck } from "@tabler/icons-react";
 
-function Checkbox({ className, ...props }: React.ComponentProps<typeof CheckboxPrimitive.Root>) {
+function Checkbox({
+  className,
+  ...props
+}: React.ComponentProps<typeof CheckboxPrimitive.Root>) {
   return (
     <CheckboxPrimitive.Root
       data-slot="checkbox"
@@ -14,7 +17,10 @@ function Checkbox({ className, ...props }: React.ComponentProps<typeof CheckboxP
       )}
       {...props}
     >
-      <CheckboxPrimitive.Indicator data-slot="checkbox-indicator" className="[&>svg]:size-3.5 grid place-content-center text-current transition-none">
+      <CheckboxPrimitive.Indicator
+        data-slot="checkbox-indicator"
+        className="[&>svg]:size-3.5 grid place-content-center text-current transition-none"
+      >
         <IconCheck />
       </CheckboxPrimitive.Indicator>
     </CheckboxPrimitive.Root>

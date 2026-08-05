@@ -13,10 +13,10 @@
  * scope.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { createDecorator } from '#/_base/di/instantiation';
-import { type AgentTool } from '#/tool/toolContract';
+import { createDecorator } from "#/_base/di/instantiation";
+import { type AgentTool } from "#/tool/toolContract";
 
 export const DEFAULT_TIMEOUT_S = 60;
 export const MAX_TIMEOUT_S = 5 * 60;
@@ -33,7 +33,10 @@ function isValidTimeoutValue(timeout: number, isBackground: boolean): boolean {
 
 export const BashInputSchema = z
   .object({
-    command: z.string().min(1, 'Command cannot be empty.').describe('The command to execute.'),
+    command: z
+      .string()
+      .min(1, "Command cannot be empty.")
+      .describe("The command to execute."),
     cwd: z
       .string()
       .optional()
@@ -53,17 +56,17 @@ export const BashInputSchema = z
       .string()
       .optional()
       .describe(
-        'A short description for the background task. Required when run_in_background is true.',
+        "A short description for the background task. Required when run_in_background is true.",
       ),
     run_in_background: z
       .boolean()
       .optional()
-      .describe('Whether to run the command as a background task.'),
+      .describe("Whether to run the command as a background task."),
     disable_timeout: z
       .boolean()
       .optional()
       .describe(
-        'If true, do not apply a timeout to the command. Only applies when run_in_background is true.',
+        "If true, do not apply a timeout to the command. Only applies when run_in_background is true.",
       ),
   })
   .superRefine((val, ctx) => {
@@ -73,8 +76,8 @@ export const BashInputSchema = z
       const cap = isBackground ? MAX_BACKGROUND_TIMEOUT_S : MAX_TIMEOUT_S;
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ['timeout'],
-        message: `timeout must be ≤ ${String(cap)}s (${isBackground ? 'background' : 'foreground'})`,
+        path: ["timeout"],
+        message: `timeout must be ≤ ${String(cap)}s (${isBackground ? "background" : "foreground"})`,
       });
     }
   });
@@ -88,5 +91,7 @@ export const BashOutputSchema = z.object({
 export type BashInput = z.infer<typeof BashInputSchema>;
 export type BashOutput = z.infer<typeof BashOutputSchema>;
 
-export interface IBashTool extends AgentTool<BashInput> { readonly _serviceBrand: undefined }
-export const IBashTool = createDecorator<IBashTool>('bashTool');
+export interface IBashTool extends AgentTool<BashInput> {
+  readonly _serviceBrand: undefined;
+}
+export const IBashTool = createDecorator<IBashTool>("bashTool");

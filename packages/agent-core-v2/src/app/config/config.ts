@@ -28,10 +28,13 @@
  * fallback; both surface warning `ConfigDiagnostic`s while in use.
  */
 
-import type { Event } from '#/_base/event';
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
+import type { Event } from "#/_base/event";
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
 
-import { isPlainObject } from './configPure';
+import { isPlainObject } from "./configPure";
 
 export interface ConfigSchema<T> {
   parse(value: unknown): T;
@@ -66,11 +69,18 @@ export interface ConfigKeyDeprecation {
   readonly message?: string;
 }
 
-export type EnvBindings<T> = EnvBinding | { [K in keyof T]?: EnvBinding | EnvBindings<T[K]> };
+export type EnvBindings<T> =
+  | EnvBinding
+  | { [K in keyof T]?: EnvBinding | EnvBindings<T[K]> };
 
-export type AnyEnvBindings = EnvBinding | { readonly [key: string]: EnvBinding | AnyEnvBindings };
+export type AnyEnvBindings =
+  | EnvBinding
+  | { readonly [key: string]: EnvBinding | AnyEnvBindings };
 
-export function envBindings<T>(_schema: ConfigSchema<T>, bindings: EnvBindings<T>): EnvBindings<T> {
+export function envBindings<T>(
+  _schema: ConfigSchema<T>,
+  bindings: EnvBindings<T>,
+): EnvBindings<T> {
   return bindings;
 }
 
@@ -81,12 +91,15 @@ export type ConfigStripEnv<T> = (
 ) => T | undefined;
 
 function isEnvBinding(value: unknown): value is EnvBinding {
-  return typeof value === 'string' || (isPlainObject(value) && 'env' in value);
+  return typeof value === "string" || (isPlainObject(value) && "env" in value);
 }
 
-export function stripEnvBoundFields<T>(bindings: EnvBindings<T>): ConfigStripEnv<T> {
+export function stripEnvBoundFields<T>(
+  bindings: EnvBindings<T>,
+): ConfigStripEnv<T> {
   return (value, raw, getEnv) => {
-    if (getEnv === undefined || value === null || typeof value !== 'object') return value;
+    if (getEnv === undefined || value === null || typeof value !== "object")
+      return value;
     if (!isPlainObject(bindings) || isEnvBinding(bindings)) return value;
     const base = isPlainObject(raw) ? raw : {};
     let out: Record<string, unknown> | undefined;
@@ -111,17 +124,22 @@ export function stripEnvBoundFields<T>(bindings: EnvBindings<T>): ConfigStripEnv
  * var wins when set and parseable, then the deprecated fallback (same rule as
  * the read path in `configService`'s `resolveBinding`).
  */
-function resolvesFromEnv(binding: EnvBinding, getEnv: (name: string) => string | undefined): boolean {
-  const parse = typeof binding === 'string' ? undefined : binding.parse;
+function resolvesFromEnv(
+  binding: EnvBinding,
+  getEnv: (name: string) => string | undefined,
+): boolean {
+  const parse = typeof binding === "string" ? undefined : binding.parse;
   const names =
-    typeof binding === 'string'
+    typeof binding === "string"
       ? [binding]
       : binding.deprecatedEnv === undefined
         ? [binding.env]
         : [binding.env, binding.deprecatedEnv];
   return names.some((name) => {
     const raw = getEnv(name);
-    return raw !== undefined && (parse === undefined || parse(raw) !== undefined);
+    return (
+      raw !== undefined && (parse === undefined || parse(raw) !== undefined)
+    );
   });
 }
 
@@ -171,7 +189,11 @@ export interface IConfigRegistry {
 
   readonly onDidRegisterSection: Event<ConfigSectionRegisteredEvent>;
   readonly onDidRegisterOverlay: Event<ConfigOverlayRegisteredEvent>;
-  registerSection<T>(domain: string, schema: ConfigSchema<T>, options?: RegisterSectionOptions<T>): void;
+  registerSection<T>(
+    domain: string,
+    schema: ConfigSchema<T>,
+    options?: RegisterSectionOptions<T>,
+  ): void;
   getSection(domain: string): ConfigSection | undefined;
   listSections(): readonly ConfigSection[];
   registerEffectiveOverlay(overlay: ConfigEffectiveOverlay): void;
@@ -190,9 +212,9 @@ export interface ConfigOverlayRegisteredEvent {
 }
 
 export const IConfigRegistry: ServiceIdentifier<IConfigRegistry> =
-  createDecorator<IConfigRegistry>('configRegistry');
+  createDecorator<IConfigRegistry>("configRegistry");
 
-export type ConfigChangeSource = 'load' | 'reload' | 'set';
+export type ConfigChangeSource = "load" | "reload" | "set";
 
 export interface ConfigChangedEvent {
   readonly domain: string;
@@ -210,21 +232,21 @@ export interface ConfigSectionChangedEvent {
 
 export interface ConfigDiagnostic {
   readonly domain?: string;
-  readonly severity: 'warning' | 'error';
+  readonly severity: "warning" | "error";
   readonly message: string;
 }
 
 export type ResolvedConfig = Record<string, unknown>;
 
 export enum ConfigScope {
-  Core = 'core',
-  Session = 'session',
-  Project = 'project',
+  Core = "core",
+  Session = "session",
+  Project = "project",
 }
 
 export enum ConfigTarget {
-  User = 'user',
-  Memory = 'memory',
+  User = "user",
+  Memory = "memory",
 }
 
 export interface ConfigInspectValue<T = unknown> {
@@ -269,4 +291,4 @@ export interface IConfigService {
 }
 
 export const IConfigService: ServiceIdentifier<IConfigService> =
-  createDecorator<IConfigService>('configService');
+  createDecorator<IConfigService>("configService");

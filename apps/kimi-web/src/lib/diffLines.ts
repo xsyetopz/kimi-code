@@ -3,7 +3,7 @@
 // plain texts (Edit's old_string/new_string, or Write's content vs an empty
 // before). Uses a classic line-level LCS so unchanged lines line up as context.
 
-import type { DiffViewLine } from '../types';
+import type { DiffViewLine } from "../types";
 
 /**
  * Maximum LCS matrix size (`(oldLines + 1) * (newLines + 1)`) we are willing to
@@ -21,11 +21,11 @@ const MAX_DIFF_CELLS = 1_000_000;
 const MAX_DIFF_ROWS = 5000;
 
 function splitLines(s: string): string[] {
-  if (s === '') return [];
-  const lines = s.split('\n');
+  if (s === "") return [];
+  const lines = s.split("\n");
   // A trailing newline produces a trailing empty element that is not a real
   // content line — drop exactly one of them.
-  if (lines.at(-1) === '') lines.pop();
+  if (lines.at(-1) === "") lines.pop();
   return lines;
 }
 
@@ -43,7 +43,10 @@ export interface DiffStats {
  * Returns null when the inputs are large enough that the LCS matrix would
  * exceed `MAX_DIFF_CELLS`; callers should fall back to the raw tool output.
  */
-export function buildDiffLines(before: string, after: string): DiffViewLine[] | null {
+export function buildDiffLines(
+  before: string,
+  after: string,
+): DiffViewLine[] | null {
   const oldLines = splitLines(before);
   const newLines = splitLines(after);
   const n = oldLines.length;
@@ -52,7 +55,9 @@ export function buildDiffLines(before: string, after: string): DiffViewLine[] | 
   if (n > MAX_DIFF_ROWS || m > MAX_DIFF_ROWS) return null;
   if ((n + 1) * (m + 1) > MAX_DIFF_CELLS) return null;
 
-  const dp: number[][] = Array.from({ length: n + 1 }, () => Array.from({ length: m + 1 }, () => 0));
+  const dp: number[][] = Array.from({ length: n + 1 }, () =>
+    Array.from({ length: m + 1 }, () => 0),
+  );
   for (let i = 1; i <= n; i++) {
     for (let j = 1; j <= m; j++) {
       dp[i]![j] =
@@ -62,20 +67,20 @@ export function buildDiffLines(before: string, after: string): DiffViewLine[] | 
     }
   }
 
-  type Op = { type: 'context' | 'add' | 'del'; text: string };
+  type Op = { type: "context" | "add" | "del"; text: string };
   const ops: Op[] = [];
   let i = n;
   let j = m;
   while (i > 0 || j > 0) {
     if (i > 0 && j > 0 && oldLines[i - 1] === newLines[j - 1]) {
-      ops.push({ type: 'context', text: oldLines[i - 1]! });
+      ops.push({ type: "context", text: oldLines[i - 1]! });
       i--;
       j--;
     } else if (j > 0 && (i === 0 || dp[i]![j - 1]! >= dp[i - 1]![j]!)) {
-      ops.push({ type: 'add', text: newLines[j - 1]! });
+      ops.push({ type: "add", text: newLines[j - 1]! });
       j--;
     } else {
-      ops.push({ type: 'del', text: oldLines[i - 1]! });
+      ops.push({ type: "del", text: oldLines[i - 1]! });
       i--;
     }
   }
@@ -85,15 +90,15 @@ export function buildDiffLines(before: string, after: string): DiffViewLine[] | 
   let oldNo = 1;
   let newNo = 1;
   for (const op of ops) {
-    if (op.type === 'context') {
-      result.push({ type: 'context', text: op.text, oldNo, newNo });
+    if (op.type === "context") {
+      result.push({ type: "context", text: op.text, oldNo, newNo });
       oldNo++;
       newNo++;
-    } else if (op.type === 'add') {
-      result.push({ type: 'add', text: op.text, newNo });
+    } else if (op.type === "add") {
+      result.push({ type: "add", text: op.text, newNo });
       newNo++;
     } else {
-      result.push({ type: 'del', text: op.text, oldNo });
+      result.push({ type: "del", text: op.text, oldNo });
       oldNo++;
     }
   }
@@ -104,8 +109,8 @@ export function diffStats(lines: DiffViewLine[]): DiffStats {
   let added = 0;
   let removed = 0;
   for (const l of lines) {
-    if (l.type === 'add') added++;
-    else if (l.type === 'del') removed++;
+    if (l.type === "add") added++;
+    else if (l.type === "del") removed++;
   }
   return { added, removed };
 }

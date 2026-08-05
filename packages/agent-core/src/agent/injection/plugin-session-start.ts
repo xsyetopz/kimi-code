@@ -1,13 +1,16 @@
-import type { EnabledPluginSessionStart } from '../../plugin/types';
-import type { SkillDefinition } from '../../skill';
-import { escapeXmlAttr } from '../../utils/xml-escape';
-import { DynamicInjector } from './injector';
+import type { EnabledPluginSessionStart } from "../../plugin/types";
+import type { SkillDefinition } from "../../skill";
+import { escapeXmlAttr } from "../../utils/xml-escape";
+import { DynamicInjector } from "./injector";
 
 export interface RenderPluginSessionStartReminderInput {
   readonly sessionStarts: readonly EnabledPluginSessionStart[];
   readonly registry:
     | {
-        getPluginSkill(pluginId: string, name: string): SkillDefinition | undefined;
+        getPluginSkill(
+          pluginId: string,
+          name: string,
+        ): SkillDefinition | undefined;
         renderSkillPrompt(skill: SkillDefinition, args: string): string;
       }
     | undefined;
@@ -30,28 +33,37 @@ export function renderPluginSessionStartReminder(
   if (registry === undefined) return undefined;
   const blocks: string[] = [];
   for (const sessionStart of sessionStarts) {
-    const skill = registry.getPluginSkill(sessionStart.pluginId, sessionStart.skillName);
+    const skill = registry.getPluginSkill(
+      sessionStart.pluginId,
+      sessionStart.skillName,
+    );
     if (skill === undefined) {
-      log?.warn('plugin sessionStart skill not found', {
+      log?.warn("plugin sessionStart skill not found", {
         pluginId: sessionStart.pluginId,
         skillName: sessionStart.skillName,
       });
       continue;
     }
-    blocks.push(renderSessionStartBlock(sessionStart, skill, registry.renderSkillPrompt(skill, '')));
+    blocks.push(
+      renderSessionStartBlock(
+        sessionStart,
+        skill,
+        registry.renderSkillPrompt(skill, ""),
+      ),
+    );
   }
   if (blocks.length === 0) return undefined;
-  return blocks.join('\n');
+  return blocks.join("\n");
 }
 
 export class PluginSessionStartInjector extends DynamicInjector {
-  protected override readonly injectionVariant = 'plugin_session_start';
+  protected override readonly injectionVariant = "plugin_session_start";
 
   protected override async getInjection(): Promise<string | undefined> {
     if (this.injectedAt !== null) return undefined;
     const replayedAt = this.agent.context.history.findIndex(
       (message) =>
-        message.origin?.kind === 'injection' &&
+        message.origin?.kind === "injection" &&
         message.origin.variant === this.injectionVariant,
     );
     if (replayedAt >= 0) {

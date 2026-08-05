@@ -13,9 +13,9 @@
  *   pnpm --filter @moonshot-ai/kimi-code exec vitest bench test/tui/tui-frame.bench.ts
  */
 
-import type { Component, Terminal } from '@moonshot-ai/pi-tui';
-import { TUI } from '@moonshot-ai/pi-tui';
-import { bench, describe } from 'vitest';
+import type { Component, Terminal } from "@moonshot-ai/pi-tui";
+import { TUI } from "@moonshot-ai/pi-tui";
+import { bench, describe } from "vitest";
 
 const WIDTH = 120;
 const HEIGHT = 40;
@@ -70,7 +70,7 @@ class SpinnerComponent implements Component {
   invalidate(): void {}
 }
 
-describe('TUI steady-state frame', () => {
+describe("TUI steady-state frame", () => {
   const terminal = new StubTerminal();
   const tui = new TUI(terminal);
   const spinner = new SpinnerComponent();
@@ -78,7 +78,8 @@ describe('TUI steady-state frame', () => {
     new StaticTranscript(
       Array.from(
         { length: TRANSCRIPT_LINES },
-        (_, i) => `transcript line ${i} — the quick brown fox jumps over the lazy dog`,
+        (_, i) =>
+          `transcript line ${i} — the quick brown fox jumps over the lazy dog`,
       ),
     ),
   );
@@ -95,7 +96,10 @@ describe('TUI steady-state frame', () => {
 
   // No teardown/stop here: bench-option hooks fire per measured iteration,
   // and stopping the TUI would turn every subsequent frame into a no-op.
-  bench(`${TRANSCRIPT_LINES}-line transcript, one spinner line change per frame`, () => {
-    renderFrame();
-  });
+  bench(
+    `${TRANSCRIPT_LINES}-line transcript, one spinner line change per frame`,
+    () => {
+      renderFrame();
+    },
+  );
 });

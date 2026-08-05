@@ -1,11 +1,11 @@
-import type { Message, StreamedMessagePart, ToolCall } from '#/message';
-import { GoogleGenAIChatProvider } from '#/providers/google-genai';
-import type { Tool } from '#/tool';
-import type { TokenUsage } from '#/usage';
-import { GoogleGenAI } from '@google/genai';
-import { describe, expect, it } from 'vitest';
+import type { Message, StreamedMessagePart, ToolCall } from "#/message";
+import { GoogleGenAIChatProvider } from "#/providers/google-genai";
+import type { Tool } from "#/tool";
+import type { TokenUsage } from "#/usage";
+import { GoogleGenAI } from "@google/genai";
+import { describe, expect, it } from "vitest";
 
-import { createFakeProviderHarness } from './fake-provider-harness';
+import { createFakeProviderHarness } from "./fake-provider-harness";
 
 async function collectParts(
   streamedMessage: AsyncIterable<StreamedMessagePart>,
@@ -18,62 +18,77 @@ async function collectParts(
 }
 
 const ADD_TOOL: Tool = {
-  name: 'add',
-  description: 'Add two integers.',
+  name: "add",
+  description: "Add two integers.",
   parameters: {
-    type: 'object',
+    type: "object",
     properties: {
-      a: { type: 'integer', description: 'First number' },
-      b: { type: 'integer', description: 'Second number' },
+      a: { type: "integer", description: "First number" },
+      b: { type: "integer", description: "Second number" },
     },
-    required: ['a', 'b'],
+    required: ["a", "b"],
   },
 };
 
 const MUL_TOOL: Tool = {
-  name: 'multiply',
-  description: 'Multiply two integers.',
+  name: "multiply",
+  description: "Multiply two integers.",
   parameters: {
-    type: 'object',
+    type: "object",
     properties: {
-      a: { type: 'integer', description: 'First number' },
-      b: { type: 'integer', description: 'Second number' },
+      a: { type: "integer", description: "First number" },
+      b: { type: "integer", description: "Second number" },
     },
-    required: ['a', 'b'],
+    required: ["a", "b"],
   },
 };
 
-describe('e2e: Google GenAI adapter bridge', () => {
-  it('sends the adapter request body, sorts tool responses, and parses streamed chunks', async () => {
+describe("e2e: Google GenAI adapter bridge", () => {
+  it("sends the adapter request body, sorts tool responses, and parses streamed chunks", async () => {
     const harness = await createFakeProviderHarness();
     try {
       harness.route(
-        'POST',
-        '/v1beta/models/gemini-2.5-flash:streamGenerateContent',
+        "POST",
+        "/v1beta/models/gemini-2.5-flash:streamGenerateContent",
         async (request, reply) => {
           const body = request.bodyJson as Record<string, unknown>;
-          expect(request.pathname).toBe('/v1beta/models/gemini-2.5-flash:streamGenerateContent');
-          expect(request.search).toBe('?alt=sse');
-          expect(request.headers['x-goog-api-key']).toBe('test-key');
-          expect(body['generationConfig']).toEqual({});
-          expect(body['tools']).toHaveLength(2);
-          expect(body['contents']).toHaveLength(3);
-          expect(body['contents']).toEqual([
-            { role: 'user', parts: [{ text: 'Add and multiply these numbers.' }] },
+          expect(request.pathname).toBe(
+            "/v1beta/models/gemini-2.5-flash:streamGenerateContent",
+          );
+          expect(request.search).toBe("?alt=sse");
+          expect(request.headers["x-goog-api-key"]).toBe("test-key");
+          expect(body["generationConfig"]).toEqual({});
+          expect(body["tools"]).toHaveLength(2);
+          expect(body["contents"]).toHaveLength(3);
+          expect(body["contents"]).toEqual([
             {
-              role: 'model',
+              role: "user",
+              parts: [{ text: "Add and multiply these numbers." }],
+            },
+            {
+              role: "model",
               parts: [
-                { text: 'I will calculate both.' },
-                { functionCall: { name: 'add', args: { a: 2, b: 3 } } },
-                { functionCall: { name: 'multiply', args: { a: 4, b: 5 } } },
+                { text: "I will calculate both." },
+                { functionCall: { name: "add", args: { a: 2, b: 3 } } },
+                { functionCall: { name: "multiply", args: { a: 4, b: 5 } } },
               ],
             },
             {
-              role: 'user',
+              role: "user",
               parts: [
-                { functionResponse: { name: 'add', response: { output: '5' }, parts: [] } },
                 {
-                  functionResponse: { name: 'multiply', response: { output: '20' }, parts: [] },
+                  functionResponse: {
+                    name: "add",
+                    response: { output: "5" },
+                    parts: [],
+                  },
+                },
+                {
+                  functionResponse: {
+                    name: "multiply",
+                    response: { output: "20" },
+                    parts: [],
+                  },
                 },
               ],
             },
@@ -81,20 +96,23 @@ describe('e2e: Google GenAI adapter bridge', () => {
           // Regression: the snake_case `system_instruction` / tool declarations used
           // to be silently dropped by the @google/genai SDK, so the model saw neither
           // a system prompt nor any tools. Both must now reach the wire as camelCase.
-          expect(body['systemInstruction']).toEqual({
-            parts: [{ text: 'You are a calculator.' }],
-            role: 'user',
+          expect(body["systemInstruction"]).toEqual({
+            parts: [{ text: "You are a calculator." }],
+            role: "user",
           });
-          expect(body['tools']).toEqual([
+          expect(body["tools"]).toEqual([
             {
               functionDeclarations: [
-                expect.objectContaining({ name: 'add', parametersJsonSchema: expect.any(Object) }),
+                expect.objectContaining({
+                  name: "add",
+                  parametersJsonSchema: expect.any(Object),
+                }),
               ],
             },
             {
               functionDeclarations: [
                 expect.objectContaining({
-                  name: 'multiply',
+                  name: "multiply",
                   parametersJsonSchema: expect.any(Object),
                 }),
               ],
@@ -106,8 +124,8 @@ describe('e2e: Google GenAI adapter bridge', () => {
               candidates: [
                 {
                   content: {
-                    role: 'model',
-                    parts: [{ text: 'Done.' }],
+                    role: "model",
+                    parts: [{ text: "Done." }],
                   },
                 },
               ],
@@ -116,22 +134,22 @@ describe('e2e: Google GenAI adapter bridge', () => {
                 candidatesTokenCount: 4,
                 cachedContentTokenCount: 1,
               },
-              responseId: 'resp-1',
+              responseId: "resp-1",
             })}`,
-            '',
+            "",
             `data: ${JSON.stringify({
               candidates: [
                 {
                   content: {
-                    role: 'model',
+                    role: "model",
                     parts: [
                       {
                         functionCall: {
-                          name: 'notify',
-                          id: 'call-1',
+                          name: "notify",
+                          id: "call-1",
                           args: { ok: true },
                         },
-                        thoughtSignature: 'sig-1',
+                        thoughtSignature: "sig-1",
                       },
                     ],
                   },
@@ -142,81 +160,84 @@ describe('e2e: Google GenAI adapter bridge', () => {
                 candidatesTokenCount: 9,
                 cachedContentTokenCount: 1,
               },
-              responseId: 'resp-1',
+              responseId: "resp-1",
             })}`,
-            '',
-            '',
+            "",
+            "",
           ]);
         },
       );
 
       const provider = new GoogleGenAIChatProvider({
-        model: 'gemini-2.5-flash',
-        apiKey: 'test-key',
+        model: "gemini-2.5-flash",
+        apiKey: "test-key",
         stream: true,
       });
       (provider as any)._client = new GoogleGenAI({
-        apiKey: 'test-key',
+        apiKey: "test-key",
         httpOptions: {
           baseUrl: harness.baseUrl,
-          apiVersion: 'v1beta',
+          apiVersion: "v1beta",
         },
       });
 
       const history: Message[] = [
         {
-          role: 'user',
-          content: [{ type: 'text', text: 'Add and multiply these numbers.' }],
+          role: "user",
+          content: [{ type: "text", text: "Add and multiply these numbers." }],
           toolCalls: [],
         },
         {
-          role: 'assistant',
-          content: [{ type: 'text', text: 'I will calculate both.' }],
+          role: "assistant",
+          content: [{ type: "text", text: "I will calculate both." }],
           toolCalls: [
             {
-              type: 'function',
-              id: 'call_add',
-              name: 'add', arguments: '{"a":2,"b":3}',
+              type: "function",
+              id: "call_add",
+              name: "add",
+              arguments: '{"a":2,"b":3}',
             },
             {
-              type: 'function',
-              id: 'call_mul',
-              name: 'multiply', arguments: '{"a":4,"b":5}',
+              type: "function",
+              id: "call_mul",
+              name: "multiply",
+              arguments: '{"a":4,"b":5}',
             },
           ],
         },
         {
-          role: 'tool',
-          content: [{ type: 'text', text: '20' }],
-          toolCallId: 'call_mul',
+          role: "tool",
+          content: [{ type: "text", text: "20" }],
+          toolCallId: "call_mul",
           toolCalls: [],
         },
         {
-          role: 'tool',
-          content: [{ type: 'text', text: '5' }],
-          toolCallId: 'call_add',
+          role: "tool",
+          content: [{ type: "text", text: "5" }],
+          toolCallId: "call_add",
           toolCalls: [],
         },
       ];
 
       const stream = await provider.generate(
-        'You are a calculator.',
+        "You are a calculator.",
         [ADD_TOOL, MUL_TOOL],
         history,
       );
       const parts = await collectParts(stream);
 
       expect(parts).toEqual([
-        { type: 'text', text: 'Done.' },
+        { type: "text", text: "Done." },
         {
-          type: 'function',
+          type: "function",
           id: expect.stringMatching(/^notify_call-1_[0-9a-f]{8}$/),
-          name: 'notify', arguments: '{"ok":true}',
-          extras: { thought_signature_b64: 'sig-1' },
+          name: "notify",
+          arguments: '{"ok":true}',
+          extras: { thought_signature_b64: "sig-1" },
         } satisfies ToolCall,
       ]);
 
-      expect(stream.id).toBe('resp-1');
+      expect(stream.id).toBe("resp-1");
       expect(stream.usage).toEqual({
         inputOther: 29,
         output: 9,

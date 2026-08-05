@@ -10,17 +10,17 @@
  * `kimi server kill`.
  */
 
-import type { Command } from 'commander';
+import type { Command } from "commander";
 
-import { registerDeprecatedServerCommand } from './deprecated-server';
-import { registerRotateTokenCommand } from './rotate-token';
-import { buildWebCommand } from './run';
+import { registerDeprecatedServerCommand } from "./deprecated-server";
+import { registerRotateTokenCommand } from "./rotate-token";
+import { buildWebCommand } from "./run";
 
 export function registerWebCommand(program: Command): void {
   const web = buildWebCommand(
     program
-      .command('web')
-      .description('Run the local Kimi server and open the web UI.'),
+      .command("web")
+      .description("Run the local Kimi server and open the web UI."),
   );
   registerRotateTokenCommand(web);
   registerDeprecatedServerCommand(program);

@@ -12,19 +12,19 @@
  * `KIMI_SHELL_PATH` to override.
  */
 
-import { execFile as nodeExecFile } from 'node:child_process';
-import { constants as fsConstants } from 'node:fs';
-import { access } from 'node:fs/promises';
-import * as nodeOs from 'node:os';
-import * as nodePath from 'node:path';
+import { execFile as nodeExecFile } from "node:child_process";
+import { constants as fsConstants } from "node:fs";
+import { access } from "node:fs/promises";
+import * as nodeOs from "node:os";
+import * as nodePath from "node:path";
 
-import { KaosShellNotFoundError } from './errors';
+import { KaosShellNotFoundError } from "./errors";
 
 // `OsKind` carries 'macOS' / 'Linux' / 'Windows' for known platforms and
 // falls back to the raw `process.platform` string for unknown ones (e.g.
 // 'freebsd'). Typed as `string` so the union isn't inhabited-by-string.
 export type OsKind = string;
-export type ShellName = 'bash' | 'sh';
+export type ShellName = "bash" | "sh";
 
 export interface Environment {
   readonly osKind: OsKind;
@@ -52,37 +52,43 @@ export interface EnvironmentDeps {
 const GIT_EXEC_PATH_TIMEOUT_MS = 5_000;
 
 const MINGW_PREFIX_SET: ReadonlySet<string> = new Set([
-  'mingw32',
-  'mingw64',
-  'ucrt64',
-  'clang64',
-  'clangarm64',
+  "mingw32",
+  "mingw64",
+  "ucrt64",
+  "clang64",
+  "clangarm64",
 ]);
 
 function resolveOsKind(platform: string): OsKind {
   switch (platform) {
-    case 'darwin':
-      return 'macOS';
-    case 'linux':
-      return 'Linux';
-    case 'win32':
-      return 'Windows';
+    case "darwin":
+      return "macOS";
+    case "linux":
+      return "Linux";
+    case "win32":
+      return "Windows";
     default:
       return platform;
   }
 }
 
-export async function detectEnvironment(deps: EnvironmentDeps): Promise<Environment> {
+export async function detectEnvironment(
+  deps: EnvironmentDeps,
+): Promise<Environment> {
   const osKind = resolveOsKind(deps.platform);
   const osArch = deps.arch;
   const osVersion = deps.release;
 
-  if (deps.platform === 'win32') {
+  if (deps.platform === "win32") {
     const shellPath = await locateWindowsGitBash(deps);
-    return { osKind, osArch, osVersion, shellName: 'bash', shellPath };
+    return { osKind, osArch, osVersion, shellName: "bash", shellPath };
   }
 
-  const candidates: readonly string[] = ['/bin/bash', '/usr/bin/bash', '/usr/local/bin/bash'];
+  const candidates: readonly string[] = [
+    "/bin/bash",
+    "/usr/bin/bash",
+    "/usr/local/bin/bash",
+  ];
   let found: string | undefined;
   for (const p of candidates) {
     if (await deps.isFile(p)) {
@@ -91,15 +97,15 @@ export async function detectEnvironment(deps: EnvironmentDeps): Promise<Environm
     }
   }
   if (found !== undefined) {
-    return { osKind, osArch, osVersion, shellName: 'bash', shellPath: found };
+    return { osKind, osArch, osVersion, shellName: "bash", shellPath: found };
   }
-  return { osKind, osArch, osVersion, shellName: 'sh', shellPath: '/bin/sh' };
+  return { osKind, osArch, osVersion, shellName: "sh", shellPath: "/bin/sh" };
 }
 
 async function locateWindowsGitBash(deps: EnvironmentDeps): Promise<string> {
   const checked: string[] = [];
 
-  const override = deps.env['KIMI_SHELL_PATH']?.trim();
+  const override = deps.env["KIMI_SHELL_PATH"]?.trim();
   if (override !== undefined && override.length > 0) {
     checked.push(override);
     if (await deps.isFile(override)) {
@@ -108,8 +114,8 @@ async function locateWindowsGitBash(deps: EnvironmentDeps): Promise<string> {
   }
 
   const gitExecutables = await findExecutablesOnPath(
-    'git.exe',
-    deps.env['PATH'],
+    "git.exe",
+    deps.env["PATH"],
     deps.platform,
     deps.isFile,
   );
@@ -138,12 +144,12 @@ async function locateWindowsGitBash(deps: EnvironmentDeps): Promise<string> {
   }
 
   const candidates: string[] = [
-    'C:\\Program Files\\Git\\bin\\bash.exe',
-    'C:\\Program Files\\Git\\usr\\bin\\bash.exe',
-    'C:\\Program Files (x86)\\Git\\bin\\bash.exe',
-    'C:\\Program Files (x86)\\Git\\usr\\bin\\bash.exe',
+    "C:\\Program Files\\Git\\bin\\bash.exe",
+    "C:\\Program Files\\Git\\usr\\bin\\bash.exe",
+    "C:\\Program Files (x86)\\Git\\bin\\bash.exe",
+    "C:\\Program Files (x86)\\Git\\usr\\bin\\bash.exe",
   ];
-  const localAppData = deps.env['LOCALAPPDATA']?.trim();
+  const localAppData = deps.env["LOCALAPPDATA"]?.trim();
   if (localAppData !== undefined && localAppData.length > 0) {
     candidates.push(`${localAppData}\\Programs\\Git\\bin\\bash.exe`);
     candidates.push(`${localAppData}\\Programs\\Git\\usr\\bin\\bash.exe`);
@@ -156,7 +162,7 @@ async function locateWindowsGitBash(deps: EnvironmentDeps): Promise<string> {
   }
 
   throw new KaosShellNotFoundError(
-    `Git Bash was not found on this Windows host. Install Git for Windows from https://gitforwindows.org/ or set KIMI_SHELL_PATH to a bash.exe. Checked: ${checked.join(', ')}.`,
+    `Git Bash was not found on this Windows host. Install Git for Windows from https://gitforwindows.org/ or set KIMI_SHELL_PATH to a bash.exe. Checked: ${checked.join(", ")}.`,
   );
 }
 
@@ -164,9 +170,14 @@ async function readGitExecPath(
   deps: EnvironmentDeps,
   gitExe: string,
 ): Promise<string | undefined> {
-  if (deps.platform === 'win32' && !isAbsoluteWindowsPath(gitExe)) return undefined;
+  if (deps.platform === "win32" && !isAbsoluteWindowsPath(gitExe))
+    return undefined;
 
-  const stdout = await deps.execFileText(gitExe, ['--exec-path'], GIT_EXEC_PATH_TIMEOUT_MS);
+  const stdout = await deps.execFileText(
+    gitExe,
+    ["--exec-path"],
+    GIT_EXEC_PATH_TIMEOUT_MS,
+  );
   if (stdout === undefined) return undefined;
 
   for (const line of stdout.split(/\r?\n/)) {
@@ -182,11 +193,15 @@ async function readGitExecPath(
 // with bash at `<root>\bin\bash.exe`. Portable installs sometimes put
 // both in `<root>\bin\`. Only infer from those anchored layouts; package
 // manager shims live elsewhere and must resolve through `git --exec-path`.
-function gitBashCandidatesFromGitExe(gitExe: string): readonly string[] | undefined {
-  const normalizedGitExe = nodePath.win32.normalize(normalizeWindowsPath(gitExe));
+function gitBashCandidatesFromGitExe(
+  gitExe: string,
+): readonly string[] | undefined {
+  const normalizedGitExe = nodePath.win32.normalize(
+    normalizeWindowsPath(gitExe),
+  );
   const gitDir = nodePath.win32.dirname(normalizedGitExe);
   const gitDirName = nodePath.win32.basename(gitDir).toLowerCase();
-  if (gitDirName !== 'cmd' && gitDirName !== 'bin') {
+  if (gitDirName !== "cmd" && gitDirName !== "bin") {
     return undefined;
   }
   return gitBashCandidatesFromGitRoot(nodePath.win32.dirname(gitDir));
@@ -194,29 +209,33 @@ function gitBashCandidatesFromGitExe(gitExe: string): readonly string[] | undefi
 
 function gitBashCandidatesFromGitExecPath(execPath: string): readonly string[] {
   const normalized = nodePath.win32.normalize(normalizeWindowsPath(execPath));
-  const parts = normalized.split('\\');
+  const parts = normalized.split("\\");
   for (let i = parts.length - 1; i >= 0; i -= 1) {
     const segment = parts[i]?.toLowerCase();
     if (segment !== undefined && MINGW_PREFIX_SET.has(segment)) {
-      const root = parts.slice(0, i).join('\\');
+      const root = parts.slice(0, i).join("\\");
       if (root.length > 0) {
         return gitBashCandidatesFromGitRoot(root);
       }
     }
   }
 
-  return gitBashCandidatesFromGitRoot(nodePath.win32.join(normalized, '..', '..'));
+  return gitBashCandidatesFromGitRoot(
+    nodePath.win32.join(normalized, "..", ".."),
+  );
 }
 
 function gitBashCandidatesFromGitRoot(root: string): readonly string[] {
   return [
-    nodePath.win32.normalize(nodePath.win32.join(root, 'bin', 'bash.exe')),
-    nodePath.win32.normalize(nodePath.win32.join(root, 'usr', 'bin', 'bash.exe')),
+    nodePath.win32.normalize(nodePath.win32.join(root, "bin", "bash.exe")),
+    nodePath.win32.normalize(
+      nodePath.win32.join(root, "usr", "bin", "bash.exe"),
+    ),
   ];
 }
 
 function normalizeWindowsPath(path: string): string {
-  return path.replaceAll('/', '\\');
+  return path.replaceAll("/", "\\");
 }
 
 function isAbsoluteWindowsPath(path: string): boolean {
@@ -277,19 +296,21 @@ async function findExecutablesOnPath(
   isFile: (p: string) => Promise<boolean>,
 ): Promise<readonly string[]> {
   if (pathEnv === undefined || pathEnv.length === 0) return [];
-  const listSep = platform === 'win32' ? ';' : ':';
-  const dirSep = platform === 'win32' ? '\\' : '/';
+  const listSep = platform === "win32" ? ";" : ":";
+  const dirSep = platform === "win32" ? "\\" : "/";
   const paths: string[] = [];
   for (const rawDir of pathEnv.split(listSep)) {
     const dir = rawDir.trim();
     if (dir.length === 0) continue;
-    if (platform === 'win32' && !isAbsoluteWindowsPath(dir)) continue;
-    const candidate = dir.endsWith(dirSep) ? `${dir}${name}` : `${dir}${dirSep}${name}`;
+    if (platform === "win32" && !isAbsoluteWindowsPath(dir)) continue;
+    const candidate = dir.endsWith(dirSep)
+      ? `${dir}${name}`
+      : `${dir}${dirSep}${name}`;
     if (await isFile(candidate)) {
       paths.push(candidate);
     }
   }
-  return platform === 'win32' ? dedupeWindowsPaths(paths) : paths;
+  return platform === "win32" ? dedupeWindowsPaths(paths) : paths;
 }
 
 export async function execFileText(
@@ -301,7 +322,7 @@ export async function execFileText(
     nodeExecFile(
       file,
       [...args],
-      { encoding: 'utf8', timeout: timeoutMs, windowsHide: true },
+      { encoding: "utf8", timeout: timeoutMs, windowsHide: true },
       (error, stdout) => {
         if (error !== null) {
           resolve(undefined);

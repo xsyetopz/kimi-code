@@ -1,15 +1,15 @@
-import { ChoicePickerComponent, type ChoiceOption } from './choice-picker';
+import { ChoicePickerComponent, type ChoiceOption } from "./choice-picker";
 
 const UPDATE_PREFERENCE_OPTIONS: readonly ChoiceOption[] = [
   {
-    value: 'on',
-    label: 'On',
-    description: 'Install new versions in the background.',
+    value: "on",
+    label: "On",
+    description: "Install new versions in the background.",
   },
   {
-    value: 'off',
-    label: 'Off',
-    description: 'Show the install prompt instead.',
+    value: "off",
+    label: "Off",
+    description: "Show the install prompt instead.",
   },
 ];
 
@@ -22,11 +22,11 @@ export interface UpdatePreferenceSelectorOptions {
 export class UpdatePreferenceSelectorComponent extends ChoicePickerComponent {
   constructor(opts: UpdatePreferenceSelectorOptions) {
     super({
-      title: 'Automatic updates',
+      title: "Automatic updates",
       options: [...UPDATE_PREFERENCE_OPTIONS],
-      currentValue: opts.currentValue ? 'on' : 'off',
+      currentValue: opts.currentValue ? "on" : "off",
       onSelect: (value) => {
-        opts.onSelect(value === 'on');
+        opts.onSelect(value === "on");
       },
       onCancel: opts.onCancel,
     });

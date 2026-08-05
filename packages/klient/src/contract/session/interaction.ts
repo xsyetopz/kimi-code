@@ -3,12 +3,16 @@
  * Mirrors `agent-core-v2/session/interaction/interaction.ts`.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { noResult } from '../helpers.js';
-import type { ServiceContract } from '../types.js';
+import { noResult } from "../helpers.js";
+import type { ServiceContract } from "../types.js";
 
-export const interactionKindSchema = z.enum(['approval', 'question', 'user_tool']);
+export const interactionKindSchema = z.enum([
+  "approval",
+  "question",
+  "user_tool",
+]);
 
 export const interactionOriginSchema = z.object({
   agentId: z.string().optional(),

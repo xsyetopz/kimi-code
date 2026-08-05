@@ -16,10 +16,16 @@ let provider: KimiWebviewProvider | undefined;
 const LEGACY_REAUTH_NOTICE_KEY = "kimi.legacyMigration.reauthNotice.v1";
 const LEGACY_WARNING_NOTICE_KEY = "kimi.legacyMigration.warningNotice.v1";
 
-export async function activate(context: vscode.ExtensionContext): Promise<void> {
+export async function activate(
+  context: vscode.ExtensionContext,
+): Promise<void> {
   outputChannel = vscode.window.createOutputChannel("Kimi Code");
-  const remoteInfo = vscode.env.remoteName ? ` (remote: ${vscode.env.remoteName})` : "";
-  log(`Kimi Code ${VSCodeSettings.getExtensionConfig().version} activating${remoteInfo}`);
+  const remoteInfo = vscode.env.remoteName
+    ? ` (remote: ${vscode.env.remoteName})`
+    : "";
+  log(
+    `Kimi Code ${VSCodeSettings.getExtensionConfig().version} activating${remoteInfo}`,
+  );
 
   provider = new KimiWebviewProvider(
     context.extensionUri,
@@ -61,7 +67,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       if (changedKeys.includes("yoloMode")) {
         void provider
           ?.setYoloModeForActiveSessions(VSCodeSettings.yoloMode)
-          .catch((error) => logError("Unable to update session permission", error));
+          .catch((error) =>
+            logError("Unable to update session permission", error),
+          );
       }
     }),
     vscode.window.registerWebviewViewProvider("kimi.webview", provider, {
@@ -79,9 +87,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   let migrationInFlight: Promise<void> | undefined;
   const runMigration = (retry: boolean): Promise<void> => {
     if (migrationInFlight !== undefined) return migrationInFlight;
-    migrationInFlight = performMigration(migrationManager, retry).finally(() => {
-      migrationInFlight = undefined;
-    });
+    migrationInFlight = performMigration(migrationManager, retry).finally(
+      () => {
+        migrationInFlight = undefined;
+      },
+    );
     return migrationInFlight;
   };
 
@@ -90,7 +100,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       await context.globalState.update("kimi.config", undefined);
       await context.globalState.update("kimi.mcpServers", undefined);
       await context.workspaceState.update("kimi.mcpEnabled", undefined);
-      await vscode.window.showInformationMessage("Kimi: Extension UI state cleared.");
+      await vscode.window.showInformationMessage(
+        "Kimi: Extension UI state cleared.",
+      );
     },
     "kimi.openInTab": () => {
       provider?.createPanel();
@@ -109,8 +121,15 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         return;
       }
       await vscode.commands.executeCommand("kimi.webview.focus");
-      if (!(await provider?.insertEditorMention(editor.document.uri, editor.selection))) {
-        await vscode.window.showWarningMessage("The active file is outside the selected working directory.");
+      if (
+        !(await provider?.insertEditorMention(
+          editor.document.uri,
+          editor.selection,
+        ))
+      ) {
+        await vscode.window.showWarningMessage(
+          "The active file is outside the selected working directory.",
+        );
       }
     },
     "kimi.newConversation": async () => {
@@ -121,7 +140,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     "kimi.resetKimi": () => provider?.resetAllWebviews(),
     "kimi.logout": async () => {
       await vscode.commands.executeCommand("kimi.webview.focus");
-      await vscode.window.showInformationMessage("Use the logout button in Kimi settings.");
+      await vscode.window.showInformationMessage(
+        "Use the logout button in Kimi settings.",
+      );
     },
     "kimi.migrateLegacyData": () => runMigration(true),
   };
@@ -152,7 +173,8 @@ function log(message: string): void {
 }
 
 function logError(message: string, error: unknown): void {
-  const detail = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+  const detail =
+    error instanceof Error ? `${error.name}: ${error.message}` : String(error);
   log(`${message}: ${detail}`);
 }
 
@@ -170,7 +192,10 @@ async function offerLegacyMigration(
       ? null
       : "Some legacy Kimi data could not be inspected. Use “Kimi Code: Migrate Legacy Data” to retry.";
   if (discovery.prompt === null) {
-    if (reauthNotice !== null && !globalState.get<boolean>(LEGACY_REAUTH_NOTICE_KEY, false)) {
+    if (
+      reauthNotice !== null &&
+      !globalState.get<boolean>(LEGACY_REAUTH_NOTICE_KEY, false)
+    ) {
       await vscode.window.showWarningMessage(reauthNotice);
       await globalState.update(LEGACY_REAUTH_NOTICE_KEY, true);
     }
@@ -194,8 +219,10 @@ async function offerLegacyMigration(
       .join(" "),
     ...discovery.prompt.actions.map(({ label }) => label),
   );
-  if (reauthNotice !== null) await globalState.update(LEGACY_REAUTH_NOTICE_KEY, true);
-  if (warningNotice !== null) await globalState.update(LEGACY_WARNING_NOTICE_KEY, true);
+  if (reauthNotice !== null)
+    await globalState.update(LEGACY_REAUTH_NOTICE_KEY, true);
+  if (warningNotice !== null)
+    await globalState.update(LEGACY_WARNING_NOTICE_KEY, true);
   if (action === "Migrate Now") await migrate();
 }
 
@@ -203,7 +230,9 @@ function legacyReauthNotice(
   discovery: LegacyMigrationDiscovery,
   isLoggedIn: boolean,
 ): string | null {
-  const kimiLogins = isLoggedIn ? 0 : discovery.notices.oauthLoginsRequiringRelogin.length;
+  const kimiLogins = isLoggedIn
+    ? 0
+    : discovery.notices.oauthLoginsRequiringRelogin.length;
   const mcpLogins = discovery.notices.mcpOauthServersRequiringReauth.length;
   if (kimiLogins === 0 && mcpLogins === 0) return null;
   if (kimiLogins > 0 && mcpLogins > 0) {
@@ -227,7 +256,10 @@ async function performMigration(
       await provider?.harness.getConfig({ reload: true });
       await provider?.resetAllWebviews();
     } catch (error) {
-      logError("Migration finished, but the runtime config could not be reloaded", error);
+      logError(
+        "Migration finished, but the runtime config could not be reloaded",
+        error,
+      );
     }
   }
 
@@ -257,7 +289,8 @@ async function performMigration(
 }
 
 function logMigrationDiscovery(discovery: LegacyMigrationDiscovery): void {
-  for (const warning of discovery.warnings) log(`Legacy migration warning: ${warning.message}`);
+  for (const warning of discovery.warnings)
+    log(`Legacy migration warning: ${warning.message}`);
   for (const source of discovery.suppressedSources) {
     log(`Legacy migration already completed for ${source.sourceHome}`);
   }
@@ -268,13 +301,17 @@ function logMigrationResult(result: LegacyMigrationRunResult): void {
   log(
     `Legacy migration ${result.status}: config=${totals.configFiles} mcp=${totals.mcpServers} history=${totals.userHistoryEntries} skills=${totals.skills} sessions=${totals.sessions} alreadyMigrated=${totals.alreadyMigratedSessions} skipped=${totals.skippedItems} conflicts=${totals.conflicts} failures=${totals.failures}`,
   );
-  for (const warning of result.warnings) log(`Legacy migration warning: ${warning.message}`);
+  for (const warning of result.warnings)
+    log(`Legacy migration warning: ${warning.message}`);
   for (const source of result.sources) {
     for (const failure of source.failures) {
-      log(`Legacy migration failure (${failure.sourceHome}): ${failure.message}`);
+      log(
+        `Legacy migration failure (${failure.sourceHome}): ${failure.message}`,
+      );
     }
   }
-  for (const action of result.manualActions) log(`Legacy migration action: ${action}`);
+  for (const action of result.manualActions)
+    log(`Legacy migration action: ${action}`);
 }
 
 export { log };

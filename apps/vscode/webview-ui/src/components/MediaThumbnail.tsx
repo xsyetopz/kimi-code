@@ -9,10 +9,21 @@ interface ThumbnailWrapperProps {
   children: React.ReactNode;
 }
 
-function ThumbnailWrapper({ onClick, onRemove, sizeClass, children }: ThumbnailWrapperProps) {
+function ThumbnailWrapper({
+  onClick,
+  onRemove,
+  sizeClass,
+  children,
+}: ThumbnailWrapperProps) {
   return (
     <div className="relative group shrink-0">
-      <div className={cn(sizeClass, "rounded-md cursor-pointer border border-border hover:border-primary/50 transition-colors overflow-hidden")} onClick={onClick}>
+      <div
+        className={cn(
+          sizeClass,
+          "rounded-md cursor-pointer border border-border hover:border-primary/50 transition-colors overflow-hidden",
+        )}
+        onClick={onClick}
+      >
         {children}
       </div>
       {onRemove && (
@@ -38,20 +49,35 @@ interface MediaThumbnailProps {
   className?: string;
 }
 
-export function MediaThumbnail({ src, onClick, onRemove, size = "md", className }: MediaThumbnailProps) {
+export function MediaThumbnail({
+  src,
+  onClick,
+  onRemove,
+  size = "md",
+  className,
+}: MediaThumbnailProps) {
   const sizeClass = size === "sm" ? "size-12" : "size-16";
   const isLoading = !src;
   const isVideo = src && getMediaTypeFromDataUri(src) === "video";
 
   return (
-    <ThumbnailWrapper onClick={onClick} onRemove={onRemove} sizeClass={cn(sizeClass, className)}>
+    <ThumbnailWrapper
+      onClick={onClick}
+      onRemove={onRemove}
+      sizeClass={cn(sizeClass, className)}
+    >
       {isLoading ? (
         <div className="w-full h-full bg-muted flex items-center justify-center">
           <IconLoader2 className="size-5 text-muted-foreground animate-spin" />
         </div>
       ) : isVideo ? (
         <div className="relative w-full h-full bg-black">
-          <video src={src} className="w-full h-full object-cover" muted preload="metadata" />
+          <video
+            src={src}
+            className="w-full h-full object-cover"
+            muted
+            preload="metadata"
+          />
           <div className="absolute inset-0 flex items-center justify-center bg-black/30">
             <IconPlayerPlay className="size-5 text-white" />
           </div>

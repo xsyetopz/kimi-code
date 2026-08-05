@@ -19,7 +19,7 @@
  * `User-Agent`'s product token came from. No resolution logic reads it.
  */
 
-import { createDecorator } from '#/_base/di/instantiation';
+import { createDecorator } from "#/_base/di/instantiation";
 
 export interface IHostRequestHeaders {
   readonly headers: Readonly<Record<string, string>>;
@@ -27,4 +27,5 @@ export interface IHostRequestHeaders {
   readonly identitySlug?: string;
 }
 
-export const IHostRequestHeaders = createDecorator<IHostRequestHeaders>('hostRequestHeaders');
+export const IHostRequestHeaders =
+  createDecorator<IHostRequestHeaders>("hostRequestHeaders");

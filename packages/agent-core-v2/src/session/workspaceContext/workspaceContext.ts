@@ -10,9 +10,12 @@
  * Session-scoped.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
 
-export type PathAccessOperation = 'read' | 'write' | 'execute';
+export type PathAccessOperation = "read" | "write" | "execute";
 
 export interface ISessionWorkspaceContext {
   readonly _serviceBrand: undefined;
@@ -25,4 +28,4 @@ export interface ISessionWorkspaceContext {
 }
 
 export const ISessionWorkspaceContext: ServiceIdentifier<ISessionWorkspaceContext> =
-  createDecorator<ISessionWorkspaceContext>('sessionWorkspaceContext');
+  createDecorator<ISessionWorkspaceContext>("sessionWorkspaceContext");

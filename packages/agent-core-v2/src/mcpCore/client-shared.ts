@@ -2,12 +2,12 @@
  * `mcpCore` domain — shared MCP client helpers — request options, liveness probes, result conversion.
  */
 
-import { getCoreVersion } from '#/_base/version';
-import { ErrorCode, McpError } from '@modelcontextprotocol/sdk/types.js';
+import { getCoreVersion } from "#/_base/version";
+import { ErrorCode, McpError } from "@modelcontextprotocol/sdk/types.js";
 
-import type { MCPClient, MCPToolDefinition, MCPToolResult } from './types';
+import type { MCPClient, MCPToolDefinition, MCPToolResult } from "./types";
 
-export const KIMI_MCP_CLIENT_NAME = 'kimi-code';
+export const KIMI_MCP_CLIENT_NAME = "kimi-code";
 export const KIMI_MCP_CLIENT_VERSION = getCoreVersion();
 
 export interface UnexpectedCloseReason {
@@ -20,7 +20,8 @@ export type UnexpectedCloseListener = (reason: UnexpectedCloseReason) => void;
 export function isMcpConnectionClosedError(error: unknown): boolean {
   return (
     error instanceof Error &&
-    (error as Error & { readonly code?: unknown }).code === ErrorCode.ConnectionClosed
+    (error as Error & { readonly code?: unknown }).code ===
+      ErrorCode.ConnectionClosed
   );
 }
 
@@ -33,10 +34,13 @@ export function isMcpTransportFailure(error: unknown): boolean {
 export const MCP_LIVENESS_PROBE_TIMEOUT_MS = 5_000;
 
 export function isMcpMalformedResultError(error: unknown): boolean {
-  return error instanceof Error && error.name === 'ZodError';
+  return error instanceof Error && error.name === "ZodError";
 }
 
-export async function probeMcpLiveness(client: MCPClient, signal: AbortSignal): Promise<boolean> {
+export async function probeMcpLiveness(
+  client: MCPClient,
+  signal: AbortSignal,
+): Promise<boolean> {
   try {
     await client.ping(signal);
     return true;
@@ -44,7 +48,10 @@ export async function probeMcpLiveness(client: MCPClient, signal: AbortSignal): 
     if (isMcpConnectionClosedError(error)) return false;
     if (isMcpMalformedResultError(error)) return true;
     if (error instanceof McpError) {
-      return (error as Error & { readonly code?: unknown }).code !== ErrorCode.RequestTimeout;
+      return (
+        (error as Error & { readonly code?: unknown }).code !==
+        ErrorCode.RequestTimeout
+      );
     }
     return false;
   }
@@ -72,13 +79,13 @@ interface SdkListedTool {
 export function toMcpToolDefinition(tool: SdkListedTool): MCPToolDefinition {
   return {
     name: tool.name,
-    description: tool.description ?? '',
+    description: tool.description ?? "",
     inputSchema: tool.inputSchema,
   };
 }
 
 export function toMcpToolResult(result: unknown): MCPToolResult {
-  if (typeof result === 'object' && result !== null && 'content' in result) {
+  if (typeof result === "object" && result !== null && "content" in result) {
     const typed = result as {
       content: unknown;
       isError?: unknown;
@@ -87,23 +94,23 @@ export function toMcpToolResult(result: unknown): MCPToolResult {
     };
     if (Array.isArray(typed.content)) {
       return {
-        content: typed.content as MCPToolResult['content'],
+        content: typed.content as MCPToolResult["content"],
         isError: typed.isError === true,
         structuredContent: typed.structuredContent,
         _meta:
-          typeof typed._meta === 'object' && typed._meta !== null
+          typeof typed._meta === "object" && typed._meta !== null
             ? (typed._meta as Record<string, unknown>)
             : undefined,
       };
     }
   }
-  if (typeof result === 'object' && result !== null && 'toolResult' in result) {
+  if (typeof result === "object" && result !== null && "toolResult" in result) {
     const legacy = (result as { toolResult: unknown }).toolResult;
     return {
       content: [
         {
-          type: 'text',
-          text: typeof legacy === 'string' ? legacy : JSON.stringify(legacy),
+          type: "text",
+          text: typeof legacy === "string" ? legacy : JSON.stringify(legacy),
         },
       ],
       isError: false,

@@ -8,10 +8,14 @@
  * returning stale zeros. Bound at App scope.
  */
 
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { BugIndicatingError } from '#/_base/errors/errors';
-import { probeHostEnvironmentFromNode } from '#/_base/execEnv/environmentProbe';
-import { applyLoginShellPathFromNode } from '#/_base/execEnv/loginShellPath';
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { BugIndicatingError } from "#/_base/errors/errors";
+import { probeHostEnvironmentFromNode } from "#/_base/execEnv/environmentProbe";
+import { applyLoginShellPathFromNode } from "#/_base/execEnv/loginShellPath";
 
 import {
   type HostEnvironmentInfo,
@@ -19,7 +23,7 @@ import {
   type OsKind,
   type PathClass,
   type ShellName,
-} from '#/os/interface/hostEnvironment';
+} from "#/os/interface/hostEnvironment";
 
 export class HostEnvironmentService implements IHostEnvironment {
   declare readonly _serviceBrand: undefined;
@@ -36,7 +40,9 @@ export class HostEnvironmentService implements IHostEnvironment {
     ]).then(() => {});
   }
 
-  private require(field: keyof HostEnvironmentInfo): never | HostEnvironmentInfo[typeof field] {
+  private require(
+    field: keyof HostEnvironmentInfo,
+  ): never | HostEnvironmentInfo[typeof field] {
     if (this._info === undefined) {
       throw new BugIndicatingError(
         `IHostEnvironment.${field} accessed before ready — await IHostEnvironment.ready first (composition root should do so before creating a Session scope).`,
@@ -46,31 +52,31 @@ export class HostEnvironmentService implements IHostEnvironment {
   }
 
   get osKind(): OsKind {
-    return this.require('osKind') as OsKind;
+    return this.require("osKind") as OsKind;
   }
 
   get osArch(): string {
-    return this.require('osArch') as string;
+    return this.require("osArch") as string;
   }
 
   get osVersion(): string {
-    return this.require('osVersion') as string;
+    return this.require("osVersion") as string;
   }
 
   get shellName(): ShellName {
-    return this.require('shellName') as ShellName;
+    return this.require("shellName") as ShellName;
   }
 
   get shellPath(): string {
-    return this.require('shellPath') as string;
+    return this.require("shellPath") as string;
   }
 
   get pathClass(): PathClass {
-    return this.require('pathClass') as PathClass;
+    return this.require("pathClass") as PathClass;
   }
 
   get homeDir(): string {
-    return this.require('homeDir') as string;
+    return this.require("homeDir") as string;
   }
 }
 
@@ -79,5 +85,5 @@ registerScopedService(
   IHostEnvironment,
   HostEnvironmentService,
   ScopeActivation.OnScopeCreated,
-  'hostEnvironment',
+  "hostEnvironment",
 );

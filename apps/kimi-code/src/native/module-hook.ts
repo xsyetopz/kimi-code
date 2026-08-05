@@ -1,10 +1,14 @@
-import { existsSync } from 'node:fs';
-import { createRequire } from 'node:module';
-import { join } from 'node:path';
+import { existsSync } from "node:fs";
+import { createRequire } from "node:module";
+import { join } from "node:path";
 
-import { getNativePackageRoot } from './native-assets';
+import { getNativePackageRoot } from "./native-assets";
 
-type ModuleLoad = (request: string, parent: unknown, isMain: boolean) => unknown;
+type ModuleLoad = (
+  request: string,
+  parent: unknown,
+  isMain: boolean,
+) => unknown;
 
 interface ModuleWithLoad {
   _load?: ModuleLoad;
@@ -21,13 +25,14 @@ let installed = false;
 //
 // Path shape: native/<darwin|win32>/prebuilds/<arch>/<file>.node — note the
 // two path segments after "prebuilds", so ".+" (not "[^/]+") is required.
-const PI_TUI_NATIVE_PATTERN = /native[\\/](?:win32|darwin)[\\/]prebuilds[\\/].+\.node$/;
+const PI_TUI_NATIVE_PATTERN =
+  /native[\\/](?:win32|darwin)[\\/]prebuilds[\\/].+\.node$/;
 
 export function installNativeModuleHook(): void {
   if (installed) return;
   installed = true;
 
-  const moduleBuiltin = nodeRequire('node:module') as ModuleWithLoad;
+  const moduleBuiltin = nodeRequire("node:module") as ModuleWithLoad;
   const originalLoad = moduleBuiltin._load;
   if (originalLoad === undefined) return;
 
@@ -38,11 +43,11 @@ export function installNativeModuleHook(): void {
     isMain: boolean,
   ): unknown {
     if (
-      typeof request === 'string' &&
+      typeof request === "string" &&
       PI_TUI_NATIVE_PATTERN.test(request) &&
       !existsSync(request)
     ) {
-      const pkgRoot = getNativePackageRoot('@moonshot-ai/pi-tui');
+      const pkgRoot = getNativePackageRoot("@moonshot-ai/pi-tui");
       if (pkgRoot !== null) {
         const match = request.match(PI_TUI_NATIVE_PATTERN);
         if (match !== null) {

@@ -7,20 +7,27 @@
  * `0x7fffffff` (guaranteed ESRCH on Linux/macOS).
  */
 
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import {
   createInstanceRegistry,
   getLiveServerInstance,
   listLiveServerInstances,
   type ServerInstanceInfo,
-} from '../src/instanceRegistry';
-import { type RunningServer, startServer } from '../src/start';
-import { TEST_HOST_IDENTITY } from './helpers/hostIdentity';
+} from "../src/instanceRegistry";
+import { type RunningServer, startServer } from "../src/start";
+import { TEST_HOST_IDENTITY } from "./helpers/hostIdentity";
 
 let tmpDir: string;
 let instancesDir: string;
@@ -29,8 +36,8 @@ let instancesDir: string;
 const DEAD_PID = 0x7fffffff;
 
 beforeEach(() => {
-  tmpDir = mkdtempSync(join(tmpdir(), 'kimi-instance-registry-test-'));
-  instancesDir = join(tmpDir, 'instances');
+  tmpDir = mkdtempSync(join(tmpdir(), "kimi-instance-registry-test-"));
+  instancesDir = join(tmpDir, "instances");
 });
 
 afterEach(() => {
@@ -47,22 +54,29 @@ interface DiskInstance {
   host_version?: string;
 }
 
-function writeInstance(serverId: string, fields: Partial<DiskInstance> & { pid: number }): void {
+function writeInstance(
+  serverId: string,
+  fields: Partial<DiskInstance> & { pid: number },
+): void {
   mkdirSync(instancesDir, { recursive: true });
   const disk: DiskInstance = {
     server_id: serverId,
     pid: fields.pid,
-    host: fields.host ?? '127.0.0.1',
+    host: fields.host ?? "127.0.0.1",
     port: fields.port ?? 58627,
     started_at: fields.started_at ?? 1000,
     heartbeat_at: fields.heartbeat_at ?? 1000,
-    ...(fields.host_version !== undefined ? { host_version: fields.host_version } : {}),
+    ...(fields.host_version !== undefined
+      ? { host_version: fields.host_version }
+      : {}),
   };
   writeFileSync(join(instancesDir, `${serverId}.json`), JSON.stringify(disk));
 }
 
 function readInstance(serverId: string): DiskInstance {
-  return JSON.parse(readFileSync(join(instancesDir, `${serverId}.json`), 'utf8')) as DiskInstance;
+  return JSON.parse(
+    readFileSync(join(instancesDir, `${serverId}.json`), "utf8"),
+  ) as DiskInstance;
 }
 
 function sleep(ms: number): Promise<void> {
@@ -71,24 +85,24 @@ function sleep(ms: number): Promise<void> {
 
 const baseInfo = {
   pid: process.pid,
-  host: '127.0.0.1',
+  host: "127.0.0.1",
   port: 58627,
   startedAt: 1000,
 };
 
-describe('createInstanceRegistry — register / release', () => {
-  it('writes a <serverId>.json file and release removes it', async () => {
+describe("createInstanceRegistry — register / release", () => {
+  it("writes a <serverId>.json file and release removes it", async () => {
     const registry = createInstanceRegistry({ instancesDir, now: () => 2000 });
     const reg = await registry.register(baseInfo);
 
-    expect(typeof reg.serverId).toBe('string');
+    expect(typeof reg.serverId).toBe("string");
     expect(reg.serverId.length).toBeGreaterThan(0);
     const filePath = join(instancesDir, `${reg.serverId}.json`);
     expect(existsSync(filePath)).toBe(true);
     expect(readInstance(reg.serverId)).toEqual({
       server_id: reg.serverId,
       pid: process.pid,
-      host: '127.0.0.1',
+      host: "127.0.0.1",
       port: 58627,
       started_at: 1000,
       heartbeat_at: 2000,
@@ -98,14 +112,17 @@ describe('createInstanceRegistry — register / release', () => {
     expect(existsSync(filePath)).toBe(false);
   });
 
-  it('records host_version when provided', async () => {
+  it("records host_version when provided", async () => {
     const registry = createInstanceRegistry({ instancesDir, now: () => 1 });
-    const reg = await registry.register({ ...baseInfo, serverVersion: '1.2.3' });
-    expect(readInstance(reg.serverId).host_version).toBe('1.2.3');
+    const reg = await registry.register({
+      ...baseInfo,
+      serverVersion: "1.2.3",
+    });
+    expect(readInstance(reg.serverId).host_version).toBe("1.2.3");
     await reg.release();
   });
 
-  it('assigns distinct serverIds to concurrent registrations', async () => {
+  it("assigns distinct serverIds to concurrent registrations", async () => {
     const registry = createInstanceRegistry({ instancesDir, now: () => 1 });
     const a = await registry.register(baseInfo);
     const b = await registry.register(baseInfo);
@@ -114,14 +131,14 @@ describe('createInstanceRegistry — register / release', () => {
     await b.release();
   });
 
-  it('release is idempotent', async () => {
+  it("release is idempotent", async () => {
     const registry = createInstanceRegistry({ instancesDir, now: () => 1 });
     const reg = await registry.register(baseInfo);
     await reg.release();
     await expect(reg.release()).resolves.toBeUndefined();
   });
 
-  it('update is a no-op after release', async () => {
+  it("update is a no-op after release", async () => {
     const registry = createInstanceRegistry({ instancesDir, now: () => 1 });
     const reg = await registry.register(baseInfo);
     const filePath = join(instancesDir, `${reg.serverId}.json`);
@@ -131,52 +148,52 @@ describe('createInstanceRegistry — register / release', () => {
   });
 });
 
-describe('createInstanceRegistry — stale sweep on register', () => {
-  it('removes dead-pid entries and keeps live ones when registering', async () => {
+describe("createInstanceRegistry — stale sweep on register", () => {
+  it("removes dead-pid entries and keeps live ones when registering", async () => {
     const registry = createInstanceRegistry({ instancesDir, now: () => 1 });
     // Pre-seed a stale (dead pid) and a live entry before registering.
-    writeInstance('stale', { pid: DEAD_PID });
-    writeInstance('live-peer', { pid: process.pid, started_at: 500 });
+    writeInstance("stale", { pid: DEAD_PID });
+    writeInstance("live-peer", { pid: process.pid, started_at: 500 });
 
     const reg = await registry.register(baseInfo);
 
-    expect(existsSync(join(instancesDir, 'stale.json'))).toBe(false);
-    expect(existsSync(join(instancesDir, 'live-peer.json'))).toBe(true);
+    expect(existsSync(join(instancesDir, "stale.json"))).toBe(false);
+    expect(existsSync(join(instancesDir, "live-peer.json"))).toBe(true);
     expect(existsSync(join(instancesDir, `${reg.serverId}.json`))).toBe(true);
     await reg.release();
   });
 
-  it('leaves unparseable entries alone (may be a live peer mid-write)', async () => {
+  it("leaves unparseable entries alone (may be a live peer mid-write)", async () => {
     const registry = createInstanceRegistry({ instancesDir, now: () => 1 });
     mkdirSync(instancesDir, { recursive: true });
-    writeFileSync(join(instancesDir, 'garbage.json'), '{not valid');
+    writeFileSync(join(instancesDir, "garbage.json"), "{not valid");
     const reg = await registry.register(baseInfo);
-    expect(existsSync(join(instancesDir, 'garbage.json'))).toBe(true);
+    expect(existsSync(join(instancesDir, "garbage.json"))).toBe(true);
     await reg.release();
   });
 });
 
-describe('createInstanceRegistry — listLive', () => {
-  it('returns live instances, drops dead ones, and sorts by startedAt', async () => {
+describe("createInstanceRegistry — listLive", () => {
+  it("returns live instances, drops dead ones, and sorts by startedAt", async () => {
     const registry = createInstanceRegistry({ instancesDir });
-    writeInstance('dead', { pid: DEAD_PID, started_at: 1 });
-    writeInstance('older', { pid: process.pid, started_at: 100 });
-    writeInstance('newer', { pid: process.pid, started_at: 200 });
+    writeInstance("dead", { pid: DEAD_PID, started_at: 1 });
+    writeInstance("older", { pid: process.pid, started_at: 100 });
+    writeInstance("newer", { pid: process.pid, started_at: 200 });
 
     const live = await registry.listLive();
-    expect(live.map((i) => i.serverId)).toEqual(['older', 'newer']);
+    expect(live.map((i) => i.serverId)).toEqual(["older", "newer"]);
     // Dead entry lazily removed as a side effect.
-    expect(existsSync(join(instancesDir, 'dead.json'))).toBe(false);
+    expect(existsSync(join(instancesDir, "dead.json"))).toBe(false);
   });
 
-  it('returns an empty array when the directory is missing', async () => {
+  it("returns an empty array when the directory is missing", async () => {
     const registry = createInstanceRegistry({ instancesDir });
     await expect(registry.listLive()).resolves.toEqual([]);
   });
 });
 
-describe('createInstanceRegistry — update', () => {
-  it('rewrites the port and refreshes heartbeatAt', async () => {
+describe("createInstanceRegistry — update", () => {
+  it("rewrites the port and refreshes heartbeatAt", async () => {
     let t = 1000;
     const registry = createInstanceRegistry({ instancesDir, now: () => t });
     const reg = await registry.register(baseInfo);
@@ -195,7 +212,7 @@ describe('createInstanceRegistry — update', () => {
     await reg.release();
   });
 
-  it('refreshes heartbeat without changing port when patch is empty', async () => {
+  it("refreshes heartbeat without changing port when patch is empty", async () => {
     let t = 1000;
     const registry = createInstanceRegistry({ instancesDir, now: () => t });
     const reg = await registry.register(baseInfo);
@@ -208,8 +225,8 @@ describe('createInstanceRegistry — update', () => {
   });
 });
 
-describe('createInstanceRegistry — heartbeat', () => {
-  it('periodically rewrites heartbeatAt until released', async () => {
+describe("createInstanceRegistry — heartbeat", () => {
+  it("periodically rewrites heartbeatAt until released", async () => {
     let tick = 0;
     const registry = createInstanceRegistry({
       instancesDir,
@@ -234,19 +251,21 @@ describe('createInstanceRegistry — heartbeat', () => {
   });
 });
 
-describe('convenience readers', () => {
-  it('listLiveServerInstances reads <homeDir>/server/instances', async () => {
-    const dir = join(tmpDir, 'server', 'instances');
+describe("convenience readers", () => {
+  it("listLiveServerInstances reads <homeDir>/server/instances", async () => {
+    const dir = join(tmpDir, "server", "instances");
     const registry = createInstanceRegistry({ instancesDir: dir });
     const reg = await registry.register({ ...baseInfo, startedAt: 100 });
 
     const live = await listLiveServerInstances(tmpDir);
-    expect(live.map((i: ServerInstanceInfo) => i.serverId)).toEqual([reg.serverId]);
+    expect(live.map((i: ServerInstanceInfo) => i.serverId)).toEqual([
+      reg.serverId,
+    ]);
     await reg.release();
   });
 
-  it('getLiveServerInstance returns the longest-running live instance', async () => {
-    const dir = join(tmpDir, 'server', 'instances');
+  it("getLiveServerInstance returns the longest-running live instance", async () => {
+    const dir = join(tmpDir, "server", "instances");
     const registry = createInstanceRegistry({ instancesDir: dir });
     const older = await registry.register({ ...baseInfo, startedAt: 100 });
     const newer = await registry.register({ ...baseInfo, startedAt: 200 });
@@ -257,13 +276,12 @@ describe('convenience readers', () => {
     await newer.release();
   });
 
-  it('getLiveServerInstance returns undefined when no live instance exists', async () => {
+  it("getLiveServerInstance returns undefined when no live instance exists", async () => {
     await expect(getLiveServerInstance(tmpDir)).resolves.toBeUndefined();
   });
 });
 
-
-describe('startServer — instance registry wiring', () => {
+describe("startServer — instance registry wiring", () => {
   let home: string | undefined;
   const servers: RunningServer[] = [];
 
@@ -277,11 +295,23 @@ describe('startServer — instance registry wiring', () => {
     }
   });
 
-  it('lets two servers share one homeDir, each registering a distinct instance and port', async () => {
-    home = mkdtempSync(join(tmpdir(), 'kimi-server-multi-server-'));
-    const a = await startServer({ hostIdentity: TEST_HOST_IDENTITY, host: '127.0.0.1', port: 0, homeDir: home, logLevel: 'silent' });
+  it("lets two servers share one homeDir, each registering a distinct instance and port", async () => {
+    home = mkdtempSync(join(tmpdir(), "kimi-server-multi-server-"));
+    const a = await startServer({
+      hostIdentity: TEST_HOST_IDENTITY,
+      host: "127.0.0.1",
+      port: 0,
+      homeDir: home,
+      logLevel: "silent",
+    });
     servers.push(a);
-    const b = await startServer({ hostIdentity: TEST_HOST_IDENTITY, host: '127.0.0.1', port: 0, homeDir: home, logLevel: 'silent' });
+    const b = await startServer({
+      hostIdentity: TEST_HOST_IDENTITY,
+      host: "127.0.0.1",
+      port: 0,
+      homeDir: home,
+      logLevel: "silent",
+    });
     servers.push(b);
 
     // Each instance binds its own (ephemeral) port and registers it.
@@ -294,14 +324,26 @@ describe('startServer — instance registry wiring', () => {
       [a.port, b.port].sort((x, y) => x - y),
     );
     // The legacy single-instance lock is never created.
-    expect(existsSync(join(home, 'server', 'lock'))).toBe(false);
+    expect(existsSync(join(home, "server", "lock"))).toBe(false);
   });
 
-  it('removes its instance file on close so peers no longer list it', async () => {
-    home = mkdtempSync(join(tmpdir(), 'kimi-server-multi-server-'));
-    const a = await startServer({ hostIdentity: TEST_HOST_IDENTITY, host: '127.0.0.1', port: 0, homeDir: home, logLevel: 'silent' });
+  it("removes its instance file on close so peers no longer list it", async () => {
+    home = mkdtempSync(join(tmpdir(), "kimi-server-multi-server-"));
+    const a = await startServer({
+      hostIdentity: TEST_HOST_IDENTITY,
+      host: "127.0.0.1",
+      port: 0,
+      homeDir: home,
+      logLevel: "silent",
+    });
     servers.push(a);
-    const b = await startServer({ hostIdentity: TEST_HOST_IDENTITY, host: '127.0.0.1', port: 0, homeDir: home, logLevel: 'silent' });
+    const b = await startServer({
+      hostIdentity: TEST_HOST_IDENTITY,
+      host: "127.0.0.1",
+      port: 0,
+      homeDir: home,
+      logLevel: "silent",
+    });
     servers.push(b);
     expect(await listLiveServerInstances(home)).toHaveLength(2);
 
@@ -313,23 +355,23 @@ describe('startServer — instance registry wiring', () => {
     expect(live[0]?.port).toBe(b.port);
   });
 
-  it('releases its registration on close so a fresh instance on the same home can start', async () => {
-    home = mkdtempSync(join(tmpdir(), 'kimi-server-multi-server-'));
+  it("releases its registration on close so a fresh instance on the same home can start", async () => {
+    home = mkdtempSync(join(tmpdir(), "kimi-server-multi-server-"));
     const first = await startServer({
       hostIdentity: TEST_HOST_IDENTITY,
-      host: '127.0.0.1',
+      host: "127.0.0.1",
       port: 0,
       homeDir: home,
-      logLevel: 'silent',
+      logLevel: "silent",
     });
     await first.close();
 
     const restarted = await startServer({
       hostIdentity: TEST_HOST_IDENTITY,
-      host: '127.0.0.1',
+      host: "127.0.0.1",
       port: 0,
       homeDir: home,
-      logLevel: 'silent',
+      logLevel: "silent",
     });
     servers.push(restarted);
     expect(await listLiveServerInstances(home)).toHaveLength(1);

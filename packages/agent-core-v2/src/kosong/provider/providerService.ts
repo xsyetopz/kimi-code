@@ -6,11 +6,15 @@
  * persists the change events it fires. Bound at App scope.
  */
 
-import { Disposable } from '#/_base/di/lifecycle';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { AsyncEmitter, type Event, type IWaitUntil } from '#/_base/event';
+import { Disposable } from "#/_base/di/lifecycle";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { AsyncEmitter, type Event, type IWaitUntil } from "#/_base/event";
 
-import { deepEqual, diffRecords, isEmptyDiff } from '../recordDiff';
+import { deepEqual, diffRecords, isEmptyDiff } from "../recordDiff";
 
 import {
   type DefaultProviderChangedEvent,
@@ -18,7 +22,7 @@ import {
   type ProvidersChangedEvent,
   type ProvidersSection,
   IProviderService,
-} from './provider';
+} from "./provider";
 
 const NO_ABORT = new AbortController().signal;
 
@@ -41,8 +45,9 @@ export class ProviderService extends Disposable implements IProviderService {
   private readonly _onDidChangeDefaultProvider = this._register(
     new AsyncEmitter<DefaultProviderChangedEvent & IWaitUntil>(),
   );
-  readonly onDidChangeDefaultProvider: Event<DefaultProviderChangedEvent & IWaitUntil> =
-    this._onDidChangeDefaultProvider.event;
+  readonly onDidChangeDefaultProvider: Event<
+    DefaultProviderChangedEvent & IWaitUntil
+  > = this._onDidChangeDefaultProvider.event;
 
   get(name: string): ProviderConfig | undefined {
     return this.providers[name];
@@ -56,7 +61,10 @@ export class ProviderService extends Disposable implements IProviderService {
     return this.defaultProvider;
   }
 
-  loadAll(providers: ProvidersSection, defaultProvider: string | undefined): void {
+  loadAll(
+    providers: ProvidersSection,
+    defaultProvider: string | undefined,
+  ): void {
     void this.applyRecords(providers);
     void this.applyDefaultProvider(defaultProvider);
     if (!this.hydrated) {
@@ -91,7 +99,9 @@ export class ProviderService extends Disposable implements IProviderService {
     await this.applyDefaultProvider(id);
   }
 
-  private async applyRecords(next: Readonly<Record<string, ProviderConfig>>): Promise<void> {
+  private async applyRecords(
+    next: Readonly<Record<string, ProviderConfig>>,
+  ): Promise<void> {
     const diff = diffRecords(this.providers, next);
     if (isEmptyDiff(diff)) return;
     this.providers = { ...next };
@@ -110,5 +120,5 @@ registerScopedService(
   IProviderService,
   ProviderService,
   ScopeActivation.OnScopeCreated,
-  'provider',
+  "provider",
 );

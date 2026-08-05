@@ -5,9 +5,9 @@
  * production tree. Import from a relative path (`./stubs` or `../log/stubs`).
  */
 
-import type { ServiceRegistration } from '#/_base/di/test';
-import { ILogService } from '#/_base/log/log';
-import type { ILogger } from '#/_base/log/log';
+import type { ServiceRegistration } from "#/_base/di/test";
+import { ILogService } from "#/_base/log/log";
+import type { ILogger } from "#/_base/log/log";
 
 export function stubLogger(): ILogger {
   const logger: ILogger = {
@@ -24,7 +24,7 @@ export function stubLog(): ILogService {
   return {
     ...stubLogger(),
     _serviceBrand: undefined,
-    level: 'info',
+    level: "info",
     setLevel: () => {},
     flush: () => Promise.resolve(),
   };

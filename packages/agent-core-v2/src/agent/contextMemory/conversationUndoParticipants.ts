@@ -5,10 +5,18 @@
  * scope.
  */
 
-import { createDecorator } from '#/_base/di/instantiation';
-import { Disposable, toDisposable, type IDisposable } from '#/_base/di/lifecycle';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { BugIndicatingError } from '#/errors';
+import { createDecorator } from "#/_base/di/instantiation";
+import {
+  Disposable,
+  toDisposable,
+  type IDisposable,
+} from "#/_base/di/lifecycle";
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { BugIndicatingError } from "#/errors";
 
 export interface AgentConversationUndoParticipant {
   readonly id: string;
@@ -24,7 +32,7 @@ export interface IAgentConversationUndoParticipantRegistry {
 
 export const IAgentConversationUndoParticipantRegistry =
   createDecorator<IAgentConversationUndoParticipantRegistry>(
-    'agentConversationUndoParticipantRegistry',
+    "agentConversationUndoParticipantRegistry",
   );
 
 class AgentConversationUndoParticipantRegistry
@@ -33,7 +41,10 @@ class AgentConversationUndoParticipantRegistry
 {
   declare readonly _serviceBrand: undefined;
 
-  private readonly participants = new Map<string, AgentConversationUndoParticipant>();
+  private readonly participants = new Map<
+    string,
+    AgentConversationUndoParticipant
+  >();
 
   register(participant: AgentConversationUndoParticipant): IDisposable {
     if (this.participants.has(participant.id)) {
@@ -59,5 +70,5 @@ registerScopedService(
   IAgentConversationUndoParticipantRegistry,
   AgentConversationUndoParticipantRegistry,
   ScopeActivation.OnScopeCreated,
-  'conversationUndoParticipants',
+  "conversationUndoParticipants",
 );

@@ -18,16 +18,16 @@
  * — keep the two in sync: SYSTEM.md semantics must land in both engines.
  */
 
-import { promises as fs } from 'node:fs';
-import { join } from 'pathe';
+import { promises as fs } from "node:fs";
+import { join } from "pathe";
 
-import type { ResolvedAgentProfile } from '../types';
+import type { ResolvedAgentProfile } from "../types";
 
-import { renderAgentFileTemplate } from './from-file';
-import { isFilePath } from './paths';
-import type { AgentFileDefinition } from './types';
+import { renderAgentFileTemplate } from "./from-file";
+import { isFilePath } from "./paths";
+import type { AgentFileDefinition } from "./types";
 
-export const SYSTEM_MD_FILENAME = 'SYSTEM.md';
+export const SYSTEM_MD_FILENAME = "SYSTEM.md";
 
 /**
  * Loads `<brandHome>/SYSTEM.md` as a synthetic agent-file definition for the
@@ -41,19 +41,19 @@ export async function loadSystemMdDefinition(
   let text: string;
   try {
     if (!(await isFilePath(path))) return undefined;
-    text = await fs.readFile(path, 'utf-8');
+    text = await fs.readFile(path, "utf-8");
   } catch (error) {
     warn(`agent SYSTEM.md load failed: ${String(error)} [${path}]`);
     return undefined;
   }
   if (text.trim().length === 0) return undefined;
   return {
-    name: 'agent',
-    description: '',
+    name: "agent",
+    description: "",
     override: true,
     prompt: text.trim(),
     path,
-    source: 'user',
+    source: "user",
   };
 }
 
@@ -66,13 +66,16 @@ export function systemMdProfile(
   definition: AgentFileDefinition,
   builtinDefault: ResolvedAgentProfile,
 ): ResolvedAgentProfile {
-  const skillActive = builtinDefault.tools.includes('Skill');
+  const skillActive = builtinDefault.tools.includes("Skill");
   return {
     name: builtinDefault.name,
     description: builtinDefault.description,
     systemPrompt: (context) =>
-      renderAgentFileTemplate(definition.prompt, context, { skillActive }, (ctx) =>
-        builtinDefault.systemPrompt(ctx),
+      renderAgentFileTemplate(
+        definition.prompt,
+        context,
+        { skillActive },
+        (ctx) => builtinDefault.systemPrompt(ctx),
       ),
     tools: [...builtinDefault.tools],
     disallowedTools:
@@ -81,7 +84,9 @@ export function systemMdProfile(
         : [...builtinDefault.disallowedTools],
     whenToUse: builtinDefault.whenToUse,
     subagents:
-      builtinDefault.subagents === undefined ? undefined : { ...builtinDefault.subagents },
+      builtinDefault.subagents === undefined
+        ? undefined
+        : { ...builtinDefault.subagents },
     modelPreference: builtinDefault.modelPreference,
   };
 }

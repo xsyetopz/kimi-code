@@ -49,11 +49,18 @@ interface FakeSessionBoundary {
   emit(event: Event): void;
   rejectNextPrompt(error: Error): void;
   rejectNextMetadataUpdate(error: Error): void;
-  requestApproval(request: ApprovalRequest): Promise<Awaited<ReturnType<ApprovalHandler>>>;
-  requestQuestion(request: QuestionRequest): Promise<Awaited<ReturnType<QuestionHandler>>>;
+  requestApproval(
+    request: ApprovalRequest,
+  ): Promise<Awaited<ReturnType<ApprovalHandler>>>;
+  requestQuestion(
+    request: QuestionRequest,
+  ): Promise<Awaited<ReturnType<QuestionHandler>>>;
 }
 
-const DEFAULT_LEGACY_APPROVAL: LegacyApprovalFlags = { yolo: false, afk: false };
+const DEFAULT_LEGACY_APPROVAL: LegacyApprovalFlags = {
+  yolo: false,
+  afk: false,
+};
 
 function createFakeSession(): FakeSessionBoundary {
   const listeners = new Set<(event: Event) => void>();
@@ -163,11 +170,13 @@ function createFakeSession(): FakeSessionBoundary {
       nextMetadataError = error;
     },
     async requestApproval(request) {
-      if (approvalHandler === undefined) throw new Error("Approval handler is unavailable");
+      if (approvalHandler === undefined)
+        throw new Error("Approval handler is unavailable");
       return approvalHandler(request);
     },
     async requestQuestion(request) {
-      if (questionHandler === undefined) throw new Error("Question handler is unavailable");
+      if (questionHandler === undefined)
+        throw new Error("Question handler is unavailable");
       return questionHandler(request);
     },
   };
@@ -180,7 +189,8 @@ function createRuntime(legacyApproval = DEFAULT_LEGACY_APPROVAL) {
   const runtime = new SessionRuntime({
     session: sdk.session,
     legacyApproval,
-    broadcast: (event, data, webviewId) => broadcasts.push({ event, data, webviewId }),
+    broadcast: (event, data, webviewId) =>
+      broadcasts.push({ event, data, webviewId }),
     captureBaseline: (session, filePath, webviewIds) => {
       baselines.push({ session, filePath, webviewIds });
     },
@@ -191,7 +201,9 @@ function createRuntime(legacyApproval = DEFAULT_LEGACY_APPROVAL) {
 }
 
 function streamData(records: readonly BroadcastRecord[]): unknown[] {
-  return records.filter((record) => record.event === Events.StreamEvent).map((record) => record.data);
+  return records
+    .filter((record) => record.event === Events.StreamEvent)
+    .map((record) => record.data);
 }
 
 function turnStarted(): Event {
@@ -261,7 +273,9 @@ describe("session runtime (adapts one SDK session for subscribed Webviews)", () 
       result: { status: "cancelled" },
       _sessionId: "session-1",
     });
-    expect(JSON.stringify(streamData(broadcasts))).not.toContain("has been generated");
+    expect(JSON.stringify(streamData(broadcasts))).not.toContain(
+      "has been generated",
+    );
   });
 
   it("does not let a cancelled action finish a newer host command", async () => {
@@ -277,7 +291,9 @@ describe("session runtime (adapts one SDK session for subscribed Webviews)", () 
     runtime.emitHostText("The context has been cleared.", clearAction);
     runtime.completeHostAction("finished", clearAction);
     expect(runtime.isBusy).toBe(false);
-    expect(JSON.stringify(streamData(broadcasts))).not.toContain("late init result");
+    expect(JSON.stringify(streamData(broadcasts))).not.toContain(
+      "late init result",
+    );
   });
 
   it("waits for the cancelled turn to settle before running an exclusive operation", async () => {
@@ -308,10 +324,13 @@ describe("session runtime (adapts one SDK session for subscribed Webviews)", () 
   it("keeps a public turn action attached to its original slash input", async () => {
     const { runtime, sdk, broadcasts } = createRuntime();
 
-    const result = runtime.runTurnAction("/skill:review carefully", async () => {
-      sdk.emit(turnStarted());
-      sdk.emit(turnEnded("completed"));
-    });
+    const result = runtime.runTurnAction(
+      "/skill:review carefully",
+      async () => {
+        sdk.emit(turnStarted());
+        sdk.emit(turnEnded("completed"));
+      },
+    );
 
     await expect(result).resolves.toEqual({ status: "finished" });
     expect(streamData(broadcasts)).toContainEqual({
@@ -325,8 +344,14 @@ describe("session runtime (adapts one SDK session for subscribed Webviews)", () 
     const { runtime, sdk } = createRuntime();
     const completion = runtime.prompt([
       { type: "text", text: "Describe these files" },
-      { type: "image_url", image_url: { url: "data:image/png;base64,AA", id: "image-1" } },
-      { type: "video_url", video_url: { url: "file:///workspace/demo.mp4", id: "video-1" } },
+      {
+        type: "image_url",
+        image_url: { url: "data:image/png;base64,AA", id: "image-1" },
+      },
+      {
+        type: "video_url",
+        video_url: { url: "file:///workspace/demo.mp4", id: "video-1" },
+      },
     ]);
 
     sdk.emit(turnStarted());
@@ -336,8 +361,14 @@ describe("session runtime (adapts one SDK session for subscribed Webviews)", () 
     expect(sdk.promptInputs).toEqual([
       [
         { type: "text", text: "Describe these files" },
-        { type: "image_url", imageUrl: { url: "data:image/png;base64,AA", id: "image-1" } },
-        { type: "video_url", videoUrl: { url: "file:///workspace/demo.mp4", id: "video-1" } },
+        {
+          type: "image_url",
+          imageUrl: { url: "data:image/png;base64,AA", id: "image-1" },
+        },
+        {
+          type: "video_url",
+          videoUrl: { url: "file:///workspace/demo.mp4", id: "video-1" },
+        },
       ],
     ]);
   });
@@ -451,7 +482,10 @@ describe("session runtime (adapts one SDK session for subscribed Webviews)", () 
     expect(
       streamData(broadcasts).filter(
         (event) =>
-          typeof event === "object" && event !== null && "type" in event && event.type === "error",
+          typeof event === "object" &&
+          event !== null &&
+          "type" in event &&
+          event.type === "error",
       ),
     ).toHaveLength(1);
   });
@@ -478,7 +512,10 @@ describe("session runtime (adapts one SDK session for subscribed Webviews)", () 
     expect(
       streamData(broadcasts).filter(
         (event) =>
-          typeof event === "object" && event !== null && "type" in event && event.type === "error",
+          typeof event === "object" &&
+          event !== null &&
+          "type" in event &&
+          event.type === "error",
       ),
     ).toHaveLength(1);
   });
@@ -487,7 +524,9 @@ describe("session runtime (adapts one SDK session for subscribed Webviews)", () 
     const { runtime, sdk, broadcasts } = createRuntime();
     sdk.rejectNextPrompt(new Error("Unable to initialize provider"));
 
-    await expect(runtime.prompt("hello")).resolves.toEqual({ status: "failed" });
+    await expect(runtime.prompt("hello")).resolves.toEqual({
+      status: "failed",
+    });
 
     expect(streamData(broadcasts)).toContainEqual({
       type: "error",
@@ -550,28 +589,34 @@ describe("session runtime (adapts one SDK session for subscribed Webviews)", () 
     ["approve", { decision: "approved" }],
     ["approve_for_session", { decision: "approved", scope: "session" }],
     ["reject", { decision: "rejected" }],
-  ] as const)("resolves SDK approval when the Webview responds with %s", async (response, expected) => {
-    const { runtime, sdk, broadcasts } = createRuntime();
-    const pending = sdk.requestApproval({
-      toolCallId: "tool-1",
-      toolName: "Bash",
-      action: "Run command",
-      display: { kind: "command", command: "pnpm test" },
-    });
-    const request = streamData(broadcasts).find(
-      (event) =>
-        typeof event === "object" &&
-        event !== null &&
-        "type" in event &&
-        event.type === "ApprovalRequest",
-    ) as { payload: { id: string } };
+  ] as const)(
+    "resolves SDK approval when the Webview responds with %s",
+    async (response, expected) => {
+      const { runtime, sdk, broadcasts } = createRuntime();
+      const pending = sdk.requestApproval({
+        toolCallId: "tool-1",
+        toolName: "Bash",
+        action: "Run command",
+        display: { kind: "command", command: "pnpm test" },
+      });
+      const request = streamData(broadcasts).find(
+        (event) =>
+          typeof event === "object" &&
+          event !== null &&
+          "type" in event &&
+          event.type === "ApprovalRequest",
+      ) as { payload: { id: string } };
 
-    expect(runtime.respondApproval(request.payload.id, response)).toBe(true);
-    await expect(pending).resolves.toEqual(expected);
-  });
+      expect(runtime.respondApproval(request.payload.id, response)).toBe(true);
+      await expect(pending).resolves.toEqual(expected);
+    },
+  );
 
   it("forwards SDK approval requests to the Webview in legacy yolo mode", async () => {
-    const { runtime, sdk, broadcasts } = createRuntime({ yolo: true, afk: false });
+    const { runtime, sdk, broadcasts } = createRuntime({
+      yolo: true,
+      afk: false,
+    });
     const pending = sdk.requestApproval({
       toolCallId: "tool-yolo",
       toolName: "Bash",
@@ -594,7 +639,9 @@ describe("session runtime (adapts one SDK session for subscribed Webviews)", () 
     const { runtime, sdk } = createRuntime();
     sdk.rejectNextMetadataUpdate(new Error("state is read-only"));
 
-    await expect(runtime.toggleLegacyApproval("afk")).rejects.toThrow("state is read-only");
+    await expect(runtime.toggleLegacyApproval("afk")).rejects.toThrow(
+      "state is read-only",
+    );
 
     expect(sdk.setPermissions).toEqual(["auto", "manual"]);
     expect(runtime.legacyApprovalFlags).toEqual({ yolo: false, afk: false });
@@ -621,12 +668,21 @@ describe("session runtime (adapts one SDK session for subscribed Webviews)", () 
         event.type === "QuestionRequest",
     ) as { payload: { id: string } };
 
-    expect(runtime.respondQuestion(request.payload.id, { "Choose a target": "Tests" })).toBe(true);
-    await expect(pending).resolves.toEqual({ answers: { "Choose a target": "Tests" } });
+    expect(
+      runtime.respondQuestion(request.payload.id, {
+        "Choose a target": "Tests",
+      }),
+    ).toBe(true);
+    await expect(pending).resolves.toEqual({
+      answers: { "Choose a target": "Tests" },
+    });
   });
 
   it("keeps SDK questions interactive in legacy yolo mode", async () => {
-    const { runtime, sdk, broadcasts } = createRuntime({ yolo: true, afk: false });
+    const { runtime, sdk, broadcasts } = createRuntime({
+      yolo: true,
+      afk: false,
+    });
     const pending = sdk.requestQuestion({
       toolCallId: "question-yolo",
       questions: [
@@ -645,7 +701,9 @@ describe("session runtime (adapts one SDK session for subscribed Webviews)", () 
         event.type === "QuestionRequest",
     ) as { payload: { id: string } };
 
-    expect(runtime.respondQuestion(request.payload.id, { "Continue?": "Yes" })).toBe(true);
+    expect(
+      runtime.respondQuestion(request.payload.id, { "Continue?": "Yes" }),
+    ).toBe(true);
     await expect(pending).resolves.toEqual({ answers: { "Continue?": "Yes" } });
   });
 
@@ -670,7 +728,11 @@ describe("session runtime (adapts one SDK session for subscribed Webviews)", () 
     const { runtime, sdk } = createRuntime();
     const pending = sdk.requestQuestion({
       questions: [
-        { question: "Continue?", options: [{ label: "Yes" }], multiSelect: false },
+        {
+          question: "Continue?",
+          options: [{ label: "Yes" }],
+          multiSelect: false,
+        },
       ],
     });
 
@@ -693,7 +755,10 @@ describe("session runtime (adapts one SDK session for subscribed Webviews)", () 
 
     expect(sdk.subscriptionCount()).toBe(1);
     expect(sdk.handlerInstallations).toEqual({ approval: 1, question: 1 });
-    expect(broadcasts.map((record) => record.webviewId)).toEqual(["view-1", "view-2"]);
+    expect(broadcasts.map((record) => record.webviewId)).toEqual([
+      "view-1",
+      "view-2",
+    ]);
   });
 
   it.each(["Write", "Edit"] as const)(
@@ -729,19 +794,22 @@ describe("session runtime (adapts one SDK session for subscribed Webviews)", () 
     ["Read", { path: "src/index.ts" }],
     ["Write", {}],
     ["Edit", { path: "" }],
-  ] as const)("does not capture a baseline when %s receives non-write input %#", (name, args) => {
-    const { sdk, baselines } = createRuntime();
+  ] as const)(
+    "does not capture a baseline when %s receives non-write input %#",
+    (name, args) => {
+      const { sdk, baselines } = createRuntime();
 
-    sdk.emit({
-      type: "tool.call.started",
-      sessionId: "session-1",
-      agentId: "main",
-      turnId: 7,
-      toolCallId: "tool-1",
-      name,
-      args,
-    });
+      sdk.emit({
+        type: "tool.call.started",
+        sessionId: "session-1",
+        agentId: "main",
+        turnId: 7,
+        toolCallId: "tool-1",
+        name,
+        args,
+      });
 
-    expect(baselines).toEqual([]);
-  });
+      expect(baselines).toEqual([]);
+    },
+  );
 });

@@ -7,8 +7,8 @@ import type {
   ToolCall,
   ToolCallPart,
   VideoURLPart,
-} from '#/message';
-import { describe, expect, it } from 'vitest';
+} from "#/message";
+import { describe, expect, it } from "vitest";
 /**
  * This function exercises TypeScript's discriminated-union narrowing.
  * If the type system is correct, every branch accesses only properties
@@ -16,20 +16,20 @@ import { describe, expect, it } from 'vitest';
  */
 function processPartSafely(part: StreamedMessagePart): string {
   switch (part.type) {
-    case 'text':
+    case "text":
       return part.text; // TextPart.text -> string
-    case 'think':
+    case "think":
       return part.think; // ThinkPart.think -> string
-    case 'image_url':
+    case "image_url":
       return part.imageUrl.url; // ImageURLPart.imageUrl.url -> string
-    case 'audio_url':
+    case "audio_url":
       return part.audioUrl.url; // AudioURLPart.audioUrl.url -> string
-    case 'video_url':
+    case "video_url":
       return part.videoUrl.url; // VideoURLPart.videoUrl.url -> string
-    case 'function':
+    case "function":
       return part.name; // ToolCall.name -> string
-    case 'tool_call_part':
-      return part.argumentsPart ?? ''; // ToolCallPart.argumentsPart -> string | null
+    case "tool_call_part":
+      return part.argumentsPart ?? ""; // ToolCallPart.argumentsPart -> string | null
     default: {
       const _exhaustive: never = part;
       throw new Error(`Unknown part type: ${JSON.stringify(_exhaustive)}`);
@@ -37,68 +37,69 @@ function processPartSafely(part: StreamedMessagePart): string {
   }
 }
 
-describe('StreamedMessagePart discriminated union narrowing', () => {
-  it('narrows TextPart via switch', () => {
-    const part: StreamedMessagePart = { type: 'text', text: 'hello' };
-    expect(processPartSafely(part)).toBe('hello');
+describe("StreamedMessagePart discriminated union narrowing", () => {
+  it("narrows TextPart via switch", () => {
+    const part: StreamedMessagePart = { type: "text", text: "hello" };
+    expect(processPartSafely(part)).toBe("hello");
   });
 
-  it('narrows ThinkPart via switch', () => {
-    const part: StreamedMessagePart = { type: 'think', think: 'reasoning...' };
-    expect(processPartSafely(part)).toBe('reasoning...');
+  it("narrows ThinkPart via switch", () => {
+    const part: StreamedMessagePart = { type: "think", think: "reasoning..." };
+    expect(processPartSafely(part)).toBe("reasoning...");
   });
 
-  it('narrows ImageURLPart via switch', () => {
+  it("narrows ImageURLPart via switch", () => {
     const part: StreamedMessagePart = {
-      type: 'image_url',
-      imageUrl: { url: 'https://example.com/img.png' },
+      type: "image_url",
+      imageUrl: { url: "https://example.com/img.png" },
     };
-    expect(processPartSafely(part)).toBe('https://example.com/img.png');
+    expect(processPartSafely(part)).toBe("https://example.com/img.png");
   });
 
-  it('narrows AudioURLPart via switch', () => {
+  it("narrows AudioURLPart via switch", () => {
     const part: StreamedMessagePart = {
-      type: 'audio_url',
-      audioUrl: { url: 'https://example.com/audio.mp3' },
+      type: "audio_url",
+      audioUrl: { url: "https://example.com/audio.mp3" },
     };
-    expect(processPartSafely(part)).toBe('https://example.com/audio.mp3');
+    expect(processPartSafely(part)).toBe("https://example.com/audio.mp3");
   });
 
-  it('narrows VideoURLPart via switch', () => {
+  it("narrows VideoURLPart via switch", () => {
     const part: StreamedMessagePart = {
-      type: 'video_url',
-      videoUrl: { url: 'https://example.com/video.mp4' },
+      type: "video_url",
+      videoUrl: { url: "https://example.com/video.mp4" },
     };
-    expect(processPartSafely(part)).toBe('https://example.com/video.mp4');
+    expect(processPartSafely(part)).toBe("https://example.com/video.mp4");
   });
 
-  it('narrows ToolCall via switch', () => {
+  it("narrows ToolCall via switch", () => {
     const part: StreamedMessagePart = {
-      type: 'function',
-      id: 'call-1',
-      name: 'search', arguments: '{"q":"test"}',
+      type: "function",
+      id: "call-1",
+      name: "search",
+      arguments: '{"q":"test"}',
     };
-    expect(processPartSafely(part)).toBe('search');
+    expect(processPartSafely(part)).toBe("search");
   });
 
-  it('narrows ToolCallPart via switch (non-null)', () => {
+  it("narrows ToolCallPart via switch (non-null)", () => {
     const part: StreamedMessagePart = {
-      type: 'tool_call_part',
+      type: "tool_call_part",
       argumentsPart: '{"key":"value"}',
     };
     expect(processPartSafely(part)).toBe('{"key":"value"}');
   });
 
-  it('narrows ToolCallPart via switch (null argumentsPart)', () => {
+  it("narrows ToolCallPart via switch (null argumentsPart)", () => {
     const part: StreamedMessagePart = {
-      type: 'tool_call_part',
+      type: "tool_call_part",
       argumentsPart: null,
     };
-    expect(processPartSafely(part)).toBe('');
+    expect(processPartSafely(part)).toBe("");
   });
 });
-describe('exhaustiveness check', () => {
-  it('switch covers all discriminants — never type reached', () => {
+describe("exhaustiveness check", () => {
+  it("switch covers all discriminants — never type reached", () => {
     // If StreamedMessagePart gains a new variant and processPartSafely
     // does not handle it, TypeScript will report:
     //   "Function lacks ending return statement and return type does
@@ -106,59 +107,64 @@ describe('exhaustiveness check', () => {
     // This is a compile-time guarantee, not a runtime one.
     // We simply verify the function returns a string for every current variant.
     const allParts: StreamedMessagePart[] = [
-      { type: 'text', text: 'a' },
-      { type: 'think', think: 'b' },
-      { type: 'image_url', imageUrl: { url: 'c' } },
-      { type: 'audio_url', audioUrl: { url: 'd' } },
-      { type: 'video_url', videoUrl: { url: 'e' } },
-      { type: 'function', id: 'f', name: 'g', arguments: null },
-      { type: 'tool_call_part', argumentsPart: 'h' },
+      { type: "text", text: "a" },
+      { type: "think", think: "b" },
+      { type: "image_url", imageUrl: { url: "c" } },
+      { type: "audio_url", audioUrl: { url: "d" } },
+      { type: "video_url", videoUrl: { url: "e" } },
+      { type: "function", id: "f", name: "g", arguments: null },
+      { type: "tool_call_part", argumentsPart: "h" },
     ];
     for (const part of allParts) {
-      expect(typeof processPartSafely(part)).toBe('string');
+      expect(typeof processPartSafely(part)).toBe("string");
     }
   });
 });
-describe('type assignability', () => {
-  it('TextPart is assignable to StreamedMessagePart', () => {
-    const text: TextPart = { type: 'text', text: 'x' };
+describe("type assignability", () => {
+  it("TextPart is assignable to StreamedMessagePart", () => {
+    const text: TextPart = { type: "text", text: "x" };
     const _part: StreamedMessagePart = text;
-    expect(_part.type).toBe('text');
+    expect(_part.type).toBe("text");
   });
 
-  it('ThinkPart is assignable to StreamedMessagePart', () => {
-    const think: ThinkPart = { type: 'think', think: 'x' };
+  it("ThinkPart is assignable to StreamedMessagePart", () => {
+    const think: ThinkPart = { type: "think", think: "x" };
     const _part: StreamedMessagePart = think;
-    expect(_part.type).toBe('think');
+    expect(_part.type).toBe("think");
   });
 
-  it('ImageURLPart is assignable to StreamedMessagePart', () => {
-    const img: ImageURLPart = { type: 'image_url', imageUrl: { url: 'x' } };
+  it("ImageURLPart is assignable to StreamedMessagePart", () => {
+    const img: ImageURLPart = { type: "image_url", imageUrl: { url: "x" } };
     const _part: StreamedMessagePart = img;
-    expect(_part.type).toBe('image_url');
+    expect(_part.type).toBe("image_url");
   });
 
-  it('AudioURLPart is assignable to StreamedMessagePart', () => {
-    const audio: AudioURLPart = { type: 'audio_url', audioUrl: { url: 'x' } };
+  it("AudioURLPart is assignable to StreamedMessagePart", () => {
+    const audio: AudioURLPart = { type: "audio_url", audioUrl: { url: "x" } };
     const _part: StreamedMessagePart = audio;
-    expect(_part.type).toBe('audio_url');
+    expect(_part.type).toBe("audio_url");
   });
 
-  it('VideoURLPart is assignable to StreamedMessagePart', () => {
-    const video: VideoURLPart = { type: 'video_url', videoUrl: { url: 'x' } };
+  it("VideoURLPart is assignable to StreamedMessagePart", () => {
+    const video: VideoURLPart = { type: "video_url", videoUrl: { url: "x" } };
     const _part: StreamedMessagePart = video;
-    expect(_part.type).toBe('video_url');
+    expect(_part.type).toBe("video_url");
   });
 
-  it('ToolCall is assignable to StreamedMessagePart', () => {
-    const tc: ToolCall = { type: 'function', id: 'c', name: 'f', arguments: null };
+  it("ToolCall is assignable to StreamedMessagePart", () => {
+    const tc: ToolCall = {
+      type: "function",
+      id: "c",
+      name: "f",
+      arguments: null,
+    };
     const _part: StreamedMessagePart = tc;
-    expect(_part.type).toBe('function');
+    expect(_part.type).toBe("function");
   });
 
-  it('ToolCallPart is assignable to StreamedMessagePart', () => {
-    const tcp: ToolCallPart = { type: 'tool_call_part', argumentsPart: null };
+  it("ToolCallPart is assignable to StreamedMessagePart", () => {
+    const tcp: ToolCallPart = { type: "tool_call_part", argumentsPart: null };
     const _part: StreamedMessagePart = tcp;
-    expect(_part.type).toBe('tool_call_part');
+    expect(_part.type).toBe("tool_call_part");
   });
 });

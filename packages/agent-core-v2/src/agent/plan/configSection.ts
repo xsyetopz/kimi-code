@@ -6,11 +6,11 @@
  * forked sessions restore plan state from wire records and ignore this.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { registerConfigSection } from '#/app/config/configSectionContributions';
+import { registerConfigSection } from "#/app/config/configSectionContributions";
 
-export const DEFAULT_PLAN_MODE_SECTION = 'defaultPlanMode';
+export const DEFAULT_PLAN_MODE_SECTION = "defaultPlanMode";
 
 export const DefaultPlanModeSchema = z.boolean().optional();
 

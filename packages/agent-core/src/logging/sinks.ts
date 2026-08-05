@@ -1,8 +1,8 @@
-import { mkdir, open, rename, stat, unlink } from 'node:fs/promises';
-import { appendFileSync, mkdirSync } from 'node:fs';
-import { dirname } from 'pathe';
+import { mkdir, open, rename, stat, unlink } from "node:fs/promises";
+import { appendFileSync, mkdirSync } from "node:fs";
+import { dirname } from "pathe";
 
-import { syncDir } from '#/utils/fs';
+import { syncDir } from "#/utils/fs";
 
 export const PENDING_MAX = 1000;
 const STDERR_NOTICE_INTERVAL_MS = 30_000;
@@ -69,7 +69,7 @@ export class RotatingFileSink implements Sink {
     if (this.closed || this.pending.length === 0) return;
     try {
       mkdirSync(dirname(this.options.path), { recursive: true });
-      const body = this.pending.join('') + this.takeDroppedNotice();
+      const body = this.pending.join("") + this.takeDroppedNotice();
       this.pending = [];
       appendFileSync(this.options.path, body);
     } catch (error) {
@@ -88,7 +88,8 @@ export class RotatingFileSink implements Sink {
   private async drain(): Promise<boolean> {
     if (this.pending.length === 0) return true;
     const droppedLine = this.takeDroppedNotice();
-    const lines = droppedLine === '' ? [...this.pending] : [...this.pending, droppedLine];
+    const lines =
+      droppedLine === "" ? [...this.pending] : [...this.pending, droppedLine];
     this.pending = [];
     try {
       await mkdir(dirname(this.options.path), { recursive: true });
@@ -122,17 +123,17 @@ export class RotatingFileSink implements Sink {
   }
 
   private async appendLines(lines: readonly string[]): Promise<void> {
-    let chunk = '';
+    let chunk = "";
     let chunkBytes = 0;
     for (const line of lines) {
-      const lineBytes = Buffer.byteLength(line, 'utf-8');
+      const lineBytes = Buffer.byteLength(line, "utf-8");
       if (
         chunkBytes > 0 &&
         (chunkBytes + lineBytes > this.options.maxBytes ||
           this.currentBytes + chunkBytes + lineBytes > this.options.maxBytes)
       ) {
         await this.appendChunk(chunk);
-        chunk = '';
+        chunk = "";
         chunkBytes = 0;
       }
 
@@ -153,14 +154,14 @@ export class RotatingFileSink implements Sink {
   }
 
   private async appendChunk(chunk: string): Promise<void> {
-    const fh = await open(this.options.path, 'a');
+    const fh = await open(this.options.path, "a");
     try {
-      await fh.appendFile(chunk, 'utf-8');
+      await fh.appendFile(chunk, "utf-8");
       await fh.sync();
     } finally {
       await fh.close();
     }
-    this.currentBytes += Buffer.byteLength(chunk, 'utf-8');
+    this.currentBytes += Buffer.byteLength(chunk, "utf-8");
     if (this.currentBytes >= this.options.maxBytes) {
       await this.rotate();
     }
@@ -174,19 +175,19 @@ export class RotatingFileSink implements Sink {
       try {
         await rename(from, to);
       } catch (error) {
-        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+        if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
       }
     }
     try {
       await rename(path, `${path}.1`);
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
     }
     // last archive may be evicted; ensure we don't keep > files
     try {
       await unlink(`${path}.${files}`);
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
     }
     this.currentBytes = 0;
     this.directorySynced = false;
@@ -197,13 +198,13 @@ export class RotatingFileSink implements Sink {
       const s = await stat(p);
       return s.size;
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return 0;
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return 0;
       throw error;
     }
   }
 
   private takeDroppedNotice(): string {
-    if (this.dropped === 0) return '';
+    if (this.dropped === 0) return "";
     const line = `... dropped ${this.dropped} entries ...\n`;
     this.dropped = 0;
     return line;
@@ -213,7 +214,7 @@ export class RotatingFileSink implements Sink {
     const now = Date.now();
     if (now - this.lastStderrNotice < STDERR_NOTICE_INTERVAL_MS) return;
     this.lastStderrNotice = now;
-    const code = (error as NodeJS.ErrnoException)?.code ?? 'UNKNOWN';
+    const code = (error as NodeJS.ErrnoException)?.code ?? "UNKNOWN";
     try {
       process.stderr.write(`[logger] write failed: ${code}\n`);
     } catch {}

@@ -1,7 +1,7 @@
-import { join } from 'pathe';
+import { join } from "pathe";
 
-import { extractError, formatEntry, redactCtx } from './formatter';
-import { RotatingFileSink } from './sinks';
+import { extractError, formatEntry, redactCtx } from "./formatter";
+import { RotatingFileSink } from "./sinks";
 import {
   type LogContext,
   type LogEntry,
@@ -13,12 +13,15 @@ import {
   type SessionAttachInput,
   type SessionLogHandle,
   levelEnabled,
-} from './types';
+} from "./types";
 
-const ROOT_SYMBOL = Symbol.for('kimi.logger.root');
-const SESSION_LOG_ID = Symbol('kimi.logger.sessionLogId');
-const LLM_REQUEST_SESSION_LOG_OMITTED_CONTEXT_KEYS = ['sessionId'];
-const MAIN_LLM_REQUEST_SESSION_LOG_OMITTED_CONTEXT_KEYS = ['sessionId', 'agentId'];
+const ROOT_SYMBOL = Symbol.for("kimi.logger.root");
+const SESSION_LOG_ID = Symbol("kimi.logger.sessionLogId");
+const LLM_REQUEST_SESSION_LOG_OMITTED_CONTEXT_KEYS = ["sessionId"];
+const MAIN_LLM_REQUEST_SESSION_LOG_OMITTED_CONTEXT_KEYS = [
+  "sessionId",
+  "agentId",
+];
 let nextSessionLogId = 0;
 
 interface SessionEntry {
@@ -26,7 +29,7 @@ interface SessionEntry {
   readonly sessionId: string;
   readonly sessionDir: string;
   readonly sink: RotatingFileSink;
-  state: 'open' | 'closing';
+  state: "open" | "closing";
   closePromise: Promise<void> | undefined;
   refCount: number;
 }
@@ -62,11 +65,11 @@ class RootLoggerImpl implements RootLogger {
       return makeHandle(existing);
     }
     const config = this.config;
-    if (config === undefined || config.level === 'off') {
+    if (config === undefined || config.level === "off") {
       return makeNoopHandle(input.sessionId);
     }
     const sink = new RotatingFileSink({
-      path: join(input.sessionDir, 'logs', 'kimi-code.log'),
+      path: join(input.sessionDir, "logs", "kimi-code.log"),
       maxBytes: config.sessionMaxBytes,
       files: config.sessionFiles,
     });
@@ -75,7 +78,7 @@ class RootLoggerImpl implements RootLogger {
       sessionId: input.sessionId,
       sessionDir: input.sessionDir,
       sink,
-      state: 'open',
+      state: "open",
       closePromise: undefined,
       refCount: 1,
     };
@@ -103,7 +106,9 @@ class RootLoggerImpl implements RootLogger {
   async flushSession(sessionId: string): Promise<boolean> {
     const entries = this.getEntriesForSessionId(sessionId);
     if (entries.length === 0) return true;
-    const results = await Promise.all(entries.map((entry) => this.flushEntry(entry)));
+    const results = await Promise.all(
+      entries.map((entry) => this.flushEntry(entry)),
+    );
     return results.every(Boolean);
   }
 
@@ -111,7 +116,7 @@ class RootLoggerImpl implements RootLogger {
     const deadline = Date.now() + 200;
     this.globalSink?.flushSync();
     for (const entry of this.sessions.values()) {
-      if (entry.state !== 'open') continue;
+      if (entry.state !== "open") continue;
       if (Date.now() > deadline) break;
       entry.sink.flushSync();
     }
@@ -119,7 +124,7 @@ class RootLoggerImpl implements RootLogger {
 
   emit(entry: LogEntry): void {
     const config = this.config;
-    if (config === undefined || config.level === 'off') return;
+    if (config === undefined || config.level === "off") return;
     if (!levelEnabled(config.level, entry.level)) return;
 
     const session = this.resolveSessionEntry(entry);
@@ -129,22 +134,23 @@ class RootLoggerImpl implements RootLogger {
         omitContextKeys,
       });
       if (!sessionFormatted.dropped) {
-        session.sink.enqueue(sessionFormatted.text + '\n');
+        session.sink.enqueue(sessionFormatted.text + "\n");
       }
     } else {
       const formatted = formatEntry(entry);
       if (formatted.dropped) return;
-      this.globalSink?.enqueue(formatted.text + '\n');
+      this.globalSink?.enqueue(formatted.text + "\n");
     }
   }
 
   detachSession(logId: string): Promise<void> {
     const entry = this.sessions.get(logId);
     if (entry === undefined) return Promise.resolve();
-    if (entry.state === 'closing') return entry.closePromise ?? Promise.resolve();
+    if (entry.state === "closing")
+      return entry.closePromise ?? Promise.resolve();
     entry.refCount -= 1;
     if (entry.refCount > 0) return Promise.resolve();
-    entry.state = 'closing';
+    entry.state = "closing";
     entry.closePromise = entry.sink.close().finally(() => {
       if (this.sessions.get(logId) === entry) {
         this.sessions.delete(logId);
@@ -159,10 +165,10 @@ class RootLoggerImpl implements RootLogger {
     const closes: Promise<void>[] = [];
     if (this.globalSink !== undefined) closes.push(this.globalSink.close());
     for (const entry of this.sessions.values()) {
-      if (entry.state === 'closing') {
+      if (entry.state === "closing") {
         if (entry.closePromise !== undefined) closes.push(entry.closePromise);
       } else {
-        entry.state = 'closing';
+        entry.state = "closing";
         entry.closePromise = entry.sink.close();
         closes.push(entry.closePromise);
       }
@@ -174,9 +180,13 @@ class RootLoggerImpl implements RootLogger {
     await Promise.allSettled(closes);
   }
 
-  private findOpenSession(sessionId: string, sessionDir: string): SessionEntry | undefined {
+  private findOpenSession(
+    sessionId: string,
+    sessionDir: string,
+  ): SessionEntry | undefined {
     for (const entry of this.getEntriesForSessionId(sessionId)) {
-      if (entry.sessionDir === sessionDir && entry.state === 'open') return entry;
+      if (entry.sessionDir === sessionDir && entry.state === "open")
+        return entry;
     }
     return undefined;
   }
@@ -205,17 +215,17 @@ class RootLoggerImpl implements RootLogger {
   private resolveSessionEntry(entry: LogEntry): SessionEntry | undefined {
     if (entry.sessionLogId !== undefined) {
       const session = this.sessions.get(entry.sessionLogId);
-      return session?.state === 'open' ? session : undefined;
+      return session?.state === "open" ? session : undefined;
     }
     if (entry.sessionId === undefined) return undefined;
     const openEntries = this.getEntriesForSessionId(entry.sessionId).filter(
-      (item) => item.state === 'open',
+      (item) => item.state === "open",
     );
     return openEntries.length === 1 ? openEntries[0] : undefined;
   }
 
   private async flushEntry(entry: SessionEntry): Promise<boolean> {
-    if (entry.state === 'closing') {
+    if (entry.state === "closing") {
       await entry.closePromise;
       return true;
     }
@@ -224,7 +234,7 @@ class RootLoggerImpl implements RootLogger {
 }
 
 function llmRequestSessionLogOmittedKeys(entry: LogEntry): readonly string[] {
-  return entry.ctx?.['agentId'] === 'main'
+  return entry.ctx?.["agentId"] === "main"
     ? MAIN_LLM_REQUEST_SESSION_LOG_OMITTED_CONTEXT_KEYS
     : LLM_REQUEST_SESSION_LOG_OMITTED_CONTEXT_KEYS;
 }
@@ -237,7 +247,7 @@ function makeHandle(entry: SessionEntry): SessionLogHandle {
       [SESSION_LOG_ID]: entry.logId,
     } as LogContext),
     async flush() {
-      if (entry.state === 'closing') {
+      if (entry.state === "closing") {
         await entry.closePromise;
       } else {
         await entry.sink.flush();
@@ -290,16 +300,16 @@ class LoggerImpl implements Logger {
   constructor(private readonly boundCtx: LogContext) {}
 
   error(message: string, payload?: LogPayload): void {
-    this.emitAt('error', message, payload);
+    this.emitAt("error", message, payload);
   }
   warn(message: string, payload?: LogPayload): void {
-    this.emitAt('warn', message, payload);
+    this.emitAt("warn", message, payload);
   }
   info(message: string, payload?: LogPayload): void {
-    this.emitAt('info', message, payload);
+    this.emitAt("info", message, payload);
   }
   debug(message: string, payload?: LogPayload): void {
-    this.emitAt('debug', message, payload);
+    this.emitAt("debug", message, payload);
   }
 
   createChild(ctx: LogContext): Logger {
@@ -307,7 +317,7 @@ class LoggerImpl implements Logger {
   }
 
   private emitAt(
-    level: Exclude<LogLevel, 'off'>,
+    level: Exclude<LogLevel, "off">,
     message: string,
     payload: LogPayload,
   ): void {
@@ -317,16 +327,19 @@ class LoggerImpl implements Logger {
       const { ctx: payloadCtx, error } = resolvePayload(payload);
       // Bound ctx wins so call-site can't overwrite ownership fields.
       const ctx = mergeCtx(payloadCtx, this.boundCtx);
-      const sessionId = ctx?.['sessionId'];
-      const sessionLogId = (ctx as InternalLogContext | undefined)?.[SESSION_LOG_ID];
+      const sessionId = ctx?.["sessionId"];
+      const sessionLogId = (ctx as InternalLogContext | undefined)?.[
+        SESSION_LOG_ID
+      ];
       root.emit({
         t: Date.now(),
         level,
         msg: message,
         ctx: stripInternalCtx(ctx),
         error,
-        sessionId: typeof sessionId === 'string' ? sessionId : undefined,
-        sessionLogId: typeof sessionLogId === 'string' ? sessionLogId : undefined,
+        sessionId: typeof sessionId === "string" ? sessionId : undefined,
+        sessionLogId:
+          typeof sessionLogId === "string" ? sessionLogId : undefined,
       });
     } catch {
       // Diagnostic logging is best-effort and must never affect main control flow.
@@ -344,7 +357,7 @@ function stripInternalCtx(ctx: LogContext | undefined): LogContext | undefined {
 }
 
 function makeGlobalSink(config: LoggingConfig): RotatingFileSink | undefined {
-  if (config.level === 'off') return undefined;
+  if (config.level === "off") return undefined;
   return new RotatingFileSink({
     path: config.globalLogPath,
     maxBytes: config.globalMaxBytes,
@@ -363,38 +376,43 @@ function sameLoggingConfig(a: LoggingConfig, b: LoggingConfig): boolean {
   );
 }
 
-function resolvePayload(
-  payload: LogPayload,
-): { ctx: LogContext | undefined; error: LogEntry['error'] } {
+function resolvePayload(payload: LogPayload): {
+  ctx: LogContext | undefined;
+  error: LogEntry["error"];
+} {
   if (payload === undefined || payload === null) {
     return { ctx: undefined, error: undefined };
   }
   if (payload instanceof Error) {
     return { ctx: undefined, error: extractError(payload) };
   }
-  if (typeof payload === 'object') {
+  if (typeof payload === "object") {
     // bunyan-style: a `{ error: Error }` field is hoisted out, stack extracted.
     const obj = payload as Record<string, unknown>;
-    if (obj['error'] instanceof Error) {
+    if (obj["error"] instanceof Error) {
       const { error: errValue, ...rest } = obj;
       return { ctx: rest as LogContext, error: extractError(errValue) };
     }
     return { ctx: obj as LogContext, error: undefined };
   }
   if (
-    typeof payload === 'string' ||
-    typeof payload === 'number' ||
-    typeof payload === 'boolean' ||
-    typeof payload === 'bigint' ||
-    typeof payload === 'symbol'
+    typeof payload === "string" ||
+    typeof payload === "number" ||
+    typeof payload === "boolean" ||
+    typeof payload === "bigint" ||
+    typeof payload === "symbol"
   ) {
     return { ctx: { reason: String(payload) }, error: undefined };
   }
-  if (typeof payload === 'function') {
-    const reason = payload.name === '' ? '[Function]' : `[Function: ${payload.name}]`;
+  if (typeof payload === "function") {
+    const reason =
+      payload.name === "" ? "[Function]" : `[Function: ${payload.name}]`;
     return { ctx: { reason }, error: undefined };
   }
-  return { ctx: { reason: Object.prototype.toString.call(payload) }, error: undefined };
+  return {
+    ctx: { reason: Object.prototype.toString.call(payload) },
+    error: undefined,
+  };
 }
 
 function mergeCtx(
@@ -426,8 +444,8 @@ function mergeCtx(
 export const log: Logger = new LoggerImpl({});
 
 export function redact<T>(value: T): T {
-  if (value === null || typeof value !== 'object') return value;
-  return redactCtx({ value: value as unknown })['value'] as T;
+  if (value === null || typeof value !== "object") return value;
+  return redactCtx({ value: value as unknown })["value"] as T;
 }
 
 /** @internal — vitest only. */
@@ -441,5 +459,5 @@ export async function __resetRootLoggerForTest(): Promise<void> {
 }
 
 export function resolveGlobalLogPath(homeDir: string): string {
-  return join(homeDir, 'logs', 'kimi-code.log');
+  return join(homeDir, "logs", "kimi-code.log");
 }

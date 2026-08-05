@@ -12,10 +12,14 @@
  * `recheckSecondaryModelWarning`. Session-scoped — one instance per session.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
 
-export const SECONDARY_MODEL_INVALID_WARNING_CODE = 'secondary-model-invalid';
-export const SECONDARY_MODEL_EFFORT_WARNING_CODE = 'secondary-model-effort-not-listed';
+export const SECONDARY_MODEL_INVALID_WARNING_CODE = "secondary-model-invalid";
+export const SECONDARY_MODEL_EFFORT_WARNING_CODE =
+  "secondary-model-effort-not-listed";
 
 export interface SecondaryModelWarning {
   readonly code: string;
@@ -29,4 +33,6 @@ export interface ISessionSecondaryModelWarningService {
 }
 
 export const ISessionSecondaryModelWarningService: ServiceIdentifier<ISessionSecondaryModelWarningService> =
-  createDecorator<ISessionSecondaryModelWarningService>('sessionSecondaryModelWarningService');
+  createDecorator<ISessionSecondaryModelWarningService>(
+    "sessionSecondaryModelWarningService",
+  );

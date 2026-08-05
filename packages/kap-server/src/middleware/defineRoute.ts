@@ -38,10 +38,10 @@
  * ```
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { jsonSchema, openApiDocumentJsonSchema } from './schema';
-import { validateBody, validateParams, validateQuery } from './validate';
+import { jsonSchema, openApiDocumentJsonSchema } from "./schema";
+import { validateBody, validateParams, validateQuery } from "./validate";
 
 // ---------------------------------------------------------------------------
 // Path conversion
@@ -49,7 +49,7 @@ import { validateBody, validateParams, validateQuery } from './validate';
 
 /** Convert OpenAPI `{param}` segments to Fastify `:param` segments. */
 function toFastifyPath(openApiPath: string): string {
-  return openApiPath.replace(/\{([^}]+)\}/g, ':$1');
+  return openApiPath.replace(/\{([^}]+)\}/g, ":$1");
 }
 
 // ---------------------------------------------------------------------------
@@ -81,7 +81,9 @@ function buildErrorEnvelopeSchema(
 }
 
 /** Build a Zod schema for the success envelope (code: 0). */
-function buildSuccessEnvelopeSchema(successDataSchema: z.ZodTypeAny): z.ZodTypeAny {
+function buildSuccessEnvelopeSchema(
+  successDataSchema: z.ZodTypeAny,
+): z.ZodTypeAny {
   return z.object({
     code: z.literal(0),
     msg: z.string(),
@@ -104,7 +106,10 @@ function buildSuccessEnvelopeSchema(successDataSchema: z.ZodTypeAny): z.ZodTypeA
  */
 function buildUnifiedResponseSchema(
   successDataSchema: z.ZodTypeAny,
-  errors: Record<number, { dataSchema?: z.ZodTypeAny; detailsSchema?: z.ZodTypeAny }>,
+  errors: Record<
+    number,
+    { dataSchema?: z.ZodTypeAny; detailsSchema?: z.ZodTypeAny }
+  >,
 ): Record<string, unknown> {
   // Error variants — sorted by code for deterministic output
   const errorEntries = Object.entries(errors)
@@ -115,7 +120,7 @@ function buildUnifiedResponseSchema(
   if (errorEntries.length === 0) {
     return openApiDocumentJsonSchema(
       buildSuccessEnvelopeSchema(successDataSchema),
-      'output',
+      "output",
     );
   }
 
@@ -125,7 +130,7 @@ function buildUnifiedResponseSchema(
   variants.push(
     openApiDocumentJsonSchema(
       buildSuccessEnvelopeSchema(successDataSchema),
-      'output',
+      "output",
     ),
   );
 
@@ -133,7 +138,7 @@ function buildUnifiedResponseSchema(
     variants.push(
       openApiDocumentJsonSchema(
         buildErrorEnvelopeSchema(code, cfg.dataSchema, cfg.detailsSchema),
-        'output',
+        "output",
       ),
     );
   }
@@ -174,7 +179,10 @@ export interface DefineRouteOptions<
    * shapes such as `{code:40903, data:{aborted:false}}`.
    * `detailsSchema` describes the structured error context when present.
    */
-  errors?: Record<number, { dataSchema?: z.ZodTypeAny; detailsSchema?: z.ZodTypeAny }>;
+  errors?: Record<
+    number,
+    { dataSchema?: z.ZodTypeAny; detailsSchema?: z.ZodTypeAny }
+  >;
   /**
    * Raw response schemas that are NOT envelope-wrapped.
    * Useful for binary-stream endpoints (e.g. file download).
@@ -237,7 +245,7 @@ export function defineRoute<
   TSuccessData extends z.ZodTypeAny | undefined,
 >(
   options: DefineRouteOptions<TBody, TParams, TQuery, TSuccessData>,
-  handler: RouteDefinition<TBody, TParams, TQuery>['handler'],
+  handler: RouteDefinition<TBody, TParams, TQuery>["handler"],
 ): RouteDefinition<TBody, TParams, TQuery> {
   // -- runtime validators ----------------------------------------------------
   const preHandler: unknown[] = [];
@@ -256,13 +264,13 @@ export function defineRoute<
   const schema: Record<string, unknown> = {};
 
   if (options.body) {
-    schema['body'] = jsonSchema(options.body);
+    schema["body"] = jsonSchema(options.body);
   }
   if (options.params) {
-    schema['params'] = jsonSchema(options.params);
+    schema["params"] = jsonSchema(options.params);
   }
   if (options.querystring) {
-    schema['querystring'] = jsonSchema(options.querystring);
+    schema["querystring"] = jsonSchema(options.querystring);
   }
 
   const hasResponse =
@@ -274,7 +282,7 @@ export function defineRoute<
     const responses: Record<string, unknown> = {};
 
     if (options.success || options.errors) {
-      responses['200'] = buildUnifiedResponseSchema(
+      responses["200"] = buildUnifiedResponseSchema(
         options.success?.data ?? z.null(),
         options.errors ?? {},
       );
@@ -286,23 +294,23 @@ export function defineRoute<
       }
     }
 
-    schema['response'] = responses;
+    schema["response"] = responses;
   }
 
   if (options.description) {
-    schema['description'] = options.description;
+    schema["description"] = options.description;
   }
   if (options.summary) {
-    schema['summary'] = options.summary;
+    schema["summary"] = options.summary;
   }
   if (options.tags) {
-    schema['tags'] = options.tags;
+    schema["tags"] = options.tags;
   }
   if (options.operationId) {
-    schema['operationId'] = options.operationId;
+    schema["operationId"] = options.operationId;
   }
   if (options.consumes) {
-    schema['consumes'] = options.consumes;
+    schema["consumes"] = options.consumes;
   }
 
   return {

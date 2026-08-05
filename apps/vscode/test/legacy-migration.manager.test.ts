@@ -17,7 +17,9 @@ const temporaryRoots: string[] = [];
 
 afterEach(async () => {
   await Promise.all(
-    temporaryRoots.splice(0).map((path) => rm(path, { recursive: true, force: true })),
+    temporaryRoots
+      .splice(0)
+      .map((path) => rm(path, { recursive: true, force: true })),
   );
 });
 
@@ -72,9 +74,17 @@ describe("legacy migration manager (discovery and migration coordination)", () =
   it("does not duplicate data when the TUI already migrated the same source", async () => {
     const rig = await createRig();
     await writeLegacyConfig(rig.sourceHome);
-    const existingSession = join(rig.targetHome, "sessions", "existing", "state.json");
+    const existingSession = join(
+      rig.targetHome,
+      "sessions",
+      "existing",
+      "state.json",
+    );
     await mkdir(join(existingSession, ".."), { recursive: true });
-    await writeFile(existingSession, '{"custom":{"imported_from_kimi_cli":true}}');
+    await writeFile(
+      existingSession,
+      '{"custom":{"imported_from_kimi_cli":true}}',
+    );
     await writeSharedMarker(rig.sourceHome, rig.targetHome);
 
     const result = await rig.manager.migrateNow();
@@ -83,7 +93,9 @@ describe("legacy migration manager (discovery and migration coordination)", () =
     await expect(readFile(existingSession, "utf-8")).resolves.toContain(
       "imported_from_kimi_cli",
     );
-    await expect(readFile(join(rig.targetHome, "config.toml"), "utf-8")).rejects.toThrow();
+    await expect(
+      readFile(join(rig.targetHome, "config.toml"), "utf-8"),
+    ).rejects.toThrow();
   });
 
   it("conservatively suppresses the prompt when the shared marker is corrupt", async () => {
@@ -113,7 +125,10 @@ describe("legacy migration manager (discovery and migration coordination)", () =
       }),
     ]);
     expect(discovery.warnings).toEqual([
-      expect.objectContaining({ code: "relative-share-dir", sourceHome: resolve(shareHome) }),
+      expect.objectContaining({
+        code: "relative-share-dir",
+        sourceHome: resolve(shareHome),
+      }),
     ]);
   });
 
@@ -123,7 +138,9 @@ describe("legacy migration manager (discovery and migration coordination)", () =
     });
     await writeLegacyConfig(rig.sourceHome);
     const shareHome = join(rig.workspaceRoot, "legacy-kimi");
-    await mkdir(join(shareHome, "skills", "example-skill"), { recursive: true });
+    await mkdir(join(shareHome, "skills", "example-skill"), {
+      recursive: true,
+    });
     await writeFile(
       join(shareHome, "skills", "example-skill", "SKILL.md"),
       "---\nname: example-skill\ndescription: test fixture\n---\n",
@@ -135,7 +152,10 @@ describe("legacy migration manager (discovery and migration coordination)", () =
     expect(result.sources).toHaveLength(2);
     expect(result.totals).toMatchObject({ configFiles: 1, skills: 1 });
     await expect(
-      readFile(join(rig.targetHome, "skills", "example-skill", "SKILL.md"), "utf-8"),
+      readFile(
+        join(rig.targetHome, "skills", "example-skill", "SKILL.md"),
+        "utf-8",
+      ),
     ).resolves.toContain("example-skill");
   });
 
@@ -154,7 +174,10 @@ describe("legacy migration manager (discovery and migration coordination)", () =
 
   it("ignores a non-string legacy KIMI_SHARE_DIR with a clear warning", async () => {
     const rig = await createRig({
-      legacyEnvironmentVariables: { KIMI_SHARE_DIR: 42, HTTPS_PROXY: "https://example.test" },
+      legacyEnvironmentVariables: {
+        KIMI_SHARE_DIR: 42,
+        HTTPS_PROXY: "https://example.test",
+      },
     });
 
     const discovery = await rig.manager.discover();
@@ -194,23 +217,26 @@ describe("legacy migration manager (discovery and migration coordination)", () =
 
     expect(result.status).toBe("completed");
     expect(result.totals.configFiles).toBe(1);
-    await expect(readFile(join(rig.targetHome, "config.toml"), "utf-8")).resolves.toContain(
-      "merge_all_available_skills",
-    );
+    await expect(
+      readFile(join(rig.targetHome, "config.toml"), "utf-8"),
+    ).resolves.toContain("merge_all_available_skills");
   });
 
   it("keeps the migrated target unchanged when an explicit retry is repeated", async () => {
     const rig = await createRig();
     await writeLegacyConfig(rig.sourceHome);
     await rig.manager.retry();
-    const firstTarget = await readFile(join(rig.targetHome, "config.toml"), "utf-8");
+    const firstTarget = await readFile(
+      join(rig.targetHome, "config.toml"),
+      "utf-8",
+    );
 
     const secondResult = await rig.manager.retry();
 
     expect(secondResult.status).toBe("completed");
-    await expect(readFile(join(rig.targetHome, "config.toml"), "utf-8")).resolves.toBe(
-      firstTarget,
-    );
+    await expect(
+      readFile(join(rig.targetHome, "config.toml"), "utf-8"),
+    ).resolves.toBe(firstTarget);
   });
 
   it("reports a corrupt session as a partial migration without rolling back valid data", async () => {
@@ -227,9 +253,9 @@ describe("legacy migration manager (discovery and migration coordination)", () =
         message: expect.stringMatching(/corrupt|parseable/i),
       }),
     ]);
-    await expect(readFile(join(rig.targetHome, "config.toml"), "utf-8")).resolves.toContain(
-      "merge_all_available_skills",
-    );
+    await expect(
+      readFile(join(rig.targetHome, "config.toml"), "utf-8"),
+    ).resolves.toContain("merge_all_available_skills");
   });
 
   it("discovers an unknown workdir bucket as actionable legacy data", async () => {
@@ -333,13 +359,19 @@ describe("legacy migration manager (discovery and migration coordination)", () =
   it("reports an unparseable legacy config with a manual review action", async () => {
     const rig = await createRig();
     await mkdir(rig.sourceHome, { recursive: true });
-    await writeFile(join(rig.sourceHome, "config.toml"), 'broken = "unterminated');
+    await writeFile(
+      join(rig.sourceHome, "config.toml"),
+      'broken = "unterminated',
+    );
 
     const result = await rig.manager.retry();
 
     expect(result.status).toBe("partial");
     expect(result.sources[0]?.failures).toEqual([
-      expect.objectContaining({ code: "legacy-config-unreadable", item: "config.toml" }),
+      expect.objectContaining({
+        code: "legacy-config-unreadable",
+        item: "config.toml",
+      }),
     ]);
     expect(result.manualActions).toEqual([
       expect.stringContaining("review it manually"),
@@ -355,7 +387,10 @@ describe("legacy migration manager (discovery and migration coordination)", () =
 
     expect(result.status).toBe("partial");
     expect(result.sources[0]?.failures).toEqual([
-      expect.objectContaining({ code: "legacy-mcp-unreadable", item: "mcp.json" }),
+      expect.objectContaining({
+        code: "legacy-mcp-unreadable",
+        item: "mcp.json",
+      }),
     ]);
   });
 
@@ -381,7 +416,10 @@ describe("legacy migration manager (discovery and migration coordination)", () =
   it("reports legacy OAuth login as requiring a new login without treating it as migratable data", async () => {
     const rig = await createRig();
     await mkdir(join(rig.sourceHome, "credentials"), { recursive: true });
-    await writeFile(join(rig.sourceHome, "credentials", "kimi-code.json"), "{}");
+    await writeFile(
+      join(rig.sourceHome, "credentials", "kimi-code.json"),
+      "{}",
+    );
 
     const discovery = await rig.manager.discover();
 
@@ -435,11 +473,16 @@ async function createRig(options: RigOptions = {}): Promise<{
   const sourceHome = join(root, ".kimi");
   const targetHome = join(root, ".kimi-code");
   const workspaceRoot = join(root, "workspace");
-  await mkdir(options.workspaceRoot === null ? root : workspaceRoot, { recursive: true });
+  await mkdir(options.workspaceRoot === null ? root : workspaceRoot, {
+    recursive: true,
+  });
   const manager = new LegacyMigrationManager({
     targetHome,
     defaultSourceHome: sourceHome,
-    workspaceRoot: options.workspaceRoot === undefined ? workspaceRoot : options.workspaceRoot,
+    workspaceRoot:
+      options.workspaceRoot === undefined
+        ? workspaceRoot
+        : options.workspaceRoot,
     legacyEnvironmentVariables: options.legacyEnvironmentVariables,
   });
   return { root, sourceHome, targetHome, workspaceRoot, manager };
@@ -447,10 +490,16 @@ async function createRig(options: RigOptions = {}): Promise<{
 
 async function writeLegacyConfig(sourceHome: string): Promise<void> {
   await mkdir(sourceHome, { recursive: true });
-  await writeFile(join(sourceHome, "config.toml"), "merge_all_available_skills = true\n");
+  await writeFile(
+    join(sourceHome, "config.toml"),
+    "merge_all_available_skills = true\n",
+  );
 }
 
-async function writeSharedMarker(sourceHome: string, targetHome: string): Promise<void> {
+async function writeSharedMarker(
+  sourceHome: string,
+  targetHome: string,
+): Promise<void> {
   await mkdir(sourceHome, { recursive: true });
   await writeFile(
     join(sourceHome, ".migrated-to-kimi-code"),
@@ -470,7 +519,10 @@ async function writeCorruptLegacySession(
   const bucket = createHash("md5").update(workDir).digest("hex");
   const sessionDir = join(sourceHome, "sessions", bucket, "corrupt-session");
   await mkdir(sessionDir, { recursive: true });
-  await writeFile(join(sessionDir, "context.jsonl"), "not-json\n{broken\n}}}\n");
+  await writeFile(
+    join(sessionDir, "context.jsonl"),
+    "not-json\n{broken\n}}}\n",
+  );
   await writeFile(join(sessionDir, "state.json"), "{}");
 }
 

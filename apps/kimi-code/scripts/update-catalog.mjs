@@ -14,7 +14,15 @@ const scriptDir = import.meta.dirname;
 const outFile = resolveOutputFile(process.argv.slice(2));
 const modelsUrl = process.env.MODELS_DEV_URL || "https://models.dev/api.json";
 
-const KEEP_PROVIDER = new Set(["id", "name", "api", "env", "npm", "type", "models"]);
+const KEEP_PROVIDER = new Set([
+  "id",
+  "name",
+  "api",
+  "env",
+  "npm",
+  "type",
+  "models",
+]);
 const KEEP_MODEL = new Set([
   "id",
   "name",

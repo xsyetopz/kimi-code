@@ -1,4 +1,4 @@
-import type { ProjectedMessage } from '../../types';
+import type { ProjectedMessage } from "../../types";
 
 interface CompactionRibbonProps {
   /** The synthetic compaction-summary message emitted by the projector. */
@@ -40,7 +40,7 @@ export function CompactionRibbon({ message }: CompactionRibbonProps) {
 
 function extractSummary(message: ProjectedMessage): string {
   for (const part of message.message.content) {
-    if (part.type === 'text') return part.text;
+    if (part.type === "text") return part.text;
   }
-  return '';
+  return "";
 }

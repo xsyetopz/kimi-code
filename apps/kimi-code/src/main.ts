@@ -13,33 +13,40 @@ import {
   resolveGlobalLogPath,
   resolveKimiHome,
   type TelemetryClient,
-} from '@moonshot-ai/kimi-code-sdk';
+} from "@moonshot-ai/kimi-code-sdk";
 import {
   installCrashHandlers,
   setTelemetryContext,
   shutdownTelemetry,
   track,
   withTelemetryContext,
-} from '@moonshot-ai/kimi-telemetry';
+} from "@moonshot-ai/kimi-telemetry";
 
-import { createProgram } from './cli/commands';
-import { finalizeHeadlessRun } from './cli/headless-exit';
-import { startupTrace } from './utils/startup-trace';
-import type { CLIOptions } from './cli/options';
-import { OptionConflictError, validateOptions } from './cli/options';
-import { runPrompt } from './cli/run-prompt';
-import { runShell } from './cli/run-shell';
-import { formatStartupError } from './cli/startup-error';
-import { runPluginNodeEntry } from './cli/sub/plugin-run-node';
-import { handleUpgrade } from './cli/sub/upgrade';
-import { createCliTelemetryBootstrap, initializeCliTelemetry } from './cli/telemetry';
-import { runUpdatePreflight } from './cli/update/preflight';
-import { createKimiCodeHostIdentity, getVersion } from './cli/version';
-import { CLI_SHUTDOWN_TIMEOUT_MS, CLI_UI_MODE, PROCESS_NAME } from './constant/app';
-import { cleanupStaleNativeCacheForCurrent } from './native/native-assets';
-import { installMinidbTextBuildWorker } from './native/minidb-worker';
-import { installNativeModuleHook } from './native/module-hook';
-import { runNativeAssetSmokeIfRequested } from './native/smoke';
+import { createProgram } from "./cli/commands";
+import { finalizeHeadlessRun } from "./cli/headless-exit";
+import { startupTrace } from "./utils/startup-trace";
+import type { CLIOptions } from "./cli/options";
+import { OptionConflictError, validateOptions } from "./cli/options";
+import { runPrompt } from "./cli/run-prompt";
+import { runShell } from "./cli/run-shell";
+import { formatStartupError } from "./cli/startup-error";
+import { runPluginNodeEntry } from "./cli/sub/plugin-run-node";
+import { handleUpgrade } from "./cli/sub/upgrade";
+import {
+  createCliTelemetryBootstrap,
+  initializeCliTelemetry,
+} from "./cli/telemetry";
+import { runUpdatePreflight } from "./cli/update/preflight";
+import { createKimiCodeHostIdentity, getVersion } from "./cli/version";
+import {
+  CLI_SHUTDOWN_TIMEOUT_MS,
+  CLI_UI_MODE,
+  PROCESS_NAME,
+} from "./constant/app";
+import { cleanupStaleNativeCacheForCurrent } from "./native/native-assets";
+import { installMinidbTextBuildWorker } from "./native/minidb-worker";
+import { installNativeModuleHook } from "./native/module-hook";
+import { runNativeAssetSmokeIfRequested } from "./native/smoke";
 
 /**
  * Outcome of a CLI command run, reported back to the process entrypoint.
@@ -58,7 +65,7 @@ export async function handleMainCommand(
   version: string,
 ): Promise<MainCommandOutcome> {
   let validated: ReturnType<typeof validateOptions>;
-  startupTrace('main:enter');
+  startupTrace("main:enter");
   try {
     validated = validateOptions(opts);
   } catch (error) {
@@ -69,22 +76,22 @@ export async function handleMainCommand(
     throw error;
   }
 
-  startupTrace('preflight:begin');
+  startupTrace("preflight:begin");
   const preflightResult = await runUpdatePreflight(
     version,
-    validated.uiMode === 'print' ? { track, isTTY: false } : { track },
+    validated.uiMode === "print" ? { track, isTTY: false } : { track },
   );
-  startupTrace('preflight:end');
-  if (preflightResult === 'exit') {
+  startupTrace("preflight:end");
+  if (preflightResult === "exit") {
     process.exit(0);
   }
 
-  if (validated.uiMode === 'print') {
+  if (validated.uiMode === "print") {
     await runPrompt(validated.options, version);
     return { headlessCompleted: true };
   }
 
-  startupTrace('runShell:begin');
+  startupTrace("runShell:begin");
   await runShell(validated.options, version);
   return { headlessCompleted: false };
 }
@@ -119,7 +126,9 @@ export async function handleUpgradeCommand(version: string): Promise<void> {
     });
     exitCode = await handleUpgrade(version, { track, logger: log });
   } finally {
-    await shutdownTelemetry({ timeoutMs: CLI_SHUTDOWN_TIMEOUT_MS }).catch(() => {});
+    await shutdownTelemetry({ timeoutMs: CLI_SHUTDOWN_TIMEOUT_MS }).catch(
+      () => {},
+    );
     await harness.close().catch(() => {});
   }
   process.exit(exitCode);
@@ -152,10 +161,10 @@ export function main(): void {
   // exposing the user's cache path; failure keeps MiniDb's bounded inline mode.
   const workerInstall = installMinidbTextBuildWorker();
   startupTrace(
-    workerInstall.status === 'installed'
+    workerInstall.status === "installed"
       ? `minidb-worker:installed basename=${workerInstall.basename} sha256=${workerInstall.assetSha256}`
-      : workerInstall.status === 'failed'
-        ? `minidb-worker:failed code=${workerInstall.errorCode} sha256=${workerInstall.assetSha256 ?? 'unknown'}`
+      : workerInstall.status === "failed"
+        ? `minidb-worker:failed code=${workerInstall.errorCode} sha256=${workerInstall.assetSha256 ?? "unknown"}`
         : `minidb-worker:${workerInstall.status}`,
   );
   if (runNativeAssetSmokeIfRequested()) return;
@@ -200,37 +209,50 @@ export function main(): void {
           // would then exit 0 nondeterministically. Setting `process.exitCode`
           // up front makes that drain-exit report failure too.
           process.exitCode = 1;
-          const operation = opts.prompt !== undefined ? 'run prompt' : 'start shell';
+          const operation =
+            opts.prompt !== undefined ? "run prompt" : "start shell";
           await logStartupFailure(operation, error);
           process.stderr.write(
             formatStartupError(error, {
               operation,
             }),
           );
-          process.stderr.write(`See log: ${resolveGlobalLogPath(resolveKimiHome())}\n`);
+          process.stderr.write(
+            `See log: ${resolveGlobalLogPath(resolveKimiHome())}\n`,
+          );
           process.exit(1);
         });
     },
     () => {
       void handleMigrateCommand(version).catch(async (error: unknown) => {
-        await logStartupFailure('run migration', error);
-        process.stderr.write(formatStartupError(error, { operation: 'run migration' }));
-        process.stderr.write(`See log: ${resolveGlobalLogPath(resolveKimiHome())}\n`);
+        await logStartupFailure("run migration", error);
+        process.stderr.write(
+          formatStartupError(error, { operation: "run migration" }),
+        );
+        process.stderr.write(
+          `See log: ${resolveGlobalLogPath(resolveKimiHome())}\n`,
+        );
         process.exit(1);
       });
     },
     (entry, args) => {
       void runPluginNodeEntry(entry, args).catch(async (error: unknown) => {
-        await logStartupFailure('run plugin node entry', error);
-        process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+        await logStartupFailure("run plugin node entry", error);
+        process.stderr.write(
+          `${error instanceof Error ? error.message : String(error)}\n`,
+        );
         process.exit(1);
       });
     },
     () => {
       void handleUpgradeCommand(version).catch(async (error: unknown) => {
-        await logStartupFailure('upgrade', error);
-        process.stderr.write(formatStartupError(error, { operation: 'upgrade' }));
-        process.stderr.write(`See log: ${resolveGlobalLogPath(resolveKimiHome())}\n`);
+        await logStartupFailure("upgrade", error);
+        process.stderr.write(
+          formatStartupError(error, { operation: "upgrade" }),
+        );
+        process.stderr.write(
+          `See log: ${resolveGlobalLogPath(resolveKimiHome())}\n`,
+        );
         process.exit(1);
       });
     },
@@ -241,8 +263,11 @@ export function main(): void {
 
 main();
 
-async function logStartupFailure(operation: string, error: unknown): Promise<void> {
-  log.error('startup failed', { operation, error });
+async function logStartupFailure(
+  operation: string,
+  error: unknown,
+): Promise<void> {
+  log.error("startup failed", { operation, error });
   try {
     await flushDiagnosticLogs();
   } catch {

@@ -20,13 +20,13 @@
  *   src/missing.ts · failed
  */
 
-import type { TUI } from '@moonshot-ai/pi-tui';
-import { Container, Spacer, Text } from '@moonshot-ai/pi-tui';
+import type { TUI } from "@moonshot-ai/pi-tui";
+import { Container, Spacer, Text } from "@moonshot-ai/pi-tui";
 
-import { STATUS_BULLET } from '#/tui/constant/symbols';
-import { currentTheme } from '#/tui/theme';
+import { STATUS_BULLET } from "#/tui/constant/symbols";
+import { currentTheme } from "#/tui/theme";
 
-import type { ToolCallComponent, ToolCallReadSnapshot } from './tool-call';
+import type { ToolCallComponent, ToolCallReadSnapshot } from "./tool-call";
 
 const THROTTLE_MS = 200;
 
@@ -40,13 +40,13 @@ export class ReadGroupComponent extends Container {
   private readonly headerText: Text;
   private readonly bodyContainer: Container;
   private throttleTimer: ReturnType<typeof setTimeout> | null = null;
-  private lastFlushPhases = new Map<string, ToolCallReadSnapshot['phase']>();
+  private lastFlushPhases = new Map<string, ToolCallReadSnapshot["phase"]>();
   private _invalidating = false;
 
   constructor(private readonly ui: TUI | undefined) {
     super();
     this.addChild(new Spacer(1));
-    this.headerText = new Text('', 0, 0);
+    this.headerText = new Text("", 0, 0);
     this.addChild(this.headerText);
     this.bodyContainer = new Container();
     this.addChild(this.bodyContainer);
@@ -105,11 +105,13 @@ export class ReadGroupComponent extends Container {
     let failed = 0;
     let totalLines = 0;
     for (const snap of snapshots) {
-      if (snap.phase === 'pending') pending += 1;
-      else if (snap.phase === 'failed') failed += 1;
+      if (snap.phase === "pending") pending += 1;
+      else if (snap.phase === "failed") failed += 1;
       else totalLines += snap.lines;
     }
-    this.headerText.setText(this.buildHeader(snapshots.length, pending, failed, totalLines));
+    this.headerText.setText(
+      this.buildHeader(snapshots.length, pending, failed, totalLines),
+    );
 
     this.bodyContainer.clear();
     const visibleSnapshots = snapshots.filter(
@@ -117,55 +119,71 @@ export class ReadGroupComponent extends Container {
     );
     visibleSnapshots.forEach((snap, idx) => {
       const isLast = idx === visibleSnapshots.length - 1;
-      this.bodyContainer.addChild(new Text(this.buildBodyLine(snap, isLast), 0, 0));
+      this.bodyContainer.addChild(
+        new Text(this.buildBodyLine(snap, isLast), 0, 0),
+      );
     });
 
     this.lastFlushPhases.clear();
     this.entries.forEach((entry, i) => {
       const snap = snapshots[i];
-      if (snap !== undefined) this.lastFlushPhases.set(entry.toolCallId, snap.phase);
+      if (snap !== undefined)
+        this.lastFlushPhases.set(entry.toolCallId, snap.phase);
     });
 
     this.invalidate();
     this.ui?.requestRender();
   }
 
-  private buildHeader(total: number, pending: number, failed: number, totalLines: number): string {
+  private buildHeader(
+    total: number,
+    pending: number,
+    failed: number,
+    totalLines: number,
+  ): string {
     const dim = (text: string): string => currentTheme.dim(text);
 
     if (pending > 0) {
-      const bullet = currentTheme.fg('text', STATUS_BULLET);
-      const label = currentTheme.boldFg('primary', `Reading ${String(total)} files…`);
+      const bullet = currentTheme.fg("text", STATUS_BULLET);
+      const label = currentTheme.boldFg(
+        "primary",
+        `Reading ${String(total)} files…`,
+      );
       return `${bullet}${label}`;
     }
 
     // All reads have finished, either successfully or with failures.
     if (failed === total) {
-      const bullet = currentTheme.fg('error', '✗ ');
-      const label = currentTheme.boldFg('error', `Read ${String(total)} files`);
-      return `${bullet}${label}${currentTheme.fg('error', ' · failed')}`;
+      const bullet = currentTheme.fg("error", "✗ ");
+      const label = currentTheme.boldFg("error", `Read ${String(total)} files`);
+      return `${bullet}${label}${currentTheme.fg("error", " · failed")}`;
     }
 
-    const bullet = currentTheme.fg('success', STATUS_BULLET);
-    const label = currentTheme.boldFg('primary', `Read ${String(total)} files`);
-    const linesPart = dim(` · ${String(totalLines)} ${totalLines === 1 ? 'line' : 'lines'}`);
-    const failPart = failed > 0 ? currentTheme.fg('error', ` · ${String(failed)} failed`) : '';
+    const bullet = currentTheme.fg("success", STATUS_BULLET);
+    const label = currentTheme.boldFg("primary", `Read ${String(total)} files`);
+    const linesPart = dim(
+      ` · ${String(totalLines)} ${totalLines === 1 ? "line" : "lines"}`,
+    );
+    const failPart =
+      failed > 0 ? currentTheme.fg("error", ` · ${String(failed)} failed`) : "";
     return `${bullet}${label}${linesPart}${failPart}`;
   }
 
   private buildBodyLine(snap: ToolCallReadSnapshot, isLast: boolean): string {
     const dim = (text: string): string => currentTheme.dim(text);
-    const branch = isLast ? '└─' : '├─';
-    const path = snap.filePath ?? '';
-    const pathPart = currentTheme.fg('text', path);
+    const branch = isLast ? "└─" : "├─";
+    const path = snap.filePath ?? "";
+    const pathPart = currentTheme.fg("text", path);
 
     let tail: string;
-    if (snap.phase === 'pending') {
-      tail = dim(' · reading…');
-    } else if (snap.phase === 'failed') {
-      tail = currentTheme.fg('error', ' · failed');
+    if (snap.phase === "pending") {
+      tail = dim(" · reading…");
+    } else if (snap.phase === "failed") {
+      tail = currentTheme.fg("error", " · failed");
     } else {
-      tail = dim(` · ${String(snap.lines)} ${snap.lines === 1 ? 'line' : 'lines'}`);
+      tail = dim(
+        ` · ${String(snap.lines)} ${snap.lines === 1 ? "line" : "lines"}`,
+      );
     }
     return `  ${branch} ${pathPart}${tail}`;
   }

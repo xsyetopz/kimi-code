@@ -21,14 +21,14 @@
  * Freshness is also enforced by `test/app/config/configManifest.test.ts`.
  */
 
-import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
-import { join, relative } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { join, relative } from "node:path";
+import { pathToFileURL } from "node:url";
 
-import { getConfigOverlayContributions } from '#/app/config/configOverlayContributions';
-import type { ConfigSectionContribution } from '#/app/config/configSectionContributions';
-import { getConfigSectionContributions } from '#/app/config/configSectionContributions';
-import { camelToSnake } from '#/app/config/toml';
+import { getConfigOverlayContributions } from "#/app/config/configOverlayContributions";
+import type { ConfigSectionContribution } from "#/app/config/configSectionContributions";
+import { getConfigSectionContributions } from "#/app/config/configSectionContributions";
+import { camelToSnake } from "#/app/config/toml";
 
 import {
   asJsonSchema,
@@ -38,11 +38,11 @@ import {
   toJsonSchema,
   truncate,
   type JsonSchema,
-} from './lib/jsonSchema.mts';
+} from "./lib/jsonSchema.mts";
 
-const PKG = join(import.meta.dirname, '..');
-const SRC = join(PKG, 'src');
-export const MANIFEST_PATH = join(PKG, 'docs', 'config-manifest.toml');
+const PKG = join(import.meta.dirname, "..");
+const SRC = join(PKG, "src");
+export const MANIFEST_PATH = join(PKG, "docs", "config-manifest.toml");
 
 // ---------------------------------------------------------------------------
 // Static pass — domain/overlay → owner file
@@ -52,13 +52,15 @@ function walk(dir: string, out: string[] = []): string[] {
   for (const entry of readdirSync(dir)) {
     const p = join(dir, entry);
     if (statSync(p).isDirectory()) walk(p, out);
-    else if (entry.endsWith('.ts')) out.push(p);
+    else if (entry.endsWith(".ts")) out.push(p);
   }
   return out;
 }
 
 function constStringValue(source: string, ident: string): string | undefined {
-  const re = new RegExp(`(?:export\\s+)?const\\s+${ident}\\s*(?::[^=;]+)?=\\s*'([^']+)'`);
+  const re = new RegExp(
+    `(?:export\\s+)?const\\s+${ident}\\s*(?::[^=;]+)?=\\s*'([^']+)'`,
+  );
   return re.exec(source)?.[1];
 }
 
@@ -66,11 +68,15 @@ function constStringValue(source: string, ident: string): string | undefined {
 function scanSectionOwners(): Map<string, string> {
   const owners = new Map<string, string>();
   for (const file of walk(SRC)) {
-    const source = readFileSync(file, 'utf-8');
-    if (!source.includes('registerConfigSection(')) continue;
-    for (const match of source.matchAll(/registerConfigSection\(\s*(?:'([^']+)'|([A-Za-z0-9_$]+))/g)) {
+    const source = readFileSync(file, "utf-8");
+    if (!source.includes("registerConfigSection(")) continue;
+    for (const match of source.matchAll(
+      /registerConfigSection\(\s*(?:'([^']+)'|([A-Za-z0-9_$]+))/g,
+    )) {
       const ident = match[2];
-      const domain = match[1] ?? (ident === undefined ? undefined : constStringValue(source, ident));
+      const domain =
+        match[1] ??
+        (ident === undefined ? undefined : constStringValue(source, ident));
       if (domain !== undefined) owners.set(domain, relative(PKG, file));
     }
   }
@@ -83,10 +89,12 @@ function scanOverlayOwners(): Map<string, string> {
   for (const file of walk(SRC)) {
     // Skip the collector module itself — its `registerConfigOverlay(overlay)`
     // function signature is not a registration.
-    if (file.endsWith('configOverlayContributions.ts')) continue;
-    const source = readFileSync(file, 'utf-8');
-    if (!source.includes('registerConfigOverlay(')) continue;
-    for (const match of source.matchAll(/registerConfigOverlay\(\s*([A-Za-z0-9_$]+)/g)) {
+    if (file.endsWith("configOverlayContributions.ts")) continue;
+    const source = readFileSync(file, "utf-8");
+    if (!source.includes("registerConfigOverlay(")) continue;
+    for (const match of source.matchAll(
+      /registerConfigOverlay\(\s*([A-Za-z0-9_$]+)/g,
+    )) {
       const ident = match[1];
       if (ident !== undefined) owners.set(ident, relative(PKG, file));
     }
@@ -100,12 +108,15 @@ function scanOverlayOwners(): Map<string, string> {
 
 /** Serialize a small JSON value as an inline TOML value. */
 function toTomlValue(value: unknown): string {
-  if (typeof value === 'string') return JSON.stringify(value);
-  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
-  if (Array.isArray(value)) return `[${value.map(toTomlValue).join(', ')}]`;
+  if (typeof value === "string") return JSON.stringify(value);
+  if (typeof value === "number" || typeof value === "boolean")
+    return String(value);
+  if (Array.isArray(value)) return `[${value.map(toTomlValue).join(", ")}]`;
   if (isRecord(value)) {
-    const entries = Object.entries(value).map(([k, v]) => `${camelToSnake(k)} = ${toTomlValue(v)}`);
-    return `{ ${entries.join(', ')} }`;
+    const entries = Object.entries(value).map(
+      ([k, v]) => `${camelToSnake(k)} = ${toTomlValue(v)}`,
+    );
+    return `{ ${entries.join(", ")} }`;
   }
   return '""';
 }
@@ -125,28 +136,33 @@ interface EnvBindingFields {
 }
 
 function flattenEnvBindings(bindings: unknown, path: string[] = []): EnvRow[] {
-  if (typeof bindings === 'string') {
-    return [{ field: path.join('.'), env: bindings, detail: '' }];
+  if (typeof bindings === "string") {
+    return [{ field: path.join("."), env: bindings, detail: "" }];
   }
   if (!isRecord(bindings)) return [];
   const binding = bindings as EnvBindingFields;
-  if (typeof binding.env === 'string') {
+  if (typeof binding.env === "string") {
     const detail: string[] = [];
-    if (binding.parse !== undefined) detail.push('custom parse');
-    if (binding.default !== undefined) detail.push(`default ${JSON.stringify(binding.default)}`);
-    if (typeof binding.deprecatedEnv === 'string') {
+    if (binding.parse !== undefined) detail.push("custom parse");
+    if (binding.default !== undefined)
+      detail.push(`default ${JSON.stringify(binding.default)}`);
+    if (typeof binding.deprecatedEnv === "string") {
       detail.push(`deprecated fallback ${binding.deprecatedEnv}`);
     }
-    return [{ field: path.join('.'), env: binding.env, detail: detail.join('; ') }];
+    return [
+      { field: path.join("."), env: binding.env, detail: detail.join("; ") },
+    ];
   }
-  return Object.entries(bindings).flatMap(([key, value]) => flattenEnvBindings(value, [...path, key]));
+  return Object.entries(bindings).flatMap(([key, value]) =>
+    flattenEnvBindings(value, [...path, key]),
+  );
 }
 
 function snakePath(field: string): string {
-  return field.split('.').map(camelToSnake).join('.');
+  return field.split(".").map(camelToSnake).join(".");
 }
 
-const RULE = `# ${'#'.repeat(74)}`;
+const RULE = `# ${"#".repeat(74)}`;
 
 // ---------------------------------------------------------------------------
 // Section rendering
@@ -163,13 +179,20 @@ function renderFieldComments(
   for (const [name, prop] of Object.entries(properties)) {
     const resolved = resolveRef(prop, root);
     const propDefault = asJsonSchema(resolved)?.default;
-    const defNote = propDefault !== undefined ? ` (default: ${JSON.stringify(propDefault)})` : '';
-    lines.push(`${indent}# ${camelToSnake(name)}: ${describeType(resolved)}${defNote}`);
+    const defNote =
+      propDefault !== undefined
+        ? ` (default: ${JSON.stringify(propDefault)})`
+        : "";
+    lines.push(
+      `${indent}# ${camelToSnake(name)}: ${describeType(resolved)}${defNote}`,
+    );
     // Expand nested object fields one level at a time (depth-capped so a
     // recursive $ref cannot loop).
     const subProps = asJsonSchema(resolved)?.properties;
     if (depth < 3 && isRecord(subProps) && Object.keys(subProps).length > 0) {
-      lines.push(...renderFieldComments(subProps, root, `${indent}  `, depth + 1));
+      lines.push(
+        ...renderFieldComments(subProps, root, `${indent}  `, depth + 1),
+      );
     }
   }
   return lines;
@@ -185,7 +208,7 @@ function renderBody(section: ConfigSectionContribution): string[] {
     if (isRecord(options.defaultValue)) {
       return [
         `[${key}]`,
-        `# (${schema === undefined ? 'no schema — passthrough' : 'schema uses transforms'}; fields below come from the registered default)`,
+        `# (${schema === undefined ? "no schema — passthrough" : "schema uses transforms"}; fields below come from the registered default)`,
         ...Object.entries(options.defaultValue).map(
           ([k, v]) => `${camelToSnake(k)} = ${truncate(toTomlValue(v))}`,
         ),
@@ -194,11 +217,17 @@ function renderBody(section: ConfigSectionContribution): string[] {
     if (options.defaultValue !== undefined) {
       return [`${key} = ${truncate(toTomlValue(options.defaultValue))}`];
     }
-    return [`[${key}]`, `# (${schema === undefined ? 'no schema — passthrough' : 'schema uses transforms; see the owner file'})`];
+    return [
+      `[${key}]`,
+      `# (${schema === undefined ? "no schema — passthrough" : "schema uses transforms; see the owner file"})`,
+    ];
   }
 
   // Object with named fields.
-  if (isRecord(jsonSchema.properties) && Object.keys(jsonSchema.properties).length > 0) {
+  if (
+    isRecord(jsonSchema.properties) &&
+    Object.keys(jsonSchema.properties).length > 0
+  ) {
     const defaults = isRecord(options.defaultValue) ? options.defaultValue : {};
     const lines = [`[${key}]`];
     for (const [name, prop] of Object.entries(jsonSchema.properties)) {
@@ -212,9 +241,9 @@ function renderBody(section: ConfigSectionContribution): string[] {
       const resolved = resolveRef(prop, jsonSchema);
       const subProps = asJsonSchema(resolved)?.properties;
       if (isRecord(subProps) && Object.keys(subProps).length > 0) {
-        lines.push('');
+        lines.push("");
         lines.push(`# [${key}.${fieldKey}]`);
-        lines.push(...renderFieldComments(subProps, jsonSchema, '  '));
+        lines.push(...renderFieldComments(subProps, jsonSchema, "  "));
         continue;
       }
       // An array-of-objects field carries its element fields inline.
@@ -223,10 +252,10 @@ function renderBody(section: ConfigSectionContribution): string[] {
       )?.properties;
       if (isRecord(itemProps) && Object.keys(itemProps).length > 0) {
         lines.push(`# ${fieldKey}: object[] — one entry per item:`);
-        lines.push(...renderFieldComments(itemProps, jsonSchema, '  '));
+        lines.push(...renderFieldComments(itemProps, jsonSchema, "  "));
         continue;
       }
-      lines.push(...renderFieldComments({ [name]: prop }, jsonSchema, ''));
+      lines.push(...renderFieldComments({ [name]: prop }, jsonSchema, ""));
     }
     return lines;
   }
@@ -237,10 +266,10 @@ function renderBody(section: ConfigSectionContribution): string[] {
     const valueProps = asJsonSchema(valueSchema)?.properties;
     const lines = [`[${key}]`];
     if (isRecord(valueProps) && Object.keys(valueProps).length > 0) {
-      lines.push('');
+      lines.push("");
       lines.push(`# one [${key}."<name>"] table per entry:`);
       lines.push(`# [${key}."<name>"]`);
-      lines.push(...renderFieldComments(valueProps, jsonSchema, '  '));
+      lines.push(...renderFieldComments(valueProps, jsonSchema, "  "));
     } else {
       lines.push(`# <name>: ${describeType(valueSchema)}`);
     }
@@ -251,13 +280,15 @@ function renderBody(section: ConfigSectionContribution): string[] {
   // no `[section]` parent table in TOML, so the whole shape stays commented;
   // emitting a bare `[${key}]` header would parse as a plain table, which
   // array sections (e.g. `hooks`) reject on load.
-  if (jsonSchema.type === 'array') {
-    const itemProps = asJsonSchema(resolveRef(jsonSchema.items, jsonSchema))?.properties;
+  if (jsonSchema.type === "array") {
+    const itemProps = asJsonSchema(
+      resolveRef(jsonSchema.items, jsonSchema),
+    )?.properties;
     if (isRecord(itemProps) && Object.keys(itemProps).length > 0) {
       return [
         `# one [[${key}]] table per entry:`,
         `# [[${key}]]`,
-        ...renderFieldComments(itemProps, jsonSchema, '  '),
+        ...renderFieldComments(itemProps, jsonSchema, "  "),
       ];
     }
   }
@@ -269,35 +300,42 @@ function renderBody(section: ConfigSectionContribution): string[] {
   return [`# ${key}: ${describeType(jsonSchema)}`];
 }
 
-function renderSection(section: ConfigSectionContribution, owner: string | undefined): string[] {
+function renderSection(
+  section: ConfigSectionContribution,
+  owner: string | undefined,
+): string[] {
   const { domain, options } = section;
   const key = camelToSnake(domain);
   const lines: string[] = [RULE];
-  lines.push(`# ${domain}${key === domain ? '' : ` (config.toml: ${key})`}`);
-  lines.push(`#   owner: ${owner ?? '(unresolved)'}`);
-  lines.push(`#   scope: ${options.scope ?? 'core'}`);
+  lines.push(`# ${domain}${key === domain ? "" : ` (config.toml: ${key})`}`);
+  lines.push(`#   owner: ${owner ?? "(unresolved)"}`);
+  lines.push(`#   scope: ${options.scope ?? "core"}`);
   const hooks: string[] = [];
-  if (options.merge !== undefined) hooks.push('custom merge');
-  if (options.fromToml !== undefined) hooks.push('custom fromToml');
-  if (options.toToml !== undefined) hooks.push('custom toToml');
-  if (options.stripEnv !== undefined) hooks.push('stripEnv');
-  if (hooks.length > 0) lines.push(`#   hooks: ${hooks.join(' · ')}`);
+  if (options.merge !== undefined) hooks.push("custom merge");
+  if (options.fromToml !== undefined) hooks.push("custom fromToml");
+  if (options.toToml !== undefined) hooks.push("custom toToml");
+  if (options.stripEnv !== undefined) hooks.push("stripEnv");
+  if (hooks.length > 0) lines.push(`#   hooks: ${hooks.join(" · ")}`);
   const deprecations = options.deprecations ?? [];
   if (deprecations.length > 0) {
-    lines.push('#   deprecations (old key is ignored + warns; rename manually):');
+    lines.push(
+      "#   deprecations (old key is ignored + warns; rename manually):",
+    );
     for (const deprecation of deprecations) {
       lines.push(`#     ${deprecation.key} -> ${deprecation.replacement}`);
     }
   }
   const envRows = flattenEnvBindings(options.env);
   if (envRows.length > 0) {
-    lines.push('#   env:');
+    lines.push("#   env:");
     for (const row of envRows) {
-      lines.push(`#     ${snakePath(row.field)} <- ${row.env}${row.detail === '' ? '' : ` (${row.detail})`}`);
+      lines.push(
+        `#     ${snakePath(row.field)} <- ${row.env}${row.detail === "" ? "" : ` (${row.detail})`}`,
+      );
     }
   }
   lines.push(RULE);
-  lines.push('');
+  lines.push("");
   lines.push(...renderBody(section));
   return lines;
 }
@@ -308,7 +346,7 @@ function renderSection(section: ConfigSectionContribution, owner: string | undef
 
 export async function buildConfigManifest(): Promise<string> {
   // "import = register": loading the package root fills the contribution bags.
-  await import('../src/index.ts');
+  await import("../src/index.ts");
   const sections = getConfigSectionContributions().toSorted((a, b) =>
     a.domain.localeCompare(b.domain),
   );
@@ -317,32 +355,34 @@ export async function buildConfigManifest(): Promise<string> {
   const overlayOwners = scanOverlayOwners();
 
   const out: string[] = [
-    '# Config Section Manifest',
-    '#',
-    '# Generated by scripts/gen-config-manifest.mts — do not edit by hand.',
-    '# Regenerate with: pnpm --filter @moonshot-ai/agent-core-v2 gen:config-manifest',
-    '#',
-    '# One [table] per registered config section, in the on-disk config.toml shape',
-    '# (snake_case keys). Un-commented assignments are registered defaults;',
+    "# Config Section Manifest",
+    "#",
+    "# Generated by scripts/gen-config-manifest.mts — do not edit by hand.",
+    "# Regenerate with: pnpm --filter @moonshot-ai/agent-core-v2 gen:config-manifest",
+    "#",
+    "# One [table] per registered config section, in the on-disk config.toml shape",
+    "# (snake_case keys). Un-commented assignments are registered defaults;",
     '# commented "# field: type" lines describe the remaining schema fields.',
-    '# Values resolve as: default -> config.toml -> env overlay -> memory.',
-    '',
+    "# Values resolve as: default -> config.toml -> env overlay -> memory.",
+    "",
     `# Index (${sections.length} sections · ${overlays.length} overlay(s))`,
   ];
   const width = Math.max(...sections.map((s) => s.domain.length));
   for (const { domain } of sections) {
-    out.push(`#   ${domain.padEnd(width)}  ${sectionOwners.get(domain) ?? '(unresolved)'}`);
+    out.push(
+      `#   ${domain.padEnd(width)}  ${sectionOwners.get(domain) ?? "(unresolved)"}`,
+    );
   }
   for (const [ident, file] of overlayOwners) {
-    out.push(`#   ${'(overlay) ' + ident}  ${file}`);
+    out.push(`#   ${"(overlay) " + ident}  ${file}`);
   }
-  out.push('');
+  out.push("");
 
   for (const section of sections) {
     out.push(...renderSection(section, sectionOwners.get(section.domain)));
-    out.push('');
+    out.push("");
   }
-  return out.join('\n');
+  return out.join("\n");
 }
 
 // ---------------------------------------------------------------------------
@@ -350,29 +390,34 @@ export async function buildConfigManifest(): Promise<string> {
 // ---------------------------------------------------------------------------
 
 async function main(): Promise<void> {
-  const check = process.argv.includes('--check');
+  const check = process.argv.includes("--check");
   const manifest = await buildConfigManifest();
   if (check) {
     let current: string | undefined;
     try {
-      current = readFileSync(MANIFEST_PATH, 'utf-8');
+      current = readFileSync(MANIFEST_PATH, "utf-8");
     } catch {
       current = undefined;
     }
     if (current !== manifest) {
       console.error(
         `[gen-config-manifest] ${relative(process.cwd(), MANIFEST_PATH)} is stale. ` +
-          'Regenerate with `pnpm --filter @moonshot-ai/agent-core-v2 gen:config-manifest`.',
+          "Regenerate with `pnpm --filter @moonshot-ai/agent-core-v2 gen:config-manifest`.",
       );
       process.exit(1);
     }
-    console.log('[gen-config-manifest] up to date');
+    console.log("[gen-config-manifest] up to date");
     return;
   }
   writeFileSync(MANIFEST_PATH, manifest);
-  console.log(`[gen-config-manifest] wrote ${relative(process.cwd(), MANIFEST_PATH)}`);
+  console.log(
+    `[gen-config-manifest] wrote ${relative(process.cwd(), MANIFEST_PATH)}`,
+  );
 }
 
-if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (
+  process.argv[1] !== undefined &&
+  import.meta.url === pathToFileURL(process.argv[1]).href
+) {
   await main();
 }

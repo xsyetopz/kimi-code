@@ -6,17 +6,17 @@
  * for undo validation. Scope-agnostic.
  */
 
-import { defineModel, type ModelDef } from '#/wire/model';
+import { defineModel, type ModelDef } from "#/wire/model";
 
-import type { ContextMessage } from './types';
+import type { ContextMessage } from "./types";
 
 export function isUndoAnchor(message: ContextMessage): boolean {
-  if (message.role !== 'user') return false;
+  if (message.role !== "user") return false;
   const origin = message.origin;
-  if (origin === undefined || origin.kind === 'user') return true;
+  if (origin === undefined || origin.kind === "user") return true;
   return (
-    (origin.kind === 'skill_activation' || origin.kind === 'plugin_command') &&
-    origin.trigger === 'user-slash'
+    (origin.kind === "skill_activation" || origin.kind === "plugin_command") &&
+    origin.trigger === "user-slash"
   );
 }
 
@@ -26,7 +26,7 @@ export function isPromptOwnedInjection(
 ): boolean {
   const origin = message.origin;
   return (
-    origin?.kind === 'injection' &&
+    origin?.kind === "injection" &&
     origin.ownerPromptId !== undefined &&
     origin.ownerPromptId === prompt.id
   );
@@ -57,20 +57,28 @@ export function defineCheckpointedModel<T>(
     () => ({ current: initial(), checkpoints: [] }),
     {
       reducers: {
-        'context.append_message': (state, { message }) => {
+        "context.append_message": (state, { message }) => {
           if (isUndoAnchor(message)) {
-            return { ...state, checkpoints: [...state.checkpoints, state.current] };
+            return {
+              ...state,
+              checkpoints: [...state.checkpoints, state.current],
+            };
           }
           if (opts?.onAppendMessage === undefined) return state;
           const current = opts.onAppendMessage(state.current, message);
           return current === state.current ? state : { ...state, current };
         },
-        'context.apply_compaction': (state) =>
-          state.checkpoints.length === 0 ? state : { ...state, checkpoints: [] },
-        'context.clear': (state) =>
-          state.checkpoints.length === 0 ? state : { ...state, checkpoints: [] },
-        'context.undo': (state, { count }) => {
-          if (!isValidUndoCount(count) || state.checkpoints.length < count) return state;
+        "context.apply_compaction": (state) =>
+          state.checkpoints.length === 0
+            ? state
+            : { ...state, checkpoints: [] },
+        "context.clear": (state) =>
+          state.checkpoints.length === 0
+            ? state
+            : { ...state, checkpoints: [] },
+        "context.undo": (state, { count }) => {
+          if (!isValidUndoCount(count) || state.checkpoints.length < count)
+            return state;
           const checkpointIndex = state.checkpoints.length - count;
           return {
             current: state.checkpoints[checkpointIndex]!,

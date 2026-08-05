@@ -10,18 +10,18 @@
 // (still in index.ts) read and iterate the state through MiniDb's private
 // views, which forward to this registry.
 
-import fs from 'node:fs/promises';
-import path from 'node:path';
-import { TEXT_INDEXES_FILE, rootPostingsFile } from './generation.js';
-import { TextIndex } from './text-index/index.js';
-import type { TextIndexOptions } from './text-index/index.js';
-import { createNgramTokenizer } from './trigram.js';
-import type { TextIndexTokenizerName } from './trigram.js';
-import { createSerializer } from './serialize.js';
-import { fromKStr } from './value-codec.js';
-import type { Store } from './store.js';
-import type { ValueCodecName } from './types.js';
-import type { TextBuildCheckpoint } from './worker/text-build.js';
+import fs from "node:fs/promises";
+import path from "node:path";
+import { TEXT_INDEXES_FILE, rootPostingsFile } from "./generation.js";
+import { TextIndex } from "./text-index/index.js";
+import type { TextIndexOptions } from "./text-index/index.js";
+import { createNgramTokenizer } from "./trigram.js";
+import type { TextIndexTokenizerName } from "./trigram.js";
+import { createSerializer } from "./serialize.js";
+import { fromKStr } from "./value-codec.js";
+import type { Store } from "./store.js";
+import type { ValueCodecName } from "./types.js";
+import type { TextBuildCheckpoint } from "./worker/text-build.js";
 
 /** Persisted shape of one entry in `db.textindexes.json`. `tokenizer` is
  *  absent in definitions written before n-gram support existed, which means
@@ -42,13 +42,13 @@ export interface TextIndexDef {
  *  index does NOT count as custom-tokenized (stage-6 worker eligibility). */
 export function textIndexTokenizers(
   name: TextIndexTokenizerName | undefined,
-): Pick<TextIndexOptions, 'tokenizer' | 'queryTokenizer' | 'builtinTokenizer'> {
-  if (name === undefined || name === 'default') return {};
-  if (name === 'ngram') {
+): Pick<TextIndexOptions, "tokenizer" | "queryTokenizer" | "builtinTokenizer"> {
+  if (name === undefined || name === "default") return {};
+  if (name === "ngram") {
     return {
       tokenizer: createNgramTokenizer(),
       queryTokenizer: createNgramTokenizer({ forQuery: true }),
-      builtinTokenizer: 'ngram',
+      builtinTokenizer: "ngram",
     };
   }
   throw new RangeError(`unknown text index tokenizer: ${String(name)}`);
@@ -73,7 +73,12 @@ export interface TextRegistryDeps<V> {
   /** The owner's bounded full-corpus build (worker/inline + rebase — see
    *  MiniDb.boundedTextBuild). Returns null when the index is ineligible and
    *  the caller must use the staged `ti.build(...)` instead. */
-  boundedTextBuild: (name: string, ti: TextIndex, def: TextIndexDef, checkpoint: TextBuildCheckpoint | null) => Promise<'worker' | 'inline' | null>;
+  boundedTextBuild: (
+    name: string,
+    ti: TextIndex,
+    def: TextIndexDef,
+    checkpoint: TextBuildCheckpoint | null,
+  ) => Promise<"worker" | "inline" | null>;
 }
 
 export class TextRegistry<V> {
@@ -106,8 +111,16 @@ export class TextRegistry<V> {
   /** The canonical definition shape a text index's manifest hash is computed
    *  from (both sides use it, so a legacy definition without `tokenizer`
    *  hashes identically to an explicit 'default'). */
-  static canonicalTextDef(d: TextIndexDef): { name: string; fields: readonly string[] | null; tokenizer: string } {
-    return { name: d.name, fields: d.fields, tokenizer: d.tokenizer ?? 'default' };
+  static canonicalTextDef(d: TextIndexDef): {
+    name: string;
+    fields: readonly string[] | null;
+    tokenizer: string;
+  } {
+    return {
+      name: d.name,
+      fields: d.fields,
+      tokenizer: d.tokenizer ?? "default",
+    };
   }
 
   /** LEGACY postings maintenance (indexGenerations: false): rebuild every
@@ -132,7 +145,7 @@ export class TextRegistry<V> {
 
   async loadTextIndexDefinitions(): Promise<void> {
     try {
-      const raw = await fs.readFile(this.textIndexPath(), 'utf8');
+      const raw = await fs.readFile(this.textIndexPath(), "utf8");
       this.textDefs = JSON.parse(raw) as TextIndexDef[];
       for (const d of this.textDefs) {
         this.text.set(
@@ -143,26 +156,37 @@ export class TextRegistry<V> {
             ...textIndexTokenizers(d.tokenizer),
             // A read-only opener must not write to a live writer's postings file;
             // it keeps the base postings in memory instead.
-            postingsPath: this.deps.readOnly() ? undefined : this.textPostingsPath(d.name),
+            postingsPath: this.deps.readOnly()
+              ? undefined
+              : this.textPostingsPath(d.name),
           }),
         );
       }
     } catch (e) {
-      if ((e as NodeJS.ErrnoException).code !== 'ENOENT') throw e;
+      if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e;
     }
   }
 
-
   async createTextIndex(
     name: string,
-    { fields, tokenizer }: { fields?: readonly string[]; tokenizer?: TextIndexTokenizerName } = {},
+    {
+      fields,
+      tokenizer,
+    }: { fields?: readonly string[]; tokenizer?: TextIndexTokenizerName } = {},
   ): Promise<void> {
     this.deps.ensureOpen();
     this.deps.ensureWritable();
-    if (this.deps.codecName() !== 'json') throw new Error('text indexes require valueCodec: "json"');
+    if (this.deps.codecName() !== "json")
+      throw new Error('text indexes require valueCodec: "json"');
     await this.textDefChain(async () => {
-      if (this.text.has(name)) throw new Error(`text index "${name}" already exists`);
-      const ti = new TextIndex({ name, fields, ...textIndexTokenizers(tokenizer), postingsPath: this.textPostingsPath(name) });
+      if (this.text.has(name))
+        throw new Error(`text index "${name}" already exists`);
+      const ti = new TextIndex({
+        name,
+        fields,
+        ...textIndexTokenizers(tokenizer),
+        postingsPath: this.textPostingsPath(name),
+      });
       // The staged definition: joins the persisted set (publish) only after
       // the sidecar is durable.
       const def: TextIndexDef = { name, fields: fields ?? null, tokenizer };
@@ -189,7 +213,9 @@ export class TextRegistry<V> {
         // derived postings file with it, exactly like dropTextIndex would.
         this.text.delete(name);
         ti.close();
-        await fs.rm(this.textPostingsPath(name), { force: true }).catch(() => {});
+        await fs
+          .rm(this.textPostingsPath(name), { force: true })
+          .catch(() => {});
         throw e;
       }
       this.textDefs.push(def);
@@ -205,7 +231,8 @@ export class TextRegistry<V> {
       // is removed while the build is still producing it). The build can only
       // be a compaction's postings rebuild — createTextIndex builds under this
       // same chain.
-      if (ti?.building) throw new Error(`text index "${name}" is still building`);
+      if (ti?.building)
+        throw new Error(`text index "${name}" is still building`);
       // Mark staged-drop BEFORE the persist window: a compaction's postings
       // rebuild checks the mark and skips this index (see textDrops), so no
       // build can start while the persist below is in flight. The marking is
@@ -221,7 +248,9 @@ export class TextRegistry<V> {
         const ok = this.text.delete(name);
         if (ti) {
           ti.close();
-          await fs.rm(this.textPostingsPath(name), { force: true }).catch(() => {});
+          await fs
+            .rm(this.textPostingsPath(name), { force: true })
+            .catch(() => {});
         }
         this.textDefs = nextDefs;
         return ok;
@@ -234,7 +263,7 @@ export class TextRegistry<V> {
   search(
     name: string,
     q: string,
-    opts: { op?: 'AND' | 'OR'; limit?: number; maxVisits?: number } = {},
+    opts: { op?: "AND" | "OR"; limit?: number; maxVisits?: number } = {},
   ): { key: string; value: V | undefined; score: number }[] {
     return this.searchBounded(name, q, opts).hits;
   }
@@ -248,15 +277,26 @@ export class TextRegistry<V> {
   searchBounded(
     name: string,
     q: string,
-    opts: { op?: 'AND' | 'OR'; limit?: number; maxVisits?: number } = {},
-  ): { hits: { key: string; value: V; score: number }[]; visits: number; truncated: boolean } {
+    opts: { op?: "AND" | "OR"; limit?: number; maxVisits?: number } = {},
+  ): {
+    hits: { key: string; value: V; score: number }[];
+    visits: number;
+    truncated: boolean;
+  } {
     this.deps.ensureOpen();
     const ti = this.text.get(name);
     if (!ti) throw new Error(`no such text index: ${name}`);
     const res = ti.searchBounded(q, opts);
     const hits = res.hits
-      .map(({ key, score }) => ({ key: fromKStr(key), value: this.deps.decode(this.deps.store().get(key)), score }))
-      .filter((r): r is { key: string; value: V; score: number } => r.value !== undefined);
+      .map(({ key, score }) => ({
+        key: fromKStr(key),
+        value: this.deps.decode(this.deps.store().get(key)),
+        score,
+      }))
+      .filter(
+        (r): r is { key: string; value: V; score: number } =>
+          r.value !== undefined,
+      );
     return { hits, visits: res.visits, truncated: res.truncated };
   }
 
@@ -266,8 +306,12 @@ export class TextRegistry<V> {
   async searchBoundedAsync(
     name: string,
     q: string,
-    opts: { op?: 'AND' | 'OR'; limit?: number; maxVisits?: number } = {},
-  ): Promise<{ hits: { key: string; value: V; score: number }[]; visits: number; truncated: boolean }> {
+    opts: { op?: "AND" | "OR"; limit?: number; maxVisits?: number } = {},
+  ): Promise<{
+    hits: { key: string; value: V; score: number }[];
+    visits: number;
+    truncated: boolean;
+  }> {
     this.deps.ensureOpen();
     const ti = this.text.get(name);
     if (!ti) throw new Error(`no such text index: ${name}`);
@@ -285,7 +329,7 @@ export class TextRegistry<V> {
   async searchAsync(
     name: string,
     q: string,
-    opts: { op?: 'AND' | 'OR'; limit?: number; maxVisits?: number } = {},
+    opts: { op?: "AND" | "OR"; limit?: number; maxVisits?: number } = {},
   ): Promise<{ key: string; value: V | undefined; score: number }[]> {
     return (await this.searchBoundedAsync(name, q, opts)).hits;
   }

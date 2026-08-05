@@ -1,6 +1,6 @@
-import { z } from 'zod';
+import { z } from "zod";
 
-import { skillSourceSchema } from './events';
+import { skillSourceSchema } from "./events";
 
 export const skillDescriptorSchema = z.object({
   name: z.string().min(1),

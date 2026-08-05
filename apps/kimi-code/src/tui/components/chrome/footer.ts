@@ -6,34 +6,44 @@
  *   Line 2: context: N% (tokens/max)
  */
 
-import type { Component } from '@moonshot-ai/pi-tui';
-import { truncateToWidth, visibleWidth } from '@moonshot-ai/pi-tui';
-import chalk from 'chalk';
-import { effectiveModelAlias } from '@moonshot-ai/kimi-code-sdk';
+import type { Component } from "@moonshot-ai/pi-tui";
+import { truncateToWidth, visibleWidth } from "@moonshot-ai/pi-tui";
+import chalk from "chalk";
+import { effectiveModelAlias } from "@moonshot-ai/kimi-code-sdk";
 
-import { ALL_TIPS, type ToolbarTip } from '#/tui/constant/tips';
-import { isRainbowDancing, renderDanceFooterModel } from '#/tui/easter-eggs/dance';
-import { currentTheme } from '#/tui/theme';
-import type { ColorPalette } from '#/tui/theme/colors';
-import type { AppState } from '#/tui/types';
+import { ALL_TIPS, type ToolbarTip } from "#/tui/constant/tips";
+import {
+  isRainbowDancing,
+  renderDanceFooterModel,
+} from "#/tui/easter-eggs/dance";
+import { currentTheme } from "#/tui/theme";
+import type { ColorPalette } from "#/tui/theme/colors";
+import type { AppState } from "#/tui/types";
 import {
   StatusLineCommandRunner,
   type StatusLinePayload,
-} from '#/tui/utils/status-line-command';
+} from "#/tui/utils/status-line-command";
 import {
   createGitStatusCache,
   formatGitBadgeBase,
   formatPullRequestBadge,
   type GitStatus,
   type GitStatusCache,
-} from '#/utils/git/git-status';
+} from "#/utils/git/git-status";
 import {
   formatTokenCount,
   usagePercent,
   usagePercentFromRatio,
-} from '#/utils/usage/usage-format';
+} from "#/utils/usage/usage-format";
 
-const DEFAULT_STATUS_LINE_ITEMS = ['mode', 'goal', 'model', 'tasks', 'cwd', 'git'] as const;
+const DEFAULT_STATUS_LINE_ITEMS = [
+  "mode",
+  "goal",
+  "model",
+  "tasks",
+  "cwd",
+  "git",
+] as const;
 
 const MAX_CWD_SEGMENTS = 3;
 const GOAL_TIMER_INTERVAL_MS = 1_000;
@@ -44,7 +54,7 @@ const GOAL_TIMER_INTERVAL_MS = 1_000;
 // makes a tip recur more often in the rotation (default 1). Width is always
 // the final arbiter (a pair that doesn't fit falls back to its first tip).
 const TIP_ROTATE_INTERVAL_MS = 10_000;
-const TIP_SEPARATOR = ' | ';
+const TIP_SEPARATOR = " | ";
 
 /**
  * Expand tips into a rotation sequence using smooth weighted round-robin
@@ -53,7 +63,9 @@ const TIP_SEPARATOR = ' | ';
  * duplicate. Deterministic and computed once at module load. Exported for
  * unit testing.
  */
-export function buildWeightedTips(tips: readonly ToolbarTip[]): readonly ToolbarTip[] {
+export function buildWeightedTips(
+  tips: readonly ToolbarTip[],
+): readonly ToolbarTip[] {
   const items = tips.map((t) => ({
     tip: t,
     weight: Math.max(1, Math.trunc(t.priority ?? 1)),
@@ -89,13 +101,17 @@ function currentTipIndex(): number {
  */
 function tipsForIndex(index: number): { primary: string; pair: string | null } {
   const n = ROTATION.length;
-  if (n === 0) return { primary: '', pair: null };
+  if (n === 0) return { primary: "", pair: null };
   const offset = ((index % n) + n) % n;
   const current = ROTATION[offset]!;
   if (n === 1 || current.solo) return { primary: current.text, pair: null };
   const next = ROTATION[(offset + 1) % n]!;
-  if (next.solo || next.text === current.text) return { primary: current.text, pair: null };
-  return { primary: current.text, pair: current.text + TIP_SEPARATOR + next.text };
+  if (next.solo || next.text === current.text)
+    return { primary: current.text, pair: null };
+  return {
+    primary: current.text,
+    pair: current.text + TIP_SEPARATOR + next.text,
+  };
 }
 
 /**
@@ -104,30 +120,34 @@ function tipsForIndex(index: number): { primary: string; pair: string | null } {
  * count unless an explicit turn budget is set, in which case it shows used/limit.
  */
 function formatGoalBadge(
-  goal: AppState['goal'],
+  goal: AppState["goal"],
   colors: ColorPalette,
   wallClockMs?: number,
 ): string | null {
   if (goal === null || goal === undefined) return null;
   // Show the badge for every persisted, resumable status. `complete` clears the
   // goal, so it never reaches here; only the unset case returns null.
-  if (goal.status !== 'active' && goal.status !== 'paused' && goal.status !== 'blocked') {
+  if (
+    goal.status !== "active" &&
+    goal.status !== "paused" &&
+    goal.status !== "blocked"
+  ) {
     return null;
   }
   const dotColor =
-    goal.status === 'active'
+    goal.status === "active"
       ? colors.primary
-      : goal.status === 'blocked'
+      : goal.status === "blocked"
         ? colors.warning
         : colors.textMuted;
   const turns =
     goal.budget.turnBudget !== null
       ? `${goal.turnsUsed}/${goal.budget.turnBudget} turns`
-      : `${goal.turnsUsed} ${goal.turnsUsed === 1 ? 'turn' : 'turns'}`;
+      : `${goal.turnsUsed} ${goal.turnsUsed === 1 ? "turn" : "turns"}`;
   const label = `${goal.status} · ${formatBadgeElapsed(wallClockMs ?? goal.wallClockMs)} · ${turns}`;
   return (
-    chalk.hex(colors.textMuted)('[goal ') +
-    chalk.hex(dotColor)('●') +
+    chalk.hex(colors.textMuted)("[goal ") +
+    chalk.hex(dotColor)("●") +
     chalk.hex(colors.textMuted)(` ${label}]`)
   );
 }
@@ -143,24 +163,25 @@ function formatBadgeElapsed(ms: number): string {
 
 function modelDisplayName(state: AppState): string {
   const model = state.availableModels[state.model];
-  const effective = model === undefined ? undefined : effectiveModelAlias(model);
+  const effective =
+    model === undefined ? undefined : effectiveModelAlias(model);
   return effective?.displayName ?? effective?.model ?? state.model;
 }
 
 function shortenCwd(path: string): string {
   if (!path) return path;
-  const home = process.env['HOME'] ?? '';
+  const home = process.env["HOME"] ?? "";
   let work = path;
   if (home && path === home) {
-    return '~';
+    return "~";
   }
-  if (home && path.startsWith(home + '/')) {
-    work = '~' + path.slice(home.length);
+  if (home && path.startsWith(home + "/")) {
+    work = "~" + path.slice(home.length);
   }
 
-  const segments = work.split('/').filter((s) => s.length > 0);
+  const segments = work.split("/").filter((s) => s.length > 0);
   if (segments.length <= MAX_CWD_SEGMENTS) return work;
-  const tail = segments.slice(-MAX_CWD_SEGMENTS).join('/');
+  const tail = segments.slice(-MAX_CWD_SEGMENTS).join("/");
   return `…/${tail}`;
 }
 
@@ -170,7 +191,11 @@ function shortenCwd(path: string): string {
  * back to the precomputed ratio. Counts use the shared 1024-based
  * formatter.
  */
-function formatContextStatus(usage: number, tokens?: number, maxTokens?: number): string {
+function formatContextStatus(
+  usage: number,
+  tokens?: number,
+  maxTokens?: number,
+): string {
   if (maxTokens !== undefined && maxTokens > 0 && tokens !== undefined) {
     const pct = String(usagePercent(tokens, maxTokens));
     return `context: ${pct}% (${formatTokenCount(tokens)}/${formatTokenCount(maxTokens)})`;
@@ -178,7 +203,10 @@ function formatContextStatus(usage: number, tokens?: number, maxTokens?: number)
   return `context: ${String(usagePercentFromRatio(usage))}%`;
 }
 
-export function formatFooterGitBadge(status: GitStatus, colors: ColorPalette): string {
+export function formatFooterGitBadge(
+  status: GitStatus,
+  colors: ColorPalette,
+): string {
   const base = chalk.hex(colors.textDim)(formatGitBadgeBase(status));
   if (status.pullRequest === null) return base;
 
@@ -212,7 +240,9 @@ export class FooterComponent implements Component {
     this.state = state;
     this.onRefresh = onRefresh;
     this.gitCacheWorkDir = state.workDir;
-    this.gitCache = createGitStatusCache(state.workDir, { onChange: this.onRefresh });
+    this.gitCache = createGitStatusCache(state.workDir, {
+      onChange: this.onRefresh,
+    });
     this.syncGoalClock(state.goal);
     this.syncGoalTimer(state.goal);
     this.syncStatusLineRunner(state);
@@ -221,7 +251,9 @@ export class FooterComponent implements Component {
   setState(state: AppState): void {
     if (state.workDir !== this.gitCacheWorkDir) {
       this.gitCacheWorkDir = state.workDir;
-      this.gitCache = createGitStatusCache(state.workDir, { onChange: this.onRefresh });
+      this.gitCache = createGitStatusCache(state.workDir, {
+        onChange: this.onRefresh,
+      });
     }
     this.syncGoalClock(state.goal);
     this.syncGoalTimer(state.goal);
@@ -240,7 +272,10 @@ export class FooterComponent implements Component {
       // A reload can swap one command for another; the old runner would
       // otherwise keep executing the previous script until restart.
       this.statusLineRunner?.dispose();
-      this.statusLineRunner = new StatusLineCommandRunner(command, this.onRefresh);
+      this.statusLineRunner = new StatusLineCommandRunner(
+        command,
+        this.onRefresh,
+      );
     }
   }
 
@@ -295,15 +330,16 @@ export class FooterComponent implements Component {
         if (pieces !== undefined) left.push(...pieces);
       }
 
-      const leftLine = left.join('  ');
+      const leftLine = left.join("  ");
       const leftWidth = visibleWidth(leftLine);
 
       // Rotating hint tips stay on the right unless they were given an
       // inline slot in items (rendered above at their configured position)
       // or the user dropped 'tips' from items.
-      let tipText = '';
-      const tipsInline = order.includes('tips');
-      const showTips = !tipsInline && (configured === null || configured.includes('tips'));
+      let tipText = "";
+      const tipsInline = order.includes("tips");
+      const showTips =
+        !tipsInline && (configured === null || configured.includes("tips"));
       if (showTips) {
         const { primary, pair } = tipsForIndex(currentTipIndex());
         const gap = 2;
@@ -317,11 +353,14 @@ export class FooterComponent implements Component {
 
       if (tipText) {
         const pad = width - leftWidth - visibleWidth(tipText);
-        line1 = leftLine + ' '.repeat(Math.max(0, pad)) + chalk.hex(colors.textMuted)(tipText);
+        line1 =
+          leftLine +
+          " ".repeat(Math.max(0, pad)) +
+          chalk.hex(colors.textMuted)(tipText);
       } else if (leftWidth <= width) {
         line1 = leftLine;
       } else {
-        line1 = truncateToWidth(leftLine, width, '…');
+        line1 = truncateToWidth(leftLine, width, "…");
       }
     }
 
@@ -338,16 +377,16 @@ export class FooterComponent implements Component {
       const shownHint =
         visibleWidth(this.transientHint) <= maxHintWidth
           ? this.transientHint
-          : truncateToWidth(this.transientHint, maxHintWidth, '…');
+          : truncateToWidth(this.transientHint, maxHintWidth, "…");
       const hintWidth = visibleWidth(shownHint);
       const pad = Math.max(0, width - hintWidth - contextWidth);
       line2 =
         chalk.hex(colors.warning).bold(shownHint) +
-        ' '.repeat(pad) +
+        " ".repeat(pad) +
         chalk.hex(colors.text)(contextText);
     } else {
       const leftPad = Math.max(0, width - contextWidth);
-      line2 = ' '.repeat(leftPad) + chalk.hex(colors.text)(contextText);
+      line2 = " ".repeat(leftPad) + chalk.hex(colors.text)(contextText);
     }
 
     return [truncateToWidth(line1, width), truncateToWidth(line2, width)];
@@ -372,40 +411,48 @@ export class FooterComponent implements Component {
     {
       const { primary, pair } = tipsForIndex(currentTipIndex());
       const tip = pair ?? primary;
-      if (tip) slots['tips'] = [chalk.hex(colors.textMuted)(tip)];
+      if (tip) slots["tips"] = [chalk.hex(colors.textMuted)(tip)];
     }
 
     const modes: string[] = [];
-    if (state.permissionMode === 'auto') modes.push(chalk.hex(colors.warning).bold('auto'));
-    if (state.permissionMode === 'yolo') modes.push(chalk.hex(colors.warning).bold('yolo'));
-    if (state.planMode) modes.push(chalk.hex(colors.primary).bold('plan'));
-    if (state.swarmMode) modes.push(chalk.hex(colors.accent).bold('swarm'));
-    if (modes.length > 0) slots['mode'] = [modes.join(' ')];
+    if (state.permissionMode === "auto")
+      modes.push(chalk.hex(colors.warning).bold("auto"));
+    if (state.permissionMode === "yolo")
+      modes.push(chalk.hex(colors.warning).bold("yolo"));
+    if (state.planMode) modes.push(chalk.hex(colors.primary).bold("plan"));
+    if (state.swarmMode) modes.push(chalk.hex(colors.accent).bold("swarm"));
+    if (modes.length > 0) slots["mode"] = [modes.join(" ")];
 
-    const goalBadge = formatGoalBadge(state.goal, colors, this.goalWallClockMs(state.goal));
-    if (goalBadge !== null) slots['goal'] = [goalBadge];
+    const goalBadge = formatGoalBadge(
+      state.goal,
+      colors,
+      this.goalWallClockMs(state.goal),
+    );
+    if (goalBadge !== null) slots["goal"] = [goalBadge];
 
     const model = modelDisplayName(state);
     if (model) {
       const effort = state.thinkingEffort;
       const rawCurrentModel = state.availableModels[state.model];
       const currentModel =
-        rawCurrentModel === undefined ? undefined : effectiveModelAlias(rawCurrentModel);
+        rawCurrentModel === undefined
+          ? undefined
+          : effectiveModelAlias(rawCurrentModel);
       // Only effort-capable models (those declaring support_efforts) show the
       // concrete effort; legacy boolean models keep the plain "thinking" suffix.
       const hasEfforts = (currentModel?.supportEfforts?.length ?? 0) > 0;
       const thinkingLabel =
-        effort !== 'off'
-          ? hasEfforts && effort !== 'on'
+        effort !== "off"
+          ? hasEfforts && effort !== "on"
             ? ` thinking: ${effort}`
-            : ' thinking'
-          : '';
+            : " thinking"
+          : "";
       const modelLabel = `${model}${thinkingLabel}`;
       let renderedModelLabel = chalk.hex(colors.text)(modelLabel);
       if (isRainbowDancing()) {
         renderedModelLabel = renderDanceFooterModel(modelLabel);
       }
-      slots['model'] = [renderedModelLabel];
+      slots["model"] = [renderedModelLabel];
     }
 
     // Background-task badges. `bash-*` tasks (shell processes) and `agent-*`
@@ -413,24 +460,28 @@ export class FooterComponent implements Component {
     // apart at a glance.
     const taskBadges: string[] = [];
     if (this.backgroundBashTaskCount > 0) {
-      const noun = this.backgroundBashTaskCount === 1 ? 'task' : 'tasks';
+      const noun = this.backgroundBashTaskCount === 1 ? "task" : "tasks";
       taskBadges.push(
-        chalk.hex(colors.primary)(`[${String(this.backgroundBashTaskCount)} ${noun} running]`),
+        chalk.hex(colors.primary)(
+          `[${String(this.backgroundBashTaskCount)} ${noun} running]`,
+        ),
       );
     }
     if (this.backgroundAgentCount > 0) {
-      const noun = this.backgroundAgentCount === 1 ? 'agent' : 'agents';
+      const noun = this.backgroundAgentCount === 1 ? "agent" : "agents";
       taskBadges.push(
-        chalk.hex(colors.primary)(`[${String(this.backgroundAgentCount)} ${noun} running]`),
+        chalk.hex(colors.primary)(
+          `[${String(this.backgroundAgentCount)} ${noun} running]`,
+        ),
       );
     }
-    slots['tasks'] = taskBadges;
+    slots["tasks"] = taskBadges;
 
     const cwd = shortenCwd(state.workDir);
-    if (cwd) slots['cwd'] = [chalk.hex(colors.textDim)(cwd)];
+    if (cwd) slots["cwd"] = [chalk.hex(colors.textDim)(cwd)];
 
     const git = this.gitCache.getStatus();
-    if (git !== null) slots['git'] = [formatFooterGitBadge(git, colors)];
+    if (git !== null) slots["git"] = [formatFooterGitBadge(git, colors)];
 
     return slots;
   }
@@ -451,15 +502,15 @@ export class FooterComponent implements Component {
     };
   }
 
-  private syncGoalClock(goal: AppState['goal']): void {
+  private syncGoalClock(goal: AppState["goal"]): void {
     const key = goalSnapshotKey(goal);
     if (key === this.goalSnapshotKey) return;
     this.goalSnapshotKey = key;
     this.goalObservedAtMs = Date.now();
   }
 
-  private syncGoalTimer(goal: AppState['goal']): void {
-    if (goal?.status === 'active') {
+  private syncGoalTimer(goal: AppState["goal"]): void {
+    if (goal?.status === "active") {
       if (this.goalTimer !== null) return;
       this.goalTimer = setInterval(() => {
         this.onRefresh();
@@ -481,24 +532,24 @@ export class FooterComponent implements Component {
     }
   }
 
-  private goalWallClockMs(goal: AppState['goal']): number | undefined {
+  private goalWallClockMs(goal: AppState["goal"]): number | undefined {
     if (goal === null || goal === undefined) return undefined;
-    if (goal.status !== 'active') return goal.wallClockMs;
+    if (goal.status !== "active") return goal.wallClockMs;
     return goal.wallClockMs + Math.max(0, Date.now() - this.goalObservedAtMs);
   }
 }
 
-function goalSnapshotKey(goal: AppState['goal']): string | null {
+function goalSnapshotKey(goal: AppState["goal"]): string | null {
   if (goal === null || goal === undefined) return null;
   return [
     goal.goalId,
     goal.status,
-    goal.terminalReason ?? '',
+    goal.terminalReason ?? "",
     String(goal.turnsUsed),
     String(goal.tokensUsed),
     String(goal.wallClockMs),
     String(goal.budget.tokenBudget),
     String(goal.budget.turnBudget),
     String(goal.budget.wallClockBudgetMs),
-  ].join('\u0000');
+  ].join("\u0000");
 }

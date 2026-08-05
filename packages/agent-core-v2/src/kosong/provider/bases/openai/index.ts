@@ -4,5 +4,5 @@
  * (Chat Completions) and `openai_responses`.
  */
 
-import './openai-legacy.contrib';
-import './openai-responses.contrib';
+import "./openai-legacy.contrib";
+import "./openai-responses.contrib";

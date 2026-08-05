@@ -1,10 +1,14 @@
-import { createKimiHarness, type Event, type Session } from '@moonshot-ai/kimi-code-sdk';
+import {
+  createKimiHarness,
+  type Event,
+  type Session,
+} from "@moonshot-ai/kimi-code-sdk";
 
-import { smokeIdentityFromEnv } from './runtime-smoke-helpers';
+import { smokeIdentityFromEnv } from "./runtime-smoke-helpers";
 
 const PROMPT =
-  process.env['KIMI_SDK_PROMPT'] ??
-  'Introduce yourself in two concise sentences and mention the current working directory.';
+  process.env["KIMI_SDK_PROMPT"] ??
+  "Introduce yourself in two concise sentences and mention the current working directory.";
 
 async function main(): Promise<void> {
   const workDir = process.cwd();
@@ -14,7 +18,7 @@ async function main(): Promise<void> {
     const config = await harness.getConfig();
     const model = config.defaultModel;
     if (model === undefined) {
-      throw new Error('No model configured. Set default_model in config.toml.');
+      throw new Error("No model configured. Set default_model in config.toml.");
     }
 
     const session = await harness.createSession({ workDir, model });
@@ -36,7 +40,7 @@ async function runPrompt(session: Session, prompt: string): Promise<void> {
 
   const done = new Promise<void>((resolve, reject) => {
     timeout = setTimeout(() => {
-      reject(new Error('Timed out waiting for turn_ended'));
+      reject(new Error("Timed out waiting for turn_ended"));
     }, 120_000);
 
     unsubscribe = session.onEvent((event) => {
@@ -44,12 +48,12 @@ async function runPrompt(session: Session, prompt: string): Promise<void> {
         activeTurnId = turnId;
       });
 
-      if (event.type === 'turn.ended' && event.turnId === activeTurnId) {
+      if (event.type === "turn.ended" && event.turnId === activeTurnId) {
         resolve();
         return;
       }
 
-      if (event.type === 'error') {
+      if (event.type === "error") {
         reject(new Error(`${event.code}: ${event.message}`));
       }
     });
@@ -71,60 +75,62 @@ function handleEvent(
   setActiveTurnId: (turnId: number) => void,
 ): void {
   switch (event.type) {
-    case 'turn.started':
+    case "turn.started":
       setActiveTurnId(event.turnId);
       process.stdout.write(`[turn ${String(event.turnId)}]\n`);
       break;
-    case 'thinking.delta':
+    case "thinking.delta":
       if (activeTurnId === undefined || event.turnId === activeTurnId) {
         process.stderr.write(event.delta);
       }
       break;
-    case 'assistant.delta':
+    case "assistant.delta":
       if (activeTurnId === undefined || event.turnId === activeTurnId) {
         process.stdout.write(event.delta);
       }
       break;
-    case 'hook.result':
+    case "hook.result":
       if (activeTurnId === undefined || event.turnId === activeTurnId) {
-        process.stdout.write(`${event.hookEvent} hook\n\n${event.content.trim() || '(empty)'}\n`);
+        process.stdout.write(
+          `${event.hookEvent} hook\n\n${event.content.trim() || "(empty)"}\n`,
+        );
       }
       break;
-    case 'turn.ended':
+    case "turn.ended":
       if (activeTurnId === undefined || event.turnId === activeTurnId) {
         process.stdout.write(`\n\nstatus: ${event.reason}\n`);
       }
       break;
-    case 'error':
+    case "error":
       process.stderr.write(`\nerror: ${event.code}: ${event.message}\n`);
       break;
-    case 'agent.status.updated':
-    case 'cron.fired':
-    case 'goal.updated':
-    case 'session.meta.updated':
-    case 'skill.activated':
-    case 'turn.step.started':
-    case 'turn.step.completed':
-    case 'turn.step.retrying':
-    case 'turn.step.interrupted':
-    case 'tool.call.delta':
-    case 'tool.call.started':
-    case 'tool.progress':
-    case 'tool.result':
-    case 'tool.list.updated':
-    case 'mcp.server.status':
-    case 'subagent.spawned':
-    case 'subagent.started':
-    case 'subagent.completed':
-    case 'subagent.failed':
-    case 'subagent.suspended':
-    case 'compaction.started':
-    case 'compaction.blocked':
-    case 'compaction.cancelled':
-    case 'compaction.completed':
-    case 'background.task.started':
-    case 'background.task.terminated':
-    case 'warning':
+    case "agent.status.updated":
+    case "cron.fired":
+    case "goal.updated":
+    case "session.meta.updated":
+    case "skill.activated":
+    case "turn.step.started":
+    case "turn.step.completed":
+    case "turn.step.retrying":
+    case "turn.step.interrupted":
+    case "tool.call.delta":
+    case "tool.call.started":
+    case "tool.progress":
+    case "tool.result":
+    case "tool.list.updated":
+    case "mcp.server.status":
+    case "subagent.spawned":
+    case "subagent.started":
+    case "subagent.completed":
+    case "subagent.failed":
+    case "subagent.suspended":
+    case "compaction.started":
+    case "compaction.blocked":
+    case "compaction.cancelled":
+    case "compaction.completed":
+    case "background.task.started":
+    case "background.task.terminated":
+    case "warning":
       break;
   }
 }

@@ -1,14 +1,21 @@
-import type { PrepareToolExecutionResult, ResolvedToolExecutionHookContext } from '../../loop';
-import type { ToolInputDisplay } from '../../tools/display';
+import type {
+  PrepareToolExecutionResult,
+  ResolvedToolExecutionHookContext,
+} from "../../loop";
+import type { ToolInputDisplay } from "../../tools/display";
 
-export type PermissionRuleDecision = 'allow' | 'deny' | 'ask';
+export type PermissionRuleDecision = "allow" | "deny" | "ask";
 
 /**
  * Rule provenance. `session-runtime` stores rules produced by
  * "approve for session"; `turn-override`, `project`, and `user` are
  * reserved for static-loaded rules surfaced by external callers.
  */
-export type PermissionRuleScope = 'turn-override' | 'session-runtime' | 'project' | 'user';
+export type PermissionRuleScope =
+  | "turn-override"
+  | "session-runtime"
+  | "project"
+  | "user";
 
 /**
  * Top-level user-facing permission posture. Controls how non-deny rules
@@ -19,7 +26,7 @@ export type PermissionRuleScope = 'turn-override' | 'session-runtime' | 'project
  *   - `yolo`   — only deny rules can block; everything else allows
  *   - `auto`   — caller may bypass rule checks entirely
  */
-export type PermissionMode = 'manual' | 'yolo' | 'auto';
+export type PermissionMode = "manual" | "yolo" | "auto";
 
 /**
  * A single permission rule. `pattern` is the DSL form (`Read(/etc/**)`,
@@ -41,8 +48,8 @@ export interface ApprovalRequest {
 }
 
 export interface ApprovalResponse {
-  decision: 'approved' | 'rejected' | 'cancelled';
-  scope?: 'session';
+  decision: "approved" | "rejected" | "cancelled";
+  scope?: "session";
   feedback?: string;
   selectedLabel?: string;
 }
@@ -61,41 +68,49 @@ export interface PermissionData {
   rules: PermissionRule[];
 }
 
-export type PermissionDecision = 'approve' | 'deny' | 'ask';
+export type PermissionDecision = "approve" | "deny" | "ask";
 
 export type PermissionReasonValue = string | number | boolean | null;
 
-export type PermissionDecisionReason = Readonly<Record<string, PermissionReasonValue>>;
+export type PermissionDecisionReason = Readonly<
+  Record<string, PermissionReasonValue>
+>;
 
 export type PermissionPolicyResolution =
   | PermissionPolicyResult
-  | ({ readonly kind: 'result' } & PrepareToolExecutionResult);
+  | ({ readonly kind: "result" } & PrepareToolExecutionResult);
 
-export interface PermissionPolicyContext extends ResolvedToolExecutionHookContext {}
+export interface PermissionPolicyContext
+  extends ResolvedToolExecutionHookContext {}
 
 export type PermissionPolicyResult =
   | {
-      readonly kind: 'approve';
+      readonly kind: "approve";
       readonly reason?: PermissionDecisionReason;
       readonly executionMetadata?: unknown;
     }
   | {
-      readonly kind: 'deny';
+      readonly kind: "deny";
       readonly reason?: PermissionDecisionReason;
       readonly message?: string;
     }
   | {
-      readonly kind: 'ask';
+      readonly kind: "ask";
       readonly reason?: PermissionDecisionReason;
       readonly resolveApproval?: (
         result: ApprovalResponse,
       ) => PermissionPolicyResolution | undefined;
-      readonly resolveError?: (error: unknown) => PermissionPolicyResolution | undefined;
+      readonly resolveError?: (
+        error: unknown,
+      ) => PermissionPolicyResolution | undefined;
     };
 
 export interface PermissionPolicy {
   readonly name: string;
   evaluate(
     context: PermissionPolicyContext,
-  ): PermissionPolicyResult | undefined | Promise<PermissionPolicyResult | undefined>;
+  ):
+    | PermissionPolicyResult
+    | undefined
+    | Promise<PermissionPolicyResult | undefined>;
 }

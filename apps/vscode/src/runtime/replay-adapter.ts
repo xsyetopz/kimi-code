@@ -28,7 +28,10 @@ interface SubagentReplayInvocation {
 }
 
 interface SubagentReplayIndex {
-  readonly byParentCall: ReadonlyMap<string, readonly SubagentReplayInvocation[]>;
+  readonly byParentCall: ReadonlyMap<
+    string,
+    readonly SubagentReplayInvocation[]
+  >;
 }
 
 /** Projects a complete resumed SDK session, including persisted subagent steps. */
@@ -38,7 +41,11 @@ export function replaySessionToWebviewEvents(
 ): UIStreamEvent[] {
   const main = state.agents["main"];
   if (main === undefined) throw new Error("Session history is unavailable.");
-  return replayAgentToWebviewEvents(main, sessionId, buildSubagentReplayIndex(state));
+  return replayAgentToWebviewEvents(
+    main,
+    sessionId,
+    buildSubagentReplayIndex(state),
+  );
 }
 
 /** Projects the public SDK resume replay into the released Webview protocol. */
@@ -64,7 +71,9 @@ function replayAgentToWebviewEvents(
       {
         type: "StatusUpdate",
         payload: {
-          ...(agent.config.modelAlias === undefined ? {} : { model: agent.config.modelAlias }),
+          ...(agent.config.modelAlias === undefined
+            ? {}
+            : { model: agent.config.modelAlias }),
           thinking_effort: agent.config.thinkingEffort,
           plan_mode: agent.plan !== null,
         },
@@ -84,7 +93,9 @@ function replayAgentToWebviewEvents(
     if (!turnOpen) return;
     if (step === 0) {
       step = 1;
-      events.push(withSession({ type: "StepBegin", payload: { n: step } }, sessionId));
+      events.push(
+        withSession({ type: "StepBegin", payload: { n: step } }, sessionId),
+      );
     }
   };
 
@@ -103,7 +114,9 @@ function replayAgentToWebviewEvents(
               {
                 type: "TurnBegin",
                 payload: {
-                  user_input: imported?.input ?? replayUserInput(message.content, message.origin),
+                  user_input:
+                    imported?.input ??
+                    replayUserInput(message.content, message.origin),
                 },
               },
               sessionId,
@@ -113,7 +126,10 @@ function replayAgentToWebviewEvents(
             ensureStep();
             events.push(
               withSession(
-                { type: "ContentPart", payload: { type: "text", text: imported.confirmation } },
+                {
+                  type: "ContentPart",
+                  payload: { type: "text", text: imported.confirmation },
+                },
                 sessionId,
               ),
             );
@@ -125,7 +141,9 @@ function replayAgentToWebviewEvents(
           if (!turnOpen) break;
           ensureStep();
           for (const part of toLegacyContent(message.content)) {
-            events.push(withSession({ type: "ContentPart", payload: part }, sessionId));
+            events.push(
+              withSession({ type: "ContentPart", payload: part }, sessionId),
+            );
           }
           for (const call of message.toolCalls) {
             const display = message.toolCallDisplays?.[call.id];
@@ -140,7 +158,9 @@ function replayAgentToWebviewEvents(
                 arguments: call.arguments,
               },
             };
-            events.push(withSession({ type: "ToolCall", payload: toolCall }, sessionId));
+            events.push(
+              withSession({ type: "ToolCall", payload: toolCall }, sessionId),
+            );
             if (subagents !== undefined) {
               for (const nested of renderSubagentInvocations(
                 subagents,
@@ -156,7 +176,11 @@ function replayAgentToWebviewEvents(
           break;
         }
 
-        if (message.role === "tool" && turnOpen && message.toolCallId !== undefined) {
+        if (
+          message.role === "tool" &&
+          turnOpen &&
+          message.toolCallId !== undefined
+        ) {
           ensureStep();
           const display = toolDisplays.get(message.toolCallId) ?? [];
           toolDisplays.delete(message.toolCallId);
@@ -183,9 +207,13 @@ function replayAgentToWebviewEvents(
       case "compaction":
         if (!turnOpen) break;
         ensureStep();
-        events.push(withSession({ type: "CompactionBegin", payload: {} }, sessionId));
+        events.push(
+          withSession({ type: "CompactionBegin", payload: {} }, sessionId),
+        );
         if (record.result !== undefined) {
-          events.push(withSession({ type: "CompactionEnd", payload: {} }, sessionId));
+          events.push(
+            withSession({ type: "CompactionEnd", payload: {} }, sessionId),
+          );
         }
         break;
       case "plan_updated":
@@ -210,35 +238,57 @@ function replayAgentToWebviewEvents(
   completeTurn();
   const resumedStatus = resumedStatusPayload(agent);
   if (Object.keys(resumedStatus).length > 0) {
-    events.push(withSession({ type: "StatusUpdate", payload: resumedStatus }, sessionId));
+    events.push(
+      withSession({ type: "StatusUpdate", payload: resumedStatus }, sessionId),
+    );
   }
   return events;
 }
 
-function buildSubagentReplayIndex(state: ResumedSessionState): SubagentReplayIndex {
+function buildSubagentReplayIndex(
+  state: ResumedSessionState,
+): SubagentReplayIndex {
   const invocations: SubagentReplayInvocation[] = [];
   let order = 0;
 
   for (const [parentAgentId, parent] of Object.entries(state.agents)) {
     const calls = new Map<
       string,
-      { readonly name: string; readonly startedAt: number; readonly order: number }
+      {
+        readonly name: string;
+        readonly startedAt: number;
+        readonly order: number;
+      }
     >();
     for (const record of parent.replay) {
       if (record.type !== "message") continue;
       const { message } = record;
       if (message.role === "assistant") {
         for (const call of message.toolCalls) {
-          calls.set(call.id, { name: call.name, startedAt: record.time, order: order++ });
+          calls.set(call.id, {
+            name: call.name,
+            startedAt: record.time,
+            order: order++,
+          });
         }
         continue;
       }
       if (message.role !== "tool" || message.toolCallId === undefined) continue;
       const call = calls.get(message.toolCallId);
-      if (call === undefined || (call.name !== "Agent" && call.name !== "AgentSwarm")) continue;
-      for (const childAgentId of subagentIdsFromResult(call.name, message.content)) {
+      if (
+        call === undefined ||
+        (call.name !== "Agent" && call.name !== "AgentSwarm")
+      )
+        continue;
+      for (const childAgentId of subagentIdsFromResult(
+        call.name,
+        message.content,
+      )) {
         const metadata = state.sessionMetadata.agents[childAgentId];
-        if (metadata?.parentAgentId !== parentAgentId || state.agents[childAgentId] === undefined) {
+        if (
+          metadata?.parentAgentId !== parentAgentId ||
+          state.agents[childAgentId] === undefined
+        ) {
           continue;
         }
         invocations.push({
@@ -274,7 +324,10 @@ function buildSubagentReplayIndex(state: ResumedSessionState): SubagentReplayInd
 
   const byParentCall = new Map<string, SubagentReplayInvocation[]>();
   for (const invocation of invocations) {
-    const key = parentCallKey(invocation.parentAgentId, invocation.parentToolCallId);
+    const key = parentCallKey(
+      invocation.parentAgentId,
+      invocation.parentToolCallId,
+    );
     const entries = byParentCall.get(key) ?? [];
     entries.push(invocation);
     byParentCall.set(key, entries);
@@ -283,7 +336,10 @@ function buildSubagentReplayIndex(state: ResumedSessionState): SubagentReplayInd
   return { byParentCall };
 }
 
-function compareInvocation(a: SubagentReplayInvocation, b: SubagentReplayInvocation): number {
+function compareInvocation(
+  a: SubagentReplayInvocation,
+  b: SubagentReplayInvocation,
+): number {
   return a.startedAt - b.startedAt || a.order - b.order;
 }
 
@@ -292,7 +348,10 @@ function subagentIdsFromResult(
   content: readonly ContentPart[],
 ): readonly string[] {
   const text = content
-    .filter((part): part is Extract<ContentPart, { type: "text" }> => part.type === "text")
+    .filter(
+      (part): part is Extract<ContentPart, { type: "text" }> =>
+        part.type === "text",
+    )
     .map((part) => part.text)
     .join("");
   if (toolName === "Agent") {
@@ -300,11 +359,18 @@ function subagentIdsFromResult(
     const match = /(?:^|\n)agent_id:\s*([^\s]+)\s*(?=\n|$)/.exec(header);
     return match === null ? [] : [match[1]!];
   }
-  const pattern = /<subagent\b[^>]*\bagent_id="([^"]+)"[^>]*\boutcome="[^"]+">/g;
-  return [...text.matchAll(pattern)].map((match) => match[1]!).filter(uniqueString);
+  const pattern =
+    /<subagent\b[^>]*\bagent_id="([^"]+)"[^>]*\boutcome="[^"]+">/g;
+  return [...text.matchAll(pattern)]
+    .map((match) => match[1]!)
+    .filter(uniqueString);
 }
 
-function uniqueString(value: string, index: number, values: readonly string[]): boolean {
+function uniqueString(
+  value: string,
+  index: number,
+  values: readonly string[],
+): boolean {
   return values.indexOf(value) === index;
 }
 
@@ -316,13 +382,20 @@ function renderSubagentInvocations(
   visited: ReadonlySet<string>,
 ): LegacyWireEvent[] {
   const result: LegacyWireEvent[] = [];
-  const invocations = index.byParentCall.get(parentCallKey(parentAgentId, parentToolCallId)) ?? [];
+  const invocations =
+    index.byParentCall.get(parentCallKey(parentAgentId, parentToolCallId)) ??
+    [];
   for (const invocation of invocations) {
     const invocationKey = `${invocation.parentAgentId}\u0000${invocation.parentToolCallId}\u0000${invocation.childAgentId}\u0000${String(invocation.startedAt)}`;
     if (visited.has(invocationKey)) continue;
     const nextVisited = new Set([...visited, invocationKey]);
     result.push(
-      ...renderSubagentInvocation(index, invocation, [invocation, ...parentChain], nextVisited),
+      ...renderSubagentInvocation(
+        index,
+        invocation,
+        [invocation, ...parentChain],
+        nextVisited,
+      ),
     );
   }
   return result;
@@ -357,9 +430,13 @@ function renderSubagentInvocation(
             emit({ type: "ContentPart", payload: part });
           }
           for (const call of message.toolCalls) {
-            const toolCallId = scopedReplayToolCallId(invocation.childAgentId, call.id);
+            const toolCallId = scopedReplayToolCallId(
+              invocation.childAgentId,
+              call.id,
+            );
             const display = message.toolCallDisplays?.[call.id];
-            if (display !== undefined) toolDisplays.set(toolCallId, toLegacyDisplay(display));
+            if (display !== undefined)
+              toolDisplays.set(toolCallId, toLegacyDisplay(display));
             emit({
               type: "ToolCall",
               payload: {
@@ -407,7 +484,8 @@ function renderSubagentInvocation(
       }
       case "compaction":
         emit({ type: "CompactionBegin", payload: {} });
-        if (record.result !== undefined) emit({ type: "CompactionEnd", payload: {} });
+        if (record.result !== undefined)
+          emit({ type: "CompactionEnd", payload: {} });
         break;
       case "plan_updated":
         emit({ type: "StatusUpdate", payload: { plan_mode: record.enabled } });
@@ -455,7 +533,10 @@ function resumedStatusPayload(agent: ResumedAgentState): {
   token_usage?: TokenUsage;
 } {
   const maxContextTokens = agent.config.modelCapabilities.max_context_tokens;
-  const totalUsage = agent.usage.total ?? sumUsage(agent.usage.byModel) ?? agent.usage.currentTurn;
+  const totalUsage =
+    agent.usage.total ??
+    sumUsage(agent.usage.byModel) ??
+    agent.usage.currentTurn;
   return {
     ...(maxContextTokens > 0
       ? { context_usage: agent.context.tokenCount / maxContextTokens }
@@ -476,7 +557,8 @@ function resumedStatusPayload(agent: ResumedAgentState): {
 function sumUsage(
   byModel: ResumedAgentState["usage"]["byModel"],
 ): ResumedAgentState["usage"]["total"] {
-  if (byModel === undefined || Object.keys(byModel).length === 0) return undefined;
+  if (byModel === undefined || Object.keys(byModel).length === 0)
+    return undefined;
   return Object.values(byModel).reduce(
     (total, usage) => ({
       inputOther: total.inputOther + usage.inputOther,
@@ -499,7 +581,9 @@ function toLegacyContent(content: readonly ContentPart[]): LegacyContentPart[] {
         result.push({
           type: "think",
           think: part.think,
-          ...(part.encrypted === undefined ? {} : { encrypted: part.encrypted }),
+          ...(part.encrypted === undefined
+            ? {}
+            : { encrypted: part.encrypted }),
         });
         break;
       case "image_url":
@@ -530,17 +614,21 @@ function replayUserInput(
 ): LegacyContentPart[] {
   if (origin?.kind === "skill_activation" && origin.trigger === "user-slash") {
     const args = origin.skillArgs?.trim();
-    return [{
-      type: "text",
-      text: `/skill:${origin.skillName}${args ? ` ${args}` : ""}`,
-    }];
+    return [
+      {
+        type: "text",
+        text: `/skill:${origin.skillName}${args ? ` ${args}` : ""}`,
+      },
+    ];
   }
   if (origin?.kind === "plugin_command") {
     const args = origin.commandArgs?.trim();
-    return [{
-      type: "text",
-      text: `/${origin.pluginId}:${origin.commandName}${args ? ` ${args}` : ""}`,
-    }];
+    return [
+      {
+        type: "text",
+        text: `/${origin.pluginId}:${origin.commandName}${args ? ` ${args}` : ""}`,
+      },
+    ];
   }
   return toLegacyContent(content);
 }
@@ -553,9 +641,10 @@ function importedContextReplay(
       part.type === "text" && part.text.startsWith("<imported_context "),
   );
   if (importedPart === undefined) return undefined;
-  const match = /^<imported_context source="([^"]*)">\n([\s\S]*)\n<\/imported_context>$/.exec(
-    importedPart.text,
-  );
+  const match =
+    /^<imported_context source="([^"]*)">\n([\s\S]*)\n<\/imported_context>$/.exec(
+      importedPart.text,
+    );
   if (match === null) return undefined;
   const source = decodeXml(match[1]!);
   const importedText = match[2]!;
@@ -580,11 +669,16 @@ function decodeXml(value: string): string {
     .replaceAll("&amp;", "&");
 }
 
-function withSession<T extends LegacyWireEvent>(event: T, sessionId: string): T & { _sessionId: string } {
+function withSession<T extends LegacyWireEvent>(
+  event: T,
+  sessionId: string,
+): T & { _sessionId: string } {
   return { ...event, _sessionId: sessionId };
 }
 
-export function replayRecordTurnCount(records: readonly AgentReplayRecord[]): number {
+export function replayRecordTurnCount(
+  records: readonly AgentReplayRecord[],
+): number {
   return records.filter(
     (record) =>
       record.type === "message" &&

@@ -2,7 +2,7 @@
 // Parse raw UNIFIED diff text (git diff output) into line-by-line rows for
 // the ~/diff tab. Handles multiple files + multiple hunks per file.
 
-import type { DiffViewLine } from '../types';
+import type { DiffViewLine } from "../types";
 
 /**
  * Lines that introduce file-level metadata. They appear BEFORE the first
@@ -11,21 +11,21 @@ import type { DiffViewLine } from '../types';
  */
 function isFileHeader(line: string): boolean {
   return (
-    line.startsWith('diff --git') ||
-    line.startsWith('index ') ||
-    line.startsWith('--- ') ||
-    line.startsWith('+++ ') ||
-    line.startsWith('new file mode') ||
-    line.startsWith('deleted file mode') ||
-    line.startsWith('old mode') ||
-    line.startsWith('new mode') ||
-    line.startsWith('similarity index') ||
-    line.startsWith('dissimilarity index') ||
-    line.startsWith('rename from') ||
-    line.startsWith('rename to') ||
-    line.startsWith('copy from') ||
-    line.startsWith('copy to') ||
-    line.startsWith('Binary files')
+    line.startsWith("diff --git") ||
+    line.startsWith("index ") ||
+    line.startsWith("--- ") ||
+    line.startsWith("+++ ") ||
+    line.startsWith("new file mode") ||
+    line.startsWith("deleted file mode") ||
+    line.startsWith("old mode") ||
+    line.startsWith("new mode") ||
+    line.startsWith("similarity index") ||
+    line.startsWith("dissimilarity index") ||
+    line.startsWith("rename from") ||
+    line.startsWith("rename to") ||
+    line.startsWith("copy from") ||
+    line.startsWith("copy to") ||
+    line.startsWith("Binary files")
   );
 }
 
@@ -45,27 +45,27 @@ export function parseDiff(diff: string): DiffViewLine[] {
   let newNo = 0;
   let inHunk = false;
 
-  for (const raw of diff.split('\n')) {
+  for (const raw of diff.split("\n")) {
     // A new file's header always ends the previous file's hunk run, even if
     // we were mid-hunk (git emits no blank separator between files). Only
     // `diff --git` may end a hunk: inside a hunk, a deleted `-- comment` line
     // (SQL/Lua/Haskell) is rendered by git as `--- comment` and an added one
     // as `+++ comment`, which the other header patterns would misclassify.
-    if (raw.startsWith('diff --git')) {
+    if (raw.startsWith("diff --git")) {
       inHunk = false;
       continue;
     }
     if (!inHunk && isFileHeader(raw)) continue;
 
     // Hunk header: `@@ -a,b +c,d @@ optional section heading`
-    if (raw.startsWith('@@')) {
+    if (raw.startsWith("@@")) {
       const m = /^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/.exec(raw);
       if (m) {
         oldNo = Number.parseInt(m[1]!, 10);
         newNo = Number.parseInt(m[2]!, 10);
       }
       inHunk = true;
-      lines.push({ type: 'hunk', text: raw });
+      lines.push({ type: "hunk", text: raw });
       continue;
     }
 
@@ -74,19 +74,19 @@ export function parseDiff(diff: string): DiffViewLine[] {
     if (!inHunk) continue;
 
     // `\ No newline at end of file` — a git marker, not a content line.
-    if (raw.startsWith('\\')) continue;
+    if (raw.startsWith("\\")) continue;
 
     const marker = raw.charAt(0);
     const text = raw.slice(1);
 
-    if (marker === '+') {
-      lines.push({ type: 'add', text, newNo });
+    if (marker === "+") {
+      lines.push({ type: "add", text, newNo });
       newNo += 1;
-    } else if (marker === '-') {
-      lines.push({ type: 'del', text, oldNo });
+    } else if (marker === "-") {
+      lines.push({ type: "del", text, oldNo });
       oldNo += 1;
-    } else if (marker === ' ') {
-      lines.push({ type: 'context', text, oldNo, newNo });
+    } else if (marker === " ") {
+      lines.push({ type: "context", text, oldNo, newNo });
       oldNo += 1;
       newNo += 1;
     }

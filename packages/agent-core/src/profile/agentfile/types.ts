@@ -8,10 +8,15 @@
  * — keep the two in sync.
  */
 
-import type { AgentModelPreference } from '../types';
-import { z } from 'zod';
+import type { AgentModelPreference } from "../types";
+import { z } from "zod";
 
-export type AgentFileSource = 'plugin' | 'project' | 'user' | 'extra' | 'explicit';
+export type AgentFileSource =
+  | "plugin"
+  | "project"
+  | "user"
+  | "extra"
+  | "explicit";
 
 export interface AgentFileRoot {
   readonly path: string;
@@ -50,9 +55,9 @@ const AgentProfileSnapshotSchema = z.object({
   tools: z.array(z.string()),
   disallowedTools: z.array(z.string()).optional(),
   subagents: z.array(z.string()),
-  modelPreference: z.enum(['primary', 'secondary']).optional(),
+  modelPreference: z.enum(["primary", "secondary"]).optional(),
   prompt: z.string(),
-  source: z.enum(['plugin', 'project', 'user', 'extra', 'explicit']).optional(),
+  source: z.enum(["plugin", "project", "user", "extra", "explicit"]).optional(),
 });
 
 /**
@@ -67,4 +72,6 @@ export const AgentProfileCatalogSnapshotSchema = z.object({
   profiles: z.array(AgentProfileSnapshotSchema),
 });
 
-export type AgentProfileCatalogSnapshot = z.infer<typeof AgentProfileCatalogSnapshotSchema>;
+export type AgentProfileCatalogSnapshot = z.infer<
+  typeof AgentProfileCatalogSnapshotSchema
+>;

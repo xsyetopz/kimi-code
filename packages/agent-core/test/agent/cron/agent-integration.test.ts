@@ -3,15 +3,15 @@
  * starts a CronManager, registers the three cron tools, and that
  * `KIMI_DISABLE_CRON=1` short-circuits `CronCreate`.
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   CronCreateTool,
   type CronCreateInput,
-} from '../../../src/tools/cron/cron-create';
-import { testAgent, type AgentTestContext } from '../harness/agent';
+} from "../../../src/tools/cron/cron-create";
+import { testAgent, type AgentTestContext } from "../harness/agent";
 
-describe('Agent + Cron integration (P1.7)', () => {
+describe("Agent + Cron integration (P1.7)", () => {
   let ctx: AgentTestContext;
 
   beforeEach(() => {
@@ -22,7 +22,7 @@ describe('Agent + Cron integration (P1.7)', () => {
     // `agent.tools.data()[i].active` is true — useful for callers that
     // want to confirm the model would actually see the tool, not just
     // that we registered it.
-    ctx.configure({ tools: ['CronCreate', 'CronList', 'CronDelete'] });
+    ctx.configure({ tools: ["CronCreate", "CronList", "CronDelete"] });
   });
 
   afterEach(async () => {
@@ -30,28 +30,28 @@ describe('Agent + Cron integration (P1.7)', () => {
     vi.unstubAllEnvs();
   });
 
-  it('exposes agent.cron with its session store on construction', () => {
+  it("exposes agent.cron with its session store on construction", () => {
     expect(ctx.agent.cron).toBeDefined();
     expect(ctx.agent.cron!.store).toBeDefined();
     expect(ctx.agent.cron!.store.list()).toEqual([]);
   });
 
-  it('registers CronCreate / CronList / CronDelete in the tool manager', () => {
+  it("registers CronCreate / CronList / CronDelete in the tool manager", () => {
     const toolNames = ctx.agent.tools.data().map((info) => info.name);
-    expect(toolNames).toContain('CronCreate');
-    expect(toolNames).toContain('CronList');
-    expect(toolNames).toContain('CronDelete');
+    expect(toolNames).toContain("CronCreate");
+    expect(toolNames).toContain("CronList");
+    expect(toolNames).toContain("CronDelete");
 
     // All three came in through the builtin barrel.
-    for (const name of ['CronCreate', 'CronList', 'CronDelete'] as const) {
+    for (const name of ["CronCreate", "CronList", "CronDelete"] as const) {
       const info = ctx.agent.tools.data().find((i) => i.name === name);
-      expect(info?.source).toBe('builtin');
+      expect(info?.source).toBe("builtin");
       expect(info?.active).toBe(true);
     }
   });
 
-  it('KIMI_DISABLE_CRON=1 short-circuits CronCreate with a disabled error', () => {
-    vi.stubEnv('KIMI_DISABLE_CRON', '1');
+  it("KIMI_DISABLE_CRON=1 short-circuits CronCreate with a disabled error", () => {
+    vi.stubEnv("KIMI_DISABLE_CRON", "1");
 
     // We construct a fresh CronCreateTool against the agent's cron
     // manager rather than driving a full tool-dispatch loop — the
@@ -60,8 +60,8 @@ describe('Agent + Cron integration (P1.7)', () => {
     // dispatch surface changes around it (P1.8 onwards).
     const tool = new CronCreateTool(ctx.agent.cron!);
     const args: CronCreateInput = {
-      cron: '*/5 * * * *',
-      prompt: 'x',
+      cron: "*/5 * * * *",
+      prompt: "x",
       recurring: true,
     };
     const result = tool.resolveExecution(args);
@@ -70,9 +70,9 @@ describe('Agent + Cron integration (P1.7)', () => {
     // up-front the shape is `{ isError: true, output: string }` with no
     // `execute` callback (see CronCreate's killswitch branch).
     expect(result).toMatchObject({ isError: true });
-    expect('output' in result ? result.output : '').toMatch(/disabled/i);
-    expect('execute' in result ? typeof result.execute : 'no-execute').toBe(
-      'no-execute',
+    expect("output" in result ? result.output : "").toMatch(/disabled/i);
+    expect("execute" in result ? typeof result.execute : "no-execute").toBe(
+      "no-execute",
     );
 
     // And no task slipped into the store.

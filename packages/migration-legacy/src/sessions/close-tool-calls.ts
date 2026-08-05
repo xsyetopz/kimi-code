@@ -1,6 +1,7 @@
-import type { NormalizedMessage } from './translator.js';
+import type { NormalizedMessage } from "./translator.js";
 
-const PLACEHOLDER_TEXT = '[tool result unavailable — session imported from kimi-cli]';
+const PLACEHOLDER_TEXT =
+  "[tool result unavailable — session imported from kimi-cli]";
 
 /**
  * Close dangling tool calls so no messages are dropped on resume.
@@ -22,7 +23,11 @@ export function closeDanglingToolCalls(
 ): NormalizedMessage[] {
   const satisfied = new Set<string>();
   for (const msg of messages) {
-    if (msg.role === 'tool' && msg.toolCallId !== undefined && msg.toolCallId !== '') {
+    if (
+      msg.role === "tool" &&
+      msg.toolCallId !== undefined &&
+      msg.toolCallId !== ""
+    ) {
       satisfied.add(msg.toolCallId);
     }
   }
@@ -30,13 +35,13 @@ export function closeDanglingToolCalls(
   const out: NormalizedMessage[] = [];
   for (const msg of messages) {
     out.push(msg);
-    if (msg.role !== 'assistant') continue;
+    if (msg.role !== "assistant") continue;
     for (const call of msg.toolCalls) {
-      if (call.id === '' || satisfied.has(call.id)) continue;
+      if (call.id === "" || satisfied.has(call.id)) continue;
       out.push({
-        role: 'tool',
+        role: "tool",
         toolCallId: call.id,
-        content: [{ type: 'text', text: PLACEHOLDER_TEXT }],
+        content: [{ type: "text", text: PLACEHOLDER_TEXT }],
         toolCalls: [],
       });
       // Guard against an assistant message that lists the same call id twice.

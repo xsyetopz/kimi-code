@@ -1,8 +1,8 @@
-import { readFile } from 'node:fs/promises';
-import path from 'node:path';
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 
-import { parseFrontmatter } from '../skill/parser';
-import type { PluginCommandDef } from './types';
+import { parseFrontmatter } from "../skill/parser";
+import type { PluginCommandDef } from "./types";
 
 export function parseCommandText(input: {
   readonly text: string;
@@ -14,11 +14,13 @@ export function parseCommandText(input: {
   const parsed = parseFrontmatter(text);
   const frontmatter = isRecord(parsed.data) ? parsed.data : {};
 
-  const baseName = input.fallbackName ?? path.basename(commandPath).replace(/\.md$/i, '');
-  const name = nonEmptyString(frontmatter['name']) ?? baseName;
+  const baseName =
+    input.fallbackName ?? path.basename(commandPath).replace(/\.md$/i, "");
+  const name = nonEmptyString(frontmatter["name"]) ?? baseName;
 
   const body = parsed.body.trim();
-  const description = nonEmptyString(frontmatter['description']) ?? descriptionFromBody(body);
+  const description =
+    nonEmptyString(frontmatter["description"]) ?? descriptionFromBody(body);
 
   return {
     pluginId,
@@ -35,7 +37,7 @@ export async function loadPluginCommand(input: {
   readonly fallbackName?: string;
 }): Promise<PluginCommandDef | undefined> {
   try {
-    const text = await readFile(input.commandPath, 'utf8');
+    const text = await readFile(input.commandPath, "utf8");
     return parseCommandText({
       text,
       commandPath: input.commandPath,
@@ -53,15 +55,17 @@ export async function loadPluginCommand(input: {
  * is silently dropped.
  */
 export function expandCommandArguments(body: string, args: string): string {
-  const replaced = body.replaceAll('$ARGUMENTS', args);
-  if (!body.includes('$ARGUMENTS') && args.length > 0) {
+  const replaced = body.replaceAll("$ARGUMENTS", args);
+  if (!body.includes("$ARGUMENTS") && args.length > 0) {
     return `${replaced}\n\nARGUMENTS: ${args}`;
   }
   return replaced;
 }
 
 function nonEmptyString(value: unknown): string | undefined {
-  return typeof value === 'string' && value.trim() !== '' ? value.trim() : undefined;
+  return typeof value === "string" && value.trim() !== ""
+    ? value.trim()
+    : undefined;
 }
 
 function descriptionFromBody(body: string): string {
@@ -69,10 +73,10 @@ function descriptionFromBody(body: string): string {
     .split(/\r?\n/)
     .map((line) => line.trim())
     .find((line) => line.length > 0);
-  if (firstLine === undefined) return 'No description provided.';
+  if (firstLine === undefined) return "No description provided.";
   return firstLine.length > 240 ? `${firstLine.slice(0, 239)}…` : firstLine;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

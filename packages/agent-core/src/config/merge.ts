@@ -1,13 +1,16 @@
-import { ErrorCodes, KimiError } from '#/errors';
+import { ErrorCodes, KimiError } from "#/errors";
 import {
   KimiConfigPatchSchema,
   formatConfigValidationError,
   type KimiConfig,
   type KimiConfigPatch,
   validateConfig,
-} from '#/config/schema';
+} from "#/config/schema";
 
-export function mergeConfigPatch(config: KimiConfig, patch: KimiConfigPatch): KimiConfig {
+export function mergeConfigPatch(
+  config: KimiConfig,
+  patch: KimiConfigPatch,
+): KimiConfig {
   const base = validateConfig(config);
   const parsedPatch = parsePatch(patch);
   const merged = deepMerge(base, parsedPatch);
@@ -16,11 +19,17 @@ export function mergeConfigPatch(config: KimiConfig, patch: KimiConfigPatch): Ki
 
 function parsePatch(patch: KimiConfigPatch): KimiConfigPatch {
   try {
-    return stripUndefinedDeep(KimiConfigPatchSchema.parse(patch)) as KimiConfigPatch;
+    return stripUndefinedDeep(
+      KimiConfigPatchSchema.parse(patch),
+    ) as KimiConfigPatch;
   } catch (error) {
-    throw new KimiError(ErrorCodes.CONFIG_INVALID, `Invalid configuration patch: ${formatConfigValidationError(error)}`, {
-      cause: error,
-    });
+    throw new KimiError(
+      ErrorCodes.CONFIG_INVALID,
+      `Invalid configuration patch: ${formatConfigValidationError(error)}`,
+      {
+        cause: error,
+      },
+    );
   }
 }
 
@@ -58,5 +67,5 @@ function stripUndefinedDeep(value: unknown): unknown {
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

@@ -127,17 +127,15 @@ function parseFlakeNix() {
   const content = readFileSync(FLAKE_NIX, "utf8");
 
   function extractArray(label) {
-    const regex = new RegExp(
-      `${label}\\s*=\\s*\\[(.*?)\\]`,
-      "s"
-    );
+    const regex = new RegExp(`${label}\\s*=\\s*\\[(.*?)\\]`, "s");
     const match = content.match(regex);
     if (!match) {
       throw new Error(`Could not find ${label} in flake.nix`);
     }
     const items = [];
     // workspaceNames uses quoted strings, workspacePaths uses bare Nix paths
-    const itemRegex = label === "workspacePaths" ? /\.\/[^\s\]]+/g : /"([^"]+)"/g;
+    const itemRegex =
+      label === "workspacePaths" ? /\.\/[^\s\]]+/g : /"([^"]+)"/g;
     let m;
     if (label === "workspacePaths") {
       while ((m = itemRegex.exec(match[1])) !== null) {
@@ -201,7 +199,7 @@ function main() {
 
     if (missingNames.length > 0) {
       console.error(
-        "The following workspace packages are missing from flake.nix workspaceNames:"
+        "The following workspace packages are missing from flake.nix workspaceNames:",
       );
       for (const n of missingNames) {
         console.error(`  - ${n}`);
@@ -211,7 +209,7 @@ function main() {
 
     if (missingPaths.length > 0) {
       console.error(
-        "The following workspace paths are missing from flake.nix workspacePaths:"
+        "The following workspace paths are missing from flake.nix workspacePaths:",
       );
       for (const { name, path } of missingPaths) {
         console.error(`  - ${path}  (${name})`);
@@ -220,12 +218,15 @@ function main() {
     }
 
     console.error(
-      "Please add the missing entries to both workspaceNames and workspacePaths in flake.nix."
+      "Please add the missing entries to both workspaceNames and workspacePaths in flake.nix.",
     );
     console.error(
-      `\nExpected workspaceNames (${flake.names.length + missingNames.length} total):`
+      `\nExpected workspaceNames (${flake.names.length + missingNames.length} total):`,
     );
-    const expectedNames = new Set([...flake.names, ...missingNames.map((m) => m)]);
+    const expectedNames = new Set([
+      ...flake.names,
+      ...missingNames.map((m) => m),
+    ]);
     for (const n of [...expectedNames].sort((a, b) => a.localeCompare(b))) {
       console.error(`  ${n}`);
     }
@@ -234,7 +235,7 @@ function main() {
   }
 
   console.log(
-    `✅ All ${closureNames.length} recursive workspace dependencies are present in flake.nix.`
+    `✅ All ${closureNames.length} recursive workspace dependencies are present in flake.nix.`,
   );
 }
 

@@ -1,6 +1,9 @@
-import type { Agent } from '..';
-import type { AgentReplayRecord, AgentReplayRecordPayload } from '../../rpc/resumed';
-import type { ContextMessage } from '../context';
+import type { Agent } from "..";
+import type {
+  AgentReplayRecord,
+  AgentReplayRecordPayload,
+} from "../../rpc/resumed";
+import type { ContextMessage } from "../context";
 
 export interface ReplayRangeOptions {
   readonly start?: number;
@@ -11,7 +14,10 @@ export interface ReplayBuilderOptions {
   readonly range?: ReplayRangeOptions;
 }
 
-const UNDO_BOUNDARY_RECORD_TYPES = new Set(['context.clear', 'context.apply_compaction']);
+const UNDO_BOUNDARY_RECORD_TYPES = new Set([
+  "context.clear",
+  "context.apply_compaction",
+]);
 
 export class ReplayBuilder {
   postRestoring = false;
@@ -26,7 +32,11 @@ export class ReplayBuilder {
   ) {}
 
   push(record: AgentReplayRecordPayload): void {
-    if (this.captureLiveRecords || this.agent.records.restoring || this.postRestoring) {
+    if (
+      this.captureLiveRecords ||
+      this.agent.records.restoring ||
+      this.postRestoring
+    ) {
       if (this.frozen) return;
       const stamped: AgentReplayRecord = {
         ...record,
@@ -36,7 +46,7 @@ export class ReplayBuilder {
     }
   }
 
-  patchLast<T extends AgentReplayRecord['type']>(
+  patchLast<T extends AgentReplayRecord["type"]>(
     type: T,
     patch: Partial<Extract<AgentReplayRecord, { type: T }>>,
   ): void {
@@ -96,7 +106,7 @@ export class ReplayBuilder {
   ): void {
     for (let i = records.length - 1; i >= 0; i--) {
       const record = records[i]!;
-      if (record.type === 'message' && removedMessages.has(record.message)) {
+      if (record.type === "message" && removedMessages.has(record.message)) {
         records.splice(i, 1);
       }
     }

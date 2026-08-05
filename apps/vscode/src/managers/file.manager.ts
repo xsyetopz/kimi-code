@@ -10,7 +10,11 @@ import {
   resolveWorkspacePath,
 } from "../utils/workspace-path";
 
-export type BroadcastFn = (event: string, data: unknown, webviewId?: string) => void;
+export type BroadcastFn = (
+  event: string,
+  data: unknown,
+  webviewId?: string,
+) => void;
 
 const IGNORE_DIRS = new Set([
   "node_modules",
@@ -43,7 +47,15 @@ const IGNORE_DIRS = new Set([
   ".turbo",
 ]);
 
-const IGNORE_EXT = new Set([".lock", ".log", ".map", ".min.js", ".min.css", ".chunk.js", ".chunk.css"]);
+const IGNORE_EXT = new Set([
+  ".lock",
+  ".log",
+  ".map",
+  ".min.js",
+  ".min.css",
+  ".chunk.js",
+  ".chunk.css",
+]);
 
 function shouldIgnore(name: string): boolean {
   if (IGNORE_DIRS.has(name)) {
@@ -148,7 +160,10 @@ export class FileManager {
     this.broadcast(Events.FileChangesUpdated, changes, webviewId);
   }
 
-  async searchFiles(workDirUri: vscode.Uri, query?: string): Promise<ProjectFile[]> {
+  async searchFiles(
+    workDirUri: vscode.Uri,
+    query?: string,
+  ): Promise<ProjectFile[]> {
     query = query ? buildCaseInsensitiveGlobLiteral(query) : "";
     const pattern = query ? `**/*${query}*` : "**/*";
     const files = await vscode.workspace.findFiles(
@@ -159,7 +174,11 @@ export class FileManager {
     const results = await Promise.all(
       files.map(async (uri): Promise<ProjectFile | undefined> => {
         const relativePath = relativeWorkspacePath(workDirUri, uri);
-        if (relativePath === undefined || !(await isWorkspacePathContained(workDirUri, uri))) return undefined;
+        if (
+          relativePath === undefined ||
+          !(await isWorkspacePathContained(workDirUri, uri))
+        )
+          return undefined;
         return {
           path: relativePath,
           name: path.posix.basename(relativePath),
@@ -167,20 +186,37 @@ export class FileManager {
         };
       }),
     );
-    return results.filter((result): result is ProjectFile => result !== undefined);
+    return results.filter(
+      (result): result is ProjectFile => result !== undefined,
+    );
   }
 
-  async listDirectory(workDirUri: vscode.Uri, directory: string): Promise<ProjectFile[]> {
-    const requested = resolveWorkspacePath(workDirUri, directory, { allowRoot: true });
-    if (requested === undefined || !(await isWorkspacePathContained(workDirUri, requested.uri))) return [];
+  async listDirectory(
+    workDirUri: vscode.Uri,
+    directory: string,
+  ): Promise<ProjectFile[]> {
+    const requested = resolveWorkspacePath(workDirUri, directory, {
+      allowRoot: true,
+    });
+    if (
+      requested === undefined ||
+      !(await isWorkspacePathContained(workDirUri, requested.uri))
+    )
+      return [];
     try {
       const entries = await vscode.workspace.fs.readDirectory(requested.uri);
       const resolvedEntries = await Promise.all(
         entries.map(async ([name, type]): Promise<ProjectFile | undefined> => {
           if (shouldIgnore(name)) return undefined;
-          const relativePath = requested.relativePath ? `${requested.relativePath}/${name}` : name;
+          const relativePath = requested.relativePath
+            ? `${requested.relativePath}/${name}`
+            : name;
           const entry = resolveWorkspacePath(workDirUri, relativePath);
-          if (entry === undefined || !(await isWorkspacePathContained(workDirUri, entry.uri))) return undefined;
+          if (
+            entry === undefined ||
+            !(await isWorkspacePathContained(workDirUri, entry.uri))
+          )
+            return undefined;
           return {
             path: entry.relativePath,
             name,
@@ -191,7 +227,11 @@ export class FileManager {
       return resolvedEntries
         .filter((entry): entry is ProjectFile => entry !== undefined)
         .toSorted((a, b) =>
-          a.isDirectory === b.isDirectory ? a.name.localeCompare(b.name) : a.isDirectory ? -1 : 1,
+          a.isDirectory === b.isDirectory
+            ? a.name.localeCompare(b.name)
+            : a.isDirectory
+              ? -1
+              : 1,
         );
     } catch {
       return [];

@@ -26,24 +26,32 @@
 // per-shard snapshot merged globally, so entries from different shards may
 // reflect different points in time.
 
-import fs from 'node:fs/promises';
-import path from 'node:path';
-import type { BatchInputOp, IndexDef, IndexInfo, MiniDb, QueryOptions, ScanEntry, SetOptions } from '../index.js';
-import type { CompoundIndexDef, CompoundIndexInfo } from '../compound-index.js';
-import { LockError } from '../lockfile.js';
-import { getPath } from '../query.js';
-import { Coordinator } from './coordinator.js';
-import { ShardLockPool } from './lock-pool.js';
-import { Router } from './router.js';
-import { Topology } from './topology.js';
+import fs from "node:fs/promises";
+import path from "node:path";
+import type {
+  BatchInputOp,
+  IndexDef,
+  IndexInfo,
+  MiniDb,
+  QueryOptions,
+  ScanEntry,
+  SetOptions,
+} from "../index.js";
+import type { CompoundIndexDef, CompoundIndexInfo } from "../compound-index.js";
+import { LockError } from "../lockfile.js";
+import { getPath } from "../query.js";
+import { Coordinator } from "./coordinator.js";
+import { ShardLockPool } from "./lock-pool.js";
+import { Router } from "./router.js";
+import { Topology } from "./topology.js";
 import type {
   ClusterIndexRegistry,
   ClusterOpenOptions,
   ClusterStats,
   CompactResult,
   ScanOptions,
-} from './types.js';
-import { CLUSTER_INDEX_FILE, sleep } from './utils.js';
+} from "./types.js";
+import { CLUSTER_INDEX_FILE, sleep } from "./utils.js";
 
 export type {
   ClusterIndexRegistry,
@@ -53,17 +61,17 @@ export type {
   CompactResult,
   CrossShardMode,
   ScanOptions,
-} from './types.js';
-export { Router } from './router.js';
-export { Topology } from './topology.js';
-export { LockError } from '../lockfile.js';
-export type { ShardOpenOptions } from './shard.js';
-export { shardDirName, shardFor, stableHash32 } from './utils.js';
+} from "./types.js";
+export { Router } from "./router.js";
+export { Topology } from "./topology.js";
+export { LockError } from "../lockfile.js";
+export type { ShardOpenOptions } from "./shard.js";
+export { shardDirName, shardFor, stableHash32 } from "./utils.js";
 
 /** Compare ScanEntry keys by UTF-8 byte order, matching the per-shard store
  *  ordering so a globally sorted merge is consistent with local scans. */
 function compareEntries<V>(a: ScanEntry<V>, b: ScanEntry<V>): number {
-  return Buffer.compare(Buffer.from(a.key, 'utf8'), Buffer.from(b.key, 'utf8'));
+  return Buffer.compare(Buffer.from(a.key, "utf8"), Buffer.from(b.key, "utf8"));
 }
 
 export class ClusterDb<V = unknown> {
@@ -78,10 +86,15 @@ export class ClusterDb<V = unknown> {
     readonly readOnly: boolean,
   ) {}
 
-  static async open<V = unknown>(opts: ClusterOpenOptions): Promise<ClusterDb<V>> {
-    if (!opts || !opts.dir) throw new TypeError('ClusterDb.open: opts.dir is required');
-    if ((opts.crossShard ?? 'best-effort') === '2pc') {
-      throw new Error("crossShard: '2pc' is reserved for a future release and is not implemented yet");
+  static async open<V = unknown>(
+    opts: ClusterOpenOptions,
+  ): Promise<ClusterDb<V>> {
+    if (!opts || !opts.dir)
+      throw new TypeError("ClusterDb.open: opts.dir is required");
+    if ((opts.crossShard ?? "best-effort") === "2pc") {
+      throw new Error(
+        "crossShard: '2pc' is reserved for a future release and is not implemented yet",
+      );
     }
     const topology = await Topology.open(opts.dir, opts);
     await topology.ensureShardDirs();
@@ -115,31 +128,44 @@ export class ClusterDb<V = unknown> {
       applyDefs: async (db) => {
         const reg = await ClusterDb.loadRegistry(indexPath);
         for (const { name, def } of reg.indexes) {
-          if (!db.listIndexes().some((i) => i.name === name)) await db.createIndex(name, def);
+          if (!db.listIndexes().some((i) => i.name === name))
+            await db.createIndex(name, def);
         }
         for (const { name, def } of reg.compoundIndexes) {
-          if (!db.listCompoundIndexes().some((i) => i.name === name)) await db.createCompoundIndex(name, def);
+          if (!db.listCompoundIndexes().some((i) => i.name === name))
+            await db.createCompoundIndex(name, def);
         }
         for (const { name, fields } of reg.textIndexes) {
           try {
             await db.createTextIndex(name, { fields: fields ?? undefined });
           } catch (e) {
             // Idempotent apply: the def may already exist on this shard.
-            if (!(e instanceof Error) || !e.message.includes('already exists')) throw e;
+            if (!(e instanceof Error) || !e.message.includes("already exists"))
+              throw e;
           }
         }
       },
     });
     const coordinator = new Coordinator<V>(
       router,
-      (shardId, fn) => pool.withWriter(shardId, router.shardDir(shardId), (db) => fn(db as MiniDb<V>)),
-      opts.crossShard ?? 'best-effort',
+      (shardId, fn) =>
+        pool.withWriter(shardId, router.shardDir(shardId), (db) =>
+          fn(db as MiniDb<V>),
+        ),
+      opts.crossShard ?? "best-effort",
     );
-    return new ClusterDb<V>(topology, router, pool, coordinator, indexPath, readOnly);
+    return new ClusterDb<V>(
+      topology,
+      router,
+      pool,
+      coordinator,
+      indexPath,
+      readOnly,
+    );
   }
 
   private ensureOpen(): void {
-    if (this.closed) throw new Error('ClusterDb is closed');
+    if (this.closed) throw new Error("ClusterDb is closed");
   }
 
   get dir(): string {
@@ -155,12 +181,22 @@ export class ClusterDb<V = unknown> {
     return this.router.shardFor(key);
   }
 
-  private writer<T>(shardId: number, fn: (db: MiniDb<V>) => T | Promise<T>): Promise<T> {
-    return this.pool.withWriter(shardId, this.router.shardDir(shardId), (db) => fn(db as MiniDb<V>));
+  private writer<T>(
+    shardId: number,
+    fn: (db: MiniDb<V>) => T | Promise<T>,
+  ): Promise<T> {
+    return this.pool.withWriter(shardId, this.router.shardDir(shardId), (db) =>
+      fn(db as MiniDb<V>),
+    );
   }
 
-  private reader<T>(shardId: number, fn: (db: MiniDb<V>) => T | Promise<T>): Promise<T> {
-    return this.pool.withReader(shardId, this.router.shardDir(shardId), (db) => fn(db as MiniDb<V>));
+  private reader<T>(
+    shardId: number,
+    fn: (db: MiniDb<V>) => T | Promise<T>,
+  ): Promise<T> {
+    return this.pool.withReader(shardId, this.router.shardDir(shardId), (db) =>
+      fn(db as MiniDb<V>),
+    );
   }
 
   // ---- single-key ops -------------------------------------------------------
@@ -172,7 +208,9 @@ export class ClusterDb<V = unknown> {
 
   async set(key: string, value: V, opts?: SetOptions): Promise<void> {
     this.ensureOpen();
-    await this.writer(this.router.shardFor(key), (db) => db.set(key, value, opts));
+    await this.writer(this.router.shardFor(key), (db) =>
+      db.set(key, value, opts),
+    );
   }
 
   async del(key: string): Promise<boolean> {
@@ -193,7 +231,9 @@ export class ClusterDb<V = unknown> {
 
   async expire(key: string, ttlMs: number): Promise<boolean> {
     this.ensureOpen();
-    return this.writer(this.router.shardFor(key), (db) => db.expire(key, ttlMs));
+    return this.writer(this.router.shardFor(key), (db) =>
+      db.expire(key, ttlMs),
+    );
   }
 
   // ---- multi-key ops --------------------------------------------------------
@@ -244,7 +284,13 @@ export class ClusterDb<V = unknown> {
     // A reverse scan must see the tail per shard, so per-shard limits only
     // apply to forward scans; slicing happens after the global merge either way.
     const perShardLimit = opts.reverse ? Infinity : (opts.limit ?? Infinity);
-    const range = { gte: opts.gte, gt: opts.gt, lte: opts.lte, lt: opts.lt, count: perShardLimit };
+    const range = {
+      gte: opts.gte,
+      gt: opts.gt,
+      lte: opts.lte,
+      lt: opts.lt,
+      count: perShardLimit,
+    };
     const usePrefix = opts.prefix !== undefined;
     const all: ScanEntry<V>[] = [];
     for (const id of this.router.shardIds()) {
@@ -278,7 +324,9 @@ export class ClusterDb<V = unknown> {
     const needed = skip + limit;
     const all: ScanEntry<V>[] = [];
     for (const id of this.router.shardIds()) {
-      const rows = await this.reader(id, (db) => db.query({ ...q, skip: 0, limit: needed }));
+      const rows = await this.reader(id, (db) =>
+        db.query({ ...q, skip: 0, limit: needed }),
+      );
       for (const r of rows) all.push(r);
     }
     if (q.sort) {
@@ -301,17 +349,29 @@ export class ClusterDb<V = unknown> {
 
   // ---- secondary indexes ------------------------------------------------------
 
-  private static async loadRegistry(file: string): Promise<ClusterIndexRegistry> {
+  private static async loadRegistry(
+    file: string,
+  ): Promise<ClusterIndexRegistry> {
     try {
-      const raw = JSON.parse(await fs.readFile(file, 'utf8')) as Partial<ClusterIndexRegistry>;
-      return { indexes: raw.indexes ?? [], compoundIndexes: raw.compoundIndexes ?? [], textIndexes: raw.textIndexes ?? [] };
+      const raw = JSON.parse(
+        await fs.readFile(file, "utf8"),
+      ) as Partial<ClusterIndexRegistry>;
+      return {
+        indexes: raw.indexes ?? [],
+        compoundIndexes: raw.compoundIndexes ?? [],
+        textIndexes: raw.textIndexes ?? [],
+      };
     } catch (e) {
-      if ((e as NodeJS.ErrnoException).code === 'ENOENT') return { indexes: [], compoundIndexes: [], textIndexes: [] };
+      if ((e as NodeJS.ErrnoException).code === "ENOENT")
+        return { indexes: [], compoundIndexes: [], textIndexes: [] };
       throw e;
     }
   }
 
-  private static async saveRegistry(file: string, reg: ClusterIndexRegistry): Promise<void> {
+  private static async saveRegistry(
+    file: string,
+    reg: ClusterIndexRegistry,
+  ): Promise<void> {
     const tmp = `${file}.tmp-${process.pid}`;
     await fs.writeFile(tmp, JSON.stringify(reg, null, 2));
     await fs.rename(tmp, file);
@@ -323,7 +383,7 @@ export class ClusterDb<V = unknown> {
   private static sameIndexDef(a: IndexDef, b: IndexDef): boolean {
     return (
       a.field === b.field &&
-      (a.type ?? 'equality') === (b.type ?? 'equality') &&
+      (a.type ?? "equality") === (b.type ?? "equality") &&
       !!a.unique === !!b.unique &&
       (a.sparse ?? true) === (b.sparse ?? true)
     );
@@ -335,7 +395,10 @@ export class ClusterDb<V = unknown> {
    *  interleaving their load/save/verify steps. */
   private static readonly registryLocks = new Map<string, Promise<void>>();
 
-  private static async withRegistryLock<T>(file: string, fn: () => Promise<T>): Promise<T> {
+  private static async withRegistryLock<T>(
+    file: string,
+    fn: () => Promise<T>,
+  ): Promise<T> {
     const prev = ClusterDb.registryLocks.get(file) ?? Promise.resolve();
     let release!: () => void;
     const current = new Promise<void>((resolve) => {
@@ -348,7 +411,8 @@ export class ClusterDb<V = unknown> {
       return await fn();
     } finally {
       release();
-      if (ClusterDb.registryLocks.get(file) === tail) ClusterDb.registryLocks.delete(file);
+      if (ClusterDb.registryLocks.get(file) === tail)
+        ClusterDb.registryLocks.delete(file);
     }
   }
 
@@ -360,24 +424,32 @@ export class ClusterDb<V = unknown> {
    *  re-read still equals what was published. A concurrent rename from
    *  another process fails that check, so the attempt is retried with
    *  jittered backoff. */
-  private async mutateRegistry(mutate: (reg: ClusterIndexRegistry) => boolean): Promise<void> {
+  private async mutateRegistry(
+    mutate: (reg: ClusterIndexRegistry) => boolean,
+  ): Promise<void> {
     for (let attempt = 0; ; attempt++) {
-      const done = await ClusterDb.withRegistryLock(this.indexPath, async () => {
-        const reg = await ClusterDb.loadRegistry(this.indexPath);
-        if (!mutate(reg)) return true; // The effect is already published.
-        const published = JSON.stringify(reg);
-        await ClusterDb.saveRegistry(this.indexPath, reg);
-        const reread = await ClusterDb.loadRegistry(this.indexPath);
-        return JSON.stringify(reread) === published;
-      });
+      const done = await ClusterDb.withRegistryLock(
+        this.indexPath,
+        async () => {
+          const reg = await ClusterDb.loadRegistry(this.indexPath);
+          if (!mutate(reg)) return true; // The effect is already published.
+          const published = JSON.stringify(reg);
+          await ClusterDb.saveRegistry(this.indexPath, reg);
+          const reread = await ClusterDb.loadRegistry(this.indexPath);
+          return JSON.stringify(reread) === published;
+        },
+      );
       if (done) return;
-      if (attempt >= 19) throw new Error('cluster index registry update keeps losing write races; retry the operation');
+      if (attempt >= 19)
+        throw new Error(
+          "cluster index registry update keeps losing write races; retry the operation",
+        );
       await sleep(10 + Math.floor(Math.random() * 41));
     }
   }
 
   private requireJsonCodec(what: string): void {
-    if (this.topology.meta.valueCodec !== 'json') {
+    if (this.topology.meta.valueCodec !== "json") {
       throw new Error(`${what} require valueCodec: "json"`);
     }
   }
@@ -386,7 +458,9 @@ export class ClusterDb<V = unknown> {
    *  management needs this so definitions stay consistent cluster-wide; it
    *  waits (up to lockAcquireTimeoutMs per shard) for shards held by other
    *  processes and throws LockError when they cannot be acquired in time. */
-  private async forEachShardWriter(fn: (db: MiniDb<V>, shardId: number) => void | Promise<void>): Promise<void> {
+  private async forEachShardWriter(
+    fn: (db: MiniDb<V>, shardId: number) => void | Promise<void>,
+  ): Promise<void> {
     for (const id of this.router.shardIds()) {
       await this.writer(id, (db) => fn(db, id));
     }
@@ -395,7 +469,10 @@ export class ClusterDb<V = unknown> {
   /** Best-effort cleanup after a failed index fan-out: run fn on the shards
    *  the fan-out had completed on, swallowing errors (a shard that cannot be
    *  re-acquired is left as-is). */
-  private async rollbackShards(shardIds: number[], fn: (db: MiniDb<V>) => void | Promise<void>): Promise<void> {
+  private async rollbackShards(
+    shardIds: number[],
+    fn: (db: MiniDb<V>) => void | Promise<void>,
+  ): Promise<void> {
     for (const id of shardIds) {
       try {
         await this.writer(id, fn);
@@ -410,9 +487,10 @@ export class ClusterDb<V = unknown> {
    *  by future shard opens via the registry. */
   async createIndex(name: string, def: IndexDef): Promise<void> {
     this.ensureOpen();
-    this.requireJsonCodec('secondary indexes');
+    this.requireJsonCodec("secondary indexes");
     const reg = await ClusterDb.loadRegistry(this.indexPath);
-    if (reg.indexes.some((i) => i.name === name)) throw new Error(`index "${name}" already exists`);
+    if (reg.indexes.some((i) => i.name === name))
+      throw new Error(`index "${name}" already exists`);
     const createdOn: number[] = [];
     try {
       await this.forEachShardWriter(async (db, shardId) => {
@@ -447,7 +525,8 @@ export class ClusterDb<V = unknown> {
     const reg = await ClusterDb.loadRegistry(this.indexPath);
     const existed = reg.indexes.some((i) => i.name === name);
     await this.forEachShardWriter(async (db) => {
-      if (db.listIndexes().some((i) => i.name === name)) await db.dropIndex(name);
+      if (db.listIndexes().some((i) => i.name === name))
+        await db.dropIndex(name);
     });
     if (!existed) return false;
     await this.mutateRegistry((current) => {
@@ -465,43 +544,67 @@ export class ClusterDb<V = unknown> {
     return reg.indexes.map(({ name, def }) => ({
       name,
       field: def.field,
-      type: def.type ?? 'equality',
+      type: def.type ?? "equality",
       unique: !!def.unique,
       sparse: !!def.sparse,
     }));
   }
 
-  async findEq(name: string, value: unknown): Promise<{ key: string; value: V | undefined }[]> {
+  async findEq(
+    name: string,
+    value: unknown,
+  ): Promise<{ key: string; value: V | undefined }[]> {
     this.ensureOpen();
     await this.requireIndex(name);
     const out: { key: string; value: V | undefined }[] = [];
     for (const id of this.router.shardIds()) {
       const rows = await this.reader(id, (db) =>
-        db.listIndexes().some((i) => i.name === name) ? db.findEq(name, value) : [],
+        db.listIndexes().some((i) => i.name === name)
+          ? db.findEq(name, value)
+          : [],
       );
       out.push(...rows);
     }
-    out.sort((a, b) => compareEntries({ key: a.key, value: a.value }, { key: b.key, value: b.value }));
+    out.sort((a, b) =>
+      compareEntries(
+        { key: a.key, value: a.value },
+        { key: b.key, value: b.value },
+      ),
+    );
     return out;
   }
 
   async findRange(
     name: string,
-    opts: Parameters<MiniDb<V>['findRange']>[1],
+    opts: Parameters<MiniDb<V>["findRange"]>[1],
   ): Promise<{ key: string; value: V | undefined; field: number }[]> {
     this.ensureOpen();
     await this.requireIndex(name);
     // Only the numeric bounds go to the shards; offset/count/reverse must
     // apply to the globally merged result, not per shard.
-    const bounds = { min: opts?.min, max: opts?.max, minExclusive: opts?.minExclusive, maxExclusive: opts?.maxExclusive };
+    const bounds = {
+      min: opts?.min,
+      max: opts?.max,
+      minExclusive: opts?.minExclusive,
+      maxExclusive: opts?.maxExclusive,
+    };
     const out: { key: string; value: V | undefined; field: number }[] = [];
     for (const id of this.router.shardIds()) {
       const rows = await this.reader(id, (db) =>
-        db.listIndexes().some((i) => i.name === name) ? db.findRange(name, bounds) : [],
+        db.listIndexes().some((i) => i.name === name)
+          ? db.findRange(name, bounds)
+          : [],
       );
       out.push(...rows);
     }
-    out.sort((a, b) => a.field - b.field || compareEntries({ key: a.key, value: a.value }, { key: b.key, value: b.value }));
+    out.sort(
+      (a, b) =>
+        a.field - b.field ||
+        compareEntries(
+          { key: a.key, value: a.value },
+          { key: b.key, value: b.value },
+        ),
+    );
     if (opts?.reverse) out.reverse();
     const offset = opts?.offset ?? 0;
     const sliced = offset > 0 ? out.slice(offset) : out;
@@ -510,24 +613,36 @@ export class ClusterDb<V = unknown> {
 
   private async requireIndex(name: string): Promise<void> {
     const reg = await ClusterDb.loadRegistry(this.indexPath);
-    if (!reg.indexes.some((i) => i.name === name)) throw new Error(`no such index: ${name}`);
+    if (!reg.indexes.some((i) => i.name === name))
+      throw new Error(`no such index: ${name}`);
   }
 
   // ---- compound indexes (groupBy + orderBy) ------------------------------------
 
-  private static sameCompoundIndexDef(a: CompoundIndexDef, b: CompoundIndexDef): boolean {
-    return a.groupBy === b.groupBy && a.orderBy === b.orderBy && (a.orderType ?? 'number') === (b.orderType ?? 'number');
+  private static sameCompoundIndexDef(
+    a: CompoundIndexDef,
+    b: CompoundIndexDef,
+  ): boolean {
+    return (
+      a.groupBy === b.groupBy &&
+      a.orderBy === b.orderBy &&
+      (a.orderType ?? "number") === (b.orderType ?? "number")
+    );
   }
 
   /** Create a compound index on every shard and record it in the cluster
    *  registry, with the same fan-out / rollback / catch-up model as
    *  createIndex. Definition management only: a merged compoundRange query
    *  is a follow-up for when a consumer needs one. */
-  async createCompoundIndex(name: string, def: CompoundIndexDef): Promise<void> {
+  async createCompoundIndex(
+    name: string,
+    def: CompoundIndexDef,
+  ): Promise<void> {
     this.ensureOpen();
-    this.requireJsonCodec('compound indexes');
+    this.requireJsonCodec("compound indexes");
     const reg = await ClusterDb.loadRegistry(this.indexPath);
-    if (reg.compoundIndexes.some((i) => i.name === name)) throw new Error(`compound index "${name}" already exists`);
+    if (reg.compoundIndexes.some((i) => i.name === name))
+      throw new Error(`compound index "${name}" already exists`);
     const createdOn: number[] = [];
     try {
       await this.forEachShardWriter(async (db, shardId) => {
@@ -560,12 +675,15 @@ export class ClusterDb<V = unknown> {
     const reg = await ClusterDb.loadRegistry(this.indexPath);
     const existed = reg.compoundIndexes.some((i) => i.name === name);
     await this.forEachShardWriter(async (db) => {
-      if (db.listCompoundIndexes().some((i) => i.name === name)) await db.dropCompoundIndex(name);
+      if (db.listCompoundIndexes().some((i) => i.name === name))
+        await db.dropCompoundIndex(name);
     });
     if (!existed) return false;
     await this.mutateRegistry((current) => {
       if (!current.compoundIndexes.some((i) => i.name === name)) return false;
-      current.compoundIndexes = current.compoundIndexes.filter((i) => i.name !== name);
+      current.compoundIndexes = current.compoundIndexes.filter(
+        (i) => i.name !== name,
+      );
       return true;
     });
     return true;
@@ -579,17 +697,21 @@ export class ClusterDb<V = unknown> {
       name,
       groupBy: def.groupBy,
       orderBy: def.orderBy,
-      orderType: def.orderType ?? 'number',
+      orderType: def.orderType ?? "number",
     }));
   }
 
   // ---- full-text search -------------------------------------------------------
 
-  async createTextIndex(name: string, opts: { fields?: readonly string[] } = {}): Promise<void> {
+  async createTextIndex(
+    name: string,
+    opts: { fields?: readonly string[] } = {},
+  ): Promise<void> {
     this.ensureOpen();
-    this.requireJsonCodec('text indexes');
+    this.requireJsonCodec("text indexes");
     const reg = await ClusterDb.loadRegistry(this.indexPath);
-    if (reg.textIndexes.some((t) => t.name === name)) throw new Error(`text index "${name}" already exists`);
+    if (reg.textIndexes.some((t) => t.name === name))
+      throw new Error(`text index "${name}" already exists`);
     const createdOn: number[] = [];
     try {
       await this.forEachShardWriter(async (db, shardId) => {
@@ -597,7 +719,8 @@ export class ClusterDb<V = unknown> {
           await db.createTextIndex(name, opts);
           createdOn.push(shardId);
         } catch (e) {
-          if (!(e instanceof Error) || !e.message.includes('already exists')) throw e;
+          if (!(e instanceof Error) || !e.message.includes("already exists"))
+            throw e;
         }
       });
     } catch (e) {
@@ -624,7 +747,8 @@ export class ClusterDb<V = unknown> {
       try {
         await db.dropTextIndex(name);
       } catch (e) {
-        if (!(e instanceof Error) || !e.message.includes('no such text index')) throw e;
+        if (!(e instanceof Error) || !e.message.includes("no such text index"))
+          throw e;
       }
     });
     if (!existed) return false;
@@ -638,23 +762,36 @@ export class ClusterDb<V = unknown> {
 
   /** Search every shard and merge by score (desc), key (asc). Scores are
    *  computed per shard (per-shard idf), so global ranking is approximate. */
-  async search(name: string, q: string, opts: { op?: 'AND' | 'OR'; limit?: number } = {}): Promise<{ key: string; value: V | undefined; score: number }[]> {
+  async search(
+    name: string,
+    q: string,
+    opts: { op?: "AND" | "OR"; limit?: number } = {},
+  ): Promise<{ key: string; value: V | undefined; score: number }[]> {
     this.ensureOpen();
     const reg = await ClusterDb.loadRegistry(this.indexPath);
-    if (!reg.textIndexes.some((t) => t.name === name)) throw new Error(`no such text index: ${name}`);
+    if (!reg.textIndexes.some((t) => t.name === name))
+      throw new Error(`no such text index: ${name}`);
     const out: { key: string; value: V | undefined; score: number }[] = [];
     for (const id of this.router.shardIds()) {
       const rows = await this.reader(id, (db) => {
         try {
           return db.search(name, q, opts);
         } catch (e) {
-          if (e instanceof Error && e.message.includes('no such text index')) return [];
+          if (e instanceof Error && e.message.includes("no such text index"))
+            return [];
           throw e;
         }
       });
       out.push(...rows);
     }
-    out.sort((a, b) => b.score - a.score || compareEntries({ key: a.key, value: a.value }, { key: b.key, value: b.value }));
+    out.sort(
+      (a, b) =>
+        b.score - a.score ||
+        compareEntries(
+          { key: a.key, value: a.value },
+          { key: b.key, value: b.value },
+        ),
+    );
     return opts.limit === undefined ? out : out.slice(0, opts.limit);
   }
 

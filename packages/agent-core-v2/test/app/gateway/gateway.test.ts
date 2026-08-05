@@ -1,27 +1,34 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { SyncDescriptor } from '#/_base/di/descriptors';
-import type { ServiceIdentifier, ServicesAccessor } from '#/_base/di/instantiation';
-import { Disposable, DisposableStore } from '#/_base/di/lifecycle';
-import { type IAgentScopeHandle, type ISessionScopeHandle, LifecycleScope } from '#/_base/di/scope';
-import { TestInstantiationService } from '#/_base/di/test';
-import { IAgentLifecycleService } from '#/session/agentLifecycle/agentLifecycle';
-import type { ContextMessage } from '#/agent/contextMemory/types';
-import { IRestGateway } from '#/app/gateway/gateway';
-import { RestGateway } from '#/app/gateway/gatewayService';
-import { ILogService } from '#/_base/log/log';
-import { IAgentPromptService } from '#/agent/prompt/prompt';
-import { IWorkspaceLifecycleService } from '#/app/workspaceLifecycle/workspaceLifecycle';
-import { ISessionLifecycleService } from '#/workspace/sessionLifecycle/sessionLifecycle';
-import { IAgentLoopService } from '#/agent/loop/loop';
-import { createHooks } from '#/hooks';
-import { stubLog } from '../../_base/log/stubs';
-import { stubLoopWithHooks, type StubLoop } from '../../agent/loop/stubs';
+import { SyncDescriptor } from "#/_base/di/descriptors";
+import type {
+  ServiceIdentifier,
+  ServicesAccessor,
+} from "#/_base/di/instantiation";
+import { Disposable, DisposableStore } from "#/_base/di/lifecycle";
+import {
+  type IAgentScopeHandle,
+  type ISessionScopeHandle,
+  LifecycleScope,
+} from "#/_base/di/scope";
+import { TestInstantiationService } from "#/_base/di/test";
+import { IAgentLifecycleService } from "#/session/agentLifecycle/agentLifecycle";
+import type { ContextMessage } from "#/agent/contextMemory/types";
+import { IRestGateway } from "#/app/gateway/gateway";
+import { RestGateway } from "#/app/gateway/gatewayService";
+import { ILogService } from "#/_base/log/log";
+import { IAgentPromptService } from "#/agent/prompt/prompt";
+import { IWorkspaceLifecycleService } from "#/app/workspaceLifecycle/workspaceLifecycle";
+import { ISessionLifecycleService } from "#/workspace/sessionLifecycle/sessionLifecycle";
+import { IAgentLoopService } from "#/agent/loop/loop";
+import { createHooks } from "#/hooks";
+import { stubLog } from "../../_base/log/stubs";
+import { stubLoopWithHooks, type StubLoop } from "../../agent/loop/stubs";
 
 function textOf(message: ContextMessage): string {
   return message.content
-    .map((part) => (part.type === 'text' ? part.text : ''))
-    .join('');
+    .map((part) => (part.type === "text" ? part.text : ""))
+    .join("");
 }
 
 function makeAccessor(
@@ -37,7 +44,7 @@ function makeAccessor(
   };
 }
 
-describe('RestGateway', () => {
+describe("RestGateway", () => {
   let disposables: DisposableStore;
   let ix: TestInstantiationService;
   let promptCalls: ContextMessage[];
@@ -51,18 +58,26 @@ describe('RestGateway', () => {
 
     const promptService: IAgentPromptService = {
       _serviceBrand: undefined,
-      enqueue: ({ message }: { message: ContextMessage }) => { promptCalls.push(message); return Promise.resolve({ id: 'p', launched: Promise.resolve(undefined) } as never); },
+      enqueue: ({ message }: { message: ContextMessage }) => {
+        promptCalls.push(message);
+        return Promise.resolve({
+          id: "p",
+          launched: Promise.resolve(undefined),
+        } as never);
+      },
       steer: () => Promise.resolve([]),
       list: () => ({ active: undefined, pending: [] }),
       abort: () => true,
       inject: () => Promise.resolve(undefined),
       retry: () => Promise.resolve(undefined),
       clear: () => {},
-      hooks: createHooks(['onBeforeSubmitPrompt']) as IAgentPromptService['hooks'],
+      hooks: createHooks([
+        "onBeforeSubmitPrompt",
+      ]) as IAgentPromptService["hooks"],
     };
 
     const agentHandle: IAgentScopeHandle = {
-      id: 'main',
+      id: "main",
       kind: LifecycleScope.Agent,
       accessor: makeAccessor([
         [IAgentPromptService, promptService],
@@ -76,13 +91,13 @@ describe('RestGateway', () => {
       onDidDispose: () => ({ dispose: () => {} }),
       create: () => Promise.resolve(agentHandle),
       fork: () => Promise.resolve(agentHandle),
-      get: (id) => (id === 'main' ? agentHandle : undefined),
+      get: (id) => (id === "main" ? agentHandle : undefined),
       list: () => [agentHandle],
       remove: () => Promise.resolve(),
       broadcastPermissionMode: () => {},
     };
     const sessionHandle: ISessionScopeHandle = {
-      id: 's1',
+      id: "s1",
       kind: LifecycleScope.Session,
       accessor: makeAccessor([[IAgentLifecycleService, agents]]),
       dispose: () => {},
@@ -95,7 +110,7 @@ describe('RestGateway', () => {
       onDidArchiveSession: () => ({ dispose: () => {} }),
       onDidForkSession: () => ({ dispose: () => {} }),
       create: () => Promise.resolve(sessionHandle),
-      get: (id: string) => (id === 's1' ? sessionHandle : undefined),
+      get: (id: string) => (id === "s1" ? sessionHandle : undefined),
       list: () => [sessionHandle],
       resume: () => Promise.resolve(sessionHandle),
       close: () => Promise.resolve(),
@@ -106,7 +121,7 @@ describe('RestGateway', () => {
       createChild: () => Promise.resolve(sessionHandle),
     };
     const handlerHandle = {
-      id: 'wd_stub',
+      id: "wd_stub",
       kind: LifecycleScope.Workspace,
       accessor: makeAccessor([[ISessionLifecycleService, sessionLifecycle]]),
       dispose: () => {},
@@ -116,28 +131,28 @@ describe('RestGateway', () => {
       onDidMaterializeHandler: () => ({ dispose: () => {} }),
       handlerFor: () => Promise.resolve(handlerHandle),
       handlers: { list: () => [handlerHandle] },
-      sessions: { list: () => ['s1'] },
+      sessions: { list: () => ["s1"] },
     });
     ix.stub(ILogService, stubLog());
     ix.set(IRestGateway, new SyncDescriptor(RestGateway));
   });
   afterEach(() => disposables.dispose());
 
-  it('routes prompt to the agent prompt service', async () => {
+  it("routes prompt to the agent prompt service", async () => {
     const gw = ix.get(IRestGateway);
-    await gw.prompt('s1', 'main', 'hello');
+    await gw.prompt("s1", "main", "hello");
 
     expect(promptCalls).toHaveLength(1);
-    expect(textOf(promptCalls[0]!)).toBe('hello');
-    expect(promptCalls[0]!.origin).toMatchObject({ kind: 'user' });
+    expect(textOf(promptCalls[0]!)).toBe("hello");
+    expect(promptCalls[0]!.origin).toMatchObject({ kind: "user" });
   });
 
-  it('aborts the active turn signal on cancel', async () => {
+  it("aborts the active turn signal on cancel", async () => {
     const gw = ix.get(IRestGateway);
     const turn = turnService.startTurn();
-    await gw.cancel('s1', 'main', 'bye');
+    await gw.cancel("s1", "main", "bye");
 
     expect(turn.signal.aborted).toBe(true);
-    expect(turn.signal.reason).toBe('bye');
+    expect(turn.signal.reason).toBe("bye");
   });
 });

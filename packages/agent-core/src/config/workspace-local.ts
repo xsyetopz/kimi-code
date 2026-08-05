@@ -1,9 +1,9 @@
-import type { Kaos } from '@moonshot-ai/kaos';
-import { dirname, isAbsolute, join, normalize, resolve } from 'pathe';
-import { parse as parseToml, stringify as stringifyToml } from 'smol-toml';
-import { z } from 'zod';
+import type { Kaos } from "@moonshot-ai/kaos";
+import { dirname, isAbsolute, join, normalize, resolve } from "pathe";
+import { parse as parseToml, stringify as stringifyToml } from "smol-toml";
+import { z } from "zod";
 
-import { ErrorCodes, KimiError } from '#/errors';
+import { ErrorCodes, KimiError } from "#/errors";
 
 const S_IFMT = 0o170000;
 const S_IFDIR = 0o040000;
@@ -48,7 +48,11 @@ export async function loadWorkspaceLocalConfig(
   return {
     projectRoot,
     configPath,
-    additionalDirs: await resolveAdditionalDirs(kaos, projectRoot, additionalDirs),
+    additionalDirs: await resolveAdditionalDirs(
+      kaos,
+      projectRoot,
+      additionalDirs,
+    ),
   };
 }
 
@@ -76,25 +80,38 @@ export async function appendWorkspaceAdditionalDir(
   const projectRoot = await findProjectRoot(kaos, workDir);
   const configPath = getWorkspaceLocalConfigPath(projectRoot);
   const additionalDir = await resolveAdditionalDir(kaos, workDir, inputPath);
-  const file = (await readWorkspaceLocalToml(kaos, configPath)) ?? { raw: {}, parsed: {} };
+  const file = (await readWorkspaceLocalToml(kaos, configPath)) ?? {
+    raw: {},
+    parsed: {},
+  };
   const fileAdditionalDirs = file.parsed.workspace?.additional_dir ?? [];
-  const fileExistingDirs = resolveExistingAdditionalDirs(kaos, projectRoot, fileAdditionalDirs);
+  const fileExistingDirs = resolveExistingAdditionalDirs(
+    kaos,
+    projectRoot,
+    fileAdditionalDirs,
+  );
 
   if (hasSameAdditionalDir(kaos, fileExistingDirs, additionalDir)) {
     return { projectRoot, configPath, additionalDirs: fileExistingDirs };
   }
 
-  const workspace = cloneRecord(file.raw['workspace']);
-  workspace['additional_dir'] = [...fileExistingDirs, additionalDir];
-  file.raw['workspace'] = workspace;
+  const workspace = cloneRecord(file.raw["workspace"]);
+  workspace["additional_dir"] = [...fileExistingDirs, additionalDir];
+  file.raw["workspace"] = workspace;
 
   await kaos.mkdir(dirname(configPath), { parents: true, existOk: true });
   await kaos.writeText(configPath, `${stringifyToml(file.raw)}\n`);
 
-  return { projectRoot, configPath, additionalDirs: [...fileExistingDirs, additionalDir] };
+  return {
+    projectRoot,
+    configPath,
+    additionalDirs: [...fileExistingDirs, additionalDir],
+  };
 }
 
-export function normalizeAdditionalDirs(additionalDirs: readonly string[]): string[] {
+export function normalizeAdditionalDirs(
+  additionalDirs: readonly string[],
+): string[] {
   const seen = new Set<string>();
   const normalizedDirs: string[] = [];
 
@@ -109,7 +126,7 @@ export function normalizeAdditionalDirs(additionalDirs: readonly string[]): stri
 }
 
 function getWorkspaceLocalConfigPath(projectRoot: string): string {
-  return join(projectRoot, '.kimi-code', 'local.toml');
+  return join(projectRoot, ".kimi-code", "local.toml");
 }
 
 async function findProjectRoot(kaos: Kaos, workDir: string): Promise<string> {
@@ -117,7 +134,7 @@ async function findProjectRoot(kaos: Kaos, workDir: string): Promise<string> {
   let current = initial;
 
   for (;;) {
-    if (await pathExists(kaos, join(current, '.git'))) return current;
+    if (await pathExists(kaos, join(current, ".git"))) return current;
     const parent = dirname(current);
     if (parent === current) return initial;
     current = parent;
@@ -125,7 +142,9 @@ async function findProjectRoot(kaos: Kaos, workDir: string): Promise<string> {
 }
 
 function resolveWorkDir(kaos: Kaos, workDir: string): string {
-  return isAbsolute(workDir) ? kaos.normpath(workDir) : resolve(kaos.getcwd(), workDir);
+  return isAbsolute(workDir)
+    ? kaos.normpath(workDir)
+    : resolve(kaos.getcwd(), workDir);
 }
 
 async function readWorkspaceLocalToml(
@@ -158,20 +177,29 @@ async function readWorkspaceLocalToml(
   }
 
   if (!isPlainObject(raw)) {
-    throw new KimiError(ErrorCodes.CONFIG_INVALID, `Invalid workspace local config in ${configPath}`);
+    throw new KimiError(
+      ErrorCodes.CONFIG_INVALID,
+      `Invalid workspace local config in ${configPath}`,
+    );
   }
 
   return { raw: cloneRecord(raw), parsed: parseWorkspaceLocalToml(raw) };
 }
 
-function parseWorkspaceLocalToml(raw: Record<string, unknown>): WorkspaceLocalToml {
+function parseWorkspaceLocalToml(
+  raw: Record<string, unknown>,
+): WorkspaceLocalToml {
   try {
     return WorkspaceLocalTomlSchema.parse(raw);
   } catch (error: unknown) {
     if (error instanceof z.ZodError) {
-      throw new KimiError(ErrorCodes.CONFIG_INVALID, describeWorkspaceLocalValidationError(error), {
-        cause: error,
-      });
+      throw new KimiError(
+        ErrorCodes.CONFIG_INVALID,
+        describeWorkspaceLocalValidationError(error),
+        {
+          cause: error,
+        },
+      );
     }
     throw error;
   }
@@ -179,10 +207,10 @@ function parseWorkspaceLocalToml(raw: Record<string, unknown>): WorkspaceLocalTo
 
 function describeWorkspaceLocalValidationError(error: z.ZodError): string {
   const issue = error.issues[0];
-  if (issue?.path[0] === 'workspace' && issue.path[1] === 'additional_dir') {
-    return 'workspace.additional_dir must be an array of strings';
+  if (issue?.path[0] === "workspace" && issue.path[1] === "additional_dir") {
+    return "workspace.additional_dir must be an array of strings";
   }
-  if (issue?.path[0] === 'workspace') return 'workspace must be a table';
+  if (issue?.path[0] === "workspace") return "workspace must be a table";
   return `Invalid workspace local config: ${error.message}`;
 }
 
@@ -194,7 +222,11 @@ async function resolveAdditionalDirs(
   const resolvedDirs: string[] = [];
 
   for (const additionalDir of normalizeAdditionalDirs(additionalDirs)) {
-    const resolvedDir = await resolveAdditionalDir(kaos, projectRoot, additionalDir);
+    const resolvedDir = await resolveAdditionalDir(
+      kaos,
+      projectRoot,
+      additionalDir,
+    );
     if (hasSameAdditionalDir(kaos, resolvedDirs, resolvedDir)) continue;
     resolvedDirs.push(resolvedDir);
   }
@@ -230,33 +262,48 @@ async function resolveAdditionalDir(
 }
 
 function normalizeAdditionalDirInput(additionalDir: string): string {
-  if (typeof additionalDir !== 'string') {
-    throw new KimiError(ErrorCodes.CONFIG_INVALID, 'workspace.additional_dir must be an array of strings');
+  if (typeof additionalDir !== "string") {
+    throw new KimiError(
+      ErrorCodes.CONFIG_INVALID,
+      "workspace.additional_dir must be an array of strings",
+    );
   }
   const trimmed = additionalDir.trim();
   if (trimmed.length === 0) {
     throw new KimiError(
       ErrorCodes.CONFIG_INVALID,
-      'workspace.additional_dir must exist and be a directory',
+      "workspace.additional_dir must exist and be a directory",
     );
   }
   return normalize(trimmed);
 }
 
-function resolvePath(kaos: Kaos, projectRoot: string, additionalDir: string): string {
+function resolvePath(
+  kaos: Kaos,
+  projectRoot: string,
+  additionalDir: string,
+): string {
   const expanded = expandHome(kaos, additionalDir);
-  return isAbsolute(expanded) ? normalize(expanded) : resolve(projectRoot, expanded);
+  return isAbsolute(expanded)
+    ? normalize(expanded)
+    : resolve(projectRoot, expanded);
 }
 
 function expandHome(kaos: Kaos, value: string): string {
-  if (value === '~') return kaos.gethome();
-  if (value.startsWith('~/')) return join(kaos.gethome(), value.slice(2));
+  if (value === "~") return kaos.gethome();
+  if (value.startsWith("~/")) return join(kaos.gethome(), value.slice(2));
   return value;
 }
 
-function hasSameAdditionalDir(kaos: Kaos, dirs: readonly string[], target: string): boolean {
+function hasSameAdditionalDir(
+  kaos: Kaos,
+  dirs: readonly string[],
+  target: string,
+): boolean {
   const normalizedTarget = normalizeForCompare(kaos, target);
-  return dirs.some((dir) => normalizeForCompare(kaos, dir) === normalizedTarget);
+  return dirs.some(
+    (dir) => normalizeForCompare(kaos, dir) === normalizedTarget,
+  );
 }
 
 function normalizeForCompare(kaos: Kaos, filePath: string): string {
@@ -271,7 +318,7 @@ async function assertDirectory(kaos: Kaos, filePath: string): Promise<void> {
     if (isPathMissing(error)) {
       throw new KimiError(
         ErrorCodes.CONFIG_INVALID,
-        'workspace.additional_dir must exist and be a directory',
+        "workspace.additional_dir must exist and be a directory",
       );
     }
     throw new KimiError(
@@ -283,7 +330,7 @@ async function assertDirectory(kaos: Kaos, filePath: string): Promise<void> {
 
   throw new KimiError(
     ErrorCodes.CONFIG_INVALID,
-    'workspace.additional_dir must exist and be a directory',
+    "workspace.additional_dir must exist and be a directory",
   );
 }
 
@@ -302,16 +349,17 @@ function cloneRecord(value: unknown): Record<string, unknown> {
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function isPathMissing(error: unknown): boolean {
   const code = getErrorCode(error);
-  return code === 'ENOENT' || code === 'ENOTDIR';
+  return code === "ENOENT" || code === "ENOTDIR";
 }
 
 function getErrorCode(error: unknown): unknown {
-  if (typeof error !== 'object' || error === null || !('code' in error)) return undefined;
+  if (typeof error !== "object" || error === null || !("code" in error))
+    return undefined;
   return (error as { code: unknown }).code;
 }
 

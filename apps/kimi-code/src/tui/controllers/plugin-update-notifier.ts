@@ -1,16 +1,16 @@
-import type { PluginSummary } from '@moonshot-ai/kimi-code-sdk';
+import type { PluginSummary } from "@moonshot-ai/kimi-code-sdk";
 
-import { KIMI_CODE_PLUGIN_MARKETPLACE_URL } from '#/constant/app';
+import { KIMI_CODE_PLUGIN_MARKETPLACE_URL } from "#/constant/app";
 import {
   computeUpdateStatus,
   loadPluginMarketplace,
   type PluginMarketplace,
-} from '#/utils/plugin-marketplace';
+} from "#/utils/plugin-marketplace";
 import {
   readPluginUpdateNoticeState,
   writePluginUpdateNoticeState,
-} from '#/utils/plugin-update-notice-state';
-import { isOfficialPluginInstall } from '../utils/plugin-source-label';
+} from "#/utils/plugin-update-notice-state";
+import { isOfficialPluginInstall } from "../utils/plugin-source-label";
 
 /**
  * The slice of the SDK session the notifier reads. Structurally satisfied by
@@ -31,7 +31,7 @@ export interface PluginUpdateNotifierDeps {
   readonly stateFile?: string;
 }
 
-const MCP_TOOL_NAME_PREFIX = 'mcp__';
+const MCP_TOOL_NAME_PREFIX = "mcp__";
 const PLUGIN_MCP_TOOL_NAME_PREFIX = `${MCP_TOOL_NAME_PREFIX}plugin-`;
 // Plugin MCP servers run under the runtime name `plugin-<id>:<server>`
 // (pluginMcpRuntimeName in packages/agent-core/src/plugin/manager.ts).
@@ -48,7 +48,7 @@ export function isPluginMcpToolName(toolName: string): boolean {
  * step guarantees the `__` separator never appears inside a name part.
  */
 function sanitizeMcpServerName(name: string): string {
-  return name.replaceAll(/[^a-zA-Z0-9_-]/g, '_').replaceAll(/_+/g, '_');
+  return name.replaceAll(/[^a-zA-Z0-9_-]/g, "_").replaceAll(/_+/g, "_");
 }
 
 /**
@@ -70,7 +70,7 @@ function matchPluginByToolName(
     const prefix = `${MCP_TOOL_NAME_PREFIX}${serverName}`;
     if (!toolName.startsWith(prefix)) continue;
     const boundary = toolName.charAt(prefix.length);
-    if (boundary !== '' && boundary !== '_') continue;
+    if (boundary !== "" && boundary !== "_") continue;
     if (prefix.length > bestLength) {
       best = pluginId;
       bestLength = prefix.length;
@@ -121,12 +121,17 @@ export class PluginUpdateNotifier {
     // concurrent checks (e.g. a turn that used two outdated plugins) would
     // otherwise read the same snapshot and the last write would drop the
     // other plugin's entry.
-    this.queue = this.queue.then(() => this.checkAndNotify(pluginId)).catch(() => {});
+    this.queue = this.queue
+      .then(() => this.checkAndNotify(pluginId))
+      .catch(() => {});
     return this.queue;
   }
 
   private async resolvePluginId(toolName: string): Promise<string | undefined> {
-    const hit = matchPluginByToolName(toolName, await this.getMcpServerPluginIds());
+    const hit = matchPluginByToolName(
+      toolName,
+      await this.getMcpServerPluginIds(),
+    );
     if (hit !== undefined) return hit;
     // The map is memoized, but this notifier is reused across /reload, /new,
     // and session switches, so plugins installed or enabled later in the same
@@ -167,23 +172,34 @@ export class PluginUpdateNotifier {
       // notice — a custom catalog (KIMI_CODE_PLUGIN_MARKETPLACE_URL) may
       // advertise anything under any id.
       if (marketplace.source !== KIMI_CODE_PLUGIN_MARKETPLACE_URL) return;
-      const entry = marketplace.plugins.find((plugin) => plugin.id === pluginId);
+      const entry = marketplace.plugins.find(
+        (plugin) => plugin.id === pluginId,
+      );
       if (entry === undefined) return;
-      const installed = (await session.listPlugins()).find((plugin) => plugin.id === pluginId);
+      const installed = (await session.listPlugins()).find(
+        (plugin) => plugin.id === pluginId,
+      );
       if (installed === undefined) return;
       // Only official installs are tracked against the Official Marketplace —
       // a local/GitHub fork that happens to share a catalog id is not it.
       if (!isOfficialPluginInstall(installed)) return;
-      const status = computeUpdateStatus(entry.version, installed.version, true);
-      if (status.kind !== 'update') return;
+      const status = computeUpdateStatus(
+        entry.version,
+        installed.version,
+        true,
+      );
+      if (status.kind !== "update") return;
       const state = await readPluginUpdateNoticeState(this.deps.stateFile);
       if (state.notified[pluginId] === status.latest) return;
       this.deps.notify(
         `Update detected: ${installed.displayName} ${status.latest} is available. ` +
-          'Run /plugins to install the latest version from the Official Marketplace.',
+          "Run /plugins to install the latest version from the Official Marketplace.",
       );
       await writePluginUpdateNoticeState(
-        { ...state, notified: { ...state.notified, [pluginId]: status.latest } },
+        {
+          ...state,
+          notified: { ...state.notified, [pluginId]: status.latest },
+        },
         this.deps.stateFile,
       );
     } finally {
@@ -193,10 +209,12 @@ export class PluginUpdateNotifier {
 
   private loadCatalog(): Promise<PluginMarketplace> {
     // Cached for the app run; a failed fetch is retried on the next invocation.
-    this.marketplacePromise ??= this.loadMarketplace().catch((error: unknown) => {
-      this.marketplacePromise = undefined;
-      throw error;
-    });
+    this.marketplacePromise ??= this.loadMarketplace().catch(
+      (error: unknown) => {
+        this.marketplacePromise = undefined;
+        throw error;
+      },
+    );
     return this.marketplacePromise;
   }
 

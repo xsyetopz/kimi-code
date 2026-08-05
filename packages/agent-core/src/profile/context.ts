@@ -1,10 +1,10 @@
-import { dirname, join } from 'pathe';
+import { dirname, join } from "pathe";
 
-import type { Kaos } from '@moonshot-ai/kaos';
+import type { Kaos } from "@moonshot-ai/kaos";
 
-import { normalizeAdditionalDirs } from '../config';
-import { listDirectory } from '../tools/support/list-directory';
-import type { SystemPromptContext } from './types';
+import { normalizeAdditionalDirs } from "../config";
+import { listDirectory } from "../tools/support/list-directory";
+import type { SystemPromptContext } from "./types";
 
 // Soft budget for the combined AGENTS.md content injected into the system
 // prompt. ~32 KB is roughly 8K–20K tokens (≈1.5–3% of a 262144-token context),
@@ -17,7 +17,10 @@ const S_IFMT = 0o170000;
 const S_IFREG = 0o100000;
 
 export interface PreparedSystemPromptContext
-  extends Pick<SystemPromptContext, 'cwdListing' | 'agentsMd' | 'additionalDirsInfo'> {
+  extends Pick<
+    SystemPromptContext,
+    "cwdListing" | "agentsMd" | "additionalDirsInfo"
+  > {
   /** Present when the combined AGENTS.md content exceeds the recommended size. */
   readonly agentsMdWarning?: string;
 }
@@ -45,7 +48,10 @@ export async function prepareSystemPromptContext(
   };
 }
 
-export async function loadAgentsMd(kaos: Kaos, brandHome?: string): Promise<string> {
+export async function loadAgentsMd(
+  kaos: Kaos,
+  brandHome?: string,
+): Promise<string> {
   const result = await loadAgentsMdForRoots(kaos, brandHome, [kaos.getcwd()]);
   return result.content;
 }
@@ -77,13 +83,13 @@ async function loadAgentsMdForRoots(
   // The brand dir follows KIMI_CODE_HOME (default ~/.kimi-code); the generic
   // .agents dir stays under the real OS home so it can be shared across tools.
   const realHome = kaos.gethome();
-  const brandDir = brandHome ?? join(realHome, '.kimi-code');
-  await collect(join(brandDir, 'AGENTS.md'));
+  const brandDir = brandHome ?? join(realHome, ".kimi-code");
+  await collect(join(brandDir, "AGENTS.md"));
 
   // Generic user-level dir (.agents) matches skill discovery.
-  const genericDirs = [join(realHome, '.agents')];
+  const genericDirs = [join(realHome, ".agents")];
   const genericFiles = genericDirs.flatMap((dir) =>
-    ['AGENTS.md', 'agents.md'].map((name) => join(dir, name)),
+    ["AGENTS.md", "agents.md"].map((name) => join(dir, name)),
   );
   for (const file of genericFiles) {
     if (await collect(file)) break;
@@ -96,8 +102,8 @@ async function loadAgentsMdForRoots(
     const dirs = dirsRootToLeaf(rootKaos, rootWorkDir, projectRoot);
 
     for (const dir of dirs) {
-      await collect(join(dir, '.kimi-code', 'AGENTS.md'));
-      for (const fileName of ['AGENTS.md', 'agents.md']) {
+      await collect(join(dir, ".kimi-code", "AGENTS.md"));
+      for (const fileName of ["AGENTS.md", "agents.md"]) {
         if (await collect(join(dir, fileName))) break;
       }
     }
@@ -125,7 +131,7 @@ async function loadAdditionalDirsInfo(
     }),
   );
 
-  return sections.join('\n\n');
+  return sections.join("\n\n");
 }
 
 async function findProjectRoot(kaos: Kaos, workDir: string): Promise<string> {
@@ -133,14 +139,18 @@ async function findProjectRoot(kaos: Kaos, workDir: string): Promise<string> {
   let current = initial;
 
   while (true) {
-    if (await pathExists(kaos, join(current, '.git'))) return current;
+    if (await pathExists(kaos, join(current, ".git"))) return current;
     const parent = dirname(current);
     if (parent === current) return initial;
     current = parent;
   }
 }
 
-function dirsRootToLeaf(kaos: Kaos, workDir: string, projectRoot: string): string[] {
+function dirsRootToLeaf(
+  kaos: Kaos,
+  workDir: string,
+  projectRoot: string,
+): string[] {
   const dirs: string[] = [];
   let current = kaos.normpath(workDir);
 
@@ -160,9 +170,12 @@ interface AgentFile {
   readonly content: string;
 }
 
-async function readAgentFile(kaos: Kaos, path: string): Promise<AgentFile | undefined> {
+async function readAgentFile(
+  kaos: Kaos,
+  path: string,
+): Promise<AgentFile | undefined> {
   if (!(await isFile(kaos, path))) return undefined;
-  const content = (await kaos.readText(path, { errors: 'ignore' })).trim();
+  const content = (await kaos.readText(path, { errors: "ignore" })).trim();
   if (content.length === 0) return undefined;
   return { path, content };
 }
@@ -186,12 +199,14 @@ async function isFile(kaos: Kaos, path: string): Promise<boolean> {
 }
 
 function renderAgentFiles(files: readonly AgentFile[]): string {
-  if (files.length === 0) return '';
-  return files.map((file) => `${annotationFor(file.path)}${file.content}`).join('\n\n');
+  if (files.length === 0) return "";
+  return files
+    .map((file) => `${annotationFor(file.path)}${file.content}`)
+    .join("\n\n");
 }
 
 function byteLength(text: string): number {
-  return Buffer.byteLength(text, 'utf8');
+  return Buffer.byteLength(text, "utf8");
 }
 
 function formatKB(bytes: number): string {

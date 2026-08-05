@@ -1,11 +1,11 @@
-import { ChoicePickerComponent, type ChoiceOption } from './choice-picker';
+import { ChoicePickerComponent, type ChoiceOption } from "./choice-picker";
 
 const EDITOR_OPTIONS: readonly ChoiceOption[] = [
-  { value: 'code --wait', label: 'VS Code (code --wait)' },
-  { value: 'vim', label: 'Vim' },
-  { value: 'nvim', label: 'Neovim' },
-  { value: 'nano', label: 'Nano' },
-  { value: '', label: 'Auto-detect ($VISUAL / $EDITOR)' },
+  { value: "code --wait", label: "VS Code (code --wait)" },
+  { value: "vim", label: "Vim" },
+  { value: "nvim", label: "Neovim" },
+  { value: "nano", label: "Nano" },
+  { value: "", label: "Auto-detect ($VISUAL / $EDITOR)" },
 ];
 
 export interface EditorSelectorOptions {
@@ -17,7 +17,7 @@ export interface EditorSelectorOptions {
 export class EditorSelectorComponent extends ChoicePickerComponent {
   constructor(opts: EditorSelectorOptions) {
     super({
-      title: 'Select external editor',
+      title: "Select external editor",
       options: [...EDITOR_OPTIONS],
       currentValue: opts.currentValue,
       onSelect: opts.onSelect,

@@ -11,18 +11,24 @@
  * types.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
-import type { Event } from '#/_base/event';
-import { isoDateTimeSchema } from '#/_base/utils/isoDateTime';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
+import type { Event } from "#/_base/event";
+import { isoDateTimeSchema } from "#/_base/utils/isoDateTime";
 
 const relativeCwdSchema = z
   .string()
   .min(1)
-  .refine((value) => !isAbsolutePath(value), 'cwd must be relative to the session workspace');
+  .refine(
+    (value) => !isAbsolutePath(value),
+    "cwd must be relative to the session workspace",
+  );
 
-export const terminalStatusSchema = z.enum(['running', 'exited']);
+export const terminalStatusSchema = z.enum(["running", "exited"]);
 export type TerminalStatus = z.infer<typeof terminalStatusSchema>;
 
 export const terminalSchema = z.object({
@@ -48,7 +54,7 @@ export const createTerminalRequestSchema = z.object({
 export type CreateTerminalRequest = z.infer<typeof createTerminalRequestSchema>;
 
 export interface TerminalOutputMessage {
-  type: 'terminal_output';
+  type: "terminal_output";
   seq: number;
   session_id: string;
   terminal_id: string;
@@ -57,7 +63,7 @@ export interface TerminalOutputMessage {
 }
 
 export interface TerminalExitMessage {
-  type: 'terminal_exit';
+  type: "terminal_exit";
   session_id: string;
   terminal_id: string;
   timestamp: string;
@@ -68,8 +74,8 @@ export type TerminalFrame = TerminalOutputMessage | TerminalExitMessage;
 
 function isAbsolutePath(value: string): boolean {
   return (
-    value.startsWith('/') ||
-    value.startsWith('\\') ||
+    value.startsWith("/") ||
+    value.startsWith("\\") ||
     /^[A-Za-z]:[\\/]/.test(value)
   );
 }
@@ -105,4 +111,4 @@ export interface IHostTerminalService {
 }
 
 export const IHostTerminalService: ServiceIdentifier<IHostTerminalService> =
-  createDecorator<IHostTerminalService>('hostTerminalService');
+  createDecorator<IHostTerminalService>("hostTerminalService");

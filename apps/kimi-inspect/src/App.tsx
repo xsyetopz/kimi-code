@@ -16,31 +16,31 @@
  * search (`SearchView`) whose hits navigate back into the chat timeline.
  */
 
-import { ISessionIndex } from '@moonshot-ai/agent-core-v2/app/sessionIndex/sessionIndex';
-import { ISessionLifecycleService } from '@moonshot-ai/agent-core-v2/workspace/sessionLifecycle/sessionLifecycle';
-import { useEffect, useState } from 'react';
+import { ISessionIndex } from "@moonshot-ai/agent-core-v2/app/sessionIndex/sessionIndex";
+import { ISessionLifecycleService } from "@moonshot-ai/agent-core-v2/workspace/sessionLifecycle/sessionLifecycle";
+import { useEffect, useState } from "react";
 
-import type { AuditTrail } from './audit/trail';
-import { AppServicesView } from './components/AppServicesView';
-import { BashParserView } from './components/BashParserView';
-import { ChatView, type ChatJump } from './components/ChatView';
-import { ModelCatalogView } from './components/ModelCatalogView';
-import { NavRail, type AppView } from './components/NavRail';
-import { RightPanel } from './components/RightPanel';
-import { SearchView } from './components/SearchView';
-import { ServerSwitcher } from './components/ServerSwitcher';
-import { SessionPane } from './components/SessionPane';
-import { Sidebar } from './components/Sidebar';
-import { WorkspaceServicesView } from './components/WorkspaceServicesView';
-import { useConnection } from './connection';
-import type { SearchHit } from './search/api';
-import { errorMessage } from './ui';
+import type { AuditTrail } from "./audit/trail";
+import { AppServicesView } from "./components/AppServicesView";
+import { BashParserView } from "./components/BashParserView";
+import { ChatView, type ChatJump } from "./components/ChatView";
+import { ModelCatalogView } from "./components/ModelCatalogView";
+import { NavRail, type AppView } from "./components/NavRail";
+import { RightPanel } from "./components/RightPanel";
+import { SearchView } from "./components/SearchView";
+import { ServerSwitcher } from "./components/ServerSwitcher";
+import { SessionPane } from "./components/SessionPane";
+import { Sidebar } from "./components/Sidebar";
+import { WorkspaceServicesView } from "./components/WorkspaceServicesView";
+import { useConnection } from "./connection";
+import type { SearchHit } from "./search/api";
+import { errorMessage } from "./ui";
 
 export function App() {
   const { klient, baseUrl, disconnect } = useConnection();
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const [agentId, setAgentId] = useState('main');
-  const [view, setView] = useState<AppView>('chat');
+  const [agentId, setAgentId] = useState("main");
+  const [view, setView] = useState<AppView>("chat");
   const [ready, setReady] = useState(false);
   const [resumeError, setResumeError] = useState<unknown>(null);
   /** Audit trail of the chat view's transcript channel, rendered in the right dock. */
@@ -61,8 +61,12 @@ export function App() {
       .core(ISessionIndex)
       .get(sessionId)
       .then((summary) => {
-        if (summary === undefined) throw new Error(`session ${sessionId} does not exist`);
-        return klient.workspace(summary.workspaceId).service(ISessionLifecycleService).resume(sessionId);
+        if (summary === undefined)
+          throw new Error(`session ${sessionId} does not exist`);
+        return klient
+          .workspace(summary.workspaceId)
+          .service(ISessionLifecycleService)
+          .resume(sessionId);
       })
       .then(() => {
         if (!cancelled) setReady(true);
@@ -79,7 +83,7 @@ export function App() {
   // belong to the server they were listed from.
   useEffect(() => {
     setSessionId(null);
-    setAgentId('main');
+    setAgentId("main");
     setJump(null);
   }, [baseUrl]);
 
@@ -88,8 +92,8 @@ export function App() {
   // over without a scroll target.
   const openSearchHit = (hit: SearchHit): void => {
     setSessionId(hit.sessionId);
-    setAgentId(hit.agentId === '' ? 'main' : hit.agentId);
-    setView('chat');
+    setAgentId(hit.agentId === "" ? "main" : hit.agentId);
+    setView("chat");
     setJump({
       turnId: hit.turn === undefined ? undefined : `t${hit.turn}`,
       stepId: hit.stepId,
@@ -100,7 +104,9 @@ export function App() {
   return (
     <div className="flex h-screen flex-col">
       <header className="flex items-center gap-3 border-b border-neutral-800 px-4 py-1.5">
-        <span className="text-[12px] font-bold tracking-widest text-neutral-200">KIMI INSPECT</span>
+        <span className="text-[12px] font-bold tracking-widest text-neutral-200">
+          KIMI INSPECT
+        </span>
         <ServerSwitcher />
         <div className="flex-1" />
         <button
@@ -112,24 +118,27 @@ export function App() {
       </header>
       <div className="flex min-h-0 flex-1">
         <NavRail view={view} onChange={setView} />
-        {view === 'services' ? (
+        {view === "services" ? (
           <AppServicesView />
-        ) : view === 'workspace' ? (
+        ) : view === "workspace" ? (
           <WorkspaceServicesView />
-        ) : view === 'bash' ? (
+        ) : view === "bash" ? (
           <BashParserView />
-        ) : view === 'models' ? (
+        ) : view === "models" ? (
           <ModelCatalogView
             onOpenSession={(id) => {
               setSessionId(id);
-              setView('chat');
+              setView("chat");
             }}
           />
-        ) : view === 'search' ? (
+        ) : view === "search" ? (
           <SearchView onOpenResult={openSearchHit} />
         ) : (
           <>
-            <Sidebar activeSessionId={sessionId} onSelectSession={setSessionId} />
+            <Sidebar
+              activeSessionId={sessionId}
+              onSelectSession={setSessionId}
+            />
             <SessionPane sessionId={sessionId} ready={ready} />
             {resumeError !== null ? (
               <div className="flex flex-1 items-center justify-center p-6 text-center text-[12px] text-red-400">

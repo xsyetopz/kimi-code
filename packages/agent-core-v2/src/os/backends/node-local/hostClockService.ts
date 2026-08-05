@@ -5,8 +5,12 @@
  * Node.js runtime. Bound at App scope.
  */
 
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { IHostClock } from '#/os/interface/hostClock';
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import { IHostClock } from "#/os/interface/hostClock";
 
 export class HostClockService implements IHostClock {
   declare readonly _serviceBrand: undefined;
@@ -16,7 +20,7 @@ export class HostClockService implements IHostClock {
   }
 
   timeZone(): string {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
   }
 }
 
@@ -25,5 +29,5 @@ registerScopedService(
   IHostClock,
   HostClockService,
   ScopeActivation.OnScopeCreated,
-  'hostClock',
+  "hostClock",
 );

@@ -20,20 +20,23 @@
  * Bound at App scope.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
-import type { ModelCapability } from '#/kosong/contract/capability';
-import type { InspectionSource } from '#/kosong/contract/inspection';
-import type { ChatProvider } from '#/kosong/contract/provider';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
+import type { ModelCapability } from "#/kosong/contract/capability";
+import type { InspectionSource } from "#/kosong/contract/inspection";
+import type { ChatProvider } from "#/kosong/contract/provider";
 
-import type { ProtocolBaseId, ResolvedAdapterIdentity } from './protocolBase';
+import type { ProtocolBaseId, ResolvedAdapterIdentity } from "./protocolBase";
 
 export const ProtocolSchema = z.enum([
-  'anthropic',
-  'openai',
-  'openai_responses',
-  'google-genai',
+  "anthropic",
+  "openai",
+  "openai_responses",
+  "google-genai",
 ]);
 
 export type Protocol = z.infer<typeof ProtocolSchema>;
@@ -71,9 +74,15 @@ export interface IProtocolAdapterRegistry {
 
   supportedProtocols(): readonly Protocol[];
 
-  resolveAdapterIdentity(protocol: Protocol, providerType?: string): ResolvedAdapterIdentity;
+  resolveAdapterIdentity(
+    protocol: Protocol,
+    providerType?: string,
+  ): ResolvedAdapterIdentity;
 
-  resolveProviderBaseId(protocol: Protocol, providerType?: string): ProtocolBaseId;
+  resolveProviderBaseId(
+    protocol: Protocol,
+    providerType?: string,
+  ): ProtocolBaseId;
 
   resolveCapability(
     protocol: Protocol,
@@ -91,4 +100,4 @@ export interface IProtocolAdapterRegistry {
 }
 
 export const IProtocolAdapterRegistry: ServiceIdentifier<IProtocolAdapterRegistry> =
-  createDecorator<IProtocolAdapterRegistry>('protocolAdapterRegistry');
+  createDecorator<IProtocolAdapterRegistry>("protocolAdapterRegistry");

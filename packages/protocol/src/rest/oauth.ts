@@ -4,23 +4,25 @@
  *   DELETE /v1/oauth/login   query: { provider? }  data: { cancelled, status }
  *   POST   /v1/oauth/logout  body: { provider? }   data: { logged_out, provider }
  */
-import { z } from 'zod';
+import { z } from "zod";
 
-import { isoDateTimeSchema } from '../time';
+import { isoDateTimeSchema } from "../time";
 
 export const oauthFlowStatusEnum = z.enum([
-  'pending',
-  'authenticated',
-  'denied',
-  'expired',
-  'cancelled',
+  "pending",
+  "authenticated",
+  "denied",
+  "expired",
+  "cancelled",
 ]);
 export type OAuthFlowStatus = z.infer<typeof oauthFlowStatusEnum>;
 
 export const oauthLoginStartRequestSchema = z.object({
   provider: z.string().min(1).optional(),
 });
-export type OAuthLoginStartRequest = z.infer<typeof oauthLoginStartRequestSchema>;
+export type OAuthLoginStartRequest = z.infer<
+  typeof oauthLoginStartRequestSchema
+>;
 
 /**
  * Result of `POST /v1/oauth/login`.
@@ -37,7 +39,7 @@ export type OAuthLoginStartRequest = z.infer<typeof oauthLoginStartRequestSchema
 export const oauthFlowStartPendingSchema = z.object({
   flow_id: z.string().min(1),
   provider: z.string().min(1),
-  status: z.literal('pending'),
+  status: z.literal("pending"),
   verification_uri: z.string().url(),
   verification_uri_complete: z.string().url(),
   user_code: z.string().min(1),
@@ -50,11 +52,13 @@ export type OAuthFlowStartPending = z.infer<typeof oauthFlowStartPendingSchema>;
 export const oauthFlowStartAuthenticatedSchema = z.object({
   flow_id: z.string().min(1),
   provider: z.string().min(1),
-  status: z.literal('authenticated'),
+  status: z.literal("authenticated"),
 });
-export type OAuthFlowStartAuthenticated = z.infer<typeof oauthFlowStartAuthenticatedSchema>;
+export type OAuthFlowStartAuthenticated = z.infer<
+  typeof oauthFlowStartAuthenticatedSchema
+>;
 
-export const oauthFlowStartSchema = z.discriminatedUnion('status', [
+export const oauthFlowStartSchema = z.discriminatedUnion("status", [
   oauthFlowStartPendingSchema,
   oauthFlowStartAuthenticatedSchema,
 ]);
@@ -84,7 +88,9 @@ export const oauthLoginCancelResponseSchema = z.object({
   cancelled: z.boolean(),
   status: oauthFlowStatusEnum,
 });
-export type OAuthLoginCancelResponse = z.infer<typeof oauthLoginCancelResponseSchema>;
+export type OAuthLoginCancelResponse = z.infer<
+  typeof oauthLoginCancelResponseSchema
+>;
 
 export const oauthLogoutRequestSchema = z.object({
   provider: z.string().min(1).optional(),

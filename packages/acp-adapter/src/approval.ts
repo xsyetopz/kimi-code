@@ -3,11 +3,14 @@ import type {
   RequestPermissionResponse,
   ToolCallContent,
   ToolCallUpdate,
-} from '@agentclientprotocol/sdk';
-import type { ApprovalRequest, ApprovalResponse } from '@moonshot-ai/kimi-code-sdk';
+} from "@agentclientprotocol/sdk";
+import type {
+  ApprovalRequest,
+  ApprovalResponse,
+} from "@moonshot-ai/kimi-code-sdk";
 
-import { displayBlockToAcpContent } from './convert';
-import { acpToolCallId } from './events-map';
+import { displayBlockToAcpContent } from "./convert";
+import { acpToolCallId } from "./events-map";
 
 /**
  * Canonical option ids surfaced to the ACP client.
@@ -18,9 +21,9 @@ import { acpToolCallId } from './events-map';
  * single source of truth on both the build- and the parse-side; tests
  * import them rather than re-typing the strings.
  */
-export const APPROVE_ONCE_OPTION_ID = 'approve_once';
-export const APPROVE_ALWAYS_OPTION_ID = 'approve_always';
-export const REJECT_OPTION_ID = 'reject';
+export const APPROVE_ONCE_OPTION_ID = "approve_once";
+export const APPROVE_ALWAYS_OPTION_ID = "approve_always";
+export const REJECT_OPTION_ID = "reject";
 
 /**
  * Phase 13.2 plan_review optionId namespace. Picked deliberately so the
@@ -38,9 +41,9 @@ export const REJECT_OPTION_ID = 'reject';
  *    `PLAN_REJECT_CHOICES`. Order is preserved so Zed renders the same
  *    bottom-of-list ordering as the TUI.
  */
-export const PLAN_APPROVE_OPTION_ID = 'plan_approve';
-export const PLAN_REVISE_OPTION_ID = 'plan_revise';
-export const PLAN_REJECT_AND_EXIT_OPTION_ID = 'plan_reject_and_exit';
+export const PLAN_APPROVE_OPTION_ID = "plan_approve";
+export const PLAN_REVISE_OPTION_ID = "plan_revise";
+export const PLAN_REJECT_AND_EXIT_OPTION_ID = "plan_reject_and_exit";
 
 function planOptOptionId(i: number): string {
   return `plan_opt_${i}`;
@@ -62,13 +65,17 @@ function planOptOptionId(i: number): string {
  * constant lookup table — they do not mutate it.
  */
 const CANONICAL_OPTIONS: readonly PermissionOption[] = [
-  { optionId: APPROVE_ONCE_OPTION_ID, name: 'Approve once', kind: 'allow_once' },
+  {
+    optionId: APPROVE_ONCE_OPTION_ID,
+    name: "Approve once",
+    kind: "allow_once",
+  },
   {
     optionId: APPROVE_ALWAYS_OPTION_ID,
-    name: 'Approve for this session',
-    kind: 'allow_always',
+    name: "Approve for this session",
+    kind: "allow_always",
   },
-  { optionId: REJECT_OPTION_ID, name: 'Reject', kind: 'reject_once' },
+  { optionId: REJECT_OPTION_ID, name: "Reject", kind: "reject_once" },
 ];
 
 /**
@@ -94,7 +101,7 @@ const CANONICAL_OPTIONS: readonly PermissionOption[] = [
 export function approvalRequestToPermissionOptions(
   req?: ApprovalRequest,
 ): readonly PermissionOption[] {
-  if (!req || req.display.kind !== 'plan_review') {
+  if (!req || req.display.kind !== "plan_review") {
     return CANONICAL_OPTIONS;
   }
   const display = req.display;
@@ -103,16 +110,26 @@ export function approvalRequestToPermissionOptions(
       ? display.options.map((opt, i) => ({
           optionId: planOptOptionId(i),
           name: opt.label,
-          kind: 'allow_once' as const,
+          kind: "allow_once" as const,
         }))
-      : [{ optionId: PLAN_APPROVE_OPTION_ID, name: 'Approve', kind: 'allow_once' as const }];
+      : [
+          {
+            optionId: PLAN_APPROVE_OPTION_ID,
+            name: "Approve",
+            kind: "allow_once" as const,
+          },
+        ];
   return [
     ...approveOptions,
-    { optionId: PLAN_REVISE_OPTION_ID, name: 'Revise', kind: 'reject_once' as const },
+    {
+      optionId: PLAN_REVISE_OPTION_ID,
+      name: "Revise",
+      kind: "reject_once" as const,
+    },
     {
       optionId: PLAN_REJECT_AND_EXIT_OPTION_ID,
-      name: 'Reject and Exit',
-      kind: 'reject_once' as const,
+      name: "Reject and Exit",
+      kind: "reject_once" as const,
     },
   ];
 }
@@ -148,11 +165,11 @@ export function permissionResponseToApprovalResponse(
   req: ApprovalRequest | undefined,
   response: RequestPermissionResponse,
 ): ApprovalResponse {
-  if (response.outcome.outcome === 'cancelled') {
-    return { decision: 'cancelled' };
+  if (response.outcome.outcome === "cancelled") {
+    return { decision: "cancelled" };
   }
   const optionId = response.outcome.optionId;
-  if (req?.display.kind === 'plan_review') {
+  if (req?.display.kind === "plan_review") {
     return mapPlanReviewOptionId(req.display, optionId);
   }
   switch (optionId) {
@@ -160,21 +177,21 @@ export function permissionResponseToApprovalResponse(
     // Legacy Python kimi-cli (< v0.9.0) used 'approve' as the
     // allow-once optionId. Keep accepting it so custom ACP clients
     // built against the old SDK are not silently rejected.
-    case 'approve':
-      return { decision: 'approved' };
+    case "approve":
+      return { decision: "approved" };
     case APPROVE_ALWAYS_OPTION_ID:
     // Legacy Python kimi-cli (< v0.9.0) used 'approve_for_session' as
     // the allow-always optionId. Same backward-compatibility rationale
     // as the 'approve' branch above.
-    case 'approve_for_session':
-      return { decision: 'approved', scope: 'session' };
+    case "approve_for_session":
+      return { decision: "approved", scope: "session" };
     case REJECT_OPTION_ID:
-      return { decision: 'rejected' };
+      return { decision: "rejected" };
     default:
       // Unknown optionId — defensive fallback. Reject is safer than
       // approve. Logging is the caller's responsibility (the mapper is
       // pure so unit tests don't need to mock a logger).
-      return { decision: 'rejected' };
+      return { decision: "rejected" };
   }
 }
 
@@ -198,30 +215,35 @@ export function permissionResponseToApprovalResponse(
  * canonical unknown→reject branch).
  */
 function mapPlanReviewOptionId(
-  display: Extract<ApprovalRequest['display'], { kind: 'plan_review' }>,
+  display: Extract<ApprovalRequest["display"], { kind: "plan_review" }>,
   optionId: string,
 ): ApprovalResponse {
   if (optionId === PLAN_APPROVE_OPTION_ID) {
-    return { decision: 'approved' };
+    return { decision: "approved" };
   }
   if (optionId === PLAN_REVISE_OPTION_ID) {
-    return { decision: 'rejected', selectedLabel: 'Revise' };
+    return { decision: "rejected", selectedLabel: "Revise" };
   }
   if (optionId === PLAN_REJECT_AND_EXIT_OPTION_ID) {
-    return { decision: 'rejected', selectedLabel: 'Reject and Exit' };
+    return { decision: "rejected", selectedLabel: "Reject and Exit" };
   }
   const match = /^plan_opt_(\d+)$/.exec(optionId);
   if (match) {
     const i = Number(match[1]);
     const opts = display.options;
-    if (opts !== undefined && Number.isInteger(i) && i >= 0 && i < opts.length) {
-      return { decision: 'approved', selectedLabel: opts[i]!.label };
+    if (
+      opts !== undefined &&
+      Number.isInteger(i) &&
+      i >= 0 &&
+      i < opts.length
+    ) {
+      return { decision: "approved", selectedLabel: opts[i]!.label };
     }
-    return { decision: 'rejected' };
+    return { decision: "rejected" };
   }
   // Unknown plan_* optionId — same defensive reject as the canonical
   // unknown branch.
-  return { decision: 'rejected' };
+  return { decision: "rejected" };
 }
 
 /**
@@ -258,7 +280,9 @@ export function buildPermissionToolCallUpdate(
   req: ApprovalRequest,
 ): ToolCallUpdate {
   const toolCallId =
-    turnId !== undefined ? acpToolCallId(turnId, req.toolCallId) : req.toolCallId;
+    turnId !== undefined
+      ? acpToolCallId(turnId, req.toolCallId)
+      : req.toolCallId;
   const content: ToolCallContent[] = [];
   // Diff entry first — diffs and file-io previews carry the most
   // context and should land at the top of the approval card. Phase 13.2
@@ -270,8 +294,8 @@ export function buildPermissionToolCallUpdate(
   }
   // Always include the action summary so the prompt is never empty.
   content.push({
-    type: 'content',
-    content: { type: 'text', text: `Requesting approval to ${req.action}` },
+    type: "content",
+    content: { type: "text", text: `Requesting approval to ${req.action}` },
   });
   return {
     toolCallId,
@@ -306,12 +330,12 @@ export function attachSelectedLabel(
   options: readonly PermissionOption[],
 ): ApprovalResponse {
   const outcome = response.outcome;
-  if (outcome.outcome !== 'selected') return approval;
+  if (outcome.outcome !== "selected") return approval;
   // Phase 13.2: plan_review optionIds already carry selectedLabel from
   // the mapper. Short-circuit so this canonical-table lookup never
   // strips an already-attached label.
   if (
-    outcome.optionId.startsWith('plan_opt_') ||
+    outcome.optionId.startsWith("plan_opt_") ||
     outcome.optionId === PLAN_APPROVE_OPTION_ID ||
     outcome.optionId === PLAN_REVISE_OPTION_ID ||
     outcome.optionId === PLAN_REJECT_AND_EXIT_OPTION_ID

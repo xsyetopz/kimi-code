@@ -5,18 +5,24 @@ import type {
   TelemetryClient,
   TelemetryContextPatch,
   TelemetryProperties,
-} from '@moonshot-ai/agent-core';
-import type { Kaos } from '@moonshot-ai/kaos';
-import type { KimiHostIdentity, OAuthRefreshOutcome } from '@moonshot-ai/kimi-code-oauth';
-import type { ContentPart } from '@moonshot-ai/kosong';
+} from "@moonshot-ai/agent-core";
+import type { Kaos } from "@moonshot-ai/kaos";
+import type {
+  KimiHostIdentity,
+  OAuthRefreshOutcome,
+} from "@moonshot-ai/kimi-code-oauth";
+import type { ContentPart } from "@moonshot-ai/kosong";
 
 export type JsonPrimitive = string | number | boolean | null;
-export type JsonValue = JsonPrimitive | JsonValue[] | { readonly [key: string]: JsonValue };
+export type JsonValue =
+  | JsonPrimitive
+  | JsonValue[]
+  | { readonly [key: string]: JsonValue };
 export type JsonObject = { readonly [key: string]: JsonValue };
 
 export type Unsubscribe = () => void;
 
-export type { CapabilityStatus } from '@moonshot-ai/agent-core-v2/app/capability/types';
+export type { CapabilityStatus } from "@moonshot-ai/agent-core-v2/app/capability/types";
 
 export type {
   AgentReplayRecord,
@@ -68,13 +74,18 @@ export type {
   ToolInfo,
   GlobalMcpServerConfig as McpServerConfig,
   GlobalMcpServerTestResult as McpTestResult,
-} from '@moonshot-ai/agent-core';
+} from "@moonshot-ai/agent-core";
 
 export type { KimiHostIdentity, OAuthRefreshOutcome };
 export type { TelemetryClient, TelemetryContextPatch, TelemetryProperties };
-export type { ContentPart, Role, ThinkingEffort, ToolCall } from '@moonshot-ai/kosong';
+export type {
+  ContentPart,
+  Role,
+  ThinkingEffort,
+  ToolCall,
+} from "@moonshot-ai/kosong";
 
-export type PermissionMode = 'yolo' | 'manual' | 'auto';
+export type PermissionMode = "yolo" | "manual" | "auto";
 
 /**
  * Trust state of a workspace directory. Only meaningful on the agent-core-v2
@@ -92,8 +103,11 @@ export interface CreateGoalInput {
   readonly replace?: boolean;
 }
 
-export type TextPromptPart = Extract<ContentPart, { type: 'text' }>;
-export type PromptPart = Extract<ContentPart, { type: 'text' | 'image_url' | 'video_url' }>;
+export type TextPromptPart = Extract<ContentPart, { type: "text" }>;
+export type PromptPart = Extract<
+  ContentPart,
+  { type: "text" | "image_url" | "video_url" }
+>;
 
 export type PromptInput = readonly PromptPart[];
 
@@ -105,7 +119,9 @@ export interface KimiHarnessOptions {
   readonly uiMode?: string;
   readonly skillDirs?: readonly string[];
   readonly telemetry?: TelemetryClient | undefined;
-  readonly onOAuthRefresh?: ((outcome: OAuthRefreshOutcome) => void) | undefined;
+  readonly onOAuthRefresh?:
+    | ((outcome: OAuthRefreshOutcome) => void)
+    | undefined;
   readonly sessionStartedProperties?: TelemetryProperties;
 }
 
@@ -292,6 +308,11 @@ export interface AddAdditionalDirResult {
   readonly persisted: boolean;
 }
 
-export type ResumedSessionState = Pick<ResumeSessionResult, 'sessionMetadata' | 'agents' | 'warning'>;
+export type ResumedSessionState = Pick<
+  ResumeSessionResult,
+  "sessionMetadata" | "agents" | "warning"
+>;
 
-export interface ResumedSessionSummary extends SessionSummary, ResumedSessionState { }
+export interface ResumedSessionSummary
+  extends SessionSummary,
+    ResumedSessionState {}

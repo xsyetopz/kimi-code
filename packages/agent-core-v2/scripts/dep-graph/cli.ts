@@ -11,11 +11,21 @@
  * while running — this CLI is for CI, hooks, or offline inspection.
  */
 
-import { SNAPSHOT_PATH, analyze, readHeadSha, summarize, writeSnapshot } from './analyzer/analyze';
+import {
+  SNAPSHOT_PATH,
+  analyze,
+  readHeadSha,
+  summarize,
+  writeSnapshot,
+} from "./analyzer/analyze";
 
-const graph = analyze({ generatedAt: readHeadSha() ?? new Date().toISOString() });
+const graph = analyze({
+  generatedAt: readHeadSha() ?? new Date().toISOString(),
+});
 writeSnapshot(graph);
 console.log(`wrote ${SNAPSHOT_PATH}\n  ${summarize(graph)}`);
 if (graph.unknownTokens.length > 0) {
-  console.log(`  unknownTokens=${graph.unknownTokens.length}: ${graph.unknownTokens.join(', ')}`);
+  console.log(
+    `  unknownTokens=${graph.unknownTokens.length}: ${graph.unknownTokens.join(", ")}`,
+  );
 }

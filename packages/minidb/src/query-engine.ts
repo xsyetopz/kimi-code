@@ -7,14 +7,14 @@
 // sink) is injected through QueryEngineDeps, so this module never imports the
 // MiniDb class itself.
 
-import { getPath, match, project } from './query.js';
-import { canonRange, fromKStr, toKStr } from './value-codec.js';
-import type { Store } from './store.js';
-import type { IndexManager } from './index-manager.js';
-import type { DtIndex } from './dt-index.js';
-import type { TextIndex } from './text-index/index.js';
-import type { RangeOptions } from './skiplist.js';
-import type { QueryOptions, ScanEntry, ValueCodecName } from './types.js';
+import { getPath, match, project } from "./query.js";
+import { canonRange, fromKStr, toKStr } from "./value-codec.js";
+import type { Store } from "./store.js";
+import type { IndexManager } from "./index-manager.js";
+import type { DtIndex } from "./dt-index.js";
+import type { TextIndex } from "./text-index/index.js";
+import type { RangeOptions } from "./skiplist.js";
+import type { QueryOptions, ScanEntry, ValueCodecName } from "./types.js";
 
 /** The owner-injected surface the query engine needs (see the header). The
  *  index managers and the text map are stable references owned by MiniDb;
@@ -40,75 +40,94 @@ export interface QueryEngineDeps<V> {
 /** Lazy one-shot candidate filter — keeps query pipelines streaming so a
  *  bounded query stops after `skip + limit` matches instead of materializing
  *  every candidate. */
-function* filterKeys(keys: Iterable<string>, pred: (k: string) => boolean): Generator<string> {
+function* filterKeys(
+  keys: Iterable<string>,
+  pred: (k: string) => boolean,
+): Generator<string> {
   for (const k of keys) if (pred(k)) yield k;
 }
 
 export class QueryEngine<V> {
   constructor(private readonly deps: QueryEngineDeps<V>) {}
 
-  private indexPredicates(filter?: Record<string, unknown>): { field: string; cond: unknown }[] {
-    if (!filter || typeof filter !== 'object') return [];
+  private indexPredicates(
+    filter?: Record<string, unknown>,
+  ): { field: string; cond: unknown }[] {
+    if (!filter || typeof filter !== "object") return [];
     const out: { field: string; cond: unknown }[] = [];
     for (const [key, cond] of Object.entries(filter)) {
-      if (key === '$and' && Array.isArray(cond)) {
+      if (key === "$and" && Array.isArray(cond)) {
         for (const f of cond) {
-          if (f && typeof f === 'object') {
+          if (f && typeof f === "object") {
             for (const [k, c] of Object.entries(f)) {
-              if (!k.startsWith('$')) out.push({ field: k, cond: c });
+              if (!k.startsWith("$")) out.push({ field: k, cond: c });
             }
           }
         }
-      } else if (!key.startsWith('$')) {
+      } else if (!key.startsWith("$")) {
         out.push({ field: key, cond });
       }
     }
     return out;
   }
 
-  private candidateKeysForPredicate(field: string, cond: unknown): Set<string> | null {
+  private candidateKeysForPredicate(
+    field: string,
+    cond: unknown,
+  ): Set<string> | null {
     const indexes = this.deps.indexes;
-    if (this.deps.codecName() !== 'json' || !indexes.indexes.size) return null;
+    if (this.deps.codecName() !== "json" || !indexes.indexes.size) return null;
     const fieldIndexes = indexes.list().filter((i) => i.field === field);
     if (!fieldIndexes.length) return null;
 
-    const isOpObj = cond !== null && typeof cond === 'object' && !(cond instanceof RegExp);
+    const isOpObj =
+      cond !== null && typeof cond === "object" && !(cond instanceof RegExp);
     const ops = isOpObj ? (cond as Record<string, unknown>) : null;
 
-    const eqIndex = fieldIndexes.find((i) => i.type === 'equality');
+    const eqIndex = fieldIndexes.find((i) => i.type === "equality");
     if (eqIndex) {
       if (!isOpObj) return new Set(indexes.findEq(eqIndex.name, cond));
-      if (ops && Object.keys(ops).length === 1 && '$eq' in ops) {
-        return new Set(indexes.findEq(eqIndex.name, ops['$eq']));
+      if (ops && Object.keys(ops).length === 1 && "$eq" in ops) {
+        return new Set(indexes.findEq(eqIndex.name, ops["$eq"]));
       }
-      if (ops && Array.isArray(ops['$in'])) {
+      if (ops && Array.isArray(ops["$in"])) {
         const set = new Set<string>();
-        for (const v of ops['$in']) for (const pk of indexes.findEq(eqIndex.name, v)) set.add(pk);
+        for (const v of ops["$in"])
+          for (const pk of indexes.findEq(eqIndex.name, v)) set.add(pk);
         return set;
       }
     }
 
-    const rangeIndex = fieldIndexes.find((i) => i.type === 'range');
+    const rangeIndex = fieldIndexes.find((i) => i.type === "range");
     if (rangeIndex && ops) {
-      const opts: { min?: number; max?: number; minExclusive?: boolean; maxExclusive?: boolean } = {};
-      if (typeof ops['$gte'] === 'number') opts.min = ops['$gte'];
-      if (typeof ops['$gt'] === 'number') {
-        opts.min = ops['$gt'];
+      const opts: {
+        min?: number;
+        max?: number;
+        minExclusive?: boolean;
+        maxExclusive?: boolean;
+      } = {};
+      if (typeof ops["$gte"] === "number") opts.min = ops["$gte"];
+      if (typeof ops["$gt"] === "number") {
+        opts.min = ops["$gt"];
         opts.minExclusive = true;
       }
-      if (typeof ops['$lte'] === 'number') opts.max = ops['$lte'];
-      if (typeof ops['$lt'] === 'number') {
-        opts.max = ops['$lt'];
+      if (typeof ops["$lte"] === "number") opts.max = ops["$lte"];
+      if (typeof ops["$lt"] === "number") {
+        opts.max = ops["$lt"];
         opts.maxExclusive = true;
       }
       if (opts.min !== undefined || opts.max !== undefined) {
-        return new Set(indexes.findRange(rangeIndex.name, opts).map((r) => r.pk));
+        return new Set(
+          indexes.findRange(rangeIndex.name, opts).map((r) => r.pk),
+        );
       }
     }
     return null;
   }
 
-  private indexedCandidateKeys(filter?: Record<string, unknown>): string[] | null {
+  private indexedCandidateKeys(
+    filter?: Record<string, unknown>,
+  ): string[] | null {
     let candidates: Set<string> | null = null;
     for (const p of this.indexPredicates(filter)) {
       const set = this.candidateKeysForPredicate(p.field, p.cond);
@@ -130,16 +149,26 @@ export class QueryEngine<V> {
   // backed by an equality index, for use as a cheap per-candidate pre-filter.
   // Only direct equality and {$eq: x} qualify; $in / range / non-indexed fields
   // are left to the full match() after decode.
-  private cheapEqChecks(filter?: Record<string, unknown>): { name: string; value: unknown }[] {
+  private cheapEqChecks(
+    filter?: Record<string, unknown>,
+  ): { name: string; value: unknown }[] {
     const out: { name: string; value: unknown }[] = [];
     const indexes = this.deps.indexes;
-    if (!filter || typeof filter !== 'object' || !indexes.indexes.size) return out;
+    if (!filter || typeof filter !== "object" || !indexes.indexes.size)
+      return out;
     for (const { field, cond } of this.indexPredicates(filter)) {
-      const idx = indexes.list().find((i) => i.field === field && i.type === 'equality');
+      const idx = indexes
+        .list()
+        .find((i) => i.field === field && i.type === "equality");
       if (!idx) continue;
-      if (cond !== null && typeof cond === 'object' && !(cond instanceof RegExp)) {
+      if (
+        cond !== null &&
+        typeof cond === "object" &&
+        !(cond instanceof RegExp)
+      ) {
         const ops = cond as Record<string, unknown>;
-        if (Object.keys(ops).length === 1 && '$eq' in ops) out.push({ name: idx.name, value: ops['$eq'] });
+        if (Object.keys(ops).length === 1 && "$eq" in ops)
+          out.push({ name: idx.name, value: ops["$eq"] });
       } else {
         out.push({ name: idx.name, value: cond });
       }
@@ -189,7 +218,11 @@ export class QueryEngine<V> {
     const eqChecks = this.cheapEqChecks(q.filter);
 
     const stats = this.deps.stats;
-    const out: { key: string; value: V; dt: Record<string, number> | undefined }[] = [];
+    const out: {
+      key: string;
+      value: V;
+      dt: Record<string, number> | undefined;
+    }[] = [];
     let skipped = 0;
     for (const { key: kstr } of this.deps.dt.iterate(col, iterOpts)) {
       stats.queryCandidates++;
@@ -233,16 +266,17 @@ export class QueryEngine<V> {
     // only the rows it returns instead of materializing the whole candidate
     // set first.
     let keys: Iterable<string> | null = null;
-    if (typeof q.key === 'string') {
+    if (typeof q.key === "string") {
       keys = [toKStr(q.key)];
-    } else if (q.key && typeof q.key === 'object') {
+    } else if (q.key && typeof q.key === "object") {
       if ((q.key as { prefix?: string }).prefix) {
         const p = toKStr((q.key as { prefix: string }).prefix);
-        keys = this.deps.store().rawKeys({ gte: p, lt: p + '￿' });
+        keys = this.deps.store().rawKeys({ gte: p, lt: p + "￿" });
       } else {
         const opts: RangeOptions<string> = {};
-        for (const b of ['gte', 'gt', 'lte', 'lt'] as const)
-          if ((q.key as Record<string, unknown>)[b] !== undefined) opts[b] = (q.key as Record<string, unknown>)[b] as string;
+        for (const b of ["gte", "gt", "lte", "lt"] as const)
+          if ((q.key as Record<string, unknown>)[b] !== undefined)
+            opts[b] = (q.key as Record<string, unknown>)[b] as string;
         keys = this.deps.store().rawKeys(canonRange(opts));
       }
     }
@@ -258,10 +292,16 @@ export class QueryEngine<V> {
     if (q.text) {
       const ti = this.deps.text.get(q.text.index);
       if (!ti) throw new Error(`no such text index: ${q.text.index}`);
-      const hits = ti.search(q.text.q, { op: q.text.op, limit: q.text.limit ?? 1_000_000 });
+      const hits = ti.search(q.text.q, {
+        op: q.text.op,
+        limit: q.text.limit ?? 1_000_000,
+      });
       textOrder = hits;
       const set = new Set(hits.map((h) => h.key));
-      keys = keys === null ? hits.map((h) => h.key) : filterKeys(keys, (k) => set.has(k));
+      keys =
+        keys === null
+          ? hits.map((h) => h.key)
+          : filterKeys(keys, (k) => set.has(k));
     }
 
     const indexed = this.indexedCandidateKeys(q.filter);
@@ -320,10 +360,18 @@ export class QueryEngine<V> {
       });
     }
 
-    const sliced = early ? docs : skip || limit !== Infinity ? docs.slice(skip, skip + limit) : docs;
+    const sliced = early
+      ? docs
+      : skip || limit !== Infinity
+        ? docs.slice(skip, skip + limit)
+        : docs;
 
     if (q.project) {
-      return sliced.map((d) => ({ key: fromKStr(d.key), value: project(d.value, q.project) as V, dt: d.dt }));
+      return sliced.map((d) => ({
+        key: fromKStr(d.key),
+        value: project(d.value, q.project) as V,
+        dt: d.dt,
+      }));
     }
     return sliced.map((d) => ({ ...d, key: fromKStr(d.key) }));
   }
@@ -338,16 +386,17 @@ export class QueryEngine<V> {
     if (fast !== null) return fast;
 
     let keys: Iterable<string> | null = null;
-    if (typeof q.key === 'string') {
+    if (typeof q.key === "string") {
       keys = [toKStr(q.key)];
-    } else if (q.key && typeof q.key === 'object') {
+    } else if (q.key && typeof q.key === "object") {
       if ((q.key as { prefix?: string }).prefix) {
         const p = toKStr((q.key as { prefix: string }).prefix);
-        keys = this.deps.store().rawKeys({ gte: p, lt: p + '￿' });
+        keys = this.deps.store().rawKeys({ gte: p, lt: p + "￿" });
       } else {
         const opts: RangeOptions<string> = {};
-        for (const b of ['gte', 'gt', 'lte', 'lt'] as const)
-          if ((q.key as Record<string, unknown>)[b] !== undefined) opts[b] = (q.key as Record<string, unknown>)[b] as string;
+        for (const b of ["gte", "gt", "lte", "lt"] as const)
+          if ((q.key as Record<string, unknown>)[b] !== undefined)
+            opts[b] = (q.key as Record<string, unknown>)[b] as string;
         keys = this.deps.store().rawKeys(canonRange(opts));
       }
     }
@@ -363,10 +412,16 @@ export class QueryEngine<V> {
     if (q.text) {
       const ti = this.deps.text.get(q.text.index);
       if (!ti) throw new Error(`no such text index: ${q.text.index}`);
-      const hits = await ti.searchAsync(q.text.q, { op: q.text.op, limit: q.text.limit ?? 1_000_000 });
+      const hits = await ti.searchAsync(q.text.q, {
+        op: q.text.op,
+        limit: q.text.limit ?? 1_000_000,
+      });
       textOrder = hits;
       const set = new Set(hits.map((h) => h.key));
-      keys = keys === null ? hits.map((h) => h.key) : filterKeys(keys, (k) => set.has(k));
+      keys =
+        keys === null
+          ? hits.map((h) => h.key)
+          : filterKeys(keys, (k) => set.has(k));
     }
 
     const indexed = this.indexedCandidateKeys(q.filter);
@@ -420,17 +475,27 @@ export class QueryEngine<V> {
       });
     }
 
-    const sliced = early ? docs : skip || limit !== Infinity ? docs.slice(skip, skip + limit) : docs;
+    const sliced = early
+      ? docs
+      : skip || limit !== Infinity
+        ? docs.slice(skip, skip + limit)
+        : docs;
 
     if (q.project) {
-      return sliced.map((d) => ({ key: fromKStr(d.key), value: project(d.value, q.project) as V, dt: d.dt }));
+      return sliced.map((d) => ({
+        key: fromKStr(d.key),
+        value: project(d.value, q.project) as V,
+        dt: d.dt,
+      }));
     }
     return sliced.map((d) => ({ ...d, key: fromKStr(d.key) }));
   }
 
   /** Async twin of the dt-ordered fast path (see tryDtOrderedLimit): the
    *  same eligibility rules and output, with async value reads. */
-  private async tryDtOrderedLimitAsync(q: QueryOptions): Promise<ScanEntry<V>[] | null> {
+  private async tryDtOrderedLimitAsync(
+    q: QueryOptions,
+  ): Promise<ScanEntry<V>[] | null> {
     if (q.text) return null;
     if (q.key !== undefined) return null;
     if (q.limit === undefined) return null;
@@ -461,7 +526,11 @@ export class QueryEngine<V> {
     const eqChecks = this.cheapEqChecks(q.filter);
 
     const stats = this.deps.stats;
-    const out: { key: string; value: V; dt: Record<string, number> | undefined }[] = [];
+    const out: {
+      key: string;
+      value: V;
+      dt: Record<string, number> | undefined;
+    }[] = [];
     let skipped = 0;
     for (const { key: kstr } of this.deps.dt.iterate(col, iterOpts)) {
       stats.queryCandidates++;

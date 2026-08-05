@@ -7,19 +7,19 @@
  * preflight description extension points. Bound at Agent scope.
  */
 
-import { createDecorator } from '#/_base/di/instantiation';
-import type { IDisposable } from '#/_base/di/lifecycle';
-import type { Event } from '#/_base/event';
-import type { ToolResult } from '#/tool/toolContract';
+import { createDecorator } from "#/_base/di/instantiation";
+import type { IDisposable } from "#/_base/di/lifecycle";
+import type { Event } from "#/_base/event";
+import type { ToolResult } from "#/tool/toolContract";
 import type {
   BeforeToolExecuteEvent,
   ToolDidExecuteContext,
   WillExecuteToolEvent,
-} from '#/agent/toolExecutor/toolHooks';
-import type { ToolCall } from '#/kosong/contract/message';
-import type { OrderedHookSlot } from '#/hooks';
-import type { LLMRequestTrace } from '#/kosong/contract/requestTrace';
-import type { ToolSource } from '#/tool/toolContract';
+} from "#/agent/toolExecutor/toolHooks";
+import type { ToolCall } from "#/kosong/contract/message";
+import type { OrderedHookSlot } from "#/hooks";
+import type { LLMRequestTrace } from "#/kosong/contract/requestTrace";
+import type { ToolSource } from "#/tool/toolContract";
 
 export interface ToolCallStartedPayload {
   readonly toolCallId: string;
@@ -47,12 +47,15 @@ export type ToolCallGuard = (tool: {
   readonly source: ToolSource;
 }) => string | undefined;
 
-export type ToolCallDupType = 'same_step' | 'cross_step';
+export type ToolCallDupType = "same_step" | "cross_step";
 
 export interface IAgentToolExecutorService {
   readonly _serviceBrand: undefined;
 
-  execute(calls: ToolCall[], options: ToolExecutorExecuteOptions): AsyncIterable<ToolExecutionResult>;
+  execute(
+    calls: ToolCall[],
+    options: ToolExecutorExecuteOptions,
+  ): AsyncIterable<ToolExecutionResult>;
 
   readonly onBeforeExecuteTool: Event<BeforeToolExecuteEvent>;
 
@@ -65,9 +68,11 @@ export interface IAgentToolExecutorService {
   recordDupType(toolCallId: string, dupType: ToolCallDupType): void;
 
   registerToolCallGuard(guard: ToolCallGuard): IDisposable;
-  registerUnavailableToolDescriber(describer: UnavailableToolDescriber): IDisposable;
+  registerUnavailableToolDescriber(
+    describer: UnavailableToolDescriber,
+  ): IDisposable;
   registerMissingToolDescriber(describer: MissingToolDescriber): IDisposable;
 }
 
 export const IAgentToolExecutorService =
-  createDecorator<IAgentToolExecutorService>('agentToolExecutorService');
+  createDecorator<IAgentToolExecutorService>("agentToolExecutorService");

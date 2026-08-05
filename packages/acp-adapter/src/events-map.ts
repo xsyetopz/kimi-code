@@ -6,7 +6,7 @@ import type {
   SessionNotification,
   ToolCallContent,
   ToolKind,
-} from '@agentclientprotocol/sdk';
+} from "@agentclientprotocol/sdk";
 import type {
   AssistantDeltaEvent,
   ThinkingDeltaEvent,
@@ -16,10 +16,10 @@ import type {
   ToolProgressEvent,
   ToolResultEvent,
   TurnEndReason,
-} from '@moonshot-ai/kimi-code-sdk';
+} from "@moonshot-ai/kimi-code-sdk";
 
-import { displayBlockToAcpContent, toolResultToAcpContent } from './convert';
-import type { AcpStopReason } from './types';
+import { displayBlockToAcpContent, toolResultToAcpContent } from "./convert";
+import type { AcpStopReason } from "./types";
 
 /**
  * Build an ACP `session/update` notification with an
@@ -38,8 +38,8 @@ export function assistantDeltaToSessionUpdate(
   return {
     sessionId,
     update: {
-      sessionUpdate: 'agent_message_chunk',
-      content: { type: 'text', text: event.delta },
+      sessionUpdate: "agent_message_chunk",
+      content: { type: "text", text: event.delta },
     },
   };
 }
@@ -69,15 +69,15 @@ export function turnEndReasonToStopReason(
   error?: { readonly code: string },
 ): AcpStopReason {
   switch (reason) {
-    case 'completed':
-      return 'end_turn';
-    case 'cancelled':
-      return 'cancelled';
-    case 'failed':
-      if (error?.code === 'provider.filtered') return 'refusal';
-      return 'end_turn';
-    case 'blocked':
-      return 'refusal';
+    case "completed":
+      return "end_turn";
+    case "cancelled":
+      return "cancelled";
+    case "failed":
+      if (error?.code === "provider.filtered") return "refusal";
+      return "end_turn";
+    case "blocked":
+      return "refusal";
   }
 }
 
@@ -105,23 +105,23 @@ export function acpToolCallId(turnId: number, toolCallId: string): string {
  */
 export function inferToolKind(name: string): ToolKind {
   switch (name) {
-    case 'Read':
-    case 'Glob':
-    case 'Grep':
-      return 'read';
-    case 'Write':
-    case 'Edit':
-      return 'edit';
-    case 'Bash':
-    case 'Terminal':
-      return 'execute';
-    case 'WebFetch':
-    case 'WebSearch':
-      return 'fetch';
-    case 'Think':
-      return 'think';
+    case "Read":
+    case "Glob":
+    case "Grep":
+      return "read";
+    case "Write":
+    case "Edit":
+      return "edit";
+    case "Bash":
+    case "Terminal":
+      return "execute";
+    case "WebFetch":
+    case "WebSearch":
+      return "fetch";
+    case "Think":
+      return "think";
     default:
-      return 'other';
+      return "other";
   }
 }
 
@@ -162,8 +162,8 @@ export function toolCallStartToSessionUpdate(
   const title = event.description ?? event.name;
   const content: ToolCallContent[] = [
     {
-      type: 'content',
-      content: { type: 'text', text: stringifyArgs(event.args) },
+      type: "content",
+      content: { type: "text", text: stringifyArgs(event.args) },
     },
   ];
   // If the tool attached a diff-bearing display (kind: 'diff' or
@@ -180,11 +180,11 @@ export function toolCallStartToSessionUpdate(
   return {
     sessionId,
     update: {
-      sessionUpdate: 'tool_call',
+      sessionUpdate: "tool_call",
       toolCallId: acpToolCallId(event.turnId, event.toolCallId),
       title,
       kind: inferToolKind(event.name),
-      status: 'in_progress',
+      status: "in_progress",
       rawInput: event.args,
       content,
     },
@@ -205,17 +205,17 @@ export function toolCallDeltaToSessionUpdate(
   event: ToolCallDeltaEvent,
   accumulator: { args: string },
 ): SessionNotification {
-  accumulator.args += event.argumentsPart ?? '';
+  accumulator.args += event.argumentsPart ?? "";
   return {
     sessionId,
     update: {
-      sessionUpdate: 'tool_call_update',
+      sessionUpdate: "tool_call_update",
       toolCallId: acpToolCallId(event.turnId, event.toolCallId),
-      status: 'in_progress',
+      status: "in_progress",
       content: [
         {
-          type: 'content',
-          content: { type: 'text', text: accumulator.args },
+          type: "content",
+          content: { type: "text", text: accumulator.args },
         },
       ],
     },
@@ -252,19 +252,19 @@ export function toolCallLazyCreateToSessionUpdate(
   sessionId: string,
   event: ToolCallDeltaEvent,
 ): SessionNotification {
-  const name = event.name ?? 'tool';
+  const name = event.name ?? "tool";
   return {
     sessionId,
     update: {
-      sessionUpdate: 'tool_call',
+      sessionUpdate: "tool_call",
       toolCallId: acpToolCallId(event.turnId, event.toolCallId),
       title: name,
-      kind: event.name ? inferToolKind(event.name) : 'other',
-      status: 'pending',
+      kind: event.name ? inferToolKind(event.name) : "other",
+      status: "pending",
       content: [
         {
-          type: 'content',
-          content: { type: 'text', text: event.argumentsPart ?? '' },
+          type: "content",
+          content: { type: "text", text: event.argumentsPart ?? "" },
         },
       ],
     },
@@ -295,8 +295,8 @@ export function toolCallStartedUpgradeToSessionUpdate(
   const title = event.description ?? event.name;
   const content: ToolCallContent[] = [
     {
-      type: 'content',
-      content: { type: 'text', text: stringifyArgs(event.args) },
+      type: "content",
+      content: { type: "text", text: stringifyArgs(event.args) },
     },
   ];
   if (event.display) {
@@ -308,11 +308,11 @@ export function toolCallStartedUpgradeToSessionUpdate(
   return {
     sessionId,
     update: {
-      sessionUpdate: 'tool_call_update',
+      sessionUpdate: "tool_call_update",
       toolCallId: acpToolCallId(event.turnId, event.toolCallId),
       title,
       kind: inferToolKind(event.name),
-      status: 'in_progress',
+      status: "in_progress",
       rawInput: event.args,
       content,
     },
@@ -332,11 +332,11 @@ export function toolProgressToSessionUpdate(
   sessionId: string,
   event: ToolProgressEvent,
 ): SessionNotification | null {
-  if (event.update.kind === 'status' && event.update.text) {
+  if (event.update.kind === "status" && event.update.text) {
     return {
       sessionId,
       update: {
-        sessionUpdate: 'tool_call_update',
+        sessionUpdate: "tool_call_update",
         toolCallId: acpToolCallId(event.turnId, event.toolCallId),
         title: event.update.text,
       },
@@ -358,8 +358,8 @@ export function thinkingDeltaToSessionUpdate(
   return {
     sessionId,
     update: {
-      sessionUpdate: 'agent_thought_chunk',
-      content: { type: 'text', text: event.delta },
+      sessionUpdate: "agent_thought_chunk",
+      content: { type: "text", text: event.delta },
     },
   };
 }
@@ -383,9 +383,9 @@ export function toolResultToSessionUpdate(
   return {
     sessionId,
     update: {
-      sessionUpdate: 'tool_call_update',
+      sessionUpdate: "tool_call_update",
       toolCallId: acpToolCallId(event.turnId, event.toolCallId),
-      status: event.isError ? 'failed' : 'completed',
+      status: event.isError ? "failed" : "completed",
       content: toolResultToAcpContent(event),
       rawOutput: event.output,
     },
@@ -427,13 +427,13 @@ export function todoListToSessionUpdate(
   if (items.length === 0) return null;
   const entries: PlanEntry[] = items.map((item) => ({
     content: item.title,
-    priority: 'medium',
+    priority: "medium",
     status: mapTodoStatus(item.status),
   }));
   return {
     sessionId,
     update: {
-      sessionUpdate: 'plan',
+      sessionUpdate: "plan",
       entries,
     },
   };
@@ -441,15 +441,15 @@ export function todoListToSessionUpdate(
 
 function mapTodoStatus(status: string): PlanEntryStatus {
   switch (status) {
-    case 'pending':
-      return 'pending';
-    case 'in_progress':
-      return 'in_progress';
-    case 'done':
-    case 'completed':
-      return 'completed';
+    case "pending":
+      return "pending";
+    case "in_progress":
+      return "in_progress";
+    case "done":
+    case "completed":
+      return "completed";
     default:
-      return 'pending';
+      return "pending";
   }
 }
 
@@ -468,7 +468,7 @@ export function planFromDisplayBlock(
   turnId: number,
   display: ToolInputDisplay,
 ): SessionNotification | null {
-  if (display.kind !== 'todo_list') return null;
+  if (display.kind !== "todo_list") return null;
   return todoListToSessionUpdate(sessionId, turnId, display.items);
 }
 
@@ -489,7 +489,7 @@ export function availableCommandsUpdateNotification(
   return {
     sessionId,
     update: {
-      sessionUpdate: 'available_commands_update',
+      sessionUpdate: "available_commands_update",
       availableCommands: commands.slice(),
     },
   };
@@ -520,7 +520,7 @@ export function configOptionUpdateNotification(
   return {
     sessionId,
     update: {
-      sessionUpdate: 'config_option_update',
+      sessionUpdate: "config_option_update",
       configOptions: [...configOptions],
     },
   };

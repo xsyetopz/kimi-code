@@ -20,17 +20,21 @@
  * stores, owning no state themselves.
  */
 
-import { IAtomicDocumentStore } from '#/persistence/interface/atomicDocumentStore';
-import { IFileSystemStorageService } from '#/persistence/interface/storage';
+import { IAtomicDocumentStore } from "#/persistence/interface/atomicDocumentStore";
+import { IFileSystemStorageService } from "#/persistence/interface/storage";
 
-import { CHILD_SESSION_KIND, CHILD_SESSION_KIND_KEY, type SessionSummary } from './sessionIndex';
+import {
+  CHILD_SESSION_KIND,
+  CHILD_SESSION_KIND_KEY,
+  type SessionSummary,
+} from "./sessionIndex";
 
-const META_SCOPE = 'session-meta';
-const META_KEY = 'state.json';
+const META_SCOPE = "session-meta";
+const META_KEY = "state.json";
 
 export function parseTime(value: unknown): number {
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-  if (typeof value === 'string') {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
     const parsed = Date.parse(value);
     if (!Number.isNaN(parsed)) return parsed;
   }
@@ -38,14 +42,16 @@ export function parseTime(value: unknown): number {
 }
 
 export function recoverCwd(meta: Record<string, unknown>): string | undefined {
-  if (typeof meta['cwd'] === 'string' && meta['cwd'].length > 0) return meta['cwd'];
-  if (typeof meta['workDir'] === 'string' && meta['workDir'].length > 0) {
-    return meta['workDir'];
+  if (typeof meta["cwd"] === "string" && meta["cwd"].length > 0)
+    return meta["cwd"];
+  if (typeof meta["workDir"] === "string" && meta["workDir"].length > 0) {
+    return meta["workDir"];
   }
-  const custom = meta['custom'];
-  if (custom !== null && typeof custom === 'object' && !Array.isArray(custom)) {
-    const fromCustom = (custom as Record<string, unknown>)['cwd'];
-    if (typeof fromCustom === 'string' && fromCustom.length > 0) return fromCustom;
+  const custom = meta["custom"];
+  if (custom !== null && typeof custom === "object" && !Array.isArray(custom)) {
+    const fromCustom = (custom as Record<string, unknown>)["cwd"];
+    if (typeof fromCustom === "string" && fromCustom.length > 0)
+      return fromCustom;
   }
   return undefined;
 }
@@ -84,7 +90,7 @@ export function summaryMatchesChildOf(
   if (parentId === undefined) return true;
   const custom = summary.custom;
   return (
-    custom?.['parent_session_id'] === parentId &&
+    custom?.["parent_session_id"] === parentId &&
     custom?.[CHILD_SESSION_KIND_KEY] === CHILD_SESSION_KIND
   );
 }
@@ -136,22 +142,27 @@ export async function readSessionSummary(
   sessionId: string,
 ): Promise<SessionSummary | undefined> {
   const base = `${sessionsScope}/${workspaceId}/${sessionId}`;
-  const meta = (await readMeta(docs, base)) ?? (await readMeta(docs, `${base}/${META_SCOPE}`));
+  const meta =
+    (await readMeta(docs, base)) ??
+    (await readMeta(docs, `${base}/${META_SCOPE}`));
   if (meta === undefined) return undefined;
-  const rawCustom = meta['custom'];
+  const rawCustom = meta["custom"];
   const custom =
-    rawCustom !== null && typeof rawCustom === 'object' && !Array.isArray(rawCustom)
+    rawCustom !== null &&
+    typeof rawCustom === "object" &&
+    !Array.isArray(rawCustom)
       ? (rawCustom as Record<string, unknown>)
       : undefined;
   return buildSessionSummary({
     id: sessionId,
     workspaceId,
     cwd: recoverCwd(meta),
-    title: typeof meta['title'] === 'string' ? meta['title'] : undefined,
-    lastPrompt: typeof meta['lastPrompt'] === 'string' ? meta['lastPrompt'] : undefined,
-    createdAt: parseTime(meta['createdAt']),
-    updatedAt: parseTime(meta['updatedAt']),
-    archived: meta['archived'] === true,
+    title: typeof meta["title"] === "string" ? meta["title"] : undefined,
+    lastPrompt:
+      typeof meta["lastPrompt"] === "string" ? meta["lastPrompt"] : undefined,
+    createdAt: parseTime(meta["createdAt"]),
+    updatedAt: parseTime(meta["updatedAt"]),
+    archived: meta["archived"] === true,
     custom,
   });
 }
@@ -176,13 +187,16 @@ export async function mapBounded<T, R>(
 ): Promise<R[]> {
   const out: R[] = [];
   let next = 0;
-  const workers = Array.from({ length: Math.min(concurrency, items.length) }, async () => {
-    while (next < items.length) {
-      const item = items[next++]!;
-      const value = await fn(item);
-      if (value !== undefined) out.push(value);
-    }
-  });
+  const workers = Array.from(
+    { length: Math.min(concurrency, items.length) },
+    async () => {
+      while (next < items.length) {
+        const item = items[next++]!;
+        const value = await fn(item);
+        if (value !== undefined) out.push(value);
+      }
+    },
+  );
   await Promise.all(workers);
   return out;
 }

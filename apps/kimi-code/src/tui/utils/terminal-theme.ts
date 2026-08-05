@@ -24,7 +24,9 @@ export {
 } from "#/tui/constant/terminal";
 
 export function hasTerminalThemeReport(data: string): boolean {
-  return data.includes(TERMINAL_THEME_DARK) || data.includes(TERMINAL_THEME_LIGHT);
+  return (
+    data.includes(TERMINAL_THEME_DARK) || data.includes(TERMINAL_THEME_LIGHT)
+  );
 }
 
 export interface TerminalThemeInputState {
@@ -59,7 +61,9 @@ export function handleTerminalThemeInput(
     }
 
     inputState.osc11Buffer =
-      candidate.length > TERMINAL_THEME_INPUT_BUFFER_MAX_LENGTH ? "" : candidate;
+      candidate.length > TERMINAL_THEME_INPUT_BUFFER_MAX_LENGTH
+        ? ""
+        : candidate;
     return { consume: true };
   }
 
@@ -77,7 +81,10 @@ export function handleTerminalThemeInput(
   return undefined;
 }
 
-function stripOsc11Reports(data: string, onTheme: (theme: ResolvedTheme) => void): string {
+function stripOsc11Reports(
+  data: string,
+  onTheme: (theme: ResolvedTheme) => void,
+): string {
   let remaining = data;
 
   for (;;) {
@@ -121,7 +128,10 @@ function findPartialOsc11Start(data: string): number {
   for (let i = 0; i < data.length; i++) {
     const suffix = data.slice(i);
     if (OSC11_RESPONSE_PREFIX.startsWith(suffix) && suffix.length > 1) return i;
-    if (OSC11_RESPONSE_PREFIX_NO_ESC.startsWith(suffix) && suffix.startsWith("]11;")) {
+    if (
+      OSC11_RESPONSE_PREFIX_NO_ESC.startsWith(suffix) &&
+      suffix.startsWith("]11;")
+    ) {
       return i;
     }
   }

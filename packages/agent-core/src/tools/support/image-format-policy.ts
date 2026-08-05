@@ -28,18 +28,18 @@
  * server-side; those pass through unchanged.
  */
 
-import { IMAGE_MIME_BY_SUFFIX, sniffMediaFromMagic } from './file-type';
+import { IMAGE_MIME_BY_SUFFIX, sniffMediaFromMagic } from "./file-type";
 
 /** Image MIME types every provider accepts. The closed set. */
 export const MODEL_ACCEPTED_IMAGE_MIMES: ReadonlySet<string> = new Set([
-  'image/png',
-  'image/jpeg',
-  'image/gif',
-  'image/webp',
+  "image/png",
+  "image/jpeg",
+  "image/gif",
+  "image/webp",
 ]);
 
 /** Human-readable list of the accepted formats, for notices. */
-const ACCEPTED_FORMATS_TEXT = 'PNG, JPEG, GIF, and WebP';
+const ACCEPTED_FORMATS_TEXT = "PNG, JPEG, GIF, and WebP";
 
 interface UnsupportedImageFormatInfo {
   /**
@@ -47,7 +47,10 @@ interface UnsupportedImageFormatInfo {
    * heif-convert for HEIC/HEIF). Other OSes, and formats without a dedicated
    * decoder, are guided to sips (macOS) or ImageMagick.
    */
-  readonly linuxDecoder?: { readonly command: string; readonly packageName: string };
+  readonly linuxDecoder?: {
+    readonly command: string;
+    readonly packageName: string;
+  };
 }
 
 /**
@@ -55,15 +58,20 @@ interface UnsupportedImageFormatInfo {
  * A missing entry still means "refuse" — the entry only adds a
  * format-specific conversion hint.
  */
-const UNSUPPORTED_IMAGE_FORMATS: Readonly<Record<string, UnsupportedImageFormatInfo>> =
-  Object.freeze({
-    'image/avif': {},
-    'image/heic': { linuxDecoder: { command: 'heif-convert', packageName: 'libheif-examples' } },
-    'image/heif': { linuxDecoder: { command: 'heif-convert', packageName: 'libheif-examples' } },
-    'image/bmp': {},
-    'image/tiff': {},
-    'image/x-icon': {},
-  });
+const UNSUPPORTED_IMAGE_FORMATS: Readonly<
+  Record<string, UnsupportedImageFormatInfo>
+> = Object.freeze({
+  "image/avif": {},
+  "image/heic": {
+    linuxDecoder: { command: "heif-convert", packageName: "libheif-examples" },
+  },
+  "image/heif": {
+    linuxDecoder: { command: "heif-convert", packageName: "libheif-examples" },
+  },
+  "image/bmp": {},
+  "image/tiff": {},
+  "image/x-icon": {},
+});
 
 /**
  * Lowercase, drop MIME parameters, and apply the `image/jpg` alias. Parameter
@@ -74,9 +82,9 @@ const UNSUPPORTED_IMAGE_FORMATS: Readonly<Record<string, UnsupportedImageFormatI
  */
 export function normalizeImageMime(mimeType: string): string {
   const lower = mimeType.trim().toLowerCase();
-  const semi = lower.indexOf(';');
+  const semi = lower.indexOf(";");
   const base = (semi === -1 ? lower : lower.slice(0, semi)).trim();
-  return base === 'image/jpg' ? 'image/jpeg' : base;
+  return base === "image/jpg" ? "image/jpeg" : base;
 }
 
 /**
@@ -92,7 +100,7 @@ const BASE64_SNIFF_CHARS = 48;
  * on malformed base64 — it decodes what it can.
  */
 export function decodeBase64Prefix(base64: string): Buffer {
-  return Buffer.from(base64.slice(0, BASE64_SNIFF_CHARS), 'base64');
+  return Buffer.from(base64.slice(0, BASE64_SNIFF_CHARS), "base64");
 }
 
 /**
@@ -103,7 +111,10 @@ export function decodeBase64Prefix(base64: string): Buffer {
  * MIME. A header recognized as a non-image container also wins, so a video
  * file hiding in an image part is refused instead of trusted.
  */
-export function resolveEffectiveImageMime(declaredMime: string, header: Uint8Array): string {
+export function resolveEffectiveImageMime(
+  declaredMime: string,
+  header: Uint8Array,
+): string {
   const sniffed = sniffMediaFromMagic(header);
   return sniffed !== null ? sniffed.mimeType : declaredMime;
 }
@@ -122,17 +133,17 @@ export function resolveEffectiveImageMime(declaredMime: string, header: Uint8Arr
  */
 export function unsupportedImageMimeFromUrl(url: string): string | null {
   let path = url;
-  const query = path.indexOf('?');
+  const query = path.indexOf("?");
   if (query !== -1) path = path.slice(0, query);
-  const hash = path.indexOf('#');
+  const hash = path.indexOf("#");
   if (hash !== -1) path = path.slice(0, hash);
-  const dot = path.lastIndexOf('.');
+  const dot = path.lastIndexOf(".");
   if (dot === -1) return null;
   const ext = path.slice(dot).toLowerCase();
   // `.svg` is deliberately absent from IMAGE_MIME_BY_SUFFIX — SVG files are
   // text for the file tools — but as a remote image URL it is accepted by no
   // provider, so flag it here without touching the shared suffix map.
-  const mime = ext === '.svg' ? 'image/svg+xml' : IMAGE_MIME_BY_SUFFIX[ext];
+  const mime = ext === ".svg" ? "image/svg+xml" : IMAGE_MIME_BY_SUFFIX[ext];
   if (mime === undefined || isModelAcceptedImageMime(mime)) return null;
   return mime;
 }
@@ -149,8 +160,10 @@ export function unsupportedImageMimeFromUrl(url: string): string | null {
  * Returns null for non-data URLs (e.g. a remote http(s) image — see the
  * scope note in the module header).
  */
-export function parseImageDataUrl(url: string): { mimeType: string; base64: string } | null {
-  const match = /^data:([^;,]+)(?:;[^;,]+)*?;base64,(.*)$/si.exec(url);
+export function parseImageDataUrl(
+  url: string,
+): { mimeType: string; base64: string } | null {
+  const match = /^data:([^;,]+)(?:;[^;,]+)*?;base64,(.*)$/is.exec(url);
   if (match === null) return null;
   return { mimeType: match[1]!, base64: match[2]! };
 }
@@ -162,7 +175,7 @@ export function parseImageDataUrl(url: string): { mimeType: string; base64: stri
  * the provider fetches).
  */
 export function isDataUrl(url: string): boolean {
-  return url.toLowerCase().startsWith('data:');
+  return url.toLowerCase().startsWith("data:");
 }
 
 /**
@@ -191,10 +204,10 @@ export function buildImageConversionGuidance(
   mimeType: string,
   osKind: string,
 ): string {
-  const converted = path.replace(/\.[^./\\]+$/, '') + '.jpg';
+  const converted = path.replace(/\.[^./\\]+$/, "") + ".jpg";
   return (
     `"${path}" is an ${mimeType} image, which the provider does not accept. ` +
-    'Convert it to JPEG first, then read the converted file. ' +
+    "Convert it to JPEG first, then read the converted file. " +
     imageConversionCommand(
       path,
       converted,
@@ -213,23 +226,23 @@ function imageConversionCommand(
   const magick = `magick "${path}" "${converted}"`;
   const linuxDecoder = format?.linuxDecoder;
   switch (osKind) {
-    case 'macOS':
+    case "macOS":
       return `On macOS: sips -s format jpeg "${path}" --out "${converted}"`;
-    case 'Linux':
+    case "Linux":
       return linuxDecoder === undefined
         ? `On Linux, with ImageMagick: ${magick}`
         : `On Linux: ${linuxDecoder.command} "${path}" "${converted}" ` +
             `(package ${linuxDecoder.packageName}), or with ImageMagick: ${magick}`;
-    case 'Windows':
+    case "Windows":
       return (
         `On Windows, with ImageMagick: ${magick} ` +
-        '(install it first if missing: winget install ImageMagick.ImageMagick)'
+        "(install it first if missing: winget install ImageMagick.ImageMagick)"
       );
     default:
       return (
         `Options: sips -s format jpeg "${path}" --out "${converted}" (macOS)` +
         (linuxDecoder === undefined
-          ? ''
+          ? ""
           : `, ${linuxDecoder.command} "${path}" "${converted}" ` +
             `(Linux, package ${linuxDecoder.packageName})`) +
         `, or ${magick} (ImageMagick)`
@@ -243,14 +256,17 @@ function imageConversionCommand(
  * dropped and this text replaces it, so the model knows what happened and
  * the session history stays free of formats the provider rejects.
  */
-export function buildUnsupportedImageNotice(mimeType: string, name?: string): string {
+export function buildUnsupportedImageNotice(
+  mimeType: string,
+  name?: string,
+): string {
   const what =
     name === undefined || name.length === 0
       ? `unsupported image format ${mimeType}`
       : `"${name}" uses unsupported image format ${mimeType}`;
   return (
     `[Image omitted: ${what}. Model providers accept only ${ACCEPTED_FORMATS_TEXT} — ` +
-    'convert it to PNG or JPEG and try again.]'
+    "convert it to PNG or JPEG and try again.]"
   );
 }
 
@@ -265,6 +281,6 @@ export function buildMalformedImageNotice(url: string): string {
   const shown = url.length > 80 ? `${url.slice(0, 80)}…` : url;
   return (
     `[Image omitted: "${shown}" is not a valid data URL (its header or payload ` +
-    'could not be parsed). Re-encode the image as PNG or JPEG and try again.]'
+    "could not be parsed). Re-encode the image as PNG or JPEG and try again.]"
   );
 }

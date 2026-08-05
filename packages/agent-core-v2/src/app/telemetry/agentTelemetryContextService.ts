@@ -6,18 +6,24 @@
  * collaborators.
  */
 
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
 import {
   IAgentTelemetryContextService,
   type AgentTelemetryContext,
-} from './agentTelemetryContext';
+} from "./agentTelemetryContext";
 
-export class AgentTelemetryContextService implements IAgentTelemetryContextService {
+export class AgentTelemetryContextService
+  implements IAgentTelemetryContextService
+{
   declare readonly _serviceBrand: undefined;
   private context: AgentTelemetryContext;
 
   constructor() {
-    this.context = { mode: 'agent' };
+    this.context = { mode: "agent" };
   }
 
   get(): AgentTelemetryContext {
@@ -34,5 +40,5 @@ registerScopedService(
   IAgentTelemetryContextService,
   AgentTelemetryContextService,
   ScopeActivation.OnScopeCreated,
-  'telemetry',
+  "telemetry",
 );

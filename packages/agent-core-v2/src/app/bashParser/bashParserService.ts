@@ -12,13 +12,21 @@
  * state and injects no services. Bound at App scope.
  */
 
-import { parse } from '@moonshot-ai/tree-sitter-bash';
-import type { SyntaxNode } from '@moonshot-ai/tree-sitter-bash';
+import { parse } from "@moonshot-ai/tree-sitter-bash";
+import type { SyntaxNode } from "@moonshot-ai/tree-sitter-bash";
 
-import { LifecycleScope, registerScopedService, ScopeActivation } from '#/_base/di/scope';
+import {
+  LifecycleScope,
+  registerScopedService,
+  ScopeActivation,
+} from "#/_base/di/scope";
 
-import type { BashParseOptions, BashParseResult, BashSyntaxNode } from './bashParser';
-import { IBashParserService } from './bashParser';
+import type {
+  BashParseOptions,
+  BashParseResult,
+  BashSyntaxNode,
+} from "./bashParser";
+import { IBashParserService } from "./bashParser";
 
 interface MutableBashSyntaxNode {
   type: string;
@@ -63,7 +71,11 @@ export class BashParserService implements IBashParserService {
     if (!result.ok) {
       return { ok: false, reason: result.reason };
     }
-    return { ok: true, hasError: result.hasError, root: snapshot(result.rootNode) };
+    return {
+      ok: true,
+      hasError: result.hasError,
+      root: snapshot(result.rootNode),
+    };
   }
 }
 
@@ -72,5 +84,5 @@ registerScopedService(
   IBashParserService,
   BashParserService,
   ScopeActivation.OnDemand,
-  'bashParser',
+  "bashParser",
 );

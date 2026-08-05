@@ -4,10 +4,10 @@ import {
   secondaryModelPatch,
   type KimiConfig,
   type SecondaryModelConfig,
-} from '../config';
-import { ErrorCodes, KimiError } from '../errors';
-import type { ExperimentalFlagResolver } from '../flags';
-import type { AgentModelPreference } from '../profile';
+} from "../config";
+import { ErrorCodes, KimiError } from "../errors";
+import type { ExperimentalFlagResolver } from "../flags";
+import type { AgentModelPreference } from "../profile";
 
 /**
  * Subagent model binding — the secondary-model half of the spawn decision.
@@ -37,7 +37,7 @@ export function resolveSecondaryModel(
   config: KimiConfig | undefined,
   flags: ExperimentalFlagResolver,
 ): SecondaryModelConfig | undefined {
-  if (!flags.enabled('secondary-model')) return undefined;
+  if (!flags.enabled("secondary-model")) return undefined;
   return config?.secondaryModel;
 }
 
@@ -49,11 +49,14 @@ export function resolveSecondaryModel(
 export function resolveSubagentBinding(
   config: KimiConfig | undefined,
   flags: ExperimentalFlagResolver,
-  own: { readonly modelAlias: string | undefined; readonly thinkingEffort: string },
+  own: {
+    readonly modelAlias: string | undefined;
+    readonly thinkingEffort: string;
+  },
   requested?: SubagentModelChoice,
 ): SubagentModelBinding {
   const secondary = resolveSecondaryModel(config, flags);
-  if (requested !== 'primary' && secondary?.model !== undefined) {
+  if (requested !== "primary" && secondary?.model !== undefined) {
     return {
       modelAlias:
         secondaryModelPatch(secondary) === undefined
@@ -76,12 +79,13 @@ export function buildSubagentModelDescriptions(
   callerModelAlias: string | undefined,
 ): string | undefined {
   const secondaryModel = resolveSecondaryModel(config, flags)?.model;
-  if (secondaryModel === undefined || callerModelAlias === undefined) return undefined;
+  if (secondaryModel === undefined || callerModelAlias === undefined)
+    return undefined;
   return [
-    'Available models (pass via model):',
+    "Available models (pass via model):",
     `- secondary: ${secondaryModel} (default) — the configured secondary model; prefer it for routine subagent tasks`,
     `- primary: ${callerModelAlias} — the main model you are running on; use it for hard, quality-sensitive subagent tasks`,
-  ].join('\n');
+  ].join("\n");
 }
 
 /**
@@ -98,16 +102,23 @@ export function buildSubagentModelDescriptions(
 export function stripSubagentModelParameter(
   parameters: Record<string, unknown>,
 ): Record<string, unknown> {
-  const properties = parameters['properties'];
-  if (typeof properties !== 'object' || properties === null || !('model' in properties)) {
+  const properties = parameters["properties"];
+  if (
+    typeof properties !== "object" ||
+    properties === null ||
+    !("model" in properties)
+  ) {
     return parameters;
   }
   const nextProperties = { ...(properties as Record<string, unknown>) };
-  delete nextProperties['model'];
-  const next: Record<string, unknown> = { ...parameters, properties: nextProperties };
-  const required = parameters['required'];
-  if (Array.isArray(required) && required.includes('model')) {
-    next['required'] = required.filter((entry) => entry !== 'model');
+  delete nextProperties["model"];
+  const next: Record<string, unknown> = {
+    ...parameters,
+    properties: nextProperties,
+  };
+  const required = parameters["required"];
+  if (Array.isArray(required) && required.includes("model")) {
+    next["required"] = required.filter((entry) => entry !== "model");
   }
   return next;
 }
@@ -124,10 +135,11 @@ export function wrapSubagentModelError(
   callerModelAlias: string | undefined,
 ): unknown {
   if (boundModel === callerModelAlias) return error;
-  if (!(error instanceof KimiError) || error.code !== ErrorCodes.CONFIG_INVALID) return error;
+  if (!(error instanceof KimiError) || error.code !== ErrorCodes.CONFIG_INVALID)
+    return error;
   // ProviderManager tags only the missing-alias failure with details.model;
   // malformed aliases and providers must keep their own actionable errors.
-  if (error.details?.['model'] !== boundModel) return error;
+  if (error.details?.["model"] !== boundModel) return error;
   const displayModel =
     boundModel === SECONDARY_DERIVED_MODEL_ALIAS
       ? `the derived entry "${SECONDARY_DERIVED_MODEL_ALIAS}"`

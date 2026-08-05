@@ -13,10 +13,10 @@
 // is kept as an additional signal for the case where the web bundle itself was
 // built for the desktop.
 
-const QUERY_KEY = 'kimi_desktop';
-const PLATFORM_KEY = 'platform';
-const STORAGE_KEY = 'kimi-desktop';
-const PLATFORM_STORAGE_KEY = 'kimi-desktop-platform';
+const QUERY_KEY = "kimi_desktop";
+const PLATFORM_KEY = "platform";
+const STORAGE_KEY = "kimi-desktop";
+const PLATFORM_STORAGE_KEY = "kimi-desktop-platform";
 
 interface DesktopEnv {
   isDesktop: boolean;
@@ -29,15 +29,16 @@ function detect(): DesktopEnv {
   // defines the same way). Fall back to `false` so a plain browser dev session
   // doesn't throw a ReferenceError on startup; the runtime query-string /
   // sessionStorage signals below still detect the desktop app when present.
-  let desktop = typeof __KIMI_WEB_DESKTOP__ !== 'undefined' ? __KIMI_WEB_DESKTOP__ : false;
+  let desktop =
+    typeof __KIMI_WEB_DESKTOP__ !== "undefined" ? __KIMI_WEB_DESKTOP__ : false;
   let platform: string | null = null;
   try {
     const params = new URLSearchParams(window.location.search);
     if (params.has(QUERY_KEY)) {
-      sessionStorage.setItem(STORAGE_KEY, '1');
+      sessionStorage.setItem(STORAGE_KEY, "1");
       desktop = true;
     } else {
-      desktop = desktop || sessionStorage.getItem(STORAGE_KEY) === '1';
+      desktop = desktop || sessionStorage.getItem(STORAGE_KEY) === "1";
     }
     const qPlatform = params.get(PLATFORM_KEY);
     if (qPlatform) {
@@ -60,4 +61,4 @@ export const isDesktop = env.isDesktop;
 
 /** True only on macOS desktop — used to reserve space for the floating traffic
  *  lights when the window uses `titleBarStyle: 'hiddenInset'`. */
-export const isMacosDesktop = env.isDesktop && env.platform === 'darwin';
+export const isMacosDesktop = env.isDesktop && env.platform === "darwin";

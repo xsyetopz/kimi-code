@@ -1,7 +1,7 @@
-import { z } from 'zod';
+import { z } from "zod";
 
-import { getBannerStateFile } from '#/utils/paths';
-import { readJsonFile, writeJsonFile } from '#/utils/persistence';
+import { getBannerStateFile } from "#/utils/paths";
+import { readJsonFile, writeJsonFile } from "#/utils/persistence";
 
 export type BannerDisplayRecord = {
   lastShownAt: string;
@@ -20,17 +20,22 @@ const BannerDisplayRecordSchema = z
 
 const BannerDisplayStateSchema = z.preprocess(
   (value) => {
-    if (typeof value !== 'object' || value === null) return value;
+    if (typeof value !== "object" || value === null) return value;
     const shown = (value as { shown?: unknown }).shown;
-    if (typeof shown !== 'object' || shown === null) {
+    if (typeof shown !== "object" || shown === null) {
       return { ...(value as Record<string, unknown>), shown: {} };
     }
 
     const normalizedShown: Record<string, BannerDisplayRecord> = {};
     for (const [key, record] of Object.entries(shown)) {
-      if (key.length === 0 || typeof record !== 'object' || record === null) continue;
+      if (key.length === 0 || typeof record !== "object" || record === null)
+        continue;
       const lastShownAt = (record as { lastShownAt?: unknown }).lastShownAt;
-      if (typeof lastShownAt !== 'string' || Number.isNaN(Date.parse(lastShownAt))) continue;
+      if (
+        typeof lastShownAt !== "string" ||
+        Number.isNaN(Date.parse(lastShownAt))
+      )
+        continue;
       normalizedShown[key] = { lastShownAt };
     }
 
@@ -55,7 +60,11 @@ export async function readBannerDisplayState(
   filePath: string = getBannerStateFile(),
 ): Promise<BannerDisplayState> {
   try {
-    return await readJsonFile(filePath, BannerDisplayStateSchema, emptyBannerDisplayState());
+    return await readJsonFile(
+      filePath,
+      BannerDisplayStateSchema,
+      emptyBannerDisplayState(),
+    );
   } catch {
     return emptyBannerDisplayState();
   }

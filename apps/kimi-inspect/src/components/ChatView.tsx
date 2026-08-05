@@ -19,13 +19,13 @@
  * derives from transcript state (`meta.activity` / running turns).
  */
 
-import { IAgentRPCService } from '@moonshot-ai/agent-core-v2/agent/rpc/rpc';
-import { ISessionApprovalService } from '@moonshot-ai/agent-core-v2/session/approval/approval';
+import { IAgentRPCService } from "@moonshot-ai/agent-core-v2/agent/rpc/rpc";
+import { ISessionApprovalService } from "@moonshot-ai/agent-core-v2/session/approval/approval";
 import {
   ISessionQuestionService,
   type QuestionItem,
   type QuestionRequest,
-} from '@moonshot-ai/agent-core-v2/session/question/question';
+} from "@moonshot-ai/agent-core-v2/session/question/question";
 import {
   EMPTY_AGENT_STATE,
   itemId,
@@ -44,7 +44,7 @@ import {
   type TranscriptUsage,
   type TurnOrigin,
   type TurnState,
-} from '@moonshot-ai/transcript';
+} from "@moonshot-ai/transcript";
 import {
   createContext,
   useCallback,
@@ -54,27 +54,31 @@ import {
   useRef,
   useState,
   useSyncExternalStore,
-} from 'react';
+} from "react";
 
-import { AuditTrail } from '../audit/trail';
-import { useConnection } from '../connection';
-import type { SearchHit } from '../search/api';
-import { fetchTranscriptOps, fetchTranscriptPage, TRANSCRIPT_PAGE_SIZE } from '../transcript/api';
+import { AuditTrail } from "../audit/trail";
+import { useConnection } from "../connection";
+import type { SearchHit } from "../search/api";
+import {
+  fetchTranscriptOps,
+  fetchTranscriptPage,
+  TRANSCRIPT_PAGE_SIZE,
+} from "../transcript/api";
 import {
   createCoalescedRunner,
   hasTurnId,
   oldestTurnId,
   recoverLoadedWindow,
   TranscriptChatStore,
-} from '../transcript/store';
-import { TranscriptWs } from '../transcript/ws';
-import { ActionButton, Badge, ErrorLine, JsonView, relTime } from '../ui';
-import { ChatSearchBar } from './ChatSearchBar';
+} from "../transcript/store";
+import { TranscriptWs } from "../transcript/ws";
+import { ActionButton, Badge, ErrorLine, JsonView, relTime } from "../ui";
+import { ChatSearchBar } from "./ChatSearchBar";
 
 const noopSubscribe = () => () => {};
 
 /** Active session id for deeply nested interaction views (approve/answer buttons). */
-const SessionContext = createContext<string>('');
+const SessionContext = createContext<string>("");
 
 /**
  * A navigation request into the chat timeline (e.g. from a search hit). The
@@ -114,9 +118,10 @@ function useTranscriptChannel(
 ): TranscriptChannel {
   const { baseUrl, config } = useConnection();
   const token = config.token.trim();
-  const [channel, setChannel] = useState<{ store: TranscriptChatStore; trail: AuditTrail } | null>(
-    null,
-  );
+  const [channel, setChannel] = useState<{
+    store: TranscriptChatStore;
+    trail: AuditTrail;
+  } | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [loadError, setLoadError] = useState<unknown>(null);
 
@@ -124,7 +129,7 @@ function useTranscriptChannel(
     if (!ready || sessionId === null) return;
     const store = new TranscriptChatStore();
     const trail = new AuditTrail();
-    const authToken = token === '' ? undefined : token;
+    const authToken = token === "" ? undefined : token;
     let disposed = false;
     /** While a REST reload / catch-up is in flight, WS ops are buffered, then flushed. */
     let fetching = true;
@@ -153,7 +158,7 @@ function useTranscriptChannel(
       if (buffer.length > 0) {
         const flushed = buffer;
         store.applyOps(flushed);
-        trail.recordOps(flushed, 'flushed', undefined, store.getState());
+        trail.recordOps(flushed, "flushed", undefined, store.getState());
         noteSeq(bufferedSeq);
       }
       buffer = [];
@@ -176,7 +181,12 @@ function useTranscriptChannel(
       });
       if (disposed) return;
       store.applyPage(newest, { replace: true });
-      trail.recordRest({ pageSize: TRANSCRIPT_PAGE_SIZE }, 'replace', newest, store.getState());
+      trail.recordRest(
+        { pageSize: TRANSCRIPT_PAGE_SIZE },
+        "replace",
+        newest,
+        store.getState(),
+      );
       lastSeq = newest.seq;
       // Re-cover the previously loaded window for refreshes (a no-op on the
       // initial load, where there is no previous oldest turn).
@@ -198,7 +208,7 @@ function useTranscriptChannel(
         (page) => {
           trail.recordRest(
             { beforeTurn: recoverBefore, pageSize: TRANSCRIPT_PAGE_SIZE },
-            'prepend',
+            "prepend",
             page,
             store.getState(),
           );
@@ -253,7 +263,7 @@ function useTranscriptChannel(
         } else {
           for (const batch of res.batches) {
             store.applyOps(batch.ops);
-            trail.recordOps(batch.ops, 'catchup', undefined, store.getState());
+            trail.recordOps(batch.ops, "catchup", undefined, store.getState());
           }
           noteSeq(res.latestSeq);
         }
@@ -282,18 +292,22 @@ function useTranscriptChannel(
             if (meta?.seq !== undefined) {
               bufferedSeq = Math.max(bufferedSeq ?? 0, meta.seq);
             }
-            trail.recordOps(ops, 'buffered', meta?.at, store.getState());
+            trail.recordOps(ops, "buffered", meta?.at, store.getState());
             return;
           }
           // Seq gap: the store is behind by at least one batch. Catch up
           // point-to-point instead of applying on a stale base (appends are
           // offset-placed and would surface a gap anyway).
-          if (meta?.seq !== undefined && lastSeq !== undefined && meta.seq > lastSeq + 1) {
+          if (
+            meta?.seq !== undefined &&
+            lastSeq !== undefined &&
+            meta.seq > lastSeq + 1
+          ) {
             catchUp();
             return;
           }
           store.applyOps(ops);
-          trail.recordOps(ops, 'live', meta?.at, store.getState());
+          trail.recordOps(ops, "live", meta?.at, store.getState());
           noteSeq(meta?.seq);
         },
         onReset: (_aid, snapshot, hasMoreOlder, meta) => {
@@ -306,17 +320,17 @@ function useTranscriptChannel(
           if (seeded && lastSeq !== undefined) catchUp();
         },
         onResyncRequired: () => {
-          trail.recordEvent('resync', undefined, store.getState());
+          trail.recordEvent("resync", undefined, store.getState());
           catchUp();
         },
         onReconnected: () => {
-          trail.recordEvent('ack-refresh', undefined, store.getState());
+          trail.recordEvent("ack-refresh", undefined, store.getState());
           catchUp();
         },
       },
     });
     store.onGap = () => {
-      trail.recordEvent('gap', undefined, store.getState());
+      trail.recordEvent("gap", undefined, store.getState());
       catchUp();
     };
     setChannel({ store, trail });
@@ -334,7 +348,13 @@ function useTranscriptChannel(
     channel?.store.subscribe ?? noopSubscribe,
     () => channel?.store.getState() ?? EMPTY_AGENT_STATE,
   );
-  return { store: channel?.store ?? null, state, trail: channel?.trail ?? null, loaded, loadError };
+  return {
+    store: channel?.store ?? null,
+    state,
+    trail: channel?.trail ?? null,
+    loaded,
+    loadError,
+  };
 }
 
 export function ChatView({
@@ -359,7 +379,7 @@ export function ChatView({
   onOpenSearchHit?: ((hit: SearchHit) => void) | undefined;
 }) {
   const { klient, baseUrl, config } = useConnection();
-  const [input, setInput] = useState('');
+  const [input, setInput] = useState("");
   const [sendError, setSendError] = useState<unknown>(null);
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [olderError, setOlderError] = useState<unknown>(null);
@@ -369,7 +389,10 @@ export function ChatView({
   /** Whether the viewport was pinned to the bottom before the last update. */
   const stickBottomRef = useRef(true);
   /** The jump target being flashed (cleared on a timer). */
-  const [flash, setFlash] = useState<{ turnId: string; stepId?: string | undefined } | null>(null);
+  const [flash, setFlash] = useState<{
+    turnId: string;
+    stepId?: string | undefined;
+  } | null>(null);
 
   const captureAnchor = useCallback(() => {
     const el = scrollRef.current;
@@ -395,7 +418,13 @@ export function ChatView({
   // step (or the turn card) and flash it briefly. A turn that never appears
   // (cut by an undo) degrades to no scroll.
   useEffect(() => {
-    if (jump === null || jump === undefined || !loaded || store === null || sessionId === null) {
+    if (
+      jump === null ||
+      jump === undefined ||
+      !loaded ||
+      store === null ||
+      sessionId === null
+    ) {
       return;
     }
     if (jump.turnId === undefined) {
@@ -416,7 +445,7 @@ export function ChatView({
           recoverBefore = beforeTurn;
           return fetchTranscriptPage({
             baseUrl,
-            token: token === '' ? undefined : token,
+            token: token === "" ? undefined : token,
             sessionId,
             agentId,
             beforeTurn,
@@ -427,7 +456,7 @@ export function ChatView({
         (page) => {
           trail?.recordRest(
             { beforeTurn: recoverBefore, pageSize: TRANSCRIPT_PAGE_SIZE },
-            'prepend',
+            "prepend",
             page,
             store.getState(),
           );
@@ -448,8 +477,10 @@ export function ChatView({
             stepId !== undefined
               ? root?.querySelector(`[data-step-id="${CSS.escape(stepId)}"]`)
               : undefined;
-          const target = stepEl ?? root?.querySelector(`[data-turn-id="${CSS.escape(turnId)}"]`);
-          target?.scrollIntoView({ block: 'start' });
+          const target =
+            stepEl ??
+            root?.querySelector(`[data-turn-id="${CSS.escape(turnId)}"]`);
+          target?.scrollIntoView({ block: "start" });
         });
       });
       onJumpHandled?.();
@@ -457,7 +488,17 @@ export function ChatView({
     return () => {
       cancelled = true;
     };
-  }, [jump, loaded, store, sessionId, agentId, baseUrl, config, trail, onJumpHandled]);
+  }, [
+    jump,
+    loaded,
+    store,
+    sessionId,
+    agentId,
+    baseUrl,
+    config,
+    trail,
+    onJumpHandled,
+  ]);
 
   // The flash highlight clears itself after a short moment.
   useEffect(() => {
@@ -480,7 +521,8 @@ export function ChatView({
   const onScroll = () => {
     const el = scrollRef.current;
     if (el === null) return;
-    stickBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+    stickBottomRef.current =
+      el.scrollHeight - el.scrollTop - el.clientHeight < 80;
   };
 
   const loadOlder = async () => {
@@ -494,7 +536,7 @@ export function ChatView({
       const token = config.token.trim();
       const page = await fetchTranscriptPage({
         baseUrl,
-        token: token === '' ? undefined : token,
+        token: token === "" ? undefined : token,
         sessionId,
         agentId,
         beforeTurn: oldest,
@@ -503,7 +545,7 @@ export function ChatView({
       store.applyPage(page);
       trail?.recordRest(
         { beforeTurn: oldest, pageSize: TRANSCRIPT_PAGE_SIZE },
-        'prepend',
+        "prepend",
         page,
         store.getState(),
       );
@@ -528,9 +570,10 @@ export function ChatView({
     if (sentinel === null || root === null || olderError !== null) return;
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries.some((entry) => entry.isIntersecting)) void loadOlderRef.current();
+        if (entries.some((entry) => entry.isIntersecting))
+          void loadOlderRef.current();
       },
-      { root, rootMargin: '400px 0px 0px 0px' },
+      { root, rootMargin: "400px 0px 0px 0px" },
     );
     observer.observe(sentinel);
     return () => {
@@ -539,8 +582,8 @@ export function ChatView({
   }, [hasMoreOlder, loaded, olderError, loadingOlder]);
 
   const running =
-    state.meta.activity === 'turn' ||
-    items.some((item) => item.kind === 'turn' && item.state === 'running');
+    state.meta.activity === "turn" ||
+    items.some((item) => item.kind === "turn" && item.state === "running");
 
   // Interactions render inline at their anchor tool frame; entities without
   // an anchor (or whose anchor frame is outside the loaded window) collect
@@ -548,22 +591,23 @@ export function ChatView({
   const anchoredToolCallIds = collectToolCallIds(items);
   const unanchoredInteractions = [...state.interactions.values()].filter(
     (interaction) =>
-      interaction.toolCallId === undefined || !anchoredToolCallIds.has(interaction.toolCallId),
+      interaction.toolCallId === undefined ||
+      !anchoredToolCallIds.has(interaction.toolCallId),
   );
   const latestTodo = [...state.todos.values()].at(-1);
 
   const send = async () => {
-    if (sessionId === null || input.trim() === '' || running) return;
+    if (sessionId === null || input.trim() === "" || running) return;
     const text = input.trim();
-    setInput('');
+    setInput("");
     setSendError(null);
     try {
       await klient
         .session(sessionId)
         .agent(agentId)
         .service(IAgentRPCService)
-        .prompt({ input: [{ type: 'text', text }] });
-      trail?.recordEvent('prompt', text, state);
+        .prompt({ input: [{ type: "text", text }] });
+      trail?.recordEvent("prompt", text, state);
     } catch (error) {
       setSendError(error);
     }
@@ -572,8 +616,12 @@ export function ChatView({
   const cancel = async () => {
     if (sessionId === null) return;
     try {
-      await klient.session(sessionId).agent(agentId).service(IAgentRPCService).cancel({});
-      trail?.recordEvent('cancel', undefined, state);
+      await klient
+        .session(sessionId)
+        .agent(agentId)
+        .service(IAgentRPCService)
+        .cancel({});
+      trail?.recordEvent("cancel", undefined, state);
     } catch (error) {
       setSendError(error);
     }
@@ -598,9 +646,15 @@ export function ChatView({
     <SessionContext.Provider value={sessionId}>
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="flex items-center gap-2 border-b border-neutral-800 px-4 py-2">
-          <span className="font-mono text-[11px] text-neutral-400">{sessionId}</span>
+          <span className="font-mono text-[11px] text-neutral-400">
+            {sessionId}
+          </span>
           <Badge tone="sky">agent: {agentId}</Badge>
-          {running ? <Badge tone="amber">turn running</Badge> : <Badge tone="green">idle</Badge>}
+          {running ? (
+            <Badge tone="amber">turn running</Badge>
+          ) : (
+            <Badge tone="green">idle</Badge>
+          )}
           {state.pendingInteractions.size > 0 ? (
             <Badge tone="amber">{state.pendingInteractions.size} pending</Badge>
           ) : null}
@@ -608,11 +662,15 @@ export function ChatView({
 
         <ChatSearchBar sessionId={sessionId} onOpenHit={onOpenSearchHit} />
 
-        <div className="flex-1 overflow-y-auto px-4 py-3" ref={scrollRef} onScroll={onScroll}>
+        <div
+          className="flex-1 overflow-y-auto px-4 py-3"
+          ref={scrollRef}
+          onScroll={onScroll}
+        >
           {state.hasMoreOlder ? (
             <div ref={topSentinelRef} className="mb-3 flex justify-center">
               <span className="text-[11px] text-neutral-600">
-                {loadingOlder ? 'Loading earlier turns…' : ''}
+                {loadingOlder ? "Loading earlier turns…" : ""}
               </span>
             </div>
           ) : null}
@@ -635,14 +693,16 @@ export function ChatView({
             <div className="mb-2">
               <ErrorLine error={loadError} />
               <div className="mt-1 text-[11px] text-neutral-600">
-                Failed to load the transcript — the server may be too old to expose the transcript
-                API.
+                Failed to load the transcript — the server may be too old to
+                expose the transcript API.
               </div>
             </div>
           ) : null}
           {items.length === 0 && loadError === null ? (
             <div className="text-[12px] text-neutral-600 italic">
-              {loaded ? 'Empty transcript — send a prompt below.' : 'Loading transcript…'}
+              {loaded
+                ? "Empty transcript — send a prompt below."
+                : "Loading transcript…"}
             </div>
           ) : null}
           {latestTodo !== undefined && latestTodo.items.length > 0 ? (
@@ -652,18 +712,24 @@ export function ChatView({
                 <div key={i} className="flex gap-2">
                   <span
                     className={
-                      entry.status === 'done'
-                        ? 'text-green-500'
-                        : entry.status === 'in_progress'
-                          ? 'text-sky-400'
-                          : 'text-neutral-600'
+                      entry.status === "done"
+                        ? "text-green-500"
+                        : entry.status === "in_progress"
+                          ? "text-sky-400"
+                          : "text-neutral-600"
                     }
                   >
-                    {entry.status === 'done' ? '✔' : entry.status === 'in_progress' ? '◐' : '□'}
+                    {entry.status === "done"
+                      ? "✔"
+                      : entry.status === "in_progress"
+                        ? "◐"
+                        : "□"}
                   </span>
                   <span
                     className={
-                      entry.status === 'done' ? 'text-neutral-600 line-through' : 'text-neutral-300'
+                      entry.status === "done"
+                        ? "text-neutral-600 line-through"
+                        : "text-neutral-300"
                     }
                   >
                     {entry.title}
@@ -679,7 +745,10 @@ export function ChatView({
             // cheap without a windowing library.
             <div
               key={itemId(item)}
-              style={{ contentVisibility: 'auto', containIntrinsicSize: 'auto 200px' }}
+              style={{
+                contentVisibility: "auto",
+                containIntrinsicSize: "auto 200px",
+              }}
             >
               <ItemView
                 item={item}
@@ -691,7 +760,10 @@ export function ChatView({
             </div>
           ))}
           {unanchoredInteractions.map((interaction) => (
-            <InteractionEntityView key={interaction.interactionId} interaction={interaction} />
+            <InteractionEntityView
+              key={interaction.interactionId}
+              interaction={interaction}
+            />
           ))}
         </div>
 
@@ -708,17 +780,24 @@ export function ChatView({
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
+                if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
                   void send();
                 }
               }}
             />
             <div className="flex flex-col gap-2">
-              <ActionButton onClick={() => void send()} disabled={running || input.trim() === ''}>
+              <ActionButton
+                onClick={() => void send()}
+                disabled={running || input.trim() === ""}
+              >
                 Send
               </ActionButton>
-              <ActionButton onClick={() => void cancel()} danger disabled={!running}>
+              <ActionButton
+                onClick={() => void cancel()}
+                danger
+                disabled={!running}
+              >
                 Cancel
               </ActionButton>
             </div>
@@ -746,7 +825,7 @@ function ItemView({
   flash?: { turnId: string; stepId?: string | undefined } | null | undefined;
 }) {
   switch (item.kind) {
-    case 'turn':
+    case "turn":
       return (
         <TurnView
           turn={item}
@@ -756,9 +835,9 @@ function ItemView({
           flash={flash}
         />
       );
-    case 'marker':
+    case "marker":
       return <MarkerView marker={item} />;
-    case 'taskref':
+    case "taskref":
       return <TaskRefView item={item} task={tasks.get(item.taskId)} />;
   }
 }
@@ -766,26 +845,28 @@ function ItemView({
 function collectToolCallIds(items: readonly TranscriptItem[]): Set<string> {
   const ids = new Set<string>();
   for (const item of items) {
-    if (item.kind !== 'turn') continue;
+    if (item.kind !== "turn") continue;
     for (const step of item.steps) {
       for (const frame of step.frames) {
-        if (frame.kind === 'tool') ids.add(frame.toolCallId);
+        if (frame.kind === "tool") ids.add(frame.toolCallId);
       }
     }
   }
   return ids;
 }
 
-function turnStateTone(state: TurnState): 'neutral' | 'green' | 'amber' | 'red' {
+function turnStateTone(
+  state: TurnState,
+): "neutral" | "green" | "amber" | "red" {
   switch (state) {
-    case 'running':
-      return 'amber';
-    case 'completed':
-      return 'green';
-    case 'failed':
-      return 'red';
+    case "running":
+      return "amber";
+    case "completed":
+      return "green";
+    case "failed":
+      return "red";
     default:
-      return 'neutral';
+      return "neutral";
   }
 }
 
@@ -793,9 +874,10 @@ function usageText(usage: TranscriptUsage): string {
   const parts: string[] = [];
   if (usage.inputTokens !== undefined) parts.push(`in ${usage.inputTokens}`);
   if (usage.outputTokens !== undefined) parts.push(`out ${usage.outputTokens}`);
-  if (usage.cachedTokens !== undefined) parts.push(`cached ${usage.cachedTokens}`);
+  if (usage.cachedTokens !== undefined)
+    parts.push(`cached ${usage.cachedTokens}`);
   if (usage.cost !== undefined) parts.push(`$${usage.cost.toFixed(4)}`);
-  return parts.join(' / ');
+  return parts.join(" / ");
 }
 
 function TurnView({
@@ -812,17 +894,22 @@ function TurnView({
   /** The jump target being flashed, if any. */
   flash?: { turnId: string; stepId?: string | undefined } | null | undefined;
 }) {
-  const turnFlashed = flash?.turnId === turn.turnId && flash.stepId === undefined;
+  const turnFlashed =
+    flash?.turnId === turn.turnId && flash.stepId === undefined;
   return (
     <div
       data-turn-id={turn.turnId}
       className={`mb-3 rounded-lg border bg-neutral-900/30 ${
-        turnFlashed ? 'border-sky-600' : 'border-neutral-800'
+        turnFlashed ? "border-sky-600" : "border-neutral-800"
       }`}
     >
       <div className="flex items-center gap-2 border-b border-neutral-800/60 px-3 py-1.5">
-        <span className="font-mono text-[10px] text-neutral-500">{turn.turnId}</span>
-        <Badge tone={turn.origin.kind === 'user' ? 'sky' : 'neutral'}>{turn.origin.kind}</Badge>
+        <span className="font-mono text-[10px] text-neutral-500">
+          {turn.turnId}
+        </span>
+        <Badge tone={turn.origin.kind === "user" ? "sky" : "neutral"}>
+          {turn.origin.kind}
+        </Badge>
         <Badge tone={turnStateTone(turn.state)}>{turn.state}</Badge>
         {turn.startedAt !== undefined ? (
           <span className="text-[10px] text-neutral-600">
@@ -830,11 +917,13 @@ function TurnView({
           </span>
         ) : null}
         {turn.usage !== undefined ? (
-          <span className="ml-auto text-[10px] text-neutral-600">{usageText(turn.usage)}</span>
+          <span className="ml-auto text-[10px] text-neutral-600">
+            {usageText(turn.usage)}
+          </span>
         ) : null}
       </div>
       <div className="px-3 py-2">
-        {turn.prompt !== undefined && turn.prompt !== '' ? (
+        {turn.prompt !== undefined && turn.prompt !== "" ? (
           <TurnPrompt origin={turn.origin} prompt={turn.prompt} />
         ) : null}
         {turn.attachmentIds !== undefined && turn.attachmentIds.length > 0 ? (
@@ -844,7 +933,11 @@ function TurnView({
           <div
             key={step.stepId}
             data-step-id={step.stepId}
-            className={flash?.stepId === step.stepId ? 'rounded bg-sky-900/20' : undefined}
+            className={
+              flash?.stepId === step.stepId
+                ? "rounded bg-sky-900/20"
+                : undefined
+            }
           >
             {step.frames.map((frame) => (
               <FrameView
@@ -855,8 +948,10 @@ function TurnView({
                 attachments={attachments}
               />
             ))}
-            {step.state === 'interrupted' ? (
-              <div className="mb-2 text-[10px] text-neutral-600 italic">step interrupted</div>
+            {step.state === "interrupted" ? (
+              <div className="mb-2 text-[10px] text-neutral-600 italic">
+                step interrupted
+              </div>
             ) : null}
           </div>
         ))}
@@ -865,8 +960,14 @@ function TurnView({
   );
 }
 
-function TurnPrompt({ origin, prompt }: { origin: TurnOrigin; prompt: string }) {
-  if (origin.kind === 'user') {
+function TurnPrompt({
+  origin,
+  prompt,
+}: {
+  origin: TurnOrigin;
+  prompt: string;
+}) {
+  if (origin.kind === "user") {
     return (
       <div className="mb-2 flex justify-end">
         <div className="max-w-[80%] whitespace-pre-wrap rounded-lg bg-sky-900/40 px-3 py-2 text-[13px] text-neutral-100">
@@ -888,7 +989,9 @@ function MarkerView({ marker }: { marker: TranscriptMarker }) {
       <div className="flex items-center gap-2 text-[10px] text-neutral-600">
         <div className="h-px flex-1 bg-neutral-800" />
         <span className="font-mono">{marker.marker}</span>
-        {marker.at !== undefined ? <span>{relTime(Date.parse(marker.at))}</span> : null}
+        {marker.at !== undefined ? (
+          <span>{relTime(Date.parse(marker.at))}</span>
+        ) : null}
         <div className="h-px flex-1 bg-neutral-800" />
       </div>
       {marker.payload !== undefined ? <JsonView data={marker.payload} /> : null}
@@ -905,22 +1008,30 @@ function TaskRefView({
 }) {
   const failed =
     task !== undefined &&
-    (task.state === 'failed' || task.state === 'timed_out' || task.state === 'lost');
+    (task.state === "failed" ||
+      task.state === "timed_out" ||
+      task.state === "lost");
   return (
     <div className="mb-3 rounded-lg border border-neutral-800 bg-neutral-900/40 px-3 py-2 text-[11px]">
       <div className="flex items-center gap-2">
-        <Badge tone={task?.state === 'running' ? 'amber' : failed ? 'red' : 'neutral'}>
-          task{task !== undefined ? `: ${task.kind}` : ''}
+        <Badge
+          tone={
+            task?.state === "running" ? "amber" : failed ? "red" : "neutral"
+          }
+        >
+          task{task !== undefined ? `: ${task.kind}` : ""}
         </Badge>
-        <span className="text-neutral-300">{task?.description ?? item.taskId}</span>
+        <span className="text-neutral-300">
+          {task?.description ?? item.taskId}
+        </span>
         {task !== undefined ? (
           <span className="text-neutral-600">
             {task.state}
-            {task.detached ? ' (detached)' : ''}
+            {task.detached ? " (detached)" : ""}
           </span>
         ) : null}
       </div>
-      {task !== undefined && task.outputTail !== '' ? (
+      {task !== undefined && task.outputTail !== "" ? (
         <pre className="mt-1 max-h-32 overflow-auto whitespace-pre-wrap text-neutral-500">
           {task.outputTail}
         </pre>
@@ -943,14 +1054,17 @@ function AttachmentChips({
       {ids.map((id) => {
         const attachment = attachments.get(id);
         const label = attachment?.name ?? attachment?.mediaType ?? id;
-        const href = attachment?.source?.kind === 'url' ? attachment.source.url : undefined;
+        const href =
+          attachment?.source?.kind === "url"
+            ? attachment.source.url
+            : undefined;
         return (
           <span
             key={id}
             className="rounded border border-neutral-700 bg-neutral-900 px-2 py-0.5 text-[10px] text-neutral-400"
             title={attachment?.mediaType}
           >
-            📎{' '}
+            📎{" "}
             {href !== undefined ? (
               <a href={href} className="underline">
                 {label}
@@ -977,22 +1091,33 @@ function FrameView({
   attachments: ReadonlyMap<string, TranscriptAttachment>;
 }) {
   switch (frame.kind) {
-    case 'text': {
+    case "text": {
       const chips =
         frame.attachmentIds !== undefined && frame.attachmentIds.length > 0 ? (
-          <AttachmentChips ids={frame.attachmentIds} attachments={attachments} />
+          <AttachmentChips
+            ids={frame.attachmentIds}
+            attachments={attachments}
+          />
         ) : null;
       const taskBadge =
         frame.taskId !== undefined ? (
           <div className="mb-1">
-            <Badge tone={tasks.get(frame.taskId)?.state === 'running' ? 'amber' : 'neutral'}>
+            <Badge
+              tone={
+                tasks.get(frame.taskId)?.state === "running"
+                  ? "amber"
+                  : "neutral"
+              }
+            >
               task: {frame.taskId}
-              {tasks.get(frame.taskId) !== undefined ? ` (${tasks.get(frame.taskId)!.state})` : ''}
+              {tasks.get(frame.taskId) !== undefined
+                ? ` (${tasks.get(frame.taskId)!.state})`
+                : ""}
             </Badge>
           </div>
         ) : null;
       const bubble =
-        frame.role === 'user' ? (
+        frame.role === "user" ? (
           <div className="mb-2 flex justify-end">
             <div className="max-w-[80%] whitespace-pre-wrap rounded-lg bg-sky-900/40 px-3 py-2 text-[13px] text-neutral-100">
               {frame.text}
@@ -1011,15 +1136,21 @@ function FrameView({
         </>
       );
     }
-    case 'thinking':
+    case "thinking":
       return (
         <div className="mb-2 max-w-[85%] whitespace-pre-wrap rounded-lg border border-dashed border-neutral-700 px-3 py-2 font-mono text-[11px] text-neutral-500">
           {frame.text}
         </div>
       );
-    case 'tool':
-      return <ToolFrameView frame={frame} tasks={tasks} interactions={interactions} />;
-    case 'notice':
+    case "tool":
+      return (
+        <ToolFrameView
+          frame={frame}
+          tasks={tasks}
+          interactions={interactions}
+        />
+      );
+    case "notice":
       return <NoticeFrameView frame={frame} />;
   }
 }
@@ -1038,13 +1169,20 @@ function ToolFrameView({
   // entity's toolCallId for requests that predate the back-link).
   const linked = [...interactions.values()].filter(
     (interaction) =>
-      interaction.interactionId === frame.approvalId || interaction.toolCallId === frame.toolCallId,
+      interaction.interactionId === frame.approvalId ||
+      interaction.toolCallId === frame.toolCallId,
   );
   return (
     <div className="mb-2 max-w-[85%] rounded-lg border border-neutral-800 bg-neutral-900/50 px-3 py-2 font-mono text-[11px]">
       <div className="mb-1 flex flex-wrap items-center gap-2">
         <Badge
-          tone={frame.state === 'error' ? 'red' : frame.state === 'running' ? 'amber' : 'neutral'}
+          tone={
+            frame.state === "error"
+              ? "red"
+              : frame.state === "running"
+                ? "amber"
+                : "neutral"
+          }
         >
           tool
         </Badge>
@@ -1058,13 +1196,15 @@ function ToolFrameView({
             agent: {ref.agentId}
           </Badge>
         ))}
-        {task !== undefined ? <span className="text-neutral-600">task: {task.state}</span> : null}
+        {task !== undefined ? (
+          <span className="text-neutral-600">task: {task.state}</span>
+        ) : null}
         {frame.todoId !== undefined ? (
           <span className="text-neutral-600">todo: {frame.todoId}</span>
         ) : null}
       </div>
       {frame.input !== undefined ? (
-        typeof frame.input === 'string' ? (
+        typeof frame.input === "string" ? (
           <pre className="max-h-32 overflow-auto whitespace-pre-wrap text-neutral-500">
             {frame.input}
           </pre>
@@ -1073,10 +1213,10 @@ function ToolFrameView({
         )
       ) : null}
       {frame.output !== undefined ? (
-        typeof frame.output === 'string' ? (
+        typeof frame.output === "string" ? (
           <pre
             className={`max-h-40 overflow-auto whitespace-pre-wrap ${
-              frame.state === 'error' ? 'text-red-400' : 'text-neutral-400'
+              frame.state === "error" ? "text-red-400" : "text-neutral-400"
             }`}
           >
             {frame.output}
@@ -1084,16 +1224,22 @@ function ToolFrameView({
         ) : (
           <JsonView data={frame.output} />
         )
-      ) : task !== undefined && task.outputTail !== '' ? (
+      ) : task !== undefined && task.outputTail !== "" ? (
         <pre className="max-h-40 overflow-auto whitespace-pre-wrap text-neutral-400">
           {task.outputTail}
         </pre>
       ) : null}
       {frame.error !== undefined && frame.error !== frame.output ? (
-        <pre className="max-h-40 overflow-auto whitespace-pre-wrap text-red-400">{frame.error}</pre>
+        <pre className="max-h-40 overflow-auto whitespace-pre-wrap text-red-400">
+          {frame.error}
+        </pre>
       ) : null}
       {linked.map((interaction) => (
-        <InteractionEntityView key={interaction.interactionId} interaction={interaction} nested />
+        <InteractionEntityView
+          key={interaction.interactionId}
+          interaction={interaction}
+          nested
+        />
       ))}
     </div>
   );
@@ -1111,13 +1257,15 @@ function InteractionEntityView({
   const [busy, setBusy] = useState(false);
   const [respondError, setRespondError] = useState<unknown>(null);
   /** Question answers in progress: question text → selected option labels. */
-  const [selections, setSelections] = useState<Readonly<Record<string, readonly string[]>>>({});
+  const [selections, setSelections] = useState<
+    Readonly<Record<string, readonly string[]>>
+  >({});
   /** Question free-text ("Other") input: question text → draft. */
   const [others, setOthers] = useState<Readonly<Record<string, string>>>({});
 
-  const pending = interaction.state === 'pending';
+  const pending = interaction.state === "pending";
   const questionRequest =
-    interaction.interactionKind === 'question'
+    interaction.interactionKind === "question"
       ? (interaction.request as QuestionRequest | undefined)
       : undefined;
 
@@ -1133,7 +1281,7 @@ function InteractionEntityView({
       });
   };
 
-  const decide = (decision: 'approved' | 'rejected'): void => {
+  const decide = (decision: "approved" | "rejected"): void => {
     run(() =>
       klient
         .session(sessionId)
@@ -1161,12 +1309,15 @@ function InteractionEntityView({
     const answers: Record<string, string> = {};
     for (const question of questionRequest?.questions ?? []) {
       const parts = [...(selections[question.question] ?? [])];
-      const other = (others[question.question] ?? '').trim();
-      if (other !== '') parts.push(other);
-      if (parts.length > 0) answers[question.question] = parts.join(', ');
+      const other = (others[question.question] ?? "").trim();
+      if (other !== "") parts.push(other);
+      if (parts.length > 0) answers[question.question] = parts.join(", ");
     }
     // Mirror the TUI adapter: no answers at all resolves with null.
-    const result = Object.keys(answers).length > 0 ? { answers, method: 'enter' as const } : null;
+    const result =
+      Object.keys(answers).length > 0
+        ? { answers, method: "enter" as const }
+        : null;
     run(() =>
       klient
         .session(sessionId)
@@ -1177,29 +1328,42 @@ function InteractionEntityView({
 
   const dismiss = (): void => {
     run(() =>
-      klient.session(sessionId).service(ISessionQuestionService).dismiss(interaction.interactionId),
+      klient
+        .session(sessionId)
+        .service(ISessionQuestionService)
+        .dismiss(interaction.interactionId),
     );
   };
 
   return (
     <div
       className={`mb-2 max-w-[85%] rounded-lg border border-amber-900/50 bg-amber-950/20 px-3 py-2 text-[11px] ${
-        nested === true ? 'mt-2 max-w-full' : ''
+        nested === true ? "mt-2 max-w-full" : ""
       }`}
     >
       <div className="mb-1 flex items-center gap-2">
-        <Badge tone={pending ? 'amber' : 'neutral'}>{interaction.interactionKind}</Badge>
+        <Badge tone={pending ? "amber" : "neutral"}>
+          {interaction.interactionKind}
+        </Badge>
         <span className="text-neutral-400">{interaction.state}</span>
         <span className="text-neutral-600">tool: {interaction.toolCallId}</span>
       </div>
-      {interaction.request !== undefined ? <JsonView data={interaction.request} /> : null}
-      {interaction.response !== undefined ? <JsonView data={interaction.response} /> : null}
-      {pending && interaction.interactionKind === 'approval' ? (
+      {interaction.request !== undefined ? (
+        <JsonView data={interaction.request} />
+      ) : null}
+      {interaction.response !== undefined ? (
+        <JsonView data={interaction.response} />
+      ) : null}
+      {pending && interaction.interactionKind === "approval" ? (
         <div className="mt-2 flex gap-2">
-          <ActionButton onClick={() => decide('approved')} disabled={busy}>
+          <ActionButton onClick={() => decide("approved")} disabled={busy}>
             Approve
           </ActionButton>
-          <ActionButton onClick={() => decide('rejected')} danger disabled={busy}>
+          <ActionButton
+            onClick={() => decide("rejected")}
+            danger
+            disabled={busy}
+          >
             Reject
           </ActionButton>
         </div>
@@ -1208,17 +1372,21 @@ function InteractionEntityView({
         <div className="mt-2">
           {questionRequest.questions.map((question) => (
             <div key={question.question} className="mb-2">
-              <div className="text-neutral-300">{question.header ?? question.question}</div>
+              <div className="text-neutral-300">
+                {question.header ?? question.question}
+              </div>
               <div className="mt-1 flex flex-wrap gap-1">
                 {question.options.map((option) => {
-                  const selected = (selections[question.question] ?? []).includes(option.label);
+                  const selected = (
+                    selections[question.question] ?? []
+                  ).includes(option.label);
                   return (
                     <button
                       key={option.label}
                       className={`rounded border px-2 py-0.5 text-[10px] transition-colors disabled:opacity-40 ${
                         selected
-                          ? 'border-sky-600 bg-sky-900/50 text-sky-200'
-                          : 'border-neutral-700 text-neutral-400 hover:bg-neutral-800'
+                          ? "border-sky-600 bg-sky-900/50 text-sky-200"
+                          : "border-neutral-700 text-neutral-400 hover:bg-neutral-800"
                       }`}
                       title={option.description}
                       disabled={busy}
@@ -1231,11 +1399,14 @@ function InteractionEntityView({
               </div>
               <input
                 className="mt-1 w-full rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-[11px] text-neutral-100 outline-none focus:border-sky-600"
-                placeholder={question.otherLabel ?? 'Other…'}
-                value={others[question.question] ?? ''}
+                placeholder={question.otherLabel ?? "Other…"}
+                value={others[question.question] ?? ""}
                 disabled={busy}
                 onChange={(e) => {
-                  setOthers((prev) => ({ ...prev, [question.question]: e.target.value }));
+                  setOthers((prev) => ({
+                    ...prev,
+                    [question.question]: e.target.value,
+                  }));
                 }}
               />
             </div>
@@ -1261,11 +1432,11 @@ function InteractionEntityView({
 
 function NoticeFrameView({ frame }: { frame: NoticeFrame }) {
   const tone =
-    frame.level === 'error'
-      ? 'bg-red-950/50 text-red-400'
-      : frame.level === 'warning'
-        ? 'bg-amber-950/40 text-amber-300'
-        : 'bg-neutral-900/60 text-neutral-400';
+    frame.level === "error"
+      ? "bg-red-950/50 text-red-400"
+      : frame.level === "warning"
+        ? "bg-amber-950/40 text-amber-300"
+        : "bg-neutral-900/60 text-neutral-400";
   return (
     <div className={`mb-2 max-w-[85%] rounded px-3 py-1.5 text-[11px] ${tone}`}>
       {frame.source !== undefined ? (

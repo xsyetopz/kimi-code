@@ -2,8 +2,8 @@
 // Logic tests for the useConfirmDialog singleton: boolean confirm/cancel,
 // supersede, and the async `action` flow (busy state, close-on-settle,
 // rejection propagation).
-import { beforeEach, describe, expect, it } from 'vitest';
-import { useConfirmDialog } from '../src/composables/useConfirmDialog';
+import { beforeEach, describe, expect, it } from "vitest";
+import { useConfirmDialog } from "../src/composables/useConfirmDialog";
 
 function deferred<T = void>(): {
   promise: Promise<T>;
@@ -19,7 +19,7 @@ function deferred<T = void>(): {
   return { promise, resolve, reject };
 }
 
-describe('useConfirmDialog', () => {
+describe("useConfirmDialog", () => {
   const { current, busy, confirm, settle, runAction } = useConfirmDialog();
 
   beforeEach(() => {
@@ -27,35 +27,35 @@ describe('useConfirmDialog', () => {
     settle(false);
   });
 
-  it('resolves true on confirm without an action', async () => {
-    const p = confirm({ title: 'Archive?' });
-    expect(current.value?.title).toBe('Archive?');
+  it("resolves true on confirm without an action", async () => {
+    const p = confirm({ title: "Archive?" });
+    expect(current.value?.title).toBe("Archive?");
     await runAction();
     expect(current.value).toBeNull();
     await expect(p).resolves.toBe(true);
   });
 
-  it('resolves false on cancel', async () => {
-    const p = confirm({ title: 'Archive?' });
+  it("resolves false on cancel", async () => {
+    const p = confirm({ title: "Archive?" });
     settle(false);
     expect(current.value).toBeNull();
     await expect(p).resolves.toBe(false);
   });
 
-  it('cancels a pending request when a new confirm supersedes it', async () => {
-    const first = confirm({ title: 'First' });
-    const second = confirm({ title: 'Second' });
+  it("cancels a pending request when a new confirm supersedes it", async () => {
+    const first = confirm({ title: "First" });
+    const second = confirm({ title: "Second" });
     await expect(first).resolves.toBe(false);
-    expect(current.value?.title).toBe('Second');
+    expect(current.value?.title).toBe("Second");
     settle(true);
     await expect(second).resolves.toBe(true);
   });
 
-  it('keeps the dialog open (busy) while the action runs, then closes', async () => {
+  it("keeps the dialog open (busy) while the action runs, then closes", async () => {
     const action = deferred();
     let ran = false;
     const p = confirm({
-      title: 'Archive?',
+      title: "Archive?",
       action: async () => {
         ran = true;
         await action.promise;
@@ -78,10 +78,10 @@ describe('useConfirmDialog', () => {
     await expect(p).resolves.toBe(true);
   });
 
-  it('closes and rejects the confirm() promise when the action fails', async () => {
-    const failure = new Error('boom');
+  it("closes and rejects the confirm() promise when the action fails", async () => {
+    const failure = new Error("boom");
     const p = confirm({
-      title: 'Archive?',
+      title: "Archive?",
       action: () => Promise.reject(failure),
     });
     // Attach the rejection expectation before running so no unhandled
@@ -93,11 +93,11 @@ describe('useConfirmDialog', () => {
     await assertion;
   });
 
-  it('ignores a duplicate confirm while an action is running', async () => {
+  it("ignores a duplicate confirm while an action is running", async () => {
     const action = deferred();
     let runs = 0;
     const p = confirm({
-      title: 'Archive?',
+      title: "Archive?",
       action: async () => {
         runs += 1;
         await action.promise;
@@ -110,16 +110,16 @@ describe('useConfirmDialog', () => {
     await p;
   });
 
-  it('runAction without a pending request is a no-op', async () => {
+  it("runAction without a pending request is a no-op", async () => {
     expect(current.value).toBeNull();
     await runAction();
     expect(busy.value).toBe(false);
   });
 
-  it('resolves a new confirm false instead of superseding while an action runs', async () => {
+  it("resolves a new confirm false instead of superseding while an action runs", async () => {
     const action = deferred();
     const first = confirm({
-      title: 'First',
+      title: "First",
       action: () => action.promise,
     });
     void runAction();
@@ -128,9 +128,9 @@ describe('useConfirmDialog', () => {
     // The second confirm can't replace the busy dialog (it would open inert
     // under the global busy state) — it resolves unconfirmed immediately and
     // leaves the in-flight request untouched.
-    const second = confirm({ title: 'Second' });
+    const second = confirm({ title: "Second" });
     await expect(second).resolves.toBe(false);
-    expect(current.value?.title).toBe('First');
+    expect(current.value?.title).toBe("First");
     expect(busy.value).toBe(true);
 
     action.resolve();

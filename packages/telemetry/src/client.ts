@@ -1,8 +1,8 @@
-import { randomUUID } from 'node:crypto';
+import { randomUUID } from "node:crypto";
 
-import type { EventSink } from './sink';
-import type { TelemetryEvent, TelemetryProperties } from './types';
-import { isTelemetryPrimitive } from './types';
+import type { EventSink } from "./sink";
+import type { TelemetryEvent, TelemetryProperties } from "./types";
+import { isTelemetryPrimitive } from "./types";
 
 export interface TelemetryContextIds {
   readonly deviceId?: string | null;
@@ -44,7 +44,10 @@ export class TelemetryClient {
   }
 
   setSystemMetricsCollector(collector: SystemMetricsCollectorHandle): void {
-    if (this.systemMetricsCollector !== null && this.systemMetricsCollector !== collector) {
+    if (
+      this.systemMetricsCollector !== null &&
+      this.systemMetricsCollector !== collector
+    ) {
       this.systemMetricsCollector.stop();
     }
     this.systemMetricsCollector = collector;
@@ -58,10 +61,16 @@ export class TelemetryClient {
     this.sink = sink;
     for (const event of this.queue) {
       const record = toTelemetryEvent(event);
-      if (record.device_id === null && event.contextOverrides?.deviceId !== true) {
+      if (
+        record.device_id === null &&
+        event.contextOverrides?.deviceId !== true
+      ) {
         record.device_id = this.deviceId;
       }
-      if (record.session_id === null && event.contextOverrides?.sessionId !== true) {
+      if (
+        record.session_id === null &&
+        event.contextOverrides?.sessionId !== true
+      ) {
         record.session_id = this.sessionId;
       }
       sink.accept(record);
@@ -96,9 +105,11 @@ export class TelemetryClient {
   ): void {
     if (this.disabled) return;
     const record: PendingTelemetryEvent = {
-      event_id: randomUUID().replaceAll('-', ''),
-      device_id: context.deviceId === undefined ? this.deviceId : context.deviceId,
-      session_id: context.sessionId === undefined ? this.sessionId : context.sessionId,
+      event_id: randomUUID().replaceAll("-", ""),
+      device_id:
+        context.deviceId === undefined ? this.deviceId : context.deviceId,
+      session_id:
+        context.sessionId === undefined ? this.sessionId : context.sessionId,
       event,
       timestamp: Date.now() / 1000,
       properties: sanitizeProperties(properties),
@@ -178,10 +189,15 @@ class ScopedTelemetryClient extends TelemetryClient {
   }
 
   override withContext(input: TelemetryContextIds): TelemetryClient {
-    return new ScopedTelemetryClient(this.parent, mergeContext(this.context, input));
+    return new ScopedTelemetryClient(
+      this.parent,
+      mergeContext(this.context, input),
+    );
   }
 
-  override setSystemMetricsCollector(collector: SystemMetricsCollectorHandle): void {
+  override setSystemMetricsCollector(
+    collector: SystemMetricsCollectorHandle,
+  ): void {
     this.parent.setSystemMetricsCollector(collector);
   }
 
@@ -213,7 +229,9 @@ class ScopedTelemetryClient extends TelemetryClient {
     this.parent.flushSync();
   }
 
-  override async shutdown(options: TelemetryShutdownOptions = {}): Promise<void> {
+  override async shutdown(
+    options: TelemetryShutdownOptions = {},
+  ): Promise<void> {
     await this.parent.shutdown(options);
   }
 
@@ -240,7 +258,10 @@ export function enable(): void {
   defaultClient.enable();
 }
 
-export function track(event: string, properties: TelemetryProperties = {}): void {
+export function track(
+  event: string,
+  properties: TelemetryProperties = {},
+): void {
   defaultClient.track(event, properties);
 }
 
@@ -256,7 +277,9 @@ export function flushSync(): void {
   defaultClient.flushSync();
 }
 
-export async function shutdown(options: TelemetryShutdownOptions = {}): Promise<void> {
+export async function shutdown(
+  options: TelemetryShutdownOptions = {},
+): Promise<void> {
   await defaultClient.shutdown(options);
 }
 
@@ -268,7 +291,10 @@ export function resetDefaultTelemetryClientForTests(): void {
   defaultClient.resetForTests();
 }
 
-function mergeContext(base: TelemetryContextIds, patch: TelemetryContextIds): TelemetryContextIds {
+function mergeContext(
+  base: TelemetryContextIds,
+  patch: TelemetryContextIds,
+): TelemetryContextIds {
   return {
     deviceId: patch.deviceId === undefined ? base.deviceId : patch.deviceId,
     sessionId: patch.sessionId === undefined ? base.sessionId : patch.sessionId,

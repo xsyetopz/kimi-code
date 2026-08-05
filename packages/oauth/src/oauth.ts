@@ -10,45 +10,54 @@
  * when to poll / refresh / store.
  */
 
-import { extractApiErrorMessage } from './api-error';
+import { extractApiErrorMessage } from "./api-error";
 import {
   OAuthConnectionError,
   OAuthError,
   OAuthUnauthorizedError,
   RetryableRefreshError,
-} from './errors';
-import type { DeviceAuthorization, DeviceHeaders, OAuthFlowConfig, OAuthRequestHeaders, TokenInfo } from './types';
-import { isRecord } from './utils';
+} from "./errors";
+import type {
+  DeviceAuthorization,
+  DeviceHeaders,
+  OAuthFlowConfig,
+  OAuthRequestHeaders,
+  TokenInfo,
+} from "./types";
+import { isRecord } from "./utils";
 
 const RETRYABLE_STATUSES = new Set([429, 500, 502, 503, 504]);
 
 function pickErrorDetail(data: Record<string, unknown>): string {
-  return extractApiErrorMessage(data) ?? 'unknown';
+  return extractApiErrorMessage(data) ?? "unknown";
 }
 
 function tokenFromResponse(payload: Record<string, unknown>): TokenInfo {
   // Required-field validation. Reject responses that are missing
   // any of the three load-bearing fields rather than persisting empty
   // strings that will fail mysteriously later.
-  const accessToken = payload['access_token'];
-  if (typeof accessToken !== 'string' || accessToken.length === 0) {
-    throw new OAuthError('OAuth response missing access_token');
+  const accessToken = payload["access_token"];
+  if (typeof accessToken !== "string" || accessToken.length === 0) {
+    throw new OAuthError("OAuth response missing access_token");
   }
-  const refreshToken = payload['refresh_token'];
-  if (typeof refreshToken !== 'string' || refreshToken.length === 0) {
-    throw new OAuthError('OAuth response missing refresh_token');
+  const refreshToken = payload["refresh_token"];
+  if (typeof refreshToken !== "string" || refreshToken.length === 0) {
+    throw new OAuthError("OAuth response missing refresh_token");
   }
-  const expiresInRaw = payload['expires_in'];
+  const expiresInRaw = payload["expires_in"];
   const expiresIn = Number(expiresInRaw);
   if (!Number.isFinite(expiresIn) || expiresIn <= 0) {
-    throw new OAuthError('OAuth response missing or invalid expires_in');
+    throw new OAuthError("OAuth response missing or invalid expires_in");
   }
   return {
     accessToken,
     refreshToken,
     expiresAt: Math.floor(Date.now() / 1000) + expiresIn,
-    scope: typeof payload['scope'] === 'string' ? payload['scope'] : '',
-    tokenType: typeof payload['token_type'] === 'string' ? payload['token_type'] : 'Bearer',
+    scope: typeof payload["scope"] === "string" ? payload["scope"] : "",
+    tokenType:
+      typeof payload["token_type"] === "string"
+        ? payload["token_type"]
+        : "Bearer",
     expiresIn,
   };
 }
@@ -71,11 +80,11 @@ async function postForm(
   let response: Response;
   try {
     response = await fetch(url, {
-      method: 'POST',
+      method: "POST",
       headers: {
         ...deviceHeaders,
-        'Content-Type': 'application/x-www-form-urlencoded',
-        Accept: 'application/json',
+        "Content-Type": "application/x-www-form-urlencoded",
+        Accept: "application/json",
       },
       body,
       signal,
@@ -111,7 +120,7 @@ function describeFetchFailure(error: unknown): string {
     messages.add(current.message);
     current = current.cause instanceof Error ? current.cause : undefined;
   }
-  return [...messages].join(': ');
+  return [...messages].join(": ");
 }
 
 // ── requestDeviceAuthorization ────────────────────────────────────────
@@ -120,7 +129,7 @@ export async function requestDeviceAuthorization(
   config: OAuthFlowConfig,
   options: { readonly deviceHeaders?: OAuthRequestHeaders | undefined },
 ): Promise<DeviceAuthorization> {
-  const url = `${config.oauthHost.replace(/\/$/, '')}/api/oauth/device_authorization`;
+  const url = `${config.oauthHost.replace(/\/$/, "")}/api/oauth/device_authorization`;
   const { status, data } = await postForm(
     url,
     { client_id: config.clientId },
@@ -134,55 +143,68 @@ export async function requestDeviceAuthorization(
   }
 
   // Required-field validation for the device authorization response.
-  const userCode = data['user_code'];
-  const deviceCode = data['device_code'];
-  const verificationUriComplete = data['verification_uri_complete'];
-  if (typeof userCode !== 'string' || userCode.length === 0) {
-    throw new OAuthError('Device authorization response missing user_code');
+  const userCode = data["user_code"];
+  const deviceCode = data["device_code"];
+  const verificationUriComplete = data["verification_uri_complete"];
+  if (typeof userCode !== "string" || userCode.length === 0) {
+    throw new OAuthError("Device authorization response missing user_code");
   }
-  if (typeof deviceCode !== 'string' || deviceCode.length === 0) {
-    throw new OAuthError('Device authorization response missing device_code');
+  if (typeof deviceCode !== "string" || deviceCode.length === 0) {
+    throw new OAuthError("Device authorization response missing device_code");
   }
-  if (typeof verificationUriComplete !== 'string' || verificationUriComplete.length === 0) {
-    throw new OAuthError('Device authorization response missing verification_uri_complete');
+  if (
+    typeof verificationUriComplete !== "string" ||
+    verificationUriComplete.length === 0
+  ) {
+    throw new OAuthError(
+      "Device authorization response missing verification_uri_complete",
+    );
   }
 
   return {
     userCode,
     deviceCode,
-    verificationUri: typeof data['verification_uri'] === 'string' ? data['verification_uri'] : '',
+    verificationUri:
+      typeof data["verification_uri"] === "string"
+        ? data["verification_uri"]
+        : "",
     verificationUriComplete,
-    expiresIn: data['expires_in'] !== undefined ? Number(data['expires_in']) : null,
-    interval: Number(data['interval'] ?? 5),
+    expiresIn:
+      data["expires_in"] !== undefined ? Number(data["expires_in"]) : null,
+    interval: Number(data["interval"] ?? 5),
   };
 }
 
 // ── pollDeviceToken ───────────────────────────────────────────────────
 
 export type DevicePollResult =
-  | { readonly kind: 'success'; readonly token: TokenInfo }
-  | { readonly kind: 'pending'; readonly errorCode: string; readonly description: string }
-  | { readonly kind: 'expired' }
-  | { readonly kind: 'denied'; readonly description: string };
+  | { readonly kind: "success"; readonly token: TokenInfo }
+  | {
+      readonly kind: "pending";
+      readonly errorCode: string;
+      readonly description: string;
+    }
+  | { readonly kind: "expired" }
+  | { readonly kind: "denied"; readonly description: string };
 
 export async function pollDeviceToken(
   config: OAuthFlowConfig,
   deviceCode: string,
   options: { readonly deviceHeaders?: OAuthRequestHeaders | undefined },
 ): Promise<DevicePollResult> {
-  const url = `${config.oauthHost.replace(/\/$/, '')}/api/oauth/token`;
+  const url = `${config.oauthHost.replace(/\/$/, "")}/api/oauth/token`;
   const { status, data } = await postForm(
     url,
     {
       client_id: config.clientId,
       device_code: deviceCode,
-      grant_type: 'urn:ietf:params:oauth:grant-type:device_code',
+      grant_type: "urn:ietf:params:oauth:grant-type:device_code",
     },
     options.deviceHeaders,
   );
 
-  if (status === 200 && typeof data['access_token'] === 'string') {
-    return { kind: 'success', token: tokenFromResponse(data) };
+  if (status === 200 && typeof data["access_token"] === "string") {
+    return { kind: "success", token: tokenFromResponse(data) };
   }
 
   if (status >= 500) {
@@ -191,18 +213,21 @@ export async function pollDeviceToken(
     );
   }
 
-  const errorCode = typeof data['error'] === 'string' ? data['error'] : 'unknown_error';
+  const errorCode =
+    typeof data["error"] === "string" ? data["error"] : "unknown_error";
   const detail = extractApiErrorMessage(data);
   const description =
-    typeof data['error_description'] === 'string' ? data['error_description'] : (detail ?? '');
+    typeof data["error_description"] === "string"
+      ? data["error_description"]
+      : (detail ?? "");
   switch (errorCode) {
-    case 'authorization_pending':
-    case 'slow_down':
-      return { kind: 'pending', errorCode, description };
-    case 'expired_token':
-      return { kind: 'expired' };
-    case 'access_denied':
-      return { kind: 'denied', description };
+    case "authorization_pending":
+    case "slow_down":
+      return { kind: "pending", errorCode, description };
+    case "expired_token":
+      return { kind: "expired" };
+    case "access_denied":
+      return { kind: "denied", description };
     default:
       throw new OAuthError(
         `Device token polling failed (HTTP ${status}): ${detail ?? `${errorCode} ${description}`}`,
@@ -236,7 +261,7 @@ export async function refreshAccessToken(
       new Promise<void>((resolve) => {
         setTimeout(resolve, ms);
       }));
-  const url = `${config.oauthHost.replace(/\/$/, '')}/api/oauth/token`;
+  const url = `${config.oauthHost.replace(/\/$/, "")}/api/oauth/token`;
 
   let lastError: Error | undefined;
   for (let attempt = 0; attempt < maxRetries; attempt += 1) {
@@ -247,7 +272,7 @@ export async function refreshAccessToken(
         url,
         {
           client_id: config.clientId,
-          grant_type: 'refresh_token',
+          grant_type: "refresh_token",
           refresh_token: refreshToken,
         },
         options.deviceHeaders,
@@ -255,22 +280,25 @@ export async function refreshAccessToken(
     } catch (error) {
       // Transport-level failure (DNS, connection refused, timeout). Treat
       // as retryable to match Python's `aiohttp.ClientError` handling.
-      lastError = error instanceof Error ? error : new OAuthError(String(error));
+      lastError =
+        error instanceof Error ? error : new OAuthError(String(error));
       if (attempt < maxRetries - 1) {
         await sleep(backoff(attempt));
         continue;
       }
-      throw lastError instanceof Error ? lastError : new OAuthError(String(lastError));
+      throw lastError instanceof Error
+        ? lastError
+        : new OAuthError(String(lastError));
     }
 
-    if (status === 200 && typeof data['access_token'] === 'string') {
+    if (status === 200 && typeof data["access_token"] === "string") {
       return tokenFromResponse(data);
     }
 
-    const errorCode = typeof data['error'] === 'string' ? data['error'] : '';
+    const errorCode = typeof data["error"] === "string" ? data["error"] : "";
     const detail = extractApiErrorMessage(data);
-    if (status === 401 || status === 403 || errorCode === 'invalid_grant') {
-      throw new OAuthUnauthorizedError(detail ?? 'Token refresh unauthorized.');
+    if (status === 401 || status === 403 || errorCode === "invalid_grant") {
+      throw new OAuthUnauthorizedError(detail ?? "Token refresh unauthorized.");
     }
 
     const desc = detail ?? `Token refresh failed (HTTP ${status}).`;
@@ -286,7 +314,7 @@ export async function refreshAccessToken(
     }
   }
 
-  throw lastError ?? new OAuthError('Token refresh failed after retries.');
+  throw lastError ?? new OAuthError("Token refresh failed after retries.");
 }
 
 export type { DeviceHeaders, OAuthRequestHeaders };

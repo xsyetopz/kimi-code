@@ -12,7 +12,10 @@
  * must degrade on either signal. Bound at App scope.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
 
 export interface BashSyntaxNode {
   readonly type: string;
@@ -29,8 +32,12 @@ export interface BashParseOptions {
 }
 
 export type BashParseResult =
-  | { readonly ok: true; readonly hasError: boolean; readonly root: BashSyntaxNode }
-  | { readonly ok: false; readonly reason: 'aborted' };
+  | {
+      readonly ok: true;
+      readonly hasError: boolean;
+      readonly root: BashSyntaxNode;
+    }
+  | { readonly ok: false; readonly reason: "aborted" };
 
 export interface IBashParserService {
   readonly _serviceBrand: undefined;
@@ -39,4 +46,4 @@ export interface IBashParserService {
 }
 
 export const IBashParserService: ServiceIdentifier<IBashParserService> =
-  createDecorator<IBashParserService>('bashParserService');
+  createDecorator<IBashParserService>("bashParserService");

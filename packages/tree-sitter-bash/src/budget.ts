@@ -15,7 +15,7 @@ export const DEFAULT_MAX_NODES = 50_000;
 export class Aborted extends Error {
   constructor(message: string) {
     super(message);
-    this.name = 'Aborted';
+    this.name = "Aborted";
   }
 }
 
@@ -49,7 +49,9 @@ export class ParseBudget {
   tick(): void {
     this.nodeCount++;
     if (this.nodeCount > this.maxNodes) {
-      throw new Aborted(`parse aborted: node budget exceeded (${this.nodeCount} > ${this.maxNodes})`);
+      throw new Aborted(
+        `parse aborted: node budget exceeded (${this.nodeCount} > ${this.maxNodes})`,
+      );
     }
     if (Date.now() >= this.deadline) {
       throw new Aborted(`parse aborted: timeout`);

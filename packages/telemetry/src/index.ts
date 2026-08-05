@@ -4,11 +4,14 @@ import {
   shutdown,
   track as trackEvent,
   withContext,
-} from './client';
-import type { TelemetryProperties as TelemetryPropertiesType } from './types';
-import type { TelemetryContextIds, TelemetryClient } from './client';
+} from "./client";
+import type { TelemetryProperties as TelemetryPropertiesType } from "./types";
+import type { TelemetryContextIds, TelemetryClient } from "./client";
 
-export function track(event: string, properties: TelemetryPropertiesType = {}): void {
+export function track(
+  event: string,
+  properties: TelemetryPropertiesType = {},
+): void {
   trackEvent(event, properties);
 }
 
@@ -16,7 +19,9 @@ export function setTelemetryContext(patch: TelemetryContextIds): void {
   setContext(patch);
 }
 
-export function withTelemetryContext(patch: TelemetryContextIds): TelemetryClient {
+export function withTelemetryContext(
+  patch: TelemetryContextIds,
+): TelemetryClient {
   return withContext(patch);
 }
 
@@ -30,13 +35,13 @@ export async function shutdownTelemetry(
   await shutdown(options);
 }
 
-export { initializeTelemetry } from './bootstrap';
-export type { TelemetryBootstrapOptions } from './bootstrap';
+export { initializeTelemetry } from "./bootstrap";
+export type { TelemetryBootstrapOptions } from "./bootstrap";
 
-export { installCrashHandlers, setCrashPhase } from './crash';
-export type { CrashPhase } from './crash';
+export { installCrashHandlers, setCrashPhase } from "./crash";
+export type { CrashPhase } from "./crash";
 
-export { normalizeRemote } from './remote';
+export { normalizeRemote } from "./remote";
 
-export type { TelemetryPrimitive, TelemetryProperties } from './types';
-export type { TelemetryClient, TelemetryContextIds } from './client';
+export type { TelemetryPrimitive, TelemetryProperties } from "./types";
+export type { TelemetryClient, TelemetryContextIds } from "./client";

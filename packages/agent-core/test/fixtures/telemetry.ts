@@ -1,4 +1,4 @@
-import type { TelemetryClient, TelemetryProperties } from '../../src/telemetry';
+import type { TelemetryClient, TelemetryProperties } from "../../src/telemetry";
 
 export interface TelemetryRecord {
   readonly event: string;
@@ -9,7 +9,9 @@ export interface TelemetryContextRecord extends TelemetryRecord {
   readonly sessionId: string | null;
 }
 
-export function recordingTelemetry(records: TelemetryRecord[]): TelemetryClient {
+export function recordingTelemetry(
+  records: TelemetryRecord[],
+): TelemetryClient {
   return {
     track: (event, properties) => {
       records.push({ event, properties });
@@ -18,7 +20,9 @@ export function recordingTelemetry(records: TelemetryRecord[]): TelemetryClient 
   };
 }
 
-export function recordingContextTelemetry(records: TelemetryContextRecord[]): TelemetryClient {
+export function recordingContextTelemetry(
+  records: TelemetryContextRecord[],
+): TelemetryClient {
   return {
     track: (event, properties) => {
       records.push({ event, sessionId: null, properties });

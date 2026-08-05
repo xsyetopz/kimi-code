@@ -46,7 +46,11 @@ async function createReplayRig(): Promise<ReplayRig> {
   const provider = await createFakeProviderHarness();
   const harness = createKimiHarness({
     homeDir,
-    identity: { productName: "kimi-code-vscode", version: "test", platform: "kimi_code_vscode" },
+    identity: {
+      productName: "kimi-code-vscode",
+      version: "test",
+      platform: "kimi_code_vscode",
+    },
   });
   await harness.setConfig({
     providers: {
@@ -125,59 +129,63 @@ describe("VS Code replay from a public Node SDK resume state", () => {
     const filePath = join(rig.workDir, "sample.txt");
     await writeFile(filePath, "before\n", "utf8");
     let requestCount = 0;
-    rig.provider.route("POST", "/v1/chat/completions", async (_request, reply) => {
-      requestCount += 1;
-      if (requestCount === 1) {
+    rig.provider.route(
+      "POST",
+      "/v1/chat/completions",
+      async (_request, reply) => {
+        requestCount += 1;
+        if (requestCount === 1) {
+          await reply.sseJson(200, [
+            completionChunk({
+              tool_calls: [
+                {
+                  index: 0,
+                  id: "edit-call-1",
+                  type: "function",
+                  function: {
+                    name: "Edit",
+                    arguments: JSON.stringify({
+                      path: "sample.txt",
+                      old_string: "before",
+                      new_string: "after",
+                    }),
+                  },
+                },
+                {
+                  index: 1,
+                  id: "write-call-1",
+                  type: "function",
+                  function: {
+                    name: "Write",
+                    arguments: JSON.stringify({
+                      path: "created.txt",
+                      content: "created content\n",
+                    }),
+                  },
+                },
+                {
+                  index: 2,
+                  id: "todo-call-1",
+                  type: "function",
+                  function: {
+                    name: "TodoList",
+                    arguments: JSON.stringify({
+                      todos: [{ title: "Verify resume", status: "done" }],
+                    }),
+                  },
+                },
+              ],
+            }),
+            completionChunk({}, "tool_calls"),
+          ]);
+          return;
+        }
         await reply.sseJson(200, [
-          completionChunk({
-            tool_calls: [
-              {
-                index: 0,
-                id: "edit-call-1",
-                type: "function",
-                function: {
-                  name: "Edit",
-                  arguments: JSON.stringify({
-                    path: "sample.txt",
-                    old_string: "before",
-                    new_string: "after",
-                  }),
-                },
-              },
-              {
-                index: 1,
-                id: "write-call-1",
-                type: "function",
-                function: {
-                  name: "Write",
-                  arguments: JSON.stringify({
-                    path: "created.txt",
-                    content: "created content\n",
-                  }),
-                },
-              },
-              {
-                index: 2,
-                id: "todo-call-1",
-                type: "function",
-                function: {
-                  name: "TodoList",
-                  arguments: JSON.stringify({
-                    todos: [{ title: "Verify resume", status: "done" }],
-                  }),
-                },
-              },
-            ],
-          }),
-          completionChunk({}, "tool_calls"),
+          completionChunk({ content: "Changes complete." }),
+          completionChunk({}, "stop"),
         ]);
-        return;
-      }
-      await reply.sseJson(200, [
-        completionChunk({ content: "Changes complete." }),
-        completionChunk({}, "stop"),
-      ]);
-    });
+      },
+    );
     const session = await rig.harness.createSession({
       id: "ses_vscode_replay_displays",
       workDir: rig.workDir,
@@ -201,12 +209,14 @@ describe("VS Code replay from a public Node SDK resume state", () => {
         payload: expect.objectContaining({
           tool_call_id: "write-call-1",
           return_value: expect.objectContaining({
-            display: [{
-              type: "diff",
-              path: join(rig.workDir, "created.txt"),
-              old_text: "",
-              new_text: "created content\n",
-            }],
+            display: [
+              {
+                type: "diff",
+                path: join(rig.workDir, "created.txt"),
+                old_text: "",
+                new_text: "created content\n",
+              },
+            ],
           }),
         }),
       }),
@@ -217,7 +227,14 @@ describe("VS Code replay from a public Node SDK resume state", () => {
         payload: expect.objectContaining({
           tool_call_id: "edit-call-1",
           return_value: expect.objectContaining({
-            display: [{ type: "diff", path: filePath, old_text: "before", new_text: "after" }],
+            display: [
+              {
+                type: "diff",
+                path: filePath,
+                old_text: "before",
+                new_text: "after",
+              },
+            ],
           }),
         }),
       }),
@@ -228,10 +245,12 @@ describe("VS Code replay from a public Node SDK resume state", () => {
         payload: expect.objectContaining({
           tool_call_id: "todo-call-1",
           return_value: expect.objectContaining({
-            display: [{
-              type: "todo",
-              items: [{ title: "Verify resume", status: "done" }],
-            }],
+            display: [
+              {
+                type: "todo",
+                items: [{ title: "Verify resume", status: "done" }],
+              },
+            ],
           }),
         }),
       }),
@@ -242,42 +261,48 @@ describe("VS Code replay from a public Node SDK resume state", () => {
     const rig = await createReplayRig();
     const childAnswer = `Subagent restored evidence. ${"Detailed persisted finding. ".repeat(10)}`;
     let requestCount = 0;
-    rig.provider.route("POST", "/v1/chat/completions", async (_request, reply) => {
-      requestCount += 1;
-      if (requestCount === 1) {
+    rig.provider.route(
+      "POST",
+      "/v1/chat/completions",
+      async (_request, reply) => {
+        requestCount += 1;
+        if (requestCount === 1) {
+          await reply.sseJson(200, [
+            completionChunk({
+              tool_calls: [
+                {
+                  index: 0,
+                  id: "agent-call-1",
+                  type: "function",
+                  function: {
+                    name: "Agent",
+                    arguments: JSON.stringify({
+                      prompt: "Inspect the workspace and report one finding.",
+                      description: "inspect workspace",
+                      subagent_type: "coder",
+                      run_in_background: false,
+                    }),
+                  },
+                },
+              ],
+            }),
+            completionChunk({}, "tool_calls"),
+          ]);
+          return;
+        }
+        if (requestCount === 2) {
+          await reply.sseJson(200, [
+            completionChunk({ content: childAnswer }),
+            completionChunk({}, "stop"),
+          ]);
+          return;
+        }
         await reply.sseJson(200, [
-          completionChunk({
-            tool_calls: [{
-              index: 0,
-              id: "agent-call-1",
-              type: "function",
-              function: {
-                name: "Agent",
-                arguments: JSON.stringify({
-                  prompt: "Inspect the workspace and report one finding.",
-                  description: "inspect workspace",
-                  subagent_type: "coder",
-                  run_in_background: false,
-                }),
-              },
-            }],
-          }),
-          completionChunk({}, "tool_calls"),
-        ]);
-        return;
-      }
-      if (requestCount === 2) {
-        await reply.sseJson(200, [
-          completionChunk({ content: childAnswer }),
+          completionChunk({ content: "Parent received the finding." }),
           completionChunk({}, "stop"),
         ]);
-        return;
-      }
-      await reply.sseJson(200, [
-        completionChunk({ content: "Parent received the finding." }),
-        completionChunk({}, "stop"),
-      ]);
-    });
+      },
+    );
     const session = await rig.harness.createSession({
       id: "ses_vscode_replay_subagent",
       workDir: rig.workDir,
@@ -309,7 +334,10 @@ describe("VS Code replay from a public Node SDK resume state", () => {
         type: "SubagentEvent",
         payload: {
           parent_tool_call_id: "agent-call-1",
-          event: { type: "ContentPart", payload: { type: "text", text: childAnswer } },
+          event: {
+            type: "ContentPart",
+            payload: { type: "text", text: childAnswer },
+          },
         },
       }),
     );

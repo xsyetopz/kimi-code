@@ -18,41 +18,41 @@
 export class OAuthError extends Error {
   constructor(message: string, options?: ErrorOptions) {
     super(message, options);
-    this.name = 'OAuthError';
+    this.name = "OAuthError";
   }
 }
 
 export class OAuthUnauthorizedError extends OAuthError {
   constructor(message: string) {
     super(message);
-    this.name = 'OAuthUnauthorizedError';
+    this.name = "OAuthUnauthorizedError";
   }
 }
 
 export class OAuthConnectionError extends OAuthError {
   constructor(message: string, options?: ErrorOptions) {
     super(message, options);
-    this.name = 'OAuthConnectionError';
+    this.name = "OAuthConnectionError";
   }
 }
 
 export class DeviceCodeExpiredError extends OAuthError {
-  constructor(message = 'Device code expired.') {
+  constructor(message = "Device code expired.") {
     super(message);
-    this.name = 'DeviceCodeExpiredError';
+    this.name = "DeviceCodeExpiredError";
   }
 }
 
 export class DeviceCodeTimeoutError extends OAuthError {
-  constructor(message = 'Device authorization timed out locally.') {
+  constructor(message = "Device authorization timed out locally.") {
     super(message);
-    this.name = 'DeviceCodeTimeoutError';
+    this.name = "DeviceCodeTimeoutError";
   }
 }
 
 export class RetryableRefreshError extends OAuthError {
   constructor(message: string) {
     super(message);
-    this.name = 'RetryableRefreshError';
+    this.name = "RetryableRefreshError";
   }
 }

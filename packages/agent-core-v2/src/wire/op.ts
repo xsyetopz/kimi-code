@@ -22,19 +22,27 @@
  * the global Op-type namespace stays unique. Scope-agnostic.
  */
 
-import type { z } from 'zod';
+import type { z } from "zod";
 
-import type { ConflictingOpType, OpPersistenceOptions, OpType } from '#/wire/types';
+import type {
+  ConflictingOpType,
+  OpPersistenceOptions,
+  OpType,
+} from "#/wire/types";
 
-import { WireError, WireErrors } from './errors';
-import type { ModelDef } from './model';
+import { WireError, WireErrors } from "./errors";
+import type { ModelDef } from "./model";
 
 export class DuplicateOpError extends WireError {
   constructor(readonly type: string) {
-    super(WireErrors.codes.WIRE_DUPLICATE_OP, `Duplicate Op type registered: '${type}'`, {
-      details: { type },
-    });
-    this.name = 'DuplicateOpError';
+    super(
+      WireErrors.codes.WIRE_DUPLICATE_OP,
+      `Duplicate Op type registered: '${type}'`,
+      {
+        details: { type },
+      },
+    );
+    this.name = "DuplicateOpError";
   }
 }
 
@@ -83,13 +91,14 @@ export interface DefineOpFn<S> {
   ): DefinedOp<K, S, P>;
 }
 
-type SingleStringLiteral<K extends string, Whole extends string = K> = {} extends Record<K, never>
-  ? never
-  : K extends unknown
-    ? [Whole] extends [K]
-      ? K
-      : never
-    : never;
+type SingleStringLiteral<K extends string, Whole extends string = K> =
+  {} extends Record<K, never>
+    ? never
+    : K extends unknown
+      ? [Whole] extends [K]
+        ? K
+        : never
+      : never;
 
 export function bindDefineOp<S>(getModel: () => ModelDef<S>): DefineOpFn<S> {
   const bound = (type: string, opts: unknown): unknown =>

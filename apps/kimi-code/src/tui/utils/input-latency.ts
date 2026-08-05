@@ -14,9 +14,9 @@
 // underestimates by the frame's own diff/write tail (sub-ms to a few ms),
 // which is the right granularity for diagnosing >100ms stalls.
 
-import { appendFileSync, mkdirSync } from 'node:fs';
-import path from 'node:path';
-import type { Component, TUI } from '@moonshot-ai/pi-tui';
+import { appendFileSync, mkdirSync } from "node:fs";
+import path from "node:path";
+import type { Component, TUI } from "@moonshot-ai/pi-tui";
 
 /** Rolling sample cap for the percentile window. */
 const MAX_SAMPLES = 500;
@@ -56,7 +56,9 @@ export class LatencyStats {
   percentile(p: number): number {
     if (this.samples.length === 0) return 0;
     const sorted = [...this.samples].sort((a, b) => a - b);
-    return sorted[Math.min(sorted.length - 1, Math.ceil((p / 100) * sorted.length) - 1)]!;
+    return sorted[
+      Math.min(sorted.length - 1, Math.ceil((p / 100) * sorted.length) - 1)
+    ]!;
   }
 
   max(): number {
@@ -64,12 +66,12 @@ export class LatencyStats {
   }
 
   formatLines(): string[] {
-    if (this.events === 0) return [' input→render: (type something) '];
+    if (this.events === 0) return [" input→render: (type something) "];
     const head =
       ` io ${this.last.toFixed(0)}ms | p50 ${this.percentile(50).toFixed(0)} p95 ${this.percentile(95).toFixed(0)}` +
       ` p99 ${this.percentile(99).toFixed(0)} max ${this.max().toFixed(0)}ms | n=${this.events}` +
       ` >100:${this.over100} >300:${this.over300} >1s:${this.over1000} `;
-    const worstLine = ` worst: ${this.worst.map((w) => `${w.latency.toFixed(0)}ms@${w.at}`).join('  ')} `;
+    const worstLine = ` worst: ${this.worst.map((w) => `${w.latency.toFixed(0)}ms@${w.at}`).join("  ")} `;
     return [head, worstLine];
   }
 }
@@ -78,7 +80,7 @@ export class LatencyStats {
 export function installInputLatencyProbe(tui: TUI): void {
   const stats = new LatencyStats();
   const pending: number[] = [];
-  const logPath = process.env['KIMI_TUI_INPUT_LATENCY_LOG'];
+  const logPath = process.env["KIMI_TUI_INPUT_LATENCY_LOG"];
   if (logPath) mkdirSync(path.dirname(logPath), { recursive: true });
 
   tui.addInputListener(() => {
@@ -95,11 +97,19 @@ export function installInputLatencyProbe(tui: TUI): void {
         for (const t of pending.splice(0)) {
           const latency = now - t;
           stats.record(latency, at);
-          if (logPath) appendFileSync(logPath, `${JSON.stringify({ t: new Date().toISOString(), latencyMs: Math.round(latency) })}\n`);
+          if (logPath)
+            appendFileSync(
+              logPath,
+              `${JSON.stringify({ t: new Date().toISOString(), latencyMs: Math.round(latency) })}\n`,
+            );
         }
       }
       return stats.formatLines();
     },
   };
-  tui.showOverlay(overlay, { nonCapturing: true, anchor: 'top-right', margin: 0 });
+  tui.showOverlay(overlay, {
+    nonCapturing: true,
+    anchor: "top-right",
+    margin: 0,
+  });
 }

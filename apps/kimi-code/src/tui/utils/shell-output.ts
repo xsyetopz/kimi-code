@@ -1,4 +1,4 @@
-import { currentTheme } from '#/tui/theme';
+import { currentTheme } from "#/tui/theme";
 
 // Captured command output can contain terminal control sequences — colours,
 // cursor moves, alternate-screen switches, hyperlinks, `\r` spinners, bells, …
@@ -29,16 +29,16 @@ const C0_CONTROL_PATTERN = /[\u0000-\u0008\u000B-\u001B\u001C-\u001F]/g;
  * C0 control characters, so rendering can never crash the TUI.
  */
 export function sanitizeShellOutput(text: string): string {
-  if (typeof text !== 'string') return '';
+  if (typeof text !== "string") return "";
   if (text.length === 0) return text;
   try {
     return text
-      .replace(OSC_PATTERN, '')
-      .replace(CSI_PATTERN, '')
-      .replace(ESC_SINGLE_PATTERN, '')
-      .replace(C0_CONTROL_PATTERN, '');
+      .replace(OSC_PATTERN, "")
+      .replace(CSI_PATTERN, "")
+      .replace(ESC_SINGLE_PATTERN, "")
+      .replace(C0_CONTROL_PATTERN, "");
   } catch {
-    return text.replace(C0_CONTROL_PATTERN, '');
+    return text.replace(C0_CONTROL_PATTERN, "");
   }
 }
 
@@ -49,9 +49,13 @@ export function sanitizeShellOutput(text: string): string {
  * Never throws: if anything goes wrong (theme lookup, huge input, …) it falls
  * back to a best-effort plain view so a render error can never crash the TUI.
  */
-export function formatBashOutputForDisplay(stdout: string, stderr: string, isError?: boolean): string {
+export function formatBashOutputForDisplay(
+  stdout: string,
+  stderr: string,
+  isError?: boolean,
+): string {
   try {
-    const dim = (s: string): string => currentTheme.fg('textDim', s);
+    const dim = (s: string): string => currentTheme.fg("textDim", s);
     const parts: string[] = [];
     const cleanStdout = sanitizeShellOutput(stdout).trimEnd();
     if (cleanStdout.length > 0) parts.push(dim(cleanStdout));
@@ -59,13 +63,18 @@ export function formatBashOutputForDisplay(stdout: string, stderr: string, isErr
     if (cleanStderr.length > 0) {
       // Dim grey normally; red only on actual failure (so warnings on a
       // successful command are not mistaken for errors).
-      parts.push(isError ? currentTheme.fg('error', cleanStderr) : dim(cleanStderr));
+      parts.push(
+        isError ? currentTheme.fg("error", cleanStderr) : dim(cleanStderr),
+      );
     }
-    return parts.length > 0 ? parts.join('\n') : dim('(no output)');
+    return parts.length > 0 ? parts.join("\n") : dim("(no output)");
   } catch {
-    const plain = [sanitizeShellOutput(String(stdout ?? '')), sanitizeShellOutput(String(stderr ?? ''))]
+    const plain = [
+      sanitizeShellOutput(String(stdout ?? "")),
+      sanitizeShellOutput(String(stderr ?? "")),
+    ]
       .filter((s) => s.length > 0)
-      .join('\n');
-    return plain.length > 0 ? plain : '(no output)';
+      .join("\n");
+    return plain.length > 0 ? plain : "(no output)";
   }
 }

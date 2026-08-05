@@ -1,26 +1,30 @@
-import { resetCapabilitiesCache, setCapabilities, visibleWidth } from '@moonshot-ai/pi-tui';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import {
+  resetCapabilitiesCache,
+  setCapabilities,
+  visibleWidth,
+} from "@moonshot-ai/pi-tui";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { ImageThumbnail } from '#/tui/components/media/image-thumbnail';
-import type { ImageAttachment } from '#/tui/utils/image-attachment-store';
+import { ImageThumbnail } from "#/tui/components/media/image-thumbnail";
+import type { ImageAttachment } from "#/tui/utils/image-attachment-store";
 
 const image: ImageAttachment = {
   id: 1,
-  kind: 'image',
+  kind: "image",
   bytes: new Uint8Array([137, 80, 78, 71]),
-  mime: 'image/png',
+  mime: "image/png",
   width: 800,
   height: 600,
-  placeholder: '[image #1 (800×600)]',
+  placeholder: "[image #1 (800×600)]",
 };
 
-describe('ImageThumbnail', () => {
+describe("ImageThumbnail", () => {
   afterEach(() => {
     resetCapabilitiesCache();
     vi.restoreAllMocks();
   });
 
-  it('keeps rendered output within narrow widths', () => {
+  it("keeps rendered output within narrow widths", () => {
     setCapabilities({ images: null, trueColor: false, hyperlinks: false });
 
     const component = new ImageThumbnail(image);
@@ -32,10 +36,10 @@ describe('ImageThumbnail', () => {
     }
   });
 
-  it('does not rebuild inline image children on repeated same-width renders', () => {
-    setCapabilities({ images: 'kitty', trueColor: true, hyperlinks: true });
+  it("does not rebuild inline image children on repeated same-width renders", () => {
+    setCapabilities({ images: "kitty", trueColor: true, hyperlinks: true });
 
-    const bufferFrom = vi.spyOn(Buffer, 'from');
+    const bufferFrom = vi.spyOn(Buffer, "from");
     const component = new ImageThumbnail(image);
     bufferFrom.mockClear();
 

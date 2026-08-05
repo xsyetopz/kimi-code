@@ -12,15 +12,17 @@
  * `ITodoListTool` DI decorator. Bound at Agent scope.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { createDecorator } from '#/_base/di/instantiation';
-import { type AgentTool } from '#/tool/toolContract';
-import { type TodoStatus } from '#/session/todo/todoItem';
+import { createDecorator } from "#/_base/di/instantiation";
+import { type AgentTool } from "#/tool/toolContract";
+import { type TodoStatus } from "#/session/todo/todoItem";
 
 const TodoItemSchema = z.object({
-  title: z.string().min(1).describe('Short, actionable title for the todo.'),
-  status: z.enum(['pending', 'in_progress', 'done']).describe('Current status of the todo.'),
+  title: z.string().min(1).describe("Short, actionable title for the todo."),
+  status: z
+    .enum(["pending", "in_progress", "done"])
+    .describe("Current status of the todo."),
 });
 
 export interface TodoListInput {
@@ -32,11 +34,11 @@ export const TodoListInputSchema: z.ZodType<TodoListInput> = z.object({
     .array(TodoItemSchema)
     .optional()
     .describe(
-      'The updated todo list. Omit to read the current todo list without making changes. Pass an empty array to clear the list.',
+      "The updated todo list. Omit to read the current todo list without making changes. Pass an empty array to clear the list.",
     ),
 });
 
 export interface ITodoListTool extends AgentTool<TodoListInput> {
   readonly _serviceBrand: undefined;
 }
-export const ITodoListTool = createDecorator<ITodoListTool>('todoListTool');
+export const ITodoListTool = createDecorator<ITodoListTool>("todoListTool");

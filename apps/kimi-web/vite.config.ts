@@ -1,10 +1,10 @@
-import { defineConfig, type Plugin } from 'vite';
-import vue from '@vitejs/plugin-vue';
-import Icons from 'unplugin-icons/vite';
-import { FileSystemIconLoader } from 'unplugin-icons/loaders';
-import { readFileSync } from 'node:fs';
-import type { IncomingMessage, ServerResponse } from 'node:http';
-import { fileURLToPath } from 'node:url';
+import { defineConfig, type Plugin } from "vite";
+import vue from "@vitejs/plugin-vue";
+import Icons from "unplugin-icons/vite";
+import { FileSystemIconLoader } from "unplugin-icons/loaders";
+import { readFileSync } from "node:fs";
+import type { IncomingMessage, ServerResponse } from "node:http";
+import { fileURLToPath } from "node:url";
 
 const webPort = Number(process.env.WEB_PORT) || 5175;
 // Dev-proxy backend presets: `default` is the kap-server started by the root
@@ -13,8 +13,8 @@ const webPort = Number(process.env.WEB_PORT) || 5175;
 // both can run at once) for multi-instance debugging. Override with
 // KIMI_BACKEND_DEFAULT_URL / KIMI_BACKEND_MULTI_URL.
 const backendPresets = {
-  default: process.env.KIMI_BACKEND_DEFAULT_URL || 'http://127.0.0.1:58627',
-  multi: process.env.KIMI_BACKEND_MULTI_URL || 'http://127.0.0.1:58628',
+  default: process.env.KIMI_BACKEND_DEFAULT_URL || "http://127.0.0.1:58627",
+  multi: process.env.KIMI_BACKEND_MULTI_URL || "http://127.0.0.1:58628",
 } as const;
 type BackendName = keyof typeof backendPresets;
 // Where the dev proxy forwards server traffic. Defaults to the `default`
@@ -26,7 +26,9 @@ const serverTarget = process.env.KIMI_SERVER_URL || backendPresets.default;
 // options repoints the proxy without a dev-server restart (see the plugin).
 let currentBackendTarget = serverTarget;
 let backendProxyOpts: { target?: unknown } | null = null;
-const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf-8')) as {
+const pkg = JSON.parse(
+  readFileSync(new URL("./package.json", import.meta.url), "utf-8"),
+) as {
   version: string;
 };
 
@@ -39,7 +41,7 @@ const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 
  */
 function backendSwitcherPlugin(): Plugin {
   const sendJson = (res: ServerResponse, body: unknown): void => {
-    res.setHeader('Content-Type', 'application/json');
+    res.setHeader("Content-Type", "application/json");
     res.end(JSON.stringify(body));
   };
   const state = (): { current: string; presets: typeof backendPresets } => ({
@@ -53,37 +55,41 @@ function backendSwitcherPlugin(): Plugin {
     if (backendProxyOpts) backendProxyOpts.target = currentBackendTarget;
   };
   return {
-    name: 'kimi-backend-switcher',
+    name: "kimi-backend-switcher",
     configureServer(server) {
-      server.middlewares.use((req: IncomingMessage, res: ServerResponse, next: () => void) => {
-        if (req.url !== '/__kimi-dev/backend') return next();
-        if (req.method === 'GET') {
-          sendJson(res, state());
-          return;
-        }
-        if (req.method === 'POST') {
-          let raw = '';
-          req.on('data', (chunk: Buffer) => (raw += chunk));
-          req.on('end', () => {
-            let name: unknown;
-            try {
-              name = (JSON.parse(raw) as { name?: unknown }).name;
-            } catch {
-              name = undefined;
-            }
-            if (name !== 'default' && name !== 'multi') {
-              res.statusCode = 400;
-              sendJson(res, { error: 'expected { "name": "default" | "multi" }' });
-              return;
-            }
-            switchTo(name as BackendName);
+      server.middlewares.use(
+        (req: IncomingMessage, res: ServerResponse, next: () => void) => {
+          if (req.url !== "/__kimi-dev/backend") return next();
+          if (req.method === "GET") {
             sendJson(res, state());
-          });
-          return;
-        }
-        res.statusCode = 405;
-        res.end();
-      });
+            return;
+          }
+          if (req.method === "POST") {
+            let raw = "";
+            req.on("data", (chunk: Buffer) => (raw += chunk));
+            req.on("end", () => {
+              let name: unknown;
+              try {
+                name = (JSON.parse(raw) as { name?: unknown }).name;
+              } catch {
+                name = undefined;
+              }
+              if (name !== "default" && name !== "multi") {
+                res.statusCode = 400;
+                sendJson(res, {
+                  error: 'expected { "name": "default" | "multi" }',
+                });
+                return;
+              }
+              switchTo(name as BackendName);
+              sendJson(res, state());
+            });
+            return;
+          }
+          res.statusCode = 405;
+          res.end();
+        },
+      );
     },
   };
 }
@@ -113,8 +119,8 @@ const apiProxyOptions = {
     options: { target?: unknown },
   ) => {
     backendProxyOpts = options;
-    proxy.on('proxyReq', (proxyReq) => proxyReq.removeHeader('origin'));
-    proxy.on('proxyReqWs', (proxyReq) => proxyReq.removeHeader('origin'));
+    proxy.on("proxyReq", (proxyReq) => proxyReq.removeHeader("origin"));
+    proxy.on("proxyReqWs", (proxyReq) => proxyReq.removeHeader("origin"));
   },
 };
 
@@ -123,13 +129,15 @@ export default defineConfig({
     vue(),
     backendSwitcherPlugin(),
     Icons({
-      compiler: 'vue3',
+      compiler: "vue3",
       // Local Kimi Design System icons (24×24 outlined, fill="currentColor"),
       // copied from the design-system icon pack into src/icons/kimi/ and
       // imported as `~icons/kimi/<file-name>` (plus `?raw`), same as the ri
       // collection. Registered in src/lib/icons.ts only.
       customCollections: {
-        kimi: FileSystemIconLoader(fileURLToPath(new URL('./src/icons/kimi', import.meta.url))),
+        kimi: FileSystemIconLoader(
+          fileURLToPath(new URL("./src/icons/kimi", import.meta.url)),
+        ),
       },
     }),
   ],
@@ -144,7 +152,7 @@ export default defineConfig({
     // True only for the web bundle embedded in the Kimi Desktop app (set by the
     // desktop-build workflow). Gates an "internal testing build" banner. When
     // false (default) the banner is tree-shaken out of the production bundle.
-    __KIMI_WEB_DESKTOP__: JSON.stringify(process.env.KIMI_WEB_DESKTOP === '1'),
+    __KIMI_WEB_DESKTOP__: JSON.stringify(process.env.KIMI_WEB_DESKTOP === "1"),
   },
   server: {
     port: webPort,
@@ -152,7 +160,7 @@ export default defineConfig({
     // Same-origin dev: the browser calls Vite, Vite forwards to the server.
     // No CORS anywhere. The real server serves REST + WS all under /api/v1.
     proxy: {
-      '/api/v1': apiProxyOptions,
+      "/api/v1": apiProxyOptions,
     },
   },
   // `vite preview` (the production build served locally) needs the same proxy —
@@ -162,18 +170,18 @@ export default defineConfig({
   preview: {
     port: Number(process.env.WEB_PREVIEW_PORT) || 4175,
     proxy: {
-      '/api/v1': apiProxyOptions,
+      "/api/v1": apiProxyOptions,
     },
   },
   build: {
-    outDir: 'dist',
+    outDir: "dist",
     emptyOutDir: true,
-    target: 'es2022',
+    target: "es2022",
   },
   // Workers that import modules with code-splitting (e.g. mermaid's dynamic
   // diagram imports) need ES format — IIFE cannot split chunks. The app
   // already targets ES2022 so all supported browsers handle module workers.
   worker: {
-    format: 'es',
+    format: "es",
   },
 });

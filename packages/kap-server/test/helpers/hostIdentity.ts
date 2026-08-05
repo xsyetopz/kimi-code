@@ -1,4 +1,4 @@
-import type { ServerHostIdentity } from '../../src/start';
+import type { ServerHostIdentity } from "../../src/start";
 
 /**
  * Neutral fixture identity for kap-server tests — stands in for the embedding
@@ -6,7 +6,7 @@ import type { ServerHostIdentity } from '../../src/start';
  * about a specific version or platform build their own literal instead.
  */
 export const TEST_HOST_IDENTITY: ServerHostIdentity = {
-  productName: 'test-host',
-  version: '0.0.0-test',
-  platform: 'test_platform',
+  productName: "test-host",
+  version: "0.0.0-test",
+  platform: "test_platform",
 };

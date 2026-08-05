@@ -17,19 +17,19 @@
  * are normalized to the current shape on read. Not scope-bound.
  */
 
-import { join } from 'pathe';
+import { join } from "pathe";
 
-import { BugIndicatingError } from '#/errors';
-import type { IAtomicDocumentStore } from '#/persistence/interface/atomicDocumentStore';
-import type { IFileSystemStorageService } from '#/persistence/interface/storage';
+import { BugIndicatingError } from "#/errors";
+import type { IAtomicDocumentStore } from "#/persistence/interface/atomicDocumentStore";
+import type { IFileSystemStorageService } from "#/persistence/interface/storage";
 
-import type { AgentTaskInfo, AgentTaskStatus } from './types';
+import type { AgentTaskInfo, AgentTaskStatus } from "./types";
 
 const VALID_TASK_ID: RegExp = /^[a-z0-9]+(?:-[a-z0-9]+)*-[0-9a-z]{8}$/;
 
-const TASKS_SCOPE = 'tasks';
-const OUTPUT_LOG_KEY = 'output.log';
-const JSON_SUFFIX = '.json';
+const TASKS_SCOPE = "tasks";
+const OUTPUT_LOG_KEY = "output.log";
+const JSON_SUFFIX = ".json";
 
 const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();
@@ -80,7 +80,9 @@ export class AgentTaskPersistence {
     return { dir: this.agentDir, scope: this.agentScope };
   }
 
-  private tasksScope(root: AgentTaskPersistenceRoot = this.primaryRoot()): string {
+  private tasksScope(
+    root: AgentTaskPersistenceRoot = this.primaryRoot(),
+  ): string {
     return `${root.scope}/${TASKS_SCOPE}`;
   }
 
@@ -92,7 +94,10 @@ export class AgentTaskPersistence {
     return `${root.scope}/${TASKS_SCOPE}/${taskId}`;
   }
 
-  private taskOutputFileAt(taskId: string, root: AgentTaskPersistenceRoot): string {
+  private taskOutputFileAt(
+    taskId: string,
+    root: AgentTaskPersistenceRoot,
+  ): string {
     validateTaskId(taskId);
     return join(root.dir, TASKS_SCOPE, taskId, OUTPUT_LOG_KEY);
   }
@@ -103,7 +108,11 @@ export class AgentTaskPersistence {
 
   async writeTask(task: PersistedTask): Promise<void> {
     validateTaskId(task.taskId);
-    await this.docs.set(this.tasksScope(), `${task.taskId}${JSON_SUFFIX}`, task);
+    await this.docs.set(
+      this.tasksScope(),
+      `${task.taskId}${JSON_SUFFIX}`,
+      task,
+    );
   }
 
   async readTask(taskId: string): Promise<PersistedTask | undefined> {
@@ -111,18 +120,28 @@ export class AgentTaskPersistence {
     const key = `${taskId}${JSON_SUFFIX}`;
     const task = await this.docs.get<DiskPersistedTask>(this.tasksScope(), key);
     if (task !== undefined) {
-      return isReadablePersistedTask(task) ? normalizePersistedTask(task) : undefined;
+      return isReadablePersistedTask(task)
+        ? normalizePersistedTask(task)
+        : undefined;
     }
     const fallbackRoot = this.fallbackRoot;
     if (fallbackRoot === undefined) return undefined;
-    const fallback = await this.docs.get<DiskPersistedTask>(this.tasksScope(fallbackRoot), key);
-    if (fallback === undefined || !isReadablePersistedTask(fallback)) return undefined;
+    const fallback = await this.docs.get<DiskPersistedTask>(
+      this.tasksScope(fallbackRoot),
+      key,
+    );
+    if (fallback === undefined || !isReadablePersistedTask(fallback))
+      return undefined;
     return normalizePersistedTask(fallback);
   }
 
   async appendTaskOutput(taskId: string, chunk: string): Promise<void> {
     if (chunk.length === 0) return;
-    await this.bytes.append(this.taskOutputScope(taskId), OUTPUT_LOG_KEY, textEncoder.encode(chunk));
+    await this.bytes.append(
+      this.taskOutputScope(taskId),
+      OUTPUT_LOG_KEY,
+      textEncoder.encode(chunk),
+    );
   }
 
   async taskOutputSizeBytes(taskId: string): Promise<number> {
@@ -134,12 +153,16 @@ export class AgentTaskPersistence {
     return (await this.readTaskOutputData(taskId)) !== undefined;
   }
 
-  async readTaskOutputBytes(taskId: string, offset: number, maxBytes: number): Promise<string> {
+  async readTaskOutputBytes(
+    taskId: string,
+    offset: number,
+    maxBytes: number,
+  ): Promise<string> {
     const start = Math.max(0, Math.trunc(offset));
     const limit = Math.max(0, Math.trunc(maxBytes));
-    if (limit === 0) return '';
+    if (limit === 0) return "";
     const output = await this.readTaskOutputData(taskId);
-    if (output === undefined || start >= output.data.byteLength) return '';
+    if (output === undefined || start >= output.data.byteLength) return "";
     const end = Math.min(output.data.byteLength, start + limit);
     return textDecoder.decode(output.data.subarray(start, end));
   }
@@ -172,7 +195,9 @@ export class AgentTaskPersistence {
         if (!primary.reservedIds.has(entry.keyId)) tasks.push(entry);
       }
     }
-    return tasks.map((entry) => entry.task).toSorted((a, b) => a.taskId.localeCompare(b.taskId));
+    return tasks
+      .map((entry) => entry.task)
+      .toSorted((a, b) => a.taskId.localeCompare(b.taskId));
   }
 
   private async listTasksAt(root: AgentTaskPersistenceRoot): Promise<{
@@ -189,7 +214,10 @@ export class AgentTaskPersistence {
       reservedIds.add(id);
       let task: DiskPersistedTask | undefined;
       try {
-        task = await this.docs.get<DiskPersistedTask>(this.tasksScope(root), key);
+        task = await this.docs.get<DiskPersistedTask>(
+          this.tasksScope(root),
+          key,
+        );
       } catch {
         continue;
       }
@@ -199,9 +227,14 @@ export class AgentTaskPersistence {
     return { reservedIds, tasks };
   }
 
-  private async readTaskOutputData(taskId: string): Promise<TaskOutputData | undefined> {
+  private async readTaskOutputData(
+    taskId: string,
+  ): Promise<TaskOutputData | undefined> {
     const primaryRoot = this.primaryRoot();
-    const primary = await this.bytes.read(this.taskOutputScope(taskId, primaryRoot), OUTPUT_LOG_KEY);
+    const primary = await this.bytes.read(
+      this.taskOutputScope(taskId, primaryRoot),
+      OUTPUT_LOG_KEY,
+    );
     if (primary !== undefined) return { root: primaryRoot, data: primary };
     const fallbackRoot = this.fallbackRoot;
     if (fallbackRoot === undefined) return undefined;
@@ -209,7 +242,9 @@ export class AgentTaskPersistence {
       this.taskOutputScope(taskId, fallbackRoot),
       OUTPUT_LOG_KEY,
     );
-    return fallback === undefined ? undefined : { root: fallbackRoot, data: fallback };
+    return fallback === undefined
+      ? undefined
+      : { root: fallbackRoot, data: fallback };
   }
 }
 
@@ -222,12 +257,12 @@ function normalizePersistedTask(task: DiskPersistedTask): PersistedTask {
 }
 
 type LegacyAgentTaskStatus =
-  | 'running'
-  | 'awaiting_approval'
-  | 'completed'
-  | 'failed'
-  | 'killed'
-  | 'lost';
+  | "running"
+  | "awaiting_approval"
+  | "completed"
+  | "failed"
+  | "killed"
+  | "lost";
 
 interface LegacyPersistedTask {
   readonly task_id: string;
@@ -248,7 +283,8 @@ interface LegacyPersistedTask {
 function legacyPersistedTaskToInfo(task: LegacyPersistedTask): PersistedTask {
   const status = legacyStatusToCurrent(task);
   const stopReason = optionalNonEmptyString(task.stop_reason);
-  const timeoutMs = typeof task.timeout_ms === 'number' ? task.timeout_ms : undefined;
+  const timeoutMs =
+    typeof task.timeout_ms === "number" ? task.timeout_ms : undefined;
   const base = {
     taskId: task.task_id,
     description: task.description,
@@ -260,10 +296,10 @@ function legacyPersistedTaskToInfo(task: LegacyPersistedTask): PersistedTask {
     timeoutMs,
   };
 
-  if (task.task_id.startsWith('agent-')) {
+  if (task.task_id.startsWith("agent-")) {
     return {
       ...base,
-      kind: 'agent',
+      kind: "agent",
       agentId: optionalNonEmptyString(task.agent_id),
       subagentType: optionalNonEmptyString(task.subagent_type),
     };
@@ -271,7 +307,7 @@ function legacyPersistedTaskToInfo(task: LegacyPersistedTask): PersistedTask {
 
   return {
     ...base,
-    kind: 'process',
+    kind: "process",
     command: task.command,
     pid: task.pid,
     exitCode: task.exit_code,
@@ -279,24 +315,26 @@ function legacyPersistedTaskToInfo(task: LegacyPersistedTask): PersistedTask {
 }
 
 function legacyStatusToCurrent(task: LegacyPersistedTask): AgentTaskStatus {
-  if (task.status === 'awaiting_approval') return 'running';
-  if (task.status === 'failed' && task.timed_out === true) return 'timed_out';
+  if (task.status === "awaiting_approval") return "running";
+  if (task.status === "failed" && task.timed_out === true) return "timed_out";
   return task.status;
 }
 
 function isReadablePersistedTask(obj: unknown): obj is DiskPersistedTask {
   return (
     isRecord(obj) &&
-    (typeof obj['taskId'] === 'string' || typeof obj['task_id'] === 'string')
+    (typeof obj["taskId"] === "string" || typeof obj["task_id"] === "string")
   );
 }
 
-function isLegacyPersistedTask(task: DiskPersistedTask): task is LegacyPersistedTask {
-  return 'task_id' in task;
+function isLegacyPersistedTask(
+  task: DiskPersistedTask,
+): task is LegacyPersistedTask {
+  return "task_id" in task;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
+  return typeof value === "object" && value !== null;
 }
 
 function optionalNonEmptyString(value: string | undefined): string | undefined {

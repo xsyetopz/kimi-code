@@ -1,9 +1,12 @@
-import { valid } from 'semver';
-import { z } from 'zod';
+import { valid } from "semver";
+import { z } from "zod";
 
-import { KIMI_CODE_CDN_LATEST_JSON_URL, KIMI_CODE_CDN_LATEST_URL } from '#/constant/app';
+import {
+  KIMI_CODE_CDN_LATEST_JSON_URL,
+  KIMI_CODE_CDN_LATEST_URL,
+} from "#/constant/app";
 
-import type { UpdateManifest } from './types';
+import type { UpdateManifest } from "./types";
 
 const CDN_FETCH_TIMEOUT_MS = 3_000;
 
@@ -19,10 +22,14 @@ const RolloutBatchSchema = z.object({
  * unexpected content bricks the update path forever).
  */
 export const UpdateManifestSchema = z.object({
-  version: z.string().refine((value) => valid(value) !== null, { error: 'invalid semver' }),
+  version: z
+    .string()
+    .refine((value) => valid(value) !== null, { error: "invalid semver" }),
   publishedAt: z
     .string()
-    .refine((value) => Number.isFinite(Date.parse(value)), { error: 'invalid timestamp' }),
+    .refine((value) => Number.isFinite(Date.parse(value)), {
+      error: "invalid timestamp",
+    }),
   rollout: z.array(RolloutBatchSchema).readonly().default([]),
 });
 
@@ -33,7 +40,10 @@ export interface FetchLatestResult {
   readonly manifest: UpdateManifest | null;
 }
 
-async function fetchWithTimeout(fetchImpl: typeof fetch, input: string): Promise<Response> {
+async function fetchWithTimeout(
+  fetchImpl: typeof fetch,
+  input: string,
+): Promise<Response> {
   const controller = new AbortController();
   const timeout = setTimeout(() => {
     controller.abort();
@@ -64,13 +74,20 @@ export async function fetchLatestVersionFromCdn(
   }
   const raw = (await response.text()).trim();
   if (valid(raw) === null) {
-    throw new Error(`CDN /latest returned invalid semver: ${JSON.stringify(raw)}`);
+    throw new Error(
+      `CDN /latest returned invalid semver: ${JSON.stringify(raw)}`,
+    );
   }
   return raw;
 }
 
-async function fetchUpdateManifestFromCdn(fetchImpl: typeof fetch): Promise<UpdateManifest> {
-  const response = await fetchWithTimeout(fetchImpl, KIMI_CODE_CDN_LATEST_JSON_URL);
+async function fetchUpdateManifestFromCdn(
+  fetchImpl: typeof fetch,
+): Promise<UpdateManifest> {
+  const response = await fetchWithTimeout(
+    fetchImpl,
+    KIMI_CODE_CDN_LATEST_JSON_URL,
+  );
   if (!response.ok) {
     throw new Error(`CDN /latest.json returned HTTP ${response.status}`);
   }
@@ -88,7 +105,9 @@ async function fetchUpdateManifestFromCdn(fetchImpl: typeof fetch): Promise<Upda
 export async function fetchLatestFromCdn(
   fetchImpl: typeof fetch = fetch,
 ): Promise<FetchLatestResult> {
-  const manifest = await fetchUpdateManifestFromCdn(fetchImpl).catch(() => null);
+  const manifest = await fetchUpdateManifestFromCdn(fetchImpl).catch(
+    () => null,
+  );
   if (manifest !== null) {
     return { latest: manifest.version, manifest };
   }

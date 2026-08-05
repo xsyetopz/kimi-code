@@ -1,8 +1,12 @@
-import { PassThrough, Readable, Writable } from 'node:stream';
+import { PassThrough, Readable, Writable } from "node:stream";
 
-import { ndJsonStream } from '@agentclientprotocol/sdk';
+import { ndJsonStream } from "@agentclientprotocol/sdk";
 
-import { runAcpServerWithStream, type RunningAcpServer, type RunAcpServerOptions } from '../../src/start';
+import {
+  runAcpServerWithStream,
+  type RunningAcpServer,
+  type RunAcpServerOptions,
+} from "../../src/start";
 
 interface RpcMessage {
   readonly id?: number;
@@ -25,7 +29,10 @@ export interface TestClient {
   /** `session/update` notifications received so far. */
   sessionUpdates(): readonly RpcMessage[];
   /** Resolve once a `session/update` whose `update.sessionUpdate` matches arrives. */
-  waitForSessionUpdate(sessionUpdate: string, timeoutMs?: number): Promise<RpcMessage>;
+  waitForSessionUpdate(
+    sessionUpdate: string,
+    timeoutMs?: number,
+  ): Promise<RpcMessage>;
   /**
    * Register a handler for an agent-initiated request method (e.g.
    * `session/request_permission`). The handler's return value is sent back as
@@ -44,12 +51,15 @@ export interface TestClient {
 export async function createTestClient(opts: {
   homeDir: string;
   disableAuth?: boolean;
-  extraSeeds?: RunAcpServerOptions['extraSeeds'];
-  slashCommands?: RunAcpServerOptions['slashCommands'];
+  extraSeeds?: RunAcpServerOptions["extraSeeds"];
+  slashCommands?: RunAcpServerOptions["slashCommands"];
 }): Promise<TestClient> {
   const toAgent = new PassThrough();
   const toClient = new PassThrough();
-  const stream = ndJsonStream(Writable.toWeb(toClient), Readable.toWeb(toAgent));
+  const stream = ndJsonStream(
+    Writable.toWeb(toClient),
+    Readable.toWeb(toAgent),
+  );
   const server = await runAcpServerWithStream(stream, {
     homeDir: opts.homeDir,
     disableAuth: opts.disableAuth ?? true,
@@ -69,7 +79,7 @@ export async function createTestClient(opts: {
     resolve: (msg: RpcMessage) => void;
     reject: (error: Error) => void;
   }> = [];
-  let buffer = '';
+  let buffer = "";
 
   async function handleIncomingRequest(
     id: number,
@@ -79,14 +89,16 @@ export async function createTestClient(opts: {
     const handler = requestHandlers.get(method);
     try {
       if (handler === undefined) {
-        throw new Error(`TestClient: no handler registered for agent request '${method}'`);
+        throw new Error(
+          `TestClient: no handler registered for agent request '${method}'`,
+        );
       }
       const result = await handler(params);
-      toAgent.write(`${JSON.stringify({ jsonrpc: '2.0', id, result })}\n`);
+      toAgent.write(`${JSON.stringify({ jsonrpc: "2.0", id, result })}\n`);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       toAgent.write(
-        `${JSON.stringify({ jsonrpc: '2.0', id, error: { code: -32603, message } })}\n`,
+        `${JSON.stringify({ jsonrpc: "2.0", id, error: { code: -32603, message } })}\n`,
       );
     }
   }
@@ -99,8 +111,10 @@ export async function createTestClient(opts: {
       return;
     }
     // Notification (no id): check session/update waiters first.
-    if (msg.id === undefined && msg.method === 'session/update') {
-      const update = (msg.params as { update?: { sessionUpdate?: string } } | undefined)?.update;
+    if (msg.id === undefined && msg.method === "session/update") {
+      const update = (
+        msg.params as { update?: { sessionUpdate?: string } } | undefined
+      )?.update;
       const kind = update?.sessionUpdate;
       for (let i = waiters.length - 1; i >= 0; i--) {
         if (waiters[i]!.sessionUpdate === kind) {
@@ -114,16 +128,17 @@ export async function createTestClient(opts: {
     if (msg.id !== undefined && pending.has(msg.id)) {
       const entry = pending.get(msg.id)!;
       pending.delete(msg.id);
-      if (msg.error !== undefined) entry.reject(new Error(JSON.stringify(msg.error)));
+      if (msg.error !== undefined)
+        entry.reject(new Error(JSON.stringify(msg.error)));
       else entry.resolve(msg.result);
     }
   }
 
   const reader = (async (): Promise<void> => {
     for await (const chunk of toClient) {
-      buffer += (chunk as Buffer).toString('utf8');
+      buffer += (chunk as Buffer).toString("utf8");
       let idx: number;
-      while ((idx = buffer.indexOf('\n')) >= 0) {
+      while ((idx = buffer.indexOf("\n")) >= 0) {
         const line = buffer.slice(0, idx);
         buffer = buffer.slice(idx + 1);
         if (line.trim().length === 0) continue;
@@ -134,7 +149,7 @@ export async function createTestClient(opts: {
 
   function send(method: string, params?: unknown): Promise<unknown> {
     const id = nextId++;
-    const request = { jsonrpc: '2.0', id, method, params: params ?? {} };
+    const request = { jsonrpc: "2.0", id, method, params: params ?? {} };
     toAgent.write(`${JSON.stringify(request)}\n`);
     return new Promise((resolve, reject) => {
       pending.set(id, { resolve, reject });
@@ -142,17 +157,22 @@ export async function createTestClient(opts: {
   }
 
   function notify(method: string, params?: unknown): void {
-    const notification = { jsonrpc: '2.0', method, params: params ?? {} };
+    const notification = { jsonrpc: "2.0", method, params: params ?? {} };
     toAgent.write(`${JSON.stringify(notification)}\n`);
   }
 
   function sessionUpdates(): readonly RpcMessage[] {
-    return received.filter((m) => m.method === 'session/update');
+    return received.filter((m) => m.method === "session/update");
   }
 
-  function waitForSessionUpdate(sessionUpdate: string, timeoutMs = 5_000): Promise<RpcMessage> {
+  function waitForSessionUpdate(
+    sessionUpdate: string,
+    timeoutMs = 5_000,
+  ): Promise<RpcMessage> {
     const existing = sessionUpdates().find((m) => {
-      const update = (m.params as { update?: { sessionUpdate?: string } } | undefined)?.update;
+      const update = (
+        m.params as { update?: { sessionUpdate?: string } } | undefined
+      )?.update;
       return update?.sessionUpdate === sessionUpdate;
     });
     if (existing !== undefined) return Promise.resolve(existing);
@@ -163,7 +183,11 @@ export async function createTestClient(opts: {
         const i = waiters.indexOf(waiter);
         if (i >= 0) {
           waiters.splice(i, 1);
-          reject(new Error(`timed out waiting for session/update '${sessionUpdate}'`));
+          reject(
+            new Error(
+              `timed out waiting for session/update '${sessionUpdate}'`,
+            ),
+          );
         }
       }, timeoutMs);
     });
@@ -180,5 +204,14 @@ export async function createTestClient(opts: {
     requestHandlers.set(method, handler);
   }
 
-  return { send, notify, received, sessionUpdates, waitForSessionUpdate, onRequest, server, close };
+  return {
+    send,
+    notify,
+    received,
+    sessionUpdates,
+    waitForSessionUpdate,
+    onRequest,
+    server,
+    close,
+  };
 }

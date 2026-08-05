@@ -34,7 +34,9 @@ export interface HostSlashCommand {
   readonly raw: string;
 }
 
-export function parseHostSlashCommand(content: string | readonly unknown[]): HostSlashCommand | undefined {
+export function parseHostSlashCommand(
+  content: string | readonly unknown[],
+): HostSlashCommand | undefined {
   if (typeof content !== "string") return undefined;
   const raw = content.trim();
   const match = /^\/([^\s]+)(?:\s+(.*))?\s*$/s.exec(raw);
@@ -52,11 +54,15 @@ export async function runHostSlashCommand(
   if (command.name.startsWith("skill:")) {
     const skillName = command.name.slice("skill:".length);
     const result = await runtime.runTurnAction(command.raw, () =>
-      runtime.session.activateSkill(skillName, command.args || undefined));
+      runtime.session.activateSkill(skillName, command.args || undefined),
+    );
     return result.status === "finished";
   }
 
-  const actionId = runtime.beginHostAction(command.raw, command.name === "import");
+  const actionId = runtime.beginHostAction(
+    command.raw,
+    command.name === "import",
+  );
   const emit = (text: string): void => runtime.emitHostText(text, actionId);
   try {
     if (command.name === "import") {
@@ -121,18 +127,22 @@ async function toggleLegacyPermission(
   const flags = await runtime.toggleLegacyApproval(kind);
 
   if (kind === "yolo") {
-    emit(flags.yolo
-      ? "You only live once! Tool actions will be auto-approved; the agent may still ask questions."
-      : flags.afk
-        ? "Yolo disabled, but Auto is still on — tool calls remain auto-approved."
-        : "You only die once! Actions will require approval.");
+    emit(
+      flags.yolo
+        ? "You only live once! Tool actions will be auto-approved; the agent may still ask questions."
+        : flags.afk
+          ? "Yolo disabled, but Auto is still on — tool calls remain auto-approved."
+          : "You only die once! Actions will require approval.",
+    );
     return;
   }
-  emit(flags.afk
-    ? "Auto mode enabled. Questions will be auto-dismissed and tool calls auto-approved."
-    : flags.yolo
-      ? "Auto mode disabled. You are back at the keyboard. Yolo is still on."
-      : "Auto mode disabled. You are back at the keyboard.");
+  emit(
+    flags.afk
+      ? "Auto mode enabled. Questions will be auto-dismissed and tool calls auto-approved."
+      : flags.yolo
+        ? "Auto mode disabled. You are back at the keyboard. Yolo is still on."
+        : "Auto mode disabled. You are back at the keyboard.",
+  );
 }
 
 async function runPlanCommand(
@@ -152,7 +162,12 @@ async function runPlanCommand(
     return;
   }
   const status = await runtime.session.getStatus();
-  const enabled = subcommand === "on" ? true : subcommand === "off" ? false : !status.planMode;
+  const enabled =
+    subcommand === "on"
+      ? true
+      : subcommand === "off"
+        ? false
+        : !status.planMode;
   if (subcommand && subcommand !== "on" && subcommand !== "off") {
     throw new Error(`Unknown plan subcommand: ${subcommand}`);
   }
@@ -162,9 +177,7 @@ async function runPlanCommand(
     return;
   }
   const plan = await runtime.session.getPlan().catch(() => null);
-  emit(plan?.path
-    ? `Plan mode ON. Plan file: ${plan.path}`
-    : "Plan mode ON.");
+  emit(plan?.path ? `Plan mode ON. Plan file: ${plan.path}` : "Plan mode ON.");
 }
 
 async function runAddDirCommand(
@@ -175,13 +188,22 @@ async function runAddDirCommand(
   const input = stripMatchingQuotes(args.trim());
   if (!input || input.toLowerCase() === "list") {
     const dirs = runtime.session.summary?.additionalDirs ?? [];
-    emit(dirs.length === 0
-      ? "No additional directories. Usage: /add-dir <path>"
-      : ["Additional directories:", ...dirs.map((path) => `  - ${path}`)].join("\n"));
+    emit(
+      dirs.length === 0
+        ? "No additional directories. Usage: /add-dir <path>"
+        : [
+            "Additional directories:",
+            ...dirs.map((path) => `  - ${path}`),
+          ].join("\n"),
+    );
     return;
   }
-  const result = await runtime.session.addAdditionalDir(input, { persist: false });
-  emit(`Added directory to workspace: ${result.additionalDirs.at(-1) ?? input}`);
+  const result = await runtime.session.addAdditionalDir(input, {
+    persist: false,
+  });
+  emit(
+    `Added directory to workspace: ${result.additionalDirs.at(-1) ?? input}`,
+  );
 }
 
 async function exportContext(
@@ -196,7 +218,11 @@ async function exportContext(
   }
   const now = new Date();
   const defaultName = defaultExportName(runtime.id, now);
-  const outputPath = await resolveExportPath(args, runtime.session.workDir, defaultName);
+  const outputPath = await resolveExportPath(
+    args,
+    runtime.session.workDir,
+    defaultName,
+  );
   const markdown = buildExportMarkdown({
     sessionId: runtime.id,
     workDir: runtime.session.workDir,
@@ -208,12 +234,14 @@ async function exportContext(
   await writeFile(outputPath, markdown, "utf8");
   emit(
     `Exported ${String(context.history.length)} messages to ${outputPath}\n\n` +
-    "Note: The exported file may contain sensitive information. Please be cautious when sharing it externally.",
+      "Note: The exported file may contain sensitive information. Please be cautious when sharing it externally.",
   );
-  void vscode.window.showInformationMessage("Kimi: Session exported.", "Open File").then((action) => {
-    if (action !== "Open File") return;
-    void vscode.window.showTextDocument(vscode.Uri.file(outputPath));
-  });
+  void vscode.window
+    .showInformationMessage("Kimi: Session exported.", "Open File")
+    .then((action) => {
+      if (action !== "Open File") return;
+      void vscode.window.showTextDocument(vscode.Uri.file(outputPath));
+    });
 }
 
 async function importContext(
@@ -226,22 +254,32 @@ async function importContext(
 
   const candidate = resolveUserPath(target, runtime.session.workDir);
   const file = await fileInfo(candidate);
-  if (file?.isDirectory()) throw new Error("The specified path is a directory; please provide a file to import.");
+  if (file?.isDirectory())
+    throw new Error(
+      "The specified path is a directory; please provide a file to import.",
+    );
   if (file?.isFile()) {
     if (!isImportableTextFile(candidate)) {
-      throw new Error(`Unsupported file type '${candidate.slice(candidate.lastIndexOf("."))}'. /import only supports text-based files.`);
+      throw new Error(
+        `Unsupported file type '${candidate.slice(candidate.lastIndexOf("."))}'. /import only supports text-based files.`,
+      );
     }
     if (file.size > MAX_IMPORT_BYTES) {
-      throw new Error(`File is too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Maximum import size is 10 MB.`);
+      throw new Error(
+        `File is too large (${(file.size / 1024 / 1024).toFixed(1)} MB). Maximum import size is 10 MB.`,
+      );
     }
     const bytes = await readFile(candidate);
     let content: string;
     try {
       content = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
     } catch {
-      throw new Error(`Cannot import '${basename(candidate)}': the file is not valid UTF-8 text.`);
+      throw new Error(
+        `Cannot import '${basename(candidate)}': the file is not valid UTF-8 text.`,
+      );
     }
-    if (!content.trim()) throw new Error("The file is empty, nothing to import.");
+    if (!content.trim())
+      throw new Error("The file is empty, nothing to import.");
     const source = `file '${basename(candidate)}'`;
     await runtime.session.importContext(content, source);
     return {
@@ -250,21 +288,29 @@ async function importContext(
     };
   }
 
-  if (target === runtime.id) throw new Error("Cannot import the current session into itself.");
-  const summary = (await ctx.harness.listSessions({
-    workDir: runtime.session.workDir,
-    sessionId: target,
-  })).find((session) => session.id === target);
-  if (summary === undefined) throw new Error(`'${target}' is not a valid file path or session ID.`);
+  if (target === runtime.id)
+    throw new Error("Cannot import the current session into itself.");
+  const summary = (
+    await ctx.harness.listSessions({
+      workDir: runtime.session.workDir,
+      sessionId: target,
+    })
+  ).find((session) => session.id === target);
+  if (summary === undefined)
+    throw new Error(`'${target}' is not a valid file path or session ID.`);
 
   const activeSource = ctx.runtime.getSession(target)?.session;
-  const sourceSession = activeSource ?? await ctx.harness.resumeSession({ id: target });
+  const sourceSession =
+    activeSource ?? (await ctx.harness.resumeSession({ id: target }));
   try {
     const sourceContext = await sourceSession.getContext();
-    if (sourceContext.history.length === 0) throw new Error("The source session has no messages.");
+    if (sourceContext.history.length === 0)
+      throw new Error("The source session has no messages.");
     const content = stringifyContextHistory(sourceContext.history);
     if (Buffer.byteLength(content, "utf8") > MAX_IMPORT_BYTES) {
-      throw new Error("Session content is too large. Maximum import size is 10 MB.");
+      throw new Error(
+        "Session content is too large. Maximum import size is 10 MB.",
+      );
     }
     const source = `session '${target}'`;
     await runtime.session.importContext(content, source);
@@ -277,7 +323,11 @@ async function importContext(
   }
 }
 
-async function resolveExportPath(args: string, workDir: string, defaultName: string): Promise<string> {
+async function resolveExportPath(
+  args: string,
+  workDir: string,
+  defaultName: string,
+): Promise<string> {
   const raw = stripMatchingQuotes(args.trim());
   if (!raw) return join(workDir, defaultName);
   const resolved = resolveUserPath(raw, workDir);
@@ -288,12 +338,21 @@ async function resolveExportPath(args: string, workDir: string, defaultName: str
 }
 
 function defaultExportName(sessionId: string, now: Date): string {
-  const timestamp = now.toISOString().replaceAll(/[-:]/g, "").replace("T", "-").slice(0, 15);
+  const timestamp = now
+    .toISOString()
+    .replaceAll(/[-:]/g, "")
+    .replace("T", "-")
+    .slice(0, 15);
   return `kimi-export-${sessionId.slice(0, 8)}-${timestamp}.md`;
 }
 
 function resolveUserPath(value: string, workDir: string): string {
-  const expanded = value === "~" ? homedir() : value.startsWith("~/") ? join(homedir(), value.slice(2)) : value;
+  const expanded =
+    value === "~"
+      ? homedir()
+      : value.startsWith("~/")
+        ? join(homedir(), value.slice(2))
+        : value;
   return isAbsolute(expanded) ? expanded : resolve(workDir, expanded);
 }
 
@@ -310,5 +369,7 @@ function stripMatchingQuotes(value: string): string {
   if (value.length < 2) return value;
   const first = value[0];
   const last = value.at(-1);
-  return (first === last && (first === '"' || first === "'")) ? value.slice(1, -1) : value;
+  return first === last && (first === '"' || first === "'")
+    ? value.slice(1, -1)
+    : value;
 }

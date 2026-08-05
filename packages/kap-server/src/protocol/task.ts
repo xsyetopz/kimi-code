@@ -1,15 +1,15 @@
-import { z } from 'zod';
+import { z } from "zod";
 
-import { isoDateTimeSchema } from '@moonshot-ai/agent-core-v2/_base/utils/isoDateTime';
+import { isoDateTimeSchema } from "@moonshot-ai/agent-core-v2/_base/utils/isoDateTime";
 
-export const taskKindSchema = z.enum(['subagent', 'bash', 'tool']);
+export const taskKindSchema = z.enum(["subagent", "bash", "tool"]);
 export type TaskKind = z.infer<typeof taskKindSchema>;
 
 export const taskStatusSchema = z.enum([
-  'running',
-  'completed',
-  'failed',
-  'cancelled',
+  "running",
+  "completed",
+  "failed",
+  "cancelled",
 ]);
 export type TaskStatus = z.infer<typeof taskStatusSchema>;
 

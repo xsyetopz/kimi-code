@@ -108,13 +108,19 @@ export interface MigrationSummary {
     /** Target `mcp.json` was unparseable; merged servers went to a sibling. */
     readonly wroteSiblingDueToConflict: boolean;
   };
-  readonly userHistory: { readonly copied: number; readonly skippedExisting: number };
-  readonly skills: { readonly copied: number; readonly skippedExisting: number };
+  readonly userHistory: {
+    readonly copied: number;
+    readonly skippedExisting: number;
+  };
+  readonly skills: {
+    readonly copied: number;
+    readonly skippedExisting: number;
+  };
   readonly sessions: SessionsSummary;
 }
 
 export interface SessionsSummary {
-  readonly scope: 'all' | 'config-only';
+  readonly scope: "all" | "config-only";
   readonly bucketsScanned: number;
   readonly bucketsSkippedNonlocalKaos: number;
   readonly bucketsSkippedNoWorkdirFound: number;
@@ -126,7 +132,10 @@ export interface SessionsSummary {
   readonly sessionsSkippedEmpty: number;
   readonly sessionsSkippedMalformed: number;
   readonly sessionsFailed: readonly SessionMigrationFailure[];
-  readonly sessionsConflicts: ReadonlyArray<{ readonly sourcePath: string; readonly targetPath: string }>;
+  readonly sessionsConflicts: ReadonlyArray<{
+    readonly sourcePath: string;
+    readonly targetPath: string;
+  }>;
 }
 
 export interface MigrationNotices {

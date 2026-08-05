@@ -1,5 +1,5 @@
-const MCP_NAME_PREFIX = 'mcp__';
-const MCP_NAME_SEPARATOR = '__';
+const MCP_NAME_PREFIX = "mcp__";
+const MCP_NAME_SEPARATOR = "__";
 /**
  * Most LLM providers cap tool names around 64 characters. Leave headroom
  * for the prefix and a separator and truncate longer names with a stable
@@ -15,7 +15,7 @@ const MAX_QUALIFIED_LENGTH = 64;
  * first `__` after the prefix.
  */
 export function sanitizeMcpNamePart(part: string): string {
-  return part.replaceAll(/[^a-zA-Z0-9_-]/g, '_').replaceAll(/_+/g, '_');
+  return part.replaceAll(/[^a-zA-Z0-9_-]/g, "_").replaceAll(/_+/g, "_");
 }
 
 export function isMcpToolName(name: string): boolean {
@@ -27,7 +27,10 @@ export function isMcpToolName(name: string): boolean {
  * If the result would exceed {@link MAX_QUALIFIED_LENGTH}, a deterministic
  * 8-char hash suffix replaces the tail so the prefix structure stays intact.
  */
-export function qualifyMcpToolName(serverName: string, toolName: string): string {
+export function qualifyMcpToolName(
+  serverName: string,
+  toolName: string,
+): string {
   const full = `${MCP_NAME_PREFIX}${sanitizeMcpNamePart(serverName)}${MCP_NAME_SEPARATOR}${sanitizeMcpNamePart(toolName)}`;
   if (full.length <= MAX_QUALIFIED_LENGTH) return full;
 
@@ -45,5 +48,5 @@ function stableHash8(input: string): string {
     hash ^= input.codePointAt(i)!;
     hash = Math.trunc(Math.imul(hash, 0x01000193));
   }
-  return hash.toString(16).padStart(8, '0');
+  return hash.toString(16).padStart(8, "0");
 }

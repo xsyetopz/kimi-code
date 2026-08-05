@@ -14,18 +14,28 @@
  * liveness only.
  */
 
-import { randomBytes } from 'node:crypto';
-import { mkdir, open, readdir, readFile, rename, unlink } from 'node:fs/promises';
-import { join } from 'node:path';
+import { randomBytes } from "node:crypto";
+import {
+  mkdir,
+  open,
+  readdir,
+  readFile,
+  rename,
+  unlink,
+} from "node:fs/promises";
+import { join } from "node:path";
 
-import { resolveKimiHome } from '@moonshot-ai/agent-core-v2';
-import { ulid } from 'ulid';
+import { resolveKimiHome } from "@moonshot-ai/agent-core-v2";
+import { ulid } from "ulid";
 
 /** Default cadence for refreshing `heartbeat_at`. */
 export const HEARTBEAT_INTERVAL_MS = 15_000;
 
-export const DEFAULT_SERVER_DIR = join(resolveKimiHome(), 'server');
-export const DEFAULT_SERVER_INSTANCES_DIR = join(DEFAULT_SERVER_DIR, 'instances');
+export const DEFAULT_SERVER_DIR = join(resolveKimiHome(), "server");
+export const DEFAULT_SERVER_INSTANCES_DIR = join(
+  DEFAULT_SERVER_DIR,
+  "instances",
+);
 
 /** In-memory shape of a registered instance. camelCase for TS consumers. */
 export interface ServerInstanceInfo {
@@ -65,7 +75,7 @@ export interface IInstanceRegistry {
    * writes the instance file, and starts the heartbeat timer.
    */
   register(
-    info: Omit<ServerInstanceInfo, 'serverId' | 'heartbeatAt'>,
+    info: Omit<ServerInstanceInfo, "serverId" | "heartbeatAt">,
   ): Promise<InstanceRegistration>;
   /** List live instances; dead-pid entries are filtered and lazily removed. */
   listLive(): Promise<readonly ServerInstanceInfo[]>;
@@ -87,16 +97,16 @@ function pidAlive(pid: number): boolean {
     return true;
   } catch (err) {
     const code = (err as NodeJS.ErrnoException).code;
-    if (code === 'ESRCH') return false;
+    if (code === "ESRCH") return false;
     // EPERM = process exists but we can't signal it (different user). Treat as alive.
-    if (code === 'EPERM') return true;
+    if (code === "EPERM") return true;
     // Anything else: be safe, assume alive so we don't clobber a live entry.
     return true;
   }
 }
 
 function isInstanceFile(name: string): boolean {
-  return name.endsWith('.json');
+  return name.endsWith(".json");
 }
 
 function encode(info: ServerInstanceInfo): string {
@@ -107,7 +117,9 @@ function encode(info: ServerInstanceInfo): string {
     port: info.port,
     started_at: info.startedAt,
     heartbeat_at: info.heartbeatAt,
-    ...(info.serverVersion !== undefined ? { host_version: info.serverVersion } : {}),
+    ...(info.serverVersion !== undefined
+      ? { host_version: info.serverVersion }
+      : {}),
   };
   return JSON.stringify(disk);
 }
@@ -116,12 +128,12 @@ function decode(raw: string): ServerInstanceInfo | undefined {
   try {
     const parsed = JSON.parse(raw) as Partial<ServerInstanceDisk>;
     if (
-      typeof parsed.server_id === 'string' &&
-      typeof parsed.pid === 'number' &&
-      typeof parsed.host === 'string' &&
-      typeof parsed.port === 'number' &&
-      typeof parsed.started_at === 'number' &&
-      typeof parsed.heartbeat_at === 'number'
+      typeof parsed.server_id === "string" &&
+      typeof parsed.pid === "number" &&
+      typeof parsed.host === "string" &&
+      typeof parsed.port === "number" &&
+      typeof parsed.started_at === "number" &&
+      typeof parsed.heartbeat_at === "number"
     ) {
       return {
         serverId: parsed.server_id,
@@ -130,7 +142,9 @@ function decode(raw: string): ServerInstanceInfo | undefined {
         port: parsed.port,
         startedAt: parsed.started_at,
         heartbeatAt: parsed.heartbeat_at,
-        ...(parsed.host_version !== undefined ? { serverVersion: parsed.host_version } : {}),
+        ...(parsed.host_version !== undefined
+          ? { serverVersion: parsed.host_version }
+          : {}),
       };
     }
     return undefined;
@@ -140,21 +154,26 @@ function decode(raw: string): ServerInstanceInfo | undefined {
 }
 
 /** Read + decode one instance file; undefined on missing/unparseable input. */
-async function readInstanceFile(filePath: string): Promise<ServerInstanceInfo | undefined> {
+async function readInstanceFile(
+  filePath: string,
+): Promise<ServerInstanceInfo | undefined> {
   try {
-    return decode(await readFile(filePath, 'utf8'));
+    return decode(await readFile(filePath, "utf8"));
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === 'ENOENT') return undefined;
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return undefined;
     return undefined;
   }
 }
 
 /** Atomic (rename-based) write. Single-writer per file, so no lock is needed. */
-async function writeFileAtomic(filePath: string, content: string): Promise<void> {
-  const tmpPath = `${filePath}.tmp.${process.pid}.${randomBytes(4).toString('hex')}`;
+async function writeFileAtomic(
+  filePath: string,
+  content: string,
+): Promise<void> {
+  const tmpPath = `${filePath}.tmp.${process.pid}.${randomBytes(4).toString("hex")}`;
   let renamed = false;
   try {
-    const fh = await open(tmpPath, 'w');
+    const fh = await open(tmpPath, "w");
     try {
       await fh.writeFile(content);
     } finally {
@@ -179,7 +198,7 @@ async function sweepStale(instancesDir: string): Promise<void> {
   try {
     names = await readdir(instancesDir);
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === 'ENOENT') return;
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return;
     throw err;
   }
   await Promise.all(
@@ -192,7 +211,7 @@ async function sweepStale(instancesDir: string): Promise<void> {
       try {
         await unlink(filePath);
       } catch (err) {
-        if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err;
+        if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
       }
     }),
   );
@@ -203,12 +222,14 @@ async function sweepStale(instancesDir: string): Promise<void> {
  * Results are sorted by `startedAt` ascending so "first" is the longest-running
  * instance — deterministic for consumers that pick one.
  */
-async function listLiveInternal(instancesDir: string): Promise<readonly ServerInstanceInfo[]> {
+async function listLiveInternal(
+  instancesDir: string,
+): Promise<readonly ServerInstanceInfo[]> {
   let names: string[];
   try {
     names = await readdir(instancesDir);
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === 'ENOENT') return [];
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return [];
     throw err;
   }
   const live: ServerInstanceInfo[] = [];
@@ -221,7 +242,7 @@ async function listLiveInternal(instancesDir: string): Promise<readonly ServerIn
         try {
           await unlink(filePath);
         } catch (err) {
-          if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err;
+          if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
         }
         return;
       }
@@ -232,10 +253,13 @@ async function listLiveInternal(instancesDir: string): Promise<readonly ServerIn
   return live;
 }
 
-export function createInstanceRegistry(options: InstanceRegistryOptions = {}): IInstanceRegistry {
+export function createInstanceRegistry(
+  options: InstanceRegistryOptions = {},
+): IInstanceRegistry {
   const instancesDir = options.instancesDir ?? DEFAULT_SERVER_INSTANCES_DIR;
   const now = options.now ?? Date.now;
-  const heartbeatIntervalMs = options.heartbeatIntervalMs ?? HEARTBEAT_INTERVAL_MS;
+  const heartbeatIntervalMs =
+    options.heartbeatIntervalMs ?? HEARTBEAT_INTERVAL_MS;
 
   return {
     async register(info) {
@@ -246,7 +270,10 @@ export function createInstanceRegistry(options: InstanceRegistryOptions = {}): I
 
       // Mutable per-registration state so `update` and the heartbeat rewrite
       // the latest port without re-reading the file.
-      const state: { port: number; released: boolean } = { port: info.port, released: false };
+      const state: { port: number; released: boolean } = {
+        port: info.port,
+        released: false,
+      };
 
       // Count of writes that passed the `released` check but have not finished
       // their atomic rename yet. `release()` must drain them before unlinking:
@@ -266,7 +293,9 @@ export function createInstanceRegistry(options: InstanceRegistryOptions = {}): I
             port: state.port,
             startedAt: info.startedAt,
             heartbeatAt: now(),
-            ...(info.serverVersion !== undefined ? { serverVersion: info.serverVersion } : {}),
+            ...(info.serverVersion !== undefined
+              ? { serverVersion: info.serverVersion }
+              : {}),
           };
           await writeFileAtomic(filePath, encode(full));
         } finally {
@@ -305,7 +334,7 @@ export function createInstanceRegistry(options: InstanceRegistryOptions = {}): I
           try {
             await unlink(filePath);
           } catch (err) {
-            if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err;
+            if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
           }
         },
       };
@@ -321,14 +350,16 @@ export function createInstanceRegistry(options: InstanceRegistryOptions = {}): I
 export function resolveServerInstancesDir(homeDir?: string): string {
   return homeDir === undefined
     ? DEFAULT_SERVER_INSTANCES_DIR
-    : join(homeDir, 'server', 'instances');
+    : join(homeDir, "server", "instances");
 }
 
 /** Convenience one-shot read: list live instances under a home directory. */
 export async function listLiveServerInstances(
   homeDir?: string,
 ): Promise<readonly ServerInstanceInfo[]> {
-  return createInstanceRegistry({ instancesDir: resolveServerInstancesDir(homeDir) }).listLive();
+  return createInstanceRegistry({
+    instancesDir: resolveServerInstancesDir(homeDir),
+  }).listLive();
 }
 
 /**

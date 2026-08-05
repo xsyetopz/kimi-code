@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   type AgentContextData,
@@ -13,9 +13,13 @@ import {
   type SessionMeta,
   type SessionSummary,
   type UpdateSessionMetadataPayload,
-} from '../../src';
-import { TestInstantiationService } from '../../src/di/test';
-import { emptySessionUsage, type Event, type Session } from '@moonshot-ai/protocol';
+} from "../../src";
+import { TestInstantiationService } from "../../src/di/test";
+import {
+  emptySessionUsage,
+  type Event,
+  type Session,
+} from "@moonshot-ai/protocol";
 
 import {
   IApprovalService,
@@ -31,7 +35,7 @@ import {
   SessionUndoUnavailableError,
   SessionService,
   toProtocolSession,
-} from '../../src/services';
+} from "../../src/services";
 
 type WithSessionId<T> = T & { readonly sessionId: string };
 
@@ -42,9 +46,13 @@ interface FakeBridgeState {
   archivedIds: string[];
   closedIds: string[];
   renamedTitles: Map<string, string>;
-  metadataPatches: Map<string, UpdateSessionMetadataPayload['metadata']>;
-  forkPayloads: Array<WithSessionId<Omit<ForkSessionPayload, 'sessionId'>>>;
-  compactions: Array<{ sessionId: string; agentId: string; instruction?: string }>;
+  metadataPatches: Map<string, UpdateSessionMetadataPayload["metadata"]>;
+  forkPayloads: Array<WithSessionId<Omit<ForkSessionPayload, "sessionId">>>;
+  compactions: Array<{
+    sessionId: string;
+    agentId: string;
+    instruction?: string;
+  }>;
   undoPayloads: Array<{ sessionId: string; agentId: string; count: number }>;
   resumedIds: string[];
   contexts: Map<string, AgentContextData>;
@@ -55,27 +63,29 @@ function makeFakeBridge(state: FakeBridgeState): ICoreProcessService {
   const rpc: Partial<CoreRPC> = {
     createSession: vi
       .fn()
-      .mockImplementation(async (payload: CreateSessionPayload): Promise<SessionSummary> => {
-        state.createPayloads.push(payload);
-        const id = payload.id ?? `sess_${state.sessions.length + 1}`;
-        const created: SessionSummary = {
-          id,
-          workDir: payload.workDir,
-          sessionDir: `/tmp/sessions/${id}`,
-          createdAt: 1_000_000 + state.sessions.length * 1_000,
-          updatedAt: 1_000_000 + state.sessions.length * 1_000,
-          metadata: payload.metadata,
-          title: undefined,
-        };
-        state.sessions.push(created);
-        return created;
-      }),
+      .mockImplementation(
+        async (payload: CreateSessionPayload): Promise<SessionSummary> => {
+          state.createPayloads.push(payload);
+          const id = payload.id ?? `sess_${state.sessions.length + 1}`;
+          const created: SessionSummary = {
+            id,
+            workDir: payload.workDir,
+            sessionDir: `/tmp/sessions/${id}`,
+            createdAt: 1_000_000 + state.sessions.length * 1_000,
+            updatedAt: 1_000_000 + state.sessions.length * 1_000,
+            metadata: payload.metadata,
+            title: undefined,
+          };
+          state.sessions.push(created);
+          return created;
+        },
+      ),
     listSessions: vi
       .fn()
       .mockImplementation(
-        async (
-          input?: { workDir?: string },
-        ): Promise<readonly SessionSummary[]> => {
+        async (input?: {
+          workDir?: string;
+        }): Promise<readonly SessionSummary[]> => {
           if (input?.workDir !== undefined) {
             return state.sessions.filter((s) => s.workDir === input.workDir);
           }
@@ -84,72 +94,81 @@ function makeFakeBridge(state: FakeBridgeState): ICoreProcessService {
       ),
     forkSession: vi
       .fn()
-      .mockImplementation(async (payload: ForkSessionPayload): Promise<ResumeSessionResult> => {
-        const source = state.sessions.find((s) => s.id === payload.sessionId);
-        if (source === undefined) {
-          throw new Error(`missing source ${payload.sessionId}`);
-        }
-        state.forkPayloads.push({
-          sessionId: payload.sessionId,
-          id: payload.id,
-          title: payload.title,
-          metadata: payload.metadata,
-        });
-        const id = payload.id ?? `sess_fork_${state.sessions.length + 1}`;
-        const created: SessionSummary = {
-          id,
-          workDir: source.workDir,
-          sessionDir: `/tmp/sessions/${id}`,
-          createdAt: 2_000_000 + state.sessions.length * 1_000,
-          updatedAt: 2_000_000 + state.sessions.length * 1_000,
-          metadata: {
-            ...source.metadata,
-            ...payload.metadata,
-          },
-          title: payload.title,
-        };
-        state.sessions.push(created);
-        const sourceMeta = state.metas.get(source.id);
-        const sessionMetadata: SessionMeta = {
-          title: payload.title ?? `Fork: ${source.title ?? source.id}`,
-          createdAt: new Date(0).toISOString(),
-          updatedAt: new Date(0).toISOString(),
-          isCustomTitle: payload.title !== undefined,
-          agents: {},
-          custom: {
-            ...sourceMeta?.custom,
-            ...payload.metadata,
-          },
-          forkedFrom: source.id,
-        };
-        state.metas.set(id, sessionMetadata);
-        return {
-          ...created,
-          sessionMetadata,
-          agents: {},
-        };
-      }),
-    archiveSession: vi.fn().mockImplementation(async ({ sessionId }: { sessionId: string }) => {
-      state.archivedIds.push(sessionId);
-    }),
-    renameSession: vi
-      .fn()
-      .mockImplementation(async (payload: WithSessionId<RenameSessionPayload>) => {
-        state.renamedTitles.set(payload.sessionId, payload.title);
-        const existing = state.metas.get(payload.sessionId);
-        if (existing !== undefined) {
-          state.metas.set(payload.sessionId, { ...existing, title: payload.title });
-        } else {
-          state.metas.set(payload.sessionId, {
+      .mockImplementation(
+        async (payload: ForkSessionPayload): Promise<ResumeSessionResult> => {
+          const source = state.sessions.find((s) => s.id === payload.sessionId);
+          if (source === undefined) {
+            throw new Error(`missing source ${payload.sessionId}`);
+          }
+          state.forkPayloads.push({
+            sessionId: payload.sessionId,
+            id: payload.id,
             title: payload.title,
+            metadata: payload.metadata,
+          });
+          const id = payload.id ?? `sess_fork_${state.sessions.length + 1}`;
+          const created: SessionSummary = {
+            id,
+            workDir: source.workDir,
+            sessionDir: `/tmp/sessions/${id}`,
+            createdAt: 2_000_000 + state.sessions.length * 1_000,
+            updatedAt: 2_000_000 + state.sessions.length * 1_000,
+            metadata: {
+              ...source.metadata,
+              ...payload.metadata,
+            },
+            title: payload.title,
+          };
+          state.sessions.push(created);
+          const sourceMeta = state.metas.get(source.id);
+          const sessionMetadata: SessionMeta = {
+            title: payload.title ?? `Fork: ${source.title ?? source.id}`,
             createdAt: new Date(0).toISOString(),
             updatedAt: new Date(0).toISOString(),
-            isCustomTitle: true,
+            isCustomTitle: payload.title !== undefined,
             agents: {},
-            custom: {},
-          });
-        }
+            custom: {
+              ...sourceMeta?.custom,
+              ...payload.metadata,
+            },
+            forkedFrom: source.id,
+          };
+          state.metas.set(id, sessionMetadata);
+          return {
+            ...created,
+            sessionMetadata,
+            agents: {},
+          };
+        },
+      ),
+    archiveSession: vi
+      .fn()
+      .mockImplementation(async ({ sessionId }: { sessionId: string }) => {
+        state.archivedIds.push(sessionId);
       }),
+    renameSession: vi
+      .fn()
+      .mockImplementation(
+        async (payload: WithSessionId<RenameSessionPayload>) => {
+          state.renamedTitles.set(payload.sessionId, payload.title);
+          const existing = state.metas.get(payload.sessionId);
+          if (existing !== undefined) {
+            state.metas.set(payload.sessionId, {
+              ...existing,
+              title: payload.title,
+            });
+          } else {
+            state.metas.set(payload.sessionId, {
+              title: payload.title,
+              createdAt: new Date(0).toISOString(),
+              updatedAt: new Date(0).toISOString(),
+              isCustomTitle: true,
+              agents: {},
+              custom: {},
+            });
+          }
+        },
+      ),
     updateSessionMetadata: vi
       .fn()
       .mockImplementation(
@@ -159,44 +178,71 @@ function makeFakeBridge(state: FakeBridgeState): ICoreProcessService {
       ),
     getSessionMetadata: vi
       .fn()
-      .mockImplementation(async ({ sessionId }: { sessionId: string }): Promise<SessionMeta> => {
-        const found = state.metas.get(sessionId);
-        if (found === undefined) {
-          throw new Error(`no metadata for ${sessionId}`);
-        }
-        return found;
-      }),
+      .mockImplementation(
+        async ({ sessionId }: { sessionId: string }): Promise<SessionMeta> => {
+          const found = state.metas.get(sessionId);
+          if (found === undefined) {
+            throw new Error(`no metadata for ${sessionId}`);
+          }
+          return found;
+        },
+      ),
     beginCompaction: vi
       .fn()
-      .mockImplementation(async (payload: { sessionId: string; agentId: string; instruction?: string }) => {
-        state.compactions.push(payload);
+      .mockImplementation(
+        async (payload: {
+          sessionId: string;
+          agentId: string;
+          instruction?: string;
+        }) => {
+          state.compactions.push(payload);
+        },
+      ),
+    resumeSession: vi
+      .fn()
+      .mockImplementation(async ({ sessionId }: { sessionId: string }) => {
+        state.resumedIds.push(sessionId);
+        const found = state.sessions.find(
+          (session) => session.id === sessionId,
+        );
+        if (found === undefined)
+          throw new Error(`missing session ${sessionId}`);
+        return found as ResumeSessionResult;
       }),
-    resumeSession: vi.fn().mockImplementation(async ({ sessionId }: { sessionId: string }) => {
-      state.resumedIds.push(sessionId);
-      const found = state.sessions.find((session) => session.id === sessionId);
-      if (found === undefined) throw new Error(`missing session ${sessionId}`);
-      return found as ResumeSessionResult;
-    }),
     undoHistory: vi
       .fn()
-      .mockImplementation(async (payload: { sessionId: string; agentId: string; count: number }) => {
-        state.undoPayloads.push(payload);
-        const next = state.postUndoContexts.get(payload.sessionId);
-        if (next !== undefined) {
-          state.contexts.set(payload.sessionId, next);
-        }
-      }),
+      .mockImplementation(
+        async (payload: {
+          sessionId: string;
+          agentId: string;
+          count: number;
+        }) => {
+          state.undoPayloads.push(payload);
+          const next = state.postUndoContexts.get(payload.sessionId);
+          if (next !== undefined) {
+            state.contexts.set(payload.sessionId, next);
+          }
+        },
+      ),
     getContext: vi
       .fn()
-      .mockImplementation(async ({ sessionId }: { sessionId: string }): Promise<AgentContextData> => {
-        return state.contexts.get(sessionId) ?? { history: [], tokenCount: 0 };
-      }),
+      .mockImplementation(
+        async ({
+          sessionId,
+        }: {
+          sessionId: string;
+        }): Promise<AgentContextData> => {
+          return (
+            state.contexts.get(sessionId) ?? { history: [], tokenCount: 0 }
+          );
+        },
+      ),
     getConfig: vi.fn().mockResolvedValue({
-      modelAlias: 'kimi-k2',
-      thinkingEffort: 'auto',
+      modelAlias: "kimi-k2",
+      thinkingEffort: "auto",
       modelCapabilities: { max_context_tokens: 100 },
     }),
-    getPermission: vi.fn().mockResolvedValue({ mode: 'manual' }),
+    getPermission: vi.fn().mockResolvedValue({ mode: "manual" }),
     getPlan: vi.fn().mockResolvedValue(null),
   };
   return {
@@ -226,13 +272,13 @@ function freshState(): FakeBridgeState {
 }
 
 function textMessage(
-  role: ContextMessage['role'],
+  role: ContextMessage["role"],
   text: string,
-  origin?: ContextMessage['origin'],
+  origin?: ContextMessage["origin"],
 ): ContextMessage {
   return {
     role,
-    content: [{ type: 'text', text }],
+    content: [{ type: "text", text }],
     toolCalls: [],
     origin,
   };
@@ -252,16 +298,20 @@ function makeWorkspaceRegistryStub(): {
   findWorkspaceIdByRoot: ReturnType<typeof vi.fn>;
   resolveAliasWorkDirs: ReturnType<typeof vi.fn>;
 } {
-  const findWorkspaceIdByRoot = vi.fn(async (): Promise<string | undefined> => undefined);
-  const resolveAliasWorkDirs = vi.fn(async (): Promise<readonly string[]> => []);
+  const findWorkspaceIdByRoot = vi.fn(
+    async (): Promise<string | undefined> => undefined,
+  );
+  const resolveAliasWorkDirs = vi.fn(
+    async (): Promise<readonly string[]> => [],
+  );
   const workspaceRegistry: IWorkspaceRegistry = {
     _serviceBrand: undefined,
-    list: vi.fn() as unknown as IWorkspaceRegistry['list'],
-    get: vi.fn() as unknown as IWorkspaceRegistry['get'],
-    createOrTouch: vi.fn() as unknown as IWorkspaceRegistry['createOrTouch'],
-    update: vi.fn() as unknown as IWorkspaceRegistry['update'],
-    delete: vi.fn() as unknown as IWorkspaceRegistry['delete'],
-    resolveRoot: vi.fn() as unknown as IWorkspaceRegistry['resolveRoot'],
+    list: vi.fn() as unknown as IWorkspaceRegistry["list"],
+    get: vi.fn() as unknown as IWorkspaceRegistry["get"],
+    createOrTouch: vi.fn() as unknown as IWorkspaceRegistry["createOrTouch"],
+    update: vi.fn() as unknown as IWorkspaceRegistry["update"],
+    delete: vi.fn() as unknown as IWorkspaceRegistry["delete"],
+    resolveRoot: vi.fn() as unknown as IWorkspaceRegistry["resolveRoot"],
     findWorkspaceIdByRoot,
     resolveAliasWorkDirs,
   };
@@ -281,38 +331,65 @@ function makeEventServiceStub(): {
       publish: vi.fn((event: unknown) => {
         events.push(event);
         emitter.fire(event as never);
-      }) as IEventService['publish'],
-      onDidPublish: emitter.event as unknown as IEventService['onDidPublish'],
+      }) as IEventService["publish"],
+      onDidPublish: emitter.event as unknown as IEventService["onDidPublish"],
     },
   };
 }
 
 function makePromptServiceStub(): {
   promptService: IPromptService;
-  calls: Array<{ sid: string; patch: Record<string, unknown>; source: string; promptId: string | undefined }>;
+  calls: Array<{
+    sid: string;
+    patch: Record<string, unknown>;
+    source: string;
+    promptId: string | undefined;
+  }>;
   activePromptIds: Map<string, string | undefined>;
 } {
-  const calls: Array<{ sid: string; patch: Record<string, unknown>; source: string; promptId: string | undefined }> = [];
+  const calls: Array<{
+    sid: string;
+    patch: Record<string, unknown>;
+    source: string;
+    promptId: string | undefined;
+  }> = [];
   const activePromptIds = new Map<string, string | undefined>();
   const applyAgentState = vi
     .fn()
-    .mockImplementation(async (sid: string, patch: Record<string, unknown>, source: string, promptId?: string) => {
-      calls.push({ sid, patch, source, promptId });
-    });
+    .mockImplementation(
+      async (
+        sid: string,
+        patch: Record<string, unknown>,
+        source: string,
+        promptId?: string,
+      ) => {
+        calls.push({ sid, patch, source, promptId });
+      },
+    );
   const emitter = new Emitter<never>();
   const promptService: IPromptService = {
     _serviceBrand: undefined,
-    list: vi.fn() as unknown as IPromptService['list'],
-    submit: vi.fn() as unknown as IPromptService['submit'],
-    startBtw: vi.fn().mockResolvedValue('btw_test') as unknown as IPromptService['startBtw'],
-    steer: vi.fn() as unknown as IPromptService['steer'],
-    abort: vi.fn() as unknown as IPromptService['abort'],
-    abortBySession: vi.fn() as unknown as IPromptService['abortBySession'],
-    getCurrentPromptId: vi.fn().mockImplementation((sid: string) => activePromptIds.get(sid)) as unknown as IPromptService['getCurrentPromptId'],
+    list: vi.fn() as unknown as IPromptService["list"],
+    submit: vi.fn() as unknown as IPromptService["submit"],
+    startBtw: vi
+      .fn()
+      .mockResolvedValue("btw_test") as unknown as IPromptService["startBtw"],
+    steer: vi.fn() as unknown as IPromptService["steer"],
+    abort: vi.fn() as unknown as IPromptService["abort"],
+    abortBySession: vi.fn() as unknown as IPromptService["abortBySession"],
+    getCurrentPromptId: vi
+      .fn()
+      .mockImplementation((sid: string) =>
+        activePromptIds.get(sid),
+      ) as unknown as IPromptService["getCurrentPromptId"],
     applyAgentState,
-    onDidComplete: emitter.event as unknown as IPromptService['onDidComplete'],
-    onDidAbort: emitter.event as unknown as IPromptService['onDidAbort'],
-    getAgentStateSnapshot: vi.fn().mockReturnValue(undefined) as unknown as IPromptService['getAgentStateSnapshot'],
+    onDidComplete: emitter.event as unknown as IPromptService["onDidComplete"],
+    onDidAbort: emitter.event as unknown as IPromptService["onDidAbort"],
+    getAgentStateSnapshot: vi
+      .fn()
+      .mockReturnValue(
+        undefined,
+      ) as unknown as IPromptService["getAgentStateSnapshot"],
   };
   return { promptService, calls, activePromptIds };
 }
@@ -324,10 +401,12 @@ function makeApprovalServiceStub(): {
   const pending = new Map<string, unknown[]>();
   const approvalService: IApprovalService = {
     _serviceBrand: undefined,
-    request: vi.fn() as unknown as IApprovalService['request'],
-    resolve: vi.fn() as unknown as IApprovalService['resolve'],
+    request: vi.fn() as unknown as IApprovalService["request"],
+    resolve: vi.fn() as unknown as IApprovalService["resolve"],
     listPending: vi.fn().mockImplementation((sessionId: string) => {
-      return (pending.get(sessionId) ?? []) as unknown as ReturnType<IApprovalService['listPending']>;
+      return (pending.get(sessionId) ?? []) as unknown as ReturnType<
+        IApprovalService["listPending"]
+      >;
     }),
   } as unknown as IApprovalService;
   return { approvalService, pending };
@@ -340,11 +419,13 @@ function makeQuestionServiceStub(): {
   const pending = new Map<string, unknown[]>();
   const questionService: IQuestionService = {
     _serviceBrand: undefined,
-    request: vi.fn() as unknown as IQuestionService['request'],
-    resolve: vi.fn() as unknown as IQuestionService['resolve'],
-    dismiss: vi.fn() as unknown as IQuestionService['dismiss'],
+    request: vi.fn() as unknown as IQuestionService["request"],
+    resolve: vi.fn() as unknown as IQuestionService["resolve"],
+    dismiss: vi.fn() as unknown as IQuestionService["dismiss"],
     listPending: vi.fn().mockImplementation((sessionId: string) => {
-      return (pending.get(sessionId) ?? []) as unknown as ReturnType<IQuestionService['listPending']>;
+      return (pending.get(sessionId) ?? []) as unknown as ReturnType<
+        IQuestionService["listPending"]
+      >;
     }),
   } as unknown as IQuestionService;
   return { questionService, pending };
@@ -390,51 +471,51 @@ afterEach(() => {
   instantiation.dispose();
 });
 
-describe('toProtocolSession adapter', () => {
-  it('converts camelCase + number timestamps to snake_case + ISO Z', () => {
+describe("toProtocolSession adapter", () => {
+  it("converts camelCase + number timestamps to snake_case + ISO Z", () => {
     const summary: SessionSummary = {
-      id: 'sess_01',
-      title: 'Hello',
-      workDir: '/tmp/wd',
-      sessionDir: '/tmp/sd',
+      id: "sess_01",
+      title: "Hello",
+      workDir: "/tmp/wd",
+      sessionDir: "/tmp/sd",
       createdAt: 1_000_000_000_000,
       updatedAt: 1_000_000_001_000,
     };
     const proto = toProtocolSession(summary);
-    expect(proto.id).toBe('sess_01');
-    expect(proto.title).toBe('Hello');
-    expect(proto.metadata.cwd).toBe('/tmp/wd');
+    expect(proto.id).toBe("sess_01");
+    expect(proto.title).toBe("Hello");
+    expect(proto.metadata.cwd).toBe("/tmp/wd");
     expect(proto.created_at).toBe(new Date(1_000_000_000_000).toISOString());
     expect(proto.updated_at).toBe(new Date(1_000_000_001_000).toISOString());
-    expect(proto.created_at.endsWith('Z')).toBe(true);
+    expect(proto.created_at.endsWith("Z")).toBe(true);
   });
 
-  it('surfaces last_prompt from the summary when present', () => {
+  it("surfaces last_prompt from the summary when present", () => {
     const withPrompt: SessionSummary = {
-      id: 'sess_lp_1',
-      workDir: '/tmp/wd',
-      sessionDir: '/tmp/sd',
+      id: "sess_lp_1",
+      workDir: "/tmp/wd",
+      sessionDir: "/tmp/sd",
       createdAt: 0,
       updatedAt: 0,
-      lastPrompt: 'what is 2 + 2?',
+      lastPrompt: "what is 2 + 2?",
     };
-    expect(toProtocolSession(withPrompt).last_prompt).toBe('what is 2 + 2?');
+    expect(toProtocolSession(withPrompt).last_prompt).toBe("what is 2 + 2?");
 
     const withoutPrompt: SessionSummary = {
-      id: 'sess_lp_2',
-      workDir: '/tmp/wd',
-      sessionDir: '/tmp/sd',
+      id: "sess_lp_2",
+      workDir: "/tmp/wd",
+      sessionDir: "/tmp/sd",
       createdAt: 0,
       updatedAt: 0,
     };
     expect(toProtocolSession(withoutPrompt).last_prompt).toBeUndefined();
   });
 
-  it('fills documented defaults when CoreAPI does not surface a field', () => {
+  it("fills documented defaults when CoreAPI does not surface a field", () => {
     const summary: SessionSummary = {
-      id: 'sess_02',
-      workDir: '/tmp/wd2',
-      sessionDir: '/tmp/sd2',
+      id: "sess_02",
+      workDir: "/tmp/wd2",
+      sessionDir: "/tmp/sd2",
       createdAt: 0,
       updatedAt: 0,
     };
@@ -444,224 +525,238 @@ describe('toProtocolSession adapter', () => {
     expect(proto.permission_rules).toEqual([]);
     expect(proto.message_count).toBe(0);
     expect(proto.last_seq).toBe(0);
-    expect(proto.agent_config.model).toBe('');
-    expect(proto.title).toBe('');
+    expect(proto.agent_config.model).toBe("");
+    expect(proto.title).toBe("");
   });
 
-  it('enriches title + cwd from SessionMeta when available', () => {
+  it("enriches title + cwd from SessionMeta when available", () => {
     const summary: SessionSummary = {
-      id: 'sess_03',
-      workDir: '/tmp/orig',
-      sessionDir: '/tmp/sd3',
+      id: "sess_03",
+      workDir: "/tmp/orig",
+      sessionDir: "/tmp/sd3",
       createdAt: 0,
       updatedAt: 0,
     };
     const meta: SessionMeta = {
-      title: 'Renamed via meta',
+      title: "Renamed via meta",
       createdAt: new Date(0).toISOString(),
       updatedAt: new Date(0).toISOString(),
       isCustomTitle: true,
       agents: {},
-      custom: { cwd: '/tmp/cwd-from-meta', other_key: 'x' },
+      custom: { cwd: "/tmp/cwd-from-meta", other_key: "x" },
     };
     const proto = toProtocolSession(summary, meta);
-    expect(proto.title).toBe('Renamed via meta');
-    expect(proto.metadata.cwd).toBe('/tmp/cwd-from-meta');
-    expect(proto.metadata['other_key']).toBe('x');
+    expect(proto.title).toBe("Renamed via meta");
+    expect(proto.metadata.cwd).toBe("/tmp/cwd-from-meta");
+    expect(proto.metadata["other_key"]).toBe("x");
   });
 
-  it('preserves custom metadata from the summary when SessionMeta is unavailable', () => {
+  it("preserves custom metadata from the summary when SessionMeta is unavailable", () => {
     const summary: SessionSummary = {
-      id: 'sess_summary_meta',
-      workDir: '/tmp/orig',
-      sessionDir: '/tmp/sd-summary-meta',
+      id: "sess_summary_meta",
+      workDir: "/tmp/orig",
+      sessionDir: "/tmp/sd-summary-meta",
       createdAt: 0,
       updatedAt: 0,
       metadata: {
-        cwd: '/tmp/from-summary',
-        parent_session_id: 'sess_parent',
-        child_session_kind: 'child',
-        topic: 'btw',
+        cwd: "/tmp/from-summary",
+        parent_session_id: "sess_parent",
+        child_session_kind: "child",
+        topic: "btw",
       },
     };
     const proto = toProtocolSession(summary);
     expect(proto.metadata).toMatchObject({
-      cwd: '/tmp/from-summary',
-      parent_session_id: 'sess_parent',
-      child_session_kind: 'child',
-      topic: 'btw',
+      cwd: "/tmp/from-summary",
+      parent_session_id: "sess_parent",
+      child_session_kind: "child",
+      topic: "btw",
     });
   });
 
   it('strips the internal "goal" metadata key', () => {
     const summary: SessionSummary = {
-      id: 'sess_04',
-      workDir: '/tmp/wd',
-      sessionDir: '/tmp/sd',
+      id: "sess_04",
+      workDir: "/tmp/wd",
+      sessionDir: "/tmp/sd",
       createdAt: 0,
       updatedAt: 0,
     };
     const meta: SessionMeta = {
-      title: 't',
+      title: "t",
       createdAt: new Date(0).toISOString(),
       updatedAt: new Date(0).toISOString(),
       isCustomTitle: false,
       agents: {},
-      custom: { goal: { secret: 'state' }, keep: 'me' },
+      custom: { goal: { secret: "state" }, keep: "me" },
     };
     const proto = toProtocolSession(summary, meta);
-    expect(proto.metadata['goal']).toBeUndefined();
-    expect(proto.metadata['keep']).toBe('me');
+    expect(proto.metadata["goal"]).toBeUndefined();
+    expect(proto.metadata["keep"]).toBe("me");
   });
 
-  it('derives workspace_id from summary.workDir via encodeWorkDirKey', async () => {
-    const { encodeWorkDirKey } = await import('../../src/session/store');
+  it("derives workspace_id from summary.workDir via encodeWorkDirKey", async () => {
+    const { encodeWorkDirKey } = await import("../../src/session/store");
     const summary: SessionSummary = {
-      id: 'sess_ws',
-      workDir: '/tmp/wd-ws',
-      sessionDir: '/tmp/sd-ws',
+      id: "sess_ws",
+      workDir: "/tmp/wd-ws",
+      sessionDir: "/tmp/sd-ws",
       createdAt: 0,
       updatedAt: 0,
     };
     const proto = toProtocolSession(summary);
-    expect(proto.workspace_id).toBe(encodeWorkDirKey('/tmp/wd-ws'));
+    expect(proto.workspace_id).toBe(encodeWorkDirKey("/tmp/wd-ws"));
     expect(proto.workspace_id).toMatch(/^wd_[A-Za-z0-9._-]+_[0-9a-f]{12}$/);
   });
 
-  it('prefers the registry-resolved workspace id over the minted key', async () => {
-    const { encodeWorkDirKey } = await import('../../src/session/store');
+  it("prefers the registry-resolved workspace id over the minted key", async () => {
+    const { encodeWorkDirKey } = await import("../../src/session/store");
     const summary: SessionSummary = {
-      id: 'sess_ws_alias',
-      workDir: '/tmp/wd-ws',
-      sessionDir: '/tmp/sd-ws',
+      id: "sess_ws_alias",
+      workDir: "/tmp/wd-ws",
+      sessionDir: "/tmp/sd-ws",
       createdAt: 0,
       updatedAt: 0,
     };
-    const proto = toProtocolSession(summary, undefined, 'wd_registered_0123456789ab');
-    expect(proto.workspace_id).toBe('wd_registered_0123456789ab');
-    expect(proto.workspace_id).not.toBe(encodeWorkDirKey('/tmp/wd-ws'));
+    const proto = toProtocolSession(
+      summary,
+      undefined,
+      "wd_registered_0123456789ab",
+    );
+    expect(proto.workspace_id).toBe("wd_registered_0123456789ab");
+    expect(proto.workspace_id).not.toBe(encodeWorkDirKey("/tmp/wd-ws"));
   });
 });
 
-describe('SessionService.create', () => {
-  it('calls bridge.rpc.createSession with workDir = metadata.cwd and returns a protocol Session', async () => {
+describe("SessionService.create", () => {
+  it("calls bridge.rpc.createSession with workDir = metadata.cwd and returns a protocol Session", async () => {
     const session = await svc.create({
-      metadata: { cwd: '/tmp/foo' },
-      title: 'My session',
+      metadata: { cwd: "/tmp/foo" },
+      title: "My session",
     });
     expect(state.sessions).toHaveLength(1);
-    expect(state.sessions[0]!.workDir).toBe('/tmp/foo');
-    expect(session.metadata.cwd).toBe('/tmp/foo');
-    expect(session.title).toBe('My session');
-    expect(session.created_at.endsWith('Z')).toBe(true);
+    expect(state.sessions[0]!.workDir).toBe("/tmp/foo");
+    expect(session.metadata.cwd).toBe("/tmp/foo");
+    expect(session.title).toBe("My session");
+    expect(session.created_at.endsWith("Z")).toBe(true);
   });
 
-  it('projects the registered workspace id when one identity-matches the cwd', async () => {
-    workspaceRegistryStub.findWorkspaceIdByRoot.mockResolvedValue('wd_registered_0123456789ab');
-    const session = await svc.create({ metadata: { cwd: '/tmp/foo' } });
-    expect(workspaceRegistryStub.findWorkspaceIdByRoot).toHaveBeenCalledWith('/tmp/foo');
-    expect(session.workspace_id).toBe('wd_registered_0123456789ab');
+  it("projects the registered workspace id when one identity-matches the cwd", async () => {
+    workspaceRegistryStub.findWorkspaceIdByRoot.mockResolvedValue(
+      "wd_registered_0123456789ab",
+    );
+    const session = await svc.create({ metadata: { cwd: "/tmp/foo" } });
+    expect(workspaceRegistryStub.findWorkspaceIdByRoot).toHaveBeenCalledWith(
+      "/tmp/foo",
+    );
+    expect(session.workspace_id).toBe("wd_registered_0123456789ab");
   });
 
-  it('falls back to the minted workspace id when the registry has no match', async () => {
-    const { encodeWorkDirKey } = await import('../../src/session/store');
-    const session = await svc.create({ metadata: { cwd: '/tmp/foo' } });
-    expect(session.workspace_id).toBe(encodeWorkDirKey('/tmp/foo'));
+  it("falls back to the minted workspace id when the registry has no match", async () => {
+    const { encodeWorkDirKey } = await import("../../src/session/store");
+    const session = await svc.create({ metadata: { cwd: "/tmp/foo" } });
+    expect(session.workspace_id).toBe(encodeWorkDirKey("/tmp/foo"));
   });
 
-  it('passes model through to the agent_config when supplied', async () => {
+  it("passes model through to the agent_config when supplied", async () => {
     await svc.create({
-      metadata: { cwd: '/tmp/x' },
-      agent_config: { model: 'moonshot-v1-128k' },
+      metadata: { cwd: "/tmp/x" },
+      agent_config: { model: "moonshot-v1-128k" },
     });
-    expect(state.sessions[0]!.metadata?.['cwd']).toBe('/tmp/x');
+    expect(state.sessions[0]!.metadata?.["cwd"]).toBe("/tmp/x");
   });
 
-  it('passes client telemetry metadata through to core createSession', async () => {
+  it("passes client telemetry metadata through to core createSession", async () => {
     await svc.create(
-      { metadata: { cwd: '/tmp/web' } },
+      { metadata: { cwd: "/tmp/web" } },
       {
         client: {
-          id: 'web_test_client',
-          name: 'kimi-code-web',
-          version: '0.1.1',
-          uiMode: 'web',
+          id: "web_test_client",
+          name: "kimi-code-web",
+          version: "0.1.1",
+          uiMode: "web",
         },
       },
     );
 
     expect(state.createPayloads[0]!.client).toEqual({
-      id: 'web_test_client',
-      name: 'kimi-code-web',
-      version: '0.1.1',
-      uiMode: 'web',
+      id: "web_test_client",
+      name: "kimi-code-web",
+      version: "0.1.1",
+      uiMode: "web",
     });
   });
 
-  it('rejects when metadata.cwd is absent (daemon route must pre-resolve workspace_id → cwd)', async () => {
-    await expect(svc.create({} as unknown as Parameters<typeof svc.create>[0])).rejects.toThrow(
-      /metadata\.cwd is required/,
-    );
+  it("rejects when metadata.cwd is absent (daemon route must pre-resolve workspace_id → cwd)", async () => {
+    await expect(
+      svc.create({} as unknown as Parameters<typeof svc.create>[0]),
+    ).rejects.toThrow(/metadata\.cwd is required/);
   });
 });
 
-describe('SessionService.list', () => {
+describe("SessionService.list", () => {
   beforeEach(async () => {
-    await svc.create({ metadata: { cwd: '/tmp/a' } });
-    await svc.create({ metadata: { cwd: '/tmp/b' } });
-    await svc.create({ metadata: { cwd: '/tmp/c' } });
+    await svc.create({ metadata: { cwd: "/tmp/a" } });
+    await svc.create({ metadata: { cwd: "/tmp/b" } });
+    await svc.create({ metadata: { cwd: "/tmp/c" } });
   });
 
-  it('returns descending-by-updatedAt order with default page size', async () => {
+  it("returns descending-by-updatedAt order with default page size", async () => {
     const page = await svc.list({});
     expect(page.items).toHaveLength(3);
-    expect(page.items[0]!.metadata.cwd).toBe('/tmp/c');
-    expect(page.items[2]!.metadata.cwd).toBe('/tmp/a');
+    expect(page.items[0]!.metadata.cwd).toBe("/tmp/c");
+    expect(page.items[2]!.metadata.cwd).toBe("/tmp/a");
     expect(page.has_more).toBe(false);
   });
 
-  it('honors page_size and surfaces has_more', async () => {
+  it("honors page_size and surfaces has_more", async () => {
     const page = await svc.list({ page_size: 2 });
-    expect(page.items.map((s) => s.metadata.cwd)).toEqual(['/tmp/c', '/tmp/b']);
+    expect(page.items.map((s) => s.metadata.cwd)).toEqual(["/tmp/c", "/tmp/b"]);
     expect(page.has_more).toBe(true);
   });
 
-  it('before_id returns less-recent sessions only', async () => {
+  it("before_id returns less-recent sessions only", async () => {
     const all = await svc.list({});
     const pivotId = all.items[0]!.id;
     const olderPage = await svc.list({ before_id: pivotId });
-    expect(olderPage.items.map((s) => s.metadata.cwd)).toEqual(['/tmp/b', '/tmp/a']);
+    expect(olderPage.items.map((s) => s.metadata.cwd)).toEqual([
+      "/tmp/b",
+      "/tmp/a",
+    ]);
   });
 
-  it('after_id returns more-recent sessions only', async () => {
+  it("after_id returns more-recent sessions only", async () => {
     const all = await svc.list({});
     const pivotId = all.items[2]!.id;
     const newerPage = await svc.list({ after_id: pivotId });
-    expect(newerPage.items.map((s) => s.metadata.cwd)).toEqual(['/tmp/c', '/tmp/b']);
+    expect(newerPage.items.map((s) => s.metadata.cwd)).toEqual([
+      "/tmp/c",
+      "/tmp/b",
+    ]);
   });
 
-  it('status filter applies post-hydration', async () => {
+  it("status filter applies post-hydration", async () => {
     const empty = await svc.list({ busy: true });
     expect(empty.items).toEqual([]);
     const idle = await svc.list({ busy: false });
     expect(idle.items.length).toBe(3);
   });
 
-  it('forwards workDir to the underlying core.rpc.listSessions for the workspace fast path', async () => {
-    const page = await svc.list({ workDir: '/tmp/b' });
+  it("forwards workDir to the underlying core.rpc.listSessions for the workspace fast path", async () => {
+    const page = await svc.list({ workDir: "/tmp/b" });
     expect(page.items).toHaveLength(1);
-    expect(page.items[0]!.metadata.cwd).toBe('/tmp/b');
+    expect(page.items[0]!.metadata.cwd).toBe("/tmp/b");
     const calls = (state as unknown as { sessions: SessionSummary[] }).sessions;
     void calls;
   });
 
-  it('returns an empty page when workDir matches no sessions', async () => {
-    const page = await svc.list({ workDir: '/tmp/nonexistent' });
+  it("returns an empty page when workDir matches no sessions", async () => {
+    const page = await svc.list({ workDir: "/tmp/nonexistent" });
     expect(page.items).toEqual([]);
     expect(page.has_more).toBe(false);
   });
 
-  it('excludeEmpty drops sessions without a lastPrompt before pagination', async () => {
+  it("excludeEmpty drops sessions without a lastPrompt before pagination", async () => {
     const ts = (n: number) => 1_000_000 + n * 1_000;
     const summary = (
       id: string,
@@ -669,41 +764,49 @@ describe('SessionService.list', () => {
       lastPrompt?: string,
     ): SessionSummary => ({
       id,
-      workDir: '/tmp/a',
+      workDir: "/tmp/a",
       sessionDir: `/tmp/sessions/${id}`,
       createdAt: updatedAt,
       updatedAt,
-      metadata: { cwd: '/tmp/a' },
+      metadata: { cwd: "/tmp/a" },
       title: undefined,
       lastPrompt,
     });
     state.sessions = [
-      summary('e1', ts(3)),
-      summary('u1', ts(2), 'hi'),
-      summary('e2', ts(1)),
-      summary('u2', ts(0), 'yo'),
+      summary("e1", ts(3)),
+      summary("u1", ts(2), "hi"),
+      summary("e2", ts(1)),
+      summary("u2", ts(0), "yo"),
     ];
 
     const all = await svc.list({});
-    expect(all.items.map((s) => s.id)).toEqual(['e1', 'u1', 'e2', 'u2']);
+    expect(all.items.map((s) => s.id)).toEqual(["e1", "u1", "e2", "u2"]);
 
     const visible = await svc.list({ excludeEmpty: true });
-    expect(visible.items.map((s) => s.id)).toEqual(['u1', 'u2']);
+    expect(visible.items.map((s) => s.id)).toEqual(["u1", "u2"]);
     expect(visible.has_more).toBe(false);
 
     // Pagination + cursor operate on the filtered set.
     const first = await svc.list({ excludeEmpty: true, page_size: 1 });
-    expect(first.items.map((s) => s.id)).toEqual(['u1']);
+    expect(first.items.map((s) => s.id)).toEqual(["u1"]);
     expect(first.has_more).toBe(true);
 
-    const next = await svc.list({ excludeEmpty: true, page_size: 1, before_id: 'u1' });
-    expect(next.items.map((s) => s.id)).toEqual(['u2']);
+    const next = await svc.list({
+      excludeEmpty: true,
+      page_size: 1,
+      before_id: "u1",
+    });
+    expect(next.items.map((s) => s.id)).toEqual(["u2"]);
     expect(next.has_more).toBe(false);
   });
 
-  it('workspaceId returns the union across alias workDirs, sorted by recency', async () => {
+  it("workspaceId returns the union across alias workDirs, sorted by recency", async () => {
     const ts = (n: number) => 1_000_000 + n * 1_000;
-    const summary = (id: string, workDir: string, updatedAt: number): SessionSummary => ({
+    const summary = (
+      id: string,
+      workDir: string,
+      updatedAt: number,
+    ): SessionSummary => ({
       id,
       workDir,
       sessionDir: `/tmp/sessions/${id}`,
@@ -717,85 +820,89 @@ describe('SessionService.list', () => {
     // workDir query could never see all three: variants of a registered root
     // resolve back onto the registered bucket.
     state.sessions = [
-      summary('s1', 'C:\\Dev\\Project', ts(1)),
-      summary('s2', 'c:\\dev\\project', ts(3)),
-      summary('s3', 'C:/dev/project', ts(2)),
-      summary('s4', '/tmp/other', ts(4)),
+      summary("s1", "C:\\Dev\\Project", ts(1)),
+      summary("s2", "c:\\dev\\project", ts(3)),
+      summary("s3", "C:/dev/project", ts(2)),
+      summary("s4", "/tmp/other", ts(4)),
     ];
     workspaceRegistryStub.resolveAliasWorkDirs.mockResolvedValue([
-      'C:\\Dev\\Project',
-      'C:/dev/project',
-      'c:\\dev\\project',
+      "C:\\Dev\\Project",
+      "C:/dev/project",
+      "c:\\dev\\project",
     ]);
 
-    const page = await svc.list({ workspaceId: 'wd_alias_deadbeef0000' });
+    const page = await svc.list({ workspaceId: "wd_alias_deadbeef0000" });
 
     expect(workspaceRegistryStub.resolveAliasWorkDirs).toHaveBeenCalledWith(
-      'wd_alias_deadbeef0000',
+      "wd_alias_deadbeef0000",
     );
-    expect(page.items.map((s) => s.id)).toEqual(['s2', 's3', 's1']);
+    expect(page.items.map((s) => s.id)).toEqual(["s2", "s3", "s1"]);
     expect(page.has_more).toBe(false);
   });
 
-  it('workspaceId for an unknown workspace returns an empty page', async () => {
-    const page = await svc.list({ workspaceId: 'wd_unknown_deadbeef0000' });
+  it("workspaceId for an unknown workspace returns an empty page", async () => {
+    const page = await svc.list({ workspaceId: "wd_unknown_deadbeef0000" });
     expect(page.items).toEqual([]);
     expect(page.has_more).toBe(false);
   });
 
-  it('does not consult workspace aliases when no workspaceId is given', async () => {
+  it("does not consult workspace aliases when no workspaceId is given", async () => {
     await svc.list({});
-    await svc.list({ workDir: '/tmp/b' });
+    await svc.list({ workDir: "/tmp/b" });
     expect(workspaceRegistryStub.resolveAliasWorkDirs).not.toHaveBeenCalled();
   });
 });
 
-describe('SessionService.get', () => {
-  it('returns the matching session', async () => {
-    const created = await svc.create({ metadata: { cwd: '/tmp/x' } });
+describe("SessionService.get", () => {
+  it("returns the matching session", async () => {
+    const created = await svc.create({ metadata: { cwd: "/tmp/x" } });
     const found = await svc.get(created.id);
     expect(found.id).toBe(created.id);
-    expect(found.metadata.cwd).toBe('/tmp/x');
+    expect(found.metadata.cwd).toBe("/tmp/x");
   });
 
-  it('throws SessionNotFoundError for an unknown id', async () => {
-    await expect(svc.get('does-not-exist')).rejects.toBeInstanceOf(SessionNotFoundError);
-    await expect(svc.get('does-not-exist')).rejects.toThrow(/does not exist/);
+  it("throws SessionNotFoundError for an unknown id", async () => {
+    await expect(svc.get("does-not-exist")).rejects.toBeInstanceOf(
+      SessionNotFoundError,
+    );
+    await expect(svc.get("does-not-exist")).rejects.toThrow(/does not exist/);
   });
 });
 
-describe('SessionService.update', () => {
+describe("SessionService.update", () => {
   let created: Session;
 
   beforeEach(async () => {
-    created = await svc.create({ metadata: { cwd: '/tmp/u' } });
+    created = await svc.create({ metadata: { cwd: "/tmp/u" } });
   });
 
-  it('rejects updates to missing sessions with SessionNotFoundError', async () => {
-    await expect(svc.update('does-not-exist', { title: 'x' })).rejects.toBeInstanceOf(
-      SessionNotFoundError,
-    );
+  it("rejects updates to missing sessions with SessionNotFoundError", async () => {
+    await expect(
+      svc.update("does-not-exist", { title: "x" }),
+    ).rejects.toBeInstanceOf(SessionNotFoundError);
   });
 
-  it('routes title through bridge.rpc.renameSession', async () => {
-    await svc.update(created.id, { title: 'Renamed' });
-    expect(state.renamedTitles.get(created.id)).toBe('Renamed');
+  it("routes title through bridge.rpc.renameSession", async () => {
+    await svc.update(created.id, { title: "Renamed" });
+    expect(state.renamedTitles.get(created.id)).toBe("Renamed");
     expect(state.metadataPatches.has(created.id)).toBe(false);
   });
 
-  it('routes metadata patch through bridge.rpc.updateSessionMetadata (into .custom)', async () => {
-    await svc.update(created.id, { metadata: { custom_field: 'x' } });
+  it("routes metadata patch through bridge.rpc.updateSessionMetadata (into .custom)", async () => {
+    await svc.update(created.id, { metadata: { custom_field: "x" } });
     const patch = state.metadataPatches.get(created.id);
-    expect(patch).toEqual({ custom: { custom_field: 'x' } });
+    expect(patch).toEqual({ custom: { custom_field: "x" } });
   });
 
-  it('handles both title + metadata in a single update', async () => {
-    await svc.update(created.id, { title: 'New', metadata: { tag: 'a' } });
-    expect(state.renamedTitles.get(created.id)).toBe('New');
-    expect(state.metadataPatches.get(created.id)).toEqual({ custom: { tag: 'a' } });
+  it("handles both title + metadata in a single update", async () => {
+    await svc.update(created.id, { title: "New", metadata: { tag: "a" } });
+    expect(state.renamedTitles.get(created.id)).toBe("New");
+    expect(state.metadataPatches.get(created.id)).toEqual({
+      custom: { tag: "a" },
+    });
   });
 
-  it('is a no-op when update body is empty', async () => {
+  it("is a no-op when update body is empty", async () => {
     await svc.update(created.id, {});
     expect(state.renamedTitles.size).toBe(0);
     expect(state.metadataPatches.size).toBe(0);
@@ -803,61 +910,69 @@ describe('SessionService.update', () => {
   });
 
   it('forwards agent_config.model through IPromptService.applyAgentState (source="meta")', async () => {
-    await svc.update(created.id, { agent_config: { model: 'kimi-code/k9' } });
+    await svc.update(created.id, { agent_config: { model: "kimi-code/k9" } });
     expect(promptStub.calls).toEqual([
-      { sid: created.id, patch: { model: 'kimi-code/k9' }, source: 'meta', promptId: undefined },
+      {
+        sid: created.id,
+        patch: { model: "kimi-code/k9" },
+        source: "meta",
+        promptId: undefined,
+      },
     ]);
   });
 
-  it('ignores agent_config.model when empty string (legacy quirk preserved)', async () => {
-    await svc.update(created.id, { agent_config: { model: '' } });
+  it("ignores agent_config.model when empty string (legacy quirk preserved)", async () => {
+    await svc.update(created.id, { agent_config: { model: "" } });
     expect(promptStub.calls).toEqual([]);
   });
 
-  it('forwards thinking + permission_mode + plan_mode through applyAgentState in one call', async () => {
+  it("forwards thinking + permission_mode + plan_mode through applyAgentState in one call", async () => {
     await svc.update(created.id, {
       agent_config: {
-        thinking: 'high',
-        permission_mode: 'yolo',
+        thinking: "high",
+        permission_mode: "yolo",
         plan_mode: true,
       },
     });
     expect(promptStub.calls).toEqual([
       {
         sid: created.id,
-        patch: { thinking: 'high', permission_mode: 'yolo', plan_mode: true },
-        source: 'meta',
+        patch: { thinking: "high", permission_mode: "yolo", plan_mode: true },
+        source: "meta",
         promptId: undefined,
       },
     ]);
   });
 
-  it('combines model + runtime controls into a single applyAgentState call', async () => {
+  it("combines model + runtime controls into a single applyAgentState call", async () => {
     await svc.update(created.id, {
-      agent_config: { model: 'kimi-code/k9', plan_mode: false },
+      agent_config: { model: "kimi-code/k9", plan_mode: false },
     });
     expect(promptStub.calls).toHaveLength(1);
-    expect(promptStub.calls[0]?.patch).toEqual({ model: 'kimi-code/k9', plan_mode: false });
-    expect(promptStub.calls[0]?.source).toBe('meta');
+    expect(promptStub.calls[0]?.patch).toEqual({
+      model: "kimi-code/k9",
+      plan_mode: false,
+    });
+    expect(promptStub.calls[0]?.source).toBe("meta");
   });
 
-  it('does not call applyAgentState when agent_config carries no runtime fields', async () => {
+  it("does not call applyAgentState when agent_config carries no runtime fields", async () => {
     await svc.update(created.id, { agent_config: {} });
     expect(promptStub.calls).toEqual([]);
   });
 
-  it('returns the post-update Session shape', async () => {
-    const after = await svc.update(created.id, { title: 'Renamed' });
+  it("returns the post-update Session shape", async () => {
+    const after = await svc.update(created.id, { title: "Renamed" });
     expect(after.id).toBe(created.id);
-    expect(after.metadata.cwd).toBe('/tmp/u');
+    expect(after.metadata.cwd).toBe("/tmp/u");
   });
 });
 
-describe('SessionService.fork', () => {
-  it('forks through core.rpc.forkSession with TUI-compatible default title', async () => {
+describe("SessionService.fork", () => {
+  it("forks through core.rpc.forkSession with TUI-compatible default title", async () => {
     const source = await svc.create({
-      metadata: { cwd: '/tmp/fork', source: true },
-      title: 'Source title',
+      metadata: { cwd: "/tmp/fork", source: true },
+      title: "Source title",
     });
 
     const fork = await svc.fork(source.id, { metadata: { child: true } });
@@ -866,54 +981,58 @@ describe('SessionService.fork', () => {
       {
         sessionId: source.id,
         id: undefined,
-        title: 'Fork: Source title',
+        title: "Fork: Source title",
         metadata: { child: true },
       },
     ]);
     expect(fork.id).toMatch(/^sess_fork_/);
-    expect(fork.title).toBe('Fork: Source title');
+    expect(fork.title).toBe("Fork: Source title");
     expect(fork.metadata).toMatchObject({
-      cwd: '/tmp/fork',
+      cwd: "/tmp/fork",
       child: true,
     });
   });
 
-  it('passes an explicit title through to core.rpc.forkSession', async () => {
-    const source = await svc.create({ metadata: { cwd: '/tmp/fork-explicit' } });
+  it("passes an explicit title through to core.rpc.forkSession", async () => {
+    const source = await svc.create({
+      metadata: { cwd: "/tmp/fork-explicit" },
+    });
 
     const fork = await svc.fork(source.id, {
-      title: 'Custom fork',
-      metadata: { origin: 'web' },
+      title: "Custom fork",
+      metadata: { origin: "web" },
     });
 
     expect(state.forkPayloads[0]).toEqual({
       sessionId: source.id,
       id: undefined,
-      title: 'Custom fork',
-      metadata: { origin: 'web' },
+      title: "Custom fork",
+      metadata: { origin: "web" },
     });
     expect(fork.id).toMatch(/^sess_fork_/);
-    expect(fork.title).toBe('Custom fork');
+    expect(fork.title).toBe("Custom fork");
   });
 
-  it('throws SessionNotFoundError when the source session is missing', async () => {
-    await expect(svc.fork('missing', {})).rejects.toBeInstanceOf(SessionNotFoundError);
+  it("throws SessionNotFoundError when the source session is missing", async () => {
+    await expect(svc.fork("missing", {})).rejects.toBeInstanceOf(
+      SessionNotFoundError,
+    );
     expect(state.forkPayloads).toEqual([]);
   });
 });
 
-describe('SessionService children', () => {
-  it('creates a child session through forkSession with child metadata', async () => {
+describe("SessionService children", () => {
+  it("creates a child session through forkSession with child metadata", async () => {
     const source = await svc.create({
-      metadata: { cwd: '/tmp/child', source: true },
-      title: 'Parent title',
+      metadata: { cwd: "/tmp/child", source: true },
+      title: "Parent title",
     });
 
     const child = await svc.createChild(source.id, {
       metadata: {
-        parent_session_id: 'spoofed-parent',
-        child_session_kind: 'spoofed-kind',
-        topic: 'btw',
+        parent_session_id: "spoofed-parent",
+        child_session_kind: "spoofed-kind",
+        topic: "btw",
       },
     });
 
@@ -921,32 +1040,32 @@ describe('SessionService children', () => {
       {
         sessionId: source.id,
         id: undefined,
-        title: 'Child: Parent title',
+        title: "Child: Parent title",
         metadata: {
           parent_session_id: source.id,
-          child_session_kind: 'child',
-          topic: 'btw',
+          child_session_kind: "child",
+          topic: "btw",
         },
       },
     ]);
     expect(child.id).toMatch(/^sess_fork_/);
-    expect(child.title).toBe('Child: Parent title');
+    expect(child.title).toBe("Child: Parent title");
     expect(child.metadata).toMatchObject({
-      cwd: '/tmp/child',
+      cwd: "/tmp/child",
       parent_session_id: source.id,
-      child_session_kind: 'child',
-      topic: 'btw',
+      child_session_kind: "child",
+      topic: "btw",
     });
   });
 
-  it('lists only direct children for a parent session', async () => {
+  it("lists only direct children for a parent session", async () => {
     const parent = await svc.create({
-      metadata: { cwd: '/tmp/children' },
-      title: 'Parent',
+      metadata: { cwd: "/tmp/children" },
+      title: "Parent",
     });
-    const child = await svc.createChild(parent.id, { title: 'Child one' });
+    const child = await svc.createChild(parent.id, { title: "Child one" });
     await svc.fork(parent.id, { metadata: { forked: true } });
-    const grandchild = await svc.createChild(child.id, { title: 'Grandchild' });
+    const grandchild = await svc.createChild(child.id, { title: "Grandchild" });
 
     const page = await svc.listChildren(parent.id, {});
 
@@ -955,82 +1074,96 @@ describe('SessionService children', () => {
     expect(page.items.map((item) => item.id)).not.toContain(grandchild.id);
   });
 
-  it('lists children from persisted summary metadata when SessionMeta is unavailable', async () => {
+  it("lists children from persisted summary metadata when SessionMeta is unavailable", async () => {
     const parent = await svc.create({
-      metadata: { cwd: '/tmp/persisted-child' },
-      title: 'Parent',
+      metadata: { cwd: "/tmp/persisted-child" },
+      title: "Parent",
     });
-    const child = await svc.createChild(parent.id, { title: 'Child one' });
+    const child = await svc.createChild(parent.id, { title: "Child one" });
     state.metas.delete(child.id);
 
     const page = await svc.listChildren(parent.id, {});
 
     expect(page.items.map((item) => item.id)).toEqual([child.id]);
     expect(page.items[0]!.metadata).toMatchObject({
-      cwd: '/tmp/persisted-child',
+      cwd: "/tmp/persisted-child",
       parent_session_id: parent.id,
-      child_session_kind: 'child',
+      child_session_kind: "child",
     });
   });
 
-  it('throws SessionNotFoundError when listing children for a missing parent', async () => {
-    await expect(svc.listChildren('missing', {})).rejects.toBeInstanceOf(SessionNotFoundError);
+  it("throws SessionNotFoundError when listing children for a missing parent", async () => {
+    await expect(svc.listChildren("missing", {})).rejects.toBeInstanceOf(
+      SessionNotFoundError,
+    );
   });
 });
 
-describe('SessionService.archive', () => {
-  it('calls bridge.rpc.archiveSession and returns { archived: true }', async () => {
-    const created = await svc.create({ metadata: { cwd: '/tmp/d' } });
+describe("SessionService.archive", () => {
+  it("calls bridge.rpc.archiveSession and returns { archived: true }", async () => {
+    const created = await svc.create({ metadata: { cwd: "/tmp/d" } });
     const result = await svc.archive(created.id);
     expect(result).toEqual({ archived: true });
     expect(state.archivedIds).toEqual([created.id]);
   });
 
-  it('throws SessionNotFoundError on a missing id', async () => {
-    await expect(svc.archive('does-not-exist')).rejects.toBeInstanceOf(SessionNotFoundError);
+  it("throws SessionNotFoundError on a missing id", async () => {
+    await expect(svc.archive("does-not-exist")).rejects.toBeInstanceOf(
+      SessionNotFoundError,
+    );
   });
 });
 
-describe('SessionService.compact', () => {
-  it('calls bridge.rpc.beginCompaction with the main agent and a trimmed instruction', async () => {
-    const created = await svc.create({ metadata: { cwd: '/tmp/compact' } });
-    const result = await svc.compact(created.id, { instruction: '  focus on decisions  ' });
+describe("SessionService.compact", () => {
+  it("calls bridge.rpc.beginCompaction with the main agent and a trimmed instruction", async () => {
+    const created = await svc.create({ metadata: { cwd: "/tmp/compact" } });
+    const result = await svc.compact(created.id, {
+      instruction: "  focus on decisions  ",
+    });
     expect(result).toEqual({});
     expect(state.compactions).toEqual([
-      { sessionId: created.id, agentId: 'main', instruction: 'focus on decisions' },
+      {
+        sessionId: created.id,
+        agentId: "main",
+        instruction: "focus on decisions",
+      },
     ]);
   });
 
-  it('omits instruction when it is blank after trimming', async () => {
-    const created = await svc.create({ metadata: { cwd: '/tmp/compact-blank' } });
-    await svc.compact(created.id, { instruction: '    ' });
+  it("omits instruction when it is blank after trimming", async () => {
+    const created = await svc.create({
+      metadata: { cwd: "/tmp/compact-blank" },
+    });
+    await svc.compact(created.id, { instruction: "    " });
     expect(state.compactions).toEqual([
-      { sessionId: created.id, agentId: 'main', instruction: undefined },
+      { sessionId: created.id, agentId: "main", instruction: undefined },
     ]);
   });
 
-  it('throws SessionNotFoundError on a missing id', async () => {
-    await expect(svc.compact('does-not-exist', {})).rejects.toBeInstanceOf(SessionNotFoundError);
+  it("throws SessionNotFoundError on a missing id", async () => {
+    await expect(svc.compact("does-not-exist", {})).rejects.toBeInstanceOf(
+      SessionNotFoundError,
+    );
     expect(state.compactions).toEqual([]);
   });
 });
 
-describe('SessionService.undo', () => {
-  it('undoes through core and returns refreshed messages plus status', async () => {
-    const created = await svc.create({ metadata: { cwd: '/tmp/undo' } });
+describe("SessionService.undo", () => {
+  it("undoes through core and returns refreshed messages plus status", async () => {
+    const created = await svc.create({ metadata: { cwd: "/tmp/undo" } });
     state.contexts.set(created.id, {
       history: [
-        textMessage('user', 'first prompt'),
-        textMessage('assistant', 'first answer'),
-        textMessage('user', 'second prompt'),
-        textMessage('assistant', 'second answer'),
+        textMessage("user", "first prompt"),
+        textMessage("assistant", "first answer"),
+        textMessage("user", "second prompt"),
+        textMessage("assistant", "second answer"),
       ],
       tokenCount: 40,
     });
     state.postUndoContexts.set(created.id, {
       history: [
-        textMessage('user', 'first prompt'),
-        textMessage('assistant', 'first answer'),
+        textMessage("user", "first prompt"),
+        textMessage("assistant", "first answer"),
       ],
       tokenCount: 20,
     });
@@ -1039,18 +1172,18 @@ describe('SessionService.undo', () => {
 
     expect(state.resumedIds).toEqual([created.id]);
     expect(state.undoPayloads).toEqual([
-      { sessionId: created.id, agentId: 'main', count: 1 },
+      { sessionId: created.id, agentId: "main", count: 1 },
     ]);
     expect(result.messages.has_more).toBe(false);
     expect(result.messages.items.map((message) => message.content[0])).toEqual([
-      { type: 'text', text: 'first answer' },
-      { type: 'text', text: 'first prompt' },
+      { type: "text", text: "first answer" },
+      { type: "text", text: "first prompt" },
     ]);
     expect(result.status).toMatchObject({
       busy: false,
-      model: 'kimi-k2',
-      thinking_level: 'auto',
-      permission: 'manual',
+      model: "kimi-k2",
+      thinking_level: "auto",
+      permission: "manual",
       plan_mode: false,
       context_tokens: 20,
       max_context_tokens: 100,
@@ -1058,13 +1191,15 @@ describe('SessionService.undo', () => {
     });
   });
 
-  it('does not call core undo when the requested count crosses a compaction boundary', async () => {
-    const created = await svc.create({ metadata: { cwd: '/tmp/undo-boundary' } });
+  it("does not call core undo when the requested count crosses a compaction boundary", async () => {
+    const created = await svc.create({
+      metadata: { cwd: "/tmp/undo-boundary" },
+    });
     state.contexts.set(created.id, {
       history: [
-        textMessage('assistant', 'summary', { kind: 'compaction_summary' }),
-        textMessage('user', 'recent prompt'),
-        textMessage('assistant', 'recent answer'),
+        textMessage("assistant", "summary", { kind: "compaction_summary" }),
+        textMessage("user", "recent prompt"),
+        textMessage("assistant", "recent answer"),
       ],
       tokenCount: 20,
     });
@@ -1073,196 +1208,252 @@ describe('SessionService.undo', () => {
       SessionUndoUnavailableError,
     );
     expect(state.undoPayloads).toEqual([]);
-    expect(state.contexts.get(created.id)?.history.map((message) => message.content[0])).toEqual([
-      { type: 'text', text: 'summary' },
-      { type: 'text', text: 'recent prompt' },
-      { type: 'text', text: 'recent answer' },
+    expect(
+      state.contexts
+        .get(created.id)
+        ?.history.map((message) => message.content[0]),
+    ).toEqual([
+      { type: "text", text: "summary" },
+      { type: "text", text: "recent prompt" },
+      { type: "text", text: "recent answer" },
     ]);
   });
 
-  it('throws SessionNotFoundError on a missing id', async () => {
-    await expect(svc.undo('does-not-exist', { count: 1 })).rejects.toBeInstanceOf(
-      SessionNotFoundError,
-    );
+  it("throws SessionNotFoundError on a missing id", async () => {
+    await expect(
+      svc.undo("does-not-exist", { count: 1 }),
+    ).rejects.toBeInstanceOf(SessionNotFoundError);
     expect(state.undoPayloads).toEqual([]);
   });
 });
 
-describe('SessionService per-domain event listeners (Phase C)', () => {
-  it('onDidCreate fires after bridge.rpc.createSession resolves', async () => {
+describe("SessionService per-domain event listeners (Phase C)", () => {
+  it("onDidCreate fires after bridge.rpc.createSession resolves", async () => {
     const events: unknown[] = [];
-    svc.onDidCreate((e) => { events.push(e); });
-    const session = await svc.create({ metadata: { cwd: '/tmp/evt' } });
+    svc.onDidCreate((e) => {
+      events.push(e);
+    });
+    const session = await svc.create({ metadata: { cwd: "/tmp/evt" } });
     expect(events).toHaveLength(1);
-    expect((events[0] as { session: { id: string } }).session.id).toBe(session.id);
+    expect((events[0] as { session: { id: string } }).session.id).toBe(
+      session.id,
+    );
   });
 
-  it('publishes session.created after creating a session', async () => {
-    const session = await svc.create({ metadata: { cwd: '/tmp/evt-bus' } });
+  it("publishes session.created after creating a session", async () => {
+    const session = await svc.create({ metadata: { cwd: "/tmp/evt-bus" } });
     expect(eventBus.events).toContainEqual({
-      type: 'event.session.created',
+      type: "event.session.created",
       sessionId: session.id,
-      agentId: 'main',
+      agentId: "main",
       session,
     });
   });
 
-  it('onDidCreate detach stops future events', async () => {
+  it("onDidCreate detach stops future events", async () => {
     const events: unknown[] = [];
-    const sub = svc.onDidCreate((e) => { events.push(e); });
+    const sub = svc.onDidCreate((e) => {
+      events.push(e);
+    });
     sub.dispose();
-    await svc.create({ metadata: { cwd: '/tmp/evt2' } });
+    await svc.create({ metadata: { cwd: "/tmp/evt2" } });
     expect(events).toHaveLength(0);
   });
 
-  it('onDidClose fires after bridge.rpc.archiveSession resolves', async () => {
+  it("onDidClose fires after bridge.rpc.archiveSession resolves", async () => {
     const closedIds: string[] = [];
-    svc.onDidClose((e) => { closedIds.push(e.sessionId); });
-    const session = await svc.create({ metadata: { cwd: '/tmp/evt3' } });
+    svc.onDidClose((e) => {
+      closedIds.push(e.sessionId);
+    });
+    const session = await svc.create({ metadata: { cwd: "/tmp/evt3" } });
     await svc.archive(session.id);
     expect(closedIds).toEqual([session.id]);
   });
 
-  it('onDidClose detach stops future events', async () => {
+  it("onDidClose detach stops future events", async () => {
     const closedIds: string[] = [];
-    const sub = svc.onDidClose((e) => { closedIds.push(e.sessionId); });
+    const sub = svc.onDidClose((e) => {
+      closedIds.push(e.sessionId);
+    });
     sub.dispose();
-    const session = await svc.create({ metadata: { cwd: '/tmp/evt4' } });
+    const session = await svc.create({ metadata: { cwd: "/tmp/evt4" } });
     await svc.archive(session.id);
     expect(closedIds).toHaveLength(0);
   });
 });
 
-describe('SessionService busy lifecycle', () => {
-  it('getStatus reports no live work for a fresh session', async () => {
-    const session = await svc.create({ metadata: { cwd: '/tmp/status' } });
+describe("SessionService busy lifecycle", () => {
+  it("getStatus reports no live work for a fresh session", async () => {
+    const session = await svc.create({ metadata: { cwd: "/tmp/status" } });
     const status = await svc.getStatus(session.id);
     expect(status.busy).toBe(false);
   });
 
-  it('patches created session to not busy', async () => {
-    const session = await svc.create({ metadata: { cwd: '/tmp/status2' } });
+  it("patches created session to not busy", async () => {
+    const session = await svc.create({ metadata: { cwd: "/tmp/status2" } });
     expect(session).toMatchObject({
       busy: false,
       main_turn_active: false,
-      pending_interaction: 'none',
+      pending_interaction: "none",
     });
   });
 
-  it('turn.started marks the session busy and emits work_changed', async () => {
-    const session = await svc.create({ metadata: { cwd: '/tmp/running' } });
+  it("turn.started marks the session busy and emits work_changed", async () => {
+    const session = await svc.create({ metadata: { cwd: "/tmp/running" } });
     eventBus.eventService.publish({
-      type: 'turn.started',
+      type: "turn.started",
       sessionId: session.id,
     } as unknown as Event);
     expect(await svc.get(session.id)).toMatchObject({
       busy: true,
       main_turn_active: true,
     });
-    expect(eventBus.events).toContainEqual(expect.objectContaining({
-      type: 'event.session.work_changed',
-      sessionId: session.id,
-      busy: true,
-      main_turn_active: true,
-    }));
+    expect(eventBus.events).toContainEqual(
+      expect.objectContaining({
+        type: "event.session.work_changed",
+        sessionId: session.id,
+        busy: true,
+        main_turn_active: true,
+      }),
+    );
   });
 
-  it('turn.ended marks the session not busy, whatever the reason', async () => {
-    for (const reason of ['completed', 'failed', 'blocked']) {
-      const session = await svc.create({ metadata: { cwd: `/tmp/ended-${reason}` } });
-      eventBus.eventService.publish({ type: 'turn.started', sessionId: session.id } as unknown as Event);
-      eventBus.eventService.publish({ type: 'turn.ended', sessionId: session.id, reason } as unknown as Event);
+  it("turn.ended marks the session not busy, whatever the reason", async () => {
+    for (const reason of ["completed", "failed", "blocked"]) {
+      const session = await svc.create({
+        metadata: { cwd: `/tmp/ended-${reason}` },
+      });
+      eventBus.eventService.publish({
+        type: "turn.started",
+        sessionId: session.id,
+      } as unknown as Event);
+      eventBus.eventService.publish({
+        type: "turn.ended",
+        sessionId: session.id,
+        reason,
+      } as unknown as Event);
       expect((await svc.get(session.id)).busy).toBe(false);
     }
   });
 
-  it('projects a blocked turn as failed across session wire surfaces', async () => {
-    const session = await svc.create({ metadata: { cwd: '/tmp/blocked' } });
-    eventBus.eventService.publish({ type: 'turn.started', sessionId: session.id } as unknown as Event);
+  it("projects a blocked turn as failed across session wire surfaces", async () => {
+    const session = await svc.create({ metadata: { cwd: "/tmp/blocked" } });
     eventBus.eventService.publish({
-      type: 'turn.ended',
+      type: "turn.started",
       sessionId: session.id,
-      reason: 'blocked',
+    } as unknown as Event);
+    eventBus.eventService.publish({
+      type: "turn.ended",
+      sessionId: session.id,
+      reason: "blocked",
     } as unknown as Event);
 
-    expect((await svc.get(session.id)).last_turn_reason).toBe('failed');
-    expect(eventBus.events).toContainEqual(expect.objectContaining({
-      type: 'event.session.work_changed',
-      sessionId: session.id,
-      busy: false,
-      last_turn_reason: 'failed',
-    }));
+    expect((await svc.get(session.id)).last_turn_reason).toBe("failed");
+    expect(eventBus.events).toContainEqual(
+      expect.objectContaining({
+        type: "event.session.work_changed",
+        sessionId: session.id,
+        busy: false,
+        last_turn_reason: "failed",
+      }),
+    );
   });
 
-  it('clears the last turn reason when a new turn starts', async () => {
-    const session = await svc.create({ metadata: { cwd: '/tmp/fresh-turn' } });
-    eventBus.eventService.publish({ type: 'turn.started', sessionId: session.id } as unknown as Event);
-    eventBus.eventService.publish({ type: 'turn.ended', sessionId: session.id, reason: 'cancelled' } as unknown as Event);
-    expect((await svc.get(session.id)).last_turn_reason).toBe('cancelled');
+  it("clears the last turn reason when a new turn starts", async () => {
+    const session = await svc.create({ metadata: { cwd: "/tmp/fresh-turn" } });
+    eventBus.eventService.publish({
+      type: "turn.started",
+      sessionId: session.id,
+    } as unknown as Event);
+    eventBus.eventService.publish({
+      type: "turn.ended",
+      sessionId: session.id,
+      reason: "cancelled",
+    } as unknown as Event);
+    expect((await svc.get(session.id)).last_turn_reason).toBe("cancelled");
 
-    eventBus.eventService.publish({ type: 'turn.started', sessionId: session.id } as unknown as Event);
+    eventBus.eventService.publish({
+      type: "turn.started",
+      sessionId: session.id,
+    } as unknown as Event);
     expect((await svc.get(session.id)).last_turn_reason).toBeUndefined();
-    expect(eventBus.events).toContainEqual(expect.objectContaining({
-      type: 'event.session.work_changed',
-      sessionId: session.id,
-      busy: true,
-      last_turn_reason: undefined,
-    }));
+    expect(eventBus.events).toContainEqual(
+      expect.objectContaining({
+        type: "event.session.work_changed",
+        sessionId: session.id,
+        busy: true,
+        last_turn_reason: undefined,
+      }),
+    );
   });
 
-  it('prompt.submitted marks the session busy when a current prompt exists', async () => {
-    const session = await svc.create({ metadata: { cwd: '/tmp/prompt' } });
-    promptStub.activePromptIds.set(session.id, 'p1');
-    eventBus.eventService.publish({ type: 'prompt.submitted', sessionId: session.id } as unknown as Event);
-    expect((await svc.get(session.id)).busy).toBe(true);
-  });
-
-  it('a pending approval keeps the session busy', async () => {
-    const session = await svc.create({ metadata: { cwd: '/tmp/approval' } });
-    approvalStub.pending.set(session.id, [{ id: 'a1' }]);
-    eventBus.eventService.publish({ type: 'event.approval.requested', sessionId: session.id } as unknown as Event);
-    expect((await svc.get(session.id)).busy).toBe(true);
-  });
-
-  it('a pending question keeps the session busy', async () => {
-    const session = await svc.create({ metadata: { cwd: '/tmp/question' } });
-    questionStub.pending.set(session.id, [{ id: 'q1' }]);
-    eventBus.eventService.publish({ type: 'event.question.requested', sessionId: session.id } as unknown as Event);
-    expect((await svc.get(session.id)).busy).toBe(true);
-  });
-
-  it('publishes the pending interaction when busy remains true', async () => {
-    const session = await svc.create({ metadata: { cwd: '/tmp/approval-count' } });
+  it("prompt.submitted marks the session busy when a current prompt exists", async () => {
+    const session = await svc.create({ metadata: { cwd: "/tmp/prompt" } });
+    promptStub.activePromptIds.set(session.id, "p1");
     eventBus.eventService.publish({
-      type: 'turn.started',
+      type: "prompt.submitted",
       sessionId: session.id,
     } as unknown as Event);
-    approvalStub.pending.set(session.id, [{ id: 'a1' }]);
+    expect((await svc.get(session.id)).busy).toBe(true);
+  });
+
+  it("a pending approval keeps the session busy", async () => {
+    const session = await svc.create({ metadata: { cwd: "/tmp/approval" } });
+    approvalStub.pending.set(session.id, [{ id: "a1" }]);
+    eventBus.eventService.publish({
+      type: "event.approval.requested",
+      sessionId: session.id,
+    } as unknown as Event);
+    expect((await svc.get(session.id)).busy).toBe(true);
+  });
+
+  it("a pending question keeps the session busy", async () => {
+    const session = await svc.create({ metadata: { cwd: "/tmp/question" } });
+    questionStub.pending.set(session.id, [{ id: "q1" }]);
+    eventBus.eventService.publish({
+      type: "event.question.requested",
+      sessionId: session.id,
+    } as unknown as Event);
+    expect((await svc.get(session.id)).busy).toBe(true);
+  });
+
+  it("publishes the pending interaction when busy remains true", async () => {
+    const session = await svc.create({
+      metadata: { cwd: "/tmp/approval-count" },
+    });
+    eventBus.eventService.publish({
+      type: "turn.started",
+      sessionId: session.id,
+    } as unknown as Event);
+    approvalStub.pending.set(session.id, [{ id: "a1" }]);
 
     eventBus.eventService.publish({
-      type: 'event.approval.requested',
+      type: "event.approval.requested",
       sessionId: session.id,
     } as unknown as Event);
 
     expect(await svc.get(session.id)).toMatchObject({
       busy: true,
       main_turn_active: true,
-      pending_interaction: 'approval',
+      pending_interaction: "approval",
     });
     expect(eventBus.events.at(-1)).toMatchObject({
-      type: 'event.session.work_changed',
+      type: "event.session.work_changed",
       busy: true,
       main_turn_active: true,
-      pending_interaction: 'approval',
+      pending_interaction: "approval",
     });
   });
 
-  it('does not emit work_changed when all work facts are unchanged', async () => {
-    const session = await svc.create({ metadata: { cwd: '/tmp/nochange' } });
+  it("does not emit work_changed when all work facts are unchanged", async () => {
+    const session = await svc.create({ metadata: { cwd: "/tmp/nochange" } });
     const workChangedCount = (e: unknown) =>
-      (e as { type?: string }).type === 'event.session.work_changed';
+      (e as { type?: string }).type === "event.session.work_changed";
     const before = eventBus.events.filter(workChangedCount).length;
-    eventBus.eventService.publish({ type: 'prompt.completed', sessionId: session.id } as unknown as Event);
+    eventBus.eventService.publish({
+      type: "prompt.completed",
+      sessionId: session.id,
+    } as unknown as Event);
     expect(eventBus.events.filter(workChangedCount).length).toBe(before);
   });
 });

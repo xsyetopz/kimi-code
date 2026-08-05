@@ -3,15 +3,15 @@
 // Handles: server_hello / client_hello handshake, subscribe/unsubscribe,
 // ping/pong heartbeat, resync_required, error frames, event.* dispatch.
 
-import { traceWsIn, traceWsLifecycle, traceWsOut } from '../../debug/trace';
-import { classifyFrame } from './agentEventProjector';
-import { getCredential } from './serverAuth';
-import type { WireEvent, WireServerFrame } from './wire';
+import { traceWsIn, traceWsLifecycle, traceWsOut } from "../../debug/trace";
+import { classifyFrame } from "./agentEventProjector";
+import { getCredential } from "./serverAuth";
+import type { WireEvent, WireServerFrame } from "./wire";
 
 // Mirrors kap-server's WS_BEARER_PROTOCOL_PREFIX. The browser WebSocket API
 // cannot set arbitrary headers, so the bearer credential rides in the
 // Sec-WebSocket-Protocol subprotocol instead.
-const WS_BEARER_PROTOCOL_PREFIX = 'kimi-code.bearer.';
+const WS_BEARER_PROTOCOL_PREFIX = "kimi-code.bearer.";
 
 // A socket with no incoming frames for this long is presumed half-open even if
 // the browser still reports OPEN (no onclose fired). Derived as 2x the server
@@ -46,8 +46,17 @@ export interface DaemonEventSocketHandlers {
   onConnectionState(connected: boolean): void;
   /** Called on error frames or JSON parse failures */
   onError(code: number, msg: string, fatal: boolean): void;
-  onTerminalOutput?(sessionId: string, terminalId: string, data: string, seq: number): void;
-  onTerminalExit?(sessionId: string, terminalId: string, exitCode: number | null): void;
+  onTerminalOutput?(
+    sessionId: string,
+    terminalId: string,
+    data: string,
+    seq: number,
+  ): void;
+  onTerminalExit?(
+    sessionId: string,
+    terminalId: string,
+    exitCode: number | null,
+  ): void;
 }
 
 // ---------------------------------------------------------------------------
@@ -108,16 +117,21 @@ export class DaemonEventSocket {
     if (this.ws !== null || this.closed) return;
 
     this.lastActivityAt = Date.now();
-    traceWsLifecycle('connect', { url: this.wsUrl, attempt: this.reconnectAttempts });
+    traceWsLifecycle("connect", {
+      url: this.wsUrl,
+      attempt: this.reconnectAttempts,
+    });
     const credential = getCredential();
     const protocols =
-      credential !== undefined ? [`${WS_BEARER_PROTOCOL_PREFIX}${credential}`] : undefined;
+      credential !== undefined
+        ? [`${WS_BEARER_PROTOCOL_PREFIX}${credential}`]
+        : undefined;
     const ws = new WebSocket(this.wsUrl, protocols);
     this.ws = ws;
 
     ws.onopen = () => {
       // Don't mark as connected yet — wait for server_hello
-      traceWsLifecycle('open');
+      traceWsLifecycle("open");
     };
 
     ws.onmessage = (ev: MessageEvent) => {
@@ -128,20 +142,29 @@ export class DaemonEventSocket {
         traceWsIn(frame);
         this.handleFrame(frame);
       } catch (error) {
-        traceWsLifecycle('parse-error', { error: String(error) });
-        this.handlers.onError(0, `Failed to parse WS frame: ${String(error)}`, false);
+        traceWsLifecycle("parse-error", { error: String(error) });
+        this.handlers.onError(
+          0,
+          `Failed to parse WS frame: ${String(error)}`,
+          false,
+        );
       }
     };
 
     ws.onerror = () => {
       // The error details are not exposed by the browser WS API; the close
       // event with a reason code follows immediately.
-      traceWsLifecycle('error');
-      this.handlers.onError(0, 'WebSocket error', false);
+      traceWsLifecycle("error");
+      this.handlers.onError(0, "WebSocket error", false);
     };
 
     ws.onclose = (ev?: CloseEvent) => {
-      traceWsLifecycle('close', ev ? { code: ev.code, reason: ev.reason, wasClean: ev.wasClean } : undefined);
+      traceWsLifecycle(
+        "close",
+        ev
+          ? { code: ev.code, reason: ev.reason, wasClean: ev.wasClean }
+          : undefined,
+      );
       this.connected = false;
       this.ws = null;
       this.handlers.onConnectionState(false);
@@ -158,7 +181,10 @@ export class DaemonEventSocket {
     const base = Math.min(30_000, 1000 * 2 ** this.reconnectAttempts);
     const delay = base + Math.floor(Math.random() * 250); // jitter
     this.reconnectAttempts += 1;
-    traceWsLifecycle('reconnect-scheduled', { delayMs: delay, attempt: this.reconnectAttempts });
+    traceWsLifecycle("reconnect-scheduled", {
+      delayMs: delay,
+      attempt: this.reconnectAttempts,
+    });
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null;
       this.connect();
@@ -176,7 +202,9 @@ export class DaemonEventSocket {
       this.sendSubscribe([sessionId], { [sessionId]: cursor });
     } else {
       // Remove any earlier pending entry for this session, then enqueue
-      const idx = this.pendingSubscriptions.findIndex((p) => p.sessionId === sessionId);
+      const idx = this.pendingSubscriptions.findIndex(
+        (p) => p.sessionId === sessionId,
+      );
       if (idx !== -1) this.pendingSubscriptions.splice(idx, 1);
       this.pendingSubscriptions.push({ sessionId, cursor: { ...cursor } });
     }
@@ -187,11 +215,13 @@ export class DaemonEventSocket {
     this.subscriptions.delete(sessionId);
     // Also cancel a subscribe that was queued before server_hello; otherwise
     // onServerHello would merge it back into the active subscription set.
-    const pendingIdx = this.pendingSubscriptions.findIndex((p) => p.sessionId === sessionId);
+    const pendingIdx = this.pendingSubscriptions.findIndex(
+      (p) => p.sessionId === sessionId,
+    );
     if (pendingIdx !== -1) this.pendingSubscriptions.splice(pendingIdx, 1);
     if (this.connected && this.ws) {
       this.send({
-        type: 'unsubscribe',
+        type: "unsubscribe",
         id: this.nextId(),
         payload: { session_ids: [sessionId] },
       });
@@ -205,13 +235,17 @@ export class DaemonEventSocket {
   abort(sessionId: string, promptId: string): void {
     if (!this.connected || !this.ws) return;
     this.send({
-      type: 'abort',
+      type: "abort",
       id: this.nextId(),
       payload: { session_id: sessionId, prompt_id: promptId },
     });
   }
 
-  terminalAttach(sessionId: string, terminalId: string, sinceSeq?: number): void {
+  terminalAttach(
+    sessionId: string,
+    terminalId: string,
+    sinceSeq?: number,
+  ): void {
     const key = terminalKey(sessionId, terminalId);
     const previous = this.terminalAttachments.get(key);
     const lastSeq = sinceSeq ?? previous?.lastSeq ?? 0;
@@ -223,16 +257,21 @@ export class DaemonEventSocket {
   terminalInput(sessionId: string, terminalId: string, data: string): void {
     if (!this.connected || !this.ws) return;
     this.send({
-      type: 'terminal_input',
+      type: "terminal_input",
       id: this.nextId(),
       payload: { session_id: sessionId, terminal_id: terminalId, data },
     });
   }
 
-  terminalResize(sessionId: string, terminalId: string, cols: number, rows: number): void {
+  terminalResize(
+    sessionId: string,
+    terminalId: string,
+    cols: number,
+    rows: number,
+  ): void {
     if (!this.connected || !this.ws) return;
     this.send({
-      type: 'terminal_resize',
+      type: "terminal_resize",
       id: this.nextId(),
       payload: { session_id: sessionId, terminal_id: terminalId, cols, rows },
     });
@@ -242,7 +281,7 @@ export class DaemonEventSocket {
     this.terminalAttachments.delete(terminalKey(sessionId, terminalId));
     if (!this.connected || !this.ws) return;
     this.send({
-      type: 'terminal_detach',
+      type: "terminal_detach",
       id: this.nextId(),
       payload: { session_id: sessionId, terminal_id: terminalId },
     });
@@ -252,7 +291,7 @@ export class DaemonEventSocket {
     this.terminalAttachments.delete(terminalKey(sessionId, terminalId));
     if (!this.connected || !this.ws) return;
     this.send({
-      type: 'terminal_close',
+      type: "terminal_close",
       id: this.nextId(),
       payload: { session_id: sessionId, terminal_id: terminalId },
     });
@@ -282,7 +321,8 @@ export class DaemonEventSocket {
   health(): { connected: boolean; open: boolean; stale: boolean } {
     const open = this.ws !== null && this.ws.readyState === WebSocket.OPEN;
     const threshold = Math.max(this.heartbeatMs * 2, STALE_SOCKET_FLOOR_MS);
-    const stale = this.lastActivityAt > 0 && Date.now() - this.lastActivityAt > threshold;
+    const stale =
+      this.lastActivityAt > 0 && Date.now() - this.lastActivityAt > threshold;
     return { connected: this.connected, open, stale };
   }
 
@@ -313,7 +353,7 @@ export class DaemonEventSocket {
       old.onerror = null;
       old.onclose = null;
       try {
-        old.close(1000, 'reconnect');
+        old.close(1000, "reconnect");
       } catch {
         // Ignore — the socket may already be closing.
       }
@@ -337,18 +377,19 @@ export class DaemonEventSocket {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const frame = rawFrame as any;
     switch ((rawFrame as { type: string }).type) {
-      case 'server_hello': {
-        const hb = (frame.payload as { heartbeat_ms?: unknown } | undefined)?.heartbeat_ms;
-        if (typeof hb === 'number' && hb > 0) this.heartbeatMs = hb;
+      case "server_hello": {
+        const hb = (frame.payload as { heartbeat_ms?: unknown } | undefined)
+          ?.heartbeat_ms;
+        if (typeof hb === "number" && hb > 0) this.heartbeatMs = hb;
         this.onServerHello();
         break;
       }
 
-      case 'ping':
-        this.send({ type: 'pong', payload: { nonce: frame.payload.nonce } });
+      case "ping":
+        this.send({ type: "pong", payload: { nonce: frame.payload.nonce } });
         break;
 
-      case 'resync_required': {
+      case "resync_required": {
         const sid = frame.payload.session_id as string;
         const epoch = frame.payload.epoch as string | undefined;
         // Adopt the announced cursor so the next reconnect handshake doesn't
@@ -358,31 +399,35 @@ export class DaemonEventSocket {
         break;
       }
 
-      case 'error': {
+      case "error": {
         // A session-scoped error (has top-level session_id) is a real agent-core
         // 'error' event — e.g. a 403 from the model provider — whose message
         // must surface in the conversation. A connection-level control error
         // (no session_id) goes to onError.
         const sid = (frame as { session_id?: unknown }).session_id;
-        if (typeof sid === 'string' && this.handlers.onRawAgentEvent) {
+        if (typeof sid === "string" && this.handlers.onRawAgentEvent) {
           this.handlers.onRawAgentEvent({
-            type: 'error',
+            type: "error",
             seq: frame.seq,
             session_id: sid,
             timestamp: frame.timestamp,
             payload: frame.payload,
           });
         } else {
-          this.handlers.onError(frame.payload.code, frame.payload.msg, frame.payload.fatal);
+          this.handlers.onError(
+            frame.payload.code,
+            frame.payload.msg,
+            frame.payload.fatal,
+          );
         }
         break;
       }
 
-      case 'ack':
+      case "ack":
         // ack frames are fire-and-forget for now (no request tracking)
         break;
 
-      case 'terminal_output': {
+      case "terminal_output": {
         const sessionId = frame.session_id as string;
         const terminalId = frame.terminal_id as string;
         const seq = frame.seq as number;
@@ -394,16 +439,17 @@ export class DaemonEventSocket {
             lastSeq: Math.max(existing.lastSeq, seq),
           });
         }
-        const data = typeof frame.payload?.data === 'string' ? frame.payload.data : '';
+        const data =
+          typeof frame.payload?.data === "string" ? frame.payload.data : "";
         this.handlers.onTerminalOutput?.(sessionId, terminalId, data, seq);
         break;
       }
 
-      case 'terminal_exit': {
+      case "terminal_exit": {
         const sessionId = frame.session_id as string;
         const terminalId = frame.terminal_id as string;
         const rawExitCode = frame.payload?.exit_code;
-        const exitCode = typeof rawExitCode === 'number' ? rawExitCode : null;
+        const exitCode = typeof rawExitCode === "number" ? rawExitCode : null;
         this.handlers.onTerminalExit?.(sessionId, terminalId, exitCode);
         break;
       }
@@ -419,21 +465,24 @@ export class DaemonEventSocket {
         // shapes: raw agent-core, "event."-prefixed agent-core, and genuine
         // projected "event.*" protocol events. See classifyFrame() for rules.
         const type = (frame as { type: string }).type;
-        const decision = classifyFrame(type, (frame as { payload?: unknown }).payload);
+        const decision = classifyFrame(
+          type,
+          (frame as { payload?: unknown }).payload,
+        );
 
-        if (decision.route === 'protocol') {
+        if (decision.route === "protocol") {
           // Genuine projected protocol event → existing toAppEvent() path.
           this.handlers.onWireEvent(frame as unknown as WireEvent);
           break;
         }
 
-        if (decision.route === 'agent') {
+        if (decision.route === "agent") {
           // Raw (or prefix-stripped) agent-core event → client-side projector.
           // We pass the prefix-stripped agentType so the projector matches its
           // raw case arms regardless of whether the wire frame carried "event.".
           if (
             this.handlers.onRawAgentEvent &&
-            typeof (frame as { session_id?: unknown }).session_id === 'string'
+            typeof (frame as { session_id?: unknown }).session_id === "string"
           ) {
             const f = frame as {
               seq: number;
@@ -448,7 +497,9 @@ export class DaemonEventSocket {
               session_id: f.session_id,
               timestamp: f.timestamp,
               payload: f.payload,
-              ...(extras.volatile !== undefined ? { volatile: extras.volatile } : {}),
+              ...(extras.volatile !== undefined
+                ? { volatile: extras.volatile }
+                : {}),
               ...(extras.offset !== undefined ? { offset: extras.offset } : {}),
             });
           }
@@ -482,7 +533,7 @@ export class DaemonEventSocket {
     }
 
     this.send({
-      type: 'client_hello',
+      type: "client_hello",
       id: this.nextId(),
       payload: {
         client_id: this.clientId,
@@ -492,13 +543,20 @@ export class DaemonEventSocket {
     });
 
     for (const attachment of this.terminalAttachments.values()) {
-      this.sendTerminalAttach(attachment.sessionId, attachment.terminalId, attachment.lastSeq);
+      this.sendTerminalAttach(
+        attachment.sessionId,
+        attachment.terminalId,
+        attachment.lastSeq,
+      );
     }
   }
 
-  private sendSubscribe(sessionIds: string[], cursors: Record<string, SessionCursor>): void {
+  private sendSubscribe(
+    sessionIds: string[],
+    cursors: Record<string, SessionCursor>,
+  ): void {
     this.send({
-      type: 'subscribe',
+      type: "subscribe",
       id: this.nextId(),
       payload: {
         session_ids: sessionIds,
@@ -507,9 +565,13 @@ export class DaemonEventSocket {
     });
   }
 
-  private sendTerminalAttach(sessionId: string, terminalId: string, sinceSeq: number): void {
+  private sendTerminalAttach(
+    sessionId: string,
+    terminalId: string,
+    sinceSeq: number,
+  ): void {
     this.send({
-      type: 'terminal_attach',
+      type: "terminal_attach",
       id: this.nextId(),
       payload: {
         session_id: sessionId,
@@ -525,14 +587,17 @@ export class DaemonEventSocket {
    * volatile frame can never carry a NEWER seq than the last durable one).
    */
   private trackCursor(frame: Record<string, unknown>): void {
-    if (frame['volatile'] === true) return;
-    const sid = frame['session_id'];
-    const seq = frame['seq'];
-    if (typeof sid !== 'string' || typeof seq !== 'number') return;
+    if (frame["volatile"] === true) return;
+    const sid = frame["session_id"];
+    const seq = frame["seq"];
+    if (typeof sid !== "string" || typeof seq !== "number") return;
     const existing = this.subscriptions.get(sid);
     if (!existing) return; // not a session we manage
     if (seq <= existing.seq && existing.epoch !== undefined) return;
-    const epoch = typeof frame['epoch'] === 'string' ? (frame['epoch'] as string) : existing.epoch;
+    const epoch =
+      typeof frame["epoch"] === "string"
+        ? (frame["epoch"] as string)
+        : existing.epoch;
     this.subscriptions.set(sid, { seq: Math.max(seq, existing.seq), epoch });
   }
 

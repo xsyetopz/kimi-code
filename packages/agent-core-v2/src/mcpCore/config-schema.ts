@@ -12,12 +12,16 @@
  * than as the server's credentials.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
 const StringRecordSchema = z.record(z.string(), z.string());
 
 export const MAX_MCP_TIMEOUT_MS = 2_147_483_647;
-export const McpTimeoutMsSchema = z.number().int().min(1).max(MAX_MCP_TIMEOUT_MS);
+export const McpTimeoutMsSchema = z
+  .number()
+  .int()
+  .min(1)
+  .max(MAX_MCP_TIMEOUT_MS);
 
 const McpServerCommonFields = {
   enabled: z.boolean().optional(),
@@ -28,22 +32,22 @@ const McpServerCommonFields = {
 } as const;
 
 export const McpServerStdioConfigSchema = z.object({
-  transport: z.literal('stdio'),
+  transport: z.literal("stdio"),
   command: z.string().min(1),
   args: z.array(z.string()).optional(),
   env: StringRecordSchema.optional(),
   cwd: z.string().optional(),
-  executor: z.enum(['local', 'kaos']).optional(),
+  executor: z.enum(["local", "kaos"]).optional(),
   ...McpServerCommonFields,
 });
 
 export type McpServerStdioConfig = z.infer<typeof McpServerStdioConfigSchema>;
 
 export const McpServerHttpConfigSchema = z.object({
-  transport: z.literal('http'),
+  transport: z.literal("http"),
   url: z.string().url(),
   headers: StringRecordSchema.optional(),
-  auth: z.literal('oauth').optional(),
+  auth: z.literal("oauth").optional(),
   bearerTokenEnvVar: z.string().min(1).optional(),
   ...McpServerCommonFields,
 });
@@ -51,10 +55,10 @@ export const McpServerHttpConfigSchema = z.object({
 export type McpServerHttpConfig = z.infer<typeof McpServerHttpConfigSchema>;
 
 export const McpServerSseConfigSchema = z.object({
-  transport: z.literal('sse'),
+  transport: z.literal("sse"),
   url: z.string().url(),
   headers: StringRecordSchema.optional(),
-  auth: z.literal('oauth').optional(),
+  auth: z.literal("oauth").optional(),
   bearerTokenEnvVar: z.string().min(1).optional(),
   ...McpServerCommonFields,
 });
@@ -62,18 +66,18 @@ export const McpServerSseConfigSchema = z.object({
 export type McpServerSseConfig = z.infer<typeof McpServerSseConfigSchema>;
 export type McpRemoteServerConfig = McpServerHttpConfig | McpServerSseConfig;
 
-const McpServerConfigDiscriminatedSchema = z.discriminatedUnion('transport', [
+const McpServerConfigDiscriminatedSchema = z.discriminatedUnion("transport", [
   McpServerStdioConfigSchema,
   McpServerHttpConfigSchema,
   McpServerSseConfigSchema,
 ]);
 
 export const McpServerConfigSchema = z.preprocess((raw) => {
-  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return raw;
+  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) return raw;
   const obj = raw as Record<string, unknown>;
-  if ('transport' in obj) return obj;
-  if (typeof obj['command'] === 'string') return { ...obj, transport: 'stdio' };
-  if (typeof obj['url'] === 'string') return { ...obj, transport: 'http' };
+  if ("transport" in obj) return obj;
+  if (typeof obj["command"] === "string") return { ...obj, transport: "stdio" };
+  if (typeof obj["url"] === "string") return { ...obj, transport: "http" };
   return obj;
 }, McpServerConfigDiscriminatedSchema);
 

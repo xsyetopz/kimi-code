@@ -24,38 +24,44 @@
  *     same path a pasted video took before inline prompt delivery existed.
  */
 
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath } from "node:url";
 
-import type { ContentPart } from '@moonshot-ai/kosong';
+import type { ContentPart } from "@moonshot-ai/kosong";
 
-import type { Agent } from '..';
-import { MEDIA_SNIFF_BYTES, detectFileType } from '../../tools/support/file-type';
+import type { Agent } from "..";
+import {
+  MEDIA_SNIFF_BYTES,
+  detectFileType,
+} from "../../tools/support/file-type";
 import {
   deliverVideoContent,
   inlineVideoSupported,
   isAuthUploadError,
-} from '../../tools/support/video-delivery';
-import { MAX_MEDIA_BYTES } from '../../tools/builtin/file/read-media';
-import { abortReason } from '../../utils/abort';
+} from "../../tools/support/video-delivery";
+import { MAX_MEDIA_BYTES } from "../../tools/builtin/file/read-media";
+import { abortReason } from "../../utils/abort";
 
 /** The local filesystem path behind a prompt-attached `file://` video part. */
 function localVideoUrl(part: ContentPart): string | undefined {
-  return part.type === 'video_url' && part.videoUrl.url.startsWith('file:')
+  return part.type === "video_url" && part.videoUrl.url.startsWith("file:")
     ? part.videoUrl.url
     : undefined;
 }
 
 function escapeAttribute(value: string): string {
   return value
-    .replaceAll('&', '&amp;')
-    .replaceAll('"', '&quot;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;');
+    .replaceAll("&", "&amp;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
 }
 
 /** A `<video path="…">` tag part the model can open with ReadMediaFile. */
 function videoTag(path: string): ContentPart {
-  return { type: 'text', text: `<video path="${escapeAttribute(path)}"></video>` };
+  return {
+    type: "text",
+    text: `<video path="${escapeAttribute(path)}"></video>`,
+  };
 }
 
 /**
@@ -102,8 +108,8 @@ async function resolveOneVideo(
     if (path.trim().length === 0) return videoTag(path);
     if (!agent.config.modelCapabilities.video_in) return videoTag(path);
     const header = await agent.kaos.readBytes(path, MEDIA_SNIFF_BYTES);
-    const fileType = detectFileType(path, header, 'media');
-    if (fileType.kind !== 'video') return videoTag(path);
+    const fileType = detectFileType(path, header, "media");
+    if (fileType.kind !== "video") return videoTag(path);
     const stat = await agent.kaos.stat(path);
     if (stat.stSize === 0) return videoTag(path);
     if (stat.stSize > MAX_MEDIA_BYTES) return videoTag(path);
@@ -122,7 +128,11 @@ async function resolveOneVideo(
       return videoTag(path);
     }
     return await deliverVideoContent(
-      { data, mimeType: fileType.mimeType, filename: path.split(/[\\/]/).at(-1) },
+      {
+        data,
+        mimeType: fileType.mimeType,
+        filename: path.split(/[\\/]/).at(-1),
+      },
       uploader,
       signal,
     );

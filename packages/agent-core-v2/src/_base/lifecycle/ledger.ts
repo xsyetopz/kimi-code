@@ -10,7 +10,7 @@
  * The Ledger knows nothing about DI; scopes and containers build on top of it.
  */
 
-import { onUnexpectedError } from '../errors/unexpectedError';
+import { onUnexpectedError } from "../errors/unexpectedError";
 import {
   isAsyncIterable,
   isPromiseLike,
@@ -18,14 +18,14 @@ import {
   type Disposer,
   type EffectBody,
   type TeardownReason,
-} from './disposer';
-import { LedgerDisposedError } from './errors';
+} from "./disposer";
+import { LedgerDisposedError } from "./errors";
 
-export type LedgerState = 'active' | 'disposing' | 'disposed';
+export type LedgerState = "active" | "disposing" | "disposed";
 
 export interface LedgerEntryInfo {
   readonly label: string;
-  readonly kind: 'disposer' | 'effect' | 'ledger';
+  readonly kind: "disposer" | "effect" | "ledger";
   readonly stack?: string;
   readonly children?: readonly LedgerEntryInfo[];
 }
@@ -43,7 +43,7 @@ export interface LedgerEntry {
 
 interface EntryRecord {
   label: string;
-  kind: 'disposer' | 'effect' | 'ledger';
+  kind: "disposer" | "effect" | "ledger";
   stack?: string;
   active: boolean;
   run: Disposer;
@@ -55,50 +55,53 @@ export class Ledger {
   /** Dev-mode toggle: capture the registration stack on every entry. */
   static captureStacks = false;
 
-  private _state: LedgerState = 'active';
+  private _state: LedgerState = "active";
   private readonly _records: EntryRecord[] = [];
   private _teardownPromise: Promise<void> | undefined;
   private _parentEntry: LedgerEntry | undefined;
 
-  constructor(readonly label: string = 'ledger') {}
+  constructor(readonly label: string = "ledger") {}
 
   get state(): LedgerState {
     return this._state;
   }
 
   get isActive(): boolean {
-    return this._state === 'active';
+    return this._state === "active";
   }
 
   get isDisposed(): boolean {
-    return this._state === 'disposed';
+    return this._state === "disposed";
   }
 
   /** Number of live entries. */
   get size(): number {
-    return this._records.reduce((count, record) => count + (record.active ? 1 : 0), 0);
+    return this._records.reduce(
+      (count, record) => count + (record.active ? 1 : 0),
+      0,
+    );
   }
 
-  register(disposer: Disposer, label: string = 'disposer'): LedgerEntry {
-    this._assertActive('register');
-    return this._push({ label, kind: 'disposer', active: true, run: disposer });
+  register(disposer: Disposer, label: string = "disposer"): LedgerEntry {
+    this._assertActive("register");
+    return this._push({ label, kind: "disposer", active: true, run: disposer });
   }
 
-  effect(body: EffectBody, label: string = 'effect'): LedgerEntry {
-    this._assertActive('effect');
+  effect(body: EffectBody, label: string = "effect"): LedgerEntry {
+    this._assertActive("effect");
     const out = body();
-    if (typeof out === 'function') {
-      return this._push({ label, kind: 'effect', active: true, run: out });
+    if (typeof out === "function") {
+      return this._push({ label, kind: "effect", active: true, run: out });
     }
     if (isPromiseLike(out)) {
       const promise = Promise.resolve(out);
       return this._push({
         label,
-        kind: 'effect',
+        kind: "effect",
         active: true,
         run: async (reason) => {
           const disposer = await promise;
-          if (typeof disposer === 'function') await disposer(reason);
+          if (typeof disposer === "function") await disposer(reason);
         },
       });
     }
@@ -106,7 +109,7 @@ export class Ledger {
       const promise = driveAsyncEffect(out);
       return this._push({
         label,
-        kind: 'effect',
+        kind: "effect",
         active: true,
         run: async (reason) => {
           const disposer = await promise;
@@ -118,18 +121,18 @@ export class Ledger {
       // Drives the iterator immediately; a mid-iteration throw rolls back the
       // already-yielded disposers before rethrowing (construction failure).
       const run = driveSyncEffect(out);
-      return this._push({ label, kind: 'effect', active: true, run });
+      return this._push({ label, kind: "effect", active: true, run });
     }
-    return this._push({ label, kind: 'effect', active: true, run: () => {} });
+    return this._push({ label, kind: "effect", active: true, run: () => {} });
   }
 
   /** A child ledger is itself one entry of this ledger. */
-  createChild(label: string = 'ledger'): Ledger {
-    this._assertActive('createChild');
+  createChild(label: string = "ledger"): Ledger {
+    this._assertActive("createChild");
     const child = new Ledger(label);
     child._parentEntry = this._push({
       label,
-      kind: 'ledger',
+      kind: "ledger",
       active: true,
       run: (reason) => child.teardown(reason),
       ledger: child,
@@ -144,26 +147,26 @@ export class Ledger {
    * every entry completed synchronously (state is then synchronously
    * `disposed`), otherwise a promise that settles once teardown completes.
    */
-  teardown(reason: TeardownReason = 'scope-close'): void | Promise<void> {
-    if (this._state !== 'active') {
+  teardown(reason: TeardownReason = "scope-close"): void | Promise<void> {
+    if (this._state !== "active") {
       return this._teardownPromise;
     }
-    this._state = 'disposing';
+    this._state = "disposing";
     this._detachFromParent();
     const out = drainRecords(this._records, reason);
     if (isPromiseLike(out)) {
       this._teardownPromise = Promise.resolve(out).then(() => {
-        this._state = 'disposed';
+        this._state = "disposed";
       });
       return this._teardownPromise;
     }
-    this._state = 'disposed';
+    this._state = "disposed";
     return undefined;
   }
 
   /** Tear down all current entries but keep the ledger active. */
-  clear(reason: TeardownReason = 'scope-close'): void | Promise<void> {
-    this._assertActive('clear');
+  clear(reason: TeardownReason = "scope-close"): void | Promise<void> {
+    this._assertActive("clear");
     return drainRecords(this._records, reason);
   }
 
@@ -184,7 +187,7 @@ export class Ledger {
 
   private _push(record: EntryRecord): LedgerEntry {
     if (Ledger.captureStacks) {
-      record.stack = new Error('Ledger registration').stack;
+      record.stack = new Error("Ledger registration").stack;
     }
     this._records.push(record);
     return {
@@ -192,7 +195,7 @@ export class Ledger {
       get disposed() {
         return !record.active;
       },
-      dispose: (reason: TeardownReason = 'scope-close') => {
+      dispose: (reason: TeardownReason = "scope-close") => {
         if (!record.active) return undefined;
         record.active = false;
         this._remove(record);
@@ -220,14 +223,17 @@ export class Ledger {
   }
 
   private _assertActive(operation: string): void {
-    if (this._state !== 'active') {
+    if (this._state !== "active") {
       throw new LedgerDisposedError(this.label, operation, this._state);
     }
   }
 }
 
 /** Run one entry's disposer, logging (with label) instead of throwing. */
-function runGuarded(record: EntryRecord, reason: TeardownReason): void | Promise<void> {
+function runGuarded(
+  record: EntryRecord,
+  reason: TeardownReason,
+): void | Promise<void> {
   let out: void | Promise<void>;
   try {
     out = record.run(reason);
@@ -255,7 +261,10 @@ function tagged(error: unknown, label: string): unknown {
  * Tear down a record list from the tail, serially. Sync fast path: when no
  * entry returns a promise, the whole drain completes within the tick.
  */
-function drainRecords(records: EntryRecord[], reason: TeardownReason): void | Promise<void> {
+function drainRecords(
+  records: EntryRecord[],
+  reason: TeardownReason,
+): void | Promise<void> {
   let index = records.length;
   const step = (): void | Promise<void> => {
     while (index > 0) {
@@ -288,12 +297,14 @@ function runDisposersReverse(
       try {
         out = disposer(reason);
       } catch (error) {
-        onUnexpectedError(tagged(error, 'effect'));
+        onUnexpectedError(tagged(error, "effect"));
         continue;
       }
       if (isPromiseLike(out)) {
         return Promise.resolve(out)
-          .catch((error: unknown) => { onUnexpectedError(tagged(error, 'effect')); })
+          .catch((error: unknown) => {
+            onUnexpectedError(tagged(error, "effect"));
+          })
           .then(step);
       }
     }
@@ -302,8 +313,11 @@ function runDisposersReverse(
   return step();
 }
 
-function collect(step: IteratorResult<Disposer | void>, disposers: Disposer[]): void {
-  if (typeof step.value === 'function') {
+function collect(
+  step: IteratorResult<Disposer | void>,
+  disposers: Disposer[],
+): void {
+  if (typeof step.value === "function") {
     disposers.push(step.value);
   }
 }
@@ -324,9 +338,11 @@ function driveSyncEffect(iterable: Iterable<Disposer | void>): Disposer {
     }
     collect(step, disposers);
   } catch (error) {
-    const rollback = runDisposersReverse(disposers, 'unload');
+    const rollback = runDisposersReverse(disposers, "unload");
     if (isPromiseLike(rollback)) {
-      Promise.resolve(rollback).catch((error: unknown) => { onUnexpectedError(error); });
+      Promise.resolve(rollback).catch((error: unknown) => {
+        onUnexpectedError(error);
+      });
     }
     throw error;
   }
@@ -334,7 +350,9 @@ function driveSyncEffect(iterable: Iterable<Disposer | void>): Disposer {
 }
 
 /** Async counterpart of {@link driveSyncEffect}; resolves to the composite disposer. */
-async function driveAsyncEffect(iterable: AsyncIterable<Disposer | void>): Promise<Disposer> {
+async function driveAsyncEffect(
+  iterable: AsyncIterable<Disposer | void>,
+): Promise<Disposer> {
   const disposers: Disposer[] = [];
   const iterator = iterable[Symbol.asyncIterator]();
   try {
@@ -345,7 +363,7 @@ async function driveAsyncEffect(iterable: AsyncIterable<Disposer | void>): Promi
     }
     collect(step, disposers);
   } catch (error) {
-    await runDisposersReverse(disposers, 'unload');
+    await runDisposersReverse(disposers, "unload");
     throw error;
   }
   return (reason) => runDisposersReverse(disposers, reason);

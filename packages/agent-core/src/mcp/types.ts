@@ -100,8 +100,14 @@ export function assertMcpInputSchema(
   toolName: string,
   inputSchema: unknown,
 ): Record<string, unknown> {
-  if (typeof inputSchema === 'object' && inputSchema !== null && !Array.isArray(inputSchema)) {
+  if (
+    typeof inputSchema === "object" &&
+    inputSchema !== null &&
+    !Array.isArray(inputSchema)
+  ) {
     return inputSchema as Record<string, unknown>;
   }
-  throw new Error(`Invalid inputSchema for MCP tool "${toolName}": schema must be a JSON object`);
+  throw new Error(
+    `Invalid inputSchema for MCP tool "${toolName}": schema must be a JSON object`,
+  );
 }

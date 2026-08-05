@@ -1,32 +1,36 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useCallback, useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 
-import { api } from '../../api';
-import type { BackgroundTaskEntry, BackgroundTaskInfo, BackgroundTaskStatus } from '../../types';
-import { formatAbsoluteTime, formatRelativeTime } from '../../util/time';
-import { useTasks } from '../../hooks/useTasks';
-import { CopyButton } from '../shared/CopyButton';
-import { JsonViewer } from '../shared/JsonViewer';
-import { formatBytes } from '../shared/SizePreview';
-import { Pill, type PillTone } from '../shared/Pill';
+import { api } from "../../api";
+import type {
+  BackgroundTaskEntry,
+  BackgroundTaskInfo,
+  BackgroundTaskStatus,
+} from "../../types";
+import { formatAbsoluteTime, formatRelativeTime } from "../../util/time";
+import { useTasks } from "../../hooks/useTasks";
+import { CopyButton } from "../shared/CopyButton";
+import { JsonViewer } from "../shared/JsonViewer";
+import { formatBytes } from "../shared/SizePreview";
+import { Pill, type PillTone } from "../shared/Pill";
 
 interface TasksTabProps {
   sessionId: string;
 }
 
 const STATUS_TONE: Record<BackgroundTaskStatus, PillTone> = {
-  running: 'info',
-  completed: 'success',
-  failed: 'error',
-  timed_out: 'warning',
-  killed: 'warning',
-  lost: 'neutral',
+  running: "info",
+  completed: "success",
+  failed: "error",
+  timed_out: "warning",
+  killed: "warning",
+  lost: "neutral",
 };
 
-function kindTone(kind: BackgroundTaskInfo['kind']): PillTone {
-  if (kind === 'agent') return 'subagent';
-  if (kind === 'question') return 'approval';
-  return 'tools';
+function kindTone(kind: BackgroundTaskInfo["kind"]): PillTone {
+  if (kind === "agent") return "subagent";
+  if (kind === "question") return "approval";
+  return "tools";
 }
 
 /** Tasks tab — background tasks (bash processes, subagents, pending
@@ -37,7 +41,9 @@ export function TasksTab({ sessionId }: TasksTabProps) {
   const { data, isLoading, error } = useTasks(sessionId);
 
   if (isLoading) {
-    return <div className="p-6 font-mono text-[12px] text-fg-3">loading tasks…</div>;
+    return (
+      <div className="p-6 font-mono text-[12px] text-fg-3">loading tasks…</div>
+    );
   }
   if (error) {
     return (
@@ -50,7 +56,7 @@ export function TasksTab({ sessionId }: TasksTabProps) {
   return (
     <div className="min-h-0 flex-1 overflow-y-auto p-4">
       <div className="font-mono text-[11px] uppercase tracking-[0.12em] text-fg-3">
-        background tasks{tasks.length > 0 ? ` · ${tasks.length}` : ''}
+        background tasks{tasks.length > 0 ? ` · ${tasks.length}` : ""}
       </div>
       {tasks.length === 0 ? (
         <div className="mt-3 border border-border bg-surface-0 px-3 py-6 text-center font-mono text-[12px] text-fg-3">
@@ -59,7 +65,11 @@ export function TasksTab({ sessionId }: TasksTabProps) {
       ) : (
         <div className="mt-3 flex flex-col gap-2">
           {tasks.map((entry) => (
-            <TaskCard key={entry.task.taskId} sessionId={sessionId} entry={entry} />
+            <TaskCard
+              key={entry.task.taskId}
+              sessionId={sessionId}
+              entry={entry}
+            />
           ))}
         </div>
       )}
@@ -67,7 +77,13 @@ export function TasksTab({ sessionId }: TasksTabProps) {
   );
 }
 
-function TaskCard({ sessionId, entry }: { sessionId: string; entry: BackgroundTaskEntry }) {
+function TaskCard({
+  sessionId,
+  entry,
+}: {
+  sessionId: string;
+  entry: BackgroundTaskEntry;
+}) {
   const { task } = entry;
   const [showLog, setShowLog] = useState(false);
   const [showRaw, setShowRaw] = useState(false);
@@ -81,36 +97,51 @@ function TaskCard({ sessionId, entry }: { sessionId: string; entry: BackgroundTa
     <div className="border border-border bg-surface-0">
       {/* Header line */}
       <div className="flex flex-wrap items-center gap-2 border-b border-border px-3 py-2">
-        <Pill tone={kindTone(task.kind)} variant="outline">{task.kind}</Pill>
+        <Pill tone={kindTone(task.kind)} variant="outline">
+          {task.kind}
+        </Pill>
         <Pill tone={STATUS_TONE[task.status]}>{task.status}</Pill>
         <span className="font-mono text-[12px] text-fg-0">{task.taskId}</span>
         <CopyButton value={task.taskId} />
-        {entry.agentId !== 'main' ? (
-          <Pill tone="subagent" variant="outline" title="the agent that spawned this task">
+        {entry.agentId !== "main" ? (
+          <Pill
+            tone="subagent"
+            variant="outline"
+            title="the agent that spawned this task"
+          >
             {entry.agentId}
           </Pill>
         ) : null}
         {task.detached === false ? (
-          <Pill tone="warning" variant="outline">foreground</Pill>
+          <Pill tone="warning" variant="outline">
+            foreground
+          </Pill>
         ) : null}
-        <span className="ml-auto font-mono text-[11px] text-fg-3 tabular" title={formatAbsoluteTime(task.startedAt)}>
+        <span
+          className="ml-auto font-mono text-[11px] text-fg-3 tabular"
+          title={formatAbsoluteTime(task.startedAt)}
+        >
           started {formatRelativeTime(task.startedAt)}
         </span>
       </div>
 
       {/* Body fields */}
       <div className="grid grid-cols-1 gap-x-6 gap-y-1 px-3 py-2 md:grid-cols-2">
-        <Field label="description">{task.description || <Dim>(none)</Dim>}</Field>
-        {task.kind === 'process' ? (
+        <Field label="description">
+          {task.description || <Dim>(none)</Dim>}
+        </Field>
+        {task.kind === "process" ? (
           <>
-            <Field label="command"><code className="break-all">{task.command}</code></Field>
+            <Field label="command">
+              <code className="break-all">{task.command}</code>
+            </Field>
             <Field label="pid">{task.pid}</Field>
             <Field label="exitCode">
               {task.exitCode ?? <Dim>(running)</Dim>}
             </Field>
           </>
         ) : null}
-        {task.kind === 'agent' ? (
+        {task.kind === "agent" ? (
           <>
             <Field label="agentId">
               {task.agentId ? (
@@ -125,13 +156,17 @@ function TaskCard({ sessionId, entry }: { sessionId: string; entry: BackgroundTa
                 <Dim>(none)</Dim>
               )}
             </Field>
-            <Field label="subagentType">{task.subagentType ?? <Dim>(none)</Dim>}</Field>
+            <Field label="subagentType">
+              {task.subagentType ?? <Dim>(none)</Dim>}
+            </Field>
           </>
         ) : null}
-        {task.kind === 'question' ? (
+        {task.kind === "question" ? (
           <>
             <Field label="questionCount">{task.questionCount}</Field>
-            <Field label="toolCallId">{task.toolCallId ?? <Dim>(none)</Dim>}</Field>
+            <Field label="toolCallId">
+              {task.toolCallId ?? <Dim>(none)</Dim>}
+            </Field>
           </>
         ) : null}
         <Field label="duration">
@@ -140,12 +175,16 @@ function TaskCard({ sessionId, entry }: { sessionId: string; entry: BackgroundTa
         {task.timeoutMs !== undefined ? (
           <Field label="timeoutMs">{task.timeoutMs}</Field>
         ) : null}
-        {task.stopReason ? <Field label="stopReason">{task.stopReason}</Field> : null}
+        {task.stopReason ? (
+          <Field label="stopReason">{task.stopReason}</Field>
+        ) : null}
         <Field label="endedAt">
           {task.endedAt === null || task.endedAt === undefined ? (
             <Dim>(running)</Dim>
           ) : (
-            <span title={formatAbsoluteTime(task.endedAt)}>{formatRelativeTime(task.endedAt)}</span>
+            <span title={formatAbsoluteTime(task.endedAt)}>
+              {formatRelativeTime(task.endedAt)}
+            </span>
           )}
         </Field>
       </div>
@@ -154,22 +193,30 @@ function TaskCard({ sessionId, entry }: { sessionId: string; entry: BackgroundTa
       <div className="flex items-center gap-3 border-t border-border px-3 py-1.5">
         <button
           type="button"
-          onClick={() => { setShowLog((v) => !v); }}
+          onClick={() => {
+            setShowLog((v) => !v);
+          }}
           className="font-mono text-[11px] text-fg-2 hover:text-fg-0"
           disabled={!entry.outputExists}
-          title={entry.outputExists ? 'view output.log' : 'no output.log for this task'}
+          title={
+            entry.outputExists
+              ? "view output.log"
+              : "no output.log for this task"
+          }
         >
-          {showLog ? '▾' : '▸'} output.log{' '}
+          {showLog ? "▾" : "▸"} output.log{" "}
           <span className="text-fg-3">
-            {entry.outputExists ? formatBytes(entry.outputSizeBytes) : '(none)'}
+            {entry.outputExists ? formatBytes(entry.outputSizeBytes) : "(none)"}
           </span>
         </button>
         <button
           type="button"
-          onClick={() => { setShowRaw((v) => !v); }}
+          onClick={() => {
+            setShowRaw((v) => !v);
+          }}
           className="ml-auto font-mono text-[11px] text-fg-3 hover:text-fg-1"
         >
-          {showRaw ? 'hide raw' : 'raw json'}
+          {showRaw ? "hide raw" : "raw json"}
         </button>
       </div>
 
@@ -185,11 +232,17 @@ function TaskCard({ sessionId, entry }: { sessionId: string; entry: BackgroundTa
   );
 }
 
-function TaskOutput({ sessionId, taskId }: { sessionId: string; taskId: string }) {
+function TaskOutput({
+  sessionId,
+  taskId,
+}: {
+  sessionId: string;
+  taskId: string;
+}) {
   // Progressive byte-window paging: fetch the first window on mount, then
   // append subsequent windows on demand via the server-provided exact
   // `nextOffset` cursor. Keeps arbitrarily large logs readable in full.
-  const [content, setContent] = useState('');
+  const [content, setContent] = useState("");
   const [cursor, setCursor] = useState(0);
   const [size, setSize] = useState(0);
   const [eof, setEof] = useState(false);
@@ -232,7 +285,9 @@ function TaskOutput({ sessionId, taskId }: { sessionId: string; taskId: string }
         {!eof && cursor > 0 ? (
           <span className="text-[var(--color-sev-warning)]">· more below</span>
         ) : null}
-        <span className="ml-auto"><CopyButton value={content} label="copy" /></span>
+        <span className="ml-auto">
+          <CopyButton value={content} label="copy" />
+        </span>
       </div>
       {err !== null ? (
         <div className="border-t border-border px-3 py-2 font-mono text-[11px] text-[var(--color-sev-error)]">
@@ -240,31 +295,43 @@ function TaskOutput({ sessionId, taskId }: { sessionId: string; taskId: string }
         </div>
       ) : null}
       <pre className="max-h-[480px] overflow-auto whitespace-pre-wrap break-words border-t border-border px-3 py-2 font-mono text-[11px] leading-[1.5] text-fg-1">
-        {content || (loading ? 'loading log…' : '(empty)')}
+        {content || (loading ? "loading log…" : "(empty)")}
       </pre>
       {!eof && cursor > 0 ? (
         <button
           type="button"
-          onClick={() => { void loadFrom(cursor); }}
+          onClick={() => {
+            void loadFrom(cursor);
+          }}
           disabled={loading}
           className="w-full border-t border-border px-3 py-1.5 font-mono text-[11px] text-fg-2 hover:bg-surface-2 hover:text-fg-0 disabled:opacity-50"
         >
-          {loading ? 'loading…' : `load more (${formatBytes(size - cursor)} remaining)`}
+          {loading
+            ? "loading…"
+            : `load more (${formatBytes(size - cursor)} remaining)`}
         </button>
       ) : null}
     </div>
   );
 }
 
-function Field({ label, children }: { label: string; children: import('react').ReactNode }) {
+function Field({
+  label,
+  children,
+}: {
+  label: string;
+  children: import("react").ReactNode;
+}) {
   return (
     <div className="flex items-baseline gap-2 font-mono text-[12px]">
-      <span className="w-28 shrink-0 text-[10px] uppercase tracking-[0.1em] text-fg-3">{label}</span>
+      <span className="w-28 shrink-0 text-[10px] uppercase tracking-[0.1em] text-fg-3">
+        {label}
+      </span>
       <span className="min-w-0 break-words text-fg-1">{children}</span>
     </div>
   );
 }
 
-function Dim({ children }: { children: import('react').ReactNode }) {
+function Dim({ children }: { children: import("react").ReactNode }) {
   return <span className="text-fg-3">{children}</span>;
 }

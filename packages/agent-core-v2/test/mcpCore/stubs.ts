@@ -1,40 +1,49 @@
-import { randomUUID } from 'node:crypto';
-import { createServer, type Server } from 'node:http';
-import type { AddressInfo } from 'node:net';
+import { randomUUID } from "node:crypto";
+import { createServer, type Server } from "node:http";
+import type { AddressInfo } from "node:net";
 
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
-import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
-import type { Tool as KosongTool } from '#/kosong/contract/tool';
-import { z } from 'zod';
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import type { Tool as KosongTool } from "#/kosong/contract/tool";
+import { z } from "zod";
 
-import type { McpOAuthStore } from '#/mcpCore/oauth/store';
-import type { MCPClient, MCPToolDefinition } from '#/mcpCore/types';
+import type { McpOAuthStore } from "#/mcpCore/oauth/store";
+import type { MCPClient, MCPToolDefinition } from "#/mcpCore/types";
 import type {
   ExecutableTool,
   ExecutableToolContext,
   ExecutableToolResult,
   ToolExecution,
-} from '#/tool/toolContract';
+} from "#/tool/toolContract";
 
-export const fixturesDir = new URL('./fixtures/', import.meta.url).pathname;
-export const stdioFixture = new URL('./fixtures/mock-stdio-server.mjs', import.meta.url).pathname;
-export const cwdStdioFixture = new URL('./fixtures/cwd-stdio-server.mjs', import.meta.url).pathname;
-export const slowStdioFixture = new URL('./fixtures/slow-stdio-server.mjs', import.meta.url).pathname;
+export const fixturesDir = new URL("./fixtures/", import.meta.url).pathname;
+export const stdioFixture = new URL(
+  "./fixtures/mock-stdio-server.mjs",
+  import.meta.url,
+).pathname;
+export const cwdStdioFixture = new URL(
+  "./fixtures/cwd-stdio-server.mjs",
+  import.meta.url,
+).pathname;
+export const slowStdioFixture = new URL(
+  "./fixtures/slow-stdio-server.mjs",
+  import.meta.url,
+).pathname;
 export const slowToolStdioFixture = new URL(
-  './fixtures/slow-tool-stdio-server.mjs',
+  "./fixtures/slow-tool-stdio-server.mjs",
   import.meta.url,
 ).pathname;
 export const hangingListStdioFixture = new URL(
-  './fixtures/hanging-list-stdio-server.mjs',
+  "./fixtures/hanging-list-stdio-server.mjs",
   import.meta.url,
 ).pathname;
 export const crashAfterConnectFixture = new URL(
-  './fixtures/crash-after-connect-stdio-server.mjs',
+  "./fixtures/crash-after-connect-stdio-server.mjs",
   import.meta.url,
 ).pathname;
 export const stderrThenExitFixture = new URL(
-  './fixtures/stderr-then-exit-stdio-server.mjs',
+  "./fixtures/stderr-then-exit-stdio-server.mjs",
   import.meta.url,
 ).pathname;
 
@@ -56,18 +65,18 @@ export function createMemoryMcpOAuthStore(): McpOAuthStore {
 export function fakeMcpClient(
   tools: readonly MCPToolDefinition[] = [
     {
-      name: 'echo',
-      description: 'Echoes back',
+      name: "echo",
+      description: "Echoes back",
       inputSchema: {
-        type: 'object',
-        properties: { text: { type: 'string' } },
-        required: ['text'],
+        type: "object",
+        properties: { text: { type: "string" } },
+        required: ["text"],
       },
     },
     {
-      name: 'noop',
-      description: 'Does nothing',
-      inputSchema: { type: 'object', properties: {} },
+      name: "noop",
+      description: "Does nothing",
+      inputSchema: { type: "object", properties: {} },
     },
   ],
 ): MCPClient {
@@ -76,10 +85,13 @@ export function fakeMcpClient(
       return [...tools];
     },
     async callTool(name, args) {
-      if (name === 'echo') {
-        return { content: [{ type: 'text', text: String(args['text']) }], isError: false };
+      if (name === "echo") {
+        return {
+          content: [{ type: "text", text: String(args["text"]) }],
+          isError: false,
+        };
       }
-      return { content: [{ type: 'text', text: 'ok' }], isError: false };
+      return { content: [{ type: "text", text: "ok" }], isError: false };
     },
     async ping() {},
   };
@@ -104,7 +116,9 @@ export async function executeTool<Input>(
 ): Promise<ExecutableToolResult> {
   const { args, ...executionContext } = context;
   const resolved = tool.resolveExecution(args);
-  const execution: ToolExecution = isPromiseLike(resolved) ? await resolved : resolved;
+  const execution: ToolExecution = isPromiseLike(resolved)
+    ? await resolved
+    : resolved;
   if (execution.isError === true) return execution;
   return execution.execute(executionContext);
 }
@@ -112,11 +126,11 @@ export async function executeTool<Input>(
 export async function startInProcessHttpMcpServer(opts?: {
   authToken?: string;
 }): Promise<{ url: string; close: () => Promise<void> }> {
-  const mcpServer = new McpServer({ name: 'mock-http', version: '0.0.1' });
+  const mcpServer = new McpServer({ name: "mock-http", version: "0.0.1" });
   mcpServer.registerTool(
-    'echo',
-    { description: 'Echoes text', inputSchema: { text: z.string() } },
-    ({ text }) => ({ content: [{ type: 'text', text }] }),
+    "echo",
+    { description: "Echoes text", inputSchema: { text: z.string() } },
+    ({ text }) => ({ content: [{ type: "text", text }] }),
   );
 
   const transport = new StreamableHTTPServerTransport({
@@ -126,10 +140,10 @@ export async function startInProcessHttpMcpServer(opts?: {
 
   const httpServer: Server = createServer((req, res) => {
     if (opts?.authToken !== undefined) {
-      const auth = req.headers['authorization'];
+      const auth = req.headers["authorization"];
       if (auth !== `Bearer ${opts.authToken}`) {
-        res.writeHead(401, { 'content-type': 'application/json' });
-        res.end(JSON.stringify({ error: 'unauthorized' }));
+        res.writeHead(401, { "content-type": "application/json" });
+        res.end(JSON.stringify({ error: "unauthorized" }));
         return;
       }
     }
@@ -151,23 +165,23 @@ export async function startInProcessSseMcpServer(opts?: {
   const transports = new Map<string, SSEServerTransport>();
   const httpServer: Server = createServer((req, res) => {
     if (opts?.authToken !== undefined) {
-      const auth = req.headers['authorization'];
+      const auth = req.headers["authorization"];
       if (auth !== `Bearer ${opts.authToken}`) {
-        res.writeHead(401, { 'content-type': 'text/plain' });
-        res.end('unauthorized');
+        res.writeHead(401, { "content-type": "text/plain" });
+        res.end("unauthorized");
         return;
       }
     }
 
-    const url = new URL(req.url ?? '/', 'http://127.0.0.1');
-    if (req.method === 'GET' && url.pathname === '/mcp') {
-      const mcpServer = new McpServer({ name: 'mock-sse', version: '0.0.1' });
+    const url = new URL(req.url ?? "/", "http://127.0.0.1");
+    if (req.method === "GET" && url.pathname === "/mcp") {
+      const mcpServer = new McpServer({ name: "mock-sse", version: "0.0.1" });
       mcpServer.registerTool(
-        'echo',
-        { description: 'Echoes text', inputSchema: { text: z.string() } },
-        ({ text }) => ({ content: [{ type: 'text', text }] }),
+        "echo",
+        { description: "Echoes text", inputSchema: { text: z.string() } },
+        ({ text }) => ({ content: [{ type: "text", text }] }),
       );
-      const transport = new SSEServerTransport('/messages', res);
+      const transport = new SSEServerTransport("/messages", res);
       transports.set(transport.sessionId, transport);
       transport.onclose = () => {
         transports.delete(transport.sessionId);
@@ -176,18 +190,19 @@ export async function startInProcessSseMcpServer(opts?: {
       return;
     }
 
-    if (req.method === 'POST' && url.pathname === '/messages') {
-      const sessionId = url.searchParams.get('sessionId');
-      const transport = sessionId === null ? undefined : transports.get(sessionId);
+    if (req.method === "POST" && url.pathname === "/messages") {
+      const sessionId = url.searchParams.get("sessionId");
+      const transport =
+        sessionId === null ? undefined : transports.get(sessionId);
       if (transport === undefined) {
-        res.writeHead(404).end('Session not found');
+        res.writeHead(404).end("Session not found");
         return;
       }
       void transport.handlePostMessage(req, res);
       return;
     }
 
-    res.writeHead(404).end('not found');
+    res.writeHead(404).end("not found");
   });
 
   await listen(httpServer);
@@ -196,7 +211,9 @@ export async function startInProcessSseMcpServer(opts?: {
   return {
     url: `http://127.0.0.1:${port}/mcp`,
     async close() {
-      await Promise.all([...transports.values()].map((transport) => transport.close()));
+      await Promise.all(
+        [...transports.values()].map((transport) => transport.close()),
+      );
       await closeServer(httpServer);
     },
   };
@@ -204,7 +221,7 @@ export async function startInProcessSseMcpServer(opts?: {
 
 function listen(server: Server): Promise<void> {
   return new Promise((resolve) => {
-    server.listen(0, '127.0.0.1', resolve);
+    server.listen(0, "127.0.0.1", resolve);
   });
 }
 
@@ -217,6 +234,8 @@ export function closeServer(server: Server): Promise<void> {
   });
 }
 
-function isPromiseLike(value: ToolExecution | Promise<ToolExecution>): value is Promise<ToolExecution> {
-  return typeof (value as Promise<ToolExecution>).then === 'function';
+function isPromiseLike(
+  value: ToolExecution | Promise<ToolExecution>,
+): value is Promise<ToolExecution> {
+  return typeof (value as Promise<ToolExecution>).then === "function";
 }

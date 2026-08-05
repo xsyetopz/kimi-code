@@ -6,14 +6,14 @@
  * export manifest without depending on live Agent services.
  */
 
-import { open, readdir, type FileHandle } from 'node:fs/promises';
-import { createInterface } from 'node:readline';
-import { Readable } from 'node:stream';
-import { finished } from 'node:stream/promises';
+import { open, readdir, type FileHandle } from "node:fs/promises";
+import { createInterface } from "node:readline";
+import { Readable } from "node:stream";
+import { finished } from "node:stream/promises";
 
-import { join } from 'pathe';
+import { join } from "pathe";
 
-const WIRE_FILENAME = 'wire.jsonl';
+const WIRE_FILENAME = "wire.jsonl";
 
 export interface SessionWireScan {
   readonly firstActivityMs?: number | undefined;
@@ -55,9 +55,12 @@ async function collectWireFiles(
   signal?: AbortSignal,
 ): Promise<readonly string[]> {
   const files = [join(sessionDir, WIRE_FILENAME)];
-  const agentsDir = join(sessionDir, 'agents');
+  const agentsDir = join(sessionDir, "agents");
   try {
-    const entries = await readdir(agentsDir, { recursive: true, withFileTypes: true });
+    const entries = await readdir(agentsDir, {
+      recursive: true,
+      withFileTypes: true,
+    });
     for (const entry of entries) {
       signal?.throwIfAborted();
       if (!entry.isFile() || entry.name !== WIRE_FILENAME) continue;
@@ -69,10 +72,13 @@ async function collectWireFiles(
   return files;
 }
 
-async function scanWireFile(path: string, signal?: AbortSignal): Promise<SessionWireScan> {
+async function scanWireFile(
+  path: string,
+  signal?: AbortSignal,
+): Promise<SessionWireScan> {
   let file: FileHandle;
   try {
-    file = await open(path, 'r');
+    file = await open(path, "r");
   } catch (error) {
     if (!isMissingPath(error)) throw error;
     return {};
@@ -93,7 +99,7 @@ async function scanWireFile(path: string, signal?: AbortSignal): Promise<Session
       size === 0
         ? Readable.from([])
         : file.createReadStream({
-            encoding: 'utf8',
+            encoding: "utf8",
             autoClose: false,
             end: size - 1,
             signal,
@@ -108,25 +114,27 @@ async function scanWireFile(path: string, signal?: AbortSignal): Promise<Session
       } catch {
         continue;
       }
-      if (typeof parsed !== 'object' || parsed === null) continue;
+      if (typeof parsed !== "object" || parsed === null) continue;
       const record = parsed as {
         type?: unknown;
         time?: unknown;
         userInput?: unknown;
       };
       const timeMs =
-        typeof record.time === 'number' ? normalizeTimestampMs(record.time) : undefined;
+        typeof record.time === "number"
+          ? normalizeTimestampMs(record.time)
+          : undefined;
       if (timeMs !== undefined) {
         firstActivityMs = minDefined(firstActivityMs, timeMs);
         lastActivityMs = maxDefined(lastActivityMs, timeMs);
       }
-      if (record.type === 'turn_begin') {
+      if (record.type === "turn_begin") {
         if (timeMs !== undefined) {
           lastUserMessageMs = maxDefined(lastUserMessageMs, timeMs);
         }
         if (
           firstUserInput === undefined &&
-          typeof record.userInput === 'string' &&
+          typeof record.userInput === "string" &&
           record.userInput.trim().length > 0
         ) {
           firstUserInput = record.userInput;
@@ -135,7 +143,8 @@ async function scanWireFile(path: string, signal?: AbortSignal): Promise<Session
     }
   } finally {
     input?.destroy();
-    if (input !== undefined) await finished(input, { cleanup: true }).catch(() => {});
+    if (input !== undefined)
+      await finished(input, { cleanup: true }).catch(() => {});
     await file.close();
   }
 
@@ -152,13 +161,19 @@ export function normalizeTimestampMs(value: number): number | undefined {
   return value > 1e12 ? Math.floor(value) : Math.floor(value * 1000);
 }
 
-function minDefined(a: number | undefined, b: number | undefined): number | undefined {
+function minDefined(
+  a: number | undefined,
+  b: number | undefined,
+): number | undefined {
   if (a === undefined) return b;
   if (b === undefined) return a;
   return Math.min(a, b);
 }
 
-function maxDefined(a: number | undefined, b: number | undefined): number | undefined {
+function maxDefined(
+  a: number | undefined,
+  b: number | undefined,
+): number | undefined {
   if (a === undefined) return b;
   if (b === undefined) return a;
   return Math.max(a, b);
@@ -166,9 +181,9 @@ function maxDefined(a: number | undefined, b: number | undefined): number | unde
 
 function isMissingPath(error: unknown): boolean {
   return (
-    typeof error === 'object' &&
+    typeof error === "object" &&
     error !== null &&
-    'code' in error &&
-    (error as NodeJS.ErrnoException).code === 'ENOENT'
+    "code" in error &&
+    (error as NodeJS.ErrnoException).code === "ENOENT"
   );
 }

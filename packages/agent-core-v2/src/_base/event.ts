@@ -7,14 +7,17 @@
  * / `any`).
  */
 
-import { onUnexpectedError, safelyCallListener } from './errors/unexpectedError';
+import {
+  onUnexpectedError,
+  safelyCallListener,
+} from "./errors/unexpectedError";
 import {
   Disposable,
   DisposableStore,
   combinedDisposable,
   type IDisposable,
-} from './di/lifecycle';
-import { LinkedList } from './di/util/linkedList';
+} from "./di/lifecycle";
+import { LinkedList } from "./di/util/linkedList";
 
 export interface Event<T> {
   (
@@ -96,10 +99,12 @@ export interface IWaitUntil {
   waitUntil(thenable: Promise<unknown>): void;
 }
 
-export type IWaitUntilData<T> = Omit<T, 'waitUntil' | 'signal'>;
+export type IWaitUntilData<T> = Omit<T, "waitUntil" | "signal">;
 
 export class AsyncEmitter<T extends IWaitUntil> extends Emitter<T> {
-  private _asyncDeliveryQueue?: LinkedList<[(event: T) => void, IWaitUntilData<T>]>;
+  private _asyncDeliveryQueue?: LinkedList<
+    [(event: T) => void, IWaitUntilData<T>]
+  >;
 
   async fireAsync(data: IWaitUntilData<T>, signal: AbortSignal): Promise<void> {
     if (this.isDisposed || this._listeners === undefined) {
@@ -125,7 +130,7 @@ export class AsyncEmitter<T extends IWaitUntil> extends Emitter<T> {
         signal,
         waitUntil: (p: Promise<unknown>): void => {
           if (Object.isFrozen(thenables)) {
-            throw new Error('waitUntil can NOT be called asynchronously');
+            throw new Error("waitUntil can NOT be called asynchronously");
           }
           thenables.push(p);
         },
@@ -141,7 +146,7 @@ export class AsyncEmitter<T extends IWaitUntil> extends Emitter<T> {
       void Object.freeze(thenables);
       const settled = await Promise.allSettled(thenables);
       for (const result of settled) {
-        if (result.status === 'rejected') {
+        if (result.status === "rejected") {
           onUnexpectedError(result.reason);
         }
       }
@@ -164,7 +169,7 @@ export function handleVetos(
     if (valueOrPromise === true) {
       return Promise.resolve(true);
     }
-    if (typeof valueOrPromise === 'boolean') {
+    if (typeof valueOrPromise === "boolean") {
       continue;
     }
     promises.push(
@@ -212,14 +217,13 @@ export namespace Event {
 
   export function map<I, O>(event: Event<I>, map: (i: I) => O): Event<O> {
     return (listener, thisArg, disposables) =>
-      event(
-        (i) => listener.call(thisArg, map(i)),
-        undefined,
-        disposables,
-      );
+      event((i) => listener.call(thisArg, map(i)), undefined, disposables);
   }
 
-  export function filter<T>(event: Event<T>, filter: (e: T) => boolean): Event<T> {
+  export function filter<T>(
+    event: Event<T>,
+    filter: (e: T) => boolean,
+  ): Event<T> {
     return (listener, thisArg, disposables) =>
       event(
         (e) => {

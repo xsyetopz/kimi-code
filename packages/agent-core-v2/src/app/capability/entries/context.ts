@@ -5,8 +5,8 @@
  * host.
  */
 
-import type { IPluginService } from '#/app/plugin/plugin';
-import type { IHostProcessService } from '#/os/interface/hostProcess';
+import type { IPluginService } from "#/app/plugin/plugin";
+import type { IHostProcessService } from "#/os/interface/hostProcess";
 
 export interface CapabilityEntryContext {
   readonly platform: NodeJS.Platform;

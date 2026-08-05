@@ -3,10 +3,10 @@
  * `agent-core-v2/app/workspace/workspace.ts`.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { maybe, noResult } from '../helpers.js';
-import type { ServiceContract } from '../types.js';
+import { maybe, noResult } from "../helpers.js";
+import type { ServiceContract } from "../types.js";
 
 export const workspaceSchema = z.object({
   id: z.string(),

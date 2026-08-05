@@ -16,15 +16,15 @@ import {
   combinedDisposable,
   toDisposable,
   type IDisposable,
-} from '#/_base/di/lifecycle';
-import { Emitter, type Event } from '#/_base/event';
+} from "#/_base/di/lifecycle";
+import { Emitter, type Event } from "#/_base/event";
 
 import {
   IFileSystemStorageService,
   type StorageAppendOptions,
   type StorageReadRange,
   type StorageWriteOptions,
-} from '#/persistence/interface/storage';
+} from "#/persistence/interface/storage";
 
 interface WatchEntry {
   readonly emitter: Emitter<void>;
@@ -113,7 +113,9 @@ export class InMemoryStorageService implements IFileSystemStorageService {
     const bucket = this.scopes.get(scope);
     if (bucket === undefined) return [];
     const keys = [...bucket.keys()];
-    return prefix === undefined ? keys : keys.filter((key) => key.startsWith(prefix));
+    return prefix === undefined
+      ? keys
+      : keys.filter((key) => key.startsWith(prefix));
   }
 
   async delete(scope: string, key: string): Promise<void> {

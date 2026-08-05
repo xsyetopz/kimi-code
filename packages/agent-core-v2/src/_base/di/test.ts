@@ -5,20 +5,25 @@
 export {
   createServices,
   TestInstantiationService,
-} from './testInstantiationService';
+} from "./testInstantiationService";
 export type {
   CreateServicesOptions,
   ServiceGroup,
   ServiceRegistration,
-} from './testInstantiationService';
+} from "./testInstantiationService";
 
-import { type ServiceIdentifier } from './instantiation';
-import { createAppScope, LifecycleScope, Scope, type ScopeSeed } from './scope';
+import { type ServiceIdentifier } from "./instantiation";
+import { createAppScope, LifecycleScope, Scope, type ScopeSeed } from "./scope";
 
 export interface ScopedTestHost {
   readonly app: Scope;
   child(kind: LifecycleScope, id: string, stubs?: ScopeSeed): Scope;
-  childOf(parent: Scope, kind: LifecycleScope, id: string, stubs?: ScopeSeed): Scope;
+  childOf(
+    parent: Scope,
+    kind: LifecycleScope,
+    id: string,
+    stubs?: ScopeSeed,
+  ): Scope;
   dispose(): void;
 }
 

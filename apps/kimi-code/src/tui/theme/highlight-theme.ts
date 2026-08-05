@@ -7,8 +7,8 @@
  * contains no red at all. Tokens not listed here fall back to DEFAULT_THEME.
  */
 
-import { plain } from 'cli-highlight';
-import type { Theme } from 'cli-highlight';
+import { plain } from "cli-highlight";
+import type { Theme } from "cli-highlight";
 
 export const codeHighlightTheme: Theme = {
   string: plain,

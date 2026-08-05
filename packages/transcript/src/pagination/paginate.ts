@@ -13,8 +13,8 @@
  * NOT paginated here — the REST layer ships them alongside every page.
  */
 
-import { compareTurnIds } from '../model/ids';
-import type { TranscriptItem } from '../model/item';
+import { compareTurnIds } from "../model/ids";
+import type { TranscriptItem } from "../model/item";
 
 export interface TurnPageQuery {
   readonly beforeTurn?: string;
@@ -27,7 +27,10 @@ export interface TurnPage {
   readonly hasMore: boolean;
 }
 
-export function paginateTurns(items: readonly TranscriptItem[], query: TurnPageQuery): TurnPage {
+export function paginateTurns(
+  items: readonly TranscriptItem[],
+  query: TurnPageQuery,
+): TurnPage {
   const pageSize = Math.max(1, query.pageSize);
   const segments = splitSegments(items);
   if (segments.length === 0) return { items: [], hasMore: false };
@@ -35,13 +38,21 @@ export function paginateTurns(items: readonly TranscriptItem[], query: TurnPageQ
   if (query.afterTurn !== undefined) {
     // The leading non-turn unit is the oldest content; it only travels with
     // before-cursor (older) paging, not with after-cursor (newer) paging.
-    return page(segments.filter((seg) => seg.turnId && compareTurnIds(seg.turnId, query.afterTurn!) > 0), pageSize, 'newer');
+    return page(
+      segments.filter(
+        (seg) => seg.turnId && compareTurnIds(seg.turnId, query.afterTurn!) > 0,
+      ),
+      pageSize,
+      "newer",
+    );
   }
   if (query.beforeTurn !== undefined) {
-    const older = segments.filter((seg) => !seg.turnId || compareTurnIds(seg.turnId, query.beforeTurn!) < 0);
-    return page(older, pageSize, 'older');
+    const older = segments.filter(
+      (seg) => !seg.turnId || compareTurnIds(seg.turnId, query.beforeTurn!) < 0,
+    );
+    return page(older, pageSize, "older");
   }
-  return page(segments, pageSize, 'older');
+  return page(segments, pageSize, "older");
 }
 
 interface Segment {
@@ -55,12 +66,13 @@ function splitSegments(items: readonly TranscriptItem[]): Segment[] {
   let current: TranscriptItem[] = [];
   let currentTurn: string | undefined;
   const flush = (): void => {
-    if (current.length > 0) segments.push({ items: current, turnId: currentTurn });
+    if (current.length > 0)
+      segments.push({ items: current, turnId: currentTurn });
     current = [];
     currentTurn = undefined;
   };
   for (const item of items) {
-    if (item.kind === 'turn') {
+    if (item.kind === "turn") {
       flush();
       current = [item];
       currentTurn = item.turnId;
@@ -74,18 +86,26 @@ function splitSegments(items: readonly TranscriptItem[]): Segment[] {
   return segments;
 }
 
-function page(segments: readonly Segment[], pageSize: number, direction: 'older' | 'newer'): TurnPage {
+function page(
+  segments: readonly Segment[],
+  pageSize: number,
+  direction: "older" | "newer",
+): TurnPage {
   // The leading non-turn unit is not a turn slot: pages are counted in turn
   // segments, and the unit rides along only with the page that reaches the
   // first turn (the oldest page).
   const head = segments[0]?.turnId === undefined ? segments[0] : undefined;
   const turnSegments = head !== undefined ? segments.slice(1) : segments;
-  if (direction === 'older') {
+  if (direction === "older") {
     const selected = turnSegments.slice(-pageSize);
     const reachesFirstTurn = selected.length === turnSegments.length;
-    const hasMore = turnSegments.length > selected.length && selected.length > 0;
+    const hasMore =
+      turnSegments.length > selected.length && selected.length > 0;
     return {
-      items: flatten([...(reachesFirstTurn && head !== undefined ? [head] : []), ...selected]),
+      items: flatten([
+        ...(reachesFirstTurn && head !== undefined ? [head] : []),
+        ...selected,
+      ]),
       hasMore,
     };
   }

@@ -15,13 +15,17 @@
  * Not a Service: a pure composition helper over the session handle.
  */
 
-import type { ISessionScopeHandle, IAgentScopeHandle } from '#/_base/di/scope';
+import type { ISessionScopeHandle, IAgentScopeHandle } from "#/_base/di/scope";
 
-import { type CreateAgentOptions, IAgentLifecycleService, MAIN_AGENT_ID } from './agentLifecycle';
+import {
+  type CreateAgentOptions,
+  IAgentLifecycleService,
+  MAIN_AGENT_ID,
+} from "./agentLifecycle";
 
 export async function ensureMainAgent(
   session: ISessionScopeHandle,
-  opts?: Omit<CreateAgentOptions, 'agentId'>,
+  opts?: Omit<CreateAgentOptions, "agentId">,
 ): Promise<IAgentScopeHandle> {
   return session.accessor.get(IAgentLifecycleService).create({
     ...opts,

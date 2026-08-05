@@ -1,10 +1,18 @@
-import { release as osRelease, type as osType } from 'node:os';
+import { release as osRelease, type as osType } from "node:os";
 
-import type { McpServerInfo, SessionStatus, SessionUsage } from '@moonshot-ai/kimi-code-sdk';
+import type {
+  McpServerInfo,
+  SessionStatus,
+  SessionUsage,
+} from "@moonshot-ai/kimi-code-sdk";
 
-import { buildMcpStatusReportLines } from '../components/messages/mcp-status-panel';
-import { buildStatusReportLines } from '../components/messages/status-panel';
-import { buildUsageReportLines, UsagePanelComponent, type ManagedUsageReport } from '../components/messages/usage-panel';
+import { buildMcpStatusReportLines } from "../components/messages/mcp-status-panel";
+import { buildStatusReportLines } from "../components/messages/status-panel";
+import {
+  buildUsageReportLines,
+  UsagePanelComponent,
+  type ManagedUsageReport,
+} from "../components/messages/usage-panel";
 import {
   FEEDBACK_ISSUE_URL,
   FEEDBACK_STATUS_CANCELLED,
@@ -18,26 +26,29 @@ import {
   feedbackIdLine,
   feedbackSessionLine,
   withFeedbackVersionPrefix,
-} from '../constant/feedback';
-import { isManagedUsageProvider } from '../constant/kimi-tui';
-import { submitFeedbackWithAttachments } from '../../feedback/feedback-attachments';
-import { formatErrorMessage } from '../utils/event-payload';
-import { openUrl } from '#/utils/open-url';
-import { promptFeedbackAttachment, promptFeedbackInput } from './prompts';
-import type { SlashCommandHost } from './dispatch';
+} from "../constant/feedback";
+import { isManagedUsageProvider } from "../constant/kimi-tui";
+import { submitFeedbackWithAttachments } from "../../feedback/feedback-attachments";
+import { formatErrorMessage } from "../utils/event-payload";
+import { openUrl } from "#/utils/open-url";
+import { promptFeedbackAttachment, promptFeedbackInput } from "./prompts";
+import type { SlashCommandHost } from "./dispatch";
 
 // ---------------------------------------------------------------------------
 // Feedback
 // ---------------------------------------------------------------------------
 
-export async function handleFeedbackCommand(host: SlashCommandHost): Promise<void> {
+export async function handleFeedbackCommand(
+  host: SlashCommandHost,
+): Promise<void> {
   const fallback = (reason: string): void => {
     host.showStatus(reason);
     host.showStatus(FEEDBACK_ISSUE_URL);
     openUrl(FEEDBACK_ISSUE_URL);
   };
 
-  const providerKey = host.state.appState.availableModels[host.state.appState.model]?.provider;
+  const providerKey =
+    host.state.appState.availableModels[host.state.appState.model]?.provider;
   if (!isManagedUsageProvider(providerKey)) {
     fallback(FEEDBACK_STATUS_NOT_SIGNED_IN);
     return;
@@ -74,17 +85,22 @@ export async function handleFeedbackCommand(host: SlashCommandHost): Promise<voi
       sessionId: host.state.appState.sessionId,
       version,
       os: `${osType()} ${osRelease()}`,
-      model: host.state.appState.model.length > 0 ? host.state.appState.model : null,
+      model:
+        host.state.appState.model.length > 0 ? host.state.appState.model : null,
     });
 
-    if (res.kind !== 'ok') {
+    if (res.kind !== "ok") {
       stopSpinner({ ok: false, label: res.message });
       fallback(FEEDBACK_STATUS_FALLBACK);
       return;
     }
 
     // Stage 3: prepare and upload each requested attachment independently.
-    const attachmentFailed = await submitFeedbackWithAttachments(host, res.feedbackId, level);
+    const attachmentFailed = await submitFeedbackWithAttachments(
+      host,
+      res.feedbackId,
+      level,
+    );
 
     stopSpinner({ ok: true, label: FEEDBACK_STATUS_SUCCESS });
     host.showStatus(feedbackSessionLine(host.state.appState.sessionId));
@@ -130,7 +146,10 @@ export async function showUsage(host: SlashCommandHost): Promise<void> {
     managedUsage: managedUsage?.usage,
     managedUsageError: managedUsage?.error,
   };
-  const panel = new UsagePanelComponent(() => buildUsageReportLines(reportArgs), 'primary');
+  const panel = new UsagePanelComponent(
+    () => buildUsageReportLines(reportArgs),
+    "primary",
+  );
   host.state.transcriptContainer.addChild(panel);
   host.state.ui.requestRender();
 }
@@ -159,7 +178,11 @@ export async function showStatusReport(host: SlashCommandHost): Promise<void> {
     managedUsage: managedUsage?.usage,
     managedUsageError: managedUsage?.error,
   };
-  const panel = new UsagePanelComponent(() => buildStatusReportLines(reportArgs), 'primary', ' Status ');
+  const panel = new UsagePanelComponent(
+    () => buildStatusReportLines(reportArgs),
+    "primary",
+    " Status ",
+  );
   host.state.transcriptContainer.addChild(panel);
   host.state.ui.requestRender();
 }
@@ -172,7 +195,9 @@ export async function showMcpServers(host: SlashCommandHost): Promise<void> {
     } else if (host.engineV2) {
       // v2 session-less: the MCP connection set is workspace-scoped, so it is
       // inspectable before the first session exists.
-      servers = await host.harness.listWorkspaceMcpServers(host.state.appState.workDir);
+      servers = await host.harness.listWorkspaceMcpServers(
+        host.state.appState.workDir,
+      );
     } else {
       servers = await host.requireSession().listMcpServers();
     }
@@ -181,17 +206,19 @@ export async function showMcpServers(host: SlashCommandHost): Promise<void> {
     return;
   }
 
-  const title = servers.length > 0 ? ` MCP (${servers.length}) ` : ' MCP ';
+  const title = servers.length > 0 ? ` MCP (${servers.length}) ` : " MCP ";
   const panel = new UsagePanelComponent(
     () => buildMcpStatusReportLines({ servers }),
-    'primary',
+    "primary",
     title,
   );
   host.state.transcriptContainer.addChild(panel);
   host.state.ui.requestRender();
 }
 
-async function loadSessionUsageReport(host: SlashCommandHost): Promise<SessionUsageResult> {
+async function loadSessionUsageReport(
+  host: SlashCommandHost,
+): Promise<SessionUsageResult> {
   try {
     return { usage: await host.requireSession().getUsage() };
   } catch (error) {
@@ -199,7 +226,9 @@ async function loadSessionUsageReport(host: SlashCommandHost): Promise<SessionUs
   }
 }
 
-async function loadRuntimeStatusReport(host: SlashCommandHost): Promise<RuntimeStatusResult> {
+async function loadRuntimeStatusReport(
+  host: SlashCommandHost,
+): Promise<RuntimeStatusResult> {
   try {
     return { status: await host.requireSession().getStatus() };
   } catch (error) {
@@ -207,7 +236,9 @@ async function loadRuntimeStatusReport(host: SlashCommandHost): Promise<RuntimeS
   }
 }
 
-async function loadManagedUsageReport(host: SlashCommandHost): Promise<ManagedUsageResult | undefined> {
+async function loadManagedUsageReport(
+  host: SlashCommandHost,
+): Promise<ManagedUsageResult | undefined> {
   const alias = host.state.appState.model;
   const providerKey = host.state.appState.availableModels[alias]?.provider;
   if (!isManagedUsageProvider(providerKey)) return undefined;
@@ -218,8 +249,14 @@ async function loadManagedUsageReport(host: SlashCommandHost): Promise<ManagedUs
   } catch (error) {
     return { error: formatErrorMessage(error) };
   }
-  if (res.kind === 'error') {
+  if (res.kind === "error") {
     return { error: res.message };
   }
-  return { usage: { summary: res.summary, limits: res.limits, extraUsage: res.extraUsage } };
+  return {
+    usage: {
+      summary: res.summary,
+      limits: res.limits,
+      extraUsage: res.extraUsage,
+    },
+  };
 }

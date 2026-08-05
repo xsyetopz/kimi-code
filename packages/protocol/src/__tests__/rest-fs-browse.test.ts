@@ -1,57 +1,57 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from "vitest";
 
 import {
   fsBrowseEntrySchema,
   fsBrowseQuerySchema,
   fsBrowseResponseSchema,
   fsHomeResponseSchema,
-} from '../rest/fsBrowse';
+} from "../rest/fsBrowse";
 
-describe('fsBrowseQuerySchema', () => {
-  it('accepts an empty query (path defaults to $HOME at the daemon)', () => {
+describe("fsBrowseQuerySchema", () => {
+  it("accepts an empty query (path defaults to $HOME at the daemon)", () => {
     expect(fsBrowseQuerySchema.parse({})).toEqual({});
   });
 
-  it('accepts a path string', () => {
-    expect(fsBrowseQuerySchema.parse({ path: '/Users/foo' })).toEqual({
-      path: '/Users/foo',
+  it("accepts a path string", () => {
+    expect(fsBrowseQuerySchema.parse({ path: "/Users/foo" })).toEqual({
+      path: "/Users/foo",
     });
   });
 
-  it('rejects empty string path', () => {
-    expect(fsBrowseQuerySchema.safeParse({ path: '' }).success).toBe(false);
+  it("rejects empty string path", () => {
+    expect(fsBrowseQuerySchema.safeParse({ path: "" }).success).toBe(false);
   });
 });
 
-describe('fsBrowseEntrySchema', () => {
-  it('round-trips a dir entry', () => {
+describe("fsBrowseEntrySchema", () => {
+  it("round-trips a dir entry", () => {
     const entry = {
-      name: 'src',
-      path: '/Users/foo/code/src',
+      name: "src",
+      path: "/Users/foo/code/src",
       is_dir: true as const,
     };
     expect(fsBrowseEntrySchema.parse(entry)).toEqual(entry);
   });
 
-  it('rejects is_dir=false (only directories are surfaced)', () => {
+  it("rejects is_dir=false (only directories are surfaced)", () => {
     const bad = {
-      name: 'README.md',
-      path: '/Users/foo/code/README.md',
+      name: "README.md",
+      path: "/Users/foo/code/README.md",
       is_dir: false,
     };
     expect(fsBrowseEntrySchema.safeParse(bad).success).toBe(false);
   });
 });
 
-describe('fsBrowseResponseSchema', () => {
-  it('accepts a populated response with a non-null parent', () => {
+describe("fsBrowseResponseSchema", () => {
+  it("accepts a populated response with a non-null parent", () => {
     const resp = {
-      path: '/Users/foo/code',
-      parent: '/Users/foo',
+      path: "/Users/foo/code",
+      parent: "/Users/foo",
       entries: [
         {
-          name: 'kimi-code',
-          path: '/Users/foo/code/kimi-code',
+          name: "kimi-code",
+          path: "/Users/foo/code/kimi-code",
           is_dir: true as const,
         },
       ],
@@ -59,9 +59,9 @@ describe('fsBrowseResponseSchema', () => {
     expect(fsBrowseResponseSchema.parse(resp).entries.length).toBe(1);
   });
 
-  it('accepts parent=null for filesystem roots', () => {
+  it("accepts parent=null for filesystem roots", () => {
     const resp = {
-      path: '/',
+      path: "/",
       parent: null,
       entries: [],
     };
@@ -69,17 +69,17 @@ describe('fsBrowseResponseSchema', () => {
   });
 });
 
-describe('fsHomeResponseSchema', () => {
-  it('round-trips an empty recent_roots list', () => {
+describe("fsHomeResponseSchema", () => {
+  it("round-trips an empty recent_roots list", () => {
     expect(
-      fsHomeResponseSchema.parse({ home: '/Users/foo', recent_roots: [] }),
-    ).toEqual({ home: '/Users/foo', recent_roots: [] });
+      fsHomeResponseSchema.parse({ home: "/Users/foo", recent_roots: [] }),
+    ).toEqual({ home: "/Users/foo", recent_roots: [] });
   });
 
-  it('round-trips a populated recent_roots list', () => {
+  it("round-trips a populated recent_roots list", () => {
     const resp = {
-      home: '/Users/foo',
-      recent_roots: ['/Users/foo/code/kimi-code', '/Users/foo/code/other'],
+      home: "/Users/foo",
+      recent_roots: ["/Users/foo/code/kimi-code", "/Users/foo/code/other"],
     };
     expect(fsHomeResponseSchema.parse(resp).recent_roots.length).toBe(2);
   });

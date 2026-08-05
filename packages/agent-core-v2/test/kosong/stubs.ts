@@ -5,24 +5,28 @@
  * token provider.
  */
 
-import { Emitter, type Event } from '#/_base/event';
-import type { IOAuthService } from '#/app/auth/auth';
+import { Emitter, type Event } from "#/_base/event";
+import type { IOAuthService } from "#/app/auth/auth";
 import {
   type ConfigChangedEvent,
   type ConfigDiagnostic,
   type ConfigInspectValue,
   IConfigService,
   type ResolvedConfig,
-} from '#/app/config/config';
-import type { IModelOAuthTokens } from '#/kosong/model/modelOAuth';
+} from "#/app/config/config";
+import type { IModelOAuthTokens } from "#/kosong/model/modelOAuth";
 
 export class StubConfigService implements IConfigService {
   declare readonly _serviceBrand: undefined;
   readonly ready = Promise.resolve();
   private readonly _onDidChange = new Emitter<ConfigChangedEvent>();
-  readonly onDidChangeConfiguration: Event<ConfigChangedEvent> = this._onDidChange.event;
-  readonly onDidSectionChange: Event<ConfigChangedEvent> = this._onDidChange.event;
-  private readonly _onDidChangeDiagnostics = new Emitter<readonly ConfigDiagnostic[]>();
+  readonly onDidChangeConfiguration: Event<ConfigChangedEvent> =
+    this._onDidChange.event;
+  readonly onDidSectionChange: Event<ConfigChangedEvent> =
+    this._onDidChange.event;
+  private readonly _onDidChangeDiagnostics = new Emitter<
+    readonly ConfigDiagnostic[]
+  >();
   readonly onDidChangeDiagnostics: Event<readonly ConfigDiagnostic[]> =
     this._onDidChangeDiagnostics.event;
   private readonly _values = new Map<string, unknown>();
@@ -53,11 +57,14 @@ export class StubConfigService implements IConfigService {
   set(domain: string, patch: unknown): Promise<void> {
     const previousValue = this._values.get(domain);
     const value =
-      patch !== null && typeof patch === 'object'
-        ? { ...(previousValue as Record<string, unknown> | undefined), ...patch }
+      patch !== null && typeof patch === "object"
+        ? {
+            ...(previousValue as Record<string, unknown> | undefined),
+            ...patch,
+          }
         : patch;
     this._values.set(domain, value);
-    this._onDidChange.fire({ domain, source: 'set', value, previousValue });
+    this._onDidChange.fire({ domain, source: "set", value, previousValue });
     return Promise.resolve();
   }
 
@@ -68,7 +75,7 @@ export class StubConfigService implements IConfigService {
     } else {
       this._values.set(domain, value);
     }
-    this._onDidChange.fire({ domain, source: 'set', value, previousValue });
+    this._onDidChange.fire({ domain, source: "set", value, previousValue });
     return Promise.resolve();
   }
 
@@ -80,7 +87,7 @@ export class StubConfigService implements IConfigService {
       } else {
         this._values.set(domain, value);
       }
-      this._onDidChange.fire({ domain, source: 'set', value, previousValue });
+      this._onDidChange.fire({ domain, source: "set", value, previousValue });
     }
     return Promise.resolve();
   }
@@ -113,7 +120,9 @@ export interface StubTokenProvider {
   readonly calls: Array<{ force?: boolean }>;
 }
 
-export function stubTokenProvider(tokens: readonly string[]): StubTokenProvider {
+export function stubTokenProvider(
+  tokens: readonly string[],
+): StubTokenProvider {
   const calls: Array<{ force?: boolean }> = [];
   let index = 0;
   return {
@@ -122,20 +131,23 @@ export function stubTokenProvider(tokens: readonly string[]): StubTokenProvider 
       calls.push(options ?? {});
       const token = tokens[Math.min(index, tokens.length - 1)];
       index += 1;
-      return Promise.resolve(token ?? '');
+      return Promise.resolve(token ?? "");
     },
   };
 }
 
-export function stubOAuthService(tokenProvider?: StubTokenProvider): IOAuthService {
+export function stubOAuthService(
+  tokenProvider?: StubTokenProvider,
+): IOAuthService {
   return {
     _serviceBrand: undefined,
-    startLogin: () => Promise.reject(new Error('not implemented')),
+    startLogin: () => Promise.reject(new Error("not implemented")),
     getFlow: () => undefined,
-    cancelLogin: () => Promise.reject(new Error('not implemented')),
-    logout: () => Promise.reject(new Error('not implemented')),
+    cancelLogin: () => Promise.reject(new Error("not implemented")),
+    logout: () => Promise.reject(new Error("not implemented")),
     status: () => Promise.resolve({ loggedIn: false }),
-    refreshOAuthProviderModels: () => Promise.reject(new Error('not implemented')),
+    refreshOAuthProviderModels: () =>
+      Promise.reject(new Error("not implemented")),
     resolveTokenProvider: () => tokenProvider,
     getCachedAccessToken: () => Promise.resolve(undefined),
   } as unknown as IOAuthService;
@@ -155,7 +167,7 @@ export function stubModelOAuthTokens(
     hasCachedAccessToken: () => Promise.resolve(cachedToken !== undefined),
     getAccessToken: (_provider, _oauthRef, options) =>
       tokenProvider === undefined
-        ? Promise.reject(new Error('auth.login_required'))
+        ? Promise.reject(new Error("auth.login_required"))
         : tokenProvider.getAccessToken(
             options?.force === true ? { force: true } : undefined,
           ),

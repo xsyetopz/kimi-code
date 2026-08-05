@@ -7,12 +7,17 @@
  * launch is delegated to a host-provided handler.
  */
 
-import type { Command } from 'commander';
+import type { Command } from "commander";
 
-export function registerMigrateCommand(parent: Command, onMigrate: () => void): void {
+export function registerMigrateCommand(
+  parent: Command,
+  onMigrate: () => void,
+): void {
   parent
-    .command('migrate')
-    .description('Migrate data from a legacy kimi-cli installation into kimi-code.')
+    .command("migrate")
+    .description(
+      "Migrate data from a legacy kimi-cli installation into kimi-code.",
+    )
     .action(() => {
       onMigrate();
     });

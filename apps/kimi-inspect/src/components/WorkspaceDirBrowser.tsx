@@ -14,25 +14,25 @@
 import {
   IHostFolderBrowser,
   type FsBrowseEntry,
-} from '@moonshot-ai/agent-core-v2/app/hostFolderBrowser/hostFolderBrowser';
+} from "@moonshot-ai/agent-core-v2/app/hostFolderBrowser/hostFolderBrowser";
 import {
   IWorkspaceService,
   type Workspace,
-} from '@moonshot-ai/agent-core-v2/app/workspace/workspace';
-import { IWorkspaceTrust } from '@moonshot-ai/agent-core-v2/workspace/workspaceTrust/workspaceTrust';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+} from "@moonshot-ai/agent-core-v2/app/workspace/workspace";
+import { IWorkspaceTrust } from "@moonshot-ai/agent-core-v2/workspace/workspaceTrust/workspaceTrust";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 
-import type { InspectClient } from '../channel';
-import { ErrorLine } from '../ui';
+import type { InspectClient } from "../channel";
+import { ErrorLine } from "../ui";
 
 function normalizePath(path: string): string {
-  return path.replaceAll('\\', '/').replace(/\/+$/, '');
+  return path.replaceAll("\\", "/").replace(/\/+$/, "");
 }
 
 function baseName(path: string): string {
   const normalized = normalizePath(path);
-  return normalized.split('/').pop() ?? normalized;
+  return normalized.split("/").pop() ?? normalized;
 }
 
 export function WorkspaceDirBrowser(props: {
@@ -46,11 +46,11 @@ export function WorkspaceDirBrowser(props: {
   const [path, setPath] = useState<string | null>(null);
 
   const home = useQuery({
-    queryKey: ['fs-home', klient.baseUrl],
+    queryKey: ["fs-home", klient.baseUrl],
     queryFn: () => klient.core(IHostFolderBrowser).home(),
   });
   const browse = useQuery({
-    queryKey: ['fs-browse', klient.baseUrl, path],
+    queryKey: ["fs-browse", klient.baseUrl, path],
     queryFn: () =>
       path === null
         ? klient.core(IHostFolderBrowser).browse()
@@ -58,9 +58,12 @@ export function WorkspaceDirBrowser(props: {
   });
 
   const select = useMutation({
-    mutationFn: (root: string) => klient.core(IWorkspaceService).createOrTouch(root),
+    mutationFn: (root: string) =>
+      klient.core(IWorkspaceService).createOrTouch(root),
     onSuccess: async (workspace) => {
-      await queryClient.invalidateQueries({ queryKey: ['workspaces', klient.baseUrl] });
+      await queryClient.invalidateQueries({
+        queryKey: ["workspaces", klient.baseUrl],
+      });
       onSelect(workspace);
     },
   });
@@ -68,14 +71,21 @@ export function WorkspaceDirBrowser(props: {
   const workspaceList = workspaces ?? [];
   /** normalized root → trusted; undefined when the server predates `workspaceTrust`. */
   const trustByRoot = useQuery({
-    queryKey: ['workspace-trust', klient.baseUrl, workspaceList.map((ws) => ws.id).join(',')],
+    queryKey: [
+      "workspace-trust",
+      klient.baseUrl,
+      workspaceList.map((ws) => ws.id).join(","),
+    ],
     enabled: workspaceList.length > 0,
     retry: false,
     queryFn: async () => {
       const entries = await Promise.all(
         workspaceList.map(async (ws) => {
           try {
-            const trusted = await klient.workspace(ws.id).service(IWorkspaceTrust).get();
+            const trusted = await klient
+              .workspace(ws.id)
+              .service(IWorkspaceTrust)
+              .get();
             return [normalizePath(ws.root), trusted] as const;
           } catch {
             return [normalizePath(ws.root), undefined] as const;
@@ -86,10 +96,13 @@ export function WorkspaceDirBrowser(props: {
     },
   });
 
-  const workspaceRoots = new Set(workspaceList.map((ws) => normalizePath(ws.root)));
+  const workspaceRoots = new Set(
+    workspaceList.map((ws) => normalizePath(ws.root)),
+  );
   const current = browse.data ?? null;
   const recents = home.data?.recent_roots ?? [];
-  const isCurrentWorkspace = current !== null && workspaceRoots.has(normalizePath(current.path));
+  const isCurrentWorkspace =
+    current !== null && workspaceRoots.has(normalizePath(current.path));
 
   const renderEntry = (entry: FsBrowseEntry) => {
     const isWorkspace = workspaceRoots.has(normalizePath(entry.path));
@@ -111,11 +124,11 @@ export function WorkspaceDirBrowser(props: {
           <span
             className={`shrink-0 rounded border px-1 text-[9px] font-semibold uppercase tracking-wider ${
               trusted
-                ? 'border-emerald-800 text-emerald-400'
-                : 'border-amber-800 text-amber-400'
+                ? "border-emerald-800 text-emerald-400"
+                : "border-amber-800 text-amber-400"
             }`}
           >
-            {trusted ? 'trusted' : 'untrusted'}
+            {trusted ? "trusted" : "untrusted"}
           </span>
         ) : null}
         {isWorkspace ? (
@@ -158,14 +171,18 @@ export function WorkspaceDirBrowser(props: {
             }}
             className="ml-auto shrink-0 rounded border border-sky-700 px-2 py-0.5 text-[10px] font-semibold text-sky-300 hover:bg-sky-950 disabled:opacity-40"
           >
-            {select.isPending ? 'selecting…' : isCurrentWorkspace ? 'select' : 'register & select'}
+            {select.isPending
+              ? "selecting…"
+              : isCurrentWorkspace
+                ? "select"
+                : "register & select"}
           </button>
         </div>
         <span
           title={current?.path}
           className="truncate font-mono text-[10px] text-neutral-500"
         >
-          {current?.path ?? '…'}
+          {current?.path ?? "…"}
         </span>
       </div>
       {recents.length > 0 ? (
@@ -194,9 +211,13 @@ export function WorkspaceDirBrowser(props: {
             <ErrorLine error={browse.error} />
           </div>
         ) : current === null ? (
-          <div className="px-3 py-2 text-[11px] text-neutral-600 italic">loading…</div>
+          <div className="px-3 py-2 text-[11px] text-neutral-600 italic">
+            loading…
+          </div>
         ) : current.entries.length === 0 ? (
-          <div className="px-3 py-2 text-[11px] text-neutral-600 italic">no subdirectories</div>
+          <div className="px-3 py-2 text-[11px] text-neutral-600 italic">
+            no subdirectories
+          </div>
         ) : (
           current.entries.map(renderEntry)
         )}

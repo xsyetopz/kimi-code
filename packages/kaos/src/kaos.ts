@@ -1,6 +1,6 @@
-import type { Environment } from './environment';
-import type { KaosProcess } from './process';
-import type { StatResult } from './types';
+import type { Environment } from "./environment";
+import type { KaosProcess } from "./process";
+import type { StatResult } from "./types";
 
 /**
  * Kimi Agent Operating System (KAOS) interface.
@@ -23,7 +23,7 @@ export interface Kaos {
   // ── Path operations (sync) ──────────────────────────────────────────
 
   /** Return the path style used by this environment. */
-  pathClass(): 'posix' | 'win32';
+  pathClass(): "posix" | "win32";
   /** Normalize the given path string (resolve `.` / `..` segments). */
   normpath(path: string): string;
   /** Return the home directory of the current user. */
@@ -45,7 +45,10 @@ export interface Kaos {
    */
   withEnv(env: Record<string, string>): Kaos;
   /** Return stat metadata for `path`. */
-  stat(path: string, options?: { followSymlinks?: boolean }): Promise<StatResult>;
+  stat(
+    path: string,
+    options?: { followSymlinks?: boolean },
+  ): Promise<StatResult>;
   /** Yield entry names in the directory at `path`. */
   iterdir(path: string): AsyncGenerator<string>;
   /** Yield paths matching `pattern` under `path`. */
@@ -70,12 +73,18 @@ export interface Kaos {
    */
   readText(
     path: string,
-    options?: { encoding?: BufferEncoding; errors?: 'strict' | 'replace' | 'ignore' },
+    options?: {
+      encoding?: BufferEncoding;
+      errors?: "strict" | "replace" | "ignore";
+    },
   ): Promise<string>;
   /** Yield lines from the file at `path` one by one. */
   readLines(
     path: string,
-    options?: { encoding?: BufferEncoding; errors?: 'strict' | 'replace' | 'ignore' },
+    options?: {
+      encoding?: BufferEncoding;
+      errors?: "strict" | "replace" | "ignore";
+    },
   ): AsyncGenerator<string>;
   /** Write raw bytes to `path`, returning the number of bytes written. */
   writeBytes(path: string, data: Buffer): Promise<number>;
@@ -83,15 +92,21 @@ export interface Kaos {
   writeText(
     path: string,
     data: string,
-    options?: { mode?: 'w' | 'a'; encoding?: BufferEncoding },
+    options?: { mode?: "w" | "a"; encoding?: BufferEncoding },
   ): Promise<number>;
   /** Create a directory at `path`. */
-  mkdir(path: string, options?: { parents?: boolean; existOk?: boolean }): Promise<void>;
+  mkdir(
+    path: string,
+    options?: { parents?: boolean; existOk?: boolean },
+  ): Promise<void>;
 
   // ── Process execution ───────────────────────────────────────────────
 
   /** Spawn a process with the given arguments. */
   exec(...args: string[]): Promise<KaosProcess>;
   /** Spawn a process with explicit environment variables. */
-  execWithEnv(args: string[], env?: Record<string, string>): Promise<KaosProcess>;
+  execWithEnv(
+    args: string[],
+    env?: Record<string, string>,
+  ): Promise<KaosProcess>;
 }

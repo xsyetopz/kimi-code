@@ -7,9 +7,9 @@
  * secondary-model derived id resolution.
  * Run: pnpm exec vitest run test/session-event-wiring.test.ts
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from "vitest";
 
-import type { Event } from '@moonshot-ai/agent-core';
+import type { Event } from "@moonshot-ai/agent-core";
 import {
   IAgentLifecycleService,
   IAgentProfileService,
@@ -21,9 +21,9 @@ import {
   SECONDARY_DERIVED_MODEL_ID,
   type IAgentScopeHandle,
   type ISessionScopeHandle,
-} from '@moonshot-ai/agent-core-v2';
+} from "@moonshot-ai/agent-core-v2";
 
-import { SessionEventWiring, type SessionEventSink } from '#/v2/session-wiring';
+import { SessionEventWiring, type SessionEventSink } from "#/v2/session-wiring";
 
 // ---------------------------------------------------------------------------
 // Fakes
@@ -81,7 +81,12 @@ function makeSession(agents: FakeAgentHandle[]): ISessionScopeHandle {
       return undefined;
     },
   };
-  return { id: 's1', kind: 1, accessor, dispose: () => {} } as unknown as ISessionScopeHandle;
+  return {
+    id: "s1",
+    kind: 1,
+    accessor,
+    dispose: () => {},
+  } as unknown as ISessionScopeHandle;
 }
 
 function collectingSink(): { sink: SessionEventSink; events: Event[] } {
@@ -92,9 +97,10 @@ function collectingSink(): { sink: SessionEventSink; events: Event[] } {
       receiveEvent: (event) => {
         events.push(event);
       },
-      requestApproval: () => Promise.resolve('cancelled' as never),
+      requestApproval: () => Promise.resolve("cancelled" as never),
       requestQuestion: () => Promise.resolve(null),
-      toolCall: () => Promise.resolve({ output: 'not supported', isError: true }),
+      toolCall: () =>
+        Promise.resolve({ output: "not supported", isError: true }),
     },
   };
 }
@@ -116,39 +122,39 @@ function bindStatusServices(agent: FakeAgentHandle, model: string): void {
 // Tests
 // ---------------------------------------------------------------------------
 
-describe('SessionEventWiring status snapshot fold', () => {
-  it('folds a consistent usage + context + model snapshot into every status event', () => {
-    const sub = new FakeAgentHandle('agent-1');
-    bindStatusServices(sub, 'sub-model');
+describe("SessionEventWiring status snapshot fold", () => {
+  it("folds a consistent usage + context + model snapshot into every status event", () => {
+    const sub = new FakeAgentHandle("agent-1");
+    bindStatusServices(sub, "sub-model");
     const { sink, events } = collectingSink();
     const wiring = new SessionEventWiring(makeSession([sub]), sink);
     try {
       // The v2 model slice rides only the subagent's bind-time emission, which
       // reaches clients before `subagent.spawned` and is dropped there; a
       // later usage-only slice must still carry the model at this edge.
-      sub.bus.emit({ type: 'agent.status.updated', usage: USAGE });
+      sub.bus.emit({ type: "agent.status.updated", usage: USAGE });
       // Non-status events pass through untouched.
-      sub.bus.emit({ type: 'assistant.delta', delta: 'Hi' });
+      sub.bus.emit({ type: "assistant.delta", delta: "Hi" });
     } finally {
       wiring.dispose();
     }
 
     expect(events).toHaveLength(2);
     expect(events[0]).toMatchObject({
-      type: 'agent.status.updated',
-      sessionId: 's1',
-      agentId: 'agent-1',
+      type: "agent.status.updated",
+      sessionId: "s1",
+      agentId: "agent-1",
       usage: USAGE,
       contextTokens: 10,
       maxContextTokens: 128_000,
-      model: 'sub-model',
+      model: "sub-model",
     });
-    expect(events[1]).toMatchObject({ type: 'assistant.delta', delta: 'Hi' });
-    expect(events[1]).not.toHaveProperty('model');
+    expect(events[1]).toMatchObject({ type: "assistant.delta", delta: "Hi" });
+    expect(events[1]).not.toHaveProperty("model");
   });
 
-  it('resolves the secondary derived model id to a display string', () => {
-    const sub = new FakeAgentHandle('agent-1');
+  it("resolves the secondary derived model id to a display string", () => {
+    const sub = new FakeAgentHandle("agent-1");
     bindStatusServices(sub, SECONDARY_DERIVED_MODEL_ID);
     const { sink, events } = collectingSink();
     const wiring = new SessionEventWiring(makeSession([sub]), sink);
@@ -156,44 +162,49 @@ describe('SessionEventWiring status snapshot fold', () => {
       sub.set(IModelCatalog, {
         get: (id: string) => {
           expect(id).toBe(SECONDARY_DERIVED_MODEL_ID);
-          return { id, name: 'kimi-k2-wire', displayName: 'Kimi K2' };
+          return { id, name: "kimi-k2-wire", displayName: "Kimi K2" };
         },
       });
-      sub.bus.emit({ type: 'agent.status.updated', usage: USAGE });
+      sub.bus.emit({ type: "agent.status.updated", usage: USAGE });
       // Without a displayName the pointed entry's wire name is shown.
-      sub.set(IModelCatalog, { get: (id: string) => ({ id, name: 'kimi-k2-wire' }) });
-      sub.bus.emit({ type: 'agent.status.updated', usage: USAGE });
+      sub.set(IModelCatalog, {
+        get: (id: string) => ({ id, name: "kimi-k2-wire" }),
+      });
+      sub.bus.emit({ type: "agent.status.updated", usage: USAGE });
       // A resolution failure falls back to the raw alias.
       sub.set(IModelCatalog, {
         get: () => {
-          throw new Error('unknown model');
+          throw new Error("unknown model");
         },
       });
-      sub.bus.emit({ type: 'agent.status.updated', usage: USAGE });
+      sub.bus.emit({ type: "agent.status.updated", usage: USAGE });
     } finally {
       wiring.dispose();
     }
 
     expect(events.map((event) => (event as { model?: string }).model)).toEqual([
-      'Kimi K2',
-      'kimi-k2-wire',
+      "Kimi K2",
+      "kimi-k2-wire",
       SECONDARY_DERIVED_MODEL_ID,
     ]);
   });
 
-  it('passes status events through unchanged when the agent services are incomplete', () => {
-    const sub = new FakeAgentHandle('agent-1');
+  it("passes status events through unchanged when the agent services are incomplete", () => {
+    const sub = new FakeAgentHandle("agent-1");
     // No profile/usage/context/wire services bound — nothing to fold in.
     const { sink, events } = collectingSink();
     const wiring = new SessionEventWiring(makeSession([sub]), sink);
     try {
-      sub.bus.emit({ type: 'agent.status.updated', usage: USAGE });
+      sub.bus.emit({ type: "agent.status.updated", usage: USAGE });
     } finally {
       wiring.dispose();
     }
 
     expect(events).toHaveLength(1);
-    expect(events[0]).toMatchObject({ type: 'agent.status.updated', usage: USAGE });
-    expect(events[0]).not.toHaveProperty('model');
+    expect(events[0]).toMatchObject({
+      type: "agent.status.updated",
+      usage: USAGE,
+    });
+    expect(events[0]).not.toHaveProperty("model");
   });
 });

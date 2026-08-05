@@ -21,11 +21,11 @@
 // deltas and the freqs are varint-coded (LEB128, unsigned). This is pure JS
 // and gives ~5-10x compression for dense docID ranges.
 
-import fs from 'node:fs';
-import fsp from 'node:fs/promises';
-import path from 'node:path';
-import { crc32 } from './crc32.ts';
-import { readAtAsync } from './value-reader.ts';
+import fs from "node:fs";
+import fsp from "node:fs/promises";
+import path from "node:path";
+import { crc32 } from "./crc32.ts";
+import { readAtAsync } from "./value-reader.ts";
 
 const HEADER_LEN = 2 + 4 + 4; // termLen + df + payloadLen (term is variable)
 const CRC_LEN = 4;
@@ -49,11 +49,11 @@ function decodeVarint(buf: Buffer, cur: { i: number }): number {
   let shift = 0;
   for (;;) {
     const b = buf[cur.i++];
-    if (b === undefined) throw new Error('postings: truncated varint');
+    if (b === undefined) throw new Error("postings: truncated varint");
     r |= (b & 0x7f) << shift;
     if ((b & 0x80) === 0) return r >>> 0;
     shift += 7;
-    if (shift > 35) throw new Error('postings: varint too long');
+    if (shift > 35) throw new Error("postings: varint too long");
   }
 }
 
@@ -63,8 +63,12 @@ function decodeVarint(buf: Buffer, cur: { i: number }): number {
  *  sized iterable (an array or a Map's entries view) so a large build never
  *  materializes a per-term copy — a hot term's list can have millions of
  *  entries and spreading it was an OOM vector. */
-export function encodePostingList(entries: ReadonlyMap<number, number> | readonly (readonly [number, number])[]): Buffer {
-  const count = Array.isArray(entries) ? (entries as readonly unknown[]).length : (entries as ReadonlyMap<number, number>).size;
+export function encodePostingList(
+  entries: ReadonlyMap<number, number> | readonly (readonly [number, number])[],
+): Buffer {
+  const count = Array.isArray(entries)
+    ? (entries as readonly unknown[]).length
+    : (entries as ReadonlyMap<number, number>).size;
   const bytes: number[] = [];
   encodeVarintInto(count, bytes);
   let prev = 0;
@@ -82,7 +86,10 @@ export function encodePostingList(entries: ReadonlyMap<number, number> | readonl
  * this is the lowest-docID prefix): a query-time work budget can stop the
  * decode of a hot term's list early instead of always paying its full length.
  */
-export function decodePostingList(buf: Buffer, maxEntries?: number): [number, number][] {
+export function decodePostingList(
+  buf: Buffer,
+  maxEntries?: number,
+): [number, number][] {
   const cur = { i: 0 };
   const count = decodeVarint(buf, cur);
   const n = maxEntries === undefined ? count : Math.min(count, maxEntries);
@@ -106,9 +113,13 @@ export interface DecodedRecord {
 }
 
 /** Encode one term's record frame (with CRC trailer). */
-export function encodeRecord(term: string, df: number, payload: Buffer): Buffer {
-  const termBuf = Buffer.from(term, 'utf8');
-  if (termBuf.length > 0xffff) throw new RangeError('postings: term too long');
+export function encodeRecord(
+  term: string,
+  df: number,
+  payload: Buffer,
+): Buffer {
+  const termBuf = Buffer.from(term, "utf8");
+  if (termBuf.length > 0xffff) throw new RangeError("postings: term too long");
   const bodyLen = HEADER_LEN + termBuf.length + payload.length;
   const body = Buffer.alloc(bodyLen);
   let o = 0;
@@ -130,21 +141,24 @@ export function encodeRecord(term: string, df: number, payload: Buffer): Buffer 
 
 /** Decode + CRC-verify a record frame. */
 export function decodeRecord(buf: Buffer): DecodedRecord {
-  if (buf.length < HEADER_LEN + CRC_LEN) throw new Error('postings: record too short');
+  if (buf.length < HEADER_LEN + CRC_LEN)
+    throw new Error("postings: record too short");
   const stored = buf.readUInt32LE(buf.length - CRC_LEN);
   const calc = crc32(buf.subarray(0, buf.length - CRC_LEN));
-  if (stored !== calc) throw new Error('postings: record crc mismatch');
+  if (stored !== calc) throw new Error("postings: record crc mismatch");
   let o = 0;
   const termLen = buf.readUInt16LE(o);
   o += 2;
-  if (o + termLen + 4 + 4 > buf.length - CRC_LEN) throw new Error('postings: record term length out of bounds');
-  const term = buf.toString('utf8', o, o + termLen);
+  if (o + termLen + 4 + 4 > buf.length - CRC_LEN)
+    throw new Error("postings: record term length out of bounds");
+  const term = buf.toString("utf8", o, o + termLen);
   o += termLen;
   const df = buf.readUInt32LE(o);
   o += 4;
   const payloadLen = buf.readUInt32LE(o);
   o += 4;
-  if (o + payloadLen > buf.length - CRC_LEN) throw new Error('postings: record payload length out of bounds');
+  if (o + payloadLen > buf.length - CRC_LEN)
+    throw new Error("postings: record payload length out of bounds");
   const payload = buf.subarray(o, o + payloadLen);
   return { term, df, payload };
 }
@@ -186,7 +200,7 @@ export class PostingsFile {
    */
   static open(filePath: string): PostingsFile {
     const pf = new PostingsFile(filePath);
-    pf.fd = fs.openSync(filePath, 'r');
+    pf.fd = fs.openSync(filePath, "r");
     return pf;
   }
 
@@ -198,12 +212,18 @@ export class PostingsFile {
    *  `maxEntries`, only the leading (lowest-docID) part of the list is
    *  decoded — see decodePostingList. */
   read(entry: PostingEntry, maxEntries?: number): [number, number][] {
-    if (this.fd === null) throw new Error('postings file is closed');
+    if (this.fd === null) throw new Error("postings file is closed");
     const buf = Buffer.alloc(entry.len);
     let got = 0;
     while (got < entry.len) {
-      const r = fs.readSync(this.fd, buf, got, entry.len - got, entry.off + got);
-      if (r === 0) throw new Error('postings: short read past EOF');
+      const r = fs.readSync(
+        this.fd,
+        buf,
+        got,
+        entry.len - got,
+        entry.off + got,
+      );
+      if (r === 0) throw new Error("postings: short read past EOF");
       got += r;
     }
     const rec = decodeRecord(buf);
@@ -213,13 +233,22 @@ export class PostingsFile {
   /** Async twin of read() (stage 6): the positioned read runs on the libuv
    *  thread pool, so a cold postings lookup no longer blocks the event loop
    *  on readSync. Purely additive — the synchronous read path is unchanged. */
-  async readAsync(entry: PostingEntry, maxEntries?: number): Promise<[number, number][]> {
-    if (this.fd === null) throw new Error('postings file is closed');
+  async readAsync(
+    entry: PostingEntry,
+    maxEntries?: number,
+  ): Promise<[number, number][]> {
+    if (this.fd === null) throw new Error("postings file is closed");
     const buf = Buffer.alloc(entry.len);
     let got = 0;
     while (got < entry.len) {
-      const r = await readAtAsync(this.fd, buf, got, entry.len - got, entry.off + got);
-      if (r === 0) throw new Error('postings: short read past EOF');
+      const r = await readAtAsync(
+        this.fd,
+        buf,
+        got,
+        entry.len - got,
+        entry.off + got,
+      );
+      if (r === 0) throw new Error("postings: short read past EOF");
       got += r;
     }
     const rec = decodeRecord(buf);
@@ -250,16 +279,25 @@ export class PostingsFile {
    */
   static async rebuild(
     filePath: string,
-    iter: Iterable<{ term: string; entries: ReadonlyMap<number, number> | readonly (readonly [number, number])[] }>,
+    iter: Iterable<{
+      term: string;
+      entries:
+        | ReadonlyMap<number, number>
+        | readonly (readonly [number, number])[];
+    }>,
     hooks: { beforeRename?: () => void } = {},
-  ): Promise<{ dict: Map<string, PostingEntry>; bytes: number; crc32: number }> {
-    const tmp = filePath + '.tmp';
+  ): Promise<{
+    dict: Map<string, PostingEntry>;
+    bytes: number;
+    crc32: number;
+  }> {
+    const tmp = filePath + ".tmp";
     const dict = new Map<string, PostingEntry>();
     let off = 0;
     let crc = 0;
     let batch: Buffer[] = [];
     let batchBytes = 0;
-    const fh = await fsp.open(tmp, 'w');
+    const fh = await fsp.open(tmp, "w");
     const flushBatch = async (): Promise<void> => {
       if (batch.length === 0) return;
       const buf = Buffer.concat(batch);
@@ -269,13 +307,16 @@ export class PostingsFile {
       let written = 0;
       while (written < buf.length) {
         const { bytesWritten } = await fh.write(buf, written);
-        if (bytesWritten === 0) throw new Error('postings: rebuild write made no progress');
+        if (bytesWritten === 0)
+          throw new Error("postings: rebuild write made no progress");
         written += bytesWritten;
       }
     };
     try {
       for (const { term, entries } of iter) {
-        const count = Array.isArray(entries) ? (entries as readonly unknown[]).length : (entries as ReadonlyMap<number, number>).size;
+        const count = Array.isArray(entries)
+          ? (entries as readonly unknown[]).length
+          : (entries as ReadonlyMap<number, number>).size;
         if (count === 0) continue;
         const payload = encodePostingList(entries);
         const rec = encodeRecord(term, count, payload);
@@ -294,7 +335,7 @@ export class PostingsFile {
     fs.renameSync(tmp, filePath);
     // Best-effort directory fsync so the rename survives a crash.
     try {
-      const dfd = fs.openSync(path.dirname(filePath), 'r');
+      const dfd = fs.openSync(path.dirname(filePath), "r");
       try {
         fs.fsyncSync(dfd);
       } finally {

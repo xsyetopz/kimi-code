@@ -2,9 +2,7 @@
   "version": 1,
   "approval": {
     "yolo": false,
-    "auto_approve_actions": [
-      "run command"
-    ]
+    "auto_approve_actions": ["run command"]
   },
   "additional_dirs": [],
   "custom_title": "帮我创建一个 plan，来优化我当前 diff 中的代码",

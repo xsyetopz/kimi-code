@@ -10,12 +10,15 @@
  * scope.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
-import type { IStateRegistry } from '#/_base/state/stateRegistry';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
+import type { IStateRegistry } from "#/_base/state/stateRegistry";
 
 export interface IAgentStateService extends IStateRegistry {
   readonly _serviceBrand: undefined;
 }
 
 export const IAgentStateService: ServiceIdentifier<IAgentStateService> =
-  createDecorator<IAgentStateService>('agentStateService');
+  createDecorator<IAgentStateService>("agentStateService");

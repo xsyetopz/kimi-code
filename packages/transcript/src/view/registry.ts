@@ -13,9 +13,9 @@
  * instantiate `ViewRegistry<TheirComponent>` and register their own widgets.
  */
 
-import type { ToolCallFrame } from '../model/frame';
-import type { TranscriptTask } from '../model/task';
-import type { TurnOrigin } from '../model/turn';
+import type { ToolCallFrame } from "../model/frame";
+import type { TranscriptTask } from "../model/task";
+import type { TurnOrigin } from "../model/turn";
 
 export interface ToolViewContext {
   readonly frame: ToolCallFrame;

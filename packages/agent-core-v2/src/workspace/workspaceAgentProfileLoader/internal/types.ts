@@ -7,12 +7,17 @@
  * Pure data; no scoped state.
  */
 
-import type { AgentModelPreference } from '#/app/agentProfileCatalog/agentProfileCatalog';
-import type { SkippedAgentFile } from '#/app/agentProfileCatalog/agentProfileContribution';
+import type { AgentModelPreference } from "#/app/agentProfileCatalog/agentProfileCatalog";
+import type { SkippedAgentFile } from "#/app/agentProfileCatalog/agentProfileContribution";
 
-export type { SkippedAgentFile } from '#/app/agentProfileCatalog/agentProfileContribution';
+export type { SkippedAgentFile } from "#/app/agentProfileCatalog/agentProfileContribution";
 
-export type AgentFileSource = 'plugin' | 'project' | 'user' | 'extra' | 'explicit';
+export type AgentFileSource =
+  | "plugin"
+  | "project"
+  | "user"
+  | "extra"
+  | "explicit";
 
 export interface AgentFileRoot {
   readonly path: string;

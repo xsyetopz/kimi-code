@@ -6,9 +6,14 @@ import {
   normalizeAPIStatusError,
   parseRetryAfterMs,
   throwIfAbortError,
-} from '#/errors';
-import type { ContentPart, Message, StreamedMessagePart, ToolCall } from '#/message';
-import { isToolDeclarationOnlyMessage } from '#/message';
+} from "#/errors";
+import type {
+  ContentPart,
+  Message,
+  StreamedMessagePart,
+  ToolCall,
+} from "#/message";
+import { isToolDeclarationOnlyMessage } from "#/message";
 import type {
   ChatProvider,
   FinishReason,
@@ -17,15 +22,15 @@ import type {
   ResponseFormat,
   StreamedMessage,
   ThinkingEffort,
-} from '#/provider';
-import type { Tool } from '#/tool';
-import type { TokenUsage } from '#/usage';
+} from "#/provider";
+import type { Tool } from "#/tool";
+import type { TokenUsage } from "#/usage";
 import Anthropic, {
   APIError as AnthropicAPIError,
   APIConnectionError as AnthropicConnectionError,
   AnthropicError,
   APIConnectionTimeoutError as AnthropicTimeoutError,
-} from '@anthropic-ai/sdk';
+} from "@anthropic-ai/sdk";
 import type {
   Tool as AnthropicTool,
   ContentBlockParam,
@@ -40,7 +45,7 @@ import type {
   ThinkingBlockParam,
   ToolResultBlockParam,
   ToolUseBlockParam,
-} from '@anthropic-ai/sdk/resources/messages/messages.js';
+} from "@anthropic-ai/sdk/resources/messages/messages.js";
 
 import {
   BUDGET_THINKING_EFFORTS,
@@ -49,14 +54,14 @@ import {
   parseAnthropicModelVersion,
   type AnthropicModelProfile,
   type AnthropicModelVersion,
-} from './anthropic-profile';
-import { mergeConsecutiveUserMessages } from './merge-user-messages';
-import { mergeRequestHeaders, resolveAuthBackedClient } from './request-auth';
+} from "./anthropic-profile";
+import { mergeConsecutiveUserMessages } from "./merge-user-messages";
+import { mergeRequestHeaders, resolveAuthBackedClient } from "./request-auth";
 import {
   normalizeToolCallIdsForProvider,
   sanitizeToolCallId,
   type ToolCallIdPolicy,
-} from './tool-call-id';
+} from "./tool-call-id";
 
 /**
  * Normalize an Anthropic `stop_reason` string to the unified
@@ -73,19 +78,19 @@ function normalizeAnthropicStopReason(raw: string | null | undefined): {
     return { finishReason: null, rawFinishReason: null };
   }
   switch (raw) {
-    case 'end_turn':
-    case 'stop_sequence':
-      return { finishReason: 'completed', rawFinishReason: raw };
-    case 'max_tokens':
-      return { finishReason: 'truncated', rawFinishReason: raw };
-    case 'tool_use':
-      return { finishReason: 'tool_calls', rawFinishReason: raw };
-    case 'pause_turn':
-      return { finishReason: 'paused', rawFinishReason: raw };
-    case 'refusal':
-      return { finishReason: 'filtered', rawFinishReason: raw };
+    case "end_turn":
+    case "stop_sequence":
+      return { finishReason: "completed", rawFinishReason: raw };
+    case "max_tokens":
+      return { finishReason: "truncated", rawFinishReason: raw };
+    case "tool_use":
+      return { finishReason: "tool_calls", rawFinishReason: raw };
+    case "pause_turn":
+      return { finishReason: "paused", rawFinishReason: raw };
+    case "refusal":
+      return { finishReason: "filtered", rawFinishReason: raw };
     default:
-      return { finishReason: 'other', rawFinishReason: raw };
+      return { finishReason: "other", rawFinishReason: raw };
   }
 }
 export interface AnthropicOptions {
@@ -138,8 +143,8 @@ interface AnthropicGenerationKwargs {
   temperature?: number | undefined;
   top_k?: number | undefined;
   top_p?: number | undefined;
-  thinking?: MessageCreateParams['thinking'] | undefined;
-  output_config?: MessageCreateParams['output_config'] | undefined;
+  thinking?: MessageCreateParams["thinking"] | undefined;
+  output_config?: MessageCreateParams["output_config"] | undefined;
   betaFeatures?: string[] | undefined;
   contextManagement?: AnthropicContextManagement | undefined;
 }
@@ -154,9 +159,9 @@ interface AnthropicContextManagement {
   edits: Array<{ type: string; keep?: unknown }>;
 }
 
-const INTERLEAVED_THINKING_BETA = 'interleaved-thinking-2025-05-14';
-const CONTEXT_MANAGEMENT_BETA = 'context-management-2025-06-27';
-const CLEAR_THINKING_EDIT = 'clear_thinking_20251015';
+const INTERLEAVED_THINKING_BETA = "interleaved-thinking-2025-05-14";
+const CONTEXT_MANAGEMENT_BETA = "context-management-2025-06-27";
+const CLEAR_THINKING_EDIT = "clear_thinking_20251015";
 const ANTHROPIC_TOOL_CALL_ID_POLICY: ToolCallIdPolicy = {
   normalize: (id) => sanitizeToolCallId(id, 64),
   maxLength: 64,
@@ -167,20 +172,20 @@ function applyResponseFormat(
   format: ResponseFormat | undefined,
 ): void {
   if (format === undefined) return;
-  if (format.type === 'json_object') {
+  if (format.type === "json_object") {
     throw new ChatProviderError(
-      'Anthropic provider requires a JSON schema for structured response output.',
+      "Anthropic provider requires a JSON schema for structured response output.",
     );
   }
   const outputConfig =
-    kwargs['output_config'] !== undefined && kwargs['output_config'] !== null
-      ? { ...(kwargs['output_config'] as Record<string, unknown>) }
+    kwargs["output_config"] !== undefined && kwargs["output_config"] !== null
+      ? { ...(kwargs["output_config"] as Record<string, unknown>) }
       : {};
-  outputConfig['format'] = {
-    type: 'json_schema',
+  outputConfig["format"] = {
+    type: "json_schema",
     schema: format.jsonSchema.schema,
   };
-  kwargs['output_config'] = outputConfig;
+  kwargs["output_config"] = outputConfig;
 }
 
 /**
@@ -198,41 +203,43 @@ function applyResponseFormat(
  */
 const CEILING_BY_FAMILY_VERSION: Readonly<Record<string, number>> = {
   // Claude Fable 5 documents a 128k output ceiling.
-  'fable-5': 128000,
-  'mythos-5': 128000,
+  "fable-5": 128000,
+  "mythos-5": 128000,
   // Claude Opus per minor version. 4.6 through 4.8 document a 128k cap;
   // 4.5 ships at 64k; 4.1 and the dated 4.0 release stay at 32k.
-  'opus-4-8': 128000,
-  'opus-4-7': 128000,
-  'opus-4-6': 128000,
-  'opus-4-5': 64000,
-  'opus-4-1': 32000,
-  'opus-4-0': 32000,
-  'opus-4': 32000,
+  "opus-4-8": 128000,
+  "opus-4-7": 128000,
+  "opus-4-6": 128000,
+  "opus-4-5": 64000,
+  "opus-4-1": 32000,
+  "opus-4-0": 32000,
+  "opus-4": 32000,
   // Claude Sonnet 5 and 4.6 document a 128k ceiling; older 4.x stays at 64k.
-  'sonnet-5': 128000,
-  'sonnet-4-6': 128000,
-  'sonnet-4-5': 64000,
-  'sonnet-4-0': 64000,
-  'sonnet-4': 64000,
+  "sonnet-5": 128000,
+  "sonnet-4-6": 128000,
+  "sonnet-4-5": 64000,
+  "sonnet-4-0": 64000,
+  "sonnet-4": 64000,
   // Claude Haiku 4.5 is 64k; the family-only entry keeps future dated
   // 4.x Haiku releases on the same ceiling.
-  'haiku-4-5': 64000,
-  'haiku-4': 64000,
+  "haiku-4-5": 64000,
+  "haiku-4": 64000,
   // Claude 3.5 / 3.7 documented at 8192 (standard endpoint).
-  'opus-3-5': 8192,
-  'sonnet-3-5': 8192,
-  'sonnet-3-7': 8192,
-  'haiku-3-5': 8192,
+  "opus-3-5": 8192,
+  "sonnet-3-5": 8192,
+  "sonnet-3-7": 8192,
+  "haiku-3-5": 8192,
   // Original Claude 3 generation.
-  'opus-3': 4096,
-  'sonnet-3': 4096,
-  'haiku-3': 4096,
+  "opus-3": 4096,
+  "sonnet-3": 4096,
+  "haiku-3": 4096,
 };
 
 const FALLBACK_MAX_TOKENS = 128000;
 
-function lookupClaudeCeiling(version: AnthropicModelVersion): number | undefined {
+function lookupClaudeCeiling(
+  version: AnthropicModelVersion,
+): number | undefined {
   const { family, major, minor } = version;
   if (minor !== null) {
     // Exact minor first, then walk down to the nearest catalogued minor:
@@ -242,7 +249,8 @@ function lookupClaudeCeiling(version: AnthropicModelVersion): number | undefined
     // the family baseline. The regex caps minors at two digits, so this
     // walk is bounded.
     for (let candidate = minor; candidate >= 0; candidate--) {
-      const ceiling = CEILING_BY_FAMILY_VERSION[`${family}-${major}-${candidate}`];
+      const ceiling =
+        CEILING_BY_FAMILY_VERSION[`${family}-${major}-${candidate}`];
       if (ceiling !== undefined) return ceiling;
     }
   }
@@ -263,7 +271,10 @@ function lookupClaudeCeiling(version: AnthropicModelVersion): number | undefined
  *   3. With no override and no recognized version, fall back to
  *      {@link FALLBACK_MAX_TOKENS}.
  */
-export function resolveDefaultMaxTokens(model: string, override?: number): number {
+export function resolveDefaultMaxTokens(
+  model: string,
+  override?: number,
+): number {
   const parsed = parseAnthropicModelVersion(model, true);
   const ceiling = parsed === null ? undefined : lookupClaudeCeiling(parsed);
   if (ceiling === undefined) {
@@ -274,7 +285,7 @@ export function resolveDefaultMaxTokens(model: string, override?: number): numbe
 
 function requiresAdaptiveThinking(efforts: readonly string[]): boolean {
   return efforts.some(
-    (effort) => effort !== 'low' && effort !== 'medium' && effort !== 'high',
+    (effort) => effort !== "low" && effort !== "medium" && effort !== "high",
   );
 }
 
@@ -287,7 +298,7 @@ function resolveThinkingProfile(
   if (adaptiveThinking === false) {
     return {
       ...inferred,
-      mode: 'budget',
+      mode: "budget",
       efforts: supportEfforts ?? BUDGET_THINKING_EFFORTS,
       // Opting out of adaptive also opts out of the effort param: budget
       // efforts must go out as pure `budget_tokens` payloads instead of
@@ -299,7 +310,7 @@ function resolveThinkingProfile(
   if (adaptiveThinking === true) {
     return {
       ...inferred,
-      mode: 'adaptive',
+      mode: "adaptive",
       efforts: supportEfforts ?? inferred.efforts,
       supportsEffortParam: true,
     };
@@ -310,7 +321,7 @@ function resolveThinkingProfile(
   }
   return {
     ...inferred,
-    mode: requiresAdaptiveThinking(supportEfforts) ? 'adaptive' : inferred.mode,
+    mode: requiresAdaptiveThinking(supportEfforts) ? "adaptive" : inferred.mode,
     efforts: supportEfforts,
     supportsEffortParam:
       requiresAdaptiveThinking(supportEfforts) || inferred.supportsEffortParam,
@@ -318,15 +329,17 @@ function resolveThinkingProfile(
 }
 
 function budgetTokensForEffort(effort: ThinkingEffort): number | undefined {
-  if (effort === 'low') return 1024;
-  if (effort === 'medium') return 4096;
-  if (effort === 'on' || effort === 'high') return 32_000;
+  if (effort === "low") return 1024;
+  if (effort === "medium") return 4096;
+  if (effort === "on" || effort === "high") return 32_000;
   return undefined;
 }
 
-const CACHE_CONTROL = { type: 'ephemeral' as const };
+const CACHE_CONTROL = { type: "ephemeral" as const };
 
-type CacheableBlock = ContentBlockParam & { cache_control?: { type: 'ephemeral' } };
+type CacheableBlock = ContentBlockParam & {
+  cache_control?: { type: "ephemeral" };
+};
 
 function shouldPreserveUnsignedThinking(model: string): boolean {
   return (
@@ -339,14 +352,14 @@ function shouldPreserveUnsignedThinking(model: string): boolean {
  * Content block types that support cache_control injection.
  */
 const CACHEABLE_TYPES = new Set([
-  'text',
-  'image',
-  'document',
-  'search_result',
-  'tool_use',
-  'tool_result',
-  'server_tool_use',
-  'web_search_tool_result',
+  "text",
+  "image",
+  "document",
+  "search_result",
+  "tool_use",
+  "tool_result",
+  "server_tool_use",
+  "web_search_tool_result",
 ]);
 
 function injectCacheControlOnLastBlock(messages: MessageParam[]): void {
@@ -368,22 +381,24 @@ function injectCacheControlOnLastBlock(messages: MessageParam[]): void {
  * message — the two carry different semantics and must stay separate.
  */
 function isToolResultOnly(message: MessageParam): boolean {
-  if (message.role !== 'user') return false;
+  if (message.role !== "user") return false;
   const content = message.content;
   if (!Array.isArray(content) || content.length === 0) return false;
-  return content.every((block) => block.type === 'tool_result');
+  return content.every((block) => block.type === "tool_result");
 }
 interface AnthropicImageBlock {
-  type: 'image';
-  source: { type: 'base64'; data: string; media_type: string } | { type: 'url'; url: string };
-  cache_control?: { type: 'ephemeral' };
+  type: "image";
+  source:
+    | { type: "base64"; data: string; media_type: string }
+    | { type: "url"; url: string };
+  cache_control?: { type: "ephemeral" };
 }
 
 interface AnthropicVideoBlock {
-  type: 'video';
+  type: "video";
   source:
-    | { type: 'base64'; media_type: string; data: string }
-    | { type: 'url'; url: string };
+    | { type: "base64"; media_type: string; data: string }
+    | { type: "url"; url: string };
 }
 
 // The Messages API has no representation for audio input. Instead of
@@ -391,27 +406,36 @@ interface AnthropicVideoBlock {
 // existed), emit a placeholder text block so it can acknowledge the gap.
 // Consecutive parts of the same kind collapse into a single placeholder.
 const OMITTED_MEDIA_PLACEHOLDER = {
-  audio_url: '(audio omitted: not supported by this provider)',
+  audio_url: "(audio omitted: not supported by this provider)",
 } as const;
 
-const SUPPORTED_B64_MEDIA_TYPES = new Set(['image/png', 'image/jpeg', 'image/gif', 'image/webp']);
+const SUPPORTED_B64_MEDIA_TYPES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/gif",
+  "image/webp",
+]);
 
 const SUPPORTED_B64_VIDEO_TYPES = new Set([
-  'video/mp4',
-  'video/mpeg',
-  'video/quicktime',
-  'video/webm',
-  'video/x-matroska',
-  'video/x-msvideo',
-  'video/x-flv',
-  'video/3gpp',
+  "video/mp4",
+  "video/mpeg",
+  "video/quicktime",
+  "video/webm",
+  "video/x-matroska",
+  "video/x-msvideo",
+  "video/x-flv",
+  "video/3gpp",
 ]);
 
 function imageUrlPartToAnthropic(url: string): AnthropicImageBlock {
-  if (url.startsWith('data:')) {
+  if (url.startsWith("data:")) {
     const withoutScheme = url.slice(5);
-    const parts = withoutScheme.split(';base64,', 2);
-    if (parts.length !== 2 || parts[0] === undefined || parts[1] === undefined) {
+    const parts = withoutScheme.split(";base64,", 2);
+    if (
+      parts.length !== 2 ||
+      parts[0] === undefined ||
+      parts[1] === undefined
+    ) {
       throw new ChatProviderError(`Invalid data URL for image: ${url}`);
     }
     const mediaType = parts[0];
@@ -422,21 +446,25 @@ function imageUrlPartToAnthropic(url: string): AnthropicImageBlock {
       );
     }
     return {
-      type: 'image',
-      source: { type: 'base64', data, media_type: mediaType },
+      type: "image",
+      source: { type: "base64", data, media_type: mediaType },
     };
   }
   return {
-    type: 'image',
-    source: { type: 'url', url },
+    type: "image",
+    source: { type: "url", url },
   };
 }
 
 function videoUrlPartToAnthropic(url: string): AnthropicVideoBlock {
-  if (url.startsWith('data:')) {
+  if (url.startsWith("data:")) {
     const withoutScheme = url.slice(5);
-    const parts = withoutScheme.split(';base64,', 2);
-    if (parts.length !== 2 || parts[0] === undefined || parts[1] === undefined) {
+    const parts = withoutScheme.split(";base64,", 2);
+    if (
+      parts.length !== 2 ||
+      parts[0] === undefined ||
+      parts[1] === undefined
+    ) {
       throw new ChatProviderError(`Invalid data URL for video: ${url}`);
     }
     const mediaType = parts[0];
@@ -447,48 +475,53 @@ function videoUrlPartToAnthropic(url: string): AnthropicVideoBlock {
       );
     }
     return {
-      type: 'video',
-      source: { type: 'base64', media_type: mediaType, data },
+      type: "video",
+      source: { type: "base64", media_type: mediaType, data },
     };
   }
 
   return {
-    type: 'video',
-    source: { type: 'url', url },
+    type: "video",
+    source: { type: "url", url },
   };
 }
 interface AnthropicToolParam extends AnthropicTool {
-  cache_control?: { type: 'ephemeral' } | null;
+  cache_control?: { type: "ephemeral" } | null;
 }
 
 function convertTool(tool: Tool): AnthropicToolParam {
   return {
     name: tool.name,
     description: tool.description,
-    input_schema: tool.parameters as AnthropicTool['input_schema'],
+    input_schema: tool.parameters as AnthropicTool["input_schema"],
   };
 }
-function toolResultToBlock(toolCallId: string, content: ContentPart[]): ToolResultBlockParam {
-  const blocks: Array<TextBlockParam | AnthropicImageBlock | AnthropicVideoBlock> = [];
+function toolResultToBlock(
+  toolCallId: string,
+  content: ContentPart[],
+): ToolResultBlockParam {
+  const blocks: Array<
+    TextBlockParam | AnthropicImageBlock | AnthropicVideoBlock
+  > = [];
   for (const part of content) {
-    if (part.type === 'text') {
+    if (part.type === "text") {
       if (part.text) {
-        blocks.push({ type: 'text', text: part.text });
+        blocks.push({ type: "text", text: part.text });
       }
-    } else if (part.type === 'image_url') {
+    } else if (part.type === "image_url") {
       blocks.push(imageUrlPartToAnthropic(part.imageUrl.url));
-    } else if (part.type === 'video_url') {
+    } else if (part.type === "video_url") {
       blocks.push(videoUrlPartToAnthropic(part.videoUrl.url));
-    } else if (part.type === 'audio_url') {
+    } else if (part.type === "audio_url") {
       const placeholder = OMITTED_MEDIA_PLACEHOLDER[part.type];
       const last = blocks.at(-1);
-      if (!(last?.type === 'text' && last.text === placeholder)) {
-        blocks.push({ type: 'text', text: placeholder });
+      if (!(last?.type === "text" && last.text === placeholder)) {
+        blocks.push({ type: "text", text: placeholder });
       }
     }
   }
   return {
-    type: 'tool_result',
+    type: "tool_result",
     tool_use_id: toolCallId,
     content: blocks,
   } as ToolResultBlockParam;
@@ -497,34 +530,38 @@ function convertMessage(message: Message, model: string): MessageParam {
   const role = message.role;
 
   // system role -> <system>...</system> wrapped user message
-  if (role === 'system') {
+  if (role === "system") {
     const text = message.content
-      .filter((p) => p.type === 'text')
+      .filter((p) => p.type === "text")
       .map((p) => p.text)
-      .join('\n');
+      .join("\n");
     return {
-      role: 'user',
-      content: [{ type: 'text', text: `<system>${text}</system>` }],
+      role: "user",
+      content: [{ type: "text", text: `<system>${text}</system>` }],
     };
   }
 
   // tool role -> ToolResultBlockParam in user message
-  if (role === 'tool') {
+  if (role === "tool") {
     if (message.toolCallId === undefined) {
-      throw new ChatProviderError('Tool message missing `toolCallId`.');
+      throw new ChatProviderError("Tool message missing `toolCallId`.");
     }
     const block = toolResultToBlock(message.toolCallId, message.content);
-    return { role: 'user', content: [block as ContentBlockParam] };
+    return { role: "user", content: [block as ContentBlockParam] };
   }
 
   // user or assistant
   const blocks: ContentBlockParam[] = [];
   for (const part of message.content) {
-    if (part.type === 'text') {
-      blocks.push({ type: 'text', text: part.text } satisfies TextBlockParam);
-    } else if (part.type === 'image_url') {
-      blocks.push(imageUrlPartToAnthropic(part.imageUrl.url) as unknown as ContentBlockParam);
-    } else if (part.type === 'think') {
+    if (part.type === "text") {
+      blocks.push({ type: "text", text: part.text } satisfies TextBlockParam);
+    } else if (part.type === "image_url") {
+      blocks.push(
+        imageUrlPartToAnthropic(
+          part.imageUrl.url,
+        ) as unknown as ContentBlockParam,
+      );
+    } else if (part.type === "think") {
       // ThinkPart -> ThinkingBlockParam.
       //
       // Signed: emit the block with its signature. api.anthropic.com requires a
@@ -540,20 +577,30 @@ function convertMessage(message: Message, model: string): MessageParam {
       // for non-Claude Anthropic-compatible models.
       if (part.encrypted !== undefined) {
         blocks.push({
-          type: 'thinking',
+          type: "thinking",
           thinking: part.think,
           signature: part.encrypted,
         } satisfies ThinkingBlockParam);
       } else if (shouldPreserveUnsignedThinking(model)) {
-        blocks.push({ type: 'thinking', thinking: part.think } as unknown as ThinkingBlockParam);
+        blocks.push({
+          type: "thinking",
+          thinking: part.think,
+        } as unknown as ThinkingBlockParam);
       }
-    } else if (part.type === 'video_url') {
-      blocks.push(videoUrlPartToAnthropic(part.videoUrl.url) as unknown as ContentBlockParam);
-    } else if (part.type === 'audio_url') {
+    } else if (part.type === "video_url") {
+      blocks.push(
+        videoUrlPartToAnthropic(
+          part.videoUrl.url,
+        ) as unknown as ContentBlockParam,
+      );
+    } else if (part.type === "audio_url") {
       const placeholder = OMITTED_MEDIA_PLACEHOLDER[part.type];
       const last = blocks.at(-1);
-      if (!(last?.type === 'text' && last.text === placeholder)) {
-        blocks.push({ type: 'text', text: placeholder } satisfies TextBlockParam);
+      if (!(last?.type === "text" && last.text === placeholder)) {
+        blocks.push({
+          type: "text",
+          text: placeholder,
+        } satisfies TextBlockParam);
       }
     }
   }
@@ -565,18 +612,26 @@ function convertMessage(message: Message, model: string): MessageParam {
       if (tc.arguments) {
         try {
           const parsed: unknown = JSON.parse(tc.arguments);
-          if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+          if (
+            typeof parsed === "object" &&
+            parsed !== null &&
+            !Array.isArray(parsed)
+          ) {
             toolInput = parsed as Record<string, unknown>;
           } else {
-            throw new ChatProviderError('Tool call arguments must be a JSON object.');
+            throw new ChatProviderError(
+              "Tool call arguments must be a JSON object.",
+            );
           }
         } catch (error) {
           if (error instanceof ChatProviderError) throw error;
-          throw new ChatProviderError('Tool call arguments must be valid JSON.');
+          throw new ChatProviderError(
+            "Tool call arguments must be valid JSON.",
+          );
         }
       }
       blocks.push({
-        type: 'tool_use',
+        type: "tool_use",
         id: tc.id,
         name: tc.name,
         input: toolInput,
@@ -588,7 +643,7 @@ function convertMessage(message: Message, model: string): MessageParam {
 }
 
 function shouldKeepConvertedMessage(message: MessageParam): boolean {
-  return message.role !== 'assistant' || message.content.length > 0;
+  return message.role !== "assistant" || message.content.length > 0;
 }
 
 export function convertAnthropicError(
@@ -619,7 +674,7 @@ export function convertAnthropicError(
     return new APIConnectionError(error.message);
   }
   // APIError with a status code => status error
-  if (error instanceof AnthropicAPIError && typeof error.status === 'number') {
+  if (error instanceof AnthropicAPIError && typeof error.status === "number") {
     const reqId = error.requestID ?? null;
     return normalizeAPIStatusError(
       error.status,
@@ -661,7 +716,9 @@ class AnthropicStreamedMessage implements StreamedMessage {
       | undefined,
   ) {
     if (isStream) {
-      this._iter = this._convertStreamResponse(response as AsyncIterable<MessageStreamEvent>);
+      this._iter = this._convertStreamResponse(
+        response as AsyncIterable<MessageStreamEvent>,
+      );
     } else {
       this._iter = this._convertNonStreamResponse(
         response as {
@@ -754,27 +811,32 @@ class AnthropicStreamedMessage implements StreamedMessage {
 
     for (const block of response.content) {
       switch (block.type) {
-        case 'text':
+        case "text":
           if (block.text !== undefined) {
-            yield { type: 'text', text: block.text };
+            yield { type: "text", text: block.text };
           }
           break;
-        case 'thinking':
+        case "thinking":
           yield block.signature !== undefined
-            ? { type: 'think' as const, think: block.thinking ?? '', encrypted: block.signature }
-            : { type: 'think' as const, think: block.thinking ?? '' };
+            ? {
+                type: "think" as const,
+                think: block.thinking ?? "",
+                encrypted: block.signature,
+              }
+            : { type: "think" as const, think: block.thinking ?? "" };
           break;
-        case 'redacted_thinking':
+        case "redacted_thinking":
           yield block.data !== undefined
-            ? { type: 'think' as const, think: '', encrypted: block.data }
-            : { type: 'think' as const, think: '' };
+            ? { type: "think" as const, think: "", encrypted: block.data }
+            : { type: "think" as const, think: "" };
           break;
-        case 'tool_use':
+        case "tool_use":
           yield {
-            type: 'function',
+            type: "function",
             id: block.id ?? crypto.randomUUID(),
-            name: block.name ?? '',
-            arguments: block.input !== undefined ? JSON.stringify(block.input) : null,
+            name: block.name ?? "",
+            arguments:
+              block.input !== undefined ? JSON.stringify(block.input) : null,
           } satisfies ToolCall;
           break;
       }
@@ -789,9 +851,9 @@ class AnthropicStreamedMessage implements StreamedMessage {
     try {
       for await (const event of response) {
         const evt = event as unknown as Record<string, unknown>;
-        const eventType = evt['type'] as string;
+        const eventType = evt["type"] as string;
 
-        if (eventType === 'message_start') {
+        if (eventType === "message_start") {
           const startEvt = evt as unknown as RawMessageStartEvent;
           this._id = startEvt.message.id;
           this._extractUsage(
@@ -802,32 +864,32 @@ class AnthropicStreamedMessage implements StreamedMessage {
               cache_creation_input_tokens?: number;
             },
           );
-        } else if (eventType === 'content_block_start') {
+        } else if (eventType === "content_block_start") {
           const blockEvt = evt as unknown as RawContentBlockStartEvent;
           const block = blockEvt.content_block;
           const blockIndex = blockEvt.index;
           // eslint-disable-next-line typescript-eslint/switch-exhaustiveness-check
           switch (block.type) {
-            case 'text':
-              yield { type: 'text', text: block.text };
+            case "text":
+              yield { type: "text", text: block.text };
               break;
-            case 'thinking':
-              yield { type: 'think', think: block.thinking ?? '' };
+            case "thinking":
+              yield { type: "think", think: block.thinking ?? "" };
               break;
-            case 'redacted_thinking':
+            case "redacted_thinking":
               yield {
-                type: 'think',
-                think: '',
+                type: "think",
+                think: "",
                 encrypted: (block as unknown as { data: string }).data,
               };
               break;
-            case 'tool_use':
+            case "tool_use":
               toolUseBlockIndexes.add(blockIndex);
               yield {
-                type: 'function',
+                type: "function",
                 id: block.id,
                 name: block.name,
-                arguments: '',
+                arguments: "",
                 // Carry the Anthropic block index so parallel tool_use
                 // blocks' interleaved input_json_delta chunks can be routed
                 // to the correct ToolCall by the generate loop.
@@ -835,55 +897,57 @@ class AnthropicStreamedMessage implements StreamedMessage {
               } satisfies ToolCall;
               break;
           }
-        } else if (eventType === 'content_block_delta') {
+        } else if (eventType === "content_block_delta") {
           const deltaEvt = evt as unknown as RawContentBlockDeltaEvent;
           const delta = deltaEvt.delta;
           const blockIndex = deltaEvt.index;
           // eslint-disable-next-line typescript-eslint/switch-exhaustiveness-check
           switch (delta.type) {
-            case 'text_delta':
-              yield { type: 'text', text: delta.text };
+            case "text_delta":
+              yield { type: "text", text: delta.text };
               break;
-            case 'thinking_delta':
-              yield { type: 'think', think: delta.thinking ?? '' };
+            case "thinking_delta":
+              yield { type: "think", think: delta.thinking ?? "" };
               break;
-            case 'input_json_delta':
+            case "input_json_delta":
               yield {
-                type: 'tool_call_part',
+                type: "tool_call_part",
                 argumentsPart: delta.partial_json,
                 // Carry the Anthropic block index so this delta is routed
                 // to the matching ToolCall (parallel tool_use support).
                 index: blockIndex,
               };
               break;
-            case 'signature_delta':
+            case "signature_delta":
               yield {
-                type: 'think',
-                think: '',
+                type: "think",
+                think: "",
                 encrypted: delta.signature,
               };
               break;
           }
-        } else if (eventType === 'content_block_stop') {
+        } else if (eventType === "content_block_stop") {
           // No-op: the generate loop infers tool-call completion from the
           // next non-merging part (typically the next content_block_start)
           // or from stream end. Anthropic's block boundary is therefore
           // absorbed inside the adapter rather than surfaced upstream.
-        } else if (eventType === 'message_delta') {
+        } else if (eventType === "message_delta") {
           // Update usage from delta
           const deltaUsage = (evt as { usage?: Record<string, unknown> }).usage;
           if (deltaUsage !== undefined) {
-            if (typeof deltaUsage['output_tokens'] === 'number') {
-              this._usage.output = deltaUsage['output_tokens'];
+            if (typeof deltaUsage["output_tokens"] === "number") {
+              this._usage.output = deltaUsage["output_tokens"];
             }
-            if (typeof deltaUsage['cache_read_input_tokens'] === 'number') {
-              this._usage.inputCacheRead = deltaUsage['cache_read_input_tokens'];
+            if (typeof deltaUsage["cache_read_input_tokens"] === "number") {
+              this._usage.inputCacheRead =
+                deltaUsage["cache_read_input_tokens"];
             }
-            if (typeof deltaUsage['cache_creation_input_tokens'] === 'number') {
-              this._usage.inputCacheCreation = deltaUsage['cache_creation_input_tokens'];
+            if (typeof deltaUsage["cache_creation_input_tokens"] === "number") {
+              this._usage.inputCacheCreation =
+                deltaUsage["cache_creation_input_tokens"];
             }
-            if (typeof deltaUsage['input_tokens'] === 'number') {
-              this._usage.inputOther = deltaUsage['input_tokens'];
+            if (typeof deltaUsage["input_tokens"] === "number") {
+              this._usage.inputOther = deltaUsage["input_tokens"];
             }
           }
           // The terminal `stop_reason` lives on `delta.stop_reason` of the
@@ -893,10 +957,15 @@ class AnthropicStreamedMessage implements StreamedMessage {
           // value (including null) to `_captureStopReason`, which maps it to
           // `{null, null}`. Only a missing key skips the capture. This avoids
           // a stale prior capture persisting after an explicit null reset.
-          const messageDeltaPayload = (evt as { delta?: Record<string, unknown> }).delta;
-          if (messageDeltaPayload !== undefined && 'stop_reason' in messageDeltaPayload) {
+          const messageDeltaPayload = (
+            evt as { delta?: Record<string, unknown> }
+          ).delta;
+          if (
+            messageDeltaPayload !== undefined &&
+            "stop_reason" in messageDeltaPayload
+          ) {
             this._captureStopReason(
-              messageDeltaPayload['stop_reason'] as string | null | undefined,
+              messageDeltaPayload["stop_reason"] as string | null | undefined,
             );
           }
         }
@@ -908,7 +977,7 @@ class AnthropicStreamedMessage implements StreamedMessage {
   }
 }
 export class AnthropicChatProvider implements ChatProvider {
-  readonly name: string = 'anthropic';
+  readonly name: string = "anthropic";
 
   /**
    * See {@link ChatProvider.maxCompletionTokens}. `max_tokens` is required by
@@ -927,11 +996,15 @@ export class AnthropicChatProvider implements ChatProvider {
   private _apiKey: string | undefined;
   private _baseUrl: string | undefined;
   private _defaultHeaders: Record<string, string | null> | undefined;
-  private _clientFactory: ((auth: ProviderRequestAuth) => Anthropic) | undefined;
+  private _clientFactory:
+    | ((auth: ProviderRequestAuth) => Anthropic)
+    | undefined;
   private _adaptiveThinking: boolean | undefined;
   private readonly _supportEfforts: readonly string[] | undefined;
   private readonly _kimiThinking: boolean;
-  private readonly _convertErrorHook: ((error: unknown) => ChatProviderError | undefined) | undefined;
+  private readonly _convertErrorHook:
+    | ((error: unknown) => ChatProviderError | undefined)
+    | undefined;
   private _betaApi: boolean;
   private _explicitMaxTokens: boolean;
 
@@ -945,14 +1018,18 @@ export class AnthropicChatProvider implements ChatProvider {
     this._convertErrorHook = options.convertError;
     this._betaApi = options.betaApi ?? false;
     this._apiKey =
-      options.apiKey === undefined || options.apiKey.length === 0 ? undefined : options.apiKey;
+      options.apiKey === undefined || options.apiKey.length === 0
+        ? undefined
+        : options.apiKey;
     this._baseUrl = options.baseUrl;
     this._defaultHeaders = options.defaultHeaders;
     this._clientFactory = options.clientFactory;
-    this._client = this._apiKey === undefined ? undefined : this._buildClient(this._apiKey);
+    this._client =
+      this._apiKey === undefined ? undefined : this._buildClient(this._apiKey);
     this._explicitMaxTokens = options.defaultMaxTokens !== undefined;
     this._generationKwargs = {
-      max_tokens: options.defaultMaxTokens ?? resolveDefaultMaxTokens(options.model),
+      max_tokens:
+        options.defaultMaxTokens ?? resolveDefaultMaxTokens(options.model),
       betaFeatures: options.betaFeatures ?? [INTERLEAVED_THINKING_BETA],
     };
   }
@@ -964,17 +1041,17 @@ export class AnthropicChatProvider implements ChatProvider {
   get thinkingEffort(): ThinkingEffort | null {
     const thinking = this._generationKwargs.thinking;
     if (thinking === undefined || thinking === null) return null;
-    if (thinking.type === 'disabled') return 'off';
+    if (thinking.type === "disabled") return "off";
 
     const effort = this._generationKwargs.output_config?.effort;
-    if (typeof effort === 'string' && effort.length > 0) return effort;
-    if (thinking.type === 'adaptive') return 'on';
+    if (typeof effort === "string" && effort.length > 0) return effort;
+    if (thinking.type === "adaptive") return "on";
 
     const budget = (thinking as { budget_tokens?: number }).budget_tokens;
-    if (budget === undefined) return 'on';
-    if (budget <= 1024) return 'low';
-    if (budget <= 4096) return 'medium';
-    return 'high';
+    if (budget === undefined) return "on";
+    if (budget <= 1024) return "low";
+    if (budget <= 4096) return "medium";
+    return "high";
   }
 
   get modelParameters(): Record<string, unknown> {
@@ -994,7 +1071,7 @@ export class AnthropicChatProvider implements ChatProvider {
     const system: TextBlockParam[] | undefined = systemPrompt
       ? [
           {
-            type: 'text',
+            type: "text",
             text: systemPrompt,
             cache_control: CACHE_CONTROL,
           } as TextBlockParam,
@@ -1023,7 +1100,7 @@ export class AnthropicChatProvider implements ChatProvider {
         .map((msg) => convertMessage(msg, this._model))
         .filter(shouldKeepConvertedMessage),
       {
-        isUser: (message) => message.role === 'user',
+        isUser: (message) => message.role === "user",
         isToolResultOnly,
         merge: (last, next) => ({
           ...last,
@@ -1042,27 +1119,27 @@ export class AnthropicChatProvider implements ChatProvider {
     // Build generation kwargs (excluding betaFeatures)
     const kwargs: Record<string, unknown> = {};
     if (this._generationKwargs.max_tokens !== undefined) {
-      kwargs['max_tokens'] = this._generationKwargs.max_tokens;
+      kwargs["max_tokens"] = this._generationKwargs.max_tokens;
     }
     if (this._generationKwargs.temperature !== undefined) {
-      kwargs['temperature'] = this._generationKwargs.temperature;
+      kwargs["temperature"] = this._generationKwargs.temperature;
     }
     if (this._generationKwargs.top_k !== undefined) {
-      kwargs['top_k'] = this._generationKwargs.top_k;
+      kwargs["top_k"] = this._generationKwargs.top_k;
     }
     if (this._generationKwargs.top_p !== undefined) {
-      kwargs['top_p'] = this._generationKwargs.top_p;
+      kwargs["top_p"] = this._generationKwargs.top_p;
     }
     const thinking = this._generationKwargs.thinking;
     if (thinking !== undefined) {
-      kwargs['thinking'] = thinking;
+      kwargs["thinking"] = thinking;
     }
     if (this._generationKwargs.output_config !== undefined) {
-      kwargs['output_config'] = this._generationKwargs.output_config;
+      kwargs["output_config"] = this._generationKwargs.output_config;
     }
     applyResponseFormat(kwargs, options?.responseFormat);
     if (this._generationKwargs.contextManagement !== undefined) {
-      kwargs['context_management'] = this._generationKwargs.contextManagement;
+      kwargs["context_management"] = this._generationKwargs.contextManagement;
     }
 
     // Build the beta feature list. On the standard Messages API these travel
@@ -1072,11 +1149,13 @@ export class AnthropicChatProvider implements ChatProvider {
     const betas = this._generationKwargs.betaFeatures ?? [];
     const extraHeaders: Record<string, string> = {};
     if (!this._betaApi && betas.length > 0) {
-      extraHeaders['anthropic-beta'] = betas.join(',');
+      extraHeaders["anthropic-beta"] = betas.join(",");
     }
 
     // Convert tools
-    const anthropicTools: AnthropicToolParam[] = tools.map((t) => convertTool(t));
+    const anthropicTools: AnthropicToolParam[] = tools.map((t) =>
+      convertTool(t),
+    );
     if (anthropicTools.length > 0) {
       const lastTool = anthropicTools.at(-1);
       if (lastTool !== undefined) {
@@ -1092,30 +1171,31 @@ export class AnthropicChatProvider implements ChatProvider {
     };
 
     if (system !== undefined) {
-      createParams['system'] = system;
+      createParams["system"] = system;
     }
 
     if (anthropicTools.length > 0) {
-      createParams['tools'] = anthropicTools;
+      createParams["tools"] = anthropicTools;
     }
 
     if (this._metadata !== undefined) {
-      createParams['metadata'] = this._metadata;
+      createParams["metadata"] = this._metadata;
     }
 
     if (this._betaApi && betas.length > 0) {
-      createParams['betas'] = betas;
+      createParams["betas"] = betas;
     }
 
     const requestOptions: Record<string, unknown> = {};
     const headers = mergeRequestHeaders(extraHeaders, options?.auth?.headers);
     if (headers !== undefined) {
-      requestOptions['headers'] = headers;
+      requestOptions["headers"] = headers;
     }
     if (options?.signal) {
-      requestOptions['signal'] = options.signal;
+      requestOptions["signal"] = options.signal;
     }
-    const finalRequestOptions = Object.keys(requestOptions).length > 0 ? requestOptions : undefined;
+    const finalRequestOptions =
+      Object.keys(requestOptions).length > 0 ? requestOptions : undefined;
     const client = this._createClient(options?.auth);
     options?.onRequestSent?.();
 
@@ -1126,14 +1206,24 @@ export class AnthropicChatProvider implements ChatProvider {
       try {
         const stream = this._betaApi
           ? await client.beta.messages.create(
-              { ...createParams, stream: true } as unknown as MessageCreateParamsStreaming,
+              {
+                ...createParams,
+                stream: true,
+              } as unknown as MessageCreateParamsStreaming,
               finalRequestOptions,
             )
           : await client.messages.create(
-              { ...createParams, stream: true } as unknown as MessageCreateParamsStreaming,
+              {
+                ...createParams,
+                stream: true,
+              } as unknown as MessageCreateParamsStreaming,
               finalRequestOptions,
             );
-        return new AnthropicStreamedMessage(stream, true, this._convertErrorHook);
+        return new AnthropicStreamedMessage(
+          stream,
+          true,
+          this._convertErrorHook,
+        );
       } catch (error: unknown) {
         throw convertAnthropicError(error, this._convertErrorHook);
       }
@@ -1143,14 +1233,24 @@ export class AnthropicChatProvider implements ChatProvider {
     try {
       const response = this._betaApi
         ? await client.beta.messages.create(
-            { ...createParams, stream: false } as unknown as MessageCreateParams,
+            {
+              ...createParams,
+              stream: false,
+            } as unknown as MessageCreateParams,
             finalRequestOptions,
           )
         : await client.messages.create(
-            { ...createParams, stream: false } as unknown as MessageCreateParams,
+            {
+              ...createParams,
+              stream: false,
+            } as unknown as MessageCreateParams,
             finalRequestOptions,
           );
-      return new AnthropicStreamedMessage(response, false, this._convertErrorHook);
+      return new AnthropicStreamedMessage(
+        response,
+        false,
+        this._convertErrorHook,
+      );
     } catch (error: unknown) {
       throw convertAnthropicError(error, this._convertErrorHook);
     }
@@ -1168,19 +1268,19 @@ export class AnthropicChatProvider implements ChatProvider {
     const apiKey = auth?.apiKey ?? this._apiKey;
     if (apiKey === undefined || apiKey.length === 0) {
       throw new ChatProviderError(
-        'AnthropicChatProvider: apiKey is required. Provide it via constructor options, options.auth.apiKey on each request, or an OAuth login. The Anthropic adapter does not read shell API-key environment variables.',
+        "AnthropicChatProvider: apiKey is required. Provide it via constructor options, options.auth.apiKey on each request, or an OAuth login. The Anthropic adapter does not read shell API-key environment variables.",
       );
     }
     return apiKey;
   }
 
   private _anthropicCustomHeaderEnvNames(): string[] {
-    const customHeaders = process.env['ANTHROPIC_CUSTOM_HEADERS'];
+    const customHeaders = process.env["ANTHROPIC_CUSTOM_HEADERS"];
     if (customHeaders === undefined || customHeaders.length === 0) return [];
 
     const names: string[] = [];
-    for (const line of customHeaders.split('\n')) {
-      const colonIndex = line.indexOf(':');
+    for (const line of customHeaders.split("\n")) {
+      const colonIndex = line.indexOf(":");
       if (colonIndex < 0) continue;
 
       const name = line.slice(0, colonIndex).trim().toLowerCase();
@@ -1190,14 +1290,16 @@ export class AnthropicChatProvider implements ChatProvider {
   }
 
   private _buildDefaultHeaders(apiKey: string): Record<string, string | null> {
-    const defaultHeaders: Record<string, string | null> = { authorization: null };
+    const defaultHeaders: Record<string, string | null> = {
+      authorization: null,
+    };
     for (const name of this._anthropicCustomHeaderEnvNames()) {
       defaultHeaders[name] = null;
     }
     for (const [name, value] of Object.entries(this._defaultHeaders ?? {})) {
       defaultHeaders[name.toLowerCase()] = value;
     }
-    defaultHeaders['x-api-key'] = apiKey;
+    defaultHeaders["x-api-key"] = apiKey;
     return defaultHeaders;
   }
 
@@ -1225,35 +1327,38 @@ export class AnthropicChatProvider implements ChatProvider {
       this._supportEfforts,
       this._kimiThinking ? true : this._adaptiveThinking,
     );
-    let thinking: MessageCreateParams['thinking'];
-    let outputConfig: MessageCreateParams['output_config'] | undefined;
+    let thinking: MessageCreateParams["thinking"];
+    let outputConfig: MessageCreateParams["output_config"] | undefined;
 
-    if (effort === 'off') {
-      thinking = { type: 'disabled' };
+    if (effort === "off") {
+      thinking = { type: "disabled" };
     } else if (this._kimiThinking) {
-      thinking = { type: 'enabled' } as MessageCreateParams['thinking'];
+      thinking = { type: "enabled" } as MessageCreateParams["thinking"];
       outputConfig =
-        effort === 'on' ? undefined : ({ effort } as MessageCreateParams['output_config']);
-    } else if (profile.mode === 'adaptive') {
-      thinking = { type: 'adaptive', display: 'summarized' };
-      outputConfig =
-        effort === 'on'
+        effort === "on"
           ? undefined
-          : ({ effort } as MessageCreateParams['output_config']);
+          : ({ effort } as MessageCreateParams["output_config"]);
+    } else if (profile.mode === "adaptive") {
+      thinking = { type: "adaptive", display: "summarized" };
+      outputConfig =
+        effort === "on"
+          ? undefined
+          : ({ effort } as MessageCreateParams["output_config"]);
     } else {
       const budgetTokens = budgetTokensForEffort(effort);
       thinking =
         budgetTokens === undefined
-          ? ({ type: 'enabled' } as MessageCreateParams['thinking'])
-          : { type: 'enabled', budget_tokens: budgetTokens };
+          ? ({ type: "enabled" } as MessageCreateParams["thinking"])
+          : { type: "enabled", budget_tokens: budgetTokens };
       outputConfig =
-        (profile.supportsEffortParam || budgetTokens === undefined) && effort !== 'on'
-          ? ({ effort } as MessageCreateParams['output_config'])
+        (profile.supportsEffortParam || budgetTokens === undefined) &&
+        effort !== "on"
+          ? ({ effort } as MessageCreateParams["output_config"])
           : undefined;
     }
 
     let newBetas = [...(this._generationKwargs.betaFeatures ?? [])];
-    if (profile.mode === 'adaptive') {
+    if (profile.mode === "adaptive") {
       newBetas = newBetas.filter((b) => b !== INTERLEAVED_THINKING_BETA);
     }
     const clone = this._withGenerationKwargs({
@@ -1297,27 +1402,34 @@ export class AnthropicChatProvider implements ChatProvider {
     return clone;
   }
 
-  withGenerationKwargs(kwargs: Partial<AnthropicGenerationKwargs>): AnthropicChatProvider {
+  withGenerationKwargs(
+    kwargs: Partial<AnthropicGenerationKwargs>,
+  ): AnthropicChatProvider {
     return this._withGenerationKwargs(kwargs);
   }
 
   withMaxCompletionTokens(maxCompletionTokens: number): AnthropicChatProvider {
-    const requestedCap = resolveDefaultMaxTokens(this._model, maxCompletionTokens);
+    const requestedCap = resolveDefaultMaxTokens(
+      this._model,
+      maxCompletionTokens,
+    );
     const existingCap = this._generationKwargs.max_tokens;
     const clone = this._withGenerationKwargs({
       max_tokens:
         existingCap === undefined || this._explicitMaxTokens
-          ? existingCap ?? requestedCap
+          ? (existingCap ?? requestedCap)
           : Math.min(existingCap, requestedCap),
     });
     clone._explicitMaxTokens = this._explicitMaxTokens;
     return clone;
   }
 
-  private _withGenerationKwargs(kwargs: Partial<AnthropicGenerationKwargs>): AnthropicChatProvider {
+  private _withGenerationKwargs(
+    kwargs: Partial<AnthropicGenerationKwargs>,
+  ): AnthropicChatProvider {
     const clone = this._clone();
     clone._generationKwargs = { ...clone._generationKwargs, ...kwargs };
-    if ('max_tokens' in kwargs) {
+    if ("max_tokens" in kwargs) {
       clone._explicitMaxTokens = kwargs.max_tokens !== undefined;
     }
     return clone;
@@ -1325,7 +1437,9 @@ export class AnthropicChatProvider implements ChatProvider {
 
   private _clone(): AnthropicChatProvider {
     const clone = Object.assign(
-      Object.create(Object.getPrototypeOf(this) as object) as AnthropicChatProvider,
+      Object.create(
+        Object.getPrototypeOf(this) as object,
+      ) as AnthropicChatProvider,
       this,
     );
     clone._generationKwargs = { ...this._generationKwargs };

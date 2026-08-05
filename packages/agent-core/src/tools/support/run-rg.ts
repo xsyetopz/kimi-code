@@ -8,41 +8,54 @@
  * and output parsing stay in the tools themselves.
  */
 
-import type { Readable } from 'node:stream';
+import type { Readable } from "node:stream";
 
-import type { Kaos, KaosProcess } from '@moonshot-ai/kaos';
+import type { Kaos, KaosProcess } from "@moonshot-ai/kaos";
 
-import type { ExecutableToolResult } from '../../loop/types';
-import { SENSITIVE_DOT_VARIANT_SUFFIXES } from '../policies/sensitive';
+import type { ExecutableToolResult } from "../../loop/types";
+import { SENSITIVE_DOT_VARIANT_SUFFIXES } from "../policies/sensitive";
 
-import { rgUnavailableMessage } from './rg-locator';
-import { isPrematureCloseError } from './stream';
+import { rgUnavailableMessage } from "./rg-locator";
+import { isPrematureCloseError } from "./stream";
 
 export const DEFAULT_TIMEOUT_MS = 20_000;
 export const SIGTERM_GRACE_MS = 5_000;
 export const MAX_OUTPUT_BYTES = 10 * 1024 * 1024;
 
-export const VCS_DIRECTORIES_TO_EXCLUDE = ['.git', '.svn', '.hg', '.bzr', '.jj', '.sl'] as const;
+export const VCS_DIRECTORIES_TO_EXCLUDE = [
+  ".git",
+  ".svn",
+  ".hg",
+  ".bzr",
+  ".jj",
+  ".sl",
+] as const;
 
 // Conservative prefilter. The authoritative sensitive-file check still happens
 // on parsed rg records after execution.
-export const SENSITIVE_KEY_BASENAMES = ['id_rsa', 'id_ed25519', 'id_ecdsa'] as const;
-export const SENSITIVE_KEY_GLOBS_TO_EXCLUDE = SENSITIVE_KEY_BASENAMES.flatMap((name) => [
-  `**/${name}`,
-  `**/${name}[-_]*`,
-  ...SENSITIVE_DOT_VARIANT_SUFFIXES.map((suffix) => `**/${name}${suffix}`),
-]);
+export const SENSITIVE_KEY_BASENAMES = [
+  "id_rsa",
+  "id_ed25519",
+  "id_ecdsa",
+] as const;
+export const SENSITIVE_KEY_GLOBS_TO_EXCLUDE = SENSITIVE_KEY_BASENAMES.flatMap(
+  (name) => [
+    `**/${name}`,
+    `**/${name}[-_]*`,
+    ...SENSITIVE_DOT_VARIANT_SUFFIXES.map((suffix) => `**/${name}${suffix}`),
+  ],
+);
 export const SENSITIVE_GLOBS_TO_EXCLUDE = [
-  '**/.env',
+  "**/.env",
   ...SENSITIVE_KEY_GLOBS_TO_EXCLUDE,
-  '**/.aws/credentials',
-  '**/.aws/credentials/**',
-  '**/.gcp/credentials',
-  '**/.gcp/credentials/**',
+  "**/.aws/credentials",
+  "**/.aws/credentials/**",
+  "**/.gcp/credentials",
+  "**/.gcp/credentials/**",
 ] as const;
 
 export interface RipgrepRunResult {
-  readonly kind: 'result';
+  readonly kind: "result";
   readonly exitCode: number;
   readonly stdoutText: string;
   readonly stderrText: string;
@@ -53,7 +66,7 @@ export interface RipgrepRunResult {
 
 export type RipgrepRunOutcome =
   | RipgrepRunResult
-  | { readonly kind: 'tool-error'; readonly result: ExecutableToolResult };
+  | { readonly kind: "tool-error"; readonly result: ExecutableToolResult };
 
 export interface RunRipgrepOptions {
   /** Message surfaced when the run is aborted via `signal`. Defaults to `"Aborted"`. */
@@ -74,9 +87,12 @@ export async function runRipgrepOnce(
   signal: AbortSignal,
   options: RunRipgrepOptions = {},
 ): Promise<RipgrepRunOutcome> {
-  const abortedMessage = options.abortedMessage ?? 'Aborted';
+  const abortedMessage = options.abortedMessage ?? "Aborted";
   if (signal.aborted) {
-    return { kind: 'tool-error', result: { isError: true, output: abortedMessage } };
+    return {
+      kind: "tool-error",
+      result: { isError: true, output: abortedMessage },
+    };
   }
 
   let proc: KaosProcess;
@@ -87,10 +103,10 @@ export async function runRipgrepOnce(
     // corrupt binary. ENOENT gets the same actionable hint as locator failures.
     const isEnoent =
       error instanceof Error &&
-      'code' in error &&
-      (error as NodeJS.ErrnoException).code === 'ENOENT';
+      "code" in error &&
+      (error as NodeJS.ErrnoException).code === "ENOENT";
     return {
-      kind: 'tool-error',
+      kind: "tool-error",
       result: {
         isError: true,
         output: isEnoent
@@ -116,7 +132,7 @@ export async function runRipgrepOnce(
     if (killed) return;
     killed = true;
     try {
-      await proc.kill('SIGTERM');
+      await proc.kill("SIGTERM");
     } catch {
       /* process already gone */
     }
@@ -134,7 +150,7 @@ export async function runRipgrepOnce(
     ]);
     if (!raced && proc.exitCode === null) {
       try {
-        await proc.kill('SIGKILL');
+        await proc.kill("SIGKILL");
       } catch {
         /* ignore */
       }
@@ -146,7 +162,7 @@ export async function runRipgrepOnce(
     aborted = true;
     void killProc();
   };
-  signal.addEventListener('abort', onAbort);
+  signal.addEventListener("abort", onAbort);
   // AbortSignal does not replay past abort events; check once after registering
   // the listener so already-aborted calls still run the cleanup path.
   if (signal.aborted) onAbort();
@@ -157,8 +173,8 @@ export async function runRipgrepOnce(
   }, DEFAULT_TIMEOUT_MS);
 
   let exitCode = 0;
-  let stdoutText = '';
-  let stderrText = '';
+  let stdoutText = "";
+  let stderrText = "";
   let bufferTruncated = false;
   let stderrTruncated = false;
 
@@ -179,7 +195,7 @@ export async function runRipgrepOnce(
       // The disposer intentionally closes streams after a terminating signal.
     } else {
       return {
-        kind: 'tool-error',
+        kind: "tool-error",
         result: {
           isError: true,
           output: error instanceof Error ? error.message : String(error),
@@ -188,16 +204,19 @@ export async function runRipgrepOnce(
     }
   } finally {
     clearTimeout(timeoutHandle);
-    signal.removeEventListener('abort', onAbort);
+    signal.removeEventListener("abort", onAbort);
     await disposeProcess(proc);
   }
 
   if (aborted) {
-    return { kind: 'tool-error', result: { isError: true, output: abortedMessage } };
+    return {
+      kind: "tool-error",
+      result: { isError: true, output: abortedMessage },
+    };
   }
 
   return {
-    kind: 'result',
+    kind: "result",
     exitCode,
     stdoutText,
     stderrText,
@@ -217,7 +236,10 @@ export function shouldRetryRipgrepEagain(result: RipgrepRunResult): boolean {
 }
 
 function isEagainRipgrepError(stderr: string): boolean {
-  return stderr.includes('os error 11') || stderr.includes('Resource temporarily unavailable');
+  return (
+    stderr.includes("os error 11") ||
+    stderr.includes("Resource temporarily unavailable")
+  );
 }
 
 interface CappedStreamResult {
@@ -236,7 +258,9 @@ async function readStreamWithCap(
   try {
     for await (const chunk of stream) {
       const buf: Buffer =
-        typeof chunk === 'string' ? Buffer.from(chunk, 'utf8') : (chunk as Buffer);
+        typeof chunk === "string"
+          ? Buffer.from(chunk, "utf8")
+          : (chunk as Buffer);
       if (truncated) continue;
       if (total + buf.length > maxBytes) {
         const remaining = maxBytes - total;
@@ -253,5 +277,5 @@ async function readStreamWithCap(
       throw error;
     }
   }
-  return { text: Buffer.concat(chunks).toString('utf8'), truncated };
+  return { text: Buffer.concat(chunks).toString("utf8"), truncated };
 }

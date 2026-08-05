@@ -15,7 +15,9 @@ export const authHandlers: Record<string, Handler<any, any>> = {
     try {
       await ctx.harness.auth.login(undefined, {
         onDeviceCode: async (authorization) => {
-          const url = authorization.verificationUriComplete || authorization.verificationUri;
+          const url =
+            authorization.verificationUriComplete ||
+            authorization.verificationUri;
           ctx.broadcast(Events.LoginUrl, { url }, ctx.webviewId);
           await vscode.env.openExternal(vscode.Uri.parse(url));
         },
@@ -25,7 +27,10 @@ export const authHandlers: Record<string, Handler<any, any>> = {
     } catch (error) {
       ctx.logError("Kimi login failed", error);
       await updateLoginContext(ctx.harness).catch((statusError: unknown) => {
-        ctx.logError("Unable to refresh login status after a failed login", statusError);
+        ctx.logError(
+          "Unable to refresh login status after a failed login",
+          statusError,
+        );
       });
       return {
         success: false,
@@ -42,7 +47,10 @@ export const authHandlers: Record<string, Handler<any, any>> = {
     } catch (error) {
       ctx.logError("Kimi logout failed", error);
       await updateLoginContext(ctx.harness).catch((statusError: unknown) => {
-        ctx.logError("Unable to refresh login status after a failed logout", statusError);
+        ctx.logError(
+          "Unable to refresh login status after a failed logout",
+          statusError,
+        );
       });
       return {
         success: false,

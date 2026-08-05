@@ -14,10 +14,10 @@
  * Read-only and infallible: it only snapshots the registry.
  */
 
-import { okEnvelope } from '../envelope';
-import { defineRoute } from '../middleware/defineRoute';
-import { type IConnectionRegistry } from '../transport/ws/connectionRegistry';
-import { connectionsListResponseSchema } from '../protocol/rest-connection';
+import { okEnvelope } from "../envelope";
+import { defineRoute } from "../middleware/defineRoute";
+import { type IConnectionRegistry } from "../transport/ws/connectionRegistry";
+import { connectionsListResponseSchema } from "../protocol/rest-connection";
 
 interface ConnectionsRouteHost {
   get(
@@ -36,11 +36,11 @@ export function registerConnectionsRoutes(
 ): void {
   const listRoute = defineRoute(
     {
-      method: 'GET',
-      path: '/connections',
+      method: "GET",
+      path: "/connections",
       success: { data: connectionsListResponseSchema },
-      description: 'List active WebSocket clients connected to the server',
-      tags: ['connections'],
+      description: "List active WebSocket clients connected to the server",
+      tags: ["connections"],
     },
     (req, reply) => {
       const connections = Array.from(registry.values())
@@ -59,6 +59,6 @@ export function registerConnectionsRoutes(
   app.get(
     listRoute.path,
     listRoute.options,
-    listRoute.handler as Parameters<ConnectionsRouteHost['get']>[2],
+    listRoute.handler as Parameters<ConnectionsRouteHost["get"]>[2],
   );
 }

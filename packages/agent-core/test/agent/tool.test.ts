@@ -4,40 +4,43 @@
  * Wiring: real Agent and ToolManager with only process/model/subagent boundaries stubbed.
  * Run: cd packages/agent-core && ../../node_modules/.bin/vitest run test/agent/tool.test.ts
  */
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
-import type { ToolCall } from '@moonshot-ai/kosong';
-import { describe, expect, it, vi } from 'vitest';
+import type { ToolCall } from "@moonshot-ai/kosong";
+import { describe, expect, it, vi } from "vitest";
 
-import { budgetToolResultForModel } from '../../src/agent/turn/tool-result-budget';
-import type { KimiConfig } from '../../src/config';
-import { HookEngine } from '../../src/session/hooks';
-import { ProviderManager } from '../../src/session/provider-manager';
-import type { SessionSubagentHost } from '../../src/session/subagent-host';
-import { FLAG_DEFINITIONS, FlagResolver } from '../../src/flags';
-import { createFakeKaos } from '../tools/fixtures/fake-kaos';
-import { createCommandKaos, testAgent } from './harness/agent';
-import { executeTool } from '../tools/fixtures/execute-tool';
+import { budgetToolResultForModel } from "../../src/agent/turn/tool-result-budget";
+import type { KimiConfig } from "../../src/config";
+import { HookEngine } from "../../src/session/hooks";
+import { ProviderManager } from "../../src/session/provider-manager";
+import type { SessionSubagentHost } from "../../src/session/subagent-host";
+import { FLAG_DEFINITIONS, FlagResolver } from "../../src/flags";
+import { createFakeKaos } from "../tools/fixtures/fake-kaos";
+import { createCommandKaos, testAgent } from "./harness/agent";
+import { executeTool } from "../tools/fixtures/execute-tool";
 
 const signal = new AbortController().signal;
 
-describe('Agent tools', () => {
-  it('blocks tools through PreToolUse before permission and emits PostToolUseFailure', async () => {
-    const execWithEnv = vi.fn().mockRejectedValue(new Error('Bash should not execute'));
+describe("Agent tools", () => {
+  it("blocks tools through PreToolUse before permission and emits PostToolUseFailure", async () => {
+    const execWithEnv = vi
+      .fn()
+      .mockRejectedValue(new Error("Bash should not execute"));
     const triggered: Array<[string, string, number]> = [];
     const hookEngine = new HookEngine(
       [
         {
-          event: 'PreToolUse',
-          matcher: 'Bash',
-          command: 'node -e "process.stderr.write(\'blocked by PreToolUse\'); process.exit(2)"',
+          event: "PreToolUse",
+          matcher: "Bash",
+          command:
+            "node -e \"process.stderr.write('blocked by PreToolUse'); process.exit(2)\"",
         },
         {
-          event: 'PostToolUseFailure',
-          matcher: 'Bash',
-          command: 'exit 0',
+          event: "PostToolUseFailure",
+          matcher: "Bash",
+          command: "exit 0",
         },
       ],
       {
@@ -50,30 +53,35 @@ describe('Agent tools', () => {
       kaos: createFakeKaos({ execWithEnv }),
       hookEngine,
     });
-    ctx.configure({ tools: ['Bash'] });
+    ctx.configure({ tools: ["Bash"] });
 
-    ctx.mockNextResponse({ type: 'text', text: 'I will run Bash.' }, bashCall());
-    ctx.mockNextResponse({ type: 'text', text: 'The hook blocked Bash.' });
-    await ctx.rpc.prompt({ input: [{ type: 'text', text: 'Try Bash' }] });
+    ctx.mockNextResponse(
+      { type: "text", text: "I will run Bash." },
+      bashCall(),
+    );
+    ctx.mockNextResponse({ type: "text", text: "The hook blocked Bash." });
+    await ctx.rpc.prompt({ input: [{ type: "text", text: "Try Bash" }] });
 
     await ctx.untilTurnEnd();
 
     expect(execWithEnv).not.toHaveBeenCalled();
     expect(triggered).toEqual([
-      ['PreToolUse', 'Bash', 1],
-      ['PostToolUseFailure', 'Bash', 1],
+      ["PreToolUse", "Bash", 1],
+      ["PostToolUseFailure", "Bash", 1],
     ]);
-    expect(JSON.stringify(ctx.agent.context.data().history)).toContain('blocked by PreToolUse');
+    expect(JSON.stringify(ctx.agent.context.data().history)).toContain(
+      "blocked by PreToolUse",
+    );
   });
 
-  it('emits PostToolUse after successful tools', async () => {
+  it("emits PostToolUse after successful tools", async () => {
     const triggered: Array<[string, string, number]> = [];
     const hookEngine = new HookEngine(
       [
         {
-          event: 'PostToolUse',
-          matcher: 'Bash',
-          command: 'exit 0',
+          event: "PostToolUse",
+          matcher: "Bash",
+          command: "exit 0",
         },
       ],
       {
@@ -83,50 +91,58 @@ describe('Agent tools', () => {
       },
     );
     const ctx = testAgent({
-      kaos: createCommandKaos('ok'),
+      kaos: createCommandKaos("ok"),
       hookEngine,
     });
-    ctx.configure({ tools: ['Bash'] });
-    await ctx.rpc.setPermission({ mode: 'auto' });
+    ctx.configure({ tools: ["Bash"] });
+    await ctx.rpc.setPermission({ mode: "auto" });
 
-    ctx.mockNextResponse({ type: 'text', text: 'I will run Bash.' }, bashCall());
-    ctx.mockNextResponse({ type: 'text', text: 'Bash returned ok.' });
-    await ctx.rpc.prompt({ input: [{ type: 'text', text: 'Run Bash' }] });
+    ctx.mockNextResponse(
+      { type: "text", text: "I will run Bash." },
+      bashCall(),
+    );
+    ctx.mockNextResponse({ type: "text", text: "Bash returned ok." });
+    await ctx.rpc.prompt({ input: [{ type: "text", text: "Run Bash" }] });
 
     await ctx.untilTurnEnd();
 
-    expect(triggered).toEqual([['PostToolUse', 'Bash', 1]]);
+    expect(triggered).toEqual([["PostToolUse", "Bash", 1]]);
   });
 
-  it('uses builtin descriptions on tool call start events', async () => {
+  it("uses builtin descriptions on tool call start events", async () => {
     const ctx = testAgent({
-      kaos: createCommandKaos('ok'),
+      kaos: createCommandKaos("ok"),
     });
-    ctx.configure({ tools: ['Bash'] });
-    await ctx.rpc.setPermission({ mode: 'yolo' });
+    ctx.configure({ tools: ["Bash"] });
+    await ctx.rpc.setPermission({ mode: "yolo" });
 
-    ctx.mockNextResponse({ type: 'text', text: 'I will run Bash.' }, bashCall());
-    ctx.mockNextResponse({ type: 'text', text: 'Bash returned ok.' });
-    await ctx.rpc.prompt({ input: [{ type: 'text', text: 'Run Bash' }] });
+    ctx.mockNextResponse(
+      { type: "text", text: "I will run Bash." },
+      bashCall(),
+    );
+    ctx.mockNextResponse({ type: "text", text: "Bash returned ok." });
+    await ctx.rpc.prompt({ input: [{ type: "text", text: "Run Bash" }] });
     await ctx.untilTurnEnd();
 
     const started = ctx.allEvents.find(
-      (event) => event.type === '[rpc]' && event.event === 'tool.call.started',
+      (event) => event.type === "[rpc]" && event.event === "tool.call.started",
     );
     expect(started?.args).toMatchObject({
-      description: 'Running: printf hook-output',
+      description: "Running: printf hook-output",
     });
   });
 
-  it('continues after a foreground Agent tool returns a max_tokens failure', async () => {
+  it("continues after a foreground Agent tool returns a max_tokens failure", async () => {
     const completion = Promise.reject(
-      new Error('Subagent turn failed before completing its final summary: reason=max_tokens.'),
+      new Error(
+        "Subagent turn failed before completing its final summary: reason=max_tokens.",
+      ),
     );
     void completion.catch(() => undefined);
     const subagentHost = {
       spawn: vi.fn().mockResolvedValue({
-        agentId: 'agent-child',
-        profileName: 'coder',
+        agentId: "agent-child",
+        profileName: "coder",
         resumed: false,
         completion,
       }),
@@ -134,54 +150,61 @@ describe('Agent tools', () => {
       delegatableSubagents: vi.fn(() => ({})),
     } as unknown as SessionSubagentHost;
     const ctx = testAgent({ subagentHost });
-    ctx.configure({ tools: ['Agent'] });
+    ctx.configure({ tools: ["Agent"] });
 
-    ctx.mockNextResponse({ type: 'text', text: 'I will ask a subagent.' }, agentCall());
+    ctx.mockNextResponse(
+      { type: "text", text: "I will ask a subagent." },
+      agentCall(),
+    );
     ctx.mockNextResponse({
-      type: 'text',
-      text: 'The subagent failed with reason=max_tokens, so I will continue in the parent turn.',
+      type: "text",
+      text: "The subagent failed with reason=max_tokens, so I will continue in the parent turn.",
     });
-    await ctx.rpc.prompt({ input: [{ type: 'text', text: 'Delegate and recover' }] });
+    await ctx.rpc.prompt({
+      input: [{ type: "text", text: "Delegate and recover" }],
+    });
     await ctx.untilTurnEnd();
 
     expect(subagentHost.spawn).toHaveBeenCalledWith(
       expect.objectContaining({
-        profileName: 'coder',
-        parentToolCallId: 'call_agent',
-        prompt: 'Investigate deeply',
-        description: 'Investigate deeply',
+        profileName: "coder",
+        parentToolCallId: "call_agent",
+        prompt: "Investigate deeply",
+        description: "Investigate deeply",
         runInBackground: false,
       }),
     );
     expect(ctx.llmCalls).toHaveLength(2);
     expect(ctx.allEvents).toContainEqual(
       expect.objectContaining({
-        type: '[rpc]',
-        event: 'tool.result',
+        type: "[rpc]",
+        event: "tool.result",
         args: expect.objectContaining({
-          toolCallId: 'call_agent',
+          toolCallId: "call_agent",
           isError: true,
-          output: expect.stringContaining('reason=max_tokens'),
+          output: expect.stringContaining("reason=max_tokens"),
         }),
       }),
     );
-    expect(JSON.stringify(ctx.llmCalls[1]?.history)).toContain('reason=max_tokens');
+    expect(JSON.stringify(ctx.llmCalls[1]?.history)).toContain(
+      "reason=max_tokens",
+    );
   });
 
-  it('passes text from content-part error outputs to PostToolUseFailure hooks', async () => {
+  it("passes text from content-part error outputs to PostToolUseFailure hooks", async () => {
     const lookupCall: ToolCall = {
-      type: 'function',
-      id: 'call_lookup',
-      name: 'Lookup',
+      type: "function",
+      id: "call_lookup",
+      name: "Lookup",
       arguments: '{"query":"moon"}',
     };
     const resolved: Array<[string, string, string]> = [];
     const hookEngine = new HookEngine(
       [
         {
-          event: 'PostToolUseFailure',
-          matcher: 'Lookup',
-          command: hookErrorMessageAssertCommand('rich failure text'),
+          event: "PostToolUseFailure",
+          matcher: "Lookup",
+          command: hookErrorMessageAssertCommand("rich failure text"),
         },
       ],
       {
@@ -192,41 +215,46 @@ describe('Agent tools', () => {
     );
     const ctx = testAgent({ hookEngine });
     ctx.configure();
-    await ctx.rpc.setPermission({ mode: 'auto' });
+    await ctx.rpc.setPermission({ mode: "auto" });
     await ctx.rpc.registerTool({
-      name: 'Lookup',
-      description: 'Look up a short test value.',
+      name: "Lookup",
+      description: "Look up a short test value.",
       parameters: {
-        type: 'object',
+        type: "object",
         properties: {
-          query: { type: 'string' },
+          query: { type: "string" },
         },
-        required: ['query'],
+        required: ["query"],
         additionalProperties: false,
       },
     });
 
-    ctx.mockNextResponse({ type: 'text', text: 'I will look it up.' }, lookupCall);
-    await ctx.rpc.prompt({ input: [{ type: 'text', text: 'Look up moon' }] });
+    ctx.mockNextResponse(
+      { type: "text", text: "I will look it up." },
+      lookupCall,
+    );
+    await ctx.rpc.prompt({ input: [{ type: "text", text: "Look up moon" }] });
     await ctx.untilToolCall({
       isError: true,
-      output: [{ type: 'text', text: 'rich failure text' }],
+      output: [{ type: "text", text: "rich failure text" }],
     });
 
-    ctx.mockNextResponse({ type: 'text', text: 'The lookup failed.' });
+    ctx.mockNextResponse({ type: "text", text: "The lookup failed." });
     await ctx.untilTurnEnd();
 
     await vi.waitFor(() => {
-      expect(resolved).toEqual([['PostToolUseFailure', 'Lookup', 'allow']]);
+      expect(resolved).toEqual([["PostToolUseFailure", "Lookup", "allow"]]);
     });
   });
 
-  it('uses the active builtin tool set as the LLM visible tools', async () => {
+  it("uses the active builtin tool set as the LLM visible tools", async () => {
     const ctx = testAgent();
-    ctx.configure({ tools: ['Write', 'Bash'] });
+    ctx.configure({ tools: ["Write", "Bash"] });
 
-    ctx.mockNextResponse({ type: 'text', text: 'ready' });
-    await ctx.rpc.prompt({ input: [{ type: 'text', text: 'Which tools are active?' }] });
+    ctx.mockNextResponse({ type: "text", text: "ready" });
+    await ctx.rpc.prompt({
+      input: [{ type: "text", text: "Which tools are active?" }],
+    });
 
     await ctx.untilTurnEnd();
     expect(ctx.lastLlmInput()).toMatchInlineSnapshot(`
@@ -238,60 +266,83 @@ describe('Agent tools', () => {
     await ctx.expectResumeMatches();
   });
 
-  it('disables Bash background mode unless task management tools are active', async () => {
+  it("disables Bash background mode unless task management tools are active", async () => {
     const ctx = testAgent();
-    ctx.configure({ tools: ['Bash'] });
+    ctx.configure({ tools: ["Bash"] });
 
-    const bashOnly = ctx.agent.tools.loopTools.find((tool) => tool.name === 'Bash');
+    const bashOnly = ctx.agent.tools.loopTools.find(
+      (tool) => tool.name === "Bash",
+    );
     expect(bashOnly).toBeDefined();
-    expect(bashOnly!.description).toContain('Background execution is disabled for this agent.');
-    expect(bashOnly!.description).not.toContain('the command will be started as a background task');
+    expect(bashOnly!.description).toContain(
+      "Background execution is disabled for this agent.",
+    );
+    expect(bashOnly!.description).not.toContain(
+      "the command will be started as a background task",
+    );
     await expect(
       executeTool(bashOnly!, {
-        turnId: '0',
-        toolCallId: 'call_bash',
-        args: { command: 'sleep 10', run_in_background: true, description: 'watch' },
+        turnId: "0",
+        toolCallId: "call_bash",
+        args: {
+          command: "sleep 10",
+          run_in_background: true,
+          description: "watch",
+        },
         signal,
       }),
     ).resolves.toMatchObject({
       isError: true,
       output:
-        'Background execution is not available for this agent because TaskOutput and TaskStop are not enabled.',
+        "Background execution is not available for this agent because TaskOutput and TaskStop are not enabled.",
     });
 
-    ctx.agent.tools.setActiveTools(['Bash', 'TaskList', 'TaskOutput', 'TaskStop']);
+    ctx.agent.tools.setActiveTools([
+      "Bash",
+      "TaskList",
+      "TaskOutput",
+      "TaskStop",
+    ]);
 
-    const managedBash = ctx.agent.tools.loopTools.find((tool) => tool.name === 'Bash');
+    const managedBash = ctx.agent.tools.loopTools.find(
+      (tool) => tool.name === "Bash",
+    );
     expect(managedBash).toBeDefined();
-    expect(managedBash!.description).toContain('run_in_background=true');
+    expect(managedBash!.description).toContain("run_in_background=true");
   });
 
-  it('disables Bash background mode when an active task management tool is denied', async () => {
+  it("disables Bash background mode when an active task management tool is denied", async () => {
     const ctx = testAgent();
     ctx.configure();
     ctx.agent.tools.setActiveTools(
-      ['Bash', 'TaskList', 'TaskOutput', 'TaskStop'],
-      ['TaskOutput'],
+      ["Bash", "TaskList", "TaskOutput", "TaskStop"],
+      ["TaskOutput"],
     );
 
-    const bash = ctx.agent.tools.loopTools.find((tool) => tool.name === 'Bash');
+    const bash = ctx.agent.tools.loopTools.find((tool) => tool.name === "Bash");
     expect(bash).toBeDefined();
-    expect(bash!.description).toContain('Background execution is disabled for this agent.');
+    expect(bash!.description).toContain(
+      "Background execution is disabled for this agent.",
+    );
     await expect(
       executeTool(bash!, {
-        turnId: '0',
-        toolCallId: 'call_bash',
-        args: { command: 'sleep 10', run_in_background: true, description: 'watch' },
+        turnId: "0",
+        toolCallId: "call_bash",
+        args: {
+          command: "sleep 10",
+          run_in_background: true,
+          description: "watch",
+        },
         signal,
       }),
     ).resolves.toMatchObject({
       isError: true,
       output:
-        'Background execution is not available for this agent because TaskOutput and TaskStop are not enabled.',
+        "Background execution is not available for this agent because TaskOutput and TaskStop are not enabled.",
     });
   });
 
-  it('disables Agent background mode when an active task management tool is denied', async () => {
+  it("disables Agent background mode when an active task management tool is denied", async () => {
     const subagentHost = {
       delegatableSubagents: vi.fn(() => ({})),
       spawn: vi.fn(),
@@ -299,21 +350,25 @@ describe('Agent tools', () => {
     const ctx = testAgent({ subagentHost });
     ctx.configure();
     ctx.agent.tools.setActiveTools(
-      ['Agent', 'TaskList', 'TaskOutput', 'TaskStop'],
-      ['TaskStop'],
+      ["Agent", "TaskList", "TaskOutput", "TaskStop"],
+      ["TaskStop"],
     );
 
-    const agent = ctx.agent.tools.loopTools.find((tool) => tool.name === 'Agent');
+    const agent = ctx.agent.tools.loopTools.find(
+      (tool) => tool.name === "Agent",
+    );
     expect(agent).toBeDefined();
-    expect(agent!.description).toContain('Background agent execution is disabled for this agent.');
+    expect(agent!.description).toContain(
+      "Background agent execution is disabled for this agent.",
+    );
     await expect(
       executeTool(agent!, {
-        turnId: '0',
-        toolCallId: 'call_agent',
+        turnId: "0",
+        toolCallId: "call_agent",
         args: {
-          prompt: 'Investigate deeply',
-          description: 'Investigate deeply',
-          subagent_type: 'coder',
+          prompt: "Investigate deeply",
+          description: "Investigate deeply",
+          subagent_type: "coder",
           run_in_background: true,
         },
         signal,
@@ -321,41 +376,43 @@ describe('Agent tools', () => {
     ).resolves.toMatchObject({
       isError: true,
       output:
-        'Background agent execution is not available for this agent because TaskList, TaskOutput, and TaskStop are not enabled.',
+        "Background agent execution is not available for this agent because TaskList, TaskOutput, and TaskStop are not enabled.",
     });
     expect(subagentHost.spawn).not.toHaveBeenCalled();
   });
 
-  it('removes denied exact tool names from the active set', () => {
+  it("removes denied exact tool names from the active set", () => {
     const ctx = testAgent();
     ctx.configure();
-    ctx.agent.tools.setActiveTools(['Read', 'Bash', 'Grep'], ['Bash']);
+    ctx.agent.tools.setActiveTools(["Read", "Bash", "Grep"], ["Bash"]);
 
     const names = ctx.agent.tools.loopTools.map((tool) => tool.name);
-    expect(names).not.toContain('Bash');
-    expect(names).toContain('Read');
-    expect(names).toContain('Grep');
-    expect(ctx.agent.tools.data().find((info) => info.name === 'Bash')?.active).toBe(false);
+    expect(names).not.toContain("Bash");
+    expect(names).toContain("Read");
+    expect(names).toContain("Grep");
+    expect(
+      ctx.agent.tools.data().find((info) => info.name === "Bash")?.active,
+    ).toBe(false);
   });
 
-  it('applies a profile disallowedTools denylist through useProfile', () => {
+  it("applies a profile disallowedTools denylist through useProfile", () => {
     const ctx = testAgent();
     ctx.configure();
     ctx.agent.useProfile({
-      name: 'restricted',
-      systemPrompt: () => 'sys',
-      tools: ['Read', 'Write', 'Edit', 'Bash', 'Grep'],
-      disallowedTools: ['Write', 'Edit'],
+      name: "restricted",
+      systemPrompt: () => "sys",
+      tools: ["Read", "Write", "Edit", "Bash", "Grep"],
+      disallowedTools: ["Write", "Edit"],
     });
 
     const names = ctx.agent.tools.loopTools.map((tool) => tool.name);
-    expect(names).toContain('Read');
-    expect(names).toContain('Bash');
-    expect(names).not.toContain('Write');
-    expect(names).not.toContain('Edit');
+    expect(names).toContain("Read");
+    expect(names).toContain("Bash");
+    expect(names).not.toContain("Write");
+    expect(names).not.toContain("Edit");
   });
 
-  it('exposes AgentSwarm when a subagent host is available', () => {
+  it("exposes AgentSwarm when a subagent host is available", () => {
     const subagentHost = {
       delegatableSubagents: vi.fn(() => ({})),
     } as unknown as SessionSubagentHost;
@@ -364,43 +421,51 @@ describe('Agent tools', () => {
       subagentHost,
       experimentalFlags: new FlagResolver({}, FLAG_DEFINITIONS),
     });
-    ctx.configure({ tools: ['AgentSwarm'] });
+    ctx.configure({ tools: ["AgentSwarm"] });
 
-    expect(ctx.agent.tools.loopTools.some((tool) => tool.name === 'AgentSwarm')).toBe(true);
+    expect(
+      ctx.agent.tools.loopTools.some((tool) => tool.name === "AgentSwarm"),
+    ).toBe(true);
   });
 
-  it('shows the model preference for a subagent type when the experiment is enabled', () => {
+  it("shows the model preference for a subagent type when the experiment is enabled", () => {
     const subagentHost = {
       delegatableSubagents: vi.fn(() => ({
         coder: {
-          name: 'coder',
-          description: 'General coding.',
-          systemPrompt: () => 'coder prompt',
-          tools: ['Read'],
-          modelPreference: 'primary' as const,
+          name: "coder",
+          description: "General coding.",
+          systemPrompt: () => "coder prompt",
+          tools: ["Read"],
+          modelPreference: "primary" as const,
         },
       })),
     } as unknown as SessionSubagentHost;
     const ctx = testAgent({
       subagentHost,
-      experimentalFlags: new FlagResolver({}, FLAG_DEFINITIONS, { 'secondary-model': true }),
+      experimentalFlags: new FlagResolver({}, FLAG_DEFINITIONS, {
+        "secondary-model": true,
+      }),
     });
-    ctx.configure({ tools: ['Agent'] });
+    ctx.configure({ tools: ["Agent"] });
 
-    const description = ctx.agent.tools.loopTools.find((tool) => tool.name === 'Agent')?.description;
+    const description = ctx.agent.tools.loopTools.find(
+      (tool) => tool.name === "Agent",
+    )?.description;
 
-    expect(description).toContain('- coder: General coding.\n  Model preference: primary');
+    expect(description).toContain(
+      "- coder: General coding.\n  Model preference: primary",
+    );
   });
 
-  it('hides model preferences when the experiment is disabled', () => {
+  it("hides model preferences when the experiment is disabled", () => {
     const subagentHost = {
       delegatableSubagents: vi.fn(() => ({
         coder: {
-          name: 'coder',
-          description: 'General coding.',
-          systemPrompt: () => 'coder prompt',
-          tools: ['Read'],
-          modelPreference: 'primary' as const,
+          name: "coder",
+          description: "General coding.",
+          systemPrompt: () => "coder prompt",
+          tools: ["Read"],
+          modelPreference: "primary" as const,
         },
       })),
     } as unknown as SessionSubagentHost;
@@ -408,14 +473,16 @@ describe('Agent tools', () => {
       subagentHost,
       experimentalFlags: new FlagResolver({}, FLAG_DEFINITIONS),
     });
-    ctx.configure({ tools: ['Agent'] });
+    ctx.configure({ tools: ["Agent"] });
 
-    const description = ctx.agent.tools.loopTools.find((tool) => tool.name === 'Agent')?.description;
+    const description = ctx.agent.tools.loopTools.find(
+      (tool) => tool.name === "Agent",
+    )?.description;
 
-    expect(description).not.toContain('Model preference:');
+    expect(description).not.toContain("Model preference:");
   });
 
-  it('self-heals the builtin tool table when the provider becomes resolvable after construction', () => {
+  it("self-heals the builtin tool table when the provider becomes resolvable after construction", () => {
     // The ProviderManager reads this live config; it starts with no model or
     // provider, so hasProvider is false at Agent construction and
     // initializeBuiltinTools() is skipped — the state the asynchronous
@@ -428,17 +495,22 @@ describe('Agent tools', () => {
     // Aim at a model that cannot resolve yet and enable some tools. Neither call
     // runs a gated re-init because hasProvider is still false, so the enabled
     // tools have no builtin backing and are not dispatchable.
-    ctx.agent.config.update({ modelAlias: 'late-model' });
-    ctx.agent.tools.setActiveTools(['Bash', 'Read', 'Glob']);
-    expect(ctx.agent.tools.loopTools.some((tool) => tool.name === 'Bash')).toBe(false);
+    ctx.agent.config.update({ modelAlias: "late-model" });
+    ctx.agent.tools.setActiveTools(["Bash", "Read", "Glob"]);
+    expect(ctx.agent.tools.loopTools.some((tool) => tool.name === "Bash")).toBe(
+      false,
+    );
 
     // The provider registers asynchronously: the config the ProviderManager reads
     // now resolves the model, but no agent config.update fires, so none of the
     // hasProvider-gated checkpoints re-run initializeBuiltinTools().
-    liveConfig.providers['late-provider'] = { type: 'kimi', apiKey: 'late-key' };
-    liveConfig.models!['late-model'] = {
-      provider: 'late-provider',
-      model: 'late-model',
+    liveConfig.providers["late-provider"] = {
+      type: "kimi",
+      apiKey: "late-key",
+    };
+    liveConfig.models!["late-model"] = {
+      provider: "late-provider",
+      model: "late-model",
       maxContextSize: 1_000_000,
       capabilities: [],
     };
@@ -446,38 +518,41 @@ describe('Agent tools', () => {
     // loopTools self-heals on read: the builtin table is populated and the
     // enabled tools become dispatchable instead of reporting "Tool not found".
     const names = ctx.agent.tools.loopTools.map((tool) => tool.name);
-    expect(names).toEqual(expect.arrayContaining(['Bash', 'Read', 'Glob']));
+    expect(names).toEqual(expect.arrayContaining(["Bash", "Read", "Glob"]));
   });
 
-  it('routes registered user tools through tool.call request/response', async () => {
+  it("routes registered user tools through tool.call request/response", async () => {
     const lookupCall: ToolCall = {
-      type: 'function',
-      id: 'call_lookup',
-      name: 'Lookup',
+      type: "function",
+      id: "call_lookup",
+      name: "Lookup",
       arguments: '{"query":"moon"}',
     };
     const ctx = testAgent();
     ctx.configure();
-    await ctx.rpc.setPermission({ mode: 'auto' });
+    await ctx.rpc.setPermission({ mode: "auto" });
     await ctx.rpc.registerTool({
-      name: 'Lookup',
-      description: 'Look up a short test value.',
+      name: "Lookup",
+      description: "Look up a short test value.",
       parameters: {
-        type: 'object',
+        type: "object",
         properties: {
-          query: { type: 'string' },
+          query: { type: "string" },
         },
-        required: ['query'],
+        required: ["query"],
         additionalProperties: false,
       },
     });
 
-    ctx.mockNextResponse({ type: 'text', text: 'I will look it up.' }, lookupCall);
-    await ctx.rpc.prompt({ input: [{ type: 'text', text: 'Look up moon' }] });
+    ctx.mockNextResponse(
+      { type: "text", text: "I will look it up." },
+      lookupCall,
+    );
+    await ctx.rpc.prompt({ input: [{ type: "text", text: "Look up moon" }] });
     expect(
       await ctx.untilToolCall({
-        content: 'moon-result',
-        output: 'moon-result',
+        content: "moon-result",
+        output: "moon-result",
       }),
     ).toMatchInlineSnapshot(`
       [wire] permission.set_mode         { "mode": "auto", "time": "<time>" }
@@ -506,7 +581,10 @@ describe('Agent tools', () => {
         user: text <auto-mode-enter-reminder>
     `);
 
-    ctx.mockNextResponse({ type: 'text', text: 'The lookup result is moon-result.' });
+    ctx.mockNextResponse({
+      type: "text",
+      text: "The lookup result is moon-result.",
+    });
     expect(await ctx.untilTurnEnd()).toMatchInlineSnapshot(`
       [wire] context.append_loop_event   { "event": { "type": "tool.result", "parentUuid": "call_lookup", "toolCallId": "call_lookup", "result": { "output": "moon-result" } }, "time": "<time>" }
       [emit] tool.result                 { "turnId": 0, "toolCallId": "call_lookup", "output": "moon-result" }
@@ -532,9 +610,14 @@ describe('Agent tools', () => {
         tool[call_lookup]: text "moon-result"
     `);
 
-    await ctx.rpc.unregisterTool({ name: 'Lookup' });
-    ctx.mockNextResponse({ type: 'text', text: 'No lookup tool is available.' });
-    await ctx.rpc.prompt({ input: [{ type: 'text', text: 'Can you still use Lookup?' }] });
+    await ctx.rpc.unregisterTool({ name: "Lookup" });
+    ctx.mockNextResponse({
+      type: "text",
+      text: "No lookup tool is available.",
+    });
+    await ctx.rpc.prompt({
+      input: [{ type: "text", text: "Can you still use Lookup?" }],
+    });
 
     expect(await ctx.untilTurnEnd()).toMatchInlineSnapshot(`
       [wire] tools.unregister_user_tool   { "name": "Lookup", "time": "<time>" }
@@ -563,79 +646,84 @@ describe('Agent tools', () => {
     await ctx.expectResumeMatches();
   });
 
-  it('persists oversized registered tool results before adding them to model context', async () => {
-    const sessionDir = mkdtempSync(join(tmpdir(), 'tool-result-overflow-'));
+  it("persists oversized registered tool results before adding them to model context", async () => {
+    const sessionDir = mkdtempSync(join(tmpdir(), "tool-result-overflow-"));
     try {
       const lookupCall: ToolCall = {
-        type: 'function',
-        id: 'call_lookup',
-        name: 'Lookup',
+        type: "function",
+        id: "call_lookup",
+        name: "Lookup",
         arguments: '{"query":"moon"}',
       };
-      const largeOutput = `${'x'.repeat(60_000)}tail survives`;
+      const largeOutput = `${"x".repeat(60_000)}tail survives`;
       const ctx = testAgent({ homedir: sessionDir });
       ctx.configure();
-      await ctx.rpc.setPermission({ mode: 'auto' });
+      await ctx.rpc.setPermission({ mode: "auto" });
       await ctx.rpc.registerTool({
-        name: 'Lookup',
-        description: 'Look up a short test value.',
-        parameters: { type: 'object', properties: {} },
+        name: "Lookup",
+        description: "Look up a short test value.",
+        parameters: { type: "object", properties: {} },
       });
 
-      ctx.mockNextResponse({ type: 'text', text: 'I will look it up.' }, lookupCall);
-      await ctx.rpc.prompt({ input: [{ type: 'text', text: 'Look up moon' }] });
+      ctx.mockNextResponse(
+        { type: "text", text: "I will look it up." },
+        lookupCall,
+      );
+      await ctx.rpc.prompt({ input: [{ type: "text", text: "Look up moon" }] });
       await ctx.untilToolCall({ output: largeOutput });
 
-      ctx.mockNextResponse({ type: 'text', text: 'done' });
+      ctx.mockNextResponse({ type: "text", text: "done" });
       await ctx.untilTurnEnd();
 
-      const toolText = ctx.compactHistory().find((message) => message.role === 'tool')?.text ?? '';
+      const toolText =
+        ctx.compactHistory().find((message) => message.role === "tool")?.text ??
+        "";
       const outputPath = /^output_path: (.+)$/m.exec(toolText)?.[1];
-      expect(toolText).toContain('Tool output exceeded 50000 characters');
-      expect(toolText).not.toContain('tail survives');
+      expect(toolText).toContain("Tool output exceeded 50000 characters");
+      expect(toolText).not.toContain("tail survives");
       expect(outputPath).toBeTruthy();
-      expect(readFileSync(outputPath!, 'utf8')).toBe(largeOutput);
+      expect(readFileSync(outputPath!, "utf8")).toBe(largeOutput);
     } finally {
       rmSync(sessionDir, { recursive: true, force: true });
     }
   });
 
-  it('does not overwrite saved oversized tool results with repeated call IDs', async () => {
-    const sessionDir = mkdtempSync(join(tmpdir(), 'tool-result-overflow-'));
+  it("does not overwrite saved oversized tool results with repeated call IDs", async () => {
+    const sessionDir = mkdtempSync(join(tmpdir(), "tool-result-overflow-"));
     try {
-      const firstOutput = `${'a'.repeat(60_000)}first tail`;
-      const secondOutput = `${'b'.repeat(60_000)}second tail`;
+      const firstOutput = `${"a".repeat(60_000)}first tail`;
+      const secondOutput = `${"b".repeat(60_000)}second tail`;
 
       const first = await budgetToolResultForModel({
         homedir: sessionDir,
-        toolName: 'Lookup',
-        toolCallId: 'call_lookup',
+        toolName: "Lookup",
+        toolCallId: "call_lookup",
         result: { output: firstOutput },
       });
       const second = await budgetToolResultForModel({
         homedir: sessionDir,
-        toolName: 'Lookup',
-        toolCallId: 'call_lookup',
+        toolName: "Lookup",
+        toolCallId: "call_lookup",
         result: { output: secondOutput },
       });
 
       const firstPath = savedOutputPath(first.output);
       const secondPath = savedOutputPath(second.output);
       expect(firstPath).not.toBe(secondPath);
-      expect(readFileSync(firstPath, 'utf8')).toBe(firstOutput);
-      expect(readFileSync(secondPath, 'utf8')).toBe(secondOutput);
+      expect(readFileSync(firstPath, "utf8")).toBe(firstOutput);
+      expect(readFileSync(secondPath, "utf8")).toBe(secondOutput);
     } finally {
       rmSync(sessionDir, { recursive: true, force: true });
     }
   });
 
-  it('keeps oversized tool results intact when no session directory is available', async () => {
-    const largeOutput = `${'x'.repeat(60_000)}tail survives`;
+  it("keeps oversized tool results intact when no session directory is available", async () => {
+    const largeOutput = `${"x".repeat(60_000)}tail survives`;
     const result = { output: largeOutput };
 
     const budgeted = await budgetToolResultForModel({
-      toolName: 'Lookup',
-      toolCallId: 'call_lookup',
+      toolName: "Lookup",
+      toolCallId: "call_lookup",
       result,
     });
 
@@ -643,10 +731,10 @@ describe('Agent tools', () => {
     expect(budgeted.output).toBe(largeOutput);
   });
 
-  it('does not save already-truncated tool result previews as full output', async () => {
-    const sessionDir = mkdtempSync(join(tmpdir(), 'tool-result-overflow-'));
+  it("does not save already-truncated tool result previews as full output", async () => {
+    const sessionDir = mkdtempSync(join(tmpdir(), "tool-result-overflow-"));
     try {
-      const largeOutput = `${'x'.repeat(60_000)}[...truncated]`;
+      const largeOutput = `${"x".repeat(60_000)}[...truncated]`;
       const result = {
         output: largeOutput,
         truncated: true,
@@ -654,15 +742,15 @@ describe('Agent tools', () => {
 
       const budgeted = await budgetToolResultForModel({
         homedir: sessionDir,
-        toolName: 'Lookup',
-        toolCallId: 'call_lookup',
+        toolName: "Lookup",
+        toolCallId: "call_lookup",
         result,
       });
 
       expect(budgeted).toBe(result);
       expect(budgeted.output).toBe(largeOutput);
-      expect(budgeted.output).not.toContain('output_path:');
-      expect(existsSync(join(sessionDir, 'tool-results'))).toBe(false);
+      expect(budgeted.output).not.toContain("output_path:");
+      expect(existsSync(join(sessionDir, "tool-results"))).toBe(false);
     } finally {
       rmSync(sessionDir, { recursive: true, force: true });
     }
@@ -671,28 +759,28 @@ describe('Agent tools', () => {
 
 function bashCall(): ToolCall {
   return {
-    type: 'function',
-    id: 'call_bash',
-    name: 'Bash',
+    type: "function",
+    id: "call_bash",
+    name: "Bash",
     arguments: '{"command":"printf hook-output","timeout":60}',
   };
 }
 
 function agentCall(): ToolCall {
   return {
-    type: 'function',
-    id: 'call_agent',
-    name: 'Agent',
+    type: "function",
+    id: "call_agent",
+    name: "Agent",
     arguments: JSON.stringify({
-        prompt: 'Investigate deeply',
-        description: 'Investigate deeply',
-        subagent_type: 'coder',
-      }),
+      prompt: "Investigate deeply",
+      description: "Investigate deeply",
+      subagent_type: "coder",
+    }),
   };
 }
 
 function savedOutputPath(output: unknown): string {
-  expect(typeof output).toBe('string');
+  expect(typeof output).toBe("string");
   const outputPath = /^output_path: (.+)$/m.exec(output as string)?.[1];
   expect(outputPath).toBeTruthy();
   return outputPath!;
@@ -703,11 +791,11 @@ function hookErrorMessageAssertCommand(expected: string): string {
     "let input = '';",
     "process.stdin.on('data', (chunk) => { input += chunk; });",
     "process.stdin.on('end', () => {",
-    '  const payload = JSON.parse(input);',
+    "  const payload = JSON.parse(input);",
     `  if (payload.error?.message === ${JSON.stringify(expected)}) process.exit(0);`,
     "  console.error(payload.error?.message ?? '<missing>');",
-    '  process.exit(2);',
-    '});',
-  ].join('');
+    "  process.exit(2);",
+    "});",
+  ].join("");
   return `node -e ${JSON.stringify(script)}`;
 }

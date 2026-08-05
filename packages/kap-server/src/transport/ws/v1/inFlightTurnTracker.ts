@@ -18,10 +18,13 @@
  * describe a different stream and would corrupt the accumulation.
  */
 
-import type { Event } from './events';
-import type { InFlightToolCall, InFlightTurn } from '../../../protocol/rest-snapshot';
+import type { Event } from "./events";
+import type {
+  InFlightToolCall,
+  InFlightTurn,
+} from "../../../protocol/rest-snapshot";
 
-const MAIN_AGENT_ID = 'main';
+const MAIN_AGENT_ID = "main";
 
 interface ToolAccum {
   tool_call_id: string;
@@ -30,7 +33,7 @@ interface ToolAccum {
   description?: string;
   display?: unknown;
   last_progress?: {
-    kind: 'stdout' | 'stderr' | 'progress' | 'status' | 'custom';
+    kind: "stdout" | "stderr" | "progress" | "status" | "custom";
     text?: string;
     percent?: number;
   };
@@ -55,59 +58,61 @@ export class InFlightTurnTracker {
     if (event.agentId !== MAIN_AGENT_ID) return {};
 
     switch (event.type) {
-      case 'turn.started': {
+      case "turn.started": {
         this.bySession.set(sessionId, {
           turnId: event.turnId,
-          assistantText: '',
-          thinkingText: '',
+          assistantText: "",
+          thinkingText: "",
           tools: new Map(),
         });
         return {};
       }
-      case 'turn.ended': {
+      case "turn.ended": {
         this.bySession.delete(sessionId);
         return {};
       }
-      case 'turn.step.started': {
+      case "turn.step.started": {
         // Prior steps' text is already in the transcript; keep running tools.
         const turn = this.bySession.get(sessionId);
         if (!turn || turn.turnId !== event.turnId) return {};
-        turn.assistantText = '';
-        turn.thinkingText = '';
+        turn.assistantText = "";
+        turn.thinkingText = "";
         return {};
       }
-      case 'assistant.delta': {
+      case "assistant.delta": {
         const turn = this.bySession.get(sessionId);
         if (!turn || turn.turnId !== event.turnId) return {};
         const offset = turn.assistantText.length;
         turn.assistantText += event.delta;
         return { offset };
       }
-      case 'thinking.delta': {
+      case "thinking.delta": {
         const turn = this.bySession.get(sessionId);
         if (!turn || turn.turnId !== event.turnId) return {};
         const offset = turn.thinkingText.length;
         turn.thinkingText += event.delta;
         return { offset };
       }
-      case 'tool.call.started': {
+      case "tool.call.started": {
         const turn = this.bySession.get(sessionId);
         if (!turn || turn.turnId !== event.turnId) return {};
         turn.tools.set(event.toolCallId, {
           tool_call_id: event.toolCallId,
           name: event.name,
           args: event.args,
-          ...(event.description !== undefined ? { description: event.description } : {}),
+          ...(event.description !== undefined
+            ? { description: event.description }
+            : {}),
           ...(event.display !== undefined ? { display: event.display } : {}),
         });
         return {};
       }
-      case 'tool.progress': {
+      case "tool.progress": {
         const turn = this.bySession.get(sessionId);
         const tool = turn?.tools.get(event.toolCallId);
         if (!tool) return {};
         const { kind, text, percent } = event.update;
-        if (kind === 'custom') return {};
+        if (kind === "custom") return {};
         tool.last_progress = {
           kind,
           ...(text !== undefined ? { text } : {}),
@@ -115,7 +120,7 @@ export class InFlightTurnTracker {
         };
         return {};
       }
-      case 'tool.result': {
+      case "tool.result": {
         this.bySession.get(sessionId)?.tools.delete(event.toolCallId);
         return {};
       }
@@ -127,13 +132,17 @@ export class InFlightTurnTracker {
   get(sessionId: string): InFlightTurn | null {
     const turn = this.bySession.get(sessionId);
     if (!turn) return null;
-    const running_tools: InFlightToolCall[] = Array.from(turn.tools.values()).map((t) => ({
+    const running_tools: InFlightToolCall[] = Array.from(
+      turn.tools.values(),
+    ).map((t) => ({
       tool_call_id: t.tool_call_id,
       name: t.name,
       ...(t.args !== undefined ? { args: t.args } : {}),
       ...(t.description !== undefined ? { description: t.description } : {}),
       ...(t.display !== undefined ? { display: t.display } : {}),
-      ...(t.last_progress !== undefined ? { last_progress: t.last_progress } : {}),
+      ...(t.last_progress !== undefined
+        ? { last_progress: t.last_progress }
+        : {}),
     }));
     return {
       turn_id: turn.turnId,

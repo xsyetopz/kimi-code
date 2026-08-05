@@ -15,16 +15,16 @@
  * — keep the two in sync: agent-file format changes must land in both engines.
  */
 
-import { FrontmatterError, parseFrontmatter } from '../../skill/parser';
+import { FrontmatterError, parseFrontmatter } from "../../skill/parser";
 
-import type { AgentFileDefinition, AgentFileSource } from './types';
+import type { AgentFileDefinition, AgentFileSource } from "./types";
 
 export class AgentFileParseError extends Error {
   readonly reason?: unknown;
 
   constructor(message: string, cause?: unknown) {
     super(message);
-    this.name = 'AgentFileParseError';
+    this.name = "AgentFileParseError";
     if (cause !== undefined) this.reason = cause;
   }
 }
@@ -37,7 +37,9 @@ export interface ParseAgentFileOptions {
 
 const AGENT_NAME_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
-export function parseAgentFileText(options: ParseAgentFileOptions): AgentFileDefinition {
+export function parseAgentFileText(
+  options: ParseAgentFileOptions,
+): AgentFileDefinition {
   let parsed;
   try {
     parsed = parseFrontmatter(options.text);
@@ -61,15 +63,21 @@ export function parseAgentFileText(options: ParseAgentFileOptions): AgentFileDef
     );
   }
 
-  const nameField = frontmatter['name'];
-  if (nameField !== undefined && nameField !== null && typeof nameField !== 'string') {
+  const nameField = frontmatter["name"];
+  if (
+    nameField !== undefined &&
+    nameField !== null &&
+    typeof nameField !== "string"
+  ) {
     throw new AgentFileParseError(
       `Frontmatter field "name" in ${options.path} must be a non-empty string`,
     );
   }
   const name = nonEmptyString(nameField) ?? deriveNameFromPath(options.path);
   if (name === undefined) {
-    throw new AgentFileParseError(`Missing required frontmatter field "name" in ${options.path}`);
+    throw new AgentFileParseError(
+      `Missing required frontmatter field "name" in ${options.path}`,
+    );
   }
   if (!AGENT_NAME_PATTERN.test(name)) {
     throw new AgentFileParseError(
@@ -78,23 +86,37 @@ export function parseAgentFileText(options: ParseAgentFileOptions): AgentFileDef
   }
 
   const description = requiredNonEmptyString(
-    frontmatter['description'],
-    'description',
+    frontmatter["description"],
+    "description",
     options.path,
   );
 
-  const override = parseBoolean(frontmatter['override'], 'override', options.path);
-  const rawTools = parseStringList(frontmatter['tools'], 'tools', options.path);
-  const tools = rawTools?.length === 1 && rawTools[0] === '*' ? undefined : rawTools;
-  const disallowedTools = parseStringList(
-    frontmatter['disallowedTools'],
-    'disallowedTools',
+  const override = parseBoolean(
+    frontmatter["override"],
+    "override",
     options.path,
   );
-  const rawSubagents = parseStringList(frontmatter['subagents'], 'subagents', options.path);
+  const rawTools = parseStringList(frontmatter["tools"], "tools", options.path);
+  const tools =
+    rawTools?.length === 1 && rawTools[0] === "*" ? undefined : rawTools;
+  const disallowedTools = parseStringList(
+    frontmatter["disallowedTools"],
+    "disallowedTools",
+    options.path,
+  );
+  const rawSubagents = parseStringList(
+    frontmatter["subagents"],
+    "subagents",
+    options.path,
+  );
   const subagents =
-    rawSubagents?.length === 1 && rawSubagents[0] === '*' ? undefined : rawSubagents;
-  const modelPreference = parseModelPreference(frontmatter['model_preference'], options.path);
+    rawSubagents?.length === 1 && rawSubagents[0] === "*"
+      ? undefined
+      : rawSubagents;
+  const modelPreference = parseModelPreference(
+    frontmatter["model_preference"],
+    options.path,
+  );
 
   const prompt = parsed.body.trim();
   if (prompt.length === 0) {
@@ -104,7 +126,7 @@ export function parseAgentFileText(options: ParseAgentFileOptions): AgentFileDef
   return {
     name,
     description,
-    whenToUse: nonEmptyString(frontmatter['whenToUse']),
+    whenToUse: nonEmptyString(frontmatter["whenToUse"]),
     override,
     tools,
     disallowedTools,
@@ -119,17 +141,21 @@ export function parseAgentFileText(options: ParseAgentFileOptions): AgentFileDef
 function parseModelPreference(
   value: unknown,
   filePath: string,
-): AgentFileDefinition['modelPreference'] {
+): AgentFileDefinition["modelPreference"] {
   if (value === undefined || value === null) return undefined;
-  if (value === 'primary' || value === 'secondary') return value;
+  if (value === "primary" || value === "secondary") return value;
   throw new AgentFileParseError(
     `Frontmatter field "model_preference" in ${filePath} must be "primary" or "secondary"`,
   );
 }
 
-function parseBoolean(value: unknown, field: string, filePath: string): boolean {
+function parseBoolean(
+  value: unknown,
+  field: string,
+  filePath: string,
+): boolean {
   if (value === undefined || value === null) return false;
-  if (typeof value === 'boolean') return value;
+  if (typeof value === "boolean") return value;
   throw new AgentFileParseError(
     `Frontmatter field "${field}" in ${filePath} must be a boolean`,
   );
@@ -141,11 +167,11 @@ function parseStringList(
   filePath: string,
 ): readonly string[] | undefined {
   if (value === undefined || value === null) return undefined;
-  if (typeof value === 'string') {
+  if (typeof value === "string") {
     return value
-      .split(',')
+      .split(",")
       .map((item) => item.trim())
-      .filter((item) => item !== '');
+      .filter((item) => item !== "");
   }
   if (!Array.isArray(value)) {
     throw new AgentFileParseError(
@@ -154,7 +180,7 @@ function parseStringList(
   }
   const out: string[] = [];
   for (const item of value) {
-    if (typeof item !== 'string' || item.trim() === '') {
+    if (typeof item !== "string" || item.trim() === "") {
       throw new AgentFileParseError(
         `Frontmatter field "${field}" in ${filePath} must be a list of non-empty strings`,
       );
@@ -164,29 +190,37 @@ function parseStringList(
   return out;
 }
 
-function requiredNonEmptyString(value: unknown, field: string, filePath: string): string {
-  if (value !== undefined && value !== null && typeof value !== 'string') {
+function requiredNonEmptyString(
+  value: unknown,
+  field: string,
+  filePath: string,
+): string {
+  if (value !== undefined && value !== null && typeof value !== "string") {
     throw new AgentFileParseError(
       `Frontmatter field "${field}" in ${filePath} must be a non-empty string`,
     );
   }
   const parsed = nonEmptyString(value);
   if (parsed === undefined) {
-    throw new AgentFileParseError(`Missing required frontmatter field "${field}" in ${filePath}`);
+    throw new AgentFileParseError(
+      `Missing required frontmatter field "${field}" in ${filePath}`,
+    );
   }
   return parsed;
 }
 
 function deriveNameFromPath(filePath: string): string | undefined {
-  const base = filePath.split(/[\\/]/).pop() ?? '';
-  const name = base.replace(/\.[^.]*$/, '');
-  return name !== '' ? name : undefined;
+  const base = filePath.split(/[\\/]/).pop() ?? "";
+  const name = base.replace(/\.[^.]*$/, "");
+  return name !== "" ? name : undefined;
 }
 
 function nonEmptyString(value: unknown): string | undefined {
-  return typeof value === 'string' && value.trim() !== '' ? value.trim() : undefined;
+  return typeof value === "string" && value.trim() !== ""
+    ? value.trim()
+    : undefined;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

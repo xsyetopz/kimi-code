@@ -16,25 +16,25 @@
  * as an optional step for manual cleanup instead of being deleted.
  */
 
-import { constants } from 'node:fs';
-import { access, chmod, mkdir, rename, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
+import { constants } from "node:fs";
+import { access, chmod, mkdir, rename, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
 
-import { downloadToFile, runCommand } from '../host';
+import { downloadToFile, runCommand } from "../host";
 import type {
   CapabilityDetectResult,
   CapabilityEntry,
   CapabilityInstallReporter,
   CapabilityStep,
-} from '../types';
-import type { CapabilityEntryContext } from './context';
+} from "../types";
+import type { CapabilityEntryContext } from "./context";
 
-const PLUGIN_ID = 'kimi-webbridge';
+const PLUGIN_ID = "kimi-webbridge";
 const PLUGIN_ZIP_URL =
-  'https://code.kimi.com/kimi-code/plugins/official/kimi-webbridge.zip';
-const BINARY_CDN_BASE = 'https://cdn.kimi.com/webbridge/latest/releases';
-const DEFAULT_DAEMON_BASE_URL = 'http://127.0.0.1:10086';
+  "https://code.kimi.com/kimi-code/plugins/official/kimi-webbridge.zip";
+const BINARY_CDN_BASE = "https://cdn.kimi.com/webbridge/latest/releases";
+const DEFAULT_DAEMON_BASE_URL = "http://127.0.0.1:10086";
 const STATUS_TIMEOUT_MS = 1_500;
 const START_TIMEOUT_MS = 30_000;
 const START_POLL_INTERVAL_MS = 500;
@@ -46,29 +46,36 @@ interface DaemonStatus {
   readonly extension_connected?: boolean;
 }
 
-function binaryAssetName(platform: NodeJS.Platform, arch: string): string | undefined {
-  if (platform === 'darwin') {
-    if (arch === 'arm64') return 'kimi-webbridge-darwin-arm64';
-    if (arch === 'x64') return 'kimi-webbridge-darwin-amd64';
+function binaryAssetName(
+  platform: NodeJS.Platform,
+  arch: string,
+): string | undefined {
+  if (platform === "darwin") {
+    if (arch === "arm64") return "kimi-webbridge-darwin-arm64";
+    if (arch === "x64") return "kimi-webbridge-darwin-amd64";
     return undefined;
   }
-  if (platform === 'linux') {
-    if (arch === 'arm64') return 'kimi-webbridge-linux-arm64';
-    if (arch === 'x64') return 'kimi-webbridge-linux-amd64';
+  if (platform === "linux") {
+    if (arch === "arm64") return "kimi-webbridge-linux-arm64";
+    if (arch === "x64") return "kimi-webbridge-linux-amd64";
     return undefined;
   }
-  if (platform === 'win32' && arch === 'x64') return 'kimi-webbridge-windows-amd64.exe';
+  if (platform === "win32" && arch === "x64")
+    return "kimi-webbridge-windows-amd64.exe";
   return undefined;
 }
 
-export function createKimiWebbridgeEntry(ctx: CapabilityEntryContext): CapabilityEntry {
+export function createKimiWebbridgeEntry(
+  ctx: CapabilityEntryContext,
+): CapabilityEntry {
   const baseUrl = ctx.webbridgeBaseUrl ?? DEFAULT_DAEMON_BASE_URL;
-  const binDir = path.join(ctx.userHomeDir, '.kimi-webbridge', 'bin');
-  const binName = ctx.platform === 'win32' ? 'kimi-webbridge.exe' : 'kimi-webbridge';
+  const binDir = path.join(ctx.userHomeDir, ".kimi-webbridge", "bin");
+  const binName =
+    ctx.platform === "win32" ? "kimi-webbridge.exe" : "kimi-webbridge";
   const binPath = path.join(binDir, binName);
   const userSourceSkillDirs = [
-    path.join(ctx.kimiHomeDir, 'skills', 'kimi-webbridge'),
-    path.join(ctx.userHomeDir, '.agents', 'skills', 'kimi-webbridge'),
+    path.join(ctx.kimiHomeDir, "skills", "kimi-webbridge"),
+    path.join(ctx.userHomeDir, ".agents", "skills", "kimi-webbridge"),
   ];
   const supported = binaryAssetName(ctx.platform, ctx.arch) !== undefined;
 
@@ -104,55 +111,60 @@ export function createKimiWebbridgeEntry(ctx: CapabilityEntryContext): Capabilit
 
     const binaryPresent = await exists(binPath);
     const binaryUsable =
-      binaryPresent && (ctx.platform === 'win32' || (await executable(binPath)));
+      binaryPresent &&
+      (ctx.platform === "win32" || (await executable(binPath)));
     steps.push({
-      id: 'daemon-binary',
-      state: binaryUsable ? 'ok' : 'missing',
-      detail: binaryPresent && !binaryUsable ? 'not executable' : undefined,
+      id: "daemon-binary",
+      state: binaryUsable ? "ok" : "missing",
+      detail: binaryPresent && !binaryUsable ? "not executable" : undefined,
     });
 
     const daemon = await fetchDaemonStatus();
     const daemonRunning = daemon?.running === true;
     steps.push({
-      id: 'daemon',
-      state: daemonRunning ? 'ok' : 'missing',
+      id: "daemon",
+      state: daemonRunning ? "ok" : "missing",
       detail: daemonRunning ? daemon?.version : undefined,
     });
 
     const installed = await ctx.plugins.listPlugins();
     const plugin = installed.find((p) => p.id === PLUGIN_ID);
     const mcpGap =
-      plugin !== undefined && plugin.enabledMcpServerCount < plugin.mcpServerCount
+      plugin !== undefined &&
+      plugin.enabledMcpServerCount < plugin.mcpServerCount
         ? `mcp ${plugin.enabledMcpServerCount}/${plugin.mcpServerCount} enabled`
         : undefined;
     const pluginOk =
       plugin !== undefined &&
       plugin.enabled &&
-      plugin.state === 'ok' &&
+      plugin.state === "ok" &&
       plugin.enabledMcpServerCount === plugin.mcpServerCount;
     steps.push({
-      id: 'skill',
-      state: pluginOk ? 'ok' : 'missing',
+      id: "skill",
+      state: pluginOk ? "ok" : "missing",
       detail: mcpGap ?? plugin?.version,
     });
 
     const skillShadows = (
       await Promise.all(
-        userSourceSkillDirs.map(async (dir) => ({ dir, present: await exists(dir) })),
+        userSourceSkillDirs.map(async (dir) => ({
+          dir,
+          present: await exists(dir),
+        })),
       )
     ).filter((item) => item.present);
     if (skillShadows.length > 0) {
       steps.push({
-        id: 'skill-shadow',
-        state: 'failed',
-        detail: skillShadows.map((item) => item.dir).join(', '),
+        id: "skill-shadow",
+        state: "failed",
+        detail: skillShadows.map((item) => item.dir).join(", "),
         optional: true,
       });
     }
 
     steps.push({
-      id: 'extension',
-      state: daemon?.extension_connected === true ? 'ok' : 'missing',
+      id: "extension",
+      state: daemon?.extension_connected === true ? "ok" : "missing",
       optional: true,
     });
 
@@ -167,39 +179,49 @@ export function createKimiWebbridgeEntry(ctx: CapabilityEntryContext): Capabilit
         setTimeout(resolve, START_POLL_INTERVAL_MS);
       });
     }
-    throw new Error(`WebBridge daemon did not come up on ${baseUrl} — check ~/.kimi-webbridge/logs`);
+    throw new Error(
+      `WebBridge daemon did not come up on ${baseUrl} — check ~/.kimi-webbridge/logs`,
+    );
   }
 
   async function install(report: CapabilityInstallReporter): Promise<void> {
     const asset = binaryAssetName(ctx.platform, ctx.arch);
     if (asset === undefined) {
-      throw new Error(`kimi-webbridge is not supported on ${ctx.platform}/${ctx.arch}`);
+      throw new Error(
+        `kimi-webbridge is not supported on ${ctx.platform}/${ctx.arch}`,
+      );
     }
 
     const before = await detect();
-    const stepStates = new Map(before.steps.map((step) => [step.id, step.state]));
+    const stepStates = new Map(
+      before.steps.map((step) => [step.id, step.state]),
+    );
     const readyBefore = before.steps
       .filter((step) => step.optional !== true)
-      .every((step) => step.state === 'ok');
-    if (stepStates.get('daemon-binary') !== 'ok' || readyBefore) {
+      .every((step) => step.state === "ok");
+    if (stepStates.get("daemon-binary") !== "ok" || readyBefore) {
       await installBinary(report, asset);
     }
 
     const status = await fetchDaemonStatus();
     if (status?.running !== true) {
-      report('daemon');
-      const started = await runCommand(ctx.hostProcess, binPath, ['start'], {
+      report("daemon");
+      const started = await runCommand(ctx.hostProcess, binPath, ["start"], {
         timeout: START_TIMEOUT_MS,
       });
       if (started.code !== 0) {
-        throw new Error(`kimi-webbridge start failed: ${started.stderr || started.stdout}`);
+        throw new Error(
+          `kimi-webbridge start failed: ${started.stderr || started.stdout}`,
+        );
       }
       await waitForDaemon();
     }
 
-    if (stepStates.get('skill') !== 'ok' || readyBefore) {
-      report('skill');
-      const summary = await ctx.plugins.installPlugin({ source: PLUGIN_ZIP_URL });
+    if (stepStates.get("skill") !== "ok" || readyBefore) {
+      report("skill");
+      const summary = await ctx.plugins.installPlugin({
+        source: PLUGIN_ZIP_URL,
+      });
       if (!summary.enabled) {
         await ctx.plugins.setPluginEnabled({ id: PLUGIN_ID, enabled: true });
       }
@@ -210,45 +232,50 @@ export function createKimiWebbridgeEntry(ctx: CapabilityEntryContext): Capabilit
     report: CapabilityInstallReporter,
     asset: string,
   ): Promise<void> {
-    report('download', 0);
+    report("download", 0);
     const url = `${BINARY_CDN_BASE}/${asset}`;
     const staging = path.join(
       tmpdir(),
-      `kimi-webbridge-${Date.now()}-${Math.random().toString(36).slice(2, 8)}${ctx.platform === 'win32' ? '.exe' : ''}`,
+      `kimi-webbridge-${Date.now()}-${Math.random().toString(36).slice(2, 8)}${ctx.platform === "win32" ? ".exe" : ""}`,
     );
     try {
       await downloadToFile(
         url,
         staging,
         (percent) => {
-          report('download', percent);
+          report("download", percent);
         },
         ctx.fetchImpl,
       );
       await mkdir(binDir, { recursive: true });
-      await rename(staging, binPath).catch(async (error: NodeJS.ErrnoException) => {
-        if (error.code !== 'EXDEV') throw error;
-        await renameAcrossDevicesFallback(staging, binPath);
-      });
-      if (ctx.platform !== 'win32') await chmod(binPath, 0o755);
+      await rename(staging, binPath).catch(
+        async (error: NodeJS.ErrnoException) => {
+          if (error.code !== "EXDEV") throw error;
+          await renameAcrossDevicesFallback(staging, binPath);
+        },
+      );
+      if (ctx.platform !== "win32") await chmod(binPath, 0o755);
     } finally {
       await rm(staging, { force: true }).catch(() => undefined);
     }
   }
 
   return {
-    id: 'kimi-webbridge',
-    displayName: 'Kimi WebBridge',
+    id: "kimi-webbridge",
+    displayName: "Kimi WebBridge",
     description:
-      'Control your real browser (with your login sessions) — navigate, click, type, read pages, and screenshot any website.',
+      "Control your real browser (with your login sessions) — navigate, click, type, read pages, and screenshot any website.",
     supported,
     detect,
     install,
   };
 }
 
-async function renameAcrossDevicesFallback(from: string, to: string): Promise<void> {
-  const { copyFile } = await import('node:fs/promises');
+async function renameAcrossDevicesFallback(
+  from: string,
+  to: string,
+): Promise<void> {
+  const { copyFile } = await import("node:fs/promises");
   const sibling = `${to}.${process.pid}.${Date.now()}.tmp`;
   try {
     await copyFile(from, sibling);
@@ -259,4 +286,7 @@ async function renameAcrossDevicesFallback(from: string, to: string): Promise<vo
   await rm(from, { force: true });
 }
 
-export const __kimiWebbridgeInternals = { binaryAssetName, renameAcrossDevicesFallback };
+export const __kimiWebbridgeInternals = {
+  binaryAssetName,
+  renameAcrossDevicesFallback,
+};

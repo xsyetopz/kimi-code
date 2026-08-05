@@ -8,10 +8,10 @@
  * lives in `@moonshot-ai/vis-server`.
  */
 
-import type { Command } from 'commander';
+import type { Command } from "commander";
 
-import { createCliTelemetryBootstrap } from '#/cli/telemetry';
-import { openUrl } from '#/utils/open-url';
+import { createCliTelemetryBootstrap } from "#/cli/telemetry";
+import { openUrl } from "#/utils/open-url";
 
 interface WritableLike {
   write(chunk: string): boolean;
@@ -33,7 +33,9 @@ export interface StartVisServerArgs {
 
 export interface VisDeps {
   readonly getHomeDir: () => string;
-  readonly startVisServer: (opts: StartVisServerArgs) => Promise<StartedVisServer>;
+  readonly startVisServer: (
+    opts: StartVisServerArgs,
+  ) => Promise<StartedVisServer>;
   readonly openUrl: (url: string) => Promise<void>;
   readonly waitForShutdown: () => Promise<void>;
   readonly stdout: WritableLike;
@@ -48,7 +50,10 @@ export interface VisOptions {
   readonly sessionId?: string;
 }
 
-export async function handleVis(deps: VisDeps, opts: VisOptions): Promise<void> {
+export async function handleVis(
+  deps: VisDeps,
+  opts: VisOptions,
+): Promise<void> {
   const homeDir = deps.getHomeDir();
 
   // Lazily load the embedded single-file SPA so normal `kimi` startup never
@@ -58,9 +63,11 @@ export async function handleVis(deps: VisDeps, opts: VisOptions): Promise<void> 
   // its own static `public/` directory.
   let webAsset: { gzipped: Uint8Array } | undefined;
   try {
-    const { VIS_WEB_GZIP_B64 } = await import('#/generated/vis-web-asset');
+    const { VIS_WEB_GZIP_B64 } = await import("#/generated/vis-web-asset");
     if (VIS_WEB_GZIP_B64.length > 0) {
-      webAsset = { gzipped: new Uint8Array(Buffer.from(VIS_WEB_GZIP_B64, 'base64')) };
+      webAsset = {
+        gzipped: new Uint8Array(Buffer.from(VIS_WEB_GZIP_B64, "base64")),
+      };
     }
   } catch {
     // Embedded asset not generated in this context — fall back to filesystem.
@@ -86,13 +93,15 @@ export async function handleVis(deps: VisDeps, opts: VisOptions): Promise<void> 
       : `${server.url}sessions/${encodeURIComponent(opts.sessionId)}`;
 
   deps.stdout.write(`kimi vis is running at ${server.url}\n`);
-  deps.stdout.write('Press Ctrl-C to stop.\n');
+  deps.stdout.write("Press Ctrl-C to stop.\n");
 
   if (opts.open) {
     try {
       await deps.openUrl(target);
     } catch {
-      deps.stderr.write(`Could not open a browser; visit ${target} manually.\n`);
+      deps.stderr.write(
+        `Could not open a browser; visit ${target} manually.\n`,
+      );
     }
   }
 
@@ -100,20 +109,26 @@ export async function handleVis(deps: VisDeps, opts: VisOptions): Promise<void> 
   await server.close();
 }
 
-export function registerVisCommand(parent: Command, overrides?: Partial<VisDeps>): void {
+export function registerVisCommand(
+  parent: Command,
+  overrides?: Partial<VisDeps>,
+): void {
   parent
-    .command('vis')
-    .description('Launch the session visualizer in your browser.')
-    .option('--port <number>', 'Port to bind. Default: auto-pick a free port.')
-    .option('--host <host>', 'Host to bind. Default: 127.0.0.1.')
-    .option('--no-open', 'Do not open the browser automatically.')
-    .argument('[sessionId]', 'Open directly to this session.')
+    .command("vis")
+    .description("Launch the session visualizer in your browser.")
+    .option("--port <number>", "Port to bind. Default: auto-pick a free port.")
+    .option("--host <host>", "Host to bind. Default: 127.0.0.1.")
+    .option("--no-open", "Do not open the browser automatically.")
+    .argument("[sessionId]", "Open directly to this session.")
     .action(
       async (
         sessionId: string | undefined,
         options: { port?: string; host?: string; open?: boolean },
       ) => {
-        const port = options.port === undefined ? undefined : Number.parseInt(options.port, 10);
+        const port =
+          options.port === undefined
+            ? undefined
+            : Number.parseInt(options.port, 10);
         await handleVis(createDefaultVisDeps(overrides), {
           open: options.open !== false,
           ...(port === undefined || Number.isNaN(port) ? {} : { port }),
@@ -126,12 +141,15 @@ export function registerVisCommand(parent: Command, overrides?: Partial<VisDeps>
 
 function createDefaultVisDeps(overrides: Partial<VisDeps> = {}): VisDeps {
   return {
-    getHomeDir: overrides.getHomeDir ?? (() => createCliTelemetryBootstrap().homeDir),
+    getHomeDir:
+      overrides.getHomeDir ?? (() => createCliTelemetryBootstrap().homeDir),
     startVisServer:
       overrides.startVisServer ??
       (async (opts) => {
         // Dynamic import keeps the vis server (and Hono) out of the hot path.
-        const { startVisServer } = await import('@moonshot-ai/vis-server/start');
+        const { startVisServer } = await import(
+          "@moonshot-ai/vis-server/start"
+        );
         return startVisServer(opts);
       }),
     // `openUrl` is a synchronous fire-and-forget; adapt it to the async dep.
@@ -150,9 +168,9 @@ function createDefaultVisDeps(overrides: Partial<VisDeps> = {}): VisDeps {
 function waitForSigint(): Promise<void> {
   return new Promise<void>((resolve) => {
     const onSig = (): void => {
-      process.off('SIGINT', onSig);
+      process.off("SIGINT", onSig);
       resolve();
     };
-    process.on('SIGINT', onSig);
+    process.on("SIGINT", onSig);
   });
 }

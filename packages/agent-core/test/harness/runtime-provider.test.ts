@@ -1,10 +1,10 @@
-import { classifyKimiQuotaError } from '@moonshot-ai/kosong';
-import { describe, expect, it } from 'vitest';
+import { classifyKimiQuotaError } from "@moonshot-ai/kosong";
+import { describe, expect, it } from "vitest";
 
-import type { KimiConfig, ModelAlias } from '../../src/config';
-import { ErrorCodes, KimiError } from '../../src/errors';
-import { ProviderManager } from '../../src/session/provider-manager';
-import { resolveThinkingEffort } from '../../src/agent/config/thinking';
+import type { KimiConfig, ModelAlias } from "../../src/config";
+import { ErrorCodes, KimiError } from "../../src/errors";
+import { ProviderManager } from "../../src/session/provider-manager";
+import { resolveThinkingEffort } from "../../src/agent/config/thinking";
 
 // Thin wrapper that adapts the legacy `resolveRuntimeProvider(input)` shape to
 // the current ProviderManager API. Kept local so the existing test bodies do
@@ -14,7 +14,7 @@ function resolveRuntimeProvider(input: {
   readonly model?: string;
   readonly kimiRequestHeaders?: Record<string, string>;
   readonly promptCacheKey?: string;
-}): ReturnType<ProviderManager['resolveProviderConfig']> {
+}): ReturnType<ProviderManager["resolveProviderConfig"]> {
   const manager = new ProviderManager({
     config: input.config,
     kimiRequestHeaders: input.kimiRequestHeaders,
@@ -24,39 +24,39 @@ function resolveRuntimeProvider(input: {
   if (model === undefined) {
     throw new KimiError(
       ErrorCodes.CONFIG_INVALID,
-      'No model is selected. Set default_model in config.toml or pass a configured model alias.',
+      "No model is selected. Set default_model in config.toml or pass a configured model alias.",
     );
   }
   return manager.resolveProviderConfig(model);
 }
 
 const BASE_CONFIG: KimiConfig = {
-  defaultModel: 'kimi-code/kimi-for-coding',
+  defaultModel: "kimi-code/kimi-for-coding",
   providers: {
-    'managed:kimi-code': {
-      type: 'kimi',
-      apiKey: 'test-key',
-      baseUrl: 'https://api.example/v1',
+    "managed:kimi-code": {
+      type: "kimi",
+      apiKey: "test-key",
+      baseUrl: "https://api.example/v1",
     },
   },
   models: {
-    'kimi-code/kimi-for-coding': {
-      provider: 'managed:kimi-code',
-      model: 'kimi-for-coding',
+    "kimi-code/kimi-for-coding": {
+      provider: "managed:kimi-code",
+      model: "kimi-for-coding",
       maxContextSize: 1_000_000,
-      capabilities: ['thinking', 'image_in', 'video_in', 'tool_use'],
+      capabilities: ["thinking", "image_in", "video_in", "tool_use"],
     },
   },
 };
 
 const TEST_KIMI_HEADERS = {
-  'User-Agent': 'kimi-code-cli/0.0.0-test',
-  'X-Msh-Platform': 'kimi_code_cli',
-  'X-Msh-Version': '0.0.0-test',
+  "User-Agent": "kimi-code-cli/0.0.0-test",
+  "X-Msh-Platform": "kimi_code_cli",
+  "X-Msh-Version": "0.0.0-test",
 };
 
-describe('resolveRuntimeProvider model metadata', () => {
-  it('uses config model metadata as the source of truth', () => {
+describe("resolveRuntimeProvider model metadata", () => {
+  it("uses config model metadata as the source of truth", () => {
     const resolved = resolveRuntimeProvider({
       config: BASE_CONFIG,
     });
@@ -68,40 +68,40 @@ describe('resolveRuntimeProvider model metadata', () => {
       tool_use: true,
       max_context_tokens: 1_000_000,
     });
-    expect(resolved.provider.model).toBe('kimi-for-coding');
+    expect(resolved.provider.model).toBe("kimi-for-coding");
   });
 
-  it('resolves requested aliases to the configured provider and provider model', () => {
+  it("resolves requested aliases to the configured provider and provider model", () => {
     const resolved = resolveRuntimeProvider({
       config: {
         ...BASE_CONFIG,
         providers: {
           ...BASE_CONFIG.providers,
           openai: {
-            type: 'openai',
-            apiKey: 'sk-openai',
-            baseUrl: 'https://openai.example/v1',
+            type: "openai",
+            apiKey: "sk-openai",
+            baseUrl: "https://openai.example/v1",
           },
         },
         models: {
           ...BASE_CONFIG.models!,
-          'gpt-alias': {
-            provider: 'openai',
-            model: 'gpt-runtime',
+          "gpt-alias": {
+            provider: "openai",
+            model: "gpt-runtime",
             maxContextSize: 200000,
-            capabilities: ['tool_use'],
+            capabilities: ["tool_use"],
           },
         },
       },
-      model: 'gpt-alias',
+      model: "gpt-alias",
     });
 
-    expect(resolved.providerName).toBe('openai');
+    expect(resolved.providerName).toBe("openai");
     expect(resolved.provider).toMatchObject({
-      type: 'openai',
-      model: 'gpt-runtime',
-      apiKey: 'sk-openai',
-      baseUrl: 'https://openai.example/v1',
+      type: "openai",
+      model: "gpt-runtime",
+      apiKey: "sk-openai",
+      baseUrl: "https://openai.example/v1",
     });
     expect(resolved.modelCapabilities).toMatchObject({
       tool_use: true,
@@ -109,16 +109,16 @@ describe('resolveRuntimeProvider model metadata', () => {
     });
   });
 
-  it('uses config Kimi capabilities without requiring an api key during OAuth setup', () => {
+  it("uses config Kimi capabilities without requiring an api key during OAuth setup", () => {
     const resolved = resolveRuntimeProvider({
       config: {
         ...BASE_CONFIG,
         providers: {
-          'managed:kimi-code': {
-            type: 'kimi',
-            apiKey: '',
-            baseUrl: 'https://api.example/v1',
-            oauth: { storage: 'file', key: 'oauth/kimi-code' },
+          "managed:kimi-code": {
+            type: "kimi",
+            apiKey: "",
+            baseUrl: "https://api.example/v1",
+            oauth: { storage: "file", key: "oauth/kimi-code" },
           },
         },
       },
@@ -133,14 +133,14 @@ describe('resolveRuntimeProvider model metadata', () => {
     });
   });
 
-  it('does not infer Kimi capabilities from the provider model name', () => {
+  it("does not infer Kimi capabilities from the provider model name", () => {
     const resolved = resolveRuntimeProvider({
       config: {
         ...BASE_CONFIG,
         models: {
-          'kimi-code/kimi-for-coding': {
-            provider: 'managed:kimi-code',
-            model: 'kimi-for-coding',
+          "kimi-code/kimi-for-coding": {
+            provider: "managed:kimi-code",
+            model: "kimi-for-coding",
             maxContextSize: 1_000_000,
           },
         },
@@ -156,16 +156,16 @@ describe('resolveRuntimeProvider model metadata', () => {
     });
   });
 
-  it('rejects provider model names that are not configured aliases', () => {
+  it("rejects provider model names that are not configured aliases", () => {
     expect(() =>
       resolveRuntimeProvider({
         config: BASE_CONFIG,
-        model: 'kimi-for-coding',
+        model: "kimi-for-coding",
       }),
     ).toThrow(/not configured in config.toml/);
   });
 
-  it('throws when no model is selected', () => {
+  it("throws when no model is selected", () => {
     expect(() =>
       resolveRuntimeProvider({
         config: {
@@ -175,45 +175,45 @@ describe('resolveRuntimeProvider model metadata', () => {
     ).toThrow(/No model is selected/);
   });
 
-  it('throws when the selected model is not configured as an alias', () => {
+  it("throws when the selected model is not configured as an alias", () => {
     expect(() =>
       resolveRuntimeProvider({
         config: BASE_CONFIG,
-        model: 'kimi-code',
+        model: "kimi-code",
       }),
     ).toThrow(KimiError);
   });
 
-  it('allows vertexai providers without an apiKey', () => {
+  it("allows vertexai providers without an apiKey", () => {
     const resolved = resolveRuntimeProvider({
       config: {
-        defaultModel: 'gemini',
+        defaultModel: "gemini",
         providers: {
           vertex: {
-            type: 'vertexai',
+            type: "vertexai",
           },
         },
         models: {
           gemini: {
-            provider: 'vertex',
-            model: 'gemini-1.5-pro',
+            provider: "vertex",
+            model: "gemini-1.5-pro",
             maxContextSize: 1_000_000,
           },
         },
       },
     });
 
-    expect(resolved.provider).toMatchObject({ type: 'vertexai' });
+    expect(resolved.provider).toMatchObject({ type: "vertexai" });
   });
 
-  it('throws when the selected model alias has no maxContextSize', () => {
+  it("throws when the selected model alias has no maxContextSize", () => {
     const config = {
       ...BASE_CONFIG,
       models: {
         broken: {
-          provider: 'managed:kimi-code',
-          model: 'kimi-for-coding',
-          capabilities: ['thinking'],
+          provider: "managed:kimi-code",
+          model: "kimi-for-coding",
+          capabilities: ["thinking"],
         },
       },
     } as unknown as KimiConfig;
@@ -221,124 +221,131 @@ describe('resolveRuntimeProvider model metadata', () => {
     expect(() =>
       resolveRuntimeProvider({
         config,
-        model: 'broken',
+        model: "broken",
       }),
     ).toThrow(/max_context_size/);
   });
 });
 
-describe('resolveRuntimeProvider maxOutputSize forwarding', () => {
-  it('returns alias.maxOutputSize for request completion budgeting', () => {
+describe("resolveRuntimeProvider maxOutputSize forwarding", () => {
+  it("returns alias.maxOutputSize for request completion budgeting", () => {
     const resolved = resolveRuntimeProvider({
       config: {
         ...BASE_CONFIG,
         providers: {
           ...BASE_CONFIG.providers,
           openai: {
-            type: 'openai',
-            apiKey: 'sk-openai',
-            baseUrl: 'https://openai.example/v1',
+            type: "openai",
+            apiKey: "sk-openai",
+            baseUrl: "https://openai.example/v1",
           },
         },
         models: {
           ...BASE_CONFIG.models!,
-          'deepseek-alias': {
-            provider: 'openai',
-            model: 'deepseek-v4-flash',
+          "deepseek-alias": {
+            provider: "openai",
+            model: "deepseek-v4-flash",
             maxContextSize: 1_000_000,
             maxOutputSize: 384000,
           },
         },
       },
-      model: 'deepseek-alias',
+      model: "deepseek-alias",
     });
 
     expect(resolved.maxOutputSize).toBe(384000);
   });
 
-  it('forwards alias.maxOutputSize to the anthropic provider config as defaultMaxTokens', () => {
+  it("forwards alias.maxOutputSize to the anthropic provider config as defaultMaxTokens", () => {
     const resolved = resolveRuntimeProvider({
       config: {
         ...BASE_CONFIG,
         providers: {
           ...BASE_CONFIG.providers,
-          anthropic: { type: 'anthropic', apiKey: 'sk-anthropic' },
+          anthropic: { type: "anthropic", apiKey: "sk-anthropic" },
         },
         models: {
           ...BASE_CONFIG.models!,
-          'opus-alias': {
-            provider: 'anthropic',
-            model: 'claude-opus-4-7',
+          "opus-alias": {
+            provider: "anthropic",
+            model: "claude-opus-4-7",
             maxContextSize: 200000,
             maxOutputSize: 24000,
           },
         },
       },
-      model: 'opus-alias',
+      model: "opus-alias",
     });
 
     expect(resolved.provider).toMatchObject({
-      type: 'anthropic',
-      model: 'claude-opus-4-7',
+      type: "anthropic",
+      model: "claude-opus-4-7",
       defaultMaxTokens: 24000,
     });
   });
 
-  it('forwards alias.offEffort to the openai and openai_responses provider configs', () => {
+  it("forwards alias.offEffort to the openai and openai_responses provider configs", () => {
     const config = {
       ...BASE_CONFIG,
       providers: {
         ...BASE_CONFIG.providers,
-        gateway: { type: 'openai', apiKey: 'sk-gateway' } as const,
-        responses: { type: 'openai_responses', apiKey: 'sk-responses' } as const,
+        gateway: { type: "openai", apiKey: "sk-gateway" } as const,
+        responses: {
+          type: "openai_responses",
+          apiKey: "sk-responses",
+        } as const,
       },
       models: {
         ...BASE_CONFIG.models!,
-        'gateway/grok': {
-          provider: 'gateway',
-          model: 'grok-4',
+        "gateway/grok": {
+          provider: "gateway",
+          model: "grok-4",
           maxContextSize: 256000,
-          supportEfforts: ['low', 'medium', 'high'],
-          offEffort: 'none',
+          supportEfforts: ["low", "medium", "high"],
+          offEffort: "none",
         },
-        'responses/grok': {
-          provider: 'responses',
-          model: 'grok-4',
+        "responses/grok": {
+          provider: "responses",
+          model: "grok-4",
           maxContextSize: 256000,
-          offEffort: 'none',
+          offEffort: "none",
         },
       },
     } as KimiConfig;
 
-    expect(resolveRuntimeProvider({ config, model: 'gateway/grok' }).provider).toMatchObject({
-      type: 'openai',
-      offEffort: 'none',
+    expect(
+      resolveRuntimeProvider({ config, model: "gateway/grok" }).provider,
+    ).toMatchObject({
+      type: "openai",
+      offEffort: "none",
     });
-    expect(resolveRuntimeProvider({ config, model: 'responses/grok' }).provider).toMatchObject({
-      type: 'openai_responses',
-      offEffort: 'none',
+    expect(
+      resolveRuntimeProvider({ config, model: "responses/grok" }).provider,
+    ).toMatchObject({
+      type: "openai_responses",
+      offEffort: "none",
     });
   });
 
-  it('maps alias.maxInputSize onto the resolved capability while keeping the total window', () => {
+  it("maps alias.maxInputSize onto the resolved capability while keeping the total window", () => {
     const resolved = resolveRuntimeProvider({
       config: {
         ...BASE_CONFIG,
         providers: {
           ...BASE_CONFIG.providers,
-          gateway: { type: 'openai', apiKey: 'sk-gateway' } as const,
+          gateway: { type: "openai", apiKey: "sk-gateway" } as const,
         },
         models: {
           ...BASE_CONFIG.models!,
-          'gateway/gpt5': {
-            provider: 'gateway',
-            model: 'gpt-5',
+          "gateway/gpt5": {
+            provider: "gateway",
+            model: "gpt-5",
             maxContextSize: 400000,
             maxInputSize: 272000,
           },
         },
       },
-      model: 'gateway/gpt5',
+      model: "gateway/gpt5",
     });
 
     expect(resolved.modelCapabilities).toMatchObject({
@@ -347,7 +354,7 @@ describe('resolveRuntimeProvider maxOutputSize forwarding', () => {
     });
   });
 
-  it('prefers alias.baseUrl over the provider base URL for the openai wire', () => {
+  it("prefers alias.baseUrl over the provider base URL for the openai wire", () => {
     // Catalog gateway shape: a model whose same-wire override endpoint
     // differs from the provider's default.
     const config = {
@@ -355,86 +362,107 @@ describe('resolveRuntimeProvider maxOutputSize forwarding', () => {
       providers: {
         ...BASE_CONFIG.providers,
         gateway: {
-          type: 'openai',
-          apiKey: 'sk-gateway',
-          baseUrl: 'https://gateway.example.test/api/v1',
+          type: "openai",
+          apiKey: "sk-gateway",
+          baseUrl: "https://gateway.example.test/api/v1",
         } as const,
       },
       models: {
         ...BASE_CONFIG.models!,
-        'gateway/tenant-model': {
-          provider: 'gateway',
-          model: 'vendor/tenant-model',
+        "gateway/tenant-model": {
+          provider: "gateway",
+          model: "vendor/tenant-model",
           maxContextSize: 1000,
-          baseUrl: 'https://tenant.example.test/v1',
+          baseUrl: "https://tenant.example.test/v1",
         },
-        'gateway/shared-model': {
-          provider: 'gateway',
-          model: 'vendor/shared-model',
+        "gateway/shared-model": {
+          provider: "gateway",
+          model: "vendor/shared-model",
           maxContextSize: 1000,
         },
       },
     } as KimiConfig;
 
-    expect(resolveRuntimeProvider({ config, model: 'gateway/tenant-model' }).provider).toMatchObject(
-      { type: 'openai', baseUrl: 'https://tenant.example.test/v1' },
-    );
-    expect(resolveRuntimeProvider({ config, model: 'gateway/shared-model' }).provider).toMatchObject(
-      { type: 'openai', baseUrl: 'https://gateway.example.test/api/v1' },
-    );
+    expect(
+      resolveRuntimeProvider({ config, model: "gateway/tenant-model" })
+        .provider,
+    ).toMatchObject({
+      type: "openai",
+      baseUrl: "https://tenant.example.test/v1",
+    });
+    expect(
+      resolveRuntimeProvider({ config, model: "gateway/shared-model" })
+        .provider,
+    ).toMatchObject({
+      type: "openai",
+      baseUrl: "https://gateway.example.test/api/v1",
+    });
   });
 
-  it('prefers alias.baseUrl over the provider base URL on the kimi, google-genai, and openai_responses wires', () => {
+  it("prefers alias.baseUrl over the provider base URL on the kimi, google-genai, and openai_responses wires", () => {
     const config = {
       ...BASE_CONFIG,
       providers: {
         ...BASE_CONFIG.providers,
-        kimi: { type: 'kimi', apiKey: 'sk-kimi', baseUrl: 'https://kimi.example.test/v1' } as const,
-        google: {
-          type: 'google-genai',
-          apiKey: 'sk-google',
-          baseUrl: 'https://google.example.test',
+        kimi: {
+          type: "kimi",
+          apiKey: "sk-kimi",
+          baseUrl: "https://kimi.example.test/v1",
         } as const,
-        responses: { type: 'openai_responses', apiKey: 'sk-responses' } as const,
+        google: {
+          type: "google-genai",
+          apiKey: "sk-google",
+          baseUrl: "https://google.example.test",
+        } as const,
+        responses: {
+          type: "openai_responses",
+          apiKey: "sk-responses",
+        } as const,
       },
       models: {
         ...BASE_CONFIG.models!,
-        'kimi/tenant': {
-          provider: 'kimi',
-          model: 'kimi-k2',
+        "kimi/tenant": {
+          provider: "kimi",
+          model: "kimi-k2",
           maxContextSize: 1000,
-          baseUrl: 'https://tenant.example.test/v1',
+          baseUrl: "https://tenant.example.test/v1",
         },
-        'google/tenant': {
-          provider: 'google',
-          model: 'gemini-2.5-flash',
+        "google/tenant": {
+          provider: "google",
+          model: "gemini-2.5-flash",
           maxContextSize: 1000,
-          baseUrl: 'https://tenant.example.test/v1',
+          baseUrl: "https://tenant.example.test/v1",
         },
-        'responses/tenant': {
-          provider: 'responses',
-          model: 'gpt-5.5',
+        "responses/tenant": {
+          provider: "responses",
+          model: "gpt-5.5",
           maxContextSize: 1000,
-          baseUrl: 'https://tenant.example.test/v1',
+          baseUrl: "https://tenant.example.test/v1",
         },
       },
     } as KimiConfig;
 
-    expect(resolveRuntimeProvider({ config, model: 'kimi/tenant' }).provider).toMatchObject({
-      type: 'kimi',
-      baseUrl: 'https://tenant.example.test/v1',
+    expect(
+      resolveRuntimeProvider({ config, model: "kimi/tenant" }).provider,
+    ).toMatchObject({
+      type: "kimi",
+      baseUrl: "https://tenant.example.test/v1",
     });
-    expect(resolveRuntimeProvider({ config, model: 'google/tenant' }).provider).toMatchObject({
-      type: 'google-genai',
-      baseUrl: 'https://tenant.example.test/v1',
+    expect(
+      resolveRuntimeProvider({ config, model: "google/tenant" }).provider,
+    ).toMatchObject({
+      type: "google-genai",
+      baseUrl: "https://tenant.example.test/v1",
     });
-    expect(resolveRuntimeProvider({ config, model: 'responses/tenant' }).provider).toMatchObject({
-      type: 'openai_responses',
-      baseUrl: 'https://tenant.example.test/v1',
+    expect(
+      resolveRuntimeProvider({ config, model: "responses/tenant" }).provider,
+    ).toMatchObject({
+      type: "openai_responses",
+      baseUrl: "https://tenant.example.test/v1",
     });
   });
 
-  it('prefers alias.baseUrl over the provider base URL for the anthropic wire', () => {
+  it("prefers alias.baseUrl over the provider base URL for the anthropic wire", () => {
     // Catalog gateway shape: provider default is the OpenAI wire, one model
     // carries an Anthropic protocol + endpoint override.
     const resolved = resolveRuntimeProvider({
@@ -443,34 +471,34 @@ describe('resolveRuntimeProvider maxOutputSize forwarding', () => {
         providers: {
           ...BASE_CONFIG.providers,
           gateway: {
-            type: 'openai',
-            apiKey: 'sk-gateway',
-            baseUrl: 'https://gateway.example.test/api/v1',
+            type: "openai",
+            apiKey: "sk-gateway",
+            baseUrl: "https://gateway.example.test/api/v1",
           },
         },
         models: {
           ...BASE_CONFIG.models!,
-          'gateway/claude-model': {
-            provider: 'gateway',
-            model: 'vendor/claude-model',
+          "gateway/claude-model": {
+            provider: "gateway",
+            model: "vendor/claude-model",
             maxContextSize: 200000,
-            protocol: 'anthropic',
-            baseUrl: 'https://gateway.example.test/api/anthropic',
+            protocol: "anthropic",
+            baseUrl: "https://gateway.example.test/api/anthropic",
           },
-          'gateway/plain-model': {
-            provider: 'gateway',
-            model: 'vendor/plain-model',
+          "gateway/plain-model": {
+            provider: "gateway",
+            model: "vendor/plain-model",
             maxContextSize: 1000,
-            protocol: 'anthropic',
+            protocol: "anthropic",
           },
         },
       },
-      model: 'gateway/claude-model',
+      model: "gateway/claude-model",
     });
 
     expect(resolved.provider).toMatchObject({
-      type: 'anthropic',
-      baseUrl: 'https://gateway.example.test/api/anthropic',
+      type: "anthropic",
+      baseUrl: "https://gateway.example.test/api/anthropic",
     });
 
     const fallback = resolveRuntimeProvider({
@@ -479,190 +507,190 @@ describe('resolveRuntimeProvider maxOutputSize forwarding', () => {
         providers: {
           ...BASE_CONFIG.providers,
           gateway: {
-            type: 'openai',
-            apiKey: 'sk-gateway',
-            baseUrl: 'https://gateway.example.test/api/v1',
+            type: "openai",
+            apiKey: "sk-gateway",
+            baseUrl: "https://gateway.example.test/api/v1",
           },
         },
         models: {
           ...BASE_CONFIG.models!,
-          'gateway/plain-model': {
-            provider: 'gateway',
-            model: 'vendor/plain-model',
+          "gateway/plain-model": {
+            provider: "gateway",
+            model: "vendor/plain-model",
             maxContextSize: 1000,
-            protocol: 'anthropic',
+            protocol: "anthropic",
           },
         },
       },
-      model: 'gateway/plain-model',
+      model: "gateway/plain-model",
     });
 
     // Without an alias endpoint the provider base URL applies (stripped of
     // the trailing /v1 for the Anthropic SDK, as before).
     expect(fallback.provider).toMatchObject({
-      type: 'anthropic',
-      baseUrl: 'https://gateway.example.test/api',
+      type: "anthropic",
+      baseUrl: "https://gateway.example.test/api",
     });
   });
 
-  it('omits defaultMaxTokens when alias.maxOutputSize is unset', () => {
+  it("omits defaultMaxTokens when alias.maxOutputSize is unset", () => {
     const resolved = resolveRuntimeProvider({
       config: {
         ...BASE_CONFIG,
         providers: {
           ...BASE_CONFIG.providers,
-          anthropic: { type: 'anthropic', apiKey: 'sk-anthropic' },
+          anthropic: { type: "anthropic", apiKey: "sk-anthropic" },
         },
         models: {
           ...BASE_CONFIG.models!,
-          'opus-alias': {
-            provider: 'anthropic',
-            model: 'claude-opus-4-7',
+          "opus-alias": {
+            provider: "anthropic",
+            model: "claude-opus-4-7",
             maxContextSize: 200000,
           },
         },
       },
-      model: 'opus-alias',
+      model: "opus-alias",
     });
 
     expect(resolved.provider).toMatchObject({
-      type: 'anthropic',
-      model: 'claude-opus-4-7',
+      type: "anthropic",
+      model: "claude-opus-4-7",
     });
-    expect('defaultMaxTokens' in resolved.provider).toBe(false);
+    expect("defaultMaxTokens" in resolved.provider).toBe(false);
   });
 
-  it('forwards alias.adaptiveThinking to the anthropic provider config', () => {
+  it("forwards alias.adaptiveThinking to the anthropic provider config", () => {
     const resolved = resolveRuntimeProvider({
       config: {
         ...BASE_CONFIG,
         providers: {
           ...BASE_CONFIG.providers,
-          anthropic: { type: 'anthropic', apiKey: 'sk-anthropic' },
+          anthropic: { type: "anthropic", apiKey: "sk-anthropic" },
         },
         models: {
           ...BASE_CONFIG.models!,
-          'okapi-alias': {
-            provider: 'anthropic',
-            model: 'coding-model-okapi-0527-vibe',
+          "okapi-alias": {
+            provider: "anthropic",
+            model: "coding-model-okapi-0527-vibe",
             maxContextSize: 200000,
             adaptiveThinking: true,
           },
         },
       },
-      model: 'okapi-alias',
+      model: "okapi-alias",
     });
 
     expect(resolved.provider).toMatchObject({
-      type: 'anthropic',
-      model: 'coding-model-okapi-0527-vibe',
+      type: "anthropic",
+      model: "coding-model-okapi-0527-vibe",
       adaptiveThinking: true,
     });
   });
 
-  it('forwards alias.supportEfforts to the anthropic provider config', () => {
+  it("forwards alias.supportEfforts to the anthropic provider config", () => {
     const resolved = resolveRuntimeProvider({
       config: {
         ...BASE_CONFIG,
         providers: {
           ...BASE_CONFIG.providers,
-          anthropic: { type: 'anthropic', apiKey: 'sk-anthropic' },
+          anthropic: { type: "anthropic", apiKey: "sk-anthropic" },
         },
         models: {
           ...BASE_CONFIG.models!,
-          'compatible-alias': {
-            provider: 'anthropic',
-            model: 'compatible-model',
+          "compatible-alias": {
+            provider: "anthropic",
+            model: "compatible-model",
             maxContextSize: 200000,
-            supportEfforts: ['low', 'high', 'max'],
+            supportEfforts: ["low", "high", "max"],
           },
         },
       },
-      model: 'compatible-alias',
+      model: "compatible-alias",
     });
 
     expect(resolved.provider).toMatchObject({
-      type: 'anthropic',
-      model: 'compatible-model',
-      supportEfforts: ['low', 'high', 'max'],
+      type: "anthropic",
+      model: "compatible-model",
+      supportEfforts: ["low", "high", "max"],
     });
   });
 
-  it('forwards alias.betaApi to the anthropic provider config', () => {
+  it("forwards alias.betaApi to the anthropic provider config", () => {
     const resolved = resolveRuntimeProvider({
       config: {
         ...BASE_CONFIG,
         providers: {
           ...BASE_CONFIG.providers,
-          anthropic: { type: 'anthropic', apiKey: 'sk-anthropic' },
+          anthropic: { type: "anthropic", apiKey: "sk-anthropic" },
         },
         models: {
           ...BASE_CONFIG.models!,
-          'kimi-alias': {
-            provider: 'anthropic',
-            model: 'kimi-for-coding',
+          "kimi-alias": {
+            provider: "anthropic",
+            model: "kimi-for-coding",
             maxContextSize: 200000,
-            protocol: 'anthropic',
+            protocol: "anthropic",
             betaApi: true,
           },
         },
       },
-      model: 'kimi-alias',
+      model: "kimi-alias",
     });
 
     expect(resolved.provider).toMatchObject({
-      type: 'anthropic',
-      model: 'kimi-for-coding',
+      type: "anthropic",
+      model: "kimi-for-coding",
       betaApi: true,
     });
   });
 
-  it('omits adaptiveThinking when alias.adaptiveThinking is unset', () => {
+  it("omits adaptiveThinking when alias.adaptiveThinking is unset", () => {
     const resolved = resolveRuntimeProvider({
       config: {
         ...BASE_CONFIG,
         providers: {
           ...BASE_CONFIG.providers,
-          anthropic: { type: 'anthropic', apiKey: 'sk-anthropic' },
+          anthropic: { type: "anthropic", apiKey: "sk-anthropic" },
         },
         models: {
           ...BASE_CONFIG.models!,
-          'opus-alias': {
-            provider: 'anthropic',
-            model: 'claude-opus-4-7',
+          "opus-alias": {
+            provider: "anthropic",
+            model: "claude-opus-4-7",
             maxContextSize: 200000,
           },
         },
       },
-      model: 'opus-alias',
+      model: "opus-alias",
     });
 
-    expect('adaptiveThinking' in resolved.provider).toBe(false);
+    expect("adaptiveThinking" in resolved.provider).toBe(false);
   });
 });
 
-describe('resolveRuntimeProvider Kimi request headers', () => {
-  it('does not set defaultHeaders when no kimiRequestHeaders or customHeaders exist', () => {
+describe("resolveRuntimeProvider Kimi request headers", () => {
+  it("does not set defaultHeaders when no kimiRequestHeaders or customHeaders exist", () => {
     const resolved = resolveRuntimeProvider({ config: BASE_CONFIG });
 
     expect(resolved.provider).toMatchObject({
-      type: 'kimi',
-      model: 'kimi-for-coding',
+      type: "kimi",
+      model: "kimi-for-coding",
     });
-    expect('defaultHeaders' in resolved.provider).toBe(false);
+    expect("defaultHeaders" in resolved.provider).toBe(false);
   });
 
-  it('uses only customHeaders when kimiRequestHeaders are missing', () => {
+  it("uses only customHeaders when kimiRequestHeaders are missing", () => {
     const resolved = resolveRuntimeProvider({
       config: {
         ...BASE_CONFIG,
         providers: {
-          'managed:kimi-code': {
-            type: 'kimi',
-            apiKey: 'test-key',
-            baseUrl: 'https://api.example/v1',
+          "managed:kimi-code": {
+            type: "kimi",
+            apiKey: "test-key",
+            baseUrl: "https://api.example/v1",
             customHeaders: {
-              'User-Agent': 'Custom/1',
+              "User-Agent": "Custom/1",
             },
           },
         },
@@ -670,51 +698,51 @@ describe('resolveRuntimeProvider Kimi request headers', () => {
     });
 
     expect(resolved.provider).toMatchObject({
-      type: 'kimi',
+      type: "kimi",
       defaultHeaders: {
-        'User-Agent': 'Custom/1',
+        "User-Agent": "Custom/1",
       },
     });
   });
 
-  it('passes kimiRequestHeaders through to Kimi provider defaultHeaders', () => {
+  it("passes kimiRequestHeaders through to Kimi provider defaultHeaders", () => {
     const resolved = resolveRuntimeProvider({
       config: BASE_CONFIG,
       kimiRequestHeaders: TEST_KIMI_HEADERS,
     });
 
     expect(resolved.provider).toMatchObject({
-      type: 'kimi',
+      type: "kimi",
       defaultHeaders: TEST_KIMI_HEADERS,
     });
   });
 
-  it('passes the prompt cache key to Kimi generation kwargs', () => {
+  it("passes the prompt cache key to Kimi generation kwargs", () => {
     const resolved = resolveRuntimeProvider({
       config: BASE_CONFIG,
-      promptCacheKey: 'session-test',
+      promptCacheKey: "session-test",
     });
 
     expect(resolved.provider).toMatchObject({
-      type: 'kimi',
+      type: "kimi",
       generationKwargs: {
-        prompt_cache_key: 'session-test',
+        prompt_cache_key: "session-test",
       },
     });
   });
 
-  it('lets provider customHeaders override kimiRequestHeaders', () => {
+  it("lets provider customHeaders override kimiRequestHeaders", () => {
     const resolved = resolveRuntimeProvider({
       config: {
         ...BASE_CONFIG,
         providers: {
-          'managed:kimi-code': {
-            type: 'kimi',
-            apiKey: 'test-key',
-            baseUrl: 'https://api.example/v1',
+          "managed:kimi-code": {
+            type: "kimi",
+            apiKey: "test-key",
+            baseUrl: "https://api.example/v1",
             customHeaders: {
-              'User-Agent': 'Custom/1',
-              'X-Msh-Version': 'override-version',
+              "User-Agent": "Custom/1",
+              "X-Msh-Version": "override-version",
             },
           },
         },
@@ -723,159 +751,71 @@ describe('resolveRuntimeProvider Kimi request headers', () => {
     });
 
     expect(resolved.provider).toMatchObject({
-      type: 'kimi',
+      type: "kimi",
       defaultHeaders: {
-        'User-Agent': 'Custom/1',
-        'X-Msh-Platform': 'kimi_code_cli',
-        'X-Msh-Version': 'override-version',
+        "User-Agent": "Custom/1",
+        "X-Msh-Platform": "kimi_code_cli",
+        "X-Msh-Version": "override-version",
       },
     });
   });
 
-  it('applies only the User-Agent from kimiRequestHeaders to non-Kimi providers', () => {
+  it("applies only the User-Agent from kimiRequestHeaders to non-Kimi providers", () => {
     const resolved = resolveRuntimeProvider({
       config: {
-        defaultModel: 'gpt-alias',
+        defaultModel: "gpt-alias",
         providers: {
           openai: {
-            type: 'openai',
-            apiKey: 'sk-openai',
+            type: "openai",
+            apiKey: "sk-openai",
           },
         },
         models: {
-          'gpt-alias': {
-            provider: 'openai',
-            model: 'gpt-runtime',
+          "gpt-alias": {
+            provider: "openai",
+            model: "gpt-runtime",
             maxContextSize: 200000,
           },
         },
       },
       kimiRequestHeaders: TEST_KIMI_HEADERS,
-      promptCacheKey: 'session-test',
+      promptCacheKey: "session-test",
     });
 
     expect(resolved.provider).toMatchObject({
-      type: 'openai',
-      model: 'gpt-runtime',
-      apiKey: 'sk-openai',
+      type: "openai",
+      model: "gpt-runtime",
+      apiKey: "sk-openai",
       defaultHeaders: {
-        'User-Agent': TEST_KIMI_HEADERS['User-Agent'],
+        "User-Agent": TEST_KIMI_HEADERS["User-Agent"],
       },
     });
     // Device identity headers (`X-Msh-*`) stay Kimi-only — they must not leak
     // to third-party providers.
-    const headers = (resolved.provider as { defaultHeaders?: Record<string, string> })
-      .defaultHeaders;
+    const headers = (
+      resolved.provider as { defaultHeaders?: Record<string, string> }
+    ).defaultHeaders;
     expect(headers).toBeDefined();
-    expect('X-Msh-Platform' in headers!).toBe(false);
+    expect("X-Msh-Platform" in headers!).toBe(false);
   });
 });
 
-describe('resolveRuntimeProvider customHeaders propagation', () => {
-  it('forwards customHeaders to an anthropic provider', () => {
+describe("resolveRuntimeProvider customHeaders propagation", () => {
+  it("forwards customHeaders to an anthropic provider", () => {
     const resolved = resolveRuntimeProvider({
       config: {
-        defaultModel: 'claude-alias',
+        defaultModel: "claude-alias",
         providers: {
           anthropic: {
-            type: 'anthropic',
-            apiKey: 'sk-anthropic',
-            customHeaders: { 'X-Custom': 'value' },
+            type: "anthropic",
+            apiKey: "sk-anthropic",
+            customHeaders: { "X-Custom": "value" },
           },
         },
         models: {
-          'claude-alias': { provider: 'anthropic', model: 'claude-runtime', maxContextSize: 200000 },
-        },
-      },
-    });
-
-    expect(resolved.provider).toMatchObject({
-      type: 'anthropic',
-      defaultHeaders: { 'X-Custom': 'value' },
-    });
-  });
-
-  it('passes the prompt cache key to Anthropic metadata.user_id', () => {
-    const resolved = resolveRuntimeProvider({
-      config: {
-        defaultModel: 'claude-alias',
-        providers: {
-          anthropic: {
-            type: 'anthropic',
-            apiKey: 'sk-anthropic',
-          },
-        },
-        models: {
-          'claude-alias': { provider: 'anthropic', model: 'claude-runtime', maxContextSize: 200000 },
-        },
-      },
-      promptCacheKey: 'session-test',
-    });
-
-    expect(resolved.provider).toMatchObject({
-      type: 'anthropic',
-      metadata: { user_id: 'session-test' },
-    });
-  });
-
-  it('omits Anthropic metadata when no prompt cache key is set', () => {
-    const resolved = resolveRuntimeProvider({
-      config: {
-        defaultModel: 'claude-alias',
-        providers: {
-          anthropic: {
-            type: 'anthropic',
-            apiKey: 'sk-anthropic',
-          },
-        },
-        models: {
-          'claude-alias': { provider: 'anthropic', model: 'claude-runtime', maxContextSize: 200000 },
-        },
-      },
-    });
-
-    expect(resolved.provider).toMatchObject({ type: 'anthropic' });
-    expect('metadata' in resolved.provider).toBe(false);
-  });
-
-  it('forwards customHeaders to an openai provider', () => {
-    const resolved = resolveRuntimeProvider({
-      config: {
-        defaultModel: 'gpt-alias',
-        providers: {
-          openai: {
-            type: 'openai',
-            apiKey: 'sk-openai',
-            customHeaders: { 'X-Custom': 'value' },
-          },
-        },
-        models: {
-          'gpt-alias': { provider: 'openai', model: 'gpt-runtime', maxContextSize: 200000 },
-        },
-      },
-    });
-
-    expect(resolved.provider).toMatchObject({
-      type: 'openai',
-      defaultHeaders: { 'X-Custom': 'value' },
-    });
-  });
-
-  it('forwards customHeaders to an openai_responses provider', () => {
-    const resolved = resolveRuntimeProvider({
-      config: {
-        defaultModel: 'resp-alias',
-        providers: {
-          openai_responses: {
-            type: 'openai_responses',
-            apiKey: 'sk-openai',
-            customHeaders: { 'X-Custom': 'value' },
-          },
-        },
-        models: {
-          'resp-alias': {
-            provider: 'openai_responses',
-            model: 'gpt-runtime',
+          "claude-alias": {
+            provider: "anthropic",
+            model: "claude-runtime",
             maxContextSize: 200000,
           },
         },
@@ -883,128 +823,241 @@ describe('resolveRuntimeProvider customHeaders propagation', () => {
     });
 
     expect(resolved.provider).toMatchObject({
-      type: 'openai_responses',
-      defaultHeaders: { 'X-Custom': 'value' },
+      type: "anthropic",
+      defaultHeaders: { "X-Custom": "value" },
     });
   });
 
-  it('keeps customHeaders isolated between resolved provider instances', () => {
+  it("passes the prompt cache key to Anthropic metadata.user_id", () => {
+    const resolved = resolveRuntimeProvider({
+      config: {
+        defaultModel: "claude-alias",
+        providers: {
+          anthropic: {
+            type: "anthropic",
+            apiKey: "sk-anthropic",
+          },
+        },
+        models: {
+          "claude-alias": {
+            provider: "anthropic",
+            model: "claude-runtime",
+            maxContextSize: 200000,
+          },
+        },
+      },
+      promptCacheKey: "session-test",
+    });
+
+    expect(resolved.provider).toMatchObject({
+      type: "anthropic",
+      metadata: { user_id: "session-test" },
+    });
+  });
+
+  it("omits Anthropic metadata when no prompt cache key is set", () => {
+    const resolved = resolveRuntimeProvider({
+      config: {
+        defaultModel: "claude-alias",
+        providers: {
+          anthropic: {
+            type: "anthropic",
+            apiKey: "sk-anthropic",
+          },
+        },
+        models: {
+          "claude-alias": {
+            provider: "anthropic",
+            model: "claude-runtime",
+            maxContextSize: 200000,
+          },
+        },
+      },
+    });
+
+    expect(resolved.provider).toMatchObject({ type: "anthropic" });
+    expect("metadata" in resolved.provider).toBe(false);
+  });
+
+  it("forwards customHeaders to an openai provider", () => {
+    const resolved = resolveRuntimeProvider({
+      config: {
+        defaultModel: "gpt-alias",
+        providers: {
+          openai: {
+            type: "openai",
+            apiKey: "sk-openai",
+            customHeaders: { "X-Custom": "value" },
+          },
+        },
+        models: {
+          "gpt-alias": {
+            provider: "openai",
+            model: "gpt-runtime",
+            maxContextSize: 200000,
+          },
+        },
+      },
+    });
+
+    expect(resolved.provider).toMatchObject({
+      type: "openai",
+      defaultHeaders: { "X-Custom": "value" },
+    });
+  });
+
+  it("forwards customHeaders to an openai_responses provider", () => {
+    const resolved = resolveRuntimeProvider({
+      config: {
+        defaultModel: "resp-alias",
+        providers: {
+          openai_responses: {
+            type: "openai_responses",
+            apiKey: "sk-openai",
+            customHeaders: { "X-Custom": "value" },
+          },
+        },
+        models: {
+          "resp-alias": {
+            provider: "openai_responses",
+            model: "gpt-runtime",
+            maxContextSize: 200000,
+          },
+        },
+      },
+    });
+
+    expect(resolved.provider).toMatchObject({
+      type: "openai_responses",
+      defaultHeaders: { "X-Custom": "value" },
+    });
+  });
+
+  it("keeps customHeaders isolated between resolved provider instances", () => {
     const config: KimiConfig = {
-      defaultModel: 'gpt-alias',
+      defaultModel: "gpt-alias",
       providers: {
         openai: {
-          type: 'openai',
-          apiKey: 'sk-openai',
-          customHeaders: { 'X-Custom': 'original' },
+          type: "openai",
+          apiKey: "sk-openai",
+          customHeaders: { "X-Custom": "original" },
         },
       },
       models: {
-        'gpt-alias': { provider: 'openai', model: 'gpt-runtime', maxContextSize: 200000 },
+        "gpt-alias": {
+          provider: "openai",
+          model: "gpt-runtime",
+          maxContextSize: 200000,
+        },
       },
     };
 
     const first = resolveRuntimeProvider({ config });
     const second = resolveRuntimeProvider({ config });
-    const firstHeaders = (first.provider as { defaultHeaders?: Record<string, string> })
-      .defaultHeaders;
-    expect(firstHeaders).toEqual({ 'X-Custom': 'original' });
+    const firstHeaders = (
+      first.provider as { defaultHeaders?: Record<string, string> }
+    ).defaultHeaders;
+    expect(firstHeaders).toEqual({ "X-Custom": "original" });
 
-    firstHeaders!['X-Custom'] = 'mutated';
+    firstHeaders!["X-Custom"] = "mutated";
 
     expect(
-      (second.provider as { defaultHeaders?: Record<string, string> }).defaultHeaders,
-    ).toEqual({ 'X-Custom': 'original' });
-    expect(config.providers['openai']?.customHeaders).toEqual({ 'X-Custom': 'original' });
+      (second.provider as { defaultHeaders?: Record<string, string> })
+        .defaultHeaders,
+    ).toEqual({ "X-Custom": "original" });
+    expect(config.providers["openai"]?.customHeaders).toEqual({
+      "X-Custom": "original",
+    });
   });
 });
 
-describe('ProviderManager prompt cache key', () => {
-  it('applies a prompt cache key to Kimi providers', () => {
+describe("ProviderManager prompt cache key", () => {
+  it("applies a prompt cache key to Kimi providers", () => {
     const manager = new ProviderManager({
       config: BASE_CONFIG,
-      promptCacheKey: 'session-test',
+      promptCacheKey: "session-test",
     });
-    const resolved = manager.resolveProviderConfig('kimi-code/kimi-for-coding');
+    const resolved = manager.resolveProviderConfig("kimi-code/kimi-for-coding");
 
     expect(resolved.provider).toMatchObject({
-      type: 'kimi',
+      type: "kimi",
       generationKwargs: {
-        prompt_cache_key: 'session-test',
+        prompt_cache_key: "session-test",
       },
     });
   });
 
-  it('applies a prompt cache key to OpenAI providers (chat completions + responses)', () => {
-    for (const type of ['openai', 'openai_responses'] as const) {
+  it("applies a prompt cache key to OpenAI providers (chat completions + responses)", () => {
+    for (const type of ["openai", "openai_responses"] as const) {
       const manager = new ProviderManager({
-        promptCacheKey: 'session-test',
+        promptCacheKey: "session-test",
         config: {
-          defaultModel: 'gpt-alias',
+          defaultModel: "gpt-alias",
           providers: {
             openai: {
               type,
-              apiKey: 'sk-openai',
+              apiKey: "sk-openai",
             },
           },
           models: {
-            'gpt-alias': {
-              provider: 'openai',
-              model: 'gpt-runtime',
+            "gpt-alias": {
+              provider: "openai",
+              model: "gpt-runtime",
               maxContextSize: 200000,
             },
           },
         },
       });
-      const resolved = manager.resolveProviderConfig('gpt-alias');
+      const resolved = manager.resolveProviderConfig("gpt-alias");
 
       // Same session-affinity intent as the Kimi branch above: every request
       // of the session routes through the same provider-side prompt cache.
       expect(resolved.provider).toMatchObject({
         type,
-        model: 'gpt-runtime',
+        model: "gpt-runtime",
         generationKwargs: {
-          prompt_cache_key: 'session-test',
+          prompt_cache_key: "session-test",
         },
       });
     }
   });
 
-  it('reads the current config when constructed with a function', () => {
+  it("reads the current config when constructed with a function", () => {
     let sharedConfig: KimiConfig = { providers: {} };
     const manager = new ProviderManager({
       config: () => sharedConfig,
-      promptCacheKey: 'session-test',
+      promptCacheKey: "session-test",
     });
 
     sharedConfig = BASE_CONFIG;
 
-    const resolved = manager.resolveProviderConfig('kimi-code/kimi-for-coding');
+    const resolved = manager.resolveProviderConfig("kimi-code/kimi-for-coding");
     expect(resolved.provider).toMatchObject({
-      type: 'kimi',
+      type: "kimi",
       generationKwargs: {
-        prompt_cache_key: 'session-test',
+        prompt_cache_key: "session-test",
       },
     });
   });
 });
 
-describe('ProviderManager OAuth auth', () => {
+describe("ProviderManager OAuth auth", () => {
   function oauthConfig(): KimiConfig {
     return {
       ...BASE_CONFIG,
       providers: {
-        'managed:kimi-code': {
-          type: 'kimi',
-          apiKey: '',
-          baseUrl: 'https://api.example/v1',
-          oauth: { storage: 'file', key: 'oauth/kimi-code' },
+        "managed:kimi-code": {
+          type: "kimi",
+          apiKey: "",
+          baseUrl: "https://api.example/v1",
+          oauth: { storage: "file", key: "oauth/kimi-code" },
         },
       },
     };
   }
 
-  it('preserves non-Kimi token fetch failures instead of guessing their category', async () => {
-    const tokenError = new Error('token storage permission denied');
+  it("preserves non-Kimi token fetch failures instead of guessing their category", async () => {
+    const tokenError = new Error("token storage permission denied");
     const manager = new ProviderManager({
       config: oauthConfig(),
       resolveOAuthTokenProvider: () => ({
@@ -1014,197 +1067,253 @@ describe('ProviderManager OAuth auth', () => {
       }),
     });
 
-    const resolveAuth = manager.resolveAuth('kimi-code/kimi-for-coding');
+    const resolveAuth = manager.resolveAuth("kimi-code/kimi-for-coding");
     expect(resolveAuth).toBeDefined();
 
-    await expect(resolveAuth!(async () => 'ok')).rejects.toBe(tokenError);
+    await expect(resolveAuth!(async () => "ok")).rejects.toBe(tokenError);
   });
 
-  it('keeps explicit login-required token failures as login-required errors', async () => {
+  it("keeps explicit login-required token failures as login-required errors", async () => {
     const manager = new ProviderManager({
       config: oauthConfig(),
       resolveOAuthTokenProvider: () => ({
         async getAccessToken() {
-          throw new KimiError(ErrorCodes.AUTH_LOGIN_REQUIRED, 'not logged in');
+          throw new KimiError(ErrorCodes.AUTH_LOGIN_REQUIRED, "not logged in");
         },
       }),
     });
 
-    const resolveAuth = manager.resolveAuth('kimi-code/kimi-for-coding');
+    const resolveAuth = manager.resolveAuth("kimi-code/kimi-for-coding");
     expect(resolveAuth).toBeDefined();
 
-    await expect(resolveAuth!(async () => 'ok')).rejects.toMatchObject({
+    await expect(resolveAuth!(async () => "ok")).rejects.toMatchObject({
       code: ErrorCodes.AUTH_LOGIN_REQUIRED,
     });
   });
 });
 
-describe('resolveThinkingEffort', () => {
+describe("resolveThinkingEffort", () => {
   const booleanModel: ModelAlias = {
-    provider: 'p',
-    model: 'm',
+    provider: "p",
+    model: "m",
     maxContextSize: 1,
-    capabilities: ['thinking'],
+    capabilities: ["thinking"],
   };
   const effortModel: ModelAlias = {
-    provider: 'p',
-    model: 'm',
+    provider: "p",
+    model: "m",
     maxContextSize: 1,
-    capabilities: ['thinking'],
-    supportEfforts: ['low', 'medium', 'high'],
+    capabilities: ["thinking"],
+    supportEfforts: ["low", "medium", "high"],
   };
   const alwaysThinkingModel: ModelAlias = {
-    provider: 'p',
-    model: 'm',
+    provider: "p",
+    model: "m",
     maxContextSize: 1,
-    capabilities: ['thinking', 'always_thinking'],
+    capabilities: ["thinking", "always_thinking"],
   };
 
-  it('returns the requested effort (normalized) when one is provided', () => {
-    expect(resolveThinkingEffort('on', { effort: 'medium' }, booleanModel)).toBe('on');
-    expect(resolveThinkingEffort('off', { effort: 'medium' }, booleanModel)).toBe('off');
-    expect(resolveThinkingEffort('low', { effort: 'medium' }, booleanModel)).toBe('low');
-    expect(resolveThinkingEffort(' Off ', { effort: 'medium' }, booleanModel)).toBe('off');
-    // Empty / whitespace requests read as absent and fall through to config.
-    expect(resolveThinkingEffort('', { enabled: false, effort: 'medium' }, booleanModel)).toBe(
-      'off',
-    );
-    expect(resolveThinkingEffort('   ', { enabled: false, effort: 'medium' }, booleanModel)).toBe(
-      'off',
-    );
-  });
-
-  it('treats config.enabled=false as off when no effort is requested', () => {
+  it("returns the requested effort (normalized) when one is provided", () => {
     expect(
-      resolveThinkingEffort(undefined, { enabled: false, effort: 'medium' }, booleanModel),
-    ).toBe('off');
-    expect(resolveThinkingEffort(undefined, { enabled: false }, booleanModel)).toBe('off');
+      resolveThinkingEffort("on", { effort: "medium" }, booleanModel),
+    ).toBe("on");
+    expect(
+      resolveThinkingEffort("off", { effort: "medium" }, booleanModel),
+    ).toBe("off");
+    expect(
+      resolveThinkingEffort("low", { effort: "medium" }, booleanModel),
+    ).toBe("low");
+    expect(
+      resolveThinkingEffort(" Off ", { effort: "medium" }, booleanModel),
+    ).toBe("off");
+    // Empty / whitespace requests read as absent and fall through to config.
+    expect(
+      resolveThinkingEffort(
+        "",
+        { enabled: false, effort: "medium" },
+        booleanModel,
+      ),
+    ).toBe("off");
+    expect(
+      resolveThinkingEffort(
+        "   ",
+        { enabled: false, effort: "medium" },
+        booleanModel,
+      ),
+    ).toBe("off");
   });
 
-  it('uses config.effort as the default effort when enabled', () => {
-    expect(resolveThinkingEffort(undefined, { effort: 'medium' }, booleanModel)).toBe('medium');
-    expect(resolveThinkingEffort(undefined, { enabled: true, effort: 'medium' }, booleanModel)).toBe(
-      'medium',
-    );
+  it("treats config.enabled=false as off when no effort is requested", () => {
+    expect(
+      resolveThinkingEffort(
+        undefined,
+        { enabled: false, effort: "medium" },
+        booleanModel,
+      ),
+    ).toBe("off");
+    expect(
+      resolveThinkingEffort(undefined, { enabled: false }, booleanModel),
+    ).toBe("off");
   });
 
-  it('falls back to the model default effort when no effort is set', () => {
+  it("uses config.effort as the default effort when enabled", () => {
+    expect(
+      resolveThinkingEffort(undefined, { effort: "medium" }, booleanModel),
+    ).toBe("medium");
+    expect(
+      resolveThinkingEffort(
+        undefined,
+        { enabled: true, effort: "medium" },
+        booleanModel,
+      ),
+    ).toBe("medium");
+  });
+
+  it("falls back to the model default effort when no effort is set", () => {
     // boolean thinking model -> 'on'
-    expect(resolveThinkingEffort(undefined, {}, booleanModel)).toBe('on');
+    expect(resolveThinkingEffort(undefined, {}, booleanModel)).toBe("on");
     // effort-capable model -> middle supportEfforts entry
-    expect(resolveThinkingEffort(undefined, {}, effortModel)).toBe('medium');
+    expect(resolveThinkingEffort(undefined, {}, effortModel)).toBe("medium");
     // no / non-thinking model -> 'off'
-    expect(resolveThinkingEffort(undefined, {}, undefined)).toBe('off');
+    expect(resolveThinkingEffort(undefined, {}, undefined)).toBe("off");
   });
 
-  it('forces always-thinking models back on even when off is requested', () => {
-    expect(resolveThinkingEffort('off', { enabled: false }, alwaysThinkingModel, true)).toBe('on');
-    expect(resolveThinkingEffort(undefined, { enabled: false }, alwaysThinkingModel, true)).toBe(
-      'on',
-    );
+  it("forces always-thinking models back on even when off is requested", () => {
+    expect(
+      resolveThinkingEffort(
+        "off",
+        { enabled: false },
+        alwaysThinkingModel,
+        true,
+      ),
+    ).toBe("on");
+    expect(
+      resolveThinkingEffort(
+        undefined,
+        { enabled: false },
+        alwaysThinkingModel,
+        true,
+      ),
+    ).toBe("on");
   });
 });
 
-describe('google base URL forwarding', () => {
-  it('forwards base_url to the google-genai provider config', () => {
+describe("google base URL forwarding", () => {
+  it("forwards base_url to the google-genai provider config", () => {
     const resolved = resolveRuntimeProvider({
       config: {
-        defaultModel: 'gemini',
+        defaultModel: "gemini",
         providers: {
           gemini: {
-            type: 'google-genai',
-            apiKey: 'g-key',
-            baseUrl: 'https://qianxun.example/v1beta',
+            type: "google-genai",
+            apiKey: "g-key",
+            baseUrl: "https://qianxun.example/v1beta",
           },
         },
         models: {
-          gemini: { provider: 'gemini', model: 'gemini-2.5-pro', maxContextSize: 1_000_000 },
+          gemini: {
+            provider: "gemini",
+            model: "gemini-2.5-pro",
+            maxContextSize: 1_000_000,
+          },
         },
       },
     });
 
     expect(resolved.provider).toMatchObject({
-      type: 'google-genai',
-      model: 'gemini-2.5-pro',
-      baseUrl: 'https://qianxun.example/v1beta',
+      type: "google-genai",
+      model: "gemini-2.5-pro",
+      baseUrl: "https://qianxun.example/v1beta",
     });
   });
 
-  it('reads GOOGLE_GEMINI_BASE_URL from provider env as a fallback', () => {
+  it("reads GOOGLE_GEMINI_BASE_URL from provider env as a fallback", () => {
     const resolved = resolveRuntimeProvider({
       config: {
-        defaultModel: 'gemini',
+        defaultModel: "gemini",
         providers: {
           gemini: {
-            type: 'google-genai',
-            apiKey: 'g-key',
-            env: { GOOGLE_GEMINI_BASE_URL: 'https://env.example/v1beta' },
+            type: "google-genai",
+            apiKey: "g-key",
+            env: { GOOGLE_GEMINI_BASE_URL: "https://env.example/v1beta" },
           },
         },
         models: {
-          gemini: { provider: 'gemini', model: 'gemini-2.5-pro', maxContextSize: 1_000_000 },
+          gemini: {
+            provider: "gemini",
+            model: "gemini-2.5-pro",
+            maxContextSize: 1_000_000,
+          },
         },
       },
     });
 
     expect(resolved.provider).toMatchObject({
-      type: 'google-genai',
-      baseUrl: 'https://env.example/v1beta',
+      type: "google-genai",
+      baseUrl: "https://env.example/v1beta",
     });
   });
 
-  it('forwards a custom proxy base_url to the vertexai provider config', () => {
+  it("forwards a custom proxy base_url to the vertexai provider config", () => {
     const resolved = resolveRuntimeProvider({
       config: {
-        defaultModel: 'gemini',
+        defaultModel: "gemini",
         providers: {
           vertex: {
-            type: 'vertexai',
-            apiKey: 'v-key',
-            baseUrl: 'https://qianxun.example/vertex',
+            type: "vertexai",
+            apiKey: "v-key",
+            baseUrl: "https://qianxun.example/vertex",
           },
         },
         models: {
-          gemini: { provider: 'vertex', model: 'gemini-1.5-pro', maxContextSize: 1_000_000 },
+          gemini: {
+            provider: "vertex",
+            model: "gemini-1.5-pro",
+            maxContextSize: 1_000_000,
+          },
         },
       },
     });
 
     expect(resolved.provider).toMatchObject({
-      type: 'vertexai',
-      model: 'gemini-1.5-pro',
-      baseUrl: 'https://qianxun.example/vertex',
+      type: "vertexai",
+      model: "gemini-1.5-pro",
+      baseUrl: "https://qianxun.example/vertex",
     });
   });
 
-  it('forwards base_url to vertexai while still deriving location from an aiplatform host', () => {
+  it("forwards base_url to vertexai while still deriving location from an aiplatform host", () => {
     // Backward compatibility: an aiplatform host must keep populating `location`
     // (existing GCP behavior) while the base URL is now also forwarded so the
     // SDK targets the configured endpoint verbatim.
     const resolved = resolveRuntimeProvider({
       config: {
-        defaultModel: 'gemini',
+        defaultModel: "gemini",
         providers: {
           vertex: {
-            type: 'vertexai',
-            apiKey: 'v-key',
-            baseUrl: 'https://us-central1-aiplatform.googleapis.com',
+            type: "vertexai",
+            apiKey: "v-key",
+            baseUrl: "https://us-central1-aiplatform.googleapis.com",
           },
         },
         models: {
-          gemini: { provider: 'vertex', model: 'gemini-1.5-pro', maxContextSize: 1_000_000 },
+          gemini: {
+            provider: "vertex",
+            model: "gemini-1.5-pro",
+            maxContextSize: 1_000_000,
+          },
         },
       },
     });
 
     expect(resolved.provider).toMatchObject({
-      type: 'vertexai',
-      baseUrl: 'https://us-central1-aiplatform.googleapis.com',
-      location: 'us-central1',
+      type: "vertexai",
+      baseUrl: "https://us-central1-aiplatform.googleapis.com",
+      location: "us-central1",
     });
   });
 
-  it('derives vertex location from the GOOGLE_VERTEX_BASE_URL env fallback so ADC mode is selected', () => {
+  it("derives vertex location from the GOOGLE_VERTEX_BASE_URL env fallback so ADC mode is selected", () => {
     // The env fallback must behave exactly like config `base_url`: when the
     // regional endpoint is supplied via GOOGLE_VERTEX_BASE_URL (with a project
     // but no explicit GOOGLE_CLOUD_LOCATION), location derivation must still see
@@ -1212,84 +1321,90 @@ describe('google base URL forwarding', () => {
     // silently downgrading to API-key Gemini routing.
     const resolved = resolveRuntimeProvider({
       config: {
-        defaultModel: 'gemini',
+        defaultModel: "gemini",
         providers: {
           vertex: {
-            type: 'vertexai',
+            type: "vertexai",
             env: {
-              GOOGLE_CLOUD_PROJECT: 'my-proj',
-              GOOGLE_VERTEX_BASE_URL: 'https://us-central1-aiplatform.googleapis.com',
+              GOOGLE_CLOUD_PROJECT: "my-proj",
+              GOOGLE_VERTEX_BASE_URL:
+                "https://us-central1-aiplatform.googleapis.com",
             },
           },
         },
         models: {
-          gemini: { provider: 'vertex', model: 'gemini-1.5-pro', maxContextSize: 1_000_000 },
+          gemini: {
+            provider: "vertex",
+            model: "gemini-1.5-pro",
+            maxContextSize: 1_000_000,
+          },
         },
       },
     });
 
     expect(resolved.provider).toMatchObject({
-      type: 'vertexai',
+      type: "vertexai",
       vertexai: true,
-      baseUrl: 'https://us-central1-aiplatform.googleapis.com',
-      project: 'my-proj',
-      location: 'us-central1',
+      baseUrl: "https://us-central1-aiplatform.googleapis.com",
+      project: "my-proj",
+      location: "us-central1",
     });
   });
 });
 
-describe('per-model protocol routing', () => {
-  it('routes a protocol:anthropic model on a kimi provider through the anthropic transport with the REST base stripped of /v1', () => {
+describe("per-model protocol routing", () => {
+  it("routes a protocol:anthropic model on a kimi provider through the anthropic transport with the REST base stripped of /v1", () => {
     const resolved = resolveRuntimeProvider({
       config: {
         ...BASE_CONFIG,
         models: {
-          'kimi-code/kimi-for-coding': {
-            ...BASE_CONFIG.models!['kimi-code/kimi-for-coding']!,
-            protocol: 'anthropic',
+          "kimi-code/kimi-for-coding": {
+            ...BASE_CONFIG.models!["kimi-code/kimi-for-coding"]!,
+            protocol: "anthropic",
           },
         },
       },
     });
 
-    expect(resolved.providerName).toBe('managed:kimi-code');
+    expect(resolved.providerName).toBe("managed:kimi-code");
     expect(resolved.provider).toMatchObject({
-      type: 'anthropic',
-      model: 'kimi-for-coding',
-      baseUrl: 'https://api.example',
+      type: "anthropic",
+      model: "kimi-for-coding",
+      baseUrl: "https://api.example",
     });
     // Kimi over the Anthropic transport keeps its vendor error classifier —
     // a Moonshot quota 429 must fail fast on this route too.
     expect(
-      (resolved.provider as { convertError?: (error: unknown) => unknown }).convertError,
+      (resolved.provider as { convertError?: (error: unknown) => unknown })
+        .convertError,
     ).toBe(classifyKimiQuotaError);
   });
 
-  it('keeps a model without protocol on the provider wire type and leaves the REST base intact', () => {
+  it("keeps a model without protocol on the provider wire type and leaves the REST base intact", () => {
     const resolved = resolveRuntimeProvider({ config: BASE_CONFIG });
 
     expect(resolved.provider).toMatchObject({
-      type: 'kimi',
-      model: 'kimi-for-coding',
-      baseUrl: 'https://api.example/v1',
+      type: "kimi",
+      model: "kimi-for-coding",
+      baseUrl: "https://api.example/v1",
     });
   });
 
-  it('does not strip the baseUrl of a provider that is itself typed anthropic', () => {
+  it("does not strip the baseUrl of a provider that is itself typed anthropic", () => {
     const resolved = resolveRuntimeProvider({
       config: {
-        defaultModel: 'claude',
+        defaultModel: "claude",
         providers: {
           anthropic: {
-            type: 'anthropic',
-            apiKey: 'sk-anthropic',
-            baseUrl: 'https://api.anthropic.example/v1',
+            type: "anthropic",
+            apiKey: "sk-anthropic",
+            baseUrl: "https://api.anthropic.example/v1",
           },
         },
         models: {
           claude: {
-            provider: 'anthropic',
-            model: 'claude-sonnet-4-5',
+            provider: "anthropic",
+            model: "claude-sonnet-4-5",
             maxContextSize: 200_000,
           },
         },
@@ -1297,33 +1412,34 @@ describe('per-model protocol routing', () => {
     });
 
     expect(resolved.provider).toMatchObject({
-      type: 'anthropic',
-      model: 'claude-sonnet-4-5',
-      baseUrl: 'https://api.anthropic.example/v1',
+      type: "anthropic",
+      model: "claude-sonnet-4-5",
+      baseUrl: "https://api.anthropic.example/v1",
     });
     // A plain anthropic provider carries no Kimi vendor classifier.
     expect(
-      (resolved.provider as { convertError?: (error: unknown) => unknown }).convertError,
+      (resolved.provider as { convertError?: (error: unknown) => unknown })
+        .convertError,
     ).toBeUndefined();
   });
 });
 
-describe('resolveRuntimeProvider model overrides', () => {
-  it('keeps supportEfforts out of the kimi provider config', () => {
+describe("resolveRuntimeProvider model overrides", () => {
+  it("keeps supportEfforts out of the kimi provider config", () => {
     const resolved = resolveRuntimeProvider({
       config: {
         ...BASE_CONFIG,
         models: {
-          'kimi-code/kimi-for-coding': {
-            ...BASE_CONFIG.models!['kimi-code/kimi-for-coding']!,
-            supportEfforts: ['low', 'high', 'max'],
-            overrides: { supportEfforts: ['low', 'high'] },
+          "kimi-code/kimi-for-coding": {
+            ...BASE_CONFIG.models!["kimi-code/kimi-for-coding"]!,
+            supportEfforts: ["low", "high", "max"],
+            overrides: { supportEfforts: ["low", "high"] },
           },
         },
       },
     });
 
-    expect(resolved.provider).toMatchObject({ type: 'kimi' });
-    expect(resolved.provider).not.toHaveProperty('supportEfforts');
+    expect(resolved.provider).toMatchObject({ type: "kimi" });
+    expect(resolved.provider).not.toHaveProperty("supportEfforts");
   });
 });

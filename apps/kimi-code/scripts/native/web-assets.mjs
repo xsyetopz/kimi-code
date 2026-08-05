@@ -1,24 +1,24 @@
-import { createHash } from 'node:crypto';
-import { existsSync } from 'node:fs';
-import { readdir, readFile, stat } from 'node:fs/promises';
-import { join, relative, resolve } from 'node:path';
+import { createHash } from "node:crypto";
+import { existsSync } from "node:fs";
+import { readdir, readFile, stat } from "node:fs/promises";
+import { join, relative, resolve } from "node:path";
 
 import {
   WEB_ASSET_MANIFEST_VERSION,
   buildWebAssetKey,
   buildWebManifestKey,
-} from './manifest.mjs';
+} from "./manifest.mjs";
 
 export { WEB_ASSET_MANIFEST_VERSION };
 
-const WEB_ASSETS_DIR = 'dist-web';
+const WEB_ASSETS_DIR = "dist-web";
 
 function toPosixPath(path) {
-  return path.split('\\').join('/');
+  return path.split("\\").join("/");
 }
 
 function sha256(bytes) {
-  return createHash('sha256').update(bytes).digest('hex');
+  return createHash("sha256").update(bytes).digest("hex");
 }
 
 async function listFiles(root) {
@@ -70,8 +70,12 @@ async function collectAssetRoot({
   missingMessage,
   assetKey,
 }) {
-  const assetRoot = resolve(appRoot, ...root.split('/'));
-  await assertBuiltAssetRoot({ assetRoot, requiredFile, message: missingMessage });
+  const assetRoot = resolve(appRoot, ...root.split("/"));
+  await assertBuiltAssetRoot({
+    assetRoot,
+    requiredFile,
+    message: missingMessage,
+  });
 
   const files = (await listFiles(assetRoot)).sort((a, b) => a.localeCompare(b));
   const manifestFiles = [];
@@ -106,12 +110,12 @@ async function collectAssetRoot({
 
 export async function collectWebAssets({ appRoot, target }) {
   const buildCommand =
-    'pnpm --filter @moonshot-ai/kimi-web run build && pnpm --filter @moonshot-ai/kimi-code run build';
+    "pnpm --filter @moonshot-ai/kimi-web run build && pnpm --filter @moonshot-ai/kimi-code run build";
   return collectAssetRoot({
     appRoot,
     target,
     root: WEB_ASSETS_DIR,
-    requiredFile: 'index.html',
+    requiredFile: "index.html",
     missingMessage: `Kimi web build output was not found at ${resolve(appRoot, WEB_ASSETS_DIR)}. Run \`${buildCommand}\` before building native SEA assets. App root: ${appRoot}`,
     assetKey: webAssetKey,
   });

@@ -10,7 +10,7 @@
 /** `ServiceNode.id` → tag list. Order is preserved as entered. */
 export type TagMap = Record<string, string[]>;
 
-const TAGS_STORAGE_KEY = 'agent-core-v2:dep-graph:tags';
+const TAGS_STORAGE_KEY = "agent-core-v2:dep-graph:tags";
 
 export function loadTags(): TagMap {
   try {
@@ -27,14 +27,14 @@ export function loadTags(): TagMap {
 export function saveTags(tags: TagMap): void {
   try {
     localStorage.setItem(TAGS_STORAGE_KEY, JSON.stringify(tags));
-  } catch {
-  }
+  } catch {}
 }
 
 function isTagMap(value: unknown): value is TagMap {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+  if (typeof value !== "object" || value === null || Array.isArray(value))
+    return false;
   for (const v of Object.values(value)) {
-    if (!Array.isArray(v) || v.some((t) => typeof t !== 'string')) return false;
+    if (!Array.isArray(v) || v.some((t) => typeof t !== "string")) return false;
   }
   return true;
 }
@@ -54,10 +54,18 @@ export function collectTagCounts(tags: TagMap): TagCount[] {
     .sort((a, b) => a.tag.localeCompare(b.tag));
 }
 
-export function tagsEqual(tags: TagMap, nodeId: string, next: string[]): boolean {
+export function tagsEqual(
+  tags: TagMap,
+  nodeId: string,
+  next: string[],
+): boolean {
   const cur = tags[nodeId];
   if (next.length === 0) return !(nodeId in tags);
-  return cur !== undefined && cur.length === next.length && cur.every((t, i) => t === next[i]);
+  return (
+    cur !== undefined &&
+    cur.length === next.length &&
+    cur.every((t, i) => t === next[i])
+  );
 }
 
 export function tagColor(tag: string): { color: string; bg: string } {

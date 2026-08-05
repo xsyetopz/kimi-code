@@ -1,25 +1,25 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import {
   LifecycleScope,
   ScopeActivation,
   _clearScopedRegistryForTests,
   registerScopedService,
-} from '#/_base/di/scope';
-import { createScopedTestHost, stubPair } from '#/_base/di/test';
+} from "#/_base/di/scope";
+import { createScopedTestHost, stubPair } from "#/_base/di/test";
 import {
   ISessionIndex,
   type SessionCountQuery,
   type SessionIndexStatus,
   type SessionListQuery,
   type SessionSummary,
-} from '#/app/sessionIndex/sessionIndex';
-import { IWorkspaceAliases } from '#/app/workspaceAliases/workspaceAliases';
+} from "#/app/sessionIndex/sessionIndex";
+import { IWorkspaceAliases } from "#/app/workspaceAliases/workspaceAliases";
 import {
   IWorkspaceSessions,
   RECENT_SESSIONS_LIMIT,
-} from '#/app/workspaceSessions/workspaceSessions';
-import { WorkspaceSessionsService } from '#/app/workspaceSessions/workspaceSessionsService';
+} from "#/app/workspaceSessions/workspaceSessions";
+import { WorkspaceSessionsService } from "#/app/workspaceSessions/workspaceSessionsService";
 
 class FakeSessionIndex implements ISessionIndex {
   readonly _serviceBrand: undefined;
@@ -33,7 +33,7 @@ class FakeSessionIndex implements ISessionIndex {
   }
 
   status(): SessionIndexStatus {
-    return { state: 'uninitialized', degradedCount: 0 };
+    return { state: "uninitialized", degradedCount: 0 };
   }
 
   async listRecent(query: SessionListQuery) {
@@ -62,7 +62,7 @@ class FakeWorkspaceAliases implements IWorkspaceAliases {
   }
 }
 
-describe('WorkspaceSessionsService', () => {
+describe("WorkspaceSessionsService", () => {
   let currentHost: ReturnType<typeof createScopedTestHost> | undefined;
 
   beforeEach(() => {
@@ -72,7 +72,7 @@ describe('WorkspaceSessionsService', () => {
       IWorkspaceSessions,
       WorkspaceSessionsService,
       ScopeActivation.OnDemand,
-      'workspaceSessions',
+      "workspaceSessions",
     );
   });
 
@@ -93,55 +93,69 @@ describe('WorkspaceSessionsService', () => {
       stubPair(IWorkspaceAliases, aliases),
     ]);
     currentHost = host;
-    return { sessions: host.app.accessor.get(IWorkspaceSessions), index, aliases };
+    return {
+      sessions: host.app.accessor.get(IWorkspaceSessions),
+      index,
+      aliases,
+    };
   }
 
-  function summary(id: string, workspaceId: string, updatedAt: number): SessionSummary {
-    return { id, workspaceId, createdAt: updatedAt - 1, updatedAt, archived: false };
+  function summary(
+    id: string,
+    workspaceId: string,
+    updatedAt: number,
+  ): SessionSummary {
+    return {
+      id,
+      workspaceId,
+      createdAt: updatedAt - 1,
+      updatedAt,
+      archived: false,
+    };
   }
 
-  it('listRecent delegates with the folded alias set and the recent limit', async () => {
+  it("listRecent delegates with the folded alias set and the recent limit", async () => {
     const { sessions, index, aliases } = build();
-    aliases.aliases['wd_abc'] = ['wd_abc', 'wd_abc_legacy'];
+    aliases.aliases["wd_abc"] = ["wd_abc", "wd_abc_legacy"];
 
-    await sessions.listRecent('wd_abc');
+    await sessions.listRecent("wd_abc");
 
     expect(index.lastListQuery).toEqual({
-      workspaceIds: ['wd_abc', 'wd_abc_legacy'],
+      workspaceIds: ["wd_abc", "wd_abc_legacy"],
       limit: RECENT_SESSIONS_LIMIT,
     });
     expect(RECENT_SESSIONS_LIMIT).toBe(20);
   });
 
-  it('listRecent returns the index items for the workspace', async () => {
+  it("listRecent returns the index items for the workspace", async () => {
     const { sessions, index } = build();
-    const items = [summary('s2', 'wd_abc', 200), summary('s1', 'wd_abc', 100)];
+    const items = [summary("s2", "wd_abc", 200), summary("s1", "wd_abc", 100)];
     index.items = items;
 
-    await expect(sessions.listRecent('wd_abc')).resolves.toEqual(items);
+    await expect(sessions.listRecent("wd_abc")).resolves.toEqual(items);
   });
 
-  it('listRecent returns an empty array when the workspace has no sessions', async () => {
+  it("listRecent returns an empty array when the workspace has no sessions", async () => {
     const { sessions } = build();
 
-    await expect(sessions.listRecent('wd_empty')).resolves.toEqual([]);
+    await expect(sessions.listRecent("wd_empty")).resolves.toEqual([]);
   });
 
-  it('count folds aliases and includes archived sessions', async () => {
+  it("count folds aliases and includes archived sessions", async () => {
     const { sessions, index, aliases } = build();
-    aliases.aliases['wd_abc'] = ['wd_abc', 'wd_abc_legacy'];
+    aliases.aliases["wd_abc"] = ["wd_abc", "wd_abc_legacy"];
     index.countResult = 3;
 
-    await expect(sessions.count('wd_abc')).resolves.toBe(3);
+    await expect(sessions.count("wd_abc")).resolves.toBe(3);
     expect(index.lastCountQuery).toEqual({
-      workspaceIds: ['wd_abc', 'wd_abc_legacy'],
+      workspaceIds: ["wd_abc", "wd_abc_legacy"],
       includeArchived: true,
     });
   });
 
-  it('count returns 0 when the workspace has no sessions', async () => {
+  it("count returns 0 when the workspace has no sessions", async () => {
     const { sessions } = build();
 
-    await expect(sessions.count('wd_empty')).resolves.toBe(0);
+    await expect(sessions.count("wd_empty")).resolves.toBe(0);
   });
 });

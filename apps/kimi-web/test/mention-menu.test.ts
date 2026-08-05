@@ -1,7 +1,7 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { nextTick, ref, type Ref } from 'vue';
-import { useMentionMenu } from '../src/composables/useMentionMenu';
-import type { FileItem } from '../src/types';
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { nextTick, ref, type Ref } from "vue";
+import { useMentionMenu } from "../src/composables/useMentionMenu";
+import type { FileItem } from "../src/types";
 
 interface MockTextarea {
   value: string;
@@ -10,7 +10,10 @@ interface MockTextarea {
   focus: () => void;
 }
 
-function setup(initialText = '', searchFiles?: (q: string) => Promise<FileItem[]>) {
+function setup(
+  initialText = "",
+  searchFiles?: (q: string) => Promise<FileItem[]>,
+) {
   const textarea: MockTextarea = {
     value: initialText,
     // Caret defaults to the end of the text.
@@ -21,7 +24,9 @@ function setup(initialText = '', searchFiles?: (q: string) => Promise<FileItem[]
     focus: () => {},
   };
   const text = ref(initialText);
-  const textareaRef = ref(textarea as unknown as HTMLTextAreaElement) as Ref<HTMLTextAreaElement | null>;
+  const textareaRef = ref(
+    textarea as unknown as HTMLTextAreaElement,
+  ) as Ref<HTMLTextAreaElement | null>;
   const mention = useMentionMenu({
     text,
     textareaRef,
@@ -31,7 +36,7 @@ function setup(initialText = '', searchFiles?: (q: string) => Promise<FileItem[]
   return { text, textarea, mention };
 }
 
-describe('useMentionMenu — update', () => {
+describe("useMentionMenu — update", () => {
   beforeEach(() => {
     vi.useFakeTimers();
   });
@@ -40,38 +45,40 @@ describe('useMentionMenu — update', () => {
     vi.useRealTimers();
   });
 
-  it('stays closed when there is no @token', async () => {
+  it("stays closed when there is no @token", async () => {
     const searchFiles = vi.fn().mockResolvedValue([]);
-    const { mention } = setup('hello', searchFiles);
+    const { mention } = setup("hello", searchFiles);
     mention.update();
     await vi.advanceTimersByTimeAsync(200);
     expect(mention.open.value).toBe(false);
     expect(searchFiles).not.toHaveBeenCalled();
   });
 
-  it('stays closed when searchFiles is not provided', async () => {
-    const { mention } = setup('@a');
+  it("stays closed when searchFiles is not provided", async () => {
+    const { mention } = setup("@a");
     mention.update();
     await vi.advanceTimersByTimeAsync(200);
     expect(mention.open.value).toBe(false);
   });
 
-  it('opens with search results after the debounce', async () => {
-    const searchFiles = vi.fn().mockResolvedValue([{ path: 'src/a.ts', name: 'a.ts' }]);
-    const { mention } = setup('@a', searchFiles);
+  it("opens with search results after the debounce", async () => {
+    const searchFiles = vi
+      .fn()
+      .mockResolvedValue([{ path: "src/a.ts", name: "a.ts" }]);
+    const { mention } = setup("@a", searchFiles);
     mention.update();
     expect(mention.open.value).toBe(false); // debounced, not yet
     await vi.advanceTimersByTimeAsync(200);
-    expect(searchFiles).toHaveBeenCalledWith('a');
+    expect(searchFiles).toHaveBeenCalledWith("a");
     expect(mention.open.value).toBe(true);
-    expect(mention.items.value).toEqual([{ path: 'src/a.ts', name: 'a.ts' }]);
+    expect(mention.items.value).toEqual([{ path: "src/a.ts", name: "a.ts" }]);
     expect(mention.loading.value).toBe(false);
     expect(mention.active.value).toBe(0);
   });
 
-  it('clears items and stops loading when the search throws', async () => {
-    const searchFiles = vi.fn().mockRejectedValue(new Error('boom'));
-    const { mention } = setup('@a', searchFiles);
+  it("clears items and stops loading when the search throws", async () => {
+    const searchFiles = vi.fn().mockRejectedValue(new Error("boom"));
+    const { mention } = setup("@a", searchFiles);
     mention.update();
     await vi.advanceTimersByTimeAsync(200);
     expect(mention.items.value).toEqual([]);
@@ -79,19 +86,19 @@ describe('useMentionMenu — update', () => {
   });
 });
 
-describe('useMentionMenu — select', () => {
-  it('replaces the @token with the chosen path', async () => {
-    const { text, textarea, mention } = setup('hello @a');
-    textarea.value = 'hello @a';
-    mention.select({ path: 'src/a.ts', name: 'a.ts' });
-    expect(text.value).toBe('hello src/a.ts');
+describe("useMentionMenu — select", () => {
+  it("replaces the @token with the chosen path", async () => {
+    const { text, textarea, mention } = setup("hello @a");
+    textarea.value = "hello @a";
+    mention.select({ path: "src/a.ts", name: "a.ts" });
+    expect(text.value).toBe("hello src/a.ts");
     expect(mention.open.value).toBe(false);
     await nextTick();
   });
 
-  it('is a no-op when there is no @token', () => {
-    const { text, mention } = setup('hello');
-    mention.select({ path: 'src/a.ts', name: 'a.ts' });
-    expect(text.value).toBe('hello');
+  it("is a no-op when there is no @token", () => {
+    const { text, mention } = setup("hello");
+    mention.select({ path: "src/a.ts", name: "a.ts" });
+    expect(text.value).toBe("hello");
   });
 });

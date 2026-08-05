@@ -1,4 +1,4 @@
-import { onUnexpectedError } from '../errors/unexpectedError';
+import { onUnexpectedError } from "../errors/unexpectedError";
 
 export interface IDisposableTracker {
   trackDisposable(disposable: IDisposable): void;
@@ -36,7 +36,7 @@ export class DisposableTracker implements IDisposableTracker {
 
   trackDisposable(d: IDisposable): void {
     const data = this.getDisposableData(d);
-    data.source ??= new Error('Disposable tracking').stack ?? null;
+    data.source ??= new Error("Disposable tracking").stack ?? null;
   }
 
   setParent(child: IDisposable, parent: IDisposable | null): void {
@@ -68,7 +68,8 @@ export class DisposableTracker implements IDisposableTracker {
     const cache = new Map<DisposableInfo, DisposableInfo>();
     return [...this.livingDisposables.entries()]
       .filter(
-        ([, v]) => v.source !== null && !this.getRootParent(v, cache).isSingleton,
+        ([, v]) =>
+          v.source !== null && !this.getRootParent(v, cache).isSingleton,
       )
       .map(([k]) => k);
   }
@@ -117,9 +118,9 @@ export interface IDisposable {
 
 export function isDisposable<E>(thing: E): thing is E & IDisposable {
   return (
-    typeof thing === 'object' &&
+    typeof thing === "object" &&
     thing !== null &&
-    typeof (thing as unknown as IDisposable).dispose === 'function' &&
+    typeof (thing as unknown as IDisposable).dispose === "function" &&
     (thing as unknown as IDisposable).dispose.length === 0
   );
 }
@@ -128,9 +129,10 @@ export function dispose<T extends IDisposable>(disposable: T): T;
 export function dispose<T extends IDisposable>(
   disposable: T | undefined,
 ): T | undefined;
-export function dispose<T extends IDisposable, A extends Iterable<T> = Iterable<T>>(
-  disposables: A,
-): A;
+export function dispose<
+  T extends IDisposable,
+  A extends Iterable<T> = Iterable<T>,
+>(disposables: A): A;
 export function dispose<T extends IDisposable>(disposables: Array<T>): Array<T>;
 export function dispose<T extends IDisposable>(
   disposables: ReadonlyArray<T>,
@@ -157,21 +159,22 @@ export function dispose<T extends IDisposable>(
     if (errors.length > 1) {
       throw new AggregateError(
         errors,
-        'Encountered errors while disposing of store',
+        "Encountered errors while disposing of store",
       );
     }
 
     return Array.isArray(arg) ? [] : arg;
   }
-  (arg).dispose();
+  arg.dispose();
   return arg;
 }
 
 function isIterable<T>(arg: unknown): arg is Iterable<T> {
   return (
-    typeof arg === 'object' &&
+    typeof arg === "object" &&
     arg !== null &&
-    typeof (arg as { [Symbol.iterator]?: unknown })[Symbol.iterator] === 'function'
+    typeof (arg as { [Symbol.iterator]?: unknown })[Symbol.iterator] ===
+      "function"
   );
 }
 
@@ -225,7 +228,7 @@ export class DisposableStore implements IDisposable {
 
   add<T extends IDisposable>(d: T): T {
     if ((d as unknown as DisposableStore) === this) {
-      throw new Error('Cannot register a disposable on itself!');
+      throw new Error("Cannot register a disposable on itself!");
     }
     setParentOfDisposable(d, this);
     if (this._isDisposed) {
@@ -239,7 +242,7 @@ export class DisposableStore implements IDisposable {
   delete<T extends IDisposable>(d: T): void {
     if (this._isDisposed) return;
     if ((d as unknown as DisposableStore) === this) {
-      throw new Error('Cannot dispose a disposable on itself!');
+      throw new Error("Cannot dispose a disposable on itself!");
     }
     this._toDispose.delete(d);
     d.dispose();
@@ -274,7 +277,7 @@ export class DisposableStore implements IDisposable {
 
   assertNotDisposed(): void {
     if (this._isDisposed) {
-      onUnexpectedError(new Error('Object disposed'));
+      onUnexpectedError(new Error("Object disposed"));
     }
   }
 }
@@ -289,7 +292,7 @@ export abstract class Disposable implements IDisposable {
 
   protected _register<T extends IDisposable>(d: T): T {
     if ((d as unknown as Disposable) === this) {
-      throw new Error('Cannot register a disposable on itself!');
+      throw new Error("Cannot register a disposable on itself!");
     }
     return this._store.add(d);
   }
@@ -357,7 +360,9 @@ export class MutableDisposable<T extends IDisposable> implements IDisposable {
   }
 }
 
-export class MandatoryMutableDisposable<T extends IDisposable> implements IDisposable {
+export class MandatoryMutableDisposable<T extends IDisposable>
+  implements IDisposable
+{
   private readonly _disposable = new MutableDisposable<T>();
   private _isDisposed = false;
 
@@ -441,7 +446,9 @@ export abstract class ReferenceCollection<T> {
 }
 
 export class AsyncReferenceCollection<T> {
-  constructor(private readonly referenceCollection: ReferenceCollection<Promise<T>>) {}
+  constructor(
+    private readonly referenceCollection: ReferenceCollection<Promise<T>>,
+  ) {}
 
   async acquire(key: string, ...args: unknown[]): Promise<IReference<T>> {
     const ref = this.referenceCollection.acquire(key, ...args);
@@ -450,7 +457,9 @@ export class AsyncReferenceCollection<T> {
       const object = await ref.object;
       return {
         object,
-        dispose: () => { ref.dispose(); },
+        dispose: () => {
+          ref.dispose();
+        },
       };
     } catch (error) {
       ref.dispose();
@@ -509,7 +518,7 @@ export class DisposableMap<K, V extends IDisposable = IDisposable>
       // eslint-disable-next-line no-console
       console.warn(
         new Error(
-          'Trying to add a disposable to a DisposableMap that has already been disposed of. The added object will be leaked!',
+          "Trying to add a disposable to a DisposableMap that has already been disposed of. The added object will be leaked!",
         ).stack,
       );
       return;
@@ -592,7 +601,7 @@ export class DisposableSet<V extends IDisposable = IDisposable>
       // eslint-disable-next-line no-console
       console.warn(
         new Error(
-          'Trying to add a disposable to a DisposableSet that has already been disposed of. The added object will be leaked!',
+          "Trying to add a disposable to a DisposableSet that has already been disposed of. The added object will be leaked!",
         ).stack,
       );
       return;

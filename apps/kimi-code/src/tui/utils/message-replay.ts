@@ -6,8 +6,8 @@ import type {
   PromptOrigin,
   ResumedAgentState,
   ToolCall,
-} from '@moonshot-ai/kimi-code-sdk';
-import { limitAgentReplayByTurns } from '@moonshot-ai/kimi-code-sdk';
+} from "@moonshot-ai/kimi-code-sdk";
+import { limitAgentReplayByTurns } from "@moonshot-ai/kimi-code-sdk";
 
 import type {
   AppState,
@@ -15,10 +15,10 @@ import type {
   SkillActivationTrigger,
   ToolCallBlockData,
   TranscriptEntry,
-} from '#/tui/types';
+} from "#/tui/types";
 
-import { mediaUrlPartToText } from './media-url';
-import { nextTranscriptId } from './transcript-id';
+import { mediaUrlPartToText } from "./media-url";
+import { nextTranscriptId } from "./transcript-id";
 
 export const REPLAY_TURN_LIMIT = 10;
 
@@ -49,19 +49,26 @@ export interface PluginCommandProjection {
   readonly pluginId: string;
   readonly commandName: string;
   readonly commandArgs?: string;
-  readonly trigger: 'user-slash';
+  readonly trigger: "user-slash";
 }
 
 export interface ReplayBackgroundProjection {
-  readonly backgroundAgentMetadata: ReadonlyMap<string, BackgroundAgentMetadata>;
+  readonly backgroundAgentMetadata: ReadonlyMap<
+    string,
+    BackgroundAgentMetadata
+  >;
 }
 
-export function appStateFromResumeAgent(agent: ResumedAgentState): Partial<AppState> {
-  const maxContextTokens = agent.config.modelCapabilities?.max_context_tokens ?? 0;
+export function appStateFromResumeAgent(
+  agent: ResumedAgentState,
+): Partial<AppState> {
+  const maxContextTokens =
+    agent.config.modelCapabilities?.max_context_tokens ?? 0;
   const contextTokens = agent.context.tokenCount;
-  const contextUsage = maxContextTokens > 0 ? contextTokens / maxContextTokens : 0;
+  const contextUsage =
+    maxContextTokens > 0 ? contextTokens / maxContextTokens : 0;
   return {
-    model: agent.config.modelAlias ?? agent.config.provider?.model ?? '',
+    model: agent.config.modelAlias ?? agent.config.provider?.model ?? "",
     contextTokens,
     maxContextTokens,
     contextUsage,
@@ -73,15 +80,17 @@ export function appStateFromResumeAgent(agent: ResumedAgentState): Partial<AppSt
 
 export function isTerminalBackgroundTask(info: BackgroundTaskInfo): boolean {
   return (
-    info.status === 'completed' ||
-    info.status === 'failed' ||
-    info.status === 'timed_out' ||
-    info.status === 'killed' ||
-    info.status === 'lost'
+    info.status === "completed" ||
+    info.status === "failed" ||
+    info.status === "timed_out" ||
+    info.status === "killed" ||
+    info.status === "lost"
   );
 }
 
-export function countActiveBackgroundTasks(tasks: ReadonlyMap<string, BackgroundTaskInfo>): {
+export function countActiveBackgroundTasks(
+  tasks: ReadonlyMap<string, BackgroundTaskInfo>,
+): {
   bashTasks: number;
   agentTasks: number;
 } {
@@ -89,7 +98,7 @@ export function countActiveBackgroundTasks(tasks: ReadonlyMap<string, Background
   let agentTasks = 0;
   for (const info of tasks.values()) {
     if (isTerminalBackgroundTask(info)) continue;
-    if (info.kind === 'agent') {
+    if (info.kind === "agent") {
       agentTasks += 1;
     } else {
       bashTasks += 1;
@@ -103,7 +112,7 @@ export function replayBackgroundProjection(
 ): ReplayBackgroundProjection {
   const backgroundAgentMetadata = new Map<string, BackgroundAgentMetadata>();
   for (const info of background) {
-    if (info.kind !== 'agent') continue;
+    if (info.kind !== "agent") continue;
     if (isTerminalBackgroundTask(info)) continue;
     const agentId = info.agentId ?? info.taskId;
     backgroundAgentMetadata.set(agentId, {
@@ -141,9 +150,9 @@ export function limitReplayRecordsByTurn(
 
 export function replayEntry(
   context: ReplayRenderContext,
-  kind: TranscriptEntry['kind'],
+  kind: TranscriptEntry["kind"],
   content: string,
-  renderMode: TranscriptEntry['renderMode'],
+  renderMode: TranscriptEntry["renderMode"],
   extras: { detail?: string; bullet?: string } = {},
 ): TranscriptEntry {
   return {
@@ -158,20 +167,20 @@ export function replayEntry(
 }
 
 export function collectReplayMessageContent(
-  target: ReplayRenderContext['assistant'],
+  target: ReplayRenderContext["assistant"],
   content: readonly ContentPart[],
 ): void {
   for (const part of content) {
     switch (part.type) {
-      case 'think':
+      case "think":
         target.thinking.push(part.think);
         break;
-      case 'text':
+      case "text":
         target.text.push(part.text);
         break;
-      case 'audio_url':
-      case 'image_url':
-      case 'video_url':
+      case "audio_url":
+      case "image_url":
+      case "video_url":
         break;
     }
   }
@@ -194,26 +203,28 @@ export function toolCallFromReplayMessage(
 }
 
 export function toolResultOutput(content: readonly ContentPart[]): string {
-  if (content.some((part) => part.type !== 'text')) {
+  if (content.some((part) => part.type !== "text")) {
     return JSON.stringify(content);
   }
   return contentPartsToText(content);
 }
 
 export function contentPartsToText(content: readonly ContentPart[]): string {
-  return content.map(contentPartToText).join('');
+  return content.map(contentPartToText).join("");
 }
 
 export function backgroundOrigin(
   message: ContextMessage,
-): Extract<PromptOrigin, { kind: 'background_task' }> | undefined {
-  return message.origin?.kind === 'background_task' ? message.origin : undefined;
+): Extract<PromptOrigin, { kind: "background_task" }> | undefined {
+  return message.origin?.kind === "background_task"
+    ? message.origin
+    : undefined;
 }
 
 export function skillActivationFromOrigin(
   origin: PromptOrigin | undefined,
 ): SkillActivationProjection | undefined {
-  if (origin?.kind !== 'skill_activation') return undefined;
+  if (origin?.kind !== "skill_activation") return undefined;
   return {
     activationId: origin.activationId,
     skillName: origin.skillName,
@@ -225,7 +236,7 @@ export function skillActivationFromOrigin(
 export function pluginCommandFromOrigin(
   origin: PromptOrigin | undefined,
 ): PluginCommandProjection | undefined {
-  if (origin?.kind !== 'plugin_command') return undefined;
+  if (origin?.kind !== "plugin_command") return undefined;
   return {
     activationId: origin.activationId,
     pluginId: origin.pluginId,
@@ -260,10 +271,14 @@ export function formatHookResultMessageForTranscript(
     return formatHookResultBlock(fallbackEvent, text, blocked);
   }
 
-  return results.map(({ event, body }) => formatHookResultBlock(event, body, blocked)).join('\n\n');
+  return results
+    .map(({ event, body }) => formatHookResultBlock(event, body, blocked))
+    .join("\n\n");
 }
 
-function parseReplayToolArguments(value: string | null): Record<string, unknown> {
+function parseReplayToolArguments(
+  value: string | null,
+): Record<string, unknown> {
   if (value === null || value.length === 0) return {};
   try {
     const parsed = JSON.parse(value);
@@ -275,26 +290,30 @@ function parseReplayToolArguments(value: string | null): Record<string, unknown>
 
 function contentPartToText(part: ContentPart): string {
   switch (part.type) {
-    case 'text':
+    case "text":
       return part.text;
-    case 'think':
+    case "think":
       return part.think;
-    case 'image_url':
-      return mediaUrlPartToText('image', part.imageUrl.url);
-    case 'video_url':
-      return mediaUrlPartToText('video', part.videoUrl.url);
-    case 'audio_url':
-      return mediaUrlPartToText('audio', part.audioUrl.url);
+    case "image_url":
+      return mediaUrlPartToText("image", part.imageUrl.url);
+    case "video_url":
+      return mediaUrlPartToText("video", part.videoUrl.url);
+    case "audio_url":
+      return mediaUrlPartToText("audio", part.audioUrl.url);
   }
 }
 
 const HOOK_RESULT_RE =
   /<hook_result\s+hook_event="([^"]+)">\n?([\s\S]*?)\n?<\/hook_result>/g;
 
-function formatHookResultBlock(event: string, body: string, blocked: boolean): string {
-  return `*${event} hook${blocked ? ' blocked' : ''}*\n\n${body.trim() || '(empty)'}`;
+function formatHookResultBlock(
+  event: string,
+  body: string,
+  blocked: boolean,
+): string {
+  return `*${event} hook${blocked ? " blocked" : ""}*\n\n${body.trim() || "(empty)"}`;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
+  return typeof value === "object" && value !== null;
 }

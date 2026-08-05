@@ -4,7 +4,7 @@
 export class KaosError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = 'KaosError';
+    this.name = "KaosError";
   }
 }
 
@@ -14,7 +14,7 @@ export class KaosError extends Error {
 export class KaosValueError extends KaosError {
   constructor(message: string) {
     super(message);
-    this.name = 'KaosValueError';
+    this.name = "KaosValueError";
   }
 }
 
@@ -24,7 +24,7 @@ export class KaosValueError extends KaosError {
 export class KaosFileExistsError extends KaosError {
   constructor(message: string) {
     super(message);
-    this.name = 'KaosFileExistsError';
+    this.name = "KaosFileExistsError";
   }
 }
 
@@ -36,6 +36,6 @@ export class KaosFileExistsError extends KaosError {
 export class KaosShellNotFoundError extends KaosError {
   constructor(message: string) {
     super(message);
-    this.name = 'KaosShellNotFoundError';
+    this.name = "KaosShellNotFoundError";
   }
 }

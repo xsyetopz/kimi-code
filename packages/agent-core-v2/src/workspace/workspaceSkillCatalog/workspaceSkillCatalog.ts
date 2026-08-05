@@ -12,11 +12,14 @@
  * receives. Bound at Workspace scope.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
-import type { Event } from '#/_base/event';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
+import type { Event } from "#/_base/event";
 
-import type { SkillCatalog } from '#/app/skillCatalog/types';
-import type { ISessionSkillCatalogData } from '#/session/sessionSkillCatalog/skillCatalogData';
+import type { SkillCatalog } from "#/app/skillCatalog/types";
+import type { ISessionSkillCatalogData } from "#/session/sessionSkillCatalog/skillCatalogData";
 
 export interface IWorkspaceSkillCatalog {
   readonly _serviceBrand: undefined;
@@ -30,4 +33,4 @@ export interface IWorkspaceSkillCatalog {
 }
 
 export const IWorkspaceSkillCatalog: ServiceIdentifier<IWorkspaceSkillCatalog> =
-  createDecorator<IWorkspaceSkillCatalog>('workspaceSkillCatalog');
+  createDecorator<IWorkspaceSkillCatalog>("workspaceSkillCatalog");

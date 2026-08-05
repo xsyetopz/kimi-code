@@ -11,13 +11,13 @@
  * clone for round-trip).
  */
 
-import { TomlError } from 'smol-toml';
+import { TomlError } from "smol-toml";
 
-import type { IConfigRegistry } from './config';
-import { describeUnknownError, isPlainObject } from './configPure';
+import type { IConfigRegistry } from "./config";
+import { describeUnknownError, isPlainObject } from "./configPure";
 
 export { TomlError };
-export { isPlainObject } from './configPure';
+export { isPlainObject } from "./configPure";
 
 export function snakeToCamel(str: string): string {
   return str.replaceAll(/_([a-z])/g, (_, ch: string) => ch.toUpperCase());
@@ -27,7 +27,9 @@ export function camelToSnake(str: string): string {
   return str.replaceAll(/[A-Z]/g, (ch: string) => `_${ch.toLowerCase()}`);
 }
 
-export function transformPlainObject(data: Record<string, unknown>): Record<string, unknown> {
+export function transformPlainObject(
+  data: Record<string, unknown>,
+): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(data)) {
     out[snakeToCamel(key)] = value;
@@ -35,7 +37,10 @@ export function transformPlainObject(data: Record<string, unknown>): Record<stri
   return out;
 }
 
-export function plainObjectToToml(value: Record<string, unknown>, raw: unknown): Record<string, unknown> {
+export function plainObjectToToml(
+  value: Record<string, unknown>,
+  raw: unknown,
+): Record<string, unknown> {
   const out = cloneRecord(raw);
   for (const [key, entry] of Object.entries(value)) {
     setDefined(out, camelToSnake(key), entry);
@@ -55,7 +60,8 @@ export function transformTomlData(
   for (const [key, value] of Object.entries(data)) {
     const domain = snakeToCamel(key);
     const fromToml = registry.getSection(domain)?.fromToml;
-    result[domain] = fromToml === undefined ? defaultFromToml(value) : fromToml(value);
+    result[domain] =
+      fromToml === undefined ? defaultFromToml(value) : fromToml(value);
   }
   return result;
 }
@@ -79,7 +85,10 @@ export function applySectionToToml(
     const converted = toToml(value, rawSub);
     if (converted === undefined || converted === null) {
       delete rawSnake[snakeKey];
-    } else if (isPlainObject(converted) && Object.keys(converted).length === 0) {
+    } else if (
+      isPlainObject(converted) &&
+      Object.keys(converted).length === 0
+    ) {
       delete rawSnake[snakeKey];
     } else {
       rawSnake[snakeKey] = converted;
@@ -101,7 +110,7 @@ export function applySectionToToml(
 }
 
 export function describeTomlSyntaxError(error: unknown): string {
-  const firstLine = describeUnknownError(error).split('\n', 1)[0] ?? '';
+  const firstLine = describeUnknownError(error).split("\n", 1)[0] ?? "";
   if (error instanceof TomlError) {
     return `${firstLine} (line ${error.line}, column ${error.column})`;
   }
@@ -117,7 +126,11 @@ function cloneUnknown<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
 
-export function setDefined(target: Record<string, unknown>, key: string, value: unknown): void {
+export function setDefined(
+  target: Record<string, unknown>,
+  key: string,
+  value: unknown,
+): void {
   if (value !== undefined) {
     target[key] = value;
   } else {

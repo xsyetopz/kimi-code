@@ -1,4 +1,4 @@
 export default {
-  searching: 'Searching…',
-  noMatch: 'No matches',
+  searching: "Searching…",
+  noMatch: "No matches",
 } as const;

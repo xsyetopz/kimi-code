@@ -18,11 +18,11 @@
  * agent the interaction belongs to.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { defineModel } from '#/wire/model';
+import { defineModel } from "#/wire/model";
 
-import type { InteractionKind } from './interaction';
+import type { InteractionKind } from "./interaction";
 
 export interface InteractionRecord {
   readonly id: string;
@@ -37,49 +37,55 @@ export interface InteractionRecord {
 export type InteractionModelState = Map<string, InteractionRecord>;
 
 export const InteractionModel = defineModel<InteractionModelState>(
-  'interaction',
+  "interaction",
   () => new Map(),
 );
 
-declare module '#/wire/types' {
+declare module "#/wire/types" {
   interface PersistedOpMap {
-    'interaction.request': typeof interactionRequest;
-    'interaction.resolved': typeof interactionResolved;
+    "interaction.request": typeof interactionRequest;
+    "interaction.resolved": typeof interactionResolved;
   }
 }
 
-export const interactionRequest = InteractionModel.defineOp('interaction.request', {
-  schema: z.object({
-    id: z.string(),
-    kind: z.enum(['approval', 'question', 'user_tool']),
-    toolCallId: z.string().optional(),
-    agentId: z.string().optional(),
-    request: z.unknown(),
-  }),
-  apply: (s, p) => {
-    const next = new Map(s);
-    next.set(p.id, {
-      id: p.id,
-      kind: p.kind,
-      toolCallId: p.toolCallId,
-      agentId: p.agentId,
-      request: p.request,
-      resolved: false,
-    });
-    return next;
+export const interactionRequest = InteractionModel.defineOp(
+  "interaction.request",
+  {
+    schema: z.object({
+      id: z.string(),
+      kind: z.enum(["approval", "question", "user_tool"]),
+      toolCallId: z.string().optional(),
+      agentId: z.string().optional(),
+      request: z.unknown(),
+    }),
+    apply: (s, p) => {
+      const next = new Map(s);
+      next.set(p.id, {
+        id: p.id,
+        kind: p.kind,
+        toolCallId: p.toolCallId,
+        agentId: p.agentId,
+        request: p.request,
+        resolved: false,
+      });
+      return next;
+    },
   },
-});
+);
 
-export const interactionResolved = InteractionModel.defineOp('interaction.resolved', {
-  schema: z.object({
-    id: z.string(),
-    response: z.unknown(),
-  }),
-  apply: (s, p) => {
-    const existing = s.get(p.id);
-    if (existing === undefined) return s;
-    const next = new Map(s);
-    next.set(p.id, { ...existing, resolved: true, response: p.response });
-    return next;
+export const interactionResolved = InteractionModel.defineOp(
+  "interaction.resolved",
+  {
+    schema: z.object({
+      id: z.string(),
+      response: z.unknown(),
+    }),
+    apply: (s, p) => {
+      const existing = s.get(p.id);
+      if (existing === undefined) return s;
+      const next = new Map(s);
+      next.set(p.id, { ...existing, resolved: true, response: p.response });
+      return next;
+    },
   },
-});
+);

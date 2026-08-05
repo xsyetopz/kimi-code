@@ -12,12 +12,15 @@
  * rendering around related facts. Bound at Session scope.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
-import type { Event } from '#/_base/event';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
+import type { Event } from "#/_base/event";
 
-export type SessionPendingInteraction = 'none' | 'approval' | 'question';
+export type SessionPendingInteraction = "none" | "approval" | "question";
 
-export type SessionTurnOutcome = 'completed' | 'cancelled' | 'failed';
+export type SessionTurnOutcome = "completed" | "cancelled" | "failed";
 
 export interface SessionActivityState {
   readonly busy: boolean;
@@ -27,11 +30,11 @@ export interface SessionActivityState {
 }
 
 export type SessionActivityCause =
-  | 'turn_started'
-  | 'turn_ended'
-  | 'background'
-  | 'interaction'
-  | 'agent_lifecycle';
+  | "turn_started"
+  | "turn_ended"
+  | "background"
+  | "interaction"
+  | "agent_lifecycle";
 
 export interface SessionActivityChangedEvent {
   readonly state: SessionActivityState;
@@ -47,4 +50,4 @@ export interface ISessionActivityView {
 }
 
 export const ISessionActivityView: ServiceIdentifier<ISessionActivityView> =
-  createDecorator<ISessionActivityView>('sessionActivityView');
+  createDecorator<ISessionActivityView>("sessionActivityView");

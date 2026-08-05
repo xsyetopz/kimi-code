@@ -10,7 +10,11 @@ export function parseOsc11BackgroundTheme(data: string): ResolvedTheme | null {
   return themeFromHexChannels(r, g, b);
 }
 
-export function themeFromHexChannels(rHex: string, gHex: string, bHex: string): ResolvedTheme {
+export function themeFromHexChannels(
+  rHex: string,
+  gHex: string,
+  bHex: string,
+): ResolvedTheme {
   const r = normalizeChannel(rHex);
   const g = normalizeChannel(gHex);
   const b = normalizeChannel(bHex);

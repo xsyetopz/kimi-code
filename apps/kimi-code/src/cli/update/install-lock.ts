@@ -1,7 +1,7 @@
-import { mkdir, open, readFile, unlink } from 'node:fs/promises';
-import { dirname } from 'node:path';
+import { mkdir, open, readFile, unlink } from "node:fs/promises";
+import { dirname } from "node:path";
 
-import { getUpdateInstallLockFile } from '#/utils/paths';
+import { getUpdateInstallLockFile } from "#/utils/paths";
 
 const UPDATE_INSTALL_LOCK_STALE_MS = 30 * 60 * 1000;
 
@@ -17,23 +17,27 @@ export interface UpdateInstallLockHandle {
 
 function isNotFound(error: unknown): boolean {
   return (
-    typeof error === 'object' && error !== null && (error as { code?: string }).code === 'ENOENT'
+    typeof error === "object" &&
+    error !== null &&
+    (error as { code?: string }).code === "ENOENT"
   );
 }
 
 function isAlreadyExists(error: unknown): boolean {
   return (
-    typeof error === 'object' && error !== null && (error as { code?: string }).code === 'EEXIST'
+    typeof error === "object" &&
+    error !== null &&
+    (error as { code?: string }).code === "EEXIST"
   );
 }
 
 async function isStaleLock(filePath: string, now: Date): Promise<boolean> {
   try {
-    const raw = await readFile(filePath, 'utf-8');
+    const raw = await readFile(filePath, "utf-8");
     const parsed = JSON.parse(raw) as unknown;
-    if (typeof parsed !== 'object' || parsed === null) return true;
+    if (typeof parsed !== "object" || parsed === null) return true;
     const lock = parsed as { readonly startedAt?: unknown };
-    if (typeof lock.startedAt !== 'string') return true;
+    if (typeof lock.startedAt !== "string") return true;
     const startedAt = Date.parse(lock.startedAt);
     if (!Number.isFinite(startedAt)) return true;
     return now.getTime() - startedAt > UPDATE_INSTALL_LOCK_STALE_MS;
@@ -49,13 +53,20 @@ async function createLockFile(
   request: UpdateInstallLockRequest,
 ): Promise<UpdateInstallLockHandle> {
   const now = request.now ?? new Date();
-  const file = await open(filePath, 'wx', 0o600);
+  const file = await open(filePath, "wx", 0o600);
   try {
-    await file.writeFile(`${JSON.stringify({
-      version: request.version,
-      pid: process.pid,
-      startedAt: now.toISOString(),
-    }, null, 2)}\n`, 'utf-8');
+    await file.writeFile(
+      `${JSON.stringify(
+        {
+          version: request.version,
+          pid: process.pid,
+          startedAt: now.toISOString(),
+        },
+        null,
+        2,
+      )}\n`,
+      "utf-8",
+    );
   } finally {
     await file.close();
   }

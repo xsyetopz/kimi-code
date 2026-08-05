@@ -8,7 +8,7 @@
  * not depend on the protocol package directly.
  */
 
-import type { z } from 'zod';
+import type { z } from "zod";
 
 import type {
   ActivityLastTurnState,
@@ -20,10 +20,10 @@ import type {
   BackgroundRef,
   ToolCallRef,
   TurnPhase,
-} from '@moonshot-ai/agent-core-v2/agent/activityView/activityView';
-import type { AgentContextData } from '@moonshot-ai/agent-core-v2/agent/contextMemory/types';
-import type { TurnEndReason } from '@moonshot-ai/agent-core-v2/agent/loop/turnEvents';
-import type { PlanData } from '@moonshot-ai/agent-core-v2/agent/plan/plan';
+} from "@moonshot-ai/agent-core-v2/agent/activityView/activityView";
+import type { AgentContextData } from "@moonshot-ai/agent-core-v2/agent/contextMemory/types";
+import type { TurnEndReason } from "@moonshot-ai/agent-core-v2/agent/loop/turnEvents";
+import type { PlanData } from "@moonshot-ai/agent-core-v2/agent/plan/plan";
 import type {
   ActivateSkillPayload,
   AgentAPI,
@@ -38,26 +38,26 @@ import type {
   SetModelResult,
   ShellCommandResult,
   StopTaskPayload,
-} from '@moonshot-ai/agent-core-v2/agent/rpc/core-api';
-import type { UsageStatus } from '@moonshot-ai/agent-core-v2/agent/usage/usage';
-import type { SkillSummary } from '@moonshot-ai/agent-core-v2/app/skillCatalog/types';
-import type { McpServerEntry } from '@moonshot-ai/agent-core-v2/mcpCore/connection-manager';
-import type { FullCompactionInput } from '@moonshot-ai/agent-core-v2/agent/fullCompaction/fullCompaction';
-import type { ISessionScopeHandle } from '@moonshot-ai/agent-core-v2/_base/di/scope';
+} from "@moonshot-ai/agent-core-v2/agent/rpc/core-api";
+import type { UsageStatus } from "@moonshot-ai/agent-core-v2/agent/usage/usage";
+import type { SkillSummary } from "@moonshot-ai/agent-core-v2/app/skillCatalog/types";
+import type { McpServerEntry } from "@moonshot-ai/agent-core-v2/mcpCore/connection-manager";
+import type { FullCompactionInput } from "@moonshot-ai/agent-core-v2/agent/fullCompaction/fullCompaction";
+import type { ISessionScopeHandle } from "@moonshot-ai/agent-core-v2/_base/di/scope";
 import type {
   CreateChildSessionOptions,
   CreateSessionOptions,
   ForkSessionOptions,
   ResumeSessionOptions,
-} from '@moonshot-ai/agent-core-v2/workspace/sessionLifecycle/sessionLifecycle';
+} from "@moonshot-ai/agent-core-v2/workspace/sessionLifecycle/sessionLifecycle";
 import type {
   ApprovalRequest,
   ApprovalResponse,
-} from '@moonshot-ai/agent-core-v2/session/approval/approval';
+} from "@moonshot-ai/agent-core-v2/session/approval/approval";
 import type {
   Interaction,
   InteractionResolution,
-} from '@moonshot-ai/agent-core-v2/session/interaction/interaction';
+} from "@moonshot-ai/agent-core-v2/session/interaction/interaction";
 import type {
   QuestionAnswers,
   QuestionItem,
@@ -65,43 +65,43 @@ import type {
   QuestionRequest,
   QuestionResponse,
   QuestionResult,
-} from '@moonshot-ai/agent-core-v2/session/question/question';
+} from "@moonshot-ai/agent-core-v2/session/question/question";
 import type {
   AgentMeta,
   SessionMeta,
   SessionMetadataChangedEvent,
   SessionMetaPatch,
-} from '@moonshot-ai/agent-core-v2/session/sessionMetadata/sessionMetadata';
+} from "@moonshot-ai/agent-core-v2/session/sessionMetadata/sessionMetadata";
 import type {
   AuthStatus,
   IOAuthService,
-} from '@moonshot-ai/agent-core-v2/app/auth/auth';
-import type { IBootstrapService } from '@moonshot-ai/agent-core-v2/app/bootstrap/bootstrap';
+} from "@moonshot-ai/agent-core-v2/app/auth/auth";
+import type { IBootstrapService } from "@moonshot-ai/agent-core-v2/app/bootstrap/bootstrap";
 import type {
   ConfigDiagnostic,
   ConfigInspectValue,
   ConfigTarget,
-} from '@moonshot-ai/agent-core-v2/app/config/config';
+} from "@moonshot-ai/agent-core-v2/app/config/config";
 import type {
   CapabilityInstallProgress,
   CapabilityStatus,
   CapabilityStep,
-} from '@moonshot-ai/agent-core-v2/app/capability/types';
-import type { ExperimentalFeatureState } from '@moonshot-ai/agent-core-v2/app/flag/flag';
+} from "@moonshot-ai/agent-core-v2/app/capability/types";
+import type { ExperimentalFeatureState } from "@moonshot-ai/agent-core-v2/app/flag/flag";
 import type {
   FsBrowseResponse,
   FsHomeResponse,
-} from '@moonshot-ai/agent-core-v2/app/hostFolderBrowser/hostFolderBrowser';
-import type { ModelRecord } from '@moonshot-ai/agent-core-v2/kosong/model/model';
-import type { IModelCatalog } from '@moonshot-ai/agent-core-v2/kosong/model/catalog';
-import type { IProviderDiscoveryService } from '@moonshot-ai/agent-core-v2/app/kosongConfig/discovery';
+} from "@moonshot-ai/agent-core-v2/app/hostFolderBrowser/hostFolderBrowser";
+import type { ModelRecord } from "@moonshot-ai/agent-core-v2/kosong/model/model";
+import type { IModelCatalog } from "@moonshot-ai/agent-core-v2/kosong/model/catalog";
+import type { IProviderDiscoveryService } from "@moonshot-ai/agent-core-v2/app/kosongConfig/discovery";
 import type {
   GetPluginInfoInput,
   InstallPluginInput,
   RemovePluginInput,
   SetPluginEnabledInput,
   SetPluginMcpServerEnabledInput,
-} from '@moonshot-ai/agent-core-v2/app/plugin/plugin';
+} from "@moonshot-ai/agent-core-v2/app/plugin/plugin";
 import type {
   PluginCommandDef,
   PluginDiagnostic,
@@ -112,16 +112,16 @@ import type {
   PluginSummary,
   PluginUpdateStatus,
   ReloadSummary,
-} from '@moonshot-ai/agent-core-v2/app/plugin/types';
-import type { ProviderConfig } from '@moonshot-ai/agent-core-v2/kosong/provider/provider';
+} from "@moonshot-ai/agent-core-v2/app/plugin/types";
+import type { ProviderConfig } from "@moonshot-ai/agent-core-v2/kosong/provider/provider";
 import type {
   SessionListQuery,
   SessionSummary,
-} from '@moonshot-ai/agent-core-v2/app/sessionIndex/sessionIndex';
+} from "@moonshot-ai/agent-core-v2/app/sessionIndex/sessionIndex";
 import type {
   Workspace,
   WorkspaceUpdate,
-} from '@moonshot-ai/agent-core-v2/app/workspace/workspace';
+} from "@moonshot-ai/agent-core-v2/app/workspace/workspace";
 // Test-only: `@moonshot-ai/protocol` is a devDependency; importing its types
 // here (never in `src/`) strengthens parity for the agent event stream.
 import type {
@@ -141,7 +141,7 @@ import type {
   TurnEndedEvent,
   TurnStartedEvent,
   WarningEvent,
-} from '@moonshot-ai/protocol';
+} from "@moonshot-ai/protocol";
 
 import {
   activityLastTurnStateSchema,
@@ -154,7 +154,7 @@ import {
   toolCallRefSchema,
   turnEndReasonSchema,
   turnPhaseSchema,
-} from '../src/contract/agent/activity.js';
+} from "../src/contract/agent/activity.js";
 import {
   agentContextDataSchema,
   agentTaskInfoSchema,
@@ -178,7 +178,7 @@ import {
   stopTaskPayloadSchema,
   tokenUsageSchema,
   usageStatusSchema,
-} from '../src/contract/agent/rpc.js';
+} from "../src/contract/agent/rpc.js";
 import {
   assistantDeltaEventSchema,
   compactionBlockedEventSchema,
@@ -195,32 +195,32 @@ import {
   turnEndedEventSchema,
   turnStartedEventSchema,
   warningEventSchema,
-} from '../src/contract/agent/events.js';
+} from "../src/contract/agent/events.js";
 import {
   approvalRequestSchema,
   approvalResponseSchema,
-} from '../src/contract/session/approval.js';
+} from "../src/contract/session/approval.js";
 import {
   fullCompactionInputSchema,
   mcpServerEntrySchema,
-} from '../src/contract/agent/services.js';
+} from "../src/contract/agent/services.js";
 import {
   createChildSessionOptionsSchema,
   createSessionOptionsSchema,
   forkSessionOptionsSchema,
   handleWireSchema,
   resumeSessionOptionsSchema,
-} from '../src/contract/session/lifecycle.js';
+} from "../src/contract/session/lifecycle.js";
 import {
   interactionResolutionSchema,
   interactionSchema,
-} from '../src/contract/session/interaction.js';
+} from "../src/contract/session/interaction.js";
 import {
   agentMetaSchema,
   sessionMetaPatchSchema,
   sessionMetaSchema,
   sessionMetadataChangedEventSchema,
-} from '../src/contract/session/metadata.js';
+} from "../src/contract/session/metadata.js";
 import {
   questionAnswersSchema,
   questionItemSchema,
@@ -228,8 +228,8 @@ import {
   questionRequestSchema,
   questionResponseSchema,
   questionResultSchema,
-} from '../src/contract/session/question.js';
-import { skillSummarySchema } from '../src/contract/session/skills.js';
+} from "../src/contract/session/question.js";
+import { skillSummarySchema } from "../src/contract/session/skills.js";
 
 import {
   authStatusSchema,
@@ -238,32 +238,32 @@ import {
   oAuthLoginCancelResponseSchema,
   oAuthLogoutResponseSchema,
   refreshOAuthProviderModelsResponseSchema,
-} from '../src/contract/global/auth.js';
+} from "../src/contract/global/auth.js";
 import {
   configDiagnosticSchema,
   configInspectValueSchema,
   configTargetSchema,
-} from '../src/contract/global/config.js';
+} from "../src/contract/global/config.js";
 import {
   capabilityInstallProgressSchema,
   capabilityStatusSchema,
   capabilityStepSchema,
-} from '../src/contract/global/capabilities.js';
+} from "../src/contract/global/capabilities.js";
 import {
   modelCatalogItemSchema,
   providerCatalogItemSchema,
   setDefaultModelResponseSchema,
-} from '../src/contract/global/catalog.js';
+} from "../src/contract/global/catalog.js";
 import {
   refreshProviderModelsOptionsSchema,
   refreshProviderModelsResponseSchema,
-} from '../src/contract/global/providerDiscovery.js';
-import { experimentalFeatureStateSchema } from '../src/contract/global/flags.js';
+} from "../src/contract/global/providerDiscovery.js";
+import { experimentalFeatureStateSchema } from "../src/contract/global/flags.js";
 import {
   fsBrowseResponseSchema,
   fsHomeResponseSchema,
-} from '../src/contract/global/hostFs.js';
-import { modelConfigSchema } from '../src/contract/global/models.js';
+} from "../src/contract/global/hostFs.js";
+import { modelConfigSchema } from "../src/contract/global/models.js";
 import {
   getPluginInfoInputSchema,
   installPluginInputSchema,
@@ -279,83 +279,109 @@ import {
   removePluginInputSchema,
   setPluginEnabledInputSchema,
   setPluginMcpServerEnabledInputSchema,
-} from '../src/contract/global/plugins.js';
-import { providerConfigSchema } from '../src/contract/global/providers.js';
+} from "../src/contract/global/plugins.js";
+import { providerConfigSchema } from "../src/contract/global/providers.js";
 import {
   sessionListQuerySchema,
   sessionSummarySchema,
-} from '../src/contract/global/sessions.js';
+} from "../src/contract/global/sessions.js";
 import {
   workspaceSchema,
   workspaceUpdateSchema,
-} from '../src/contract/global/workspaces.js';
+} from "../src/contract/global/workspaces.js";
 
-import type { AssertWire, MutableDeep } from './helpers/typeAssert.js';
+import type { AssertWire, MutableDeep } from "./helpers/typeAssert.js";
 
 /** One-directional: the engine type must be assignable TO the schema's infer. */
-type AssertEngineToWire<TSchema extends z.ZodType, TEngine> = [MutableDeep<TEngine>] extends [
-  z.infer<TSchema>,
-]
+type AssertEngineToWire<TSchema extends z.ZodType, TEngine> = [
+  MutableDeep<TEngine>,
+] extends [z.infer<TSchema>]
   ? true
   : never;
 
 /** One-directional: the schema's infer must be assignable TO the engine type. */
-type AssertWireToEngine<TSchema extends z.ZodType, TEngine> = [z.infer<TSchema>] extends [
-  MutableDeep<TEngine>,
-]
+type AssertWireToEngine<TSchema extends z.ZodType, TEngine> = [
+  z.infer<TSchema>,
+] extends [MutableDeep<TEngine>]
   ? true
   : never;
 
 // Protocol wire shapes, derived from the engine interfaces (no direct
 // `@moonshot-ai/protocol` dependency in klient).
-type OAuthFlowStart = Awaited<ReturnType<IOAuthService['startLogin']>>;
-type OAuthFlowSnapshot = NonNullable<ReturnType<IOAuthService['getFlow']>>;
-type OAuthLoginCancelResponse = Awaited<ReturnType<IOAuthService['cancelLogin']>>;
-type OAuthLogoutResponse = Awaited<ReturnType<IOAuthService['logout']>>;
+type OAuthFlowStart = Awaited<ReturnType<IOAuthService["startLogin"]>>;
+type OAuthFlowSnapshot = NonNullable<ReturnType<IOAuthService["getFlow"]>>;
+type OAuthLoginCancelResponse = Awaited<
+  ReturnType<IOAuthService["cancelLogin"]>
+>;
+type OAuthLogoutResponse = Awaited<ReturnType<IOAuthService["logout"]>>;
 type RefreshOAuthProviderModelsResponse = Awaited<
-  ReturnType<IOAuthService['refreshOAuthProviderModels']>
+  ReturnType<IOAuthService["refreshOAuthProviderModels"]>
 >;
 /** String-enum value union (`'user' | 'memory'`). */
 type ConfigTargetValues = `${ConfigTarget}`;
 
 // sessions.ts
-const _sessionSummary: AssertWire<typeof sessionSummarySchema, SessionSummary> = true;
-const _sessionListQuery: AssertWire<typeof sessionListQuerySchema, SessionListQuery> = true;
+const _sessionSummary: AssertWire<typeof sessionSummarySchema, SessionSummary> =
+  true;
+const _sessionListQuery: AssertWire<
+  typeof sessionListQuerySchema,
+  SessionListQuery
+> = true;
 
 // workspaces.ts
 const _workspace: AssertWire<typeof workspaceSchema, Workspace> = true;
-const _workspaceUpdate: AssertWire<typeof workspaceUpdateSchema, WorkspaceUpdate> = true;
+const _workspaceUpdate: AssertWire<
+  typeof workspaceUpdateSchema,
+  WorkspaceUpdate
+> = true;
 
 // config.ts
 // One-directional: the engine declares the `ConfigInspectValue` keys as
 // required with `| undefined` values, while the wire schema marks them
 // `.optional()`; optional → required is not assignable, so only the
 // engine → wire direction holds.
-const _configInspectValue: AssertEngineToWire<typeof configInspectValueSchema, ConfigInspectValue> =
+const _configInspectValue: AssertEngineToWire<
+  typeof configInspectValueSchema,
+  ConfigInspectValue
+> = true;
+const _configDiagnostic: AssertWire<
+  typeof configDiagnosticSchema,
+  ConfigDiagnostic
+> = true;
+const _configTarget: AssertWire<typeof configTargetSchema, ConfigTargetValues> =
   true;
-const _configDiagnostic: AssertWire<typeof configDiagnosticSchema, ConfigDiagnostic> = true;
-const _configTarget: AssertWire<typeof configTargetSchema, ConfigTargetValues> = true;
 
 // capabilities.ts
-const _capabilityStep: AssertWire<typeof capabilityStepSchema, CapabilityStep> = true;
+const _capabilityStep: AssertWire<typeof capabilityStepSchema, CapabilityStep> =
+  true;
 const _capabilityInstallProgress: AssertWire<
   typeof capabilityInstallProgressSchema,
   CapabilityInstallProgress
 > = true;
-const _capabilityStatus: AssertWire<typeof capabilityStatusSchema, CapabilityStatus> = true;
+const _capabilityStatus: AssertWire<
+  typeof capabilityStatusSchema,
+  CapabilityStatus
+> = true;
 
 // providers.ts
-const _providerConfig: AssertWire<typeof providerConfigSchema, ProviderConfig> = true;
+const _providerConfig: AssertWire<typeof providerConfigSchema, ProviderConfig> =
+  true;
 
 // auth.ts
-const _oAuthFlowStart: AssertWire<typeof oAuthFlowStartSchema, OAuthFlowStart> = true;
-const _oAuthFlowSnapshot: AssertWire<typeof oAuthFlowSnapshotSchema, OAuthFlowSnapshot> = true;
+const _oAuthFlowStart: AssertWire<typeof oAuthFlowStartSchema, OAuthFlowStart> =
+  true;
+const _oAuthFlowSnapshot: AssertWire<
+  typeof oAuthFlowSnapshotSchema,
+  OAuthFlowSnapshot
+> = true;
 const _oAuthLoginCancelResponse: AssertWire<
   typeof oAuthLoginCancelResponseSchema,
   OAuthLoginCancelResponse
 > = true;
-const _oAuthLogoutResponse: AssertWire<typeof oAuthLogoutResponseSchema, OAuthLogoutResponse> =
-  true;
+const _oAuthLogoutResponse: AssertWire<
+  typeof oAuthLogoutResponseSchema,
+  OAuthLogoutResponse
+> = true;
 const _authStatus: AssertWire<typeof authStatusSchema, AuthStatus> = true;
 const _refreshOAuthProviderModelsResponse: AssertWire<
   typeof refreshOAuthProviderModelsResponseSchema,
@@ -369,23 +395,38 @@ const _experimentalFeatureState: AssertWire<
 > = true;
 
 // hostFs.ts
-const _fsBrowseResponse: AssertWire<typeof fsBrowseResponseSchema, FsBrowseResponse> = true;
-const _fsHomeResponse: AssertWire<typeof fsHomeResponseSchema, FsHomeResponse> = true;
+const _fsBrowseResponse: AssertWire<
+  typeof fsBrowseResponseSchema,
+  FsBrowseResponse
+> = true;
+const _fsHomeResponse: AssertWire<typeof fsHomeResponseSchema, FsHomeResponse> =
+  true;
 
 // catalog.ts / providerDiscovery.ts — protocol wire shapes derived through the
 // catalog and discovery service interfaces.
-type ModelCatalogItem = Awaited<ReturnType<IModelCatalog['listModels']>>[number];
-type ProviderCatalogItem = Awaited<ReturnType<IModelCatalog['listProviders']>>[number];
-type SetDefaultModelResponse = Awaited<ReturnType<IModelCatalog['setDefaultModel']>>;
+type ModelCatalogItem = Awaited<
+  ReturnType<IModelCatalog["listModels"]>
+>[number];
+type ProviderCatalogItem = Awaited<
+  ReturnType<IModelCatalog["listProviders"]>
+>[number];
+type SetDefaultModelResponse = Awaited<
+  ReturnType<IModelCatalog["setDefaultModel"]>
+>;
 type RefreshProviderModelsOptions = NonNullable<
-  Parameters<IProviderDiscoveryService['refreshProviderModels']>[0]
+  Parameters<IProviderDiscoveryService["refreshProviderModels"]>[0]
 >;
 type RefreshProviderModelsResponse = Awaited<
-  ReturnType<IProviderDiscoveryService['refreshProviderModels']>
+  ReturnType<IProviderDiscoveryService["refreshProviderModels"]>
 >;
-const _modelCatalogItem: AssertWire<typeof modelCatalogItemSchema, ModelCatalogItem> = true;
-const _providerCatalogItem: AssertWire<typeof providerCatalogItemSchema, ProviderCatalogItem> =
-  true;
+const _modelCatalogItem: AssertWire<
+  typeof modelCatalogItemSchema,
+  ModelCatalogItem
+> = true;
+const _providerCatalogItem: AssertWire<
+  typeof providerCatalogItemSchema,
+  ProviderCatalogItem
+> = true;
 const _setDefaultModelResponse: AssertWire<
   typeof setDefaultModelResponseSchema,
   SetDefaultModelResponse
@@ -403,18 +444,37 @@ const _refreshProviderModelsResponse: AssertWire<
 const _modelConfig: AssertWire<typeof modelConfigSchema, ModelRecord> = true;
 
 // plugins.ts
-const _pluginSummary: AssertWire<typeof pluginSummarySchema, PluginSummary> = true;
+const _pluginSummary: AssertWire<typeof pluginSummarySchema, PluginSummary> =
+  true;
 const _pluginInfo: AssertWire<typeof pluginInfoSchema, PluginInfo> = true;
-const _pluginManifest: AssertWire<typeof pluginManifestSchema, PluginManifest> = true;
-const _pluginMcpServerInfo: AssertWire<typeof pluginMcpServerInfoSchema, PluginMcpServerInfo> =
+const _pluginManifest: AssertWire<typeof pluginManifestSchema, PluginManifest> =
   true;
-const _pluginDiagnostic: AssertWire<typeof pluginDiagnosticSchema, PluginDiagnostic> = true;
-const _pluginGithubMetadata: AssertWire<typeof pluginGithubMetadataSchema, PluginGithubMetadata> =
+const _pluginMcpServerInfo: AssertWire<
+  typeof pluginMcpServerInfoSchema,
+  PluginMcpServerInfo
+> = true;
+const _pluginDiagnostic: AssertWire<
+  typeof pluginDiagnosticSchema,
+  PluginDiagnostic
+> = true;
+const _pluginGithubMetadata: AssertWire<
+  typeof pluginGithubMetadataSchema,
+  PluginGithubMetadata
+> = true;
+const _reloadSummary: AssertWire<typeof reloadSummarySchema, ReloadSummary> =
   true;
-const _reloadSummary: AssertWire<typeof reloadSummarySchema, ReloadSummary> = true;
-const _pluginUpdateStatus: AssertWire<typeof pluginUpdateStatusSchema, PluginUpdateStatus> = true;
-const _pluginCommandDef: AssertWire<typeof pluginCommandDefSchema, PluginCommandDef> = true;
-const _installPluginInput: AssertWire<typeof installPluginInputSchema, InstallPluginInput> = true;
+const _pluginUpdateStatus: AssertWire<
+  typeof pluginUpdateStatusSchema,
+  PluginUpdateStatus
+> = true;
+const _pluginCommandDef: AssertWire<
+  typeof pluginCommandDefSchema,
+  PluginCommandDef
+> = true;
+const _installPluginInput: AssertWire<
+  typeof installPluginInputSchema,
+  InstallPluginInput
+> = true;
 const _setPluginEnabledInput: AssertWire<
   typeof setPluginEnabledInputSchema,
   SetPluginEnabledInput
@@ -423,8 +483,14 @@ const _setPluginMcpServerEnabledInput: AssertWire<
   typeof setPluginMcpServerEnabledInputSchema,
   SetPluginMcpServerEnabledInput
 > = true;
-const _removePluginInput: AssertWire<typeof removePluginInputSchema, RemovePluginInput> = true;
-const _getPluginInfoInput: AssertWire<typeof getPluginInfoInputSchema, GetPluginInfoInput> = true;
+const _removePluginInput: AssertWire<
+  typeof removePluginInputSchema,
+  RemovePluginInput
+> = true;
+const _getPluginInfoInput: AssertWire<
+  typeof getPluginInfoInputSchema,
+  GetPluginInfoInput
+> = true;
 
 // env.ts has no named schemas; `platform` narrows to `NodeJS.Platform` in the
 // engine — assert the bootstrap properties are all strings instead. The
@@ -432,17 +498,17 @@ const _getPluginInfoInput: AssertWire<typeof getPluginInfoInputSchema, GetPlugin
 type _bootstrapStringProps = AssertStringProps<
   Pick<
     IBootstrapService,
-    | 'platform'
-    | 'arch'
-    | 'cwd'
-    | 'osHomeDir'
-    | 'homeDir'
-    | 'configPath'
-    | 'sessionsDir'
-    | 'blobsDir'
-    | 'storeDir'
-    | 'cacheDir'
-    | 'logsDir'
+    | "platform"
+    | "arch"
+    | "cwd"
+    | "osHomeDir"
+    | "homeDir"
+    | "configPath"
+    | "sessionsDir"
+    | "blobsDir"
+    | "storeDir"
+    | "cacheDir"
+    | "logsDir"
   >
 >;
 type AssertStringProps<T> = T extends Record<string, string> ? true : never;
@@ -453,18 +519,28 @@ const _envProps: _bootstrapStringProps = true;
 // session/metadata.ts
 const _sessionMeta: AssertWire<typeof sessionMetaSchema, SessionMeta> = true;
 const _agentMeta: AssertWire<typeof agentMetaSchema, AgentMeta> = true;
-const _sessionMetaPatch: AssertWire<typeof sessionMetaPatchSchema, SessionMetaPatch> = true;
+const _sessionMetaPatch: AssertWire<
+  typeof sessionMetaPatchSchema,
+  SessionMetaPatch
+> = true;
 const _sessionMetadataChangedEvent: AssertWire<
   typeof sessionMetadataChangedEventSchema,
   SessionMetadataChangedEvent
 > = true;
 
 // session/lifecycle.ts
-const _createSessionOptions: AssertWire<typeof createSessionOptionsSchema, CreateSessionOptions> =
-  true;
-const _forkSessionOptions: AssertWire<typeof forkSessionOptionsSchema, ForkSessionOptions> = true;
-const _resumeSessionOptions: AssertWire<typeof resumeSessionOptionsSchema, ResumeSessionOptions> =
-  true;
+const _createSessionOptions: AssertWire<
+  typeof createSessionOptionsSchema,
+  CreateSessionOptions
+> = true;
+const _forkSessionOptions: AssertWire<
+  typeof forkSessionOptionsSchema,
+  ForkSessionOptions
+> = true;
+const _resumeSessionOptions: AssertWire<
+  typeof resumeSessionOptionsSchema,
+  ResumeSessionOptions
+> = true;
 const _createChildSessionOptions: AssertWire<
   typeof createChildSessionOptionsSchema,
   CreateChildSessionOptions
@@ -472,7 +548,10 @@ const _createChildSessionOptions: AssertWire<
 // One-directional: the wire handle is `z.looseObject` — the in-process
 // `ISessionScopeHandle` carries an `accessor` and `dispose()` that JSON
 // drops, so only the engine → wire direction holds.
-const _handleWire: AssertEngineToWire<typeof handleWireSchema, ISessionScopeHandle> = true;
+const _handleWire: AssertEngineToWire<
+  typeof handleWireSchema,
+  ISessionScopeHandle
+> = true;
 
 // session/interaction.ts
 const _interaction: AssertWire<typeof interactionSchema, Interaction> = true;
@@ -485,16 +564,33 @@ const _interactionResolution: AssertWire<
 // One-directional: `display` is the protocol `ToolInputDisplay` union (huge)
 // and crosses the wire as `unknown`; the wire schema cannot be assignable
 // back to the engine type.
-const _approvalRequest: AssertEngineToWire<typeof approvalRequestSchema, ApprovalRequest> = true;
-const _approvalResponse: AssertWire<typeof approvalResponseSchema, ApprovalResponse> = true;
+const _approvalRequest: AssertEngineToWire<
+  typeof approvalRequestSchema,
+  ApprovalRequest
+> = true;
+const _approvalResponse: AssertWire<
+  typeof approvalResponseSchema,
+  ApprovalResponse
+> = true;
 
 // session/question.ts
-const _questionRequest: AssertWire<typeof questionRequestSchema, QuestionRequest> = true;
+const _questionRequest: AssertWire<
+  typeof questionRequestSchema,
+  QuestionRequest
+> = true;
 const _questionItem: AssertWire<typeof questionItemSchema, QuestionItem> = true;
-const _questionOption: AssertWire<typeof questionOptionSchema, QuestionOption> = true;
-const _questionAnswers: AssertWire<typeof questionAnswersSchema, QuestionAnswers> = true;
-const _questionResponse: AssertWire<typeof questionResponseSchema, QuestionResponse> = true;
-const _questionResult: AssertWire<typeof questionResultSchema, QuestionResult> = true;
+const _questionOption: AssertWire<typeof questionOptionSchema, QuestionOption> =
+  true;
+const _questionAnswers: AssertWire<
+  typeof questionAnswersSchema,
+  QuestionAnswers
+> = true;
+const _questionResponse: AssertWire<
+  typeof questionResponseSchema,
+  QuestionResponse
+> = true;
+const _questionResult: AssertWire<typeof questionResultSchema, QuestionResult> =
+  true;
 
 // session/skills.ts
 const _skillSummary: AssertWire<typeof skillSummarySchema, SkillSummary> = true;
@@ -503,21 +599,32 @@ const _skillSummary: AssertWire<typeof skillSummarySchema, SkillSummary> = true;
 const _turnPhase: AssertWire<typeof turnPhaseSchema, TurnPhase> = true;
 const _approvalRef: AssertWire<typeof approvalRefSchema, ApprovalRef> = true;
 const _toolCallRef: AssertWire<typeof toolCallRefSchema, ToolCallRef> = true;
-const _activityRetryState: AssertWire<typeof activityRetryStateSchema, ActivityRetryState> = true;
+const _activityRetryState: AssertWire<
+  typeof activityRetryStateSchema,
+  ActivityRetryState
+> = true;
 // One-directional: `origin` is the deep `PromptOrigin` union mirrored as
 // `unknown`; the wire schema cannot be assignable back to the engine type.
-const _activityTurnState: AssertEngineToWire<typeof activityTurnStateSchema, ActivityTurnState> =
+const _activityTurnState: AssertEngineToWire<
+  typeof activityTurnStateSchema,
+  ActivityTurnState
+> = true;
+const _turnEndReason: AssertWire<typeof turnEndReasonSchema, TurnEndReason> =
   true;
-const _turnEndReason: AssertWire<typeof turnEndReasonSchema, TurnEndReason> = true;
 const _activityLastTurnState: AssertWire<
   typeof activityLastTurnStateSchema,
   ActivityLastTurnState
 > = true;
-const _backgroundRef: AssertWire<typeof backgroundRefSchema, BackgroundRef> = true;
-const _activityViewLifecycle: AssertWire<typeof activityViewLifecycleSchema, ActivityViewLifecycle> =
+const _backgroundRef: AssertWire<typeof backgroundRefSchema, BackgroundRef> =
   true;
-const _agentActivityState: AssertEngineToWire<typeof agentActivityStateSchema, AgentActivityState> =
-  true;
+const _activityViewLifecycle: AssertWire<
+  typeof activityViewLifecycleSchema,
+  ActivityViewLifecycle
+> = true;
+const _agentActivityState: AssertEngineToWire<
+  typeof agentActivityStateSchema,
+  AgentActivityState
+> = true;
 
 // ── agent scope (rpc.ts) ────────────────────────────────────────────────────
 // Payload/result types for the remaining `AgentAPI` methods are reached
@@ -525,77 +632,140 @@ const _agentActivityState: AssertEngineToWire<typeof agentActivityStateSchema, A
 // contract mirrors; payloads of the domain services the facade calls
 // directly (shellCommand / profile / usage / plan / task) are imported from
 // `core-api.ts` (they no longer have `AgentAPI` entries).
-type PromptPayload = Parameters<AgentAPI['prompt']>[0];
-type PromptLaunchResult = NonNullable<ReturnType<AgentAPI['prompt']>>;
-type SteerPayload = Parameters<AgentAPI['steer']>[0];
-type CancelPayload = Parameters<AgentAPI['cancel']>[0];
-type SetPermissionPayload = Parameters<AgentAPI['setPermission']>[0];
-type TokenUsage = NonNullable<UsageStatus['total']>;
+type PromptPayload = Parameters<AgentAPI["prompt"]>[0];
+type PromptLaunchResult = NonNullable<ReturnType<AgentAPI["prompt"]>>;
+type SteerPayload = Parameters<AgentAPI["steer"]>[0];
+type CancelPayload = Parameters<AgentAPI["cancel"]>[0];
+type SetPermissionPayload = Parameters<AgentAPI["setPermission"]>[0];
+type TokenUsage = NonNullable<UsageStatus["total"]>;
 
 const _emptyPayload: AssertWire<typeof emptyPayloadSchema, EmptyPayload> = true;
 const _promptPart: AssertWire<typeof promptPartSchema, PromptPart> = true;
 // One-directional (wire → engine): the engine's `PromptPayload.input` accepts
 // the full `ContentPart` union (also think/audio parts); the wire mirrors the
 // `PromptPart` subset clients may send, so the reverse direction fails.
-const _promptPayload: AssertWireToEngine<typeof promptPayloadSchema, PromptPayload> = true;
-const _steerPayload: AssertWireToEngine<typeof steerPayloadSchema, SteerPayload> = true;
-const _activateSkillPayload: AssertWire<typeof activateSkillPayloadSchema, ActivateSkillPayload> =
+const _promptPayload: AssertWireToEngine<
+  typeof promptPayloadSchema,
+  PromptPayload
+> = true;
+const _steerPayload: AssertWireToEngine<
+  typeof steerPayloadSchema,
+  SteerPayload
+> = true;
+const _activateSkillPayload: AssertWire<
+  typeof activateSkillPayloadSchema,
+  ActivateSkillPayload
+> = true;
+const _promptLaunchResult: AssertWire<
+  typeof promptLaunchResultSchema,
+  PromptLaunchResult
+> = true;
+const _cancelPayload: AssertWire<typeof cancelPayloadSchema, CancelPayload> =
   true;
-const _promptLaunchResult: AssertWire<typeof promptLaunchResultSchema, PromptLaunchResult> = true;
-const _cancelPayload: AssertWire<typeof cancelPayloadSchema, CancelPayload> = true;
 const _runShellCommandPayload: AssertWire<
   typeof runShellCommandPayloadSchema,
   RunShellCommandPayload
 > = true;
-const _shellCommandResult: AssertWire<typeof shellCommandResultSchema, ShellCommandResult> = true;
+const _shellCommandResult: AssertWire<
+  typeof shellCommandResultSchema,
+  ShellCommandResult
+> = true;
 const _cancelShellCommandPayload: AssertWire<
   typeof cancelShellCommandPayloadSchema,
   CancelShellCommandPayload
 > = true;
-const _setModelPayload: AssertWire<typeof setModelPayloadSchema, SetModelPayload> = true;
-const _setModelResult: AssertWire<typeof setModelResultSchema, SetModelResult> = true;
-const _setPermissionPayload: AssertWire<typeof setPermissionPayloadSchema, SetPermissionPayload> =
+const _setModelPayload: AssertWire<
+  typeof setModelPayloadSchema,
+  SetModelPayload
+> = true;
+const _setModelResult: AssertWire<typeof setModelResultSchema, SetModelResult> =
   true;
+const _setPermissionPayload: AssertWire<
+  typeof setPermissionPayloadSchema,
+  SetPermissionPayload
+> = true;
 const _tokenUsage: AssertWire<typeof tokenUsageSchema, TokenUsage> = true;
 const _usageStatus: AssertWire<typeof usageStatusSchema, UsageStatus> = true;
 // One-directional: `history` entries are full `ContextMessage`s (deep
 // `Message`/`Tool`/`PromptOrigin` unions) mirrored as `unknown`.
-const _agentContextData: AssertEngineToWire<typeof agentContextDataSchema, AgentContextData> = true;
+const _agentContextData: AssertEngineToWire<
+  typeof agentContextDataSchema,
+  AgentContextData
+> = true;
 const _planData: AssertWire<typeof planDataSchema, PlanData> = true;
-const _cancelPlanPayload: AssertWire<typeof cancelPlanPayloadSchema, CancelPlanPayload> = true;
-const _getTasksPayload: AssertWire<typeof getTasksPayloadSchema, GetTasksPayload> = true;
+const _cancelPlanPayload: AssertWire<
+  typeof cancelPlanPayloadSchema,
+  CancelPlanPayload
+> = true;
+const _getTasksPayload: AssertWire<
+  typeof getTasksPayloadSchema,
+  GetTasksPayload
+> = true;
 // The wire task union mirrors the protocol `TaskInfo`; the engine's
 // declaration-merged `AgentTaskInfo` is structurally identical but depends on
 // tool-module augmentation, so parity is pinned to the protocol type.
 const _agentTaskInfo: AssertWire<typeof agentTaskInfoSchema, TaskInfo> = true;
-const _stopTaskPayload: AssertWire<typeof stopTaskPayloadSchema, StopTaskPayload> = true;
-const _getTaskOutputPayload: AssertWire<typeof getTaskOutputPayloadSchema, GetTaskOutputPayload> =
-  true;
+const _stopTaskPayload: AssertWire<
+  typeof stopTaskPayloadSchema,
+  StopTaskPayload
+> = true;
+const _getTaskOutputPayload: AssertWire<
+  typeof getTaskOutputPayloadSchema,
+  GetTaskOutputPayload
+> = true;
 
 // agent/services.ts (mcp / fullCompaction)
-const _mcpServerEntry: AssertWire<typeof mcpServerEntrySchema, McpServerEntry> = true;
-const _fullCompactionInput: AssertWire<typeof fullCompactionInputSchema, FullCompactionInput> =
+const _mcpServerEntry: AssertWire<typeof mcpServerEntrySchema, McpServerEntry> =
   true;
+const _fullCompactionInput: AssertWire<
+  typeof fullCompactionInputSchema,
+  FullCompactionInput
+> = true;
 
 // ── agent scope (events.ts) ─────────────────────────────────────────────────
 // Parity against the protocol event types (the stream carries flat
 // `{ type, ... }` events; schemas keep the `type` literal). One-directional
 // where a field is mirrored as `unknown`.
-const _turnStartedEvent: AssertEngineToWire<typeof turnStartedEventSchema, TurnStartedEvent> = true;
-const _turnEndedEvent: AssertEngineToWire<typeof turnEndedEventSchema, TurnEndedEvent> = true;
-const _assistantDeltaEvent: AssertWire<typeof assistantDeltaEventSchema, AssistantDeltaEvent> =
-  true;
-const _thinkingDeltaEvent: AssertWire<typeof thinkingDeltaEventSchema, ThinkingDeltaEvent> = true;
+const _turnStartedEvent: AssertEngineToWire<
+  typeof turnStartedEventSchema,
+  TurnStartedEvent
+> = true;
+const _turnEndedEvent: AssertEngineToWire<
+  typeof turnEndedEventSchema,
+  TurnEndedEvent
+> = true;
+const _assistantDeltaEvent: AssertWire<
+  typeof assistantDeltaEventSchema,
+  AssistantDeltaEvent
+> = true;
+const _thinkingDeltaEvent: AssertWire<
+  typeof thinkingDeltaEventSchema,
+  ThinkingDeltaEvent
+> = true;
 const _toolCallStartedEvent: AssertEngineToWire<
   typeof toolCallStartedEventSchema,
   ToolCallStartedEvent
 > = true;
-const _toolCallDeltaEvent: AssertWire<typeof toolCallDeltaEventSchema, ToolCallDeltaEvent> = true;
-const _toolProgressEvent: AssertWire<typeof toolProgressEventSchema, ToolProgressEvent> = true;
-const _toolResultEvent: AssertWire<typeof toolResultEventSchema, ToolResultEvent> = true;
-const _promptCompletedEvent: AssertWire<typeof promptCompletedEventSchema, PromptCompletedEvent> =
-  true;
-const _promptAbortedEvent: AssertWire<typeof promptAbortedEventSchema, PromptAbortedEvent> = true;
+const _toolCallDeltaEvent: AssertWire<
+  typeof toolCallDeltaEventSchema,
+  ToolCallDeltaEvent
+> = true;
+const _toolProgressEvent: AssertWire<
+  typeof toolProgressEventSchema,
+  ToolProgressEvent
+> = true;
+const _toolResultEvent: AssertWire<
+  typeof toolResultEventSchema,
+  ToolResultEvent
+> = true;
+const _promptCompletedEvent: AssertWire<
+  typeof promptCompletedEventSchema,
+  PromptCompletedEvent
+> = true;
+const _promptAbortedEvent: AssertWire<
+  typeof promptAbortedEventSchema,
+  PromptAbortedEvent
+> = true;
 const _compactionStartedEvent: AssertWire<
   typeof compactionStartedEventSchema,
   CompactionStartedEvent

@@ -11,23 +11,27 @@
  * and awaits the user's answer.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import type { Agent } from '../../../agent';
-import { QuestionBackgroundTask } from '../../../agent/background';
-import type { BuiltinTool } from '../../../agent/tool';
-import { ErrorCodes, KimiError } from '../../../errors';
-import { errorMessage, isAbortError } from '../../../loop/errors';
-import type { ExecutableToolContext, ExecutableToolResult, ToolExecution } from '../../../loop/types';
+import type { Agent } from "../../../agent";
+import { QuestionBackgroundTask } from "../../../agent/background";
+import type { BuiltinTool } from "../../../agent/tool";
+import { ErrorCodes, KimiError } from "../../../errors";
+import { errorMessage, isAbortError } from "../../../loop/errors";
+import type {
+  ExecutableToolContext,
+  ExecutableToolResult,
+  ToolExecution,
+} from "../../../loop/types";
 import type {
   QuestionAnswers,
   QuestionAnswerMethod,
   QuestionResponse,
   QuestionResult,
-} from '../../../rpc';
-import type { TelemetryPropertyValue } from '../../../telemetry';
-import { toInputJsonSchema } from '../../support/input-schema';
-import DESCRIPTION from './ask-user.md?raw';
+} from "../../../rpc";
+import type { TelemetryPropertyValue } from "../../../telemetry";
+import { toInputJsonSchema } from "../../support/input-schema";
+import DESCRIPTION from "./ask-user.md?raw";
 
 // ── Input schema ─────────────────────────────────────────────────────
 
@@ -35,15 +39,23 @@ const QuestionOptionSchema = z.object({
   label: z
     .string()
     .min(1)
-    .describe("Concise display text (1-5 words). If recommended, append '(Recommended)'."),
-  description: z.string().default('').describe('Brief explanation of trade-offs or implications.'),
+    .describe(
+      "Concise display text (1-5 words). If recommended, append '(Recommended)'.",
+    ),
+  description: z
+    .string()
+    .default("")
+    .describe("Brief explanation of trade-offs or implications."),
 });
 
 const QuestionItemSchema = z.object({
-  question: z.string().min(1).describe("A specific, actionable question. End with '?'."),
+  question: z
+    .string()
+    .min(1)
+    .describe("A specific, actionable question. End with '?'."),
   header: z
     .string()
-    .default('')
+    .default("")
     .describe("Short category tag (max 12 chars, e.g. 'Auth', 'Style')."),
   options: z
     .array(QuestionOptionSchema)
@@ -55,7 +67,7 @@ const QuestionItemSchema = z.object({
   multi_select: z
     .boolean()
     .default(false)
-    .describe('Whether the user can select multiple options.'),
+    .describe("Whether the user can select multiple options."),
 });
 
 export interface AskUserQuestionInput {
@@ -69,7 +81,7 @@ export interface AskUserQuestionInput {
 }
 
 const QUESTION_UNIQUENESS_MESSAGE =
-  'Question texts must be unique across questions, and option labels must be unique within each question.';
+  "Question texts must be unique across questions, and option labels must be unique within each question.";
 
 /**
  * Answers are keyed by question text with option labels as values, so both
@@ -79,7 +91,7 @@ const QUESTION_UNIQUENESS_MESSAGE =
  * execution path re-runs this check itself.
  */
 function questionUniquenessError(
-  questions: AskUserQuestionInput['questions'],
+  questions: AskUserQuestionInput["questions"],
 ): string | null {
   const texts = new Set<string>();
   for (const q of questions) {
@@ -103,19 +115,20 @@ const AskUserQuestionInputBaseSchema = z.object({
     .array(QuestionItemSchema)
     .min(1)
     .max(4)
-    .describe('The questions to ask the user (1-4 questions).'),
+    .describe("The questions to ask the user (1-4 questions)."),
 });
 
-const AskUserQuestionInputSchemaWithBackground = AskUserQuestionInputBaseSchema.extend({
-  background: z
-    .boolean()
-    .default(false)
-    .describe(
-      'Set true to ask in the background and return immediately with a background task_id; you are notified automatically when the user answers — do not poll with TaskOutput while the question is pending.',
-    ),
-}).refine((data) => questionUniquenessError(data.questions) === null, {
-  message: QUESTION_UNIQUENESS_MESSAGE,
-});
+const AskUserQuestionInputSchemaWithBackground =
+  AskUserQuestionInputBaseSchema.extend({
+    background: z
+      .boolean()
+      .default(false)
+      .describe(
+        "Set true to ask in the background and return immediately with a background task_id; you are notified automatically when the user answers — do not poll with TaskOutput while the question is pending.",
+      ),
+  }).refine((data) => questionUniquenessError(data.questions) === null, {
+    message: QUESTION_UNIQUENESS_MESSAGE,
+  });
 
 export const AskUserQuestionInputSchema: z.ZodType<AskUserQuestionInput> =
   AskUserQuestionInputBaseSchema.refine(
@@ -123,15 +136,16 @@ export const AskUserQuestionInputSchema: z.ZodType<AskUserQuestionInput> =
     { message: QUESTION_UNIQUENESS_MESSAGE },
   );
 
-const QUESTION_DISMISSED_MESSAGE = 'User dismissed the question without answering.';
+const QUESTION_DISMISSED_MESSAGE =
+  "User dismissed the question without answering.";
 
 const QUESTION_UNSUPPORTED_FAILURE_MESSAGE =
-  'The connected client does not support interactive questions. Do NOT call this tool again. Ask the user directly in your text response instead.';
+  "The connected client does not support interactive questions. Do NOT call this tool again. Ask the user directly in your text response instead.";
 
 // ── Implementation ───────────────────────────────────────────────────
 
 export class AskUserQuestionTool implements BuiltinTool<AskUserQuestionInput> {
-  readonly name = 'AskUserQuestion' as const;
+  readonly name = "AskUserQuestion" as const;
   readonly description: string;
   readonly parameters: Record<string, unknown>;
 
@@ -145,7 +159,7 @@ export class AskUserQuestionTool implements BuiltinTool<AskUserQuestionInput> {
     return {
       description: isBackground
         ? `Starting background question: ${questionDescription(args.questions)}`
-        : 'Asking user questions',
+        : "Asking user questions",
       approvalRule: this.name,
       execute: (ctx) => this.execution(args, ctx),
     };
@@ -153,12 +167,7 @@ export class AskUserQuestionTool implements BuiltinTool<AskUserQuestionInput> {
 
   private async execution(
     args: AskUserQuestionInput,
-    {
-      toolCallId,
-      signal,
-      traceId,
-      turnId,
-    }: ExecutableToolContext,
+    { toolCallId, signal, traceId, turnId }: ExecutableToolContext,
   ): Promise<ExecutableToolResult> {
     // AJV (the runtime arg validator) cannot express the uniqueness refine,
     // so enforce it here before any UI interaction or task registration.
@@ -168,7 +177,12 @@ export class AskUserQuestionTool implements BuiltinTool<AskUserQuestionInput> {
     }
 
     if (args.background === true) {
-      return this.executeInBackground(args, { toolCallId, turnId, signal, traceId });
+      return this.executeInBackground(args, {
+        toolCallId,
+        turnId,
+        signal,
+        traceId,
+      });
     }
 
     return this.executeQuestion(args, { toolCallId, turnId, signal, traceId });
@@ -185,7 +199,10 @@ export class AskUserQuestionTool implements BuiltinTool<AskUserQuestionInput> {
       signal,
       traceId,
       turnId,
-    }: Pick<ExecutableToolContext, 'toolCallId' | 'signal' | 'traceId' | 'turnId'>,
+    }: Pick<
+      ExecutableToolContext,
+      "toolCallId" | "signal" | "traceId" | "turnId"
+    >,
   ): Promise<ExecutableToolResult> {
     try {
       const result = await this.agent.rpc!.requestQuestion!(
@@ -207,7 +224,7 @@ export class AskUserQuestionTool implements BuiltinTool<AskUserQuestionInput> {
 
       const normalized = normalizeQuestionResult(result);
       if (normalized === null || Object.keys(normalized.answers).length === 0) {
-        this.agent.telemetry.track('question_dismissed', {
+        this.agent.telemetry.track("question_dismissed", {
           trace_id: traceId,
         });
         return dismissedQuestionResult();
@@ -217,8 +234,9 @@ export class AskUserQuestionTool implements BuiltinTool<AskUserQuestionInput> {
         answered: Object.keys(normalized.answers).length,
         trace_id: traceId,
       };
-      if (normalized.method !== undefined) properties['method'] = normalized.method;
-      this.agent.telemetry.track('question_answered', properties);
+      if (normalized.method !== undefined)
+        properties["method"] = normalized.method;
+      this.agent.telemetry.track("question_answered", properties);
       return {
         isError: false,
         output: JSON.stringify({ answers: normalized.answers }),
@@ -226,7 +244,10 @@ export class AskUserQuestionTool implements BuiltinTool<AskUserQuestionInput> {
     } catch (error) {
       if (isAbortError(error) || signal.aborted) throw error;
 
-      if (error instanceof KimiError && error.code === ErrorCodes.NOT_IMPLEMENTED) {
+      if (
+        error instanceof KimiError &&
+        error.code === ErrorCodes.NOT_IMPLEMENTED
+      ) {
         return {
           isError: true,
           output: QUESTION_UNSUPPORTED_FAILURE_MESSAGE,
@@ -244,7 +265,10 @@ export class AskUserQuestionTool implements BuiltinTool<AskUserQuestionInput> {
       signal,
       traceId,
       turnId,
-    }: Pick<ExecutableToolContext, 'toolCallId' | 'signal' | 'traceId' | 'turnId'>,
+    }: Pick<
+      ExecutableToolContext,
+      "toolCallId" | "signal" | "traceId" | "turnId"
+    >,
   ): ExecutableToolResult {
     if (signal.aborted) {
       signal.throwIfAborted();
@@ -257,7 +281,12 @@ export class AskUserQuestionTool implements BuiltinTool<AskUserQuestionInput> {
       taskId = backgroundManager.registerTask(
         new QuestionBackgroundTask(
           (taskSignal) =>
-            this.executeQuestion(args, { toolCallId, turnId, signal: taskSignal, traceId }),
+            this.executeQuestion(args, {
+              toolCallId,
+              turnId,
+              signal: taskSignal,
+              traceId,
+            }),
           description,
           {
             questionCount: args.questions.length,
@@ -272,7 +301,7 @@ export class AskUserQuestionTool implements BuiltinTool<AskUserQuestionInput> {
       };
     }
 
-    const status = backgroundManager.getTask(taskId)?.status ?? 'running';
+    const status = backgroundManager.getTask(taskId)?.status ?? "running";
     return {
       isError: false,
       output:
@@ -280,10 +309,10 @@ export class AskUserQuestionTool implements BuiltinTool<AskUserQuestionInput> {
         `description: ${description}\n` +
         `status: ${status}\n` +
         `automatic_notification: true\n` +
-        'next_step: Continue your current work; the answer will arrive automatically when the user responds.\n' +
-        'next_step: Use TaskOutput with this task_id for a non-blocking status/answer snapshot.\n' +
-        'next_step: Use TaskStop only if the question should be cancelled.\n' +
-        'human_shell_hint: The pending question is also visible in /tasks.',
+        "next_step: Continue your current work; the answer will arrive automatically when the user responds.\n" +
+        "next_step: Use TaskOutput with this task_id for a non-blocking status/answer snapshot.\n" +
+        "next_step: Use TaskStop only if the question should be cancelled.\n" +
+        "human_shell_hint: The pending question is also visible in /tasks.",
       message: `Started ${taskId}`,
     };
   }
@@ -305,16 +334,22 @@ function numericTurnId(turnId: string): number | undefined {
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
-function questionDescription(questions: AskUserQuestionInput['questions']): string {
+function questionDescription(
+  questions: AskUserQuestionInput["questions"],
+): string {
   const first = questions[0]?.question.trim();
-  const label = first === undefined || first.length === 0 ? 'Ask user question' : first;
+  const label =
+    first === undefined || first.length === 0 ? "Ask user question" : first;
   if (questions.length <= 1) return label;
   return `${label} (+${String(questions.length - 1)} more)`;
 }
 
 function normalizeQuestionResult(
   result: QuestionResult,
-): { readonly answers: QuestionAnswers; readonly method?: QuestionAnswerMethod | undefined } | null {
+): {
+  readonly answers: QuestionAnswers;
+  readonly method?: QuestionAnswerMethod | undefined;
+} | null {
   if (result === null) return null;
   if (isQuestionResponse(result)) {
     return {
@@ -325,9 +360,13 @@ function normalizeQuestionResult(
   return { answers: result };
 }
 
-function isQuestionResponse(result: Exclude<QuestionResult, null>): result is QuestionResponse {
-  if (typeof result !== 'object' || result === null) return false;
-  if (!Object.hasOwn(result, 'answers')) return false;
+function isQuestionResponse(
+  result: Exclude<QuestionResult, null>,
+): result is QuestionResponse {
+  if (typeof result !== "object" || result === null) return false;
+  if (!Object.hasOwn(result, "answers")) return false;
   const answers = (result as { readonly answers?: unknown }).answers;
-  return typeof answers === 'object' && answers !== null && !Array.isArray(answers);
+  return (
+    typeof answers === "object" && answers !== null && !Array.isArray(answers)
+  );
 }

@@ -39,7 +39,11 @@ export function CopyButton({ content, className }: CopyButtonProps) {
       }}
       title="Copy message"
     >
-      {isCopied ? <IconCheck className="size-3.5" /> : <IconCopy className="size-3.5" />}
+      {isCopied ? (
+        <IconCheck className="size-3.5" />
+      ) : (
+        <IconCopy className="size-3.5" />
+      )}
     </Button>
   );
 }

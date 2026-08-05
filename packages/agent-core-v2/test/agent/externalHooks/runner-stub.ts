@@ -10,14 +10,14 @@
  * test feed an arbitrary hook list.
  */
 
-import { Event } from '#/_base/event';
-import { ExternalHooksRunnerService } from '#/app/externalHooksRunner/externalHooksRunnerService';
-import { HOOKS_SECTION } from '#/agent/externalHooks/configSection';
-import type { HookDef } from '#/agent/externalHooks/types';
-import { IBootstrapService } from '#/app/bootstrap/bootstrap';
-import { IConfigService } from '#/app/config/config';
-import { IPluginService } from '#/app/plugin/plugin';
-import { HostProcessService } from '#/os/backends/node-local/hostProcessService';
+import { Event } from "#/_base/event";
+import { ExternalHooksRunnerService } from "#/app/externalHooksRunner/externalHooksRunnerService";
+import { HOOKS_SECTION } from "#/agent/externalHooks/configSection";
+import type { HookDef } from "#/agent/externalHooks/types";
+import { IBootstrapService } from "#/app/bootstrap/bootstrap";
+import { IConfigService } from "#/app/config/config";
+import { IPluginService } from "#/app/plugin/plugin";
+import { HostProcessService } from "#/os/backends/node-local/hostProcessService";
 
 export function makeHookRunner(
   hooks: readonly HookDef[],
@@ -42,12 +42,16 @@ export function makeHookRunner(
     {
       _serviceBrand: undefined,
       enabledHooks: async () => [],
-      onDidReload: Event.None as IPluginService['onDidReload'],
+      onDidReload: Event.None as IPluginService["onDidReload"],
     } as unknown as IPluginService,
     {
       _serviceBrand: undefined,
-      cwd: options.cwd ?? '',
-      clientIdentity: { productName: 'test', version: '0.0.0-test', platform: 'test_platform' },
+      cwd: options.cwd ?? "",
+      clientIdentity: {
+        productName: "test",
+        version: "0.0.0-test",
+        platform: "test_platform",
+      },
     } as unknown as IBootstrapService,
     new HostProcessService(),
     { onTriggered: options.onTriggered, onResolved: options.onResolved },

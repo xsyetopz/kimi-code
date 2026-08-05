@@ -55,24 +55,24 @@ import {
   type SetSessionConfigOptionResponse,
   type SetSessionModeRequest,
   type SetSessionModeResponse,
-} from '@agentclientprotocol/sdk';
+} from "@agentclientprotocol/sdk";
 import type {
   AgentHandle,
   Klient,
   SessionHandle,
   SessionRestoreOptions,
   SessionSummary,
-} from '@moonshot-ai/klient';
-import { RPCError } from '@moonshot-ai/klient';
+} from "@moonshot-ai/klient";
+import { RPCError } from "@moonshot-ai/klient";
 
-import type { AcpClient } from './acp-client';
-import type { IAcpConnection } from './acp-fs';
-import { buildTerminalAuthMethod, TERMINAL_AUTH_METHOD } from './auth-methods';
-import { acpMcpServersToConfigRecord } from './convert';
-import { log } from './log';
-import { isAcpModeId } from './modes';
-import { AcpSession } from './session';
-import { negotiateVersion } from './version';
+import type { AcpClient } from "./acp-client";
+import type { IAcpConnection } from "./acp-fs";
+import { buildTerminalAuthMethod, TERMINAL_AUTH_METHOD } from "./auth-methods";
+import { acpMcpServersToConfigRecord } from "./convert";
+import { log } from "./log";
+import { isAcpModeId } from "./modes";
+import { AcpSession } from "./session";
+import { negotiateVersion } from "./version";
 
 /**
  * Klient's stable wire code for "session not found" (`RPCError.code`) — the
@@ -135,9 +135,13 @@ export class AcpServer {
   private clientCapabilities: ClientCapabilities | undefined;
   private readonly agentInfo: Implementation | undefined;
   private readonly disableAuth: boolean;
-  private readonly terminalAuthEnv: Readonly<Record<string, string>> | undefined;
+  private readonly terminalAuthEnv:
+    | Readonly<Record<string, string>>
+    | undefined;
   private readonly terminalAuthLegacyCommand: string | undefined;
-  private readonly resolveOriginalsDir: ((sessionId: string) => string | undefined) | undefined;
+  private readonly resolveOriginalsDir:
+    | ((sessionId: string) => string | undefined)
+    | undefined;
   private readonly resolveSlashCommands: (
     session: SessionHandle,
   ) => Promise<ReadonlyArray<AvailableCommand> | SlashCommandsSnapshot>;
@@ -161,7 +165,7 @@ export class AcpServer {
     this.resolveOriginalsDir = opts.resolveOriginalsDir;
     const slashCommands = opts.slashCommands;
     this.resolveSlashCommands =
-      typeof slashCommands === 'function'
+      typeof slashCommands === "function"
         ? async (session) => slashCommands(session)
         : async () => slashCommands ?? [];
   }
@@ -179,7 +183,9 @@ export class AcpServer {
   async initialize(params: InitializeRequest): Promise<InitializeResponse> {
     this.clientCapabilities = params.clientCapabilities;
     this.acpConnection.bindFsCapabilities(params.clientCapabilities?.fs);
-    this.acpConnection.bindTerminalCapability(params.clientCapabilities?.terminal === true);
+    this.acpConnection.bindTerminalCapability(
+      params.clientCapabilities?.terminal === true,
+    );
     // Answer with the highest mutually-supported protocol version (a client
     // advertising a newer major, e.g. 99, still gets our current version).
     const negotiated = negotiateVersion(params.protocolVersion);
@@ -214,7 +220,8 @@ export class AcpServer {
       protocolVersion: negotiated.protocolVersion,
       agentCapabilities,
       authMethods: [
-        this.terminalAuthEnv !== undefined || this.terminalAuthLegacyCommand !== undefined
+        this.terminalAuthEnv !== undefined ||
+        this.terminalAuthLegacyCommand !== undefined
           ? buildTerminalAuthMethod({
               env: this.terminalAuthEnv,
               legacyCommand: this.terminalAuthLegacyCommand,
@@ -249,13 +256,21 @@ export class AcpServer {
    * fields are ignored with a warning, mirroring load/resume. An unknown
    * source id maps to ACP `invalid_params` (-32602).
    */
-  async unstable_forkSession(params: ForkSessionRequest): Promise<ForkSessionResponse> {
+  async unstable_forkSession(
+    params: ForkSessionRequest,
+  ): Promise<ForkSessionResponse> {
     await this.ensureAuthed();
-    this.warnIgnoredAdditionalDirs('session/fork', params.additionalDirectories);
+    this.warnIgnoredAdditionalDirs(
+      "session/fork",
+      params.additionalDirectories,
+    );
     if (params.mcpServers !== undefined && params.mcpServers.length > 0) {
-      log.warn('acp: session/fork ignores mcpServers (engine fork keeps the source servers)', {
-        servers: params.mcpServers.map((server) => server.name),
-      });
+      log.warn(
+        "acp: session/fork ignores mcpServers (engine fork keeps the source servers)",
+        {
+          servers: params.mcpServers.map((server) => server.name),
+        },
+      );
     }
     let forkedId: string;
     try {
@@ -274,7 +289,10 @@ export class AcpServer {
 
   async loadSession(params: LoadSessionRequest): Promise<LoadSessionResponse> {
     await this.ensureAuthed();
-    this.warnIgnoredAdditionalDirs('session/load', params.additionalDirectories);
+    this.warnIgnoredAdditionalDirs(
+      "session/load",
+      params.additionalDirectories,
+    );
     const acpSession = await this.resumeAcpSession(
       params.sessionId,
       acpMcpServersToConfigRecord(params.mcpServers),
@@ -285,26 +303,40 @@ export class AcpServer {
     // `resumeSession`, which deliberately skips replay per the ACP spec.
     await acpSession.replayHistory();
     this.scheduleAvailableCommandsUpdate(acpSession);
-    return { configOptions: await acpSession.configOptions(), modes: acpSession.modeState() };
+    return {
+      configOptions: await acpSession.configOptions(),
+      modes: acpSession.modeState(),
+    };
   }
 
-  async resumeSession(params: ResumeSessionRequest): Promise<ResumeSessionResponse> {
+  async resumeSession(
+    params: ResumeSessionRequest,
+  ): Promise<ResumeSessionResponse> {
     await this.ensureAuthed();
-    this.warnIgnoredAdditionalDirs('session/resume', params.additionalDirectories);
+    this.warnIgnoredAdditionalDirs(
+      "session/resume",
+      params.additionalDirectories,
+    );
     const acpSession = await this.resumeAcpSession(
       params.sessionId,
       acpMcpServersToConfigRecord(params.mcpServers),
     );
     this.scheduleAvailableCommandsUpdate(acpSession);
-    return { configOptions: await acpSession.configOptions(), modes: acpSession.modeState() };
+    return {
+      configOptions: await acpSession.configOptions(),
+      modes: acpSession.modeState(),
+    };
   }
 
-  async listSessions(params: ListSessionsRequest): Promise<ListSessionsResponse> {
+  async listSessions(
+    params: ListSessionsRequest,
+  ): Promise<ListSessionsResponse> {
     const cwd = params.cwd ?? undefined;
     const page = await this.klient.global.sessions.list({});
-    const sessions: SessionInfo[] = filterSessionSummariesByCwd(page.items, cwd).map(
-      sessionSummaryToSessionInfo,
-    );
+    const sessions: SessionInfo[] = filterSessionSummariesByCwd(
+      page.items,
+      cwd,
+    ).map(sessionSummaryToSessionInfo);
     return { sessions, nextCursor: page.nextCursor ?? null };
   }
 
@@ -316,7 +348,9 @@ export class AcpServer {
    * cleanup operation, and the lifecycle close is a no-op for a session that
    * is not currently live.
    */
-  async closeSession(params: CloseSessionRequest): Promise<CloseSessionResponse | void> {
+  async closeSession(
+    params: CloseSessionRequest,
+  ): Promise<CloseSessionResponse | void> {
     const acpSession = this.sessions.get(params.sessionId);
     if (acpSession !== undefined) {
       acpSession.dispose();
@@ -333,7 +367,9 @@ export class AcpServer {
    * asked to remove one specific listed session, so an unknown id maps to ACP
    * `invalid_params` (-32602).
    */
-  async deleteSession(params: DeleteSessionRequest): Promise<DeleteSessionResponse> {
+  async deleteSession(
+    params: DeleteSessionRequest,
+  ): Promise<DeleteSessionResponse> {
     try {
       await this.klient.session(params.sessionId).delete();
     } catch (error) {
@@ -353,8 +389,10 @@ export class AcpServer {
     return {};
   }
 
-  async authenticate(params: AuthenticateRequest): Promise<AuthenticateResponse | void> {
-    if (params.methodId !== 'login') {
+  async authenticate(
+    params: AuthenticateRequest,
+  ): Promise<AuthenticateResponse | void> {
+    if (params.methodId !== "login") {
       throw RequestError.invalidParams(
         { methodId: params.methodId },
         `Unknown auth method: ${params.methodId}`,
@@ -383,10 +421,16 @@ export class AcpServer {
    * abort is routed into the exact same cancel path as the `session/cancel`
    * notification ({@link cancel}).
    */
-  async prompt(params: PromptRequest, signal?: AbortSignal): Promise<PromptResponse> {
+  async prompt(
+    params: PromptRequest,
+    signal?: AbortSignal,
+  ): Promise<PromptResponse> {
     const acpSession = this.sessions.get(params.sessionId);
     if (!acpSession) {
-      throw RequestError.invalidParams(undefined, `Unknown sessionId: ${params.sessionId}`);
+      throw RequestError.invalidParams(
+        undefined,
+        `Unknown sessionId: ${params.sessionId}`,
+      );
     }
     if (signal === undefined) {
       return acpSession.prompt(params.prompt);
@@ -395,19 +439,19 @@ export class AcpServer {
       try {
         acpSession.cancel();
       } catch (error) {
-        log.warn('acp: error while cancelling session', {
+        log.warn("acp: error while cancelling session", {
           sessionId: params.sessionId,
           error: error instanceof Error ? error.message : String(error),
         });
       }
     };
-    signal.addEventListener('abort', onAbort, { once: true });
+    signal.addEventListener("abort", onAbort, { once: true });
     try {
       // An already-aborted signal never fires the listener — cancel up front.
       if (signal.aborted) onAbort();
       return await acpSession.prompt(params.prompt);
     } finally {
-      signal.removeEventListener('abort', onAbort);
+      signal.removeEventListener("abort", onAbort);
     }
   }
 
@@ -415,20 +459,24 @@ export class AcpServer {
     const acpSession = this.sessions.get(params.sessionId);
     if (!acpSession) {
       // `session/cancel` is a notification — the spec forbids returning errors.
-      log.warn('acp: cancel for unknown sessionId', { sessionId: params.sessionId });
+      log.warn("acp: cancel for unknown sessionId", {
+        sessionId: params.sessionId,
+      });
       return;
     }
     try {
       acpSession.cancel();
     } catch (error) {
-      log.warn('acp: error while cancelling session', {
+      log.warn("acp: error while cancelling session", {
         sessionId: params.sessionId,
         error: error instanceof Error ? error.message : String(error),
       });
     }
   }
 
-  async setSessionMode(params: SetSessionModeRequest): Promise<SetSessionModeResponse | void> {
+  async setSessionMode(
+    params: SetSessionModeRequest,
+  ): Promise<SetSessionModeResponse | void> {
     const acpSession = this.sessions.get(params.sessionId);
     if (!acpSession) {
       throw RequestError.invalidParams(
@@ -457,17 +505,20 @@ export class AcpServer {
     }
     const value = (params as { value: unknown }).value;
     switch (params.configId) {
-      case 'model':
+      case "model":
         await acpSession.setModel(String(value));
         break;
-      case 'mode': {
+      case "mode": {
         if (!isAcpModeId(value)) {
-          throw RequestError.invalidParams({ modeId: value }, `Unknown modeId: ${String(value)}`);
+          throw RequestError.invalidParams(
+            { modeId: value },
+            `Unknown modeId: ${String(value)}`,
+          );
         }
         await acpSession.setMode(value);
         break;
       }
-      case 'thinking': {
+      case "thinking": {
         // Capability-aware validation lives in the session (allowed set
         // depends on the current model's declared efforts); an unacceptable
         // value maps to `invalid_params`.
@@ -495,7 +546,9 @@ export class AcpServer {
    * {@link createAcpAgentApp} for its registration and param parsing).
    * Returns the empty success body.
    */
-  async setSessionModel(params: SetSessionModelParams): Promise<Record<string, unknown>> {
+  async setSessionModel(
+    params: SetSessionModelParams,
+  ): Promise<Record<string, unknown>> {
     const acpSession = this.sessions.get(params.sessionId);
     if (!acpSession) {
       throw RequestError.invalidParams(
@@ -516,13 +569,18 @@ export class AcpServer {
    */
   private async resumeAcpSession(
     sessionId: string,
-    mcpServers?: SessionRestoreOptions['mcpServers'],
+    mcpServers?: SessionRestoreOptions["mcpServers"],
   ): Promise<AcpSession> {
     // `restore` re-materializes a persisted session (a live one passes
     // through) and reports `false` only when the id no longer exists.
-    const restored = await this.klient.session(sessionId).restore({ mcpServers });
+    const restored = await this.klient
+      .session(sessionId)
+      .restore({ mcpServers });
     if (!restored) {
-      throw RequestError.invalidParams({ sessionId }, `Unknown sessionId: ${sessionId}`);
+      throw RequestError.invalidParams(
+        { sessionId },
+        `Unknown sessionId: ${sessionId}`,
+      );
     }
     const acpSession = await this.wireSession(sessionId);
     this.sessions.get(sessionId)?.dispose();
@@ -538,7 +596,7 @@ export class AcpServer {
    */
   private async wireSession(sessionId: string): Promise<AcpSession> {
     const session = this.klient.session(sessionId);
-    await this.bindDefaultModel(session.agent('main'));
+    await this.bindDefaultModel(session.agent("main"));
     const hostCommands = await this.resolveSlashCommands(session);
     const acpSession = new AcpSession(
       this.conn,
@@ -559,13 +617,16 @@ export class AcpServer {
    * surface shared by `session/new` and `session/fork`.
    */
   private async activateSession(sessionId: string): Promise<{
-    configOptions: Awaited<ReturnType<AcpSession['configOptions']>>;
-    modes: ReturnType<AcpSession['modeState']>;
+    configOptions: Awaited<ReturnType<AcpSession["configOptions"]>>;
+    modes: ReturnType<AcpSession["modeState"]>;
   }> {
     const acpSession = await this.wireSession(sessionId);
     this.sessions.set(sessionId, acpSession);
     this.scheduleAvailableCommandsUpdate(acpSession);
-    return { configOptions: await acpSession.configOptions(), modes: acpSession.modeState() };
+    return {
+      configOptions: await acpSession.configOptions(),
+      modes: acpSession.modeState(),
+    };
   }
 
   /**
@@ -587,13 +648,14 @@ export class AcpServer {
       // `getModel` is '' while the profile has no model bound (the same guard
       // the old engine-direct binding expressed via `isRunnable()`).
       if ((await agent.getModel()).length > 0) return;
-      const inspected = await this.klient.global.config.inspect<string>('defaultModel');
+      const inspected =
+        await this.klient.global.config.inspect<string>("defaultModel");
       const model = inspected.value;
-      if (typeof model === 'string' && model.length > 0) {
+      if (typeof model === "string" && model.length > 0) {
         await agent.setModel(model);
       }
     } catch (error) {
-      log.warn('acp: default model binding skipped', {
+      log.warn("acp: default model binding skipped", {
         error: error instanceof Error ? error.message : String(error),
       });
     }
@@ -610,7 +672,7 @@ export class AcpServer {
       await this.klient.global.auth.ensureReady();
       return;
     } catch (error) {
-      log.info('acp: auth readiness probe failed, trying the OAuth summary', {
+      log.info("acp: auth readiness probe failed, trying the OAuth summary", {
         error: error instanceof Error ? error.message : String(error),
       });
     }
@@ -628,16 +690,22 @@ export class AcpServer {
    * no merge slot yet, so the field is ignored there with a warning rather
    * than silently honored.
    */
-  private warnIgnoredAdditionalDirs(method: string, dirs: readonly string[] | undefined): void {
+  private warnIgnoredAdditionalDirs(
+    method: string,
+    dirs: readonly string[] | undefined,
+  ): void {
     if (dirs === undefined || dirs.length === 0) return;
-    log.warn(`acp: ${method} ignores additionalDirectories (engine merges dirs only on create)`, {
-      dirs,
-    });
+    log.warn(
+      `acp: ${method} ignores additionalDirectories (engine merges dirs only on create)`,
+      {
+        dirs,
+      },
+    );
   }
 }
 
 /** The custom ACP method name for per-session model selection. */
-const SET_SESSION_MODEL_METHOD = 'session/set_model';
+const SET_SESSION_MODEL_METHOD = "session/set_model";
 
 /** Parsed params of the custom `session/set_model` request. */
 export interface SetSessionModelParams {
@@ -654,10 +722,10 @@ export interface SetSessionModelParams {
  */
 function parseSetSessionModelParams(params: unknown): SetSessionModelParams {
   const { sessionId, modelId } = (params ?? {}) as Record<string, unknown>;
-  if (typeof sessionId !== 'string' || typeof modelId !== 'string') {
+  if (typeof sessionId !== "string" || typeof modelId !== "string") {
     throw RequestError.invalidParams(
       params,
-      'session/set_model expects { sessionId: string, modelId: string }',
+      "session/set_model expects { sessionId: string, modelId: string }",
     );
   }
   return { sessionId, modelId };
@@ -675,23 +743,47 @@ function parseSetSessionModelParams(params: unknown): SetSessionModelParams {
  * `extMethod` / `extNotification` fallbacks.
  */
 export function createAcpAgentApp(getServer: () => AcpServer): AgentApp {
-  return agent({ name: 'kimi-code-acp' })
-    .onRequest(methods.agent.initialize, (ctx) => getServer().initialize(ctx.params))
-    .onRequest(methods.agent.authenticate, (ctx) => getServer().authenticate(ctx.params))
+  return agent({ name: "kimi-code-acp" })
+    .onRequest(methods.agent.initialize, (ctx) =>
+      getServer().initialize(ctx.params),
+    )
+    .onRequest(methods.agent.authenticate, (ctx) =>
+      getServer().authenticate(ctx.params),
+    )
     .onRequest(methods.agent.logout, (ctx) => getServer().logout(ctx.params))
-    .onRequest(methods.agent.session.new, (ctx) => getServer().newSession(ctx.params))
-    .onRequest(methods.agent.session.load, (ctx) => getServer().loadSession(ctx.params))
-    .onRequest(methods.agent.session.resume, (ctx) => getServer().resumeSession(ctx.params))
-    .onRequest(methods.agent.session.list, (ctx) => getServer().listSessions(ctx.params))
-    .onRequest(methods.agent.session.close, (ctx) => getServer().closeSession(ctx.params))
-    .onRequest(methods.agent.session.delete, (ctx) => getServer().deleteSession(ctx.params))
-    .onRequest(methods.agent.session.fork, (ctx) => getServer().unstable_forkSession(ctx.params))
-    .onRequest(methods.agent.session.setMode, (ctx) => getServer().setSessionMode(ctx.params))
+    .onRequest(methods.agent.session.new, (ctx) =>
+      getServer().newSession(ctx.params),
+    )
+    .onRequest(methods.agent.session.load, (ctx) =>
+      getServer().loadSession(ctx.params),
+    )
+    .onRequest(methods.agent.session.resume, (ctx) =>
+      getServer().resumeSession(ctx.params),
+    )
+    .onRequest(methods.agent.session.list, (ctx) =>
+      getServer().listSessions(ctx.params),
+    )
+    .onRequest(methods.agent.session.close, (ctx) =>
+      getServer().closeSession(ctx.params),
+    )
+    .onRequest(methods.agent.session.delete, (ctx) =>
+      getServer().deleteSession(ctx.params),
+    )
+    .onRequest(methods.agent.session.fork, (ctx) =>
+      getServer().unstable_forkSession(ctx.params),
+    )
+    .onRequest(methods.agent.session.setMode, (ctx) =>
+      getServer().setSessionMode(ctx.params),
+    )
     .onRequest(methods.agent.session.setConfigOption, (ctx) =>
       getServer().setSessionConfigOption(ctx.params),
     )
-    .onRequest(methods.agent.session.prompt, (ctx) => getServer().prompt(ctx.params, ctx.signal))
-    .onNotification(methods.agent.session.cancel, (ctx) => getServer().cancel(ctx.params))
+    .onRequest(methods.agent.session.prompt, (ctx) =>
+      getServer().prompt(ctx.params, ctx.signal),
+    )
+    .onNotification(methods.agent.session.cancel, (ctx) =>
+      getServer().cancel(ctx.params),
+    )
     .onRequest(SET_SESSION_MODEL_METHOD, parseSetSessionModelParams, (ctx) =>
       getServer().setSessionModel(ctx.params),
     );
@@ -724,17 +816,21 @@ export function filterSessionSummariesByCwd(
  */
 function sessionSummaryToSessionInfo(summary: SessionSummary): SessionInfo {
   let updatedAt: string | null = null;
-  if (typeof summary.updatedAt === 'number' && Number.isFinite(summary.updatedAt)) {
+  if (
+    typeof summary.updatedAt === "number" &&
+    Number.isFinite(summary.updatedAt)
+  ) {
     const date = new Date(summary.updatedAt);
     if (!Number.isNaN(date.getTime())) {
       updatedAt = date.toISOString();
     }
   }
   const titleRaw = summary.title;
-  const title = typeof titleRaw === 'string' && titleRaw.length > 0 ? titleRaw : null;
+  const title =
+    typeof titleRaw === "string" && titleRaw.length > 0 ? titleRaw : null;
   return {
     sessionId: summary.id,
-    cwd: summary.cwd ?? '',
+    cwd: summary.cwd ?? "",
     title,
     updatedAt,
   };

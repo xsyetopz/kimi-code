@@ -17,8 +17,11 @@
  * to boot.
  */
 
-import { createPerIdJsonStore, type PerIdJsonStore } from '../../utils/per-id-json-store';
-import type { CronTask } from './types';
+import {
+  createPerIdJsonStore,
+  type PerIdJsonStore,
+} from "../../utils/per-id-json-store";
+import type { CronTask } from "./types";
 
 /**
  * On-disk id shape. Mirrors the regex `SessionCronStore` uses when
@@ -33,16 +36,17 @@ export const CRON_ID_REGEX: RegExp = /^[0-9a-f]{8}$/;
  * dropped.
  */
 export function isValidCronTask(obj: unknown): obj is CronTask {
-  if (typeof obj !== 'object' || obj === null) return false;
+  if (typeof obj !== "object" || obj === null) return false;
   const o = obj as Record<string, unknown>;
-  if (typeof o['id'] !== 'string' || !CRON_ID_REGEX.test(o['id'])) return false;
-  if (typeof o['cron'] !== 'string') return false;
-  if (typeof o['prompt'] !== 'string') return false;
-  if (typeof o['createdAt'] !== 'number') return false;
-  if (o['recurring'] !== undefined && typeof o['recurring'] !== 'boolean') return false;
+  if (typeof o["id"] !== "string" || !CRON_ID_REGEX.test(o["id"])) return false;
+  if (typeof o["cron"] !== "string") return false;
+  if (typeof o["prompt"] !== "string") return false;
+  if (typeof o["createdAt"] !== "number") return false;
+  if (o["recurring"] !== undefined && typeof o["recurring"] !== "boolean")
+    return false;
   if (
-    o['lastFiredAt'] !== undefined &&
-    (typeof o['lastFiredAt'] !== 'number' || !Number.isFinite(o['lastFiredAt']))
+    o["lastFiredAt"] !== undefined &&
+    (typeof o["lastFiredAt"] !== "number" || !Number.isFinite(o["lastFiredAt"]))
   ) {
     return false;
   }
@@ -53,12 +57,14 @@ export function isValidCronTask(obj: unknown): obj is CronTask {
  * Construct a per-id JSON store for cron tasks under `sessionDir`. The
  * store is stateless — callers can create it on demand.
  */
-export function createCronPersistStore(sessionDir: string): PerIdJsonStore<CronTask> {
+export function createCronPersistStore(
+  sessionDir: string,
+): PerIdJsonStore<CronTask> {
   return createPerIdJsonStore<CronTask>({
     rootDir: sessionDir,
-    subdir: 'cron',
+    subdir: "cron",
     idRegex: CRON_ID_REGEX,
     isValid: isValidCronTask,
-    entityName: 'cron job id',
+    entityName: "cron job id",
   });
 }

@@ -1,4 +1,4 @@
-import type { KimiConfig } from './schema';
+import type { KimiConfig } from "./schema";
 
 /**
  * Print-mode (`kimi -p`) defaults for the v1 engine. A headless run should not
@@ -50,6 +50,9 @@ export function applyPrintModeConfigDefaults(config: KimiConfig): KimiConfig {
       bashTaskTimeoutS: PRINT_BASH_TASK_TIMEOUT_S_DEFAULT,
       ...config.background,
     },
-    subagent: { timeoutMs: PRINT_SUBAGENT_TIMEOUT_MS_DEFAULT, ...config.subagent },
+    subagent: {
+      timeoutMs: PRINT_SUBAGENT_TIMEOUT_MS_DEFAULT,
+      ...config.subagent,
+    },
   };
 }

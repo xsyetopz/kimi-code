@@ -13,11 +13,11 @@
  * reads the same "work in progress" signal across the UI.
  */
 
-import { Container, Text, Spacer } from '@moonshot-ai/pi-tui';
-import type { TUI } from '@moonshot-ai/pi-tui';
+import { Container, Text, Spacer } from "@moonshot-ai/pi-tui";
+import type { TUI } from "@moonshot-ai/pi-tui";
 
-import { STATUS_BULLET } from '#/tui/constant/symbols';
-import { currentTheme } from '#/tui/theme';
+import { STATUS_BULLET } from "#/tui/constant/symbols";
+import { currentTheme } from "#/tui/theme";
 
 const BLINK_INTERVAL = 500;
 
@@ -55,7 +55,11 @@ export class CompactionComponent extends Container {
 
   private addInstructionChild(): void {
     if (this.instruction !== undefined) {
-      this.instructionText = new Text(currentTheme.dim(`  ${this.instruction}`), 0, 0);
+      this.instructionText = new Text(
+        currentTheme.dim(`  ${this.instruction}`),
+        0,
+        0,
+      );
       this.addChild(this.instructionText);
     }
   }
@@ -86,7 +90,11 @@ export class CompactionComponent extends Container {
     super.invalidate();
   }
 
-  markDone(tokensBefore?: number, tokensAfter?: number, summary?: string): void {
+  markDone(
+    tokensBefore?: number,
+    tokensAfter?: number,
+    summary?: string,
+  ): void {
     if (this.done || this.canceled) return;
     this.done = true;
     this.tokensBefore = tokensBefore;
@@ -121,13 +129,17 @@ export class CompactionComponent extends Container {
   }
 
   private addSummaryChild(): void {
-    if (this.summaryText !== undefined || this.summary === undefined || this.summary.length === 0) {
+    if (
+      this.summaryText !== undefined ||
+      this.summary === undefined ||
+      this.summary.length === 0
+    ) {
       return;
     }
     const indentedSummary = this.summary
-      .split('\n')
+      .split("\n")
       .map((line) => `  ${line}`)
-      .join('\n');
+      .join("\n");
     this.summaryText = new Text(currentTheme.dim(indentedSummary), 0, 0);
     this.addChild(this.summaryText);
   }
@@ -147,26 +159,32 @@ export class CompactionComponent extends Container {
 
   private buildHeader(): string {
     if (this.done) {
-      const bullet = currentTheme.fg('success', STATUS_BULLET);
-      const label = currentTheme.boldFg('success', 'Compaction complete');
+      const bullet = currentTheme.fg("success", STATUS_BULLET);
+      const label = currentTheme.boldFg("success", "Compaction complete");
       const detail =
         this.tokensBefore !== undefined && this.tokensAfter !== undefined
-          ? currentTheme.dim(` (${String(this.tokensBefore)} → ${String(this.tokensAfter)} tokens)`)
-          : '';
+          ? currentTheme.dim(
+              ` (${String(this.tokensBefore)} → ${String(this.tokensAfter)} tokens)`,
+            )
+          : "";
       const shortcutHint =
         this.summary !== undefined && this.summary.length > 0
-          ? currentTheme.dim(` (Ctrl-O to ${this.expanded ? 'hide' : 'show'} compaction summary)`)
-          : '';
+          ? currentTheme.dim(
+              ` (Ctrl-O to ${this.expanded ? "hide" : "show"} compaction summary)`,
+            )
+          : "";
       return `${bullet}${label}${detail}${shortcutHint}`;
     }
     if (this.canceled) {
-      const bullet = currentTheme.fg('warning', STATUS_BULLET);
-      const label = currentTheme.boldFg('warning', 'Compaction cancelled');
+      const bullet = currentTheme.fg("warning", STATUS_BULLET);
+      const label = currentTheme.boldFg("warning", "Compaction cancelled");
       return `${bullet}${label}`;
     }
-    const bullet = this.blinkOn ? currentTheme.fg('text', STATUS_BULLET) : '  ';
-    const label = currentTheme.boldFg('primary', 'Compacting context...');
-    const tip = this.tip ? currentTheme.fg('textDim', ` · Tip: ${this.tip}`) : '';
+    const bullet = this.blinkOn ? currentTheme.fg("text", STATUS_BULLET) : "  ";
+    const label = currentTheme.boldFg("primary", "Compacting context...");
+    const tip = this.tip
+      ? currentTheme.fg("textDim", ` · Tip: ${this.tip}`)
+      : "";
     return `${bullet}${label}${tip}`;
   }
 

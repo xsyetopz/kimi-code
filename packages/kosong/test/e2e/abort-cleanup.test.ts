@@ -1,14 +1,19 @@
-import { generate } from '#/generate';
-import type { Message, StreamedMessagePart } from '#/message';
-import { extractText } from '#/message';
-import type { ChatProvider, GenerateOptions, StreamedMessage, ThinkingEffort } from '#/provider';
-import { SimpleToolset, toolOk } from '../fixtures/simple-toolset';
-import type { ToolReturnValue } from '../fixtures/simple-toolset';
-import { step } from '../fixtures/step';
-import type { Tool } from '#/tool';
-import type { JsonValue } from '../fixtures/args-validator';
-import type { TokenUsage } from '#/usage';
-import { describe, expect, it } from 'vitest';
+import { generate } from "#/generate";
+import type { Message, StreamedMessagePart } from "#/message";
+import { extractText } from "#/message";
+import type {
+  ChatProvider,
+  GenerateOptions,
+  StreamedMessage,
+  ThinkingEffort,
+} from "#/provider";
+import { SimpleToolset, toolOk } from "../fixtures/simple-toolset";
+import type { ToolReturnValue } from "../fixtures/simple-toolset";
+import { step } from "../fixtures/step";
+import type { Tool } from "#/tool";
+import type { JsonValue } from "../fixtures/args-validator";
+import type { TokenUsage } from "#/usage";
+import { describe, expect, it } from "vitest";
 
 /**
  * When an in-flight step() is aborted, tool handlers must settle, the provider
@@ -26,18 +31,19 @@ interface StreamStats {
  * across iterator invocations.
  */
 function clonePart(part: StreamedMessagePart): StreamedMessagePart {
-  if (part.type === 'function') {
+  if (part.type === "function") {
     return {
-      type: 'function',
+      type: "function",
       id: part.id,
-      name: part.name, arguments: part.arguments,
+      name: part.name,
+      arguments: part.arguments,
       ...(part.extras !== undefined ? { extras: { ...part.extras } } : {}),
       _streamIndex: part._streamIndex,
     };
   }
-  if (part.type === 'tool_call_part') {
+  if (part.type === "tool_call_part") {
     return {
-      type: 'tool_call_part',
+      type: "tool_call_part",
       argumentsPart: part.argumentsPart,
       index: part.index,
     };
@@ -82,8 +88,8 @@ function createTrackingStream(
 }
 
 class TrackingProvider implements ChatProvider {
-  readonly name: string = 'tracking';
-  readonly modelName: string = 'tracking';
+  readonly name: string = "tracking";
+  readonly modelName: string = "tracking";
   readonly thinkingEffort: ThinkingEffort | null = null;
   readonly stats: StreamStats = { started: 0, completed: 0, abandoned: 0 };
 
@@ -108,8 +114,8 @@ class TrackingProvider implements ChatProvider {
     return this;
   }
 }
-describe('e2e: abort cleanup', () => {
-  it('aborting step() mid-stream awaits pending tool handlers before rethrowing', async () => {
+describe("e2e: abort cleanup", () => {
+  it("aborting step() mid-stream awaits pending tool handlers before rethrowing", async () => {
     // The provider emits a tool_call header, a few argument delta chunks,
     // then a text delta. We abort in onMessagePart after seeing a couple
     // of parts. Because the tool call is only dispatched on stream-drain,
@@ -117,11 +123,11 @@ describe('e2e: abort cleanup', () => {
     // to verify that subsequent generate() calls on the same provider
     // succeed — i.e. the provider has no residual internal state.
     const parts: StreamedMessagePart[] = [
-      { type: 'text', text: 'a' },
-      { type: 'text', text: 'b' },
-      { type: 'text', text: 'c' },
-      { type: 'text', text: 'd' },
-      { type: 'text', text: 'e' },
+      { type: "text", text: "a" },
+      { type: "text", text: "b" },
+      { type: "text", text: "c" },
+      { type: "text", text: "d" },
+      { type: "text", text: "e" },
     ];
     const provider = new TrackingProvider(parts, 5);
 
@@ -132,7 +138,7 @@ describe('e2e: abort cleanup', () => {
     await expect(
       step(
         provider,
-        '',
+        "",
         toolset,
         [],
         {
@@ -152,13 +158,13 @@ describe('e2e: abort cleanup', () => {
     expect(provider.stats.completed).toBe(0);
 
     // The same provider instance must be reusable.
-    const result = await generate(provider, '', [], []);
-    expect(extractText(result.message)).toBe('abcde');
+    const result = await generate(provider, "", [], []);
+    expect(extractText(result.message)).toBe("abcde");
     expect(provider.stats.started).toBe(2);
     expect(provider.stats.completed).toBe(1);
   });
 
-  it('aborting step() while a tool handler is running still awaits the handler before rethrowing (no dangling promise)', async () => {
+  it("aborting step() while a tool handler is running still awaits the handler before rethrowing (no dangling promise)", async () => {
     // Provider drains synchronously, then the tool handler sleeps long.
     // We trigger the abort signal AFTER step() has already progressed
     // into calling toolResults(). This test verifies that even if the
@@ -167,9 +173,10 @@ describe('e2e: abort cleanup', () => {
     // step() propagates the failure.
     const parts: StreamedMessagePart[] = [
       {
-        type: 'function',
-        id: 'tc_slow',
-        name: 'slow', arguments: '{}',
+        type: "function",
+        id: "tc_slow",
+        name: "slow",
+        arguments: "{}",
       },
     ];
     const provider = new TrackingProvider(parts, 0);
@@ -179,33 +186,40 @@ describe('e2e: abort cleanup', () => {
 
     const toolset = new SimpleToolset();
     toolset.add(
-      { name: 'slow', description: 'slow', parameters: { type: 'object', properties: {} } },
+      {
+        name: "slow",
+        description: "slow",
+        parameters: { type: "object", properties: {} },
+      },
       async (_args: JsonValue): Promise<ToolReturnValue> => {
         handlerStarted = true;
         await new Promise<void>((r) => setTimeout(r, 40));
         handlerFinished = true;
-        return toolOk({ output: 'slow-done' });
+        return toolOk({ output: "slow-done" });
       },
     );
 
     // step() completes the generate phase (single tool_call, no args),
     // then returns with a toolResults() function. Await the results.
-    const result = await step(provider, '', toolset, []);
+    const result = await step(provider, "", toolset, []);
     expect(result.toolCalls).toHaveLength(1);
     const toolResults = await result.toolResults();
     expect(toolResults).toHaveLength(1);
     expect(handlerStarted).toBe(true);
     expect(handlerFinished).toBe(true);
-    expect(toolResults[0]!.returnValue.output).toBe('slow-done');
+    expect(toolResults[0]!.returnValue.output).toBe("slow-done");
   });
 
-  it('pre-aborted signal rejects without starting the stream iterator', async () => {
-    const provider = new TrackingProvider([{ type: 'text', text: 'should not reach' }], 0);
+  it("pre-aborted signal rejects without starting the stream iterator", async () => {
+    const provider = new TrackingProvider(
+      [{ type: "text", text: "should not reach" }],
+      0,
+    );
     const controller = new AbortController();
     controller.abort();
 
     await expect(
-      generate(provider, '', [], [], undefined, { signal: controller.signal }),
+      generate(provider, "", [], [], undefined, { signal: controller.signal }),
     ).rejects.toThrow();
 
     // Stream was never drained.
@@ -218,24 +232,28 @@ describe('e2e: abort cleanup', () => {
     }
 
     // Followup call must still work.
-    const result = await generate(provider, '', [], []);
-    expect(extractText(result.message)).toBe('should not reach');
+    const result = await generate(provider, "", [], []);
+    expect(extractText(result.message)).toBe("should not reach");
   });
 
-  it('a rejected generate() does not leave the toolset / toolResultPromises in an inconsistent state for a fresh step() call', async () => {
+  it("a rejected generate() does not leave the toolset / toolResultPromises in an inconsistent state for a fresh step() call", async () => {
     // First step(): aborts mid-stream.
     // Second step(): no tool calls, should succeed cleanly.
     const abortParts: StreamedMessagePart[] = [
-      { type: 'text', text: 'x' },
-      { type: 'text', text: 'y' },
-      { type: 'text', text: 'z' },
+      { type: "text", text: "x" },
+      { type: "text", text: "y" },
+      { type: "text", text: "z" },
     ];
     const provider = new TrackingProvider(abortParts, 5);
 
     const toolset = new SimpleToolset();
     toolset.add(
-      { name: 'unused', description: 'unused', parameters: { type: 'object', properties: {} } },
-      async (): Promise<ToolReturnValue> => toolOk({ output: 'never-called' }),
+      {
+        name: "unused",
+        description: "unused",
+        parameters: { type: "object", properties: {} },
+      },
+      async (): Promise<ToolReturnValue> => toolOk({ output: "never-called" }),
     );
 
     const controller = new AbortController();
@@ -243,7 +261,7 @@ describe('e2e: abort cleanup', () => {
     await expect(
       step(
         provider,
-        '',
+        "",
         toolset,
         [],
         {
@@ -257,9 +275,9 @@ describe('e2e: abort cleanup', () => {
     ).rejects.toThrow();
 
     // Now reuse the toolset in a second, unrelated step().
-    const textOnly = new TrackingProvider([{ type: 'text', text: 'ok' }], 0);
-    const result = await step(textOnly, '', toolset, []);
+    const textOnly = new TrackingProvider([{ type: "text", text: "ok" }], 0);
+    const result = await step(textOnly, "", toolset, []);
     expect(result.toolCalls).toHaveLength(0);
-    expect(extractText(result.message)).toBe('ok');
+    expect(extractText(result.message)).toBe("ok");
   });
 });

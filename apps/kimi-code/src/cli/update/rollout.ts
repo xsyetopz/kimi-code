@@ -1,14 +1,14 @@
-import { createHash, randomUUID } from 'node:crypto';
-import { appendFile, mkdir, stat, writeFile } from 'node:fs/promises';
-import { dirname } from 'node:path';
+import { createHash, randomUUID } from "node:crypto";
+import { appendFile, mkdir, stat, writeFile } from "node:fs/promises";
+import { dirname } from "node:path";
 
-import { readKimiDeviceId } from '@moonshot-ai/kimi-code-oauth';
-import { resolveKimiHome } from '@moonshot-ai/kimi-code-sdk';
+import { readKimiDeviceId } from "@moonshot-ai/kimi-code-oauth";
+import { resolveKimiHome } from "@moonshot-ai/kimi-code-sdk";
 
-import { getUpdateRolloutLogFile } from '#/utils/paths';
+import { getUpdateRolloutLogFile } from "#/utils/paths";
 
-import { selectUpdateTarget } from './select';
-import type { RolloutBatch, UpdateManifest, UpdateTarget } from './types';
+import { selectUpdateTarget } from "./select";
+import type { RolloutBatch, UpdateManifest, UpdateTarget } from "./types";
 
 /**
  * Hard ceiling for any rollout delay. Combined with the uncovered-bucket
@@ -22,7 +22,9 @@ export const MAX_ROLLOUT_DELAY_SECONDS = 86_400;
  * so each release reshuffles which devices land in the early batches.
  */
 export function rolloutBucket(deviceId: string, version: string): number {
-  const digest = createHash('sha256').update(`${deviceId}:${version}`, 'utf-8').digest();
+  const digest = createHash("sha256")
+    .update(`${deviceId}:${version}`, "utf-8")
+    .digest();
   return digest.readUInt32BE(0) % 100;
 }
 
@@ -31,20 +33,32 @@ export function rolloutBucket(deviceId: string, version: string): number {
  * ranges in array order; buckets left uncovered (percents summing under 100)
  * fall into the slowest cohort, and oversized delays are clamped to 24h.
  */
-export function rolloutDelayForBucket(rollout: readonly RolloutBatch[], bucket: number): number {
+export function rolloutDelayForBucket(
+  rollout: readonly RolloutBatch[],
+  bucket: number,
+): number {
   let cumulative = 0;
   for (const batch of rollout) {
     cumulative += batch.percent;
     if (bucket < cumulative) {
-      return Math.min(Math.max(batch.delaySeconds, 0), MAX_ROLLOUT_DELAY_SECONDS);
+      return Math.min(
+        Math.max(batch.delaySeconds, 0),
+        MAX_ROLLOUT_DELAY_SECONDS,
+      );
     }
   }
   if (rollout.length === 0) return 0;
   return MAX_ROLLOUT_DELAY_SECONDS;
 }
 
-export function rolloutDelaySeconds(manifest: UpdateManifest, deviceId: string): number {
-  return rolloutDelayForBucket(manifest.rollout, rolloutBucket(deviceId, manifest.version));
+export function rolloutDelaySeconds(
+  manifest: UpdateManifest,
+  deviceId: string,
+): number {
+  return rolloutDelayForBucket(
+    manifest.rollout,
+    rolloutBucket(deviceId, manifest.version),
+  );
 }
 
 export function isRolloutEligible(
@@ -63,17 +77,17 @@ export function isRolloutEligible(
 /** Which case a passive update check hit; written to the rollout log. */
 export type PassiveUpdateReason =
   /** Nothing known yet (no cache / CDN never reached). */
-  | 'no-latest'
+  | "no-latest"
   /** Known version is not an upgrade over the running one. */
-  | 'not-newer'
+  | "not-newer"
   /** Plain-text fallback or legacy cache: visible immediately, no gating. */
-  | 'no-manifest'
+  | "no-manifest"
   /** Gated: this device's batch delay has not elapsed yet. */
-  | 'held'
+  | "held"
   /** Gated and the batch delay has elapsed: update is visible. */
-  | 'eligible'
+  | "eligible"
   /** KIMI_CODE_EXPERIMENTAL_FLAG is on: rollout skipped, newest always visible. */
-  | 'experimental';
+  | "experimental";
 
 export interface PassiveUpdateDecision {
   readonly target: UpdateTarget | null;
@@ -102,12 +116,18 @@ export function decidePassiveUpdateTarget(
 ): PassiveUpdateDecision {
   if (bypassRollout) {
     if (latest === null) {
-      return { target: null, reason: 'no-latest', bucket: null, delaySeconds: null, eligibleAt: null };
+      return {
+        target: null,
+        reason: "no-latest",
+        bucket: null,
+        delaySeconds: null,
+        eligibleAt: null,
+      };
     }
     const target = selectUpdateTarget(currentVersion, latest);
     return {
       target,
-      reason: target === null ? 'not-newer' : 'experimental',
+      reason: target === null ? "not-newer" : "experimental",
       bucket: null,
       delaySeconds: null,
       eligibleAt: null,
@@ -116,12 +136,18 @@ export function decidePassiveUpdateTarget(
 
   if (manifest === null) {
     if (latest === null) {
-      return { target: null, reason: 'no-latest', bucket: null, delaySeconds: null, eligibleAt: null };
+      return {
+        target: null,
+        reason: "no-latest",
+        bucket: null,
+        delaySeconds: null,
+        eligibleAt: null,
+      };
     }
     const target = selectUpdateTarget(currentVersion, latest);
     return {
       target,
-      reason: target === null ? 'not-newer' : 'no-manifest',
+      reason: target === null ? "not-newer" : "no-manifest",
       bucket: null,
       delaySeconds: null,
       eligibleAt: null,
@@ -130,7 +156,13 @@ export function decidePassiveUpdateTarget(
 
   const target = selectUpdateTarget(currentVersion, manifest.version);
   if (target === null) {
-    return { target: null, reason: 'not-newer', bucket: null, delaySeconds: null, eligibleAt: null };
+    return {
+      target: null,
+      reason: "not-newer",
+      bucket: null,
+      delaySeconds: null,
+      eligibleAt: null,
+    };
   }
 
   const bucket = rolloutBucket(deviceId, manifest.version);
@@ -142,7 +174,7 @@ export function decidePassiveUpdateTarget(
   const eligible = isRolloutEligible(manifest, deviceId, now);
   return {
     target: eligible ? target : null,
-    reason: eligible ? 'eligible' : 'held',
+    reason: eligible ? "eligible" : "held",
     bucket,
     delaySeconds,
     eligibleAt,
@@ -156,7 +188,13 @@ export function selectPassiveUpdateTarget(
   deviceId: string,
   now: Date,
 ): UpdateTarget | null {
-  return decidePassiveUpdateTarget(currentVersion, latest, manifest, deviceId, now).target;
+  return decidePassiveUpdateTarget(
+    currentVersion,
+    latest,
+    manifest,
+    deviceId,
+    now,
+  ).target;
 }
 
 const ROLLOUT_LOG_MAX_BYTES = 256 * 1024;
@@ -174,12 +212,15 @@ export async function appendRolloutDecisionLog(
   try {
     await mkdir(dirname(filePath), { recursive: true });
     const line = `${JSON.stringify(entry)}\n`;
-    const size = await stat(filePath).then((s) => s.size, () => 0);
+    const size = await stat(filePath).then(
+      (s) => s.size,
+      () => 0,
+    );
     if (size > ROLLOUT_LOG_MAX_BYTES) {
-      await writeFile(filePath, line, 'utf-8');
+      await writeFile(filePath, line, "utf-8");
       return;
     }
-    await appendFile(filePath, line, 'utf-8');
+    await appendFile(filePath, line, "utf-8");
   } catch {
     // Diagnostic logging must never affect the update flow.
   }
@@ -205,6 +246,6 @@ export function resolveUpdateDeviceId(): string {
 export function isRolloutBypassedByExperimentalEnv(
   env: Readonly<Record<string, string | undefined>> = process.env,
 ): boolean {
-  const value = (env['KIMI_CODE_EXPERIMENTAL_FLAG'] ?? '').trim().toLowerCase();
-  return ['1', 'true', 'yes', 'on'].includes(value);
+  const value = (env["KIMI_CODE_EXPERIMENTAL_FLAG"] ?? "").trim().toLowerCase();
+  return ["1", "true", "yes", "on"].includes(value);
 }

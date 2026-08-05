@@ -2,26 +2,26 @@
  * TaskStopTool — stop a running background task.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import type { BuiltinTool } from '../../agent/tool';
+import type { BuiltinTool } from "../../agent/tool";
 import {
   isBackgroundTaskTerminal,
   type BackgroundManager,
-} from '../../agent/background';
-import type { ToolExecution } from '../../loop/types';
-import { toInputJsonSchema } from '../support/input-schema';
-import { matchesGlobRuleSubject } from '../support/rule-match';
-import TASK_STOP_DESCRIPTION from './task-stop.md?raw';
+} from "../../agent/background";
+import type { ToolExecution } from "../../loop/types";
+import { toInputJsonSchema } from "../support/input-schema";
+import { matchesGlobRuleSubject } from "../support/rule-match";
+import TASK_STOP_DESCRIPTION from "./task-stop.md?raw";
 
 // ── Input schema ─────────────────────────────────────────────────────
 
 export const TaskStopInputSchema = z.object({
-  task_id: z.string().describe('The background task ID to stop.'),
+  task_id: z.string().describe("The background task ID to stop."),
   reason: z
     .string()
-    .default('Stopped by TaskStop')
-    .describe('Short reason recorded when the task is stopped.')
+    .default("Stopped by TaskStop")
+    .describe("Short reason recorded when the task is stopped.")
     .optional(),
 });
 
@@ -30,9 +30,10 @@ export type TaskStopInput = z.Infer<typeof TaskStopInputSchema>;
 // ── Implementation ───────────────────────────────────────────────────
 
 export class TaskStopTool implements BuiltinTool<TaskStopInput> {
-  readonly name = 'TaskStop' as const;
+  readonly name = "TaskStop" as const;
   readonly description = TASK_STOP_DESCRIPTION;
-  readonly parameters: Record<string, unknown> = toInputJsonSchema(TaskStopInputSchema);
+  readonly parameters: Record<string, unknown> =
+    toInputJsonSchema(TaskStopInputSchema);
 
   constructor(private readonly manager: BackgroundManager) {}
 
@@ -52,7 +53,7 @@ export class TaskStopTool implements BuiltinTool<TaskStopInput> {
         const trimmedReason = args.reason?.trim();
         const reason =
           trimmedReason === undefined || trimmedReason.length === 0
-            ? 'Stopped by TaskStop'
+            ? "Stopped by TaskStop"
             : trimmedReason;
 
         if (isBackgroundTaskTerminal(info.status)) {
@@ -72,7 +73,10 @@ export class TaskStopTool implements BuiltinTool<TaskStopInput> {
         await this.manager.suppressTerminalNotification(args.task_id);
         const result = await this.manager.stop(args.task_id, reason);
         if (!result) {
-          return { isError: true, output: `Failed to stop task: ${args.task_id}` };
+          return {
+            isError: true,
+            output: `Failed to stop task: ${args.task_id}`,
+          };
         }
 
         return {
@@ -89,5 +93,7 @@ export class TaskStopTool implements BuiltinTool<TaskStopInput> {
 
 function terminalStopReason(reason: string | undefined): string {
   const trimmed = reason?.trim();
-  return trimmed === undefined || trimmed.length === 0 ? 'Task already in terminal state' : trimmed;
+  return trimmed === undefined || trimmed.length === 0
+    ? "Task already in terminal state"
+    : trimmed;
 }

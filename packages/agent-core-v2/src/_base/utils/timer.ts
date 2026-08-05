@@ -9,7 +9,7 @@
  * values. Mirrors VS Code's `IntervalTimer`.
  */
 
-import type { IDisposable } from '#/_base/di/lifecycle';
+import type { IDisposable } from "#/_base/di/lifecycle";
 
 export interface IntervalTimerOptions {
   readonly unref?: boolean;
@@ -32,9 +32,9 @@ export class IntervalTimer implements IDisposable {
     const handle = setInterval(runner, intervalMs);
     if (
       this.options.unref === true &&
-      typeof handle === 'object' &&
+      typeof handle === "object" &&
       handle !== null &&
-      'unref' in handle
+      "unref" in handle
     ) {
       (handle as { unref: () => void }).unref();
     }
@@ -66,7 +66,7 @@ export class TimeoutTimer implements IDisposable {
       this.handle = undefined;
       runner();
     }, timeoutMs);
-    if (typeof handle === 'object' && handle !== null && 'unref' in handle) {
+    if (typeof handle === "object" && handle !== null && "unref" in handle) {
       (handle as { unref: () => void }).unref();
     }
     this.handle = handle;

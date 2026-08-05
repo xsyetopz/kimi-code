@@ -8,9 +8,12 @@
  * Agent-scoped — one instance per agent.
  */
 
-import type { ContentPart } from '#/kosong/contract/message';
+import type { ContentPart } from "#/kosong/contract/message";
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
 
 export type ToolDedupeOutput = string | ContentPart[];
 
@@ -37,4 +40,4 @@ export interface IAgentToolDedupeService {
 }
 
 export const IAgentToolDedupeService: ServiceIdentifier<IAgentToolDedupeService> =
-  createDecorator<IAgentToolDedupeService>('agentToolDedupeService');
+  createDecorator<IAgentToolDedupeService>("agentToolDedupeService");

@@ -7,7 +7,13 @@ import { workspaceHandlers } from "./workspace.handler";
 import { authHandlers } from "./auth.handler";
 import type { Handler } from "./types";
 
-export type { Handler, HandlerContext, BroadcastFn, ReloadWebviewFn, ShowLogsFn } from "./types";
+export type {
+  Handler,
+  HandlerContext,
+  BroadcastFn,
+  ReloadWebviewFn,
+  ShowLogsFn,
+} from "./types";
 
 export const handlers: Record<string, Handler<any, any>> = {
   ...workspaceHandlers,

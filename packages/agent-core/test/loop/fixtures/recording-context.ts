@@ -1,4 +1,4 @@
-import type { Message } from '@moonshot-ai/kosong';
+import type { Message } from "@moonshot-ai/kosong";
 
 import type {
   LoopContentPartEvent,
@@ -8,14 +8,14 @@ import type {
   LoopStepEndEvent,
   LoopToolCallEvent,
   LoopToolResultEvent,
-} from '../../../src/loop/index';
+} from "../../../src/loop/index";
 
 export type AppendCall =
-  | { kind: 'appendStepBegin'; input: LoopStepBeginEvent }
-  | { kind: 'appendStepEnd'; input: LoopStepEndEvent }
-  | { kind: 'appendContentPart'; input: LoopContentPartEvent }
-  | { kind: 'appendToolCall'; input: LoopToolCallEvent }
-  | { kind: 'appendToolResult'; input: LoopToolResultEvent };
+  | { kind: "appendStepBegin"; input: LoopStepBeginEvent }
+  | { kind: "appendStepEnd"; input: LoopStepEndEvent }
+  | { kind: "appendContentPart"; input: LoopContentPartEvent }
+  | { kind: "appendToolCall"; input: LoopToolCallEvent }
+  | { kind: "appendToolResult"; input: LoopToolResultEvent };
 
 export interface RecordingContextOptions {
   readonly messages?: Message[] | undefined;
@@ -44,56 +44,62 @@ export class RecordingContext {
     this._messages = messages;
   }
 
-  readonly appendTranscriptRecord = async (record: LoopRecordedEvent): Promise<void> => {
+  readonly appendTranscriptRecord = async (
+    record: LoopRecordedEvent,
+  ): Promise<void> => {
     switch (record.type) {
-      case 'step.begin': {
-        this.calls.push({ kind: 'appendStepBegin', input: record });
+      case "step.begin": {
+        this.calls.push({ kind: "appendStepBegin", input: record });
         return;
       }
-      case 'step.end': {
-        this.calls.push({ kind: 'appendStepEnd', input: record });
+      case "step.end": {
+        this.calls.push({ kind: "appendStepEnd", input: record });
         return;
       }
-      case 'content.part': {
-        this.calls.push({ kind: 'appendContentPart', input: record });
+      case "content.part": {
+        this.calls.push({ kind: "appendContentPart", input: record });
         return;
       }
-      case 'tool.call': {
-        this.calls.push({ kind: 'appendToolCall', input: record });
+      case "tool.call": {
+        this.calls.push({ kind: "appendToolCall", input: record });
         return;
       }
-      case 'tool.result':
-        this.calls.push({ kind: 'appendToolResult', input: record });
+      case "tool.result":
+        this.calls.push({ kind: "appendToolResult", input: record });
     }
   };
 
   // Convenience filters
 
-  kinds(): AppendCall['kind'][] {
+  kinds(): AppendCall["kind"][] {
     return this.calls.map((c) => c.kind);
   }
 
-  ofKind<K extends AppendCall['kind']>(kind: K): Extract<AppendCall, { kind: K }>[] {
-    return this.calls.filter((c): c is Extract<AppendCall, { kind: K }> => c.kind === kind);
+  ofKind<K extends AppendCall["kind"]>(
+    kind: K,
+  ): Extract<AppendCall, { kind: K }>[] {
+    return this.calls.filter(
+      (c): c is Extract<AppendCall, { kind: K }> => c.kind === kind,
+    );
   }
 
   stepBegins(): LoopStepBeginEvent[] {
-    return this.ofKind('appendStepBegin').map((c) => c.input);
+    return this.ofKind("appendStepBegin").map((c) => c.input);
   }
 
   stepEnds(): LoopStepEndEvent[] {
-    return this.ofKind('appendStepEnd').map((c) => c.input);
+    return this.ofKind("appendStepEnd").map((c) => c.input);
   }
 
   contentParts(): LoopContentPartEvent[] {
-    return this.ofKind('appendContentPart').map((c) => c.input);
+    return this.ofKind("appendContentPart").map((c) => c.input);
   }
 
   toolCalls(): LoopToolCallEvent[] {
-    return this.ofKind('appendToolCall').map((c) => c.input);
+    return this.ofKind("appendToolCall").map((c) => c.input);
   }
 
   toolResults(): LoopToolResultEvent[] {
-    return this.ofKind('appendToolResult').map((c) => c.input);
+    return this.ofKind("appendToolResult").map((c) => c.input);
   }
 }

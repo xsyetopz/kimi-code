@@ -7,7 +7,10 @@ import type {
   QuestionResult,
 } from "@moonshot-ai/kimi-code-sdk";
 
-import type { ApprovalResponse, QuestionRequest as LegacyQuestionRequest } from "../../shared/legacy-sdk";
+import type {
+  ApprovalResponse,
+  QuestionRequest as LegacyQuestionRequest,
+} from "../../shared/legacy-sdk";
 import { describeToolDisplay, toLegacyDisplay } from "./tool-display";
 
 export type ReverseRpcEvent =
@@ -15,8 +18,14 @@ export type ReverseRpcEvent =
   | { type: "QuestionRequest"; payload: LegacyQuestionRequest };
 
 export class ReverseRpcController {
-  private readonly approvals = new Map<string, (response: CoreApprovalResponse) => void>();
-  private readonly questions = new Map<string, (result: QuestionResult) => void>();
+  private readonly approvals = new Map<
+    string,
+    (response: CoreApprovalResponse) => void
+  >();
+  private readonly questions = new Map<
+    string,
+    (result: QuestionResult) => void
+  >();
 
   constructor(private readonly emit: (event: ReverseRpcEvent) => void) {}
 
@@ -24,7 +33,10 @@ export class ReverseRpcController {
     const id = randomUUID();
     return new Promise((resolve) => {
       this.approvals.set(id, resolve);
-      this.emit({ type: "ApprovalRequest", payload: approvalPayload(id, request) });
+      this.emit({
+        type: "ApprovalRequest",
+        payload: approvalPayload(id, request),
+      });
     });
   }
 

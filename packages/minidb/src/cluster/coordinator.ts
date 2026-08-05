@@ -6,29 +6,39 @@
 // a single MiniDb batch (one WAL frame, all-or-nothing); across shards the
 // semantics depend on the configured CrossShardMode.
 
-import type { BatchInputOp, MiniDb } from '../index.js';
-import type { CrossShardMode } from './types.js';
-import type { Router } from './router.js';
+import type { BatchInputOp, MiniDb } from "../index.js";
+import type { CrossShardMode } from "./types.js";
+import type { Router } from "./router.js";
 
 export class Coordinator<V = unknown> {
   constructor(
     private readonly router: Router,
-    private readonly runOnShard: <T>(shardId: number, fn: (db: MiniDb<V>) => T | Promise<T>) => Promise<T>,
+    private readonly runOnShard: <T>(
+      shardId: number,
+      fn: (db: MiniDb<V>) => T | Promise<T>,
+    ) => Promise<T>,
     private readonly mode: CrossShardMode,
   ) {}
 
   private checkMode(shardIds: number[]): void {
     if (shardIds.length <= 1) return;
-    if (this.mode === 'none') {
-      throw new Error(`operation spans ${shardIds.length} shards but crossShard mode is 'none'`);
+    if (this.mode === "none") {
+      throw new Error(
+        `operation spans ${shardIds.length} shards but crossShard mode is 'none'`,
+      );
     }
-    if (this.mode === '2pc') {
-      throw new Error("crossShard mode '2pc' is reserved but not implemented yet");
+    if (this.mode === "2pc") {
+      throw new Error(
+        "crossShard mode '2pc' is reserved but not implemented yet",
+      );
     }
   }
 
   /** Group items by their key's shard, shards in ascending id order. */
-  private group<T>(items: readonly T[], keyOf: (item: T) => string): [number, T[]][] {
+  private group<T>(
+    items: readonly T[],
+    keyOf: (item: T) => string,
+  ): [number, T[]][] {
     const byShard = new Map<number, T[]>();
     for (const item of items) {
       const id = this.router.shardFor(keyOf(item));
@@ -55,7 +65,10 @@ export class Coordinator<V = unknown> {
       }
     }
     if (errors.length > 0) {
-      throw new AggregateError(errors, `${opName} failed on ${errors.length}/${groups.length} shard(s); partial writes possible`);
+      throw new AggregateError(
+        errors,
+        `${opName} failed on ${errors.length}/${groups.length} shard(s); partial writes possible`,
+      );
     }
   }
 
@@ -65,8 +78,12 @@ export class Coordinator<V = unknown> {
     await this.runGroups(
       groups,
       (id, items) =>
-        this.runOnShard(id, (db) => db.batch(items.map(([key, value]) => ({ op: 'set' as const, key, value })))),
-      'mset',
+        this.runOnShard(id, (db) =>
+          db.batch(
+            items.map(([key, value]) => ({ op: "set" as const, key, value })),
+          ),
+        ),
+      "mset",
     );
   }
 
@@ -80,7 +97,10 @@ export class Coordinator<V = unknown> {
       try {
         removed += await this.runOnShard(id, async (db) => {
           const existing = ks.filter((k) => db.has(k));
-          if (existing.length > 0) await db.batch(existing.map((key) => ({ op: 'del' as const, key })));
+          if (existing.length > 0)
+            await db.batch(
+              existing.map((key) => ({ op: "del" as const, key })),
+            );
           return existing.length;
         });
       } catch (e) {
@@ -88,7 +108,10 @@ export class Coordinator<V = unknown> {
       }
     }
     if (errors.length > 0) {
-      throw new AggregateError(errors, `mdel failed on ${errors.length}/${groups.length} shard(s); partial writes possible`);
+      throw new AggregateError(
+        errors,
+        `mdel failed on ${errors.length}/${groups.length} shard(s); partial writes possible`,
+      );
     }
     return removed;
   }
@@ -96,6 +119,10 @@ export class Coordinator<V = unknown> {
   /** Multi-shard atomic-per-shard batch (set/del ops with optional ttl/dt). */
   async batch(ops: readonly BatchInputOp<V>[]): Promise<void> {
     const groups = this.group(ops, (op) => op.key);
-    await this.runGroups(groups, (id, items) => this.runOnShard(id, (db) => db.batch(items)), 'batch');
+    await this.runGroups(
+      groups,
+      (id, items) => this.runOnShard(id, (db) => db.batch(items)),
+      "batch",
+    );
   }
 }

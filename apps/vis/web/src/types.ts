@@ -37,7 +37,7 @@ export type {
   ImportResult,
   LogLine,
   LogsResponse,
-} from '../../server/src/lib/agent-record-types';
+} from "../../server/src/lib/agent-record-types";
 
 export type {
   ProjectedMessage,
@@ -45,7 +45,7 @@ export type {
   ConfigSnapshot,
   ContextProjection,
   GoalSnapshot,
-} from '../../server/src/lib/context-projector';
+} from "../../server/src/lib/context-projector";
 
 export interface DeleteSessionResponse {
   sessionId: string;
@@ -61,12 +61,16 @@ export interface DeleteSessionResponse {
 export interface ContextResponse {
   sessionId: string;
   agentId: string;
-  messages: import('../../server/src/lib/context-projector').ProjectedMessage[];
-  usage: import('../../server/src/lib/context-projector').UsageTotals;
+  messages: import("../../server/src/lib/context-projector").ProjectedMessage[];
+  usage: import("../../server/src/lib/context-projector").UsageTotals;
   contextTokens: number;
-  config: import('../../server/src/lib/context-projector').ConfigSnapshot;
-  permission: { mode: import('../../server/src/lib/agent-record-types').PermissionMode | null };
+  config: import("../../server/src/lib/context-projector").ConfigSnapshot;
+  permission: {
+    mode:
+      | import("../../server/src/lib/agent-record-types").PermissionMode
+      | null;
+  };
   planMode: { active: boolean; id?: string };
-  goal: import('../../server/src/lib/context-projector').GoalSnapshot | null;
+  goal: import("../../server/src/lib/context-projector").GoalSnapshot | null;
   swarm: { active: boolean; trigger?: string };
 }

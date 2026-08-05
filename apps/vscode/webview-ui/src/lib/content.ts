@@ -7,7 +7,9 @@ export const Content = {
     if (typeof input === "string") {
       return cleanSystemTags(input);
     }
-    const texts = input.filter((p): p is ContentPart & { type: "text" } => p.type === "text").map((p) => p.text);
+    const texts = input
+      .filter((p): p is ContentPart & { type: "text" } => p.type === "text")
+      .map((p) => p.text);
     return cleanSystemTags(texts.join("\n"));
   },
 
@@ -15,14 +17,22 @@ export const Content = {
     if (typeof input === "string") {
       return [];
     }
-    return input.filter((p): p is ContentPart & { type: "image_url" } => p.type === "image_url").map((p) => p.image_url.url);
+    return input
+      .filter(
+        (p): p is ContentPart & { type: "image_url" } => p.type === "image_url",
+      )
+      .map((p) => p.image_url.url);
   },
 
   getVideos(input: string | ContentPart[]): string[] {
     if (typeof input === "string") {
       return [];
     }
-    return input.filter((p): p is ContentPart & { type: "video_url" } => p.type === "video_url").map((p) => p.video_url.url);
+    return input
+      .filter(
+        (p): p is ContentPart & { type: "video_url" } => p.type === "video_url",
+      )
+      .map((p) => p.video_url.url);
   },
 
   hasImages(input: string | ContentPart[]): boolean {

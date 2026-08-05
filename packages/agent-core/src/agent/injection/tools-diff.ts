@@ -17,12 +17,12 @@
  * self-heal for free, at the cost of one cheap origin-anchored scan per turn.
  */
 
-import type { Agent } from '..';
+import type { Agent } from "..";
 import {
   foldAnnouncedToolNames,
   LOADABLE_TOOLS_TRIGGER,
   renderLoadableToolsAnnouncement,
-} from '../context/dynamic-tools';
+} from "../context/dynamic-tools";
 
 export class ToolsDiffInjector {
   constructor(protected readonly agent: Agent) {}
@@ -45,7 +45,7 @@ export class ToolsDiffInjector {
     if (added.length === 0 && removed.length === 0) return;
     this.agent.context.appendSystemReminder(
       renderLoadableToolsAnnouncement(added, removed),
-      { kind: 'system_trigger', name: LOADABLE_TOOLS_TRIGGER },
+      { kind: "system_trigger", name: LOADABLE_TOOLS_TRIGGER },
     );
   }
 }

@@ -1,14 +1,14 @@
-import type { PromisableMethods, Promisify } from '#/utils/types';
-import { createControlledPromise, objectMap } from '@antfu/utils';
+import type { PromisableMethods, Promisify } from "#/utils/types";
+import { createControlledPromise, objectMap } from "@antfu/utils";
 
 import {
   fromKimiErrorPayload,
   type KimiErrorPayload,
   toKimiErrorPayload,
-} from '../errors';
-import { abortable } from '../utils/abort';
-import type { CoreAPI } from './core-api';
-import type { SDKAPI } from './sdk-api';
+} from "../errors";
+import { abortable } from "../utils/abort";
+import type { CoreAPI } from "./core-api";
+import type { SDKAPI } from "./sdk-api";
 
 export interface RPCCallOptions {
   signal?: AbortSignal;
@@ -24,14 +24,15 @@ export type RPCMethods<T> = {
     : never;
 };
 
-export type RPCClient<Self extends Record<string, any>, Other extends Record<string, any>> = (
-  self: PromisableMethods<Self>,
-) => Promise<RPCMethods<Other>>;
+export type RPCClient<
+  Self extends Record<string, any>,
+  Other extends Record<string, any>,
+> = (self: PromisableMethods<Self>) => Promise<RPCMethods<Other>>;
 
-export function createRPC<Left extends Record<string, any>, Right extends Record<string, any>>(): [
-  RPCClient<Left, Right>,
-  RPCClient<Right, Left>,
-] {
+export function createRPC<
+  Left extends Record<string, any>,
+  Right extends Record<string, any>,
+>(): [RPCClient<Left, Right>, RPCClient<Right, Left>] {
   const left = createControlledPromise<PromisableMethods<Left>>();
   const right = createControlledPromise<PromisableMethods<Right>>();
 
@@ -39,12 +40,17 @@ export function createRPC<Left extends Record<string, any>, Right extends Record
     return new Promise((resolve) => {
       setTimeout(() => {
         const serialized = JSON.stringify(data);
-        resolve(serialized === undefined ? (undefined as T) : JSON.parse(serialized));
+        resolve(
+          serialized === undefined ? (undefined as T) : JSON.parse(serialized),
+        );
       }, 0);
     });
   }
 
-  function abortableRpc<T>(promise: Promise<T>, signal?: AbortSignal): Promise<T> {
+  function abortableRpc<T>(
+    promise: Promise<T>,
+    signal?: AbortSignal,
+  ): Promise<T> {
     return signal === undefined ? promise : abortable(promise, signal);
   }
 
@@ -57,7 +63,10 @@ export function createRPC<Left extends Record<string, any>, Right extends Record
       try {
         const handlerResult =
           signal === undefined ? fn(rpcPayload) : fn(rpcPayload, { signal });
-        const value = await abortableRpc(Promise.resolve(handlerResult), signal);
+        const value = await abortableRpc(
+          Promise.resolve(handlerResult),
+          signal,
+        );
         response = { ok: true, value };
       } catch (error) {
         signal?.throwIfAborted();
@@ -75,12 +84,12 @@ export function createRPC<Left extends Record<string, any>, Right extends Record
 
     while (current !== null && current !== Object.prototype) {
       for (const key of Object.getOwnPropertyNames(current)) {
-        if (key === 'constructor' || Object.hasOwn(bound, key)) {
+        if (key === "constructor" || Object.hasOwn(bound, key)) {
           continue;
         }
 
         const descriptor = Object.getOwnPropertyDescriptor(current, key);
-        if (typeof descriptor?.value === 'function') {
+        if (typeof descriptor?.value === "function") {
           bound[key] = descriptor.value.bind(obj);
         }
       }
@@ -91,14 +100,24 @@ export function createRPC<Left extends Record<string, any>, Right extends Record
     return bound as T;
   }
 
-  async function leftClient(self: PromisableMethods<Left>): Promise<RPCMethods<Right>> {
+  async function leftClient(
+    self: PromisableMethods<Left>,
+  ): Promise<RPCMethods<Right>> {
     left.resolve(bindAllFunctions(self));
-    return objectMap(await right, (key, fn) => [key, mapRpcFunction(fn)]) as RPCMethods<Right>;
+    return objectMap(await right, (key, fn) => [
+      key,
+      mapRpcFunction(fn),
+    ]) as RPCMethods<Right>;
   }
 
-  async function rightClient(self: PromisableMethods<Right>): Promise<RPCMethods<Left>> {
+  async function rightClient(
+    self: PromisableMethods<Right>,
+  ): Promise<RPCMethods<Left>> {
     right.resolve(bindAllFunctions(self));
-    return objectMap(await left, (key, fn) => [key, mapRpcFunction(fn)]) as RPCMethods<Left>;
+    return objectMap(await left, (key, fn) => [
+      key,
+      mapRpcFunction(fn),
+    ]) as RPCMethods<Left>;
   }
 
   return [leftClient, rightClient];

@@ -11,18 +11,21 @@
  * handler's own service. Own no scoped state.
  */
 
-import type { ServicesAccessor } from '#/_base/di/instantiation';
-import { DisposableStore, type IDisposable } from '#/_base/di/lifecycle';
-import type { ISessionScopeHandle, IWorkspaceScopeHandle } from '#/_base/di/scope';
-import { ISessionIndex } from '#/app/sessionIndex/sessionIndex';
-import { ITelemetryService } from '#/app/telemetry/telemetry';
-import { ErrorCodes, isError2 } from '#/errors';
+import type { ServicesAccessor } from "#/_base/di/instantiation";
+import { DisposableStore, type IDisposable } from "#/_base/di/lifecycle";
+import type {
+  ISessionScopeHandle,
+  IWorkspaceScopeHandle,
+} from "#/_base/di/scope";
+import { ISessionIndex } from "#/app/sessionIndex/sessionIndex";
+import { ITelemetryService } from "#/app/telemetry/telemetry";
+import { ErrorCodes, isError2 } from "#/errors";
 import {
   ISessionLifecycleService,
   type ResumeSessionOptions,
-} from '#/workspace/sessionLifecycle/sessionLifecycle';
+} from "#/workspace/sessionLifecycle/sessionLifecycle";
 
-import { IWorkspaceLifecycleService } from './workspaceLifecycle';
+import { IWorkspaceLifecycleService } from "./workspaceLifecycle";
 
 export async function handlerForSession(
   accessor: ServicesAccessor,
@@ -35,7 +38,8 @@ export async function handlerForSession(
       .get(IWorkspaceLifecycleService)
       .handlerFor({ workspaceId: summary.workspaceId, root: summary.cwd });
   } catch (error) {
-    if (isError2(error) && error.code === ErrorCodes.WORKSPACE_NOT_FOUND) return undefined;
+    if (isError2(error) && error.code === ErrorCodes.WORKSPACE_NOT_FOUND)
+      return undefined;
     throw error;
   }
 }
@@ -52,8 +56,12 @@ export async function resumeSessionById(
     accessor
       .get(ITelemetryService)
       .withContext({ sessionId })
-      .track2('session_load_failed', {
-        reason: isError2(error) ? error.code : error instanceof Error ? error.name : 'unknown',
+      .track2("session_load_failed", {
+        reason: isError2(error)
+          ? error.code
+          : error instanceof Error
+            ? error.name
+            : "unknown",
       });
     throw error;
   }
@@ -65,8 +73,13 @@ export function liveHandlerForSession(
   accessor: ServicesAccessor,
   sessionId: string,
 ): IWorkspaceScopeHandle | undefined {
-  for (const handler of accessor.get(IWorkspaceLifecycleService).handlers.list()) {
-    if (handler.accessor.get(ISessionLifecycleService).get(sessionId) !== undefined) {
+  for (const handler of accessor
+    .get(IWorkspaceLifecycleService)
+    .handlers.list()) {
+    if (
+      handler.accessor.get(ISessionLifecycleService).get(sessionId) !==
+      undefined
+    ) {
       return handler;
     }
   }
@@ -77,8 +90,8 @@ export function getLiveSessionById(
   accessor: ServicesAccessor,
   sessionId: string,
 ): ISessionScopeHandle | undefined {
-  return liveHandlerForSession(accessor, sessionId)?.accessor
-    .get(ISessionLifecycleService)
+  return liveHandlerForSession(accessor, sessionId)
+    ?.accessor.get(ISessionLifecycleService)
     .get(sessionId);
 }
 

@@ -2,22 +2,22 @@
 //
 // Hashing, shard directory naming, and shared small helpers.
 
-export const CLUSTER_META_FILE = 'cluster.meta.json';
-export const CLUSTER_INDEX_FILE = 'cluster.indexes.json';
-const SHARD_DIR_PREFIX = 'shard-';
+export const CLUSTER_META_FILE = "cluster.meta.json";
+export const CLUSTER_INDEX_FILE = "cluster.indexes.json";
+const SHARD_DIR_PREFIX = "shard-";
 
 /** Zero-padded shard directory name, e.g. shard-03 for shardCount <= 100. The
  *  width grows with the shard count so directory listings stay sorted. */
 export function shardDirName(shardId: number, shardCount: number): string {
   const width = Math.max(2, String(Math.max(shardCount - 1, 0)).length);
-  return `${SHARD_DIR_PREFIX}${String(shardId).padStart(width, '0')}`;
+  return `${SHARD_DIR_PREFIX}${String(shardId).padStart(width, "0")}`;
 }
 
 /** MurmurHash3 x86 32-bit: stable, fast, and with a proper avalanche so the
  *  low bits (which is all `hash % shardCount` uses) stay uniform even for
  *  sequential or highly-similar keys. Zero dependencies. */
 export function stableHash32(key: string, seed = 0): number {
-  const data = Buffer.from(key, 'utf8');
+  const data = Buffer.from(key, "utf8");
   const len = data.length;
   let h1 = seed >>> 0;
   const c1 = 0xcc9e2d51;
@@ -60,7 +60,9 @@ export function stableHash32(key: string, seed = 0): number {
  *  process agrees on placement without coordination. */
 export function shardFor(key: string, shardCount: number): number {
   if (!(shardCount >= 1) || !Number.isInteger(shardCount)) {
-    throw new RangeError(`shardCount must be a positive integer, got ${shardCount}`);
+    throw new RangeError(
+      `shardCount must be a positive integer, got ${shardCount}`,
+    );
   }
   return stableHash32(key) % shardCount;
 }

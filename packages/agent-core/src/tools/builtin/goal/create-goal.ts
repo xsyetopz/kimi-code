@@ -4,36 +4,45 @@
  * GoalMode, not text parsed from a slash command.
  */
 
-import type { Agent } from '#/agent';
-import { z } from 'zod';
+import type { Agent } from "#/agent";
+import { z } from "zod";
 
-import type { BuiltinTool } from '../../../agent/tool';
-import type { ToolExecution } from '../../../loop/types';
-import type { ToolInputDisplay } from '../../display';
-import { toInputJsonSchema } from '../../support/input-schema';
-import DESCRIPTION from './create-goal.md?raw';
-import { goalForModel } from './serialize';
+import type { BuiltinTool } from "../../../agent/tool";
+import type { ToolExecution } from "../../../loop/types";
+import type { ToolInputDisplay } from "../../display";
+import { toInputJsonSchema } from "../../support/input-schema";
+import DESCRIPTION from "./create-goal.md?raw";
+import { goalForModel } from "./serialize";
 
 export const CreateGoalToolInputSchema = z
   .object({
-    objective: z.string().min(1).describe('The objective to pursue. Must have a verifiable end state.'),
+    objective: z
+      .string()
+      .min(1)
+      .describe("The objective to pursue. Must have a verifiable end state."),
     completionCriterion: z
       .string()
       .optional()
-      .describe('How to verify the goal is complete. Include when the user provides one.'),
+      .describe(
+        "How to verify the goal is complete. Include when the user provides one.",
+      ),
     replace: z
       .boolean()
       .optional()
-      .describe('Replace an existing active, paused, or blocked goal instead of failing.'),
+      .describe(
+        "Replace an existing active, paused, or blocked goal instead of failing.",
+      ),
   })
   .strict();
 
 export type CreateGoalToolInput = z.infer<typeof CreateGoalToolInputSchema>;
 
 export class CreateGoalTool implements BuiltinTool<CreateGoalToolInput> {
-  readonly name = 'CreateGoal' as const;
+  readonly name = "CreateGoal" as const;
   readonly description: string = DESCRIPTION;
-  readonly parameters: Record<string, unknown> = toInputJsonSchema(CreateGoalToolInputSchema);
+  readonly parameters: Record<string, unknown> = toInputJsonSchema(
+    CreateGoalToolInputSchema,
+  );
 
   constructor(private readonly agent: Agent) {}
 
@@ -41,7 +50,7 @@ export class CreateGoalTool implements BuiltinTool<CreateGoalToolInput> {
     const goal = this.agent.goal;
 
     return {
-      description: 'Creating a goal',
+      description: "Creating a goal",
       display: this.resolveGoalStartDisplay(args),
       approvalRule: this.name,
       execute: async () => {
@@ -51,9 +60,11 @@ export class CreateGoalTool implements BuiltinTool<CreateGoalToolInput> {
             completionCriterion: args.completionCriterion,
             replace: args.replace,
           },
-          'model',
+          "model",
         );
-        return { output: JSON.stringify({ goal: goalForModel(snapshot) }, null, 2) };
+        return {
+          output: JSON.stringify({ goal: goalForModel(snapshot) }, null, 2),
+        };
       },
     };
   }
@@ -64,11 +75,13 @@ export class CreateGoalTool implements BuiltinTool<CreateGoalToolInput> {
    * permission mode to run under, or decline. `auto` mode auto-approves the goal
    * upstream and never reaches this prompt, so the menu only covers manual/yolo.
    */
-  private resolveGoalStartDisplay(args: CreateGoalToolInput): ToolInputDisplay | undefined {
+  private resolveGoalStartDisplay(
+    args: CreateGoalToolInput,
+  ): ToolInputDisplay | undefined {
     const mode = this.agent.permission.mode;
-    if (mode === 'auto') return undefined;
+    if (mode === "auto") return undefined;
     return {
-      kind: 'goal_start',
+      kind: "goal_start",
       objective: args.objective,
       completionCriterion: args.completionCriterion,
       mode,

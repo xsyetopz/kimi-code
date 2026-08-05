@@ -8,8 +8,8 @@
  * arg" pattern in services that only need path resolution.
  */
 
-import { createDecorator } from '../../di';
-import type { KimiHostIdentity } from '@moonshot-ai/kimi-code-oauth';
+import { createDecorator } from "../../di";
+import type { KimiHostIdentity } from "@moonshot-ai/kimi-code-oauth";
 
 export interface IEnvironmentService {
   readonly _serviceBrand: undefined;
@@ -27,6 +27,5 @@ export interface IEnvironmentService {
   readonly identity?: KimiHostIdentity;
 }
 
-export const IEnvironmentService = createDecorator<IEnvironmentService>(
-  'environmentService',
-);
+export const IEnvironmentService =
+  createDecorator<IEnvironmentService>("environmentService");

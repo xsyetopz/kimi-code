@@ -1,18 +1,26 @@
 // apps/kimi-web/src/composables/useDetailPanel.ts
 // Unified right-side detail layer. Only one detail is open at a time.
 
-import { computed, ref, watch, type Ref } from 'vue';
-import type { AgentMember, ToolDiffTarget } from '../types';
-import type { DetailTarget } from './useFilePreview';
-import type { useKimiWebClient } from './useKimiWebClient';
-import { buildEditDiffLines, extractEditPath, findToolCallById } from '../lib/toolDiff';
-import { toolLabel } from '../lib/toolMeta';
-import { toAgentMember } from './messagesToTurns';
-import { clampPanelWidth, panelMaxWidth, useViewportWidth } from './useViewportWidth';
+import { computed, ref, watch, type Ref } from "vue";
+import type { AgentMember, ToolDiffTarget } from "../types";
+import type { DetailTarget } from "./useFilePreview";
+import type { useKimiWebClient } from "./useKimiWebClient";
+import {
+  buildEditDiffLines,
+  extractEditPath,
+  findToolCallById,
+} from "../lib/toolDiff";
+import { toolLabel } from "../lib/toolMeta";
+import { toAgentMember } from "./messagesToTurns";
+import {
+  clampPanelWidth,
+  panelMaxWidth,
+  useViewportWidth,
+} from "./useViewportWidth";
 
 type KimiWebClient = ReturnType<typeof useKimiWebClient>;
 
-const PREVIEW_WIDTH_KEY = 'kimi-web.file-preview-width';
+const PREVIEW_WIDTH_KEY = "kimi-web.file-preview-width";
 export const PREVIEW_MIN = 320;
 
 export interface UseDetailPanelOptions {
@@ -65,32 +73,41 @@ export function useDetailPanel({
   // ---------------------------------------------------------------------------
   // Thinking panel
   // ---------------------------------------------------------------------------
-  const thinkingTarget = ref<{ turnId: string; blockIndex: number } | null>(null);
+  const thinkingTarget = ref<{ turnId: string; blockIndex: number } | null>(
+    null,
+  );
 
   const thinkingPanelText = computed<string | null>(() => {
     const target = thinkingTarget.value;
     if (!target) return null;
     const turn = client.turns.value.find((tn) => tn.id === target.turnId);
     const blk = turn?.blocks?.[target.blockIndex];
-    return blk?.kind === 'thinking' ? blk.thinking : null;
+    return blk?.kind === "thinking" ? blk.thinking : null;
   });
 
   const thinkingVisible = computed(() => thinkingPanelText.value !== null);
 
-  function openThinkingPanel(target: { turnId: string; blockIndex: number }): void {
+  function openThinkingPanel(target: {
+    turnId: string;
+    blockIndex: number;
+  }): void {
     const current = thinkingTarget.value;
-    if (current && current.turnId === target.turnId && current.blockIndex === target.blockIndex) {
+    if (
+      current &&
+      current.turnId === target.turnId &&
+      current.blockIndex === target.blockIndex
+    ) {
       thinkingTarget.value = null;
-      if (detailTarget.value === 'thinking') detailTarget.value = null;
+      if (detailTarget.value === "thinking") detailTarget.value = null;
       return;
     }
-    detailTarget.value = 'thinking';
+    detailTarget.value = "thinking";
     thinkingTarget.value = target;
   }
 
   function closeThinkingPanel(): void {
     thinkingTarget.value = null;
-    if (detailTarget.value === 'thinking') detailTarget.value = null;
+    if (detailTarget.value === "thinking") detailTarget.value = null;
   }
 
   // ---------------------------------------------------------------------------
@@ -102,24 +119,26 @@ export function useDetailPanel({
     const target = compactionTarget.value;
     if (!target) return null;
     const turn = client.turns.value.find((tn) => tn.id === target.turnId);
-    return turn?.role === 'compaction' && turn.text ? turn.text : null;
+    return turn?.role === "compaction" && turn.text ? turn.text : null;
   });
 
-  const compactionPanelVisible = computed(() => compactionPanelText.value !== null);
+  const compactionPanelVisible = computed(
+    () => compactionPanelText.value !== null,
+  );
 
   function openCompactionPanel(target: { turnId: string }): void {
     if (compactionTarget.value?.turnId === target.turnId) {
       compactionTarget.value = null;
-      if (detailTarget.value === 'compaction') detailTarget.value = null;
+      if (detailTarget.value === "compaction") detailTarget.value = null;
       return;
     }
-    detailTarget.value = 'compaction';
+    detailTarget.value = "compaction";
     compactionTarget.value = target;
   }
 
   function closeCompactionPanel(): void {
     compactionTarget.value = null;
-    if (detailTarget.value === 'compaction') detailTarget.value = null;
+    if (detailTarget.value === "compaction") detailTarget.value = null;
   }
 
   // ---------------------------------------------------------------------------
@@ -135,11 +154,14 @@ export function useDetailPanel({
   function resolveSubagentId(target: string): string | undefined {
     const tasks = client.activeAppTasks.value;
     const task =
-      tasks.find((tk) => tk.id === target) ?? tasks.find((tk) => tk.parentToolCallId === target);
+      tasks.find((tk) => tk.id === target) ??
+      tasks.find((tk) => tk.parentToolCallId === target);
     if (task) return task.id;
     // Same fallback as resolveAgentTaskId: a synthesized subagent task (missed
     // spawn) has no parentToolCallId; if exactly one exists, open it.
-    const unmapped = tasks.filter((tk) => tk.kind === 'subagent' && !tk.parentToolCallId);
+    const unmapped = tasks.filter(
+      (tk) => tk.kind === "subagent" && !tk.parentToolCallId,
+    );
     if (unmapped.length === 1) return unmapped[0]!.id;
     return undefined;
   }
@@ -147,7 +169,9 @@ export function useDetailPanel({
   const agentPanelMember = computed<AgentMember | null>(() => {
     const target = agentTarget.value;
     if (!target) return null;
-    const task = client.activeAppTasks.value.find((tk) => tk.id === target.subagentId);
+    const task = client.activeAppTasks.value.find(
+      (tk) => tk.id === target.subagentId,
+    );
     return task ? toAgentMember(task) : null;
   });
 
@@ -158,16 +182,16 @@ export function useDetailPanel({
     if (!subagentId) return;
     if (agentTarget.value?.subagentId === subagentId) {
       agentTarget.value = null;
-      if (detailTarget.value === 'agent') detailTarget.value = null;
+      if (detailTarget.value === "agent") detailTarget.value = null;
       return;
     }
     agentTarget.value = { subagentId };
-    detailTarget.value = 'agent';
+    detailTarget.value = "agent";
   }
 
   function closeAgentPanel(): void {
     agentTarget.value = null;
-    if (detailTarget.value === 'agent') detailTarget.value = null;
+    if (detailTarget.value === "agent") detailTarget.value = null;
   }
 
   // ---------------------------------------------------------------------------
@@ -189,7 +213,7 @@ export function useDetailPanel({
       path: extractEditPath(tool.arg),
       // On error the diff describes what was attempted, not what happened —
       // show the tool output (the failure reason) instead.
-      lines: tool.status === 'error' ? null : buildEditDiffLines(tool),
+      lines: tool.status === "error" ? null : buildEditDiffLines(tool),
       output: tool.output,
     };
   });
@@ -197,45 +221,45 @@ export function useDetailPanel({
   const toolDiffVisible = computed(() => toolDiffTarget.value !== null);
 
   function openToolDiff(id: string): void {
-    if (detailTarget.value === 'toolDiff' && toolDiffToolId.value === id) {
+    if (detailTarget.value === "toolDiff" && toolDiffToolId.value === id) {
       closeToolDiff();
       return;
     }
-    detailTarget.value = 'toolDiff';
+    detailTarget.value = "toolDiff";
     toolDiffToolId.value = id;
   }
 
   function closeToolDiff(): void {
     toolDiffToolId.value = null;
-    if (detailTarget.value === 'toolDiff') detailTarget.value = null;
+    if (detailTarget.value === "toolDiff") detailTarget.value = null;
   }
 
   // ---------------------------------------------------------------------------
   // Diff detail layer (opened from the chat header git area)
   // ---------------------------------------------------------------------------
-  const detailDiffMode = ref<'list' | 'detail'>('list');
+  const detailDiffMode = ref<"list" | "detail">("list");
   const detailDiffPath = ref<string | null>(null);
 
   function openDiffDetail(): void {
-    if (detailTarget.value === 'diff') {
+    if (detailTarget.value === "diff") {
       closeDiffDetail();
       return;
     }
-    detailTarget.value = 'diff';
-    detailDiffMode.value = 'list';
+    detailTarget.value = "diff";
+    detailDiffMode.value = "list";
     detailDiffPath.value = null;
     void client.loadGitStatus(client.activeSessionId.value!);
   }
 
   function closeDiffDetail(): void {
-    if (detailTarget.value === 'diff') detailTarget.value = null;
-    detailDiffMode.value = 'list';
+    if (detailTarget.value === "diff") detailTarget.value = null;
+    detailDiffMode.value = "list";
     detailDiffPath.value = null;
     client.clearFileDiff();
   }
 
   async function selectDiffFile(path: string): Promise<void> {
-    detailDiffMode.value = 'detail';
+    detailDiffMode.value = "detail";
     detailDiffPath.value = path;
     await client.loadFileDiff(path);
   }
@@ -249,22 +273,25 @@ export function useDetailPanel({
     // in the active workspace (same path as the first prompt / a new-session
     // skill / goal), then open the side chat on it.
     if (!client.activeSessionId.value && client.activeWorkspaceId.value) {
-      await client.startSessionAndOpenSideChat(client.activeWorkspaceId.value, prompt);
+      await client.startSessionAndOpenSideChat(
+        client.activeWorkspaceId.value,
+        prompt,
+      );
     } else {
       await client.openSideChat(prompt);
     }
-    detailTarget.value = 'btw';
+    detailTarget.value = "btw";
   }
 
   function closeSideChat(): void {
     client.closeSideChat();
-    if (detailTarget.value === 'btw') detailTarget.value = null;
+    if (detailTarget.value === "btw") detailTarget.value = null;
   }
 
   // Only hides the right-side BTW panel; the side-chat target is per-session and
   // preserved so switching back to a session restores its BTW transcript.
   function hideSideChatPanel(): void {
-    if (detailTarget.value === 'btw') detailTarget.value = null;
+    if (detailTarget.value === "btw") detailTarget.value = null;
   }
 
   const btwVisible = computed(() => client.sideChatVisible.value);
@@ -273,11 +300,11 @@ export function useDetailPanel({
   const sidePanelVisible = computed(
     () =>
       detailTarget.value !== null &&
-      (detailTarget.value !== 'thinking' || thinkingVisible.value) &&
-      (detailTarget.value !== 'compaction' || compactionPanelVisible.value) &&
-      (detailTarget.value !== 'agent' || agentPanelVisible.value) &&
-      (detailTarget.value !== 'toolDiff' || toolDiffVisible.value) &&
-      (detailTarget.value !== 'btw' || btwVisible.value),
+      (detailTarget.value !== "thinking" || thinkingVisible.value) &&
+      (detailTarget.value !== "compaction" || compactionPanelVisible.value) &&
+      (detailTarget.value !== "agent" || agentPanelVisible.value) &&
+      (detailTarget.value !== "toolDiff" || toolDiffVisible.value) &&
+      (detailTarget.value !== "btw" || btwVisible.value),
   );
 
   /** True while the panel's resize handle is being dragged — the width
@@ -296,26 +323,34 @@ export function useDetailPanel({
   // re-fetched on demand, so restoring them across sessions would be ambiguous.
   // ---------------------------------------------------------------------------
   type PanelSnapshot =
-    | { kind: 'thinking'; turnId: string; blockIndex: number }
-    | { kind: 'compaction'; turnId: string }
-    | { kind: 'agent'; subagentId: string }
-    | { kind: 'toolDiff'; toolId: string }
-    | { kind: 'btw' };
+    | { kind: "thinking"; turnId: string; blockIndex: number }
+    | { kind: "compaction"; turnId: string }
+    | { kind: "agent"; subagentId: string }
+    | { kind: "toolDiff"; toolId: string }
+    | { kind: "btw" };
 
   const snapshotBySession = ref<Record<string, PanelSnapshot>>({});
 
   function captureSnapshot(): PanelSnapshot | null {
     switch (detailTarget.value) {
-      case 'thinking':
-        return thinkingTarget.value ? { kind: 'thinking', ...thinkingTarget.value } : null;
-      case 'compaction':
-        return compactionTarget.value ? { kind: 'compaction', ...compactionTarget.value } : null;
-      case 'agent':
-        return agentTarget.value ? { kind: 'agent', ...agentTarget.value } : null;
-      case 'toolDiff':
-        return toolDiffToolId.value ? { kind: 'toolDiff', toolId: toolDiffToolId.value } : null;
-      case 'btw':
-        return { kind: 'btw' };
+      case "thinking":
+        return thinkingTarget.value
+          ? { kind: "thinking", ...thinkingTarget.value }
+          : null;
+      case "compaction":
+        return compactionTarget.value
+          ? { kind: "compaction", ...compactionTarget.value }
+          : null;
+      case "agent":
+        return agentTarget.value
+          ? { kind: "agent", ...agentTarget.value }
+          : null;
+      case "toolDiff":
+        return toolDiffToolId.value
+          ? { kind: "toolDiff", toolId: toolDiffToolId.value }
+          : null;
+      case "btw":
+        return { kind: "btw" };
       default:
         return null;
     }
@@ -324,39 +359,63 @@ export function useDetailPanel({
   function restoreSnapshot(snap: PanelSnapshot | undefined): void {
     if (!snap) return;
     switch (snap.kind) {
-      case 'thinking':
-        thinkingTarget.value = { turnId: snap.turnId, blockIndex: snap.blockIndex };
-        detailTarget.value = 'thinking';
+      case "thinking":
+        thinkingTarget.value = {
+          turnId: snap.turnId,
+          blockIndex: snap.blockIndex,
+        };
+        detailTarget.value = "thinking";
         break;
-      case 'compaction':
+      case "compaction":
         compactionTarget.value = { turnId: snap.turnId };
-        detailTarget.value = 'compaction';
+        detailTarget.value = "compaction";
         break;
-      case 'agent':
+      case "agent":
         agentTarget.value = { subagentId: snap.subagentId };
-        detailTarget.value = 'agent';
+        detailTarget.value = "agent";
         break;
-      case 'toolDiff':
+      case "toolDiff":
         toolDiffToolId.value = snap.toolId;
-        detailTarget.value = 'toolDiff';
+        detailTarget.value = "toolDiff";
         break;
-      case 'btw':
+      case "btw":
         // Only re-open the BTW panel if this session still has a live side chat;
         // the snapshot can outlive it if the user closed the side chat explicitly.
-        if (client.sideChatVisible.value) detailTarget.value = 'btw';
+        if (client.sideChatVisible.value) detailTarget.value = "btw";
         break;
     }
   }
 
   // Escape closes whichever transient right-side detail panel is open.
   function closeOpenSidePanel(): boolean {
-    if (detailTarget.value === 'thinking' && thinkingVisible.value) { closeThinkingPanel(); return true; }
-    if (detailTarget.value === 'compaction' && compactionPanelVisible.value) { closeCompactionPanel(); return true; }
-    if (detailTarget.value === 'agent' && agentPanelVisible.value) { closeAgentPanel(); return true; }
-    if (detailTarget.value === 'toolDiff' && toolDiffVisible.value) { closeToolDiff(); return true; }
-    if (detailTarget.value === 'file') { closeFilePreview(); return true; }
-    if (detailTarget.value === 'diff') { closeDiffDetail(); return true; }
-    if (detailTarget.value === 'btw') { closeSideChat(); return true; }
+    if (detailTarget.value === "thinking" && thinkingVisible.value) {
+      closeThinkingPanel();
+      return true;
+    }
+    if (detailTarget.value === "compaction" && compactionPanelVisible.value) {
+      closeCompactionPanel();
+      return true;
+    }
+    if (detailTarget.value === "agent" && agentPanelVisible.value) {
+      closeAgentPanel();
+      return true;
+    }
+    if (detailTarget.value === "toolDiff" && toolDiffVisible.value) {
+      closeToolDiff();
+      return true;
+    }
+    if (detailTarget.value === "file") {
+      closeFilePreview();
+      return true;
+    }
+    if (detailTarget.value === "diff") {
+      closeDiffDetail();
+      return true;
+    }
+    if (detailTarget.value === "btw") {
+      closeSideChat();
+      return true;
+    }
     return false;
   }
 

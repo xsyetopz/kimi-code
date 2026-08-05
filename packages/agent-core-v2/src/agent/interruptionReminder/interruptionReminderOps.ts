@@ -8,17 +8,21 @@
  * `interruptionReminderService`.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { defineModel } from '#/wire/model';
+import { defineModel } from "#/wire/model";
 
 export const InterruptionReminderModel = defineModel<readonly number[]>(
-  'interruptionReminder',
+  "interruptionReminder",
   () => [],
   {
     reducers: {
-      'turn.cancel': (state, { turnId, target, reason }) => {
-        if (target !== 'active' || reason !== 'user_cancelled' || turnId === undefined) {
+      "turn.cancel": (state, { turnId, target, reason }) => {
+        if (
+          target !== "active" ||
+          reason !== "user_cancelled" ||
+          turnId === undefined
+        ) {
           return state;
         }
         if (state.includes(turnId)) return state;
@@ -28,16 +32,17 @@ export const InterruptionReminderModel = defineModel<readonly number[]>(
   },
 );
 
-declare module '#/wire/types' {
+declare module "#/wire/types" {
   interface PersistedOpMap {
-    'interruptionReminder.recorded': typeof interruptionReminderRecorded;
+    "interruptionReminder.recorded": typeof interruptionReminderRecorded;
   }
 }
 
 export const interruptionReminderRecorded = InterruptionReminderModel.defineOp(
-  'interruptionReminder.recorded',
+  "interruptionReminder.recorded",
   {
     schema: z.object({ turnId: z.number().int().nonnegative() }),
-    apply: (state, { turnId }) => state.filter((pendingTurnId) => pendingTurnId !== turnId),
+    apply: (state, { turnId }) =>
+      state.filter((pendingTurnId) => pendingTurnId !== turnId),
   },
 );

@@ -11,9 +11,9 @@
  * a DB on a server). App-scoped.
  */
 
-import { createDecorator } from '#/_base/di/instantiation';
+import { createDecorator } from "#/_base/di/instantiation";
 
-import type { SkillDefinition, SkillRoot, SkippedSkill } from './types';
+import type { SkillDefinition, SkillRoot, SkippedSkill } from "./types";
 
 export interface SkillDiscoveryResult {
   readonly skills: readonly SkillDefinition[];
@@ -26,4 +26,5 @@ export interface ISkillDiscovery {
   discover(roots: readonly SkillRoot[]): Promise<SkillDiscoveryResult>;
 }
 
-export const ISkillDiscovery = createDecorator<ISkillDiscovery>('skillDiscovery');
+export const ISkillDiscovery =
+  createDecorator<ISkillDiscovery>("skillDiscovery");

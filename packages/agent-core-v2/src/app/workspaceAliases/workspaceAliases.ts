@@ -7,7 +7,10 @@
  * readers can query every sibling session bucket at once. App-scoped.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
 
 export interface IWorkspaceAliases {
   readonly _serviceBrand: undefined;
@@ -16,4 +19,4 @@ export interface IWorkspaceAliases {
 }
 
 export const IWorkspaceAliases: ServiceIdentifier<IWorkspaceAliases> =
-  createDecorator<IWorkspaceAliases>('workspaceAliases');
+  createDecorator<IWorkspaceAliases>("workspaceAliases");

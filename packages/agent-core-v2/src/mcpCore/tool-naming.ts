@@ -2,16 +2,19 @@
  * `mcpCore` domain — qualified `mcp__server__tool` name sanitizing and hashing.
  */
 
-const MCP_NAME_PREFIX = 'mcp__';
-const MCP_NAME_SEPARATOR = '__';
+const MCP_NAME_PREFIX = "mcp__";
+const MCP_NAME_SEPARATOR = "__";
 
 const MAX_QUALIFIED_LENGTH = 64;
 
 export function sanitizeMcpNamePart(part: string): string {
-  return part.replaceAll(/[^a-zA-Z0-9_-]/g, '_').replaceAll(/_+/g, '_');
+  return part.replaceAll(/[^a-zA-Z0-9_-]/g, "_").replaceAll(/_+/g, "_");
 }
 
-export function qualifyMcpToolName(serverName: string, toolName: string): string {
+export function qualifyMcpToolName(
+  serverName: string,
+  toolName: string,
+): string {
   const full = `${MCP_NAME_PREFIX}${sanitizeMcpNamePart(serverName)}${MCP_NAME_SEPARATOR}${sanitizeMcpNamePart(toolName)}`;
   if (full.length <= MAX_QUALIFIED_LENGTH) return full;
 
@@ -26,5 +29,5 @@ function stableHash8(input: string): string {
     hash ^= input.codePointAt(i)!;
     hash = Math.trunc(Math.imul(hash, 0x01000193));
   }
-  return hash.toString(16).padStart(8, '0');
+  return hash.toString(16).padStart(8, "0");
 }

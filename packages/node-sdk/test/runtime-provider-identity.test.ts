@@ -1,15 +1,18 @@
-import { mkdtemp, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from "vitest";
 
-import type { KimiConfig } from '@moonshot-ai/agent-core';
-import { createKimiDefaultHeaders, KIMI_CODE_PLATFORM } from '@moonshot-ai/kimi-code-oauth';
+import type { KimiConfig } from "@moonshot-ai/agent-core";
+import {
+  createKimiDefaultHeaders,
+  KIMI_CODE_PLATFORM,
+} from "@moonshot-ai/kimi-code-oauth";
 
-import { ProviderManager } from '../../agent-core/src/session/provider-manager';
-import { SDKRpcClient } from '#/index';
-import { TEST_IDENTITY } from './test-identity';
+import { ProviderManager } from "../../agent-core/src/session/provider-manager";
+import { SDKRpcClient } from "#/index";
+import { TEST_IDENTITY } from "./test-identity";
 
 const tempDirs: string[] = [];
 
@@ -24,13 +27,13 @@ function resolveRuntimeProvider(options: {
   });
   const model = options.model ?? options.config.defaultModel;
   if (model === undefined) {
-    throw new Error('No model selected');
+    throw new Error("No model selected");
   }
   return manager.resolveProviderConfig(model);
 }
 
 async function makeTempDir(): Promise<string> {
-  const dir = await mkdtemp(join(tmpdir(), 'kimi-sdk-provider-identity-'));
+  const dir = await mkdtemp(join(tmpdir(), "kimi-sdk-provider-identity-"));
   tempDirs.push(dir);
   return dir;
 }
@@ -41,14 +44,14 @@ afterEach(async () => {
   }
 });
 
-describe('runtime provider identity headers', () => {
-  it('preserves the host user agent suffix in SDK RPC headers', async () => {
+describe("runtime provider identity headers", () => {
+  it("preserves the host user agent suffix in SDK RPC headers", async () => {
     const homeDir = await makeTempDir();
     const client = new SDKRpcClient({
       homeDir,
       identity: {
         ...TEST_IDENTITY,
-        userAgentSuffix: 'web-runtime',
+        userAgentSuffix: "web-runtime",
       },
     });
     const core = client.core as unknown as {
@@ -57,30 +60,33 @@ describe('runtime provider identity headers', () => {
 
     try {
       expect(core.kimiRequestHeaders).toMatchObject({
-        'User-Agent': 'kimi-code-cli/0.0.0-test (web-runtime)',
-        'X-Msh-Version': '0.0.0-test',
+        "User-Agent": "kimi-code-cli/0.0.0-test (web-runtime)",
+        "X-Msh-Version": "0.0.0-test",
       });
     } finally {
       await client.close();
     }
   });
 
-  it('adds kimi-code-cli User-Agent and complete X-Msh headers to the default Kimi provider', async () => {
+  it("adds kimi-code-cli User-Agent and complete X-Msh headers to the default Kimi provider", async () => {
     const homeDir = await makeTempDir();
-    const kimiRequestHeaders = createKimiDefaultHeaders({ homeDir, ...TEST_IDENTITY });
+    const kimiRequestHeaders = createKimiDefaultHeaders({
+      homeDir,
+      ...TEST_IDENTITY,
+    });
     const resolved = resolveRuntimeProvider({
       config: {
-        defaultModel: 'kimi-model',
+        defaultModel: "kimi-model",
         providers: {
           kimi: {
-            type: 'kimi',
-            apiKey: 'test-key',
+            type: "kimi",
+            apiKey: "test-key",
           },
         },
         models: {
-          'kimi-model': {
-            provider: 'kimi',
-            model: 'kimi-model',
+          "kimi-model": {
+            provider: "kimi",
+            model: "kimi-model",
             maxContextSize: 1000,
           },
         },
@@ -89,39 +95,42 @@ describe('runtime provider identity headers', () => {
     });
 
     expect(resolved.provider).toMatchObject({
-      type: 'kimi',
+      type: "kimi",
       defaultHeaders: expect.objectContaining({
-        'User-Agent': 'kimi-code-cli/0.0.0-test',
-        'X-Msh-Platform': KIMI_CODE_PLATFORM,
-        'X-Msh-Version': '0.0.0-test',
-        'X-Msh-Device-Name': expect.any(String),
-        'X-Msh-Device-Model': expect.any(String),
-        'X-Msh-Os-Version': expect.any(String),
-        'X-Msh-Device-Id': expect.stringMatching(/^[0-9a-f-]+$/),
+        "User-Agent": "kimi-code-cli/0.0.0-test",
+        "X-Msh-Platform": KIMI_CODE_PLATFORM,
+        "X-Msh-Version": "0.0.0-test",
+        "X-Msh-Device-Name": expect.any(String),
+        "X-Msh-Device-Model": expect.any(String),
+        "X-Msh-Os-Version": expect.any(String),
+        "X-Msh-Device-Id": expect.stringMatching(/^[0-9a-f-]+$/),
       }),
     });
   });
 
-  it('lets Kimi provider customHeaders override default identity headers', async () => {
+  it("lets Kimi provider customHeaders override default identity headers", async () => {
     const homeDir = await makeTempDir();
-    const kimiRequestHeaders = createKimiDefaultHeaders({ homeDir, ...TEST_IDENTITY });
+    const kimiRequestHeaders = createKimiDefaultHeaders({
+      homeDir,
+      ...TEST_IDENTITY,
+    });
     const config: KimiConfig = {
       providers: {
         kimi: {
-          type: 'kimi',
-          apiKey: 'test-key',
+          type: "kimi",
+          apiKey: "test-key",
           customHeaders: {
-            'User-Agent': 'Custom/1',
-            'X-Msh-Version': 'override-version',
+            "User-Agent": "Custom/1",
+            "X-Msh-Version": "override-version",
           },
         },
       },
-      defaultProvider: 'kimi',
-      defaultModel: 'kimi-model',
+      defaultProvider: "kimi",
+      defaultModel: "kimi-model",
       models: {
-        'kimi-model': {
-          provider: 'kimi',
-          model: 'kimi-model',
+        "kimi-model": {
+          provider: "kimi",
+          model: "kimi-model",
           maxContextSize: 1000,
         },
       },
@@ -133,32 +142,35 @@ describe('runtime provider identity headers', () => {
     });
 
     expect(resolved.provider).toMatchObject({
-      type: 'kimi',
+      type: "kimi",
       defaultHeaders: expect.objectContaining({
-        'User-Agent': 'Custom/1',
-        'X-Msh-Version': 'override-version',
-        'X-Msh-Platform': KIMI_CODE_PLATFORM,
+        "User-Agent": "Custom/1",
+        "X-Msh-Version": "override-version",
+        "X-Msh-Platform": KIMI_CODE_PLATFORM,
       }),
     });
   });
 
-  it('applies only the User-Agent (no device identity headers) to non-Kimi providers', async () => {
+  it("applies only the User-Agent (no device identity headers) to non-Kimi providers", async () => {
     const homeDir = await makeTempDir();
-    const kimiRequestHeaders = createKimiDefaultHeaders({ homeDir, ...TEST_IDENTITY });
+    const kimiRequestHeaders = createKimiDefaultHeaders({
+      homeDir,
+      ...TEST_IDENTITY,
+    });
     const config: KimiConfig = {
       providers: {
         openai: {
-          type: 'openai',
-          baseUrl: 'https://example.test/v1',
-          apiKey: 'sk-test',
+          type: "openai",
+          baseUrl: "https://example.test/v1",
+          apiKey: "sk-test",
         },
       },
-      defaultProvider: 'openai',
-      defaultModel: 'gpt-test',
+      defaultProvider: "openai",
+      defaultModel: "gpt-test",
       models: {
-        'gpt-test': {
-          provider: 'openai',
-          model: 'gpt-test',
+        "gpt-test": {
+          provider: "openai",
+          model: "gpt-test",
           maxContextSize: 1000,
         },
       },
@@ -170,17 +182,18 @@ describe('runtime provider identity headers', () => {
     });
 
     expect(resolved.provider).toMatchObject({
-      type: 'openai',
-      model: 'gpt-test',
+      type: "openai",
+      model: "gpt-test",
       defaultHeaders: {
-        'User-Agent': `kimi-code-cli/${TEST_IDENTITY.version}`,
+        "User-Agent": `kimi-code-cli/${TEST_IDENTITY.version}`,
       },
     });
     // Device identity headers (`X-Msh-*`) stay Kimi-only — must not leak to
     // third-party providers.
-    const headers = (resolved.provider as { defaultHeaders?: Record<string, string> })
-      .defaultHeaders;
+    const headers = (
+      resolved.provider as { defaultHeaders?: Record<string, string> }
+    ).defaultHeaders;
     expect(headers).toBeDefined();
-    expect(headers).not.toHaveProperty('X-Msh-Platform');
+    expect(headers).not.toHaveProperty("X-Msh-Platform");
   });
 });

@@ -25,11 +25,11 @@
  * strips `origin`.
  */
 
-import type { ContextMessage } from '#/agent/contextMemory/types';
+import type { ContextMessage } from "#/agent/contextMemory/types";
 
-export const DYNAMIC_TOOL_SCHEMA_VARIANT = 'dynamic_tool_schema';
+export const DYNAMIC_TOOL_SCHEMA_VARIANT = "dynamic_tool_schema";
 
-export const LOADABLE_TOOLS_TRIGGER = 'loadable-tools';
+export const LOADABLE_TOOLS_TRIGGER = "loadable-tools";
 
 export function isDynamicToolSchemaMessage(message: ContextMessage): boolean {
   return message.tools !== undefined && message.tools.length > 0;
@@ -37,7 +37,7 @@ export function isDynamicToolSchemaMessage(message: ContextMessage): boolean {
 
 export function isLoadableToolsAnnouncement(message: ContextMessage): boolean {
   return (
-    message.origin?.kind === 'system_trigger' &&
+    message.origin?.kind === "system_trigger" &&
     message.origin.name === LOADABLE_TOOLS_TRIGGER
   );
 }
@@ -45,7 +45,11 @@ export function isLoadableToolsAnnouncement(message: ContextMessage): boolean {
 export function stripDynamicToolContext(
   history: readonly ContextMessage[],
 ): readonly ContextMessage[] {
-  if (!history.some((m) => isDynamicToolSchemaMessage(m) || isLoadableToolsAnnouncement(m))) {
+  if (
+    !history.some(
+      (m) => isDynamicToolSchemaMessage(m) || isLoadableToolsAnnouncement(m),
+    )
+  ) {
     return history;
   }
   const out: ContextMessage[] = [];
@@ -79,13 +83,15 @@ export function collectLoadedDynamicToolNames(
 const TOOLS_ADDED_BLOCK = /<tools_added>\n?([\s\S]*?)\n?<\/tools_added>/g;
 const TOOLS_REMOVED_BLOCK = /<tools_removed>\n?([\s\S]*?)\n?<\/tools_removed>/g;
 
-export function foldAnnouncedToolNames(history: readonly ContextMessage[]): Set<string> {
+export function foldAnnouncedToolNames(
+  history: readonly ContextMessage[],
+): Set<string> {
   const announced = new Set<string>();
   for (const message of history) {
     if (!isLoadableToolsAnnouncement(message)) continue;
     const text = message.content
-      .map((part) => (part.type === 'text' ? part.text : ''))
-      .join('');
+      .map((part) => (part.type === "text" ? part.text : ""))
+      .join("");
     for (const name of matchToolNameBlocks(text, TOOLS_REMOVED_BLOCK)) {
       announced.delete(name);
     }
@@ -100,8 +106,8 @@ function matchToolNameBlocks(text: string, pattern: RegExp): string[] {
   const names: string[] = [];
   pattern.lastIndex = 0;
   for (const match of text.matchAll(pattern)) {
-    const body = match[1] ?? '';
-    for (const line of body.split('\n')) {
+    const body = match[1] ?? "";
+    for (const line of body.split("\n")) {
       const name = line.trim();
       if (name.length > 0) names.push(name);
     }
@@ -115,15 +121,15 @@ export function renderLoadableToolsAnnouncement(
 ): string {
   const sections: string[] = [];
   if (added.length > 0) {
-    sections.push(`<tools_added>\n${added.join('\n')}\n</tools_added>`);
+    sections.push(`<tools_added>\n${added.join("\n")}\n</tools_added>`);
   }
   if (removed.length > 0) {
-    sections.push(`<tools_removed>\n${removed.join('\n')}\n</tools_removed>`);
+    sections.push(`<tools_removed>\n${removed.join("\n")}\n</tools_removed>`);
   }
   sections.push(
-    'Use the select_tools tool with exact names to load full tool definitions before calling them. ' +
-      'Names listed as removed are no longer loadable — do not select them. ' +
-      'Fold all announcements in this conversation in order to get the current list.',
+    "Use the select_tools tool with exact names to load full tool definitions before calling them. " +
+      "Names listed as removed are no longer loadable — do not select them. " +
+      "Fold all announcements in this conversation in order to get the current list.",
   );
-  return sections.join('\n\n');
+  return sections.join("\n\n");
 }

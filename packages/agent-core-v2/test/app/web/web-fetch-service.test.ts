@@ -6,36 +6,42 @@
  * local fetcher is the fallback so `FetchURL` keeps working without either.
  */
 
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { DisposableStore } from '#/_base/di/lifecycle';
-import { createServices, type TestInstantiationService } from '#/_base/di/test';
-import { IOAuthService } from '#/app/auth/auth';
-import { SERVICES_SECTION, type ServicesConfig } from '#/app/auth/configSection';
+import { DisposableStore } from "#/_base/di/lifecycle";
+import { createServices, type TestInstantiationService } from "#/_base/di/test";
+import { IOAuthService } from "#/app/auth/auth";
+import {
+  SERVICES_SECTION,
+  type ServicesConfig,
+} from "#/app/auth/configSection";
 import {
   buildAgentIdentitySnapshot,
   IAgentIdentity,
   type AgentIdentitySnapshot,
-} from '#/app/agentIdentity/agentIdentity';
-import { IBootstrapService } from '#/app/bootstrap/bootstrap';
-import { IConfigService } from '#/app/config/config';
-import { IProviderService, type ProviderConfig } from '#/kosong/provider/provider';
-import { LocalFetchURLProvider } from '#/app/web/providers/local-fetch-url';
-import { MoonshotFetchURLProvider } from '#/app/web/providers/moonshot-fetch-url';
-import { IWebFetchService } from '#/app/web/web';
-import { WebFetchService } from '#/app/web/webService';
-import '#/kosong/provider/providers/kimi/kimi.contrib';
+} from "#/app/agentIdentity/agentIdentity";
+import { IBootstrapService } from "#/app/bootstrap/bootstrap";
+import { IConfigService } from "#/app/config/config";
+import {
+  IProviderService,
+  type ProviderConfig,
+} from "#/kosong/provider/provider";
+import { LocalFetchURLProvider } from "#/app/web/providers/local-fetch-url";
+import { MoonshotFetchURLProvider } from "#/app/web/providers/moonshot-fetch-url";
+import { IWebFetchService } from "#/app/web/web";
+import { WebFetchService } from "#/app/web/webService";
+import "#/kosong/provider/providers/kimi/kimi.contrib";
 
-import { stubAgentIdentity } from '../agentIdentity/stubs';
+import { stubAgentIdentity } from "../agentIdentity/stubs";
 
-const OAUTH_PROVIDER = 'managed:kimi-code';
-const NON_OAUTH_PROVIDER = 'openai-main';
+const OAUTH_PROVIDER = "managed:kimi-code";
+const NON_OAUTH_PROVIDER = "openai-main";
 const HOST_HEADERS = {
-  'User-Agent': 'kimi-code-cli/test',
-  'X-Msh-Device-Id': 'device-test',
+  "User-Agent": "kimi-code-cli/test",
+  "X-Msh-Device-Id": "device-test",
 };
 
-describe('WebFetchService', () => {
+describe("WebFetchService", () => {
   let disposables: DisposableStore;
   let ix: TestInstantiationService;
   let providers: Record<string, ProviderConfig>;
@@ -50,20 +56,23 @@ describe('WebFetchService', () => {
     identitySlug = undefined;
     resolveTokenProvider = vi
       .fn()
-      .mockReturnValue({ getAccessToken: async () => 'access-token' });
+      .mockReturnValue({ getAccessToken: async () => "access-token" });
     ix = createServices(disposables, {
       additionalServices: (reg) => {
         reg.definePartialInstance(IProviderService, {
-          get: ((name: string) => providers[name]) as IProviderService['get'],
+          get: ((name: string) => providers[name]) as IProviderService["get"],
         });
         reg.definePartialInstance(IOAuthService, {
           resolveTokenProvider:
-            resolveTokenProvider as unknown as IOAuthService['resolveTokenProvider'],
+            resolveTokenProvider as unknown as IOAuthService["resolveTokenProvider"],
         });
         // Built per call so each test's `identitySlug` assignment lands in the
         // snapshot the service reads.
         const snapshot = (): AgentIdentitySnapshot =>
-          buildAgentIdentitySnapshot({ slug: identitySlug, hostRequestHeaders: HOST_HEADERS });
+          buildAgentIdentitySnapshot({
+            slug: identitySlug,
+            hostRequestHeaders: HOST_HEADERS,
+          });
         reg.defineInstance(IAgentIdentity, {
           _serviceBrand: undefined,
           resolved: () => Promise.resolve(snapshot()),
@@ -74,7 +83,9 @@ describe('WebFetchService', () => {
         });
         reg.definePartialInstance(IConfigService, {
           get: ((domain: string) =>
-            domain === SERVICES_SECTION ? servicesConfig : undefined) as IConfigService['get'],
+            domain === SERVICES_SECTION
+              ? servicesConfig
+              : undefined) as IConfigService["get"],
         });
         reg.define(IWebFetchService, WebFetchService);
       },
@@ -86,171 +97,181 @@ describe('WebFetchService', () => {
     vi.unstubAllGlobals();
   });
 
-  function fetcher(): ReturnType<IWebFetchService['getUrlFetcher']> {
+  function fetcher(): ReturnType<IWebFetchService["getUrlFetcher"]> {
     return ix.get(IWebFetchService).getUrlFetcher();
   }
 
-  it('yields the local fetcher when the managed provider is not configured', () => {
-    providers = { [NON_OAUTH_PROVIDER]: { type: 'openai', apiKey: 'sk-test' } };
+  it("yields the local fetcher when the managed provider is not configured", () => {
+    providers = { [NON_OAUTH_PROVIDER]: { type: "openai", apiKey: "sk-test" } };
     expect(fetcher()).toBeInstanceOf(LocalFetchURLProvider);
     expect(resolveTokenProvider).not.toHaveBeenCalled();
   });
 
-  it('yields the local fetcher when the managed provider is not an OAuth kimi provider', () => {
-    providers = { [OAUTH_PROVIDER]: { type: 'kimi', apiKey: 'sk-test' } };
+  it("yields the local fetcher when the managed provider is not an OAuth kimi provider", () => {
+    providers = { [OAUTH_PROVIDER]: { type: "kimi", apiKey: "sk-test" } };
     expect(fetcher()).toBeInstanceOf(LocalFetchURLProvider);
     expect(resolveTokenProvider).not.toHaveBeenCalled();
   });
 
-  it('yields the local fetcher when the oauth service yields no token provider', () => {
+  it("yields the local fetcher when the oauth service yields no token provider", () => {
     providers = {
       [OAUTH_PROVIDER]: {
-        type: 'kimi',
-        baseUrl: 'https://api.example.com',
-        oauth: { storage: 'file', key: 'oauth/kimi-code' },
+        type: "kimi",
+        baseUrl: "https://api.example.com",
+        oauth: { storage: "file", key: "oauth/kimi-code" },
       },
     };
     resolveTokenProvider.mockReturnValue(undefined);
     expect(fetcher()).toBeInstanceOf(LocalFetchURLProvider);
   });
 
-  it('builds a Moonshot fetcher from the managed provider oauth ref', () => {
+  it("builds a Moonshot fetcher from the managed provider oauth ref", () => {
     providers = {
       [OAUTH_PROVIDER]: {
-        type: 'kimi',
-        baseUrl: 'https://api.example.com/v1',
-        oauth: { storage: 'file', key: 'oauth/kimi-code' },
+        type: "kimi",
+        baseUrl: "https://api.example.com/v1",
+        oauth: { storage: "file", key: "oauth/kimi-code" },
       },
     };
     expect(fetcher()).toBeInstanceOf(MoonshotFetchURLProvider);
     expect(resolveTokenProvider).toHaveBeenCalledWith(OAUTH_PROVIDER, {
-      storage: 'file',
-      key: 'oauth/kimi-code',
+      storage: "file",
+      key: "oauth/kimi-code",
     });
   });
 
-  it('fetches against /fetch with the OAuth access token, host identity headers, and custom headers', async () => {
+  it("fetches against /fetch with the OAuth access token, host identity headers, and custom headers", async () => {
     providers = {
       [OAUTH_PROVIDER]: {
-        type: 'kimi',
-        baseUrl: 'https://api.example.com/v1/',
-        oauth: { storage: 'file', key: 'oauth/kimi-code' },
-        customHeaders: { 'X-Custom': 'yes' },
+        type: "kimi",
+        baseUrl: "https://api.example.com/v1/",
+        oauth: { storage: "file", key: "oauth/kimi-code" },
+        customHeaders: { "X-Custom": "yes" },
       },
     };
     const fetchMock = vi.fn().mockResolvedValue({
       status: 200,
-      text: async () => 'page body',
+      text: async () => "page body",
     });
-    vi.stubGlobal('fetch', fetchMock);
+    vi.stubGlobal("fetch", fetchMock);
 
-    const result = await fetcher().fetch('https://example.com/page');
+    const result = await fetcher().fetch("https://example.com/page");
 
-    expect(result).toEqual({ content: 'page body', kind: 'extracted' });
+    expect(result).toEqual({ content: "page body", kind: "extracted" });
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe('https://api.example.com/v1/fetch');
+    expect(url).toBe("https://api.example.com/v1/fetch");
     const headers = init.headers as Record<string, string>;
-    expect(headers['Authorization']).toBe('Bearer access-token');
-    expect(headers['User-Agent']).toBe('kimi-code-cli/test');
-    expect(headers['X-Msh-Device-Id']).toBe('device-test');
-    expect(headers['X-Custom']).toBe('yes');
+    expect(headers["Authorization"]).toBe("Bearer access-token");
+    expect(headers["User-Agent"]).toBe("kimi-code-cli/test");
+    expect(headers["X-Msh-Device-Id"]).toBe("device-test");
+    expect(headers["X-Custom"]).toBe("yes");
   });
 
-  it('builds a Moonshot fetcher from the services.moonshot_fetch api_key config', async () => {
+  it("builds a Moonshot fetcher from the services.moonshot_fetch api_key config", async () => {
     servicesConfig = {
       moonshotFetch: {
-        baseUrl: 'https://fetch.example.com/fetch',
-        apiKey: 'fetch-key',
-        customHeaders: { 'X-Config': '1' },
+        baseUrl: "https://fetch.example.com/fetch",
+        apiKey: "fetch-key",
+        customHeaders: { "X-Config": "1" },
       },
     };
     const fetchMock = vi.fn().mockResolvedValue({
       status: 200,
-      text: async () => 'page body',
+      text: async () => "page body",
     });
-    vi.stubGlobal('fetch', fetchMock);
+    vi.stubGlobal("fetch", fetchMock);
 
     expect(fetcher()).toBeInstanceOf(MoonshotFetchURLProvider);
     expect(resolveTokenProvider).not.toHaveBeenCalled();
-    const result = await fetcher().fetch('https://example.com/page');
+    const result = await fetcher().fetch("https://example.com/page");
 
-    expect(result).toEqual({ content: 'page body', kind: 'extracted' });
+    expect(result).toEqual({ content: "page body", kind: "extracted" });
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe('https://fetch.example.com/fetch');
+    expect(url).toBe("https://fetch.example.com/fetch");
     const headers = init.headers as Record<string, string>;
-    expect(headers['Authorization']).toBe('Bearer fetch-key');
-    expect(headers['User-Agent']).toBe('kimi-code-cli/test');
-    expect(headers['X-Msh-Device-Id']).toBe('device-test');
-    expect(headers['X-Config']).toBe('1');
+    expect(headers["Authorization"]).toBe("Bearer fetch-key");
+    expect(headers["User-Agent"]).toBe("kimi-code-cli/test");
+    expect(headers["X-Msh-Device-Id"]).toBe("device-test");
+    expect(headers["X-Config"]).toBe("1");
   });
 
   // A `[services]` entry names its own endpoint, so the identity applies there;
   // the managed OAuth endpoint is the one the session authenticated against and
   // keeps the host's own token.
-  it('sends the configured identity to a services-config endpoint', async () => {
-    identitySlug = 'acme';
+  it("sends the configured identity to a services-config endpoint", async () => {
+    identitySlug = "acme";
     servicesConfig = {
-      moonshotFetch: { baseUrl: 'https://fetch.example.com/fetch', apiKey: 'fetch-key' },
+      moonshotFetch: {
+        baseUrl: "https://fetch.example.com/fetch",
+        apiKey: "fetch-key",
+      },
     };
-    const fetchMock = vi.fn().mockResolvedValue({ status: 200, text: async () => 'page body' });
-    vi.stubGlobal('fetch', fetchMock);
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue({ status: 200, text: async () => "page body" });
+    vi.stubGlobal("fetch", fetchMock);
 
-    await fetcher().fetch('https://example.com/page');
+    await fetcher().fetch("https://example.com/page");
 
     const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     const headers = init.headers as Record<string, string>;
-    expect(headers['User-Agent']).toBe('acme/test');
+    expect(headers["User-Agent"]).toBe("acme/test");
   });
 
-  it('keeps the host token on the managed oauth endpoint under a custom identity', async () => {
-    identitySlug = 'acme';
+  it("keeps the host token on the managed oauth endpoint under a custom identity", async () => {
+    identitySlug = "acme";
     providers[OAUTH_PROVIDER] = {
-      type: 'kimi',
-      baseUrl: 'https://api.example.com/v1',
-      oauth: { storage: 'file', key: 'oauth/kimi-code' },
+      type: "kimi",
+      baseUrl: "https://api.example.com/v1",
+      oauth: { storage: "file", key: "oauth/kimi-code" },
     };
-    const fetchMock = vi.fn().mockResolvedValue({ status: 200, text: async () => 'page body' });
-    vi.stubGlobal('fetch', fetchMock);
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue({ status: 200, text: async () => "page body" });
+    vi.stubGlobal("fetch", fetchMock);
 
-    await fetcher().fetch('https://example.com/page');
+    await fetcher().fetch("https://example.com/page");
 
     const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     const headers = init.headers as Record<string, string>;
-    expect(headers['User-Agent']).toBe('kimi-code-cli/test');
+    expect(headers["User-Agent"]).toBe("kimi-code-cli/test");
   });
 
-  it('prefers the services.moonshot_fetch config over the managed oauth provider', () => {
+  it("prefers the services.moonshot_fetch config over the managed oauth provider", () => {
     servicesConfig = {
-      moonshotFetch: { baseUrl: 'https://config.example.com/fetch', apiKey: 'config-key' },
+      moonshotFetch: {
+        baseUrl: "https://config.example.com/fetch",
+        apiKey: "config-key",
+      },
     };
     providers = {
       [OAUTH_PROVIDER]: {
-        type: 'kimi',
-        baseUrl: 'https://managed.example.com/v1',
-        oauth: { storage: 'file', key: 'oauth/kimi-code' },
+        type: "kimi",
+        baseUrl: "https://managed.example.com/v1",
+        oauth: { storage: "file", key: "oauth/kimi-code" },
       },
     };
     expect(fetcher()).toBeInstanceOf(MoonshotFetchURLProvider);
     expect(resolveTokenProvider).not.toHaveBeenCalled();
   });
 
-  it('builds a Moonshot fetcher from the services.moonshot_fetch oauth ref', () => {
+  it("builds a Moonshot fetcher from the services.moonshot_fetch oauth ref", () => {
     servicesConfig = {
       moonshotFetch: {
-        baseUrl: 'https://fetch.example.com/fetch',
-        oauth: { storage: 'file', key: 'oauth/kimi-code' },
+        baseUrl: "https://fetch.example.com/fetch",
+        oauth: { storage: "file", key: "oauth/kimi-code" },
       },
     };
     expect(fetcher()).toBeInstanceOf(MoonshotFetchURLProvider);
     expect(resolveTokenProvider).toHaveBeenCalledWith(OAUTH_PROVIDER, {
-      storage: 'file',
-      key: 'oauth/kimi-code',
+      storage: "file",
+      key: "oauth/kimi-code",
     });
   });
 
-  it('yields the local fetcher when services.moonshot_fetch has no baseUrl and no managed oauth', () => {
-    servicesConfig = { moonshotFetch: { apiKey: 'fetch-key' } };
+  it("yields the local fetcher when services.moonshot_fetch has no baseUrl and no managed oauth", () => {
+    servicesConfig = { moonshotFetch: { apiKey: "fetch-key" } };
     expect(fetcher()).toBeInstanceOf(LocalFetchURLProvider);
     expect(resolveTokenProvider).not.toHaveBeenCalled();
   });

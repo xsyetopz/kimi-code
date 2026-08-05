@@ -20,25 +20,25 @@ import type {
   QuestionRequest,
   SessionApprovalRequest as ApprovalRequest,
   SessionApprovalResponse as ApprovalResponse,
-} from '@moonshot-ai/agent-core-v2';
-import type { IDisposable, SessionHandle } from '@moonshot-ai/klient';
+} from "@moonshot-ai/agent-core-v2";
+import type { IDisposable, SessionHandle } from "@moonshot-ai/klient";
 
-import type { AcpClient } from './acp-client';
+import type { AcpClient } from "./acp-client";
 
 import {
   approvalRequestToPermissionOptions,
   attachSelectedLabel,
   buildPermissionToolCallUpdate,
   permissionResponseToApprovalResponse,
-} from './approval';
-import { acpToolCallId } from './events-map';
-import { log } from './log';
+} from "./approval";
+import { acpToolCallId } from "./events-map";
+import { log } from "./log";
 import {
   elicitationResponseToQuestionAnswers,
   outcomeToQuestionAnswer,
   questionItemToPermissionOptions,
   questionRequestToElicitationParams,
-} from './question';
+} from "./question";
 
 export class AcpInteractionBridge {
   /** Ids the bridge has already begun handling — guards against re-entry. */
@@ -58,7 +58,7 @@ export class AcpInteractionBridge {
      */
     private readonly elicitationForm = false,
   ) {
-    this.subscription = session.events.on('interactions.changed', (pending) => {
+    this.subscription = session.events.on("interactions.changed", (pending) => {
       this.onPendingChanged(pending);
     }); // The event stream only fires on change — sweep anything parked before the
     // subscription attached (matches the old direct `listPending()` sweep).
@@ -67,7 +67,7 @@ export class AcpInteractionBridge {
         this.onPendingChanged(pending);
       },
       (error: unknown) => {
-        log.warn('acp: initial interaction sweep failed', {
+        log.warn("acp: initial interaction sweep failed", {
           sessionId: this.sessionId,
           error: error instanceof Error ? error.message : String(error),
         });
@@ -86,7 +86,8 @@ export class AcpInteractionBridge {
     if (this.disposed) return;
     for (const interaction of pending) {
       if (this.inFlight.has(interaction.id)) continue;
-      if (interaction.kind !== 'approval' && interaction.kind !== 'question') continue;
+      if (interaction.kind !== "approval" && interaction.kind !== "question")
+        continue;
       this.inFlight.add(interaction.id);
       void this.dispatch(interaction);
     }
@@ -96,13 +97,17 @@ export class AcpInteractionBridge {
     const respond = (response: unknown): Promise<void> =>
       this.session.interactions.respond(interaction.id, response);
     try {
-      if (interaction.kind === 'approval') {
-        const response = await this.handleApproval(interaction.payload as ApprovalRequest);
+      if (interaction.kind === "approval") {
+        const response = await this.handleApproval(
+          interaction.payload as ApprovalRequest,
+        );
         await respond(response);
         return;
       }
-      if (interaction.kind === 'question') {
-        const result = await this.handleQuestion(interaction.payload as QuestionRequest);
+      if (interaction.kind === "question") {
+        const result = await this.handleQuestion(
+          interaction.payload as QuestionRequest,
+        );
         await respond(result);
       }
     } catch (error) {
@@ -110,21 +115,24 @@ export class AcpInteractionBridge {
       // already swallow RPC failures into a safe response — so reaching here
       // means something unexpected broke. Log and settle with the safest
       // default so the gate/tool does not park forever.
-      log.warn('acp: interaction bridge dispatch failed', {
+      log.warn("acp: interaction bridge dispatch failed", {
         sessionId: this.sessionId,
         interactionId: interaction.id,
         kind: interaction.kind,
         error: error instanceof Error ? error.message : String(error),
       });
       const fallback: unknown =
-        interaction.kind === 'approval'
-          ? ({ decision: 'rejected' } satisfies ApprovalResponse)
+        interaction.kind === "approval"
+          ? ({ decision: "rejected" } satisfies ApprovalResponse)
           : null;
       await respond(fallback).catch((respondError: unknown) => {
-        log.warn('acp: interaction bridge fallback respond failed', {
+        log.warn("acp: interaction bridge fallback respond failed", {
           sessionId: this.sessionId,
           interactionId: interaction.id,
-          error: respondError instanceof Error ? respondError.message : String(respondError),
+          error:
+            respondError instanceof Error
+              ? respondError.message
+              : String(respondError),
         });
       });
     }
@@ -135,7 +143,9 @@ export class AcpInteractionBridge {
    * RPC failure resolves with `decision: 'rejected'` — rejecting on failure is
    * strictly safer than approving when the client cannot confirm intent.
    */
-  private async handleApproval(req: ApprovalRequest): Promise<ApprovalResponse> {
+  private async handleApproval(
+    req: ApprovalRequest,
+  ): Promise<ApprovalResponse> {
     const toolCall = buildPermissionToolCallUpdate(req);
     const options = approvalRequestToPermissionOptions(req);
     try {
@@ -150,13 +160,13 @@ export class AcpInteractionBridge {
         options,
       );
     } catch (error) {
-      log.warn('acp: requestPermission failed; rejecting', {
+      log.warn("acp: requestPermission failed; rejecting", {
         sessionId: this.sessionId,
         toolCallId: req.toolCallId,
         toolName: req.toolName,
         error: error instanceof Error ? error.message : String(error),
       });
-      return { decision: 'rejected' };
+      return { decision: "rejected" };
     }
   }
 
@@ -176,33 +186,44 @@ export class AcpInteractionBridge {
    * `null` so the tool takes its canonical "user dismissed" branch —
    * strictly safer than fabricating an answer.
    */
-  private async handleQuestion(req: QuestionRequest): Promise<QuestionAnswers | null> {
+  private async handleQuestion(
+    req: QuestionRequest,
+  ): Promise<QuestionAnswers | null> {
     const questions = req.questions;
     if (questions.length === 0) {
-      log.warn('acp: handleQuestion received empty questions array', {
+      log.warn("acp: handleQuestion received empty questions array", {
         sessionId: this.sessionId,
       });
       return null;
     }
-    const rawToolCallId = req.toolCallId ?? 'ask-user';
+    const rawToolCallId = req.toolCallId ?? "ask-user";
     const toolCallId =
-      req.turnId !== undefined ? acpToolCallId(req.turnId, rawToolCallId) : rawToolCallId;
+      req.turnId !== undefined
+        ? acpToolCallId(req.turnId, rawToolCallId)
+        : rawToolCallId;
     if (this.elicitationForm) {
       try {
         const response = await this.conn.createElicitation(
-          questionRequestToElicitationParams(questions, this.sessionId, toolCallId),
+          questionRequestToElicitationParams(
+            questions,
+            this.sessionId,
+            toolCallId,
+          ),
         );
         return elicitationResponseToQuestionAnswers(questions, response);
       } catch (error) {
-        log.warn('acp: elicitation/create failed; falling back to request_permission', {
-          sessionId: this.sessionId,
-          toolCallId: req.toolCallId,
-          error: error instanceof Error ? error.message : String(error),
-        });
+        log.warn(
+          "acp: elicitation/create failed; falling back to request_permission",
+          {
+            sessionId: this.sessionId,
+            toolCallId: req.toolCallId,
+            error: error instanceof Error ? error.message : String(error),
+          },
+        );
       }
     }
     if (questions.length > 1) {
-      log.warn('acp: handleQuestion degrading to first question only', {
+      log.warn("acp: handleQuestion degrading to first question only", {
         sessionId: this.sessionId,
         dropped: questions.length - 1,
       });
@@ -215,13 +236,15 @@ export class AcpInteractionBridge {
         options: [...options],
         toolCall: {
           toolCallId,
-          title: 'AskUserQuestion',
-          content: [{ type: 'content', content: { type: 'text', text: q.question } }],
+          title: "AskUserQuestion",
+          content: [
+            { type: "content", content: { type: "text", text: q.question } },
+          ],
         },
       });
       return outcomeToQuestionAnswer(q, response);
     } catch (error) {
-      log.warn('acp: requestPermission (question) failed; dismissing', {
+      log.warn("acp: requestPermission (question) failed; dismissing", {
         sessionId: this.sessionId,
         toolCallId: req.toolCallId,
         error: error instanceof Error ? error.message : String(error),

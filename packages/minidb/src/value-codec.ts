@@ -5,17 +5,20 @@
 // dt normalization, and the atomic sidecar-file write used by the index
 // definition files.
 
-import fs from 'node:fs/promises';
-import path from 'node:path';
-import { fsyncDir } from './compaction.js';
-import { SNAPSHOT_FILE, WAL_FILE } from './generation.js';
-import type { RangeOptions } from './skiplist.js';
-import type { ValueMode } from './recovery.js';
-import type { ValueCodec, ValueCodecName, ValueModeSetting } from './types.js';
+import fs from "node:fs/promises";
+import path from "node:path";
+import { fsyncDir } from "./compaction.js";
+import { SNAPSHOT_FILE, WAL_FILE } from "./generation.js";
+import type { RangeOptions } from "./skiplist.js";
+import type { ValueMode } from "./recovery.js";
+import type { ValueCodec, ValueCodecName, ValueModeSetting } from "./types.js";
 
 export const BUFFER: ValueCodec<Buffer> = {
   encode: (v) => {
-    if (!Buffer.isBuffer(v)) throw new TypeError('value must be a Buffer (use valueCodec: "string" or "json")');
+    if (!Buffer.isBuffer(v))
+      throw new TypeError(
+        'value must be a Buffer (use valueCodec: "string" or "json")',
+      );
     return v;
   },
   // Return a copy so a caller mutating the result cannot corrupt the stored
@@ -23,18 +26,22 @@ export const BUFFER: ValueCodec<Buffer> = {
   decode: (b) => Buffer.from(b),
 };
 export const STRING: ValueCodec<string> = {
-  encode: (v) => Buffer.from(String(v), 'utf8'),
-  decode: (b) => b.toString('utf8'),
+  encode: (v) => Buffer.from(String(v), "utf8"),
+  decode: (b) => b.toString("utf8"),
 };
 export const JSON_CODEC: ValueCodec<unknown> = {
-  encode: (v) => Buffer.from(JSON.stringify(v), 'utf8'),
-  decode: (b) => JSON.parse(b.toString('utf8')),
+  encode: (v) => Buffer.from(JSON.stringify(v), "utf8"),
+  decode: (b) => JSON.parse(b.toString("utf8")),
 };
-export const CODECS: Record<ValueCodecName, ValueCodec<unknown>> = { buffer: BUFFER, string: STRING, json: JSON_CODEC };
+export const CODECS: Record<ValueCodecName, ValueCodec<unknown>> = {
+  buffer: BUFFER,
+  string: STRING,
+  json: JSON_CODEC,
+};
 export const MAX_KEY_LEN = 128;
 
 export function toBuf(key: string | Buffer): Buffer {
-  return Buffer.isBuffer(key) ? key : Buffer.from(String(key), 'utf8');
+  return Buffer.isBuffer(key) ? key : Buffer.from(String(key), "utf8");
 }
 // Canonical byte-string form of a key: each char's code unit equals one byte of
 // the key's UTF-8 encoding. The store and every derived index key their maps by
@@ -44,12 +51,14 @@ export function toBuf(key: string | Buffer): Buffer {
 // path) but looked up under another (the raw UTF-16 string), so get/del/scan and
 // every index miss it.
 export function toKStr(key: string | Buffer): string {
-  return typeof key === 'string' ? Buffer.from(key, 'utf8').toString('binary') : key.toString('binary');
+  return typeof key === "string"
+    ? Buffer.from(key, "utf8").toString("binary")
+    : key.toString("binary");
 }
 // Inverse of toKStr: turn a canonical byte-string back into the original UTF-8
 // string for keys returned to callers (scan / findEq / dtRange / ...).
 export function fromKStr(k: string): string {
-  return Buffer.from(k, 'binary').toString('utf8');
+  return Buffer.from(k, "binary").toString("utf8");
 }
 // Canonicalize the string bounds of a range scan so they compare correctly
 // against the canonically-keyed ordered index.
@@ -62,11 +71,13 @@ export function canonRange(opts: RangeOptions<string>): RangeOptions<string> {
   return out;
 }
 
-export function normDt(dt?: Record<string, number | string> | null): Record<string, number> | null {
+export function normDt(
+  dt?: Record<string, number | string> | null,
+): Record<string, number> | null {
   if (!dt) return null;
   const out: Record<string, number> = {};
   for (const [k, v] of Object.entries(dt)) {
-    const ms = typeof v === 'number' ? v : Date.parse(v);
+    const ms = typeof v === "number" ? v : Date.parse(v);
     if (Number.isFinite(ms)) out[k] = ms;
   }
   return Object.keys(out).length ? out : null;
@@ -76,7 +87,7 @@ export async function fileSize(file: string): Promise<number> {
   try {
     return (await fs.stat(file)).size;
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === 'ENOENT') return 0;
+    if ((e as NodeJS.ErrnoException).code === "ENOENT") return 0;
     throw e;
   }
 }
@@ -104,7 +115,7 @@ export async function writeFileAtomic(
 ): Promise<void> {
   const tmp = `${file}.tmp-${process.pid}-${++sidecarTmpSeq}`;
   try {
-    await fs.writeFile(tmp, data, 'utf8');
+    await fs.writeFile(tmp, data, "utf8");
     await fs.rename(tmp, file);
   } finally {
     // A successful rename already moved the tmp away (this rm is a no-op); a
@@ -114,9 +125,15 @@ export async function writeFileAtomic(
   await fsyncDir(path.dirname(file), { strict: true, stats: opts.stats });
 }
 
-export async function resolveValueMode(mode: ValueModeSetting, dir: string, maxMemoryBytes: number | null): Promise<ValueMode> {
-  if (mode !== 'auto') return mode;
-  if (maxMemoryBytes === null) return 'memory';
-  const total = (await fileSize(path.join(dir, SNAPSHOT_FILE))) + (await fileSize(path.join(dir, WAL_FILE)));
-  return total > maxMemoryBytes ? 'disk' : 'memory';
+export async function resolveValueMode(
+  mode: ValueModeSetting,
+  dir: string,
+  maxMemoryBytes: number | null,
+): Promise<ValueMode> {
+  if (mode !== "auto") return mode;
+  if (maxMemoryBytes === null) return "memory";
+  const total =
+    (await fileSize(path.join(dir, SNAPSHOT_FILE))) +
+    (await fileSize(path.join(dir, WAL_FILE)));
+  return total > maxMemoryBytes ? "disk" : "memory";
 }

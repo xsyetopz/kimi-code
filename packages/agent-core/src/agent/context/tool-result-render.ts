@@ -30,19 +30,20 @@
  * Callers: the live LLM projection (`agent/context/projector.ts`) and the
  * vis debugger's model view, which must mirror the live projection exactly.
  */
-import type { ContentPart } from '@moonshot-ai/kosong';
+import type { ContentPart } from "@moonshot-ai/kosong";
 
-export const TOOL_ERROR_STATUS = '<system>ERROR: Tool execution failed.</system>';
-export const TOOL_EMPTY_STATUS = '<system>Tool output is empty.</system>';
+export const TOOL_ERROR_STATUS =
+  "<system>ERROR: Tool execution failed.</system>";
+export const TOOL_EMPTY_STATUS = "<system>Tool output is empty.</system>";
 export const TOOL_EMPTY_ERROR_STATUS =
-  '<system>ERROR: Tool execution failed. Tool output is empty.</system>';
+  "<system>ERROR: Tool execution failed. Tool output is empty.</system>";
 
 /**
  * The plain placeholder the loop layer bakes into records for empty outputs
  * (`normalizeToolResult`'s `TOOL_OUTPUT_EMPTY`). The projection recognizes
  * it as empty-equivalent and emits the wrapped {@link TOOL_EMPTY_STATUS}.
  */
-const TOOL_OUTPUT_EMPTY_TEXT = 'Tool output is empty.';
+const TOOL_OUTPUT_EMPTY_TEXT = "Tool output is empty.";
 
 export interface RenderableToolResult {
   readonly output: string | readonly ContentPart[];
@@ -50,13 +51,15 @@ export interface RenderableToolResult {
   readonly isError?: boolean | undefined;
 }
 
-export function renderToolResultForModel(result: RenderableToolResult): ContentPart[] {
+export function renderToolResultForModel(
+  result: RenderableToolResult,
+): ContentPart[] {
   const rendered = renderStatus(result);
   if (result.note === undefined || result.note.length === 0) {
     return rendered;
   }
   const only = rendered[0];
-  if (rendered.length === 1 && only?.type === 'text') {
+  if (rendered.length === 1 && only?.type === "text") {
     return [textPart(`${only.text}\n${result.note}`)];
   }
   return [...rendered, textPart(result.note)];
@@ -68,13 +71,15 @@ function renderStatus(result: RenderableToolResult): ContentPart[] {
   // String outputs — and their history form, a single text part — keep the
   // legacy joined shape: the status prefix shares one text part with the
   // output so provider serialization is unchanged.
-  const single = typeof output === 'string' ? output : singleTextPart(output);
+  const single = typeof output === "string" ? output : singleTextPart(output);
   if (single !== undefined) {
     if (result.isError === true) {
       if (single.length === 0) return [textPart(TOOL_EMPTY_ERROR_STATUS)];
       return [textPart(`${TOOL_ERROR_STATUS}\n${single}`)];
     }
-    return isEmptyOutputText(single) ? [textPart(TOOL_EMPTY_STATUS)] : [textPart(single)];
+    return isEmptyOutputText(single)
+      ? [textPart(TOOL_EMPTY_STATUS)]
+      : [textPart(single)];
   }
 
   const parts = output as readonly ContentPart[];
@@ -82,7 +87,11 @@ function renderStatus(result: RenderableToolResult): ContentPart[] {
   // text blocks) gets the placeholder. Otherwise projection would drop the
   // blank text blocks, leave the tool message empty, and throw on every send.
   if (isEmptyEquivalentContentArray(parts)) {
-    return [textPart(result.isError === true ? TOOL_EMPTY_ERROR_STATUS : TOOL_EMPTY_STATUS)];
+    return [
+      textPart(
+        result.isError === true ? TOOL_EMPTY_ERROR_STATUS : TOOL_EMPTY_STATUS,
+      ),
+    ];
   }
   if (result.isError === true) {
     return [textPart(TOOL_ERROR_STATUS), ...parts];
@@ -92,17 +101,21 @@ function renderStatus(result: RenderableToolResult): ContentPart[] {
 
 function singleTextPart(output: readonly ContentPart[]): string | undefined {
   const first = output[0];
-  return output.length === 1 && first?.type === 'text' ? first.text : undefined;
+  return output.length === 1 && first?.type === "text" ? first.text : undefined;
 }
 
 function textPart(text: string): ContentPart {
-  return { type: 'text', text };
+  return { type: "text", text };
 }
 
 function isEmptyOutputText(output: string): boolean {
   return output.trim().length === 0 || output.trim() === TOOL_OUTPUT_EMPTY_TEXT;
 }
 
-function isEmptyEquivalentContentArray(output: readonly ContentPart[]): boolean {
-  return output.every((part) => part.type === 'text' && part.text.trim().length === 0);
+function isEmptyEquivalentContentArray(
+  output: readonly ContentPart[],
+): boolean {
+  return output.every(
+    (part) => part.type === "text" && part.text.trim().length === 0,
+  );
 }

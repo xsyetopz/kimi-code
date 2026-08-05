@@ -23,9 +23,17 @@ function fuzzyMatch(text: string, query: string): boolean {
   return qi === lowerQuery.length;
 }
 
-export function findActiveToken(text: string, cursorPos: number): ActiveToken | null {
+export function findActiveToken(
+  text: string,
+  cursorPos: number,
+): ActiveToken | null {
   const beforeCursor = text.slice(0, cursorPos);
-  const lastSpace = Math.max(beforeCursor.lastIndexOf(" "), beforeCursor.lastIndexOf("\n"), beforeCursor.lastIndexOf("\t"), -1);
+  const lastSpace = Math.max(
+    beforeCursor.lastIndexOf(" "),
+    beforeCursor.lastIndexOf("\n"),
+    beforeCursor.lastIndexOf("\t"),
+    -1,
+  );
   const currentWord = beforeCursor.slice(lastSpace + 1);
 
   if (currentWord.startsWith("@")) {
@@ -46,7 +54,11 @@ interface UseSlashMenuResult {
   resetSlashMenu: () => void;
 }
 
-export function useSlashMenu(activeToken: ActiveToken | null, onSelectCommand: (name: string) => void, onCancel: () => void): UseSlashMenuResult {
+export function useSlashMenu(
+  activeToken: ActiveToken | null,
+  onSelectCommand: (name: string) => void,
+  onCancel: () => void,
+): UseSlashMenuResult {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const { slashCommands } = useSettingsStore();
 
@@ -60,7 +72,9 @@ export function useSlashMenu(activeToken: ActiveToken | null, onSelectCommand: (
     if (!q) {
       return slashCommands;
     }
-    return slashCommands.filter((cmd) => fuzzyMatch(cmd.name, q) || fuzzyMatch(cmd.description, q));
+    return slashCommands.filter(
+      (cmd) => fuzzyMatch(cmd.name, q) || fuzzyMatch(cmd.description, q),
+    );
   }, [showSlashMenu, activeToken?.query, slashCommands]);
 
   const resetSlashMenu = useCallback(() => {

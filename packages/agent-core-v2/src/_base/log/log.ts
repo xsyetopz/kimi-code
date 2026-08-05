@@ -10,9 +10,12 @@
  * are created by the `*LogService` implementations, not registered.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
 
-export type LogLevel = 'off' | 'error' | 'warn' | 'info' | 'debug';
+export type LogLevel = "off" | "error" | "warn" | "info" | "debug";
 
 export type LogContext = Record<string, unknown>;
 
@@ -25,7 +28,7 @@ export interface LogEntryError {
 
 export interface LogEntry {
   readonly t: number;
-  readonly level: Exclude<LogLevel, 'off'>;
+  readonly level: Exclude<LogLevel, "off">;
   readonly msg: string;
   readonly ctx?: LogContext;
   readonly error?: LogEntryError;
@@ -55,7 +58,7 @@ export interface ILogService extends ILogger {
 }
 
 export const ILogService: ServiceIdentifier<ILogService> =
-  createDecorator<ILogService>('logService');
+  createDecorator<ILogService>("logService");
 
 const LEVEL_ORDER: Record<LogLevel, number> = {
   off: 0,
@@ -66,6 +69,6 @@ const LEVEL_ORDER: Record<LogLevel, number> = {
 };
 
 export function levelEnabled(level: LogLevel, configured: LogLevel): boolean {
-  if (level === 'off' || configured === 'off') return false;
+  if (level === "off" || configured === "off") return false;
   return LEVEL_ORDER[level] <= LEVEL_ORDER[configured];
 }

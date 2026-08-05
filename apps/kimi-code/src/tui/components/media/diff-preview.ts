@@ -5,11 +5,11 @@
  * formatted text lines instead of React elements.
  */
 
-import chalk from 'chalk';
+import chalk from "chalk";
 
-import { currentTheme } from '#/tui/theme';
+import { currentTheme } from "#/tui/theme";
 
-export type DiffLineKind = 'context' | 'add' | 'delete';
+export type DiffLineKind = "context" | "add" | "delete";
 
 interface DiffStyles {
   add: (s: string) => string;
@@ -45,8 +45,8 @@ export function computeDiffLines(
   newStart: number = 1,
   isIncomplete: boolean = false,
 ): DiffLine[] {
-  const oldLines = oldText ? oldText.split('\n') : [];
-  const newLines = newText ? newText.split('\n') : [];
+  const oldLines = oldText ? oldText.split("\n") : [];
+  const newLines = newText ? newText.split("\n") : [];
   const m = oldLines.length;
   const n = newLines.length;
 
@@ -68,14 +68,26 @@ export function computeDiffLines(
   let j = n;
   while (i > 0 || j > 0) {
     if (i > 0 && j > 0 && oldLines[i - 1] === newLines[j - 1]) {
-      reversed.push({ kind: 'context', lineNum: newStart + j - 1, code: newLines[j - 1]! });
+      reversed.push({
+        kind: "context",
+        lineNum: newStart + j - 1,
+        code: newLines[j - 1]!,
+      });
       i--;
       j--;
     } else if (j > 0 && (i === 0 || dp[i]![j - 1]! >= dp[i - 1]![j]!)) {
-      reversed.push({ kind: 'add', lineNum: newStart + j - 1, code: newLines[j - 1]! });
+      reversed.push({
+        kind: "add",
+        lineNum: newStart + j - 1,
+        code: newLines[j - 1]!,
+      });
       j--;
     } else {
-      reversed.push({ kind: 'delete', lineNum: oldStart + i - 1, code: oldLines[i - 1]! });
+      reversed.push({
+        kind: "delete",
+        lineNum: oldStart + i - 1,
+        code: oldLines[i - 1]!,
+      });
       i--;
     }
   }
@@ -90,7 +102,7 @@ export function computeDiffLines(
   // than genuine deletions.
   if (isIncomplete && result.length > 0) {
     let lastNonDelete = result.length - 1;
-    while (lastNonDelete >= 0 && result[lastNonDelete]!.kind === 'delete') {
+    while (lastNonDelete >= 0 && result[lastNonDelete]!.kind === "delete") {
       lastNonDelete--;
     }
     if (lastNonDelete >= 0) {
@@ -115,14 +127,20 @@ export function renderDiffLines(
   maxLines?: number,
 ): string[] {
   const s = makeDiffStyles();
-  const diffLines = computeDiffLines(oldText, newText, oldStart ?? 1, newStart ?? 1, isIncomplete);
-  const changedLines = diffLines.filter((l) => l.kind !== 'context');
-  const added = changedLines.filter((l) => l.kind === 'add').length;
-  const removed = changedLines.filter((l) => l.kind === 'delete').length;
+  const diffLines = computeDiffLines(
+    oldText,
+    newText,
+    oldStart ?? 1,
+    newStart ?? 1,
+    isIncomplete,
+  );
+  const changedLines = diffLines.filter((l) => l.kind !== "context");
+  const added = changedLines.filter((l) => l.kind === "add").length;
+  const removed = changedLines.filter((l) => l.kind === "delete").length;
 
   const output: string[] = [];
 
-  let header = '';
+  let header = "";
   if (added > 0) header += s.addBold(`+${String(added)} `);
   if (removed > 0) header += s.delBold(`-${String(removed)} `);
   header += path;
@@ -134,16 +152,19 @@ export function renderDiffLines(
       : changedLines;
 
   for (const line of shown) {
-    const marker = line.kind === 'add' ? '+' : '-';
-    const color = line.kind === 'add' ? s.add : s.del;
-    output.push(s.gutter(String(line.lineNum).padStart(4) + ' ') + color(marker + ' ' + line.code));
+    const marker = line.kind === "add" ? "+" : "-";
+    const color = line.kind === "add" ? s.add : s.del;
+    output.push(
+      s.gutter(String(line.lineNum).padStart(4) + " ") +
+        color(marker + " " + line.code),
+    );
   }
 
   const hidden = changedLines.length - shown.length;
   if (hidden > 0) {
     output.push(
       s.meta(
-        `     … ${String(hidden)} more change${hidden > 1 ? 's' : ''} hidden (ctrl+o to expand)`,
+        `     … ${String(hidden)} more change${hidden > 1 ? "s" : ""} hidden (ctrl+o to expand)`,
       ),
     );
   }
@@ -168,15 +189,20 @@ interface Cluster {
 function buildClusters(
   diffLines: DiffLine[],
   contextLines: number,
-): { clusters: Cluster[]; changedCount: number; addedCount: number; removedCount: number } {
+): {
+  clusters: Cluster[];
+  changedCount: number;
+  addedCount: number;
+  removedCount: number;
+} {
   const changeIndices: number[] = [];
   let added = 0;
   let removed = 0;
   for (const [i, line] of diffLines.entries()) {
-    if (line.kind === 'add') {
+    if (line.kind === "add") {
       added++;
       changeIndices.push(i);
-    } else if (line.kind === 'delete') {
+    } else if (line.kind === "delete") {
       removed++;
       changeIndices.push(i);
     }
@@ -184,7 +210,12 @@ function buildClusters(
 
   const clusters: Cluster[] = [];
   if (changeIndices.length === 0) {
-    return { clusters, changedCount: 0, addedCount: added, removedCount: removed };
+    return {
+      clusters,
+      changedCount: 0,
+      addedCount: added,
+      removedCount: removed,
+    };
   }
 
   const mergeGap = 2 * contextLines;
@@ -217,10 +248,10 @@ function buildClusters(
 }
 
 function formatDiffRow(line: DiffLine, s: DiffStyles): string {
-  const gutter = s.gutter(String(line.lineNum).padStart(4) + ' ');
-  if (line.kind === 'add') return gutter + s.add('+ ' + line.code);
-  if (line.kind === 'delete') return gutter + s.del('- ' + line.code);
-  return gutter + '  ' + line.code;
+  const gutter = s.gutter(String(line.lineNum).padStart(4) + " ");
+  if (line.kind === "add") return gutter + s.add("+ " + line.code);
+  if (line.kind === "delete") return gutter + s.del("- " + line.code);
+  return gutter + "  " + line.code;
 }
 
 /**
@@ -254,7 +285,7 @@ export function renderDiffLinesClustered(
   );
 
   const output: string[] = [];
-  let header = '';
+  let header = "";
   if (addedCount > 0) header += s.addBold(`+${String(addedCount)} `);
   if (removedCount > 0) header += s.delBold(`-${String(removedCount)} `);
   header += path;
@@ -262,7 +293,10 @@ export function renderDiffLinesClustered(
 
   if (clusters.length === 0) return output;
 
-  const cap = maxLines !== undefined && maxLines >= 0 ? maxLines : Number.POSITIVE_INFINITY;
+  const cap =
+    maxLines !== undefined && maxLines >= 0
+      ? maxLines
+      : Number.POSITIVE_INFINITY;
   let body = 0;
   let prevEnd = -1;
   let truncated = false;
@@ -280,7 +314,9 @@ export function renderDiffLinesClustered(
           truncated = true;
           break;
         }
-        output.push(s.meta(`     … ${String(gap)} unchanged line${gap > 1 ? 's' : ''} …`));
+        output.push(
+          s.meta(`     … ${String(gap)} unchanged line${gap > 1 ? "s" : ""} …`),
+        );
         body++;
       }
     }
@@ -296,7 +332,7 @@ export function renderDiffLinesClustered(
       const line = diffLines[i]!;
       output.push(formatDiffRow(line, s));
       body++;
-      if (line.kind !== 'context') shownChanges++;
+      if (line.kind !== "context") shownChanges++;
       prevEnd = i;
     }
   }
@@ -304,10 +340,10 @@ export function renderDiffLinesClustered(
   if (truncated) {
     const hidden = changedCount - shownChanges;
     if (hidden > 0) {
-      const hint = opts.expandKeyHint ?? 'ctrl+o';
+      const hint = opts.expandKeyHint ?? "ctrl+o";
       output.push(
         s.meta(
-          `     … ${String(hidden)} more change${hidden > 1 ? 's' : ''} hidden (${hint} to expand)`,
+          `     … ${String(hidden)} more change${hidden > 1 ? "s" : ""} hidden (${hint} to expand)`,
         ),
       );
     }

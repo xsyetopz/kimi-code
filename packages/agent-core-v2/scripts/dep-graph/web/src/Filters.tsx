@@ -1,6 +1,6 @@
-import type { EdgeKind, Graph, ServiceScope } from '../../analyzer/types';
-import { EDGE_KINDS, EDGE_STYLE, SCOPE_STYLE } from './style';
-import { tagColor, type TagCount } from './tags';
+import type { EdgeKind, Graph, ServiceScope } from "../../analyzer/types";
+import { EDGE_KINDS, EDGE_STYLE, SCOPE_STYLE } from "./style";
+import { tagColor, type TagCount } from "./tags";
 
 export interface FilterState {
   scopes: Set<ServiceScope>;
@@ -20,7 +20,7 @@ interface FiltersProps {
   onChange: (next: FilterState) => void;
 }
 
-const SCOPES: ServiceScope[] = ['App', 'Session', 'Agent'];
+const SCOPES: ServiceScope[] = ["App", "Session", "Agent"];
 
 export function Filters({
   graph,
@@ -45,10 +45,10 @@ export function Filters({
       style={{
         width: 260,
         minWidth: 260,
-        background: '#151b23',
-        borderRight: '1px solid #30363d',
+        background: "#151b23",
+        borderRight: "1px solid #30363d",
         padding: 16,
-        overflowY: 'auto',
+        overflowY: "auto",
         fontSize: 13,
       }}
     >
@@ -56,10 +56,10 @@ export function Filters({
         <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>
           agent-core-v2 · dep graph
         </div>
-        <div style={{ color: '#7d8590', fontSize: 11 }}>
+        <div style={{ color: "#7d8590", fontSize: 11 }}>
           {graph.services.length} services · {graph.edges.length} edges
         </div>
-        <div style={{ color: '#7d8590', fontSize: 11, marginTop: 4 }}>
+        <div style={{ color: "#7d8590", fontSize: 11, marginTop: 4 }}>
           @ <code>{graph.generatedAt.slice(0, 10)}</code>
         </div>
       </div>
@@ -70,14 +70,14 @@ export function Filters({
         onChange={(e) => onChange({ ...state, search: e.target.value })}
         title="Substring match across impl class, token interface, domain, and public members"
         style={{
-          width: '100%',
-          padding: '6px 8px',
-          background: '#0e1116',
-          color: '#e6edf3',
-          border: '1px solid #30363d',
+          width: "100%",
+          padding: "6px 8px",
+          background: "#0e1116",
+          color: "#e6edf3",
+          border: "1px solid #30363d",
           borderRadius: 4,
           marginBottom: 16,
-          boxSizing: 'border-box',
+          boxSizing: "border-box",
         }}
       />
 
@@ -89,7 +89,9 @@ export function Filters({
             count={scopeCounts[s] ?? 0}
             checked={state.scopes.has(s)}
             color={SCOPE_STYLE[s].color}
-            onToggle={() => onChange({ ...state, scopes: toggle(state.scopes, s) })}
+            onToggle={() =>
+              onChange({ ...state, scopes: toggle(state.scopes, s) })
+            }
           />
         ))}
       </Section>
@@ -103,7 +105,9 @@ export function Filters({
             checked={state.kinds.has(k)}
             color={EDGE_STYLE[k].color}
             dashed={EDGE_STYLE[k].dashed}
-            onToggle={() => onChange({ ...state, kinds: toggle(state.kinds, k) })}
+            onToggle={() =>
+              onChange({ ...state, kinds: toggle(state.kinds, k) })
+            }
           />
         ))}
       </Section>
@@ -112,23 +116,27 @@ export function Filters({
         <CheckRow
           label="hide orphans"
           checked={state.hideOrphans}
-          onToggle={() => onChange({ ...state, hideOrphans: !state.hideOrphans })}
+          onToggle={() =>
+            onChange({ ...state, hideOrphans: !state.hideOrphans })
+          }
         />
         <CheckRow
           label="group by scope"
           checked={state.groupByScope}
-          onToggle={() => onChange({ ...state, groupByScope: !state.groupByScope })}
+          onToggle={() =>
+            onChange({ ...state, groupByScope: !state.groupByScope })
+          }
         />
       </Section>
 
       <Section title={`Tags (${tagCounts.length})`}>
         {tagCounts.length === 0 ? (
-          <div style={{ color: '#7d8590', fontSize: 11 }}>
+          <div style={{ color: "#7d8590", fontSize: 11 }}>
             none yet — click a node to add tags
           </div>
         ) : (
           <>
-            <div style={{ marginBottom: 6, display: 'flex', gap: 6 }}>
+            <div style={{ marginBottom: 6, display: "flex", gap: 6 }}>
               <button
                 style={btnStyle}
                 onClick={() =>
@@ -155,7 +163,10 @@ export function Filters({
                 checked={state.activeTags.has(tag)}
                 color={tagColor(tag).color}
                 onToggle={() =>
-                  onChange({ ...state, activeTags: toggle(state.activeTags, tag) })
+                  onChange({
+                    ...state,
+                    activeTags: toggle(state.activeTags, tag),
+                  })
                 }
               />
             ))}
@@ -164,7 +175,7 @@ export function Filters({
       </Section>
 
       <Section title={`Domain (${domains.length})`}>
-        <div style={{ marginBottom: 6, display: 'flex', gap: 6 }}>
+        <div style={{ marginBottom: 6, display: "flex", gap: 6 }}>
           <button
             style={btnStyle}
             onClick={() => onChange({ ...state, hiddenDomains: new Set() })}
@@ -173,7 +184,9 @@ export function Filters({
           </button>
           <button
             style={btnStyle}
-            onClick={() => onChange({ ...state, hiddenDomains: new Set(domains) })}
+            onClick={() =>
+              onChange({ ...state, hiddenDomains: new Set(domains) })
+            }
           >
             none
           </button>
@@ -185,7 +198,10 @@ export function Filters({
             count={domainCounts[d] ?? 0}
             checked={!state.hiddenDomains.has(d)}
             onToggle={() =>
-              onChange({ ...state, hiddenDomains: toggle(state.hiddenDomains, d) })
+              onChange({
+                ...state,
+                hiddenDomains: toggle(state.hiddenDomains, d),
+              })
             }
           />
         ))}
@@ -194,15 +210,21 @@ export function Filters({
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }): JSX.Element {
+function Section({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}): JSX.Element {
   return (
     <div style={{ marginBottom: 18 }}>
       <div
         style={{
           fontSize: 11,
           fontWeight: 600,
-          textTransform: 'uppercase',
-          color: '#7d8590',
+          textTransform: "uppercase",
+          color: "#7d8590",
           marginBottom: 6,
           letterSpacing: 0.5,
         }}
@@ -223,15 +245,22 @@ interface CheckRowProps {
   onToggle: () => void;
 }
 
-function CheckRow({ label, count, checked, color, dashed, onToggle }: CheckRowProps): JSX.Element {
+function CheckRow({
+  label,
+  count,
+  checked,
+  color,
+  dashed,
+  onToggle,
+}: CheckRowProps): JSX.Element {
   return (
     <label
       style={{
-        display: 'flex',
-        alignItems: 'center',
+        display: "flex",
+        alignItems: "center",
         gap: 6,
-        padding: '3px 0',
-        cursor: 'pointer',
+        padding: "3px 0",
+        cursor: "pointer",
         opacity: checked ? 1 : 0.5,
       }}
     >
@@ -239,22 +268,22 @@ function CheckRow({ label, count, checked, color, dashed, onToggle }: CheckRowPr
         type="checkbox"
         checked={checked}
         onChange={onToggle}
-        style={{ margin: 0, accentColor: color ?? '#79c0ff' }}
+        style={{ margin: 0, accentColor: color ?? "#79c0ff" }}
       />
       {color !== undefined && (
         <span
           style={{
-            display: 'inline-block',
+            display: "inline-block",
             width: 14,
             height: 3,
-            borderTop: `${dashed ? '2px dashed' : '2px solid'} ${color}`,
+            borderTop: `${dashed ? "2px dashed" : "2px solid"} ${color}`,
             marginRight: 2,
           }}
         />
       )}
       <span style={{ flex: 1 }}>{label}</span>
       {count !== undefined && (
-        <span style={{ color: '#7d8590', fontSize: 11 }}>{count}</span>
+        <span style={{ color: "#7d8590", fontSize: 11 }}>{count}</span>
       )}
     </label>
   );
@@ -262,12 +291,12 @@ function CheckRow({ label, count, checked, color, dashed, onToggle }: CheckRowPr
 
 const btnStyle: React.CSSProperties = {
   flex: 1,
-  padding: '3px 8px',
-  background: '#21262d',
-  color: '#e6edf3',
-  border: '1px solid #30363d',
+  padding: "3px 8px",
+  background: "#21262d",
+  color: "#e6edf3",
+  border: "1px solid #30363d",
   borderRadius: 4,
-  cursor: 'pointer',
+  cursor: "pointer",
   fontSize: 11,
 };
 

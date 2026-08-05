@@ -7,7 +7,7 @@
  * to invoke configured external commands.
  */
 
-import { createDecorator } from '#/_base/di/instantiation';
+import { createDecorator } from "#/_base/di/instantiation";
 
 export interface RenderedExternalHookResult {
   readonly event: string;
@@ -20,4 +20,4 @@ export interface IAgentExternalHooksService {
 }
 
 export const IAgentExternalHooksService =
-  createDecorator<IAgentExternalHooksService>('agentExternalHooksService');
+  createDecorator<IAgentExternalHooksService>("agentExternalHooksService");

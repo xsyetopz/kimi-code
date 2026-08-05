@@ -15,52 +15,63 @@
  * runtime.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import type { BuiltinTool } from '../../../agent/tool';
-import type { Logger } from '../../../logging';
-import { ToolAccesses } from '../../../loop/tool-access';
-import { isAbortError } from '../../../loop/errors';
-import type { ExecutableToolContext, ExecutableToolResult, ToolExecution } from '../../../loop/types';
-import type { ResolvedAgentProfile } from '../../../profile';
+import type { BuiltinTool } from "../../../agent/tool";
+import type { Logger } from "../../../logging";
+import { ToolAccesses } from "../../../loop/tool-access";
+import { isAbortError } from "../../../loop/errors";
+import type {
+  ExecutableToolContext,
+  ExecutableToolResult,
+  ToolExecution,
+} from "../../../loop/types";
+import type { ResolvedAgentProfile } from "../../../profile";
 import {
   DEFAULT_SUBAGENT_TIMEOUT_MS,
   formatSubagentTimeoutDescription,
   type SessionSubagentHost,
   type SubagentHandle,
-} from '../../../session/subagent-host';
-import { stripSubagentModelParameter } from '../../../session/subagent-binding';
-import { isUserCancellation } from '../../../utils/abort';
-import { AgentBackgroundTask, type BackgroundManager } from '../../../agent/background';
-import { toInputJsonSchema } from '../../support/input-schema';
-import { matchesGlobRuleSubject } from '../../support/rule-match';
-import AGENT_BACKGROUND_DISABLED_DESCRIPTION from './agent-background-disabled.md?raw';
-import AGENT_BACKGROUND_DESCRIPTION from './agent-background-enabled.md?raw';
-import AGENT_DESCRIPTION_BASE from './agent.md?raw';
+} from "../../../session/subagent-host";
+import { stripSubagentModelParameter } from "../../../session/subagent-binding";
+import { isUserCancellation } from "../../../utils/abort";
+import {
+  AgentBackgroundTask,
+  type BackgroundManager,
+} from "../../../agent/background";
+import { toInputJsonSchema } from "../../support/input-schema";
+import { matchesGlobRuleSubject } from "../../support/rule-match";
+import AGENT_BACKGROUND_DISABLED_DESCRIPTION from "./agent-background-disabled.md?raw";
+import AGENT_BACKGROUND_DESCRIPTION from "./agent-background-enabled.md?raw";
+import AGENT_DESCRIPTION_BASE from "./agent.md?raw";
 
 // ── AgentTool input ──────────────────────────────────────────────────
 
 export const AgentToolInputSchema = z.preprocess(
   (input) => {
-    if (typeof input !== 'object' || input === null || Array.isArray(input)) {
+    if (typeof input !== "object" || input === null || Array.isArray(input)) {
       return input;
     }
     const record = input as Record<string, unknown>;
     const normalized = { ...record };
     const hasResumeId =
-      typeof normalized['resume'] === 'string' && normalized['resume'].trim().length > 0;
+      typeof normalized["resume"] === "string" &&
+      normalized["resume"].trim().length > 0;
     const hasSubagentType =
-      typeof normalized['subagent_type'] === 'string' && normalized['subagent_type'].length > 0;
+      typeof normalized["subagent_type"] === "string" &&
+      normalized["subagent_type"].length > 0;
     if (!hasSubagentType && !hasResumeId) {
-      normalized['subagent_type'] = 'coder';
+      normalized["subagent_type"] = "coder";
     } else if (!hasSubagentType) {
-      delete normalized['subagent_type'];
+      delete normalized["subagent_type"];
     }
     return normalized;
   },
   z.object({
-    prompt: z.string().describe('Full task prompt for the subagent'),
-    description: z.string().describe('Short task description (3-5 words) for UI display'),
+    prompt: z.string().describe("Full task prompt for the subagent"),
+    description: z
+      .string()
+      .describe("Short task description (3-5 words) for UI display"),
     subagent_type: z
       .string()
       .optional()
@@ -68,7 +79,7 @@ export const AgentToolInputSchema = z.preprocess(
         'One of the available agent types (see "Available agent types" in this tool description). Defaults to "coder" when omitted.',
       ),
     model: z
-      .enum(['primary', 'secondary'])
+      .enum(["primary", "secondary"])
       .optional()
       .describe(
         'Model for the new subagent: "secondary" uses the configured secondary model (the default when one is set), "primary" uses the model you are running on. Only applies when spawning a new agent — a resumed agent keeps its bound model.',
@@ -77,13 +88,13 @@ export const AgentToolInputSchema = z.preprocess(
       .string()
       .optional()
       .describe(
-        'Optional agent ID to resume instead of creating a new instance. When set, do not also pass subagent_type — the resumed agent keeps its own type, and supplying both is rejected.',
+        "Optional agent ID to resume instead of creating a new instance. When set, do not also pass subagent_type — the resumed agent keeps its own type, and supplying both is rejected.",
       ),
     run_in_background: z
       .boolean()
       .optional()
       .describe(
-        'If true, return immediately without waiting for completion. Prefer false unless the task can run independently and there is a clear benefit to not waiting.',
+        "If true, return immediately without waiting for completion. Prefer false unless the task can run independently and there is a clear benefit to not waiting.",
       ),
   }),
 );
@@ -93,7 +104,7 @@ export type AgentToolInput = z.infer<typeof AgentToolInputSchema>;
 // ── AgentTool output ─────────────────────────────────────────────────
 
 export const AgentToolOutputSchema = z.object({
-  result: z.string().describe('Aggregated text output from the subagent'),
+  result: z.string().describe("Aggregated text output from the subagent"),
   usage: z
     .object({
       input: z.number().int().nonnegative(),
@@ -101,27 +112,29 @@ export const AgentToolOutputSchema = z.object({
       cache_read: z.number().int().nonnegative().optional(),
       cache_write: z.number().int().nonnegative().optional(),
     })
-    .describe('Cumulative token usage'),
+    .describe("Cumulative token usage"),
 });
 
 export type AgentToolOutput = z.infer<typeof AgentToolOutputSchema>;
 
 const BACKGROUND_AGENT_UNAVAILABLE =
-  'Background agent execution is not available for this agent because TaskList, TaskOutput, and TaskStop are not enabled.';
+  "Background agent execution is not available for this agent because TaskList, TaskOutput, and TaskStop are not enabled.";
 
 // ── AgentTool class ──────────────────────────────────────────────────
 
 const AGENT_TOOL_PARAMETERS = toInputJsonSchema(AgentToolInputSchema);
-const AGENT_TOOL_PARAMETERS_NO_MODEL = stripSubagentModelParameter(AGENT_TOOL_PARAMETERS);
+const AGENT_TOOL_PARAMETERS_NO_MODEL = stripSubagentModelParameter(
+  AGENT_TOOL_PARAMETERS,
+);
 
 export class AgentTool implements BuiltinTool<AgentToolInput> {
-  readonly name: string = 'Agent';
+  readonly name: string = "Agent";
   readonly description: string;
   readonly parameters: Record<string, unknown>;
   constructor(
     private readonly subagentHost: SessionSubagentHost,
     private readonly backgroundManager: BackgroundManager,
-    subagents?: ResolvedAgentProfile['subagents'] | undefined,
+    subagents?: ResolvedAgentProfile["subagents"] | undefined,
     options?: {
       log?: Logger;
       allowBackground?: boolean | undefined;
@@ -148,16 +161,20 @@ export class AgentTool implements BuiltinTool<AgentToolInput> {
       options?.showModelPreferences ?? false,
     );
     const baseDescription = `${AGENT_DESCRIPTION_BASE}\n\n${
-      this.allowBackground ? AGENT_BACKGROUND_DESCRIPTION : AGENT_BACKGROUND_DISABLED_DESCRIPTION
+      this.allowBackground
+        ? AGENT_BACKGROUND_DESCRIPTION
+        : AGENT_BACKGROUND_DISABLED_DESCRIPTION
     }`;
     const sections = [baseDescription];
     if (typeLines) {
-      sections.push(`Available agent types (pass via subagent_type):\n${typeLines}`);
+      sections.push(
+        `Available agent types (pass via subagent_type):\n${typeLines}`,
+      );
     }
     if (options?.subagentModelDescription !== undefined) {
       sections.push(options.subagentModelDescription);
     }
-    this.description = sections.join('\n\n');
+    this.description = sections.join("\n\n");
     this.log = log;
   }
 
@@ -166,17 +183,19 @@ export class AgentTool implements BuiltinTool<AgentToolInput> {
   private readonly subagentTimeoutMs?: number;
 
   async resolveExecution(args: AgentToolInput): Promise<ToolExecution> {
-    let profileName = args.subagent_type?.length ? args.subagent_type : 'coder';
+    let profileName = args.subagent_type?.length ? args.subagent_type : "coder";
     const resumeAgentId = args.resume?.trim();
     if (resumeAgentId !== undefined && resumeAgentId.length > 0) {
-      profileName = (await this.subagentHost.getProfileName?.(resumeAgentId)) ?? 'subagent';
+      profileName =
+        (await this.subagentHost.getProfileName?.(resumeAgentId)) ?? "subagent";
     }
-    const prefix = args.run_in_background === true ? 'Launching background' : 'Launching';
+    const prefix =
+      args.run_in_background === true ? "Launching background" : "Launching";
     return {
       description: `${prefix} ${profileName} agent: ${args.description}`,
       accesses: ToolAccesses.none(),
       display: {
-        kind: 'agent_call',
+        kind: "agent_call",
         agent_name: profileName,
         prompt: args.prompt,
         background: args.run_in_background,
@@ -189,15 +208,14 @@ export class AgentTool implements BuiltinTool<AgentToolInput> {
 
   private async execution(
     args: AgentToolInput,
-    {
-      toolCallId,
-      signal,
-    }: ExecutableToolContext,
+    { toolCallId, signal }: ExecutableToolContext,
   ): Promise<ExecutableToolResult> {
     try {
       signal.throwIfAborted();
       const runInBackground = args.run_in_background === true;
-      const requestedProfileName = args.subagent_type?.length ? args.subagent_type : undefined;
+      const requestedProfileName = args.subagent_type?.length
+        ? args.subagent_type
+        : undefined;
       const resumeAgentId = args.resume?.trim();
       if (
         resumeAgentId !== undefined &&
@@ -205,7 +223,8 @@ export class AgentTool implements BuiltinTool<AgentToolInput> {
         requestedProfileName !== undefined
       ) {
         return {
-          output: 'Cannot set subagent_type when resuming an existing agent. Resume by agent id only.',
+          output:
+            "Cannot set subagent_type when resuming an existing agent. Resume by agent id only.",
           isError: true,
         };
       }
@@ -222,10 +241,13 @@ export class AgentTool implements BuiltinTool<AgentToolInput> {
         controller.abort(signal.reason);
       };
       if (!runInBackground) {
-        signal.addEventListener('abort', abortBeforeRegister, { once: true });
+        signal.addEventListener("abort", abortBeforeRegister, { once: true });
       }
 
-      const operation = resumeAgentId !== undefined && resumeAgentId.length > 0 ? 'resume' : 'spawn';
+      const operation =
+        resumeAgentId !== undefined && resumeAgentId.length > 0
+          ? "resume"
+          : "spawn";
       const runOptions = {
         parentToolCallId: toolCallId,
         prompt: args.prompt,
@@ -236,21 +258,24 @@ export class AgentTool implements BuiltinTool<AgentToolInput> {
       let handle: SubagentHandle;
       try {
         handle =
-          operation === 'resume'
+          operation === "resume"
             ? await this.subagentHost.resume(resumeAgentId!, runOptions)
             : await this.subagentHost.spawn({
-                profileName: requestedProfileName ?? 'coder',
+                profileName: requestedProfileName ?? "coder",
                 modelChoice: args.model,
                 ...runOptions,
               });
       } catch (error) {
-        signal.removeEventListener('abort', abortBeforeRegister);
-        this.log?.warn('subagent launch failed', {
+        signal.removeEventListener("abort", abortBeforeRegister);
+        this.log?.warn("subagent launch failed", {
           toolCallId,
           runInBackground,
           operation,
           agentId: resumeAgentId,
-          subagentType: operation === 'spawn' ? requestedProfileName ?? 'coder' : undefined,
+          subagentType:
+            operation === "spawn"
+              ? (requestedProfileName ?? "coder")
+              : undefined,
           error,
         });
         throw error;
@@ -259,19 +284,24 @@ export class AgentTool implements BuiltinTool<AgentToolInput> {
       let taskId: string;
       try {
         taskId = this.backgroundManager.registerTask(
-          new AgentBackgroundTask(handle, args.description, this.subagentHost, controller),
+          new AgentBackgroundTask(
+            handle,
+            args.description,
+            this.subagentHost,
+            controller,
+          ),
           {
             detached: runInBackground,
             timeoutMs: this.subagentTimeoutMs ?? DEFAULT_SUBAGENT_TIMEOUT_MS,
             signal: runInBackground ? undefined : signal,
           },
         );
-        signal.removeEventListener('abort', abortBeforeRegister);
+        signal.removeEventListener("abort", abortBeforeRegister);
       } catch (error) {
         controller.abort();
         void handle.completion.catch(() => {});
-        signal.removeEventListener('abort', abortBeforeRegister);
-        this.log?.warn('background agent task registration failed', {
+        signal.removeEventListener("abort", abortBeforeRegister);
+        this.log?.warn("background agent task registration failed", {
           toolCallId,
           agentId: handle.agentId,
           subagentType: handle.profileName,
@@ -294,8 +324,9 @@ export class AgentTool implements BuiltinTool<AgentToolInput> {
         };
       }
 
-      const release = await this.backgroundManager.waitForForegroundRelease(taskId);
-      if (release === 'detached') {
+      const release =
+        await this.backgroundManager.waitForForegroundRelease(taskId);
+      if (release === "detached") {
         return {
           output: formatBackgroundAgentResult(
             taskId,
@@ -307,7 +338,10 @@ export class AgentTool implements BuiltinTool<AgentToolInput> {
       }
       return await this.formatForegroundResult(taskId, handle);
     } catch (error) {
-      return { output: `subagent error: ${launchErrorMessage(error, signal)}`, isError: true };
+      return {
+        output: `subagent error: ${launchErrorMessage(error, signal)}`,
+        isError: true,
+      };
     }
   }
 
@@ -316,7 +350,7 @@ export class AgentTool implements BuiltinTool<AgentToolInput> {
     handle: SubagentHandle,
   ): Promise<ExecutableToolResult> {
     const info = this.backgroundManager.getTask(taskId);
-    if (info?.status === 'completed') {
+    if (info?.status === "completed") {
       return {
         output: formatForegroundAgentSuccess(
           handle,
@@ -324,15 +358,14 @@ export class AgentTool implements BuiltinTool<AgentToolInput> {
         ),
       };
     }
-    const timedOut = info?.status === 'timed_out';
-    const message =
-      timedOut
-        ? `Agent timed out after ${formatSubagentTimeoutDescription(this.subagentTimeoutMs ?? DEFAULT_SUBAGENT_TIMEOUT_MS)}.`
-        : info?.stopReason === 'Interrupted by user'
-          ? USER_INTERRUPTED_SUBAGENT_MESSAGE
-          : info?.stopReason !== undefined
-            ? info.stopReason
-            : 'The subagent was stopped before it finished.';
+    const timedOut = info?.status === "timed_out";
+    const message = timedOut
+      ? `Agent timed out after ${formatSubagentTimeoutDescription(this.subagentTimeoutMs ?? DEFAULT_SUBAGENT_TIMEOUT_MS)}.`
+      : info?.stopReason === "Interrupted by user"
+        ? USER_INTERRUPTED_SUBAGENT_MESSAGE
+        : info?.stopReason !== undefined
+          ? info.stopReason
+          : "The subagent was stopped before it finished.";
     return {
       output: formatForegroundAgentFailure(handle, message, timedOut),
       isError: true,
@@ -341,7 +374,7 @@ export class AgentTool implements BuiltinTool<AgentToolInput> {
 }
 
 const USER_INTERRUPTED_SUBAGENT_MESSAGE =
-  'The user manually interrupted this subagent (and any sibling agents launched alongside it). This was a deliberate user action, not a system error, a timeout, or a capacity/concurrency limit. Do not retry automatically or speculate about why it failed — wait for the user\'s next instruction.';
+  "The user manually interrupted this subagent (and any sibling agents launched alongside it). This was a deliberate user action, not a system error, a timeout, or a capacity/concurrency limit. Do not retry automatically or speculate about why it failed — wait for the user's next instruction.";
 
 function formatBackgroundAgentResult(
   taskId: string,
@@ -351,29 +384,32 @@ function formatBackgroundAgentResult(
 ): string {
   return [
     `task_id: ${taskId}`,
-    'status: running',
+    "status: running",
     `agent_id: ${handle.agentId}`,
     `actual_subagent_type: ${handle.profileName}`,
-    'automatic_notification: true',
-    '',
+    "automatic_notification: true",
+    "",
     `description: ${description}`,
-    '',
+    "",
     allowBackground
       ? `next_step: The completion arrives automatically in a later turn — do NOT wait, poll, or call TaskOutput on it; continue with other work or hand back to the user. (If you have nothing to do until it finishes, run such tasks in the foreground next time.)`
-      : 'next_step: The completion arrives automatically in a later turn.',
+      : "next_step: The completion arrives automatically in a later turn.",
     `resume_hint: To continue or recover this same subagent later, call Agent(resume="${handle.agentId}", prompt="..."). The parameter is agent_id ("${handle.agentId}"), NOT task_id ("${taskId}") or source_id from a later <notification>. Recovery cases: a later <notification type="task.lost" | "task.failed" | "task.killed"> for this subagent — its conversation history is preserved across session restarts and resume will pick it up.`,
-  ].join('\n');
+  ].join("\n");
 }
 
-function formatForegroundAgentSuccess(handle: SubagentHandle, result: string): string {
+function formatForegroundAgentSuccess(
+  handle: SubagentHandle,
+  result: string,
+): string {
   return [
     `agent_id: ${handle.agentId}`,
     `actual_subagent_type: ${handle.profileName}`,
-    'status: completed',
-    '',
-    '[summary]',
+    "status: completed",
+    "",
+    "[summary]",
     result,
-  ].join('\n');
+  ].join("\n");
 }
 
 function formatForegroundAgentFailure(
@@ -384,8 +420,8 @@ function formatForegroundAgentFailure(
   const lines = [
     `agent_id: ${handle.agentId}`,
     `actual_subagent_type: ${handle.profileName}`,
-    'status: failed',
-    '',
+    "status: failed",
+    "",
     `subagent error: ${message}`,
   ];
   if (timedOut) {
@@ -393,39 +429,50 @@ function formatForegroundAgentFailure(
       `resume_hint: Continue with Agent(resume="${handle.agentId}", prompt="continue"). Use agent_id only; do not set subagent_type. The subagent retains its prior context; redo any unfinished tool call if its result was lost.`,
     );
   }
-  return lines.join('\n');
+  return lines.join("\n");
 }
 
 function launchErrorMessage(error: unknown, signal: AbortSignal): string {
-  if (isUserCancellation(signal.reason)) return USER_INTERRUPTED_SUBAGENT_MESSAGE;
-  if (isAbortError(error)) return 'The subagent was stopped before it finished.';
+  if (isUserCancellation(signal.reason))
+    return USER_INTERRUPTED_SUBAGENT_MESSAGE;
+  if (isAbortError(error))
+    return "The subagent was stopped before it finished.";
   return error instanceof Error ? error.message : String(error);
 }
 
 function buildSubagentDescriptions(
-  subagents: ResolvedAgentProfile['subagents'],
+  subagents: ResolvedAgentProfile["subagents"],
   showModelPreferences: boolean,
 ): string {
-  if (subagents === undefined) return '';
+  if (subagents === undefined) return "";
   return Object.entries(subagents)
     .map(([name, subagent]) => {
       const details = [subagent.description, subagent.whenToUse].filter(
         (part): part is string => part !== undefined && part.length > 0,
       );
-      const header = details.length === 0 ? `- ${name}` : `- ${name}: ${details.join(' ')}`;
+      const header =
+        details.length === 0 ? `- ${name}` : `- ${name}: ${details.join(" ")}`;
       const deniedExact = new Set(
-        (subagent.disallowedTools ?? []).filter((tool) => !tool.startsWith('mcp__')),
+        (subagent.disallowedTools ?? []).filter(
+          (tool) => !tool.startsWith("mcp__"),
+        ),
       );
-      const shownTools = subagent.tools.filter((tool) => !deniedExact.has(tool));
+      const shownTools = subagent.tools.filter(
+        (tool) => !deniedExact.has(tool),
+      );
       const lines = [header];
       if (showModelPreferences && subagent.modelPreference !== undefined) {
         lines.push(`  Model preference: ${subagent.modelPreference}`);
       }
-      if (shownTools.length > 0) lines.push(`  Tools: ${shownTools.join(', ')}`);
-      if (subagent.disallowedTools !== undefined && subagent.disallowedTools.length > 0) {
-        lines.push(`  Disabled: ${subagent.disallowedTools.join(', ')}`);
+      if (shownTools.length > 0)
+        lines.push(`  Tools: ${shownTools.join(", ")}`);
+      if (
+        subagent.disallowedTools !== undefined &&
+        subagent.disallowedTools.length > 0
+      ) {
+        lines.push(`  Disabled: ${subagent.disallowedTools.join(", ")}`);
       }
-      return lines.join('\n');
+      return lines.join("\n");
     })
-    .join('\n');
+    .join("\n");
 }

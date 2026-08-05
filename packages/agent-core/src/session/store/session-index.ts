@@ -1,8 +1,8 @@
-import { appendFile, mkdir, readFile } from 'node:fs/promises';
-import * as nodePath from 'node:path';
-import { basename, dirname, isAbsolute, join, relative, resolve } from 'pathe';
+import { appendFile, mkdir, readFile } from "node:fs/promises";
+import * as nodePath from "node:path";
+import { basename, dirname, isAbsolute, join, relative, resolve } from "pathe";
 
-import { normalizeWorkDir } from '#/session/store/workdir-key';
+import { normalizeWorkDir } from "#/session/store/workdir-key";
 
 export interface SessionIndexEntry {
   readonly sessionId: string;
@@ -26,7 +26,7 @@ type SessionIndexRecord = SessionIndexEntry | SessionIndexDeletion;
 const appendQueues = new Map<string, Promise<void>>();
 
 export function sessionIndexPath(homeDir: string): string {
-  return join(homeDir, 'session_index.jsonl');
+  return join(homeDir, "session_index.jsonl");
 }
 
 export async function appendSessionIndexEntry(
@@ -52,9 +52,15 @@ async function appendSessionIndexRecord(
   const previous = appendQueues.get(homeDir) ?? Promise.resolve();
   const next = previous.then(async () => {
     await mkdir(dirname(indexPath), { recursive: true, mode: 0o700 });
-    await appendFile(indexPath, line, 'utf-8');
+    await appendFile(indexPath, line, "utf-8");
   });
-  appendQueues.set(homeDir, next.then(() => undefined, () => undefined));
+  appendQueues.set(
+    homeDir,
+    next.then(
+      () => undefined,
+      () => undefined,
+    ),
+  );
   return next;
 }
 
@@ -64,7 +70,7 @@ export async function readSessionIndex(
 ): Promise<Map<string, SessionIndexEntry>> {
   let raw: string;
   try {
-    raw = await readFile(sessionIndexPath(homeDir), 'utf-8');
+    raw = await readFile(sessionIndexPath(homeDir), "utf-8");
   } catch {
     return new Map();
   }
@@ -72,10 +78,10 @@ export async function readSessionIndex(
   const result = new Map<string, SessionIndexEntry>();
   for (const line of raw.split(/\r?\n/)) {
     const trimmed = line.trim();
-    if (trimmed === '') continue;
+    if (trimmed === "") continue;
     const record = parseIndexLine(trimmed);
     if (record === undefined) continue;
-    if ('deleted' in record) {
+    if ("deleted" in record) {
       result.delete(record.sessionId);
       continue;
     }
@@ -99,15 +105,15 @@ export async function readSessionIndex(
 function parseIndexLine(line: string): SessionIndexRecord | undefined {
   try {
     const parsed = JSON.parse(line) as unknown;
-    if (typeof parsed !== 'object' || parsed === null) return undefined;
+    if (typeof parsed !== "object" || parsed === null) return undefined;
     const entry = parsed as Partial<SessionIndexEntry & SessionIndexDeletion>;
-    if (typeof entry.sessionId !== 'string') return undefined;
+    if (typeof entry.sessionId !== "string") return undefined;
     if (entry.deleted === true) {
       return { sessionId: entry.sessionId, deleted: true };
     }
     if (
-      typeof entry.sessionDir !== 'string' ||
-      typeof entry.workDir !== 'string'
+      typeof entry.sessionDir !== "string" ||
+      typeof entry.workDir !== "string"
     ) {
       return undefined;
     }
@@ -127,12 +133,19 @@ function isPathInside(parent: string, child: string): boolean {
       nodePath.win32.resolve(parent),
       nodePath.win32.resolve(child),
     );
-    return rel !== '' && rel !== '..' && !rel.startsWith(`..${nodePath.win32.sep}`) && !nodePath.win32.isAbsolute(rel);
+    return (
+      rel !== "" &&
+      rel !== ".." &&
+      !rel.startsWith(`..${nodePath.win32.sep}`) &&
+      !nodePath.win32.isAbsolute(rel)
+    );
   }
   const rel = relative(resolve(parent), resolve(child));
-  return rel !== '' && !rel.startsWith('..') && !isAbsolute(rel);
+  return rel !== "" && !rel.startsWith("..") && !isAbsolute(rel);
 }
 
 function isWindowsAbsolutePath(value: string): boolean {
-  return /^[A-Za-z]:[\\/]/.test(value) || /^[\\/]{2}[^\\/]+[\\/][^\\/]+/.test(value);
+  return (
+    /^[A-Za-z]:[\\/]/.test(value) || /^[\\/]{2}[^\\/]+[\\/][^\\/]+/.test(value)
+  );
 }

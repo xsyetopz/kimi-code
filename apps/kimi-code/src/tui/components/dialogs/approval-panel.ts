@@ -14,27 +14,34 @@ import {
   truncateToWidth,
   visibleWidth,
   wrapTextWithAnsi,
-} from '@moonshot-ai/pi-tui';
-import { currentTheme } from '#/tui/theme';
-import { highlightLines, langFromPath } from '#/tui/components/media/code-highlight';
-import { renderDiffLinesClustered } from '#/tui/components/media/diff-preview';
+} from "@moonshot-ai/pi-tui";
+import { currentTheme } from "#/tui/theme";
+import {
+  highlightLines,
+  langFromPath,
+} from "#/tui/components/media/code-highlight";
+import { renderDiffLinesClustered } from "#/tui/components/media/diff-preview";
 import type {
   ApprovalPanelChoice,
   DiffDisplayBlock,
   DisplayBlock,
   FileContentDisplayBlock,
   PendingApproval,
-} from '#/tui/reverse-rpc/types';
+} from "#/tui/reverse-rpc/types";
 
 export interface ApprovalPanelResponse {
-  readonly response: 'approved' | 'approved_for_session' | 'rejected' | 'cancelled';
+  readonly response:
+    | "approved"
+    | "approved_for_session"
+    | "rejected"
+    | "cancelled";
   readonly feedback?: string | undefined;
   readonly selected_label?: string | undefined;
 }
 
 function truncateOneLine(text: string, max: number): string {
-  const firstLine = text.split('\n')[0] ?? '';
-  return firstLine.length > max ? firstLine.slice(0, max - 1) + '…' : firstLine;
+  const firstLine = text.split("\n")[0] ?? "";
+  return firstLine.length > max ? firstLine.slice(0, max - 1) + "…" : firstLine;
 }
 
 const DIFF_SUMMARY_MAX_LINES = 10;
@@ -50,11 +57,11 @@ interface BlockStyles {
 
 function makeBlockStyles(): BlockStyles {
   return {
-    strong: (s) => currentTheme.fg('textStrong', s),
-    dim: (s) => currentTheme.fg('textDim', s),
-    accent: (s) => currentTheme.fg('accent', s),
-    gutter: (s) => currentTheme.fg('diffGutter', s),
-    errorBold: (s) => currentTheme.boldFg('error', s),
+    strong: (s) => currentTheme.fg("textStrong", s),
+    dim: (s) => currentTheme.fg("textDim", s),
+    accent: (s) => currentTheme.fg("accent", s),
+    gutter: (s) => currentTheme.fg("diffGutter", s),
+    errorBold: (s) => currentTheme.boldFg("error", s),
   };
 }
 
@@ -65,20 +72,23 @@ function appendWrappedLine(
   content: string,
   width: number,
 ): void {
-  const prefixWidth = Math.max(visibleWidth(firstPrefix), visibleWidth(continuationPrefix));
+  const prefixWidth = Math.max(
+    visibleWidth(firstPrefix),
+    visibleWidth(continuationPrefix),
+  );
   const wrapped = wrapTextWithAnsi(content, Math.max(1, width - prefixWidth));
   if (wrapped.length === 0) {
     lines.push(firstPrefix);
     return;
   }
-  lines.push(`${firstPrefix}${wrapped[0] ?? ''}`);
+  lines.push(`${firstPrefix}${wrapped[0] ?? ""}`);
   for (let i = 1; i < wrapped.length; i++) {
-    lines.push(`${continuationPrefix}${wrapped[i] ?? ''}`);
+    lines.push(`${continuationPrefix}${wrapped[i] ?? ""}`);
   }
 }
 
 function renderShellDisplayBlock(
-  block: Extract<DisplayBlock, { type: 'shell' }>,
+  block: Extract<DisplayBlock, { type: "shell" }>,
   s: BlockStyles,
   width: number,
 ): string[] {
@@ -89,10 +99,10 @@ function renderShellDisplayBlock(
   if (block.danger !== undefined) {
     lines.push(s.errorBold(`Dangerous: ${block.danger}`));
   }
-  const cmdLines = block.command.length > 0 ? block.command.split('\n') : [''];
+  const cmdLines = block.command.length > 0 ? block.command.split("\n") : [""];
   cmdLines.forEach((cmdLine, idx) => {
-    const prefix = idx === 0 ? `${s.accent('$')} ` : `${s.dim('·')} `;
-    appendWrappedLine(lines, prefix, '  ', s.strong(cmdLine), width);
+    const prefix = idx === 0 ? `${s.accent("$")} ` : `${s.dim("·")} `;
+    appendWrappedLine(lines, prefix, "  ", s.strong(cmdLine), width);
   });
   if (block.description !== undefined && block.description.length > 0) {
     lines.push(`  ${s.dim(block.description)}`);
@@ -106,33 +116,38 @@ function renderDisplayBlock(
   contentWidth: number,
 ): string[] {
   switch (block.type) {
-    case 'diff':
-      return renderDiffLinesClustered(block.old_text, block.new_text, block.path, {
-        contextLines: 3,
-        expandKeyHint: 'ctrl+e to preview',
-        maxLines: DIFF_SUMMARY_MAX_LINES,
-      });
-    case 'file_content': {
+    case "diff":
+      return renderDiffLinesClustered(
+        block.old_text,
+        block.new_text,
+        block.path,
+        {
+          contextLines: 3,
+          expandKeyHint: "ctrl+e to preview",
+          maxLines: DIFF_SUMMARY_MAX_LINES,
+        },
+      );
+    case "file_content": {
       const lang = block.language ?? langFromPath(block.path);
       const allLines = highlightLines(block.content, lang);
       const shown = allLines.slice(0, CONTENT_SUMMARY_MAX_LINES);
       const lines = [s.strong(block.path)];
       for (const [i, line] of shown.entries()) {
-        lines.push(s.gutter(String(i + 1).padStart(4) + '  ') + line);
+        lines.push(s.gutter(String(i + 1).padStart(4) + "  ") + line);
       }
       const remaining = allLines.length - shown.length;
       if (remaining > 0) {
         lines.push(
           s.dim(
-            `     … ${String(remaining)} more line${remaining > 1 ? 's' : ''} hidden (ctrl+e to preview)`,
+            `     … ${String(remaining)} more line${remaining > 1 ? "s" : ""} hidden (ctrl+e to preview)`,
           ),
         );
       }
       return lines;
     }
-    case 'shell':
+    case "shell":
       return renderShellDisplayBlock(block, s, contentWidth);
-    case 'file_op': {
+    case "file_op": {
       const op = s.accent(block.operation.padEnd(5));
       const lines = [`${op} ${s.strong(block.path)}`];
       if (block.detail !== undefined && block.detail.length > 0) {
@@ -140,66 +155,80 @@ function renderDisplayBlock(
       }
       return lines;
     }
-    case 'url_fetch': {
-      const method = s.accent((block.method ?? 'GET').toUpperCase().padEnd(5));
+    case "url_fetch": {
+      const method = s.accent((block.method ?? "GET").toUpperCase().padEnd(5));
       return [`${method} ${s.strong(block.url)}`];
     }
-    case 'search': {
-      const lines = [`${s.accent('search')} ${s.strong(block.query)}`];
+    case "search": {
+      const lines = [`${s.accent("search")} ${s.strong(block.query)}`];
       if (block.scope !== undefined && block.scope.length > 0) {
         lines.push(s.dim(`scope: ${block.scope}`));
       }
       return lines;
     }
-    case 'invocation': {
-      const lines = [`${s.accent(block.kind.padEnd(5))} ${s.strong(block.name)}`];
+    case "invocation": {
+      const lines = [
+        `${s.accent(block.kind.padEnd(5))} ${s.strong(block.name)}`,
+      ];
       if (block.description !== undefined && block.description.length > 0) {
         lines.push(s.dim(truncateOneLine(block.description, 200)));
       }
       return lines;
     }
-    case 'brief':
+    case "brief":
       return block.text
-        ? block.text.split('\n').map((line) => (line.length > 0 ? s.strong(line) : ''))
+        ? block.text
+            .split("\n")
+            .map((line) => (line.length > 0 ? s.strong(line) : ""))
         : [];
-    case 'background_task':
+    case "background_task":
       return [
-        s.strong(`${block.status} ${block.kind} task ${block.task_id}: ${block.description}`),
+        s.strong(
+          `${block.status} ${block.kind} task ${block.task_id}: ${block.description}`,
+        ),
       ];
-    case 'todo':
-      return block.items.map((item) => s.strong(`- [${item.status}] ${item.title}`));
+    case "todo":
+      return block.items.map((item) =>
+        s.strong(`- [${item.status}] ${item.title}`),
+      );
     default:
       return [];
   }
 }
 
 function normalizeApprovalText(text: string): string {
-  return text.replaceAll('\r\n', '\n').trim();
+  return text.replaceAll("\r\n", "\n").trim();
 }
 
-function isDuplicateBriefBlock(block: DisplayBlock, description: string): boolean {
-  if (block.type !== 'brief' || block.text.trim().length === 0) return false;
+function isDuplicateBriefBlock(
+  block: DisplayBlock,
+  description: string,
+): boolean {
+  if (block.type !== "brief" || block.text.trim().length === 0) return false;
   const normalizedDescription = normalizeApprovalText(description);
   if (normalizedDescription.length === 0) return false;
   const normalizedBlockText = normalizeApprovalText(block.text);
   if (normalizedBlockText === normalizedDescription) return true;
-  const blockLines = normalizedBlockText.split('\n');
+  const blockLines = normalizedBlockText.split("\n");
   if (blockLines.length <= 1) return false;
-  return normalizeApprovalText(blockLines.slice(1).join('\n')) === normalizedDescription;
+  return (
+    normalizeApprovalText(blockLines.slice(1).join("\n")) ===
+    normalizedDescription
+  );
 }
 
 function headerFor(toolName: string): string {
   switch (toolName) {
-    case 'Bash':
-      return 'Run this command?';
-    case 'Write':
-      return 'Write this file?';
-    case 'Edit':
-      return 'Apply these edits?';
-    case 'TaskStop':
-      return 'Stop this task?';
-    case 'ExitPlanMode':
-      return 'Ready to build with this plan?';
+    case "Bash":
+      return "Run this command?";
+    case "Write":
+      return "Write this file?";
+    case "Edit":
+      return "Apply these edits?";
+    case "TaskStop":
+      return "Stop this task?";
+    case "ExitPlanMode":
+      return "Ready to build with this plan?";
     default:
       return `Approve ${toolName}?`;
   }
@@ -233,11 +262,11 @@ export class ApprovalPanelComponent extends Container implements Focusable {
     };
     this.feedbackInput.onEscape = () => {
       this.feedbackMode = false;
-      this.feedbackInput.setValue('');
+      this.feedbackInput.setValue("");
     };
   }
 
-  private submit(index: number, feedback: string = ''): void {
+  private submit(index: number, feedback: string = ""): void {
     const option = this.choiceAt(index);
     if (!option) return;
     this.onResponse({
@@ -261,14 +290,14 @@ export class ApprovalPanelComponent extends Container implements Focusable {
   handleInput(data: string): void {
     if (
       matchesKey(data, Key.escape) ||
-      matchesKey(data, Key.ctrl('c')) ||
-      matchesKey(data, Key.ctrl('d'))
+      matchesKey(data, Key.ctrl("c")) ||
+      matchesKey(data, Key.ctrl("d"))
     ) {
-      this.onResponse({ response: 'rejected' });
+      this.onResponse({ response: "rejected" });
       return;
     }
 
-    if (matchesKey(data, Key.ctrl('e'))) {
+    if (matchesKey(data, Key.ctrl("e"))) {
       const previewable = this.findPreviewableBlock();
       if (previewable !== undefined && this.onOpenPreview !== undefined) {
         this.onOpenPreview(previewable);
@@ -276,7 +305,7 @@ export class ApprovalPanelComponent extends Container implements Focusable {
       return;
     }
 
-    if (matchesKey(data, Key.ctrl('o'))) {
+    if (matchesKey(data, Key.ctrl("o"))) {
       this.onToggleToolOutput?.();
       return;
     }
@@ -284,7 +313,8 @@ export class ApprovalPanelComponent extends Container implements Focusable {
     if (this.feedbackMode) {
       if (matchesKey(data, Key.up)) {
         this.feedbackMode = false;
-        this.selectedIndex = (this.selectedIndex - 1 + this.choiceCount()) % this.choiceCount();
+        this.selectedIndex =
+          (this.selectedIndex - 1 + this.choiceCount()) % this.choiceCount();
         return;
       }
       if (matchesKey(data, Key.down)) {
@@ -298,7 +328,8 @@ export class ApprovalPanelComponent extends Container implements Focusable {
 
     if (this.choiceCount() === 0) return;
     if (matchesKey(data, Key.up)) {
-      this.selectedIndex = (this.selectedIndex - 1 + this.choiceCount()) % this.choiceCount();
+      this.selectedIndex =
+        (this.selectedIndex - 1 + this.choiceCount()) % this.choiceCount();
       return;
     }
     if (matchesKey(data, Key.down)) {
@@ -312,7 +343,11 @@ export class ApprovalPanelComponent extends Container implements Focusable {
 
     const printable = decodeKittyPrintable(data) ?? data;
     const numericIndex = Number(printable) - 1;
-    if (Number.isInteger(numericIndex) && numericIndex >= 0 && numericIndex < this.choiceCount()) {
+    if (
+      Number.isInteger(numericIndex) &&
+      numericIndex >= 0 &&
+      numericIndex < this.choiceCount()
+    ) {
       this.selectAndSubmit(numericIndex);
     }
   }
@@ -323,18 +358,20 @@ export class ApprovalPanelComponent extends Container implements Focusable {
     this.feedbackInput.focused = this.focused && this.feedbackMode;
     const { data } = this.request;
     const blockStyles = makeBlockStyles();
-    const borderColor = (text: string) => currentTheme.fg('borderFocus', text);
-    const borderColorBold = (text: string) => currentTheme.boldFg('borderFocus', text);
-    const selectColorBold = (text: string) => currentTheme.boldFg('accent', text);
-    const dim = (text: string) => currentTheme.fg('textDim', text);
-    const strong = (text: string) => currentTheme.fg('textStrong', text);
-    const horizontalBar = borderColor('─'.repeat(width));
+    const borderColor = (text: string) => currentTheme.fg("borderFocus", text);
+    const borderColorBold = (text: string) =>
+      currentTheme.boldFg("borderFocus", text);
+    const selectColorBold = (text: string) =>
+      currentTheme.boldFg("accent", text);
+    const dim = (text: string) => currentTheme.fg("textDim", text);
+    const strong = (text: string) => currentTheme.fg("textStrong", text);
+    const horizontalBar = borderColor("─".repeat(width));
     const indent = (s: string): string => `  ${s}`;
 
     const title = headerFor(data.tool_name);
     const lines: string[] = [
       horizontalBar,
-      indent(`${borderColorBold('▶')} ${borderColorBold(title)}`),
+      indent(`${borderColorBold("▶")} ${borderColorBold(title)}`),
     ];
 
     const dedupedBlocks = data.display.filter(
@@ -342,11 +379,11 @@ export class ApprovalPanelComponent extends Container implements Focusable {
     );
     const visibleBlocks = dedupedBlocks.slice(0, 5);
     const hasPreviewable = visibleBlocks.some(
-      (block) => block.type === 'diff' || block.type === 'file_content',
+      (block) => block.type === "diff" || block.type === "file_content",
     );
 
     if (visibleBlocks.length > 0) {
-      lines.push('');
+      lines.push("");
       for (const block of visibleBlocks) {
         const blockLines = renderDisplayBlock(
           block,
@@ -358,13 +395,13 @@ export class ApprovalPanelComponent extends Container implements Focusable {
         }
       }
     } else if (data.description) {
-      lines.push('');
-      for (const descLine of data.description.split('\n')) {
+      lines.push("");
+      for (const descLine of data.description.split("\n")) {
         lines.push(indent(dim(descLine)));
       }
     }
 
-    lines.push('');
+    lines.push("");
     for (let idx = 0; idx < data.choices.length; idx++) {
       const option = data.choices[idx];
       if (option === undefined) continue;
@@ -372,10 +409,18 @@ export class ApprovalPanelComponent extends Container implements Focusable {
       const num = idx + 1;
 
       const labelWithNum = `${String(num)}. ${option.label}`;
-      if (this.feedbackMode && option.requires_feedback === true && isSelected) {
-        lines.push(indent(this.renderInlineFeedbackLine(width - 2, labelWithNum)));
+      if (
+        this.feedbackMode &&
+        option.requires_feedback === true &&
+        isSelected
+      ) {
+        lines.push(
+          indent(this.renderInlineFeedbackLine(width - 2, labelWithNum)),
+        );
       } else if (isSelected) {
-        lines.push(indent(`${selectColorBold('▶')} ${selectColorBold(labelWithNum)}`));
+        lines.push(
+          indent(`${selectColorBold("▶")} ${selectColorBold(labelWithNum)}`),
+        );
       } else {
         lines.push(indent(strong(`  ${labelWithNum}`)));
       }
@@ -387,17 +432,20 @@ export class ApprovalPanelComponent extends Container implements Focusable {
         option.description.length > 0 &&
         !(this.feedbackMode && option.requires_feedback === true && isSelected)
       ) {
-        for (const descLine of wrapTextWithAnsi(option.description, Math.max(20, width - 7))) {
+        for (const descLine of wrapTextWithAnsi(
+          option.description,
+          Math.max(20, width - 7),
+        )) {
           lines.push(indent(`     ${dim(descLine)}`));
         }
       }
     }
 
-    lines.push('');
+    lines.push("");
     if (this.feedbackMode) {
-      lines.push(indent(dim('Type feedback · ↵ submit.')));
+      lines.push(indent(dim("Type feedback · ↵ submit.")));
     } else {
-      const expandHint = hasPreviewable ? ' · ctrl+e preview' : '';
+      const expandHint = hasPreviewable ? " · ctrl+e preview" : "";
       lines.push(
         indent(
           dim(
@@ -411,9 +459,12 @@ export class ApprovalPanelComponent extends Container implements Focusable {
     return lines.map((line) => truncateToWidth(line, width));
   }
 
-  private findPreviewableBlock(): DiffDisplayBlock | FileContentDisplayBlock | undefined {
+  private findPreviewableBlock():
+    | DiffDisplayBlock
+    | FileContentDisplayBlock
+    | undefined {
     for (const block of this.request.data.display) {
-      if (block.type === 'diff' || block.type === 'file_content') return block;
+      if (block.type === "diff" || block.type === "file_content") return block;
     }
     return undefined;
   }
@@ -437,11 +488,16 @@ export class ApprovalPanelComponent extends Container implements Focusable {
     }
   }
 
-  private renderInlineFeedbackLine(width: number, labelWithNum: string): string {
-    const prefix = `${currentTheme.boldFg('accent', '▶')} ${currentTheme.boldFg('accent', labelWithNum)}  `;
+  private renderInlineFeedbackLine(
+    width: number,
+    labelWithNum: string,
+  ): string {
+    const prefix = `${currentTheme.boldFg("accent", "▶")} ${currentTheme.boldFg("accent", labelWithNum)}  `;
     const inputWidth = Math.max(4, width - visibleWidth(prefix) + 2);
-    const inputLine = this.feedbackInput.render(inputWidth)[0] ?? '> ';
-    const inlineInput = inputLine.startsWith('> ') ? inputLine.slice(2) : inputLine;
+    const inputLine = this.feedbackInput.render(inputWidth)[0] ?? "> ";
+    const inlineInput = inputLine.startsWith("> ")
+      ? inputLine.slice(2)
+      : inputLine;
     return prefix + inlineInput;
   }
 
@@ -452,6 +508,8 @@ export class ApprovalPanelComponent extends Container implements Focusable {
 }
 
 function buildNumericHint(count: number): string {
-  if (count <= 0) return '↵';
-  return Array.from({ length: Math.min(count, 9) }, (_, idx) => String(idx + 1)).join('/');
+  if (count <= 0) return "↵";
+  return Array.from({ length: Math.min(count, 9) }, (_, idx) =>
+    String(idx + 1),
+  ).join("/");
 }

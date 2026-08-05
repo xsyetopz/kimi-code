@@ -32,12 +32,12 @@
  * it.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
 import {
   defineCheckpointedModel,
   type Checkpointed,
-} from '#/agent/contextMemory/conversationTime';
+} from "#/agent/contextMemory/conversationTime";
 
 export interface PlanState {
   readonly active: boolean;
@@ -47,42 +47,58 @@ export interface PlanState {
 
 export type PlanModelState = Checkpointed<PlanState>;
 
-export const PlanModel = defineCheckpointedModel('plan', (): PlanState => ({ active: false }));
+export const PlanModel = defineCheckpointedModel(
+  "plan",
+  (): PlanState => ({ active: false }),
+);
 
-export const planModeEnter = PlanModel.defineOp('plan_mode.enter', {
+export const planModeEnter = PlanModel.defineOp("plan_mode.enter", {
   schema: z.object({ id: z.string() }),
   apply: (s, p) =>
     s.current.active && s.current.id === p.id
       ? s
-      : { ...s, current: { active: true, id: p.id, revisionCount: s.current.revisionCount } },
-  toEvent: () => ({ type: 'agent.status.updated' as const, planMode: true }),
+      : {
+          ...s,
+          current: {
+            active: true,
+            id: p.id,
+            revisionCount: s.current.revisionCount,
+          },
+        },
+  toEvent: () => ({ type: "agent.status.updated" as const, planMode: true }),
 });
 
-declare module '#/wire/types' {
+declare module "#/wire/types" {
   interface PersistedOpMap {
-    'plan_mode.enter': typeof planModeEnter;
-    'plan_mode.cancel': typeof planModeCancel;
-    'plan_mode.exit': typeof planModeExit;
-    'plan.revision': typeof planRevision;
+    "plan_mode.enter": typeof planModeEnter;
+    "plan_mode.cancel": typeof planModeCancel;
+    "plan_mode.exit": typeof planModeExit;
+    "plan.revision": typeof planRevision;
   }
 }
 
-export const planModeCancel = PlanModel.defineOp('plan_mode.cancel', {
+export const planModeCancel = PlanModel.defineOp("plan_mode.cancel", {
   schema: z.object({ id: z.string().optional() }),
   apply: (s) =>
     s.current.active
-      ? { ...s, current: { active: false, revisionCount: s.current.revisionCount } }
+      ? {
+          ...s,
+          current: { active: false, revisionCount: s.current.revisionCount },
+        }
       : s,
-  toEvent: () => ({ type: 'agent.status.updated' as const, planMode: false }),
+  toEvent: () => ({ type: "agent.status.updated" as const, planMode: false }),
 });
 
-export const planModeExit = PlanModel.defineOp('plan_mode.exit', {
+export const planModeExit = PlanModel.defineOp("plan_mode.exit", {
   schema: z.object({ id: z.string().optional() }),
   apply: (s) =>
     s.current.active
-      ? { ...s, current: { active: false, revisionCount: s.current.revisionCount } }
+      ? {
+          ...s,
+          current: { active: false, revisionCount: s.current.revisionCount },
+        }
       : s,
-  toEvent: () => ({ type: 'agent.status.updated' as const, planMode: false }),
+  toEvent: () => ({ type: "agent.status.updated" as const, planMode: false }),
 });
 
 export interface PlanRevisionRecordedEvent {
@@ -93,13 +109,13 @@ export interface PlanRevisionRecordedEvent {
   readonly bytes: number;
 }
 
-declare module '#/app/event/eventBus' {
+declare module "#/app/event/eventBus" {
   interface DomainEventMap {
-    'plan.revision': PlanRevisionRecordedEvent;
+    "plan.revision": PlanRevisionRecordedEvent;
   }
 }
 
-export const planRevision = PlanModel.defineOp('plan.revision', {
+export const planRevision = PlanModel.defineOp("plan.revision", {
   schema: z.object({
     id: z.string(),
     version: z.number(),
@@ -115,7 +131,7 @@ export const planRevision = PlanModel.defineOp('plan.revision', {
     },
   }),
   toEvent: (p) => ({
-    type: 'plan.revision' as const,
+    type: "plan.revision" as const,
     id: p.id,
     version: p.version,
     path: p.path,

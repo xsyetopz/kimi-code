@@ -1,13 +1,13 @@
-import { createReadStream } from 'node:fs';
-import { createInterface } from 'node:readline';
+import { createReadStream } from "node:fs";
+import { createInterface } from "node:readline";
 
 import {
   migrateWireRecord,
   resolveWireMigrations,
   type WireMigration,
-} from '@moonshot-ai/agent-core/agent/records/migration/index';
+} from "@moonshot-ai/agent-core/agent/records/migration/index";
 
-import type { AgentRecord, WireEntry } from './agent-record-types';
+import type { AgentRecord, WireEntry } from "./agent-record-types";
 
 export interface WireReadResult {
   metadata: { protocolVersion: string; createdAt: number };
@@ -23,7 +23,7 @@ export interface WireReadResult {
  *  resolve to an empty chain and are passed through directly.) */
 function bestEffortMigrations(): readonly WireMigration[] {
   try {
-    return resolveWireMigrations('1.0');
+    return resolveWireMigrations("1.0");
   } catch {
     return [];
   }
@@ -41,10 +41,10 @@ function bestEffortMigrations(): readonly WireMigration[] {
  *      empty chain, so records are passed through unchanged, with no migration
  *      and no warning. */
 export async function readAgentWire(path: string): Promise<WireReadResult> {
-  const stream = createReadStream(path, { encoding: 'utf8' });
+  const stream = createReadStream(path, { encoding: "utf8" });
   const rl = createInterface({ input: stream, crlfDelay: Infinity });
   let lineNo = 0;
-  let metadata: WireReadResult['metadata'] | null = null;
+  let metadata: WireReadResult["metadata"] | null = null;
   let migrations: readonly WireMigration[] = [];
   const records: WireEntry[] = [];
   const warnings: string[] = [];
@@ -56,20 +56,22 @@ export async function readAgentWire(path: string): Promise<WireReadResult> {
     try {
       parsed = JSON.parse(line);
     } catch (error) {
-      warnings.push(`line ${lineNo}: invalid JSON (${(error as Error).message})`);
+      warnings.push(
+        `line ${lineNo}: invalid JSON (${(error as Error).message})`,
+      );
       continue;
     }
-    if (!isObject(parsed) || typeof parsed['type'] !== 'string') {
+    if (!isObject(parsed) || typeof parsed["type"] !== "string") {
       warnings.push(`line ${lineNo}: missing 'type' field`);
       continue;
     }
     if (metadata === null) {
-      if (parsed['type'] !== 'metadata') {
+      if (parsed["type"] !== "metadata") {
         throw new Error(`Wire file missing metadata header at line ${lineNo}`);
       }
-      const pv = parsed['protocol_version'];
-      const ca = parsed['created_at'];
-      if (typeof pv !== 'string' || typeof ca !== 'number') {
+      const pv = parsed["protocol_version"];
+      const ca = parsed["created_at"];
+      if (typeof pv !== "string" || typeof ca !== "number") {
         throw new TypeError(`Wire metadata malformed at line ${lineNo}`);
       }
       try {
@@ -104,11 +106,11 @@ export async function readAgentWire(path: string): Promise<WireReadResult> {
     records.push({ lineNo, data: migrated as AgentRecord, raw });
   }
   if (metadata === null) {
-    throw new Error('Wire file is empty (no metadata)');
+    throw new Error("Wire file is empty (no metadata)");
   }
   return { metadata, records, warnings };
 }
 
 function isObject(v: unknown): v is Record<string, unknown> {
-  return typeof v === 'object' && v !== null && !Array.isArray(v);
+  return typeof v === "object" && v !== null && !Array.isArray(v);
 }

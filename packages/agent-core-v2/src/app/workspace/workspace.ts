@@ -7,7 +7,10 @@
  * work directory. App-scoped.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
 
 export interface Workspace {
   readonly id: string;
@@ -32,4 +35,4 @@ export interface IWorkspaceService {
 }
 
 export const IWorkspaceService: ServiceIdentifier<IWorkspaceService> =
-  createDecorator<IWorkspaceService>('workspaceService');
+  createDecorator<IWorkspaceService>("workspaceService");

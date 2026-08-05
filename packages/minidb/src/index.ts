@@ -11,19 +11,19 @@
 // public option/record types in types.ts; everything is re-exported here so
 // the entry point's public surface stays exactly the pre-split one.
 
-export * from './mini-db.js';
-export { UniqueViolationError } from './index-manager.js';
-export { LockError } from './lockfile.js';
+export * from "./mini-db.js";
+export { UniqueViolationError } from "./index-manager.js";
+export { LockError } from "./lockfile.js";
 // The close-gate + in-flight-count lifecycle primitive, shared with embedders
 // that run lifecycle-managed background work (kap-server's search service).
-export { OpTracker } from './op-tracker.js';
-export { TextIndexBuildingError } from './text-index/index.js';
-export { normalizeLiteral, createNgramTokenizer } from './trigram.js';
-export { tokenize } from './text-index/index.js';
-export type { RecoveryInfo } from './recovery.js';
-export type { IndexDef, IndexInfo, IndexType } from './index-manager.js';
-export type { CompoundIndexDef, CompoundIndexInfo } from './compound-index.js';
-export type { TextIndexTokenizerName } from './trigram.js';
+export { OpTracker } from "./op-tracker.js";
+export { TextIndexBuildingError } from "./text-index/index.js";
+export { normalizeLiteral, createNgramTokenizer } from "./trigram.js";
+export { tokenize } from "./text-index/index.js";
+export type { RecoveryInfo } from "./recovery.js";
+export type { IndexDef, IndexInfo, IndexType } from "./index-manager.js";
+export type { CompoundIndexDef, CompoundIndexInfo } from "./compound-index.js";
+export type { TextIndexTokenizerName } from "./trigram.js";
 export type {
   ValueCodecName,
   ValueCodec,
@@ -35,6 +35,6 @@ export type {
   DocRecord,
   ScanEntry,
   QueryOptions,
-} from './types.js';
+} from "./types.js";
 // ClusterDb (the multi-process sharding layer) lives at the './cluster'
 // subpath export to keep this module free of import cycles.

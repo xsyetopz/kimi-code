@@ -11,7 +11,7 @@
  * 100 are rounded to whole numbers ("977k").
  */
 export function formatTokenCount(n: number): string {
-  if (!Number.isFinite(n) || n < 0) return '0';
+  if (!Number.isFinite(n) || n < 0) return "0";
   if (n >= 1024 * 1024) return `${trimDecimal(n / (1024 * 1024))}M`;
   if (n >= 1024) {
     const k = n / 1024;
@@ -23,7 +23,7 @@ export function formatTokenCount(n: number): string {
 /** One decimal place, dropping a redundant ".0" ("1.0" → "1", "1.5" stays). */
 function trimDecimal(v: number): string {
   const s = v.toFixed(1);
-  return s.endsWith('.0') ? s.slice(0, -2) : s;
+  return s.endsWith(".0") ? s.slice(0, -2) : s;
 }
 
 /**
@@ -45,10 +45,17 @@ export function usagePercentFromRatio(ratio: number): number {
  * Build a `[███░░░░░░░]` style bar. Returns a plain-ASCII string with
  * `filled`/`empty` glyphs — colouring is the caller's responsibility.
  */
-export function renderProgressBar(ratio: number, width = 20, filled = '█', empty = '░'): string {
+export function renderProgressBar(
+  ratio: number,
+  width = 20,
+  filled = "█",
+  empty = "░",
+): string {
   const clamped = safeUsageRatio(ratio);
   const filledCount = Math.round(clamped * width);
-  return filled.repeat(filledCount) + empty.repeat(Math.max(0, width - filledCount));
+  return (
+    filled.repeat(filledCount) + empty.repeat(Math.max(0, width - filledCount))
+  );
 }
 
 export function safeUsageRatio(ratio: number): number {
@@ -59,8 +66,8 @@ export function safeUsageRatio(ratio: number): number {
  * Map a usage ratio to a semantic colour token — the `/usage` renderer
  * translates these into palette hex values.
  */
-export function ratioSeverity(ratio: number): 'ok' | 'warn' | 'danger' {
-  if (ratio >= 0.85) return 'danger';
-  if (ratio >= 0.5) return 'warn';
-  return 'ok';
+export function ratioSeverity(ratio: number): "ok" | "warn" | "danger" {
+  if (ratio >= 0.85) return "danger";
+  if (ratio >= 0.5) return "warn";
+  return "ok";
 }

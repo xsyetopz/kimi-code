@@ -18,9 +18,12 @@
  * `handlerFor` → handler.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
-import type { IWorkspaceScopeHandle } from '#/_base/di/scope';
-import type { Event } from '#/_base/event';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
+import type { IWorkspaceScopeHandle } from "#/_base/di/scope";
+import type { Event } from "#/_base/event";
 
 export type WorkspaceRef =
   | { readonly workspaceId: string; readonly root?: string }
@@ -44,4 +47,4 @@ export interface IWorkspaceLifecycleService {
 }
 
 export const IWorkspaceLifecycleService: ServiceIdentifier<IWorkspaceLifecycleService> =
-  createDecorator<IWorkspaceLifecycleService>('workspaceLifecycleService');
+  createDecorator<IWorkspaceLifecycleService>("workspaceLifecycleService");

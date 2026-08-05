@@ -7,8 +7,8 @@
  * scope is built.
  */
 
-import './acpConnection';
-import './acpFsService';
+import "./acpConnection";
+import "./acpFsService";
 
 export {
   AcpConnection,
@@ -18,5 +18,5 @@ export {
   type IAcpFsClient,
   type IAcpTerminalClient,
   type IAcpTerminalHandle,
-} from './acpConnection';
-export { AcpHostFileSystem } from './acpFsService';
+} from "./acpConnection";
+export { AcpHostFileSystem } from "./acpFsService";

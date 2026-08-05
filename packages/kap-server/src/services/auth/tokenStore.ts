@@ -1,7 +1,7 @@
-import { timingSafeEqual } from 'node:crypto';
-import { readFileSync, statSync } from 'node:fs';
+import { timingSafeEqual } from "node:crypto";
+import { readFileSync, statSync } from "node:fs";
 
-import { loadOrCreateServerToken, serverTokenPath } from './persistentToken';
+import { loadOrCreateServerToken, serverTokenPath } from "./persistentToken";
 
 export interface TokenStore {
   readonly tokenPath: string;
@@ -51,11 +51,11 @@ export async function createTokenStore(homeDir: string): Promise<TokenStore> {
     // Skip the check on Windows: fs.stat mode is synthesised from the
     // read-only attribute and does not reflect real ACLs, so it would always
     // appear too permissive and prevent legitimate token reloads.
-    if (process.platform !== 'win32' && (st.mode & 0o077) !== 0) {
+    if (process.platform !== "win32" && (st.mode & 0o077) !== 0) {
       return cache.token;
     }
     try {
-      const token = readFileSync(tokenPath, 'utf8').trim();
+      const token = readFileSync(tokenPath, "utf8").trim();
       if (token.length > 0) {
         cache = { token, mtimeMs: st.mtimeMs, ino: st.ino };
       }

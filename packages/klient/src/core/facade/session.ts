@@ -7,34 +7,34 @@
  * wire).
  */
 
-import type { AgentActivityState } from '@moonshot-ai/agent-core-v2/agent/activityView/activityView';
+import type { AgentActivityState } from "@moonshot-ai/agent-core-v2/agent/activityView/activityView";
 import type {
   ApprovalRequest,
   ApprovalResponse,
-} from '@moonshot-ai/agent-core-v2/session/approval/approval';
+} from "@moonshot-ai/agent-core-v2/session/approval/approval";
 import type {
   Interaction,
   InteractionKind,
-} from '@moonshot-ai/agent-core-v2/session/interaction/interaction';
+} from "@moonshot-ai/agent-core-v2/session/interaction/interaction";
 import type {
   QuestionRequest,
   QuestionResult,
-} from '@moonshot-ai/agent-core-v2/session/question/question';
+} from "@moonshot-ai/agent-core-v2/session/question/question";
 import type {
   AgentMeta,
   SessionMeta,
   SessionMetaPatch,
-} from '@moonshot-ai/agent-core-v2/session/sessionMetadata/sessionMetadata';
-import type { SkillSummary } from '@moonshot-ai/agent-core-v2/app/skillCatalog/types';
+} from "@moonshot-ai/agent-core-v2/session/sessionMetadata/sessionMetadata";
+import type { SkillSummary } from "@moonshot-ai/agent-core-v2/app/skillCatalog/types";
 
-import type { ScopeRef } from '../channel.js';
-import type { McpServerConfig } from '../../contract/mcp.js';
-import { RPCError } from '../errors.js';
-import type { ScopedCaller } from './global.js';
+import type { ScopeRef } from "../channel.js";
+import type { McpServerConfig } from "../../contract/mcp.js";
+import { RPCError } from "../errors.js";
+import type { ScopedCaller } from "./global.js";
 
 const NOT_FOUND = 40404;
 
-export type { ScopedCaller } from './global.js';
+export type { ScopedCaller } from "./global.js";
 
 /** What `sessionLifecycleService.create/fork/createChild` leaves on the wire. */
 interface HandleWire {
@@ -83,7 +83,11 @@ export interface SessionSkillsFacade {
  * facade composes the phase from the pending interaction lists and each
  * agent's `agentActivityView`, keeping the retired service's precedence.
  */
-export type SessionStatus = 'running' | 'idle' | 'awaiting_approval' | 'awaiting_question';
+export type SessionStatus =
+  | "running"
+  | "idle"
+  | "awaiting_approval"
+  | "awaiting_question";
 
 export interface SessionFacade {
   get(): Promise<SessionMeta>;
@@ -97,8 +101,14 @@ export interface SessionFacade {
   restore(opts?: SessionRestoreOptions): Promise<boolean>;
   /** Permanently delete the session and its persisted data; throws when missing. */
   delete(): Promise<void>;
-  fork(input?: { title?: string; metadata?: Record<string, unknown> }): Promise<SessionMeta>;
-  createChild(input?: { title?: string; metadata?: Record<string, unknown> }): Promise<SessionMeta>;
+  fork(input?: {
+    title?: string;
+    metadata?: Record<string, unknown>;
+  }): Promise<SessionMeta>;
+  createChild(input?: {
+    title?: string;
+    metadata?: Record<string, unknown>;
+  }): Promise<SessionMeta>;
   readonly approvals: SessionApprovalsFacade;
   readonly questions: SessionQuestionsFacade;
   readonly interactions: SessionInteractionsFacade;
@@ -107,80 +117,108 @@ export interface SessionFacade {
   agents(): Promise<Readonly<Record<string, AgentMeta>>>;
 }
 
-export function createSessionFacade(call: ScopedCaller, sessionId: string): SessionFacade {
+export function createSessionFacade(
+  call: ScopedCaller,
+  sessionId: string,
+): SessionFacade {
   const scope: ScopeRef = { sessionId };
   const read = (): Promise<SessionMeta> =>
-    call(scope, 'sessionMetadata', 'read', []) as Promise<SessionMeta>;
+    call(scope, "sessionMetadata", "read", []) as Promise<SessionMeta>;
   // Session lifecycle methods live on the session's workspace handler
   // (Workspace scope) — the index supplies the handler's workspaceId.
   const resolveWorkspaceId = async (): Promise<string | undefined> => {
-    const summary = (await call({}, 'sessionIndex', 'get', [sessionId])) as
+    const summary = (await call({}, "sessionIndex", "get", [sessionId])) as
       | { workspaceId: string }
       | undefined;
     return summary?.workspaceId;
   };
   const spawn = async (
-    method: 'fork' | 'createChild',
+    method: "fork" | "createChild",
     input: { title?: string; metadata?: Record<string, unknown> } = {},
   ): Promise<SessionMeta> => {
     const workspaceId = await resolveWorkspaceId();
     if (workspaceId === undefined) {
       throw new RPCError(NOT_FOUND, `session not found: ${sessionId}`);
     }
-    const handle = (await call({ workspaceId }, 'sessionLifecycleService', method, [
-      { sourceSessionId: sessionId, title: input.title, metadata: input.metadata },
-    ])) as HandleWire;
-    return call({ sessionId: handle.id }, 'sessionMetadata', 'read', []) as Promise<SessionMeta>;
+    const handle = (await call(
+      { workspaceId },
+      "sessionLifecycleService",
+      method,
+      [
+        {
+          sourceSessionId: sessionId,
+          title: input.title,
+          metadata: input.metadata,
+        },
+      ],
+    )) as HandleWire;
+    return call(
+      { sessionId: handle.id },
+      "sessionMetadata",
+      "read",
+      [],
+    ) as Promise<SessionMeta>;
   };
 
   return {
     get: read,
-    setTitle: (title) => call(scope, 'sessionMetadata', 'setTitle', [title]) as Promise<void>,
-    update: (patch) => call(scope, 'sessionMetadata', 'update', [patch]) as Promise<void>,
+    setTitle: (title) =>
+      call(scope, "sessionMetadata", "setTitle", [title]) as Promise<void>,
+    update: (patch) =>
+      call(scope, "sessionMetadata", "update", [patch]) as Promise<void>,
     setArchived: (archived) =>
-      call(scope, 'sessionMetadata', 'setArchived', [archived]) as Promise<void>,
+      call(scope, "sessionMetadata", "setArchived", [
+        archived,
+      ]) as Promise<void>,
     status: async () => {
-      const pending = (kind: 'approval' | 'question') =>
-        call(scope, 'sessionInteractionService', 'listPending', [kind]) as Promise<
-          readonly unknown[]
-        >;
-      if ((await pending('approval')).length > 0) return 'awaiting_approval';
-      if ((await pending('question')).length > 0) return 'awaiting_question';
+      const pending = (kind: "approval" | "question") =>
+        call(scope, "sessionInteractionService", "listPending", [
+          kind,
+        ]) as Promise<readonly unknown[]>;
+      if ((await pending("approval")).length > 0) return "awaiting_approval";
+      if ((await pending("question")).length > 0) return "awaiting_question";
       const meta = await read();
       for (const agentId of Object.keys(meta.agents ?? {})) {
         try {
           const state = (await call(
             { sessionId, agentId },
-            'agentActivityView',
-            'state',
+            "agentActivityView",
+            "state",
             [],
           )) as AgentActivityState;
-          if (state.turn !== undefined || state.background.length > 0) return 'running';
+          if (state.turn !== undefined || state.background.length > 0)
+            return "running";
         } catch {
           // Agents stay registered after their live handle is gone; the scope
           // probe fails for a dead agent, so treat it as not active — the same
           // view the retired service had from iterating live handles only.
         }
       }
-      return 'idle';
+      return "idle";
     },
     close: async () => {
       const workspaceId = await resolveWorkspaceId();
       if (workspaceId === undefined) return;
-      await call({ workspaceId }, 'sessionLifecycleService', 'close', [sessionId]);
+      await call({ workspaceId }, "sessionLifecycleService", "close", [
+        sessionId,
+      ]);
     },
     archive: async () => {
       const workspaceId = await resolveWorkspaceId();
       if (workspaceId === undefined) return;
-      await call({ workspaceId }, 'sessionLifecycleService', 'archive', [sessionId]);
+      await call({ workspaceId }, "sessionLifecycleService", "archive", [
+        sessionId,
+      ]);
     },
     restore: async (opts) => {
       const workspaceId = await resolveWorkspaceId();
       if (workspaceId === undefined) return false;
-      const handle = (await call({ workspaceId }, 'sessionLifecycleService', 'restore', [
-        sessionId,
-        opts,
-      ])) as HandleWire | null;
+      const handle = (await call(
+        { workspaceId },
+        "sessionLifecycleService",
+        "restore",
+        [sessionId, opts],
+      )) as HandleWire | null;
       // The engine reports "not found" with `undefined`, which JSON transports
       // may surface as `null` — reject both.
       return handle !== null && handle !== undefined;
@@ -190,42 +228,56 @@ export function createSessionFacade(call: ScopedCaller, sessionId: string): Sess
       if (workspaceId === undefined) {
         throw new RPCError(NOT_FOUND, `session not found: ${sessionId}`);
       }
-      await call({ workspaceId }, 'sessionLifecycleService', 'delete', [sessionId]);
+      await call({ workspaceId }, "sessionLifecycleService", "delete", [
+        sessionId,
+      ]);
     },
-    fork: (input) => spawn('fork', input),
-    createChild: (input) => spawn('createChild', input),
+    fork: (input) => spawn("fork", input),
+    createChild: (input) => spawn("createChild", input),
 
     approvals: {
       list: () =>
-        call(scope, 'sessionApprovalService', 'listPending', []) as Promise<
+        call(scope, "sessionApprovalService", "listPending", []) as Promise<
           readonly ApprovalRequest[]
         >,
       decide: (id, response) =>
-        call(scope, 'sessionApprovalService', 'decide', [id, response]) as Promise<void>,
+        call(scope, "sessionApprovalService", "decide", [
+          id,
+          response,
+        ]) as Promise<void>,
     },
 
     questions: {
       list: () =>
-        call(scope, 'sessionQuestionService', 'listPending', []) as Promise<
+        call(scope, "sessionQuestionService", "listPending", []) as Promise<
           readonly QuestionRequest[]
         >,
       answer: (id, result) =>
-        call(scope, 'sessionQuestionService', 'answer', [id, result]) as Promise<void>,
-      dismiss: (id) => call(scope, 'sessionQuestionService', 'dismiss', [id]) as Promise<void>,
+        call(scope, "sessionQuestionService", "answer", [
+          id,
+          result,
+        ]) as Promise<void>,
+      dismiss: (id) =>
+        call(scope, "sessionQuestionService", "dismiss", [id]) as Promise<void>,
     },
 
     interactions: {
       list: (kind) =>
-        call(scope, 'sessionInteractionService', 'listPending', [kind]) as Promise<
-          readonly Interaction[]
-        >,
+        call(scope, "sessionInteractionService", "listPending", [
+          kind,
+        ]) as Promise<readonly Interaction[]>,
       respond: (id, response) =>
-        call(scope, 'sessionInteractionService', 'respond', [id, response]) as Promise<void>,
+        call(scope, "sessionInteractionService", "respond", [
+          id,
+          response,
+        ]) as Promise<void>,
     },
 
     skills: {
       list: () =>
-        call(scope, 'sessionSkillCatalog', 'list', []) as Promise<readonly SkillSummary[]>,
+        call(scope, "sessionSkillCatalog", "list", []) as Promise<
+          readonly SkillSummary[]
+        >,
     },
 
     agents: async () => {

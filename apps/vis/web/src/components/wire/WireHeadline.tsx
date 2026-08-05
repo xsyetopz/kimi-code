@@ -1,6 +1,6 @@
-import type { AgentRecord } from '../../types';
-import { Dim, type HeadlineRender } from './parts';
-import { rendererFor } from './renderers';
+import type { AgentRecord } from "../../types";
+import { Dim, type HeadlineRender } from "./parts";
+import { rendererFor } from "./renderers";
 
 export type { HeadlineRender };
 

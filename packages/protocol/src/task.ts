@@ -1,15 +1,15 @@
-import { z } from 'zod';
+import { z } from "zod";
 
-import { isoDateTimeSchema } from './time';
+import { isoDateTimeSchema } from "./time";
 
-export const taskKindSchema = z.enum(['subagent', 'bash', 'tool']);
+export const taskKindSchema = z.enum(["subagent", "bash", "tool"]);
 export type TaskKind = z.infer<typeof taskKindSchema>;
 
 export const taskStatusSchema = z.enum([
-  'running',
-  'completed',
-  'failed',
-  'cancelled',
+  "running",
+  "completed",
+  "failed",
+  "cancelled",
 ]);
 export type TaskStatus = z.infer<typeof taskStatusSchema>;
 

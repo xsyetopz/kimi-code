@@ -1,12 +1,12 @@
-import { readdir, readFile, realpath, stat } from 'node:fs/promises';
-import path from 'node:path';
+import { readdir, readFile, realpath, stat } from "node:fs/promises";
+import path from "node:path";
 
 import {
   HookDefSchema,
   McpServerConfigSchema,
   type HookDefConfig,
   type McpServerConfig,
-} from '../config/schema';
+} from "../config/schema";
 import {
   PLUGIN_NAME_REGEX,
   type PluginCommandEntry,
@@ -14,10 +14,10 @@ import {
   type PluginInterface,
   type PluginManifest,
   type PluginManifestKind,
-} from './types';
+} from "./types";
 
-const KIMI_PLUGIN_ROOT_PATH = 'kimi.plugin.json';
-const KIMI_PLUGIN_DIR_PATH = '.kimi-plugin/plugin.json';
+const KIMI_PLUGIN_ROOT_PATH = "kimi.plugin.json";
+const KIMI_PLUGIN_DIR_PATH = ".kimi-plugin/plugin.json";
 
 export const PLUGIN_SYSTEM_PROMPT_MAX_BYTES = 32 * 1024;
 
@@ -25,12 +25,12 @@ export const PLUGIN_SYSTEM_PROMPT_MAX_BYTES = 32 * 1024;
 // Kimi CLI). We do not run them; emit an info diagnostic so plugin authors and
 // users can see why a field is silently ignored.
 const UNSUPPORTED_RUNTIME_FIELDS = [
-  'tools',
-  'apps',
-  'inject',
-  'configFile',
-  'config_file',
-  'bootstrap',
+  "tools",
+  "apps",
+  "inject",
+  "configFile",
+  "config_file",
+  "bootstrap",
 ] as const;
 
 export interface ParsedManifestResult {
@@ -41,7 +41,9 @@ export interface ParsedManifestResult {
   readonly diagnostics: readonly PluginDiagnostic[];
 }
 
-export async function parseManifest(pluginRoot: string): Promise<ParsedManifestResult> {
+export async function parseManifest(
+  pluginRoot: string,
+): Promise<ParsedManifestResult> {
   const rootJsonPath = path.join(pluginRoot, KIMI_PLUGIN_ROOT_PATH);
   const dirJsonPath = path.join(pluginRoot, KIMI_PLUGIN_DIR_PATH);
   const rootJsonExists = await isFile(rootJsonPath);
@@ -51,7 +53,7 @@ export async function parseManifest(pluginRoot: string): Promise<ParsedManifestR
     return {
       diagnostics: [
         {
-          severity: 'error',
+          severity: "error",
           message: `No manifest at ${KIMI_PLUGIN_ROOT_PATH} or ${KIMI_PLUGIN_DIR_PATH}`,
         },
       ],
@@ -59,12 +61,15 @@ export async function parseManifest(pluginRoot: string): Promise<ParsedManifestR
   }
 
   const manifestPath = rootJsonExists ? rootJsonPath : dirJsonPath;
-  const manifestKind: PluginManifestKind = rootJsonExists ? 'kimi-plugin-root' : 'kimi-plugin-dir';
-  const shadowedManifestPath = rootJsonExists && dirJsonExists ? dirJsonPath : undefined;
+  const manifestKind: PluginManifestKind = rootJsonExists
+    ? "kimi-plugin-root"
+    : "kimi-plugin-dir";
+  const shadowedManifestPath =
+    rootJsonExists && dirJsonExists ? dirJsonPath : undefined;
 
   let raw: unknown;
   try {
-    raw = JSON.parse(await readFile(manifestPath, 'utf8'));
+    raw = JSON.parse(await readFile(manifestPath, "utf8"));
   } catch (error) {
     return {
       manifestKind,
@@ -72,7 +77,7 @@ export async function parseManifest(pluginRoot: string): Promise<ParsedManifestR
       shadowedManifestPath,
       diagnostics: [
         {
-          severity: 'error',
+          severity: "error",
           message: `Failed to parse ${path.relative(pluginRoot, manifestPath)}: ${(error as Error).message}`,
         },
       ],
@@ -84,43 +89,57 @@ export async function parseManifest(pluginRoot: string): Promise<ParsedManifestR
       manifestKind,
       manifestPath,
       shadowedManifestPath,
-      diagnostics: [{ severity: 'error', message: 'manifest must be a JSON object' }],
+      diagnostics: [
+        { severity: "error", message: "manifest must be a JSON object" },
+      ],
     };
   }
 
   const diagnostics: PluginDiagnostic[] = [];
 
-  const name = typeof raw['name'] === 'string' ? raw['name'].trim() : '';
+  const name = typeof raw["name"] === "string" ? raw["name"].trim() : "";
   if (name.length === 0) {
-    diagnostics.push({ severity: 'error', message: '"name" is required' });
+    diagnostics.push({ severity: "error", message: '"name" is required' });
     return { manifestKind, manifestPath, shadowedManifestPath, diagnostics };
   }
   if (!PLUGIN_NAME_REGEX.test(name)) {
     diagnostics.push({
-      severity: 'error',
+      severity: "error",
       message: `"name" must match ${PLUGIN_NAME_REGEX} (got "${name}")`,
     });
     return { manifestKind, manifestPath, shadowedManifestPath, diagnostics };
   }
 
-  let skills = await resolveDirListField(pluginRoot, 'skills', raw['skills'], diagnostics);
-  if (raw['skills'] === undefined) {
-    const rootSkillMd = path.join(pluginRoot, 'SKILL.md');
+  let skills = await resolveDirListField(
+    pluginRoot,
+    "skills",
+    raw["skills"],
+    diagnostics,
+  );
+  if (raw["skills"] === undefined) {
+    const rootSkillMd = path.join(pluginRoot, "SKILL.md");
     if (await isFile(rootSkillMd)) {
       skills = [pluginRoot];
     }
   }
 
-  let agents = await resolveDirListField(pluginRoot, 'agents', raw['agents'], diagnostics);
-  if (raw['agents'] === undefined) {
-    const agentsDir = path.join(pluginRoot, 'agents');
+  let agents = await resolveDirListField(
+    pluginRoot,
+    "agents",
+    raw["agents"],
+    diagnostics,
+  );
+  if (raw["agents"] === undefined) {
+    const agentsDir = path.join(pluginRoot, "agents");
     if (await isDir(agentsDir)) {
       agents = [agentsDir];
     }
   }
 
   const skillInstructions =
-    typeof raw['skillInstructions'] === 'string' ? raw['skillInstructions'] : undefined;
+    typeof raw["skillInstructions"] === "string"
+      ? raw["skillInstructions"]
+      : undefined;
 
   const systemPrompt = await readSystemPrompt(pluginRoot, raw, diagnostics);
 
@@ -128,24 +147,34 @@ export async function parseManifest(pluginRoot: string): Promise<ParsedManifestR
 
   const manifest: PluginManifest = {
     name,
-    version: stringField(raw, 'version'),
-    description: stringField(raw, 'description'),
-    keywords: stringArrayField(raw, 'keywords'),
-    homepage: stringField(raw, 'homepage'),
-    license: stringField(raw, 'license'),
-    author: readAuthor(raw['author']),
+    version: stringField(raw, "version"),
+    description: stringField(raw, "description"),
+    keywords: stringArrayField(raw, "keywords"),
+    homepage: stringField(raw, "homepage"),
+    license: stringField(raw, "license"),
+    author: readAuthor(raw["author"]),
     skills,
     agents,
-    sessionStart: readSessionStart(raw['sessionStart'], diagnostics),
-    mcpServers: await readMcpServers(pluginRoot, raw['mcpServers'], diagnostics),
-    hooks: readHooks(raw['hooks'], diagnostics),
-    commands: await readCommands(pluginRoot, raw['commands'], diagnostics),
-    interface: readInterface(raw['interface']),
+    sessionStart: readSessionStart(raw["sessionStart"], diagnostics),
+    mcpServers: await readMcpServers(
+      pluginRoot,
+      raw["mcpServers"],
+      diagnostics,
+    ),
+    hooks: readHooks(raw["hooks"], diagnostics),
+    commands: await readCommands(pluginRoot, raw["commands"], diagnostics),
+    interface: readInterface(raw["interface"]),
     skillInstructions,
     systemPrompt,
   };
 
-  return { manifest, manifestKind, manifestPath, shadowedManifestPath, diagnostics };
+  return {
+    manifest,
+    manifestKind,
+    manifestPath,
+    shadowedManifestPath,
+    diagnostics,
+  };
 }
 
 function recordUnsupportedRuntimeFields(
@@ -155,7 +184,7 @@ function recordUnsupportedRuntimeFields(
   for (const field of UNSUPPORTED_RUNTIME_FIELDS) {
     if (raw[field] === undefined) continue;
     diagnostics.push({
-      severity: 'info',
+      severity: "info",
       message: `"${field}" is present but not supported by Kimi plugins`,
     });
   }
@@ -169,20 +198,26 @@ async function resolveDirListField(
 ): Promise<readonly string[]> {
   if (raw === undefined) return [];
   const entries: string[] = [];
-  if (typeof raw === 'string') {
+  if (typeof raw === "string") {
     entries.push(raw);
-  } else if (Array.isArray(raw) && raw.every((entry) => typeof entry === 'string')) {
+  } else if (
+    Array.isArray(raw) &&
+    raw.every((entry) => typeof entry === "string")
+  ) {
     entries.push(...raw);
   } else {
-    diagnostics.push({ severity: 'error', message: `"${field}" must be a string or string[]` });
+    diagnostics.push({
+      severity: "error",
+      message: `"${field}" must be a string or string[]`,
+    });
     return [];
   }
 
   const resolved: string[] = [];
   for (const entry of entries) {
-    if (!entry.startsWith('./')) {
+    if (!entry.startsWith("./")) {
       diagnostics.push({
-        severity: 'error',
+        severity: "error",
         message: `"${field}" path must start with "./" (got "${entry}")`,
       });
       continue;
@@ -197,14 +232,14 @@ async function resolveDirListField(
     const rootReal = await realpath(pluginRoot).catch(() => pluginRoot);
     if (!isWithin(real, rootReal)) {
       diagnostics.push({
-        severity: 'error',
+        severity: "error",
         message: `"${field}" path resolves outside the plugin (${entry})`,
       });
       continue;
     }
     if (!(await isDir(real))) {
       diagnostics.push({
-        severity: 'warn',
+        severity: "warn",
         message: `"${field}" path is not a directory (${entry})`,
       });
       continue;
@@ -220,9 +255,9 @@ async function resolvePluginPathField(input: {
   readonly value: string;
   readonly diagnostics: PluginDiagnostic[];
 }): Promise<string | undefined> {
-  if (!input.value.startsWith('./')) {
+  if (!input.value.startsWith("./")) {
     input.diagnostics.push({
-      severity: 'warn',
+      severity: "warn",
       message: `"${input.field}" path must start with "./" (got "${input.value}")`,
     });
     return undefined;
@@ -234,10 +269,12 @@ async function resolvePluginPathField(input: {
   } catch {
     real = absolute;
   }
-  const rootReal = await realpath(input.pluginRoot).catch(() => input.pluginRoot);
+  const rootReal = await realpath(input.pluginRoot).catch(
+    () => input.pluginRoot,
+  );
   if (!isWithin(real, rootReal)) {
     input.diagnostics.push({
-      severity: 'warn',
+      severity: "warn",
       message: `"${input.field}" path resolves outside the plugin (${input.value})`,
     });
     return undefined;
@@ -248,16 +285,19 @@ async function resolvePluginPathField(input: {
 function readSessionStart(
   raw: unknown,
   diagnostics: PluginDiagnostic[],
-): PluginManifest['sessionStart'] {
+): PluginManifest["sessionStart"] {
   if (raw === undefined) return undefined;
   if (!isObject(raw)) {
-    diagnostics.push({ severity: 'warn', message: '"sessionStart" must be an object' });
+    diagnostics.push({
+      severity: "warn",
+      message: '"sessionStart" must be an object',
+    });
     return undefined;
   }
-  const skill = typeof raw['skill'] === 'string' ? raw['skill'].trim() : '';
+  const skill = typeof raw["skill"] === "string" ? raw["skill"].trim() : "";
   if (skill.length === 0) {
     diagnostics.push({
-      severity: 'warn',
+      severity: "warn",
       message: '"sessionStart.skill" is required when sessionStart is present',
     });
     return undefined;
@@ -271,15 +311,21 @@ async function readSystemPrompt(
   diagnostics: PluginDiagnostic[],
 ): Promise<string | undefined> {
   const parts: string[] = [];
-  if (raw['systemPrompt'] !== undefined && typeof raw['systemPrompt'] !== 'string') {
-    diagnostics.push({ severity: 'warn', message: '"systemPrompt" must be a string' });
+  if (
+    raw["systemPrompt"] !== undefined &&
+    typeof raw["systemPrompt"] !== "string"
+  ) {
+    diagnostics.push({
+      severity: "warn",
+      message: '"systemPrompt" must be a string',
+    });
   }
-  const inline = stringField(raw, 'systemPrompt');
+  const inline = stringField(raw, "systemPrompt");
   if (inline !== undefined) {
-    const inlineBytes = Buffer.byteLength(inline, 'utf8');
+    const inlineBytes = Buffer.byteLength(inline, "utf8");
     if (inlineBytes > PLUGIN_SYSTEM_PROMPT_MAX_BYTES) {
       diagnostics.push({
-        severity: 'warn',
+        severity: "warn",
         message:
           `"systemPrompt" is ${inlineBytes} bytes, exceeding the ` +
           `${PLUGIN_SYSTEM_PROMPT_MAX_BYTES / 1024} KB limit; the field is ignored`,
@@ -289,16 +335,22 @@ async function readSystemPrompt(
     }
   }
 
-  const pathValue = raw['systemPromptPath'];
+  const pathValue = raw["systemPromptPath"];
   if (pathValue !== undefined) {
-    if (typeof pathValue !== 'string') {
-      diagnostics.push({ severity: 'warn', message: '"systemPromptPath" must be a string' });
+    if (typeof pathValue !== "string") {
+      diagnostics.push({
+        severity: "warn",
+        message: '"systemPromptPath" must be a string',
+      });
     } else if (pathValue.trim().length === 0) {
-      diagnostics.push({ severity: 'warn', message: '"systemPromptPath" must not be blank' });
+      diagnostics.push({
+        severity: "warn",
+        message: '"systemPromptPath" must not be blank',
+      });
     } else {
       const resolved = await resolvePluginPathField({
         pluginRoot,
-        field: 'systemPromptPath',
+        field: "systemPromptPath",
         value: pathValue.trim(),
         diagnostics,
       });
@@ -306,23 +358,25 @@ async function readSystemPrompt(
         const fileStat = await stat(resolved).catch(() => undefined);
         if (fileStat === undefined || !fileStat.isFile()) {
           diagnostics.push({
-            severity: 'warn',
+            severity: "warn",
             message: `"systemPromptPath" is not a file (${pathValue})`,
           });
         } else if (fileStat.size > PLUGIN_SYSTEM_PROMPT_MAX_BYTES) {
           diagnostics.push({
-            severity: 'warn',
+            severity: "warn",
             message:
               `"systemPromptPath" is ${fileStat.size} bytes, exceeding the ` +
               `${PLUGIN_SYSTEM_PROMPT_MAX_BYTES / 1024} KB limit; the file is ignored (${pathValue})`,
           });
         } else {
           try {
-            const content = (await readFile(resolved, 'utf8')).replace(/^\uFEFF/, '').trim();
+            const content = (await readFile(resolved, "utf8"))
+              .replace(/^\uFEFF/, "")
+              .trim();
             if (content.length > 0) parts.push(content);
           } catch (error) {
             diagnostics.push({
-              severity: 'warn',
+              severity: "warn",
               message: `Failed to read "systemPromptPath" (${pathValue}): ${(error as Error).message}`,
             });
           }
@@ -331,17 +385,20 @@ async function readSystemPrompt(
     }
   }
 
-  return parts.length === 0 ? undefined : parts.join('\n\n');
+  return parts.length === 0 ? undefined : parts.join("\n\n");
 }
 
 async function readMcpServers(
   pluginRoot: string,
   raw: unknown,
   diagnostics: PluginDiagnostic[],
-): Promise<PluginManifest['mcpServers']> {
+): Promise<PluginManifest["mcpServers"]> {
   if (raw === undefined) return undefined;
   if (!isObject(raw)) {
-    diagnostics.push({ severity: 'warn', message: '"mcpServers" must be an object' });
+    diagnostics.push({
+      severity: "warn",
+      message: '"mcpServers" must be an object',
+    });
     return undefined;
   }
 
@@ -350,7 +407,7 @@ async function readMcpServers(
     const trimmedName = name.trim();
     if (trimmedName.length === 0) {
       diagnostics.push({
-        severity: 'warn',
+        severity: "warn",
         message: '"mcpServers" entries must have a non-empty name',
       });
       continue;
@@ -358,7 +415,7 @@ async function readMcpServers(
     const parsed = McpServerConfigSchema.safeParse(value);
     if (!parsed.success) {
       diagnostics.push({
-        severity: 'warn',
+        severity: "warn",
         message: `Invalid MCP server "${trimmedName}": ${parsed.error.message}`,
       });
       continue;
@@ -380,7 +437,7 @@ function readHooks(
 ): readonly HookDefConfig[] | undefined {
   if (raw === undefined) return undefined;
   if (!Array.isArray(raw)) {
-    diagnostics.push({ severity: 'warn', message: '"hooks" must be an array' });
+    diagnostics.push({ severity: "warn", message: '"hooks" must be an array' });
     return undefined;
   }
   const out: HookDefConfig[] = [];
@@ -388,7 +445,7 @@ function readHooks(
     const parsed = HookDefSchema.safeParse(entry);
     if (!parsed.success) {
       diagnostics.push({
-        severity: 'warn',
+        severity: "warn",
         message: `Invalid hook at index ${i}: ${parsed.error.message}`,
       });
     } else {
@@ -405,12 +462,18 @@ async function readCommands(
 ): Promise<readonly PluginCommandEntry[] | undefined> {
   if (raw === undefined) return undefined;
   const entries: string[] = [];
-  if (typeof raw === 'string') {
+  if (typeof raw === "string") {
     entries.push(raw);
-  } else if (Array.isArray(raw) && raw.every((entry) => typeof entry === 'string')) {
+  } else if (
+    Array.isArray(raw) &&
+    raw.every((entry) => typeof entry === "string")
+  ) {
     entries.push(...raw);
   } else {
-    diagnostics.push({ severity: 'warn', message: '"commands" must be a string or string[]' });
+    diagnostics.push({
+      severity: "warn",
+      message: '"commands" must be a string or string[]',
+    });
     return undefined;
   }
 
@@ -418,26 +481,33 @@ async function readCommands(
   for (const entry of entries) {
     const resolved = await resolvePluginPathField({
       pluginRoot,
-      field: 'commands',
+      field: "commands",
       value: entry,
       diagnostics,
     });
     if (resolved === undefined) continue;
     if (await isDir(resolved)) {
       files.push(...(await listMarkdownFilesRecursive(resolved)));
-    } else if ((await isFile(resolved)) && resolved.endsWith('.md')) {
-      files.push({ path: resolved, name: commandNameFromFile(resolved, path.dirname(resolved)) });
+    } else if ((await isFile(resolved)) && resolved.endsWith(".md")) {
+      files.push({
+        path: resolved,
+        name: commandNameFromFile(resolved, path.dirname(resolved)),
+      });
     } else {
       diagnostics.push({
-        severity: 'warn',
+        severity: "warn",
         message: `"commands" entry must be a directory or .md file (${entry})`,
       });
     }
   }
-  return files.length === 0 ? undefined : files.toSorted((a, b) => a.name.localeCompare(b.name));
+  return files.length === 0
+    ? undefined
+    : files.toSorted((a, b) => a.name.localeCompare(b.name));
 }
 
-async function listMarkdownFilesRecursive(root: string): Promise<readonly PluginCommandEntry[]> {
+async function listMarkdownFilesRecursive(
+  root: string,
+): Promise<readonly PluginCommandEntry[]> {
   const out: PluginCommandEntry[] = [];
   await walkMarkdown(root, root, out);
   return out;
@@ -458,15 +528,15 @@ async function walkMarkdown(
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) {
       await walkMarkdown(root, full, out);
-    } else if (entry.isFile() && entry.name.endsWith('.md')) {
+    } else if (entry.isFile() && entry.name.endsWith(".md")) {
       out.push({ path: full, name: commandNameFromFile(full, root) });
     }
   }
 }
 
 function commandNameFromFile(file: string, root: string): string {
-  const relative = path.relative(root, file).replace(/\.md$/i, '');
-  return relative.split(path.sep).join('/');
+  const relative = path.relative(root, file).replace(/\.md$/i, "");
+  return relative.split(path.sep).join("/");
 }
 
 async function normalizePluginMcpServer(input: {
@@ -476,10 +546,10 @@ async function normalizePluginMcpServer(input: {
   readonly diagnostics: PluginDiagnostic[];
 }): Promise<McpServerConfig | undefined> {
   const { config } = input;
-  if (config.transport === 'http' || config.transport === 'sse') return config;
+  if (config.transport === "http" || config.transport === "sse") return config;
 
   let command = config.command;
-  if (command.startsWith('./')) {
+  if (command.startsWith("./")) {
     const resolvedCommand = await resolvePluginPathField({
       pluginRoot: input.pluginRoot,
       field: `mcpServers.${input.name}.command`,
@@ -488,9 +558,9 @@ async function normalizePluginMcpServer(input: {
     });
     if (resolvedCommand === undefined) return undefined;
     command = resolvedCommand;
-  } else if (command.includes('/') || path.isAbsolute(command)) {
+  } else if (command.includes("/") || path.isAbsolute(command)) {
     input.diagnostics.push({
-      severity: 'warn',
+      severity: "warn",
       message: `"mcpServers.${input.name}.command" must be a PATH command or start with "./"`,
     });
     return undefined;
@@ -511,11 +581,11 @@ async function normalizePluginMcpServer(input: {
   return { ...config, command, cwd };
 }
 
-function readAuthor(raw: unknown): PluginManifest['author'] {
-  if (typeof raw === 'string') return { name: raw };
+function readAuthor(raw: unknown): PluginManifest["author"] {
+  if (typeof raw === "string") return { name: raw };
   if (!isObject(raw)) return undefined;
-  const name = stringField(raw, 'name');
-  const email = stringField(raw, 'email');
+  const name = stringField(raw, "name");
+  const email = stringField(raw, "email");
   if (name === undefined && email === undefined) return undefined;
   return { name, email };
 }
@@ -523,38 +593,50 @@ function readAuthor(raw: unknown): PluginManifest['author'] {
 function readInterface(raw: unknown): PluginInterface | undefined {
   if (!isObject(raw)) return undefined;
   const out: PluginInterface = {
-    displayName: stringField(raw, 'displayName'),
-    shortDescription: stringField(raw, 'shortDescription'),
-    longDescription: stringField(raw, 'longDescription'),
-    developerName: stringField(raw, 'developerName'),
-    websiteURL: stringField(raw, 'websiteURL'),
+    displayName: stringField(raw, "displayName"),
+    shortDescription: stringField(raw, "shortDescription"),
+    longDescription: stringField(raw, "longDescription"),
+    developerName: stringField(raw, "developerName"),
+    websiteURL: stringField(raw, "websiteURL"),
   };
   const hasAny = Object.values(out).some((value) => value !== undefined);
   return hasAny ? out : undefined;
 }
 
-function stringField(raw: Record<string, unknown>, key: string): string | undefined {
+function stringField(
+  raw: Record<string, unknown>,
+  key: string,
+): string | undefined {
   const value = raw[key];
-  if (typeof value !== 'string') return undefined;
+  if (typeof value !== "string") return undefined;
   const trimmed = value.trim();
   return trimmed.length === 0 ? undefined : trimmed;
 }
 
-function stringArrayField(raw: Record<string, unknown>, key: string): readonly string[] | undefined {
+function stringArrayField(
+  raw: Record<string, unknown>,
+  key: string,
+): readonly string[] | undefined {
   const value = raw[key];
-  if (!Array.isArray(value) || !value.every((entry) => typeof entry === 'string')) {
+  if (
+    !Array.isArray(value) ||
+    !value.every((entry) => typeof entry === "string")
+  ) {
     return undefined;
   }
   return value as readonly string[];
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function isWithin(child: string, parent: string): boolean {
   const relative = path.relative(parent, child);
-  return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
+  return (
+    relative === "" ||
+    (!relative.startsWith("..") && !path.isAbsolute(relative))
+  );
 }
 
 async function isFile(p: string): Promise<boolean> {

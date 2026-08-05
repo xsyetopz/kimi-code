@@ -1,6 +1,6 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { DisposableStore, type IDisposable } from '#/_base/di/lifecycle';
+import { DisposableStore, type IDisposable } from "#/_base/di/lifecycle";
 import {
   _clearScopedRegistryForTests,
   LifecycleScope,
@@ -8,27 +8,40 @@ import {
   registerScopedService,
   type IAgentScopeHandle,
   type Scope,
-} from '#/_base/di/scope';
-import { createScopedTestHost, stubPair, type ScopedTestHost } from '#/_base/di/test';
-import { Emitter } from '#/_base/event';
-import { IEventBus, type DomainEvent } from '#/app/event/eventBus';
-import { IAgentActivityView, type AgentActivityState } from '#/agent/activityView/activityView';
-import { IAgentLifecycleService, MAIN_AGENT_ID } from '#/session/agentLifecycle/agentLifecycle';
-import { ISessionInteractionService } from '#/session/interaction/interaction';
-import { SessionInteractionService } from '#/session/interaction/interactionService';
+} from "#/_base/di/scope";
+import {
+  createScopedTestHost,
+  stubPair,
+  type ScopedTestHost,
+} from "#/_base/di/test";
+import { Emitter } from "#/_base/event";
+import { IEventBus, type DomainEvent } from "#/app/event/eventBus";
+import {
+  IAgentActivityView,
+  type AgentActivityState,
+} from "#/agent/activityView/activityView";
+import {
+  IAgentLifecycleService,
+  MAIN_AGENT_ID,
+} from "#/session/agentLifecycle/agentLifecycle";
+import { ISessionInteractionService } from "#/session/interaction/interaction";
+import { SessionInteractionService } from "#/session/interaction/interactionService";
 import {
   ISessionActivityView,
   type SessionActivityChangedEvent,
-} from '#/session/sessionActivity/sessionActivity';
-import { SessionActivityView } from '#/session/sessionActivity/sessionActivityService';
-import { ISessionStateService } from '#/session/state/sessionState';
-import { SessionStateService } from '#/session/state/sessionStateService';
-import { IWorkspaceStateService } from '#/workspace/state/workspaceState';
-import { WorkspaceStateService } from '#/workspace/state/workspaceStateService';
+} from "#/session/sessionActivity/sessionActivity";
+import { SessionActivityView } from "#/session/sessionActivity/sessionActivityService";
+import { ISessionStateService } from "#/session/state/sessionState";
+import { SessionStateService } from "#/session/state/sessionStateService";
+import { IWorkspaceStateService } from "#/workspace/state/workspaceState";
+import { WorkspaceStateService } from "#/workspace/state/workspaceStateService";
 
 class FakeBus implements IEventBus {
   declare readonly _serviceBrand: undefined;
-  private readonly handlers = new Set<{ type?: string; fn: (event: DomainEvent) => void }>();
+  private readonly handlers = new Set<{
+    type?: string;
+    fn: (event: DomainEvent) => void;
+  }>();
 
   publish(event: DomainEvent): void {
     for (const h of [...this.handlers]) {
@@ -38,7 +51,7 @@ class FakeBus implements IEventBus {
 
   subscribe(arg1: unknown, arg2?: unknown): IDisposable {
     const entry =
-      typeof arg1 === 'string'
+      typeof arg1 === "string"
         ? { type: arg1, fn: arg2 as (event: DomainEvent) => void }
         : { fn: arg1 as (event: DomainEvent) => void };
     this.handlers.add(entry);
@@ -49,7 +62,7 @@ class FakeBus implements IEventBus {
 class FakeAgentHandle {
   readonly kind = LifecycleScope.Agent;
   readonly bus = new FakeBus();
-  activity: AgentActivityState = { lifecycle: 'ready', background: [] };
+  activity: AgentActivityState = { lifecycle: "ready", background: [] };
   private readonly view = { state: () => this.activity };
   readonly accessor;
 
@@ -64,7 +77,10 @@ class FakeAgentHandle {
   }
 
   emitActivity(): void {
-    this.bus.publish({ type: 'agent.activity.updated', ...this.activity } as DomainEvent);
+    this.bus.publish({
+      type: "agent.activity.updated",
+      ...this.activity,
+    } as DomainEvent);
   }
 
   dispose(): void {}
@@ -83,7 +99,9 @@ class FakeAgentLifecycle implements IAgentLifecycleService {
   }
 
   get(agentId: string): IAgentScopeHandle | undefined {
-    return this.handles.find((h) => h.id === agentId) as unknown as IAgentScopeHandle | undefined;
+    return this.handles.find((h) => h.id === agentId) as unknown as
+      | IAgentScopeHandle
+      | undefined;
   }
 
   addAgent(id: string): FakeAgentHandle {
@@ -100,25 +118,28 @@ class FakeAgentLifecycle implements IAgentLifecycleService {
   }
 
   create(): Promise<IAgentScopeHandle> {
-    throw new Error('not implemented');
+    throw new Error("not implemented");
   }
   fork(): Promise<IAgentScopeHandle> {
-    throw new Error('not implemented');
+    throw new Error("not implemented");
   }
   remove(): Promise<void> {
-    throw new Error('not implemented');
+    throw new Error("not implemented");
   }
   broadcastPermissionMode(): void {
-    throw new Error('not implemented');
+    throw new Error("not implemented");
   }
 }
 
-function turnActive(turnId: number, phase: 'running' | 'streaming' = 'running'): AgentActivityState {
+function turnActive(
+  turnId: number,
+  phase: "running" | "streaming" = "running",
+): AgentActivityState {
   return {
-    lifecycle: 'ready',
+    lifecycle: "ready",
     turn: {
       turnId,
-      origin: { kind: 'user' },
+      origin: { kind: "user" },
       phase,
       step: 0,
       ending: false,
@@ -132,13 +153,13 @@ function turnActive(turnId: number, phase: 'running' | 'streaming' = 'running'):
 
 function turnEnded(turnId: number, reason: string): AgentActivityState {
   return {
-    lifecycle: 'ready',
+    lifecycle: "ready",
     lastTurn: { turnId, reason, at: 0 },
     background: [],
   } as AgentActivityState;
 }
 
-describe('ISessionActivityView (Session scope aggregate of agent activity + interactions)', () => {
+describe("ISessionActivityView (Session scope aggregate of agent activity + interactions)", () => {
   let disposables: DisposableStore;
   let host: ScopedTestHost;
   let session: Scope;
@@ -146,17 +167,43 @@ describe('ISessionActivityView (Session scope aggregate of agent activity + inte
 
   beforeEach(() => {
     _clearScopedRegistryForTests();
-    registerScopedService(LifecycleScope.Session, ISessionStateService, SessionStateService, ScopeActivation.OnScopeCreated, 'state');
-    registerScopedService(LifecycleScope.Session, ISessionInteractionService, SessionInteractionService, ScopeActivation.OnDemand, 'interaction');
-    registerScopedService(LifecycleScope.Session, IAgentLifecycleService, FakeAgentLifecycle, ScopeActivation.OnDemand, 'agentLifecycle');
-    registerScopedService(LifecycleScope.Session, ISessionActivityView, SessionActivityView, ScopeActivation.OnScopeCreated, 'sessionActivity');
+    registerScopedService(
+      LifecycleScope.Session,
+      ISessionStateService,
+      SessionStateService,
+      ScopeActivation.OnScopeCreated,
+      "state",
+    );
+    registerScopedService(
+      LifecycleScope.Session,
+      ISessionInteractionService,
+      SessionInteractionService,
+      ScopeActivation.OnDemand,
+      "interaction",
+    );
+    registerScopedService(
+      LifecycleScope.Session,
+      IAgentLifecycleService,
+      FakeAgentLifecycle,
+      ScopeActivation.OnDemand,
+      "agentLifecycle",
+    );
+    registerScopedService(
+      LifecycleScope.Session,
+      ISessionActivityView,
+      SessionActivityView,
+      ScopeActivation.OnScopeCreated,
+      "sessionActivity",
+    );
 
     disposables = new DisposableStore();
     host = createScopedTestHost();
-    session = host.child(LifecycleScope.Session, 'session-a', [
+    session = host.child(LifecycleScope.Session, "session-a", [
       stubPair(IWorkspaceStateService, new WorkspaceStateService()),
     ]);
-    lifecycle = session.accessor.get(IAgentLifecycleService) as unknown as FakeAgentLifecycle;
+    lifecycle = session.accessor.get(
+      IAgentLifecycleService,
+    ) as unknown as FakeAgentLifecycle;
   });
 
   afterEach(() => {
@@ -174,22 +221,22 @@ describe('ISessionActivityView (Session scope aggregate of agent activity + inte
     return { view, changes };
   }
 
-  it('starts idle when no agent has work', () => {
+  it("starts idle when no agent has work", () => {
     lifecycle.addAgent(MAIN_AGENT_ID);
     const { view } = viewWithChanges();
     expect(view.state()).toEqual({
       busy: false,
       mainTurnActive: false,
-      pendingInteraction: 'none',
+      pendingInteraction: "none",
       lastTurnReason: undefined,
     });
   });
 
-  it('seeds the aggregate from agents already active at construction', () => {
+  it("seeds the aggregate from agents already active at construction", () => {
     const seededLifecycle = new FakeAgentLifecycle();
     const main = seededLifecycle.addAgent(MAIN_AGENT_ID);
     main.activity = turnActive(1);
-    const seededSession = host.child(LifecycleScope.Session, 'session-seeded', [
+    const seededSession = host.child(LifecycleScope.Session, "session-seeded", [
       stubPair(IAgentLifecycleService, seededLifecycle),
       stubPair(IWorkspaceStateService, new WorkspaceStateService()),
     ]);
@@ -198,7 +245,7 @@ describe('ISessionActivityView (Session scope aggregate of agent activity + inte
     expect(view.state().mainTurnActive).toBe(true);
   });
 
-  it('fires turn_started when the main agent begins a turn', () => {
+  it("fires turn_started when the main agent begins a turn", () => {
     const main = lifecycle.addAgent(MAIN_AGENT_ID);
     const { changes } = viewWithChanges();
 
@@ -207,41 +254,51 @@ describe('ISessionActivityView (Session scope aggregate of agent activity + inte
 
     expect(changes).toEqual([
       {
-        state: { busy: true, mainTurnActive: true, pendingInteraction: 'none', lastTurnReason: undefined },
-        cause: 'turn_started',
+        state: {
+          busy: true,
+          mainTurnActive: true,
+          pendingInteraction: "none",
+          lastTurnReason: undefined,
+        },
+        cause: "turn_started",
       },
     ]);
   });
 
-  it('fires turn_ended with the mapped outcome when the main agent ends a turn', () => {
+  it("fires turn_ended with the mapped outcome when the main agent ends a turn", () => {
     const main = lifecycle.addAgent(MAIN_AGENT_ID);
     const { changes } = viewWithChanges();
 
     main.activity = turnActive(1);
     main.emitActivity();
-    main.activity = turnEnded(1, 'completed');
+    main.activity = turnEnded(1, "completed");
     main.emitActivity();
 
     expect(changes.at(-1)).toEqual({
-      state: { busy: false, mainTurnActive: false, pendingInteraction: 'none', lastTurnReason: 'completed' },
-      cause: 'turn_ended',
+      state: {
+        busy: false,
+        mainTurnActive: false,
+        pendingInteraction: "none",
+        lastTurnReason: "completed",
+      },
+      cause: "turn_ended",
     });
   });
 
-  it('maps non-completed non-cancelled outcomes to failed', () => {
+  it("maps non-completed non-cancelled outcomes to failed", () => {
     const main = lifecycle.addAgent(MAIN_AGENT_ID);
     const { changes } = viewWithChanges();
 
     main.activity = turnActive(1);
     main.emitActivity();
-    main.activity = turnEnded(1, 'blocked');
+    main.activity = turnEnded(1, "blocked");
     main.emitActivity();
 
-    expect(changes.at(-1)?.state.lastTurnReason).toBe('failed');
+    expect(changes.at(-1)?.state.lastTurnReason).toBe("failed");
   });
 
-  it('tracks subagent turns in busy without touching the main-agent slices', () => {
-    const sub = lifecycle.addAgent('agent-0');
+  it("tracks subagent turns in busy without touching the main-agent slices", () => {
+    const sub = lifecycle.addAgent("agent-0");
     const { view, changes } = viewWithChanges();
 
     sub.activity = turnActive(1);
@@ -251,7 +308,7 @@ describe('ISessionActivityView (Session scope aggregate of agent activity + inte
     expect(view.state().mainTurnActive).toBe(false);
     expect(view.state().lastTurnReason).toBeUndefined();
 
-    sub.activity = turnEnded(1, 'completed');
+    sub.activity = turnEnded(1, "completed");
     sub.emitActivity();
 
     expect(changes).toHaveLength(2);
@@ -259,87 +316,117 @@ describe('ISessionActivityView (Session scope aggregate of agent activity + inte
     expect(view.state().lastTurnReason).toBeUndefined();
   });
 
-  it('fires background when live background work changes without a turn', () => {
+  it("fires background when live background work changes without a turn", () => {
     const main = lifecycle.addAgent(MAIN_AGENT_ID);
     const { changes } = viewWithChanges();
 
     main.activity = {
-      lifecycle: 'ready',
-      background: [{ kind: 'task', id: 't1', since: 0 }],
+      lifecycle: "ready",
+      background: [{ kind: "task", id: "t1", since: 0 }],
     };
     main.emitActivity();
 
     expect(changes).toEqual([
       {
-        state: { busy: true, mainTurnActive: false, pendingInteraction: 'none', lastTurnReason: undefined },
-        cause: 'background',
+        state: {
+          busy: true,
+          mainTurnActive: false,
+          pendingInteraction: "none",
+          lastTurnReason: undefined,
+        },
+        cause: "background",
       },
     ]);
   });
 
-  it('does not fire when the aggregate is unchanged (phase churn inside a turn)', () => {
+  it("does not fire when the aggregate is unchanged (phase churn inside a turn)", () => {
     const main = lifecycle.addAgent(MAIN_AGENT_ID);
     const { changes } = viewWithChanges();
 
     main.activity = turnActive(1);
     main.emitActivity();
-    main.activity = turnActive(1, 'streaming');
+    main.activity = turnActive(1, "streaming");
     main.emitActivity();
 
     expect(changes).toHaveLength(1);
   });
 
-  it('fires interaction when the pending set flips the session slice', () => {
+  it("fires interaction when the pending set flips the session slice", () => {
     lifecycle.addAgent(MAIN_AGENT_ID);
     const interactions = session.accessor.get(ISessionInteractionService);
     const { changes } = viewWithChanges();
 
-    interactions.enqueue({ id: 'a1', kind: 'approval', payload: {}, origin: { agentId: MAIN_AGENT_ID } });
+    interactions.enqueue({
+      id: "a1",
+      kind: "approval",
+      payload: {},
+      origin: { agentId: MAIN_AGENT_ID },
+    });
     expect(changes.at(-1)).toEqual({
-      state: { busy: false, mainTurnActive: false, pendingInteraction: 'approval', lastTurnReason: undefined },
-      cause: 'interaction',
+      state: {
+        busy: false,
+        mainTurnActive: false,
+        pendingInteraction: "approval",
+        lastTurnReason: undefined,
+      },
+      cause: "interaction",
     });
 
     // A question joining an already-pending approval does not change the slice.
-    interactions.enqueue({ id: 'q1', kind: 'question', payload: {}, origin: { agentId: MAIN_AGENT_ID } });
+    interactions.enqueue({
+      id: "q1",
+      kind: "question",
+      payload: {},
+      origin: { agentId: MAIN_AGENT_ID },
+    });
     expect(changes).toHaveLength(1);
 
-    interactions.respond('a1', { approved: true });
-    expect(changes.at(-1)?.state.pendingInteraction).toBe('question');
+    interactions.respond("a1", { approved: true });
+    expect(changes.at(-1)?.state.pendingInteraction).toBe("question");
   });
 
-  it('treats user_tool pending as none', () => {
+  it("treats user_tool pending as none", () => {
     lifecycle.addAgent(MAIN_AGENT_ID);
     const interactions = session.accessor.get(ISessionInteractionService);
     const { changes } = viewWithChanges();
 
-    interactions.enqueue({ id: 'u1', kind: 'user_tool', payload: {}, origin: { agentId: MAIN_AGENT_ID } });
+    interactions.enqueue({
+      id: "u1",
+      kind: "user_tool",
+      payload: {},
+      origin: { agentId: MAIN_AGENT_ID },
+    });
     expect(changes).toHaveLength(0);
   });
 
-  it('drops a disposed agent from the aggregate with agent_lifecycle cause', () => {
-    const sub = lifecycle.addAgent('agent-0');
+  it("drops a disposed agent from the aggregate with agent_lifecycle cause", () => {
+    const sub = lifecycle.addAgent("agent-0");
     const { view, changes } = viewWithChanges();
 
     sub.activity = turnActive(1);
     sub.emitActivity();
     expect(view.state().busy).toBe(true);
 
-    lifecycle.removeAgent('agent-0');
+    lifecycle.removeAgent("agent-0");
     expect(changes.at(-1)).toEqual({
-      state: { busy: false, mainTurnActive: false, pendingInteraction: 'none', lastTurnReason: undefined },
-      cause: 'agent_lifecycle',
+      state: {
+        busy: false,
+        mainTurnActive: false,
+        pendingInteraction: "none",
+        lastTurnReason: undefined,
+      },
+      cause: "agent_lifecycle",
     });
   });
 
-  it('seeds agents created after construction through onDidCreate', () => {
+  it("seeds agents created after construction through onDidCreate", () => {
     const { view, changes } = viewWithChanges();
 
-    const sub = lifecycle.addAgent('agent-0');
+    const sub = lifecycle.addAgent("agent-0");
     sub.activity = turnActive(1);
     sub.emitActivity();
 
     expect(view.state().busy).toBe(true);
-    expect(changes.at(-1)?.cause).toBe('turn_started');
+    expect(changes.at(-1)?.cause).toBe("turn_started");
   });
 });

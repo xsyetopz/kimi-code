@@ -1,8 +1,13 @@
-import type { WebSearchProvider, WebSearchResult } from '#/agent/tools/web-search/web-search';
-import { Error2, ErrorCodes } from '#/errors';
+import type {
+  WebSearchProvider,
+  WebSearchResult,
+} from "#/agent/tools/web-search/web-search";
+import { Error2, ErrorCodes } from "#/errors";
 
 export interface BearerTokenProvider {
-  getAccessToken(options?: { readonly force?: boolean | undefined }): Promise<string>;
+  getAccessToken(options?: {
+    readonly force?: boolean | undefined;
+  }): Promise<string>;
 }
 
 export interface MoonshotWebSearchProviderOptions {
@@ -82,12 +87,13 @@ export class MoonshotWebSearchProvider implements WebSearchProvider {
 
     return raw.map((r): WebSearchResult => {
       const out: WebSearchResult = {
-        title: r.title ?? '',
-        url: r.url ?? '',
-        snippet: r.snippet ?? '',
+        title: r.title ?? "",
+        url: r.url ?? "",
+        snippet: r.snippet ?? "",
       };
-      if (typeof r.date === 'string' && r.date.length > 0) out.date = r.date;
-      if (typeof r.site_name === 'string' && r.site_name.length > 0) out.siteName = r.site_name;
+      if (typeof r.date === "string" && r.date.length > 0) out.date = r.date;
+      if (typeof r.site_name === "string" && r.site_name.length > 0)
+        out.siteName = r.site_name;
       return out;
     });
   }
@@ -99,13 +105,13 @@ export class MoonshotWebSearchProvider implements WebSearchProvider {
   ): Promise<Response> {
     const accessToken = await this.resolveApiKey();
     return this.fetchImpl(this.baseUrl, {
-      method: 'POST',
+      method: "POST",
       headers: {
         ...this.defaultHeaders,
         Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
         ...(toolCallId !== undefined && toolCallId.length > 0
-          ? { 'X-Msh-Tool-Call-Id': toolCallId }
+          ? { "X-Msh-Tool-Call-Id": toolCallId }
           : {}),
         ...this.customHeaders,
       },
@@ -119,14 +125,15 @@ export class MoonshotWebSearchProvider implements WebSearchProvider {
       try {
         return await this.tokenProvider.getAccessToken();
       } catch (error) {
-        if (this.apiKey !== undefined && this.apiKey.length > 0) return this.apiKey;
+        if (this.apiKey !== undefined && this.apiKey.length > 0)
+          return this.apiKey;
         throw error;
       }
     }
     if (this.apiKey !== undefined && this.apiKey.length > 0) return this.apiKey;
     throw new Error2(
       ErrorCodes.AUTH_TOKEN_MISSING,
-      'Moonshot search service is not configured: missing API key or token provider.',
+      "Moonshot search service is not configured: missing API key or token provider.",
     );
   }
 }
@@ -135,6 +142,6 @@ async function safeReadText(response: Response): Promise<string> {
   try {
     return await response.text();
   } catch {
-    return '';
+    return "";
   }
 }

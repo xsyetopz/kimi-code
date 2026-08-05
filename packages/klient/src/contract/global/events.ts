@@ -6,16 +6,16 @@
  * naming; unknown bus event types are not forwarded.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import type { ConfigChangedEvent } from '@moonshot-ai/agent-core-v2/app/config/config';
-import type { ModelsChangedEvent } from '@moonshot-ai/agent-core-v2/kosong/model/model';
-import type { ProvidersChangedEvent } from '@moonshot-ai/agent-core-v2/kosong/provider/provider';
-import type { ReloadSummary } from '@moonshot-ai/agent-core-v2/app/plugin/types';
-import type { IOAuthService } from '@moonshot-ai/agent-core-v2/app/auth/auth';
+import type { ConfigChangedEvent } from "@moonshot-ai/agent-core-v2/app/config/config";
+import type { ModelsChangedEvent } from "@moonshot-ai/agent-core-v2/kosong/model/model";
+import type { ProvidersChangedEvent } from "@moonshot-ai/agent-core-v2/kosong/provider/provider";
+import type { ReloadSummary } from "@moonshot-ai/agent-core-v2/app/plugin/types";
+import type { IOAuthService } from "@moonshot-ai/agent-core-v2/app/auth/auth";
 
-import { stringDeltaSchema } from '../helpers.js';
-import type { EventRegistration } from '../types.js';
+import { stringDeltaSchema } from "../helpers.js";
+import type { EventRegistration } from "../types.js";
 
 /** Payload of `event.session.archived` on the global bus. */
 export interface SessionArchivedPayload {
@@ -36,26 +36,26 @@ export interface SessionMetaUpdatedPayload {
 
 /** Payload of `event.model_catalog.changed` — same shape as an OAuth refresh result. */
 export type CatalogChangedPayload = Awaited<
-  ReturnType<IOAuthService['refreshOAuthProviderModels']>
+  ReturnType<IOAuthService["refreshOAuthProviderModels"]>
 >;
 
 /** Public event name → payload type. Keys must stay in sync with `globalEvents`. */
 export interface KlientEventPayloads {
-  'config.changed': ConfigChangedEvent;
-  'config.sectionChanged': ConfigChangedEvent;
-  'kosong.providers.changed': ProvidersChangedEvent;
-  'kosong.models.changed': ModelsChangedEvent;
-  'plugins.reloaded': ReloadSummary;
-  'session.archived': SessionArchivedPayload;
-  'session.metaUpdated': SessionMetaUpdatedPayload;
-  'kosong.changed': CatalogChangedPayload;
+  "config.changed": ConfigChangedEvent;
+  "config.sectionChanged": ConfigChangedEvent;
+  "kosong.providers.changed": ProvidersChangedEvent;
+  "kosong.models.changed": ModelsChangedEvent;
+  "plugins.reloaded": ReloadSummary;
+  "session.archived": SessionArchivedPayload;
+  "session.metaUpdated": SessionMetaUpdatedPayload;
+  "kosong.changed": CatalogChangedPayload;
 }
 
 export type KlientEventName = keyof KlientEventPayloads;
 
 const configChangedSchema = z.object({
   domain: z.string(),
-  source: z.enum(['load', 'reload', 'set']),
+  source: z.enum(["load", "reload", "set"]),
   value: z.unknown(),
   previousValue: z.unknown(),
 });
@@ -92,49 +92,49 @@ export const catalogChangedSchema = z.object({
 
 /** Public event name → source binding + payload schema. */
 export const globalEvents = {
-  'config.changed': {
-    kind: 'emitter',
-    service: 'configService',
-    event: 'onDidChangeConfiguration',
+  "config.changed": {
+    kind: "emitter",
+    service: "configService",
+    event: "onDidChangeConfiguration",
     schema: configChangedSchema,
   },
-  'config.sectionChanged': {
-    kind: 'emitter',
-    service: 'configService',
-    event: 'onDidSectionChange',
+  "config.sectionChanged": {
+    kind: "emitter",
+    service: "configService",
+    event: "onDidSectionChange",
     schema: configChangedSchema,
   },
-  'kosong.providers.changed': {
-    kind: 'emitter',
-    service: 'providerService',
-    event: 'onDidChangeProviders',
+  "kosong.providers.changed": {
+    kind: "emitter",
+    service: "providerService",
+    event: "onDidChangeProviders",
     schema: stringDeltaSchema,
   },
-  'kosong.models.changed': {
-    kind: 'emitter',
-    service: 'modelService',
-    event: 'onDidChangeModels',
+  "kosong.models.changed": {
+    kind: "emitter",
+    service: "modelService",
+    event: "onDidChangeModels",
     schema: stringDeltaSchema,
   },
-  'plugins.reloaded': {
-    kind: 'emitter',
-    service: 'pluginService',
-    event: 'onDidReload',
+  "plugins.reloaded": {
+    kind: "emitter",
+    service: "pluginService",
+    event: "onDidReload",
     schema: reloadSummarySchema,
   },
-  'session.archived': {
-    kind: 'bus',
-    type: 'event.session.archived',
+  "session.archived": {
+    kind: "bus",
+    type: "event.session.archived",
     schema: z.object({ sessionId: z.string() }),
   },
-  'session.metaUpdated': {
-    kind: 'bus',
-    type: 'session.meta.updated',
+  "session.metaUpdated": {
+    kind: "bus",
+    type: "session.meta.updated",
     schema: sessionMetaUpdatedSchema,
   },
-  'kosong.changed': {
-    kind: 'bus',
-    type: 'event.model_catalog.changed',
+  "kosong.changed": {
+    kind: "bus",
+    type: "event.model_catalog.changed",
     schema: catalogChangedSchema,
   },
 } satisfies Record<KlientEventName, EventRegistration>;

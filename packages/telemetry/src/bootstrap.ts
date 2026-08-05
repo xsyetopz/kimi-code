@@ -1,11 +1,11 @@
-import { getDefaultTelemetryClient } from './client';
-import { EventSink } from './sink';
-import { SystemMetricsCollector } from './systemMetrics';
-import { AsyncTransport } from './transport';
+import { getDefaultTelemetryClient } from "./client";
+import { EventSink } from "./sink";
+import { SystemMetricsCollector } from "./systemMetrics";
+import { AsyncTransport } from "./transport";
 
-export const TELEMETRY_DISABLE_ENV = 'KIMI_DISABLE_TELEMETRY';
+export const TELEMETRY_DISABLE_ENV = "KIMI_DISABLE_TELEMETRY";
 
-const TRUE_ENV_VALUES = new Set(['1', 'true', 't', 'yes', 'y']);
+const TRUE_ENV_VALUES = new Set(["1", "true", "t", "yes", "y"]);
 
 export interface TelemetryBootstrapOptions {
   readonly enabled?: boolean;
@@ -22,7 +22,9 @@ export interface TelemetryBootstrapOptions {
   readonly getAccessToken?: () => string | null | Promise<string | null>;
 }
 
-export function isTelemetryDisabledByEnv(env: NodeJS.ProcessEnv = process.env): boolean {
+export function isTelemetryDisabledByEnv(
+  env: NodeJS.ProcessEnv = process.env,
+): boolean {
   const value = env[TELEMETRY_DISABLE_ENV];
   return value !== undefined && TRUE_ENV_VALUES.has(value.trim().toLowerCase());
 }
@@ -30,7 +32,10 @@ export function isTelemetryDisabledByEnv(env: NodeJS.ProcessEnv = process.env): 
 export function shouldEnableTelemetry(
   input: { readonly enabled?: boolean; readonly env?: NodeJS.ProcessEnv } = {},
 ): boolean {
-  return input.enabled !== false && !isTelemetryDisabledByEnv(input.env ?? process.env);
+  return (
+    input.enabled !== false &&
+    !isTelemetryDisabledByEnv(input.env ?? process.env)
+  );
 }
 
 export function initializeTelemetry(options: TelemetryBootstrapOptions): void {

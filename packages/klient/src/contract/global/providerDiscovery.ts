@@ -4,12 +4,12 @@
  * `agent-core-v2/app/kosongConfig/discovery.ts`.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import type { ServiceContract } from '../types.js';
+import type { ServiceContract } from "../types.js";
 
 export const refreshProviderModelsOptionsSchema = z.object({
-  scope: z.enum(['all', 'oauth']).optional(),
+  scope: z.enum(["all", "oauth"]).optional(),
   providerId: z.string().optional(),
 });
 

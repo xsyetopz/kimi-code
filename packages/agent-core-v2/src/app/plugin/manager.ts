@@ -5,24 +5,32 @@
  * plugin skills through skill discovery.
  */
 
-import { cp, mkdir, mkdtemp, realpath, rename, rm, stat } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
+import {
+  cp,
+  mkdir,
+  mkdtemp,
+  realpath,
+  rename,
+  rm,
+  stat,
+} from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
 
-import { BugIndicatingError, Error2, ErrorCodes, PluginErrors } from '#/errors';
-import type { HookDef } from '#/agent/externalHooks/types';
-import type { McpServerConfig } from '#/mcpCore/config-schema';
-import type { PluginAgentRoot } from './types';
-import { discoverFileSkills } from '#/app/skillCatalog/fileSkillDiscovery';
-import type { SkillDiscoveryResult } from '#/app/skillCatalog/skillDiscovery';
-import type { SkillRoot } from '#/app/skillCatalog/types';
+import { BugIndicatingError, Error2, ErrorCodes, PluginErrors } from "#/errors";
+import type { HookDef } from "#/agent/externalHooks/types";
+import type { McpServerConfig } from "#/mcpCore/config-schema";
+import type { PluginAgentRoot } from "./types";
+import { discoverFileSkills } from "#/app/skillCatalog/fileSkillDiscovery";
+import type { SkillDiscoveryResult } from "#/app/skillCatalog/skillDiscovery";
+import type { SkillRoot } from "#/app/skillCatalog/types";
 
-import { downloadZip, extractZip } from './archive';
-import { loadPluginCommand } from './commands';
-import { resolveGithubCommitSha, resolveGithubSource } from './github-resolver';
-import { resolveInstallSource } from './source';
-import { parseManifest, type ParsedManifestResult } from './manifest';
-import { readInstalled, writeInstalled, type InstalledRecord } from './store';
+import { downloadZip, extractZip } from "./archive";
+import { loadPluginCommand } from "./commands";
+import { resolveGithubCommitSha, resolveGithubSource } from "./github-resolver";
+import { resolveInstallSource } from "./source";
+import { parseManifest, type ParsedManifestResult } from "./manifest";
+import { readInstalled, writeInstalled, type InstalledRecord } from "./store";
 import {
   normalizePluginId,
   type EnabledPluginSessionStart,
@@ -37,11 +45,13 @@ import {
   type PluginSummary,
   type PluginUpdateStatus,
   type ReloadSummary,
-} from './types';
+} from "./types";
 
 export interface PluginManagerOptions {
   readonly kimiHomeDir: string;
-  readonly discoverSkills?: (roots: readonly SkillRoot[]) => Promise<SkillDiscoveryResult>;
+  readonly discoverSkills?: (
+    roots: readonly SkillRoot[],
+  ) => Promise<SkillDiscoveryResult>;
 }
 
 interface ManagedPluginCopy {
@@ -71,7 +81,9 @@ export class PluginManager {
   }
 
   list(): readonly PluginRecord[] {
-    return [...this.records.values()].toSorted((a, b) => a.id.localeCompare(b.id));
+    return [...this.records.values()].toSorted((a, b) =>
+      a.id.localeCompare(b.id),
+    );
   }
 
   get(id: string): PluginRecord | undefined {
@@ -89,15 +101,15 @@ export class PluginManager {
     let github: PluginGithubMetadata | undefined;
 
     try {
-      if (resolved.kind === 'local-path') {
+      if (resolved.kind === "local-path") {
         sourceRoot = await normalizeInstallRoot(resolved.path);
         originalSource = resolved.path;
-        sourceType = 'local-path';
+        sourceType = "local-path";
       } else {
         originalSource = source.trim();
-        sourceType = resolved.kind === 'github' ? 'github' : 'zip-url';
+        sourceType = resolved.kind === "github" ? "github" : "zip-url";
         const zipUrl =
-          resolved.kind === 'github'
+          resolved.kind === "github"
             ? await (async () => {
                 const resolution = await resolveGithubSource(resolved);
                 const installedSha = await installedGithubSha(
@@ -118,16 +130,18 @@ export class PluginManager {
               })()
             : resolved.path;
         const buffer = await downloadZip(zipUrl);
-        zipTmpDir = await mkdtemp(path.join(tmpdir(), 'kimi-plugin-zip-'));
+        zipTmpDir = await mkdtemp(path.join(tmpdir(), "kimi-plugin-zip-"));
         sourceRoot = await extractZip(buffer, zipTmpDir);
       }
 
       const parsed = await parseManifest(sourceRoot);
       if (parsed.manifest === undefined) {
-        const msg = parsed.diagnostics.find((d) => d.severity === 'error')?.message ?? 'no manifest';
+        const msg =
+          parsed.diagnostics.find((d) => d.severity === "error")?.message ??
+          "no manifest";
         throw new Error2(
           ErrorCodes.PLUGIN_LOAD_FAILED,
-          sourceType === 'local-path'
+          sourceType === "local-path"
             ? `Cannot install plugin at ${sourceRoot}: ${msg}`
             : `Cannot install plugin from ${originalSource}: ${msg}`,
           { details: { sourceType } },
@@ -135,7 +149,11 @@ export class PluginManager {
       }
 
       const id = normalizePluginId(parsed.manifest.name);
-      managedCopy = await copyPluginToManagedRoot(this.kimiHomeDir, id, sourceRoot);
+      managedCopy = await copyPluginToManagedRoot(
+        this.kimiHomeDir,
+        id,
+        sourceRoot,
+      );
       const normalizedRoot = managedCopy.root;
       const managedParsed = await parseManifest(normalizedRoot);
       const existing = this.records.get(id);
@@ -158,7 +176,10 @@ export class PluginManager {
       await this.persist(next);
       this.records = next;
       if (managedCopy.previousRoot !== undefined) {
-        await rm(managedCopy.previousRoot, { recursive: true, force: true }).catch(() => undefined);
+        await rm(managedCopy.previousRoot, {
+          recursive: true,
+          force: true,
+        }).catch(() => undefined);
       }
       managedCopy = undefined;
       return record;
@@ -169,11 +190,11 @@ export class PluginManager {
         } catch (rollbackError) {
           throw new Error2(
             ErrorCodes.PLUGIN_LOAD_FAILED,
-            'Plugin installation failed and the previous managed copy could not be restored',
+            "Plugin installation failed and the previous managed copy could not be restored",
             {
               cause: new AggregateError(
                 [error, rollbackError],
-                'Plugin installation failed and the previous managed copy could not be restored',
+                "Plugin installation failed and the previous managed copy could not be restored",
                 { cause: error },
               ),
             },
@@ -199,7 +220,11 @@ export class PluginManager {
     this.records = next;
   }
 
-  async setMcpServerEnabled(id: string, server: string, enabled: boolean): Promise<void> {
+  async setMcpServerEnabled(
+    id: string,
+    server: string,
+    enabled: boolean,
+  ): Promise<void> {
     const key = normalizePluginId(id);
     const current = this.records.get(key);
     if (current === undefined) throw pluginNotFound(id);
@@ -240,7 +265,7 @@ export class PluginManager {
 
   async checkUpdates(): Promise<readonly PluginUpdateStatus[]> {
     const records = [...this.records.values()].filter(
-      (record) => record.source === 'github' && record.github !== undefined,
+      (record) => record.source === "github" && record.github !== undefined,
     );
     const results = await Promise.all(
       records.map(async (record) => {
@@ -279,7 +304,12 @@ export class PluginManager {
   enabledHooks(): readonly HookDef[] {
     const out: HookDef[] = [];
     for (const record of this.records.values()) {
-      if (!record.enabled || record.state !== 'ok' || record.manifest === undefined) continue;
+      if (
+        !record.enabled ||
+        record.state !== "ok" ||
+        record.manifest === undefined
+      )
+        continue;
       for (const hook of record.manifest.hooks ?? []) {
         out.push({
           ...hook,
@@ -298,7 +328,12 @@ export class PluginManager {
     const out: PluginCommandDef[] = [];
     const records = [...this.records.values()];
     for (const record of records) {
-      if (!record.enabled || record.state !== 'ok' || record.manifest === undefined) continue;
+      if (
+        !record.enabled ||
+        record.state !== "ok" ||
+        record.manifest === undefined
+      )
+        continue;
       for (const entry of record.manifest.commands ?? []) {
         const def = await loadPluginCommand({
           commandPath: entry.path,
@@ -314,11 +349,16 @@ export class PluginManager {
   pluginSkillRoots(): readonly SkillRoot[] {
     const roots: SkillRoot[] = [];
     for (const record of this.records.values()) {
-      if (!record.enabled || record.state !== 'ok' || record.manifest === undefined) continue;
+      if (
+        !record.enabled ||
+        record.state !== "ok" ||
+        record.manifest === undefined
+      )
+        continue;
       for (const dir of record.manifest.skills ?? []) {
         roots.push({
           path: dir,
-          source: 'extra',
+          source: "extra",
           plugin: { id: record.id, instructions: record.skillInstructions },
         });
       }
@@ -329,9 +369,14 @@ export class PluginManager {
   pluginAgentRoots(): readonly PluginAgentRoot[] {
     const roots: PluginAgentRoot[] = [];
     for (const record of this.records.values()) {
-      if (!record.enabled || record.state !== 'ok' || record.manifest === undefined) continue;
+      if (
+        !record.enabled ||
+        record.state !== "ok" ||
+        record.manifest === undefined
+      )
+        continue;
       for (const dir of record.manifest.agents ?? []) {
-        roots.push({ path: dir, source: 'plugin' });
+        roots.push({ path: dir, source: "plugin" });
       }
     }
     return roots;
@@ -340,7 +385,7 @@ export class PluginManager {
   enabledSessionStarts(): readonly EnabledPluginSessionStart[] {
     const out: EnabledPluginSessionStart[] = [];
     for (const record of this.records.values()) {
-      if (!record.enabled || record.state !== 'ok') continue;
+      if (!record.enabled || record.state !== "ok") continue;
       const skill = record.manifest?.sessionStart?.skill;
       if (skill === undefined) continue;
       out.push({ pluginId: record.id, skillName: skill });
@@ -351,7 +396,7 @@ export class PluginManager {
   enabledSystemPrompts(): readonly EnabledPluginSystemPrompt[] {
     const out: EnabledPluginSystemPrompt[] = [];
     for (const record of this.records.values()) {
-      if (!record.enabled || record.state !== 'ok') continue;
+      if (!record.enabled || record.state !== "ok") continue;
       const content = record.manifest?.systemPrompt;
       if (content === undefined) continue;
       out.push({ pluginId: record.id, content });
@@ -362,8 +407,15 @@ export class PluginManager {
   enabledMcpServers(): Record<string, McpServerConfig> {
     const out: Record<string, McpServerConfig> = {};
     for (const record of this.records.values()) {
-      if (!record.enabled || record.state !== 'ok' || record.manifest === undefined) continue;
-      for (const [name, config] of Object.entries(record.manifest.mcpServers ?? {})) {
+      if (
+        !record.enabled ||
+        record.state !== "ok" ||
+        record.manifest === undefined
+      )
+        continue;
+      for (const [name, config] of Object.entries(
+        record.manifest.mcpServers ?? {},
+      )) {
         if (!isMcpServerEnabled(record, name, config)) continue;
         out[pluginMcpRuntimeName(record.id, name)] = withPluginMcpRuntime(
           withMcpServerEnabled(config, true),
@@ -384,18 +436,22 @@ export class PluginManager {
     return record === undefined ? undefined : recordToInfo(record);
   }
 
-  private async persist(records: ReadonlyMap<string, PluginRecord>): Promise<void> {
-    const installed: InstalledRecord[] = [...records.values()].map((record) => ({
-      id: record.id,
-      root: record.root,
-      source: record.source,
-      enabled: record.enabled,
-      installedAt: record.installedAt,
-      updatedAt: record.updatedAt,
-      originalSource: record.originalSource,
-      capabilities: record.capabilities,
-      github: record.github,
-    }));
+  private async persist(
+    records: ReadonlyMap<string, PluginRecord>,
+  ): Promise<void> {
+    const installed: InstalledRecord[] = [...records.values()].map(
+      (record) => ({
+        id: record.id,
+        root: record.root,
+        source: record.source,
+        enabled: record.enabled,
+        installedAt: record.installedAt,
+        updatedAt: record.updatedAt,
+        originalSource: record.originalSource,
+        capabilities: record.capabilities,
+        github: record.github,
+      }),
+    );
     await writeInstalled(this.kimiHomeDir, { version: 1, plugins: installed });
   }
 
@@ -420,23 +476,28 @@ export class PluginManager {
 async function installedGithubSha(
   owner: string,
   repo: string,
-  ref: PluginGithubMetadata['ref'],
+  ref: PluginGithubMetadata["ref"],
 ): Promise<string | undefined> {
-  if (ref.kind === 'sha' && ref.value.length === 40) return ref.value.toLowerCase();
+  if (ref.kind === "sha" && ref.value.length === 40)
+    return ref.value.toLowerCase();
   return resolveGithubCommitSha(owner, repo, ref.value);
 }
 
-async function checkGithubUpdate(record: PluginRecord): Promise<PluginUpdateStatus> {
+async function checkGithubUpdate(
+  record: PluginRecord,
+): Promise<PluginUpdateStatus> {
   const github = record.github;
   if (github === undefined)
-    throw new BugIndicatingError(`Plugin "${record.id}" has no GitHub metadata`);
+    throw new BugIndicatingError(
+      `Plugin "${record.id}" has no GitHub metadata`,
+    );
   const current = github.ref;
   const pinned = explicitGithubRef(record);
 
-  if (pinned?.kind === 'tag' || pinned?.kind === 'sha') {
+  if (pinned?.kind === "tag" || pinned?.kind === "sha") {
     return {
       id: record.id,
-      source: 'github',
+      source: "github",
       current,
       latest: current,
       displayVersion: current.value,
@@ -444,31 +505,45 @@ async function checkGithubUpdate(record: PluginRecord): Promise<PluginUpdateStat
     };
   }
 
-  if (pinned?.kind === 'branch') {
-    const latestSha = await resolveGithubCommitSha(github.owner, github.repo, pinned.value);
+  if (pinned?.kind === "branch") {
+    const latestSha = await resolveGithubCommitSha(
+      github.owner,
+      github.repo,
+      pinned.value,
+    );
     return {
       id: record.id,
-      source: 'github',
+      source: "github",
       current,
       latest: current,
       displayVersion: latestSha.slice(0, 12),
-      updateAvailable: github.installedSha === undefined || github.installedSha !== latestSha,
+      updateAvailable:
+        github.installedSha === undefined || github.installedSha !== latestSha,
     };
   }
 
   const latest = await resolveGithubSource({
-    kind: 'github',
+    kind: "github",
     owner: github.owner,
     repo: github.repo,
   });
-  let updateAvailable = current.kind !== latest.ref.kind || current.value !== latest.ref.value;
-  if (!updateAvailable && (latest.ref.kind === 'branch' || latest.ref.kind === 'tag')) {
-    const latestSha = await resolveGithubCommitSha(github.owner, github.repo, latest.ref.value);
-    updateAvailable = github.installedSha === undefined || github.installedSha !== latestSha;
+  let updateAvailable =
+    current.kind !== latest.ref.kind || current.value !== latest.ref.value;
+  if (
+    !updateAvailable &&
+    (latest.ref.kind === "branch" || latest.ref.kind === "tag")
+  ) {
+    const latestSha = await resolveGithubCommitSha(
+      github.owner,
+      github.repo,
+      latest.ref.value,
+    );
+    updateAvailable =
+      github.installedSha === undefined || github.installedSha !== latestSha;
   }
   return {
     id: record.id,
-    source: 'github',
+    source: "github",
     current,
     latest: latest.ref,
     displayVersion: latest.displayVersion,
@@ -476,25 +551,31 @@ async function checkGithubUpdate(record: PluginRecord): Promise<PluginUpdateStat
   };
 }
 
-function explicitGithubRef(record: PluginRecord): PluginGithubMetadata['ref'] | undefined {
+function explicitGithubRef(
+  record: PluginRecord,
+): PluginGithubMetadata["ref"] | undefined {
   const fallback =
-    record.github?.ref.kind === 'sha' ||
-    (record.github?.ref.kind === 'branch' && record.github.ref.value !== 'HEAD')
+    record.github?.ref.kind === "sha" ||
+    (record.github?.ref.kind === "branch" && record.github.ref.value !== "HEAD")
       ? record.github.ref
       : undefined;
   if (record.originalSource === undefined) return fallback;
   try {
     const source = resolveInstallSource(record.originalSource);
-    return source.kind === 'github' ? source.ref : fallback;
+    return source.kind === "github" ? source.ref : fallback;
   } catch {
     return fallback;
   }
 }
 
 function pluginNotFound(id: string): Error2 {
-  return new Error2(PluginErrors.codes.PLUGIN_NOT_FOUND, `Plugin "${id}" is not installed`, {
-    details: { id },
-  });
+  return new Error2(
+    PluginErrors.codes.PLUGIN_NOT_FOUND,
+    `Plugin "${id}" is not installed`,
+    {
+      details: { id },
+    },
+  );
 }
 
 async function normalizeInstallRoot(rootPath: string): Promise<string> {
@@ -510,15 +591,23 @@ async function normalizeInstallRoot(rootPath: string): Promise<string> {
   try {
     resolved = await realpath(trimmed);
   } catch (error) {
-    throw new Error2(ErrorCodes.FS_PATH_NOT_FOUND, `Plugin root does not exist: ${trimmed}`, {
-      cause: error,
-      details: { path: trimmed },
-    });
+    throw new Error2(
+      ErrorCodes.FS_PATH_NOT_FOUND,
+      `Plugin root does not exist: ${trimmed}`,
+      {
+        cause: error,
+        details: { path: trimmed },
+      },
+    );
   }
   if (!(await stat(resolved)).isDirectory()) {
-    throw new Error2(ErrorCodes.VALIDATION_FAILED, `Plugin root is not a directory: ${trimmed}`, {
-      details: { path: trimmed },
-    });
+    throw new Error2(
+      ErrorCodes.VALIDATION_FAILED,
+      `Plugin root is not a directory: ${trimmed}`,
+      {
+        details: { path: trimmed },
+      },
+    );
   }
   return resolved;
 }
@@ -528,7 +617,7 @@ async function copyPluginToManagedRoot(
   id: string,
   sourceRoot: string,
 ): Promise<ManagedPluginCopy> {
-  const managedRoot = path.join(kimiHomeDir, 'plugins', 'managed', id);
+  const managedRoot = path.join(kimiHomeDir, "plugins", "managed", id);
   const managedDir = path.dirname(managedRoot);
   await mkdir(managedDir, { recursive: true });
   const stagingRoot = await mkdtemp(path.join(managedDir, `${id}-`));
@@ -541,7 +630,7 @@ async function copyPluginToManagedRoot(
       await rename(managedRoot, previousRoot);
       movedPreviousRoot = true;
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
     }
     await rename(stagingRoot, managedRoot);
     published = true;
@@ -550,13 +639,18 @@ async function copyPluginToManagedRoot(
       previousRoot: movedPreviousRoot ? previousRoot : undefined,
     };
   } catch (error) {
-    await rm(published ? managedRoot : stagingRoot, { recursive: true, force: true });
+    await rm(published ? managedRoot : stagingRoot, {
+      recursive: true,
+      force: true,
+    });
     if (movedPreviousRoot) await rename(previousRoot, managedRoot);
     throw error;
   }
 }
 
-async function rollbackManagedPluginCopy(copy: ManagedPluginCopy): Promise<void> {
+async function rollbackManagedPluginCopy(
+  copy: ManagedPluginCopy,
+): Promise<void> {
   await rm(copy.root, { recursive: true, force: true });
   if (copy.previousRoot !== undefined) {
     await rename(copy.previousRoot, copy.root);
@@ -574,16 +668,18 @@ async function recordFrom(input: {
   github?: PluginGithubMetadata;
   source?: PluginSource;
   parsed: ParsedManifestResult;
-  discoverSkills: (roots: readonly SkillRoot[]) => Promise<SkillDiscoveryResult>;
+  discoverSkills: (
+    roots: readonly SkillRoot[],
+  ) => Promise<SkillDiscoveryResult>;
 }): Promise<PluginRecord> {
   const { parsed } = input;
-  const hasError = parsed.diagnostics.some((d) => d.severity === 'error');
+  const hasError = parsed.diagnostics.some((d) => d.severity === "error");
   return {
     id: input.id,
     root: input.root,
-    source: input.source ?? 'local-path',
+    source: input.source ?? "local-path",
     enabled: input.enabled,
-    state: hasError || parsed.manifest === undefined ? 'error' : 'ok',
+    state: hasError || parsed.manifest === undefined ? "error" : "ok",
     installedAt: input.installedAt,
     updatedAt: input.updatedAt,
     originalSource: input.originalSource,
@@ -612,10 +708,12 @@ function recordToSummary(record: PluginRecord): PluginSummary {
     state: record.state,
     skillCount: record.skillCount,
     mcpServerCount: Object.keys(record.manifest?.mcpServers ?? {}).length,
-    enabledMcpServerCount: pluginMcpServersInfo(record).filter((server) => server.enabled).length,
+    enabledMcpServerCount: pluginMcpServersInfo(record).filter(
+      (server) => server.enabled,
+    ).length,
     hookCount: record.manifest?.hooks?.length ?? 0,
     commandCount: record.manifest?.commands?.length ?? 0,
-    hasErrors: record.diagnostics.some((d) => d.severity === 'error'),
+    hasErrors: record.diagnostics.some((d) => d.severity === "error"),
     source: record.source,
     originalSource: record.originalSource,
     github: record.github,
@@ -637,11 +735,19 @@ function recordToInfo(record: PluginRecord): PluginInfo {
   };
 }
 
-function isMcpServerEnabled(record: PluginRecord, name: string, config: McpServerConfig): boolean {
-  return record.capabilities?.mcpServers?.[name]?.enabled ?? config.enabled !== false;
+function isMcpServerEnabled(
+  record: PluginRecord,
+  name: string,
+  config: McpServerConfig,
+): boolean {
+  return (
+    record.capabilities?.mcpServers?.[name]?.enabled ?? config.enabled !== false
+  );
 }
 
-function pluginMcpServersInfo(record: PluginRecord): readonly PluginMcpServerInfo[] {
+function pluginMcpServersInfo(
+  record: PluginRecord,
+): readonly PluginMcpServerInfo[] {
   return Object.entries(record.manifest?.mcpServers ?? {})
     .map(([name, config]) => pluginMcpServerInfo(record, name, config))
     .toSorted((a, b) => a.name.localeCompare(b.name));
@@ -652,25 +758,29 @@ function pluginMcpServerInfo(
   name: string,
   config: McpServerConfig,
 ): PluginMcpServerInfo {
-  if (config.transport === 'http' || config.transport === 'sse') {
+  if (config.transport === "http" || config.transport === "sse") {
     return {
       name,
       runtimeName: pluginMcpRuntimeName(record.id, name),
       enabled: isMcpServerEnabled(record, name, config),
       transport: config.transport,
       url: config.url,
-      headerKeys: config.headers === undefined ? undefined : Object.keys(config.headers).toSorted(),
+      headerKeys:
+        config.headers === undefined
+          ? undefined
+          : Object.keys(config.headers).toSorted(),
     };
   }
   return {
     name,
     runtimeName: pluginMcpRuntimeName(record.id, name),
     enabled: isMcpServerEnabled(record, name, config),
-    transport: 'stdio',
+    transport: "stdio",
     command: config.command,
     args: config.args,
     cwd: config.cwd,
-    envKeys: config.env === undefined ? undefined : Object.keys(config.env).toSorted(),
+    envKeys:
+      config.env === undefined ? undefined : Object.keys(config.env).toSorted(),
   };
 }
 
@@ -678,9 +788,12 @@ function pluginMcpRuntimeName(pluginId: string, serverName: string): string {
   return `plugin-${pluginId}:${serverName}`;
 }
 
-const KIMI_NODE_FALLBACK_SUBCOMMAND = '__plugin_run_node';
+const KIMI_NODE_FALLBACK_SUBCOMMAND = "__plugin_run_node";
 
-function withMcpServerEnabled(config: McpServerConfig, enabled: boolean): McpServerConfig {
+function withMcpServerEnabled(
+  config: McpServerConfig,
+  enabled: boolean,
+): McpServerConfig {
   return { ...config, enabled };
 }
 
@@ -689,7 +802,7 @@ function withPluginMcpRuntime(
   pluginRoot: string,
   kimiHomeDir: string,
 ): McpServerConfig {
-  if (config.transport === 'http' || config.transport === 'sse') return config;
+  if (config.transport === "http" || config.transport === "sse") return config;
 
   const env = {
     ...config.env,
@@ -697,17 +810,17 @@ function withPluginMcpRuntime(
     KIMI_PLUGIN_ROOT: pluginRoot,
   };
 
-  if (config.command === 'node' && isElectron()) {
+  if (config.command === "node" && isElectron()) {
     return {
       ...config,
       command: process.execPath,
       args: config.args ?? [],
       cwd: config.cwd ?? pluginRoot,
-      env: { ...env, ELECTRON_RUN_AS_NODE: '1' },
+      env: { ...env, ELECTRON_RUN_AS_NODE: "1" },
     };
   }
 
-  if (config.command === 'node' && isKimiNativeBinary()) {
+  if (config.command === "node" && isKimiNativeBinary()) {
     return {
       ...config,
       command: process.execPath,
@@ -721,23 +834,25 @@ function withPluginMcpRuntime(
 }
 
 function isElectron(): boolean {
-  return typeof process.versions['electron'] === 'string';
+  return typeof process.versions["electron"] === "string";
 }
 
 function isKimiNativeBinary(): boolean {
-  return !path.basename(process.execPath).toLowerCase().startsWith('node');
+  return !path.basename(process.execPath).toLowerCase().startsWith("node");
 }
 
 async function countDiscoveredPluginSkills(
   pluginId: string,
-  manifest: PluginRecord['manifest'],
-  discoverSkills: (roots: readonly SkillRoot[]) => Promise<SkillDiscoveryResult>,
+  manifest: PluginRecord["manifest"],
+  discoverSkills: (
+    roots: readonly SkillRoot[],
+  ) => Promise<SkillDiscoveryResult>,
 ): Promise<number> {
   const dirs = manifest?.skills ?? [];
   if (dirs.length === 0) return 0;
   const roots: SkillRoot[] = dirs.map((dir) => ({
     path: dir,
-    source: 'extra',
+    source: "extra",
     plugin: { id: pluginId, instructions: manifest?.skillInstructions },
   }));
   const result = await discoverSkills(roots);

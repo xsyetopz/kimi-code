@@ -1,10 +1,10 @@
-import { memo, useCallback } from 'react';
+import { memo, useCallback } from "react";
 
-import type { WireEntry } from '../../types';
-import { formatDuration, formatWallClock } from '../../util/time';
-import { TypeBadge } from './TypeBadge';
-import { renderHeadline } from './WireHeadline';
-import { WireRowDetail } from './WireRowDetail';
+import type { WireEntry } from "../../types";
+import { formatDuration, formatWallClock } from "../../util/time";
+import { TypeBadge } from "./TypeBadge";
+import { renderHeadline } from "./WireHeadline";
+import { WireRowDetail } from "./WireRowDetail";
 
 /** Pairing hint for a `tool.call` ↔ `tool.result` row. Computed by the
  *  parent (WireTab) from the full record list and threaded down here so
@@ -12,7 +12,7 @@ import { WireRowDetail } from './WireRowDetail';
  *  hover-highlight protocol. */
 export interface PairHint {
   toolCallId: string;
-  kind: 'call' | 'result';
+  kind: "call" | "result";
   callLineNo: number | null;
   resultLineNo: number | null;
   /** result.time − call.time, when both records carry a timestamp. */
@@ -62,13 +62,13 @@ export const WireRow = memo(function WireRow({
       onMouseEnter={handleEnter}
       onMouseLeave={handleLeave}
       className={[
-        'flex items-stretch border-b border-border',
+        "flex items-stretch border-b border-border",
         highlighted
-          ? 'bg-[color-mix(in_oklab,var(--color-cat-tools)_18%,transparent)]'
+          ? "bg-[color-mix(in_oklab,var(--color-cat-tools)_18%,transparent)]"
           : expanded
-            ? 'bg-surface-1'
-            : 'bg-surface-0 hover:bg-surface-1',
-      ].join(' ')}
+            ? "bg-surface-1"
+            : "bg-surface-0 hover:bg-surface-1",
+      ].join(" ")}
     >
       <div className="min-w-0 flex-1">
         <button
@@ -82,15 +82,21 @@ export const WireRow = memo(function WireRow({
             className="font-mono text-[11px] text-fg-3 tabular w-[68px] shrink-0"
             title={timeTitle}
           >
-            {record.time !== undefined ? formatWallClock(record.time) : '--:--:--'}
+            {record.time !== undefined
+              ? formatWallClock(record.time)
+              : "--:--:--"}
           </span>
           <span className="shrink-0">
             <TypeBadge type={record.type} />
           </span>
-          <span className="flex-1 min-w-0 flex items-center gap-2">{h.main}</span>
+          <span className="flex-1 min-w-0 flex items-center gap-2">
+            {h.main}
+          </span>
           <span className="flex items-center gap-2 shrink-0">
             {h.right}
-            {pair !== undefined ? <PairIndicator pair={pair} onJumpTo={onJumpTo} /> : null}
+            {pair !== undefined ? (
+              <PairIndicator pair={pair} onJumpTo={onJumpTo} />
+            ) : null}
             <Chevron open={expanded} />
           </span>
         </button>
@@ -111,27 +117,32 @@ function PairIndicator({
   pair: PairHint;
   onJumpTo?: (lineNo: number) => void;
 }) {
-  const isCall = pair.kind === 'call';
+  const isCall = pair.kind === "call";
   const target = isCall ? pair.resultLineNo : pair.callLineNo;
-  const arrow = isCall ? '→' : '←';
+  const arrow = isCall ? "→" : "←";
   const orphan = target === null;
   const label = orphan ? `${arrow} ?` : `${arrow} #${target}`;
   const title = orphan
     ? isCall
-      ? 'no matching tool.result yet'
-      : 'no preceding tool.call seen'
+      ? "no matching tool.result yet"
+      : "no preceding tool.call seen"
     : isCall
       ? `jump to tool.result on line ${target}`
       : `jump to tool.call on line ${target}`;
 
   const className = `font-mono text-[10px] tabular ${
-    orphan ? 'text-[var(--color-sev-error)]' : 'text-[var(--color-cat-tools)] hover:text-fg-0'
+    orphan
+      ? "text-[var(--color-sev-error)]"
+      : "text-[var(--color-cat-tools)] hover:text-fg-0"
   }`;
 
   // Show the call→result elapsed time on whichever row has its partner.
   const duration =
     pair.durationMs !== null ? (
-      <span className="font-mono text-[10px] text-fg-3 tabular" title="tool.call → tool.result elapsed">
+      <span
+        className="font-mono text-[10px] text-fg-3 tabular"
+        title="tool.call → tool.result elapsed"
+      >
         {formatDuration(pair.durationMs)}
       </span>
     ) : null;
@@ -159,7 +170,7 @@ function PairIndicator({
           onJumpTo(target);
         }}
         onKeyDown={(e) => {
-          if (e.key === 'Enter') {
+          if (e.key === "Enter") {
             e.stopPropagation();
             onJumpTo(target);
           }
@@ -172,9 +183,9 @@ function PairIndicator({
 }
 
 function formatTimeTitle(epochMs: number | undefined): string {
-  if (epochMs === undefined || !Number.isFinite(epochMs)) return 'missing time';
+  if (epochMs === undefined || !Number.isFinite(epochMs)) return "missing time";
   const date = new Date(epochMs);
-  if (!Number.isFinite(date.getTime())) return 'invalid time';
+  if (!Number.isFinite(date.getTime())) return "invalid time";
   return date.toISOString();
 }
 
@@ -184,10 +195,15 @@ function Chevron({ open }: { open: boolean }) {
       width="10"
       height="10"
       viewBox="0 0 10 10"
-      className={`text-fg-3 transition-transform ${open ? 'rotate-90' : ''}`}
+      className={`text-fg-3 transition-transform ${open ? "rotate-90" : ""}`}
       aria-hidden="true"
     >
-      <path d="M3 2 L7 5 L3 8" stroke="currentColor" strokeWidth="1" fill="none" />
+      <path
+        d="M3 2 L7 5 L3 8"
+        stroke="currentColor"
+        strokeWidth="1"
+        fill="none"
+      />
     </svg>
   );
 }

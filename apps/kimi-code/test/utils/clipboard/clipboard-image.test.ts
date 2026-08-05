@@ -1,12 +1,15 @@
-import { mkdtempSync, rmSync, truncateSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { mkdtempSync, rmSync, truncateSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from "vitest";
 
-import { ClipboardMediaError, readClipboardMedia } from '#/utils/clipboard/clipboard-image';
-import type { ClipboardModule } from '#/utils/clipboard/clipboard-native';
+import {
+  ClipboardMediaError,
+  readClipboardMedia,
+} from "#/utils/clipboard/clipboard-image";
+import type { ClipboardModule } from "#/utils/clipboard/clipboard-native";
 
 function png(width: number, height: number): Uint8Array {
   const bytes = new Uint8Array(24);
@@ -36,27 +39,34 @@ function noMacOsPaths(): { stdout: Buffer; ok: boolean } {
   return { stdout: Buffer.alloc(0), ok: false };
 }
 
-describe('readClipboardMedia', () => {
-  it('reads a copied image file from its real path instead of the Finder preview icon', async () => {
-    const dir = mkdtempSync(join(tmpdir(), 'kimi-code-clip-'));
+describe("readClipboardMedia", () => {
+  it("reads a copied image file from its real path instead of the Finder preview icon", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "kimi-code-clip-"));
     try {
-      const imagePath = join(dir, 'photo.png');
+      const imagePath = join(dir, "photo.png");
       const imageBytes = png(12, 34);
       writeFileSync(imagePath, imageBytes);
       const getImageBinary = vi.fn(async () => Array.from(png(1, 1)));
       const clip = fakeClipboard({
-        availableFormats: vi.fn(() => ['public.file-url', 'public.png']),
+        availableFormats: vi.fn(() => ["public.file-url", "public.png"]),
         hasImage: vi.fn(() => true),
         getImageBinary,
       });
-      const runCommand = vi.fn(() => ({ stdout: Buffer.from(`${imagePath}\n`), ok: true }));
+      const runCommand = vi.fn(() => ({
+        stdout: Buffer.from(`${imagePath}\n`),
+        ok: true,
+      }));
 
-      const media = await readClipboardMedia({ platform: 'darwin', clipboard: clip, runCommand });
+      const media = await readClipboardMedia({
+        platform: "darwin",
+        clipboard: clip,
+        runCommand,
+      });
 
       expect(media).toEqual({
-        kind: 'image',
+        kind: "image",
         bytes: imageBytes,
-        mimeType: 'image/png',
+        mimeType: "image/png",
       });
       expect(getImageBinary).not.toHaveBeenCalled();
     } finally {
@@ -64,14 +74,14 @@ describe('readClipboardMedia', () => {
     }
   });
 
-  it('prefers a video file URL over an available image preview', async () => {
-    const dir = mkdtempSync(join(tmpdir(), 'kimi-code-clip-'));
+  it("prefers a video file URL over an available image preview", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "kimi-code-clip-"));
     try {
-      const videoPath = join(dir, 'sample.mov');
+      const videoPath = join(dir, "sample.mov");
       writeFileSync(videoPath, new Uint8Array([0, 1, 2]));
       const getImageBinary = vi.fn(async () => [0x89, 0x50, 0x4e, 0x47]);
       const clip = fakeClipboard({
-        availableFormats: vi.fn(() => ['public.file-url', 'public.png']),
+        availableFormats: vi.fn(() => ["public.file-url", "public.png"]),
         hasText: vi.fn(() => true),
         getText: vi.fn(async () => pathToFileURL(videoPath).toString()),
         hasImage: vi.fn(() => true),
@@ -79,15 +89,15 @@ describe('readClipboardMedia', () => {
       });
 
       const media = await readClipboardMedia({
-        platform: 'darwin',
+        platform: "darwin",
         clipboard: clip,
         runCommand: noMacOsPaths,
       });
 
-      expect(media?.kind).toBe('video');
+      expect(media?.kind).toBe("video");
       expect(media).toMatchObject({
-        mimeType: 'video/quicktime',
-        filename: 'sample.mov',
+        mimeType: "video/quicktime",
+        filename: "sample.mov",
         sourcePath: videoPath,
       });
       expect(getImageBinary).not.toHaveBeenCalled();
@@ -96,37 +106,37 @@ describe('readClipboardMedia', () => {
     }
   });
 
-  it('falls back to native image bytes when no video file is present', async () => {
+  it("falls back to native image bytes when no video file is present", async () => {
     const clip = fakeClipboard({
-      availableFormats: vi.fn(() => ['public.png']),
+      availableFormats: vi.fn(() => ["public.png"]),
       hasText: vi.fn(() => false),
       hasImage: vi.fn(() => true),
       getImageBinary: vi.fn(async () => [0x89, 0x50, 0x4e, 0x47]),
     });
 
     const media = await readClipboardMedia({
-      platform: 'darwin',
+      platform: "darwin",
       clipboard: clip,
       runCommand: noMacOsPaths,
     });
 
     expect(media).toEqual({
-      kind: 'image',
+      kind: "image",
       bytes: new Uint8Array([0x89, 0x50, 0x4e, 0x47]),
-      mimeType: 'image/png',
+      mimeType: "image/png",
     });
   });
 
-  it('does not consume file-like clipboard image previews when no real file path is readable', async () => {
+  it("does not consume file-like clipboard image previews when no real file path is readable", async () => {
     const getImageBinary = vi.fn(async () => Array.from(png(1, 1)));
     const clip = fakeClipboard({
-      availableFormats: vi.fn(() => ['public.file-url', 'public.png']),
+      availableFormats: vi.fn(() => ["public.file-url", "public.png"]),
       hasImage: vi.fn(() => true),
       getImageBinary,
     });
 
     const media = await readClipboardMedia({
-      platform: 'darwin',
+      platform: "darwin",
       clipboard: clip,
       runCommand: noMacOsPaths,
     });
@@ -135,21 +145,21 @@ describe('readClipboardMedia', () => {
     expect(getImageBinary).not.toHaveBeenCalled();
   });
 
-  it('rejects pasted videos larger than 100 MB', async () => {
-    const dir = mkdtempSync(join(tmpdir(), 'kimi-code-clip-'));
+  it("rejects pasted videos larger than 100 MB", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "kimi-code-clip-"));
     try {
-      const videoPath = resolve(dir, 'too-big.mp4');
+      const videoPath = resolve(dir, "too-big.mp4");
       writeFileSync(videoPath, new Uint8Array([0]));
       truncateSync(videoPath, 101 * 1024 * 1024);
       const clip = fakeClipboard({
-        availableFormats: vi.fn(() => ['public.file-url']),
+        availableFormats: vi.fn(() => ["public.file-url"]),
         hasText: vi.fn(() => true),
         getText: vi.fn(async () => pathToFileURL(videoPath).toString()),
       });
 
       await expect(
         readClipboardMedia({
-          platform: 'darwin',
+          platform: "darwin",
           clipboard: clip,
           runCommand: noMacOsPaths,
         }),

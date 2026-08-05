@@ -8,34 +8,42 @@
  * holds no IO.
  */
 
-import { createHash } from 'node:crypto';
+import { createHash } from "node:crypto";
 
-import { basename } from 'pathe';
+import { basename } from "pathe";
 
-import { ErrorCodes, Error2 } from '#/errors';
+import { ErrorCodes, Error2 } from "#/errors";
 
 export function sanitizeStoreKey(name: string): string {
-  const safe = basename(name).replaceAll(/[^a-zA-Z0-9_-]/g, '_').replaceAll(/_+/g, '_');
-  if (safe.length === 0 || safe.startsWith('.')) {
-    throw new Error2(ErrorCodes.CONFIG_INVALID, `Invalid MCP OAuth store key: "${name}"`);
+  const safe = basename(name)
+    .replaceAll(/[^a-zA-Z0-9_-]/g, "_")
+    .replaceAll(/_+/g, "_");
+  if (safe.length === 0 || safe.startsWith(".")) {
+    throw new Error2(
+      ErrorCodes.CONFIG_INVALID,
+      `Invalid MCP OAuth store key: "${name}"`,
+    );
   }
   return safe;
 }
 
 export function canonicalMcpOAuthResource(serverUrl: string | URL): string {
   const url = new URL(serverUrl);
-  url.hash = '';
+  url.hash = "";
   return url.toString();
 }
 
-export function mcpOAuthStoreKey(serverName: string, serverUrl: string | URL): string {
+export function mcpOAuthStoreKey(
+  serverName: string,
+  serverUrl: string | URL,
+): string {
   const safeName = sanitizeStoreKey(serverName);
   const resource = canonicalMcpOAuthResource(serverUrl);
-  const digest = createHash('sha256')
+  const digest = createHash("sha256")
     .update(serverName)
-    .update('\0')
+    .update("\0")
     .update(resource)
-    .digest('hex')
+    .digest("hex")
     .slice(0, 24);
   return `${safeName}-${digest}`;
 }

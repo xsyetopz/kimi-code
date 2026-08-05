@@ -7,10 +7,10 @@
  * detection) and fires the token's availability event with `{ oldUid, newUid }`.
  */
 
-import { Emitter } from '../event';
-import { SyncDescriptor } from './descriptors';
-import type { ServiceIdentifier } from './instantiation';
-import type { IDisposable } from './lifecycle';
+import { Emitter } from "../event";
+import { SyncDescriptor } from "./descriptors";
+import type { ServiceIdentifier } from "./instantiation";
+import type { IDisposable } from "./lifecycle";
 
 export interface ServiceCollectionEntry<T = unknown> {
   readonly value: T | SyncDescriptor<T>;
@@ -27,7 +27,10 @@ export interface AvailabilityChange {
 
 export class ServiceCollection {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private readonly _entries = new Map<ServiceIdentifier<any>, ServiceCollectionEntry<any>>();
+  private readonly _entries = new Map<
+    ServiceIdentifier<any>,
+    ServiceCollectionEntry<any>
+  >();
   private readonly _emitters = new Map<
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ServiceIdentifier<any>,
@@ -140,7 +143,9 @@ export class ServiceCollection {
       value: unknown,
     ) => void,
   ): void {
-    this._entries.forEach((entry, id) => { callback(id, entry.value); });
+    this._entries.forEach((entry, id) => {
+      callback(id, entry.value);
+    });
   }
 
   dispose(): void {
@@ -150,7 +155,9 @@ export class ServiceCollection {
     this._emitters.clear();
   }
 
-  private _emitterFor<T>(id: ServiceIdentifier<T>): Emitter<AvailabilityChange> {
+  private _emitterFor<T>(
+    id: ServiceIdentifier<T>,
+  ): Emitter<AvailabilityChange> {
     let emitter = this._emitters.get(id);
     if (emitter === undefined) {
       emitter = new Emitter<AvailabilityChange>();

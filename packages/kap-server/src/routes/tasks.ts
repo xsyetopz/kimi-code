@@ -44,23 +44,23 @@ import {
   getLiveSessionById,
   type AgentTaskInfo,
   type Scope,
-} from '@moonshot-ai/agent-core-v2';
-import { ErrorCode } from '../protocol/error-codes';
+} from "@moonshot-ai/agent-core-v2";
+import { ErrorCode } from "../protocol/error-codes";
 import {
   cancelTaskResultSchema,
   getTaskQuerySchema,
   getTaskResponseSchema,
   listTasksQuerySchema,
   listTasksResponseSchema,
-} from '../protocol/rest-task';
-import type { Task, TaskKind, TaskStatus } from '../protocol/task';
-import { z } from 'zod';
+} from "../protocol/rest-task";
+import type { Task, TaskKind, TaskStatus } from "../protocol/task";
+import { z } from "zod";
 
-import { errEnvelope, okEnvelope } from '../envelope';
-import { requestLog } from '../lib/requestLog';
-import { defineRoute } from '../middleware/defineRoute';
-import { ensureMainAgent } from '../transport/mainAgent';
-import { parseActionSuffix } from './action-suffix';
+import { errEnvelope, okEnvelope } from "../envelope";
+import { requestLog } from "../lib/requestLog";
+import { defineRoute } from "../middleware/defineRoute";
+import { ensureMainAgent } from "../transport/mainAgent";
+import { parseActionSuffix } from "./action-suffix";
 
 /** Default cap (bytes) for the opt-in output preview on GET-by-id. */
 const DEFAULT_TASK_OUTPUT_PREVIEW_BYTES = 32 * 1024;
@@ -68,7 +68,9 @@ const DEFAULT_TASK_OUTPUT_PREVIEW_BYTES = 32 * 1024;
 interface TasksRouteHost {
   get(
     path: string,
-    options: { preHandler: unknown[]; schema?: Record<string, unknown> } | undefined,
+    options:
+      | { preHandler: unknown[]; schema?: Record<string, unknown> }
+      | undefined,
     handler: (
       req: { id: string; query: unknown; params: unknown },
       reply: { send(payload: unknown): unknown },
@@ -95,7 +97,9 @@ const sessionAndTaskIdParamSchema = z.object({
   task_id: z.string().min(1),
 });
 
-const detailsSchema = z.array(z.object({ path: z.string(), message: z.string() }));
+const detailsSchema = z.array(
+  z.object({ path: z.string(), message: z.string() }),
+);
 
 // --- Registration -----------------------------------------------------------
 
@@ -103,8 +107,8 @@ export function registerTasksRoutes(app: TasksRouteHost, core: Scope): void {
   // GET /sessions/{session_id}/tasks ------------------------------------
   const listRoute = defineRoute(
     {
-      method: 'GET',
-      path: '/sessions/{session_id}/tasks',
+      method: "GET",
+      path: "/sessions/{session_id}/tasks",
       params: sessionIdParamSchema,
       querystring: listTasksQuerySchema,
       success: { data: listTasksResponseSchema },
@@ -112,13 +116,13 @@ export function registerTasksRoutes(app: TasksRouteHost, core: Scope): void {
         [ErrorCode.VALIDATION_FAILED]: { detailsSchema },
         [ErrorCode.SESSION_NOT_FOUND]: {},
       },
-      description: 'List tasks for a session',
-      tags: ['tasks'],
+      description: "List tasks for a session",
+      tags: ["tasks"],
     },
     async (req, reply) => {
       const { session_id } = req.params;
       const resolved = await resolveSessionTasks(core, session_id);
-      if (resolved.kind === 'not_found') {
+      if (resolved.kind === "not_found") {
         reply.send(sessionNotFound(session_id, req.id));
         return;
       }
@@ -130,17 +134,23 @@ export function registerTasksRoutes(app: TasksRouteHost, core: Scope): void {
       );
       const query = req.query as { status?: TaskStatus };
       const items =
-        query.status !== undefined ? all.filter((t) => t.status === query.status) : all;
+        query.status !== undefined
+          ? all.filter((t) => t.status === query.status)
+          : all;
       reply.send(okEnvelope({ items }, req.id));
     },
   );
-  app.get(listRoute.path, listRoute.options, listRoute.handler as Parameters<TasksRouteHost['get']>[2]);
+  app.get(
+    listRoute.path,
+    listRoute.options,
+    listRoute.handler as Parameters<TasksRouteHost["get"]>[2],
+  );
 
   // GET /sessions/{session_id}/tasks/{task_id} --------------------------
   const getRoute = defineRoute(
     {
-      method: 'GET',
-      path: '/sessions/{session_id}/tasks/{task_id}',
+      method: "GET",
+      path: "/sessions/{session_id}/tasks/{task_id}",
       params: sessionAndTaskIdParamSchema,
       querystring: getTaskQuerySchema,
       success: { data: getTaskResponseSchema },
@@ -149,13 +159,13 @@ export function registerTasksRoutes(app: TasksRouteHost, core: Scope): void {
         [ErrorCode.SESSION_NOT_FOUND]: {},
         [ErrorCode.TASK_NOT_FOUND]: {},
       },
-      description: 'Get a task by ID',
-      tags: ['tasks'],
+      description: "Get a task by ID",
+      tags: ["tasks"],
     },
     async (req, reply) => {
       const { session_id, task_id } = req.params;
       const resolved = await resolveSessionTasks(core, session_id);
-      if (resolved.kind === 'not_found') {
+      if (resolved.kind === "not_found") {
         reply.send(sessionNotFound(session_id, req.id));
         return;
       }
@@ -166,14 +176,18 @@ export function registerTasksRoutes(app: TasksRouteHost, core: Scope): void {
         return;
       }
 
-      const query = req.query as { with_output?: boolean; output_bytes?: number };
+      const query = req.query as {
+        with_output?: boolean;
+        output_bytes?: number;
+      };
       let output: { preview: string; bytes: number } | undefined;
       if (query.with_output === true && resolved.tasks !== undefined) {
-        const tailBytes = query.output_bytes ?? DEFAULT_TASK_OUTPUT_PREVIEW_BYTES;
+        const tailBytes =
+          query.output_bytes ?? DEFAULT_TASK_OUTPUT_PREVIEW_BYTES;
         try {
           const preview = await resolved.tasks.readOutput(task_id, tailBytes);
           if (preview.length > 0) {
-            output = { preview, bytes: Buffer.byteLength(preview, 'utf-8') };
+            output = { preview, bytes: Buffer.byteLength(preview, "utf-8") };
           }
         } catch {
           // Output may not be available yet; fall back to task metadata only.
@@ -183,7 +197,11 @@ export function registerTasksRoutes(app: TasksRouteHost, core: Scope): void {
       reply.send(okEnvelope(toWireTask(session_id, found, output), req.id));
     },
   );
-  app.get(getRoute.path, getRoute.options, getRoute.handler as Parameters<TasksRouteHost['get']>[2]);
+  app.get(
+    getRoute.path,
+    getRoute.options,
+    getRoute.handler as Parameters<TasksRouteHost["get"]>[2],
+  );
 
   // POST /sessions/{session_id}/tasks/{task_id}:cancel ------------------
   //
@@ -192,8 +210,8 @@ export function registerTasksRoutes(app: TasksRouteHost, core: Scope): void {
   // capture `:tail` and demand the `:cancel` suffix via the shared parser.
   const cancelRoute = defineRoute(
     {
-      method: 'POST',
-      path: '/sessions/{session_id}/tasks/{tail}',
+      method: "POST",
+      path: "/sessions/{session_id}/tasks/{tail}",
       success: { data: cancelTaskResultSchema },
       errors: {
         [ErrorCode.VALIDATION_FAILED]: { detailsSchema },
@@ -204,9 +222,9 @@ export function registerTasksRoutes(app: TasksRouteHost, core: Scope): void {
           detailsSchema: z.object({ current_status: z.string() }),
         },
       },
-      description: 'Cancel a task',
-      tags: ['tasks'],
-      operationId: 'cancelTask',
+      description: "Cancel a task",
+      tags: ["tasks"],
+      operationId: "cancelTask",
     },
     async (req, reply) => {
       const { session_id, tail } = req.params as {
@@ -215,29 +233,41 @@ export function registerTasksRoutes(app: TasksRouteHost, core: Scope): void {
       };
       const parsed = parseActionSuffix({
         tail,
-        allowedActions: ['cancel'] as const,
-        resourceLabel: 'task',
+        allowedActions: ["cancel"] as const,
+        resourceLabel: "task",
       });
-      if (parsed.kind === 'invalid') {
-        reply.send(errEnvelope(ErrorCode.VALIDATION_FAILED, parsed.reason, req.id));
+      if (parsed.kind === "invalid") {
+        reply.send(
+          errEnvelope(ErrorCode.VALIDATION_FAILED, parsed.reason, req.id),
+        );
         return;
       }
-      if (parsed.kind === 'bare') {
+      if (parsed.kind === "bare") {
         // POST without `:cancel` is not a defined action; the bare GET form
         // serves `/.../tasks/{tid}`.
         reply.send(
-          errEnvelope(ErrorCode.VALIDATION_FAILED, `unsupported action: ${tail}`, req.id),
+          errEnvelope(
+            ErrorCode.VALIDATION_FAILED,
+            `unsupported action: ${tail}`,
+            req.id,
+          ),
         );
         return;
       }
       const task_id = parsed.id;
       if (!session_id || !task_id) {
-        reply.send(errEnvelope(ErrorCode.VALIDATION_FAILED, 'invalid path params', req.id));
+        reply.send(
+          errEnvelope(
+            ErrorCode.VALIDATION_FAILED,
+            "invalid path params",
+            req.id,
+          ),
+        );
         return;
       }
 
       const resolved = await resolveSessionTasks(core, session_id);
-      if (resolved.kind === 'not_found') {
+      if (resolved.kind === "not_found") {
         reply.send(sessionNotFound(session_id, req.id));
         return;
       }
@@ -252,16 +282,22 @@ export function registerTasksRoutes(app: TasksRouteHost, core: Scope): void {
       }
       const wireStatus = toWireTask(session_id, found).status;
       if (isTerminalStatus(wireStatus)) {
-        reply.send(taskAlreadyFinished(session_id, task_id, wireStatus, req.id));
+        reply.send(
+          taskAlreadyFinished(session_id, task_id, wireStatus, req.id),
+        );
         return;
       }
 
       await resolved.tasks?.stopByUser(task_id);
-      requestLog(req)?.info({ session_id, task_id }, 'task cancelled');
+      requestLog(req)?.info({ session_id, task_id }, "task cancelled");
       reply.send(okEnvelope({ cancelled: true as const }, req.id));
     },
   );
-  app.post(cancelRoute.path, cancelRoute.options, cancelRoute.handler as Parameters<TasksRouteHost['post']>[2]);
+  app.post(
+    cancelRoute.path,
+    cancelRoute.options,
+    cancelRoute.handler as Parameters<TasksRouteHost["post"]>[2],
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -272,18 +308,24 @@ export function registerTasksRoutes(app: TasksRouteHost, core: Scope): void {
 // ---------------------------------------------------------------------------
 
 type ResolvedTasks =
-  | { readonly kind: 'not_found' }
-  | { readonly kind: 'resolved'; readonly tasks: IAgentTaskService | undefined };
+  | { readonly kind: "not_found" }
+  | {
+      readonly kind: "resolved";
+      readonly tasks: IAgentTaskService | undefined;
+    };
 
-async function resolveSessionTasks(core: Scope, sid: string): Promise<ResolvedTasks> {
+async function resolveSessionTasks(
+  core: Scope,
+  sid: string,
+): Promise<ResolvedTasks> {
   const summary = await core.accessor.get(ISessionIndex).get(sid);
-  if (summary === undefined) return { kind: 'not_found' };
+  if (summary === undefined) return { kind: "not_found" };
 
   const session = getLiveSessionById(core.accessor, sid);
-  if (session === undefined) return { kind: 'resolved', tasks: undefined };
+  if (session === undefined) return { kind: "resolved", tasks: undefined };
   const agent = await ensureMainAgent(session);
   const tasks = agent.accessor.get(IAgentTaskService);
-  return { kind: 'resolved', tasks };
+  return { kind: "resolved", tasks };
 }
 
 // ---------------------------------------------------------------------------
@@ -304,41 +346,41 @@ async function resolveSessionTasks(core: Scope, sid: string): Promise<ResolvedTa
 //            lost      → failed       (lossy)
 // ---------------------------------------------------------------------------
 
-function mapKind(k: AgentTaskInfo['kind']): TaskKind {
+function mapKind(k: AgentTaskInfo["kind"]): TaskKind {
   switch (k) {
-    case 'process':
-      return 'bash';
-    case 'agent':
-      return 'subagent';
-    case 'question':
+    case "process":
+      return "bash";
+    case "agent":
+      return "subagent";
+    case "question":
       // SCHEMAS §7 has no 'question' literal; question tasks are
       // tool-spawned flows, so 'tool' is the closest spec literal.
-      return 'tool';
+      return "tool";
   }
 }
 
-function mapStatus(s: AgentTaskInfo['status']): TaskStatus {
+function mapStatus(s: AgentTaskInfo["status"]): TaskStatus {
   switch (s) {
-    case 'running':
-      return 'running';
-    case 'completed':
-      return 'completed';
-    case 'failed':
-      return 'failed';
-    case 'timed_out':
+    case "running":
+      return "running";
+    case "completed":
+      return "completed";
+    case "failed":
+      return "failed";
+    case "timed_out":
       // SCHEMAS §7 has no 'timed_out' literal; collapse to 'failed'.
-      return 'failed';
-    case 'killed':
-      return 'cancelled';
-    case 'lost':
-      return 'failed';
+      return "failed";
+    case "killed":
+      return "cancelled";
+    case "lost":
+      return "failed";
   }
 }
 
 const TERMINAL_WIRE_STATUSES: ReadonlySet<TaskStatus> = new Set([
-  'completed',
-  'failed',
-  'cancelled',
+  "completed",
+  "failed",
+  "cancelled",
 ]);
 
 function isTerminalStatus(status: TaskStatus): boolean {
@@ -366,7 +408,11 @@ function toWireTask(
   if (info.endedAt !== null && info.endedAt !== undefined) {
     base.completed_at = new Date(info.endedAt).toISOString();
   }
-  if (info.kind === 'process' && 'command' in info && typeof info.command === 'string') {
+  if (
+    info.kind === "process" &&
+    "command" in info &&
+    typeof info.command === "string"
+  ) {
     base.command = info.command;
   }
   if (output !== undefined) {
@@ -381,7 +427,11 @@ function toWireTask(
 // ---------------------------------------------------------------------------
 
 function sessionNotFound(sid: string, requestId: string): unknown {
-  return errEnvelope(ErrorCode.SESSION_NOT_FOUND, `session ${sid} does not exist`, requestId);
+  return errEnvelope(
+    ErrorCode.SESSION_NOT_FOUND,
+    `session ${sid} does not exist`,
+    requestId,
+  );
 }
 
 function taskNotFound(sid: string, tid: string, requestId: string): unknown {

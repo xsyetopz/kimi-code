@@ -1,11 +1,11 @@
-import { createRequire } from 'node:module';
-import { join } from 'node:path';
+import { createRequire } from "node:module";
+import { join } from "node:path";
 
 import {
   ensureNativeAssetTree,
   getNativePackageRoot,
   type NativeAssetOptions,
-} from './native-assets';
+} from "./native-assets";
 
 export function createNativePackageRequire(
   packageName: string,
@@ -17,7 +17,9 @@ export function createNativePackageRequire(
   const cacheRoot = ensureNativeAssetTree(options);
   if (cacheRoot === null) return null;
 
-  return createRequire(join(cacheRoot, 'node_modules', '.kimi-native-entry.cjs'));
+  return createRequire(
+    join(cacheRoot, "node_modules", ".kimi-native-entry.cjs"),
+  );
 }
 
 export function loadNativePackage<T>(

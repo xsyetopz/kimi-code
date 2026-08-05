@@ -4,17 +4,17 @@
 // storage + the DOM, never rawState or the API. The values are module-level
 // singletons so the whole app shares one instance.
 
-import { ref, watch } from 'vue';
-import { safeGetString, safeSetString, STORAGE_KEYS } from '../../lib/storage';
+import { ref, watch } from "vue";
+import { safeGetString, safeSetString, STORAGE_KEYS } from "../../lib/storage";
 
 /** Color scheme: 'light', 'dark', or follow the OS preference ('system'). */
-export type ColorScheme = 'light' | 'dark' | 'system';
+export type ColorScheme = "light" | "dark" | "system";
 
 /** Accent: 'blue' (Kimi blue, default) or 'mono' (black/white). */
-export type Accent = 'blue' | 'mono';
+export type Accent = "blue" | "mono";
 
-const ACCENT_VALUES: readonly string[] = ['blue', 'mono'];
-const COLOR_SCHEME_VALUES: readonly string[] = ['light', 'dark', 'system'];
+const ACCENT_VALUES: readonly string[] = ["blue", "mono"];
+const COLOR_SCHEME_VALUES: readonly string[] = ["light", "dark", "system"];
 const UI_FONT_SIZE_DEFAULT = 14;
 const UI_FONT_SIZE_MIN = 12;
 const UI_FONT_SIZE_MAX = 20;
@@ -22,38 +22,43 @@ const UI_FONT_SIZE_MAX = 20;
 function loadAccent(): Accent {
   const v = safeGetString(STORAGE_KEYS.accent);
   if (v && ACCENT_VALUES.includes(v)) return v as Accent;
-  return 'blue';
+  return "blue";
 }
 
 function applyAccent(a: Accent): void {
-  if (typeof document === 'undefined' || !document.documentElement) return;
+  if (typeof document === "undefined" || !document.documentElement) return;
   document.documentElement.dataset.accent = a;
 }
 
 function loadColorScheme(): ColorScheme {
   const v = safeGetString(STORAGE_KEYS.colorScheme);
   if (v && COLOR_SCHEME_VALUES.includes(v)) return v as ColorScheme;
-  return 'system';
+  return "system";
 }
 
 function applyColorScheme(c: ColorScheme): void {
-  if (typeof document === 'undefined' || !document.documentElement) return;
+  if (typeof document === "undefined" || !document.documentElement) return;
   document.documentElement.dataset.colorScheme = c;
 
   // Mobile browser chrome (status/address bar) follows <meta name=theme-color>.
-  const metas = document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]');
+  const metas = document.querySelectorAll<HTMLMetaElement>(
+    'meta[name="theme-color"]',
+  );
   if (metas.length === 0) return;
-  const pinned = c === 'dark' ? '#0d1117' : c === 'light' ? '#ffffff' : null;
+  const pinned = c === "dark" ? "#0d1117" : c === "light" ? "#ffffff" : null;
   metas.forEach((meta) => {
-    const media = meta.getAttribute('media') ?? '';
-    const systemValue = media.includes('dark') ? '#0d1117' : '#ffffff';
-    meta.setAttribute('content', pinned ?? systemValue);
+    const media = meta.getAttribute("media") ?? "";
+    const systemValue = media.includes("dark") ? "#0d1117" : "#ffffff";
+    meta.setAttribute("content", pinned ?? systemValue);
   });
 }
 
 function clampUiFontSize(value: number): number {
   if (!Number.isFinite(value)) return UI_FONT_SIZE_DEFAULT;
-  return Math.min(UI_FONT_SIZE_MAX, Math.max(UI_FONT_SIZE_MIN, Math.round(value)));
+  return Math.min(
+    UI_FONT_SIZE_MAX,
+    Math.max(UI_FONT_SIZE_MIN, Math.round(value)),
+  );
 }
 
 function loadUiFontSize(): number {
@@ -62,8 +67,11 @@ function loadUiFontSize(): number {
 }
 
 function applyUiFontSize(value: number): void {
-  if (typeof document === 'undefined' || !document.documentElement) return;
-  document.documentElement.style.setProperty('--base-ui-font-size', `${clampUiFontSize(value)}px`);
+  if (typeof document === "undefined" || !document.documentElement) return;
+  document.documentElement.style.setProperty(
+    "--base-ui-font-size",
+    `${clampUiFontSize(value)}px`,
+  );
 }
 
 const colorScheme = ref<ColorScheme>(loadColorScheme());

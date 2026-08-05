@@ -24,15 +24,19 @@
  * env-var escape hatch; this test skips on `process.platform === 'win32'`.
  */
 
-import { mkdir, stat } from 'node:fs/promises';
-import { join } from 'node:path';
+import { mkdir, stat } from "node:fs/promises";
+import { join } from "node:path";
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from "vitest";
 
-import { createTempWorkDir, spawnInlineWorkers, type TempDirHandle } from './helpers';
+import {
+  createTempWorkDir,
+  spawnInlineWorkers,
+  type TempDirHandle,
+} from "./helpers";
 
-const skipOnWindows = process.platform === 'win32';
-const OAUTH_ENTRY_URL = new URL('../src/index.ts', import.meta.url).href;
+const skipOnWindows = process.platform === "win32";
+const OAUTH_ENTRY_URL = new URL("../src/index.ts", import.meta.url).href;
 
 // ─────────────────────────────────────────────────────────────────────
 // Worker body — dedicated inline .mjs script.
@@ -155,24 +159,24 @@ const WORKER_SCRIPT = `
 `;
 
 async function seedInitialToken(shareDir: string): Promise<void> {
-  const tokenPath = join(shareDir, 'token.json');
+  const tokenPath = join(shareDir, "token.json");
   const nowSec = Math.floor(Date.now() / 1000);
   const token = {
-    'test-provider': {
-      accessToken: 'at-initial',
-      refreshToken: 'rt-initial',
+    "test-provider": {
+      accessToken: "at-initial",
+      refreshToken: "rt-initial",
       expiresAt: nowSec + 60, // inside refresh threshold → force refresh hits
-      scope: '',
-      tokenType: 'Bearer',
+      scope: "",
+      tokenType: "Bearer",
       expiresIn: 3600,
     },
   };
-  const { writeFile } = await import('node:fs/promises');
-  await writeFile(tokenPath, JSON.stringify(token), 'utf8');
+  const { writeFile } = await import("node:fs/promises");
+  await writeFile(tokenPath, JSON.stringify(token), "utf8");
 }
 
 async function readRefreshCount(shareDir: string): Promise<number> {
-  const counterPath = join(shareDir, 'refresh-count.txt');
+  const counterPath = join(shareDir, "refresh-count.txt");
   try {
     const s = await stat(counterPath);
     return s.size;
@@ -189,80 +193,87 @@ afterEach(async () => {
   }
 });
 
-describe.skipIf(skipOnWindows)('OAuthManager cross-process refresh lock', () => {
-  it('2 workers concurrently force-refresh → exactly one refreshImpl fires', async () => {
-    const dir = await createTempWorkDir();
-    tmpHandles.push(dir);
-    await seedInitialToken(dir.path);
+describe.skipIf(skipOnWindows)(
+  "OAuthManager cross-process refresh lock",
+  () => {
+    it("2 workers concurrently force-refresh → exactly one refreshImpl fires", async () => {
+      const dir = await createTempWorkDir();
+      tmpHandles.push(dir);
+      await seedInitialToken(dir.path);
 
-    const workers = await spawnInlineWorkers({
-      count: 2,
-      inlineScript: WORKER_SCRIPT,
-      tmpDir: dir.path,
-      shareDir: dir.path,
-      timeoutMs: 30_000,
-      env: {
-        KIMI_OAUTH_ENTRY: OAUTH_ENTRY_URL,
-        KIMI_SYNC_FIRST_LOAD: '1',
-        KIMI_WORKER_COUNT: '2',
-      },
-    });
+      const workers = await spawnInlineWorkers({
+        count: 2,
+        inlineScript: WORKER_SCRIPT,
+        tmpDir: dir.path,
+        shareDir: dir.path,
+        timeoutMs: 30_000,
+        env: {
+          KIMI_OAUTH_ENTRY: OAUTH_ENTRY_URL,
+          KIMI_SYNC_FIRST_LOAD: "1",
+          KIMI_WORKER_COUNT: "2",
+        },
+      });
 
-    // All workers exit cleanly.
-    for (const w of workers) {
-      expect(w.exitCode, `worker ${String(w.id)} stderr: ${w.stderr}`).toBe(0);
-      expect(w.stdout.startsWith('ok:')).toBe(true);
-    }
+      // All workers exit cleanly.
+      for (const w of workers) {
+        expect(w.exitCode, `worker ${String(w.id)} stderr: ${w.stderr}`).toBe(
+          0,
+        );
+        expect(w.stdout.startsWith("ok:")).toBe(true);
+      }
 
-    // Refresh count = 1 → exactly one refresh happened across the 5
-    // processes. Without the lock the count equals N (or any value > 1).
-    const count = await readRefreshCount(dir.path);
-    expect(count).toBe(1);
-  }, 45_000);
+      // Refresh count = 1 → exactly one refresh happened across the 5
+      // processes. Without the lock the count equals N (or any value > 1).
+      const count = await readRefreshCount(dir.path);
+      expect(count).toBe(1);
+    }, 45_000);
 
-  it('stale lock (held by a killed worker) is reclaimed after stale timeout', async () => {
-    // Scenario: worker A takes the lock and crashes without releasing
-    // (SIGKILL). Worker B arrives 6+ seconds later and must reclaim
-    // the stale lock via `proper-lockfile`'s `stale: 5_000ms` policy.
-    //
-    // BLK-2 fix: proper-lockfile represents the lock as a DIRECTORY
-    // at `{target}.lock/`. The staleness probe is `stat().mtimeMs`
-    // on that directory, so we must `mkdir` + `utimes` (not
-    // `writeFile`, which would put a regular file where a dir is
-    // expected — `proper-lockfile` would then blow up or
-    // mis-interpret it).
-    const dir = await createTempWorkDir();
-    tmpHandles.push(dir);
-    await seedInitialToken(dir.path);
-    await mkdir(join(dir.path, 'oauth'), { recursive: true });
+    it("stale lock (held by a killed worker) is reclaimed after stale timeout", async () => {
+      // Scenario: worker A takes the lock and crashes without releasing
+      // (SIGKILL). Worker B arrives 6+ seconds later and must reclaim
+      // the stale lock via `proper-lockfile`'s `stale: 5_000ms` policy.
+      //
+      // BLK-2 fix: proper-lockfile represents the lock as a DIRECTORY
+      // at `{target}.lock/`. The staleness probe is `stat().mtimeMs`
+      // on that directory, so we must `mkdir` + `utimes` (not
+      // `writeFile`, which would put a regular file where a dir is
+      // expected — `proper-lockfile` would then blow up or
+      // mis-interpret it).
+      const dir = await createTempWorkDir();
+      tmpHandles.push(dir);
+      await seedInitialToken(dir.path);
+      await mkdir(join(dir.path, "oauth"), { recursive: true });
 
-    const { utimes } = await import('node:fs/promises');
-    const lockDir = join(dir.path, 'oauth', 'test-provider.lock');
-    await mkdir(lockDir, { recursive: true });
-    // 10 seconds ago — past the 5 s stale threshold.
-    const tenSecondsAgo = (Date.now() - 10_000) / 1000;
-    await utimes(lockDir, tenSecondsAgo, tenSecondsAgo);
+      const { utimes } = await import("node:fs/promises");
+      const lockDir = join(dir.path, "oauth", "test-provider.lock");
+      await mkdir(lockDir, { recursive: true });
+      // 10 seconds ago — past the 5 s stale threshold.
+      const tenSecondsAgo = (Date.now() - 10_000) / 1000;
+      await utimes(lockDir, tenSecondsAgo, tenSecondsAgo);
 
-    const workers = await spawnInlineWorkers({
-      count: 1,
-      inlineScript: WORKER_SCRIPT,
-      tmpDir: dir.path,
-      shareDir: dir.path,
-      timeoutMs: 20_000,
-      env: {
-        KIMI_OAUTH_ENTRY: OAUTH_ENTRY_URL,
-      },
-    });
+      const workers = await spawnInlineWorkers({
+        count: 1,
+        inlineScript: WORKER_SCRIPT,
+        tmpDir: dir.path,
+        shareDir: dir.path,
+        timeoutMs: 20_000,
+        env: {
+          KIMI_OAUTH_ENTRY: OAUTH_ENTRY_URL,
+        },
+      });
 
-    expect(workers[0]?.exitCode).toBe(0);
-    expect(workers[0]?.stdout.startsWith('ok:')).toBe(true);
-  }, 30_000);
-});
+      expect(workers[0]?.exitCode).toBe(0);
+      expect(workers[0]?.stdout.startsWith("ok:")).toBe(true);
+    }, 30_000);
+  },
+);
 
 // Prevent "no tests in file" when running on Windows.
-describe.skipIf(!skipOnWindows)('OAuthManager cross-process refresh lock (Windows skip)', () => {
-  it('skipped on Windows — covered by KIMI_DISABLE_OAUTH_LOCK=1 env escape hatch', () => {
-    expect(skipOnWindows).toBe(true);
-  });
-});
-
+describe.skipIf(!skipOnWindows)(
+  "OAuthManager cross-process refresh lock (Windows skip)",
+  () => {
+    it("skipped on Windows — covered by KIMI_DISABLE_OAUTH_LOCK=1 env escape hatch", () => {
+      expect(skipOnWindows).toBe(true);
+    });
+  },
+);

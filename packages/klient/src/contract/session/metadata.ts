@@ -4,14 +4,14 @@
  * promise property is excluded (not a wire method).
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { noResult } from '../helpers.js';
-import type { ServiceContract } from '../types.js';
+import { noResult } from "../helpers.js";
+import type { ServiceContract } from "../types.js";
 
 export const agentMetaSchema = z.object({
   homedir: z.string().optional(),
-  type: z.enum(['main', 'sub', 'independent']).optional(),
+  type: z.enum(["main", "sub", "independent"]).optional(),
   parentAgentId: z.union([z.string(), z.null()]).optional(),
   forkedFrom: z.string().optional(),
   labels: z.record(z.string(), z.string()).optional(),
@@ -49,18 +49,18 @@ export const sessionMetaPatchSchema = z.object({
 
 /** `keyof SessionMeta` — keep in sync with `sessionMetaSchema`. */
 export const sessionMetaKeySchema = z.enum([
-  'id',
-  'version',
-  'title',
-  'isCustomTitle',
-  'lastPrompt',
-  'createdAt',
-  'updatedAt',
-  'archived',
-  'cwd',
-  'forkedFrom',
-  'agents',
-  'custom',
+  "id",
+  "version",
+  "title",
+  "isCustomTitle",
+  "lastPrompt",
+  "createdAt",
+  "updatedAt",
+  "archived",
+  "cwd",
+  "forkedFrom",
+  "agents",
+  "custom",
 ]);
 
 export const sessionMetadataChangedEventSchema = z.object({
@@ -72,5 +72,8 @@ export const sessionMetadataContract = {
   update: { input: z.tuple([sessionMetaPatchSchema]), output: noResult },
   setTitle: { input: z.tuple([z.string()]), output: noResult },
   setArchived: { input: z.tuple([z.boolean()]), output: noResult },
-  registerAgent: { input: z.tuple([z.string(), agentMetaSchema]), output: noResult },
+  registerAgent: {
+    input: z.tuple([z.string(), agentMetaSchema]),
+    output: noResult,
+  },
 } satisfies ServiceContract;

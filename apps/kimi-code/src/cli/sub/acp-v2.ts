@@ -22,23 +22,23 @@
  * in `#/cli/sub/server/run.ts`.
  */
 
-import type { Command } from 'commander';
+import type { Command } from "commander";
 
-import { getVersion } from '#/cli/version';
-import { KIMI_CODE_HOME_ENV } from '#/constant/app';
-import { getDataDir } from '#/utils/paths';
+import { getVersion } from "#/cli/version";
+import { KIMI_CODE_HOME_ENV } from "#/constant/app";
+import { getDataDir } from "#/utils/paths";
 
-import { runLoginFlow } from './login-flow';
+import { runLoginFlow } from "./login-flow";
 
 export function registerAcpV2Command(parent: Command): void {
   parent
-    .command('acp-v2')
+    .command("acp-v2")
     .description(
-      'Run kimi-code as an Agent Client Protocol (ACP) server over stdio (experimental agent-core-v2 engine).',
+      "Run kimi-code as an Agent Client Protocol (ACP) server over stdio (experimental agent-core-v2 engine).",
     )
     .option(
-      '--login',
-      'Run the device-code login flow then exit (entry point for ACP terminal-auth).',
+      "--login",
+      "Run the device-code login flow then exit (entry point for ACP terminal-auth).",
       false,
     )
     .action(async (opts: { login?: boolean }) => {
@@ -59,10 +59,10 @@ export function registerAcpV2Command(parent: Command): void {
       // path to this very binary so the client can spawn it for login.
       const legacyCommand = process.argv[1];
       try {
-        const { runAcpServer } = await import('@moonshot-ai/acp-server');
+        const { runAcpServer } = await import("@moonshot-ai/acp-server");
         await runAcpServer({
           homeDir: getDataDir(),
-          agentInfo: { name: 'Kimi Code CLI', version: getVersion() },
+          agentInfo: { name: "Kimi Code CLI", version: getVersion() },
           ...(terminalAuthEnv ? { terminalAuthEnv } : {}),
           ...(legacyCommand !== undefined && legacyCommand.length > 0
             ? { terminalAuthLegacyCommand: legacyCommand }

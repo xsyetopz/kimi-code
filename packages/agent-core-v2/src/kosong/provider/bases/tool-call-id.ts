@@ -6,20 +6,23 @@
  * `toolCallId` pair consistently and keeps rewritten ids unique.
  */
 
-import { BugIndicatingError } from '#/_base/errors/errors';
-import type { Message, ToolCall } from '#/kosong/contract/message';
-import type { ToolCallIdPolicy } from '#/kosong/contract/provider';
+import { BugIndicatingError } from "#/_base/errors/errors";
+import type { Message, ToolCall } from "#/kosong/contract/message";
+import type { ToolCallIdPolicy } from "#/kosong/contract/provider";
 
-const EMPTY_TOOL_CALL_ID = 'tool_call';
+const EMPTY_TOOL_CALL_ID = "tool_call";
 const TOOL_CALL_ID_SAFE_CHARS = /[^a-zA-Z0-9_-]/g;
 
 export function sanitizeToolCallId(id: string, maxLength?: number): string {
-  const sanitized = id.replace(TOOL_CALL_ID_SAFE_CHARS, '_');
+  const sanitized = id.replace(TOOL_CALL_ID_SAFE_CHARS, "_");
   return maxLength === undefined ? sanitized : sanitized.slice(0, maxLength);
 }
 
-export function sanitizeOpenAIResponsesCallId(id: string, maxLength?: number): string {
-  const [callId] = id.split('|', 1);
+export function sanitizeOpenAIResponsesCallId(
+  id: string,
+  maxLength?: number,
+): string {
+  const [callId] = id.split("|", 1);
   return sanitizeToolCallId(callId ?? id, maxLength);
 }
 
@@ -46,7 +49,9 @@ export function normalizeToolCallIdsForProvider(
     }
 
     const toolCallId =
-      message.toolCallId === undefined ? undefined : mappedIds.get(message.toolCallId);
+      message.toolCallId === undefined
+        ? undefined
+        : mappedIds.get(message.toolCallId);
     const mappedToolCallId = toolCallId ?? message.toolCallId;
     if (mappedToolCallId !== message.toolCallId) {
       messageChanged = true;
@@ -81,7 +86,10 @@ function collectToolCallIds(messages: Message[]): string[] {
   return ids;
 }
 
-function buildToolCallIdMap(rawIds: string[], policy: ToolCallIdPolicy): Map<string, string> {
+function buildToolCallIdMap(
+  rawIds: string[],
+  policy: ToolCallIdPolicy,
+): Map<string, string> {
   const mappedIds = new Map<string, string>();
   const usedIds = new Set<string>();
 
@@ -110,7 +118,7 @@ function makeUniqueToolCallId(
   maxLength: number | undefined,
 ): string {
   const base = normalized.length > 0 ? normalized : EMPTY_TOOL_CALL_ID;
-  const candidate = truncateToolCallId(base, maxLength, '');
+  const candidate = truncateToolCallId(base, maxLength, "");
   if (!usedIds.has(candidate)) return candidate;
 
   for (let i = 2; ; i++) {
@@ -120,7 +128,11 @@ function makeUniqueToolCallId(
   }
 }
 
-function truncateToolCallId(base: string, maxLength: number | undefined, suffix: string): string {
+function truncateToolCallId(
+  base: string,
+  maxLength: number | undefined,
+  suffix: string,
+): string {
   if (maxLength === undefined) return `${base}${suffix}`;
   const baseLength = maxLength - suffix.length;
   if (baseLength <= 0) {

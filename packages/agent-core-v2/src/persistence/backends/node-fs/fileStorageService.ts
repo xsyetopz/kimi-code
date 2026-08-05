@@ -21,28 +21,33 @@
  * agent-execution-environment abstraction does not expose.
  */
 
-import { createReadStream, mkdirSync } from 'node:fs';
-import { mkdir, open, readFile, readdir, unlink } from 'node:fs/promises';
-import { FSWatcher } from 'chokidar';
-import { dirname, join, normalize } from 'pathe';
+import { createReadStream, mkdirSync } from "node:fs";
+import { mkdir, open, readFile, readdir, unlink } from "node:fs/promises";
+import { FSWatcher } from "chokidar";
+import { dirname, join, normalize } from "pathe";
 
-import { DisposableStore, combinedDisposable, toDisposable, type IDisposable } from '#/_base/di/lifecycle';
-import { Emitter, type Event } from '#/_base/event';
-import { onUnexpectedError } from '#/_base/errors/unexpectedError';
-import { atomicWrite, atomicWriteStream, syncDir } from '#/_base/utils/fs';
+import {
+  DisposableStore,
+  combinedDisposable,
+  toDisposable,
+  type IDisposable,
+} from "#/_base/di/lifecycle";
+import { Emitter, type Event } from "#/_base/event";
+import { onUnexpectedError } from "#/_base/errors/unexpectedError";
+import { atomicWrite, atomicWriteStream, syncDir } from "#/_base/utils/fs";
 
 import type {
   IFileSystemStorageService,
   StorageAppendOptions,
   StorageReadRange,
   StorageWriteOptions,
-} from '#/persistence/interface/storage';
-import { toStorageIoError } from '#/persistence/interface/storage';
+} from "#/persistence/interface/storage";
+import { toStorageIoError } from "#/persistence/interface/storage";
 
 const WATCH_DEBOUNCE_MS = 150;
 
 function isEnoent(error: unknown): boolean {
-  return (error as NodeJS.ErrnoException).code === 'ENOENT';
+  return (error as NodeJS.ErrnoException).code === "ENOENT";
 }
 
 export class FileStorageService implements IFileSystemStorageService {
@@ -62,7 +67,7 @@ export class FileStorageService implements IFileSystemStorageService {
       return await readFile(filePath);
     } catch (error) {
       if (isEnoent(error)) return undefined;
-      throw toStorageIoError(error, { path: filePath, op: 'read' });
+      throw toStorageIoError(error, { path: filePath, op: "read" });
     }
   }
 
@@ -82,7 +87,7 @@ export class FileStorageService implements IFileSystemStorageService {
       }
     } catch (error) {
       if (isEnoent(error)) return;
-      throw toStorageIoError(error, { path: filePath, op: 'read' });
+      throw toStorageIoError(error, { path: filePath, op: "read" });
     }
   }
 
@@ -98,7 +103,7 @@ export class FileStorageService implements IFileSystemStorageService {
       await atomicWrite(filePath, data, undefined, this.fileMode);
       await this.syncDirOnce(dirname(filePath));
     } catch (error) {
-      throw toStorageIoError(error, { path: filePath, op: 'write' });
+      throw toStorageIoError(error, { path: filePath, op: "write" });
     }
   }
 
@@ -114,7 +119,7 @@ export class FileStorageService implements IFileSystemStorageService {
       await atomicWriteStream(filePath, source, this.fileMode);
       await this.syncDirOnce(dirname(filePath));
     } catch (error) {
-      throw toStorageIoError(error, { path: filePath, op: 'write' });
+      throw toStorageIoError(error, { path: filePath, op: "write" });
     }
   }
 
@@ -129,7 +134,7 @@ export class FileStorageService implements IFileSystemStorageService {
     try {
       await mkdir(dir, { recursive: true, mode: this.dirMode });
 
-      const fh = await open(filePath, 'a', this.fileMode);
+      const fh = await open(filePath, "a", this.fileMode);
       try {
         if (data.byteLength > 0) {
           await fh.writeFile(data);
@@ -142,7 +147,7 @@ export class FileStorageService implements IFileSystemStorageService {
       }
       await this.syncDirOnce(dir);
     } catch (error) {
-      throw toStorageIoError(error, { path: filePath, op: 'append' });
+      throw toStorageIoError(error, { path: filePath, op: "append" });
     }
   }
 
@@ -152,9 +157,14 @@ export class FileStorageService implements IFileSystemStorageService {
       entries = await readdir(this.scopePath(scope));
     } catch (error) {
       if (isEnoent(error)) return [];
-      throw toStorageIoError(error, { path: this.scopePath(scope), op: 'list' });
+      throw toStorageIoError(error, {
+        path: this.scopePath(scope),
+        op: "list",
+      });
     }
-    return prefix === undefined ? entries : entries.filter((entry) => entry.startsWith(prefix));
+    return prefix === undefined
+      ? entries
+      : entries.filter((entry) => entry.startsWith(prefix));
   }
 
   async delete(scope: string, key: string): Promise<void> {
@@ -163,7 +173,7 @@ export class FileStorageService implements IFileSystemStorageService {
       await unlink(filePath);
     } catch (error) {
       if (isEnoent(error)) return;
-      throw toStorageIoError(error, { path: filePath, op: 'delete' });
+      throw toStorageIoError(error, { path: filePath, op: "delete" });
     }
   }
 
@@ -190,10 +200,10 @@ export class FileStorageService implements IFileSystemStorageService {
           awaitWriteFinish: false,
           depth: 0,
         });
-        watcher.on('all', (_event, changedPath) => {
+        watcher.on("all", (_event, changedPath) => {
           if (normalize(changedPath) === normalizedTarget) schedule();
         });
-        watcher.on('error', (error: unknown) => onUnexpectedError(error));
+        watcher.on("error", (error: unknown) => onUnexpectedError(error));
         watcher.add(dir);
       } catch (error) {
         onUnexpectedError(error);
@@ -231,8 +241,7 @@ export class FileStorageService implements IFileSystemStorageService {
     };
   }
 
-  async flush(): Promise<void> {
-  }
+  async flush(): Promise<void> {}
 
   async close(): Promise<void> {}
 

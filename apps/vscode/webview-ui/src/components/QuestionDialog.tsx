@@ -52,15 +52,25 @@ export function QuestionDialog() {
   const customIndex = options.length + 1;
 
   return (
-    <div className={cn("mb-0.5 border border-blue-200 dark:border-blue-800 rounded-lg overflow-hidden bg-background flex flex-col shrink")}>
+    <div
+      className={cn(
+        "mb-0.5 border border-blue-200 dark:border-blue-800 rounded-lg overflow-hidden bg-background flex flex-col shrink",
+      )}
+    >
       <div className="p-2 space-y-2">
         {questions.length > 1 && (
           <div className="text-[10px] text-muted-foreground">
             Question {questionIndex + 1} of {questions.length}
           </div>
         )}
-        {question.header && <div className="text-[10px] text-muted-foreground uppercase tracking-wide">{question.header}</div>}
-        <div className="text-xs font-semibold text-foreground">{question.question}</div>
+        {question.header && (
+          <div className="text-[10px] text-muted-foreground uppercase tracking-wide">
+            {question.header}
+          </div>
+        )}
+        <div className="text-xs font-semibold text-foreground">
+          {question.question}
+        </div>
         <div className="space-y-1.5">
           {options.map((option, idx) => (
             <button
@@ -72,13 +82,33 @@ export function QuestionDialog() {
               className={cn(
                 "w-full text-left px-2 py-1 rounded-md text-xs transition-colors",
                 "border border-border cursor-pointer",
-                selectedIndex === idx + 1 ? "bg-blue-500 text-white border-blue-500" : "bg-background hover:bg-muted/50",
+                selectedIndex === idx + 1
+                  ? "bg-blue-500 text-white border-blue-500"
+                  : "bg-background hover:bg-muted/50",
               )}
             >
-              <span className={cn("mr-2", selectedIndex === idx + 1 ? "text-blue-200" : "text-muted-foreground")}>{idx + 1}</span>
+              <span
+                className={cn(
+                  "mr-2",
+                  selectedIndex === idx + 1
+                    ? "text-blue-200"
+                    : "text-muted-foreground",
+                )}
+              >
+                {idx + 1}
+              </span>
               <span className="font-medium">{option.label}</span>
               {option.description && (
-                <span className={cn("ml-2", selectedIndex === idx + 1 ? "text-blue-200" : "text-muted-foreground")}>- {option.description}</span>
+                <span
+                  className={cn(
+                    "ml-2",
+                    selectedIndex === idx + 1
+                      ? "text-blue-200"
+                      : "text-muted-foreground",
+                  )}
+                >
+                  - {option.description}
+                </span>
               )}
             </button>
           ))}
@@ -112,10 +142,21 @@ export function QuestionDialog() {
               className={cn(
                 "w-full text-left px-2 py-1 rounded-md text-xs transition-colors",
                 "border border-border cursor-pointer",
-                selectedIndex === customIndex ? "bg-blue-500 text-white border-blue-500" : "bg-background hover:bg-muted/50",
+                selectedIndex === customIndex
+                  ? "bg-blue-500 text-white border-blue-500"
+                  : "bg-background hover:bg-muted/50",
               )}
             >
-              <span className={cn("mr-2", selectedIndex === customIndex ? "text-blue-200" : "text-muted-foreground")}>{customIndex}</span>
+              <span
+                className={cn(
+                  "mr-2",
+                  selectedIndex === customIndex
+                    ? "text-blue-200"
+                    : "text-muted-foreground",
+                )}
+              >
+                {customIndex}
+              </span>
               <span className="font-medium">Custom response...</span>
             </button>
           )}

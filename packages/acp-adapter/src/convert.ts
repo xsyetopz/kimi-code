@@ -1,4 +1,4 @@
-import type { ContentBlock, ToolCallContent } from '@agentclientprotocol/sdk';
+import type { ContentBlock, ToolCallContent } from "@agentclientprotocol/sdk";
 import {
   log,
   buildImageCompressionCaption,
@@ -10,9 +10,9 @@ import {
   type TelemetryClient,
   type ToolInputDisplay,
   type ToolResultEvent,
-} from '@moonshot-ai/kimi-code-sdk';
+} from "@moonshot-ai/kimi-code-sdk";
 
-import { isHideOutputMarker } from './marker';
+import { isHideOutputMarker } from "./marker";
 
 /**
  * Convert an array of ACP {@link ContentBlock}s into the SDK's
@@ -27,53 +27,53 @@ export function acpBlocksToPromptParts(
 ): readonly PromptPart[] {
   const out: PromptPart[] = [];
   for (const block of blocks) {
-    if (block.type === 'text') {
-      out.push({ type: 'text', text: block.text });
+    if (block.type === "text") {
+      out.push({ type: "text", text: block.text });
       continue;
     }
-    if (block.type === 'image') {
+    if (block.type === "image") {
       const url = `data:${block.mimeType};base64,${block.data}`;
-      out.push({ type: 'image_url', imageUrl: { url } });
+      out.push({ type: "image_url", imageUrl: { url } });
       continue;
     }
-    if (block.type === 'audio') {
-      log.warn('acp: dropping unsupported audio prompt block', {
+    if (block.type === "audio") {
+      log.warn("acp: dropping unsupported audio prompt block", {
         mimeType: block.mimeType,
       });
       continue;
     }
-    if (block.type === 'resource_link') {
+    if (block.type === "resource_link") {
       const fileRef = fileLinkToTextRef(block.uri);
       if (fileRef !== null) {
-        out.push({ type: 'text', text: fileRef });
+        out.push({ type: "text", text: fileRef });
         continue;
       }
       const text = `<resource_link uri="${escapeXmlAttr(
         block.uri,
       )}" name="${escapeXmlAttr(block.name)}" />`;
-      out.push({ type: 'text', text });
+      out.push({ type: "text", text });
       continue;
     }
-    if (block.type === 'resource') {
+    if (block.type === "resource") {
       const resource = block.resource;
-      if ('text' in resource) {
+      if ("text" in resource) {
         // TextResourceContents — wrap as a `<resource>` element so the
         // model sees the uri provenance alongside the text body.
         const text = `<resource uri="${escapeXmlAttr(resource.uri)}">${
           resource.text
         }</resource>`;
-        out.push({ type: 'text', text });
+        out.push({ type: "text", text });
         continue;
       }
       // BlobResourceContents — D3 mandates drop+warn.
-      log.warn('acp: dropping blob embedded resource', {
+      log.warn("acp: dropping blob embedded resource", {
         uri: resource.uri,
         mimeType: resource.mimeType,
       });
       continue;
     }
     // Future-proof: anything else (new ACP block kinds) → warn and drop.
-    log.warn('acp: dropping unsupported prompt content block', {
+    log.warn("acp: dropping unsupported prompt content block", {
       type: (block as { type: string }).type,
     });
   }
@@ -115,24 +115,30 @@ export async function compressPromptImageParts(
 ): Promise<PromptPart[]> {
   const out: PromptPart[] = [];
   for (const part of gateImageFormatParts(parts) as PromptPart[]) {
-    if (part.type === 'image_url') {
+    if (part.type === "image_url") {
       const parsed = parseImageDataUrl(part.imageUrl.url);
       if (parsed !== null) {
-        const result = await compressBase64ForModel(parsed.base64, parsed.mimeType, {
-          maxEdge: options.maxImageEdgePx,
-          telemetry:
-            options.telemetry === undefined
-              ? undefined
-              : { client: options.telemetry, source: 'acp_prompt' },
-        });
+        const result = await compressBase64ForModel(
+          parsed.base64,
+          parsed.mimeType,
+          {
+            maxEdge: options.maxImageEdgePx,
+            telemetry:
+              options.telemetry === undefined
+                ? undefined
+                : { client: options.telemetry, source: "acp_prompt" },
+          },
+        );
         if (result.changed) {
           const originalPath = await persistOriginalImage(
-            Buffer.from(parsed.base64, 'base64'),
+            Buffer.from(parsed.base64, "base64"),
             parsed.mimeType,
-            options.originalsDir === undefined ? {} : { dir: options.originalsDir },
+            options.originalsDir === undefined
+              ? {}
+              : { dir: options.originalsDir },
           );
           out.push({
-            type: 'text',
+            type: "text",
             text: buildImageCompressionCaption({
               original: {
                 width: result.originalWidth,
@@ -150,8 +156,11 @@ export async function compressPromptImageParts(
             }),
           });
           out.push({
-            type: 'image_url',
-            imageUrl: { ...part.imageUrl, url: `data:${result.mimeType};base64,${result.base64}` },
+            type: "image_url",
+            imageUrl: {
+              ...part.imageUrl,
+              url: `data:${result.mimeType};base64,${result.base64}`,
+            },
           });
           continue;
         }
@@ -171,11 +180,11 @@ export async function compressPromptImageParts(
  */
 function escapeXmlAttr(s: string): string {
   return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;');
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
 }
 
 function fileLinkToTextRef(uri: string): string | null {
@@ -185,7 +194,7 @@ function fileLinkToTextRef(uri: string): string | null {
   } catch {
     return null;
   }
-  if (url.protocol !== 'file:') return null;
+  if (url.protocol !== "file:") return null;
 
   let path: string;
   try {
@@ -200,7 +209,7 @@ function fileLinkToTextRef(uri: string): string | null {
   // `file://localhost/...` is still treated as local. Host is lower-cased so
   // `file://Server/...` and `file://server/...` collapse to one ref.
   const host = url.hostname.toLowerCase();
-  const isUncHost = host !== '' && host !== 'localhost';
+  const isUncHost = host !== "" && host !== "localhost";
 
   // Drive-letter normalization is local-only: a UNC URI never legitimately
   // carries `/C:/...` in its path, so we leave such inputs untouched rather
@@ -208,7 +217,7 @@ function fileLinkToTextRef(uri: string): string | null {
   if (!isUncHost && /^\/[A-Za-z]:/.test(path)) path = path.slice(1);
 
   if (isUncHost) {
-    path = `//${host}${path.startsWith('/') ? path : `/${path}`}`;
+    path = `//${host}${path.startsWith("/") ? path : `/${path}`}`;
   }
 
   const range = parseLineRange(url.hash) ?? parseLineRange(url.search);
@@ -217,7 +226,7 @@ function fileLinkToTextRef(uri: string): string | null {
 
 function parseLineRange(suffix: string): string | null {
   if (!suffix) return null;
-  const body = suffix.replace(/^[#?]/, '');
+  const body = suffix.replace(/^[#?]/, "");
   const match = /^(?:lines?=|L)(\d+)(?:[-:]L?(\d+))?/i.exec(body);
   if (!match) return null;
   return match[2] !== undefined ? `${match[1]}-${match[2]}` : match[1]!;
@@ -226,30 +235,30 @@ function parseLineRange(suffix: string): string | null {
 export function displayBlockToAcpContent(
   block: ToolInputDisplay,
 ): ToolCallContent | null {
-  if (block.kind === 'diff') {
+  if (block.kind === "diff") {
     return {
-      type: 'diff',
+      type: "diff",
       path: block.path,
       oldText: block.before,
       newText: block.after,
     };
   }
   if (
-    block.kind === 'file_io' &&
+    block.kind === "file_io" &&
     block.before !== undefined &&
     block.after !== undefined
   ) {
     return {
-      type: 'diff',
+      type: "diff",
       path: block.path,
       oldText: block.before,
       newText: block.after,
     };
   }
-  if (block.kind === 'plan_review') {
+  if (block.kind === "plan_review") {
     const text = composePlanContent(block);
     if (text === null) return null;
-    return { type: 'content', content: { type: 'text', text } };
+    return { type: "content", content: { type: "text", text } };
   }
   return null;
 }
@@ -272,7 +281,7 @@ export function displayBlockToAcpContent(
  * concern).
  */
 function composePlanContent(
-  block: Extract<ToolInputDisplay, { kind: 'plan_review' }>,
+  block: Extract<ToolInputDisplay, { kind: "plan_review" }>,
 ): string | null {
   if (block.plan.trim().length === 0) return null;
   if (block.path !== undefined) {
@@ -296,7 +305,9 @@ function composePlanContent(
  * no `display` field; diffs attach to `ToolCallStartedEvent.display`
  * and are emitted by `toolCallStartToSessionUpdate`.
  */
-export function toolResultToAcpContent(event: ToolResultEvent): ToolCallContent[] {
+export function toolResultToAcpContent(
+  event: ToolResultEvent,
+): ToolCallContent[] {
   const out = event.output;
   // Mechanism A — array output containing the HideOutputMarker tells
   // the adapter to suppress this tool's textual content entirely
@@ -308,9 +319,9 @@ export function toolResultToAcpContent(event: ToolResultEvent): ToolCallContent[
     return [];
   }
   if (out === undefined || out === null) return [];
-  if (typeof out === 'string') {
+  if (typeof out === "string") {
     if (out.length === 0) return [];
-    return [{ type: 'content', content: { type: 'text', text: out } }];
+    return [{ type: "content", content: { type: "text", text: out } }];
   }
   // Best-effort stringify for object/array outputs.
   let text: string;
@@ -318,8 +329,8 @@ export function toolResultToAcpContent(event: ToolResultEvent): ToolCallContent[
     text = JSON.stringify(out);
   } catch {
     // eslint-disable-next-line no-base-to-string
-    text = typeof out === 'object' && out !== null ? '[object]' : String(out);
+    text = typeof out === "object" && out !== null ? "[object]" : String(out);
   }
   if (!text) return [];
-  return [{ type: 'content', content: { type: 'text', text } }];
+  return [{ type: "content", content: { type: "text", text } }];
 }

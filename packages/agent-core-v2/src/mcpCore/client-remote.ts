@@ -2,8 +2,8 @@
  * `mcpCore` domain — remote (HTTP/SSE) server config guards and request-header builders.
  */
 
-import type { McpRemoteServerConfig, McpServerConfig } from './config-schema';
-import { ErrorCodes, Error2 } from '#/errors';
+import type { McpRemoteServerConfig, McpServerConfig } from "./config-schema";
+import { ErrorCodes, Error2 } from "#/errors";
 
 export function buildMcpRemoteHeaders(
   config: McpRemoteServerConfig,
@@ -19,15 +19,17 @@ export function buildMcpRemoteHeaders(
       );
     }
     for (const key of Object.keys(headers)) {
-      if (key.toLowerCase() === 'authorization') {
+      if (key.toLowerCase() === "authorization") {
         delete headers[key];
       }
     }
-    headers['Authorization'] = `Bearer ${token}`;
+    headers["Authorization"] = `Bearer ${token}`;
   }
   return Object.keys(headers).length > 0 ? headers : undefined;
 }
 
-export function isRemoteMcpConfig(config: McpServerConfig): config is McpRemoteServerConfig {
-  return config.transport === 'http' || config.transport === 'sse';
+export function isRemoteMcpConfig(
+  config: McpServerConfig,
+): config is McpRemoteServerConfig {
+  return config.transport === "http" || config.transport === "sse";
 }

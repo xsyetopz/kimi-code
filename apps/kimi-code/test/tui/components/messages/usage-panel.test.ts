@@ -1,23 +1,26 @@
-import { visibleWidth } from '@moonshot-ai/pi-tui';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { visibleWidth } from "@moonshot-ai/pi-tui";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { buildUsageReportLines, UsagePanelComponent } from '#/tui/components/messages/usage-panel';
-import { currentTheme, darkColors, lightColors } from '#/tui/theme';
+import {
+  buildUsageReportLines,
+  UsagePanelComponent,
+} from "#/tui/components/messages/usage-panel";
+import { currentTheme, darkColors, lightColors } from "#/tui/theme";
 
 afterEach(() => {
   currentTheme.setPalette(darkColors);
 });
 
 function strip(text: string): string {
-  return text.replaceAll(/\u001B\[[0-9;]*m/g, '');
+  return text.replaceAll(/\u001B\[[0-9;]*m/g, "");
 }
 
-describe('UsagePanelComponent', () => {
-  it('formats session, context, and managed usage sections', () => {
+describe("UsagePanelComponent", () => {
+  it("formats session, context, and managed usage sections", () => {
     // Freeze the clock so the resetAt fixture is an exact hour out — with a
     // live clock the elapsed milliseconds floor the diff down to 59m.
     vi.useFakeTimers();
-    vi.setSystemTime(new Date('2026-07-28T00:00:00Z'));
+    vi.setSystemTime(new Date("2026-07-28T00:00:00Z"));
     try {
       const lines = buildUsageReportLines({
         sessionUsage: {
@@ -35,7 +38,7 @@ describe('UsagePanelComponent', () => {
         maxContextTokens: 10000,
         managedUsage: {
           summary: {
-            name: 'daily',
+            name: "daily",
             used: 20,
             limit: 100,
             resetAt: new Date(Date.now() + 3600_000).toISOString(),
@@ -44,40 +47,40 @@ describe('UsagePanelComponent', () => {
         },
       }).map(strip);
 
-      expect(lines).toContain('Session usage');
-      expect(lines).toContain('  kimi  input 2k  output 250  total 2.2k');
-      expect(lines).toContain('Context window');
-      expect(lines.join('\n')).toContain('25%');
-      expect(lines).toContain('Plan usage');
-      expect(lines.join('\n')).toContain('daily');
-      expect(lines.join('\n')).toContain('20% used');
-      expect(lines.join('\n')).toContain('resets in 1h');
+      expect(lines).toContain("Session usage");
+      expect(lines).toContain("  kimi  input 2k  output 250  total 2.2k");
+      expect(lines).toContain("Context window");
+      expect(lines.join("\n")).toContain("25%");
+      expect(lines).toContain("Plan usage");
+      expect(lines.join("\n")).toContain("daily");
+      expect(lines.join("\n")).toContain("20% used");
+      expect(lines.join("\n")).toContain("resets in 1h");
     } finally {
       vi.useRealTimers();
     }
   });
 
-  it('derives plan usage labels from the window and falls back to name / Limit', () => {
+  it("derives plan usage labels from the window and falls back to name / Limit", () => {
     const lines = buildUsageReportLines({
       sessionUsage: { byModel: {} },
       contextUsage: 0,
       contextTokens: 0,
       maxContextTokens: 0,
       managedUsage: {
-        summary: { window: { duration: 1, unit: 'week' }, used: 1, limit: 10 },
+        summary: { window: { duration: 1, unit: "week" }, used: 1, limit: 10 },
         limits: [
-          { window: { duration: 5, unit: 'hour' }, used: 2, limit: 10 },
-          { name: 'Custom cap', used: 3, limit: 10 },
+          { window: { duration: 5, unit: "hour" }, used: 2, limit: 10 },
+          { name: "Custom cap", used: 3, limit: 10 },
           { used: 4, limit: 10 },
         ],
       },
     }).map(strip);
 
-    const output = lines.join('\n');
-    expect(output).toContain('Weekly limit');
-    expect(output).toContain('5h limit');
-    expect(output).toContain('Custom cap');
-    expect(output).toContain('Limit');
+    const output = lines.join("\n");
+    expect(output).toContain("Weekly limit");
+    expect(output).toContain("5h limit");
+    expect(output).toContain("Custom cap");
+    expect(output).toContain("Limit");
   });
 
   it('shows "reset" when the reset timestamp is already in the past', () => {
@@ -90,7 +93,7 @@ describe('UsagePanelComponent', () => {
         summary: null,
         limits: [
           {
-            name: 'daily',
+            name: "daily",
             used: 1,
             limit: 10,
             resetAt: new Date(Date.now() - 60_000).toISOString(),
@@ -99,11 +102,11 @@ describe('UsagePanelComponent', () => {
       },
     }).map(strip);
 
-    expect(lines.join('\n')).toContain('reset');
-    expect(lines.join('\n')).not.toContain('resets in');
+    expect(lines.join("\n")).toContain("reset");
+    expect(lines.join("\n")).not.toContain("resets in");
   });
 
-  it('formats extra usage with a monthly limit', () => {
+  it("formats extra usage with a monthly limit", () => {
     const lines = buildUsageReportLines({
       sessionUsage: { byModel: {} },
       contextUsage: 0,
@@ -118,24 +121,24 @@ describe('UsagePanelComponent', () => {
           monthlyChargeLimitEnabled: true,
           monthlyChargeLimitCents: 20000,
           monthlyUsedCents: 5000,
-          currency: 'USD',
+          currency: "USD",
         },
       },
     }).map(strip);
 
-    const output = lines.join('\n');
-    expect(lines).toContain('Extra Usage');
-    expect(output).toContain('Balance');
-    expect(output).toContain('100.00');
-    expect(output).toContain('Used this month');
-    expect(output).toContain('50.00');
-    expect(output).toContain('Monthly limit');
-    expect(output).toContain('200.00');
+    const output = lines.join("\n");
+    expect(lines).toContain("Extra Usage");
+    expect(output).toContain("Balance");
+    expect(output).toContain("100.00");
+    expect(output).toContain("Used this month");
+    expect(output).toContain("50.00");
+    expect(output).toContain("Monthly limit");
+    expect(output).toContain("200.00");
     // bar row contains block glyphs but no percentage text
-    expect(output).toContain('░');
+    expect(output).toContain("░");
   });
 
-  it('formats extra usage without a monthly limit and omits the progress bar', () => {
+  it("formats extra usage without a monthly limit and omits the progress bar", () => {
     const lines = buildUsageReportLines({
       sessionUsage: { byModel: {} },
       contextUsage: 0,
@@ -150,24 +153,24 @@ describe('UsagePanelComponent', () => {
           monthlyChargeLimitEnabled: false,
           monthlyChargeLimitCents: 0,
           monthlyUsedCents: 21792,
-          currency: 'CNY',
+          currency: "CNY",
         },
       },
     }).map(strip);
 
-    const output = lines.join('\n');
-    expect(lines).toContain('Extra Usage');
-    expect(output).toContain('Balance');
-    expect(output).toContain('¥182.08');
-    expect(output).toContain('Used this month');
-    expect(output).toContain('¥217.92');
-    expect(output).toContain('Monthly limit');
-    expect(output).toContain('Unlimited');
-    expect(output).not.toContain('░');
-    expect(output).not.toContain('█');
+    const output = lines.join("\n");
+    expect(lines).toContain("Extra Usage");
+    expect(output).toContain("Balance");
+    expect(output).toContain("¥182.08");
+    expect(output).toContain("Used this month");
+    expect(output).toContain("¥217.92");
+    expect(output).toContain("Monthly limit");
+    expect(output).toContain("Unlimited");
+    expect(output).not.toContain("░");
+    expect(output).not.toContain("█");
   });
 
-  it('omits the extra usage section when extraUsage is omitted or null', () => {
+  it("omits the extra usage section when extraUsage is omitted or null", () => {
     for (const extraUsage of [undefined, null]) {
       const lines = buildUsageReportLines({
         sessionUsage: { byModel: {} },
@@ -177,11 +180,11 @@ describe('UsagePanelComponent', () => {
         managedUsage: { summary: null, limits: [], extraUsage },
       }).map(strip);
 
-      expect(lines).not.toContain('Extra Usage');
+      expect(lines).not.toContain("Extra Usage");
     }
   });
 
-  it('formats extra usage with CNY currency', () => {
+  it("formats extra usage with CNY currency", () => {
     const lines = buildUsageReportLines({
       sessionUsage: { byModel: {} },
       contextUsage: 0,
@@ -196,21 +199,21 @@ describe('UsagePanelComponent', () => {
           monthlyChargeLimitEnabled: true,
           monthlyChargeLimitCents: 20000,
           monthlyUsedCents: 5000,
-          currency: 'CNY',
+          currency: "CNY",
         },
       },
     }).map(strip);
 
-    const output = lines.join('\n');
-    expect(output).toContain('Balance');
-    expect(output).toContain('100.00');
-    expect(output).toContain('Used this month');
-    expect(output).toContain('50.00');
-    expect(output).toContain('Monthly limit');
-    expect(output).toContain('200.00');
+    const output = lines.join("\n");
+    expect(output).toContain("Balance");
+    expect(output).toContain("100.00");
+    expect(output).toContain("Used this month");
+    expect(output).toContain("50.00");
+    expect(output).toContain("Monthly limit");
+    expect(output).toContain("200.00");
   });
 
-  it('aligns the currency symbol and decimal point across extra usage rows', () => {
+  it("aligns the currency symbol and decimal point across extra usage rows", () => {
     const lines = buildUsageReportLines({
       sessionUsage: { byModel: {} },
       contextUsage: 0,
@@ -225,31 +228,34 @@ describe('UsagePanelComponent', () => {
           monthlyChargeLimitEnabled: true,
           monthlyChargeLimitCents: 300000,
           monthlyUsedCents: 24099,
-          currency: 'CNY',
+          currency: "CNY",
         },
       },
     }).map(strip);
 
-    const extraRows = lines.filter((line) => line.includes('¥'));
+    const extraRows = lines.filter((line) => line.includes("¥"));
     expect(extraRows).toHaveLength(3);
     // The currency symbol stays in one column...
-    expect(new Set(extraRows.map((line) => line.indexOf('¥'))).size).toBe(1);
+    expect(new Set(extraRows.map((line) => line.indexOf("¥"))).size).toBe(1);
     // ...and the right-aligned numeric parts end in the same column, so the
     // decimal points line up across rows.
     expect(new Set(extraRows.map((line) => line.length)).size).toBe(1);
   });
 
-  it('wraps preformatted usage lines in a bordered panel', () => {
-    const component = new UsagePanelComponent(() => ['Session usage'], 'primary');
+  it("wraps preformatted usage lines in a bordered panel", () => {
+    const component = new UsagePanelComponent(
+      () => ["Session usage"],
+      "primary",
+    );
     const output = component.render(80).map(strip);
 
-    expect(output[0]).toContain(' Usage ');
-    expect(output[1]).toContain('Session usage');
+    expect(output[0]).toContain(" Usage ");
+    expect(output[1]).toContain("Session usage");
   });
 
-  it('truncates lines wider than the terminal so the panel never overflows', () => {
-    const longLine = 'error: ' + 'x'.repeat(200);
-    const component = new UsagePanelComponent(() => [longLine], 'primary');
+  it("truncates lines wider than the terminal so the panel never overflows", () => {
+    const longLine = "error: " + "x".repeat(200);
+    const component = new UsagePanelComponent(() => [longLine], "primary");
     const width = 60;
 
     const output = component.render(width);
@@ -259,8 +265,11 @@ describe('UsagePanelComponent', () => {
     }
   });
 
-  it('keeps the bordered panel within narrow terminal widths', () => {
-    const component = new UsagePanelComponent(() => ['Session usage', '  kimi  input 2.0k'], 'primary');
+  it("keeps the bordered panel within narrow terminal widths", () => {
+    const component = new UsagePanelComponent(
+      () => ["Session usage", "  kimi  input 2.0k"],
+      "primary",
+    );
 
     for (const width of [39, 24, 20, 10, 4, 1]) {
       for (const line of component.render(width)) {
@@ -269,13 +278,19 @@ describe('UsagePanelComponent', () => {
     }
   });
 
-  it('rebuilds its body from the active palette on invalidate', () => {
+  it("rebuilds its body from the active palette on invalidate", () => {
     // Emit the resolved palette value as visible text so the assertion holds
     // regardless of chalk's colour level in the test environment.
-    const component = new UsagePanelComponent(() => [`text=${currentTheme.color('text')}`], 'primary');
+    const component = new UsagePanelComponent(
+      () => [`text=${currentTheme.color("text")}`],
+      "primary",
+    );
     const bodyOf = (): string => {
-      const line = component.render(80).map(strip).find((l) => l.includes('text='));
-      if (line === undefined) throw new Error('body line not found');
+      const line = component
+        .render(80)
+        .map(strip)
+        .find((l) => l.includes("text="));
+      if (line === undefined) throw new Error("body line not found");
       return line;
     };
 

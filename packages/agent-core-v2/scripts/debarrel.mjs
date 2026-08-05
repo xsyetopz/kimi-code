@@ -15,31 +15,36 @@
  *   --verify-coverage  exit non-zero if any register file is unreachable from entry
  *   --dry-run          report planned edits without writing
  */
-import { Project } from 'ts-morph';
-import path from 'node:path';
-import fs from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { Project } from "ts-morph";
+import path from "node:path";
+import fs from "node:fs";
+import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const PKG = path.resolve(__dirname, '..');
-const SRC = path.join(PKG, 'src');
-const ENTRY = path.join(SRC, 'index.ts');
+const PKG = path.resolve(__dirname, "..");
+const SRC = path.join(PKG, "src");
+const ENTRY = path.join(SRC, "index.ts");
 
 const args = process.argv.slice(2);
-const DRY = args.includes('--dry-run');
-const ONLY = (args.find((a) => a.startsWith('--only=')) || '').slice('--only='.length) || null;
-const ENTRY_ONLY = args.includes('--entry');
-const DELETE_BARRELS = args.includes('--delete-barrels');
-const LIST_REGS = args.includes('--list-registers');
-const VERIFY = args.includes('--verify-coverage');
+const DRY = args.includes("--dry-run");
+const ONLY =
+  (args.find((a) => a.startsWith("--only=")) || "").slice("--only=".length) ||
+  null;
+const ENTRY_ONLY = args.includes("--entry");
+const DELETE_BARRELS = args.includes("--delete-barrels");
+const LIST_REGS = args.includes("--list-registers");
+const VERIFY = args.includes("--verify-coverage");
 
-const project = new Project({ tsConfigFilePath: path.join(PKG, 'tsconfig.json') });
+const project = new Project({
+  tsConfigFilePath: path.join(PKG, "tsconfig.json"),
+});
 
 const relSpec = (absFile) =>
-  '#/' + path.relative(SRC, absFile).split(path.sep).join('/').replace(/\.ts$/, '');
+  "#/" +
+  path.relative(SRC, absFile).split(path.sep).join("/").replace(/\.ts$/, "");
 
 const isUnderSrc = (abs) => abs === SRC || abs.startsWith(SRC + path.sep);
-const isIndexBasename = (abs) => path.basename(abs) === 'index.ts';
+const isIndexBasename = (abs) => path.basename(abs) === "index.ts";
 const isBarrelFile = (sf) => {
   const f = sf.getFilePath();
   return isUnderSrc(f) && isIndexBasename(f) && f !== ENTRY;
@@ -84,9 +89,13 @@ function expandBarrelClauses(barrel) {
     const isStar =
       ed.getNamedExports().length === 0 && !ed.getNamespaceExport();
     if (isStar) {
-      clauses.push({ kind: 'star', file });
+      clauses.push({ kind: "star", file });
     } else if (ed.getNamespaceExport()) {
-      clauses.push({ kind: 'namespace', file, name: ed.getNamespaceExport().getName() });
+      clauses.push({
+        kind: "namespace",
+        file,
+        name: ed.getNamespaceExport().getName(),
+      });
     } else {
       const declType = ed.isTypeOnly();
       const specs = ed.getNamedExports().map((s) => ({
@@ -94,7 +103,7 @@ function expandBarrelClauses(barrel) {
         alias: s.getAliasNode()?.getText(),
         isTypeOnly: declType || s.isTypeOnly(),
       }));
-      clauses.push({ kind: 'named', file, isTypeOnly: declType, specs });
+      clauses.push({ kind: "named", file, isTypeOnly: declType, specs });
     }
   }
   return clauses;
@@ -108,10 +117,10 @@ function allLeavesUnderDir(dirAbs) {
       if (ent.isDirectory()) walk(p);
       else if (
         ent.isFile() &&
-        p.endsWith('.ts') &&
-        !p.endsWith('.test.ts') &&
-        !p.endsWith('.d.ts') &&
-        path.basename(p) !== 'index.ts'
+        p.endsWith(".ts") &&
+        !p.endsWith(".test.ts") &&
+        !p.endsWith(".d.ts") &&
+        path.basename(p) !== "index.ts"
       ) {
         out.push(p);
       }
@@ -134,14 +143,20 @@ function rewriteConsumerFile(sf, onlyBarrelPath) {
     if (onlyBarrelPath && barrel.getFilePath() !== onlyBarrelPath) continue;
 
     if (decl.getNamespaceImport()) {
-      report.manuals.push({ sf: sf.getFilePath(), text: decl.getText(), why: 'namespace import' });
+      report.manuals.push({
+        sf: sf.getFilePath(),
+        text: decl.getText(),
+        why: "namespace import",
+      });
       continue;
     }
     const hasDefault = !!decl.getDefaultImport();
     const named = decl.getNamedImports();
     if (!hasDefault && named.length === 0) {
       // side-effect: import '#/B' -> load each leaf of B.
-      const leaves = [...new Set(expandBarrelClauses(barrel).map((c) => c.file))];
+      const leaves = [
+        ...new Set(expandBarrelClauses(barrel).map((c) => c.file)),
+      ];
       const idx = sf.getImportDeclarations().indexOf(decl);
       sf.insertImportDeclarations(
         idx,
@@ -161,8 +176,13 @@ function rewriteConsumerFile(sf, onlyBarrelPath) {
     };
 
     if (hasDefault) {
-      const r = resolveName(barrel, 'default');
-      if (!r) report.manuals.push({ sf: sf.getFilePath(), text: decl.getText(), why: 'default import unresolved' });
+      const r = resolveName(barrel, "default");
+      if (!r)
+        report.manuals.push({
+          sf: sf.getFilePath(),
+          text: decl.getText(),
+          why: "default import unresolved",
+        });
       else add(r.leafFile, { default: decl.getDefaultImport().getText() });
     }
     for (const s of named) {
@@ -170,7 +190,11 @@ function rewriteConsumerFile(sf, onlyBarrelPath) {
       const local = s.getAliasNode()?.getText() || s.getName();
       const r = resolveName(barrel, lookup);
       if (!r) {
-        report.manuals.push({ sf: sf.getFilePath(), text: s.getText(), why: 'named import unresolved' });
+        report.manuals.push({
+          sf: sf.getFilePath(),
+          text: s.getText(),
+          why: "named import unresolved",
+        });
         continue;
       }
       add(r.leafFile, {
@@ -192,15 +216,20 @@ function rewriteConsumerFile(sf, onlyBarrelPath) {
     if (!barrel) continue;
     if (onlyBarrelPath && barrel.getFilePath() !== onlyBarrelPath) continue;
 
-    const isStar = decl.getNamedExports().length === 0 && !decl.getNamespaceExport();
+    const isStar =
+      decl.getNamedExports().length === 0 && !decl.getNamespaceExport();
     if (isStar) {
       const clauses = expandBarrelClauses(barrel);
-      decl.replaceWithText(clauses.map(exportClauseToText).join('\n'));
+      decl.replaceWithText(clauses.map(exportClauseToText).join("\n"));
       report.exports++;
       continue;
     }
     if (decl.getNamespaceExport()) {
-      report.manuals.push({ sf: sf.getFilePath(), text: decl.getText(), why: 'namespace export' });
+      report.manuals.push({
+        sf: sf.getFilePath(),
+        text: decl.getText(),
+        why: "namespace export",
+      });
       continue;
     }
     // named re-export
@@ -211,10 +240,15 @@ function rewriteConsumerFile(sf, onlyBarrelPath) {
       const exportedAs = s.getAliasNode()?.getText() || s.getName();
       const r = resolveName(barrel, lookup);
       if (!r) {
-        report.manuals.push({ sf: sf.getFilePath(), text: s.getText(), why: 'named export unresolved' });
+        report.manuals.push({
+          sf: sf.getFilePath(),
+          text: s.getText(),
+          why: "named export unresolved",
+        });
         continue;
       }
-      if (!groups.has(r.leafFile)) groups.set(r.leafFile, { specs: [], allType: true });
+      if (!groups.has(r.leafFile))
+        groups.set(r.leafFile, { specs: [], allType: true });
       const g = groups.get(r.leafFile);
       const t = declType || s.isTypeOnly();
       g.allType = g.allType && t;
@@ -228,7 +262,7 @@ function rewriteConsumerFile(sf, onlyBarrelPath) {
     for (const [leaf, { specs, allType }] of groups) {
       lines.push(renderNamedExport(relSpec(leaf), specs, allType));
     }
-    decl.replaceWithText(lines.join('\n'));
+    decl.replaceWithText(lines.join("\n"));
     report.exports++;
   }
   return report;
@@ -262,14 +296,18 @@ function buildImportStructures(groups) {
 
 function renderNamedExport(spec, specs, allType) {
   const body = specs
-    .map((s) => `${allType ? '' : s.isTypeOnly ? 'type ' : ''}${s.name}${s.alias ? ' as ' + s.alias : ''}`)
-    .join(', ');
-  return `${allType ? 'export type' : 'export'} { ${body} } from '${spec}';`;
+    .map(
+      (s) =>
+        `${allType ? "" : s.isTypeOnly ? "type " : ""}${s.name}${s.alias ? " as " + s.alias : ""}`,
+    )
+    .join(", ");
+  return `${allType ? "export type" : "export"} { ${body} } from '${spec}';`;
 }
 
 function exportClauseToText(c) {
-  if (c.kind === 'star') return `export * from '${relSpec(c.file)}';`;
-  if (c.kind === 'namespace') return `export * as ${c.name} from '${relSpec(c.file)}';`;
+  if (c.kind === "star") return `export * from '${relSpec(c.file)}';`;
+  if (c.kind === "namespace")
+    return `export * as ${c.name} from '${relSpec(c.file)}';`;
   return renderNamedExport(relSpec(c.file), c.specs, c.isTypeOnly);
 }
 
@@ -280,19 +318,25 @@ function regenerateEntry() {
   const entrySf = project.getSourceFileOrThrow(ENTRY);
   const original = entrySf.getFullText();
   const headerMatch = original.match(/^\s*\/\*\*[\s\S]*?\*\//);
-  const header = headerMatch ? headerMatch[0] : '/** agent-core-v2 public surface. */';
+  const header = headerMatch
+    ? headerMatch[0]
+    : "/** agent-core-v2 public surface. */";
 
   // First pass: classify each referenced barrel and how it is referenced.
   /** @type {Array<{decl: any, barrel: any, mode: 'star'|'named'|'side'}>} */
   const refs = [];
-  for (const decl of [...entrySf.getExportDeclarations(), ...entrySf.getImportDeclarations()]) {
+  for (const decl of [
+    ...entrySf.getExportDeclarations(),
+    ...entrySf.getImportDeclarations(),
+  ]) {
     const barrel = barrelOfDecl(decl);
     if (!barrel) continue;
     let mode;
-    if (decl.getKindName() === 'ImportDeclaration') mode = 'side';
+    if (decl.getKindName() === "ImportDeclaration") mode = "side";
     else {
-      const isStar = decl.getNamedExports().length === 0 && !decl.getNamespaceExport();
-      mode = isStar ? 'star' : 'named';
+      const isStar =
+        decl.getNamedExports().length === 0 && !decl.getNamespaceExport();
+      mode = isStar ? "star" : "named";
     }
     refs.push({ decl, barrel, mode });
   }
@@ -306,12 +350,14 @@ function regenerateEntry() {
     const dirAbs = path.dirname(bf);
     const allLeaves = allLeavesUnderDir(dirAbs);
     const clauses = expandBarrelClauses(barrel);
-    const starLeaves = new Set(clauses.filter((c) => c.kind === 'star').map((c) => c.file));
+    const starLeaves = new Set(
+      clauses.filter((c) => c.kind === "star").map((c) => c.file),
+    );
 
-    if (mode === 'star') {
+    if (mode === "star") {
       // Public: replay the barrel's clauses in order against precise leaves.
       for (const c of clauses) publicLines.push(exportClauseToText(c));
-    } else if (mode === 'named') {
+    } else if (mode === "named") {
       const declType = decl.isTypeOnly();
       const groups = new Map();
       for (const s of decl.getNamedExports()) {
@@ -319,7 +365,8 @@ function regenerateEntry() {
         const exportedAs = s.getAliasNode()?.getText() || s.getName();
         const r = resolveName(barrel, lookup);
         if (!r) continue;
-        if (!groups.has(r.leafFile)) groups.set(r.leafFile, { specs: [], allType: true });
+        if (!groups.has(r.leafFile))
+          groups.set(r.leafFile, { specs: [], allType: true });
         const g = groups.get(r.leafFile);
         const t = declType || s.isTypeOnly();
         g.allType = g.allType && t;
@@ -346,15 +393,15 @@ function regenerateEntry() {
 
   const body = [
     header,
-    '',
-    '// Public surface — precise re-exports of each domain leaf (no barrels).',
+    "",
+    "// Public surface — precise re-exports of each domain leaf (no barrels).",
     ...publicLines,
-    '',
-    '// Side-effect loading — ensure every domain leaf (and its top-level',
-    '// `register*` calls) is evaluated when the package is imported.',
+    "",
+    "// Side-effect loading — ensure every domain leaf (and its top-level",
+    "// `register*` calls) is evaluated when the package is imported.",
     ...loadingLines,
-    '',
-  ].join('\n');
+    "",
+  ].join("\n");
 
   if (!DRY) fs.writeFileSync(ENTRY, body);
   return { publicLines: publicLines.length, loadingLines: loadingLines.length };
@@ -364,12 +411,12 @@ function regenerateEntry() {
 // Register-file enumeration + coverage verification.
 // ---------------------------------------------------------------------------
 const REGISTER_NAMES = new Set([
-  'registerScopedService',
-  'registerAgentToolService',
-  'registerErrorDomain',
-  'registerConfigSection',
-  'registerAgentProfile',
-  'registerFlagDefinition',
+  "registerScopedService",
+  "registerAgentToolService",
+  "registerErrorDomain",
+  "registerConfigSection",
+  "registerAgentProfile",
+  "registerFlagDefinition",
 ]);
 
 function isModuleScoped(call) {
@@ -377,12 +424,12 @@ function isModuleScoped(call) {
   while (n) {
     const k = n.getKindName();
     if (
-      k === 'FunctionDeclaration' ||
-      k === 'FunctionExpression' ||
-      k === 'ArrowFunction' ||
-      k === 'MethodDeclaration' ||
-      k === 'Constructor' ||
-      k === 'ClassDeclaration'
+      k === "FunctionDeclaration" ||
+      k === "FunctionExpression" ||
+      k === "ArrowFunction" ||
+      k === "MethodDeclaration" ||
+      k === "Constructor" ||
+      k === "ClassDeclaration"
     ) {
       return false;
     }
@@ -395,13 +442,13 @@ function findRegisterFiles() {
   const files = [];
   for (const sf of project.getSourceFiles()) {
     const f = sf.getFilePath();
-    if (!isUnderSrc(f) || f.endsWith('.test.ts')) continue;
+    if (!isUnderSrc(f) || f.endsWith(".test.ts")) continue;
     let hit = false;
     sf.forEachDescendant((node) => {
       if (hit) return;
-      if (node.getKindName() !== 'CallExpression') return;
+      if (node.getKindName() !== "CallExpression") return;
       const expr = node.getExpression();
-      if (expr.getKindName() !== 'Identifier') return;
+      if (expr.getKindName() !== "Identifier") return;
       if (!REGISTER_NAMES.has(expr.getText())) return;
       if (isModuleScoped(node)) hit = true;
     });
@@ -417,7 +464,10 @@ function reachedFromEntry() {
     if (reached.has(f)) return;
     reached.add(f);
     if (!isUnderSrc(f)) return;
-    const edges = [...sf.getImportDeclarations(), ...sf.getExportDeclarations()];
+    const edges = [
+      ...sf.getImportDeclarations(),
+      ...sf.getExportDeclarations(),
+    ];
     for (const d of edges) {
       if (d.isTypeOnly && d.isTypeOnly()) continue; // type-only edges don't execute
       const t = resolvedFile(d);
@@ -432,10 +482,12 @@ function verifyCoverage() {
   const regs = findRegisterFiles();
   const reached = reachedFromEntry();
   const missing = regs.filter((f) => !reached.has(f));
-  console.log(`register files: ${regs.length}; reachable from entry: ${reached.size}; missing: ${missing.length}`);
+  console.log(
+    `register files: ${regs.length}; reachable from entry: ${reached.size}; missing: ${missing.length}`,
+  );
   if (missing.length) {
-    console.log('MISSING (not reachable from src/index.ts):');
-    for (const m of missing) console.log('  ' + path.relative(PKG, m));
+    console.log("MISSING (not reachable from src/index.ts):");
+    for (const m of missing) console.log("  " + path.relative(PKG, m));
     return false;
   }
   return true;
@@ -466,23 +518,34 @@ function main() {
   }
   if (ENTRY_ONLY) {
     const r = regenerateEntry();
-    console.log(`entry regenerated: ${r.publicLines} public lines, ${r.loadingLines} loading lines${DRY ? ' (dry-run)' : ''}`);
+    console.log(
+      `entry regenerated: ${r.publicLines} public lines, ${r.loadingLines} loading lines${DRY ? " (dry-run)" : ""}`,
+    );
     return;
   }
 
   let onlyBarrelPath = null;
   if (ONLY) {
-    onlyBarrelPath = path.join(SRC, ONLY, 'index.ts');
+    onlyBarrelPath = path.join(SRC, ONLY, "index.ts");
     if (!fs.existsSync(onlyBarrelPath)) {
-      console.error(`--only target not a barrel: ${path.relative(PKG, onlyBarrelPath)}`);
+      console.error(
+        `--only target not a barrel: ${path.relative(PKG, onlyBarrelPath)}`,
+      );
       process.exit(2);
     }
   }
 
-  const totals = { files: 0, imports: 0, exports: 0, sideEffects: 0, manuals: [] };
+  const totals = {
+    files: 0,
+    imports: 0,
+    exports: 0,
+    sideEffects: 0,
+    manuals: [],
+  };
   for (const sf of project.getSourceFiles()) {
     const f = sf.getFilePath();
-    if (!isUnderSrc(f) && !f.startsWith(path.join(PKG, 'test') + path.sep)) continue;
+    if (!isUnderSrc(f) && !f.startsWith(path.join(PKG, "test") + path.sep))
+      continue;
     if (f === ENTRY) continue; // entry handled by --entry
     const before = sf.getFullText();
     const r = rewriteConsumerFile(sf, onlyBarrelPath);
@@ -498,17 +561,19 @@ function main() {
   if (!DRY) project.saveSync();
 
   console.log(
-    `rewrote ${totals.files} files: ${totals.imports} barrel imports, ${totals.exports} barrel exports, ${totals.sideEffects} side-effect loads${DRY ? ' (dry-run)' : ''}`,
+    `rewrote ${totals.files} files: ${totals.imports} barrel imports, ${totals.exports} barrel exports, ${totals.sideEffects} side-effect loads${DRY ? " (dry-run)" : ""}`,
   );
   if (totals.manuals.length) {
     console.log(`MANUAL (${totals.manuals.length}) — could not auto-split:`);
     for (const m of totals.manuals)
-      console.log(`  ${path.relative(PKG, m.sf)} :: ${m.why} :: ${m.text.replace(/\s+/g, ' ').slice(0, 120)}`);
+      console.log(
+        `  ${path.relative(PKG, m.sf)} :: ${m.why} :: ${m.text.replace(/\s+/g, " ").slice(0, 120)}`,
+      );
   }
 
   if (DELETE_BARRELS) {
     const n = deleteBarrels();
-    console.log(`deleted ${n} domain barrels${DRY ? ' (dry-run)' : ''}`);
+    console.log(`deleted ${n} domain barrels${DRY ? " (dry-run)" : ""}`);
   }
 }
 

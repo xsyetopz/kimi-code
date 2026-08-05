@@ -1,7 +1,7 @@
-import { mkdir, mkdtemp, readdir, rm, stat } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
+import { mkdir, mkdtemp, readdir, rm, stat } from "node:fs/promises";
+import { dirname, join } from "node:path";
 
-import { getCacheDir } from '../utils/paths';
+import { getCacheDir } from "../utils/paths";
 
 const STALE_ARCHIVE_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours.
 
@@ -40,11 +40,13 @@ export async function removeStaleFeedbackUploads(
   options: { readonly now?: number; readonly dir?: string } = {},
 ): Promise<void> {
   const now = options.now ?? Date.now();
-  const dir = options.dir ?? join(getCacheDir(), 'feedback-uploads');
-  const entries = await readdir(dir, { withFileTypes: true }).catch((error: unknown) => {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
-    throw error;
-  });
+  const dir = options.dir ?? join(getCacheDir(), "feedback-uploads");
+  const entries = await readdir(dir, { withFileTypes: true }).catch(
+    (error: unknown) => {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+      throw error;
+    },
+  );
   if (entries === null) return;
 
   const cutoff = now - STALE_ARCHIVE_MAX_AGE_MS;
@@ -61,9 +63,9 @@ export async function removeStaleFeedbackUploads(
 
 async function createArchivePath(filename: string): Promise<string> {
   await removeStaleFeedbackUploads();
-  const root = join(getCacheDir(), 'feedback-uploads');
+  const root = join(getCacheDir(), "feedback-uploads");
   await mkdir(root, { recursive: true });
-  const dir = await mkdtemp(join(root, 'upload-'));
+  const dir = await mkdtemp(join(root, "upload-"));
   return join(dir, filename);
 }
 

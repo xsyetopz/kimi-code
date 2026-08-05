@@ -1,13 +1,18 @@
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from "vitest";
 
-import { createKimiHarness, ImageLimits, KimiHarness, SDKRpcClientBase } from '#/index';
+import {
+  createKimiHarness,
+  ImageLimits,
+  KimiHarness,
+  SDKRpcClientBase,
+} from "#/index";
 
-import { recordingTelemetry } from './telemetry';
-import { TEST_IDENTITY } from './test-identity';
+import { recordingTelemetry } from "./telemetry";
+import { TEST_IDENTITY } from "./test-identity";
 
 const tempDirs: string[] = [];
 
@@ -24,22 +29,22 @@ afterEach(async () => {
 class StubRpc extends SDKRpcClientBase {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   protected async getRpc(): Promise<any> {
-    throw new Error('no core calls expected');
+    throw new Error("no core calls expected");
   }
 }
 
-describe('KimiHarness imageLimits', () => {
-  it('exposes the in-process core [image] limits loaded from config.toml', async () => {
-    const homeDir = await mkdtemp(join(tmpdir(), 'kimi-sdk-harness-'));
+describe("KimiHarness imageLimits", () => {
+  it("exposes the in-process core [image] limits loaded from config.toml", async () => {
+    const homeDir = await mkdtemp(join(tmpdir(), "kimi-sdk-harness-"));
     tempDirs.push(homeDir);
     await writeFile(
-      join(homeDir, 'config.toml'),
+      join(homeDir, "config.toml"),
       `
 [image]
 max_edge_px = 1200
 read_byte_budget = 65536
 `,
-      'utf-8',
+      "utf-8",
     );
 
     const harness = createKimiHarness({ identity: TEST_IDENTITY, homeDir });
@@ -54,8 +59,8 @@ read_byte_budget = 65536
     }
   });
 
-  it('falls back to built-in defaults when no [image] section is configured', async () => {
-    const homeDir = await mkdtemp(join(tmpdir(), 'kimi-sdk-harness-'));
+  it("falls back to built-in defaults when no [image] section is configured", async () => {
+    const homeDir = await mkdtemp(join(tmpdir(), "kimi-sdk-harness-"));
     tempDirs.push(homeDir);
 
     const harness = createKimiHarness({ identity: TEST_IDENTITY, homeDir });
@@ -68,11 +73,11 @@ read_byte_budget = 65536
     }
   });
 
-  it('a hand-built harness returns the injected ImageLimits as-is', () => {
+  it("a hand-built harness returns the injected ImageLimits as-is", () => {
     const limits = new ImageLimits(process.env, { maxEdgePx: 900 });
     const harness = new KimiHarness(new StubRpc(), {
-      homeDir: '/tmp/home',
-      configPath: '/tmp/config.toml',
+      homeDir: "/tmp/home",
+      configPath: "/tmp/config.toml",
       auth: { status: async () => ({ providers: [] }) } as never,
       telemetry: recordingTelemetry([]),
       ensureConfigFile: async () => undefined,

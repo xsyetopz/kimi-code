@@ -1,4 +1,4 @@
-import { AsyncLocalStorage } from 'node:async_hooks';
+import { AsyncLocalStorage } from "node:async_hooks";
 
 import {
   ErrorCodes,
@@ -19,10 +19,10 @@ import {
   type ToolCallRequest,
   type ToolCallResponse,
   type SwarmModeTrigger,
-} from '@moonshot-ai/agent-core';
-import type { Kaos } from '@moonshot-ai/kaos';
+} from "@moonshot-ai/agent-core";
+import type { Kaos } from "@moonshot-ai/kaos";
 
-import type { ApprovalHandler, QuestionHandler } from '#/events';
+import type { ApprovalHandler, QuestionHandler } from "#/events";
 import type {
   AddAdditionalDirInput,
   AddAdditionalDirResult,
@@ -61,9 +61,9 @@ import type {
   PluginCommandDef,
   Unsubscribe,
   WorkspaceTrustInfo,
-} from '#/types';
+} from "#/types";
 
-const MAIN_AGENT_ID = 'main';
+const MAIN_AGENT_ID = "main";
 
 export interface SessionPromptRpcInput {
   readonly sessionId: string;
@@ -115,7 +115,10 @@ export interface SetSessionPlanModeRpcInput extends SessionIdRpcInput {
 }
 
 export type SetSessionSwarmModeRpcInput =
-  | (SessionIdRpcInput & { readonly enabled: true; readonly trigger: SwarmModeTrigger })
+  | (SessionIdRpcInput & {
+      readonly enabled: true;
+      readonly trigger: SwarmModeTrigger;
+    })
   | (SessionIdRpcInput & { readonly enabled: false });
 
 export interface ActivateSkillRpcInput extends SessionIdRpcInput {
@@ -168,7 +171,9 @@ export abstract class SDKRpcClientBase {
     return this.createSession(input);
   }
 
-  async resumeSession(input: ResumeSessionInput): Promise<ResumedSessionSummary> {
+  async resumeSession(
+    input: ResumeSessionInput,
+  ): Promise<ResumedSessionSummary> {
     const rpc = await this.getRpc();
     return rpc.resumeSession({ ...input, sessionId: input.id });
   }
@@ -183,7 +188,9 @@ export abstract class SDKRpcClientBase {
     return this.resumeSession(input);
   }
 
-  async reloadSession(input: ReloadSessionRpcInput): Promise<ResumedSessionSummary> {
+  async reloadSession(
+    input: ReloadSessionRpcInput,
+  ): Promise<ResumedSessionSummary> {
     const rpc = await this.getRpc();
     return rpc.reloadSession({
       sessionId: input.sessionId,
@@ -212,7 +219,9 @@ export abstract class SDKRpcClientBase {
     return rpc.deleteSession({ sessionId: input.sessionId });
   }
 
-  async listSessions(input: ListSessionsOptions = {}): Promise<readonly SessionSummary[]> {
+  async listSessions(
+    input: ListSessionsOptions = {},
+  ): Promise<readonly SessionSummary[]> {
     const rpc = await this.getRpc();
     return rpc.listSessions(input);
   }
@@ -266,7 +275,9 @@ export abstract class SDKRpcClientBase {
     return rpc.getConfigDiagnostics({});
   }
 
-  async getExperimentalFeatures(): Promise<readonly ExperimentalFeatureState[]> {
+  async getExperimentalFeatures(): Promise<
+    readonly ExperimentalFeatureState[]
+  > {
     const rpc = await this.getRpc();
     return rpc.getExperimentalFeatures({});
   }
@@ -300,7 +311,7 @@ export abstract class SDKRpcClientBase {
   replaceConfigSections(_sections: Record<string, unknown>): Promise<void> {
     throw new KimiError(
       ErrorCodes.NOT_IMPLEMENTED,
-      'This SDK client does not support atomic config section replacement.',
+      "This SDK client does not support atomic config section replacement.",
     );
   }
 
@@ -309,22 +320,30 @@ export abstract class SDKRpcClientBase {
     return rpc.listGlobalMcpServers({});
   }
 
-  async addGlobalMcpServer(server: McpServerConfig): Promise<readonly McpServerConfig[]> {
+  async addGlobalMcpServer(
+    server: McpServerConfig,
+  ): Promise<readonly McpServerConfig[]> {
     const rpc = await this.getRpc();
     return rpc.addGlobalMcpServer({ server });
   }
 
-  async updateGlobalMcpServer(server: McpServerConfig): Promise<readonly McpServerConfig[]> {
+  async updateGlobalMcpServer(
+    server: McpServerConfig,
+  ): Promise<readonly McpServerConfig[]> {
     const rpc = await this.getRpc();
     return rpc.updateGlobalMcpServer({ server });
   }
 
-  async removeGlobalMcpServer(name: string): Promise<readonly McpServerConfig[]> {
+  async removeGlobalMcpServer(
+    name: string,
+  ): Promise<readonly McpServerConfig[]> {
     const rpc = await this.getRpc();
     return rpc.removeGlobalMcpServer({ name });
   }
 
-  async beginGlobalMcpServerAuth(name: string): Promise<BeginGlobalMcpServerAuthResult> {
+  async beginGlobalMcpServerAuth(
+    name: string,
+  ): Promise<BeginGlobalMcpServerAuthResult> {
     const rpc = await this.getRpc();
     return rpc.beginGlobalMcpServerAuth({ name });
   }
@@ -370,7 +389,12 @@ export abstract class SDKRpcClientBase {
     sessionId: string;
     command: string;
     commandId?: string;
-  }): Promise<{ stdout: string; stderr: string; isError?: boolean; backgrounded?: boolean }> {
+  }): Promise<{
+    stdout: string;
+    stderr: string;
+    isError?: boolean;
+    backgrounded?: boolean;
+  }> {
     const agentId = this.interactiveAgentId;
     const rpc = await this.getRpc();
     return rpc.runShellCommand({
@@ -381,7 +405,10 @@ export abstract class SDKRpcClientBase {
     });
   }
 
-  async cancelShellCommand(input: { sessionId: string; commandId: string }): Promise<void> {
+  async cancelShellCommand(input: {
+    sessionId: string;
+    commandId: string;
+  }): Promise<void> {
     const agentId = this.interactiveAgentId;
     const rpc = await this.getRpc();
     return rpc.cancelShellCommand({
@@ -411,9 +438,15 @@ export abstract class SDKRpcClientBase {
     return rpc.getSessionWarnings({ sessionId: input.sessionId });
   }
 
-  async addAdditionalDir(input: AddAdditionalDirInput): Promise<AddAdditionalDirResult> {
+  async addAdditionalDir(
+    input: AddAdditionalDirInput,
+  ): Promise<AddAdditionalDirResult> {
     const rpc = await this.getRpc();
-    return rpc.addAdditionalDir({ sessionId: input.id, path: input.path, persist: input.persist });
+    return rpc.addAdditionalDir({
+      sessionId: input.id,
+      path: input.path,
+      persist: input.persist,
+    });
   }
 
   async startBtw(input: SessionIdRpcInput): Promise<string> {
@@ -452,7 +485,9 @@ export abstract class SDKRpcClientBase {
     });
   }
 
-  async setModel(input: SetSessionModelRpcInput): Promise<SetSessionModelRpcResult> {
+  async setModel(
+    input: SetSessionModelRpcInput,
+  ): Promise<SetSessionModelRpcResult> {
     const rpc = await this.getRpc();
     return rpc.setModel({
       sessionId: input.sessionId,
@@ -484,9 +519,13 @@ export abstract class SDKRpcClientBase {
     });
   }
 
-  async updateSessionMetadata(input: UpdateSessionMetadataRpcInput): Promise<void> {
+  async updateSessionMetadata(
+    input: UpdateSessionMetadataRpcInput,
+  ): Promise<void> {
     const rpc = await this.getRpc();
-    const current = await rpc.getSessionMetadata({ sessionId: input.sessionId });
+    const current = await rpc.getSessionMetadata({
+      sessionId: input.sessionId,
+    });
     const metadata = { ...current.custom, ...input.metadata } as JsonObject;
     await rpc.updateSessionMetadata({
       sessionId: input.sessionId,
@@ -514,7 +553,7 @@ export abstract class SDKRpcClientBase {
   }
 
   async swarm(input: SessionPromptRpcInput): Promise<void> {
-    await this.enterSwarmMode({ sessionId: input.sessionId, trigger: 'task' });
+    await this.enterSwarmMode({ sessionId: input.sessionId, trigger: "task" });
     return this.prompt(input);
   }
 
@@ -558,7 +597,9 @@ export abstract class SDKRpcClientBase {
     return rpc.beginCompaction({
       sessionId: input.sessionId,
       agentId: this.interactiveAgentId,
-      ...(input.instruction !== undefined ? { instruction: input.instruction } : {}),
+      ...(input.instruction !== undefined
+        ? { instruction: input.instruction }
+        : {}),
     });
   }
 
@@ -570,7 +611,9 @@ export abstract class SDKRpcClientBase {
     });
   }
 
-  async undoHistory(input: SessionIdRpcInput & { count: number }): Promise<void> {
+  async undoHistory(
+    input: SessionIdRpcInput & { count: number },
+  ): Promise<void> {
     const rpc = await this.getRpc();
     return rpc.undoHistory({
       sessionId: input.sessionId,
@@ -623,14 +666,18 @@ export abstract class SDKRpcClientBase {
       agentId,
     });
     const capability = config.modelCapabilities;
-    const maxContextTokens = capability?.max_input_tokens ?? capability?.max_context_tokens ?? 0;
+    const maxContextTokens =
+      capability?.max_input_tokens ?? capability?.max_context_tokens ?? 0;
     const contextTokens = context.tokenCount;
     // Deliberately unclamped: >100% is the documented overflow signal on this
     // path (see acp-adapter's formatContextUsage), unlike the schema-bounded
     // REST status surfaces which clamp to 1.
-    const contextUsage = maxContextTokens > 0 ? contextTokens / maxContextTokens : 0;
+    const contextUsage =
+      maxContextTokens > 0 ? contextTokens / maxContextTokens : 0;
     const hasUsage =
-      usage.byModel !== undefined || usage.total !== undefined || usage.currentTurn !== undefined;
+      usage.byModel !== undefined ||
+      usage.total !== undefined ||
+      usage.currentTurn !== undefined;
     return {
       model: config.modelAlias ?? config.provider?.model,
       thinkingEffort: config.thinkingEffort,
@@ -649,7 +696,9 @@ export abstract class SDKRpcClientBase {
     return rpc.listSkills({ sessionId: input.sessionId });
   }
 
-  async listPluginCommands(input: SessionIdRpcInput): Promise<readonly PluginCommandDef[]> {
+  async listPluginCommands(
+    input: SessionIdRpcInput,
+  ): Promise<readonly PluginCommandDef[]> {
     const rpc = await this.getRpc();
     return rpc.listPluginCommands({ sessionId: input.sessionId });
   }
@@ -715,12 +764,16 @@ export abstract class SDKRpcClientBase {
     return rpc.waitForBackgroundTasksOnPrint({ sessionId: input.sessionId });
   }
 
-  async handlePrintMainTurnCompleted(input: SessionIdRpcInput): Promise<'finish' | 'continue'> {
+  async handlePrintMainTurnCompleted(
+    input: SessionIdRpcInput,
+  ): Promise<"finish" | "continue"> {
     const rpc = await this.getRpc();
     return rpc.handlePrintMainTurnCompleted({ sessionId: input.sessionId });
   }
 
-  async createGoal(input: SessionIdRpcInput & CreateGoalInput): Promise<GoalSnapshot> {
+  async createGoal(
+    input: SessionIdRpcInput & CreateGoalInput,
+  ): Promise<GoalSnapshot> {
     const rpc = await this.getRpc();
     return rpc.createGoal({
       sessionId: input.sessionId,
@@ -732,7 +785,10 @@ export abstract class SDKRpcClientBase {
 
   async getGoal(input: SessionIdRpcInput): Promise<GoalToolResult> {
     const rpc = await this.getRpc();
-    return rpc.getGoal({ sessionId: input.sessionId, agentId: this.interactiveAgentId });
+    return rpc.getGoal({
+      sessionId: input.sessionId,
+      agentId: this.interactiveAgentId,
+    });
   }
 
   async pauseGoal(input: SessionIdRpcInput): Promise<GoalSnapshot> {
@@ -761,10 +817,15 @@ export abstract class SDKRpcClientBase {
 
   async getCronTasks(input: SessionIdRpcInput): Promise<GetCronTasksResult> {
     const rpc = await this.getRpc();
-    return rpc.getCronTasks({ sessionId: input.sessionId, agentId: this.interactiveAgentId });
+    return rpc.getCronTasks({
+      sessionId: input.sessionId,
+      agentId: this.interactiveAgentId,
+    });
   }
 
-  async listMcpServers(input: SessionIdRpcInput): Promise<readonly McpServerInfo[]> {
+  async listMcpServers(
+    input: SessionIdRpcInput,
+  ): Promise<readonly McpServerInfo[]> {
     const rpc = await this.getRpc();
     return rpc.listMcpServers({ sessionId: input.sessionId });
   }
@@ -775,19 +836,26 @@ export abstract class SDKRpcClientBase {
    * before the first session exists; the v1 engine only exposes MCP through
    * a live session and the base returns an empty list.
    */
-  async listWorkspaceMcpServers(workDir: string): Promise<readonly McpServerInfo[]> {
+  async listWorkspaceMcpServers(
+    workDir: string,
+  ): Promise<readonly McpServerInfo[]> {
     void workDir;
     return [];
   }
 
-  async getMcpStartupMetrics(input: SessionIdRpcInput): Promise<McpStartupMetrics> {
+  async getMcpStartupMetrics(
+    input: SessionIdRpcInput,
+  ): Promise<McpStartupMetrics> {
     const rpc = await this.getRpc();
     return rpc.getMcpStartupMetrics({ sessionId: input.sessionId });
   }
 
   async reconnectMcpServer(input: ReconnectMcpServerRpcInput): Promise<void> {
     const rpc = await this.getRpc();
-    return rpc.reconnectMcpServer({ sessionId: input.sessionId, name: input.name });
+    return rpc.reconnectMcpServer({
+      sessionId: input.sessionId,
+      name: input.name,
+    });
   }
 
   async listPlugins(): Promise<readonly PluginSummary[]> {
@@ -839,7 +907,9 @@ export abstract class SDKRpcClientBase {
     });
   }
 
-  async activatePluginCommand(input: ActivatePluginCommandRpcInput): Promise<void> {
+  async activatePluginCommand(
+    input: ActivatePluginCommandRpcInput,
+  ): Promise<void> {
     const rpc = await this.getRpc();
     return rpc.activatePluginCommand({
       sessionId: input.sessionId,
@@ -863,7 +933,10 @@ export abstract class SDKRpcClientBase {
     }
   }
 
-  setApprovalHandler(sessionId: string, handler: ApprovalHandler | undefined): void {
+  setApprovalHandler(
+    sessionId: string,
+    handler: ApprovalHandler | undefined,
+  ): void {
     if (handler === undefined) {
       this.approvalHandlers.delete(sessionId);
       return;
@@ -871,7 +944,10 @@ export abstract class SDKRpcClientBase {
     this.approvalHandlers.set(sessionId, handler);
   }
 
-  setQuestionHandler(sessionId: string, handler: QuestionHandler | undefined): void {
+  setQuestionHandler(
+    sessionId: string,
+    handler: QuestionHandler | undefined,
+  ): void {
     if (handler === undefined) {
       this.questionHandlers.delete(sessionId);
       return;
@@ -890,8 +966,8 @@ export abstract class SDKRpcClientBase {
     const handler = this.approvalHandlers.get(request.sessionId);
     if (handler === undefined) {
       return {
-        decision: 'cancelled',
-        feedback: 'No approval handler registered.',
+        decision: "cancelled",
+        feedback: "No approval handler registered.",
       };
     }
 
@@ -899,14 +975,17 @@ export abstract class SDKRpcClientBase {
       return await handler(request);
     } catch (error) {
       this.receiveEvent({
-        type: 'error',
+        type: "error",
         sessionId: request.sessionId,
         agentId: request.agentId,
-        ...makeErrorPayload(ErrorCodes.SESSION_APPROVAL_HANDLER_ERROR, errorMessage(error)),
+        ...makeErrorPayload(
+          ErrorCodes.SESSION_APPROVAL_HANDLER_ERROR,
+          errorMessage(error),
+        ),
       });
       return {
-        decision: 'cancelled',
-        feedback: 'Approval handler failed.',
+        decision: "cancelled",
+        feedback: "Approval handler failed.",
       };
     }
   }
@@ -921,10 +1000,13 @@ export abstract class SDKRpcClientBase {
       return await handler(request);
     } catch (error) {
       this.receiveEvent({
-        type: 'error',
+        type: "error",
         sessionId: request.sessionId,
         agentId: request.agentId,
-        ...makeErrorPayload(ErrorCodes.SESSION_QUESTION_HANDLER_ERROR, errorMessage(error)),
+        ...makeErrorPayload(
+          ErrorCodes.SESSION_QUESTION_HANDLER_ERROR,
+          errorMessage(error),
+        ),
       });
       return null;
     }
@@ -936,7 +1018,6 @@ export abstract class SDKRpcClientBase {
       isError: true,
     };
   }
-
 }
 
 export class ClientAPI implements SDKAPI {

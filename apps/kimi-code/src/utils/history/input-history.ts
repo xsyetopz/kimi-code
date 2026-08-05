@@ -13,9 +13,9 @@
  * - Tolerate corrupt lines: log + skip, do not abort load
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { appendJsonlLine, readJsonlFile } from '#/utils/persistence';
+import { appendJsonlLine, readJsonlFile } from "#/utils/persistence";
 
 export interface InputHistoryEntry {
   content: string;
@@ -25,7 +25,9 @@ const InputHistoryEntrySchema: z.ZodType<InputHistoryEntry> = z.object({
   content: z.string(),
 });
 
-export async function loadInputHistory(file: string): Promise<InputHistoryEntry[]> {
+export async function loadInputHistory(
+  file: string,
+): Promise<InputHistoryEntry[]> {
   return readJsonlFile(file, InputHistoryEntrySchema);
 }
 

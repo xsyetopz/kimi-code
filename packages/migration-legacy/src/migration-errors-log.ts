@@ -1,7 +1,7 @@
-import { appendFile, mkdir, readFile } from 'node:fs/promises';
-import { basename, join } from 'node:path';
+import { appendFile, mkdir, readFile } from "node:fs/promises";
+import { basename, join } from "node:path";
 
-import { migrationErrorsLogFile } from './paths.js';
+import { migrationErrorsLogFile } from "./paths.js";
 
 export interface MigrationFailureEntry {
   readonly sourcePath: string;
@@ -34,9 +34,9 @@ export async function writeMigrationErrorsLog(
   const lines: string[] = [`===== migration run @ ${input.startedAt} =====`];
 
   if (input.failures.length === 0) {
-    lines.push('no failures.', '');
+    lines.push("no failures.", "");
   } else {
-    lines.push(`${input.failures.length} session(s) failed to migrate.`, '');
+    lines.push(`${input.failures.length} session(s) failed to migrate.`, "");
     let index = 0;
     for (const failure of input.failures) {
       index += 1;
@@ -45,7 +45,7 @@ export async function writeMigrationErrorsLog(
         `  source: ${failure.sourcePath}`,
         `  reason: ${failure.reason}`,
         `  ${await describeContext(failure.sourcePath)}`,
-        '',
+        "",
       );
     }
   }
@@ -55,7 +55,7 @@ export async function writeMigrationErrorsLog(
     // POSIX `O_APPEND` makes a single `appendFile` atomic — concurrent runs
     // would still produce well-formed blocks. `mode` only applies when the
     // file is created; an existing log keeps its prior 0600.
-    await appendFile(migrationErrorsLogFile(targetHome), lines.join('\n'), {
+    await appendFile(migrationErrorsLogFile(targetHome), lines.join("\n"), {
       mode: 0o600,
     });
   } catch {
@@ -71,19 +71,19 @@ export async function writeMigrationErrorsLog(
 async function describeContext(sessionDir: string): Promise<string> {
   let text: string;
   try {
-    text = await readFile(join(sessionDir, 'context.jsonl'), 'utf-8');
+    text = await readFile(join(sessionDir, "context.jsonl"), "utf-8");
   } catch {
-    return 'context.jsonl: unreadable';
+    return "context.jsonl: unreadable";
   }
-  const lines = text.split(/\r?\n/).filter((line) => line.trim() !== '');
+  const lines = text.split(/\r?\n/).filter((line) => line.trim() !== "");
   const roleCounts = new Map<string, number>();
   for (const line of lines) {
-    let role = '<unparseable>';
+    let role = "<unparseable>";
     try {
       const parsed: unknown = JSON.parse(line);
-      if (typeof parsed === 'object' && parsed !== null) {
-        const raw = (parsed as Record<string, unknown>)['role'];
-        role = typeof raw === 'string' ? raw : '<no-role>';
+      if (typeof parsed === "object" && parsed !== null) {
+        const raw = (parsed as Record<string, unknown>)["role"];
+        role = typeof raw === "string" ? raw : "<no-role>";
       }
     } catch {
       // role stays '<unparseable>'
@@ -93,6 +93,6 @@ async function describeContext(sessionDir: string): Promise<string> {
   const histogram = [...roleCounts.entries()]
     .toSorted((a, b) => b[1] - a[1])
     .map(([role, count]) => `${role}=${count}`)
-    .join(' ');
-  return `context.jsonl: ${lines.length} lines${histogram === '' ? '' : ` - ${histogram}`}`;
+    .join(" ");
+  return `context.jsonl: ${lines.length} lines${histogram === "" ? "" : ` - ${histogram}`}`;
 }

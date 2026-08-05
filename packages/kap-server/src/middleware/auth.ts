@@ -2,25 +2,25 @@
  * Global HTTP bearer-auth hook.
  */
 
-import type { FastifyReply, FastifyRequest } from 'fastify';
+import type { FastifyReply, FastifyRequest } from "fastify";
 
-import { errEnvelope } from '../envelope';
-import type { IAuthTokenService } from '../services/auth/authTokenService';
-import type { CredentialValidator } from '../services/auth/credentials';
+import { errEnvelope } from "../envelope";
+import type { IAuthTokenService } from "../services/auth/authTokenService";
+import type { CredentialValidator } from "../services/auth/credentials";
 import {
   AUTH_RATE_LIMIT_CODE,
   AUTH_RATE_LIMIT_MSG,
   type AuthFailureLimiter,
-} from './rateLimit';
+} from "./rateLimit";
 
 const AUTH_ERROR_CODE = 40101;
-const AUTH_ERROR_MSG = 'Unauthorized';
-const REDACTED = '[redacted]';
-const BEARER_PREFIX = 'Bearer ';
+const AUTH_ERROR_MSG = "Unauthorized";
+const REDACTED = "[redacted]";
+const BEARER_PREFIX = "Bearer ";
 
 export interface AuthHookOptions {
   readonly isBypassed?: (req: FastifyRequest) => boolean;
-  readonly limiter?: Pick<AuthFailureLimiter, 'recordFailure' | 'isBanned'>;
+  readonly limiter?: Pick<AuthFailureLimiter, "recordFailure" | "isBanned">;
   /**
    * Unified credential validator. Defaults to `authTokenService.isValid`
    * (persistent token / password). `start.ts` supplies one that also accepts
@@ -39,7 +39,7 @@ export interface AuthHookOptions {
  * caller must fail closed.
  */
 function decodeRequestPath(rawUrl: string): string | null {
-  const path = rawUrl.split('?', 1)[0] ?? rawUrl;
+  const path = rawUrl.split("?", 1)[0] ?? rawUrl;
   try {
     return decodeURIComponent(path);
   } catch {
@@ -62,7 +62,7 @@ function decodeRequestPath(rawUrl: string): string | null {
  * token protects them all.
  */
 function defaultIsBypassed(req: FastifyRequest): boolean {
-  if (req.method === 'OPTIONS') {
+  if (req.method === "OPTIONS") {
     return true;
   }
   const path = decodeRequestPath(req.url);
@@ -70,11 +70,11 @@ function defaultIsBypassed(req: FastifyRequest): boolean {
     // Fail closed: an undecodable path must never skip authentication.
     return false;
   }
-  if (req.method === 'GET' && path === '/api/v1/healthz') {
+  if (req.method === "GET" && path === "/api/v1/healthz") {
     return true;
   }
-  const isApi = path.startsWith('/api/');
-  const isMeta = path === '/openapi.json' || path === '/asyncapi.json';
+  const isApi = path.startsWith("/api/");
+  const isMeta = path === "/openapi.json" || path === "/asyncapi.json";
   return !isApi && !isMeta;
 }
 
@@ -92,11 +92,14 @@ export function createAuthHook(
 ): (req: FastifyRequest, reply: FastifyReply) => Promise<FastifyReply | void> {
   const isBypassed = opts?.isBypassed ?? defaultIsBypassed;
   const validateCredential: CredentialValidator =
-    opts?.validateCredential ?? ((candidate) => authTokenService.isValid(candidate));
+    opts?.validateCredential ??
+    ((candidate) => authTokenService.isValid(candidate));
 
   return async (req, reply) => {
     if (opts?.limiter?.isBanned(req.ip) === true) {
-      return reply.code(429).send(errEnvelope(AUTH_RATE_LIMIT_CODE, AUTH_RATE_LIMIT_MSG, req.id));
+      return reply
+        .code(429)
+        .send(errEnvelope(AUTH_RATE_LIMIT_CODE, AUTH_RATE_LIMIT_MSG, req.id));
     }
 
     const header = req.headers.authorization;
@@ -112,12 +115,16 @@ export function createAuthHook(
 
     if (token === null) {
       opts?.limiter?.recordFailure(req.ip);
-      return reply.code(401).send(errEnvelope(AUTH_ERROR_CODE, AUTH_ERROR_MSG, req.id));
+      return reply
+        .code(401)
+        .send(errEnvelope(AUTH_ERROR_CODE, AUTH_ERROR_MSG, req.id));
     }
 
     if (!(await validateCredential(token))) {
       opts?.limiter?.recordFailure(req.ip);
-      return reply.code(401).send(errEnvelope(AUTH_ERROR_CODE, AUTH_ERROR_MSG, req.id));
+      return reply
+        .code(401)
+        .send(errEnvelope(AUTH_ERROR_CODE, AUTH_ERROR_MSG, req.id));
     }
   };
 }

@@ -14,9 +14,9 @@
  * mismatch).
  */
 
-import { timingSafeEqual } from 'node:crypto';
+import { timingSafeEqual } from "node:crypto";
 
-import type { IAuthTokenService } from './authTokenService';
+import type { IAuthTokenService } from "./authTokenService";
 
 export type CredentialValidator = (candidate: string) => Promise<boolean>;
 
@@ -32,7 +32,11 @@ export function createCredentialValidator(
 ): CredentialValidator {
   return async (candidate) => {
     if (await authTokenService.isValid(candidate)) return true;
-    if (rpcToken !== undefined && candidate.length > 0 && timingSafeMatch(candidate, rpcToken)) {
+    if (
+      rpcToken !== undefined &&
+      candidate.length > 0 &&
+      timingSafeMatch(candidate, rpcToken)
+    ) {
       return true;
     }
     return false;

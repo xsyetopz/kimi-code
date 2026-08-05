@@ -1,18 +1,21 @@
-import { homedir } from 'node:os';
-import { join } from 'pathe';
-import type { Kaos } from '@moonshot-ai/kaos';
-import type { SessionWarning } from '@moonshot-ai/protocol';
+import { homedir } from "node:os";
+import { join } from "pathe";
+import type { Kaos } from "@moonshot-ai/kaos";
+import type { SessionWarning } from "@moonshot-ai/protocol";
 
-import { ErrorCodes, KimiError } from '#/errors';
-import { getRootLogger, log } from '#/logging/logger';
-import type { Logger, SessionLogHandle } from '#/logging/types';
-import type { KimiConfig, SDKSessionRPC } from '#/rpc';
-import { proxyWithExtraPayload } from '#/rpc/types';
+import { ErrorCodes, KimiError } from "#/errors";
+import { getRootLogger, log } from "#/logging/logger";
+import type { Logger, SessionLogHandle } from "#/logging/types";
+import type { KimiConfig, SDKSessionRPC } from "#/rpc";
+import { proxyWithExtraPayload } from "#/rpc/types";
 
-import { Agent, type AgentOptions, type AgentType } from '../agent';
-import { renderPluginSessionStartReminder } from '../agent/injection/plugin-session-start';
-import { HookEngine, type HookDef } from './hooks';
-import type { PermissionManagerOptions, PermissionRule } from '../agent/permission';
+import { Agent, type AgentOptions, type AgentType } from "../agent";
+import { renderPluginSessionStartReminder } from "../agent/injection/plugin-session-start";
+import { HookEngine, type HookDef } from "./hooks";
+import type {
+  PermissionManagerOptions,
+  PermissionRule,
+} from "../agent/permission";
 import {
   appendWorkspaceAdditionalDir,
   normalizeAdditionalDirs,
@@ -24,8 +27,8 @@ import {
   resolveConfigValue,
   type BackgroundConfig,
   type WorkspaceAdditionalDirsLoadResult,
-} from '../config';
-import { makeErrorPayload } from '../errors';
+} from "../config";
+import { makeErrorPayload } from "../errors";
 import {
   McpConnectionManager,
   McpOAuthService,
@@ -33,8 +36,12 @@ import {
   resolveMcpToolTimeoutMs,
   type McpServerEntry,
   type SessionMcpConfig,
-} from '../mcp';
-import type { EnabledPluginSessionStart, EnabledPluginSystemPrompt, PluginCommandDef } from '../plugin';
+} from "../mcp";
+import type {
+  EnabledPluginSessionStart,
+  EnabledPluginSystemPrompt,
+  PluginCommandDef,
+} from "../plugin";
 import {
   AgentProfileCatalogSnapshotSchema,
   DEFAULT_AGENT_PROFILE_NAME,
@@ -45,16 +52,16 @@ import {
   type AgentFileRoot,
   type AgentProfileCatalogSnapshot,
   type ResolvedAgentProfile,
-} from '../profile';
-import type { ProviderManager } from './provider-manager';
+} from "../profile";
+import type { ProviderManager } from "./provider-manager";
 import {
   resolveSecondaryModel,
   wrapSubagentModelError,
-} from './subagent-binding';
+} from "./subagent-binding";
 import {
   SECONDARY_DERIVED_MODEL_ALIAS,
   secondaryModelPatch,
-} from '../config/secondary-model';
+} from "../config/secondary-model";
 import {
   registerBuiltinSkills,
   SessionSkillRegistry,
@@ -62,15 +69,19 @@ import {
   summarizeSkill,
   type SkillRoot,
   type SkillSummary,
-} from '../skill';
-import { noopTelemetryClient, type TelemetryClient, withTelemetryProperties } from '../telemetry';
-import { SessionSubagentHost } from './subagent-host';
-import { sessionMediaOriginalsDir } from '../tools/support/image-originals';
-import type { ToolServices } from '../tools/support/services';
-import { FlagResolver, type ExperimentalFlagResolver } from '../flags';
-import { ImageLimits } from '../tools/support/image-limits';
-import { abortError } from '../utils/abort';
-import { resolveMainAgentProfile } from './main-agent-profile';
+} from "../skill";
+import {
+  noopTelemetryClient,
+  type TelemetryClient,
+  withTelemetryProperties,
+} from "../telemetry";
+import { SessionSubagentHost } from "./subagent-host";
+import { sessionMediaOriginalsDir } from "../tools/support/image-originals";
+import type { ToolServices } from "../tools/support/services";
+import { FlagResolver, type ExperimentalFlagResolver } from "../flags";
+import { ImageLimits } from "../tools/support/image-limits";
+import { abortError } from "../utils/abort";
+import { resolveMainAgentProfile } from "./main-agent-profile";
 
 export interface SessionOptions {
   readonly kaos: Kaos;
@@ -182,7 +193,8 @@ interface PersistedSessionState extends SessionMeta {
   readonly agentProfileCatalog?: unknown;
 }
 
-const BACKGROUND_KEEP_ALIVE_ON_EXIT_ENV = 'KIMI_CODE_BACKGROUND_KEEP_ALIVE_ON_EXIT';
+const BACKGROUND_KEEP_ALIVE_ON_EXIT_ENV =
+  "KIMI_CODE_BACKGROUND_KEEP_ALIVE_ON_EXIT";
 const ACTIVE_TURN_CLOSE_TIMEOUT_MS = 8_000;
 
 async function waitForSettlementOrTimeout(
@@ -233,7 +245,7 @@ export class Session {
   metadata: SessionMeta = {
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    title: 'New Session',
+    title: "New Session",
     isCustomTitle: false,
     agents: {},
     custom: {},
@@ -265,12 +277,14 @@ export class Session {
       options.id === undefined
         ? undefined
         : getRootLogger().attachSession({
-          sessionId: options.id,
-          sessionDir: options.homedir,
-        });
+            sessionId: options.id,
+            sessionDir: options.homedir,
+          });
     this.log =
       this.logHandle?.logger ??
-      (options.id === undefined ? log : log.createChild({ sessionId: options.id }));
+      (options.id === undefined
+        ? log
+        : log.createChild({ sessionId: options.id }));
     this.rpc = options.rpc;
     this.experimentalFlags = options.experimentalFlags ?? new FlagResolver();
     this.imageLimits = options.imageLimits ?? new ImageLimits();
@@ -291,8 +305,12 @@ export class Session {
       oauthService: new McpOAuthService({ kimiHomeDir: options.kimiHomeDir }),
       log: this.log,
       stdioCwd: options.kaos.getcwd(),
-      defaultStartupTimeoutMs: resolveMcpStartupTimeoutMs(options.config?.mcp?.startupTimeoutMs),
-      defaultToolTimeoutMs: resolveMcpToolTimeoutMs(options.config?.mcp?.toolTimeoutMs),
+      defaultStartupTimeoutMs: resolveMcpStartupTimeoutMs(
+        options.config?.mcp?.startupTimeoutMs,
+      ),
+      defaultToolTimeoutMs: resolveMcpToolTimeoutMs(
+        options.config?.mcp?.toolTimeoutMs,
+      ),
     });
     this.mcp.onStatusChange((entry) => {
       this.onMcpServerStatusChange(entry);
@@ -301,7 +319,7 @@ export class Session {
       options.agents?.catalog ??
       new SessionAgentProfileCatalog({
         workDir: options.kaos.getcwd(),
-        brandHomeDir: options.kimiHomeDir ?? join(homedir(), '.kimi-code'),
+        brandHomeDir: options.kimiHomeDir ?? join(homedir(), ".kimi-code"),
         osHomeDir: options.agents?.userHomeDir ?? homedir(),
         extraDirs: options.agents?.extraDirs ?? options.config?.extraAgentDirs,
         explicitFiles: options.agents?.explicitFiles,
@@ -312,7 +330,7 @@ export class Session {
       });
     this.skillsReady = this.loadSkills()
       .catch((error: unknown) => {
-        this.log.error('skills load failed', error);
+        this.log.error("skills load failed", error);
       })
       // Agentfile discovery rides the same readiness gate: every createAgent
       // caller already awaits it, so profile binding and the Agent tool's
@@ -326,7 +344,6 @@ export class Session {
       this.emitInitialMcpLoadError(error);
     });
   }
-
 
   setToolKaos(kaos: Kaos) {
     this.toolKaos = kaos;
@@ -347,27 +364,49 @@ export class Session {
     }
   }
 
-  async setBaseAdditionalDirs(additionalDirs: readonly string[]): Promise<void> {
-    await this.setAdditionalDirs([...additionalDirs, ...this.sessionAdditionalDirs]);
+  async setBaseAdditionalDirs(
+    additionalDirs: readonly string[],
+  ): Promise<void> {
+    await this.setAdditionalDirs([
+      ...additionalDirs,
+      ...this.sessionAdditionalDirs,
+    ]);
   }
 
   async addAdditionalDir(
     path: string,
     persist = true,
-  ): Promise<WorkspaceAdditionalDirsLoadResult & { readonly persisted: boolean }> {
+  ): Promise<
+    WorkspaceAdditionalDirsLoadResult & { readonly persisted: boolean }
+  > {
     const cwd = this.toolKaos.getcwd();
     const systemKaos = this.systemContextKaos(cwd);
     if (persist) {
-      const result = await appendWorkspaceAdditionalDir(systemKaos, cwd, path, this.additionalDirs);
-      const additionalDirs = normalizeAdditionalDirs([...this.additionalDirs, ...result.additionalDirs]);
+      const result = await appendWorkspaceAdditionalDir(
+        systemKaos,
+        cwd,
+        path,
+        this.additionalDirs,
+      );
+      const additionalDirs = normalizeAdditionalDirs([
+        ...this.additionalDirs,
+        ...result.additionalDirs,
+      ]);
       await this.setAdditionalDirs(additionalDirs);
       this.notifyAdditionalDirAdded(path, true, result.configPath);
       return { ...result, additionalDirs, persisted: true };
     }
 
     const workspace = await readWorkspaceAdditionalDirs(systemKaos, cwd);
-    const additionalDirs = await resolveWorkspaceAdditionalDirs(systemKaos, cwd, [path]);
-    const nextAdditionalDirs = normalizeAdditionalDirs([...this.additionalDirs, ...additionalDirs]);
+    const additionalDirs = await resolveWorkspaceAdditionalDirs(
+      systemKaos,
+      cwd,
+      [path],
+    );
+    const nextAdditionalDirs = normalizeAdditionalDirs([
+      ...this.additionalDirs,
+      ...additionalDirs,
+    ]);
     const nextSessionAdditionalDirs = normalizeAdditionalDirs([
       ...this.sessionAdditionalDirs,
       ...additionalDirs,
@@ -394,7 +433,11 @@ export class Session {
     };
   }
 
-  private notifyAdditionalDirAdded(path: string, persisted: boolean, configPath: string): void {
+  private notifyAdditionalDirAdded(
+    path: string,
+    persisted: boolean,
+    configPath: string,
+  ): void {
     const message = persisted
       ? `Added workspace directory:\n  ${path}\n  Saved to:\n  ${configPath}`
       : `Added workspace directory:\n  ${path}\n  For this session only`;
@@ -422,26 +465,29 @@ export class Session {
       this.agentCatalog,
       this.options.agents?.profileName,
     );
-    const { agent } = await this.createAgent({ type: 'main' }, {
-      profile,
-    });
+    const { agent } = await this.createAgent(
+      { type: "main" },
+      {
+        profile,
+      },
+    );
     if (this.options.drainAgentTasksOnStop) {
       agent.printDrainAgentTasksOnStop = true;
     }
     for (const warning of this.computeSecondaryModelWarnings()) {
       agent.emitEvent({
-        type: 'warning',
+        type: "warning",
         message: warning.message,
         code: warning.code,
       });
     }
-    await this.triggerSessionStart('startup');
+    await this.triggerSessionStart("startup");
     return agent;
   }
 
   async resume(): Promise<{ warning?: string }> {
     await this.skillsReady;
-    this.log.info('session resume', { app_version: this.options.appVersion });
+    this.log.info("session resume", { app_version: this.options.appVersion });
     const { agents, additionalDirs = [] } = await this.readMetadata();
     const cwd = this.toolKaos.getcwd();
     this.sessionAdditionalDirs = await resolveWorkspaceAdditionalDirs(
@@ -454,25 +500,30 @@ export class Session {
     // Only the main agent is needed to reopen the session; subagents replay
     // lazily when an RPC or Agent(resume=...) call asks for their state.
     const { warning } =
-      agents['main'] === undefined ? { warning: undefined } : await this.resumeAgent('main');
+      agents["main"] === undefined
+        ? { warning: undefined }
+        : await this.resumeAgent("main");
     // A session migrated from an external tool ships a wire without the
     // `config.update` bootstrap events a natively-created agent writes, so the
     // main agent comes back with an empty system prompt and no tools. Apply the
     // default profile so the resumed session is usable. Native sessions always
     // replay a non-empty system prompt and never enter this branch.
-    const main = this.getReadyAgent('main');
+    const main = this.getReadyAgent("main");
     const profile = this.agentCatalog.getDefault();
-    if (main !== undefined && main.config.systemPrompt === '') {
+    if (main !== undefined && main.config.systemPrompt === "") {
       await this.bootstrapAgentProfile(main, profile);
     }
-    await this.triggerSessionStart('resume');
+    await this.triggerSessionStart("resume");
     return { warning };
   }
 
-  async assertMainProfileSelection(requestedProfileName: string | undefined): Promise<void> {
+  async assertMainProfileSelection(
+    requestedProfileName: string | undefined,
+  ): Promise<void> {
     if (requestedProfileName === undefined) return;
-    const main = await this.ensureAgentResumed('main');
-    const currentProfileName = main.config.profileName ?? DEFAULT_AGENT_PROFILE_NAME;
+    const main = await this.ensureAgentResumed("main");
+    const currentProfileName =
+      main.config.profileName ?? DEFAULT_AGENT_PROFILE_NAME;
     if (currentProfileName === requestedProfileName) return;
     throw new KimiError(
       ErrorCodes.REQUEST_INVALID,
@@ -488,7 +539,7 @@ export class Session {
       await this.cancelActiveTurnsOnClose();
       await this.stopBackgroundTasksOnExit();
       await this.flushMetadata();
-      await this.triggerSessionEnd('exit');
+      await this.triggerSessionEnd("exit");
     } finally {
       try {
         await this.mcp.shutdown();
@@ -517,7 +568,8 @@ export class Session {
     const backgroundAgentIds = this.activeBackgroundAgentIds();
     const cancellations: Array<Promise<void>> = [];
     for (const [agentId, entry] of this.agents) {
-      if (!(entry instanceof Agent) || backgroundAgentIds.has(agentId)) continue;
+      if (!(entry instanceof Agent) || backgroundAgentIds.has(agentId))
+        continue;
       cancellations.push(this.cancelAgentTurnOnClose(entry));
     }
     await Promise.allSettled(cancellations);
@@ -527,7 +579,11 @@ export class Session {
     const agentIds = new Set<string>();
     for (const agent of this.readyAgents()) {
       for (const task of agent.background.list(true)) {
-        if (task.kind === 'agent' && task.agentId !== undefined && task.detached !== false) {
+        if (
+          task.kind === "agent" &&
+          task.agentId !== undefined &&
+          task.detached !== false
+        ) {
           agentIds.add(task.agentId);
         }
       }
@@ -542,7 +598,7 @@ export class Session {
     try {
       waitForTurn = agent.turn.waitForCurrentTurn();
     } catch (error: unknown) {
-      this.log.debug('active turn wait unavailable during session close', {
+      this.log.debug("active turn wait unavailable during session close", {
         agentType: agent.type,
         agentHomedir: agent.homedir,
         error,
@@ -550,14 +606,20 @@ export class Session {
       return;
     }
 
-    agent.turn.cancel(undefined, abortError('Session closed'));
-    const settled = await waitForSettlementOrTimeout(waitForTurn, ACTIVE_TURN_CLOSE_TIMEOUT_MS);
+    agent.turn.cancel(undefined, abortError("Session closed"));
+    const settled = await waitForSettlementOrTimeout(
+      waitForTurn,
+      ACTIVE_TURN_CLOSE_TIMEOUT_MS,
+    );
     if (!settled) {
-      this.log.warn('timed out waiting for active turn to cancel during session close', {
-        agentType: agent.type,
-        agentHomedir: agent.homedir,
-        timeoutMs: ACTIVE_TURN_CLOSE_TIMEOUT_MS,
-      });
+      this.log.warn(
+        "timed out waiting for active turn to cancel during session close",
+        {
+          agentType: agent.type,
+          agentHomedir: agent.homedir,
+          timeoutMs: ACTIVE_TURN_CLOSE_TIMEOUT_MS,
+        },
+      );
     }
   }
 
@@ -578,7 +640,7 @@ export class Session {
             agent.background.suppressTerminalNotification(task.taskId),
           ),
         );
-        await agent.background.stopAll('Session closed');
+        await agent.background.stopAll("Session closed");
       }),
     );
   }
@@ -599,9 +661,11 @@ export class Session {
    * a new turn. (This is exactly what `'steer'` mode avoids by never calling here.)
    */
   async waitForBackgroundTasksOnPrint(): Promise<void> {
-    if (this.resolvePrintBackgroundMode() !== 'drain') return;
+    if (this.resolvePrintBackgroundMode() !== "drain") return;
 
-    const ceilingS = this.options.background?.printWaitCeilingS ?? PRINT_WAIT_CEILING_S_DEFAULT;
+    const ceilingS =
+      this.options.background?.printWaitCeilingS ??
+      PRINT_WAIT_CEILING_S_DEFAULT;
     const timeoutMs = ceilingS * 1000;
     const deadline = Date.now() + timeoutMs;
 
@@ -626,7 +690,9 @@ export class Session {
           // when called; defer awaiting the persist until after the whole
           // enumeration so no task can complete and fire a notification while
           // another task's persist write is pending.
-          suppressions.push(agent.background.suppressTerminalNotification(task.taskId));
+          suppressions.push(
+            agent.background.suppressTerminalNotification(task.taskId),
+          );
           const remaining = Math.max(1, deadline - Date.now());
           const waiter = agent.background.wait(task.taskId, remaining);
           batch.push(waiter);
@@ -637,7 +703,7 @@ export class Session {
         await Promise.all(suppressions);
       }
       if (activeCount === 0 || batch.length === 0) break;
-      this.log.info('waiting for background tasks before print exit', {
+      this.log.info("waiting for background tasks before print exit", {
         active: activeCount,
         new: batch.length,
         timeoutMs,
@@ -646,7 +712,7 @@ export class Session {
     }
     if (allWaiters.length > 0) {
       await Promise.all(allWaiters);
-      this.log.info('background tasks settled before print exit', {
+      this.log.info("background tasks settled before print exit", {
         count: seen.size,
         timeoutMs,
       });
@@ -663,7 +729,7 @@ export class Session {
    * mode defaults to `'steer'`: a headless run stays alive while background
    * tasks are pending so their completions can steer new main turns.
    */
-  private resolvePrintBackgroundMode(): 'exit' | 'drain' | 'steer' {
+  private resolvePrintBackgroundMode(): "exit" | "drain" | "steer" {
     const configured = this.options.background?.printBackgroundMode;
     if (configured !== undefined) return configured;
     const keepAliveOnExit = resolveConfigValue({
@@ -673,7 +739,7 @@ export class Session {
       defaultValue: false,
       parseEnv: parseBooleanEnv,
     });
-    return keepAliveOnExit ? 'drain' : 'steer';
+    return keepAliveOnExit ? "drain" : "steer";
   }
 
   private countActiveBackgroundTasks(): number {
@@ -698,32 +764,35 @@ export class Session {
    *              the wall-clock ceiling (`print_wait_ceiling_s`) or the turn cap
    *              (`print_max_turns`) is reached. This is the default mode.
    */
-  async handlePrintMainTurnCompleted(): Promise<'finish' | 'continue'> {
+  async handlePrintMainTurnCompleted(): Promise<"finish" | "continue"> {
     const mode = this.resolvePrintBackgroundMode();
-    if (mode === 'exit') return 'finish';
-    if (mode === 'drain') {
+    if (mode === "exit") return "finish";
+    if (mode === "drain") {
       await this.waitForBackgroundTasksOnPrint();
-      return 'finish';
+      return "finish";
     }
 
     // 'steer'
-    const ceilingS = this.options.background?.printWaitCeilingS ?? PRINT_WAIT_CEILING_S_DEFAULT;
-    const maxTurns = this.options.background?.printMaxTurns ?? PRINT_MAX_TURNS_DEFAULT;
+    const ceilingS =
+      this.options.background?.printWaitCeilingS ??
+      PRINT_WAIT_CEILING_S_DEFAULT;
+    const maxTurns =
+      this.options.background?.printMaxTurns ?? PRINT_MAX_TURNS_DEFAULT;
     const now = Date.now();
     this.printSteerDeadline ??= now + ceilingS * 1000;
     this.printSteerTurns += 1;
     if (now >= this.printSteerDeadline) {
-      this.log.warn('print steer ceiling reached, finishing', { ceilingS });
-      return 'finish';
+      this.log.warn("print steer ceiling reached, finishing", { ceilingS });
+      return "finish";
     }
     if (this.printSteerTurns > maxTurns) {
-      this.log.warn('print steer max turns reached, finishing', { maxTurns });
-      return 'finish';
+      this.log.warn("print steer max turns reached, finishing", { maxTurns });
+      return "finish";
     }
     if (this.countActiveBackgroundTasks() > 0) {
-      return 'continue';
+      return "continue";
     }
-    return 'finish';
+    return "finish";
   }
 
   async createAgent(
@@ -731,11 +800,17 @@ export class Session {
     options: CreateAgentOptions = {},
   ): Promise<{ readonly id: string; readonly agent: Agent }> {
     await this.skillsReady;
-    const type = config.type ?? 'main';
-    const id = type === 'main' ? 'main' : this.nextGeneratedAgentId();
-    const homedir = config.homedir ?? join(this.options.homedir, 'agents', id);
+    const type = config.type ?? "main";
+    const id = type === "main" ? "main" : this.nextGeneratedAgentId();
+    const homedir = config.homedir ?? join(this.options.homedir, "agents", id);
     const parentAgentId = options.parentAgentId ?? null;
-    const agent = this.instantiateAgent(id, homedir, type, config, parentAgentId);
+    const agent = this.instantiateAgent(
+      id,
+      homedir,
+      type,
+      config,
+      parentAgentId,
+    );
     if (options.profile) {
       await this.bootstrapAgentProfile(agent, options.profile);
     }
@@ -758,7 +833,10 @@ export class Session {
     const entry = this.agents.get(id);
     if (entry !== undefined) return (await this.resolveAgentEntry(entry)).agent;
     if (this.metadata.agents[id] === undefined) {
-      throw new KimiError(ErrorCodes.AGENT_NOT_FOUND, `Agent "${id}" was not found`);
+      throw new KimiError(
+        ErrorCodes.AGENT_NOT_FOUND,
+        `Agent "${id}" was not found`,
+      );
     }
     return (await this.resumeAgent(id)).agent;
   }
@@ -777,16 +855,20 @@ export class Session {
       this.options.kimiHomeDir,
       { additionalDirs: this.additionalDirs },
     );
-    const subagentNames = Object.keys(this.agentCatalog.delegatableSubagents(profile.name));
+    const subagentNames = Object.keys(
+      this.agentCatalog.delegatableSubagents(profile.name),
+    );
     agent.useProfile(profile, context, this.options.kimiHomeDir, subagentNames);
     const { agentsMdWarning } = context;
     if (agentsMdWarning !== undefined) {
       this.agentsMdWarning = agentsMdWarning;
-      log.warn('AGENTS.md exceeds recommended size', { message: agentsMdWarning });
-      agent.emitEvent({
-        type: 'warning',
+      log.warn("AGENTS.md exceeds recommended size", {
         message: agentsMdWarning,
-        code: 'agents-md-oversized',
+      });
+      agent.emitEvent({
+        type: "warning",
+        message: agentsMdWarning,
+        code: "agents-md-oversized",
       });
     }
   }
@@ -796,9 +878,9 @@ export class Session {
     const agentsMdWarning = await this.computeAgentsMdWarning();
     if (agentsMdWarning !== undefined) {
       warnings.push({
-        code: 'agents-md-oversized',
+        code: "agents-md-oversized",
         message: agentsMdWarning,
-        severity: 'warning',
+        severity: "warning",
       });
     }
     warnings.push(...this.computeSecondaryModelWarnings());
@@ -821,14 +903,14 @@ export class Session {
     if (base === undefined) {
       throw new KimiError(
         ErrorCodes.CONFIG_INVALID,
-        'Cannot set the secondary model: the session has no config.',
+        "Cannot set the secondary model: the session has no config.",
       );
     }
     const secondary = config.secondaryModel;
     if (secondary?.model === undefined) {
       throw new KimiError(
         ErrorCodes.CONFIG_INVALID,
-        'Cannot set the secondary model: persist its recipe before applying it to a session.',
+        "Cannot set the secondary model: persist its recipe before applying it to a session.",
       );
     }
     try {
@@ -841,7 +923,8 @@ export class Session {
     const pointedModel = config.models?.[secondary.model];
     if (pointedModel !== undefined) models[secondary.model] = pointedModel;
     const derivedModel = config.models?.[SECONDARY_DERIVED_MODEL_ALIAS];
-    if (derivedModel !== undefined) models[SECONDARY_DERIVED_MODEL_ALIAS] = derivedModel;
+    if (derivedModel !== undefined)
+      models[SECONDARY_DERIVED_MODEL_ALIAS] = derivedModel;
     const next = { ...base, models, secondaryModel: secondary };
     this.runtimeConfig = next;
     this.secondaryModelWarnings = undefined;
@@ -851,7 +934,9 @@ export class Session {
       } else {
         // Resume in flight: push the update once the agent materializes (the
         // rejection is owned by the resume caller, not by this tap).
-        void entry.then(({ agent }) => agent.updateKimiConfig(next)).catch(() => {});
+        void entry
+          .then(({ agent }) => agent.updateKimiConfig(next))
+          .catch(() => {});
       }
     }
   }
@@ -866,16 +951,21 @@ export class Session {
    * error) remains the backstop. Computed once per session.
    */
   private computeSecondaryModelWarnings(): SessionWarning[] {
-    if (this.secondaryModelWarnings !== undefined) return [...this.secondaryModelWarnings];
+    if (this.secondaryModelWarnings !== undefined)
+      return [...this.secondaryModelWarnings];
     const warnings: SessionWarning[] = [];
-    const secondary = resolveSecondaryModel(this.kimiConfig, this.experimentalFlags);
+    const secondary = resolveSecondaryModel(
+      this.kimiConfig,
+      this.experimentalFlags,
+    );
     if (secondary?.model !== undefined) {
       const boundAlias =
         secondaryModelPatch(secondary) === undefined
           ? secondary.model
           : SECONDARY_DERIVED_MODEL_ALIAS;
       try {
-        const resolved = this.options.providerManager?.resolveProviderConfig(boundAlias);
+        const resolved =
+          this.options.providerManager?.resolveProviderConfig(boundAlias);
         const supported = resolved?.supportEfforts ?? [];
         if (
           secondary.defaultEffort !== undefined &&
@@ -883,19 +973,19 @@ export class Session {
           !supported.includes(secondary.defaultEffort)
         ) {
           warnings.push({
-            code: 'secondary-model-effort-not-listed',
+            code: "secondary-model-effort-not-listed",
             message:
               `Secondary model default_effort "${secondary.defaultEffort}" is not in the resolved model's ` +
-              `support_efforts (${supported.join(', ')}). Subagents will resolve thinking without it.`,
-            severity: 'warning',
+              `support_efforts (${supported.join(", ")}). Subagents will resolve thinking without it.`,
+            severity: "warning",
           });
         }
       } catch (error) {
         const wrapped = wrapSubagentModelError(error, boundAlias, undefined);
         warnings.push({
-          code: 'secondary-model-invalid',
+          code: "secondary-model-invalid",
           message: `${wrapped instanceof Error ? wrapped.message : String(wrapped)} Subagent spawns will fail until this is fixed.`,
-          severity: 'warning',
+          severity: "warning",
         });
       }
     }
@@ -918,7 +1008,7 @@ export class Session {
       );
       this.agentsMdWarning = context.agentsMdWarning;
     } catch (error) {
-      log.warn('failed to compute AGENTS.md warning', { error });
+      log.warn("failed to compute AGENTS.md warning", { error });
     }
     return this.agentsMdWarning;
   }
@@ -929,25 +1019,28 @@ export class Session {
 
     try {
       const handle = await mainAgent.subagentHost!.spawn({
-        profileName: 'coder',
-        parentToolCallId: 'generate-agents-md',
+        profileName: "coder",
+        parentToolCallId: "generate-agents-md",
         prompt: DEFAULT_INIT_PROMPT,
-        description: 'Initialize AGENTS.md',
+        description: "Initialize AGENTS.md",
         runInBackground: false,
         signal: new AbortController().signal,
       });
       await handle.completion;
 
-      const agentsMd = await loadAgentsMd(mainAgent.kaos, this.options.kimiHomeDir);
+      const agentsMd = await loadAgentsMd(
+        mainAgent.kaos,
+        this.options.kimiHomeDir,
+      );
       mainAgent.context.appendSystemReminder(initCompletionReminder(agentsMd), {
-        kind: 'injection',
-        variant: 'init',
+        kind: "injection",
+        variant: "init",
       });
       await mainAgent.records.flush();
     } catch (error) {
       throw new KimiError(
         ErrorCodes.SESSION_INIT_FAILED,
-        error instanceof Error ? error.message : 'Init failed',
+        error instanceof Error ? error.message : "Init failed",
         { cause: error },
       );
     }
@@ -977,12 +1070,12 @@ export class Session {
     if (reminder !== undefined) {
       mainAgent.context.appendSystemReminder(
         `${reminder}\n\nThis supersedes any earlier plugin_session_start reminder in this session.`,
-        { kind: 'injection', variant: 'plugin_session_start' },
+        { kind: "injection", variant: "plugin_session_start" },
       );
     } else if (this.shouldNeutralizePluginSessionStart(mainAgent)) {
       mainAgent.context.appendSystemReminder(
-        'There are currently no active plugin session starts. This supersedes any earlier plugin_session_start reminder in this session.',
-        { kind: 'injection', variant: 'plugin_session_start' },
+        "There are currently no active plugin session starts. This supersedes any earlier plugin_session_start reminder in this session.",
+        { kind: "injection", variant: "plugin_session_start" },
       );
     } else {
       return;
@@ -993,13 +1086,13 @@ export class Session {
   private shouldNeutralizePluginSessionStart(mainAgent: Agent): boolean {
     return mainAgent.context.history.some((message) => {
       const kind = message.origin?.kind;
-      if (kind === 'injection') {
-        return message.origin?.variant === 'plugin_session_start';
+      if (kind === "injection") {
+        return message.origin?.variant === "plugin_session_start";
       }
       // A compaction summary replaces earlier messages (including any plugin
       // session-start reminder) with a single summary that may still carry stale
       // plugin guidance, so the origin-only check above is not sufficient.
-      return kind === 'compaction_summary';
+      return kind === "compaction_summary";
     });
   }
 
@@ -1011,7 +1104,7 @@ export class Session {
   }
 
   protected get metadataPath() {
-    return join(this.options.homedir, 'state.json');
+    return join(this.options.homedir, "state.json");
   }
 
   writeMetadata() {
@@ -1024,7 +1117,10 @@ export class Session {
       2,
     );
     const write = async () => {
-      await this.persistenceKaos.mkdir(this.options.homedir, { parents: true, existOk: true });
+      await this.persistenceKaos.mkdir(this.options.homedir, {
+        parents: true,
+        existOk: true,
+      });
       await this.persistenceKaos.writeText(this.metadataPath, text);
     };
     this.writeMetadataPromise = this.writeMetadataPromise.then(write, write);
@@ -1041,7 +1137,8 @@ export class Session {
         this.agentProfileSnapshot = this.agentCatalog.snapshot();
       }
     } else {
-      const parsed = AgentProfileCatalogSnapshotSchema.safeParse(agentProfileCatalog);
+      const parsed =
+        AgentProfileCatalogSnapshotSchema.safeParse(agentProfileCatalog);
       if (parsed.success) {
         if (this.options.agents?.refreshPluginAgents === true) {
           await this.agentCatalog.restoreSnapshotRefreshingPlugins(
@@ -1053,9 +1150,12 @@ export class Session {
         }
         this.agentProfileSnapshot = this.agentCatalog.snapshot();
       } else {
-        this.log.warn('stored agent profile catalog is invalid; using discovered profiles', {
-          error: parsed.error.message,
-        });
+        this.log.warn(
+          "stored agent profile catalog is invalid; using discovered profiles",
+          {
+            error: parsed.error.message,
+          },
+        );
         if (this.options.agents?.refreshPluginAgents === true) {
           this.agentProfileSnapshot = this.agentCatalog.snapshot();
         }
@@ -1067,7 +1167,9 @@ export class Session {
   async flushMetadata() {
     await this.skillsReady;
     await this.writeMetadataPromise;
-    await Promise.all(Array.from(this.readyAgents()).map((agent) => agent.records.flush()));
+    await Promise.all(
+      Array.from(this.readyAgents()).map((agent) => agent.records.flush()),
+    );
   }
 
   async listSkills(): Promise<readonly SkillSummary[]> {
@@ -1083,7 +1185,8 @@ export class Session {
     const roots = await resolveSkillRoots({
       paths: {
         userHomeDir: this.options.skills?.userHomeDir ?? homedir(),
-        brandHomeDir: this.options.skills?.brandHomeDir ?? this.options.kimiHomeDir,
+        brandHomeDir:
+          this.options.skills?.brandHomeDir ?? this.options.kimiHomeDir,
         workDir: this.options.kaos.getcwd(),
       },
       explicitDirs: this.options.skills?.explicitDirs,
@@ -1100,21 +1203,27 @@ export class Session {
     const servers = this.options.mcpConfig?.servers;
     if (servers === undefined || Object.keys(servers).length === 0) return;
     await this.mcp.connectAll(servers);
-    const entries = this.mcp.list().filter((entry) => entry.status !== 'disabled');
+    const entries = this.mcp
+      .list()
+      .filter((entry) => entry.status !== "disabled");
     const totalCount = entries.length;
     if (totalCount === 0) return;
 
-    const connectedCount = entries.filter((entry) => entry.status === 'connected').length;
+    const connectedCount = entries.filter(
+      (entry) => entry.status === "connected",
+    ).length;
     if (connectedCount > 0) {
-      this.telemetry.track('mcp_connected', {
+      this.telemetry.track("mcp_connected", {
         server_count: connectedCount,
         total_count: totalCount,
       });
     }
 
-    const failedCount = entries.filter((entry) => entry.status === 'failed').length;
+    const failedCount = entries.filter(
+      (entry) => entry.status === "failed",
+    ).length;
     if (failedCount > 0) {
-      this.telemetry.track('mcp_failed', {
+      this.telemetry.track("mcp_failed", {
         failed_count: failedCount,
         total_count: totalCount,
       });
@@ -1123,10 +1232,10 @@ export class Session {
 
   private emitInitialMcpLoadError(error: unknown): void {
     const message = error instanceof Error ? error.message : String(error);
-    this.log.error('mcp initial load failed', error);
+    this.log.error("mcp initial load failed", error);
     void this.rpc.emitEvent({
-      type: 'error',
-      agentId: 'main',
+      type: "error",
+      agentId: "main",
       ...makeErrorPayload(ErrorCodes.MCP_STARTUP_FAILED, message),
     });
   }
@@ -1135,8 +1244,8 @@ export class Session {
     // Always surface server-level status changes to clients so the TUI/SDK
     // can keep its dashboard in sync, even before the main agent exists.
     void this.rpc.emitEvent({
-      type: 'mcp.server.status',
-      agentId: 'main',
+      type: "mcp.server.status",
+      agentId: "main",
       server: {
         name: entry.name,
         transport: entry.transport,
@@ -1160,14 +1269,18 @@ export class Session {
    * plugin reload — installing, enabling, disabling, or removing a plugin
    * without a reload deliberately leaves live prompts unchanged.
    */
-  async setPluginSystemPrompts(sections: readonly EnabledPluginSystemPrompt[]): Promise<void> {
+  async setPluginSystemPrompts(
+    sections: readonly EnabledPluginSystemPrompt[],
+  ): Promise<void> {
     this.pluginSystemPrompts = sections;
     for (const agent of this.readyAgents()) {
       agent.setPluginSystemPrompts(sections);
       try {
         await agent.refreshSystemPrompt();
       } catch (error) {
-        this.log.warn('failed to refresh system prompt after plugin reload', { error });
+        this.log.warn("failed to refresh system prompt after plugin reload", {
+          error,
+        });
       }
     }
   }
@@ -1179,7 +1292,8 @@ export class Session {
     config: Partial<AgentOptions> = {},
     parentAgentId: string | null = null,
   ): Agent {
-    const parentAgent = parentAgentId !== null ? this.getReadyAgent(parentAgentId) : undefined;
+    const parentAgent =
+      parentAgentId !== null ? this.getReadyAgent(parentAgentId) : undefined;
     const cwd = parentAgent?.config.cwd ?? this.toolKaos.getcwd();
     let agent!: Agent;
     const subagentHost =
@@ -1203,8 +1317,9 @@ export class Session {
       permission: this.permissionOptions(parentAgentId, config.permission),
       telemetry: withTelemetryProperties(this.telemetry, { agent_id: id }),
       log: this.log.createChild({ agentId: id }),
-      pluginSessionStarts: type === 'main' ? this.options.pluginSessionStarts : undefined,
-      pluginCommands: type === 'main' ? this.options.pluginCommands : undefined,
+      pluginSessionStarts:
+        type === "main" ? this.options.pluginSessionStarts : undefined,
+      pluginCommands: type === "main" ? this.options.pluginCommands : undefined,
       pluginSystemPrompts: this.pluginSystemPrompts,
       experimentalFlags: this.experimentalFlags,
       imageLimits: this.imageLimits,
@@ -1258,7 +1373,7 @@ export class Session {
     if (stack.includes(id)) {
       throw new KimiError(
         ErrorCodes.SESSION_STATE_INVALID,
-        `Session agent parent chain contains a cycle: ${[...stack, id].join(' -> ')}`,
+        `Session agent parent chain contains a cycle: ${[...stack, id].join(" -> ")}`,
       );
     }
 
@@ -1277,7 +1392,10 @@ export class Session {
     await this.skillsReady;
     const meta = this.metadata.agents[id];
     if (meta === undefined) {
-      throw new KimiError(ErrorCodes.SESSION_STATE_INVALID, `Session agent "${id}" is missing`);
+      throw new KimiError(
+        ErrorCodes.SESSION_STATE_INVALID,
+        `Session agent "${id}" is missing`,
+      );
     }
 
     const parentAgentId = meta.parentAgentId ?? null;
@@ -1289,7 +1407,7 @@ export class Session {
     try {
       const agent = this.instantiateAgent(
         id,
-        join(this.options.homedir, 'agents', id),
+        join(this.options.homedir, "agents", id),
         meta.type,
         {},
         parentAgentId,
@@ -1312,7 +1430,7 @@ export class Session {
     meta: AgentMeta,
     parentAgent: Agent | undefined,
   ): void {
-    if (agent.config.systemPrompt === '') return;
+    if (agent.config.systemPrompt === "") return;
     const profile = this.resolvePersistedProfile(agent, meta, parentAgent);
     if (profile === undefined) return;
     agent.setActiveProfile(profile, this.options.kimiHomeDir);
@@ -1325,10 +1443,10 @@ export class Session {
   ): ResolvedAgentProfile | undefined {
     const profileName = agent.config.profileName;
     if (profileName === undefined) return undefined;
-    if (meta.type === 'sub') {
-      return this.agentCatalog.delegatableSubagents(parentAgent?.config.profileName ?? 'agent')[
-        profileName
-      ];
+    if (meta.type === "sub") {
+      return this.agentCatalog.delegatableSubagents(
+        parentAgent?.config.profileName ?? "agent",
+      )[profileName];
     }
     return this.agentCatalog.get(profileName);
   }
@@ -1343,42 +1461,47 @@ export class Session {
   }
 
   private requireMainAgent(): Agent {
-    const agent = this.getReadyAgent('main');
+    const agent = this.getReadyAgent("main");
     if (agent === undefined) {
-      throw new KimiError(ErrorCodes.AGENT_NOT_FOUND, 'Main agent was not found');
+      throw new KimiError(
+        ErrorCodes.AGENT_NOT_FOUND,
+        "Main agent was not found",
+      );
     }
     return agent;
   }
 
-  private async triggerSessionStart(source: 'startup' | 'resume'): Promise<void> {
-    await this.hookEngine.trigger('SessionStart', {
+  private async triggerSessionStart(
+    source: "startup" | "resume",
+  ): Promise<void> {
+    await this.hookEngine.trigger("SessionStart", {
       matcherValue: source,
       inputData: { source },
     });
   }
 
-  private async triggerSessionEnd(reason: 'exit'): Promise<void> {
-    await this.hookEngine.trigger('SessionEnd', {
+  private async triggerSessionEnd(reason: "exit"): Promise<void> {
+    await this.hookEngine.trigger("SessionEnd", {
       matcherValue: reason,
       inputData: { reason },
     });
   }
 }
 
-export * from './subagent-host';
-export * from './subagent-binding';
-export * from './store';
+export * from "./subagent-host";
+export * from "./subagent-binding";
+export * from "./store";
 
 function initCompletionReminder(agentsMd: string): string {
   const latest =
     agentsMd.trim().length === 0
-      ? 'No AGENTS.md content was found after `/init` completed.'
+      ? "No AGENTS.md content was found after `/init` completed."
       : agentsMd;
   return [
-    'The user just ran `/init` slash command.',
-    'The system has analyzed the codebase and generated an `AGENTS.md` file.',
-    '',
-    'Latest AGENTS.md file content:',
+    "The user just ran `/init` slash command.",
+    "The system has analyzed the codebase and generated an `AGENTS.md` file.",
+    "",
+    "Latest AGENTS.md file content:",
     latest,
-  ].join('\n');
+  ].join("\n");
 }

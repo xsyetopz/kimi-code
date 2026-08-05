@@ -1,13 +1,30 @@
 import { useState, useEffect } from "react";
-import { IconFolder, IconFolderOpen, IconCheck, IconHome } from "@tabler/icons-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  IconFolder,
+  IconFolderOpen,
+  IconCheck,
+  IconHome,
+} from "@tabler/icons-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useSettingsStore, useChatStore } from "@/stores";
 import { bridge } from "@/services";
 import { cn } from "@/lib/utils";
 
 export function WorkDirModal() {
-  const { workDirModalOpen, setWorkDirModalOpen, currentWorkDir, workspaceRoot, setCurrentWorkDir } = useSettingsStore();
+  const {
+    workDirModalOpen,
+    setWorkDirModalOpen,
+    currentWorkDir,
+    workspaceRoot,
+    setCurrentWorkDir,
+  } = useSettingsStore();
   const { startNewConversation } = useChatStore();
   const [workDirs, setWorkDirs] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -23,7 +40,9 @@ export function WorkDirModal() {
     try {
       const result = await bridge.setWorkDir(dir);
       if (result.ok) {
-        setCurrentWorkDir(result.workDir === workspaceRoot ? null : result.workDir);
+        setCurrentWorkDir(
+          result.workDir === workspaceRoot ? null : result.workDir,
+        );
         await startNewConversation();
         setWorkDirModalOpen(false);
       }
@@ -37,7 +56,9 @@ export function WorkDirModal() {
     try {
       const result = await bridge.browseWorkDir();
       if (result.ok && result.workDir) {
-        setCurrentWorkDir(result.workDir === workspaceRoot ? null : result.workDir);
+        setCurrentWorkDir(
+          result.workDir === workspaceRoot ? null : result.workDir,
+        );
         await startNewConversation();
         setWorkDirModalOpen(false);
       }
@@ -48,7 +69,8 @@ export function WorkDirModal() {
 
   const displayPath = (fullPath: string) => {
     if (!workspaceRoot) return fullPath;
-    if (fullPath === workspaceRoot) return fullPath.split("/").pop() || fullPath;
+    if (fullPath === workspaceRoot)
+      return fullPath.split("/").pop() || fullPath;
     return fullPath.replace(workspaceRoot, ".");
   };
 
@@ -84,8 +106,12 @@ export function WorkDirModal() {
                 <IconFolder className="size-4 text-muted-foreground shrink-0" />
               )}
               <span className="flex-1 truncate">{displayPath(dir)}</span>
-              {isSelected(dir) && <IconCheck className="size-4 text-blue-500 shrink-0" />}
-              {dir === workspaceRoot && <span className="text-xs text-muted-foreground">(root)</span>}
+              {isSelected(dir) && (
+                <IconCheck className="size-4 text-blue-500 shrink-0" />
+              )}
+              {dir === workspaceRoot && (
+                <span className="text-xs text-muted-foreground">(root)</span>
+              )}
             </button>
           ))}
         </div>
@@ -117,7 +143,11 @@ export function WorkDirModal() {
               </Button>
             )}
           </div>
-          <Button variant="ghost" size="sm" onClick={() => setWorkDirModalOpen(false)}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setWorkDirModalOpen(false)}
+          >
             Cancel
           </Button>
         </DialogFooter>

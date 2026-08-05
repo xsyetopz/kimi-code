@@ -8,7 +8,10 @@
  * `reload()` re-discovers and re-registers. Workspace-scoped.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
 
 export interface IPluginAgentProfileLoader {
   readonly _serviceBrand: undefined;
@@ -17,4 +20,4 @@ export interface IPluginAgentProfileLoader {
 }
 
 export const IPluginAgentProfileLoader: ServiceIdentifier<IPluginAgentProfileLoader> =
-  createDecorator<IPluginAgentProfileLoader>('pluginAgentProfileLoader');
+  createDecorator<IPluginAgentProfileLoader>("pluginAgentProfileLoader");

@@ -21,12 +21,17 @@
 // Internal to the package — NOT re-exported from the root entry point; the
 // public surface is MiniDb.maintenanceStatus().
 
-import os from 'node:os';
-import { AsyncLocalStorage } from 'node:async_hooks';
-import { OpTracker } from './op-tracker.js';
+import os from "node:os";
+import { AsyncLocalStorage } from "node:async_hooks";
+import { OpTracker } from "./op-tracker.js";
 
-export type MaintenanceKind = 'compact' | 'generation-build' | 'text-build';
-export type MaintenanceState = 'queued' | 'running' | 'publishing' | 'failed' | 'complete';
+export type MaintenanceKind = "compact" | "generation-build" | "text-build";
+export type MaintenanceState =
+  | "queued"
+  | "running"
+  | "publishing"
+  | "failed"
+  | "complete";
 
 /** Stable, serializable view of one task (MiniDb.maintenanceStatus()). */
 export interface MaintenanceTaskInfo {
@@ -68,27 +73,27 @@ interface Task {
 }
 
 export class MaintenanceBackpressureError extends Error {
-  readonly code = 'MAINTENANCE_BACKPRESSURE';
+  readonly code = "MAINTENANCE_BACKPRESSURE";
   constructor(kind: MaintenanceKind) {
     super(`maintenance queue is full; cannot queue ${kind}`);
-    this.name = 'MaintenanceBackpressureError';
+    this.name = "MaintenanceBackpressureError";
   }
 }
 
 export class MaintenanceClosedError extends Error {
-  readonly code = 'MAINTENANCE_CLOSED';
+  readonly code = "MAINTENANCE_CLOSED";
   constructor() {
-    super('maintenance scheduler is closed');
-    this.name = 'MaintenanceClosedError';
+    super("maintenance scheduler is closed");
+    this.name = "MaintenanceClosedError";
   }
 }
 
 export class MaintenanceCancelledError extends Error {
-  readonly code = 'MAINTENANCE_CANCELLED';
-  constructor(kind: MaintenanceKind | 'generation-build') {
+  readonly code = "MAINTENANCE_CANCELLED";
+  constructor(kind: MaintenanceKind | "generation-build") {
     super(`maintenance task ${kind} was cancelled`);
     // Named AbortError so cancellation routes like other abort flows.
-    this.name = 'AbortError';
+    this.name = "AbortError";
   }
 }
 
@@ -117,8 +122,12 @@ export class MaintenanceScheduler {
   private closed = false;
   private readonly tracker = new OpTracker();
   private readonly maxQueue: number;
-  private readonly estimateBytes?: (kind: MaintenanceKind) => Promise<number | null>;
-  private readonly statfsFn: (dir: string) => Promise<{ bavail: number; bsize: number }>;
+  private readonly estimateBytes?: (
+    kind: MaintenanceKind,
+  ) => Promise<number | null>;
+  private readonly statfsFn: (
+    dir: string,
+  ) => Promise<{ bavail: number; bsize: number }>;
   private readonly dir: string;
   /** The task whose run() is currently on the stack: a NESTED submission
    *  from inside a task (compaction's onCompacted hook submitting a
@@ -130,7 +139,9 @@ export class MaintenanceScheduler {
   constructor(opts: MaintenanceSchedulerOptions) {
     this.maxQueue = opts.maxQueue ?? 4;
     this.estimateBytes = opts.estimateBytes;
-    this.statfsFn = opts.statfs ?? (async (dir: string) => (await import('node:fs/promises')).statfs(dir));
+    this.statfsFn =
+      opts.statfs ??
+      (async (dir: string) => (await import("node:fs/promises")).statfs(dir));
     this.dir = opts.dir;
   }
 
@@ -138,7 +149,15 @@ export class MaintenanceScheduler {
   status(): MaintenanceTaskInfo[] {
     const out: MaintenanceTaskInfo[] = [];
     const push = (t: Task): void => {
-      out.push({ id: t.id, kind: t.kind, state: t.state, queuedAt: t.queuedAt, startedAt: t.startedAt, finishedAt: t.finishedAt, error: t.error });
+      out.push({
+        id: t.id,
+        kind: t.kind,
+        state: t.state,
+        queuedAt: t.queuedAt,
+        startedAt: t.startedAt,
+        finishedAt: t.finishedAt,
+        error: t.error,
+      });
     };
     if (this.running) push(this.running);
     for (const t of this.queue) push(t);
@@ -178,7 +197,7 @@ export class MaintenanceScheduler {
       return run({
         signal: current.controller.signal,
         markPublishing: () => {
-          if (current.state === 'running') current.state = 'publishing';
+          if (current.state === "running") current.state = "publishing";
         },
       });
     }
@@ -186,13 +205,15 @@ export class MaintenanceScheduler {
     if (this.running?.kind === kind) return this.promiseOf(this.running);
     const queued = this.queue.find((t) => t.kind === kind);
     if (queued) return this.promiseOf(queued);
-    if (this.queue.length >= this.maxQueue) return Promise.reject(new MaintenanceBackpressureError(kind));
-    if (!this.tracker.enter()) return Promise.reject(new MaintenanceClosedError());
+    if (this.queue.length >= this.maxQueue)
+      return Promise.reject(new MaintenanceBackpressureError(kind));
+    if (!this.tracker.enter())
+      return Promise.reject(new MaintenanceClosedError());
 
     const task: Task = {
       id: this.nextId++,
       kind,
-      state: 'queued',
+      state: "queued",
       queuedAt: Date.now(),
       run,
       controller: new AbortController(),
@@ -205,7 +226,10 @@ export class MaintenanceScheduler {
     });
     task.promise = promise;
     if (opts.deadlineMs !== undefined) {
-      task.deadlineTimer = setTimeout(() => task.controller.abort(), opts.deadlineMs);
+      task.deadlineTimer = setTimeout(
+        () => task.controller.abort(),
+        opts.deadlineMs,
+      );
       task.deadlineTimer.unref?.();
     }
     this.queue.push(task);
@@ -222,7 +246,7 @@ export class MaintenanceScheduler {
     const task = this.queue.shift();
     if (!task) return;
     this.running = task;
-    task.state = 'running';
+    task.state = "running";
     task.startedAt = Date.now();
     try {
       await this.preflight(task.kind);
@@ -234,7 +258,7 @@ export class MaintenanceScheduler {
     const ctx: MaintenanceContext = {
       signal: task.controller.signal,
       markPublishing: () => {
-        if (task.state === 'running') task.state = 'publishing';
+        if (task.state === "running") task.state = "publishing";
       },
     };
     try {
@@ -263,24 +287,38 @@ export class MaintenanceScheduler {
       return;
     }
     if (free < need) {
-      const err = new Error(`insufficient disk space for ${kind}: need ~${need} bytes, have ${free} bytes`);
-      (err as { code?: string }).code = 'ENOSPC_PREFLIGHT';
+      const err = new Error(
+        `insufficient disk space for ${kind}: need ~${need} bytes, have ${free} bytes`,
+      );
+      (err as { code?: string }).code = "ENOSPC_PREFLIGHT";
       throw err;
     }
   }
 
   private finish(task: Task, error: unknown): void {
     if (task.deadlineTimer) clearTimeout(task.deadlineTimer);
-    task.state = error ? 'failed' : 'complete';
+    task.state = error ? "failed" : "complete";
     task.finishedAt = Date.now();
     if (error) {
-      task.error = error instanceof Error ? error.message : `non-Error thrown: ${Object.prototype.toString.call(error)}`;
+      task.error =
+        error instanceof Error
+          ? error.message
+          : `non-Error thrown: ${Object.prototype.toString.call(error)}`;
       task.reject(error);
     } else {
       task.resolve();
     }
-    this.history.unshift({ id: task.id, kind: task.kind, state: task.state, queuedAt: task.queuedAt, startedAt: task.startedAt, finishedAt: task.finishedAt, error: task.error });
-    if (this.history.length > HISTORY_LIMIT) this.history.length = HISTORY_LIMIT;
+    this.history.unshift({
+      id: task.id,
+      kind: task.kind,
+      state: task.state,
+      queuedAt: task.queuedAt,
+      startedAt: task.startedAt,
+      finishedAt: task.finishedAt,
+      error: task.error,
+    });
+    if (this.history.length > HISTORY_LIMIT)
+      this.history.length = HISTORY_LIMIT;
     if (this.running === task) this.running = null;
     this.tracker.leave();
   }
@@ -297,15 +335,23 @@ export class MaintenanceScheduler {
     this.closed = true;
     for (const t of this.queue.splice(0)) {
       if (t.deadlineTimer) clearTimeout(t.deadlineTimer);
-      t.state = 'failed';
+      t.state = "failed";
       t.finishedAt = Date.now();
-      t.error = 'cancelled by shutdown';
+      t.error = "cancelled by shutdown";
       t.reject(new MaintenanceCancelledError(t.kind));
-      this.history.unshift({ id: t.id, kind: t.kind, state: t.state, queuedAt: t.queuedAt, startedAt: t.startedAt, finishedAt: t.finishedAt, error: t.error });
+      this.history.unshift({
+        id: t.id,
+        kind: t.kind,
+        state: t.state,
+        queuedAt: t.queuedAt,
+        startedAt: t.startedAt,
+        finishedAt: t.finishedAt,
+        error: t.error,
+      });
       this.tracker.leave();
     }
     const running = this.running;
-    if (running && running.state !== 'publishing') running.controller.abort();
+    if (running && running.state !== "publishing") running.controller.abort();
     await this.tracker.close();
   }
 }
@@ -333,18 +379,19 @@ export class WorkerSlots {
   async acquire(signal?: AbortSignal): Promise<() => void> {
     const immediate = this.tryAcquire();
     if (immediate) return immediate;
-    if (signal?.aborted) throw new MaintenanceCancelledError('generation-build');
+    if (signal?.aborted)
+      throw new MaintenanceCancelledError("generation-build");
     return new Promise<() => void>((resolve, reject) => {
       const onAbort = (): void => {
         const i = this.waiters.indexOf(grant);
         if (i >= 0) this.waiters.splice(i, 1);
-        reject(new MaintenanceCancelledError('generation-build'));
+        reject(new MaintenanceCancelledError("generation-build"));
       };
       const grant = (): void => {
-        signal?.removeEventListener('abort', onAbort);
+        signal?.removeEventListener("abort", onAbort);
         resolve(() => this.release());
       };
-      signal?.addEventListener('abort', onAbort, { once: true });
+      signal?.addEventListener("abort", onAbort, { once: true });
       this.waiters.push(grant);
     });
   }
@@ -362,4 +409,6 @@ export class WorkerSlots {
 /** The process-wide default worker slot pool: half the CPUs, at least one,
  *  capped at two — one worker build already saturates a core for seconds,
  *  and the main thread must stay responsive. */
-export const defaultWorkerSlots = new WorkerSlots(Math.max(1, Math.min(2, Math.floor(os.cpus().length / 2))));
+export const defaultWorkerSlots = new WorkerSlots(
+  Math.max(1, Math.min(2, Math.floor(os.cpus().length / 2))),
+);

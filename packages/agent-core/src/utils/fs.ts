@@ -14,11 +14,11 @@
  * dirent inside the file fsync, so a separate directory fsync is a
  * no-op (and EISDIR-fails on `open(dir, 'r')`).
  */
-import { randomBytes } from 'node:crypto';
-import { closeSync, fsyncSync, openSync } from 'node:fs';
-import * as nodeFs from 'node:fs';
-import { open, rename, unlink } from 'node:fs/promises';
-import { dirname } from 'pathe';
+import { randomBytes } from "node:crypto";
+import { closeSync, fsyncSync, openSync } from "node:fs";
+import * as nodeFs from "node:fs";
+import { open, rename, unlink } from "node:fs/promises";
+import { dirname } from "pathe";
 
 /**
  * Open a directory read-only and fsync it, then close. Used to make a
@@ -29,8 +29,8 @@ import { dirname } from 'pathe';
  * fsync would buy nothing even if we could issue it.
  */
 export async function syncDir(dirPath: string): Promise<void> {
-  if (process.platform === 'win32') return;
-  const dirFh = await open(dirPath, 'r');
+  if (process.platform === "win32") return;
+  const dirFh = await open(dirPath, "r");
   try {
     await dirFh.sync();
   } finally {
@@ -43,8 +43,8 @@ export async function syncDir(dirPath: string): Promise<void> {
  * mirrors the async variant — noop.
  */
 export function syncDirSync(dirPath: string): void {
-  if (process.platform === 'win32') return;
-  const fd = openSync(dirPath, 'r');
+  if (process.platform === "win32") return;
+  const fd = openSync(dirPath, "r");
   try {
     fsyncSync(fd);
   } finally {
@@ -67,10 +67,10 @@ export async function writeFileAtomicDurable(
   filePath: string,
   content: string | Uint8Array,
 ): Promise<void> {
-  const tmpPath = filePath + '.tmp';
+  const tmpPath = filePath + ".tmp";
   let renamed = false;
   try {
-    const fh = await open(tmpPath, 'w');
+    const fh = await open(tmpPath, "w");
     try {
       await fh.writeFile(content);
       await fh.sync();
@@ -78,12 +78,12 @@ export async function writeFileAtomicDurable(
       await fh.close();
     }
     // Windows pre-unlink for MoveFileEx parity.
-    if (process.platform === 'win32') {
+    if (process.platform === "win32") {
       try {
         await unlink(filePath);
       } catch (error) {
         const code = (error as NodeJS.ErrnoException).code;
-        if (code !== 'ENOENT') throw error;
+        if (code !== "ENOENT") throw error;
       }
     }
     await rename(tmpPath, filePath);
@@ -151,11 +151,11 @@ export async function atomicWrite(
   content: string | Uint8Array,
   _syncOverride?: (fd: number) => Promise<void>,
 ): Promise<void> {
-  const hex = randomBytes(4).toString('hex');
+  const hex = randomBytes(4).toString("hex");
   const tmpPath = `${filePath}.tmp.${process.pid}.${hex}`;
   let renamed = false;
   try {
-    const fh = await open(tmpPath, 'w');
+    const fh = await open(tmpPath, "w");
     try {
       await fh.writeFile(content);
       await (_syncOverride ?? syncFd)(fh.fd);
@@ -165,12 +165,12 @@ export async function atomicWrite(
     // Windows `fs.rename` maps to MoveFileEx and fails with EPERM if
     // the target is held by another handle. Pre-unlinking
     // before the rename turns this into the POSIX-style "replace" case.
-    if (process.platform === 'win32') {
+    if (process.platform === "win32") {
       try {
         await unlink(filePath);
       } catch (error) {
         const code = (error as NodeJS.ErrnoException).code;
-        if (code !== 'ENOENT') throw error;
+        if (code !== "ENOENT") throw error;
       }
     }
     await rename(tmpPath, filePath);

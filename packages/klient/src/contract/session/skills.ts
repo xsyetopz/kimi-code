@@ -6,15 +6,15 @@
  * `agent-core-v2/app/skillCatalog/types.ts`.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import type { ServiceContract } from '../types.js';
+import type { ServiceContract } from "../types.js";
 
 export const skillSummarySchema = z.object({
   name: z.string(),
   description: z.string(),
   path: z.string(),
-  source: z.enum(['project', 'user', 'extra', 'builtin']),
+  source: z.enum(["project", "user", "extra", "builtin"]),
   type: z.string().optional(),
   disableModelInvocation: z.boolean().optional(),
   isSubSkill: z.boolean().optional(),

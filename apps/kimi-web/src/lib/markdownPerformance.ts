@@ -1,4 +1,4 @@
-export type MarkdownCodeRenderer = 'pre' | 'shiki';
+export type MarkdownCodeRenderer = "pre" | "shiki";
 
 export interface MarkdownRenderPlan {
   codeRenderer: MarkdownCodeRenderer;
@@ -20,7 +20,7 @@ export function markdownRenderPlan(text: string): MarkdownRenderPlan {
   CODE_FENCE_RE.lastIndex = 0;
   let match: RegExpExecArray | null;
   while ((match = CODE_FENCE_RE.exec(text)) !== null) {
-    const code = match[3] ?? '';
+    const code = match[3] ?? "";
     codeFenceCount += 1;
     codeChars += code.length;
     longestFence = Math.max(longestFence, code.length);
@@ -33,7 +33,7 @@ export function markdownRenderPlan(text: string): MarkdownRenderPlan {
     longestFence >= HEAVY_SINGLE_FENCE_CHARS;
 
   return {
-    codeRenderer: heavy ? 'pre' : 'shiki',
+    codeRenderer: heavy ? "pre" : "shiki",
     codeFenceCount,
     codeChars,
   };

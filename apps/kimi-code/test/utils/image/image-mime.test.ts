@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from "vitest";
 
-import { parseImageMeta } from '#/utils/image/image-mime';
+import { parseImageMeta } from "#/utils/image/image-mime";
 
 function png(width: number, height: number): Uint8Array {
   // 8-byte PNG signature + IHDR length (4) + 'IHDR' + width (4 BE) + height (4 BE) + ...
@@ -63,35 +63,35 @@ function gif(width: number, height: number): Uint8Array {
   return bytes;
 }
 
-describe('parseImageMeta', () => {
-  it('recognises PNG with correct dimensions', () => {
+describe("parseImageMeta", () => {
+  it("recognises PNG with correct dimensions", () => {
     const meta = parseImageMeta(png(640, 480));
-    expect(meta).toEqual({ mime: 'image/png', width: 640, height: 480 });
+    expect(meta).toEqual({ mime: "image/png", width: 640, height: 480 });
   });
 
-  it('recognises JPEG with correct dimensions', () => {
+  it("recognises JPEG with correct dimensions", () => {
     const meta = parseImageMeta(jpeg(1280, 720));
-    expect(meta).toEqual({ mime: 'image/jpeg', width: 1280, height: 720 });
+    expect(meta).toEqual({ mime: "image/jpeg", width: 1280, height: 720 });
   });
 
-  it('recognises GIF (89a)', () => {
+  it("recognises GIF (89a)", () => {
     const meta = parseImageMeta(gif(100, 200));
-    expect(meta).toEqual({ mime: 'image/gif', width: 100, height: 200 });
+    expect(meta).toEqual({ mime: "image/gif", width: 100, height: 200 });
   });
 
-  it('recognises GIF (87a)', () => {
+  it("recognises GIF (87a)", () => {
     const bytes = gif(50, 75);
     bytes[4] = 0x37; // '7'
     const meta = parseImageMeta(bytes);
-    expect(meta).toEqual({ mime: 'image/gif', width: 50, height: 75 });
+    expect(meta).toEqual({ mime: "image/gif", width: 50, height: 75 });
   });
 
-  it('returns null for non-image bytes', () => {
+  it("returns null for non-image bytes", () => {
     expect(parseImageMeta(new Uint8Array([1, 2, 3, 4]))).toBeNull();
     expect(parseImageMeta(new Uint8Array([]))).toBeNull();
   });
 
-  it('returns null for truncated PNG', () => {
+  it("returns null for truncated PNG", () => {
     const full = png(10, 10);
     expect(parseImageMeta(full.slice(0, 20))).toBeNull();
   });

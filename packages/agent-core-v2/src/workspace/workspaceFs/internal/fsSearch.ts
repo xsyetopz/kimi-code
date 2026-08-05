@@ -6,7 +6,7 @@
  * be unit-tested directly. Ported from v1.
  */
 
-import type { FsGrepRequest } from '../fs';
+import type { FsGrepRequest } from "../fs";
 
 export function computeFuzzyScore(name: string, queryLower: string): number {
   if (queryLower.length === 0) return 0;
@@ -54,19 +54,19 @@ export function matchesAnyGlob(rel: string, globs: readonly string[]): boolean {
 }
 
 function globToRegExp(glob: string): RegExp {
-  let re = '^';
+  let re = "^";
   let i = 0;
   while (i < glob.length) {
     const ch = glob[i]!;
-    if (ch === '*' && glob[i + 1] === '*') {
-      re += '.*';
+    if (ch === "*" && glob[i + 1] === "*") {
+      re += ".*";
       i += 2;
-      if (glob[i] === '/') i++;
-    } else if (ch === '*') {
-      re += '[^/]*';
+      if (glob[i] === "/") i++;
+    } else if (ch === "*") {
+      re += "[^/]*";
       i++;
-    } else if (ch === '?') {
-      re += '[^/]';
+    } else if (ch === "?") {
+      re += "[^/]";
       i++;
     } else if (/[.+^${}()|[\]\\]/.test(ch)) {
       re += `\\${ch}`;
@@ -76,23 +76,23 @@ function globToRegExp(glob: string): RegExp {
       i++;
     }
   }
-  re += '$';
+  re += "$";
   return new RegExp(re);
 }
 
 export function compileGrepPattern(req: FsGrepRequest): RegExp {
-  const flags = req.case_sensitive ? 'g' : 'gi';
+  const flags = req.case_sensitive ? "g" : "gi";
   const body = req.regex ? req.pattern : escapeRegExp(req.pattern);
   return new RegExp(body, flags);
 }
 
 function escapeRegExp(s: string): string {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 export function stripTrailingNewline(s: string): string {
-  if (s.endsWith('\r\n')) return s.slice(0, -2);
-  if (s.endsWith('\n')) return s.slice(0, -1);
+  if (s.endsWith("\r\n")) return s.slice(0, -2);
+  if (s.endsWith("\n")) return s.slice(0, -1);
   return s;
 }
 
@@ -105,7 +105,7 @@ interface RgLinesField {
   bytes?: string;
 }
 export interface RgJsonRecord {
-  type: 'begin' | 'end' | 'match' | 'context' | 'summary';
+  type: "begin" | "end" | "match" | "context" | "summary";
   data?: {
     path?: RgPathField;
     lines?: RgLinesField;
@@ -117,30 +117,30 @@ export interface RgJsonRecord {
 export function rgPath(p: RgPathField | undefined): string | undefined {
   if (p === undefined) return undefined;
   let raw: string | undefined;
-  if (typeof p.text === 'string') {
+  if (typeof p.text === "string") {
     raw = p.text;
-  } else if (typeof p.bytes === 'string') {
+  } else if (typeof p.bytes === "string") {
     try {
-      raw = Buffer.from(p.bytes, 'base64').toString('utf-8');
+      raw = Buffer.from(p.bytes, "base64").toString("utf-8");
     } catch {
       return undefined;
     }
   }
   if (raw === undefined) return undefined;
 
-  if (raw.startsWith('./')) return raw.slice(2);
+  if (raw.startsWith("./")) return raw.slice(2);
   return raw;
 }
 
 export function rgText(l: RgLinesField | undefined): string {
-  if (l === undefined) return '';
-  if (typeof l.text === 'string') return l.text;
-  if (typeof l.bytes === 'string') {
+  if (l === undefined) return "";
+  if (typeof l.text === "string") return l.text;
+  if (typeof l.bytes === "string") {
     try {
-      return Buffer.from(l.bytes, 'base64').toString('utf-8');
+      return Buffer.from(l.bytes, "base64").toString("utf-8");
     } catch {
-      return '';
+      return "";
     }
   }
-  return '';
+  return "";
 }

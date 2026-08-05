@@ -1,8 +1,8 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from "vitest";
 
-import { SyncDescriptor } from '#/di/descriptors';
-import { createDecorator } from '#/di/instantiation';
-import { ServiceCollection } from '#/di/serviceCollection';
+import { SyncDescriptor } from "#/di/descriptors";
+import { createDecorator } from "#/di/instantiation";
+import { ServiceCollection } from "#/di/serviceCollection";
 
 interface ILogger {
   log(msg: string): void;
@@ -21,19 +21,22 @@ class FixedClock implements IClock {
   }
 }
 
-const ILogger = createDecorator<ILogger>('logger');
-const IClock = createDecorator<IClock>('clock');
+const ILogger = createDecorator<ILogger>("logger");
+const IClock = createDecorator<IClock>("clock");
 
-describe('ServiceCollection', () => {
-  it('starts empty when constructed without args', () => {
+describe("ServiceCollection", () => {
+  it("starts empty when constructed without args", () => {
     const c = new ServiceCollection();
     expect(c.has(ILogger)).toBe(false);
     expect(c.get(ILogger)).toBeUndefined();
   });
 
-  it('accepts initial pairs in constructor', () => {
+  it("accepts initial pairs in constructor", () => {
     const inst = new ConsoleLogger();
-    const c = new ServiceCollection([ILogger, inst], [IClock, new SyncDescriptor(FixedClock)]);
+    const c = new ServiceCollection(
+      [ILogger, inst],
+      [IClock, new SyncDescriptor(FixedClock)],
+    );
     expect(c.has(ILogger)).toBe(true);
     expect(c.has(IClock)).toBe(true);
     expect(c.get(ILogger)).toBe(inst);
@@ -41,7 +44,7 @@ describe('ServiceCollection', () => {
     expect(desc).toBeInstanceOf(SyncDescriptor);
   });
 
-  it('set() returns previous value, or undefined when none', () => {
+  it("set() returns previous value, or undefined when none", () => {
     const c = new ServiceCollection();
     const first = new ConsoleLogger();
     const second = new ConsoleLogger();
@@ -50,16 +53,19 @@ describe('ServiceCollection', () => {
     expect(c.get(ILogger)).toBe(second);
   });
 
-  it('has() reflects set state', () => {
+  it("has() reflects set state", () => {
     const c = new ServiceCollection();
     expect(c.has(ILogger)).toBe(false);
     c.set(ILogger, new ConsoleLogger());
     expect(c.has(ILogger)).toBe(true);
   });
 
-  it('forEach visits every entry exactly once', () => {
+  it("forEach visits every entry exactly once", () => {
     const inst = new ConsoleLogger();
-    const c = new ServiceCollection([ILogger, inst], [IClock, new SyncDescriptor(FixedClock)]);
+    const c = new ServiceCollection(
+      [ILogger, inst],
+      [IClock, new SyncDescriptor(FixedClock)],
+    );
     const seen: Array<[string, unknown]> = [];
     c.forEach((id, value) => {
       // P0.3: identifier name is exposed via `toString()` (krow style), no
@@ -68,6 +74,6 @@ describe('ServiceCollection', () => {
     });
     expect(seen).toHaveLength(2);
     const names = seen.map(([n]) => n).sort();
-    expect(names).toEqual(['clock', 'logger']);
+    expect(names).toEqual(["clock", "logger"]);
   });
 });

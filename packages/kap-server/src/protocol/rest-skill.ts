@@ -3,9 +3,9 @@
  *   POST /v1/sessions/{session_id}/skills/{skill_name}:activate
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { skillDescriptorSchema } from './skill';
+import { skillDescriptorSchema } from "./skill";
 
 export const listSkillsResponseSchema = z.object({
   skills: z.array(skillDescriptorSchema),

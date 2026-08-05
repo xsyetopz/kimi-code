@@ -1,4 +1,4 @@
-import type { FlagDefinitionInput } from './types';
+import type { FlagDefinitionInput } from "./types";
 
 /**
  * Experimental feature flags.
@@ -24,33 +24,33 @@ export const FLAG_DEFINITIONS = [
   //   surface: 'core',
   // },
   {
-    id: 'tool-select',
-    title: 'Tool select (progressive tool disclosure)',
+    id: "tool-select",
+    title: "Tool select (progressive tool disclosure)",
     description:
-      'Keep MCP tool schemas out of the immutable top-level tools[]; the model loads them on demand via the select_tools tool. Only takes effect on models whose capability catalog declares dynamically loaded tools.',
-    env: 'KIMI_CODE_EXPERIMENTAL_TOOL_SELECT',
+      "Keep MCP tool schemas out of the immutable top-level tools[]; the model loads them on demand via the select_tools tool. Only takes effect on models whose capability catalog declares dynamically loaded tools.",
+    env: "KIMI_CODE_EXPERIMENTAL_TOOL_SELECT",
     default: false,
-    surface: 'core',
+    surface: "core",
   },
   {
-    id: 'secondary-model',
-    title: 'Secondary model for subagents',
+    id: "secondary-model",
+    title: "Secondary model for subagents",
     description:
-      'Let newly spawned subagents use a separately configured secondary model by default, with an explicit primary-model override for quality-sensitive tasks.',
-    env: 'KIMI_CODE_EXPERIMENTAL_SECONDARY_MODEL',
+      "Let newly spawned subagents use a separately configured secondary model by default, with an explicit primary-model override for quality-sensitive tasks.",
+    env: "KIMI_CODE_EXPERIMENTAL_SECONDARY_MODEL",
     default: false,
-    surface: 'core',
+    surface: "core",
   },
   {
-    id: 'acp-v2',
-    title: 'ACP server v2 (agent-core-v2 engine)',
+    id: "acp-v2",
+    title: "ACP server v2 (agent-core-v2 engine)",
     description:
-      'Expose the `kimi acp-v2` sub-command that runs the Agent Client Protocol server over the experimental agent-core-v2 engine.',
-    env: 'KIMI_CODE_EXPERIMENTAL_ACP_V2',
+      "Expose the `kimi acp-v2` sub-command that runs the Agent Client Protocol server over the experimental agent-core-v2 engine.",
+    env: "KIMI_CODE_EXPERIMENTAL_ACP_V2",
     default: false,
-    surface: 'core',
+    surface: "core",
   },
 ] as const satisfies readonly FlagDefinitionInput[];
 
 /** Literal union of registered flag ids. */
-export type FlagId = (typeof FLAG_DEFINITIONS)[number]['id'];
+export type FlagId = (typeof FLAG_DEFINITIONS)[number]["id"];

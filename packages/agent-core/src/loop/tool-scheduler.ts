@@ -10,9 +10,9 @@
  * `tool-call.ts`.
  */
 
-import { createControlledPromise, type ControlledPromise } from '@antfu/utils';
+import { createControlledPromise, type ControlledPromise } from "@antfu/utils";
 
-import { ToolAccesses } from './tool-access';
+import { ToolAccesses } from "./tool-access";
 
 // Scheduler
 
@@ -48,7 +48,8 @@ export class ToolScheduler<Result> {
     queuedBefore: readonly ToolCallTask<Result>[],
   ): boolean {
     return (
-      this.conflictsWithAny(task, this.activeTasks) || this.conflictsWithAny(task, queuedBefore)
+      this.conflictsWithAny(task, this.activeTasks) ||
+      this.conflictsWithAny(task, queuedBefore)
     );
   }
 

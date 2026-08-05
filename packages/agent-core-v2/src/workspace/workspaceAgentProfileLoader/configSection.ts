@@ -6,11 +6,11 @@
  * memory; TOML uses the snake_case key `extra_agent_dirs`.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { registerConfigSection } from '#/app/config/configSectionContributions';
+import { registerConfigSection } from "#/app/config/configSectionContributions";
 
-export const EXTRA_AGENT_DIRS_SECTION = 'extraAgentDirs';
+export const EXTRA_AGENT_DIRS_SECTION = "extraAgentDirs";
 export const ExtraAgentDirsConfigSchema = z.array(z.string()).optional();
 export type ExtraAgentDirsConfig = z.infer<typeof ExtraAgentDirsConfigSchema>;
 

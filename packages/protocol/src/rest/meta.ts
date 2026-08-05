@@ -7,10 +7,10 @@
  *     started_at
  *   }
  */
-import { z } from 'zod';
+import { z } from "zod";
 
-import { fsOpenInAppIdSchema } from '../rest/fs';
-import { isoDateTimeSchema } from '../time';
+import { fsOpenInAppIdSchema } from "../rest/fs";
+import { isoDateTimeSchema } from "../time";
 
 export const metaCapabilitiesSchema = z.object({
   websocket: z.literal(true),
@@ -42,7 +42,7 @@ export const metaResponseSchema = z.object({
    * the field (treat absence as v1). Lets clients identify the backend without
    * probing routes.
    */
-  backend: z.enum(['v1', 'v2']).optional(),
+  backend: z.enum(["v1", "v2"]).optional(),
 });
 
 export type MetaResponse = z.infer<typeof metaResponseSchema>;

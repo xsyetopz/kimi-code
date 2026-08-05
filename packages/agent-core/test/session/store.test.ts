@@ -4,19 +4,23 @@
  * Wiring: real temporary session storage; no stubbed collaborators.
  * Run: pnpm exec vitest run test/session/store.test.ts
  */
-import { mkdtemp, mkdir, realpath, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { mkdtemp, mkdir, realpath, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { SessionStore } from '../../src/session/store/session-store';
+import { SessionStore } from "../../src/session/store/session-store";
 import {
   appendSessionIndexDeletion,
   appendSessionIndexEntry,
   readSessionIndex,
-} from '../../src/session/store/session-index';
-import { encodeWorkDirKey, normalizeWorkDir, workspaceRootKey } from '../../src/session/store/workdir-key';
+} from "../../src/session/store/session-index";
+import {
+  encodeWorkDirKey,
+  normalizeWorkDir,
+  workspaceRootKey,
+} from "../../src/session/store/workdir-key";
 
 async function makeWorkDir(label: string): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), `kimi-store-wd-${label}-`));
@@ -31,19 +35,23 @@ async function seedSessionDir(
   sessionId: string,
   state: Record<string, unknown> = {},
 ): Promise<string> {
-  const dir = join(homeDir, 'sessions', encodeWorkDirKey(workDir), sessionId);
+  const dir = join(homeDir, "sessions", encodeWorkDirKey(workDir), sessionId);
   await mkdir(dir, { recursive: true });
-  await writeFile(join(dir, 'state.json'), JSON.stringify({ workDir, ...state }), 'utf-8');
+  await writeFile(
+    join(dir, "state.json"),
+    JSON.stringify({ workDir, ...state }),
+    "utf-8",
+  );
   return dir;
 }
 
-describe('SessionStore', () => {
+describe("SessionStore", () => {
   let homeDir: string;
   let store: SessionStore;
   const tempRoots: string[] = [];
 
   beforeEach(async () => {
-    homeDir = await mkdtemp(join(tmpdir(), 'kimi-store-home-'));
+    homeDir = await mkdtemp(join(tmpdir(), "kimi-store-home-"));
     store = new SessionStore(homeDir);
   });
 
@@ -61,93 +69,117 @@ describe('SessionStore', () => {
     return wd;
   }
 
-  describe('create', () => {
-    it('creates a session when an earlier index entry points to a missing directory', async () => {
-      const workDir = await trackWorkDir('stale-create');
-      const sessionId = 'session_stale_create';
+  describe("create", () => {
+    it("creates a session when an earlier index entry points to a missing directory", async () => {
+      const workDir = await trackWorkDir("stale-create");
+      const sessionId = "session_stale_create";
       await appendSessionIndexEntry(homeDir, {
         sessionId,
-        sessionDir: join(homeDir, 'sessions', 'wd_stale_000000000000', sessionId),
+        sessionDir: join(
+          homeDir,
+          "sessions",
+          "wd_stale_000000000000",
+          sessionId,
+        ),
         workDir,
       });
 
-      await expect(store.create({ id: sessionId, workDir })).resolves.toMatchObject({
+      await expect(
+        store.create({ id: sessionId, workDir }),
+      ).resolves.toMatchObject({
         id: sessionId,
         workDir,
       });
     });
 
-    it('returns a canonical drive workDir when Windows separators are used', async () => {
+    it("returns a canonical drive workDir when Windows separators are used", async () => {
       const summary = await store.create({
-        id: 'session_windows_drive',
-        workDir: 'C:\\Users\\Example User\\项目',
+        id: "session_windows_drive",
+        workDir: "C:\\Users\\Example User\\项目",
       });
 
-      expect(summary.workDir).toBe('C:/Users/Example User/项目');
+      expect(summary.workDir).toBe("C:/Users/Example User/项目");
     });
 
-    it('preserves the share root when an UNC workDir is used', async () => {
+    it("preserves the share root when an UNC workDir is used", async () => {
       const summary = await store.create({
-        id: 'session_windows_unc',
-        workDir: '\\\\Server\\Share\\Workspace\\项目',
+        id: "session_windows_unc",
+        workDir: "\\\\Server\\Share\\Workspace\\项目",
       });
 
-      expect(summary.workDir).toBe('//Server/Share/Workspace/项目');
+      expect(summary.workDir).toBe("//Server/Share/Workspace/项目");
     });
   });
 
-  describe('summaryFromDir (via get/list)', () => {
-    it('prefers workDir from state.json over the index entry', async () => {
-      const indexWorkDir = await trackWorkDir('index');
-      const stateWorkDir = await trackWorkDir('state');
-      const sessionId = 'session_pref';
+  describe("summaryFromDir (via get/list)", () => {
+    it("prefers workDir from state.json over the index entry", async () => {
+      const indexWorkDir = await trackWorkDir("index");
+      const stateWorkDir = await trackWorkDir("state");
+      const sessionId = "session_pref";
 
       // Index says one workDir; state.json (self-describing) says another.
       await store.create({ id: sessionId, workDir: indexWorkDir });
-      const dir = join(homeDir, 'sessions', encodeWorkDirKey(indexWorkDir), sessionId);
-      await writeFile(join(dir, 'state.json'), JSON.stringify({ workDir: stateWorkDir }), 'utf-8');
+      const dir = join(
+        homeDir,
+        "sessions",
+        encodeWorkDirKey(indexWorkDir),
+        sessionId,
+      );
+      await writeFile(
+        join(dir, "state.json"),
+        JSON.stringify({ workDir: stateWorkDir }),
+        "utf-8",
+      );
 
       const summary = await store.get(sessionId);
       expect(summary.workDir).toBe(stateWorkDir);
     });
   });
 
-  describe('list by Windows workDir', () => {
-    it('merges drive buckets when only workDir casing differs', async () => {
-      await store.create({ id: 'session_drive_upper', workDir: 'C:\\Workspace\\项目' });
-      await store.create({ id: 'session_drive_lower', workDir: 'c:\\workspace\\项目' });
+  describe("list by Windows workDir", () => {
+    it("merges drive buckets when only workDir casing differs", async () => {
+      await store.create({
+        id: "session_drive_upper",
+        workDir: "C:\\Workspace\\项目",
+      });
+      await store.create({
+        id: "session_drive_lower",
+        workDir: "c:\\workspace\\项目",
+      });
 
-      const sessions = await store.list({ workDir: 'C:/WORKSPACE/项目' });
+      const sessions = await store.list({ workDir: "C:/WORKSPACE/项目" });
 
       expect(sessions.map((session) => session.id).toSorted()).toEqual([
-        'session_drive_lower',
-        'session_drive_upper',
+        "session_drive_lower",
+        "session_drive_upper",
       ]);
     });
 
-    it('merges UNC buckets when server and share casing differs', async () => {
+    it("merges UNC buckets when server and share casing differs", async () => {
       await store.create({
-        id: 'session_unc_upper',
-        workDir: '\\\\Server\\Share\\Workspace',
+        id: "session_unc_upper",
+        workDir: "\\\\Server\\Share\\Workspace",
       });
       await store.create({
-        id: 'session_unc_lower',
-        workDir: '\\\\server\\share\\workspace',
+        id: "session_unc_lower",
+        workDir: "\\\\server\\share\\workspace",
       });
 
-      const sessions = await store.list({ workDir: '//SERVER/SHARE/WORKSPACE' });
+      const sessions = await store.list({
+        workDir: "//SERVER/SHARE/WORKSPACE",
+      });
 
       expect(sessions.map((session) => session.id).toSorted()).toEqual([
-        'session_unc_lower',
-        'session_unc_upper',
+        "session_unc_lower",
+        "session_unc_upper",
       ]);
     });
   });
 
-  describe('reindex', () => {
-    it('adds an index entry for an on-disk session missing from the index', async () => {
-      const workDir = await trackWorkDir('missing');
-      const sessionId = 'session_missing';
+  describe("reindex", () => {
+    it("adds an index entry for an on-disk session missing from the index", async () => {
+      const workDir = await trackWorkDir("missing");
+      const sessionId = "session_missing";
       await seedSessionDir(homeDir, workDir, sessionId);
 
       expect(await store.list({})).toHaveLength(0);
@@ -160,15 +192,20 @@ describe('SessionStore', () => {
       expect(listed[0]?.workDir).toBe(workDir);
     });
 
-    it('repairs an index entry that points at a stale sessionDir', async () => {
-      const workDir = await trackWorkDir('stale');
-      const sessionId = 'session_stale';
+    it("repairs an index entry that points at a stale sessionDir", async () => {
+      const workDir = await trackWorkDir("stale");
+      const sessionId = "session_stale";
       const realDir = await seedSessionDir(homeDir, workDir, sessionId);
 
       // Seed a decoy dir inside the sessions tree with a matching basename so it
       // passes index integrity checks, then point the index at it instead of the
       // real dir.
-      const decoyDir = join(homeDir, 'sessions', 'wd_decoy_000000000000', sessionId);
+      const decoyDir = join(
+        homeDir,
+        "sessions",
+        "wd_decoy_000000000000",
+        sessionId,
+      );
       await mkdir(decoyDir, { recursive: true });
       await appendSessionIndexEntry(homeDir, {
         sessionId,
@@ -183,28 +220,33 @@ describe('SessionStore', () => {
       expect(index.get(sessionId)?.sessionDir).toBe(realDir);
     });
 
-    it('repairs an index entry whose sessionDir is correct but workDir is stale', async () => {
-      const workDir = await trackWorkDir('staleworkdir');
-      const sessionId = 'session_staleworkdir';
+    it("repairs an index entry whose sessionDir is correct but workDir is stale", async () => {
+      const workDir = await trackWorkDir("staleworkdir");
+      const sessionId = "session_staleworkdir";
       // Legacy state: no top-level workDir, only custom.cwd, so summaryFromDir
       // falls back to the index entry's workDir.
-      const realDir = join(homeDir, 'sessions', encodeWorkDirKey(workDir), sessionId);
+      const realDir = join(
+        homeDir,
+        "sessions",
+        encodeWorkDirKey(workDir),
+        sessionId,
+      );
       await mkdir(realDir, { recursive: true });
       await writeFile(
-        join(realDir, 'state.json'),
+        join(realDir, "state.json"),
         JSON.stringify({ custom: { cwd: workDir } }),
-        'utf-8',
+        "utf-8",
       );
 
       // Index points at the right dir but carries a bogus workDir.
       await appendSessionIndexEntry(homeDir, {
         sessionId,
         sessionDir: realDir,
-        workDir: '/totally/bogus/path',
+        workDir: "/totally/bogus/path",
       });
 
       // Before reindex the summary surfaces the bogus index workDir.
-      expect((await store.get(sessionId)).workDir).toBe('/totally/bogus/path');
+      expect((await store.get(sessionId)).workDir).toBe("/totally/bogus/path");
 
       const stats = await store.reindex();
       expect(stats).toEqual({ scanned: 1, added: 0, repaired: 1 });
@@ -214,14 +256,23 @@ describe('SessionStore', () => {
       expect((await store.get(sessionId)).workDir).toBe(workDir);
     });
 
-    it('leaves a session unindexed when it records no recoverable workDir', async () => {
-      const workDir = await trackWorkDir('noworkdir');
-      const sessionId = 'session_noworkdir';
+    it("leaves a session unindexed when it records no recoverable workDir", async () => {
+      const workDir = await trackWorkDir("noworkdir");
+      const sessionId = "session_noworkdir";
       // state.json present but without workDir or custom.cwd.
       await seedSessionDir(homeDir, workDir, sessionId, { workDir: undefined });
       // Overwrite state.json to truly drop the workDir field seedSessionDir adds.
-      const dir = join(homeDir, 'sessions', encodeWorkDirKey(workDir), sessionId);
-      await writeFile(join(dir, 'state.json'), JSON.stringify({ title: 'legacy' }), 'utf-8');
+      const dir = join(
+        homeDir,
+        "sessions",
+        encodeWorkDirKey(workDir),
+        sessionId,
+      );
+      await writeFile(
+        join(dir, "state.json"),
+        JSON.stringify({ title: "legacy" }),
+        "utf-8",
+      );
 
       const stats = await store.reindex();
       expect(stats).toEqual({ scanned: 0, added: 0, repaired: 0 });
@@ -229,18 +280,23 @@ describe('SessionStore', () => {
     });
   });
 
-  describe('readSessionIndex', () => {
-    it('keeps an entry whose index workDir is non-absolute, using state.json workDir', async () => {
-      const workDir = await trackWorkDir('relaxed');
-      const sessionId = 'session_relaxed';
+  describe("readSessionIndex", () => {
+    it("keeps an entry whose index workDir is non-absolute, using state.json workDir", async () => {
+      const workDir = await trackWorkDir("relaxed");
+      const sessionId = "session_relaxed";
       await seedSessionDir(homeDir, workDir, sessionId);
 
-      const sessionDir = join(homeDir, 'sessions', encodeWorkDirKey(workDir), sessionId);
+      const sessionDir = join(
+        homeDir,
+        "sessions",
+        encodeWorkDirKey(workDir),
+        sessionId,
+      );
       // Non-absolute, previously would have dropped the entry.
       await appendSessionIndexEntry(homeDir, {
         sessionId,
         sessionDir,
-        workDir: 'not/an/absolute/path',
+        workDir: "not/an/absolute/path",
       });
 
       const listed = await store.list({});
@@ -249,20 +305,26 @@ describe('SessionStore', () => {
       expect(listed[0]?.workDir).toBe(workDir);
     });
 
-    it('removes an entry when a deletion record follows it', async () => {
-      const workDir = await trackWorkDir('deleted-index');
-      const sessionId = 'session_deleted_index';
+    it("removes an entry when a deletion record follows it", async () => {
+      const workDir = await trackWorkDir("deleted-index");
+      const sessionId = "session_deleted_index";
       const sessionDir = await seedSessionDir(homeDir, workDir, sessionId);
-      await appendSessionIndexEntry(homeDir, { sessionId, sessionDir, workDir });
+      await appendSessionIndexEntry(homeDir, {
+        sessionId,
+        sessionDir,
+        workDir,
+      });
 
       await appendSessionIndexDeletion(homeDir, sessionId);
 
-      expect((await readSessionIndex(homeDir, store.sessionsDir)).has(sessionId)).toBe(false);
+      expect(
+        (await readSessionIndex(homeDir, store.sessionsDir)).has(sessionId),
+      ).toBe(false);
     });
 
-    it('restores an id when a live entry follows its deletion record', async () => {
-      const workDir = await trackWorkDir('restored-index');
-      const sessionId = 'session_restored_index';
+    it("restores an id when a live entry follows its deletion record", async () => {
+      const workDir = await trackWorkDir("restored-index");
+      const sessionId = "session_restored_index";
       const sessionDir = await seedSessionDir(homeDir, workDir, sessionId);
       const entry = { sessionId, sessionDir, workDir };
       await appendSessionIndexEntry(homeDir, entry);
@@ -270,53 +332,64 @@ describe('SessionStore', () => {
 
       await appendSessionIndexEntry(homeDir, entry);
 
-      expect((await readSessionIndex(homeDir, store.sessionsDir)).get(sessionId)).toEqual(entry);
+      expect(
+        (await readSessionIndex(homeDir, store.sessionsDir)).get(sessionId),
+      ).toEqual(entry);
     });
   });
 });
 
-
-describe('workspaceRootKey', () => {
-  it('folds drive-letter Windows paths regardless of casing', () => {
-    expect(workspaceRootKey('C:\\Users\\Dev\\Project')).toBe('c:/users/dev/project');
-    expect(workspaceRootKey('c:/Users/DEV/Project')).toBe('c:/users/dev/project');
+describe("workspaceRootKey", () => {
+  it("folds drive-letter Windows paths regardless of casing", () => {
+    expect(workspaceRootKey("C:\\Users\\Dev\\Project")).toBe(
+      "c:/users/dev/project",
+    );
+    expect(workspaceRootKey("c:/Users/DEV/Project")).toBe(
+      "c:/users/dev/project",
+    );
   });
 
-  it('folds drive roots before separator stripping can mask the shape', () => {
+  it("folds drive roots before separator stripping can mask the shape", () => {
     // `C:\` would strip to `C:` and stop reading as Windows-shaped.
-    expect(workspaceRootKey('C:\\')).toBe('c:');
-    expect(workspaceRootKey('C:\\')).toBe(workspaceRootKey('c:\\'));
-    expect(workspaceRootKey('C:\\')).toBe(workspaceRootKey('c:/'));
+    expect(workspaceRootKey("C:\\")).toBe("c:");
+    expect(workspaceRootKey("C:\\")).toBe(workspaceRootKey("c:\\"));
+    expect(workspaceRootKey("C:\\")).toBe(workspaceRootKey("c:/"));
   });
 
-  it('unifies slashes and strips trailing separators', () => {
-    expect(workspaceRootKey('C:\\Users\\Dev\\Project\\')).toBe('c:/users/dev/project');
-    expect(workspaceRootKey('C:/Users/Dev/Project/')).toBe('c:/users/dev/project');
+  it("unifies slashes and strips trailing separators", () => {
+    expect(workspaceRootKey("C:\\Users\\Dev\\Project\\")).toBe(
+      "c:/users/dev/project",
+    );
+    expect(workspaceRootKey("C:/Users/Dev/Project/")).toBe(
+      "c:/users/dev/project",
+    );
   });
 
-  it('folds UNC paths (both slash styles)', () => {
-    expect(workspaceRootKey('\\\\Host\\Share\\Dir')).toBe('//host/share/dir');
-    expect(workspaceRootKey('//Host/Share/Dir')).toBe('//host/share/dir');
+  it("folds UNC paths (both slash styles)", () => {
+    expect(workspaceRootKey("\\\\Host\\Share\\Dir")).toBe("//host/share/dir");
+    expect(workspaceRootKey("//Host/Share/Dir")).toBe("//host/share/dir");
   });
 
-  it('never folds POSIX paths — case variants stay distinct', () => {
-    expect(workspaceRootKey('/Home/Dev/Project')).toBe('/Home/Dev/Project');
-    expect(workspaceRootKey('/Home/Dev/Project')).not.toBe(workspaceRootKey('/home/dev/project'));
+  it("never folds POSIX paths — case variants stay distinct", () => {
+    expect(workspaceRootKey("/Home/Dev/Project")).toBe("/Home/Dev/Project");
+    expect(workspaceRootKey("/Home/Dev/Project")).not.toBe(
+      workspaceRootKey("/home/dev/project"),
+    );
   });
 
-  it('strips trailing separators on POSIX paths', () => {
-    expect(workspaceRootKey('/home/dev/project/')).toBe('/home/dev/project');
+  it("strips trailing separators on POSIX paths", () => {
+    expect(workspaceRootKey("/home/dev/project/")).toBe("/home/dev/project");
   });
 });
 
-describe('SessionStore resolveWorkspaceId option', () => {
+describe("SessionStore resolveWorkspaceId option", () => {
   let homeDir: string;
   let store: SessionStore;
   const tempRoots: string[] = [];
-  const registeredId = 'wd_registered_0123456789ab';
+  const registeredId = "wd_registered_0123456789ab";
 
   beforeEach(async () => {
-    homeDir = await mkdtemp(join(tmpdir(), 'kimi-store-home-'));
+    homeDir = await mkdtemp(join(tmpdir(), "kimi-store-home-"));
     store = new SessionStore(homeDir);
   });
 
@@ -340,88 +413,99 @@ describe('SessionStore resolveWorkspaceId option', () => {
     });
   }
 
-  it('creates the session in the registry-resolved bucket instead of minting a new one', async () => {
-    const workDir = await trackWorkDir('resolved');
+  it("creates the session in the registry-resolved bucket instead of minting a new one", async () => {
+    const workDir = await trackWorkDir("resolved");
     const resolved = storeResolving({ [workDir]: registeredId });
-    const summary = await resolved.create({ id: 'sess_resolved', workDir });
+    const summary = await resolved.create({ id: "sess_resolved", workDir });
 
-    expect(summary.sessionDir).toBe(join(homeDir, 'sessions', registeredId, 'sess_resolved'));
+    expect(summary.sessionDir).toBe(
+      join(homeDir, "sessions", registeredId, "sess_resolved"),
+    );
     // Listing by workDir reads the same resolved bucket, so the session is
     // visible through the registered workspace's id.
     const listed = await resolved.list({ workDir });
-    expect(listed.map((s) => s.id)).toEqual(['sess_resolved']);
+    expect(listed.map((s) => s.id)).toEqual(["sess_resolved"]);
   });
 
-  it('forks into the registry-resolved bucket of the source session', async () => {
-    const workDir = await trackWorkDir('resolved-fork');
+  it("forks into the registry-resolved bucket of the source session", async () => {
+    const workDir = await trackWorkDir("resolved-fork");
     const resolved = storeResolving({ [workDir]: registeredId });
-    await resolved.create({ id: 'sess_src', workDir });
+    await resolved.create({ id: "sess_src", workDir });
     // store.create only mkdirs the session dir; fork copies state.json.
     await writeFile(
-      join(homeDir, 'sessions', registeredId, 'sess_src', 'state.json'),
+      join(homeDir, "sessions", registeredId, "sess_src", "state.json"),
       JSON.stringify({ workDir }),
-      'utf-8',
+      "utf-8",
     );
 
-    const forked = await resolved.fork({ sourceId: 'sess_src', targetId: 'sess_fork' });
-
-    expect(forked.sessionDir).toBe(join(homeDir, 'sessions', registeredId, 'sess_fork'));
-  });
-
-  it('finds a session by (sessionId, workDir) inside the resolved bucket', async () => {
-    const workDir = await trackWorkDir('resolved-lookup');
-    const resolved = storeResolving({ [workDir]: registeredId });
-    await resolved.create({ id: 'sess_lookup', workDir });
-
-    const listed = await resolved.list({ workDir, sessionId: 'sess_lookup' });
-    expect(listed.map((s) => s.id)).toEqual(['sess_lookup']);
-  });
-
-  it('mints the canonical bucket when the resolver has no match', async () => {
-    const workDir = await trackWorkDir('unresolved');
-    const resolved = storeResolving({});
-    const summary = await resolved.create({ id: 'sess_minted', workDir });
-
-    expect(summary.sessionDir).toBe(
-      join(homeDir, 'sessions', encodeWorkDirKey(workDir), 'sess_minted'),
-    );
-  });
-
-  it('ignores a resolver id that is not a safe bucket name', async () => {
-    const workDir = await trackWorkDir('unsafe');
-    const resolved = new SessionStore(homeDir, {
-      resolveWorkspaceId: async () => '../../outside',
+    const forked = await resolved.fork({
+      sourceId: "sess_src",
+      targetId: "sess_fork",
     });
-    const summary = await resolved.create({ id: 'sess_unsafe', workDir });
 
-    expect(summary.sessionDir).toBe(
-      join(homeDir, 'sessions', encodeWorkDirKey(workDir), 'sess_unsafe'),
+    expect(forked.sessionDir).toBe(
+      join(homeDir, "sessions", registeredId, "sess_fork"),
     );
   });
 
-  it('falls back to minting when the resolver throws', async () => {
-    const workDir = await trackWorkDir('throwing');
+  it("finds a session by (sessionId, workDir) inside the resolved bucket", async () => {
+    const workDir = await trackWorkDir("resolved-lookup");
+    const resolved = storeResolving({ [workDir]: registeredId });
+    await resolved.create({ id: "sess_lookup", workDir });
+
+    const listed = await resolved.list({ workDir, sessionId: "sess_lookup" });
+    expect(listed.map((s) => s.id)).toEqual(["sess_lookup"]);
+  });
+
+  it("mints the canonical bucket when the resolver has no match", async () => {
+    const workDir = await trackWorkDir("unresolved");
+    const resolved = storeResolving({});
+    const summary = await resolved.create({ id: "sess_minted", workDir });
+
+    expect(summary.sessionDir).toBe(
+      join(homeDir, "sessions", encodeWorkDirKey(workDir), "sess_minted"),
+    );
+  });
+
+  it("ignores a resolver id that is not a safe bucket name", async () => {
+    const workDir = await trackWorkDir("unsafe");
+    const resolved = new SessionStore(homeDir, {
+      resolveWorkspaceId: async () => "../../outside",
+    });
+    const summary = await resolved.create({ id: "sess_unsafe", workDir });
+
+    expect(summary.sessionDir).toBe(
+      join(homeDir, "sessions", encodeWorkDirKey(workDir), "sess_unsafe"),
+    );
+  });
+
+  it("falls back to minting when the resolver throws", async () => {
+    const workDir = await trackWorkDir("throwing");
     const resolved = new SessionStore(homeDir, {
       resolveWorkspaceId: async () => {
-        throw new Error('registry unavailable');
+        throw new Error("registry unavailable");
       },
     });
-    const summary = await resolved.create({ id: 'sess_throw', workDir });
+    const summary = await resolved.create({ id: "sess_throw", workDir });
 
     expect(summary.sessionDir).toBe(
-      join(homeDir, 'sessions', encodeWorkDirKey(workDir), 'sess_throw'),
+      join(homeDir, "sessions", encodeWorkDirKey(workDir), "sess_throw"),
     );
   });
 
-  it('reindex recovers a session that lives in the registry-resolved bucket', async () => {
-    const workDir = await trackWorkDir('reindex-resolved');
+  it("reindex recovers a session that lives in the registry-resolved bucket", async () => {
+    const workDir = await trackWorkDir("reindex-resolved");
     const resolved = storeResolving({ [workDir]: registeredId });
     // Physically seeded in the registered bucket with no index entry — how
     // sessions created through a wired resolver sit on disk.
-    const sessionId = 'sess_resolved_reindex';
-    const dir = join(homeDir, 'sessions', registeredId, sessionId);
+    const sessionId = "sess_resolved_reindex";
+    const dir = join(homeDir, "sessions", registeredId, sessionId);
     await mkdir(dir, { recursive: true });
-    await writeFile(join(dir, 'state.json'), JSON.stringify({ workDir }), 'utf-8');
+    await writeFile(
+      join(dir, "state.json"),
+      JSON.stringify({ workDir }),
+      "utf-8",
+    );
 
     const stats = await resolved.reindex();
 

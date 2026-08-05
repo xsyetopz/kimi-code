@@ -17,32 +17,32 @@
  * guardrail over the wire contract.
  */
 
-import { mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from "vitest";
 
-import { startServer, type RunningServer } from '../src';
-import { TEST_HOST_IDENTITY } from './helpers/hostIdentity';
-import { authHeaders } from './helpers/auth';
+import { startServer, type RunningServer } from "../src";
+import { TEST_HOST_IDENTITY } from "./helpers/hostIdentity";
+import { authHeaders } from "./helpers/auth";
 
 /** OpenAPI path-item keys that are HTTP methods (skip `parameters`, etc.). */
 const HTTP_METHODS = new Set([
-  'get',
-  'put',
-  'post',
-  'delete',
-  'options',
-  'head',
-  'patch',
-  'trace',
+  "get",
+  "put",
+  "post",
+  "delete",
+  "options",
+  "head",
+  "patch",
+  "trace",
 ]);
 
 /** Doc/meta endpoints outside the OpenAPI `paths` map to probe for reachability. */
-const META_ENDPOINTS = ['/openapi.json', '/asyncapi.json', '/'];
+const META_ENDPOINTS = ["/openapi.json", "/asyncapi.json", "/"];
 
-describe('API surface snapshot', () => {
+describe("API surface snapshot", () => {
   let home: string | undefined;
   let server: RunningServer | undefined;
 
@@ -61,22 +61,24 @@ describe('API surface snapshot', () => {
     }
   });
 
-  it('matches the documented v2 route table and meta endpoints', async () => {
-    home = mkdtempSync(join(tmpdir(), 'kimi-server-v2-api-surface-'));
+  it("matches the documented v2 route table and meta endpoints", async () => {
+    home = mkdtempSync(join(tmpdir(), "kimi-server-v2-api-surface-"));
 
     server = await startServer({
       hostIdentity: TEST_HOST_IDENTITY,
-      host: '127.0.0.1',
+      host: "127.0.0.1",
       port: 0,
       homeDir: home,
-      logLevel: 'silent',
+      logLevel: "silent",
       debugEndpoints: true,
     });
 
     const base = `http://${server.host}:${server.port}`;
 
     // 1) Documented REST surface, derived from /openapi.json `paths`.
-    const openApiRes = await fetch(`${base}/openapi.json`, { headers: authHeaders(server) } as never);
+    const openApiRes = await fetch(`${base}/openapi.json`, {
+      headers: authHeaders(server),
+    } as never);
     expect(openApiRes.status).toBe(200);
     const openApi = (await openApiRes.json()) as {
       paths?: Record<string, Record<string, unknown>>;
@@ -97,10 +99,15 @@ describe('API surface snapshot', () => {
     // 2) Doc/meta endpoints that are not part of the OpenAPI `paths` map.
     const meta: Array<[string, string, number]> = [];
     for (const endpoint of META_ENDPOINTS) {
-      const res = await fetch(`${base}${endpoint}`, { headers: authHeaders(server) } as never);
-      meta.push(['GET', endpoint, res.status]);
+      const res = await fetch(`${base}${endpoint}`, {
+        headers: authHeaders(server),
+      } as never);
+      meta.push(["GET", endpoint, res.status]);
     }
-    meta.sort((a, b) => a[0].localeCompare(b[0]) || a[1].localeCompare(b[1]) || a[2] - b[2]);
+    meta.sort(
+      (a, b) =>
+        a[0].localeCompare(b[0]) || a[1].localeCompare(b[1]) || a[2] - b[2],
+    );
 
     expect({ routes, meta }).toMatchSnapshot();
   });

@@ -1,5 +1,8 @@
-import { ReverseRpcController } from '#/tui/reverse-rpc/base-controller';
-import type { QuestionPanelData, QuestionPanelResponse } from '#/tui/reverse-rpc/types';
+import { ReverseRpcController } from "#/tui/reverse-rpc/base-controller";
+import type {
+  QuestionPanelData,
+  QuestionPanelResponse,
+} from "#/tui/reverse-rpc/types";
 
 export class QuestionController extends ReverseRpcController<
   QuestionPanelData,

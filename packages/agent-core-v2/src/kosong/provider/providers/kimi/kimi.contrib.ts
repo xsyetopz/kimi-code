@@ -79,25 +79,28 @@
  * base's `'openai'`).
  */
 
-import type { ContentPart } from '#/kosong/contract/message';
-import type { Tool } from '#/kosong/contract/tool';
+import type { ContentPart } from "#/kosong/contract/message";
+import type { Tool } from "#/kosong/contract/tool";
 import type {
   ProtocolEndpoint,
   ProtocolTrait,
   TraitContext,
-} from '#/kosong/protocol/protocolTrait';
+} from "#/kosong/protocol/protocolTrait";
 
-import { type OpenAIToolParam, toolToOpenAI } from '../../bases/openai/openai-common';
-import { registerProviderDefinition } from '../../providerDefinition';
-import { classifyKimiQuotaError } from './kimi-errors';
-import { KimiFiles } from './kimi-files';
-import { normalizeKimiToolSchema } from './kimi-schema';
+import {
+  type OpenAIToolParam,
+  toolToOpenAI,
+} from "../../bases/openai/openai-common";
+import { registerProviderDefinition } from "../../providerDefinition";
+import { classifyKimiQuotaError } from "./kimi-errors";
+import { KimiFiles } from "./kimi-files";
+import { normalizeKimiToolSchema } from "./kimi-schema";
 
-export const KIMI_API_KEY_ENV = 'KIMI_API_KEY';
-export const KIMI_BASE_URL_ENV = 'KIMI_BASE_URL';
-export const KIMI_DEFAULT_BASE_URL = 'https://api.moonshot.ai/v1';
+export const KIMI_API_KEY_ENV = "KIMI_API_KEY";
+export const KIMI_BASE_URL_ENV = "KIMI_BASE_URL";
+export const KIMI_DEFAULT_BASE_URL = "https://api.moonshot.ai/v1";
 
-const INTERLEAVED_THINKING_BETA = 'interleaved-thinking-2025-05-14';
+const INTERLEAVED_THINKING_BETA = "interleaved-thinking-2025-05-14";
 
 export interface GenerationKwargs {
   max_tokens?: number | undefined;
@@ -113,7 +116,7 @@ export interface GenerationKwargs {
 }
 
 export interface KimiThinkingConfig {
-  type?: 'enabled' | 'disabled';
+  type?: "enabled" | "disabled";
   effort?: string;
   keep?: unknown;
   [key: string]: unknown;
@@ -125,9 +128,9 @@ export interface ExtraBody {
 }
 
 export function convertKimiTool(tool: Tool): OpenAIToolParam {
-  if (tool.name.startsWith('$')) {
+  if (tool.name.startsWith("$")) {
     return {
-      type: 'builtin_function',
+      type: "builtin_function",
       function: { name: tool.name },
     };
   }
@@ -143,8 +146,8 @@ export function convertKimiTool(tool: Tool): OpenAIToolParam {
 
 function isEffectivelyEmptyContent(parts: ContentPart[]): boolean {
   for (const part of parts) {
-    if (part.type !== 'text') return false;
-    if (part.text.trim() !== '') return false;
+    if (part.type !== "text") return false;
+    if (part.text.trim() !== "") return false;
   }
   return true;
 }
@@ -164,9 +167,14 @@ function resolveFiles(ctx: TraitContext): KimiFiles {
   if (files === undefined) {
     files = new KimiFiles({
       apiKey: ctx.config.apiKey ?? firstEnv(KIMI_API_KEY_ENV),
-      baseUrl: ctx.config.baseUrl ?? firstEnv(KIMI_BASE_URL_ENV) ?? KIMI_DEFAULT_BASE_URL,
+      baseUrl:
+        ctx.config.baseUrl ??
+        firstEnv(KIMI_BASE_URL_ENV) ??
+        KIMI_DEFAULT_BASE_URL,
       defaultHeaders:
-        ctx.config.defaultHeaders === undefined ? undefined : { ...ctx.config.defaultHeaders },
+        ctx.config.defaultHeaders === undefined
+          ? undefined
+          : { ...ctx.config.defaultHeaders },
     });
     filesByContext.set(ctx, files);
   }
@@ -188,22 +196,22 @@ export const kimiOpenAITrait: ProtocolTrait = {
 
   withThinking: (effort, options, generationKwargs) => {
     const thinking: KimiThinkingConfig =
-      effort === 'off'
-        ? { type: 'disabled' }
-        : effort === 'on'
-          ? { type: 'enabled' }
-          : { type: 'enabled', effort };
+      effort === "off"
+        ? { type: "disabled" }
+        : effort === "on"
+          ? { type: "enabled" }
+          : { type: "enabled", effort };
     if (options.keep !== undefined) {
       thinking.keep = options.keep;
     }
-    const extraBody = generationKwargs['extra_body'] as ExtraBody | undefined;
+    const extraBody = generationKwargs["extra_body"] as ExtraBody | undefined;
     return { extra_body: { ...extraBody, thinking } };
   },
 
   preserveThinking: (generationKwargs) => {
-    const extraBody = generationKwargs['extra_body'] as ExtraBody | undefined;
+    const extraBody = generationKwargs["extra_body"] as ExtraBody | undefined;
     const thinking = extraBody?.thinking;
-    if (thinking?.keep === 'all' && thinking.type !== 'disabled') {
+    if (thinking?.keep === "all" && thinking.type !== "disabled") {
       return true;
     }
     return undefined;
@@ -223,7 +231,7 @@ export const kimiOpenAITrait: ProtocolTrait = {
     const out: Record<string, unknown> = { ...rest };
     const resolvedMaxCompletionTokens = maxCompletionTokens ?? maxTokens;
     if (resolvedMaxCompletionTokens !== undefined) {
-      out['max_completion_tokens'] = resolvedMaxCompletionTokens;
+      out["max_completion_tokens"] = resolvedMaxCompletionTokens;
     }
     if (extraBody !== undefined && extraBody !== null) {
       Object.assign(out, extraBody);
@@ -234,70 +242,83 @@ export const kimiOpenAITrait: ProtocolTrait = {
   convertTool: (tool) => convertKimiTool(tool),
 
   convertMessage: (message, converted) => {
-    if (message.role === 'assistant' && message.toolCalls.length > 0) {
-      const nonThinkParts = message.content.filter((part) => part.type !== 'think');
+    if (message.role === "assistant" && message.toolCalls.length > 0) {
+      const nonThinkParts = message.content.filter(
+        (part) => part.type !== "think",
+      );
       if (isEffectivelyEmptyContent(nonThinkParts)) {
         // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
-        delete converted['content'];
+        delete converted["content"];
       }
     }
 
-    const convertedToolCalls = converted['tool_calls'];
+    const convertedToolCalls = converted["tool_calls"];
     if (Array.isArray(convertedToolCalls)) {
       message.toolCalls.forEach((toolCall, index) => {
         if (toolCall.extras === undefined) return;
-        const out = convertedToolCalls[index] as Record<string, unknown> | undefined;
+        const out = convertedToolCalls[index] as
+          | Record<string, unknown>
+          | undefined;
         if (out !== undefined) {
-          out['extras'] = toolCall.extras;
+          out["extras"] = toolCall.extras;
         }
       });
     }
 
     if (message.tools !== undefined && message.tools.length > 0) {
-      converted['tools'] = message.tools.map((tool) => convertKimiTool(tool));
+      converted["tools"] = message.tools.map((tool) => convertKimiTool(tool));
     }
 
     return converted;
   },
 
   extractUsage: (chunk) => {
-    const topLevel = chunk['usage'];
-    if (topLevel !== null && topLevel !== undefined && typeof topLevel === 'object') {
+    const topLevel = chunk["usage"];
+    if (
+      topLevel !== null &&
+      topLevel !== undefined &&
+      typeof topLevel === "object"
+    ) {
       return topLevel as Record<string, unknown>;
     }
-    const choices = chunk['choices'];
+    const choices = chunk["choices"];
     if (!Array.isArray(choices) || choices.length === 0) {
       return undefined;
     }
     const firstChoice = choices[0] as Record<string, unknown> | undefined;
-    const choiceUsage = firstChoice?.['usage'];
-    if (choiceUsage !== null && choiceUsage !== undefined && typeof choiceUsage === 'object') {
+    const choiceUsage = firstChoice?.["usage"];
+    if (
+      choiceUsage !== null &&
+      choiceUsage !== undefined &&
+      typeof choiceUsage === "object"
+    ) {
       return choiceUsage as Record<string, unknown>;
     }
     return undefined;
   },
 
-  uploadVideo: (input, options, ctx) => resolveFiles(ctx).uploadVideo(input, options),
+  uploadVideo: (input, options, ctx) =>
+    resolveFiles(ctx).uploadVideo(input, options),
 };
 
 export const kimiAnthropicTrait: ProtocolTrait = {
   convertError: (error) => classifyKimiQuotaError(error),
 
   withThinking: (effort, _options, generationKwargs) => {
-    const seeded = generationKwargs['betaFeatures'];
-    const betaFeatures = (Array.isArray(seeded) ? (seeded as string[]) : []).filter(
-      (beta) => beta !== INTERLEAVED_THINKING_BETA,
-    );
-    if (effort === 'off') {
+    const seeded = generationKwargs["betaFeatures"];
+    const betaFeatures = (
+      Array.isArray(seeded) ? (seeded as string[]) : []
+    ).filter((beta) => beta !== INTERLEAVED_THINKING_BETA);
+    if (effort === "off") {
       return {
-        thinking: { type: 'disabled' },
+        thinking: { type: "disabled" },
         output_config: undefined,
         betaFeatures,
       };
     }
     return {
-      thinking: { type: 'enabled' },
-      output_config: effort === 'on' ? undefined : { effort },
+      thinking: { type: "enabled" },
+      output_config: effort === "on" ? undefined : { effort },
       betaFeatures,
     };
   },
@@ -310,19 +331,19 @@ const kimiEndpoint: ProtocolEndpoint = {
 };
 
 registerProviderDefinition({
-  id: 'kimi',
-  baseProtocol: 'openai',
+  id: "kimi",
+  baseProtocol: "openai",
   traits: [kimiOpenAITrait],
   endpoint: kimiEndpoint,
-  hostHeaders: 'full',
-  modelSource: 'oauth-catalog',
+  hostHeaders: "full",
+  modelSource: "oauth-catalog",
 });
 
 registerProviderDefinition({
-  id: 'kimi',
-  baseProtocol: 'anthropic',
+  id: "kimi",
+  baseProtocol: "anthropic",
   traits: [kimiAnthropicTrait],
   endpoint: kimiEndpoint,
-  hostHeaders: 'full',
-  modelSource: 'oauth-catalog',
+  hostHeaders: "full",
+  modelSource: "oauth-catalog",
 });

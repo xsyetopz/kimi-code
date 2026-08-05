@@ -1,17 +1,23 @@
-import type { Kaos, StatResult } from '@moonshot-ai/kaos';
-import { z } from 'zod';
+import type { Kaos, StatResult } from "@moonshot-ai/kaos";
+import { z } from "zod";
 
-import type { BuiltinTool } from '../../../agent/tool';
-import { ToolAccesses } from '../../../loop/tool-access';
-import type { ExecutableToolResult, ToolExecution } from '../../../loop/types';
-import { renderPrompt } from '../../../utils/render-prompt';
-import { resolvePathAccessPath } from '../../policies/path-access';
-import { MEDIA_SNIFF_BYTES, detectFileType } from '../../support/file-type';
-import { toInputJsonSchema } from '../../support/input-schema';
-import { literalRulePattern, matchesPathRuleSubject } from '../../support/rule-match';
-import type { WorkspaceConfig } from '../../support/workspace';
-import { makeCarriageReturnsVisible, type LineEndingStyle } from './line-endings';
-import readDescriptionTemplate from './read.md?raw';
+import type { BuiltinTool } from "../../../agent/tool";
+import { ToolAccesses } from "../../../loop/tool-access";
+import type { ExecutableToolResult, ToolExecution } from "../../../loop/types";
+import { renderPrompt } from "../../../utils/render-prompt";
+import { resolvePathAccessPath } from "../../policies/path-access";
+import { MEDIA_SNIFF_BYTES, detectFileType } from "../../support/file-type";
+import { toInputJsonSchema } from "../../support/input-schema";
+import {
+  literalRulePattern,
+  matchesPathRuleSubject,
+} from "../../support/rule-match";
+import type { WorkspaceConfig } from "../../support/workspace";
+import {
+  makeCarriageReturnsVisible,
+  type LineEndingStyle,
+} from "./line-endings";
+import readDescriptionTemplate from "./read.md?raw";
 
 export const MAX_LINES: number = 1000;
 export const MAX_LINE_LENGTH: number = 2000;
@@ -26,7 +32,7 @@ export const ReadInputSchema = z.object({
   path: z
     .string()
     .describe(
-      'Path to a text file. Relative paths resolve against the working directory; a path outside the working directory must be absolute. Directories are not supported; use `ls` via Bash for a known directory, or Glob for pattern search.',
+      "Path to a text file. Relative paths resolve against the working directory; a path outside the working directory must be absolute. Directories are not supported; use `ls` via Bash for a known directory, or Glob for pattern search.",
     ),
   line_offset: z
     .union([PositiveLineOffsetSchema, TailLineOffsetSchema])
@@ -94,15 +100,23 @@ type RangeReadKaos = TextPreviewKaos & {
   scanTextFile?: (path: string) => Promise<TextFileScan>;
   readLineRange?: (
     path: string,
-    options: { startLine: number; maxLines: number; errors?: 'strict' | 'replace' | 'ignore' },
+    options: {
+      startLine: number;
+      maxLines: number;
+      errors?: "strict" | "replace" | "ignore";
+    },
   ) => AsyncGenerator<string>;
   readTailLines?: (
     path: string,
-    options: { tailCount: number; errors?: 'strict' | 'replace' | 'ignore' },
+    options: { tailCount: number; errors?: "strict" | "replace" | "ignore" },
   ) => AsyncGenerator<string>;
 };
 
-async function readTextHeader(kaos: TextPreviewKaos, path: string, n: number): Promise<Buffer> {
+async function readTextHeader(
+  kaos: TextPreviewKaos,
+  path: string,
+  n: number,
+): Promise<Buffer> {
   if (kaos.readTextPreview !== undefined) {
     return kaos.readTextPreview(path, n);
   }
@@ -111,13 +125,13 @@ async function readTextHeader(kaos: TextPreviewKaos, path: string, n: number): P
 
 function truncateLine(line: string, maxLength: number): string {
   if (line.length <= maxLength) return line;
-  const marker = '...';
+  const marker = "...";
   const target = Math.max(maxLength, marker.length);
   return line.slice(0, target - marker.length) + marker;
 }
 
 function stripTrailingLf(line: string): string {
-  return line.endsWith('\n') ? line.slice(0, -1) : line;
+  return line.endsWith("\n") ? line.slice(0, -1) : line;
 }
 
 function updateLineEndingFlags(flags: LineEndingFlags, text: string): void {
@@ -137,19 +151,24 @@ function updateLineEndingFlags(flags: LineEndingFlags, text: string): void {
 }
 
 function lineEndingStyleFromFlags(flags: LineEndingFlags): LineEndingStyle {
-  if (flags.hasLoneCr || (flags.hasCrLf && flags.hasLf)) return 'mixed';
-  if (flags.hasCrLf) return 'crlf';
-  return 'lf';
+  if (flags.hasLoneCr || (flags.hasCrLf && flags.hasLf)) return "mixed";
+  if (flags.hasCrLf) return "crlf";
+  return "lf";
 }
 
-function renderLine(entry: ReadLineEntry, lineEndingStyle: LineEndingStyle): RenderedLine {
+function renderLine(
+  entry: ReadLineEntry,
+  lineEndingStyle: LineEndingStyle,
+): RenderedLine {
   const modelContent =
-    lineEndingStyle === 'crlf' && entry.rawContent.endsWith('\r')
+    lineEndingStyle === "crlf" && entry.rawContent.endsWith("\r")
       ? entry.rawContent.slice(0, -1)
       : entry.rawContent;
   const truncated = truncateLine(modelContent, MAX_LINE_LENGTH);
   const renderedContent =
-    lineEndingStyle === 'mixed' ? makeCarriageReturnsVisible(truncated) : truncated;
+    lineEndingStyle === "mixed"
+      ? makeCarriageReturnsVisible(truncated)
+      : truncated;
   return {
     line: `${String(entry.lineNo)}\t${renderedContent}`,
     wasTruncated: truncated !== modelContent,
@@ -157,7 +176,7 @@ function renderLine(entry: ReadLineEntry, lineEndingStyle: LineEndingStyle): Ren
 }
 
 function renderedLineBytes(renderedLine: string, isFirst: boolean): number {
-  return (isFirst ? 0 : 1) + Buffer.byteLength(renderedLine, 'utf8');
+  return (isFirst ? 0 : 1) + Buffer.byteLength(renderedLine, "utf8");
 }
 
 function renderEntries(
@@ -175,7 +194,10 @@ function renderEntries(
 
   for (const entry of entries) {
     const rendered = renderLine(entry, lineEndingStyle);
-    const lineBytes = renderedLineBytes(rendered.line, renderedLines.length === 0);
+    const lineBytes = renderedLineBytes(
+      rendered.line,
+      renderedLines.length === 0,
+    );
     if (renderedLines.length > 0 && bytes + lineBytes > MAX_BYTES) {
       maxBytesReached = true;
       break;
@@ -200,28 +222,30 @@ function isRegularFileMode(stMode: number): boolean {
 }
 
 function isFileNotFoundError(error: unknown): boolean {
-  if (typeof error !== 'object' || error === null) return false;
-  const code = (error as { code?: unknown })['code'];
-  return code === 'ENOENT' || code === 'ENOTDIR';
+  if (typeof error !== "object" || error === null) return false;
+  const code = (error as { code?: unknown })["code"];
+  return code === "ENOENT" || code === "ENOTDIR";
 }
 
 function isTextDecodeError(error: unknown): boolean {
-  if (typeof error !== 'object' || error === null) return false;
-  const code = (error as { code?: unknown })['code'];
-  if (code === 'ERR_ENCODING_INVALID_ENCODED_DATA') return true;
+  if (typeof error !== "object" || error === null) return false;
+  const code = (error as { code?: unknown })["code"];
+  if (code === "ERR_ENCODING_INVALID_ENCODED_DATA") return true;
   if (!(error instanceof Error)) return false;
-  return /encoded data was not valid|invalid.*encoding|invalid.*utf-?8/i.test(error.message);
+  return /encoded data was not valid|invalid.*encoding|invalid.*utf-?8/i.test(
+    error.message,
+  );
 }
 
 function containsNulByte(text: string): boolean {
-  return text.includes('\u0000');
+  return text.includes("\u0000");
 }
 
 function notReadableFileOutput(path: string): string {
   return (
     `"${path}" is not readable as UTF-8 text. ` +
-    'If it is an image or video, use ReadMediaFile. ' +
-    'For other binary formats, use Bash or an MCP tool if available.'
+    "If it is an image or video, use ReadMediaFile. " +
+    "For other binary formats, use Bash or an MCP tool if available."
   );
 }
 
@@ -232,9 +256,10 @@ const READ_DESCRIPTION = renderPrompt(readDescriptionTemplate, {
 });
 
 export class ReadTool implements BuiltinTool<ReadInput> {
-  readonly name = 'Read' as const;
+  readonly name = "Read" as const;
   readonly description = READ_DESCRIPTION;
-  readonly parameters: Record<string, unknown> = toInputJsonSchema(ReadInputSchema);
+  readonly parameters: Record<string, unknown> =
+    toInputJsonSchema(ReadInputSchema);
   constructor(
     private readonly kaos: Kaos,
     private readonly workspace: WorkspaceConfig,
@@ -244,12 +269,12 @@ export class ReadTool implements BuiltinTool<ReadInput> {
     const path = resolvePathAccessPath(args.path, {
       kaos: this.kaos,
       workspace: this.workspace,
-      operation: 'read',
+      operation: "read",
     });
     return {
       accesses: ToolAccesses.readFile(path),
       description: `Reading ${args.path}`,
-      display: { kind: 'file_io', operation: 'read', path },
+      display: { kind: "file_io", operation: "read", path },
       approvalRule: literalRulePattern(this.name, path),
       matchesRule: (ruleArgs) =>
         matchesPathRuleSubject(ruleArgs, path, {
@@ -261,7 +286,10 @@ export class ReadTool implements BuiltinTool<ReadInput> {
     };
   }
 
-  private async execution(args: ReadInput, safePath: string): Promise<ExecutableToolResult> {
+  private async execution(
+    args: ReadInput,
+    safePath: string,
+  ): Promise<ExecutableToolResult> {
     try {
       let stat: StatResult;
       try {
@@ -276,15 +304,19 @@ export class ReadTool implements BuiltinTool<ReadInput> {
         return { isError: true, output: `"${args.path}" is not a file.` };
       }
 
-      const header = await readTextHeader(this.kaos, safePath, MEDIA_SNIFF_BYTES);
+      const header = await readTextHeader(
+        this.kaos,
+        safePath,
+        MEDIA_SNIFF_BYTES,
+      );
       const fileType = detectFileType(safePath, header);
-      if (fileType.kind === 'image' || fileType.kind === 'video') {
+      if (fileType.kind === "image" || fileType.kind === "video") {
         return {
           isError: true,
           output: `"${args.path}" is a ${fileType.kind} file. Use ReadMediaFile to read image or video files.`,
         };
       }
-      if (fileType.kind === 'unknown') {
+      if (fileType.kind === "unknown") {
         return {
           isError: true,
           output: notReadableFileOutput(args.path),
@@ -330,7 +362,10 @@ export class ReadTool implements BuiltinTool<ReadInput> {
     requestedLines: number,
   ): Promise<ExecutableToolResult> {
     const rangeKaos = this.kaos as RangeReadKaos;
-    if (rangeKaos.scanTextFile !== undefined && rangeKaos.readLineRange !== undefined) {
+    if (
+      rangeKaos.scanTextFile !== undefined &&
+      rangeKaos.readLineRange !== undefined
+    ) {
       const scan = await rangeKaos.scanTextFile(safePath);
       if (scan.hasNul) {
         return { isError: true, output: notReadableFileOutput(displayPath) };
@@ -340,7 +375,7 @@ export class ReadTool implements BuiltinTool<ReadInput> {
       for await (const rawLine of rangeKaos.readLineRange(safePath, {
         startLine: lineOffset,
         maxLines: effectiveLimit,
-        errors: 'strict',
+        errors: "strict",
       })) {
         selectedEntries.push({ lineNo, rawContent: stripTrailingLf(rawLine) });
         lineNo += 1;
@@ -350,7 +385,9 @@ export class ReadTool implements BuiltinTool<ReadInput> {
       return this.finishReadResult({
         renderedLines: rendered.renderedLines,
         truncatedLineNumbers: rendered.truncatedLineNumbers,
-        maxLinesReached: effectiveLimit >= MAX_LINES && lineOffset + MAX_LINES <= scan.totalLines,
+        maxLinesReached:
+          effectiveLimit >= MAX_LINES &&
+          lineOffset + MAX_LINES <= scan.totalLines,
         maxBytesReached: rendered.maxBytesReached,
         lineEndingStyle,
         startLine: selectedEntries.length > 0 ? lineOffset : 0,
@@ -360,12 +397,18 @@ export class ReadTool implements BuiltinTool<ReadInput> {
     }
 
     const selectedEntries: ReadLineEntry[] = [];
-    const flags: LineEndingFlags = { hasCrLf: false, hasLf: false, hasLoneCr: false };
+    const flags: LineEndingFlags = {
+      hasCrLf: false,
+      hasLf: false,
+      hasLoneCr: false,
+    };
     let currentLineNo = 0;
     let maxLinesReached = false;
     let collectionClosed = false;
 
-    for await (const rawLine of this.kaos.readLines(safePath, { errors: 'strict' })) {
+    for await (const rawLine of this.kaos.readLines(safePath, {
+      errors: "strict",
+    })) {
       if (containsNulByte(rawLine)) {
         return { isError: true, output: notReadableFileOutput(displayPath) };
       }
@@ -418,7 +461,10 @@ export class ReadTool implements BuiltinTool<ReadInput> {
   ): Promise<ExecutableToolResult> {
     const tailCount = Math.abs(lineOffset);
     const rangeKaos = this.kaos as RangeReadKaos;
-    if (rangeKaos.scanTextFile !== undefined && rangeKaos.readTailLines !== undefined) {
+    if (
+      rangeKaos.scanTextFile !== undefined &&
+      rangeKaos.readTailLines !== undefined
+    ) {
       const scan = await rangeKaos.scanTextFile(safePath);
       if (scan.hasNul) {
         return { isError: true, output: notReadableFileOutput(displayPath) };
@@ -426,7 +472,7 @@ export class ReadTool implements BuiltinTool<ReadInput> {
       const rawLines: string[] = [];
       for await (const rawLine of rangeKaos.readTailLines(safePath, {
         tailCount,
-        errors: 'strict',
+        errors: "strict",
       })) {
         rawLines.push(rawLine);
       }
@@ -445,10 +491,16 @@ export class ReadTool implements BuiltinTool<ReadInput> {
     }
 
     const entries: ReadLineEntry[] = [];
-    const flags: LineEndingFlags = { hasCrLf: false, hasLf: false, hasLoneCr: false };
+    const flags: LineEndingFlags = {
+      hasCrLf: false,
+      hasLf: false,
+      hasLoneCr: false,
+    };
     let currentLineNo = 0;
 
-    for await (const rawLine of this.kaos.readLines(safePath, { errors: 'strict' })) {
+    for await (const rawLine of this.kaos.readLines(safePath, {
+      errors: "strict",
+    })) {
       if (containsNulByte(rawLine)) {
         return { isError: true, output: notReadableFileOutput(displayPath) };
       }
@@ -480,9 +532,11 @@ export class ReadTool implements BuiltinTool<ReadInput> {
     requestedLines: number;
   }): ExecutableToolResult {
     const lineEndingStyle = lineEndingStyleFromFlags(input.lineEndingFlags);
-    let renderedCandidates = input.entries.slice(0, input.effectiveLimit).map((entry) => {
-      return { entry, rendered: renderLine(entry, lineEndingStyle) };
-    });
+    let renderedCandidates = input.entries
+      .slice(0, input.effectiveLimit)
+      .map((entry) => {
+        return { entry, rendered: renderLine(entry, lineEndingStyle) };
+      });
 
     let totalBytes = 0;
     for (const [index, candidate] of renderedCandidates.entries()) {
@@ -497,7 +551,10 @@ export class ReadTool implements BuiltinTool<ReadInput> {
       for (let i = renderedCandidates.length - 1; i >= 0; i -= 1) {
         const candidate = renderedCandidates[i];
         if (candidate === undefined) continue;
-        const lineBytes = renderedLineBytes(candidate.rendered.line, kept.length === 0);
+        const lineBytes = renderedLineBytes(
+          candidate.rendered.line,
+          kept.length === 0,
+        );
         if (bytes + lineBytes > MAX_BYTES) break;
         kept.unshift(candidate);
         bytes += lineBytes;
@@ -531,20 +588,20 @@ export class ReadTool implements BuiltinTool<ReadInput> {
     // the rendered file content and nothing else. The `<system>` wrapping is
     // this tool's wording choice.
     return {
-      output: input.renderedLines.join('\n'),
+      output: input.renderedLines.join("\n"),
       note: `<system>${this.finishMessage(input)}</system>`,
     };
   }
 
   private finishMessage(input: FinishReadResultInput): string {
     const lineCount = input.renderedLines.length;
-    const lineWord = lineCount === 1 ? 'line' : 'lines';
+    const lineWord = lineCount === 1 ? "line" : "lines";
     const parts =
       lineCount > 0
         ? [
             `${String(lineCount)} ${lineWord} read from file starting from line ${String(input.startLine)}.`,
           ]
-        : ['No lines read from file.'];
+        : ["No lines read from file."];
 
     parts.push(`Total lines in file: ${String(input.totalLines)}.`);
     if (input.maxLinesReached) {
@@ -552,16 +609,18 @@ export class ReadTool implements BuiltinTool<ReadInput> {
     } else if (input.maxBytesReached) {
       parts.push(`Max ${String(MAX_BYTES)} bytes reached.`);
     } else if (lineCount < input.requestedLines) {
-      parts.push('End of file reached.');
+      parts.push("End of file reached.");
     }
     if (input.truncatedLineNumbers.length > 0) {
-      parts.push(`Lines [${input.truncatedLineNumbers.join(', ')}] were truncated.`);
-    }
-    if (input.lineEndingStyle === 'mixed') {
       parts.push(
-        'Mixed or lone carriage-return line endings are shown as \\r. Use exact \\r\\n or \\r escapes in Edit.old_string for those lines.',
+        `Lines [${input.truncatedLineNumbers.join(", ")}] were truncated.`,
       );
     }
-    return parts.join(' ');
+    if (input.lineEndingStyle === "mixed") {
+      parts.push(
+        "Mixed or lone carriage-return line endings are shown as \\r. Use exact \\r\\n or \\r escapes in Edit.old_string for those lines.",
+      );
+    }
+    return parts.join(" ");
   }
 }

@@ -1,11 +1,11 @@
-import { Readable } from 'node:stream';
+import { Readable } from "node:stream";
 
 function isUtf8Continuation(byte: number): boolean {
   return byte >= 0x80 && byte <= 0xbf;
 }
 
 function decodeUtf8Ignore(data: Buffer): string {
-  let output = '';
+  let output = "";
   let i = 0;
 
   while (i < data.length) {
@@ -40,7 +40,9 @@ function decodeUtf8Ignore(data: Buffer): string {
           (b0 >= 0xee && b0 <= 0xef && isUtf8Continuation(b1)));
 
       if (validSecond && b2 !== undefined && isUtf8Continuation(b2)) {
-        output += String.fromCodePoint(((b0 & 0x0f) << 12) | ((b1 & 0x3f) << 6) | (b2 & 0x3f));
+        output += String.fromCodePoint(
+          ((b0 & 0x0f) << 12) | ((b1 & 0x3f) << 6) | (b2 & 0x3f),
+        );
         i += 3;
         continue;
       }
@@ -66,7 +68,10 @@ function decodeUtf8Ignore(data: Buffer): string {
         isUtf8Continuation(b3)
       ) {
         output += String.fromCodePoint(
-          ((b0 & 0x07) << 18) | ((b1 & 0x3f) << 12) | ((b2 & 0x3f) << 6) | (b3 & 0x3f),
+          ((b0 & 0x07) << 18) |
+            ((b1 & 0x3f) << 12) |
+            ((b2 & 0x3f) << 6) |
+            (b3 & 0x3f),
         );
         i += 4;
         continue;
@@ -82,7 +87,7 @@ function decodeUtf8Ignore(data: Buffer): string {
 }
 
 function decodeUtf16LeIgnore(data: Buffer): string {
-  let output = '';
+  let output = "";
   let i = 0;
 
   while (i + 1 < data.length) {
@@ -98,7 +103,8 @@ function decodeUtf16LeIgnore(data: Buffer): string {
       if (lowFirst !== undefined && lowSecond !== undefined) {
         const low = lowFirst | (lowSecond << 8);
         if (low >= 0xdc00 && low <= 0xdfff) {
-          const codePoint = 0x10000 + ((codeUnit - 0xd800) << 10) + (low - 0xdc00);
+          const codePoint =
+            0x10000 + ((codeUnit - 0xd800) << 10) + (low - 0xdc00);
           output += String.fromCodePoint(codePoint);
           i += 4;
           continue;
@@ -135,7 +141,7 @@ function decodeUtf16LeIgnore(data: Buffer): string {
 export function decodeTextWithErrors(
   data: Buffer,
   encoding: BufferEncoding,
-  errors: 'strict' | 'replace' | 'ignore' = 'strict',
+  errors: "strict" | "replace" | "ignore" = "strict",
   ignoreBOM: boolean = false,
 ): string {
   // Map Node's BufferEncoding names to Web TextDecoder labels where the two
@@ -144,14 +150,14 @@ export function decodeTextWithErrors(
   let webLabel: string | undefined;
   // eslint-disable-next-line typescript-eslint/switch-exhaustiveness-check
   switch (encoding) {
-    case 'utf-8':
-    case 'utf8':
-      webLabel = 'utf-8';
+    case "utf-8":
+    case "utf8":
+      webLabel = "utf-8";
       break;
-    case 'utf16le':
-    case 'ucs2':
-    case 'ucs-2':
-      webLabel = 'utf-16le';
+    case "utf16le":
+    case "ucs2":
+    case "ucs-2":
+      webLabel = "utf-16le";
       break;
     default:
       webLabel = undefined;
@@ -163,15 +169,17 @@ export function decodeTextWithErrors(
     return data.toString(encoding);
   }
 
-  if (errors === 'strict') {
+  if (errors === "strict") {
     return new TextDecoder(webLabel, { fatal: true, ignoreBOM }).decode(data);
   }
 
   // 'ignore' must skip invalid input bytes/code units, not delete every
   // replacement character in the decoded output. A file can contain a valid
   // U+FFFD, and Python preserves it under errors="ignore".
-  if (errors === 'ignore') {
-    return webLabel === 'utf-8' ? decodeUtf8Ignore(data) : decodeUtf16LeIgnore(data);
+  if (errors === "ignore") {
+    return webLabel === "utf-8"
+      ? decodeUtf8Ignore(data)
+      : decodeUtf16LeIgnore(data);
   }
 
   // 'replace' → substitute each invalid sequence with U+FFFD (default).
@@ -183,22 +191,25 @@ export function decodeTextWithErrors(
  * Mirrors Python pathlib behavior: includes dotfiles, case-sensitive by default.
  * @internal
  */
-export function globPatternToRegex(pattern: string, caseSensitive: boolean): RegExp {
-  let regex = '^';
+export function globPatternToRegex(
+  pattern: string,
+  caseSensitive: boolean,
+): RegExp {
+  let regex = "^";
   for (let i = 0; i < pattern.length; i++) {
     const ch = pattern[i];
     if (ch === undefined) break;
     switch (ch) {
-      case '*':
-        regex += '[^/]*';
+      case "*":
+        regex += "[^/]*";
         break;
-      case '?':
-        regex += '[^/]';
+      case "?":
+        regex += "[^/]";
         break;
-      case '[': {
-        const end = pattern.indexOf(']', i + 1);
+      case "[": {
+        const end = pattern.indexOf("]", i + 1);
         if (end === -1) {
-          regex += '\\[';
+          regex += "\\[";
         } else {
           // Glob character classes only use `!` for negation. A literal
           // leading `^` must remain literal even though JS regex char
@@ -206,35 +217,35 @@ export function globPatternToRegex(pattern: string, caseSensitive: boolean): Reg
           let charClass = pattern.slice(i + 1, end);
           // Escape backslashes inside the class so a trailing backslash
           // does not accidentally escape the closing `]`.
-          charClass = charClass.replace(/\\/g, '\\\\');
-          if (charClass.startsWith('!')) {
-            charClass = '^' + charClass.slice(1);
-          } else if (charClass.startsWith('^')) {
-            charClass = '\\' + charClass;
+          charClass = charClass.replace(/\\/g, "\\\\");
+          if (charClass.startsWith("!")) {
+            charClass = "^" + charClass.slice(1);
+          } else if (charClass.startsWith("^")) {
+            charClass = "\\" + charClass;
           }
-          regex += '[' + charClass + ']';
+          regex += "[" + charClass + "]";
           i = end;
         }
         break;
       }
-      case '\\': {
+      case "\\": {
         if (i + 1 < pattern.length) {
           const next = pattern.charAt(i + 1);
-          regex += next.replaceAll(/[{}()+.\\[\]^$|]/g, '\\$&');
+          regex += next.replaceAll(/[{}()+.\\[\]^$|]/g, "\\$&");
           // Advance past the escaped character so it is not processed
           // again as a regex metacharacter. match literally.
           i++;
         } else {
-          regex += '\\\\';
+          regex += "\\\\";
         }
         break;
       }
       default:
-        regex += ch.replaceAll(/[{}()+.\\[\]^$|]/g, '\\$&');
+        regex += ch.replaceAll(/[{}()+.\\[\]^$|]/g, "\\$&");
     }
   }
-  regex += '$';
-  return new RegExp(regex, caseSensitive ? '' : 'i');
+  regex += "$";
+  return new RegExp(regex, caseSensitive ? "" : "i");
 }
 
 /**
@@ -251,10 +262,10 @@ export class BufferedReadable extends Readable {
     // common small/medium outputs without draining unboundedly.
     super({ highWaterMark: 128 * 1024 });
     this._source = source;
-    this._source.on('data', this._onData);
-    this._source.on('end', this._onEnd);
-    this._source.on('close', this._onClose);
-    this._source.on('error', this._onError);
+    this._source.on("data", this._onData);
+    this._source.on("end", this._onEnd);
+    this._source.on("close", this._onClose);
+    this._source.on("error", this._onError);
   }
 
   override _read(): void {
@@ -263,11 +274,14 @@ export class BufferedReadable extends Readable {
     }
   }
 
-  override _destroy(error: Error | null, callback: (error?: Error | null) => void): void {
-    this._source.off('data', this._onData);
-    this._source.off('end', this._onEnd);
-    this._source.off('close', this._onClose);
-    this._source.off('error', this._onError);
+  override _destroy(
+    error: Error | null,
+    callback: (error?: Error | null) => void,
+  ): void {
+    this._source.off("data", this._onData);
+    this._source.off("end", this._onEnd);
+    this._source.off("close", this._onClose);
+    this._source.off("error", this._onError);
     this._source.destroy();
     callback(error);
   }

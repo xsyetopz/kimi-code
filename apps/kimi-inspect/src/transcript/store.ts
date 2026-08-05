@@ -25,23 +25,28 @@ import {
   type AgentState,
   type TranscriptItem,
   type TranscriptOperation,
-} from '@moonshot-ai/transcript';
+} from "@moonshot-ai/transcript";
 
-import type { TranscriptPage } from './api';
+import type { TranscriptPage } from "./api";
 
 export function countTurns(items: readonly TranscriptItem[]): number {
   let count = 0;
-  for (const item of items) if (item.kind === 'turn') count += 1;
+  for (const item of items) if (item.kind === "turn") count += 1;
   return count;
 }
 
-export function oldestTurnId(items: readonly TranscriptItem[]): string | undefined {
-  for (const item of items) if (item.kind === 'turn') return item.turnId;
+export function oldestTurnId(
+  items: readonly TranscriptItem[],
+): string | undefined {
+  for (const item of items) if (item.kind === "turn") return item.turnId;
   return undefined;
 }
 
-export function hasTurnId(items: readonly TranscriptItem[], turnId: string): boolean {
-  return items.some((item) => item.kind === 'turn' && item.turnId === turnId);
+export function hasTurnId(
+  items: readonly TranscriptItem[],
+  turnId: string,
+): boolean {
+  return items.some((item) => item.kind === "turn" && item.turnId === turnId);
 }
 
 /**
@@ -60,7 +65,10 @@ export async function recoverLoadedWindow(
   onPageApplied?: (page: TranscriptPage) => void,
 ): Promise<void> {
   if (prevOldestTurnId === undefined) return;
-  while (!hasTurnId(store.getState().items, prevOldestTurnId) && store.getState().hasMoreOlder) {
+  while (
+    !hasTurnId(store.getState().items, prevOldestTurnId) &&
+    store.getState().hasMoreOlder
+  ) {
     const oldest = oldestTurnId(store.getState().items);
     if (oldest === undefined) break;
     const before = countTurns(store.getState().items);
@@ -129,10 +137,16 @@ export class TranscriptChatStore {
         items: page.items,
         tasks: new Map(page.tasks.map((task) => [task.taskId, task])),
         interactions: new Map(
-          page.interactions.map((interaction) => [interaction.interactionId, interaction]),
+          page.interactions.map((interaction) => [
+            interaction.interactionId,
+            interaction,
+          ]),
         ),
         attachments: new Map(
-          page.attachments.map((attachment) => [attachment.attachmentId, attachment]),
+          page.attachments.map((attachment) => [
+            attachment.attachmentId,
+            attachment,
+          ]),
         ),
         todos: new Map(page.todos.map((todo) => [todo.todoId, todo])),
         // The page contract carries no prompt slice yet; prompt.upsert ops
@@ -147,7 +161,8 @@ export class TranscriptChatStore {
     }
     const existing = new Set(this.state.items.map(itemId));
     const fresh = page.items.filter((item) => !existing.has(itemId(item)));
-    if (fresh.length === 0 && page.hasMoreOlder === this.state.hasMoreOlder) return;
+    if (fresh.length === 0 && page.hasMoreOlder === this.state.hasMoreOlder)
+      return;
     this.state = {
       ...this.state,
       items: [...fresh, ...this.state.items],

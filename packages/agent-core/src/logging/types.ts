@@ -1,4 +1,4 @@
-export type LogLevel = 'off' | 'error' | 'warn' | 'info' | 'debug';
+export type LogLevel = "off" | "error" | "warn" | "info" | "debug";
 
 export type LogContext = Record<string, unknown>;
 
@@ -36,10 +36,12 @@ export interface Logger {
 
 export interface LogEntry {
   readonly t: number;
-  readonly level: Exclude<LogLevel, 'off'>;
+  readonly level: Exclude<LogLevel, "off">;
   readonly msg: string;
   readonly ctx?: LogContext | undefined;
-  readonly error?: { readonly message: string; readonly stack?: string } | undefined;
+  readonly error?:
+    | { readonly message: string; readonly stack?: string }
+    | undefined;
   readonly sessionId?: string | undefined;
   readonly sessionLogId?: string | undefined;
 }
@@ -86,6 +88,9 @@ export const LOG_LEVEL_RANK: Record<LogLevel, number> = {
   debug: 4,
 };
 
-export function levelEnabled(threshold: LogLevel, level: Exclude<LogLevel, 'off'>): boolean {
+export function levelEnabled(
+  threshold: LogLevel,
+  level: Exclude<LogLevel, "off">,
+): boolean {
   return LOG_LEVEL_RANK[threshold] >= LOG_LEVEL_RANK[level];
 }

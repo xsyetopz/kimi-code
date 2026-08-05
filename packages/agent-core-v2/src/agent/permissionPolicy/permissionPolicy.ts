@@ -1,9 +1,6 @@
 import { createDecorator } from "#/_base/di/instantiation";
-import type {
-  ResolvedToolExecutionHookContext
-} from '#/agent/toolExecutor/toolHooks';
-import type { PermissionPolicyResult } from './types';
-
+import type { ResolvedToolExecutionHookContext } from "#/agent/toolExecutor/toolHooks";
+import type { PermissionPolicyResult } from "./types";
 
 export interface PermissionPolicyEvaluation {
   readonly policyName: string;
@@ -19,4 +16,6 @@ export interface IAgentPermissionPolicyService {
 }
 
 export const IAgentPermissionPolicyService =
-  createDecorator<IAgentPermissionPolicyService>('agentPermissionPolicyService');
+  createDecorator<IAgentPermissionPolicyService>(
+    "agentPermissionPolicyService",
+  );

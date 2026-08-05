@@ -17,7 +17,7 @@
  * Re-exports `@moonshot-ai/protocol` types are NOT bundled here — scenarios
  * that want them import from `@moonshot-ai/protocol` directly.
  */
-export { DaemonClient } from './client.js';
+export { DaemonClient } from "./client.js";
 export type {
   DaemonClientOptions,
   SubmitAndWaitOptions,
@@ -28,15 +28,15 @@ export type {
   TerminalDetachResult,
   TerminalInputResult,
   TerminalResizeResult,
-} from './client.js';
+} from "./client.js";
 
-export { HttpClient } from './http.js';
-export type { HttpClientOptions } from './http.js';
+export { HttpClient } from "./http.js";
+export type { HttpClientOptions } from "./http.js";
 
-export { WsClient } from './ws.js';
-export type { AnyFrame, WsClientOptions } from './ws.js';
+export { WsClient } from "./ws.js";
+export type { AnyFrame, WsClientOptions } from "./ws.js";
 
-export { EnvelopeError, unwrap } from './envelope.js';
+export { EnvelopeError, unwrap } from "./envelope.js";
 
 export {
   defaultReportDir,
@@ -47,7 +47,7 @@ export {
   resetReportDir,
   setActiveReportCase,
   writeHtmlReport,
-} from './report.js';
+} from "./report.js";
 export type {
   FetchWithReportOptions,
   HtmlReportOptions,
@@ -61,10 +61,13 @@ export type {
   TestResultReportEvent,
   WsDirection,
   WsReportEvent,
-} from './report.js';
+} from "./report.js";
 
-export { installReverseRpcHandler } from './reverse-rpc.js';
-export type { ReverseRpcOptions } from './reverse-rpc.js';
+export { installReverseRpcHandler } from "./reverse-rpc.js";
+export type { ReverseRpcOptions } from "./reverse-rpc.js";
 
-export { DEFAULT_FRAME_TIMEOUT_MS, waitForFrame, waitForSessionBusy } from './wait.js';
-
+export {
+  DEFAULT_FRAME_TIMEOUT_MS,
+  waitForFrame,
+  waitForSessionBusy,
+} from "./wait.js";

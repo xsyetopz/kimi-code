@@ -7,16 +7,16 @@
  * file doesn't have to hand-roll them.
  */
 
-import type { ModelAlias } from '@moonshot-ai/kimi-code-sdk';
+import type { ModelAlias } from "@moonshot-ai/kimi-code-sdk";
 
 /** Stub `auth.status()` payload for an authenticated harness. */
 export const AUTHED_STATUS = {
-  providers: [{ providerName: 'kimi', hasToken: true }],
+  providers: [{ providerName: "kimi", hasToken: true }],
 } as const;
 
 /** Stub `auth.status()` payload for an unauthenticated harness. */
 export const UNAUTHED_STATUS = {
-  providers: [{ providerName: 'kimi', hasToken: false }],
+  providers: [{ providerName: "kimi", hasToken: false }],
 } as const;
 
 /**
@@ -42,11 +42,12 @@ export function makeModelsMap(
 ): Record<string, ModelAlias> {
   const out: Record<string, ModelAlias> = {};
   for (const entry of entries) {
-    const capabilities = entry.alwaysThinking === true
-      ? ['thinking', 'always_thinking']
-      : entry.thinkingSupported === true
-        ? ['thinking']
-        : undefined;
+    const capabilities =
+      entry.alwaysThinking === true
+        ? ["thinking", "always_thinking"]
+        : entry.thinkingSupported === true
+          ? ["thinking"]
+          : undefined;
     out[entry.id] = {
       // The fields below are the minimum shape the adapter reads off
       // each alias — `provider`/`max_context_size` are required by the
@@ -55,8 +56,12 @@ export function makeModelsMap(
       model: entry.id,
       ...(entry.name !== undefined ? { displayName: entry.name } : {}),
       ...(capabilities !== undefined ? { capabilities } : {}),
-      ...(entry.efforts !== undefined ? { supportEfforts: [...entry.efforts] } : {}),
-      ...(entry.defaultEffort !== undefined ? { defaultEffort: entry.defaultEffort } : {}),
+      ...(entry.efforts !== undefined
+        ? { supportEfforts: [...entry.efforts] }
+        : {}),
+      ...(entry.defaultEffort !== undefined
+        ? { defaultEffort: entry.defaultEffort }
+        : {}),
     } as ModelAlias;
   }
   return out;

@@ -3,23 +3,23 @@ import type {
   MigrationReport,
   MigrationScope,
   SessionsSummary,
-} from './types.js';
-import { migrateConfigStep } from './steps/config.js';
-import { migrateMcpStep } from './steps/mcp.js';
-import { migrateUserHistoryStep } from './steps/user-history.js';
-import { migrateSkillsStep } from './steps/skills.js';
-import { migrateSessionsStep } from './sessions/index.js';
-import { writeReport } from './report.js';
-import { writeMigrationErrorsLog } from './migration-errors-log.js';
-import { appendMarkerRun, readMarker, writeMarker } from './marker.js';
+} from "./types.js";
+import { migrateConfigStep } from "./steps/config.js";
+import { migrateMcpStep } from "./steps/mcp.js";
+import { migrateUserHistoryStep } from "./steps/user-history.js";
+import { migrateSkillsStep } from "./steps/skills.js";
+import { migrateSessionsStep } from "./sessions/index.js";
+import { writeReport } from "./report.js";
+import { writeMigrationErrorsLog } from "./migration-errors-log.js";
+import { appendMarkerRun, readMarker, writeMarker } from "./marker.js";
 
-const DEFAULT_MIGRATOR_VERSION = '0.1.1';
+const DEFAULT_MIGRATOR_VERSION = "0.1.1";
 
 const CONFIG_CONFLICT_NOTICE =
-  'Your existing config.toml could not be parsed; migrated copy saved to ~/.kimi-code/config.migrated-from-kimi-cli.toml — please review and merge manually.';
+  "Your existing config.toml could not be parsed; migrated copy saved to ~/.kimi-code/config.migrated-from-kimi-cli.toml — please review and merge manually.";
 
 const TUI_CONFLICT_NOTICE =
-  'Your existing tui.toml had user modifications; migrated copy saved to ~/.kimi-code/tui.migrated-from-kimi-cli.toml — please review and merge manually.';
+  "Your existing tui.toml had user modifications; migrated copy saved to ~/.kimi-code/tui.migrated-from-kimi-cli.toml — please review and merge manually.";
 
 export interface RunMigrationInput {
   readonly plan: MigrationPlan;
@@ -31,7 +31,9 @@ export interface RunMigrationInput {
   readonly onSessionProgress?: (done: number, total: number) => void;
 }
 
-export async function runMigration(input: RunMigrationInput): Promise<MigrationReport> {
+export async function runMigration(
+  input: RunMigrationInput,
+): Promise<MigrationReport> {
   const startedAt = new Date().toISOString();
   const version = input.migratorVersion ?? DEFAULT_MIGRATOR_VERSION;
   const log = (m: string): void => {
@@ -39,7 +41,10 @@ export async function runMigration(input: RunMigrationInput): Promise<MigrationR
   };
 
   const config = input.scope.config
-    ? await migrateConfigStep({ sourceHome: input.source, targetHome: input.target })
+    ? await migrateConfigStep({
+        sourceHome: input.source,
+        targetHome: input.target,
+      })
     : {
         migrated: false,
         tuiExtracted: false,
@@ -53,22 +58,36 @@ export async function runMigration(input: RunMigrationInput): Promise<MigrationR
         droppedHooks: 0,
         siblingContents: { providers: [], models: [], hooks: 0 },
       };
-  log('config done');
+  log("config done");
 
   const mcp = input.scope.mcp
-    ? await migrateMcpStep({ sourceHome: input.source, targetHome: input.target })
-    : { mergedServers: [], keptNewForConflicts: [], droppedServers: [], wroteSiblingDueToConflict: false };
-  log('mcp done');
+    ? await migrateMcpStep({
+        sourceHome: input.source,
+        targetHome: input.target,
+      })
+    : {
+        mergedServers: [],
+        keptNewForConflicts: [],
+        droppedServers: [],
+        wroteSiblingDueToConflict: false,
+      };
+  log("mcp done");
 
   const userHistory = input.scope.userHistory
-    ? await migrateUserHistoryStep({ sourceHome: input.source, targetHome: input.target })
+    ? await migrateUserHistoryStep({
+        sourceHome: input.source,
+        targetHome: input.target,
+      })
     : { copied: 0, skippedExisting: 0 };
-  log('user-history done');
+  log("user-history done");
 
   const skills = input.scope.skills
-    ? await migrateSkillsStep({ sourceHome: input.source, targetHome: input.target })
+    ? await migrateSkillsStep({
+        sourceHome: input.source,
+        targetHome: input.target,
+      })
     : { copied: 0, skippedExisting: 0 };
-  log('skills done');
+  log("skills done");
 
   const sessions: SessionsSummary = input.scope.sessions
     ? await migrateSessionsStep({
@@ -77,7 +96,7 @@ export async function runMigration(input: RunMigrationInput): Promise<MigrationR
         onSessionProgress: input.onSessionProgress,
       })
     : emptyConfigOnlySessions();
-  log('sessions done');
+  log("sessions done");
 
   const completedAt = new Date().toISOString();
 
@@ -98,7 +117,9 @@ export async function runMigration(input: RunMigrationInput): Promise<MigrationR
       mcpOauthServersRequiringReauth: input.plan.detectedMcpOauthServers,
       oauthLoginsRequiringRelogin: input.plan.oauthCredentials,
       detectedPlugins: input.plan.detectedPlugins,
-      configConflictNotice: config.wroteSiblingDueToConflict ? CONFIG_CONFLICT_NOTICE : null,
+      configConflictNotice: config.wroteSiblingDueToConflict
+        ? CONFIG_CONFLICT_NOTICE
+        : null,
       tuiConflictNotice: config.wroteTuiSibling ? TUI_CONFLICT_NOTICE : null,
     },
   };
@@ -154,7 +175,7 @@ export async function runMigration(input: RunMigrationInput): Promise<MigrationR
 
 function emptyConfigOnlySessions(): SessionsSummary {
   return {
-    scope: 'config-only',
+    scope: "config-only",
     bucketsScanned: 0,
     bucketsSkippedNonlocalKaos: 0,
     bucketsSkippedNoWorkdirFound: 0,

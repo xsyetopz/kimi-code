@@ -16,5 +16,5 @@ export function formatTokens(n: number): string {
 /** One decimal place, dropping a redundant ".0" ("1.0" → "1", "1.5" stays). */
 function trimDecimal(v: number): string {
   const s = v.toFixed(1);
-  return s.endsWith('.0') ? s.slice(0, -2) : s;
+  return s.endsWith(".0") ? s.slice(0, -2) : s;
 }

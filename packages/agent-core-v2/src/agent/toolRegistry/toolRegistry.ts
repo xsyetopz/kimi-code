@@ -6,14 +6,14 @@
  * hooks. Bound at Agent scope.
  */
 
-import { createDecorator } from '#/_base/di/instantiation';
-import { type IDisposable } from '#/_base/di/lifecycle';
+import { createDecorator } from "#/_base/di/instantiation";
+import { type IDisposable } from "#/_base/di/lifecycle";
 import type {
   ExecutableTool,
   ToolDisclosure,
   ToolInfo,
   ToolSource,
-} from '#/tool/toolContract';
+} from "#/tool/toolContract";
 
 export interface ToolRegistrationOptions {
   readonly source?: ToolSource;
@@ -28,10 +28,14 @@ export interface ToolReference {
 export interface IAgentToolRegistryService {
   readonly _serviceBrand: undefined;
 
-  register(tool: ExecutableTool, options?: ToolRegistrationOptions): IDisposable;
+  register(
+    tool: ExecutableTool,
+    options?: ToolRegistrationOptions,
+  ): IDisposable;
   list(): readonly ToolInfo[];
   listReferences(): readonly ToolReference[];
   resolve(name: string): ExecutableTool | undefined;
 }
 
-export const IAgentToolRegistryService = createDecorator<IAgentToolRegistryService>('agentToolRegistryService');
+export const IAgentToolRegistryService =
+  createDecorator<IAgentToolRegistryService>("agentToolRegistryService");

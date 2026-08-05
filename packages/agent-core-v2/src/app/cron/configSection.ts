@@ -7,10 +7,14 @@
  * persisted to `config.toml`.
  */
 
-import { type ConfigStripEnv, type EnvBindings, envBindings } from '#/app/config/config';
-import { registerConfigSection } from '#/app/config/configSectionContributions';
+import {
+  type ConfigStripEnv,
+  type EnvBindings,
+  envBindings,
+} from "#/app/config/config";
+import { registerConfigSection } from "#/app/config/configSectionContributions";
 
-export const CRON_SECTION = 'cron';
+export const CRON_SECTION = "cron";
 
 export interface CronConfig {
   readonly debug: boolean;
@@ -30,28 +34,37 @@ export const DEFAULT_CRON_CONFIG: CronConfig = {
   manualTick: false,
 };
 
-const cronConfigSchema = { parse: (value: unknown): CronConfig => value as CronConfig };
+const cronConfigSchema = {
+  parse: (value: unknown): CronConfig => value as CronConfig,
+};
 
-const on = (raw: string): boolean => raw === '1';
+const on = (raw: string): boolean => raw === "1";
 
 function parsePollIntervalMs(raw: string): number | null | undefined {
   const value = raw.trim();
   if (value.length === 0) return undefined;
-  if (value === 'null') return null;
+  if (value === "null") return null;
   const parsed = Number(value);
-  if (!Number.isFinite(parsed) || !Number.isInteger(parsed) || parsed < 0) return undefined;
+  if (!Number.isFinite(parsed) || !Number.isInteger(parsed) || parsed < 0)
+    return undefined;
   return parsed;
 }
 
-export const cronEnvBindings: EnvBindings<CronConfig> = envBindings(cronConfigSchema, {
-  debug: { env: 'KIMI_CRON_DEBUG', parse: on },
-  noJitter: { env: 'KIMI_CRON_NO_JITTER', parse: on },
-  noStale: { env: 'KIMI_CRON_NO_STALE', parse: on },
-  disabled: { env: 'KIMI_DISABLE_CRON', parse: on },
-  manualTick: { env: 'KIMI_CRON_MANUAL_TICK', parse: on },
-  clock: 'KIMI_CRON_CLOCK',
-  pollIntervalMs: { env: 'KIMI_CRON_POLL_INTERVAL_MS', parse: parsePollIntervalMs },
-});
+export const cronEnvBindings: EnvBindings<CronConfig> = envBindings(
+  cronConfigSchema,
+  {
+    debug: { env: "KIMI_CRON_DEBUG", parse: on },
+    noJitter: { env: "KIMI_CRON_NO_JITTER", parse: on },
+    noStale: { env: "KIMI_CRON_NO_STALE", parse: on },
+    disabled: { env: "KIMI_DISABLE_CRON", parse: on },
+    manualTick: { env: "KIMI_CRON_MANUAL_TICK", parse: on },
+    clock: "KIMI_CRON_CLOCK",
+    pollIntervalMs: {
+      env: "KIMI_CRON_POLL_INTERVAL_MS",
+      parse: parsePollIntervalMs,
+    },
+  },
+);
 
 export const stripCronEnv: ConfigStripEnv<CronConfig> = () => undefined;
 

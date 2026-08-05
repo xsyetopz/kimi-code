@@ -1,12 +1,12 @@
-import { ChatProviderError } from '#/errors';
-import type { Message, StreamedMessagePart, ToolCall } from '#/message';
-import type { ChatProvider, StreamedMessage, ThinkingEffort } from '#/provider';
-import { step } from './fixtures/step';
-import type { Tool } from '#/tool';
-import { toolOk } from './fixtures/simple-toolset';
-import type { ToolResult, Toolset } from './fixtures/simple-toolset';
-import type { TokenUsage } from '#/usage';
-import { describe, expect, it } from 'vitest';
+import { ChatProviderError } from "#/errors";
+import type { Message, StreamedMessagePart, ToolCall } from "#/message";
+import type { ChatProvider, StreamedMessage, ThinkingEffort } from "#/provider";
+import { step } from "./fixtures/step";
+import type { Tool } from "#/tool";
+import { toolOk } from "./fixtures/simple-toolset";
+import type { ToolResult, Toolset } from "./fixtures/simple-toolset";
+import type { TokenUsage } from "#/usage";
+import { describe, expect, it } from "vitest";
 function createMockStream(
   parts: StreamedMessagePart[],
   opts?: { id?: string; usage?: TokenUsage },
@@ -30,10 +30,14 @@ function createMockStream(
 
 function createMockProvider(stream: StreamedMessage): ChatProvider {
   return {
-    name: 'mock',
-    modelName: 'mock-model',
+    name: "mock",
+    modelName: "mock-model",
     thinkingEffort: null,
-    generate(_systemPrompt: string, _tools: Tool[], _history: Message[]): Promise<StreamedMessage> {
+    generate(
+      _systemPrompt: string,
+      _tools: Tool[],
+      _history: Message[],
+    ): Promise<StreamedMessage> {
       return Promise.resolve(stream);
     },
     withThinking(_effort: ThinkingEffort): ChatProvider {
@@ -51,13 +55,13 @@ function createSimpleMockToolset(
   return {
     tools: [
       {
-        name: 'plus',
-        description: 'Add two numbers',
+        name: "plus",
+        description: "Add two numbers",
         parameters: {
-          type: 'object',
+          type: "object",
           properties: {
-            a: { type: 'integer' },
-            b: { type: 'integer' },
+            a: { type: "integer" },
+            b: { type: "integer" },
           },
         },
       },
@@ -66,59 +70,69 @@ function createSimpleMockToolset(
       handler ??
       ((toolCall: ToolCall): ToolResult => ({
         toolCallId: toolCall.id,
-        returnValue: toolOk({ output: 'mock-result' }),
+        returnValue: toolOk({ output: "mock-result" }),
       })),
   };
 }
-describe('step()', () => {
-  it('returns a StepResult with message, toolCalls, and toolResults', async () => {
+describe("step()", () => {
+  it("returns a StepResult with message, toolCalls, and toolResults", async () => {
     const plusToolCall: ToolCall = {
-      type: 'function',
-      id: 'plus#123',
-      name: 'plus', arguments: '{"a": 1, "b": 2}',
+      type: "function",
+      id: "plus#123",
+      name: "plus",
+      arguments: '{"a": 1, "b": 2}',
     };
-    const stream = createMockStream([{ type: 'text', text: 'Hello, world!' }, plusToolCall]);
+    const stream = createMockStream([
+      { type: "text", text: "Hello, world!" },
+      plusToolCall,
+    ]);
     const provider = createMockProvider(stream);
 
     const toolset = createSimpleMockToolset(
       (toolCall: ToolCall): ToolResult => ({
         toolCallId: toolCall.id,
-        returnValue: toolOk({ output: '3' }),
+        returnValue: toolOk({ output: "3" }),
       }),
     );
 
-    const result = await step(provider, '', toolset, []);
+    const result = await step(provider, "", toolset, []);
 
-    expect(result.message.content).toEqual([{ type: 'text', text: 'Hello, world!' }]);
+    expect(result.message.content).toEqual([
+      { type: "text", text: "Hello, world!" },
+    ]);
     expect(result.toolCalls).toHaveLength(1);
     expect(result.toolCalls[0]).toEqual(plusToolCall);
 
     const toolResults = await result.toolResults();
     expect(toolResults).toHaveLength(1);
-    expect(toolResults[0]!.toolCallId).toBe('plus#123');
-    expect(toolResults[0]!.returnValue.output).toBe('3');
+    expect(toolResults[0]!.toolCallId).toBe("plus#123");
+    expect(toolResults[0]!.returnValue.output).toBe("3");
   });
 
-  it('fires onMessagePart and onToolResult callbacks', async () => {
+  it("fires onMessagePart and onToolResult callbacks", async () => {
     const plusToolCall: ToolCall = {
-      type: 'function',
-      id: 'plus#123',
-      name: 'plus', arguments: '{"a": 1, "b": 2}',
+      type: "function",
+      id: "plus#123",
+      name: "plus",
+      arguments: '{"a": 1, "b": 2}',
     };
-    const stream = createMockStream([{ type: 'text', text: 'Hello, world!' }, plusToolCall]);
+    const stream = createMockStream([
+      { type: "text", text: "Hello, world!" },
+      plusToolCall,
+    ]);
     const provider = createMockProvider(stream);
 
     const toolset = createSimpleMockToolset(
       (toolCall: ToolCall): ToolResult => ({
         toolCallId: toolCall.id,
-        returnValue: toolOk({ output: '3' }),
+        returnValue: toolOk({ output: "3" }),
       }),
     );
 
     const outputParts: StreamedMessagePart[] = [];
     const collectedToolResults: ToolResult[] = [];
 
-    const stepResult = await step(provider, '', toolset, [], {
+    const stepResult = await step(provider, "", toolset, [], {
       onMessagePart(part: StreamedMessagePart): void {
         outputParts.push(part);
       },
@@ -129,58 +143,62 @@ describe('step()', () => {
 
     // onMessagePart should receive each raw streamed part.
     expect(outputParts).toHaveLength(2);
-    expect(outputParts[0]).toEqual({ type: 'text', text: 'Hello, world!' });
+    expect(outputParts[0]).toEqual({ type: "text", text: "Hello, world!" });
 
     // Await results so onToolResult fires.
     const toolResults = await stepResult.toolResults();
 
     expect(toolResults).toHaveLength(1);
     expect(collectedToolResults).toHaveLength(1);
-    expect(collectedToolResults[0]!.toolCallId).toBe('plus#123');
+    expect(collectedToolResults[0]!.toolCallId).toBe("plus#123");
   });
 
-  it('returns empty toolResults when no tool calls', async () => {
-    const stream = createMockStream([{ type: 'text', text: 'No tools needed.' }]);
+  it("returns empty toolResults when no tool calls", async () => {
+    const stream = createMockStream([
+      { type: "text", text: "No tools needed." },
+    ]);
     const provider = createMockProvider(stream);
     const toolset = createSimpleMockToolset();
 
-    const stepResult = await step(provider, '', toolset, []);
+    const stepResult = await step(provider, "", toolset, []);
     const toolResults = await stepResult.toolResults();
 
     expect(stepResult.toolCalls).toHaveLength(0);
     expect(toolResults).toHaveLength(0);
   });
 
-  it('preserves stream id and usage', async () => {
+  it("preserves stream id and usage", async () => {
     const usage: TokenUsage = {
       inputOther: 100,
       output: 50,
       inputCacheRead: 200,
       inputCacheCreation: 10,
     };
-    const stream = createMockStream([{ type: 'text', text: 'hi' }], {
-      id: 'msg-123',
+    const stream = createMockStream([{ type: "text", text: "hi" }], {
+      id: "msg-123",
       usage,
     });
     const provider = createMockProvider(stream);
     const toolset = createSimpleMockToolset();
 
-    const stepResult = await step(provider, '', toolset, []);
+    const stepResult = await step(provider, "", toolset, []);
 
-    expect(stepResult.id).toBe('msg-123');
+    expect(stepResult.id).toBe("msg-123");
     expect(stepResult.usage).toEqual(usage);
   });
 
-  it('handles multiple tool calls', async () => {
+  it("handles multiple tool calls", async () => {
     const tc1: ToolCall = {
-      type: 'function',
-      id: 'call-1',
-      name: 'plus', arguments: '{"a":1,"b":2}',
+      type: "function",
+      id: "call-1",
+      name: "plus",
+      arguments: '{"a":1,"b":2}',
     };
     const tc2: ToolCall = {
-      type: 'function',
-      id: 'call-2',
-      name: 'plus', arguments: '{"a":3,"b":4}',
+      type: "function",
+      id: "call-2",
+      name: "plus",
+      arguments: '{"a":3,"b":4}',
     };
     const stream = createMockStream([tc1, tc2]);
     const provider = createMockProvider(stream);
@@ -192,15 +210,15 @@ describe('step()', () => {
       }),
     );
 
-    const stepResult = await step(provider, '', toolset, []);
+    const stepResult = await step(provider, "", toolset, []);
     const toolResults = await stepResult.toolResults();
 
     expect(stepResult.toolCalls).toHaveLength(2);
     expect(toolResults).toHaveLength(2);
-    expect(toolResults[0]!.toolCallId).toBe('call-1');
-    expect(toolResults[1]!.toolCallId).toBe('call-2');
+    expect(toolResults[0]!.toolCallId).toBe("call-1");
+    expect(toolResults[1]!.toolCallId).toBe("call-2");
   });
-  it('does not dispatch tool calls when provider throws mid-stream', async () => {
+  it("does not dispatch tool calls when provider throws mid-stream", async () => {
     // With deferred dispatch, onToolCall only fires *after* the stream
     // has drained. A mid-stream provider error therefore leaves zero
     // pending tool futures — toolset.handle must never be called.
@@ -212,14 +230,16 @@ describe('step()', () => {
     let toolHandleCalls = 0;
 
     const tc1: ToolCall = {
-      type: 'function',
-      id: 'call-first',
-      name: 'slow', arguments: '{}',
+      type: "function",
+      id: "call-first",
+      name: "slow",
+      arguments: "{}",
     };
     const tc2: ToolCall = {
-      type: 'function',
-      id: 'call-second',
-      name: 'slow', arguments: '{}',
+      type: "function",
+      id: "call-second",
+      name: "slow",
+      arguments: "{}",
     };
 
     const throwingStream: StreamedMessage = {
@@ -234,13 +254,13 @@ describe('step()', () => {
       async *[Symbol.asyncIterator](): AsyncIterator<StreamedMessagePart> {
         yield tc1;
         yield tc2;
-        throw new ChatProviderError('provider blew up mid-stream');
+        throw new ChatProviderError("provider blew up mid-stream");
       },
     };
 
     const provider: ChatProvider = {
-      name: 'mock-throwing',
-      modelName: 'mock-model',
+      name: "mock-throwing",
+      modelName: "mock-model",
       thinkingEffort: null,
       generate(): Promise<StreamedMessage> {
         return Promise.resolve(throwingStream);
@@ -256,28 +276,32 @@ describe('step()', () => {
         toolHandleCalls++;
         return Promise.resolve({
           toolCallId: toolCall.id,
-          returnValue: toolOk({ output: 'should-never-run' }),
+          returnValue: toolOk({ output: "should-never-run" }),
         });
       },
     };
 
-    await expect(step(provider, '', toolset, [])).rejects.toThrow(ChatProviderError);
+    await expect(step(provider, "", toolset, [])).rejects.toThrow(
+      ChatProviderError,
+    );
 
     // No tools were dispatched because onToolCall is deferred until
     // after the stream completes successfully.
     expect(toolHandleCalls).toBe(0);
   });
 
-  it('mid-stream provider error does not leak unhandled rejections', async () => {
+  it("mid-stream provider error does not leak unhandled rejections", async () => {
     const tc1: ToolCall = {
-      type: 'function',
-      id: 'call-rejected',
-      name: 'boom', arguments: '{}',
+      type: "function",
+      id: "call-rejected",
+      name: "boom",
+      arguments: "{}",
     };
     const tc2: ToolCall = {
-      type: 'function',
-      id: 'call-next',
-      name: 'boom', arguments: '{}',
+      type: "function",
+      id: "call-next",
+      name: "boom",
+      arguments: "{}",
     };
 
     const throwingStream: StreamedMessage = {
@@ -292,13 +316,13 @@ describe('step()', () => {
       async *[Symbol.asyncIterator](): AsyncIterator<StreamedMessagePart> {
         yield tc1;
         yield tc2;
-        throw new ChatProviderError('kaboom');
+        throw new ChatProviderError("kaboom");
       },
     };
 
     const provider: ChatProvider = {
-      name: 'mock-throwing',
-      modelName: 'mock-model',
+      name: "mock-throwing",
+      modelName: "mock-model",
       thinkingEffort: null,
       generate(): Promise<StreamedMessage> {
         return Promise.resolve(throwingStream);
@@ -316,7 +340,7 @@ describe('step()', () => {
     const toolset: Toolset = {
       tools: [],
       handle(): Promise<ToolResult> {
-        return Promise.reject(new Error('tool failed'));
+        return Promise.reject(new Error("tool failed"));
       },
     };
 
@@ -324,26 +348,29 @@ describe('step()', () => {
     const listener = (reason: unknown): void => {
       unhandled.push(reason);
     };
-    process.on('unhandledRejection', listener);
+    process.on("unhandledRejection", listener);
     try {
-      await expect(step(provider, '', toolset, [])).rejects.toThrow(ChatProviderError);
+      await expect(step(provider, "", toolset, [])).rejects.toThrow(
+        ChatProviderError,
+      );
       // Give the event loop a few ticks for any unhandled rejections to fire.
       await new Promise<void>((resolve) => {
         setTimeout(resolve, 10);
       });
     } finally {
-      process.off('unhandledRejection', listener);
+      process.off("unhandledRejection", listener);
     }
 
     expect(unhandled).toEqual([]);
   });
 
-  it('does not emit unhandledRejection when toolResults() is not awaited', async () => {
+  it("does not emit unhandledRejection when toolResults() is not awaited", async () => {
     const stream = createMockStream([
       {
-        type: 'function',
-        id: 'call-rejected',
-        name: 'plus', arguments: '{"a":1,"b":2}',
+        type: "function",
+        id: "call-rejected",
+        name: "plus",
+        arguments: '{"a":1,"b":2}',
       },
     ]);
     const provider = createMockProvider(stream);
@@ -351,7 +378,7 @@ describe('step()', () => {
     const toolset: Toolset = {
       tools: [],
       handle(): Promise<ToolResult> {
-        return Promise.reject(new Error('tool failed'));
+        return Promise.reject(new Error("tool failed"));
       },
     };
 
@@ -360,20 +387,20 @@ describe('step()', () => {
       unhandled.push(reason);
     };
 
-    process.on('unhandledRejection', listener);
+    process.on("unhandledRejection", listener);
     try {
-      await step(provider, '', toolset, []);
+      await step(provider, "", toolset, []);
       await new Promise<void>((resolve) => {
         setTimeout(resolve, 100);
       });
     } finally {
-      process.off('unhandledRejection', listener);
+      process.off("unhandledRejection", listener);
     }
 
     expect(unhandled).toEqual([]);
   });
 
-  it('dispatches tool calls after the stream completes (deferred dispatch)', async () => {
+  it("dispatches tool calls after the stream completes (deferred dispatch)", async () => {
     // Positive regression: with interleaved parallel tool call streams,
     // step() must still dispatch every tool exactly once, and each
     // toolset.handle() invocation must receive fully-assembled
@@ -382,21 +409,23 @@ describe('step()', () => {
 
     const stream = createMockStream([
       {
-        type: 'function',
-        id: 'tc-a',
-        name: 'plus', arguments: null,
+        type: "function",
+        id: "tc-a",
+        name: "plus",
+        arguments: null,
         _streamIndex: 0,
       },
       {
-        type: 'function',
-        id: 'tc-b',
-        name: 'plus', arguments: null,
+        type: "function",
+        id: "tc-b",
+        name: "plus",
+        arguments: null,
         _streamIndex: 1,
       },
-      { type: 'tool_call_part', argumentsPart: '{"a":1,', index: 0 },
-      { type: 'tool_call_part', argumentsPart: '{"a":3,', index: 1 },
-      { type: 'tool_call_part', argumentsPart: '"b":2}', index: 0 },
-      { type: 'tool_call_part', argumentsPart: '"b":4}', index: 1 },
+      { type: "tool_call_part", argumentsPart: '{"a":1,', index: 0 },
+      { type: "tool_call_part", argumentsPart: '{"a":3,', index: 1 },
+      { type: "tool_call_part", argumentsPart: '"b":2}', index: 0 },
+      { type: "tool_call_part", argumentsPart: '"b":4}', index: 1 },
     ]);
     const provider = createMockProvider(stream);
 
@@ -411,25 +440,26 @@ describe('step()', () => {
       },
     };
 
-    const stepResult = await step(provider, '', toolset, []);
+    const stepResult = await step(provider, "", toolset, []);
     const toolResults = await stepResult.toolResults();
 
     // Every handle() invocation saw the fully-assembled arguments for
     // its own tool call — no partial JSON.
     expect(seenArgs).toEqual([
-      { id: 'tc-a', args: '{"a":1,"b":2}' },
-      { id: 'tc-b', args: '{"a":3,"b":4}' },
+      { id: "tc-a", args: '{"a":1,"b":2}' },
+      { id: "tc-b", args: '{"a":3,"b":4}' },
     ]);
     expect(toolResults).toHaveLength(2);
-    expect(toolResults[0]!.toolCallId).toBe('tc-a');
-    expect(toolResults[1]!.toolCallId).toBe('tc-b');
+    expect(toolResults[0]!.toolCallId).toBe("tc-a");
+    expect(toolResults[1]!.toolCallId).toBe("tc-b");
   });
 
-  it('handles sync toolset.handle() return', async () => {
+  it("handles sync toolset.handle() return", async () => {
     const tc: ToolCall = {
-      type: 'function',
-      id: 'call-sync',
-      name: 'plus', arguments: '{}',
+      type: "function",
+      id: "call-sync",
+      name: "plus",
+      arguments: "{}",
     };
     const stream = createMockStream([tc]);
     const provider = createMockProvider(stream);
@@ -440,33 +470,33 @@ describe('step()', () => {
       handle(toolCall: ToolCall): ToolResult {
         return {
           toolCallId: toolCall.id,
-          returnValue: toolOk({ output: 'sync-result' }),
+          returnValue: toolOk({ output: "sync-result" }),
         };
       },
     };
 
-    const stepResult = await step(provider, '', toolset, []);
+    const stepResult = await step(provider, "", toolset, []);
     const toolResults = await stepResult.toolResults();
 
     expect(toolResults).toHaveLength(1);
-    expect(toolResults[0]!.returnValue.output).toBe('sync-result');
+    expect(toolResults[0]!.returnValue.output).toBe("sync-result");
   });
 
-  describe('finishReason propagation', () => {
+  describe("finishReason propagation", () => {
     function streamWithFinish(
       parts: StreamedMessagePart[],
       finishReason:
-        | 'completed'
-        | 'truncated'
-        | 'tool_calls'
-        | 'filtered'
-        | 'paused'
-        | 'other'
+        | "completed"
+        | "truncated"
+        | "tool_calls"
+        | "filtered"
+        | "paused"
+        | "other"
         | null,
       rawFinishReason: string | null,
     ): StreamedMessage {
       return {
-        id: 'mock',
+        id: "mock",
         usage: null,
         finishReason,
         rawFinishReason,
@@ -478,38 +508,47 @@ describe('step()', () => {
       };
     }
 
-    it('copies stream.finishReason onto the StepResult', async () => {
-      const stream = streamWithFinish([{ type: 'text', text: 'hi' }], 'truncated', 'length');
+    it("copies stream.finishReason onto the StepResult", async () => {
+      const stream = streamWithFinish(
+        [{ type: "text", text: "hi" }],
+        "truncated",
+        "length",
+      );
       const provider = createMockProvider(stream);
       const toolset = createSimpleMockToolset();
-      const result = await step(provider, '', toolset, []);
-      expect(result.finishReason).toBe('truncated');
-      expect(result.rawFinishReason).toBe('length');
+      const result = await step(provider, "", toolset, []);
+      expect(result.finishReason).toBe("truncated");
+      expect(result.rawFinishReason).toBe("length");
       await result.toolResults();
     });
 
-    it('copies null finishReason onto the StepResult', async () => {
-      const stream = streamWithFinish([{ type: 'text', text: 'hi' }], null, null);
+    it("copies null finishReason onto the StepResult", async () => {
+      const stream = streamWithFinish(
+        [{ type: "text", text: "hi" }],
+        null,
+        null,
+      );
       const provider = createMockProvider(stream);
       const toolset = createSimpleMockToolset();
-      const result = await step(provider, '', toolset, []);
+      const result = await step(provider, "", toolset, []);
       expect(result.finishReason).toBeNull();
       expect(result.rawFinishReason).toBeNull();
       await result.toolResults();
     });
 
-    it('propagates tool_calls finishReason when the model requested tools', async () => {
+    it("propagates tool_calls finishReason when the model requested tools", async () => {
       const tc: ToolCall = {
-        type: 'function',
-        id: 'tc-propagate',
-        name: 'plus', arguments: '{"a":1,"b":2}',
+        type: "function",
+        id: "tc-propagate",
+        name: "plus",
+        arguments: '{"a":1,"b":2}',
       };
-      const stream = streamWithFinish([tc], 'tool_calls', 'tool_calls');
+      const stream = streamWithFinish([tc], "tool_calls", "tool_calls");
       const provider = createMockProvider(stream);
       const toolset = createSimpleMockToolset();
-      const result = await step(provider, '', toolset, []);
-      expect(result.finishReason).toBe('tool_calls');
-      expect(result.rawFinishReason).toBe('tool_calls');
+      const result = await step(provider, "", toolset, []);
+      expect(result.finishReason).toBe("tool_calls");
+      expect(result.rawFinishReason).toBe("tool_calls");
       await result.toolResults();
     });
   });

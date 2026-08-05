@@ -16,17 +16,17 @@
  * is the intended unit, but reusing across prompts is also fine.
  */
 
-import { Buffer } from 'node:buffer';
+import { Buffer } from "node:buffer";
 
-import type { AgentSideConnection } from '@agentclientprotocol/sdk';
-import { RequestError } from '@agentclientprotocol/sdk';
+import type { AgentSideConnection } from "@agentclientprotocol/sdk";
+import { RequestError } from "@agentclientprotocol/sdk";
 import {
   KaosError,
   type Environment,
   type Kaos,
   type KaosProcess,
   type StatResult,
-} from '@moonshot-ai/kaos';
+} from "@moonshot-ai/kaos";
 
 /**
  * `Kaos` that routes `read*` / `write*` through the ACP reverse-RPC
@@ -59,7 +59,7 @@ export class AcpKaos implements Kaos {
 
   // ── path operations: delegate to inner ─────────────────────────────
 
-  pathClass(): 'posix' | 'win32' {
+  pathClass(): "posix" | "win32" {
     return this.inner.pathClass();
   }
 
@@ -93,7 +93,10 @@ export class AcpKaos implements Kaos {
     return new AcpKaos(this.conn, this.sessionId, this.inner.withEnv(env));
   }
 
-  stat(path: string, options?: { followSymlinks?: boolean }): Promise<StatResult> {
+  stat(
+    path: string,
+    options?: { followSymlinks?: boolean },
+  ): Promise<StatResult> {
     return this.inner.stat(path, options);
   }
 
@@ -109,7 +112,10 @@ export class AcpKaos implements Kaos {
     return this.inner.glob(path, pattern, options);
   }
 
-  mkdir(path: string, options?: { parents?: boolean; existOk?: boolean }): Promise<void> {
+  mkdir(
+    path: string,
+    options?: { parents?: boolean; existOk?: boolean },
+  ): Promise<void> {
     return this.inner.mkdir(path, options);
   }
 
@@ -124,11 +130,17 @@ export class AcpKaos implements Kaos {
    */
   async readText(
     path: string,
-    _options?: { encoding?: BufferEncoding; errors?: 'strict' | 'replace' | 'ignore' },
+    _options?: {
+      encoding?: BufferEncoding;
+      errors?: "strict" | "replace" | "ignore";
+    },
   ): Promise<string> {
     const rpcPath = this.toClientPath(path);
     try {
-      const resp = await this.conn.readTextFile({ sessionId: this.sessionId, path: rpcPath });
+      const resp = await this.conn.readTextFile({
+        sessionId: this.sessionId,
+        path: rpcPath,
+      });
       return resp.content;
     } catch (err) {
       throw wrapKaosError(`acp: readTextFile failed for ${rpcPath}`, err);
@@ -153,7 +165,7 @@ export class AcpKaos implements Kaos {
    */
   async readTextPreview(path: string, n: number): Promise<Buffer> {
     const text = await this.readText(path);
-    return Buffer.from(text.slice(0, n), 'utf8');
+    return Buffer.from(text.slice(0, n), "utf8");
   }
 
   /**
@@ -165,7 +177,10 @@ export class AcpKaos implements Kaos {
    */
   async *readLines(
     path: string,
-    options?: { encoding?: BufferEncoding; errors?: 'strict' | 'replace' | 'ignore' },
+    options?: {
+      encoding?: BufferEncoding;
+      errors?: "strict" | "replace" | "ignore";
+    },
   ): AsyncGenerator<string> {
     const text = await this.readText(path, options);
     if (text.length === 0) return;
@@ -198,15 +213,15 @@ export class AcpKaos implements Kaos {
   async writeText(
     path: string,
     data: string,
-    options?: { mode?: 'w' | 'a'; encoding?: BufferEncoding },
+    options?: { mode?: "w" | "a"; encoding?: BufferEncoding },
   ): Promise<number> {
-    if (options?.mode === 'a') {
-      let existing = '';
+    if (options?.mode === "a") {
+      let existing = "";
       try {
         existing = await this.readText(path);
       } catch (err) {
         if (!isNotFoundError(err)) throw err;
-        existing = '';
+        existing = "";
       }
       await this.acpWrite(path, existing + data);
       return data.length;
@@ -221,22 +236,26 @@ export class AcpKaos implements Kaos {
    * (Read/Write/Edit tools), not binary streaming.
    */
   async writeBytes(path: string, data: Buffer): Promise<number> {
-    await this.acpWrite(path, data.toString('utf8'));
+    await this.acpWrite(path, data.toString("utf8"));
     return data.byteLength;
   }
 
   private async acpWrite(path: string, content: string): Promise<void> {
     const rpcPath = this.toClientPath(path);
     try {
-      await this.conn.writeTextFile({ sessionId: this.sessionId, path: rpcPath, content });
+      await this.conn.writeTextFile({
+        sessionId: this.sessionId,
+        path: rpcPath,
+        content,
+      });
     } catch (err) {
       throw wrapKaosError(`acp: writeTextFile failed for ${rpcPath}`, err);
     }
   }
 
   private toClientPath(path: string): string {
-    if (this.inner.pathClass() !== 'win32') return path;
-    return path.replaceAll('/', '\\');
+    if (this.inner.pathClass() !== "win32") return path;
+    return path.replaceAll("/", "\\");
   }
 
   // ── process execution: delegate to inner ───────────────────────────
@@ -245,7 +264,10 @@ export class AcpKaos implements Kaos {
     return this.inner.exec(...args);
   }
 
-  execWithEnv(args: string[], env?: Record<string, string>): Promise<KaosProcess> {
+  execWithEnv(
+    args: string[],
+    env?: Record<string, string>,
+  ): Promise<KaosProcess> {
     return this.inner.execWithEnv(args, env);
   }
 }

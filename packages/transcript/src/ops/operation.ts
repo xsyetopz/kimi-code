@@ -11,66 +11,69 @@
  * The single convergence path is `AgentTranscript.apply` in `store/`.
  */
 
+import type { AgentId, FrameId, StepId, TaskId, TurnId } from "../model/ids";
+import type { TranscriptAttachment } from "../model/attachment";
+import type { TranscriptFrame } from "../model/frame";
+import type { TranscriptInteraction } from "../model/interaction";
 import type {
-  AgentId,
-  FrameId,
-  StepId,
-  TaskId,
-  TurnId,
-} from '../model/ids';
-import type { TranscriptAttachment } from '../model/attachment';
-import type { TranscriptFrame } from '../model/frame';
-import type { TranscriptInteraction } from '../model/interaction';
-import type { TranscriptItem, TranscriptMarker, TranscriptTaskRef } from '../model/item';
-import type { TranscriptMeta, TranscriptMetaMerge } from '../model/meta';
-import type { TranscriptPrompt } from '../model/prompt';
-import type { TranscriptTask } from '../model/task';
-import type { TranscriptTodo } from '../model/todo';
-import type { TranscriptStep, TranscriptTurn } from '../model/turn';
+  TranscriptItem,
+  TranscriptMarker,
+  TranscriptTaskRef,
+} from "../model/item";
+import type { TranscriptMeta, TranscriptMetaMerge } from "../model/meta";
+import type { TranscriptPrompt } from "../model/prompt";
+import type { TranscriptTask } from "../model/task";
+import type { TranscriptTodo } from "../model/todo";
+import type { TranscriptStep, TranscriptTurn } from "../model/turn";
 
 /** Turn header as carried in ops: steps always arrive via step.upsert. */
-export type TurnHeader = Omit<TranscriptTurn, 'steps'>;
+export type TurnHeader = Omit<TranscriptTurn, "steps">;
 /** Step header as carried in ops: frames always arrive via frame.upsert. */
-export type StepHeader = Omit<TranscriptStep, 'frames'>;
+export type StepHeader = Omit<TranscriptStep, "frames">;
 
 export interface ResetOp {
-  readonly op: 'reset';
+  readonly op: "reset";
   readonly agentId: AgentId;
   readonly snapshot: AgentTranscriptSnapshot;
 }
 
 export interface TurnUpsertOp {
-  readonly op: 'turn.upsert';
+  readonly op: "turn.upsert";
   readonly turn: TurnHeader;
 }
 
 export interface StepUpsertOp {
-  readonly op: 'step.upsert';
+  readonly op: "step.upsert";
   readonly turnId: TurnId;
   readonly step: StepHeader;
 }
 
 export interface FrameUpsertOp {
-  readonly op: 'frame.upsert';
+  readonly op: "frame.upsert";
   readonly turnId: TurnId;
   readonly stepId: StepId;
   readonly frame: TranscriptFrame;
 }
 
 export type AppendTarget =
-  | { readonly type: 'frame'; readonly turnId: TurnId; readonly stepId: StepId; readonly frameId: FrameId }
-  | { readonly type: 'task'; readonly taskId: TaskId };
+  | {
+      readonly type: "frame";
+      readonly turnId: TurnId;
+      readonly stepId: StepId;
+      readonly frameId: FrameId;
+    }
+  | { readonly type: "task"; readonly taskId: TaskId };
 
 /** The only non-idempotent op. `offset` is the chunk's cumulative position. */
 export interface AppendOp {
-  readonly op: 'append';
+  readonly op: "append";
   readonly target: AppendTarget;
   readonly offset: number;
   readonly text: string;
 }
 
 export interface MarkerUpsertOp {
-  readonly op: 'marker.upsert';
+  readonly op: "marker.upsert";
   readonly item: TranscriptMarker;
   /**
    * Placement anchor for out-of-order (backfill) inserts: insert before the
@@ -81,14 +84,14 @@ export interface MarkerUpsertOp {
 }
 
 export interface TaskRefUpsertOp {
-  readonly op: 'taskref.upsert';
+  readonly op: "taskref.upsert";
   readonly item: TranscriptTaskRef;
   /** Same placement anchor as `MarkerUpsertOp.beforeTurn`. */
   readonly beforeTurn?: number;
 }
 
 export interface TaskUpsertOp {
-  readonly op: 'task.upsert';
+  readonly op: "task.upsert";
   readonly task: TranscriptTask;
 }
 
@@ -98,7 +101,7 @@ export interface TaskUpsertOp {
  * subscribers see pending approvals/questions.
  */
 export interface InteractionUpsertOp {
-  readonly op: 'interaction.upsert';
+  readonly op: "interaction.upsert";
   readonly interaction: TranscriptInteraction;
 }
 
@@ -107,7 +110,7 @@ export interface InteractionUpsertOp {
  * travel in ops; the entity carries metadata plus a fetch reference.
  */
 export interface AttachmentUpsertOp {
-  readonly op: 'attachment.upsert';
+  readonly op: "attachment.upsert";
   readonly attachment: TranscriptAttachment;
 }
 
@@ -116,7 +119,7 @@ export interface AttachmentUpsertOp {
  * latest list; point-in-time history stays on `TodoList` tool frames.
  */
 export interface TodoUpsertOp {
-  readonly op: 'todo.upsert';
+  readonly op: "todo.upsert";
   readonly todo: TranscriptTodo;
 }
 
@@ -126,18 +129,18 @@ export interface TodoUpsertOp {
  * coarse subscribers see queue state.
  */
 export interface PromptUpsertOp {
-  readonly op: 'prompt.upsert';
+  readonly op: "prompt.upsert";
   readonly prompt: TranscriptPrompt;
 }
 
 export interface MetaMergeOp {
-  readonly op: 'meta.merge';
+  readonly op: "meta.merge";
   readonly meta: TranscriptMetaMerge;
 }
 
 /** Structural correction (undo / clear). Removes whole items by id; idempotent. */
 export interface ItemsRemoveOp {
-  readonly op: 'items.remove';
+  readonly op: "items.remove";
   readonly ids: readonly string[];
 }
 
@@ -186,7 +189,11 @@ export interface AppliedOps {
   /** Ops that were accepted and mutated the store (normalized). */
   readonly accepted: readonly TranscriptOperation[];
   /** Set when an `append` could not be placed (offset beyond local length). */
-  readonly gap?: { readonly target: AppendTarget; readonly expected: number; readonly got: number };
+  readonly gap?: {
+    readonly target: AppendTarget;
+    readonly expected: number;
+    readonly got: number;
+  };
 }
 
 export interface TranscriptChangeEvent {

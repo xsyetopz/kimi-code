@@ -6,18 +6,21 @@
  * Path access policy is resolved before any Kaos I/O.
  */
 
-import type { Kaos } from '@moonshot-ai/kaos';
-import { dirname } from 'pathe';
-import { z } from 'zod';
+import type { Kaos } from "@moonshot-ai/kaos";
+import { dirname } from "pathe";
+import { z } from "zod";
 
-import type { BuiltinTool } from '../../../agent/tool';
-import { ToolAccesses } from '../../../loop/tool-access';
-import type { ExecutableToolResult, ToolExecution } from '../../../loop/types';
-import { resolvePathAccessPath } from '../../policies/path-access';
-import { toInputJsonSchema } from '../../support/input-schema';
-import { literalRulePattern, matchesPathRuleSubject } from '../../support/rule-match';
-import type { WorkspaceConfig } from '../../support/workspace';
-import WRITE_DESCRIPTION from './write.md?raw';
+import type { BuiltinTool } from "../../../agent/tool";
+import { ToolAccesses } from "../../../loop/tool-access";
+import type { ExecutableToolResult, ToolExecution } from "../../../loop/types";
+import { resolvePathAccessPath } from "../../policies/path-access";
+import { toInputJsonSchema } from "../../support/input-schema";
+import {
+  literalRulePattern,
+  matchesPathRuleSubject,
+} from "../../support/rule-match";
+import type { WorkspaceConfig } from "../../support/workspace";
+import WRITE_DESCRIPTION from "./write.md?raw";
 
 /** Mask isolating the file-type bits of a stat mode. */
 const S_IFMT = 0o170000;
@@ -28,18 +31,18 @@ export const WriteInputSchema = z.object({
   path: z
     .string()
     .describe(
-      'Path to the file to create, append to, or completely overwrite. Relative paths resolve against the working directory; a path outside the working directory must be absolute. Missing parent directories are created automatically.',
+      "Path to the file to create, append to, or completely overwrite. Relative paths resolve against the working directory; a path outside the working directory must be absolute. Missing parent directories are created automatically.",
     ),
   content: z
     .string()
     .describe(
-      'Raw full file content to write exactly as provided. This does not use the Read/Edit text view.',
+      "Raw full file content to write exactly as provided. This does not use the Read/Edit text view.",
     ),
   mode: z
-    .enum(['overwrite', 'append'])
+    .enum(["overwrite", "append"])
     .optional()
     .describe(
-      'Write mode. Defaults to overwrite. append adds content to the end exactly as provided and does not add a newline.',
+      "Write mode. Defaults to overwrite. append adds content to the end exactly as provided and does not add a newline.",
     ),
 });
 
@@ -52,9 +55,10 @@ export type WriteInput = z.Infer<typeof WriteInputSchema>;
 export type WriteOutput = z.Infer<typeof WriteOutputSchema>;
 
 export class WriteTool implements BuiltinTool<WriteInput> {
-  readonly name = 'Write' as const;
+  readonly name = "Write" as const;
   readonly description = WRITE_DESCRIPTION;
-  readonly parameters: Record<string, unknown> = toInputJsonSchema(WriteInputSchema);
+  readonly parameters: Record<string, unknown> =
+    toInputJsonSchema(WriteInputSchema);
 
   constructor(
     private readonly kaos: Kaos,
@@ -65,12 +69,17 @@ export class WriteTool implements BuiltinTool<WriteInput> {
     const path = resolvePathAccessPath(args.path, {
       kaos: this.kaos,
       workspace: this.workspace,
-      operation: 'write',
+      operation: "write",
     });
     return {
       accesses: ToolAccesses.writeFile(path),
       description: `Writing ${args.path}`,
-      display: { kind: 'file_io', operation: 'write', path, content: args.content },
+      display: {
+        kind: "file_io",
+        operation: "write",
+        path,
+        content: args.content,
+      },
       approvalRule: literalRulePattern(this.name, path),
       matchesRule: (ruleArgs) =>
         matchesPathRuleSubject(ruleArgs, path, {
@@ -82,29 +91,32 @@ export class WriteTool implements BuiltinTool<WriteInput> {
     };
   }
 
-  private async execution(args: WriteInput, safePath: string): Promise<ExecutableToolResult> {
+  private async execution(
+    args: WriteInput,
+    safePath: string,
+  ): Promise<ExecutableToolResult> {
     const parentError = await this.ensureParentDirectory(safePath);
     if (parentError !== undefined) {
       return { isError: true, output: parentError };
     }
 
     try {
-      const mode = args.mode ?? 'overwrite';
-      if (mode === 'append') {
-        await this.kaos.writeText(safePath, args.content, { mode: 'a' });
+      const mode = args.mode ?? "overwrite";
+      if (mode === "append") {
+        await this.kaos.writeText(safePath, args.content, { mode: "a" });
       } else {
         await this.kaos.writeText(safePath, args.content);
       }
       // Report the number of UTF-8 bytes this call wrote to disk. The string
       // length would only equal the byte count for pure ASCII content, so it
       // is not used here.
-      const bytesWritten = Buffer.byteLength(args.content, 'utf8');
+      const bytesWritten = Buffer.byteLength(args.content, "utf8");
       return {
-        output: `${mode === 'append' ? 'Appended' : 'Wrote'} ${String(bytesWritten)} bytes to ${args.path}`,
+        output: `${mode === "append" ? "Appended" : "Wrote"} ${String(bytesWritten)} bytes to ${args.path}`,
       };
     } catch (error) {
       const code = (error as { code?: unknown } | null)?.code;
-      if (code === 'ENOENT') {
+      if (code === "ENOENT") {
         return {
           isError: true,
           output: `Failed to write ${args.path}: parent directory does not exist.`,
@@ -133,18 +145,22 @@ export class WriteTool implements BuiltinTool<WriteInput> {
    * Returns an error string when the precondition is definitively violated,
    * or `undefined` otherwise.
    */
-  private async ensureParentDirectory(safePath: string): Promise<string | undefined> {
+  private async ensureParentDirectory(
+    safePath: string,
+  ): Promise<string | undefined> {
     const parent = dirname(safePath);
     let stat;
     try {
       stat = await this.kaos.stat(parent);
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
         try {
           await this.kaos.mkdir(parent, { parents: true, existOk: true });
           return undefined;
         } catch (mkdirError) {
-          return mkdirError instanceof Error ? mkdirError.message : String(mkdirError);
+          return mkdirError instanceof Error
+            ? mkdirError.message
+            : String(mkdirError);
         }
       }
       return undefined;

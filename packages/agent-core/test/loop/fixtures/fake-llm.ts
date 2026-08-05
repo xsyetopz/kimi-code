@@ -5,7 +5,7 @@ import {
   type TextPart,
   type ThinkPart,
   type TokenUsage,
-} from '@moonshot-ai/kosong';
+} from "@moonshot-ai/kosong";
 
 import type {
   LLM,
@@ -13,7 +13,7 @@ import type {
   LLMChatResponse,
   LoopStepStopReason,
   ToolCall,
-} from '../../../src/loop/index';
+} from "../../../src/loop/index";
 
 export type FakeOutputPart = TextPart | ThinkPart;
 
@@ -23,7 +23,9 @@ export interface FakeLLMResponse extends LLMChatResponse {
 
 export interface FakeLLMOptions {
   readonly responses: readonly FakeLLMResponse[];
-  readonly throwOnIndex?: { readonly index: number; readonly error: unknown } | undefined;
+  readonly throwOnIndex?:
+    | { readonly index: number; readonly error: unknown }
+    | undefined;
   readonly abortOnIndex?:
     | { readonly index: number; readonly controller: AbortController }
     | undefined;
@@ -42,13 +44,13 @@ export class FakeLLM implements LLM {
 
   private index = 0;
   private readonly responses: readonly FakeLLMResponse[];
-  private readonly throwOnIndex: FakeLLMOptions['throwOnIndex'];
-  private readonly abortOnIndex: FakeLLMOptions['abortOnIndex'];
+  private readonly throwOnIndex: FakeLLMOptions["throwOnIndex"];
+  private readonly abortOnIndex: FakeLLMOptions["abortOnIndex"];
   private readonly delayMs: number;
 
   constructor(opts: FakeLLMOptions) {
-    this.systemPrompt = opts.systemPrompt ?? 'fake system prompt';
-    this.modelName = opts.modelName ?? 'fake-model';
+    this.systemPrompt = opts.systemPrompt ?? "fake system prompt";
+    this.modelName = opts.modelName ?? "fake-model";
     this.capability = opts.capability;
     this.responses = opts.responses;
     this.throwOnIndex = opts.throwOnIndex;
@@ -65,22 +67,30 @@ export class FakeLLM implements LLM {
       await new Promise((resolve) => setTimeout(resolve, this.delayMs));
     }
 
-    if (this.abortOnIndex !== undefined && this.abortOnIndex.index === current) {
+    if (
+      this.abortOnIndex !== undefined &&
+      this.abortOnIndex.index === current
+    ) {
       this.abortOnIndex.controller.abort();
     }
 
     if (params.signal.aborted) {
-      const err = new Error('aborted');
-      err.name = 'AbortError';
+      const err = new Error("aborted");
+      err.name = "AbortError";
       throw err;
     }
 
-    if (this.throwOnIndex !== undefined && this.throwOnIndex.index === current) {
+    if (
+      this.throwOnIndex !== undefined &&
+      this.throwOnIndex.index === current
+    ) {
       throw this.throwOnIndex.error;
     }
 
     if (current >= this.responses.length) {
-      throw new Error(`FakeLLM ran out of responses at call ${String(current + 1)}`);
+      throw new Error(
+        `FakeLLM ran out of responses at call ${String(current + 1)}`,
+      );
     }
 
     const response = this.responses[current];
@@ -89,7 +99,7 @@ export class FakeLLM implements LLM {
     }
 
     for (const part of response.contentParts ?? []) {
-      if (part.type === 'text') {
+      if (part.type === "text") {
         await params.onTextPart?.(part);
       } else {
         await params.onThinkPart?.(part);
@@ -105,19 +115,19 @@ export class FakeLLM implements LLM {
 }
 
 export function makeTextParts(text: string): FakeOutputPart[] {
-  return text.length > 0 ? [{ type: 'text', text }] : [];
+  return text.length > 0 ? [{ type: "text", text }] : [];
 }
 
 export function makeThinkingParts(
   thinking: string,
-  text = '',
+  text = "",
   signature?: string,
 ): FakeOutputPart[] {
   const parts: FakeOutputPart[] =
     signature !== undefined
-      ? [{ type: 'think', think: thinking, encrypted: signature }]
-      : [{ type: 'think', think: thinking }];
-  if (text.length > 0) parts.push({ type: 'text', text });
+      ? [{ type: "think", think: thinking, encrypted: signature }]
+      : [{ type: "think", think: thinking }];
+  if (text.length > 0) parts.push({ type: "text", text });
   return parts;
 }
 
@@ -127,7 +137,7 @@ export function makeEndTurnResponse(
 ): FakeLLMResponse {
   return {
     toolCalls: [],
-    providerFinishReason: 'completed',
+    providerFinishReason: "completed",
     usage: zeroUsage(usage),
     contentParts: makeTextParts(text),
   };
@@ -139,7 +149,7 @@ export function makeMaxTokensResponse(
 ): FakeLLMResponse {
   return {
     toolCalls: [],
-    providerFinishReason: 'truncated',
+    providerFinishReason: "truncated",
     usage: zeroUsage(usage),
     contentParts: makeTextParts(text),
   };
@@ -151,7 +161,7 @@ export function makeToolUseResponse(
 ): FakeLLMResponse {
   return {
     toolCalls,
-    providerFinishReason: 'tool_calls',
+    providerFinishReason: "tool_calls",
     usage: zeroUsage(usage),
   };
 }
@@ -170,20 +180,22 @@ export function makeResponse(
   };
 }
 
-function providerFinishReasonForStopReason(reason: LoopStepStopReason): FinishReason {
+function providerFinishReasonForStopReason(
+  reason: LoopStepStopReason,
+): FinishReason {
   switch (reason) {
-    case 'end_turn':
-      return 'completed';
-    case 'tool_use':
-      return 'tool_calls';
-    case 'max_tokens':
-      return 'truncated';
-    case 'filtered':
-      return 'filtered';
-    case 'paused':
-      return 'paused';
-    case 'unknown':
-      return 'other';
+    case "end_turn":
+      return "completed";
+    case "tool_use":
+      return "tool_calls";
+    case "max_tokens":
+      return "truncated";
+    case "filtered":
+      return "filtered";
+    case "paused":
+      return "paused";
+    case "unknown":
+      return "other";
     default: {
       const _exhaustive: never = reason;
       return _exhaustive;
@@ -195,11 +207,15 @@ export function zeroUsage(partial: Partial<TokenUsage> = {}): TokenUsage {
   return { ...emptyUsage(), ...partial };
 }
 
-export function makeToolCall(name: string, args: unknown, id?: string): ToolCall {
+export function makeToolCall(
+  name: string,
+  args: unknown,
+  id?: string,
+): ToolCall {
   return {
-    type: 'function',
+    type: "function",
     id: id ?? `call_${Math.random().toString(36).slice(2, 10)}`,
     name,
-      arguments: JSON.stringify(args),
+    arguments: JSON.stringify(args),
   };
 }

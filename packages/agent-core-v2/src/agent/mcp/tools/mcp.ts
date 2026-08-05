@@ -23,20 +23,24 @@
  * reconnects, so this trade-off is accepted deliberately.
  */
 
-import type { Tool as KosongTool } from '#/kosong/contract/tool';
-import type { ITelemetryService } from '#/app/telemetry/telemetry';
-import { Error2, ErrorCodes, toErrorMessage } from '#/errors';
-import { isAbortError } from '#/_base/utils/abort';
+import type { Tool as KosongTool } from "#/kosong/contract/tool";
+import type { ITelemetryService } from "#/app/telemetry/telemetry";
+import { Error2, ErrorCodes, toErrorMessage } from "#/errors";
+import { isAbortError } from "#/_base/utils/abort";
 
-import type { ExecutableTool, ExecutableToolContext, ExecutableToolResult } from '#/tool/toolContract';
-import { mcpResultToExecutableOutput } from '#/agent/mcp/output';
-import type { MCPClient, MCPToolResult } from '#/mcpCore/types';
+import type {
+  ExecutableTool,
+  ExecutableToolContext,
+  ExecutableToolResult,
+} from "#/tool/toolContract";
+import { mcpResultToExecutableOutput } from "#/agent/mcp/output";
+import type { MCPClient, MCPToolResult } from "#/mcpCore/types";
 import {
   isMcpConnectionClosedError,
   isMcpMalformedResultError,
   isMcpTransportFailure,
   probeMcpLiveness,
-} from '#/mcpCore/client-shared';
+} from "#/mcpCore/client-shared";
 
 interface McpToolOptions {
   readonly originalsDir?: string;
@@ -50,8 +54,16 @@ export function createMcpTool(
   client: MCPClient,
   options: McpToolOptions = {},
 ): ExecutableTool {
-  const callTool = (activeClient: MCPClient, args: unknown, signal: AbortSignal) =>
-    activeClient.callTool(tool.name, (args ?? {}) as Record<string, unknown>, signal);
+  const callTool = (
+    activeClient: MCPClient,
+    args: unknown,
+    signal: AbortSignal,
+  ) =>
+    activeClient.callTool(
+      tool.name,
+      (args ?? {}) as Record<string, unknown>,
+      signal,
+    );
   return {
     name: qualifiedName,
     description: tool.description,
@@ -63,7 +75,14 @@ export function createMcpTool(
         try {
           result = await callTool(client, args, context.signal);
         } catch (error) {
-          result = await retryAfterReconnect(error, client, args, context, options, callTool);
+          result = await retryAfterReconnect(
+            error,
+            client,
+            args,
+            context,
+            options,
+            callTool,
+          );
         }
         return normalizeMcpToolResult(
           await mcpResultToExecutableOutput(result, qualifiedName, {
@@ -80,9 +99,13 @@ async function retryAfterReconnect(
   error: unknown,
   client: MCPClient,
   args: unknown,
-  context: Pick<ExecutableToolContext, 'signal' | 'onUpdate'>,
+  context: Pick<ExecutableToolContext, "signal" | "onUpdate">,
   options: McpToolOptions,
-  callTool: (client: MCPClient, args: unknown, signal: AbortSignal) => Promise<MCPToolResult>,
+  callTool: (
+    client: MCPClient,
+    args: unknown,
+    signal: AbortSignal,
+  ) => Promise<MCPToolResult>,
 ): Promise<MCPToolResult> {
   const reconnect = options.reconnect;
   const isUnrecoverable = (e: unknown): boolean =>
@@ -110,7 +133,10 @@ async function retryAfterReconnect(
     }
   }
 
-  context.onUpdate?.({ kind: 'status', text: 'MCP connection lost — reconnecting…' });
+  context.onUpdate?.({
+    kind: "status",
+    text: "MCP connection lost — reconnecting…",
+  });
   let freshClient: MCPClient | undefined;
   try {
     freshClient = await reconnect(context.signal);
@@ -131,14 +157,19 @@ async function retryAfterReconnect(
 }
 
 function normalizeMcpToolResult(result: {
-  readonly output: ExecutableToolResult['output'];
+  readonly output: ExecutableToolResult["output"];
   readonly isError: boolean;
   readonly note?: string;
   readonly truncated?: true;
 }): ExecutableToolResult {
   if (result.isError) {
     return result.truncated === true
-      ? { output: result.output, isError: true, note: result.note, truncated: true }
+      ? {
+          output: result.output,
+          isError: true,
+          note: result.note,
+          truncated: true,
+        }
       : { output: result.output, isError: true, note: result.note };
   }
   return result.truncated === true

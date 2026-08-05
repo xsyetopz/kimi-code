@@ -15,11 +15,22 @@ interface GetProjectFilesParams {
   query?: string;
   directory?: string;
 }
-interface PickMediaParams { maxCount?: number; includeVideo?: boolean }
-interface FilePathParams { filePath: string }
-interface OptionalFilePathParams { filePath?: string }
-interface PathsParams { paths: string[] }
-interface CheckFilesExistParams { paths: string[] }
+interface PickMediaParams {
+  maxCount?: number;
+  includeVideo?: boolean;
+}
+interface FilePathParams {
+  filePath: string;
+}
+interface OptionalFilePathParams {
+  filePath?: string;
+}
+interface PathsParams {
+  paths: string[];
+}
+interface CheckFilesExistParams {
+  paths: string[];
+}
 
 const IMAGE_EXTENSIONS = ["png", "jpg", "jpeg", "gif", "webp"];
 const VIDEO_EXTENSIONS = ["mp4", "webm", "mov"];
@@ -34,7 +45,10 @@ const IMAGE_MIME_TYPES: Record<string, string> = {
   ".ico": "image/x-icon",
 };
 
-const getProjectFiles: Handler<GetProjectFilesParams | undefined, ProjectFile[]> = async (params, ctx) => {
+const getProjectFiles: Handler<
+  GetProjectFilesParams | undefined,
+  ProjectFile[]
+> = async (params, ctx) => {
   if (!ctx.workDirUri) return [];
   return params?.directory !== undefined
     ? ctx.fileManager.listDirectory(ctx.workDirUri, params.directory)
@@ -49,7 +63,11 @@ const pickMedia: Handler<PickMediaParams, string[]> = async (params) => {
     filters["Videos"] = VIDEO_EXTENSIONS;
     filters["All Media"] = [...IMAGE_EXTENSIONS, ...VIDEO_EXTENSIONS];
   }
-  const uris = await vscode.window.showOpenDialog({ canSelectMany: true, filters, title: "Select Media" });
+  const uris = await vscode.window.showOpenDialog({
+    canSelectMany: true,
+    filters,
+    title: "Select Media",
+  });
   if (!uris) return [];
 
   const results: string[] = [];
@@ -60,7 +78,9 @@ const pickMedia: Handler<PickMediaParams, string[]> = async (params) => {
       const stat = await vscode.workspace.fs.stat(uri);
       if (stat.size > (isVideo ? 20 : 10) * 1024 * 1024) continue;
       const bytes = await vscode.workspace.fs.readFile(uri);
-      results.push(`data:${mediaMime(extension)};base64,${Buffer.from(bytes).toString("base64")}`);
+      results.push(
+        `data:${mediaMime(extension)};base64,${Buffer.from(bytes).toString("base64")}`,
+      );
     } catch {
       // Skip a file that disappears or cannot be read without failing the whole picker.
     }
@@ -68,16 +88,28 @@ const pickMedia: Handler<PickMediaParams, string[]> = async (params) => {
   return results;
 };
 
-const openFile: Handler<FilePathParams, { ok: boolean }> = async ({ filePath }, ctx) => {
-  const resolved = await resolveExistingWorkspaceFile(ctx.requireWorkDirUri(), filePath);
+const openFile: Handler<FilePathParams, { ok: boolean }> = async (
+  { filePath },
+  ctx,
+) => {
+  const resolved = await resolveExistingWorkspaceFile(
+    ctx.requireWorkDirUri(),
+    filePath,
+  );
   if (resolved === undefined) return { ok: false };
   await vscode.commands.executeCommand("vscode.open", resolved.uri);
   return { ok: true };
 };
 
-const openFileDiff: Handler<FilePathParams, { ok: boolean }> = async ({ filePath }, ctx) => {
+const openFileDiff: Handler<FilePathParams, { ok: boolean }> = async (
+  { filePath },
+  ctx,
+) => {
   const sessionId = ctx.getSessionId();
-  const resolved = await resolveExistingWorkspaceFile(ctx.requireWorkDirUri(), filePath);
+  const resolved = await resolveExistingWorkspaceFile(
+    ctx.requireWorkDirUri(),
+    filePath,
+  );
   if (!sessionId || resolved === undefined) return { ok: false };
 
   const baselineUri = vscode.Uri.from({
@@ -94,12 +126,16 @@ const openFileDiff: Handler<FilePathParams, { ok: boolean }> = async ({ filePath
   return { ok: true };
 };
 
-const trackFiles: Handler<PathsParams, FileChange[]> = async ({ paths }, ctx) => {
+const trackFiles: Handler<PathsParams, FileChange[]> = async (
+  { paths },
+  ctx,
+) => {
   const session = requireBaselineSession(ctx);
   const workDirUri = ctx.requireWorkDirUri();
   for (const filePath of paths) {
     const resolved = await resolveWorkspaceFile(workDirUri, filePath, true);
-    if (resolved !== undefined) ctx.fileManager.trackFile(ctx.webviewId, resolved.uri.fsPath);
+    if (resolved !== undefined)
+      ctx.fileManager.trackFile(ctx.webviewId, resolved.uri.fsPath);
   }
   const changes = await ctx.baselineManager.getChanges(session);
   ctx.broadcast(Events.FileChangesUpdated, changes, ctx.webviewId);
@@ -112,10 +148,17 @@ const clearTrackedFiles: Handler<void, { ok: boolean }> = async (_, ctx) => {
   return { ok: true };
 };
 
-const revertFiles: Handler<OptionalFilePathParams, { ok: boolean }> = async (params, ctx) => {
+const revertFiles: Handler<OptionalFilePathParams, { ok: boolean }> = async (
+  params,
+  ctx,
+) => {
   const session = requireBaselineSession(ctx);
   if (params.filePath) {
-    const resolved = await resolveWorkspaceFile(ctx.requireWorkDirUri(), params.filePath, true);
+    const resolved = await resolveWorkspaceFile(
+      ctx.requireWorkDirUri(),
+      params.filePath,
+      true,
+    );
     if (resolved === undefined) return { ok: false };
     await ctx.baselineManager.undo(session, resolved.relativePath);
   } else {
@@ -126,10 +169,17 @@ const revertFiles: Handler<OptionalFilePathParams, { ok: boolean }> = async (par
   return { ok: true };
 };
 
-const keepChanges: Handler<OptionalFilePathParams, { ok: boolean }> = async (params, ctx) => {
+const keepChanges: Handler<OptionalFilePathParams, { ok: boolean }> = async (
+  params,
+  ctx,
+) => {
   const session = requireBaselineSession(ctx);
   if (params.filePath) {
-    const resolved = await resolveWorkspaceFile(ctx.requireWorkDirUri(), params.filePath, true);
+    const resolved = await resolveWorkspaceFile(
+      ctx.requireWorkDirUri(),
+      params.filePath,
+      true,
+    );
     if (resolved === undefined) return { ok: false };
     await ctx.baselineManager.keep(session, resolved.relativePath);
     ctx.fileManager.getTracked(ctx.webviewId).delete(resolved.uri.fsPath);
@@ -141,28 +191,47 @@ const keepChanges: Handler<OptionalFilePathParams, { ok: boolean }> = async (par
   return { ok: true };
 };
 
-const checkFileExists: Handler<FilePathParams, boolean> = async ({ filePath }, ctx) => {
+const checkFileExists: Handler<FilePathParams, boolean> = async (
+  { filePath },
+  ctx,
+) => {
   if (!ctx.workDirUri) return false;
-  return (await resolveExistingWorkspaceFile(ctx.workDirUri, filePath)) !== undefined;
+  return (
+    (await resolveExistingWorkspaceFile(ctx.workDirUri, filePath)) !== undefined
+  );
 };
 
-const checkFilesExist: Handler<CheckFilesExistParams, Record<string, boolean>> = async ({ paths }, ctx) => {
+const checkFilesExist: Handler<
+  CheckFilesExistParams,
+  Record<string, boolean>
+> = async ({ paths }, ctx) => {
   if (!ctx.workDirUri) return {};
   return Object.fromEntries(
     await Promise.all(
-      paths.map(async (filePath) => [
-        filePath,
-        (await resolveExistingWorkspaceFile(ctx.workDirUri!, filePath)) !== undefined,
-      ] as const),
+      paths.map(
+        async (filePath) =>
+          [
+            filePath,
+            (await resolveExistingWorkspaceFile(ctx.workDirUri!, filePath)) !==
+              undefined,
+          ] as const,
+      ),
     ),
   );
 };
 
-const getImageDataUri: Handler<FilePathParams, string | null> = async ({ filePath }, ctx) => {
+const getImageDataUri: Handler<FilePathParams, string | null> = async (
+  { filePath },
+  ctx,
+) => {
   if (!ctx.workDirUri) return null;
-  const resolved = await resolveExistingWorkspaceFile(ctx.workDirUri, decodeURIComponent(filePath));
+  const resolved = await resolveExistingWorkspaceFile(
+    ctx.workDirUri,
+    decodeURIComponent(filePath),
+  );
   if (resolved === undefined) return null;
-  const mime = IMAGE_MIME_TYPES[path.extname(resolved.relativePath).toLowerCase()];
+  const mime =
+    IMAGE_MIME_TYPES[path.extname(resolved.relativePath).toLowerCase()];
   if (!mime) return null;
   try {
     // Same cap as the media picker: an oversized image inlined as a data URI
@@ -202,7 +271,12 @@ async function resolveWorkspaceFile(
   allowMissing = false,
 ): Promise<WorkspacePath | undefined> {
   const resolved = resolveWorkspacePath(workDirUri, filePath);
-  if (resolved === undefined || !(await isWorkspacePathContained(workDirUri, resolved.uri, { allowMissing }))) {
+  if (
+    resolved === undefined ||
+    !(await isWorkspacePathContained(workDirUri, resolved.uri, {
+      allowMissing,
+    }))
+  ) {
     return undefined;
   }
   return resolved;
@@ -223,8 +297,18 @@ async function resolveExistingWorkspaceFile(
 }
 
 function mediaMime(extension: string): string {
-  return ({
-    png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", gif: "image/gif", webp: "image/webp",
-    mp4: "video/mp4", webm: "video/webm", mov: "video/quicktime",
-  } as Record<string, string>)[extension] ?? "application/octet-stream";
+  return (
+    (
+      {
+        png: "image/png",
+        jpg: "image/jpeg",
+        jpeg: "image/jpeg",
+        gif: "image/gif",
+        webp: "image/webp",
+        mp4: "video/mp4",
+        webm: "video/webm",
+        mov: "video/quicktime",
+      } as Record<string, string>
+    )[extension] ?? "application/octet-stream"
+  );
 }

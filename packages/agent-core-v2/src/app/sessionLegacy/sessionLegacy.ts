@@ -13,11 +13,17 @@
  * dispatcher that resolves the target session/agent per call.
  */
 
-import type { GoalSnapshot } from '#/agent/goal/types';
+import type { GoalSnapshot } from "#/agent/goal/types";
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
 
-import type { SessionStatusResponse, UpdateSessionProfileRequest } from './sessionProtocol';
+import type {
+  SessionStatusResponse,
+  UpdateSessionProfileRequest,
+} from "./sessionProtocol";
 
 export interface SessionWireFields {
   readonly id: string;
@@ -34,10 +40,13 @@ export interface SessionWireFields {
 export interface ISessionLegacyService {
   readonly _serviceBrand: undefined;
 
-  updateProfile(sessionId: string, body: UpdateSessionProfileRequest): Promise<SessionWireFields>;
+  updateProfile(
+    sessionId: string,
+    body: UpdateSessionProfileRequest,
+  ): Promise<SessionWireFields>;
   status(sessionId: string): Promise<SessionStatusResponse>;
   goal(sessionId: string): Promise<GoalSnapshot | null>;
 }
 
 export const ISessionLegacyService: ServiceIdentifier<ISessionLegacyService> =
-  createDecorator<ISessionLegacyService>('sessionLegacyService');
+  createDecorator<ISessionLegacyService>("sessionLegacyService");

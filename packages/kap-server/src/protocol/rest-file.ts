@@ -4,9 +4,9 @@
  *   DELETE /v1/files/{file_id}
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { fileMetaSchema } from '@moonshot-ai/agent-core-v2/app/file/fileService';
+import { fileMetaSchema } from "@moonshot-ai/agent-core-v2/app/file/fileService";
 
 export const uploadFileResponseSchema = fileMetaSchema;
 export type UploadFileResponse = z.infer<typeof uploadFileResponseSchema>;

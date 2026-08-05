@@ -4,12 +4,18 @@ import type {
   LoopHooks,
   LoopLiveEventEmitter,
   TurnResult,
-} from '../../../src/loop/index';
-import type { Logger } from '../../../src/logging';
-import { createLoopEventDispatcher, runTurn as runTurnImpl } from '../../../src/loop/index';
-import { CollectingSink, type SinkErrorMode } from './collecting-sink';
-import { FakeLLM, type FakeLLMResponse } from './fake-llm';
-import { RecordingContext, type RecordingContextOptions } from './recording-context';
+} from "../../../src/loop/index";
+import type { Logger } from "../../../src/logging";
+import {
+  createLoopEventDispatcher,
+  runTurn as runTurnImpl,
+} from "../../../src/loop/index";
+import { CollectingSink, type SinkErrorMode } from "./collecting-sink";
+import { FakeLLM, type FakeLLMResponse } from "./fake-llm";
+import {
+  RecordingContext,
+  type RecordingContextOptions,
+} from "./recording-context";
 
 export interface RunTurnOptions {
   readonly responses: readonly FakeLLMResponse[];
@@ -21,12 +27,14 @@ export interface RunTurnOptions {
   readonly signal?: AbortSignal | undefined;
   readonly emitLiveEvent?: LoopLiveEventEmitter | undefined;
   readonly llmThrowOnIndex?: { index: number; error: unknown } | undefined;
-  readonly llmAbortOnIndex?: { index: number; controller: AbortController } | undefined;
+  readonly llmAbortOnIndex?:
+    | { index: number; controller: AbortController }
+    | undefined;
   readonly llmDelayMs?: number | undefined;
   readonly systemPrompt?: string | undefined;
   readonly contextOptions?: RecordingContextOptions | undefined;
   readonly sinkErrorMode?: SinkErrorMode | undefined;
-  readonly recordStepUsage?: RunTurnInput['recordStepUsage'] | undefined;
+  readonly recordStepUsage?: RunTurnInput["recordStepUsage"] | undefined;
 }
 
 export interface RunTurnResult {
@@ -52,7 +60,7 @@ export async function runTurn(opts: RunTurnOptions): Promise<RunTurnResult> {
   const fallback = new CollectingSink({ errorMode: opts.sinkErrorMode });
   const sink = fallback;
   const input: RunTurnInput = {
-    turnId: opts.turnId ?? 'turn-1',
+    turnId: opts.turnId ?? "turn-1",
     signal: opts.signal ?? new AbortController().signal,
     llm,
     buildMessages: context.buildMessages,
@@ -91,7 +99,7 @@ export async function runTurnExpectingThrow(opts: RunTurnOptions): Promise<{
   const fallback = new CollectingSink({ errorMode: opts.sinkErrorMode });
   const sink = fallback;
   const input: RunTurnInput = {
-    turnId: opts.turnId ?? 'turn-1',
+    turnId: opts.turnId ?? "turn-1",
     signal: opts.signal ?? new AbortController().signal,
     llm,
     buildMessages: context.buildMessages,
@@ -110,18 +118,22 @@ export async function runTurnExpectingThrow(opts: RunTurnOptions): Promise<{
   } catch (error) {
     return { error, llm, context, sink };
   }
-  throw new Error('runTurnExpectingThrow: expected throw, got resolution');
+  throw new Error("runTurnExpectingThrow: expected throw, got resolution");
 }
 
 /**
  * Find the index of a kind in `recording.kinds()`, throwing a clear
  * error if it's missing. Helpful for adjacency-pair assertions.
  */
-export function indexOfKind(kinds: readonly string[], kind: string, fromIndex = 0): number {
+export function indexOfKind(
+  kinds: readonly string[],
+  kind: string,
+  fromIndex = 0,
+): number {
   for (let i = fromIndex; i < kinds.length; i += 1) {
     if (kinds[i] === kind) return i;
   }
-  throw new Error(`indexOfKind: missing "${kind}" in [${kinds.join(',')}]`);
+  throw new Error(`indexOfKind: missing "${kind}" in [${kinds.join(",")}]`);
 }
 
 /**
@@ -137,8 +149,8 @@ export function assertImmediatelyBefore(
   if (kinds[i + 1] !== later) {
     throw new Error(
       `expected "${earlier}" to be immediately followed by "${later}", got "${
-        kinds[i + 1] ?? '<end>'
-      }". full: [${kinds.join(',')}]`,
+        kinds[i + 1] ?? "<end>"
+      }". full: [${kinds.join(",")}]`,
     );
   }
 }

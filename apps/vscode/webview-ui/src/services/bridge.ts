@@ -43,7 +43,8 @@ class Bridge {
   private webviewId: string;
 
   constructor() {
-    this.webviewId = document.body.getAttribute("data-webviewid") || `unknown_${Date.now()}`;
+    this.webviewId =
+      document.body.getAttribute("data-webviewid") || `unknown_${Date.now()}`;
 
     if (typeof acquireVsCodeApi === "function") {
       this.vscode = acquireVsCodeApi();
@@ -81,7 +82,11 @@ class Bridge {
     }
   };
 
-  private call<T>(method: string, params?: unknown, timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS): Promise<T> {
+  private call<T>(
+    method: string,
+    params?: unknown,
+    timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS,
+  ): Promise<T> {
     const id = `${++this.requestId}_${Date.now()}`;
 
     return new Promise((resolve, reject) => {
@@ -90,8 +95,17 @@ class Bridge {
         reject(new Error(`Bridge ${method} timed out`));
       }, timeoutMs);
 
-      this.pending.set(id, { resolve: resolve as (v: unknown) => void, reject, timeout });
-      this.vscode.postMessage({ id, method, params, webviewId: this.webviewId });
+      this.pending.set(id, {
+        resolve: resolve as (v: unknown) => void,
+        reject,
+        timeout,
+      });
+      this.vscode.postMessage({
+        id,
+        method,
+        params,
+        webviewId: this.webviewId,
+      });
     });
   }
 
@@ -119,7 +133,9 @@ class Bridge {
   }
 
   getSlashCommands() {
-    return this.call<import("shared/legacy-sdk").SlashCommandInfo[]>(Methods.GetSlashCommands);
+    return this.call<import("shared/legacy-sdk").SlashCommandInfo[]>(
+      Methods.GetSlashCommands,
+    );
   }
 
   checkLoginStatus() {
@@ -127,7 +143,11 @@ class Bridge {
   }
 
   login() {
-    return this.call<LoginResult>(Methods.Login, undefined, OAUTH_REQUEST_TIMEOUT_MS);
+    return this.call<LoginResult>(
+      Methods.Login,
+      undefined,
+      OAUTH_REQUEST_TIMEOUT_MS,
+    );
   }
 
   logout() {
@@ -163,7 +183,10 @@ class Bridge {
   }
 
   updateMCPServer(originalName: string, serverConfig: MCPServerConfig) {
-    const request: UpdateMCPServerRequest = { originalName, server: serverConfig };
+    const request: UpdateMCPServerRequest = {
+      originalName,
+      server: serverConfig,
+    };
     return this.call<MCPServerConfig[]>(Methods.UpdateMCPServer, request);
   }
 
@@ -172,7 +195,11 @@ class Bridge {
   }
 
   authMCP(name: string) {
-    return this.call<{ ok: boolean }>(Methods.AuthMCP, { name }, OAUTH_REQUEST_TIMEOUT_MS);
+    return this.call<{ ok: boolean }>(
+      Methods.AuthMCP,
+      { name },
+      OAUTH_REQUEST_TIMEOUT_MS,
+    );
   }
 
   resetAuthMCP(name: string) {
@@ -183,8 +210,20 @@ class Bridge {
     return this.call<MCPTestResult>(Methods.TestMCP, { name });
   }
 
-  streamChat(content: string | ContentPart[], model: string, effort: string, planMode: boolean, sessionId?: string) {
-    return this.call<{ done: boolean }>(Methods.StreamChat, { content, model, effort, planMode, sessionId });
+  streamChat(
+    content: string | ContentPart[],
+    model: string,
+    effort: string,
+    planMode: boolean,
+    sessionId?: string,
+  ) {
+    return this.call<{ done: boolean }>(Methods.StreamChat, {
+      content,
+      model,
+      effort,
+      planMode,
+      sessionId,
+    });
   }
 
   abortChat() {
@@ -196,15 +235,29 @@ class Bridge {
   }
 
   getProjectFiles(params?: { query?: string; directory?: string }) {
-    return this.call<import("shared/types").ProjectFile[]>(Methods.GetProjectFiles, params);
+    return this.call<import("shared/types").ProjectFile[]>(
+      Methods.GetProjectFiles,
+      params,
+    );
   }
 
   respondApproval(requestId: string, response: ApprovalResponse) {
-    return this.call<{ ok: boolean }>(Methods.RespondApproval, { requestId, response });
+    return this.call<{ ok: boolean }>(Methods.RespondApproval, {
+      requestId,
+      response,
+    });
   }
 
-  respondQuestion(rpcRequestId: string, questionRequestId: string, answers: Record<string, string>) {
-    return this.call<{ ok: boolean }>(Methods.RespondQuestion, { rpcRequestId, questionRequestId, answers });
+  respondQuestion(
+    rpcRequestId: string,
+    questionRequestId: string,
+    answers: Record<string, string>,
+  ) {
+    return this.call<{ ok: boolean }>(Methods.RespondQuestion, {
+      rpcRequestId,
+      questionRequestId,
+      answers,
+    });
   }
 
   getKimiSessions() {
@@ -220,15 +273,21 @@ class Bridge {
   }
 
   setWorkDir(workDir: string | null) {
-    return this.call<{ ok: boolean; workDir: string }>(Methods.SetWorkDir, { workDir });
+    return this.call<{ ok: boolean; workDir: string }>(Methods.SetWorkDir, {
+      workDir,
+    });
   }
 
   browseWorkDir() {
-    return this.call<{ ok: boolean; workDir: string | null }>(Methods.BrowseWorkDir);
+    return this.call<{ ok: boolean; workDir: string | null }>(
+      Methods.BrowseWorkDir,
+    );
   }
 
   loadSessionHistory(sessionId: string) {
-    return this.call<UIStreamEvent[]>(Methods.LoadKimiSessionHistory, { kimiSessionId: sessionId });
+    return this.call<UIStreamEvent[]>(Methods.LoadKimiSessionHistory, {
+      kimiSessionId: sessionId,
+    });
   }
 
   deleteSession(sessionId: string) {
@@ -236,7 +295,10 @@ class Bridge {
   }
 
   forkSession(sessionId: string, turnIndex: number) {
-    return this.call<{ sessionId: string } | null>(Methods.ForkKimiSession, { sessionId, turnIndex });
+    return this.call<{ sessionId: string } | null>(Methods.ForkKimiSession, {
+      sessionId,
+      turnIndex,
+    });
   }
 
   pickMedia(maxCount: number, includeVideo = true) {
@@ -248,7 +310,9 @@ class Bridge {
   }
 
   checkFilesExist(paths: string[]) {
-    return this.call<Record<string, boolean>>(Methods.CheckFilesExist, { paths });
+    return this.call<Record<string, boolean>>(Methods.CheckFilesExist, {
+      paths,
+    });
   }
 
   openFile(filePath: string) {
@@ -280,7 +344,9 @@ class Bridge {
   }
 
   setPlanMode(enabled: boolean) {
-    return this.call<{ ok: boolean; planMode: boolean }>(Methods.SetPlanMode, { enabled });
+    return this.call<{ ok: boolean; planMode: boolean }>(Methods.SetPlanMode, {
+      enabled,
+    });
   }
 
   steerChat(content: string | ContentPart[]) {

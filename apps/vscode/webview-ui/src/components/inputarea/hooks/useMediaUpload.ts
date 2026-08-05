@@ -1,7 +1,12 @@
 import { useCallback, useEffect } from "react";
 import { toast } from "@/components/ui/sonner";
 import { bridge } from "@/services";
-import { validateMediaFile, validateTotalSize, processMediaFile, getMediaType } from "@/lib/media-utils";
+import {
+  validateMediaFile,
+  validateTotalSize,
+  processMediaFile,
+  getMediaType,
+} from "@/lib/media-utils";
 import { useChatStore } from "@/stores";
 import { MEDIA_CONFIG } from "@/services/config";
 
@@ -13,7 +18,8 @@ interface UseMediaUploadResult {
 }
 
 export function useMediaUpload(): UseMediaUploadResult {
-  const { draftMedia, addDraftMedia, updateDraftMedia, removeDraftMedia } = useChatStore();
+  const { draftMedia, addDraftMedia, updateDraftMedia, removeDraftMedia } =
+    useChatStore();
 
   const hasProcessing = draftMedia.some((m) => !m.dataUri);
   const canAddMedia = draftMedia.length < MEDIA_CONFIG.maxCount;
@@ -47,7 +53,13 @@ export function useMediaUpload(): UseMediaUploadResult {
         toast.error("Failed to process media file");
       }
     },
-    [draftMedia.length, addDraftMedia, updateDraftMedia, removeDraftMedia, getExistingDataUris],
+    [
+      draftMedia.length,
+      addDraftMedia,
+      updateDraftMedia,
+      removeDraftMedia,
+      getExistingDataUris,
+    ],
   );
 
   const addMediaFiles = useCallback(

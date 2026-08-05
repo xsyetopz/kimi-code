@@ -1,5 +1,9 @@
 import { IconClipboardList } from "@tabler/icons-react";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 interface PlanModeButtonProps {
@@ -8,7 +12,9 @@ interface PlanModeButtonProps {
 }
 
 export function PlanModeButton({ active, onToggle }: PlanModeButtonProps) {
-  const tooltipText = active ? "Plan mode active (click to exit)" : "Enter plan mode";
+  const tooltipText = active
+    ? "Plan mode active (click to exit)"
+    : "Enter plan mode";
 
   return (
     <Tooltip>

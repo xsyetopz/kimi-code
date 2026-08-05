@@ -17,31 +17,41 @@ export interface ServerHelloPayload {
 }
 
 export interface ServerHelloFrame {
-  type: 'server_hello';
+  type: "server_hello";
   timestamp: string;
   payload: ServerHelloPayload;
 }
 
-export function buildServerHello(payload: ServerHelloPayload): ServerHelloFrame {
-  return { type: 'server_hello', timestamp: new Date().toISOString(), payload };
+export function buildServerHello(
+  payload: ServerHelloPayload,
+): ServerHelloFrame {
+  return { type: "server_hello", timestamp: new Date().toISOString(), payload };
 }
 
 export interface AckFrame<P = unknown> {
-  type: 'ack';
+  type: "ack";
   id: string;
   code: number;
   msg: string;
   payload: P;
 }
 
-export function buildAck<P>(id: string, code: number, msg: string, payload: P): AckFrame<P> {
-  return { type: 'ack', id, code, msg, payload };
+export function buildAck<P>(
+  id: string,
+  code: number,
+  msg: string,
+  payload: P,
+): AckFrame<P> {
+  return { type: "ack", id, code, msg, payload };
 }
 
-export type ResyncReason = 'buffer_overflow' | 'session_recreated' | 'epoch_changed';
+export type ResyncReason =
+  | "buffer_overflow"
+  | "session_recreated"
+  | "epoch_changed";
 
 export interface ResyncRequiredFrame {
-  type: 'resync_required';
+  type: "resync_required";
   timestamp: string;
   payload: {
     session_id: string;
@@ -58,7 +68,7 @@ export function buildResyncRequired(
   epoch?: string,
 ): ResyncRequiredFrame {
   return {
-    type: 'resync_required',
+    type: "resync_required",
     timestamp: new Date().toISOString(),
     payload: {
       session_id: sessionId,

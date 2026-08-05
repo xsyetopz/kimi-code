@@ -39,19 +39,21 @@
 //   read QPS rises 6→47/s and 2→46/s (bounded only by the 20ms poll grid).
 // ---------------------------------------------------------------------------
 
-import { spawn } from 'node:child_process';
-import fs from 'node:fs/promises';
-import os from 'node:os';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { MiniDb } from '../src/index.js';
-import { ClusterDb, shardDirName } from '../src/cluster/index.js';
-import { shardFor } from '../src/cluster/utils.js';
+import { spawn } from "node:child_process";
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { MiniDb } from "../src/index.js";
+import { ClusterDb, shardDirName } from "../src/cluster/index.js";
+import { shardFor } from "../src/cluster/utils.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const WORKER = path.join(__dirname, 'reader-worker.ts');
+const WORKER = path.join(__dirname, "reader-worker.ts");
 
-const SIZES = (process.env.READER_BENCH_KEYS ?? '10000,50000').split(',').map(Number);
+const SIZES = (process.env.READER_BENCH_KEYS ?? "10000,50000")
+  .split(",")
+  .map(Number);
 const WINDOW_MS = Number(process.env.READER_BENCH_WINDOW_MS ?? 8000);
 const VALUE_BYTES = Number(process.env.READER_BENCH_VALUE_BYTES ?? 150);
 const SHARDS = Number(process.env.READER_BENCH_SHARDS ?? 4);
@@ -59,7 +61,8 @@ const PACE_MS = Number(process.env.READER_BENCH_PACE_MS ?? 5);
 const POLL_MS = Number(process.env.READER_BENCH_POLL_MS ?? 20);
 const HOT_SHARD = 1;
 
-const fmt = (n: number) => n.toLocaleString('en-US', { maximumFractionDigits: 0 });
+const fmt = (n: number) =>
+  n.toLocaleString("en-US", { maximumFractionDigits: 0 });
 
 interface Report {
   ok: number;
@@ -70,22 +73,37 @@ interface Report {
   error?: string;
 }
 
-function spawnWorker(args: string[]): { child: ReturnType<typeof spawn>; done: Promise<Report> } {
-  const child = spawn(process.execPath, ['--import', 'tsx', WORKER, ...args], { stdio: ['ignore', 'pipe', 'pipe'] });
-  let stdout = '';
-  let stderr = '';
-  child.stdout.on('data', (d) => (stdout += d));
-  child.stderr.on('data', (d) => (stderr += d));
+function spawnWorker(args: string[]): {
+  child: ReturnType<typeof spawn>;
+  done: Promise<Report>;
+} {
+  const child = spawn(process.execPath, ["--import", "tsx", WORKER, ...args], {
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  let stdout = "";
+  let stderr = "";
+  child.stdout.on("data", (d) => (stdout += d));
+  child.stderr.on("data", (d) => (stderr += d));
   const done = new Promise<Report>((resolve, reject) => {
-    child.on('error', reject);
-    child.on('close', (code) => {
-      const lines = stdout.trim().split('\n').filter((l) => l.startsWith('{'));
+    child.on("error", reject);
+    child.on("close", (code) => {
+      const lines = stdout
+        .trim()
+        .split("\n")
+        .filter((l) => l.startsWith("{"));
       if (code !== 0 || lines.length === 0) {
-        reject(new Error(`worker failed (code=${code}) args=${args.join(' ')}\n${stderr}`));
+        reject(
+          new Error(
+            `worker failed (code=${code}) args=${args.join(" ")}\n${stderr}`,
+          ),
+        );
         return;
       }
       const report = JSON.parse(lines[lines.length - 1]!) as Report;
-      if (!report.ok) reject(new Error(`worker error args=${args.join(' ')}: ${report.error}`));
+      if (!report.ok)
+        reject(
+          new Error(`worker error args=${args.join(" ")}: ${report.error}`),
+        );
       else resolve(report);
     });
   });
@@ -103,7 +121,10 @@ function sleep(ms: number): Promise<void> {
 
 function percentile(sorted: number[], p: number): number {
   if (!sorted.length) return NaN;
-  const idx = Math.min(sorted.length - 1, Math.ceil((p / 100) * sorted.length) - 1);
+  const idx = Math.min(
+    sorted.length - 1,
+    Math.ceil((p / 100) * sorted.length) - 1,
+  );
   return sorted[Math.max(0, idx)]!;
 }
 
@@ -133,13 +154,20 @@ interface Row {
 }
 
 async function benchSize(n: number): Promise<Row> {
-  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'minidb-reader-bench-'));
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "minidb-reader-bench-"));
   const keys = preloadKeys(n);
   let db: ClusterDb | null = null;
   try {
     // Build the shard (writes + compaction), then start the hot writer.
     const t0 = performance.now();
-    await runWorker(['preload', dir, String(SHARDS), String(HOT_SHARD), String(n), String(VALUE_BYTES)]);
+    await runWorker([
+      "preload",
+      dir,
+      String(SHARDS),
+      String(HOT_SHARD),
+      String(n),
+      String(VALUE_BYTES),
+    ]);
     const buildMs = performance.now() - t0;
 
     // Full-reopen cost of the built shard: what a reader pays when incremental
@@ -149,7 +177,11 @@ async function benchSize(n: number): Promise<Row> {
     const reopens: number[] = [];
     for (let r = 0; r < 3; r++) {
       const t = performance.now();
-      const shard = await MiniDb.open({ dir: shardDir, valueCodec: 'json', readOnly: true });
+      const shard = await MiniDb.open({
+        dir: shardDir,
+        valueCodec: "json",
+        readOnly: true,
+      });
       reopens.push(performance.now() - t);
       await shard.close();
     }
@@ -161,14 +193,27 @@ async function benchSize(n: number): Promise<Row> {
     for (let i = 0; i < 3; i++) await db.get(keys[i]!);
     const stats0 = db.stats();
 
-    const hammer = spawnWorker(['hammer', dir, String(SHARDS), String(HOT_SHARD), String(VALUE_BYTES), String(PACE_MS)]);
+    const hammer = spawnWorker([
+      "hammer",
+      dir,
+      String(SHARDS),
+      String(HOT_SHARD),
+      String(VALUE_BYTES),
+      String(PACE_MS),
+    ]);
     // The hammer's own shard open replays the (large) shard first, so it only
     // starts appending hundreds of ms after spawn. Wait for the WAL to grow
     // once before measuring, or the early window samples a quiet file.
-    const walPath = path.join(dir, shardDirName(HOT_SHARD, SHARDS), 'db.wal');
-    const walBase = await fs.stat(walPath).then((s) => s.size, () => -1);
+    const walPath = path.join(dir, shardDirName(HOT_SHARD, SHARDS), "db.wal");
+    const walBase = await fs.stat(walPath).then(
+      (s) => s.size,
+      () => -1,
+    );
     for (let waited = 0; ; waited += 50) {
-      const cur = await fs.stat(walPath).then((s) => s.size, () => -1);
+      const cur = await fs.stat(walPath).then(
+        (s) => s.size,
+        () => -1,
+      );
       if (cur !== walBase || waited > 15_000) break;
       await sleep(50);
     }
@@ -191,11 +236,11 @@ async function benchSize(n: number): Promise<Row> {
     }
     const windowMs = performance.now() - w0;
 
-    hammer.child.kill('SIGTERM');
+    hammer.child.kill("SIGTERM");
     const report = await Promise.race([
       hammer.done,
       sleep(10_000).then(() => {
-        hammer.child.kill('SIGKILL');
+        hammer.child.kill("SIGKILL");
         return hammer.done;
       }),
     ]);
@@ -213,8 +258,10 @@ async function benchSize(n: number): Promise<Row> {
       p99: percentile(lat, 99),
       writerOps: report.n,
       readerReopens: stats1.readerReopens - stats0.readerReopens,
-      incrementalCatchups: (stats1.incrementalCatchups ?? 0) - (stats0.incrementalCatchups ?? 0),
-      catchupFramesApplied: (stats1.catchupFramesApplied ?? 0) - (stats0.catchupFramesApplied ?? 0),
+      incrementalCatchups:
+        (stats1.incrementalCatchups ?? 0) - (stats0.incrementalCatchups ?? 0),
+      catchupFramesApplied:
+        (stats1.catchupFramesApplied ?? 0) - (stats0.catchupFramesApplied ?? 0),
     };
   } finally {
     if (db) await db.close().catch(() => {});
@@ -239,13 +286,15 @@ async function main(): Promise<void> {
     );
   }
 
-  console.log(`\n  ${'keys'.padStart(8)} | ${'build'.padStart(8)} | ${'reopen'.padStart(8)} | ${'reads'.padStart(7)} | ${'qps'.padStart(8)} | ${'p50 ms'.padStart(8)} | ${'p95 ms'.padStart(8)} | ${'p99 ms'.padStart(8)} | ${'reopens'.padStart(8)} | ${'catchups'.padStart(9)} | ${'frames'.padStart(9)}`);
+  console.log(
+    `\n  ${"keys".padStart(8)} | ${"build".padStart(8)} | ${"reopen".padStart(8)} | ${"reads".padStart(7)} | ${"qps".padStart(8)} | ${"p50 ms".padStart(8)} | ${"p95 ms".padStart(8)} | ${"p99 ms".padStart(8)} | ${"reopens".padStart(8)} | ${"catchups".padStart(9)} | ${"frames".padStart(9)}`,
+  );
   for (const r of rows) {
     console.log(
       `  ${fmt(r.keys).padStart(8)} | ${fmt(r.buildMs).padStart(8)} | ${r.fullReopenMs.toFixed(1).padStart(8)} | ${fmt(r.reads).padStart(7)} | ${fmt(r.qps).padStart(8)} | ${r.p50.toFixed(1).padStart(8)} | ${r.p95.toFixed(1).padStart(8)} | ${r.p99.toFixed(1).padStart(8)} | ${fmt(r.readerReopens).padStart(8)} | ${fmt(r.incrementalCatchups).padStart(9)} | ${fmt(r.catchupFramesApplied).padStart(9)}`,
     );
   }
-  console.log('');
+  console.log("");
 }
 
 main().catch((e) => {

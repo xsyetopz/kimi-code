@@ -7,8 +7,8 @@
  * failure — it never invents a key from a vendor-specific source.
  */
 
-import { ChatProviderError } from '#/kosong/contract/errors';
-import type { ProviderRequestAuth } from '#/kosong/contract/provider';
+import { ChatProviderError } from "#/kosong/contract/errors";
+import type { ProviderRequestAuth } from "#/kosong/contract/provider";
 
 export function requireProviderApiKey(
   providerName: string,
@@ -41,7 +41,9 @@ export function mergeRequestHeaders(
 export function resolveAuthBackedClient<TClient>(
   state: {
     readonly cachedClient: TClient | undefined;
-    readonly clientFactory: ((auth: ProviderRequestAuth) => TClient) | undefined;
+    readonly clientFactory:
+      | ((auth: ProviderRequestAuth) => TClient)
+      | undefined;
   },
   auth: ProviderRequestAuth | undefined,
   build: (auth: ProviderRequestAuth | undefined) => TClient,

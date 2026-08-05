@@ -10,8 +10,8 @@
  * helpers; no scoped service.
  */
 
-const KIMI_FILE_SCHEME = 'kimi-file://';
-const PATH_QUERY = '?path=';
+const KIMI_FILE_SCHEME = "kimi-file://";
+const PATH_QUERY = "?path=";
 
 export interface KimiFileRef {
   readonly fileId: string;

@@ -17,22 +17,24 @@
  * calls settling concurrently could double-inject the same schema message.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import type { Agent } from '#/agent';
-import { DYNAMIC_TOOL_SCHEMA_VARIANT } from '../../agent/context/dynamic-tools';
-import type { BuiltinTool } from '../../agent/tool/types';
-import type { ToolExecution } from '../../loop/types';
-import { toInputJsonSchema } from '../support/input-schema';
+import type { Agent } from "#/agent";
+import { DYNAMIC_TOOL_SCHEMA_VARIANT } from "../../agent/context/dynamic-tools";
+import type { BuiltinTool } from "../../agent/tool/types";
+import type { ToolExecution } from "../../loop/types";
+import { toInputJsonSchema } from "../support/input-schema";
 
-export const SELECT_TOOLS_TOOL_NAME = 'select_tools';
+export const SELECT_TOOLS_TOOL_NAME = "select_tools";
 
 export const SelectToolsInputSchema = z
   .object({
     names: z
       .array(z.string())
       .min(1)
-      .describe('Exact tool names to load, taken from the latest announced tool list.'),
+      .describe(
+        "Exact tool names to load, taken from the latest announced tool list.",
+      ),
   })
   .strict();
 
@@ -42,22 +44,24 @@ export type SelectToolsInput = z.infer<typeof SelectToolsInputSchema>;
 // byte-stable across the session. Anything that varies with the tool set
 // (names, counts) belongs in the announcements, never here.
 const DESCRIPTION =
-  'Load one or more tools by name so you can call them. ' +
-  'All available tool names are listed in the <tools_added>/<tools_removed> announcements ' +
-  'in the system context — fold them in order to get the current list. ' +
-  'Pass the exact name(s) you need; their full definitions become available immediately, ' +
-  'so you can call them directly in your next tool call.';
+  "Load one or more tools by name so you can call them. " +
+  "All available tool names are listed in the <tools_added>/<tools_removed> announcements " +
+  "in the system context — fold them in order to get the current list. " +
+  "Pass the exact name(s) you need; their full definitions become available immediately, " +
+  "so you can call them directly in your next tool call.";
 
 export class SelectToolsTool implements BuiltinTool<SelectToolsInput> {
   readonly name = SELECT_TOOLS_TOOL_NAME;
   readonly description: string = DESCRIPTION;
-  readonly parameters: Record<string, unknown> = toInputJsonSchema(SelectToolsInputSchema);
+  readonly parameters: Record<string, unknown> = toInputJsonSchema(
+    SelectToolsInputSchema,
+  );
 
   constructor(private readonly agent: Agent) {}
 
   resolveExecution(args: SelectToolsInput): ToolExecution {
     return {
-      description: `Loading ${args.names.join(', ')}`,
+      description: `Loading ${args.names.join(", ")}`,
       approvalRule: this.name,
       execute: async () => {
         // The tool is registered unconditionally (the flag can flip at
@@ -66,7 +70,7 @@ export class SelectToolsTool implements BuiltinTool<SelectToolsInput> {
         // closed between table build and execution.
         if (!this.agent.toolSelectEnabled) {
           return {
-            output: 'select_tools is not available for the current model.',
+            output: "select_tools is not available for the current model.",
             isError: true,
           };
         }
@@ -100,13 +104,15 @@ export class SelectToolsTool implements BuiltinTool<SelectToolsInput> {
           toLoad.sort((a, b) => a.localeCompare(b));
           const tools = toLoad
             .map((name) => manager.getDynamicToolSchema(name))
-            .filter((tool): tool is NonNullable<typeof tool> => tool !== undefined);
+            .filter(
+              (tool): tool is NonNullable<typeof tool> => tool !== undefined,
+            );
           this.agent.context.appendMessage({
-            role: 'system',
+            role: "system",
             content: [],
             toolCalls: [],
             tools,
-            origin: { kind: 'injection', variant: DYNAMIC_TOOL_SCHEMA_VARIANT },
+            origin: { kind: "injection", variant: DYNAMIC_TOOL_SCHEMA_VARIANT },
           });
           // The schema message may sit in the deferred queue until this tool
           // exchange closes; the pending mark keeps the ledger ahead of the
@@ -115,15 +121,19 @@ export class SelectToolsTool implements BuiltinTool<SelectToolsInput> {
         }
 
         const lines: string[] = [];
-        if (toLoad.length > 0) lines.push(`Loaded: ${toLoad.join(', ')}`);
+        if (toLoad.length > 0) lines.push(`Loaded: ${toLoad.join(", ")}`);
         if (alreadyAvailable.length > 0) {
-          lines.push(`Already available: ${alreadyAvailable.join(', ')}`);
+          lines.push(`Already available: ${alreadyAvailable.join(", ")}`);
         }
         for (const name of unknown) {
-          lines.push(`Unknown tool: ${name}. Pick from the latest announced tools list.`);
+          lines.push(
+            `Unknown tool: ${name}. Pick from the latest announced tools list.`,
+          );
         }
         const isError = toLoad.length === 0 && alreadyAvailable.length === 0;
-        return isError ? { output: lines.join('\n'), isError } : { output: lines.join('\n') };
+        return isError
+          ? { output: lines.join("\n"), isError }
+          : { output: lines.join("\n") };
       },
     };
   }

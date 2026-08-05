@@ -37,14 +37,19 @@
  * applied by the wire service after every `apply`. Scope-agnostic.
  */
 
-import { bindDefineOp, type DefineOpFn } from '#/wire/op';
-import type { ModelReducers } from '#/wire/types';
-import type { WireRecord } from '#/wire/record';
+import { bindDefineOp, type DefineOpFn } from "#/wire/op";
+import type { ModelReducers } from "#/wire/types";
+import type { WireRecord } from "#/wire/record";
 
-export type PartsTransformer = (parts: readonly unknown[]) => Promise<readonly unknown[]>;
+export type PartsTransformer = (
+  parts: readonly unknown[],
+) => Promise<readonly unknown[]>;
 
 export interface ModelBlobCodec<S> {
-  dehydrate(record: WireRecord, transform: PartsTransformer): WireRecord | Promise<WireRecord>;
+  dehydrate(
+    record: WireRecord,
+    transform: PartsTransformer,
+  ): WireRecord | Promise<WireRecord>;
   rehydrate(state: S, transform: PartsTransformer): S | Promise<S>;
 }
 

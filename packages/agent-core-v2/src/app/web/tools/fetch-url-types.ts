@@ -2,9 +2,9 @@
  * `web` domain — host-injected `UrlFetcher` contract.
  */
 
-import { Error2 } from '#/_base/errors/errors';
+import { Error2 } from "#/_base/errors/errors";
 
-import { WebErrors } from '../errors';
+import { WebErrors } from "../errors";
 
 /**
  * How the returned content relates to the original response body.
@@ -14,7 +14,7 @@ import { WebErrors } from '../errors';
  * - `extracted` — the body was an HTML page; only the main article text
  *   was extracted and returned.
  */
-export type UrlFetchKind = 'passthrough' | 'extracted';
+export type UrlFetchKind = "passthrough" | "extracted";
 
 export interface UrlFetchResult {
   readonly content: string;
@@ -29,7 +29,7 @@ export interface UrlFetcher {
 }
 
 export class HttpFetchError extends Error2 {
-  override readonly name = 'HttpFetchError';
+  override readonly name = "HttpFetchError";
   readonly status: number;
   constructor(status: number, message: string) {
     super(WebErrors.codes.WEB_FETCH_FAILED, message, { details: { status } });

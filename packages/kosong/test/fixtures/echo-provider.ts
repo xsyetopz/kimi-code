@@ -1,4 +1,4 @@
-import { ChatProviderError } from '#/errors';
+import { ChatProviderError } from "#/errors";
 import type {
   AudioURLPart,
   ImageURLPart,
@@ -9,18 +9,18 @@ import type {
   ToolCall,
   ToolCallPart,
   VideoURLPart,
-} from '#/message';
-import { extractText } from '#/message';
+} from "#/message";
+import { extractText } from "#/message";
 import type {
   ChatProvider,
   FinishReason,
   GenerateOptions,
   StreamedMessage,
   ThinkingEffort,
-} from '#/provider';
-import { normalizeOpenAIFinishReason } from '#/providers/openai-common';
-import type { Tool } from '#/tool';
-import type { TokenUsage } from '#/usage';
+} from "#/provider";
+import { normalizeOpenAIFinishReason } from "#/providers/openai-common";
+import type { Tool } from "#/tool";
+import type { TokenUsage } from "#/usage";
 
 // ---------------------------------------------------------------------------
 // DSL parser
@@ -48,44 +48,46 @@ export function parseEchoScript(script: string): ParseResult {
   const parts: StreamedMessagePart[] = [];
   let messageId: string | null = null;
   let usage: TokenUsage | null = null;
-  let finishReason: FinishReason | null = 'completed';
-  let rawFinishReason: string | null = 'stop';
+  let finishReason: FinishReason | null = "completed";
+  let rawFinishReason: string | null = "stop";
 
-  const lines = script.split('\n');
+  const lines = script.split("\n");
   for (const [i, rawLine] of lines.entries()) {
     const lineno = i + 1;
     const line = rawLine.trim();
 
     // skip empty lines, comments, markdown fences, bare "echo" keyword
-    if (!line || line.startsWith('#') || line.startsWith('```')) continue;
-    if (line.toLowerCase() === 'echo') continue;
+    if (!line || line.startsWith("#") || line.startsWith("```")) continue;
+    if (line.toLowerCase() === "echo") continue;
 
-    const sepIdx = line.indexOf(':');
+    const sepIdx = line.indexOf(":");
     if (sepIdx === -1) {
-      throw new ChatProviderError(`Invalid echo DSL at line ${lineno}: ${JSON.stringify(rawLine)}`);
+      throw new ChatProviderError(
+        `Invalid echo DSL at line ${lineno}: ${JSON.stringify(rawLine)}`,
+      );
     }
 
     const kind = line.slice(0, sepIdx).trim().toLowerCase();
     let payload = line.slice(sepIdx + 1);
     // strip at most one leading space from payload
-    if (payload.startsWith(' ')) {
+    if (payload.startsWith(" ")) {
       payload = payload.slice(1);
     }
 
-    if (kind === 'id') {
+    if (kind === "id") {
       messageId = stripQuotes(payload.trim());
       continue;
     }
-    if (kind === 'usage') {
+    if (kind === "usage") {
       usage = parseUsage(payload);
       continue;
     }
-    if (kind === 'finish_reason') {
+    if (kind === "finish_reason") {
       const rawValue = stripQuotes(payload.trim());
       if (
-        rawValue === '' ||
-        rawValue.toLowerCase() === 'null' ||
-        rawValue.toLowerCase() === 'none'
+        rawValue === "" ||
+        rawValue.toLowerCase() === "null" ||
+        rawValue.toLowerCase() === "none"
       ) {
         finishReason = null;
         rawFinishReason = null;
@@ -111,33 +113,37 @@ function parsePart(
   rawLine: string,
 ): StreamedMessagePart {
   switch (kind) {
-    case 'text':
-      return { type: 'text', text: stripQuotes(payload) } satisfies TextPart;
-    case 'think':
-      return { type: 'think', think: stripQuotes(payload) } satisfies ThinkPart;
-    case 'think_encrypted':
-      return { type: 'think', think: '', encrypted: stripQuotes(payload) } satisfies ThinkPart;
-    case 'image_url': {
+    case "text":
+      return { type: "text", text: stripQuotes(payload) } satisfies TextPart;
+    case "think":
+      return { type: "think", think: stripQuotes(payload) } satisfies ThinkPart;
+    case "think_encrypted":
+      return {
+        type: "think",
+        think: "",
+        encrypted: stripQuotes(payload),
+      } satisfies ThinkPart;
+    case "image_url": {
       const { url, id } = parseUrlPayload(payload, kind);
-      const imageUrl: ImageURLPart['imageUrl'] =
+      const imageUrl: ImageURLPart["imageUrl"] =
         id !== null && id !== undefined ? { url, id } : { url };
-      return { type: 'image_url', imageUrl } satisfies ImageURLPart;
+      return { type: "image_url", imageUrl } satisfies ImageURLPart;
     }
-    case 'audio_url': {
+    case "audio_url": {
       const { url, id } = parseUrlPayload(payload, kind);
-      const audioUrl: AudioURLPart['audioUrl'] =
+      const audioUrl: AudioURLPart["audioUrl"] =
         id !== null && id !== undefined ? { url, id } : { url };
-      return { type: 'audio_url', audioUrl } satisfies AudioURLPart;
+      return { type: "audio_url", audioUrl } satisfies AudioURLPart;
     }
-    case 'video_url': {
+    case "video_url": {
       const { url, id } = parseUrlPayload(payload, kind);
-      const videoUrl: VideoURLPart['videoUrl'] =
+      const videoUrl: VideoURLPart["videoUrl"] =
         id !== null && id !== undefined ? { url, id } : { url };
-      return { type: 'video_url', videoUrl } satisfies VideoURLPart;
+      return { type: "video_url", videoUrl } satisfies VideoURLPart;
     }
-    case 'tool_call':
+    case "tool_call":
       return parseToolCall(payload, lineno, rawLine);
-    case 'tool_call_part':
+    case "tool_call_part":
       return parseToolCallPart(payload);
     default:
       throw new ChatProviderError(
@@ -147,7 +153,7 @@ function parsePart(
 }
 
 function parseUsage(payload: string): TokenUsage {
-  const mapping = parseMapping(payload, 'usage');
+  const mapping = parseMapping(payload, "usage");
 
   function intValue(key: string): number {
     const value = mapping[key] ?? 0;
@@ -161,28 +167,42 @@ function parseUsage(payload: string): TokenUsage {
   }
 
   return {
-    inputOther: intValue('input_other'),
-    output: intValue('output'),
-    inputCacheRead: intValue('input_cache_read'),
-    inputCacheCreation: intValue('input_cache_creation'),
+    inputOther: intValue("input_other"),
+    output: intValue("output"),
+    inputCacheRead: intValue("input_cache_read"),
+    inputCacheCreation: intValue("input_cache_creation"),
   };
 }
 
-function parseUrlPayload(payload: string, kind: string): { url: string; id: string | null } {
+function parseUrlPayload(
+  payload: string,
+  kind: string,
+): { url: string; id: string | null } {
   const value = parseValue(payload);
-  if (typeof value === 'object' && value !== null && value !== undefined && !Array.isArray(value)) {
+  if (
+    typeof value === "object" &&
+    value !== null &&
+    value !== undefined &&
+    !Array.isArray(value)
+  ) {
     const mapping = value as Record<string, unknown>;
-    const url = mapping['url'];
-    if (typeof url !== 'string') {
-      throw new ChatProviderError(`${kind} requires a url field, got ${JSON.stringify(mapping)}`);
+    const url = mapping["url"];
+    if (typeof url !== "string") {
+      throw new ChatProviderError(
+        `${kind} requires a url field, got ${JSON.stringify(mapping)}`,
+      );
     }
-    const contentId = mapping['id'];
-    if (contentId !== null && contentId !== undefined && typeof contentId !== 'string') {
+    const contentId = mapping["id"];
+    if (
+      contentId !== null &&
+      contentId !== undefined &&
+      typeof contentId !== "string"
+    ) {
       throw new ChatProviderError(`${kind} id must be a string when provided.`);
     }
     return { url, id: (contentId as string | undefined) ?? null };
   }
-  if (typeof value !== 'string') {
+  if (typeof value !== "string") {
     throw new ChatProviderError(
       `${kind} expects url string or object, got ${JSON.stringify(value)}`,
     );
@@ -190,39 +210,46 @@ function parseUrlPayload(payload: string, kind: string): { url: string; id: stri
   return { url: value, id: null };
 }
 
-function parseToolCall(payload: string, lineno: number, rawLine: string): ToolCall {
-  const mapping = parseMapping(payload, 'tool_call');
+function parseToolCall(
+  payload: string,
+  lineno: number,
+  rawLine: string,
+): ToolCall {
+  const mapping = parseMapping(payload, "tool_call");
   const func =
-    typeof mapping['function'] === 'object' &&
-    mapping['function'] !== null &&
-    mapping['function'] !== undefined
-      ? (mapping['function'] as Record<string, unknown>)
+    typeof mapping["function"] === "object" &&
+    mapping["function"] !== null &&
+    mapping["function"] !== undefined
+      ? (mapping["function"] as Record<string, unknown>)
       : null;
 
-  const toolCallId = mapping['id'] as string | undefined;
-  let name = (mapping['name'] as string | undefined) ?? (func?.['name'] as string | undefined);
-  let args = mapping['arguments'] as string | null | undefined;
+  const toolCallId = mapping["id"] as string | undefined;
+  let name =
+    (mapping["name"] as string | undefined) ??
+    (func?.["name"] as string | undefined);
+  let args = mapping["arguments"] as string | null | undefined;
 
   if (func) {
-    args ??= func['arguments'] as string | null | undefined;
+    args ??= func["arguments"] as string | null | undefined;
   }
 
-  if (typeof toolCallId !== 'string' || typeof name !== 'string') {
+  if (typeof toolCallId !== "string" || typeof name !== "string") {
     throw new ChatProviderError(
       `tool_call requires string id and name at line ${lineno}: ${JSON.stringify(rawLine)}`,
     );
   }
 
-  if (args !== null && args !== undefined && typeof args !== 'string') {
+  if (args !== null && args !== undefined && typeof args !== "string") {
     throw new ChatProviderError(
       `tool_call.arguments must be a string at line ${lineno}, got ${typeof args}`,
     );
   }
 
   return {
-    type: 'function',
+    type: "function",
     id: toolCallId,
-    name, arguments: args ?? null,
+    name,
+    arguments: args ?? null,
   };
 }
 
@@ -230,21 +257,32 @@ function parseToolCallPart(payload: string): ToolCallPart {
   const value = parseValue(payload);
   let argumentsPart: unknown;
 
-  if (typeof value === 'object' && value !== null && value !== undefined && !Array.isArray(value)) {
-    argumentsPart = (value as Record<string, unknown>)['arguments_part'];
+  if (
+    typeof value === "object" &&
+    value !== null &&
+    value !== undefined &&
+    !Array.isArray(value)
+  ) {
+    argumentsPart = (value as Record<string, unknown>)["arguments_part"];
   } else {
     argumentsPart = value;
   }
 
-  if (typeof argumentsPart === 'object' && argumentsPart !== null && argumentsPart !== undefined) {
+  if (
+    typeof argumentsPart === "object" &&
+    argumentsPart !== null &&
+    argumentsPart !== undefined
+  ) {
     argumentsPart = JSON.stringify(argumentsPart);
   }
 
   const result =
-    argumentsPart === null || argumentsPart === undefined || argumentsPart === ''
+    argumentsPart === null ||
+    argumentsPart === undefined ||
+    argumentsPart === ""
       ? null
       : argumentsPart;
-  return { type: 'tool_call_part', argumentsPart: result as string | null };
+  return { type: "tool_call_part", argumentsPart: result as string | null };
 }
 
 function parseMapping(raw: string, context: string): Record<string, unknown> {
@@ -254,7 +292,7 @@ function parseMapping(raw: string, context: string): Record<string, unknown> {
   try {
     const loaded: unknown = JSON.parse(raw);
     if (
-      typeof loaded === 'object' &&
+      typeof loaded === "object" &&
       loaded !== null &&
       loaded !== undefined &&
       !Array.isArray(loaded)
@@ -273,13 +311,15 @@ function parseMapping(raw: string, context: string): Record<string, unknown> {
 
   // key=value parsing
   const mapping: Record<string, unknown> = {};
-  const tokens = raw.replaceAll(',', ' ').split(/\s+/);
+  const tokens = raw.replaceAll(",", " ").split(/\s+/);
   for (const token of tokens) {
     if (!token) continue;
-    if (!token.includes('=')) {
-      throw new ChatProviderError(`Invalid token '${token}' in ${context} payload.`);
+    if (!token.includes("=")) {
+      throw new ChatProviderError(
+        `Invalid token '${token}' in ${context} payload.`,
+      );
     }
-    const eqIdx = token.indexOf('=');
+    const eqIdx = token.indexOf("=");
     const key = token.slice(0, eqIdx).trim();
     const val = token.slice(eqIdx + 1).trim();
     mapping[key] = parseValue(val);
@@ -295,7 +335,7 @@ function parseValue(raw: string): unknown {
   raw = raw.trim();
   if (!raw) return null;
   const lowered = raw.toLowerCase();
-  if (lowered === 'null' || lowered === 'none') return null;
+  if (lowered === "null" || lowered === "none") return null;
   try {
     return JSON.parse(raw) as unknown;
   } catch {
@@ -304,7 +344,11 @@ function parseValue(raw: string): unknown {
 }
 
 function stripQuotes(value: string): string {
-  if (value.length >= 2 && value[0] === value.at(-1) && (value[0] === "'" || value[0] === '"')) {
+  if (
+    value.length >= 2 &&
+    value[0] === value.at(-1) &&
+    (value[0] === "'" || value[0] === '"')
+  ) {
     return value.slice(1, -1);
   }
   return value;
@@ -354,8 +398,8 @@ class EchoStreamedMessage implements StreamedMessage {
  * The DSL lives in the text content of the last message in `history`.
  */
 export class EchoChatProvider implements ChatProvider {
-  readonly name: string = 'echo';
-  readonly modelName: string = 'echo';
+  readonly name: string = "echo";
+  readonly modelName: string = "echo";
   readonly thinkingEffort: ThinkingEffort | null = null;
 
   async generate(
@@ -366,18 +410,31 @@ export class EchoChatProvider implements ChatProvider {
   ): Promise<EchoStreamedMessage> {
     const lastMessage = history.at(-1);
     if (lastMessage === undefined) {
-      throw new ChatProviderError('EchoChatProvider requires at least one message in history.');
+      throw new ChatProviderError(
+        "EchoChatProvider requires at least one message in history.",
+      );
     }
-    if (lastMessage.role !== 'user') {
-      throw new ChatProviderError('EchoChatProvider expects the last history message to be user.');
+    if (lastMessage.role !== "user") {
+      throw new ChatProviderError(
+        "EchoChatProvider expects the last history message to be user.",
+      );
     }
 
     const scriptText = extractText(lastMessage);
-    const { parts, messageId, usage, finishReason, rawFinishReason } = parseEchoScript(scriptText);
+    const { parts, messageId, usage, finishReason, rawFinishReason } =
+      parseEchoScript(scriptText);
     if (parts.length === 0) {
-      throw new ChatProviderError('EchoChatProvider DSL produced no streamable parts.');
+      throw new ChatProviderError(
+        "EchoChatProvider DSL produced no streamable parts.",
+      );
     }
-    return new EchoStreamedMessage(parts, messageId, usage, finishReason, rawFinishReason);
+    return new EchoStreamedMessage(
+      parts,
+      messageId,
+      usage,
+      finishReason,
+      rawFinishReason,
+    );
   }
 
   withThinking(_effort: ThinkingEffort): EchoChatProvider {
@@ -394,8 +451,8 @@ export class EchoChatProvider implements ChatProvider {
  * per call, one per `generate()` invocation.
  */
 export class ScriptedEchoChatProvider implements ChatProvider {
-  readonly name: string = 'scripted_echo';
-  readonly modelName: string = 'scripted_echo';
+  readonly name: string = "scripted_echo";
+  readonly modelName: string = "scripted_echo";
   readonly thinkingEffort: ThinkingEffort | null = null;
 
   private readonly _scripts: string[];
@@ -419,11 +476,20 @@ export class ScriptedEchoChatProvider implements ChatProvider {
     }
     this._cursor++;
 
-    const { parts, messageId, usage, finishReason, rawFinishReason } = parseEchoScript(scriptText);
+    const { parts, messageId, usage, finishReason, rawFinishReason } =
+      parseEchoScript(scriptText);
     if (parts.length === 0) {
-      throw new ChatProviderError('ScriptedEchoChatProvider DSL produced no streamable parts.');
+      throw new ChatProviderError(
+        "ScriptedEchoChatProvider DSL produced no streamable parts.",
+      );
     }
-    return new EchoStreamedMessage(parts, messageId, usage, finishReason, rawFinishReason);
+    return new EchoStreamedMessage(
+      parts,
+      messageId,
+      usage,
+      finishReason,
+      rawFinishReason,
+    );
   }
 
   withThinking(_effort: ThinkingEffort): ScriptedEchoChatProvider {

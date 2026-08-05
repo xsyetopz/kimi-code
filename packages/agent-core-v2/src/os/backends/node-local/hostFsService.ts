@@ -16,18 +16,29 @@ import {
   rm,
   stat as nodeStat,
   writeFile,
-} from 'node:fs/promises';
+} from "node:fs/promises";
 
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
-import { decodeTextWithErrors, type TextDecodeErrors } from '#/_base/execEnv/decodeText';
+import {
+  LifecycleScope,
+  ScopeActivation,
+  registerScopedService,
+} from "#/_base/di/scope";
+import {
+  decodeTextWithErrors,
+  type TextDecodeErrors,
+} from "#/_base/execEnv/decodeText";
 
-import { type HostDirEntry, type HostFileStat, IHostFileSystem } from '#/os/interface/hostFileSystem';
-import { toHostFsError } from '#/os/interface/hostFsErrors';
+import {
+  type HostDirEntry,
+  type HostFileStat,
+  IHostFileSystem,
+} from "#/os/interface/hostFileSystem";
+import { toHostFsError } from "#/os/interface/hostFsErrors";
 
 const READ_CHUNK_SIZE = 64 * 1024;
 
 function isUtf8Encoding(encoding: BufferEncoding): boolean {
-  return encoding === 'utf-8' || encoding === 'utf8';
+  return encoding === "utf-8" || encoding === "utf8";
 }
 
 function* splitLinesKeepingTerminator(text: string): Generator<string> {
@@ -53,29 +64,29 @@ export class HostFileSystem implements IHostFileSystem {
   ): Promise<string> {
     try {
       if (options === undefined) {
-        return await readFile(path, 'utf8');
+        return await readFile(path, "utf8");
       }
-      const encoding = options.encoding ?? 'utf-8';
-      const errors = options.errors ?? 'strict';
+      const encoding = options.encoding ?? "utf-8";
+      const errors = options.errors ?? "strict";
       return decodeTextWithErrors(await readFile(path), encoding, errors);
     } catch (error) {
-      throw toHostFsError(error, { path, op: 'read' });
+      throw toHostFsError(error, { path, op: "read" });
     }
   }
 
   async writeText(path: string, data: string): Promise<void> {
     try {
-      await writeFile(path, data, 'utf8');
+      await writeFile(path, data, "utf8");
     } catch (error) {
-      throw toHostFsError(error, { path, op: 'write' });
+      throw toHostFsError(error, { path, op: "write" });
     }
   }
 
   async appendText(path: string, data: string): Promise<void> {
     try {
-      await appendFile(path, data, 'utf8');
+      await appendFile(path, data, "utf8");
     } catch (error) {
-      throw toHostFsError(error, { path, op: 'append' });
+      throw toHostFsError(error, { path, op: "append" });
     }
   }
 
@@ -85,7 +96,7 @@ export class HostFileSystem implements IHostFileSystem {
         const buf = await readFile(path);
         return new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength);
       }
-      const fh = await open(path, 'r');
+      const fh = await open(path, "r");
       try {
         const buf = Buffer.alloc(n);
         const { bytesRead } = await fh.read(buf, 0, n, 0);
@@ -94,7 +105,7 @@ export class HostFileSystem implements IHostFileSystem {
         await fh.close();
       }
     } catch (error) {
-      throw toHostFsError(error, { path, op: 'read' });
+      throw toHostFsError(error, { path, op: "read" });
     }
   }
 
@@ -102,7 +113,7 @@ export class HostFileSystem implements IHostFileSystem {
     try {
       await writeFile(path, data);
     } catch (error) {
-      throw toHostFsError(error, { path, op: 'write' });
+      throw toHostFsError(error, { path, op: "write" });
     }
   }
 
@@ -111,18 +122,22 @@ export class HostFileSystem implements IHostFileSystem {
     options?: { encoding?: BufferEncoding; errors?: TextDecodeErrors },
   ): AsyncGenerator<string> {
     try {
-      const encoding = options?.encoding ?? 'utf-8';
-      const errors = options?.errors ?? 'strict';
+      const encoding = options?.encoding ?? "utf-8";
+      const errors = options?.errors ?? "strict";
 
       if (!isUtf8Encoding(encoding)) {
-        const content = decodeTextWithErrors(await readFile(path), encoding, errors);
+        const content = decodeTextWithErrors(
+          await readFile(path),
+          encoding,
+          errors,
+        );
         yield* splitLinesKeepingTerminator(content);
         return;
       }
 
       yield* this._readUtf8Lines(path, errors);
     } catch (error) {
-      throw toHostFsError(error, { path, op: 'read' });
+      throw toHostFsError(error, { path, op: "read" });
     }
   }
 
@@ -130,7 +145,7 @@ export class HostFileSystem implements IHostFileSystem {
     path: string,
     errors: TextDecodeErrors,
   ): AsyncGenerator<string> {
-    const fh = await open(path, 'r');
+    const fh = await open(path, "r");
     try {
       const buf = Buffer.alloc(READ_CHUNK_SIZE);
       let pending: Buffer[] = [];
@@ -147,9 +162,11 @@ export class HostFileSystem implements IHostFileSystem {
           const byte = chunk[i];
           if (byte !== 0x0a) continue;
           const piece = chunk.subarray(lineStart, i + 1);
-          const lineOffset = pending.length === 0 ? fileOffset + lineStart : pendingOffset;
-          const line = pending.length === 0 ? piece : Buffer.concat([...pending, piece]);
-          yield decodeTextWithErrors(line, 'utf-8', errors, lineOffset !== 0);
+          const lineOffset =
+            pending.length === 0 ? fileOffset + lineStart : pendingOffset;
+          const line =
+            pending.length === 0 ? piece : Buffer.concat([...pending, piece]);
+          yield decodeTextWithErrors(line, "utf-8", errors, lineOffset !== 0);
           pending = [];
           lineStart = i + 1;
         }
@@ -164,7 +181,7 @@ export class HostFileSystem implements IHostFileSystem {
 
       if (pending.length > 0) {
         const line = Buffer.concat(pending);
-        yield decodeTextWithErrors(line, 'utf-8', errors, pendingOffset !== 0);
+        yield decodeTextWithErrors(line, "utf-8", errors, pendingOffset !== 0);
       }
     } finally {
       await fh.close();
@@ -173,7 +190,7 @@ export class HostFileSystem implements IHostFileSystem {
 
   async createExclusive(path: string, data: Uint8Array): Promise<boolean> {
     try {
-      const fh = await open(path, 'wx');
+      const fh = await open(path, "wx");
       try {
         await fh.writeFile(data);
         await fh.sync();
@@ -182,8 +199,8 @@ export class HostFileSystem implements IHostFileSystem {
       }
       return true;
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'EEXIST') return false;
-      throw toHostFsError(error, { path, op: 'create' });
+      if ((error as NodeJS.ErrnoException).code === "EEXIST") return false;
+      throw toHostFsError(error, { path, op: "create" });
     }
   }
 
@@ -199,7 +216,7 @@ export class HostFileSystem implements IHostFileSystem {
         ino: s.ino,
       };
     } catch (error) {
-      throw toHostFsError(error, { path, op: 'stat' });
+      throw toHostFsError(error, { path, op: "stat" });
     }
   }
 
@@ -215,7 +232,7 @@ export class HostFileSystem implements IHostFileSystem {
         ino: s.ino,
       };
     } catch (error) {
-      throw toHostFsError(error, { path, op: 'lstat' });
+      throw toHostFsError(error, { path, op: "lstat" });
     }
   }
 
@@ -229,15 +246,18 @@ export class HostFileSystem implements IHostFileSystem {
         isSymbolicLink: d.isSymbolicLink(),
       }));
     } catch (error) {
-      throw toHostFsError(error, { path, op: 'readdir' });
+      throw toHostFsError(error, { path, op: "readdir" });
     }
   }
 
-  async mkdir(path: string, options?: { readonly recursive?: boolean }): Promise<void> {
+  async mkdir(
+    path: string,
+    options?: { readonly recursive?: boolean },
+  ): Promise<void> {
     try {
       await mkdir(path, { recursive: options?.recursive ?? false });
     } catch (error) {
-      throw toHostFsError(error, { path, op: 'mkdir' });
+      throw toHostFsError(error, { path, op: "mkdir" });
     }
   }
 
@@ -245,7 +265,7 @@ export class HostFileSystem implements IHostFileSystem {
     try {
       await rm(path, { recursive: true, force: true });
     } catch (error) {
-      throw toHostFsError(error, { path, op: 'remove' });
+      throw toHostFsError(error, { path, op: "remove" });
     }
   }
 
@@ -253,7 +273,7 @@ export class HostFileSystem implements IHostFileSystem {
     try {
       return await nodeRealpath(path);
     } catch (error) {
-      throw toHostFsError(error, { path, op: 'realpath' });
+      throw toHostFsError(error, { path, op: "realpath" });
     }
   }
 }
@@ -263,5 +283,5 @@ registerScopedService(
   IHostFileSystem,
   HostFileSystem,
   ScopeActivation.OnScopeCreated,
-  'hostFs',
+  "hostFs",
 );

@@ -14,14 +14,14 @@
  * The host renders the questions (pi-tui migration screen); the package only
  * owns the decision logic.
  */
-import type { MigrationScope } from './types.js';
+import type { MigrationScope } from "./types.js";
 
-export type Prompt1Choice = 'now' | 'later' | 'never';
-export type Prompt2Choice = 'config-only' | 'all-sessions';
+export type Prompt1Choice = "now" | "later" | "never";
+export type Prompt2Choice = "config-only" | "all-sessions";
 export type AnyChoice = Prompt1Choice | Prompt2Choice;
 
 export interface MigrationPromptResult {
-  readonly decision: 'now' | 'later' | 'never';
+  readonly decision: "now" | "later" | "never";
   readonly scope?: MigrationScope;
 }
 
@@ -33,17 +33,17 @@ export function resolveMigrationScope(
   choices: readonly AnyChoice[],
 ): MigrationPromptResult {
   const [c1, c2] = choices;
-  if (c1 === 'later') return { decision: 'later' };
-  if (c1 === 'never') return { decision: 'never' };
+  if (c1 === "later") return { decision: "later" };
+  if (c1 === "never") return { decision: "never" };
   // c1 === 'now'
   return {
-    decision: 'now',
+    decision: "now",
     scope: {
       config: true,
       mcp: true,
       userHistory: true,
       skills: true,
-      sessions: c2 === 'all-sessions',
+      sessions: c2 === "all-sessions",
     },
   };
 }

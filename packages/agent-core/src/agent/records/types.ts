@@ -1,16 +1,23 @@
-import type { ContentPart, ThinkingEffort, TokenUsage } from '@moonshot-ai/kosong';
+import type {
+  ContentPart,
+  ThinkingEffort,
+  TokenUsage,
+} from "@moonshot-ai/kosong";
 
-import type { LoopRecordedEvent } from '../../loop';
-import type { GoalActor, GoalBudgetLimits, GoalStatus } from '../goal';
-import type { MCPToolDefinition } from '../../mcp/types';
-import type { ToolStoreUpdate } from '../../tools/store';
-import type { CompactionBeginData, CompactionResult } from '../compaction';
-import type { AgentConfigUpdateData } from '../config';
-import type { ContextMessage, PromptOrigin } from '../context';
-import type { PermissionApprovalResultRecord, PermissionMode } from '../permission';
-import type { McpToolCollision, UserToolRegistration } from '../tool';
-import type { UsageRecordScope } from '../usage';
-import type { SwarmModeTrigger } from '../swarm';
+import type { LoopRecordedEvent } from "../../loop";
+import type { GoalActor, GoalBudgetLimits, GoalStatus } from "../goal";
+import type { MCPToolDefinition } from "../../mcp/types";
+import type { ToolStoreUpdate } from "../../tools/store";
+import type { CompactionBeginData, CompactionResult } from "../compaction";
+import type { AgentConfigUpdateData } from "../config";
+import type { ContextMessage, PromptOrigin } from "../context";
+import type {
+  PermissionApprovalResultRecord,
+  PermissionMode,
+} from "../permission";
+import type { McpToolCollision, UserToolRegistration } from "../tool";
+import type { UsageRecordScope } from "../usage";
+import type { SwarmModeTrigger } from "../swarm";
 
 /** One entry of a tools table as sent in a request's top-level `tools[]`. */
 export interface LlmRequestToolSchema {
@@ -41,17 +48,17 @@ export interface AgentRecordEvents {
 
   forked: {};
 
-  'turn.prompt': {
+  "turn.prompt": {
     input: readonly ContentPart[];
     origin: PromptOrigin;
   };
-  'turn.steer': {
+  "turn.steer": {
     input: readonly ContentPart[];
     origin: PromptOrigin;
   };
-  'turn.cancel': { turnId?: number };
+  "turn.cancel": { turnId?: number };
 
-  'config.update': AgentConfigUpdateData;
+  "config.update": AgentConfigUpdateData;
 
   /**
    * v2-engine profile binding (wire protocol 1.5). v1 never writes this
@@ -60,7 +67,7 @@ export interface AgentRecordEvents {
    * Field shapes follow the v2 payload: live v2 records carry
    * `thinkingEffort`, legacy ones may carry `thinkingLevel` instead.
    */
-  'profile.bind': {
+  "profile.bind": {
     modelAlias?: string;
     profileName?: string;
     thinkingEffort?: string;
@@ -78,35 +85,35 @@ export interface AgentRecordEvents {
    * active). v1 has no corresponding state to rebuild; replay treats it as a
    * no-op so the session-level profile fallback keeps its behavior.
    */
-  'tools.reset_active_tools': {};
+  "tools.reset_active_tools": {};
 
-  'permission.set_mode': {
+  "permission.set_mode": {
     mode: PermissionMode;
   };
-  'permission.record_approval_result': PermissionApprovalResultRecord;
+  "permission.record_approval_result": PermissionApprovalResultRecord;
 
-  'full_compaction.begin': CompactionBeginData;
+  "full_compaction.begin": CompactionBeginData;
 
-  'plan_mode.enter': {
+  "plan_mode.enter": {
     id: string;
   };
-  'plan_mode.cancel': {
+  "plan_mode.cancel": {
     id?: string;
   };
-  'plan_mode.exit': {
+  "plan_mode.exit": {
     id?: string;
   };
 
-  'swarm_mode.enter': {
+  "swarm_mode.enter": {
     trigger: SwarmModeTrigger;
   };
-  'swarm_mode.exit': {};
+  "swarm_mode.exit": {};
 
-  'tools.register_user_tool': UserToolRegistration;
-  'tools.unregister_user_tool': {
+  "tools.register_user_tool": UserToolRegistration;
+  "tools.unregister_user_tool": {
     name: string;
   };
-  'tools.set_active_tools': {
+  "tools.set_active_tools": {
     names: readonly string[];
     /**
      * Profile denylist applied on top of `names` (agentfile
@@ -116,31 +123,31 @@ export interface AgentRecordEvents {
     disallowedNames?: readonly string[];
   };
 
-  'usage.record': {
+  "usage.record": {
     model: string;
     usage: TokenUsage;
     usageScope?: UsageRecordScope | undefined;
   };
 
-  'full_compaction.cancel': {};
-  'full_compaction.complete': {};
-  'micro_compaction.apply': { cutoff: number };
+  "full_compaction.cancel": {};
+  "full_compaction.complete": {};
+  "micro_compaction.apply": { cutoff: number };
 
-  'context.append_message': { message: ContextMessage };
-  'context.append_loop_event': { event: LoopRecordedEvent };
-  'context.update_token_count': { tokenCount: number };
-  'context.clear': {};
-  'context.apply_compaction': CompactionResult;
-  'context.undo': { count: number };
+  "context.append_message": { message: ContextMessage };
+  "context.append_loop_event": { event: LoopRecordedEvent };
+  "context.update_token_count": { tokenCount: number };
+  "context.clear": {};
+  "context.apply_compaction": CompactionResult;
+  "context.undo": { count: number };
 
-  'tools.update_store': ToolStoreUpdate;
+  "tools.update_store": ToolStoreUpdate;
 
-  'goal.create': {
+  "goal.create": {
     goalId: string;
     objective: string;
     completionCriterion?: string;
   };
-  'goal.update': {
+  "goal.update": {
     status?: GoalStatus;
     tokensUsed?: number;
     turnsUsed?: number;
@@ -149,7 +156,7 @@ export interface AgentRecordEvents {
     reason?: string;
     actor?: GoalActor;
   };
-  'goal.clear': {};
+  "goal.clear": {};
 
   // Observability records (see the header note): request-trace data, not
   // state. Resume only restores the write-dedup cursors.
@@ -159,7 +166,7 @@ export interface AgentRecordEvents {
    * `deferred` strip — exactly what the provider receives). Written once per
    * unique table; `llm.request.toolsHash` points here.
    */
-  'llm.tools_snapshot': {
+  "llm.tools_snapshot": {
     hash: string;
     tools: readonly LlmRequestToolSchema[];
   };
@@ -171,8 +178,8 @@ export interface AgentRecordEvents {
    * `llm.tools_snapshot` (tool schemas), this makes each request
    * reconstructable from the wire log at the logical-request level.
    */
-  'llm.request': {
-    kind: 'loop' | 'compaction';
+  "llm.request": {
+    kind: "loop" | "compaction";
     provider: string;
     model: string;
     modelAlias?: string;
@@ -213,7 +220,7 @@ export interface AgentRecordEvents {
     attempt?: string;
     /** Set when this request is a fallback resend (strict rebuild,
      * media-degraded rebuild, or media-stripped rebuild). */
-    projection?: 'strict' | 'media-degraded' | 'media-stripped';
+    projection?: "strict" | "media-degraded" | "media-stripped";
     /** Compaction only: messages dropped so far by overflow/empty shrinking. */
     droppedCount?: number;
   };
@@ -223,7 +230,7 @@ export interface AgentRecordEvents {
    * agent gated it (allow-list, name collisions). Written on registration,
    * deduplicated per server by content hash.
    */
-  'mcp.tools_discovered': {
+  "mcp.tools_discovered": {
     serverName: string;
     hash: string;
     tools: readonly MCPToolDefinition[];

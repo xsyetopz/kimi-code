@@ -4,18 +4,21 @@
 // Prefix an animated spinner when the agent is running so users can see activity
 // at a glance.
 
-import { computed, onUnmounted, ref, watch, watchEffect, type Ref } from 'vue';
-import { useI18n } from 'vue-i18n';
+import { computed, onUnmounted, ref, watch, watchEffect, type Ref } from "vue";
+import { useI18n } from "vue-i18n";
 
 export interface UsePageTitleOptions {
   running: Ref<boolean>;
   showAuthGate: Ref<boolean>;
 }
 
-export function usePageTitle({ running, showAuthGate }: UsePageTitleOptions): void {
+export function usePageTitle({
+  running,
+  showAuthGate,
+}: UsePageTitleOptions): void {
   const { t } = useI18n();
 
-  const SPINNER_FRAMES = ['◐', '◓', '◑', '◒'];
+  const SPINNER_FRAMES = ["◐", "◓", "◑", "◒"];
   const spinnerFrame = ref(0);
   let spinnerTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -35,18 +38,25 @@ export function usePageTitle({ running, showAuthGate }: UsePageTitleOptions): vo
     spinnerFrame.value = 0;
   }
 
-  watch(running, (isRunning) => {
-    if (isRunning) startSpinner();
-    else stopSpinner();
-  }, { immediate: true });
+  watch(
+    running,
+    (isRunning) => {
+      if (isRunning) startSpinner();
+      else stopSpinner();
+    },
+    { immediate: true },
+  );
 
   const pageTitle = computed<string>(() => {
-    const prefix = running.value ? `${SPINNER_FRAMES[spinnerFrame.value]} ` : '';
-    if (showAuthGate.value) return `${prefix}${t('app.authPageTitle')} - Kimi Code Web`;
+    const prefix = running.value
+      ? `${SPINNER_FRAMES[spinnerFrame.value]} `
+      : "";
+    if (showAuthGate.value)
+      return `${prefix}${t("app.authPageTitle")} - Kimi Code Web`;
     return `${prefix}Kimi Code Web`;
   });
   watchEffect(() => {
-    if (typeof document !== 'undefined') document.title = pageTitle.value;
+    if (typeof document !== "undefined") document.title = pageTitle.value;
   });
 
   onUnmounted(() => {

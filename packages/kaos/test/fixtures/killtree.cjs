@@ -9,7 +9,7 @@
 // inline multi-line `node -e` with backslash paths gets mangled by Node's
 // Windows arg-quoting and by JS string escapes (`\f` etc.).
 
-const { spawn } = require('node:child_process');
+const { spawn } = require("node:child_process");
 
 const pidPath = process.argv[2];
 if (!pidPath) {
@@ -23,9 +23,9 @@ const childCode = [
   "const { spawn } = require('node:child_process');",
   "const { writeFileSync } = require('node:fs');",
   "const g = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 60000)']);",
-  'writeFileSync(process.argv[1], String(g.pid));',
-  'setInterval(() => {}, 1000);',
-].join(' ');
+  "writeFileSync(process.argv[1], String(g.pid));",
+  "setInterval(() => {}, 1000);",
+].join(" ");
 
-spawn(process.execPath, ['-e', childCode, pidPath], { stdio: 'inherit' });
+spawn(process.execPath, ["-e", childCode, pidPath], { stdio: "inherit" });
 setInterval(() => {}, 1000);

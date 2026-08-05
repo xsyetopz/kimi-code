@@ -1,14 +1,14 @@
-import { z } from 'zod';
+import { z } from "zod";
 
-import { isoDateTimeSchema } from '@moonshot-ai/agent-core-v2/_base/utils/isoDateTime';
+import { isoDateTimeSchema } from "@moonshot-ai/agent-core-v2/_base/utils/isoDateTime";
 import {
   permissionRuleSchema,
   sessionAgentConfigPartialSchema,
   sessionAgentConfigSchema,
   sessionMetadataSchema,
-} from '@moonshot-ai/agent-core-v2/app/sessionLegacy/sessionProtocol';
+} from "@moonshot-ai/agent-core-v2/app/sessionLegacy/sessionProtocol";
 
-import { workspaceIdSchema } from './workspace';
+import { workspaceIdSchema } from "./workspace";
 
 export const sessionUsageSchema = z.object({
   input_tokens: z.number().int().nonnegative(),
@@ -36,8 +36,14 @@ export function emptySessionUsage(): SessionUsage {
   };
 }
 
-export const sessionPendingInteractionSchema = z.enum(['none', 'approval', 'question']);
-export type SessionPendingInteraction = z.infer<typeof sessionPendingInteractionSchema>;
+export const sessionPendingInteractionSchema = z.enum([
+  "none",
+  "approval",
+  "question",
+]);
+export type SessionPendingInteraction = z.infer<
+  typeof sessionPendingInteractionSchema
+>;
 
 export const sessionSchema = z.object({
   id: z.string().min(1),
@@ -52,7 +58,7 @@ export const sessionSchema = z.object({
   /** Highest-priority pending human interaction. */
   pending_interaction: sessionPendingInteractionSchema.optional(),
   /** Outcome of the main agent's most recent turn. */
-  last_turn_reason: z.enum(['completed', 'cancelled', 'failed']).optional(),
+  last_turn_reason: z.enum(["completed", "cancelled", "failed"]).optional(),
   archived: z.boolean().optional(),
   current_prompt_id: z.string().min(1).optional(),
   /** Text of the most recent user prompt, for search/preview. Absent for empty sessions. */

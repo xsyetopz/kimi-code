@@ -1,6 +1,6 @@
-import { z } from 'zod';
+import { z } from "zod";
 
-import { ErrorCode } from './error-codes';
+import { ErrorCode } from "./error-codes";
 
 export const cursorQuerySchema = z
   .object({
@@ -11,9 +11,9 @@ export const cursorQuerySchema = z
   .superRefine((value, ctx) => {
     if (value.before_id !== undefined && value.after_id !== undefined) {
       ctx.addIssue({
-        code: 'custom',
-        message: 'before_id and after_id are mutually exclusive',
-        path: ['before_id'],
+        code: "custom",
+        message: "before_id and after_id are mutually exclusive",
+        path: ["before_id"],
         params: { code: ErrorCode.VALIDATION_FAILED },
       });
     }

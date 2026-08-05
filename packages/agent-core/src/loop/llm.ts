@@ -15,7 +15,7 @@ import type {
   TokenUsage,
   Tool,
   ToolCall,
-} from '@moonshot-ai/kosong';
+} from "@moonshot-ai/kosong";
 
 export interface ToolCallDelta {
   readonly toolCallId: string;
@@ -32,12 +32,12 @@ export interface LLMRequestLogFields {
   readonly turnStep?: string;
   readonly attempt?: string;
   /** Request purpose; absent means a regular loop step. */
-  readonly kind?: 'loop' | 'compaction';
+  readonly kind?: "loop" | "compaction";
   /** Set when the messages are a fallback resend projection: the strict
    * wire-compliant rebuild, the media-degraded rebuild after a
    * request-too-large rejection, or the media-stripped rebuild after an
    * image-format rejection / a second request-too-large rejection. */
-  readonly projection?: 'strict' | 'media-degraded' | 'media-stripped';
+  readonly projection?: "strict" | "media-degraded" | "media-stripped";
   /** Compaction only: messages dropped so far by overflow/empty shrinking. */
   readonly droppedCount?: number;
 }

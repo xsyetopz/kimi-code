@@ -7,7 +7,10 @@
  * on-disk state, while the export manifest stays a JSON data contract.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
 
 export interface ShellEnvironment {
   readonly term?: string | undefined;
@@ -71,4 +74,4 @@ export interface ISessionExportService {
 }
 
 export const ISessionExportService: ServiceIdentifier<ISessionExportService> =
-  createDecorator<ISessionExportService>('sessionExportService');
+  createDecorator<ISessionExportService>("sessionExportService");

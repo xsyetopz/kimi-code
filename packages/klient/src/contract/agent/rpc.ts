@@ -10,30 +10,30 @@
  * Task wire shapes mirror the `TaskInfo` union in `protocol/src/events.ts`.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { maybe, noResult } from '../helpers.js';
-import type { ServiceContract } from '../types.js';
+import { maybe, noResult } from "../helpers.js";
+import type { ServiceContract } from "../types.js";
 
 // ── prompt parts ────────────────────────────────────────────────────────────
 
 const textPartSchema = z.object({
-  type: z.literal('text'),
+  type: z.literal("text"),
   text: z.string(),
 });
 
 const imageUrlPartSchema = z.object({
-  type: z.literal('image_url'),
+  type: z.literal("image_url"),
   imageUrl: z.object({ url: z.string(), id: z.string().optional() }),
 });
 
 const videoUrlPartSchema = z.object({
-  type: z.literal('video_url'),
+  type: z.literal("video_url"),
   videoUrl: z.object({ url: z.string(), id: z.string().optional() }),
 });
 
 /** `PromptPart = Extract<ContentPart, { type: 'text' | 'image_url' | 'video_url' }>`. */
-export const promptPartSchema = z.discriminatedUnion('type', [
+export const promptPartSchema = z.discriminatedUnion("type", [
   textPartSchema,
   imageUrlPartSchema,
   videoUrlPartSchema,
@@ -94,7 +94,7 @@ export const setModelResultSchema = z.object({
   providerName: z.string().optional(),
 });
 
-export const permissionModeSchema = z.enum(['manual', 'yolo', 'auto']);
+export const permissionModeSchema = z.enum(["manual", "yolo", "auto"]);
 
 export const setPermissionPayloadSchema = z.object({
   mode: permissionModeSchema,
@@ -142,12 +142,12 @@ export const getTasksPayloadSchema = z.object({
 });
 
 const taskLifecycleStatusSchema = z.enum([
-  'running',
-  'completed',
-  'failed',
-  'timed_out',
-  'killed',
-  'lost',
+  "running",
+  "completed",
+  "failed",
+  "timed_out",
+  "killed",
+  "lost",
 ]);
 
 const taskInfoBaseFields = {
@@ -163,22 +163,22 @@ const taskInfoBaseFields = {
 } as const;
 
 /** Protocol `TaskInfo` union (`protocol/src/events.ts`). */
-export const agentTaskInfoSchema = z.discriminatedUnion('kind', [
+export const agentTaskInfoSchema = z.discriminatedUnion("kind", [
   z.object({
-    kind: z.literal('process'),
+    kind: z.literal("process"),
     command: z.string(),
     pid: z.number(),
     exitCode: z.union([z.number(), z.null()]),
     ...taskInfoBaseFields,
   }),
   z.object({
-    kind: z.literal('agent'),
+    kind: z.literal("agent"),
     agentId: z.string().optional(),
     subagentType: z.string().optional(),
     ...taskInfoBaseFields,
   }),
   z.object({
-    kind: z.literal('question'),
+    kind: z.literal("question"),
     questionCount: z.number(),
     toolCallId: z.string().optional(),
     ...taskInfoBaseFields,
@@ -198,13 +198,25 @@ export const getTaskOutputPayloadSchema = z.object({
 // ── contract ────────────────────────────────────────────────────────────────
 
 export const agentRpcContract = {
-  prompt: { input: z.tuple([promptPayloadSchema]), output: maybe(promptLaunchResultSchema) },
-  steer: { input: z.tuple([steerPayloadSchema]), output: maybe(promptLaunchResultSchema) },
+  prompt: {
+    input: z.tuple([promptPayloadSchema]),
+    output: maybe(promptLaunchResultSchema),
+  },
+  steer: {
+    input: z.tuple([steerPayloadSchema]),
+    output: maybe(promptLaunchResultSchema),
+  },
   activateSkill: {
     input: z.tuple([activateSkillPayloadSchema]),
     output: maybe(promptLaunchResultSchema),
   },
   cancel: { input: z.tuple([cancelPayloadSchema]), output: noResult },
-  setPermission: { input: z.tuple([setPermissionPayloadSchema]), output: noResult },
-  getContext: { input: z.tuple([emptyPayloadSchema]), output: agentContextDataSchema },
+  setPermission: {
+    input: z.tuple([setPermissionPayloadSchema]),
+    output: noResult,
+  },
+  getContext: {
+    input: z.tuple([emptyPayloadSchema]),
+    output: agentContextDataSchema,
+  },
 } satisfies ServiceContract;

@@ -9,12 +9,15 @@
  * document is materialized when the session is created.
  */
 
-import type { Event } from '#/_base/event';
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
+import type { Event } from "#/_base/event";
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
 
 export interface AgentMeta {
   readonly homedir?: string;
-  readonly type?: 'main' | 'sub' | 'independent';
+  readonly type?: "main" | "sub" | "independent";
   readonly parentAgentId?: string | null;
   readonly forkedFrom?: string;
   readonly labels?: Readonly<Record<string, string>>;
@@ -38,7 +41,7 @@ export interface SessionMeta {
   readonly custom?: Record<string, unknown>;
 }
 
-export type SessionMetaPatch = Partial<Omit<SessionMeta, 'id' | 'createdAt'>>;
+export type SessionMetaPatch = Partial<Omit<SessionMeta, "id" | "createdAt">>;
 
 export interface SessionMetadataChangedEvent {
   readonly changed: readonly (keyof SessionMeta)[];
@@ -57,4 +60,4 @@ export interface ISessionMetadata {
 }
 
 export const ISessionMetadata: ServiceIdentifier<ISessionMetadata> =
-  createDecorator<ISessionMetadata>('sessionMetadata');
+  createDecorator<ISessionMetadata>("sessionMetadata");

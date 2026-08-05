@@ -1,10 +1,13 @@
-import { existsSync, readFileSync } from 'node:fs';
-import { mkdir, open } from 'node:fs/promises';
-import { dirname } from 'pathe';
+import { existsSync, readFileSync } from "node:fs";
+import { mkdir, open } from "node:fs/promises";
+import { dirname } from "pathe";
 
-import { ErrorCodes, KimiError } from '#/errors';
-import { applyEnvModelConfig, stripEnvModelConfig } from './env-model';
-import { applySecondaryModelConfig, stripSecondaryModelConfig } from './secondary-model';
+import { ErrorCodes, KimiError } from "#/errors";
+import { applyEnvModelConfig, stripEnvModelConfig } from "./env-model";
+import {
+  applySecondaryModelConfig,
+  stripSecondaryModelConfig,
+} from "./secondary-model";
 import {
   KimiConfigSchema,
   formatConfigValidationError,
@@ -26,9 +29,13 @@ import {
   type SubagentConfig,
   type ThinkingConfig,
   validateConfig,
-} from '#/config/schema';
-import { atomicWrite } from '#/utils/fs';
-import { parse as parseToml, stringify as stringifyToml, TomlError } from 'smol-toml';
+} from "#/config/schema";
+import { atomicWrite } from "#/utils/fs";
+import {
+  parse as parseToml,
+  stringify as stringifyToml,
+  TomlError,
+} from "smol-toml";
 
 /* ------------------------------------------------------------------ */
 /*  Key helpers – reuse generic snake / camel conversion instead of    */
@@ -57,8 +64,8 @@ export async function ensureConfigFile(filePath: string): Promise<void> {
   await mkdir(dirname(filePath), { recursive: true, mode: 0o700 });
   let handle: Awaited<ReturnType<typeof open>> | undefined;
   try {
-    handle = await open(filePath, 'wx', 0o600);
-    await handle.writeFile(DEFAULT_CONFIG_FILE_TEXT, 'utf-8');
+    handle = await open(filePath, "wx", 0o600);
+    await handle.writeFile(DEFAULT_CONFIG_FILE_TEXT, "utf-8");
   } catch (error) {
     if (isFileExistsError(error)) return;
     throw error;
@@ -71,7 +78,7 @@ export function readConfigFile(filePath: string): KimiConfig {
   if (!existsSync(filePath)) {
     return getDefaultConfig();
   }
-  const text = readFileSync(filePath, 'utf-8');
+  const text = readFileSync(filePath, "utf-8");
   return parseConfigString(text, filePath);
 }
 
@@ -85,7 +92,10 @@ export function readConfigFileForUpdate(filePath: string): KimiConfig {
   try {
     return readConfigFile(filePath);
   } catch (error) {
-    if (error instanceof KimiError && error.code === ErrorCodes.CONFIG_INVALID) {
+    if (
+      error instanceof KimiError &&
+      error.code === ErrorCodes.CONFIG_INVALID
+    ) {
       throw new KimiError(
         ErrorCodes.CONFIG_INVALID,
         `Cannot change settings while ${filePath} is invalid — fix it first (run \`kimi doctor\` for details).`,
@@ -106,7 +116,10 @@ export function loadRuntimeConfig(
   filePath: string,
   env: Readonly<Record<string, string | undefined>> = process.env,
 ): KimiConfig {
-  return applySecondaryModelConfig(applyEnvModelConfig(readConfigFile(filePath), env), env);
+  return applySecondaryModelConfig(
+    applyEnvModelConfig(readConfigFile(filePath), env),
+    env,
+  );
 }
 
 export interface RuntimeConfigLoadResult {
@@ -144,14 +157,16 @@ export function loadRuntimeConfigSafe(
 
   let text: string | undefined;
   try {
-    text = existsSync(filePath) ? readFileSync(filePath, 'utf-8') : undefined;
+    text = existsSync(filePath) ? readFileSync(filePath, "utf-8") : undefined;
   } catch (error) {
     fileError = new KimiError(
       ErrorCodes.CONFIG_INVALID,
       `Failed to read ${filePath}: ${describeUnknownError(error)}`,
       { cause: error },
     );
-    fileWarnings.push(`Failed to read ${filePath}: ${describeUnknownError(error)}.`);
+    fileWarnings.push(
+      `Failed to read ${filePath}: ${describeUnknownError(error)}.`,
+    );
   }
 
   if (text !== undefined && text.trim().length > 0) {
@@ -166,12 +181,14 @@ export function loadRuntimeConfigSafe(
         `Invalid TOML in ${filePath}: ${describeUnknownError(error)}`,
         { cause: error },
       );
-      fileWarnings.push(`Invalid TOML in ${filePath}: ${describeTomlSyntaxError(error)}.`);
+      fileWarnings.push(
+        `Invalid TOML in ${filePath}: ${describeTomlSyntaxError(error)}.`,
+      );
     }
     if (data !== undefined) {
       const raw = cloneRecord(data);
       const transformed = transformTomlData(data);
-      transformed['raw'] = raw;
+      transformed["raw"] = raw;
       const salvaged = salvageConfigData(transformed);
       if (salvaged.config === undefined) {
         fileError = new KimiError(
@@ -186,7 +203,7 @@ export function loadRuntimeConfigSafe(
         config = salvaged.config;
         if (salvaged.dropped.length > 0) {
           fileWarnings.push(
-            `Ignored invalid config in ${filePath}: ${salvaged.dropped.join(', ')}. Run \`kimi doctor\` for details.`,
+            `Ignored invalid config in ${filePath}: ${salvaged.dropped.join(", ")}. Run \`kimi doctor\` for details.`,
           );
         }
       }
@@ -208,7 +225,7 @@ export function loadRuntimeConfigSafe(
 }
 
 /** Sections keyed by user-chosen names where single entries can be dropped. */
-const ENTRY_KEYED_SECTIONS = new Set(['providers', 'models']);
+const ENTRY_KEYED_SECTIONS = new Set(["providers", "models"]);
 
 interface SalvageResult {
   readonly config: KimiConfig | undefined;
@@ -216,7 +233,9 @@ interface SalvageResult {
   readonly error?: unknown;
 }
 
-function salvageConfigData(transformed: Record<string, unknown>): SalvageResult {
+function salvageConfigData(
+  transformed: Record<string, unknown>,
+): SalvageResult {
   const dropped: string[] = [];
   for (;;) {
     const result = KimiConfigSchema.safeParse(transformed);
@@ -226,11 +245,11 @@ function salvageConfigData(transformed: Record<string, unknown>): SalvageResult 
     let deletedAny = false;
     for (const issue of result.error.issues) {
       const [section, entry] = issue.path;
-      if (typeof section !== 'string' || !(section in transformed)) continue;
+      if (typeof section !== "string" || !(section in transformed)) continue;
       const sectionValue = transformed[section];
       if (
         ENTRY_KEYED_SECTIONS.has(section) &&
-        typeof entry === 'string' &&
+        typeof entry === "string" &&
         isPlainObject(sectionValue)
       ) {
         // Issues on entry-keyed sections only ever drop that entry. An entry
@@ -262,14 +281,17 @@ function describeUnknownError(error: unknown): string {
  * line/column location, without the multi-line code-frame block.
  */
 function describeTomlSyntaxError(error: unknown): string {
-  const firstLine = describeUnknownError(error).split('\n', 1)[0] ?? '';
+  const firstLine = describeUnknownError(error).split("\n", 1)[0] ?? "";
   if (error instanceof TomlError) {
     return `${firstLine} (line ${error.line}, column ${error.column})`;
   }
   return firstLine;
 }
 
-export function parseConfigString(tomlText: string, filePath = 'config.toml'): KimiConfig {
+export function parseConfigString(
+  tomlText: string,
+  filePath = "config.toml",
+): KimiConfig {
   if (tomlText.trim().length === 0) {
     return getDefaultConfig();
   }
@@ -278,56 +300,73 @@ export function parseConfigString(tomlText: string, filePath = 'config.toml'): K
   try {
     data = parseToml(tomlText) as Record<string, unknown>;
   } catch (error) {
-    throw new KimiError(ErrorCodes.CONFIG_INVALID, `Invalid TOML in ${filePath}: ${error instanceof Error ? error.message : String(error)}`, {
-      cause: error,
-    });
+    throw new KimiError(
+      ErrorCodes.CONFIG_INVALID,
+      `Invalid TOML in ${filePath}: ${error instanceof Error ? error.message : String(error)}`,
+      {
+        cause: error,
+      },
+    );
   }
 
   return parseConfigData(data, filePath);
 }
 
-function parseConfigData(data: Record<string, unknown>, filePath: string): KimiConfig {
+function parseConfigData(
+  data: Record<string, unknown>,
+  filePath: string,
+): KimiConfig {
   const raw = cloneRecord(data);
   const transformed = transformTomlData(data);
-  transformed['raw'] = raw;
+  transformed["raw"] = raw;
 
   try {
     return KimiConfigSchema.parse(transformed);
   } catch (error) {
-    throw new KimiError(ErrorCodes.CONFIG_INVALID, `Invalid configuration in ${filePath}: ${formatConfigValidationError(error)}`, {
-      cause: error,
-    });
+    throw new KimiError(
+      ErrorCodes.CONFIG_INVALID,
+      `Invalid configuration in ${filePath}: ${formatConfigValidationError(error)}`,
+      {
+        cause: error,
+      },
+    );
   }
 }
 
-export function transformTomlData(data: Record<string, unknown>): Record<string, unknown> {
+export function transformTomlData(
+  data: Record<string, unknown>,
+): Record<string, unknown> {
   const result: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(data)) {
     const targetKey = snakeToCamel(key);
 
-    if (targetKey === 'providers' && isPlainObject(value)) {
+    if (targetKey === "providers" && isPlainObject(value)) {
       result[targetKey] = transformRecord(value, transformProviderData);
-    } else if (targetKey === 'models' && isPlainObject(value)) {
+    } else if (targetKey === "models" && isPlainObject(value)) {
       result[targetKey] = transformRecord(value, transformModelData);
-    } else if (targetKey === 'thinking' && isPlainObject(value)) {
+    } else if (targetKey === "thinking" && isPlainObject(value)) {
       result[targetKey] = transformPlainObject(value);
-    } else if (targetKey === 'permission' && isPlainObject(value)) {
+    } else if (targetKey === "permission" && isPlainObject(value)) {
       result[targetKey] = transformPermissionData(value);
-    } else if (targetKey === 'services' && isPlainObject(value)) {
-      result[targetKey] = transformRecord(value, transformServiceData, snakeToCamel);
-    } else if (targetKey === 'loopControl' && isPlainObject(value)) {
+    } else if (targetKey === "services" && isPlainObject(value)) {
+      result[targetKey] = transformRecord(
+        value,
+        transformServiceData,
+        snakeToCamel,
+      );
+    } else if (targetKey === "loopControl" && isPlainObject(value)) {
       result[targetKey] = transformLoopControlData(value);
-    } else if (targetKey === 'background' && isPlainObject(value)) {
+    } else if (targetKey === "background" && isPlainObject(value)) {
       result[targetKey] = transformPlainObject(value);
-    } else if (targetKey === 'image' && isPlainObject(value)) {
+    } else if (targetKey === "image" && isPlainObject(value)) {
       result[targetKey] = transformPlainObject(value);
-    } else if (targetKey === 'experimental' && isPlainObject(value)) {
+    } else if (targetKey === "experimental" && isPlainObject(value)) {
       result[targetKey] = cloneRecord(value);
-    } else if (targetKey === 'subagent' && isPlainObject(value)) {
+    } else if (targetKey === "subagent" && isPlainObject(value)) {
       result[targetKey] = transformPlainObject(value);
-    } else if (targetKey === 'secondaryModel' && isPlainObject(value)) {
+    } else if (targetKey === "secondaryModel" && isPlainObject(value)) {
       result[targetKey] = transformPlainObject(value);
-    } else if (targetKey === 'mcp' && isPlainObject(value)) {
+    } else if (targetKey === "mcp" && isPlainObject(value)) {
       result[targetKey] = transformPlainObject(value);
     } else if (!isPlainObject(value)) {
       result[targetKey] = value;
@@ -350,7 +389,9 @@ function transformRecord(
   return record;
 }
 
-function transformPlainObject(data: Record<string, unknown>): Record<string, unknown> {
+function transformPlainObject(
+  data: Record<string, unknown>,
+): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(data)) {
     out[snakeToCamel(key)] = value;
@@ -358,13 +399,17 @@ function transformPlainObject(data: Record<string, unknown>): Record<string, unk
   return out;
 }
 
-function transformProviderData(data: Record<string, unknown>): Record<string, unknown> {
+function transformProviderData(
+  data: Record<string, unknown>,
+): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(data)) {
     const targetKey = snakeToCamel(key);
-    if (targetKey === 'oauth') {
-      out[targetKey] = isPlainObject(value) ? transformPlainObject(value) : value;
-    } else if (targetKey === 'env' || targetKey === 'customHeaders') {
+    if (targetKey === "oauth") {
+      out[targetKey] = isPlainObject(value)
+        ? transformPlainObject(value)
+        : value;
+    } else if (targetKey === "env" || targetKey === "customHeaders") {
       out[targetKey] = cloneObjectValue(value);
     } else {
       out[targetKey] = value;
@@ -373,25 +418,29 @@ function transformProviderData(data: Record<string, unknown>): Record<string, un
   return out;
 }
 
-function transformModelData(data: Record<string, unknown>): Record<string, unknown> {
+function transformModelData(
+  data: Record<string, unknown>,
+): Record<string, unknown> {
   const out = transformPlainObject(data);
-  if (isPlainObject(out['overrides'])) {
-    out['overrides'] = transformPlainObject(out['overrides']);
+  if (isPlainObject(out["overrides"])) {
+    out["overrides"] = transformPlainObject(out["overrides"]);
   }
   return out;
 }
 
-function transformPermissionData(data: Record<string, unknown>): Record<string, unknown> {
+function transformPermissionData(
+  data: Record<string, unknown>,
+): Record<string, unknown> {
   const raw = transformPlainObject(data);
   const out: Record<string, unknown> = {};
 
   const rules: unknown[] = [];
-  appendPermissionRules(rules, raw['rules']);
-  appendPermissionRules(rules, raw['deny'], 'deny');
-  appendPermissionRules(rules, raw['allow'], 'allow');
-  appendPermissionRules(rules, raw['ask'], 'ask');
+  appendPermissionRules(rules, raw["rules"]);
+  appendPermissionRules(rules, raw["deny"], "deny");
+  appendPermissionRules(rules, raw["allow"], "allow");
+  appendPermissionRules(rules, raw["ask"], "ask");
   if (rules.length > 0) {
-    out['rules'] = rules;
+    out["rules"] = rules;
   }
   return out;
 }
@@ -399,7 +448,7 @@ function transformPermissionData(data: Record<string, unknown>): Record<string, 
 function appendPermissionRules(
   target: unknown[],
   value: unknown,
-  decision?: 'allow' | 'deny' | 'ask',
+  decision?: "allow" | "deny" | "ask",
 ): void {
   if (value === undefined) return;
   const entries = Array.isArray(value) ? value : [value];
@@ -408,40 +457,48 @@ function appendPermissionRules(
   }
 }
 
-function transformPermissionRule(value: unknown, decision?: 'allow' | 'deny' | 'ask'): unknown {
+function transformPermissionRule(
+  value: unknown,
+  decision?: "allow" | "deny" | "ask",
+): unknown {
   if (!isPlainObject(value)) return value;
 
   const rule = transformPlainObject(value);
-  const tool = rule['tool'];
-  const match = rule['match'];
-  const pattern = rule['pattern'];
+  const tool = rule["tool"];
+  const match = rule["match"];
+  const pattern = rule["pattern"];
   const out: Record<string, unknown> = {};
 
   if (decision !== undefined) {
-    out['decision'] = decision;
+    out["decision"] = decision;
   } else {
-    out['decision'] = rule['decision'];
+    out["decision"] = rule["decision"];
   }
-  out['scope'] = rule['scope'];
-  out['reason'] = rule['reason'];
+  out["scope"] = rule["scope"];
+  out["reason"] = rule["reason"];
 
-  if (typeof tool === 'string') {
-    const argPattern = typeof match === 'string' ? match : pattern;
-    out['pattern'] = typeof argPattern === 'string' ? `${tool}(${argPattern})` : tool;
+  if (typeof tool === "string") {
+    const argPattern = typeof match === "string" ? match : pattern;
+    out["pattern"] =
+      typeof argPattern === "string" ? `${tool}(${argPattern})` : tool;
   } else {
-    out['pattern'] = pattern;
+    out["pattern"] = pattern;
   }
 
   return out;
 }
 
-function transformServiceData(data: Record<string, unknown>): Record<string, unknown> {
+function transformServiceData(
+  data: Record<string, unknown>,
+): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(data)) {
     const targetKey = snakeToCamel(key);
-    if (targetKey === 'oauth') {
-      out[targetKey] = isPlainObject(value) ? transformPlainObject(value) : value;
-    } else if (targetKey === 'customHeaders') {
+    if (targetKey === "oauth") {
+      out[targetKey] = isPlainObject(value)
+        ? transformPlainObject(value)
+        : value;
+    } else if (targetKey === "customHeaders") {
       out[targetKey] = cloneObjectValue(value);
     } else {
       out[targetKey] = value;
@@ -450,12 +507,17 @@ function transformServiceData(data: Record<string, unknown>): Record<string, unk
   return out;
 }
 
-function transformLoopControlData(data: Record<string, unknown>): Record<string, unknown> {
+function transformLoopControlData(
+  data: Record<string, unknown>,
+): Record<string, unknown> {
   const out = transformPlainObject(data);
-  if (out['maxStepsPerTurn'] === undefined && out['maxStepsPerRun'] !== undefined) {
-    out['maxStepsPerTurn'] = out['maxStepsPerRun'];
+  if (
+    out["maxStepsPerTurn"] === undefined &&
+    out["maxStepsPerRun"] !== undefined
+  ) {
+    out["maxStepsPerTurn"] = out["maxStepsPerRun"];
   }
-  delete out['maxStepsPerRun'];
+  delete out["maxStepsPerRun"];
   return out;
 }
 
@@ -463,55 +525,68 @@ function transformLoopControlData(data: Record<string, unknown>): Record<string,
 /*  Write / stringify                                                  */
 /* ------------------------------------------------------------------ */
 
-export async function writeConfigFile(filePath: string, config: KimiConfig): Promise<void> {
+export async function writeConfigFile(
+  filePath: string,
+  config: KimiConfig,
+): Promise<void> {
   // Final guard: never persist the env-synthesized model/provider or the
   // secondary-model runtime view to disk, even if a caller passes back the
   // runtime config as a patch (see stripEnvModelConfig /
   // stripSecondaryModelConfig / the getConfig -> setConfig round-trip).
-  const validated = validateConfig(stripSecondaryModelConfig(stripEnvModelConfig(config)));
+  const validated = validateConfig(
+    stripSecondaryModelConfig(stripEnvModelConfig(config)),
+  );
   await mkdir(dirname(filePath), { recursive: true, mode: 0o700 });
-  await atomicWrite(filePath, `${stringifyToml(configToTomlData(validated))}\n`);
+  await atomicWrite(
+    filePath,
+    `${stringifyToml(configToTomlData(validated))}\n`,
+  );
 }
 
 export function configToTomlData(config: KimiConfig): Record<string, unknown> {
   const out = cloneRecord(config.raw);
 
   // Strip deprecated fields
-  delete out['default_yolo'];
-  delete out['defaultYolo'];
-  delete out['defaultPermissionMode'];
-  delete out['default_thinking'];
-  delete out['defaultThinking'];
+  delete out["default_yolo"];
+  delete out["defaultYolo"];
+  delete out["defaultPermissionMode"];
+  delete out["default_thinking"];
+  delete out["defaultThinking"];
 
   // Top-level scalar fields
   const scalarFields: (keyof KimiConfig)[] = [
-    'defaultProvider',
-    'defaultModel',
-    'planMode',
-    'yolo',
-    'defaultPermissionMode',
-    'defaultPlanMode',
-    'mergeAllAvailableSkills',
-    'extraSkillDirs',
-    'extraAgentDirs',
-    'telemetry',
+    "defaultProvider",
+    "defaultModel",
+    "planMode",
+    "yolo",
+    "defaultPermissionMode",
+    "defaultPlanMode",
+    "mergeAllAvailableSkills",
+    "extraSkillDirs",
+    "extraAgentDirs",
+    "telemetry",
   ];
   for (const key of scalarFields) {
     setDefined(out, camelToSnake(key), config[key]);
   }
 
-  setRecordSection(out, 'providers', config.providers, providerToToml);
-  setRecordSection(out, 'models', config.models, modelToToml);
-  setSection(out, 'thinking', config.thinking, thinkingToToml);
-  setSection(out, 'services', config.services, servicesToToml);
-  setSection(out, 'loop_control', config.loopControl, loopControlToToml);
-  setSection(out, 'background', config.background, backgroundToToml);
-  setSection(out, 'subagent', config.subagent, subagentToToml);
-  setSection(out, 'secondary_model', config.secondaryModel, secondaryModelToToml);
-  setSection(out, 'mcp', config.mcp, mcpToToml);
-  setSection(out, 'image', config.image, imageToToml);
-  setSection(out, 'experimental', config.experimental, experimentalToToml);
-  setSection(out, 'permission', config.permission, permissionToToml);
+  setRecordSection(out, "providers", config.providers, providerToToml);
+  setRecordSection(out, "models", config.models, modelToToml);
+  setSection(out, "thinking", config.thinking, thinkingToToml);
+  setSection(out, "services", config.services, servicesToToml);
+  setSection(out, "loop_control", config.loopControl, loopControlToToml);
+  setSection(out, "background", config.background, backgroundToToml);
+  setSection(out, "subagent", config.subagent, subagentToToml);
+  setSection(
+    out,
+    "secondary_model",
+    config.secondaryModel,
+    secondaryModelToToml,
+  );
+  setSection(out, "mcp", config.mcp, mcpToToml);
+  setSection(out, "image", config.image, imageToToml);
+  setSection(out, "experimental", config.experimental, experimentalToToml);
+  setSection(out, "permission", config.permission, permissionToToml);
   setHooks(out, config.hooks);
 
   return out;
@@ -560,12 +635,18 @@ function setSection<T>(
   }
 }
 
-function providerToToml(provider: ProviderConfig, rawProvider: unknown): Record<string, unknown> {
+function providerToToml(
+  provider: ProviderConfig,
+  rawProvider: unknown,
+): Record<string, unknown> {
   const out = cloneRecord(rawProvider);
   for (const [key, value] of Object.entries(provider)) {
-    if (key === 'oauth' && value !== undefined) {
+    if (key === "oauth" && value !== undefined) {
       out[camelToSnake(key)] = oauthToToml(value as OAuthRef);
-    } else if ((key === 'env' || key === 'customHeaders') && value !== undefined) {
+    } else if (
+      (key === "env" || key === "customHeaders") &&
+      value !== undefined
+    ) {
       out[camelToSnake(key)] = cloneUnknown(value);
     } else {
       setDefined(out, camelToSnake(key), value);
@@ -574,14 +655,19 @@ function providerToToml(provider: ProviderConfig, rawProvider: unknown): Record<
   return out;
 }
 
-function modelToToml(model: ModelAlias, rawModel: unknown): Record<string, unknown> {
+function modelToToml(
+  model: ModelAlias,
+  rawModel: unknown,
+): Record<string, unknown> {
   const out = cloneRecord(rawModel);
   for (const [key, value] of Object.entries(model)) {
-    if (key === 'capabilities' && Array.isArray(value)) {
+    if (key === "capabilities" && Array.isArray(value)) {
       out[camelToSnake(key)] = [...value];
-    } else if (key === 'overrides' && isPlainObject(value)) {
-      const rawOverrides = isPlainObject(rawModel) ? rawModel['overrides'] : undefined;
-      out['overrides'] = modelOverridesToToml(value, rawOverrides);
+    } else if (key === "overrides" && isPlainObject(value)) {
+      const rawOverrides = isPlainObject(rawModel)
+        ? rawModel["overrides"]
+        : undefined;
+      out["overrides"] = modelOverridesToToml(value, rawOverrides);
     } else {
       setDefined(out, camelToSnake(key), value);
     }
@@ -595,7 +681,7 @@ function modelOverridesToToml(
 ): Record<string, unknown> {
   const out = cloneRecord(rawOverrides);
   for (const [key, value] of Object.entries(overrides)) {
-    if (key === 'capabilities' && Array.isArray(value)) {
+    if (key === "capabilities" && Array.isArray(value)) {
       out[camelToSnake(key)] = [...value];
     } else {
       setDefined(out, camelToSnake(key), value);
@@ -604,9 +690,12 @@ function modelOverridesToToml(
   return out;
 }
 
-function thinkingToToml(thinking: ThinkingConfig, rawThinking: unknown): Record<string, unknown> {
+function thinkingToToml(
+  thinking: ThinkingConfig,
+  rawThinking: unknown,
+): Record<string, unknown> {
   const out = cloneRecord(rawThinking);
-  delete out['mode'];
+  delete out["mode"];
   for (const [key, value] of Object.entries(thinking)) {
     setDefined(out, camelToSnake(key), value);
   }
@@ -618,20 +707,20 @@ function permissionToToml(
   rawPermission: unknown,
 ): Record<string, unknown> {
   const out = cloneRecord(rawPermission);
-  delete out['deny'];
-  delete out['allow'];
-  delete out['ask'];
+  delete out["deny"];
+  delete out["allow"];
+  delete out["ask"];
 
   if (permission.rules !== undefined) {
-    out['rules'] = permission.rules.map(permissionRuleToToml);
+    out["rules"] = permission.rules.map(permissionRuleToToml);
   } else {
-    delete out['rules'];
+    delete out["rules"];
   }
   return out;
 }
 
 function permissionRuleToToml(
-  rule: NonNullable<PermissionConfig['rules']>[number],
+  rule: NonNullable<PermissionConfig["rules"]>[number],
 ): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(rule)) {
@@ -640,27 +729,32 @@ function permissionRuleToToml(
   return out;
 }
 
-function servicesToToml(services: ServicesConfig, rawServices: unknown): Record<string, unknown> {
+function servicesToToml(
+  services: ServicesConfig,
+  rawServices: unknown,
+): Record<string, unknown> {
   const out = cloneRecord(rawServices);
   if (services.moonshotSearch !== undefined) {
-    out['moonshot_search'] = serviceToToml(services.moonshotSearch);
+    out["moonshot_search"] = serviceToToml(services.moonshotSearch);
   } else {
-    delete out['moonshot_search'];
+    delete out["moonshot_search"];
   }
   if (services.moonshotFetch !== undefined) {
-    out['moonshot_fetch'] = serviceToToml(services.moonshotFetch);
+    out["moonshot_fetch"] = serviceToToml(services.moonshotFetch);
   } else {
-    delete out['moonshot_fetch'];
+    delete out["moonshot_fetch"];
   }
   return out;
 }
 
-function serviceToToml(service: MoonshotServiceConfig): Record<string, unknown> {
+function serviceToToml(
+  service: MoonshotServiceConfig,
+): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(service)) {
-    if (key === 'oauth' && value !== undefined) {
+    if (key === "oauth" && value !== undefined) {
       out[camelToSnake(key)] = oauthToToml(value as OAuthRef);
-    } else if (key === 'customHeaders' && value !== undefined) {
+    } else if (key === "customHeaders" && value !== undefined) {
       out[camelToSnake(key)] = cloneUnknown(value);
     } else {
       setDefined(out, camelToSnake(key), value);
@@ -691,7 +785,10 @@ function backgroundToToml(
   return out;
 }
 
-function subagentToToml(subagent: SubagentConfig, rawSubagent: unknown): Record<string, unknown> {
+function subagentToToml(
+  subagent: SubagentConfig,
+  rawSubagent: unknown,
+): Record<string, unknown> {
   const out = cloneRecord(rawSubagent);
   for (const [key, value] of Object.entries(subagent)) {
     setDefined(out, camelToSnake(key), value);
@@ -705,7 +802,7 @@ function secondaryModelToToml(
 ): Record<string, unknown> {
   const out = cloneRecord(rawSecondaryModel);
   for (const [key, value] of Object.entries(secondaryModel)) {
-    if (key === 'capabilities' && Array.isArray(value)) {
+    if (key === "capabilities" && Array.isArray(value)) {
       out[camelToSnake(key)] = [...value];
     } else {
       setDefined(out, camelToSnake(key), value);
@@ -722,7 +819,10 @@ function mcpToToml(mcp: McpConfig, rawMcp: unknown): Record<string, unknown> {
   return out;
 }
 
-function imageToToml(image: ImageConfig, rawImage: unknown): Record<string, unknown> {
+function imageToToml(
+  image: ImageConfig,
+  rawImage: unknown,
+): Record<string, unknown> {
   const out = cloneRecord(rawImage);
   for (const [key, value] of Object.entries(image)) {
     setDefined(out, camelToSnake(key), value);
@@ -741,12 +841,15 @@ function experimentalToToml(
   return out;
 }
 
-function setHooks(out: Record<string, unknown>, hooks: readonly HookDefConfig[] | undefined): void {
+function setHooks(
+  out: Record<string, unknown>,
+  hooks: readonly HookDefConfig[] | undefined,
+): void {
   if (hooks === undefined) {
-    delete out['hooks'];
+    delete out["hooks"];
     return;
   }
-  out['hooks'] = hooks.map(hookToToml);
+  out["hooks"] = hooks.map(hookToToml);
 }
 
 function hookToToml(hook: HookDefConfig): Record<string, unknown> {
@@ -770,7 +873,7 @@ function oauthToToml(oauth: OAuthRef): Record<string, unknown> {
 /* ------------------------------------------------------------------ */
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function cloneRecord(value: unknown): Record<string, unknown> {
@@ -786,7 +889,11 @@ function cloneObjectValue(value: unknown): unknown {
   return isPlainObject(value) ? cloneUnknown(value) : value;
 }
 
-function setDefined(target: Record<string, unknown>, key: string, value: unknown): void {
+function setDefined(
+  target: Record<string, unknown>,
+  key: string,
+  value: unknown,
+): void {
   if (value !== undefined) {
     target[key] = value;
   } else {
@@ -796,8 +903,8 @@ function setDefined(target: Record<string, unknown>, key: string, value: unknown
 
 function isFileExistsError(error: unknown): boolean {
   return (
-    typeof error === 'object' &&
+    typeof error === "object" &&
     error !== null &&
-    (error as { code?: unknown }).code === 'EEXIST'
+    (error as { code?: unknown }).code === "EEXIST"
   );
 }

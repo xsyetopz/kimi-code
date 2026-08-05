@@ -1,17 +1,24 @@
-import { createHash } from 'node:crypto';
-import { existsSync, realpathSync } from 'node:fs';
-import { readdir, readFile } from 'node:fs/promises';
-import { createRequire } from 'node:module';
-import { dirname, extname, isAbsolute, join, relative, resolve } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { createHash } from "node:crypto";
+import { existsSync, realpathSync } from "node:fs";
+import { readdir, readFile } from "node:fs/promises";
+import { createRequire } from "node:module";
+import {
+  dirname,
+  extname,
+  isAbsolute,
+  join,
+  relative,
+  resolve,
+} from "node:path";
+import { pathToFileURL } from "node:url";
 
 import {
   MINIDB_TEXT_BUILD_WORKER_ASSET,
   NATIVE_ASSET_MANIFEST_VERSION,
   buildManifestKey,
   buildRuntimeAssetKey,
-} from './manifest.mjs';
-import { resolveTargetDeps, SUPPORTED_TARGETS } from './native-deps.mjs';
+} from "./manifest.mjs";
+import { resolveTargetDeps, SUPPORTED_TARGETS } from "./native-deps.mjs";
 
 export { NATIVE_ASSET_MANIFEST_VERSION };
 
@@ -21,29 +28,31 @@ export const NATIVE_TARGETS = Object.freeze(
   Object.fromEntries(
     SUPPORTED_TARGETS.map((t) => {
       const deps = resolveTargetDeps(t);
-      const clipboardTarget = deps.find((d) => d.id === 'clipboard-target')?.resolvedName;
+      const clipboardTarget = deps.find(
+        (d) => d.id === "clipboard-target",
+      )?.resolvedName;
       return [t, { clipboardPackage: clipboardTarget }];
     }),
   ),
 );
 
-const jsExtensions = ['.js', '.cjs', '.mjs', '.json', '.node'];
-const runtimeEntryNames = ['index.js', 'index.cjs', 'index.mjs'];
+const jsExtensions = [".js", ".cjs", ".mjs", ".json", ".node"];
+const runtimeEntryNames = ["index.js", "index.cjs", "index.mjs"];
 
 function fail(message) {
   throw new Error(message);
 }
 
 function toPosixPath(path) {
-  return path.split('\\').join('/');
+  return path.split("\\").join("/");
 }
 
 function sha256(bytes) {
-  return createHash('sha256').update(bytes).digest('hex');
+  return createHash("sha256").update(bytes).digest("hex");
 }
 
 async function readJson(path) {
-  return JSON.parse(await readFile(path, 'utf-8'));
+  return JSON.parse(await readFile(path, "utf-8"));
 }
 
 async function listFiles(root) {
@@ -67,7 +76,13 @@ async function listFiles(root) {
   return files;
 }
 
-function resolvePackageRootGeneric(requireFromApp, packageName, parentPackageName, appRoot, target) {
+function resolvePackageRootGeneric(
+  requireFromApp,
+  packageName,
+  parentPackageName,
+  appRoot,
+  target,
+) {
   try {
     return dirname(requireFromApp.resolve(`${packageName}/package.json`));
   } catch (rootError) {
@@ -76,20 +91,24 @@ function resolvePackageRootGeneric(requireFromApp, packageName, parentPackageNam
         const parentPackageJsonPath = realpathSync(
           requireFromApp.resolve(`${parentPackageName}/package.json`),
         );
-        const requireFromParent = createRequire(pathToFileURL(parentPackageJsonPath));
-        return dirname(requireFromParent.resolve(`${packageName}/package.json`));
+        const requireFromParent = createRequire(
+          pathToFileURL(parentPackageJsonPath),
+        );
+        return dirname(
+          requireFromParent.resolve(`${packageName}/package.json`),
+        );
       } catch {}
     }
     fail(
       [
         `Native asset package is not installed for target ${target}: ${packageName}`,
-        parentPackageName ? `Searched via parent: ${parentPackageName}` : '',
+        parentPackageName ? `Searched via parent: ${parentPackageName}` : "",
         `Resolve root: ${appRoot}`,
-        'Run pnpm install --frozen-lockfile before building native assets.',
+        "Run pnpm install --frozen-lockfile before building native assets.",
         rootError instanceof Error ? rootError.message : String(rootError),
       ]
         .filter(Boolean)
-        .join('\n'),
+        .join("\n"),
     );
   }
 }
@@ -109,11 +128,11 @@ function resolveFileCandidate(path) {
 
 function resolvePackageEntry(packageRoot, packageJson) {
   const rawMain =
-    typeof packageJson.main === 'string'
+    typeof packageJson.main === "string"
       ? packageJson.main
-      : typeof packageJson.module === 'string'
+      : typeof packageJson.module === "string"
         ? packageJson.module
-        : 'index.js';
+        : "index.js";
   return resolveFileCandidate(resolve(packageRoot, rawMain));
 }
 
@@ -122,7 +141,9 @@ function relativeRuntimeSpecifiers(text) {
   for (const match of text.matchAll(/\brequire\(\s*["'](\.[^"']+)["']\s*\)/g)) {
     specifiers.add(match[1]);
   }
-  for (const match of text.matchAll(/(?<![.\w])import\(\s*["'](\.[^"']+)["']\s*\)/g)) {
+  for (const match of text.matchAll(
+    /(?<![.\w])import\(\s*["'](\.[^"']+)["']\s*\)/g,
+  )) {
     specifiers.add(match[1]);
   }
   for (const match of text.matchAll(/\bfrom\s+["'](\.[^"']+)["']/g)) {
@@ -133,22 +154,24 @@ function relativeRuntimeSpecifiers(text) {
 
 async function addRuntimeDependencyFiles(packageRoot, filePath, selected) {
   const extension = extname(filePath);
-  if (!['.js', '.cjs', '.mjs'].includes(extension)) return;
+  if (![".js", ".cjs", ".mjs"].includes(extension)) return;
 
   let text;
   try {
-    text = await readFile(filePath, 'utf-8');
+    text = await readFile(filePath, "utf-8");
   } catch {
     return;
   }
 
   for (const specifier of relativeRuntimeSpecifiers(text)) {
-    const candidate = resolveFileCandidate(resolve(dirname(filePath), specifier));
+    const candidate = resolveFileCandidate(
+      resolve(dirname(filePath), specifier),
+    );
     if (candidate === null) continue;
-    if (candidate.endsWith('.node')) continue;
+    if (candidate.endsWith(".node")) continue;
     const packageRelativePath = relative(packageRoot, candidate);
     if (
-      packageRelativePath.startsWith('..') ||
+      packageRelativePath.startsWith("..") ||
       isAbsolute(packageRelativePath) ||
       packageRelativePath.length === 0
     ) {
@@ -167,7 +190,7 @@ async function collectPackageFiles({
   includeEntryJs = true,
   nativeFileRelatives = [],
 }) {
-  const packageJsonPath = join(packageRoot, 'package.json');
+  const packageJsonPath = join(packageRoot, "package.json");
   const packageJson = await readJson(packageJsonPath);
   const selected = new Set([packageJsonPath]);
 
@@ -182,7 +205,9 @@ async function collectPackageFiles({
   for (const nativeFileRelative of nativeFileRelatives) {
     const nativeFile = resolve(packageRoot, nativeFileRelative);
     if (!existsSync(nativeFile)) {
-      fail(`Native package ${packageName} does not contain ${nativeFileRelative} at ${packageRoot}`);
+      fail(
+        `Native package ${packageName} does not contain ${nativeFileRelative} at ${packageRoot}`,
+      );
     }
     selected.add(nativeFile);
   }
@@ -190,20 +215,27 @@ async function collectPackageFiles({
   if (includeNativeFiles) {
     const files = await listFiles(packageRoot);
     for (const file of files) {
-      if (file.endsWith('.node')) {
+      if (file.endsWith(".node")) {
         selected.add(file);
       }
     }
   }
 
   const sorted = [...selected].sort((a, b) => a.localeCompare(b));
-  if (includeNativeFiles && !sorted.some((file) => file.endsWith('.node'))) {
-    fail(`Native package ${packageName} does not contain a .node file at ${packageRoot}`);
+  if (includeNativeFiles && !sorted.some((file) => file.endsWith(".node"))) {
+    fail(
+      `Native package ${packageName} does not contain a .node file at ${packageRoot}`,
+    );
   }
   return sorted;
 }
 
-async function packageManifestEntries({ packageName, packageRoot, files, target }) {
+async function packageManifestEntries({
+  packageName,
+  packageRoot,
+  files,
+  target,
+}) {
   const root = `node_modules/${packageName}`;
   const entries = [];
   const assets = {};
@@ -241,7 +273,9 @@ export function nativeAssetSummary(manifest) {
 }
 
 export async function collectNativeAssets({ appRoot, target }) {
-  const requireFromApp = createRequire(pathToFileURL(resolve(appRoot, 'package.json')));
+  const requireFromApp = createRequire(
+    pathToFileURL(resolve(appRoot, "package.json")),
+  );
   const targetDeps = resolveTargetDeps(target); // throws on unsupported target
 
   const manifestPackages = [];
@@ -258,8 +292,8 @@ export async function collectNativeAssets({ appRoot, target }) {
     const files = await collectPackageFiles({
       packageName: dep.resolvedName,
       packageRoot,
-      includeNativeFiles: dep.collect === 'native-files',
-      includeEntryJs: dep.collect !== 'native-file-only',
+      includeNativeFiles: dep.collect === "native-files",
+      includeEntryJs: dep.collect !== "native-file-only",
       nativeFileRelatives: dep.nativeFileRelatives,
     });
     const result = await packageManifestEntries({
@@ -272,9 +306,17 @@ export async function collectNativeAssets({ appRoot, target }) {
     Object.assign(assets, result.assets);
   }
 
-  const workerSource = resolve(appRoot, 'dist-native', 'intermediates', 'text-build-worker.mjs');
+  const workerSource = resolve(
+    appRoot,
+    "dist-native",
+    "intermediates",
+    "text-build-worker.mjs",
+  );
   const workerBytes = await readFile(workerSource);
-  const workerAssetKey = buildRuntimeAssetKey(target, MINIDB_TEXT_BUILD_WORKER_ASSET.key);
+  const workerAssetKey = buildRuntimeAssetKey(
+    target,
+    MINIDB_TEXT_BUILD_WORKER_ASSET.key,
+  );
   const runtimeFiles = [
     {
       key: MINIDB_TEXT_BUILD_WORKER_ASSET.key,

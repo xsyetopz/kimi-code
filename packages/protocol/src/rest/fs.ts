@@ -65,32 +65,32 @@
  *             41304 (path escapes cwd)
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
 import {
   fsEntrySchema,
   fsGitStatusSchema,
   fsGrepFileHitSchema,
   fsSearchHitSchema,
-} from '../fs';
+} from "../fs";
 
 export const fsListSortSchema = z.enum([
-  'type_first',
-  'name_asc',
-  'name_desc',
-  'mtime_desc',
-  'size_desc',
+  "type_first",
+  "name_asc",
+  "name_desc",
+  "mtime_desc",
+  "size_desc",
 ]);
 export type FsListSort = z.infer<typeof fsListSortSchema>;
 
 export const fsListRequestSchema = z.object({
-  path: z.string().default('.'),
+  path: z.string().default("."),
   depth: z.number().int().min(1).max(10).default(1),
   limit: z.number().int().min(1).max(1000).default(200),
   show_hidden: z.boolean().default(false),
   follow_gitignore: z.boolean().default(true),
   exclude_globs: z.array(z.string()).optional(),
-  sort: fsListSortSchema.default('type_first'),
+  sort: fsListSortSchema.default("type_first"),
   include_git_status: z.boolean().default(false),
 });
 export type FsListRequest = z.infer<typeof fsListRequestSchema>;
@@ -102,15 +102,15 @@ export const fsListResponseSchema = z.object({
 });
 export type FsListResponse = z.infer<typeof fsListResponseSchema>;
 
-export const fsReadEncodingRequestSchema = z.enum(['auto', 'utf-8', 'base64']);
-export const fsReadEncodingResponseSchema = z.enum(['utf-8', 'base64']);
+export const fsReadEncodingRequestSchema = z.enum(["auto", "utf-8", "base64"]);
+export const fsReadEncodingResponseSchema = z.enum(["utf-8", "base64"]);
 export type FsReadEncoding = z.infer<typeof fsReadEncodingResponseSchema>;
 
 export const fsReadRequestSchema = z.object({
   path: z.string().min(1),
   offset: z.number().int().nonnegative().default(0),
   length: z.number().int().min(1).max(10_485_760).default(1_048_576),
-  encoding: fsReadEncodingRequestSchema.default('auto'),
+  encoding: fsReadEncodingRequestSchema.default("auto"),
 });
 export type FsReadRequest = z.infer<typeof fsReadRequestSchema>;
 
@@ -159,11 +159,11 @@ export const fsMkdirResponseSchema = fsEntrySchema;
 export type FsMkdirResponse = z.infer<typeof fsMkdirResponseSchema>;
 
 export const fsOpenInAppIdSchema = z.enum([
-  'finder',
-  'cursor',
-  'vscode',
-  'iterm',
-  'terminal',
+  "finder",
+  "cursor",
+  "vscode",
+  "iterm",
+  "terminal",
 ]);
 export type FsOpenInAppId = z.infer<typeof fsOpenInAppIdSchema>;
 
@@ -186,7 +186,7 @@ export const fsListManyRequestSchema = z.object({
   show_hidden: z.boolean().default(false),
   follow_gitignore: z.boolean().default(true),
   exclude_globs: z.array(z.string()).optional(),
-  sort: fsListSortSchema.default('type_first'),
+  sort: fsListSortSchema.default("type_first"),
   include_git_status: z.boolean().default(false),
 });
 export type FsListManyRequest = z.infer<typeof fsListManyRequestSchema>;
@@ -195,7 +195,9 @@ export const fsListManyPartialErrorSchema = z.object({
   code: z.number().int(),
   msg: z.string(),
 });
-export type FsListManyPartialError = z.infer<typeof fsListManyPartialErrorSchema>;
+export type FsListManyPartialError = z.infer<
+  typeof fsListManyPartialErrorSchema
+>;
 
 export const fsListManyResponseSchema = z.object({
   results: z.record(z.string(), z.array(fsEntrySchema)),
@@ -269,7 +271,7 @@ export type FsGitStatusRequest = z.infer<typeof fsGitStatusRequestSchema>;
 
 export const fsPullRequestSchema = z.object({
   number: z.number().int().positive(),
-  state: z.enum(['open', 'merged', 'closed', 'draft']),
+  state: z.enum(["open", "merged", "closed", "draft"]),
   url: z.string().url(),
 });
 export type FsPullRequest = z.infer<typeof fsPullRequestSchema>;

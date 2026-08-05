@@ -21,7 +21,8 @@ export async function readMigratedLegacyApprovalFlags(
   metadata: Readonly<Record<string, unknown>> | undefined,
 ): Promise<LegacyApprovalFlags | undefined> {
   const sourcePath = metadata?.["kimi_cli_source_path"];
-  if (typeof sourcePath !== "string" || sourcePath.length === 0) return undefined;
+  if (typeof sourcePath !== "string" || sourcePath.length === 0)
+    return undefined;
   let text: string;
   try {
     text = await readFile(join(sourcePath, "state.json"), "utf8");
@@ -33,8 +34,11 @@ export async function readMigratedLegacyApprovalFlags(
   return parseLegacyApprovalFlags(state.approval);
 }
 
-function parseLegacyApprovalFlags(value: unknown): LegacyApprovalFlags | undefined {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) return undefined;
+function parseLegacyApprovalFlags(
+  value: unknown,
+): LegacyApprovalFlags | undefined {
+  if (typeof value !== "object" || value === null || Array.isArray(value))
+    return undefined;
   const yolo = Reflect.get(value, "yolo");
   const afk = Reflect.get(value, "afk");
   if (typeof yolo !== "boolean" && typeof afk !== "boolean") return undefined;
@@ -53,7 +57,9 @@ export function legacyApprovalMetadata(flags: LegacyApprovalFlags): JsonObject {
   };
 }
 
-export function corePermissionForLegacyApproval(flags: LegacyApprovalFlags): PermissionMode {
+export function corePermissionForLegacyApproval(
+  flags: LegacyApprovalFlags,
+): PermissionMode {
   if (flags.afk) return "auto";
   return flags.yolo ? "yolo" : "manual";
 }

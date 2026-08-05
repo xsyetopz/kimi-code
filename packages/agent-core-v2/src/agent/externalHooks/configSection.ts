@@ -7,14 +7,18 @@
  * Registered at module load via `registerConfigSection`.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { registerConfigSection } from '#/app/config/configSectionContributions';
-import { isPlainObject, plainObjectToToml, transformPlainObject } from '#/app/config/toml';
+import { registerConfigSection } from "#/app/config/configSectionContributions";
+import {
+  isPlainObject,
+  plainObjectToToml,
+  transformPlainObject,
+} from "#/app/config/toml";
 
-import { HOOK_EVENT_TYPES } from './types';
+import { HOOK_EVENT_TYPES } from "./types";
 
-export const HOOKS_SECTION = 'hooks';
+export const HOOKS_SECTION = "hooks";
 
 export const HookDefSchema = z
   .object({
@@ -31,12 +35,16 @@ export const HooksConfigSchema = z.array(HookDefSchema);
 
 export const hooksFromToml = (rawSnake: unknown): unknown => {
   if (!Array.isArray(rawSnake)) return rawSnake;
-  return rawSnake.map((hook) => (isPlainObject(hook) ? transformPlainObject(hook) : hook));
+  return rawSnake.map((hook) =>
+    isPlainObject(hook) ? transformPlainObject(hook) : hook,
+  );
 };
 
 export const hooksToToml = (value: unknown, _rawSnake: unknown): unknown => {
   if (!Array.isArray(value)) return value;
-  return value.map((hook) => (isPlainObject(hook) ? plainObjectToToml(hook, undefined) : hook));
+  return value.map((hook) =>
+    isPlainObject(hook) ? plainObjectToToml(hook, undefined) : hook,
+  );
 };
 
 registerConfigSection(HOOKS_SECTION, HooksConfigSchema, {

@@ -48,15 +48,22 @@ export interface CompactionResult {
  * path fills in what it knows, while restore passes the persisted record so its
  * historical values are preserved verbatim.
  */
-export type CompactionInput = Pick<CompactionResult, 'summary' | 'compactedCount' | 'tokensBefore'> &
+export type CompactionInput = Pick<
+  CompactionResult,
+  "summary" | "compactedCount" | "tokensBefore"
+> &
   Partial<
     Pick<
       CompactionResult,
-      'contextSummary' | 'tokensAfter' | 'keptUserMessageCount' | 'keptHeadUserMessageCount' | 'droppedCount'
+      | "contextSummary"
+      | "tokensAfter"
+      | "keptUserMessageCount"
+      | "keptHeadUserMessageCount"
+      | "droppedCount"
     >
   >;
 
-export type CompactionSource = 'manual' | 'auto';
+export type CompactionSource = "manual" | "auto";
 
 export interface CompactionBeginData {
   instruction?: string;

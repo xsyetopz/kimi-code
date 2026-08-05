@@ -5,10 +5,10 @@
 // homedir, `<session>/agents/<id>`). The visualizer never writes these files;
 // it mirrors agent-core's on-disk layout (tools/cron/persist.ts) for reading.
 
-import { readdir, readFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { readdir, readFile } from "node:fs/promises";
+import { join } from "node:path";
 
-import type { CronTask } from './agent-record-types';
+import type { CronTask } from "./agent-record-types";
 
 /** Cron id format: 8 lowercase hex chars (mirror of agent-core's cron-id
  *  shape). Enforced before joining a path so a stray / hand-edited filename
@@ -20,7 +20,7 @@ export function isSafeCronId(id: string): boolean {
 }
 
 function cronDirOf(agentDir: string): string {
-  return join(agentDir, 'cron');
+  return join(agentDir, "cron");
 }
 
 /**
@@ -32,7 +32,7 @@ function cronDirOf(agentDir: string): string {
  */
 export async function listCronTasks(agentDir: string): Promise<CronTask[]> {
   const dir = cronDirOf(agentDir);
-  let entries: import('node:fs').Dirent[];
+  let entries: import("node:fs").Dirent[];
   try {
     entries = await readdir(dir, { withFileTypes: true });
   } catch {
@@ -40,12 +40,12 @@ export async function listCronTasks(agentDir: string): Promise<CronTask[]> {
   }
   const out: CronTask[] = [];
   for (const entry of entries) {
-    if (!entry.isFile() || !entry.name.endsWith('.json')) continue;
-    const id = entry.name.slice(0, -'.json'.length);
+    if (!entry.isFile() || !entry.name.endsWith(".json")) continue;
+    const id = entry.name.slice(0, -".json".length);
     if (!VALID_CRON_ID.test(id)) continue;
     let parsed: unknown;
     try {
-      parsed = JSON.parse(await readFile(join(dir, entry.name), 'utf8'));
+      parsed = JSON.parse(await readFile(join(dir, entry.name), "utf8"));
     } catch {
       continue;
     }
@@ -56,12 +56,12 @@ export async function listCronTasks(agentDir: string): Promise<CronTask[]> {
 }
 
 function isCronTask(value: unknown): value is CronTask {
-  if (typeof value !== 'object' || value === null) return false;
+  if (typeof value !== "object" || value === null) return false;
   const o = value as Record<string, unknown>;
   return (
-    typeof o['id'] === 'string' &&
-    typeof o['cron'] === 'string' &&
-    typeof o['prompt'] === 'string' &&
-    typeof o['createdAt'] === 'number'
+    typeof o["id"] === "string" &&
+    typeof o["cron"] === "string" &&
+    typeof o["prompt"] === "string" &&
+    typeof o["createdAt"] === "number"
   );
 }

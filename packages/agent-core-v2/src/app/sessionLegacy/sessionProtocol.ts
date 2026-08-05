@@ -7,26 +7,28 @@
  * are wire breaks.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { isoDateTimeSchema } from '#/_base/utils/isoDateTime';
+import { isoDateTimeSchema } from "#/_base/utils/isoDateTime";
 
 export const sessionWarningSchema = z.object({
   code: z.string(),
   message: z.string(),
-  severity: z.enum(['info', 'warning', 'error']),
+  severity: z.enum(["info", "warning", "error"]),
 });
 export type SessionWarning = z.infer<typeof sessionWarningSchema>;
 
 export const sessionWarningsResponseSchema = z.object({
   warnings: z.array(sessionWarningSchema),
 });
-export type SessionWarningsResponse = z.infer<typeof sessionWarningsResponseSchema>;
+export type SessionWarningsResponse = z.infer<
+  typeof sessionWarningsResponseSchema
+>;
 
 export const promptThinkingSchema = z.string().min(1);
 export type PromptThinking = z.infer<typeof promptThinkingSchema>;
 
-export const promptPermissionModeSchema = z.enum(['manual', 'yolo', 'auto']);
+export const promptPermissionModeSchema = z.enum(["manual", "yolo", "auto"]);
 export type PromptPermissionMode = z.infer<typeof promptPermissionModeSchema>;
 
 export const sessionMetadataSchema = z
@@ -46,15 +48,18 @@ export const sessionAgentConfigSchema = z.object({
   plan_mode: z.boolean().optional(),
   swarm_mode: z.boolean().optional(),
   goal_objective: z.string().optional(),
-  goal_control: z.enum(['pause', 'resume', 'cancel']).optional(),
+  goal_control: z.enum(["pause", "resume", "cancel"]).optional(),
 });
 export type SessionAgentConfig = z.infer<typeof sessionAgentConfigSchema>;
 
-export const sessionAgentConfigPartialSchema = sessionAgentConfigSchema.partial();
-export type SessionAgentConfigPartial = z.infer<typeof sessionAgentConfigPartialSchema>;
+export const sessionAgentConfigPartialSchema =
+  sessionAgentConfigSchema.partial();
+export type SessionAgentConfigPartial = z.infer<
+  typeof sessionAgentConfigPartialSchema
+>;
 
 export const permissionRuleMatcherSchema = z.object({
-  kind: z.enum(['command_prefix', 'path_glob', 'exact_input', 'always']),
+  kind: z.enum(["command_prefix", "path_glob", "exact_input", "always"]),
   value: z.string().optional(),
 });
 export type PermissionRuleMatcher = z.infer<typeof permissionRuleMatcherSchema>;
@@ -63,9 +68,9 @@ export const permissionRuleSchema = z.object({
   id: z.string().min(1),
   tool_name: z.string().min(1),
   matcher: permissionRuleMatcherSchema.optional(),
-  decision: z.literal('approved'),
+  decision: z.literal("approved"),
   created_at: isoDateTimeSchema,
-  created_by: z.enum(['user', 'agent']),
+  created_by: z.enum(["user", "agent"]),
 });
 export type PermissionRule = z.infer<typeof permissionRuleSchema>;
 
@@ -75,7 +80,9 @@ export const updateSessionProfileRequestSchema = z.object({
   agent_config: sessionAgentConfigPartialSchema.optional(),
   permission_rules: z.array(permissionRuleSchema).optional(),
 });
-export type UpdateSessionProfileRequest = z.infer<typeof updateSessionProfileRequestSchema>;
+export type UpdateSessionProfileRequest = z.infer<
+  typeof updateSessionProfileRequestSchema
+>;
 
 export const sessionStatusResponseSchema = z.object({
   busy: z.boolean(),

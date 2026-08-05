@@ -1,4 +1,4 @@
-import type { KimiErrorCode } from './codes';
+import type { KimiErrorCode } from "./codes";
 
 export interface KimiErrorOptions {
   /** JSON-serializable structured details. */
@@ -18,9 +18,13 @@ export class KimiError extends Error {
   readonly details?: Record<string, unknown>;
   override readonly cause?: unknown;
 
-  constructor(code: KimiErrorCode, message: string, options: KimiErrorOptions = {}) {
+  constructor(
+    code: KimiErrorCode,
+    message: string,
+    options: KimiErrorOptions = {},
+  ) {
     super(message);
-    this.name = 'KimiError';
+    this.name = "KimiError";
     this.code = code;
     this.details = options.details;
     this.cause = options.cause;

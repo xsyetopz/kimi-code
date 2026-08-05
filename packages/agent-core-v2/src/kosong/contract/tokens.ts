@@ -8,8 +8,8 @@
  * message object via a WeakMap.
  */
 
-import type { ContentPart, Message } from './message';
-import type { Tool } from './tool';
+import type { ContentPart, Message } from "./message";
+import type { Tool } from "./tool";
 
 const messageTokenEstimateCache = new WeakMap<Message, number>();
 
@@ -26,7 +26,9 @@ export function estimateTokens(text: string): number {
   return Math.ceil(asciiCount / 4) + nonAsciiCount;
 }
 
-export function estimateTokensForMessages(messages: readonly Message[]): number {
+export function estimateTokensForMessages(
+  messages: readonly Message[],
+): number {
   let total = 0;
   for (const message of messages) {
     total += estimateTokensForMessage(message);
@@ -62,7 +64,9 @@ export function estimateTokensForMessage(message: Message): number {
   return total;
 }
 
-export function estimateTokensForContentParts(parts: readonly ContentPart[]): number {
+export function estimateTokensForContentParts(
+  parts: readonly ContentPart[],
+): number {
   let total = 0;
   for (const part of parts) {
     total += estimateTokensForContentPart(part);
@@ -74,13 +78,13 @@ export const MEDIA_TOKEN_ESTIMATE = 2000;
 
 export function estimateTokensForContentPart(part: ContentPart): number {
   switch (part.type) {
-    case 'text':
+    case "text":
       return estimateTokens(part.text);
-    case 'think':
+    case "think":
       return estimateTokens(part.think);
-    case 'image_url':
-    case 'audio_url':
-    case 'video_url':
+    case "image_url":
+    case "audio_url":
+    case "video_url":
       return MEDIA_TOKEN_ESTIMATE;
     default: {
       const exhaustive: never = part;

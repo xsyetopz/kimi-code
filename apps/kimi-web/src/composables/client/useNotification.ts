@@ -12,43 +12,47 @@
 // alerts doesn't start receiving sensitive content on their desktop without
 // explicitly opting in.
 
-import { ref, type Ref } from 'vue';
-import { i18n } from '../../i18n';
-import { safeGetString, safeSetString, STORAGE_KEYS } from '../../lib/storage';
+import { ref, type Ref } from "vue";
+import { i18n } from "../../i18n";
+import { safeGetString, safeSetString, STORAGE_KEYS } from "../../lib/storage";
 
 export function shouldNotifyCompletion(
-  status: 'idle' | 'aborted',
+  status: "idle" | "aborted",
   hasPendingApproval: boolean,
   hasPendingQuestion: boolean,
 ): boolean {
-  return status === 'idle' && !hasPendingApproval && !hasPendingQuestion;
+  return status === "idle" && !hasPendingApproval && !hasPendingQuestion;
 }
 
 function loadNotify(key: string, defaultOn: boolean): boolean {
   const v = safeGetString(key);
-  return v === null ? defaultOn : v === '1';
+  return v === null ? defaultOn : v === "1";
 }
 
 const notifyOnComplete = ref(loadNotify(STORAGE_KEYS.notifyOnComplete, true));
 const notifyOnQuestion = ref(loadNotify(STORAGE_KEYS.notifyOnQuestion, false));
 const notifyOnApproval = ref(loadNotify(STORAGE_KEYS.notifyOnApproval, false));
 const notifyPermission = ref<string>(
-  typeof Notification !== 'undefined' ? Notification.permission : 'denied',
+  typeof Notification !== "undefined" ? Notification.permission : "denied",
 );
 
-const NOTIFICATION_ICON = '/favicon.ico';
+const NOTIFICATION_ICON = "/favicon.ico";
 
 /** Shared setter: disabling is instant; enabling requests OS permission first
     and stays off if the user blocks it. */
-async function setNotifyPref(pref: Ref<boolean>, key: string, on: boolean): Promise<void> {
+async function setNotifyPref(
+  pref: Ref<boolean>,
+  key: string,
+  on: boolean,
+): Promise<void> {
   if (!on) {
     pref.value = false;
-    safeSetString(key, '0');
+    safeSetString(key, "0");
     return;
   }
-  if (typeof Notification === 'undefined') return;
+  if (typeof Notification === "undefined") return;
   let perm = Notification.permission;
-  if (perm === 'default') {
+  if (perm === "default") {
     try {
       perm = await Notification.requestPermission();
     } catch {
@@ -56,9 +60,9 @@ async function setNotifyPref(pref: Ref<boolean>, key: string, on: boolean): Prom
     }
   }
   notifyPermission.value = perm;
-  if (perm !== 'granted') return; // blocked — leave the toggle off
+  if (perm !== "granted") return; // blocked — leave the toggle off
   pref.value = true;
-  safeSetString(key, '1');
+  safeSetString(key, "1");
 }
 
 /** Enable/disable turn-completion notifications. */
@@ -119,13 +123,15 @@ function firstText(...values: Array<string | undefined>): string {
     const trimmed = value?.trim();
     if (trimmed) return trimmed;
   }
-  return '';
+  return "";
 }
 
-export function completionNotificationCopy(sessionTitle: string): NotificationCopy {
+export function completionNotificationCopy(
+  sessionTitle: string,
+): NotificationCopy {
   return {
-    title: i18n.global.t('settings.notifyTitle'),
-    body: firstText(sessionTitle, i18n.global.t('settings.notifyFallback')),
+    title: i18n.global.t("settings.notifyTitle"),
+    body: firstText(sessionTitle, i18n.global.t("settings.notifyFallback")),
   };
 }
 
@@ -134,11 +140,11 @@ export function questionNotificationCopy(
   questionPreview: string,
 ): NotificationCopy {
   return {
-    title: i18n.global.t('settings.notifyQuestionTitle'),
+    title: i18n.global.t("settings.notifyQuestionTitle"),
     body: firstText(
       questionPreview,
       sessionTitle,
-      i18n.global.t('settings.notifyQuestionFallback'),
+      i18n.global.t("settings.notifyQuestionFallback"),
     ),
   };
 }
@@ -148,11 +154,11 @@ export function approvalNotificationCopy(
   toolName: string,
 ): NotificationCopy {
   return {
-    title: i18n.global.t('settings.notifyApprovalTitle'),
+    title: i18n.global.t("settings.notifyApprovalTitle"),
     body: firstText(
       toolName,
       sessionTitle,
-      i18n.global.t('settings.notifyApprovalFallback'),
+      i18n.global.t("settings.notifyApprovalFallback"),
     ),
   };
 }
@@ -170,14 +176,14 @@ function maybeNotify(
   tag: string,
 ): void {
   if (!enabled) return;
-  if (typeof Notification === 'undefined') return;
+  if (typeof Notification === "undefined") return;
   const perm = Notification.permission;
-  if (perm === 'denied') return;
-  if (perm === 'default') {
+  if (perm === "denied") return;
+  if (perm === "default") {
     // Request permission asynchronously; if granted, fire the notification.
     void Notification.requestPermission().then((p) => {
       notifyPermission.value = p;
-      if (p === 'granted') fire(ctx, copy, tag);
+      if (p === "granted") fire(ctx, copy, tag);
     });
     return;
   }
@@ -187,7 +193,11 @@ function maybeNotify(
 function fire(ctx: NotifyBaseCtx, copy: NotificationCopy, tag: string): void {
   if (ctx.isUserWatching) return;
   try {
-    const n = new Notification(copy.title, { body: copy.body, tag, icon: NOTIFICATION_ICON });
+    const n = new Notification(copy.title, {
+      body: copy.body,
+      tag,
+      icon: NOTIFICATION_ICON,
+    });
     n.onclick = () => {
       try {
         window.focus();

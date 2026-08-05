@@ -7,39 +7,54 @@
  * like `.env.example` are explicitly allowed.
  */
 
-import { basename } from 'pathe';
+import { basename } from "pathe";
 
 const SENSITIVE_BASENAMES = new Set<string>([
-  '.env',
-  'id_rsa',
-  'id_ed25519',
-  'id_ecdsa',
-  'credentials',
+  ".env",
+  "id_rsa",
+  "id_ed25519",
+  "id_ecdsa",
+  "credentials",
 ]);
 
 const SENSITIVE_PATH_SUFFIXES = [
-  ['.aws', 'credentials'],
-  ['.gcp', 'credentials'],
+  [".aws", "credentials"],
+  [".gcp", "credentials"],
 ];
 
-const ENV_PREFIX = '.env.';
-const ENV_EXEMPTIONS = new Set<string>(['.env.example', '.env.sample', '.env.template']);
+const ENV_PREFIX = ".env.";
+const ENV_EXEMPTIONS = new Set<string>([
+  ".env.example",
+  ".env.sample",
+  ".env.template",
+]);
 
-const SENSITIVE_BASENAME_PREFIXES = ['id_rsa', 'id_ed25519', 'id_ecdsa', 'credentials'];
-const PUBLIC_KEY_BASENAMES = new Set<string>(['id_rsa.pub', 'id_ed25519.pub', 'id_ecdsa.pub']);
+const SENSITIVE_BASENAME_PREFIXES = [
+  "id_rsa",
+  "id_ed25519",
+  "id_ecdsa",
+  "credentials",
+];
+const PUBLIC_KEY_BASENAMES = new Set<string>([
+  "id_rsa.pub",
+  "id_ed25519.pub",
+  "id_ecdsa.pub",
+]);
 export const SENSITIVE_DOT_VARIANT_SUFFIXES = [
-  '.bak',
-  '.backup',
-  '.copy',
-  '.disabled',
-  '.key',
-  '.old',
-  '.orig',
-  '.pem',
-  '.save',
-  '.tmp',
+  ".bak",
+  ".backup",
+  ".copy",
+  ".disabled",
+  ".key",
+  ".old",
+  ".orig",
+  ".pem",
+  ".save",
+  ".tmp",
 ] as const;
-const SENSITIVE_DOT_VARIANT_SUFFIX_SET = new Set<string>(SENSITIVE_DOT_VARIANT_SUFFIXES);
+const SENSITIVE_DOT_VARIANT_SUFFIX_SET = new Set<string>(
+  SENSITIVE_DOT_VARIANT_SUFFIXES,
+);
 
 function comparable(path: string): string {
   return path.toLowerCase();
@@ -59,16 +74,20 @@ export function isSensitiveFile(path: string): boolean {
     if (comparableName === prefix) return true;
     // Catch rename-shielded variants without flagging unrelated filenames
     // like `id_rsafoo` or ordinary JSON files like `credentials.json`.
-    if (comparableName.length > prefix.length && comparableName.startsWith(prefix)) {
+    if (
+      comparableName.length > prefix.length &&
+      comparableName.startsWith(prefix)
+    ) {
       const suffix = comparableName.slice(prefix.length);
       const next = suffix[0];
-      if (next === '-' || next === '_') return true;
-      if (next === '.' && SENSITIVE_DOT_VARIANT_SUFFIX_SET.has(suffix)) return true;
+      if (next === "-" || next === "_") return true;
+      if (next === "." && SENSITIVE_DOT_VARIANT_SUFFIX_SET.has(suffix))
+        return true;
     }
   }
 
   for (const suffixParts of SENSITIVE_PATH_SUFFIXES) {
-    const suffix = suffixParts.join('/');
+    const suffix = suffixParts.join("/");
     const comparableSuffix = comparable(suffix);
     if (
       comparablePath.endsWith(`/${comparableSuffix}`) ||

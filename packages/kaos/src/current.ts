@@ -1,9 +1,9 @@
-import { AsyncLocalStorage } from 'node:async_hooks';
+import { AsyncLocalStorage } from "node:async_hooks";
 
-import { KaosError } from './errors';
-import type { Kaos } from './kaos';
-import type { KaosProcess } from './process';
-import type { StatResult } from './types';
+import { KaosError } from "./errors";
+import type { Kaos } from "./kaos";
+import type { KaosProcess } from "./process";
+import type { StatResult } from "./types";
 
 const kaosStorage = new AsyncLocalStorage<Kaos>();
 
@@ -17,7 +17,7 @@ export function getCurrentKaos(): Kaos {
   const store = kaosStorage.getStore();
   if (store === undefined) {
     throw new KaosError(
-      'No Kaos is bound to the current async context. Call `setCurrentKaos(await LocalKaos.create())` once at startup, or wrap the call in `runWithKaos(...)`.',
+      "No Kaos is bound to the current async context. Call `setCurrentKaos(await LocalKaos.create())` once at startup, or wrap the call in `runWithKaos(...)`.",
     );
   }
   return store;
@@ -47,7 +47,10 @@ export function runWithKaos<T>(kaos: Kaos, fn: () => T): T {
 
 export function readText(
   path: string,
-  options?: { encoding?: BufferEncoding; errors?: 'strict' | 'replace' | 'ignore' },
+  options?: {
+    encoding?: BufferEncoding;
+    errors?: "strict" | "replace" | "ignore";
+  },
 ): Promise<string> {
   return getCurrentKaos().readText(path, options);
 }
@@ -55,14 +58,17 @@ export function readText(
 export function writeText(
   path: string,
   data: string,
-  options?: { mode?: 'w' | 'a'; encoding?: BufferEncoding },
+  options?: { mode?: "w" | "a"; encoding?: BufferEncoding },
 ): Promise<number> {
   return getCurrentKaos().writeText(path, data, options);
 }
 
 export function readLines(
   path: string,
-  options?: { encoding?: BufferEncoding; errors?: 'strict' | 'replace' | 'ignore' },
+  options?: {
+    encoding?: BufferEncoding;
+    errors?: "strict" | "replace" | "ignore";
+  },
 ): AsyncGenerator<string> {
   return getCurrentKaos().readLines(path, options);
 }
@@ -79,7 +85,10 @@ export function writeBytes(path: string, data: Buffer): Promise<number> {
   return getCurrentKaos().writeBytes(path, data);
 }
 
-export function stat(path: string, options?: { followSymlinks?: boolean }): Promise<StatResult> {
+export function stat(
+  path: string,
+  options?: { followSymlinks?: boolean },
+): Promise<StatResult> {
   return getCurrentKaos().stat(path, options);
 }
 
@@ -118,10 +127,13 @@ export function normpath(path: string): string {
   return getCurrentKaos().normpath(path);
 }
 
-export function pathClass(): 'posix' | 'win32' {
+export function pathClass(): "posix" | "win32" {
   return getCurrentKaos().pathClass();
 }
 
-export function execWithEnv(args: string[], env?: Record<string, string>): Promise<KaosProcess> {
+export function execWithEnv(
+  args: string[],
+  env?: Record<string, string>,
+): Promise<KaosProcess> {
   return getCurrentKaos().execWithEnv(args, env);
 }

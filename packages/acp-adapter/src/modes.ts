@@ -15,8 +15,8 @@
  * registry, not the dispatcher.
  */
 
-import type { SessionMode } from '@agentclientprotocol/sdk';
-import type { PermissionMode } from '@moonshot-ai/kimi-code-sdk';
+import type { SessionMode } from "@agentclientprotocol/sdk";
+import type { PermissionMode } from "@moonshot-ai/kimi-code-sdk";
 
 /**
  * Canonical 4-mode taxonomy (PLAN D9). Order matters: the array
@@ -27,36 +27,37 @@ import type { PermissionMode } from '@moonshot-ai/kimi-code-sdk';
  */
 export const ACP_MODES = [
   {
-    id: 'default',
-    name: 'Default',
-    description: 'Manual approvals; tools execute normally.',
+    id: "default",
+    name: "Default",
+    description: "Manual approvals; tools execute normally.",
   },
   {
-    id: 'plan',
-    name: 'Plan',
-    description: 'Read-only planning; no tool execution.',
+    id: "plan",
+    name: "Plan",
+    description: "Read-only planning; no tool execution.",
   },
   {
-    id: 'auto',
-    name: 'Auto',
-    description: 'Fully autonomous — agent decides everything without asking.',
+    id: "auto",
+    name: "Auto",
+    description: "Fully autonomous — agent decides everything without asking.",
   },
   {
-    id: 'yolo',
-    name: 'YOLO',
-    description: 'Auto-approve tool actions, but the agent may still ask questions.',
+    id: "yolo",
+    name: "YOLO",
+    description:
+      "Auto-approve tool actions, but the agent may still ask questions.",
   },
 ] as const satisfies readonly SessionMode[];
 
 /** Initial `currentModeId` for every freshly created ACP session. */
-export const DEFAULT_MODE_ID = 'default' as const;
+export const DEFAULT_MODE_ID = "default" as const;
 
 /**
  * The four wire-level mode ids understood by this adapter. Keep
  * this union in lock-step with {@link ACP_MODES} — Phase 12.2's
  * dispatch table assumes the only valid ids are these four.
  */
-export type AcpModeId = 'default' | 'plan' | 'auto' | 'yolo';
+export type AcpModeId = "default" | "plan" | "auto" | "yolo";
 
 /**
  * Narrow an unknown wire string to {@link AcpModeId}. Used by Phase
@@ -66,7 +67,10 @@ export type AcpModeId = 'default' | 'plan' | 'auto' | 'yolo';
  */
 export function isAcpModeId(value: unknown): value is AcpModeId {
   return (
-    value === 'default' || value === 'plan' || value === 'auto' || value === 'yolo'
+    value === "default" ||
+    value === "plan" ||
+    value === "auto" ||
+    value === "yolo"
   );
 }
 
@@ -92,14 +96,14 @@ export interface AcpModeToggles {
  */
 export function acpModeToToggles(id: AcpModeId): AcpModeToggles {
   switch (id) {
-    case 'default':
-      return { plan: false, permission: 'manual' };
-    case 'plan':
-      return { plan: true, permission: 'manual' };
-    case 'auto':
-      return { plan: false, permission: 'auto' };
-    case 'yolo':
-      return { plan: false, permission: 'yolo' };
+    case "default":
+      return { plan: false, permission: "manual" };
+    case "plan":
+      return { plan: true, permission: "manual" };
+    case "auto":
+      return { plan: false, permission: "auto" };
+    case "yolo":
+      return { plan: false, permission: "yolo" };
     default: {
       const _exhaustive: never = id;
       throw new Error(`Unhandled AcpModeId: ${String(_exhaustive)}`);

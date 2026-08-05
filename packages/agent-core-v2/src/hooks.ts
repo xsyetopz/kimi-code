@@ -20,7 +20,10 @@ export interface HookSlot<TContext> {
 
   delete(id: string): boolean;
 
-  run(context: TContext, terminal?: (context: TContext) => Promise<void>): Promise<void>;
+  run(
+    context: TContext,
+    terminal?: (context: TContext) => Promise<void>,
+  ): Promise<void>;
 }
 
 export type HookHandler<TContext> = (
@@ -47,7 +50,9 @@ export class OrderedHookSlot<TContext> implements HookSlot<TContext> {
     options: HookRegisterOptions = {},
   ): IDisposable {
     if (options.before !== undefined && options.after !== undefined) {
-      throw new BugIndicatingError('Hook registration cannot specify both before and after');
+      throw new BugIndicatingError(
+        "Hook registration cannot specify both before and after",
+      );
     }
 
     this.delete(id);
@@ -63,7 +68,8 @@ export class OrderedHookSlot<TContext> implements HookSlot<TContext> {
       throw new BugIndicatingError(`Hook target "${target}" is not registered`);
     }
 
-    const insertAt = options.before !== undefined ? targetIndex : targetIndex + 1;
+    const insertAt =
+      options.before !== undefined ? targetIndex : targetIndex + 1;
     this.entries.splice(insertAt, 0, entry);
     return this.toEntryDisposable(entry);
   }
@@ -94,7 +100,10 @@ export class OrderedHookSlot<TContext> implements HookSlot<TContext> {
     terminal: (context: TContext) => Promise<void> = async () => {},
   ): Promise<void> {
     const entries = [...this.entries];
-    const dispatch = (index: number, ctx: TContext): ((override?: TContext) => Promise<void>) => {
+    const dispatch = (
+      index: number,
+      ctx: TContext,
+    ): ((override?: TContext) => Promise<void>) => {
       return async (override?: TContext): Promise<void> => {
         const current = override ?? ctx;
         const entry = entries[index];
@@ -109,9 +118,10 @@ export class OrderedHookSlot<TContext> implements HookSlot<TContext> {
   }
 }
 
-export function createHooks<TEvents extends Record<string, unknown>, TKeys extends keyof TEvents>(
-  keys: readonly TKeys[],
-): Hooks<TEvents> {
+export function createHooks<
+  TEvents extends Record<string, unknown>,
+  TKeys extends keyof TEvents,
+>(keys: readonly TKeys[]): Hooks<TEvents> {
   return Object.fromEntries(
     keys.map((key) => [key, new OrderedHookSlot<TEvents[TKeys]>()]),
   ) as unknown as Hooks<TEvents>;

@@ -6,8 +6,10 @@
  * formatting.
  */
 
-export function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+export function isPlainObject(
+  value: unknown,
+): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 export function deepEqual(a: unknown, b: unknown): boolean {
@@ -23,7 +25,11 @@ export function deepEqual(a: unknown, b: unknown): boolean {
     const aKeys = Object.keys(a);
     if (aKeys.length !== Object.keys(b).length) return false;
     for (const key of aKeys) {
-      if (!Object.prototype.hasOwnProperty.call(b, key) || !deepEqual(a[key], b[key])) return false;
+      if (
+        !Object.prototype.hasOwnProperty.call(b, key) ||
+        !deepEqual(a[key], b[key])
+      )
+        return false;
     }
     return true;
   }
@@ -43,7 +49,9 @@ export function deepMerge<T>(base: T | undefined, patch: unknown): T {
   return out as T;
 }
 
-export function omitUndefined<T extends Record<string, unknown>>(value: T): Partial<T> {
+export function omitUndefined<T extends Record<string, unknown>>(
+  value: T,
+): Partial<T> {
   const out: Partial<T> = {};
   for (const key of Object.keys(value)) {
     const v = value[key];

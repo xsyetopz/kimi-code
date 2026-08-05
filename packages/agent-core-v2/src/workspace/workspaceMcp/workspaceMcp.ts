@@ -17,10 +17,13 @@
  * trust — only the project-level config files are. Bound at Workspace scope.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
-import type { McpConnectionManager } from '#/mcpCore/connection-manager';
-import type { McpServerConfig } from '#/mcpCore/config-schema';
-import type { ISessionMcpHandle } from '#/session/mcp/sessionMcpHandle';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
+import type { McpConnectionManager } from "#/mcpCore/connection-manager";
+import type { McpServerConfig } from "#/mcpCore/config-schema";
+import type { ISessionMcpHandle } from "#/session/mcp/sessionMcpHandle";
 
 export interface ISessionMcpOverlay {
   readonly handle: ISessionMcpHandle;
@@ -47,4 +50,4 @@ export interface IWorkspaceMcpService {
 }
 
 export const IWorkspaceMcpService: ServiceIdentifier<IWorkspaceMcpService> =
-  createDecorator<IWorkspaceMcpService>('workspaceMcpService');
+  createDecorator<IWorkspaceMcpService>("workspaceMcpService");

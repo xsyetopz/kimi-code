@@ -2,7 +2,7 @@
  * Shared schema helpers for contract fragments.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
 /** `Page<T>` on the wire (`persistence/interface/queryStore.ts`). */
 export const pageOf = <T extends z.ZodType>(item: T) =>
@@ -17,7 +17,9 @@ export const pageOf = <T extends z.ZodType>(item: T) =>
  * normalize to `undefined`.
  */
 export const maybe = <T extends z.ZodType>(schema: T) =>
-  z.union([schema, z.null(), z.undefined()]).transform((value) => value ?? undefined);
+  z
+    .union([schema, z.null(), z.undefined()])
+    .transform((value) => value ?? undefined);
 
 /**
  * `void` method results arrive as `null` over HTTP (JSON has no `undefined`)

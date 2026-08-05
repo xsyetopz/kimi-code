@@ -1,10 +1,10 @@
-import type { AppModel, ThinkingLevel } from '../api/types';
+import type { AppModel, ThinkingLevel } from "../api/types";
 
-export type ThinkingAvailability = 'toggle' | 'always-on' | 'unsupported';
+export type ThinkingAvailability = "toggle" | "always-on" | "unsupported";
 
 export type ModelThinkingInfo = Pick<
   AppModel,
-  'capabilities' | 'supportEfforts' | 'defaultEffort'
+  "capabilities" | "supportEfforts" | "defaultEffort"
 > & {
   readonly adaptiveThinking?: boolean;
 };
@@ -12,11 +12,12 @@ export type ModelThinkingInfo = Pick<
 export function modelThinkingAvailability(
   model: ModelThinkingInfo | undefined,
 ): ThinkingAvailability {
-  if (model === undefined) return 'toggle';
+  if (model === undefined) return "toggle";
   const capabilities = model.capabilities ?? [];
-  if (capabilities.includes('always_thinking')) return 'always-on';
-  if (capabilities.includes('thinking') || model.adaptiveThinking === true) return 'toggle';
-  return 'unsupported';
+  if (capabilities.includes("always_thinking")) return "always-on";
+  if (capabilities.includes("thinking") || model.adaptiveThinking === true)
+    return "toggle";
+  return "unsupported";
 }
 
 function effortsOf(model: ModelThinkingInfo | undefined): readonly string[] {
@@ -36,10 +37,10 @@ function middleOf(efforts: readonly string[]): string {
 export function defaultThinkingLevelFor(
   model: ModelThinkingInfo | undefined,
 ): ThinkingLevel {
-  if (modelThinkingAvailability(model) === 'unsupported') return 'off';
+  if (modelThinkingAvailability(model) === "unsupported") return "off";
   const efforts = effortsOf(model);
   if (efforts.length > 0) return model?.defaultEffort ?? middleOf(efforts);
-  return 'on';
+  return "on";
 }
 
 /**
@@ -50,24 +51,28 @@ export function defaultThinkingLevelFor(
  *  - effort toggle     → ['off', ...efforts]      (Off on the left)
  *  - effort always-on  → [...efforts]             (no Off segment)
  */
-export function segmentsFor(model: ModelThinkingInfo | undefined): readonly string[] {
+export function segmentsFor(
+  model: ModelThinkingInfo | undefined,
+): readonly string[] {
   const efforts = effortsOf(model);
   const availability = modelThinkingAvailability(model);
   if (efforts.length > 0) {
-    return availability === 'always-on' ? [...efforts] : ['off', ...efforts];
+    return availability === "always-on" ? [...efforts] : ["off", ...efforts];
   }
-  if (availability === 'always-on') return ['on'];
-  if (availability === 'unsupported') return ['off'];
-  return ['on', 'off'];
+  if (availability === "always-on") return ["on"];
+  if (availability === "unsupported") return ["off"];
+  return ["on", "off"];
 }
 
 /** Display label for a level: capitalize the first letter (off→Off, max→Max). */
 export function effortLabel(effort: string): string {
-  return effort.length === 0 ? effort : effort.charAt(0).toUpperCase() + effort.slice(1);
+  return effort.length === 0
+    ? effort
+    : effort.charAt(0).toUpperCase() + effort.slice(1);
 }
 
 export function isThinkingOn(level: ThinkingLevel): boolean {
-  return level !== 'off';
+  return level !== "off";
 }
 
 /** True when the level is selectable for the model (one of its UI segments). */
@@ -86,8 +91,8 @@ export function commitLevel(
   model: ModelThinkingInfo | undefined,
   draft: string,
 ): ThinkingLevel {
-  if (draft === 'off') return 'off';
-  if (draft === 'on') return defaultThinkingLevelFor(model);
+  if (draft === "off") return "off";
+  if (draft === "on") return defaultThinkingLevelFor(model);
   return draft;
 }
 
@@ -122,8 +127,8 @@ export function thinkingLevelToConfig(
   enabled: boolean;
   effort?: string;
 } {
-  if (level === 'off') return { enabled: false };
-  if (level === 'on') return { enabled: true };
+  if (level === "off") return { enabled: false };
+  if (level === "on") return { enabled: true };
   const top = supportEfforts?.at(-1);
   if (top !== undefined && level === top) return { enabled: true };
   return { enabled: true, effort: level };

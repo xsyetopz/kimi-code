@@ -5,13 +5,19 @@
  * to align after the bullet.
  */
 
-import { Container, Markdown, truncateToWidth, visibleWidth, type Component } from '@moonshot-ai/pi-tui';
+import {
+  Container,
+  Markdown,
+  truncateToWidth,
+  visibleWidth,
+  type Component,
+} from "@moonshot-ai/pi-tui";
 
-import { MESSAGE_INDENT } from '#/tui/constant/rendering';
-import { STATUS_BULLET } from '#/tui/constant/symbols';
-import { currentTheme } from '#/tui/theme';
-import { createMarkdownTheme } from '#/tui/theme/pi-tui-theme';
-import { isRenderCacheEnabled } from '#/tui/utils/render-cache';
+import { MESSAGE_INDENT } from "#/tui/constant/rendering";
+import { STATUS_BULLET } from "#/tui/constant/symbols";
+import { currentTheme } from "#/tui/theme";
+import { createMarkdownTheme } from "#/tui/theme/pi-tui-theme";
+import { isRenderCacheEnabled } from "#/tui/utils/render-cache";
 
 type AssistantMarkdownOptions = {
   transient?: boolean;
@@ -21,7 +27,7 @@ export class AssistantMessageComponent implements Component {
   private contentContainer: Container;
   private markdown: Markdown | undefined;
   private markdownTransient = false;
-  private lastText = '';
+  private lastText = "";
   private lastTransient = false;
   private showBullet: boolean;
 
@@ -46,7 +52,8 @@ export class AssistantMessageComponent implements Component {
     const displayText = text.trim();
     const transient = opts?.transient === true;
 
-    if (displayText === this.lastText && transient === this.lastTransient) return;
+    if (displayText === this.lastText && transient === this.lastTransient)
+      return;
 
     this.lastText = displayText;
     this.lastTransient = transient;
@@ -61,7 +68,12 @@ export class AssistantMessageComponent implements Component {
 
     if (this.markdown === undefined || this.markdownTransient !== transient) {
       this.contentContainer.clear();
-      this.markdown = new Markdown(displayText, 0, 0, createMarkdownTheme({ transient }));
+      this.markdown = new Markdown(
+        displayText,
+        0,
+        0,
+        createMarkdownTheme({ transient }),
+      );
       this.markdownTransient = transient;
       this.contentContainer.addChild(this.markdown);
       return;
@@ -94,7 +106,7 @@ export class AssistantMessageComponent implements Component {
     if (this.lastText.trim().length === 0) return [];
 
     const safeWidth = Math.max(0, width);
-    if (safeWidth <= 0) return [''];
+    if (safeWidth <= 0) return [""];
 
     if (
       isRenderCacheEnabled() &&
@@ -108,13 +120,15 @@ export class AssistantMessageComponent implements Component {
     const contentWidth = Math.max(1, safeWidth - visibleWidth(prefix));
     const contentLines = this.contentContainer.render(contentWidth);
 
-    const lines: string[] = [''];
+    const lines: string[] = [""];
     for (let i = 0; i < contentLines.length; i++) {
       const p =
-        i === 0 && this.showBullet ? currentTheme.fg('text', STATUS_BULLET) : MESSAGE_INDENT;
+        i === 0 && this.showBullet
+          ? currentTheme.fg("text", STATUS_BULLET)
+          : MESSAGE_INDENT;
       lines.push(p + contentLines[i]);
     }
-    const rendered = lines.map((line) => truncateToWidth(line, safeWidth, '…'));
+    const rendered = lines.map((line) => truncateToWidth(line, safeWidth, "…"));
     if (isRenderCacheEnabled()) {
       this.renderCache = { width: safeWidth, lines: rendered };
     }

@@ -1,21 +1,26 @@
-import { execFile } from 'node:child_process';
-import { basename } from 'node:path';
-import { promisify } from 'node:util';
+import { execFile } from "node:child_process";
+import { basename } from "node:path";
+import { promisify } from "node:util";
 
-import { appRoot } from './paths.mjs';
+import { appRoot } from "./paths.mjs";
 
 const execFileAsync = promisify(execFile);
 
-export function commandForExecFile(command, args, platform = process.platform, env = process.env) {
-  if (platform !== 'win32' || !/\.(?:bat|cmd)$/i.test(command)) {
+export function commandForExecFile(
+  command,
+  args,
+  platform = process.platform,
+  env = process.env,
+) {
+  if (platform !== "win32" || !/\.(?:bat|cmd)$/i.test(command)) {
     return { command, args };
   }
   const shellCommand = [command, ...args]
     .map((arg) => `"${String(arg).replaceAll('"', '""')}"`)
-    .join(' ');
+    .join(" ");
   return {
-    command: env.ComSpec ?? 'cmd.exe',
-    args: ['/d', '/s', '/c', `"${shellCommand}"`],
+    command: env.ComSpec ?? "cmd.exe",
+    args: ["/d", "/s", "/c", `"${shellCommand}"`],
     options: { windowsVerbatimArguments: true },
   };
 }
@@ -39,8 +44,8 @@ export async function run(command, args, options = {}) {
   } catch (error) {
     const details = [error.stdout?.trim(), error.stderr?.trim(), error.message]
       .filter(Boolean)
-      .join('\n');
-    fail(`Command failed: ${basename(command)} ${args.join(' ')}\n${details}`);
+      .join("\n");
+    fail(`Command failed: ${basename(command)} ${args.join(" ")}\n${details}`);
   }
 }
 
@@ -55,7 +60,9 @@ export async function tryRun(command, args, options = {}) {
   } catch (error) {
     const details = [error.stdout?.trim(), error.stderr?.trim(), error.message]
       .filter(Boolean)
-      .join('\n');
-    console.warn(`Warning: ${basename(command)} ${args.join(' ')} failed.\n${details}`);
+      .join("\n");
+    console.warn(
+      `Warning: ${basename(command)} ${args.join(" ")} failed.\n${details}`,
+    );
   }
 }

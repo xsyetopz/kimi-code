@@ -1,4 +1,4 @@
-import type { TelemetryClient, TelemetryProperties } from '#/index';
+import type { TelemetryClient, TelemetryProperties } from "#/index";
 
 export interface TelemetryRecord {
   readonly event: string;
@@ -6,7 +6,9 @@ export interface TelemetryRecord {
   readonly properties?: TelemetryProperties;
 }
 
-export function recordingTelemetry(records: TelemetryRecord[]): TelemetryClient {
+export function recordingTelemetry(
+  records: TelemetryRecord[],
+): TelemetryClient {
   return {
     track: (event, properties) => {
       records.push({ event, sessionId: null, properties });

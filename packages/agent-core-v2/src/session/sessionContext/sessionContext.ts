@@ -10,8 +10,11 @@
  * Session-scoped.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
-import type { ScopeSeed } from '#/_base/di/scope';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
+import type { ScopeSeed } from "#/_base/di/scope";
 
 export interface ISessionContext {
   readonly _serviceBrand: undefined;
@@ -25,7 +28,7 @@ export interface ISessionContext {
 }
 
 export const ISessionContext: ServiceIdentifier<ISessionContext> =
-  createDecorator<ISessionContext>('sessionContext');
+  createDecorator<ISessionContext>("sessionContext");
 
 export function sessionContextSeed(ctx: ISessionContext): ScopeSeed {
   return [[ISessionContext as ServiceIdentifier<unknown>, ctx]];
@@ -48,6 +51,8 @@ export function makeSessionContext(input: {
     metaScope: input.metaScope ?? sessionScope,
     cwd: input.cwd,
     scope: (subKey?: string): string =>
-      subKey === undefined || subKey === '' ? sessionScope : `${sessionScope}/${subKey}`,
+      subKey === undefined || subKey === ""
+        ? sessionScope
+        : `${sessionScope}/${subKey}`,
   };
 }

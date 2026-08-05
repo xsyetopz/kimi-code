@@ -23,14 +23,19 @@ export type {
   ProcessBackgroundTaskInfo,
   AgentBackgroundTaskInfo,
   QuestionBackgroundTaskInfo,
-} from '@moonshot-ai/agent-core';
-export { AGENT_WIRE_PROTOCOL_VERSION } from '@moonshot-ai/agent-core';
-export type { Message, ContentPart, ToolCall, TokenUsage } from '@moonshot-ai/kosong';
+} from "@moonshot-ai/agent-core";
+export { AGENT_WIRE_PROTOCOL_VERSION } from "@moonshot-ai/agent-core";
+export type {
+  Message,
+  ContentPart,
+  ToolCall,
+  TokenUsage,
+} from "@moonshot-ai/kosong";
 
 // Local bindings for the upstream types referenced by the vis-only DTOs
 // below. The `export type { … }` re-export above forwards the names to
 // consumers but does NOT bring them into this module's scope.
-import type { AgentRecord, BackgroundTaskInfo } from '@moonshot-ai/agent-core';
+import type { AgentRecord, BackgroundTaskInfo } from "@moonshot-ai/agent-core";
 
 /**
  * Persistent representation of a cron task.
@@ -90,19 +95,19 @@ export interface ImportInfo {
 export interface ApiError {
   error: string;
   code:
-    | 'NOT_FOUND'
-    | 'BAD_REQUEST'
-    | 'UNAUTHORIZED'
-    | 'READ_ERROR'
-    | 'PARSE_ERROR'
-    | 'DELETE_ERROR';
+    | "NOT_FOUND"
+    | "BAD_REQUEST"
+    | "UNAUTHORIZED"
+    | "READ_ERROR"
+    | "PARSE_ERROR"
+    | "DELETE_ERROR";
 }
 
 export type SessionHealth =
-  | 'ok'
-  | 'broken_state'
-  | 'broken_main_wire'
-  | 'missing_main_wire';
+  | "ok"
+  | "broken_state"
+  | "broken_main_wire"
+  | "missing_main_wire";
 
 export interface SessionSummary {
   sessionId: string;
@@ -126,7 +131,7 @@ export interface SessionSummary {
 
 export interface AgentInfo {
   agentId: string;
-  type: 'main' | 'sub' | 'independent';
+  type: "main" | "sub" | "independent";
   parentAgentId: string | null;
   homedir: string;
   wireExists: boolean;
@@ -264,7 +269,7 @@ export interface LogLine {
 
 export interface LogsResponse {
   sessionId: string;
-  which: 'session' | 'global';
+  which: "session" | "global";
   /** Which logs exist on disk for this session. */
   available: { session: boolean; global: boolean };
   lines: LogLine[];

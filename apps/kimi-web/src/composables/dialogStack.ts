@@ -1,4 +1,4 @@
-import { ref } from 'vue';
+import { ref } from "vue";
 
 /**
  * Number of design-system `Dialog` instances currently open. App.vue's

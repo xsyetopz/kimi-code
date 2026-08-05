@@ -19,9 +19,12 @@
  * rebuild.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
 
-import type { Workspace } from './workspace';
+import type { Workspace } from "./workspace";
 
 export interface PersistedWorkspaceEntry {
   readonly root: string;
@@ -49,4 +52,4 @@ export interface IWorkspacePersistence {
 }
 
 export const IWorkspacePersistence: ServiceIdentifier<IWorkspacePersistence> =
-  createDecorator<IWorkspacePersistence>('workspacePersistence');
+  createDecorator<IWorkspacePersistence>("workspacePersistence");

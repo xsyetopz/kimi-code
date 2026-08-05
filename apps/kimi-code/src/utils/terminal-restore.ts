@@ -15,7 +15,8 @@
 
 // Show cursor (`?25h`), disable bracketed paste (`?2004l`), pop the Kitty
 // keyboard protocol (`<u`), and reset modifyOtherKeys (`>4;0m`).
-const TERMINAL_RESTORE_SEQUENCE = '\u001B[?25h\u001B[?2004l\u001B[<u\u001B[>4;0m';
+const TERMINAL_RESTORE_SEQUENCE =
+  "\u001B[?25h\u001B[?2004l\u001B[<u\u001B[>4;0m";
 
 export function restoreTerminalModes(): void {
   try {

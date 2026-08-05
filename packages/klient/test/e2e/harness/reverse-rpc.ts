@@ -14,7 +14,7 @@
  * timeout in `waitForFrame`. Surfacing those errors here would break the
  * "framework auto-responds" contract.
  */
-import type { AnyFrame, WsClient } from './ws.js';
+import type { AnyFrame, WsClient } from "./ws.js";
 
 export interface ReverseRpcOptions<Req, Res> {
   requestEventType: string;
@@ -24,7 +24,11 @@ export interface ReverseRpcOptions<Req, Res> {
   handler: (req: Req) => Promise<Res> | Res;
   /** POST helper bound to the right path. */
   postResolve: (sessionId: string, id: string, body: Res) => Promise<unknown>;
-  logger: (level: 'info' | 'warn' | 'error' | 'debug', msg: string, meta?: unknown) => void;
+  logger: (
+    level: "info" | "warn" | "error" | "debug",
+    msg: string,
+    meta?: unknown,
+  ) => void;
 }
 
 /**
@@ -40,11 +44,17 @@ export function installReverseRpcHandler<Req, Res>(
     const payload = frame.payload as Req | undefined;
     if (!payload) return;
     const sessionId = (payload as { session_id?: string }).session_id;
-    const id = (payload as Record<string, unknown>)[opts.idField] as string | undefined;
+    const id = (payload as Record<string, unknown>)[opts.idField] as
+      | string
+      | undefined;
     if (!sessionId || !id) {
-      opts.logger('warn', `reverse-rpc: ${opts.requestEventType} missing session_id/${opts.idField}`, {
-        payload,
-      });
+      opts.logger(
+        "warn",
+        `reverse-rpc: ${opts.requestEventType} missing session_id/${opts.idField}`,
+        {
+          payload,
+        },
+      );
       return;
     }
     // Fire-and-forget: the WS handler is sync; we kick off the resolve and
@@ -55,11 +65,15 @@ export function installReverseRpcHandler<Req, Res>(
         await opts.postResolve(sessionId, id, response);
       })
       .catch((err) => {
-        opts.logger('warn', `reverse-rpc: ${opts.requestEventType} resolve failed`, {
-          err: String(err),
-          sessionId,
-          id,
-        });
+        opts.logger(
+          "warn",
+          `reverse-rpc: ${opts.requestEventType} resolve failed`,
+          {
+            err: String(err),
+            sessionId,
+            id,
+          },
+        );
       });
   });
   return unsubscribe;

@@ -6,12 +6,12 @@
  * telemetry.track) and inflating them through `testAgent()` would drag
  * kosong / records / context into every unit-level assertion.
  */
-import type { ContentPart } from '@moonshot-ai/kosong';
+import type { ContentPart } from "@moonshot-ai/kosong";
 
-import type { Agent } from '../../../../src/agent';
-import type { PromptOrigin } from '../../../../src/agent/context/types';
-import type { AgentEvent } from '../../../../src/rpc';
-import type { ClockSources } from '../../../../src/tools/cron/clock';
+import type { Agent } from "../../../../src/agent";
+import type { PromptOrigin } from "../../../../src/agent/context/types";
+import type { AgentEvent } from "../../../../src/rpc";
+import type { ClockSources } from "../../../../src/tools/cron/clock";
 
 /**
  * Stable wall-clock anchor (Nov 14 2023, 22:13:20 UTC). Deliberately
@@ -63,7 +63,7 @@ export function createAgentStub(opts: AgentStubOptions = {}): AgentStub {
   // `?? 42` would collapse explicit `null` (buffered) into 42, so probe
   // the property's presence instead of relying on nullish coalescing.
   const steerReturns: number | null =
-    'steerReturns' in opts ? (opts.steerReturns as number | null) : 42;
+    "steerReturns" in opts ? (opts.steerReturns as number | null) : 42;
 
   const turn = {
     get hasActiveTurn(): boolean {
@@ -135,9 +135,9 @@ export function createClocks(initial: number = WALL_ANCHOR): ClockHarness {
  */
 export function scrubCronOutput(out: string): string {
   return out
-    .replaceAll(/\b[0-9a-f]{8}\b/g, '<id>')
+    .replaceAll(/\b[0-9a-f]{8}\b/g, "<id>")
     .replaceAll(
       /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}(?:Z|[+-]\d{2}:\d{2})/g,
-      '<iso>',
+      "<iso>",
     );
 }

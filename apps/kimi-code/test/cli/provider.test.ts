@@ -4,9 +4,9 @@
  * a real harness or hitting the network.
  */
 
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { Command } from 'commander';
-import type { KimiConfig } from '@moonshot-ai/kimi-code-sdk';
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
+import { Command } from "commander";
+import type { KimiConfig } from "@moonshot-ai/kimi-code-sdk";
 
 import {
   handleCatalogAdd,
@@ -16,7 +16,7 @@ import {
   handleProviderRemove,
   registerProviderCommand,
   type ProviderDeps,
-} from '#/cli/sub/provider';
+} from "#/cli/sub/provider";
 
 class ExitCalled extends Error {
   constructor(public readonly code: number) {
@@ -76,7 +76,11 @@ function makeHarness(initial: KimiConfig): {
           if (persisted.defaultModel === alias) removedDefault = true;
         }
       }
-      persisted = { ...persisted, providers: nextProviders, models: nextModels };
+      persisted = {
+        ...persisted,
+        providers: nextProviders,
+        models: nextModels,
+      };
       if (removedDefault) persisted = { ...persisted, defaultModel: undefined };
       return structuredClone(persisted);
     },
@@ -102,9 +106,10 @@ function makeDeps(
   const stderr: string[] = [];
   const exitCodes: number[] = [];
   const deps: ProviderDeps = {
-    getHarness: () => harness as unknown as ProviderDeps extends { getHarness: () => infer R }
-      ? R
-      : never,
+    getHarness: () =>
+      harness as unknown as ProviderDeps extends { getHarness: () => infer R }
+        ? R
+        : never,
     stdout: {
       write: (chunk: string) => {
         stdout.push(chunk);
@@ -121,7 +126,7 @@ function makeDeps(
     exit: ((code: number) => {
       exitCodes.push(code);
       throw new ExitCalled(code);
-    }) as ProviderDeps['exit'],
+    }) as ProviderDeps["exit"],
     ...overrides,
   };
   return { deps, stdout, stderr, exitCodes };
@@ -136,24 +141,28 @@ async function tryRun<T>(fn: () => Promise<T>): Promise<T | undefined> {
   }
 }
 
-const REGISTRY_URL = 'https://registry.example.test/v1/models/api.json';
+const REGISTRY_URL = "https://registry.example.test/v1/models/api.json";
 const REGISTRY_BODY = {
   kohub: {
-    id: 'kohub',
-    name: 'KoHub Anthropic',
-    api: 'https://registry.example.test',
-    type: 'anthropic',
+    id: "kohub",
+    name: "KoHub Anthropic",
+    api: "https://registry.example.test",
+    type: "anthropic",
     models: {
-      'claude-opus-4-7': { id: 'claude-opus-4-7', name: 'Claude Opus 4-7', tool_call: true },
+      "claude-opus-4-7": {
+        id: "claude-opus-4-7",
+        name: "Claude Opus 4-7",
+        tool_call: true,
+      },
     },
   },
-  'kohub-responses': {
-    id: 'kohub-responses',
-    name: 'KoHub Responses',
-    api: 'https://registry.example.test/v1',
-    type: 'openai_responses',
+  "kohub-responses": {
+    id: "kohub-responses",
+    name: "KoHub Responses",
+    api: "https://registry.example.test/v1",
+    type: "openai_responses",
     models: {
-      'gpt-5.5': { id: 'gpt-5.5', name: 'GPT 5.5', reasoning: true },
+      "gpt-5.5": { id: "gpt-5.5", name: "GPT 5.5", reasoning: true },
     },
   },
 };
@@ -169,12 +178,15 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-function mockRegistryFetch(body: unknown = REGISTRY_BODY, status = 200): ReturnType<typeof vi.fn> {
+function mockRegistryFetch(
+  body: unknown = REGISTRY_BODY,
+  status = 200,
+): ReturnType<typeof vi.fn> {
   const fetchMock = vi.fn(
     async () =>
       new Response(JSON.stringify(body), {
         status,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { "Content-Type": "application/json" },
       }),
   );
   globalThis.fetch = fetchMock as unknown as typeof globalThis.fetch;
@@ -183,115 +195,122 @@ function mockRegistryFetch(body: unknown = REGISTRY_BODY, status = 200): ReturnT
 
 const CATALOG_BODY = {
   anthropic: {
-    id: 'anthropic',
-    name: 'Anthropic',
-    npm: '@ai-sdk/anthropic',
-    api: 'https://api.anthropic.com',
-    env: ['ANTHROPIC_API_KEY'],
+    id: "anthropic",
+    name: "Anthropic",
+    npm: "@ai-sdk/anthropic",
+    api: "https://api.anthropic.com",
+    env: ["ANTHROPIC_API_KEY"],
     models: {
-      'claude-opus-4-7': {
-        id: 'claude-opus-4-7',
-        name: 'Claude Opus 4.7',
+      "claude-opus-4-7": {
+        id: "claude-opus-4-7",
+        name: "Claude Opus 4.7",
         limit: { context: 200_000, output: 64_000 },
         tool_call: true,
         reasoning: true,
-        modalities: { input: ['text', 'image'], output: ['text'] },
+        modalities: { input: ["text", "image"], output: ["text"] },
       },
-      'claude-haiku-4-5': {
-        id: 'claude-haiku-4-5',
-        name: 'Claude Haiku 4.5',
+      "claude-haiku-4-5": {
+        id: "claude-haiku-4-5",
+        name: "Claude Haiku 4.5",
         limit: { context: 200_000, output: 16_000 },
         tool_call: true,
-        modalities: { input: ['text'], output: ['text'] },
+        modalities: { input: ["text"], output: ["text"] },
       },
     },
   },
   openai: {
-    id: 'openai',
-    name: 'OpenAI',
-    npm: '@ai-sdk/openai',
-    api: 'https://api.openai.com/v1',
-    env: ['OPENAI_API_KEY'],
+    id: "openai",
+    name: "OpenAI",
+    npm: "@ai-sdk/openai",
+    api: "https://api.openai.com/v1",
+    env: ["OPENAI_API_KEY"],
     models: {
-      'gpt-5.5': {
-        id: 'gpt-5.5',
-        name: 'GPT 5.5',
+      "gpt-5.5": {
+        id: "gpt-5.5",
+        name: "GPT 5.5",
         limit: { context: 1_048_576, output: 128_000 },
         tool_call: true,
         reasoning: true,
-        modalities: { input: ['text', 'image'], output: ['text'] },
+        modalities: { input: ["text", "image"], output: ["text"] },
       },
     },
   },
 };
 
-describe('kimi provider add', () => {
-  it('imports providers and models from a custom registry, persisting source on each provider', async () => {
+describe("kimi provider add", () => {
+  it("imports providers and models from a custom registry, persisting source on each provider", async () => {
     const fetchMock = mockRegistryFetch();
-    const { harness, current, setConfigCalls } = makeHarness({ providers: {} } as KimiConfig);
+    const { harness, current, setConfigCalls } = makeHarness({
+      providers: {},
+    } as KimiConfig);
     const { deps, stdout, stderr, exitCodes } = makeDeps(harness);
 
     await tryRun(() =>
-      handleProviderAdd(deps, REGISTRY_URL, { apiKey: 'sk-test-token' }),
+      handleProviderAdd(deps, REGISTRY_URL, { apiKey: "sk-test-token" }),
     );
 
     expect(exitCodes).toEqual([]);
-    expect(stderr.join('')).toBe('');
+    expect(stderr.join("")).toBe("");
     expect(fetchMock).toHaveBeenCalledWith(
       REGISTRY_URL,
       expect.objectContaining({
-        headers: expect.objectContaining({ Authorization: 'Bearer sk-test-token' }),
+        headers: expect.objectContaining({
+          Authorization: "Bearer sk-test-token",
+        }),
       }),
     );
 
     const finalConfig = current();
-    expect(Object.keys(finalConfig.providers).toSorted()).toEqual(['kohub', 'kohub-responses']);
-    const kohub = finalConfig.providers['kohub']!;
-    expect(kohub.type).toBe('anthropic');
-    expect(kohub.baseUrl).toBe('https://registry.example.test');
-    expect(kohub.apiKey).toBe('sk-test-token');
+    expect(Object.keys(finalConfig.providers).toSorted()).toEqual([
+      "kohub",
+      "kohub-responses",
+    ]);
+    const kohub = finalConfig.providers["kohub"]!;
+    expect(kohub.type).toBe("anthropic");
+    expect(kohub.baseUrl).toBe("https://registry.example.test");
+    expect(kohub.apiKey).toBe("sk-test-token");
     expect(kohub.source).toEqual({
-      kind: 'apiJson',
+      kind: "apiJson",
       url: REGISTRY_URL,
-      apiKey: 'sk-test-token',
+      apiKey: "sk-test-token",
     });
 
-    expect(finalConfig.models?.['kohub/claude-opus-4-7']).toMatchObject({
-      provider: 'kohub',
-      model: 'claude-opus-4-7',
+    expect(finalConfig.models?.["kohub/claude-opus-4-7"]).toMatchObject({
+      provider: "kohub",
+      model: "claude-opus-4-7",
     });
-    expect(finalConfig.models?.['kohub-responses/gpt-5.5']).toMatchObject({
-      provider: 'kohub-responses',
-      model: 'gpt-5.5',
+    expect(finalConfig.models?.["kohub-responses/gpt-5.5"]).toMatchObject({
+      provider: "kohub-responses",
+      model: "gpt-5.5",
     });
 
     // The single setConfig patch should carry both providers and models.
     expect(setConfigCalls).toHaveLength(1);
     expect(Object.keys(setConfigCalls[0]?.providers ?? {}).toSorted()).toEqual([
-      'kohub',
-      'kohub-responses',
+      "kohub",
+      "kohub-responses",
     ]);
 
-    const output = stdout.join('');
-    expect(output).toContain('Imported 2 providers (2 models)');
-    expect(output).toContain('- kohub');
-    expect(output).toContain('- kohub-responses');
+    const output = stdout.join("");
+    expect(output).toContain("Imported 2 providers (2 models)");
+    expect(output).toContain("- kohub");
+    expect(output).toContain("- kohub-responses");
   });
 
-  it('drops a stale provider before re-applying when the id already exists', async () => {
+  it("drops a stale provider before re-applying when the id already exists", async () => {
     mockRegistryFetch();
     const initial: KimiConfig = {
       providers: {
         kohub: {
-          type: 'kimi',
-          baseUrl: 'https://stale.example.test',
-          apiKey: 'old',
+          type: "kimi",
+          baseUrl: "https://stale.example.test",
+          apiKey: "old",
         },
       },
       models: {
-        'kohub/stale-model': {
-          provider: 'kohub',
-          model: 'stale-model',
+        "kohub/stale-model": {
+          provider: "kohub",
+          model: "stale-model",
           maxContextSize: 1024,
           capabilities: [],
         },
@@ -301,17 +320,17 @@ describe('kimi provider add', () => {
     const { deps, exitCodes } = makeDeps(harness);
 
     await tryRun(() =>
-      handleProviderAdd(deps, REGISTRY_URL, { apiKey: 'sk-new' }),
+      handleProviderAdd(deps, REGISTRY_URL, { apiKey: "sk-new" }),
     );
 
     expect(exitCodes).toEqual([]);
-    expect(removeCalls).toContain('kohub');
+    expect(removeCalls).toContain("kohub");
     // The stale model alias must be gone; the registry's alias must be in.
-    expect(current().models?.['kohub/stale-model']).toBeUndefined();
-    expect(current().models?.['kohub/claude-opus-4-7']).toBeDefined();
+    expect(current().models?.["kohub/stale-model"]).toBeUndefined();
+    expect(current().models?.["kohub/claude-opus-4-7"]).toBeDefined();
   });
 
-  it('preserves newly-imported providers when a later registry entry replaces an existing id', async () => {
+  it("preserves newly-imported providers when a later registry entry replaces an existing id", async () => {
     // Regression test for the codex P1: `harness.removeProvider` re-reads
     // from disk on each call, so applying the loop body without flushing
     // would silently drop providers added earlier in the same iteration.
@@ -320,16 +339,16 @@ describe('kimi provider add', () => {
     const initial: KimiConfig = {
       providers: {
         // The registry will replace this one.
-        'kohub-responses': {
-          type: 'openai_responses',
-          baseUrl: 'https://stale.example.test/v1',
-          apiKey: 'old',
+        "kohub-responses": {
+          type: "openai_responses",
+          baseUrl: "https://stale.example.test/v1",
+          apiKey: "old",
         },
       },
       models: {
-        'kohub-responses/legacy-model': {
-          provider: 'kohub-responses',
-          model: 'legacy-model',
+        "kohub-responses/legacy-model": {
+          provider: "kohub-responses",
+          model: "legacy-model",
           maxContextSize: 1024,
           capabilities: [],
         },
@@ -339,7 +358,7 @@ describe('kimi provider add', () => {
     const { deps, exitCodes } = makeDeps(harness);
 
     await tryRun(() =>
-      handleProviderAdd(deps, REGISTRY_URL, { apiKey: 'sk-fresh' }),
+      handleProviderAdd(deps, REGISTRY_URL, { apiKey: "sk-fresh" }),
     );
 
     expect(exitCodes).toEqual([]);
@@ -348,19 +367,19 @@ describe('kimi provider add', () => {
     // added in the loop, `kohub-responses` was replaced. The old bug dropped
     // `kohub` because the second iteration's `removeProvider` reloaded a
     // disk-backed config that had not yet been persisted with `kohub`.
-    expect(final.providers['kohub']).toBeDefined();
-    expect(final.providers['kohub-responses']).toBeDefined();
-    expect(final.providers['kohub-responses']?.apiKey).toBe('sk-fresh');
-    expect(final.models?.['kohub/claude-opus-4-7']).toBeDefined();
-    expect(final.models?.['kohub-responses/gpt-5.5']).toBeDefined();
-    expect(final.models?.['kohub-responses/legacy-model']).toBeUndefined();
+    expect(final.providers["kohub"]).toBeDefined();
+    expect(final.providers["kohub-responses"]).toBeDefined();
+    expect(final.providers["kohub-responses"]?.apiKey).toBe("sk-fresh");
+    expect(final.models?.["kohub/claude-opus-4-7"]).toBeDefined();
+    expect(final.models?.["kohub-responses/gpt-5.5"]).toBeDefined();
+    expect(final.models?.["kohub-responses/legacy-model"]).toBeUndefined();
   });
 
-  it('reads the api key from KIMI_REGISTRY_API_KEY when --api-key is omitted', async () => {
+  it("reads the api key from KIMI_REGISTRY_API_KEY when --api-key is omitted", async () => {
     const fetchMock = mockRegistryFetch();
     const { harness } = makeHarness({ providers: {} } as KimiConfig);
     const { deps, exitCodes } = makeDeps(harness, {
-      env: { KIMI_REGISTRY_API_KEY: 'sk-env-token' },
+      env: { KIMI_REGISTRY_API_KEY: "sk-env-token" },
     });
 
     await tryRun(() => handleProviderAdd(deps, REGISTRY_URL, {}));
@@ -369,12 +388,14 @@ describe('kimi provider add', () => {
     expect(fetchMock).toHaveBeenCalledWith(
       REGISTRY_URL,
       expect.objectContaining({
-        headers: expect.objectContaining({ Authorization: 'Bearer sk-env-token' }),
+        headers: expect.objectContaining({
+          Authorization: "Bearer sk-env-token",
+        }),
       }),
     );
   });
 
-  it('exits 1 with a clear message when no api key is supplied anywhere', async () => {
+  it("exits 1 with a clear message when no api key is supplied anywhere", async () => {
     const fetchMock = mockRegistryFetch();
     const { harness } = makeHarness({ providers: {} } as KimiConfig);
     const { deps, stderr, exitCodes } = makeDeps(harness);
@@ -382,34 +403,34 @@ describe('kimi provider add', () => {
     await tryRun(() => handleProviderAdd(deps, REGISTRY_URL, {}));
 
     expect(exitCodes).toEqual([1]);
-    expect(stderr.join('')).toMatch(/missing api key/i);
+    expect(stderr.join("")).toMatch(/missing api key/i);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('exits 1 when the registry fetch fails with an HTTP error', async () => {
-    mockRegistryFetch({ message: 'invalid token' }, 401);
+  it("exits 1 when the registry fetch fails with an HTTP error", async () => {
+    mockRegistryFetch({ message: "invalid token" }, 401);
     const { harness } = makeHarness({ providers: {} } as KimiConfig);
     const { deps, stderr, exitCodes } = makeDeps(harness);
 
     await tryRun(() =>
-      handleProviderAdd(deps, REGISTRY_URL, { apiKey: 'sk-bad' }),
+      handleProviderAdd(deps, REGISTRY_URL, { apiKey: "sk-bad" }),
     );
 
     expect(exitCodes).toEqual([1]);
-    expect(stderr.join('')).toMatch(/HTTP 401/);
+    expect(stderr.join("")).toMatch(/HTTP 401/);
   });
 });
 
-describe('kimi provider remove', () => {
-  it('removes a provider and reports success', async () => {
+describe("kimi provider remove", () => {
+  it("removes a provider and reports success", async () => {
     const initial: KimiConfig = {
       providers: {
-        kohub: { type: 'anthropic', baseUrl: 'https://x', apiKey: 'k' },
+        kohub: { type: "anthropic", baseUrl: "https://x", apiKey: "k" },
       },
       models: {
-        'kohub/m': {
-          provider: 'kohub',
-          model: 'm',
+        "kohub/m": {
+          provider: "kohub",
+          model: "m",
           maxContextSize: 1024,
           capabilities: [],
         },
@@ -418,121 +439,131 @@ describe('kimi provider remove', () => {
     const { harness, removeCalls, current } = makeHarness(initial);
     const { deps, stdout, exitCodes } = makeDeps(harness);
 
-    await tryRun(() => handleProviderRemove(deps, 'kohub'));
+    await tryRun(() => handleProviderRemove(deps, "kohub"));
 
     expect(exitCodes).toEqual([]);
-    expect(removeCalls).toEqual(['kohub']);
-    expect(current().providers['kohub']).toBeUndefined();
-    expect(stdout.join('')).toContain('Removed provider "kohub"');
+    expect(removeCalls).toEqual(["kohub"]);
+    expect(current().providers["kohub"]).toBeUndefined();
+    expect(stdout.join("")).toContain('Removed provider "kohub"');
   });
 
-  it('exits 1 when the provider id does not exist', async () => {
+  it("exits 1 when the provider id does not exist", async () => {
     const { harness } = makeHarness({ providers: {} } as KimiConfig);
     const { deps, stderr, exitCodes } = makeDeps(harness);
 
-    await tryRun(() => handleProviderRemove(deps, 'nope'));
+    await tryRun(() => handleProviderRemove(deps, "nope"));
 
     expect(exitCodes).toEqual([1]);
-    expect(stderr.join('')).toContain('Provider "nope" not found');
+    expect(stderr.join("")).toContain('Provider "nope" not found');
   });
 });
 
-describe('kimi provider list', () => {
+describe("kimi provider list", () => {
   const config: KimiConfig = {
     providers: {
       kohub: {
-        type: 'anthropic',
-        baseUrl: 'https://x',
-        apiKey: 'k',
-        source: { kind: 'apiJson', url: REGISTRY_URL, apiKey: 'k' },
+        type: "anthropic",
+        baseUrl: "https://x",
+        apiKey: "k",
+        source: { kind: "apiJson", url: REGISTRY_URL, apiKey: "k" },
       },
-      'managed:kimi-code': {
-        type: 'kimi',
-        baseUrl: 'https://api.kimi.com/coding/v1',
-        oauth: { storage: 'file', key: 'oauth/kimi-code' },
+      "managed:kimi-code": {
+        type: "kimi",
+        baseUrl: "https://api.kimi.com/coding/v1",
+        oauth: { storage: "file", key: "oauth/kimi-code" },
       },
-      manual: { type: 'openai', baseUrl: 'https://y', apiKey: 'm' },
+      manual: { type: "openai", baseUrl: "https://y", apiKey: "m" },
     },
     models: {
-      'kohub/a': {
-        provider: 'kohub',
-        model: 'a',
+      "kohub/a": {
+        provider: "kohub",
+        model: "a",
         maxContextSize: 1024,
         capabilities: [],
       },
-      'kohub/b': {
-        provider: 'kohub',
-        model: 'b',
+      "kohub/b": {
+        provider: "kohub",
+        model: "b",
         maxContextSize: 1024,
         capabilities: [],
       },
-      'manual/x': {
-        provider: 'manual',
-        model: 'x',
+      "manual/x": {
+        provider: "manual",
+        model: "x",
         maxContextSize: 1024,
         capabilities: [],
       },
     },
-    defaultModel: 'kohub/a',
+    defaultModel: "kohub/a",
   } as unknown as KimiConfig;
 
-  it('renders one row per provider with counts and source labels', async () => {
+  it("renders one row per provider with counts and source labels", async () => {
     const { harness } = makeHarness(config);
     const { deps, stdout } = makeDeps(harness);
 
     await tryRun(() => handleProviderList(deps, { json: false }));
 
-    const out = stdout.join('');
+    const out = stdout.join("");
     expect(out).toMatch(/kohub\s+type=anthropic\s+models=2\s+source=apiJson\(/);
-    expect(out).toMatch(/managed:kimi-code\s+type=kimi\s+models=0\s+source=oauth/);
+    expect(out).toMatch(
+      /managed:kimi-code\s+type=kimi\s+models=0\s+source=oauth/,
+    );
     expect(out).toMatch(/manual\s+type=openai\s+models=1\s+source=inline/);
-    expect(out).toContain('Default model: kohub/a');
+    expect(out).toContain("Default model: kohub/a");
   });
 
-  it('prints a friendly message when nothing is configured', async () => {
+  it("prints a friendly message when nothing is configured", async () => {
     const { harness } = makeHarness({ providers: {} } as KimiConfig);
     const { deps, stdout } = makeDeps(harness);
 
     await tryRun(() => handleProviderList(deps, { json: false }));
 
-    expect(stdout.join('')).toContain('No providers configured');
+    expect(stdout.join("")).toContain("No providers configured");
   });
 
-  it('emits parseable JSON with --json', async () => {
+  it("emits parseable JSON with --json", async () => {
     const { harness } = makeHarness(config);
     const { deps, stdout } = makeDeps(harness);
 
     await tryRun(() => handleProviderList(deps, { json: true }));
 
-    const parsed = JSON.parse(stdout.join('')) as {
+    const parsed = JSON.parse(stdout.join("")) as {
       providers: Record<string, unknown>;
       models: Record<string, unknown>;
     };
     expect(Object.keys(parsed.providers).toSorted()).toEqual([
-      'kohub',
-      'managed:kimi-code',
-      'manual',
+      "kohub",
+      "managed:kimi-code",
+      "manual",
     ]);
-    expect(Object.keys(parsed.models)).toContain('kohub/a');
+    expect(Object.keys(parsed.models)).toContain("kohub/a");
   });
 });
 
-describe('registerProviderCommand', () => {
-  it('describes the user-facing subcommand and routes flags through commander', async () => {
+describe("registerProviderCommand", () => {
+  it("describes the user-facing subcommand and routes flags through commander", async () => {
     const fetchMock = mockRegistryFetch();
     const { harness, current } = makeHarness({ providers: {} } as KimiConfig);
     const { deps, exitCodes, stdout } = makeDeps(harness);
 
-    const program = new Command('kimi');
+    const program = new Command("kimi");
     registerProviderCommand(program, deps);
 
-    const providerCmd = program.commands.find((c) => c.name() === 'provider');
+    const providerCmd = program.commands.find((c) => c.name() === "provider");
     expect(providerCmd?.description()).toMatch(/Manage LLM providers/i);
 
     await tryRun(() =>
       program.parseAsync(
-        ['node', 'kimi', 'provider', 'add', REGISTRY_URL, '--api-key', 'sk-cli'],
-        { from: 'node' },
+        [
+          "node",
+          "kimi",
+          "provider",
+          "add",
+          REGISTRY_URL,
+          "--api-key",
+          "sk-cli",
+        ],
+        { from: "node" },
       ),
     );
 
@@ -540,40 +571,45 @@ describe('registerProviderCommand', () => {
     expect(fetchMock).toHaveBeenCalledWith(
       REGISTRY_URL,
       expect.objectContaining({
-        headers: expect.objectContaining({ Authorization: 'Bearer sk-cli' }),
+        headers: expect.objectContaining({ Authorization: "Bearer sk-cli" }),
       }),
     );
-    expect(Object.keys(current().providers).toSorted()).toEqual(['kohub', 'kohub-responses']);
-    expect(stdout.join('')).toContain('Imported 2 providers');
+    expect(Object.keys(current().providers).toSorted()).toEqual([
+      "kohub",
+      "kohub-responses",
+    ]);
+    expect(stdout.join("")).toContain("Imported 2 providers");
   });
 
-  it('reports write failures on stderr and exits 1 instead of crashing', async () => {
+  it("reports write failures on stderr and exits 1 instead of crashing", async () => {
     const { harness } = makeHarness({
-      providers: { kimi: { type: 'kimi' } },
+      providers: { kimi: { type: "kimi" } },
     } as unknown as KimiConfig);
     // Simulate the strict write path rejecting because config.toml is invalid.
     harness.removeProvider = async () => {
       throw new Error(
-        'Cannot change settings while config.toml is invalid — fix it first (run `kimi doctor` for details).',
+        "Cannot change settings while config.toml is invalid — fix it first (run `kimi doctor` for details).",
       );
     };
     const { deps, stderr, exitCodes } = makeDeps(harness);
 
-    const program = new Command('kimi');
+    const program = new Command("kimi");
     registerProviderCommand(program, deps);
 
     await tryRun(() =>
-      program.parseAsync(['node', 'kimi', 'provider', 'remove', 'kimi'], { from: 'node' }),
+      program.parseAsync(["node", "kimi", "provider", "remove", "kimi"], {
+        from: "node",
+      }),
     );
 
     expect(exitCodes).toEqual([1]);
-    expect(stderr.join('')).toContain('Cannot change settings');
-    expect(stderr.join('')).not.toContain('    at '); // no stack trace dump
+    expect(stderr.join("")).toContain("Cannot change settings");
+    expect(stderr.join("")).not.toContain("    at "); // no stack trace dump
   });
 });
 
-describe('kimi provider catalog list', () => {
-  it('lists catalog providers with wire/model counts, sorted by id', async () => {
+describe("kimi provider catalog list", () => {
+  it("lists catalog providers with wire/model counts, sorted by id", async () => {
     mockRegistryFetch(CATALOG_BODY);
     const { harness } = makeHarness({ providers: {} } as KimiConfig);
     const { deps, stdout, exitCodes } = makeDeps(harness);
@@ -581,124 +617,136 @@ describe('kimi provider catalog list', () => {
     await tryRun(() => handleCatalogList(deps, undefined, { json: false }));
 
     expect(exitCodes).toEqual([]);
-    const out = stdout.join('');
+    const out = stdout.join("");
     expect(out).toMatch(/^anthropic\s+wire=anthropic\s+models=2\s+Anthropic\n/);
     expect(out).toMatch(/openai\s+wire=openai\s+models=1\s+OpenAI/);
     // anthropic before openai (alphabetical).
-    expect(out.indexOf('anthropic')).toBeLessThan(out.indexOf('openai'));
+    expect(out.indexOf("anthropic")).toBeLessThan(out.indexOf("openai"));
   });
 
-  it('filters case-insensitively by id and name substring', async () => {
+  it("filters case-insensitively by id and name substring", async () => {
     mockRegistryFetch(CATALOG_BODY);
     const { harness } = makeHarness({ providers: {} } as KimiConfig);
     const { deps, stdout } = makeDeps(harness);
 
-    await tryRun(() => handleCatalogList(deps, undefined, { json: false, filter: 'open' }));
+    await tryRun(() =>
+      handleCatalogList(deps, undefined, { json: false, filter: "open" }),
+    );
 
-    const out = stdout.join('');
-    expect(out).toContain('openai');
-    expect(out).not.toContain('anthropic');
+    const out = stdout.join("");
+    expect(out).toContain("openai");
+    expect(out).not.toContain("anthropic");
   });
 
-  it('drills into a specific providerId and lists its models with capabilities', async () => {
+  it("drills into a specific providerId and lists its models with capabilities", async () => {
     mockRegistryFetch(CATALOG_BODY);
     const { harness } = makeHarness({ providers: {} } as KimiConfig);
     const { deps, stdout } = makeDeps(harness);
 
-    await tryRun(() => handleCatalogList(deps, 'anthropic', { json: false }));
+    await tryRun(() => handleCatalogList(deps, "anthropic", { json: false }));
 
-    const out = stdout.join('');
+    const out = stdout.join("");
     expect(out).toMatch(/^Anthropic \(anthropic\)/);
-    expect(out).toMatch(/claude-opus-4-7\s+ctx=200000.*tool_use.*thinking.*image_in/);
+    expect(out).toMatch(
+      /claude-opus-4-7\s+ctx=200000.*tool_use.*thinking.*image_in/,
+    );
     expect(out).toMatch(/claude-haiku-4-5\s+ctx=200000.*tool_use/);
   });
 
-  it('exits 1 when the requested providerId is missing from the catalog', async () => {
+  it("exits 1 when the requested providerId is missing from the catalog", async () => {
     mockRegistryFetch(CATALOG_BODY);
     const { harness } = makeHarness({ providers: {} } as KimiConfig);
     const { deps, stderr, exitCodes } = makeDeps(harness);
 
-    await tryRun(() => handleCatalogList(deps, 'unknown', { json: false }));
+    await tryRun(() => handleCatalogList(deps, "unknown", { json: false }));
 
     expect(exitCodes).toEqual([1]);
-    expect(stderr.join('')).toContain('Provider "unknown" not found in catalog');
+    expect(stderr.join("")).toContain(
+      'Provider "unknown" not found in catalog',
+    );
   });
 
-  it('emits parseable JSON for the providerId view', async () => {
+  it("emits parseable JSON for the providerId view", async () => {
     mockRegistryFetch(CATALOG_BODY);
     const { harness } = makeHarness({ providers: {} } as KimiConfig);
     const { deps, stdout } = makeDeps(harness);
 
-    await tryRun(() => handleCatalogList(deps, 'openai', { json: true }));
+    await tryRun(() => handleCatalogList(deps, "openai", { json: true }));
 
-    const parsed = JSON.parse(stdout.join('')) as {
+    const parsed = JSON.parse(stdout.join("")) as {
       providerId: string;
       models: Array<{ id: string }>;
     };
-    expect(parsed.providerId).toBe('openai');
-    expect(parsed.models.map((m) => m.id)).toEqual(['gpt-5.5']);
+    expect(parsed.providerId).toBe("openai");
+    expect(parsed.models.map((m) => m.id)).toEqual(["gpt-5.5"]);
   });
 
-  it('honors --url override when supplied', async () => {
+  it("honors --url override when supplied", async () => {
     const fetchMock = mockRegistryFetch(CATALOG_BODY);
     const { harness } = makeHarness({ providers: {} } as KimiConfig);
     const { deps } = makeDeps(harness);
 
     await tryRun(() =>
-      handleCatalogList(deps, undefined, { json: true, url: 'https://example.test/catalog.json' }),
+      handleCatalogList(deps, undefined, {
+        json: true,
+        url: "https://example.test/catalog.json",
+      }),
     );
 
-    expect(fetchMock).toHaveBeenCalledWith('https://example.test/catalog.json', expect.any(Object));
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://example.test/catalog.json",
+      expect.any(Object),
+    );
   });
 });
 
-describe('kimi provider catalog add', () => {
-  it('imports a provider from the catalog without changing the default model', async () => {
+describe("kimi provider catalog add", () => {
+  it("imports a provider from the catalog without changing the default model", async () => {
     mockRegistryFetch(CATALOG_BODY);
     const initial: KimiConfig = {
       providers: {
-        other: { type: 'kimi', baseUrl: 'https://x', apiKey: 'k' },
+        other: { type: "kimi", baseUrl: "https://x", apiKey: "k" },
       },
       models: {
-        'other/main': {
-          provider: 'other',
-          model: 'main',
+        "other/main": {
+          provider: "other",
+          model: "main",
           maxContextSize: 1024,
           capabilities: [],
         },
       },
-      defaultModel: 'other/main',
+      defaultModel: "other/main",
       thinking: { enabled: true },
     } as unknown as KimiConfig;
     const { harness, current, setConfigCalls } = makeHarness(initial);
     const { deps, stdout, exitCodes } = makeDeps(harness);
 
     await tryRun(() =>
-      handleCatalogAdd(deps, 'anthropic', { apiKey: 'sk-ant-token' }),
+      handleCatalogAdd(deps, "anthropic", { apiKey: "sk-ant-token" }),
     );
 
     expect(exitCodes).toEqual([]);
     const finalConfig = current();
-    expect(finalConfig.providers['anthropic']).toMatchObject({
-      type: 'anthropic',
-      apiKey: 'sk-ant-token',
+    expect(finalConfig.providers["anthropic"]).toMatchObject({
+      type: "anthropic",
+      apiKey: "sk-ant-token",
     });
     // Catalog import populates the model aliases.
-    expect(finalConfig.models?.['anthropic/claude-opus-4-7']).toMatchObject({
-      provider: 'anthropic',
-      model: 'claude-opus-4-7',
+    expect(finalConfig.models?.["anthropic/claude-opus-4-7"]).toMatchObject({
+      provider: "anthropic",
+      model: "claude-opus-4-7",
     });
-    expect(finalConfig.models?.['anthropic/claude-haiku-4-5']).toBeDefined();
+    expect(finalConfig.models?.["anthropic/claude-haiku-4-5"]).toBeDefined();
     // The unrelated provider's model survives, and remains the default.
-    expect(finalConfig.models?.['other/main']).toBeDefined();
-    expect(finalConfig.defaultModel).toBe('other/main');
+    expect(finalConfig.models?.["other/main"]).toBeDefined();
+    expect(finalConfig.defaultModel).toBe("other/main");
     expect(finalConfig.thinking?.enabled).toBe(true);
     // The patch sent over `setConfig` must explicitly carry the preserved default.
-    expect(setConfigCalls[0]?.defaultModel).toBe('other/main');
-    expect(stdout.join('')).toContain('Imported Anthropic (anthropic)');
+    expect(setConfigCalls[0]?.defaultModel).toBe("other/main");
+    expect(stdout.join("")).toContain("Imported Anthropic (anthropic)");
   });
 
-  it('sets default_model when --default-model is supplied and the model exists', async () => {
+  it("sets default_model when --default-model is supplied and the model exists", async () => {
     mockRegistryFetch(CATALOG_BODY);
     const { harness, current, setConfigCalls } = makeHarness({
       providers: {},
@@ -706,37 +754,39 @@ describe('kimi provider catalog add', () => {
     const { deps, stdout, exitCodes } = makeDeps(harness);
 
     await tryRun(() =>
-      handleCatalogAdd(deps, 'anthropic', {
-        apiKey: 'sk-ant-token',
-        defaultModel: 'claude-opus-4-7',
+      handleCatalogAdd(deps, "anthropic", {
+        apiKey: "sk-ant-token",
+        defaultModel: "claude-opus-4-7",
       }),
     );
 
     expect(exitCodes).toEqual([]);
-    expect(current().defaultModel).toBe('anthropic/claude-opus-4-7');
-    expect(setConfigCalls[0]?.defaultModel).toBe('anthropic/claude-opus-4-7');
-    expect(stdout.join('')).toContain('Default model set to anthropic/claude-opus-4-7');
+    expect(current().defaultModel).toBe("anthropic/claude-opus-4-7");
+    expect(setConfigCalls[0]?.defaultModel).toBe("anthropic/claude-opus-4-7");
+    expect(stdout.join("")).toContain(
+      "Default model set to anthropic/claude-opus-4-7",
+    );
   });
 
-  it('rejects an unknown --default-model with a helpful hint', async () => {
+  it("rejects an unknown --default-model with a helpful hint", async () => {
     mockRegistryFetch(CATALOG_BODY);
     const { harness } = makeHarness({ providers: {} } as KimiConfig);
     const { deps, stderr, exitCodes } = makeDeps(harness);
 
     await tryRun(() =>
-      handleCatalogAdd(deps, 'anthropic', {
-        apiKey: 'sk-ant-token',
-        defaultModel: 'does-not-exist',
+      handleCatalogAdd(deps, "anthropic", {
+        apiKey: "sk-ant-token",
+        defaultModel: "does-not-exist",
       }),
     );
 
     expect(exitCodes).toEqual([1]);
-    const err = stderr.join('');
+    const err = stderr.join("");
     expect(err).toContain('"does-not-exist" is not in provider "anthropic"');
-    expect(err).toContain('kimi provider catalog list anthropic');
+    expect(err).toContain("kimi provider catalog list anthropic");
   });
 
-  it('preserves an existing default_model when re-importing the same provider without --default-model', async () => {
+  it("preserves an existing default_model when re-importing the same provider without --default-model", async () => {
     // Regression test for the codex P2: `removeProvider` clears
     // `defaultModel` if it pointed at one of the provider's aliases. The
     // handler must capture the previous default BEFORE calling
@@ -746,37 +796,37 @@ describe('kimi provider catalog add', () => {
     const initial: KimiConfig = {
       providers: {
         anthropic: {
-          type: 'anthropic',
-          baseUrl: 'https://api.anthropic.com',
-          apiKey: 'sk-old',
+          type: "anthropic",
+          baseUrl: "https://api.anthropic.com",
+          apiKey: "sk-old",
         },
       },
       models: {
-        'anthropic/claude-opus-4-7': {
-          provider: 'anthropic',
-          model: 'claude-opus-4-7',
+        "anthropic/claude-opus-4-7": {
+          provider: "anthropic",
+          model: "claude-opus-4-7",
           maxContextSize: 200_000,
-          capabilities: ['tool_use', 'thinking', 'image_in'],
+          capabilities: ["tool_use", "thinking", "image_in"],
         },
       },
-      defaultModel: 'anthropic/claude-opus-4-7',
+      defaultModel: "anthropic/claude-opus-4-7",
       thinking: { enabled: true },
     } as unknown as KimiConfig;
     const { harness, current } = makeHarness(initial);
     const { deps, exitCodes } = makeDeps(harness);
 
     await tryRun(() =>
-      handleCatalogAdd(deps, 'anthropic', { apiKey: 'sk-rotated' }),
+      handleCatalogAdd(deps, "anthropic", { apiKey: "sk-rotated" }),
     );
 
     expect(exitCodes).toEqual([]);
-    expect(current().providers['anthropic']?.apiKey).toBe('sk-rotated');
+    expect(current().providers["anthropic"]?.apiKey).toBe("sk-rotated");
     // Previous default and thinking flag must survive the re-import.
-    expect(current().defaultModel).toBe('anthropic/claude-opus-4-7');
+    expect(current().defaultModel).toBe("anthropic/claude-opus-4-7");
     expect(current().thinking?.enabled).toBe(true);
   });
 
-  it('preserves thinking.enabled when --default-model is supplied to a thinking-capable model', async () => {
+  it("preserves thinking.enabled when --default-model is supplied to a thinking-capable model", async () => {
     // Regression test for the codex P2: `applyCatalogProvider` always
     // assigns `thinking.enabled` from `options.thinking`. Hardcoding `false`
     // silently disabled thinking even when the user previously had it on
@@ -791,19 +841,19 @@ describe('kimi provider catalog add', () => {
     const { deps, exitCodes } = makeDeps(harness);
 
     await tryRun(() =>
-      handleCatalogAdd(deps, 'anthropic', {
-        apiKey: 'sk-ant',
-        defaultModel: 'claude-opus-4-7',
+      handleCatalogAdd(deps, "anthropic", {
+        apiKey: "sk-ant",
+        defaultModel: "claude-opus-4-7",
       }),
     );
 
     expect(exitCodes).toEqual([]);
-    expect(current().defaultModel).toBe('anthropic/claude-opus-4-7');
+    expect(current().defaultModel).toBe("anthropic/claude-opus-4-7");
     expect(current().thinking?.enabled).toBe(true);
     expect(setConfigCalls[0]?.thinking?.enabled).toBe(true);
   });
 
-  it('does not persist thinking.enabled=false for first-time setup with --default-model', async () => {
+  it("does not persist thinking.enabled=false for first-time setup with --default-model", async () => {
     // Regression test for codex P2 follow-up: previously the handler fell
     // back to `false` when `thinking.enabled` was unset, but
     // `resolveThinkingEffort` treats `thinking.enabled === false` as an
@@ -819,21 +869,21 @@ describe('kimi provider catalog add', () => {
     const { deps, exitCodes } = makeDeps(harness);
 
     await tryRun(() =>
-      handleCatalogAdd(deps, 'anthropic', {
-        apiKey: 'sk-ant',
-        defaultModel: 'claude-opus-4-7',
+      handleCatalogAdd(deps, "anthropic", {
+        apiKey: "sk-ant",
+        defaultModel: "claude-opus-4-7",
       }),
     );
 
     expect(exitCodes).toEqual([]);
-    expect(current().defaultModel).toBe('anthropic/claude-opus-4-7');
+    expect(current().defaultModel).toBe("anthropic/claude-opus-4-7");
     // Must NOT be `false`. `undefined` lets the runtime resolver pick the
     // per-model default; `false` would force `'off'`.
     expect(current().thinking?.enabled).toBeUndefined();
     expect(setConfigCalls[0]?.thinking?.enabled).toBeUndefined();
   });
 
-  it('drops a stale default_model when the catalog refresh no longer contains it', async () => {
+  it("drops a stale default_model when the catalog refresh no longer contains it", async () => {
     // Regression test for codex P2: when the user previously chose
     // `anthropic/legacy` as default and a refresh of the same provider no
     // longer ships that model, restoring the previous default would point
@@ -844,252 +894,270 @@ describe('kimi provider catalog add', () => {
     const initial: KimiConfig = {
       providers: {
         anthropic: {
-          type: 'anthropic',
-          baseUrl: 'https://api.anthropic.com',
-          apiKey: 'sk-old',
+          type: "anthropic",
+          baseUrl: "https://api.anthropic.com",
+          apiKey: "sk-old",
         },
       },
       models: {
-        'anthropic/legacy-claude': {
-          provider: 'anthropic',
-          model: 'legacy-claude',
+        "anthropic/legacy-claude": {
+          provider: "anthropic",
+          model: "legacy-claude",
           maxContextSize: 200_000,
           capabilities: [],
         },
       },
-      defaultModel: 'anthropic/legacy-claude',
+      defaultModel: "anthropic/legacy-claude",
     } as unknown as KimiConfig;
     const { harness, current } = makeHarness(initial);
     const { deps, exitCodes } = makeDeps(harness);
 
     await tryRun(() =>
-      handleCatalogAdd(deps, 'anthropic', { apiKey: 'sk-rotated' }),
+      handleCatalogAdd(deps, "anthropic", { apiKey: "sk-rotated" }),
     );
 
     expect(exitCodes).toEqual([]);
     // The legacy alias must have been replaced by the catalog's models.
-    expect(current().models?.['anthropic/legacy-claude']).toBeUndefined();
-    expect(current().models?.['anthropic/claude-opus-4-7']).toBeDefined();
+    expect(current().models?.["anthropic/legacy-claude"]).toBeUndefined();
+    expect(current().models?.["anthropic/claude-opus-4-7"]).toBeDefined();
     // The dangling default must NOT have been restored — it would point at
     // a non-existent alias. The handler clears it instead.
     expect(current().defaultModel).toBeUndefined();
   });
 
-  it('falls back to KIMI_REGISTRY_API_KEY when --api-key is omitted', async () => {
+  it("falls back to KIMI_REGISTRY_API_KEY when --api-key is omitted", async () => {
     mockRegistryFetch(CATALOG_BODY);
     const { harness, current } = makeHarness({ providers: {} } as KimiConfig);
     const { deps, exitCodes } = makeDeps(harness, {
-      env: { KIMI_REGISTRY_API_KEY: 'sk-env' },
+      env: { KIMI_REGISTRY_API_KEY: "sk-env" },
     });
 
-    await tryRun(() => handleCatalogAdd(deps, 'openai', {}));
+    await tryRun(() => handleCatalogAdd(deps, "openai", {}));
 
     expect(exitCodes).toEqual([]);
-    expect(current().providers['openai']).toMatchObject({ apiKey: 'sk-env' });
+    expect(current().providers["openai"]).toMatchObject({ apiKey: "sk-env" });
   });
 
-  it('lets --base-url override the catalog-declared endpoint', async () => {
+  it("lets --base-url override the catalog-declared endpoint", async () => {
     mockRegistryFetch(CATALOG_BODY);
     const { harness, current } = makeHarness({ providers: {} } as KimiConfig);
     const { deps, exitCodes } = makeDeps(harness);
 
     await tryRun(() =>
-      handleCatalogAdd(deps, 'openai', {
-        apiKey: 'sk-o',
-        baseUrl: 'https://proxy.example.test/v1',
+      handleCatalogAdd(deps, "openai", {
+        apiKey: "sk-o",
+        baseUrl: "https://proxy.example.test/v1",
       }),
     );
 
     expect(exitCodes).toEqual([]);
-    expect(current().providers['openai']).toMatchObject({
-      type: 'openai',
-      baseUrl: 'https://proxy.example.test/v1',
+    expect(current().providers["openai"]).toMatchObject({
+      type: "openai",
+      baseUrl: "https://proxy.example.test/v1",
     });
   });
 
-  it('strips a trailing /v1 from --base-url for Anthropic-wire imports', async () => {
+  it("strips a trailing /v1 from --base-url for Anthropic-wire imports", async () => {
     mockRegistryFetch({
-      'claude-gateway': {
-        id: 'claude-gateway',
-        name: 'Claude Gateway',
-        npm: '@custom/claude-gateway',
-        models: { 'claude-x': { id: 'claude-x', limit: { context: 1000 } } },
+      "claude-gateway": {
+        id: "claude-gateway",
+        name: "Claude Gateway",
+        npm: "@custom/claude-gateway",
+        models: { "claude-x": { id: "claude-x", limit: { context: 1000 } } },
       },
     });
     const { harness, current } = makeHarness({ providers: {} } as KimiConfig);
     const { deps, exitCodes } = makeDeps(harness);
 
     await tryRun(() =>
-      handleCatalogAdd(deps, 'claude-gateway', {
-        apiKey: 'sk-gw',
-        baseUrl: 'https://claude-gateway.example.test/v1',
+      handleCatalogAdd(deps, "claude-gateway", {
+        apiKey: "sk-gw",
+        baseUrl: "https://claude-gateway.example.test/v1",
       }),
     );
 
     expect(exitCodes).toEqual([]);
-    expect(current().providers['claude-gateway']).toMatchObject({
-      type: 'anthropic',
+    expect(current().providers["claude-gateway"]).toMatchObject({
+      type: "anthropic",
       // The Anthropic SDK appends /v1/messages itself — persisting the /v1
       // would double it (/v1/v1/messages).
-      baseUrl: 'https://claude-gateway.example.test',
+      baseUrl: "https://claude-gateway.example.test",
     });
   });
 
-  it('rejects an empty --base-url instead of persisting a blank endpoint', async () => {
+  it("rejects an empty --base-url instead of persisting a blank endpoint", async () => {
     mockRegistryFetch(CATALOG_BODY);
     const { harness } = makeHarness({ providers: {} } as KimiConfig);
     const { deps, stderr, exitCodes } = makeDeps(harness);
 
-    await tryRun(() => handleCatalogAdd(deps, 'openai', { apiKey: 'sk-o', baseUrl: '   ' }));
+    await tryRun(() =>
+      handleCatalogAdd(deps, "openai", { apiKey: "sk-o", baseUrl: "   " }),
+    );
 
     expect(exitCodes).toEqual([1]);
-    expect(stderr.join('')).toContain('--base-url cannot be empty');
-    await expect(harness.getConfig().then((c) => c.providers['openai'])).resolves.toBeUndefined();
+    expect(stderr.join("")).toContain("--base-url cannot be empty");
+    await expect(
+      harness.getConfig().then((c) => c.providers["openai"]),
+    ).resolves.toBeUndefined();
   });
 
-  it('requires --base-url for a non-official Anthropic-compatible vendor without one', async () => {
+  it("requires --base-url for a non-official Anthropic-compatible vendor without one", async () => {
     mockRegistryFetch({
-      'claude-gateway': {
-        id: 'claude-gateway',
-        name: 'Claude Gateway',
-        npm: '@custom/claude-gateway',
-        models: { 'claude-x': { id: 'claude-x', limit: { context: 1000 } } },
+      "claude-gateway": {
+        id: "claude-gateway",
+        name: "Claude Gateway",
+        npm: "@custom/claude-gateway",
+        models: { "claude-x": { id: "claude-x", limit: { context: 1000 } } },
       },
     });
     const { harness, current } = makeHarness({ providers: {} } as KimiConfig);
     const { deps, stderr, exitCodes } = makeDeps(harness);
 
-    await tryRun(() => handleCatalogAdd(deps, 'claude-gateway', { apiKey: 'sk-gw' }));
+    await tryRun(() =>
+      handleCatalogAdd(deps, "claude-gateway", { apiKey: "sk-gw" }),
+    );
     expect(exitCodes).toEqual([1]);
-    expect(stderr.join('')).toContain('--base-url');
+    expect(stderr.join("")).toContain("--base-url");
 
     await tryRun(() =>
-      handleCatalogAdd(deps, 'claude-gateway', {
-        apiKey: 'sk-gw',
-        baseUrl: 'https://claude-gateway.example.test',
+      handleCatalogAdd(deps, "claude-gateway", {
+        apiKey: "sk-gw",
+        baseUrl: "https://claude-gateway.example.test",
       }),
     );
-    expect(current().providers['claude-gateway']).toMatchObject({
-      type: 'anthropic',
-      baseUrl: 'https://claude-gateway.example.test',
+    expect(current().providers["claude-gateway"]).toMatchObject({
+      type: "anthropic",
+      baseUrl: "https://claude-gateway.example.test",
     });
   });
 
-  it('exits 1 when the api key is missing and skips the network', async () => {
+  it("exits 1 when the api key is missing and skips the network", async () => {
     const fetchMock = mockRegistryFetch(CATALOG_BODY);
     const { harness } = makeHarness({ providers: {} } as KimiConfig);
     const { deps, stderr, exitCodes } = makeDeps(harness);
 
-    await tryRun(() => handleCatalogAdd(deps, 'anthropic', {}));
+    await tryRun(() => handleCatalogAdd(deps, "anthropic", {}));
 
     expect(exitCodes).toEqual([1]);
-    expect(stderr.join('')).toMatch(/missing api key/i);
+    expect(stderr.join("")).toMatch(/missing api key/i);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('exits 1 when the providerId is missing from the catalog', async () => {
+  it("exits 1 when the providerId is missing from the catalog", async () => {
     mockRegistryFetch(CATALOG_BODY);
     const { harness } = makeHarness({ providers: {} } as KimiConfig);
     const { deps, stderr, exitCodes } = makeDeps(harness);
 
     await tryRun(() =>
-      handleCatalogAdd(deps, 'no-such-id', { apiKey: 'sk-x' }),
+      handleCatalogAdd(deps, "no-such-id", { apiKey: "sk-x" }),
     );
 
     expect(exitCodes).toEqual([1]);
-    expect(stderr.join('')).toContain('Provider "no-such-id" not found in catalog');
+    expect(stderr.join("")).toContain(
+      'Provider "no-such-id" not found in catalog',
+    );
   });
 
   const GUESS_CATALOG_BODY = {
     xai: {
-      id: 'xai',
-      name: 'xAI',
-      npm: '@ai-sdk/xai',
-      env: ['XAI_API_KEY'],
+      id: "xai",
+      name: "xAI",
+      npm: "@ai-sdk/xai",
+      env: ["XAI_API_KEY"],
       models: {
-        'grok-4': {
-          id: 'grok-4',
+        "grok-4": {
+          id: "grok-4",
           limit: { context: 256_000 },
           reasoning: true,
-          reasoning_options: [{ type: 'effort', values: ['none', 'low', 'medium', 'high'] }],
+          reasoning_options: [
+            { type: "effort", values: ["none", "low", "medium", "high"] },
+          ],
         },
       },
     },
     bedrock: {
-      id: 'amazon-bedrock',
-      name: 'Amazon Bedrock',
-      npm: '@ai-sdk/amazon-bedrock',
-      models: { 'claude-x': { id: 'claude-x', limit: { context: 1000 } } },
+      id: "amazon-bedrock",
+      name: "Amazon Bedrock",
+      npm: "@ai-sdk/amazon-bedrock",
+      models: { "claude-x": { id: "claude-x", limit: { context: 1000 } } },
     },
     azure: {
-      id: 'azure',
-      name: 'Azure',
-      npm: '@ai-sdk/azure',
-      env: ['AZURE_API_KEY'],
-      models: { 'gpt-x': { id: 'gpt-x', limit: { context: 1000 } } },
+      id: "azure",
+      name: "Azure",
+      npm: "@ai-sdk/azure",
+      env: ["AZURE_API_KEY"],
+      models: { "gpt-x": { id: "gpt-x", limit: { context: 1000 } } },
     },
   };
 
-  it('guesses openai for a vendor-specific SDK and requires --base-url', async () => {
+  it("guesses openai for a vendor-specific SDK and requires --base-url", async () => {
     mockRegistryFetch(GUESS_CATALOG_BODY);
     const { harness } = makeHarness({ providers: {} } as KimiConfig);
     const { deps, stderr, exitCodes } = makeDeps(harness);
 
-    await tryRun(() => handleCatalogAdd(deps, 'xai', { apiKey: 'sk-xai' }));
+    await tryRun(() => handleCatalogAdd(deps, "xai", { apiKey: "sk-xai" }));
 
     expect(exitCodes).toEqual([1]);
-    expect(stderr.join('')).toContain('--base-url');
-    await expect(harness.getConfig().then((c) => c.providers['xai'])).resolves.toBeUndefined();
+    expect(stderr.join("")).toContain("--base-url");
+    await expect(
+      harness.getConfig().then((c) => c.providers["xai"]),
+    ).resolves.toBeUndefined();
   });
 
-  it('imports a guessed vendor with --base-url, carrying off_effort and a guess note', async () => {
+  it("imports a guessed vendor with --base-url, carrying off_effort and a guess note", async () => {
     mockRegistryFetch(GUESS_CATALOG_BODY);
     const { harness, current } = makeHarness({ providers: {} } as KimiConfig);
     const { deps, stdout, exitCodes } = makeDeps(harness);
 
     await tryRun(() =>
-      handleCatalogAdd(deps, 'xai', { apiKey: 'sk-xai', baseUrl: 'https://api.x.ai/v1' }),
+      handleCatalogAdd(deps, "xai", {
+        apiKey: "sk-xai",
+        baseUrl: "https://api.x.ai/v1",
+      }),
     );
 
     expect(exitCodes).toEqual([]);
-    expect(current().providers['xai']).toMatchObject({
-      type: 'openai',
-      baseUrl: 'https://api.x.ai/v1',
-      apiKey: 'sk-xai',
+    expect(current().providers["xai"]).toMatchObject({
+      type: "openai",
+      baseUrl: "https://api.x.ai/v1",
+      apiKey: "sk-xai",
     });
-    expect(current().models?.['xai/grok-4']).toMatchObject({
-      supportEfforts: ['low', 'medium', 'high'],
-      offEffort: 'none',
+    expect(current().models?.["xai/grok-4"]).toMatchObject({
+      supportEfforts: ["low", "medium", "high"],
+      offEffort: "none",
     });
-    expect(stdout.join('')).toContain('guessed "openai"');
+    expect(stdout.join("")).toContain('guessed "openai"');
   });
 
-  it('refuses a proprietary SDK (bedrock) instead of guessing', async () => {
+  it("refuses a proprietary SDK (bedrock) instead of guessing", async () => {
     mockRegistryFetch(GUESS_CATALOG_BODY);
     const { harness } = makeHarness({ providers: {} } as KimiConfig);
     const { deps, stderr, exitCodes } = makeDeps(harness);
 
-    await tryRun(() => handleCatalogAdd(deps, 'bedrock', { apiKey: 'sk-x' }));
+    await tryRun(() => handleCatalogAdd(deps, "bedrock", { apiKey: "sk-x" }));
 
     expect(exitCodes).toEqual([1]);
-    expect(stderr.join('')).toContain('proprietary');
+    expect(stderr.join("")).toContain("proprietary");
   });
 
-  it('requires --base-url for a vendor with no catalog endpoint (azure shape)', async () => {
+  it("requires --base-url for a vendor with no catalog endpoint (azure shape)", async () => {
     mockRegistryFetch(GUESS_CATALOG_BODY);
     const { harness, current } = makeHarness({ providers: {} } as KimiConfig);
     const { deps, stderr, exitCodes } = makeDeps(harness);
 
-    await tryRun(() => handleCatalogAdd(deps, 'azure', { apiKey: 'sk-az' }));
+    await tryRun(() => handleCatalogAdd(deps, "azure", { apiKey: "sk-az" }));
     expect(exitCodes).toEqual([1]);
-    expect(stderr.join('')).toContain('--base-url');
+    expect(stderr.join("")).toContain("--base-url");
 
     await tryRun(() =>
-      handleCatalogAdd(deps, 'azure', { apiKey: 'sk-az', baseUrl: 'https://res.example.test/openai/v1' }),
+      handleCatalogAdd(deps, "azure", {
+        apiKey: "sk-az",
+        baseUrl: "https://res.example.test/openai/v1",
+      }),
     );
-    expect(current().providers['azure']).toMatchObject({
-      type: 'openai',
-      baseUrl: 'https://res.example.test/openai/v1',
+    expect(current().providers["azure"]).toMatchObject({
+      type: "openai",
+      baseUrl: "https://res.example.test/openai/v1",
     });
   });
 });

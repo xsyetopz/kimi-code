@@ -15,7 +15,7 @@
  * extracts it without parsing the whole body — large payloads stay cheap.
  */
 
-import type { FastifyInstance, FastifyReply } from 'fastify';
+import type { FastifyInstance, FastifyReply } from "fastify";
 
 /**
  * Pull the envelope `code` out of a serialized JSON response body.
@@ -25,7 +25,7 @@ import type { FastifyInstance, FastifyReply } from 'fastify';
  * log without a `code` field.
  */
 export function extractEnvelopeCode(payload: unknown): number | undefined {
-  if (typeof payload !== 'string') {
+  if (typeof payload !== "string") {
     return undefined;
   }
   const match = /^\s*\{\s*"code"\s*:\s*(-?\d+)/.exec(payload);
@@ -48,7 +48,7 @@ export function registerRequestLogging(app: FastifyInstance): void {
   // known). Keyed by reply object so entries are GC'd with the request.
   const codes = new WeakMap<FastifyReply, number>();
 
-  app.addHook('onSend', (req, reply, payload, done) => {
+  app.addHook("onSend", (req, reply, payload, done) => {
     const code = extractEnvelopeCode(payload);
     if (code !== undefined) {
       codes.set(reply, code);
@@ -56,21 +56,22 @@ export function registerRequestLogging(app: FastifyInstance): void {
     done(null, payload);
   });
 
-  app.addHook('onResponse', (req, reply, done) => {
+  app.addHook("onResponse", (req, reply, done) => {
     req.log.info(
       {
         req: {
           method: req.method,
           url: req.url,
-          version: req.headers['accept-version'],
+          version: req.headers["accept-version"],
           host: req.host,
           remoteAddress: req.ip,
-          remotePort: req.socket === undefined ? undefined : req.socket.remotePort,
+          remotePort:
+            req.socket === undefined ? undefined : req.socket.remotePort,
         },
         code: codes.get(reply),
         responseTime: reply.elapsedTime,
       },
-      'request completed',
+      "request completed",
     );
     done();
   });

@@ -3,8 +3,8 @@ import {
   type EventSnapshot,
   type EventSnapshotEntry,
   type WireSnapshotEntry,
-} from '../harness/snapshots';
-import type { WireRecord } from '#/wire/record';
+} from "../harness/snapshots";
+import type { WireRecord } from "#/wire/record";
 
 export interface RpcPromiseLike {
   resolve(value: unknown): void;
@@ -50,7 +50,8 @@ export function recordAgentEvents() {
   const onceAnyWaiters: OnceAnyWaiter[] = [];
   const takeWaiters: TakeWaiter[] = [];
 
-  const snapshotFrom = (start: number): EventSnapshot => snapshot(entries.slice(start));
+  const snapshotFrom = (start: number): EventSnapshot =>
+    snapshot(entries.slice(start));
 
   const emit = (entry: RecordedEventEntry): RecordedEventEntry => {
     entries.push(entry);
@@ -61,7 +62,7 @@ export function recordAgentEvents() {
     // truncate the matching emit entry out of the returned snapshot.
     for (let index = eventWaiters.length - 1; index >= 0; index -= 1) {
       const waiter = eventWaiters[index]!;
-      if (entry.type !== '[rpc]' || waiter.event !== entry.event) continue;
+      if (entry.type !== "[rpc]" || waiter.event !== entry.event) continue;
       eventWaiters.splice(index, 1);
       cursor = Math.max(cursor, entries.length);
       waiter.resolve(snapshotFrom(waiter.start));
@@ -83,7 +84,7 @@ export function recordAgentEvents() {
 
     for (let index = takeWaiters.length - 1; index >= 0; index -= 1) {
       const waiter = takeWaiters[index]!;
-      if (entry.type !== '[rpc]' || waiter.event !== entry.event) continue;
+      if (entry.type !== "[rpc]" || waiter.event !== entry.event) continue;
       takeWaiters.splice(index, 1);
       cursor = Math.max(cursor, entries.length);
       waiter.resolve({
@@ -125,7 +126,9 @@ export function recordAgentEvents() {
       });
     },
 
-    take<T = unknown>(event: string): Promise<{
+    take<T = unknown>(
+      event: string,
+    ): Promise<{
       event: RecordedEventEntry;
       events: EventSnapshot;
       respond(result: T): void;
@@ -135,7 +138,11 @@ export function recordAgentEvents() {
           event,
           start: cursor,
           resolve: ({ event: found, events: foundEvents, respond }) => {
-            resolve({ event: found, events: foundEvents, respond: (result) => respond(result) });
+            resolve({
+              event: found,
+              events: foundEvents,
+              respond: (result) => respond(result),
+            });
           },
         });
       });
@@ -143,11 +150,15 @@ export function recordAgentEvents() {
 
     recordWire(record: WireRecord): WireSnapshotEntry {
       const { type, ...args } = record;
-      return emit({ type: '[wire]', event: type, args }) as WireSnapshotEntry;
+      return emit({ type: "[wire]", event: type, args }) as WireSnapshotEntry;
     },
 
-    recordEmit(method: string, args: unknown, response?: RpcPromiseLike): RecordedEventEntry {
-      return emit({ type: '[rpc]', event: method, args, response });
+    recordEmit(
+      method: string,
+      args: unknown,
+      response?: RpcPromiseLike,
+    ): RecordedEventEntry {
+      return emit({ type: "[rpc]", event: method, args, response });
     },
 
     respond(entry: RecordedEventEntry, result: unknown): void {
@@ -157,7 +168,7 @@ export function recordAgentEvents() {
     respondPending(method: string, id: string, result: unknown): void {
       const entry = entries.find((candidate) => {
         if (
-          candidate.type !== '[rpc]' ||
+          candidate.type !== "[rpc]" ||
           candidate.event !== method ||
           candidate.response === undefined
         ) {

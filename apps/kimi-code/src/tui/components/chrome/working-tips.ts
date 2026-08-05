@@ -1,6 +1,6 @@
-import { WORKING_TIPS, type ToolbarTip } from '#/tui/constant/tips';
+import { WORKING_TIPS, type ToolbarTip } from "#/tui/constant/tips";
 
-import { buildWeightedTips } from './footer';
+import { buildWeightedTips } from "./footer";
 
 export { WORKING_TIPS };
 
@@ -10,7 +10,8 @@ const WORKING_TIP_ROTATION = buildWeightedTips(WORKING_TIPS);
 
 export function currentWorkingTip(now = Date.now()): ToolbarTip | undefined {
   if (WORKING_TIP_ROTATION.length === 0) return undefined;
-  const index = Math.floor(now / TIP_ROTATE_INTERVAL_MS) % WORKING_TIP_ROTATION.length;
+  const index =
+    Math.floor(now / TIP_ROTATE_INTERVAL_MS) % WORKING_TIP_ROTATION.length;
   return WORKING_TIP_ROTATION[index];
 }
 
@@ -19,7 +20,9 @@ export function currentWorkingTip(now = Date.now()): ToolbarTip | undefined {
  * If `excludeText` is provided and there are other tips available, avoid
  * returning the same text twice in a row.
  */
-export function pickRandomWorkingTip(excludeText?: string): ToolbarTip | undefined {
+export function pickRandomWorkingTip(
+  excludeText?: string,
+): ToolbarTip | undefined {
   if (WORKING_TIP_ROTATION.length === 0) return undefined;
   const candidates =
     excludeText === undefined || WORKING_TIP_ROTATION.length === 1

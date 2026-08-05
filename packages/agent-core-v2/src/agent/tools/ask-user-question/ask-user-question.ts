@@ -10,24 +10,32 @@
  * against via `registerAgentToolService`. Bound at Agent scope.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { createDecorator } from '#/_base/di/instantiation';
-import { type AgentTool } from '#/tool/toolContract';
+import { createDecorator } from "#/_base/di/instantiation";
+import { type AgentTool } from "#/tool/toolContract";
 
 const QuestionOptionSchema = z.object({
   label: z
     .string()
     .min(1)
-    .describe("Concise display text (1-5 words). If recommended, append '(Recommended)'."),
-  description: z.string().default('').describe('Brief explanation of trade-offs or implications.'),
+    .describe(
+      "Concise display text (1-5 words). If recommended, append '(Recommended)'.",
+    ),
+  description: z
+    .string()
+    .default("")
+    .describe("Brief explanation of trade-offs or implications."),
 });
 
 const QuestionItemSchema = z.object({
-  question: z.string().min(1).describe("A specific, actionable question. End with '?'."),
+  question: z
+    .string()
+    .min(1)
+    .describe("A specific, actionable question. End with '?'."),
   header: z
     .string()
-    .default('')
+    .default("")
     .describe("Short category tag (max 12 chars, e.g. 'Auth', 'Style')."),
   options: z
     .array(QuestionOptionSchema)
@@ -39,7 +47,7 @@ const QuestionItemSchema = z.object({
   multi_select: z
     .boolean()
     .default(false)
-    .describe('Whether the user can select multiple options.'),
+    .describe("Whether the user can select multiple options."),
 });
 
 export interface AskUserQuestionInput {
@@ -53,10 +61,10 @@ export interface AskUserQuestionInput {
 }
 
 const QUESTION_UNIQUENESS_MESSAGE =
-  'Question texts must be unique across questions, and option labels must be unique within each question.';
+  "Question texts must be unique across questions, and option labels must be unique within each question.";
 
 export function questionUniquenessError(
-  questions: AskUserQuestionInput['questions'],
+  questions: AskUserQuestionInput["questions"],
 ): string | null {
   const texts = new Set<string>();
   for (const q of questions) {
@@ -80,19 +88,20 @@ const AskUserQuestionInputBaseSchema = z.object({
     .array(QuestionItemSchema)
     .min(1)
     .max(4)
-    .describe('The questions to ask the user (1-4 questions).'),
+    .describe("The questions to ask the user (1-4 questions)."),
 });
 
-export const AskUserQuestionInputSchemaWithBackground = AskUserQuestionInputBaseSchema.extend({
-  background: z
-    .boolean()
-    .default(false)
-    .describe(
-      'Set true to ask in the background and return immediately with a background task_id; you are notified automatically when the user answers — do not poll with TaskOutput while the question is pending.',
-    ),
-}).refine((data) => questionUniquenessError(data.questions) === null, {
-  message: QUESTION_UNIQUENESS_MESSAGE,
-});
+export const AskUserQuestionInputSchemaWithBackground =
+  AskUserQuestionInputBaseSchema.extend({
+    background: z
+      .boolean()
+      .default(false)
+      .describe(
+        "Set true to ask in the background and return immediately with a background task_id; you are notified automatically when the user answers — do not poll with TaskOutput while the question is pending.",
+      ),
+  }).refine((data) => questionUniquenessError(data.questions) === null, {
+    message: QUESTION_UNIQUENESS_MESSAGE,
+  });
 
 export const AskUserQuestionInputSchema: z.ZodType<AskUserQuestionInput> =
   AskUserQuestionInputBaseSchema.refine(
@@ -100,8 +109,9 @@ export const AskUserQuestionInputSchema: z.ZodType<AskUserQuestionInput> =
     { message: QUESTION_UNIQUENESS_MESSAGE },
   );
 
-
 export interface IAskUserQuestionTool extends AgentTool<AskUserQuestionInput> {
   readonly _serviceBrand: undefined;
 }
-export const IAskUserQuestionTool = createDecorator<IAskUserQuestionTool>('askUserQuestionTool');
+export const IAskUserQuestionTool = createDecorator<IAskUserQuestionTool>(
+  "askUserQuestionTool",
+);

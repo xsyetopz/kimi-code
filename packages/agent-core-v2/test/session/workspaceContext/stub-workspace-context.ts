@@ -1,4 +1,4 @@
-import type { ISessionWorkspaceContext } from '#/session/workspaceContext/workspaceContext';
+import type { ISessionWorkspaceContext } from "#/session/workspaceContext/workspaceContext";
 
 export function stubWorkspaceContext(
   workDir: string,

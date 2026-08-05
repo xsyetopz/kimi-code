@@ -17,56 +17,70 @@
  * There is no live event push; the queries refresh on a slow poll.
  */
 
-import { IAgentProfileService } from '@moonshot-ai/agent-core-v2/agent/profile/profile';
-import { ISessionIndex } from '@moonshot-ai/agent-core-v2/app/sessionIndex/sessionIndex';
-import { ISessionLifecycleService } from '@moonshot-ai/agent-core-v2/workspace/sessionLifecycle/sessionLifecycle';
-import type { InspectionSource } from '@moonshot-ai/agent-core-v2/kosong/contract/inspection';
-import type { TokenUsage } from '@moonshot-ai/agent-core-v2/kosong/contract/usage';
+import { IAgentProfileService } from "@moonshot-ai/agent-core-v2/agent/profile/profile";
+import { ISessionIndex } from "@moonshot-ai/agent-core-v2/app/sessionIndex/sessionIndex";
+import { ISessionLifecycleService } from "@moonshot-ai/agent-core-v2/workspace/sessionLifecycle/sessionLifecycle";
+import type { InspectionSource } from "@moonshot-ai/agent-core-v2/kosong/contract/inspection";
+import type { TokenUsage } from "@moonshot-ai/agent-core-v2/kosong/contract/usage";
 import {
   IModelCatalog,
   type ModelCatalogItem,
   type ModelPingResult,
   type ProviderCatalogItem,
-} from '@moonshot-ai/agent-core-v2/kosong/model/catalog';
-import { IModelService } from '@moonshot-ai/agent-core-v2/kosong/model/model';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useRef, useState } from 'react';
+} from "@moonshot-ai/agent-core-v2/kosong/model/catalog";
+import { IModelService } from "@moonshot-ai/agent-core-v2/kosong/model/model";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useRef, useState } from "react";
 
-import { useConnection } from '../connection';
-import { ActionButton, Badge, ErrorLine, JsonTree, JsonView, errorMessage } from '../ui';
+import { useConnection } from "../connection";
+import {
+  ActionButton,
+  Badge,
+  ErrorLine,
+  JsonTree,
+  JsonView,
+  errorMessage,
+} from "../ui";
 
 const SOURCE_TONES: Record<
-  InspectionSource['kind'],
-  'sky' | 'amber' | 'violet' | 'green' | 'neutral' | 'red'
+  InspectionSource["kind"],
+  "sky" | "amber" | "violet" | "green" | "neutral" | "red"
 > = {
-  config: 'sky',
-  override: 'amber',
-  builtin: 'violet',
-  env: 'green',
-  synthesized: 'neutral',
-  none: 'red',
+  config: "sky",
+  override: "amber",
+  builtin: "violet",
+  env: "green",
+  synthesized: "neutral",
+  none: "red",
 };
 
 /** Row accent (left bar + text) of a tree node by its finally-effective source. */
-const KIND_ROW_CLASSES: Record<InspectionSource['kind'], string> = {
-  config: 'border-sky-500/70 text-sky-300',
-  override: 'border-amber-500/70 text-amber-300',
-  builtin: 'border-violet-500/70 text-violet-300',
-  env: 'border-emerald-500/70 text-emerald-300',
-  synthesized: 'border-neutral-600 text-neutral-500',
-  none: 'border-red-500/70 text-red-400',
+const KIND_ROW_CLASSES: Record<InspectionSource["kind"], string> = {
+  config: "border-sky-500/70 text-sky-300",
+  override: "border-amber-500/70 text-amber-300",
+  builtin: "border-violet-500/70 text-violet-300",
+  env: "border-emerald-500/70 text-emerald-300",
+  synthesized: "border-neutral-600 text-neutral-500",
+  none: "border-red-500/70 text-red-400",
 };
 
-const KIND_DOT_CLASSES: Record<InspectionSource['kind'], string> = {
-  config: 'bg-sky-400',
-  override: 'bg-amber-400',
-  builtin: 'bg-violet-400',
-  env: 'bg-emerald-400',
-  synthesized: 'bg-neutral-500',
-  none: 'bg-red-400',
+const KIND_DOT_CLASSES: Record<InspectionSource["kind"], string> = {
+  config: "bg-sky-400",
+  override: "bg-amber-400",
+  builtin: "bg-violet-400",
+  env: "bg-emerald-400",
+  synthesized: "bg-neutral-500",
+  none: "bg-red-400",
 };
 
-const SOURCE_KINDS = ['config', 'override', 'builtin', 'env', 'synthesized', 'none'] as const;
+const SOURCE_KINDS = [
+  "config",
+  "override",
+  "builtin",
+  "env",
+  "synthesized",
+  "none",
+] as const;
 
 interface FlatEntry {
   readonly item: ModelCatalogItem;
@@ -82,18 +96,18 @@ export function ModelCatalogView({
   const queryClient = useQueryClient();
 
   const providers = useQuery({
-    queryKey: ['modelCatalog', 'providers'],
+    queryKey: ["modelCatalog", "providers"],
     queryFn: () => klient.core(IModelCatalog).listProviders(),
     refetchInterval: 15_000,
   });
   const models = useQuery({
-    queryKey: ['modelCatalog', 'models'],
+    queryKey: ["modelCatalog", "models"],
     queryFn: () => klient.core(IModelCatalog).listModels(),
     refetchInterval: 15_000,
   });
   // Raw records carry the structured `providerId` grouping fallback.
   const records = useQuery({
-    queryKey: ['modelCatalog', 'records'],
+    queryKey: ["modelCatalog", "records"],
     queryFn: () => klient.core(IModelService).list(),
     refetchInterval: 15_000,
   });
@@ -119,14 +133,18 @@ export function ModelCatalogView({
   const extraGroups = [...byGroup.keys()].filter((key) => !listedIds.has(key));
   const flatEntries: FlatEntry[] = [
     ...providerList.flatMap((provider) =>
-      (byGroup.get(provider.id) ?? []).map((item) => ({ item, provider }) as const),
+      (byGroup.get(provider.id) ?? []).map(
+        (item) => ({ item, provider }) as const,
+      ),
     ),
-    ...extraGroups.flatMap((key) => (byGroup.get(key) ?? []).map((item) => ({ item }) as const)),
+    ...extraGroups.flatMap((key) =>
+      (byGroup.get(key) ?? []).map((item) => ({ item }) as const),
+    ),
   ];
 
   // --- two-way sync between the left list and the center scroll ----------
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [selectedPath, setSelectedPath] = useState('resolved');
+  const [selectedPath, setSelectedPath] = useState("resolved");
   const scrollRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const sectionRefs = useRef(new Map<string, HTMLElement>());
@@ -136,7 +154,10 @@ export function ModelCatalogView({
   // the list when the highlighted model disappears (config changed).
   useEffect(() => {
     if (flatEntries.length === 0) return;
-    if (activeId === null || !flatEntries.some((entry) => entry.item.model === activeId)) {
+    if (
+      activeId === null ||
+      !flatEntries.some((entry) => entry.item.model === activeId)
+    ) {
       setActiveId(flatEntries[0]!.item.model);
     }
   }, [activeId, flatEntries]);
@@ -155,7 +176,8 @@ export function ModelCatalogView({
       if (el.offsetTop <= top) current = entry.item.model;
       else break;
     }
-    if (current !== null) setActiveId((prev) => (prev === current ? prev : current));
+    if (current !== null)
+      setActiveId((prev) => (prev === current ? prev : current));
   };
 
   // Left highlight → keep the highlighted entry visible inside the left list
@@ -177,7 +199,9 @@ export function ModelCatalogView({
     setActiveId(modelId);
     // 'instant', not 'smooth': smooth scrolling is frame-driven and stalls in
     // occluded tabs, leaving the center column stranded mid-jump.
-    sectionRefs.current.get(modelId)?.scrollIntoView({ behavior: 'instant', block: 'start' });
+    sectionRefs.current
+      .get(modelId)
+      ?.scrollIntoView({ behavior: "instant", block: "start" });
   };
 
   const selectIn = (modelId: string, path: string) => {
@@ -187,7 +211,9 @@ export function ModelCatalogView({
 
   const loading = providers.isLoading || models.isLoading || records.isLoading;
   const error = providers.error ?? models.error ?? records.error;
-  const activeItem = flatEntries.find((entry) => entry.item.model === activeId)?.item;
+  const activeItem = flatEntries.find(
+    (entry) => entry.item.model === activeId,
+  )?.item;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -200,14 +226,23 @@ export function ModelCatalogView({
         </span>
         <div className="ml-4 flex items-center gap-2.5">
           {SOURCE_KINDS.map((kind) => (
-            <span key={kind} className="flex items-center gap-1 text-[10px] text-neutral-500">
-              <span className={`inline-block h-2 w-2 rounded-full ${KIND_DOT_CLASSES[kind]}`} />
+            <span
+              key={kind}
+              className="flex items-center gap-1 text-[10px] text-neutral-500"
+            >
+              <span
+                className={`inline-block h-2 w-2 rounded-full ${KIND_DOT_CLASSES[kind]}`}
+              />
               {kind}
             </span>
           ))}
         </div>
         <div className="flex-1" />
-        <ActionButton onClick={() => queryClient.invalidateQueries({ queryKey: ['modelCatalog'] })}>
+        <ActionButton
+          onClick={() =>
+            queryClient.invalidateQueries({ queryKey: ["modelCatalog"] })
+          }
+        >
           Refresh
         </ActionButton>
       </div>
@@ -216,7 +251,9 @@ export function ModelCatalogView({
           <ErrorLine error={error} />
         </div>
       ) : null}
-      {loading ? <div className="px-4 py-2 text-[11px] text-neutral-600">loading…</div> : null}
+      {loading ? (
+        <div className="px-4 py-2 text-[11px] text-neutral-600">loading…</div>
+      ) : null}
       {!loading && flatEntries.length === 0 ? (
         <div className="px-4 py-2 text-[11px] text-neutral-600">
           no providers or models configured
@@ -228,7 +265,12 @@ export function ModelCatalogView({
           ref={listRef}
           className="relative w-72 shrink-0 overflow-y-auto border-r border-neutral-800"
         >
-          <LeftList entries={flatEntries} activeId={activeId} onJump={jumpTo} itemRefs={itemRefs} />
+          <LeftList
+            entries={flatEntries}
+            activeId={activeId}
+            onJump={jumpTo}
+            itemRefs={itemRefs}
+          />
         </div>
         {/* center: one god object per model */}
         <div
@@ -240,7 +282,9 @@ export function ModelCatalogView({
             <ModelSection
               key={entry.item.model}
               entry={entry}
-              selectedPath={entry.item.model === activeId ? selectedPath : undefined}
+              selectedPath={
+                entry.item.model === activeId ? selectedPath : undefined
+              }
               onSelect={selectIn}
               onOpenSession={onOpenSession}
               registerRef={(el) => {
@@ -282,7 +326,7 @@ function LeftList({
   return (
     <div className="py-1">
       {entries.map((entry) => {
-        const groupId = entry.provider?.id ?? '(no provider)';
+        const groupId = entry.provider?.id ?? "(no provider)";
         const header = groupId !== lastGroup ? groupId : undefined;
         lastGroup = groupId;
         const isDefault = entry.provider?.default_model === entry.item.model;
@@ -295,11 +339,11 @@ function LeftList({
                 {entry.provider !== undefined ? (
                   <Badge
                     tone={
-                      entry.provider.status === 'connected'
-                        ? 'green'
-                        : entry.provider.status === 'error'
-                          ? 'red'
-                          : 'amber'
+                      entry.provider.status === "connected"
+                        ? "green"
+                        : entry.provider.status === "error"
+                          ? "red"
+                          : "amber"
                     }
                   >
                     {entry.provider.status}
@@ -313,7 +357,7 @@ function LeftList({
                 else itemRefs.current.set(entry.item.model, el);
               }}
               className={`cursor-pointer px-3 py-1.5 ${
-                active ? 'bg-sky-950/60' : 'hover:bg-neutral-800/60'
+                active ? "bg-sky-950/60" : "hover:bg-neutral-800/60"
               }`}
               onClick={() => {
                 onJump(entry.item.model);
@@ -322,7 +366,7 @@ function LeftList({
               <div className="flex items-center gap-1.5">
                 <span
                   className={`min-w-0 flex-1 truncate font-mono text-[11px] ${
-                    active ? 'text-neutral-100' : 'text-neutral-300'
+                    active ? "text-neutral-100" : "text-neutral-300"
                   }`}
                   title={entry.item.model}
                 >
@@ -364,25 +408,25 @@ function ModelSection({
   const { klient, baseUrl, config } = useConnection();
   const { item, provider } = entry;
   const inspection = useQuery({
-    queryKey: ['modelCatalog', 'inspect', item.model],
+    queryKey: ["modelCatalog", "inspect", item.model],
     queryFn: () => klient.core(IModelCatalog).inspect(item.model),
     refetchInterval: 15_000,
   });
   const [ping, setPing] = useState<
-    | { readonly status: 'idle' | 'running' }
-    | { readonly status: 'done'; readonly result: ModelPingResult }
-  >({ status: 'idle' });
+    | { readonly status: "idle" | "running" }
+    | { readonly status: "done"; readonly result: ModelPingResult }
+  >({ status: "idle" });
   const [creating, setCreating] = useState(false);
   const [sessionError, setSessionError] = useState<unknown>(null);
 
   const runPing = async () => {
-    setPing({ status: 'running' });
+    setPing({ status: "running" });
     try {
       const result = await klient.core(IModelCatalog).ping(item.model);
-      setPing({ status: 'done', result });
+      setPing({ status: "done", result });
     } catch (error) {
       setPing({
-        status: 'done',
+        status: "done",
         result: { ok: false, durationMs: 0, error: errorMessage(error) },
       });
     }
@@ -391,19 +435,26 @@ function ModelSection({
   // Session creation itself is v1 REST (klient is v2-only); resume + model
   // selection then go through the channel layer before opening the chat tab.
   const createSession = async () => {
-    const cwd = window.prompt('Working directory for the new session:', '');
-    if (cwd === null || cwd.trim() === '') return;
+    const cwd = window.prompt("Working directory for the new session:", "");
+    if (cwd === null || cwd.trim() === "") return;
     setCreating(true);
     setSessionError(null);
     try {
-      const headers: Record<string, string> = { 'content-type': 'application/json' };
-      if (config.token.trim() !== '') headers['authorization'] = `Bearer ${config.token.trim()}`;
+      const headers: Record<string, string> = {
+        "content-type": "application/json",
+      };
+      if (config.token.trim() !== "")
+        headers["authorization"] = `Bearer ${config.token.trim()}`;
       const res = await fetch(`${baseUrl}/api/v1/sessions`, {
-        method: 'POST',
+        method: "POST",
         headers,
         body: JSON.stringify({ metadata: { cwd: cwd.trim() } }),
       });
-      const envelope = (await res.json()) as { code: number; msg: string; data: { id: string } };
+      const envelope = (await res.json()) as {
+        code: number;
+        msg: string;
+        data: { id: string };
+      };
       if (envelope.code !== 0) throw new Error(envelope.msg);
       const sessionId = envelope.data.id;
       const summary = await klient.core(ISessionIndex).get(sessionId);
@@ -415,7 +466,7 @@ function ModelSection({
       }
       await klient
         .session(sessionId)
-        .agent('main')
+        .agent("main")
         .service(IAgentProfileService)
         .setModel(item.model);
       onOpenSession(sessionId);
@@ -442,16 +493,25 @@ function ModelSection({
   };
 
   return (
-    <section ref={registerRef} className="border-b border-neutral-800 px-4 py-3">
+    <section
+      ref={registerRef}
+      className="border-b border-neutral-800 px-4 py-3"
+    >
       <header className="mb-1 flex flex-wrap items-center gap-2">
-        <span className="font-mono text-[12px] font-semibold text-neutral-100">{item.model}</span>
-        {provider?.default_model === item.model ? <Badge tone="sky">default</Badge> : null}
-        <span className="text-[10px] text-neutral-600">{provider?.id ?? '(no provider)'}</span>
-        <ActionButton disabled={ping.status === 'running'} onClick={runPing}>
-          {ping.status === 'running' ? 'pinging…' : 'Ping'}
+        <span className="font-mono text-[12px] font-semibold text-neutral-100">
+          {item.model}
+        </span>
+        {provider?.default_model === item.model ? (
+          <Badge tone="sky">default</Badge>
+        ) : null}
+        <span className="text-[10px] text-neutral-600">
+          {provider?.id ?? "(no provider)"}
+        </span>
+        <ActionButton disabled={ping.status === "running"} onClick={runPing}>
+          {ping.status === "running" ? "pinging…" : "Ping"}
         </ActionButton>
         <ActionButton disabled={creating} onClick={createSession}>
-          {creating ? 'creating…' : '+ Session'}
+          {creating ? "creating…" : "+ Session"}
         </ActionButton>
         <div className="flex-1" />
         {(item.capabilities ?? []).map((capability) => (
@@ -464,34 +524,46 @@ function ModelSection({
           {formatContextSize(item.max_context_size)}
         </span>
       </header>
-      {ping.status === 'done' ? (
+      {ping.status === "done" ? (
         <div className="mb-1 flex flex-wrap items-center gap-2 border border-neutral-800/60 bg-neutral-900/50 px-2 py-1">
           {ping.result.ok ? (
             <>
               <Badge tone="green">pong · {ping.result.durationMs}ms</Badge>
-              {ping.result.text !== undefined && ping.result.text !== '' ? (
-                <span className="text-[11px] text-neutral-300">{ping.result.text}</span>
+              {ping.result.text !== undefined && ping.result.text !== "" ? (
+                <span className="text-[11px] text-neutral-300">
+                  {ping.result.text}
+                </span>
               ) : null}
               {ping.result.usage !== undefined ? (
-                <span className="text-[10px] text-neutral-600">{usageLine(ping.result.usage)}</span>
+                <span className="text-[10px] text-neutral-600">
+                  {usageLine(ping.result.usage)}
+                </span>
               ) : null}
               {ping.result.finishReason !== undefined ? (
-                <span className="text-[10px] text-neutral-600">{ping.result.finishReason}</span>
+                <span className="text-[10px] text-neutral-600">
+                  {ping.result.finishReason}
+                </span>
               ) : null}
             </>
           ) : (
             <>
               <Badge tone="red">ping failed · {ping.result.durationMs}ms</Badge>
-              <span className="text-[11px] text-red-400">{ping.result.error}</span>
+              <span className="text-[11px] text-red-400">
+                {ping.result.error}
+              </span>
             </>
           )}
         </div>
       ) : null}
       {sessionError !== null ? <ErrorLine error={sessionError} /> : null}
       {inspection.isLoading ? (
-        <div className="text-[11px] text-neutral-600">resolving inspection…</div>
+        <div className="text-[11px] text-neutral-600">
+          resolving inspection…
+        </div>
       ) : null}
-      {inspection.error !== null ? <ErrorLine error={inspection.error} /> : null}
+      {inspection.error !== null ? (
+        <ErrorLine error={inspection.error} />
+      ) : null}
       {god !== undefined ? (
         <JsonTree
           data={god}
@@ -507,7 +579,8 @@ function ModelSection({
 }
 
 function usageLine(usage: TokenUsage): string {
-  const input = usage.inputOther + usage.inputCacheRead + usage.inputCacheCreation;
+  const input =
+    usage.inputOther + usage.inputCacheRead + usage.inputCacheCreation;
   return `in ${input} · out ${usage.output}`;
 }
 
@@ -515,15 +588,23 @@ function usageLine(usage: TokenUsage): string {
 // right column
 // ---------------------------------------------------------------------------
 
-function SourcePane({ modelId, path }: { readonly modelId: string; readonly path: string }) {
+function SourcePane({
+  modelId,
+  path,
+}: {
+  readonly modelId: string;
+  readonly path: string;
+}) {
   const { klient } = useConnection();
   const inspection = useQuery({
-    queryKey: ['modelCatalog', 'inspect', modelId],
+    queryKey: ["modelCatalog", "inspect", modelId],
     queryFn: () => klient.core(IModelCatalog).inspect(modelId),
     refetchInterval: 15_000,
   });
   if (inspection.isLoading) {
-    return <div className="text-[11px] text-neutral-600">resolving inspection…</div>;
+    return (
+      <div className="text-[11px] text-neutral-600">resolving inspection…</div>
+    );
   }
   if (inspection.error !== null) return <ErrorLine error={inspection.error} />;
   if (inspection.data === undefined) return null;
@@ -539,7 +620,10 @@ function SourcePane({ modelId, path }: { readonly modelId: string; readonly path
 
   return (
     <div>
-      <div className="mb-1 truncate font-mono text-[11px] text-neutral-500" title={modelId}>
+      <div
+        className="mb-1 truncate font-mono text-[11px] text-neutral-500"
+        title={modelId}
+      >
         {modelId}
       </div>
       <div className="mb-2 break-all rounded bg-neutral-800/70 px-2 py-1 font-mono text-[11px] text-sky-300">
@@ -552,7 +636,9 @@ function SourcePane({ modelId, path }: { readonly modelId: string; readonly path
           <Badge>no source</Badge>
         )}
         {inheritedFrom !== undefined ? (
-          <span className="text-[10px] text-neutral-600">inherited from {inheritedFrom}</span>
+          <span className="text-[10px] text-neutral-600">
+            inherited from {inheritedFrom}
+          </span>
         ) : null}
       </div>
       {source?.detail !== undefined ? (
@@ -574,8 +660,13 @@ function SourcePane({ modelId, path }: { readonly modelId: string; readonly path
 
 function getPath(root: unknown, path: string): unknown {
   let current = root;
-  for (const segment of path.split('.')) {
-    if (current === null || current === undefined || typeof current !== 'object') return undefined;
+  for (const segment of path.split(".")) {
+    if (
+      current === null ||
+      current === undefined ||
+      typeof current !== "object"
+    )
+      return undefined;
     current = (current as Record<string, unknown>)[segment];
   }
   return current;
@@ -586,19 +677,22 @@ function findSource(
   path: string,
 ): { readonly source?: InspectionSource; readonly inheritedFrom?: string } {
   let current = path;
-  while (current !== '') {
+  while (current !== "") {
     const hit = sources[current];
     if (hit !== undefined) {
-      return { source: hit, inheritedFrom: current === path ? undefined : current };
+      return {
+        source: hit,
+        inheritedFrom: current === path ? undefined : current,
+      };
     }
-    const index = current.lastIndexOf('.');
-    current = index === -1 ? '' : current.slice(0, index);
+    const index = current.lastIndexOf(".");
+    current = index === -1 ? "" : current.slice(0, index);
   }
   return {};
 }
 
 function formatContextSize(size: number): string {
-  if (size <= 0) return '—';
+  if (size <= 0) return "—";
   if (size >= 1_000_000) {
     const millions = size / 1_000_000;
     return `${millions.toFixed(Number.isInteger(millions) ? 0 : 1)}M ctx`;

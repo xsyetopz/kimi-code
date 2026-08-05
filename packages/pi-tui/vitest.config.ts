@@ -6,8 +6,8 @@ import { defineConfig } from "vitest/config";
 // pointed at no files here and allowed to pass with none. Convert a test
 // file to vitest's API and add it to `include` to opt it in.
 export default defineConfig({
-	test: {
-		include: [],
-		passWithNoTests: true,
-	},
+  test: {
+    include: [],
+    passWithNoTests: true,
+  },
 });

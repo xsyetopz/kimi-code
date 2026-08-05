@@ -1,21 +1,21 @@
-import { HOOK_EVENT_TYPES } from '../session/hooks/types';
-import { parsePattern } from '#/agent/permission/matches-rule';
-import { ErrorCodes, KimiError } from '#/errors';
-import { z } from 'zod';
+import { HOOK_EVENT_TYPES } from "../session/hooks/types";
+import { parsePattern } from "#/agent/permission/matches-rule";
+import { ErrorCodes, KimiError } from "#/errors";
+import { z } from "zod";
 
 export const ProviderTypeSchema = z.enum([
-  'anthropic',
-  'openai',
-  'kimi',
-  'google-genai',
-  'openai_responses',
-  'vertexai',
+  "anthropic",
+  "openai",
+  "kimi",
+  "google-genai",
+  "openai_responses",
+  "vertexai",
 ]);
 
 export type ProviderType = z.infer<typeof ProviderTypeSchema>;
 
 export const OAuthRefSchema = z.object({
-  storage: z.enum(['file', 'keyring']),
+  storage: z.enum(["file", "keyring"]),
   key: z.string().min(1),
   oauthHost: z.string().min(1).optional(),
 });
@@ -49,7 +49,7 @@ const ModelAliasBaseSchema = z.object({
   capabilities: z.array(z.string()).optional(),
   displayName: z.string().optional(),
   reasoningKey: z.string().optional(),
-  protocol: z.literal('anthropic').optional(),
+  protocol: z.literal("anthropic").optional(),
   // Explicitly declare adaptive-thinking support, overriding the kosong
   // model-name version inference. Needed for custom-named Anthropic endpoints
   // whose model name does not encode a parseable Claude version.
@@ -117,21 +117,21 @@ export const ThinkingConfigSchema = z.object({
 
 export type ThinkingConfig = z.infer<typeof ThinkingConfigSchema>;
 
-export const PermissionModeSchema = z.enum(['yolo', 'manual', 'auto']);
+export const PermissionModeSchema = z.enum(["yolo", "manual", "auto"]);
 
-export const PermissionRuleDecisionSchema = z.enum(['allow', 'deny', 'ask']);
+export const PermissionRuleDecisionSchema = z.enum(["allow", "deny", "ask"]);
 export const PermissionRuleScopeSchema = z.enum([
-  'turn-override',
-  'session-runtime',
-  'project',
-  'user',
+  "turn-override",
+  "session-runtime",
+  "project",
+  "user",
 ]);
 
 export const PermissionRuleSchema = z.object({
   decision: PermissionRuleDecisionSchema,
-  scope: PermissionRuleScopeSchema.default('user'),
+  scope: PermissionRuleScopeSchema.default("user"),
   pattern: z.string().min(1).refine(isValidPermissionPattern, {
-    message: 'Invalid permission rule pattern',
+    message: "Invalid permission rule pattern",
   }),
   reason: z.string().optional(),
 });
@@ -169,7 +169,7 @@ export const BackgroundConfigSchema = z.object({
   bashTaskTimeoutS: z.number().int().min(0).optional(),
   killGracePeriodMs: z.number().int().min(0).optional(),
   printWaitCeilingS: z.number().int().min(1).optional(),
-  printBackgroundMode: z.enum(['exit', 'drain', 'steer']).optional(),
+  printBackgroundMode: z.enum(["exit", "drain", "steer"]).optional(),
   printMaxTurns: z.number().int().min(1).optional(),
 });
 
@@ -275,27 +275,27 @@ const McpServerCommonFields = {
 } as const;
 
 export const McpServerStdioConfigSchema = z.object({
-  transport: z.literal('stdio'),
+  transport: z.literal("stdio"),
   command: z.string().min(1),
   args: z.array(z.string()).optional(),
   env: StringRecordSchema.optional(),
   cwd: z.string().optional(),
   // Reserved for future kaos-backed stdio launchers. `undefined` and `'local'`
   // both mean direct child_process spawn for now.
-  executor: z.enum(['local', 'kaos']).optional(),
+  executor: z.enum(["local", "kaos"]).optional(),
   ...McpServerCommonFields,
 });
 
 export type McpServerStdioConfig = z.infer<typeof McpServerStdioConfigSchema>;
 
 export const McpServerHttpConfigSchema = z.object({
-  transport: z.literal('http'),
+  transport: z.literal("http"),
   url: z.string().url(),
   headers: StringRecordSchema.optional(),
   // Backward-compatible UI marker. OAuth is still discovered from a remote
   // server's 401 response; this flag only records that the user explicitly
   // chose OAuth and lets hosts expose login/reset controls before connecting.
-  auth: z.literal('oauth').optional(),
+  auth: z.literal("oauth").optional(),
   // Indirect secret reference: the bearer token is looked up from
   // `process.env[bearerTokenEnvVar]` at connection time, never committed.
   bearerTokenEnvVar: z.string().min(1).optional(),
@@ -305,10 +305,10 @@ export const McpServerHttpConfigSchema = z.object({
 export type McpServerHttpConfig = z.infer<typeof McpServerHttpConfigSchema>;
 
 export const McpServerSseConfigSchema = z.object({
-  transport: z.literal('sse'),
+  transport: z.literal("sse"),
   url: z.string().url(),
   headers: StringRecordSchema.optional(),
-  auth: z.literal('oauth').optional(),
+  auth: z.literal("oauth").optional(),
   // Indirect secret reference: the bearer token is looked up from
   // `process.env[bearerTokenEnvVar]` at connection time, never committed.
   bearerTokenEnvVar: z.string().min(1).optional(),
@@ -319,18 +319,18 @@ export type McpServerSseConfig = z.infer<typeof McpServerSseConfigSchema>;
 
 export type McpRemoteServerConfig = McpServerHttpConfig | McpServerSseConfig;
 
-const McpServerConfigDiscriminatedSchema = z.discriminatedUnion('transport', [
+const McpServerConfigDiscriminatedSchema = z.discriminatedUnion("transport", [
   McpServerStdioConfigSchema,
   McpServerHttpConfigSchema,
   McpServerSseConfigSchema,
 ]);
 
 export const McpServerConfigSchema = z.preprocess((raw) => {
-  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return raw;
+  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) return raw;
   const obj = raw as Record<string, unknown>;
-  if ('transport' in obj) return obj;
-  if (typeof obj['command'] === 'string') return { ...obj, transport: 'stdio' };
-  if (typeof obj['url'] === 'string') return { ...obj, transport: 'http' };
+  if ("transport" in obj) return obj;
+  if (typeof obj["command"] === "string") return { ...obj, transport: "stdio" };
+  if (typeof obj["url"] === "string") return { ...obj, transport: "http" };
   return obj;
 }, McpServerConfigDiscriminatedSchema);
 
@@ -425,9 +425,13 @@ export function validateConfig(config: unknown): KimiConfig {
   try {
     return KimiConfigSchema.parse(config);
   } catch (error) {
-    throw new KimiError(ErrorCodes.CONFIG_INVALID, `Invalid configuration: ${formatConfigValidationError(error)}`, {
-      cause: error,
-    });
+    throw new KimiError(
+      ErrorCodes.CONFIG_INVALID,
+      `Invalid configuration: ${formatConfigValidationError(error)}`,
+      {
+        cause: error,
+      },
+    );
   }
 }
 
@@ -441,7 +445,11 @@ function missingModelContextSizeMessage(error: unknown): string | undefined {
   if (!(error instanceof z.ZodError)) return undefined;
   for (const issue of error.issues) {
     const [section, modelName, field] = issue.path;
-    if (section === 'models' && typeof modelName === 'string' && field === 'maxContextSize') {
+    if (
+      section === "models" &&
+      typeof modelName === "string" &&
+      field === "maxContextSize"
+    ) {
       return `Model "${modelName}" must define a positive max_context_size in config.toml.`;
     }
   }

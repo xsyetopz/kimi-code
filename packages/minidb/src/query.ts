@@ -12,7 +12,7 @@ type Path = string | readonly (string | number)[];
 function tokenizePath(path: Path): (string | number)[] {
   if (Array.isArray(path)) return [...path];
   const tokens: (string | number)[] = [];
-  for (const seg of String(path).split('.')) {
+  for (const seg of String(path).split(".")) {
     let s = seg;
     while (s.length) {
       const m = s.match(/^([^[]*)\[(\d+)\](.*)$/);
@@ -22,7 +22,7 @@ function tokenizePath(path: Path): (string | number)[] {
         s = m[3]!;
       } else {
         tokens.push(s);
-        s = '';
+        s = "";
       }
     }
   }
@@ -43,8 +43,8 @@ export function setPath(obj: Doc, path: Path, value: unknown): Doc {
   let cur = obj as Record<string | number, unknown>;
   for (let i = 0; i < tokens.length - 1; i++) {
     const t = tokens[i]!;
-    if (cur[t] === null || cur[t] === undefined || typeof cur[t] !== 'object') {
-      cur[t] = typeof tokens[i + 1] === 'number' ? [] : {};
+    if (cur[t] === null || cur[t] === undefined || typeof cur[t] !== "object") {
+      cur[t] = typeof tokens[i + 1] === "number" ? [] : {};
     }
     cur = cur[t] as Record<string | number, unknown>;
   }
@@ -68,60 +68,64 @@ export function project(doc: Doc, paths?: readonly string[]): Doc {
 type Cond = unknown;
 
 function matchCond(val: unknown, cond: Cond): boolean {
-  if (cond === null || typeof cond !== 'object' || cond instanceof RegExp) {
+  if (cond === null || typeof cond !== "object" || cond instanceof RegExp) {
     if (cond instanceof RegExp) {
       // A caller-supplied RegExp with the global/sticky flag is stateful:
       // .test() advances lastIndex. Reset it so every document is tested from
       // the start instead of alternating match/miss across documents.
       cond.lastIndex = 0;
-      return typeof val === 'string' && cond.test(val);
+      return typeof val === "string" && cond.test(val);
     }
     return val === cond;
   }
   for (const op of Object.keys(cond as Record<string, unknown>)) {
     const arg = (cond as Record<string, unknown>)[op];
     switch (op) {
-      case '$eq':
+      case "$eq":
         if (val !== arg) return false;
         break;
-      case '$ne':
+      case "$ne":
         if (val === arg) return false;
         break;
-      case '$gt':
+      case "$gt":
         if (!((val as number) > (arg as number))) return false;
         break;
-      case '$gte':
+      case "$gte":
         if (!((val as number) >= (arg as number))) return false;
         break;
-      case '$lt':
+      case "$lt":
         if (!((val as number) < (arg as number))) return false;
         break;
-      case '$lte':
+      case "$lte":
         if (!((val as number) <= (arg as number))) return false;
         break;
-      case '$in':
+      case "$in":
         if (!Array.isArray(arg) || !arg.includes(val)) return false;
         break;
-      case '$nin':
+      case "$nin":
         if (!Array.isArray(arg) || arg.includes(val)) return false;
         break;
-      case '$regex': {
+      case "$regex": {
         const re =
-          arg instanceof RegExp ? arg : Array.isArray(arg) ? new RegExp(arg[0] as string, arg[1] as string | undefined) : new RegExp(arg as string);
-        if (typeof val !== 'string') return false;
+          arg instanceof RegExp
+            ? arg
+            : Array.isArray(arg)
+              ? new RegExp(arg[0] as string, arg[1] as string | undefined)
+              : new RegExp(arg as string);
+        if (typeof val !== "string") return false;
         // Reset a stateful (global/sticky) RegExp so a reused instance does not
         // carry lastIndex over from the previous document.
         re.lastIndex = 0;
         if (!re.test(val)) return false;
         break;
       }
-      case '$exists':
+      case "$exists":
         if ((val !== undefined) !== !!arg) return false;
         break;
-      case '$contains':
+      case "$contains":
         if (!Array.isArray(val) || !val.includes(arg)) return false;
         break;
-      case '$type':
+      case "$type":
         if (typeof val !== arg) return false;
         break;
       default:
@@ -132,17 +136,32 @@ function matchCond(val: unknown, cond: Cond): boolean {
 }
 
 /** Does `doc` satisfy the Mongo-like `filter`? */
-export function match(doc: Doc, filter?: Record<string, unknown> | null): boolean {
+export function match(
+  doc: Doc,
+  filter?: Record<string, unknown> | null,
+): boolean {
   if (!filter || Object.keys(filter).length === 0) return true;
   for (const key of Object.keys(filter)) {
     const cond = filter[key];
-    if (key === '$and') {
-      if (!Array.isArray(cond) || !cond.every((f) => match(doc, f as Record<string, unknown>))) return false;
-    } else if (key === '$or') {
-      if (!Array.isArray(cond) || !cond.some((f) => match(doc, f as Record<string, unknown>))) return false;
-    } else if (key === '$nor') {
-      if (!Array.isArray(cond) || cond.some((f) => match(doc, f as Record<string, unknown>))) return false;
-    } else if (key === '$not') {
+    if (key === "$and") {
+      if (
+        !Array.isArray(cond) ||
+        !cond.every((f) => match(doc, f as Record<string, unknown>))
+      )
+        return false;
+    } else if (key === "$or") {
+      if (
+        !Array.isArray(cond) ||
+        !cond.some((f) => match(doc, f as Record<string, unknown>))
+      )
+        return false;
+    } else if (key === "$nor") {
+      if (
+        !Array.isArray(cond) ||
+        cond.some((f) => match(doc, f as Record<string, unknown>))
+      )
+        return false;
+    } else if (key === "$not") {
       if (match(doc, cond as Record<string, unknown>)) return false;
     } else {
       if (!matchCond(getPath(doc, key), cond)) return false;
@@ -150,4 +169,3 @@ export function match(doc: Doc, filter?: Record<string, unknown> | null): boolea
   }
   return true;
 }
-

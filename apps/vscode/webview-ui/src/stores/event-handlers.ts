@@ -2,14 +2,35 @@ import { bridge } from "@/services";
 import { useApprovalStore } from "./approval.store";
 import { useSettingsStore } from "./settings.store";
 import { isPreflightError, isUserInterrupt } from "shared/errors";
-import type { ChatMessage, UIStep, UIStepItem, ChatState, TokenUsage } from "./chat.store";
-import type { ContentPart, ToolCall, ToolResult, TurnBegin, SubagentEvent, ApprovalRequestPayload, DiffBlock, RunResult, QuestionRequest } from "shared/legacy-sdk";
+import type {
+  ChatMessage,
+  UIStep,
+  UIStepItem,
+  ChatState,
+  TokenUsage,
+} from "./chat.store";
+import type {
+  ContentPart,
+  ToolCall,
+  ToolResult,
+  TurnBegin,
+  SubagentEvent,
+  ApprovalRequestPayload,
+  DiffBlock,
+  RunResult,
+  QuestionRequest,
+} from "shared/legacy-sdk";
 import type { UIStreamEvent, StreamError } from "shared/types";
 
 type EventHandler = (draft: ChatState, payload: any) => void;
 
 function createEmptyTokenUsage(): TokenUsage {
-  return { input_other: 0, output: 0, input_cache_read: 0, input_cache_creation: 0 };
+  return {
+    input_other: 0,
+    output: 0,
+    input_cache_read: 0,
+    input_cache_creation: 0,
+  };
 }
 
 function addTokenUsage(target: TokenUsage, source: TokenUsage): void {
@@ -19,11 +40,18 @@ function addTokenUsage(target: TokenUsage, source: TokenUsage): void {
   target.input_cache_creation += source.input_cache_creation || 0;
 }
 
-function extractDiffPaths(display?: { type: string; path?: string }[]): string[] {
+function extractDiffPaths(
+  display?: { type: string; path?: string }[],
+): string[] {
   if (!display) {
     return [];
   }
-  return display.filter((block): block is DiffBlock => block.type === "diff" && typeof block.path === "string").map((block) => block.path);
+  return display
+    .filter(
+      (block): block is DiffBlock =>
+        block.type === "diff" && typeof block.path === "string",
+    )
+    .map((block) => block.path);
 }
 
 function getLastAssistant(draft: ChatState): ChatMessage | undefined {
@@ -42,7 +70,10 @@ function hasContent(message: ChatMessage): boolean {
   return message.steps?.some((s) => s.items.length > 0) ?? false;
 }
 
-function findToolUseItem(steps: UIStep[], toolId: string): (UIStepItem & { type: "tool_use" }) | null {
+function findToolUseItem(
+  steps: UIStep[],
+  toolId: string,
+): (UIStepItem & { type: "tool_use" }) | null {
   for (const step of steps) {
     for (const item of step.items) {
       if (item.type === "tool_use") {
@@ -66,7 +97,11 @@ function findToolUseItem(steps: UIStep[], toolId: string): (UIStepItem & { type:
 function resolveSubagentTarget(
   steps: UIStep[],
   payload: SubagentEvent,
-): { steps: UIStep[]; event: { type: string; payload: any }; toolItem: UIStepItem & { type: "tool_use" } } | null {
+): {
+  steps: UIStep[];
+  event: { type: string; payload: any };
+  toolItem: UIStepItem & { type: "tool_use" };
+} | null {
   const { parent_tool_call_id, event } = payload;
 
   // Nested SubagentEvent
@@ -99,7 +134,11 @@ function finishAllTextItems(steps: UIStep[]): void {
   }
 }
 
-function applyEventToSteps(steps: UIStep[], event: { type: string; payload: any }, onText?: (text: string) => void): void {
+function applyEventToSteps(
+  steps: UIStep[],
+  event: { type: string; payload: any },
+  onText?: (text: string) => void,
+): void {
   const currentStep = steps.at(-1);
 
   const appendOrCreate = (type: "text" | "thinking", content: string): void => {
@@ -129,7 +168,10 @@ function applyEventToSteps(steps: UIStep[], event: { type: string; payload: any 
     return null;
   };
 
-  const updateToolResult = (toolCallId: string, returnValue: ToolResult["return_value"]): boolean => {
+  const updateToolResult = (
+    toolCallId: string,
+    returnValue: ToolResult["return_value"],
+  ): boolean => {
     for (const step of steps) {
       for (const item of step.items) {
         if (item.type === "tool_use") {
@@ -138,7 +180,10 @@ function applyEventToSteps(steps: UIStep[], event: { type: string; payload: any 
             return true;
           }
 
-          if (item.subagent_steps && applyToolResult(item.subagent_steps, toolCallId, returnValue)) {
+          if (
+            item.subagent_steps &&
+            applyToolResult(item.subagent_steps, toolCallId, returnValue)
+          ) {
             return true;
           }
         }
@@ -148,7 +193,11 @@ function applyEventToSteps(steps: UIStep[], event: { type: string; payload: any 
     return false;
   };
 
-  const applyToolResult = (subSteps: UIStep[], toolCallId: string, returnValue: ToolResult["return_value"]): boolean => {
+  const applyToolResult = (
+    subSteps: UIStep[],
+    toolCallId: string,
+    returnValue: ToolResult["return_value"],
+  ): boolean => {
     for (const step of subSteps) {
       for (const item of step.items) {
         if (item.type === "tool_use") {
@@ -157,7 +206,10 @@ function applyEventToSteps(steps: UIStep[], event: { type: string; payload: any 
             return true;
           }
 
-          if (item.subagent_steps && applyToolResult(item.subagent_steps, toolCallId, returnValue)) {
+          if (
+            item.subagent_steps &&
+            applyToolResult(item.subagent_steps, toolCallId, returnValue)
+          ) {
             return true;
           }
         }
@@ -211,9 +263,10 @@ function applyEventToSteps(steps: UIStep[], event: { type: string; payload: any 
       if (!arguments_part) {
         break;
       }
-      const tool = typeof tool_call_id === "string"
-        ? findToolUseItem(steps, tool_call_id)
-        : findLastToolUse();
+      const tool =
+        typeof tool_call_id === "string"
+          ? findToolUseItem(steps, tool_call_id)
+          : findLastToolUse();
 
       if (tool) {
         tool.call.arguments = (tool.call.arguments || "") + arguments_part;
@@ -236,7 +289,10 @@ function applyEventToSteps(steps: UIStep[], event: { type: string; payload: any 
   }
 }
 
-function isTaskToolResult(steps: UIStep[] | undefined, toolCallId: string): boolean {
+function isTaskToolResult(
+  steps: UIStep[] | undefined,
+  toolCallId: string,
+): boolean {
   if (!steps) {
     return false;
   }
@@ -244,7 +300,11 @@ function isTaskToolResult(steps: UIStep[] | undefined, toolCallId: string): bool
   return toolItem?.call.name === "Task" || toolItem?.call.name === "Agent";
 }
 
-function handlePreflightError(draft: ChatState, _code: string, _message: string): void {
+function handlePreflightError(
+  draft: ChatState,
+  _code: string,
+  _message: string,
+): void {
   // Pre-flight: 删除未发送成功的消息，恢复输入
   addTokenUsage(draft.tokenUsage, draft.activeTokenUsage);
   draft.activeTokenUsage = createEmptyTokenUsage();
@@ -268,7 +328,12 @@ function handlePreflightError(draft: ChatState, _code: string, _message: string)
   }
 }
 
-function handleRuntimeError(draft: ChatState, code: string, message: string, detail?: string): void {
+function handleRuntimeError(
+  draft: ChatState,
+  code: string,
+  message: string,
+  detail?: string,
+): void {
   // Runtime: 保留现场，添加内嵌错误
   addTokenUsage(draft.tokenUsage, draft.activeTokenUsage);
   draft.activeTokenUsage = createEmptyTokenUsage();
@@ -311,7 +376,8 @@ const eventHandlers: Record<string, EventHandler> = {
 
   error: (draft, payload: StreamError) => {
     const code = payload.code || "UNKNOWN";
-    const phase = payload.phase || (isPreflightError(code) ? "preflight" : "runtime");
+    const phase =
+      payload.phase || (isPreflightError(code) ? "preflight" : "runtime");
 
     if (code === "UNKNOWN_EVENT_TYPE") {
       return;
@@ -520,7 +586,14 @@ const eventHandlers: Record<string, EventHandler> = {
   },
 
   StatusUpdate: (draft, payload) => {
-    const { context_usage, token_usage, plan_mode, model, thinking_effort, retrying } = payload;
+    const {
+      context_usage,
+      token_usage,
+      plan_mode,
+      model,
+      thinking_effort,
+      retrying,
+    } = payload;
 
     if (typeof model === "string" && model.length > 0) {
       useSettingsStore.getState().setCurrentModel(model);

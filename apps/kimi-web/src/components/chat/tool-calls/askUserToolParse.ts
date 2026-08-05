@@ -49,26 +49,30 @@ export function parseAskInput(arg: string): AskQuestion[] {
   if (!arg) return [];
   try {
     const obj = JSON.parse(arg) as Record<string, unknown>;
-    const raw = obj['questions'];
+    const raw = obj["questions"];
     if (!Array.isArray(raw)) return [];
     const out: AskQuestion[] = [];
     for (const q of raw) {
-      if (!q || typeof q !== 'object') continue;
+      if (!q || typeof q !== "object") continue;
       const qr = q as Record<string, unknown>;
-      const opts: AskOption[] = Array.isArray(qr['options'])
-        ? (qr['options'] as unknown[]).map(o => {
-            const or = (o && typeof o === 'object' ? o : {}) as Record<string, unknown>;
+      const opts: AskOption[] = Array.isArray(qr["options"])
+        ? (qr["options"] as unknown[]).map((o) => {
+            const or = (o && typeof o === "object" ? o : {}) as Record<
+              string,
+              unknown
+            >;
             return {
-              label: typeof or['label'] === 'string' ? or['label'] : '',
-              description: typeof or['description'] === 'string' ? or['description'] : '',
+              label: typeof or["label"] === "string" ? or["label"] : "",
+              description:
+                typeof or["description"] === "string" ? or["description"] : "",
             };
           })
         : [];
       out.push({
-        question: typeof qr['question'] === 'string' ? qr['question'] : '',
-        header: typeof qr['header'] === 'string' ? qr['header'] : '',
+        question: typeof qr["question"] === "string" ? qr["question"] : "",
+        header: typeof qr["header"] === "string" ? qr["header"] : "",
         options: opts,
-        multiSelect: qr['multi_select'] === true,
+        multiSelect: qr["multi_select"] === true,
       });
     }
     return out;
@@ -77,7 +81,7 @@ export function parseAskInput(arg: string): AskQuestion[] {
   }
 }
 
-const EMPTY: AskOutput = { recognized: false, answers: {}, note: '' };
+const EMPTY: AskOutput = { recognized: false, answers: {}, note: "" };
 
 export function parseAskOutput(output: string[] | undefined): AskOutput {
   const line = output?.[0];
@@ -89,22 +93,23 @@ export function parseAskOutput(output: string[] | undefined): AskOutput {
     // Plain-text output (background `task_id/status`, error message) — show raw.
     return EMPTY;
   }
-  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return EMPTY;
-  const raw = (obj as Record<string, unknown>)['answers'];
+  if (!obj || typeof obj !== "object" || Array.isArray(obj)) return EMPTY;
+  const raw = (obj as Record<string, unknown>)["answers"];
   // The answer payload is the only shape we render specially; anything else
   // (a JSON object without an `answers` record) falls back to raw output.
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return EMPTY;
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return EMPTY;
   const answers: Record<string, string | true> = {};
   for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
-    if (typeof v === 'string') answers[k] = v;
+    if (typeof v === "string") answers[k] = v;
     else if (v === true) answers[k] = true;
   }
   return {
     recognized: true,
     answers,
-    note: typeof (obj as Record<string, unknown>)['note'] === 'string'
-      ? ((obj as Record<string, unknown>)['note'] as string)
-      : '',
+    note:
+      typeof (obj as Record<string, unknown>)["note"] === "string"
+        ? ((obj as Record<string, unknown>)["note"] as string)
+        : "",
   };
 }
 
@@ -135,23 +140,26 @@ export function resolveAnswer(
   value: string | true | undefined,
   options: readonly AskOption[] = [],
 ): Resolved {
-  if (value === undefined) return { selected: new Set(), otherText: '', indeterminate: false };
-  if (value === true) return { selected: new Set(), otherText: '', indeterminate: true };
+  if (value === undefined)
+    return { selected: new Set(), otherText: "", indeterminate: false };
+  if (value === true)
+    return { selected: new Set(), otherText: "", indeterminate: true };
 
   const indexByLabel = new Map<string, number>();
   // First occurrence wins on (out-of-contract) duplicate labels.
   options.forEach((o, i) => {
-    if (o.label.length > 0 && !indexByLabel.has(o.label)) indexByLabel.set(o.label, i);
+    if (o.label.length > 0 && !indexByLabel.has(o.label))
+      indexByLabel.set(o.label, i);
   });
 
   const whole = indexByLabel.get(value);
   if (whole !== undefined) {
-    return { selected: new Set([whole]), otherText: '', indeterminate: false };
+    return { selected: new Set([whole]), otherText: "", indeterminate: false };
   }
 
   const selected = new Set<number>();
   const others: string[] = [];
-  for (const rawSeg of value.split(',')) {
+  for (const rawSeg of value.split(",")) {
     const seg = rawSeg.trim();
     const byLabel = indexByLabel.get(seg);
     if (byLabel !== undefined) {
@@ -162,5 +170,5 @@ export function resolveAnswer(
     if (m) selected.add(Number(m[1]));
     else if (seg.length > 0) others.push(seg);
   }
-  return { selected, otherText: others.join(', '), indeterminate: false };
+  return { selected, otherText: others.join(", "), indeterminate: false };
 }

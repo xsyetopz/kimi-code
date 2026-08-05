@@ -62,13 +62,13 @@
  * `DeviceCodeTimeoutError`.
  */
 
-import { createDecorator } from '../../di';
+import { createDecorator } from "../../di";
 import type {
   OAuthFlowSnapshot,
   OAuthFlowStart,
   OAuthLoginCancelResponse,
   OAuthLogoutResponse,
-} from '@moonshot-ai/protocol';
+} from "@moonshot-ai/protocol";
 
 export interface IOAuthService {
   readonly _serviceBrand: undefined;
@@ -104,4 +104,4 @@ export interface IOAuthService {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
-export const IOAuthService = createDecorator<IOAuthService>('oauthService');
+export const IOAuthService = createDecorator<IOAuthService>("oauthService");

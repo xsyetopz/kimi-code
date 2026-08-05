@@ -5,9 +5,9 @@
 // of the owning TextIndex instead of importing the class itself — TextIndex
 // satisfies the view structurally and delegates its same-named methods here.
 
-import { PostingsFile } from '../text-postings.js';
-import type { PostingEntry } from '../text-postings.js';
-import { yieldToLoop } from './tokenize.js';
+import { PostingsFile } from "../text-postings.js";
+import type { PostingEntry } from "../text-postings.js";
+import { yieldToLoop } from "./tokenize.js";
 
 /** The serialized image of a text index (the stage-5 generation checkpoint):
  *  dictionary, doc table, tombstones, and the write buffer. */
@@ -47,7 +47,10 @@ export interface TextIndexImageState {
  *  while no build is in flight (a committed build's state is what a
  *  generation serializes). */
 export function exportImageState(
-  s: Pick<TextIndexImageState, 'postings' | 'keys' | 'docLen' | 'N' | 'removed' | 'delta'>,
+  s: Pick<
+    TextIndexImageState,
+    "postings" | "keys" | "docLen" | "N" | "removed" | "delta"
+  >,
 ): TextIndexImage {
   return {
     dict: new Map(s.postings),
@@ -70,7 +73,10 @@ export function exportImageState(
  *  replay reconciles any mid-copy write exactly as it reconciles any
  *  post-seal write. */
 export async function exportImageStateAsync(
-  s: Pick<TextIndexImageState, 'postings' | 'keys' | 'docLen' | 'N' | 'removed' | 'delta'>,
+  s: Pick<
+    TextIndexImageState,
+    "postings" | "keys" | "docLen" | "N" | "removed" | "delta"
+  >,
   opts: { sliceEvery?: number } = {},
 ): Promise<TextIndexImage> {
   const sliceEvery = opts.sliceEvery ?? 65536;
@@ -157,9 +163,12 @@ export function attachImage(
  *  rename and reopens here; POSIX just updates the path (the fd stays valid
  *  across the rename). A reopen failure degrades reads to delta-only until
  *  the next build, exactly like commitBuild's reopen failure. */
-export function repointPostings(s: Pick<TextIndexImageState, 'pf'>, newPath: string): void {
+export function repointPostings(
+  s: Pick<TextIndexImageState, "pf">,
+  newPath: string,
+): void {
   if (!s.pf) return;
-  if (process.platform === 'win32') {
+  if (process.platform === "win32") {
     s.pf.close();
     s.pf = null;
     try {

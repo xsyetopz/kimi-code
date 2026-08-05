@@ -1,10 +1,13 @@
-import type { BackgroundTaskInfo, Session } from '@moonshot-ai/kimi-code-sdk';
-import type { Component, ProcessTerminal, TUI } from '@moonshot-ai/pi-tui';
+import type { BackgroundTaskInfo, Session } from "@moonshot-ai/kimi-code-sdk";
+import type { Component, ProcessTerminal, TUI } from "@moonshot-ai/pi-tui";
 
-import { TaskOutputViewer } from '../components/dialogs/task-output-viewer';
-import { TasksBrowserApp, type TasksFilter } from '../components/dialogs/tasks-browser';
-import type { Theme } from '#/tui/theme';
-import type { CustomEditor } from '../components/editor/custom-editor';
+import { TaskOutputViewer } from "../components/dialogs/task-output-viewer";
+import {
+  TasksBrowserApp,
+  type TasksFilter,
+} from "../components/dialogs/tasks-browser";
+import type { Theme } from "#/tui/theme";
+import type { CustomEditor } from "../components/editor/custom-editor";
 
 export interface TasksBrowserHost {
   readonly state: {
@@ -52,7 +55,7 @@ export class TasksBrowserController {
 
     const session = this.host.session;
     if (session === undefined) {
-      this.host.showError('No active session.');
+      this.host.showError("No active session.");
       return;
     }
 
@@ -67,7 +70,7 @@ export class TasksBrowserController {
     }
     if (state.tasksBrowser !== undefined) return;
 
-    const filter: TasksFilter = 'all';
+    const filter: TasksFilter = "all";
     const selectedTaskId = this.pickInitialSelection(tasks, filter);
     const component = new TasksBrowserApp(
       {
@@ -156,7 +159,11 @@ export class TasksBrowserController {
       return;
     }
     const current = state.tasksBrowser?.viewer;
-    if (current === undefined || current !== viewer || current.refreshId !== myRefreshId) {
+    if (
+      current === undefined ||
+      current !== viewer ||
+      current.refreshId !== myRefreshId
+    ) {
       return;
     }
     if (output === viewer.output) return;
@@ -180,18 +187,21 @@ export class TasksBrowserController {
     filter: TasksFilter,
   ): string | undefined {
     const candidates =
-      filter === 'all'
+      filter === "all"
         ? tasks
         : tasks.filter(
             (t) =>
-              t.status !== 'completed' &&
-              t.status !== 'failed' &&
-              t.status !== 'timed_out' &&
-              t.status !== 'killed' &&
-              t.status !== 'lost',
+              t.status !== "completed" &&
+              t.status !== "failed" &&
+              t.status !== "timed_out" &&
+              t.status !== "killed" &&
+              t.status !== "lost",
           );
     if (candidates.length === 0) return undefined;
-    return candidates.find((t) => t.status === 'running')?.taskId ?? candidates[0]!.taskId;
+    return (
+      candidates.find((t) => t.status === "running")?.taskId ??
+      candidates[0]!.taskId
+    );
   }
 
   private async refresh(opts: { silent?: boolean } = {}): Promise<void> {
@@ -239,7 +249,7 @@ export class TasksBrowserController {
     onCancel: () => void;
     onStopConfirmed: (taskId: string) => void;
     onOpenOutput: (taskId: string) => void;
-    onStopIgnored: (taskId: string, reason: 'terminal') => void;
+    onStopIgnored: (taskId: string, reason: "terminal") => void;
   } {
     return {
       onSelect: (taskId) => {
@@ -261,7 +271,7 @@ export class TasksBrowserController {
         void this.handleOpenOutput(taskId);
       },
       onStopIgnored: (taskId, reason) => {
-        if (reason === 'terminal') {
+        if (reason === "terminal") {
           this.flash(`${taskId} is already terminal — nothing to stop.`);
         }
       },
@@ -282,12 +292,12 @@ export class TasksBrowserController {
   private handleToggleFilter(): void {
     const browser = this.host.state.tasksBrowser;
     if (browser === undefined) return;
-    browser.filter = browser.filter === 'all' ? 'active' : 'all';
+    browser.filter = browser.filter === "all" ? "active" : "all";
     this.repaint();
   }
 
   private handleRefresh(): void {
-    this.flash('Refreshing…', 600);
+    this.flash("Refreshing…", 600);
     void this.refresh();
   }
 
@@ -297,13 +307,15 @@ export class TasksBrowserController {
 
     const session = this.host.session;
     if (session === undefined) {
-      this.flash('No active session.');
+      this.flash("No active session.");
       return;
     }
 
     this.flash(`Stopping ${taskId}…`, 1500);
     try {
-      await session.stopBackgroundTask(taskId, { reason: 'User initiated stop' });
+      await session.stopBackgroundTask(taskId, {
+        reason: "User initiated stop",
+      });
       await this.refresh({ silent: true });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -319,7 +331,7 @@ export class TasksBrowserController {
 
     const session = this.host.session;
     if (session === undefined) {
-      this.flash('No active session.');
+      this.flash("No active session.");
       return;
     }
 
@@ -396,7 +408,7 @@ export class TasksBrowserController {
         if (current === undefined) return;
         if (current !== browser || current.tailRequestId !== requestId) return;
         if (current.selectedTaskId !== taskId) return;
-        current.tailOutput = '';
+        current.tailOutput = "";
         current.tailLoading = false;
         this.repaint();
       });

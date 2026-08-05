@@ -6,13 +6,10 @@
  * version facts, and wire-log activity timestamps discovered during export.
  */
 
-import { WIRE_PROTOCOL_VERSION } from '#/wire/migration/migration';
+import { WIRE_PROTOCOL_VERSION } from "#/wire/migration/migration";
 
-import type {
-  ExportSessionManifest,
-  ShellEnvironment,
-} from './sessionExport';
-import type { SessionWireScan } from './wire-scan';
+import type { ExportSessionManifest, ShellEnvironment } from "./sessionExport";
+import type { SessionWireScan } from "./wire-scan";
 
 export interface ExportSessionManifestSummary {
   readonly id: string;
@@ -39,7 +36,7 @@ export function buildExportManifest(args: {
     kimiCodeVersion: args.version,
     wireProtocolVersion: args.wireProtocolVersion ?? WIRE_PROTOCOL_VERSION,
     os: `${process.platform} ${process.arch}`,
-    nodejsVersion: process.version.replace(/^v/, ''),
+    nodejsVersion: process.version.replace(/^v/, ""),
     sessionFirstActivity:
       args.sessionScan.firstActivityMs === undefined
         ? undefined

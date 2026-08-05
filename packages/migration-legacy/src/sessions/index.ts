@@ -1,13 +1,16 @@
-import { readFile, readdir, stat } from 'node:fs/promises';
-import { join } from 'node:path';
+import { readFile, readdir, stat } from "node:fs/promises";
+import { join } from "node:path";
 
-import { OldKimiJsonSchema, OldSessionStateSchema } from '../kimi-cli-schema.js';
-import { ensureSessionIndexEntry } from '../session-index.js';
-import { sourceKimiJson, sourceSessionsDir } from '../paths.js';
-import type { SessionsSummary } from '../types.js';
-import { classifySessionDir } from './classify.js';
-import { migrateOneSession } from './migrate-one.js';
-import { oldMd5BucketName } from './workdir-bucket.js';
+import {
+  OldKimiJsonSchema,
+  OldSessionStateSchema,
+} from "../kimi-cli-schema.js";
+import { ensureSessionIndexEntry } from "../session-index.js";
+import { sourceKimiJson, sourceSessionsDir } from "../paths.js";
+import type { SessionsSummary } from "../types.js";
+import { classifySessionDir } from "./classify.js";
+import { migrateOneSession } from "./migrate-one.js";
+import { oldMd5BucketName } from "./workdir-bucket.js";
 
 export interface SessionsStepInput {
   readonly sourceHome: string;
@@ -36,7 +39,10 @@ export async function migrateSessionsStep(
   const workdirs = await loadWorkdirs(input.sourceHome);
   const md5ToWorkdir = new Map<string, WorkdirMeta>();
   for (const wd of workdirs) {
-    md5ToWorkdir.set(oldMd5BucketName(wd.path), { path: wd.path, kaos: wd.kaos });
+    md5ToWorkdir.set(oldMd5BucketName(wd.path), {
+      path: wd.path,
+      kaos: wd.kaos,
+    });
   }
 
   let bucketsScanned = 0;
@@ -46,7 +52,8 @@ export async function migrateSessionsStep(
   let sessionsSkippedEmpty = 0;
   let sessionsSkippedMalformed = 0;
   const sessionsFailed: Array<{ sourcePath: string; reason: string }> = [];
-  const sessionsConflicts: Array<{ sourcePath: string; targetPath: string }> = [];
+  const sessionsConflicts: Array<{ sourcePath: string; targetPath: string }> =
+    [];
 
   const sessionsDir = sourceSessionsDir(input.sourceHome);
   let bucketDirs: string[];
@@ -71,11 +78,11 @@ export async function migrateSessionsStep(
     bucketsScanned++;
     const bucketPath = join(sessionsDir, bucketName);
     const workdir = resolveBucket(bucketName, md5ToWorkdir);
-    if (workdir.kind === 'nonlocal-kaos') {
+    if (workdir.kind === "nonlocal-kaos") {
       bucketsSkippedNonlocalKaos++;
       continue;
     }
-    if (workdir.kind === 'no-workdir-found') {
+    if (workdir.kind === "no-workdir-found") {
       bucketsSkippedNoWorkdirFound++;
       sessionsFailed.push({
         sourcePath: bucketPath,
@@ -97,15 +104,15 @@ export async function migrateSessionsStep(
     for (const uuid of sessionUuids) {
       const sessionDir = join(bucketPath, uuid);
       const cls = await classifySessionDir(sessionDir);
-      if (cls === 'placeholder') {
+      if (cls === "placeholder") {
         sessionsSkippedPlaceholder++;
         continue;
       }
-      if (cls === 'empty') {
+      if (cls === "empty") {
         sessionsSkippedEmpty++;
         continue;
       }
-      if (cls === 'malformed') {
+      if (cls === "malformed") {
         sessionsFailed.push({
           sourcePath: sessionDir,
           reason: unreadableSessionReason(),
@@ -138,7 +145,7 @@ export async function migrateSessionsStep(
     });
     processedCount += 1;
     input.onSessionProgress?.(processedCount, candidates.length);
-    if (result.outcome === 'migrated') {
+    if (result.outcome === "migrated") {
       try {
         // `ensureSessionIndexEntry` is idempotent — if a stale index line for
         // this session survived a deleted target dir, re-migrating it must not
@@ -158,7 +165,7 @@ export async function migrateSessionsStep(
           reason: `session migrated but index append failed: ${String(error)}`,
         });
       }
-    } else if (result.outcome === 'already-migrated') {
+    } else if (result.outcome === "already-migrated") {
       // The session dir exists from a prior run, but that run may have crashed
       // before appending the index entry. `ensureSessionIndexEntry` is
       // idempotent — it adds the entry only when absent — so a rerun
@@ -178,12 +185,12 @@ export async function migrateSessionsStep(
           reason: `session already migrated but index entry could not be ensured: ${String(error)}`,
         });
       }
-    } else if (result.outcome === 'conflict') {
+    } else if (result.outcome === "conflict") {
       sessionsConflicts.push({
         sourcePath: c.sourceSessionDir,
         targetPath: result.targetDir,
       });
-    } else if (result.outcome === 'empty') {
+    } else if (result.outcome === "empty") {
       // No migratable conversation (empty or user-cleared session). Counted
       // as skipped, not failed — `classifySessionDir` usually catches these
       // before they become candidates, but a translator/classifier edge can
@@ -198,7 +205,7 @@ export async function migrateSessionsStep(
   }
 
   return {
-    scope: 'all',
+    scope: "all",
     bucketsScanned,
     bucketsSkippedNonlocalKaos,
     bucketsSkippedNoWorkdirFound,
@@ -214,9 +221,9 @@ export async function migrateSessionsStep(
 }
 
 type BucketResolution =
-  | { readonly kind: 'local'; readonly path: string }
-  | { readonly kind: 'nonlocal-kaos' }
-  | { readonly kind: 'no-workdir-found' };
+  | { readonly kind: "local"; readonly path: string }
+  | { readonly kind: "nonlocal-kaos" }
+  | { readonly kind: "no-workdir-found" };
 
 function resolveBucket(
   bucketName: string,
@@ -226,25 +233,25 @@ function resolveBucket(
   if (MD5_HEX_RE.test(bucketName)) {
     const meta = md5ToWorkdir.get(bucketName);
     if (meta === undefined) {
-      return { kind: 'no-workdir-found' };
+      return { kind: "no-workdir-found" };
     }
-    if (meta.kaos !== 'local') {
-      return { kind: 'nonlocal-kaos' };
+    if (meta.kaos !== "local") {
+      return { kind: "nonlocal-kaos" };
     }
-    return { kind: 'local', path: meta.path };
+    return { kind: "local", path: meta.path };
   }
   // Non-local pattern: `<kaos>_<md5>`. Use the last `_` so kaos names that
   // contain underscores still resolve.
-  const idx = bucketName.lastIndexOf('_');
+  const idx = bucketName.lastIndexOf("_");
   if (idx > 0 && MD5_HEX_RE.test(bucketName.slice(idx + 1))) {
-    return { kind: 'nonlocal-kaos' };
+    return { kind: "nonlocal-kaos" };
   }
-  return { kind: 'no-workdir-found' };
+  return { kind: "no-workdir-found" };
 }
 
 async function loadWorkdirs(sourceHome: string): Promise<WorkdirMeta[]> {
   try {
-    const text = await readFile(sourceKimiJson(sourceHome), 'utf-8');
+    const text = await readFile(sourceKimiJson(sourceHome), "utf-8");
     const parsed = OldKimiJsonSchema.parse(JSON.parse(text));
     return parsed.work_dirs.map((w) => ({ path: w.path, kaos: w.kaos }));
   } catch {
@@ -254,7 +261,7 @@ async function loadWorkdirs(sourceHome: string): Promise<WorkdirMeta[]> {
 
 async function readWireMtime(sessionDir: string): Promise<number> {
   try {
-    const text = await readFile(join(sessionDir, 'state.json'), 'utf-8');
+    const text = await readFile(join(sessionDir, "state.json"), "utf-8");
     const parsed = OldSessionStateSchema.parse(JSON.parse(text));
     if (parsed.wire_mtime !== null && parsed.wire_mtime !== undefined) {
       return parsed.wire_mtime * 1000;
@@ -263,7 +270,7 @@ async function readWireMtime(sessionDir: string): Promise<number> {
     // fall through to wire.jsonl mtime
   }
   try {
-    const st = await stat(join(sessionDir, 'wire.jsonl'));
+    const st = await stat(join(sessionDir, "wire.jsonl"));
     return st.mtimeMs;
   } catch {
     return 0;
@@ -272,7 +279,7 @@ async function readWireMtime(sessionDir: string): Promise<number> {
 
 function emptySummary(): SessionsSummary {
   return {
-    scope: 'all',
+    scope: "all",
     bucketsScanned: 0,
     bucketsSkippedNonlocalKaos: 0,
     bucketsSkippedNoWorkdirFound: 0,
@@ -288,19 +295,19 @@ function emptySummary(): SessionsSummary {
 }
 
 function unknownWorkdirReason(): string {
-  return 'No local workdir mapping was found for this legacy session bucket; kimi.json may be missing, unreadable, or not list the workdir.';
+  return "No local workdir mapping was found for this legacy session bucket; kimi.json may be missing, unreadable, or not list the workdir.";
 }
 
 function unreadableSessionReason(): string {
-  return 'Legacy session could not be inspected because context.jsonl is missing or unreadable.';
+  return "Legacy session could not be inspected because context.jsonl is missing or unreadable.";
 }
 
 function isMissingError(error: unknown): boolean {
   return (
-    typeof error === 'object' &&
+    typeof error === "object" &&
     error !== null &&
-    'code' in error &&
-    (error as { readonly code?: unknown }).code === 'ENOENT'
+    "code" in error &&
+    (error as { readonly code?: unknown }).code === "ENOENT"
   );
 }
 

@@ -22,21 +22,21 @@ export interface SlashCommand {
 }
 
 export const SLASH_COMMANDS: SlashCommand[] = [
-  { name: '/new',        desc: 'commands.new.desc' },
-  { name: '/clear',      desc: 'commands.clear.desc' },
-  { name: '/login',      desc: 'commands.login.desc' },
-  { name: '/plan',       desc: 'commands.plan.desc' },
-  { name: '/swarm',      desc: 'commands.swarm.desc', acceptsInput: true },
-  { name: '/goal',       desc: 'commands.goal.desc', acceptsInput: true },
-  { name: '/btw',        desc: 'commands.btw.desc', acceptsInput: true },
-  { name: '/auto',       desc: 'commands.auto.desc' },
-  { name: '/yolo',       desc: 'commands.yolo.desc' },
-  { name: '/thinking',   desc: 'commands.thinking.desc' },
-  { name: '/compact',    desc: 'commands.compact.desc', acceptsInput: true },
-  { name: '/undo',       desc: 'commands.undo.desc' },
-  { name: '/fork',       desc: 'commands.fork.desc' },
-  { name: '/export',     desc: 'commands.export.desc' },
-  { name: '/status',     desc: 'commands.status.desc' },
+  { name: "/new", desc: "commands.new.desc" },
+  { name: "/clear", desc: "commands.clear.desc" },
+  { name: "/login", desc: "commands.login.desc" },
+  { name: "/plan", desc: "commands.plan.desc" },
+  { name: "/swarm", desc: "commands.swarm.desc", acceptsInput: true },
+  { name: "/goal", desc: "commands.goal.desc", acceptsInput: true },
+  { name: "/btw", desc: "commands.btw.desc", acceptsInput: true },
+  { name: "/auto", desc: "commands.auto.desc" },
+  { name: "/yolo", desc: "commands.yolo.desc" },
+  { name: "/thinking", desc: "commands.thinking.desc" },
+  { name: "/compact", desc: "commands.compact.desc", acceptsInput: true },
+  { name: "/undo", desc: "commands.undo.desc" },
+  { name: "/fork", desc: "commands.fork.desc" },
+  { name: "/export", desc: "commands.export.desc" },
+  { name: "/status", desc: "commands.status.desc" },
 ];
 
 /**
@@ -51,11 +51,11 @@ export const SLASH_COMMANDS: SlashCommand[] = [
  *   "  /help"       -> null (leading whitespace)
  */
 export function parseSlash(input: string): { cmd: string; arg: string } | null {
-  if (!input.startsWith('/')) return null;
+  if (!input.startsWith("/")) return null;
   // Must start exactly at position 0 (no leading spaces)
-  const spaceIdx = input.indexOf(' ');
+  const spaceIdx = input.indexOf(" ");
   if (spaceIdx === -1) {
-    return { cmd: input, arg: '' };
+    return { cmd: input, arg: "" };
   }
   return {
     cmd: input.slice(0, spaceIdx),
@@ -64,7 +64,7 @@ export function parseSlash(input: string): { cmd: string; arg: string } | null {
 }
 
 /** The prefix marking a slash item as a skill activation (`/skill:<name>`). */
-export const SKILL_COMMAND_PREFIX = 'skill:';
+export const SKILL_COMMAND_PREFIX = "skill:";
 
 /**
  * Strip the `skill:` prefix from a slash-command name (with or without the
@@ -72,7 +72,9 @@ export const SKILL_COMMAND_PREFIX = 'skill:';
  * unchanged.
  */
 export function stripSkillPrefix(name: string): string {
-  return name.startsWith(SKILL_COMMAND_PREFIX) ? name.slice(SKILL_COMMAND_PREFIX.length) : name;
+  return name.startsWith(SKILL_COMMAND_PREFIX)
+    ? name.slice(SKILL_COMMAND_PREFIX.length)
+    : name;
 }
 
 /**
@@ -83,10 +85,17 @@ export function stripSkillPrefix(name: string): string {
  * an `isSkill` flag so the caller knows to activate rather than run a command.
  */
 export function buildSlashItems(
-  skills: ReadonlyArray<{ name: string; description: string; source?: string }> = [],
+  skills: ReadonlyArray<{
+    name: string;
+    description: string;
+    source?: string;
+  }> = [],
 ): SlashCommand[] {
   const skillItems: SlashCommand[] = skills.map((s) => ({
-    name: s.source === 'builtin' ? `/${s.name}` : `/${SKILL_COMMAND_PREFIX}${s.name}`,
+    name:
+      s.source === "builtin"
+        ? `/${s.name}`
+        : `/${SKILL_COMMAND_PREFIX}${s.name}`,
     desc: s.description,
     isSkill: true,
     // Keep the selected skill in the composer so arguments can be appended.
@@ -105,12 +114,12 @@ export function filterCommands(
   query: string,
   items: SlashCommand[] = SLASH_COMMANDS,
 ): SlashCommand[] {
-  const q = query.toLowerCase().trim().replace(/^\//, '');
-  if (q === '') return items;
+  const q = query.toLowerCase().trim().replace(/^\//, "");
+  if (q === "") return items;
 
   return items
     .map((item, index) => {
-      const name = item.name.toLowerCase().replace(/^\//, '');
+      const name = item.name.toLowerCase().replace(/^\//, "");
       let score = 0;
       if (name === q) score = 3;
       else if (name.startsWith(q)) score = 2;

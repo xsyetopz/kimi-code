@@ -1,29 +1,44 @@
-import type { Dirent } from 'node:fs';
-import { cp, mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
-import * as nodePath from 'node:path';
-import { dirname, isAbsolute, join, relative, resolve } from 'pathe';
+import type { Dirent } from "node:fs";
+import {
+  cp,
+  mkdir,
+  readdir,
+  readFile,
+  rm,
+  stat,
+  writeFile,
+} from "node:fs/promises";
+import * as nodePath from "node:path";
+import { dirname, isAbsolute, join, relative, resolve } from "pathe";
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { ErrorCodes, KimiError } from '#/errors';
-import type { SessionIndexEntry } from '#/session/store/session-index';
+import { ErrorCodes, KimiError } from "#/errors";
+import type { SessionIndexEntry } from "#/session/store/session-index";
 import {
   appendSessionIndexDeletion,
   appendSessionIndexEntry,
   readSessionIndex,
-} from '#/session/store/session-index';
-import { encodeWorkDirKey, normalizeWorkDir } from '#/session/store/workdir-key';
+} from "#/session/store/session-index";
+import {
+  encodeWorkDirKey,
+  normalizeWorkDir,
+} from "#/session/store/workdir-key";
 import {
   promptMetadataTextFromPayload,
   promptMetadataTextFromPluginCommand,
   promptMetadataTextFromSkill,
-} from '#/session/prompt-metadata';
-import type { JsonObject, ListSessionsPayload, SessionSummary } from '#/rpc/core-api';
+} from "#/session/prompt-metadata";
+import type {
+  JsonObject,
+  ListSessionsPayload,
+  SessionSummary,
+} from "#/rpc/core-api";
 import {
   FileSystemAgentRecordPersistence,
   type AgentRecord,
   type AgentRecordOf,
-} from '../../agent/records';
+} from "../../agent/records";
 
 const SessionSummaryStateSchema = z.object({
   archived: z.boolean().optional(),
@@ -35,7 +50,7 @@ const SessionSummaryStateSchema = z.object({
   custom: z.record(z.string(), z.unknown()).optional(),
 });
 
-const FORKED_SESSION_DROPPED_FILES = ['upcoming-goals.json'] as const;
+const FORKED_SESSION_DROPPED_FILES = ["upcoming-goals.json"] as const;
 
 type SessionSummaryState = z.infer<typeof SessionSummaryStateSchema>;
 
@@ -61,24 +76,33 @@ export type SessionStoreOptions = {
    * created from a case/slash variant of a registered Windows root lands in
    * the registered bucket instead of splitting into a second one.
    */
-  readonly resolveWorkspaceId?: (workDir: string) => Promise<string | undefined>;
+  readonly resolveWorkspaceId?: (
+    workDir: string,
+  ) => Promise<string | undefined>;
 };
 
 export class SessionStore {
   readonly sessionsDir: string;
-  private readonly resolveWorkspaceId: SessionStoreOptions['resolveWorkspaceId'];
+  private readonly resolveWorkspaceId: SessionStoreOptions["resolveWorkspaceId"];
 
   constructor(
     readonly homeDir: string,
     options: SessionStoreOptions = {},
   ) {
-    this.sessionsDir = join(homeDir, 'sessions');
+    this.sessionsDir = join(homeDir, "sessions");
     this.resolveWorkspaceId = options.resolveWorkspaceId;
   }
 
-  sessionDirFor(input: { readonly id: string; readonly workDir: string }): string {
+  sessionDirFor(input: {
+    readonly id: string;
+    readonly workDir: string;
+  }): string {
     assertSafeSessionId(input.id);
-    return join(this.sessionsDir, encodeWorkDirKey(normalizeWorkDir(input.workDir)), input.id);
+    return join(
+      this.sessionsDir,
+      encodeWorkDirKey(normalizeWorkDir(input.workDir)),
+      input.id,
+    );
   }
 
   /**
@@ -107,7 +131,11 @@ export class SessionStore {
     readonly workDir: string;
   }): Promise<string> {
     assertSafeSessionId(input.id);
-    return join(this.sessionsDir, await this.bucketKeyFor(input.workDir), input.id);
+    return join(
+      this.sessionsDir,
+      await this.bucketKeyFor(input.workDir),
+      input.id,
+    );
   }
 
   /** Bucket directory for a workDir, registry-resolved when possible. */
@@ -120,12 +148,18 @@ export class SessionStore {
     const workDir = normalizeWorkDir(input.workDir);
     const indexed = await this.findSessionEntry(input.id);
     if (indexed !== undefined && (await isDirectory(indexed.sessionDir))) {
-      throw new KimiError(ErrorCodes.SESSION_ALREADY_EXISTS, `Session "${input.id}" already exists`);
+      throw new KimiError(
+        ErrorCodes.SESSION_ALREADY_EXISTS,
+        `Session "${input.id}" already exists`,
+      );
     }
 
     const dir = await this.resolvedSessionDirFor({ id: input.id, workDir });
     if (await isDirectory(dir)) {
-      throw new KimiError(ErrorCodes.SESSION_ALREADY_EXISTS, `Session "${input.id}" already exists`);
+      throw new KimiError(
+        ErrorCodes.SESSION_ALREADY_EXISTS,
+        `Session "${input.id}" already exists`,
+      );
     }
 
     await mkdir(dir, { recursive: true, mode: 0o700 });
@@ -143,12 +177,21 @@ export class SessionStore {
     assertSafeSessionId(input.targetId);
     const indexed = await this.findSessionEntry(input.targetId);
     if (indexed !== undefined) {
-      throw new KimiError(ErrorCodes.SESSION_ALREADY_EXISTS, `Session "${input.targetId}" already exists`);
+      throw new KimiError(
+        ErrorCodes.SESSION_ALREADY_EXISTS,
+        `Session "${input.targetId}" already exists`,
+      );
     }
 
-    const targetDir = await this.resolvedSessionDirFor({ id: input.targetId, workDir: source.workDir });
+    const targetDir = await this.resolvedSessionDirFor({
+      id: input.targetId,
+      workDir: source.workDir,
+    });
     if (await isDirectory(targetDir)) {
-      throw new KimiError(ErrorCodes.SESSION_ALREADY_EXISTS, `Session "${input.targetId}" already exists`);
+      throw new KimiError(
+        ErrorCodes.SESSION_ALREADY_EXISTS,
+        `Session "${input.targetId}" already exists`,
+      );
     }
 
     await mkdir(dirname(targetDir), { recursive: true, mode: 0o700 });
@@ -165,16 +208,21 @@ export class SessionStore {
         source.workDir,
         targetDir,
       );
-      const forkedState = input.turnIndex === undefined
-        ? fullForkedState
-        : await truncateForkedSessionAtTurn(
-            targetDir,
-            input.sourceId,
-            input.turnIndex,
-            fullForkedState,
-          );
+      const forkedState =
+        input.turnIndex === undefined
+          ? fullForkedState
+          : await truncateForkedSessionAtTurn(
+              targetDir,
+              input.sourceId,
+              input.turnIndex,
+              fullForkedState,
+            );
       await appendForkedMarkers(forkedState);
-      const summary = await this.summaryFromDir(input.targetId, targetDir, source.workDir);
+      const summary = await this.summaryFromDir(
+        input.targetId,
+        targetDir,
+        source.workDir,
+      );
       await appendSessionIndexEntry(this.homeDir, {
         sessionId: input.targetId,
         sessionDir: targetDir,
@@ -195,42 +243,67 @@ export class SessionStore {
   async rename(id: string, title: string): Promise<void> {
     const normalized = title.trim();
     if (normalized.length === 0) {
-      throw new KimiError(ErrorCodes.SESSION_TITLE_EMPTY, 'Session title cannot be empty');
+      throw new KimiError(
+        ErrorCodes.SESSION_TITLE_EMPTY,
+        "Session title cannot be empty",
+      );
     }
     const entry = await this.findExistingSessionEntry(id);
-    const statePath = join(entry.sessionDir, 'state.json');
+    const statePath = join(entry.sessionDir, "state.json");
     let parsed: unknown;
     try {
-      parsed = JSON.parse(await readFile(statePath, 'utf-8')) as unknown;
+      parsed = JSON.parse(await readFile(statePath, "utf-8")) as unknown;
     } catch (error) {
-      throw new KimiError(ErrorCodes.SESSION_STATE_NOT_FOUND, `Session "${id}" state.json was not found`, {
-        cause: error,
-      });
+      throw new KimiError(
+        ErrorCodes.SESSION_STATE_NOT_FOUND,
+        `Session "${id}" state.json was not found`,
+        {
+          cause: error,
+        },
+      );
     }
-    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
-      throw new KimiError(ErrorCodes.SESSION_STATE_INVALID, `Session "${id}" state.json is invalid`);
+    if (
+      typeof parsed !== "object" ||
+      parsed === null ||
+      Array.isArray(parsed)
+    ) {
+      throw new KimiError(
+        ErrorCodes.SESSION_STATE_INVALID,
+        `Session "${id}" state.json is invalid`,
+      );
     }
     const next: Record<string, unknown> = {
       ...(parsed as Record<string, unknown>),
       title: normalized,
       isCustomTitle: true,
     };
-    await writeFile(statePath, `${JSON.stringify(next, null, 2)}\n`, 'utf-8');
+    await writeFile(statePath, `${JSON.stringify(next, null, 2)}\n`, "utf-8");
   }
 
   async archive(id: string): Promise<SessionSummary> {
     const entry = await this.findExistingSessionEntry(id);
-    const statePath = join(entry.sessionDir, 'state.json');
+    const statePath = join(entry.sessionDir, "state.json");
     let parsed: unknown;
     try {
-      parsed = JSON.parse(await readFile(statePath, 'utf-8')) as unknown;
+      parsed = JSON.parse(await readFile(statePath, "utf-8")) as unknown;
     } catch (error) {
-      throw new KimiError(ErrorCodes.SESSION_STATE_NOT_FOUND, `Session "${id}" state.json was not found`, {
-        cause: error,
-      });
+      throw new KimiError(
+        ErrorCodes.SESSION_STATE_NOT_FOUND,
+        `Session "${id}" state.json was not found`,
+        {
+          cause: error,
+        },
+      );
     }
-    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
-      throw new KimiError(ErrorCodes.SESSION_STATE_INVALID, `Session "${id}" state.json is invalid`);
+    if (
+      typeof parsed !== "object" ||
+      parsed === null ||
+      Array.isArray(parsed)
+    ) {
+      throw new KimiError(
+        ErrorCodes.SESSION_STATE_INVALID,
+        `Session "${id}" state.json is invalid`,
+      );
     }
     const now = new Date().toISOString();
     const next: Record<string, unknown> = {
@@ -238,7 +311,7 @@ export class SessionStore {
       archived: true,
       updatedAt: now,
     };
-    await writeFile(statePath, `${JSON.stringify(next, null, 2)}\n`, 'utf-8');
+    await writeFile(statePath, `${JSON.stringify(next, null, 2)}\n`, "utf-8");
     return this.summaryFromDir(id, entry.sessionDir, entry.workDir);
   }
 
@@ -248,15 +321,23 @@ export class SessionStore {
     await appendSessionIndexDeletion(this.homeDir, id);
   }
 
-  async list(options: ListSessionsPayload = {}): Promise<readonly SessionSummary[]> {
+  async list(
+    options: ListSessionsPayload = {},
+  ): Promise<readonly SessionSummary[]> {
     const workDir =
-      options.workDir === undefined ? undefined : normalizeRequiredWorkDir(options.workDir);
+      options.workDir === undefined
+        ? undefined
+        : normalizeRequiredWorkDir(options.workDir);
     const sessionId = normalizeOptionalSessionId(options.sessionId);
     const includeArchive = options.includeArchive === true;
 
     if (workDir !== undefined) {
       if (sessionId !== undefined) {
-        const local = await this.summaryFromWorkDirSession(sessionId, workDir, includeArchive);
+        const local = await this.summaryFromWorkDirSession(
+          sessionId,
+          workDir,
+          includeArchive,
+        );
         if (local !== undefined) return [local];
         return this.listSessionId(sessionId, includeArchive);
       }
@@ -282,7 +363,11 @@ export class SessionStore {
    * earlier ones for the same id, so appending a corrected line both adds
    * missing entries and repairs stale ones. Best-effort: never throws.
    */
-  async reindex(): Promise<{ scanned: number; added: number; repaired: number }> {
+  async reindex(): Promise<{
+    scanned: number;
+    added: number;
+    repaired: number;
+  }> {
     const index = await readSessionIndex(this.homeDir, this.sessionsDir);
     let bucketEntries;
     try {
@@ -325,7 +410,10 @@ export class SessionStore {
         // in the registered bucket even though their workDir mints elsewhere.
         if (
           !areSameFsPath(sessionDir, expectedDir) &&
-          !areSameFsPath(sessionDir, await this.resolvedSessionDirFor({ id, workDir }))
+          !areSameFsPath(
+            sessionDir,
+            await this.resolvedSessionDirFor({ id, workDir }),
+          )
         ) {
           continue;
         }
@@ -339,7 +427,11 @@ export class SessionStore {
           continue;
         }
 
-        await appendSessionIndexEntry(this.homeDir, { sessionId: id, sessionDir, workDir });
+        await appendSessionIndexEntry(this.homeDir, {
+          sessionId: id,
+          sessionDir,
+          workDir,
+        });
         index.set(id, { sessionId: id, sessionDir, workDir });
         if (existing === undefined) added++;
         else repaired++;
@@ -348,7 +440,9 @@ export class SessionStore {
     return { scanned, added, repaired };
   }
 
-  private async recoverWorkDir(sessionDir: string): Promise<string | undefined> {
+  private async recoverWorkDir(
+    sessionDir: string,
+  ): Promise<string | undefined> {
     const state = await readOptionalState(sessionDir);
     if (state?.workDir !== undefined) {
       try {
@@ -357,8 +451,8 @@ export class SessionStore {
         return undefined;
       }
     }
-    const legacyCwd = state?.custom?.['cwd'];
-    if (typeof legacyCwd === 'string' && legacyCwd.length > 0) {
+    const legacyCwd = state?.custom?.["cwd"];
+    if (typeof legacyCwd === "string" && legacyCwd.length > 0) {
       try {
         return normalizeWorkDir(legacyCwd);
       } catch {
@@ -400,8 +494,13 @@ export class SessionStore {
     // or UNC location (for example TUI `C:/Work` vs VS Code `c:\\Work`).
     const index = await readSessionIndex(this.homeDir, this.sessionsDir);
     for (const entry of index.values()) {
-      if (seen.has(entry.sessionId) || !(await isDirectory(entry.sessionDir))) continue;
-      const summary = await this.summaryFromDir(entry.sessionId, entry.sessionDir, entry.workDir);
+      if (seen.has(entry.sessionId) || !(await isDirectory(entry.sessionDir)))
+        continue;
+      const summary = await this.summaryFromDir(
+        entry.sessionId,
+        entry.sessionDir,
+        entry.workDir,
+      );
       if (!areSameFsPath(summary.workDir, workDir)) continue;
       if (!includeArchive && summary.archived === true) continue;
       sessions.push(summary);
@@ -420,19 +519,28 @@ export class SessionStore {
       if (!includeArchive && summary.archived === true) return [];
       return [summary];
     } catch (error) {
-      if (error instanceof KimiError && error.code === ErrorCodes.SESSION_NOT_FOUND) {
+      if (
+        error instanceof KimiError &&
+        error.code === ErrorCodes.SESSION_NOT_FOUND
+      ) {
         return [];
       }
       throw error;
     }
   }
 
-  private async listAll(includeArchive: boolean): Promise<readonly SessionSummary[]> {
+  private async listAll(
+    includeArchive: boolean,
+  ): Promise<readonly SessionSummary[]> {
     const index = await readSessionIndex(this.homeDir, this.sessionsDir);
     const sessions: SessionSummary[] = [];
     for (const entry of index.values()) {
       if (!(await isDirectory(entry.sessionDir))) continue;
-      const summary = await this.summaryFromDir(entry.sessionId, entry.sessionDir, entry.workDir);
+      const summary = await this.summaryFromDir(
+        entry.sessionId,
+        entry.sessionDir,
+        entry.workDir,
+      );
       if (!includeArchive && summary.archived === true) continue;
       sessions.push(summary);
     }
@@ -446,7 +554,10 @@ export class SessionStore {
     includeArchive: boolean,
   ): Promise<SessionSummary | undefined> {
     if (!isSafeSessionId(sessionId)) return undefined;
-    const sessionDir = await this.resolvedSessionDirFor({ id: sessionId, workDir });
+    const sessionDir = await this.resolvedSessionDirFor({
+      id: sessionId,
+      workDir,
+    });
     if (!(await isDirectory(sessionDir))) return undefined;
     const summary = await this.summaryFromDir(sessionId, sessionDir, workDir);
     if (!includeArchive && summary.archived === true) return undefined;
@@ -457,18 +568,27 @@ export class SessionStore {
     return (await this.findExistingSessionEntry(id)).sessionDir;
   }
 
-  private async findSessionEntry(id: string): Promise<SessionIndexEntry | undefined> {
+  private async findSessionEntry(
+    id: string,
+  ): Promise<SessionIndexEntry | undefined> {
     if (!isSafeSessionId(id)) return undefined;
     const index = await readSessionIndex(this.homeDir, this.sessionsDir);
     return index.get(id);
   }
 
-  private async findExistingSessionEntry(id: string): Promise<SessionIndexEntry> {
+  private async findExistingSessionEntry(
+    id: string,
+  ): Promise<SessionIndexEntry> {
     const entry = await this.findSessionEntry(id);
-    if (entry !== undefined && (await isDirectory(entry.sessionDir))) return entry;
-    throw new KimiError(ErrorCodes.SESSION_NOT_FOUND, `Session "${id}" was not found`, {
-      details: { sessionId: id },
-    });
+    if (entry !== undefined && (await isDirectory(entry.sessionDir)))
+      return entry;
+    throw new KimiError(
+      ErrorCodes.SESSION_NOT_FOUND,
+      `Session "${id}" was not found`,
+      {
+        details: { sessionId: id },
+      },
+    );
   }
 
   private async writeForkedState(
@@ -477,10 +597,10 @@ export class SessionStore {
     sourceWorkDir: string,
     targetDir: string,
   ): Promise<Record<string, unknown>> {
-    const statePath = join(targetDir, 'state.json');
+    const statePath = join(targetDir, "state.json");
     let parsed: unknown;
     try {
-      parsed = JSON.parse(await readFile(statePath, 'utf-8')) as unknown;
+      parsed = JSON.parse(await readFile(statePath, "utf-8")) as unknown;
     } catch (error) {
       throw new KimiError(
         ErrorCodes.SESSION_STATE_NOT_FOUND,
@@ -497,7 +617,7 @@ export class SessionStore {
       );
     }
 
-    const title = normalizeForkTitle(input.title, parsed['title']);
+    const title = normalizeForkTitle(input.title, parsed["title"]);
     const now = new Date().toISOString();
     const next: Record<string, unknown> = {
       ...parsed,
@@ -505,12 +625,13 @@ export class SessionStore {
       updatedAt: now,
       workDir: sourceWorkDir,
       title,
-      isCustomTitle: input.title === undefined ? parsed['isCustomTitle'] === true : true,
+      isCustomTitle:
+        input.title === undefined ? parsed["isCustomTitle"] === true : true,
       forkedFrom: input.sourceId,
-      agents: rewriteAgentHomedirs(parsed['agents'], sourceDir, targetDir),
-      custom: forkCustomMetadata(parsed['custom'], input.metadata),
+      agents: rewriteAgentHomedirs(parsed["agents"], sourceDir, targetDir),
+      custom: forkCustomMetadata(parsed["custom"], input.metadata),
     };
-    await writeFile(statePath, `${JSON.stringify(next, null, 2)}\n`, 'utf-8');
+    await writeFile(statePath, `${JSON.stringify(next, null, 2)}\n`, "utf-8");
     return next;
   }
 
@@ -522,8 +643,8 @@ export class SessionStore {
     const dirStat = await stat(sessionDir);
     const state = await readOptionalState(sessionDir);
     const [stateInfo, wireInfo, agentsWireMtime] = await Promise.all([
-      statIfExists(join(sessionDir, 'state.json')),
-      statIfExists(join(sessionDir, 'wire.jsonl')),
+      statIfExists(join(sessionDir, "state.json")),
+      statIfExists(join(sessionDir, "wire.jsonl")),
       latestAgentWireMtime(sessionDir),
     ]);
     return {
@@ -545,12 +666,17 @@ export class SessionStore {
   }
 }
 
-function metadataFromState(state: SessionSummaryState | undefined): JsonObject | undefined {
+function metadataFromState(
+  state: SessionSummaryState | undefined,
+): JsonObject | undefined {
   if (state === undefined || state.custom === undefined) return undefined;
   return state.custom as JsonObject;
 }
 
-function forkCustomMetadata(source: unknown, metadata: JsonObject | undefined): Record<string, unknown> {
+function forkCustomMetadata(
+  source: unknown,
+  metadata: JsonObject | undefined,
+): Record<string, unknown> {
   return {
     ...customMetadataWithoutGoal(source),
     ...customMetadataWithoutGoal(metadata),
@@ -559,7 +685,9 @@ function forkCustomMetadata(source: unknown, metadata: JsonObject | undefined): 
 
 async function dropForkedSessionFiles(sessionDir: string): Promise<void> {
   await Promise.all(
-    FORKED_SESSION_DROPPED_FILES.map((fileName) => rm(join(sessionDir, fileName), { force: true })),
+    FORKED_SESSION_DROPPED_FILES.map((fileName) =>
+      rm(join(sessionDir, fileName), { force: true }),
+    ),
   );
 }
 
@@ -575,30 +703,37 @@ async function truncateForkedSessionAtTurn(
   turnIndex: number,
   state: Record<string, unknown>,
 ): Promise<Record<string, unknown>> {
-  const agents = state['agents'];
-  if (!isRecord(agents) || !isRecord(agents['main'])) {
+  const agents = state["agents"];
+  if (!isRecord(agents) || !isRecord(agents["main"])) {
     throw new KimiError(
       ErrorCodes.SESSION_STATE_INVALID,
       `Session "${sourceSessionId}" has no main agent metadata`,
     );
   }
 
-  const mainAgentDir = join(sessionDir, 'agents', 'main');
+  const mainAgentDir = join(sessionDir, "agents", "main");
   const mainPersistence = new FileSystemAgentRecordPersistence(
-    join(mainAgentDir, 'wire.jsonl'),
+    join(mainAgentDir, "wire.jsonl"),
   );
   const mainRecords = await readAgentRecords(mainPersistence);
-  const mainSlice = sliceMainRecordsAtTurn(mainRecords, sourceSessionId, turnIndex);
+  const mainSlice = sliceMainRecordsAtTurn(
+    mainRecords,
+    sourceSessionId,
+    turnIndex,
+  );
   mainPersistence.rewrite(mainSlice.records);
   await mainPersistence.flush();
 
   const retainedAgents: Record<string, unknown> = {
-    main: withAgentHomedir(agents['main'], mainAgentDir),
+    main: withAgentHomedir(agents["main"], mainAgentDir),
   };
   for (const [agentId, agentMeta] of Object.entries(agents)) {
-    if (agentId === 'main') continue;
-    const agentDir = join(sessionDir, 'agents', agentId);
-    const retained = await truncateSubagentAtTime(agentDir, mainSlice.cutoffTime);
+    if (agentId === "main") continue;
+    const agentDir = join(sessionDir, "agents", agentId);
+    const retained = await truncateSubagentAtTime(
+      agentDir,
+      mainSlice.cutoffTime,
+    );
     if (retained) {
       retainedAgents[agentId] = withAgentHomedir(agentMeta, agentDir);
       continue;
@@ -609,14 +744,17 @@ async function truncateForkedSessionAtTurn(
 
   for (const agentId of Object.keys(agents)) {
     if (retainedAgents[agentId] !== undefined) continue;
-    await rm(join(sessionDir, 'agents', agentId), { recursive: true, force: true });
+    await rm(join(sessionDir, "agents", agentId), {
+      recursive: true,
+      force: true,
+    });
   }
 
   for (const agentId of Object.keys(retainedAgents)) {
-    const agentDir = join(sessionDir, 'agents', agentId);
+    const agentDir = join(sessionDir, "agents", agentId);
     await Promise.all([
-      rm(join(agentDir, 'tasks'), { recursive: true, force: true }),
-      rm(join(agentDir, 'cron'), { recursive: true, force: true }),
+      rm(join(agentDir, "tasks"), { recursive: true, force: true }),
+      rm(join(agentDir, "cron"), { recursive: true, force: true }),
     ]);
   }
 
@@ -625,7 +763,11 @@ async function truncateForkedSessionAtTurn(
     lastPrompt: mainSlice.lastPrompt,
     agents: retainedAgents,
   };
-  await writeFile(join(sessionDir, 'state.json'), `${JSON.stringify(next, null, 2)}\n`, 'utf-8');
+  await writeFile(
+    join(sessionDir, "state.json"),
+    `${JSON.stringify(next, null, 2)}\n`,
+    "utf-8",
+  );
   return next;
 }
 
@@ -685,7 +827,9 @@ async function truncateSubagentAtTime(
   cutoffTime: number | undefined,
 ): Promise<boolean> {
   if (cutoffTime === undefined) return false;
-  const persistence = new FileSystemAgentRecordPersistence(join(agentDir, 'wire.jsonl'));
+  const persistence = new FileSystemAgentRecordPersistence(
+    join(agentDir, "wire.jsonl"),
+  );
   const records = await readAgentRecords(persistence);
   let end = records.length;
   for (let index = 0; index < records.length; index += 1) {
@@ -707,11 +851,11 @@ function dropAgentsWithMissingParents(agents: Record<string, unknown>): void {
   while (changed) {
     changed = false;
     for (const [agentId, agentMeta] of Object.entries(agents)) {
-      if (agentId === 'main' || !isRecord(agentMeta)) continue;
-      const parentAgentId = agentMeta['parentAgentId'];
+      if (agentId === "main" || !isRecord(agentMeta)) continue;
+      const parentAgentId = agentMeta["parentAgentId"];
       if (
-        typeof parentAgentId === 'string' &&
-        parentAgentId !== 'main' &&
+        typeof parentAgentId === "string" &&
+        parentAgentId !== "main" &&
         agents[parentAgentId] === undefined
       ) {
         delete agents[agentId];
@@ -722,10 +866,11 @@ function dropAgentsWithMissingParents(agents: Record<string, unknown>): void {
 }
 
 function recordTime(record: AgentRecord): number | undefined {
-  if (typeof record.time === 'number' && Number.isFinite(record.time)) return record.time;
+  if (typeof record.time === "number" && Number.isFinite(record.time))
+    return record.time;
   if (
-    record.type === 'metadata' &&
-    typeof record.created_at === 'number' &&
+    record.type === "metadata" &&
+    typeof record.created_at === "number" &&
     Number.isFinite(record.created_at)
   ) {
     return record.created_at;
@@ -734,48 +879,49 @@ function recordTime(record: AgentRecord): number | undefined {
 }
 
 function isUserVisibleTurnRecord(record: AgentRecord): boolean {
-  if (record.type !== 'context.append_message') return false;
+  if (record.type !== "context.append_message") return false;
   const { message } = record;
-  if (message.role !== 'user') return false;
+  if (message.role !== "user") return false;
   switch (message.origin?.kind) {
     case undefined:
-    case 'user':
+    case "user":
       return true;
-    case 'skill_activation':
-    case 'plugin_command':
-      return message.origin.trigger === 'user-slash';
-    case 'shell_command':
-      return message.origin.phase === 'input';
-    case 'background_task':
-    case 'compaction_summary':
-    case 'cron_job':
-    case 'cron_missed':
-    case 'hook_result':
-    case 'injection':
-    case 'retry':
-    case 'system_trigger':
+    case "skill_activation":
+    case "plugin_command":
+      return message.origin.trigger === "user-slash";
+    case "shell_command":
+      return message.origin.phase === "input";
+    case "background_task":
+    case "compaction_summary":
+    case "cron_job":
+    case "cron_missed":
+    case "hook_result":
+    case "injection":
+    case "retry":
+    case "system_trigger":
       return false;
   }
 }
 
 function isUserVisibleTurnInputRecord(record: AgentRecord): boolean {
-  if (record.type !== 'turn.prompt' && record.type !== 'turn.steer') return false;
+  if (record.type !== "turn.prompt" && record.type !== "turn.steer")
+    return false;
   switch (record.origin.kind) {
-    case 'user':
+    case "user":
       return true;
-    case 'skill_activation':
-    case 'plugin_command':
-      return record.origin.trigger === 'user-slash';
-    case 'shell_command':
-      return record.origin.phase === 'input';
-    case 'background_task':
-    case 'compaction_summary':
-    case 'cron_job':
-    case 'cron_missed':
-    case 'hook_result':
-    case 'injection':
-    case 'retry':
-    case 'system_trigger':
+    case "skill_activation":
+    case "plugin_command":
+      return record.origin.trigger === "user-slash";
+    case "shell_command":
+      return record.origin.phase === "input";
+    case "background_task":
+    case "compaction_summary":
+    case "cron_job":
+    case "cron_missed":
+    case "hook_result":
+    case "injection":
+    case "retry":
+    case "system_trigger":
       return false;
   }
 }
@@ -827,33 +973,45 @@ function turnInputMatchesRecord(
   compareContent: boolean,
 ): boolean {
   if (
-    (inputRecord.type !== 'turn.prompt' && inputRecord.type !== 'turn.steer') ||
-    turnRecord.type !== 'context.append_message' ||
-    turnRecord.message.role !== 'user'
+    (inputRecord.type !== "turn.prompt" && inputRecord.type !== "turn.steer") ||
+    turnRecord.type !== "context.append_message" ||
+    turnRecord.message.role !== "user"
   ) {
     return false;
   }
-  if (!sameTurnOrigin(inputRecord.origin.kind, turnRecord.message.origin?.kind)) return false;
-  return !compareContent || JSON.stringify(inputRecord.input) === JSON.stringify(turnRecord.message.content);
+  if (!sameTurnOrigin(inputRecord.origin.kind, turnRecord.message.origin?.kind))
+    return false;
+  return (
+    !compareContent ||
+    JSON.stringify(inputRecord.input) ===
+      JSON.stringify(turnRecord.message.content)
+  );
 }
 
-function sameTurnOrigin(inputKind: string, messageKind: string | undefined): boolean {
-  if (inputKind === 'user') return messageKind === undefined || messageKind === 'user';
+function sameTurnOrigin(
+  inputKind: string,
+  messageKind: string | undefined,
+): boolean {
+  if (inputKind === "user")
+    return messageKind === undefined || messageKind === "user";
   return inputKind === messageKind;
 }
 
 function promptMetadataFromTurnRecord(record: AgentRecord): string | undefined {
-  if (record.type !== 'context.append_message' || record.message.role !== 'user') {
+  if (
+    record.type !== "context.append_message" ||
+    record.message.role !== "user"
+  ) {
     return undefined;
   }
   const { message } = record;
-  if (message.origin?.kind === 'skill_activation') {
+  if (message.origin?.kind === "skill_activation") {
     return promptMetadataTextFromSkill({
       name: message.origin.skillName,
       args: message.origin.skillArgs,
     });
   }
-  if (message.origin?.kind === 'plugin_command') {
+  if (message.origin?.kind === "plugin_command") {
     return promptMetadataTextFromPluginCommand({
       pluginId: message.origin.pluginId,
       commandName: message.origin.commandName,
@@ -868,44 +1026,50 @@ function assertForkTurnIndex(turnIndex: number | undefined): void {
   if (Number.isSafeInteger(turnIndex) && turnIndex >= 0) return;
   throw new KimiError(
     ErrorCodes.REQUEST_INVALID,
-    'forkSession turnIndex must be a non-negative safe integer',
+    "forkSession turnIndex must be a non-negative safe integer",
     { details: { turnIndex } },
   );
 }
 
-async function appendForkedMarkers(state: Record<string, unknown>): Promise<void> {
-  const record: AgentRecordOf<'forked'> = { type: 'forked', time: Date.now() };
+async function appendForkedMarkers(
+  state: Record<string, unknown>,
+): Promise<void> {
+  const record: AgentRecordOf<"forked"> = { type: "forked", time: Date.now() };
 
-  const agents = state['agents'];
+  const agents = state["agents"];
   if (!isRecord(agents)) return;
 
   const paths = new Set<string>();
   for (const agentMeta of Object.values(agents)) {
     if (!isRecord(agentMeta)) continue;
-    const homedir = agentMeta['homedir'];
-    if (typeof homedir !== 'string') continue;
-    paths.add(join(homedir, 'wire.jsonl'));
+    const homedir = agentMeta["homedir"];
+    if (typeof homedir !== "string") continue;
+    paths.add(join(homedir, "wire.jsonl"));
   }
 
-  await Promise.all([...paths].map(async (path) => {
-    const persistence = new FileSystemAgentRecordPersistence(path);
-    persistence.append(record);
-    await persistence.flush();
-  }));
+  await Promise.all(
+    [...paths].map(async (path) => {
+      const persistence = new FileSystemAgentRecordPersistence(path);
+      persistence.append(record);
+      await persistence.flush();
+    }),
+  );
 }
 
 function customMetadataWithoutGoal(value: unknown): Record<string, unknown> {
   if (!isRecord(value)) return {};
   const custom: Record<string, unknown> = {};
   for (const [key, entry] of Object.entries(value)) {
-    if (key === 'goal') continue;
+    if (key === "goal") continue;
     custom[key] = entry;
   }
   return custom;
 }
 
-async function latestAgentWireMtime(sessionDir: string): Promise<number | undefined> {
-  const agentsDir = join(sessionDir, 'agents');
+async function latestAgentWireMtime(
+  sessionDir: string,
+): Promise<number | undefined> {
+  const agentsDir = join(sessionDir, "agents");
   let entries;
   try {
     entries = await readdir(agentsDir, { withFileTypes: true });
@@ -916,24 +1080,35 @@ async function latestAgentWireMtime(sessionDir: string): Promise<number | undefi
   let latest = 0;
   for (const entry of entries) {
     if (!entry.isDirectory()) continue;
-    const wireInfo = await statIfExists(join(agentsDir, entry.name, 'wire.jsonl'));
+    const wireInfo = await statIfExists(
+      join(agentsDir, entry.name, "wire.jsonl"),
+    );
     latest = Math.max(latest, wireInfo?.mtimeMs ?? 0);
   }
   return latest > 0 ? latest : undefined;
 }
 
-function titleFromState(state: SessionSummaryState | undefined): string | undefined {
+function titleFromState(
+  state: SessionSummaryState | undefined,
+): string | undefined {
   if (state === undefined) return undefined;
-  if (typeof state.isCustomTitle === 'boolean' && typeof state.title === 'string') {
+  if (
+    typeof state.isCustomTitle === "boolean" &&
+    typeof state.title === "string"
+  ) {
     return state.title;
   }
-  if (typeof state.customTitle === 'string') return state.customTitle;
-  return typeof state.title === 'string' ? state.title : undefined;
+  if (typeof state.customTitle === "string") return state.customTitle;
+  return typeof state.title === "string" ? state.title : undefined;
 }
 
-async function readOptionalState(sessionDir: string): Promise<SessionSummaryState | undefined> {
+async function readOptionalState(
+  sessionDir: string,
+): Promise<SessionSummaryState | undefined> {
   try {
-    const parsed = JSON.parse(await readFile(join(sessionDir, 'state.json'), 'utf-8')) as unknown;
+    const parsed = JSON.parse(
+      await readFile(join(sessionDir, "state.json"), "utf-8"),
+    ) as unknown;
     const result = SessionSummaryStateSchema.safeParse(parsed);
     return result.success ? result.data : undefined;
   } catch {
@@ -942,28 +1117,45 @@ async function readOptionalState(sessionDir: string): Promise<SessionSummaryStat
 }
 
 function normalizeRequiredWorkDir(workDir: string): string {
-  if (workDir.trim() === '') {
-    throw new KimiError(ErrorCodes.REQUEST_WORK_DIR_REQUIRED, 'listSessions requires workDir');
+  if (workDir.trim() === "") {
+    throw new KimiError(
+      ErrorCodes.REQUEST_WORK_DIR_REQUIRED,
+      "listSessions requires workDir",
+    );
   }
   return normalizeWorkDir(workDir);
 }
 
-function normalizeOptionalSessionId(sessionId: string | undefined): string | undefined {
+function normalizeOptionalSessionId(
+  sessionId: string | undefined,
+): string | undefined {
   return sessionId === undefined ? undefined : sessionId.trim();
 }
 
-function normalizeForkTitle(title: string | undefined, fallback: unknown): string {
+function normalizeForkTitle(
+  title: string | undefined,
+  fallback: unknown,
+): string {
   if (title !== undefined) {
     const normalized = title.trim();
     if (normalized.length === 0) {
-      throw new KimiError(ErrorCodes.SESSION_TITLE_EMPTY, 'Session title cannot be empty');
+      throw new KimiError(
+        ErrorCodes.SESSION_TITLE_EMPTY,
+        "Session title cannot be empty",
+      );
     }
     return normalized;
   }
-  return typeof fallback === 'string' && fallback.trim().length > 0 ? fallback : 'New Session';
+  return typeof fallback === "string" && fallback.trim().length > 0
+    ? fallback
+    : "New Session";
 }
 
-function rewriteAgentHomedirs(value: unknown, sourceDir: string, targetDir: string): unknown {
+function rewriteAgentHomedirs(
+  value: unknown,
+  sourceDir: string,
+  targetDir: string,
+): unknown {
   if (!isRecord(value)) return {};
 
   const agents: Record<string, unknown> = {};
@@ -972,39 +1164,52 @@ function rewriteAgentHomedirs(value: unknown, sourceDir: string, targetDir: stri
       agents[agentId] = agentMeta;
       continue;
     }
-    const homedir = agentMeta['homedir'];
+    const homedir = agentMeta["homedir"];
     agents[agentId] = {
       ...agentMeta,
       homedir:
-        typeof homedir === 'string' ? remapSessionPath(homedir, sourceDir, targetDir) : homedir,
+        typeof homedir === "string"
+          ? remapSessionPath(homedir, sourceDir, targetDir)
+          : homedir,
     };
   }
   return agents;
 }
 
-function remapSessionPath(value: string, sourceDir: string, targetDir: string): string {
+function remapSessionPath(
+  value: string,
+  sourceDir: string,
+  targetDir: string,
+): string {
   const rel = relative(sourceDir, value);
-  if (rel === '') return targetDir;
-  if (rel.startsWith('..') || isAbsolute(rel)) return value;
+  if (rel === "") return targetDir;
+  if (rel.startsWith("..") || isAbsolute(rel)) return value;
   return join(targetDir, rel);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function areSameFsPath(left: string, right: string): boolean {
   if (isWindowsAbsolutePath(left) || isWindowsAbsolutePath(right)) {
-    return nodePath.win32.resolve(left).toLowerCase() === nodePath.win32.resolve(right).toLowerCase();
+    return (
+      nodePath.win32.resolve(left).toLowerCase() ===
+      nodePath.win32.resolve(right).toLowerCase()
+    );
   }
   return resolve(left) === resolve(right);
 }
 
 function isWindowsAbsolutePath(value: string): boolean {
-  return /^[A-Za-z]:[\\/]/.test(value) || /^[\\/]{2}[^\\/]+[\\/][^\\/]+/.test(value);
+  return (
+    /^[A-Za-z]:[\\/]/.test(value) || /^[\\/]{2}[^\\/]+[\\/][^\\/]+/.test(value)
+  );
 }
 
-async function statIfExists(path: string): Promise<{ readonly mtimeMs: number } | undefined> {
+async function statIfExists(
+  path: string,
+): Promise<{ readonly mtimeMs: number } | undefined> {
   try {
     return await stat(path);
   } catch {
@@ -1026,11 +1231,14 @@ function timestampOrFallback(value: number, fallback: number): number {
 
 function assertSafeSessionId(id: string): void {
   if (isSafeSessionId(id)) return;
-  throw new KimiError(ErrorCodes.SESSION_ID_INVALID, 'Session id contains unsupported path characters');
+  throw new KimiError(
+    ErrorCodes.SESSION_ID_INVALID,
+    "Session id contains unsupported path characters",
+  );
 }
 
 function isSafeSessionId(id: string): boolean {
-  return /^[A-Za-z0-9._-]+$/.test(id) && id !== '.' && id !== '..';
+  return /^[A-Za-z0-9._-]+$/.test(id) && id !== "." && id !== "..";
 }
 
 function compareSessionSummary(a: SessionSummary, b: SessionSummary): number {

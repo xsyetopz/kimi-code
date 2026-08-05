@@ -9,12 +9,16 @@
  * — keep the two in sync.
  */
 
-import { promises as fs } from 'node:fs';
-import { isAbsolute, join, resolve } from 'pathe';
+import { promises as fs } from "node:fs";
+import { isAbsolute, join, resolve } from "pathe";
 
-export function resolveAgentPath(path: string, baseDir: string, osHomeDir: string): string {
-  if (path === '~') return osHomeDir;
-  if (path.startsWith('~/')) return join(osHomeDir, path.slice(2));
+export function resolveAgentPath(
+  path: string,
+  baseDir: string,
+  osHomeDir: string,
+): string {
+  if (path === "~") return osHomeDir;
+  if (path.startsWith("~/")) return join(osHomeDir, path.slice(2));
   if (isAbsolute(path)) return path;
   return resolve(baseDir, path);
 }
@@ -51,9 +55,9 @@ export async function pathExists(p: string): Promise<boolean> {
 
 export function isMissingPathError(error: unknown): boolean {
   return (
-    typeof error === 'object' &&
+    typeof error === "object" &&
     error !== null &&
-    'code' in error &&
-    (error.code === 'ENOENT' || error.code === 'ENOTDIR')
+    "code" in error &&
+    (error.code === "ENOENT" || error.code === "ENOTDIR")
   );
 }

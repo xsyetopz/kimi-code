@@ -87,18 +87,30 @@ export class KimiRuntime {
       requestedId === current.id &&
       areSameFsPath(current.session.workDir, options.workDir)
     ) {
-      await applySessionSettings(current.session, options, current.legacyApprovalFlags);
+      await applySessionSettings(
+        current.session,
+        options,
+        current.legacyApprovalFlags,
+      );
       await current.announceStatus(options.webviewId);
       return current;
     }
 
-    let runtime = requestedId === undefined ? undefined : this.sessions.get(requestedId);
+    let runtime =
+      requestedId === undefined ? undefined : this.sessions.get(requestedId);
     if (runtime !== undefined) {
       assertSessionWorkDir(runtime.session, options.workDir);
-      await applySessionSettings(runtime.session, options, runtime.legacyApprovalFlags);
+      await applySessionSettings(
+        runtime.session,
+        options,
+        runtime.legacyApprovalFlags,
+      );
       await this.detachView(options.webviewId);
     } else {
-      const defaultApproval: LegacyApprovalFlags = { yolo: options.yoloMode, afk: false };
+      const defaultApproval: LegacyApprovalFlags = {
+        yolo: options.yoloMode,
+        afk: false,
+      };
       const session =
         requestedId === undefined
           ? await this.harness.createSession({
@@ -108,14 +120,24 @@ export class KimiRuntime {
               permission: corePermissionForLegacyApproval(defaultApproval),
               metadata: legacyApprovalMetadata(defaultApproval),
             })
-          : await this.harness.resumeSession({ id: requestedId, includeSubagents: true });
+          : await this.harness.resumeSession({
+              id: requestedId,
+              includeSubagents: true,
+            });
       try {
         assertSessionWorkDir(session, options.workDir);
-        const storedApproval = readLegacyApprovalFlags(session.summary?.metadata);
+        const storedApproval = readLegacyApprovalFlags(
+          session.summary?.metadata,
+        );
         const restoredApproval =
-          storedApproval ?? (await this.readMigratedLegacyApproval(session)) ?? defaultApproval;
+          storedApproval ??
+          (await this.readMigratedLegacyApproval(session)) ??
+          defaultApproval;
         const approval = withGlobalYoloMode(restoredApproval, options.yoloMode);
-        if (storedApproval === undefined || flagsDiffer(storedApproval, approval)) {
+        if (
+          storedApproval === undefined ||
+          flagsDiffer(storedApproval, approval)
+        ) {
           await session.updateMetadata(legacyApprovalMetadata(approval));
         }
         await applySessionSettings(session, options, approval);
@@ -141,7 +163,10 @@ export class KimiRuntime {
     defaultYoloMode = false,
   ): Promise<SessionRuntime> {
     const existing = this.sessions.get(session.id);
-    if (existing !== undefined && this.sessionByView.get(webviewId) === session.id) {
+    if (
+      existing !== undefined &&
+      this.sessionByView.get(webviewId) === session.id
+    ) {
       existing.subscribe(webviewId);
       await existing.announceStatus(webviewId);
       return existing;
@@ -150,18 +175,25 @@ export class KimiRuntime {
     let runtime = existing ?? this.sessions.get(session.id);
     if (runtime === undefined) {
       try {
-        const storedApproval = readLegacyApprovalFlags(session.summary?.metadata);
-        const restoredApproval =
-          storedApproval ??
-          (await this.readMigratedLegacyApproval(session)) ??
-          { yolo: defaultYoloMode, afk: false };
+        const storedApproval = readLegacyApprovalFlags(
+          session.summary?.metadata,
+        );
+        const restoredApproval = storedApproval ??
+          (await this.readMigratedLegacyApproval(session)) ?? {
+            yolo: defaultYoloMode,
+            afk: false,
+          };
         const approval = withGlobalYoloMode(restoredApproval, defaultYoloMode);
-        if (storedApproval === undefined || flagsDiffer(storedApproval, approval)) {
+        if (
+          storedApproval === undefined ||
+          flagsDiffer(storedApproval, approval)
+        ) {
           await session.updateMetadata(legacyApprovalMetadata(approval));
         }
         const status = await session.getStatus();
         const permission = corePermissionForLegacyApproval(approval);
-        if (status.permission !== permission) await session.setPermission(permission);
+        if (status.permission !== permission)
+          await session.setPermission(permission);
         runtime = this.wrapSession(session, approval);
       } catch (error) {
         await session.close().catch((closeError: unknown) => {
@@ -209,20 +241,27 @@ export class KimiRuntime {
 
   async setYoloModeForActiveSessions(enabled: boolean): Promise<void> {
     await Promise.all(
-      [...this.sessions.values()].map((session) => session.setLegacyYoloMode(enabled)),
+      [...this.sessions.values()].map((session) =>
+        session.setLegacyYoloMode(enabled),
+      ),
     );
   }
 
   async dispose(): Promise<void> {
     if (this.closed) return;
     this.closed = true;
-    await Promise.all([...this.sessions.values()].map((session) => session.close()));
+    await Promise.all(
+      [...this.sessions.values()].map((session) => session.close()),
+    );
     this.sessions.clear();
     this.sessionByView.clear();
     await this.harness.close();
   }
 
-  private wrapSession(session: Session, legacyApproval: LegacyApprovalFlags): SessionRuntime {
+  private wrapSession(
+    session: Session,
+    legacyApproval: LegacyApprovalFlags,
+  ): SessionRuntime {
     const runtime = new SessionRuntime({
       session,
       legacyApproval,
@@ -276,8 +315,13 @@ function flagsDiffer(a: LegacyApprovalFlags, b: LegacyApprovalFlags): boolean {
   return a.yolo !== b.yolo || a.afk !== b.afk;
 }
 
-function assertSessionWorkDir(session: Pick<Session, "workDir">, expectedWorkDir: string): void {
+function assertSessionWorkDir(
+  session: Pick<Session, "workDir">,
+  expectedWorkDir: string,
+): void {
   if (!areSameFsPath(session.workDir, expectedWorkDir)) {
-    throw new Error("The selected session belongs to a different working directory.");
+    throw new Error(
+      "The selected session belongs to a different working directory.",
+    );
   }
 }

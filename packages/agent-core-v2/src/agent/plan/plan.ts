@@ -20,4 +20,4 @@ export interface IAgentPlanService {
 }
 
 export const IAgentPlanService =
-  createDecorator<IAgentPlanService>('agentPlanService');
+  createDecorator<IAgentPlanService>("agentPlanService");

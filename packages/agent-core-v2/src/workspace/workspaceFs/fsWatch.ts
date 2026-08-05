@@ -14,13 +14,16 @@
  * per-session watch service. Workspace-scoped.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
-import type { IDisposable } from '#/_base/di/lifecycle';
-import type { Event } from '#/_base/event';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
+import type { IDisposable } from "#/_base/di/lifecycle";
+import type { Event } from "#/_base/event";
 
-export type FsChangeKind = 'file' | 'directory' | 'symlink';
+export type FsChangeKind = "file" | "directory" | "symlink";
 
-export type FsChangeAction = 'created' | 'modified' | 'deleted';
+export type FsChangeAction = "created" | "modified" | "deleted";
 
 export interface FsChangeEntry {
   path: string;
@@ -52,4 +55,4 @@ export interface IWorkspaceFsWatchService {
 }
 
 export const IWorkspaceFsWatchService: ServiceIdentifier<IWorkspaceFsWatchService> =
-  createDecorator<IWorkspaceFsWatchService>('workspaceFsWatchService');
+  createDecorator<IWorkspaceFsWatchService>("workspaceFsWatchService");

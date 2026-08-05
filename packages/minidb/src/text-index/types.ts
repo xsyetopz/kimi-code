@@ -4,7 +4,7 @@
 // build contract) plus the small shared pieces both the core index and the
 // builder rely on (TopK / EMPTY_MAP / BuildOp).
 
-import type { TextIndexTokenizerName } from '../trigram.js';
+import type { TextIndexTokenizerName } from "../trigram.js";
 
 export interface TextIndexOptions {
   fields?: readonly string[] | null;
@@ -45,7 +45,7 @@ export interface SearchHit {
 }
 
 export interface SearchOptions {
-  op?: 'AND' | 'OR';
+  op?: "AND" | "OR";
   limit?: number;
   /**
    * Max posting entries visited (decoded + merged) across all query terms.
@@ -83,8 +83,12 @@ export const EMPTY_MAP: ReadonlyMap<number, number> = new Map();
  *  doc — so the swap-time replay cannot throw on a tokenizer failure
  *  (review #24). */
 export type BuildOp =
-  | { readonly kind: 'add'; readonly key: string; readonly tokens: readonly string[] }
-  | { readonly kind: 'remove'; readonly key: string };
+  | {
+      readonly kind: "add";
+      readonly key: string;
+      readonly tokens: readonly string[];
+    }
+  | { readonly kind: "remove"; readonly key: string };
 
 /** Bounded collector for the K best hits by (score desc, key asc). The heap
  *  root holds the WORST kept hit, so a new candidate enters only when it beats
@@ -131,6 +135,9 @@ export class TopK {
 
   /** The kept hits in final rank order: score descending, key ascending. */
   sorted(): SearchHit[] {
-    return this.a.sort((x, y) => y.score - x.score || (x.key < y.key ? -1 : x.key > y.key ? 1 : 0));
+    return this.a.sort(
+      (x, y) =>
+        y.score - x.score || (x.key < y.key ? -1 : x.key > y.key ? 1 : 0),
+    );
   }
 }

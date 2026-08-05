@@ -4,8 +4,8 @@ import {
   type Dispatcher,
   EnvHttpProxyAgent,
   setGlobalDispatcher as undiciSetGlobalDispatcher,
-} from 'undici';
-import { SocksClient } from 'socks';
+} from "undici";
+import { SocksClient } from "socks";
 
 type Env = Readonly<Record<string, string | undefined>>;
 
@@ -28,9 +28,15 @@ export interface SocksProxyConfig {
 // only bypasses the IPv6 loopback when the NO_PROXY entry is bracketed (it
 // otherwise mis-parses `::1` as host `:` port `1`), while our own SOCKS matcher
 // normalizes brackets away — so including both covers every path.
-const LOOPBACK_NO_PROXY = ['localhost', '127.0.0.1', '::1', '[::1]'] as const;
+const LOOPBACK_NO_PROXY = ["localhost", "127.0.0.1", "::1", "[::1]"] as const;
 
-const SOCKS_SCHEMES = new Set(['socks', 'socks4', 'socks4a', 'socks5', 'socks5h']);
+const SOCKS_SCHEMES = new Set([
+  "socks",
+  "socks4",
+  "socks4a",
+  "socks5",
+  "socks5h",
+]);
 
 /** Lowercase URL scheme (without the trailing colon), or undefined if absent. */
 function schemeOf(value: string): string | undefined {
@@ -48,7 +54,9 @@ function firstNonBlank(env: Env, keys: readonly string[]): string | undefined {
 
 /** The value if it is an HTTP/HTTPS-scheme proxy (not SOCKS), else undefined. */
 function httpSchemeValue(value: string | undefined): string | undefined {
-  return value !== undefined && !SOCKS_SCHEMES.has(schemeOf(value) ?? '') ? value : undefined;
+  return value !== undefined && !SOCKS_SCHEMES.has(schemeOf(value) ?? "")
+    ? value
+    : undefined;
 }
 
 /**
@@ -57,9 +65,9 @@ function httpSchemeValue(value: string | undefined): string | undefined {
  */
 function hasHttpProxy(env: Env): boolean {
   return [
-    firstNonBlank(env, ['http_proxy', 'HTTP_PROXY']),
-    firstNonBlank(env, ['https_proxy', 'HTTPS_PROXY']),
-    firstNonBlank(env, ['all_proxy', 'ALL_PROXY']),
+    firstNonBlank(env, ["http_proxy", "HTTP_PROXY"]),
+    firstNonBlank(env, ["https_proxy", "HTTPS_PROXY"]),
+    firstNonBlank(env, ["all_proxy", "ALL_PROXY"]),
   ].some((value) => httpSchemeValue(value) !== undefined);
 }
 
@@ -69,11 +77,20 @@ function hasHttpProxy(env: Env): boolean {
  * http-scheme `ALL_PROXY` catch-all. `undefined` for a scheme with no usable
  * value.
  */
-function resolveHttpProxyUrls(env: Env): { httpProxy?: string; httpsProxy?: string } {
-  const allProxy = httpSchemeValue(firstNonBlank(env, ['all_proxy', 'ALL_PROXY']));
+function resolveHttpProxyUrls(env: Env): {
+  httpProxy?: string;
+  httpsProxy?: string;
+} {
+  const allProxy = httpSchemeValue(
+    firstNonBlank(env, ["all_proxy", "ALL_PROXY"]),
+  );
   return {
-    httpProxy: httpSchemeValue(firstNonBlank(env, ['http_proxy', 'HTTP_PROXY'])) ?? allProxy,
-    httpsProxy: httpSchemeValue(firstNonBlank(env, ['https_proxy', 'HTTPS_PROXY'])) ?? allProxy,
+    httpProxy:
+      httpSchemeValue(firstNonBlank(env, ["http_proxy", "HTTP_PROXY"])) ??
+      allProxy,
+    httpsProxy:
+      httpSchemeValue(firstNonBlank(env, ["https_proxy", "HTTPS_PROXY"])) ??
+      allProxy,
   };
 }
 
@@ -83,11 +100,13 @@ function resolveHttpProxyUrls(env: Env): { httpProxy?: string; httpsProxy?: stri
  * by putting a `socks*` scheme in `HTTP(S)_PROXY`. `ALL_PROXY` wins, then
  * `HTTPS_PROXY`, then `HTTP_PROXY`. `socks://` is an alias for `socks5://`.
  */
-export function resolveSocksProxy(env: Env = process.env): SocksProxyConfig | undefined {
+export function resolveSocksProxy(
+  env: Env = process.env,
+): SocksProxyConfig | undefined {
   const candidates = [
-    firstNonBlank(env, ['all_proxy', 'ALL_PROXY']),
-    firstNonBlank(env, ['https_proxy', 'HTTPS_PROXY']),
-    firstNonBlank(env, ['http_proxy', 'HTTP_PROXY']),
+    firstNonBlank(env, ["all_proxy", "ALL_PROXY"]),
+    firstNonBlank(env, ["https_proxy", "HTTPS_PROXY"]),
+    firstNonBlank(env, ["http_proxy", "HTTP_PROXY"]),
   ];
   for (const value of candidates) {
     if (value === undefined) continue;
@@ -100,10 +119,10 @@ export function resolveSocksProxy(env: Env = process.env): SocksProxyConfig | un
       continue;
     }
     const config: SocksProxyConfig = {
-      type: scheme === 'socks4' || scheme === 'socks4a' ? 4 : 5,
+      type: scheme === "socks4" || scheme === "socks4a" ? 4 : 5,
       // Strip IPv6 brackets: the `socks` client wants the bare address (`::1`),
       // not the URL's bracketed `[::1]`, which it would treat as a hostname.
-      host: url.hostname.replaceAll(/^\[|\]$/g, ''),
+      host: url.hostname.replaceAll(/^\[|\]$/g, ""),
       port: url.port ? Number(url.port) : 1080,
       ...(url.username ? { userId: decodeURIComponent(url.username) } : {}),
       ...(url.password ? { password: decodeURIComponent(url.password) } : {}),
@@ -132,16 +151,19 @@ export function isProxyConfigured(env: Env = process.env): boolean {
 export function resolveNoProxy(env: Env = process.env): string {
   // Prefer the first non-blank casing; an empty `no_proxy=''` must not mask a
   // populated `NO_PROXY` (`??` would, since `''` is not nullish).
-  const raw = [env['no_proxy'], env['NO_PROXY']].find((value) => (value?.trim() ?? '').length > 0) ?? '';
+  const raw =
+    [env["no_proxy"], env["NO_PROXY"]].find(
+      (value) => (value?.trim() ?? "").length > 0,
+    ) ?? "";
   const hosts = raw
-    .split(',')
+    .split(",")
     .map((host) => host.trim())
     .filter((host) => host.length > 0);
-  if (hosts.includes('*')) return '*';
+  if (hosts.includes("*")) return "*";
   for (const loopback of LOOPBACK_NO_PROXY) {
     if (!hosts.includes(loopback)) hosts.push(loopback);
   }
-  return hosts.join(',');
+  return hosts.join(",");
 }
 
 /**
@@ -151,15 +173,17 @@ export function resolveNoProxy(env: Env = process.env): string {
  * entries; a port-qualified entry (`host:443`) matches only that port. Used for
  * the SOCKS path, where bypass is not handled by undici for us.
  */
-export function makeNoProxyMatcher(noProxy: string): (host: string, port?: number | string) => boolean {
+export function makeNoProxyMatcher(
+  noProxy: string,
+): (host: string, port?: number | string) => boolean {
   const entries = noProxy
-    .split(',')
+    .split(",")
     .map((entry) => entry.trim().toLowerCase())
     .filter((entry) => entry.length > 0);
-  if (entries.includes('*')) return () => true;
+  if (entries.includes("*")) return () => true;
   const parsed = entries.map(parseNoProxyEntry);
   return (host: string, port?: number | string) => {
-    const target = host.toLowerCase().replaceAll(/^\[|\]$/g, '');
+    const target = host.toLowerCase().replaceAll(/^\[|\]$/g, "");
     const targetPort = port === undefined ? undefined : String(port);
     return parsed.some(
       ({ host: entry, port: entryPort }) =>
@@ -177,24 +201,28 @@ export function makeNoProxyMatcher(noProxy: string): (host: string, port?: numbe
 function parseNoProxyEntry(entry: string): { host: string; port?: string } {
   let host = entry;
   let port: string | undefined;
-  if (entry.startsWith('[')) {
-    const close = entry.indexOf(']');
+  if (entry.startsWith("[")) {
+    const close = entry.indexOf("]");
     host = entry.slice(1, close);
     const rest = entry.slice(close + 1);
-    if (rest.startsWith(':')) port = rest.slice(1);
+    if (rest.startsWith(":")) port = rest.slice(1);
   } else {
-    const colon = entry.indexOf(':');
+    const colon = entry.indexOf(":");
     // Only a single colon followed by digits is a port; multiple colons mean a
     // bare IPv6 address (e.g. `::1`), which carries no port.
-    if (colon !== -1 && colon === entry.lastIndexOf(':') && /^\d+$/.test(entry.slice(colon + 1))) {
+    if (
+      colon !== -1 &&
+      colon === entry.lastIndexOf(":") &&
+      /^\d+$/.test(entry.slice(colon + 1))
+    ) {
       host = entry.slice(0, colon);
       port = entry.slice(colon + 1);
     }
   }
   // Normalize a wildcard domain (`*.example.com`) and a leading-dot
   // (`.example.com`) to the bare domain; subdomain matching is handled below.
-  if (host.startsWith('*.')) host = host.slice(2);
-  else if (host.startsWith('.')) host = host.slice(1);
+  if (host.startsWith("*.")) host = host.slice(2);
+  else if (host.startsWith(".")) host = host.slice(1);
   return port === undefined ? { host } : { host, port };
 }
 
@@ -206,17 +234,27 @@ export interface ProxyAgentFactories {
     noProxy: string;
   }) => Dispatcher;
   /** Build the dispatcher for a SOCKS proxy. */
-  readonly makeSocksAgent: (options: { proxy: SocksProxyConfig; noProxy: string }) => Dispatcher;
+  readonly makeSocksAgent: (options: {
+    proxy: SocksProxyConfig;
+    noProxy: string;
+  }) => Dispatcher;
 }
 
-const defaultMakeHttpAgent: ProxyAgentFactories['makeHttpAgent'] = ({ httpProxy, httpsProxy, noProxy }) =>
+const defaultMakeHttpAgent: ProxyAgentFactories["makeHttpAgent"] = ({
+  httpProxy,
+  httpsProxy,
+  noProxy,
+}) =>
   // Pass the resolved proxy URLs explicitly: left to itself EnvHttpProxyAgent
   // reads `http_proxy ?? HTTP_PROXY`, where a blank lowercase value would mask a
   // populated uppercase one and silently disable proxying. noProxy is likewise
   // pre-resolved to guarantee the loopback bypass.
   new EnvHttpProxyAgent({ httpProxy, httpsProxy, noProxy });
 
-const defaultMakeSocksAgent: ProxyAgentFactories['makeSocksAgent'] = ({ proxy, noProxy }) => {
+const defaultMakeSocksAgent: ProxyAgentFactories["makeSocksAgent"] = ({
+  proxy,
+  noProxy,
+}) => {
   // undici has no SOCKS support, so we drive a custom connector: tunnel the
   // destination through the SOCKS proxy with the `socks` client, then hand the
   // established socket back to undici's connector — which performs the TLS
@@ -230,22 +268,36 @@ const defaultMakeSocksAgent: ProxyAgentFactories['makeSocksAgent'] = ({ proxy, n
     }
     void (async () => {
       try {
-        const isTls = options.protocol === 'https:';
+        const isTls = options.protocol === "https:";
         const port = Number(options.port) || (isTls ? 443 : 80);
         const { socket } = await SocksClient.createConnection({
-          proxy: { host: proxy.host, port: proxy.port, type: proxy.type, userId: proxy.userId, password: proxy.password },
-          command: 'connect',
+          proxy: {
+            host: proxy.host,
+            port: proxy.port,
+            type: proxy.type,
+            userId: proxy.userId,
+            password: proxy.password,
+          },
+          command: "connect",
           destination: { host: options.hostname, port },
         });
         if (isTls) {
           // Upgrade the SOCKS socket to TLS via undici's own connector.
-          directConnect({ ...options, httpSocket: socket } as Parameters<typeof directConnect>[0], callback);
+          directConnect(
+            { ...options, httpSocket: socket } as Parameters<
+              typeof directConnect
+            >[0],
+            callback,
+          );
         } else {
           socket.setNoDelay(true);
           callback(null, socket);
         }
       } catch (error) {
-        callback(error instanceof Error ? error : new Error(String(error)), null);
+        callback(
+          error instanceof Error ? error : new Error(String(error)),
+          null,
+        );
       }
     })();
   };
@@ -264,7 +316,10 @@ export function createProxyDispatcher(
   env: Env = process.env,
   factories: Partial<ProxyAgentFactories> = {},
 ): Dispatcher | undefined {
-  const { makeHttpAgent = defaultMakeHttpAgent, makeSocksAgent = defaultMakeSocksAgent } = factories;
+  const {
+    makeHttpAgent = defaultMakeHttpAgent,
+    makeSocksAgent = defaultMakeSocksAgent,
+  } = factories;
   try {
     if (hasHttpProxy(env)) {
       // Coerce a missing value to '' (falsy to undici) so EnvHttpProxyAgent
@@ -272,8 +327,8 @@ export function createProxyDispatcher(
       // blank-masked value from env.
       const { httpProxy, httpsProxy } = resolveHttpProxyUrls(env);
       return makeHttpAgent({
-        httpProxy: httpProxy ?? '',
-        httpsProxy: httpsProxy ?? '',
+        httpProxy: httpProxy ?? "",
+        httpsProxy: httpsProxy ?? "",
         noProxy: resolveNoProxy(env),
       });
     }
@@ -286,7 +341,9 @@ export function createProxyDispatcher(
     // A malformed proxy URL makes agent construction throw synchronously. Don't
     // abort startup with a raw stack trace — report it and fall back to direct.
     const reason = error instanceof Error ? error.message : String(error);
-    process.stderr.write(`kimi: ignoring invalid proxy configuration (${reason}); connecting directly\n`);
+    process.stderr.write(
+      `kimi: ignoring invalid proxy configuration (${reason}); connecting directly\n`,
+    );
     return undefined;
   }
 }
@@ -333,22 +390,24 @@ export function installGlobalProxyDispatcher(
  * an http-scheme `ALL_PROXY` is synthesized into the scheme-specific variables
  * so an `ALL_PROXY`-only parent still proxies the child.
  */
-export function proxyEnvForChild(env: Env = process.env): Record<string, string> {
+export function proxyEnvForChild(
+  env: Env = process.env,
+): Record<string, string> {
   if (!hasHttpProxy(env)) return {};
   const noProxy = resolveNoProxy(env);
   const result: Record<string, string> = {
-    NODE_USE_ENV_PROXY: '1',
+    NODE_USE_ENV_PROXY: "1",
     NO_PROXY: noProxy,
     no_proxy: noProxy,
   };
   const { httpProxy, httpsProxy } = resolveHttpProxyUrls(env);
   if (httpProxy !== undefined) {
-    result['HTTP_PROXY'] = httpProxy;
-    result['http_proxy'] = httpProxy;
+    result["HTTP_PROXY"] = httpProxy;
+    result["http_proxy"] = httpProxy;
   }
   if (httpsProxy !== undefined) {
-    result['HTTPS_PROXY'] = httpsProxy;
-    result['https_proxy'] = httpsProxy;
+    result["HTTPS_PROXY"] = httpsProxy;
+    result["https_proxy"] = httpsProxy;
   }
   return result;
 }
@@ -368,11 +427,11 @@ export function reconcileChildNoProxy(
   childEnv: Record<string, string>,
   configEnv?: Record<string, string>,
 ): void {
-  const override = [configEnv?.['no_proxy'], configEnv?.['NO_PROXY']].find(
-    (value) => (value?.trim() ?? '').length > 0,
+  const override = [configEnv?.["no_proxy"], configEnv?.["NO_PROXY"]].find(
+    (value) => (value?.trim() ?? "").length > 0,
   );
   if (override === undefined) return;
   const noProxy = resolveNoProxy({ no_proxy: override, NO_PROXY: override });
-  childEnv['NO_PROXY'] = noProxy;
-  childEnv['no_proxy'] = noProxy;
+  childEnv["NO_PROXY"] = noProxy;
+  childEnv["no_proxy"] = noProxy;
 }

@@ -18,8 +18,8 @@
  * `createDecorator` value.
  */
 
-import { createDecorator } from '../../di';
-import type { ToolDescriptor, ToolSource } from '@moonshot-ai/protocol';
+import { createDecorator } from "../../di";
+import type { ToolDescriptor, ToolSource } from "@moonshot-ai/protocol";
 
 // ---------------------------------------------------------------------------
 // Adapter helpers (tool side of former adapter/tool-adapter.ts)
@@ -33,19 +33,19 @@ import type { ToolDescriptor, ToolSource } from '@moonshot-ai/protocol';
 export interface AgentCoreToolInfoLike {
   readonly name: string;
   readonly description: string;
-  readonly source: 'builtin' | 'user' | 'mcp';
+  readonly source: "builtin" | "user" | "mcp";
   /** agent-core may add fields like `active`; we ignore them. */
   readonly active?: boolean;
 }
 
-function mapToolSource(s: AgentCoreToolInfoLike['source']): ToolSource {
+function mapToolSource(s: AgentCoreToolInfoLike["source"]): ToolSource {
   switch (s) {
-    case 'builtin':
-      return 'builtin';
-    case 'user':
-      return 'skill';
-    case 'mcp':
-      return 'mcp';
+    case "builtin":
+      return "builtin";
+    case "user":
+      return "skill";
+    case "mcp":
+      return "mcp";
   }
 }
 
@@ -55,9 +55,9 @@ function mapToolSource(s: AgentCoreToolInfoLike['source']): ToolSource {
  * `undefined` when the name does not match — caller omits `mcp_server_id`.
  */
 function parseMcpServerIdFromToolName(name: string): string | undefined {
-  if (!name.startsWith('mcp:')) return undefined;
-  const rest = name.slice('mcp:'.length);
-  const sep = rest.indexOf(':');
+  if (!name.startsWith("mcp:")) return undefined;
+  const rest = name.slice("mcp:".length);
+  const sep = rest.indexOf(":");
   if (sep <= 0) return undefined;
   return rest.slice(0, sep);
 }
@@ -72,7 +72,7 @@ export function toProtocolTool(info: AgentCoreToolInfoLike): ToolDescriptor {
     input_schema: null,
     source,
   };
-  if (source === 'mcp') {
+  if (source === "mcp") {
     const serverId = parseMcpServerIdFromToolName(info.name);
     if (serverId !== undefined) {
       return { ...base, mcp_server_id: serverId };
@@ -97,6 +97,6 @@ export interface IToolService {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
-export const IToolService = createDecorator<IToolService>('toolService');
+export const IToolService = createDecorator<IToolService>("toolService");
 
 void IToolService;

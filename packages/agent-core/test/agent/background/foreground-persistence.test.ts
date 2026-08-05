@@ -5,32 +5,36 @@
  * undiscoverable logs don't accumulate.
  */
 
-import { existsSync, mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { Readable } from 'node:stream';
-import type { Writable } from 'node:stream';
-import { join } from 'pathe';
+import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { Readable } from "node:stream";
+import type { Writable } from "node:stream";
+import { join } from "pathe";
 
-import type { KaosProcess } from '@moonshot-ai/kaos';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { KaosProcess } from "@moonshot-ai/kaos";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ProcessBackgroundTask, type BackgroundManager } from '../../../src/agent/background';
-import { createBackgroundManager, waitForTerminal } from './helpers';
+import {
+  ProcessBackgroundTask,
+  type BackgroundManager,
+} from "../../../src/agent/background";
+import { createBackgroundManager, waitForTerminal } from "./helpers";
 
 const MAX_OUTPUT_BYTES = 1024 * 1024;
 
-const tick = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 5));
+const tick = (): Promise<void> =>
+  new Promise((resolve) => setTimeout(resolve, 5));
 
-function immediateProcess(exitCode: number, stdoutText = ''): KaosProcess {
+function immediateProcess(exitCode: number, stdoutText = ""): KaosProcess {
   return {
     stdin: { write: vi.fn(), end: vi.fn() } as unknown as Writable,
     stdout: Readable.from(stdoutText ? [stdoutText] : []),
     stderr: Readable.from([]),
     pid: 60000 + exitCode,
     exitCode,
-    wait: vi.fn().mockResolvedValue(exitCode) as KaosProcess['wait'],
-    kill: vi.fn().mockResolvedValue(undefined) as KaosProcess['kill'],
-    dispose: vi.fn().mockResolvedValue(undefined) as KaosProcess['dispose'],
+    wait: vi.fn().mockResolvedValue(exitCode) as KaosProcess["wait"],
+    kill: vi.fn().mockResolvedValue(undefined) as KaosProcess["kill"],
+    dispose: vi.fn().mockResolvedValue(undefined) as KaosProcess["dispose"],
   };
 }
 
@@ -51,9 +55,9 @@ function controllableProcess(): {
     stderr: Readable.from([]),
     pid: 61000,
     exitCode: null,
-    wait: vi.fn(() => waitPromise) as KaosProcess['wait'],
-    kill: vi.fn().mockResolvedValue(undefined) as KaosProcess['kill'],
-    dispose: vi.fn().mockResolvedValue(undefined) as KaosProcess['dispose'],
+    wait: vi.fn(() => waitPromise) as KaosProcess["wait"],
+    kill: vi.fn().mockResolvedValue(undefined) as KaosProcess["kill"],
+    dispose: vi.fn().mockResolvedValue(undefined) as KaosProcess["dispose"],
   };
   return {
     proc,
@@ -72,18 +76,23 @@ function registerForeground(
   command: string,
   description: string,
 ): string {
-  return manager.registerTask(new ProcessBackgroundTask(proc, command, description), {
-    detached: false,
-  });
+  return manager.registerTask(
+    new ProcessBackgroundTask(proc, command, description),
+    {
+      detached: false,
+    },
+  );
 }
 
-describe('BackgroundManager — foreground persistence', () => {
+describe("BackgroundManager — foreground persistence", () => {
   let sessionDir: string;
   let manager: BackgroundManager;
-  let persistence: NonNullable<ReturnType<typeof createBackgroundManager>['persistence']>;
+  let persistence: NonNullable<
+    ReturnType<typeof createBackgroundManager>["persistence"]
+  >;
 
   beforeEach(() => {
-    sessionDir = mkdtempSync(join(tmpdir(), 'bpm-fg-'));
+    sessionDir = mkdtempSync(join(tmpdir(), "bpm-fg-"));
     const fixture = createBackgroundManager({ sessionDir });
     manager = fixture.manager;
     persistence = fixture.persistence!;
@@ -93,10 +102,16 @@ describe('BackgroundManager — foreground persistence', () => {
     rmSync(sessionDir, { recursive: true, force: true });
   });
 
-  const taskJsonPath = (taskId: string): string => join(sessionDir, 'tasks', `${taskId}.json`);
+  const taskJsonPath = (taskId: string): string =>
+    join(sessionDir, "tasks", `${taskId}.json`);
 
-  it('writes nothing to disk for a foreground task that does not spill or detach', async () => {
-    const taskId = registerForeground(manager, immediateProcess(0, 'hello\n'), 'echo', 'demo');
+  it("writes nothing to disk for a foreground task that does not spill or detach", async () => {
+    const taskId = registerForeground(
+      manager,
+      immediateProcess(0, "hello\n"),
+      "echo",
+      "demo",
+    );
 
     await waitForTerminal(manager, taskId);
 
@@ -106,32 +121,39 @@ describe('BackgroundManager — foreground persistence', () => {
     // Output is still readable from the in-memory ring buffer.
     const snapshot = await manager.getOutputSnapshot(taskId, 1_000);
     expect(snapshot.fullOutputAvailable).toBe(false);
-    expect(snapshot.preview).toContain('hello');
+    expect(snapshot.preview).toContain("hello");
   });
 
-  it('flushes complete pre-detach output to disk when a foreground task detaches', async () => {
+  it("flushes complete pre-detach output to disk when a foreground task detaches", async () => {
     const { proc, pushStdout, finish } = controllableProcess();
-    const taskId = registerForeground(manager, proc, 'stream', 'demo');
+    const taskId = registerForeground(manager, proc, "stream", "demo");
 
-    pushStdout('before-detach\n');
+    pushStdout("before-detach\n");
     await tick(); // buffered in memory, not yet on disk
     expect(existsSync(persistence.taskOutputFile(taskId))).toBe(false);
 
     expect(manager.detach(taskId)?.detached).toBe(true);
 
-    pushStdout('after-detach\n');
+    pushStdout("after-detach\n");
     await tick();
     finish(0);
     await waitForTerminal(manager, taskId);
 
     // output.log is the complete, in-order record across the detach boundary.
-    expect(await manager.readOutput(taskId)).toBe('before-detach\nafter-detach\n');
+    expect(await manager.readOutput(taskId)).toBe(
+      "before-detach\nafter-detach\n",
+    );
     expect(existsSync(taskJsonPath(taskId))).toBe(true);
   });
 
-  it('spills to disk and keeps the log when foreground output exceeds the buffer', async () => {
-    const big = 'a'.repeat(MAX_OUTPUT_BYTES + 1024);
-    const taskId = registerForeground(manager, immediateProcess(0, big), 'flood', 'demo');
+  it("spills to disk and keeps the log when foreground output exceeds the buffer", async () => {
+    const big = "a".repeat(MAX_OUTPUT_BYTES + 1024);
+    const taskId = registerForeground(
+      manager,
+      immediateProcess(0, big),
+      "flood",
+      "demo",
+    );
 
     await waitForTerminal(manager, taskId);
 

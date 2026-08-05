@@ -19,14 +19,18 @@
  * can look up the id that issued them.
  */
 
-import type { SessionNotification } from '@agentclientprotocol/sdk';
-import type { ContentPart, ContextMessage, ToolCall } from '@moonshot-ai/agent-core-v2';
+import type { SessionNotification } from "@agentclientprotocol/sdk";
+import type {
+  ContentPart,
+  ContextMessage,
+  ToolCall,
+} from "@moonshot-ai/agent-core-v2";
 
 import {
   assistantDeltaToSessionUpdate,
   thinkingDeltaToSessionUpdate,
   toolCallStartToSessionUpdate,
-} from './events-map';
+} from "./events-map";
 
 /**
  * Project a persisted context history into an ordered batch of ACP
@@ -43,14 +47,14 @@ export function projectHistoryToSessionUpdates(
 
   for (const message of messages) {
     switch (message.role) {
-      case 'user':
+      case "user":
         for (const part of message.content) {
-          if (part.type === 'text' && part.text) {
+          if (part.type === "text" && part.text) {
             out.push(userMessageChunk(sessionId, part.text));
           }
         }
         break;
-      case 'assistant': {
+      case "assistant": {
         turnId += 1;
         for (const part of message.content) {
           const update = assistantContentPartToUpdate(part, sessionId, turnId);
@@ -62,7 +66,7 @@ export function projectHistoryToSessionUpdates(
         }
         break;
       }
-      case 'tool': {
+      case "tool": {
         const update = toolMessageToUpdate(message, sessionId, toolCallTurnIds);
         if (update !== null) out.push(update);
         break;
@@ -75,12 +79,15 @@ export function projectHistoryToSessionUpdates(
   return out;
 }
 
-function userMessageChunk(sessionId: string, text: string): SessionNotification {
+function userMessageChunk(
+  sessionId: string,
+  text: string,
+): SessionNotification {
   return {
     sessionId,
     update: {
-      sessionUpdate: 'user_message_chunk',
-      content: { type: 'text', text },
+      sessionUpdate: "user_message_chunk",
+      content: { type: "text", text },
     },
   };
 }
@@ -90,16 +97,16 @@ function assistantContentPartToUpdate(
   sessionId: string,
   turnId: number,
 ): SessionNotification | null {
-  if (part.type === 'text' && part.text) {
+  if (part.type === "text" && part.text) {
     return assistantDeltaToSessionUpdate(sessionId, {
-      type: 'assistant.delta',
+      type: "assistant.delta",
       turnId,
       delta: part.text,
     });
   }
-  if (part.type === 'think' && part.think) {
+  if (part.type === "think" && part.think) {
     return thinkingDeltaToSessionUpdate(sessionId, {
-      type: 'thinking.delta',
+      type: "thinking.delta",
       turnId,
       delta: part.think,
     });
@@ -115,7 +122,7 @@ function syntheticToolCall(
   toolCall: ToolCall,
 ): SessionNotification {
   return toolCallStartToSessionUpdate(sessionId, {
-    type: 'tool.call.started',
+    type: "tool.call.started",
     turnId,
     toolCallId: toolCall.id,
     name: toolCall.name,
@@ -146,9 +153,9 @@ function toolMessageToUpdate(
   return {
     sessionId,
     update: {
-      sessionUpdate: 'tool_call_update',
+      sessionUpdate: "tool_call_update",
       toolCallId: `${turnId}:${rawToolCallId}`,
-      status: isError ? 'failed' : 'completed',
+      status: isError ? "failed" : "completed",
       content: toolMessageContentToAcpToolCallContent(message.content),
     },
   };
@@ -160,7 +167,7 @@ function toolMessageToUpdate(
  * back to the raw string when the payload is not valid JSON.
  */
 function parseToolCallArguments(rawArguments: string | null): unknown {
-  if (rawArguments === null || rawArguments === '') return {};
+  if (rawArguments === null || rawArguments === "") return {};
   try {
     return JSON.parse(rawArguments);
   } catch {
@@ -176,16 +183,25 @@ function parseToolCallArguments(rawArguments: string | null): unknown {
  */
 function toolMessageContentToAcpToolCallContent(
   parts: readonly ContentPart[],
-): Array<{ type: 'content'; content: { type: 'text'; text: string } }> {
-  const result: Array<{ type: 'content'; content: { type: 'text'; text: string } }> = [];
+): Array<{ type: "content"; content: { type: "text"; text: string } }> {
+  const result: Array<{
+    type: "content";
+    content: { type: "text"; text: string };
+  }> = [];
   for (const part of parts) {
-    if (part.type === 'text') {
+    if (part.type === "text") {
       if (part.text) {
-        result.push({ type: 'content', content: { type: 'text', text: part.text } });
+        result.push({
+          type: "content",
+          content: { type: "text", text: part.text },
+        });
       }
       continue;
     }
-    result.push({ type: 'content', content: { type: 'text', text: `[${part.type}]` } });
+    result.push({
+      type: "content",
+      content: { type: "text", text: `[${part.type}]` },
+    });
   }
   return result;
 }

@@ -1,9 +1,9 @@
-import { defineConfig } from 'vitest/config';
+import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   test: {
-    name: 'kimi-core',
-    include: ['test/**/*.{test,e2e}.ts'],
-    setupFiles: ['test/setup.ts'],
+    name: "kimi-core",
+    include: ["test/**/*.{test,e2e}.ts"],
+    setupFiles: ["test/setup.ts"],
   },
 });

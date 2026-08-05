@@ -23,24 +23,31 @@
  * sync across both engines.
  */
 
-import { DEFAULT_AGENT_PROFILES } from '../default';
-import type { ResolvedAgentProfile } from '../types';
+import { DEFAULT_AGENT_PROFILES } from "../default";
+import type { ResolvedAgentProfile } from "../types";
 
-import { discoverAgentFiles } from './discovery';
-import { agentProfileFromFile } from './from-file';
-import { resolveAgentPath } from './paths';
-import { configuredAgentRoots, projectAgentRoots, userAgentRoots } from './roots';
-import { loadSystemMdDefinition, systemMdProfile } from './system-file';
-import { describeInactiveToolPattern, findInactiveToolPatterns } from './validate';
+import { discoverAgentFiles } from "./discovery";
+import { agentProfileFromFile } from "./from-file";
+import { resolveAgentPath } from "./paths";
+import {
+  configuredAgentRoots,
+  projectAgentRoots,
+  userAgentRoots,
+} from "./roots";
+import { loadSystemMdDefinition, systemMdProfile } from "./system-file";
+import {
+  describeInactiveToolPattern,
+  findInactiveToolPatterns,
+} from "./validate";
 import {
   AgentProfileCatalogSnapshotSchema,
   type AgentFileDefinition,
   type AgentFileRoot,
   type AgentFileSource,
   type AgentProfileCatalogSnapshot,
-} from './types';
-import { promises as fs } from 'node:fs';
-import { parseAgentFileText } from './parser';
+} from "./types";
+import { promises as fs } from "node:fs";
+import { parseAgentFileText } from "./parser";
 
 export interface SessionAgentCatalogOptions {
   readonly workDir: string;
@@ -63,12 +70,12 @@ const SOURCE_PRIORITY: Readonly<Record<AgentFileSource, number>> = {
   explicit: 40,
 };
 
-export const DEFAULT_AGENT_PROFILE_NAME = 'agent';
+export const DEFAULT_AGENT_PROFILE_NAME = "agent";
 
 /** Exact tool names known to the builtin profiles (MCP glob entries excluded). */
 const KNOWN_BUILTIN_TOOL_NAMES: ReadonlySet<string> = new Set(
   Object.values(DEFAULT_AGENT_PROFILES).flatMap((profile) =>
-    profile.tools.filter((tool) => !tool.startsWith('mcp__')),
+    profile.tools.filter((tool) => !tool.startsWith("mcp__")),
   ),
 );
 
@@ -77,7 +84,7 @@ function isKnownBuiltinToolName(name: string): boolean {
 }
 
 interface FileProfileEntry {
-  readonly kind: 'file' | 'system-prompt';
+  readonly kind: "file" | "system-prompt";
   readonly definition: AgentFileDefinition;
   readonly profile: ResolvedAgentProfile;
   readonly priority: number;
@@ -141,7 +148,7 @@ export class SessionAgentProfileCatalog {
     const restored = AgentProfileCatalogSnapshotSchema.parse(snapshot);
     const { effectiveDefault, entries, systemMd } = this.entriesFromSnapshot(
       restored,
-      (profile) => profile.source !== 'plugin',
+      (profile) => profile.source !== "plugin",
     );
 
     if (pluginRoots.length > 0) {
@@ -159,7 +166,7 @@ export class SessionAgentProfileCatalog {
   private entriesFromSnapshot(
     restored: AgentProfileCatalogSnapshot,
     includeProfile: (
-      profile: AgentProfileCatalogSnapshot['profiles'][number],
+      profile: AgentProfileCatalogSnapshot["profiles"][number],
     ) => boolean = () => true,
   ): {
     readonly effectiveDefault: ResolvedAgentProfile;
@@ -174,7 +181,9 @@ export class SessionAgentProfileCatalog {
         ? undefined
         : this.snapshotSystemDefinition(restored.systemPromptTemplate);
     const effectiveDefault =
-      systemMd === undefined ? builtinDefault : systemMdProfile(systemMd, builtinDefault);
+      systemMd === undefined
+        ? builtinDefault
+        : systemMdProfile(systemMd, builtinDefault);
     const entries: FileProfileEntry[] = [];
     if (systemMd !== undefined) {
       entries.push(this.systemMdEntry(systemMd, effectiveDefault));
@@ -192,7 +201,7 @@ export class SessionAgentProfileCatalog {
         modelPreference: profile.modelPreference,
         prompt: profile.prompt,
         path: `<session-agent-profile:${profile.name}>`,
-        source: profile.source ?? 'explicit',
+        source: profile.source ?? "explicit",
       };
       entries.push(this.entryFromDefinition(definition, effectiveDefault));
     }
@@ -206,8 +215,13 @@ export class SessionAgentProfileCatalog {
    * declares none (mirroring the historical lookup against the builtin
    * `agent` profile).
    */
-  delegatableSubagents(callerProfileName?: string): Record<string, ResolvedAgentProfile> {
-    const caller = callerProfileName === undefined ? undefined : this.merged.get(callerProfileName);
+  delegatableSubagents(
+    callerProfileName?: string,
+  ): Record<string, ResolvedAgentProfile> {
+    const caller =
+      callerProfileName === undefined
+        ? undefined
+        : this.merged.get(callerProfileName);
     const record = caller?.subagents ?? this.getDefault().subagents;
     return record ?? {};
   }
@@ -226,15 +240,16 @@ export class SessionAgentProfileCatalog {
         this.options.extraDirs ?? [],
         this.options.workDir,
         this.options.osHomeDir,
-        'extra',
+        "extra",
         warn,
       ),
     ]);
 
     // SYSTEM.md is pushed first: within the user source it wins the `agent`
     // name over directory files (first candidate per priority wins).
-    const systemMd = await loadSystemMdDefinition(this.options.brandHomeDir, (message) =>
-      warn?.(message),
+    const systemMd = await loadSystemMdDefinition(
+      this.options.brandHomeDir,
+      (message) => warn?.(message),
     );
 
     // The base every file profile's `${base_prompt}` renders against — the
@@ -243,9 +258,12 @@ export class SessionAgentProfileCatalog {
     // (only ever SYSTEM.md or builtin), so a file profile that overrides the
     // default can never recurse into itself through `${base_prompt}`. The
     // chain is at most: agent file → SYSTEM.md → builtin default.
-    const builtinDefault = this.merged.get(DEFAULT_AGENT_PROFILE_NAME) ?? this.getDefault();
+    const builtinDefault =
+      this.merged.get(DEFAULT_AGENT_PROFILE_NAME) ?? this.getDefault();
     const effectiveDefault =
-      systemMd !== undefined ? systemMdProfile(systemMd, builtinDefault) : builtinDefault;
+      systemMd !== undefined
+        ? systemMdProfile(systemMd, builtinDefault)
+        : builtinDefault;
 
     if (systemMd !== undefined) {
       entries.push(this.systemMdEntry(systemMd, effectiveDefault));
@@ -274,11 +292,18 @@ export class SessionAgentProfileCatalog {
     // declare the same profile name, the last file replaces the earlier one.
     const explicitEntries = new Map<string, FileProfileEntry>();
     for (const file of this.options.explicitFiles ?? []) {
-      const path = resolveAgentPath(file, this.options.workDir, this.options.osHomeDir);
-      const text = await fs.readFile(path, 'utf-8');
-      const definition = parseAgentFileText({ path, source: 'explicit', text });
+      const path = resolveAgentPath(
+        file,
+        this.options.workDir,
+        this.options.osHomeDir,
+      );
+      const text = await fs.readFile(path, "utf-8");
+      const definition = parseAgentFileText({ path, source: "explicit", text });
       this.warnInactivePatterns(definition);
-      explicitEntries.set(definition.name, this.entryFromDefinition(definition, effectiveDefault));
+      explicitEntries.set(
+        definition.name,
+        this.entryFromDefinition(definition, effectiveDefault),
+      );
     }
     entries.push(...explicitEntries.values());
 
@@ -294,14 +319,22 @@ export class SessionAgentProfileCatalog {
   private warnInactivePatterns(definition: AgentFileDefinition): void {
     const warn = this.warn;
     if (warn === undefined) return;
-    const fields: readonly (readonly [string, readonly string[] | undefined])[] = [
-      ['tools', definition.tools],
-      ['disallowedTools', definition.disallowedTools],
+    const fields: readonly (readonly [
+      string,
+      readonly string[] | undefined,
+    ])[] = [
+      ["tools", definition.tools],
+      ["disallowedTools", definition.disallowedTools],
     ];
     for (const [field, patterns] of fields) {
       if (patterns === undefined) continue;
-      for (const issue of findInactiveToolPatterns(patterns, isKnownBuiltinToolName)) {
-        warn(`agent file ${definition.path}: ${field} entry ${describeInactiveToolPattern(issue)}`);
+      for (const issue of findInactiveToolPatterns(
+        patterns,
+        isKnownBuiltinToolName,
+      )) {
+        warn(
+          `agent file ${definition.path}: ${field} entry ${describeInactiveToolPattern(issue)}`,
+        );
       }
     }
   }
@@ -311,10 +344,10 @@ export class SessionAgentProfileCatalog {
     effectiveDefault: ResolvedAgentProfile,
   ): FileProfileEntry {
     return {
-      kind: 'system-prompt',
+      kind: "system-prompt",
       definition,
       profile: effectiveDefault,
-      priority: SOURCE_PRIORITY['user'],
+      priority: SOURCE_PRIORITY["user"],
       // SYSTEM.md permanently replaces the builtin default prompt.
       override: true,
     };
@@ -325,21 +358,27 @@ export class SessionAgentProfileCatalog {
     effectiveDefault: ResolvedAgentProfile,
   ): FileProfileEntry {
     return {
-      kind: 'file',
+      kind: "file",
       definition,
-      profile: agentProfileFromFile(definition, effectiveDefault.tools, (context) =>
-        effectiveDefault.systemPrompt(context),
+      profile: agentProfileFromFile(
+        definition,
+        effectiveDefault.tools,
+        (context) => effectiveDefault.systemPrompt(context),
       ),
       priority: SOURCE_PRIORITY[definition.source],
-      override: definition.override || definition.source === 'explicit',
+      override: definition.override || definition.source === "explicit",
     };
   }
 
-  private applyFileEntries(entries: readonly FileProfileEntry[]): readonly FileProfileEntry[] {
+  private applyFileEntries(
+    entries: readonly FileProfileEntry[],
+  ): readonly FileProfileEntry[] {
     const warn = this.warn;
     const merged = new Map(this.merged);
     const byName = new Map<string, FileProfileEntry[]>();
-    for (const entry of [...entries].toSorted((a, b) => b.priority - a.priority)) {
+    for (const entry of [...entries].toSorted(
+      (a, b) => b.priority - a.priority,
+    )) {
       const candidates = byName.get(entry.definition.name) ?? [];
       candidates.push(entry);
       byName.set(entry.definition.name, candidates);
@@ -364,8 +403,12 @@ export class SessionAgentProfileCatalog {
     // frontmatter as an unrestricted allowlist would let `agent` delegate to
     // itself instead of preserving the builtin delegation policy.
     for (const winner of winners) {
-      if (winner.kind === 'system-prompt') continue;
-      winner.profile.subagents = this.linkSubagentAllowlist(winner.definition, merged, warn);
+      if (winner.kind === "system-prompt") continue;
+      winner.profile.subagents = this.linkSubagentAllowlist(
+        winner.definition,
+        merged,
+        warn,
+      );
     }
 
     // Extend the builtin default — or its SYSTEM.md prompt-overlay variant —
@@ -375,12 +418,14 @@ export class SessionAgentProfileCatalog {
       (winner) => winner.definition.name === DEFAULT_AGENT_PROFILE_NAME,
     );
     const defaultKeepsBuiltinDelegation =
-      defaultWinner === undefined || defaultWinner.kind === 'system-prompt';
-    const fileWinners = winners.filter((winner) => winner.kind === 'file');
+      defaultWinner === undefined || defaultWinner.kind === "system-prompt";
+    const fileWinners = winners.filter((winner) => winner.kind === "file");
     if (defaultKeepsBuiltinDelegation && fileWinners.length > 0) {
-      const defaultProfile = merged.get(DEFAULT_AGENT_PROFILE_NAME) ?? this.getDefault();
+      const defaultProfile =
+        merged.get(DEFAULT_AGENT_PROFILE_NAME) ?? this.getDefault();
       const fileRecord: Record<string, ResolvedAgentProfile> = {};
-      for (const winner of fileWinners) fileRecord[winner.definition.name] = winner.profile;
+      for (const winner of fileWinners)
+        fileRecord[winner.definition.name] = winner.profile;
       merged.set(DEFAULT_AGENT_PROFILE_NAME, {
         ...defaultProfile,
         subagents: { ...defaultProfile.subagents, ...fileRecord },
@@ -403,7 +448,9 @@ export class SessionAgentProfileCatalog {
         whenToUse: profile.whenToUse,
         tools: [...profile.tools],
         disallowedTools:
-          profile.disallowedTools === undefined ? undefined : [...profile.disallowedTools],
+          profile.disallowedTools === undefined
+            ? undefined
+            : [...profile.disallowedTools],
         subagents: Object.keys(profile.subagents ?? {}),
         modelPreference: profile.modelPreference,
         prompt: definition.prompt,
@@ -420,11 +467,11 @@ export class SessionAgentProfileCatalog {
   private snapshotSystemDefinition(prompt: string): AgentFileDefinition {
     return {
       name: DEFAULT_AGENT_PROFILE_NAME,
-      description: '',
+      description: "",
       override: true,
       prompt,
-      path: '<session-agent-profile:SYSTEM.md>',
-      source: 'user',
+      path: "<session-agent-profile:SYSTEM.md>",
+      source: "user",
     };
   }
 

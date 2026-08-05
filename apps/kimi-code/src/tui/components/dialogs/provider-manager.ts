@@ -29,12 +29,12 @@
  * `setOptions`.
  */
 
-import type { ProviderConfig } from '@moonshot-ai/kimi-code-sdk';
+import type { ProviderConfig } from "@moonshot-ai/kimi-code-sdk";
 import {
   getOpenPlatformById,
   isOpenPlatformId,
   type CustomRegistrySource,
-} from '@moonshot-ai/kimi-code-oauth';
+} from "@moonshot-ai/kimi-code-oauth";
 import {
   Container,
   Key,
@@ -42,13 +42,13 @@ import {
   truncateToWidth,
   visibleWidth,
   type Focusable,
-} from '@moonshot-ai/pi-tui';
+} from "@moonshot-ai/pi-tui";
 
-import { DEFAULT_OAUTH_PROVIDER_NAME } from '#/constant/app';
-import { CURRENT_MARK, SELECT_POINTER } from '#/tui/constant/symbols';
-import { currentTheme } from '#/tui/theme';
-import { printableChar } from '#/tui/utils/printable-key';
-import { pageView, type PageView } from '#/tui/utils/paging';
+import { DEFAULT_OAUTH_PROVIDER_NAME } from "#/constant/app";
+import { CURRENT_MARK, SELECT_POINTER } from "#/tui/constant/symbols";
+import { currentTheme } from "#/tui/theme";
+import { printableChar } from "#/tui/utils/printable-key";
+import { pageView, type PageView } from "#/tui/utils/paging";
 
 interface ConfirmState {
   readonly label: string;
@@ -70,7 +70,7 @@ export interface ProviderManagerOptions {
 
 /** Real (non-synthetic) source row. */
 interface SourceRow {
-  readonly kind: 'source';
+  readonly kind: "source";
   readonly id: string;
   readonly label: string;
   readonly providerIds: readonly string[];
@@ -82,34 +82,37 @@ interface SourceRow {
 
 /** Synthetic `[ Add New Platform ]` action row pinned to the bottom. */
 interface AddRow {
-  readonly kind: 'add';
-  readonly id: '__add__';
+  readonly kind: "add";
+  readonly id: "__add__";
   readonly label: string;
 }
 
 type Row = SourceRow | AddRow;
 
-const ADD_ROW_LABEL = '[ Add New Platform ]';
+const ADD_ROW_LABEL = "[ Add New Platform ]";
 const PAGE_SIZE = 8;
-const HEADER_HINT = '↑↓ navigate · D delete · Esc cancel';
+const HEADER_HINT = "↑↓ navigate · D delete · Esc cancel";
 
 // Narrows a `ProviderConfig` blob to a `CustomRegistrySource` payload.
 // Mirrors `readCustomRegistrySource` in `kimi-tui.ts`. We can't import
 // that helper because it lives in the host and would create a cyclic
 // dependency on the component's container; duplicating ~15 lines is cheap.
-function readCustomRegistrySource(provider: unknown): CustomRegistrySource | undefined {
-  if (typeof provider !== 'object' || provider === null) return undefined;
+function readCustomRegistrySource(
+  provider: unknown,
+): CustomRegistrySource | undefined {
+  if (typeof provider !== "object" || provider === null) return undefined;
   const source = (provider as { readonly source?: unknown }).source;
-  if (typeof source !== 'object' || source === null) return undefined;
+  if (typeof source !== "object" || source === null) return undefined;
   const candidate = source as {
     readonly kind?: unknown;
     readonly url?: unknown;
     readonly apiKey?: unknown;
   };
-  if (candidate.kind !== 'apiJson') return undefined;
-  if (typeof candidate.url !== 'string' || candidate.url.length === 0) return undefined;
-  if (typeof candidate.apiKey !== 'string') return undefined;
-  return { kind: 'apiJson', url: candidate.url, apiKey: candidate.apiKey };
+  if (candidate.kind !== "apiJson") return undefined;
+  if (typeof candidate.url !== "string" || candidate.url.length === 0)
+    return undefined;
+  if (typeof candidate.apiKey !== "string") return undefined;
+  return { kind: "apiJson", url: candidate.url, apiKey: candidate.apiKey };
 }
 
 /**
@@ -120,7 +123,7 @@ function readCustomRegistrySource(provider: unknown): CustomRegistrySource | und
 function sourceUrlLabel(url: string): string {
   try {
     const parsed = new URL(url);
-    return parsed.host + parsed.pathname.replace(/\/+$/, '');
+    return parsed.host + parsed.pathname.replace(/\/+$/, "");
   } catch {
     return url;
   }
@@ -151,7 +154,7 @@ function buildRows(opts: ProviderManagerOptions): readonly Row[] {
     if (isOpenPlatformId(id)) {
       const platform = getOpenPlatformById(id);
       sources.push({
-        kind: 'source',
+        kind: "source",
         id: `open:${id}`,
         label: platform?.name ?? id,
         providerIds: [id],
@@ -161,7 +164,10 @@ function buildRows(opts: ProviderManagerOptions): readonly Row[] {
     }
 
     const baseUrl =
-      typeof cfg === 'object' && cfg !== null && 'baseUrl' in cfg && typeof cfg.baseUrl === 'string'
+      typeof cfg === "object" &&
+      cfg !== null &&
+      "baseUrl" in cfg &&
+      typeof cfg.baseUrl === "string"
         ? cfg.baseUrl
         : undefined;
 
@@ -171,9 +177,9 @@ function buildRows(opts: ProviderManagerOptions): readonly Row[] {
       const existingIdx = customRegistryIndex.get(key);
       if (existingIdx !== undefined) {
         const existing = sources[existingIdx];
-        if (existing !== undefined && existing.kind === 'source') {
+        if (existing !== undefined && existing.kind === "source") {
           sources[existingIdx] = {
-            kind: 'source',
+            kind: "source",
             id: existing.id,
             label: existing.label,
             providerIds: [...existing.providerIds, id],
@@ -185,7 +191,7 @@ function buildRows(opts: ProviderManagerOptions): readonly Row[] {
       }
       customRegistryIndex.set(key, sources.length);
       sources.push({
-        kind: 'source',
+        kind: "source",
         id: `custom:${key}`,
         label: sourceUrlLabel(customSource.url),
         providerIds: [id],
@@ -196,7 +202,7 @@ function buildRows(opts: ProviderManagerOptions): readonly Row[] {
     }
 
     sources.push({
-      kind: 'source',
+      kind: "source",
       id: `provider:${id}`,
       label: id,
       providerIds: [id],
@@ -205,7 +211,7 @@ function buildRows(opts: ProviderManagerOptions): readonly Row[] {
     });
   }
 
-  return [...sources, { kind: 'add', id: '__add__', label: ADD_ROW_LABEL }];
+  return [...sources, { kind: "add", id: "__add__", label: ADD_ROW_LABEL }];
 }
 
 export class ProviderManagerComponent extends Container implements Focusable {
@@ -221,7 +227,9 @@ export class ProviderManagerComponent extends Container implements Focusable {
     this.rows = buildRows(opts);
     const activeIdx = opts.activeProviderId
       ? this.rows.findIndex(
-          (row) => row.kind === 'source' && row.providerIds.includes(opts.activeProviderId ?? ''),
+          (row) =>
+            row.kind === "source" &&
+            row.providerIds.includes(opts.activeProviderId ?? ""),
         )
       : -1;
     this.selectedIndex = Math.max(activeIdx, 0);
@@ -238,7 +246,9 @@ export class ProviderManagerComponent extends Container implements Focusable {
     const previousSelected = this.rows[this.selectedIndex];
     const previousSelectedId = previousSelected?.id;
     const previousFirstProviderId =
-      previousSelected?.kind === 'source' ? previousSelected.providerIds[0] : undefined;
+      previousSelected?.kind === "source"
+        ? previousSelected.providerIds[0]
+        : undefined;
 
     this.opts = next;
     this.rows = buildRows(next);
@@ -250,7 +260,9 @@ export class ProviderManagerComponent extends Container implements Focusable {
     }
     if (newIdx < 0 && previousFirstProviderId !== undefined) {
       newIdx = this.rows.findIndex(
-        (row) => row.kind === 'source' && row.providerIds.includes(previousFirstProviderId),
+        (row) =>
+          row.kind === "source" &&
+          row.providerIds.includes(previousFirstProviderId),
       );
     }
     if (newIdx < 0) {
@@ -299,14 +311,17 @@ export class ProviderManagerComponent extends Container implements Focusable {
     }
     if (matchesKey(data, Key.right) || matchesKey(data, Key.pageDown)) {
       if (rows.length === 0) return;
-      this.selectedIndex = Math.min(rows.length - 1, this.selectedIndex + PAGE_SIZE);
+      this.selectedIndex = Math.min(
+        rows.length - 1,
+        this.selectedIndex + PAGE_SIZE,
+      );
       this.invalidate();
       return;
     }
 
     if (matchesKey(data, Key.enter)) {
       const selected = rows[this.selectedIndex];
-      if (selected?.kind === 'add') {
+      if (selected?.kind === "add") {
         this.opts.onAdd();
       }
       return;
@@ -314,14 +329,14 @@ export class ProviderManagerComponent extends Container implements Focusable {
 
     // Delete the highlighted provider with the D key.
     const ch = printableChar(data);
-    if (ch === 'd' || ch === 'D') {
+    if (ch === "d" || ch === "D") {
       this.armDeleteConfirm();
     }
   }
 
   private armDeleteConfirm(): void {
     const selected = this.rows[this.selectedIndex];
-    if (selected === undefined || selected.kind === 'add') return;
+    if (selected === undefined || selected.kind === "add") return;
     const ids = selected.providerIds;
     const prompt =
       ids.length === 1
@@ -336,12 +351,12 @@ export class ProviderManagerComponent extends Container implements Focusable {
 
   private handleConfirmInput(data: string): void {
     const k = printableChar(data);
-    if (matchesKey(data, Key.escape) || k === 'n' || k === 'N') {
+    if (matchesKey(data, Key.escape) || k === "n" || k === "N") {
       this.confirm = undefined;
       this.invalidate();
       return;
     }
-    if (k === 'y' || k === 'Y') {
+    if (k === "y" || k === "Y") {
       const confirm = this.confirm;
       this.confirm = undefined;
       this.invalidate();
@@ -358,27 +373,30 @@ export class ProviderManagerComponent extends Container implements Focusable {
     // Header shape mirrors the model dialog (see model-selector.ts): a single
     // top border, the title, the keymap hint, then a blank line. No inner
     // border under the title.
-    const border = currentTheme.fg('primary', '─'.repeat(width));
+    const border = currentTheme.fg("primary", "─".repeat(width));
     lines.push(border);
-    lines.push(currentTheme.boldFg('primary', ' Providers'));
-    lines.push(currentTheme.fg('textMuted', ' ' + HEADER_HINT));
-    lines.push('');
+    lines.push(currentTheme.boldFg("primary", " Providers"));
+    lines.push(currentTheme.fg("textMuted", " " + HEADER_HINT));
+    lines.push("");
 
     const rows = this.rows;
     if (rows.length === 0) {
-      lines.push(currentTheme.fg('textMuted', '  No providers configured.'));
+      lines.push(currentTheme.fg("textMuted", "  No providers configured."));
     } else {
       const view = this.page();
       for (let i = view.start; i < view.end; i++) {
         const row = rows[i];
         if (row === undefined) continue;
-        for (const line of renderRow(row, { isSelected: i === this.selectedIndex, width })) {
+        for (const line of renderRow(row, {
+          isSelected: i === this.selectedIndex,
+          width,
+        })) {
           lines.push(line);
         }
       }
     }
 
-    lines.push('');
+    lines.push("");
 
     if (this.confirm !== undefined) {
       lines.push(this.renderConfirmLine(width));
@@ -387,7 +405,7 @@ export class ProviderManagerComponent extends Container implements Focusable {
       if (view.pageCount > 1) {
         lines.push(
           currentTheme.fg(
-            'textMuted',
+            "textMuted",
             ` Page ${String(view.page + 1)}/${String(view.pageCount)}`,
           ),
         );
@@ -400,47 +418,52 @@ export class ProviderManagerComponent extends Container implements Focusable {
 
   private renderConfirmLine(width: number): string {
     const confirm = this.confirm;
-    const prompt = confirm?.label ?? '';
-    const styled = currentTheme.boldFg('warning', `  ${prompt} [y/N]`);
-    return truncateToWidth(styled, width, '…');
+    const prompt = confirm?.label ?? "";
+    const styled = currentTheme.boldFg("warning", `  ${prompt} [y/N]`);
+    return truncateToWidth(styled, width, "…");
   }
 }
-
 
 function renderRow(
   row: Row,
   ctx: { isSelected: boolean; width: number },
 ): string[] {
   const { isSelected, width } = ctx;
-  const pointer = isSelected ? SELECT_POINTER : ' ';
+  const pointer = isSelected ? SELECT_POINTER : " ";
   const pointerStyle = (text: string) =>
-    isSelected ? currentTheme.fg('primary', text) : currentTheme.fg('textDim', text);
+    isSelected
+      ? currentTheme.fg("primary", text)
+      : currentTheme.fg("textDim", text);
   // The synthetic "Add New Platform" row is an action/CTA: keep it in the brand
   // color so it never reads as disabled, and bold it when selected (matching
   // the other rows' selected treatment).
   const labelStyle = (text: string) =>
     isSelected
-      ? currentTheme.boldFg('primary', text)
-      : row.kind === 'add'
-        ? currentTheme.fg('primary', text)
-        : currentTheme.fg('text', text);
+      ? currentTheme.boldFg("primary", text)
+      : row.kind === "add"
+        ? currentTheme.fg("primary", text)
+        : currentTheme.fg("text", text);
 
   // The active provider is flagged with a trailing "← current" (success),
   // matching the model selector's current-item marker — see .agents/skills/write-tui/DESIGN.md.
-  const isActive = row.kind === 'source' && row.hasActive;
-  const marker = isActive ? ` ${CURRENT_MARK}` : '';
+  const isActive = row.kind === "source" && row.hasActive;
+  const marker = isActive ? ` ${CURRENT_MARK}` : "";
 
   // Reserve 2 leading spaces + 2 for the pointer + room for the marker.
   const labelWidth = Math.max(0, width - 4 - visibleWidth(marker));
-  const labelText = truncateToWidth(row.label, labelWidth, '…');
+  const labelText = truncateToWidth(row.label, labelWidth, "…");
   let line = `  ${pointerStyle(`${pointer} `)}${labelStyle(labelText)}`;
-  if (isActive) line += currentTheme.fg('success', marker);
+  if (isActive) line += currentTheme.fg("success", marker);
 
   const lines: string[] = [line];
 
-  if (row.kind === 'source' && row.baseUrl !== undefined && row.baseUrl.length > 0) {
-    const urlText = truncateToWidth(row.baseUrl, Math.max(0, width - 6), '…');
-    lines.push(currentTheme.fg('textMuted', `      ${urlText}`));
+  if (
+    row.kind === "source" &&
+    row.baseUrl !== undefined &&
+    row.baseUrl.length > 0
+  ) {
+    const urlText = truncateToWidth(row.baseUrl, Math.max(0, width - 6), "…");
+    lines.push(currentTheme.fg("textMuted", `      ${urlText}`));
   }
 
   return lines;

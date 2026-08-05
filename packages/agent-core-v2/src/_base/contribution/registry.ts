@@ -14,8 +14,8 @@
  * `onDidChange` with the affected `sourceId` so catalogs can re-project.
  */
 
-import { Disposable, type IDisposable } from '../di/lifecycle';
-import { Emitter, type Event } from '../event';
+import { Disposable, type IDisposable } from "../di/lifecycle";
+import { Emitter, type Event } from "../event";
 
 export interface ContributionRegistration<T> {
   readonly sourceId: string;
@@ -28,7 +28,10 @@ export interface RegisterContributionOptions {
 }
 
 export class ContributionRegistry<T> extends Disposable {
-  private readonly registrations = new Map<string, ContributionRegistration<T>>();
+  private readonly registrations = new Map<
+    string,
+    ContributionRegistration<T>
+  >();
   private readonly onDidChangeEmitter = this._register(new Emitter<string>());
   readonly onDidChange: Event<string> = this.onDidChangeEmitter.event;
 

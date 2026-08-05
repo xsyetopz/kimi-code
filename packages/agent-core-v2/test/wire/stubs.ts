@@ -1,18 +1,24 @@
-import { SyncDescriptor } from '#/_base/di/descriptors';
-import { toDisposable } from '#/_base/di/lifecycle';
-import type { ServiceRegistration, TestInstantiationService } from '#/_base/di/test';
-import { IAgentBlobService } from '#/agent/blob/agentBlobService';
-import { IAgentScopeContext, type IAgentScopeContext as AgentScopeContext } from '#/agent/scopeContext/scopeContext';
-import { IEventBus } from '#/app/event/eventBus';
-import { createHooks } from '#/hooks';
-import { IAppendLogStore } from '#/persistence/interface/appendLogStore';
+import { SyncDescriptor } from "#/_base/di/descriptors";
+import { toDisposable } from "#/_base/di/lifecycle";
+import type {
+  ServiceRegistration,
+  TestInstantiationService,
+} from "#/_base/di/test";
+import { IAgentBlobService } from "#/agent/blob/agentBlobService";
+import {
+  IAgentScopeContext,
+  type IAgentScopeContext as AgentScopeContext,
+} from "#/agent/scopeContext/scopeContext";
+import { IEventBus } from "#/app/event/eventBus";
+import { createHooks } from "#/hooks";
+import { IAppendLogStore } from "#/persistence/interface/appendLogStore";
 import {
   IWireService,
   type IWireService as AgentWire,
   type WireHooks,
-} from '#/wire/wire';
-import { WireService } from '#/wire/wireService';
-import { AGENT_WIRE_RECORD_KEY, type WireRecord } from '#/wire/record';
+} from "#/wire/wire";
+import { WireService } from "#/wire/wireService";
+import { AGENT_WIRE_RECORD_KEY, type WireRecord } from "#/wire/record";
 
 interface TestAgentWireDependencies {
   readonly log?: IAppendLogStore;
@@ -50,9 +56,9 @@ export function testWireScope(scope: string, journal: string): string {
 export function stubAgentScopeContext(scope: string): AgentScopeContext {
   return {
     _serviceBrand: undefined,
-    agentId: 'test-agent',
+    agentId: "test-agent",
     scope: (subKey?: string): string =>
-      subKey === undefined || subKey === '' ? scope : `${scope}/${subKey}`,
+      subKey === undefined || subKey === "" ? scope : `${scope}/${subKey}`,
   };
 }
 
@@ -71,7 +77,7 @@ export function registerTestAgentWire(
 
 export function registerTestAgentWireServices(
   registration: ServiceRegistration,
-  scope = 'wire/test-agent',
+  scope = "wire/test-agent",
 ): void {
   registration.defineInstance(IAgentScopeContext, stubAgentScopeContext(scope));
   registration.defineInstance(IAppendLogStore, noopLog);
@@ -95,7 +101,7 @@ export function stubAgentWire(
 ): AgentWire {
   return {
     _serviceBrand: undefined,
-    hooks: createHooks<WireHooks, keyof WireHooks>(['onDidRestore']),
+    hooks: createHooks<WireHooks, keyof WireHooks>(["onDidRestore"]),
     dispatch: () => {},
     seal: async () => {},
     restore: async () => {},

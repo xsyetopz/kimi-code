@@ -1,4 +1,4 @@
-import type { EnabledPluginSystemPrompt } from '../plugin/types';
+import type { EnabledPluginSystemPrompt } from "../plugin/types";
 
 /**
  * Soft aggregate budget for the plugin system-prompt sections injected into
@@ -24,7 +24,7 @@ export function composePluginSections(
   let totalBytes = 0;
   for (const section of sections) {
     const block = `<!-- From: plugin ${section.pluginId} -->\n${section.content}`;
-    const bytes = Buffer.byteLength(block, 'utf8');
+    const bytes = Buffer.byteLength(block, "utf8");
     if (totalBytes + bytes > PLUGIN_SECTIONS_MAX_BYTES) {
       skipped.push(section.pluginId);
       continue;
@@ -32,5 +32,5 @@ export function composePluginSections(
     totalBytes += bytes;
     parts.push(block);
   }
-  return { content: parts.join('\n\n'), skipped };
+  return { content: parts.join("\n\n"), skipped };
 }

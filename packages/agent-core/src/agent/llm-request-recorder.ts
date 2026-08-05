@@ -10,14 +10,19 @@
  * `records/types.ts` for the persistence contract.
  */
 
-import { KimiChatProvider, type ChatProvider, type Message, type Tool } from '@moonshot-ai/kosong';
+import {
+  KimiChatProvider,
+  type ChatProvider,
+  type Message,
+  type Tool,
+} from "@moonshot-ai/kosong";
 
-import { parseFloatEnv } from '#/config/resolve';
-import { resolveThinkingKeep } from '#/config/kimi-env-params';
+import { parseFloatEnv } from "#/config/resolve";
+import { resolveThinkingKeep } from "#/config/kimi-env-params";
 
-import type { Agent } from '.';
-import type { LLMRequestLogFields } from '../loop';
-import { fingerprint, toolSignature } from './llm-request-logger';
+import type { Agent } from ".";
+import type { LLMRequestLogFields } from "../loop";
+import { fingerprint, toolSignature } from "./llm-request-logger";
 
 export class LlmRequestRecorder {
   /** Hashes of tool tables already durable in this wire log. */
@@ -57,7 +62,7 @@ export class LlmRequestRecorder {
     if (!this.seenToolsHashes.has(toolsHash)) {
       this.seenToolsHashes.add(toolsHash);
       this.agent.records.logRecord({
-        type: 'llm.tools_snapshot',
+        type: "llm.tools_snapshot",
         hash: toolsHash,
         tools: toolSignature(wireTools),
       });
@@ -72,8 +77,8 @@ export class LlmRequestRecorder {
     // env effort overrides are already reflected in the read value.
     const isKimiProvider = provider instanceof KimiChatProvider;
     this.agent.records.logRecord({
-      type: 'llm.request',
-      kind: fields.kind ?? 'loop',
+      type: "llm.request",
+      kind: fields.kind ?? "loop",
       provider: provider.name,
       model: provider.modelName,
       modelAlias,
@@ -82,14 +87,17 @@ export class LlmRequestRecorder {
         ? resolveThinkingKeep(
             process.env,
             this.agent.kimiConfig?.thinking?.keep,
-            provider.thinkingEffort ?? 'off',
+            provider.thinkingEffort ?? "off",
           )
         : undefined,
       temperature: isKimiProvider
-        ? parseFloatEnv(process.env['KIMI_MODEL_TEMPERATURE'], 'KIMI_MODEL_TEMPERATURE')
+        ? parseFloatEnv(
+            process.env["KIMI_MODEL_TEMPERATURE"],
+            "KIMI_MODEL_TEMPERATURE",
+          )
         : undefined,
       topP: isKimiProvider
-        ? parseFloatEnv(process.env['KIMI_MODEL_TOP_P'], 'KIMI_MODEL_TOP_P')
+        ? parseFloatEnv(process.env["KIMI_MODEL_TOP_P"], "KIMI_MODEL_TOP_P")
         : undefined,
       maxTokens: provider.maxCompletionTokens,
       betaApi:
@@ -99,7 +107,9 @@ export class LlmRequestRecorder {
       toolSelect: this.agent.toolSelectEnabled,
       systemPromptHash: this.systemPromptHashFor(systemPrompt),
       systemPrompt:
-        systemPrompt === this.agent.config.systemPrompt ? undefined : systemPrompt,
+        systemPrompt === this.agent.config.systemPrompt
+          ? undefined
+          : systemPrompt,
       toolsHash,
       messageCount: messages.length,
       turnStep: fields.turnStep,
@@ -110,7 +120,10 @@ export class LlmRequestRecorder {
   }
 
   private toolsHashFor(wireTools: readonly Tool[]): string {
-    if (this.lastToolsHash !== undefined && sameToolInstances(this.lastWireTools, wireTools)) {
+    if (
+      this.lastToolsHash !== undefined &&
+      sameToolInstances(this.lastWireTools, wireTools)
+    ) {
       return this.lastToolsHash;
     }
     const hash = fingerprint(JSON.stringify(toolSignature(wireTools)));
@@ -120,7 +133,10 @@ export class LlmRequestRecorder {
   }
 
   private systemPromptHashFor(systemPrompt: string): string {
-    if (this.lastSystemPromptHash === undefined || systemPrompt !== this.lastSystemPrompt) {
+    if (
+      this.lastSystemPromptHash === undefined ||
+      systemPrompt !== this.lastSystemPrompt
+    ) {
       this.lastSystemPrompt = systemPrompt;
       this.lastSystemPromptHash = fingerprint(systemPrompt);
     }
@@ -132,7 +148,8 @@ function sameToolInstances(
   previous: readonly Tool[] | undefined,
   current: readonly Tool[],
 ): boolean {
-  if (previous === undefined || previous.length !== current.length) return false;
+  if (previous === undefined || previous.length !== current.length)
+    return false;
   for (let i = 0; i < current.length; i++) {
     if (previous[i] !== current[i]) return false;
   }

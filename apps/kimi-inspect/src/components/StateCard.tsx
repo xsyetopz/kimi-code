@@ -10,12 +10,12 @@
  * expanded across polls.
  */
 
-import { useQuery } from '@tanstack/react-query';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState, type ReactNode } from "react";
 
-import { diffValue, type DiffNode } from '../audit/diff';
-import { ActionButton, Badge, ErrorLine } from '../ui';
-import { StateTree, plainNode } from './audit/StateTree';
+import { diffValue, type DiffNode } from "../audit/diff";
+import { ActionButton, Badge, ErrorLine } from "../ui";
+import { StateTree, plainNode } from "./audit/StateTree";
 
 export function StateCard({
   id,
@@ -75,24 +75,37 @@ export function StateCard({
     <div className="mb-3 rounded-lg border border-neutral-800 bg-neutral-900/60">
       <div className="flex items-center justify-between border-b border-neutral-800/60 px-3 py-2">
         <div>
-          <span className="text-[12px] font-medium text-neutral-200">{title}</span>
-          <span className="ml-2 font-mono text-[10px] text-neutral-600">{label}</span>
+          <span className="text-[12px] font-medium text-neutral-200">
+            {title}
+          </span>
+          <span className="ml-2 font-mono text-[10px] text-neutral-600">
+            {label}
+          </span>
           {badge}
           {visibleTree !== null ? (
             <Badge tone="neutral">
-              {Object.keys(visibleTree.node.value as Record<string, unknown>).length} keys
+              {
+                Object.keys(visibleTree.node.value as Record<string, unknown>)
+                  .length
+              }{" "}
+              keys
             </Badge>
           ) : null}
         </div>
         <div className="flex items-center gap-1.5">
           <ActionButton
             onClick={() =>
-              setExpand((s) => ({ nonce: s.nonce + 1, depth: Number.POSITIVE_INFINITY }))
+              setExpand((s) => ({
+                nonce: s.nonce + 1,
+                depth: Number.POSITIVE_INFINITY,
+              }))
             }
           >
             Expand
           </ActionButton>
-          <ActionButton onClick={() => setExpand((s) => ({ nonce: s.nonce + 1, depth: 0 }))}>
+          <ActionButton
+            onClick={() => setExpand((s) => ({ nonce: s.nonce + 1, depth: 0 }))}
+          >
             Collapse
           </ActionButton>
           <span className="text-[10px] text-neutral-600">live · 1s</span>
@@ -106,10 +119,16 @@ export function StateCard({
         ) : null}
         {visibleTree === null ? (
           <div className="text-[11px] text-neutral-600 italic">
-            {query.isPending || tree !== null ? 'Loading state…' : 'no state registered'}
+            {query.isPending || tree !== null
+              ? "Loading state…"
+              : "no state registered"}
           </div>
         ) : (
-          <StateTree key={expand.nonce} root={visibleTree.node} defaultDepth={expand.depth} />
+          <StateTree
+            key={expand.nonce}
+            root={visibleTree.node}
+            defaultDepth={expand.depth}
+          />
         )}
       </div>
     </div>

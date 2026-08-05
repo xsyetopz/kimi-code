@@ -2,11 +2,11 @@
  * `mcpCore` domain — Streamable HTTP transport MCP client.
  */
 
-import { ErrorCodes, Error2 } from '#/errors';
-import type { McpServerHttpConfig } from './config-schema';
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import type { OAuthClientProvider } from '@modelcontextprotocol/sdk/client/auth.js';
-import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
+import { ErrorCodes, Error2 } from "#/errors";
+import type { McpServerHttpConfig } from "./config-schema";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import type { OAuthClientProvider } from "@modelcontextprotocol/sdk/client/auth.js";
+import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 
 import {
   buildRequestOptions,
@@ -17,9 +17,9 @@ import {
   toMcpToolResult,
   type UnexpectedCloseListener,
   type UnexpectedCloseReason,
-} from './client-shared';
-import { buildMcpRemoteHeaders } from './client-remote';
-import type { MCPClient, MCPToolDefinition, MCPToolResult } from './types';
+} from "./client-shared";
+import { buildMcpRemoteHeaders } from "./client-remote";
+import type { MCPClient, MCPToolDefinition, MCPToolResult } from "./types";
 
 export interface HttpMcpClientOptions {
   readonly clientName?: string;
@@ -64,7 +64,10 @@ export class HttpMcpClient implements MCPClient {
 
   async connect(): Promise<void> {
     if (this.closed) {
-      throw new Error2(ErrorCodes.MCP_STARTUP_FAILED, 'MCP HTTP client is closed');
+      throw new Error2(
+        ErrorCodes.MCP_STARTUP_FAILED,
+        "MCP HTTP client is closed",
+      );
     }
     if (this.started) return;
     this.started = true;
@@ -80,7 +83,10 @@ export class HttpMcpClient implements MCPClient {
     }
     if (this.closed) {
       await this.closeStartedClient();
-      throw new Error2(ErrorCodes.MCP_STARTUP_FAILED, 'MCP HTTP client was closed during startup');
+      throw new Error2(
+        ErrorCodes.MCP_STARTUP_FAILED,
+        "MCP HTTP client was closed during startup",
+      );
     }
     this.ready = true;
   }
@@ -114,12 +120,18 @@ export class HttpMcpClient implements MCPClient {
     signal?: AbortSignal,
   ): Promise<MCPToolResult> {
     const requestOptions = buildRequestOptions(this.toolCallTimeoutMs, signal);
-    const result = await this.client.callTool({ name, arguments: args }, undefined, requestOptions);
+    const result = await this.client.callTool(
+      { name, arguments: args },
+      undefined,
+      requestOptions,
+    );
     return toMcpToolResult(result);
   }
 
   async ping(signal?: AbortSignal): Promise<void> {
-    await this.client.ping(buildRequestOptions(MCP_LIVENESS_PROBE_TIMEOUT_MS, signal));
+    await this.client.ping(
+      buildRequestOptions(MCP_LIVENESS_PROBE_TIMEOUT_MS, signal),
+    );
   }
 
   private async closeStartedClient(): Promise<void> {
@@ -159,7 +171,7 @@ export class HttpMcpClient implements MCPClient {
 }
 
 export function isTerminalTransportError(error: Error): boolean {
-  if (error.name === 'UnauthorizedError') return true;
+  if (error.name === "UnauthorizedError") return true;
   if (/Maximum reconnection attempts/i.test(error.message)) return true;
   return false;
 }

@@ -1,25 +1,37 @@
-import { mkdtempSync, mkdirSync, rmSync } from 'node:fs';
-import { createRequire } from 'node:module';
-import { dirname, join } from 'node:path';
+import { mkdtempSync, mkdirSync, rmSync } from "node:fs";
+import { createRequire } from "node:module";
+import { dirname, join } from "node:path";
 
-import { MiniDb } from '@moonshot-ai/minidb';
+import { MiniDb } from "@moonshot-ai/minidb";
 
 import {
   getEmbeddedNativeAssetManifest,
   getNativeCacheBase,
   getNativePackageRoot,
-} from './native-assets';
+} from "./native-assets";
 
-const smokePackages = ['@mariozechner/clipboard', '@moonshot-ai/pi-tui'];
+const smokePackages = ["@mariozechner/clipboard", "@moonshot-ai/pi-tui"];
 
 function smokePiTuiNativeLoad(): void {
   const platform = process.platform;
   const arch = process.arch;
   let rel: string | undefined;
-  if (platform === 'darwin' && (arch === 'x64' || arch === 'arm64')) {
-    rel = join('native', 'darwin', 'prebuilds', `darwin-${arch}`, 'darwin-modifiers.node');
-  } else if (platform === 'win32' && (arch === 'x64' || arch === 'arm64')) {
-    rel = join('native', 'win32', 'prebuilds', `win32-${arch}`, 'win32-console-mode.node');
+  if (platform === "darwin" && (arch === "x64" || arch === "arm64")) {
+    rel = join(
+      "native",
+      "darwin",
+      "prebuilds",
+      `darwin-${arch}`,
+      "darwin-modifiers.node",
+    );
+  } else if (platform === "win32" && (arch === "x64" || arch === "arm64")) {
+    rel = join(
+      "native",
+      "win32",
+      "prebuilds",
+      `win32-${arch}`,
+      "win32-console-mode.node",
+    );
   }
   if (rel === undefined) return;
 
@@ -29,8 +41,8 @@ function smokePiTuiNativeLoad(): void {
     enableVirtualTerminalInput?: unknown;
   };
   if (
-    typeof helper.isModifierPressed !== 'function' &&
-    typeof helper.enableVirtualTerminalInput !== 'function'
+    typeof helper.isModifierPressed !== "function" &&
+    typeof helper.enableVirtualTerminalInput !== "function"
   ) {
     throw new TypeError(`pi-tui native helper exports are unexpected: ${rel}`);
   }
@@ -39,34 +51,39 @@ function smokePiTuiNativeLoad(): void {
 async function smokeMinidbWorker(): Promise<void> {
   const cacheBase = getNativeCacheBase();
   mkdirSync(cacheBase, { recursive: true });
-  const dir = mkdtempSync(join(cacheBase, 'sea-minidb-smoke-'));
+  const dir = mkdtempSync(join(cacheBase, "sea-minidb-smoke-"));
   let db: MiniDb<Record<string, unknown>> | null = null;
   try {
-    db = await MiniDb.open<Record<string, unknown>>({ dir, valueCodec: 'json' });
+    db = await MiniDb.open<Record<string, unknown>>({
+      dir,
+      valueCodec: "json",
+    });
     const total = 4_200;
     for (let base = 0; base < total; base += 500) {
       await db.batch(
         Array.from({ length: Math.min(500, total - base) }, (_, offset) => {
           const id = base + offset;
           return {
-            op: 'set' as const,
+            op: "set" as const,
             key: `doc-${id}`,
             value: { text: `sea worker searchable document ${id}` },
           };
         }),
       );
     }
-    await db.createTextIndex('smoke', { fields: ['text'] });
+    await db.createTextIndex("smoke", { fields: ["text"] });
     if (db.stats.textWorkerBuilds < 1) {
       throw new Error(`MiniDb worker did not run: ${JSON.stringify(db.stats)}`);
     }
     if (db.stats.textWorkerFallbacks !== 0) {
       throw new Error(
-        `MiniDb worker unexpectedly fell back: ${db.stats.lastTextWorkerFallback ?? 'unknown'}`,
+        `MiniDb worker unexpectedly fell back: ${db.stats.lastTextWorkerFallback ?? "unknown"}`,
       );
     }
-    if (!db.search('smoke', 'searchable').some((hit) => hit.key === 'doc-0')) {
-      throw new Error('MiniDb worker-built text index returned an incorrect search result');
+    if (!db.search("smoke", "searchable").some((hit) => hit.key === "doc-0")) {
+      throw new Error(
+        "MiniDb worker-built text index returned an incorrect search result",
+      );
     }
   } finally {
     await db?.close().catch(() => {});
@@ -76,7 +93,8 @@ async function smokeMinidbWorker(): Promise<void> {
 
 async function runSmoke(): Promise<void> {
   const manifest = getEmbeddedNativeAssetManifest();
-  if (manifest === null) throw new Error('Native asset manifest is not available.');
+  if (manifest === null)
+    throw new Error("Native asset manifest is not available.");
   for (const packageName of smokePackages) {
     if (getNativePackageRoot(packageName, { manifest }) === null) {
       throw new Error(`Native package is not available: ${packageName}`);
@@ -84,11 +102,13 @@ async function runSmoke(): Promise<void> {
   }
   smokePiTuiNativeLoad();
   await smokeMinidbWorker();
-  process.stdout.write(`Native asset smoke passed: ${manifest.target}; MiniDb worker build passed\n`);
+  process.stdout.write(
+    `Native asset smoke passed: ${manifest.target}; MiniDb worker build passed\n`,
+  );
 }
 
 export function runNativeAssetSmokeIfRequested(): boolean {
-  if (process.env['KIMI_CODE_NATIVE_ASSET_SMOKE'] !== '1') return false;
+  if (process.env["KIMI_CODE_NATIVE_ASSET_SMOKE"] !== "1") return false;
   void runSmoke().then(
     () => process.exit(0),
     (error: unknown) => {

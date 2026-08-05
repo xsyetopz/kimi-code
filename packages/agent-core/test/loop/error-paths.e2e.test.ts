@@ -8,33 +8,37 @@
  * names the cause.
  */
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from "vitest";
 
-import { ErrorCodes, KimiError } from '../../src/errors';
-import type { Logger, LogPayload } from '../../src/logging';
-import type { LoopHooks } from '../../src/loop/index';
-import { makeEndTurnResponse, makeToolCall, makeToolUseResponse } from './fixtures/fake-llm';
-import { runTurn, runTurnExpectingThrow } from './fixtures/helpers';
-import { EchoTool } from './fixtures/tools';
+import { ErrorCodes, KimiError } from "../../src/errors";
+import type { Logger, LogPayload } from "../../src/logging";
+import type { LoopHooks } from "../../src/loop/index";
+import {
+  makeEndTurnResponse,
+  makeToolCall,
+  makeToolUseResponse,
+} from "./fixtures/fake-llm";
+import { runTurn, runTurnExpectingThrow } from "./fixtures/helpers";
+import { EchoTool } from "./fixtures/tools";
 
 interface CapturedLogEntry {
-  readonly level: 'error' | 'warn' | 'info' | 'debug';
+  readonly level: "error" | "warn" | "info" | "debug";
   readonly message: string;
   readonly payload?: LogPayload;
 }
 
-describe('runTurn — error paths', () => {
+describe("runTurn — error paths", () => {
   it('rethrows non-abort LLM errors with turn.interrupted{reason:"error"}', async () => {
-    const llmError = new Error('upstream blew up');
+    const llmError = new Error("upstream blew up");
     const { error, sink, context } = await runTurnExpectingThrow({
-      responses: [makeEndTurnResponse('never')], // ignored: throw fires first
+      responses: [makeEndTurnResponse("never")], // ignored: throw fires first
       llmThrowOnIndex: { index: 0, error: llmError },
     });
 
     expect(error).toBe(llmError);
-    const interrupted = sink.byType('turn.interrupted');
+    const interrupted = sink.byType("turn.interrupted");
     expect(interrupted.length).toBe(1);
-    expect(interrupted[0]?.reason).toBe('error');
+    expect(interrupted[0]?.reason).toBe("error");
     expect(interrupted[0]?.attemptedSteps).toBe(1);
     expect(interrupted[0]?.activeStep).toBe(1);
     // step.begin was opened but step.end was NOT
@@ -42,11 +46,11 @@ describe('runTurn — error paths', () => {
     expect(context.stepEnds().length).toBe(0);
   });
 
-  it('logs non-abort LLM request failures without request payloads or stacks', async () => {
-    const llmError = new Error('upstream blew up');
+  it("logs non-abort LLM request failures without request payloads or stacks", async () => {
+    const llmError = new Error("upstream blew up");
     const { logger, entries } = captureLogs();
     const { error } = await runTurnExpectingThrow({
-      responses: [makeEndTurnResponse('never')],
+      responses: [makeEndTurnResponse("never")],
       llmThrowOnIndex: { index: 0, error: llmError },
       log: logger,
     });
@@ -54,30 +58,30 @@ describe('runTurn — error paths', () => {
     expect(error).toBe(llmError);
     expect(entries).toEqual([
       {
-        level: 'warn',
-        message: 'llm request failed',
+        level: "warn",
+        message: "llm request failed",
         payload: {
-          turnStep: 'turn-1.1',
-          attempt: '1/10',
-          model: 'fake-model',
-          errorName: 'Error',
-          errorMessage: 'upstream blew up',
+          turnStep: "turn-1.1",
+          attempt: "1/10",
+          model: "fake-model",
+          errorName: "Error",
+          errorMessage: "upstream blew up",
         },
       },
     ]);
   });
 
-  it('does not log aborted LLM requests as failures', async () => {
+  it("does not log aborted LLM requests as failures", async () => {
     const controller = new AbortController();
     const { logger, entries } = captureLogs();
     const { result } = await runTurn({
-      responses: [makeEndTurnResponse('never')],
+      responses: [makeEndTurnResponse("never")],
       llmAbortOnIndex: { index: 0, controller },
       signal: controller.signal,
       log: logger,
     });
 
-    expect(result.stopReason).toBe('aborted');
+    expect(result.stopReason).toBe("aborted");
     expect(entries).toEqual([]);
   });
 
@@ -87,22 +91,22 @@ describe('runTurn — error paths', () => {
       maxSteps: 2,
       tools: [echo],
       responses: [
-        makeToolUseResponse([makeToolCall('echo', { text: '1' }, 'a')]),
-        makeToolUseResponse([makeToolCall('echo', { text: '2' }, 'b')]),
+        makeToolUseResponse([makeToolCall("echo", { text: "1" }, "a")]),
+        makeToolUseResponse([makeToolCall("echo", { text: "2" }, "b")]),
         // never reached
       ],
     });
 
     expect(error).toBeInstanceOf(KimiError);
     expect((error as KimiError).code).toBe(ErrorCodes.LOOP_MAX_STEPS_EXCEEDED);
-    const interrupted = sink.byType('turn.interrupted');
-    expect(interrupted.map((e) => e.reason)).toEqual(['max_steps']);
+    const interrupted = sink.byType("turn.interrupted");
+    expect(interrupted.map((e) => e.reason)).toEqual(["max_steps"]);
     expect(interrupted[0]?.attemptedSteps).toBe(2);
     expect(interrupted[0]?.activeStep).toBeUndefined();
   });
 
-  it('rethrows non-abort hook errors via the same path', async () => {
-    const hookError = new Error('hook crashed');
+  it("rethrows non-abort hook errors via the same path", async () => {
+    const hookError = new Error("hook crashed");
     const hooks: LoopHooks = {
       beforeStep: async () => {
         throw hookError;
@@ -110,13 +114,13 @@ describe('runTurn — error paths', () => {
     };
     const { error, sink } = await runTurnExpectingThrow({
       hooks,
-      responses: [makeEndTurnResponse('never')],
+      responses: [makeEndTurnResponse("never")],
     });
 
     expect(error).toBe(hookError);
-    const interrupted = sink.byType('turn.interrupted');
+    const interrupted = sink.byType("turn.interrupted");
     expect(interrupted.length).toBe(1);
-    expect(interrupted[0]?.reason).toBe('error');
+    expect(interrupted[0]?.reason).toBe("error");
   });
 
   it('AbortError thrown by a hook converges to stopReason="aborted" (no throw)', async () => {
@@ -124,56 +128,59 @@ describe('runTurn — error paths', () => {
     const hooks: LoopHooks = {
       beforeStep: async () => {
         controller.abort();
-        const err = new Error('aborted');
-        err.name = 'AbortError';
+        const err = new Error("aborted");
+        err.name = "AbortError";
         throw err;
       },
     };
     const { result, sink } = await runTurn({
       hooks,
-      responses: [makeEndTurnResponse('never')],
+      responses: [makeEndTurnResponse("never")],
       signal: controller.signal,
     });
-    expect(result.stopReason).toBe('aborted');
-    const interrupted = sink.byType('turn.interrupted');
+    expect(result.stopReason).toBe("aborted");
+    const interrupted = sink.byType("turn.interrupted");
     expect(interrupted.length).toBe(1);
-    expect(interrupted[0]?.reason).toBe('aborted');
+    expect(interrupted[0]?.reason).toBe("aborted");
   });
 
-  it('emits turn.interrupted exactly once per failure (no duplicate emits)', async () => {
+  it("emits turn.interrupted exactly once per failure (no duplicate emits)", async () => {
     const { sink } = await runTurnExpectingThrow({
-      responses: [makeEndTurnResponse('never')],
-      llmThrowOnIndex: { index: 0, error: new Error('once') },
+      responses: [makeEndTurnResponse("never")],
+      llmThrowOnIndex: { index: 0, error: new Error("once") },
     });
-    expect(sink.byType('turn.interrupted').length).toBe(1);
+    expect(sink.byType("turn.interrupted").length).toBe(1);
   });
 
-  it('does NOT emit step.end when a step throws before sealing', async () => {
+  it("does NOT emit step.end when a step throws before sealing", async () => {
     const { sink } = await runTurnExpectingThrow({
-      responses: [makeEndTurnResponse('never')],
-      llmThrowOnIndex: { index: 0, error: new Error('boom') },
+      responses: [makeEndTurnResponse("never")],
+      llmThrowOnIndex: { index: 0, error: new Error("boom") },
     });
     // step.begin fires, step.end does not, turn.interrupted takes its place
-    expect(sink.count('step.begin')).toBe(1);
-    expect(sink.count('step.end')).toBe(0);
-    expect(sink.count('turn.interrupted')).toBe(1);
+    expect(sink.count("step.begin")).toBe(1);
+    expect(sink.count("step.end")).toBe(0);
+    expect(sink.count("turn.interrupted")).toBe(1);
   });
 });
 
-function captureLogs(): { readonly logger: Logger; readonly entries: CapturedLogEntry[] } {
+function captureLogs(): {
+  readonly logger: Logger;
+  readonly entries: CapturedLogEntry[];
+} {
   const entries: CapturedLogEntry[] = [];
   const logger: Logger = {
     error: (message, payload) => {
-      entries.push({ level: 'error', message, payload });
+      entries.push({ level: "error", message, payload });
     },
     warn: (message, payload) => {
-      entries.push({ level: 'warn', message, payload });
+      entries.push({ level: "warn", message, payload });
     },
     info: (message, payload) => {
-      entries.push({ level: 'info', message, payload });
+      entries.push({ level: "info", message, payload });
     },
     debug: (message, payload) => {
-      entries.push({ level: 'debug', message, payload });
+      entries.push({ level: "debug", message, payload });
     },
     createChild: () => logger,
   };

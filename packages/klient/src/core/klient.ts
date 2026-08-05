@@ -5,17 +5,31 @@
  * which transport carried the bytes.
  */
 
-import type { KlientChannel, ScopeRef } from './channel.js';
-import { globalContract, isStreamingContract } from '#/contract/index';
-import { globalEvents, type KlientEventPayloads } from '#/contract/global/events';
-import { sessionEvents, type SessionEventPayloads } from '#/contract/session/events';
-import { agentEvents, type AgentEventPayloads } from '#/contract/agent/events';
-import type { EventRegistration, StreamingProcedureContract } from '#/contract/types';
-import { EventHub, type KlientEvents } from './events/hub.js';
-import { createGlobalFacade, type GlobalFacade, type ScopedCaller, type ScopedStreamCaller } from './facade/global.js';
-import { createSessionFacade, type SessionFacade } from './facade/session.js';
-import { createAgentFacade, type AgentFacade } from './facade/agent.js';
-import { parseChunk, parseInput, parseOutput } from './validation.js';
+import type { KlientChannel, ScopeRef } from "./channel.js";
+import { globalContract, isStreamingContract } from "#/contract/index";
+import {
+  globalEvents,
+  type KlientEventPayloads,
+} from "#/contract/global/events";
+import {
+  sessionEvents,
+  type SessionEventPayloads,
+} from "#/contract/session/events";
+import { agentEvents, type AgentEventPayloads } from "#/contract/agent/events";
+import type {
+  EventRegistration,
+  StreamingProcedureContract,
+} from "#/contract/types";
+import { EventHub, type KlientEvents } from "./events/hub.js";
+import {
+  createGlobalFacade,
+  type GlobalFacade,
+  type ScopedCaller,
+  type ScopedStreamCaller,
+} from "./facade/global.js";
+import { createSessionFacade, type SessionFacade } from "./facade/session.js";
+import { createAgentFacade, type AgentFacade } from "./facade/agent.js";
+import { parseChunk, parseInput, parseOutput } from "./validation.js";
 
 export interface KlientOptions {
   /**
@@ -55,7 +69,9 @@ export function createKlientFromChannel(
       throw new Error(`no contract registered for ${service}.${method}`);
     }
     if (isStreamingContract(procedure)) {
-      throw new Error(`${service}.${method} is a streaming procedure — use callStream instead`);
+      throw new Error(
+        `${service}.${method} is a streaming procedure — use callStream instead`,
+      );
     }
     const name = `${service}.${method}`;
     const wireArgs = validate ? parseInput(name, procedure, args) : args;
@@ -69,7 +85,9 @@ export function createKlientFromChannel(
       throw new Error(`no contract registered for ${service}.${method}`);
     }
     if (!isStreamingContract(procedure)) {
-      throw new Error(`${service}.${method} is not a streaming procedure — use call instead`);
+      throw new Error(
+        `${service}.${method} is not a streaming procedure — use call instead`,
+      );
     }
     const name = `${service}.${method}`;
     const wireArgs = validate ? parseInput(name, procedure, args) : args;
@@ -85,7 +103,10 @@ export function createKlientFromChannel(
           async next() {
             const result = await iter.next();
             if (result.done) return { done: true as const, value: undefined };
-            return { done: false, value: parseChunk(name, contract, result.value) };
+            return {
+              done: false,
+              value: parseChunk(name, contract, result.value),
+            };
           },
           async return(value?: unknown) {
             await iter.return?.(value);
@@ -101,7 +122,12 @@ export function createKlientFromChannel(
     scope: ScopeRef,
     registrations: Record<string, EventRegistration>,
   ): KlientEvents<TPayloadMap> => {
-    const hub = new EventHub<TPayloadMap>(channel, validate, scope, registrations);
+    const hub = new EventHub<TPayloadMap>(
+      channel,
+      validate,
+      scope,
+      registrations,
+    );
     hubs.add(hub);
     return hub;
   };

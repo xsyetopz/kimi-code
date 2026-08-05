@@ -5,19 +5,19 @@
  * MUST treat the returned promise as `Promise<never>`.
  */
 
-import { createKimiHarness } from '@moonshot-ai/kimi-code-sdk';
+import { createKimiHarness } from "@moonshot-ai/kimi-code-sdk";
 
-import { createKimiCodeHostIdentity } from '#/cli/version';
-import { openUrl } from '#/utils/open-url';
+import { createKimiCodeHostIdentity } from "#/cli/version";
+import { openUrl } from "#/utils/open-url";
 
 export async function runLoginFlow(): Promise<never> {
   const identity = createKimiCodeHostIdentity();
   const harness = createKimiHarness({
     identity,
-    uiMode: 'cli',
+    uiMode: "cli",
   });
   const controller = new AbortController();
-  process.once('SIGINT', () => {
+  process.once("SIGINT", () => {
     controller.abort();
   });
   try {
@@ -30,17 +30,17 @@ export async function runLoginFlow(): Promise<never> {
         // and code needed to complete login.
         process.stderr.write(
           [
-            '',
+            "",
             `Opening browser for Kimi device login: ${url}`,
             `If the browser did not open, paste the URL above and enter code: ${data.userCode}`,
             data.expiresIn !== null && data.expiresIn !== undefined
               ? `Code expires in ${data.expiresIn}s.`
               : undefined,
-            'Waiting for authorization to complete...',
-            '',
+            "Waiting for authorization to complete...",
+            "",
           ]
             .filter((line): line is string => line !== undefined)
-            .join('\n'),
+            .join("\n"),
         );
         try {
           openUrl(url);
@@ -53,7 +53,7 @@ export async function runLoginFlow(): Promise<never> {
     process.exit(0);
   } catch (error) {
     if (controller.signal.aborted) {
-      process.stderr.write('Login cancelled.\n');
+      process.stderr.write("Login cancelled.\n");
     } else {
       const message = error instanceof Error ? error.message : String(error);
       process.stderr.write(`Login failed: ${message}\n`);

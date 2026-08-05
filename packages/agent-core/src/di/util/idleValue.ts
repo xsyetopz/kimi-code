@@ -15,7 +15,7 @@
  * package later needs it, lift it then.
  */
 
-import type { IDisposable } from '../lifecycle';
+import type { IDisposable } from "../lifecycle";
 
 interface IdleDeadline {
   readonly didTimeout: boolean;
@@ -36,12 +36,12 @@ function runWhenGlobalIdle(
   const safeGlobal: any = globalThis;
 
   if (
-    typeof safeGlobal.requestIdleCallback === 'function' &&
-    typeof safeGlobal.cancelIdleCallback === 'function'
+    typeof safeGlobal.requestIdleCallback === "function" &&
+    typeof safeGlobal.cancelIdleCallback === "function"
   ) {
     const handle: number = safeGlobal.requestIdleCallback(
       callback,
-      typeof timeout === 'number' ? { timeout } : undefined,
+      typeof timeout === "number" ? { timeout } : undefined,
     );
     let disposed = false;
     return {
@@ -125,7 +125,7 @@ export class GlobalIdleValue<T> {
       if (this._error instanceof Error) {
         throw this._error;
       }
-      throw new Error('Lazy value initialization failed');
+      throw new Error("Lazy value initialization failed");
     }
     return this._value!;
   }

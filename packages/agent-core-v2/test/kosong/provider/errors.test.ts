@@ -19,9 +19,9 @@
  * error-event path.
  */
 
-import { APIError as AnthropicAPIError } from '@anthropic-ai/sdk';
-import { APIError as OpenAIAPIError } from 'openai';
-import { describe, expect, it } from 'vitest';
+import { APIError as AnthropicAPIError } from "@anthropic-ai/sdk";
+import { APIError as OpenAIAPIError } from "openai";
+import { describe, expect, it } from "vitest";
 
 import {
   APIProviderQuotaExhaustedError,
@@ -30,15 +30,21 @@ import {
   ChatProviderError,
   createAbortError,
   isRetryableGenerateError,
-} from '#/kosong/contract/errors';
-import type { ProtocolAdapterConfig } from '#/kosong/protocol/protocol';
-import { traitConvertError, type TraitContext } from '#/kosong/protocol/protocolTrait';
-import { convertAnthropicError } from '#/kosong/provider/bases/anthropic/anthropic';
-import { convertOpenAIError } from '#/kosong/provider/bases/openai/openai-common';
-import { OpenAIResponsesStreamedMessage } from '#/kosong/provider/bases/openai/openai-responses';
-import { composeOpenAIChatHooks } from '#/kosong/provider/bases/openai/openaiHooks';
-import { kimiAnthropicTrait, kimiOpenAITrait } from '#/kosong/provider/providers/kimi/kimi.contrib';
-import { classifyKimiQuotaError } from '#/kosong/provider/providers/kimi/kimi-errors';
+} from "#/kosong/contract/errors";
+import type { ProtocolAdapterConfig } from "#/kosong/protocol/protocol";
+import {
+  traitConvertError,
+  type TraitContext,
+} from "#/kosong/protocol/protocolTrait";
+import { convertAnthropicError } from "#/kosong/provider/bases/anthropic/anthropic";
+import { convertOpenAIError } from "#/kosong/provider/bases/openai/openai-common";
+import { OpenAIResponsesStreamedMessage } from "#/kosong/provider/bases/openai/openai-responses";
+import { composeOpenAIChatHooks } from "#/kosong/provider/bases/openai/openaiHooks";
+import {
+  kimiAnthropicTrait,
+  kimiOpenAITrait,
+} from "#/kosong/provider/providers/kimi/kimi.contrib";
+import { classifyKimiQuotaError } from "#/kosong/provider/providers/kimi/kimi-errors";
 
 // Structurally an SDK user-abort: recognized by constructor name, the same
 // way the OpenAI and Anthropic SDKs name their abort error class.
@@ -52,48 +58,52 @@ function expectStandardAbort(run: () => unknown): void {
     thrown = error;
   }
   expect(thrown).toBeInstanceOf(DOMException);
-  expect((thrown as DOMException).name).toBe('AbortError');
+  expect((thrown as DOMException).name).toBe("AbortError");
 }
 
-describe('convertOpenAIError abort guard', () => {
-  it('throws the standard abort DOMException for the standard abort shape', () => {
+describe("convertOpenAIError abort guard", () => {
+  it("throws the standard abort DOMException for the standard abort shape", () => {
     expectStandardAbort(() => convertOpenAIError(createAbortError()));
   });
 
-  it('throws for a bare Error named AbortError', () => {
-    const bare = new Error('aborted');
-    bare.name = 'AbortError';
+  it("throws for a bare Error named AbortError", () => {
+    const bare = new Error("aborted");
+    bare.name = "AbortError";
     expectStandardAbort(() => convertOpenAIError(bare));
   });
 
-  it('throws for an SDK APIUserAbortError', () => {
-    expectStandardAbort(() => convertOpenAIError(new APIUserAbortError('user aborted')));
+  it("throws for an SDK APIUserAbortError", () => {
+    expectStandardAbort(() =>
+      convertOpenAIError(new APIUserAbortError("user aborted")),
+    );
   });
 
-  it('never classifies an abort as retryable', () => {
+  it("never classifies an abort as retryable", () => {
     expect(isRetryableGenerateError(createAbortError())).toBe(false);
   });
 });
 
-describe('convertAnthropicError abort guard', () => {
-  it('throws the standard abort DOMException for abort shapes', () => {
+describe("convertAnthropicError abort guard", () => {
+  it("throws the standard abort DOMException for abort shapes", () => {
     expectStandardAbort(() => convertAnthropicError(createAbortError()));
-    expectStandardAbort(() => convertAnthropicError(new APIUserAbortError('user aborted')));
+    expectStandardAbort(() =>
+      convertAnthropicError(new APIUserAbortError("user aborted")),
+    );
   });
 });
 
-describe('non-abort classification still works', () => {
-  it('passes ChatProviderError through unchanged', () => {
-    const original = new ChatProviderError('wire issue');
+describe("non-abort classification still works", () => {
+  it("passes ChatProviderError through unchanged", () => {
+    const original = new ChatProviderError("wire issue");
     expect(convertOpenAIError(original)).toBe(original);
     expect(convertAnthropicError(original)).not.toBeUndefined();
   });
 
-  it('classifies generic errors and keeps status errors retryable', () => {
-    const timeout = convertOpenAIError(new Error('request timed out'));
+  it("classifies generic errors and keeps status errors retryable", () => {
+    const timeout = convertOpenAIError(new Error("request timed out"));
     expect(isRetryableGenerateError(timeout)).toBe(true);
 
-    const status = new APIStatusError(500, 'server error');
+    const status = new APIStatusError(500, "server error");
     expect(convertOpenAIError(status)).toBe(status);
     expect(isRetryableGenerateError(status)).toBe(true);
   });
@@ -110,10 +120,10 @@ async function consume(stream: AsyncIterable<unknown>): Promise<void> {
 }
 
 const QUOTA_MESSAGE =
-  'Your account org-0123456789abcdef <ak-test> is suspended due to insufficient balance, please recharge your account or check your plan and billing details';
+  "Your account org-0123456789abcdef <ak-test> is suspended due to insufficient balance, please recharge your account or check your plan and billing details";
 
 const TOKEN_QUOTA_MESSAGE =
-  'You exceeded your current token quota: <org-0123456789abcdef> 31275, please check your account balance';
+  "You exceeded your current token quota: <org-0123456789abcdef> 31275, please check your account balance";
 
 function moonshotQuota429(message: string, type?: string): OpenAIAPIError {
   return new OpenAIAPIError(
@@ -124,10 +134,10 @@ function moonshotQuota429(message: string, type?: string): OpenAIAPIError {
   );
 }
 
-describe('classifyKimiQuotaError (Kimi trait classifier)', () => {
-  it('classifies a structured exceeded_current_quota_error body as quota-exhausted', () => {
+describe("classifyKimiQuotaError (Kimi trait classifier)", () => {
+  it("classifies a structured exceeded_current_quota_error body as quota-exhausted", () => {
     const error = classifyKimiQuotaError(
-      moonshotQuota429('Too many requests', 'exceeded_current_quota_error'),
+      moonshotQuota429("Too many requests", "exceeded_current_quota_error"),
     );
     expect(error).toBeInstanceOf(APIProviderQuotaExhaustedError);
     expect(isRetryableGenerateError(error)).toBe(false);
@@ -142,26 +152,31 @@ describe('classifyKimiQuotaError (Kimi trait classifier)', () => {
     },
   );
 
-  it.each(['Too many requests', 'your token quota per minute was exceeded'])(
+  it.each(["Too many requests", "your token quota per minute was exceeded"])(
     'answers undefined for transient 429 "%s"',
     (message) => {
       expect(classifyKimiQuotaError(moonshotQuota429(message))).toBeUndefined();
     },
   );
 
-  it('answers undefined for non-429 and non-SDK shapes', () => {
+  it("answers undefined for non-429 and non-SDK shapes", () => {
     expect(
-      classifyKimiQuotaError(new OpenAIAPIError(403, undefined, QUOTA_MESSAGE, new Headers())),
+      classifyKimiQuotaError(
+        new OpenAIAPIError(403, undefined, QUOTA_MESSAGE, new Headers()),
+      ),
     ).toBeUndefined();
     expect(classifyKimiQuotaError(new Error(QUOTA_MESSAGE))).toBeUndefined();
     expect(classifyKimiQuotaError(undefined)).toBeUndefined();
   });
 
-  it('classifies the Anthropic SDK error shape (body nested under .error)', () => {
+  it("classifies the Anthropic SDK error shape (body nested under .error)", () => {
     const source = AnthropicAPIError.generate(
       429,
-      { type: 'error', error: { type: 'exceeded_current_quota_error', message: 'quota gone' } },
-      'Too many requests',
+      {
+        type: "error",
+        error: { type: "exceeded_current_quota_error", message: "quota gone" },
+      },
+      "Too many requests",
       new Headers(),
     );
     const error = classifyKimiQuotaError(source);
@@ -169,12 +184,19 @@ describe('classifyKimiQuotaError (Kimi trait classifier)', () => {
     expect(isRetryableGenerateError(error)).toBe(false);
   });
 
-  it('is declared as the convertError hook on both Kimi traits', () => {
+  it("is declared as the convertError hook on both Kimi traits", () => {
     const context: TraitContext = {
-      config: { protocol: 'openai', providerType: 'kimi', modelName: '' } as ProtocolAdapterConfig,
-      providerId: 'kimi',
+      config: {
+        protocol: "openai",
+        providerType: "kimi",
+        modelName: "",
+      } as ProtocolAdapterConfig,
+      providerId: "kimi",
     };
-    const source = moonshotQuota429('Too many requests', 'exceeded_current_quota_error');
+    const source = moonshotQuota429(
+      "Too many requests",
+      "exceeded_current_quota_error",
+    );
     expect(kimiOpenAITrait.convertError!(source, context)).toBeInstanceOf(
       APIProviderQuotaExhaustedError,
     );
@@ -184,57 +206,75 @@ describe('classifyKimiQuotaError (Kimi trait classifier)', () => {
   });
 });
 
-describe('convertError hook consult at the OpenAI boundary', () => {
+describe("convertError hook consult at the OpenAI boundary", () => {
   const kimiContext: TraitContext = {
-    config: { protocol: 'openai', providerType: 'kimi', modelName: '' } as ProtocolAdapterConfig,
-    providerId: 'kimi',
+    config: {
+      protocol: "openai",
+      providerType: "kimi",
+      modelName: "",
+    } as ProtocolAdapterConfig,
+    providerId: "kimi",
   };
 
-  it('prefers the composed hook over the vendor-neutral base classification', () => {
-    const hooks = composeOpenAIChatHooks([{ trait: kimiOpenAITrait, context: kimiContext }]);
+  it("prefers the composed hook over the vendor-neutral base classification", () => {
+    const hooks = composeOpenAIChatHooks([
+      { trait: kimiOpenAITrait, context: kimiContext },
+    ]);
     const source = moonshotQuota429(QUOTA_MESSAGE);
 
-    expect(convertOpenAIError(source)).toBeInstanceOf(APIProviderRateLimitError);
+    expect(convertOpenAIError(source)).toBeInstanceOf(
+      APIProviderRateLimitError,
+    );
     expect(convertOpenAIError(source, hooks?.convertError)).toBeInstanceOf(
       APIProviderQuotaExhaustedError,
     );
   });
 
-  it('binds convertError with last-declarer-wins semantics', () => {
+  it("binds convertError with last-declarer-wins semantics", () => {
     const bound = traitConvertError([
-      { trait: { convertError: () => new ChatProviderError('first') }, context: kimiContext },
-      { trait: { convertError: () => new ChatProviderError('second') }, context: kimiContext },
+      {
+        trait: { convertError: () => new ChatProviderError("first") },
+        context: kimiContext,
+      },
+      {
+        trait: { convertError: () => new ChatProviderError("second") },
+        context: kimiContext,
+      },
     ]);
-    expect(bound!(new Error('anything'))?.message).toBe('second');
+    expect(bound!(new Error("anything"))?.message).toBe("second");
   });
 
-  it('still throws the standard abort shape when a hook is present', () => {
+  it("still throws the standard abort shape when a hook is present", () => {
     expectStandardAbort(() =>
-      convertOpenAIError(createAbortError(), () => new ChatProviderError('never')),
+      convertOpenAIError(
+        createAbortError(),
+        () => new ChatProviderError("never"),
+      ),
     );
   });
 
-  it('passes already-converted errors through without re-consulting the hook', () => {
+  it("passes already-converted errors through without re-consulting the hook", () => {
     const calls: unknown[] = [];
-    const converted = new APIProviderQuotaExhaustedError('already classified');
+    const converted = new APIProviderQuotaExhaustedError("already classified");
     const result = convertOpenAIError(converted, (error) => {
       calls.push(error);
-      return new ChatProviderError('re-classified');
+      return new ChatProviderError("re-classified");
     });
     expect(result).toBe(converted);
     expect(calls).toHaveLength(0);
   });
 });
 
-describe('OpenAI base quota classification (vendor-neutral)', () => {
+describe("OpenAI base quota classification (vendor-neutral)", () => {
   it("fails fast on OpenAI's own insufficient_quota code without any hook", () => {
     const source = new OpenAIAPIError(
       429,
       {
-        message: 'You exceeded your current quota, please check your plan and billing details.',
-        type: 'insufficient_quota',
+        message:
+          "You exceeded your current quota, please check your plan and billing details.",
+        type: "insufficient_quota",
       },
-      '429 You exceeded your current quota, please check your plan and billing details.',
+      "429 You exceeded your current quota, please check your plan and billing details.",
       new Headers(),
     );
 
@@ -244,21 +284,22 @@ describe('OpenAI base quota classification (vendor-neutral)', () => {
     expect(isRetryableGenerateError(error)).toBe(false);
   });
 
-  it('keeps vendor billing wordings a retryable rate limit without a hook', () => {
+  it("keeps vendor billing wordings a retryable rate limit without a hook", () => {
     const error = convertOpenAIError(moonshotQuota429(QUOTA_MESSAGE));
     expect(error).toBeInstanceOf(APIProviderRateLimitError);
     expect(isRetryableGenerateError(error)).toBe(true);
   });
 });
 
-describe('OpenAI Responses quota-exhausted conversion', () => {
-  it('fails fast on a streamed insufficient_quota error event', async () => {
+describe("OpenAI Responses quota-exhausted conversion", () => {
+  it("fails fast on a streamed insufficient_quota error event", async () => {
     const stream = new OpenAIResponsesStreamedMessage(
       streamEvents([
         {
-          type: 'error',
-          code: 'insufficient_quota',
-          message: 'You exceeded your current quota, please check your plan and billing details.',
+          type: "error",
+          code: "insufficient_quota",
+          message:
+            "You exceeded your current quota, please check your plan and billing details.",
           param: null,
         },
       ]),
@@ -273,22 +314,22 @@ describe('OpenAI Responses quota-exhausted conversion', () => {
     expect(isRetryableGenerateError(caught)).toBe(false);
   });
 
-  it('consults a convertError hook with the raw in-stream error event', async () => {
+  it("consults a convertError hook with the raw in-stream error event", async () => {
     const seen: unknown[] = [];
     const stream = new OpenAIResponsesStreamedMessage(
       streamEvents([
         {
-          type: 'error',
-          code: 'vendor_quota_gone',
-          message: 'vendor says the quota is gone',
+          type: "error",
+          code: "vendor_quota_gone",
+          message: "vendor says the quota is gone",
           param: null,
         },
       ]),
       true,
       (error) => {
         seen.push(error);
-        return (error as { code?: string }).code === 'vendor_quota_gone'
-          ? new APIProviderQuotaExhaustedError('vendor quota exhausted')
+        return (error as { code?: string }).code === "vendor_quota_gone"
+          ? new APIProviderQuotaExhaustedError("vendor quota exhausted")
           : undefined;
       },
     );
@@ -298,8 +339,10 @@ describe('OpenAI Responses quota-exhausted conversion', () => {
       (error: unknown) => error,
     );
     expect(caught).toBeInstanceOf(APIProviderQuotaExhaustedError);
-    expect((caught as APIProviderQuotaExhaustedError).message).toBe('vendor quota exhausted');
+    expect((caught as APIProviderQuotaExhaustedError).message).toBe(
+      "vendor quota exhausted",
+    );
     expect(seen).toHaveLength(1);
-    expect(seen[0]).toMatchObject({ type: 'error', code: 'vendor_quota_gone' });
+    expect(seen[0]).toMatchObject({ type: "error", code: "vendor_quota_gone" });
   });
 });

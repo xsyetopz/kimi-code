@@ -1,5 +1,5 @@
 function formatValue(value: unknown): string {
-  return typeof value === 'string' ? value : String(value);
+  return typeof value === "string" ? value : String(value);
 }
 
 function fieldName(key: string): string {
@@ -10,5 +10,5 @@ export function formatPlainObject(record: object): string {
   return Object.entries(record)
     .filter(([, value]) => value !== undefined && value !== null)
     .map(([key, value]) => `${fieldName(key)}: ${formatValue(value)}`)
-    .join('\n');
+    .join("\n");
 }

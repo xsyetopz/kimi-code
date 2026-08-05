@@ -1,8 +1,8 @@
-import { randomUUID } from 'node:crypto';
-import { dirname, join } from 'pathe';
+import { randomUUID } from "node:crypto";
+import { dirname, join } from "pathe";
 
-import type { Agent } from '..';
-import { generateHeroSlug } from '../../utils/hero-slug';
+import type { Agent } from "..";
+import { generateHeroSlug } from "../../utils/hero-slug";
 
 export type PlanData = null | {
   id: string;
@@ -22,9 +22,13 @@ export class PlanMode {
     return generateHeroSlug(randomUUID(), new Set());
   }
 
-  async enter(id = this.createPlanId(), createFile = false, emitStatus = true): Promise<void> {
+  async enter(
+    id = this.createPlanId(),
+    createFile = false,
+    emitStatus = true,
+  ): Promise<void> {
     if (this._isActive) {
-      throw new Error('Already in plan mode');
+      throw new Error("Already in plan mode");
     }
 
     this._isActive = true;
@@ -36,7 +40,7 @@ export class PlanMode {
       const planFilePath = this.planFilePathFor(id);
       this._planFilePath = planFilePath;
       await this.ensurePlanDirectory(planFilePath);
-      this.agent.records.logRecord({ type: 'plan_mode.enter', id });
+      this.agent.records.logRecord({ type: "plan_mode.enter", id });
       enterRecorded = true;
       if (createFile) {
         await this.writeEmptyPlanFile(planFilePath);
@@ -57,7 +61,7 @@ export class PlanMode {
 
   restoreEnter({ id }: { readonly id: string }): void {
     this.agent.replayBuilder.push({
-      type: 'plan_updated',
+      type: "plan_updated",
       enabled: true,
     });
 
@@ -67,9 +71,9 @@ export class PlanMode {
   }
 
   cancel(id?: string): void {
-    this.agent.records.logRecord({ type: 'plan_mode.cancel', id });
+    this.agent.records.logRecord({ type: "plan_mode.cancel", id });
     this.agent.replayBuilder.push({
-      type: 'plan_updated',
+      type: "plan_updated",
       enabled: false,
     });
     this._isActive = false;
@@ -84,9 +88,9 @@ export class PlanMode {
   }
 
   exit(id?: string): void {
-    this.agent.records.logRecord({ type: 'plan_mode.exit', id });
+    this.agent.records.logRecord({ type: "plan_mode.exit", id });
     this.agent.replayBuilder.push({
-      type: 'plan_updated',
+      type: "plan_updated",
       enabled: false,
     });
     this._isActive = false;
@@ -105,7 +109,7 @@ export class PlanMode {
 
   async data(): Promise<PlanData> {
     if (!this._planId || !this._planFilePath) return null;
-    let content = '';
+    let content = "";
     try {
       content = await this.agent.kaos.readText(this._planFilePath);
     } catch (error) {
@@ -120,7 +124,7 @@ export class PlanMode {
 
   private async writeEmptyPlanFile(path: string): Promise<void> {
     await this.ensurePlanDirectory(path);
-    await this.agent.kaos.writeText(path, '');
+    await this.agent.kaos.writeText(path, "");
   }
 
   private async ensurePlanDirectory(path: string): Promise<void> {
@@ -133,14 +137,14 @@ export class PlanMode {
   private planFilePathFor(id: string): string {
     const plansDir =
       this.agent.homedir === undefined
-        ? join(this.agent.config.cwd, 'plan')
-        : join(this.agent.homedir, 'plans');
+        ? join(this.agent.config.cwd, "plan")
+        : join(this.agent.homedir, "plans");
     return join(plansDir, `${id}.md`);
   }
 }
 
 function isMissingFileError(error: unknown): boolean {
-  if (error === null || typeof error !== 'object') return false;
+  if (error === null || typeof error !== "object") return false;
   const code = (error as { readonly code?: unknown }).code;
-  return code === 'ENOENT';
+  return code === "ENOENT";
 }

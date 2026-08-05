@@ -1,11 +1,15 @@
-import { z } from 'zod';
+import { z } from "zod";
 
-import { isoDateTimeSchema } from './time';
+import { isoDateTimeSchema } from "./time";
 
-export const approvalDecisionSchema = z.enum(['approved', 'rejected', 'cancelled']);
+export const approvalDecisionSchema = z.enum([
+  "approved",
+  "rejected",
+  "cancelled",
+]);
 export type ApprovalDecision = z.infer<typeof approvalDecisionSchema>;
 
-export const approvalScopeSchema = z.enum(['session']);
+export const approvalScopeSchema = z.enum(["session"]);
 export type ApprovalScope = z.infer<typeof approvalScopeSchema>;
 
 export const approvalRequestSchema = z.object({

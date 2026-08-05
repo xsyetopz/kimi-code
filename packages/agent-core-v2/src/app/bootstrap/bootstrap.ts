@@ -17,22 +17,23 @@
  * to disk.
  */
 
-import { mkdirSync } from 'node:fs';
-import { homedir } from 'node:os';
+import { mkdirSync } from "node:fs";
+import { homedir } from "node:os";
 
-import { join } from 'pathe';
+import { join } from "pathe";
 
-import type { KimiHostIdentity } from '@moonshot-ai/kimi-code-oauth';
+import type { KimiHostIdentity } from "@moonshot-ai/kimi-code-oauth";
 
-import { SyncDescriptor } from '#/_base/di/descriptors';
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
-import { createAppScope, type Scope, type ScopeSeed } from '#/_base/di/scope';
+import { SyncDescriptor } from "#/_base/di/descriptors";
 import {
-  IFileSystemStorageService,
-} from '#/persistence/interface/storage';
-import { FileStorageService } from '#/persistence/backends/node-fs/fileStorageService';
-import { FileSkillDiscovery } from '#/app/skillCatalog/fileSkillDiscovery';
-import { ISkillDiscovery } from '#/app/skillCatalog/skillDiscovery';
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
+import { createAppScope, type Scope, type ScopeSeed } from "#/_base/di/scope";
+import { IFileSystemStorageService } from "#/persistence/interface/storage";
+import { FileStorageService } from "#/persistence/backends/node-fs/fileStorageService";
+import { FileSkillDiscovery } from "#/app/skillCatalog/fileSkillDiscovery";
+import { ISkillDiscovery } from "#/app/skillCatalog/skillDiscovery";
 
 /**
  * Host invocation arguments — process-level overrides the embedding host
@@ -97,17 +98,17 @@ export interface IBootstrapOptions {
 }
 
 export const IBootstrapOptions: ServiceIdentifier<IBootstrapOptions> =
-  createDecorator<IBootstrapOptions>('bootstrapOptions');
+  createDecorator<IBootstrapOptions>("bootstrapOptions");
 
 export type PersistenceScopeName =
-  | 'config'
-  | 'sessions'
-  | 'blobs'
-  | 'store'
-  | 'logs'
-  | 'cache'
-  | 'credentials'
-  | 'cron';
+  | "config"
+  | "sessions"
+  | "blobs"
+  | "store"
+  | "logs"
+  | "cache"
+  | "credentials"
+  | "cron";
 
 export interface IBootstrapService {
   readonly _serviceBrand: undefined;
@@ -132,7 +133,7 @@ export interface IBootstrapService {
 }
 
 export const IBootstrapService: ServiceIdentifier<IBootstrapService> =
-  createDecorator<IBootstrapService>('bootstrapService');
+  createDecorator<IBootstrapService>("bootstrapService");
 
 export interface BootstrapInput {
   readonly homeDir?: string;
@@ -149,11 +150,13 @@ export interface BootstrapInput {
   readonly args?: HostArgsInput;
 }
 
-export function resolveBootstrapOptions(input: BootstrapInput): IBootstrapOptions {
+export function resolveBootstrapOptions(
+  input: BootstrapInput,
+): IBootstrapOptions {
   const env = input.env ?? process.env;
   const osHomeDir = input.osHomeDir ?? homedir();
   const homeDir = resolveKimiHome(input.homeDir, env, osHomeDir);
-  const configPath = input.configPath ?? join(homeDir, 'config.toml');
+  const configPath = input.configPath ?? join(homeDir, "config.toml");
   return {
     homeDir,
     configPath,
@@ -168,17 +171,30 @@ export function resolveBootstrapOptions(input: BootstrapInput): IBootstrapOption
 }
 
 export function bootstrapSeed(input: BootstrapInput): ScopeSeed {
-  return [[IBootstrapOptions as ServiceIdentifier<unknown>, resolveBootstrapOptions(input)]];
+  return [
+    [
+      IBootstrapOptions as ServiceIdentifier<unknown>,
+      resolveBootstrapOptions(input),
+    ],
+  ];
 }
 
 export interface BootstrapResult {
   readonly app: Scope;
 }
 
-export function bootstrap(input: BootstrapInput, extraSeeds: ScopeSeed = []): BootstrapResult {
+export function bootstrap(
+  input: BootstrapInput,
+  extraSeeds: ScopeSeed = [],
+): BootstrapResult {
   const options = resolveBootstrapOptions(input);
   const app = createAppScope({
-    extra: [...bootstrapSeed(input), ...storageSeed(options), ...skillSeed(), ...extraSeeds],
+    extra: [
+      ...bootstrapSeed(input),
+      ...storageSeed(options),
+      ...skillSeed(),
+      ...extraSeeds,
+    ],
   });
   return { app };
 }
@@ -186,9 +202,7 @@ export function bootstrap(input: BootstrapInput, extraSeeds: ScopeSeed = []): Bo
 function storageSeed(options: IBootstrapOptions): ScopeSeed {
   const file = (): SyncDescriptor<IFileSystemStorageService> =>
     new SyncDescriptor(FileStorageService, [options.homeDir, 0o700, 0o600]);
-  return [
-    [IFileSystemStorageService as ServiceIdentifier<unknown>, file()],
-  ];
+  return [[IFileSystemStorageService as ServiceIdentifier<unknown>, file()]];
 }
 
 function skillSeed(): ScopeSeed {
@@ -205,14 +219,16 @@ export function resolveKimiHome(
   env: NodeJS.ProcessEnv = process.env,
   osHomeDir: string = homedir(),
 ): string {
-  return homeDir ?? env['KIMI_CODE_HOME'] ?? join(osHomeDir, '.kimi-code');
+  return homeDir ?? env["KIMI_CODE_HOME"] ?? join(osHomeDir, ".kimi-code");
 }
 
 export function resolveConfigPath(input: {
   readonly homeDir?: string;
   readonly configPath?: string;
 }): string {
-  return input.configPath ?? join(resolveKimiHome(input.homeDir), 'config.toml');
+  return (
+    input.configPath ?? join(resolveKimiHome(input.homeDir), "config.toml")
+  );
 }
 
 export function ensureKimiHome(homeDir: string): void {

@@ -7,10 +7,10 @@
  * wire), and readable by every agent in the session. Bound at Session scope.
  */
 
-import { createDecorator } from '#/_base/di/instantiation';
-import type { Event } from '#/_base/event';
+import { createDecorator } from "#/_base/di/instantiation";
+import type { Event } from "#/_base/event";
 
-import type { TodoItem } from './todoItem';
+import type { TodoItem } from "./todoItem";
 
 export interface ISessionTodoService {
   readonly _serviceBrand: undefined;
@@ -21,4 +21,5 @@ export interface ISessionTodoService {
   readonly onDidChange: Event<readonly TodoItem[]>;
 }
 
-export const ISessionTodoService = createDecorator<ISessionTodoService>('sessionTodoService');
+export const ISessionTodoService =
+  createDecorator<ISessionTodoService>("sessionTodoService");

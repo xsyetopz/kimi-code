@@ -13,7 +13,7 @@
 // Pure: consumes the same `WireEntry[]` the Wire tab already fetches, so the
 // Timeline view needs no extra server round-trip.
 
-import type { TokenUsage, WireEntry } from '../types';
+import type { TokenUsage, WireEntry } from "../types";
 
 export interface ContentSummary {
   textChars: number;
@@ -67,7 +67,7 @@ export interface StepNode {
 export interface TurnNode {
   index: number;
   /** 'prompt' | 'steer' — how the turn was kicked off. */
-  trigger: 'prompt' | 'steer';
+  trigger: "prompt" | "steer";
   promptLineNo: number;
   promptTime?: number;
   promptText: string;
@@ -112,7 +112,7 @@ export interface IdleGap {
   beforeLineNo: number;
   gapMs: number;
   /** Heuristic label for what the gap represents. */
-  kind: 'between_turns' | 'in_turn';
+  kind: "between_turns" | "in_turn";
 }
 
 export interface ConfigChange {
@@ -186,22 +186,29 @@ function contextFill(u: TokenUsage): number {
 }
 
 function firstText(input: readonly unknown[] | undefined): string {
-  if (!input) return '';
+  if (!input) return "";
   for (const part of input) {
-    if (part && typeof part === 'object' && (part as { type?: string }).type === 'text') {
-      return (part as { text?: string }).text ?? '';
+    if (
+      part &&
+      typeof part === "object" &&
+      (part as { type?: string }).type === "text"
+    ) {
+      return (part as { text?: string }).text ?? "";
     }
   }
-  return '';
+  return "";
 }
 
 function outputSize(output: unknown): number {
-  if (typeof output === 'string') return output.length;
+  if (typeof output === "string") return output.length;
   if (Array.isArray(output)) {
     let n = 0;
     for (const part of output) {
       const text = (part as { text?: string })?.text;
-      n += typeof text === 'string' ? text.length : JSON.stringify(part ?? null).length;
+      n +=
+        typeof text === "string"
+          ? text.length
+          : JSON.stringify(part ?? null).length;
     }
     return n;
   }
@@ -227,7 +234,13 @@ export function analyzeWire(entries: readonly WireEntry[]): Analysis {
   let prevTime: number | undefined;
   let prevLineNo = 0;
 
-  const startTurn = (trigger: 'prompt' | 'steer', lineNo: number, time: number | undefined, text: string, originKind: string | undefined): TurnNode => {
+  const startTurn = (
+    trigger: "prompt" | "steer",
+    lineNo: number,
+    time: number | undefined,
+    text: string,
+    originKind: string | undefined,
+  ): TurnNode => {
     const node: TurnNode = {
       index: turns.length,
       trigger,
@@ -261,7 +274,10 @@ export function analyzeWire(entries: readonly WireEntry[]): Analysis {
           gapMs: t - prevTime,
           // A gap straddling a turn boundary is "waiting for the user"; a gap
           // inside a turn is the agent/tool being slow.
-          kind: rec.type === 'turn.prompt' || rec.type === 'turn.steer' ? 'between_turns' : 'in_turn',
+          kind:
+            rec.type === "turn.prompt" || rec.type === "turn.steer"
+              ? "between_turns"
+              : "in_turn",
         });
       }
       prevTime = t;
@@ -269,17 +285,29 @@ export function analyzeWire(entries: readonly WireEntry[]): Analysis {
     }
 
     switch (rec.type) {
-      case 'turn.prompt':
-        current = startTurn('prompt', entry.lineNo, t, firstText(rec.input), rec.origin?.kind);
+      case "turn.prompt":
+        current = startTurn(
+          "prompt",
+          entry.lineNo,
+          t,
+          firstText(rec.input),
+          rec.origin?.kind,
+        );
         break;
-      case 'turn.steer':
-        current = startTurn('steer', entry.lineNo, t, firstText(rec.input), rec.origin?.kind);
+      case "turn.steer":
+        current = startTurn(
+          "steer",
+          entry.lineNo,
+          t,
+          firstText(rec.input),
+          rec.origin?.kind,
+        );
         break;
-      case 'turn.cancel':
+      case "turn.cancel":
         if (current) current.cancelled = true;
         break;
 
-      case 'context.update_token_count':
+      case "context.update_token_count":
         contextTokens = rec.tokenCount;
         contextSeries.push({
           lineNo: entry.lineNo,
@@ -290,30 +318,51 @@ export function analyzeWire(entries: readonly WireEntry[]): Analysis {
         });
         if (contextTokens > peakContext) peakContext = contextTokens;
         break;
-      case 'context.clear':
+      case "context.clear":
         contextTokens = 0;
         break;
-      case 'context.apply_compaction':
+      case "context.apply_compaction":
         contextTokens = rec.tokensAfter;
-        contextSeries.push({ lineNo: entry.lineNo, time: t, turnIndex: current?.index ?? -1, step: -1, contextTokens });
+        contextSeries.push({
+          lineNo: entry.lineNo,
+          time: t,
+          turnIndex: current?.index ?? -1,
+          step: -1,
+          contextTokens,
+        });
         if (contextTokens > peakContext) peakContext = contextTokens;
         break;
 
-      case 'config.update': {
+      case "config.update": {
         const changed: { field: string; value: string }[] = [];
-        if (rec.profileName !== undefined) changed.push({ field: 'profile', value: rec.profileName });
-        if (rec.modelAlias !== undefined) changed.push({ field: 'model', value: rec.modelAlias });
-        if (rec.thinkingEffort !== undefined) changed.push({ field: 'thinking', value: rec.thinkingEffort });
-        if (rec.cwd !== undefined) changed.push({ field: 'cwd', value: rec.cwd });
-        if (rec.systemPrompt !== undefined) changed.push({ field: 'systemPrompt', value: `${rec.systemPrompt.length} chars` });
-        if (changed.length > 0) configChanges.push({ lineNo: entry.lineNo, time: t, changed });
+        if (rec.profileName !== undefined)
+          changed.push({ field: "profile", value: rec.profileName });
+        if (rec.modelAlias !== undefined)
+          changed.push({ field: "model", value: rec.modelAlias });
+        if (rec.thinkingEffort !== undefined)
+          changed.push({ field: "thinking", value: rec.thinkingEffort });
+        if (rec.cwd !== undefined)
+          changed.push({ field: "cwd", value: rec.cwd });
+        if (rec.systemPrompt !== undefined)
+          changed.push({
+            field: "systemPrompt",
+            value: `${rec.systemPrompt.length} chars`,
+          });
+        if (changed.length > 0)
+          configChanges.push({ lineNo: entry.lineNo, time: t, changed });
         break;
       }
 
-      case 'context.append_loop_event': {
+      case "context.append_loop_event": {
         const ev = rec.event;
-        if (ev.type === 'step.begin') {
-          current ??= startTurn('prompt', entry.lineNo, t, '(no prompt record)', undefined);
+        if (ev.type === "step.begin") {
+          current ??= startTurn(
+            "prompt",
+            entry.lineNo,
+            t,
+            "(no prompt record)",
+            undefined,
+          );
           const step: StepNode = {
             uuid: ev.uuid,
             step: ev.step,
@@ -326,7 +375,7 @@ export function analyzeWire(entries: readonly WireEntry[]): Analysis {
           stepByUuid.set(ev.uuid, step);
           current.steps.push(step);
           current.startTime ??= t;
-        } else if (ev.type === 'step.end') {
+        } else if (ev.type === "step.end") {
           const step = stepByUuid.get(ev.uuid);
           if (step) {
             step.endLineNo = entry.lineNo;
@@ -338,12 +387,13 @@ export function analyzeWire(entries: readonly WireEntry[]): Analysis {
             step.llmServerFirstTokenMs = ev.llmServerFirstTokenMs;
             step.llmServerDecodeMs = ev.llmServerDecodeMs;
             step.llmClientConsumeMs = ev.llmClientConsumeMs;
-            if (step.beginTime !== undefined && t !== undefined) step.durationMs = t - step.beginTime;
+            if (step.beginTime !== undefined && t !== undefined)
+              step.durationMs = t - step.beginTime;
             // Steps don't carry a generic 'error' finish reason (errors are
             // thrown, not recorded). 'filtered' means the provider blocked the
             // response — the closest persisted step-level failure signal.
-            step.isError = ev.finishReason === 'filtered';
-            if ('usage' in ev && ev.usage !== undefined) {
+            step.isError = ev.finishReason === "filtered";
+            if ("usage" in ev && ev.usage !== undefined) {
               step.usage = ev.usage;
               if (current) addUsage(current.tokens, ev.usage);
               addUsage(cache, ev.usage);
@@ -367,7 +417,7 @@ export function analyzeWire(entries: readonly WireEntry[]): Analysis {
             }
             if (current && t !== undefined) current.endTime = t;
           }
-        } else if (ev.type === 'tool.call') {
+        } else if (ev.type === "tool.call") {
           const node: ToolCallNode = {
             callLineNo: entry.lineNo,
             toolCallId: ev.toolCallId,
@@ -377,17 +427,19 @@ export function analyzeWire(entries: readonly WireEntry[]): Analysis {
           };
           toolByCallId.set(ev.toolCallId, node);
           const step = stepByUuid.get(ev.stepUuid);
-          (step ? step.toolCalls : current?.steps.at(-1)?.toolCalls)?.push(node);
+          (step ? step.toolCalls : current?.steps.at(-1)?.toolCalls)?.push(
+            node,
+          );
           if (current) current.toolCallCount += 1;
-        } else if (ev.type === 'content.part') {
+        } else if (ev.type === "content.part") {
           const step = stepByUuid.get(ev.stepUuid);
           const part = ev.part as { type?: string; text?: string } | undefined;
           if (step && part) {
-            const chars = typeof part.text === 'string' ? part.text.length : 0;
-            if (part.type === 'think') step.content.thinkChars += chars;
+            const chars = typeof part.text === "string" ? part.text.length : 0;
+            if (part.type === "think") step.content.thinkChars += chars;
             else step.content.textChars += chars;
           }
-        } else if (ev.type === 'tool.result') {
+        } else if (ev.type === "tool.result") {
           const node = toolByCallId.get(ev.toolCallId);
           const isError = ev.result.isError === true;
           const truncated = ev.result.truncated === true;
@@ -399,7 +451,8 @@ export function analyzeWire(entries: readonly WireEntry[]): Analysis {
             node.truncated = truncated;
             node.outputBytes = bytes;
             node.resultMessage = ev.result.message;
-            if (node.callTime !== undefined && t !== undefined) node.durationMs = t - node.callTime;
+            if (node.callTime !== undefined && t !== undefined)
+              node.durationMs = t - node.callTime;
             if (isError && current) current.toolErrorCount += 1;
             recordToolStat(toolStatMap, node);
           }
@@ -417,11 +470,19 @@ export function analyzeWire(entries: readonly WireEntry[]): Analysis {
     if (node.resultLineNo === undefined) recordToolStat(toolStatMap, node);
   }
 
-  const summary = summarize(turns, contextTokens, peakContext, firstTime, lastTime);
+  const summary = summarize(
+    turns,
+    contextTokens,
+    peakContext,
+    firstTime,
+    lastTime,
+  );
   for (const s of toolStatMap.values()) {
     s.avgMs = s.timedCount > 0 ? s.totalMs / s.timedCount : null;
   }
-  const toolStats = [...toolStatMap.values()].toSorted((a, b) => b.count - a.count);
+  const toolStats = [...toolStatMap.values()].toSorted(
+    (a, b) => b.count - a.count,
+  );
   const sortedGaps = idleGaps.toSorted((a, b) => b.gapMs - a.gapMs);
 
   return {
@@ -438,7 +499,17 @@ export function analyzeWire(entries: readonly WireEntry[]): Analysis {
 function recordToolStat(map: Map<string, ToolStat>, node: ToolCallNode): void {
   let s = map.get(node.name);
   if (!s) {
-    s = { name: node.name, count: 0, errorCount: 0, truncatedCount: 0, timedCount: 0, totalMs: 0, avgMs: null, maxMs: null, totalOutputBytes: 0 };
+    s = {
+      name: node.name,
+      count: 0,
+      errorCount: 0,
+      truncatedCount: 0,
+      timedCount: 0,
+      totalMs: 0,
+      avgMs: null,
+      maxMs: null,
+      totalOutputBytes: 0,
+    };
     map.set(node.name, s);
   }
   s.count += 1;
@@ -448,7 +519,8 @@ function recordToolStat(map: Map<string, ToolStat>, node: ToolCallNode): void {
   if (node.durationMs !== undefined) {
     s.timedCount += 1;
     s.totalMs += node.durationMs;
-    s.maxMs = s.maxMs === null ? node.durationMs : Math.max(s.maxMs, node.durationMs);
+    s.maxMs =
+      s.maxMs === null ? node.durationMs : Math.max(s.maxMs, node.durationMs);
   }
 }
 
@@ -475,7 +547,8 @@ function summarize(
     totalTokens += usageTotal(turn.tokens);
     activeMs += turn.durationMs ?? 0;
     for (const step of turn.steps) {
-      for (const tc of step.toolCalls) if (tc.truncated) truncatedToolCount += 1;
+      for (const tc of step.toolCalls)
+        if (tc.truncated) truncatedToolCount += 1;
     }
   }
   return {
@@ -487,7 +560,10 @@ function summarize(
     totalTokens,
     contextTokens,
     peakContextTokens: peakContext,
-    wallClockMs: firstTime !== undefined && lastTime !== undefined ? lastTime - firstTime : null,
+    wallClockMs:
+      firstTime !== undefined && lastTime !== undefined
+        ? lastTime - firstTime
+        : null,
     activeMs,
   };
 }

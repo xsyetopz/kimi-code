@@ -1,4 +1,4 @@
-import type { AgentReplayRecord } from '../../rpc/resumed';
+import type { AgentReplayRecord } from "../../rpc/resumed";
 
 /**
  * User-turn boundary detection over an agent's replay records.
@@ -17,35 +17,37 @@ import type { AgentReplayRecord } from '../../rpc/resumed';
  * Source of truth for turn-boundary detection; the TUI mirrors this through
  * the SDK re-export instead of keeping its own predicate.
  */
-export function isAgentReplayUserTurnRecord(record: AgentReplayRecord): boolean {
-  if (record.type !== 'message') return false;
+export function isAgentReplayUserTurnRecord(
+  record: AgentReplayRecord,
+): boolean {
+  if (record.type !== "message") return false;
   const { message } = record;
-  if (message.role !== 'user') return false;
+  if (message.role !== "user") return false;
   switch (message.origin?.kind) {
     case undefined:
-    case 'user':
+    case "user":
       return true;
-    case 'skill_activation':
-      return message.origin.trigger === 'user-slash';
-    case 'plugin_command':
-      return message.origin.trigger === 'user-slash';
-    case 'shell_command':
+    case "skill_activation":
+      return message.origin.trigger === "user-slash";
+    case "plugin_command":
+      return message.origin.trigger === "user-slash";
+    case "shell_command":
       // A `!` command's input is a user-turn anchor; its output is not.
-      return message.origin.phase === 'input';
-    case 'background_task':
-    case 'compaction_summary':
-    case 'cron_job':
-    case 'cron_missed':
-    case 'hook_result':
-    case 'injection':
-    case 'retry':
+      return message.origin.phase === "input";
+    case "background_task":
+    case "compaction_summary":
+    case "cron_job":
+    case "cron_missed":
+    case "hook_result":
+    case "injection":
+    case "retry":
       return false;
-    case 'system_trigger':
+    case "system_trigger":
       // The goal driver fires one synthetic continuation prompt per goal turn
       // (agent/turn/index.ts GOAL_CONTINUATION_ORIGIN) — real rounds of work
       // the goal system itself counts as turns. All other system triggers are
       // reminders that continue the current turn.
-      return message.origin.name === 'goal_continuation';
+      return message.origin.name === "goal_continuation";
   }
 }
 

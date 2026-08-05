@@ -4,10 +4,10 @@
  * the pattern stays consistent across command-triggered panels.
  */
 
-import type { Component } from '@moonshot-ai/pi-tui';
-import { truncateToWidth, visibleWidth } from '@moonshot-ai/pi-tui';
-import { formatDuration } from '@moonshot-ai/kimi-code-oauth';
-import type { SessionUsage, TokenUsage } from '@moonshot-ai/kimi-code-sdk';
+import type { Component } from "@moonshot-ai/pi-tui";
+import { truncateToWidth, visibleWidth } from "@moonshot-ai/pi-tui";
+import { formatDuration } from "@moonshot-ai/kimi-code-oauth";
+import type { SessionUsage, TokenUsage } from "@moonshot-ai/kimi-code-sdk";
 
 import {
   formatTokenCount,
@@ -15,9 +15,9 @@ import {
   renderProgressBar,
   safeUsageRatio,
   usagePercent,
-} from '#/utils/usage/usage-format';
-import { currentTheme } from '#/tui/theme';
-import type { ColorToken } from '#/tui/theme';
+} from "#/utils/usage/usage-format";
+import { currentTheme } from "#/tui/theme";
+import type { ColorToken } from "#/tui/theme";
 
 const LEFT_MARGIN = 2;
 const SIDE_PADDING = 1;
@@ -27,7 +27,7 @@ type Colorize = (text: string) => string;
 
 export interface ManagedUsageWindow {
   readonly duration: number;
-  readonly unit: 'minute' | 'hour' | 'day' | 'week';
+  readonly unit: "minute" | "hour" | "day" | "week";
 }
 
 export interface ManagedUsageRow {
@@ -41,10 +41,10 @@ export interface ManagedUsageRow {
 function usageRowLabel(row: ManagedUsageRow): string {
   const window = row.window;
   if (window !== undefined) {
-    if (window.unit === 'week') return 'Weekly limit';
-    return `${String(window.duration)}${window.unit[0] ?? ''} limit`;
+    if (window.unit === "week") return "Weekly limit";
+    return `${String(window.duration)}${window.unit[0] ?? ""} limit`;
   }
-  return row.name ?? 'Limit';
+  return row.name ?? "Limit";
 }
 
 function usageRowResetHint(row: ManagedUsageRow): string | undefined {
@@ -53,7 +53,7 @@ function usageRowResetHint(row: ManagedUsageRow): string | undefined {
   const parsed = Date.parse(resetAt);
   if (!Number.isFinite(parsed)) return undefined;
   const diffSec = Math.floor((parsed - Date.now()) / 1000);
-  if (diffSec <= 0) return 'reset';
+  if (diffSec <= 0) return "reset";
   return `resets in ${formatDuration(diffSec)}`;
 }
 
@@ -88,7 +88,9 @@ export interface ManagedUsageReportLineOptions {
 }
 
 function usageNumber(value: unknown): number {
-  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : 0;
+  return typeof value === "number" && Number.isFinite(value) && value > 0
+    ? value
+    : 0;
 }
 
 function usageInputTotal(usage: TokenUsage): number {
@@ -107,10 +109,11 @@ function buildSessionUsageSection(
   errorStyle: Colorize,
 ): string[] {
   if (error !== undefined) return [errorStyle(`  ${error}`)];
-  const byModel = (usage as { readonly byModel?: Record<string, TokenUsage> } | undefined)
-    ?.byModel;
+  const byModel = (
+    usage as { readonly byModel?: Record<string, TokenUsage> } | undefined
+  )?.byModel;
   const entries = Object.entries(byModel ?? {});
-  if (entries.length === 0) return [muted('  No token usage recorded yet.')];
+  if (entries.length === 0) return [muted("  No token usage recorded yet.")];
 
   const lines: string[] = [];
   let totalInput = 0;
@@ -128,7 +131,7 @@ function buildSessionUsageSection(
   }
   if (entries.length > 1) {
     lines.push(
-      `  ${muted('total')}  input ${value(formatTokenCount(totalInput))}  output ${value(
+      `  ${muted("total")}  input ${value(formatTokenCount(totalInput))}  output ${value(
         formatTokenCount(totalOutput),
       )}  total ${value(formatTokenCount(totalInput + totalOutput))}`,
     );
@@ -144,11 +147,12 @@ function buildManagedUsageSection(
   muted: Colorize,
   errorStyle: Colorize,
 ): string[] {
-  if (error !== undefined) return [accent('Plan usage'), errorStyle(`  ${error}`)];
+  if (error !== undefined)
+    return [accent("Plan usage"), errorStyle(`  ${error}`)];
   if (usage === undefined) return [];
   const { summary, limits } = usage;
   if (summary === null && limits.length === 0) {
-    return [accent('Plan usage'), muted('  No usage data available.')];
+    return [accent("Plan usage"), muted("  No usage data available.")];
   }
 
   const rows: ManagedUsageRow[] = [];
@@ -158,35 +162,44 @@ function buildManagedUsageSection(
     r.limit > 0 ? Math.max(0, Math.min(r.used / r.limit, 1)) : 0;
   const labels = rows.map((r) => usageRowLabel(r));
   const labelWidth = Math.max(10, ...labels.map((l) => l.length));
-  const pctWidth = Math.max(...rows.map((r) => `${Math.round(usedRatio(r) * 100)}% used`.length));
+  const pctWidth = Math.max(
+    ...rows.map((r) => `${Math.round(usedRatio(r) * 100)}% used`.length),
+  );
 
-  const out: string[] = [accent('Plan usage')];
+  const out: string[] = [accent("Plan usage")];
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i]!;
     const ratioUsed = usedRatio(row);
     const bar = renderProgressBar(ratioUsed, 20);
     const pct = `${Math.round(ratioUsed * 100)}% used`;
-    const barColoured = currentTheme.fg(severityColor(ratioSeverity(ratioUsed)), bar);
-    const label = labels[i]!.padEnd(labelWidth, ' ');
+    const barColoured = currentTheme.fg(
+      severityColor(ratioSeverity(ratioUsed)),
+      bar,
+    );
+    const label = labels[i]!.padEnd(labelWidth, " ");
     const resetHint = usageRowResetHint(row);
-    const resetStr = resetHint !== undefined ? `  ${muted(resetHint)}` : '';
-    out.push(`  ${muted(label)}  ${barColoured}  ${value(pct.padEnd(pctWidth, ' '))}${resetStr}`);
+    const resetStr = resetHint !== undefined ? `  ${muted(resetHint)}` : "";
+    out.push(
+      `  ${muted(label)}  ${barColoured}  ${value(pct.padEnd(pctWidth, " "))}${resetStr}`,
+    );
   }
   return out;
 }
 
-function severityColor(sev: 'ok' | 'warn' | 'danger'): 'success' | 'warning' | 'error' {
-  return sev === 'danger' ? 'error' : sev === 'warn' ? 'warning' : 'success';
+function severityColor(
+  sev: "ok" | "warn" | "danger",
+): "success" | "warning" | "error" {
+  return sev === "danger" ? "error" : sev === "warn" ? "warning" : "success";
 }
 
 function currencySymbol(currency: string): string {
   switch (currency.toUpperCase()) {
-    case 'CNY':
-      return '¥';
-    case 'USD':
-      return '$';
+    case "CNY":
+      return "¥";
+    case "USD":
+      return "$";
     default:
-      return '';
+      return "";
   }
 }
 
@@ -201,7 +214,7 @@ function formatCurrencyParts(cents: number, currency: string): CurrencyParts {
   const formatted = main.toFixed(2);
   return symbol.length > 0
     ? { symbol, number: formatted }
-    : { symbol: '', number: `${formatted} ${currency}` };
+    : { symbol: "", number: `${formatted} ${currency}` };
 }
 
 export function buildExtraUsageSection(
@@ -213,28 +226,41 @@ export function buildExtraUsageSection(
   if (extraUsage === undefined || extraUsage === null) return [];
 
   const hasMonthlyLimit =
-    extraUsage.monthlyChargeLimitEnabled && extraUsage.monthlyChargeLimitCents > 0;
+    extraUsage.monthlyChargeLimitEnabled &&
+    extraUsage.monthlyChargeLimitCents > 0;
 
-  const balance = formatCurrencyParts(extraUsage.balanceCents, extraUsage.currency);
-  const used = formatCurrencyParts(extraUsage.monthlyUsedCents, extraUsage.currency);
+  const balance = formatCurrencyParts(
+    extraUsage.balanceCents,
+    extraUsage.currency,
+  );
+  const used = formatCurrencyParts(
+    extraUsage.monthlyUsedCents,
+    extraUsage.currency,
+  );
   const rows: Array<{ label: string; symbol: string; number: string }> = [];
   let barLine: string | null = null;
 
   if (hasMonthlyLimit) {
     const ratio = Math.max(
       0,
-      Math.min(extraUsage.monthlyUsedCents / extraUsage.monthlyChargeLimitCents, 1),
+      Math.min(
+        extraUsage.monthlyUsedCents / extraUsage.monthlyChargeLimitCents,
+        1,
+      ),
     );
     const bar = renderProgressBar(ratio, 20);
     barLine = `  ${currentTheme.fg(severityColor(ratioSeverity(ratio)), bar)}`;
-    const limit = formatCurrencyParts(extraUsage.monthlyChargeLimitCents, extraUsage.currency);
-    rows.push({ label: 'Used this month', ...used });
-    rows.push({ label: 'Monthly limit', ...limit });
-    rows.push({ label: 'Balance', ...balance });
+    const limit = formatCurrencyParts(
+      extraUsage.monthlyChargeLimitCents,
+      extraUsage.currency,
+    );
+    rows.push({ label: "Used this month", ...used });
+    rows.push({ label: "Monthly limit", ...limit });
+    rows.push({ label: "Balance", ...balance });
   } else {
-    rows.push({ label: 'Used this month', ...used });
-    rows.push({ label: 'Monthly limit', symbol: '', number: 'Unlimited' });
-    rows.push({ label: 'Balance', ...balance });
+    rows.push({ label: "Used this month", ...used });
+    rows.push({ label: "Monthly limit", symbol: "", number: "Unlimited" });
+    rows.push({ label: "Balance", ...balance });
   }
 
   // `Used this month` is the longest label; size the column to the widest label
@@ -246,25 +272,30 @@ export function buildExtraUsageSection(
   // column — otherwise money values get padded with stray spaces.
   const numberWidth = Math.max(
     0,
-    ...rows.filter((r) => r.symbol.length > 0).map((r) => visibleWidth(r.number)),
+    ...rows
+      .filter((r) => r.symbol.length > 0)
+      .map((r) => visibleWidth(r.number)),
   );
   const row = (label: string, symbol: string, number: string): string => {
-    const cell = symbol.length > 0 ? symbol + number.padStart(numberWidth, ' ') : number;
-    return `  ${muted(label.padEnd(labelWidth, ' '))}  ${value(cell)}`;
+    const cell =
+      symbol.length > 0 ? symbol + number.padStart(numberWidth, " ") : number;
+    return `  ${muted(label.padEnd(labelWidth, " "))}  ${value(cell)}`;
   };
 
-  const lines: string[] = [accent('Extra Usage')];
+  const lines: string[] = [accent("Extra Usage")];
   if (barLine !== null) lines.push(barLine);
   for (const r of rows) lines.push(row(r.label, r.symbol, r.number));
 
   return lines;
 }
 
-export function buildManagedUsageReportLines(options: ManagedUsageReportLineOptions): string[] {
-  const accent = (text: string) => currentTheme.boldFg('primary', text);
-  const value = (text: string) => currentTheme.fg('text', text);
-  const muted = (text: string) => currentTheme.fg('textDim', text);
-  const errorStyle = (text: string) => currentTheme.fg('error', text);
+export function buildManagedUsageReportLines(
+  options: ManagedUsageReportLineOptions,
+): string[] {
+  const accent = (text: string) => currentTheme.boldFg("primary", text);
+  const value = (text: string) => currentTheme.fg("text", text);
+  const muted = (text: string) => currentTheme.fg("textDim", text);
+  const errorStyle = (text: string) => currentTheme.fg("error", text);
 
   return buildManagedUsageSection(
     options.managedUsage,
@@ -277,13 +308,13 @@ export function buildManagedUsageReportLines(options: ManagedUsageReportLineOpti
 }
 
 export function buildUsageReportLines(options: UsageReportOptions): string[] {
-  const accent = (text: string) => currentTheme.boldFg('primary', text);
-  const value = (text: string) => currentTheme.fg('text', text);
-  const muted = (text: string) => currentTheme.fg('textDim', text);
-  const errorStyle = (text: string) => currentTheme.fg('error', text);
+  const accent = (text: string) => currentTheme.boldFg("primary", text);
+  const value = (text: string) => currentTheme.fg("text", text);
+  const muted = (text: string) => currentTheme.fg("textDim", text);
+  const errorStyle = (text: string) => currentTheme.fg("error", text);
 
   const lines: string[] = [
-    accent('Session usage'),
+    accent("Session usage"),
     ...buildSessionUsageSection(
       options.sessionUsage,
       options.sessionUsageError,
@@ -297,11 +328,14 @@ export function buildUsageReportLines(options: UsageReportOptions): string[] {
     const ratio = safeUsageRatio(options.contextUsage);
     const bar = renderProgressBar(ratio, 20);
     const pct = `${String(usagePercent(options.contextTokens, options.maxContextTokens))}%`;
-    const barColoured = currentTheme.fg(severityColor(ratioSeverity(ratio)), bar);
-    lines.push('');
-    lines.push(accent('Context window'));
+    const barColoured = currentTheme.fg(
+      severityColor(ratioSeverity(ratio)),
+      bar,
+    );
+    lines.push("");
+    lines.push(accent("Context window"));
     lines.push(
-      `  ${barColoured}  ${value(pct.padStart(6, ' '))}  ` +
+      `  ${barColoured}  ${value(pct.padStart(6, " "))}  ` +
         muted(
           `(${formatTokenCount(options.contextTokens)} / ${formatTokenCount(
             options.maxContextTokens,
@@ -315,7 +349,7 @@ export function buildUsageReportLines(options: UsageReportOptions): string[] {
     managedUsageError: options.managedUsageError,
   });
   if (managedSection.length > 0) {
-    lines.push('');
+    lines.push("");
     lines.push(...managedSection);
   }
 
@@ -326,7 +360,7 @@ export function buildUsageReportLines(options: UsageReportOptions): string[] {
     muted,
   );
   if (extraSection.length > 0) {
-    lines.push('');
+    lines.push("");
     lines.push(...extraSection);
   }
 
@@ -340,7 +374,7 @@ export class UsagePanelComponent implements Component {
   constructor(
     private readonly buildLines: () => readonly string[],
     private readonly borderToken: ColorToken,
-    private readonly title: string = ' Usage ',
+    private readonly title: string = " Usage ",
   ) {
     this.lines = buildLines();
   }
@@ -353,38 +387,59 @@ export class UsagePanelComponent implements Component {
 
   render(width: number): string[] {
     const safeWidth = Math.max(0, width);
-    if (safeWidth <= 0) return [''];
+    if (safeWidth <= 0) return [""];
 
     const paint = (s: string): string => currentTheme.fg(this.borderToken, s);
     const availableInterior = safeWidth - BOX_OVERHEAD;
     if (availableInterior < 1) {
       return [
-        truncateToWidth(this.title.trim(), safeWidth, '…'),
-        ...this.lines.map((line) => truncateToWidth(line, safeWidth, '…')),
+        truncateToWidth(this.title.trim(), safeWidth, "…"),
+        ...this.lines.map((line) => truncateToWidth(line, safeWidth, "…")),
       ];
     }
 
-    const indent = ' '.repeat(LEFT_MARGIN);
-    const longestLine = this.lines.reduce((max, line) => Math.max(max, visibleWidth(line)), 0);
+    const indent = " ".repeat(LEFT_MARGIN);
+    const longestLine = this.lines.reduce(
+      (max, line) => Math.max(max, visibleWidth(line)),
+      0,
+    );
     const contentWidth = Math.max(
       1,
-      Math.min(availableInterior, Math.max(longestLine, visibleWidth(this.title))),
+      Math.min(
+        availableInterior,
+        Math.max(longestLine, visibleWidth(this.title)),
+      ),
     );
     const horzLen = contentWidth + 2 * SIDE_PADDING;
-    const title = truncateToWidth(this.title, horzLen, '…');
+    const title = truncateToWidth(this.title, horzLen, "…");
 
     const trailingDashLen = Math.max(0, horzLen - visibleWidth(title));
     const top =
-      indent + paint('╭') + paint(title) + paint('─'.repeat(trailingDashLen)) + paint('╮');
-    const bottom = indent + paint('╰' + '─'.repeat(horzLen) + '╯');
+      indent +
+      paint("╭") +
+      paint(title) +
+      paint("─".repeat(trailingDashLen)) +
+      paint("╮");
+    const bottom = indent + paint("╰" + "─".repeat(horzLen) + "╯");
 
     const out: string[] = [top];
     for (const line of this.lines) {
-      const clipped = visibleWidth(line) > contentWidth ? truncateToWidth(line, contentWidth) : line;
+      const clipped =
+        visibleWidth(line) > contentWidth
+          ? truncateToWidth(line, contentWidth)
+          : line;
       const pad = Math.max(0, contentWidth - visibleWidth(clipped));
-      out.push(indent + paint('│') + ' ' + clipped + ' '.repeat(pad) + ' ' + paint('│'));
+      out.push(
+        indent +
+          paint("│") +
+          " " +
+          clipped +
+          " ".repeat(pad) +
+          " " +
+          paint("│"),
+      );
     }
     out.push(bottom);
-    return out.map((line) => truncateToWidth(line, safeWidth, '…'));
+    return out.map((line) => truncateToWidth(line, safeWidth, "…"));
   }
 }

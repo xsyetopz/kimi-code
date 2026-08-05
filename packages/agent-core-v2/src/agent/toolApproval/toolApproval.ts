@@ -7,16 +7,16 @@
  * resolves ask continuations. Bound at Agent scope.
  */
 
-import { createDecorator } from '#/_base/di/instantiation';
+import { createDecorator } from "#/_base/di/instantiation";
 import type {
   ApprovalResponse,
   PermissionPolicyResolution,
   PermissionPolicyResult,
-} from '#/agent/permissionPolicy/types';
+} from "#/agent/permissionPolicy/types";
 import type {
   BeforeExecuteDecision,
   ResolvedToolExecutionHookContext,
-} from '#/agent/toolExecutor/toolHooks';
+} from "#/agent/toolExecutor/toolHooks";
 
 export interface IAgentToolApprovalService {
   readonly _serviceBrand: undefined;
@@ -29,7 +29,7 @@ export interface IAgentToolApprovalService {
 
   requestToolApproval(
     context: ResolvedToolExecutionHookContext,
-    result: Extract<PermissionPolicyResult, { kind: 'ask' }>,
+    result: Extract<PermissionPolicyResult, { kind: "ask" }>,
     origin: string,
   ): Promise<BeforeExecuteDecision | undefined>;
 
@@ -37,10 +37,9 @@ export interface IAgentToolApprovalService {
 
   formatApprovalRejectionMessage(
     toolName: string,
-    result: Pick<ApprovalResponse, 'decision' | 'feedback'>,
+    result: Pick<ApprovalResponse, "decision" | "feedback">,
   ): string;
 }
 
-export const IAgentToolApprovalService = createDecorator<IAgentToolApprovalService>(
-  'agentToolApprovalService',
-);
+export const IAgentToolApprovalService =
+  createDecorator<IAgentToolApprovalService>("agentToolApprovalService");

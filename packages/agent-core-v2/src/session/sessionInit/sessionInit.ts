@@ -8,7 +8,10 @@
  * session's main agent.
  */
 
-import { createDecorator, type ServiceIdentifier } from '#/_base/di/instantiation';
+import {
+  createDecorator,
+  type ServiceIdentifier,
+} from "#/_base/di/instantiation";
 
 export interface ISessionInitService {
   readonly _serviceBrand: undefined;
@@ -19,4 +22,4 @@ export interface ISessionInitService {
 }
 
 export const ISessionInitService: ServiceIdentifier<ISessionInitService> =
-  createDecorator<ISessionInitService>('sessionInitService');
+  createDecorator<ISessionInitService>("sessionInitService");

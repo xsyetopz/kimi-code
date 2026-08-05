@@ -11,5 +11,8 @@
  * It is meant for tooling and tests, not for runtime import by a wire-only
  * client.
  */
-export type { ChannelDescriptor, ChannelMethodDescriptor } from './transport/channelRegistry';
-export type { IChannel, ScopeKind } from './transport/channel';
+export type {
+  ChannelDescriptor,
+  ChannelMethodDescriptor,
+} from "./transport/channelRegistry";
+export type { IChannel, ScopeKind } from "./transport/channel";

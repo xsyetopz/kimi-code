@@ -5,7 +5,7 @@
  * overload (sustained 429s) before a turn fails.
  */
 
-import { abortable } from '#/_base/utils/abort';
+import { abortable } from "#/_base/utils/abort";
 
 export const DEFAULT_MAX_RETRY_ATTEMPTS = 10;
 
@@ -24,19 +24,25 @@ export function retryBackoffDelays(maxAttempts: number): number[] {
   const count = Math.max(maxAttempts - 1, 0);
   const delays: number[] = [];
   for (let i = 0; i < count; i += 1) {
-    const base = Math.min(BASE_DELAY_MS * Math.pow(RETRY_FACTOR, i), MAX_DELAY_MS);
+    const base = Math.min(
+      BASE_DELAY_MS * Math.pow(RETRY_FACTOR, i),
+      MAX_DELAY_MS,
+    );
     delays.push(base + Math.random() * JITTER_FACTOR * base);
   }
   return delays;
 }
 
 export function readRetryAfterMs(error: unknown): number | null {
-  if (typeof error !== 'object' || error === null) return null;
+  if (typeof error !== "object" || error === null) return null;
   const value = (error as { retryAfterMs?: unknown }).retryAfterMs;
-  return typeof value === 'number' && value > 0 ? value : null;
+  return typeof value === "number" && value > 0 ? value : null;
 }
 
-export async function sleepForRetry(delayMs: number, signal?: AbortSignal): Promise<void> {
+export async function sleepForRetry(
+  delayMs: number,
+  signal?: AbortSignal,
+): Promise<void> {
   signal?.throwIfAborted();
   const sleepPromise = sleep(delayMs);
   if (signal === undefined) {
@@ -61,13 +67,13 @@ function sleep(delayMs: number): Promise<void> {
 }
 
 function maybeStatusCode(error: unknown): number | undefined {
-  if (typeof error !== 'object' || error === null) return undefined;
+  if (typeof error !== "object" || error === null) return undefined;
   const statusCode = (error as { statusCode?: unknown }).statusCode;
-  if (typeof statusCode === 'number') return statusCode;
+  if (typeof statusCode === "number") return statusCode;
   const details = (error as { details?: unknown }).details;
-  if (details !== null && typeof details === 'object') {
+  if (details !== null && typeof details === "object") {
     const detailsStatus = (details as { statusCode?: unknown }).statusCode;
-    if (typeof detailsStatus === 'number') return detailsStatus;
+    if (typeof detailsStatus === "number") return detailsStatus;
   }
   return undefined;
 }

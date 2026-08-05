@@ -4,11 +4,14 @@
 // shard's db.lock, with a lease timer refreshing the lock timestamp) or
 // reader mode (read-only, no lock, coexisting with another process's writer).
 
-import { MiniDb } from '../index.js';
-import type { OpenOptions } from '../index.js';
+import { MiniDb } from "../index.js";
+import type { OpenOptions } from "../index.js";
 
 /** MiniDb options for a shard open; everything except the identity fields. */
-export type ShardOpenOptions = Omit<OpenOptions, 'dir' | 'readOnly' | 'onLockFail'>;
+export type ShardOpenOptions = Omit<
+  OpenOptions,
+  "dir" | "readOnly" | "onLockFail"
+>;
 
 export class ShardHandle {
   private leaseTimer: NodeJS.Timeout | null = null;
@@ -44,13 +47,17 @@ export class ShardHandle {
   /** Open the shard read-only. Does not touch db.lock, never fsyncs, and
    *  never auto-compacts (a read-only open must not rewrite a live writer's
    *  directory). */
-  static async openReader(shardId: number, dir: string, opts: ShardOpenOptions): Promise<ShardHandle> {
+  static async openReader(
+    shardId: number,
+    dir: string,
+    opts: ShardOpenOptions,
+  ): Promise<ShardHandle> {
     const db = await MiniDb.open({
       ...opts,
       dir,
       readOnly: true,
       autoCompact: false,
-      fsyncPolicy: 'no',
+      fsyncPolicy: "no",
     });
     return new ShardHandle(shardId, dir, db as MiniDb<unknown>, false);
   }

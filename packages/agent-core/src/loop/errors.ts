@@ -2,9 +2,12 @@
  * Loop-local error helpers.
  */
 
-import { ErrorCodes, KimiError, isKimiError } from '#/errors';
+import { ErrorCodes, KimiError, isKimiError } from "#/errors";
 
-export function createMaxStepsExceededError(maxSteps: number, message?: string): KimiError {
+export function createMaxStepsExceededError(
+  maxSteps: number,
+  message?: string,
+): KimiError {
   return new KimiError(
     ErrorCodes.LOOP_MAX_STEPS_EXCEEDED,
     message ??
@@ -16,12 +19,14 @@ export function createMaxStepsExceededError(maxSteps: number, message?: string):
 }
 
 export function isMaxStepsExceededError(error: unknown): boolean {
-  return isKimiError(error) && error.code === ErrorCodes.LOOP_MAX_STEPS_EXCEEDED;
+  return (
+    isKimiError(error) && error.code === ErrorCodes.LOOP_MAX_STEPS_EXCEEDED
+  );
 }
 
 export function isAbortError(err: unknown): boolean {
   if (err instanceof Error) {
-    return err.name === 'AbortError';
+    return err.name === "AbortError";
   }
   return false;
 }

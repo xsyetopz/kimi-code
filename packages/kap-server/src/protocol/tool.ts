@@ -1,6 +1,6 @@
-import { z } from 'zod';
+import { z } from "zod";
 
-export const toolSourceSchema = z.enum(['builtin', 'skill', 'mcp']);
+export const toolSourceSchema = z.enum(["builtin", "skill", "mcp"]);
 export type ToolSource = z.infer<typeof toolSourceSchema>;
 
 export const toolDescriptorSchema = z.object({
@@ -17,14 +17,14 @@ export const toolDescriptorSchema = z.object({
 export type ToolDescriptor = z.infer<typeof toolDescriptorSchema>;
 
 export const mcpServerStatusSchema = z.enum([
-  'connected',
-  'connecting',
-  'disconnected',
-  'error',
+  "connected",
+  "connecting",
+  "disconnected",
+  "error",
 ]);
 export type McpServerStatus = z.infer<typeof mcpServerStatusSchema>;
 
-export const mcpServerTransportSchema = z.enum(['stdio', 'http', 'sse']);
+export const mcpServerTransportSchema = z.enum(["stdio", "http", "sse"]);
 export type McpServerTransport = z.infer<typeof mcpServerTransportSchema>;
 
 export const mcpServerSchema = z.object({

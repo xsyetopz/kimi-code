@@ -13,7 +13,7 @@
  * but never join a cascade contagion set.
  */
 
-import type { ServiceIdentifier } from './instantiation';
+import type { ServiceIdentifier } from "./instantiation";
 
 /** A token as seen from the tree: the owning container plus the identifier. */
 export interface ScopedToken {
@@ -23,7 +23,7 @@ export interface ScopedToken {
   readonly token: ServiceIdentifier<any>;
 }
 
-export type DependencyEdgeKind = 'instance' | 'collection';
+export type DependencyEdgeKind = "instance" | "collection";
 
 export interface DependencyEdge {
   readonly consumer: ScopedToken;
@@ -33,11 +33,14 @@ export interface DependencyEdge {
 
 /** Nested scope → token maps, so scoped tokens stay structural (no interning). */
 export class PairIndex<V> {
-  private readonly _map = new Map<object, Map<
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ServiceIdentifier<any>,
-    V
-  >>();
+  private readonly _map = new Map<
+    object,
+    Map<
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ServiceIdentifier<any>,
+      V
+    >
+  >();
 
   get(scope: object, token: ServiceIdentifier<unknown>): V | undefined {
     return this._map.get(scope)?.get(token);
@@ -119,7 +122,7 @@ export class DependencyGraph {
   addEdge(
     consumerInstance: object,
     dependency: ScopedToken,
-    kind: DependencyEdgeKind = 'instance',
+    kind: DependencyEdgeKind = "instance",
   ): void {
     let out = this._out.get(consumerInstance);
     if (out === undefined) {
@@ -160,7 +163,7 @@ export class DependencyGraph {
       const inbound = this._in.get(ref.scope, ref.token);
       if (inbound === undefined) continue;
       for (const [consumerInstance, kind] of inbound) {
-        if (kind !== 'instance') continue;
+        if (kind !== "instance") continue;
         const consumer = this._refByInstance.get(consumerInstance);
         if (consumer === undefined) continue;
         push(consumer);
@@ -198,18 +201,19 @@ export class DependencyGraph {
 
   /** Instance-edge cycle check over the live graph; returns the cycle path or null. */
   findCycle(label: (ref: ScopedToken) => string): string[] | null {
-    const state = new PairIndex<'visiting' | 'done'>();
+    const state = new PairIndex<"visiting" | "done">();
     const path: ScopedToken[] = [];
     const visit = (ref: ScopedToken): string[] | null => {
-      state.set(ref.scope, ref.token, 'visiting');
+      state.set(ref.scope, ref.token, "visiting");
       path.push(ref);
       for (const dependency of this._dependenciesOf(ref, undefined)) {
         const mark = state.get(dependency.scope, dependency.token);
-        if (mark === 'done') continue;
-        if (mark === 'visiting') {
+        if (mark === "done") continue;
+        if (mark === "visiting") {
           const start = path.findIndex(
             (entry) =>
-              entry.scope === dependency.scope && entry.token === dependency.token,
+              entry.scope === dependency.scope &&
+              entry.token === dependency.token,
           );
           return [...path.slice(start), dependency].map(label);
         }
@@ -217,7 +221,7 @@ export class DependencyGraph {
         if (cycle !== null) return cycle;
       }
       path.pop();
-      state.set(ref.scope, ref.token, 'done');
+      state.set(ref.scope, ref.token, "done");
       return null;
     };
     for (const [ref] of this._instanceByRef.entries()) {
@@ -259,8 +263,11 @@ export class DependencyGraph {
     if (out === undefined) return [];
     const result: ScopedToken[] = [];
     for (const [dependency, kind] of out.entries()) {
-      if (kind !== 'instance') continue;
-      if (subset !== undefined && subset.get(dependency.scope, dependency.token) === undefined) {
+      if (kind !== "instance") continue;
+      if (
+        subset !== undefined &&
+        subset.get(dependency.scope, dependency.token) === undefined
+      ) {
         continue;
       }
       result.push(dependency);

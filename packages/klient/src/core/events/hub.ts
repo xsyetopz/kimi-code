@@ -12,12 +12,14 @@
  * right scope's event stream on every transport.
  */
 
-import type { IDisposable, KlientChannel, ScopeRef } from '../channel.js';
-import type { EventRegistration } from '#/contract/types';
-import type { KlientEventPayloads } from '#/contract/global/events';
-import { parseEvent } from '../validation.js';
+import type { IDisposable, KlientChannel, ScopeRef } from "../channel.js";
+import type { EventRegistration } from "#/contract/types";
+import type { KlientEventPayloads } from "#/contract/global/events";
+import { parseEvent } from "../validation.js";
 
-export interface KlientEvents<TPayloadMap extends object = KlientEventPayloads> {
+export interface KlientEvents<
+  TPayloadMap extends object = KlientEventPayloads,
+> {
   on<E extends keyof TPayloadMap & string>(
     event: E,
     listener: (payload: TPayloadMap[E]) => void,
@@ -37,19 +39,19 @@ interface SharedSub {
 /** Stable identity of a registration's underlying channel subscription. */
 function keyOf(reg: EventRegistration): string {
   switch (reg.kind) {
-    case 'bus':
-      return 'bus';
-    case 'stream':
+    case "bus":
+      return "bus";
+    case "stream":
       return `stream:${reg.name}`;
-    case 'emitter':
+    case "emitter":
       return `emitter:${reg.service}:${reg.event}`;
   }
 }
 
 function rawTypeOf(raw: unknown): string | undefined {
-  if (typeof raw !== 'object' || raw === null) return undefined;
+  if (typeof raw !== "object" || raw === null) return undefined;
   const type = (raw as { type?: unknown }).type;
-  return typeof type === 'string' ? type : undefined;
+  return typeof type === "string" ? type : undefined;
 }
 
 export class EventHub<TPayloadMap extends object = KlientEventPayloads>
@@ -71,7 +73,7 @@ export class EventHub<TPayloadMap extends object = KlientEventPayloads>
     event: E,
     listener: (payload: TPayloadMap[E]) => void,
   ): IDisposable {
-    if (this.closed) throw new Error('event hub is closed');
+    if (this.closed) throw new Error("event hub is closed");
     if (this.registrations[event] === undefined) {
       throw new Error(`unknown event: ${event}`);
     }
@@ -147,10 +149,10 @@ export class EventHub<TPayloadMap extends object = KlientEventPayloads>
   }
 
   private subscribe(key: string, reg: EventRegistration): IDisposable {
-    if (reg.kind === 'emitter') {
+    if (reg.kind === "emitter") {
       return this.channel.listen(
         this.scope,
-        { kind: 'emitter', service: reg.service, event: reg.event },
+        { kind: "emitter", service: reg.service, event: reg.event },
         (data) => {
           this.deliver(key, data);
         },
@@ -159,10 +161,10 @@ export class EventHub<TPayloadMap extends object = KlientEventPayloads>
         },
       );
     }
-    const name = reg.kind === 'bus' ? 'events' : reg.name;
+    const name = reg.kind === "bus" ? "events" : reg.name;
     return this.channel.listen(
       this.scope,
-      { kind: 'stream', name },
+      { kind: "stream", name },
       (data) => {
         this.deliver(key, data);
       },
@@ -176,14 +178,18 @@ export class EventHub<TPayloadMap extends object = KlientEventPayloads>
   private deliver(key: string, raw: unknown): void {
     for (const [event, reg] of Object.entries(this.registrations)) {
       if (keyOf(reg) !== key || !this.listeners.has(event)) continue;
-      if (reg.kind === 'bus') {
+      if (reg.kind === "bus") {
         // Global bus events are `{ type, payload }` facts; only registered
         // types are forwarded, with the payload unwrapped.
         if (rawTypeOf(raw) !== reg.type) continue;
-        this.deliverValidated(event, reg, (raw as { payload?: unknown }).payload);
+        this.deliverValidated(
+          event,
+          reg,
+          (raw as { payload?: unknown }).payload,
+        );
         continue;
       }
-      if (reg.kind === 'stream' && reg.type !== undefined) {
+      if (reg.kind === "stream" && reg.type !== undefined) {
         // Scoped streams (e.g. the agent `events` bus) carry flat
         // `{ type, ...fields }` events; forward the whole event.
         if (rawTypeOf(raw) !== reg.type) continue;
@@ -194,7 +200,11 @@ export class EventHub<TPayloadMap extends object = KlientEventPayloads>
     }
   }
 
-  private deliverValidated(event: string, reg: EventRegistration, data: unknown): void {
+  private deliverValidated(
+    event: string,
+    reg: EventRegistration,
+    data: unknown,
+  ): void {
     let payload: unknown = data;
     if (this.validate) {
       const parsed = parseEvent(event, reg.schema, data);
@@ -210,7 +220,9 @@ export class EventHub<TPayloadMap extends object = KlientEventPayloads>
       try {
         (listener as (payload: unknown) => void)(payload);
       } catch (error) {
-        this.reportError(error instanceof Error ? error : new Error(String(error)));
+        this.reportError(
+          error instanceof Error ? error : new Error(String(error)),
+        );
       }
     }
   }
