@@ -4,7 +4,7 @@ export {
   ICoreProcessService,
   type CoreProcessServiceOptions,
 } from "./coreProcess/coreProcess";
-export { CoreProcessService } from "./coreProcess/coreProcessService";
+// services/index.ts — in-process DI services
 
 export { IEventService } from "./event/event";
 export { EventService } from "./event/eventService";
