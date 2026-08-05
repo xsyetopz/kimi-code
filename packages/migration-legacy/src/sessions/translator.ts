@@ -1,4 +1,4 @@
-import type { ToolInputDisplay } from "@moonshot-ai/agent-core";
+import type { ToolInputDisplay } from "@moonshot-ai/kimi-code-sdk";
 
 import {
   normalizeContentPart,

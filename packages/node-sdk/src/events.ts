@@ -3,12 +3,12 @@ import type {
   ApprovalResponse,
   QuestionRequest,
   QuestionResult,
-} from "@moonshot-ai/agent-core";
+} from "#/compat";
 
 // Event union plus shared fields/payloads used across event families.
-export type { KimiErrorPayload, Event } from "@moonshot-ai/agent-core";
+export type { KimiErrorPayload, Event } from "#/compat";
 
-export { MCP_OAUTH_AUTHORIZATION_URL_TOOL_UPDATE } from "@moonshot-ai/agent-core";
+export { MCP_OAUTH_AUTHORIZATION_URL_TOOL_UPDATE } from "#/compat";
 
 // Session lifecycle/status events and their status payload.
 export type {
@@ -20,7 +20,7 @@ export type {
   ErrorEvent,
   WarningEvent,
   UsageStatus,
-} from "@moonshot-ai/agent-core";
+} from "#/compat";
 
 // Turn and step lifecycle events plus the turn-ending reason enum.
 export type {
@@ -31,14 +31,14 @@ export type {
   TurnStepRetryingEvent,
   TurnStepInterruptedEvent,
   TurnEndReason,
-} from "@moonshot-ai/agent-core";
+} from "#/compat";
 
 // Streaming content and hook-result events.
 export type {
   AssistantDeltaEvent,
   HookResultEvent,
   ThinkingDeltaEvent,
-} from "@moonshot-ai/agent-core";
+} from "#/compat";
 
 // Tool-call events and incremental progress payloads.
 export type {
@@ -50,7 +50,7 @@ export type {
   ToolCallResponse,
   ToolUpdate,
   McpOAuthAuthorizationUrlUpdateData,
-} from "@moonshot-ai/agent-core";
+} from "#/compat";
 
 // MCP tool-list and server status events.
 export type {
@@ -58,7 +58,7 @@ export type {
   ToolListUpdatedReason,
   McpServerStatusEvent,
   McpServerStatusPayload,
-} from "@moonshot-ai/agent-core";
+} from "#/compat";
 
 // Approval reverse-RPC request and response/display payloads.
 export type {
@@ -67,7 +67,7 @@ export type {
   ApprovalScope,
   ApprovalResponse,
   ToolInputDisplay,
-} from "@moonshot-ai/agent-core";
+} from "#/compat";
 
 // Question reverse-RPC request and answer payloads.
 export type {
@@ -78,7 +78,7 @@ export type {
   QuestionAnswers,
   QuestionResponse,
   QuestionResult,
-} from "@moonshot-ai/agent-core";
+} from "#/compat";
 
 // Subagent lifecycle events.
 export type {
@@ -87,7 +87,7 @@ export type {
   SubagentSuspendedEvent,
   SubagentCompletedEvent,
   SubagentFailedEvent,
-} from "@moonshot-ai/agent-core";
+} from "#/compat";
 
 // Compaction lifecycle events and compaction result payload.
 export type {
@@ -96,16 +96,16 @@ export type {
   CompactionCancelledEvent,
   CompactionCompletedEvent,
   CompactionResult,
-} from "@moonshot-ai/agent-core";
+} from "#/compat";
 
 // Background task lifecycle events emitted by the BPM. Covers both
 // bash (`bash-*`) and agent (`agent-*`) tasks under one wire format.
 export type {
   BackgroundTaskStartedEvent,
   BackgroundTaskTerminatedEvent,
-} from "@moonshot-ai/agent-core";
+} from "#/compat";
 
-export type { CronFiredEvent } from "@moonshot-ai/agent-core";
+export type { CronFiredEvent } from "#/compat";
 
 export type MaybePromise<T> = T | Promise<T>;
 

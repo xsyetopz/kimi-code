@@ -138,7 +138,7 @@ import {
   type AgentContextData,
   type BeginGlobalMcpServerAuthResult,
   type ExperimentalFeatureState,
-} from "@moonshot-ai/agent-core";
+} from "#/compat";
 import { encodeWorkDirKey } from "@moonshot-ai/agent-core-v2/_base/utils/workdir-slug";
 import {
   MCP_SECTION,

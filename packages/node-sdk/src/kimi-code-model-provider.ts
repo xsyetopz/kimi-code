@@ -5,7 +5,7 @@ import {
   type Logger,
   type ModelProvider,
   type ResolvedRuntimeProvider,
-} from "@moonshot-ai/agent-core";
+} from "#/compat";
 import {
   createKimiDefaultHeaders,
   KIMI_CODE_FLOW_CONFIG,

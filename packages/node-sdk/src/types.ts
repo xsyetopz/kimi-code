@@ -5,7 +5,7 @@ import type {
   TelemetryClient,
   TelemetryContextPatch,
   TelemetryProperties,
-} from "@moonshot-ai/agent-core";
+} from "#/compat";
 import type { Kaos } from "@moonshot-ai/kaos";
 import type {
   KimiHostIdentity,
@@ -74,7 +74,7 @@ export type {
   ToolInfo,
   GlobalMcpServerConfig as McpServerConfig,
   GlobalMcpServerTestResult as McpTestResult,
-} from "@moonshot-ai/agent-core";
+} from "#/compat";
 
 export type { KimiHostIdentity, OAuthRefreshOutcome };
 export type { TelemetryClient, TelemetryContextPatch, TelemetryProperties };

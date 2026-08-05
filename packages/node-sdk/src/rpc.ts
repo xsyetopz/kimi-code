@@ -19,7 +19,7 @@ import {
   type ToolCallRequest,
   type ToolCallResponse,
   type SwarmModeTrigger,
-} from "@moonshot-ai/agent-core";
+} from "#/compat";
 import type { Kaos } from "@moonshot-ai/kaos";
 
 import type { ApprovalHandler, QuestionHandler } from "#/events";

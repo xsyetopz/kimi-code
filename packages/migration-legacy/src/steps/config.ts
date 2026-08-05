@@ -6,7 +6,7 @@ import {
   ModelAliasSchema,
   ProviderConfigSchema,
   transformTomlData,
-} from "@moonshot-ai/agent-core";
+} from "@moonshot-ai/kimi-code-sdk";
 import { atomicWrite } from "../atomic-write.js";
 import {
   DEFAULT_CONFIG_FILE_TEXT,

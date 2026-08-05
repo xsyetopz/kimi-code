@@ -5,7 +5,7 @@ import {
   ImageLimits,
   withTelemetryContext,
   type ExperimentalFeatureState,
-} from "@moonshot-ai/agent-core";
+} from "#/compat";
 
 import { Session } from "#/session";
 import type { KimiAuthFacade } from "#/auth";

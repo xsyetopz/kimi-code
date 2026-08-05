@@ -541,7 +541,7 @@ function buildCronTurn(
  * system-injected user turns (compaction summaries, injections, hook results,
  * retries, system triggers, background tasks, cron) are hidden. The origin
  * arrives via message metadata (see toProtocolMessage in
- * @moonshot-ai/agent-core).
+ * @moonshot-ai/kimi-code-sdk).
  */
 function isDisplayableUserMessage(msg: AppMessage): boolean {
   const origin = msg.metadata?.["origin"] as

@@ -4,7 +4,7 @@ import {
   type AgentContextData,
   type KimiErrorCode,
   type SwarmModeTrigger,
-} from "@moonshot-ai/agent-core";
+} from "#/compat";
 
 import {
   type ApprovalHandler,

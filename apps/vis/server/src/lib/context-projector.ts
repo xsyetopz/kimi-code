@@ -7,7 +7,7 @@ import {
   renderToolResultForModel,
   selectCompactionUserMessages,
   selectRecentUserMessages,
-} from "@moonshot-ai/agent-core";
+} from "@moonshot-ai/kimi-code-sdk";
 import type {
   ContentPart,
   ContextMessage,
