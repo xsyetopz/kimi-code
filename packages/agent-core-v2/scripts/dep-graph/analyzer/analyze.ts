@@ -200,7 +200,7 @@ function sameRef(a: EdgeRef, b: EdgeRef): boolean {
 }
 
 // ---------------------------------------------------------------------------
-// AST helpers — replacements for ts-morph utilities
+// AST helpers using TypeScript compiler API
 // ---------------------------------------------------------------------------
 
 function getNodeText(sf: ts.SourceFile, node: ts.Node): string {

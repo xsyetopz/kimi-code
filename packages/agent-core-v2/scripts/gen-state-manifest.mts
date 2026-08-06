@@ -21,7 +21,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
-import ts from "typescript";
+import { createSourceFile, SyntaxKind } from "typescript/unstable/ast";
 
 const PKG = join(import.meta.dirname, "..");
 const REPO_ROOT = join(PKG, "..", "..");
@@ -95,7 +95,7 @@ function tsFieldKey(key: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// AST helpers — replacements for ts-morph
+// AST helpers using TypeScript compiler API
 // ---------------------------------------------------------------------------
 
 function getNodeText(sf: ts.SourceFile, node: ts.Node): string {
@@ -514,9 +514,6 @@ function buildManifest(project: ts.Program): StateManifestModel {
       if (!ts.isCallExpression(expr)) continue;
       if (!ts.isIdentifier(expr.expression) || expr.expression.text !== "defineState")
         continue;
-
-      const [nameArg] = expr.arguments;
-      if (!nameArgs || !ts.isStringLiteral(nameArg)) continue;
 
       const nameArg = expr.arguments[0];
       if (nameArg === undefined || !ts.isStringLiteral(nameArg)) continue;

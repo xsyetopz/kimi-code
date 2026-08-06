@@ -30,9 +30,8 @@ import {
 } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
-import { createRequire } from "node:module";
 
-import ts from "typescript";
+import { createRequire } from "node:module";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PKG = join(__dirname, ".."); // packages/agent-core-v2

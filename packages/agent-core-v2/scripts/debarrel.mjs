@@ -18,7 +18,7 @@
 import path from "node:path";
 import fs from "node:fs";
 import { fileURLToPath } from "node:url";
-import ts from "typescript";
+import { createSourceFile, SyntaxKind } from "typescript/unstable/ast";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PKG = path.resolve(__dirname, "..");

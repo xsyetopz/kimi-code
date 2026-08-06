@@ -1,9 +1,8 @@
 /**
- * Shared AST utilities that replace ts-morph patterns across agent-core-v2 scripts.
+ * Shared AST utilities for agent-core-v2 scripts.
  *
  * Provides convenient wrappers around the `typescript` compiler API so scripts
- * can parse, traverse and transform TypeScript source files without the
- * ts-morph dependency.
+ * can parse, traverse and transform TypeScript source files.
  */
 
 import { readFileSync, writeFileSync } from "node:fs";
