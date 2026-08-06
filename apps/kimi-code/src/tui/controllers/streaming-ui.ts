@@ -40,6 +40,7 @@ export interface StreamingUIHost {
   pushTranscriptEntry(entry: TranscriptEntry): void;
   mergeCurrentTurnSteps(): void;
   mergeCompletedTurnAssistants(): void;
+  requestTerminalRender(): void;
 }
 
 export class StreamingUIController {
@@ -424,7 +425,7 @@ export class StreamingUIController {
     this._currentStep = 0;
     this._streamingToolCallArguments.clear();
     this.pendingToolCallFlushIds.clear();
-    this.host.state.ui.requestRender();
+    this.host.requestTerminalRender();
   }
 
   // ---------------------------------------------------------------------------
@@ -547,7 +548,7 @@ export class StreamingUIController {
     }
     this._assistantDraft = "";
     this.host.updateActivityPane();
-    this.host.state.ui.requestRender();
+    this.host.requestTerminalRender();
   }
 
   resetLiveText(): void {
@@ -637,7 +638,7 @@ export class StreamingUIController {
     this._streamingBlock = { component, entry };
     this.host.pushTranscriptEntry(entry);
     state.transcriptContainer.addChild(component);
-    state.ui.requestRender();
+    this.host.requestTerminalRender();
   }
 
   onStreamingTextUpdate(fullText: string): void {
@@ -645,7 +646,7 @@ export class StreamingUIController {
     if (block !== null) {
       block.entry.content = fullText;
       block.component.updateContent(fullText, { transient: true });
-      this.host.state.ui.requestRender();
+      this.host.requestTerminalRender();
     }
   }
 
@@ -683,14 +684,14 @@ export class StreamingUIController {
     } else {
       this._activeThinkingComponent.setText(fullText);
     }
-    state.ui.requestRender();
+    this.host.requestTerminalRender();
   }
 
   onThinkingEnd(): void {
     if (this._activeThinkingComponent === undefined) return;
     this._activeThinkingComponent.finalize();
     this._activeThinkingComponent = undefined;
-    this.host.state.ui.requestRender();
+    this.host.requestTerminalRender();
     this.host.mergeCurrentTurnSteps();
   }
 
@@ -714,7 +715,7 @@ export class StreamingUIController {
     if (!handled) handled = this.tryAttachReadToolCall(toolCall, tc);
     if (!handled) {
       state.transcriptContainer.addChild(tc);
-      state.ui.requestRender();
+      this.host.requestTerminalRender();
     }
 
     if (
@@ -742,7 +743,7 @@ export class StreamingUIController {
     if (tc) {
       tc.setResult(result);
       this._pendingToolComponents.delete(toolCallId);
-      state.ui.requestRender();
+      this.host.requestTerminalRender();
       this.host.mergeCurrentTurnSteps();
       return;
     }
@@ -756,7 +757,7 @@ export class StreamingUIController {
       );
       if (state.toolOutputExpanded) completed.setExpanded(true);
       state.transcriptContainer.addChild(completed);
-      state.ui.requestRender();
+      this.host.requestTerminalRender();
     }
     this.host.mergeCurrentTurnSteps();
   }
@@ -768,7 +769,7 @@ export class StreamingUIController {
     if (!state.todoPanel.isEmpty()) {
       state.todoPanelContainer.addChild(state.todoPanel);
     }
-    state.ui.requestRender();
+    this.host.requestTerminalRender();
   }
 
   beginCompaction(instruction?: string): void {
@@ -787,7 +788,7 @@ export class StreamingUIController {
     if (state.toolOutputExpanded) {
       block.setExpanded(true);
     }
-    state.ui.requestRender();
+    this.host.requestTerminalRender();
   }
 
   endCompaction(
@@ -799,7 +800,7 @@ export class StreamingUIController {
     if (block === undefined) return;
     block.markDone(tokensBefore, tokensAfter, summary);
     this._activeCompactionBlock = undefined;
-    this.host.state.ui.requestRender();
+    this.host.requestTerminalRender();
   }
 
   cancelCompaction(): void {
@@ -807,7 +808,7 @@ export class StreamingUIController {
     if (block === undefined) return;
     block.markCanceled();
     this._activeCompactionBlock = undefined;
-    this.host.state.ui.requestRender();
+    this.host.requestTerminalRender();
   }
 
   // ---------------------------------------------------------------------------
@@ -865,7 +866,7 @@ export class StreamingUIController {
     if (cur === null) {
       this._pendingAgentGroup = { step, turnId, solo: tc };
       state.transcriptContainer.addChild(tc);
-      state.ui.requestRender();
+      this.host.requestTerminalRender();
       return true;
     }
 
@@ -878,13 +879,13 @@ export class StreamingUIController {
     if (solo === undefined) {
       this._pendingAgentGroup = { step, turnId, solo: tc };
       state.transcriptContainer.addChild(tc);
-      state.ui.requestRender();
+      this.host.requestTerminalRender();
       return true;
     }
     const group = this.upgradeSoloAgentToGroup(solo);
     group.attach(toolCall.id, tc);
     this._pendingAgentGroup = { step, turnId, group };
-    state.ui.requestRender();
+    this.host.requestTerminalRender();
     return true;
   }
 
@@ -931,7 +932,7 @@ export class StreamingUIController {
     if (cur === null) {
       this._pendingReadGroup = { step, turnId, solo: tc };
       state.transcriptContainer.addChild(tc);
-      state.ui.requestRender();
+      this.host.requestTerminalRender();
       return true;
     }
 
@@ -944,13 +945,13 @@ export class StreamingUIController {
     if (solo === undefined) {
       this._pendingReadGroup = { step, turnId, solo: tc };
       state.transcriptContainer.addChild(tc);
-      state.ui.requestRender();
+      this.host.requestTerminalRender();
       return true;
     }
     const group = this.upgradeSoloReadToGroup(solo);
     group.attach(toolCall.id, tc);
     this._pendingReadGroup = { step, turnId, group };
-    state.ui.requestRender();
+    this.host.requestTerminalRender();
     return true;
   }
 

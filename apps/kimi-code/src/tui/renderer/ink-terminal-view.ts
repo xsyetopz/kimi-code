@@ -1,9 +1,10 @@
-import { Box, type Key, Text, useInput, useStdout } from "ink";
+import { Box, Static, type Key, Text, useInput, useStdout } from "ink";
 import { createElement, type ReactNode, useEffect, useState } from "react";
 
 import { SELECT_POINTER } from "../constant/symbols";
 import { InkDialogView } from "./components/dialogs/InkDialogView";
 import { InkApprovalPreview } from "./components/dialogs/InkApprovalPreview";
+import { splitInkTranscript } from "./ink-transcript-split";
 import type {
   TerminalActivityView,
   TerminalQueueView,
@@ -208,7 +209,7 @@ export function InkTerminalView({
     }
     onInput?.(encodeInkInput(input, key));
   });
-  const transcript = projectInkTranscript(view);
+  const { staticEntries, liveEntries } = splitInkTranscript(view);
   const activity = projectInkActivity(view.activity);
   const queue = projectInkQueue(view.queue);
   const editor = projectInkEditor(view.editor);
@@ -243,7 +244,15 @@ export function InkTerminalView({
   return createElement(
     Box,
     { flexDirection: "column" },
-    ...transcript.map((entry) =>
+    staticEntries.length === 0
+      ? null
+      : createElement(
+          Static,
+          { items: staticEntries },
+          (entry: InkTranscriptProjection) =>
+            createElement(TranscriptEntryView, { key: entry.id, entry }),
+        ),
+    ...liveEntries.map((entry) =>
       createElement(TranscriptEntryView, { key: entry.id, entry }),
     ),
     activity === undefined ? null : createElement(Text, null, activity),

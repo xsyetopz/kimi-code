@@ -3832,6 +3832,15 @@ export class KimiTUI {
     this.inkRenderer?.update(this.getTerminalViewState());
   }
 
+  /** Refresh whichever renderer currently owns the terminal output. */
+  requestTerminalRender(): void {
+    if (this.inkOwnsTerminal()) {
+      this.updateInkRenderer();
+      return;
+    }
+    this.state.ui.requestRender();
+  }
+
   /** Unmount the staged Ink bridge; safe to call repeatedly during shutdown. */
   unmountInkRenderer(): void {
     const renderer = this.inkRenderer;
