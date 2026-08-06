@@ -14,6 +14,7 @@ type InkDialogDriver = {
   inkSessionPickerSelect?: (session: { id: string }) => void;
   trustPromptChoiceResolver?: (choice: "trust" | "distrust") => void;
   approvalController: { respond: (response: unknown) => void };
+  questionController: { respond: (response: unknown) => void };
 };
 
 function makeTui() {
@@ -254,6 +255,71 @@ describe("Ink-owned simple dialog input", () => {
       decision: "approved",
       feedback: "no",
       selectedLabel: undefined,
+    });
+  });
+
+  it("routes a single simple question to Ink without mounting legacy panel", () => {
+    const tui = makeTui();
+    const mountEditorReplacement = vi.spyOn(
+      tui as unknown as { mountEditorReplacement: () => void },
+      "mountEditorReplacement",
+    );
+
+    (
+      tui as unknown as {
+        showQuestionDialog: (payload: {
+          id: string;
+          tool_call_id: string;
+          questions: readonly [
+            {
+              question: string;
+              multi_select: boolean;
+              options: readonly [{ label: string }];
+            },
+          ];
+        }) => void;
+      }
+    ).showQuestionDialog({
+      id: "question-1",
+      tool_call_id: "tool-1",
+      questions: [
+        {
+          question: "Pick one",
+          multi_select: false,
+          options: [{ label: "Yes" }],
+        },
+      ],
+    });
+
+    expect(tui.state.livePane.pendingQuestion).not.toBeNull();
+    expect(mountEditorReplacement).not.toHaveBeenCalled();
+  });
+
+  it("submits a single-select Ink question through the question controller", () => {
+    const tui = makeTui();
+    const respond = vi.spyOn(tui.questionController, "respond");
+    tui.state.livePane.pendingQuestion = {
+      data: {
+        id: "question-1",
+        tool_call_id: "tool-1",
+        questions: [
+          {
+            question: "Pick one",
+            multi_select: false,
+            options: [
+              { label: "First" },
+              { label: "Second" },
+            ],
+          },
+        ],
+      },
+    };
+
+    expect(tui.handleInkSimpleDialogInput("\u001b[B")).toBe(true);
+    expect(tui.handleInkSimpleDialogInput("\r")).toBe(true);
+    expect(respond).toHaveBeenCalledWith({
+      answers: ["Second"],
+      method: "enter",
     });
   });
 });

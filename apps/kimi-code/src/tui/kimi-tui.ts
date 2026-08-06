@@ -414,6 +414,7 @@ export class KimiTUI {
   private inkDialogScrollTop = 0;
   private inkApprovalFeedbackMode = false;
   private inkApprovalFeedbackText = "";
+  private inkQuestionMultiSelections = new Set<number>();
   private inkSessionPickerSelect: ((session: SessionRow) => void) | undefined;
   private inkSessionPickerCancel: (() => void) | undefined;
   private inkSessionPickerToggleScope:
@@ -886,6 +887,9 @@ export class KimiTUI {
     if (this.state.livePane.pendingApproval !== null) {
       return this.handleInkApprovalInput(data);
     }
+    if (this.state.livePane.pendingQuestion !== null) {
+      return this.handleInkQuestionInput(data);
+    }
     const dialog = this.state.activeDialog;
     if (dialog === "help") {
       const printable = printableChar(data);
@@ -1076,6 +1080,97 @@ export class KimiTUI {
     this.inkApprovalFeedbackMode = false;
     this.inkApprovalFeedbackText = "";
     this.inkDialogSelection = 0;
+  }
+
+  private resetInkQuestionDialogState(): void {
+    this.inkDialogSelection = 0;
+    this.inkQuestionMultiSelections = new Set<number>();
+  }
+
+  private isInkSimpleQuestion(payload: QuestionPanelData): boolean {
+    if (payload.questions.length !== 1) return false;
+    const question = payload.questions[0];
+    if (question === undefined) return false;
+    if (question.other_label !== undefined && question.other_label.length > 0) {
+      return false;
+    }
+    return true;
+  }
+
+  private handleInkQuestionInput(data: string): boolean {
+    const pending = this.state.livePane.pendingQuestion;
+    if (pending === null) return false;
+    if (!this.isInkSimpleQuestion(pending.data)) return false;
+
+    const question = pending.data.questions[0];
+    if (question === undefined) return false;
+    const optionCount = question.options.length;
+
+    if (
+      matchesKey(data, Key.escape) ||
+      matchesKey(data, Key.ctrl("c")) ||
+      matchesKey(data, Key.ctrl("d"))
+    ) {
+      this.questionController.respond({ answers: [] });
+      return true;
+    }
+
+    if (optionCount === 0) return true;
+    if (matchesKey(data, Key.up) || matchesKey(data, Key.down)) {
+      const delta = matchesKey(data, Key.up) ? -1 : 1;
+      this.inkDialogSelection =
+        (this.inkDialogSelection + delta + optionCount) % optionCount;
+      this.updateInkRenderer();
+      return true;
+    }
+
+    if (question.multi_select) {
+      if (matchesKey(data, Key.space)) {
+        if (this.inkQuestionMultiSelections.has(this.inkDialogSelection)) {
+          this.inkQuestionMultiSelections.delete(this.inkDialogSelection);
+        } else {
+          this.inkQuestionMultiSelections.add(this.inkDialogSelection);
+        }
+        this.updateInkRenderer();
+        return true;
+      }
+      if (matchesKey(data, Key.enter)) {
+        const labels = question.options.flatMap((option, index) =>
+          this.inkQuestionMultiSelections.has(index) ? [option.label] : [],
+        );
+        this.questionController.respond({
+          answers: labels.length > 0 ? [labels.join(", ")] : [],
+          method: "enter",
+        });
+        return true;
+      }
+      return true;
+    }
+
+    if (matchesKey(data, Key.enter)) {
+      const selected = question.options[this.inkDialogSelection];
+      this.questionController.respond({
+        answers: selected === undefined ? [] : [selected.label],
+        method: "enter",
+      });
+      return true;
+    }
+
+    const printable = printableChar(data);
+    const numericIndex = Number(printable) - 1;
+    if (
+      Number.isInteger(numericIndex) &&
+      numericIndex >= 0 &&
+      numericIndex < optionCount
+    ) {
+      const selected = question.options[numericIndex];
+      this.questionController.respond({
+        answers: selected === undefined ? [] : [selected.label],
+        method: "number_key",
+      });
+      return true;
+    }
+    return true;
   }
 
   /** Refresh Ink after an asynchronous clipboard/image editor callback. */
@@ -4165,11 +4260,16 @@ export class KimiTUI {
   }
 
   private showQuestionDialog(payload: QuestionPanelData): void {
+    this.resetInkQuestionDialogState();
     this.patchLivePane({ pendingQuestion: { data: payload } });
     notifyTerminalOnce(this.state, `question:${payload.id}`, {
       title: "Kimi Code needs your answer",
       body: payload.questions[0]?.question,
     });
+    if (this.terminalRenderer === "ink" && this.isInkSimpleQuestion(payload)) {
+      this.updateInkRenderer();
+      return;
+    }
     const dialog = new QuestionDialogComponent(
       { data: payload },
       (response) => {
@@ -4184,6 +4284,7 @@ export class KimiTUI {
   }
 
   private hideQuestionDialog(): void {
+    this.resetInkQuestionDialogState();
     this.patchLivePane({ pendingQuestion: null });
     this.restoreEditor();
   }
