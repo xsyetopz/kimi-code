@@ -12,6 +12,7 @@ import { SkillActivation } from "./SkillActivation";
 import { PluginCommand } from "./PluginCommand";
 import { CronMessage } from "./CronMessage";
 import { BackgroundAgentStatus } from "./BackgroundAgentStatus";
+import { AgentSwarm } from "./AgentSwarm";
 
 export interface TranscriptEntryProps {
   readonly entry: TranscriptEntry;
@@ -44,6 +45,9 @@ export function TranscriptEntryView({
     case "tool_call":
       if (entry.backgroundAgentStatus) {
         return <BackgroundAgentStatus entry={entry} />;
+      }
+      if (entry.toolCallData?.agentSwarmProgress !== undefined) {
+        return <AgentSwarm entry={entry} />;
       }
       return <ToolCall entry={entry} workspaceDir={workspaceDir} />;
 

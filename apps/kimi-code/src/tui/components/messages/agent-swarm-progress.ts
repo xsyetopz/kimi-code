@@ -194,7 +194,7 @@ const PHASE_LABELS: Record<AgentSwarmPhase, string> = {
 
 export class AgentSwarmProgressComponent implements Component {
   private members: AgentSwarmMember[];
-  private readonly progressEstimator = new AgentSwarmProgressEstimator();
+  private progressEstimator = new AgentSwarmProgressEstimator();
   private description: string;
   private readonly requestRender: (() => void) | undefined;
   private readonly availableGridHeight: (() => number | undefined) | undefined;
@@ -261,8 +261,78 @@ export class AgentSwarmProgressComponent implements Component {
     };
   }
 
-  private notifyProjectionChange(): void {
-    this.projectionListener?.();
+  /** Rehydrate a detached snapshot for Ink projection or replay rendering. */
+  applyViewState(state: AgentSwarmProgressViewState): void {
+    this.description = state.description;
+    this.modelDisplay = state.modelDisplay;
+    this.promptTemplateText = state.promptTemplateText;
+    this.inputComplete = state.inputComplete;
+    this.failed = state.failed;
+    this.aborted = state.aborted;
+    this.itemsStarted = state.itemsStarted;
+    this.toolCallActive = state.toolCallActive;
+    if (state.activitySpinnerText.length > 0) {
+      const spinnerText = state.activitySpinnerText;
+      this.activitySpinnerText = () => spinnerText;
+    } else {
+      this.activitySpinnerText = undefined;
+    }
+    this.members = state.members.map((member) => ({
+      id: member.id,
+      agentId: member.agentId,
+      phase: member.phase,
+      ticks: member.ticks,
+      itemText: member.itemText,
+      latestModelText: member.latestModelText,
+      completedText: member.completedText,
+      failureText: member.failureText,
+      cancelledLabelText: member.cancelledLabelText,
+      suspendedReason: member.suspendedReason,
+    }));
+    for (const member of this.members) {
+      if (member.phase !== "cancelled") continue;
+      member.cancelledLabelColor =
+        member.cancelledLabelColor ?? cancelledLabelColor(this.colors);
+      member.cancelledMarkColor = member.cancelledMarkColor ?? this.colors.warning;
+      member.cancelledBarColor = member.cancelledBarColor ?? this.colors.warning;
+    }
+    this.rebuildProgressEstimatorFromMembers();
+  }
+
+  private rebuildProgressEstimatorFromMembers(nowMs = Date.now()): void {
+    this.progressEstimator = new AgentSwarmProgressEstimator();
+    for (const member of this.members) {
+      switch (member.phase) {
+        case "pending":
+          break;
+        case "queued":
+        case "suspended":
+          this.progressEstimator.markQueued(member.id, nowMs);
+          break;
+        case "running": {
+          this.progressEstimator.markStarted(member.id, nowMs);
+          for (let tick = 1; tick < member.ticks; tick += 1) {
+            this.progressEstimator.recordToolCall({
+              memberKey: member.id,
+              toolCallId: `hydrate:${member.id}:${String(tick)}`,
+              nowMs,
+            });
+          }
+          break;
+        }
+        case "completed":
+          this.progressEstimator.markStarted(member.id, nowMs - 1_000);
+          this.progressEstimator.markCompleted(member.id, nowMs);
+          break;
+        case "failed":
+          this.progressEstimator.markStarted(member.id, nowMs - 1_000);
+          this.progressEstimator.markFailed(member.id, nowMs);
+          break;
+        case "cancelled":
+          this.progressEstimator.markCancelled(member.id, nowMs);
+          break;
+      }
+    }
   }
 
   setActivitySpinnerText(provider: (() => string) | undefined): void {
@@ -1341,6 +1411,24 @@ export function agentSwarmGridHeightForTerminalRows(
     0,
     Math.floor(rows) - rowsAfterSwarm - AGENT_SWARM_NON_GRID_LINES,
   );
+}
+
+export interface RenderAgentSwarmProgressViewOptions {
+  readonly availableGridHeight?: () => number | undefined;
+}
+
+/** Render a captured swarm snapshot with the same layout as the live pi-tui card. */
+export function renderAgentSwarmProgressView(
+  state: AgentSwarmProgressViewState,
+  width: number,
+  options: RenderAgentSwarmProgressViewOptions = {},
+): string[] {
+  const component = new AgentSwarmProgressComponent({
+    description: state.description,
+    availableGridHeight: options.availableGridHeight,
+  });
+  component.applyViewState(state);
+  return component.render(width);
 }
 
 function agentSwarmGridIdWidth(count: number): number {

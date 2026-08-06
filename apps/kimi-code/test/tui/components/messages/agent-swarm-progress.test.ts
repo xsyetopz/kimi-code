@@ -11,6 +11,7 @@ import {
   agentSwarmPartialItemsCountFromArguments,
   agentSwarmPartialItemsFromArguments,
   calculateAgentSwarmGridLayout,
+  renderAgentSwarmProgressView,
 } from "#/tui/components/messages/agent-swarm-progress";
 import { AgentSwarmProgressEstimator } from "#/tui/components/messages/agent-swarm-progress-estimator";
 import { currentTheme, darkColors, lightColors } from "#/tui/theme";
@@ -974,6 +975,30 @@ describe("AgentSwarmProgressComponent", () => {
     expect(state.members).toHaveLength(1);
     expect(state.members[0]?.phase).toBe("running");
     expect(state.members[0]?.agentId).toBe("agent-1");
+  });
+
+  it("renders captured view state with the same layout as the live component", () => {
+    const component = createComponent();
+    component.updateArgs({
+      description: "Review changed files",
+      items: ["src/a.ts", "src/b.ts"],
+    });
+    component.markInputComplete();
+    component.registerSubagent({ agentId: "agent-1", swarmIndex: 1 });
+    component.markStarted("agent-1");
+
+    const live = renderText(component);
+    const projected = strip(
+      renderAgentSwarmProgressView(
+        component.captureAgentSwarmProgressState(),
+        100,
+      ).join("\n"),
+    );
+
+    expect(projected).toContain("Agent Swarm");
+    expect(projected).toContain("Review changed files");
+    expect(projected).toContain("001 [");
+    expect(live).toContain("001 [");
   });
 });
 
