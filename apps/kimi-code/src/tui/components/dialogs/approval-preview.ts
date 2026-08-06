@@ -8,12 +8,6 @@
  * lines are rendered once at construction and only sliced on scroll, so
  * the per-frame render cost stays in `O(viewport)` even when the
  * underlying diff/content is very large.
- *
- * This avoids the prior failure mode where pressing ctrl+e on an Edit
- * with a long hunk inflated the approval panel past one screen, which
- * collided with kimi-tui's inline differential renderer and the terminal
- * emulator's "snap to bottom on stdout" reflex, causing flicker and an
- * unscrollable history pane.
  */
 
 import {
@@ -27,20 +21,15 @@ import {
 } from "@moonshot-ai/kimi-tui";
 
 import {
-  highlightLines,
-  langFromPath,
-} from "#/tui/components/media/code-highlight";
-import { renderDiffLinesClustered } from "#/tui/components/media/diff-preview";
-import type {
-  DiffDisplayBlock,
-  FileContentDisplayBlock,
-} from "#/tui/reverse-rpc/types";
+  buildApprovalPreviewBody,
+  type ApprovalPreviewBlock,
+} from "#/tui/components/dialogs/approval-preview-body";
 import { currentTheme } from "#/tui/theme";
 import { printableChar } from "#/tui/utils/printable-key";
 
-const ELLIPSIS = "…";
+export type { ApprovalPreviewBlock } from "#/tui/components/dialogs/approval-preview-body";
 
-export type ApprovalPreviewBlock = DiffDisplayBlock | FileContentDisplayBlock;
+const ELLIPSIS = "…";
 
 export interface ApprovalPreviewViewerProps {
   readonly block: ApprovalPreviewBlock;
@@ -76,8 +65,8 @@ export class ApprovalPreviewViewer extends Container implements Focusable {
     super();
     this.props = props;
     this.terminal = terminal;
-    const built = buildBody(props.block);
-    this.bodyLines = built.lines;
+    const built = buildApprovalPreviewBody(props.block);
+    this.bodyLines = [...built.lines];
     this.headerTitle = built.title;
   }
 
@@ -125,8 +114,8 @@ export class ApprovalPreviewViewer extends Container implements Focusable {
   }
 
   override invalidate(): void {
-    const built = buildBody(this.props.block);
-    this.bodyLines = built.lines;
+    const built = buildApprovalPreviewBody(this.props.block);
+    this.bodyLines = [...built.lines];
     this.headerTitle = built.title;
   }
 
@@ -220,50 +209,4 @@ export class ApprovalPreviewViewer extends Container implements Focusable {
     }
     return fitExactly(left, width);
   }
-}
-
-interface BuiltBody {
-  lines: string[];
-  title: string;
-}
-
-function buildBody(block: ApprovalPreviewBlock): BuiltBody {
-  if (block.type === "diff") {
-    return buildDiffBody(block);
-  }
-  return buildFileContentBody(block);
-}
-
-function buildDiffBody(block: DiffDisplayBlock): BuiltBody {
-  // renderDiffLinesClustered emits a `+N -M path` header on its first line
-  // followed by every changed line plus surrounding context. We pull the
-  // header out into the viewer chrome so the body is purely scrollable diff
-  // content; this also means we don't double-render the path.
-  const rendered = renderDiffLinesClustered(
-    block.old_text,
-    block.new_text,
-    block.path,
-    {
-      contextLines: 3,
-      oldStart: block.old_start ?? 1,
-      newStart: block.new_start ?? 1,
-    },
-  );
-  const [header = "", ...rest] = rendered;
-  return { lines: rest, title: stripLeadingSpace(header) };
-}
-
-function buildFileContentBody(block: FileContentDisplayBlock): BuiltBody {
-  const lang = block.language ?? langFromPath(block.path);
-  const highlighted = highlightLines(block.content, lang);
-  const lines = highlighted.map(
-    (line, i) =>
-      currentTheme.fg("diffGutter", String(i + 1).padStart(4) + "  ") + line,
-  );
-  const title = currentTheme.fg("textStrong", block.path);
-  return { lines, title };
-}
-
-function stripLeadingSpace(s: string): string {
-  return s.replace(/^ +/, "");
 }
