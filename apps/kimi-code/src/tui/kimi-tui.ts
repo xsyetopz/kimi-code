@@ -76,6 +76,7 @@ import {
   findApprovalPreviewBlock,
 } from "./components/dialogs/approval-preview-body.ts";
 import { CompactionComponent } from "./components/dialogs/compaction.ts";
+import { ChoicePickerComponent } from "./components/dialogs/choice-picker.ts";
 import { HelpPanelComponent } from "./components/dialogs/help-panel.ts";
 import { defaultThinkingEffortFor } from "./components/dialogs/model-selector.ts";
 import { QuestionDialogComponent } from "./components/dialogs/question-dialog.ts";
@@ -147,6 +148,14 @@ import {
   resetInkOverlayApproval,
   resetInkOverlayQuestion,
 } from "./renderer/ink-overlay-state.ts";
+import {
+  createInkChoicePickerList,
+  handleInkChoicePickerInput,
+  projectInkChoicePickerView,
+} from "./renderer/ink-choice-picker.ts";
+import type { ChoicePickerOptions } from "./components/dialogs/choice-picker.ts";
+import type { ChoiceOption } from "./components/dialogs/choice-picker.ts";
+import { SearchableList } from "./utils/searchable-list.ts";
 import {
   handleInkQuestionWizardInput,
   projectInkQuestionWizardView,
@@ -432,6 +441,8 @@ export class KimiTUI {
     | undefined;
   /** Optional Ink bridge used by the staged renderer migration. */
   private inkRenderer: InkTerminalRenderer | undefined;
+  private inkChoicePickerOptions: ChoicePickerOptions | null = null;
+  private inkChoicePickerList: SearchableList<ChoiceOption> | null = null;
   private readonly terminalRenderer: "kimi-tui" | "ink";
   private readonly terminalOwnership = new TerminalOwnership();
   private inkOwnsTerminal(): boolean {
@@ -952,6 +963,9 @@ export class KimiTUI {
       }
       return true;
     }
+    if (dialog === "choice-picker") {
+      return this.handleInkChoicePickerInput(data);
+    }
     if (dialog !== "trust-prompt" && dialog !== "session-picker") return false;
     const count =
       dialog === "trust-prompt" ? 2 : Math.min(8, this.state.sessions.length);
@@ -1216,6 +1230,43 @@ export class KimiTUI {
       this.updateInkRenderer();
     }
     return consumed;
+  }
+
+  private handleInkChoicePickerInput(data: string): boolean {
+    const opts = this.inkChoicePickerOptions;
+    const list = this.inkChoicePickerList;
+    if (opts === null || list === null) return false;
+    const consumed = handleInkChoicePickerInput(opts, list, data, {
+      onSelect: (value) => {
+        this.closeInkChoicePicker();
+        opts.onSelect(value);
+      },
+      onSessionOnlySelect: opts.onSessionOnlySelect,
+      onCancel: () => {
+        this.closeInkChoicePicker();
+        opts.onCancel();
+      },
+    });
+    if (consumed) {
+      this.updateInkRenderer();
+    }
+    return consumed;
+  }
+
+  private openInkChoicePicker(opts: ChoicePickerOptions): void {
+    this.closeInkChoicePicker();
+    this.inkChoicePickerOptions = opts;
+    this.inkChoicePickerList = createInkChoicePickerList(opts);
+    this.state.activeDialog = "choice-picker";
+    this.updateInkRenderer();
+  }
+
+  private closeInkChoicePicker(): void {
+    this.inkChoicePickerOptions = null;
+    this.inkChoicePickerList = null;
+    if (this.state.activeDialog === "choice-picker") {
+      this.state.activeDialog = null;
+    }
   }
 
   /** Refresh Ink after an asynchronous clipboard/image editor callback. */
@@ -3660,6 +3711,14 @@ export class KimiTUI {
               this.state.livePane.pendingQuestion,
               this.inkOverlay.questionWizard,
             ),
+      choicePicker:
+        this.inkChoicePickerOptions === null ||
+        this.inkChoicePickerList === null
+          ? null
+          : projectInkChoicePickerView(
+              this.inkChoicePickerOptions,
+              this.inkChoicePickerList,
+            ),
       sessions,
       loadingSessions: this.state.loadingSessions,
       sessionsScope: this.state.sessionsScope,
@@ -4011,6 +4070,13 @@ export class KimiTUI {
   // =========================================================================
 
   mountEditorReplacement(panel: Component & Focusable): void {
+    if (
+      this.inkOwnsTerminal() &&
+      panel instanceof ChoicePickerComponent
+    ) {
+      this.openInkChoicePicker(panel.getChoicePickerOptions());
+      return;
+    }
     this.state.editorContainer.clear();
     this.state.editorContainer.addChild(panel);
     if (!this.inkOwnsTerminal()) {
@@ -4021,6 +4087,7 @@ export class KimiTUI {
   }
 
   restoreEditor(): void {
+    this.closeInkChoicePicker();
     if (this.inkOwnsTerminal()) {
       const children = this.state.editorContainer.children;
       if (children.length === 1 && children[0] === this.state.editor) {

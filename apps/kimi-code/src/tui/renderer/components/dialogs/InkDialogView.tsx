@@ -4,6 +4,7 @@ import { type ReactNode } from "react";
 import type { TerminalViewState } from "../../terminal-view-state";
 
 import { InkApprovalDialog } from "./InkApprovalDialog";
+import { InkChoicePickerDialog } from "./InkChoicePickerDialog";
 import { InkHelpDialog } from "./InkHelpDialog";
 import { InkQuestionDialog } from "./InkQuestionDialog";
 import { InkSessionPickerDialog } from "./InkSessionPickerDialog";
@@ -27,6 +28,8 @@ function dialogTitle(view: TerminalViewState): string | undefined {
       return "Select a session";
     case "help":
       return "Help";
+    case "choice-picker":
+      return dialog.choicePicker?.title;
     default:
       return;
   }
@@ -81,6 +84,9 @@ function dialogBody(
           maxVisible={maxVisible}
         />
       );
+    case "choice-picker":
+      if (dialog.choicePicker === null) return null;
+      return <InkChoicePickerDialog picker={dialog.choicePicker} />;
     default:
       return null;
   }
@@ -99,8 +105,8 @@ export function InkDialogView({
   const body = dialogBody(view, width, maxVisible);
   if (title === undefined || body === null) return null;
 
-  // Help renders its own top rule and title row; skip the outer chrome there.
-  if (view.dialog.active === "help") {
+  // Help and choice pickers render their own title row; skip the outer chrome there.
+  if (view.dialog.active === "help" || view.dialog.active === "choice-picker") {
     return body;
   }
 

@@ -83,8 +83,13 @@ function wrapDescription(text: string, width: number): string[] {
 
 export class ChoicePickerComponent extends Container implements Focusable {
   focused = false;
-  private readonly opts: ChoicePickerOptions;
+  protected readonly opts: ChoicePickerOptions;
   private readonly list: SearchableList<ChoiceOption>;
+
+  /** Expose options for the Ink renderer path without mounting legacy UI. */
+  getChoicePickerOptions(): ChoicePickerOptions {
+    return this.opts;
+  }
 
   constructor(opts: ChoicePickerOptions) {
     super();
