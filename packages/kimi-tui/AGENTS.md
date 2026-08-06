@@ -1,6 +1,6 @@
-# pi-tui Agent Guide
+# kimi-tui Agent Guide
 
-`packages/pi-tui` is a vendored copy of pi-tui from the upstream pi-mono project (baseline: upstream 0.80.2, see commit `7859b0af`). It is no longer patched via pnpm patches — all local fixes are applied directly to the source. The differential-rendering behavior in `src/tui.ts` matches upstream: the fork's viewport/scrollback rendering patches were reverted; the only remaining divergences are listed below.
+`packages/kimi-tui` is the terminal UI engine for Kimi Code, forked from the pi-tui project (upstream pi-mono, baseline 0.80.2, commit `7859b0af`). It is no longer patched via pnpm patches — all local fixes are applied directly to the source. The differential-rendering behavior in `src/tui.ts` matches upstream: the fork's viewport/scrollback rendering patches were reverted; the only remaining divergences are listed below.
 
 ## Local divergences from upstream (must be preserved on every re-vendor)
 
@@ -14,9 +14,9 @@ Never overwrite this directory wholesale when syncing from upstream. Each of the
 
 ## Acceptance after syncing from upstream
 
-- `pnpm --filter @moonshot-ai/pi-tui test` must pass in full; any failure among the guarding tests above means a local divergence was overwritten and lost.
+- `bun --filter @moonshot-ai/kimi-tui test` must pass in full; any failure among the guarding tests above means a local divergence was overwritten and lost.
 
 ## Testing
 
-- This package's tests run with `node --test` (`pnpm --filter @moonshot-ai/pi-tui test`), not vitest; the root `vitest run` does not execute them — CI covers them through the dedicated `test-pi-tui` job in `.github/workflows/ci.yml`.
+- This package's tests run with `node --test` (`bun --filter @moonshot-ai/kimi-tui test`), not vitest; the root `vitest run` does not execute them — CI covers them through the dedicated `test-kimi-tui` job in `.github/workflows/ci.yml`.
 - Prefer adding new narrow-width tests to the existing test file of the corresponding component.

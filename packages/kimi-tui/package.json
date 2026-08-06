@@ -1,15 +1,15 @@
 {
-  "name": "@moonshot-ai/pi-tui",
+  "name": "@moonshot-ai/kimi-tui",
   "version": "0.80.8",
   "private": true,
-  "description": "Terminal User Interface library with differential rendering for efficient text-based applications",
+  "description": "Terminal UI engine for Kimi Code — differential rendering, text editor, markdown, and component framework",
   "license": "MIT",
   "author": "Moonshot AI",
-  "homepage": "https://github.com/MoonshotAI/kimi-code/tree/main/packages/pi-tui#readme",
+  "homepage": "https://github.com/MoonshotAI/kimi-code/tree/main/packages/kimi-tui#readme",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/MoonshotAI/kimi-code.git",
-    "directory": "packages/pi-tui"
+    "directory": "packages/kimi-tui"
   },
   "bugs": {
     "url": "https://github.com/MoonshotAI/kimi-code/issues"
