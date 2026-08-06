@@ -437,8 +437,14 @@ export class KimiTUI {
     return this.state.inkOverlay;
   }
 
-  /** Source of truth for normal prompt editing while Ink owns the terminal. */
-  private promptEditorState: PromptEditorState;
+  private get promptEditorState(): PromptEditorState {
+    return this.state.promptEditorState;
+  }
+
+  private set promptEditorState(state: PromptEditorState) {
+    this.state.promptEditorState = state;
+  }
+
   private lastHistoryContent: string | undefined;
   // Live `!` shell output entries, keyed by commandId so concurrent commands
   // each update their own card and stale events are dropped. Mutated in place
@@ -524,7 +530,6 @@ export class KimiTUI {
     // rollback renderer during the migration window.
     this.engineV2 = startupInput.engineV2 ?? false;
     this.terminalRenderer = startupInput.terminalRenderer ?? "ink";
-    this.promptEditorState = createPromptEditorState({ inputMode: "prompt" });
     this.startupNotice = startupInput.startupNotice;
     this.state = createTUIState(tuiOptions);
     this.uninstallRainbowDance = installRainbowDance(() => {
@@ -2042,7 +2047,9 @@ export class KimiTUI {
           type: "history-add",
           text: entry.content,
         });
-        this.state.editor.addToHistory(entry.content);
+        if (!this.inkOwnsTerminal()) {
+          this.state.editor.addToHistory(entry.content);
+        }
       }
       this.lastHistoryContent = entries.at(-1)?.content;
     } catch {
@@ -2058,7 +2065,9 @@ export class KimiTUI {
       type: "history-add",
       text: trimmed,
     });
-    this.state.editor.addToHistory(trimmed);
+    if (!this.inkOwnsTerminal()) {
+      this.state.editor.addToHistory(trimmed);
+    }
     try {
       const file = getInputHistoryFile(this.state.appState.workDir);
       const written = await appendInputHistory(
@@ -4071,9 +4080,11 @@ export class KimiTUI {
       type: "set-text",
       text,
     });
-    this.state.editor.setText(text);
+    if (!this.inkOwnsTerminal()) {
+      this.state.editor.setText(text);
+      this.state.ui.requestRender();
+    }
     this.updateEditorBorderHighlight(text);
-    this.state.ui.requestRender();
     this.updateInkRenderer();
   }
 

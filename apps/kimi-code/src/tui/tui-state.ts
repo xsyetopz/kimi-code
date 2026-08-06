@@ -15,6 +15,10 @@ import {
   type TerminalState,
 } from "./utils/terminal-state";
 import {
+  createPromptEditorState,
+  type PromptEditorState,
+} from "./renderer/prompt-editor-state";
+import {
   createInkOverlayState,
   type InkOverlayState,
 } from "./renderer/ink-overlay-state";
@@ -65,6 +69,8 @@ export interface TUIState {
   swarmModeEntry: "manual" | "task" | undefined;
   /** Ink-owned dialog/overlay state; the rollback renderer ignores this. */
   inkOverlay: InkOverlayState;
+  /** Renderer-neutral prompt buffer while Ink owns the terminal. */
+  promptEditorState: PromptEditorState;
 }
 
 export function createTUIState(options: KimiTUIOptions): TUIState {
@@ -119,5 +125,6 @@ export function createTUIState(options: KimiTUIOptions): TUIState {
     queuedMessageDispatchPending: false,
     swarmModeEntry: undefined,
     inkOverlay: createInkOverlayState(),
+    promptEditorState: createPromptEditorState({ inputMode: "prompt" }),
   };
 }
