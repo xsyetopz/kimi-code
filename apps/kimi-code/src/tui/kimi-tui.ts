@@ -19,8 +19,6 @@ import {
   deleteAllKittyImages,
   type Focusable,
   getCapabilities,
-  Key,
-  matchesKey,
   Spacer,
 } from "@moonshot-ai/kimi-tui";
 import { resolve } from "pathe";
@@ -69,23 +67,7 @@ import {
   type ApprovalPreviewBlock,
   ApprovalPreviewViewer,
 } from "./components/dialogs/approval-preview.ts";
-import {
-  approvalPreviewMaxScroll,
-  approvalPreviewViewableRows,
-  buildApprovalPreviewBody,
-  findApprovalPreviewBlock,
-} from "./components/dialogs/approval-preview-body.ts";
 import { CompactionComponent } from "./components/dialogs/compaction.ts";
-import { ChoicePickerComponent } from "./components/dialogs/choice-picker.ts";
-import { EffortSelectorComponent } from "./components/dialogs/effort-selector.ts";
-import { ExperimentsSelectorComponent } from "./components/dialogs/experiments-selector.ts";
-import { ModelSelectorComponent } from "./components/dialogs/model-selector.ts";
-import {
-  PluginMcpSelectorComponent,
-  PluginsPanelComponent,
-} from "./components/dialogs/plugins-selector.ts";
-import { TabbedModelSelectorComponent } from "./components/dialogs/tabbed-model-selector.ts";
-import { UndoSelectorComponent } from "./components/dialogs/undo-selector.ts";
 import { HelpPanelComponent } from "./components/dialogs/help-panel.ts";
 import { defaultThinkingEffortFor } from "./components/dialogs/model-selector.ts";
 import { QuestionDialogComponent } from "./components/dialogs/question-dialog.ts";
@@ -97,15 +79,6 @@ import {
   type TrustPromptChoice,
   TrustPromptComponent,
 } from "./components/dialogs/trust-prompt.ts";
-import { StartPermissionPromptComponent } from "./components/dialogs/start-permission-prompt.ts";
-import {
-  GoalQueueEditDialogComponent,
-  GoalQueueManagerComponent,
-} from "./components/dialogs/goal-queue-manager.ts";
-import { ProviderManagerComponent } from "./components/dialogs/provider-manager.ts";
-import { ApiKeyInputDialogComponent } from "./components/dialogs/api-key-input-dialog.ts";
-import { CustomRegistryImportDialogComponent } from "./components/dialogs/custom-registry-import.ts";
-import { FeedbackInputDialogComponent } from "./components/dialogs/feedback-input-dialog.ts";
 import {
   FileMentionProvider,
   type SlashAutocompleteCommand,
@@ -151,6 +124,7 @@ import { AuthFlowController } from "./controllers/auth-flow.ts";
 import { BtwPanelController } from "./controllers/btw-panel.ts";
 import { ClipboardImageHintController } from "./controllers/clipboard-image-hint.ts";
 import { EditorKeyboardController } from "./controllers/editor-keyboard.ts";
+import { InkDialogsController } from "./controllers/ink-dialogs.ts";
 import { SessionEventHandler } from "./controllers/session-event-handler.ts";
 import { SessionReplayRenderer } from "./controllers/session-replay.ts";
 import { StreamingUIController } from "./controllers/streaming-ui.ts";
@@ -161,107 +135,6 @@ import {
   type InkTerminalRendererOptions,
   mountInkTerminalRenderer,
 } from "./renderer/ink/terminal-renderer.ts";
-import {
-  initInkOverlayQuestion,
-  resetInkOverlayApproval,
-  resetInkOverlayQuestion,
-} from "./renderer/ink/overlay-state.ts";
-import {
-  createInkChoicePickerList,
-  handleInkChoicePickerInput,
-  projectInkChoicePickerView,
-} from "./renderer/ink/sessions/choice-picker.ts";
-import {
-  createInkPluginMcpSelectorSession,
-  type InkPluginMcpSelectorSession,
-  projectInkPluginMcpSelectorView,
-} from "./renderer/ink/sessions/plugin-mcp-selector.ts";
-import {
-  createInkApiKeyInputSession,
-  projectInkApiKeyInputView,
-} from "./renderer/ink/sessions/api-key-input.ts";
-import type { InkSingleLineInputSession } from "./renderer/ink/sessions/input-single-line.ts";
-import {
-  createInkCustomRegistryImportSession,
-  type InkCustomRegistryImportSession,
-  projectInkCustomRegistryImportView,
-} from "./renderer/ink/sessions/custom-registry-import.ts";
-import {
-  createInkFeedbackInputSession,
-  projectInkFeedbackInputView,
-} from "./renderer/ink/sessions/feedback-input.ts";
-import {
-  createInkProviderManagerSession,
-  type InkProviderManagerSession,
-  projectInkProviderManagerView,
-} from "./renderer/ink/sessions/provider-manager.ts";
-import {
-  createInkGoalQueueEditSession,
-  type InkGoalQueueEditSession,
-  projectInkGoalQueueEditView,
-} from "./renderer/ink/sessions/goal-queue-edit.ts";
-import {
-  createInkGoalQueueManagerSession,
-  type InkGoalQueueManagerSession,
-  projectInkGoalQueueManagerView,
-} from "./renderer/ink/sessions/goal-queue-manager.ts";
-import {
-  createInkStartPermissionPromptSession,
-  type InkStartPermissionPromptSession,
-  projectInkStartPermissionPromptView,
-} from "./renderer/ink/sessions/start-permission-prompt.ts";
-import {
-  createInkPluginsPanelSession,
-  type InkPluginsPanelSession,
-  projectInkPluginsPanelView,
-} from "./renderer/ink/sessions/plugins-panel.ts";
-import {
-  createInkExperimentsSelectorSession,
-  type InkExperimentsSelectorSession,
-  projectInkExperimentsSelectorView,
-} from "./renderer/ink/sessions/experiments-selector.ts";
-import {
-  createInkUndoSelectorSession,
-  type InkUndoSelectorSession,
-  projectInkUndoSelectorView,
-} from "./renderer/ink/sessions/undo-selector.ts";
-import {
-  createInkEffortSelectorSession,
-  type InkEffortSelectorSession,
-  projectInkEffortSelectorView,
-} from "./renderer/ink/sessions/effort-selector.ts";
-import {
-  createInkModelSelectorSession,
-  createInkTabbedModelSelectorSession,
-  type InkModelSelectorSession,
-  type InkTabbedModelSelectorSession,
-  projectInkModelSelectorView,
-} from "./renderer/ink/sessions/model-selector.ts";
-import type { ChoicePickerOptions } from "./components/dialogs/choice-picker.ts";
-import type { ChoiceOption } from "./components/dialogs/choice-picker.ts";
-import type { EffortSelectorOptions } from "./components/dialogs/effort-selector.ts";
-import type {
-  ExperimentalFeatureDraftChange,
-  ExperimentsSelectorOptions,
-} from "./components/dialogs/experiments-selector.ts";
-import type { PluginMcpSelectorOptions, PluginsPanelOptions } from "./components/dialogs/plugins-selector.ts";
-import type { ModelSelectorOptions } from "./components/dialogs/model-selector.ts";
-import type { TabbedModelSelectorOptions } from "./components/dialogs/tabbed-model-selector.ts";
-import type { UndoSelectorOptions } from "./components/dialogs/undo-selector.ts";
-import type { StartPermissionPromptOptions } from "./components/dialogs/start-permission-prompt.ts";
-import type {
-  GoalQueueEditDialogOptions,
-  GoalQueueManagerOptions,
-} from "./components/dialogs/goal-queue-manager.ts";
-import type { ProviderManagerOptions } from "./components/dialogs/provider-manager.ts";
-import type { ApiKeyInputDialogOptions, ApiKeyInputResult } from "./components/dialogs/api-key-input-dialog.ts";
-import type { CustomRegistryImportDialogOptions } from "./components/dialogs/custom-registry-import.ts";
-import type { FeedbackInputDialogOptions, FeedbackInputDialogResult } from "./components/dialogs/feedback-input-dialog.ts";
-import { SearchableList } from "./utils/searchable-list.ts";
-import {
-  handleInkQuestionWizardInput,
-  projectInkQuestionWizardView,
-} from "./renderer/ink/question-wizard.ts";
 import {
   type PromptSemanticAction,
   routePromptEditorInput,
@@ -336,7 +209,6 @@ import { notifyTerminalOnce } from "./utils/terminal-notification.ts";
 import { installTerminalThemeTracking } from "./utils/terminal-theme.ts";
 import { thinkingEffortFromConfig } from "./utils/thinking-config.ts";
 import { detectTmuxKeyboardWarning } from "./utils/tmux-keyboard.ts";
-import { isPrintableChar, printableChar } from "./utils/printable-key.ts";
 import {
   getTranscriptComponentEntry,
   markTranscriptComponent,
@@ -543,70 +415,7 @@ export class KimiTUI {
     | undefined;
   /** Optional Ink bridge used by the staged renderer migration. */
   private inkRenderer: InkTerminalRenderer | undefined;
-  private inkChoicePickerOptions: ChoicePickerOptions | null = null;
-  private inkChoicePickerList: SearchableList<ChoiceOption> | null = null;
-  private inkModelSelector:
-    | {
-        readonly kind: "flat";
-        readonly session: InkModelSelectorSession;
-        readonly opts: ModelSelectorOptions;
-      }
-    | {
-        readonly kind: "tabbed";
-        readonly session: InkTabbedModelSelectorSession;
-        readonly opts: TabbedModelSelectorOptions;
-      }
-    | null = null;
-  private inkEffortSelector: {
-    readonly session: InkEffortSelectorSession;
-    readonly opts: EffortSelectorOptions;
-  } | null = null;
-  private inkUndoSelector: {
-    readonly session: InkUndoSelectorSession;
-    readonly opts: UndoSelectorOptions;
-  } | null = null;
-  private inkExperimentsSelector: {
-    readonly session: InkExperimentsSelectorSession;
-    readonly opts: ExperimentsSelectorOptions;
-  } | null = null;
-  private inkPluginMcpSelector: {
-    readonly session: InkPluginMcpSelectorSession;
-    readonly opts: PluginMcpSelectorOptions;
-  } | null = null;
-  private inkPluginsPanel: {
-    readonly session: InkPluginsPanelSession;
-    readonly opts: PluginsPanelOptions;
-    readonly panel: PluginsPanelComponent;
-  } | null = null;
-  private inkStartPermissionPrompt: {
-    readonly session: InkStartPermissionPromptSession;
-    readonly opts: StartPermissionPromptOptions;
-  } | null = null;
-  private inkGoalQueueManager: {
-    readonly session: InkGoalQueueManagerSession;
-    readonly opts: GoalQueueManagerOptions;
-    readonly panel: GoalQueueManagerComponent;
-  } | null = null;
-  private inkGoalQueueEdit: {
-    readonly session: InkGoalQueueEditSession;
-    readonly opts: GoalQueueEditDialogOptions;
-  } | null = null;
-  private inkProviderManager: {
-    readonly session: InkProviderManagerSession;
-    readonly opts: ProviderManagerOptions;
-  } | null = null;
-  private inkApiKeyInput: {
-    readonly session: InkSingleLineInputSession<ApiKeyInputResult>;
-    readonly opts: ApiKeyInputDialogOptions;
-  } | null = null;
-  private inkFeedbackInput: {
-    readonly session: InkSingleLineInputSession<FeedbackInputDialogResult>;
-    readonly opts: FeedbackInputDialogOptions;
-  } | null = null;
-  private inkCustomRegistryImport: {
-    readonly session: InkCustomRegistryImportSession;
-    readonly opts: CustomRegistryImportDialogOptions;
-  } | null = null;
+  readonly inkDialogsController: InkDialogsController;
   private readonly terminalRenderer: "kimi-tui" | "ink";
   private readonly terminalOwnership = new TerminalOwnership();
   private inkOwnsTerminal(): boolean {
@@ -712,6 +521,7 @@ export class KimiTUI {
     this.terminalRenderer = startupInput.terminalRenderer ?? "ink";
     this.startupNotice = startupInput.startupNotice;
     this.state = createTUIState(tuiOptions);
+    this.inkDialogsController = new InkDialogsController(this);
     this.uninstallRainbowDance = installRainbowDance(() => {
       this.state.ui.requestRender();
     });
@@ -1053,7 +863,7 @@ export class KimiTUI {
   /** Route normal prompt input through the renderer-neutral editor model. */
   private handleInkInput(data: string): void {
     if (this.inkOverlay.approvalPreviewBlock !== null) {
-      if (this.handleInkApprovalPreviewInput(data)) return;
+      if (this.inkDialogsController.handleApprovalPreviewInput(data)) return;
       this.updateInkRenderer();
       return;
     }
@@ -1062,7 +872,7 @@ export class KimiTUI {
       this.state.livePane.pendingApproval !== null ||
       this.state.livePane.pendingQuestion !== null;
     if (hasLegacyDialog) {
-      if (this.handleInkSimpleDialogInput(data)) return;
+      if (this.inkDialogsController.handleDialogInput(data)) return;
       this.state.ui.dispatchInput(data);
       this.updateInkRenderer();
       return;
@@ -1085,871 +895,25 @@ export class KimiTUI {
     }
   }
 
-  /** Handle dialogs whose interaction model is represented in the Ink snapshot. */
-  private handleInkSimpleDialogInput(data: string): boolean {
-    if (this.state.livePane.pendingApproval !== null) {
-      return this.handleInkApprovalInput(data);
-    }
-    if (this.state.livePane.pendingQuestion !== null) {
-      return this.handleInkQuestionInput(data);
-    }
-    const dialog = this.state.activeDialog;
-    if (dialog === "help") {
-      const printable = printableChar(data);
-      if (
-        matchesKey(data, Key.escape) ||
-        matchesKey(data, Key.enter) ||
-        printable === "q" ||
-        printable === "Q"
-      ) {
-        this.hideHelpPanel();
-        return true;
-      }
-      if (matchesKey(data, Key.up)) {
-        this.inkOverlay.dialogScrollTop = Math.max(0, this.inkOverlay.dialogScrollTop - 1);
-        this.updateInkRenderer();
-        return true;
-      }
-      if (matchesKey(data, Key.down)) {
-        this.inkOverlay.dialogScrollTop += 1;
-        this.updateInkRenderer();
-        return true;
-      }
-      if (matchesKey(data, Key.pageUp)) {
-        this.inkOverlay.dialogScrollTop = Math.max(0, this.inkOverlay.dialogScrollTop - 10);
-        this.updateInkRenderer();
-        return true;
-      }
-      if (matchesKey(data, Key.pageDown)) {
-        this.inkOverlay.dialogScrollTop += 10;
-        this.updateInkRenderer();
-        return true;
-      }
-      return true;
-    }
-    if (dialog === "choice-picker") {
-      return this.handleInkChoicePickerInput(data);
-    }
-    if (dialog === "model-selector") {
-      return this.handleInkModelSelectorInput(data);
-    }
-    if (dialog === "effort-selector") {
-      return this.handleInkEffortSelectorInput(data);
-    }
-    if (dialog === "undo-selector") {
-      return this.handleInkUndoSelectorInput(data);
-    }
-    if (dialog === "experiments-selector") {
-      return this.handleInkExperimentsSelectorInput(data);
-    }
-    if (dialog === "plugin-mcp-selector") {
-      return this.handleInkPluginMcpSelectorInput(data);
-    }
-    if (dialog === "plugins-panel") {
-      return this.handleInkPluginsPanelInput(data);
-    }
-    if (dialog === "start-permission-prompt") {
-      return this.handleInkStartPermissionPromptInput(data);
-    }
-    if (dialog === "goal-queue-manager") {
-      return this.handleInkGoalQueueManagerInput(data);
-    }
-    if (dialog === "goal-queue-edit") {
-      return this.handleInkGoalQueueEditInput(data);
-    }
-    if (dialog === "provider-manager") {
-      return this.handleInkProviderManagerInput(data);
-    }
-    if (dialog === "api-key-input") {
-      return this.handleInkApiKeyInput(data);
-    }
-    if (dialog === "feedback-input") {
-      return this.handleInkFeedbackInput(data);
-    }
-    if (dialog === "custom-registry-import") {
-      return this.handleInkCustomRegistryImportInput(data);
-    }
-    if (dialog !== "trust-prompt" && dialog !== "session-picker") return false;
-    const count =
-      dialog === "trust-prompt" ? 2 : Math.min(8, this.state.sessions.length);
-    if (matchesKey(data, Key.up) || matchesKey(data, Key.down)) {
-      if (count === 0) return true;
-      const delta = matchesKey(data, Key.up) ? -1 : 1;
-      this.inkOverlay.dialogSelectedIndex =
-        (this.inkOverlay.dialogSelectedIndex + delta + count) % count;
-      this.updateInkRenderer();
-      return true;
-    }
-    if (matchesKey(data, Key.escape)) {
-      if (dialog === "trust-prompt") {
-        this.trustPromptChoiceResolver?.("distrust");
-      } else {
-        this.inkSessionPickerCancel?.();
-      }
-      return true;
-    }
-    if (dialog === "session-picker" && matchesKey(data, Key.ctrl("a"))) {
-      const selected = this.state.sessions[this.inkOverlay.dialogSelectedIndex];
-      this.inkSessionPickerToggleScope?.(
-        selected?.id ?? this.state.appState.sessionId,
-      );
-      return true;
-    }
-    if (matchesKey(data, Key.enter) || matchesKey(data, Key.space)) {
-      if (dialog === "trust-prompt") {
-        this.trustPromptChoiceResolver?.(
-          this.inkOverlay.dialogSelectedIndex === 0 ? "trust" : "distrust",
-        );
-      } else {
-        const selected = this.state.sessions[this.inkOverlay.dialogSelectedIndex];
-        if (selected !== undefined) this.inkSessionPickerSelect?.(selected);
-      }
-      return true;
-    }
-    return false;
+  resolveTrustPrompt(choice: TrustPromptChoice): void {
+    this.trustPromptChoiceResolver?.(choice);
   }
 
-  private handleInkApprovalInput(data: string): boolean {
-    const approval = this.state.livePane.pendingApproval;
-    if (approval === null) return false;
-    const choices = approval.data.choices;
-    const count = choices.length;
-
-    if (this.inkOverlay.approvalFeedbackMode) {
-      if (matchesKey(data, Key.up) || matchesKey(data, Key.down)) {
-        this.inkOverlay.approvalFeedbackMode = false;
-        this.inkOverlay.approvalFeedbackText = "";
-        if (count > 0) {
-          const delta = matchesKey(data, Key.up) ? -1 : 1;
-          this.inkOverlay.dialogSelectedIndex =
-            (this.inkOverlay.dialogSelectedIndex + delta + count) % count;
-        }
-        this.updateInkRenderer();
-        return true;
-      }
-      if (matchesKey(data, Key.escape)) {
-        this.inkOverlay.approvalFeedbackMode = false;
-        this.inkOverlay.approvalFeedbackText = "";
-        this.updateInkRenderer();
-        return true;
-      }
-      if (matchesKey(data, Key.enter)) {
-        this.submitInkApproval(
-          this.inkOverlay.dialogSelectedIndex,
-          this.inkOverlay.approvalFeedbackText,
-        );
-        return true;
-      }
-      if (matchesKey(data, Key.backspace) || data === "\u007f") {
-        this.inkOverlay.approvalFeedbackText = this.inkOverlay.approvalFeedbackText.slice(
-          0,
-          -1,
-        );
-        this.updateInkRenderer();
-        return true;
-      }
-      const printable = printableChar(data);
-      if (isPrintableChar(printable)) {
-        this.inkOverlay.approvalFeedbackText += printable;
-        this.updateInkRenderer();
-      }
-      return true;
-    }
-
-    if (
-      matchesKey(data, Key.escape) ||
-      matchesKey(data, Key.ctrl("c")) ||
-      matchesKey(data, Key.ctrl("d"))
-    ) {
-      this.approvalController.respond(
-        adaptPanelResponse({ response: "rejected" }),
-      );
-      return true;
-    }
-
-    if (matchesKey(data, Key.ctrl("e"))) {
-      const block = this.findInkApprovalPreviewBlock();
-      if (block !== undefined) this.openInkApprovalPreview(block);
-      return true;
-    }
-
-    if (count === 0) return true;
-    if (matchesKey(data, Key.up) || matchesKey(data, Key.down)) {
-      const delta = matchesKey(data, Key.up) ? -1 : 1;
-      this.inkOverlay.dialogSelectedIndex = (this.inkOverlay.dialogSelectedIndex + delta + count) % count;
-      this.updateInkRenderer();
-      return true;
-    }
-    if (matchesKey(data, Key.enter)) {
-      this.selectInkApproval(this.inkOverlay.dialogSelectedIndex);
-      return true;
-    }
-
-    const printable = printableChar(data);
-    const numericIndex = Number(printable) - 1;
-    if (
-      Number.isInteger(numericIndex) &&
-      numericIndex >= 0 &&
-      numericIndex < count
-    ) {
-      this.selectInkApproval(numericIndex);
-      return true;
-    }
-    return true;
+  cancelSessionPicker(): void {
+    this.inkSessionPickerCancel?.();
   }
 
-  private selectInkApproval(index: number): void {
-    const approval = this.state.livePane.pendingApproval;
-    if (approval === null) return;
-    const option = approval.data.choices[index];
-    if (option === undefined) return;
-    if (option.requires_feedback === true) {
-      this.inkOverlay.dialogSelectedIndex = index;
-      this.inkOverlay.approvalFeedbackMode = true;
-      this.inkOverlay.approvalFeedbackText = "";
-      this.updateInkRenderer();
-      return;
-    }
-    this.submitInkApproval(index);
+  selectSessionPickerRow(session: SessionRow): void {
+    this.inkSessionPickerSelect?.(session);
   }
 
-  private submitInkApproval(index: number, feedback = ""): void {
-    const approval = this.state.livePane.pendingApproval;
-    if (approval === null) return;
-    const option = approval.data.choices[index];
-    if (option === undefined) return;
-    this.approvalController.respond(
-      adaptPanelResponse({
-        response: option.response,
-        feedback: feedback.length > 0 ? feedback : undefined,
-        selected_label: option.selected_label,
-      }),
-    );
+  toggleSessionPickerScope(sessionId: string): void {
+    this.inkSessionPickerToggleScope?.(sessionId);
   }
 
-  private resetInkApprovalDialogState(): void {
-    resetInkOverlayApproval(this.inkOverlay);
-  }
-
-  private findInkApprovalPreviewBlock(): ApprovalPreviewBlock | undefined {
-    const approval = this.state.livePane.pendingApproval;
-    if (approval === null) return;
-    return findApprovalPreviewBlock(approval.data.display);
-  }
-
-  private openInkApprovalPreview(block: ApprovalPreviewBlock): void {
-    if (this.inkOverlay.approvalPreviewBlock !== null) return;
-    this.inkOverlay.approvalPreviewBlock = block;
-    this.inkOverlay.approvalPreviewScrollTop = 0;
-    this.updateInkRenderer();
-  }
-
-  private handleInkApprovalPreviewInput(data: string): boolean {
-    if (this.inkOverlay.approvalPreviewBlock === null) return false;
-    const rows = this.state.terminal.rows;
-    const viewable = approvalPreviewViewableRows(rows);
-    const printable = printableChar(data);
-
-    if (
-      matchesKey(data, Key.escape) ||
-      matchesKey(data, Key.ctrl("e")) ||
-      printable === "q" ||
-      printable === "Q"
-    ) {
-      this.closeApprovalPreview();
-      return true;
-    }
-    if (matchesKey(data, Key.up) || printable === "k") {
-      this.scrollInkApprovalPreview(-1, viewable);
-      return true;
-    }
-    if (matchesKey(data, Key.down) || printable === "j") {
-      this.scrollInkApprovalPreview(1, viewable);
-      return true;
-    }
-    if (matchesKey(data, Key.pageUp) || printable === " " || data === "\x02") {
-      this.scrollInkApprovalPreview(-Math.max(1, viewable - 1), viewable);
-      return true;
-    }
-    if (matchesKey(data, Key.pageDown) || data === "\x06") {
-      this.scrollInkApprovalPreview(Math.max(1, viewable - 1), viewable);
-      return true;
-    }
-    if (matchesKey(data, Key.home) || printable === "g") {
-      this.inkOverlay.approvalPreviewScrollTop = 0;
-      this.updateInkRenderer();
-      return true;
-    }
-    if (matchesKey(data, Key.end) || printable === "G") {
-      const lineCount = buildApprovalPreviewBody(this.inkOverlay.approvalPreviewBlock)
-        .lines.length;
-      this.inkOverlay.approvalPreviewScrollTop = approvalPreviewMaxScroll(
-        lineCount,
-        viewable,
-      );
-      this.updateInkRenderer();
-      return true;
-    }
-    return true;
-  }
-
-  private scrollInkApprovalPreview(delta: number, viewable: number): void {
-    if (this.inkOverlay.approvalPreviewBlock === null) return;
-    const lineCount = buildApprovalPreviewBody(this.inkOverlay.approvalPreviewBlock)
-      .lines.length;
-    const maxScroll = approvalPreviewMaxScroll(lineCount, viewable);
-    this.inkOverlay.approvalPreviewScrollTop = Math.max(
-      0,
-      Math.min(this.inkOverlay.approvalPreviewScrollTop + delta, maxScroll),
-    );
-    this.updateInkRenderer();
-  }
-
-  private resetInkQuestionDialogState(): void {
-    resetInkOverlayQuestion(this.inkOverlay);
-  }
-
-  private handleInkQuestionInput(data: string): boolean {
-    const pending = this.state.livePane.pendingQuestion;
-    if (pending === null) return false;
-    if (this.inkOverlay.questionWizard === null) {
-      initInkOverlayQuestion(this.inkOverlay, pending.data.questions.length);
-    }
-    const wizard = this.inkOverlay.questionWizard;
-    if (wizard === null) return false;
-    const consumed = handleInkQuestionWizardInput(
-      pending,
-      wizard,
-      data,
-      (response) => {
-        this.questionController.respond(response);
-      },
-    );
-    if (consumed) {
-      this.inkOverlay.dialogSelectedIndex = projectInkQuestionWizardView(
-        pending,
-        wizard,
-      ).selectedIndex;
-      this.updateInkRenderer();
-    }
-    return consumed;
-  }
-
-  private handleInkChoicePickerInput(data: string): boolean {
-    const opts = this.inkChoicePickerOptions;
-    const list = this.inkChoicePickerList;
-    if (opts === null || list === null) return false;
-    const consumed = handleInkChoicePickerInput(opts, list, data, {
-      onSelect: (value) => {
-        this.closeInkChoicePicker();
-        opts.onSelect(value);
-      },
-      onSessionOnlySelect: opts.onSessionOnlySelect,
-      onCancel: () => {
-        this.closeInkChoicePicker();
-        opts.onCancel();
-      },
-    });
-    if (consumed) {
-      this.updateInkRenderer();
-    }
-    return consumed;
-  }
-
-  private openInkChoicePicker(opts: ChoicePickerOptions): void {
-    this.closeInkChoicePicker();
-    this.inkChoicePickerOptions = opts;
-    this.inkChoicePickerList = createInkChoicePickerList(opts);
-    this.state.activeDialog = "choice-picker";
-    this.updateInkRenderer();
-  }
-
-  private closeInkChoicePicker(): void {
-    this.inkChoicePickerOptions = null;
-    this.inkChoicePickerList = null;
-    if (this.state.activeDialog === "choice-picker") {
-      this.state.activeDialog = null;
-    }
-  }
-
-  private handleInkModelSelectorInput(data: string): boolean {
-    const handle = this.inkModelSelector;
-    if (handle === null) return false;
-    const callbacks = {
-      onSelect: (selection: { alias: string; thinking: string }) => {
-        this.closeInkModelSelector();
-        if (handle.kind === "flat") {
-          handle.opts.onSelect(selection);
-          return;
-        }
-        handle.opts.onSelect(selection);
-      },
-      onSessionOnlySelect:
-        handle.kind === "flat"
-          ? handle.opts.onSessionOnlySelect
-          : handle.opts.onSessionOnlySelect,
-      onCancel: () => {
-        this.closeInkModelSelector();
-        if (handle.kind === "flat") {
-          handle.opts.onCancel();
-          return;
-        }
-        handle.opts.onCancel();
-      },
-    };
-    const consumed =
-      handle.kind === "flat"
-        ? handle.session.handleInput(data, callbacks)
-        : handle.session.handleInput(data, callbacks);
-    if (consumed) {
-      this.updateInkRenderer();
-    }
-    return consumed;
-  }
-
-  private openInkModelSelector(opts: ModelSelectorOptions): void {
-    this.closeInkModelSelector();
-    this.inkModelSelector = {
-      kind: "flat",
-      session: createInkModelSelectorSession(opts),
-      opts,
-    };
-    this.state.activeDialog = "model-selector";
-    this.updateInkRenderer();
-  }
-
-  private openInkTabbedModelSelector(opts: TabbedModelSelectorOptions): void {
-    this.closeInkModelSelector();
-    this.inkModelSelector = {
-      kind: "tabbed",
-      session: createInkTabbedModelSelectorSession(opts),
-      opts,
-    };
-    this.state.activeDialog = "model-selector";
-    this.updateInkRenderer();
-  }
-
-  private closeInkModelSelector(): void {
-    this.inkModelSelector = null;
-    if (this.state.activeDialog === "model-selector") {
-      this.state.activeDialog = null;
-    }
-  }
-
-  private handleInkEffortSelectorInput(data: string): boolean {
-    const handle = this.inkEffortSelector;
-    if (handle === null) return false;
-    const callbacks = {
-      onSelect: (effort: EffortSelectorOptions["efforts"][number]) => {
-        this.closeInkEffortSelector();
-        handle.opts.onSelect(effort);
-      },
-      onSessionOnlySelect: handle.opts.onSessionOnlySelect,
-      onCancel: () => {
-        this.closeInkEffortSelector();
-        handle.opts.onCancel();
-      },
-    };
-    const consumed = handle.session.handleInput(data, callbacks);
-    if (consumed) {
-      this.updateInkRenderer();
-    }
-    return consumed;
-  }
-
-  private openInkEffortSelector(opts: EffortSelectorOptions): void {
-    this.closeInkEffortSelector();
-    this.inkEffortSelector = {
-      session: createInkEffortSelectorSession(opts),
-      opts,
-    };
-    this.state.activeDialog = "effort-selector";
-    this.updateInkRenderer();
-  }
-
-  private closeInkEffortSelector(): void {
-    this.inkEffortSelector = null;
-    if (this.state.activeDialog === "effort-selector") {
-      this.state.activeDialog = null;
-    }
-  }
-
-  private handleInkUndoSelectorInput(data: string): boolean {
-    const handle = this.inkUndoSelector;
-    if (handle === null) return false;
-    const callbacks = {
-      onSelect: (choice: UndoSelectorOptions["choices"][number]) => {
-        this.closeInkUndoSelector();
-        handle.opts.onSelect(choice);
-      },
-      onCancel: () => {
-        this.closeInkUndoSelector();
-        handle.opts.onCancel();
-      },
-    };
-    const consumed = handle.session.handleInput(data, callbacks);
-    if (consumed) {
-      this.updateInkRenderer();
-    }
-    return consumed;
-  }
-
-  private openInkUndoSelector(opts: UndoSelectorOptions): void {
-    this.closeInkUndoSelector();
-    this.inkUndoSelector = {
-      session: createInkUndoSelectorSession(opts),
-      opts,
-    };
-    this.state.activeDialog = "undo-selector";
-    this.updateInkRenderer();
-  }
-
-  private closeInkUndoSelector(): void {
-    this.inkUndoSelector = null;
-    if (this.state.activeDialog === "undo-selector") {
-      this.state.activeDialog = null;
-    }
-  }
-
-  private handleInkExperimentsSelectorInput(data: string): boolean {
-    const handle = this.inkExperimentsSelector;
-    if (handle === null) return false;
-    const callbacks = {
-      onApply: (changes: readonly ExperimentalFeatureDraftChange[]) => {
-        handle.opts.onApply(changes);
-      },
-      onCancel: () => {
-        this.closeInkExperimentsSelector();
-        handle.opts.onCancel();
-      },
-    };
-    const consumed = handle.session.handleInput(data, callbacks);
-    if (consumed) {
-      this.updateInkRenderer();
-    }
-    return consumed;
-  }
-
-  private openInkExperimentsSelector(opts: ExperimentsSelectorOptions): void {
-    this.closeInkExperimentsSelector();
-    this.inkExperimentsSelector = {
-      session: createInkExperimentsSelectorSession(opts),
-      opts,
-    };
-    this.state.activeDialog = "experiments-selector";
-    this.updateInkRenderer();
-  }
-
-  private closeInkExperimentsSelector(): void {
-    this.inkExperimentsSelector = null;
-    if (this.state.activeDialog === "experiments-selector") {
-      this.state.activeDialog = null;
-    }
-  }
-
-  private handleInkPluginMcpSelectorInput(data: string): boolean {
-    const handle = this.inkPluginMcpSelector;
-    if (handle === null) return false;
-    const callbacks = {
-      onSelect: (selection: Parameters<PluginMcpSelectorOptions["onSelect"]>[0]) => {
-        handle.opts.onSelect(selection);
-      },
-      onCancel: () => {
-        this.closeInkPluginMcpSelector();
-        handle.opts.onCancel();
-      },
-    };
-    const consumed = handle.session.handleInput(data, callbacks);
-    if (consumed) {
-      this.updateInkRenderer();
-    }
-    return consumed;
-  }
-
-  private openInkPluginMcpSelector(opts: PluginMcpSelectorOptions): void {
-    this.closeInkPluginMcpSelector();
-    this.inkPluginMcpSelector = {
-      session: createInkPluginMcpSelectorSession(opts),
-      opts,
-    };
-    this.state.activeDialog = "plugin-mcp-selector";
-    this.updateInkRenderer();
-  }
-
-  private closeInkPluginMcpSelector(): void {
-    this.inkPluginMcpSelector = null;
-    if (this.state.activeDialog === "plugin-mcp-selector") {
-      this.state.activeDialog = null;
-    }
-  }
-
-  private handleInkPluginsPanelInput(data: string): boolean {
-    const handle = this.inkPluginsPanel;
-    if (handle === null) return false;
-    const callbacks = {
-      onSelect: (selection: Parameters<PluginsPanelOptions["onSelect"]>[0]) => {
-        handle.opts.onSelect(selection);
-      },
-      onCancel: () => {
-        this.closeInkPluginsPanel();
-        handle.opts.onCancel();
-      },
-    };
-    const consumed = handle.session.handleInput(data, callbacks);
-    if (consumed) {
-      this.updateInkRenderer();
-    }
-    return consumed;
-  }
-
-  private openInkPluginsPanel(panel: PluginsPanelComponent): void {
-    this.closeInkPluginsPanel();
-    const opts = panel.getPluginsPanelOptions();
-    const session = createInkPluginsPanelSession(opts);
-    panel.attachInkSession(session, () => {
-      this.updateInkRenderer();
-    });
-    this.inkPluginsPanel = { session, opts, panel };
-    this.state.activeDialog = "plugins-panel";
-    this.updateInkRenderer();
-  }
-
-  private closeInkPluginsPanel(): void {
-    this.inkPluginsPanel = null;
-    if (this.state.activeDialog === "plugins-panel") {
-      this.state.activeDialog = null;
-    }
-  }
-
-  private handleInkStartPermissionPromptInput(data: string): boolean {
-    const handle = this.inkStartPermissionPrompt;
-    if (handle === null) return false;
-    const callbacks = {
-      onSelect: (choice: Parameters<StartPermissionPromptOptions["onSelect"]>[0]) => {
-        handle.opts.onSelect(choice);
-      },
-      onCancel: () => {
-        this.closeInkStartPermissionPrompt();
-        handle.opts.onCancel();
-      },
-    };
-    const consumed = handle.session.handleInput(data, callbacks);
-    if (consumed) {
-      this.updateInkRenderer();
-    }
-    return consumed;
-  }
-
-  private openInkStartPermissionPrompt(
-    opts: StartPermissionPromptOptions,
-  ): void {
-    this.closeInkStartPermissionPrompt();
-    this.inkStartPermissionPrompt = {
-      session: createInkStartPermissionPromptSession(opts),
-      opts,
-    };
-    this.state.activeDialog = "start-permission-prompt";
-    this.updateInkRenderer();
-  }
-
-  private closeInkStartPermissionPrompt(): void {
-    this.inkStartPermissionPrompt = null;
-    if (this.state.activeDialog === "start-permission-prompt") {
-      this.state.activeDialog = null;
-    }
-  }
-
-  private handleInkGoalQueueManagerInput(data: string): boolean {
-    const handle = this.inkGoalQueueManager;
-    if (handle === null) return false;
-    const callbacks = {
-      onAction: (action: Parameters<GoalQueueManagerOptions["onAction"]>[0]) =>
-        handle.opts.onAction(action),
-      onCancel: () => {
-        this.closeInkGoalQueueManager();
-        handle.opts.onCancel();
-      },
-    };
-    const consumed = handle.session.handleInput(data, callbacks);
-    if (consumed) {
-      this.updateInkRenderer();
-    }
-    return consumed;
-  }
-
-  private openInkGoalQueueManager(panel: GoalQueueManagerComponent): void {
-    this.closeInkGoalQueueManager();
-    this.closeInkGoalQueueEdit();
-    const opts = panel.getGoalQueueManagerOptions();
-    const session = createInkGoalQueueManagerSession(opts);
-    panel.attachInkSession(session, () => {
-      this.updateInkRenderer();
-    });
-    this.inkGoalQueueManager = { session, opts, panel };
-    this.state.activeDialog = "goal-queue-manager";
-    this.updateInkRenderer();
-  }
-
-  private closeInkGoalQueueManager(): void {
-    this.inkGoalQueueManager = null;
-    if (this.state.activeDialog === "goal-queue-manager") {
-      this.state.activeDialog = null;
-    }
-  }
-
-  private handleInkGoalQueueEditInput(data: string): boolean {
-    const handle = this.inkGoalQueueEdit;
-    if (handle === null) return false;
-    const callbacks = {
-      onDone: (result: Parameters<GoalQueueEditDialogOptions["onDone"]>[0]) => {
-        handle.opts.onDone(result);
-      },
-    };
-    const consumed = handle.session.handleInput(data, callbacks);
-    if (consumed) {
-      this.updateInkRenderer();
-    }
-    return consumed;
-  }
-
-  private openInkGoalQueueEdit(opts: GoalQueueEditDialogOptions): void {
-    this.closeInkGoalQueueEdit();
-    this.closeInkGoalQueueManager();
-    this.inkGoalQueueEdit = {
-      session: createInkGoalQueueEditSession(opts),
-      opts,
-    };
-    this.state.activeDialog = "goal-queue-edit";
-    this.updateInkRenderer();
-  }
-
-  private closeInkGoalQueueEdit(): void {
-    this.inkGoalQueueEdit = null;
-    if (this.state.activeDialog === "goal-queue-edit") {
-      this.state.activeDialog = null;
-    }
-  }
-
-  private handleInkProviderManagerInput(data: string): boolean {
-    const handle = this.inkProviderManager;
-    if (handle === null) return false;
-    const callbacks = {
-      onAdd: () => {
-        handle.opts.onAdd();
-      },
-      onDeleteSource: (providerIds: readonly string[]) => {
-        handle.opts.onDeleteSource(providerIds);
-      },
-      onClose: () => {
-        this.closeInkProviderManager();
-        handle.opts.onClose();
-      },
-    };
-    const consumed = handle.session.handleInput(data, callbacks);
-    if (consumed) {
-      this.updateInkRenderer();
-    }
-    return consumed;
-  }
-
-  private openInkProviderManager(opts: ProviderManagerOptions): void {
-    this.closeInkProviderManager();
-    this.inkProviderManager = {
-      session: createInkProviderManagerSession(opts),
-      opts,
-    };
-    this.state.activeDialog = "provider-manager";
-    this.updateInkRenderer();
-  }
-
-  private closeInkProviderManager(): void {
-    this.inkProviderManager = null;
-    if (this.state.activeDialog === "provider-manager") {
-      this.state.activeDialog = null;
-    }
-  }
-
-  private handleInkApiKeyInput(data: string): boolean {
-    const handle = this.inkApiKeyInput;
-    if (handle === null) return false;
-    const consumed = handle.session.handleInput(data);
-    if (consumed) {
-      this.updateInkRenderer();
-    }
-    return consumed;
-  }
-
-  private openInkApiKeyInput(opts: ApiKeyInputDialogOptions): void {
-    this.closeInkApiKeyInput();
-    this.inkApiKeyInput = {
-      session: createInkApiKeyInputSession(opts),
-      opts,
-    };
-    this.state.activeDialog = "api-key-input";
-    this.updateInkRenderer();
-  }
-
-  private closeInkApiKeyInput(): void {
-    this.inkApiKeyInput = null;
-    if (this.state.activeDialog === "api-key-input") {
-      this.state.activeDialog = null;
-    }
-  }
-
-  private handleInkFeedbackInput(data: string): boolean {
-    const handle = this.inkFeedbackInput;
-    if (handle === null) return false;
-    const consumed = handle.session.handleInput(data);
-    if (consumed) {
-      this.updateInkRenderer();
-    }
-    return consumed;
-  }
-
-  private openInkFeedbackInput(opts: FeedbackInputDialogOptions): void {
-    this.closeInkFeedbackInput();
-    this.inkFeedbackInput = {
-      session: createInkFeedbackInputSession(opts),
-      opts,
-    };
-    this.state.activeDialog = "feedback-input";
-    this.updateInkRenderer();
-  }
-
-  private closeInkFeedbackInput(): void {
-    this.inkFeedbackInput = null;
-    if (this.state.activeDialog === "feedback-input") {
-      this.state.activeDialog = null;
-    }
-  }
-
-  private handleInkCustomRegistryImportInput(data: string): boolean {
-    const handle = this.inkCustomRegistryImport;
-    if (handle === null) return false;
-    const consumed = handle.session.handleInput(data);
-    if (consumed) {
-      this.updateInkRenderer();
-    }
-    return consumed;
-  }
-
-  private openInkCustomRegistryImport(
-    opts: CustomRegistryImportDialogOptions,
-  ): void {
-    this.closeInkCustomRegistryImport();
-    this.inkCustomRegistryImport = {
-      session: createInkCustomRegistryImportSession(opts),
-      opts,
-    };
-    this.state.activeDialog = "custom-registry-import";
-    this.updateInkRenderer();
-  }
-
-  private closeInkCustomRegistryImport(): void {
-    this.inkCustomRegistryImport = null;
-    if (this.state.activeDialog === "custom-registry-import") {
-      this.state.activeDialog = null;
-    }
+  /** @internal Test hook — delegates to {@link InkDialogsController.handleDialogInput}. */
+  handleInkSimpleDialogInput(data: string): boolean {
+    return this.inkDialogsController.handleDialogInput(data);
   }
 
   /** Refresh Ink after an asynchronous clipboard/image editor callback. */
@@ -4382,96 +3346,12 @@ export class KimiTUI {
         autocomplete: this.promptEditorState.completion?.items ?? [],
       },
       activeDialog: this.state.activeDialog,
-      dialogSelectedIndex: this.inkOverlay.dialogSelectedIndex,
-      dialogScrollTop: this.inkOverlay.dialogScrollTop,
-      approvalFeedbackMode: this.inkOverlay.approvalFeedbackMode,
-      approvalFeedbackText: this.inkOverlay.approvalFeedbackText,
-      questionWizard:
-        this.inkOverlay.questionWizard === null ||
-        this.state.livePane.pendingQuestion === null
-          ? null
-          : projectInkQuestionWizardView(
-              this.state.livePane.pendingQuestion,
-              this.inkOverlay.questionWizard,
-            ),
-      choicePicker:
-        this.inkChoicePickerOptions === null ||
-        this.inkChoicePickerList === null
-          ? null
-          : projectInkChoicePickerView(
-              this.inkChoicePickerOptions,
-              this.inkChoicePickerList,
-            ),
-      modelSelector:
-        this.inkModelSelector === null
-          ? null
-          : projectInkModelSelectorView(this.inkModelSelector.session),
-      effortSelector:
-        this.inkEffortSelector === null
-          ? null
-          : projectInkEffortSelectorView(this.inkEffortSelector.session),
-      undoSelector:
-        this.inkUndoSelector === null
-          ? null
-          : projectInkUndoSelectorView(this.inkUndoSelector.session),
-      experimentsSelector:
-        this.inkExperimentsSelector === null
-          ? null
-          : projectInkExperimentsSelectorView(
-              this.inkExperimentsSelector.session,
-            ),
-      pluginMcpSelector:
-        this.inkPluginMcpSelector === null
-          ? null
-          : projectInkPluginMcpSelectorView(this.inkPluginMcpSelector.session),
-      pluginsPanel:
-        this.inkPluginsPanel === null
-          ? null
-          : projectInkPluginsPanelView(this.inkPluginsPanel.session),
-      startPermissionPrompt:
-        this.inkStartPermissionPrompt === null
-          ? null
-          : projectInkStartPermissionPromptView(
-              this.inkStartPermissionPrompt.session,
-            ),
-      goalQueueManager:
-        this.inkGoalQueueManager === null
-          ? null
-          : projectInkGoalQueueManagerView(this.inkGoalQueueManager.session),
-      goalQueueEdit:
-        this.inkGoalQueueEdit === null
-          ? null
-          : projectInkGoalQueueEditView(this.inkGoalQueueEdit.session),
-      providerManager:
-        this.inkProviderManager === null
-          ? null
-          : projectInkProviderManagerView(this.inkProviderManager.session),
-      apiKeyInput:
-        this.inkApiKeyInput === null
-          ? null
-          : projectInkApiKeyInputView(this.inkApiKeyInput.session),
-      feedbackInput:
-        this.inkFeedbackInput === null
-          ? null
-          : projectInkFeedbackInputView(this.inkFeedbackInput.session),
-      customRegistryImport:
-        this.inkCustomRegistryImport === null
-          ? null
-          : projectInkCustomRegistryImportView(
-              this.inkCustomRegistryImport.session,
-            ),
+      ...this.inkDialogsController.projectDialogFields(),
       sessions,
       loadingSessions: this.state.loadingSessions,
       sessionsScope: this.state.sessionsScope,
       helpCommands,
       trustPrompt: this.trustPromptView,
-      approvalPreview:
-        this.inkOverlay.approvalPreviewBlock === null
-          ? null
-          : {
-              block: this.inkOverlay.approvalPreviewBlock,
-              scrollTop: this.inkOverlay.approvalPreviewScrollTop,
-            },
       toolOutputExpanded: this.state.toolOutputExpanded,
       externalEditorRunning: this.state.externalEditorRunning,
       queuedMessageDispatchPending: this.state.queuedMessageDispatchPending,
@@ -4811,84 +3691,7 @@ export class KimiTUI {
   // =========================================================================
 
   mountEditorReplacement(panel: Component & Focusable): void {
-    if (
-      this.inkOwnsTerminal() &&
-      panel instanceof TabbedModelSelectorComponent
-    ) {
-      this.openInkTabbedModelSelector(panel.getTabbedModelSelectorOptions());
-      return;
-    }
-    if (this.inkOwnsTerminal() && panel instanceof ModelSelectorComponent) {
-      this.openInkModelSelector(panel.getModelSelectorOptions());
-      return;
-    }
-    if (this.inkOwnsTerminal() && panel instanceof EffortSelectorComponent) {
-      this.openInkEffortSelector(panel.getEffortSelectorOptions());
-      return;
-    }
-    if (this.inkOwnsTerminal() && panel instanceof UndoSelectorComponent) {
-      this.openInkUndoSelector(panel.getUndoSelectorOptions());
-      return;
-    }
-    if (this.inkOwnsTerminal() && panel instanceof ExperimentsSelectorComponent) {
-      this.openInkExperimentsSelector(panel.getExperimentsSelectorOptions());
-      return;
-    }
-    if (
-      this.inkOwnsTerminal() &&
-      panel instanceof PluginMcpSelectorComponent
-    ) {
-      this.openInkPluginMcpSelector(panel.getPluginMcpSelectorOptions());
-      return;
-    }
-    if (this.inkOwnsTerminal() && panel instanceof PluginsPanelComponent) {
-      this.openInkPluginsPanel(panel);
-      return;
-    }
-    if (
-      this.inkOwnsTerminal() &&
-      panel instanceof StartPermissionPromptComponent
-    ) {
-      this.openInkStartPermissionPrompt(panel.getStartPermissionPromptOptions());
-      return;
-    }
-    if (this.inkOwnsTerminal() && panel instanceof GoalQueueManagerComponent) {
-      this.openInkGoalQueueManager(panel);
-      return;
-    }
-    if (this.inkOwnsTerminal() && panel instanceof GoalQueueEditDialogComponent) {
-      this.openInkGoalQueueEdit(panel.getGoalQueueEditDialogOptions());
-      return;
-    }
-    if (this.inkOwnsTerminal() && panel instanceof ProviderManagerComponent) {
-      this.openInkProviderManager(panel.getProviderManagerOptions());
-      return;
-    }
-    if (this.inkOwnsTerminal() && panel instanceof ApiKeyInputDialogComponent) {
-      this.openInkApiKeyInput(panel.getApiKeyInputDialogOptions());
-      return;
-    }
-    if (
-      this.inkOwnsTerminal() &&
-      panel instanceof FeedbackInputDialogComponent
-    ) {
-      this.openInkFeedbackInput(panel.getFeedbackInputDialogOptions());
-      return;
-    }
-    if (
-      this.inkOwnsTerminal() &&
-      panel instanceof CustomRegistryImportDialogComponent
-    ) {
-      this.openInkCustomRegistryImport(
-        panel.getCustomRegistryImportDialogOptions(),
-      );
-      return;
-    }
-    if (
-      this.inkOwnsTerminal() &&
-      panel instanceof ChoicePickerComponent
-    ) {
-      this.openInkChoicePicker(panel.getChoicePickerOptions());
+    if (this.inkOwnsTerminal() && this.inkDialogsController.tryOpenFromPanel(panel)) {
       return;
     }
     this.state.editorContainer.clear();
@@ -4901,20 +3704,7 @@ export class KimiTUI {
   }
 
   restoreEditor(): void {
-    this.closeInkChoicePicker();
-    this.closeInkModelSelector();
-    this.closeInkEffortSelector();
-    this.closeInkUndoSelector();
-    this.closeInkExperimentsSelector();
-    this.closeInkPluginMcpSelector();
-    this.closeInkPluginsPanel();
-    this.closeInkStartPermissionPrompt();
-    this.closeInkGoalQueueManager();
-    this.closeInkGoalQueueEdit();
-    this.closeInkProviderManager();
-    this.closeInkApiKeyInput();
-    this.closeInkFeedbackInput();
-    this.closeInkCustomRegistryImport();
+    this.inkDialogsController.closeAll();
     if (this.inkOwnsTerminal()) {
       const children = this.state.editorContainer.children;
       if (children.length === 1 && children[0] === this.state.editor) {
@@ -5033,7 +3823,7 @@ export class KimiTUI {
     );
   }
 
-  private hideHelpPanel(): void {
+  hideHelpPanel(): void {
     this.state.activeDialog = null;
     this.inkOverlay.dialogScrollTop = 0;
     this.restoreEditor();
@@ -5092,7 +3882,7 @@ export class KimiTUI {
     });
   }
 
-  private async toggleSessionPickerScope(
+  private async applySessionPickerScopeChange(
     selectedSessionId: string,
   ): Promise<void> {
     const requestToken = ++this.sessionPickerScopeRequestToken;
@@ -5163,7 +3953,7 @@ export class KimiTUI {
     };
     this.inkSessionPickerCancel = options.onCancel;
     this.inkSessionPickerToggleScope = (selectedSessionId) => {
-      void this.toggleSessionPickerScope(selectedSessionId);
+      void this.applySessionPickerScopeChange(selectedSessionId);
     };
     if (this.terminalRenderer === "ink") {
       this.updateInkRenderer();
@@ -5206,7 +3996,7 @@ export class KimiTUI {
   }
 
   private showApprovalPanel(payload: ApprovalPanelData): void {
-    this.resetInkApprovalDialogState();
+    this.inkDialogsController.resetApprovalState();
     this.patchLivePane({ pendingApproval: { data: payload } });
     notifyTerminalOnce(this.state, `approval:${payload.id}`, {
       title: "Kimi Code approval required",
@@ -5239,7 +4029,7 @@ export class KimiTUI {
       this.closeApprovalPreview();
     }
     this.activeApprovalPanel = undefined;
-    this.resetInkApprovalDialogState();
+    this.inkDialogsController.resetApprovalState();
     this.patchLivePane({ pendingApproval: null });
     this.restoreEditor();
   }
@@ -5257,7 +4047,7 @@ export class KimiTUI {
       return;
     }
     if (this.terminalRenderer === "ink") {
-      this.openInkApprovalPreview(block);
+      this.inkDialogsController.openApprovalPreview(block);
       return;
     }
     const savedChildren = [...this.state.ui.children];
@@ -5279,9 +4069,7 @@ export class KimiTUI {
 
   private closeApprovalPreview(): void {
     if (this.inkOverlay.approvalPreviewBlock !== null) {
-      this.inkOverlay.approvalPreviewBlock = null;
-      this.inkOverlay.approvalPreviewScrollTop = 0;
-      this.updateInkRenderer();
+      this.inkDialogsController.closeApprovalPreview();
       return;
     }
     const preview = this.approvalPreview;
@@ -5296,14 +4084,14 @@ export class KimiTUI {
   }
 
   private showQuestionDialog(payload: QuestionPanelData): void {
-    this.resetInkQuestionDialogState();
+    this.inkDialogsController.resetQuestionState();
     this.patchLivePane({ pendingQuestion: { data: payload } });
     notifyTerminalOnce(this.state, `question:${payload.id}`, {
       title: "Kimi Code needs your answer",
       body: payload.questions[0]?.question,
     });
     if (this.terminalRenderer === "ink") {
-      initInkOverlayQuestion(this.inkOverlay, payload.questions.length);
+      this.inkDialogsController.initQuestionState(payload.questions.length);
       this.updateInkRenderer();
       return;
     }
@@ -5321,7 +4109,7 @@ export class KimiTUI {
   }
 
   private hideQuestionDialog(): void {
-    this.resetInkQuestionDialogState();
+    this.inkDialogsController.resetQuestionState();
     this.patchLivePane({ pendingQuestion: null });
     this.restoreEditor();
   }
