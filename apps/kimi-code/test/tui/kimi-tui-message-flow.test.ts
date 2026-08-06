@@ -16,7 +16,6 @@ import type {
 } from "@moonshot-ai/kimi-code-sdk";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { ApprovalPanelComponent } from "#/tui/components/dialogs/approval-panel";
 import { EffortSelectorComponent } from "#/tui/components/dialogs/effort-selector";
 import { KIMI_CODE_PLUGIN_MARKETPLACE_URL } from "#/constant/app";
 import { MOON_SPINNER_FRAMES } from "#/tui/constant/rendering";
@@ -39,9 +38,7 @@ import { ModelSelectorComponent } from "#/tui/components/dialogs/model-selector"
 import { TabbedModelSelectorComponent } from "#/tui/components/dialogs/tabbed-model-selector";
 import { UndoSelectorComponent } from "#/tui/components/dialogs/undo-selector";
 import {
-  PluginInstallTrustConfirmComponent,
   PluginMcpSelectorComponent,
-  PluginRemoveConfirmComponent,
   PluginsPanelComponent,
 } from "#/tui/components/dialogs/plugins-selector";
 import {
@@ -330,6 +327,77 @@ async function makeDriver(
   driver.persistInputHistory = vi.fn(async () => {});
   await driver.init();
   return { driver, session, harness };
+}
+
+async function waitForInkChoicePicker(driver: MessageDriver): Promise<void> {
+  await vi.waitFor(() => {
+    expect(driver.state.activeDialog).toBe("choice-picker");
+  });
+}
+
+function sendInkChoicePickerInput(driver: MessageDriver, data: string): void {
+  sendInkDialogInput(driver, data);
+}
+
+function inkChoicePickerText(driver: MessageDriver): string {
+  const picker = (
+    driver as unknown as {
+      getTerminalViewState: () => {
+        dialog: {
+          choicePicker: {
+            title: string;
+            options: readonly { label: string }[];
+          } | null;
+        };
+      };
+    }
+  ).getTerminalViewState().dialog.choicePicker;
+  if (picker === null) return "";
+  return [picker.title, ...picker.options.map((option) => option.label)].join(
+    "\n",
+  );
+}
+
+async function waitForInkApproval(driver: MessageDriver): Promise<void> {
+  await vi.waitFor(() => {
+    expect(driver.state.livePane.pendingApproval).not.toBeNull();
+  });
+}
+
+async function waitForInkSessionPicker(driver: MessageDriver): Promise<void> {
+  await vi.waitFor(() => {
+    expect(driver.state.activeDialog).toBe("session-picker");
+  });
+}
+
+function sendInkDialogInput(driver: MessageDriver, data: string): void {
+  (
+    driver as unknown as { handleInkSimpleDialogInput: (data: string) => boolean }
+  ).handleInkSimpleDialogInput(data);
+}
+
+function setDriverEditorText(driver: MessageDriver, text: string): void {
+  driver.state.editor.setText(text);
+  driver.state.promptEditorState = {
+    ...driver.state.promptEditorState,
+    text,
+  };
+}
+
+function getDriverEditorText(driver: MessageDriver): string {
+  return driver.state.promptEditorState.text;
+}
+
+function setDriverEditorInputMode(
+  driver: MessageDriver,
+  mode: "prompt" | "bash",
+): void {
+  driver.state.editor.inputMode = mode;
+  driver.state.appState.inputMode = mode;
+  driver.state.promptEditorState = {
+    ...driver.state.promptEditorState,
+    inputMode: mode,
+  };
 }
 
 function makeActiveGoalSnapshot(): GoalSnapshot {
@@ -830,10 +898,8 @@ describe("KimiTUI message flow", () => {
     await (
       driver as unknown as { showSessionPicker(): Promise<void> }
     ).showSessionPicker();
-    const picker = driver.state.editorContainer.children[0] as {
-      handleInput(data: string): void;
-    };
-    picker.handleInput("\r");
+    await waitForInkSessionPicker(driver);
+    sendInkDialogInput(driver, "\r");
 
     resolveCreate(lazySession);
     // The prompt starts its turn first; the switch must then be rejected
@@ -2447,14 +2513,8 @@ command = "vim"
       },
     });
 
-    await vi.waitFor(() => {
-      expect(driver.state.editorContainer.children[0]).toBeInstanceOf(
-        ApprovalPanelComponent,
-      );
-    });
-    (
-      driver.state.editorContainer.children[0] as ApprovalPanelComponent
-    ).handleInput("1");
+    await waitForInkApproval(driver);
+    sendInkDialogInput(driver, "1");
     await expect(response).resolves.toMatchObject({ decision: "approved" });
 
     await vi.waitFor(() => {
@@ -2854,11 +2914,11 @@ command = "vim"
     const { driver, session } = await makeDriver();
 
     driver.state.appState.streamingPhase = "waiting";
-    driver.state.editor.setText("draft while streaming");
+    setDriverEditorText(driver, "draft while streaming");
 
     driver.state.editor.onCtrlC?.();
 
-    expect(driver.state.editor.getText()).toBe("");
+    expect(getDriverEditorText(driver)).toBe("");
     expect(session.cancel).not.toHaveBeenCalled();
     expect(driver.state.appState.streamingPhase).toBe("waiting");
 
@@ -3045,6 +3105,7 @@ command = "vim"
       1,
     );
     driver.state.editor.setText(`check ${attachment.placeholder}`);
+    setDriverEditorText(driver, `check ${attachment.placeholder}`);
 
     driver.state.editor.onCtrlS?.();
 
@@ -3295,6 +3356,7 @@ command = "vim"
     );
     driver.state.queuedMessages = [{ text: "queued note", agentId: "main" }];
     driver.state.editor.setText(`look ${missing.placeholder}`);
+    setDriverEditorText(driver, `look ${missing.placeholder}`);
 
     driver.state.editor.onCtrlS?.();
 
@@ -3302,7 +3364,7 @@ command = "vim"
     expect(driver.state.queuedMessages).toEqual([
       { text: "queued note", agentId: "main" },
     ]);
-    expect(driver.state.editor.getText()).toBe(`look ${missing.placeholder}`);
+    expect(getDriverEditorText(driver)).toBe(`look ${missing.placeholder}`);
     expect(stripSgr(renderTranscript(driver))).toContain(
       "Failed to prepare media attachment",
     );
@@ -3315,14 +3377,13 @@ command = "vim"
       { text: "ls", agentId: "main", mode: "bash" },
     ];
     // After a bash command is queued the editor is reset to prompt mode.
-    driver.state.editor.inputMode = "prompt";
-    driver.state.appState.inputMode = "prompt";
+    setDriverEditorInputMode(driver, "prompt");
 
     const handled = driver.state.editor.onUpArrowEmpty?.();
 
     expect(handled).toBe(true);
-    expect(driver.state.editor.getText()).toBe("ls");
-    expect(driver.state.editor.inputMode).toBe("bash");
+    expect(getDriverEditorText(driver)).toBe("ls");
+    expect(driver.state.promptEditorState.inputMode).toBe("bash");
     expect(driver.state.appState.inputMode).toBe("bash");
     expect(driver.state.queuedMessages).toEqual([]);
   });
@@ -3331,14 +3392,13 @@ command = "vim"
     const { driver } = await makeDriver();
     driver.state.appState.streamingPhase = "waiting";
     driver.state.queuedMessages = [{ text: "hello", agentId: "main" }];
-    driver.state.editor.inputMode = "bash";
-    driver.state.appState.inputMode = "bash";
+    setDriverEditorInputMode(driver, "bash");
 
     const handled = driver.state.editor.onUpArrowEmpty?.();
 
     expect(handled).toBe(true);
-    expect(driver.state.editor.getText()).toBe("hello");
-    expect(driver.state.editor.inputMode).toBe("prompt");
+    expect(getDriverEditorText(driver)).toBe("hello");
+    expect(driver.state.promptEditorState.inputMode).toBe("prompt");
     expect(driver.state.appState.inputMode).toBe("prompt");
     expect(driver.state.queuedMessages).toEqual([]);
   });
@@ -3566,11 +3626,11 @@ command = "vim"
       } as Event,
       vi.fn(),
     );
-    driver.state.editor.setText("draft while compacting");
+    setDriverEditorText(driver, "draft while compacting");
 
     driver.state.editor.onCtrlC?.();
 
-    expect(driver.state.editor.getText()).toBe("");
+    expect(getDriverEditorText(driver)).toBe("");
     expect(session.cancelCompaction).not.toHaveBeenCalled();
     expect(driver.state.appState.isCompacting).toBe(true);
 
@@ -4509,7 +4569,7 @@ command = "vim"
       expect(session.init).toHaveBeenCalledTimes(1);
     });
 
-    driver.state.editor.setText("apply after init");
+    setDriverEditorText(driver, "apply after init");
     driver.state.editor.onCtrlS?.();
 
     expect(session.steer).not.toHaveBeenCalled();
@@ -4759,12 +4819,12 @@ command = "vim"
     });
 
     await vi.waitFor(() => {
-      const approval = stripSgr(
-        driver.state.editorContainer.render(120).join("\n"),
-      );
-      expect(approval).toContain("Ready to build with this plan?");
-      expect(approval).not.toContain("non-duplicated plan work");
-      expect(approval).not.toContain("/tmp/no-duplicate-plan.md");
+      expect(driver.state.livePane.pendingApproval).not.toBeNull();
+      const approval = driver.state.livePane.pendingApproval!.data;
+      expect(approval.action).toBe("Review plan");
+      const serialized = JSON.stringify(approval.display);
+      expect(serialized).not.toContain("non-duplicated plan work");
+      expect(serialized).not.toContain("/tmp/no-duplicate-plan.md");
     });
   });
 
@@ -5250,14 +5310,8 @@ command = "vim"
       },
     });
 
-    await vi.waitFor(() => {
-      expect(driver.state.editorContainer.children[0]).toBeInstanceOf(
-        ApprovalPanelComponent,
-      );
-    });
-    (
-      driver.state.editorContainer.children[0] as ApprovalPanelComponent
-    ).handleInput("2");
+    await waitForInkApproval(driver);
+    sendInkDialogInput(driver, "2");
     await expect(response).resolves.toMatchObject({ decision: "rejected" });
 
     driver.sessionEventHandler.handleEvent(
@@ -5454,15 +5508,9 @@ command = "vim"
 
     driver.handleUserInput("/plugins install ./plugins/kimi-datasource");
 
-    await vi.waitFor(() => {
-      expect(driver.state.editorContainer.children[0]).toBeInstanceOf(
-        PluginInstallTrustConfirmComponent,
-      );
-    });
-    const confirm = driver.state.editorContainer
-      .children[0] as PluginInstallTrustConfirmComponent;
-    confirm.handleInput("\u001B[B"); // switch from "Exit" to "Trust and install"
-    confirm.handleInput("\r");
+    await waitForInkChoicePicker(driver);
+    sendInkChoicePickerInput(driver, "\u001B[B"); // switch from "Exit" to "Trust and install"
+    sendInkChoicePickerInput(driver, "\r");
 
     await vi.waitFor(() => {
       expect(session.installPlugin).toHaveBeenCalledWith(
@@ -5523,15 +5571,9 @@ command = "vim"
 
     driver.handleUserInput("/plugins install ./plugins/kimi-datasource-fork");
 
-    await vi.waitFor(() => {
-      expect(driver.state.editorContainer.children[0]).toBeInstanceOf(
-        PluginInstallTrustConfirmComponent,
-      );
-    });
-    const confirm = driver.state.editorContainer
-      .children[0] as PluginInstallTrustConfirmComponent;
-    confirm.handleInput("\u001B[B"); // switch from "Exit" to "Trust and install"
-    confirm.handleInput("\r");
+    await waitForInkChoicePicker(driver);
+    sendInkChoicePickerInput(driver, "\u001B[B"); // switch from "Exit" to "Trust and install"
+    sendInkChoicePickerInput(driver, "\r");
 
     // The manifest id matches a billed plugin, but a local-path install is
     // not the official quota-consuming build.
@@ -5550,19 +5592,11 @@ command = "vim"
 
     driver.handleUserInput("/plugins install ./plugins/kimi-datasource");
 
-    await vi.waitFor(() => {
-      expect(driver.state.editorContainer.children[0]).toBeInstanceOf(
-        PluginInstallTrustConfirmComponent,
-      );
-    });
-    const confirm = driver.state.editorContainer
-      .children[0] as PluginInstallTrustConfirmComponent;
-    confirm.handleInput("\r"); // default option is "Exit"
+    await waitForInkChoicePicker(driver);
+    sendInkChoicePickerInput(driver, "\r"); // default option is "Exit"
 
     await vi.waitFor(() => {
-      expect(driver.state.editorContainer.children[0]).toBe(
-        driver.state.editor,
-      );
+      expect(driver.state.activeDialog).toBeNull();
     });
     expect(session.installPlugin).not.toHaveBeenCalled();
   });
@@ -5719,15 +5753,9 @@ command = "vim"
     });
     panel.handleInput("\r");
 
-    await vi.waitFor(() => {
-      expect(driver.state.editorContainer.children[0]).toBeInstanceOf(
-        PluginInstallTrustConfirmComponent,
-      );
-    });
-    const confirm = driver.state.editorContainer
-      .children[0] as PluginInstallTrustConfirmComponent;
-    confirm.handleInput("\u001B[B"); // switch from "Exit" to "Trust and install"
-    confirm.handleInput("\r");
+    await waitForInkChoicePicker(driver);
+    sendInkChoicePickerInput(driver, "\u001B[B"); // switch from "Exit" to "Trust and install"
+    sendInkChoicePickerInput(driver, "\r");
 
     await vi.waitFor(() => {
       expect(session.installPlugin).toHaveBeenCalledWith(
@@ -5773,15 +5801,9 @@ command = "vim"
     });
     panel.handleInput("\r");
 
-    await vi.waitFor(() => {
-      expect(driver.state.editorContainer.children[0]).toBeInstanceOf(
-        PluginInstallTrustConfirmComponent,
-      );
-    });
-    const confirm = driver.state.editorContainer
-      .children[0] as PluginInstallTrustConfirmComponent;
-    confirm.handleInput("\u001B[B"); // switch from "Exit" to "Trust and install"
-    confirm.handleInput("\r");
+    await waitForInkChoicePicker(driver);
+    sendInkChoicePickerInput(driver, "\u001B[B"); // switch from "Exit" to "Trust and install"
+    sendInkChoicePickerInput(driver, "\r");
 
     // The failed install must return the user to the marketplace panel so they
     // can retry, rather than dropping them back at the editor.
@@ -5796,15 +5818,9 @@ command = "vim"
 
     driver.handleUserInput("/plugins remove kimi-webbridge");
 
-    await vi.waitFor(() => {
-      expect(driver.state.editorContainer.children[0]).toBeInstanceOf(
-        PluginRemoveConfirmComponent,
-      );
-    });
-    const confirm = driver.state.editorContainer
-      .children[0] as PluginRemoveConfirmComponent;
-    confirm.handleInput("\u001B[B");
-    confirm.handleInput("\r");
+    await waitForInkChoicePicker(driver);
+    sendInkChoicePickerInput(driver, "\u001B[B");
+    sendInkChoicePickerInput(driver, "\r");
 
     await vi.waitFor(() => {
       expect(session.removePlugin).toHaveBeenCalledWith("kimi-webbridge");
@@ -6072,19 +6088,11 @@ command = "vim"
 
     driver.handleUserInput("/plugins remove demo");
 
-    await vi.waitFor(() => {
-      expect(driver.state.editorContainer.children[0]).toBeInstanceOf(
-        PluginRemoveConfirmComponent,
-      );
-    });
+    await waitForInkChoicePicker(driver);
     expect(session.removePlugin).not.toHaveBeenCalled();
 
-    const confirm = driver.state.editorContainer
-      .children[0] as PluginRemoveConfirmComponent;
-    expect(stripSgr(confirm.render(120).join("\n"))).toContain(
-      "Remove demo (demo)?",
-    );
-    confirm.handleInput("\r");
+    expect(inkChoicePickerText(driver)).toContain("Remove demo");
+    sendInkChoicePickerInput(driver, "\r");
 
     await vi.waitFor(() => {
       expect(stripSgr(renderTranscript(driver))).toContain(
