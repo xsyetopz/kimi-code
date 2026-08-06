@@ -3,14 +3,10 @@
  * Supports expand/collapse via Ctrl+O.
  */
 
-import { isAbsolute, relative, sep } from "node:path";
-
 import {
   Container,
   Spacer,
   Text,
-  truncateToWidth,
-  visibleWidth,
 } from "@moonshot-ai/kimi-tui";
 import type { Component, TUI } from "@moonshot-ai/kimi-tui";
 import {
@@ -23,7 +19,6 @@ import {
   BRAILLE_SPINNER_INTERVAL_MS,
   COMMAND_PREVIEW_LINES,
   RESULT_PREVIEW_LINES,
-  THINKING_PREVIEW_LINES,
 } from "#/tui/constant/rendering";
 import {
   STREAMING_ARGS_FIELD_RE,
@@ -39,27 +34,35 @@ import { createMarkdownTheme } from "#/tui/theme/kimi-tui-theme";
 import type { ToolCallBlockData, ToolResultBlockData } from "#/tui/types";
 import type { TokenUsage } from "@moonshot-ai/kimi-code-sdk";
 import { appendStreamingArgsPreview } from "#/tui/utils/event-payload";
-import { decodeMcpToolName } from "#/tui/utils/mcp-tool-name";
 import { isRenderCacheEnabled } from "#/tui/utils/render-cache";
 import { formatTokenCount } from "#/utils/usage/usage-format";
 
 import { agentSwarmResultSummaryFromOutput } from "./agent-swarm-progress";
 import { PlanBoxComponent } from "./plan-box";
 import { ShellExecutionComponent } from "./shell-execution";
-import { countNonEmptyLines, pickChip } from "./tool-renderers/chip";
-import { buildGoalToolHeader } from "./tool-renderers/goal";
+import { countNonEmptyLines } from "./tool-renderers/chip";
 import {
-  isGenericToolResult,
   pickResultRenderer,
 } from "./tool-renderers/registry";
+import {
+  APPROVED_PLAN_MARKER,
+  AUTO_APPROVED_PLAN_MARKER,
+  interpretExitPlanModeOutcome,
+  isExitPlanModeOutcomeOutput,
+} from "#/tui/projections/tool-call/exit-plan-mode";
+import {
+  extractKeyArgument,
+  makeWorkspaceRelativePath,
+} from "#/tui/projections/tool-call/key-argument";
+import { projectToolCallHeader } from "#/tui/projections/tool-call/header";
+import {
+  deriveSubagentPhase,
+  projectSingleSubagentBodyLines,
+  projectSingleSubagentHeader,
+} from "#/tui/projections/tool-call/subagent";
+import type { SubagentCardViewState, SubagentPhase } from "#/tui/types";
 
-const MAX_ARG_LENGTH = 60;
 const MAX_SUB_TOOL_CALLS_SHOWN = 4;
-// Cap the Agent `description` in the single-subagent header so a long prompt
-// cannot wrap the header onto a second row and break the card's stable height.
-const MAX_SUBAGENT_DESCRIPTION_LENGTH = 60;
-const APPROVED_PLAN_MARKER = "## Approved Plan:";
-const AUTO_APPROVED_PLAN_MARKER = "## Plan (auto-approved, not user-reviewed):";
 const STREAMING_PROGRESS_INTERVAL_MS = 1000;
 const PROGRESS_URL_RE = /https?:\/\/\S+/g;
 const ABORTED_MARK = "⊘";
@@ -70,13 +73,6 @@ const DETACH_HINT_DELAY_MS = 10_000;
 const DETACH_HINT_TEXT = "Press Ctrl+B to run in background";
 
 type SubagentTextKind = "thinking" | "text";
-type SubagentPhase =
-  | "queued"
-  | "spawning"
-  | "running"
-  | "done"
-  | "failed"
-  | "backgrounded";
 
 interface FinishedSubCall {
   readonly name: string;
@@ -211,81 +207,6 @@ function extractApprovedPlan(output: string): string {
   return output.slice(markerIndex + marker.length).trim();
 }
 
-interface ExitPlanModeOutcome {
-  readonly kind: "approved" | "auto_approved" | "rejected";
-  readonly chosen?: string;
-  readonly feedback?: string;
-  readonly path?: string;
-}
-
-const REJECT_PREFIX = "User rejected the plan.";
-const REJECT_FEEDBACK_PREFIX = "User rejected the plan. Feedback:";
-const APPROVED_OPTION_RE = /^User approved option "([^"]+)"\./;
-const PLAN_REJECT_PREFIX = "Plan rejected by user.";
-const SELECTED_APPROACH_RE =
-  /^Exited plan mode\. Selected approach: ([^\n]+)\n/;
-const PLAN_SAVED_TO_RE = /\nPlan saved to: ([^\n]+)\n/;
-
-/**
- * Parses the ExitPlanMode result content string to recover the approval outcome
- * and optional plan path. Core-side templates live in
- * `the planning exit-plan-mode tool` and
- * `.../agent/permission/policies/exit-plan-mode-review-ask.ts`:
- *   - Approved output starts with 'Exited plan mode.' and selected options
- *     are reported as 'Selected approach: <label>'. Older outputs may start
- *     with 'User approved option "<label>".' Plan-file mode may include
- *     'Plan saved to: <path>'.
- *   - Auto-approved output (auto permission mode skips the review ask) also
- *     starts with 'Exited plan mode.' but marks the plan body with
- *     '## Plan (auto-approved, not user-reviewed):' instead of
- *     '## Approved Plan:' — the user never saw or approved the plan.
- *   - Rejected output starts with 'Plan rejected by user.' or older
- *     'User rejected the plan.'; feedback uses 'User rejected the plan.
- *     Feedback:\n\n<text>'.
- * This is a string protocol rather than a structured payload. Prefer a
- * structured event payload if core starts emitting one.
- */
-function interpretExitPlanModeOutcome(output: string): ExitPlanModeOutcome {
-  if (output.startsWith(REJECT_PREFIX)) {
-    if (output.startsWith(REJECT_FEEDBACK_PREFIX)) {
-      const feedback = output.slice(REJECT_FEEDBACK_PREFIX.length).trimStart();
-      return { kind: "rejected", feedback };
-    }
-    return { kind: "rejected" };
-  }
-  if (output.startsWith(PLAN_REJECT_PREFIX)) {
-    return { kind: "rejected" };
-  }
-  const pathMatch = PLAN_SAVED_TO_RE.exec(output);
-  const path = pathMatch?.[1]?.trim();
-  if (output.includes(AUTO_APPROVED_PLAN_MARKER)) {
-    return path !== undefined && path.length > 0
-      ? { kind: "auto_approved", path }
-      : { kind: "auto_approved" };
-  }
-  const optionMatch =
-    SELECTED_APPROACH_RE.exec(output) ?? APPROVED_OPTION_RE.exec(output);
-  if (optionMatch !== null) {
-    return path !== undefined && path.length > 0
-      ? { kind: "approved", chosen: optionMatch[1], path }
-      : { kind: "approved", chosen: optionMatch[1] };
-  }
-  return path !== undefined && path.length > 0
-    ? { kind: "approved", path }
-    : { kind: "approved" };
-}
-
-function isExitPlanModeOutcomeOutput(output: string): boolean {
-  return (
-    output.startsWith(REJECT_PREFIX) ||
-    output.startsWith(PLAN_REJECT_PREFIX) ||
-    output.startsWith("Exited plan mode.") ||
-    APPROVED_OPTION_RE.test(output) ||
-    output.includes(APPROVED_PLAN_MARKER) ||
-    output.includes(AUTO_APPROVED_PLAN_MARKER)
-  );
-}
-
 function unescapeJsonString(s: string): string {
   return s.replaceAll(/\\(["\\/bfnrt])/g, (_, ch: string) => {
     switch (ch) {
@@ -410,176 +331,23 @@ function parseArgsPreview(value: string): Record<string, unknown> {
   return result;
 }
 
-const PATH_KEYS = new Set(["path", "file_path"]);
-
-function truncateArgValue(key: string, value: string): string {
-  if (value.length <= MAX_ARG_LENGTH) return value;
-  if (PATH_KEYS.has(key)) {
-    // Preserve the tail (filename) — drop the prefix so the user can
-    // still tell which file is being touched.
-    return "…" + value.slice(value.length - (MAX_ARG_LENGTH - 1));
-  }
-  return value.slice(0, MAX_ARG_LENGTH - 3) + "...";
-}
-
-function makeWorkspaceRelativePath(
-  filePath: string,
-  workspaceDir: string | undefined,
-): string {
-  if (
-    workspaceDir === undefined ||
-    workspaceDir.length === 0 ||
-    !isAbsolute(filePath)
-  ) {
-    return filePath;
-  }
-  const relativePath = relative(workspaceDir, filePath);
-  if (
-    relativePath.length === 0 ||
-    relativePath === ".." ||
-    relativePath.startsWith(`..${sep}`) ||
-    isAbsolute(relativePath)
-  ) {
-    return filePath;
-  }
-  return relativePath;
-}
-
-function formatKeyArgument(
-  toolName: string,
-  key: string,
-  value: string,
-  workspaceDir: string | undefined,
-): string {
-  const displayValue =
-    toolName === "Read" && PATH_KEYS.has(key)
-      ? makeWorkspaceRelativePath(value, workspaceDir)
-      : value;
-  return truncateArgValue(key, displayValue);
-}
-
-function extractKeyArgument(
-  toolName: string,
-  args: Record<string, unknown>,
-  workspaceDir?: string,
-): string | null {
-  const keyMap: Record<string, string[]> = {
-    Bash: ["command"],
-    Read: ["path", "file_path"],
-    Write: ["path", "file_path"],
-    Edit: ["path", "file_path"],
-    Grep: ["pattern"],
-    Glob: ["pattern"],
-    FetchURL: ["url"],
-    WebSearch: ["query"],
-    // Prefer the short `description` so the header preview never spills a
-    // multi-line `prompt` into the TUI chrome.
-    Agent: ["description", "prompt"],
-  };
-
-  // Glob: concatenate multiple args into a single summary so the header
-  // shows pattern, optional explicit path, and ignored-file inclusion.
-  if (toolName === "Glob") {
-    const pattern = args["pattern"];
-    if (typeof pattern !== "string" || pattern.length === 0) return null;
-    let summary = pattern;
-    const path = args["path"];
-    if (typeof path === "string" && path.length > 0) {
-      summary += ` · ${makeWorkspaceRelativePath(path, workspaceDir)}`;
-    }
-    if (args["include_ignored"] === true) {
-      summary += " · include ignored";
-    }
-    return truncateArgValue("pattern", summary);
-  }
-
-  const candidates = keyMap[toolName] ?? Object.keys(args);
-  for (const key of candidates) {
-    const val = args[key];
-    if (typeof val === "string" && val.length > 0) {
-      const firstLine = val.split("\n")[0] ?? val;
-      const displayValue =
-        toolName === "Bash" && val.includes("\n") ? `${firstLine}…` : firstLine;
-      return formatKeyArgument(toolName, key, displayValue, workspaceDir);
-    }
-  }
-  return null;
-}
-
-function formatSubagentLabel(agentName: string | undefined): string {
-  const raw = agentName?.trim();
-  if (raw === undefined || raw.length === 0) return "SubAgent";
-  const label = raw
-    .split(/[-_\s]+/)
-    .filter((part) => part.length > 0)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
-  if (/\bagent$/i.test(label)) return label;
-  return `${label} Agent`;
-}
-
-function tailNonEmptyLines(text: string, maxLines: number): string[] {
-  if (text.length === 0) return [];
-  return text
-    .split("\n")
-    .map((line) => line.trimEnd())
-    .filter((line) => line.trim().length > 0)
-    .slice(-maxLines);
-}
-
-class PrefixedWrappedLine implements Component {
-  private renderCache: { width: number; lines: string[] } | undefined;
-
+/** Re-projects the single-subagent body at pi-tui render width. */
+class SubagentProjectedBodyComponent implements Component {
   constructor(
-    private readonly firstPrefix: string,
-    private readonly continuationPrefix: string,
-    private readonly text: string,
-    // When set, only the last N wrapped display rows are kept, so a long
-    // unwrapped paragraph scrolls within a fixed window instead of growing
-    // unbounded. The first kept row still gets `firstPrefix`.
-    private readonly tailLines?: number,
-    // When set, the output is padded with empty continuation rows until it
-    // reaches this many display rows, so a short paragraph still fills a
-    // fixed-height window. Applied after `tailLines`.
-    private readonly minLines?: number,
+    private readonly getCard: () => SubagentCardViewState,
+    private readonly getResult: () => ToolResultBlockData | undefined,
+    private readonly workspaceDir?: string,
   ) {}
 
-  invalidate(): void {
-    this.renderCache = undefined;
-  }
+  invalidate(): void {}
 
   render(width: number): string[] {
-    const safeWidth = Math.max(0, width);
-    if (safeWidth <= 0) return [""];
-
-    if (isRenderCacheEnabled() && this.renderCache?.width === safeWidth) {
-      return this.renderCache.lines;
-    }
-
-    const prefixWidth = Math.max(
-      visibleWidth(this.firstPrefix),
-      visibleWidth(this.continuationPrefix),
-    );
-    const contentWidth = Math.max(1, safeWidth - prefixWidth);
-    const wrapped = new Text(this.text, 0, 0).render(contentWidth);
-    const lines =
-      this.tailLines !== undefined && wrapped.length > this.tailLines
-        ? wrapped.slice(wrapped.length - this.tailLines)
-        : wrapped;
-    if (this.minLines !== undefined) {
-      while (lines.length < this.minLines) lines.push("");
-    }
-    const rendered = lines
-      .map((line, index) =>
-        index === 0
-          ? `${this.firstPrefix}${line}`
-          : `${this.continuationPrefix}${line}`,
-      )
-      .map((line) => truncateToWidth(line, safeWidth, "…"));
-    if (isRenderCacheEnabled()) {
-      this.renderCache = { width: safeWidth, lines: rendered };
-    }
-    return rendered;
+    return projectSingleSubagentBodyLines({
+      card: this.getCard(),
+      result: this.getResult(),
+      workspaceDir: this.workspaceDir,
+      width,
+    });
   }
 }
 
@@ -685,6 +453,7 @@ export class ToolCallComponent extends Container {
    * only belong to one group at a time, so one listener slot is enough.
    */
   private onSnapshotChange: (() => void) | undefined;
+  private projectionListener: (() => void) | undefined;
 
   constructor(
     toolCall: ToolCallBlockData,
@@ -1030,9 +799,57 @@ export class ToolCallComponent extends Container {
     return this.toolCall;
   }
 
+  /** Ink transcript mirror — called whenever projection-relevant state changes. */
+  setProjectionListener(listener: (() => void) | undefined): void {
+    this.projectionListener = listener;
+  }
+
+  captureSubagentCardState(): SubagentCardViewState {
+    const toolActivities = [...this.subToolActivities.values()]
+      .sort((a, b) => a.orderSeq - b.orderSeq)
+      .map(({ name, args, phase, output }) => ({
+        name,
+        args,
+        phase,
+        ...(output !== undefined ? { output } : {}),
+      }));
+    return {
+      phase: this.subagentPhase,
+      agentName: this.subagentAgentName,
+      model: this.subagentModel,
+      spinnerFrame: this.subagentSpinnerFrame,
+      toolActivities,
+      subagentText: this.subagentText,
+      subagentThinkingText: this.subagentThinkingText,
+      lastStreamKind: this.lastSubagentStreamKind,
+      subagentError: this.subagentError,
+      contextTokens: this.subagentContextTokens,
+      usageTokens:
+        this.subagentUsage === undefined
+          ? undefined
+          : usageTotal(this.subagentUsage),
+      elapsedSeconds: this.getSubagentElapsedSeconds(),
+      detachedFromForeground: this.detachedFromForeground,
+      backgroundTerminalPhase: this.backgroundTaskTerminalPhase,
+    };
+  }
+
+  captureToolCallProjection(): ToolCallBlockData {
+    const projection: ToolCallBlockData = {
+      ...this.toolCall,
+      result: this.result,
+    };
+    if (!this.isSingleSubagentView()) return projection;
+    return {
+      ...projection,
+      subagentCard: this.captureSubagentCardState(),
+    };
+  }
+
   /** Notifies the listener when internal state changes, if a group is attached. */
   private notifySnapshotChange(): void {
     this.onSnapshotChange?.();
+    this.projectionListener?.();
   }
 
   private upsertSubToolActivity(
@@ -1535,113 +1352,14 @@ export class ToolCallComponent extends Container {
   }
 
   private buildHeader(): string {
-    const { toolCall, result } = this;
-    const isFinished = result !== undefined;
-    const isError = result?.is_error ?? false;
-    const isTruncated = toolCall.truncated === true && !isFinished;
-
-    let bullet: string;
-    if (isFinished) {
-      bullet = isError
-        ? currentTheme.fg("error", "✗ ")
-        : currentTheme.fg("success", STATUS_BULLET);
-    } else if (isTruncated) {
-      bullet = currentTheme.fg("error", "✗ ");
-    } else {
-      // Solid bullet for in-flight tools — the previous marker ↔ blank
-      // toggle caused visible flicker on every re-render.
-      bullet = currentTheme.fg("text", STATUS_BULLET);
-    }
-
-    if (toolCall.name === "ExitPlanMode") {
-      const label = currentTheme.boldFg("primary", "Current plan");
-      if (!isFinished || result === undefined || result.is_error === true) {
-        return label;
-      }
-      const outcome = interpretExitPlanModeOutcome(result.output);
-      if (outcome.kind === "approved") {
-        const chipText =
-          outcome.chosen !== undefined && outcome.chosen.length > 0
-            ? `Approved: ${outcome.chosen}`
-            : "Approved";
-        return `${label}${currentTheme.fg("success", ` · ${chipText}`)}`;
-      }
-      if (outcome.kind === "auto_approved") {
-        // Auto permission mode let the plan through without user review —
-        // a warning-toned chip keeps "the user approved this" out of the UI.
-        return `${label}${currentTheme.fg("warning", " · Auto-approved")}`;
-      }
-      return label;
-    }
-
-    if (toolCall.name === "AskUserQuestion") {
-      const isBackgroundAsk = toolCall.args["background"] === true;
-      const label = isFinished
-        ? isError
-          ? "Could not collect your input"
-          : isBackgroundAsk
-            ? "Started background question"
-            : "Collected your answers"
-        : isBackgroundAsk
-          ? "Starting background question"
-          : "Waiting for your input";
-      const tone = isError ? "error" : "primary";
-      return `${bullet}${currentTheme.boldFg(tone, label)}`;
-    }
-
-    if (toolCall.name === "Bash") {
-      // The command itself is rendered in the body (with a `$` prompt), so the
-      // header only names the action — repeating the command in parentheses
-      // would duplicate the body. Wording mirrors the other label-only headers
-      // (e.g. AskUserQuestion): the whole label takes the tone colour.
-      if (isTruncated) {
-        return `${bullet}${currentTheme.fg("error", "Truncated")} ${currentTheme.boldFg("primary", "Bash")}`;
-      }
-      const label = isFinished ? "Ran a command" : "Running a command";
-      const tone = isError ? "error" : "primary";
-      const chipStr =
-        isFinished && result !== undefined ? this.buildHeaderChip(result) : "";
-      return `${bullet}${currentTheme.boldFg(tone, label)}${chipStr}`;
-    }
-
-    const goalHeader = buildGoalToolHeader({
-      toolCall,
-      result,
-      bullet,
-      chip:
-        isFinished && result !== undefined ? this.buildHeaderChip(result) : "",
-    });
-    if (goalHeader !== undefined) return goalHeader;
-
     if (this.isSingleSubagentView()) {
       return this.buildSingleSubagentHeader();
     }
-
-    const verb = isFinished ? "Used" : isTruncated ? "Truncated" : "Using";
-    const keyArg = extractKeyArgument(
-      toolCall.name,
-      toolCall.args,
-      this.workspaceDir,
-    );
-    const decoded = decodeMcpToolName(toolCall.name);
-    const verbStyled = isTruncated ? currentTheme.fg("error", verb) : verb;
-    const toolLabel =
-      decoded !== null
-        ? `${currentTheme.boldFg("primary", decoded.toolName)}${currentTheme.dim(` · MCP/${decoded.serverName}`)}`
-        : currentTheme.boldFg("primary", toolCall.name);
-    const argStr = keyArg ? currentTheme.dim(` (${keyArg})`) : "";
-    let chipStr = "";
-    if (isFinished && result) chipStr = this.buildHeaderChip(result);
-    return `${bullet}${verbStyled} ${toolLabel}${argStr}${chipStr}`;
-  }
-
-  private buildHeaderChip(result: ToolResultBlockData): string {
-    const provider = pickChip(this.toolCall.name);
-    if (provider === undefined) return "";
-    const text = provider(this.toolCall, result);
-    if (text.length === 0) return "";
-    if (result.is_error) return currentTheme.fg("error", ` · ${text}`);
-    return currentTheme.dim(` · ${text}`);
+    return projectToolCallHeader({
+      toolCall: this.toolCall,
+      result: this.result,
+      workspaceDir: this.workspaceDir,
+    });
   }
 
   private rebuildContent(): void {
@@ -1881,79 +1599,10 @@ export class ToolCallComponent extends Container {
   }
 
   private getDerivedSubagentPhase(): SubagentPhase | undefined {
-    if (this.backgroundTaskTerminalPhase !== undefined) {
-      return this.backgroundTaskTerminalPhase;
-    }
-    // A foreground subagent detached via Ctrl+B keeps showing `backgrounded`
-    // even after its spawn-success ToolResult lands, so the card doesn't flip
-    // to `✓ Completed` and look like the work actually finished. Agents that
-    // started in the background (`detachedFromForeground === false`) read as
-    // `done` once their result lands.
-    if (this.detachedFromForeground && this.subagentPhase === "backgrounded") {
-      return "backgrounded";
-    }
-    if (this.result !== undefined)
-      return this.result.is_error ? "failed" : "done";
-    return this.subagentPhase;
-  }
-
-  private buildSingleSubagentHeader(): string {
-    const phase = this.getDerivedSubagentPhase();
-    const isDone = phase === "done";
-    const marker = this.buildSingleSubagentMarker(phase);
-    const labelText = formatSubagentLabel(this.subagentAgentName);
-    const label = currentTheme.boldFg("primary", labelText);
-    const status = this.formatSingleSubagentStatus(phase);
-    const rawDescription = str(this.toolCall.args["description"]);
-    const description =
-      rawDescription.length > MAX_SUBAGENT_DESCRIPTION_LENGTH
-        ? `${rawDescription.slice(0, MAX_SUBAGENT_DESCRIPTION_LENGTH - 1)}…`
-        : rawDescription;
-    const descriptionPlain = description.length > 0 ? ` (${description})` : "";
-    const descriptionText =
-      descriptionPlain.length > 0 ? currentTheme.dim(descriptionPlain) : "";
-    const statsText = this.formatSingleSubagentStatsText();
-    if (isDone) {
-      return `${marker}${currentTheme.boldFg("success", labelText)} ${currentTheme.fg("success", `Completed${descriptionPlain}${statsText}`)}`;
-    }
-    const stats = currentTheme.dim(statsText);
-    return `${marker}${label} ${status}${descriptionText}${stats}`;
-  }
-
-  private formatSingleSubagentStatus(phase: SubagentPhase | undefined): string {
-    switch (phase) {
-      case "done":
-        return currentTheme.fg("success", "Completed");
-      case "failed":
-        return currentTheme.fg("error", "Failed");
-      case "running":
-        return currentTheme.fg("primary", "Running");
-      case "backgrounded":
-        return "Backgrounded";
-      case "queued":
-        return currentTheme.fg("primary", "Queued");
-      case "spawning":
-      case undefined:
-        return currentTheme.fg("primary", "Starting");
-    }
-  }
-
-  private formatSingleSubagentStatsText(): string {
-    const parts: string[] = [];
-    if (this.subagentModel !== undefined) parts.push(this.subagentModel);
-    parts.push(
-      `${String(this.subToolActivities.size)} tool${this.subToolActivities.size === 1 ? "" : "s"}`,
-    );
-    const elapsed = this.getSubagentElapsedSeconds();
-    if (elapsed !== undefined) parts.push(formatElapsed(elapsed));
-    const tokens =
-      this.subagentContextTokens && this.subagentContextTokens > 0
-        ? this.subagentContextTokens
-        : this.subagentUsage === undefined
-          ? 0
-          : usageTotal(this.subagentUsage);
-    if (tokens > 0) parts.push(formatTokens(tokens));
-    return ` · ${parts.join(" · ")}`;
+    return deriveSubagentPhase({
+      card: this.captureSubagentCardState(),
+      result: this.result,
+    });
   }
 
   private getSubagentElapsedSeconds(): number | undefined {
@@ -1962,148 +1611,21 @@ export class ToolCallComponent extends Container {
     return Math.max(0, Math.floor((end - this.subagentStartedAtMs) / 1000));
   }
 
-  private buildSingleSubagentMarker(phase: SubagentPhase | undefined): string {
-    if (phase === "failed") return currentTheme.fg("error", "✗ ");
-    if (phase === "done") return currentTheme.fg("success", STATUS_BULLET);
-    if (phase === "backgrounded") return currentTheme.dim("◐ ");
-    // Active (queued / spawning / running): a braille spinner reads as alive
-    // where a static bullet looked frozen.
-    const frame =
-      BRAILLE_SPINNER_FRAMES[this.subagentSpinnerFrame] ??
-      BRAILLE_SPINNER_FRAMES[0];
-    return currentTheme.fg("primary", `${frame} `);
+  private buildSingleSubagentHeader(): string {
+    return projectSingleSubagentHeader({
+      toolCall: this.toolCall,
+      result: this.result,
+      card: this.captureSubagentCardState(),
+    });
   }
 
   private buildSingleSubagentBlock(): void {
-    const phase = this.getDerivedSubagentPhase();
-
-    // Every state shares the same skeleton — header, a one-line tool summary,
-    // and a fixed two-row content window — so the card height is identical
-    // while running and after it finishes (no end-of-run shrink).
-    this.addChild(new Text(this.buildSingleSubagentSummaryLine(), 0, 0));
-
-    if (phase === "failed") {
-      this.addChild(this.buildSingleSubagentResultWindow("error"));
-      return;
-    }
-    if (phase === "done" || phase === "backgrounded") {
-      this.addChild(this.buildSingleSubagentResultWindow("output"));
-      return;
-    }
-    this.addChild(this.buildSingleSubagentActiveWindow());
-  }
-
-  /** Most-recently-started sub-tool, preferring one that is still running. */
-  private getCurrentSubToolActivity(): SubToolActivity | undefined {
-    let latestOngoing: SubToolActivity | undefined;
-    let latest: SubToolActivity | undefined;
-    for (const activity of this.subToolActivities.values()) {
-      if (latest === undefined || activity.orderSeq > latest.orderSeq)
-        latest = activity;
-      if (
-        activity.phase === "ongoing" &&
-        (latestOngoing === undefined ||
-          activity.orderSeq > latestOngoing.orderSeq)
-      ) {
-        latestOngoing = activity;
-      }
-    }
-    return latestOngoing ?? latest;
-  }
-
-  /**
-   * The single live stream shown in the active window. A running sub-tool with
-   * previewable output (Bash or any tool without a dedicated renderer) wins;
-   * otherwise the most-recently-updated of the child agent's text / thinking.
-   */
-  private getActiveSubagentContent():
-    | { text: string; tone: "text" | "thinking" }
-    | undefined {
-    const current = this.getCurrentSubToolActivity();
-    if (
-      current?.phase === "ongoing" &&
-      current.output !== undefined &&
-      current.output.trim().length > 0 &&
-      (current.name === "Bash" || isGenericToolResult(current.name))
-    ) {
-      return { text: current.output, tone: "text" };
-    }
-    if (
-      this.lastSubagentStreamKind === "thinking" &&
-      this.subagentThinkingText.trim().length > 0
-    ) {
-      return { text: this.subagentThinkingText.trimEnd(), tone: "thinking" };
-    }
-    if (this.subagentText.trim().length > 0) {
-      return { text: this.subagentText, tone: "text" };
-    }
-    if (this.subagentThinkingText.trim().length > 0) {
-      return { text: this.subagentThinkingText.trimEnd(), tone: "thinking" };
-    }
-    return undefined;
-  }
-
-  private buildSingleSubagentSummaryLine(): string {
-    const toolCount = this.subToolActivities.size;
-    const countLabel = `${String(toolCount)} tool${toolCount === 1 ? "" : "s"}`;
-    const current = this.getCurrentSubToolActivity();
-    if (current === undefined) {
-      return currentTheme.dim(`  · ${countLabel}`);
-    }
-    const verb = current.phase === "ongoing" ? "Using" : "Used";
-    const keyArg = extractKeyArgument(
-      current.name,
-      current.args,
-      this.workspaceDir,
-    );
-    const nameCol = currentTheme.fg("primary", current.name);
-    const argCol = keyArg ? currentTheme.dim(` (${keyArg})`) : "";
-    const mark =
-      current.phase === "failed"
-        ? currentTheme.fg("error", " ✗")
-        : current.phase === "done"
-          ? currentTheme.fg("success", " ✓")
-          : "";
-    return `${currentTheme.dim(`  · ${countLabel} · `)}${verb} ${nameCol}${argCol}${mark}`;
-  }
-
-  private buildSingleSubagentActiveWindow(): Component {
-    const gutter = currentTheme.dim("│");
-    const content = this.getActiveSubagentContent();
-    // Keep both tones muted: a bright `fg('text')` here flashed white whenever
-    // the window flipped between thinking and a brief text/tool-output segment.
-    const styled =
-      content === undefined
-        ? currentTheme.dim("…")
-        : content.tone === "thinking"
-          ? currentTheme.dim(content.text)
-          : currentTheme.fg("textDim", content.text);
-    // Always exactly two rows (padded when short) so the live window matches
-    // the finished card's height.
-    return new PrefixedWrappedLine(
-      `  ${gutter} `,
-      `  ${gutter} `,
-      styled,
-      THINKING_PREVIEW_LINES,
-      THINKING_PREVIEW_LINES,
-    );
-  }
-
-  private buildSingleSubagentResultWindow(kind: "output" | "error"): Component {
-    const gutter = currentTheme.dim("│");
-    const source = kind === "error" ? this.subagentError : this.subagentText;
-    const text =
-      source === undefined ? "" : tailNonEmptyLines(source, 2).join("\n");
-    const styled =
-      kind === "error"
-        ? currentTheme.fg("error", text)
-        : currentTheme.fg("text", text);
-    return new PrefixedWrappedLine(
-      `  ${gutter} `,
-      `  ${gutter} `,
-      styled,
-      THINKING_PREVIEW_LINES,
-      THINKING_PREVIEW_LINES,
+    this.addChild(
+      new SubagentProjectedBodyComponent(
+        () => this.captureSubagentCardState(),
+        () => this.result,
+        this.workspaceDir,
+      ),
     );
   }
 
@@ -2551,10 +2073,6 @@ function computeLatestActivity(
     if (tail !== undefined) return tail.trim();
   }
   return undefined;
-}
-
-function formatTokens(n: number): string {
-  return `${formatTokenCount(n)} tok`;
 }
 
 function formatActivityLine(

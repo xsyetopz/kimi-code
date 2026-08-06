@@ -250,10 +250,18 @@ export function InkTerminalView({
           Static,
           { items: staticEntries },
           (entry: InkTranscriptProjection) =>
-            createElement(TranscriptEntryView, { key: entry.id, entry }),
+            createElement(TranscriptEntryView, {
+              key: entry.id,
+              entry,
+              workspaceDir: view.app.workDir,
+            }),
         ),
     ...liveEntries.map((entry) =>
-      createElement(TranscriptEntryView, { key: entry.id, entry }),
+      createElement(TranscriptEntryView, {
+        key: entry.id,
+        entry,
+        workspaceDir: view.app.workDir,
+      }),
     ),
     activity === undefined ? null : createElement(Text, null, activity),
     queue.messages.length === 0

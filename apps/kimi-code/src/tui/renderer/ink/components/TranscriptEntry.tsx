@@ -15,13 +15,17 @@ import { BackgroundAgentStatus } from "./BackgroundAgentStatus";
 
 export interface TranscriptEntryProps {
   readonly entry: TranscriptEntry;
+  readonly workspaceDir?: string;
 }
 
 /**
  * Dispatch a single TranscriptEntry to the right React component.
  * Mirrors the dispatch logic in kimi-tui.ts `createTranscriptComponent`.
  */
-export function TranscriptEntryView({ entry }: TranscriptEntryProps): ReactNode {
+export function TranscriptEntryView({
+  entry,
+  workspaceDir,
+}: TranscriptEntryProps): ReactNode {
   // Compaction entries
   if (entry.compactionData) {
     return <StatusMessage entry={entry} />;
@@ -41,7 +45,7 @@ export function TranscriptEntryView({ entry }: TranscriptEntryProps): ReactNode 
       if (entry.backgroundAgentStatus) {
         return <BackgroundAgentStatus entry={entry} />;
       }
-      return <ToolCall entry={entry} />;
+      return <ToolCall entry={entry} workspaceDir={workspaceDir} />;
 
     case "thinking":
       return <Thinking entry={entry} />;

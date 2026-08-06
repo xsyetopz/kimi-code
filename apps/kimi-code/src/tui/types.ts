@@ -97,6 +97,8 @@ export interface ToolCallBlockData {
   streamingStartedAtMs?: number;
   result?: ToolResultBlockData;
   subagent?: SubagentReplayBlockData;
+  /** Live Agent subagent card projection for Ink (mirrored from ToolCallComponent). */
+  subagentCard?: SubagentCardViewState;
   step?: number;
   turnId?: string;
   /** Set when the step ended (e.g. max_tokens) before the tool call's
@@ -125,6 +127,39 @@ export interface SubagentReplayBlockData {
   name?: string;
   text?: string;
   toolCalls?: readonly SubagentReplayToolCallData[];
+}
+
+export type SubagentPhase =
+  | "queued"
+  | "spawning"
+  | "running"
+  | "done"
+  | "failed"
+  | "backgrounded";
+
+export interface SubagentToolActivityView {
+  readonly name: string;
+  readonly args: Record<string, unknown>;
+  readonly phase: "ongoing" | "done" | "failed";
+  readonly output?: string;
+}
+
+/** Serializable Agent subagent card state for Ink and replay projection. */
+export interface SubagentCardViewState {
+  readonly phase: SubagentPhase | undefined;
+  readonly agentName?: string;
+  readonly model?: string;
+  readonly spinnerFrame: number;
+  readonly toolActivities: readonly SubagentToolActivityView[];
+  readonly subagentText: string;
+  readonly subagentThinkingText: string;
+  readonly lastStreamKind: "text" | "thinking";
+  readonly subagentError?: string;
+  readonly contextTokens?: number;
+  readonly usageTokens?: number;
+  readonly elapsedSeconds?: number;
+  readonly detachedFromForeground: boolean;
+  readonly backgroundTerminalPhase?: "done" | "failed";
 }
 
 export interface BackgroundAgentMetadata {

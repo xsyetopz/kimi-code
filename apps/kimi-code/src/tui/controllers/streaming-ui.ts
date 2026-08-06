@@ -41,6 +41,11 @@ export interface StreamingUIHost {
   mergeCurrentTurnSteps(): void;
   mergeCompletedTurnAssistants(): void;
   requestTerminalRender(): void;
+  readonly terminalRenderer: "kimi-tui" | "ink";
+  syncToolCallTranscriptEntry(
+    toolCallId: string,
+    data: ToolCallBlockData,
+  ): void;
 }
 
 export class StreamingUIController {
@@ -707,6 +712,7 @@ export class StreamingUIController {
     );
     if (state.toolOutputExpanded) tc.setExpanded(true);
     this._pendingToolComponents.set(toolCall.id, tc);
+    this.attachInkToolCallMirror(tc);
 
     if (toolCall.name !== "Agent") this._pendingAgentGroup = null;
     if (toolCall.name !== "Read") this._pendingReadGroup = null;
@@ -756,6 +762,7 @@ export class StreamingUIController {
         state.appState.workDir,
       );
       if (state.toolOutputExpanded) completed.setExpanded(true);
+      this.attachInkToolCallMirror(completed);
       state.transcriptContainer.addChild(completed);
       this.host.requestTerminalRender();
     }
@@ -814,6 +821,19 @@ export class StreamingUIController {
   // ---------------------------------------------------------------------------
   // Tool call grouping
   // ---------------------------------------------------------------------------
+
+  private attachInkToolCallMirror(tc: ToolCallComponent): void {
+    tc.setProjectionListener(() => {
+      this.mirrorToolCallToInk(tc);
+    });
+    this.mirrorToolCallToInk(tc);
+  }
+
+  private mirrorToolCallToInk(tc: ToolCallComponent): void {
+    if (this.host.terminalRenderer !== "ink") return;
+    const data = tc.captureToolCallProjection();
+    this.host.syncToolCallTranscriptEntry(data.id, data);
+  }
 
   private flushToolCallPreview(id: string): void {
     const streaming = this._streamingToolCallArguments.get(id);

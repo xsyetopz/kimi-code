@@ -44,6 +44,7 @@ import type { ColorToken } from "#/tui/theme";
 import { currentTheme } from "#/tui/theme";
 import type {
   LoginProgressSpinnerHandle,
+  ToolCallBlockData,
   TranscriptEntry,
 } from "#/tui/types";
 import { hasDispose } from "#/tui/utils/component-capabilities";
@@ -190,6 +191,28 @@ export class TranscriptCoordinator {
     const merged = this.mergeCurrentTurnSteps();
     if (component || trimmed || merged) {
       this.host.state.ui.requestRender();
+    }
+    this.host.updateInkRenderer();
+  }
+
+  /** Upsert a live tool-call row for Ink without mounting a pi-tui component twice. */
+  syncToolCallTranscriptEntry(
+    toolCallId: string,
+    data: ToolCallBlockData,
+  ): void {
+    const entries = this.host.state.transcriptEntries;
+    const existing = entries.find((entry) => entry.toolCallData?.id === toolCallId);
+    if (existing !== undefined) {
+      existing.toolCallData = data;
+    } else {
+      entries.push({
+        id: nextTranscriptId(),
+        kind: "tool_call",
+        turnId: data.turnId,
+        renderMode: "plain",
+        content: "",
+        toolCallData: data,
+      });
     }
     this.host.updateInkRenderer();
   }

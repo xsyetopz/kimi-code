@@ -74,6 +74,7 @@ import {
   type LoginProgressSpinnerHandle,
   type QueuedMessage,
   type SteerInputItem,
+  type ToolCallBlockData,
   type TranscriptEntry,
 } from "./types.ts";
 import { isExpandable } from "./utils/component-capabilities.ts";
@@ -887,6 +888,13 @@ export class KimiTUI {
 
   appendTranscriptEntry(entry: TranscriptEntry): void {
     this.transcriptCoordinator.appendTranscriptEntry(entry);
+  }
+
+  syncToolCallTranscriptEntry(
+    toolCallId: string,
+    data: ToolCallBlockData,
+  ): void {
+    this.transcriptCoordinator.syncToolCallTranscriptEntry(toolCallId, data);
   }
 
   appendApprovalTranscriptEntry(
