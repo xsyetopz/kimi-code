@@ -9,8 +9,9 @@ vi.mock("ink", async () => {
 });
 
 import { renderToString } from "ink";
-import { visibleWidth } from "@moonshot-ai/pi-tui";
+import { visibleWidth } from "@moonshot-ai/kimi-tui";
 
+import { InkDialogView, projectInkHelpLines } from "#/tui/renderer/ink-terminal-dialog";
 import {
   InkTerminalView,
   encodeInkInput,
@@ -20,7 +21,6 @@ import {
   projectInkQueue,
   projectInkTranscript,
 } from "#/tui/renderer/ink-terminal-view";
-import { projectInkDialogLines } from "#/tui/renderer/ink-terminal-dialog";
 import type { InkTerminalRenderer } from "#/tui/renderer/ink-terminal-renderer";
 import { mountInkTerminalRenderer as mountRenderer } from "#/tui/renderer/ink-terminal-renderer";
 import {
@@ -103,18 +103,11 @@ function view(
 }
 
 describe("InkTerminalView", () => {
-  it("projects dialog and footer chrome without coupling to pi-tui", () => {
+  it("projects footer chrome without coupling to kimi-tui", () => {
     const terminalView = view({
       appState: { planMode: true, thinkingEffort: "high", contextUsage: 0.42 },
     });
-    const chrome = projectInkChrome({
-      ...terminalView,
-      dialog: {
-        ...terminalView.dialog,
-        active: "help",
-      },
-    });
-    expect(chrome.dialog).toBe("Help");
+    const chrome = projectInkChrome(terminalView);
     expect(chrome.footer).toContain("k2");
     expect(chrome.footer).toContain("42%");
   });
@@ -163,7 +156,7 @@ describe("InkTerminalView", () => {
     ).toContain("❯ /login — Sign in");
   });
 
-  it("maps Ink key metadata back to pi-tui input sequences", () => {
+  it("maps Ink key metadata back to kimi-tui input sequences", () => {
     const key = (overrides: Record<string, boolean> = {}) =>
       ({
         upArrow: false,
@@ -222,11 +215,7 @@ describe("InkTerminalView", () => {
     });
 
     expect(projectInkTranscript(terminalView)).toEqual(
-      terminalView.transcript.map(({ id, kind, content }) => ({
-        id,
-        kind,
-        content,
-      })),
+      terminalView.transcript,
     );
     expect(projectInkActivity(terminalView.activity)).toBe("Thinking");
     expect(projectInkActivity({ mode: "hidden", tip: "ignored" })).toBe(
@@ -291,15 +280,19 @@ describe("InkTerminalView", () => {
     expect(output).toContain("ls -la · /workspace");
     expect(output).toContain("❯ Allow once");
     expect(output).toContain("2 Reject");
-    expect(
-      projectInkDialogLines(
-        {
+    const rejectOutput = renderToString(
+      createElement(InkDialogView, {
+        view: {
           ...terminalView,
-          dialog: { ...terminalView.dialog, pendingApproval: approval },
+          dialog: {
+            ...terminalView.dialog,
+            pendingApproval: approval,
+            selectedIndex: 1,
+          },
         },
-        1,
-      ),
-    ).toContain("  ❯ Reject");
+      }),
+    );
+    expect(rejectOutput).toContain("❯ Reject");
   });
 
   it("projects session, trust, and help chrome from the same snapshot", () => {
@@ -375,7 +368,7 @@ describe("InkTerminalView", () => {
         })),
       },
     };
-    const lines = projectInkDialogLines(helpView, 0, 28, 6);
+    const lines = projectInkHelpLines(helpView.dialog, 28, 6);
     expect(lines.join("\n")).toContain("showing 4-9 of");
     expect(lines.every((line) => visibleWidth(line) <= 28)).toBe(true);
   });

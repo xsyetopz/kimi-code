@@ -3,6 +3,7 @@
   "compilerOptions": {
     "allowJs": true,
     "experimentalDecorators": true,
+    "jsx": "react-jsx",
     "paths": {
       "@/*": ["./src/*"]
     }

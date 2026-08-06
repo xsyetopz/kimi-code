@@ -87,7 +87,7 @@ describe("Ink-owned simple dialog input", () => {
     expect(select).toHaveBeenCalledWith(tui.state.sessions[1]);
   });
 
-  it("routes help to Ink without mounting the legacy pi-tui panel", () => {
+  it("routes help to Ink without mounting the legacy kimi-tui panel", () => {
     const tui = makeTui();
     const mountEditorReplacement = vi.spyOn(
       tui as unknown as { mountEditorReplacement: () => void },
@@ -97,6 +97,34 @@ describe("Ink-owned simple dialog input", () => {
     tui.showHelpPanel();
 
     expect(tui.state.activeDialog).toBe("help");
+    expect(mountEditorReplacement).not.toHaveBeenCalled();
+  });
+
+  it("routes session picker to Ink without mounting the legacy kimi-tui panel", () => {
+    const tui = makeTui();
+    const mountEditorReplacement = vi.spyOn(
+      tui as unknown as { mountEditorReplacement: () => void },
+      "mountEditorReplacement",
+    );
+    tui.state.sessions = [
+      {
+        id: "ses-1",
+        title: "First",
+        last_prompt: null,
+        work_dir: "/tmp/kimi-test",
+        updated_at: 1,
+      },
+    ];
+
+    (
+      tui as unknown as {
+        mountSessionPicker: (options: {
+          onCancel: () => void;
+        }) => void;
+      }
+    ).mountSessionPicker({ onCancel: () => {} });
+
+    expect(tui.state.activeDialog).toBe("session-picker");
     expect(mountEditorReplacement).not.toHaveBeenCalled();
   });
 

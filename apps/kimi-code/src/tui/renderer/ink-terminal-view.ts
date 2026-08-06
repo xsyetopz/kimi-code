@@ -2,21 +2,16 @@ import { Box, type Key, Text, useInput, useStdout } from "ink";
 import { createElement, type ReactNode, useEffect, useState } from "react";
 
 import { SELECT_POINTER } from "../constant/symbols";
-import {
-  InkHelpDialog,
-  projectInkDialogLines,
-} from "./ink-terminal-dialog";
+import { InkDialogView } from "./components/dialogs/InkDialogView";
 import type {
   TerminalActivityView,
   TerminalQueueView,
   TerminalViewState,
 } from "./terminal-view-state";
+import type { TranscriptEntry } from "../types";
+import { TranscriptEntryView } from "./components/TranscriptEntry";
 
-export interface InkTranscriptProjection {
-  readonly id: string;
-  readonly kind: TerminalViewState["transcript"][number]["kind"];
-  readonly content: string;
-}
+export type InkTranscriptProjection = TranscriptEntry;
 
 export interface InkQueueProjection {
   readonly messages: readonly string[];
@@ -32,34 +27,11 @@ export interface InkEditorProjection {
 }
 
 export interface InkChromeProjection {
-  readonly dialog: string | undefined;
   readonly footer: string;
-  readonly dialogLines: readonly string[];
 }
 
-function dialogTitle(view: TerminalViewState): string | undefined {
-  if (view.dialog.pendingApproval !== null) {
-    return `Approval required: ${view.dialog.pendingApproval.data.tool_name}`;
-  }
-  if (view.dialog.pendingQuestion !== null) return "Question required";
-  switch (view.dialog.active) {
-    case "trust-prompt":
-      return "Trust this workspace to enable project integrations?";
-    case "session-picker":
-      return "Select a session";
-    case "help":
-      return "Help";
-    default:
-      return;
-  }
-}
-
-/** Keep dialog/status chrome visible while each interactive panel migrates. */
-export function projectInkChrome(
-  view: TerminalViewState,
-  selectedIndex = 0,
-): InkChromeProjection {
-  const dialog = dialogTitle(view);
+/** Footer chrome shared by every Ink frame. */
+export function projectInkChrome(view: TerminalViewState): InkChromeProjection {
   const mode =
     view.app.permissionMode === "manual" ? "manual" : view.app.permissionMode;
   const plan = view.app.planMode ? " plan" : "";
@@ -70,9 +42,7 @@ export function projectInkChrome(
       ? ` · ctx ${Math.round(view.app.contextUsage * 100)}%`
       : "";
   return {
-    dialog,
     footer: `${view.app.model} · ${mode}${plan}${effort}${context}`,
-    dialogLines: projectInkDialogLines(view, selectedIndex),
   };
 }
 
@@ -89,15 +59,11 @@ export function projectInkEditor(
   };
 }
 
-/** Project transcript data without reaching into pi-tui components. */
+/** Project transcript entries, passing through the full typed data for rich rendering. */
 export function projectInkTranscript(
   view: Pick<TerminalViewState, "transcript">,
 ): readonly InkTranscriptProjection[] {
-  return view.transcript.map((entry) => ({
-    id: entry.id,
-    kind: entry.kind,
-    content: entry.content,
-  }));
+  return view.transcript;
 }
 
 /** Project the activity pane's visible text while preserving its mode rules. */
@@ -116,7 +82,7 @@ export function projectInkActivity(
   return activity.tip === undefined ? label : `${label} · Tip: ${activity.tip}`;
 }
 
-/** Project queue rows and hints with the same policy as the pi-tui queue pane. */
+/** Project queue rows and hints with the same policy as the kimi-tui queue pane. */
 export function projectInkQueue(queue: TerminalQueueView): InkQueueProjection {
   if (queue.messages.length === 0) {
     return { messages: [], hint: undefined };
@@ -144,7 +110,7 @@ export function projectInkQueue(queue: TerminalQueueView): InkQueueProjection {
 
 export interface InkTerminalViewProps {
   readonly view: TerminalViewState;
-  /** Receives canonical pi-tui input sequences while Ink owns stdin. */
+  /** Receives canonical kimi-tui input sequences while Ink owns stdin. */
   readonly onInput?: (data: string) => void;
 }
 
@@ -192,7 +158,7 @@ export function encodeInkInput(input: string, key: Key): string {
   }
 
   // Ink reports ctrl+letter as the letter name, including when the terminal
-  // uses Kitty's CSI-u protocol. pi-tui's key matcher expects C0 bytes.
+  // uses Kitty's CSI-u protocol. kimi-tui's key matcher expects C0 bytes.
   if (key.ctrl && input.length === 1) {
     const code = input.toLowerCase().charCodeAt(0);
     if (code >= 97 && code <= 122) {
@@ -210,7 +176,7 @@ export function encodeInkInput(input: string, key: Key): string {
 /**
  * Initial Ink transcript/activity/queue/editor renderer. It deliberately
  * consumes only TerminalViewState so the remaining chrome can migrate without
- * coupling React components to the pi-tui coordinator.
+ * coupling React components to the kimi-tui coordinator.
  */
 export function InkTerminalView({
   view,
@@ -245,23 +211,18 @@ export function InkTerminalView({
   const activity = projectInkActivity(view.activity);
   const queue = projectInkQueue(view.queue);
   const editor = projectInkEditor(view.editor);
-  const chrome = projectInkChrome(view, view.dialog.selectedIndex);
+  const chrome = projectInkChrome(view);
   const dialogWidth = Math.max(20, stdout.columns ?? 80);
   // Non-TTY renderers (snapshots/tests) do not have a meaningful viewport;
   // retain the legacy 24-row default there. Interactive terminals reserve
   // room for the transcript/editor chrome before sizing the help viewport.
   const dialogRows =
     stdout.isTTY === true ? Math.max(5, (stdout.rows ?? 24) - 8) : 24;
-  const helpDialog =
-    view.dialog.active === "help" &&
-    view.dialog.pendingApproval === null &&
-    view.dialog.pendingQuestion === null
-      ? createElement(InkHelpDialog, {
-          dialog: view.dialog,
-          width: dialogWidth,
-          maxVisible: dialogRows,
-        })
-      : null;
+  const dialog = createElement(InkDialogView, {
+    view,
+    width: dialogWidth,
+    maxVisible: dialogRows,
+  });
   const editorLines = editor.text.split("\n");
   const editorText = editorLines
     .map((line, index) => {
@@ -274,7 +235,7 @@ export function InkTerminalView({
     Box,
     { flexDirection: "column" },
     ...transcript.map((entry) =>
-      createElement(Text, { key: entry.id }, entry.content),
+      createElement(TranscriptEntryView, { key: entry.id, entry }),
     ),
     activity === undefined ? null : createElement(Text, null, activity),
     queue.messages.length === 0
@@ -306,17 +267,7 @@ export function InkTerminalView({
             ),
           ),
         ),
-    helpDialog ??
-      (chrome.dialog === undefined
-        ? null
-        : createElement(
-            Box,
-            { flexDirection: "column", borderStyle: "single", paddingX: 1 },
-            createElement(Text, { bold: true }, chrome.dialog),
-            ...chrome.dialogLines.map((line, index) =>
-              createElement(Text, { key: `dialog-${index}` }, line),
-            ),
-          )),
+    dialog,
     createElement(Text, { dimColor: true }, chrome.footer),
   );
 }

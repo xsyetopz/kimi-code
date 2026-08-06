@@ -19,11 +19,10 @@ import {
   deleteAllKittyImages,
   type Focusable,
   getCapabilities,
-  // DEPRECATED: pi-tui imports replaced by @moonshot-ai/kimi-code-tui
   Key,
   matchesKey,
   Spacer,
-} from "@moonshot-ai/kimi-code-tui";
+} from "@moonshot-ai/kimi-tui";
 import { resolve } from "pathe";
 import type { CLIOptions } from "#/cli/options";
 import { copyTextToClipboard } from "#/utils/clipboard/clipboard-text";
@@ -249,8 +248,8 @@ export interface KimiTUIStartupInput {
   readonly startupNotice?: string;
   /** Enables the v2-only startup/session behavior for embedded callers. */
   readonly engineV2?: boolean;
-  /** Selects the terminal owner; Ink is the default and pi-tui is rollback-only. */
-  readonly terminalRenderer?: "pi-tui" | "ink";
+  /** Selects the terminal owner; Ink is the default and kimi-tui is rollback-only. */
+  readonly terminalRenderer?: "kimi-tui" | "ink";
 }
 
 type EffectiveActivityPaneMode = ActivityPaneMode | "idle" | "session";
@@ -420,7 +419,7 @@ export class KimiTUI {
     | undefined;
   /** Optional Ink bridge used by the staged renderer migration. */
   private inkRenderer: InkTerminalRenderer | undefined;
-  private readonly terminalRenderer: "pi-tui" | "ink";
+  private readonly terminalRenderer: "kimi-tui" | "ink";
   private readonly terminalOwnership = new TerminalOwnership();
   /** Source of truth for normal prompt editing while Ink owns the terminal. */
   private promptEditorState: PromptEditorState;
@@ -475,7 +474,7 @@ export class KimiTUI {
   }
 
   /** Current terminal owner, exposed for lifecycle diagnostics and tests. */
-  get terminalRendererOwner(): "none" | "pi-tui" | "ink" {
+  get terminalRendererOwner(): "none" | "kimi-tui" | "ink" {
     return this.terminalOwnership.current;
   }
 
@@ -505,7 +504,7 @@ export class KimiTUI {
     };
     this.options = tuiOptions;
     // Embedded callers inherit the same React/Ink owner as the production CLI;
-    // pi-tui remains available only when a caller explicitly opts into the
+    // kimi-tui remains available only when a caller explicitly opts into the
     // rollback renderer during the migration window.
     this.engineV2 = startupInput.engineV2 ?? false;
     this.terminalRenderer = startupInput.terminalRenderer ?? "ink";
@@ -799,10 +798,10 @@ export class KimiTUI {
       return;
     }
     if (this.terminalOwnership.current === "ink") {
-      throw new Error("Cannot start pi-tui while Ink owns the terminal.");
+      throw new Error("Cannot start kimi-tui while Ink owns the terminal.");
     }
     this.state.ui.start();
-    this.terminalOwnership.claim("pi-tui");
+    this.terminalOwnership.claim("kimi-tui");
     this.startClipboardImageHintController();
     this.terminalFocusTrackingDispose = installTerminalFocusTracking(
       this.state,
@@ -810,13 +809,13 @@ export class KimiTUI {
     this.refreshTerminalThemeTracking();
   }
 
-  /** Start the staged Ink owner without starting pi-tui's terminal loop. */
+  /** Start the staged Ink owner without starting kimi-tui's terminal loop. */
   private startInkEventLoop(): void {
-    if (this.terminalOwnership.current === "pi-tui") {
+    if (this.terminalOwnership.current === "kimi-tui") {
       // A handoff must stop the old terminal first; otherwise both renderers
       // would attach stdin listeners and write competing screen diffs.
       this.state.ui.stop();
-      this.terminalOwnership.release("pi-tui");
+      this.terminalOwnership.release("kimi-tui");
     }
     if (this.terminalOwnership.current === "ink") return;
 
@@ -840,7 +839,7 @@ export class KimiTUI {
     try {
       this.state.ui.stop();
     } finally {
-      this.terminalOwnership.release("pi-tui");
+      this.terminalOwnership.release("kimi-tui");
       this.terminalOwnership.release("ink");
     }
   }
@@ -2893,7 +2892,7 @@ export class KimiTUI {
       componentsToRemove.push(child);
     }
     for (const child of componentsToRemove) {
-      // pi-tui Container.removeChild (not a DOM node); `child.remove()` does not exist.
+      // kimi-tui Container.removeChild (not a DOM node); `child.remove()` does not exist.
       // oxlint-disable-next-line unicorn/prefer-dom-node-remove
       this.state.transcriptContainer.removeChild(child);
       if (hasDispose(child)) child.dispose();
@@ -3277,7 +3276,7 @@ export class KimiTUI {
         this.syncAgentSwarmActivitySpinner(undefined);
         // Keep a placeholder row so the activity area does not fully shrink
         // when the spinner is removed at the end of streaming; combined with
-        // pi-tui's clamp, this avoids a destructive full redraw (viewport jump).
+        // kimi-tui's clamp, this avoids a destructive full redraw (viewport jump).
         this.state.activityContainer.addChild(new Spacer(1));
         break;
       }
@@ -3311,7 +3310,7 @@ export class KimiTUI {
 
   /** Snapshot terminal data for renderer implementations without UI objects. */
   getTerminalViewState(): TerminalViewState {
-    if (this.terminalRenderer === "pi-tui") {
+    if (this.terminalRenderer === "kimi-tui") {
       this.syncPromptEditorFromLegacy();
     }
     const helpCommands: readonly TerminalHelpCommandView[] =
@@ -3363,16 +3362,16 @@ export class KimiTUI {
    * Mount the Ink renderer at the coordinator boundary.
    *
    * Ink is the default terminal owner. During the staged migration, input is
-   * still dispatched through the coordinator's focus tree while pi-tui output
+   * still dispatched through the coordinator's focus tree while kimi-tui output
    * stays stopped; only one renderer owns stdin/stdout at a time. Callers
-   * using the explicit rollback renderer must release pi-tui before mounting
+   * using the explicit rollback renderer must release kimi-tui before mounting
    * this renderer.
    */
   mountInkRenderer(options?: InkTerminalRendererOptions): InkTerminalRenderer {
     if (this.inkRenderer !== undefined) return this.inkRenderer;
-    if (this.terminalOwnership.current === "pi-tui") {
+    if (this.terminalOwnership.current === "kimi-tui") {
       throw new Error(
-        "Cannot mount Ink while pi-tui owns the terminal; stop pi-tui first.",
+        "Cannot mount Ink while kimi-tui owns the terminal; stop kimi-tui first.",
       );
     }
     this.inkRenderer = mountInkTerminalRenderer(
@@ -3739,6 +3738,10 @@ export class KimiTUI {
         workDir,
         gatedMcpServers: [...info.gatedMcpServers],
       };
+      if (this.terminalRenderer === "ink") {
+        this.updateInkRenderer();
+        return;
+      }
       this.mountEditorReplacement(
         new TrustPromptComponent({
           workDir,
@@ -3774,7 +3777,7 @@ export class KimiTUI {
     this.inkDialogScrollTop = 0;
     if (this.terminalRenderer === "ink") {
       // Ink owns the `/help` dialog in the production renderer. Keep the
-      // pi-tui panel only for the explicit rollback renderer below.
+      // kimi-tui panel only for the explicit rollback renderer below.
       this.updateInkRenderer();
       return;
     }
@@ -3920,6 +3923,10 @@ export class KimiTUI {
     this.inkSessionPickerToggleScope = (selectedSessionId) => {
       void this.toggleSessionPickerScope(selectedSessionId);
     };
+    if (this.terminalRenderer === "ink") {
+      this.updateInkRenderer();
+      return;
+    }
     this.mountEditorReplacement(
       new SessionPickerComponent({
         sessions: this.state.sessions,
