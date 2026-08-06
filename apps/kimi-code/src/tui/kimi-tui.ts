@@ -77,6 +77,8 @@ import {
 } from "./components/dialogs/approval-preview-body.ts";
 import { CompactionComponent } from "./components/dialogs/compaction.ts";
 import { ChoicePickerComponent } from "./components/dialogs/choice-picker.ts";
+import { ModelSelectorComponent } from "./components/dialogs/model-selector.ts";
+import { TabbedModelSelectorComponent } from "./components/dialogs/tabbed-model-selector.ts";
 import { HelpPanelComponent } from "./components/dialogs/help-panel.ts";
 import { defaultThinkingEffortFor } from "./components/dialogs/model-selector.ts";
 import { QuestionDialogComponent } from "./components/dialogs/question-dialog.ts";
@@ -153,8 +155,17 @@ import {
   handleInkChoicePickerInput,
   projectInkChoicePickerView,
 } from "./renderer/ink-choice-picker.ts";
+import {
+  createInkModelSelectorSession,
+  createInkTabbedModelSelectorSession,
+  type InkModelSelectorSession,
+  type InkTabbedModelSelectorSession,
+  projectInkModelSelectorView,
+} from "./renderer/ink-model-selector.ts";
 import type { ChoicePickerOptions } from "./components/dialogs/choice-picker.ts";
 import type { ChoiceOption } from "./components/dialogs/choice-picker.ts";
+import type { ModelSelectorOptions } from "./components/dialogs/model-selector.ts";
+import type { TabbedModelSelectorOptions } from "./components/dialogs/tabbed-model-selector.ts";
 import { SearchableList } from "./utils/searchable-list.ts";
 import {
   handleInkQuestionWizardInput,
@@ -443,6 +454,18 @@ export class KimiTUI {
   private inkRenderer: InkTerminalRenderer | undefined;
   private inkChoicePickerOptions: ChoicePickerOptions | null = null;
   private inkChoicePickerList: SearchableList<ChoiceOption> | null = null;
+  private inkModelSelector:
+    | {
+        readonly kind: "flat";
+        readonly session: InkModelSelectorSession;
+        readonly opts: ModelSelectorOptions;
+      }
+    | {
+        readonly kind: "tabbed";
+        readonly session: InkTabbedModelSelectorSession;
+        readonly opts: TabbedModelSelectorOptions;
+      }
+    | null = null;
   private readonly terminalRenderer: "kimi-tui" | "ink";
   private readonly terminalOwnership = new TerminalOwnership();
   private inkOwnsTerminal(): boolean {
@@ -966,6 +989,9 @@ export class KimiTUI {
     if (dialog === "choice-picker") {
       return this.handleInkChoicePickerInput(data);
     }
+    if (dialog === "model-selector") {
+      return this.handleInkModelSelectorInput(data);
+    }
     if (dialog !== "trust-prompt" && dialog !== "session-picker") return false;
     const count =
       dialog === "trust-prompt" ? 2 : Math.min(8, this.state.sessions.length);
@@ -1265,6 +1291,70 @@ export class KimiTUI {
     this.inkChoicePickerOptions = null;
     this.inkChoicePickerList = null;
     if (this.state.activeDialog === "choice-picker") {
+      this.state.activeDialog = null;
+    }
+  }
+
+  private handleInkModelSelectorInput(data: string): boolean {
+    const handle = this.inkModelSelector;
+    if (handle === null) return false;
+    const callbacks = {
+      onSelect: (selection: { alias: string; thinking: string }) => {
+        this.closeInkModelSelector();
+        if (handle.kind === "flat") {
+          handle.opts.onSelect(selection);
+          return;
+        }
+        handle.opts.onSelect(selection);
+      },
+      onSessionOnlySelect:
+        handle.kind === "flat"
+          ? handle.opts.onSessionOnlySelect
+          : handle.opts.onSessionOnlySelect,
+      onCancel: () => {
+        this.closeInkModelSelector();
+        if (handle.kind === "flat") {
+          handle.opts.onCancel();
+          return;
+        }
+        handle.opts.onCancel();
+      },
+    };
+    const consumed =
+      handle.kind === "flat"
+        ? handle.session.handleInput(data, callbacks)
+        : handle.session.handleInput(data, callbacks);
+    if (consumed) {
+      this.updateInkRenderer();
+    }
+    return consumed;
+  }
+
+  private openInkModelSelector(opts: ModelSelectorOptions): void {
+    this.closeInkModelSelector();
+    this.inkModelSelector = {
+      kind: "flat",
+      session: createInkModelSelectorSession(opts),
+      opts,
+    };
+    this.state.activeDialog = "model-selector";
+    this.updateInkRenderer();
+  }
+
+  private openInkTabbedModelSelector(opts: TabbedModelSelectorOptions): void {
+    this.closeInkModelSelector();
+    this.inkModelSelector = {
+      kind: "tabbed",
+      session: createInkTabbedModelSelectorSession(opts),
+      opts,
+    };
+    this.state.activeDialog = "model-selector";
+    this.updateInkRenderer();
+  }
+
+  private closeInkModelSelector(): void {
+    this.inkModelSelector = null;
+    if (this.state.activeDialog === "model-selector") {
       this.state.activeDialog = null;
     }
   }
@@ -3719,6 +3809,10 @@ export class KimiTUI {
               this.inkChoicePickerOptions,
               this.inkChoicePickerList,
             ),
+      modelSelector:
+        this.inkModelSelector === null
+          ? null
+          : projectInkModelSelectorView(this.inkModelSelector.session),
       sessions,
       loadingSessions: this.state.loadingSessions,
       sessionsScope: this.state.sessionsScope,
@@ -4072,6 +4166,17 @@ export class KimiTUI {
   mountEditorReplacement(panel: Component & Focusable): void {
     if (
       this.inkOwnsTerminal() &&
+      panel instanceof TabbedModelSelectorComponent
+    ) {
+      this.openInkTabbedModelSelector(panel.getTabbedModelSelectorOptions());
+      return;
+    }
+    if (this.inkOwnsTerminal() && panel instanceof ModelSelectorComponent) {
+      this.openInkModelSelector(panel.getModelSelectorOptions());
+      return;
+    }
+    if (
+      this.inkOwnsTerminal() &&
       panel instanceof ChoicePickerComponent
     ) {
       this.openInkChoicePicker(panel.getChoicePickerOptions());
@@ -4088,6 +4193,7 @@ export class KimiTUI {
 
   restoreEditor(): void {
     this.closeInkChoicePicker();
+    this.closeInkModelSelector();
     if (this.inkOwnsTerminal()) {
       const children = this.state.editorContainer.children;
       if (children.length === 1 && children[0] === this.state.editor) {

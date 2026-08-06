@@ -34,8 +34,6 @@ import {
 import { BtwPanelComponent } from "#/tui/components/panes/btw-panel";
 import { ThinkingComponent } from "#/tui/components/messages/thinking";
 import { WelcomeComponent } from "#/tui/components/chrome/welcome";
-import { ModelSelectorComponent } from "#/tui/components/dialogs/model-selector";
-import { TabbedModelSelectorComponent } from "#/tui/components/dialogs/tabbed-model-selector";
 import { UndoSelectorComponent } from "#/tui/components/dialogs/undo-selector";
 import {
   PluginMcpSelectorComponent,
@@ -374,6 +372,54 @@ function sendInkDialogInput(driver: MessageDriver, data: string): void {
   (
     driver as unknown as { handleInkSimpleDialogInput: (data: string) => boolean }
   ).handleInkSimpleDialogInput(data);
+}
+
+async function waitForInkModelSelector(driver: MessageDriver): Promise<void> {
+  await vi.waitFor(() => {
+    expect(driver.state.activeDialog).toBe("model-selector");
+    expect(
+      (
+        driver as unknown as {
+          getTerminalViewState: () => {
+            dialog: { modelSelector: { title: string } | null };
+          };
+        }
+      ).getTerminalViewState().dialog.modelSelector,
+    ).not.toBeNull();
+  });
+}
+
+function inkModelSelectorText(driver: MessageDriver): string {
+  const selector = (
+    driver as unknown as {
+      getTerminalViewState: () => {
+        dialog: {
+          modelSelector: {
+            title: string;
+            query: string;
+            rows: readonly {
+              name: string;
+              provider: string;
+              isCurrent: boolean;
+            }[];
+            thinkingSegments: readonly { label: string; active: boolean }[];
+          } | null;
+        };
+      };
+    }
+  ).getTerminalViewState().dialog.modelSelector;
+  if (selector === null) return "";
+  return [
+    selector.title,
+    selector.query.length > 0 ? `Search: ${selector.query}` : "",
+    ...selector.rows.map(
+      (row) =>
+        `${row.name} ${row.provider}${row.isCurrent ? " ← current" : ""}`,
+    ),
+    ...selector.thinkingSegments.map((segment) =>
+      segment.active ? `[ ${segment.label} ]` : `  ${segment.label}  `,
+    ),
+  ].join("\n");
 }
 
 function setDriverEditorText(driver: MessageDriver, text: string): void {
@@ -6156,28 +6202,17 @@ command = "vim"
 
     driver.handleUserInput("/model turbo");
 
-    await vi.waitFor(() => {
-      expect(driver.state.editorContainer.children[0]).toBeInstanceOf(
-        TabbedModelSelectorComponent,
-      );
-    });
-    const picker = driver.state.editorContainer.children[0];
-    const pickerOutput = stripSgr(
-      (picker as TabbedModelSelectorComponent).render(120).join("\n"),
-    );
-    expect(pickerOutput).toMatch(/Kimi K2\s+Kimi Code ← current/);
-    expect(pickerOutput).toMatch(/❯ Kimi Turbo\s+Kimi Code/);
-    (picker as TabbedModelSelectorComponent).handleInput("t");
-    (picker as TabbedModelSelectorComponent).handleInput("u");
-    const filteredOutput = stripSgr(
-      (picker as TabbedModelSelectorComponent).render(120).join("\n"),
-    );
+    await waitForInkModelSelector(driver);
+    const pickerOutput = inkModelSelectorText(driver);
+    expect(pickerOutput).toMatch(/Kimi K2.*← current/);
+    expect(pickerOutput).toMatch(/Kimi Turbo/);
+    sendInkDialogInput(driver, "t");
+    sendInkDialogInput(driver, "u");
+    const filteredOutput = inkModelSelectorText(driver);
     expect(filteredOutput).toContain("Search: tu");
     expect(filteredOutput).toContain("Kimi Turbo");
     expect(filteredOutput).not.toContain("Kimi K2");
-    // Turbo is a thinking-capable model that is not the active one, so it
-    // defaults to thinking on — selecting it applies thinking without a toggle.
-    (picker as TabbedModelSelectorComponent).handleInput("\r");
+    sendInkDialogInput(driver, "\r");
 
     await vi.waitFor(() => {
       expect(session.setModel).toHaveBeenCalledWith("turbo");
@@ -6220,14 +6255,8 @@ command = "vim"
 
     driver.handleUserInput("/model turbo");
 
-    await vi.waitFor(() => {
-      expect(driver.state.editorContainer.children[0]).toBeInstanceOf(
-        TabbedModelSelectorComponent,
-      );
-    });
-    const picker = driver.state.editorContainer.children[0];
-    // /model turbo preselects turbo; Alt+S applies it to the current session only.
-    (picker as TabbedModelSelectorComponent).handleInput(`${ESC}s`);
+    await waitForInkModelSelector(driver);
+    sendInkDialogInput(driver, `${ESC}s`);
 
     await vi.waitFor(() => {
       expect(session.setModel).toHaveBeenCalledWith("turbo");
@@ -6283,14 +6312,8 @@ command = "vim"
 
     driver.handleUserInput("/model turbo");
 
-    await vi.waitFor(() => {
-      expect(driver.state.editorContainer.children[0]).toBeInstanceOf(
-        TabbedModelSelectorComponent,
-      );
-    });
-    (
-      driver.state.editorContainer.children[0] as TabbedModelSelectorComponent
-    ).handleInput("\r");
+    await waitForInkModelSelector(driver);
+    sendInkDialogInput(driver, "\r");
 
     await vi.waitFor(() => {
       expect(setConfig).toHaveBeenCalledWith({
@@ -6327,13 +6350,8 @@ command = "vim"
 
     driver.handleUserInput("/model k2");
 
-    await vi.waitFor(() => {
-      expect(driver.state.editorContainer.children[0]).toBeInstanceOf(
-        TabbedModelSelectorComponent,
-      );
-    });
-    const picker = driver.state.editorContainer.children[0];
-    (picker as TabbedModelSelectorComponent).handleInput("\r");
+    await waitForInkModelSelector(driver);
+    sendInkDialogInput(driver, "\r");
 
     await vi.waitFor(() => {
       expect(setConfig).toHaveBeenCalledWith({
@@ -6446,14 +6464,8 @@ command = "vim"
 
     driver.handleUserInput("/model turbo");
 
-    await vi.waitFor(() => {
-      expect(driver.state.editorContainer.children[0]).toBeInstanceOf(
-        TabbedModelSelectorComponent,
-      );
-    });
-    (
-      driver.state.editorContainer.children[0] as TabbedModelSelectorComponent
-    ).handleInput("\r");
+    await waitForInkModelSelector(driver);
+    sendInkDialogInput(driver, "\r");
 
     // The effort matches the value shown when the picker opened, so the patch
     // carries no effort key; the stored preference stays as-is via the merge.
@@ -6507,11 +6519,8 @@ command = "vim"
     driver.handleUserInput("/model");
 
     await vi.waitFor(() => {
-      const picker = driver.state.editorContainer.children[0];
-      expect(picker).toBeInstanceOf(TabbedModelSelectorComponent);
-      const output = stripSgr(
-        (picker as TabbedModelSelectorComponent).render(120).join("\n"),
-      );
+      expect(driver.state.activeDialog).toBe("model-selector");
+      const output = inkModelSelectorText(driver);
       expect(output).toContain("Fresh Kimi K2");
       expect(output).not.toContain("Old Kimi K2");
     });
@@ -6549,22 +6558,14 @@ command = "vim"
       await Promise.resolve();
 
       expect(refreshOAuthProviderModels).toHaveBeenCalledOnce();
-      expect(driver.state.editorContainer.children[0]).not.toBeInstanceOf(
-        TabbedModelSelectorComponent,
-      );
+      expect(driver.state.activeDialog).not.toBe("model-selector");
 
       await vi.advanceTimersByTimeAsync(1_999);
-      expect(driver.state.editorContainer.children[0]).not.toBeInstanceOf(
-        TabbedModelSelectorComponent,
-      );
+      expect(driver.state.activeDialog).not.toBe("model-selector");
 
       await vi.advanceTimersByTimeAsync(1);
-      const picker = driver.state.editorContainer.children[0];
-      expect(picker).toBeInstanceOf(TabbedModelSelectorComponent);
-      const output = stripSgr(
-        (picker as TabbedModelSelectorComponent).render(120).join("\n"),
-      );
-      expect(output).toContain("Kimi K2");
+      await waitForInkModelSelector(driver);
+      expect(inkModelSelectorText(driver)).toContain("Kimi K2");
     } finally {
       vi.useRealTimers();
     }
@@ -6589,20 +6590,17 @@ command = "vim"
       },
     });
 
-    const picker = driver.state.editorContainer.children[0];
-    expect(picker).toBeInstanceOf(ModelSelectorComponent);
-    (picker as ModelSelectorComponent).handleInput("t");
-    (picker as ModelSelectorComponent).handleInput("u");
+    await waitForInkModelSelector(driver);
+    sendInkDialogInput(driver, "t");
+    sendInkDialogInput(driver, "u");
 
-    const output = stripSgr(
-      (picker as ModelSelectorComponent).render(120).join("\n"),
-    );
+    const output = inkModelSelectorText(driver);
     expect(output).toContain("Search: tu");
     expect(output).toContain("Kimi Turbo");
     expect(output).not.toContain("Kimi Alpha");
 
-    (picker as ModelSelectorComponent).handleInput("\u001B");
-    (picker as ModelSelectorComponent).handleInput("\u001B");
+    sendInkDialogInput(driver, "\u001B");
+    sendInkDialogInput(driver, "\u001B");
     await expect(selection).resolves.toBeUndefined();
   });
 
@@ -7000,14 +6998,8 @@ describe("/model status displayName override", () => {
 
     driver.handleUserInput("/model turbo");
 
-    await vi.waitFor(() => {
-      expect(driver.state.editorContainer.children[0]).toBeInstanceOf(
-        TabbedModelSelectorComponent,
-      );
-    });
-    (
-      driver.state.editorContainer.children[0] as TabbedModelSelectorComponent
-    ).handleInput("\r");
+    await waitForInkModelSelector(driver);
+    sendInkDialogInput(driver, "\r");
 
     await vi.waitFor(() => {
       expect(setConfig).toHaveBeenCalledWith({

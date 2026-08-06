@@ -5,6 +5,7 @@ import type {
   PendingQuestion,
 } from "../reverse-rpc/types";
 import type { InkChoicePickerView } from "./ink-choice-picker";
+import type { InkModelSelectorView } from "./ink-model-selector";
 import type { InkQuestionWizardView } from "./ink-question-wizard";
 import type {
   AppState,
@@ -104,7 +105,7 @@ export interface TerminalApprovalPreviewView {
 }
 
 export interface TerminalDialogView {
-  readonly active: "session-picker" | "help" | "trust-prompt" | "choice-picker" | null;
+  readonly active: "session-picker" | "help" | "trust-prompt" | "choice-picker" | "model-selector" | null;
   readonly pendingApproval: PendingApproval | null;
   readonly pendingQuestion: PendingQuestion | null;
   readonly sessions: readonly TerminalSessionView[];
@@ -120,6 +121,7 @@ export interface TerminalDialogView {
   readonly approvalFeedbackText: string;
   readonly questionWizard: InkQuestionWizardView | null;
   readonly choicePicker: InkChoicePickerView | null;
+  readonly modelSelector: InkModelSelectorView | null;
 }
 
 /**
@@ -164,6 +166,7 @@ export interface TerminalViewSource {
   readonly approvalFeedbackText?: string;
   readonly questionWizard?: InkQuestionWizardView | null;
   readonly choicePicker?: InkChoicePickerView | null;
+  readonly modelSelector?: InkModelSelectorView | null;
   readonly approvalPreview?: TerminalApprovalPreviewView | null;
   readonly toolOutputExpanded: boolean;
   readonly externalEditorRunning: boolean;
@@ -303,6 +306,7 @@ export function createTerminalViewState(
       approvalFeedbackText: source.approvalFeedbackText ?? "",
       questionWizard: source.questionWizard ?? null,
       choicePicker: source.choicePicker ?? null,
+      modelSelector: source.modelSelector ?? null,
     },
     toolOutputExpanded: source.toolOutputExpanded,
     externalEditorRunning: source.externalEditorRunning,

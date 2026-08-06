@@ -6,6 +6,7 @@ import type { TerminalViewState } from "../../terminal-view-state";
 import { InkApprovalDialog } from "./InkApprovalDialog";
 import { InkChoicePickerDialog } from "./InkChoicePickerDialog";
 import { InkHelpDialog } from "./InkHelpDialog";
+import { InkModelSelectorDialog } from "./InkModelSelectorDialog";
 import { InkQuestionDialog } from "./InkQuestionDialog";
 import { InkSessionPickerDialog } from "./InkSessionPickerDialog";
 import { InkTrustDialog } from "./InkTrustDialog";
@@ -29,7 +30,9 @@ function dialogTitle(view: TerminalViewState): string | undefined {
     case "help":
       return "Help";
     case "choice-picker":
-      return dialog.choicePicker?.title;
+      return view.dialog.choicePicker?.title;
+    case "model-selector":
+      return view.dialog.modelSelector?.title;
     default:
       return;
   }
@@ -87,6 +90,9 @@ function dialogBody(
     case "choice-picker":
       if (dialog.choicePicker === null) return null;
       return <InkChoicePickerDialog picker={dialog.choicePicker} />;
+    case "model-selector":
+      if (dialog.modelSelector === null) return null;
+      return <InkModelSelectorDialog selector={dialog.modelSelector} />;
     default:
       return null;
   }
@@ -106,7 +112,11 @@ export function InkDialogView({
   if (title === undefined || body === null) return null;
 
   // Help and choice pickers render their own title row; skip the outer chrome there.
-  if (view.dialog.active === "help" || view.dialog.active === "choice-picker") {
+  if (
+    view.dialog.active === "help" ||
+    view.dialog.active === "choice-picker" ||
+    view.dialog.active === "model-selector"
+  ) {
     return body;
   }
 

@@ -22,7 +22,7 @@ import type { ChoiceOption } from "./choice-picker";
 
 type ThinkingAvailability = "toggle" | "always-on" | "unsupported";
 
-interface ModelChoice {
+export interface ModelChoice {
   readonly alias: string;
   readonly model: ModelAlias;
   /** Model display name (left column). */
@@ -95,7 +95,7 @@ export interface ModelSelectorOptions {
   readonly onCancel: () => void;
 }
 
-function createModelChoices(
+export function createModelChoices(
   models: Record<string, ModelAlias>,
 ): readonly ModelChoice[] {
   return Object.entries(models).map(([alias, cfg]) => {
@@ -174,6 +174,14 @@ function commitEffort(
   return draft;
 }
 
+/** Exported for the Ink renderer path. */
+export function commitModelEffort(
+  choice: ModelChoice,
+  draft: ThinkingEffort,
+): ThinkingEffort {
+  return commitEffort(choice, draft);
+}
+
 /**
  * Flat, searchable single-list model picker.
  *
@@ -204,6 +212,11 @@ export class ModelSelectorComponent extends Container implements Focusable {
       initialIndex: Math.max(selectedIdx, 0),
       searchable: opts.searchable === true,
     });
+  }
+
+  /** Expose options for the Ink renderer path without mounting legacy UI. */
+  getModelSelectorOptions(): ModelSelectorOptions {
+    return this.opts;
   }
 
   /**

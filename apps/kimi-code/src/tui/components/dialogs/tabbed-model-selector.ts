@@ -87,6 +87,11 @@ export class TabbedModelSelectorComponent
     this.syncFocusToActive();
   }
 
+  /** Expose options for the Ink renderer path without mounting legacy UI. */
+  getTabbedModelSelectorOptions(): TabbedModelSelectorOptions {
+    return this.opts;
+  }
+
   handleInput(data: string): void {
     if (this.tabs.length > 1) {
       if (matchesKey(data, Key.tab)) {
