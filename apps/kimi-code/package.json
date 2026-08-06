@@ -1,5 +1,4 @@
 {
-  "name": "@moonshot-ai/kimi-code",
   "version": "0.32.0",
   "description": "The Starting Point for Next-Gen Agents",
   "license": "MIT",
@@ -72,8 +71,8 @@
     "dev:prod": "node dist/main.mjs",
     "clean": "rm -rf dist",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "bun run --cwd ../.. build:packages && vitest run",
-    "e2e": "bun run --cwd ../.. build:packages && KIMI_E2E=1 vitest run test/e2e",
+    "test": "bun run --cwd ../.. build:packages && bun test",
+    "e2e": "bun run --cwd ../.. build:packages && KIMI_E2E=1 bun test test/e2e",
     "e2e:real": "bun run --cwd ../.. build:packages && KIMI_E2E_REAL=1 vitest run test/e2e/real-llm-smoke.e2e.test.ts",
     "postinstall": "node scripts/postinstall.mjs"
   },
@@ -83,36 +82,28 @@
   },
   "devDependencies": {
     "@moonshot-ai/acp-server": "workspace:^",
-    "@moonshot-ai/agent-core-v2": "workspace:^",
-    "@moonshot-ai/kap-server": "workspace:^",
-    "@moonshot-ai/kimi-code-oauth": "workspace:^",
-    "@moonshot-ai/kimi-code-sdk": "workspace:^",
-    "@moonshot-ai/kimi-web": "workspace:^",
-    "@moonshot-ai/pi-tui": "workspace:^",
-    "@moonshot-ai/vis-server": "workspace:^",
-    "@moonshot-ai/vis-web": "workspace:*",
-    "@types/semver": "^7.7.0",
-    "@types/yazl": "^2.4.6",
-    "chalk": "^5.4.1",
-    "cli-highlight": "^2.1.11",
-    "commander": "^13.1.0",
+    "@types/react-dom": "^19.2.4",
     "jimp": "^1.6.1",
     "pathe": "^2.0.3",
-    "postject": "1.0.0-alpha.6",
-    "semver": "^7.7.4",
-    "smol-toml": "^1.6.1",
-    "tsx": "^4.21.0",
-    "yazl": "^3.3.1",
-    "zod": "^4.3.6"
-  },
-  "engines": {
-    "node": ">=22.19.0"
+    "semver": "^7.8.5",
+    "tsx": "^4.23.8",
+    "zod": "^4.4.3"
   },
   "dependencies": {
     "@clack/prompts": "^1.7.0",
+    "@iarna/toml": "^2.2.5",
+    "@moonshot-ai/kimi-code-tui": "workspace:^",
+    "@shikijs/cli": "^4.4.2",
     "@types/react": "^19.2.18",
+    "ansis": "^4.3.1",
+    "cac": "^7.0.0",
     "ink": "^7.1.1",
+    "picocolors": "^1.1.1",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
-  }
+  },
+  "engines": {
+    "node": ">=24.15.0"
+  },
+  "name": "@moonshot-ai/kimi-code"
 }
