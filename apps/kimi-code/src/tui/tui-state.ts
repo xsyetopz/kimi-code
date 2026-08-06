@@ -55,7 +55,7 @@ export interface TUIState {
   sessions: SessionRow[];
   loadingSessions: boolean;
   sessionsScope: "cwd" | "all";
-  activeDialog: "session-picker" | "help" | "trust-prompt" | "choice-picker" | "model-selector" | "effort-selector" | "undo-selector" | "experiments-selector" | "plugin-mcp-selector" | "plugins-panel" | "start-permission-prompt" | "goal-queue-manager" | "goal-queue-edit" | null;
+  activeDialog: "session-picker" | "help" | "trust-prompt" | "choice-picker" | "model-selector" | "effort-selector" | "undo-selector" | "experiments-selector" | "plugin-mcp-selector" | "plugins-panel" | "start-permission-prompt" | "goal-queue-manager" | "goal-queue-edit" | "provider-manager" | null;
   tasksBrowser: TasksBrowserState | undefined;
   externalEditorRunning: boolean;
   queuedMessages: QueuedMessage[];

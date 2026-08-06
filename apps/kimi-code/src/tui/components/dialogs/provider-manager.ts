@@ -69,7 +69,7 @@ export interface ProviderManagerOptions {
 }
 
 /** Real (non-synthetic) source row. */
-interface SourceRow {
+export interface ProviderManagerSourceRow {
   readonly kind: "source";
   readonly id: string;
   readonly label: string;
@@ -81,17 +81,24 @@ interface SourceRow {
 }
 
 /** Synthetic `[ Add New Platform ]` action row pinned to the bottom. */
-interface AddRow {
+export interface ProviderManagerAddRow {
   readonly kind: "add";
   readonly id: "__add__";
   readonly label: string;
 }
 
-type Row = SourceRow | AddRow;
+export type ProviderManagerRow = ProviderManagerSourceRow | ProviderManagerAddRow;
+
+interface SourceRow extends ProviderManagerSourceRow {}
+interface AddRow extends ProviderManagerAddRow {}
+type Row = ProviderManagerRow;
 
 const ADD_ROW_LABEL = "[ Add New Platform ]";
-const PAGE_SIZE = 8;
-const HEADER_HINT = "↑↓ navigate · D delete · Esc cancel";
+export const PROVIDER_MANAGER_PAGE_SIZE = 8;
+export const PROVIDER_MANAGER_HEADER_HINT =
+  "↑↓ navigate · D delete · Esc cancel";
+const PAGE_SIZE = PROVIDER_MANAGER_PAGE_SIZE;
+const HEADER_HINT = PROVIDER_MANAGER_HEADER_HINT;
 
 // Narrows a `ProviderConfig` blob to a `CustomRegistrySource` payload.
 // Mirrors `readCustomRegistrySource` in `kimi-tui.ts`. We can't import
@@ -139,6 +146,12 @@ function sourceUrlLabel(url: string): string {
  *     pair, label = hostname + pathname.
  *   - Anything else → 1 source per provider, label = provider id.
  */
+export function buildProviderManagerRows(
+  opts: ProviderManagerOptions,
+): readonly ProviderManagerRow[] {
+  return buildRows(opts);
+}
+
 function buildRows(opts: ProviderManagerOptions): readonly Row[] {
   const sources: SourceRow[] = [];
 
@@ -234,6 +247,10 @@ export class ProviderManagerComponent extends Container implements Focusable {
       : -1;
     this.selectedIndex = Math.max(activeIdx, 0);
     this.confirm = undefined;
+  }
+
+  getProviderManagerOptions(): ProviderManagerOptions {
+    return this.opts;
   }
 
   /**

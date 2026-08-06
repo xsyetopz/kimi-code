@@ -13,6 +13,7 @@ import { InkModelSelectorDialog } from "./InkModelSelectorDialog";
 import { InkExperimentsSelectorDialog } from "./InkExperimentsSelectorDialog";
 import { InkPluginMcpSelectorDialog } from "./InkPluginMcpSelectorDialog";
 import { InkPluginsPanelDialog } from "./InkPluginsPanelDialog";
+import { InkProviderManagerDialog } from "./InkProviderManagerDialog";
 import { InkStartPermissionPromptDialog } from "./InkStartPermissionPromptDialog";
 import { InkUndoSelectorDialog } from "./InkUndoSelectorDialog";
 import { InkQuestionDialog } from "./InkQuestionDialog";
@@ -57,6 +58,8 @@ function dialogTitle(view: TerminalViewState): string | undefined {
       return view.dialog.goalQueueManager?.title;
     case "goal-queue-edit":
       return view.dialog.goalQueueEdit?.title;
+    case "provider-manager":
+      return view.dialog.providerManager?.title;
     default:
       return;
   }
@@ -151,6 +154,11 @@ function dialogBody(
     case "goal-queue-edit":
       if (dialog.goalQueueEdit === null) return null;
       return <InkGoalQueueEditDialog edit={dialog.goalQueueEdit} />;
+    case "provider-manager":
+      if (dialog.providerManager === null) return null;
+      return (
+        <InkProviderManagerDialog manager={dialog.providerManager} />
+      );
     default:
       return null;
   }
@@ -181,7 +189,8 @@ export function InkDialogView({
     view.dialog.active === "plugins-panel" ||
     view.dialog.active === "start-permission-prompt" ||
     view.dialog.active === "goal-queue-manager" ||
-    view.dialog.active === "goal-queue-edit"
+    view.dialog.active === "goal-queue-edit" ||
+    view.dialog.active === "provider-manager"
   ) {
     return body;
   }
