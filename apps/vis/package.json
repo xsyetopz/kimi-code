@@ -6,7 +6,7 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "build:deps": "bun run --filter @moonshot-ai/agent-core... build",
+    "build:deps": "bun run --cwd ../../packages/agent-core-v2 build",
     "predev": "bun run build:deps",
     "dev": "node scripts/dev.mjs",
     "build": "bun run build:deps && bun run --filter @moonshot-ai/vis-server build && bun run --filter @moonshot-ai/vis-web build && node scripts/copy-web-dist.mjs",

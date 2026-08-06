@@ -1,8 +1,5 @@
-import { writeFileSync } from "node:fs";
-import { join } from "node:path";
-
+import process from "node:process";
 import type { DeviceAuthorization } from "@moonshot-ai/kimi-code-oauth";
-import { effectiveModelAlias, log } from "@moonshot-ai/kimi-code-sdk";
 import type {
   ApprovalRequest,
   ApprovalResponse,
@@ -16,21 +13,19 @@ import type {
   SkillSummary,
   WorkspaceTrustInfo,
 } from "@moonshot-ai/kimi-code-sdk";
-import type { MigrationPlan } from "@moonshot-ai/migration-legacy";
+import { effectiveModelAlias, log } from "@moonshot-ai/kimi-code-sdk";
 import {
-  deleteAllKittyImages,
   type Component,
+  deleteAllKittyImages,
   type Focusable,
   getCapabilities,
+  // DEPRECATED: pi-tui imports replaced by @moonshot-ai/kimi-code-tui
+  Key,
+  matchesKey,
   Spacer,
-} from "@moonshot-ai/pi-tui";
+} from "@moonshot-ai/kimi-code-tui";
 import { resolve } from "pathe";
-
 import type { CLIOptions } from "#/cli/options";
-import {
-  MigrationScreenComponent,
-  type MigrationScreenResult,
-} from "#/migration/index";
 import { copyTextToClipboard } from "#/utils/clipboard/clipboard-text";
 import {
   appendInputHistory,
@@ -40,160 +35,190 @@ import { openUrl } from "#/utils/open-url";
 import { getInputHistoryFile } from "#/utils/paths";
 import { detectFdPath, ensureFdPath } from "#/utils/process/fd-detect";
 import { quoteShellArg } from "#/utils/shell-quote";
+import { startupTrace } from "#/utils/startup-trace";
 import { restoreTerminalModes } from "#/utils/terminal-restore";
-
-import { BannerProvider } from "./banner/banner-provider";
+import { BannerProvider } from "./banner/banner-provider.ts";
 import {
   readBannerDisplayState,
   writeBannerDisplayState,
-} from "./banner/state";
+} from "./banner/state.ts";
+import * as slashCommands from "./commands/dispatch.ts";
 import {
   BUILTIN_SLASH_COMMANDS,
   buildPluginSlashCommands,
   buildSkillSlashCommands,
   isExperimentalFlagEnabled,
-  setExperimentalFeatures,
-  sortSlashCommands,
   type KimiSlashCommand,
   type SkillListSession,
-} from "./commands";
-import * as slashCommands from "./commands/dispatch";
-import { BannerComponent } from "./components/chrome/banner";
-import { DeviceCodeBoxComponent } from "./components/chrome/device-code-box";
-import { GutterContainer } from "./components/chrome/gutter-container";
-import { MoonLoader, type SpinnerStyle } from "./components/chrome/moon-loader";
-import { WelcomeComponent } from "./components/chrome/welcome";
-import { pickRandomWorkingTip } from "./components/chrome/working-tips";
+  setExperimentalFeatures,
+  sortSlashCommands,
+} from "./commands/index.ts";
+import { BannerComponent } from "./components/chrome/banner.ts";
+import { DeviceCodeBoxComponent } from "./components/chrome/device-code-box.ts";
+import { GutterContainer } from "./components/chrome/gutter-container.ts";
+import {
+  MoonLoader,
+  type SpinnerStyle,
+} from "./components/chrome/moon-loader.ts";
+import { WelcomeComponent } from "./components/chrome/welcome.ts";
+import { pickRandomWorkingTip } from "./components/chrome/working-tips.ts";
 import {
   ApprovalPanelComponent,
   type ApprovalPanelResponse,
-} from "./components/dialogs/approval-panel";
+} from "./components/dialogs/approval-panel.ts";
 import {
-  ApprovalPreviewViewer,
   type ApprovalPreviewBlock,
-} from "./components/dialogs/approval-preview";
-import { CompactionComponent } from "./components/dialogs/compaction";
-import { HelpPanelComponent } from "./components/dialogs/help-panel";
-import { defaultThinkingEffortFor } from "./components/dialogs/model-selector";
-import { QuestionDialogComponent } from "./components/dialogs/question-dialog";
+  ApprovalPreviewViewer,
+} from "./components/dialogs/approval-preview.ts";
+import { CompactionComponent } from "./components/dialogs/compaction.ts";
+import { HelpPanelComponent } from "./components/dialogs/help-panel.ts";
+import { defaultThinkingEffortFor } from "./components/dialogs/model-selector.ts";
+import { QuestionDialogComponent } from "./components/dialogs/question-dialog.ts";
 import {
   SessionPickerComponent,
   type SessionRow,
-} from "./components/dialogs/session-picker";
+} from "./components/dialogs/session-picker.ts";
 import {
-  TrustPromptComponent,
   type TrustPromptChoice,
-} from "./components/dialogs/trust-prompt";
+  TrustPromptComponent,
+} from "./components/dialogs/trust-prompt.ts";
 import {
   FileMentionProvider,
   type SlashAutocompleteCommand,
-} from "./components/editor/file-mention-provider";
-import { AssistantMessageComponent } from "./components/messages/assistant-message";
-import { BackgroundAgentStatusComponent } from "./components/messages/background-agent-status";
-import { CronMessageComponent } from "./components/messages/cron-message";
-import { buildGoalMarker } from "./components/messages/goal-markers";
+} from "./components/editor/file-mention-provider.ts";
+import { AssistantMessageComponent } from "./components/messages/assistant-message.ts";
+import { BackgroundAgentStatusComponent } from "./components/messages/background-agent-status.ts";
+import { CronMessageComponent } from "./components/messages/cron-message.ts";
+import { buildGoalMarker } from "./components/messages/goal-markers.ts";
 import {
   GoalCompletionMessageComponent,
   GoalSetMessageComponent,
-} from "./components/messages/goal-panel";
-import { PluginCommandComponent } from "./components/messages/plugin-command";
-import { ShellRunComponent } from "./components/messages/shell-run";
-import { SkillActivationComponent } from "./components/messages/skill-activation";
+} from "./components/messages/goal-panel.ts";
+import { PluginCommandComponent } from "./components/messages/plugin-command.ts";
+import { ShellRunComponent } from "./components/messages/shell-run.ts";
+import { SkillActivationComponent } from "./components/messages/skill-activation.ts";
 import {
   NoticeMessageComponent,
   StatusMessageComponent,
-} from "./components/messages/status-message";
-import { StepSummaryComponent } from "./components/messages/step-summary";
-import { ThinkingComponent } from "./components/messages/thinking";
-import { ToolCallComponent } from "./components/messages/tool-call";
+} from "./components/messages/status-message.ts";
+import { StepSummaryComponent } from "./components/messages/step-summary.ts";
+import { ThinkingComponent } from "./components/messages/thinking.ts";
+import { ToolCallComponent } from "./components/messages/tool-call.ts";
 import {
   ReplayTurnBoundaryComponent,
   UserMessageComponent,
-} from "./components/messages/user-message";
+} from "./components/messages/user-message.ts";
 import {
   ActivityPaneComponent,
   type ActivityPaneMode,
-} from "./components/panes/activity-pane";
-import { QueuePaneComponent } from "./components/panes/queue-pane";
-import type { TuiConfig } from "./config";
+} from "./components/panes/activity-pane.ts";
+import { QueuePaneComponent } from "./components/panes/queue-pane.ts";
+import type { TuiConfig } from "./config.ts";
 import {
   LLM_NOT_SET_MESSAGE,
   MAIN_AGENT_ID,
   NO_ACTIVE_SESSION_MESSAGE,
   PRODUCT_NAME,
   SESSIONLESS_STARTUP_NOTICE,
-} from "./constant/kimi-tui";
-import { CHROME_GUTTER } from "./constant/rendering";
-import { MAX_TERMINAL_TITLE_LENGTH } from "./constant/terminal";
-import { AuthFlowController } from "./controllers/auth-flow";
-import { BtwPanelController } from "./controllers/btw-panel";
-import { ClipboardImageHintController } from "./controllers/clipboard-image-hint";
-import { EditorKeyboardController } from "./controllers/editor-keyboard";
-import { SessionEventHandler } from "./controllers/session-event-handler";
-import { SessionReplayRenderer } from "./controllers/session-replay";
-import { StreamingUIController } from "./controllers/streaming-ui";
-import { TasksBrowserController } from "./controllers/tasks-browser";
-import { installRainbowDance } from "./easter-eggs/dance";
-import { adaptPanelResponse } from "./reverse-rpc/approval/adapter";
-import { ApprovalController } from "./reverse-rpc/approval/controller";
-import { createApprovalRequestHandler } from "./reverse-rpc/approval/handler";
-import { registerReverseRPCHandlers } from "./reverse-rpc/index";
-import { QuestionController } from "./reverse-rpc/question/controller";
-import { createQuestionAskHandler } from "./reverse-rpc/question/handler";
-import type { ApprovalPanelData, QuestionPanelData } from "./reverse-rpc/types";
+} from "./constant/kimi-tui.ts";
+import { CHROME_GUTTER } from "./constant/rendering.ts";
+import { MAX_TERMINAL_TITLE_LENGTH } from "./constant/terminal.ts";
+import { AuthFlowController } from "./controllers/auth-flow.ts";
+import { BtwPanelController } from "./controllers/btw-panel.ts";
+import { ClipboardImageHintController } from "./controllers/clipboard-image-hint.ts";
+import { EditorKeyboardController } from "./controllers/editor-keyboard.ts";
+import { SessionEventHandler } from "./controllers/session-event-handler.ts";
+import { SessionReplayRenderer } from "./controllers/session-replay.ts";
+import { StreamingUIController } from "./controllers/streaming-ui.ts";
+import { TasksBrowserController } from "./controllers/tasks-browser.ts";
+import { installRainbowDance } from "./easter-eggs/dance.ts";
+import {
+  type InkTerminalRenderer,
+  type InkTerminalRendererOptions,
+  mountInkTerminalRenderer,
+} from "./renderer/ink-terminal-renderer.ts";
+import {
+  type PromptSemanticAction,
+  routePromptEditorInput,
+} from "./renderer/prompt-editor-input.ts";
+import {
+  createPromptEditorState,
+  type PromptEditorAction,
+  type PromptEditorState,
+  promptEditorLineColumn,
+  reducePromptEditor,
+} from "./renderer/prompt-editor-state.ts";
+import { TerminalOwnership } from "./renderer/terminal-owner.ts";
+import {
+  createTerminalViewState,
+  resolveTerminalActivityMode,
+  type TerminalHelpCommandView,
+  type TerminalSessionView,
+  type TerminalTrustPromptView,
+  type TerminalViewState,
+} from "./renderer/terminal-view-state.ts";
+import { adaptPanelResponse } from "./reverse-rpc/approval/adapter.ts";
+import { ApprovalController } from "./reverse-rpc/approval/controller.ts";
+import { createApprovalRequestHandler } from "./reverse-rpc/approval/handler.ts";
+import { registerReverseRPCHandlers } from "./reverse-rpc/index.ts";
+import { QuestionController } from "./reverse-rpc/question/controller.ts";
+import { createQuestionAskHandler } from "./reverse-rpc/question/handler.ts";
+import type {
+  ApprovalPanelData,
+  QuestionPanelData,
+} from "./reverse-rpc/types.ts";
+import type { ColorToken, ResolvedTheme, ThemeName } from "./theme/index.ts";
 import {
   currentTheme,
-  getColorPalette,
   getBuiltInPalette,
+  getColorPalette,
   isBuiltInTheme,
-} from "./theme";
-import type { ColorToken, ResolvedTheme, ThemeName } from "./theme";
-import { createTUIState, type TUIState } from "./tui-state";
+} from "./theme/index.ts";
+import { createTUIState, type TUIState } from "./tui-state.ts";
 import {
-  INITIAL_LIVE_PANE,
   type AppState,
+  INITIAL_LIVE_PANE,
   type KimiTUIOptions,
   type LivePaneState,
   type LoginProgressSpinnerHandle,
   type QueuedMessage,
   type SteerInputItem,
   type TranscriptEntry,
-  type TUIStartupOptions,
-  type TUIStartupState,
-} from "./types";
-import { hasDispose, isExpandable } from "./utils/component-capabilities";
-import { isDeadTerminalError } from "./utils/dead-terminal";
-import { formatErrorMessage } from "./utils/event-payload";
-import { pickForegroundTasks } from "./utils/foreground-task";
+} from "./types.ts";
+import { hasDispose, isExpandable } from "./utils/component-capabilities.ts";
+import { isDeadTerminalError } from "./utils/dead-terminal.ts";
+import { formatErrorMessage } from "./utils/event-payload.ts";
+import { pickForegroundTasks } from "./utils/foreground-task.ts";
 import {
-  ImageAttachmentStore,
   type ImageAttachment,
-} from "./utils/image-attachment-store";
+  ImageAttachmentStore,
+} from "./utils/image-attachment-store.ts";
 import {
   extractMediaAttachments,
   rewriteMediaPlaceholders,
-} from "./utils/image-placeholder";
-import { installInputLatencyProbe } from "./utils/input-latency";
-import { startupTrace } from "#/utils/startup-trace";
-import { REPLAY_TURN_LIMIT } from "./utils/message-replay";
-import { hasPatchChanges } from "./utils/object-patch";
-import { sessionRowsForPicker } from "./utils/session-picker-rows";
-import { formatBashOutputForDisplay } from "./utils/shell-output";
-import { thinkingEffortFromConfig } from "./utils/thinking-config";
+} from "./utils/image-placeholder.ts";
+import { installInputLatencyProbe } from "./utils/input-latency.ts";
+import { REPLAY_TURN_LIMIT } from "./utils/message-replay.ts";
+import { hasPatchChanges } from "./utils/object-patch.ts";
+import { sessionRowsForPicker } from "./utils/session-picker-rows.ts";
+import { formatBashOutputForDisplay } from "./utils/shell-output.ts";
 import {
   combineStartupNotice,
   isOAuthLoginRequiredError,
-} from "./utils/startup";
-import { installTerminalFocusTracking } from "./utils/terminal-focus";
-import { notifyTerminalOnce } from "./utils/terminal-notification";
-import { installTerminalThemeTracking } from "./utils/terminal-theme";
-import { detectTmuxKeyboardWarning } from "./utils/tmux-keyboard";
+} from "./utils/startup.ts";
+import { installTerminalFocusTracking } from "./utils/terminal-focus.ts";
+import { notifyTerminalOnce } from "./utils/terminal-notification.ts";
+import { installTerminalThemeTracking } from "./utils/terminal-theme.ts";
+import { thinkingEffortFromConfig } from "./utils/thinking-config.ts";
+import { detectTmuxKeyboardWarning } from "./utils/tmux-keyboard.ts";
+import { printableChar } from "./utils/printable-key.ts";
 import {
   getTranscriptComponentEntry,
   markTranscriptComponent,
-} from "./utils/transcript-component-metadata";
-import { nextTranscriptId } from "./utils/transcript-id";
+} from "./utils/transcript-component-metadata.ts";
+import { nextTranscriptId } from "./utils/transcript-id.ts";
 import {
+  groupTurns,
   TRANSCRIPT_EXPAND_TURNS,
   TRANSCRIPT_HYSTERESIS,
   TRANSCRIPT_KEEP_RECENT_ASSISTANT,
@@ -201,18 +226,17 @@ import {
   TRANSCRIPT_KEEP_RECENT_STEPS,
   TRANSCRIPT_MAX_TURNS,
   TRANSCRIPT_WINDOW_ENABLED,
-  groupTurns,
   turnsToTrim,
-} from "./utils/transcript-window";
+} from "./utils/transcript-window.ts";
 
-export type { TUIState } from "./tui-state";
-export { createTUIState } from "./tui-state";
+export type { TUIState } from "./tui-state.ts";
+export { createTUIState } from "./tui-state.ts";
 export type {
   KimiTUIOptions,
   LoginProgressSpinnerHandle,
   TUIStartupOptions,
   TUIStartupState,
-} from "./types";
+} from "./types.ts";
 
 export interface KimiTUIStartupInput {
   readonly cliOptions: CLIOptions;
@@ -223,11 +247,10 @@ export interface KimiTUIStartupInput {
   readonly version: string;
   readonly workDir: string;
   readonly startupNotice?: string;
-  readonly migrationPlan?: MigrationPlan | null;
-  /** When true, run only the migration screen, then exit (the `kimi migrate` command). */
-  readonly migrateOnly?: boolean;
-  /** agent-core-v2 engine (KIMI_CODE_EXPERIMENTAL_FLAG); enables the startup workspace-trust prompt. */
+  /** Enables the v2-only startup/session behavior for embedded callers. */
   readonly engineV2?: boolean;
+  /** Selects the terminal owner; Ink is the default and pi-tui is rollback-only. */
+  readonly terminalRenderer?: "pi-tui" | "ink";
 }
 
 type EffectiveActivityPaneMode = ActivityPaneMode | "idle" | "session";
@@ -377,8 +400,6 @@ export class KimiTUI {
   private signalCleanupHandlers: Array<() => void> = [];
   private isShuttingDown = false;
   private backgroundRefreshPromise: Promise<void> | undefined;
-  private readonly migrationPlan: MigrationPlan | null;
-  private readonly migrateOnly: boolean;
   /** Whether the harness runs on the agent-core-v2 engine (lazy session creation). */
   readonly engineV2: boolean;
   private startupNotice: string | undefined;
@@ -386,6 +407,23 @@ export class KimiTUI {
   private currentLoadingTip:
     | { kind: LoadingTipKind; tip: string | undefined }
     | undefined = undefined;
+  private trustPromptView: TerminalTrustPromptView | null = null;
+  private trustPromptChoiceResolver:
+    | ((choice: TrustPromptChoice) => void)
+    | undefined;
+  private inkDialogSelection = 0;
+  private inkDialogScrollTop = 0;
+  private inkSessionPickerSelect: ((session: SessionRow) => void) | undefined;
+  private inkSessionPickerCancel: (() => void) | undefined;
+  private inkSessionPickerToggleScope:
+    | ((sessionId: string) => void)
+    | undefined;
+  /** Optional Ink bridge used by the staged renderer migration. */
+  private inkRenderer: InkTerminalRenderer | undefined;
+  private readonly terminalRenderer: "pi-tui" | "ink";
+  private readonly terminalOwnership = new TerminalOwnership();
+  /** Source of truth for normal prompt editing while Ink owns the terminal. */
+  private promptEditorState: PromptEditorState;
   private lastHistoryContent: string | undefined;
   // Live `!` shell output entries, keyed by commandId so concurrent commands
   // each update their own card and stale events are dropped. Mutated in place
@@ -436,26 +474,42 @@ export class KimiTUI {
     this.harness.track(event, properties);
   }
 
+  /** Current terminal owner, exposed for lifecycle diagnostics and tests. */
+  get terminalRendererOwner(): "none" | "pi-tui" | "ink" {
+    return this.terminalOwnership.current;
+  }
+
   constructor(harness: KimiHarness, startupInput: KimiTUIStartupInput) {
     this.harness = harness;
     const tuiOptions: KimiTUIOptions = {
       initialAppState: createInitialAppState(startupInput),
       startup: {
-        sessionFlag: startupInput.cliOptions.session,
         continueLast: startupInput.cliOptions.continue,
         yolo: startupInput.cliOptions.yolo,
         auto: startupInput.cliOptions.auto,
         plan: startupInput.cliOptions.plan,
-        model: startupInput.cliOptions.model,
-        agentProfile: startupInput.agentProfile,
         agentFiles: startupInput.cliOptions.agentFiles,
-        startupNotice: startupInput.startupNotice,
+        ...(startupInput.cliOptions.session === undefined
+          ? {}
+          : { sessionFlag: startupInput.cliOptions.session }),
+        ...(startupInput.cliOptions.model === undefined
+          ? {}
+          : { model: startupInput.cliOptions.model }),
+        ...(startupInput.agentProfile === undefined
+          ? {}
+          : { agentProfile: startupInput.agentProfile }),
+        ...(startupInput.startupNotice === undefined
+          ? {}
+          : { startupNotice: startupInput.startupNotice }),
       },
     };
     this.options = tuiOptions;
-    this.migrationPlan = startupInput.migrationPlan ?? null;
-    this.migrateOnly = startupInput.migrateOnly ?? false;
+    // Embedded callers inherit the same React/Ink owner as the production CLI;
+    // pi-tui remains available only when a caller explicitly opts into the
+    // rollback renderer during the migration window.
     this.engineV2 = startupInput.engineV2 ?? false;
+    this.terminalRenderer = startupInput.terminalRenderer ?? "ink";
+    this.promptEditorState = createPromptEditorState({ inputMode: "prompt" });
     this.startupNotice = startupInput.startupNotice;
     this.state = createTUIState(tuiOptions);
     this.uninstallRainbowDance = installRainbowDance(() => {
@@ -538,6 +592,7 @@ export class KimiTUI {
       }
     }
     this.state.editor.setArgumentHints(argumentHints);
+    this.refreshPromptCompletions();
   }
 
   refreshSlashCommandAutocomplete(): void {
@@ -633,33 +688,6 @@ export class KimiTUI {
     this.registerSignalHandlers();
     // Outer try rolls back signal listeners on startup failure.
     try {
-      if (this.migrationPlan !== null) {
-        // Migration needs the event loop running first (pi-tui component).
-        this.startEventLoop();
-        try {
-          const migrationResult = await this.runMigrationScreen(
-            this.migrationPlan,
-          );
-          if (this.migrateOnly) {
-            const failed =
-              migrationResult.decision === "now" &&
-              migrationResult.migrated === false;
-            this.disposeTerminalTracking();
-            this.state.ui.stop();
-            await this.onExit?.(failed ? 1 : 0);
-            return;
-          }
-          const shouldReplayHistory = await this.initMainTui();
-          this.startBackgroundFdAutocomplete();
-          await this.finishStartup(shouldReplayHistory);
-        } catch (error) {
-          this.disposeTerminalTracking();
-          this.state.ui.stop();
-          throw error;
-        }
-        return;
-      }
-
       startupTrace("trustPrompt:begin");
       const trustPromptStartedLoop = await this.maybeRunWorkspaceTrustPrompt();
       startupTrace("trustPrompt:end");
@@ -670,9 +698,7 @@ export class KimiTUI {
       if (process.env["KIMI_TUI_INPUT_LATENCY"])
         installInputLatencyProbe(this.state.ui);
       // When the trust prompt already started the event loop, starting it
-      // again would re-run pi-tui's terminal.start() — stacking a second
-      // Kitty keyboard-protocol push (leaking CSI-u mode past exit) and
-      // duplicate stdin listeners.
+      // again would mount a second renderer and duplicate stdin listeners.
       if (!trustPromptStartedLoop) this.startEventLoop();
       startupTrace("eventLoop:started");
       try {
@@ -768,12 +794,257 @@ export class KimiTUI {
     // Dispose any previous focus/clipboard/theme tracking so re-entering the
     // event loop (e.g. a future TUI reconnect) can't stack duplicate listeners.
     this.disposeTerminalTracking();
+    if (this.terminalRenderer === "ink") {
+      this.startInkEventLoop();
+      return;
+    }
+    if (this.terminalOwnership.current === "ink") {
+      throw new Error("Cannot start pi-tui while Ink owns the terminal.");
+    }
     this.state.ui.start();
+    this.terminalOwnership.claim("pi-tui");
     this.startClipboardImageHintController();
     this.terminalFocusTrackingDispose = installTerminalFocusTracking(
       this.state,
     );
     this.refreshTerminalThemeTracking();
+  }
+
+  /** Start the staged Ink owner without starting pi-tui's terminal loop. */
+  private startInkEventLoop(): void {
+    if (this.terminalOwnership.current === "pi-tui") {
+      // A handoff must stop the old terminal first; otherwise both renderers
+      // would attach stdin listeners and write competing screen diffs.
+      this.state.ui.stop();
+      this.terminalOwnership.release("pi-tui");
+    }
+    if (this.terminalOwnership.current === "ink") return;
+
+    // TUI.requestRender() remains used by existing controllers, but its
+    // output is suppressed while stopped. Ink is the sole stdout owner.
+    this.state.ui.stop();
+    this.mountInkRenderer({
+      onInput: (data) => this.handleInkInput(data),
+    });
+    this.startClipboardImageHintController();
+    this.terminalFocusTrackingDispose = installTerminalFocusTracking(
+      this.state,
+    );
+    this.refreshTerminalThemeTracking();
+  }
+
+  /** Temporarily release whichever renderer owns the terminal (external editor). */
+  suspendTerminal(): void {
+    this.disposeTerminalTracking();
+    this.unmountInkRenderer();
+    try {
+      this.state.ui.stop();
+    } finally {
+      this.terminalOwnership.release("pi-tui");
+      this.terminalOwnership.release("ink");
+    }
+  }
+
+  /** Reacquire the configured terminal owner after an external editor exits. */
+  resumeTerminal(): void {
+    this.startEventLoop();
+  }
+
+  /** Route normal prompt input through the renderer-neutral editor model. */
+  private handleInkInput(data: string): void {
+    const hasLegacyDialog =
+      this.state.activeDialog !== null ||
+      this.state.livePane.pendingApproval !== null ||
+      this.state.livePane.pendingQuestion !== null;
+    if (hasLegacyDialog) {
+      if (this.handleInkSimpleDialogInput(data)) return;
+      this.state.ui.dispatchInput(data);
+      this.updateInkRenderer();
+      return;
+    }
+
+    const route = routePromptEditorInput(this.promptEditorState, data);
+    if (route.type === "action") {
+      this.applyPromptEditorAction(route.action);
+    } else if (route.type === "submit") {
+      this.syncLegacyPromptEditor();
+      this.handleUserInput(route.text);
+      this.promptEditorState = reducePromptEditor(this.promptEditorState, {
+        type: "set-text",
+        text: "",
+      });
+      this.syncLegacyPromptEditor();
+      this.updateInkRenderer();
+    } else if (route.type === "semantic") {
+      this.handlePromptSemantic(route.action);
+    }
+  }
+
+  /** Handle dialogs whose interaction model is represented in the Ink snapshot. */
+  private handleInkSimpleDialogInput(data: string): boolean {
+    const dialog = this.state.activeDialog;
+    if (dialog === "help") {
+      const printable = printableChar(data);
+      if (
+        matchesKey(data, Key.escape) ||
+        matchesKey(data, Key.enter) ||
+        printable === "q" ||
+        printable === "Q"
+      ) {
+        this.hideHelpPanel();
+        return true;
+      }
+      if (matchesKey(data, Key.up)) {
+        this.inkDialogScrollTop = Math.max(0, this.inkDialogScrollTop - 1);
+        this.updateInkRenderer();
+        return true;
+      }
+      if (matchesKey(data, Key.down)) {
+        this.inkDialogScrollTop += 1;
+        this.updateInkRenderer();
+        return true;
+      }
+      if (matchesKey(data, Key.pageUp)) {
+        this.inkDialogScrollTop = Math.max(0, this.inkDialogScrollTop - 10);
+        this.updateInkRenderer();
+        return true;
+      }
+      if (matchesKey(data, Key.pageDown)) {
+        this.inkDialogScrollTop += 10;
+        this.updateInkRenderer();
+        return true;
+      }
+      return true;
+    }
+    if (dialog !== "trust-prompt" && dialog !== "session-picker") return false;
+    const count =
+      dialog === "trust-prompt" ? 2 : Math.min(8, this.state.sessions.length);
+    if (matchesKey(data, Key.up) || matchesKey(data, Key.down)) {
+      if (count === 0) return true;
+      const delta = matchesKey(data, Key.up) ? -1 : 1;
+      this.inkDialogSelection =
+        (this.inkDialogSelection + delta + count) % count;
+      this.updateInkRenderer();
+      return true;
+    }
+    if (matchesKey(data, Key.escape)) {
+      if (dialog === "trust-prompt") {
+        this.trustPromptChoiceResolver?.("distrust");
+      } else {
+        this.inkSessionPickerCancel?.();
+      }
+      return true;
+    }
+    if (dialog === "session-picker" && matchesKey(data, Key.ctrl("a"))) {
+      const selected = this.state.sessions[this.inkDialogSelection];
+      this.inkSessionPickerToggleScope?.(
+        selected?.id ?? this.state.appState.sessionId,
+      );
+      return true;
+    }
+    if (matchesKey(data, Key.enter) || matchesKey(data, Key.space)) {
+      if (dialog === "trust-prompt") {
+        this.trustPromptChoiceResolver?.(
+          this.inkDialogSelection === 0 ? "trust" : "distrust",
+        );
+      } else {
+        const selected = this.state.sessions[this.inkDialogSelection];
+        if (selected !== undefined) this.inkSessionPickerSelect?.(selected);
+      }
+      return true;
+    }
+    return false;
+  }
+
+  /** Refresh Ink after an asynchronous clipboard/image editor callback. */
+  updatePromptEditorView(): void {
+    this.syncPromptEditorFromLegacy();
+    this.updateInkRenderer();
+  }
+
+  private handlePromptSemantic(action: PromptSemanticAction): void {
+    this.syncLegacyPromptEditor();
+    const consumed = this.editorKeyboard.dispatchPromptSemantic(action);
+    if (!consumed && action === "ctrl-b") {
+      this.applyPromptEditorAction({ type: "move-left" });
+      return;
+    }
+    if (!consumed && action === "up-empty") {
+      this.applyPromptEditorAction({ type: "history-up" });
+      return;
+    }
+    if (!consumed && action === "down-empty") {
+      this.applyPromptEditorAction({ type: "history-down" });
+      return;
+    }
+    // Queue recall and callback-driven editor mutations (Ctrl-C, Ctrl-S, ...)
+    // happen on the compatibility editor; mirror them back into the model.
+    this.syncPromptEditorFromLegacy();
+    this.updateInkRenderer();
+  }
+
+  private applyPromptEditorAction(action: PromptEditorAction): void {
+    this.promptEditorState = reducePromptEditor(this.promptEditorState, action);
+    this.syncLegacyPromptEditor();
+    this.refreshPromptCompletions();
+    this.updateEditorBorderHighlight(this.promptEditorState.text);
+    this.state.ui.requestRender();
+    this.updateInkRenderer();
+  }
+
+  private syncLegacyPromptEditor(): void {
+    const editor = this.state.editor;
+    if (editor.getText() !== this.promptEditorState.text) {
+      editor.setText(this.promptEditorState.text);
+    }
+    if (editor.inputMode !== this.promptEditorState.inputMode) {
+      editor.inputMode = this.promptEditorState.inputMode;
+    }
+    if (this.state.appState.inputMode !== this.promptEditorState.inputMode) {
+      this.setAppState({ inputMode: this.promptEditorState.inputMode });
+    }
+  }
+
+  private syncPromptEditorFromLegacy(): void {
+    const editor = this.state.editor;
+    const cursor = editor.getCursor();
+    const text = editor.getText();
+    this.promptEditorState = createPromptEditorState({
+      text,
+      cursor:
+        text
+          .split("\n")
+          .slice(0, cursor.line)
+          .reduce((sum, line) => sum + line.length + 1, 0) + cursor.col,
+      inputMode: editor.inputMode,
+      history: this.promptEditorState.history,
+    });
+    this.refreshPromptCompletions();
+  }
+
+  private refreshPromptCompletions(): void {
+    const { text, inputMode } = this.promptEditorState;
+    if (inputMode !== "prompt" || !/^\/\S*$/u.test(text)) {
+      this.promptEditorState = reducePromptEditor(this.promptEditorState, {
+        type: "completion-cancel",
+      });
+      return;
+    }
+    const prefix = text.slice(1).toLowerCase();
+    const items = this.getSlashCommands()
+      .filter(
+        (command) =>
+          command.name.toLowerCase().startsWith(prefix) ||
+          (command.aliases ?? []).some((alias) =>
+            alias.toLowerCase().startsWith(prefix),
+          ),
+      )
+      .slice(0, 8)
+      .map((command) => `/${command.name}`);
+    this.promptEditorState = reducePromptEditor(this.promptEditorState, {
+      type: "completion-set",
+      items,
+    });
   }
 
   private startClipboardImageHintController(): void {
@@ -910,6 +1181,7 @@ export class KimiTUI {
       if (isResumeStartup) {
         if (startup.sessionFlag === "") {
           this.state.startupState = "picker";
+          this.updateInkRenderer();
           return false;
         }
 
@@ -991,6 +1263,7 @@ export class KimiTUI {
     }
     this.applyStartupPermissionAndPlanToAppState();
     this.state.startupState = "ready";
+    this.updateInkRenderer();
     return shouldReplayHistory;
   }
 
@@ -1033,6 +1306,7 @@ export class KimiTUI {
       await this.closeSession("shutting down");
       await this.harness.close();
     } finally {
+      this.unmountInkRenderer();
       this.sessionEventHandler.stopAllMcpServerStatusSpinners();
       this.uninstallRainbowDance();
       try {
@@ -1157,6 +1431,10 @@ export class KimiTUI {
 
   handleInputModeChange(mode: "prompt" | "bash"): void {
     this.setAppState({ inputMode: mode });
+    this.promptEditorState = reducePromptEditor(this.promptEditorState, {
+      type: "set-mode",
+      inputMode: mode,
+    });
     this.updateEditorBorderHighlight();
   }
 
@@ -1416,6 +1694,10 @@ export class KimiTUI {
       const file = getInputHistoryFile(this.state.appState.workDir);
       const entries = await loadInputHistory(file);
       for (const entry of entries) {
+        this.promptEditorState = reducePromptEditor(this.promptEditorState, {
+          type: "history-add",
+          text: entry.content,
+        });
         this.state.editor.addToHistory(entry.content);
       }
       this.lastHistoryContent = entries.at(-1)?.content;
@@ -1428,6 +1710,10 @@ export class KimiTUI {
     const trimmed = text.trim();
     if (trimmed.length === 0) return;
     if (trimmed === this.lastHistoryContent) return;
+    this.promptEditorState = reducePromptEditor(this.promptEditorState, {
+      type: "history-add",
+      text: trimmed,
+    });
     this.state.editor.addToHistory(trimmed);
     try {
       const file = getInputHistoryFile(this.state.appState.workDir);
@@ -1443,7 +1729,7 @@ export class KimiTUI {
   }
 
   recallLastQueued(): QueuedMessage | undefined {
-    if (this.state.queuedMessages.length === 0) return undefined;
+    if (this.state.queuedMessages.length === 0) return;
     const last = this.state.queuedMessages.at(-1)!;
     this.state.queuedMessages = this.state.queuedMessages.slice(0, -1);
     return last;
@@ -1673,25 +1959,32 @@ export class KimiTUI {
 
   setStartupReady(): void {
     this.state.startupState = "ready";
+    this.updateInkRenderer();
   }
 
   clearQueuedMessages(): void {
     this.state.queuedMessages = [];
+    this.updateQueueDisplay();
+    this.updateInkRenderer();
   }
 
   shiftQueuedMessage(): QueuedMessage | undefined {
-    if (this.state.queuedMessages.length === 0) return undefined;
+    if (this.state.queuedMessages.length === 0) return;
     const [first, ...rest] = this.state.queuedMessages;
     this.state.queuedMessages = rest;
+    this.updateQueueDisplay();
+    this.updateInkRenderer();
     return first;
   }
 
   pushTranscriptEntry(entry: TranscriptEntry): void {
     this.state.transcriptEntries.push(entry);
+    this.updateInkRenderer();
   }
 
   setExternalEditorRunning(running: boolean): void {
     this.state.externalEditorRunning = running;
+    this.updateInkRenderer();
   }
 
   setTasksBrowser(value: TUIState["tasksBrowser"]): void {
@@ -1752,6 +2045,7 @@ export class KimiTUI {
     }
     if (additionalDirsChanged) this.setupAutocomplete();
     this.state.ui.requestRender();
+    this.updateInkRenderer();
   }
 
   patchLivePane(patch: Partial<LivePaneState>): void {
@@ -1759,12 +2053,14 @@ export class KimiTUI {
     Object.assign(this.state.livePane, patch);
     this.updateActivityPane();
     this.state.ui.requestRender();
+    this.updateInkRenderer();
   }
 
   resetLivePane(): void {
     this.state.livePane = { ...INITIAL_LIVE_PANE };
     this.updateActivityPane();
     this.state.ui.requestRender();
+    this.updateInkRenderer();
   }
 
   private syncAdditionalDirs(session: Session): void {
@@ -1813,7 +2109,7 @@ export class KimiTUI {
     }
     // CLI --auto/--yolo/--plan win over config defaults; the flags are
     // re-applied by applyStartupPermissionAndPlanToAppState at startup.
-    if (!startup.auto && !startup.yolo) {
+    if (!(startup.auto || startup.yolo)) {
       // Reset to manual when the default was removed from config — a stale
       // elevated mode must not be passed to the first lazy-created session.
       patch.permissionMode = config.defaultPermissionMode ?? "manual";
@@ -1938,7 +2234,7 @@ export class KimiTUI {
     } catch (error) {
       const msg = formatErrorMessage(error);
       this.showError(`Failed to start a session: ${msg}`);
-      return undefined;
+      return;
     }
     this.resetSessionRuntime();
     await this.setSession(session);
@@ -1950,7 +2246,7 @@ export class KimiTUI {
       this.sessionEventHandler.startSubscription();
       const msg = formatErrorMessage(error);
       this.showError(`Post-create setup failed: ${msg}`);
-      return undefined;
+      return;
     }
     try {
       await this.refreshSkillCommands(session);
@@ -1972,7 +2268,6 @@ export class KimiTUI {
     const previous = this.unloadCurrentSession("switching session");
     await previous?.close();
     this.session = session;
-    this.harness.setTelemetryContext({ sessionId: session.id });
     this.registerSessionHandlers(session);
     this.syncAdditionalDirs(session);
   }
@@ -2059,7 +2354,6 @@ export class KimiTUI {
     this.questionController.cancelAll(reason);
     this.session = undefined;
     this.state.swarmModeEntry = undefined;
-    this.harness.setTelemetryContext({ sessionId: null });
     this.setAppState({ goal: null });
     return previous;
   }
@@ -2236,7 +2530,6 @@ export class KimiTUI {
 
     this.resetSessionRuntime();
     this.session = session;
-    this.harness.setTelemetryContext({ sessionId: session.id });
     this.registerSessionHandlers(session);
     await this.syncRuntimeState(session);
     this.updateTerminalTitle();
@@ -2421,6 +2714,7 @@ export class KimiTUI {
     if (component || trimmed || merged) {
       this.state.ui.requestRender();
     }
+    this.updateInkRenderer();
   }
 
   private appendApprovalTranscriptEntry(
@@ -2502,6 +2796,7 @@ export class KimiTUI {
     this.state.todoPanelContainer.clear();
     this.imageStore.clear();
     this.renderWelcome();
+    this.updateInkRenderer();
     // No forced full render on session reset: let the differential renderer
     // converge on its own (a mass change above the viewport still makes the
     // engine repaint everything, but nothing is forced destructively here).
@@ -2510,10 +2805,12 @@ export class KimiTUI {
 
   private isTurnBoundaryComponent(child: Component): boolean {
     if (
-      !(child instanceof UserMessageComponent) &&
-      !(child instanceof SkillActivationComponent) &&
-      !(child instanceof PluginCommandComponent) &&
-      !(child instanceof ReplayTurnBoundaryComponent)
+      !(
+        child instanceof UserMessageComponent ||
+        child instanceof SkillActivationComponent ||
+        child instanceof PluginCommandComponent ||
+        child instanceof ReplayTurnBoundaryComponent
+      )
     ) {
       return false;
     }
@@ -2909,6 +3206,7 @@ export class KimiTUI {
           this.state.activitySpinner?.instance,
         );
       }
+      this.updateInkRenderer();
       return;
     }
 
@@ -2920,6 +3218,7 @@ export class KimiTUI {
         this.stopActivitySpinner();
         this.syncAgentSwarmActivitySpinner(undefined);
         this.state.ui.requestRender();
+        this.updateInkRenderer();
         return;
       case "waiting": {
         const spinner = this.ensureActivitySpinner("moon");
@@ -2984,33 +3283,20 @@ export class KimiTUI {
       }
     }
     this.state.ui.requestRender();
+    this.updateInkRenderer();
   }
 
   private resolveActivityPaneMode(): EffectiveActivityPaneMode {
-    if (this.state.activeDialog === "session-picker") return "hidden";
-    if (this.state.livePane.pendingApproval !== null) return "hidden";
-    if (this.state.appState.isCompacting) return "hidden";
-    if (this.state.livePane.pendingQuestion !== null) return "hidden";
-
-    const streamingPhase = this.state.appState.streamingPhase;
-
-    // A running `!` shell command shows the moon spinner (same as `waiting`)
-    // until it finishes, signalling that input is busy / queued.
-    if (streamingPhase === "shell") return "waiting";
-
-    if (this.state.livePane.mode === "idle") {
-      if (streamingPhase === "thinking" || streamingPhase === "composing") {
-        return streamingPhase;
-      }
-    }
-
-    return this.state.livePane.mode;
+    return resolveTerminalActivityMode(this.state);
   }
 
   updateQueueDisplay(): void {
     this.state.queueContainer.clear();
     const queued = this.state.queuedMessages;
-    if (queued.length === 0) return;
+    if (queued.length === 0) {
+      this.updateInkRenderer();
+      return;
+    }
 
     this.state.queueContainer.addChild(
       new QueuePaneComponent({
@@ -3020,6 +3306,94 @@ export class KimiTUI {
         canSteerImmediately: !this.deferUserMessages,
       }),
     );
+    this.updateInkRenderer();
+  }
+
+  /** Snapshot terminal data for renderer implementations without UI objects. */
+  getTerminalViewState(): TerminalViewState {
+    if (this.terminalRenderer === "pi-tui") {
+      this.syncPromptEditorFromLegacy();
+    }
+    const helpCommands: readonly TerminalHelpCommandView[] =
+      this.getSlashCommands().map((command) => ({
+        name: command.name,
+        aliases: [...command.aliases],
+        description: command.description,
+      }));
+    const sessions: readonly TerminalSessionView[] = this.state.sessions.map(
+      (session) => ({
+        id: session.id,
+        title: session.title,
+        lastPrompt: session.last_prompt ?? null,
+        workDir: session.work_dir,
+        updatedAt: session.updated_at,
+      }),
+    );
+    return createTerminalViewState({
+      appState: this.state.appState,
+      startupState: this.state.startupState,
+      transcriptEntries: this.state.transcriptEntries,
+      livePane: this.state.livePane,
+      queuedMessages: this.state.queuedMessages,
+      editor: {
+        text: this.promptEditorState.text,
+        cursorLine: promptEditorLineColumn(this.promptEditorState).line,
+        cursorColumn: promptEditorLineColumn(this.promptEditorState).column,
+        inputMode: this.promptEditorState.inputMode,
+        autocomplete: this.promptEditorState.completion?.items ?? [],
+      },
+      activeDialog: this.state.activeDialog,
+      dialogSelectedIndex: this.inkDialogSelection,
+      dialogScrollTop: this.inkDialogScrollTop,
+      sessions,
+      loadingSessions: this.state.loadingSessions,
+      sessionsScope: this.state.sessionsScope,
+      helpCommands,
+      trustPrompt: this.trustPromptView,
+      toolOutputExpanded: this.state.toolOutputExpanded,
+      externalEditorRunning: this.state.externalEditorRunning,
+      queuedMessageDispatchPending: this.state.queuedMessageDispatchPending,
+      swarmModeEntry: this.state.swarmModeEntry,
+      deferUserMessages: this.deferUserMessages,
+      activityTip: this.currentLoadingTip?.tip,
+    });
+  }
+
+  /**
+   * Mount the Ink renderer at the coordinator boundary.
+   *
+   * Ink is the default terminal owner. During the staged migration, input is
+   * still dispatched through the coordinator's focus tree while pi-tui output
+   * stays stopped; only one renderer owns stdin/stdout at a time. Callers
+   * using the explicit rollback renderer must release pi-tui before mounting
+   * this renderer.
+   */
+  mountInkRenderer(options?: InkTerminalRendererOptions): InkTerminalRenderer {
+    if (this.inkRenderer !== undefined) return this.inkRenderer;
+    if (this.terminalOwnership.current === "pi-tui") {
+      throw new Error(
+        "Cannot mount Ink while pi-tui owns the terminal; stop pi-tui first.",
+      );
+    }
+    this.inkRenderer = mountInkTerminalRenderer(
+      this.getTerminalViewState(),
+      options,
+    );
+    this.terminalOwnership.claim("ink");
+    return this.inkRenderer;
+  }
+
+  /** Push the latest coordinator snapshot to the mounted Ink bridge. */
+  updateInkRenderer(): void {
+    this.inkRenderer?.update(this.getTerminalViewState());
+  }
+
+  /** Unmount the staged Ink bridge; safe to call repeatedly during shutdown. */
+  unmountInkRenderer(): void {
+    const renderer = this.inkRenderer;
+    this.inkRenderer = undefined;
+    renderer?.unmount();
+    this.terminalOwnership.release("ink");
   }
 
   toggleToolOutputExpansion(): void {
@@ -3310,6 +3684,7 @@ export class KimiTUI {
     this.state.editorContainer.addChild(panel);
     this.state.ui.setFocus(panel);
     this.state.ui.requestRender();
+    this.updateInkRenderer();
   }
 
   restoreEditor(): void {
@@ -3320,48 +3695,19 @@ export class KimiTUI {
     // rows above the bottom (blank tail) until the next append, but avoids a
     // destructive full redraw on every dialog close.
     this.state.ui.requestRender();
+    this.updateInkRenderer();
   }
 
   restoreInputText(text: string): void {
     this.restoreEditor();
+    this.promptEditorState = reducePromptEditor(this.promptEditorState, {
+      type: "set-text",
+      text,
+    });
     this.state.editor.setText(text);
     this.updateEditorBorderHighlight(text);
     this.state.ui.requestRender();
-  }
-
-  private async runMigrationScreen(
-    plan: MigrationPlan,
-  ): Promise<MigrationScreenResult> {
-    const result = await new Promise<MigrationScreenResult>((resolve) => {
-      const screen = new MigrationScreenComponent({
-        plan,
-        sourceHome: plan.sourceHome,
-        targetHome: this.harness.homeDir,
-        skipDecisionStep: this.migrateOnly,
-        requestRender: () => {
-          this.state.ui.requestRender();
-        },
-        onComplete: (r) => {
-          resolve(r);
-        },
-      });
-      this.mountEditorReplacement(screen);
-    });
-    this.restoreEditor();
-    if (result.decision === "never") {
-      // Persist the skip marker `detectPendingMigration` checks, so "Never ask
-      // again" actually stops the prompt from reappearing every launch.
-      try {
-        writeFileSync(
-          join(this.harness.homeDir, ".skip-migration-from-kimi-cli"),
-          "",
-          "utf-8",
-        );
-      } catch {
-        // Non-blocking: a failed marker write must never crash startup.
-      }
-    }
-    return result;
+    this.updateInkRenderer();
   }
 
   /**
@@ -3386,7 +3732,13 @@ export class KimiTUI {
     if (info.trusted) return false;
     this.startEventLoop();
     const choice = await new Promise<TrustPromptChoice>((resolve) => {
+      this.inkDialogSelection = 0;
+      this.trustPromptChoiceResolver = resolve;
       this.state.activeDialog = "trust-prompt";
+      this.trustPromptView = {
+        workDir,
+        gatedMcpServers: [...info.gatedMcpServers],
+      };
       this.mountEditorReplacement(
         new TrustPromptComponent({
           workDir,
@@ -3397,7 +3749,9 @@ export class KimiTUI {
         }),
       );
     });
+    this.trustPromptChoiceResolver = undefined;
     this.state.activeDialog = null;
+    this.trustPromptView = null;
     if (choice !== "trust") {
       // Declining trust exits the program (Claude Code's "No, exit" semantics):
       // stop() runs the standard shutdown path and ends in process.exit. The
@@ -3417,6 +3771,13 @@ export class KimiTUI {
 
   showHelpPanel(): void {
     this.state.activeDialog = "help";
+    this.inkDialogScrollTop = 0;
+    if (this.terminalRenderer === "ink") {
+      // Ink owns the `/help` dialog in the production renderer. Keep the
+      // pi-tui panel only for the explicit rollback renderer below.
+      this.updateInkRenderer();
+      return;
+    }
     this.mountEditorReplacement(
       new HelpPanelComponent({
         commands: this.getSlashCommands(),
@@ -3429,6 +3790,7 @@ export class KimiTUI {
 
   private hideHelpPanel(): void {
     this.state.activeDialog = null;
+    this.inkDialogScrollTop = 0;
     this.restoreEditor();
   }
 
@@ -3516,6 +3878,9 @@ export class KimiTUI {
   hideSessionPicker(): void {
     this.sessionPickerScopeRequestToken += 1;
     this.editorKeyboard.clearPendingExit();
+    this.inkSessionPickerSelect = undefined;
+    this.inkSessionPickerCancel = undefined;
+    this.inkSessionPickerToggleScope = undefined;
     this.state.activeDialog = null;
     this.restoreEditor();
   }
@@ -3535,6 +3900,26 @@ export class KimiTUI {
     readonly applyStartupModes?: boolean;
   }): void {
     this.state.activeDialog = "session-picker";
+    const initialSessionId =
+      options.initialSelectedSessionId ?? this.state.appState.sessionId;
+    const initialIndex = this.state.sessions.findIndex(
+      (session) => session.id === initialSessionId,
+    );
+    this.inkDialogSelection = initialIndex >= 0 ? Math.min(initialIndex, 7) : 0;
+    this.inkSessionPickerSelect = (session) => {
+      void this.handleSessionPickerSelect(
+        session,
+        options.applyStartupModes === true,
+      ).catch((error) => {
+        this.showError(
+          `Failed to apply startup flags: ${formatErrorMessage(error)}`,
+        );
+      });
+    };
+    this.inkSessionPickerCancel = options.onCancel;
+    this.inkSessionPickerToggleScope = (selectedSessionId) => {
+      void this.toggleSessionPickerScope(selectedSessionId);
+    };
     this.mountEditorReplacement(
       new SessionPickerComponent({
         sessions: this.state.sessions,
@@ -3543,22 +3928,11 @@ export class KimiTUI {
         scope: this.state.sessionsScope,
         initialSelectedSessionId: options.initialSelectedSessionId,
         pageSize: 50,
-        onSelect: (session: SessionRow) => {
-          void this.handleSessionPickerSelect(
-            session,
-            options.applyStartupModes === true,
-          ).catch((error) => {
-            this.showError(
-              `Failed to apply startup flags: ${formatErrorMessage(error)}`,
-            );
-          });
-        },
+        onSelect: this.inkSessionPickerSelect!,
         onCancel: options.onCancel,
         onCtrlC: options.onCtrlC,
         onCtrlD: options.onCtrlD,
-        onToggleScope: (selectedSessionId: string) => {
-          void this.toggleSessionPickerScope(selectedSessionId);
-        },
+        onToggleScope: this.inkSessionPickerToggleScope!,
       }),
     );
   }

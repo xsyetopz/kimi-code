@@ -4,7 +4,7 @@ import { join } from "node:path";
 import type * as KosongModule from "@moonshot-ai/kosong";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { createKimiHarness, type KimiError, type Event } from "#/index";
+import { createKimiHarnessV2, type KimiError, type Event } from "#/index";
 
 import {
   makeTempDir,
@@ -48,7 +48,7 @@ describe("Session.cancel", () => {
     const homeDir = await makeTempDir(tempDirs, "kimi-sdk-cancel-home-");
     const workDir = await makeTempDir(tempDirs, "kimi-sdk-cancel-work-");
     await writeFakeModelConfig(homeDir);
-    const harness = createKimiHarness({ homeDir, identity: TEST_IDENTITY });
+    const harness = createKimiHarnessV2({ homeDir, identity: TEST_IDENTITY });
 
     try {
       const session = await harness.createSession({
@@ -108,7 +108,7 @@ describe("Session.cancel", () => {
       "kimi-sdk-cancel-compact-work-",
     );
     await writeFakeModelConfig(homeDir);
-    const harness = createKimiHarness({ homeDir, identity: TEST_IDENTITY });
+    const harness = createKimiHarnessV2({ homeDir, identity: TEST_IDENTITY });
 
     try {
       const session = await harness.createSession({
@@ -130,7 +130,7 @@ describe("Session.cancel", () => {
   it("rejects after the session is closed", async () => {
     const homeDir = await makeTempDir(tempDirs, "kimi-sdk-cancel-home-");
     const workDir = await makeTempDir(tempDirs, "kimi-sdk-cancel-work-");
-    const harness = createKimiHarness({ homeDir, identity: TEST_IDENTITY });
+    const harness = createKimiHarnessV2({ homeDir, identity: TEST_IDENTITY });
 
     try {
       const session = await harness.createSession({
@@ -158,7 +158,7 @@ describe("KimiHarness.forkSession", () => {
     const homeDir = await makeTempDir(tempDirs, "kimi-sdk-fork-active-home-");
     const workDir = await makeTempDir(tempDirs, "kimi-sdk-fork-active-work-");
     await writeFakeModelConfig(homeDir);
-    const harness = createKimiHarness({ homeDir, identity: TEST_IDENTITY });
+    const harness = createKimiHarnessV2({ homeDir, identity: TEST_IDENTITY });
 
     try {
       const session = await harness.createSession({

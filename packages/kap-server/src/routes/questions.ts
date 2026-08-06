@@ -326,7 +326,7 @@ export function registerQuestionsRoutes(
 
 // ---------------------------------------------------------------------------
 // Protocol ↔ in-process adapter (ported from
-// `packages/agent-core/src/services/question/question.ts`, reimplemented here
+// `the question domain`, reimplemented here
 // so the edge never imports v1). Synthesizing stable ids (the SDK has no
 // per-item / per-option id):
 //   - QuestionItem.id   ← `q_<index>`              (e.g. `q_0`, `q_1`)

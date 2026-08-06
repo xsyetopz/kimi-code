@@ -29,7 +29,6 @@ export const configResponseSchema = z.object({
   loop_control: z.unknown().optional(),
   background: z.unknown().optional(),
   experimental: z.record(z.string(), z.boolean()).optional(),
-  telemetry: z.boolean().optional(),
   raw: z.record(z.string(), z.unknown()).optional(),
 });
 export type ConfigResponse = z.infer<typeof configResponseSchema>;
@@ -53,6 +52,5 @@ export const patchConfigRequestSchema = z.object({
   loop_control: z.unknown().optional(),
   background: z.unknown().optional(),
   experimental: z.record(z.string(), z.boolean()).optional(),
-  telemetry: z.boolean().optional(),
 });
 export type PatchConfigRequest = z.infer<typeof patchConfigRequestSchema>;

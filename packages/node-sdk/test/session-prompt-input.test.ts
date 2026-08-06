@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { CoreAPI, RPCMethods } from "@moonshot-ai/agent-core";
+import type { CoreAPI, RPCMethods } from "../src/compat";
 
 import { SDKRpcClientBase } from "../src/rpc";
 import { Session } from "../src/session";

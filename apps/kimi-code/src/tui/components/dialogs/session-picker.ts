@@ -9,11 +9,11 @@ import {
   truncateToWidth,
   visibleWidth,
   type Focusable,
-} from "@moonshot-ai/pi-tui";
-import { formatSessionLabel } from "#/migration/index";
+} from "@moonshot-ai/kimi-code-tui";
 import { CURRENT_MARK, SELECT_POINTER } from "#/tui/constant/symbols";
 import { currentTheme } from "#/tui/theme";
 import { SearchableList } from "#/tui/utils/searchable-list";
+import { formatSessionLabel } from "#/tui/utils/session-label";
 
 export interface SessionRow {
   readonly id: string;

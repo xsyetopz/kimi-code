@@ -1,0 +1,33 @@
+{
+  "name": "@moonshot-ai/kimi-code-tui",
+  "version": "0.1.0",
+  "private": true,
+  "description": "React+Ink TUI renderer for Kimi Code - replaces pi-tui",
+  "type": "module",
+  "main": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "react": "^19.2.8",
+    "ink": "^7.1.1",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.5",
+    "vitest": "^1.6.0"
+  }
+}

@@ -6,7 +6,7 @@ import {
   truncateToWidth,
   visibleWidth,
   type Focusable,
-} from "@moonshot-ai/pi-tui";
+} from "@moonshot-ai/kimi-code-tui";
 import chalk from "chalk";
 
 import { SELECT_POINTER } from "#/tui/constant/symbols";

@@ -434,7 +434,6 @@ export interface WireConfig {
   loop_control?: unknown;
   background?: unknown;
   experimental?: Record<string, boolean>;
-  telemetry?: boolean;
   raw?: Record<string, unknown>;
 }
 

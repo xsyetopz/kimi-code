@@ -11,7 +11,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import type { Kaos } from "@moonshot-ai/kaos";
-import { createKimiHarness, KimiHarness } from "#/index";
+import { createKimiHarnessV2, KimiHarness } from "#/index";
 import type { KimiError } from "#/index";
 import type { ResumeSessionInput, ResumedSessionSummary } from "#/types";
 import { SDKRpcClientBase } from "#/rpc";
@@ -122,7 +122,7 @@ describe("KimiHarness.createSession transport link", () => {
     const homeDir = await makeTempDir();
     const workDir = await makeTempDir();
     const records: TelemetryRecord[] = [];
-    const harness = createKimiHarness({
+    const harness = createKimiHarnessV2({
       identity: TEST_IDENTITY,
       homeDir,
       telemetry: recordingTelemetry(records),
@@ -186,7 +186,7 @@ describe("KimiHarness.createSession transport link", () => {
     const homeDir = await makeTempDir();
     const workDir = await makeTempDir();
     const records: TelemetryRecord[] = [];
-    const harness = createKimiHarness({
+    const harness = createKimiHarnessV2({
       identity: TEST_IDENTITY,
       homeDir,
       telemetry: recordingTelemetry(records),
@@ -219,7 +219,7 @@ describe("KimiHarness.createSession transport link", () => {
     const homeDir = await makeTempDir();
     const workDir = await makeTempDir();
     const records: TelemetryRecord[] = [];
-    const harness = createKimiHarness({
+    const harness = createKimiHarnessV2({
       identity: TEST_IDENTITY,
       homeDir,
       telemetry: recordingTelemetry(records),
@@ -254,7 +254,7 @@ describe("KimiHarness.createSession transport link", () => {
     const homeDir = await makeTempDir();
     const workDir = await makeTempDir();
     const records: TelemetryRecord[] = [];
-    const harness = createKimiHarness({
+    const harness = createKimiHarnessV2({
       identity: TEST_IDENTITY,
       homeDir,
       telemetry: recordingTelemetry(records),
@@ -310,7 +310,7 @@ describe("KimiHarness.createSession transport link", () => {
     const homeDir = await makeTempDir();
     const workDir = await makeTempDir();
     const records: TelemetryRecord[] = [];
-    const harness = createKimiHarness({
+    const harness = createKimiHarnessV2({
       identity: TEST_IDENTITY,
       homeDir,
       telemetry: recordingTelemetry(records),
@@ -350,7 +350,7 @@ describe("KimiHarness.createSession transport link", () => {
     const homeDir = await makeTempDir();
     const workDir = await makeTempDir();
     const records: TelemetryRecord[] = [];
-    const harness = createKimiHarness({
+    const harness = createKimiHarnessV2({
       identity: TEST_IDENTITY,
       homeDir,
       telemetry: recordingTelemetry(records),
@@ -393,7 +393,7 @@ describe("KimiHarness.createSession transport link", () => {
     const homeDir = await makeTempDir();
     const workDir = await makeTempDir();
     const records: TelemetryRecord[] = [];
-    const harness = createKimiHarness({
+    const harness = createKimiHarnessV2({
       homeDir,
       telemetry: recordingTelemetry(records),
     });
@@ -424,7 +424,7 @@ describe("KimiHarness.createSession transport link", () => {
     const homeDir = await makeTempDir();
     const workDir = await makeTempDir();
     await writeTestModelConfig(homeDir);
-    const harness = createKimiHarness({
+    const harness = createKimiHarnessV2({
       identity: TEST_IDENTITY,
       homeDir,
     });
@@ -504,7 +504,7 @@ effort = "medium"
 `,
       "utf-8",
     );
-    const harness = createKimiHarness({
+    const harness = createKimiHarnessV2({
       identity: TEST_IDENTITY,
       homeDir,
     });
@@ -538,7 +538,7 @@ effort = "medium"
   it("does not require provider config or API keys before prompt is implemented", async () => {
     const homeDir = await makeTempDir();
     const workDir = await makeTempDir();
-    const harness = createKimiHarness({
+    const harness = createKimiHarnessV2({
       identity: TEST_IDENTITY,
       homeDir,
     });
@@ -558,7 +558,7 @@ effort = "medium"
 
   it("requires a non-empty workDir on createSession", async () => {
     const homeDir = await makeTempDir();
-    const harness = createKimiHarness({ homeDir, identity: TEST_IDENTITY });
+    const harness = createKimiHarnessV2({ homeDir, identity: TEST_IDENTITY });
 
     try {
       await expect(
@@ -584,7 +584,7 @@ effort = "medium"
     // Project-local mcp.json is intentionally ignored, so plant the malformed
     // file under the user home dir where the loader actually reads from.
     await writeFile(join(homeDir, "mcp.json"), "{not json}", "utf-8");
-    const harness = createKimiHarness({
+    const harness = createKimiHarnessV2({
       identity: TEST_IDENTITY,
       homeDir,
     });
@@ -606,7 +606,7 @@ effort = "medium"
   it("does not persist a session record when the requested agent profile is missing", async () => {
     const homeDir = await makeTempDir();
     const workDir = await makeTempDir();
-    const harness = createKimiHarness({
+    const harness = createKimiHarnessV2({
       identity: TEST_IDENTITY,
       homeDir,
     });
@@ -632,7 +632,7 @@ effort = "medium"
   it("allows the session ID to be reused after agent profile selection fails", async () => {
     const homeDir = await makeTempDir();
     const workDir = await makeTempDir();
-    const harness = createKimiHarness({
+    const harness = createKimiHarnessV2({
       identity: TEST_IDENTITY,
       homeDir,
     });
@@ -660,7 +660,7 @@ effort = "medium"
   it("does not persist a session record when an explicit agent file cannot be loaded", async () => {
     const homeDir = await makeTempDir();
     const workDir = await makeTempDir();
-    const harness = createKimiHarness({
+    const harness = createKimiHarnessV2({
       identity: TEST_IDENTITY,
       homeDir,
     });
@@ -683,7 +683,7 @@ effort = "medium"
     const homeDir = await makeTempDir();
     const workDir = await makeTempDir();
     await writeTestModelConfig(homeDir);
-    const harness = createKimiHarness({
+    const harness = createKimiHarnessV2({
       identity: TEST_IDENTITY,
       homeDir,
     });
@@ -716,7 +716,7 @@ effort = "medium"
   it("permanently deletes an active session", async () => {
     const homeDir = await makeTempDir();
     const workDir = await makeTempDir();
-    const harness = createKimiHarness({
+    const harness = createKimiHarnessV2({
       identity: TEST_IDENTITY,
       homeDir,
     });
@@ -742,7 +742,7 @@ effort = "medium"
 
   it("returns session.not_found when deleteSession targets a missing id", async () => {
     const homeDir = await makeTempDir();
-    const harness = createKimiHarness({ identity: TEST_IDENTITY, homeDir });
+    const harness = createKimiHarnessV2({ identity: TEST_IDENTITY, homeDir });
 
     try {
       await expect(
@@ -759,7 +759,7 @@ effort = "medium"
   it("allows a deleted session id to be created again", async () => {
     const homeDir = await makeTempDir();
     const workDir = await makeTempDir();
-    const harness = createKimiHarness({ identity: TEST_IDENTITY, homeDir });
+    const harness = createKimiHarnessV2({ identity: TEST_IDENTITY, homeDir });
     const sessionId = "ses_delete_recreate";
 
     try {
@@ -783,7 +783,7 @@ effort = "medium"
     const legacySourceDir = await makeTempDir();
     const markerPath = join(legacySourceDir, "legacy-marker.txt");
     await writeFile(markerPath, "legacy source remains", "utf-8");
-    const harness = createKimiHarness({ identity: TEST_IDENTITY, homeDir });
+    const harness = createKimiHarnessV2({ identity: TEST_IDENTITY, homeDir });
 
     try {
       const session = await harness.createSession({
@@ -805,7 +805,7 @@ effort = "medium"
   it("applies initial thinking and permission runtime options", async () => {
     const homeDir = await makeTempDir();
     const workDir = await makeTempDir();
-    const harness = createKimiHarness({
+    const harness = createKimiHarnessV2({
       identity: TEST_IDENTITY,
       homeDir,
     });
@@ -853,7 +853,7 @@ effort = "medium"
       'default_permission_mode = "auto"\n',
       "utf-8",
     );
-    const harness = createKimiHarness({
+    const harness = createKimiHarnessV2({
       identity: TEST_IDENTITY,
       homeDir,
     });
@@ -926,7 +926,7 @@ effort = "medium"
     const workDir = await makeTempDir();
     await writeTestModelConfig(homeDir);
     await writeReviewerAgent(workDir);
-    const harness = createKimiHarness({ identity: TEST_IDENTITY, homeDir });
+    const harness = createKimiHarnessV2({ identity: TEST_IDENTITY, homeDir });
 
     try {
       const session = await harness.createSession({
@@ -950,7 +950,7 @@ effort = "medium"
     const workDir = await makeTempDir();
     await writeTestModelConfig(homeDir);
     await writeReviewerAgent(workDir);
-    const harness = createKimiHarness({ identity: TEST_IDENTITY, homeDir });
+    const harness = createKimiHarnessV2({ identity: TEST_IDENTITY, homeDir });
 
     try {
       const session = await harness.createSession({
@@ -972,7 +972,7 @@ effort = "medium"
     const workDir = await makeTempDir();
     await writeTestModelConfig(homeDir);
     await writeReviewerAgent(workDir);
-    const harness = createKimiHarness({ identity: TEST_IDENTITY, homeDir });
+    const harness = createKimiHarnessV2({ identity: TEST_IDENTITY, homeDir });
 
     try {
       const session = await harness.createSession({

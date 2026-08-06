@@ -39,6 +39,7 @@ registerProtocolBase({
         apiKey:
           config.apiKey ??
           firstProcessEnv(endpoint?.apiKeyEnv) ??
+          endpoint?.defaultApiKey ??
           (endpoint === undefined ? undefined : ""),
         baseUrl:
           config.baseUrl ??

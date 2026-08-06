@@ -2,7 +2,7 @@ import {
   truncateToWidth,
   visibleWidth,
   type Component,
-} from "@moonshot-ai/pi-tui";
+} from "@moonshot-ai/kimi-code-tui";
 import chalk from "chalk";
 
 import {

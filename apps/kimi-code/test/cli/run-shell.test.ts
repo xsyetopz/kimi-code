@@ -29,7 +29,6 @@ const mocks = vi.hoisted(() => {
   return {
     loadTuiConfig: vi.fn(),
     detectTerminalTheme: vi.fn(),
-    kimiHarnessConstructor: vi.fn(),
     kimiHarnessV2Constructor: vi.fn(),
     harnessEnsureConfigFile: vi.fn(),
     harnessGetConfig: vi.fn(async () => ({
@@ -41,7 +40,6 @@ const mocks = vi.hoisted(() => {
       warnings: [] as readonly string[],
     })),
     harnessClose: vi.fn(),
-    detectPendingMigration: vi.fn<() => Promise<unknown>>(async () => null),
     kimiTuiConstructor: vi.fn(),
     tuiStart: vi.fn(),
     tuiGetCurrentSessionId: vi.fn(() => ""),
@@ -73,10 +71,6 @@ vi.mock("@moonshot-ai/kimi-code-sdk", async (importOriginal) => {
     ...actual,
     resolveKimiHome: mocks.resolveKimiHome,
     flushDiagnosticLogsSync: mocks.flushDiagnosticLogsSync,
-    createKimiHarness: (...args: unknown[]) => {
-      mocks.kimiHarnessConstructor(...args);
-      return makeHarnessStub(args);
-    },
     createKimiHarnessV2: (...args: unknown[]) => {
       mocks.kimiHarnessV2Constructor(...args);
       return makeHarnessStub(args);
@@ -107,10 +101,6 @@ vi.mock("../../src/tui/theme/detect", () => ({
   detectTerminalTheme: mocks.detectTerminalTheme,
 }));
 
-vi.mock("../../src/migration/index", () => ({
-  detectPendingMigration: mocks.detectPendingMigration,
-}));
-
 vi.mock("node:child_process", () => ({
   execSync: mocks.execSync,
 }));
@@ -118,6 +108,7 @@ vi.mock("node:child_process", () => ({
 describe("runShell", () => {
   afterEach(() => {
     vi.clearAllMocks();
+    delete process.env["KIMI_TUI_RENDERER"];
     mocks.harnessGetConfig.mockResolvedValue({
       providers: {},
       defaultModel: "k2",
@@ -153,48 +144,10 @@ describe("runShell", () => {
     mocks.tuiStart.mockResolvedValue(undefined);
   }
 
-  function withEnv(
-    patch: Record<string, string | undefined>,
-    fn: () => Promise<void>,
-  ): Promise<void> {
-    const saved: Record<string, string | undefined> = {};
-    for (const key of Object.keys(patch)) {
-      saved[key] = process.env[key];
-      const value = patch[key];
-      if (value === undefined) {
-        delete process.env[key];
-      } else {
-        process.env[key] = value;
-      }
-    }
-    return fn().finally(() => {
-      for (const key of Object.keys(patch)) {
-        const value = saved[key];
-        if (value === undefined) {
-          delete process.env[key];
-        } else {
-          process.env[key] = value;
-        }
-      }
-    });
-  }
-
-  it("builds the v2 harness when the master experimental flag is set", async () => {
+  it("always builds the v2 harness", async () => {
     stubTuiStartup();
-    await withEnv({ KIMI_CODE_EXPERIMENTAL_FLAG: "1" }, async () => {
-      await runShell(minimalCliOptions, "1.2.3-test");
-    });
+    await runShell(minimalCliOptions, "1.2.3-test");
     expect(mocks.kimiHarnessV2Constructor).toHaveBeenCalledTimes(1);
-    expect(mocks.kimiHarnessConstructor).not.toHaveBeenCalled();
-  });
-
-  it("keeps the v1 harness when the master experimental flag is unset", async () => {
-    stubTuiStartup();
-    await withEnv({ KIMI_CODE_EXPERIMENTAL_FLAG: undefined }, async () => {
-      await runShell(minimalCliOptions, "1.2.3-test");
-    });
-    expect(mocks.kimiHarnessConstructor).toHaveBeenCalledTimes(1);
-    expect(mocks.kimiHarnessV2Constructor).not.toHaveBeenCalled();
   });
 
   it("constructs KimiHarness and KimiTUI with startup input", async () => {
@@ -223,7 +176,7 @@ describe("runShell", () => {
 
     await runShell(cliOptions, "1.2.3-test");
 
-    expect(mocks.kimiHarnessConstructor).toHaveBeenCalledWith(
+    expect(mocks.kimiHarnessV2Constructor).toHaveBeenCalledWith(
       expect.objectContaining({
         identity: expect.objectContaining({
           productName: "kimi-code-cli",
@@ -258,8 +211,18 @@ describe("runShell", () => {
       },
       version: "1.2.3-test",
       workDir: process.cwd(),
+      terminalRenderer: "ink",
     });
     expect(mocks.tuiStart).toHaveBeenCalledOnce();
+  });
+
+  it("keeps pi-tui available only as an explicit rollback owner", async () => {
+    process.env["KIMI_TUI_RENDERER"] = "pi-tui";
+    stubTuiStartup();
+    await runShell(minimalCliOptions, "1.2.3-test");
+
+    const [, , startupInput] = mocks.kimiTuiConstructor.mock.calls[0]!;
+    expect(startupInput).toMatchObject({ terminalRenderer: "pi-tui" });
   });
 
   it("resolves the --agent profile into the TUI startup input", async () => {
@@ -316,7 +279,7 @@ describe("runShell", () => {
       "1.2.3-test",
     );
 
-    expect(mocks.kimiHarnessConstructor).toHaveBeenCalledWith(
+    expect(mocks.kimiHarnessV2Constructor).toHaveBeenCalledWith(
       expect.objectContaining({ skillDirs: ["/skills"] }),
     );
   });
@@ -621,40 +584,5 @@ describe("runShell", () => {
       stdout.restore();
       stderr.restore();
     }
-  });
-
-  it("surfaces an invalid target config as an error for kimi migrate, not silently", async () => {
-    mocks.loadTuiConfig.mockResolvedValue({
-      theme: "dark",
-      editorCommand: null,
-      notifications: { enabled: true, condition: "unfocused" },
-    });
-    mocks.detectPendingMigration.mockResolvedValue({ totalSessions: 1 });
-    mocks.harnessGetConfig.mockRejectedValue(
-      new Error("Invalid configuration in ~/.kimi-code/config.toml"),
-    );
-
-    // A broken config.toml must fail loudly — `kimi migrate` must not swallow
-    // it and proceed, or the user never learns their config is broken.
-    await expect(
-      runShell(
-        {
-          session: undefined,
-          continue: false,
-          yolo: false,
-          auto: false,
-          plan: false,
-          model: undefined,
-          outputFormat: undefined,
-          prompt: undefined,
-          skillsDirs: [],
-          agent: undefined,
-          agentFiles: [],
-        },
-        "1.2.3-test",
-        { migrateOnly: true },
-      ),
-    ).rejects.toThrow("Invalid configuration");
-    expect(mocks.tuiStart).not.toHaveBeenCalled();
   });
 });

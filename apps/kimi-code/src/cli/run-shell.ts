@@ -1,35 +1,27 @@
 import { execSync, spawnSync } from "node:child_process";
-import { homedir } from "node:os";
-import { join } from "node:path";
-
+import process from "node:process";
 import {
   createKimiHarnessV2,
   flushDiagnosticLogsSync,
+  type KimiHarnessOptions,
   log,
   resolveKimiHome,
-  type KimiHarness,
-  type KimiHarnessOptions,
 } from "@moonshot-ai/kimi-code-sdk";
-
-import { CLI_UI_MODE } from "#/constant/app";
-import { detectPendingMigration } from "#/migration/index";
 import type { TuiConfig } from "#/tui/config";
 import { loadTuiConfig, TuiConfigParseError } from "#/tui/config";
 import { CHROME_GUTTER } from "#/tui/constant/rendering";
 import { KimiTUI } from "#/tui/index";
-import { startupTrace } from "#/utils/startup-trace";
 import { currentTheme, getColorPalette } from "#/tui/theme";
+import { startupTrace } from "#/utils/startup-trace";
 import { toTerminalHyperlink } from "#/utils/terminal-hyperlink";
 import { restoreTerminalModes } from "#/utils/terminal-restore";
-
-import type { CLIOptions } from "./options";
-import { resolveAgentProfileSelection } from "./agent-selection";
-import { createKimiCodeHostIdentity } from "./version";
+import { resolveAgentProfileSelection } from "./agent-selection.ts";
+import type { CLIOptions } from "./options.ts";
+import { createKimiCodeHostIdentity } from "./version.ts";
 
 export async function runShell(
   opts: CLIOptions,
   version: string,
-  runOptions: { readonly migrateOnly?: boolean } = {},
 ): Promise<void> {
   let tuiConfig: TuiConfig;
   let configWarning: string | undefined;
@@ -59,25 +51,7 @@ export async function runShell(
   };
   const harness = createKimiHarnessV2(harnessOptions);
   startupTrace("harness:created");
-  log.info("kimi-code starting", {
-    version,
-    uiMode: CLI_UI_MODE,
-    nodeVersion: process.version,
-    platform: `${process.platform}/${process.arch}`,
-    workDir,
-  });
-
   await harness.ensureConfigFile();
-  const migrationPlan = await detectPendingMigration({
-    sourceHome: join(homedir(), ".kimi"),
-    targetHome: harness.homeDir,
-    ignoreMarker: runOptions.migrateOnly,
-  });
-  if (runOptions.migrateOnly === true && migrationPlan === null) {
-    process.stdout.write("  Nothing to migrate from ~/.kimi/.\n");
-    await harness.close();
-    return;
-  }
   await harness.getConfig();
   startupTrace("config:loaded");
   // Config diagnostics (deprecated keys, invalid sections, ...) are surfaced
@@ -88,15 +62,20 @@ export async function runShell(
   const agentProfile = await resolveAgentProfileSelection(opts, workDir);
   const tui = new KimiTUI(harness, {
     cliOptions: opts,
-    agentProfile,
-    additionalDirs: opts.addDirs?.length ? opts.addDirs : undefined,
+    ...(agentProfile === undefined ? {} : { agentProfile }),
+    ...(opts.addDirs?.length ? { additionalDirs: opts.addDirs } : {}),
     tuiConfig,
     version,
     workDir,
-    startupNotice: configWarning,
-    migrationPlan,
-    migrateOnly: runOptions.migrateOnly,
-    engineV2,
+    ...(configWarning === undefined ? {} : { startupNotice: configWarning }),
+    // The interactive CLI is v2-only; retain this coordinator capability
+    // marker for the remaining command/controller interfaces while they are
+    // collapsed onto the v2 contracts.
+    engineV2: true,
+    // Ink is the production terminal owner. pi-tui remains an explicit
+    // rollback switch while the last renderer-specific surfaces are retired.
+    terminalRenderer:
+      process.env["KIMI_TUI_RENDERER"] === "pi-tui" ? "pi-tui" : "ink",
   });
 
   let savedStty: string | undefined;
@@ -114,7 +93,7 @@ export async function runShell(
   }
   const restoreStty = (): void => {
     if (savedStty === undefined) return;
-    const args = savedStty.split(/\s+/).filter((arg) => arg.length > 0);
+    const args = savedStty.split(/\s+/u).filter((arg) => arg.length > 0);
     if (args.length === 0) return;
     spawnSync("stty", args, { stdio: ["inherit", "ignore", "ignore"] });
   };

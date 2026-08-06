@@ -13,7 +13,7 @@ import {
   type AutocompleteProvider,
   type AutocompleteSuggestions,
   type SlashCommand,
-} from "@moonshot-ai/pi-tui";
+} from "@moonshot-ai/kimi-code-tui";
 
 const PATH_DELIMITERS = new Set([" ", "\t", '"', "'", "="]);
 const MAX_FALLBACK_SCAN = 2000;

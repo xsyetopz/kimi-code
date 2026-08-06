@@ -5,7 +5,7 @@
  * The v2 engine persists each agent's journal at
  * `<sessionDir>/agents/<agentId>/wire.jsonl` using v1's record vocabulary for
  * every replay-relevant op. The fold in `./resume-replay-fold.ts` reproduces
- * the v1 engine's restore semantics (assistant-message assembly from loop
+ * the previous engine's restore semantics (assistant-message assembly from loop
  * events, mid-history gap closing with synthesized interrupted results,
  * context.undo, compaction lifecycle) WITHOUT instantiating a throwaway v1
  * `Agent` — it reads the records directly and produces the same

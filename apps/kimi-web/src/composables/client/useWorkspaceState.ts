@@ -879,9 +879,8 @@ export function useWorkspaceState(
 
   /**
    * Re-read GET /meta and apply the server-self fields (version, open-in
-   * apps, auth bypass, backend engine). Called on first load and on every WS
-   * (re)connect — the latter keeps the values truthful across backend
-   * restarts and dev-proxy backend switches.
+   * apps, auth bypass). Called on first load and on every WS reconnect so
+   * values remain truthful across server restarts.
    */
   async function refreshServerMeta(): Promise<void> {
     const m = await getKimiWebApi()
@@ -891,7 +890,6 @@ export function useWorkspaceState(
     rawState.serverVersion = m.serverVersion;
     rawState.availableOpenInApps = m.openInApps;
     rawState.dangerousBypassAuth = m.dangerousBypassAuth;
-    rawState.backend = m.backend;
   }
 
   async function load(): Promise<void> {

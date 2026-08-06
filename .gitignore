@@ -30,6 +30,9 @@ reports/
 .superpowers/
 /plan/
 
+# Kimi Code CLI files - do not commit
+kimi-debug-*.zip
+
 # Agent scratch / throwaway files - do not commit
 .tmp/
 HANDOVER*.md

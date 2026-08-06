@@ -15,6 +15,7 @@ import {
   type Mock,
 } from "vitest";
 import {
+  KIMI_CODE_PROVIDER_NAME,
   clearManagedKimiCodeConfig,
   resolveKimiCodeOAuthKey,
   resolveKimiCodeRuntimeAuth,
@@ -40,6 +41,11 @@ import { IWebSearchProviderService } from "#/app/auth/webSearch/webSearch";
 import { WebSearchProviderService } from "#/app/auth/webSearch/webSearchService";
 import { IAuthLegacyService } from "#/app/authLegacy/authLegacy";
 import { AuthLegacyService } from "#/app/authLegacy/authLegacyService";
+import {
+  getProviderAuthIntegration,
+  registerProviderAuthAdapter,
+  type ProviderAuthAdapter,
+} from "#/app/auth/providerAuth";
 import { IConfigService } from "#/app/config/config";
 import { ConfigRegistry } from "#/app/config/configService";
 import { type DomainEvent, IEventService } from "#/app/event/event";
@@ -62,7 +68,7 @@ import { registerBootstrapServices } from "../bootstrap/stubs";
 import { registerTelemetryServices } from "../telemetry/stubs";
 import { stubAgentIdentity } from "../../app/agentIdentity/stubs";
 
-const OAUTH_PROVIDER = "managed:kimi-code";
+const OAUTH_PROVIDER = KIMI_CODE_PROVIDER_NAME;
 const NON_OAUTH_PROVIDER = "openai-main";
 
 const deviceAuth = {
@@ -294,6 +300,303 @@ describe("OAuthService", () => {
     await vi.waitFor(() =>
       expect(svc.getFlow(OAUTH_PROVIDER)?.status).toBe("authenticated"),
     );
+  });
+
+  it("models Zen Free and Go as distinct OpenCode providers with API-key fallback", () => {
+    expect(getProviderAuthIntegration("opencode")).toMatchObject({
+      providerId: "opencode",
+      kind: "external-oauth",
+      displayName: "OpenCode Zen",
+      integration: "opencode",
+      apiKeyEnv: ["OPENCODE_API_KEY", "OPENCODE_ZEN_API_KEY"],
+    });
+    expect(getProviderAuthIntegration("opencode-go")).toMatchObject({
+      providerId: "opencode-go",
+      kind: "external-oauth",
+      displayName: "OpenCode Go",
+      integration: "opencode",
+    });
+  });
+
+  it("does not route unsupported provider logins through the Kimi OAuth toolkit", async () => {
+    const svc = createService();
+
+    await expect(svc.startLogin("openai")).rejects.toMatchObject({
+      code: "auth.provider_unsupported",
+      message: expect.stringContaining("OpenAI Codex"),
+    });
+    await expect(svc.startLogin("openai_responses")).rejects.toMatchObject({
+      code: "auth.provider_unsupported",
+      message: expect.stringContaining("OpenAI Codex"),
+    });
+    await expect(svc.startLogin("github-copilot")).rejects.toMatchObject({
+      code: "auth.provider_unsupported",
+      message: expect.stringContaining("GitHub Copilot"),
+    });
+    await expect(svc.startLogin("opencode")).rejects.toMatchObject({
+      code: "auth.provider_unsupported",
+      message: expect.stringContaining("OpenCode Zen"),
+    });
+    await expect(svc.startLogin("opencode-go")).rejects.toMatchObject({
+      code: "auth.provider_unsupported",
+      message: expect.stringContaining("OpenCode Go"),
+    });
+    await expect(svc.logout("openai")).rejects.toMatchObject({
+      code: "auth.provider_unsupported",
+    });
+    await expect(svc.status("openai")).rejects.toMatchObject({
+      code: "auth.provider_unsupported",
+    });
+    expect(svc.resolveTokenProvider("openai")).toBeUndefined();
+    await expect(svc.getCachedAccessToken("openai")).resolves.toBeUndefined();
+    expect(toolkit.login).not.toHaveBeenCalled();
+    expect(toolkit.logout).not.toHaveBeenCalled();
+    expect(toolkit.tokenProvider).not.toHaveBeenCalled();
+    expect(toolkit.getCachedAccessToken).not.toHaveBeenCalled();
+  });
+
+  it("dispatches registered provider logins to their external adapters", async () => {
+    const codexResult = {
+      flow_id: "codex-flow",
+      provider: "openai",
+      status: "authenticated" as const,
+    };
+    const copilotResult = {
+      flow_id: "copilot-flow",
+      provider: "github-copilot",
+      status: "authenticated" as const,
+    };
+    const codex: ProviderAuthAdapter = {
+      integration: "openai-codex",
+      startLogin: vi.fn(async (provider) => ({
+        ...codexResult,
+        provider,
+      })),
+    };
+    const copilot: ProviderAuthAdapter = {
+      integration: "github-copilot",
+      startLogin: vi.fn().mockResolvedValue(copilotResult),
+    };
+    const opencode: ProviderAuthAdapter = {
+      integration: "opencode",
+      startLogin: vi.fn(async (provider) => ({
+        flow_id: "opencode-flow",
+        provider,
+        status: "authenticated" as const,
+      })),
+    };
+    const disposeCodex = registerProviderAuthAdapter(codex);
+    const disposeCopilot = registerProviderAuthAdapter(copilot);
+    const disposeOpencode = registerProviderAuthAdapter(opencode);
+    try {
+      providers["codex-main"] = {
+        type: "openai",
+        oauth: { storage: "file", key: "oauth/codex" },
+      };
+      const svc = createService();
+      await expect(svc.startLogin("openai")).resolves.toEqual(codexResult);
+      await expect(svc.startLogin("openai_responses")).resolves.toEqual({
+        ...codexResult,
+        provider: "openai_responses",
+      });
+      await expect(svc.startLogin("codex-main")).resolves.toEqual({
+        ...codexResult,
+        provider: "codex-main",
+      });
+      await expect(svc.startLogin("github-copilot")).resolves.toEqual(
+        copilotResult,
+      );
+      await expect(svc.startLogin("opencode")).resolves.toMatchObject({
+        flow_id: "opencode-flow",
+        provider: "opencode",
+        status: "authenticated",
+      });
+      await expect(svc.startLogin("opencode-go")).resolves.toMatchObject({
+        flow_id: "opencode-flow",
+        provider: "opencode-go",
+        status: "authenticated",
+      });
+      expect(codex.startLogin).toHaveBeenNthCalledWith(1, "openai");
+      expect(codex.startLogin).toHaveBeenNthCalledWith(2, "openai_responses");
+      expect(codex.startLogin).toHaveBeenNthCalledWith(3, "codex-main");
+      expect(copilot.startLogin).toHaveBeenCalledWith("github-copilot");
+      expect(opencode.startLogin).toHaveBeenNthCalledWith(1, "opencode");
+      expect(opencode.startLogin).toHaveBeenNthCalledWith(2, "opencode-go");
+      expect(toolkit.login).not.toHaveBeenCalled();
+    } finally {
+      disposeCopilot();
+      disposeCodex();
+      disposeOpencode();
+    }
+  });
+
+  it("reads an external adapter token cache through its token provider when no direct cache hook exists", async () => {
+    const cachedToken = vi.fn().mockResolvedValue("codex-cached-token");
+    const tokenProvider = {
+      getAccessToken: vi.fn().mockResolvedValue("codex-request-token"),
+      getCachedAccessToken: cachedToken,
+    };
+    const adapter: ProviderAuthAdapter = {
+      integration: "openai-codex",
+      startLogin: vi.fn().mockResolvedValue({
+        flow_id: "codex-flow",
+        provider: "openai",
+        status: "authenticated" as const,
+      }),
+      resolveTokenProvider: vi.fn().mockReturnValue(tokenProvider),
+    };
+    const dispose = registerProviderAuthAdapter(adapter);
+    try {
+      const svc = createService();
+      await expect(svc.getCachedAccessToken("openai")).resolves.toBe(
+        "codex-cached-token",
+      );
+      expect(adapter.resolveTokenProvider).toHaveBeenCalledWith(
+        "openai",
+        undefined,
+      );
+      expect(cachedToken).toHaveBeenCalledTimes(1);
+      expect(tokenProvider.getAccessToken).not.toHaveBeenCalled();
+    } finally {
+      dispose();
+    }
+  });
+
+  it("derives external status from a token-provider cache when the adapter has no status hook", async () => {
+    const adapter: ProviderAuthAdapter = {
+      integration: "openai-codex",
+      startLogin: vi.fn().mockResolvedValue({
+        flow_id: "codex-flow",
+        provider: "openai",
+        status: "authenticated" as const,
+      }),
+      resolveTokenProvider: vi.fn().mockReturnValue({
+        getAccessToken: vi.fn().mockResolvedValue("request-token"),
+        getCachedAccessToken: vi.fn().mockResolvedValue("cached-token"),
+      }),
+    };
+    const dispose = registerProviderAuthAdapter(adapter);
+    try {
+      await expect(createService().status("openai")).resolves.toEqual({
+        loggedIn: true,
+        provider: "openai",
+      });
+    } finally {
+      dispose();
+    }
+  });
+
+  it("routes external auth lifecycle calls away from the Kimi toolkit", async () => {
+    const tokenProvider = { getAccessToken: async () => "codex-token" };
+    const adapter: ProviderAuthAdapter = {
+      integration: "openai-codex",
+      startLogin: vi.fn().mockResolvedValue({
+        flow_id: "codex-flow",
+        provider: "openai",
+        status: "authenticated" as const,
+      }),
+      getFlow: vi.fn().mockReturnValue(undefined),
+      cancelLogin: vi.fn().mockResolvedValue({
+        cancelled: false,
+        status: "cancelled" as const,
+      }),
+      logout: vi.fn().mockResolvedValue({
+        logged_out: true as const,
+        provider: "openai",
+      }),
+      status: vi.fn().mockResolvedValue({
+        loggedIn: true,
+        provider: "openai",
+      }),
+      resolveTokenProvider: vi.fn().mockReturnValue(tokenProvider),
+      getCachedAccessToken: vi.fn().mockResolvedValue("codex-token"),
+    };
+    const dispose = registerProviderAuthAdapter(adapter);
+    try {
+      const svc = createService();
+      expect(svc.getFlow("openai")).toBeUndefined();
+      await expect(svc.cancelLogin("openai")).resolves.toEqual({
+        cancelled: false,
+        status: "cancelled",
+      });
+      await expect(svc.logout("openai")).resolves.toEqual({
+        logged_out: true,
+        provider: "openai",
+      });
+      await expect(svc.status("openai")).resolves.toEqual({
+        loggedIn: true,
+        provider: "openai",
+      });
+      expect(svc.resolveTokenProvider("openai")).toBe(tokenProvider);
+      await expect(svc.getCachedAccessToken("openai")).resolves.toBe(
+        "codex-token",
+      );
+      expect(adapter.getFlow).toHaveBeenCalledWith("openai");
+      expect(adapter.cancelLogin).toHaveBeenCalledWith("openai");
+      expect(adapter.logout).toHaveBeenCalledWith("openai");
+      expect(adapter.status).toHaveBeenCalledWith("openai");
+      expect(adapter.resolveTokenProvider).toHaveBeenCalledWith(
+        "openai",
+        undefined,
+      );
+      expect(adapter.getCachedAccessToken).toHaveBeenCalledWith(
+        "openai",
+        undefined,
+      );
+      expect(toolkit.login).not.toHaveBeenCalled();
+      expect(toolkit.logout).not.toHaveBeenCalled();
+      expect(toolkit.tokenProvider).not.toHaveBeenCalled();
+      expect(toolkit.getCachedAccessToken).not.toHaveBeenCalled();
+    } finally {
+      dispose();
+    }
+  });
+
+  it("resolves provider auth by configured type for aliases without displacing Kimi", () => {
+    providers["codex-main"] = {
+      type: "openai",
+      oauth: { storage: "file", key: "oauth/codex" },
+    };
+    providers["kimi-alias"] = {
+      type: "kimi",
+      oauth: { storage: "file", key: "oauth/kimi-code" },
+    };
+    const adapterToken = { getAccessToken: async () => "codex-token" };
+    const adapter: ProviderAuthAdapter = {
+      integration: "openai-codex",
+      startLogin: vi.fn().mockResolvedValue({
+        flow_id: "codex-flow",
+        provider: "codex-main",
+        status: "authenticated" as const,
+      }),
+      resolveTokenProvider: vi.fn().mockReturnValue(adapterToken),
+    };
+    const dispose = registerProviderAuthAdapter(adapter);
+    try {
+      const svc = createService();
+      expect(
+        svc.resolveTokenProvider("codex-main", {
+          storage: "file",
+          key: "oauth/codex",
+        }),
+      ).toBe(adapterToken);
+      expect(
+        svc.resolveTokenProvider("kimi-alias", {
+          storage: "file",
+          key: "oauth/kimi-code",
+        }),
+      ).toEqual({ getAccessToken: expect.any(Function) });
+      expect(adapter.resolveTokenProvider).toHaveBeenCalledWith("codex-main", {
+        storage: "file",
+        key: "oauth/codex",
+      });
+      expect(toolkit.tokenProvider).toHaveBeenCalledWith("kimi-alias", {
+        storage: "file",
+        key: "oauth/kimi-code",
+      });
+    } finally {
+      dispose();
+    }
   });
 
   it("provisions the managed provider through the provider service after login", async () => {
@@ -759,14 +1062,14 @@ describe("OAuthService", () => {
     });
   });
 
-  it("resolveTokenProvider delegates to the toolkit", () => {
+  it("resolveTokenProvider preserves the toolkit fallback for unregistered providers", () => {
     const svc = createService();
-    const provider = svc.resolveTokenProvider(NON_OAUTH_PROVIDER, {
+    const provider = svc.resolveTokenProvider("legacy-provider", {
       storage: "file",
       key: "k",
     });
     expect(provider).toEqual({ getAccessToken: expect.any(Function) });
-    expect(toolkit.tokenProvider).toHaveBeenCalledWith(NON_OAUTH_PROVIDER, {
+    expect(toolkit.tokenProvider).toHaveBeenCalledWith("legacy-provider", {
       storage: "file",
       key: "k",
     });
@@ -1496,6 +1799,28 @@ describe("AuthSummaryService", () => {
       storage: "file",
       key: "oauth/kimi-code",
     });
+  });
+
+  it("ensureReady accepts a cached external adapter token without an OAuthRef", async () => {
+    providers = {
+      codex: { type: "openai" },
+    };
+    models = {
+      codex: {
+        provider: "codex",
+        model: "gpt-5",
+        protocol: "openai",
+        maxContextSize: 128000,
+      },
+    };
+    defaultModel = "codex";
+    getCachedAccessToken.mockResolvedValue("codex-cached-token");
+
+    // The real OAuthService dispatches this call to the injected official
+    // adapter. This test keeps AuthSummaryService isolated while proving it
+    // does not require a serialized OAuthRef for external integrations.
+    await expect(createSummary().ensureReady()).resolves.toBeUndefined();
+    expect(getCachedAccessToken).toHaveBeenCalledWith("codex");
   });
 
   it("ensureReady accepts provider api keys", async () => {

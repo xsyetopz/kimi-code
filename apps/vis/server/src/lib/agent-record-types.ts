@@ -1,6 +1,5 @@
 // apps/vis/server/src/lib/agent-record-types.ts
-// Single source of truth: everything below comes from agent-core directly.
-// Do NOT add local interfaces that duplicate upstream shapes.
+// Server DTOs plus the canonical v2 journal/read-model contracts.
 
 export type {
   AgentRecord,
@@ -23,8 +22,8 @@ export type {
   ProcessBackgroundTaskInfo,
   AgentBackgroundTaskInfo,
   QuestionBackgroundTaskInfo,
-} from "@moonshot-ai/kimi-code-sdk";
-export { AGENT_WIRE_PROTOCOL_VERSION } from "@moonshot-ai/kimi-code-sdk";
+} from "@moonshot-ai/agent-core-v2/wire/recordTypes";
+export { WIRE_PROTOCOL_VERSION as AGENT_WIRE_PROTOCOL_VERSION } from "@moonshot-ai/agent-core-v2/wire/migration/migration";
 export type {
   Message,
   ContentPart,
@@ -35,7 +34,10 @@ export type {
 // Local bindings for the upstream types referenced by the vis-only DTOs
 // below. The `export type { … }` re-export above forwards the names to
 // consumers but does NOT bring them into this module's scope.
-import type { AgentRecord, BackgroundTaskInfo } from "@moonshot-ai/kimi-code-sdk";
+import type {
+  AgentRecord,
+  BackgroundTaskInfo,
+} from "@moonshot-ai/agent-core-v2/wire/recordTypes";
 
 /**
  * Persistent representation of a cron task.

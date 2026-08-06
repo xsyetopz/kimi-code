@@ -14,7 +14,7 @@ import { KIMI_CODE_PLATFORM } from "@moonshot-ai/kimi-code-oauth";
 import type * as KosongModule from "@moonshot-ai/kosong";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createKimiHarness, type Event, type KimiHarness } from "#/index";
+import { createKimiHarnessV2, type Event, type KimiHarness } from "#/index";
 
 import { TEST_IDENTITY } from "./test-identity";
 
@@ -107,7 +107,7 @@ describe("Session.prompt events", () => {
   it("preserves existing custom metadata when an SDK metadata patch is resumed", async () => {
     const homeDir = await makeTempDir();
     const workDir = await makeTempDir();
-    const harness = createKimiHarness({ identity: TEST_IDENTITY, homeDir });
+    const harness = createKimiHarnessV2({ identity: TEST_IDENTITY, homeDir });
 
     try {
       await configureFakeProvider(harness);
@@ -139,7 +139,7 @@ describe("Session.prompt events", () => {
   it("persists sanitized prompt metadata without marking the title custom", async () => {
     const homeDir = await makeTempDir();
     const workDir = await makeTempDir();
-    const harness = createKimiHarness({
+    const harness = createKimiHarnessV2({
       identity: TEST_IDENTITY,
       homeDir,
     });
@@ -234,7 +234,7 @@ describe("Session.prompt events", () => {
   it("emits mapped turn events through Session.onEvent", async () => {
     const homeDir = await makeTempDir();
     const workDir = await makeTempDir();
-    const harness = createKimiHarness({
+    const harness = createKimiHarnessV2({
       identity: TEST_IDENTITY,
       homeDir,
     });
@@ -297,7 +297,7 @@ describe("Session.prompt events", () => {
   it("supports onEvent unsubscribe without touching runtime wire directly", async () => {
     const homeDir = await makeTempDir();
     const workDir = await makeTempDir();
-    const harness = createKimiHarness({
+    const harness = createKimiHarnessV2({
       identity: TEST_IDENTITY,
       homeDir,
     });
@@ -330,7 +330,7 @@ describe("Session.prompt events", () => {
   it("runs init through generateAgentsMd RPC as a subagent system trigger without prompt metadata updates", async () => {
     const homeDir = await makeTempDir();
     const workDir = await makeTempDir();
-    const harness = createKimiHarness({
+    const harness = createKimiHarnessV2({
       identity: TEST_IDENTITY,
       homeDir,
     });
@@ -398,7 +398,7 @@ describe("Session.prompt events", () => {
   it("includes persisted subagent replay only when resume explicitly requests it", async () => {
     const homeDir = await makeTempDir();
     const workDir = await makeTempDir();
-    const harness = createKimiHarness({ identity: TEST_IDENTITY, homeDir });
+    const harness = createKimiHarnessV2({ identity: TEST_IDENTITY, homeDir });
 
     try {
       await configureFakeProvider(harness);
@@ -441,7 +441,7 @@ describe("Session.prompt events", () => {
   it("starts btw through RPC as a forked subagent without prompt metadata updates", async () => {
     const homeDir = await makeTempDir();
     const workDir = await makeTempDir();
-    const harness = createKimiHarness({
+    const harness = createKimiHarnessV2({
       identity: TEST_IDENTITY,
       homeDir,
     });
@@ -538,7 +538,7 @@ describe("Session.prompt events", () => {
   it("persists only conversation through the selected turn across resume", async () => {
     const homeDir = await makeTempDir();
     const workDir = await makeTempDir();
-    const harness = createKimiHarness({ identity: TEST_IDENTITY, homeDir });
+    const harness = createKimiHarnessV2({ identity: TEST_IDENTITY, homeDir });
 
     try {
       await configureFakeProvider(harness);
@@ -575,7 +575,7 @@ describe("Session.prompt events", () => {
   it("returns the requested identity for a historical fork", async () => {
     const homeDir = await makeTempDir();
     const workDir = await makeTempDir();
-    const harness = createKimiHarness({ identity: TEST_IDENTITY, homeDir });
+    const harness = createKimiHarnessV2({ identity: TEST_IDENTITY, homeDir });
 
     try {
       await configureFakeProvider(harness);
@@ -607,7 +607,7 @@ describe("Session.prompt events", () => {
   it("derives historical fork metadata from the selected turn", async () => {
     const homeDir = await makeTempDir();
     const workDir = await makeTempDir();
-    const harness = createKimiHarness({ identity: TEST_IDENTITY, homeDir });
+    const harness = createKimiHarnessV2({ identity: TEST_IDENTITY, homeDir });
 
     try {
       await configureFakeProvider(harness);
@@ -645,7 +645,7 @@ describe("Session.prompt events", () => {
   it("continues with the next turn id after a historical fork", async () => {
     const homeDir = await makeTempDir();
     const workDir = await makeTempDir();
-    const harness = createKimiHarness({ identity: TEST_IDENTITY, homeDir });
+    const harness = createKimiHarnessV2({ identity: TEST_IDENTITY, homeDir });
 
     try {
       await configureFakeProvider(harness);
@@ -677,7 +677,7 @@ describe("Session.prompt events", () => {
   it("omits subagents created after the selected historical turn", async () => {
     const homeDir = await makeTempDir();
     const workDir = await makeTempDir();
-    const harness = createKimiHarness({ identity: TEST_IDENTITY, homeDir });
+    const harness = createKimiHarnessV2({ identity: TEST_IDENTITY, homeDir });
 
     try {
       await configureFakeProvider(harness);
@@ -702,7 +702,7 @@ describe("Session.prompt events", () => {
   it("rejects a negative historical turn index with request.invalid", async () => {
     const homeDir = await makeTempDir();
     const workDir = await makeTempDir();
-    const harness = createKimiHarness({ identity: TEST_IDENTITY, homeDir });
+    const harness = createKimiHarnessV2({ identity: TEST_IDENTITY, homeDir });
 
     try {
       const source = await harness.createSession({
@@ -724,7 +724,7 @@ describe("Session.prompt events", () => {
   it("rejects an out-of-range historical turn without creating the fork", async () => {
     const homeDir = await makeTempDir();
     const workDir = await makeTempDir();
-    const harness = createKimiHarness({ identity: TEST_IDENTITY, homeDir });
+    const harness = createKimiHarnessV2({ identity: TEST_IDENTITY, homeDir });
 
     try {
       await configureFakeProvider(harness);
@@ -756,7 +756,7 @@ describe("Session.prompt events", () => {
   it("rejects empty prompt input", async () => {
     const homeDir = await makeTempDir();
     const workDir = await makeTempDir();
-    const harness = createKimiHarness({
+    const harness = createKimiHarnessV2({
       identity: TEST_IDENTITY,
       homeDir,
     });

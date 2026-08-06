@@ -1,4 +1,4 @@
-import type { KimiConfig } from "@moonshot-ai/agent-core";
+import type { KimiConfig } from "../src/compat";
 import { describe, expect, it, vi } from "vitest";
 
 import {

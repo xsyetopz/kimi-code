@@ -470,6 +470,8 @@ describe("normalizeAPIStatusError", () => {
 
   it.each([
     [400, "Context length exceeded"],
+    [400, "Context limit exceeded"],
+    [400, "CONTEXT LIMIT EXCEEDED"],
     [400, "Exceeded max tokens"],
     [413, "Context length exceeded"],
     [422, "Maximum context window exceeded"],

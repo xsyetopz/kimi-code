@@ -20,7 +20,7 @@ import {
   matchesKey,
   truncateToWidth,
   type Focusable,
-} from "@moonshot-ai/pi-tui";
+} from "@moonshot-ai/kimi-code-tui";
 
 import { currentTheme } from "#/tui/theme";
 import { renderTabStrip } from "#/tui/utils/tab-strip";

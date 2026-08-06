@@ -445,11 +445,6 @@ html[data-color-scheme="dark"][data-accent="mono"] {
   --color-done-soft: #f3e8ff;
   --color-done-bd: #e0ccff;
   --color-info: var(--accent-primary);
-  /* Dev-only brand tint: recolors the logo mark golden-yellow so a `pnpm dev:web`
-     tab is visually distinct from production. Referenced by Sidebar's
-     `.ch-logo.is-dev` override of `--logo`. Scheme-independent on purpose. */
-  --color-logo-dev: #f5b301;
-
   /* -- spacing (4px grid) -------------------------------------------------- */
   --space-1: 4px;
   --space-2: 8px;
@@ -644,6 +639,487 @@ body,
   inset: 0;
 }
 
+/* React-owned desktop-only internal-build marker. It is rendered beside the
+   Vue island at the application root, so its styling belongs to the shared
+   stylesheet rather than a Vue-scoped component. */
+.internal-build-fab {
+  position: absolute;
+  right: var(--space-3);
+  bottom: var(--space-3);
+  z-index: var(--z-sticky);
+  pointer-events: none;
+}
+.internal-build-tag {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #f5a623;
+  color: #3a2a00;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  line-height: 1.4;
+  white-space: nowrap;
+  user-select: none;
+}
+
+/* React-owned inline notice primitive. Vue's Banner scoped rules moved here
+   with the strangler adapter so the visual contract remains global while the
+   complete visible surface is rendered by React. */
+.react-banner-host {
+  display: contents;
+}
+.ui-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+}
+.ui-banner__icon {
+  display: inline-flex;
+  flex: none;
+}
+.ui-banner__icon svg {
+  width: 18px;
+  height: 18px;
+}
+.ui-banner--info {
+  background: var(--color-accent-soft);
+  border-color: var(--color-accent-bd);
+}
+.ui-banner--warning {
+  background: var(--color-warning-soft);
+  border-color: var(--color-warning-bd);
+}
+.ui-banner--danger {
+  background: var(--color-danger-soft);
+  border-color: var(--color-danger-bd);
+}
+.ui-banner--info .ui-banner__icon {
+  color: var(--color-accent);
+}
+.ui-banner--warning .ui-banner__icon {
+  color: var(--color-warning);
+}
+.ui-banner--danger .ui-banner__icon {
+  color: var(--color-danger);
+}
+
+/* React-owned mobile title bar. The Vue component's scoped rules moved here
+   with the strangler adapter so the React surface retains the same tokens and
+   safe-area behavior while it sits inside the existing .app.mobile grid. */
+.react-mobile-topbar-host {
+  display: contents;
+}
+.mobile-topbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  /* Grow the bar by the top inset so the 50px content row stays below the
+     status bar / notch in standalone PWA mode and landscape. */
+  height: calc(50px + var(--safe-top));
+  flex: none;
+  padding: var(--safe-top) max(12px, var(--safe-right)) 0 max(12px, var(--safe-left));
+  border-bottom: 1px solid var(--color-line);
+  background: var(--color-bg);
+  font-family: var(--font-ui);
+}
+.mobile-topbar__workspace-chip {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-md);
+  background: var(--color-text);
+  color: var(--color-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-weight: var(--weight-medium);
+  font-size: var(--ui-font-size-sm);
+}
+.mobile-topbar__middle {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+}
+.mobile-topbar__middle:focus-visible,
+.mobile-topbar__settings:focus-visible {
+  outline: none;
+  box-shadow: var(--p-focus-ring);
+}
+.mobile-topbar__path {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--ui-font-size-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--sans);
+}
+.mobile-topbar__workspace-name { color: var(--color-text); }
+.mobile-topbar__separator,
+.mobile-topbar__chevron { color: var(--color-text-faint); }
+.mobile-topbar__chevron { flex: none; }
+.mobile-topbar__session {
+  color: var(--color-text);
+  font-weight: var(--weight-medium);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mobile-topbar__status {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: max(9px, calc(var(--ui-font-size) - 3.5px));
+  color: var(--color-text-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mobile-topbar__status-dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--color-text-faint);
+}
+.mobile-topbar__status-dot.is-running { background: var(--color-success); }
+.mobile-topbar__settings {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: background var(--duration-base) var(--ease-out),
+    color var(--duration-base) var(--ease-out);
+}
+.mobile-topbar__settings:hover {
+  background: color-mix(in srgb, var(--color-text) 8%, transparent);
+  color: var(--color-text);
+}
+.mobile-topbar__settings:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.mobile-topbar__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.mobile-topbar__icon svg {
+  width: var(--p-ic-lg);
+  height: var(--p-ic-lg);
+}
+
+/* React-owned first-load splash. The Vue host only controls mount/unmount;
+   these global rules keep the full-screen surface and its transition stable
+   while the visible body is rendered by React. */
+.react-global-loading-host {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-toast);
+}
+.gload {
+  position: fixed;
+  top: 0;
+  left: 0;
+  /* Viewport units keep the splash full-screen even if a transformed or
+     collapsed html element would otherwise shrink a fixed box. */
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  min-width: 100vw;
+  min-height: 100dvh;
+  z-index: var(--z-toast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+}
+.gload-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+  /* Nudge slightly above center — feels more intentional than dead-center. */
+  transform: translateY(-6%);
+}
+.gload-logo {
+  width: 128px;
+  height: auto;
+  color: var(--color-text);
+  animation: gload-pop 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.gload-spinner {
+  display: inline-flex;
+  flex: none;
+  width: 18px;
+  height: 18px;
+  color: var(--color-accent);
+}
+.gload-spinner__svg {
+  width: 100%;
+  height: 100%;
+  animation: gload-spinner-rotate 0.85s linear infinite;
+}
+.gload-spinner__track {
+  fill: none;
+  stroke: var(--color-line);
+  stroke-width: 2.2;
+}
+.gload-spinner__arc {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-dasharray: 56 56;
+  stroke-dashoffset: 38;
+}
+.gload-text {
+  font-family: var(--sans);
+  font-size: var(--text-base);
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+.gload-issue {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: min(480px, 80vw);
+  font-family: var(--sans);
+  font-size: var(--text-sm);
+  color: var(--muted);
+  text-align: center;
+}
+.gload-issue-detail {
+  font-family: var(--mono);
+  font-size: var(--text-xs);
+  color: var(--muted);
+  opacity: 0.8;
+  word-break: break-word;
+}
+@keyframes gload-pop {
+  from { opacity: 0; transform: translateY(6px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes gload-spinner-rotate {
+  to { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gload-logo { animation: none; }
+  .gload-spinner__svg { animation-duration: 1.8s; }
+}
+
+/* React-owned warning/error stack. Vue still supplies warning state through
+   ReactWarningToastsHost, while this shared stylesheet preserves the former
+   Toast primitive and stack transition tokens outside Vue scoped CSS. */
+.react-warning-toasts-host {
+  display: contents;
+}
+.toasts {
+  position: fixed;
+  right: 16px;
+  bottom: 84px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  z-index: var(--z-toast);
+  width: min(440px, calc(100vw - 32px));
+  max-height: 56vh;
+  overflow-y: auto;
+}
+
+/* New toasts slide in from the right and fade; dismissed toasts fade + slide
+   out in place, then the remaining stack glides up through toast-move. */
+.toast-enter-active,
+.toast-leave-active {
+  transition: opacity var(--duration-base) var(--ease-out),
+    transform var(--duration-base) var(--ease-out);
+}
+.toast-enter-from,
+.toast-leave-to {
+  opacity: 0;
+  transform: translateX(16px);
+}
+.toast-move {
+  transition: transform var(--duration-base) var(--ease-out);
+}
+
+.toasts .ui-toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  width: 360px;
+  max-width: 100%;
+  padding: 13px 14px;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  font-family: var(--font-ui);
+  line-height: 1.45;
+}
+.toasts .ui-toast__icon {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin-top: 1px;
+  border-radius: var(--radius-full);
+  display: grid;
+  place-items: center;
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+}
+.toasts .ui-toast__icon svg {
+  width: 12px;
+  height: 12px;
+}
+.toasts .ui-toast--warning .ui-toast__icon {
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+}
+.toasts .ui-toast--danger .ui-toast__icon {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+.toasts .ui-toast--danger {
+  border-color: color-mix(in srgb, var(--color-danger) 35%, transparent);
+}
+.toasts .ui-toast__body {
+  flex: 1;
+  min-width: 0;
+}
+.toasts .ui-toast__title {
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+.toasts .ui-toast__msg {
+  margin-top: 2px;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
+}
+.toasts .ui-toast--danger .ui-toast__msg {
+  color: var(--color-danger);
+}
+.toasts .ui-toast__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 26px;
+  height: 26px;
+  margin: -3px -4px 0 0;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: background var(--duration-base) var(--ease-out),
+    color var(--duration-base) var(--ease-out);
+}
+.toasts .ui-toast__close:hover {
+  background: color-mix(in srgb, var(--color-text) 8%, transparent);
+  color: var(--color-text);
+}
+.toasts .ui-toast__close:focus-visible {
+  outline: none;
+  box-shadow: var(--p-focus-ring);
+}
+.toasts .ui-toast__close svg {
+  width: var(--p-ic-md);
+  height: var(--p-ic-md);
+}
+.toasts .actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+.toasts .link {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: var(--color-accent);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--ui-font-size-xs);
+}
+.toasts .link:hover {
+  text-decoration: underline;
+}
+.toasts .details {
+  display: grid;
+  gap: 5px;
+  margin: 8px 0 0;
+  padding: 8px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-sunken);
+}
+.toasts .detail-row {
+  display: grid;
+  grid-template-columns: minmax(88px, 0.34fr) minmax(0, 1fr);
+  gap: 8px;
+}
+.toasts .detail-row dt {
+  color: var(--color-text-muted);
+}
+.toasts .detail-row dd {
+  margin: 0;
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+@media (max-width: 640px) {
+  .toasts {
+    left: 12px;
+    right: 12px;
+    /* Sit just above the chat dock; --dock-h already includes the dock's own
+       safe-area padding, so no extra safe-bottom term is needed. */
+    bottom: calc(var(--dock-h, 76px) + 8px);
+    width: auto;
+    max-height: 50vh;
+  }
+  .toasts .detail-row {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+}
+
 /* The app is a fixed full-viewport shell with its own internal scrollers; the
    document itself must never scroll. Without this, any transient overflow
    (e.g. the composer growing for a frame on a multi-line paste) pops a window
@@ -783,7 +1259,7 @@ body {
    canvas). Bubbles/tool cards still read fine via their own borders + shadows. */
 /* Session rows → rounded, inset pills with a soft active state (cards, not a
    full-bleed tint bar). Keeps the mono timestamp/badges. Scoped under
-   .sessions because .se is also a (different) class in MobileTopBar. */
+   .sessions so row chrome stays isolated from other session labels. */
 /* Tab bar → clean white strip with a single hairline.
    Sidebar header (.ch) keeps the sidebar body color so the right border
    extends seamlessly from top to bottom. */

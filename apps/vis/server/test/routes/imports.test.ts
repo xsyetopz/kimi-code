@@ -70,7 +70,7 @@ async function importBundle(home: string): Promise<string> {
   const app = importsRoute(home);
   const res = await app.request("/?name=demo.zip", {
     method: "POST",
-    body: await buildZip(bundle()),
+    body: (await buildZip(bundle())) as unknown as BodyInit,
   });
   expect(res.status).toBe(200);
   return ((await res.json()) as { sessionId: string }).sessionId;
@@ -165,7 +165,7 @@ describe("imports + logs routes", () => {
     };
     const importRes = await importsRoute(home).request("/?name=x.zip", {
       method: "POST",
-      body: await buildZip(noAgents),
+      body: (await buildZip(noAgents)) as unknown as BodyInit,
     });
     expect(importRes.status).toBe(200);
     const importId = ((await importRes.json()) as { sessionId: string })
@@ -200,7 +200,7 @@ describe("imports + logs routes", () => {
       (await (
         await importsRoute(home).request("/?name=x.zip", {
           method: "POST",
-          body: await buildZip(corruptAgents),
+      body: (await buildZip(corruptAgents)) as unknown as BodyInit,
         })
       ).json()) as { sessionId: string }
     ).sessionId;
@@ -237,7 +237,7 @@ describe("imports + logs routes", () => {
       (await (
         await importsRoute(home).request("/?name=x.zip", {
           method: "POST",
-          body: await buildZip(corrupt),
+      body: (await buildZip(corrupt)) as unknown as BodyInit,
         })
       ).json()) as { sessionId: string }
     ).sessionId;

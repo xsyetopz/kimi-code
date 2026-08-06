@@ -15,7 +15,7 @@
  * `AgentTaskInfo` (camelCase + ms timestamps + agent-core literal sets)
  * into the protocol's `Task` shape (snake_case + ISO + spec literal
  * sets) — the same field/literal mapping v1 performs in
- * `packages/agent-core/src/services/task/task.ts`.
+ * `the task domain`.
  *
  * **Resolution**: `core` → `ISessionIndex` (existence, → 40401) →
  * the live handler registry (live session handle) → `IAgentLifecycleService`

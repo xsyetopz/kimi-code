@@ -150,10 +150,10 @@ describe("kimi acp-v2", () => {
       const actual = await importOriginal();
       return {
         ...actual,
-        createKimiHarness: () =>
+        createKimiHarnessV2: () =>
           ({
             auth: { login: loginStub },
-          }) as unknown as ReturnType<typeof actual.createKimiHarness>,
+          }) as unknown as ReturnType<typeof actual.createKimiHarnessV2>,
       };
     });
     vi.resetModules();

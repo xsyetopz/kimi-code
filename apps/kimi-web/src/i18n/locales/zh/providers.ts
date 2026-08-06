@@ -19,7 +19,6 @@ export default {
   refreshTitle: "刷新 {type}",
   deleteTitle: "删除 {type}",
   loginKimi: "登录 Kimi",
-  loginAnthropic: "登录 Anthropic",
   enterApiKey: "填写 API Key",
   fieldType: "类型",
   fieldApiKey: "API Key",

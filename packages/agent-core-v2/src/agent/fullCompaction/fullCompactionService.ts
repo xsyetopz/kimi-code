@@ -78,6 +78,10 @@ import {
 import { Emitter, type Event } from '#/_base/event';
 import { OrderedHookSlot } from '#/hooks';
 
+/**
+ * Max retries for empty/truncated compaction response within a single round.
+ * Governs `emptyOrTruncatedShrinkCount`. Different concept from `overflowShrinkCount`.
+ */
 export const MAX_COMPACTION_RETRY_ATTEMPTS = 5;
 const DEFAULT_COMPACTION_MAX_COMPLETION_TOKENS = 128 * 1024;
 const OVERFLOW_CONTEXT_SAFETY_RATIO = 0.85;
@@ -623,7 +627,17 @@ export class AgentFullCompactionService extends Disposable implements IAgentFull
       let attempt: CompactionAttemptResult | undefined;
       let historyForModel: readonly ContextMessage[] = stripDynamicToolContext(originalHistory);
       let droppedCount = 0;
+      /**
+       * Overflow reduction attempt counter scoped to a SINGLE compaction round.
+       * Resets on each loop iteration when a different history slice is tried.
+       * Governed by MAX_COMPACTION_OVERFLOW_SHRINK_ATTEMPTS (constant: 3).
+       */
       let overflowShrinkCount = 0;
+      /**
+       * Empty or truncated response retry counter scoped to a SINGLE compaction round.
+       * Resets on each loop iteration when different message structure is tried.
+       * Governed by MAX_COMPACTION_RETRY_ATTEMPTS (constant: 5).
+       */
       let emptyOrTruncatedShrinkCount = 0;
       while (true) {
         const messagesToCompact = historyForModel;

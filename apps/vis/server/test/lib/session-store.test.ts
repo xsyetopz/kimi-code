@@ -307,7 +307,8 @@ describe("session-store", () => {
           homedir,
           parentAgentId,
         }))
-        .toSorted((a, b) => a.agentId.localeCompare(b.agentId)),
+        .slice()
+        .sort((a, b) => a.agentId.localeCompare(b.agentId)),
     ).toEqual([
       {
         agentId: "agent-0",

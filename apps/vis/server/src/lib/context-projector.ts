@@ -4,10 +4,10 @@ import {
   buildCompactionElisionText,
   collectCompactableUserMessages,
   isRealUserInput,
-  renderToolResultForModel,
   selectCompactionUserMessages,
   selectRecentUserMessages,
-} from "@moonshot-ai/kimi-code-sdk";
+} from "@moonshot-ai/agent-core-v2/agent/contextMemory/compactionHandoff";
+import { renderToolResultForModel } from "@moonshot-ai/agent-core-v2/agent/contextMemory/toolResultRender";
 import type {
   ContentPart,
   ContextMessage,
@@ -142,7 +142,7 @@ export function projectContext(
       case "context.append_message":
         messages.push({
           lineNo: entry.lineNo,
-          time: rec.time,
+          ...(rec.time === undefined ? {} : { time: rec.time }),
           source: "append_message",
           message: rec.message,
           toolStepUuids: [],
@@ -158,7 +158,7 @@ export function projectContext(
           };
           const projected: ProjectedMessage = {
             lineNo: entry.lineNo,
-            time: rec.time,
+            ...(rec.time === undefined ? {} : { time: rec.time }),
             source: "append_message",
             message,
             toolStepUuids: [ev.uuid],
@@ -218,7 +218,7 @@ export function projectContext(
           };
           messages.push({
             lineNo: entry.lineNo,
-            time: rec.time,
+            ...(rec.time === undefined ? {} : { time: rec.time }),
             source: "append_message",
             message: toolMsg,
             toolStepUuids: [],
@@ -243,7 +243,7 @@ export function projectContext(
           // blanking pass is gated on model mode).
           messages.push({
             lineNo: entry.lineNo,
-            time: rec.time,
+            ...(rec.time === undefined ? {} : { time: rec.time }),
             source: "clear",
             // Synthetic marker: never rendered as a bubble (the web dispatches on
             // `source === 'clear'`). `role: 'assistant'` keeps it out of any
@@ -263,7 +263,7 @@ export function projectContext(
       case "context.apply_compaction": {
         openSteps = new Map();
         // Mirror agent-core's `applyCompaction`
-        // (`packages/agent-core/src/agent/context/index.ts`): the live history
+        // (the live v2 context history)
         // becomes the kept real user messages (verbatim, within a token budget
         // — the oldest head plus the most recent tail, separated by an elision
         // marker when the pool overflowed) followed by a single user-role
@@ -275,7 +275,7 @@ export function projectContext(
         // views stay in sync.
         const summaryBubble: ProjectedMessage = {
           lineNo: entry.lineNo,
-          time: rec.time,
+          ...(rec.time === undefined ? {} : { time: rec.time }),
           source: "compaction_summary",
           message: {
             role: "user",
@@ -388,7 +388,7 @@ export function projectContext(
             );
             const markerBubble: ProjectedMessage = {
               lineNo: entry.lineNo - 0.5,
-              time: rec.time,
+              ...(rec.time === undefined ? {} : { time: rec.time }),
               source: "append_message",
               message: {
                 role: "user",
@@ -505,7 +505,7 @@ export function projectContext(
         // what WOULD have been removed.
         messages.push({
           lineNo: entry.lineNo,
-          time: rec.time,
+          ...(rec.time === undefined ? {} : { time: rec.time }),
           source: "undo",
           // Synthetic message: never rendered. The web dispatches on
           // `source === 'undo'`; this only satisfies ProjectedMessage.
@@ -532,7 +532,9 @@ export function projectContext(
         goal = {
           goalId: rec.goalId,
           objective: rec.objective,
-          completionCriterion: rec.completionCriterion,
+          ...(rec.completionCriterion === undefined
+            ? {}
+            : { completionCriterion: rec.completionCriterion }),
         };
         break;
       case "goal.update":
@@ -540,12 +542,18 @@ export function projectContext(
           const prev: GoalSnapshot = goal;
           goal = {
             ...prev,
-            status: rec.status ?? prev.status,
-            actor: rec.actor ?? prev.actor,
-            reason: rec.reason ?? prev.reason,
-            tokensUsed: rec.tokensUsed ?? prev.tokensUsed,
-            turnsUsed: rec.turnsUsed ?? prev.turnsUsed,
-            wallClockMs: rec.wallClockMs ?? prev.wallClockMs,
+            ...(rec.status === undefined ? {} : { status: rec.status }),
+            ...(rec.actor === undefined ? {} : { actor: rec.actor }),
+            ...(rec.reason === undefined ? {} : { reason: rec.reason }),
+            ...(rec.tokensUsed === undefined
+              ? {}
+              : { tokensUsed: rec.tokensUsed }),
+            ...(rec.turnsUsed === undefined
+              ? {}
+              : { turnsUsed: rec.turnsUsed }),
+            ...(rec.wallClockMs === undefined
+              ? {}
+              : { wallClockMs: rec.wallClockMs }),
           };
         }
         break;
@@ -623,7 +631,10 @@ export function projectContext(
     contextTokens,
     config,
     permission: { mode: permissionMode },
-    planMode: { active: planActive, id: planId },
+    planMode: {
+      active: planActive,
+      ...(planId === undefined ? {} : { id: planId }),
+    },
     goal,
     swarm,
   };
@@ -641,7 +652,7 @@ const MICRO_MIN_CONTENT_TOKENS = 100;
 
 /** Replicates agent-core's per-char token weighting exactly, over the same
  *  `text` + `think` parts its gate counts. agent-core
- *  (`packages/agent-core/src/utils/tokens.ts`) sums per-part estimates, each
+ *  the context token estimator sums per-part estimates, each
  *  `estimateTokens(s) = Math.ceil(asciiCount / 4) + nonAsciiCount` (ASCII ~4
  *  chars/token, every non-ASCII/CJK code point a full token); other part types
  *  contribute 0. Matching it ensures Chinese-heavy tool results blank at the

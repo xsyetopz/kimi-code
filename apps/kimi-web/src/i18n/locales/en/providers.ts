@@ -19,7 +19,6 @@ export default {
   refreshTitle: "Refresh {type}",
   deleteTitle: "Delete {type}",
   loginKimi: "Sign in to Kimi",
-  loginAnthropic: "Sign in to Anthropic",
   enterApiKey: "Enter API Key",
   fieldType: "Type",
   fieldApiKey: "API Key",

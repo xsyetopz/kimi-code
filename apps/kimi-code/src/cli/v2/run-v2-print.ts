@@ -1,19 +1,17 @@
 /**
  * Native v2 `kimi -p` (print mode) runner.
  *
- * Unlike the v1 path (and the former `V2PromptHarness` / `V2Session` shim), this
- * runner talks to agent-core-v2's native DI services directly — no
- * `PromptHarness`, no SDK-shaped session, no v2→v1 event translation. It:
+ * This runner talks to agent-core-v2's native DI services directly. It:
  *   - `bootstrap()`s the app scope,
  *   - creates / resumes a session and its main agent via native services,
  *   - subscribes to the main agent's per-agent `IEventBus` and renders the
- *     native `DomainEvent` stream (payloads are already v1-protocol-shaped),
+ *     native `DomainEvent` stream,
  *   - drives a turn through `IAgentPromptService.enqueue()` and awaits
  *     `Turn.result` for authoritative completion,
- *   - applies the print-mode background policy (config-driven, v1-aligned:
+ *   - applies the print-mode background policy (config-driven:
  *     `exit` / `drain` / `steer`) before exiting.
  *
- * Selected by `runPrompt` when `KIMI_CODE_EXPERIMENTAL_FLAG` is set.
+ * Selected by `runPrompt` for the v2 print surface.
  */
 
 import { readFile } from "node:fs/promises";
@@ -29,17 +27,14 @@ import {
   IBootstrapService,
   IConfigService,
   IEventBus,
-  IOAuthToolkit,
   ISessionCronService,
   ISessionIndex,
   ISessionLifecycleService,
   IWorkspaceLifecycleService,
-  ITelemetryService,
   PRINT_MAX_TURNS_DEFAULT,
   PRINT_WAIT_CEILING_S_DEFAULT,
   applyPrintModeConfigDefaults,
   bootstrap,
-  createCloudAppender,
   ensureMainAgent,
   resumeSessionById,
   logSeed,
@@ -56,17 +51,10 @@ import {
   type PrintBackgroundMode,
   type Scope,
 } from "@moonshot-ai/agent-core-v2";
-import {
-  createKimiDefaultHeaders,
-  createKimiDeviceId,
-} from "@moonshot-ai/kimi-code-oauth";
+import { createKimiDefaultHeaders } from "@moonshot-ai/kimi-code-oauth";
 import { resolve } from "pathe";
 
-import {
-  CLI_SHUTDOWN_TIMEOUT_MS,
-  CLI_USER_AGENT_PRODUCT,
-  PROMPT_CLEANUP_TIMEOUT_MS,
-} from "#/constant/app";
+import { PROMPT_CLEANUP_TIMEOUT_MS } from "#/constant/app";
 
 import {
   formatGoalSummaryText,
@@ -91,11 +79,10 @@ import {
   PromptJsonWriter,
   type PromptTurnWriter,
   PromptTranscriptWriter,
-  writeExperimentalVersion,
+  writeVersion,
   writeResumeHint,
 } from "../prompt-render";
 
-const PROMPT_UI_MODE = "print";
 /** Re-check `goalActive` at least this often while waiting for goal turns. */
 const GOAL_WAIT_POLL_MS = 250;
 /**
@@ -110,22 +97,15 @@ export async function runV2Print(
   version: string,
   io: PromptRunIO = {},
 ): Promise<void> {
-  const startedAt = Date.now();
   const stdout = io.stdout ?? process.stdout;
   const stderr = io.stderr ?? process.stderr;
   const promptProcess = io.process ?? process;
   const outputFormat = resolveOutputFormat(opts);
   const workDir = process.cwd();
 
-  writeExperimentalVersion(version, outputFormat, stdout, stderr);
+  writeVersion(version, outputFormat, stdout, stderr);
 
   const homeDir = resolveKimiHome();
-  let firstLaunch = false;
-  const deviceId = createKimiDeviceId(homeDir, {
-    onFirstLaunch: () => {
-      firstLaunch = true;
-    },
-  });
   const logging = resolveLoggingConfig({ homeDir, env: process.env });
   const identity = createKimiCodeHostIdentity(version);
   const hostHeaders = createKimiDefaultHeaders({ homeDir, ...identity });
@@ -136,7 +116,7 @@ export async function runV2Print(
       clientIdentity: identity,
       args: {
         requestHeaders: hostHeaders,
-        // `--skillsDir` (v1 print parity): explicit skill dirs replace default
+        // Explicit skill dirs replace default
         // user / project discovery for this process.
         skillDirs: opts.skillsDirs,
         // `--agent-file`: explicit agent definition files, registered with the
@@ -148,8 +128,6 @@ export async function runV2Print(
     },
     [...logSeed(logging)],
   );
-  const auth = app.accessor.get(IOAuthToolkit);
-
   const configService = app.accessor.get(IConfigService);
   await configService.ready;
   // Print-mode config defaults (task timeouts / loop step cap / subagent
@@ -157,12 +135,6 @@ export async function runV2Print(
   // user left unset are filled, in the memory layer.
   await applyPrintModeConfigDefaults(configService);
   const defaultModel = configService.get<string>("defaultModel") ?? undefined;
-  let telemetryEnabled = true;
-  try {
-    telemetryEnabled = configService.get("telemetry") !== false;
-  } catch {
-    telemetryEnabled = true;
-  }
   for (const diagnostic of configService.diagnostics()) {
     if (diagnostic.severity === "warning") {
       stderr.write(`Warning: ${diagnostic.message}\n`);
@@ -172,19 +144,12 @@ export async function runV2Print(
   let restorePermission = async (): Promise<void> => {};
   let removeTerminationCleanup: (() => void) | undefined;
   let cleanupPromise: Promise<void> | undefined;
-  let telemetryService: ITelemetryService | undefined;
   const cleanup = async (): Promise<void> => {
     const pending = (cleanupPromise ??= (async () => {
       removeTerminationCleanup?.();
       try {
         await restorePermission();
       } finally {
-        if (telemetryService !== undefined) {
-          await raceWithTimeout(
-            telemetryService.shutdown(),
-            CLI_SHUTDOWN_TIMEOUT_MS,
-          );
-        }
         app.dispose();
       }
     })());
@@ -196,25 +161,6 @@ export async function runV2Print(
   );
 
   try {
-    // Install the appender BEFORE resolving the session: `session_started` and
-    // `session_load_failed` fire inside create()/resume(), so an appender wired
-    // up only after resolveNativeSession() would drop them to the null appender.
-    // The model below is the best known up front; a resumed session's real
-    // model is reconciled via setContext once resolved.
-    telemetryService = app.accessor.get(ITelemetryService);
-    if (telemetryEnabled) {
-      telemetryService.setAppender(
-        createCloudAppender(app.accessor, {
-          deviceId,
-          appName: CLI_USER_AGENT_PRODUCT,
-          uiMode: PROMPT_UI_MODE,
-          model: opts.model ?? defaultModel,
-          getAccessToken: async () =>
-            (await auth.getCachedAccessToken()) ?? null,
-        }),
-      );
-    }
-
     const resolved = await resolveNativeSession(
       app,
       opts,
@@ -223,14 +169,6 @@ export async function runV2Print(
       stderr,
     );
     restorePermission = resolved.restorePermission;
-
-    telemetryService.setContext({
-      sessionId: resolved.session.id,
-      model: resolved.telemetryModel,
-    });
-    if (firstLaunch) {
-      telemetryService.track2("first_launch");
-    }
 
     const goalCreate = parseHeadlessGoalCreate(opts.prompt!);
     if (goalCreate !== undefined) {
@@ -257,11 +195,6 @@ export async function runV2Print(
     }
     writeResumeHint(resolved.session.id, outputFormat, stdout, stderr);
 
-    telemetryService
-      .withContext({ sessionId: resolved.session.id })
-      .track2("exit", {
-        duration_ms: Date.now() - startedAt,
-      });
   } finally {
     await cleanup();
   }
@@ -271,7 +204,6 @@ interface ResolvedNativeSession {
   readonly session: ISessionScopeHandle;
   readonly agent: IAgentScopeHandle;
   readonly restorePermission: () => Promise<void>;
-  readonly telemetryModel: string | undefined;
   readonly goalModel: string | undefined;
 }
 
@@ -374,7 +306,6 @@ async function resolveNativeSession(
       session,
       agent,
       restorePermission,
-      telemetryModel: configuredModel(opts.model, currentModel, defaultModel),
       goalModel: configuredModel(opts.model, currentModel),
     };
   }
@@ -393,7 +324,6 @@ async function resolveNativeSession(
         session,
         agent,
         restorePermission,
-        telemetryModel: configuredModel(opts.model, currentModel, defaultModel),
         goalModel: configuredModel(opts.model, currentModel),
       };
     }
@@ -418,7 +348,6 @@ async function resolveNativeSession(
     session,
     agent,
     restorePermission: async () => {},
-    telemetryModel: model,
     goalModel: model,
   };
 }
@@ -498,9 +427,9 @@ async function runNativeTurn(
           cronNextFireAt: () => cronService.getNextFireTime(),
         });
       } catch (error) {
-        // A steered turn that fails fails the run (v1 parity). Anything else
-        // is best-effort: a wedged background task must not fail the (already
-        // completed) main turn.
+        // A steered turn that fails fails the run, matching the print contract;
+        // other background failures are best-effort and must not fail the
+        // already completed main turn.
         if (error instanceof PrintSteeredTurnFailedError) {
           writer.finish();
           throw error;
@@ -708,10 +637,9 @@ export interface PrintBackgroundPolicyInput {
   readonly warn: (message: string) => void;
   readonly now: () => number;
   /**
-   * Reports whether an agent goal is still `active`. v2 drives goal
-   * continuation as new turns (v1 keeps a single turn alive), so a `-p` goal
-   * run must stay alive until the goal leaves `active`, independent of the
-   * background policy.
+   * Reports whether an agent goal is still `active`. Goal continuation runs as
+   * new turns, so a `-p` goal run must stay alive until the goal leaves
+   * `active`, independent of the background policy.
    */
   readonly goalActive?: () => boolean;
   /**
@@ -721,7 +649,7 @@ export interface PrintBackgroundPolicyInput {
    * the fire to steer a new turn, then re-evaluating (a fired one-shot task
    * disappears; a recurring one reports its advanced next fire). Cron
    * liveness is independent of the background mode: it applies under
-   * `exit`/`drain` too (v1 parity). Omitted = no cron waiting.
+   * `exit`/`drain` too. Omitted = no cron waiting.
    */
   readonly cronNextFireAt?: () => number | null;
 }
@@ -735,7 +663,7 @@ export interface PrintBackgroundPolicyInput {
  *              the background mode; the goal summary drives the exit code.
  *  - cron    : while `cronNextFireAt` reports a future fire, keep waiting —
  *              the cron tick timer is unref'd, so the process must hold the
- *              event loop itself (v1 parity, independent of the mode). The
+ *              event loop itself (independent of the mode). The
  *              fire steers a new turn; a steered turn that does not complete
  *              fails the run. Each round re-reads the next fire time, so a
  *              fired one-shot task ends the wait while a recurring one keeps

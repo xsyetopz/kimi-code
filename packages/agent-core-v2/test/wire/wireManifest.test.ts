@@ -8,7 +8,7 @@
  */
 
 import { readFileSync } from "node:fs";
-import { Project } from "ts-morph";
+import ts from "typescript";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -24,15 +24,13 @@ describe("wire manifest", () => {
   }, 60_000);
 
   it("docs/wire-manifest.d.ts parses as TypeScript", () => {
-    const project = new Project({ useInMemoryFileSystem: true });
-    const sourceFile = project.createSourceFile(
+    const sourceFile = ts.createSourceFile(
       "wire-manifest.d.ts",
       readFileSync(MANIFEST_PATH, "utf-8"),
+      ts.ScriptTarget.Latest,
+      /* setParentNodes */ true,
+      ts.ScriptKind.TS,
     );
-    // `parseDiagnostics` is internal in the compiler typings but populated at runtime.
-    const diagnostics = (
-      sourceFile.compilerNode as { parseDiagnostics?: readonly unknown[] }
-    ).parseDiagnostics;
-    expect(diagnostics ?? []).toEqual([]);
+    expect(sourceFile.parseDiagnostics ?? []).toEqual([]);
   });
 });

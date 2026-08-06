@@ -1,7 +1,7 @@
 /**
  * v2 import-context construction — pure functions that replicate, byte for
  * byte, the user message v1's `ContextMemory.importContext`
- * (`packages/agent-core/src/agent/context/index.ts`) appends for an
+ * (the previous context implementation) appends for an
  * `importContext` RPC, plus its validation and overflow rejection.
  *
  * Why a replica exists: the v2 engine has no import-context capability of its
@@ -10,8 +10,8 @@
  * estimator, the same model capabilities — are available, so the SDK composes
  * the v1 behavior on top of them. The wrapper format, the guidance text, and
  * the two XML escapers below are copied from v1 (`agent/core/src/agent/context`
- * and `agent-core/src/utils/xml-escape.ts`); keep them byte-identical with
- * those sources so a v1-written and a v2-written import reduce to the same
+ * and the shared XML escaping implementation); keep them byte-identical with
+ * those sources so a older and current import reduce to the same
  * history.
  */
 import { ErrorCodes, KimiError } from "#/compat";

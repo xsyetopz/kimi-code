@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
-  createKimiHarness,
+  createKimiHarnessV2,
   ImageLimits,
   KimiHarness,
   SDKRpcClientBase,
@@ -47,7 +47,7 @@ read_byte_budget = 65536
       "utf-8",
     );
 
-    const harness = createKimiHarness({ identity: TEST_IDENTITY, homeDir });
+    const harness = createKimiHarnessV2({ identity: TEST_IDENTITY, homeDir });
     try {
       // The core was constructed in-process; its owner-scoped [image] limits
       // must be readable on the harness for prompt-ingestion paths.
@@ -63,7 +63,7 @@ read_byte_budget = 65536
     const homeDir = await mkdtemp(join(tmpdir(), "kimi-sdk-harness-"));
     tempDirs.push(homeDir);
 
-    const harness = createKimiHarness({ identity: TEST_IDENTITY, homeDir });
+    const harness = createKimiHarnessV2({ identity: TEST_IDENTITY, homeDir });
     try {
       expect(harness.imageLimits).toBeInstanceOf(ImageLimits);
       expect(harness.imageLimits?.maxEdgePx()).toBe(2000);

@@ -38,7 +38,6 @@ const ICON_EXEMPT = new Set([
   "components/ui/MoonSpinner.vue",
   "components/ui/ContextRing.vue",
   "components/ui/AuthStateIcon.vue",
-  "components/GlobalLoading.vue",
 ]);
 
 // Files entirely exempt from the §06 scan. The design-system showcase view is

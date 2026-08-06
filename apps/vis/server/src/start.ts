@@ -33,7 +33,11 @@ export async function startVisServer(
   const host = opts.host ?? resolveHost();
   const authToken = opts.authToken ?? resolveVisAuthToken(host);
   const homeDir = opts.homeDir ?? resolveKimiCodeHome();
-  const app = await createApp({ authToken, homeDir, webAsset: opts.webAsset });
+  const app = await createApp({
+    homeDir,
+    ...(authToken === undefined ? {} : { authToken }),
+    ...(opts.webAsset === undefined ? {} : { webAsset: opts.webAsset }),
+  });
   const port = opts.port ?? resolvePort();
 
   return new Promise<StartedVisServer>((resolveStarted, rejectStarted) => {

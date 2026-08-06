@@ -2,7 +2,7 @@ import {
   isInsideTmux,
   supportsOsc9Notification,
   supportsTerminalProgress,
-} from "./terminal-notification";
+} from "./terminal-notification"; // DEPRECATED (pi-tui types reused here, no migration needed)
 
 export interface TerminalState {
   notificationKeys: Set<string>;

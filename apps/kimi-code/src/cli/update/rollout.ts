@@ -227,9 +227,9 @@ export async function appendRolloutDecisionLog(
 }
 
 /**
- * Stable per-installation id used for bucketing when telemetry has already
- * minted one. Missing ids stay ephemeral here so update preflight never
- * creates the telemetry device_id before telemetry can emit first_launch.
+ * Stable per-installation id used for staged-update bucketing when one already
+ * exists. Missing ids stay ephemeral so update preflight never writes a new
+ * identifier solely to evaluate an update.
  */
 export function resolveUpdateDeviceId(): string {
   return readKimiDeviceId(resolveKimiHome()) ?? randomUUID();

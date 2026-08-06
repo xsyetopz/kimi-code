@@ -323,6 +323,7 @@ export function classifyBaseApiError(message: string): ChatProviderError {
 
 const CONTEXT_OVERFLOW_MESSAGE_PATTERNS = [
   /context[ _-]?length/,
+  /context[ _-]?limit\s+exceeded/,
   /(?:context[ _-]?window.*exceed|exceed.*context[ _-]?window)/,
   /maximum context/,
   /exceed(?:ed|s|ing)?\s+(?:the\s+)?max(?:imum)?\s+tokens?/,

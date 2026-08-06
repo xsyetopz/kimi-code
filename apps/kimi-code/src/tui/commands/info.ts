@@ -22,7 +22,6 @@ import {
   FEEDBACK_STATUS_SUBMITTING,
   FEEDBACK_STATUS_SUCCESS,
   FEEDBACK_STATUS_UPLOAD_FAILED,
-  FEEDBACK_TELEMETRY_EVENT,
   feedbackIdLine,
   feedbackSessionLine,
   withFeedbackVersionPrefix,
@@ -105,7 +104,6 @@ export async function handleFeedbackCommand(
     stopSpinner({ ok: true, label: FEEDBACK_STATUS_SUCCESS });
     host.showStatus(feedbackSessionLine(host.state.appState.sessionId));
     host.showStatus(feedbackIdLine(res.feedbackId));
-    host.track(FEEDBACK_TELEMETRY_EVENT);
     if (attachmentFailed) {
       host.showStatus(FEEDBACK_STATUS_UPLOAD_FAILED);
     }

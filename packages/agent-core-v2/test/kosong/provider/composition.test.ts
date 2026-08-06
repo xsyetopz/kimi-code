@@ -110,6 +110,8 @@ registerProviderDefinition({
 const ENV_KEYS = [
   "OPENAI_API_KEY",
   "OPENAI_BASE_URL",
+  "OPENCODE_API_KEY",
+  "GITHUB_TOKEN",
   "KIMI_API_KEY",
   "KIMI_BASE_URL",
   "GOOGLE_API_KEY",
@@ -479,6 +481,21 @@ describe("resolveProviderEndpoint", () => {
     });
   });
 
+  it("resolves the OpenCode Zen endpoint with API-key fallback precedence", () => {
+    expect(
+      resolveProviderEndpoint("opencode", {
+        OPENCODE_ZEN_API_KEY: "zen-env-key",
+      }),
+    ).toEqual({
+      apiKey: "zen-env-key",
+      baseUrl: "https://opencode.ai/zen/v1",
+    });
+    expect(resolveProviderEndpoint("opencode", {})).toEqual({
+      apiKey: "public",
+      baseUrl: "https://opencode.ai/zen/v1",
+    });
+  });
+
   it("aggregates the google-genai chain with the legacy vertex precedence", () => {
     expect(
       resolveProviderEndpoint("google-genai", {
@@ -508,6 +525,130 @@ describe("resolveProviderEndpoint", () => {
 
   it("returns {} for unregistered vendors", () => {
     expect(resolveProviderEndpoint("no-such-vendor")).toEqual({});
+  });
+});
+
+describe("OpenCode Zen provider definition", () => {
+  it("uses the OpenAI transport with its own endpoint declaration", () => {
+    const definition = getProviderDefinition("opencode", "openai");
+    expect(definition).toMatchObject({
+      id: "opencode",
+      baseProtocol: "openai",
+      traits: [
+        {
+          endpoint: expect.any(Function),
+        },
+      ],
+      endpoint: {
+        apiKeyEnv: ["OPENCODE_API_KEY", "OPENCODE_ZEN_API_KEY"],
+        defaultApiKey: "public",
+        defaultBaseUrl: "https://opencode.ai/zen/v1",
+      },
+    });
+    expect(definition?.modelSource).toBeUndefined();
+
+    process.env["OPENCODE_API_KEY"] = "zen-process-key";
+    const provider = registry.createChatProvider({
+      protocol: "openai",
+      providerType: "opencode",
+      modelName: "big-pickle",
+    });
+    expect(Reflect.get(provider, "_apiKey")).toBe("zen-process-key");
+    expect(Reflect.get(provider, "_baseUrl")).toBe(
+      "https://opencode.ai/zen/v1",
+    );
+
+    const savedKey = process.env["OPENCODE_API_KEY"];
+    delete process.env["OPENCODE_API_KEY"];
+    try {
+      const freeProvider = registry.createChatProvider({
+        protocol: "openai",
+        providerType: "opencode",
+        modelName: "north-mini-code-free",
+      });
+      expect(Reflect.get(freeProvider, "_apiKey")).toBe("public");
+    } finally {
+      if (savedKey === undefined) delete process.env["OPENCODE_API_KEY"];
+      else process.env["OPENCODE_API_KEY"] = savedKey;
+    }
+  });
+
+  it("keeps OpenCode Go on its distinct subscription endpoint", () => {
+    const definition = getProviderDefinition("opencode-go", "openai");
+    expect(definition).toMatchObject({
+      id: "opencode-go",
+      baseProtocol: "openai",
+      endpoint: {
+        apiKeyEnv: ["OPENCODE_API_KEY", "OPENCODE_ZEN_API_KEY"],
+        defaultBaseUrl: "https://opencode.ai/zen/go/v1",
+      },
+    });
+    expect(
+      resolveProviderEndpoint("opencode-go", {
+        OPENCODE_API_KEY: "shared-opencode-key",
+      }),
+    ).toEqual({
+      apiKey: "shared-opencode-key",
+      baseUrl: "https://opencode.ai/zen/go/v1",
+    });
+  });
+});
+
+describe("GitHub Copilot provider definition", () => {
+  it("uses the OpenAI transport with the GitHub token endpoint declaration", () => {
+    const definition = getProviderDefinition("github-copilot", "openai");
+    expect(definition).toMatchObject({
+      id: "github-copilot",
+      baseProtocol: "openai",
+      traits: [
+        {
+          endpoint: expect.any(Function),
+        },
+      ],
+      endpoint: {
+        apiKeyEnv: ["COPILOT_GITHUB_TOKEN", "GH_TOKEN", "GITHUB_TOKEN"],
+        defaultBaseUrl: "https://api.githubcopilot.com",
+      },
+    });
+    expect(definition?.modelSource).toBeUndefined();
+
+    expect(
+      resolveProviderEndpoint("github-copilot", {
+        GITHUB_TOKEN: "gh-token",
+      }),
+    ).toEqual({
+      apiKey: "gh-token",
+      baseUrl: "https://api.githubcopilot.com",
+    });
+    process.env["GITHUB_TOKEN"] = "gh-process-token";
+    const provider = registry.createChatProvider({
+      protocol: "openai",
+      providerType: "github-copilot",
+      modelName: "gpt-4o",
+    });
+    expect(Reflect.get(provider, "_apiKey")).toBe("gh-process-token");
+    expect(Reflect.get(provider, "_baseUrl")).toBe(
+      "https://api.githubcopilot.com",
+    );
+  });
+
+  it("honors Copilot CLI token precedence", () => {
+    expect(
+      resolveProviderEndpoint("github-copilot", {
+        COPILOT_GITHUB_TOKEN: "copilot-token",
+        GH_TOKEN: "gh-token",
+        GITHUB_TOKEN: "github-token",
+      }),
+    ).toEqual({
+      apiKey: "copilot-token",
+      baseUrl: "https://api.githubcopilot.com",
+    });
+    expect(
+      resolveProviderEndpoint("github-copilot", {
+        GH_TOKEN: "gh-token",
+        GITHUB_TOKEN: "github-token",
+      }).apiKey,
+    ).toBe("gh-token");
   });
 });
 

@@ -89,7 +89,7 @@ export type PermissionMode = "yolo" | "manual" | "auto";
 
 /**
  * Trust state of a workspace directory. Only meaningful on the agent-core-v2
- * engine; the v1 engine has no workspace-trust concept and reports
+ * engine; the previous engine has no workspace-trust concept and reports
  * `{ trusted: true, gatedMcpServers: [] }`.
  */
 export interface WorkspaceTrustInfo {

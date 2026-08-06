@@ -25,6 +25,17 @@ export interface IModelOAuthTokens {
     oauthRef: OAuthRef,
     options?: { readonly force?: boolean },
   ): Promise<string>;
+
+  /**
+   * Resolve a provider-owned token when its official SDK keeps credentials
+   * outside kimi's serialized OAuthRef config (for example OpenCode account
+   * OAuth, Codex, or Copilot). Optional so existing hosts can remain key-only.
+   */
+  getExternalAccessToken?(
+    provider: string,
+    providerType?: string,
+    options?: { readonly force?: boolean },
+  ): Promise<string | undefined>;
 }
 
 export const IModelOAuthTokens: ServiceIdentifier<IModelOAuthTokens> =

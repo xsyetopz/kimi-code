@@ -16,7 +16,8 @@
 
 import { appendFileSync, mkdirSync } from "node:fs";
 import path from "node:path";
-import type { Component, TUI } from "@moonshot-ai/pi-tui";
+// DEPRECATED: pi-tui imports replaced by @moonshot-ai/kimi-code-tui
+import type { Component, TUI } from "@moonshot-ai/kimi-code-tui";
 
 /** Rolling sample cap for the percentile window. */
 const MAX_SAMPLES = 500;

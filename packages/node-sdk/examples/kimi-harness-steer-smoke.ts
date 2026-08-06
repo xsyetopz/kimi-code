@@ -1,4 +1,4 @@
-import { createKimiHarness } from "@moonshot-ai/kimi-code-sdk";
+import { createKimiHarnessV2 } from "@moonshot-ai/kimi-code-sdk";
 
 import {
   smokeIdentityFromEnv,
@@ -11,7 +11,7 @@ const PROMPT =
 const STEER = "Also include cancellation and permission-mode checks.";
 
 async function main(): Promise<void> {
-  const harness = createKimiHarness({ identity: smokeIdentityFromEnv() });
+  const harness = createKimiHarnessV2({ identity: smokeIdentityFromEnv() });
 
   try {
     const session = await createConfiguredSession(harness);

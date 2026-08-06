@@ -9,7 +9,7 @@
  * owning domain and resolves each independently. The v1 top-level field
  * names line up 1:1 with the v2 camelCase domain names (both derive from
  * the same snake_case TOML keys), so the read mapping is a field pick, not
- * a reshape. Gaps that cannot be mapped faithfully (the v1-only `raw`
+ * a reshape. Gaps that cannot be mapped faithfully (the compatibility-only `raw`
  * passthrough document, v2's materialized section defaults) are pinned in
  * the parity test's `KNOWN_DIFFS`, not papered over here.
  */

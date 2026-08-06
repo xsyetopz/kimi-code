@@ -48,8 +48,6 @@ const props = defineProps<{
   configSaving?: boolean;
   /** Server version reported by GET /api/v1/meta. */
   serverVersion?: string;
-  /** Backend engine generation from GET /api/v1/meta ('v1' legacy, 'v2' kap-server). */
-  backend?: 'v1' | 'v2';
 }>();
 
 const emit = defineEmits<{
@@ -82,9 +80,6 @@ const tabs: { id: SettingsTab; labelKey: string }[] = [
 ];
 
 const daemonEndpoint = serverEndpointLabel();
-const backendLabel = computed(() =>
-  props.backend === 'v2' ? 'v2 (kap-server)' : 'v1 (server)',
-);
 const permissionModes = ['manual', 'yolo', 'auto'] as const;
 // Reuse the Composer's permission labels (status.permission*) so the
 // default-permission names stay in sync with the toolbar.
@@ -204,14 +199,6 @@ function thinkingEnabled(): boolean {
 
 function toggleDefaultThinking(): void {
   emit('updateConfig', { thinking: { enabled: !thinkingEnabled() } } as Partial<AppConfig>);
-}
-
-// Telemetry is opt-out: undefined and `true` both mean enabled, only explicit
-// `false` disables it. Toggle based on that effective state so an unset value
-// (displayed as on) flips to `false` instead of writing a redundant `true`.
-function toggleTelemetry(): void {
-  const enabled = props.config?.telemetry !== false;
-  emit('updateConfig', { telemetry: !enabled } as Partial<AppConfig>);
 }
 
 function setTab(tab: SettingsTab): void {
@@ -565,25 +552,8 @@ function archiveTime(iso: string): string {
               <span class="rvalue mono">{{ daemonEndpoint }}</span>
             </div>
             <div class="row">
-              <span class="rlabel">{{ t('settings.backend') }}</span>
-              <span class="rvalue mono">{{ backendLabel }}</span>
-            </div>
-            <div class="row">
               <span class="rlabel">{{ t('settings.serverVersion') }}</span>
               <span class="rvalue mono">{{ serverVersion || '-' }}</span>
-            </div>
-            <div v-if="config" class="row">
-              <span class="rlabel">
-                {{ t('settings.telemetry') }}
-                <span class="hint">{{ t('settings.telemetryHint') }}</span>
-                <span class="hint">{{ t('settings.telemetryRestartHint') }}</span>
-              </span>
-              <Switch
-                :model-value="config.telemetry !== false"
-                :disabled="configSaving"
-                :label="t('settings.telemetry')"
-                @update:model-value="toggleTelemetry()"
-              />
             </div>
             <div class="row">
               <span class="rlabel">

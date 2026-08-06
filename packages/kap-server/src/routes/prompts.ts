@@ -31,7 +31,6 @@ import {
   type PromptQueueSnapshot,
   ISessionContext,
   resumeSessionById,
-  ITelemetryService,
   applyPromptMetadataUpdate,
   buildImageCompressionCaption,
   buildUnsupportedImageNotice,
@@ -48,7 +47,6 @@ import {
   sessionMediaOriginalsDir,
   unsupportedImageMimeFromUrl,
   type GetResult,
-  type ImageCompressionTelemetry,
   type ISessionScopeHandle,
   type Scope,
 } from "@moonshot-ai/agent-core-v2";
@@ -301,15 +299,11 @@ export function registerPromptsRoutes(app: PromptRouteHost, core: Scope): void {
         // internal `kimi-file://` reference; the engine resolves them to a
         // provider form (upload / inline / `<video path>` tag) at request
         // time, so the edge no longer uploads.
-        const telemetry = core.accessor
-          .get(ITelemetryService)
-          .withContext({ sessionId: session_id });
         const resolvedBody = await resolvePromptMediaFiles(
           req.body,
           core.accessor.get(IFileService),
           core.accessor.get(IBootstrapService).cacheDir,
           {
-            telemetry,
             resolveOriginalsDir: async () => {
               const session = await resumeSessionById(
                 core.accessor,
@@ -640,8 +634,6 @@ interface ResolvePromptMediaOptions {
    * the shared cache dir.
    */
   readonly resolveAttachmentsDir?: () => Promise<string | undefined>;
-  /** Report an `image_compress` event per compressed prompt image. */
-  readonly telemetry?: ITelemetryService;
 }
 
 async function resolvePromptMediaFiles(
@@ -673,12 +665,6 @@ async function resolvePromptMediaFiles(
     }
     return attachmentsDir ?? cacheDir;
   };
-  const telemetryFor = (
-    source: string,
-  ): ImageCompressionTelemetry | undefined =>
-    options.telemetry === undefined
-      ? undefined
-      : { client: options.telemetry, source };
   const content: PromptSubmission["content"] = [];
   for (const part of body.content) {
     // Inline base64 image: compress the payload in place. This mirrors the v1
@@ -724,9 +710,7 @@ async function resolvePromptMediaFiles(
       const compressed = await compressBase64ForModel(
         part.source.data,
         canonicalMime,
-        {
-          telemetry: telemetryFor("prompt_inline"),
-        },
+        {},
       );
       if (compressed.changed) {
         const dir = await resolveOriginalsDir();
@@ -854,9 +838,7 @@ async function resolvePromptMediaFiles(
       // Forward the canonical MIME (image/jpg → image/jpeg, case/whitespace)
       // — strict provider whitelists reject the raw alias.
       mediaType = normalizeImageMime(mediaType);
-      const compressed = await compressImageForModel(data, mediaType, {
-        telemetry: telemetryFor("prompt_file"),
-      });
+      const compressed = await compressImageForModel(data, mediaType);
       if (compressed.changed) {
         const dir = await resolveOriginalsDir();
         const originalPath = await persistOriginalImage(data, mediaType, {

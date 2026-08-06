@@ -1,0 +1,76 @@
+# kimi-code-tui Implementation Plan
+
+## Status: Early Phase - Foundation Created
+
+### Delivered Components
+
+#### 1. Core Types (packages/kimi-code-tui/src/types.ts)
+- `Component` - Core interface matching pi-tui
+- `Focusable` - Cursor positioning semantics
+- `OverlayHandle` - Modal overlay management
+- `OverlayOptions` - Configurable positioning/sizing
+- All ANSI sequence markers (`CURSOR_MARKER`, `OverlayAnchor`, `SizeValue`)
+
+#### 2. Utility Functions
+- `visibleWidth(text, limit?)` - Handles ANSI escape sequences
+- `asciiVisibleWidth(text, limit)` - Fast path optimization
+- `sliceByColumn(text, col)` - Safe character boundary splitting
+
+#### 3. Core Hooks
+- `useTerminalDimensions()` - Viewport sizing in React
+- `useInputMode(mode?)` - Text vs navigation vs autocomplete states
+
+#### 4. Graphics Primitives
+- `createHorizontalRule(props?)` - Box-based renderable line
+- `createSpacer(lines?)` - Empty line generation
+
+#### 5. Package Entry
+- `packages/kimi-code-tui/index.ts` - Public API exports
+- `packages/kimi-code-tui/package.json` - Bun-first deps (React 19, Ink 7)
+
+### Remaining Work (to be executed)
+
+1. **Component Implementations** (~30 components)
+   - `Box.tsx` - Layout container with flex/align props
+   - `Static.tsx` - Once-rendered content cache
+   - `Parallax.tsx` - Scrollback history view
+   - `Cursor.tsx` - Hardware cursor positioning
+   - `Scrollview.tsx` - Virtual scrolling container
+
+2. **Editor Integration**
+   - `useInkEditor.ts` - Displace pi-tui's `editor-component.ts` logic
+   - `TextEditor.tsx` - Replace `editor-component.ts` with React+Ink version
+   - Placeholder extractions + insert-like commands
+
+3. **Kitty Image Support** (optional, fallback to CSI)
+   - Find `react-kitty-images` or implement via raw CSI
+   - Keep as non-blocking if library is unmaintained
+
+4. **Migration Script**
+   - `bun run packages/kimi-code-tui/migrate.ts`
+   - Substitute `@moonshot-ai/pi-tui` imports to `@moonshot-ai/kimi-code-tui`
+   - Replace `Component.*` instantiations with React components
+   - Update type imports in kimi-code/src/tui/
+
+5. **Test Suite**
+   - Component-level tests matching pi-tui coverage
+   - E2E smoke test: run `kimi` TUI and assert no crashes
+   - Benchmark: startup latency ≤ 15% increase vs pi-tui baseline
+
+### Dependencies Constraint
+
+**Use bun/bunx everywhere**. Node.js only as absolute last resort after bun fails.
+
+### Success Criteria
+
+- [ ] All pi-tui import statements swapped to `@moonshot-ai/kimi-code-tui`
+- [ ] Start TUI without `--renderer ink` flag (default becomes kimi-code-tui)
+- [ ] Test suite passes: 84 overflow tests + TUI smoke tests
+- [ ] Startup latency ≤ 15% vs pi-tui baseline
+- [ ] Packages/pi-tui deleted from monorepo
+
+### Notes on Destructive Refactor
+
+- External editor (Ctrl+E, Ctrl+O) integration: drop into kimi-web/vis paths
+- Kitty image sequences: can fallback to raw CSI sequences if `react-kitty-images` is unmaintained
+- Theme system: use `packages/kimi-code/src/tui/theme/` contracts (unchanged)

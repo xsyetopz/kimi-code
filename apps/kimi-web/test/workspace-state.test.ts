@@ -86,7 +86,6 @@ function createState(): ExtendedState {
     connected: true,
     serverVersion: "",
     dangerousBypassAuth: false,
-    backend: "v1",
     workspaceName: "kimi-web",
     connection: "connected",
     permission: "manual",
@@ -1270,7 +1269,6 @@ describe("useWorkspaceState — first-load auth gate", () => {
       serverVersion: "0.0.0",
       openInApps: [],
       dangerousBypassAuth: false,
-      backend: "v1",
     });
     apiMock.getConfig.mockReset().mockResolvedValue({});
     apiMock.listWorkspaces.mockReset().mockResolvedValue([]);
@@ -1404,7 +1402,6 @@ describe("useWorkspaceState — session list loading", () => {
       serverVersion: "0.0.0",
       openInApps: [],
       dangerousBypassAuth: false,
-      backend: "v1",
     });
     apiMock.getConfig.mockReset().mockResolvedValue({});
     apiMock.listWorkspaces.mockReset().mockResolvedValue([]);
@@ -1705,19 +1702,18 @@ describe("useWorkspaceState — session list loading", () => {
   });
 });
 
-// /meta re-read on every WS (re)connect — keeps version / backend truthful
-// across backend restarts and dev-proxy backend switches.
+// /meta re-read on every WS reconnect keeps server metadata truthful across
+// server restarts.
 describe("useWorkspaceState — refreshServerMeta", () => {
   beforeEach(() => {
     apiMock.getMeta.mockReset();
   });
 
-  it("applies the meta payload including the v2 backend marker", async () => {
+  it("applies the meta payload", async () => {
     apiMock.getMeta.mockResolvedValue({
       serverVersion: "9.9.9",
       openInApps: ["finder"],
       dangerousBypassAuth: true,
-      backend: "v2",
     });
     const state = createState();
     const ws = useWorkspaceState(state, createDeps());
@@ -1727,18 +1723,15 @@ describe("useWorkspaceState — refreshServerMeta", () => {
     expect(state.serverVersion).toBe("9.9.9");
     expect(state.availableOpenInApps).toEqual(["finder"]);
     expect(state.dangerousBypassAuth).toBe(true);
-    expect(state.backend).toBe("v2");
   });
 
   it("keeps the previous meta when /meta fails", async () => {
     apiMock.getMeta.mockRejectedValue(new Error("connection refused"));
     const state = createState();
-    state.backend = "v2";
     const ws = useWorkspaceState(state, createDeps());
 
     await ws.refreshServerMeta();
 
-    expect(state.backend).toBe("v2");
     expect(state.serverVersion).toBe("");
   });
 });

@@ -40,10 +40,6 @@ export default {
   defaultPlanModeHint: "Whether new sessions start in plan mode",
   mergeSkills: "Merge all available skills",
   mergeSkillsHint: "Show project, plugin, and user skills together",
-  telemetry: "Improve product with usage data",
-  telemetryHint:
-    "When on, we collect anonymous interaction data (such as clicks, interruptions, and feature usage) to improve the product experience. You can turn it off at any time.",
-  telemetryRestartHint: "Takes effect after restarting the service.",
   credentialReady: "Credential configured",
   credentialMissing: "Missing credential",
   configUnavailable:
@@ -51,7 +47,6 @@ export default {
   advanced: "Advanced",
   build: "Build",
   serverVersion: "Server version",
-  backend: "Backend",
   exportLog: "Troubleshooting log",
   logHint: "Enable with ?debug=1 to capture",
   exportLogBtn: "Export log",

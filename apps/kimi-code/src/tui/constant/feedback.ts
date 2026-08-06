@@ -1,5 +1,5 @@
 /**
- * Constants for the /feedback command — endpoints, telemetry keys, and
+ * Constants for the /feedback command — endpoints and
  * the status messages shown around the feedback submission flow.
  *
  * Dialog-internal copy (the box title, subtitle, footer) lives next to
@@ -11,7 +11,6 @@ import { FEEDBACK_VERSION_PREFIX } from "#/constant/app";
 
 export {
   FEEDBACK_ISSUE_URL,
-  FEEDBACK_TELEMETRY_EVENT,
   FEEDBACK_VERSION_PREFIX,
 } from "#/constant/app";
 

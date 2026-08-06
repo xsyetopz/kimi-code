@@ -10,51 +10,24 @@
 
 import {
   Container,
-  matchesKey,
-  Key,
-  decodeKittyPrintable,
   type Focusable,
+  Key,
+  matchesKey,
   truncateToWidth,
-} from "@moonshot-ai/pi-tui";
+} from "@moonshot-ai/kimi-code-tui";
 import { currentTheme } from "#/tui/theme";
+import { printableChar } from "../../utils/printable-key.ts";
+import {
+  DEFAULT_KEYBOARD_SHORTCUTS as DEFAULT_KEYBOARD_SHORTCUTS_DATA,
+  formatHelpPanelCommandLabel,
+  type HelpPanelCommand,
+  type KeyboardShortcut,
+  sortHelpPanelCommands,
+} from "./help-panel-data.ts";
 
-export interface KeyboardShortcut {
-  readonly keys: string;
-  readonly description: string;
-}
-
-export interface HelpPanelCommand {
-  readonly name: string;
-  readonly aliases: readonly string[];
-  readonly description: string;
-}
-
-/** Static list — keep in sync with the global editor bindings. */
-export const DEFAULT_KEYBOARD_SHORTCUTS: readonly KeyboardShortcut[] = [
-  { keys: "Shift-Tab", description: "Toggle plan mode" },
-  {
-    keys: "Ctrl-G",
-    description: "Edit in external editor ($VISUAL / $EDITOR)",
-  },
-  {
-    keys: "Ctrl-O",
-    description: "Toggle tool output / compaction summary expansion",
-  },
-  {
-    keys: "Ctrl-T",
-    description: "Expand / collapse the todo list (when truncated)",
-  },
-  {
-    keys: "Ctrl-S",
-    description: "Steer — inject a follow-up during streaming",
-  },
-  { keys: "Shift-Enter / Ctrl-J", description: "Insert newline" },
-  { keys: "Ctrl-C", description: "Interrupt stream / clear input" },
-  { keys: "Ctrl-D", description: "Exit (on empty input)" },
-  { keys: "Esc", description: "Close dialogs / interrupt streaming" },
-  { keys: "↑ / ↓", description: "Browse input history" },
-  { keys: "Enter", description: "Submit" },
-];
+export type { HelpPanelCommand, KeyboardShortcut } from "./help-panel-data.ts";
+export const DEFAULT_KEYBOARD_SHORTCUTS: readonly KeyboardShortcut[] =
+  DEFAULT_KEYBOARD_SHORTCUTS_DATA;
 
 export interface HelpPanelOptions {
   readonly commands: readonly HelpPanelCommand[];
@@ -75,7 +48,7 @@ export class HelpPanelComponent extends Container implements Focusable {
   }
 
   handleInput(data: string): void {
-    const printable = decodeKittyPrintable(data) ?? data;
+    const printable = printableChar(data);
     if (
       matchesKey(data, Key.escape) ||
       matchesKey(data, Key.enter) ||
@@ -103,29 +76,22 @@ export class HelpPanelComponent extends Container implements Focusable {
   }
 
   override render(width: number): string[] {
-    const accent = (text: string) => currentTheme.fg("primary", text);
-    const dim = (text: string) => currentTheme.fg("textDim", text);
-    const muted = (text: string) => currentTheme.fg("textMuted", text);
-    const kbdColor = (text: string) => currentTheme.fg("warning", text);
-    const slashColor = (text: string) => currentTheme.fg("primary", text);
+    const accent = (text: string): string => currentTheme.fg("primary", text);
+    const dim = (text: string): string => currentTheme.fg("textDim", text);
+    const muted = (text: string): string => currentTheme.fg("textMuted", text);
+    const kbdColor = (text: string): string => currentTheme.fg("warning", text);
+    const slashColor = (text: string): string =>
+      currentTheme.fg("primary", text);
 
     const shortcuts = this.opts.shortcuts ?? DEFAULT_KEYBOARD_SHORTCUTS;
     const kbdWidth = Math.max(8, ...shortcuts.map((s) => s.keys.length));
-    const sortedCmds = [...this.opts.commands].toSorted(
-      compareSlashCommandsForDisplay,
-    );
-    const cmdLabels = sortedCmds.map((c) => {
-      const aliases =
-        c.aliases.length > 0
-          ? ` (${c.aliases.map((a) => "/" + a).join(", ")})`
-          : "";
-      return `/${c.name}${aliases}`;
-    });
+    const sortedCmds = sortHelpPanelCommands(this.opts.commands);
+    const cmdLabels = sortedCmds.map(formatHelpPanelCommandLabel);
     const cmdWidth = Math.max(12, ...cmdLabels.map((l) => l.length));
     const lines: string[] = [
       accent("─".repeat(width)),
       currentTheme.boldFg("primary", " help ") +
-        muted("· Esc / Enter / q to cancel · ↑↓ scroll"),
+        muted("· Esc / Enter / q to cancel · ↑↓ scroll · PgUp/PgDn page"),
       "",
       // Greeting
       `  ${dim("Sure, Kimi is ready to help! Just send a message to get started.")}`,
@@ -166,18 +132,4 @@ export class HelpPanelComponent extends Container implements Focusable {
     this.scrollTop = 0;
     return lines.map((line) => truncateToWidth(line, width));
   }
-}
-
-function compareSlashCommandsForDisplay(
-  a: HelpPanelCommand,
-  b: HelpPanelCommand,
-): number {
-  return (
-    getSlashCommandDisplayGroup(a.name) - getSlashCommandDisplayGroup(b.name) ||
-    a.name.localeCompare(b.name)
-  );
-}
-
-function getSlashCommandDisplayGroup(name: string): number {
-  return name.startsWith("skill:") ? 1 : 0;
 }

@@ -120,7 +120,10 @@ export async function listImportedIds(home: string): Promise<string[]> {
       return { id, mtime };
     }),
   );
-  return withMtime.toSorted((a, b) => b.mtime - a.mtime).map((x) => x.id);
+  return withMtime
+    .slice()
+    .sort((a, b) => b.mtime - a.mtime)
+    .map((x) => x.id);
 }
 
 export async function readImportMeta(

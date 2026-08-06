@@ -24,7 +24,6 @@ function parse(argv: string[]): CLIOptions {
     (opts) => {
       captured = opts;
     },
-    () => {},
   );
 
   program.exitOverride();
@@ -65,7 +64,6 @@ describe("CLI options parsing", () => {
       const program = createProgram(
         "1.2.3",
         () => {},
-        () => {},
       );
       program.exitOverride();
       program.configureOutput({
@@ -82,7 +80,6 @@ describe("CLI options parsing", () => {
       let output = "";
       const program = createProgram(
         "4.5.6",
-        () => {},
         () => {},
       );
       program.exitOverride();
@@ -108,7 +105,6 @@ describe("CLI options parsing", () => {
         () => {
           throw new Error("main action should not run");
         },
-        () => {},
         (entry, args) => {
           pluginRunnerCalls.push({ entry, args });
         },
@@ -426,7 +422,6 @@ describe("CLI options parsing", () => {
       const help = createProgram(
         "0.1.0-test",
         () => {},
-        () => {},
       ).helpInformation();
       const normalizedHelp = help.replaceAll(/\s+/g, " ");
 
@@ -558,16 +553,9 @@ describe("CLI options parsing", () => {
       );
     });
 
-    it("accepts the flags in prompt mode without the v2 engine flag", () => {
+    it("accepts agent profile flags in prompt mode", () => {
       const opts = parse(["-p", "hi", "--agent-file", "a.md"]);
       expect(validateOptions(opts, {}).uiMode).toBe("print");
-    });
-
-    it("accepts the flags in prompt mode with the v2 engine flag", () => {
-      const opts = parse(["-p", "hi", "--agent", "reviewer"]);
-      expect(
-        validateOptions(opts, { KIMI_CODE_EXPERIMENTAL_FLAG: "1" }).uiMode,
-      ).toBe("print");
     });
   });
 
@@ -593,7 +581,6 @@ describe("CLI options parsing", () => {
           throw new Error("main action should not run");
         },
         () => {},
-        () => {},
         () => {
           upgradeCalls += 1;
         },
@@ -617,7 +604,6 @@ describe("CLI options parsing", () => {
           throw new Error("main action should not run");
         },
         () => {},
-        () => {},
         () => {
           upgradeCalls += 1;
         },
@@ -637,7 +623,6 @@ describe("CLI options parsing", () => {
       const program = createProgram(
         "0.0.0",
         () => {},
-        () => {},
       );
       const commandNames: string[] = program.commands
         .filter((command) => !command.name().startsWith("__"))
@@ -645,38 +630,16 @@ describe("CLI options parsing", () => {
       expect(commandNames).toEqual([
         "export",
         "provider",
-        "acp",
+        "acp-v2",
         "web",
         "server",
         "login",
         "doctor",
         "vis",
-        "migrate",
         "upgrade",
       ]);
     });
 
-    it("registers acp-v2 when the experimental flag is enabled", () => {
-      const original = process.env["KIMI_CODE_EXPERIMENTAL_ACP_V2"];
-      process.env["KIMI_CODE_EXPERIMENTAL_ACP_V2"] = "1";
-      try {
-        const program = createProgram(
-          "0.0.0",
-          () => {},
-          () => {},
-        );
-        const commandNames: string[] = program.commands
-          .filter((command) => !command.name().startsWith("__"))
-          .map((command) => command.name());
-        expect(commandNames).toContain("acp-v2");
-      } finally {
-        if (original === undefined) {
-          delete process.env["KIMI_CODE_EXPERIMENTAL_ACP_V2"];
-        } else {
-          process.env["KIMI_CODE_EXPERIMENTAL_ACP_V2"] = original;
-        }
-      }
-    });
   });
 
   describe("rejected flags", () => {

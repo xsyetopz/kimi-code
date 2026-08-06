@@ -1,32 +1,8 @@
 /**
- * ⚠ PHASE 4 GAP PATCH — additive lower-layer fill-in, clearly marked.
+ * `kosong/provider` domain — side-effect registrations for standard provider
+ * transports and their endpoint/auth environment declarations.
  *
- * `kosong/provider` domain — side-effect module: endpoint-only provider
- * definitions for the four canonical vendors.
- *
- * Only the Kimi vendor definition existed before, so endpoint resolution
- * answered for `kimi` alone and the legacy config-env-bag fallbacks
- * (`[providers.x.env] OPENAI_API_KEY=…` etc.) had no registry home. Endpoint
- * resolution now goes through the definition registry — hardcoded
- * per-protocol env tables are abolished — so the four canonical vendors each
- * need a definition that declares their env chain. These declarations change
- * nothing else: each vendor's `baseProtocol` equals its protocol id and
- * (Google GenAI aside, see below) the trait list is empty, so adapter
- * identity, hook composition, and capability resolution are exactly as they
- * were for an unregistered vendor.
- *
- * No `defaultBaseUrl` is declared: construction-time defaults stay where they
- * always were (inside the bases / their SDKs), matching the legacy env-only
- * fallback semantics precisely.
- *
- * Google GenAI is the one definition with non-empty traits: Vertex AI is a
- * `providerOptions` mode of the `google-genai` base rather than a vendor of
- * its own, and two one-line endpoint traits keep the legacy vertex chain
- * precedence — `VERTEXAI_API_KEY` / `GOOGLE_VERTEX_BASE_URL` first,
- * `GOOGLE_API_KEY` / `GOOGLE_GEMINI_BASE_URL` as fallback — while plain
- * Gemini users without the vertex envs see exactly the old behavior.
- *
- * Like every contrib, this module is imported for effect only.
+ * Like every contribution module, this file is imported for effect only.
  */
 
 import { registerProviderDefinition } from "../providerDefinition";
@@ -46,6 +22,74 @@ registerProviderDefinition({
   baseProtocol: "openai",
   traits: [],
   endpoint: { apiKeyEnv: "OPENAI_API_KEY", baseUrlEnv: "OPENAI_BASE_URL" },
+});
+
+// OpenCode Zen speaks the OpenAI Chat Completions protocol. OpenCode's
+// account flow can provide either an OAuth bearer token or a copied API key;
+// Zen Free is a zero-cost model tier within this provider, not a separate
+// provider/auth owner. The public credential keeps that tier available
+// without login.
+registerProviderDefinition({
+  id: "opencode",
+  baseProtocol: "openai",
+  // The endpoint is repeated as a construction-time trait because the
+  // OpenAI base consumes endpoint declarations through composed traits. The
+  // definition-level copy remains the provider registry's introspection and
+  // env-bag resolution source of truth.
+  traits: [
+    {
+      endpoint: () => ({
+        apiKeyEnv: ["OPENCODE_API_KEY", "OPENCODE_ZEN_API_KEY"],
+        defaultApiKey: "public",
+        defaultBaseUrl: "https://opencode.ai/zen/v1",
+      }),
+    },
+  ],
+  endpoint: {
+    apiKeyEnv: ["OPENCODE_API_KEY", "OPENCODE_ZEN_API_KEY"],
+    defaultApiKey: "public",
+    defaultBaseUrl: "https://opencode.ai/zen/v1",
+  },
+});
+
+// OpenCode Go is a distinct subscription/catalog endpoint. It shares the
+// OpenCode account/API-key boundary but must not be collapsed into Zen because
+// model availability and billing are selected by the URL. It has no public
+// Zen-Free fallback.
+registerProviderDefinition({
+  id: "opencode-go",
+  baseProtocol: "openai",
+  traits: [
+    {
+      endpoint: () => ({
+        apiKeyEnv: ["OPENCODE_API_KEY", "OPENCODE_ZEN_API_KEY"],
+        defaultBaseUrl: "https://opencode.ai/zen/go/v1",
+      }),
+    },
+  ],
+  endpoint: {
+    apiKeyEnv: ["OPENCODE_API_KEY", "OPENCODE_ZEN_API_KEY"],
+    defaultBaseUrl: "https://opencode.ai/zen/go/v1",
+  },
+});
+
+// GitHub Copilot's OpenAI-compatible endpoint is authenticated with a GitHub
+// token. The Copilot login/runtime boundary stays outside the kosong layer.
+registerProviderDefinition({
+  id: "github-copilot",
+  baseProtocol: "openai",
+  traits: [
+    {
+      endpoint: () => ({
+        apiKeyEnv: ["COPILOT_GITHUB_TOKEN", "GH_TOKEN", "GITHUB_TOKEN"],
+        defaultBaseUrl: "https://api.githubcopilot.com",
+      }),
+    },
+  ],
+  endpoint: {
+    apiKeyEnv: ["COPILOT_GITHUB_TOKEN", "GH_TOKEN", "GITHUB_TOKEN"],
+    defaultBaseUrl: "https://api.githubcopilot.com",
+  },
 });
 
 registerProviderDefinition({

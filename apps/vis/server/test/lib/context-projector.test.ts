@@ -228,7 +228,7 @@ describe("context-projector", () => {
   // agent-core's `ContextMemory.appendLoopEvent` (`tool.result` case) stores
   // `createToolMessage(toolCallId, toolResultOutputForModel(event.result))`, NOT
   // the raw `event.result.output`. `toolResultOutputForModel`
-  // (`packages/agent-core/src/agent/context/index.ts` ~line 350) normalizes
+  // (the v2 context normalizer) normalizes
   // error / empty outputs with sentinel strings. The projector must replicate
   // that normalization so the model-view shows the content the model actually
   // received for failed / empty tool calls.

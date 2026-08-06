@@ -28,8 +28,8 @@ export function readKimiApiConfig(): KimiApiConfig {
 }
 
 // Default to SAME-ORIGIN so we never depend on CORS:
-//  - dev: the SPA is served by Vite; the Vite dev proxy forwards /v1, /healthz
-//    and /v1/ws to the server (see vite.config.ts), so the browser only ever
+//  - dev: the SPA is served by Vite; the Vite dev proxy forwards /api/v1
+//    to the server (see vite.config.ts), so the browser only ever
 //    talks to its own origin.
 //  - prod: `kimi web` serves this built SPA from the server itself, so the
 //    server's origin already is the API origin.
@@ -45,7 +45,9 @@ function defaultServerOrigin(): string {
 export function normalizeServerOrigin(value: string | undefined): string {
   const raw = value && value.trim() ? value : defaultServerOrigin();
   const url = new URL(raw);
-  url.pathname = url.pathname.replace(/\/v1\/?$/, "").replace(/\/$/, "");
+  url.pathname = url.pathname
+    .replace(/\/api\/v1\/?$/, "")
+    .replace(/\/$/, "");
   url.search = "";
   url.hash = "";
   return url.toString().replace(/\/$/, "");

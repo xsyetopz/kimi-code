@@ -547,6 +547,13 @@ export class ModelCatalog extends Disposable implements IModelCatalog {
 
   private buildAuthProvider(providerName: string, auth: ResolvedModelAuthMaterial): AuthProvider {
     if (auth.apiKey !== undefined) {
+      // OpenCode's Zen Free public credential is a deliberate no-login
+      // fallback. Prefer a cached OpenCode account token when one exists so
+      // an authenticated account can unlock the paid Zen catalog without
+      // changing the provider's public default.
+      if (auth.apiKey === 'public') {
+        return this.externalTokenAuthProvider(providerName, auth.apiKey);
+      }
       return new StaticAuthProvider(auth.apiKey);
     }
     if (auth.oauth !== undefined) {
@@ -563,7 +570,28 @@ export class ModelCatalog extends Disposable implements IModelCatalog {
         },
       };
     }
-    return new StaticAuthProvider(undefined);
+    // Provider-owned integrations (OpenCode Console, Codex, Copilot, …) may
+    // keep credentials in their official SDK store instead of serializing an
+    // OAuthRef into kimi config. Resolve that token provider only after the
+    // explicit apiKey/oauth paths so public/free API-key access remains the
+    // default where supported.
+    return this.externalTokenAuthProvider(providerName);
+  }
+
+  private externalTokenAuthProvider(providerName: string, fallbackApiKey?: string): AuthProvider {
+    const tokens = this.oauth;
+    const providerType = this.providers.get(providerName)?.type;
+    return {
+      canRefresh: true,
+      async getAuth(options): Promise<ProviderRequestAuth | undefined> {
+        const apiKey = await tokens.getExternalAccessToken?.(
+          providerName,
+          providerType,
+          { force: options?.force === true },
+        );
+        return { apiKey: apiKey ?? fallbackApiKey };
+      },
+    };
   }
 }
 

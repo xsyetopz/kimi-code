@@ -63,13 +63,11 @@
       # -------------------------------------------------------------------
       workspacePaths = [
         ./packages/acp-server
-        ./packages/agent-core
         ./packages/agent-core-v2
         ./packages/kap-server
         ./packages/kaos
         ./packages/klient
         ./packages/kosong
-        ./packages/migration-legacy
         ./packages/minidb
         ./packages/node-sdk
         ./packages/oauth
@@ -88,12 +86,10 @@
 
       workspaceNames = [
         "@moonshot-ai/acp-server"
-        "@moonshot-ai/agent-core"
         "@moonshot-ai/agent-core-v2"
         "@moonshot-ai/kap-server"
         "@moonshot-ai/kaos"
         "@moonshot-ai/kosong"
-        "@moonshot-ai/migration-legacy"
         "@moonshot-ai/minidb"
         "@moonshot-ai/kimi-code-sdk"
         "@moonshot-ai/kimi-code-oauth"

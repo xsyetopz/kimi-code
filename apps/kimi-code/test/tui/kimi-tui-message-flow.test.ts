@@ -1572,7 +1572,7 @@ command = "vim"
         model: "k2",
       }),
     );
-    expect(harness.track).toHaveBeenCalledWith("feedback_submitted", undefined);
+    expect(harness.track).not.toHaveBeenCalled();
     const transcript = stripSgr(renderTranscript(driver));
     expect(transcript).toContain("Feedback ID: 3");
   });

@@ -879,7 +879,6 @@ export function toAppConfig(wire: WireConfig): AppConfig {
     loopControl: wire.loop_control,
     background: wire.background,
     experimental: wire.experimental,
-    telemetry: wire.telemetry,
     raw: wire.raw,
   };
 }

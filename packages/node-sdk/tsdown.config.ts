@@ -20,9 +20,6 @@ export default defineConfig({
     ].join("\n"),
   },
   alias: {
-    "@moonshot-ai/kimi-code-sdk": fileURLToPath(
-      new URL("../agent-core/src/index.ts", import.meta.url),
-    ),
     "@moonshot-ai/kaos": fileURLToPath(
       new URL("../kaos/src/index.ts", import.meta.url),
     ),

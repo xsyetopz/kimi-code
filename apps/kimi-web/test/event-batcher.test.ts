@@ -713,7 +713,6 @@ describe("useKimiWebClient (resync integration)", () => {
         capabilities: {},
         openInApps: [],
         dangerousBypassAuth: false,
-        backend: "v2",
       })),
       getConfig: vi.fn(async () => ({
         providers: {},

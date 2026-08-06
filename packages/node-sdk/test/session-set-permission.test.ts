@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
-  createKimiHarness,
+  createKimiHarnessV2,
   type KimiError,
   type PermissionMode,
 } from "#/index";
@@ -24,7 +24,7 @@ describe("Session.setPermission", () => {
     async (mode: PermissionMode) => {
       const homeDir = await makeTempDir(tempDirs, "kimi-sdk-permission-home-");
       const workDir = await makeTempDir(tempDirs, "kimi-sdk-permission-work-");
-      const harness = createKimiHarness({ homeDir, identity: TEST_IDENTITY });
+      const harness = createKimiHarnessV2({ homeDir, identity: TEST_IDENTITY });
 
       try {
         const session = await harness.createSession({
@@ -54,7 +54,7 @@ describe("Session.setPermission", () => {
   it("rejects invalid permission modes", async () => {
     const homeDir = await makeTempDir(tempDirs, "kimi-sdk-permission-home-");
     const workDir = await makeTempDir(tempDirs, "kimi-sdk-permission-work-");
-    const harness = createKimiHarness({ homeDir, identity: TEST_IDENTITY });
+    const harness = createKimiHarnessV2({ homeDir, identity: TEST_IDENTITY });
 
     try {
       const session = await harness.createSession({
@@ -76,7 +76,7 @@ describe("Session.setPermission", () => {
   it("rejects after the session is closed", async () => {
     const homeDir = await makeTempDir(tempDirs, "kimi-sdk-permission-home-");
     const workDir = await makeTempDir(tempDirs, "kimi-sdk-permission-work-");
-    const harness = createKimiHarness({ homeDir, identity: TEST_IDENTITY });
+    const harness = createKimiHarnessV2({ homeDir, identity: TEST_IDENTITY });
 
     try {
       const session = await harness.createSession({

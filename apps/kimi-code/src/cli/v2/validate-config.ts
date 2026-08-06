@@ -1,10 +1,8 @@
 /**
- * Experimental v2 config.toml validation for `kimi doctor`.
+ * agent-core-v2 config.toml validation for `kimi doctor`.
  *
- * Loaded lazily (dynamic import) by the doctor command only when the
- * agent-core-v2 master switch (`KIMI_CODE_EXPERIMENTAL_FLAG`) is on, so the
- * v2 module graph stays off the default (v1) doctor path. Validation uses the
- * engine's own section registry instead of v1's whole-document strict schema:
+ * Validation uses the engine's own section registry instead of a whole-document
+ * strict schema:
  * importing the package root runs every built-in section's side-effect
  * registration ("import = register"), and `ConfigRegistry` is then
  * constructed directly — no DI container, no `ConfigService`, no file IO.
@@ -43,14 +41,12 @@ import {
  * Top-level domains the v2 engine reads via `IConfigService.get` / `inspect`
  * without registering a schema (free-form values, structurally validated
  * nowhere): `defaultModel` / `defaultProvider` (`kosongConfig` default
- * pointers), `modelOverrides` (`llmRequester` / `profile`), and `telemetry`
- * (read by the CLI itself).
+ * pointers) and `modelOverrides` (`llmRequester` / `profile`).
  */
 const SCHEMALESS_DOMAINS: ReadonlySet<string> = new Set([
   "defaultModel",
   "defaultProvider",
   "modelOverrides",
-  "telemetry",
 ]);
 
 interface V2ConfigValidationIssue {

@@ -820,7 +820,6 @@ export interface AppConfig {
   loopControl?: unknown;
   background?: unknown;
   experimental?: Record<string, boolean>;
-  telemetry?: boolean;
   raw?: Record<string, unknown>;
 }
 
@@ -851,7 +850,6 @@ export interface KimiWebApi {
     capabilities: Record<string, boolean>;
     openInApps: string[];
     dangerousBypassAuth: boolean;
-    backend: "v1" | "v2";
   }>;
   listSessions(
     input?: PageRequest & {
@@ -1102,7 +1100,8 @@ export interface KimiWebApi {
     defaultModel: string | null;
     managedProvider: { status: string } | null;
   }>;
-  startOAuthLogin(): Promise<OAuthLoginStartResult>;
+  /** Start the selected provider's OAuth flow; omitted provider keeps Kimi's default. */
+  startOAuthLogin(provider?: string): Promise<OAuthLoginStartResult>;
   pollOAuthLogin(): Promise<{
     flowId: string;
     status: "pending" | "authenticated" | "expired" | "cancelled";

@@ -593,11 +593,11 @@ export function useModelProviderState(
     }
   }
 
-  /** Start managed Kimi OAuth device flow. Returns flow data or null on error. */
-  async function startOAuthLogin(): Promise<OAuthLoginStartResult | null> {
+  /** Start the selected provider's OAuth device flow; omitted provider keeps Kimi's default. */
+  async function startOAuthLogin(provider?: string): Promise<OAuthLoginStartResult | null> {
     try {
       const api = getKimiWebApi();
-      return await api.startOAuthLogin();
+      return await api.startOAuthLogin(provider);
     } catch {
       return null;
     }

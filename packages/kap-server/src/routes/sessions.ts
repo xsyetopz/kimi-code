@@ -47,7 +47,7 @@
  * yields an empty list, matching v1's "no warning" case.
  *
  * **Wire fidelity**: mirrors v1's `toProtocolSession`
- * (`packages/agent-core/src/services/session/session.ts`), which populates
+ * (`the session domain`), which populates
  * only the index/metadata fields and returns placeholders for the heavy ones
  * (`agent_config:{model:''}`, `usage:zeros`, `permission_rules:[]`,
  * `message_count:0`, `last_seq:0`). v2 produces the same placeholder shape

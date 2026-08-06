@@ -178,10 +178,6 @@ function statusLabel(status: AppProvider['status']): string {
               <Icon name="user" size="sm" />
               {{ t('providers.loginKimi') }}
             </Button>
-            <Button variant="secondary" size="sm" @click="emit('openLogin', 'anthropic')">
-              <Icon name="user" size="sm" />
-              {{ t('providers.loginAnthropic') }}
-            </Button>
             <Button variant="primary" size="sm" @click="openAdd">
               <Icon name="plus" size="sm" />
               {{ t('providers.enterApiKey') }}

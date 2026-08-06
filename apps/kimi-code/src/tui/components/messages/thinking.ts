@@ -10,7 +10,7 @@ import {
   truncateToWidth,
   type Component,
   type TUI,
-} from "@moonshot-ai/pi-tui";
+} from "@moonshot-ai/kimi-code-tui";
 
 import {
   BRAILLE_SPINNER_FRAMES,

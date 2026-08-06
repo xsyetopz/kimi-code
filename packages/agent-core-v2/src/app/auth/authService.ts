@@ -5,11 +5,13 @@
  * Owns the device-code OAuth flows and the auth readiness view; reads and
  * writes provider configuration through `provider`, refreshes the managed
  * OAuth provider's server-side model configuration through `config`, publishes
- * model-catalog changes through `event`, reports through `telemetry`,
+ * model-catalog changes through `event`,
  * logs through `log`, and delegates
  * the device-code protocol, token storage, and token refresh to `IOAuthToolkit`
  * (provided by `OAuthToolkitService` over `@moonshot-ai/kimi-code-oauth`,
- * which locates token storage through `bootstrap`). Bound at App scope.
+ * which locates token storage through `bootstrap`). Optional external provider
+ * adapters are dispatched through the provider-auth integration registry and
+ * are not linked into core. Bound at App scope.
  */
 
 import { randomUUID } from 'node:crypto';
@@ -70,7 +72,10 @@ import {
   type ProvidersChangedEvent,
 } from '#/kosong/provider/provider';
 import { isOAuthCatalogVendor } from '#/kosong/provider/providerDefinition';
-import { ITelemetryService } from '#/app/telemetry/telemetry';
+import {
+  getProviderAuthAdapter,
+  getProviderAuthIntegration,
+} from './providerAuth';
 
 import {
   AuthModelNotResolvedError,
@@ -81,6 +86,7 @@ import {
   IOAuthService,
   IOAuthToolkit,
 } from './auth';
+import { AuthErrors } from './errors';
 
 const TERMINAL_RETENTION_MS = 5 * 60 * 1000;
 const DEFAULT_DEVICE_EXPIRES_IN_SEC = 15 * 60;
@@ -110,7 +116,6 @@ export class OAuthService extends Disposable implements IOAuthService {
     @IOAuthToolkit private readonly toolkit: IOAuthToolkit,
     @IProviderService private readonly providerService: IProviderService,
     @IConfigService private readonly config: IConfigService,
-    @ITelemetryService private readonly telemetry: ITelemetryService,
     @ILogService private readonly log: ILogService,
     @IEventService private readonly events: IEventService,
   ) {
@@ -121,6 +126,21 @@ export class OAuthService extends Disposable implements IOAuthService {
   }
 
   async startLogin(provider = KIMI_CODE_PROVIDER_NAME): Promise<OAuthFlowStart> {
+    const integration = this.providerAuthIntegration(provider);
+    if (integration?.kind === 'external-oauth') {
+      const adapter = this.providerAuthAdapter(provider);
+      if (adapter === undefined) {
+        throw this.externalAuthUnsupported(provider, integration.displayName);
+      }
+      return adapter.startLogin(provider);
+    }
+    if (integration?.kind !== 'kimi-device-oauth') {
+      throw this.externalAuthUnsupported(
+        provider,
+        integration?.displayName ?? 'the provider',
+        integration?.kind,
+      );
+    }
     this.log.info('oauth startLogin: enter', { provider });
     const loginAuth = this.resolveLoginAuth(provider);
     this.log.info('oauth startLogin: resolved login auth', {
@@ -216,12 +236,28 @@ export class OAuthService extends Disposable implements IOAuthService {
   }
 
   getFlow(provider = KIMI_CODE_PROVIDER_NAME): OAuthFlowSnapshot | undefined {
+    const integration = this.providerAuthIntegration(provider);
+    if (integration?.kind === 'external-oauth') {
+      return this.providerAuthAdapter(provider)?.getFlow?.(provider);
+    }
+    if (integration?.kind === 'api-key') return undefined;
     const state = this.flows.get(provider);
     if (state === undefined || state.device === undefined) return undefined;
     return this.toSnapshot(state, state.device);
   }
 
   cancelLogin(provider = KIMI_CODE_PROVIDER_NAME): Promise<OAuthLoginCancelResponse> {
+    const integration = this.providerAuthIntegration(provider);
+    if (integration?.kind === 'external-oauth') {
+      const adapter = this.providerAuthAdapter(provider);
+      return (
+        adapter?.cancelLogin?.(provider) ??
+        Promise.resolve({ cancelled: false, status: 'cancelled' })
+      );
+    }
+    if (integration?.kind === 'api-key') {
+      return Promise.resolve({ cancelled: false, status: 'cancelled' });
+    }
     const state = this.flows.get(provider);
     if (state === undefined || state.status !== 'pending') {
       return Promise.resolve({ cancelled: false, status: state?.status ?? 'cancelled' });
@@ -232,6 +268,17 @@ export class OAuthService extends Disposable implements IOAuthService {
   }
 
   async logout(provider = KIMI_CODE_PROVIDER_NAME): Promise<OAuthLogoutResponse> {
+    const integration = this.providerAuthIntegration(provider);
+    if (integration?.kind === 'external-oauth') {
+      const adapter = this.providerAuthAdapter(provider);
+      if (adapter?.logout === undefined) {
+        throw this.externalAuthUnsupported(provider, integration.displayName);
+      }
+      return adapter.logout(provider);
+    }
+    if (integration?.kind === 'api-key') {
+      throw this.externalAuthUnsupported(provider, integration.displayName, integration.kind);
+    }
     const oauthRef =
       provider === KIMI_CODE_PROVIDER_NAME
         ? this.resolveRuntimeOAuthRef(provider)
@@ -243,6 +290,25 @@ export class OAuthService extends Disposable implements IOAuthService {
   }
 
   async status(provider = KIMI_CODE_PROVIDER_NAME): Promise<AuthStatus> {
+    const integration = this.providerAuthIntegration(provider);
+    if (integration?.kind === 'external-oauth') {
+      const adapter = this.providerAuthAdapter(provider);
+      if (adapter?.status !== undefined) {
+        return adapter.status(provider);
+      }
+      if (adapter !== undefined) {
+        // Official SDKs frequently expose only a token provider. Derive a
+        // read-only status from its cache hook without initiating login.
+        const token = await this.getCachedAccessToken(provider);
+        return token === undefined
+          ? { loggedIn: false }
+          : { loggedIn: true, provider };
+      }
+      throw this.externalAuthUnsupported(provider, integration.displayName);
+    }
+    if (integration?.kind === 'api-key') {
+      throw this.externalAuthUnsupported(provider, integration.displayName, integration.kind);
+    }
     this.log.info('oauth status: enter', { provider });
     const oauthRef = this.readOAuthRefOptional(provider);
     try {
@@ -259,11 +325,68 @@ export class OAuthService extends Disposable implements IOAuthService {
   }
 
   resolveTokenProvider(provider: string, oauthRef?: OAuthRef): BearerTokenProvider | undefined {
+    const integration = this.providerAuthIntegration(provider);
+    if (integration?.kind === 'external-oauth') {
+      return this.providerAuthAdapter(provider)?.resolveTokenProvider?.(
+        provider,
+        oauthRef,
+      );
+    }
+    if (integration?.kind === 'api-key') return undefined;
     return this.toolkit.tokenProvider(provider, this.resolveRuntimeOAuthRef(provider, oauthRef));
   }
 
-  getCachedAccessToken(provider: string, oauthRef?: OAuthRef): Promise<string | undefined> {
-    return this.toolkit.getCachedAccessToken(provider, this.resolveRuntimeOAuthRef(provider, oauthRef));
+  async getCachedAccessToken(
+    provider: string,
+    oauthRef?: OAuthRef,
+  ): Promise<string | undefined> {
+    const integration = this.providerAuthIntegration(provider);
+    if (integration?.kind === 'external-oauth') {
+      const adapter = this.providerAuthAdapter(provider);
+      if (adapter === undefined) return undefined;
+      const cached = adapter.getCachedAccessToken;
+      if (cached !== undefined) {
+        return cached(provider, oauthRef);
+      }
+      // Some official SDKs expose a token-provider object but not a separate
+      // cache-read method. Only use its explicit cache hook here: readiness
+      // checks must never trigger an OAuth/browser/device flow implicitly.
+      return adapter.resolveTokenProvider?.(provider, oauthRef)?.getCachedAccessToken?.();
+    }
+    if (integration?.kind === 'api-key') return undefined;
+    return this.toolkit.getCachedAccessToken(
+      provider,
+      this.resolveRuntimeOAuthRef(provider, oauthRef),
+    );
+  }
+
+  private externalAuthUnsupported(
+    provider: string,
+    displayName: string,
+    kind?: string,
+  ): Error2 {
+    const message =
+      kind === 'api-key'
+        ? `Provider '${provider}' uses API-key authentication; configure its ${displayName} API key instead of interactive login.`
+        : `Provider '${provider}' must use ${displayName} authentication; no official integration is installed.`;
+    return new Error2(
+      AuthErrors.codes.AUTH_PROVIDER_UNSUPPORTED,
+      message,
+      {
+        details: {
+          provider_id: provider,
+          auth_kind: kind ?? this.providerAuthIntegration(provider)?.kind ?? 'unknown',
+        },
+      },
+    );
+  }
+
+  private providerAuthIntegration(provider: string) {
+    return getProviderAuthIntegration(provider, this.providerService.get(provider)?.type);
+  }
+
+  private providerAuthAdapter(provider: string) {
+    return getProviderAuthAdapter(provider, this.providerService.get(provider)?.type);
   }
 
   getManagedUsage(provider = KIMI_CODE_PROVIDER_NAME): Promise<AuthManagedUsageResult> {
@@ -602,9 +725,14 @@ export class AuthSummaryService implements IAuthSummaryService {
 
   async summarize(): Promise<readonly AuthStatus[]> {
     const providers = this.providerService.list();
-    const oauthProviders = Object.entries(providers).filter(
-      ([, config]) => config.oauth !== undefined,
-    );
+    const oauthProviders = Object.entries(providers).filter(([name, config]) => {
+      if (config.oauth !== undefined) return true;
+      const integration = getProviderAuthIntegration(name, config.type);
+      return (
+        integration?.kind === 'external-oauth' &&
+        getProviderAuthAdapter(name, config.type) !== undefined
+      );
+    });
     this.log.info('auth summarize: enter', {
       total: Object.keys(providers).length,
       oauthProviders: oauthProviders.map(([name]) => name),
@@ -663,6 +791,15 @@ export class AuthSummaryService implements IAuthSummaryService {
       const token = await this.oauth.getCachedAccessToken(providerKey, auth.oauth);
       if (nonEmpty(token) !== undefined) return;
       throw new AuthTokenMissingError(providerKey);
+    }
+
+    // External official integrations (Codex, Copilot, …) own their token
+    // store and commonly do not serialize an OAuthRef into config. Ask the
+    // injected adapter's cache hook before declaring the provider unauthenticated.
+    const integration = getProviderAuthIntegration(providerName, provider?.type);
+    if (integration?.kind === 'external-oauth') {
+      const token = await this.oauth.getCachedAccessToken(providerName);
+      if (nonEmpty(token) !== undefined) return;
     }
     throw new AuthTokenMissingError(providerName);
   }

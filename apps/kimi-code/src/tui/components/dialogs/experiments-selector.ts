@@ -5,7 +5,7 @@ import {
   truncateToWidth,
   visibleWidth,
   type Focusable,
-} from "@moonshot-ai/pi-tui";
+} from "@moonshot-ai/kimi-code-tui";
 import type { ExperimentalFeatureState } from "@moonshot-ai/kimi-code-sdk";
 
 import { SELECT_POINTER } from "#/tui/constant/symbols";

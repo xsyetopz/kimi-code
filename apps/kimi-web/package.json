@@ -21,6 +21,8 @@
     "markstream-vue": "1.0.9-beta.1",
     "mermaid": "^11.15.0",
     "monaco-editor": "^0.55.1",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
     "shiki": "^4.3.0",
     "stream-diffs": "0.0.2",
     "stream-markdown": "0.0.16",
@@ -31,6 +33,9 @@
   "devDependencies": {
     "@iconify-json/ri": "^1.2.10",
     "@iconify-json/tabler": "^1.2.35",
+    "@types/react": "^19.1.2",
+    "@types/react-dom": "^19.1.2",
+    "@vitejs/plugin-react": "^4.4.1",
     "@vitejs/plugin-vue": "^5.2.4",
     "typescript": "6.0.2",
     "unplugin-icons": "^23.0.0",

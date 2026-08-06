@@ -7,8 +7,8 @@
  * engine writes it, there is no app-scope MCP config service, and the v2
  * OAuth orchestrator / connection manager live behind the session scope — so
  * the store, the `require*` guards, and the probe result shaping are ported
- * here byte-for-byte from v1 (`agent-core/src/mcp/global-config.ts` and the
- * helpers at the bottom of `agent-core/src/rpc/core-impl.ts`). Validation
+ * here byte-for-byte from v1 (the previous MCP config implementation and the
+ * helpers at the bottom of the previous RPC implementation). Validation
  * keeps using v1's own `McpServerConfigSchema` (the v2 schema dropped the
  * `auth: 'oauth'` marker field and would strip it on write). The moving
  * parts that DO have v2 counterparts — the OAuth service and the connection

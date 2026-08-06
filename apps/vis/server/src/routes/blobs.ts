@@ -37,7 +37,7 @@ export function blobsRoute(home: string = KIMI_CODE_HOME): Hono {
       return c.json({ error: "blob not found", code: "NOT_FOUND" }, 404);
     }
     const mimeType = c.req.query("mime") ?? "application/octet-stream";
-    return new Response(content, {
+    return new Response(content as unknown as BodyInit, {
       headers: { "content-type": mimeType },
     });
   });

@@ -189,6 +189,48 @@ describe("DaemonKimiWebApi.exportSession", () => {
   });
 });
 
+describe("DaemonKimiWebApi.startOAuthLogin", () => {
+  beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn());
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  const pending = {
+    flow_id: "flow_1",
+    provider: "managed:kimi-code",
+    status: "pending" as const,
+    verification_uri: "https://auth.example/device",
+    verification_uri_complete: "https://auth.example/device?code=abc",
+    user_code: "ABCD-EFGH",
+    expires_in: 600,
+    interval: 5,
+    expires_at: "2026-08-05T18:00:00.000Z",
+  };
+
+  it("forwards the selected provider identity in the login request", async () => {
+    vi.mocked(fetch).mockResolvedValue(envelope(pending));
+
+    const result = await createApi().startOAuthLogin("anthropic");
+
+    expect(result.provider).toBe("managed:kimi-code");
+    const request = vi.mocked(fetch).mock.calls[0]?.[1] as RequestInit | undefined;
+    expect(request?.method).toBe("POST");
+    expect(request?.body).toBe(JSON.stringify({ provider: "anthropic" }));
+  });
+
+  it("omits the provider field when no provider is selected", async () => {
+    vi.mocked(fetch).mockResolvedValue(envelope(pending));
+
+    await createApi().startOAuthLogin();
+
+    const request = vi.mocked(fetch).mock.calls[0]?.[1] as RequestInit | undefined;
+    expect(request?.body).toBe(JSON.stringify({}));
+  });
+});
+
 describe("DaemonKimiWebApi.getSessionGoal", () => {
   beforeEach(() => {
     vi.stubGlobal("fetch", vi.fn());

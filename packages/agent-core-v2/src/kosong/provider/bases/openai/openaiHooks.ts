@@ -120,6 +120,7 @@ export function composeOpenAIChatHooks(
 
 export interface AggregatedEndpoint {
   readonly apiKeyEnv: readonly string[];
+  readonly defaultApiKey?: string;
   readonly baseUrlEnv: readonly string[];
   readonly defaultBaseUrl?: string;
 }
@@ -129,6 +130,7 @@ export function traitEndpoint(
 ): AggregatedEndpoint | undefined {
   const apiKeyEnv: string[] = [];
   const baseUrlEnv: string[] = [];
+  let defaultApiKey: string | undefined;
   let defaultBaseUrl: string | undefined;
   let declared = false;
   for (const { trait, context } of traits) {
@@ -136,12 +138,33 @@ export function traitEndpoint(
     const endpoint: ProtocolEndpoint | undefined = trait.endpoint(context);
     if (endpoint === undefined) continue;
     declared = true;
-    if (endpoint.apiKeyEnv !== undefined) apiKeyEnv.push(endpoint.apiKeyEnv);
-    if (endpoint.baseUrlEnv !== undefined) baseUrlEnv.push(endpoint.baseUrlEnv);
+    appendEnvNames(apiKeyEnv, endpoint.apiKeyEnv);
+    if (endpoint.defaultApiKey !== undefined)
+      defaultApiKey = endpoint.defaultApiKey;
+    appendEnvNames(baseUrlEnv, endpoint.baseUrlEnv);
     if (endpoint.defaultBaseUrl !== undefined)
       defaultBaseUrl = endpoint.defaultBaseUrl;
   }
-  return declared ? { apiKeyEnv, baseUrlEnv, defaultBaseUrl } : undefined;
+  return declared
+    ? {
+        apiKeyEnv,
+        ...(defaultApiKey !== undefined ? { defaultApiKey } : undefined),
+        baseUrlEnv,
+        ...(defaultBaseUrl !== undefined ? { defaultBaseUrl } : undefined),
+      }
+    : undefined;
+}
+
+function appendEnvNames(
+  target: string[],
+  value: string | readonly string[] | undefined,
+): void {
+  if (value === undefined) return;
+  if (typeof value === "string") {
+    target.push(value);
+    return;
+  }
+  target.push(...value);
 }
 
 export function firstProcessEnv(

@@ -280,12 +280,6 @@ function refreshAndMaybeInstallInBackground(
       source,
       platform,
       logger,
-      rolloutTelemetryFor(
-        deviceId,
-        target.version,
-        refreshed.manifest,
-        bypassRollout,
-      ),
     );
   })().catch(() => {});
 }

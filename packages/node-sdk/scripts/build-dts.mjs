@@ -16,7 +16,6 @@ const apiExtractorBinPath = packageBinPath(
 );
 
 const packageDirs = new Set([
-  "agent-core",
   "agent-core-v2",
   "kaos",
   "klient",
@@ -26,7 +25,6 @@ const packageDirs = new Set([
 ]);
 const workspacePackages = new Map([
   ["@moonshot-ai/agent-core-v2", "agent-core-v2"],
-  ["@moonshot-ai/agent-core", "agent-core"],
   ["@moonshot-ai/kaos", "kaos"],
   ["@moonshot-ai/kimi-code-oauth", "oauth"],
   ["@moonshot-ai/klient", "klient"],

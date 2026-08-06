@@ -218,17 +218,24 @@ function legacyPersistedTaskToInfo(
     detached: true,
     startedAt: task.started_at,
     endedAt: task.ended_at,
-    stopReason: optionalNonEmptyString(task.stop_reason),
-    timeoutMs:
-      typeof task.timeout_ms === "number" ? task.timeout_ms : undefined,
+    ...(optionalNonEmptyString(task.stop_reason) === undefined
+      ? {}
+      : { stopReason: optionalNonEmptyString(task.stop_reason) }),
+    ...(typeof task.timeout_ms !== "number"
+      ? {}
+      : { timeoutMs: task.timeout_ms }),
   };
   if (task.task_id.startsWith("agent-")) {
     return {
       ...base,
       kind: "agent",
-      agentId: optionalNonEmptyString(task.agent_id),
-      subagentType: optionalNonEmptyString(task.subagent_type),
-    };
+      ...(optionalNonEmptyString(task.agent_id) === undefined
+        ? {}
+        : { agentId: optionalNonEmptyString(task.agent_id) }),
+      ...(optionalNonEmptyString(task.subagent_type) === undefined
+        ? {}
+        : { subagentType: optionalNonEmptyString(task.subagent_type) }),
+    } as Extract<BackgroundTaskInfo, { kind: "agent" }>;
   }
   return {
     ...base,
@@ -236,7 +243,7 @@ function legacyPersistedTaskToInfo(
     command: task.command,
     pid: task.pid,
     exitCode: task.exit_code,
-  };
+  } as Extract<BackgroundTaskInfo, { kind: "process" }>;
 }
 
 function legacyStatusToCurrent(

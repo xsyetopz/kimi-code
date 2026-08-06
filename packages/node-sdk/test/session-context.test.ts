@@ -9,7 +9,7 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { createKimiHarness, type KimiError } from "#/index";
+import { createKimiHarnessV2, type KimiError } from "#/index";
 
 import {
   makeTempDir,
@@ -33,7 +33,7 @@ describe("Session context", () => {
       tempDirs,
       "kimi-sdk-additional-dir-",
     );
-    const harness = createKimiHarness({ homeDir, identity: TEST_IDENTITY });
+    const harness = createKimiHarnessV2({ homeDir, identity: TEST_IDENTITY });
 
     try {
       const session = await harness.createSession({
@@ -57,7 +57,7 @@ describe("Session context", () => {
     const homeDir = await makeTempDir(tempDirs, "kimi-sdk-context-home-");
     const workDir = await makeTempDir(tempDirs, "kimi-sdk-context-work-");
     await writeTestConfig(homeDir, 200_000);
-    const harness = createKimiHarness({ homeDir, identity: TEST_IDENTITY });
+    const harness = createKimiHarnessV2({ homeDir, identity: TEST_IDENTITY });
 
     try {
       const session = await harness.createSession({
@@ -94,7 +94,7 @@ describe("Session context", () => {
       "kimi-sdk-context-import-work-",
     );
     await writeTestConfig(homeDir, 200_000);
-    const harness = createKimiHarness({ homeDir, identity: TEST_IDENTITY });
+    const harness = createKimiHarnessV2({ homeDir, identity: TEST_IDENTITY });
 
     try {
       const session = await harness.createSession({
@@ -148,7 +148,7 @@ describe("Session context", () => {
       "kimi-sdk-context-status-work-",
     );
     await writeTestConfig(homeDir, 200_000);
-    const harness = createKimiHarness({ homeDir, identity: TEST_IDENTITY });
+    const harness = createKimiHarnessV2({ homeDir, identity: TEST_IDENTITY });
 
     try {
       const session = await harness.createSession({
@@ -186,7 +186,7 @@ describe("Session context", () => {
       "kimi-sdk-context-resume-work-",
     );
     await writeTestConfig(homeDir, 200_000);
-    const harness = createKimiHarness({ homeDir, identity: TEST_IDENTITY });
+    const harness = createKimiHarnessV2({ homeDir, identity: TEST_IDENTITY });
 
     try {
       const session = await harness.createSession({
@@ -217,7 +217,7 @@ describe("Session context", () => {
   it("rejects whitespace-only imported content without mutating context", async () => {
     const homeDir = await makeTempDir(tempDirs, "kimi-sdk-context-empty-home-");
     const workDir = await makeTempDir(tempDirs, "kimi-sdk-context-empty-work-");
-    const harness = createKimiHarness({ homeDir, identity: TEST_IDENTITY });
+    const harness = createKimiHarnessV2({ homeDir, identity: TEST_IDENTITY });
 
     try {
       const session = await harness.createSession({
@@ -251,7 +251,7 @@ describe("Session context", () => {
       "kimi-sdk-context-overflow-work-",
     );
     await writeTestConfig(homeDir, 100);
-    const harness = createKimiHarness({ homeDir, identity: TEST_IDENTITY });
+    const harness = createKimiHarnessV2({ homeDir, identity: TEST_IDENTITY });
 
     try {
       const session = await harness.createSession({

@@ -122,7 +122,9 @@ export function explainProviderEndpoint(
   return {
     ...(apiKeyHit !== undefined
       ? { apiKey: apiKeyHit.value, apiKeyEnvName: apiKeyHit.name }
-      : undefined),
+      : endpoint.defaultApiKey !== undefined
+        ? { apiKey: endpoint.defaultApiKey }
+        : undefined),
     ...(baseUrlHit !== undefined
       ? { baseUrl: baseUrlHit.value, baseUrlEnvName: baseUrlHit.name }
       : endpoint.defaultBaseUrl !== undefined
@@ -144,8 +146,16 @@ export function resolveProviderEndpoint(
 
 interface AggregatedEndpointDeclaration {
   readonly apiKeyEnv: readonly string[];
+  readonly defaultApiKey?: string;
   readonly baseUrlEnv: readonly string[];
   readonly defaultBaseUrl?: string;
+}
+
+function envNames(
+  value: string | readonly string[] | undefined,
+): readonly string[] {
+  if (value === undefined) return [];
+  return typeof value === "string" ? [value] : value;
 }
 
 function normalizeEndpointDeclaration(
@@ -153,9 +163,14 @@ function normalizeEndpointDeclaration(
 ): AggregatedEndpointDeclaration | undefined {
   if (endpoint === undefined) return undefined;
   return {
-    apiKeyEnv: endpoint.apiKeyEnv === undefined ? [] : [endpoint.apiKeyEnv],
-    baseUrlEnv: endpoint.baseUrlEnv === undefined ? [] : [endpoint.baseUrlEnv],
-    defaultBaseUrl: endpoint.defaultBaseUrl,
+    apiKeyEnv: [...envNames(endpoint.apiKeyEnv)],
+    ...(endpoint.defaultApiKey !== undefined
+      ? { defaultApiKey: endpoint.defaultApiKey }
+      : undefined),
+    baseUrlEnv: [...envNames(endpoint.baseUrlEnv)],
+    ...(endpoint.defaultBaseUrl !== undefined
+      ? { defaultBaseUrl: endpoint.defaultBaseUrl }
+      : undefined),
   };
 }
 
@@ -170,6 +185,7 @@ function aggregateTraitEndpoints(
   const context: TraitContext = { config, providerId: definition.id };
   const apiKeyEnv: string[] = [];
   const baseUrlEnv: string[] = [];
+  let defaultApiKey: string | undefined;
   let defaultBaseUrl: string | undefined;
   let declared = false;
   for (const trait of definition.traits) {
@@ -177,12 +193,21 @@ function aggregateTraitEndpoints(
     const endpoint = trait.endpoint(context);
     if (endpoint === undefined) continue;
     declared = true;
-    if (endpoint.apiKeyEnv !== undefined) apiKeyEnv.push(endpoint.apiKeyEnv);
-    if (endpoint.baseUrlEnv !== undefined) baseUrlEnv.push(endpoint.baseUrlEnv);
+    apiKeyEnv.push(...envNames(endpoint.apiKeyEnv));
+    if (endpoint.defaultApiKey !== undefined)
+      defaultApiKey = endpoint.defaultApiKey;
+    baseUrlEnv.push(...envNames(endpoint.baseUrlEnv));
     if (endpoint.defaultBaseUrl !== undefined)
       defaultBaseUrl = endpoint.defaultBaseUrl;
   }
-  return declared ? { apiKeyEnv, baseUrlEnv, defaultBaseUrl } : undefined;
+  return declared
+    ? {
+        apiKeyEnv,
+        ...(defaultApiKey !== undefined ? { defaultApiKey } : undefined),
+        baseUrlEnv,
+        ...(defaultBaseUrl !== undefined ? { defaultBaseUrl } : undefined),
+      }
+    : undefined;
 }
 
 function firstEnvHit(

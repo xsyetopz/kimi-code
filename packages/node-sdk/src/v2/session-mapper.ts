@@ -13,8 +13,8 @@ import type { AgentMeta, SessionMeta } from "#/compat";
 import type {
   AgentMeta as V2AgentMeta,
   SessionMeta as V2SessionMeta,
-  SessionSummary as V2SessionSummary,
-} from "@moonshot-ai/kimi-code-sdk-v2";
+} from "@moonshot-ai/agent-core-v2/session/sessionMetadata/sessionMetadata";
+import type { SessionSummary as V2SessionSummary } from "@moonshot-ai/agent-core-v2/app/sessionIndex/sessionIndex";
 
 import { resolve, win32 } from "node:path";
 
@@ -48,18 +48,27 @@ export function v2SummaryToSessionSummary(
   summary: V2SessionSummary,
   facts: SessionSummaryFacts,
 ): SessionSummary {
-  return {
+  const mapped = {
     id: summary.id,
-    title: summary.title,
-    lastPrompt: summary.lastPrompt,
     workDir: facts.workDir,
     sessionDir: facts.sessionDir,
     createdAt: summary.createdAt,
     updatedAt: summary.updatedAt,
     archived: summary.archived,
-    metadata: summary.custom as JsonObject | undefined,
-    additionalDirs: facts.additionalDirs,
   };
+  return {
+    ...mapped,
+    ...(summary.title !== undefined ? { title: summary.title } : {}),
+    ...(summary.lastPrompt !== undefined
+      ? { lastPrompt: summary.lastPrompt }
+      : {}),
+    ...(summary.custom !== undefined
+      ? { metadata: summary.custom as JsonObject }
+      : {}),
+    ...(facts.additionalDirs !== undefined
+      ? { additionalDirs: facts.additionalDirs }
+      : {}),
+  } satisfies SessionSummary;
 }
 
 /**
@@ -68,17 +77,22 @@ export function v2SummaryToSessionSummary(
  * defaults produce (`''` / `false` / `{}`). Timestamps convert epoch ms → ISO.
  */
 export function v2MetaToSessionMeta(meta: V2SessionMeta): SessionMeta {
-  return {
+  const mapped = {
     createdAt: new Date(meta.createdAt).toISOString(),
     updatedAt: new Date(meta.updatedAt).toISOString(),
     title: meta.title ?? "",
     isCustomTitle: meta.isCustomTitle ?? false,
-    lastPrompt: meta.lastPrompt,
-    forkedFrom: meta.forkedFrom,
-    workDir: meta.cwd,
     agents: v2AgentsToV1(meta.agents ?? {}),
     custom: (meta.custom ?? {}) as Record<string, unknown>,
   };
+  return {
+    ...mapped,
+    ...(meta.lastPrompt !== undefined ? { lastPrompt: meta.lastPrompt } : {}),
+    ...(meta.forkedFrom !== undefined
+      ? { forkedFrom: meta.forkedFrom }
+      : {}),
+    ...(meta.cwd !== undefined ? { workDir: meta.cwd } : {}),
+  } satisfies SessionMeta;
 }
 
 function v2AgentsToV1(
@@ -86,16 +100,19 @@ function v2AgentsToV1(
 ): Record<string, AgentMeta> {
   const mapped: Record<string, AgentMeta> = {};
   for (const [agentId, agent] of Object.entries(agents)) {
-    mapped[agentId] = {
-      homedir: agent.homedir,
+    const v1 = {
       // v2 registers every agent with a type; the fallbacks only cover
       // documents written before that registration existed.
       type: agent.type ?? (agentId === "main" ? "main" : "sub"),
       // v1 persists an explicit null for a parentless agent where v2 leaves
       // the field unset.
       parentAgentId: agent.parentAgentId ?? null,
-      swarmItem: agent.swarmItem,
     };
+    mapped[agentId] = {
+      ...v1,
+      ...(agent.homedir !== undefined ? { homedir: agent.homedir } : {}),
+      ...(agent.swarmItem !== undefined ? { swarmItem: agent.swarmItem } : {}),
+    } satisfies AgentMeta;
   }
   return mapped;
 }

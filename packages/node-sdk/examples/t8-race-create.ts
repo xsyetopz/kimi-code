@@ -1,6 +1,6 @@
 // T8.4 driver: create session with explicit id, twice concurrently in same process.
 import {
-  createKimiHarness,
+  createKimiHarnessV2,
   type KimiHarness,
 } from "@moonshot-ai/kimi-code-sdk";
 
@@ -13,8 +13,8 @@ const identity: any = {
   version: "0.0.1-test",
   platform: "kimi_code_cli",
 };
-const harnessA = createKimiHarness({ identity, homeDir });
-const harnessB = createKimiHarness({ identity, homeDir });
+const harnessA = createKimiHarnessV2({ identity, homeDir });
+const harnessB = createKimiHarnessV2({ identity, homeDir });
 
 async function run(label: string, h: KimiHarness): Promise<void> {
   try {

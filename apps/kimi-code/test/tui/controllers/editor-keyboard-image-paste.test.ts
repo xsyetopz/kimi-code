@@ -313,7 +313,7 @@ describe("clipboard image paste compression", () => {
     expect(att.placeholder).toContain("80×120");
   });
 
-  it("emits image_compress telemetry tagged tui_paste through host.track", async () => {
+  it("does not emit compression telemetry while recording the paste action", async () => {
     const big = await solidPng(3600, 1800);
     readClipboardMedia.mockResolvedValue({
       kind: "image",
@@ -324,12 +324,9 @@ describe("clipboard image paste compression", () => {
     const { track, pasteImage } = createPasteHarness();
     await pasteImage();
 
-    const compressCalls = track.mock.calls.filter(
-      ([event]) => event === "image_compress",
-    );
-    expect(compressCalls).toHaveLength(1);
-    const props = compressCalls[0]![1] as Record<string, unknown>;
-    expect(props["source"]).toBe("tui_paste");
-    expect(props["outcome"]).toBe("compressed");
+    expect(track).toHaveBeenCalledWith("shortcut_paste", { kind: "image" });
+    expect(
+      track.mock.calls.filter(([event]) => event === "image_compress"),
+    ).toHaveLength(0);
   });
 });

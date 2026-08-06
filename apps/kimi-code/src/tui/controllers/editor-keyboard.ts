@@ -29,6 +29,7 @@ import { extractMediaAttachments } from "../utils/image-placeholder";
 import type { PendingExit, QueuedMessage, SteerInputItem } from "../types";
 import type { TUIState } from "../tui-state";
 import type { BtwPanelController } from "./btw-panel";
+import type { PromptSemanticAction } from "../renderer/prompt-editor-input";
 
 export interface EditorKeyboardHost {
   state: TUIState;
@@ -67,6 +68,10 @@ export interface EditorKeyboardHost {
   handleInputModeChange(mode: "prompt" | "bash"): void;
   clearQueuedMessages(): void;
   setExternalEditorRunning(running: boolean): void;
+  /** Optional renderer-aware terminal handoff for external editors. */
+  suspendTerminal?: () => void;
+  resumeTerminal?: () => void;
+  updatePromptEditorView?: () => void;
 }
 
 export class EditorKeyboardController {
@@ -409,6 +414,61 @@ export class EditorKeyboardController {
     this.pendingExit = null;
   }
 
+  /**
+   * Dispatch a semantic shortcut from a renderer-owned prompt editor. The
+   * legacy pi editor still owns these callbacks for dialog compatibility, but
+   * normal Ink prompt input no longer needs to enter the pi focus tree.
+   * Returns whether the shortcut consumed the input (Ctrl-B/Ctrl-T can fall
+   * through to ordinary editing when their feature is inactive).
+   */
+  dispatchPromptSemantic(action: PromptSemanticAction): boolean {
+    const editor = this.host.state.editor;
+    switch (action) {
+      case "ctrl-c":
+        editor.onCtrlC?.();
+        return true;
+      case "ctrl-d":
+        editor.onCtrlD?.();
+        return true;
+      case "ctrl-g":
+        editor.onOpenExternalEditor?.();
+        return true;
+      case "ctrl-o":
+        editor.onToggleToolExpand?.();
+        return true;
+      case "ctrl-s":
+        editor.onCtrlS?.();
+        return true;
+      case "ctrl-b":
+        return editor.onCtrlB?.() ?? false;
+      case "ctrl-t":
+        return editor.onToggleTodoExpand?.() ?? false;
+      case "paste-image":
+        if (editor.onPasteImage !== undefined) {
+          void editor
+            .onPasteImage()
+            .then((handled) => {
+              if (!handled) editor.onTextPaste?.();
+            })
+            .finally(() => this.host.updatePromptEditorView?.());
+        }
+        return true;
+      case "undo":
+        editor.onUndo?.();
+        return true;
+      case "shift-tab":
+        editor.onShiftTab?.();
+        return true;
+      case "escape":
+        editor.onEscape?.();
+        return true;
+      case "up-empty":
+        return editor.onUpArrowEmpty?.() ?? false;
+      case "down-empty":
+        return editor.onDownArrowEmpty?.() ?? false;
+    }
+  }
+
   dispose(): void {
     this.clearPendingExit();
     this.clearPendingUndoEsc();
@@ -506,19 +566,12 @@ export class EditorKeyboardController {
     // The edge cap comes from the host harness's [image] config (resolved per
     // paste so a config reload applies immediately); hosts without a harness
     // use the env/built-in default.
-    const compressed = await compressImageForModel(media.bytes, meta.mime, {
-      maxEdge: this.host.harness?.imageLimits?.maxEdgePx(),
-      telemetry: {
-        client: {
-          track: (event, properties) =>
-            this.host.track(
-              event,
-              properties === undefined ? undefined : { ...properties },
-            ),
-        },
-        source: "tui_paste",
-      },
-    });
+    const maxEdge = this.host.harness?.imageLimits?.maxEdgePx();
+    const compressed = await compressImageForModel(
+      media.bytes,
+      meta.mime,
+      maxEdge === undefined ? {} : { maxEdge },
+    );
     const sessionDir = this.host.session?.summary?.sessionDir;
     // Dimensions come from the compression result, not parseImageMeta: the
     // compressor reports display space (EXIF orientation applied) — the space
@@ -568,7 +621,8 @@ export class EditorKeyboardController {
     }
     this.host.setExternalEditorRunning(true);
     const seed = state.editor.getExpandedText?.() ?? state.editor.getText();
-    state.ui.stop();
+    if (this.host.suspendTerminal !== undefined) this.host.suspendTerminal();
+    else state.ui.stop();
     await new Promise<void>((resolve) => {
       setImmediate(resolve);
     });
@@ -586,7 +640,8 @@ export class EditorKeyboardController {
       if (typeof process.stdin.pause === "function") {
         process.stdin.pause();
       }
-      state.ui.start();
+      if (this.host.resumeTerminal !== undefined) this.host.resumeTerminal();
+      else state.ui.start();
       state.ui.setFocus(state.editor);
       state.ui.requestRender(true);
       this.host.setExternalEditorRunning(false);

@@ -292,12 +292,7 @@ max_context_size = "large"
 });
 
 describe("kimi doctor (v2 config validation)", () => {
-  beforeEach(() => {
-    process.env["KIMI_CODE_EXPERIMENTAL_FLAG"] = "1";
-  });
-
   afterEach(() => {
-    delete process.env["KIMI_CODE_EXPERIMENTAL_FLAG"];
     delete process.env["KIMI_LOOP_MAX_RETRIES_PER_STEP"];
     delete process.env["KIMI_LOOP_MAX_ATTEMPTS_PER_STEP"];
   });

@@ -6,9 +6,7 @@ import Sidebar from './components/Sidebar.vue';
 import ResizeHandle from './components/ResizeHandle.vue';
 import ConversationPane from './components/chat/ConversationPane.vue';
 import FilePreview from './components/FilePreview.vue';
-import ThinkingPanel from './components/chat/ThinkingPanel.vue';
 import AgentDetailPanel from './components/chat/AgentDetailPanel.vue';
-import ToolDiffPanel from './components/chat/ToolDiffPanel.vue';
 import SideChatPanel from './components/chat/SideChatPanel.vue';
 import DiffView from './components/chat/DiffView.vue';
 import ModelPicker from './components/settings/ModelPicker.vue';
@@ -17,13 +15,15 @@ import LoginDialog from './components/dialogs/LoginDialog.vue';
 import SettingsDialog from './components/settings/SettingsDialog.vue';
 import AddWorkspaceDialog from './components/dialogs/AddWorkspaceDialog.vue';
 import ConfirmDialogHost from './components/dialogs/ConfirmDialogHost.vue';
-import StatusPanel from './components/chat/StatusPanel.vue';
-import WarningToasts from './components/WarningToasts.vue';
-import MobileTopBar from './components/mobile/MobileTopBar.vue';
+import { ReactWarningToastsHost } from './react/ReactWarningToastsHost';
+import { ReactMobileTopBarHost } from './react/ReactMobileTopBarHost';
+import { ReactThinkingPanelHost } from './react/ReactThinkingPanelHost';
+import { ReactStatusPanelHost } from './react/ReactStatusPanelHost';
+import { ReactToolDiffPanelHost } from './react/ReactToolDiffPanelHost';
 import MobileSwitcherSheet from './components/mobile/MobileSwitcherSheet.vue';
 import MobileSettingsSheet from './components/mobile/MobileSettingsSheet.vue';
 import Onboarding from './components/settings/Onboarding.vue';
-import GlobalLoading from './components/GlobalLoading.vue';
+import { ReactGlobalLoadingHost } from './react/ReactGlobalLoadingHost';
 import DebugPanel from './debug/DebugPanel.vue';
 import { isTraceEnabled } from './debug/trace';
 import { useKimiWebClient } from './composables/useKimiWebClient';
@@ -46,7 +46,6 @@ import { stripSkillPrefix } from './lib/slashCommands';
 import Button from './components/ui/Button.vue';
 import IconButton from './components/ui/IconButton.vue';
 import Icon from './components/ui/Icon.vue';
-import InternalBuildBanner from './components/InternalBuildBanner.vue';
 import { isMacosDesktop } from './lib/desktopFlag';
 
 // Hydrate the server-transport credential (fragment token or localStorage)
@@ -316,6 +315,10 @@ const showModelPicker = ref(false);
 const showProviders = ref(false);
 
 const showLogin = ref(false);
+// ProviderManager emits the selected platform, while the login dialog is
+// shared by the auth gate/settings entry points. Keep that identity in the
+// parent until the dialog starts the flow so it reaches the daemon request.
+const loginProvider = ref<string | undefined>(undefined);
 const showAddWorkspace = ref(false);
 const showStatusPanel = ref(false);
 const showSettings = ref(false);
@@ -384,8 +387,14 @@ async function openProviders(): Promise<void> {
   }
 }
 
-function openLogin(): void {
+function openLogin(provider?: string): void {
+  loginProvider.value = provider;
   showLogin.value = true;
+}
+
+function closeLogin(): void {
+  showLogin.value = false;
+  loginProvider.value = undefined;
 }
 
 async function handleSelectModel(modelId: string): Promise<void> {
@@ -468,7 +477,7 @@ async function handleUpdateConfig(patch: Partial<AppConfig>): Promise<void> {
 
 // LoginDialog callbacks — delegates to composable
 async function handleStartOAuthLogin() {
-  return client.startOAuthLogin();
+  return client.startOAuthLogin(loginProvider.value);
 }
 
 async function handlePollOAuthLogin() {
@@ -480,7 +489,7 @@ async function handleCancelOAuthLogin() {
 }
 
 async function handleLoginSuccess(): Promise<void> {
-  showLogin.value = false;
+  closeLogin();
   // Re-check auth state and reload sessions now that we're authenticated
   await client.checkAuth();
   await client.load();
@@ -734,7 +743,6 @@ function openPr(url: string): void {
         :pending-by-session="client.pendingBySession.value"
         :unread-by-session="client.unreadBySession.value"
         :workspace-sort-mode="client.workspaceSortMode.value"
-        :backend="client.backend.value"
         @select="client.selectSession($event)"
         @create="handleCreateSession"
         @create-in-workspace="handleCreateSessionInWorkspace($event)"
@@ -766,7 +774,7 @@ function openPr(url: string): void {
     </template>
 
     <!-- Mobile navigation: slim top bar (switcher + settings sheets). -->
-    <MobileTopBar
+    <ReactMobileTopBarHost
       v-else
       :workspace="client.visibleWorkspace.value"
       :session-title="activeSessionTitle"
@@ -908,12 +916,12 @@ function openPr(url: string): void {
       :aria-label="t('layout.detailPanelAria')"
       :aria-hidden="!sidePanelVisible"
     >
-      <ThinkingPanel
+      <ReactThinkingPanelHost
         v-if="detailTarget === 'thinking' && thinkingVisible"
         :text="thinkingPanelText ?? ''"
         @close="closeThinkingPanel"
       />
-      <ThinkingPanel
+      <ReactThinkingPanelHost
         v-else-if="detailTarget === 'compaction' && compactionPanelVisible"
         :text="compactionPanelText ?? ''"
         :subtitle="t('conversation.summaryTitle')"
@@ -945,7 +953,7 @@ function openPr(url: string): void {
         @back="detailDiffMode = 'list'; detailDiffPath = null; client.clearFileDiff()"
         @close="closeDiffDetail"
       />
-      <ToolDiffPanel
+      <ReactToolDiffPanelHost
         v-else-if="detailTarget === 'toolDiff' && toolDiffTarget"
         :target="toolDiffTarget"
         @close="closeToolDiff"
@@ -965,11 +973,6 @@ function openPr(url: string): void {
         @reveal="revealPreviewFile"
       />
     </aside>
-
-    <!-- Internal-build tag — pinned to the app's bottom-right corner, above
-         whatever pane happens to be there. Purely informational: pointer
-         events pass through so it never blocks clicks. -->
-    <InternalBuildBanner class="internal-build-fab" />
 
     <!-- Model Picker overlay -->
     <ModelPicker
@@ -1002,7 +1005,6 @@ function openPr(url: string): void {
       :models="client.models.value"
       :config-saving="configSaving"
       :server-version="client.serverVersion.value"
-      :backend="client.backend.value"
       @set-color-scheme="client.setColorScheme($event)"
       @set-accent="client.setAccent($event)"
       @set-ui-font-size="client.setUiFontSize($event)"
@@ -1028,12 +1030,12 @@ function openPr(url: string): void {
       @add="handleAddProvider($event)"
       @refresh="handleRefreshProvider($event)"
       @delete="confirmDeleteProvider($event)"
-      @open-login="() => { showProviders = false; openLogin(); }"
+      @open-login="(provider) => { showProviders = false; openLogin(provider); }"
       @close="showProviders = false"
     />
 
     <!-- Status panel overlay (/status) — renders current client state, no daemon call -->
-    <StatusPanel
+    <ReactStatusPanelHost
       v-if="showStatusPanel"
       :status="client.status.value"
       :thinking="statusPanelThinking"
@@ -1056,7 +1058,7 @@ function openPr(url: string): void {
 
     <!-- Global connecting splash on first load (until the daemon round-trips) -->
     <Transition name="gload-fade">
-      <GlobalLoading v-if="!client.initialized.value" :issue="client.connectIssue.value" />
+      <ReactGlobalLoadingHost v-if="!client.initialized.value" :issue="client.connectIssue.value" />
     </Transition>
 
     <!-- First-run onboarding overlay (language + welcome greeting). Held back
@@ -1069,7 +1071,7 @@ function openPr(url: string): void {
     />
 
     <!-- Floating warnings / agent errors (e.g. a 403 from the model provider) -->
-    <WarningToasts :warnings="client.warnings.value" @dismiss="client.dismissWarning" />
+    <ReactWarningToastsHost :warnings="client.warnings.value" @dismiss="client.dismissWarning" />
 
     <!-- KAP/daemon debug panel (opt-in, ?debug=1) -->
     <DebugPanel v-if="debugEnabled" />
@@ -1130,7 +1132,7 @@ function openPr(url: string): void {
       :on-poll-o-auth-login="handlePollOAuthLogin"
       :on-cancel-o-auth-login="handleCancelOAuthLogin"
       @success="handleLoginSuccess"
-      @close="showLogin = false"
+      @close="closeLogin"
     />
   </div>
 </template>
@@ -1269,17 +1271,6 @@ function openPr(url: string): void {
 }
 @keyframes sidebar-toggle-btn-in {
   from { opacity: 0; }
-}
-
-/* Internal-build tag pinned to the app's bottom-right corner (desktop app
-   only — the component renders nothing elsewhere). Informational: never
-   intercepts pointer input. */
-.internal-build-fab {
-  position: absolute;
-  right: var(--space-3);
-  bottom: var(--space-3);
-  z-index: var(--z-sticky);
-  pointer-events: none;
 }
 
 /* Mobile single-column shell: slim top bar (auto) over the full-width

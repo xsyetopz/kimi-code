@@ -11,7 +11,7 @@ import {
   truncateToWidth,
   visibleWidth,
   type Component,
-} from "@moonshot-ai/pi-tui";
+} from "@moonshot-ai/kimi-code-tui";
 
 import { MESSAGE_INDENT } from "#/tui/constant/rendering";
 import { STATUS_BULLET } from "#/tui/constant/symbols";

@@ -1,0 +1,206 @@
+.react-status-panel-host {
+  display: contents;
+}
+
+.status-dialog__overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6);
+  background: rgba(13, 17, 23, 0.45);
+  animation: status-dialog-overlay-in var(--duration-base) var(--ease-out);
+}
+
+@keyframes status-dialog-overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.status-dialog {
+  width: min(440px, 100%);
+  max-height: calc(100vh - var(--space-8) * 2);
+  display: flex;
+  flex-direction: column;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xl);
+  outline: none;
+  overflow: hidden;
+  animation: status-dialog-card-in var(--duration-slow) var(--ease-out);
+}
+
+@keyframes status-dialog-card-in {
+  from { opacity: 0; transform: translateY(4px) scale(0.99); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.status-dialog__head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: 20px 22px 14px;
+}
+
+.status-dialog__titles {
+  flex: 1;
+  min-width: 0;
+}
+
+.status-dialog__title {
+  color: var(--color-text);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-tight);
+}
+
+.status-dialog__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  margin: -2px -4px 0 0;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  line-height: 1;
+  transition: background var(--duration-base) var(--ease-out), color var(--duration-base) var(--ease-out);
+}
+
+.status-dialog__close:hover {
+  background: color-mix(in srgb, var(--color-text) 8%, transparent);
+  color: var(--color-text);
+}
+
+.status-dialog__close:focus-visible {
+  outline: none;
+  box-shadow: var(--p-focus-ring);
+}
+
+.status-dialog__body {
+  flex: 1;
+  min-height: 0;
+  padding: 4px 22px 18px;
+  color: var(--color-text);
+  overflow: auto;
+}
+
+.status-panel__rows {
+  margin: 0;
+  padding: 0;
+}
+
+.status-panel__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  font-size: var(--text-base);
+}
+
+.status-panel__row dt {
+  width: 96px;
+  flex: none;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: var(--text-xs);
+}
+
+.status-panel__row dd {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  margin: 0;
+  color: var(--color-text);
+  font-weight: var(--weight-medium);
+}
+
+.status-panel__row .status-panel__value--permission-yolo {
+  color: var(--color-warning);
+}
+
+.status-panel__row .status-panel__value--permission-auto {
+  color: var(--color-danger);
+}
+
+.status-panel__row .status-panel__value--permission-manual {
+  color: var(--color-text);
+}
+
+.status-panel__row .status-panel__value--on {
+  color: var(--color-accent);
+}
+
+.status-panel__context-text {
+  flex: none;
+}
+
+.status-panel__bar {
+  width: 80px;
+  height: 5px;
+  flex: none;
+  overflow: hidden;
+  border-radius: var(--radius-full);
+  background: var(--color-line);
+}
+
+.status-panel__bar i {
+  display: block;
+  height: 100%;
+  background: var(--color-accent);
+}
+
+@media (max-width: 640px) {
+  .status-dialog__overlay {
+    align-items: flex-end;
+    justify-content: stretch;
+    padding: 0;
+  }
+
+  .status-dialog {
+    width: 100%;
+    max-width: 100%;
+    max-height: 88vh;
+    border-right: none;
+    border-bottom: none;
+    border-left: none;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    animation: status-dialog-sheet-up var(--duration-slow) var(--ease-out);
+  }
+
+  .status-panel__rows {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .status-panel__row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: var(--space-1);
+    min-height: 48px;
+  }
+
+  .status-panel__row dt {
+    width: auto;
+  }
+
+  .status-panel__row dd {
+    max-width: 100%;
+    flex-wrap: wrap;
+  }
+}
+
+@keyframes status-dialog-sheet-up {
+  from { transform: translateY(101%); }
+  to { transform: translateY(0); }
+}

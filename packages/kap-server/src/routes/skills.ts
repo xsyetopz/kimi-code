@@ -49,7 +49,7 @@
  *
  * **Model projection**: `SkillDefinition` (v2) → protocol `SkillDescriptor`,
  * byte-for-byte with v1's `toProtocolSkill`
- * (`packages/agent-core/src/services/skill/skill.ts`): only
+ * (`the skill domain`): only
  * `name`/`description`/`path`/`source` plus optional `type` and
  * `disable_model_invocation` are emitted; `isSubSkill` is intentionally
  * dropped.

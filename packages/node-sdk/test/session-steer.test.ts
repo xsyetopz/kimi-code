@@ -1,7 +1,7 @@
 import type * as KosongModule from "@moonshot-ai/kosong";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createKimiHarness, type KimiError } from "#/index";
+import { createKimiHarnessV2, type KimiError } from "#/index";
 
 import {
   makeTempDir,
@@ -59,7 +59,7 @@ describe("Session.steer", () => {
   it("sends turn.steer to the core session runtime", async () => {
     const homeDir = await makeTempDir(tempDirs, "kimi-sdk-steer-home-");
     const workDir = await makeTempDir(tempDirs, "kimi-sdk-steer-work-");
-    const harness = createKimiHarness({ homeDir, identity: TEST_IDENTITY });
+    const harness = createKimiHarnessV2({ homeDir, identity: TEST_IDENTITY });
 
     try {
       const session = await harness.createSession({
@@ -85,7 +85,7 @@ describe("Session.steer", () => {
   it("rejects empty steer input", async () => {
     const homeDir = await makeTempDir(tempDirs, "kimi-sdk-steer-home-");
     const workDir = await makeTempDir(tempDirs, "kimi-sdk-steer-work-");
-    const harness = createKimiHarness({ homeDir, identity: TEST_IDENTITY });
+    const harness = createKimiHarnessV2({ homeDir, identity: TEST_IDENTITY });
 
     try {
       const session = await harness.createSession({
@@ -105,7 +105,7 @@ describe("Session.steer", () => {
   it("rejects after the session is closed", async () => {
     const homeDir = await makeTempDir(tempDirs, "kimi-sdk-steer-home-");
     const workDir = await makeTempDir(tempDirs, "kimi-sdk-steer-work-");
-    const harness = createKimiHarness({ homeDir, identity: TEST_IDENTITY });
+    const harness = createKimiHarnessV2({ homeDir, identity: TEST_IDENTITY });
 
     try {
       const session = await harness.createSession({

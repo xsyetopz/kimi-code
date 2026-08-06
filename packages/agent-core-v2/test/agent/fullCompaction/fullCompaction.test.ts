@@ -26,6 +26,7 @@ import {
   APIContextOverflowError,
   APIRequestTooLargeError,
   APIStatusError,
+  normalizeAPIStatusError,
 } from "#/kosong/contract/errors";
 import {
   type Message,
@@ -2491,9 +2492,9 @@ describe("FullCompaction", () => {
         // estimator would retry the SAME messages until the attempt limit and
         // fail the turn.
         compactionInputLengths.push(history.length);
-        throw new APIContextOverflowError(
+        throw normalizeAPIStatusError(
           400,
-          "Context length exceeded",
+          "Context limit exceeded",
           "req-measured-shrink",
         );
       }

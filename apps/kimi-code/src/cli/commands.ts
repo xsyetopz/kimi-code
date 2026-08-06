@@ -1,5 +1,4 @@
 import { CLI_COMMAND_NAME } from "#/constant/app";
-import { registerMigrateCommand } from "#/migration/index";
 import { Command, InvalidArgumentError, Option } from "commander";
 
 import type { CLIOptions } from "./options";
@@ -12,7 +11,6 @@ import { registerVisCommand } from "./sub/vis";
 import { registerWebCommand } from "./sub/web";
 
 export type MainCommandHandler = (opts: CLIOptions) => void;
-export type MigrateCommandHandler = () => void;
 export type PluginNodeRunnerHandler = (
   entry: string,
   args: readonly string[],
@@ -22,7 +20,6 @@ export type UpgradeCommandHandler = () => void | Promise<void>;
 export function createProgram(
   version: string,
   onMain: MainCommandHandler,
-  onMigrate: MigrateCommandHandler,
   onPluginNodeRunner: PluginNodeRunnerHandler = () => {},
   onUpgrade: UpgradeCommandHandler = () => {},
 ): Command {
@@ -152,7 +149,6 @@ export function createProgram(
   registerLoginCommand(program);
   registerDoctorCommand(program);
   registerVisCommand(program);
-  registerMigrateCommand(program, onMigrate);
   program
     .command("upgrade")
     .alias("update")

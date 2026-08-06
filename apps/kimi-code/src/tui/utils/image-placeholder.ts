@@ -8,10 +8,8 @@
  *     `ImageAttachment.original`);
  *   - video placeholders are copied into the shared cache (`getCacheDir()`)
  *     and expand to a `video_url` part pointing at the cache copy with a
- *     `file://` url. The v1 engine resolves that local reference inside the
- *     turn — uploading it (the `ms://` inline form) or degrading to a
- *     `<video path>` tag the model reads with `ReadMediaFile` — before the
- *     prompt lands in history.
+ *     `file://` url. The native engine resolves that local reference inside
+ *     the turn before the prompt lands in history.
  *
  * `rewriteMediaPlaceholders` is the separate text channel for slash-command
  * args (`/skill`, plugin commands): those are plain text, so media is rendered

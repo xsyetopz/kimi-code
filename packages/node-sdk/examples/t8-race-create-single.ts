@@ -1,5 +1,5 @@
 // One creator: meant to run twice as separate processes simultaneously.
-import { createKimiHarness } from "@moonshot-ai/kimi-code-sdk";
+import { createKimiHarnessV2 } from "@moonshot-ai/kimi-code-sdk";
 
 const workDir = process.argv[2]!;
 const homeDir = process.argv[3]!;
@@ -11,7 +11,7 @@ const identity: any = {
   version: "0.0.1-test",
   platform: "kimi_code_cli",
 };
-const h = createKimiHarness({ identity, homeDir });
+const h = createKimiHarnessV2({ identity, homeDir });
 
 try {
   const s = await h.createSession({

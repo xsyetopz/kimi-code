@@ -10,7 +10,6 @@ import {
 import type { Command } from "commander";
 import { z } from "zod";
 
-import { isKimiV2Enabled } from "#/cli/experimental-v2";
 import { getTuiConfigPath, parseTuiConfig } from "#/tui/config";
 
 interface WritableLike {
@@ -161,17 +160,8 @@ function resolveDeps(
     validateConfigToml:
       deps?.validateConfigToml ??
       (async (text, filePath) => {
-        if (isKimiV2Enabled()) {
-          // Experimental v2 route (same master switch as `kimi -p`): validate
-          // with the agent-core-v2 section registry instead of the v1 schema.
-          // Loaded lazily so the v2 module graph stays off the default path.
-          const { validateConfigTomlV2 } = await import(
-            "../v2/validate-config"
-          );
-          return validateConfigTomlV2(text, filePath);
-        }
-        await getConfigRpc().validateConfigToml({ text, filePath });
-        return undefined;
+        const { validateConfigTomlV2 } = await import("../v2/validate-config");
+        return validateConfigTomlV2(text, filePath);
       }),
   };
 }

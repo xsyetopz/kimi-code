@@ -941,6 +941,16 @@ export class TUI extends Container {
     }
   }
 
+  /**
+   * Forward a terminal input sequence to the focused component without
+   * starting pi-tui's terminal loop.  React/Ink hosts use this while they own
+   * stdin/stdout; keeping the dispatch path here preserves the existing
+   * editor, overlay, and input-listener semantics during the migration.
+   */
+  public dispatchInput(data: string): void {
+    this.handleInput(data);
+  }
+
   private consumeOsc11BackgroundResponse(data: string): boolean {
     if (this.pendingOsc11BackgroundReplies <= 0) {
       return false;

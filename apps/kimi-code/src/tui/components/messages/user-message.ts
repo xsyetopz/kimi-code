@@ -8,7 +8,7 @@ import {
   truncateToWidth,
   visibleWidth,
   type Component,
-} from "@moonshot-ai/pi-tui";
+} from "@moonshot-ai/kimi-code-tui";
 
 import { ImageThumbnail } from "#/tui/components/media/image-thumbnail";
 import { USER_MESSAGE_BULLET } from "#/tui/constant/symbols";

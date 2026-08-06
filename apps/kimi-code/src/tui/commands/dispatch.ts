@@ -1,4 +1,4 @@
-import type { Component, Focusable } from "@moonshot-ai/pi-tui";
+import type { Component, Focusable } from "@moonshot-ai/kimi-code-tui";
 import type { DeviceAuthorization } from "@moonshot-ai/kimi-code-oauth";
 import type { KimiHarness, Session } from "@moonshot-ai/kimi-code-sdk";
 
@@ -122,7 +122,7 @@ export interface SlashCommandHost {
   state: TUIState;
   session: Session | undefined;
   readonly harness: KimiHarness;
-  /** agent-core-v2 engine (KIMI_CODE_EXPERIMENTAL_FLAG); enables lazy session creation. */
+  /** Native engine capability; enables lazy session creation. */
   readonly engineV2: boolean;
   cancelInFlight: (() => void) | undefined;
   deferUserMessages: boolean;

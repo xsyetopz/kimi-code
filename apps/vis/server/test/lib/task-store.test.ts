@@ -173,7 +173,7 @@ describe("task-store", () => {
 
     const tasks = await listBackgroundTasks(sessionDir);
     // No throw; both tasks listed, the corrupt fields coerced away.
-    expect(tasks.map((t) => t.taskId).toSorted()).toEqual([
+    expect(tasks.map((t) => t.taskId).slice().sort()).toEqual([
       "agent-bbbbbbbb",
       "bash-aaaaaaaa",
     ]);

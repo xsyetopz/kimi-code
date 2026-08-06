@@ -1,5 +1,5 @@
 import {
-  createKimiHarness,
+  createKimiHarnessV2,
   type PermissionMode,
 } from "@moonshot-ai/kimi-code-sdk";
 
@@ -10,7 +10,7 @@ import {
 } from "./runtime-smoke-helpers";
 
 async function main(): Promise<void> {
-  const harness = createKimiHarness({ identity: smokeIdentityFromEnv() });
+  const harness = createKimiHarnessV2({ identity: smokeIdentityFromEnv() });
   const mode: PermissionMode = "yolo";
 
   try {

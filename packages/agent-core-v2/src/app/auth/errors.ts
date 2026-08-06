@@ -11,6 +11,7 @@ export const AuthErrors = {
     AUTH_TOKEN_MISSING: "auth.token_missing",
     AUTH_TOKEN_UNAUTHORIZED: "auth.token_unauthorized",
     AUTH_MODEL_NOT_RESOLVED: "auth.model_not_resolved",
+    AUTH_PROVIDER_UNSUPPORTED: "auth.provider_unsupported",
   },
   info: {
     "auth.login_required": {
@@ -42,6 +43,13 @@ export const AuthErrors = {
       retryable: false,
       public: true,
       action: "Set a default model or configure the requested model alias.",
+    },
+    "auth.provider_unsupported": {
+      title: "Provider authentication is external",
+      retryable: false,
+      public: true,
+      action:
+        "Use the provider's official login integration or configure its API key.",
     },
   },
 } as const satisfies ErrorDomain;

@@ -1,0 +1,86 @@
+/* React-owned thinking/summary detail panel. The Vue host keeps the shared
+   target and close event during the strangler migration; these rules mirror the
+   PanelHeader + transcript surface used by the former SFC. */
+.react-thinking-panel-host {
+  display: contents;
+}
+.thinking-panel {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--color-bg);
+}
+.thinking-panel__header {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: var(--panel-head-h, 48px);
+  padding: 0 6px 0 var(--space-3);
+  box-sizing: border-box;
+  min-width: 0;
+  border-bottom: 1px solid var(--color-line);
+  background: var(--color-surface);
+}
+.thinking-panel__title {
+  flex: none;
+  font: var(--weight-semibold) var(--text-xs) var(--font-mono);
+  letter-spacing: 0.04em;
+  color: var(--color-text);
+}
+.thinking-panel__subtitle {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: var(--text-xs) var(--font-mono);
+  color: var(--color-text-muted);
+}
+.thinking-panel__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 26px;
+  height: 26px;
+  margin-left: auto;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: background var(--duration-base) var(--ease-out),
+    color var(--duration-base) var(--ease-out);
+}
+.thinking-panel__close:hover {
+  background: color-mix(in srgb, var(--color-text) 8%, transparent);
+  color: var(--color-text);
+}
+.thinking-panel__close:focus-visible {
+  outline: none;
+  box-shadow: var(--p-focus-ring);
+}
+.thinking-panel__close-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.thinking-panel__close-icon svg {
+  width: var(--p-ic-md);
+  height: var(--p-ic-md);
+}
+.thinking-panel__body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  font: var(--text-base)/var(--leading-relaxed) var(--font-ui);
+  font-weight: var(--weight-regular);
+  color: var(--color-text-muted);
+  white-space: pre-wrap;
+  word-break: break-word;
+}

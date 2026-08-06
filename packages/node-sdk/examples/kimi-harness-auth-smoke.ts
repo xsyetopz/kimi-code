@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import {
-  createKimiHarness,
+  createKimiHarnessV2,
   type KimiHarness,
 } from "@moonshot-ai/kimi-code-sdk";
 
@@ -25,7 +25,7 @@ async function main(): Promise<void> {
   const prompt =
     process.env["KIMI_SDK_AUTH_SMOKE_PROMPT"] ??
     "Reply with exactly: Kimi SDK auth smoke ok";
-  const harness = createKimiHarness({
+  const harness = createKimiHarnessV2({
     homeDir,
     identity: smokeIdentityFromEnv(),
   });

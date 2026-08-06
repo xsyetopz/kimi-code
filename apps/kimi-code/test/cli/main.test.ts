@@ -34,7 +34,7 @@ const mocks = vi.hoisted(() => {
       ensureConfigFile: vi.fn(),
       close: vi.fn(),
     },
-    createKimiHarness: vi.fn(),
+    createKimiHarnessV2: vi.fn(),
   };
 });
 
@@ -44,8 +44,8 @@ vi.mock("@moonshot-ai/kimi-code-sdk", async () => {
   >("@moonshot-ai/kimi-code-sdk");
   return {
     ...actual,
-    createKimiHarness: (...args: unknown[]) => {
-      mocks.createKimiHarness(...args);
+    createKimiHarnessV2: (...args: unknown[]) => {
+      mocks.createKimiHarnessV2(...args);
       return mocks.harness;
     },
     flushDiagnosticLogs: mocks.flushDiagnosticLogs,
@@ -348,7 +348,7 @@ describe("main entry command handling", () => {
     const exitCode = await runHandleUpgradeCommand();
 
     expect(exitCode).toBe(0);
-    expect(mocks.createKimiHarness).toHaveBeenCalledWith(
+    expect(mocks.createKimiHarnessV2).toHaveBeenCalledWith(
       expect.objectContaining({
         homeDir: expect.any(String),
         identity: expect.objectContaining({ productName: "kimi-code-cli" }),

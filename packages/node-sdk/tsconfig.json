@@ -7,7 +7,6 @@
   "include": [
     "src",
     "test",
-    "examples",
-    "../agent-core/src/prompt-modules.d.ts"
+    "examples"
   ]
 }

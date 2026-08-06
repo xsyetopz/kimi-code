@@ -833,7 +833,7 @@ export abstract class SDKRpcClientBase {
   /**
    * Workspace-level MCP server list, no session required. The v2 engine owns
    * one shared connection set per workspace handler, so `/mcp` is inspectable
-   * before the first session exists; the v1 engine only exposes MCP through
+   * before the first session exists; the previous engine only exposes MCP through
    * a live session and the base returns an empty list.
    */
   async listWorkspaceMcpServers(

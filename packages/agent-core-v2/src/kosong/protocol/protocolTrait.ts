@@ -50,8 +50,11 @@ export interface TraitContext {
 }
 
 export interface ProtocolEndpoint {
-  readonly apiKeyEnv?: string;
-  readonly baseUrlEnv?: string;
+  /** Environment variable name or ordered fallback chain. */
+  readonly apiKeyEnv?: string | readonly string[];
+  /** Optional vendor-declared public credential for unauthenticated tiers. */
+  readonly defaultApiKey?: string;
+  readonly baseUrlEnv?: string | readonly string[];
   readonly defaultBaseUrl?: string;
 }
 
