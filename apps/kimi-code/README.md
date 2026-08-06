@@ -34,7 +34,7 @@ kimi --version
 
 ### Alternative: npm
 
-If you prefer npm, use Node.js 22.19.0 or later:
+If you prefer npm, use Node.js 24.15.0 or later:
 
 ```sh
 npm install -g @moonshot-ai/kimi-code
@@ -75,14 +75,14 @@ Take a look at this project and explain the main directories.
 
 ## Documentation
 
-- Full docs: https://moonshotai.github.io/kimi-code/en/
-- 中文文档: https://moonshotai.github.io/kimi-code/zh/
-- Getting Started: https://moonshotai.github.io/kimi-code/en/guides/getting-started
+- Full docs: <https://moonshotai.github.io/kimi-code/en/>
+- 中文文档: <https://moonshotai.github.io/kimi-code/zh/>
+- Getting Started: <https://moonshotai.github.io/kimi-code/en/guides/getting-started>
 
 ## Repository & Issues
 
-- Source: https://github.com/MoonshotAI/kimi-code
-- Issues: https://github.com/MoonshotAI/kimi-code/issues
+- Source: <https://github.com/MoonshotAI/kimi-code>
+- Issues: <https://github.com/MoonshotAI/kimi-code/issues>
 - Security: see SECURITY.md in the main repository
 
 ## License
