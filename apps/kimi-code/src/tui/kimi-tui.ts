@@ -78,11 +78,6 @@ import {
 import { CompactionComponent } from "./components/dialogs/compaction.ts";
 import { HelpPanelComponent } from "./components/dialogs/help-panel.ts";
 import { defaultThinkingEffortFor } from "./components/dialogs/model-selector.ts";
-import {
-  buildQuestionDisplayOptions,
-  isQuestionOtherOption,
-  questionOtherOptionIndex,
-} from "./components/dialogs/question-dialog-options.ts";
 import { QuestionDialogComponent } from "./components/dialogs/question-dialog.ts";
 import {
   SessionPickerComponent,
@@ -148,9 +143,14 @@ import {
   mountInkTerminalRenderer,
 } from "./renderer/ink-terminal-renderer.ts";
 import {
+  initInkOverlayQuestion,
   resetInkOverlayApproval,
   resetInkOverlayQuestion,
 } from "./renderer/ink-overlay-state.ts";
+import {
+  handleInkQuestionWizardInput,
+  projectInkQuestionWizardView,
+} from "./renderer/ink-question-wizard.ts";
 import {
   type PromptSemanticAction,
   routePromptEditorInput,
@@ -1192,157 +1192,30 @@ export class KimiTUI {
     resetInkOverlayQuestion(this.inkOverlay);
   }
 
-  private isInkSimpleQuestion(payload: QuestionPanelData): boolean {
-    return payload.questions.length === 1;
-  }
-
   private handleInkQuestionInput(data: string): boolean {
     const pending = this.state.livePane.pendingQuestion;
     if (pending === null) return false;
-    if (!this.isInkSimpleQuestion(pending.data)) return false;
-
-    const question = pending.data.questions[0];
-    if (question === undefined) return false;
-    const options = buildQuestionDisplayOptions(question);
-    const optionCount = options.length;
-
-    if (
-      matchesKey(data, Key.escape) ||
-      matchesKey(data, Key.ctrl("c")) ||
-      matchesKey(data, Key.ctrl("d"))
-    ) {
-      if (this.inkOverlay.questionOtherMode) {
-        this.inkOverlay.questionOtherMode = false;
-        this.inkOverlay.questionOtherText = "";
-        this.updateInkRenderer();
-        return true;
-      }
-      this.questionController.respond({ answers: [] });
-      return true;
+    if (this.inkOverlay.questionWizard === null) {
+      initInkOverlayQuestion(this.inkOverlay, pending.data.questions.length);
     }
-
-    if (optionCount === 0) return true;
-
-    if (this.inkOverlay.questionOtherMode) {
-      if (matchesKey(data, Key.backspace)) {
-        this.inkOverlay.questionOtherText = this.inkOverlay.questionOtherText.slice(
-          0,
-          -1,
-        );
-        this.updateInkRenderer();
-        return true;
-      }
-      const printable = printableChar(data);
-      if (printable !== undefined && isPrintableChar(printable)) {
-        this.inkOverlay.questionOtherText += printable;
-        this.updateInkRenderer();
-        return true;
-      }
-      if (matchesKey(data, Key.enter)) {
-        const value = this.inkOverlay.questionOtherText.trim();
-        if (value.length === 0) return true;
-        this.inkOverlay.questionOtherMode = false;
-        this.inkOverlay.questionOtherText = "";
-        if (question.multi_select) {
-          this.inkOverlay.questionMultiSelections.add(
-            questionOtherOptionIndex(question),
-          );
-          this.inkOverlay.questionCommittedOtherText = value;
-          this.inkOverlay.questionOtherMode = false;
-          this.inkOverlay.questionOtherText = "";
-          this.updateInkRenderer();
-          return true;
-        }
-        this.questionController.respond({
-          answers: [value],
-          method: "enter",
-        });
-        return true;
-      }
-      return true;
-    }
-
-    if (matchesKey(data, Key.up) || matchesKey(data, Key.down)) {
-      const delta = matchesKey(data, Key.up) ? -1 : 1;
-      this.inkOverlay.dialogSelectedIndex =
-        (this.inkOverlay.dialogSelectedIndex + delta + optionCount) % optionCount;
+    const wizard = this.inkOverlay.questionWizard;
+    if (wizard === null) return false;
+    const consumed = handleInkQuestionWizardInput(
+      pending,
+      wizard,
+      data,
+      (response) => {
+        this.questionController.respond(response);
+      },
+    );
+    if (consumed) {
+      this.inkOverlay.dialogSelectedIndex = projectInkQuestionWizardView(
+        pending,
+        wizard,
+      ).selectedIndex;
       this.updateInkRenderer();
-      return true;
     }
-
-    if (question.multi_select) {
-      if (matchesKey(data, Key.space)) {
-        const index = this.inkOverlay.dialogSelectedIndex;
-        if (isQuestionOtherOption(question, index)) {
-          this.inkOverlay.questionOtherMode = true;
-          this.inkOverlay.questionOtherText = "";
-          this.updateInkRenderer();
-          return true;
-        }
-        if (this.inkOverlay.questionMultiSelections.has(index)) {
-          this.inkOverlay.questionMultiSelections.delete(index);
-        } else {
-          this.inkOverlay.questionMultiSelections.add(index);
-        }
-        this.updateInkRenderer();
-        return true;
-      }
-      if (matchesKey(data, Key.enter)) {
-        const labels = options.flatMap((option, index) => {
-          if (!this.inkOverlay.questionMultiSelections.has(index)) return [];
-          if (option.kind === "other") {
-            const other = this.inkOverlay.questionCommittedOtherText.trim();
-            return other.length > 0 ? [other] : [];
-          }
-          return option.label.length > 0 ? [option.label] : [];
-        });
-        this.questionController.respond({
-          answers: labels.length > 0 ? [labels.join(", ")] : [],
-          method: "enter",
-        });
-        return true;
-      }
-      return true;
-    }
-
-    if (matchesKey(data, Key.enter)) {
-      const index = this.inkOverlay.dialogSelectedIndex;
-      if (isQuestionOtherOption(question, index)) {
-        this.inkOverlay.questionOtherMode = true;
-        this.inkOverlay.questionOtherText = "";
-        this.updateInkRenderer();
-        return true;
-      }
-      const selected = options[index];
-      this.questionController.respond({
-        answers: selected === undefined ? [] : [selected.label],
-        method: "enter",
-      });
-      return true;
-    }
-
-    const printable = printableChar(data);
-    const numericIndex = Number(printable) - 1;
-    if (
-      Number.isInteger(numericIndex) &&
-      numericIndex >= 0 &&
-      numericIndex < optionCount
-    ) {
-      if (isQuestionOtherOption(question, numericIndex)) {
-        this.inkOverlay.dialogSelectedIndex = numericIndex;
-        this.inkOverlay.questionOtherMode = true;
-        this.inkOverlay.questionOtherText = "";
-        this.updateInkRenderer();
-        return true;
-      }
-      const selected = options[numericIndex];
-      this.questionController.respond({
-        answers: selected === undefined ? [] : [selected.label],
-        method: "number_key",
-      });
-      return true;
-    }
-    return true;
+    return consumed;
   }
 
   /** Refresh Ink after an asynchronous clipboard/image editor callback. */
@@ -3779,9 +3652,14 @@ export class KimiTUI {
       dialogScrollTop: this.inkOverlay.dialogScrollTop,
       approvalFeedbackMode: this.inkOverlay.approvalFeedbackMode,
       approvalFeedbackText: this.inkOverlay.approvalFeedbackText,
-      questionOtherMode: this.inkOverlay.questionOtherMode,
-      questionOtherText: this.inkOverlay.questionOtherText,
-      questionMultiSelections: [...this.inkOverlay.questionMultiSelections],
+      questionWizard:
+        this.inkOverlay.questionWizard === null ||
+        this.state.livePane.pendingQuestion === null
+          ? null
+          : projectInkQuestionWizardView(
+              this.state.livePane.pendingQuestion,
+              this.inkOverlay.questionWizard,
+            ),
       sessions,
       loadingSessions: this.state.loadingSessions,
       sessionsScope: this.state.sessionsScope,
@@ -4530,7 +4408,8 @@ export class KimiTUI {
       title: "Kimi Code needs your answer",
       body: payload.questions[0]?.question,
     });
-    if (this.terminalRenderer === "ink" && this.isInkSimpleQuestion(payload)) {
+    if (this.terminalRenderer === "ink") {
+      initInkOverlayQuestion(this.inkOverlay, payload.questions.length);
       this.updateInkRenderer();
       return;
     }

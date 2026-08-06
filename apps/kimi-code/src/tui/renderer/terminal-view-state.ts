@@ -4,6 +4,7 @@ import type {
   PendingApproval,
   PendingQuestion,
 } from "../reverse-rpc/types";
+import type { InkQuestionWizardView } from "./ink-question-wizard";
 import type {
   AppState,
   LivePaneState,
@@ -116,9 +117,7 @@ export interface TerminalDialogView {
   /** Inline feedback entry while an Ink approval choice requires it. */
   readonly approvalFeedbackMode: boolean;
   readonly approvalFeedbackText: string;
-  readonly questionOtherMode: boolean;
-  readonly questionOtherText: string;
-  readonly questionMultiSelections: readonly number[];
+  readonly questionWizard: InkQuestionWizardView | null;
 }
 
 /**
@@ -161,9 +160,7 @@ export interface TerminalViewSource {
   readonly dialogScrollTop?: number;
   readonly approvalFeedbackMode?: boolean;
   readonly approvalFeedbackText?: string;
-  readonly questionOtherMode?: boolean;
-  readonly questionOtherText?: string;
-  readonly questionMultiSelections?: readonly number[];
+  readonly questionWizard?: InkQuestionWizardView | null;
   readonly approvalPreview?: TerminalApprovalPreviewView | null;
   readonly toolOutputExpanded: boolean;
   readonly externalEditorRunning: boolean;
@@ -301,9 +298,7 @@ export function createTerminalViewState(
       scrollTop: source.dialogScrollTop ?? 0,
       approvalFeedbackMode: source.approvalFeedbackMode ?? false,
       approvalFeedbackText: source.approvalFeedbackText ?? "",
-      questionOtherMode: source.questionOtherMode ?? false,
-      questionOtherText: source.questionOtherText ?? "",
-      questionMultiSelections: [...(source.questionMultiSelections ?? [])],
+      questionWizard: source.questionWizard ?? null,
     },
     toolOutputExpanded: source.toolOutputExpanded,
     externalEditorRunning: source.externalEditorRunning,

@@ -1,17 +1,19 @@
 import type { ApprovalPreviewBlock } from "#/tui/components/dialogs/approval-preview-body";
 
+import {
+  createInkQuestionWizardState,
+  type InkQuestionWizardState,
+} from "./ink-question-wizard";
+
 /** Ink-owned dialog and overlay state. Unused when the rollback renderer is active. */
 export interface InkOverlayState {
   dialogSelectedIndex: number;
   dialogScrollTop: number;
   approvalFeedbackMode: boolean;
   approvalFeedbackText: string;
-  questionMultiSelections: Set<number>;
   approvalPreviewBlock: ApprovalPreviewBlock | null;
   approvalPreviewScrollTop: number;
-  questionOtherMode: boolean;
-  questionOtherText: string;
-  questionCommittedOtherText: string;
+  questionWizard: InkQuestionWizardState | null;
 }
 
 export function createInkOverlayState(): InkOverlayState {
@@ -20,12 +22,9 @@ export function createInkOverlayState(): InkOverlayState {
     dialogScrollTop: 0,
     approvalFeedbackMode: false,
     approvalFeedbackText: "",
-    questionMultiSelections: new Set(),
     approvalPreviewBlock: null,
     approvalPreviewScrollTop: 0,
-    questionOtherMode: false,
-    questionOtherText: "",
-    questionCommittedOtherText: "",
+    questionWizard: null,
   };
 }
 
@@ -39,8 +38,13 @@ export function resetInkOverlayApproval(overlay: InkOverlayState): void {
 
 export function resetInkOverlayQuestion(overlay: InkOverlayState): void {
   overlay.dialogSelectedIndex = 0;
-  overlay.questionMultiSelections = new Set();
-  overlay.questionOtherMode = false;
-  overlay.questionOtherText = "";
-  overlay.questionCommittedOtherText = "";
+  overlay.questionWizard = null;
+}
+
+export function initInkOverlayQuestion(
+  overlay: InkOverlayState,
+  questionCount: number,
+): void {
+  overlay.dialogSelectedIndex = 0;
+  overlay.questionWizard = createInkQuestionWizardState(questionCount);
 }

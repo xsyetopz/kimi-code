@@ -314,6 +314,8 @@ describe("Ink-owned simple dialog input", () => {
 
     expect(tui.handleInkSimpleDialogInput("\u001b[B")).toBe(true);
     expect(tui.handleInkSimpleDialogInput("\r")).toBe(true);
+    expect(respond).not.toHaveBeenCalled();
+    expect(tui.handleInkSimpleDialogInput("\r")).toBe(true);
     expect(respond).toHaveBeenCalledWith({
       answers: ["Second"],
       method: "enter",
@@ -340,14 +342,49 @@ describe("Ink-owned simple dialog input", () => {
 
     expect(tui.handleInkSimpleDialogInput("\u001b[B")).toBe(true);
     expect(tui.handleInkSimpleDialogInput("\r")).toBe(true);
-    expect(tui.state.inkOverlay.questionOtherMode).toBe(true);
+    expect(tui.state.inkOverlay.questionWizard?.otherMode).toBe(true);
     for (const ch of "mine") {
       expect(tui.handleInkSimpleDialogInput(ch)).toBe(true);
     }
     expect(tui.handleInkSimpleDialogInput("\r")).toBe(true);
+    expect(respond).not.toHaveBeenCalled();
+    expect(tui.handleInkSimpleDialogInput("\r")).toBe(true);
     expect(respond).toHaveBeenCalledWith({
       answers: ["mine"],
       method: "enter",
+    });
+  });
+
+  it("walks multi-question Ink dialogs through the review tab", () => {
+    const tui = makeTui();
+    const respond = vi.spyOn(tui.questionController, "respond");
+    tui.state.livePane.pendingQuestion = {
+      data: {
+        id: "question-1",
+        tool_call_id: "tool-1",
+        questions: [
+          {
+            question: "Q1?",
+            multi_select: false,
+            options: [{ label: "A1" }, { label: "B1" }],
+          },
+          {
+            question: "Q2?",
+            multi_select: false,
+            options: [{ label: "A2" }, { label: "B2" }],
+          },
+        ],
+      },
+    };
+
+    expect(tui.handleInkSimpleDialogInput("2")).toBe(true);
+    expect(respond).not.toHaveBeenCalled();
+    expect(tui.handleInkSimpleDialogInput("2")).toBe(true);
+    expect(respond).not.toHaveBeenCalled();
+    expect(tui.handleInkSimpleDialogInput("1")).toBe(true);
+    expect(respond).toHaveBeenCalledWith({
+      answers: ["B1", "B2"],
+      method: "number_key",
     });
   });
 

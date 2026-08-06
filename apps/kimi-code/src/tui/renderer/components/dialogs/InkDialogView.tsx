@@ -49,13 +49,11 @@ function dialogBody(
     );
   }
   if (dialog.pendingQuestion !== null) {
+    if (dialog.questionWizard === null) return null;
     return (
       <InkQuestionDialog
         request={dialog.pendingQuestion}
-        selectedIndex={dialog.selectedIndex}
-        otherMode={dialog.questionOtherMode}
-        otherText={dialog.questionOtherText}
-        multiSelections={new Set(dialog.questionMultiSelections)}
+        wizard={dialog.questionWizard}
       />
     );
   }
