@@ -77,6 +77,7 @@ import {
 } from "./components/dialogs/approval-preview-body.ts";
 import { CompactionComponent } from "./components/dialogs/compaction.ts";
 import { ChoicePickerComponent } from "./components/dialogs/choice-picker.ts";
+import { EffortSelectorComponent } from "./components/dialogs/effort-selector.ts";
 import { ModelSelectorComponent } from "./components/dialogs/model-selector.ts";
 import { TabbedModelSelectorComponent } from "./components/dialogs/tabbed-model-selector.ts";
 import { HelpPanelComponent } from "./components/dialogs/help-panel.ts";
@@ -156,6 +157,11 @@ import {
   projectInkChoicePickerView,
 } from "./renderer/ink-choice-picker.ts";
 import {
+  createInkEffortSelectorSession,
+  type InkEffortSelectorSession,
+  projectInkEffortSelectorView,
+} from "./renderer/ink-effort-selector.ts";
+import {
   createInkModelSelectorSession,
   createInkTabbedModelSelectorSession,
   type InkModelSelectorSession,
@@ -164,6 +170,7 @@ import {
 } from "./renderer/ink-model-selector.ts";
 import type { ChoicePickerOptions } from "./components/dialogs/choice-picker.ts";
 import type { ChoiceOption } from "./components/dialogs/choice-picker.ts";
+import type { EffortSelectorOptions } from "./components/dialogs/effort-selector.ts";
 import type { ModelSelectorOptions } from "./components/dialogs/model-selector.ts";
 import type { TabbedModelSelectorOptions } from "./components/dialogs/tabbed-model-selector.ts";
 import { SearchableList } from "./utils/searchable-list.ts";
@@ -466,6 +473,10 @@ export class KimiTUI {
         readonly opts: TabbedModelSelectorOptions;
       }
     | null = null;
+  private inkEffortSelector: {
+    readonly session: InkEffortSelectorSession;
+    readonly opts: EffortSelectorOptions;
+  } | null = null;
   private readonly terminalRenderer: "kimi-tui" | "ink";
   private readonly terminalOwnership = new TerminalOwnership();
   private inkOwnsTerminal(): boolean {
@@ -992,6 +1003,9 @@ export class KimiTUI {
     if (dialog === "model-selector") {
       return this.handleInkModelSelectorInput(data);
     }
+    if (dialog === "effort-selector") {
+      return this.handleInkEffortSelectorInput(data);
+    }
     if (dialog !== "trust-prompt" && dialog !== "session-picker") return false;
     const count =
       dialog === "trust-prompt" ? 2 : Math.min(8, this.state.sessions.length);
@@ -1355,6 +1369,44 @@ export class KimiTUI {
   private closeInkModelSelector(): void {
     this.inkModelSelector = null;
     if (this.state.activeDialog === "model-selector") {
+      this.state.activeDialog = null;
+    }
+  }
+
+  private handleInkEffortSelectorInput(data: string): boolean {
+    const handle = this.inkEffortSelector;
+    if (handle === null) return false;
+    const callbacks = {
+      onSelect: (effort: EffortSelectorOptions["efforts"][number]) => {
+        this.closeInkEffortSelector();
+        handle.opts.onSelect(effort);
+      },
+      onSessionOnlySelect: handle.opts.onSessionOnlySelect,
+      onCancel: () => {
+        this.closeInkEffortSelector();
+        handle.opts.onCancel();
+      },
+    };
+    const consumed = handle.session.handleInput(data, callbacks);
+    if (consumed) {
+      this.updateInkRenderer();
+    }
+    return consumed;
+  }
+
+  private openInkEffortSelector(opts: EffortSelectorOptions): void {
+    this.closeInkEffortSelector();
+    this.inkEffortSelector = {
+      session: createInkEffortSelectorSession(opts),
+      opts,
+    };
+    this.state.activeDialog = "effort-selector";
+    this.updateInkRenderer();
+  }
+
+  private closeInkEffortSelector(): void {
+    this.inkEffortSelector = null;
+    if (this.state.activeDialog === "effort-selector") {
       this.state.activeDialog = null;
     }
   }
@@ -3813,6 +3865,10 @@ export class KimiTUI {
         this.inkModelSelector === null
           ? null
           : projectInkModelSelectorView(this.inkModelSelector.session),
+      effortSelector:
+        this.inkEffortSelector === null
+          ? null
+          : projectInkEffortSelectorView(this.inkEffortSelector.session),
       sessions,
       loadingSessions: this.state.loadingSessions,
       sessionsScope: this.state.sessionsScope,
@@ -4175,6 +4231,10 @@ export class KimiTUI {
       this.openInkModelSelector(panel.getModelSelectorOptions());
       return;
     }
+    if (this.inkOwnsTerminal() && panel instanceof EffortSelectorComponent) {
+      this.openInkEffortSelector(panel.getEffortSelectorOptions());
+      return;
+    }
     if (
       this.inkOwnsTerminal() &&
       panel instanceof ChoicePickerComponent
@@ -4194,6 +4254,7 @@ export class KimiTUI {
   restoreEditor(): void {
     this.closeInkChoicePicker();
     this.closeInkModelSelector();
+    this.closeInkEffortSelector();
     if (this.inkOwnsTerminal()) {
       const children = this.state.editorContainer.children;
       if (children.length === 1 && children[0] === this.state.editor) {

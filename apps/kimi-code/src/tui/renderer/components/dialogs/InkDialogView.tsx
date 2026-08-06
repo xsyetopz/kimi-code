@@ -5,6 +5,7 @@ import type { TerminalViewState } from "../../terminal-view-state";
 
 import { InkApprovalDialog } from "./InkApprovalDialog";
 import { InkChoicePickerDialog } from "./InkChoicePickerDialog";
+import { InkEffortSelectorDialog } from "./InkEffortSelectorDialog";
 import { InkHelpDialog } from "./InkHelpDialog";
 import { InkModelSelectorDialog } from "./InkModelSelectorDialog";
 import { InkQuestionDialog } from "./InkQuestionDialog";
@@ -33,6 +34,8 @@ function dialogTitle(view: TerminalViewState): string | undefined {
       return view.dialog.choicePicker?.title;
     case "model-selector":
       return view.dialog.modelSelector?.title;
+    case "effort-selector":
+      return view.dialog.effortSelector?.title;
     default:
       return;
   }
@@ -93,6 +96,9 @@ function dialogBody(
     case "model-selector":
       if (dialog.modelSelector === null) return null;
       return <InkModelSelectorDialog selector={dialog.modelSelector} />;
+    case "effort-selector":
+      if (dialog.effortSelector === null) return null;
+      return <InkEffortSelectorDialog selector={dialog.effortSelector} />;
     default:
       return null;
   }
@@ -115,7 +121,8 @@ export function InkDialogView({
   if (
     view.dialog.active === "help" ||
     view.dialog.active === "choice-picker" ||
-    view.dialog.active === "model-selector"
+    view.dialog.active === "model-selector" ||
+    view.dialog.active === "effort-selector"
   ) {
     return body;
   }

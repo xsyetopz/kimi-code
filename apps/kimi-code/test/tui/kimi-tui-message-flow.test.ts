@@ -16,7 +16,6 @@ import type {
 } from "@moonshot-ai/kimi-code-sdk";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { EffortSelectorComponent } from "#/tui/components/dialogs/effort-selector";
 import { KIMI_CODE_PLUGIN_MARKETPLACE_URL } from "#/constant/app";
 import { MOON_SPINNER_FRAMES } from "#/tui/constant/rendering";
 import {
@@ -387,6 +386,47 @@ async function waitForInkModelSelector(driver: MessageDriver): Promise<void> {
       ).getTerminalViewState().dialog.modelSelector,
     ).not.toBeNull();
   });
+}
+
+async function waitForInkEffortSelector(driver: MessageDriver): Promise<void> {
+  await vi.waitFor(() => {
+    expect(driver.state.activeDialog).toBe("effort-selector");
+    expect(
+      (
+        driver as unknown as {
+          getTerminalViewState: () => {
+            dialog: { effortSelector: { title: string } | null };
+          };
+        }
+      ).getTerminalViewState().dialog.effortSelector,
+    ).not.toBeNull();
+  });
+}
+
+function inkEffortSelectorText(driver: MessageDriver): string {
+  const selector = (
+    driver as unknown as {
+      getTerminalViewState: () => {
+        dialog: {
+          effortSelector: {
+            title: string;
+            hint: string;
+            warning: string | undefined;
+            segments: readonly { label: string; active: boolean }[];
+          } | null;
+        };
+      };
+    }
+  ).getTerminalViewState().dialog.effortSelector;
+  if (selector === null) return "";
+  return [
+    selector.title,
+    selector.hint,
+    ...(selector.warning === undefined ? [] : [selector.warning]),
+    ...selector.segments.map((segment) =>
+      segment.active ? `[ ${segment.label} ]` : `  ${segment.label}  `,
+    ),
+  ].join("\n");
 }
 
 function inkModelSelectorText(driver: MessageDriver): string {
@@ -6399,14 +6439,8 @@ command = "vim"
 
     driver.handleUserInput("/effort");
 
-    await vi.waitFor(() => {
-      expect(driver.state.editorContainer.children[0]).toBeInstanceOf(
-        EffortSelectorComponent,
-      );
-    });
-    (
-      driver.state.editorContainer.children[0] as EffortSelectorComponent
-    ).handleInput("\r");
+    await waitForInkEffortSelector(driver);
+    sendInkDialogInput(driver, "\r");
 
     await vi.waitFor(() => {
       expect(renderTranscript(driver)).toContain(
@@ -7074,14 +7108,8 @@ describe("/effort support_efforts override", () => {
 
     driver.handleUserInput("/effort");
 
-    await vi.waitFor(() => {
-      expect(driver.state.editorContainer.children[0]).toBeInstanceOf(
-        EffortSelectorComponent,
-      );
-    });
-    const picker = driver.state.editorContainer
-      .children[0] as EffortSelectorComponent;
-    expect(picker.render(80).join("\n")).toContain("Max");
+    await waitForInkEffortSelector(driver);
+    expect(inkEffortSelectorText(driver)).toContain("Max");
   });
 
   it("offers no fallback efforts for a clearly non-Claude Anthropic-compatible model", async () => {
@@ -7103,14 +7131,8 @@ describe("/effort support_efforts override", () => {
 
     driver.handleUserInput("/effort");
 
-    await vi.waitFor(() => {
-      expect(driver.state.editorContainer.children[0]).toBeInstanceOf(
-        EffortSelectorComponent,
-      );
-    });
-    const picker = driver.state.editorContainer
-      .children[0] as EffortSelectorComponent;
-    expect(picker.render(80).join("\n")).not.toContain("Max");
+    await waitForInkEffortSelector(driver);
+    expect(inkEffortSelectorText(driver)).not.toContain("Max");
   });
 
   it("offers no fallback efforts for an unknown model on a Kimi provider using the Anthropic protocol", async () => {
@@ -7133,14 +7155,8 @@ describe("/effort support_efforts override", () => {
 
     driver.handleUserInput("/effort");
 
-    await vi.waitFor(() => {
-      expect(driver.state.editorContainer.children[0]).toBeInstanceOf(
-        EffortSelectorComponent,
-      );
-    });
-    const picker = driver.state.editorContainer
-      .children[0] as EffortSelectorComponent;
-    expect(picker.render(80).join("\n")).not.toContain("Max");
+    await waitForInkEffortSelector(driver);
+    expect(inkEffortSelectorText(driver)).not.toContain("Max");
   });
 
   it("offers the latest Opus efforts for a flat providerless Claude-marked Anthropic model", async () => {
@@ -7162,14 +7178,8 @@ describe("/effort support_efforts override", () => {
 
     driver.handleUserInput("/effort");
 
-    await vi.waitFor(() => {
-      expect(driver.state.editorContainer.children[0]).toBeInstanceOf(
-        EffortSelectorComponent,
-      );
-    });
-    const picker = driver.state.editorContainer
-      .children[0] as EffortSelectorComponent;
-    expect(picker.render(80).join("\n")).toContain("Max");
+    await waitForInkEffortSelector(driver);
+    expect(inkEffortSelectorText(driver)).toContain("Max");
   });
 
   it("keeps rejecting efforts hidden by a Kimi support_efforts override", async () => {

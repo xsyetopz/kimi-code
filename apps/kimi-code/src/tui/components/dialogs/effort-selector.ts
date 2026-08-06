@@ -49,6 +49,10 @@ export class EffortSelectorComponent extends Container implements Focusable {
     this.activeIndex = Math.max(idx, 0);
   }
 
+  getEffortSelectorOptions(): EffortSelectorOptions {
+    return this.opts;
+  }
+
   handleInput(data: string): void {
     if (matchesKey(data, Key.escape)) {
       this.opts.onCancel();
