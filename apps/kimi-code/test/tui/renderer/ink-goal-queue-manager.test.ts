@@ -10,11 +10,11 @@ import { KimiTUI, type KimiTUIStartupInput } from "#/tui/kimi-tui";
 import {
   createInkGoalQueueEditSession,
   projectInkGoalQueueEditView,
-} from "#/tui/renderer/ink-goal-queue-edit";
+} from "#/tui/renderer/ink/sessions/goal-queue-edit";
 import {
   createInkGoalQueueManagerSession,
   projectInkGoalQueueManagerView,
-} from "#/tui/renderer/ink-goal-queue-manager";
+} from "#/tui/renderer/ink/sessions/goal-queue-manager";
 
 const demoGoal: UpcomingGoal = {
   id: "g1",

@@ -21,7 +21,7 @@ import {
 import {
   createInkOverlayState,
   type InkOverlayState,
-} from "./renderer/ink-overlay-state";
+} from "./renderer/ink/overlay-state";
 import {
   INITIAL_LIVE_PANE,
   type AppState,

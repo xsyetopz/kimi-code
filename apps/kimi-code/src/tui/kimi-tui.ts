@@ -160,83 +160,83 @@ import {
   type InkTerminalRenderer,
   type InkTerminalRendererOptions,
   mountInkTerminalRenderer,
-} from "./renderer/ink-terminal-renderer.ts";
+} from "./renderer/ink/terminal-renderer.ts";
 import {
   initInkOverlayQuestion,
   resetInkOverlayApproval,
   resetInkOverlayQuestion,
-} from "./renderer/ink-overlay-state.ts";
+} from "./renderer/ink/overlay-state.ts";
 import {
   createInkChoicePickerList,
   handleInkChoicePickerInput,
   projectInkChoicePickerView,
-} from "./renderer/ink-choice-picker.ts";
+} from "./renderer/ink/sessions/choice-picker.ts";
 import {
   createInkPluginMcpSelectorSession,
   type InkPluginMcpSelectorSession,
   projectInkPluginMcpSelectorView,
-} from "./renderer/ink-plugin-mcp-selector.ts";
+} from "./renderer/ink/sessions/plugin-mcp-selector.ts";
 import {
   createInkApiKeyInputSession,
   projectInkApiKeyInputView,
-} from "./renderer/ink-api-key-input.ts";
-import type { InkSingleLineInputSession } from "./renderer/ink-input-dialog-common.ts";
+} from "./renderer/ink/sessions/api-key-input.ts";
+import type { InkSingleLineInputSession } from "./renderer/ink/sessions/input-single-line.ts";
 import {
   createInkCustomRegistryImportSession,
   type InkCustomRegistryImportSession,
   projectInkCustomRegistryImportView,
-} from "./renderer/ink-custom-registry-import.ts";
+} from "./renderer/ink/sessions/custom-registry-import.ts";
 import {
   createInkFeedbackInputSession,
   projectInkFeedbackInputView,
-} from "./renderer/ink-feedback-input.ts";
+} from "./renderer/ink/sessions/feedback-input.ts";
 import {
   createInkProviderManagerSession,
   type InkProviderManagerSession,
   projectInkProviderManagerView,
-} from "./renderer/ink-provider-manager.ts";
+} from "./renderer/ink/sessions/provider-manager.ts";
 import {
   createInkGoalQueueEditSession,
   type InkGoalQueueEditSession,
   projectInkGoalQueueEditView,
-} from "./renderer/ink-goal-queue-edit.ts";
+} from "./renderer/ink/sessions/goal-queue-edit.ts";
 import {
   createInkGoalQueueManagerSession,
   type InkGoalQueueManagerSession,
   projectInkGoalQueueManagerView,
-} from "./renderer/ink-goal-queue-manager.ts";
+} from "./renderer/ink/sessions/goal-queue-manager.ts";
 import {
   createInkStartPermissionPromptSession,
   type InkStartPermissionPromptSession,
   projectInkStartPermissionPromptView,
-} from "./renderer/ink-start-permission-prompt.ts";
+} from "./renderer/ink/sessions/start-permission-prompt.ts";
 import {
   createInkPluginsPanelSession,
   type InkPluginsPanelSession,
   projectInkPluginsPanelView,
-} from "./renderer/ink-plugins-panel.ts";
+} from "./renderer/ink/sessions/plugins-panel.ts";
 import {
   createInkExperimentsSelectorSession,
   type InkExperimentsSelectorSession,
   projectInkExperimentsSelectorView,
-} from "./renderer/ink-experiments-selector.ts";
+} from "./renderer/ink/sessions/experiments-selector.ts";
 import {
   createInkUndoSelectorSession,
   type InkUndoSelectorSession,
   projectInkUndoSelectorView,
-} from "./renderer/ink-undo-selector.ts";
+} from "./renderer/ink/sessions/undo-selector.ts";
 import {
   createInkEffortSelectorSession,
   type InkEffortSelectorSession,
   projectInkEffortSelectorView,
-} from "./renderer/ink-effort-selector.ts";
+} from "./renderer/ink/sessions/effort-selector.ts";
 import {
   createInkModelSelectorSession,
   createInkTabbedModelSelectorSession,
   type InkModelSelectorSession,
   type InkTabbedModelSelectorSession,
   projectInkModelSelectorView,
-} from "./renderer/ink-model-selector.ts";
+} from "./renderer/ink/sessions/model-selector.ts";
 import type { ChoicePickerOptions } from "./components/dialogs/choice-picker.ts";
 import type { ChoiceOption } from "./components/dialogs/choice-picker.ts";
 import type { EffortSelectorOptions } from "./components/dialogs/effort-selector.ts";
@@ -261,7 +261,7 @@ import { SearchableList } from "./utils/searchable-list.ts";
 import {
   handleInkQuestionWizardInput,
   projectInkQuestionWizardView,
-} from "./renderer/ink-question-wizard.ts";
+} from "./renderer/ink/question-wizard.ts";
 import {
   type PromptSemanticAction,
   routePromptEditorInput,

@@ -4,9 +4,9 @@ import { ApiKeyInputDialogComponent } from "#/tui/components/dialogs/api-key-inp
 import { CustomRegistryImportDialogComponent } from "#/tui/components/dialogs/custom-registry-import";
 import { FeedbackInputDialogComponent } from "#/tui/components/dialogs/feedback-input-dialog";
 import { KimiTUI, type KimiTUIStartupInput } from "#/tui/kimi-tui";
-import { createInkApiKeyInputSession } from "#/tui/renderer/ink-api-key-input";
-import { createInkCustomRegistryImportSession } from "#/tui/renderer/ink-custom-registry-import";
-import { createInkFeedbackInputSession } from "#/tui/renderer/ink-feedback-input";
+import { createInkApiKeyInputSession } from "#/tui/renderer/ink/sessions/api-key-input";
+import { createInkCustomRegistryImportSession } from "#/tui/renderer/ink/sessions/custom-registry-import";
+import { createInkFeedbackInputSession } from "#/tui/renderer/ink/sessions/feedback-input";
 
 function makeTui() {
   const input: KimiTUIStartupInput = {

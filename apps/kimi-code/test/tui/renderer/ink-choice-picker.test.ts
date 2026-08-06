@@ -6,7 +6,7 @@ import {
   createInkChoicePickerList,
   handleInkChoicePickerInput,
   projectInkChoicePickerView,
-} from "#/tui/renderer/ink-choice-picker";
+} from "#/tui/renderer/ink/sessions/choice-picker";
 
 function makeTui() {
   const input: KimiTUIStartupInput = {

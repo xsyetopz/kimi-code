@@ -5,7 +5,7 @@ import { KimiTUI, type KimiTUIStartupInput } from "#/tui/kimi-tui";
 import {
   createInkTabbedModelSelectorSession,
   projectInkModelSelectorView,
-} from "#/tui/renderer/ink-model-selector";
+} from "#/tui/renderer/ink/sessions/model-selector";
 
 function makeTui() {
   const input: KimiTUIStartupInput = {

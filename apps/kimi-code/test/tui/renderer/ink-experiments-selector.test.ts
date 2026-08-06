@@ -9,7 +9,7 @@ import { KimiTUI, type KimiTUIStartupInput } from "#/tui/kimi-tui";
 import {
   createInkExperimentsSelectorSession,
   projectInkExperimentsSelectorView,
-} from "#/tui/renderer/ink-experiments-selector";
+} from "#/tui/renderer/ink/sessions/experiments-selector";
 
 function feature(
   overrides: Partial<ExperimentalFeatureState> = {},

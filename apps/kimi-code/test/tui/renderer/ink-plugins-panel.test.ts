@@ -9,7 +9,7 @@ import { KimiTUI, type KimiTUIStartupInput } from "#/tui/kimi-tui";
 import {
   createInkPluginsPanelSession,
   projectInkPluginsPanelView,
-} from "#/tui/renderer/ink-plugins-panel";
+} from "#/tui/renderer/ink/sessions/plugins-panel";
 
 const demoPlugin: PluginSummary = {
   id: "demo",

@@ -9,7 +9,7 @@ import { KimiTUI, type KimiTUIStartupInput } from "#/tui/kimi-tui";
 import {
   createInkProviderManagerSession,
   projectInkProviderManagerView,
-} from "#/tui/renderer/ink-provider-manager";
+} from "#/tui/renderer/ink/sessions/provider-manager";
 
 function makeTui() {
   const input: KimiTUIStartupInput = {

@@ -5,7 +5,7 @@ import {
   createInkQuestionWizardState,
   handleInkQuestionWizardInput,
   projectInkQuestionWizardView,
-} from "#/tui/renderer/ink-question-wizard";
+} from "#/tui/renderer/ink/question-wizard";
 
 function makePending(
   questions: PendingQuestion["data"]["questions"],

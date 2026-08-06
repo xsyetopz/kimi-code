@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { createTerminalViewState } from "#/tui/renderer/terminal-view-state";
-import { splitInkTranscript } from "#/tui/renderer/ink-transcript-split";
+import { splitInkTranscript } from "#/tui/renderer/ink/transcript-split";
 import type { AppState, LivePaneState } from "#/tui/types";
 
 const baseAppState = {

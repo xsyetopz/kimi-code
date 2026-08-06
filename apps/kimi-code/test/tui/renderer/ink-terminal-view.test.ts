@@ -11,7 +11,7 @@ vi.mock("ink", async () => {
 import { renderToString } from "ink";
 import { visibleWidth } from "@moonshot-ai/kimi-tui";
 
-import { InkDialogView, projectInkHelpLines } from "#/tui/renderer/ink-terminal-dialog";
+import { InkDialogView, projectInkHelpLines } from "#/tui/renderer/ink/terminal-dialog";
 import {
   InkTerminalView,
   encodeInkInput,
@@ -20,9 +20,9 @@ import {
   projectInkActivity,
   projectInkQueue,
   projectInkTranscript,
-} from "#/tui/renderer/ink-terminal-view";
-import type { InkTerminalRenderer } from "#/tui/renderer/ink-terminal-renderer";
-import { mountInkTerminalRenderer as mountRenderer } from "#/tui/renderer/ink-terminal-renderer";
+} from "#/tui/renderer/ink/terminal-view";
+import type { InkTerminalRenderer } from "#/tui/renderer/ink/terminal-renderer";
+import { mountInkTerminalRenderer as mountRenderer } from "#/tui/renderer/ink/terminal-renderer";
 import {
   createTerminalViewState,
   type TerminalViewState,

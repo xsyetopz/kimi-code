@@ -5,7 +5,7 @@ import { KimiTUI, type KimiTUIStartupInput } from "#/tui/kimi-tui";
 import {
   createInkUndoSelectorSession,
   projectInkUndoSelectorView,
-} from "#/tui/renderer/ink-undo-selector";
+} from "#/tui/renderer/ink/sessions/undo-selector";
 
 function makeTui() {
   const input: KimiTUIStartupInput = {

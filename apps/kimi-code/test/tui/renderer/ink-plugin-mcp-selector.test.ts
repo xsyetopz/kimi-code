@@ -8,7 +8,7 @@ import { KimiTUI, type KimiTUIStartupInput } from "#/tui/kimi-tui";
 import {
   createInkPluginMcpSelectorSession,
   projectInkPluginMcpSelectorView,
-} from "#/tui/renderer/ink-plugin-mcp-selector";
+} from "#/tui/renderer/ink/sessions/plugin-mcp-selector";
 
 function pluginInfo(overrides: Partial<PluginInfo> = {}): PluginInfo {
   return {

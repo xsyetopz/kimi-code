@@ -9,7 +9,7 @@ import { KimiTUI, type KimiTUIStartupInput } from "#/tui/kimi-tui";
 import {
   createInkStartPermissionPromptSession,
   projectInkStartPermissionPromptView,
-} from "#/tui/renderer/ink-start-permission-prompt";
+} from "#/tui/renderer/ink/sessions/start-permission-prompt";
 
 function makeTui() {
   const input: KimiTUIStartupInput = {

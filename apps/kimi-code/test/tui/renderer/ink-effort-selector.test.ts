@@ -5,7 +5,7 @@ import { KimiTUI, type KimiTUIStartupInput } from "#/tui/kimi-tui";
 import {
   createInkEffortSelectorSession,
   projectInkEffortSelectorView,
-} from "#/tui/renderer/ink-effort-selector";
+} from "#/tui/renderer/ink/sessions/effort-selector";
 
 function makeTui() {
   const input: KimiTUIStartupInput = {

@@ -4,20 +4,20 @@ import type {
   PendingApproval,
   PendingQuestion,
 } from "../reverse-rpc/types";
-import type { InkChoicePickerView } from "./ink-choice-picker";
-import type { InkEffortSelectorView } from "./ink-effort-selector";
-import type { InkModelSelectorView } from "./ink-model-selector";
-import type { InkExperimentsSelectorView } from "./ink-experiments-selector";
-import type { InkPluginMcpSelectorView } from "./ink-plugin-mcp-selector";
-import type { InkGoalQueueEditView } from "./ink-goal-queue-edit";
-import type { InkGoalQueueManagerView } from "./ink-goal-queue-manager";
-import type { InkPluginsPanelView } from "./ink-plugins-panel";
-import type { InkCustomRegistryImportView } from "./ink-custom-registry-import";
-import type { InkSingleLineInputView } from "./ink-input-dialog-common";
-import type { InkProviderManagerView } from "./ink-provider-manager";
-import type { InkStartPermissionPromptView } from "./ink-start-permission-prompt";
-import type { InkUndoSelectorView } from "./ink-undo-selector";
-import type { InkQuestionWizardView } from "./ink-question-wizard";
+import type { InkChoicePickerView } from "./ink/sessions/choice-picker";
+import type { InkEffortSelectorView } from "./ink/sessions/effort-selector";
+import type { InkModelSelectorView } from "./ink/sessions/model-selector";
+import type { InkExperimentsSelectorView } from "./ink/sessions/experiments-selector";
+import type { InkPluginMcpSelectorView } from "./ink/sessions/plugin-mcp-selector";
+import type { InkGoalQueueEditView } from "./ink/sessions/goal-queue-edit";
+import type { InkGoalQueueManagerView } from "./ink/sessions/goal-queue-manager";
+import type { InkPluginsPanelView } from "./ink/sessions/plugins-panel";
+import type { InkCustomRegistryImportView } from "./ink/sessions/custom-registry-import";
+import type { InkSingleLineInputView } from "./ink/sessions/input-single-line";
+import type { InkProviderManagerView } from "./ink/sessions/provider-manager";
+import type { InkStartPermissionPromptView } from "./ink/sessions/start-permission-prompt";
+import type { InkUndoSelectorView } from "./ink/sessions/undo-selector";
+import type { InkQuestionWizardView } from "./ink/question-wizard";
 import type {
   AppState,
   LivePaneState,

@@ -22,18 +22,18 @@ export {
   projectInkActivity,
   projectInkQueue,
   projectInkTranscript,
-} from "./renderer/ink-terminal-view";
+} from "./renderer/ink/terminal-view";
 export type {
   InkQueueProjection,
   InkEditorProjection,
   InkTerminalViewProps,
   InkTranscriptProjection,
-} from "./renderer/ink-terminal-view";
-export { mountInkTerminalRenderer } from "./renderer/ink-terminal-renderer";
+} from "./renderer/ink/terminal-view";
+export { mountInkTerminalRenderer } from "./renderer/ink/terminal-renderer";
 export type {
   InkTerminalRenderer,
   InkTerminalRendererOptions,
-} from "./renderer/ink-terminal-renderer";
+} from "./renderer/ink/terminal-renderer";
 export { TerminalOwnership } from "./renderer/terminal-owner";
 export type { TerminalOwner } from "./renderer/terminal-owner";
 export {
