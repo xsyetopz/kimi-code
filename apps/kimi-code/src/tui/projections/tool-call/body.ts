@@ -4,6 +4,7 @@ import { pickResultRenderer } from "#/tui/components/messages/tool-renderers/reg
 import { currentTheme } from "#/tui/theme";
 import type { ToolCallBlockData, ToolResultBlockData } from "#/tui/types";
 
+import { projectWriteEditPreviewLines } from "./call-preview";
 import {
   interpretExitPlanModeOutcome,
   isExitPlanModeOutcomeOutput,
@@ -57,6 +58,17 @@ export function projectToolCallBodyLines(
   }
 
   if (
+    toolCall.name === "Write" ||
+    toolCall.name === "Edit"
+  ) {
+    lines.push(
+      ...projectWriteEditPreviewLines({
+        toolCall,
+        result,
+        expanded,
+      }),
+    );
+  } else if (
     result === undefined &&
     toolCall.streamingArguments !== undefined &&
     toolCall.streamingArguments.length > 0

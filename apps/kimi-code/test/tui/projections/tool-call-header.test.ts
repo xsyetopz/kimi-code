@@ -1,8 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { ToolCallComponent } from "#/tui/components/messages/tool-call";
 import { STATUS_BULLET } from "#/tui/constant/symbols";
 import { projectToolCallBodyLines } from "#/tui/projections/tool-call/body";
+import { projectWriteEditPreviewLines } from "#/tui/projections/tool-call/call-preview";
 import { projectToolCallHeader } from "#/tui/projections/tool-call/header";
 import { projectSingleSubagentHeader } from "#/tui/projections/tool-call/subagent";
 import { darkColors } from "#/tui/theme/colors";
@@ -10,6 +11,17 @@ import { currentTheme } from "#/tui/theme";
 
 function strip(text: string): string {
   return text.replaceAll(/\u001B\[[0-9;]*m/g, "");
+}
+
+function liveBodyContainsProjectedLines(
+  live: string,
+  projectedLines: readonly string[],
+): void {
+  const liveLines = live.split("\n").map((line) => line.trimEnd());
+  for (const projected of projectedLines) {
+    const needle = strip(projected).trimEnd();
+    expect(liveLines.some((line) => line.includes(needle))).toBe(true);
+  }
 }
 
 describe("projectToolCallHeader", () => {
@@ -79,6 +91,75 @@ describe("projectToolCallBodyLines", () => {
     });
     const plain = lines.map(strip).join("\n");
     expect(plain).toContain("src/a.ts");
+  });
+
+  it("projects Write streaming preview lines matching the live component", () => {
+    currentTheme.setPalette(darkColors);
+    const lines: string[] = [];
+    for (let i = 1; i <= 30; i++) lines.push(`line${String(i)}`);
+    const escaped = lines.join("\\n");
+    const toolCall = {
+      id: "call_write_stream",
+      name: "Write" as const,
+      args: { file_path: "foo.ts", content: lines.join("\n") },
+      streamingArguments: `{"file_path":"foo.ts","content":"${escaped}`,
+    };
+    const component = new ToolCallComponent(toolCall, undefined);
+    const live = strip(component.render(100).join("\n"));
+    const projectedLines = projectWriteEditPreviewLines({ toolCall });
+    const projected = strip(projectedLines.join("\n"));
+    expect(projected).toContain("line21");
+    expect(projected).toContain("line30");
+    expect(projected).not.toContain("line1");
+    liveBodyContainsProjectedLines(live, projectedLines);
+  });
+
+  it("projects capped Write preview lines matching the live component", () => {
+    currentTheme.setPalette(darkColors);
+    const lines: string[] = [];
+    for (let i = 1; i <= 30; i++) lines.push(`line${String(i)}`);
+    const toolCall = {
+      id: "call_write_pending",
+      name: "Write" as const,
+      args: { file_path: "foo.ts", content: lines.join("\n") },
+    };
+    const component = new ToolCallComponent(toolCall, undefined);
+    const live = strip(component.render(100).join("\n"));
+    const projectedLines = projectToolCallBodyLines({
+      toolCall,
+      result: undefined,
+    });
+    const projected = strip(projectedLines.join("\n"));
+    expect(projected).toContain("line1");
+    expect(projected).toContain("line10");
+    expect(projected).not.toContain("line11");
+    expect(projected).toContain("ctrl+o to expand");
+    liveBodyContainsProjectedLines(live, projectedLines);
+  });
+
+  it("projects Edit streaming progress matching the live component", () => {
+    currentTheme.setPalette(darkColors);
+    vi.useFakeTimers();
+    vi.setSystemTime(4000);
+    const streaming = '{"file_path":"foo.ts","old_string":"old","new_string":"new';
+    const toolCall = {
+      id: "call_edit_stream",
+      name: "Edit" as const,
+      args: { file_path: "foo.ts", old_string: "old", new_string: "new" },
+      streamingArguments: streaming,
+      streamingStartedAtMs: 0,
+    };
+    const component = new ToolCallComponent(toolCall, undefined);
+    const live = strip(component.render(100).join("\n"));
+    const projectedLines = projectWriteEditPreviewLines({
+      toolCall,
+      nowMs: 4000,
+    });
+    const projected = strip(projectedLines.join("\n"));
+    expect(projected).toContain("Preparing changes for foo.ts...");
+    expect(projected).toContain("4s elapsed");
+    liveBodyContainsProjectedLines(live, projectedLines);
+    vi.useRealTimers();
   });
 });
 

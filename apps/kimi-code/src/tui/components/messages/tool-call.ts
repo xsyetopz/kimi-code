@@ -10,11 +10,6 @@ import {
 } from "@moonshot-ai/kimi-tui";
 import type { Component, TUI } from "@moonshot-ai/kimi-tui";
 import {
-  highlightLines,
-  langFromPath,
-} from "#/tui/components/media/code-highlight";
-import { renderDiffLinesClustered } from "#/tui/components/media/diff-preview";
-import {
   BRAILLE_SPINNER_FRAMES,
   BRAILLE_SPINNER_INTERVAL_MS,
   COMMAND_PREVIEW_LINES,
@@ -55,6 +50,10 @@ import {
   makeWorkspaceRelativePath,
 } from "#/tui/projections/tool-call/key-argument";
 import { projectToolCallHeader } from "#/tui/projections/tool-call/header";
+import {
+  extractPartialStringField,
+  projectWriteEditPreviewLines,
+} from "#/tui/projections/tool-call/call-preview";
 import {
   deriveSubagentPhase,
   projectSingleSubagentBodyLines,
@@ -185,19 +184,6 @@ function formatSubagentTokens(
   return `${formatTokenCount(total)} tok`;
 }
 
-function formatByteSize(bytes: number): string {
-  if (bytes < 1024) return `${String(bytes)} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
-}
-
-function formatElapsed(seconds: number): string {
-  if (seconds < 60) return `${String(seconds)}s`;
-  const minutes = Math.floor(seconds / 60);
-  const remainder = seconds % 60;
-  return `${String(minutes)}m ${String(remainder)}s`;
-}
-
 function extractApprovedPlan(output: string): string {
   const marker = output.includes(AUTO_APPROVED_PLAN_MARKER)
     ? AUTO_APPROVED_PLAN_MARKER
@@ -205,100 +191,6 @@ function extractApprovedPlan(output: string): string {
   const markerIndex = output.indexOf(marker);
   if (markerIndex < 0) return "";
   return output.slice(markerIndex + marker.length).trim();
-}
-
-function unescapeJsonString(s: string): string {
-  return s.replaceAll(/\\(["\\/bfnrt])/g, (_, ch: string) => {
-    switch (ch) {
-      case "n":
-        return "\n";
-      case "t":
-        return "\t";
-      case "r":
-        return "\r";
-      case "b":
-        return "\b";
-      case "f":
-        return "\f";
-      case '"':
-        return '"';
-      case "\\":
-        return "\\";
-      case "/":
-        return "/";
-      default:
-        return ch;
-    }
-  });
-}
-
-/**
- * Pull the live value of a JSON string field out of partially-streamed
- * arguments, even if the closing quote hasn't arrived yet. Handles the
- * common JSON string escapes so `\n` in a streamed `content` becomes a
- * real newline we can highlight. Returns `undefined` if the field hasn't
- * started streaming yet.
- */
-function extractPartialStringField(
-  text: string,
-  key: string,
-): string | undefined {
-  const opener = new RegExp(`"${key}"\\s*:\\s*"`);
-  const match = opener.exec(text);
-  if (match === null) return undefined;
-  const start = match.index + match[0].length;
-  let out = "";
-  let i = start;
-  while (i < text.length) {
-    const ch = text[i];
-    if (ch === "\\") {
-      const next = text[i + 1];
-      if (next === undefined) return out;
-      switch (next) {
-        case "n":
-          out += "\n";
-          break;
-        case "t":
-          out += "\t";
-          break;
-        case "r":
-          out += "\r";
-          break;
-        case "b":
-          out += "\b";
-          break;
-        case "f":
-          out += "\f";
-          break;
-        case '"':
-          out += '"';
-          break;
-        case "\\":
-          out += "\\";
-          break;
-        case "/":
-          out += "/";
-          break;
-        case "u": {
-          if (i + 5 >= text.length) return out;
-          const hex = text.slice(i + 2, i + 6);
-          const code = Number.parseInt(hex, 16);
-          if (Number.isNaN(code)) return out;
-          out += String.fromCodePoint(code);
-          i += 6;
-          continue;
-        }
-        default:
-          out += next;
-      }
-      i += 2;
-      continue;
-    }
-    if (ch === '"') return out;
-    out += ch;
-    i++;
-  }
-  return out;
 }
 
 function parseArgsPreview(value: string): Record<string, unknown> {
@@ -1629,6 +1521,12 @@ export class ToolCallComponent extends Container {
     );
   }
 
+  private addPreviewLines(lines: readonly string[]): void {
+    for (const line of lines) {
+      this.addChild(new Text(line, 0, 0));
+    }
+  }
+
   private buildCallPreview(): void {
     const name = this.toolCall.name;
     if (name === "ExitPlanMode") {
@@ -1647,6 +1545,16 @@ export class ToolCallComponent extends Container {
       );
       return;
     }
+    if (name === "Write" || name === "Edit") {
+      this.addPreviewLines(
+        projectWriteEditPreviewLines({
+          toolCall: this.toolCall,
+          result: this.result,
+          expanded: this.expanded,
+        }),
+      );
+      return;
+    }
     if (
       this.result === undefined &&
       this.toolCall.streamingArguments !== undefined
@@ -1654,61 +1562,8 @@ export class ToolCallComponent extends Container {
       this.buildStreamingPreview(this.toolCall.streamingArguments);
       return;
     }
-    // Cap Edit's diff as soon as args finalize, not only when the result
-    // lands — mirroring Write's writeShouldCap below. Otherwise the render
-    // tick between finalized args (streamingArguments cleared by the
-    // `tool.call.started` payload) and the result draws the full diff, then
-    // snaps back to the cap: a height collapse that triggers kimi-tui's full
-    // redraw and wipes scrollback. Streaming frames (streamingArguments set)
-    // still take buildStreamingPreview above and never reach here.
     const shouldCap = !this.expanded;
-    if (name === "Write") {
-      const content = str(this.toolCall.args["content"]);
-      if (content.length === 0) return;
-      const filePath = str(
-        this.toolCall.args["file_path"] ?? this.toolCall.args["path"],
-      );
-      const lang = langFromPath(filePath);
-      const allLines = highlightLines(content, lang);
-      // Cap as soon as args finalize, not just when result lands. Otherwise the
-      // brief render tick between finalized args and result draws the full file,
-      // and the snap back to the collapsed cap triggers kimi-tui's full-redraw
-      // path which wipes the terminal scrollback (pre-TUI history).
-      const writeShouldCap = !this.expanded;
-      const shown = writeShouldCap
-        ? allLines.slice(0, COMMAND_PREVIEW_LINES)
-        : allLines;
-      const remaining = allLines.length - shown.length;
-      for (const [i, line] of shown.entries()) {
-        const lineNum = currentTheme.dim(String(i + 1).padStart(4) + "  ");
-        this.addChild(new Text(lineNum + line, 2, 0));
-      }
-      if (writeShouldCap && remaining > 0) {
-        this.addChild(
-          new Text(
-            currentTheme.dim(
-              `... (${String(remaining)} more lines, ${String(allLines.length)} total, ctrl+o to expand)`,
-            ),
-            2,
-            0,
-          ),
-        );
-      }
-    } else if (name === "Edit") {
-      const oldStr = str(this.toolCall.args["old_string"]);
-      const newStr = str(this.toolCall.args["new_string"]);
-      if (oldStr.length === 0 && newStr.length === 0) return;
-      const filePath = str(
-        this.toolCall.args["file_path"] ?? this.toolCall.args["path"],
-      );
-      const lines = renderDiffLinesClustered(oldStr, newStr, filePath, {
-        contextLines: 3,
-        ...(shouldCap ? { maxLines: COMMAND_PREVIEW_LINES } : {}),
-      });
-      for (const line of lines) {
-        this.addChild(new Text(line, 2, 0));
-      }
-    } else if (name === "Bash") {
+    if (name === "Bash") {
       // Surface the command in the body across the whole lifecycle — while
       // streaming, running, and after the result lands. Keeping the collapsed
       // command preview here (instead of yielding to the result renderer once
@@ -1732,62 +1587,13 @@ export class ToolCallComponent extends Container {
   }
 
   /**
-   * Live-rendering during the `tool.call.delta` streaming window.
-   *
-   * For tools we recognise, we reach into the partial JSON (via
-   * `extractPartialStringField`) and render a stable high-signal
-   * preview: Write's `content` as highlighted code, Edit's argument
-   * receive progress, Bash's `$ command`, etc. While args are still
-   * streaming we render from a bounded preview buffer; once the result lands,
-   * the preview snaps to the collapsed cap unless the user has expanded.
+   * Live-rendering during the `tool.call.delta` streaming window for tools
+   * without a dedicated projection (currently Bash only).
    */
   private buildStreamingPreview(streamText: string): void {
     const name = this.toolCall.name;
-    const previewText = streamText.slice(0, STREAMING_ARGS_PREVIEW_MAX_CHARS);
-    if (name === "Write") {
-      const content = extractPartialStringField(previewText, "content");
-      if (content === undefined || content.length === 0) return;
-      const filePath =
-        extractPartialStringField(previewText, "file_path") ??
-        extractPartialStringField(previewText, "path") ??
-        "";
-      const lang = langFromPath(filePath);
-      const allLines = highlightLines(content, lang);
-      const maxLines = COMMAND_PREVIEW_LINES;
-      const scrollLines =
-        allLines.length > maxLines
-          ? allLines.slice(allLines.length - maxLines)
-          : allLines;
-      for (const [i, line] of scrollLines.entries()) {
-        const originalLineNumber =
-          allLines.length > maxLines ? allLines.length - maxLines + i : i;
-        const lineNum = currentTheme.dim(
-          String(originalLineNumber + 1).padStart(4) + "  ",
-        );
-        this.addChild(new Text(lineNum + line, 2, 0));
-      }
-      return;
-    }
-    if (name === "Edit") {
-      const filePath =
-        extractPartialStringField(previewText, "file_path") ??
-        extractPartialStringField(previewText, "path") ??
-        "";
-      const bytes = Buffer.byteLength(previewText, "utf8");
-      const startedAtMs = this.toolCall.streamingStartedAtMs;
-      const elapsedSeconds =
-        startedAtMs === undefined
-          ? 0
-          : Math.max(0, Math.floor((Date.now() - startedAtMs) / 1000));
-      const target = filePath.length > 0 ? ` for ${filePath}` : "";
-      const progress = `Preparing changes${target}... ${formatByteSize(bytes)} · ${formatElapsed(
-        elapsedSeconds,
-      )} elapsed`;
-      this.addChild(new Text(currentTheme.dim(progress), 2, 0));
-      return;
-    }
     if (name === "Bash") {
-      const cmd = extractPartialStringField(previewText, "command");
+      const cmd = extractPartialStringField(streamText, "command");
       if (cmd === undefined || cmd.length === 0) return;
       this.addChild(
         new ShellExecutionComponent({
