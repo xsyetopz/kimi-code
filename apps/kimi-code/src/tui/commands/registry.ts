@@ -2,7 +2,7 @@ import { readdirSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, dirname, join, relative, resolve } from "pathe";
 
-import type { AutocompleteItem } from "@moonshot-ai/kimi-code-tui";
+import type { AutocompleteItem } from "@moonshot-ai/kimi-tui";
 
 import { completeLeadingArg, type ArgCompletionSpec } from "./complete-args";
 import type { KimiSlashCommand, SlashCommandAvailability } from "./types";

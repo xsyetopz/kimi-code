@@ -1,4 +1,4 @@
-import { Text, truncateToWidth, type Component } from "@moonshot-ai/kimi-code-tui";
+import { Text, truncateToWidth, type Component } from "@moonshot-ai/kimi-tui";
 
 import { currentTheme } from "#/tui/theme";
 import type { ColorPalette } from "#/tui/theme/colors";
@@ -20,7 +20,7 @@ export function trimTrailingEmptyLines(lines: string[]): string[] {
 
 /**
  * Component that renders tool output with wrap-aware line truncation.
- * Uses pi-tui's Text component to compute actual visual wrapped lines,
+ * Uses kimi-tui's Text component to compute actual visual wrapped lines,
  * then caps at PREVIEW_LINES. This handles long single-line output (e.g.
  * JSON blobs) that would otherwise wrap to dozens of visual rows.
  */

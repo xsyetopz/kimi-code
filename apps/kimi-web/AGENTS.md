@@ -55,7 +55,7 @@ Debugging against kap-server: start it from the repository root with `bun run de
 
 ## Gotchas / hard rules
 
-- **Do not depend on `@moonshot-ai/agent-core`** (mirrors the CLI/SDK rule). The web app is decoupled from core/protocol; wire types are re-implemented locally in `src/api/daemon/wire.ts`. Keep it that way.
+- **Do not depend on `@moonshot-ai/agent-core-v2`** (mirrors the CLI/SDK rule). The web app is decoupled from core/protocol; wire types are re-implemented locally in `src/api/daemon/wire.ts`. Keep it that way.
 - **Same-origin by default:** the browser only talks to its own origin; Vite proxies `/api/v1` for both HTTP and WS. Set `VITE_KIMI_SERVER_HTTP_URL` only when you intentionally want direct (CORS) mode.
 - Vite-injected globals (`__KIMI_DEV_PROXY_TARGET__`, `__KIMI_WEB_VERSION__`, `__KIMI_WEB_COMMIT__`) are declared in `src/env.d.ts` and defined in `vite.config.ts`. Do not hand-edit `dist/`.
 - **Theming:** the root element carries `data-color-scheme` (`light` | `dark` | `system`); react to it through `useIsDark()`, not by reading the DOM directly.

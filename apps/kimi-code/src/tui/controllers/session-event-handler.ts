@@ -1,4 +1,4 @@
-import type { Component, Focusable } from "@moonshot-ai/kimi-code-tui";
+import type { Component, Focusable } from "@moonshot-ai/kimi-tui";
 import type {
   AgentStatusUpdatedEvent,
   AssistantDeltaEvent,

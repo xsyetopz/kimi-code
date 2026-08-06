@@ -1,10 +1,10 @@
-import { Markdown, visibleWidth } from "@moonshot-ai/pi-tui";
+import { Markdown, visibleWidth } from "@moonshot-ai/kimi-tui";
 import * as cliHighlight from "cli-highlight";
 import { describe, expect, it, vi } from "vitest";
 
 import { AssistantMessageComponent } from "#/tui/components/messages/assistant-message";
 import { STATUS_BULLET } from "#/tui/constant/symbols";
-import { createMarkdownTheme } from "#/tui/theme/pi-tui-theme";
+import { createMarkdownTheme } from "#/tui/theme/kimi-tui-theme";
 
 import { captureProcessWrite } from "../../../helpers/process";
 

@@ -15,8 +15,8 @@
  * - Ungrouping is not implemented. Once formed, a group stays grouped.
  */
 
-import type { TUI } from "@moonshot-ai/kimi-code-tui";
-import { Container, Spacer, Text } from "@moonshot-ai/kimi-code-tui";
+import type { TUI } from "@moonshot-ai/kimi-tui";
+import { Container, Spacer, Text } from "@moonshot-ai/kimi-tui";
 
 import { STATUS_BULLET } from "#/tui/constant/symbols";
 import { currentTheme } from "#/tui/theme";

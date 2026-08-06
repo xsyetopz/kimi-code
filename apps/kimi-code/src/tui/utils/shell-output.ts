@@ -2,8 +2,8 @@ import { currentTheme } from "#/tui/theme";
 
 // Captured command output can contain terminal control sequences — colours,
 // cursor moves, alternate-screen switches, hyperlinks, `\r` spinners, bells, …
-// We render through pi-tui, which passes strings straight to the terminal, so
-// any sequence left intact is executed by the terminal and fights with pi-tui's
+// We render through kimi-tui, which passes strings straight to the terminal, so
+// any sequence left intact is executed by the terminal and fights with kimi-tui's
 // own cursor control (the "blank screen + leftover characters" symptom). Strip
 // everything a terminal would interpret as a command rather than printable text,
 // keeping only `\n` and `\t` (which the renderer understands).
@@ -23,7 +23,7 @@ const C0_CONTROL_PATTERN = /[\u0000-\u0008\u000B-\u001B\u001C-\u001F]/g;
 
 /**
  * Strip every terminal control sequence from captured command output so it is
- * safe to render via pi-tui (which does not sanitize on its own).
+ * safe to render via kimi-tui (which does not sanitize on its own).
  *
  * Never throws: a bad or pathological input falls back to stripping only the
  * C0 control characters, so rendering can never crash the TUI.

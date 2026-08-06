@@ -1,5 +1,5 @@
 /**
- * SessionPicker — pi-tui version of the session selection dialog.
+ * SessionPicker — kimi-tui version of the session selection dialog.
  */
 
 import {
@@ -9,7 +9,7 @@ import {
   truncateToWidth,
   visibleWidth,
   type Focusable,
-} from "@moonshot-ai/kimi-code-tui";
+} from "@moonshot-ai/kimi-tui";
 import { CURRENT_MARK, SELECT_POINTER } from "#/tui/constant/symbols";
 import { currentTheme } from "#/tui/theme";
 import { SearchableList } from "#/tui/utils/searchable-list";

@@ -72,7 +72,7 @@ describe("highlightFirstSlashToken", () => {
   });
 
   it("passes through pre-existing ANSI (e.g. cursor inverse) in the tail", () => {
-    // Simulate pi-tui Editor inserting an inverse-video cursor marker
+    // Simulate kimi-tui Editor inserting an inverse-video cursor marker
     // somewhere after the slash token.
     const line = "/help x\u001B[7m \u001B[0m";
     const out = highlightFirstSlashToken(line, "primary");

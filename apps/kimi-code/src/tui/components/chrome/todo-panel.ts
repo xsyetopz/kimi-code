@@ -9,8 +9,8 @@
  * is issued.
  */
 
-import type { Component } from "@moonshot-ai/kimi-code-tui";
-import { truncateToWidth } from "@moonshot-ai/kimi-code-tui";
+import type { Component } from "@moonshot-ai/kimi-tui";
+import { truncateToWidth } from "@moonshot-ai/kimi-tui";
 import chalk from "chalk";
 
 import { currentTheme } from "#/tui/theme";

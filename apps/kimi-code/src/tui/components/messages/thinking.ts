@@ -10,7 +10,7 @@ import {
   truncateToWidth,
   type Component,
   type TUI,
-} from "@moonshot-ai/kimi-code-tui";
+} from "@moonshot-ai/kimi-tui";
 
 import {
   BRAILLE_SPINNER_FRAMES,
@@ -32,7 +32,7 @@ export class ThinkingComponent implements Component {
   private readonly ui: TUI | undefined;
   private spinnerFrame = 0;
   private spinnerInterval: ReturnType<typeof setInterval> | undefined;
-  // Hold a single Text instance so pi-tui's (text, width) → lines cache
+  // Hold a single Text instance so kimi-tui's (text, width) → lines cache
   // actually survives across renders. Re-constructing per render destroys
   // the cache and forces full re-wrap on every frame, which dominates CPU
   // once the transcript accumulates many finalized thinking blocks.

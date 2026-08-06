@@ -216,13 +216,13 @@ describe("runShell", () => {
     expect(mocks.tuiStart).toHaveBeenCalledOnce();
   });
 
-  it("keeps pi-tui available only as an explicit rollback owner", async () => {
-    process.env["KIMI_TUI_RENDERER"] = "pi-tui";
+  it("keeps kimi-tui available only as an explicit rollback owner", async () => {
+    process.env["KIMI_TUI_RENDERER"] = "kimi-tui";
     stubTuiStartup();
     await runShell(minimalCliOptions, "1.2.3-test");
 
     const [, , startupInput] = mocks.kimiTuiConstructor.mock.calls[0]!;
-    expect(startupInput).toMatchObject({ terminalRenderer: "pi-tui" });
+    expect(startupInput).toMatchObject({ terminalRenderer: "kimi-tui" });
   });
 
   it("resolves the --agent profile into the TUI startup input", async () => {

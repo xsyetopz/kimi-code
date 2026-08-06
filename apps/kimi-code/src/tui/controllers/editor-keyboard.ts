@@ -121,7 +121,7 @@ export class EditorKeyboardController {
       return undefined;
     };
 
-    // Save/restore the input mode alongside pi-tui's history draft. Without
+    // Save/restore the input mode alongside kimi-tui's history draft. Without
     // this, recalling a shell entry and then pressing Down back to an empty
     // draft would leave the editor stuck in bash mode, so the next typed
     // message would be submitted as a shell command. Also locks the history

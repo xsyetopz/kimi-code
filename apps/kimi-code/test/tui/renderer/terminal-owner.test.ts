@@ -14,12 +14,12 @@ describe("TerminalOwnership", () => {
 
   it("rejects competing owners until the current owner is released", () => {
     const ownership = new TerminalOwnership();
-    ownership.claim("pi-tui");
+    ownership.claim("kimi-tui");
 
-    expect(() => ownership.claim("ink")).toThrow("pi-tui still owns it");
+    expect(() => ownership.claim("ink")).toThrow("kimi-tui still owns it");
     ownership.release("ink");
-    expect(ownership.current).toBe("pi-tui");
-    ownership.release("pi-tui");
+    expect(ownership.current).toBe("kimi-tui");
+    ownership.release("kimi-tui");
     ownership.claim("ink");
     expect(ownership.current).toBe("ink");
   });

@@ -1,4 +1,4 @@
-import { Container, Spacer } from "@moonshot-ai/kimi-code-tui";
+import { Container, Spacer } from "@moonshot-ai/kimi-tui";
 
 import type { MoonLoader } from "#/tui/components/chrome/moon-loader";
 

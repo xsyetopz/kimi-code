@@ -119,7 +119,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the full contribution guide.
 
 ## Acknowledgements
 
-Our TUI is built on top of [`pi-tui`](https://github.com/earendil-works/pi-mono/tree/main/packages/tui). We thank the authors of `pi-tui` for their valuable work.
+Our TUI is built on top of [pi-tui](https://github.com/earendil-works/pi-mono/tree/main/packages/tui) (forked as `@moonshot-ai/kimi-tui`). We thank the authors of pi-tui for their valuable work.
 
 ## License
 

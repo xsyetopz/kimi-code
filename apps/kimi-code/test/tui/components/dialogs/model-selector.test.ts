@@ -1,5 +1,5 @@
 import type { ModelAlias } from "@moonshot-ai/kimi-code-sdk";
-import { visibleWidth } from "@moonshot-ai/pi-tui";
+import { visibleWidth } from "@moonshot-ai/kimi-tui";
 import { describe, expect, it, vi } from "vitest";
 
 import { ModelSelectorComponent } from "#/tui/components/dialogs/model-selector";

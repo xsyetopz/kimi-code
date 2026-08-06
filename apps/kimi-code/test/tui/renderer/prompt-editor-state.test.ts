@@ -41,7 +41,7 @@ describe("prompt editor state", () => {
     expect(state.historyIndex).toBeNull();
   });
 
-  it("accepts and cancels completion without coupling to Ink or pi-tui", () => {
+  it("accepts and cancels completion without coupling to Ink or kimi-tui", () => {
     let state = createPromptEditorState({ text: "/he" });
     state = reducePromptEditor(state, {
       type: "completion-set",

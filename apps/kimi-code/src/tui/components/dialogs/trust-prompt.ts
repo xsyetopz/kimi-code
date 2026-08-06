@@ -5,7 +5,7 @@ import {
   wrapTextWithAnsi,
   type Component,
   type Focusable,
-} from "@moonshot-ai/kimi-code-tui";
+} from "@moonshot-ai/kimi-tui";
 
 import { SELECT_POINTER } from "#/tui/constant/symbols";
 import { currentTheme } from "#/tui/theme";

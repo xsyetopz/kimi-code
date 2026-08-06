@@ -13,7 +13,7 @@ import {
   visibleWidth,
   type Component,
   type MarkdownTheme,
-} from "@moonshot-ai/kimi-code-tui";
+} from "@moonshot-ai/kimi-tui";
 import chalk from "chalk";
 
 import { toTerminalHyperlink } from "#/utils/terminal-hyperlink";
@@ -43,7 +43,7 @@ export class PlanBoxComponent implements Component {
     private readonly planPath?: string,
     opts?: PlanBoxOptions,
   ) {
-    // Build the Markdown instance once — pi-tui's Markdown caches its own
+    // Build the Markdown instance once — kimi-tui's Markdown caches its own
     // parse + wrap output keyed on (text, width), so reusing the same
     // instance means repeated render() calls from the parent Container
     // hit the cache instead of re-parsing on every frame.

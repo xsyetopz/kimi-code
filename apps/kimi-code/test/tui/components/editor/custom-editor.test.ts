@@ -3,7 +3,7 @@ import type {
   AutocompleteProvider,
   AutocompleteSuggestions,
   TUI,
-} from "@moonshot-ai/pi-tui";
+} from "@moonshot-ai/kimi-tui";
 import { describe, expect, it, vi } from "vitest";
 
 import { CustomEditor } from "#/tui/components/editor/custom-editor";
@@ -823,7 +823,7 @@ describe("CustomEditor bash mode file completion", () => {
     await new Promise((resolve) => setTimeout(resolve, 30));
     await flushAutocomplete();
 
-    // A force:false request would let pi-tui's own slash-command handling pop
+    // A force:false request would let kimi-tui's own slash-command handling pop
     // up subcommand completions for `/add-dir `. Bash mode must only ever
     // request force:true path completion.
     expect(calls.length).toBeGreaterThan(0);

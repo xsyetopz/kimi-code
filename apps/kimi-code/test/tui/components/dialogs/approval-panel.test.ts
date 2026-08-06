@@ -1,4 +1,4 @@
-import { CURSOR_MARKER } from "@moonshot-ai/pi-tui";
+import { CURSOR_MARKER } from "@moonshot-ai/kimi-tui";
 import { describe, expect, it } from "vitest";
 
 import { ApprovalPanelComponent } from "#/tui/components/dialogs/approval-panel";
@@ -266,7 +266,7 @@ describe("ApprovalPanelComponent", () => {
   });
 
   // Inline expand-in-place used to inflate the panel past the viewport on
-  // any non-trivial Edit, which then collided with pi-tui's inline scroll
+  // any non-trivial Edit, which then collided with kimi-tui's inline scroll
   // and made the terminal flicker / refuse to scroll. The panel now always
   // renders the diff in its compact cluster form; ctrl+e instead asks the
   // host to open a dedicated full-screen preview that can manage its own

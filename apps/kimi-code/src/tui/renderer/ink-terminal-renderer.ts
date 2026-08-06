@@ -14,14 +14,14 @@ export interface InkTerminalRenderer {
 }
 
 export interface InkTerminalRendererOptions extends RenderOptions {
-  /** Receives canonical pi-tui input sequences from Ink's useInput hook. */
+  /** Receives canonical kimi-tui input sequences from Ink's useInput hook. */
   readonly onInput?: (data: string) => void;
 }
 
 /**
  * Mount the Ink tree and expose the lifecycle operations needed by a host
  * coordinator. The host owns state and calls update after each state snapshot;
- * no session or pi-tui object is captured by the renderer.
+ * no session or kimi-tui object is captured by the renderer.
  */
 export function mountInkTerminalRenderer(
   initialView: TerminalViewState,

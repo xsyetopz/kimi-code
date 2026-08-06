@@ -92,7 +92,7 @@
   "dependencies": {
     "@clack/prompts": "^1.7.0",
     "@iarna/toml": "^2.2.5",
-    "@moonshot-ai/kimi-code-tui": "workspace:^",
+    "@moonshot-ai/kimi-tui": "workspace:^",
     "@shikijs/cli": "^4.4.2",
     "@types/react": "^19.2.18",
     "ansis": "^4.3.1",

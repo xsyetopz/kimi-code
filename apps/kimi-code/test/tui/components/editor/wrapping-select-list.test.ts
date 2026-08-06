@@ -2,7 +2,7 @@ import {
   visibleWidth,
   type SelectItem,
   type SelectListTheme,
-} from "@moonshot-ai/pi-tui";
+} from "@moonshot-ai/kimi-tui";
 import { describe, expect, it } from "vitest";
 
 import { WrappingSelectList } from "#/tui/components/editor/wrapping-select-list";
@@ -24,7 +24,7 @@ const IDENTITY_THEME: SelectListTheme = {
   noMatch: (s) => s,
 };
 
-/** Mirrors pi-tui's slash command layout (editor.js). */
+/** Mirrors kimi-tui's slash command layout (editor.js). */
 const SLASH_LAYOUT = { minPrimaryColumnWidth: 12, maxPrimaryColumnWidth: 32 };
 
 // With two 4-char labels and SLASH_LAYOUT at width 80, the primary column is

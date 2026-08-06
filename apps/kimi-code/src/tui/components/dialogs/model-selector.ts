@@ -11,7 +11,7 @@ import {
   visibleWidth,
   wrapTextWithAnsi,
   type Focusable,
-} from "@moonshot-ai/kimi-code-tui";
+} from "@moonshot-ai/kimi-tui";
 
 import { DEFAULT_OAUTH_PROVIDER_NAME, PRODUCT_NAME } from "#/constant/app";
 import { CURRENT_MARK, SELECT_POINTER } from "#/tui/constant/symbols";

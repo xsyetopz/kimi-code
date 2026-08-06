@@ -1,7 +1,7 @@
 // src/tui/utils/input-latency.ts
 //
 // Debug-only input→render latency probe, enabled with KIMI_TUI_INPUT_LATENCY=1.
-// Registers a pi-tui input listener (event timestamps) and mounts a
+// Registers a kimi-tui input listener (event timestamps) and mounts a
 // non-capturing overlay in the top-right corner whose render() drains the
 // queue: each pending input event is stamped against the frame that first
 // renders after it, and the overlay shows the live stats (last / p50 / p95 /
@@ -16,8 +16,7 @@
 
 import { appendFileSync, mkdirSync } from "node:fs";
 import path from "node:path";
-// DEPRECATED: pi-tui imports replaced by @moonshot-ai/kimi-code-tui
-import type { Component, TUI } from "@moonshot-ai/kimi-code-tui";
+import type { Component, TUI } from "@moonshot-ai/kimi-tui";
 
 /** Rolling sample cap for the percentile window. */
 const MAX_SAMPLES = 500;

@@ -1,4 +1,4 @@
-import type { AutocompleteItem, SlashCommand } from "@moonshot-ai/kimi-code-tui";
+import type { AutocompleteItem, SlashCommand } from "@moonshot-ai/kimi-tui";
 import type { FlagId } from "@moonshot-ai/kimi-code-sdk";
 
 export type SlashCommandAvailability = "always" | "idle-only";
@@ -18,7 +18,7 @@ export interface KimiSlashCommand<Name extends string = string>
    * Generic argument autocompletion. `argumentPrefix` is the text typed after
    * `/<command> `; return suggestions or `null`. Declared as a plain function
    * property (not a method) so passing it around is `this`-free. Adapted to
-   * pi-tui's `getArgumentCompletions` in the autocomplete setup.
+   * kimi-tui's `getArgumentCompletions` in the autocomplete setup.
    */
   readonly completeArgs?: (argumentPrefix: string) => AutocompleteItem[] | null;
 }

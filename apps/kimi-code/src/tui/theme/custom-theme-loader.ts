@@ -56,7 +56,7 @@ async function readCustomTheme(
 
     // Invalid hex values are dropped (the token falls back to the base
     // palette). We intentionally do not print here: this loader can run while
-    // pi-tui owns the terminal, where raw stdout/stderr writes corrupt the
+    // kimi-tui owns the terminal, where raw stdout/stderr writes corrupt the
     // rendered screen. Authoring-time validation lives in the JSON schema.
     const colors = Object.fromEntries(
       Object.entries(parsed.colors ?? {}).filter(([, v]) =>

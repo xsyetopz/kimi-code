@@ -8,14 +8,14 @@
  * instances reads the *current* palette via the singleton.
  */
 
-import type { MarkdownTheme, EditorTheme } from "@moonshot-ai/kimi-code-tui";
+import type { MarkdownTheme, EditorTheme } from "@moonshot-ai/kimi-tui";
 import chalk from "chalk";
 import { highlight, supportsLanguage } from "cli-highlight";
 
 import { currentTheme } from "./theme";
 import { codeHighlightTheme } from "./highlight-theme";
 
-// pi-tui's renderer emits literal "### " / "#### " / ... markers for h3-h6
+// kimi-tui's renderer emits literal "### " / "#### " / ... markers for h3-h6
 // headings (h1/h2 are rendered without the `#` prefix). The prefix arrives
 // here already wrapped in bold SGR codes, so we strip it — after any leading
 // ANSI sequences — before re-styling. Without this, h3+ renders as raw

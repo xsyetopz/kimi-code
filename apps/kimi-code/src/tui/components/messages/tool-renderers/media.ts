@@ -13,8 +13,8 @@
  * message.
  */
 
-import type { Component } from "@moonshot-ai/kimi-code-tui";
-import { Text } from "@moonshot-ai/kimi-code-tui";
+import type { Component } from "@moonshot-ai/kimi-tui";
+import { Text } from "@moonshot-ai/kimi-tui";
 import chalk from "chalk";
 
 import type { ChipProvider } from "./chip";

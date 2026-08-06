@@ -8,7 +8,7 @@
  * visible, framed by `<`/`>` markers.
  */
 
-import { visibleWidth } from "@moonshot-ai/kimi-code-tui";
+import { visibleWidth } from "@moonshot-ai/kimi-tui";
 import chalk from "chalk";
 
 import type { ColorPalette } from "#/tui/theme/colors";

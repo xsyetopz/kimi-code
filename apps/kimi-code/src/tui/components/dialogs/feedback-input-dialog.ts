@@ -3,7 +3,7 @@
  * user feedback before submitting it to the managed Kimi Code platform.
  *
  * Geometry mirrors `DeviceCodeBox` so the chrome stays consistent with
- * the OAuth login flow. The box embeds a `pi-tui` Input for the actual
+ * the OAuth login flow. The box embeds a `kimi-tui` Input for the actual
  * text entry; cursor visibility tracks the dialog's `focused` flag.
  *
  * This is stage 1 of the feedback flow: it collects the free-form text
@@ -19,7 +19,7 @@ import {
   truncateToWidth,
   visibleWidth,
   type Focusable,
-} from "@moonshot-ai/kimi-code-tui";
+} from "@moonshot-ai/kimi-tui";
 import { currentTheme } from "#/tui/theme";
 
 export type FeedbackInputDialogResult =

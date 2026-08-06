@@ -6,10 +6,10 @@ import {
   type SelectItem,
   type SelectListLayoutOptions,
   type SelectListTheme,
-} from "@moonshot-ai/kimi-code-tui";
+} from "@moonshot-ai/kimi-tui";
 
-// Mirror pi-tui's private select-list layout constants
-// (dist/components/select-list.js); keep in sync when bumping pi-tui.
+// Mirror kimi-tui's private select-list layout constants
+// (dist/components/select-list.js); keep in sync when bumping kimi-tui.
 const DEFAULT_PRIMARY_COLUMN_WIDTH = 32;
 const PRIMARY_COLUMN_GAP = 2;
 const MIN_DESCRIPTION_WIDTH = 10;
@@ -44,7 +44,7 @@ interface SelectListInternals {
  * anything past the second line is ellipsized.
  *
  * Only `render` is replaced — selection, filtering, and key handling stay in
- * pi-tui. pi-tui keeps the row state private, so the renderer reads it
+ * kimi-tui. kimi-tui keeps the row state private, so the renderer reads it
  * through a cast, the same idiom CustomEditor uses for autocomplete
  * internals.
  */

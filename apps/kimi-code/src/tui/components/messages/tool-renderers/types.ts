@@ -1,4 +1,4 @@
-import type { Component } from "@moonshot-ai/kimi-code-tui";
+import type { Component } from "@moonshot-ai/kimi-tui";
 
 import { RESULT_PREVIEW_LINES } from "#/tui/constant/rendering";
 import type { ToolCallBlockData, ToolResultBlockData } from "#/tui/types";

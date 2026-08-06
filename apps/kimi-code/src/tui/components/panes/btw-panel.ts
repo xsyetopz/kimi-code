@@ -1,10 +1,10 @@
-import type { Component, MarkdownTheme } from "@moonshot-ai/kimi-code-tui";
+import type { Component, MarkdownTheme } from "@moonshot-ai/kimi-tui";
 import {
   Markdown,
   Text,
   truncateToWidth,
   visibleWidth,
-} from "@moonshot-ai/kimi-code-tui";
+} from "@moonshot-ai/kimi-tui";
 import chalk from "chalk";
 
 import { THINKING_PREVIEW_LINES } from "../../constant/rendering";

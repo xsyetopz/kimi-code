@@ -1,7 +1,7 @@
 /**
  * Best-effort terminal restoration for crash / emergency-exit paths.
  *
- * The normal shutdown path goes through pi-tui's `TUI.stop()`, which restores
+ * The normal shutdown path goes through kimi-tui's `TUI.stop()`, which restores
  * raw mode, the cursor, bracketed paste, and the Kitty / modifyOtherKeys
  * keyboard protocols. When we bail out without running `TUI.stop()` — an
  * uncaught exception, a SIGTERM whose cleanup throws, or a SIGHUP — the

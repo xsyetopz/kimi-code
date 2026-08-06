@@ -1,4 +1,4 @@
-import { Container, Spacer, Text } from "@moonshot-ai/kimi-code-tui";
+import { Container, Spacer, Text } from "@moonshot-ai/kimi-tui";
 
 import { currentTheme } from "#/tui/theme";
 import type { ColorToken } from "#/tui/theme";

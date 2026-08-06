@@ -1,5 +1,5 @@
 /**
- * QuestionDialog — pi-tui version of the structured question prompt.
+ * QuestionDialog — kimi-tui version of the structured question prompt.
  *
  * Each question collects an answer locally, and a final Submit tab
  * reviews everything before the answers are emitted upstream.
@@ -15,7 +15,7 @@ import {
   truncateToWidth,
   visibleWidth,
   wrapTextWithAnsi,
-} from "@moonshot-ai/kimi-code-tui";
+} from "@moonshot-ai/kimi-tui";
 
 import { currentTheme } from "#/tui/theme";
 import type {

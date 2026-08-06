@@ -1,4 +1,4 @@
-import type { TUI } from "@moonshot-ai/kimi-code-tui";
+import type { TUI } from "@moonshot-ai/kimi-tui";
 
 import { clipboardHasImage } from "#/utils/clipboard/clipboard-has-image";
 

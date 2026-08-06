@@ -1,4 +1,4 @@
-import type { Terminal } from "@moonshot-ai/kimi-code-tui"; // DEPRECATED (was @moonshot-ai/pi-tui)
+import type { Terminal } from "@moonshot-ai/kimi-tui";
 
 import {
   BEL,

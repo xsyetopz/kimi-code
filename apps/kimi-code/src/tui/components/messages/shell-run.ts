@@ -1,4 +1,4 @@
-import { Container, Text } from "@moonshot-ai/kimi-code-tui";
+import { Container, Text } from "@moonshot-ai/kimi-tui";
 
 import { currentTheme } from "#/tui/theme";
 

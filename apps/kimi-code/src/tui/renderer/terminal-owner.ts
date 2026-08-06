@@ -1,5 +1,5 @@
 /** Renderer that currently owns stdin/stdout for the interactive terminal. */
-export type TerminalOwner = "none" | "pi-tui" | "ink";
+export type TerminalOwner = "none" | "kimi-tui" | "ink";
 
 /**
  * Small lifecycle guard shared by the coordinator and migration tests.

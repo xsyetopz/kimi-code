@@ -1,4 +1,4 @@
-import type { Terminal } from "@moonshot-ai/pi-tui";
+import type { Terminal } from "@moonshot-ai/kimi-tui";
 import type {
   BackgroundTaskInfo,
   BackgroundTaskStatus,

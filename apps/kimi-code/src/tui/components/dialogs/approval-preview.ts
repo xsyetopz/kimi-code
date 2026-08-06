@@ -11,7 +11,7 @@
  *
  * This avoids the prior failure mode where pressing ctrl+e on an Edit
  * with a long hunk inflated the approval panel past one screen, which
- * collided with pi-tui's inline differential renderer and the terminal
+ * collided with kimi-tui's inline differential renderer and the terminal
  * emulator's "snap to bottom on stdout" reflex, causing flicker and an
  * unscrollable history pane.
  */
@@ -24,7 +24,7 @@ import {
   truncateToWidth,
   visibleWidth,
   type Focusable,
-} from "@moonshot-ai/kimi-code-tui";
+} from "@moonshot-ai/kimi-tui";
 
 import {
   highlightLines,

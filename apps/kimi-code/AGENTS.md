@@ -28,7 +28,7 @@ Main directories:
 - `src/tui/components/messages/`: message blocks in the transcript — assistant, user, tool call, thinking, usage, subagent, and so on.
 - `src/tui/components/panes/`: right-side / activity-area panes such as the activity pane and queue pane.
 - `src/tui/reverse-rpc/`: the adapter layer that bridges SDK approval/question callbacks to the UI.
-- `src/tui/theme/`: themes, color tokens, style helpers, terminal-background detection, and the pi-tui markdown theme.
+- `src/tui/theme/`: themes, color tokens, style helpers, terminal-background detection, and the kimi-tui markdown theme.
 - `src/tui/utils/`: TUI-only utility functions.
 - `src/utils/`: app-wide utilities — clipboard, git, history, image, process, usage, and so on.
 
@@ -42,7 +42,7 @@ Main directories:
 - `reverse-rpc` converts SDK approval/question requests into the data shape a UI panel/dialog needs, and converts the user's choice back into an SDK response.
 - `theme` is the single source of truth for colors and styles. Components must not bypass the theme system and use chalk named colors directly.
 - `utils` holds utility functions with no UI-state dependency. Logic that needs `TUIState` or a component instance must not live under app-level `src/utils`.
-- `apps/kimi-code` may only use core capabilities through `@moonshot-ai/kimi-code-sdk`. Do not import `@moonshot-ai/agent-core` directly in app code.
+- `apps/kimi-code` may only use core capabilities through `@moonshot-ai/kimi-code-sdk`. Do not import `@moonshot-ai/agent-core-v2` directly in app code.
 
 ## TUI Coding Conventions
 

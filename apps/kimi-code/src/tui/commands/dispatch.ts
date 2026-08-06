@@ -1,4 +1,4 @@
-import type { Component, Focusable } from "@moonshot-ai/kimi-code-tui";
+import type { Component, Focusable } from "@moonshot-ai/kimi-tui";
 import type { DeviceAuthorization } from "@moonshot-ai/kimi-code-oauth";
 import type { KimiHarness, Session } from "@moonshot-ai/kimi-code-sdk";
 

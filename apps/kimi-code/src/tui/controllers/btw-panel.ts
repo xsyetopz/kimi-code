@@ -1,4 +1,4 @@
-import { Spacer } from "@moonshot-ai/kimi-code-tui";
+import { Spacer } from "@moonshot-ai/kimi-tui";
 import type {
   Event,
   KimiHarness,
@@ -10,7 +10,7 @@ import { NO_ACTIVE_SESSION_MESSAGE } from "../constant/kimi-tui";
 import { BtwPanelComponent } from "../components/panes/btw-panel";
 import { formatErrorMessage } from "../utils/event-payload";
 import { formatHookResultPlain } from "../utils/hook-result-format";
-import { createMarkdownTheme } from "../theme/pi-tui-theme";
+import { createMarkdownTheme } from "../theme/kimi-tui-theme";
 import type { TUIState } from "../tui-state";
 
 const BTW_BUSY_NOTICE =

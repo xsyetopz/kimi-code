@@ -9,7 +9,7 @@
  *   3. COLORFGBG — VT100 / xterm fallback exposing `"fg;bg"`.
  *   4. Default — `'dark'`.
  *
- * Must run before pi-tui enters raw mode; once the framework owns stdin
+ * Must run before kimi-tui enters raw mode; once the framework owns stdin
  * the OSC reply gets eaten by the input loop.
  */
 

@@ -1,5 +1,5 @@
-import type { Component } from "@moonshot-ai/kimi-code-tui";
-import { Spacer, Text, visibleWidth } from "@moonshot-ai/kimi-code-tui";
+import type { Component } from "@moonshot-ai/kimi-tui";
+import { Spacer, Text, visibleWidth } from "@moonshot-ai/kimi-tui";
 
 import { STATUS_BULLET } from "#/tui/constant/symbols";
 import { currentTheme } from "#/tui/theme";

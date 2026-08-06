@@ -1,5 +1,5 @@
 /**
- * TaskOutputViewer — full-screen pi-tui rendered output viewer for
+ * TaskOutputViewer — full-screen kimi-tui rendered output viewer for
  * a single background task. Replaces the previous "shell out to less"
  * approach so the experience stays inside the TUI: same colors, same
  * fonts, same redraw cycle, no alt-screen flip-flop.
@@ -17,7 +17,7 @@ import {
   truncateToWidth,
   visibleWidth,
   type Focusable,
-} from "@moonshot-ai/kimi-code-tui";
+} from "@moonshot-ai/kimi-tui";
 import type {
   BackgroundTaskInfo,
   BackgroundTaskStatus,

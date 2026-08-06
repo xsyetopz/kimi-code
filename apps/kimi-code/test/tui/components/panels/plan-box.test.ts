@@ -1,11 +1,11 @@
 import { pathToFileURL } from "node:url";
 
-import { visibleWidth } from "@moonshot-ai/pi-tui";
+import { visibleWidth } from "@moonshot-ai/kimi-tui";
 import { describe, expect, it } from "vitest";
 
 import { PlanBoxComponent } from "#/tui/components/messages/plan-box";
 import { darkColors } from "#/tui/theme/colors";
-import { createMarkdownTheme } from "#/tui/theme/pi-tui-theme";
+import { createMarkdownTheme } from "#/tui/theme/kimi-tui-theme";
 
 const ESC = String.fromCodePoint(0x1b);
 const BEL = String.fromCodePoint(0x07);

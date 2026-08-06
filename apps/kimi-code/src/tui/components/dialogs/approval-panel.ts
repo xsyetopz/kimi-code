@@ -1,5 +1,5 @@
 /**
- * ApprovalPanel — pi-tui version of the approval request UI.
+ * ApprovalPanel — kimi-tui version of the approval request UI.
  *
  * Container-based component with keyboard navigation.
  */
@@ -14,7 +14,7 @@ import {
   truncateToWidth,
   visibleWidth,
   wrapTextWithAnsi,
-} from "@moonshot-ai/kimi-code-tui";
+} from "@moonshot-ai/kimi-tui";
 import { currentTheme } from "#/tui/theme";
 import {
   highlightLines,

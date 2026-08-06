@@ -2,7 +2,7 @@
  * Standalone fold: read a v2 agent's `wire.jsonl` journal and produce the
  * replay records + tool-store snapshot the TUI consumes, WITHOUT a throwaway
  * v1 `Agent`. Replaces `Agent.resume()` → `replayBuilder.buildResult()` +
- * `tools.storeData()` from `@moonshot-ai/agent-core`.
+ * `tools.storeData()` from the legacy v1 agent engine.
  *
  * Record-type → replay-record mapping (identical to the v1 restore):
  * - `context.append_message` / `context.append_loop_event` → message assembly

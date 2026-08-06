@@ -1,4 +1,4 @@
-import { visibleWidth, type TUI } from "@moonshot-ai/pi-tui";
+import { visibleWidth, type TUI } from "@moonshot-ai/kimi-tui";
 import chalk from "chalk";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -1793,7 +1793,7 @@ describe("ToolCallComponent", () => {
     // even without an approval panel, at least one render tick can land
     // in this state. The preview must stay capped so the transcript
     // height does not balloon and then snap back when the result lands;
-    // a big shrink triggers pi-tui's full-redraw path which wipes the
+    // a big shrink triggers kimi-tui's full-redraw path which wipes the
     // terminal scrollback (history before TUI start).
     const lines: string[] = [];
     for (let i = 1; i <= 30; i++) lines.push(`line${String(i)}`);

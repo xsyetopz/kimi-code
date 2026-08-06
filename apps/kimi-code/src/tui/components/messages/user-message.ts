@@ -8,7 +8,7 @@ import {
   truncateToWidth,
   visibleWidth,
   type Component,
-} from "@moonshot-ai/kimi-code-tui";
+} from "@moonshot-ai/kimi-tui";
 
 import { ImageThumbnail } from "#/tui/components/media/image-thumbnail";
 import { USER_MESSAGE_BULLET } from "#/tui/constant/symbols";
@@ -86,7 +86,7 @@ export class UserMessageComponent implements Component {
 
     const rendered = lines.map((line) => {
       // Inline image sequences (Kitty / iTerm2) carry their own placement
-      // information and have zero visible width, but pi-tui's truncateToWidth
+      // information and have zero visible width, but kimi-tui's truncateToWidth
       // treats the embedded base64 payload as visible text and would chop the
       // escape sequence in half, leaving garbage like "0m...". Skip truncation
       // for those lines; the image itself already respects maxWidthCells.

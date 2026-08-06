@@ -548,7 +548,7 @@ describe("FileMentionProvider", () => {
     expect(values.some((value) => value.startsWith("@current/"))).toBe(false);
   });
 
-  it("delegates path suggestions to pi-tui for regular path completion", async () => {
+  it("delegates path suggestions to kimi-tui for regular path completion", async () => {
     mkdirSync(join(workDir, "src"));
     writeFileSync(join(workDir, "README.md"), "readme");
     const provider = new FileMentionProvider([], workDir, NO_FD);
@@ -565,7 +565,7 @@ describe("FileMentionProvider", () => {
     ]);
   });
 
-  it("applyCompletion delegates file and directory insertion to pi-tui", () => {
+  it("applyCompletion delegates file and directory insertion to kimi-tui", () => {
     const provider = new FileMentionProvider([], workDir, NO_FD);
 
     const file = provider.applyCompletion(
@@ -698,7 +698,7 @@ describe("FileMentionProvider", () => {
       expect(result.cursorCol).toBe('cd "/tmp/My Dir/'.length);
     });
 
-    it("keeps pi-tui slash-command behaviour in prompt mode", () => {
+    it("keeps kimi-tui slash-command behaviour in prompt mode", () => {
       const provider = new FileMentionProvider(
         [],
         workDir,
@@ -713,7 +713,7 @@ describe("FileMentionProvider", () => {
         { value: "help", label: "help" },
         "/",
       );
-      // pi-tui's slash-command branch: beforePrefix + '/' + value + ' '
+      // kimi-tui's slash-command branch: beforePrefix + '/' + value + ' '
       expect(result.lines[0]).toBe("/help ");
     });
   });
@@ -768,7 +768,7 @@ describe("FileMentionProvider", () => {
       );
 
       // `/add-dir ` (trailing space) used to be re-triggered with force:false,
-      // which let pi-tui's own slash-command handling return subcommand
+      // which let kimi-tui's own slash-command handling return subcommand
       // completions. Bash mode now only ever triggers force:true path
       // completion, so the argument completer must not run.
       const text = "/add-dir ";

@@ -5,7 +5,7 @@ import {
   truncateToWidth,
   wrapTextWithAnsi,
   type Focusable,
-} from "@moonshot-ai/kimi-code-tui";
+} from "@moonshot-ai/kimi-tui";
 
 import type { ThinkingEffort } from "@moonshot-ai/kimi-code-sdk";
 

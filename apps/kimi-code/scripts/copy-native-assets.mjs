@@ -4,10 +4,10 @@ import { fileURLToPath } from "node:url";
 
 const appRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const repoRoot = resolve(appRoot, "../..");
-const source = resolve(repoRoot, "packages/pi-tui/native");
+const source = resolve(repoRoot, "packages/kimi-tui/native");
 const target = resolve(appRoot, "native");
 
-// pi-tui ships platform-specific native helpers only for darwin/win32;
+// kimi-tui ships platform-specific native helpers only for darwin/win32;
 // Linux has no native helper, so there is nothing to copy for it.
 const PLATFORMS = ["darwin", "win32"];
 
@@ -20,7 +20,7 @@ async function assertPrebuilds(platform) {
     }
   } catch {
     throw new Error(
-      `pi-tui native prebuilds were not found at ${dir}. Build or restore packages/pi-tui first.`,
+      `kimi-tui native prebuilds were not found at ${dir}. Build or restore packages/kimi-tui first.`,
     );
   }
   return dir;
@@ -35,4 +35,4 @@ for (const platform of PLATFORMS) {
   await cp(srcPrebuilds, dstPrebuilds, { recursive: true });
 }
 
-console.log(`Copied pi-tui native prebuilds to ${target}`);
+console.log(`Copied kimi-tui native prebuilds to ${target}`);

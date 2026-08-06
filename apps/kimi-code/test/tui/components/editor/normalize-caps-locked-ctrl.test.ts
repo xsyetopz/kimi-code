@@ -4,10 +4,10 @@ import { normalizeCapsLockedCtrl } from "#/tui/components/editor/custom-editor";
 
 // Kitty keyboard protocol emits `ESC[<codepoint>;<modifier+1>[:eventType]u`.
 // Modifier mask bits: shift=1, alt=2, ctrl=4, super=8, hyper=16, meta=32,
-// caps_lock=64, num_lock=128. The pi-tui bug this helper works around is
+// caps_lock=64, num_lock=128. The kimi-tui bug this helper works around is
 // that when caps_lock is on, terminals report the codepoint of ctrl+letter
 // as the *uppercase* ASCII letter (e.g. 68 = 'D' instead of 100 = 'd'),
-// which pi-tui's matcher compares literally and fails. We rewrite the
+// which kimi-tui's matcher compares literally and fails. We rewrite the
 // sequence back to the unlocked form before dispatching.
 
 describe("normalizeCapsLockedCtrl", () => {

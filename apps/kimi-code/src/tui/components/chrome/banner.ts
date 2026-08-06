@@ -1,5 +1,5 @@
-import type { Component } from "@moonshot-ai/kimi-code-tui";
-import { visibleWidth, wrapTextWithAnsi } from "@moonshot-ai/kimi-code-tui";
+import type { Component } from "@moonshot-ai/kimi-tui";
+import { visibleWidth, wrapTextWithAnsi } from "@moonshot-ai/kimi-tui";
 
 import { currentTheme } from "#/tui/theme";
 import type { BannerState } from "#/tui/types";

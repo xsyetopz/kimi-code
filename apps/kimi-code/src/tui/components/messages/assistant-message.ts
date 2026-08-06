@@ -1,5 +1,5 @@
 /**
- * Renders an assistant message using pi-tui Markdown.
+ * Renders an assistant message using kimi-tui Markdown.
  *
  * Displays a white bullet prefix with markdown content indented
  * to align after the bullet.
@@ -11,12 +11,12 @@ import {
   truncateToWidth,
   visibleWidth,
   type Component,
-} from "@moonshot-ai/kimi-code-tui";
+} from "@moonshot-ai/kimi-tui";
 
 import { MESSAGE_INDENT } from "#/tui/constant/rendering";
 import { STATUS_BULLET } from "#/tui/constant/symbols";
 import { currentTheme } from "#/tui/theme";
-import { createMarkdownTheme } from "#/tui/theme/pi-tui-theme";
+import { createMarkdownTheme } from "#/tui/theme/kimi-tui-theme";
 import { isRenderCacheEnabled } from "#/tui/utils/render-cache";
 
 type AssistantMarkdownOptions = {

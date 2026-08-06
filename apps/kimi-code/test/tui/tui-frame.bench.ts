@@ -13,8 +13,8 @@
  *   pnpm --filter @moonshot-ai/kimi-code exec vitest bench test/tui/tui-frame.bench.ts
  */
 
-import type { Component, Terminal } from "@moonshot-ai/pi-tui";
-import { TUI } from "@moonshot-ai/pi-tui";
+import type { Component, Terminal } from "@moonshot-ai/kimi-tui";
+import { TUI } from "@moonshot-ai/kimi-tui";
 import { bench, describe } from "vitest";
 
 const WIDTH = 120;

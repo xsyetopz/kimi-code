@@ -15,8 +15,8 @@
  * style changes that genuinely dirty every child (e.g. theme switches).
  */
 
-import { Container } from "@moonshot-ai/kimi-code-tui";
-import type { Component } from "@moonshot-ai/kimi-code-tui";
+import { Container } from "@moonshot-ai/kimi-tui";
+import type { Component } from "@moonshot-ai/kimi-tui";
 
 import { isRenderCacheEnabled } from "#/tui/utils/render-cache";
 

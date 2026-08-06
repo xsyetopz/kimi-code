@@ -1,4 +1,4 @@
-import { truncateToWidth, type Component } from "@moonshot-ai/kimi-code-tui";
+import { truncateToWidth, type Component } from "@moonshot-ai/kimi-tui";
 
 import { STATUS_BULLET } from "#/tui/constant/symbols";
 import { currentTheme } from "#/tui/theme";

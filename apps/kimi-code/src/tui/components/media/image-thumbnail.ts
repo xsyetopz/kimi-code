@@ -2,14 +2,14 @@
  * Transcript-side rendering of a pasted image.
  *
  * On terminals that speak the Kitty graphics protocol or iTerm2 inline
- * image protocol (detected by pi-tui's `getCapabilities()`), we show
+ * image protocol (detected by kimi-tui's `getCapabilities()`), we show
  * the actual image. Everywhere else we fall back to a one-line text
  * marker matching the placeholder the user sees in the input box —
  * this keeps the transcript readable on Terminal.app / Linux default
  * terminals / `script` recordings without extra chrome.
  *
  * Height is capped at ~12 rows so a single screenshot can't monopolize
- * the viewport; pi-tui handles proportional scaling internally.
+ * the viewport; kimi-tui handles proportional scaling internally.
  */
 
 import {
@@ -18,7 +18,7 @@ import {
   Text,
   type ImageTheme,
   getCapabilities,
-} from "@moonshot-ai/kimi-code-tui";
+} from "@moonshot-ai/kimi-tui";
 
 import { currentTheme } from "#/tui/theme";
 import type { ImageAttachment } from "#/tui/utils/image-attachment-store";

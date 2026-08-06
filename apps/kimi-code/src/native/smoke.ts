@@ -6,7 +6,7 @@ import {
   getNativePackageRoot,
 } from "./native-assets";
 
-const smokePackages = ["@mariozechner/clipboard", "@moonshot-ai/pi-tui"];
+const smokePackages = ["@mariozechner/clipboard", "@moonshot-ai/kimi-tui"];
 
 function smokePiTuiNativeLoad(): void {
   const platform = process.platform;
@@ -40,7 +40,7 @@ function smokePiTuiNativeLoad(): void {
     typeof helper.isModifierPressed !== "function" &&
     typeof helper.enableVirtualTerminalInput !== "function"
   ) {
-    throw new TypeError(`pi-tui native helper exports are unexpected: ${rel}`);
+    throw new TypeError(`kimi-tui native helper exports are unexpected: ${rel}`);
   }
 }
 

@@ -11,7 +11,7 @@
  * context; the TUI only consumes the `plugin_command.activated` event.
  */
 
-import { Container, Text, Spacer } from "@moonshot-ai/kimi-code-tui";
+import { Container, Text, Spacer } from "@moonshot-ai/kimi-tui";
 
 import { currentTheme } from "#/tui/theme";
 

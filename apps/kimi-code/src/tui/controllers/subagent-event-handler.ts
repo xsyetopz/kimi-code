@@ -1,5 +1,5 @@
 import type { BackgroundTaskInfo, Event } from "@moonshot-ai/kimi-code-sdk";
-import type { Component } from "@moonshot-ai/kimi-code-tui";
+import type { Component } from "@moonshot-ai/kimi-tui";
 
 import {
   AgentSwarmProgressComponent,

@@ -107,7 +107,7 @@ export interface TerminalDialogView {
 
 /**
  * Renderer-neutral terminal state. It contains data and derived visibility
- * only; no pi-tui, Ink, terminal, or session methods cross this boundary.
+ * only; no kimi-tui, Ink, terminal, or session methods cross this boundary.
  */
 export interface TerminalViewState {
   readonly app: TerminalAppView;
@@ -152,7 +152,7 @@ export interface TerminalViewSource {
 
 /**
  * Resolve activity visibility exactly once for every renderer. The existing
- * pi-tui renderer and the future Ink renderer therefore share the same rules.
+ * kimi-tui renderer and the future Ink renderer therefore share the same rules.
  */
 export function resolveTerminalActivityMode(
   source: Pick<TerminalViewSource, "appState" | "activeDialog" | "livePane">,

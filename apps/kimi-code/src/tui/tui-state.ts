@@ -1,4 +1,4 @@
-import { Container, ProcessTerminal, TUI } from "@moonshot-ai/kimi-code-tui";
+import { Container, ProcessTerminal, TUI } from "@moonshot-ai/kimi-tui";
 
 import { FooterComponent } from "./components/chrome/footer";
 import { GutterContainer } from "./components/chrome/gutter-container";

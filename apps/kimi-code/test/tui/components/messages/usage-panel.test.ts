@@ -1,4 +1,4 @@
-import { visibleWidth } from "@moonshot-ai/pi-tui";
+import { visibleWidth } from "@moonshot-ai/kimi-tui";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {

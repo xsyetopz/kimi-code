@@ -13,7 +13,7 @@ import {
   type AutocompleteProvider,
   type AutocompleteSuggestions,
   type SlashCommand,
-} from "@moonshot-ai/kimi-code-tui";
+} from "@moonshot-ai/kimi-tui";
 
 const PATH_DELIMITERS = new Set([" ", "\t", '"', "'", "="]);
 const MAX_FALLBACK_SCAN = 2000;
@@ -30,14 +30,14 @@ interface FsMentionCandidate {
 }
 
 /**
- * Kimi wrapper around pi-tui's combined autocomplete provider.
+ * Kimi wrapper around kimi-tui's combined autocomplete provider.
  *
- * File / folder mention behavior uses pi-tui's fd-backed provider whenever fd
+ * File / folder mention behavior uses kimi-tui's fd-backed provider whenever fd
  * is available, fanning out across the working directory and any additional
  * roots so `@` completion pushes the query down to fd instead of enumerating
  * every file. A small filesystem fallback is used only while managed fd is
  * downloading, when it is unavailable, or if fd fails to spawn. Ordinary path
- * completion is still handled by pi-tui's readdir-backed path completer. This
+ * completion is still handled by kimi-tui's readdir-backed path completer. This
  * wrapper also keeps Kimi-specific slash-command guards.
  */
 export class FileMentionProvider implements AutocompleteProvider {
@@ -247,12 +247,12 @@ export class FileMentionProvider implements AutocompleteProvider {
     item: AutocompleteItem,
     prefix: string,
   ): { lines: string[]; cursorLine: number; cursorCol: number } {
-    // In bash mode a leading `/` is a path, but pi-tui's applyCompletion
+    // In bash mode a leading `/` is a path, but kimi-tui's applyCompletion
     // mistakes it for a slash command (prefix starts with `/`, nothing before
     // it, no second `/`) and prepends another `/`, producing e.g.
     // `//Applications/ ` with a trailing space that also blocks further
     // completion. Handle path completion ourselves so the value replaces the
-    // prefix verbatim. `@` mentions keep pi-tui's behaviour.
+    // prefix verbatim. `@` mentions keep kimi-tui's behaviour.
     if (this.getInputMode() === "bash" && prefix.startsWith("/")) {
       return applyPathCompletion(lines, cursorLine, cursorCol, item, prefix);
     }
@@ -295,7 +295,7 @@ function isExecutableFd(fdPath: string): boolean {
 
 /**
  * Match the `/add-dir` directory completer, which skips every entry whose name
- * starts with `.` (see registry.ts). pi-tui's path completer sets `label` to
+ * starts with `.` (see registry.ts). kimi-tui's path completer sets `label` to
  * the entry basename, with a trailing `/` for directories.
  */
 function isDotPrefixedEntry(item: AutocompleteItem): boolean {
@@ -304,9 +304,9 @@ function isDotPrefixedEntry(item: AutocompleteItem): boolean {
 }
 
 /**
- * Replace `prefix` with `item.value` verbatim, mirroring pi-tui's file-path
+ * Replace `prefix` with `item.value` verbatim, mirroring kimi-tui's file-path
  * branch (no trailing space, so a completed directory can be extended with the
- * next `/`). Used in bash mode to avoid pi-tui's slash-command branch, which
+ * next `/`). Used in bash mode to avoid kimi-tui's slash-command branch, which
  * would prepend an extra `/` to a bare leading `/` path. For a quoted
  * directory value (path contains spaces), the cursor stays inside the closing
  * quote so follow-up `/` completion keeps working.
@@ -564,7 +564,7 @@ function shouldSuppressSlashArgumentCompletion(
 /**
  * All tokens must fuzzy-match `text`; returns the summed score, or null when
  * any token misses. An empty token list matches everything with score 0.
- * Mirrors pi-tui fuzzyFilter's token semantics — keep in sync if it changes.
+ * Mirrors kimi-tui fuzzyFilter's token semantics — keep in sync if it changes.
  */
 function scoreTokens(tokens: readonly string[], text: string): number | null {
   let score = 0;

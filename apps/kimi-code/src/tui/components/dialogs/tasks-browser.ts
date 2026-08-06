@@ -21,7 +21,7 @@ import {
   truncateToWidth,
   visibleWidth,
   type Focusable,
-} from "@moonshot-ai/kimi-code-tui";
+} from "@moonshot-ai/kimi-tui";
 import type {
   BackgroundTaskInfo,
   BackgroundTaskStatus,

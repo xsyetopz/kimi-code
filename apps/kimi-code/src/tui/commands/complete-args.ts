@@ -1,4 +1,4 @@
-import type { AutocompleteItem } from "@moonshot-ai/kimi-code-tui";
+import type { AutocompleteItem } from "@moonshot-ai/kimi-tui";
 
 /**
  * A completable token (subcommand or flag) for a slash command's argument
@@ -15,7 +15,7 @@ export interface ArgCompletionSpec {
 /**
  * Generic leading-token completer for slash-command arguments.
  *
- * pi-tui passes `argumentPrefix` = everything typed after `/<command> `. We only
+ * kimi-tui passes `argumentPrefix` = everything typed after `/<command> `. We only
  * complete the *first* token: once the user has typed a space after it (moved on
  * to an objective, a flag value, etc.) we return `null` so completion never
  * clobbers free text. Matching is case-insensitive prefix match on `value`.

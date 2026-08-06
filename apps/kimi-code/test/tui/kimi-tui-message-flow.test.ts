@@ -7,7 +7,7 @@ import {
   deleteAllKittyImages,
   resetCapabilitiesCache,
   setCapabilities,
-} from "@moonshot-ai/pi-tui";
+} from "@moonshot-ai/kimi-tui";
 import type {
   ApprovalRequest,
   ApprovalResponse,
@@ -6616,7 +6616,7 @@ command = "vim"
     expect(write).toHaveBeenCalledWith(deleteAllKittyImages());
   });
 
-  it("updates terminal title through pi-tui without changing process title", async () => {
+  it("updates terminal title through kimi-tui without changing process title", async () => {
     const originalTitle = process.title;
     const { driver } = await makeDriver(makeSession({ id: "ses-1" }));
     const setTitle = vi

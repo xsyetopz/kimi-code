@@ -123,7 +123,7 @@ pnpm build      # 构建所有包
 
 ## 致谢
 
-我们的 TUI 构建在 [`pi-tui`](https://github.com/earendil-works/pi-mono/tree/main/packages/tui) 之上。我们衷心感谢 `pi-tui` 作者的工作。
+我们的 TUI 构建在 [pi-tui](https://github.com/earendil-works/pi-mono/tree/main/packages/tui) 之上（已 fork 为 `@moonshot-ai/kimi-tui`）。我们衷心感谢 pi-tui 作者的工作。
 
 ## 许可证
 

@@ -1,5 +1,5 @@
-import type { Component } from "@moonshot-ai/kimi-code-tui";
-import { Container, Text } from "@moonshot-ai/kimi-code-tui";
+import type { Component } from "@moonshot-ai/kimi-tui";
+import { Container, Text } from "@moonshot-ai/kimi-tui";
 
 import { currentTheme } from "#/tui/theme";
 import type { ToolCallBlockData, ToolResultBlockData } from "#/tui/types";

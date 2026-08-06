@@ -48,9 +48,9 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm run test --shard=${{ matrix.shard }}/5
 
-  # pi-tui's suite runs on node:test (not vitest), so the root `pnpm run test`
+  # kimi-tui's suite runs on node:test (not vitest), so the root `pnpm run test`
   # does not execute it; it needs its own job.
-  test-pi-tui:
+  test-kimi-tui:
     runs-on: ubuntu-latest
 
     steps:
@@ -64,7 +64,7 @@ jobs:
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @moonshot-ai/pi-tui test
+      - run: pnpm --filter @moonshot-ai/kimi-tui test
 
   test-windows:
     runs-on: windows-latest

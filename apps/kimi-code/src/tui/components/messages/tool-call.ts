@@ -11,8 +11,8 @@ import {
   Text,
   truncateToWidth,
   visibleWidth,
-} from "@moonshot-ai/kimi-code-tui";
-import type { Component, TUI } from "@moonshot-ai/kimi-code-tui";
+} from "@moonshot-ai/kimi-tui";
+import type { Component, TUI } from "@moonshot-ai/kimi-tui";
 import {
   highlightLines,
   langFromPath,
@@ -35,7 +35,7 @@ import {
   SUCCESS_MARK,
 } from "#/tui/constant/symbols";
 import { currentTheme } from "#/tui/theme";
-import { createMarkdownTheme } from "#/tui/theme/pi-tui-theme";
+import { createMarkdownTheme } from "#/tui/theme/kimi-tui-theme";
 import type { ToolCallBlockData, ToolResultBlockData } from "#/tui/types";
 import type { TokenUsage } from "@moonshot-ai/kimi-code-sdk";
 import { appendStreamingArgsPreview } from "#/tui/utils/event-payload";
@@ -1673,8 +1673,8 @@ export class ToolCallComponent extends Container {
    * the result body. URLs inside a line are wrapped in an OSC 8 hyperlink
    * sequence so terminals that support it (iTerm2, Ghostty, kitty, modern
    * Terminal.app, VS Code) make the URL Cmd-clickable and expose
-   * "Copy Link" via the context menu — even when pi-tui soft-wraps the
-   * URL across multiple rows (pi-tui's wrapTextWithAnsi re-opens the
+   * "Copy Link" via the context menu — even when kimi-tui soft-wraps the
+   * URL across multiple rows (kimi-tui's wrapTextWithAnsi re-opens the
    * active OSC 8 link on each continuation line). Each embedded URL is
    * styled individually so surrounding prose keeps its default dim tone.
    */
@@ -2136,7 +2136,7 @@ export class ToolCallComponent extends Container {
     // lands — mirroring Write's writeShouldCap below. Otherwise the render
     // tick between finalized args (streamingArguments cleared by the
     // `tool.call.started` payload) and the result draws the full diff, then
-    // snaps back to the cap: a height collapse that triggers pi-tui's full
+    // snaps back to the cap: a height collapse that triggers kimi-tui's full
     // redraw and wipes scrollback. Streaming frames (streamingArguments set)
     // still take buildStreamingPreview above and never reach here.
     const shouldCap = !this.expanded;
@@ -2150,7 +2150,7 @@ export class ToolCallComponent extends Container {
       const allLines = highlightLines(content, lang);
       // Cap as soon as args finalize, not just when result lands. Otherwise the
       // brief render tick between finalized args and result draws the full file,
-      // and the snap back to the collapsed cap triggers pi-tui's full-redraw
+      // and the snap back to the collapsed cap triggers kimi-tui's full-redraw
       // path which wipes the terminal scrollback (pre-TUI history).
       const writeShouldCap = !this.expanded;
       const shown = writeShouldCap

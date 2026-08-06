@@ -1,5 +1,5 @@
 /**
- * Custom editor extending pi-tui Editor with app-level keybindings.
+ * Custom editor extending kimi-tui Editor with app-level keybindings.
  */
 
 import {
@@ -11,10 +11,10 @@ import {
   visibleWidth,
   type SelectItem,
   type TUI,
-} from "@moonshot-ai/kimi-code-tui";
+} from "@moonshot-ai/kimi-tui";
 
 import { currentTheme } from "#/tui/theme";
-import { createEditorTheme } from "#/tui/theme/pi-tui-theme";
+import { createEditorTheme } from "#/tui/theme/kimi-tui-theme";
 import { printableChar } from "#/tui/utils/printable-key";
 
 import { extractAtPrefix } from "./file-mention-provider";
@@ -56,18 +56,18 @@ interface AutocompleteTriggerInternals {
   }) => void;
 }
 
-// Mirror pi-tui's private SLASH_COMMAND_SELECT_LIST_LAYOUT
-// (dist/components/editor.js); keep in sync when bumping pi-tui.
+// Mirror kimi-tui's private SLASH_COMMAND_SELECT_LIST_LAYOUT
+// (dist/components/editor.js); keep in sync when bumping kimi-tui.
 const SLASH_COMMAND_SELECT_LIST_LAYOUT = {
   minPrimaryColumnWidth: 12,
   maxPrimaryColumnWidth: 32,
 } as const;
 
 /**
- * Workaround for a pi-tui bug that surfaces when Kitty keyboard protocol
+ * Workaround for a kimi-tui bug that surfaces when Kitty keyboard protocol
  * is active AND caps_lock is on. In that state terminals emit, e.g.,
  * `ESC[68;69u` for ctrl+d (codepoint=68=`D`, modifier=ctrl|caps_lock).
- * pi-tui's `matchesKittySequence` masks `caps_lock` out of the *modifier*
+ * kimi-tui's `matchesKittySequence` masks `caps_lock` out of the *modifier*
  * but leaves the *codepoint* capitalised, so `matchesKey(data, "ctrl+d")`
  * (which expects codepoint=100=`d`) fails and every ctrl-shortcut is
  * silently dropped.
@@ -142,7 +142,7 @@ export class CustomEditor extends Editor {
   /**
    * Called when ↑ is pressed in an empty editor. Return `true` to consume
    * the key (e.g. recalled a queued message); return `false` to fall
-   * through so pi-tui's built-in history navigation runs.
+   * through so kimi-tui's built-in history navigation runs.
    */
   public onUpArrowEmpty?: () => boolean;
   public onDownArrowEmpty?: () => boolean;
@@ -158,7 +158,7 @@ export class CustomEditor extends Editor {
    * Alt-V on Windows — Ctrl-V is terminal-reserved there). Return
    * `true` to consume the key (image was read and handled); return
    * `false` to let the key fall through to the normal paste path.
-   * The callback may be async; pi-tui awaits it before dispatching
+   * The callback may be async; kimi-tui awaits it before dispatching
    * the next keystroke.
    */
   public onPasteImage?: () => Promise<boolean>;
@@ -183,10 +183,10 @@ export class CustomEditor extends Editor {
       disablePasteBurst: options.disablePasteBurst,
     });
 
-    // pi-tui keeps `createAutocompleteList` private; shadow it with an
+    // kimi-tui keeps `createAutocompleteList` private; shadow it with an
     // instance property so slash command menus render descriptions wrapped
     // to at most two lines. Non-slash completion (paths, @ mentions) keeps
-    // pi-tui's single-line list.
+    // kimi-tui's single-line list.
     (
       this as unknown as AutocompleteListFactoryInternals
     ).createAutocompleteList = (prefix, items) => {
@@ -205,12 +205,12 @@ export class CustomEditor extends Editor {
       );
     };
 
-    // pi-tui auto-triggers autocomplete for `/` (and letters in a slash
+    // kimi-tui auto-triggers autocomplete for `/` (and letters in a slash
     // context) with force:false, which routes through the slash-command
     // branch. In bash mode `/` is a path separator, not a command prefix, so
     // shadow the trigger to request file path completion (force:true) instead.
     // Prompt mode keeps the original force:false behaviour. `tryTriggerAutocomplete`
-    // is private in pi-tui's typings but a plain prototype method at runtime.
+    // is private in kimi-tui's typings but a plain prototype method at runtime.
     const triggerInternals = this as unknown as AutocompleteTriggerInternals;
     triggerInternals.tryTriggerAutocomplete = (explicitTab = false) => {
       triggerInternals.requestAutocomplete({
@@ -267,7 +267,7 @@ export class CustomEditor extends Editor {
   }
 
   private cancelAutocompleteActivity(): void {
-    // pi-tui exposes `isShowingAutocomplete()` but keeps cancellation private.
+    // kimi-tui exposes `isShowingAutocomplete()` but keeps cancellation private.
     // Kimi needs Esc to win over app-level cancel while the slash menu request is active.
     (this as unknown as AutocompleteInternals).cancelAutocomplete();
   }
@@ -312,7 +312,7 @@ export class CustomEditor extends Editor {
         lines[firstContentIdx] = withPrompt;
       }
     }
-    // `this.borderColor` is pi-tui's per-render paint function. The host may
+    // `this.borderColor` is kimi-tui's per-render paint function. The host may
     // overwrite it (e.g. plan-mode / slash-context highlight via
     // `editor.borderColor = chalk.hex(primary)`), so we route corners and
     // side bars through the same hook to stay in sync.
@@ -381,7 +381,7 @@ export class CustomEditor extends Editor {
     //   Windows terminals reserve Ctrl-V for their own paste handling
     //   (e.g. Windows Terminal's Ctrl+V shortcut), so we listen for
     //   Alt-V there. Everywhere else Ctrl-V pastes. When the host
-    //   reports no image available, we fall through to pi-tui's
+    //   reports no image available, we fall through to kimi-tui's
     //   normal paste path so text from the clipboard still works.
     const pasteKey = process.platform === "win32" ? "alt+v" : Key.ctrl("v");
     if (matchesKey(normalized, pasteKey)) {
@@ -495,8 +495,8 @@ export class CustomEditor extends Editor {
     }
 
     // Swallow Tab while the autocomplete dropdown is closed so it does not
-    // trigger pi-tui's built-in file completion. When the dropdown is open,
-    // fall through so pi-tui can still accept the selected item with Tab.
+    // trigger kimi-tui's built-in file completion. When the dropdown is open,
+    // fall through so kimi-tui can still accept the selected item with Tab.
     if (matchesKey(normalized, Key.tab) && !this.isShowingAutocomplete()) {
       return;
     }
@@ -564,8 +564,8 @@ export class CustomEditor extends Editor {
         // In bash mode `/` is a path separator, not a slash command. A bare
         // leading `/` is already handled by the tryTriggerAutocomplete shadow
         // in the constructor; this branch covers the inline case (e.g. `ls /`,
-        // `cat /etc/`, `/add-dir/`) that pi-tui never auto-triggers. force:true
-        // is required so pi-tui's own slash-command handling is bypassed —
+        // `cat /etc/`, `/add-dir/`) that kimi-tui never auto-triggers. force:true
+        // is required so kimi-tui's own slash-command handling is bypassed —
         // force:false would let it pop up subcommand completions.
         if (textBeforeCursor.trimStart() !== "/") {
           editor.requestAutocomplete?.({ force: true, explicitTab: false });
@@ -580,11 +580,11 @@ export class CustomEditor extends Editor {
       return;
     }
 
-    // After accepting a slash command name via Tab, pi-tui inserts a trailing
+    // After accepting a slash command name via Tab, kimi-tui inserts a trailing
     // space and closes the menu without triggering argument completion. Reopen
     // it so subcommands (e.g. `/goal ` → status/pause/…) show immediately.
     // Skipped in bash mode: `/` is a path there, and force:false would let
-    // pi-tui's own slash-command handling pop up subcommand completions.
+    // kimi-tui's own slash-command handling pop up subcommand completions.
     if (
       this.inputMode !== "bash" &&
       textBeforeCursor.endsWith(" ") &&
@@ -691,7 +691,7 @@ function highlightVisibleRanges(
 // Mirrors the editor's paddingX (see constructor). The hint is spliced into
 // the first content line, which starts with this many spaces of left padding.
 const EDITOR_LEFT_PADDING = 4;
-// pi-tui renders the end-of-input cursor as an inverse-video space.
+// kimi-tui renders the end-of-input cursor as an inverse-video space.
 const CURSOR_BLOCK = "\u001B[7m \u001B[0m";
 
 /**
@@ -763,9 +763,9 @@ export function injectPromptSymbol(
 }
 
 /**
- * Post-process pi-tui's editor output to draw a full box around it.
+ * Post-process kimi-tui's editor output to draw a full box around it.
  *
- * pi-tui only renders horizontal top/bottom borders; we wrap them with
+ * kimi-tui only renders horizontal top/bottom borders; we wrap them with
  * `╭╮╰╯` corners and add vertical `│` bars on each row's outer columns.
  * Horizontal-border rows (those whose first visible char is `─`, including
  * scroll indicators like `── ↑ N more ──`) are stripped of their existing

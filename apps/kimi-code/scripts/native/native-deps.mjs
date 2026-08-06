@@ -28,10 +28,10 @@ const clipboardSubpackageByTarget = Object.freeze({
   "win32-x64": "@mariozechner/clipboard-win32-x64-msvc",
 });
 
-// pi-tui ships platform-specific native helpers (no Linux build):
+// kimi-tui ships platform-specific native helpers (no Linux build):
 // - darwin: Shift-modifier detection for Terminal.app Shift+Enter
 // - win32: enable ENABLE_VIRTUAL_TERMINAL_INPUT so Shift+Tab is distinguishable
-const piTuiNativeFileByTarget = Object.freeze({
+const kimiTuiNativeFileByTarget = Object.freeze({
   "darwin-arm64": [
     "native/darwin/prebuilds/darwin-arm64/darwin-modifiers.node",
   ],
@@ -78,15 +78,15 @@ export const nativeDeps = Object.freeze([
     parent: "clipboard-host",
   },
   {
-    id: "pi-tui",
-    name: () => "@moonshot-ai/pi-tui",
-    // pi-tui's JS is bundled into main.cjs, so only the platform-specific
+    id: "kimi-tui",
+    name: () => "@moonshot-ai/kimi-tui",
+    // kimi-tui's JS is bundled into main.cjs, so only the platform-specific
     // native helper (.node under native/) ships alongside the binary — its
     // dist/ JS is intentionally NOT collected (it stays in the bundle). This
     // keeps the SEA native-asset payload small. Linux has no native helper.
     collect: "native-file-only",
     parent: null,
-    nativeFileRelatives: (target) => piTuiNativeFileByTarget[target] ?? [],
+    nativeFileRelatives: (target) => kimiTuiNativeFileByTarget[target] ?? [],
   },
 ]);
 

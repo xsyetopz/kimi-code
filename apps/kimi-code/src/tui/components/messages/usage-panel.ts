@@ -4,8 +4,8 @@
  * the pattern stays consistent across command-triggered panels.
  */
 
-import type { Component } from "@moonshot-ai/kimi-code-tui";
-import { truncateToWidth, visibleWidth } from "@moonshot-ai/kimi-code-tui";
+import type { Component } from "@moonshot-ai/kimi-tui";
+import { truncateToWidth, visibleWidth } from "@moonshot-ai/kimi-tui";
 import { formatDuration } from "@moonshot-ai/kimi-code-oauth";
 import type { SessionUsage, TokenUsage } from "@moonshot-ai/kimi-code-sdk";
 

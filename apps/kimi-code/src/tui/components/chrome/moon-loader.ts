@@ -1,5 +1,5 @@
-import { Text, visibleWidth } from "@moonshot-ai/kimi-code-tui";
-import type { TUI } from "@moonshot-ai/kimi-code-tui";
+import { Text, visibleWidth } from "@moonshot-ai/kimi-tui";
+import type { TUI } from "@moonshot-ai/kimi-tui";
 
 import {
   BRAILLE_SPINNER_FRAMES,
