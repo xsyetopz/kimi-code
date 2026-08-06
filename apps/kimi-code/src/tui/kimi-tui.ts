@@ -1282,9 +1282,6 @@ export class KimiTUI {
   }
 
   private handlePromptSemantic(action: PromptSemanticAction): void {
-    // Semantic shortcuts still execute on the compatibility editor callbacks.
-    // Push the Ink model into legacy state only for that dispatch window.
-    this.syncLegacyPromptEditor({ mirrorForSemanticDispatch: true });
     const consumed = this.editorKeyboard.dispatchPromptSemantic(action);
     if (!consumed && action === "ctrl-b") {
       this.applyPromptEditorAction({ type: "move-left" });
@@ -1298,16 +1295,9 @@ export class KimiTUI {
       this.applyPromptEditorAction({ type: "history-down" });
       return;
     }
-    if (this.inkOwnsTerminal()) {
-      if (consumed) {
-        this.syncPromptEditorFromLegacy({ mirrorFromSemanticDispatch: true });
-      }
-      this.updateInkRenderer();
-      return;
+    if (!this.inkOwnsTerminal()) {
+      this.syncPromptEditorFromLegacy();
     }
-    // Queue recall and callback-driven editor mutations (Ctrl-C, Ctrl-S, ...)
-    // happen on the compatibility editor; mirror them back into the model.
-    this.syncPromptEditorFromLegacy();
     this.updateInkRenderer();
   }
 
@@ -1322,13 +1312,8 @@ export class KimiTUI {
     this.updateInkRenderer();
   }
 
-  private syncLegacyPromptEditor(options?: {
-    readonly mirrorForSemanticDispatch?: boolean;
-  }): void {
-    if (
-      this.inkOwnsTerminal() &&
-      options?.mirrorForSemanticDispatch !== true
-    ) {
+  private syncLegacyPromptEditor(): void {
+    if (this.inkOwnsTerminal()) {
       if (this.state.appState.inputMode !== this.promptEditorState.inputMode) {
         this.setAppState({ inputMode: this.promptEditorState.inputMode });
       }
@@ -1346,15 +1331,8 @@ export class KimiTUI {
     }
   }
 
-  private syncPromptEditorFromLegacy(options?: {
-    readonly mirrorFromSemanticDispatch?: boolean;
-  }): void {
-    if (
-      this.inkOwnsTerminal() &&
-      options?.mirrorFromSemanticDispatch !== true
-    ) {
-      return;
-    }
+  private syncPromptEditorFromLegacy(): void {
+    if (this.inkOwnsTerminal()) return;
     const editor = this.state.editor;
     const cursor = editor.getCursor();
     const text = editor.getText();
@@ -1785,6 +1763,35 @@ export class KimiTUI {
       inputMode: mode,
     });
     this.updateEditorBorderHighlight();
+  }
+
+  /** {@link EditorKeyboardController} ink prompt bridge methods. */
+  inkOwnsPromptEditor(): boolean {
+    return this.inkOwnsTerminal();
+  }
+
+  getPromptEditorText(): string {
+    return this.promptEditorState.text;
+  }
+
+  setPromptEditorText(text: string): void {
+    this.applyPromptEditorAction({ type: "set-text", text });
+  }
+
+  getPromptInputMode(): "prompt" | "bash" {
+    return this.promptEditorState.inputMode;
+  }
+
+  setPromptInputMode(mode: "prompt" | "bash"): void {
+    this.handleInputModeChange(mode);
+  }
+
+  insertPromptEditorText(text: string): void {
+    this.applyPromptEditorAction({ type: "insert", text });
+  }
+
+  requestPromptEditorRender(): void {
+    this.updateInkRenderer();
   }
 
   handleUserInput(text: string): void {

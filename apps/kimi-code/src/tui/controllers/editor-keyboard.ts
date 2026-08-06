@@ -72,6 +72,14 @@ export interface EditorKeyboardHost {
   suspendTerminal?: () => void;
   resumeTerminal?: () => void;
   updatePromptEditorView?: () => void;
+  /** When true, prompt shortcuts read/write the renderer-neutral model. */
+  inkOwnsPromptEditor?: () => boolean;
+  getPromptEditorText?: () => string;
+  setPromptEditorText?: (text: string) => void;
+  getPromptInputMode?: () => "prompt" | "bash";
+  setPromptInputMode?: (mode: "prompt" | "bash") => void;
+  insertPromptEditorText?: (text: string) => void;
+  requestPromptEditorRender?: () => void;
 }
 
 export class EditorKeyboardController {
@@ -139,270 +147,53 @@ export class EditorKeyboardController {
       this.clearPendingUndoEsc();
     };
 
-    editor.onCtrlC = () => {
-      if (host.cancelInFlight !== undefined) {
-        const cancel = host.cancelInFlight;
-        host.cancelInFlight = undefined;
-        this.clearPendingExit();
-        cancel();
-        return;
-      }
-
-      // The btw panel stacks above the transcript, so Ctrl+C cancels/closes it
-      // before touching an in-flight compaction or stream.
-      if (host.btwPanelController.cancelRunning()) {
-        this.clearPendingExit();
-        return;
-      }
-      if (host.btwPanelController.closeOrCancel()) {
-        this.clearPendingExit();
-        return;
-      }
-
-      if (host.state.appState.isCompacting) {
-        this.clearPendingExit();
-
-        if (this.clearEditorTextIfPresent()) return;
-
-        this.cancelCurrentCompaction();
-        return;
-      }
-
-      if (host.state.appState.streamingPhase !== "idle") {
-        this.clearPendingExit();
-
-        if (this.clearEditorTextIfPresent()) return;
-
-        this.cancelCurrentStream();
-        return;
-      }
-
-      if (this.pendingExit?.kind === "ctrl-c") {
-        this.clearPendingExit();
-        void host.stop();
-        return;
-      }
-
-      if (editor.getText().length > 0) {
-        editor.setText("");
-      }
-      this.armPendingExit("ctrl-c", CTRL_C_HINT);
-    };
-
-    editor.onCtrlD = () => {
-      if (this.pendingExit?.kind === "ctrl-d") {
-        this.clearPendingExit();
-        void host.stop();
-        return;
-      }
-      this.armPendingExit("ctrl-d", CTRL_D_HINT);
-    };
-
-    editor.onEscape = () => {
-      if (this.pendingExit) this.clearPendingExit();
-      if (host.state.activeDialog === "session-picker") {
-        host.hideSessionPicker();
-        this.clearPendingUndoEsc();
-        return;
-      }
-      // The btw panel stacks above the transcript, so Esc dismisses it before
-      // touching an in-flight compaction or stream.
-      if (host.btwPanelController.closeOrCancel()) {
-        this.clearPendingUndoEsc();
-        return;
-      }
-      if (host.state.appState.isCompacting) {
-        this.cancelCurrentCompaction();
-        this.clearPendingUndoEsc();
-        return;
-      }
-      if (host.state.appState.streamingPhase !== "idle") {
-        this.cancelCurrentStream();
-        this.clearPendingUndoEsc();
-        return;
-      }
-      // Idle: a second Esc within the double-tap window opens the undo selector.
-      if (this.pendingUndoEsc !== null) {
-        this.clearPendingUndoEsc();
-        host.openUndoSelector();
-        return;
-      }
-      this.armPendingUndoEsc();
-    };
-
-    editor.onShiftTab = () => {
-      const togglePlan = (): void => {
-        const next = !host.state.appState.planMode;
-        host.track("shortcut_plan_toggle", { enabled: next });
-        host.track("shortcut_mode_switch", {
-          to_mode: next ? "plan" : "agent",
-        });
-        host.handlePlanToggle(next);
-      };
-      if (host.session === undefined) {
-        if (!host.engineV2) {
-          host.showError(NO_ACTIVE_SESSION_MESSAGE);
-          return;
-        }
-        // v2 session-less: lazy-create the session, then toggle — the same
-        // path /plan takes.
-        void host.ensureSession().then((session) => {
-          if (session !== undefined) togglePlan();
-        });
-        return;
-      }
-      togglePlan();
-    };
-
     editor.onInputModeChange = (mode) => {
       host.handleInputModeChange(mode);
     };
 
+    editor.onCtrlC = () => {
+      this.handleCtrlC();
+    };
+
+    editor.onCtrlD = () => {
+      this.handleCtrlD();
+    };
+
+    editor.onEscape = () => {
+      this.handleEscape();
+    };
+
+    editor.onShiftTab = () => {
+      this.handleShiftTab();
+    };
+
     editor.onOpenExternalEditor = () => {
-      host.track("shortcut_editor");
-      void this.openExternalEditor();
+      this.handleOpenExternalEditor();
     };
 
     editor.onToggleToolExpand = () => {
-      host.track("shortcut_expand");
-      host.toggleToolOutputExpansion();
+      this.handleToggleToolExpand();
     };
 
-    editor.onToggleTodoExpand = (): boolean => {
-      if (!host.state.todoPanel.hasOverflow()) return false;
-      // Disarm a pending double-press exit confirmation so expanding the
-      // todo list in between two Ctrl-C presses does not accidentally exit.
-      this.clearPendingExit();
-      host.track("shortcut_todo_expand");
-      host.toggleTodoPanelExpansion();
-      return true;
-    };
+    editor.onToggleTodoExpand = (): boolean => this.handleToggleTodoExpand();
 
     editor.onCtrlS = () => {
-      if (
-        host.state.appState.streamingPhase === "idle" ||
-        host.state.appState.streamingPhase === "shell" ||
-        host.state.appState.isCompacting
-      )
-        return;
-      const text = editor.getText().trim();
-      const editorIsBash = editor.inputMode === "bash";
-
-      // Bash commands (`! …`) are not steerable: keep them queued so they run
-      // after the current task instead of being injected into the turn as text.
-      const queued = host.state.queuedMessages;
-      const steerable = queued.filter((m) => m.mode !== "bash");
-
-      const items: SteerInputItem[] = [];
-      for (const m of steerable) {
-        const trimmed = m.text.trim();
-        if (trimmed.length > 0) {
-          // Queued items carry the parts extracted when they were submitted
-          // (and were already capability-validated then).
-          items.push({
-            text: trimmed,
-            parts: m.parts,
-            imageAttachmentIds: m.imageAttachmentIds,
-          });
-        }
-      }
-      let editorExtraction:
-        | ReturnType<typeof extractMediaAttachments>
-        | undefined;
-      if (!editorIsBash && text.length > 0) {
-        try {
-          editorExtraction = extractMediaAttachments(text, this.imageStore);
-        } catch (error) {
-          // Cache copy failed (e.g. the pasted video's source vanished) —
-          // leave the queue and the editor draft untouched.
-          host.showError(
-            `Failed to prepare media attachment: ${formatErrorMessage(error)}`,
-          );
-          return;
-        }
-        items.push({
-          text,
-          parts: editorExtraction.hasMedia ? editorExtraction.parts : undefined,
-          imageAttachmentIds:
-            editorExtraction.imageAttachmentIds.length > 0
-              ? editorExtraction.imageAttachmentIds
-              : undefined,
-        });
-      }
-
-      if (items.length > 0) {
-        // The editor draft is fresh input: gate it on the model's media
-        // capabilities before splicing the queue, so a rejection leaves the
-        // queue and the draft untouched.
-        if (
-          editorExtraction !== undefined &&
-          !host.validateMediaCapabilities(editorExtraction)
-        ) {
-          return;
-        }
-        host.state.queuedMessages = queued.filter((m) => m.mode === "bash");
-        if (!editorIsBash) editor.setText("");
-        const session = host.session;
-        if (
-          host.state.appState.model.trim().length === 0 ||
-          session === undefined
-        ) {
-          host.showError(LLM_NOT_SET_MESSAGE);
-        } else {
-          host.steerMessage(session, items);
-        }
-      }
-      host.updateQueueDisplay();
-      host.state.ui.requestRender();
+      this.handleCtrlS();
     };
 
-    editor.onCtrlB = (): boolean => {
-      // Shell command execution is treated as a streaming phase ('shell'), so
-      // this gate already covers it; only idle + not-compacting falls through.
-      if (
-        host.state.appState.streamingPhase === "idle" ||
-        host.state.appState.isCompacting
-      ) {
-        return false;
-      }
-      host.track("shortcut_background_task");
-      host.detachCurrentForegroundTask();
-      return true;
-    };
+    editor.onCtrlB = (): boolean => this.handleCtrlB();
 
     editor.onUndo = () => {
-      host.track("undo");
+      this.handleUndo();
     };
 
     editor.onTextPaste = () => {
-      host.track("shortcut_paste", { kind: "text" });
+      this.handleTextPaste();
     };
 
-    editor.onUpArrowEmpty = () => {
-      if (host.btwPanelController.scroll("up")) return true;
-      if (
-        host.state.appState.streamingPhase === "idle" &&
-        !host.state.appState.isCompacting
-      )
-        return false;
-      const recalled = host.recallLastQueued();
-      if (recalled !== undefined) {
-        editor.setText(recalled.text);
-        // Restore the queued item's mode so a recalled `!` command runs as a
-        // shell command again instead of being submitted as a normal prompt.
-        const mode = recalled.mode ?? "prompt";
-        if (editor.inputMode !== mode) {
-          editor.inputMode = mode;
-          editor.onInputModeChange?.(mode);
-        }
-        host.updateQueueDisplay();
-        host.state.ui.requestRender();
-        return true;
-      }
-      return false;
-    };
+    editor.onUpArrowEmpty = () => this.handleUpArrowEmpty();
 
-    editor.onDownArrowEmpty = () => host.btwPanelController.scroll("down");
+    editor.onDownArrowEmpty = () => this.handleDownArrowEmpty();
 
     editor.onPasteImage = async () => this.handleClipboardImagePaste();
   }
@@ -415,58 +206,347 @@ export class EditorKeyboardController {
   }
 
   /**
-   * Dispatch a semantic shortcut from a renderer-owned prompt editor. The
-   * legacy pi editor still owns these callbacks for dialog compatibility, but
-   * normal Ink prompt input no longer needs to enter the pi focus tree.
+   * Dispatch a semantic shortcut from a renderer-owned prompt editor.
    * Returns whether the shortcut consumed the input (Ctrl-B/Ctrl-T can fall
    * through to ordinary editing when their feature is inactive).
    */
   dispatchPromptSemantic(action: PromptSemanticAction): boolean {
-    const editor = this.host.state.editor;
     switch (action) {
       case "ctrl-c":
-        editor.onCtrlC?.();
+        this.handleCtrlC();
         return true;
       case "ctrl-d":
-        editor.onCtrlD?.();
+        this.handleCtrlD();
         return true;
       case "ctrl-g":
-        editor.onOpenExternalEditor?.();
+        this.handleOpenExternalEditor();
         return true;
       case "ctrl-o":
-        editor.onToggleToolExpand?.();
+        this.handleToggleToolExpand();
         return true;
       case "ctrl-s":
-        editor.onCtrlS?.();
+        this.handleCtrlS();
         return true;
       case "ctrl-b":
-        return editor.onCtrlB?.() ?? false;
+        return this.handleCtrlB();
       case "ctrl-t":
-        return editor.onToggleTodoExpand?.() ?? false;
+        return this.handleToggleTodoExpand();
       case "paste-image":
-        if (editor.onPasteImage !== undefined) {
-          void editor
-            .onPasteImage()
-            .then((handled) => {
-              if (!handled) editor.onTextPaste?.();
-            })
-            .finally(() => this.host.updatePromptEditorView?.());
-        }
+        void this.handleClipboardImagePaste()
+          .then((handled) => {
+            if (!handled) this.handleTextPaste();
+          })
+          .finally(() => this.host.updatePromptEditorView?.());
         return true;
       case "undo":
-        editor.onUndo?.();
+        this.handleUndo();
         return true;
       case "shift-tab":
-        editor.onShiftTab?.();
+        this.handleShiftTab();
         return true;
       case "escape":
-        editor.onEscape?.();
+        this.handleEscape();
         return true;
       case "up-empty":
-        return editor.onUpArrowEmpty?.() ?? false;
+        return this.handleUpArrowEmpty();
       case "down-empty":
-        return editor.onDownArrowEmpty?.() ?? false;
+        return this.handleDownArrowEmpty();
     }
+  }
+
+  private handleCtrlC(): void {
+    const { host } = this;
+    if (host.cancelInFlight !== undefined) {
+      const cancel = host.cancelInFlight;
+      host.cancelInFlight = undefined;
+      this.clearPendingExit();
+      cancel();
+      return;
+    }
+
+    if (host.btwPanelController.cancelRunning()) {
+      this.clearPendingExit();
+      return;
+    }
+    if (host.btwPanelController.closeOrCancel()) {
+      this.clearPendingExit();
+      return;
+    }
+
+    if (host.state.appState.isCompacting) {
+      this.clearPendingExit();
+      if (this.clearEditorTextIfPresent()) return;
+      this.cancelCurrentCompaction();
+      return;
+    }
+
+    if (host.state.appState.streamingPhase !== "idle") {
+      this.clearPendingExit();
+      if (this.clearEditorTextIfPresent()) return;
+      this.cancelCurrentStream();
+      return;
+    }
+
+    if (this.pendingExit?.kind === "ctrl-c") {
+      this.clearPendingExit();
+      void host.stop();
+      return;
+    }
+
+    if (this.readPromptText().length > 0) {
+      this.writePromptText("");
+    }
+    this.armPendingExit("ctrl-c", CTRL_C_HINT);
+  }
+
+  private handleCtrlD(): void {
+    if (this.pendingExit?.kind === "ctrl-d") {
+      this.clearPendingExit();
+      void this.host.stop();
+      return;
+    }
+    this.armPendingExit("ctrl-d", CTRL_D_HINT);
+  }
+
+  private handleEscape(): void {
+    const { host } = this;
+    if (this.pendingExit) this.clearPendingExit();
+    if (host.state.activeDialog === "session-picker") {
+      host.hideSessionPicker();
+      this.clearPendingUndoEsc();
+      return;
+    }
+    if (host.btwPanelController.closeOrCancel()) {
+      this.clearPendingUndoEsc();
+      return;
+    }
+    if (host.state.appState.isCompacting) {
+      this.cancelCurrentCompaction();
+      this.clearPendingUndoEsc();
+      return;
+    }
+    if (host.state.appState.streamingPhase !== "idle") {
+      this.cancelCurrentStream();
+      this.clearPendingUndoEsc();
+      return;
+    }
+    if (this.pendingUndoEsc !== null) {
+      this.clearPendingUndoEsc();
+      host.openUndoSelector();
+      return;
+    }
+    this.armPendingUndoEsc();
+  }
+
+  private handleShiftTab(): void {
+    const { host } = this;
+    const togglePlan = (): void => {
+      const next = !host.state.appState.planMode;
+      host.track("shortcut_plan_toggle", { enabled: next });
+      host.track("shortcut_mode_switch", {
+        to_mode: next ? "plan" : "agent",
+      });
+      host.handlePlanToggle(next);
+    };
+    if (host.session === undefined) {
+      if (!host.engineV2) {
+        host.showError(NO_ACTIVE_SESSION_MESSAGE);
+        return;
+      }
+      void host.ensureSession().then((session) => {
+        if (session !== undefined) togglePlan();
+      });
+      return;
+    }
+    togglePlan();
+  }
+
+  private handleOpenExternalEditor(): void {
+    this.host.track("shortcut_editor");
+    void this.openExternalEditor();
+  }
+
+  private handleToggleToolExpand(): void {
+    this.host.track("shortcut_expand");
+    this.host.toggleToolOutputExpansion();
+  }
+
+  private handleToggleTodoExpand(): boolean {
+    if (!this.host.state.todoPanel.hasOverflow()) return false;
+    this.clearPendingExit();
+    this.host.track("shortcut_todo_expand");
+    this.host.toggleTodoPanelExpansion();
+    return true;
+  }
+
+  private handleCtrlS(): void {
+    const { host } = this;
+    if (
+      host.state.appState.streamingPhase === "idle" ||
+      host.state.appState.streamingPhase === "shell" ||
+      host.state.appState.isCompacting
+    ) {
+      return;
+    }
+    const text = this.readPromptText().trim();
+    const editorIsBash = this.readPromptInputMode() === "bash";
+
+    const queued = host.state.queuedMessages;
+    const steerable = queued.filter((m) => m.mode !== "bash");
+
+    const items: SteerInputItem[] = [];
+    for (const m of steerable) {
+      const trimmed = m.text.trim();
+      if (trimmed.length > 0) {
+        items.push({
+          text: trimmed,
+          parts: m.parts,
+          imageAttachmentIds: m.imageAttachmentIds,
+        });
+      }
+    }
+    let editorExtraction:
+      | ReturnType<typeof extractMediaAttachments>
+      | undefined;
+    if (!editorIsBash && text.length > 0) {
+      try {
+        editorExtraction = extractMediaAttachments(text, this.imageStore);
+      } catch (error) {
+        host.showError(
+          `Failed to prepare media attachment: ${formatErrorMessage(error)}`,
+        );
+        return;
+      }
+      items.push({
+        text,
+        parts: editorExtraction.hasMedia ? editorExtraction.parts : undefined,
+        imageAttachmentIds:
+          editorExtraction.imageAttachmentIds.length > 0
+            ? editorExtraction.imageAttachmentIds
+            : undefined,
+      });
+    }
+
+    if (items.length > 0) {
+      if (
+        editorExtraction !== undefined &&
+        !host.validateMediaCapabilities(editorExtraction)
+      ) {
+        return;
+      }
+      host.state.queuedMessages = queued.filter((m) => m.mode === "bash");
+      if (!editorIsBash) this.writePromptText("");
+      const session = host.session;
+      if (
+        host.state.appState.model.trim().length === 0 ||
+        session === undefined
+      ) {
+        host.showError(LLM_NOT_SET_MESSAGE);
+      } else {
+        host.steerMessage(session, items);
+      }
+    }
+    host.updateQueueDisplay();
+    this.requestPromptRender();
+  }
+
+  private handleCtrlB(): boolean {
+    if (
+      this.host.state.appState.streamingPhase === "idle" ||
+      this.host.state.appState.isCompacting
+    ) {
+      return false;
+    }
+    this.host.track("shortcut_background_task");
+    this.host.detachCurrentForegroundTask();
+    return true;
+  }
+
+  private handleUndo(): void {
+    this.host.track("undo");
+  }
+
+  private handleTextPaste(): void {
+    this.host.track("shortcut_paste", { kind: "text" });
+  }
+
+  private handleUpArrowEmpty(): boolean {
+    const { host } = this;
+    if (host.btwPanelController.scroll("up")) return true;
+    if (
+      host.state.appState.streamingPhase === "idle" &&
+      !host.state.appState.isCompacting
+    ) {
+      return false;
+    }
+    const recalled = host.recallLastQueued();
+    if (recalled !== undefined) {
+      this.writePromptText(recalled.text);
+      const mode = recalled.mode ?? "prompt";
+      if (this.readPromptInputMode() !== mode) {
+        this.writePromptInputMode(mode);
+      }
+      host.updateQueueDisplay();
+      this.requestPromptRender();
+      return true;
+    }
+    return false;
+  }
+
+  private handleDownArrowEmpty(): boolean {
+    return this.host.btwPanelController.scroll("down");
+  }
+
+  private usesInkPromptModel(): boolean {
+    return this.host.inkOwnsPromptEditor?.() === true;
+  }
+
+  private readPromptText(): string {
+    if (this.usesInkPromptModel()) {
+      return this.host.getPromptEditorText?.() ?? "";
+    }
+    return this.host.state.editor.getText();
+  }
+
+  private writePromptText(text: string): void {
+    if (this.usesInkPromptModel()) {
+      this.host.setPromptEditorText?.(text);
+      return;
+    }
+    this.host.state.editor.setText(text);
+  }
+
+  private readPromptInputMode(): "prompt" | "bash" {
+    if (this.usesInkPromptModel()) {
+      return this.host.getPromptInputMode?.() ?? "prompt";
+    }
+    return this.host.state.editor.inputMode;
+  }
+
+  private writePromptInputMode(mode: "prompt" | "bash"): void {
+    if (this.usesInkPromptModel()) {
+      this.host.setPromptInputMode?.(mode);
+      return;
+    }
+    const editor = this.host.state.editor;
+    editor.inputMode = mode;
+    editor.onInputModeChange?.(mode);
+  }
+
+  private insertPromptText(text: string): void {
+    if (this.usesInkPromptModel()) {
+      this.host.insertPromptEditorText?.(text);
+      return;
+    }
+    this.host.state.editor.insertTextAtCursor?.(text);
+  }
+
+  private requestPromptRender(force = false): void {
+    if (this.usesInkPromptModel()) {
+      this.host.requestPromptEditorRender?.();
+      return;
+    }
+    this.host.state.ui.requestRender(force);
   }
 
   dispose(): void {
@@ -497,18 +577,17 @@ export class EditorKeyboardController {
     const timer = setTimeout(() => {
       if (this.pendingExit?.timer === timer) {
         this.clearPendingExit();
-        this.host.state.ui.requestRender();
+        this.requestPromptRender();
       }
     }, EXIT_CONFIRM_WINDOW_MS);
 
     this.pendingExit = { kind, timer };
-    this.host.state.ui.requestRender();
+    this.requestPromptRender();
   }
 
   private clearEditorTextIfPresent(): boolean {
-    const editor = this.host.state.editor;
-    if (editor.getText().length === 0) return false;
-    editor.setText("");
+    if (this.readPromptText().length === 0) return false;
+    this.writePromptText("");
     return true;
   }
 
@@ -547,8 +626,8 @@ export class EditorKeyboardController {
         media.sourcePath,
         media.filename,
       );
-      this.host.state.editor.insertTextAtCursor?.(`${attachment.placeholder} `);
-      this.host.state.ui.requestRender();
+      this.insertPromptText(`${attachment.placeholder} `);
+      this.requestPromptRender();
       this.host.track("shortcut_paste", { kind: "video" });
       return true;
     }
@@ -603,8 +682,8 @@ export class EditorKeyboardController {
           compressed.width || meta.width,
           compressed.height || meta.height,
         );
-    this.host.state.editor.insertTextAtCursor?.(`${attachment.placeholder} `);
-    this.host.state.ui.requestRender();
+    this.insertPromptText(`${attachment.placeholder} `);
+    this.requestPromptRender();
     this.host.track("shortcut_paste", { kind: "image" });
     return true;
   }
@@ -620,7 +699,8 @@ export class EditorKeyboardController {
       return;
     }
     this.host.setExternalEditorRunning(true);
-    const seed = state.editor.getExpandedText?.() ?? state.editor.getText();
+    const seed =
+      this.host.state.editor.getExpandedText?.() ?? this.readPromptText();
     if (this.host.suspendTerminal !== undefined) this.host.suspendTerminal();
     else state.ui.stop();
     await new Promise<void>((resolve) => {
@@ -629,9 +709,7 @@ export class EditorKeyboardController {
     try {
       const result = await editInExternalEditor(seed, cmd);
       if (result !== undefined) {
-        state.editor.setText(
-          result.replaceAll("\r\n", "\n").replace(/\n$/, ""),
-        );
+        this.writePromptText(result.replaceAll("\r\n", "\n").replace(/\n$/, ""));
       }
     } catch (error) {
       const msg = formatErrorMessage(error);
@@ -642,8 +720,10 @@ export class EditorKeyboardController {
       }
       if (this.host.resumeTerminal !== undefined) this.host.resumeTerminal();
       else state.ui.start();
-      state.ui.setFocus(state.editor);
-      state.ui.requestRender(true);
+      if (!this.usesInkPromptModel()) {
+        state.ui.setFocus(state.editor);
+      }
+      this.requestPromptRender(true);
       this.host.setExternalEditorRunning(false);
     }
   }
