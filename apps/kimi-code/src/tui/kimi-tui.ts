@@ -78,6 +78,11 @@ import {
 import { CompactionComponent } from "./components/dialogs/compaction.ts";
 import { HelpPanelComponent } from "./components/dialogs/help-panel.ts";
 import { defaultThinkingEffortFor } from "./components/dialogs/model-selector.ts";
+import {
+  buildQuestionDisplayOptions,
+  isQuestionOtherOption,
+  questionOtherOptionIndex,
+} from "./components/dialogs/question-dialog-options.ts";
 import { QuestionDialogComponent } from "./components/dialogs/question-dialog.ts";
 import {
   SessionPickerComponent,
@@ -1188,13 +1193,7 @@ export class KimiTUI {
   }
 
   private isInkSimpleQuestion(payload: QuestionPanelData): boolean {
-    if (payload.questions.length !== 1) return false;
-    const question = payload.questions[0];
-    if (question === undefined) return false;
-    if (question.other_label !== undefined && question.other_label.length > 0) {
-      return false;
-    }
-    return true;
+    return payload.questions.length === 1;
   }
 
   private handleInkQuestionInput(data: string): boolean {
@@ -1204,18 +1203,65 @@ export class KimiTUI {
 
     const question = pending.data.questions[0];
     if (question === undefined) return false;
-    const optionCount = question.options.length;
+    const options = buildQuestionDisplayOptions(question);
+    const optionCount = options.length;
 
     if (
       matchesKey(data, Key.escape) ||
       matchesKey(data, Key.ctrl("c")) ||
       matchesKey(data, Key.ctrl("d"))
     ) {
+      if (this.inkOverlay.questionOtherMode) {
+        this.inkOverlay.questionOtherMode = false;
+        this.inkOverlay.questionOtherText = "";
+        this.updateInkRenderer();
+        return true;
+      }
       this.questionController.respond({ answers: [] });
       return true;
     }
 
     if (optionCount === 0) return true;
+
+    if (this.inkOverlay.questionOtherMode) {
+      if (matchesKey(data, Key.backspace)) {
+        this.inkOverlay.questionOtherText = this.inkOverlay.questionOtherText.slice(
+          0,
+          -1,
+        );
+        this.updateInkRenderer();
+        return true;
+      }
+      const printable = printableChar(data);
+      if (printable !== undefined && isPrintableChar(printable)) {
+        this.inkOverlay.questionOtherText += printable;
+        this.updateInkRenderer();
+        return true;
+      }
+      if (matchesKey(data, Key.enter)) {
+        const value = this.inkOverlay.questionOtherText.trim();
+        if (value.length === 0) return true;
+        this.inkOverlay.questionOtherMode = false;
+        this.inkOverlay.questionOtherText = "";
+        if (question.multi_select) {
+          this.inkOverlay.questionMultiSelections.add(
+            questionOtherOptionIndex(question),
+          );
+          this.inkOverlay.questionCommittedOtherText = value;
+          this.inkOverlay.questionOtherMode = false;
+          this.inkOverlay.questionOtherText = "";
+          this.updateInkRenderer();
+          return true;
+        }
+        this.questionController.respond({
+          answers: [value],
+          method: "enter",
+        });
+        return true;
+      }
+      return true;
+    }
+
     if (matchesKey(data, Key.up) || matchesKey(data, Key.down)) {
       const delta = matchesKey(data, Key.up) ? -1 : 1;
       this.inkOverlay.dialogSelectedIndex =
@@ -1226,18 +1272,30 @@ export class KimiTUI {
 
     if (question.multi_select) {
       if (matchesKey(data, Key.space)) {
-        if (this.inkOverlay.questionMultiSelections.has(this.inkOverlay.dialogSelectedIndex)) {
-          this.inkOverlay.questionMultiSelections.delete(this.inkOverlay.dialogSelectedIndex);
+        const index = this.inkOverlay.dialogSelectedIndex;
+        if (isQuestionOtherOption(question, index)) {
+          this.inkOverlay.questionOtherMode = true;
+          this.inkOverlay.questionOtherText = "";
+          this.updateInkRenderer();
+          return true;
+        }
+        if (this.inkOverlay.questionMultiSelections.has(index)) {
+          this.inkOverlay.questionMultiSelections.delete(index);
         } else {
-          this.inkOverlay.questionMultiSelections.add(this.inkOverlay.dialogSelectedIndex);
+          this.inkOverlay.questionMultiSelections.add(index);
         }
         this.updateInkRenderer();
         return true;
       }
       if (matchesKey(data, Key.enter)) {
-        const labels = question.options.flatMap((option, index) =>
-          this.inkOverlay.questionMultiSelections.has(index) ? [option.label] : [],
-        );
+        const labels = options.flatMap((option, index) => {
+          if (!this.inkOverlay.questionMultiSelections.has(index)) return [];
+          if (option.kind === "other") {
+            const other = this.inkOverlay.questionCommittedOtherText.trim();
+            return other.length > 0 ? [other] : [];
+          }
+          return option.label.length > 0 ? [option.label] : [];
+        });
         this.questionController.respond({
           answers: labels.length > 0 ? [labels.join(", ")] : [],
           method: "enter",
@@ -1248,7 +1306,14 @@ export class KimiTUI {
     }
 
     if (matchesKey(data, Key.enter)) {
-      const selected = question.options[this.inkOverlay.dialogSelectedIndex];
+      const index = this.inkOverlay.dialogSelectedIndex;
+      if (isQuestionOtherOption(question, index)) {
+        this.inkOverlay.questionOtherMode = true;
+        this.inkOverlay.questionOtherText = "";
+        this.updateInkRenderer();
+        return true;
+      }
+      const selected = options[index];
       this.questionController.respond({
         answers: selected === undefined ? [] : [selected.label],
         method: "enter",
@@ -1263,7 +1328,14 @@ export class KimiTUI {
       numericIndex >= 0 &&
       numericIndex < optionCount
     ) {
-      const selected = question.options[numericIndex];
+      if (isQuestionOtherOption(question, numericIndex)) {
+        this.inkOverlay.dialogSelectedIndex = numericIndex;
+        this.inkOverlay.questionOtherMode = true;
+        this.inkOverlay.questionOtherText = "";
+        this.updateInkRenderer();
+        return true;
+      }
+      const selected = options[numericIndex];
       this.questionController.respond({
         answers: selected === undefined ? [] : [selected.label],
         method: "number_key",
@@ -3707,6 +3779,9 @@ export class KimiTUI {
       dialogScrollTop: this.inkOverlay.dialogScrollTop,
       approvalFeedbackMode: this.inkOverlay.approvalFeedbackMode,
       approvalFeedbackText: this.inkOverlay.approvalFeedbackText,
+      questionOtherMode: this.inkOverlay.questionOtherMode,
+      questionOtherText: this.inkOverlay.questionOtherText,
+      questionMultiSelections: [...this.inkOverlay.questionMultiSelections],
       sessions,
       loadingSessions: this.state.loadingSessions,
       sessionsScope: this.state.sessionsScope,

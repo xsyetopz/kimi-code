@@ -320,6 +320,37 @@ describe("Ink-owned simple dialog input", () => {
     });
   });
 
+  it("collects a custom Other answer for a single Ink question", () => {
+    const tui = makeTui();
+    const respond = vi.spyOn(tui.questionController, "respond");
+    tui.state.livePane.pendingQuestion = {
+      data: {
+        id: "question-1",
+        tool_call_id: "tool-1",
+        questions: [
+          {
+            question: "Pick one",
+            multi_select: false,
+            other_label: "Custom",
+            options: [{ label: "Preset" }],
+          },
+        ],
+      },
+    };
+
+    expect(tui.handleInkSimpleDialogInput("\u001b[B")).toBe(true);
+    expect(tui.handleInkSimpleDialogInput("\r")).toBe(true);
+    expect(tui.state.inkOverlay.questionOtherMode).toBe(true);
+    for (const ch of "mine") {
+      expect(tui.handleInkSimpleDialogInput(ch)).toBe(true);
+    }
+    expect(tui.handleInkSimpleDialogInput("\r")).toBe(true);
+    expect(respond).toHaveBeenCalledWith({
+      answers: ["mine"],
+      method: "enter",
+    });
+  });
+
   it("opens and scrolls an Ink approval preview with ctrl+e", () => {
     const tui = makeTui();
     tui.state.livePane.pendingApproval = {

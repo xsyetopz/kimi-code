@@ -116,6 +116,9 @@ export interface TerminalDialogView {
   /** Inline feedback entry while an Ink approval choice requires it. */
   readonly approvalFeedbackMode: boolean;
   readonly approvalFeedbackText: string;
+  readonly questionOtherMode: boolean;
+  readonly questionOtherText: string;
+  readonly questionMultiSelections: readonly number[];
 }
 
 /**
@@ -158,6 +161,9 @@ export interface TerminalViewSource {
   readonly dialogScrollTop?: number;
   readonly approvalFeedbackMode?: boolean;
   readonly approvalFeedbackText?: string;
+  readonly questionOtherMode?: boolean;
+  readonly questionOtherText?: string;
+  readonly questionMultiSelections?: readonly number[];
   readonly approvalPreview?: TerminalApprovalPreviewView | null;
   readonly toolOutputExpanded: boolean;
   readonly externalEditorRunning: boolean;
@@ -295,6 +301,9 @@ export function createTerminalViewState(
       scrollTop: source.dialogScrollTop ?? 0,
       approvalFeedbackMode: source.approvalFeedbackMode ?? false,
       approvalFeedbackText: source.approvalFeedbackText ?? "",
+      questionOtherMode: source.questionOtherMode ?? false,
+      questionOtherText: source.questionOtherText ?? "",
+      questionMultiSelections: [...(source.questionMultiSelections ?? [])],
     },
     toolOutputExpanded: source.toolOutputExpanded,
     externalEditorRunning: source.externalEditorRunning,

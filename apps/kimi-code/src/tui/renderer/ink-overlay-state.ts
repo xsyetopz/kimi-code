@@ -9,6 +9,9 @@ export interface InkOverlayState {
   questionMultiSelections: Set<number>;
   approvalPreviewBlock: ApprovalPreviewBlock | null;
   approvalPreviewScrollTop: number;
+  questionOtherMode: boolean;
+  questionOtherText: string;
+  questionCommittedOtherText: string;
 }
 
 export function createInkOverlayState(): InkOverlayState {
@@ -20,6 +23,9 @@ export function createInkOverlayState(): InkOverlayState {
     questionMultiSelections: new Set(),
     approvalPreviewBlock: null,
     approvalPreviewScrollTop: 0,
+    questionOtherMode: false,
+    questionOtherText: "",
+    questionCommittedOtherText: "",
   };
 }
 
@@ -34,4 +40,7 @@ export function resetInkOverlayApproval(overlay: InkOverlayState): void {
 export function resetInkOverlayQuestion(overlay: InkOverlayState): void {
   overlay.dialogSelectedIndex = 0;
   overlay.questionMultiSelections = new Set();
+  overlay.questionOtherMode = false;
+  overlay.questionOtherText = "";
+  overlay.questionCommittedOtherText = "";
 }

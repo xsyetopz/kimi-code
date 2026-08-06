@@ -53,6 +53,9 @@ function dialogBody(
       <InkQuestionDialog
         request={dialog.pendingQuestion}
         selectedIndex={dialog.selectedIndex}
+        otherMode={dialog.questionOtherMode}
+        otherText={dialog.questionOtherText}
+        multiSelections={new Set(dialog.questionMultiSelections)}
       />
     );
   }
