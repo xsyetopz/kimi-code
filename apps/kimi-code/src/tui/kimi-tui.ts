@@ -97,6 +97,7 @@ import {
   type TrustPromptChoice,
   TrustPromptComponent,
 } from "./components/dialogs/trust-prompt.ts";
+import { StartPermissionPromptComponent } from "./components/dialogs/start-permission-prompt.ts";
 import {
   FileMentionProvider,
   type SlashAutocompleteCommand,
@@ -168,6 +169,11 @@ import {
   projectInkPluginMcpSelectorView,
 } from "./renderer/ink-plugin-mcp-selector.ts";
 import {
+  createInkStartPermissionPromptSession,
+  type InkStartPermissionPromptSession,
+  projectInkStartPermissionPromptView,
+} from "./renderer/ink-start-permission-prompt.ts";
+import {
   createInkPluginsPanelSession,
   type InkPluginsPanelSession,
   projectInkPluginsPanelView,
@@ -205,6 +211,7 @@ import type { PluginMcpSelectorOptions, PluginsPanelOptions } from "./components
 import type { ModelSelectorOptions } from "./components/dialogs/model-selector.ts";
 import type { TabbedModelSelectorOptions } from "./components/dialogs/tabbed-model-selector.ts";
 import type { UndoSelectorOptions } from "./components/dialogs/undo-selector.ts";
+import type { StartPermissionPromptOptions } from "./components/dialogs/start-permission-prompt.ts";
 import { SearchableList } from "./utils/searchable-list.ts";
 import {
   handleInkQuestionWizardInput,
@@ -525,6 +532,10 @@ export class KimiTUI {
     readonly session: InkPluginsPanelSession;
     readonly opts: PluginsPanelOptions;
     readonly panel: PluginsPanelComponent;
+  } | null = null;
+  private inkStartPermissionPrompt: {
+    readonly session: InkStartPermissionPromptSession;
+    readonly opts: StartPermissionPromptOptions;
   } | null = null;
   private readonly terminalRenderer: "kimi-tui" | "ink";
   private readonly terminalOwnership = new TerminalOwnership();
@@ -1066,6 +1077,9 @@ export class KimiTUI {
     }
     if (dialog === "plugins-panel") {
       return this.handleInkPluginsPanelInput(data);
+    }
+    if (dialog === "start-permission-prompt") {
+      return this.handleInkStartPermissionPromptInput(data);
     }
     if (dialog !== "trust-prompt" && dialog !== "session-picker") return false;
     const count =
@@ -1615,6 +1629,44 @@ export class KimiTUI {
   private closeInkPluginsPanel(): void {
     this.inkPluginsPanel = null;
     if (this.state.activeDialog === "plugins-panel") {
+      this.state.activeDialog = null;
+    }
+  }
+
+  private handleInkStartPermissionPromptInput(data: string): boolean {
+    const handle = this.inkStartPermissionPrompt;
+    if (handle === null) return false;
+    const callbacks = {
+      onSelect: (choice: Parameters<StartPermissionPromptOptions["onSelect"]>[0]) => {
+        handle.opts.onSelect(choice);
+      },
+      onCancel: () => {
+        this.closeInkStartPermissionPrompt();
+        handle.opts.onCancel();
+      },
+    };
+    const consumed = handle.session.handleInput(data, callbacks);
+    if (consumed) {
+      this.updateInkRenderer();
+    }
+    return consumed;
+  }
+
+  private openInkStartPermissionPrompt(
+    opts: StartPermissionPromptOptions,
+  ): void {
+    this.closeInkStartPermissionPrompt();
+    this.inkStartPermissionPrompt = {
+      session: createInkStartPermissionPromptSession(opts),
+      opts,
+    };
+    this.state.activeDialog = "start-permission-prompt";
+    this.updateInkRenderer();
+  }
+
+  private closeInkStartPermissionPrompt(): void {
+    this.inkStartPermissionPrompt = null;
+    if (this.state.activeDialog === "start-permission-prompt") {
       this.state.activeDialog = null;
     }
   }
@@ -4095,6 +4147,12 @@ export class KimiTUI {
         this.inkPluginsPanel === null
           ? null
           : projectInkPluginsPanelView(this.inkPluginsPanel.session),
+      startPermissionPrompt:
+        this.inkStartPermissionPrompt === null
+          ? null
+          : projectInkStartPermissionPromptView(
+              this.inkStartPermissionPrompt.session,
+            ),
       sessions,
       loadingSessions: this.state.loadingSessions,
       sessionsScope: this.state.sessionsScope,
@@ -4482,6 +4540,13 @@ export class KimiTUI {
     }
     if (
       this.inkOwnsTerminal() &&
+      panel instanceof StartPermissionPromptComponent
+    ) {
+      this.openInkStartPermissionPrompt(panel.getStartPermissionPromptOptions());
+      return;
+    }
+    if (
+      this.inkOwnsTerminal() &&
       panel instanceof ChoicePickerComponent
     ) {
       this.openInkChoicePicker(panel.getChoicePickerOptions());
@@ -4504,6 +4569,7 @@ export class KimiTUI {
     this.closeInkExperimentsSelector();
     this.closeInkPluginMcpSelector();
     this.closeInkPluginsPanel();
+    this.closeInkStartPermissionPrompt();
     if (this.inkOwnsTerminal()) {
       const children = this.state.editorContainer.children;
       if (children.length === 1 && children[0] === this.state.editor) {

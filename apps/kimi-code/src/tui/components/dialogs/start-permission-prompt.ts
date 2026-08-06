@@ -39,6 +39,10 @@ export class StartPermissionPromptComponent<
 
   constructor(private readonly opts: StartPermissionPromptOptions<TChoice>) {}
 
+  getStartPermissionPromptOptions(): StartPermissionPromptOptions<TChoice> {
+    return this.opts;
+  }
+
   invalidate(): void {}
 
   handleInput(data: string): void {

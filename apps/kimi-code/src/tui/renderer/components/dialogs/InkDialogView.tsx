@@ -11,6 +11,7 @@ import { InkModelSelectorDialog } from "./InkModelSelectorDialog";
 import { InkExperimentsSelectorDialog } from "./InkExperimentsSelectorDialog";
 import { InkPluginMcpSelectorDialog } from "./InkPluginMcpSelectorDialog";
 import { InkPluginsPanelDialog } from "./InkPluginsPanelDialog";
+import { InkStartPermissionPromptDialog } from "./InkStartPermissionPromptDialog";
 import { InkUndoSelectorDialog } from "./InkUndoSelectorDialog";
 import { InkQuestionDialog } from "./InkQuestionDialog";
 import { InkSessionPickerDialog } from "./InkSessionPickerDialog";
@@ -48,6 +49,8 @@ function dialogTitle(view: TerminalViewState): string | undefined {
       return view.dialog.pluginMcpSelector?.title;
     case "plugins-panel":
       return view.dialog.pluginsPanel?.title;
+    case "start-permission-prompt":
+      return view.dialog.startPermissionPrompt?.title;
     default:
       return;
   }
@@ -127,6 +130,13 @@ function dialogBody(
     case "plugins-panel":
       if (dialog.pluginsPanel === null) return null;
       return <InkPluginsPanelDialog panel={dialog.pluginsPanel} />;
+    case "start-permission-prompt":
+      if (dialog.startPermissionPrompt === null) return null;
+      return (
+        <InkStartPermissionPromptDialog
+          prompt={dialog.startPermissionPrompt}
+        />
+      );
     default:
       return null;
   }
@@ -154,7 +164,8 @@ export function InkDialogView({
     view.dialog.active === "undo-selector" ||
     view.dialog.active === "experiments-selector" ||
     view.dialog.active === "plugin-mcp-selector" ||
-    view.dialog.active === "plugins-panel"
+    view.dialog.active === "plugins-panel" ||
+    view.dialog.active === "start-permission-prompt"
   ) {
     return body;
   }
