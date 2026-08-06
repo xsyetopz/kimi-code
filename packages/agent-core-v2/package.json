@@ -81,6 +81,6 @@
     "@xyflow/react": "^12.11.2",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "@oxy-lang/oxc-parser": "^0.9.0"
+    "oxc-parser": "^0.143.0"
   }
 }

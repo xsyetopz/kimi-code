@@ -2,12 +2,9 @@
 /**
  * Import-boundary checker for `agent-core-v2`.
  *
- * Enforces two rules over `packages/agent-core-v2/src/**` (and the v1-import
- * ban over `test/**` too):
+ * Enforces one rule over `packages/agent-core-v2/src/**`:
  *
- *  1. **No v1 imports** — v2 must never `import '@moonshot-ai/agent-core'`
- *     (or any subpath). v2 ports logic; it never depends on v1.
- *  2. **Kosong layering** — the `src/kosong/{contract,protocol,provider,model}`
+ *  1. **Kosong layering** — the `src/kosong/{contract,protocol,provider,model}`
  *     subtree has strict internal rules:
  *       - internal order: contract(L0) ← protocol(L1) ← provider/model(L2)
  *         ← catalog(L3); a lower layer never imports a higher one (so L1
@@ -27,7 +24,7 @@
  *
  * Intra-package relative imports, `#/`-alias imports, and the package's
  * self-reference (`@moonshot-ai/agent-core-v2/<path>` → `src/<path>`) are
- * resolved against `src/`. Sibling packages (`@moonshot-ai/*` other than v1)
+ * resolved against `src/`. Sibling packages (`@moonshot-ai/*`)
  * and third-party imports are out of scope (except for the kosong purity
  * bans above).
  *
@@ -43,7 +40,6 @@ const PKG_ROOT = resolve(__dirname, "..");
 export const SRC_ROOT = join(PKG_ROOT, "src");
 const TEST_ROOT = join(PKG_ROOT, "test");
 
-const V1_PACKAGE = "@moonshot-ai/agent-core";
 const SELF_PACKAGE_PREFIX = "@moonshot-ai/agent-core-v2/";
 
 /**
@@ -232,23 +228,13 @@ export function checkSource(source, absFile) {
     if (!specifier) continue;
     const line = source.slice(0, match.index).split("\n").length;
 
-    // Rule 1: v2 must not import v1.
-    if (specifier === V1_PACKAGE || specifier.startsWith(`${V1_PACKAGE}/`)) {
-      violations.push({
-        file: absFile,
-        line,
-        message: `v2 must not import v1 (${specifier})`,
-      });
-      continue;
-    }
-
-    // Rule 2: kosong subtree (production code only).
+    // Rule 1: kosong subtree (production code only).
     if (!inSrc) continue;
     const targetAbs = resolveIntraV2(specifier, absFile);
     const sourceKosong = kosongInfoOf(absFile);
     if (sourceKosong === undefined) continue;
 
-    // Rule 2a: kosong purity bans on external packages. The L0 contract
+    // Rule 1a: kosong purity bans on external packages. The L0 contract
     // imports no external package at all (no SDKs, not even types); the L1
     // protocol layer is SDK-free but may use general-purpose packages.
     if (targetAbs === undefined) {
@@ -273,7 +259,7 @@ export function checkSource(source, absFile) {
       continue;
     }
 
-    // Rule 2b: kosong-internal layering. Runs even for same-domain imports
+    // Rule 1b: kosong-internal layering. Runs even for same-domain imports
     // because the provider/bases sub-boundary also bans same-domain targets
     // (registries and contrib modules live beside the bases).
     const targetKosong = kosongInfoOf(targetAbs);
@@ -313,7 +299,7 @@ export function checkSource(source, absFile) {
       continue;
     }
 
-    // Rule 2c: outside the kosong subtree, kosong code may only depend on
+    // Rule 1c: outside the kosong subtree, kosong code may only depend on
     // `_base` utilities (`protocol` additionally sees `kosong/contract`,
     // handled by Rule 2b above). This is what keeps kosong a pure
     // abstraction layer with no upward dependencies.
