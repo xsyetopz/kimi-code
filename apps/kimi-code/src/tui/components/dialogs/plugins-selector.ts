@@ -107,6 +107,10 @@ export class PluginMcpSelectorComponent extends Container implements Focusable {
     this.selectedIndex = Math.max(0, selectedIndex);
   }
 
+  getPluginMcpSelectorOptions(): PluginMcpSelectorOptions {
+    return this.opts;
+  }
+
   handleInput(data: string): void {
     if (matchesKey(data, Key.escape)) {
       this.opts.onCancel();

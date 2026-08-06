@@ -34,7 +34,6 @@ import { BtwPanelComponent } from "#/tui/components/panes/btw-panel";
 import { ThinkingComponent } from "#/tui/components/messages/thinking";
 import { WelcomeComponent } from "#/tui/components/chrome/welcome";
 import {
-  PluginMcpSelectorComponent,
   PluginsPanelComponent,
 } from "#/tui/components/dialogs/plugins-selector";
 import {
@@ -426,6 +425,51 @@ function inkEffortSelectorText(driver: MessageDriver): string {
       segment.active ? `[ ${segment.label} ]` : `  ${segment.label}  `,
     ),
   ].join("\n");
+}
+
+async function waitForInkPluginMcpSelector(
+  driver: MessageDriver,
+): Promise<void> {
+  await vi.waitFor(() => {
+    expect(driver.state.activeDialog).toBe("plugin-mcp-selector");
+    expect(
+      (
+        driver as unknown as {
+          getTerminalViewState: () => {
+            dialog: { pluginMcpSelector: { title: string } | null };
+          };
+        }
+      ).getTerminalViewState().dialog.pluginMcpSelector,
+    ).not.toBeNull();
+  });
+}
+
+function inkPluginMcpSelectorText(driver: MessageDriver): string {
+  const selector = (
+    driver as unknown as {
+      getTerminalViewState: () => {
+        dialog: {
+          pluginMcpSelector: {
+            rows: readonly {
+              label: string;
+              status: string | undefined;
+              hint: string | undefined;
+              selected: boolean;
+            }[];
+          } | null;
+        };
+      };
+    }
+  ).getTerminalViewState().dialog.pluginMcpSelector;
+  if (selector === null) return "";
+  return selector.rows
+    .map((row) => {
+      const pointer = row.selected ? "❯" : " ";
+      const status = row.status ?? "";
+      const hint = row.hint ?? "";
+      return `${pointer} ${row.label}  ${status}  ${hint}`.trim();
+    })
+    .join("\n");
 }
 
 function inkModelSelectorText(driver: MessageDriver): string {
@@ -6132,15 +6176,9 @@ command = "vim"
       .children[0] as PluginsPanelComponent;
     panel.handleInput("m");
 
-    await vi.waitFor(() => {
-      expect(driver.state.editorContainer.children[0]).toBeInstanceOf(
-        PluginMcpSelectorComponent,
-      );
-    });
-    const mcpPicker = driver.state.editorContainer
-      .children[0] as PluginMcpSelectorComponent;
-    mcpPicker.handleInput("\u001B[B");
-    mcpPicker.handleInput(" ");
+    await waitForInkPluginMcpSelector(driver);
+    sendInkDialogInput(driver, "\u001B[B");
+    sendInkDialogInput(driver, " ");
 
     await vi.waitFor(() => {
       expect(session.setPluginMcpServerEnabled).toHaveBeenCalledWith(
@@ -6149,15 +6187,10 @@ command = "vim"
         false,
       );
     });
-    await vi.waitFor(() => {
-      expect(driver.state.editorContainer.children[0]).toBeInstanceOf(
-        PluginMcpSelectorComponent,
-      );
-    });
-    const out = stripSgr(
-      driver.state.editorContainer.children[0]!.render(120).join("\n"),
+    await waitForInkPluginMcpSelector(driver);
+    expect(inkPluginMcpSelectorText(driver)).toContain(
+      "❯ data  disabled  run /reload or /new to apply",
     );
-    expect(out).toContain("❯ data  disabled  run /reload or /new to apply");
     expect(stripSgr(renderTranscript(driver))).not.toContain(
       "Disabled MCP server data for kimi-datasource. Run /reload or /new to apply.",
     );

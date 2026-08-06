@@ -9,6 +9,7 @@ import { InkEffortSelectorDialog } from "./InkEffortSelectorDialog";
 import { InkHelpDialog } from "./InkHelpDialog";
 import { InkModelSelectorDialog } from "./InkModelSelectorDialog";
 import { InkExperimentsSelectorDialog } from "./InkExperimentsSelectorDialog";
+import { InkPluginMcpSelectorDialog } from "./InkPluginMcpSelectorDialog";
 import { InkUndoSelectorDialog } from "./InkUndoSelectorDialog";
 import { InkQuestionDialog } from "./InkQuestionDialog";
 import { InkSessionPickerDialog } from "./InkSessionPickerDialog";
@@ -42,6 +43,8 @@ function dialogTitle(view: TerminalViewState): string | undefined {
       return view.dialog.undoSelector?.title;
     case "experiments-selector":
       return view.dialog.experimentsSelector?.title;
+    case "plugin-mcp-selector":
+      return view.dialog.pluginMcpSelector?.title;
     default:
       return;
   }
@@ -113,6 +116,11 @@ function dialogBody(
       return (
         <InkExperimentsSelectorDialog selector={dialog.experimentsSelector} />
       );
+    case "plugin-mcp-selector":
+      if (dialog.pluginMcpSelector === null) return null;
+      return (
+        <InkPluginMcpSelectorDialog selector={dialog.pluginMcpSelector} />
+      );
     default:
       return null;
   }
@@ -138,7 +146,8 @@ export function InkDialogView({
     view.dialog.active === "model-selector" ||
     view.dialog.active === "effort-selector" ||
     view.dialog.active === "undo-selector" ||
-    view.dialog.active === "experiments-selector"
+    view.dialog.active === "experiments-selector" ||
+    view.dialog.active === "plugin-mcp-selector"
   ) {
     return body;
   }
