@@ -143,6 +143,10 @@ import {
   mountInkTerminalRenderer,
 } from "./renderer/ink-terminal-renderer.ts";
 import {
+  resetInkOverlayApproval,
+  resetInkOverlayQuestion,
+} from "./renderer/ink-overlay-state.ts";
+import {
   type PromptSemanticAction,
   routePromptEditorInput,
 } from "./renderer/prompt-editor-input.ts";
@@ -416,13 +420,6 @@ export class KimiTUI {
   private trustPromptChoiceResolver:
     | ((choice: TrustPromptChoice) => void)
     | undefined;
-  private inkDialogSelection = 0;
-  private inkDialogScrollTop = 0;
-  private inkApprovalFeedbackMode = false;
-  private inkApprovalFeedbackText = "";
-  private inkQuestionMultiSelections = new Set<number>();
-  private inkApprovalPreviewBlock: ApprovalPreviewBlock | null = null;
-  private inkApprovalPreviewScrollTop = 0;
   private inkSessionPickerSelect: ((session: SessionRow) => void) | undefined;
   private inkSessionPickerCancel: (() => void) | undefined;
   private inkSessionPickerToggleScope:
@@ -432,6 +429,14 @@ export class KimiTUI {
   private inkRenderer: InkTerminalRenderer | undefined;
   private readonly terminalRenderer: "kimi-tui" | "ink";
   private readonly terminalOwnership = new TerminalOwnership();
+  private inkOwnsTerminal(): boolean {
+    return this.terminalRenderer === "ink";
+  }
+
+  private get inkOverlay() {
+    return this.state.inkOverlay;
+  }
+
   /** Source of truth for normal prompt editing while Ink owns the terminal. */
   private promptEditorState: PromptEditorState;
   private lastHistoryContent: string | undefined;
@@ -862,7 +867,7 @@ export class KimiTUI {
 
   /** Route normal prompt input through the renderer-neutral editor model. */
   private handleInkInput(data: string): void {
-    if (this.inkApprovalPreviewBlock !== null) {
+    if (this.inkOverlay.approvalPreviewBlock !== null) {
       if (this.handleInkApprovalPreviewInput(data)) return;
       this.updateInkRenderer();
       return;
@@ -916,22 +921,22 @@ export class KimiTUI {
         return true;
       }
       if (matchesKey(data, Key.up)) {
-        this.inkDialogScrollTop = Math.max(0, this.inkDialogScrollTop - 1);
+        this.inkOverlay.dialogScrollTop = Math.max(0, this.inkOverlay.dialogScrollTop - 1);
         this.updateInkRenderer();
         return true;
       }
       if (matchesKey(data, Key.down)) {
-        this.inkDialogScrollTop += 1;
+        this.inkOverlay.dialogScrollTop += 1;
         this.updateInkRenderer();
         return true;
       }
       if (matchesKey(data, Key.pageUp)) {
-        this.inkDialogScrollTop = Math.max(0, this.inkDialogScrollTop - 10);
+        this.inkOverlay.dialogScrollTop = Math.max(0, this.inkOverlay.dialogScrollTop - 10);
         this.updateInkRenderer();
         return true;
       }
       if (matchesKey(data, Key.pageDown)) {
-        this.inkDialogScrollTop += 10;
+        this.inkOverlay.dialogScrollTop += 10;
         this.updateInkRenderer();
         return true;
       }
@@ -943,8 +948,8 @@ export class KimiTUI {
     if (matchesKey(data, Key.up) || matchesKey(data, Key.down)) {
       if (count === 0) return true;
       const delta = matchesKey(data, Key.up) ? -1 : 1;
-      this.inkDialogSelection =
-        (this.inkDialogSelection + delta + count) % count;
+      this.inkOverlay.dialogSelectedIndex =
+        (this.inkOverlay.dialogSelectedIndex + delta + count) % count;
       this.updateInkRenderer();
       return true;
     }
@@ -957,7 +962,7 @@ export class KimiTUI {
       return true;
     }
     if (dialog === "session-picker" && matchesKey(data, Key.ctrl("a"))) {
-      const selected = this.state.sessions[this.inkDialogSelection];
+      const selected = this.state.sessions[this.inkOverlay.dialogSelectedIndex];
       this.inkSessionPickerToggleScope?.(
         selected?.id ?? this.state.appState.sessionId,
       );
@@ -966,10 +971,10 @@ export class KimiTUI {
     if (matchesKey(data, Key.enter) || matchesKey(data, Key.space)) {
       if (dialog === "trust-prompt") {
         this.trustPromptChoiceResolver?.(
-          this.inkDialogSelection === 0 ? "trust" : "distrust",
+          this.inkOverlay.dialogSelectedIndex === 0 ? "trust" : "distrust",
         );
       } else {
-        const selected = this.state.sessions[this.inkDialogSelection];
+        const selected = this.state.sessions[this.inkOverlay.dialogSelectedIndex];
         if (selected !== undefined) this.inkSessionPickerSelect?.(selected);
       }
       return true;
@@ -983,33 +988,33 @@ export class KimiTUI {
     const choices = approval.data.choices;
     const count = choices.length;
 
-    if (this.inkApprovalFeedbackMode) {
+    if (this.inkOverlay.approvalFeedbackMode) {
       if (matchesKey(data, Key.up) || matchesKey(data, Key.down)) {
-        this.inkApprovalFeedbackMode = false;
-        this.inkApprovalFeedbackText = "";
+        this.inkOverlay.approvalFeedbackMode = false;
+        this.inkOverlay.approvalFeedbackText = "";
         if (count > 0) {
           const delta = matchesKey(data, Key.up) ? -1 : 1;
-          this.inkDialogSelection =
-            (this.inkDialogSelection + delta + count) % count;
+          this.inkOverlay.dialogSelectedIndex =
+            (this.inkOverlay.dialogSelectedIndex + delta + count) % count;
         }
         this.updateInkRenderer();
         return true;
       }
       if (matchesKey(data, Key.escape)) {
-        this.inkApprovalFeedbackMode = false;
-        this.inkApprovalFeedbackText = "";
+        this.inkOverlay.approvalFeedbackMode = false;
+        this.inkOverlay.approvalFeedbackText = "";
         this.updateInkRenderer();
         return true;
       }
       if (matchesKey(data, Key.enter)) {
         this.submitInkApproval(
-          this.inkDialogSelection,
-          this.inkApprovalFeedbackText,
+          this.inkOverlay.dialogSelectedIndex,
+          this.inkOverlay.approvalFeedbackText,
         );
         return true;
       }
       if (matchesKey(data, Key.backspace) || data === "\u007f") {
-        this.inkApprovalFeedbackText = this.inkApprovalFeedbackText.slice(
+        this.inkOverlay.approvalFeedbackText = this.inkOverlay.approvalFeedbackText.slice(
           0,
           -1,
         );
@@ -1018,7 +1023,7 @@ export class KimiTUI {
       }
       const printable = printableChar(data);
       if (isPrintableChar(printable)) {
-        this.inkApprovalFeedbackText += printable;
+        this.inkOverlay.approvalFeedbackText += printable;
         this.updateInkRenderer();
       }
       return true;
@@ -1044,12 +1049,12 @@ export class KimiTUI {
     if (count === 0) return true;
     if (matchesKey(data, Key.up) || matchesKey(data, Key.down)) {
       const delta = matchesKey(data, Key.up) ? -1 : 1;
-      this.inkDialogSelection = (this.inkDialogSelection + delta + count) % count;
+      this.inkOverlay.dialogSelectedIndex = (this.inkOverlay.dialogSelectedIndex + delta + count) % count;
       this.updateInkRenderer();
       return true;
     }
     if (matchesKey(data, Key.enter)) {
-      this.selectInkApproval(this.inkDialogSelection);
+      this.selectInkApproval(this.inkOverlay.dialogSelectedIndex);
       return true;
     }
 
@@ -1072,9 +1077,9 @@ export class KimiTUI {
     const option = approval.data.choices[index];
     if (option === undefined) return;
     if (option.requires_feedback === true) {
-      this.inkDialogSelection = index;
-      this.inkApprovalFeedbackMode = true;
-      this.inkApprovalFeedbackText = "";
+      this.inkOverlay.dialogSelectedIndex = index;
+      this.inkOverlay.approvalFeedbackMode = true;
+      this.inkOverlay.approvalFeedbackText = "";
       this.updateInkRenderer();
       return;
     }
@@ -1096,11 +1101,7 @@ export class KimiTUI {
   }
 
   private resetInkApprovalDialogState(): void {
-    this.inkApprovalFeedbackMode = false;
-    this.inkApprovalFeedbackText = "";
-    this.inkDialogSelection = 0;
-    this.inkApprovalPreviewBlock = null;
-    this.inkApprovalPreviewScrollTop = 0;
+    resetInkOverlayApproval(this.inkOverlay);
   }
 
   private findInkApprovalPreviewBlock(): ApprovalPreviewBlock | undefined {
@@ -1110,14 +1111,14 @@ export class KimiTUI {
   }
 
   private openInkApprovalPreview(block: ApprovalPreviewBlock): void {
-    if (this.inkApprovalPreviewBlock !== null) return;
-    this.inkApprovalPreviewBlock = block;
-    this.inkApprovalPreviewScrollTop = 0;
+    if (this.inkOverlay.approvalPreviewBlock !== null) return;
+    this.inkOverlay.approvalPreviewBlock = block;
+    this.inkOverlay.approvalPreviewScrollTop = 0;
     this.updateInkRenderer();
   }
 
   private handleInkApprovalPreviewInput(data: string): boolean {
-    if (this.inkApprovalPreviewBlock === null) return false;
+    if (this.inkOverlay.approvalPreviewBlock === null) return false;
     const rows = this.state.terminal.rows;
     const viewable = approvalPreviewViewableRows(rows);
     const printable = printableChar(data);
@@ -1148,14 +1149,14 @@ export class KimiTUI {
       return true;
     }
     if (matchesKey(data, Key.home) || printable === "g") {
-      this.inkApprovalPreviewScrollTop = 0;
+      this.inkOverlay.approvalPreviewScrollTop = 0;
       this.updateInkRenderer();
       return true;
     }
     if (matchesKey(data, Key.end) || printable === "G") {
-      const lineCount = buildApprovalPreviewBody(this.inkApprovalPreviewBlock)
+      const lineCount = buildApprovalPreviewBody(this.inkOverlay.approvalPreviewBlock)
         .lines.length;
-      this.inkApprovalPreviewScrollTop = approvalPreviewMaxScroll(
+      this.inkOverlay.approvalPreviewScrollTop = approvalPreviewMaxScroll(
         lineCount,
         viewable,
       );
@@ -1166,20 +1167,19 @@ export class KimiTUI {
   }
 
   private scrollInkApprovalPreview(delta: number, viewable: number): void {
-    if (this.inkApprovalPreviewBlock === null) return;
-    const lineCount = buildApprovalPreviewBody(this.inkApprovalPreviewBlock)
+    if (this.inkOverlay.approvalPreviewBlock === null) return;
+    const lineCount = buildApprovalPreviewBody(this.inkOverlay.approvalPreviewBlock)
       .lines.length;
     const maxScroll = approvalPreviewMaxScroll(lineCount, viewable);
-    this.inkApprovalPreviewScrollTop = Math.max(
+    this.inkOverlay.approvalPreviewScrollTop = Math.max(
       0,
-      Math.min(this.inkApprovalPreviewScrollTop + delta, maxScroll),
+      Math.min(this.inkOverlay.approvalPreviewScrollTop + delta, maxScroll),
     );
     this.updateInkRenderer();
   }
 
   private resetInkQuestionDialogState(): void {
-    this.inkDialogSelection = 0;
-    this.inkQuestionMultiSelections = new Set<number>();
+    resetInkOverlayQuestion(this.inkOverlay);
   }
 
   private isInkSimpleQuestion(payload: QuestionPanelData): boolean {
@@ -1213,25 +1213,25 @@ export class KimiTUI {
     if (optionCount === 0) return true;
     if (matchesKey(data, Key.up) || matchesKey(data, Key.down)) {
       const delta = matchesKey(data, Key.up) ? -1 : 1;
-      this.inkDialogSelection =
-        (this.inkDialogSelection + delta + optionCount) % optionCount;
+      this.inkOverlay.dialogSelectedIndex =
+        (this.inkOverlay.dialogSelectedIndex + delta + optionCount) % optionCount;
       this.updateInkRenderer();
       return true;
     }
 
     if (question.multi_select) {
       if (matchesKey(data, Key.space)) {
-        if (this.inkQuestionMultiSelections.has(this.inkDialogSelection)) {
-          this.inkQuestionMultiSelections.delete(this.inkDialogSelection);
+        if (this.inkOverlay.questionMultiSelections.has(this.inkOverlay.dialogSelectedIndex)) {
+          this.inkOverlay.questionMultiSelections.delete(this.inkOverlay.dialogSelectedIndex);
         } else {
-          this.inkQuestionMultiSelections.add(this.inkDialogSelection);
+          this.inkOverlay.questionMultiSelections.add(this.inkOverlay.dialogSelectedIndex);
         }
         this.updateInkRenderer();
         return true;
       }
       if (matchesKey(data, Key.enter)) {
         const labels = question.options.flatMap((option, index) =>
-          this.inkQuestionMultiSelections.has(index) ? [option.label] : [],
+          this.inkOverlay.questionMultiSelections.has(index) ? [option.label] : [],
         );
         this.questionController.respond({
           answers: labels.length > 0 ? [labels.join(", ")] : [],
@@ -1243,7 +1243,7 @@ export class KimiTUI {
     }
 
     if (matchesKey(data, Key.enter)) {
-      const selected = question.options[this.inkDialogSelection];
+      const selected = question.options[this.inkOverlay.dialogSelectedIndex];
       this.questionController.respond({
         answers: selected === undefined ? [] : [selected.label],
         method: "enter",
@@ -1270,12 +1270,16 @@ export class KimiTUI {
 
   /** Refresh Ink after an asynchronous clipboard/image editor callback. */
   updatePromptEditorView(): void {
-    this.syncPromptEditorFromLegacy();
+    if (!this.inkOwnsTerminal()) {
+      this.syncPromptEditorFromLegacy();
+    }
     this.updateInkRenderer();
   }
 
   private handlePromptSemantic(action: PromptSemanticAction): void {
-    this.syncLegacyPromptEditor();
+    // Semantic shortcuts still execute on the compatibility editor callbacks.
+    // Push the Ink model into legacy state only for that dispatch window.
+    this.syncLegacyPromptEditor({ mirrorForSemanticDispatch: true });
     const consumed = this.editorKeyboard.dispatchPromptSemantic(action);
     if (!consumed && action === "ctrl-b") {
       this.applyPromptEditorAction({ type: "move-left" });
@@ -1289,6 +1293,13 @@ export class KimiTUI {
       this.applyPromptEditorAction({ type: "history-down" });
       return;
     }
+    if (this.inkOwnsTerminal()) {
+      if (consumed) {
+        this.syncPromptEditorFromLegacy({ mirrorFromSemanticDispatch: true });
+      }
+      this.updateInkRenderer();
+      return;
+    }
     // Queue recall and callback-driven editor mutations (Ctrl-C, Ctrl-S, ...)
     // happen on the compatibility editor; mirror them back into the model.
     this.syncPromptEditorFromLegacy();
@@ -1300,11 +1311,24 @@ export class KimiTUI {
     this.syncLegacyPromptEditor();
     this.refreshPromptCompletions();
     this.updateEditorBorderHighlight(this.promptEditorState.text);
-    this.state.ui.requestRender();
+    if (!this.inkOwnsTerminal()) {
+      this.state.ui.requestRender();
+    }
     this.updateInkRenderer();
   }
 
-  private syncLegacyPromptEditor(): void {
+  private syncLegacyPromptEditor(options?: {
+    readonly mirrorForSemanticDispatch?: boolean;
+  }): void {
+    if (
+      this.inkOwnsTerminal() &&
+      options?.mirrorForSemanticDispatch !== true
+    ) {
+      if (this.state.appState.inputMode !== this.promptEditorState.inputMode) {
+        this.setAppState({ inputMode: this.promptEditorState.inputMode });
+      }
+      return;
+    }
     const editor = this.state.editor;
     if (editor.getText() !== this.promptEditorState.text) {
       editor.setText(this.promptEditorState.text);
@@ -1317,7 +1341,15 @@ export class KimiTUI {
     }
   }
 
-  private syncPromptEditorFromLegacy(): void {
+  private syncPromptEditorFromLegacy(options?: {
+    readonly mirrorFromSemanticDispatch?: boolean;
+  }): void {
+    if (
+      this.inkOwnsTerminal() &&
+      options?.mirrorFromSemanticDispatch !== true
+    ) {
+      return;
+    }
     const editor = this.state.editor;
     const cursor = editor.getCursor();
     const text = editor.getText();
@@ -3655,21 +3687,21 @@ export class KimiTUI {
         autocomplete: this.promptEditorState.completion?.items ?? [],
       },
       activeDialog: this.state.activeDialog,
-      dialogSelectedIndex: this.inkDialogSelection,
-      dialogScrollTop: this.inkDialogScrollTop,
-      approvalFeedbackMode: this.inkApprovalFeedbackMode,
-      approvalFeedbackText: this.inkApprovalFeedbackText,
+      dialogSelectedIndex: this.inkOverlay.dialogSelectedIndex,
+      dialogScrollTop: this.inkOverlay.dialogScrollTop,
+      approvalFeedbackMode: this.inkOverlay.approvalFeedbackMode,
+      approvalFeedbackText: this.inkOverlay.approvalFeedbackText,
       sessions,
       loadingSessions: this.state.loadingSessions,
       sessionsScope: this.state.sessionsScope,
       helpCommands,
       trustPrompt: this.trustPromptView,
       approvalPreview:
-        this.inkApprovalPreviewBlock === null
+        this.inkOverlay.approvalPreviewBlock === null
           ? null
           : {
-              block: this.inkApprovalPreviewBlock,
-              scrollTop: this.inkApprovalPreviewScrollTop,
+              block: this.inkOverlay.approvalPreviewBlock,
+              scrollTop: this.inkOverlay.approvalPreviewScrollTop,
             },
       toolOutputExpanded: this.state.toolOutputExpanded,
       externalEditorRunning: this.state.externalEditorRunning,
@@ -4003,12 +4035,26 @@ export class KimiTUI {
   mountEditorReplacement(panel: Component & Focusable): void {
     this.state.editorContainer.clear();
     this.state.editorContainer.addChild(panel);
-    this.state.ui.setFocus(panel);
-    this.state.ui.requestRender();
+    if (!this.inkOwnsTerminal()) {
+      this.state.ui.setFocus(panel);
+      this.state.ui.requestRender();
+    }
     this.updateInkRenderer();
   }
 
   restoreEditor(): void {
+    if (this.inkOwnsTerminal()) {
+      const children = this.state.editorContainer.children;
+      if (children.length === 1 && children[0] === this.state.editor) {
+        this.updateInkRenderer();
+        return;
+      }
+      // A legacy fallback panel was mounted for Ink input dispatch.
+      this.state.editorContainer.clear();
+      this.state.editorContainer.addChild(this.state.editor);
+      this.updateInkRenderer();
+      return;
+    }
     this.state.editorContainer.clear();
     this.state.editorContainer.addChild(this.state.editor);
     this.state.ui.setFocus(this.state.editor);
@@ -4053,7 +4099,7 @@ export class KimiTUI {
     if (info.trusted) return false;
     this.startEventLoop();
     const choice = await new Promise<TrustPromptChoice>((resolve) => {
-      this.inkDialogSelection = 0;
+      this.inkOverlay.dialogSelectedIndex = 0;
       this.trustPromptChoiceResolver = resolve;
       this.state.activeDialog = "trust-prompt";
       this.trustPromptView = {
@@ -4096,7 +4142,7 @@ export class KimiTUI {
 
   showHelpPanel(): void {
     this.state.activeDialog = "help";
-    this.inkDialogScrollTop = 0;
+    this.inkOverlay.dialogScrollTop = 0;
     if (this.terminalRenderer === "ink") {
       // Ink owns the `/help` dialog in the production renderer. Keep the
       // kimi-tui panel only for the explicit rollback renderer below.
@@ -4115,7 +4161,7 @@ export class KimiTUI {
 
   private hideHelpPanel(): void {
     this.state.activeDialog = null;
-    this.inkDialogScrollTop = 0;
+    this.inkOverlay.dialogScrollTop = 0;
     this.restoreEditor();
   }
 
@@ -4230,7 +4276,7 @@ export class KimiTUI {
     const initialIndex = this.state.sessions.findIndex(
       (session) => session.id === initialSessionId,
     );
-    this.inkDialogSelection = initialIndex >= 0 ? Math.min(initialIndex, 7) : 0;
+    this.inkOverlay.dialogSelectedIndex = initialIndex >= 0 ? Math.min(initialIndex, 7) : 0;
     this.inkSessionPickerSelect = (session) => {
       void this.handleSessionPickerSelect(
         session,
@@ -4315,7 +4361,7 @@ export class KimiTUI {
   private hideApprovalPanel(): void {
     // If the full-screen preview is open, fold it back first so the saved-
     // children stack stays consistent with what mountEditorReplacement set up.
-    if (this.approvalPreview !== undefined || this.inkApprovalPreviewBlock !== null) {
+    if (this.approvalPreview !== undefined || this.inkOverlay.approvalPreviewBlock !== null) {
       this.closeApprovalPreview();
     }
     this.activeApprovalPanel = undefined;
@@ -4333,7 +4379,7 @@ export class KimiTUI {
     panel: ApprovalPanelComponent,
     block: ApprovalPreviewBlock,
   ): void {
-    if (this.approvalPreview !== undefined || this.inkApprovalPreviewBlock !== null) {
+    if (this.approvalPreview !== undefined || this.inkOverlay.approvalPreviewBlock !== null) {
       return;
     }
     if (this.terminalRenderer === "ink") {
@@ -4358,9 +4404,9 @@ export class KimiTUI {
   }
 
   private closeApprovalPreview(): void {
-    if (this.inkApprovalPreviewBlock !== null) {
-      this.inkApprovalPreviewBlock = null;
-      this.inkApprovalPreviewScrollTop = 0;
+    if (this.inkOverlay.approvalPreviewBlock !== null) {
+      this.inkOverlay.approvalPreviewBlock = null;
+      this.inkOverlay.approvalPreviewScrollTop = 0;
       this.updateInkRenderer();
       return;
     }

@@ -7,12 +7,6 @@ type InkDialogDriver = {
   handleInkSimpleDialogInput(data: string): boolean;
   showHelpPanel(): void;
   getTerminalViewState(): ReturnType<KimiTUI["getTerminalViewState"]>;
-  inkDialogSelection: number;
-  inkDialogScrollTop: number;
-  inkApprovalFeedbackMode: boolean;
-  inkApprovalFeedbackText: string;
-  inkApprovalPreviewBlock: { type: string; path: string; content: string } | null;
-  inkApprovalPreviewScrollTop: number;
   handleInkInput(data: string): void;
   inkSessionPickerSelect?: (session: { id: string }) => void;
   trustPromptChoiceResolver?: (choice: "trust" | "distrust") => void;
@@ -61,7 +55,7 @@ describe("Ink-owned simple dialog input", () => {
     tui.trustPromptChoiceResolver = select;
 
     expect(tui.handleInkSimpleDialogInput("\u001b[B")).toBe(true);
-    expect(tui.inkDialogSelection).toBe(1);
+    expect(tui.state.inkOverlay.dialogSelectedIndex).toBe(1);
     expect(tui.handleInkSimpleDialogInput("\r")).toBe(true);
     expect(select).toHaveBeenCalledWith("distrust");
   });
@@ -89,7 +83,7 @@ describe("Ink-owned simple dialog input", () => {
     tui.inkSessionPickerSelect = select;
 
     expect(tui.handleInkSimpleDialogInput("\u001b[B")).toBe(true);
-    expect(tui.inkDialogSelection).toBe(1);
+    expect(tui.state.inkOverlay.dialogSelectedIndex).toBe(1);
     expect(tui.handleInkSimpleDialogInput("\r")).toBe(true);
     expect(select).toHaveBeenCalledWith(tui.state.sessions[1]);
   });
@@ -156,13 +150,13 @@ describe("Ink-owned simple dialog input", () => {
     tui.showHelpPanel();
 
     expect(tui.handleInkSimpleDialogInput("\u001b[B")).toBe(true);
-    expect(tui.inkDialogScrollTop).toBe(1);
+    expect(tui.state.inkOverlay.dialogScrollTop).toBe(1);
     expect(tui.handleInkSimpleDialogInput("\u001b[6~")).toBe(true);
-    expect(tui.inkDialogScrollTop).toBe(11);
+    expect(tui.state.inkOverlay.dialogScrollTop).toBe(11);
     expect(tui.handleInkSimpleDialogInput("\u001b[5~")).toBe(true);
-    expect(tui.inkDialogScrollTop).toBe(1);
+    expect(tui.state.inkOverlay.dialogScrollTop).toBe(1);
     expect(tui.handleInkSimpleDialogInput("\u001b[A")).toBe(true);
-    expect(tui.inkDialogScrollTop).toBe(0);
+    expect(tui.state.inkOverlay.dialogScrollTop).toBe(0);
     expect(tui.getTerminalViewState().dialog.scrollTop).toBe(0);
   });
 
@@ -218,7 +212,7 @@ describe("Ink-owned simple dialog input", () => {
     };
 
     expect(tui.handleInkSimpleDialogInput("\u001b[B")).toBe(true);
-    expect(tui.inkDialogSelection).toBe(1);
+    expect(tui.state.inkOverlay.dialogSelectedIndex).toBe(1);
     expect(tui.handleInkSimpleDialogInput("\r")).toBe(true);
     expect(respond).toHaveBeenCalledWith({
       decision: "rejected",
@@ -249,7 +243,7 @@ describe("Ink-owned simple dialog input", () => {
     };
 
     expect(tui.handleInkSimpleDialogInput("\r")).toBe(true);
-    expect(tui.inkApprovalFeedbackMode).toBe(true);
+    expect(tui.state.inkOverlay.approvalFeedbackMode).toBe(true);
     expect(tui.handleInkSimpleDialogInput("n")).toBe(true);
     expect(tui.handleInkSimpleDialogInput("o")).toBe(true);
     expect(tui.getTerminalViewState().dialog.approvalFeedbackText).toBe("no");
@@ -349,13 +343,13 @@ describe("Ink-owned simple dialog input", () => {
     };
 
     expect(tui.handleInkInput("\u0005")).toBeUndefined();
-    expect(tui.inkApprovalPreviewBlock).not.toBeNull();
+    expect(tui.state.inkOverlay.approvalPreviewBlock).not.toBeNull();
     expect(tui.getTerminalViewState().approvalPreview).not.toBeNull();
 
     tui.handleInkInput("\u001b[B");
-    expect(tui.inkApprovalPreviewScrollTop).toBe(1);
+    expect(tui.state.inkOverlay.approvalPreviewScrollTop).toBe(1);
 
     tui.handleInkInput("\u001b");
-    expect(tui.inkApprovalPreviewBlock).toBeNull();
+    expect(tui.state.inkOverlay.approvalPreviewBlock).toBeNull();
   });
 });

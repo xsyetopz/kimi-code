@@ -15,6 +15,10 @@ import {
   type TerminalState,
 } from "./utils/terminal-state";
 import {
+  createInkOverlayState,
+  type InkOverlayState,
+} from "./renderer/ink-overlay-state";
+import {
   INITIAL_LIVE_PANE,
   type AppState,
   type KimiTUIOptions,
@@ -59,6 +63,8 @@ export interface TUIState {
    */
   queuedMessageDispatchPending: boolean;
   swarmModeEntry: "manual" | "task" | undefined;
+  /** Ink-owned dialog/overlay state; the rollback renderer ignores this. */
+  inkOverlay: InkOverlayState;
 }
 
 export function createTUIState(options: KimiTUIOptions): TUIState {
@@ -112,5 +118,6 @@ export function createTUIState(options: KimiTUIOptions): TUIState {
     queuedMessages: [],
     queuedMessageDispatchPending: false,
     swarmModeEntry: undefined,
+    inkOverlay: createInkOverlayState(),
   };
 }
