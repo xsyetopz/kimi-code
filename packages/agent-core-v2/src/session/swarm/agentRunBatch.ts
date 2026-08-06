@@ -52,6 +52,7 @@ const RATE_LIMIT_SUSPENDED_REASON =
   "Provider rate limit; subagent requeued for retry.";
 
 const AGENT_SWARM_MAX_CONCURRENCY_ENV = "KIMI_CODE_AGENT_SWARM_MAX_CONCURRENCY";
+const DEFAULT_SWARM_MAX_CONCURRENCY = 3;
 
 export type QueuedAgentRunTask<T = unknown> = SessionSwarmTask<T>;
 
@@ -334,6 +335,13 @@ export class AgentRunBatch<T> {
         handle = await this.launcher.spawn(spawnOptions);
       }
     } catch (error) {
+      if (isProviderRateLimitError(error)) {
+        return {
+          type: "rate_limited",
+          agentId: attempt.state.agentId ?? "",
+          error: this.attemptErrorMessage(attempt, error, "failed"),
+        };
+      }
       return this.failedAttemptOutcome(attempt, error);
     }
 
@@ -420,6 +428,14 @@ export class AgentRunBatch<T> {
   private handleAttemptError(attempt: ActiveAttempt<T>, error: unknown): void {
     if (!this.releaseAttempt(attempt)) return;
     if (this.finished) return;
+    if (isProviderRateLimitError(error)) {
+      this.handleAttemptOutcome(attempt, {
+        type: "rate_limited",
+        agentId: attempt.state.agentId ?? "",
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return;
+    }
     this.results[attempt.state.index] = {
       task: attempt.state.task,
       agentId: attempt.state.agentId,
@@ -437,8 +453,10 @@ export class AgentRunBatch<T> {
 
   private requeueRateLimited(attempt: ActiveAttempt<T>, agentId: string): void {
     const state = attempt.state;
-    state.agentId = agentId;
-    state.retryAgentId = agentId;
+    if (agentId.length > 0) {
+      state.agentId = agentId;
+      state.retryAgentId = agentId;
+    }
     this.launcher.suspended?.({
       task: state.task,
       agentId,
@@ -685,9 +703,11 @@ export class AgentRunBatch<T> {
 
 export function resolveSwarmMaxConcurrency(
   env: Readonly<Record<string, string | undefined>> = process.env,
-): number | undefined {
+): number {
   const raw = env[AGENT_SWARM_MAX_CONCURRENCY_ENV];
-  if (raw === undefined || raw.trim() === "") return undefined;
+  if (raw === undefined || raw.trim() === "") {
+    return DEFAULT_SWARM_MAX_CONCURRENCY;
+  }
   const value = Number(raw);
   if (!Number.isInteger(value) || value <= 0) {
     throw new Error2(

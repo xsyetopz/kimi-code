@@ -666,6 +666,9 @@ describe("isProviderRateLimitError", () => {
     expect(
       isProviderRateLimitError(new Error("[provider.rate_limit] slow down")),
     ).toBe(true);
+    expect(
+      isProviderRateLimitError(new Error('429 "Too many concurrent requests"')),
+    ).toBe(true);
   });
 
   it("does not match non-rate-limit provider errors", () => {

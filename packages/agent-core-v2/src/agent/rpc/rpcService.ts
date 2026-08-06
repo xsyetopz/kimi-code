@@ -43,6 +43,7 @@ import {
   promptMetadataTextFromPluginCommand,
   promptMetadataTextFromSkill,
 } from './prompt-metadata';
+import { submitSteerInput } from './submit-steer-input';
 
 export interface PluginCommandActivatedEvent {
   readonly type: 'plugin_command.activated';
@@ -109,13 +110,12 @@ export class AgentRPCService implements IAgentRPCService {
 
   async steer(payload: SteerPayload): Promise<PromptLaunchResult | undefined> {
     this.telemetry.track2('input_steer', { parts: payload.input.length });
-    const queued = await this.promptService.enqueue({ message: {
+    const turn = await submitSteerInput(this.promptService, {
       role: 'user',
       content: [...payload.input],
       toolCalls: [],
-    } });
-    const [steered] = await this.promptService.steer([queued.id]);
-    const turn = await steered?.launched;
+      origin: { kind: 'user' },
+    });
     return turn === undefined ? undefined : { turn_id: turn.id };
   }
 

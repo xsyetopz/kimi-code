@@ -22,6 +22,7 @@ import { IWorkspaceLifecycleService } from '#/app/workspaceLifecycle/workspaceLi
 import { ISessionLifecycleService } from '#/workspace/sessionLifecycle/sessionLifecycle';
 import { IAgentPromptService } from '#/agent/prompt/prompt';
 import { IAgentLoopService } from '#/agent/loop/loop';
+import { submitSteerInput } from '#/agent/rpc/submit-steer-input';
 
 import { IRestGateway, IWSGateway } from './gateway';
 
@@ -80,14 +81,12 @@ export class RestGateway implements IRestGateway {
     content: string,
   ): Promise<{ readonly turn_id: number } | undefined> {
     const service = this.agent(sessionId, agentId).accessor.get(IAgentPromptService);
-    const queued = await service.enqueue({ message: {
+    const turn = await submitSteerInput(service, {
       role: 'user',
       content: [{ type: 'text', text: content }],
       toolCalls: [],
       origin: { kind: 'user' },
-    } });
-    const [steered] = await service.steer([queued.id]);
-    const turn = await steered?.launched;
+    });
     return turn === undefined ? undefined : { turn_id: turn.id };
   }
   cancel(sessionId: string, agentId: string, reason?: string): Promise<void> {

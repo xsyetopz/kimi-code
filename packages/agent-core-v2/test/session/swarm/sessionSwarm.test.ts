@@ -68,19 +68,19 @@ import { SessionSwarmService } from "#/session/swarm/sessionSwarmService";
 import { stubLog } from "../../_base/log/stubs";
 
 describe("resolveSwarmMaxConcurrency", () => {
-  it("returns undefined when the variable is unset", () => {
-    expect(resolveSwarmMaxConcurrency({})).toBeUndefined();
+  it("returns the default cap when the variable is unset", () => {
+    expect(resolveSwarmMaxConcurrency({})).toBe(3);
   });
 
-  it("returns undefined for empty or whitespace-only values", () => {
+  it("returns the default cap for empty or whitespace-only values", () => {
     expect(
       resolveSwarmMaxConcurrency({ KIMI_CODE_AGENT_SWARM_MAX_CONCURRENCY: "" }),
-    ).toBeUndefined();
+    ).toBe(3);
     expect(
       resolveSwarmMaxConcurrency({
         KIMI_CODE_AGENT_SWARM_MAX_CONCURRENCY: "   ",
       }),
-    ).toBeUndefined();
+    ).toBe(3);
   });
 
   it("throws for non-positive, non-integer, or non-numeric values", () => {
@@ -378,6 +378,57 @@ describe("AgentRunBatch scheduling contract", () => {
       vi.useRealTimers();
     }
   });
+
+  it(
+    "requeues spawn-time 429 concurrent-limit errors instead of failing immediately",
+    async () => {
+    const onSuspended = vi.fn();
+    let spawnCount = 0;
+    const launcher: AgentRunBatchLauncher = {
+      spawn: async (options) => {
+        spawnCount += 1;
+        if (spawnCount === 1) {
+          throw new APIProviderRateLimitError("Too many concurrent requests");
+        }
+        options.onReady?.();
+        return {
+          agentId: `agent-${String(spawnCount)}`,
+          profileName: "coder",
+          completion: Promise.resolve({ result: "ok" }),
+        };
+      },
+      resume: async (agentId, options) => {
+        options.onReady?.();
+        return {
+          agentId,
+          profileName: "coder",
+          completion: Promise.resolve({ result: "ok" }),
+        };
+      },
+      retry: async (agentId, options) => {
+        options.onReady?.();
+        return {
+          agentId,
+          profileName: "coder",
+          completion: Promise.resolve({ result: "ok" }),
+        };
+      },
+      suspended: onSuspended,
+    };
+    const results = await new AgentRunBatch(
+      launcher,
+      [queuedAgentRunTask(1), queuedAgentRunTask(2)],
+      { maxConcurrency: 1 },
+    ).run();
+
+    expect(onSuspended).toHaveBeenCalledTimes(1);
+    expect(results).toMatchObject([
+      { task: { data: 1 }, status: "completed", result: "ok" },
+      { task: { data: 2 }, status: "completed", result: "ok" },
+    ]);
+    },
+    20_000,
+  );
 
   it("fails the only unfinished task on provider rate limit instead of suspending forever", async () => {
     vi.useFakeTimers();

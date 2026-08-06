@@ -17,6 +17,7 @@ import { IAgentFullCompactionService } from "#/agent/fullCompaction/fullCompacti
 import { IAgentLoopService } from "#/agent/loop/loop";
 import { IAgentPromptService } from "#/agent/prompt/prompt";
 import { AgentPromptService } from "#/agent/prompt/promptService";
+import { submitSteerInput } from "#/agent/rpc/submit-steer-input";
 import { IAgentSystemReminderService } from "#/agent/systemReminder/systemReminder";
 import { AgentSystemReminderService } from "#/agent/systemReminder/systemReminderService";
 import { IAgentToolExecutorService } from "#/agent/toolExecutor/toolExecutor";
@@ -233,5 +234,16 @@ describe("AgentPromptService", () => {
         (part) => part.type === "text" && part.text.includes("image/avif"),
       ),
     ).toBe(true);
+  });
+
+  it("injects steer input when no active prompt exists", async () => {
+    const { prompt, context, loop } = harness();
+    const turn = await submitSteerInput(prompt, message("mid goal"));
+    expect(turn).toBeDefined();
+    loop.drainNextBatch(context);
+    expect(context.get().some((entry) => entry.content[0]?.type === "text")).toBe(
+      true,
+    );
+    expect(prompt.list()).toEqual({ active: undefined, pending: [] });
   });
 });

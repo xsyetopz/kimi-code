@@ -336,7 +336,9 @@ const CONTEXT_OVERFLOW_MESSAGE_PATTERNS = [
 const PROVIDER_RATE_LIMIT_MESSAGE_PATTERNS = [
   /(?:apistatuserror.*429|429.*apistatuserror)/,
   /429.*too many requests/,
+  /429.*too many concurrent requests/,
   /too many requests/,
+  /too many concurrent requests/,
   /provider\.rate_limit/,
   /reached .*max rpm/,
   /rate[ _-]?limit(?:ed)?/,
