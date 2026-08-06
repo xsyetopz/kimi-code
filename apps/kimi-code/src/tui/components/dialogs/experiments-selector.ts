@@ -49,6 +49,10 @@ export class ExperimentsSelectorComponent
     });
   }
 
+  getExperimentsSelectorOptions(): ExperimentsSelectorOptions {
+    return this.opts;
+  }
+
   handleInput(data: string): void {
     if (matchesKey(data, Key.escape)) {
       if (this.list.clearQuery()) return;
