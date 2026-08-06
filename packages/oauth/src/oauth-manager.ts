@@ -12,7 +12,7 @@
  */
 
 import { randomUUID } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, stat, unlink, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 
 import lockfile from "proper-lockfile";
@@ -44,6 +44,20 @@ import type {
 const MIN_REFRESH_THRESHOLD_SECONDS = 300;
 const REFRESH_THRESHOLD_RATIO = 0.5;
 const DEFAULT_DEVICE_CODE_TIMEOUT_MS = 15 * 60 * 1000;
+
+/** proper-lockfile expects `{target}.lock` to be a directory, not a file. */
+async function sanitizeLockDirectory(lockPath: string): Promise<void> {
+  try {
+    const info = await stat(lockPath);
+    if (!info.isDirectory()) {
+      await unlink(lockPath);
+    }
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+      throw error;
+    }
+  }
+}
 
 export function defaultRefreshThreshold(expiresIn: number): number {
   if (expiresIn > 0) {
@@ -253,6 +267,8 @@ export class OAuthManager {
         }`,
       );
     }
+
+    await sanitizeLockDirectory(`${target}.lock`);
 
     try {
       const release = await lockfile.lock(target, {
