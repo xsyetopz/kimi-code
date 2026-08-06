@@ -4,3 +4,4 @@
  */
 export { InkHelpDialog, projectInkHelpLines } from "./components/dialogs/InkHelpDialog";
 export { InkDialogView } from "./components/dialogs/InkDialogView";
+export { InkApprovalPreview } from "./components/dialogs/InkApprovalPreview";

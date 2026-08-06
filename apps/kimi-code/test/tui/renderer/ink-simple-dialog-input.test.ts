@@ -11,6 +11,9 @@ type InkDialogDriver = {
   inkDialogScrollTop: number;
   inkApprovalFeedbackMode: boolean;
   inkApprovalFeedbackText: string;
+  inkApprovalPreviewBlock: { type: string; path: string; content: string } | null;
+  inkApprovalPreviewScrollTop: number;
+  handleInkInput(data: string): void;
   inkSessionPickerSelect?: (session: { id: string }) => void;
   trustPromptChoiceResolver?: (choice: "trust" | "distrust") => void;
   approvalController: { respond: (response: unknown) => void };
@@ -321,5 +324,38 @@ describe("Ink-owned simple dialog input", () => {
       answers: ["Second"],
       method: "enter",
     });
+  });
+
+  it("opens and scrolls an Ink approval preview with ctrl+e", () => {
+    const tui = makeTui();
+    tui.state.livePane.pendingApproval = {
+      data: {
+        id: "approval-1",
+        tool_call_id: "tool-1",
+        tool_name: "Write",
+        action: "Write file?",
+        description: "",
+        display: [
+          {
+            type: "file_content",
+            path: "src/example.ts",
+            content: Array.from({ length: 40 }, (_, i) => `line-${String(i + 1)}`).join(
+              "\n",
+            ),
+          },
+        ],
+        choices: [{ label: "Allow", response: "approved" }],
+      },
+    };
+
+    expect(tui.handleInkInput("\u0005")).toBeUndefined();
+    expect(tui.inkApprovalPreviewBlock).not.toBeNull();
+    expect(tui.getTerminalViewState().approvalPreview).not.toBeNull();
+
+    tui.handleInkInput("\u001b[B");
+    expect(tui.inkApprovalPreviewScrollTop).toBe(1);
+
+    tui.handleInkInput("\u001b");
+    expect(tui.inkApprovalPreviewBlock).toBeNull();
   });
 });

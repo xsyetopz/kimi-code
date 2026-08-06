@@ -3,6 +3,7 @@ import { createElement, type ReactNode, useEffect, useState } from "react";
 
 import { SELECT_POINTER } from "../constant/symbols";
 import { InkDialogView } from "./components/dialogs/InkDialogView";
+import { InkApprovalPreview } from "./components/dialogs/InkApprovalPreview";
 import type {
   TerminalActivityView,
   TerminalQueueView,
@@ -218,6 +219,14 @@ export function InkTerminalView({
   // room for the transcript/editor chrome before sizing the help viewport.
   const dialogRows =
     stdout.isTTY === true ? Math.max(5, (stdout.rows ?? 24) - 8) : 24;
+  if (view.approvalPreview !== null) {
+    return createElement(InkApprovalPreview, {
+      block: view.approvalPreview.block,
+      scrollTop: view.approvalPreview.scrollTop,
+      width: dialogWidth,
+      height: Math.max(5, stdout.rows ?? 24),
+    });
+  }
   const dialog = createElement(InkDialogView, {
     view,
     width: dialogWidth,

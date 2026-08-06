@@ -69,6 +69,12 @@ import {
   type ApprovalPreviewBlock,
   ApprovalPreviewViewer,
 } from "./components/dialogs/approval-preview.ts";
+import {
+  approvalPreviewMaxScroll,
+  approvalPreviewViewableRows,
+  buildApprovalPreviewBody,
+  findApprovalPreviewBlock,
+} from "./components/dialogs/approval-preview-body.ts";
 import { CompactionComponent } from "./components/dialogs/compaction.ts";
 import { HelpPanelComponent } from "./components/dialogs/help-panel.ts";
 import { defaultThinkingEffortFor } from "./components/dialogs/model-selector.ts";
@@ -415,6 +421,8 @@ export class KimiTUI {
   private inkApprovalFeedbackMode = false;
   private inkApprovalFeedbackText = "";
   private inkQuestionMultiSelections = new Set<number>();
+  private inkApprovalPreviewBlock: ApprovalPreviewBlock | null = null;
+  private inkApprovalPreviewScrollTop = 0;
   private inkSessionPickerSelect: ((session: SessionRow) => void) | undefined;
   private inkSessionPickerCancel: (() => void) | undefined;
   private inkSessionPickerToggleScope:
@@ -854,6 +862,11 @@ export class KimiTUI {
 
   /** Route normal prompt input through the renderer-neutral editor model. */
   private handleInkInput(data: string): void {
+    if (this.inkApprovalPreviewBlock !== null) {
+      if (this.handleInkApprovalPreviewInput(data)) return;
+      this.updateInkRenderer();
+      return;
+    }
     const hasLegacyDialog =
       this.state.activeDialog !== null ||
       this.state.livePane.pendingApproval !== null ||
@@ -1022,6 +1035,12 @@ export class KimiTUI {
       return true;
     }
 
+    if (matchesKey(data, Key.ctrl("e"))) {
+      const block = this.findInkApprovalPreviewBlock();
+      if (block !== undefined) this.openInkApprovalPreview(block);
+      return true;
+    }
+
     if (count === 0) return true;
     if (matchesKey(data, Key.up) || matchesKey(data, Key.down)) {
       const delta = matchesKey(data, Key.up) ? -1 : 1;
@@ -1080,6 +1099,82 @@ export class KimiTUI {
     this.inkApprovalFeedbackMode = false;
     this.inkApprovalFeedbackText = "";
     this.inkDialogSelection = 0;
+    this.inkApprovalPreviewBlock = null;
+    this.inkApprovalPreviewScrollTop = 0;
+  }
+
+  private findInkApprovalPreviewBlock(): ApprovalPreviewBlock | undefined {
+    const approval = this.state.livePane.pendingApproval;
+    if (approval === null) return;
+    return findApprovalPreviewBlock(approval.data.display);
+  }
+
+  private openInkApprovalPreview(block: ApprovalPreviewBlock): void {
+    if (this.inkApprovalPreviewBlock !== null) return;
+    this.inkApprovalPreviewBlock = block;
+    this.inkApprovalPreviewScrollTop = 0;
+    this.updateInkRenderer();
+  }
+
+  private handleInkApprovalPreviewInput(data: string): boolean {
+    if (this.inkApprovalPreviewBlock === null) return false;
+    const rows = this.state.terminal.rows;
+    const viewable = approvalPreviewViewableRows(rows);
+    const printable = printableChar(data);
+
+    if (
+      matchesKey(data, Key.escape) ||
+      matchesKey(data, Key.ctrl("e")) ||
+      printable === "q" ||
+      printable === "Q"
+    ) {
+      this.closeApprovalPreview();
+      return true;
+    }
+    if (matchesKey(data, Key.up) || printable === "k") {
+      this.scrollInkApprovalPreview(-1, viewable);
+      return true;
+    }
+    if (matchesKey(data, Key.down) || printable === "j") {
+      this.scrollInkApprovalPreview(1, viewable);
+      return true;
+    }
+    if (matchesKey(data, Key.pageUp) || printable === " " || data === "\x02") {
+      this.scrollInkApprovalPreview(-Math.max(1, viewable - 1), viewable);
+      return true;
+    }
+    if (matchesKey(data, Key.pageDown) || data === "\x06") {
+      this.scrollInkApprovalPreview(Math.max(1, viewable - 1), viewable);
+      return true;
+    }
+    if (matchesKey(data, Key.home) || printable === "g") {
+      this.inkApprovalPreviewScrollTop = 0;
+      this.updateInkRenderer();
+      return true;
+    }
+    if (matchesKey(data, Key.end) || printable === "G") {
+      const lineCount = buildApprovalPreviewBody(this.inkApprovalPreviewBlock)
+        .lines.length;
+      this.inkApprovalPreviewScrollTop = approvalPreviewMaxScroll(
+        lineCount,
+        viewable,
+      );
+      this.updateInkRenderer();
+      return true;
+    }
+    return true;
+  }
+
+  private scrollInkApprovalPreview(delta: number, viewable: number): void {
+    if (this.inkApprovalPreviewBlock === null) return;
+    const lineCount = buildApprovalPreviewBody(this.inkApprovalPreviewBlock)
+      .lines.length;
+    const maxScroll = approvalPreviewMaxScroll(lineCount, viewable);
+    this.inkApprovalPreviewScrollTop = Math.max(
+      0,
+      Math.min(this.inkApprovalPreviewScrollTop + delta, maxScroll),
+    );
+    this.updateInkRenderer();
   }
 
   private resetInkQuestionDialogState(): void {
@@ -3569,6 +3664,13 @@ export class KimiTUI {
       sessionsScope: this.state.sessionsScope,
       helpCommands,
       trustPrompt: this.trustPromptView,
+      approvalPreview:
+        this.inkApprovalPreviewBlock === null
+          ? null
+          : {
+              block: this.inkApprovalPreviewBlock,
+              scrollTop: this.inkApprovalPreviewScrollTop,
+            },
       toolOutputExpanded: this.state.toolOutputExpanded,
       externalEditorRunning: this.state.externalEditorRunning,
       queuedMessageDispatchPending: this.state.queuedMessageDispatchPending,
@@ -4213,7 +4315,9 @@ export class KimiTUI {
   private hideApprovalPanel(): void {
     // If the full-screen preview is open, fold it back first so the saved-
     // children stack stays consistent with what mountEditorReplacement set up.
-    if (this.approvalPreview !== undefined) this.closeApprovalPreview();
+    if (this.approvalPreview !== undefined || this.inkApprovalPreviewBlock !== null) {
+      this.closeApprovalPreview();
+    }
     this.activeApprovalPanel = undefined;
     this.resetInkApprovalDialogState();
     this.patchLivePane({ pendingApproval: null });
@@ -4229,7 +4333,13 @@ export class KimiTUI {
     panel: ApprovalPanelComponent,
     block: ApprovalPreviewBlock,
   ): void {
-    if (this.approvalPreview !== undefined) return;
+    if (this.approvalPreview !== undefined || this.inkApprovalPreviewBlock !== null) {
+      return;
+    }
+    if (this.terminalRenderer === "ink") {
+      this.openInkApprovalPreview(block);
+      return;
+    }
     const savedChildren = [...this.state.ui.children];
     const viewer = new ApprovalPreviewViewer(
       {
@@ -4248,6 +4358,12 @@ export class KimiTUI {
   }
 
   private closeApprovalPreview(): void {
+    if (this.inkApprovalPreviewBlock !== null) {
+      this.inkApprovalPreviewBlock = null;
+      this.inkApprovalPreviewScrollTop = 0;
+      this.updateInkRenderer();
+      return;
+    }
     const preview = this.approvalPreview;
     if (preview === undefined) return;
     this.approvalPreview = undefined;

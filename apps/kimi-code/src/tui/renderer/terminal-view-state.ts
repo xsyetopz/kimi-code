@@ -1,4 +1,9 @@
-import type { PendingApproval, PendingQuestion } from "../reverse-rpc/types";
+import type {
+  DiffDisplayBlock,
+  FileContentDisplayBlock,
+  PendingApproval,
+  PendingQuestion,
+} from "../reverse-rpc/types";
 import type {
   AppState,
   LivePaneState,
@@ -91,6 +96,11 @@ export interface TerminalTrustPromptView {
   readonly gatedMcpServers: readonly string[];
 }
 
+export interface TerminalApprovalPreviewView {
+  readonly block: DiffDisplayBlock | FileContentDisplayBlock;
+  readonly scrollTop: number;
+}
+
 export interface TerminalDialogView {
   readonly active: "session-picker" | "help" | "trust-prompt" | null;
   readonly pendingApproval: PendingApproval | null;
@@ -125,6 +135,7 @@ export interface TerminalViewState {
   readonly externalEditorRunning: boolean;
   readonly queuedMessageDispatchPending: boolean;
   readonly swarmModeEntry: "manual" | "task" | undefined;
+  readonly approvalPreview: TerminalApprovalPreviewView | null;
 }
 
 /** Fields read from the current coordinator; runtime UI objects are excluded. */
@@ -147,6 +158,7 @@ export interface TerminalViewSource {
   readonly dialogScrollTop?: number;
   readonly approvalFeedbackMode?: boolean;
   readonly approvalFeedbackText?: string;
+  readonly approvalPreview?: TerminalApprovalPreviewView | null;
   readonly toolOutputExpanded: boolean;
   readonly externalEditorRunning: boolean;
   readonly queuedMessageDispatchPending: boolean;
@@ -288,5 +300,6 @@ export function createTerminalViewState(
     externalEditorRunning: source.externalEditorRunning,
     queuedMessageDispatchPending: source.queuedMessageDispatchPending,
     swarmModeEntry: source.swarmModeEntry,
+    approvalPreview: source.approvalPreview ?? null,
   };
 }
