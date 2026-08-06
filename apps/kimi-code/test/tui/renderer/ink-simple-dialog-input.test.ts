@@ -9,8 +9,11 @@ type InkDialogDriver = {
   getTerminalViewState(): ReturnType<KimiTUI["getTerminalViewState"]>;
   inkDialogSelection: number;
   inkDialogScrollTop: number;
+  inkApprovalFeedbackMode: boolean;
+  inkApprovalFeedbackText: string;
   inkSessionPickerSelect?: (session: { id: string }) => void;
   trustPromptChoiceResolver?: (choice: "trust" | "distrust") => void;
+  approvalController: { respond: (response: unknown) => void };
 };
 
 function makeTui() {
@@ -157,5 +160,100 @@ describe("Ink-owned simple dialog input", () => {
     expect(tui.handleInkSimpleDialogInput("\u001b[A")).toBe(true);
     expect(tui.inkDialogScrollTop).toBe(0);
     expect(tui.getTerminalViewState().dialog.scrollTop).toBe(0);
+  });
+
+  it("routes approval to Ink without mounting the legacy kimi-tui panel", () => {
+    const tui = makeTui();
+    const mountEditorReplacement = vi.spyOn(
+      tui as unknown as { mountEditorReplacement: () => void },
+      "mountEditorReplacement",
+    );
+
+    (
+      tui as unknown as {
+        showApprovalPanel: (payload: {
+          id: string;
+          tool_call_id: string;
+          tool_name: string;
+          action: string;
+          description: string;
+          display: readonly [];
+          choices: readonly [{ label: string; response: "approved" }];
+        }) => void;
+      }
+    ).showApprovalPanel({
+      id: "approval-1",
+      tool_call_id: "tool-1",
+      tool_name: "Bash",
+      action: "Run?",
+      description: "",
+      display: [],
+      choices: [{ label: "Allow", response: "approved" }],
+    });
+
+    expect(tui.state.livePane.pendingApproval).not.toBeNull();
+    expect(mountEditorReplacement).not.toHaveBeenCalled();
+  });
+
+  it("submits the selected Ink approval choice through the approval controller", () => {
+    const tui = makeTui();
+    const respond = vi.spyOn(tui.approvalController, "respond");
+    tui.state.livePane.pendingApproval = {
+      data: {
+        id: "approval-1",
+        tool_call_id: "tool-1",
+        tool_name: "Bash",
+        action: "Run?",
+        description: "",
+        display: [],
+        choices: [
+          { label: "Allow once", response: "approved" },
+          { label: "Reject", response: "rejected" },
+        ],
+      },
+    };
+
+    expect(tui.handleInkSimpleDialogInput("\u001b[B")).toBe(true);
+    expect(tui.inkDialogSelection).toBe(1);
+    expect(tui.handleInkSimpleDialogInput("\r")).toBe(true);
+    expect(respond).toHaveBeenCalledWith({
+      decision: "rejected",
+      feedback: undefined,
+      selectedLabel: undefined,
+    });
+  });
+
+  it("collects inline feedback before submitting a requires_feedback approval", () => {
+    const tui = makeTui();
+    const respond = vi.spyOn(tui.approvalController, "respond");
+    tui.state.livePane.pendingApproval = {
+      data: {
+        id: "approval-1",
+        tool_call_id: "tool-1",
+        tool_name: "Bash",
+        action: "Run?",
+        description: "",
+        display: [],
+        choices: [
+          {
+            label: "Allow with note",
+            response: "approved",
+            requires_feedback: true,
+          },
+        ],
+      },
+    };
+
+    expect(tui.handleInkSimpleDialogInput("\r")).toBe(true);
+    expect(tui.inkApprovalFeedbackMode).toBe(true);
+    expect(tui.handleInkSimpleDialogInput("n")).toBe(true);
+    expect(tui.handleInkSimpleDialogInput("o")).toBe(true);
+    expect(tui.getTerminalViewState().dialog.approvalFeedbackText).toBe("no");
+    expect(tui.handleInkSimpleDialogInput("\r")).toBe(true);
+    expect(respond).toHaveBeenCalledWith({
+      decision: "approved",
+      feedback: "no",
+      selectedLabel: undefined,
+    });
   });
 });

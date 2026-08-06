@@ -210,7 +210,7 @@ import { notifyTerminalOnce } from "./utils/terminal-notification.ts";
 import { installTerminalThemeTracking } from "./utils/terminal-theme.ts";
 import { thinkingEffortFromConfig } from "./utils/thinking-config.ts";
 import { detectTmuxKeyboardWarning } from "./utils/tmux-keyboard.ts";
-import { printableChar } from "./utils/printable-key.ts";
+import { isPrintableChar, printableChar } from "./utils/printable-key.ts";
 import {
   getTranscriptComponentEntry,
   markTranscriptComponent,
@@ -412,6 +412,8 @@ export class KimiTUI {
     | undefined;
   private inkDialogSelection = 0;
   private inkDialogScrollTop = 0;
+  private inkApprovalFeedbackMode = false;
+  private inkApprovalFeedbackText = "";
   private inkSessionPickerSelect: ((session: SessionRow) => void) | undefined;
   private inkSessionPickerCancel: (() => void) | undefined;
   private inkSessionPickerToggleScope:
@@ -881,6 +883,9 @@ export class KimiTUI {
 
   /** Handle dialogs whose interaction model is represented in the Ink snapshot. */
   private handleInkSimpleDialogInput(data: string): boolean {
+    if (this.state.livePane.pendingApproval !== null) {
+      return this.handleInkApprovalInput(data);
+    }
     const dialog = this.state.activeDialog;
     if (dialog === "help") {
       const printable = printableChar(data);
@@ -953,6 +958,124 @@ export class KimiTUI {
       return true;
     }
     return false;
+  }
+
+  private handleInkApprovalInput(data: string): boolean {
+    const approval = this.state.livePane.pendingApproval;
+    if (approval === null) return false;
+    const choices = approval.data.choices;
+    const count = choices.length;
+
+    if (this.inkApprovalFeedbackMode) {
+      if (matchesKey(data, Key.up) || matchesKey(data, Key.down)) {
+        this.inkApprovalFeedbackMode = false;
+        this.inkApprovalFeedbackText = "";
+        if (count > 0) {
+          const delta = matchesKey(data, Key.up) ? -1 : 1;
+          this.inkDialogSelection =
+            (this.inkDialogSelection + delta + count) % count;
+        }
+        this.updateInkRenderer();
+        return true;
+      }
+      if (matchesKey(data, Key.escape)) {
+        this.inkApprovalFeedbackMode = false;
+        this.inkApprovalFeedbackText = "";
+        this.updateInkRenderer();
+        return true;
+      }
+      if (matchesKey(data, Key.enter)) {
+        this.submitInkApproval(
+          this.inkDialogSelection,
+          this.inkApprovalFeedbackText,
+        );
+        return true;
+      }
+      if (matchesKey(data, Key.backspace) || data === "\u007f") {
+        this.inkApprovalFeedbackText = this.inkApprovalFeedbackText.slice(
+          0,
+          -1,
+        );
+        this.updateInkRenderer();
+        return true;
+      }
+      const printable = printableChar(data);
+      if (isPrintableChar(printable)) {
+        this.inkApprovalFeedbackText += printable;
+        this.updateInkRenderer();
+      }
+      return true;
+    }
+
+    if (
+      matchesKey(data, Key.escape) ||
+      matchesKey(data, Key.ctrl("c")) ||
+      matchesKey(data, Key.ctrl("d"))
+    ) {
+      this.approvalController.respond(
+        adaptPanelResponse({ response: "rejected" }),
+      );
+      return true;
+    }
+
+    if (count === 0) return true;
+    if (matchesKey(data, Key.up) || matchesKey(data, Key.down)) {
+      const delta = matchesKey(data, Key.up) ? -1 : 1;
+      this.inkDialogSelection = (this.inkDialogSelection + delta + count) % count;
+      this.updateInkRenderer();
+      return true;
+    }
+    if (matchesKey(data, Key.enter)) {
+      this.selectInkApproval(this.inkDialogSelection);
+      return true;
+    }
+
+    const printable = printableChar(data);
+    const numericIndex = Number(printable) - 1;
+    if (
+      Number.isInteger(numericIndex) &&
+      numericIndex >= 0 &&
+      numericIndex < count
+    ) {
+      this.selectInkApproval(numericIndex);
+      return true;
+    }
+    return true;
+  }
+
+  private selectInkApproval(index: number): void {
+    const approval = this.state.livePane.pendingApproval;
+    if (approval === null) return;
+    const option = approval.data.choices[index];
+    if (option === undefined) return;
+    if (option.requires_feedback === true) {
+      this.inkDialogSelection = index;
+      this.inkApprovalFeedbackMode = true;
+      this.inkApprovalFeedbackText = "";
+      this.updateInkRenderer();
+      return;
+    }
+    this.submitInkApproval(index);
+  }
+
+  private submitInkApproval(index: number, feedback = ""): void {
+    const approval = this.state.livePane.pendingApproval;
+    if (approval === null) return;
+    const option = approval.data.choices[index];
+    if (option === undefined) return;
+    this.approvalController.respond(
+      adaptPanelResponse({
+        response: option.response,
+        feedback: feedback.length > 0 ? feedback : undefined,
+        selected_label: option.selected_label,
+      }),
+    );
+  }
+
+  private resetInkApprovalDialogState(): void {
+    this.inkApprovalFeedbackMode = false;
+    this.inkApprovalFeedbackText = "";
+    this.inkDialogSelection = 0;
   }
 
   /** Refresh Ink after an asynchronous clipboard/image editor callback. */
@@ -3344,6 +3467,8 @@ export class KimiTUI {
       activeDialog: this.state.activeDialog,
       dialogSelectedIndex: this.inkDialogSelection,
       dialogScrollTop: this.inkDialogScrollTop,
+      approvalFeedbackMode: this.inkApprovalFeedbackMode,
+      approvalFeedbackText: this.inkApprovalFeedbackText,
       sessions,
       loadingSessions: this.state.loadingSessions,
       sessionsScope: this.state.sessionsScope,
@@ -3964,11 +4089,16 @@ export class KimiTUI {
   }
 
   private showApprovalPanel(payload: ApprovalPanelData): void {
+    this.resetInkApprovalDialogState();
     this.patchLivePane({ pendingApproval: { data: payload } });
     notifyTerminalOnce(this.state, `approval:${payload.id}`, {
       title: "Kimi Code approval required",
       body: payload.tool_name,
     });
+    if (this.terminalRenderer === "ink") {
+      this.updateInkRenderer();
+      return;
+    }
     const panel = new ApprovalPanelComponent(
       { data: payload },
       (response: ApprovalPanelResponse) => {
@@ -3990,6 +4120,7 @@ export class KimiTUI {
     // children stack stays consistent with what mountEditorReplacement set up.
     if (this.approvalPreview !== undefined) this.closeApprovalPreview();
     this.activeApprovalPanel = undefined;
+    this.resetInkApprovalDialogState();
     this.patchLivePane({ pendingApproval: null });
     this.restoreEditor();
   }

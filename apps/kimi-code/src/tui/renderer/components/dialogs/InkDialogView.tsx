@@ -43,6 +43,8 @@ function dialogBody(
       <InkApprovalDialog
         request={dialog.pendingApproval}
         selectedIndex={dialog.selectedIndex}
+        feedbackMode={dialog.approvalFeedbackMode}
+        feedbackText={dialog.approvalFeedbackText}
       />
     );
   }

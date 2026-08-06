@@ -103,6 +103,9 @@ export interface TerminalDialogView {
   readonly selectedIndex: number;
   /** Scroll offset for renderer-owned long-form dialogs such as `/help`. */
   readonly scrollTop: number;
+  /** Inline feedback entry while an Ink approval choice requires it. */
+  readonly approvalFeedbackMode: boolean;
+  readonly approvalFeedbackText: string;
 }
 
 /**
@@ -142,6 +145,8 @@ export interface TerminalViewSource {
   readonly helpCommands?: readonly TerminalHelpCommandView[];
   readonly trustPrompt?: TerminalTrustPromptView | null;
   readonly dialogScrollTop?: number;
+  readonly approvalFeedbackMode?: boolean;
+  readonly approvalFeedbackText?: string;
   readonly toolOutputExpanded: boolean;
   readonly externalEditorRunning: boolean;
   readonly queuedMessageDispatchPending: boolean;
@@ -276,6 +281,8 @@ export function createTerminalViewState(
       trustPrompt: source.trustPrompt ?? null,
       selectedIndex: source.dialogSelectedIndex ?? 0,
       scrollTop: source.dialogScrollTop ?? 0,
+      approvalFeedbackMode: source.approvalFeedbackMode ?? false,
+      approvalFeedbackText: source.approvalFeedbackText ?? "",
     },
     toolOutputExpanded: source.toolOutputExpanded,
     externalEditorRunning: source.externalEditorRunning,

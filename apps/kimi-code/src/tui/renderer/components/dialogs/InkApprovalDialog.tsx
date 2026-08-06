@@ -10,11 +10,15 @@ import { summarizeDisplayBlock } from "./dialog-display";
 export interface InkApprovalDialogProps {
   readonly request: PendingApproval;
   readonly selectedIndex: number;
+  readonly feedbackMode?: boolean;
+  readonly feedbackText?: string;
 }
 
 export function InkApprovalDialog({
   request,
   selectedIndex,
+  feedbackMode = false,
+  feedbackText = "",
 }: InkApprovalDialogProps): ReactNode {
   const { data } = request;
   const displayLines = data.display
@@ -35,7 +39,19 @@ export function InkApprovalDialog({
         choices={data.choices}
         selectedIndex={selectedIndex}
       />
-      <Text>{currentTheme.fg("textMuted", "↑↓ choose · Enter select · Esc reject")}</Text>
+      {feedbackMode ? (
+        <Text>
+          {currentTheme.fg("accent", `Feedback: ${feedbackText}▌`)}
+        </Text>
+      ) : null}
+      <Text>
+        {currentTheme.fg(
+          "textMuted",
+          feedbackMode
+            ? "Type feedback · Enter submit · ↑↓ change choice"
+            : "↑↓ choose · Enter select · Esc reject",
+        )}
+      </Text>
     </Box>
   );
 }
