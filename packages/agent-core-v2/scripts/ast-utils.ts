@@ -8,7 +8,12 @@
 
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import ts from "typescript";
+import {
+  createSourceFile,
+  Program,
+  TypeChecker,
+  CompilerOptions,
+} from "typescript/unstable/ast";
 
 // ---------------------------------------------------------------------------
 // Source-file loading

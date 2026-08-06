@@ -12,7 +12,7 @@
 
 import { relative } from "node:path";
 
-import chokidar, { type FSWatcher } from "chokidar";
+import { watch, type FSWatcher as NodeFSWatcher } from "node:fs";
 import type { Plugin, ViteDevServer } from "vite";
 
 import {
@@ -59,7 +59,7 @@ export function depGraphPlugin(options: PluginOptions = {}): Plugin {
   let cachedFingerprint: string | undefined;
   let server: ViteDevServer | undefined;
   let debounceTimer: ReturnType<typeof setTimeout> | undefined;
-  let watcher: FSWatcher | undefined;
+  let watcher: NodeFSWatcher | undefined;
 
   function analyzeNow(reason: string): boolean {
     const started = Date.now();
@@ -107,29 +107,19 @@ export function depGraphPlugin(options: PluginOptions = {}): Plugin {
     },
     configureServer(dev) {
       server = dev;
-      watcher = chokidar.watch(SRC_ROOT, {
-        ignoreInitial: true,
-        ignored: (path, stats) => {
-          if (!stats) return false;
-          if (stats.isDirectory()) return false;
-          return !path.endsWith(".ts");
-        },
-      });
-      watcher.on("ready", () => {
-        console.log(
-          `[dep-graph] watching ${relative(process.cwd(), SRC_ROOT)}`,
-        );
-      });
-      for (const evt of ["add", "change", "unlink"] as const) {
-        watcher.on(evt, (file: string) => {
-          if (!isSrcFile(file)) return;
-          scheduleRefresh(`${evt} ${relative(SRC_ROOT, file)}`);
-        });
-      }
+      watcher = watch(SRC_ROOT, { recursive: true, persistent: true }, (event, file) => {
+        if (file === undefined) return;
+        if (!isSrcFile(file)) return;
+        const evt = event === "change" ? "change" : "add";
+        scheduleRefresh(`${evt} ${relative(SRC_ROOT, file)}`);
+      }) as unknown as NodeFSWatcher;
+      console.log(
+        `[dep-graph] watching ${relative(process.cwd(), SRC_ROOT)}`,
+      );
     },
     async closeBundle() {
       if (debounceTimer) clearTimeout(debounceTimer);
-      await watcher?.close();
+      watcher?.close();
     },
     resolveId(id) {
       if (id === VIRTUAL_ID) return RESOLVED_ID;

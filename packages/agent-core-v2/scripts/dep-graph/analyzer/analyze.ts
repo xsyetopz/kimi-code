@@ -18,7 +18,10 @@
 import { readFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import ts from "typescript";
+import {
+  createSourceFile,
+  SyntaxKind,
+} from "typescript/unstable/ast";
 
 import type {
   Edge,
