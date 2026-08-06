@@ -111,6 +111,12 @@ export interface SessionEventHost {
   restoreEditor(): void;
   restoreInputText(text: string): void;
   appendTranscriptEntry(entry: TranscriptEntry): void;
+  readonly terminalRenderer: "kimi-tui" | "ink";
+  syncToolCallTranscriptEntry(
+    toolCallId: string,
+    data: ToolCallBlockData,
+  ): void;
+  removeToolCallTranscriptEntry(toolCallId: string): void;
   handleShellOutput(event: {
     commandId: string;
     update: { kind: string; text?: string };

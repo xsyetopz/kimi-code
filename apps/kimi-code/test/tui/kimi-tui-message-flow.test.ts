@@ -5008,6 +5008,35 @@ command = "vim"
     });
   });
 
+  it("mirrors live AgentSwarm progress into transcriptEntries for Ink", async () => {
+    const { driver } = await makeDriver();
+    const sendQueued = vi.fn();
+
+    driver.sessionEventHandler.handleEvent(
+      {
+        type: "tool.call.started",
+        agentId: "main",
+        sessionId: "ses-1",
+        turnId: 1,
+        toolCallId: "call_swarm_ink",
+        name: "AgentSwarm",
+        args: {
+          description: "Review changed files",
+          items: ["src/a.ts"],
+        },
+      } as Event,
+      sendQueued,
+    );
+
+    const entry = driver.state.transcriptEntries.find(
+      (row) => row.toolCallData?.id === "call_swarm_ink",
+    );
+    expect(entry?.toolCallData?.agentSwarmProgress?.description).toBe(
+      "Review changed files",
+    );
+    expect(entry?.toolCallData?.agentSwarmProgress?.inputComplete).toBe(true);
+  });
+
   it("renders AgentSwarm progress in the transcript instead of the tool-card body", async () => {
     const { driver } = await makeDriver();
     const sendQueued = vi.fn();

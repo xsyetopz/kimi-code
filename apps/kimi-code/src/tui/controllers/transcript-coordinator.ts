@@ -217,6 +217,16 @@ export class TranscriptCoordinator {
     this.host.updateInkRenderer();
   }
 
+  removeToolCallTranscriptEntry(toolCallId: string): void {
+    const entries = this.host.state.transcriptEntries;
+    const index = entries.findIndex(
+      (entry) => entry.toolCallData?.id === toolCallId,
+    );
+    if (index < 0) return;
+    entries.splice(index, 1);
+    this.host.updateInkRenderer();
+  }
+
   appendApprovalTranscriptEntry(
     request: ApprovalRequest,
     response: ApprovalResponse,

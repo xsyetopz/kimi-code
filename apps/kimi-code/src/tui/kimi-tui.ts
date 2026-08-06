@@ -897,6 +897,10 @@ export class KimiTUI {
     this.transcriptCoordinator.syncToolCallTranscriptEntry(toolCallId, data);
   }
 
+  removeToolCallTranscriptEntry(toolCallId: string): void {
+    this.transcriptCoordinator.removeToolCallTranscriptEntry(toolCallId);
+  }
+
   appendApprovalTranscriptEntry(
     request: ApprovalRequest,
     response: ApprovalResponse,

@@ -86,6 +86,7 @@ export class SubAgentEventHandler {
         event,
         childAgentId,
       );
+      this.mirrorAgentSwarmToInk(parentToolCallId, swarmProgress);
       this.requestRender();
       return true;
     }
@@ -170,6 +171,11 @@ export class SubAgentEventHandler {
   }
 
   clearAgentSwarmProgress(): void {
+    if (this.host.terminalRenderer === "ink") {
+      for (const toolCallId of this.agentSwarmProgress.keys()) {
+        this.host.removeToolCallTranscriptEntry(toolCallId);
+      }
+    }
     for (const progress of this.agentSwarmProgress.values()) {
       progress.dispose();
     }
@@ -190,10 +196,11 @@ export class SubAgentEventHandler {
   syncAgentSwarmActivitySpinner(
     spinner: { renderInline(): string } | undefined,
   ): void {
-    for (const progress of this.agentSwarmProgress.values()) {
+    for (const [toolCallId, progress] of this.agentSwarmProgress) {
       progress.setActivitySpinnerText(
         spinner === undefined ? undefined : () => spinner.renderInline(),
       );
+      this.mirrorAgentSwarmToInk(toolCallId, progress);
     }
   }
 
@@ -203,6 +210,7 @@ export class SubAgentEventHandler {
   ): void {
     const progress = this.ensureAgentSwarmProgress(toolCallId, args);
     progress.markInputComplete();
+    this.mirrorAgentSwarmToInk(toolCallId, progress);
     this.requestRender();
   }
 
@@ -226,10 +234,12 @@ export class SubAgentEventHandler {
     if (isError && isUserCancelledSubagentError(resultData.output)) {
       if (progress.isRequestStreaming()) {
         this.removeAgentSwarmProgress(toolCallId, progress);
-      } else {
-        progress.markToolCallEnded();
-        progress.markActiveCancelled();
+        this.host.updateActivityPane();
+        this.requestRender();
+        return;
       }
+      progress.markToolCallEnded();
+      progress.markActiveCancelled();
     } else if (isError) {
       progress.markToolCallEnded();
       if (!progress.applyResult(resultData.output)) {
@@ -239,6 +249,7 @@ export class SubAgentEventHandler {
       progress.markToolCallEnded();
       progress.applyResult(resultData.output);
     }
+    this.mirrorAgentSwarmToInk(toolCallId, progress);
     this.host.updateActivityPane();
     this.requestRender();
   }
@@ -252,6 +263,7 @@ export class SubAgentEventHandler {
         continue;
       }
       progress.markActiveCancelled();
+      this.mirrorAgentSwarmToInk(toolCallId, progress);
       updated = true;
     }
     if (updated) this.requestRender();
@@ -578,8 +590,39 @@ export class SubAgentEventHandler {
     const progress = this.agentSwarmProgress.get(parentToolCallId);
     if (progress === undefined) return false;
     update(progress);
+    this.mirrorAgentSwarmToInk(parentToolCallId, progress);
     this.requestRender();
     return true;
+  }
+
+  private attachInkAgentSwarmMirror(
+    toolCallId: string,
+    progress: AgentSwarmProgressComponent,
+  ): void {
+    progress.setProjectionListener(() => {
+      this.mirrorAgentSwarmToInk(toolCallId, progress);
+    });
+    this.mirrorAgentSwarmToInk(toolCallId, progress);
+  }
+
+  private mirrorAgentSwarmToInk(
+    toolCallId: string,
+    progress: AgentSwarmProgressComponent,
+  ): void {
+    if (this.host.terminalRenderer !== "ink") return;
+    const activeCall = this.host.streamingUI.getActiveToolCall(toolCallId);
+    const { turnId, step } = this.host.streamingUI.getTurnContext();
+    const args = activeCall?.args ?? {};
+    this.host.syncToolCallTranscriptEntry(toolCallId, {
+      id: toolCallId,
+      name: "AgentSwarm",
+      args,
+      description: agentSwarmDescriptionFromArgs(args),
+      turnId: activeCall?.turnId ?? turnId,
+      step: activeCall?.step ?? step,
+      result: activeCall?.result,
+      agentSwarmProgress: progress.captureAgentSwarmProgressState(),
+    });
   }
 
   private ensureAgentSwarmProgress(
@@ -590,6 +633,7 @@ export class SubAgentEventHandler {
     const existing = this.agentSwarmProgress.get(toolCallId);
     if (existing !== undefined) {
       existing.updateArgs(args, options);
+      this.mirrorAgentSwarmToInk(toolCallId, existing);
       return existing;
     }
 
@@ -598,12 +642,14 @@ export class SubAgentEventHandler {
       availableGridHeight: () => this.agentSwarmGridHeight(),
       requestRender: () => {
         this.requestRender();
+        this.mirrorAgentSwarmToInk(toolCallId, progress);
       },
     });
     progress.updateArgs(args, options);
     this.agentSwarmProgress.set(toolCallId, progress);
     this.host.streamingUI.finalizeLiveTextBuffers("tool");
     this.host.state.transcriptContainer.addChild(progress);
+    this.attachInkAgentSwarmMirror(toolCallId, progress);
     this.host.updateActivityPane();
     this.requestRender();
     return progress;
@@ -615,6 +661,9 @@ export class SubAgentEventHandler {
   ): void {
     this.agentSwarmProgress.delete(toolCallId);
     progress.dispose();
+    if (this.host.terminalRenderer === "ink") {
+      this.host.removeToolCallTranscriptEntry(toolCallId);
+    }
     const children = this.host.state.transcriptContainer.children;
     const index = children.indexOf(progress);
     if (index >= 0) {

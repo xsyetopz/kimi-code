@@ -53,8 +53,9 @@ export function ToolCall({ entry, workspaceDir }: ToolCallProps): ReactNode {
     toolCall: data,
     result: data.result,
     skipResultBody:
-      data.name === "Agent" &&
-      (data.subagent !== undefined || data.subagentCard !== undefined),
+      (data.name === "Agent" &&
+        (data.subagent !== undefined || data.subagentCard !== undefined)) ||
+      data.agentSwarmProgress !== undefined,
   });
 
   return (
