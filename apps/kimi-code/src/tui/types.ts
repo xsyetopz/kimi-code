@@ -99,6 +99,8 @@ export interface ToolCallBlockData {
   subagent?: SubagentReplayBlockData;
   /** Live Agent subagent card projection for Ink (mirrored from ToolCallComponent). */
   subagentCard?: SubagentCardViewState;
+  /** Live AgentSwarm grid projection for Ink (mirrored from AgentSwarmProgressComponent). */
+  agentSwarmProgress?: AgentSwarmProgressViewState;
   step?: number;
   turnId?: string;
   /** Set when the step ended (e.g. max_tokens) before the tool call's
@@ -160,6 +162,42 @@ export interface SubagentCardViewState {
   readonly elapsedSeconds?: number;
   readonly detachedFromForeground: boolean;
   readonly backgroundTerminalPhase?: "done" | "failed";
+}
+
+export type AgentSwarmMemberPhase =
+  | "pending"
+  | "queued"
+  | "suspended"
+  | "running"
+  | "completed"
+  | "failed"
+  | "cancelled";
+
+export interface AgentSwarmMemberViewState {
+  readonly id: string;
+  readonly agentId?: string;
+  readonly phase: AgentSwarmMemberPhase;
+  readonly ticks: number;
+  readonly itemText: string;
+  readonly latestModelText: string;
+  readonly completedText?: string;
+  readonly failureText?: string;
+  readonly cancelledLabelText?: string;
+  readonly suspendedReason?: string;
+}
+
+/** Serializable AgentSwarm grid state for Ink and replay projection. */
+export interface AgentSwarmProgressViewState {
+  readonly description: string;
+  readonly modelDisplay: string;
+  readonly promptTemplateText: string;
+  readonly inputComplete: boolean;
+  readonly failed: boolean;
+  readonly aborted: boolean;
+  readonly itemsStarted: boolean;
+  readonly toolCallActive: boolean;
+  readonly activitySpinnerText: string;
+  readonly members: readonly AgentSwarmMemberViewState[];
 }
 
 export interface BackgroundAgentMetadata {

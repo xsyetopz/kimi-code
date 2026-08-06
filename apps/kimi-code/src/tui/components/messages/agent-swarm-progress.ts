@@ -12,6 +12,10 @@ import {
 import { FAILURE_MARK, SUCCESS_MARK } from "#/tui/constant/symbols";
 import { currentTheme } from "#/tui/theme";
 import type { ColorPalette } from "#/tui/theme/colors";
+import type {
+  AgentSwarmMemberViewState,
+  AgentSwarmProgressViewState,
+} from "#/tui/types";
 import { gradientText } from "#/tui/theme/gradient-text";
 
 const TEXT_CELL_PREFERRED_WIDTH = 30;
@@ -203,6 +207,7 @@ export class AgentSwarmProgressComponent implements Component {
   private promptTemplateText = "";
   private activitySpinnerText: (() => string) | undefined;
   private timer: ReturnType<typeof setInterval> | undefined;
+  private projectionListener: (() => void) | undefined;
 
   constructor(options: AgentSwarmProgressOptions) {
     this.description = options.description;
@@ -223,6 +228,42 @@ export class AgentSwarmProgressComponent implements Component {
   }
 
   invalidate(): void {}
+
+  /** Ink transcript mirror — called whenever projection-relevant state changes. */
+  setProjectionListener(listener: (() => void) | undefined): void {
+    this.projectionListener = listener;
+  }
+
+  captureAgentSwarmProgressState(): AgentSwarmProgressViewState {
+    const members: AgentSwarmMemberViewState[] = this.members.map((member) => ({
+      id: member.id,
+      agentId: member.agentId,
+      phase: member.phase,
+      ticks: member.ticks,
+      itemText: member.itemText,
+      latestModelText: member.latestModelText,
+      completedText: member.completedText,
+      failureText: member.failureText,
+      cancelledLabelText: member.cancelledLabelText,
+      suspendedReason: member.suspendedReason,
+    }));
+    return {
+      description: this.description,
+      modelDisplay: this.modelDisplay,
+      promptTemplateText: this.promptTemplateText,
+      inputComplete: this.inputComplete,
+      failed: this.failed,
+      aborted: this.aborted,
+      itemsStarted: this.itemsStarted,
+      toolCallActive: this.toolCallActive,
+      activitySpinnerText: this.activitySpinnerText?.() ?? "",
+      members,
+    };
+  }
+
+  private notifyProjectionChange(): void {
+    this.projectionListener?.();
+  }
 
   setActivitySpinnerText(provider: (() => string) | undefined): void {
     if (!this.toolCallActive) return;

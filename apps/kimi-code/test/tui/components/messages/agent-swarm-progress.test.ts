@@ -955,6 +955,26 @@ describe("AgentSwarmProgressComponent", () => {
     expect(agentSwarmDescriptionFromArgs(args)).toBe("Review changed files");
     expect(agentSwarmItemsFromArgs(args)).toEqual(["src/a.ts", "123"]);
   });
+
+  it("captures serializable progress state for Ink projection", () => {
+    const component = createComponent();
+    component.updateArgs({
+      description: "Review changed files",
+      items: ["src/a.ts"],
+    });
+    component.markInputComplete();
+    component.registerSubagent({ agentId: "agent-1", swarmIndex: 1 });
+    component.markStarted("agent-1");
+    component.setModelDisplay("kimi-k2-thinking");
+
+    const state = component.captureAgentSwarmProgressState();
+    expect(state.description).toBe("Review changed files");
+    expect(state.modelDisplay).toBe("kimi-k2-thinking");
+    expect(state.inputComplete).toBe(true);
+    expect(state.members).toHaveLength(1);
+    expect(state.members[0]?.phase).toBe("running");
+    expect(state.members[0]?.agentId).toBe("agent-1");
+  });
 });
 
 describe("AgentSwarmProgressEstimator", () => {
