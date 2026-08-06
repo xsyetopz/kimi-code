@@ -34,9 +34,6 @@ import { BtwPanelComponent } from "#/tui/components/panes/btw-panel";
 import { ThinkingComponent } from "#/tui/components/messages/thinking";
 import { WelcomeComponent } from "#/tui/components/chrome/welcome";
 import {
-  PluginsPanelComponent,
-} from "#/tui/components/dialogs/plugins-selector";
-import {
   KimiTUI,
   type KimiTUIStartupInput,
   type TUIState,
@@ -470,6 +467,64 @@ function inkPluginMcpSelectorText(driver: MessageDriver): string {
       return `${pointer} ${row.label}  ${status}  ${hint}`.trim();
     })
     .join("\n");
+}
+
+async function waitForInkPluginsPanel(driver: MessageDriver): Promise<void> {
+  await vi.waitFor(() => {
+    expect(driver.state.activeDialog).toBe("plugins-panel");
+    expect(
+      (
+        driver as unknown as {
+          getTerminalViewState: () => {
+            dialog: { pluginsPanel: { title: string } | null };
+          };
+        }
+      ).getTerminalViewState().dialog.pluginsPanel,
+    ).not.toBeNull();
+  });
+}
+
+function inkPluginsPanelText(driver: MessageDriver): string {
+  const panel = (
+    driver as unknown as {
+      getTerminalViewState: () => {
+        dialog: {
+          pluginsPanel: {
+            title: string;
+            hint: string;
+            rows: readonly {
+              label: string;
+              status: string | undefined;
+              hint: string | undefined;
+              selected: boolean;
+            }[];
+            footerLines: readonly string[];
+            mode: "installing" | "list" | "custom";
+            installingLabel: string | undefined;
+          } | null;
+        };
+      };
+    }
+  ).getTerminalViewState().dialog.pluginsPanel;
+  if (panel === null) return "";
+  if (panel.mode === "installing") {
+    return `Installing ${panel.installingLabel ?? ""} from marketplace…`;
+  }
+  return [
+    panel.title,
+    panel.hint,
+    ...panel.rows.map((row) => {
+      const pointer = row.selected ? "❯" : " ";
+      const status = row.status ?? "";
+      const hint = row.hint ?? "";
+      return `${pointer} ${row.label}  ${status}  ${hint}`.trim();
+    }),
+    ...panel.footerLines,
+  ].join("\n");
+}
+
+function sendInkPluginsPanelInput(driver: MessageDriver, data: string): void {
+  sendInkDialogInput(driver, data);
 }
 
 function inkModelSelectorText(driver: MessageDriver): string {
@@ -5751,23 +5806,15 @@ command = "vim"
 
     driver.handleUserInput("/plugins marketplace");
 
-    await vi.waitFor(() => {
-      expect(driver.state.editorContainer.children[0]).toBeInstanceOf(
-        PluginsPanelComponent,
-      );
-    });
-    const panel = driver.state.editorContainer
-      .children[0] as PluginsPanelComponent;
+    await waitForInkPluginsPanel(driver);
     // Official loads its catalog lazily; wait for the entry to render before install.
     await vi.waitFor(() => {
-      expect(stripSgr(panel.render(120).join("\n"))).toContain(
-        "Kimi Datasource",
-      );
+      expect(stripSgr(inkPluginsPanelText(driver))).toContain("Kimi Datasource");
     });
     // The pinned Kimi WebBridge row leads the Official tab, so move down to
     // the Kimi Datasource entry before installing.
-    panel.handleInput("\u001B[B");
-    panel.handleInput("\r");
+    sendInkPluginsPanelInput(driver, "\u001B[B");
+    sendInkPluginsPanelInput(driver, "\r");
 
     await vi.waitFor(() => {
       expect(session.installPlugin).toHaveBeenCalledWith(
@@ -5819,24 +5866,17 @@ command = "vim"
 
     driver.handleUserInput("/plugins marketplace");
 
+    await waitForInkPluginsPanel(driver);
     await vi.waitFor(() => {
-      expect(driver.state.editorContainer.children[0]).toBeInstanceOf(
-        PluginsPanelComponent,
-      );
+      expect(stripSgr(inkPluginsPanelText(driver))).toContain("Kimi Datasource");
     });
-    const panel = driver.state.editorContainer
-      .children[0] as PluginsPanelComponent;
-    await vi.waitFor(() => {
-      expect(stripSgr(panel.render(120).join("\n"))).toContain(
-        "Kimi Datasource",
-      );
-    });
-    panel.handleInput("\r");
+    sendInkPluginsPanelInput(driver, "\u001B[B");
+    sendInkPluginsPanelInput(driver, "\r");
 
     // The panel must not get stuck on the one-way "Installing…" view; it should
     // return to the list so the user can retry.
     await vi.waitFor(() => {
-      const rendered = stripSgr(panel.render(120).join("\n"));
+      const rendered = stripSgr(inkPluginsPanelText(driver));
       expect(rendered).toContain("Kimi Datasource");
       expect(rendered).not.toContain("Installing");
     });
@@ -5866,17 +5906,11 @@ command = "vim"
     // Passing the marketplace path opens the panel directly on the Third-party tab.
     driver.handleUserInput(`/plugins marketplace ${marketplacePath}`);
 
+    await waitForInkPluginsPanel(driver);
     await vi.waitFor(() => {
-      expect(driver.state.editorContainer.children[0]).toBeInstanceOf(
-        PluginsPanelComponent,
-      );
+      expect(stripSgr(inkPluginsPanelText(driver))).toContain("Superpowers");
     });
-    const panel = driver.state.editorContainer
-      .children[0] as PluginsPanelComponent;
-    await vi.waitFor(() => {
-      expect(stripSgr(panel.render(120).join("\n"))).toContain("Superpowers");
-    });
-    panel.handleInput("\r");
+    sendInkPluginsPanelInput(driver, "\r");
 
     await waitForInkChoicePicker(driver);
     sendInkChoicePickerInput(driver, "\u001B[B"); // switch from "Exit" to "Trust and install"
@@ -5914,17 +5948,11 @@ command = "vim"
 
     driver.handleUserInput(`/plugins marketplace ${marketplacePath}`);
 
+    await waitForInkPluginsPanel(driver);
     await vi.waitFor(() => {
-      expect(driver.state.editorContainer.children[0]).toBeInstanceOf(
-        PluginsPanelComponent,
-      );
+      expect(stripSgr(inkPluginsPanelText(driver))).toContain("Superpowers");
     });
-    const panel = driver.state.editorContainer
-      .children[0] as PluginsPanelComponent;
-    await vi.waitFor(() => {
-      expect(stripSgr(panel.render(120).join("\n"))).toContain("Superpowers");
-    });
-    panel.handleInput("\r");
+    sendInkPluginsPanelInput(driver, "\r");
 
     await waitForInkChoicePicker(driver);
     sendInkChoicePickerInput(driver, "\u001B[B"); // switch from "Exit" to "Trust and install"
@@ -5933,7 +5961,8 @@ command = "vim"
     // The failed install must return the user to the marketplace panel so they
     // can retry, rather than dropping them back at the editor.
     await vi.waitFor(() => {
-      expect(driver.state.editorContainer.children[0]).toBe(panel);
+      expect(driver.state.activeDialog).toBe("plugins-panel");
+      expect(stripSgr(inkPluginsPanelText(driver))).toContain("Superpowers");
     });
   });
 
@@ -5980,22 +6009,16 @@ command = "vim"
     try {
       driver.handleUserInput("/plugins marketplace");
 
+      await waitForInkPluginsPanel(driver);
       await vi.waitFor(() => {
-        expect(driver.state.editorContainer.children[0]).toBeInstanceOf(
-          PluginsPanelComponent,
-        );
-      });
-      const panel = driver.state.editorContainer
-        .children[0] as PluginsPanelComponent;
-      await vi.waitFor(() => {
-        expect(stripSgr(panel.render(120).join("\n"))).toContain(
+        expect(stripSgr(inkPluginsPanelText(driver))).toContain(
           "Kimi Datasource",
         );
       });
       // The pinned Kimi WebBridge row leads the Official tab, so move down to
       // the Kimi Datasource entry before installing.
-      panel.handleInput("\u001B[B");
-      panel.handleInput("\r");
+      sendInkPluginsPanelInput(driver, "\u001B[B");
+      sendInkPluginsPanelInput(driver, "\r");
 
       await vi.waitFor(() => {
         expect(session.installPlugin).toHaveBeenCalledWith(
@@ -6027,22 +6050,16 @@ command = "vim"
       driver.handleUserInput("/plugins");
 
       // The panel opens immediately on the Installed tab — no marketplace fetch.
-      await vi.waitFor(() => {
-        expect(driver.state.editorContainer.children[0]).toBeInstanceOf(
-          PluginsPanelComponent,
-        );
-      });
-      const panel = driver.state.editorContainer
-        .children[0] as PluginsPanelComponent;
-      panel.handleInput("\t"); // → Official, which lazily (and unsuccessfully) loads
+      await waitForInkPluginsPanel(driver);
+      sendInkPluginsPanelInput(driver, "\t"); // → Official, which lazily (and unsuccessfully) loads
 
       await vi.waitFor(() => {
-        expect(stripSgr(panel.render(120).join("\n"))).toContain(
+        expect(stripSgr(inkPluginsPanelText(driver))).toContain(
           "Marketplace unavailable: fetch failed",
         );
       });
       // The panel stays mounted; the failure does not close /plugins.
-      expect(driver.state.editorContainer.children[0]).toBe(panel);
+      expect(driver.state.activeDialog).toBe("plugins-panel");
     } finally {
       vi.stubGlobal("fetch", originalFetch);
     }
@@ -6073,29 +6090,18 @@ command = "vim"
 
     driver.handleUserInput("/plugins");
 
-    await vi.waitFor(() => {
-      expect(driver.state.editorContainer.children[0]).toBeInstanceOf(
-        PluginsPanelComponent,
-      );
-    });
-    const panel = driver.state.editorContainer
-      .children[0] as PluginsPanelComponent;
-    panel.handleInput(" ");
+    await waitForInkPluginsPanel(driver);
+    sendInkPluginsPanelInput(driver, " ");
 
     // Toggling refreshes the panel in place: it must not flash back to the
     // editor between the keypress and the refreshed panel mounting.
-    expect(driver.state.editorContainer.children[0]).toBeInstanceOf(
-      PluginsPanelComponent,
-    );
+    expect(driver.state.activeDialog).toBe("plugins-panel");
 
     await vi.waitFor(() => {
       expect(session.setPluginEnabled).toHaveBeenCalledWith("demo", false);
     });
     await vi.waitFor(() => {
-      const refreshed = stripSgr(
-        driver.state.editorContainer.children[0]!.render(120).join("\n"),
-      );
-      expect(refreshed).toContain(
+      expect(stripSgr(inkPluginsPanelText(driver))).toContain(
         "❯ Demo  disabled  run /reload or /new to apply",
       );
     });
@@ -6167,14 +6173,8 @@ command = "vim"
 
     driver.handleUserInput("/plugins");
 
-    await vi.waitFor(() => {
-      expect(driver.state.editorContainer.children[0]).toBeInstanceOf(
-        PluginsPanelComponent,
-      );
-    });
-    const panel = driver.state.editorContainer
-      .children[0] as PluginsPanelComponent;
-    panel.handleInput("m");
+    await waitForInkPluginsPanel(driver);
+    sendInkPluginsPanelInput(driver, "m");
 
     await waitForInkPluginMcpSelector(driver);
     sendInkDialogInput(driver, "\u001B[B");

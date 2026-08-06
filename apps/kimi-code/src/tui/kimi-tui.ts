@@ -168,6 +168,11 @@ import {
   projectInkPluginMcpSelectorView,
 } from "./renderer/ink-plugin-mcp-selector.ts";
 import {
+  createInkPluginsPanelSession,
+  type InkPluginsPanelSession,
+  projectInkPluginsPanelView,
+} from "./renderer/ink-plugins-panel.ts";
+import {
   createInkExperimentsSelectorSession,
   type InkExperimentsSelectorSession,
   projectInkExperimentsSelectorView,
@@ -196,7 +201,7 @@ import type {
   ExperimentalFeatureDraftChange,
   ExperimentsSelectorOptions,
 } from "./components/dialogs/experiments-selector.ts";
-import type { PluginMcpSelectorOptions } from "./components/dialogs/plugins-selector.ts";
+import type { PluginMcpSelectorOptions, PluginsPanelOptions } from "./components/dialogs/plugins-selector.ts";
 import type { ModelSelectorOptions } from "./components/dialogs/model-selector.ts";
 import type { TabbedModelSelectorOptions } from "./components/dialogs/tabbed-model-selector.ts";
 import type { UndoSelectorOptions } from "./components/dialogs/undo-selector.ts";
@@ -515,6 +520,11 @@ export class KimiTUI {
   private inkPluginMcpSelector: {
     readonly session: InkPluginMcpSelectorSession;
     readonly opts: PluginMcpSelectorOptions;
+  } | null = null;
+  private inkPluginsPanel: {
+    readonly session: InkPluginsPanelSession;
+    readonly opts: PluginsPanelOptions;
+    readonly panel: PluginsPanelComponent;
   } | null = null;
   private readonly terminalRenderer: "kimi-tui" | "ink";
   private readonly terminalOwnership = new TerminalOwnership();
@@ -1054,6 +1064,9 @@ export class KimiTUI {
     if (dialog === "plugin-mcp-selector") {
       return this.handleInkPluginMcpSelectorInput(data);
     }
+    if (dialog === "plugins-panel") {
+      return this.handleInkPluginsPanelInput(data);
+    }
     if (dialog !== "trust-prompt" && dialog !== "session-picker") return false;
     const count =
       dialog === "trust-prompt" ? 2 : Math.min(8, this.state.sessions.length);
@@ -1564,6 +1577,44 @@ export class KimiTUI {
   private closeInkPluginMcpSelector(): void {
     this.inkPluginMcpSelector = null;
     if (this.state.activeDialog === "plugin-mcp-selector") {
+      this.state.activeDialog = null;
+    }
+  }
+
+  private handleInkPluginsPanelInput(data: string): boolean {
+    const handle = this.inkPluginsPanel;
+    if (handle === null) return false;
+    const callbacks = {
+      onSelect: (selection: Parameters<PluginsPanelOptions["onSelect"]>[0]) => {
+        handle.opts.onSelect(selection);
+      },
+      onCancel: () => {
+        this.closeInkPluginsPanel();
+        handle.opts.onCancel();
+      },
+    };
+    const consumed = handle.session.handleInput(data, callbacks);
+    if (consumed) {
+      this.updateInkRenderer();
+    }
+    return consumed;
+  }
+
+  private openInkPluginsPanel(panel: PluginsPanelComponent): void {
+    this.closeInkPluginsPanel();
+    const opts = panel.getPluginsPanelOptions();
+    const session = createInkPluginsPanelSession(opts);
+    panel.attachInkSession(session, () => {
+      this.updateInkRenderer();
+    });
+    this.inkPluginsPanel = { session, opts, panel };
+    this.state.activeDialog = "plugins-panel";
+    this.updateInkRenderer();
+  }
+
+  private closeInkPluginsPanel(): void {
+    this.inkPluginsPanel = null;
+    if (this.state.activeDialog === "plugins-panel") {
       this.state.activeDialog = null;
     }
   }
@@ -4040,6 +4091,10 @@ export class KimiTUI {
         this.inkPluginMcpSelector === null
           ? null
           : projectInkPluginMcpSelectorView(this.inkPluginMcpSelector.session),
+      pluginsPanel:
+        this.inkPluginsPanel === null
+          ? null
+          : projectInkPluginsPanelView(this.inkPluginsPanel.session),
       sessions,
       loadingSessions: this.state.loadingSessions,
       sessionsScope: this.state.sessionsScope,
@@ -4421,6 +4476,10 @@ export class KimiTUI {
       this.openInkPluginMcpSelector(panel.getPluginMcpSelectorOptions());
       return;
     }
+    if (this.inkOwnsTerminal() && panel instanceof PluginsPanelComponent) {
+      this.openInkPluginsPanel(panel);
+      return;
+    }
     if (
       this.inkOwnsTerminal() &&
       panel instanceof ChoicePickerComponent
@@ -4444,6 +4503,7 @@ export class KimiTUI {
     this.closeInkUndoSelector();
     this.closeInkExperimentsSelector();
     this.closeInkPluginMcpSelector();
+    this.closeInkPluginsPanel();
     if (this.inkOwnsTerminal()) {
       const children = this.state.editorContainer.children;
       if (children.length === 1 && children[0] === this.state.editor) {

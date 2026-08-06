@@ -9,6 +9,7 @@ import type { InkEffortSelectorView } from "./ink-effort-selector";
 import type { InkModelSelectorView } from "./ink-model-selector";
 import type { InkExperimentsSelectorView } from "./ink-experiments-selector";
 import type { InkPluginMcpSelectorView } from "./ink-plugin-mcp-selector";
+import type { InkPluginsPanelView } from "./ink-plugins-panel";
 import type { InkUndoSelectorView } from "./ink-undo-selector";
 import type { InkQuestionWizardView } from "./ink-question-wizard";
 import type {
@@ -109,7 +110,7 @@ export interface TerminalApprovalPreviewView {
 }
 
 export interface TerminalDialogView {
-  readonly active: "session-picker" | "help" | "trust-prompt" | "choice-picker" | "model-selector" | "effort-selector" | "undo-selector" | "experiments-selector" | "plugin-mcp-selector" | null;
+  readonly active: "session-picker" | "help" | "trust-prompt" | "choice-picker" | "model-selector" | "effort-selector" | "undo-selector" | "experiments-selector" | "plugin-mcp-selector" | "plugins-panel" | null;
   readonly pendingApproval: PendingApproval | null;
   readonly pendingQuestion: PendingQuestion | null;
   readonly sessions: readonly TerminalSessionView[];
@@ -130,6 +131,7 @@ export interface TerminalDialogView {
   readonly undoSelector: InkUndoSelectorView | null;
   readonly experimentsSelector: InkExperimentsSelectorView | null;
   readonly pluginMcpSelector: InkPluginMcpSelectorView | null;
+  readonly pluginsPanel: InkPluginsPanelView | null;
 }
 
 /**
@@ -179,6 +181,7 @@ export interface TerminalViewSource {
   readonly undoSelector?: InkUndoSelectorView | null;
   readonly experimentsSelector?: InkExperimentsSelectorView | null;
   readonly pluginMcpSelector?: InkPluginMcpSelectorView | null;
+  readonly pluginsPanel?: InkPluginsPanelView | null;
   readonly approvalPreview?: TerminalApprovalPreviewView | null;
   readonly toolOutputExpanded: boolean;
   readonly externalEditorRunning: boolean;
@@ -323,6 +326,7 @@ export function createTerminalViewState(
       undoSelector: source.undoSelector ?? null,
       experimentsSelector: source.experimentsSelector ?? null,
       pluginMcpSelector: source.pluginMcpSelector ?? null,
+      pluginsPanel: source.pluginsPanel ?? null,
     },
     toolOutputExpanded: source.toolOutputExpanded,
     externalEditorRunning: source.externalEditorRunning,

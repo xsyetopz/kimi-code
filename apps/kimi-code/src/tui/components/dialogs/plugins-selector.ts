@@ -444,6 +444,28 @@ const PLUGINS_PANEL_TABS: readonly { id: PluginsPanelTabId; label: string }[] =
     { id: "custom", label: "Custom" },
   ];
 
+export interface PluginsPanelStateSnapshot {
+  readonly activeTabIndex: number;
+  readonly selectedIndex: number;
+  readonly market: MarketState;
+  readonly installing: string | undefined;
+  readonly customText: string;
+}
+
+export interface PluginsPanelInkSync {
+  importState(snapshot: PluginsPanelStateSnapshot): void;
+  exportState(): PluginsPanelStateSnapshot;
+  setOnStateChange(onChange: (() => void) | null): void;
+  setMarketplaceLoading(): void;
+  setMarketplace(
+    entries: readonly PluginMarketplaceEntry[],
+    source: string,
+  ): void;
+  setMarketplaceError(message: string): void;
+  setInstalling(label: string): void;
+  clearInstalling(): void;
+}
+
 export class PluginsPanelComponent extends Container implements Focusable {
   focused = false;
 
@@ -453,6 +475,8 @@ export class PluginsPanelComponent extends Container implements Focusable {
   private selectedIndex = 0;
   private market: MarketState = { status: "idle" };
   private installing: string | undefined;
+  private inkSession: PluginsPanelInkSync | null = null;
+  private inkOnChange: (() => void) | null = null;
 
   constructor(opts: PluginsPanelOptions) {
     super();
@@ -474,12 +498,51 @@ export class PluginsPanelComponent extends Container implements Focusable {
     };
   }
 
+  getPluginsPanelOptions(): PluginsPanelOptions {
+    return this.opts;
+  }
+
+  exportState(): PluginsPanelStateSnapshot {
+    return {
+      activeTabIndex: this.activeTabIndex,
+      selectedIndex: this.selectedIndex,
+      market: this.market,
+      installing: this.installing,
+      customText: this.customInput.getValue(),
+    };
+  }
+
+  importState(snapshot: PluginsPanelStateSnapshot): void {
+    this.activeTabIndex = snapshot.activeTabIndex;
+    this.selectedIndex = snapshot.selectedIndex;
+    this.market = snapshot.market;
+    this.installing = snapshot.installing;
+    this.customInput.setValue(snapshot.customText);
+    this.invalidate();
+  }
+
+  attachInkSession(session: PluginsPanelInkSync, onChange: () => void): void {
+    this.inkSession = session;
+    this.inkOnChange = onChange;
+    session.importState(this.exportState());
+    session.setOnStateChange(() => {
+      this.importState(session.exportState());
+      this.inkOnChange?.();
+    });
+  }
+
+  private notifyInkChange(): void {
+    this.inkOnChange?.();
+  }
+
   marketplaceStatus(): MarketState["status"] {
     return this.market.status;
   }
 
   setMarketplaceLoading(): void {
     this.market = { status: "loading" };
+    this.inkSession?.setMarketplaceLoading();
+    this.notifyInkChange();
   }
 
   setMarketplace(
@@ -487,20 +550,28 @@ export class PluginsPanelComponent extends Container implements Focusable {
     source: string,
   ): void {
     this.market = { status: "loaded", entries, source };
+    this.inkSession?.setMarketplace(entries, source);
+    this.notifyInkChange();
   }
 
   setMarketplaceError(message: string): void {
     this.market = { status: "error", message };
+    this.inkSession?.setMarketplaceError(message);
+    this.notifyInkChange();
   }
 
   setInstalling(label: string): void {
     this.installing = label;
+    this.inkSession?.setInstalling(label);
     this.invalidate();
+    this.notifyInkChange();
   }
 
   clearInstalling(): void {
     this.installing = undefined;
+    this.inkSession?.clearInstalling();
     this.invalidate();
+    this.notifyInkChange();
   }
 
   private get activeTab(): (typeof PLUGINS_PANEL_TABS)[number] {
