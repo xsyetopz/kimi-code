@@ -9,6 +9,8 @@ import type { InkEffortSelectorView } from "./ink-effort-selector";
 import type { InkModelSelectorView } from "./ink-model-selector";
 import type { InkExperimentsSelectorView } from "./ink-experiments-selector";
 import type { InkPluginMcpSelectorView } from "./ink-plugin-mcp-selector";
+import type { InkGoalQueueEditView } from "./ink-goal-queue-edit";
+import type { InkGoalQueueManagerView } from "./ink-goal-queue-manager";
 import type { InkPluginsPanelView } from "./ink-plugins-panel";
 import type { InkStartPermissionPromptView } from "./ink-start-permission-prompt";
 import type { InkUndoSelectorView } from "./ink-undo-selector";
@@ -111,7 +113,7 @@ export interface TerminalApprovalPreviewView {
 }
 
 export interface TerminalDialogView {
-  readonly active: "session-picker" | "help" | "trust-prompt" | "choice-picker" | "model-selector" | "effort-selector" | "undo-selector" | "experiments-selector" | "plugin-mcp-selector" | "plugins-panel" | "start-permission-prompt" | null;
+  readonly active: "session-picker" | "help" | "trust-prompt" | "choice-picker" | "model-selector" | "effort-selector" | "undo-selector" | "experiments-selector" | "plugin-mcp-selector" | "plugins-panel" | "start-permission-prompt" | "goal-queue-manager" | "goal-queue-edit" | null;
   readonly pendingApproval: PendingApproval | null;
   readonly pendingQuestion: PendingQuestion | null;
   readonly sessions: readonly TerminalSessionView[];
@@ -134,6 +136,8 @@ export interface TerminalDialogView {
   readonly pluginMcpSelector: InkPluginMcpSelectorView | null;
   readonly pluginsPanel: InkPluginsPanelView | null;
   readonly startPermissionPrompt: InkStartPermissionPromptView | null;
+  readonly goalQueueManager: InkGoalQueueManagerView | null;
+  readonly goalQueueEdit: InkGoalQueueEditView | null;
 }
 
 /**
@@ -185,6 +189,8 @@ export interface TerminalViewSource {
   readonly pluginMcpSelector?: InkPluginMcpSelectorView | null;
   readonly pluginsPanel?: InkPluginsPanelView | null;
   readonly startPermissionPrompt?: InkStartPermissionPromptView | null;
+  readonly goalQueueManager?: InkGoalQueueManagerView | null;
+  readonly goalQueueEdit?: InkGoalQueueEditView | null;
   readonly approvalPreview?: TerminalApprovalPreviewView | null;
   readonly toolOutputExpanded: boolean;
   readonly externalEditorRunning: boolean;
@@ -331,6 +337,8 @@ export function createTerminalViewState(
       pluginMcpSelector: source.pluginMcpSelector ?? null,
       pluginsPanel: source.pluginsPanel ?? null,
       startPermissionPrompt: source.startPermissionPrompt ?? null,
+      goalQueueManager: source.goalQueueManager ?? null,
+      goalQueueEdit: source.goalQueueEdit ?? null,
     },
     toolOutputExpanded: source.toolOutputExpanded,
     externalEditorRunning: source.externalEditorRunning,

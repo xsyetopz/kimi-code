@@ -99,6 +99,10 @@ import {
 } from "./components/dialogs/trust-prompt.ts";
 import { StartPermissionPromptComponent } from "./components/dialogs/start-permission-prompt.ts";
 import {
+  GoalQueueEditDialogComponent,
+  GoalQueueManagerComponent,
+} from "./components/dialogs/goal-queue-manager.ts";
+import {
   FileMentionProvider,
   type SlashAutocompleteCommand,
 } from "./components/editor/file-mention-provider.ts";
@@ -169,6 +173,16 @@ import {
   projectInkPluginMcpSelectorView,
 } from "./renderer/ink-plugin-mcp-selector.ts";
 import {
+  createInkGoalQueueEditSession,
+  type InkGoalQueueEditSession,
+  projectInkGoalQueueEditView,
+} from "./renderer/ink-goal-queue-edit.ts";
+import {
+  createInkGoalQueueManagerSession,
+  type InkGoalQueueManagerSession,
+  projectInkGoalQueueManagerView,
+} from "./renderer/ink-goal-queue-manager.ts";
+import {
   createInkStartPermissionPromptSession,
   type InkStartPermissionPromptSession,
   projectInkStartPermissionPromptView,
@@ -212,6 +226,10 @@ import type { ModelSelectorOptions } from "./components/dialogs/model-selector.t
 import type { TabbedModelSelectorOptions } from "./components/dialogs/tabbed-model-selector.ts";
 import type { UndoSelectorOptions } from "./components/dialogs/undo-selector.ts";
 import type { StartPermissionPromptOptions } from "./components/dialogs/start-permission-prompt.ts";
+import type {
+  GoalQueueEditDialogOptions,
+  GoalQueueManagerOptions,
+} from "./components/dialogs/goal-queue-manager.ts";
 import { SearchableList } from "./utils/searchable-list.ts";
 import {
   handleInkQuestionWizardInput,
@@ -536,6 +554,15 @@ export class KimiTUI {
   private inkStartPermissionPrompt: {
     readonly session: InkStartPermissionPromptSession;
     readonly opts: StartPermissionPromptOptions;
+  } | null = null;
+  private inkGoalQueueManager: {
+    readonly session: InkGoalQueueManagerSession;
+    readonly opts: GoalQueueManagerOptions;
+    readonly panel: GoalQueueManagerComponent;
+  } | null = null;
+  private inkGoalQueueEdit: {
+    readonly session: InkGoalQueueEditSession;
+    readonly opts: GoalQueueEditDialogOptions;
   } | null = null;
   private readonly terminalRenderer: "kimi-tui" | "ink";
   private readonly terminalOwnership = new TerminalOwnership();
@@ -1080,6 +1107,12 @@ export class KimiTUI {
     }
     if (dialog === "start-permission-prompt") {
       return this.handleInkStartPermissionPromptInput(data);
+    }
+    if (dialog === "goal-queue-manager") {
+      return this.handleInkGoalQueueManagerInput(data);
+    }
+    if (dialog === "goal-queue-edit") {
+      return this.handleInkGoalQueueEditInput(data);
     }
     if (dialog !== "trust-prompt" && dialog !== "session-picker") return false;
     const count =
@@ -1667,6 +1700,77 @@ export class KimiTUI {
   private closeInkStartPermissionPrompt(): void {
     this.inkStartPermissionPrompt = null;
     if (this.state.activeDialog === "start-permission-prompt") {
+      this.state.activeDialog = null;
+    }
+  }
+
+  private handleInkGoalQueueManagerInput(data: string): boolean {
+    const handle = this.inkGoalQueueManager;
+    if (handle === null) return false;
+    const callbacks = {
+      onAction: (action: Parameters<GoalQueueManagerOptions["onAction"]>[0]) =>
+        handle.opts.onAction(action),
+      onCancel: () => {
+        this.closeInkGoalQueueManager();
+        handle.opts.onCancel();
+      },
+    };
+    const consumed = handle.session.handleInput(data, callbacks);
+    if (consumed) {
+      this.updateInkRenderer();
+    }
+    return consumed;
+  }
+
+  private openInkGoalQueueManager(panel: GoalQueueManagerComponent): void {
+    this.closeInkGoalQueueManager();
+    this.closeInkGoalQueueEdit();
+    const opts = panel.getGoalQueueManagerOptions();
+    const session = createInkGoalQueueManagerSession(opts);
+    panel.attachInkSession(session, () => {
+      this.updateInkRenderer();
+    });
+    this.inkGoalQueueManager = { session, opts, panel };
+    this.state.activeDialog = "goal-queue-manager";
+    this.updateInkRenderer();
+  }
+
+  private closeInkGoalQueueManager(): void {
+    this.inkGoalQueueManager = null;
+    if (this.state.activeDialog === "goal-queue-manager") {
+      this.state.activeDialog = null;
+    }
+  }
+
+  private handleInkGoalQueueEditInput(data: string): boolean {
+    const handle = this.inkGoalQueueEdit;
+    if (handle === null) return false;
+    const callbacks = {
+      onDone: (result: Parameters<GoalQueueEditDialogOptions["onDone"]>[0]) => {
+        handle.opts.onDone(result);
+      },
+    };
+    const consumed = handle.session.handleInput(data, callbacks);
+    if (consumed) {
+      this.updateInkRenderer();
+    }
+    return consumed;
+  }
+
+  private openInkGoalQueueEdit(opts: GoalQueueEditDialogOptions): void {
+    this.closeInkGoalQueueEdit();
+    this.closeInkGoalQueueManager();
+    this.inkGoalQueueEdit = {
+      session: createInkGoalQueueEditSession(opts),
+      opts,
+    };
+    this.state.activeDialog = "goal-queue-edit";
+    this.updateInkRenderer();
+  }
+
+  private closeInkGoalQueueEdit(): void {
+    this.inkGoalQueueEdit = null;
+    if (this.state.activeDialog === "goal-queue-edit") {
       this.state.activeDialog = null;
     }
   }
@@ -4153,6 +4257,14 @@ export class KimiTUI {
           : projectInkStartPermissionPromptView(
               this.inkStartPermissionPrompt.session,
             ),
+      goalQueueManager:
+        this.inkGoalQueueManager === null
+          ? null
+          : projectInkGoalQueueManagerView(this.inkGoalQueueManager.session),
+      goalQueueEdit:
+        this.inkGoalQueueEdit === null
+          ? null
+          : projectInkGoalQueueEditView(this.inkGoalQueueEdit.session),
       sessions,
       loadingSessions: this.state.loadingSessions,
       sessionsScope: this.state.sessionsScope,
@@ -4545,6 +4657,14 @@ export class KimiTUI {
       this.openInkStartPermissionPrompt(panel.getStartPermissionPromptOptions());
       return;
     }
+    if (this.inkOwnsTerminal() && panel instanceof GoalQueueManagerComponent) {
+      this.openInkGoalQueueManager(panel);
+      return;
+    }
+    if (this.inkOwnsTerminal() && panel instanceof GoalQueueEditDialogComponent) {
+      this.openInkGoalQueueEdit(panel.getGoalQueueEditDialogOptions());
+      return;
+    }
     if (
       this.inkOwnsTerminal() &&
       panel instanceof ChoicePickerComponent
@@ -4570,6 +4690,8 @@ export class KimiTUI {
     this.closeInkPluginMcpSelector();
     this.closeInkPluginsPanel();
     this.closeInkStartPermissionPrompt();
+    this.closeInkGoalQueueManager();
+    this.closeInkGoalQueueEdit();
     if (this.inkOwnsTerminal()) {
       const children = this.state.editorContainer.children;
       if (children.length === 1 && children[0] === this.state.editor) {

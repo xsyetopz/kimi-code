@@ -49,6 +49,19 @@ export interface GoalQueueManagerOptions {
   readonly onCancel: () => void;
 }
 
+export interface GoalQueueManagerStateSnapshot {
+  readonly goals: readonly UpcomingGoal[];
+  readonly selectedIndex: number;
+  readonly movingGoalId: string | undefined;
+  readonly busy: boolean;
+}
+
+export interface GoalQueueManagerInkSync {
+  importState(snapshot: GoalQueueManagerStateSnapshot): void;
+  exportState(): GoalQueueManagerStateSnapshot;
+  setOnStateChange(onStateChange: (() => void) | null): void;
+}
+
 export type GoalQueueEditResult =
   | {
       readonly kind: "save";
@@ -70,12 +83,50 @@ export class GoalQueueManagerComponent extends Container implements Focusable {
   private list: SearchableList<UpcomingGoal>;
   private movingGoalId: string | undefined;
   private busy = false;
+  private inkSession: GoalQueueManagerInkSync | undefined;
+  private inkOnChange: (() => void) | undefined;
 
   constructor(opts: GoalQueueManagerOptions) {
     super();
     this.opts = opts;
     this.goals = opts.goals;
     this.list = this.createList(opts.selectedGoalId);
+  }
+
+  getGoalQueueManagerOptions(): GoalQueueManagerOptions {
+    return this.opts;
+  }
+
+  exportState(): GoalQueueManagerStateSnapshot {
+    const view = this.list.view();
+    return {
+      goals: this.goals,
+      selectedIndex: view.selectedIndex,
+      movingGoalId: this.movingGoalId,
+      busy: this.busy,
+    };
+  }
+
+  importState(snapshot: GoalQueueManagerStateSnapshot): void {
+    this.goals = snapshot.goals;
+    this.movingGoalId = snapshot.movingGoalId;
+    this.busy = snapshot.busy;
+    this.list = this.createList(undefined, snapshot.selectedIndex);
+    this.invalidate();
+  }
+
+  attachInkSession(session: GoalQueueManagerInkSync, onChange: () => void): void {
+    this.inkSession = session;
+    this.inkOnChange = onChange;
+    session.importState(this.exportState());
+    session.setOnStateChange(() => {
+      this.importState(session.exportState());
+      this.inkOnChange?.();
+    });
+  }
+
+  private notifyInkChange(): void {
+    this.inkOnChange?.();
   }
 
   handleInput(data: string): void {
@@ -90,6 +141,7 @@ export class GoalQueueManagerComponent extends Container implements Focusable {
     if (matchesKey(data, Key.space) || decoded === " ") {
       this.movingGoalId =
         this.movingGoalId === selected?.id ? undefined : selected?.id;
+      this.notifyInkChange();
       return;
     }
 
@@ -122,7 +174,10 @@ export class GoalQueueManagerComponent extends Container implements Focusable {
       }
     }
 
-    if (this.list.handleKey(data)) return;
+    if (this.list.handleKey(data)) {
+      this.notifyInkChange();
+      return;
+    }
   }
 
   override render(width: number): string[] {
@@ -197,6 +252,7 @@ export class GoalQueueManagerComponent extends Container implements Focusable {
     action: Exclude<GoalQueueManagerAction, { kind: "edit" }>,
   ) {
     this.busy = true;
+    this.notifyInkChange();
     try {
       const result = await this.opts.onAction(action);
       if (result !== undefined) {
@@ -211,18 +267,21 @@ export class GoalQueueManagerComponent extends Container implements Focusable {
     } finally {
       this.busy = false;
       this.invalidate();
+      this.notifyInkChange();
     }
   }
 
-  private createList(selectedGoalId?: string): SearchableList<UpcomingGoal> {
-    const initialIndex = this.goals.findIndex(
-      (goal) => goal.id === selectedGoalId,
-    );
+  private createList(
+    selectedGoalId?: string,
+    initialIndex?: number,
+  ): SearchableList<UpcomingGoal> {
+    const fromId = this.goals.findIndex((goal) => goal.id === selectedGoalId);
+    const index = fromId === -1 ? initialIndex : fromId;
     return new SearchableList({
       items: this.goals,
       toSearchText: (goal) => goal.objective,
       pageSize: this.opts.pageSize,
-      initialIndex: initialIndex === -1 ? 0 : initialIndex,
+      initialIndex: index === undefined || index === -1 ? 0 : index,
       searchable: false,
     });
   }
@@ -246,6 +305,10 @@ export class GoalQueueEditDialogComponent
     this.input.onSubmit = (value) => {
       this.submit(value);
     };
+  }
+
+  getGoalQueueEditDialogOptions(): GoalQueueEditDialogOptions {
+    return this.opts;
   }
 
   handleInput(data: string): void {
@@ -342,7 +405,7 @@ export class GoalQueueEditDialogComponent
   }
 }
 
-class MultilineGoalInput {
+export class MultilineGoalInput {
   focused = false;
   onSubmit?: (value: string) => void;
 

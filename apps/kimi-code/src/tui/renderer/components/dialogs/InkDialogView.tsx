@@ -6,6 +6,8 @@ import type { TerminalViewState } from "../../terminal-view-state";
 import { InkApprovalDialog } from "./InkApprovalDialog";
 import { InkChoicePickerDialog } from "./InkChoicePickerDialog";
 import { InkEffortSelectorDialog } from "./InkEffortSelectorDialog";
+import { InkGoalQueueEditDialog } from "./InkGoalQueueEditDialog";
+import { InkGoalQueueManagerDialog } from "./InkGoalQueueManagerDialog";
 import { InkHelpDialog } from "./InkHelpDialog";
 import { InkModelSelectorDialog } from "./InkModelSelectorDialog";
 import { InkExperimentsSelectorDialog } from "./InkExperimentsSelectorDialog";
@@ -51,6 +53,10 @@ function dialogTitle(view: TerminalViewState): string | undefined {
       return view.dialog.pluginsPanel?.title;
     case "start-permission-prompt":
       return view.dialog.startPermissionPrompt?.title;
+    case "goal-queue-manager":
+      return view.dialog.goalQueueManager?.title;
+    case "goal-queue-edit":
+      return view.dialog.goalQueueEdit?.title;
     default:
       return;
   }
@@ -137,6 +143,14 @@ function dialogBody(
           prompt={dialog.startPermissionPrompt}
         />
       );
+    case "goal-queue-manager":
+      if (dialog.goalQueueManager === null) return null;
+      return (
+        <InkGoalQueueManagerDialog manager={dialog.goalQueueManager} />
+      );
+    case "goal-queue-edit":
+      if (dialog.goalQueueEdit === null) return null;
+      return <InkGoalQueueEditDialog edit={dialog.goalQueueEdit} />;
     default:
       return null;
   }
@@ -165,7 +179,9 @@ export function InkDialogView({
     view.dialog.active === "experiments-selector" ||
     view.dialog.active === "plugin-mcp-selector" ||
     view.dialog.active === "plugins-panel" ||
-    view.dialog.active === "start-permission-prompt"
+    view.dialog.active === "start-permission-prompt" ||
+    view.dialog.active === "goal-queue-manager" ||
+    view.dialog.active === "goal-queue-edit"
   ) {
     return body;
   }
