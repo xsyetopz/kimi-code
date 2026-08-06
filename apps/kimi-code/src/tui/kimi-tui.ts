@@ -103,6 +103,9 @@ import {
   GoalQueueManagerComponent,
 } from "./components/dialogs/goal-queue-manager.ts";
 import { ProviderManagerComponent } from "./components/dialogs/provider-manager.ts";
+import { ApiKeyInputDialogComponent } from "./components/dialogs/api-key-input-dialog.ts";
+import { CustomRegistryImportDialogComponent } from "./components/dialogs/custom-registry-import.ts";
+import { FeedbackInputDialogComponent } from "./components/dialogs/feedback-input-dialog.ts";
 import {
   FileMentionProvider,
   type SlashAutocompleteCommand,
@@ -174,6 +177,20 @@ import {
   projectInkPluginMcpSelectorView,
 } from "./renderer/ink-plugin-mcp-selector.ts";
 import {
+  createInkApiKeyInputSession,
+  projectInkApiKeyInputView,
+} from "./renderer/ink-api-key-input.ts";
+import type { InkSingleLineInputSession } from "./renderer/ink-input-dialog-common.ts";
+import {
+  createInkCustomRegistryImportSession,
+  type InkCustomRegistryImportSession,
+  projectInkCustomRegistryImportView,
+} from "./renderer/ink-custom-registry-import.ts";
+import {
+  createInkFeedbackInputSession,
+  projectInkFeedbackInputView,
+} from "./renderer/ink-feedback-input.ts";
+import {
   createInkProviderManagerSession,
   type InkProviderManagerSession,
   projectInkProviderManagerView,
@@ -237,6 +254,9 @@ import type {
   GoalQueueManagerOptions,
 } from "./components/dialogs/goal-queue-manager.ts";
 import type { ProviderManagerOptions } from "./components/dialogs/provider-manager.ts";
+import type { ApiKeyInputDialogOptions, ApiKeyInputResult } from "./components/dialogs/api-key-input-dialog.ts";
+import type { CustomRegistryImportDialogOptions } from "./components/dialogs/custom-registry-import.ts";
+import type { FeedbackInputDialogOptions, FeedbackInputDialogResult } from "./components/dialogs/feedback-input-dialog.ts";
 import { SearchableList } from "./utils/searchable-list.ts";
 import {
   handleInkQuestionWizardInput,
@@ -574,6 +594,18 @@ export class KimiTUI {
   private inkProviderManager: {
     readonly session: InkProviderManagerSession;
     readonly opts: ProviderManagerOptions;
+  } | null = null;
+  private inkApiKeyInput: {
+    readonly session: InkSingleLineInputSession<ApiKeyInputResult>;
+    readonly opts: ApiKeyInputDialogOptions;
+  } | null = null;
+  private inkFeedbackInput: {
+    readonly session: InkSingleLineInputSession<FeedbackInputDialogResult>;
+    readonly opts: FeedbackInputDialogOptions;
+  } | null = null;
+  private inkCustomRegistryImport: {
+    readonly session: InkCustomRegistryImportSession;
+    readonly opts: CustomRegistryImportDialogOptions;
   } | null = null;
   private readonly terminalRenderer: "kimi-tui" | "ink";
   private readonly terminalOwnership = new TerminalOwnership();
@@ -1127,6 +1159,15 @@ export class KimiTUI {
     }
     if (dialog === "provider-manager") {
       return this.handleInkProviderManagerInput(data);
+    }
+    if (dialog === "api-key-input") {
+      return this.handleInkApiKeyInput(data);
+    }
+    if (dialog === "feedback-input") {
+      return this.handleInkFeedbackInput(data);
+    }
+    if (dialog === "custom-registry-import") {
+      return this.handleInkCustomRegistryImportInput(data);
     }
     if (dialog !== "trust-prompt" && dialog !== "session-picker") return false;
     const count =
@@ -1824,6 +1865,89 @@ export class KimiTUI {
   private closeInkProviderManager(): void {
     this.inkProviderManager = null;
     if (this.state.activeDialog === "provider-manager") {
+      this.state.activeDialog = null;
+    }
+  }
+
+  private handleInkApiKeyInput(data: string): boolean {
+    const handle = this.inkApiKeyInput;
+    if (handle === null) return false;
+    const consumed = handle.session.handleInput(data);
+    if (consumed) {
+      this.updateInkRenderer();
+    }
+    return consumed;
+  }
+
+  private openInkApiKeyInput(opts: ApiKeyInputDialogOptions): void {
+    this.closeInkApiKeyInput();
+    this.inkApiKeyInput = {
+      session: createInkApiKeyInputSession(opts),
+      opts,
+    };
+    this.state.activeDialog = "api-key-input";
+    this.updateInkRenderer();
+  }
+
+  private closeInkApiKeyInput(): void {
+    this.inkApiKeyInput = null;
+    if (this.state.activeDialog === "api-key-input") {
+      this.state.activeDialog = null;
+    }
+  }
+
+  private handleInkFeedbackInput(data: string): boolean {
+    const handle = this.inkFeedbackInput;
+    if (handle === null) return false;
+    const consumed = handle.session.handleInput(data);
+    if (consumed) {
+      this.updateInkRenderer();
+    }
+    return consumed;
+  }
+
+  private openInkFeedbackInput(opts: FeedbackInputDialogOptions): void {
+    this.closeInkFeedbackInput();
+    this.inkFeedbackInput = {
+      session: createInkFeedbackInputSession(opts),
+      opts,
+    };
+    this.state.activeDialog = "feedback-input";
+    this.updateInkRenderer();
+  }
+
+  private closeInkFeedbackInput(): void {
+    this.inkFeedbackInput = null;
+    if (this.state.activeDialog === "feedback-input") {
+      this.state.activeDialog = null;
+    }
+  }
+
+  private handleInkCustomRegistryImportInput(data: string): boolean {
+    const handle = this.inkCustomRegistryImport;
+    if (handle === null) return false;
+    const consumed = handle.session.handleInput(data);
+    if (consumed) {
+      this.updateInkRenderer();
+    }
+    return consumed;
+  }
+
+  private openInkCustomRegistryImport(
+    opts: CustomRegistryImportDialogOptions,
+  ): void {
+    this.closeInkCustomRegistryImport();
+    this.inkCustomRegistryImport = {
+      session: createInkCustomRegistryImportSession(opts),
+      opts,
+    };
+    this.state.activeDialog = "custom-registry-import";
+    this.updateInkRenderer();
+  }
+
+  private closeInkCustomRegistryImport(): void {
+    this.inkCustomRegistryImport = null;
+    if (this.state.activeDialog === "custom-registry-import") {
       this.state.activeDialog = null;
     }
   }
@@ -4322,6 +4446,20 @@ export class KimiTUI {
         this.inkProviderManager === null
           ? null
           : projectInkProviderManagerView(this.inkProviderManager.session),
+      apiKeyInput:
+        this.inkApiKeyInput === null
+          ? null
+          : projectInkApiKeyInputView(this.inkApiKeyInput.session),
+      feedbackInput:
+        this.inkFeedbackInput === null
+          ? null
+          : projectInkFeedbackInputView(this.inkFeedbackInput.session),
+      customRegistryImport:
+        this.inkCustomRegistryImport === null
+          ? null
+          : projectInkCustomRegistryImportView(
+              this.inkCustomRegistryImport.session,
+            ),
       sessions,
       loadingSessions: this.state.loadingSessions,
       sessionsScope: this.state.sessionsScope,
@@ -4726,6 +4864,26 @@ export class KimiTUI {
       this.openInkProviderManager(panel.getProviderManagerOptions());
       return;
     }
+    if (this.inkOwnsTerminal() && panel instanceof ApiKeyInputDialogComponent) {
+      this.openInkApiKeyInput(panel.getApiKeyInputDialogOptions());
+      return;
+    }
+    if (
+      this.inkOwnsTerminal() &&
+      panel instanceof FeedbackInputDialogComponent
+    ) {
+      this.openInkFeedbackInput(panel.getFeedbackInputDialogOptions());
+      return;
+    }
+    if (
+      this.inkOwnsTerminal() &&
+      panel instanceof CustomRegistryImportDialogComponent
+    ) {
+      this.openInkCustomRegistryImport(
+        panel.getCustomRegistryImportDialogOptions(),
+      );
+      return;
+    }
     if (
       this.inkOwnsTerminal() &&
       panel instanceof ChoicePickerComponent
@@ -4754,6 +4912,9 @@ export class KimiTUI {
     this.closeInkGoalQueueManager();
     this.closeInkGoalQueueEdit();
     this.closeInkProviderManager();
+    this.closeInkApiKeyInput();
+    this.closeInkFeedbackInput();
+    this.closeInkCustomRegistryImport();
     if (this.inkOwnsTerminal()) {
       const children = this.state.editorContainer.children;
       if (children.length === 1 && children[0] === this.state.editor) {

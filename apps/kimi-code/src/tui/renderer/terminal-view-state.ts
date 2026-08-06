@@ -12,6 +12,8 @@ import type { InkPluginMcpSelectorView } from "./ink-plugin-mcp-selector";
 import type { InkGoalQueueEditView } from "./ink-goal-queue-edit";
 import type { InkGoalQueueManagerView } from "./ink-goal-queue-manager";
 import type { InkPluginsPanelView } from "./ink-plugins-panel";
+import type { InkCustomRegistryImportView } from "./ink-custom-registry-import";
+import type { InkSingleLineInputView } from "./ink-input-dialog-common";
 import type { InkProviderManagerView } from "./ink-provider-manager";
 import type { InkStartPermissionPromptView } from "./ink-start-permission-prompt";
 import type { InkUndoSelectorView } from "./ink-undo-selector";
@@ -114,7 +116,7 @@ export interface TerminalApprovalPreviewView {
 }
 
 export interface TerminalDialogView {
-  readonly active: "session-picker" | "help" | "trust-prompt" | "choice-picker" | "model-selector" | "effort-selector" | "undo-selector" | "experiments-selector" | "plugin-mcp-selector" | "plugins-panel" | "start-permission-prompt" | "goal-queue-manager" | "goal-queue-edit" | "provider-manager" | null;
+  readonly active: "session-picker" | "help" | "trust-prompt" | "choice-picker" | "model-selector" | "effort-selector" | "undo-selector" | "experiments-selector" | "plugin-mcp-selector" | "plugins-panel" | "start-permission-prompt" | "goal-queue-manager" | "goal-queue-edit" | "provider-manager" | "api-key-input" | "feedback-input" | "custom-registry-import" | null;
   readonly pendingApproval: PendingApproval | null;
   readonly pendingQuestion: PendingQuestion | null;
   readonly sessions: readonly TerminalSessionView[];
@@ -140,6 +142,9 @@ export interface TerminalDialogView {
   readonly goalQueueManager: InkGoalQueueManagerView | null;
   readonly goalQueueEdit: InkGoalQueueEditView | null;
   readonly providerManager: InkProviderManagerView | null;
+  readonly apiKeyInput: InkSingleLineInputView | null;
+  readonly feedbackInput: InkSingleLineInputView | null;
+  readonly customRegistryImport: InkCustomRegistryImportView | null;
 }
 
 /**
@@ -194,6 +199,9 @@ export interface TerminalViewSource {
   readonly goalQueueManager?: InkGoalQueueManagerView | null;
   readonly goalQueueEdit?: InkGoalQueueEditView | null;
   readonly providerManager?: InkProviderManagerView | null;
+  readonly apiKeyInput?: InkSingleLineInputView | null;
+  readonly feedbackInput?: InkSingleLineInputView | null;
+  readonly customRegistryImport?: InkCustomRegistryImportView | null;
   readonly approvalPreview?: TerminalApprovalPreviewView | null;
   readonly toolOutputExpanded: boolean;
   readonly externalEditorRunning: boolean;
@@ -343,6 +351,9 @@ export function createTerminalViewState(
       goalQueueManager: source.goalQueueManager ?? null,
       goalQueueEdit: source.goalQueueEdit ?? null,
       providerManager: source.providerManager ?? null,
+      apiKeyInput: source.apiKeyInput ?? null,
+      feedbackInput: source.feedbackInput ?? null,
+      customRegistryImport: source.customRegistryImport ?? null,
     },
     toolOutputExpanded: source.toolOutputExpanded,
     externalEditorRunning: source.externalEditorRunning,

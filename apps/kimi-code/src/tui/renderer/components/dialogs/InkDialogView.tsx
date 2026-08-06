@@ -6,6 +6,7 @@ import type { TerminalViewState } from "../../terminal-view-state";
 import { InkApprovalDialog } from "./InkApprovalDialog";
 import { InkChoicePickerDialog } from "./InkChoicePickerDialog";
 import { InkEffortSelectorDialog } from "./InkEffortSelectorDialog";
+import { InkCustomRegistryImportDialog } from "./InkCustomRegistryImportDialog";
 import { InkGoalQueueEditDialog } from "./InkGoalQueueEditDialog";
 import { InkGoalQueueManagerDialog } from "./InkGoalQueueManagerDialog";
 import { InkHelpDialog } from "./InkHelpDialog";
@@ -14,6 +15,7 @@ import { InkExperimentsSelectorDialog } from "./InkExperimentsSelectorDialog";
 import { InkPluginMcpSelectorDialog } from "./InkPluginMcpSelectorDialog";
 import { InkPluginsPanelDialog } from "./InkPluginsPanelDialog";
 import { InkProviderManagerDialog } from "./InkProviderManagerDialog";
+import { InkSingleLineInputDialog } from "./InkSingleLineInputDialog";
 import { InkStartPermissionPromptDialog } from "./InkStartPermissionPromptDialog";
 import { InkUndoSelectorDialog } from "./InkUndoSelectorDialog";
 import { InkQuestionDialog } from "./InkQuestionDialog";
@@ -60,6 +62,12 @@ function dialogTitle(view: TerminalViewState): string | undefined {
       return view.dialog.goalQueueEdit?.title;
     case "provider-manager":
       return view.dialog.providerManager?.title;
+    case "api-key-input":
+      return view.dialog.apiKeyInput?.title;
+    case "feedback-input":
+      return view.dialog.feedbackInput?.title;
+    case "custom-registry-import":
+      return view.dialog.customRegistryImport?.title;
     default:
       return;
   }
@@ -159,6 +167,17 @@ function dialogBody(
       return (
         <InkProviderManagerDialog manager={dialog.providerManager} />
       );
+    case "api-key-input":
+      if (dialog.apiKeyInput === null) return null;
+      return <InkSingleLineInputDialog dialog={dialog.apiKeyInput} />;
+    case "feedback-input":
+      if (dialog.feedbackInput === null) return null;
+      return <InkSingleLineInputDialog dialog={dialog.feedbackInput} />;
+    case "custom-registry-import":
+      if (dialog.customRegistryImport === null) return null;
+      return (
+        <InkCustomRegistryImportDialog dialog={dialog.customRegistryImport} />
+      );
     default:
       return null;
   }
@@ -190,7 +209,10 @@ export function InkDialogView({
     view.dialog.active === "start-permission-prompt" ||
     view.dialog.active === "goal-queue-manager" ||
     view.dialog.active === "goal-queue-edit" ||
-    view.dialog.active === "provider-manager"
+    view.dialog.active === "provider-manager" ||
+    view.dialog.active === "api-key-input" ||
+    view.dialog.active === "feedback-input" ||
+    view.dialog.active === "custom-registry-import"
   ) {
     return body;
   }

@@ -26,6 +26,10 @@ export type FeedbackInputDialogResult =
   | { readonly kind: "ok"; readonly value: string }
   | { readonly kind: "cancel" };
 
+export interface FeedbackInputDialogOptions {
+  readonly onDone: (result: FeedbackInputDialogResult) => void;
+}
+
 const TITLE = "Send feedback to Kimi Code";
 const SUBTITLE_DEFAULT = "Tell us what's working or what's not.";
 const SUBTITLE_EMPTY = "Feedback cannot be empty.";
@@ -38,16 +42,20 @@ export class FeedbackInputDialogComponent
   focused = false;
 
   private readonly input = new Input();
-  private readonly onDone: (result: FeedbackInputDialogResult) => void;
+  private readonly opts: FeedbackInputDialogOptions;
   private done = false;
   private emptyHinted = false;
 
   constructor(onDone: (result: FeedbackInputDialogResult) => void) {
     super();
-    this.onDone = onDone;
+    this.opts = { onDone };
     this.input.onSubmit = (value) => {
       this.submit(value);
     };
+  }
+
+  getFeedbackInputDialogOptions(): FeedbackInputDialogOptions {
+    return this.opts;
   }
 
   handleInput(data: string): void {
@@ -136,12 +144,12 @@ export class FeedbackInputDialogComponent
       return;
     }
     this.done = true;
-    this.onDone({ kind: "ok", value: trimmed });
+    this.opts.onDone({ kind: "ok", value: trimmed });
   }
 
   private cancel(): void {
     if (this.done) return;
     this.done = true;
-    this.onDone({ kind: "cancel" });
+    this.opts.onDone({ kind: "cancel" });
   }
 }

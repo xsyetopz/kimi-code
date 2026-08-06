@@ -14,6 +14,15 @@ export type ApiKeyInputResult =
   | { readonly kind: "ok"; readonly value: string }
   | { readonly kind: "cancel" };
 
+export interface ApiKeyInputDialogOptions {
+  readonly platformName: string;
+  readonly subtitleLines: readonly string[];
+  readonly onDone: (result: ApiKeyInputResult) => void;
+  readonly title?: string;
+  readonly mask?: boolean;
+  readonly emptyHint?: string;
+}
+
 const FOOTER = "Enter to submit  ·  Esc to cancel";
 
 function maskInputLine(raw: string): string {
@@ -45,11 +54,7 @@ export class ApiKeyInputDialogComponent extends Container implements Focusable {
   focused = false;
 
   private readonly input = new Input();
-  private readonly onDone: (result: ApiKeyInputResult) => void;
-  private readonly title: string;
-  private readonly subtitleLines: readonly string[];
-  private readonly mask: boolean;
-  private readonly emptyHint: string;
+  private readonly opts: ApiKeyInputDialogOptions;
   private done = false;
   private emptyHinted = false;
 
@@ -57,17 +62,44 @@ export class ApiKeyInputDialogComponent extends Container implements Focusable {
     platformName: string,
     subtitleLines: readonly string[],
     onDone: (result: ApiKeyInputResult) => void,
-    options?: { title?: string; mask?: boolean; emptyHint?: string },
+    options?: {
+      title?: string;
+      mask?: boolean;
+      emptyHint?: string;
+    },
   ) {
     super();
-    this.onDone = onDone;
-    this.title = options?.title ?? `Enter API key for ${platformName}`;
-    this.subtitleLines = subtitleLines;
-    this.mask = options?.mask ?? true;
-    this.emptyHint = options?.emptyHint ?? "API key cannot be empty.";
+    this.opts = {
+      platformName,
+      subtitleLines,
+      onDone,
+      title: options?.title,
+      mask: options?.mask,
+      emptyHint: options?.emptyHint,
+    };
     this.input.onSubmit = (value) => {
       this.submit(value);
     };
+  }
+
+  getApiKeyInputDialogOptions(): ApiKeyInputDialogOptions {
+    return this.opts;
+  }
+
+  private get title(): string {
+    return this.opts.title ?? `Enter API key for ${this.opts.platformName}`;
+  }
+
+  private get subtitleLines(): readonly string[] {
+    return this.opts.subtitleLines;
+  }
+
+  private get mask(): boolean {
+    return this.opts.mask ?? true;
+  }
+
+  private get emptyHint(): string {
+    return this.opts.emptyHint ?? "API key cannot be empty.";
   }
 
   handleInput(data: string): void {
@@ -163,12 +195,12 @@ export class ApiKeyInputDialogComponent extends Container implements Focusable {
       return;
     }
     this.done = true;
-    this.onDone({ kind: "ok", value: trimmed });
+    this.opts.onDone({ kind: "ok", value: trimmed });
   }
 
   private cancel(): void {
     if (this.done) return;
     this.done = true;
-    this.onDone({ kind: "cancel" });
+    this.opts.onDone({ kind: "cancel" });
   }
 }

@@ -30,6 +30,11 @@ export type CustomRegistryImportResult =
   | { readonly kind: "ok"; readonly value: CustomRegistryImportValue }
   | { readonly kind: "cancel" };
 
+export interface CustomRegistryImportDialogOptions {
+  readonly onDone: (result: CustomRegistryImportResult) => void;
+  readonly defaultUrl?: string;
+}
+
 const TITLE = "Import custom provider registry";
 const SUBTITLE_DEFAULT = "Paste an api.json URL and its Bearer token.";
 const SUBTITLE_URL_EMPTY = "Registry URL cannot be empty.";
@@ -73,7 +78,7 @@ export class CustomRegistryImportDialogComponent
 
   private readonly urlInput = new Input();
   private readonly tokenInput = new Input();
-  private readonly onDone: (result: CustomRegistryImportResult) => void;
+  private readonly opts: CustomRegistryImportDialogOptions;
   private activeField: FieldId = "url";
   private done = false;
   private hint: "none" | "url-empty" | "token-empty" = "none";
@@ -83,7 +88,7 @@ export class CustomRegistryImportDialogComponent
     defaultUrl: string = "",
   ) {
     super();
-    this.onDone = onDone;
+    this.opts = { onDone, defaultUrl };
     if (defaultUrl.length > 0) this.urlInput.setValue(defaultUrl);
     // Enter on the URL field advances to the token field; Enter on the token
     // (last) field submits.
@@ -93,6 +98,10 @@ export class CustomRegistryImportDialogComponent
     this.tokenInput.onSubmit = () => {
       this.handleSubmit();
     };
+  }
+
+  getCustomRegistryImportDialogOptions(): CustomRegistryImportDialogOptions {
+    return this.opts;
   }
 
   handleInput(data: string): void {
@@ -249,12 +258,12 @@ export class CustomRegistryImportDialogComponent
     }
 
     this.done = true;
-    this.onDone({ kind: "ok", value: { url: urlValue, apiKey: tokenValue } });
+    this.opts.onDone({ kind: "ok", value: { url: urlValue, apiKey: tokenValue } });
   }
 
   private cancel(): void {
     if (this.done) return;
     this.done = true;
-    this.onDone({ kind: "cancel" });
+    this.opts.onDone({ kind: "cancel" });
   }
 }
