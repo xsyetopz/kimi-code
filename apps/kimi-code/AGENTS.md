@@ -17,7 +17,7 @@ Main directories:
 - `src/tui/`: the interactive terminal UI.
 - `src/tui/kimi-tui.ts`: the `KimiTUI` coordinator — wires state, layout, editor, session, SDK events, and dialogs together, and dispatches slash-command handlers. Heavy logic is delegated to `controllers/`, not accumulated here.
 - `src/tui/tui-state.ts`: `TUIState`, `createTUIState`, `createInitialAppState` — the single global UI-state shape.
-- `src/tui/controllers/`: independently-testable responsibilities — `session-event-handler` (SDK event routing), `streaming-ui` (streaming render), `session-replay` (resume/replay), `tasks-browser`, `editor-keyboard`, `auth-flow`.
+- `src/tui/controllers/`: independently-testable responsibilities — `session-event-handler` (SDK event routing), `streaming-ui` (streaming render), `session-replay` (resume/replay), `session-orchestration`, `transcript-coordinator`, `presentation-state`, `ink-dialogs`, `tui-accessors`, `slash-setup`, `startup-panels`, `message-queue`, `prompt-input`, `tui-lifecycle`, `tasks-browser`, `editor-keyboard`, `auth-flow`.
 - `src/tui/commands/`: slash command definitions, parsing, ordering, and dynamic skill command generation.
 - `src/tui/components/`: pi-tui components, organized by UI type.
 - `src/tui/constant/`: non-copy constants reused across TUI modules — symbols, terminal sequences, render sizing, streaming-arg match rules, and so on.
