@@ -33,7 +33,6 @@ import {
 import { BtwPanelComponent } from "#/tui/components/panes/btw-panel";
 import { ThinkingComponent } from "#/tui/components/messages/thinking";
 import { WelcomeComponent } from "#/tui/components/chrome/welcome";
-import { UndoSelectorComponent } from "#/tui/components/dialogs/undo-selector";
 import {
   PluginMcpSelectorComponent,
   PluginsPanelComponent,
@@ -515,13 +514,9 @@ function renderTranscript(driver: MessageDriver): string {
 
 async function confirmUndoSelection(driver: MessageDriver): Promise<void> {
   await vi.waitFor(() => {
-    expect(driver.state.editorContainer.children[0]).toBeInstanceOf(
-      UndoSelectorComponent,
-    );
+    expect(driver.state.activeDialog).toBe("undo-selector");
   });
-  (
-    driver.state.editorContainer.children[0] as UndoSelectorComponent
-  ).handleInput("\r");
+  sendInkDialogInput(driver, "\r");
 }
 
 function renderActivity(driver: MessageDriver): string {

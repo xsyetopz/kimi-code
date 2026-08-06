@@ -43,6 +43,10 @@ export class UndoSelectorComponent extends Container implements Focusable {
     });
   }
 
+  getUndoSelectorOptions(): UndoSelectorOptions {
+    return this.opts;
+  }
+
   handleInput(data: string): void {
     if (this.submitted) return;
 

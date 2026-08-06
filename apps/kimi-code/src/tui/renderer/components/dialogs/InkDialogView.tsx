@@ -8,6 +8,7 @@ import { InkChoicePickerDialog } from "./InkChoicePickerDialog";
 import { InkEffortSelectorDialog } from "./InkEffortSelectorDialog";
 import { InkHelpDialog } from "./InkHelpDialog";
 import { InkModelSelectorDialog } from "./InkModelSelectorDialog";
+import { InkUndoSelectorDialog } from "./InkUndoSelectorDialog";
 import { InkQuestionDialog } from "./InkQuestionDialog";
 import { InkSessionPickerDialog } from "./InkSessionPickerDialog";
 import { InkTrustDialog } from "./InkTrustDialog";
@@ -36,6 +37,8 @@ function dialogTitle(view: TerminalViewState): string | undefined {
       return view.dialog.modelSelector?.title;
     case "effort-selector":
       return view.dialog.effortSelector?.title;
+    case "undo-selector":
+      return view.dialog.undoSelector?.title;
     default:
       return;
   }
@@ -99,6 +102,9 @@ function dialogBody(
     case "effort-selector":
       if (dialog.effortSelector === null) return null;
       return <InkEffortSelectorDialog selector={dialog.effortSelector} />;
+    case "undo-selector":
+      if (dialog.undoSelector === null) return null;
+      return <InkUndoSelectorDialog selector={dialog.undoSelector} />;
     default:
       return null;
   }
@@ -122,7 +128,8 @@ export function InkDialogView({
     view.dialog.active === "help" ||
     view.dialog.active === "choice-picker" ||
     view.dialog.active === "model-selector" ||
-    view.dialog.active === "effort-selector"
+    view.dialog.active === "effort-selector" ||
+    view.dialog.active === "undo-selector"
   ) {
     return body;
   }

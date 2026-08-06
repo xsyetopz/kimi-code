@@ -7,6 +7,7 @@ import type {
 import type { InkChoicePickerView } from "./ink-choice-picker";
 import type { InkEffortSelectorView } from "./ink-effort-selector";
 import type { InkModelSelectorView } from "./ink-model-selector";
+import type { InkUndoSelectorView } from "./ink-undo-selector";
 import type { InkQuestionWizardView } from "./ink-question-wizard";
 import type {
   AppState,
@@ -106,7 +107,7 @@ export interface TerminalApprovalPreviewView {
 }
 
 export interface TerminalDialogView {
-  readonly active: "session-picker" | "help" | "trust-prompt" | "choice-picker" | "model-selector" | "effort-selector" | null;
+  readonly active: "session-picker" | "help" | "trust-prompt" | "choice-picker" | "model-selector" | "effort-selector" | "undo-selector" | null;
   readonly pendingApproval: PendingApproval | null;
   readonly pendingQuestion: PendingQuestion | null;
   readonly sessions: readonly TerminalSessionView[];
@@ -124,6 +125,7 @@ export interface TerminalDialogView {
   readonly choicePicker: InkChoicePickerView | null;
   readonly modelSelector: InkModelSelectorView | null;
   readonly effortSelector: InkEffortSelectorView | null;
+  readonly undoSelector: InkUndoSelectorView | null;
 }
 
 /**
@@ -170,6 +172,7 @@ export interface TerminalViewSource {
   readonly choicePicker?: InkChoicePickerView | null;
   readonly modelSelector?: InkModelSelectorView | null;
   readonly effortSelector?: InkEffortSelectorView | null;
+  readonly undoSelector?: InkUndoSelectorView | null;
   readonly approvalPreview?: TerminalApprovalPreviewView | null;
   readonly toolOutputExpanded: boolean;
   readonly externalEditorRunning: boolean;
@@ -311,6 +314,7 @@ export function createTerminalViewState(
       choicePicker: source.choicePicker ?? null,
       modelSelector: source.modelSelector ?? null,
       effortSelector: source.effortSelector ?? null,
+      undoSelector: source.undoSelector ?? null,
     },
     toolOutputExpanded: source.toolOutputExpanded,
     externalEditorRunning: source.externalEditorRunning,

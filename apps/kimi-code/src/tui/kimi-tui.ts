@@ -80,6 +80,7 @@ import { ChoicePickerComponent } from "./components/dialogs/choice-picker.ts";
 import { EffortSelectorComponent } from "./components/dialogs/effort-selector.ts";
 import { ModelSelectorComponent } from "./components/dialogs/model-selector.ts";
 import { TabbedModelSelectorComponent } from "./components/dialogs/tabbed-model-selector.ts";
+import { UndoSelectorComponent } from "./components/dialogs/undo-selector.ts";
 import { HelpPanelComponent } from "./components/dialogs/help-panel.ts";
 import { defaultThinkingEffortFor } from "./components/dialogs/model-selector.ts";
 import { QuestionDialogComponent } from "./components/dialogs/question-dialog.ts";
@@ -157,6 +158,11 @@ import {
   projectInkChoicePickerView,
 } from "./renderer/ink-choice-picker.ts";
 import {
+  createInkUndoSelectorSession,
+  type InkUndoSelectorSession,
+  projectInkUndoSelectorView,
+} from "./renderer/ink-undo-selector.ts";
+import {
   createInkEffortSelectorSession,
   type InkEffortSelectorSession,
   projectInkEffortSelectorView,
@@ -173,6 +179,7 @@ import type { ChoiceOption } from "./components/dialogs/choice-picker.ts";
 import type { EffortSelectorOptions } from "./components/dialogs/effort-selector.ts";
 import type { ModelSelectorOptions } from "./components/dialogs/model-selector.ts";
 import type { TabbedModelSelectorOptions } from "./components/dialogs/tabbed-model-selector.ts";
+import type { UndoSelectorOptions } from "./components/dialogs/undo-selector.ts";
 import { SearchableList } from "./utils/searchable-list.ts";
 import {
   handleInkQuestionWizardInput,
@@ -476,6 +483,10 @@ export class KimiTUI {
   private inkEffortSelector: {
     readonly session: InkEffortSelectorSession;
     readonly opts: EffortSelectorOptions;
+  } | null = null;
+  private inkUndoSelector: {
+    readonly session: InkUndoSelectorSession;
+    readonly opts: UndoSelectorOptions;
   } | null = null;
   private readonly terminalRenderer: "kimi-tui" | "ink";
   private readonly terminalOwnership = new TerminalOwnership();
@@ -1006,6 +1017,9 @@ export class KimiTUI {
     if (dialog === "effort-selector") {
       return this.handleInkEffortSelectorInput(data);
     }
+    if (dialog === "undo-selector") {
+      return this.handleInkUndoSelectorInput(data);
+    }
     if (dialog !== "trust-prompt" && dialog !== "session-picker") return false;
     const count =
       dialog === "trust-prompt" ? 2 : Math.min(8, this.state.sessions.length);
@@ -1407,6 +1421,43 @@ export class KimiTUI {
   private closeInkEffortSelector(): void {
     this.inkEffortSelector = null;
     if (this.state.activeDialog === "effort-selector") {
+      this.state.activeDialog = null;
+    }
+  }
+
+  private handleInkUndoSelectorInput(data: string): boolean {
+    const handle = this.inkUndoSelector;
+    if (handle === null) return false;
+    const callbacks = {
+      onSelect: (choice: UndoSelectorOptions["choices"][number]) => {
+        this.closeInkUndoSelector();
+        handle.opts.onSelect(choice);
+      },
+      onCancel: () => {
+        this.closeInkUndoSelector();
+        handle.opts.onCancel();
+      },
+    };
+    const consumed = handle.session.handleInput(data, callbacks);
+    if (consumed) {
+      this.updateInkRenderer();
+    }
+    return consumed;
+  }
+
+  private openInkUndoSelector(opts: UndoSelectorOptions): void {
+    this.closeInkUndoSelector();
+    this.inkUndoSelector = {
+      session: createInkUndoSelectorSession(opts),
+      opts,
+    };
+    this.state.activeDialog = "undo-selector";
+    this.updateInkRenderer();
+  }
+
+  private closeInkUndoSelector(): void {
+    this.inkUndoSelector = null;
+    if (this.state.activeDialog === "undo-selector") {
       this.state.activeDialog = null;
     }
   }
@@ -3869,6 +3920,10 @@ export class KimiTUI {
         this.inkEffortSelector === null
           ? null
           : projectInkEffortSelectorView(this.inkEffortSelector.session),
+      undoSelector:
+        this.inkUndoSelector === null
+          ? null
+          : projectInkUndoSelectorView(this.inkUndoSelector.session),
       sessions,
       loadingSessions: this.state.loadingSessions,
       sessionsScope: this.state.sessionsScope,
@@ -4235,6 +4290,10 @@ export class KimiTUI {
       this.openInkEffortSelector(panel.getEffortSelectorOptions());
       return;
     }
+    if (this.inkOwnsTerminal() && panel instanceof UndoSelectorComponent) {
+      this.openInkUndoSelector(panel.getUndoSelectorOptions());
+      return;
+    }
     if (
       this.inkOwnsTerminal() &&
       panel instanceof ChoicePickerComponent
@@ -4255,6 +4314,7 @@ export class KimiTUI {
     this.closeInkChoicePicker();
     this.closeInkModelSelector();
     this.closeInkEffortSelector();
+    this.closeInkUndoSelector();
     if (this.inkOwnsTerminal()) {
       const children = this.state.editorContainer.children;
       if (children.length === 1 && children[0] === this.state.editor) {
