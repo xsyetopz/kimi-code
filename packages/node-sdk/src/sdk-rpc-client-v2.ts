@@ -124,7 +124,7 @@
  *   matching v1's aggregate.
  */
 import { randomUUID } from "node:crypto";
-import { readdir } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
 
 import {
@@ -195,6 +195,7 @@ import {
   ISessionSkillCatalog,
   ISessionWorkspaceContext,
   IExplicitAgentProfileLoader,
+  tokenCountingRebased,
   IWireService,
   IWorkspaceAliases,
   IWorkspaceDirs,
@@ -223,6 +224,7 @@ import {
   resolveConfigPath,
   resolveKimiHome,
   resolveLoggingConfig,
+  SessionErrors,
   resolvePrintBackgroundMode,
   summarizeSkill,
   type BindAgentInput,
@@ -247,6 +249,12 @@ import {
   createKimiEngineAuthFacade,
   type KimiEngineAuthFacade,
 } from "#/engine-auth";
+import {
+  appendForkedMarkers,
+  assertForkTurnIndex,
+  assertHistoricalTurnAvailable,
+  truncateForkedSessionAtTurn,
+} from "#/v2/fork-session-turn";
 import { KimiHarness } from "#/kimi-harness";
 import { resolveHarnessImageLimits } from "#/harness-image-limits";
 import {
@@ -1213,10 +1221,17 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
    * title for identical results.
    */
   override async forkSession(input: ForkSessionInput): Promise<SessionSummary> {
+    assertForkTurnIndex(input.turnIndex);
+    await this.assertSourceSessionNotBusy(input.id);
+    const sourceSessionDir = await this.resolveSessionDir(input.id);
+    if (sourceSessionDir === undefined) {
+      throw SDKRpcClientV2.sessionNotFound(input.id);
+    }
     if (input.turnIndex !== undefined) {
-      throw new KimiError(
-        ErrorCodes.NOT_IMPLEMENTED,
-        "forkSession turnIndex truncation is not wired to agent-core-v2 yet.",
+      await assertHistoricalTurnAvailable(
+        input.id,
+        sourceSessionDir,
+        input.turnIndex,
       );
     }
     const forkHandler = await handlerForSession(this.engineAccessor, input.id);
@@ -1230,6 +1245,25 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
         title: input.title,
         metadata: input.metadata,
       });
+    if (input.turnIndex !== undefined) {
+      const forkSessionDir = handle.accessor.get(ISessionContext).sessionDir;
+      const forkId = handle.id;
+      await closeSessionById(this.engineAccessor, forkId);
+      this.unwireSession(forkId);
+      const state = JSON.parse(
+        await readFile(join(forkSessionDir, "state.json"), "utf-8"),
+      ) as Record<string, unknown>;
+      const truncated = await truncateForkedSessionAtTurn(
+        forkSessionDir,
+        input.id,
+        input.turnIndex,
+        state,
+      );
+      await appendForkedMarkers(truncated);
+      const resumed = await this.reloadForkAgentsAfterTruncate(forkId);
+      this.wireSession(resumed);
+      return this.resumedSessionSummary(resumed);
+    }
     this.wireSession(handle);
     return this.resumedSessionSummary(handle);
   }
@@ -1646,11 +1680,15 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
   override async compact(
     input: SessionIdRpcInput & CompactOptions,
   ): Promise<void> {
-    const agent = await this.agentScope(input.sessionId);
-    agent.accessor.get(IAgentFullCompactionService).begin({
-      source: "manual",
-      instruction: input.instruction,
-    });
+    try {
+      const agent = await this.agentScope(input.sessionId);
+      agent.accessor.get(IAgentFullCompactionService).begin({
+        source: "manual",
+        instruction: input.instruction,
+      });
+    } catch (error) {
+      throw this.asKimiError(error);
+    }
   }
 
   /**
@@ -1659,8 +1697,12 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
    * compaction; a no-op when idle, like v1.
    */
   override async cancelCompaction(input: SessionIdRpcInput): Promise<void> {
-    const agent = await this.agentScope(input.sessionId);
-    await agent.accessor.get(IAgentRPCService).cancelCompaction({});
+    try {
+      const agent = await this.agentScope(input.sessionId);
+      await agent.accessor.get(IAgentRPCService).cancelCompaction({});
+    } catch (error) {
+      throw this.asKimiError(error);
+    }
   }
 
   /**
@@ -1674,10 +1716,14 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
   override async undoHistory(
     input: SessionIdRpcInput & { count: number },
   ): Promise<void> {
-    const agent = await this.agentScope(input.sessionId);
-    await agent.accessor
-      .get(IAgentRPCService)
-      .undoHistory({ count: input.count });
+    try {
+      const agent = await this.agentScope(input.sessionId);
+      await agent.accessor
+        .get(IAgentRPCService)
+        .undoHistory({ count: input.count });
+    } catch (error) {
+      throw this.asKimiError(error);
+    }
   }
 
   /**
@@ -1687,8 +1733,12 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
    * (the prompt service's own `clear` would additionally abort prompts).
    */
   override async clearContext(input: SessionIdRpcInput): Promise<void> {
-    const agent = await this.agentScope(input.sessionId);
-    agent.accessor.get(IAgentContextMemoryService).clear();
+    try {
+      const agent = await this.agentScope(input.sessionId);
+      agent.accessor.get(IAgentContextMemoryService).clear();
+    } catch (error) {
+      throw this.asKimiError(error);
+    }
   }
 
   /**
@@ -1703,29 +1753,40 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
    * `getContext().tokenCount` diverges (pinned in the parity KNOWN_DIFFS).
    */
   override async importContext(input: ImportContextRpcInput): Promise<void> {
-    const agent = await this.agentScope(input.sessionId);
-    if (
-      agent.accessor.get(IAgentLoopService).status().state === "running" ||
-      agent.accessor.get(IAgentFullCompactionService).compacting !== null
-    ) {
-      throw new KimiError(
-        ErrorCodes.TURN_AGENT_BUSY,
-        "Cannot import context while the agent is busy",
+    try {
+      const agent = await this.agentScope(input.sessionId);
+      if (
+        agent.accessor.get(IAgentLoopService).status().state === "running" ||
+        agent.accessor.get(IAgentFullCompactionService).compacting !== null
+      ) {
+        throw new KimiError(
+          ErrorCodes.TURN_AGENT_BUSY,
+          "Cannot import context while the agent is busy",
+        );
+      }
+      const message = buildImportContextMessage(input.content, input.source);
+      const capability = agent.accessor
+        .get(IAgentProfileService)
+        .data().modelCapabilities;
+      const tokenCounting = agent.accessor.get(IAgentTokenCountingService);
+      const currentTokenCount = tokenCounting.get().size;
+      assertImportFits(
+        message,
+        currentTokenCount,
+        capability.max_input_tokens ?? capability.max_context_tokens,
       );
+      agent.accessor.get(IAgentContextMemoryService).append(message);
+      const history = agent.accessor.get(IAgentContextMemoryService).get();
+      agent.accessor.get(IWireService).dispatch(
+        tokenCountingRebased({
+          length: history.length,
+          tokens: tokenCounting.estimateMessages(history),
+          measured: false,
+        }),
+      );
+    } catch (error) {
+      throw this.asKimiError(error);
     }
-    const message = buildImportContextMessage(input.content, input.source);
-    const capability = agent.accessor
-      .get(IAgentProfileService)
-      .data().modelCapabilities;
-    const currentTokenCount = agent.accessor
-      .get(IAgentTokenCountingService)
-      .get().size;
-    assertImportFits(
-      message,
-      currentTokenCount,
-      capability.max_input_tokens ?? capability.max_context_tokens,
-    );
-    agent.accessor.get(IAgentContextMemoryService).append(message);
   }
 
   /**
@@ -2127,10 +2188,14 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
   override async stopBackgroundTask(
     input: SessionIdRpcInput & { taskId: string; reason?: string },
   ): Promise<void> {
-    const agent = await this.agentScope(input.sessionId);
-    await agent.accessor
-      .get(IAgentTaskService)
-      .stop(input.taskId, input.reason);
+    try {
+      const agent = await this.agentScope(input.sessionId);
+      await agent.accessor
+        .get(IAgentTaskService)
+        .stop(input.taskId, input.reason);
+    } catch (error) {
+      throw this.asKimiError(error);
+    }
   }
 
   /**

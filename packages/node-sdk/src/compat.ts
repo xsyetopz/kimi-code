@@ -118,7 +118,7 @@ export const ErrorCodes = {
   GOAL_NOT_FOUND: "goal.not_found",
   GOAL_OBJECTIVE_EMPTY: "goal.objective_empty",
   GOAL_OBJECTIVE_TOO_LONG: "goal.objective_too_long",
-  BACKGROUND_TASK_ID_EMPTY: "background.task_id_empty",
+  BACKGROUND_TASK_ID_EMPTY: "task.task_id_empty",
   SKILL_NAME_EMPTY: "skill.name_empty",
 } as const;
 export type {

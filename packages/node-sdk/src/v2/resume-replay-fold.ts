@@ -48,14 +48,20 @@ interface WireRecord {
     name?: string;
   };
   readonly event?: {
-    kind: string;
-    turnId?: string;
-    text?: string;
-    delta?: { text?: string };
-    toolCall?: { id: string; name: string; input: unknown };
-    result?: unknown;
-    isError?: boolean;
-    interruptedToolCallId?: string;
+    readonly type?: string;
+    readonly kind?: string;
+    readonly turnId?: string;
+    readonly text?: string;
+    readonly delta?: { text?: string };
+    readonly part?: { text?: string };
+    readonly toolCallId?: string;
+    readonly name?: string;
+    readonly args?: unknown;
+    readonly toolCall?: { id: string; name: string; input: unknown };
+    readonly result?: unknown;
+    readonly isError?: boolean;
+    readonly interruptedToolCallId?: string;
+    readonly initiator?: string;
   };
   readonly input?: unknown;
   readonly undoBoundary?: { turnId: number };
@@ -130,9 +136,6 @@ interface ContextMessage {
   name?: string;
 }
 
-const OPEN_STEP_INITIATOR = new Set(["agent", "tool"]);
-const TOOL_CLOSE_INITIATOR = new Set(["tool"]);
-
 // ---------------------------------------------------------------------------
 // Fold
 // ---------------------------------------------------------------------------
@@ -162,7 +165,7 @@ export function foldWireRecords(
   const flushAssembling = (time: number): void => {
     if (assembling === null) return;
     if (assembling.role !== "tool") {
-      pendingMessages.push({ ...assembling });
+      pendingMessages.push(normalizeReplayMessage({ ...assembling }));
     }
     if (assembling.tool_call_id !== undefined) {
       // Synthesize a tool-result message for every tool call that was still
@@ -217,29 +220,29 @@ export function foldWireRecords(
       case "context.append_loop_event": {
         if (rec.event === undefined) break;
         const ev = rec.event;
-        if (
-          ev.kind === "step.begin" &&
-          OPEN_STEP_INITIATOR.has(rec.event.initiator ?? "")
-        ) {
+        const eventType = ev.type ?? ev.kind;
+        if (eventType === "step.begin") {
           flushAssembling(time);
-          assembling = { role: ev.initiator ?? "assistant" };
-        } else if (ev.kind === "content.part" && assembling !== null) {
-          assembling.content =
-            (assembling.content ?? "") + (ev.text ?? ev.delta?.text ?? "");
-        } else if (ev.kind === "tool.call" && assembling !== null) {
+          assembling = { role: "assistant" };
+        } else if (eventType === "content.part" && assembling !== null) {
+          const partText = ev.part?.text ?? ev.text ?? ev.delta?.text ?? "";
+          assembling.content = (assembling.content ?? "") + partText;
+        } else if (eventType === "tool.call" && assembling !== null) {
+          assembling.tool_calls ??= [];
           if (ev.toolCall !== undefined) {
-            assembling.tool_calls ??= [];
             assembling.tool_calls.push(ev.toolCall);
+          } else if (ev.toolCallId !== undefined && ev.name !== undefined) {
+            assembling.tool_calls.push({
+              id: ev.toolCallId,
+              name: ev.name,
+              input: ev.args,
+            });
           }
-        } else if (
-          ev.kind === "tool.result" &&
-          TOOL_CLOSE_INITIATOR.has(ev.initiator ?? "") &&
-          assembling !== null
-        ) {
-          // Close tool: push the assembled message + a synthesized
-          // interrupted-result message when the tool call had no explicit
-          // result (v1 finishResume behavior).
-          pendingMessages.push({ ...assembling });
+        } else if (eventType === "step.end" && assembling !== null) {
+          pendingMessages.push(normalizeReplayMessage({ ...assembling }));
+          assembling = null;
+        } else if (eventType === "tool.result" && assembling !== null) {
+          pendingMessages.push(normalizeReplayMessage({ ...assembling }));
           if (ev.interruptedToolCallId !== undefined) {
             pendingMessages.push({
               role: "tool",
@@ -247,13 +250,24 @@ export function foldWireRecords(
               tool_call_id: ev.interruptedToolCallId,
             });
           } else if (ev.result !== undefined) {
+            const result = ev.result as
+              | string
+              | { readonly output?: unknown }
+              | undefined;
+            const output =
+              typeof result === "string"
+                ? result
+                : result !== undefined && "output" in result
+                  ? result.output
+                  : result;
             pendingMessages.push({
               role: "tool",
               content:
-                typeof ev.result === "string"
-                  ? ev.result
-                  : JSON.stringify(ev.result),
-              tool_call_id: ev.toolCall?.id ?? assembling.tool_call_id,
+                typeof output === "string"
+                  ? output
+                  : JSON.stringify(output),
+              tool_call_id:
+                ev.toolCallId ?? ev.toolCall?.id ?? assembling.tool_call_id,
               name: ev.toolCall?.name ?? assembling.name,
             });
           }
@@ -416,9 +430,33 @@ function flushPending(
   time: number,
 ): void {
   for (const msg of pending) {
-    replay.push({ type: "message", message: msg, time } as AgentReplayRecord);
+    replay.push({
+      type: "message",
+      message: normalizeReplayMessage(msg),
+      time,
+    } as AgentReplayRecord);
   }
   pending.length = 0;
+}
+
+
+function normalizeReplayMessage(msg: ContextMessage): ContextMessage {
+  const raw = msg as ContextMessage & {
+    tool_calls?: unknown[];
+    toolCalls?: unknown[];
+  };
+  const content =
+    raw.content === undefined
+      ? []
+      : typeof raw.content === "string"
+        ? [{ type: "text", text: raw.content }]
+        : raw.content;
+  const toolCalls = raw.toolCalls ?? raw.tool_calls;
+  return {
+    ...raw,
+    content,
+    ...(toolCalls !== undefined ? { toolCalls } : {}),
+  };
 }
 
 function patchLast<T extends AgentReplayRecord["type"]>(
