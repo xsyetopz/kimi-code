@@ -1,100 +1,17 @@
 /**
- * `goal` domain — `IAgentGoalService` implementation.
- *
- * Owns the main-agent goal lifecycle; persists the goal in the `wire`
- * `GoalModel` (`GoalState | null`) through the `goal.create` / `goal.update` /
- * `goal.clear` Ops (`wire.dispatch`), reads it through `wire.getModel`,
- * publishes `goal.updated` live to `IEventBus`, and forces a replayed `active`
- * goal back to `paused` via `wire.hooks.onDidRestore`. The accumulated
- * `wallClockMs` lives in the Model (set from each Op payload, never by
- * `Date.now()` inside `apply`); the active interval's epoch-ms
- * `wallClockResumedAt` anchor is
- * persisted at create/resume boundaries so recovery can settle crash-spanning
- * elapsed time without periodic writes. A `forked` wire Op clears the Model
- * at a fork boundary. Injects reminders through
- * `contextInjector`, drives continuation turns by enqueueing `newTurn`
- * `StepRequest`s onto `loop` (the continuation message materializes when the
- * loop pops it), accounts live
- * turn usage through `usage`, observes terminal goal tool results through
- * `toolExecutor`, writes system reminders through `systemReminder`, reports
- * telemetry through `telemetry`, and checks main-agent eligibility through
- * `scopeContext`. Measures time and arms hard deadlines through `goal`'s
- * App-scoped deadline scheduler. Two `onBeforeExecuteTool` veto listeners
- * guard the goal lifecycle: stale or budget-exhausted goal tool calls are
- * vetoed with synthetic results, and a `CreateGoal` call carrying a
- * `goal_start` display outside `auto` mode defers to a cold `waitUntil`
- * factory that runs the goal-start review through `toolApproval` under the
- * origin `goal-start-review-ask` — including the permission-mode switch
- * picked on the approval surface. The mutable turn-tracking and wall-clock
- * state (`liveTurnId`, `goalDrivenTurns`, `countedGoalTurns`,
- * `goalStarterTurns`, `goalOutcomeToolResultTurns`,
- * `goalOutcomeContinuationTurns`, `budgetGraceTurns`,
- * `pendingContinuationGoals`, `goalTurnTargets`, `exhaustedTurnBudgetGoals`,
- * `liveWallClockStartedAt`, `resumeContinuation`) is registered into
- * `agentState` (`IAgentStateService`) and read/written through it; the
- * `pendingContinuation` promise lock and the `wallClockDeadline` disposable
- * slot stay plain fields. Bound at Agent scope.
- * Subagent instances reject every goal command and do not install goal
- * injection, accounting, budget, or continuation hooks.
+ * `goal` domain — goal lifecycle constants, state keys, and helpers.
  */
 
-import { randomUUID } from 'node:crypto';
-
-import type { TurnEndedEvent, TurnStartedEvent } from '#/agent/loop/turnEvents';
-import { Disposable, MutableDisposable, type IDisposable } from '#/_base/di/lifecycle';
-import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
 import { defineState } from '#/_base/state/stateRegistry';
-import { abortError } from '#/_base/utils/abort';
-import { isPlainRecord } from '#/_base/utils/canonical-args';
-import { IAgentContextInjectorService } from '#/agent/contextInjector/contextInjector';
-import type { ContextMessage, PromptOrigin } from '#/agent/contextMemory/types';
-import { GoalInjection } from '#/agent/goal/injection/goalInjection';
-import {
-  IAgentLoopService,
-  type AfterStepContext,
-  type BeforeStepContext,
-  type EnqueueReceipt,
-} from '#/agent/loop/loop';
-import { LOOP_CONTROL_SECTION, type LoopControl } from '#/agent/loop/configSection';
+import { defineModel } from '#/wire/wire';
+import { ErrorCodes, isPlainRecord, toKimiErrorPayload, type KimiErrorPayload } from '#/errors';
 import { LoopErrors } from '#/agent/loop/errors';
-import { ContinuationStepRequest, MessageStepRequest } from '#/agent/loop/stepRequest';
-import { IAgentSystemReminderService } from '#/agent/systemReminder/systemReminder';
-import { IAgentScopeContext } from '#/agent/scopeContext/scopeContext';
-import { IAgentStateService } from '#/agent/state/agentState';
-import type { ExecutableToolResult } from '#/tool/toolContract';
-import { IAgentPermissionModeService } from '#/agent/permissionMode/permissionMode';
-import type { PermissionMode } from '#/agent/permissionPolicy/types';
-import { IAgentToolApprovalService } from '#/agent/toolApproval/toolApproval';
-import { IAgentToolExecutorService } from '#/agent/toolExecutor/toolExecutor';
-import type { BeforeToolExecuteEvent } from '#/agent/toolExecutor/toolHooks';
-import { IAgentUsageService, type UsageRecordedContext } from '#/agent/usage/usage';
-import type { GoalBudgetProperties } from '#/app/telemetry/events';
-import { ITelemetryService } from '#/app/telemetry/telemetry';
-import { IConfigService } from '#/app/config/config';
-import {
-  ErrorCodes,
-  Error2,
-  toKimiErrorPayload,
-  type KimiErrorPayload,
-} from '#/errors';
-import { IWireService } from '#/wire/wire';
-import { defineModel } from '#/wire/model';
-import { IEventBus } from '#/app/event/eventBus';
-
-import { IAgentGoalService, type GoalReasonInput, type ResumeGoalInput } from './goal';
-import { IGoalDeadlineScheduler } from './goalDeadlineScheduler';
-import { clearGoal, createGoal, GoalModel, updateGoal, type GoalState } from './goalOps';
-import type {
-  CreateGoalInput,
-  GoalActor,
-  GoalBudgetLimits,
-  GoalBudgetReport,
-  GoalChange,
-  GoalChangeStats,
-  GoalSnapshot,
-  GoalStatus,
-  GoalToolResult,
-} from './types';
+import type { EnqueueReceipt } from '#/agent/loop/loop';
+import type { TurnEndedEvent, TurnStartedEvent } from '#/app/telemetry/events';
+import type { ContextMessage, PromptOrigin } from '#/agent/contextMemory/types';
+import type { PermissionMode } from '#/agent/permissionMode/permissionMode';
+import type { ExecutableToolResult } from '#/agent/toolExecutor/toolExecutor';
+import type { GoalBudgetLimits, GoalBudgetProperties, GoalBudgetReport, GoalState } from './types';
 
 const MAX_GOAL_OBJECTIVE_LENGTH = 4000;
 
@@ -276,16 +193,128 @@ export const goalResumeContinuationKey = defineState<ResumeContinuation | undefi
   () => undefined as ResumeContinuation | undefined,
 );
 
-import { AgentGoalServiceContinuation } from './goalService.continuation';
+function computeBudgetReport(state: GoalState, wallClockMs: number): GoalBudgetReport {
+  const tokenBudget = state.budgetLimits.tokenBudget ?? null;
+  const turnBudget = state.budgetLimits.turnBudget ?? null;
+  const wallClockBudgetMs = state.budgetLimits.wallClockBudgetMs ?? null;
 
-export class AgentGoalService extends AgentGoalServiceContinuation {
+  const tokenBudgetReached = tokenBudget !== null && state.tokensUsed >= tokenBudget;
+  const turnBudgetReached = turnBudget !== null && state.turnsUsed >= turnBudget;
+  const wallClockBudgetReached = wallClockBudgetMs !== null && wallClockMs >= wallClockBudgetMs;
 
+  return {
+    tokenBudget,
+    turnBudget,
+    wallClockBudgetMs,
+    remainingTokens: tokenBudget === null ? null : Math.max(0, tokenBudget - state.tokensUsed),
+    remainingTurns: turnBudget === null ? null : Math.max(0, turnBudget - state.turnsUsed),
+    remainingWallClockMs:
+      wallClockBudgetMs === null ? null : Math.max(0, wallClockBudgetMs - wallClockMs),
+    tokenBudgetReached,
+    turnBudgetReached,
+    wallClockBudgetReached,
+    overBudget: tokenBudgetReached || turnBudgetReached || wallClockBudgetReached,
+  };
 }
 
-registerScopedService(
-  LifecycleScope.Agent,
-  IAgentGoalService,
-  AgentGoalService,
-  ScopeActivation.OnScopeCreated,
-  'goal',
-);
+function matchesGoal(state: GoalState, goalId: string | undefined): boolean {
+  return goalId === undefined || state.goalId === goalId;
+}
+
+function isGoalMutationTool(toolName: string): boolean {
+  return toolName === 'CreateGoal' || toolName === 'UpdateGoal' || toolName === 'SetGoalBudget';
+}
+
+function toGoalStartReviewPermissionMode(label: string | undefined): PermissionMode | undefined {
+  if (label === 'auto' || label === 'yolo' || label === 'manual') return label;
+  return undefined;
+}
+
+function goalBudgetBlockReason(budget: GoalBudgetReport): string | undefined {
+  const reached: string[] = [];
+  if (budget.turnBudgetReached) {
+    reached.push(`turn budget ${budget.turnBudget ?? ''}`.trim());
+  }
+  if (budget.tokenBudgetReached) {
+    reached.push(`token budget ${budget.tokenBudget ?? ''}`.trim());
+  }
+  if (budget.wallClockBudgetReached) {
+    reached.push(`wall-clock budget ${budget.wallClockBudgetMs ?? ''}ms`.trim());
+  }
+  return reached.length === 0 ? undefined : `${GOAL_BUDGET_BLOCK_PREFIX}: ${reached.join(', ')}`;
+}
+
+function budgetTelemetryProperties(limits: GoalBudgetLimits): GoalBudgetProperties {
+  return {
+    has_token_budget: limits.tokenBudget !== undefined,
+    has_turn_budget: limits.turnBudget !== undefined,
+    has_wall_clock_budget: limits.wallClockBudgetMs !== undefined,
+  };
+}
+
+function normalizeCompletionCriterion(value: string | undefined): string | undefined {
+  const trimmed = value?.trim();
+  if (!trimmed?.length) return undefined;
+  return trimmed.length > MAX_GOAL_COMPLETION_CRITERION_LENGTH
+    ? trimmed.slice(0, MAX_GOAL_COMPLETION_CRITERION_LENGTH)
+    : trimmed;
+}
+
+function hasStepBudgetRemaining(maxSteps: number | undefined, currentStep: number): boolean {
+  return maxSteps === undefined || maxSteps <= 0 || currentStep < maxSteps;
+}
+
+function isTerminalUpdateGoalResult(
+  toolName: string,
+  args: unknown,
+  result: ExecutableToolResult,
+): boolean {
+  if (toolName !== 'UpdateGoal' || result.isError === true || result.stopTurn !== true) {
+    return false;
+  }
+  if (!isPlainRecord(args)) return false;
+  const status = args['status'];
+  return status === 'complete' || status === 'blocked';
+}
+
+function isMaxStepsTurnFailure(result: Pick<TurnEndedEvent, 'reason' | 'error'>): boolean {
+  return (
+    result.reason === 'failed' &&
+    normalizeGoalErrorPayload(result.error).code === LoopErrors.codes.LOOP_MAX_STEPS_EXCEEDED
+  );
+}
+
+function goalFailurePauseReason(error: unknown): string {
+  const payload = normalizeGoalErrorPayload(error);
+  switch (payload.code) {
+    case ErrorCodes.PROVIDER_RATE_LIMIT:
+      return GOAL_RATE_LIMIT_PAUSE_REASON;
+    case ErrorCodes.PROVIDER_CONNECTION_ERROR:
+      return pauseReasonWithMessage(GOAL_PROVIDER_CONNECTION_PAUSE_PREFIX, payload.message);
+    case ErrorCodes.PROVIDER_AUTH_ERROR:
+      return pauseReasonWithMessage(GOAL_PROVIDER_AUTH_PAUSE_PREFIX, payload.message);
+    case ErrorCodes.PROVIDER_FILTERED:
+      return GOAL_PROVIDER_FILTERED_PAUSE_REASON;
+    case ErrorCodes.PROVIDER_API_ERROR:
+      return pauseReasonWithMessage(GOAL_PROVIDER_API_PAUSE_PREFIX, payload.message);
+    case ErrorCodes.MODEL_NOT_CONFIGURED:
+      return pauseReasonWithMessage(GOAL_MODEL_CONFIG_PAUSE_PREFIX, LLM_NOT_SET_MESSAGE);
+    case ErrorCodes.MODEL_CONFIG_INVALID:
+      return pauseReasonWithMessage(GOAL_MODEL_CONFIG_PAUSE_PREFIX, payload.message);
+    default:
+      return pauseReasonWithMessage(GOAL_RUNTIME_PAUSE_PREFIX, payload.message);
+  }
+}
+
+function normalizeGoalErrorPayload(error: unknown): KimiErrorPayload {
+  const payload = toKimiErrorPayload(error);
+  if (payload.code === ErrorCodes.MODEL_NOT_CONFIGURED) {
+    return { ...payload, message: LLM_NOT_SET_MESSAGE };
+  }
+  return payload;
+}
+
+function pauseReasonWithMessage(prefix: string, message: string | undefined): string {
+  const trimmed = message?.trim();
+  return trimmed === undefined || trimmed.length === 0 ? prefix : `${prefix}: ${trimmed}`;
+}

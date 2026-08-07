@@ -29,7 +29,6 @@
  * Agent scope.
  */
 
-import { createHash } from 'node:crypto';
 import { LifecycleScope, ScopeActivation, registerScopedService } from '#/_base/di/scope';
 import { defineState } from '#/_base/state/stateRegistry';
 import { IAgentContextMemoryService } from '#/agent/contextMemory/contextMemory';
@@ -88,6 +87,21 @@ import {
   type AgentLLMRequestTask,
   type PreparedTurnRequestConfig,
 } from './llmRequester';
+import {
+  apiStatusCode,
+  apiTraceId,
+  fingerprint,
+  logFieldsForSource,
+  MutableLLMRequestTrace,
+  numberField,
+  projectionField,
+  providerVisibleTools,
+  requestKindForRecord,
+  requestKindForTelemetry,
+  stringField,
+  toolSignature,
+} from './llmRequesterHelpers';
+
 import type { LLMRequestTrace } from '#/kosong/contract/requestTrace';
 import {
   LlmRequestTraceModel,
@@ -734,109 +748,6 @@ export class AgentLLMRequesterService implements IAgentLLMRequesterService {
         deferred: tool.deferred,
       }));
   }
-}
-
-class MutableLLMRequestTrace implements LLMRequestTrace {
-  traceId: string | undefined;
-
-  set(traceId: string | undefined): void {
-    this.traceId = traceId;
-  }
-}
-
-function logFieldsForSource(source: AgentLLMRequestSource | undefined): AgentLLMRequestLogFields {
-  switch (source?.type) {
-    case 'turn':
-      return {
-        ...source.logFields,
-        ...(source.step === undefined
-          ? {}
-          : { turnStep: `${String(source.turnId)}.${String(source.step)}` }),
-      };
-    case 'operation':
-      return {
-        ...source.logFields,
-        ...(source.requestKind === undefined ? {} : { requestKind: source.requestKind }),
-      };
-    default:
-      return {};
-  }
-}
-
-function requestKindForTelemetry(source: AgentLLMRequestSource | undefined): string | undefined {
-  if (source?.type === 'turn') return 'turn';
-  if (source?.type === 'operation') return source.requestKind ?? 'operation';
-  return undefined;
-}
-
-function providerVisibleTools(tools: readonly Tool[]): readonly Tool[] {
-  if (!tools.some((tool) => tool.deferred === true)) return tools;
-  return tools.filter((tool) => tool.deferred !== true);
-}
-
-function toolSignature(tools: readonly Tool[]): readonly LlmRequestToolSchema[] {
-  return tools.map(({ name, description, parameters }) => ({ name, description, parameters }));
-}
-
-function requestKindForRecord(fields: AgentLLMRequestLogFields): PayloadOf<typeof llmRequest>['kind'] {
-  if (fields['kind'] === 'compaction') return 'compaction';
-  if (fields['requestKind'] === 'full_compaction') return 'compaction';
-  return 'loop';
-}
-
-function stringField(fields: AgentLLMRequestLogFields, key: string): string | undefined {
-  const value = fields[key];
-  return typeof value === 'string' ? value : undefined;
-}
-
-function numberField(fields: AgentLLMRequestLogFields, key: string): number | undefined {
-  const value = fields[key];
-  return typeof value === 'number' ? value : undefined;
-}
-
-function projectionField(
-  fields: AgentLLMRequestLogFields,
-): 'strict' | 'media-degraded' | 'media-stripped' | undefined {
-  const value = fields['projection'];
-  return value === 'strict' || value === 'media-degraded' || value === 'media-stripped'
-    ? value
-    : undefined;
-}
-
-function fingerprint(content: string): string {
-  return createHash('sha256').update(content).digest('hex');
-}
-
-function apiStatusCode(error: unknown): number | undefined {
-  const raw = unwrapErrorCause(error);
-  if (raw instanceof APIStatusError) return raw.statusCode;
-  if (typeof raw === 'object' && raw !== null) {
-    const statusCode = (raw as Record<string, unknown>)['statusCode'];
-    if (typeof statusCode === 'number') return statusCode;
-    const status = (raw as Record<string, unknown>)['status'];
-    if (typeof status === 'number') return status;
-  }
-  if (typeof error === 'object' && error !== null) {
-    const details = (error as Record<string, unknown>)['details'];
-    if (typeof details === 'object' && details !== null) {
-      const statusCode = (details as Record<string, unknown>)['statusCode'];
-      if (typeof statusCode === 'number') return statusCode;
-    }
-  }
-  return undefined;
-}
-
-function apiTraceId(error: unknown): string | undefined {
-  const raw = unwrapErrorCause(error);
-  if (raw instanceof APIStatusError && raw.traceId !== null) return raw.traceId;
-  if (typeof error === 'object' && error !== null) {
-    const details = (error as Record<string, unknown>)['details'];
-    if (typeof details === 'object' && details !== null) {
-      const traceId = (details as Record<string, unknown>)['traceId'];
-      if (typeof traceId === 'string') return traceId;
-    }
-  }
-  return undefined;
 }
 
 registerScopedService(

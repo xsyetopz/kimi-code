@@ -449,6 +449,7 @@ export * from "#/app/auth/providerAuth";
 export * from "#/app/auth/opencodeAuthAdapter";
 import "#/app/auth/opencodeAuthAdapterService";
 export * from "#/app/auth/authService";
+import "#/app/auth/authSummaryService";
 export * from "#/app/auth/configSection";
 export * from "#/app/auth/webSearch/webSearch";
 export * from "#/app/auth/webSearch/webSearchService";

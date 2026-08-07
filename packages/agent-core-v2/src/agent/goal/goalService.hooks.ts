@@ -276,16 +276,81 @@ export const goalResumeContinuationKey = defineState<ResumeContinuation | undefi
   () => undefined as ResumeContinuation | undefined,
 );
 
-import { AgentGoalServiceContinuation } from './goalService.continuation';
+import { AgentGoalServiceCore } from './goalService.core';
 
-export class AgentGoalService extends AgentGoalServiceContinuation {
+export class AgentGoalServiceHooks extends AgentGoalServiceCore {
+
+  private async handleBeforeStep(ctx: BeforeStepContext): Promise<void> {
+    const goalId = this.goalDrivenTurns.get(ctx.turnId);
+    if (goalId === undefined) return;
+    if (this.countedGoalTurns.has(ctx.turnId)) return;
+    this.countedGoalTurns.add(ctx.turnId);
+    this.incrementGoalTurn(goalId);
+  }
+
+  private handleUsageRecorded(ctx: UsageRecordedContext): void {
+    const source = ctx.source;
+    if (source?.type !== 'turn') return;
+    const goalId = this.goalDrivenTurns.get(source.turnId);
+    if (goalId === undefined) return;
+    this.accountTokenUsage(ctx.usage.output, goalId);
+  }
+
+  private handleAfterStep(ctx: AfterStepContext): void {
+    if (this.stopAfterBudgetReached(ctx)) return;
+    this.enqueueGoalOutcomeContinuation(ctx);
+  }
+
+  private stopAfterBudgetReached(ctx: AfterStepContext): boolean {
+    const goalId = this.goalTurnTarget(ctx.turnId);
+    const state = this.goalState;
+    const budget = state === null ? null : this.toSnapshot(state).budget;
+    const turnBudgetBlocksCurrentTurn =
+      budget?.turnBudgetReached === true &&
+      (this.exhaustedTurnBudgetGoals.get(ctx.turnId) === goalId ||
+        (state?.status === 'blocked' &&
+          state.terminalReason?.startsWith(GOAL_BUDGET_BLOCK_PREFIX) === true));
+    if (
+      goalId === undefined ||
+      state === null ||
+      state.goalId !== goalId ||
+      budget === null ||
+      (!budget.tokenBudgetReached &&
+        !budget.wallClockBudgetReached &&
+        !turnBudgetBlocksCurrentTurn)
+    ) {
+      return false;
+    }
+    const maxSteps = this.config.get<LoopControl>(LOOP_CONTROL_SECTION)?.maxStepsPerTurn;
+    if (
+      ctx.finishReason === 'tool_calls' &&
+      !this.budgetGraceTurns.has(ctx.turnId) &&
+      hasStepBudgetRemaining(maxSteps, ctx.step)
+    ) {
+      this.budgetGraceTurns.add(ctx.turnId);
+      this.reminders.appendSystemReminder(GOAL_BUDGET_STOP_REMINDER, {
+        kind: 'system_trigger',
+        name: GOAL_BUDGET_STOP_REMINDER_NAME,
+      });
+      return true;
+    }
+    ctx.stopTurn = true;
+    return true;
+  }
+
+  private enqueueGoalOutcomeContinuation(ctx: AfterStepContext): void {
+    if (this.goalOutcomeContinuationTurns.has(ctx.turnId)) return;
+    const goalId = this.goalTurnTarget(ctx.turnId);
+    const outcomeGoalId = this.goalOutcomeToolResultTurns.get(ctx.turnId);
+    this.goalOutcomeToolResultTurns.delete(ctx.turnId);
+    if (goalId === undefined || outcomeGoalId !== goalId) return;
+    const state = this.goalState;
+    if (state !== null && state.goalId !== goalId) return;
+    this.goalOutcomeContinuationTurns.add(ctx.turnId);
+    const maxSteps = this.config.get<LoopControl>(LOOP_CONTROL_SECTION)?.maxStepsPerTurn;
+    if (!hasStepBudgetRemaining(maxSteps, ctx.step)) return;
+    this.loopService.enqueue(new ContinuationStepRequest());
+  }
 
 }
 
-registerScopedService(
-  LifecycleScope.Agent,
-  IAgentGoalService,
-  AgentGoalService,
-  ScopeActivation.OnScopeCreated,
-  'goal',
-);

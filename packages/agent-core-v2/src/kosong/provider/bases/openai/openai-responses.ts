@@ -69,685 +69,8 @@ import {
   normalizeToolCallIdsForProvider,
   sanitizeOpenAIResponsesCallId,
 } from "../tool-call-id";
-
-function normalizeResponsesFinishReason(
-  status: string | null | undefined,
-  incompleteReason: string | null | undefined,
-): { finishReason: FinishReason | null; rawFinishReason: string | null } {
-  if (status === null || status === undefined) {
-    return { finishReason: null, rawFinishReason: null };
-  }
-  if (status === "completed") {
-    return { finishReason: "completed", rawFinishReason: "completed" };
-  }
-  if (status === "incomplete") {
-    if (incompleteReason === "max_output_tokens") {
-      return {
-        finishReason: "truncated",
-        rawFinishReason: "max_output_tokens",
-      };
-    }
-    if (incompleteReason === "content_filter") {
-      return { finishReason: "filtered", rawFinishReason: "content_filter" };
-    }
-    return {
-      finishReason: "other",
-      rawFinishReason: incompleteReason ?? "incomplete",
-    };
-  }
-  if (status === "failed") {
-    return { finishReason: "other", rawFinishReason: "failed" };
-  }
-  return { finishReason: null, rawFinishReason: null };
-}
-
-type RawObject = Record<string, unknown>;
-const OPENAI_RESPONSES_TOOL_CALL_ID_POLICY: ToolCallIdPolicy = {
-  normalize: (id) => sanitizeOpenAIResponsesCallId(id, 64),
-  maxLength: 64,
-};
-
-type ResponseOutputItemView =
-  | {
-      type: "message";
-      content: RawObject[];
-    }
-  | {
-      type: "function_call";
-      itemId?: string;
-      callId?: string;
-      name?: string;
-      arguments?: string | null;
-    }
-  | {
-      type: "reasoning";
-      encryptedContent?: string;
-      summary: RawObject[];
-    }
-  | {
-      type: "other";
-    };
-
-function asRawObject(value: unknown): RawObject | null {
-  if (value === null || typeof value !== "object" || Array.isArray(value)) {
-    return null;
-  }
-  return value as RawObject;
-}
-
-function readStringField(object: RawObject, key: string): string | undefined {
-  const value = object[key];
-  return typeof value === "string" ? value : undefined;
-}
-
-function hasOwn(object: RawObject, key: string): boolean {
-  return Object.prototype.hasOwnProperty.call(object, key);
-}
-
-function readNullableStringField(
-  object: RawObject,
-  key: string,
-): string | null | undefined {
-  const value = object[key];
-  if (value === null) return null;
-  return typeof value === "string" ? value : undefined;
-}
-
-function readNumberField(object: RawObject, key: string): number | undefined {
-  const value = object[key];
-  return typeof value === "number" ? value : undefined;
-}
-
-function readObjectField(
-  object: RawObject,
-  key: string,
-): RawObject | undefined {
-  return asRawObject(object[key]) ?? undefined;
-}
-
-function readObjectArrayField(
-  object: RawObject,
-  key: string,
-): RawObject[] | undefined {
-  const value = object[key];
-  if (!Array.isArray(value)) return undefined;
-  return value.flatMap((item) => {
-    const objectItem = asRawObject(item);
-    return objectItem === null ? [] : [objectItem];
-  });
-}
-
-function failResponsesDecode(context: string, detail: string): never {
-  throw new ChatProviderError(
-    `OpenAI Responses decode error: ${context} ${detail}`,
-  );
-}
-
-function requireStringField(
-  object: RawObject,
-  key: string,
-  context: string,
-): string {
-  const value = readStringField(object, key);
-  if (value === undefined) {
-    failResponsesDecode(`${context}.${key}`, "must be a string.");
-  }
-  return value;
-}
-
-function requireObjectField(
-  object: RawObject,
-  key: string,
-  context: string,
-): RawObject {
-  const value = readObjectField(object, key);
-  if (value === undefined) {
-    failResponsesDecode(`${context}.${key}`, "must be an object.");
-  }
-  return value;
-}
-
-function readResponseOutputItem(
-  value: unknown,
-  context: string,
-): ResponseOutputItemView {
-  const item = asRawObject(value);
-  if (item === null) {
-    failResponsesDecode(context, "must be an object.");
-  }
-
-  const type = requireStringField(item, "type", context);
-
-  if (type === "message") {
-    return {
-      type,
-      content: readObjectArrayField(item, "content") ?? [],
-    };
-  }
-
-  if (type === "function_call") {
-    return {
-      type,
-      itemId: readStringField(item, "id"),
-      callId: readStringField(item, "call_id"),
-      name: readStringField(item, "name"),
-      arguments: readNullableStringField(item, "arguments"),
-    };
-  }
-
-  if (type === "reasoning") {
-    return {
-      type,
-      encryptedContent: readStringField(item, "encrypted_content"),
-      summary: readObjectArrayField(item, "summary") ?? [],
-    };
-  }
-
-  return { type: "other" };
-}
-
-function responseStreamIndex(
-  itemId: string | undefined,
-  outputIndex: number | undefined,
-): string | number | undefined {
-  return itemId ?? outputIndex;
-}
-
-function formatResponseStreamIndex(
-  streamIndex: string | number | undefined,
-): string {
-  return streamIndex === undefined ? "<unindexed>" : String(streamIndex);
-}
-
-function requireFunctionCallName(item: { name?: string }): string {
-  if (item.name === undefined) {
-    throw new ChatProviderError(
-      "OpenAI Responses function_call item is missing a name.",
-    );
-  }
-  return item.name;
-}
-
-function functionCallId(callId: string | undefined): string {
-  return callId === undefined || callId.length === 0
-    ? crypto.randomUUID()
-    : callId;
-}
-
-function formatResponsesErrorEvent(
-  code: string | null,
-  message: string,
-  param: string | null,
-): string {
-  const codeText = code ?? "unknown";
-  const paramText = param === null ? "" : ` (param: ${param})`;
-  return `${codeText}: ${message}${paramText}`;
-}
-
-const EMBEDDED_STATUS_CODE_RE = /\bstatus_code\s*[:=]\s*(\d{3})\b/;
-
-function readEmbeddedStatusCode(message: string): number | undefined {
-  const match = EMBEDDED_STATUS_CODE_RE.exec(message);
-  return match === null ? undefined : Number(match[1]);
-}
-
-function errorFromOpenAIResponsesEvent(
-  prefix: string,
-  code: string | null,
-  message: string,
-  param: string | null,
-  options?: {
-    readonly rawEvent?: unknown;
-    readonly convertErrorHook?: (
-      error: unknown,
-    ) => ChatProviderError | undefined;
-  },
-): ChatProviderError {
-  const formatted = formatResponsesErrorEvent(code, message, param);
-  const fullMessage = `${prefix}: ${formatted}`;
-  const hooked = options?.convertErrorHook?.(
-    options.rawEvent ?? { code, message, param },
-  );
-  if (hooked !== undefined) {
-    return hooked;
-  }
-  if (isContextOverflowErrorCode(code)) {
-    return new APIContextOverflowError(400, fullMessage);
-  }
-  if (isOpenAIInsufficientQuotaCode(code)) {
-    return new APIProviderQuotaExhaustedError(fullMessage);
-  }
-  if (
-    code === "rate_limit_exceeded" ||
-    readEmbeddedStatusCode(message) === 429
-  ) {
-    return new APIProviderRateLimitError(fullMessage);
-  }
-  return new ChatProviderError(fullMessage);
-}
-
-function parseNestedGatewayStreamError(message: string):
-  | {
-      code: string | null;
-      message: string;
-      param: string | null;
-    }
-  | undefined {
-  const marker = "received error while streaming:";
-  const markerIndex = message.indexOf(marker);
-  if (markerIndex === -1) return undefined;
-
-  const jsonText = message.slice(markerIndex + marker.length).trim();
-  if (jsonText.length === 0) return undefined;
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(jsonText);
-  } catch {
-    return undefined;
-  }
-
-  const error = asRawObject(parsed);
-  if (error === null) return undefined;
-
-  const nestedMessage = readStringField(error, "message");
-  if (nestedMessage === undefined) return undefined;
-
-  return {
-    code: readNullableStringField(error, "code") ?? null,
-    message: nestedMessage,
-    param: readNullableStringField(error, "param") ?? null,
-  };
-}
-
-function malformedStreamErrorEvent(
-  message: string,
-  convertErrorHook?: (error: unknown) => ChatProviderError | undefined,
-): ChatProviderError {
-  const nested = parseNestedGatewayStreamError(message);
-  if (nested !== undefined) {
-    return errorFromOpenAIResponsesEvent(
-      "OpenAI Responses malformed stream error",
-      nested.code,
-      nested.message,
-      nested.param,
-      { convertErrorHook },
-    );
-  }
-
-  return errorFromOpenAIResponsesEvent(
-    "OpenAI Responses malformed stream error",
-    null,
-    message,
-    null,
-    { convertErrorHook },
-  );
-}
-
-function readResponsesFailedResponseError(response: RawObject):
-  | {
-      code: string | null;
-      message: string;
-    }
-  | undefined {
-  const error = readObjectField(response, "error");
-  if (error !== undefined) {
-    const code = readNullableStringField(error, "code") ?? "unknown";
-    const message = readStringField(error, "message") ?? "no message";
-    return { code, message };
-  }
-  return undefined;
-}
-
-function formatResponsesFailedResponse(response: RawObject): string {
-  const error = readResponsesFailedResponseError(response);
-  if (error !== undefined) {
-    return formatResponsesErrorEvent(error.code, error.message, null);
-  }
-
-  const incompleteDetails = readObjectField(response, "incomplete_details");
-  const reason =
-    incompleteDetails === undefined
-      ? undefined
-      : readStringField(incompleteDetails, "reason");
-  return reason === undefined
-    ? "Unknown error (no error details in response)"
-    : `incomplete: ${reason}`;
-}
-
-export interface OpenAIResponsesOptions {
-  apiKey?: string | undefined;
-  baseUrl?: string | undefined;
-  model: string;
-  maxOutputTokens?: number | undefined;
-  offEffort?: string | undefined;
-  thinkingEffort?: ThinkingEffort | undefined;
-  httpClient?: unknown;
-  defaultHeaders?: Record<string, string>;
-  toolMessageConversion?: ToolMessageConversion | undefined;
-  clientFactory?: (auth: ProviderRequestAuth) => OpenAI;
-  convertError?: (error: unknown) => ChatProviderError | undefined;
-}
-
-export interface OpenAIResponsesGenerationKwargs {
-  max_output_tokens?: number | undefined;
-  temperature?: number | undefined;
-  top_p?: number | undefined;
-  reasoning_effort?: string | undefined;
-  [key: string]: unknown;
-}
-
-interface ResponseInputItem {
-  [key: string]: unknown;
-}
-
-interface ResponseToolParam {
-  type: string;
-  name: string;
-  description: string;
-  parameters: Record<string, unknown>;
-  strict: boolean;
-}
-
-function responseFormatToResponsesText(
-  format: ResponseFormat,
-): Record<string, unknown> {
-  if (format.type === "json_object") {
-    return { format: { type: "json_object" } };
-  }
-  return {
-    format: {
-      type: "json_schema",
-      name: format.jsonSchema.name,
-      schema: format.jsonSchema.schema,
-      strict: format.jsonSchema.strict,
-      description: format.jsonSchema.description,
-    },
-  };
-}
-
-const OMITTED_AUDIO_PLACEHOLDER = "(audio omitted: unsupported audio format)";
-const OMITTED_VIDEO_PLACEHOLDER =
-  "(video omitted: not supported by this provider)";
-
-function contentPartsToInputItems(parts: ContentPart[]): unknown[] {
-  const items: unknown[] = [];
-  for (const part of parts) {
-    switch (part.type) {
-      case "text":
-        if (part.text) {
-          items.push({ type: "input_text", text: part.text });
-        }
-        break;
-      case "image_url":
-        items.push({
-          type: "input_image",
-          detail: "auto",
-          image_url: part.imageUrl.url,
-        });
-        break;
-      case "audio_url": {
-        const mapped = mapAudioUrlToInputItem(part.audioUrl.url);
-        items.push(
-          mapped ?? { type: "input_text", text: OMITTED_AUDIO_PLACEHOLDER },
-        );
-        break;
-      }
-      case "video_url":
-        items.push({ type: "input_text", text: OMITTED_VIDEO_PLACEHOLDER });
-        break;
-      case "think":
-        break;
-    }
-  }
-  return items;
-}
-
-function contentPartsToOutputItems(parts: ContentPart[]): unknown[] {
-  const items: unknown[] = [];
-  for (const part of parts) {
-    if (part.type === "text" && part.text) {
-      items.push({ type: "output_text", text: part.text, annotations: [] });
-    }
-  }
-  return items;
-}
-
-function messageContentToFunctionOutputItems(
-  content: ContentPart[],
-): unknown[] {
-  const items: unknown[] = [];
-  for (const part of content) {
-    switch (part.type) {
-      case "text":
-        if (part.text) {
-          items.push({ type: "input_text", text: part.text });
-        }
-        break;
-      case "image_url":
-        items.push({ type: "input_image", image_url: part.imageUrl.url });
-        break;
-      case "audio_url": {
-        const mapped = mapAudioUrlToInputItem(part.audioUrl.url);
-        items.push(
-          mapped ?? { type: "input_text", text: OMITTED_AUDIO_PLACEHOLDER },
-        );
-        break;
-      }
-      case "video_url":
-        items.push({ type: "input_text", text: OMITTED_VIDEO_PLACEHOLDER });
-        break;
-      case "think":
-        break;
-    }
-  }
-  return items;
-}
-
-function mapAudioUrlToInputItem(url: string): unknown {
-  if (url.startsWith("data:audio/")) {
-    try {
-      const parts = url.split(",", 2);
-      if (
-        parts.length !== 2 ||
-        parts[0] === undefined ||
-        parts[1] === undefined
-      )
-        return null;
-      const header = parts[0];
-      const b64 = parts[1];
-      const subtypePart = header.split("/")[1];
-      if (subtypePart === undefined) return null;
-      const [subtypeHead = ""] = subtypePart.split(";");
-      const subtype = subtypeHead.toLowerCase();
-      const ext =
-        subtype === "mp3" || subtype === "mpeg"
-          ? "mp3"
-          : subtype === "wav"
-            ? "wav"
-            : null;
-      if (ext === null) return null;
-      return { type: "input_file", file_data: b64, filename: `inline.${ext}` };
-    } catch {
-      return null;
-    }
-  }
-  if (url.startsWith("http://") || url.startsWith("https://")) {
-    return { type: "input_file", file_url: url };
-  }
-  return null;
-}
-
-const OPENAI_RESPONSES_DEVELOPER_ROLE_MODELS = new Set([
-  "gpt-4.1",
-  "gpt-4.1-mini",
-  "gpt-4.1-nano",
-  "gpt-5-codex",
-  "o1",
-  "o1-mini",
-  "o1-pro",
-  "o3",
-  "o3-mini",
-  "o3-pro",
-  "o4-mini",
-]);
-
-export function usesOpenAIResponsesDeveloperRole(modelName: string): boolean {
-  const normalized = modelName.toLowerCase();
-  if (OPENAI_RESPONSES_DEVELOPER_ROLE_MODELS.has(normalized)) return true;
-  for (const cataloguedModel of OPENAI_RESPONSES_DEVELOPER_ROLE_MODELS) {
-    if (normalized.startsWith(cataloguedModel + "-")) return true;
-  }
-  return false;
-}
-
-function convertMessage(
-  message: Message,
-  modelName: string,
-  toolMessageConversion: ToolMessageConversion,
-): ResponseInputItem[] {
-  let role: string = message.role;
-  if (usesOpenAIResponsesDeveloperRole(modelName) && role === "system") {
-    role = "developer";
-  }
-
-  if (role === "tool") {
-    const callId = message.toolCallId ?? "";
-    let output: string | unknown[];
-    if (toolMessageConversion === "extract_text") {
-      const text = extractText(message);
-      output =
-        text.length === 0 && message.content.some(isMediaPart)
-          ? TOOL_RESULT_MEDIA_PLACEHOLDER
-          : text;
-    } else {
-      output = messageContentToFunctionOutputItems(message.content);
-    }
-    return [
-      {
-        call_id: callId,
-        output,
-        type: "function_call_output",
-      },
-    ];
-  }
-
-  const result: ResponseInputItem[] = [];
-
-  if (message.content.length > 0) {
-    const pendingParts: ContentPart[] = [];
-
-    const flushPendingParts = (): void => {
-      if (pendingParts.length === 0) return;
-      if (role === "assistant") {
-        result.push({
-          content: contentPartsToOutputItems(pendingParts),
-          role,
-          type: "message",
-        });
-      } else {
-        result.push({
-          content: contentPartsToInputItems(pendingParts),
-          role,
-          type: "message",
-        });
-      }
-      pendingParts.length = 0;
-    };
-
-    let i = 0;
-    const n = message.content.length;
-    while (i < n) {
-      const part = message.content[i];
-      if (part === undefined) break;
-      if (part.type === "think") {
-        flushPendingParts();
-        const encryptedValue = part.encrypted;
-        const summaries: unknown[] = [
-          { type: "summary_text", text: part.think },
-        ];
-        i += 1;
-        while (i < n) {
-          const nextPart = message.content[i];
-          if (nextPart === undefined) break;
-          if (nextPart.type !== "think") break;
-          if (nextPart.encrypted !== encryptedValue) break;
-          summaries.push({ type: "summary_text", text: nextPart.think });
-          i += 1;
-        }
-        result.push({
-          summary: summaries,
-          type: "reasoning",
-          encrypted_content: encryptedValue,
-        });
-      } else {
-        pendingParts.push(part);
-        i += 1;
-      }
-    }
-
-    flushPendingParts();
-  }
-
-  for (const toolCall of message.toolCalls) {
-    result.push({
-      arguments: toolCall.arguments ?? "{}",
-      call_id: toolCall.id,
-      name: toolCall.name,
-      type: "function_call",
-    });
-  }
-
-  return result;
-}
-
-function convertTool(tool: Tool): ResponseToolParam {
-  return {
-    type: "function",
-    name: tool.name,
-    description: tool.description,
-    parameters: tool.parameters,
-    strict: false,
-  };
-}
-
-function convertHistoryMessages(
-  history: readonly Message[],
-  modelName: string,
-  toolMessageConversion: ToolMessageConversion,
-): unknown[] {
-  const input: unknown[] = [];
-  const pendingToolResultMedia: unknown[] = [];
-
-  const flushPendingMedia = (): void => {
-    if (pendingToolResultMedia.length === 0) return;
-    input.push({
-      type: "message",
-      role: "user",
-      content: [
-        { type: "input_text", text: TOOL_RESULT_MEDIA_PROMPT },
-        ...pendingToolResultMedia,
-      ],
-    });
-    pendingToolResultMedia.length = 0;
-  };
-
-  for (const msg of history) {
-    if (isToolDeclarationOnlyMessage(msg)) continue;
-    if (msg.role !== "tool") {
-      flushPendingMedia();
-    }
-    input.push(...convertMessage(msg, modelName, toolMessageConversion));
-    if (msg.role === "tool" && toolMessageConversion === "extract_text") {
-      pendingToolResultMedia.push(
-        ...messageContentToFunctionOutputItems(msg.content.filter(isMediaPart)),
-      );
-    }
-  }
-
-  flushPendingMedia();
-  return input;
-}
+import * as decode from "./openai-responses.decode";
+import * as convert from "./openai-responses.convert";
 
 export class OpenAIResponsesStreamedMessage implements StreamedMessage {
   private _id: string | null = null;
@@ -793,22 +116,22 @@ export class OpenAIResponsesStreamedMessage implements StreamedMessage {
   }
 
   private _captureFinishReasonFromResponse(response: RawObject): void {
-    const status = readNullableStringField(response, "status");
-    const incomplete = readObjectField(response, "incomplete_details");
+    const status = decode.readNullableStringField(response, "status");
+    const incomplete = decode.readObjectField(response, "incomplete_details");
     const incompleteReason = incomplete
-      ? readStringField(incomplete, "reason")
+      ? decode.readStringField(incomplete, "reason")
       : null;
-    const normalized = normalizeResponsesFinishReason(status, incompleteReason);
+    const normalized = decode.normalizeResponsesFinishReason(status, incompleteReason);
     this._finishReason = normalized.finishReason;
     this._rawFinishReason = normalized.rawFinishReason;
   }
 
   private _extractUsage(usage: RawObject): void {
-    const inputTokens = readNumberField(usage, "input_tokens") ?? 0;
-    const outputTokens = readNumberField(usage, "output_tokens") ?? 0;
-    const details = readObjectField(usage, "input_tokens_details");
+    const inputTokens = decode.readNumberField(usage, "input_tokens") ?? 0;
+    const outputTokens = decode.readNumberField(usage, "output_tokens") ?? 0;
+    const details = decode.readObjectField(usage, "input_tokens_details");
     const cached = details
-      ? (readNumberField(details, "cached_tokens") ?? 0)
+      ? (decode.readNumberField(details, "cached_tokens") ?? 0)
       : 0;
     this._usage = {
       inputOther: inputTokens - cached,
@@ -821,23 +144,23 @@ export class OpenAIResponsesStreamedMessage implements StreamedMessage {
   private async *_convertNonStreamResponse(
     response: RawObject,
   ): AsyncGenerator<StreamedMessagePart> {
-    this._id = readStringField(response, "id") ?? null;
-    const usage = readObjectField(response, "usage");
+    this._id = decode.readStringField(response, "id") ?? null;
+    const usage = decode.readObjectField(response, "usage");
     if (usage !== undefined) {
       this._extractUsage(usage);
     }
     this._captureFinishReasonFromResponse(response);
 
-    const output = readObjectArrayField(response, "output");
+    const output = decode.readObjectArrayField(response, "output");
     if (output === undefined) return;
 
     for (const item of output) {
-      const outputItem = readResponseOutputItem(item, "response.output item");
+      const outputItem = decode.readResponseOutputItem(item, "response.output item");
 
       if (outputItem.type === "message") {
         for (const contentItem of outputItem.content) {
           if (contentItem["type"] === "output_text") {
-            const text = readStringField(contentItem, "text");
+            const text = decode.readStringField(contentItem, "text");
             if (text !== undefined) {
               yield { type: "text", text };
             }
@@ -846,14 +169,14 @@ export class OpenAIResponsesStreamedMessage implements StreamedMessage {
       } else if (outputItem.type === "function_call") {
         yield {
           type: "function",
-          id: functionCallId(outputItem.callId),
-          name: requireFunctionCallName(outputItem),
+          id: decode.functionCallId(outputItem.callId),
+          name: decode.requireFunctionCallName(outputItem),
           arguments: outputItem.arguments ?? null,
         } satisfies ToolCall;
       } else if (outputItem.type === "reasoning") {
         let hasReasoningSummary = false;
         for (const summary of outputItem.summary) {
-          const text = readStringField(summary, "text");
+          const text = decode.readStringField(summary, "text");
           if (text === undefined) continue;
           hasReasoningSummary = true;
           const thinkPart: StreamedMessagePart = {
@@ -915,9 +238,9 @@ export class OpenAIResponsesStreamedMessage implements StreamedMessage {
       context: string,
     ): void => {
       if (!hasFunctionCallArguments(streamIndex)) {
-        failResponsesDecode(
+        decode.failResponsesDecode(
           context,
-          `received function-call arguments for unknown stream index ${formatResponseStreamIndex(streamIndex)}.`,
+          `received function-call arguments for unknown stream index ${decode.formatResponseStreamIndex(streamIndex)}.`,
         );
       }
       setFunctionCallArguments(
@@ -932,9 +255,9 @@ export class OpenAIResponsesStreamedMessage implements StreamedMessage {
       context: string,
     ): Generator<StreamedMessagePart> {
       if (!hasFunctionCallArguments(streamIndex)) {
-        failResponsesDecode(
+        decode.failResponsesDecode(
           context,
-          `received final function-call arguments for unknown stream index ${formatResponseStreamIndex(streamIndex)}.`,
+          `received final function-call arguments for unknown stream index ${decode.formatResponseStreamIndex(streamIndex)}.`,
         );
       }
 
@@ -945,7 +268,7 @@ export class OpenAIResponsesStreamedMessage implements StreamedMessage {
 
       if (!finalArguments.startsWith(accumulatedArguments)) {
         throw new ChatProviderError(
-          `OpenAI Responses final function-call arguments for stream index ${formatResponseStreamIndex(
+          `OpenAI Responses final function-call arguments for stream index ${decode.formatResponseStreamIndex(
             streamIndex,
           )} do not match the streamed argument deltas.`,
         );
@@ -969,43 +292,43 @@ export class OpenAIResponsesStreamedMessage implements StreamedMessage {
 
     try {
       for await (const chunk of response) {
-        const type = readStringField(chunk, "type");
+        const type = decode.readStringField(chunk, "type");
         if (type === undefined) {
-          if (!hasOwn(chunk, "type")) {
-            const message = readStringField(chunk, "message");
+          if (!decode.hasOwn(chunk, "type")) {
+            const message = decode.readStringField(chunk, "message");
             if (message !== undefined) {
-              throw malformedStreamErrorEvent(message, this._convertErrorHook);
+              throw decode.malformedStreamErrorEvent(message, this._convertErrorHook);
             }
           }
-          failResponsesDecode("stream event.type", "must be a string.");
+          decode.failResponsesDecode("stream event.type", "must be a string.");
         }
 
         switch (type) {
           case "response.output_text.delta":
             yield {
               type: "text",
-              text: requireStringField(chunk, "delta", type),
+              text: decode.requireStringField(chunk, "delta", type),
             };
             break;
           case "response.created":
           case "response.in_progress": {
-            const responseObject = requireObjectField(chunk, "response", type);
-            const respId = readStringField(responseObject, "id");
+            const responseObject = decode.requireObjectField(chunk, "response", type);
+            const respId = decode.readStringField(responseObject, "id");
             if (respId !== undefined) {
               this._id = respId;
             }
             break;
           }
           case "response.output_item.added": {
-            const item = readResponseOutputItem(chunk["item"], `${type}.item`);
-            const outputIndex = readNumberField(chunk, "output_index");
+            const item = decode.readResponseOutputItem(chunk["item"], `${type}.item`);
+            const outputIndex = decode.readNumberField(chunk, "output_index");
             if (item.type === "function_call") {
-              const streamIndex = responseStreamIndex(item.itemId, outputIndex);
+              const streamIndex = decode.responseStreamIndex(item.itemId, outputIndex);
               setFunctionCallArguments(streamIndex, item.arguments ?? "");
               const tc: ToolCall = {
                 type: "function",
-                id: functionCallId(item.callId),
-                name: requireFunctionCallName(item),
+                id: decode.functionCallId(item.callId),
+                name: decode.requireFunctionCallName(item),
                 arguments: item.arguments ?? null,
               };
               if (streamIndex !== undefined) {
@@ -1016,8 +339,8 @@ export class OpenAIResponsesStreamedMessage implements StreamedMessage {
             break;
           }
           case "response.output_item.done": {
-            const item = readResponseOutputItem(chunk["item"], `${type}.item`);
-            const outputIndex = readNumberField(chunk, "output_index");
+            const item = decode.readResponseOutputItem(chunk["item"], `${type}.item`);
+            const outputIndex = decode.readNumberField(chunk, "output_index");
             if (item.type === "reasoning") {
               const thinkPart: StreamedMessagePart = {
                 type: "think",
@@ -1032,7 +355,7 @@ export class OpenAIResponsesStreamedMessage implements StreamedMessage {
               item.type === "function_call" &&
               typeof item.arguments === "string"
             ) {
-              const streamIndex = responseStreamIndex(item.itemId, outputIndex);
+              const streamIndex = decode.responseStreamIndex(item.itemId, outputIndex);
               yield* yieldFinalArgumentsSuffix(
                 streamIndex,
                 item.arguments,
@@ -1042,11 +365,11 @@ export class OpenAIResponsesStreamedMessage implements StreamedMessage {
             break;
           }
           case "response.function_call_arguments.delta": {
-            const streamIndex = responseStreamIndex(
-              readStringField(chunk, "item_id"),
-              readNumberField(chunk, "output_index"),
+            const streamIndex = decode.responseStreamIndex(
+              decode.readStringField(chunk, "item_id"),
+              decode.readNumberField(chunk, "output_index"),
             );
-            const argumentsPart = requireStringField(chunk, "delta", type);
+            const argumentsPart = decode.requireStringField(chunk, "delta", type);
             const part: StreamedMessagePart = {
               type: "tool_call_part",
               argumentsPart,
@@ -1059,14 +382,14 @@ export class OpenAIResponsesStreamedMessage implements StreamedMessage {
             break;
           }
           case "response.function_call_arguments.done": {
-            const functionArguments = requireStringField(
+            const functionArguments = decode.requireStringField(
               chunk,
               "arguments",
               type,
             );
-            const streamIndex = responseStreamIndex(
-              readStringField(chunk, "item_id"),
-              readNumberField(chunk, "output_index"),
+            const streamIndex = decode.responseStreamIndex(
+              decode.readStringField(chunk, "item_id"),
+              decode.readNumberField(chunk, "output_index"),
             );
             yield* yieldFinalArgumentsSuffix(
               streamIndex,
@@ -1081,17 +404,17 @@ export class OpenAIResponsesStreamedMessage implements StreamedMessage {
           case "response.reasoning_summary_text.delta":
             yield {
               type: "think",
-              think: requireStringField(chunk, "delta", type),
+              think: decode.requireStringField(chunk, "delta", type),
             };
             break;
           case "response.completed":
           case "response.incomplete": {
-            const responseObject = requireObjectField(chunk, "response", type);
-            const respId = readStringField(responseObject, "id");
+            const responseObject = decode.requireObjectField(chunk, "response", type);
+            const respId = decode.readStringField(responseObject, "id");
             if (respId !== undefined) {
               this._id = respId;
             }
-            const usage = readObjectField(responseObject, "usage");
+            const usage = decode.readObjectField(responseObject, "usage");
             if (usage !== undefined) {
               this._extractUsage(usage);
             }
@@ -1099,20 +422,20 @@ export class OpenAIResponsesStreamedMessage implements StreamedMessage {
             break;
           }
           case "error": {
-            const message = requireStringField(chunk, "message", type);
-            throw errorFromOpenAIResponsesEvent(
+            const message = decode.requireStringField(chunk, "message", type);
+            throw decode.errorFromOpenAIResponsesEvent(
               "OpenAI Responses stream error",
-              readNullableStringField(chunk, "code") ?? null,
+              decode.readNullableStringField(chunk, "code") ?? null,
               message,
-              readNullableStringField(chunk, "param") ?? null,
+              decode.readNullableStringField(chunk, "param") ?? null,
               { rawEvent: chunk, convertErrorHook: this._convertErrorHook },
             );
           }
           case "response.failed": {
-            const responseObject = requireObjectField(chunk, "response", type);
-            const error = readResponsesFailedResponseError(responseObject);
+            const responseObject = decode.requireObjectField(chunk, "response", type);
+            const error = decode.readResponsesFailedResponseError(responseObject);
             if (error !== undefined) {
-              throw errorFromOpenAIResponsesEvent(
+              throw decode.errorFromOpenAIResponsesEvent(
                 "OpenAI Responses response.failed",
                 error.code,
                 error.message,
@@ -1121,7 +444,7 @@ export class OpenAIResponsesStreamedMessage implements StreamedMessage {
               );
             }
             throw new ChatProviderError(
-              `OpenAI Responses response.failed: ${formatResponsesFailedResponse(responseObject)}`,
+              `OpenAI Responses response.failed: ${decode.formatResponsesFailedResponse(responseObject)}`,
             );
           }
           default:
@@ -1204,7 +527,7 @@ export class OpenAIResponsesChatProvider implements ChatProvider {
       OPENAI_RESPONSES_TOOL_CALL_ID_POLICY,
     );
     input.push(
-      ...convertHistoryMessages(
+      ...convert.convertHistoryMessages(
         normalizedHistory,
         this._model,
         this._toolMessageConversion,
@@ -1277,7 +600,7 @@ export class OpenAIResponsesChatProvider implements ChatProvider {
       const createParams: Record<string, unknown> = {
         model: this._model,
         input,
-        tools: tools.map((t) => convertTool(t)),
+        tools: tools.map((t) => convert.convertTool(t)),
         store: false,
         stream: this._stream,
         ...kwargs,
@@ -1287,8 +610,8 @@ export class OpenAIResponsesChatProvider implements ChatProvider {
       }
       if (options?.responseFormat !== undefined) {
         createParams["text"] = {
-          ...asRawObject(createParams["text"]),
-          ...responseFormatToResponsesText(options.responseFormat),
+          ...decode.asRawObject(createParams["text"]),
+          ...convert.responseFormatToResponsesText(options.responseFormat),
         };
       }
 
