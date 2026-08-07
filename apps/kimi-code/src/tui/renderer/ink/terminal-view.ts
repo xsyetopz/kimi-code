@@ -4,6 +4,8 @@ import { createElement, type ReactNode, useEffect, useState } from "react";
 import { SELECT_POINTER } from "../../constant/symbols";
 import { InkDialogView } from "./components/dialogs/InkDialogView";
 import { InkApprovalPreview } from "./components/dialogs/InkApprovalPreview";
+import { InkFooter } from "./components/InkFooter";
+import { InkQueue } from "./components/InkQueue";
 import { splitInkTranscript } from "./transcript-split";
 import type {
   TerminalActivityView,
@@ -264,18 +266,7 @@ export function InkTerminalView({
       }),
     ),
     activity === undefined ? null : createElement(Text, null, activity),
-    queue.messages.length === 0
-      ? null
-      : createElement(
-          Box,
-          { flexDirection: "column" },
-          ...queue.messages.map((message, index) =>
-            createElement(Text, { key: `${index}-${message}` }, message),
-          ),
-          queue.hint === undefined
-            ? null
-            : createElement(Text, { dimColor: true }, queue.hint),
-        ),
+    createElement(InkQueue, { queue }),
     createElement(Text, null, `${editor.prompt} ${editorText}`),
     editor.autocomplete.length === 0
       ? null
@@ -294,6 +285,6 @@ export function InkTerminalView({
           ),
         ),
     dialog,
-    createElement(Text, { dimColor: true }, chrome.footer),
+    createElement(InkFooter, { chrome }),
   );
 }
