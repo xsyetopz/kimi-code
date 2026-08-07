@@ -850,7 +850,6 @@ describe("ReadMediaFileTool", () => {
         { "/workspace/clip.mp4": { data: mp4Buffer() } },
         capabilities(),
         videoUploader,
-        undefined,
         true,
       ),
       { path: "/workspace/clip.mp4" },

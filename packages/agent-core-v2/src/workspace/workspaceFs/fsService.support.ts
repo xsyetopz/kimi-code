@@ -12,7 +12,6 @@ import type {
   FsListRequest,
   FsEntry,
 } from "./fs";
-import { isAbsolute, relative } from "node:path";
 import { ErrorCodes, Error2, isError2, unwrapErrorCause } from "#/errors";
 import type { HostFileStat } from "#/os/interface/hostFileSystem";
 import { buildEtag, guessLanguageId, guessMime } from "#/_base/utils/fileMeta";

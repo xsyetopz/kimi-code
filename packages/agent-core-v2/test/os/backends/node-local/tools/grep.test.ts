@@ -2086,6 +2086,10 @@ describe("GrepTool", () => {
   });
 
   it("appends the count-mode summary and pagination to the model-visible output", async () => {
+    const counts = Array.from(
+      { length: 10 },
+      (_, i) => `/workspace/f${String(i)}.txt:3`,
+    );
     const stdout = `${counts.join("\n")}\n`;
     const exec = vi.fn().mockResolvedValue(processWithOutput(stdout));
     const tool = new GrepTool(createFakeKaos({ exec }), {

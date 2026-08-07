@@ -246,7 +246,7 @@ export function budgetTokensForEffort(
   return undefined;
 }
 
-const CACHE_CONTROL = { type: "ephemeral" as const };
+export const CACHE_CONTROL = { type: "ephemeral" as const };
 
 type CacheableBlock = ContentBlockParam & {
   cache_control?: { type: "ephemeral" };
