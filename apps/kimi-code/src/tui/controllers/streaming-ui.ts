@@ -25,6 +25,17 @@ import type {
   TranscriptEntry,
 } from "../types";
 import type { TUIState } from "../tui-state";
+import {
+  StreamingUIToolGroups,
+  type StreamingUIToolGroupState,
+  cleanupStreamingAfterReplay,
+  markStreamingStepTruncated,
+  type StreamingUIReplayState,
+} from "./streaming-ui-tool-groups";
+import {
+  applyBackgroundTaskTerminalStatus as applySubagentTerminalStatus,
+  markSubagentBackgrounded as markSubagentDetached,
+} from "./streaming-ui-subagent";
 
 export interface StreamingUIHost {
   state: TUIState;
@@ -68,9 +79,7 @@ export class StreamingUIController {
   private pendingThinkingFlush = false;
   readonly pendingToolCallFlushIds = new Set<string>();
 
-  // ---------------------------------------------------------------------------
-  // Streaming runtime state (private — accessed via semantic methods below)
-  // ---------------------------------------------------------------------------
+  // Streaming runtime state
 
   private _currentTurnId: string | undefined = undefined;
   private _currentStep = 0;
@@ -103,12 +112,64 @@ export class StreamingUIController {
   } | null = null;
   private _agentGroupInkEntryId: string | undefined = undefined;
   private _readGroupInkEntryId: string | undefined = undefined;
+  private readonly toolGroups: StreamingUIToolGroups;
+  private readonly replayState: StreamingUIReplayState;
 
-  constructor(private readonly host: StreamingUIHost) {}
+  constructor(private readonly host: StreamingUIHost) {
+    const groupState: StreamingUIToolGroupState = {
+      getStep: () => this._currentStep,
+      getTurnId: () => this._currentTurnId,
+      getThinkingDraft: () => this._thinkingDraft,
+      hasStreamingBlock: () => this._streamingBlock !== null,
+      getPendingAgentGroup: () => this._pendingAgentGroup,
+      setPendingAgentGroup: (value) => {
+        this._pendingAgentGroup = value;
+      },
+      getPendingReadGroup: () => this._pendingReadGroup,
+      setPendingReadGroup: (value) => {
+        this._pendingReadGroup = value;
+      },
+      getAgentGroupInkEntryId: () => this._agentGroupInkEntryId,
+      setAgentGroupInkEntryId: (value) => {
+        this._agentGroupInkEntryId = value;
+      },
+      getReadGroupInkEntryId: () => this._readGroupInkEntryId,
+      setReadGroupInkEntryId: (value) => {
+        this._readGroupInkEntryId = value;
+      },
+      getActiveToolCall: (id) => this._activeToolCalls.get(id),
+      setActiveToolCall: (id, toolCall) => {
+        this._activeToolCalls.set(id, toolCall);
+      },
+      getStreamingToolCallArguments: (id) =>
+        this._streamingToolCallArguments.get(id),
+      getPendingToolComponent: (id) => this._pendingToolComponents.get(id),
+      finalizeLiveTextBuffers: (nextMode) => this.finalizeLiveTextBuffers(nextMode),
+      onToolCallStart: (toolCall) => this.onToolCallStart(toolCall),
+    };
+    this.toolGroups = new StreamingUIToolGroups(this.host, groupState);
+    this.replayState = {
+      host: this.host,
+      activeToolCalls: this._activeToolCalls,
+      pendingToolComponents: this._pendingToolComponents,
+      pendingToolCallFlushIds: this.pendingToolCallFlushIds,
+      streamingToolCallArguments: this._streamingToolCallArguments,
+      setPendingAgentGroup: (value) => {
+        this._pendingAgentGroup = value;
+      },
+      setPendingReadGroup: (value) => {
+        this._pendingReadGroup = value;
+      },
+      setTurnId: (value) => {
+        this._currentTurnId = value;
+      },
+      setStep: (value) => {
+        this._currentStep = value;
+      },
+    };
+  }
 
-  // ---------------------------------------------------------------------------
   // Turn context — read/write accessors
-  // ---------------------------------------------------------------------------
 
   getTurnContext(): { turnId: string | undefined; step: number } {
     return { turnId: this._currentTurnId, step: this._currentStep };
@@ -126,9 +187,7 @@ export class StreamingUIController {
     return this._currentTurnId !== undefined;
   }
 
-  // ---------------------------------------------------------------------------
-  // Text streaming — semantic write accessors
-  // ---------------------------------------------------------------------------
+  // Text streaming accessors
 
   appendThinkingDelta(delta: string): void {
     this._thinkingDraft += delta;
@@ -163,9 +222,7 @@ export class StreamingUIController {
     this._assistantDraft = "";
   }
 
-  // ---------------------------------------------------------------------------
-  // Tool call state — semantic accessors
-  // ---------------------------------------------------------------------------
+  // Tool call state accessors
 
   getActiveToolCall(id: string): ToolCallBlockData | undefined {
     return this._activeToolCalls.get(id);
@@ -243,100 +300,23 @@ export class StreamingUIController {
     agentId?: string | undefined;
     description: string;
     status: "completed" | "failed" | "timed_out" | "killed" | "lost";
-    /**
-     * Real failure message to surface on the card. Pass the `subagent.failed`
-     * event's `error` for live crashes — it is far more useful than the
-     * friendly generic the card falls back to. Omit on the resume / terminate
-     * path where no real error is available.
-     */
     errorText?: string | undefined;
   }): boolean {
-    const useAgentIdOnly = args.agentId !== undefined;
-    let agentIdMatch: ToolCallComponent | undefined;
-    let descMatch: ToolCallComponent | undefined;
-    let descAmbiguous = false;
-    const visit = (tc: ToolCallComponent): void => {
-      if (agentIdMatch !== undefined) return;
-      if (useAgentIdOnly) {
-        if (tc.getSubagentAgentId() === args.agentId) agentIdMatch = tc;
-        return;
-      }
-      if (tc.getAgentToolDescription() !== args.description) return;
-      if (descMatch !== undefined) {
-        descAmbiguous = true;
-        return;
-      }
-      descMatch = tc;
-    };
-
-    for (const tc of this._pendingToolComponents.values()) {
-      visit(tc);
-      if (agentIdMatch !== undefined) break;
-    }
-    if (agentIdMatch === undefined) {
-      for (const child of this.host.state.transcriptContainer.children) {
-        if (child instanceof ToolCallComponent) {
-          visit(child);
-        } else if (child instanceof AgentGroupComponent) {
-          for (const tc of child.getToolComponents()) {
-            visit(tc);
-            if (agentIdMatch !== undefined) break;
-          }
-        }
-        if (agentIdMatch !== undefined) break;
-      }
-    }
-    const target = useAgentIdOnly
-      ? agentIdMatch
-      : descAmbiguous
-        ? undefined
-        : descMatch;
-    if (target === undefined) return false;
-    target.setBackgroundTaskTerminalStatus(args.status, {
-      errorText: args.errorText,
-    });
-    return true;
+    return applySubagentTerminalStatus(
+      this.host,
+      this._pendingToolComponents,
+      args,
+    );
   }
 
-  /**
-   * Mark a foreground subagent card as detached-to-background (`◐ backgrounded`).
-   * Routed from a `background.task.started` event whose `info.kind === 'agent'`,
-   * keyed by `agentId`. Returns true iff a matching component was found.
-   *
-   * Gated to cards that are currently foreground-running: `background.task.started`
-   * also fires for `Agent(run_in_background=true)` launches and for background
-   * resumes, and those must not mutate older completed rows that happen to share
-   * the same `agentId` (a resume's new card has no parsed `agent_id` yet, so the
-   * search can otherwise hit the previous completed card).
-   */
   markSubagentBackgrounded(agentId: string | undefined): boolean {
-    if (agentId === undefined) return false;
-    const visit = (tc: ToolCallComponent): boolean => {
-      if (tc.getSubagentAgentId() !== agentId) return false;
-      const phase = tc.getSubagentSnapshot().phase;
-      if (phase !== "running" && phase !== "queued" && phase !== "spawning")
-        return false;
-      tc.markBackgrounded();
-      return true;
-    };
-    for (const tc of this._pendingToolComponents.values()) {
-      if (visit(tc)) return true;
-    }
-    for (const child of this.host.state.transcriptContainer.children) {
-      if (child instanceof ToolCallComponent) {
-        if (visit(child)) return true;
-      } else if (child instanceof AgentGroupComponent) {
-        for (const tc of child.getToolComponents()) {
-          if (visit(tc)) return true;
-        }
-      }
-    }
-    return false;
+    return markSubagentDetached(
+      this.host,
+      this._pendingToolComponents,
+      agentId,
+    );
   }
 
-  /** Registers a tool call that arrived via tool.call.started.
-   *  Clears any pending streaming state for this id, updates or creates the
-   *  component, and returns whether the call was new (no previous entry). */
   registerToolCall(toolCall: ToolCallBlockData): boolean {
     const existing = this._activeToolCalls.get(toolCall.id);
     this._activeToolCalls.set(toolCall.id, toolCall);
@@ -354,7 +334,6 @@ export class StreamingUIController {
     return existing === undefined;
   }
 
-  /** Accumulates a streaming tool-call argument delta. */
   accumulateToolCallDelta(
     id: string,
     eventName: string | undefined,
@@ -399,8 +378,6 @@ export class StreamingUIController {
     };
   }
 
-  /** Completes a tool call: delivers the result and removes tracking state.
-   *  Returns the matched ToolCallBlockData, or undefined if no call was tracked. */
   completeToolResult(
     toolCallId: string,
     result: ToolResultBlockData,
@@ -414,45 +391,15 @@ export class StreamingUIController {
     return matchedCall;
   }
 
-  /** Marks in-flight tool calls as truncated when a step hits max_tokens.
-   *  Returns the count of tool calls that were truncated. */
   markStepTruncated(turnId: string, step: number): number {
-    let count = 0;
-    for (const toolCall of this._activeToolCalls.values()) {
-      if (toolCall.result !== undefined) continue;
-      if (toolCall.streamingArguments === undefined) continue;
-      if (toolCall.turnId !== turnId) continue;
-      if (toolCall.step !== step) continue;
-      toolCall.truncated = true;
-      const component = this._pendingToolComponents.get(toolCall.id);
-      if (component !== undefined) {
-        component.updateToolCall(toolCall);
-      }
-      count += 1;
-    }
-    this._streamingToolCallArguments.clear();
-    return count;
+    return markStreamingStepTruncated(this.replayState, turnId, step);
   }
 
-  /** Tears down replay-specific state after session history has been rendered. */
   cleanupAfterReplay(completedToolCallIds: Set<string>): void {
-    this._activeToolCalls.clear();
-    for (const toolCallId of completedToolCallIds) {
-      this._pendingToolComponents.delete(toolCallId);
-    }
-    this._pendingAgentGroup = null;
-    this._pendingReadGroup = null;
-    this._currentTurnId = undefined;
-    this._currentStep = 0;
-    this._streamingToolCallArguments.clear();
-    this.pendingToolCallFlushIds.clear();
-    this.host.requestTerminalRender();
+    cleanupStreamingAfterReplay(this.replayState, completedToolCallIds);
   }
 
-  // ---------------------------------------------------------------------------
-  // Dispose helpers (moved from KimiTUI)
-  // ---------------------------------------------------------------------------
-
+  // Dispose helpers
   disposeActiveThinkingComponent(): void {
     if (this._activeThinkingComponent !== undefined) {
       this._activeThinkingComponent.dispose();
@@ -474,10 +421,7 @@ export class StreamingUIController {
     }
   }
 
-  // ---------------------------------------------------------------------------
   // Flush control
-  // ---------------------------------------------------------------------------
-
   hasPending(): boolean {
     return (
       this.pendingAssistantFlush ||
@@ -539,7 +483,7 @@ export class StreamingUIController {
       this.onStreamingTextUpdate(this._assistantDraft);
     }
     for (const id of toolCallIds) {
-      this.flushToolCallPreview(id);
+      this.toolGroups.flushToolCallPreview(id);
     }
   }
 
@@ -551,9 +495,7 @@ export class StreamingUIController {
     this.pendingThinkingFlush = true;
   }
 
-  // ---------------------------------------------------------------------------
   // Text streaming
-  // ---------------------------------------------------------------------------
 
   flushThinkingToTranscript(nextMode: LivePaneState["mode"] = "idle"): void {
     this.flushNow();
@@ -639,9 +581,7 @@ export class StreamingUIController {
     });
   }
 
-  // ---------------------------------------------------------------------------
-  // Live Render Hooks
-  // ---------------------------------------------------------------------------
+  // Live render hooks
 
   onStreamingTextStart(): void {
     const { state } = this.host;
@@ -728,13 +668,13 @@ export class StreamingUIController {
     );
     if (state.toolOutputExpanded) tc.setExpanded(true);
     this._pendingToolComponents.set(toolCall.id, tc);
-    this.attachInkToolCallMirror(tc);
+    this.toolGroups.attachInkToolCallMirror(tc);
 
     if (toolCall.name !== "Agent") this._pendingAgentGroup = null;
     if (toolCall.name !== "Read") this._pendingReadGroup = null;
 
-    let handled = this.tryAttachAgentToolCall(toolCall, tc);
-    if (!handled) handled = this.tryAttachReadToolCall(toolCall, tc);
+    let handled = this.toolGroups.tryAttachAgentToolCall(toolCall, tc);
+    if (!handled) handled = this.toolGroups.tryAttachReadToolCall(toolCall, tc);
     if (!handled) {
       state.transcriptContainer.addChild(tc);
       this.host.requestTerminalRender();
@@ -778,7 +718,7 @@ export class StreamingUIController {
         state.appState.workDir,
       );
       if (state.toolOutputExpanded) completed.setExpanded(true);
-      this.attachInkToolCallMirror(completed);
+      this.toolGroups.attachInkToolCallMirror(completed);
       state.transcriptContainer.addChild(completed);
       this.host.requestTerminalRender();
     }
@@ -854,247 +794,5 @@ export class StreamingUIController {
     this._activeCompactionBlock = undefined;
     this._activeCompactionEntryId = undefined;
     this.host.requestTerminalRender();
-  }
-
-  // ---------------------------------------------------------------------------
-  // Tool call grouping
-  // ---------------------------------------------------------------------------
-
-  private attachInkToolCallMirror(tc: ToolCallComponent): void {
-    tc.setProjectionListener(() => {
-      this.mirrorToolCallToInk(tc);
-    });
-    this.mirrorToolCallToInk(tc);
-  }
-
-  private mirrorToolCallToInk(tc: ToolCallComponent): void {
-    const agentGroup = this.findActiveAgentGroupFor(tc.toolCallView.id);
-    if (agentGroup !== undefined) {
-      this.mirrorAgentGroupToInk(agentGroup);
-      return;
-    }
-    const readGroup = this.findActiveReadGroupFor(tc.toolCallView.id);
-    if (readGroup !== undefined) {
-      this.mirrorReadGroupToInk(readGroup);
-      return;
-    }
-    const data = tc.captureToolCallProjection();
-    this.host.syncToolCallTranscriptEntry(data.id, data);
-  }
-
-  private findActiveAgentGroupFor(
-    toolCallId: string,
-  ): AgentGroupComponent | undefined {
-    const group = this._pendingAgentGroup?.group;
-    if (group === undefined) return undefined;
-    return group.containsToolCall(toolCallId) ? group : undefined;
-  }
-
-  private findActiveReadGroupFor(
-    toolCallId: string,
-  ): ReadGroupComponent | undefined {
-    const group = this._pendingReadGroup?.group;
-    if (group === undefined) return undefined;
-    return group.containsToolCall(toolCallId) ? group : undefined;
-  }
-
-  private wireInkAgentGroupMirror(group: AgentGroupComponent): void {
-    if (this._agentGroupInkEntryId === undefined) {
-      this._agentGroupInkEntryId = nextTranscriptId();
-    }
-    group.setInkMirrorListener(() => {
-      this.mirrorAgentGroupToInk(group);
-    });
-  }
-
-  private mirrorAgentGroupToInk(group: AgentGroupComponent): void {
-    if (this._agentGroupInkEntryId === undefined) return;
-    this.host.syncAgentGroupTranscriptEntry(
-      this._agentGroupInkEntryId,
-      group.captureAgentGroupViewState(),
-      group.getToolCallIds(),
-    );
-  }
-
-  private wireInkReadGroupMirror(group: ReadGroupComponent): void {
-    if (this._readGroupInkEntryId === undefined) {
-      this._readGroupInkEntryId = nextTranscriptId();
-    }
-    group.setInkMirrorListener(() => {
-      this.mirrorReadGroupToInk(group);
-    });
-  }
-
-  private mirrorReadGroupToInk(group: ReadGroupComponent): void {
-    if (this._readGroupInkEntryId === undefined) return;
-    this.host.syncReadGroupTranscriptEntry(
-      this._readGroupInkEntryId,
-      group.captureReadGroupViewState(),
-      group.getToolCallIds(),
-    );
-  }
-
-  private flushToolCallPreview(id: string): void {
-    const streaming = this._streamingToolCallArguments.get(id);
-    if (streaming === undefined) return;
-    const toolCall: ToolCallBlockData = {
-      id,
-      name: streaming.name ?? this._activeToolCalls.get(id)?.name ?? "Tool",
-      args: parseStreamingArgs(streaming.argumentsText),
-      streamingArguments: streaming.argumentsText,
-      streamingStartedAtMs: streaming.startedAtMs,
-      step: this._currentStep,
-      turnId: this._currentTurnId,
-    };
-    this._activeToolCalls.set(id, toolCall);
-
-    if (this._thinkingDraft.length > 0 || this._streamingBlock !== null) {
-      this.finalizeLiveTextBuffers("tool");
-    }
-
-    const existingComponent = this._pendingToolComponents.get(id);
-    if (existingComponent !== undefined) {
-      existingComponent.updateToolCall(toolCall);
-    } else if (toolCall.name !== "Agent" && toolCall.name !== "AgentSwarm") {
-      this.onToolCallStart(toolCall);
-    }
-  }
-
-  private tryAttachAgentToolCall(
-    toolCall: ToolCallBlockData,
-    tc: ToolCallComponent,
-  ): boolean {
-    const { state } = this.host;
-    if (toolCall.name !== "Agent") {
-      this._pendingAgentGroup = null;
-      return false;
-    }
-
-    const step = toolCall.step ?? this._currentStep;
-    const turnId = toolCall.turnId ?? this._currentTurnId;
-    const pending = this._pendingAgentGroup;
-
-    if (
-      pending !== null &&
-      (pending.step !== step || pending.turnId !== turnId)
-    ) {
-      this._pendingAgentGroup = null;
-      this._agentGroupInkEntryId = undefined;
-    }
-
-    const cur = this._pendingAgentGroup;
-    if (cur === null) {
-      this._pendingAgentGroup = { step, turnId, solo: tc };
-      state.transcriptContainer.addChild(tc);
-      this.host.requestTerminalRender();
-      return true;
-    }
-
-    if (cur.group !== undefined) {
-      cur.group.attach(toolCall.id, tc);
-      this.mirrorAgentGroupToInk(cur.group);
-      return true;
-    }
-
-    const solo = cur.solo;
-    if (solo === undefined) {
-      this._pendingAgentGroup = { step, turnId, solo: tc };
-      state.transcriptContainer.addChild(tc);
-      this.host.requestTerminalRender();
-      return true;
-    }
-    const group = this.upgradeSoloAgentToGroup(solo);
-    group.attach(toolCall.id, tc);
-    this._pendingAgentGroup = { step, turnId, group };
-    this.mirrorAgentGroupToInk(group);
-    this.host.requestTerminalRender();
-    return true;
-  }
-
-  private upgradeSoloAgentToGroup(
-    solo: ToolCallComponent,
-  ): AgentGroupComponent {
-    const { state } = this.host;
-    const group = new AgentGroupComponent(state.ui);
-    const children = state.transcriptContainer.children;
-    const idx = children.indexOf(solo);
-    if (idx >= 0) {
-      // In-place replacement is picked up by the container's ref-checked
-      // render cache; a tree-wide invalidate is unnecessary (and costly).
-      children[idx] = group;
-    } else {
-      state.transcriptContainer.addChild(group);
-    }
-    group.attach(solo.toolCallView.id, solo);
-    this.wireInkAgentGroupMirror(group);
-    return group;
-  }
-
-  private tryAttachReadToolCall(
-    toolCall: ToolCallBlockData,
-    tc: ToolCallComponent,
-  ): boolean {
-    const { state } = this.host;
-    if (toolCall.name !== "Read") {
-      this._pendingReadGroup = null;
-      return false;
-    }
-
-    const step = toolCall.step ?? this._currentStep;
-    const turnId = toolCall.turnId ?? this._currentTurnId;
-    const pending = this._pendingReadGroup;
-
-    if (
-      pending !== null &&
-      (pending.step !== step || pending.turnId !== turnId)
-    ) {
-      this._pendingReadGroup = null;
-      this._readGroupInkEntryId = undefined;
-    }
-
-    const cur = this._pendingReadGroup;
-    if (cur === null) {
-      this._pendingReadGroup = { step, turnId, solo: tc };
-      state.transcriptContainer.addChild(tc);
-      this.host.requestTerminalRender();
-      return true;
-    }
-
-    if (cur.group !== undefined) {
-      cur.group.attach(toolCall.id, tc);
-      this.mirrorReadGroupToInk(cur.group);
-      return true;
-    }
-
-    const solo = cur.solo;
-    if (solo === undefined) {
-      this._pendingReadGroup = { step, turnId, solo: tc };
-      state.transcriptContainer.addChild(tc);
-      this.host.requestTerminalRender();
-      return true;
-    }
-    const group = this.upgradeSoloReadToGroup(solo);
-    group.attach(toolCall.id, tc);
-    this._pendingReadGroup = { step, turnId, group };
-    this.mirrorReadGroupToInk(group);
-    this.host.requestTerminalRender();
-    return true;
-  }
-
-  private upgradeSoloReadToGroup(solo: ToolCallComponent): ReadGroupComponent {
-    const { state } = this.host;
-    const group = new ReadGroupComponent(state.ui);
-    const children = state.transcriptContainer.children;
-    const idx = children.indexOf(solo);
-    if (idx >= 0) {
-      // In-place replacement is picked up by the container's ref-checked
-      // render cache; a tree-wide invalidate is unnecessary (and costly).
-      children[idx] = group;
-    } else {
-      state.transcriptContainer.addChild(group);
-    }
-    group.attach(solo.toolCallView.id, solo);
-    this.wireInkReadGroupMirror(group);
-    return group;
   }
 }
