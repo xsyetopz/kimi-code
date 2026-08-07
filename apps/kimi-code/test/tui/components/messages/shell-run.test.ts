@@ -1,10 +1,39 @@
 import { afterEach, describe, expect, it } from "vitest";
 
 import { ShellRunComponent } from "#/tui/components/messages/shell-run";
+import { projectShellRunLines } from "#/tui/projections/shell-run";
+import { darkColors } from "#/tui/theme/colors";
+import { currentTheme } from "#/tui/theme";
 
 function stripTheme(text: string): string {
   return text.replaceAll(/\u001B\[[0-9;]*m/g, "");
 }
+
+describe("projectShellRunLines", () => {
+  it("matches the live component for a finished command", () => {
+    currentTheme.setPalette(darkColors);
+    const component = new ShellRunComponent(() => {});
+    component.finish("final output", "stderr line", false);
+    const projected = projectShellRunLines(component.captureShellRunState());
+    const live = stripTheme(component.render(100).join("\n"));
+    for (const line of projected) {
+      expect(live).toContain(stripTheme(line).trimEnd());
+    }
+    component.dispose();
+  });
+
+  it("matches the live component for a backgrounded command", () => {
+    currentTheme.setPalette(darkColors);
+    const component = new ShellRunComponent(() => {});
+    component.finishBackgrounded();
+    const projected = projectShellRunLines(component.captureShellRunState());
+    const live = stripTheme(component.render(100).join("\n"));
+    for (const line of projected) {
+      expect(live).toContain(stripTheme(line).trimEnd());
+    }
+    component.dispose();
+  });
+});
 
 describe("ShellRunComponent hardening", () => {
   let component: ShellRunComponent | undefined;

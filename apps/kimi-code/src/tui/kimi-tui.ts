@@ -69,10 +69,12 @@ import {
 import { createTUIState, type TUIState } from "./tui-state.ts";
 import {
   type AppState,
+  type CompactionTranscriptData,
   type KimiTUIOptions,
   type LivePaneState,
   type LoginProgressSpinnerHandle,
   type QueuedMessage,
+  type ShellRunViewState,
   type SteerInputItem,
   type ToolCallBlockData,
   type TranscriptEntry,
@@ -895,6 +897,20 @@ export class KimiTUI {
     data: ToolCallBlockData,
   ): void {
     this.transcriptCoordinator.syncToolCallTranscriptEntry(toolCallId, data);
+  }
+
+  syncShellRunTranscriptEntry(
+    entryId: string,
+    data: ShellRunViewState,
+  ): void {
+    this.transcriptCoordinator.syncShellRunTranscriptEntry(entryId, data);
+  }
+
+  syncCompactionTranscriptEntry(
+    entryId: string,
+    data: CompactionTranscriptData,
+  ): void {
+    this.transcriptCoordinator.syncCompactionTranscriptEntry(entryId, data);
   }
 
   removeToolCallTranscriptEntry(toolCallId: string): void {

@@ -215,12 +215,29 @@ export interface BackgroundAgentStatusData {
   readonly detail?: string;
 }
 
+export type CompactionPhase = "running" | "done" | "cancelled";
+
 export interface CompactionTranscriptData {
+  readonly phase?: CompactionPhase;
   readonly result?: "cancelled";
   readonly summary?: string;
   readonly tokensBefore?: number;
   readonly tokensAfter?: number;
   readonly instruction?: string;
+  readonly tip?: string;
+  readonly expanded?: boolean;
+  readonly blinkOn?: boolean;
+}
+
+export type ShellRunPhase = "running" | "finished" | "backgrounded";
+
+export interface ShellRunViewState {
+  readonly phase: ShellRunPhase;
+  readonly startedAtMs: number;
+  readonly combinedOutput: string;
+  readonly stdout: string;
+  readonly stderr: string;
+  readonly isError?: boolean;
 }
 
 export interface CronTranscriptData {
@@ -281,6 +298,7 @@ export interface TranscriptEntry {
   toolCallData?: ToolCallBlockData;
   backgroundAgentStatus?: BackgroundAgentStatusData;
   compactionData?: CompactionTranscriptData;
+  shellRunData?: ShellRunViewState;
   cronData?: CronTranscriptData;
   goalData?: GoalTranscriptData;
   imageAttachmentIds?: readonly number[];

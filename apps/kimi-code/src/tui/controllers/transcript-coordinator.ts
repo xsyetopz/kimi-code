@@ -44,6 +44,8 @@ import type { ColorToken } from "#/tui/theme";
 import { currentTheme } from "#/tui/theme";
 import type {
   LoginProgressSpinnerHandle,
+  CompactionTranscriptData,
+  ShellRunViewState,
   ToolCallBlockData,
   TranscriptEntry,
 } from "#/tui/types";
@@ -214,6 +216,30 @@ export class TranscriptCoordinator {
         toolCallData: data,
       });
     }
+    this.host.updateInkRenderer();
+  }
+
+  syncShellRunTranscriptEntry(
+    entryId: string,
+    data: ShellRunViewState,
+  ): void {
+    const entry = this.host.state.transcriptEntries.find(
+      (candidate) => candidate.id === entryId,
+    );
+    if (entry === undefined) return;
+    entry.shellRunData = data;
+    this.host.updateInkRenderer();
+  }
+
+  syncCompactionTranscriptEntry(
+    entryId: string,
+    data: CompactionTranscriptData,
+  ): void {
+    const entry = this.host.state.transcriptEntries.find(
+      (candidate) => candidate.id === entryId,
+    );
+    if (entry === undefined) return;
+    entry.compactionData = data;
     this.host.updateInkRenderer();
   }
 

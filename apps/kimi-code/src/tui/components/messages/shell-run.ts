@@ -1,13 +1,8 @@
 import { Container, Text } from "@moonshot-ai/kimi-tui";
 
-import { currentTheme } from "#/tui/theme";
+import { projectShellRunLines } from "#/tui/projections/shell-run";
+import type { ShellRunViewState } from "#/tui/types";
 
-import {
-  formatBashOutputForDisplay,
-  sanitizeShellOutput,
-} from "#/tui/utils/shell-output";
-
-const RUNNING_TAIL_LINES = 5;
 const TIMER_INTERVAL_MS = 1000;
 // Cap the live running buffer so a command that spews output for minutes can't
 // grow memory without bound or make every render re-strip a multi-MB string.
@@ -40,12 +35,50 @@ export class ShellRunComponent extends Container {
   private finalIsError?: boolean;
   private readonly startedAt = Date.now();
   private timer: ReturnType<typeof setInterval> | undefined;
+  private onStateChange: (() => void) | undefined;
 
-  constructor(private readonly requestRender: () => void) {
+  constructor(
+    private readonly requestRender: () => void,
+    onStateChange?: () => void,
+  ) {
     super();
+    this.onStateChange = onStateChange;
     this.textComponent = new Text(this.renderText(), 0, 0);
     this.addChild(this.textComponent);
     this.timer = setInterval(() => this.tick(), TIMER_INTERVAL_MS);
+  }
+
+  setStateListener(listener: (() => void) | undefined): void {
+    this.onStateChange = listener;
+  }
+
+  captureShellRunState(): ShellRunViewState {
+    if (this.backgrounded) {
+      return {
+        phase: "backgrounded",
+        startedAtMs: this.startedAt,
+        combinedOutput: "",
+        stdout: "",
+        stderr: "",
+      };
+    }
+    if (!this.running) {
+      return {
+        phase: "finished",
+        startedAtMs: this.startedAt,
+        combinedOutput: "",
+        stdout: this.finalStdout,
+        stderr: this.finalStderr,
+        isError: this.finalIsError,
+      };
+    }
+    return {
+      phase: "running",
+      startedAtMs: this.startedAt,
+      combinedOutput: this.combined,
+      stdout: "",
+      stderr: "",
+    };
   }
 
   append(text: string): void {
@@ -90,6 +123,7 @@ export class ShellRunComponent extends Container {
     try {
       this.textComponent.setText(this.renderText());
       this.requestRender();
+      this.onStateChange?.();
     } catch {
       // Never let a render/render-request error escape into a timer or event
       // handler — an uncaught exception there can take down the whole TUI.
@@ -104,38 +138,6 @@ export class ShellRunComponent extends Container {
   }
 
   private renderText(): string {
-    try {
-      if (this.backgrounded) {
-        return `  ${currentTheme.fg("textDim", "Moved to background.")}`;
-      }
-      if (!this.running) {
-        return formatBashOutputForDisplay(
-          this.finalStdout,
-          this.finalStderr,
-          this.finalIsError,
-        )
-          .split("\n")
-          .map((line) => `  ${line}`)
-          .join("\n");
-      }
-      const elapsed = Math.floor((Date.now() - this.startedAt) / 1000);
-      const dim = (s: string): string => currentTheme.fg("textDim", s);
-      const trimmed = sanitizeShellOutput(this.combined).trimEnd();
-      let body: string;
-      let extra = 0;
-      if (trimmed.length === 0) {
-        body = `  ${dim("Running…")}`;
-      } else {
-        const lines = trimmed.split("\n");
-        const tail = lines.slice(-RUNNING_TAIL_LINES);
-        extra = Math.max(0, lines.length - RUNNING_TAIL_LINES);
-        body = tail.map((line) => `  ${dim(line)}`).join("\n");
-      }
-      const timing = `  ${dim(`${extra > 0 ? `+${extra} lines ` : ""}(${elapsed}s)`)}`;
-      const hint = `  ${dim("(ctrl+b to run in background)")}`;
-      return `${body}\n${timing}\n${hint}`;
-    } catch {
-      return "  (output unavailable)";
-    }
+    return projectShellRunLines(this.captureShellRunState()).join("\n");
   }
 }

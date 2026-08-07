@@ -12,7 +12,9 @@ import { SkillActivation } from "./SkillActivation";
 import { PluginCommand } from "./PluginCommand";
 import { CronMessage } from "./CronMessage";
 import { BackgroundAgentStatus } from "./BackgroundAgentStatus";
+import { Compaction } from "./Compaction";
 import { AgentSwarm } from "./AgentSwarm";
+import { ShellRun } from "./ShellRun";
 
 export interface TranscriptEntryProps {
   readonly entry: TranscriptEntry;
@@ -29,7 +31,7 @@ export function TranscriptEntryView({
 }: TranscriptEntryProps): ReactNode {
   // Compaction entries
   if (entry.compactionData) {
-    return <StatusMessage entry={entry} />;
+    return <Compaction entry={entry} />;
   }
 
   switch (entry.kind) {
@@ -55,6 +57,9 @@ export function TranscriptEntryView({
       return <Thinking entry={entry} />;
 
     case "status":
+      if (entry.shellRunData) {
+        return <ShellRun entry={entry} />;
+      }
       if (entry.backgroundAgentStatus) {
         return <BackgroundAgentStatus entry={entry} />;
       }

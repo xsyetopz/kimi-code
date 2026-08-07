@@ -22,7 +22,7 @@ import {
 } from "../renderer/prompt-editor-state";
 import type { InkOverlayState } from "../renderer/ink/overlay-state";
 import { currentTheme } from "../theme";
-import type { TranscriptEntry } from "../types";
+import type { ShellRunViewState, TranscriptEntry } from "../types";
 import { formatErrorMessage } from "../utils/event-payload";
 import { markTranscriptComponent } from "../utils/transcript-component-metadata";
 import { nextTranscriptId } from "../utils/transcript-id";
@@ -59,6 +59,10 @@ export interface PromptInputHost extends SlashCommandHost {
     stderr: string,
     isError?: boolean,
     backgrounded?: boolean,
+  ): void;
+  syncShellRunTranscriptEntry(
+    entryId: string,
+    data: ShellRunViewState,
   ): void;
   persistInputHistory(text: string): Promise<void>;
 }
@@ -327,13 +331,22 @@ export class PromptInputController {
       renderMode: "plain",
       content: "",
     };
-    const outputComponent = new ShellRunComponent(() =>
-      this.host.state.ui.requestRender(),
+    const mirrorShellRunToInk = (): void => {
+      if (!this.host.inkOwnsTerminal()) return;
+      this.host.syncShellRunTranscriptEntry(
+        commandId,
+        outputComponent.captureShellRunState(),
+      );
+    };
+    const outputComponent = new ShellRunComponent(
+      () => this.host.state.ui.requestRender(),
+      mirrorShellRunToInk,
     );
     this.host.shellOutputStreams.set(commandId, {
       entry: outputEntry,
       component: outputComponent,
     });
+    mirrorShellRunToInk();
     this.host.state.transcriptEntries.push(outputEntry);
     markTranscriptComponent(outputComponent, outputEntry);
     this.host.state.transcriptContainer.addChild(outputComponent);
