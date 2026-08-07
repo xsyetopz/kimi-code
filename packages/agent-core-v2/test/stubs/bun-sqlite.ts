@@ -8,6 +8,8 @@ type Row = Record<string, unknown>;
 export class Database {
   private readonly kv = new Map<string, string>();
   private readonly termsFts = new Map<string, string>();
+  private readonly triFts = new Map<string, string>();
+  private readonly docsNorm = new Map<string, string>();
 
   constructor(
     _path: string,
@@ -67,6 +69,22 @@ export class Database {
     }
     if (sql.includes("DELETE FROM terms_fts")) {
       this.termsFts.delete(String(args[0]));
+      return;
+    }
+    if (sql.includes("INSERT INTO tri_fts")) {
+      this.triFts.set(String(args[0]), String(args[1]));
+      return;
+    }
+    if (sql.includes("DELETE FROM tri_fts")) {
+      this.triFts.delete(String(args[0]));
+      return;
+    }
+    if (sql.includes("INSERT INTO docs_norm")) {
+      this.docsNorm.set(String(args[0]), String(args[1]));
+      return;
+    }
+    if (sql.includes("DELETE FROM docs_norm")) {
+      this.docsNorm.delete(String(args[0]));
     }
   }
 
@@ -100,6 +118,30 @@ export class Database {
         if (terms.every((term) => haystack.includes(` ${term} `))) {
           const value = this.kv.get(key);
           if (value !== undefined) hits.push({ key, value, score: 1 });
+        }
+      }
+      return hits.slice(0, limit);
+    }
+    if (sql.includes("tri_fts MATCH")) {
+      const needle = String(args[0]).replaceAll('"', "");
+      const limit = Number(args[1]);
+      const hits: Row[] = [];
+      for (const [key, norm] of this.triFts) {
+        if (norm.includes(needle)) {
+          const value = this.kv.get(key);
+          if (value !== undefined) hits.push({ key, value });
+        }
+      }
+      return hits.slice(0, limit);
+    }
+    if (sql.includes("instr(n.norm, ?)")) {
+      const needle = String(args[0]);
+      const limit = Number(args[1]);
+      const hits: Row[] = [];
+      for (const [key, norm] of this.docsNorm) {
+        if (norm.includes(needle)) {
+          const value = this.kv.get(key);
+          if (value !== undefined) hits.push({ key, value });
         }
       }
       return hits.slice(0, limit);

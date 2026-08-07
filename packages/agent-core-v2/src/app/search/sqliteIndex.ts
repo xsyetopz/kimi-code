@@ -175,6 +175,42 @@ export class SqliteSearchIndex<T> {
     return row.n;
   }
 
+  searchLiteral(
+    literalQuery: string,
+    opts: { limit: number },
+  ): { hits: SearchHit<T>[]; truncated: boolean } {
+    const chars = Array.from(literalQuery).length;
+    const rows =
+      chars >= 3
+        ? (this.db
+            .query(
+              `SELECT t.key AS key, k.value AS value
+               FROM tri_fts t JOIN kv k ON k.key = t.key
+               WHERE tri_fts MATCH ?
+               LIMIT ?`,
+            )
+            .all(escapeMatch(literalQuery), opts.limit) as {
+            key: string;
+            value: string;
+          }[])
+        : (this.db
+            .query(
+              `SELECT n.key AS key, k.value AS value
+               FROM docs_norm n JOIN kv k ON k.key = n.key
+               WHERE instr(n.norm, ?) > 0
+               LIMIT ?`,
+            )
+            .all(literalQuery, opts.limit) as { key: string; value: string }[]);
+    return {
+      hits: rows.map((row) => ({
+        key: row.key,
+        value: JSON.parse(row.value) as T,
+        score: 0,
+      })),
+      truncated: rows.length >= opts.limit,
+    };
+  }
+
   searchTerms(
     queryTerms: readonly string[],
     opts: { op: "AND" | "OR"; limit: number },

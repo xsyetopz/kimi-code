@@ -26,6 +26,16 @@ export function legacyFileMetaKey(filePath: string): string {
 }
 
 export const MAX_DOC_TEXT_CHARS = 20_000;
+/** Upper bound for literal-mode candidates confirmed per query. */
+export const LITERAL_CANDIDATE_CAP = 10_000;
+/** Max literal-query length in normalized code points. */
+export const MAX_LITERAL_QUERY_CHARS = 1_024;
+/** Wall-clock budget for the in-memory match/confirm phase of one query. */
+export const QUERY_DEADLINE_MS = 500;
+/** Max document text processed by literal confirmation per query (UTF-16 code units). */
+export const QUERY_TEXT_BUDGET_CHARS = 16_000_000;
+/** How often the match loop re-checks the deadline (candidate iterations). */
+export const DEADLINE_CHECK_STRIDE = 64;
 export const WIRE_READ_CHUNK_BYTES = 1 << 20;
 export const WIRE_BATCH_OPS = 1_000;
 export const EMPTY_BUFFER = Buffer.alloc(0);
