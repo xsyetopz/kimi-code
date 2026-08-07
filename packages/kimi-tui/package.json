@@ -43,10 +43,6 @@
     },
     "./react/theme.css": "./src/react/theme/theme.css",
     "./react/components.css": "./src/react/theme/components.css",
-    "./ink": {
-      "types": "./src/ink/index.ts",
-      "default": "./src/ink/index.ts"
-    },
     "./terminal": {
       "types": "./src/terminal/index.ts",
       "default": "./src/terminal/index.ts"
@@ -68,11 +64,6 @@
       },
       "./react/theme.css": "./dist/react/theme/theme.css",
       "./react/components.css": "./dist/react/theme/components.css",
-      "./ink": {
-        "types": "./dist/ink/index.d.mts",
-        "import": "./dist/ink/index.mjs",
-        "default": "./dist/ink/index.mjs"
-      },
       "./terminal": {
         "types": "./dist/terminal/index.d.mts",
         "import": "./dist/terminal/index.mjs",
