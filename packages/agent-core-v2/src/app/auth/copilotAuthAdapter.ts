@@ -37,7 +37,7 @@ const TOKEN_URL = "https://github.com/login/oauth/access_token";
 const DEFAULT_VERIFICATION_URI = "https://github.com/login/device";
 const SCOPE = "read:user";
 const STORAGE_NAME = "github-copilot";
-/** GitHub device-flow polling safety margin (OpenCode Copilot plugin). */
+/** Extra polling delay beyond the server-reported interval. */
 const OAUTH_POLLING_SAFETY_MARGIN_MS = 3_000;
 
 type DeviceResponse = {
@@ -226,8 +226,7 @@ export class CopilotAuthAdapter implements ProviderAuthAdapter {
   private async saveGithubToken(accessToken: string): Promise<void> {
     const stored: TokenInfo = {
       accessToken,
-      // GitHub device OAuth does not issue a refresh token; Copilot uses the
-      // GitHub token directly (OpenCode plugin stores the same value twice).
+      // No separate Copilot token exchange; the GitHub device token is the credential.
       refreshToken: accessToken,
       expiresAt: 0,
       expiresIn: 0,

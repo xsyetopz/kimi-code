@@ -104,10 +104,6 @@ const integrations = new Map<string, ProviderAuthIntegration>([
     "opencode",
     {
       providerId: "opencode",
-      // OpenCode owns both the public/free-model path and a device OAuth
-      // login. Keep the API-key fallback visible while routing interactive
-      // login through an adapter that implements OpenCode's official
-      // console.opencode.ai protocol; this is not Kimi OAuth.
       kind: "external-oauth",
       displayName: "OpenCode Zen",
       integration: "opencode",
@@ -118,8 +114,6 @@ const integrations = new Map<string, ProviderAuthIntegration>([
     "opencode-go",
     {
       providerId: "opencode-go",
-      // Go is a separate paid catalog/endpoint, but it shares OpenCode's
-      // account and device-OAuth integration. API keys remain supported.
       kind: "external-oauth",
       displayName: "OpenCode Go",
       integration: "opencode",

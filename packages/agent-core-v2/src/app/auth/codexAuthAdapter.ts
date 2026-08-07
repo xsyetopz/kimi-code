@@ -44,7 +44,7 @@ const DEVICE_REDIRECT_URI = "https://auth.openai.com/deviceauth/callback";
 const DEFAULT_DEVICE_EXPIRES_SEC = 15 * 60;
 const DEFAULT_TOKEN_EXPIRES_SEC = 3600;
 const REFRESH_SKEW_MS = 60_000;
-/** Codex device-flow polling safety margin (OpenCode Codex plugin). */
+/** Extra polling delay beyond the server-reported interval. */
 const OAUTH_POLLING_SAFETY_MARGIN_MS = 3_000;
 const CODEX_ACCOUNT_ID_HEADER = "ChatGPT-Account-Id";
 const STORAGE_NAME = "openai-codex";
