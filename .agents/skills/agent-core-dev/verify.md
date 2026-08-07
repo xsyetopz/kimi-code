@@ -6,9 +6,9 @@ Run the guards and re-scan the red lines before submitting.
 
 Run from the package (or with `--filter @moonshot-ai/agent-core-v2`):
 
-- `pnpm --filter @moonshot-ai/agent-core-v2 lint:imports` — import-boundary guard (`scripts/check-import-boundaries.mjs`). Catches v1 imports (`@moonshot-ai/agent-core`) and kosong subtree violations.
-- `pnpm --filter @moonshot-ai/agent-core-v2 typecheck` — `tsc -p tsconfig.json --noEmit`.
-- `pnpm --filter @moonshot-ai/agent-core-v2 test` — `vitest run`.
+- `bun --filter @moonshot-ai/agent-core-v2 lint:imports` — import-boundary guard (`scripts/check-import-boundaries.mjs`). Catches v1 imports (`@moonshot-ai/agent-core`) and kosong subtree violations.
+- `bun --filter @moonshot-ai/agent-core-v2 typecheck` — `tsc -p tsconfig.json --noEmit`.
+- `bun --filter @moonshot-ai/agent-core-v2 test` — `vitest run`.
 
 ## Changesets (when the change ships through the CLI)
 

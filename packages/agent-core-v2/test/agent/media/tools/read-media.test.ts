@@ -4,7 +4,7 @@
  * Responsibilities: validates access resolution, media delivery, compression
  * budget refusal, capability gates, and registration. Wiring: real
  * ReadMediaFileTool with an in-memory host-filesystem boundary and real image
- * compression. Run: pnpm test -- test/agent/media/tools/read-media.test.ts
+ * compression. Run: bun test -- test/agent/media/tools/read-media.test.ts
  */
 
 import type { ModelCapability } from "#/kosong/contract/capability";

@@ -7,7 +7,7 @@
  * scope host) against real temp directories: source-priority merge, the
  * builtin-override rule, explicit fatal semantics, config / plugin-reload /
  * fs-watch driven reloads, and SYSTEM.md interplay. Run:
- * `pnpm --filter @moonshot-ai/agent-core-v2 exec vitest run
+ * `bun --filter @moonshot-ai/agent-core-v2 exec vitest run
  * test/workspace/workspaceAgentProfileLoader/agentProfileLoader.test.ts`.
  */
 

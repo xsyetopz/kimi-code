@@ -8,7 +8,7 @@
  * decoded `onDidChange` payload. The generic contribution registry
  * underneath is covered by `test/_base/contribution/registry.test.ts`; this
  * suite only pins the service layer's workspaceKey dimension. Run:
- * `pnpm --filter @moonshot-ai/agent-core-v2 exec vitest run
+ * `bun --filter @moonshot-ai/agent-core-v2 exec vitest run
  * test/app/agentProfileCatalog/agentProfileRegistry.test.ts`.
  */
 

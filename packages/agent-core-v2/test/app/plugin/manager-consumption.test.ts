@@ -3,7 +3,7 @@
  *
  * Verifies persisted plugin capabilities and skill counts against the real
  * filesystem discovery path. Network download boundaries are stubbed locally.
- * Run with `pnpm --filter @moonshot-ai/agent-core-v2 exec vitest run
+ * Run with `bun --filter @moonshot-ai/agent-core-v2 exec vitest run
  * test/app/plugin/manager-consumption.test.ts`.
  */
 

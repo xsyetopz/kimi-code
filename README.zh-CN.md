@@ -98,22 +98,22 @@ Kimi Code CLI 支持 [Agent Client Protocol](https://agentclientprotocol.com/)�
 
 ## 本地开发
 
-环境要求：Node.js ≥ 24.15.0，pnpm 10.33.0。
+环境要求：Node.js ≥ 24.15.0，bun 1.3.14。
 
 ```sh
 git clone https://github.com/MoonshotAI/kimi-code.git
 cd kimi-code
-pnpm install
+bun install
 ```
 
 ```sh
-pnpm dev:cli    # 以开发模式运行 CLI
-pnpm test       # 运行测试
-pnpm typecheck    # TypeScript 检查
-pnpm lint         # TypeScript 检查（typecheck 别名）
-pnpm format       # Biome 格式化
-pnpm format:check # 校验格式（本地）
-pnpm build        # 构建所有包
+bun run dev:cli       # 以开发模式运行 CLI
+bun run test          # 运行测试
+bun run typecheck     # TypeScript 检查
+bun run lint          # TypeScript 检查（typecheck 别名）
+bun run format        # Biome 格式化
+bun run format:check  # 校验格式（本地）
+bun run build         # 构建所有包
 ```
 
 完整贡献流程见 [CONTRIBUTING.md](CONTRIBUTING.md)。

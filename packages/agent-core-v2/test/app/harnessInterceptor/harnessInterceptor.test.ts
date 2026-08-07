@@ -2,7 +2,7 @@
  * Scenario: App-scope harness interceptor registry and agent-scope wiring into
  * existing hook slots.
  *
- * Run: `pnpm exec vitest run packages/agent-core-v2/test/app/harnessInterceptor/harnessInterceptor.test.ts`.
+ * Run: `bunx vitest run packages/agent-core-v2/test/app/harnessInterceptor/harnessInterceptor.test.ts`.
  */
 
 import { afterEach, describe, expect, it, onTestFinished } from "vitest";

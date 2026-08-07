@@ -6,7 +6,7 @@
  * payloads are never cached, replacement re-accounts size, and multiple entries
  * evict to make room. Pure data-structure tests — no DI, no IO.
  *
- * Run: `pnpm test -- test/blob/byteLruCache.test.ts`
+ * Run: `bun test -- test/blob/byteLruCache.test.ts`
  */
 
 import { describe, expect, it } from "vitest";

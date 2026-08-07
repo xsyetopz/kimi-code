@@ -5,7 +5,7 @@
  *
  * Exercises the real `WorkspaceMcpService` against a stubbed
  * `IWorkspaceMcpConfigService` and real stdio fixture servers. Run:
- * `pnpm --filter @moonshot-ai/agent-core-v2 exec vitest run
+ * `bun --filter @moonshot-ai/agent-core-v2 exec vitest run
  * test/workspace/workspaceMcp/workspaceMcp.test.ts`.
  */
 

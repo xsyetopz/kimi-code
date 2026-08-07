@@ -4,7 +4,7 @@
  * Exercises `SessionSkillCatalogService` against a controlled
  * `ISessionSkillCatalogData` seed: snapshot forwarding, change-event
  * fan-out, session-local ad-hoc sink contributions, and the no-rescan
- * `reload()`. Run: `pnpm --filter @moonshot-ai/agent-core-v2 exec vitest run
+ * `reload()`. Run: `bun --filter @moonshot-ai/agent-core-v2 exec vitest run
  * test/session/sessionSkillCatalog/skillCatalog.test.ts`.
  */
 

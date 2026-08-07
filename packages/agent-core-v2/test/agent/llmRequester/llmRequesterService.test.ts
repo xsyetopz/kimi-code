@@ -8,7 +8,7 @@
  * per-turn recovery stickiness, request recording, and usage accounting.
  * Wiring: real AgentLLMRequesterService with stubbed context memory,
  * projector, context sizing, profile, model, telemetry, and wire/log services. Run:
- * pnpm test -- test/agent/llmRequester/llmRequesterService.test.ts
+ * bun test -- test/agent/llmRequester/llmRequesterService.test.ts
  */
 
 import { createControlledPromise } from "@antfu/utils";

@@ -3,7 +3,7 @@
  *
  * Exercises the public profile/config surfaces and resolves the real
  * `ConfigService` with TOML document storage while stubbing host and model
- * boundaries. Run with `pnpm --filter @moonshot-ai/agent-core-v2 exec vitest run
+ * boundaries. Run with `bun --filter @moonshot-ai/agent-core-v2 exec vitest run
  * test/app/config/config.test.ts`.
  */
 

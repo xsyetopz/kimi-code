@@ -5,7 +5,7 @@
  * external boundary, and timeout forwarding tests stub only the MCP SDK
  * client boundary. The workspace-level initialization scenarios live in
  * `test/workspace/workspaceMcp/`. Run with
- * `pnpm --filter @moonshot-ai/agent-core-v2 exec vitest run
+ * `bun --filter @moonshot-ai/agent-core-v2 exec vitest run
  * test/agent/mcp/connection-manager.test.ts`.
  */
 

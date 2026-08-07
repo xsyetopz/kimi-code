@@ -5,9 +5,9 @@
  * scratch review branch, or piped to another tool without running the dev
  * server.
  *
- *     pnpm dep-graph:analyze
+ *     bun dep-graph:analyze
  *
- * The dev server (`pnpm dep-graph:dev`) writes the same file continuously
+ * The dev server (`bun dep-graph:dev`) writes the same file continuously
  * while running — this CLI is for CI, hooks, or offline inspection.
  */
 

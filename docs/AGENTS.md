@@ -199,7 +199,7 @@ Outline prompt:
 
 Kimi Code CLI requires Node.js 24.15.0 or later. We recommend using pnpm for installation and management.
 
-If you haven't installed pnpm yet, please refer to the pnpm installation docs first. Install Kimi Code CLI:
+If you haven't installed pnpm yet, please refer to the bun installation docs first. Install Kimi Code CLI:
 
 (code block)
 

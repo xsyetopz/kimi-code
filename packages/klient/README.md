@@ -83,7 +83,7 @@ folded in here):
   and their client harness (skip unless `KIMI_SERVER_URL` is set; the v1
   surface has no in-memory equivalent, so these stay live-server-only).
 
-The docker e2e runner (`pnpm docker:e2e`) runs this whole vitest suite inside
+The docker e2e runner (`bun docker:e2e`) runs this whole vitest suite inside
 a container against a container-local server. See `AGENTS.md` for the testing
 rules.
 
@@ -98,7 +98,7 @@ only).
 ## Smoke check
 
 ```sh
-pnpm -C packages/klient smoke
+bun -C packages/klient smoke
 ```
 
 `examples/smoke.ts` boots an in-process engine (memory transport) and asserts

@@ -25,8 +25,8 @@
  *    the check.
  *
  * Usage:
- *   pnpm dep-graph:lint         # errors → exit 1
- *   pnpm dep-graph:lint --warn  # also fail on warnings
+ *   bun dep-graph:lint         # errors → exit 1
+ *   bun dep-graph:lint --warn  # also fail on warnings
  */
 
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";

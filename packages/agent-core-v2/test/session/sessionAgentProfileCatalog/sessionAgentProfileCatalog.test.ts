@@ -8,7 +8,7 @@
  * priority-ordered name dedup, the builtin-override rule, change-event
  * fan-out, and the read surface (`get` / `list` / `getDefault` / `inspect`).
  * Run:
- * `pnpm --filter @moonshot-ai/agent-core-v2 exec vitest run
+ * `bun --filter @moonshot-ai/agent-core-v2 exec vitest run
  * test/session/sessionAgentProfileCatalog/sessionAgentProfileCatalog.test.ts`.
  */
 

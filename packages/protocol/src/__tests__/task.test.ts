@@ -39,7 +39,7 @@ describe("taskSchema", () => {
     id: "task_01HXYZ",
     session_id: "sess_01HZZZ",
     kind: "bash",
-    description: "pnpm install",
+    description: "bun install",
     status: "running",
     created_at: "2026-06-04T10:00:00.000Z",
     started_at: "2026-06-04T10:00:00.000Z",

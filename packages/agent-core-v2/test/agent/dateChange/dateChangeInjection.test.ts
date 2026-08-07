@@ -4,7 +4,7 @@
  * Exercises the real provider through the harness injector with `hostClock`
  * stubbed at the host boundary: baselines come from typed reminder metadata,
  * then the persisted rendered-date snapshot, then a runtime seed recorded on
- * first observation for prompts that never disclose a date. Run: `pnpm --filter
+ * first observation for prompts that never disclose a date. Run: `bun --filter
  * @moonshot-ai/agent-core-v2 exec vitest run
  * test/agent/dateChange/dateChangeInjection.test.ts`.
  */

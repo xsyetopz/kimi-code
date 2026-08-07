@@ -5,7 +5,7 @@
  *
  * Exercises the real `WorkspaceMcpConfigService` against real temp config
  * files with a manually-fired fs-watch stub. Run:
- * `pnpm --filter @moonshot-ai/agent-core-v2 exec vitest run
+ * `bun --filter @moonshot-ai/agent-core-v2 exec vitest run
  * test/workspace/workspaceMcpConfig/workspaceMcpConfig.test.ts`.
  */
 

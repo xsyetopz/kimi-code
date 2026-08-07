@@ -46,7 +46,7 @@ export function loadReferenceParser(): Promise<RefParser> {
     } catch (error) {
       throw new Error(
         `failed to load the tree-sitter-bash wasm reference (expected at ${WASM_PATH}). ` +
-          "Run `pnpm install` and make sure the tree-sitter-bash devDependency is present.",
+          "Run `bun install` and make sure the tree-sitter-bash devDependency is present.",
         { cause: error },
       );
     }

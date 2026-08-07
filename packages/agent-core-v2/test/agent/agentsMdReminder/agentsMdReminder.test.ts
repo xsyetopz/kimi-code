@@ -2,7 +2,7 @@
  * Scenario: discover uninjected AGENTS.md files from canonical tool accesses and Bash targets.
  * Responsibilities: seeding, once-only reminders, result delivery, probing, and path extraction.
  * Wiring: real reminder, executor, parser, and host filesystem with telemetry/event stubs.
- * Run: pnpm exec vitest run test/agent/agentsMdReminder/agentsMdReminder.test.ts
+ * Run: bunx vitest run test/agent/agentsMdReminder/agentsMdReminder.test.ts
  */
 
 import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";

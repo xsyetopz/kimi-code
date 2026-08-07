@@ -1,7 +1,7 @@
 /**
  * Scenario: MCP config discovery, precedence, normalization, and validation.
  *
- * Exercises the real loader against temporary JSON files. Run with `pnpm
+ * Exercises the real loader against temporary JSON files. Run with `bun
  * --filter @moonshot-ai/agent-core-v2 exec vitest run
  * test/workspace/workspaceMcpConfig/config-loader.test.ts`.
  */

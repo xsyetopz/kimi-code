@@ -6,7 +6,7 @@
  *
  * Exercises the real `WorkspaceTrustService` against the real node-fs
  * `JsonAtomicDocumentStore` over a temp home. Run:
- * `pnpm --filter @moonshot-ai/agent-core-v2 exec vitest run
+ * `bun --filter @moonshot-ai/agent-core-v2 exec vitest run
  * test/workspace/workspaceTrust/workspaceTrust.test.ts`.
  */
 

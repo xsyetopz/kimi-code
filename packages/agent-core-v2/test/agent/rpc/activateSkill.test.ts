@@ -5,7 +5,7 @@
  * Unlike `IAgentSkillService.activate` (in-process, returns the live `Turn`
  * handle), the RPC variant must settle only once the turn has launched and
  * must surface activation failures (unknown skill, busy agent) to the caller
- * instead of fire-and-forget. Run: `pnpm --filter @moonshot-ai/agent-core-v2
+ * instead of fire-and-forget. Run: `bun --filter @moonshot-ai/agent-core-v2
  * exec vitest run test/agent/rpc/activateSkill.test.ts`.
  */
 

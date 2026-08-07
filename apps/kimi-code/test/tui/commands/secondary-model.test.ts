@@ -2,7 +2,7 @@
  * Scenario: /secondary_model command behavior in the interactive TUI.
  * Responsibilities: picker filtering, persistence, live apply, and effective-model state refresh.
  * Wiring: real command and selector with the SDK/session boundaries stubbed by a small host rig.
- * Run: pnpm -C apps/kimi-code exec vitest run test/tui/commands/secondary-model.test.ts
+ * Run: bun -C apps/kimi-code exec vitest run test/tui/commands/secondary-model.test.ts
  */
 import type { ModelAlias, ThinkingEffort } from "@moonshot-ai/kimi-code-sdk";
 import { describe, expect, it, vi } from "vitest";

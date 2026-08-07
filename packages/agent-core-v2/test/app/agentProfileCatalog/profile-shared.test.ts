@@ -6,7 +6,7 @@
  * disclosure metadata and its code-composed conditional sections (Windows
  * notes, additional directories, skills), plus `normalizeAgentProfile`
  * deriving the missing render entry at registration. Pure functions, no IO.
- * Run: `pnpm --filter @moonshot-ai/agent-core-v2 exec vitest run
+ * Run: `bun --filter @moonshot-ai/agent-core-v2 exec vitest run
  * test/app/agentProfileCatalog/profile-shared.test.ts`.
  */
 

@@ -7,7 +7,7 @@
  * discovery are stubbed, while the installed-file store remains real except
  * for controlled read/write failures used for concurrency and rollback.
  *
- * Run: pnpm --filter @moonshot-ai/agent-core-v2 exec vitest run test/app/plugin/pluginService.test.ts
+ * Run: bun --filter @moonshot-ai/agent-core-v2 exec vitest run test/app/plugin/pluginService.test.ts
  */
 
 import {

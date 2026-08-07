@@ -8,7 +8,7 @@
  * for two sessions of the same workspace, no skill rescan when the second
  * session lists skills, and the fs-watch fan-out refreshing a live session's
  * skill list after `.agents/skills` changes on disk. Run:
- * `pnpm --filter @moonshot-ai/agent-core-v2 exec vitest run
+ * `bun --filter @moonshot-ai/agent-core-v2 exec vitest run
  * test/workspace/workspaceResources.test.ts`.
  */
 

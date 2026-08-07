@@ -13,7 +13,7 @@
  *
  * Runs the real `AgentIdentityService` over a stub config service and a stub
  * bootstrap; nothing else is wired. Run with
- * `pnpm --filter @moonshot-ai/agent-core-v2 exec vitest run
+ * `bun --filter @moonshot-ai/agent-core-v2 exec vitest run
  * test/app/agentIdentity/agentIdentity.test.ts`.
  */
 

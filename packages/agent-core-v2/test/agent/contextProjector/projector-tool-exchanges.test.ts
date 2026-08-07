@@ -4,7 +4,7 @@
  * Responsibilities: validates tool-exchange repair, strict projection, and
  * degraded/full-strip media projections through the public projector contract.
  * Wiring: real AgentContextProjectorService with captured log and telemetry
- * boundaries. Run: pnpm test -- test/agent/contextProjector/projector-tool-exchanges.test.ts
+ * boundaries. Run: bun test -- test/agent/contextProjector/projector-tool-exchanges.test.ts
  */
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";

@@ -111,9 +111,9 @@ The release PR runs:
 
 Once the release PR is merged into `main`, the same workflow runs:
 
-- `pnpm install --frozen-lockfile`
-- `pnpm build`
-- `pnpm changeset publish`
+- `bun install --frozen-lockfile`
+- `bun run build`
+- `bun changeset publish`
 
 The packages are then published via npm Trusted Publishing, and a GitHub Release is created.
 
@@ -122,18 +122,18 @@ The packages are then published via npm Trusted Publishing, and a GitHub Release
 Only publish manually when CI is unavailable. Before publishing manually, make sure you are logged into npm locally and using the Node.js and pnpm versions required by the repository.
 
 ```sh
-pnpm run version
-pnpm run publish
+bun run version
+bun run publish
 ```
 
 The underlying changesets commands are:
 
 ```sh
 pnpm changeset version
-pnpm changeset publish
+bun changeset publish
 ```
 
-The root-level `pnpm run publish` first runs typecheck, lint, sherif, test, build, and package lint, then runs `changeset publish`.
+The root-level `bun run publish` first runs typecheck, lint, sherif, test, build, and package lint, then runs `changeset publish`.
 
 ## Notes
 

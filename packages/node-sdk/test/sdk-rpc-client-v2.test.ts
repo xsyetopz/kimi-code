@@ -5,7 +5,7 @@
  * not-yet-migrated method fails loudly with `not_implemented` instead of
  * silently hitting a v1 core.
  * Wiring: real v2 engine bootstrapped on a temp KIMI_CODE_HOME; no provider calls.
- * Run: pnpm exec vitest run test/sdk-rpc-client-v2.test.ts
+ * Run: bunx vitest run test/sdk-rpc-client-v2.test.ts
  */
 import { mkdir, mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";

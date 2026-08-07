@@ -203,11 +203,11 @@ Where the route mirrors v1, the test is the regression guard for the schema-fide
 
 ### 7. Verify
 
-- `pnpm -C packages/kap-server test` — server routes green.
-- `pnpm -C packages/kap-server test` — server routes green (incl. any wire-schema guards).
-- `pnpm -C packages/agent-core-v2 test` — native + Legacy Service tests green.
-- `pnpm -C packages/agent-core-v2 run lint:imports` — the import boundaries (v1 ban, kosong subtree) still hold for a LegacyService.
-- `pnpm -C packages/klient test` (optionally with `KIMI_SERVER_URL` for the live legacy suites) when a v1 parity scenario exists.
+- `bun -C packages/kap-server test` — server routes green.
+- `bun -C packages/kap-server test` — server routes green (incl. any wire-schema guards).
+- `bun -C packages/agent-core-v2 test` — native + Legacy Service tests green.
+- `bun -C packages/agent-core-v2 run lint:imports` — the import boundaries (v1 ban, kosong subtree) still hold for a LegacyService.
+- `bun -C packages/klient test` (optionally with `KIMI_SERVER_URL` for the live legacy suites) when a v1 parity scenario exists.
 
 ## Worked example — porting v1 `/sessions/:sid/prompts`
 

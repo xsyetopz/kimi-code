@@ -5,7 +5,7 @@
  * wiring merges a consistent usage + context + model snapshot into every
  * status event (mirrors kap-server's broadcaster bridge), including the
  * secondary-model derived id resolution.
- * Run: pnpm exec vitest run test/session-event-wiring.test.ts
+ * Run: bunx vitest run test/session-event-wiring.test.ts
  */
 import { describe, expect, it } from "vitest";
 

@@ -14,7 +14,7 @@
  * - an external `local.toml` edit (another process) refreshes live session
  *   views through the fs watch.
  * Run:
- * `pnpm --filter @moonshot-ai/agent-core-v2 exec vitest run
+ * `bun --filter @moonshot-ai/agent-core-v2 exec vitest run
  * test/workspace/workspaceDirs/workspaceDirs.test.ts`.
  */
 

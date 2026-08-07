@@ -4,7 +4,7 @@
  * Exercises the real Workspace-scoped catalog and source services with
  * filesystem or in-memory discovery boundaries, including controlled
  * concurrent refreshes and the fs-watch-driven single-source rescan.
- * Run: `pnpm --filter @moonshot-ai/agent-core-v2 exec vitest run
+ * Run: `bun --filter @moonshot-ai/agent-core-v2 exec vitest run
  * test/workspace/workspaceSkillCatalog/skillCatalog.test.ts`.
  */
 

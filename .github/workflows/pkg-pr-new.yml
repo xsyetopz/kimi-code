@@ -21,20 +21,21 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v6
+      - name: Setup bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
           node-version-file: .nvmrc
-          cache: pnpm
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: bun install --frozen-lockfile
 
       - name: Build package dependencies
-        run: pnpm run build:packages
+        run: bun run build:packages
 
       - name: Generate Kimi Code built-in catalog
         shell: bash
@@ -44,7 +45,7 @@ jobs:
           echo "KIMI_CODE_BUILT_IN_CATALOG_FILE=$CATALOG_FILE" >> "$GITHUB_ENV"
 
       - name: Build Kimi Code package
-        run: pnpm --filter @moonshot-ai/kimi-code run build
+        run: bun --filter @moonshot-ai/kimi-code run build
 
       - name: Publish pkg.pr.new preview
-        run: pnpm exec pkg-pr-new publish --bin --commentWithSha --packageManager=pnpm,npm --no-template './apps/kimi-code'
+        run: bunx pkg-pr-new publish --bin --commentWithSha --packageManager=bun,npm --no-template './apps/kimi-code'

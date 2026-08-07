@@ -4,7 +4,7 @@
  * `${base_prompt}`, `${plugin_sections}`, tool pass-through, explicit override
  * intent).
  * Pure-function level, no IO.
- * Run: `pnpm --filter @moonshot-ai/agent-core-v2 exec vitest run
+ * Run: `bun --filter @moonshot-ai/agent-core-v2 exec vitest run
  * test/workspace/workspaceAgentProfileLoader/agentFile.test.ts`.
  */
 

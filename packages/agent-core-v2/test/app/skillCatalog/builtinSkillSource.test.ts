@@ -7,7 +7,7 @@
  * after the names already reached the system prompt.
  *
  * Runs the real `BuiltinSkillSource` over a stub config service. Run with
- * `pnpm --filter @moonshot-ai/agent-core-v2 exec vitest run
+ * `bun --filter @moonshot-ai/agent-core-v2 exec vitest run
  * test/app/skillCatalog/builtinSkillSource.test.ts`.
  */
 

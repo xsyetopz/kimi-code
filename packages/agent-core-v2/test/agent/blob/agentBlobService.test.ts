@@ -13,7 +13,7 @@
  * Wiring: real `BlobStoreService` over the in-memory storage backend, with the
  * service resolved through the DI scope tree — no stubbed boundary, no real fs.
  *
- * Run: `pnpm test -- test/blob/agentBlobService.test.ts`
+ * Run: `bun test -- test/blob/agentBlobService.test.ts`
  */
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
