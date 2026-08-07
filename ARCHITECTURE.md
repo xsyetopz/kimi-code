@@ -171,7 +171,19 @@ Violates `REQ-001`. **Rejected.**
 | 4 | **Delete web/vis/inspect apps; default to klient/memory** | revert |
 | 5 | Replace kap-server/minidb search with Bun SQLite + ripgrep fallback | revert |
 | 6 | Delete dead pi-tui transcript dual path in kimi-code | revert |
-| 7 | LOC budget pass + cycle check; then CI | — |
+| 7 | LOC budget pass + cycle check; bun package manager; CI refresh | — |
+
+### Kosong / provider compat layers (completed on this branch)
+
+| Layer | Scope | Outcome |
+|---|---|---|
+| 0–1 | `packages/kosong` protocol profiles | Model-family presets (OpenAI, Anthropic, Google, Kimi, DeepSeek, MiniMax) with transport + reasoning metadata |
+| 2 | Streaming assembler | Gap fixes for partial tool/reasoning deltas in kosong adapters |
+| 3 | Runtime wiring | Protocol profile replay invariants in agent-core catalog + context projector |
+| 4 | Headless print | `apps/kimi-code` routes print through `@moonshot-ai/kimi-code-sdk` |
+| 5 | Swarm | Orchestrator profile, worker pool chrome, `[swarm]` config section |
+
+`packages/agent-core-v2` keeps an internal `src/kosong/protocol/*` tree for adapter registration; it does not depend on `@moonshot-ai/kosong` at the package boundary.
 
 ## 8. Novelty strip policy
 
