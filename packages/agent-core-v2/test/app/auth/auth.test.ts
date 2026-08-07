@@ -191,7 +191,7 @@ describe("OAuthService", () => {
         .mockResolvedValue({ kind: "error", message: "not configured" }),
     };
     ix = createServices(disposables, {
-      base: [registerBootstrapServices, registerTelemetryServices],
+      base: [registerBootstrapServices],
       additionalServices: (reg) => {
         reg.definePartialInstance(IProviderService, {
           get: ((name: string) => providers[name]) as IProviderService["get"],

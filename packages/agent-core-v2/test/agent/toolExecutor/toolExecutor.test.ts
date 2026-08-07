@@ -139,35 +139,6 @@ describe("AgentToolExecutorService", () => {
     expect(tool.calls).toEqual([]);
   });
 
-  it("tags tool_call telemetry with recorded dup types, defaulting to normal", async () => {
-    const tool = new TestTool("echo");
-    registry.register(tool);
-    let tag = true;
-    executor.onBeforeExecuteTool((event) => {
-      if (tag && event.toolCall.id === "call_dup")
-        executor.recordDupType("call_dup", "cross_step");
-    });
-
-    await execute([
-      toolCall("call_ok", "echo", { text: "a" }),
-      toolCall("call_dup", "echo", { text: "b" }),
-    ]);
-
-    tag = false;
-    await execute([toolCall("call_dup", "echo", { text: "c" })]);
-  });
-
-  it("merges the request trace id into tool_call telemetry", async () => {
-    const tool = new TestTool("echo");
-    registry.register(tool);
-
-    await execute(
-      [toolCall("call_traced", "echo", { text: "hi" })],
-      undefined,
-      { traceId: "trace-tool-1" },
-    );
-  });
-
   it("truncates final tool results before publishing protocol events", async () => {
     truncateForModel = async (input) => ({
       ...input.result,

@@ -570,16 +570,6 @@ describe("AgentToolApprovalService", () => {
       expect(recorded).toEqual([]);
     });
 
-    it("merges the request trace id into approval result telemetry", async () => {
-      useBroker(async () => ({ decision: "approved" }));
-      const svc = make();
-
-      await svc.requestToolApproval(
-        makeContext("bash", {}, { traceId: "trace-approval-1" }),
-        ask(),
-        "fallback-ask",
-      );
-    });
   });
 
   describe("message formatting", () => {
