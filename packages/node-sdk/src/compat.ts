@@ -33,6 +33,7 @@ import {
   IMAGE_BYTE_BUDGET,
   MAX_IMAGE_EDGE_PX,
   resolveMaxImageEdgePx,
+  resolveReadImageByteBudget,
 } from "@moonshot-ai/agent-core-v2/agent/media/image-compress";
 import {
   buildUnsupportedImageNotice,
@@ -289,12 +290,13 @@ export type {
   QuestionBackgroundTaskInfo,
 } from "@moonshot-ai/agent-core-v2/wire/recordTypes";
 
-// ── Config schema stubs (not in v2) ──
-import { z } from "zod";
-export const KimiConfigSchema = z.object({}).passthrough();
-export const ModelAliasSchema = z.object({}).passthrough();
-export const ProviderConfigSchema = z.object({}).passthrough();
-export const HookDefSchema = z.object({}).passthrough();
+// ── Config schema (SDK public boundary) ──
+export {
+  HookDefSchema,
+  KimiConfigSchema,
+  ModelAliasSchema,
+  ProviderConfigSchema,
+} from "#/config-schema";
 
 // ── Config types ──
 /** Model configuration consumed by the v2 catalog and terminal model picker. */
@@ -459,19 +461,26 @@ export const AGENT_WIRE_PROTOCOL_VERSION = "1.5" as const;
 // ── Type stubs (not in v2 or different shape) ──
 export class ImageLimits {
   private readonly edge: number;
-  private readonly budget: number;
+  private readonly readBudget: number;
   constructor(
     _env: NodeJS.ProcessEnv = process.env,
-    options: { readonly maxEdgePx?: number; readonly byteBudget?: number } = {},
+    options: {
+      readonly maxEdgePx?: number;
+      readonly readByteBudget?: number;
+      readonly byteBudget?: number;
+    } = {},
   ) {
     this.edge = options.maxEdgePx ?? resolveMaxImageEdgePx();
-    this.budget = options.byteBudget ?? IMAGE_BYTE_BUDGET;
+    this.readBudget = options.readByteBudget ?? resolveReadImageByteBudget();
   }
   maxEdgePx(): number {
     return this.edge;
   }
+  readByteBudget(): number {
+    return this.readBudget;
+  }
   byteBudget(): number {
-    return this.budget;
+    return IMAGE_BYTE_BUDGET;
   }
 }
 export class Emitter<T> {
@@ -487,11 +496,13 @@ export class Emitter<T> {
 export type ExperimentalFeatureState = { enabled: boolean };
 export type SwarmModeTrigger = "manual" | "task" | "tool";
 export type GetCronTasksResult = { tasks: readonly unknown[] };
-export type CoreAPI = Record<string, unknown>;
-export type SDKAPI = Record<string, unknown>;
-export type RPCMethods = Record<string, unknown>;
-export type ToolCallRequest = unknown;
-export type ToolCallResponse = unknown;
+export type {
+  CoreAPI,
+  RPCMethods,
+  SDKAPI,
+  ToolCallRequest,
+  ToolCallResponse,
+} from "#/sdk-api-types";
 export type TelemetryClient = typeof disabledTelemetryClient;
 export type TelemetryProperties = Record<string, unknown>;
 export type TelemetryContextPatch = Record<string, unknown>;
