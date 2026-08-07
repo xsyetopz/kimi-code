@@ -12,92 +12,54 @@ import {
   Key,
   decodeKittyPrintable,
   type Focusable,
-  truncateToWidth,
-  visibleWidth,
-  wrapTextWithAnsi,
 } from "@moonshot-ai/kimi-tui";
 
-import { currentTheme } from "#/tui/theme";
 import type {
   PendingQuestion,
   QuestionPanelResponse,
   QuestionSubmissionMethod,
 } from "#/tui/reverse-rpc/types";
+import type { QuestionDisplayOption } from "./question-dialog-options";
+import {
+  displayOptionsForQuestion,
+  isOtherOption,
+  otherOptionIndex,
+  renderQuestionDialog,
+  SUBMIT_ACTIONS,
+  type QuestionDialogRenderHost,
+} from "./question-dialog-render";
 
 const NUMBER_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9"];
-const MAX_BODY_LINES = 12;
-const DEFAULT_OTHER_LABEL = "Other";
-const NOT_ANSWERED_LABEL = "Not answered";
-const REVIEW_TITLE = "Review your answer before submit";
-const SUBMIT_PROMPT = "Ready to submit your answers?";
-const UNANSWERED_WARNING = "Some questions are still unanswered.";
-const SUBMIT_ACTIONS = ["Submit", "Cancel"] as const;
 
-interface DisplayOption {
-  readonly label: string;
-  readonly description?: string | undefined;
-  readonly kind: "preset" | "other";
-}
-
-/**
- * Push `content` to `lines`, wrapping it to fit `width` with a hanging
- * indent. The first physical line starts with `firstPrefix`; continuation
- * lines get `continuationPrefix`. Pass `tone` to wrap every emitted line
- * in a single ANSI span (cleaner for selection highlights and matches the
- * pre-wrap rendering tests expect); leave it undefined when the prefixes
- * already carry their own mixed styling.
- */
-function appendWrapped(
-  lines: string[],
-  firstPrefix: string,
-  continuationPrefix: string,
-  content: string,
-  width: number,
-  tone?: (s: string) => string,
-): void {
-  const prefixWidth = Math.max(
-    visibleWidth(firstPrefix),
-    visibleWidth(continuationPrefix),
-  );
-  const contentWidth = Math.max(1, width - prefixWidth);
-  const wrapped = wrapTextWithAnsi(content, contentWidth);
-  const styleLine = tone ?? ((s: string) => s);
-  if (wrapped.length === 0) {
-    lines.push(styleLine(firstPrefix));
-    return;
-  }
-  lines.push(styleLine(`${firstPrefix}${wrapped[0] ?? ""}`));
-  for (let i = 1; i < wrapped.length; i++) {
-    lines.push(styleLine(`${continuationPrefix}${wrapped[i] ?? ""}`));
-  }
-}
-
-export class QuestionDialogComponent extends Container implements Focusable {
+export class QuestionDialogComponent
+  extends Container
+  implements Focusable, QuestionDialogRenderHost
+{
   focused = false;
 
-  private readonly request: PendingQuestion;
+  readonly request: PendingQuestion;
   private readonly onAnswer: (response: QuestionPanelResponse) => void;
-  private readonly maxVisibleOptions: number;
-  private readonly otherInput = new Input();
+  readonly maxVisibleOptions: number;
+  readonly otherInput = new Input();
 
-  private currentTab = 0;
-  private submitActionIdx = 0;
-  private editingOther = false;
-  private reviewMessage: string | undefined;
+  currentTab = 0;
+  submitActionIdx = 0;
+  editingOther = false;
+  reviewMessage: string | undefined;
   private lastAnswerMethod: QuestionSubmissionMethod | undefined;
 
   /** Per-question cursor position. */
-  private readonly cursors: number[];
+  readonly cursors: number[];
   /** Per-question single-select choice. */
-  private readonly singleSelections: (number | undefined)[];
+  readonly singleSelections: (number | undefined)[];
   /** Per-question multi-select choices. */
-  private readonly multiSelections: Set<number>[];
+  readonly multiSelections: Set<number>[];
   /** Per-question free-text drafts for the synthetic Other option. */
-  private readonly otherDrafts: string[];
+  readonly otherDrafts: string[];
   /** Per-question committed Other values. */
-  private readonly committedOtherValues: (string | undefined)[];
+  readonly committedOtherValues: (string | undefined)[];
   /** Per-question derived answers used by tabs + review. */
-  private readonly answers: (string | undefined)[];
+  readonly answers: (string | undefined)[];
 
   private readonly onToggleToolOutput: (() => void) | undefined;
 
@@ -320,7 +282,7 @@ export class QuestionDialogComponent extends Container implements Focusable {
     this.editingOther = false;
     this.reviewMessage = undefined;
 
-    if (this.isOtherOption(questionIdx, optionIdx)) {
+    if (isOtherOption(this, questionIdx, optionIdx)) {
       this.enterOtherInput(questionIdx);
       return;
     }
@@ -343,7 +305,7 @@ export class QuestionDialogComponent extends Container implements Focusable {
   }
 
   private enterOtherInput(questionIdx: number): void {
-    this.cursors[questionIdx] = this.otherOptionIndex(questionIdx);
+    this.cursors[questionIdx] = otherOptionIndex(this, questionIdx);
     this.editingOther = true;
     this.otherInput.setValue(this.otherDraftValue(questionIdx));
     this.reviewMessage = undefined;
@@ -368,10 +330,10 @@ export class QuestionDialogComponent extends Container implements Focusable {
 
     if (question.multi_select) {
       this.multiSelections[questionIdx]?.add(
-        this.otherOptionIndex(questionIdx),
+        otherOptionIndex(this, questionIdx),
       );
     } else {
-      this.singleSelections[questionIdx] = this.otherOptionIndex(questionIdx);
+      this.singleSelections[questionIdx] = otherOptionIndex(this, questionIdx);
     }
 
     this.lastAnswerMethod = method;
@@ -404,7 +366,7 @@ export class QuestionDialogComponent extends Container implements Focusable {
     if (question.multi_select) {
       const labels: string[] = [];
       const set = this.multiSelections[questionIdx] ?? new Set<number>();
-      const otherIdx = this.otherOptionIndex(questionIdx);
+      const otherIdx = otherOptionIndex(this, questionIdx);
       for (let i = 0; i < question.options.length; i++) {
         if (!set.has(i)) continue;
         const label = question.options[i]?.label;
@@ -429,7 +391,7 @@ export class QuestionDialogComponent extends Container implements Focusable {
       return;
     }
 
-    if (this.isOtherOption(questionIdx, selection)) {
+    if (isOtherOption(this, questionIdx, selection)) {
       const otherText = this.committedOtherValues[questionIdx];
       this.answers[questionIdx] =
         otherText !== undefined && otherText.length > 0 ? otherText : undefined;
@@ -467,391 +429,14 @@ export class QuestionDialogComponent extends Container implements Focusable {
 
   override render(width: number): string[] {
     this.otherInput.focused = this.focused && this.isEditingOther();
-    return this.isSubmitTab()
-      ? this.renderSubmitTab(width)
-      : this.renderQuestionTab(width);
+    return renderQuestionDialog(this, width);
   }
 
-  private renderQuestionTab(width: number): string[] {
-    const questionIdx = this.currentQuestionIndex();
-    if (questionIdx === undefined) return this.renderSubmitTab(width);
-
-    const question = this.request.data.questions[questionIdx];
-    if (question === undefined) return [];
-
-    const accent = (text: string) => currentTheme.fg("primary", text);
-    const dim = (text: string) => currentTheme.fg("textDim", text);
-    const success = (text: string) => currentTheme.fg("success", text);
-
-    const renderWidth = Math.max(1, width);
-    const lines: string[] = [
-      accent("─".repeat(renderWidth)),
-      currentTheme.boldFg("primary", " question"),
-      "",
-    ];
-    this.pushTabs(lines);
-    lines.push("");
-
-    appendWrapped(lines, " ? ", "   ", question.question, renderWidth, accent);
-    if (this.isEditingOther()) {
-      lines.push(dim("   Type your answer, then press Enter to save."));
-    }
-
-    if (question.body !== undefined && question.body.trim().length > 0) {
-      lines.push("");
-      const bodyLines = question.body.trim().split("\n");
-      const visibleBodyLines = bodyLines.slice(0, MAX_BODY_LINES);
-      for (const bodyLine of visibleBodyLines) {
-        appendWrapped(lines, "   ", "   ", bodyLine, renderWidth, dim);
-      }
-      if (bodyLines.length > visibleBodyLines.length) {
-        lines.push(
-          dim(
-            `   ... ${String(bodyLines.length - visibleBodyLines.length)} more lines`,
-          ),
-        );
-      }
-    }
-
-    lines.push("");
-
-    const options = this.displayOptions(questionIdx);
-    const cursor = this.currentCursor();
-    const visibleStart = this.computeVisibleStart(cursor, options.length);
-    const visibleEnd = Math.min(
-      options.length,
-      visibleStart + this.maxVisibleOptions,
-    );
-    const multiSet = this.multiSelections[questionIdx] ?? new Set<number>();
-    const singleSelection = this.singleSelections[questionIdx];
-
-    for (let i = visibleStart; i < visibleEnd; i++) {
-      const option = options[i];
-      if (option === undefined) continue;
-      const num = i + 1;
-      const isCursor = i === cursor;
-      const isOther = option.kind === "other";
-      const isSelected = question.multi_select
-        ? multiSet.has(i)
-        : singleSelection === i;
-
-      if (this.isEditingOther() && isCursor && isOther) {
-        lines.push(
-          this.renderEditingOtherLine(
-            renderWidth,
-            questionIdx,
-            option,
-            num,
-            isSelected,
-          ),
-        );
-        continue;
-      }
-
-      const label = this.renderOptionLabel(questionIdx, option, isCursor);
-
-      let tone: (s: string) => string;
-      let prefix: string;
-      if (question.multi_select) {
-        const checked = isSelected ? "✓" : " ";
-        prefix = `  [${checked}] `;
-        if (isSelected && isCursor)
-          tone = (s) => currentTheme.boldFg("success", s);
-        else if (isSelected) tone = success;
-        else if (isCursor) tone = accent;
-        else tone = dim;
-      } else if (isSelected && this.isAnswered(questionIdx)) {
-        prefix = isCursor ? `  → [${String(num)}] ` : `    [${String(num)}] `;
-        tone = isCursor ? (s) => currentTheme.boldFg("success", s) : success;
-      } else if (isCursor) {
-        prefix = `  → [${String(num)}] `;
-        tone = accent;
-      } else {
-        prefix = `    [${String(num)}] `;
-        tone = dim;
-      }
-      const continuation = " ".repeat(visibleWidth(prefix));
-      appendWrapped(lines, prefix, continuation, label, renderWidth, tone);
-
-      if (
-        option.description !== undefined &&
-        option.description.length > 0 &&
-        !(this.isEditingOther() && isCursor && isOther)
-      ) {
-        appendWrapped(
-          lines,
-          "        ",
-          "        ",
-          option.description,
-          renderWidth,
-          dim,
-        );
-      }
-    }
-
-    if (visibleEnd < options.length || visibleStart > 0) {
-      lines.push(
-        dim(
-          `   showing ${String(visibleStart + 1)}-${String(visibleEnd)} of ${String(options.length)}`,
-        ),
-      );
-    }
-
-    lines.push("");
-    lines.push(this.buildQuestionHint(dim, questionIdx));
-    lines.push(accent("─".repeat(renderWidth)));
-
-    return lines.map((line) => truncateToWidth(line, width));
+  displayOptions(questionIdx: number): readonly QuestionDisplayOption[] {
+    return displayOptionsForQuestion(this, questionIdx);
   }
 
-  private renderSubmitTab(width: number): string[] {
-    const accent = (text: string) => currentTheme.fg("primary", text);
-    const dim = (text: string) => currentTheme.fg("textDim", text);
-    const text = (t: string) => currentTheme.fg("text", t);
-    const warning = (text: string) => currentTheme.fg("warning", text);
-
-    const renderWidth = Math.max(1, width);
-    const lines: string[] = [
-      accent("─".repeat(renderWidth)),
-      currentTheme.boldFg("primary", " question"),
-      "",
-    ];
-    this.pushTabs(lines);
-    lines.push("");
-    lines.push(currentTheme.boldFg("text", ` ${REVIEW_TITLE}`));
-    const reviewWarning =
-      this.reviewMessage ??
-      (this.hasUnansweredQuestions() ? UNANSWERED_WARNING : undefined);
-    if (reviewWarning !== undefined) {
-      lines.push(warning(`  ${reviewWarning}`));
-    }
-    lines.push("");
-
-    for (let i = 0; i < this.request.data.questions.length; i++) {
-      const question = this.request.data.questions[i];
-      if (question === undefined) continue;
-      const answer = this.answers[i];
-      appendWrapped(
-        lines,
-        `  ${dim("Q")}  `,
-        "       ",
-        question.question,
-        renderWidth,
-      );
-      if (answer !== undefined && answer.length > 0) {
-        appendWrapped(
-          lines,
-          `  ${accent("→")}  `,
-          "       ",
-          text(answer),
-          renderWidth,
-        );
-      } else {
-        lines.push(`  ${dim("→")}  ${dim(NOT_ANSWERED_LABEL)}`);
-      }
-    }
-
-    lines.push("");
-    lines.push(text(` ${SUBMIT_PROMPT}`));
-    lines.push("");
-
-    for (let i = 0; i < SUBMIT_ACTIONS.length; i++) {
-      const label = SUBMIT_ACTIONS[i];
-      if (label === undefined) continue;
-      const num = i + 1;
-      if (i === this.submitActionIdx) {
-        lines.push(accent(`  → [${String(num)}] ${label}`));
-      } else {
-        lines.push(dim(`    [${String(num)}] ${label}`));
-      }
-    }
-
-    lines.push("");
-    lines.push(this.buildSubmitHint(dim));
-    lines.push(accent("─".repeat(renderWidth)));
-
-    return lines.map((line) => truncateToWidth(line, width));
-  }
-
-  private pushTabs(lines: string[]): void {
-    const dim = (text: string) => currentTheme.fg("textDim", text);
-    const active = (text: string) =>
-      currentTheme.bg("primary", currentTheme.boldFg("text", text));
-
-    const tabs: string[] = [];
-    for (let i = 0; i < this.request.data.questions.length; i++) {
-      const question = this.request.data.questions[i];
-      if (question === undefined) continue;
-      const label =
-        question.header !== undefined && question.header.length > 0
-          ? question.header
-          : `Q${String(i + 1)}`;
-      if (i === this.currentTab) tabs.push(active(` ${label} `));
-      else if (this.isAnswered(i))
-        tabs.push(currentTheme.fg("success", `(✓) ${label}`));
-      else tabs.push(dim(`(○) ${label}`));
-    }
-
-    const submitLabel = "Submit";
-    if (this.isSubmitTab()) tabs.push(active(` ${submitLabel} `));
-    else tabs.push(dim(` ${submitLabel} `));
-
-    lines.push(` ${tabs.join("  ")}`);
-  }
-
-  private buildQuestionHint(
-    dim: (s: string) => string,
-    questionIdx: number,
-  ): string {
-    if (this.isEditingOther()) {
-      const parts: string[] = [
-        "type answer",
-        "↵ save",
-        ...(this.totalTabs() > 1 ? ["tab switch"] : []),
-        "esc cancel",
-      ];
-      return dim(`  ${parts.join("  ")}`);
-    }
-
-    const optionCount = Math.min(
-      this.displayOptions(questionIdx).length,
-      NUMBER_KEYS.length,
-    );
-    const numberHint = optionCount <= 1 ? "1" : `1-${String(optionCount)}`;
-    const question = this.request.data.questions[questionIdx];
-    if (question === undefined) return dim("  esc cancel");
-
-    const parts: string[] = [
-      "↑↓ select",
-      `${numberHint} / ↵ ${question.multi_select ? "toggle" : "choose"}`,
-    ];
-    if (this.totalTabs() > 1) parts.push("←/→/tab switch");
-    parts.push("esc cancel");
-    return dim(`  ${parts.join("  ")}`);
-  }
-
-  private buildSubmitHint(dim: (s: string) => string): string {
-    const parts: string[] = ["↑↓ select", "1/2 choose", "↵ confirm"];
-    if (this.totalTabs() > 1) parts.push("←/→/tab switch");
-    parts.push("esc cancel");
-    return dim(`  ${parts.join("  ")}`);
-  }
-
-  private computeVisibleStart(cursor: number, total: number): number {
-    if (total <= this.maxVisibleOptions) return 0;
-    const half = Math.floor(this.maxVisibleOptions / 2);
-    const max = Math.max(0, total - this.maxVisibleOptions);
-    return Math.max(0, Math.min(cursor - half, max));
-  }
-
-  // ── Helpers ───────────────────────────────────────────────────────
-
-  private totalTabs(): number {
-    return this.request.data.questions.length + 1;
-  }
-
-  private submitTabIndex(): number {
-    return this.request.data.questions.length;
-  }
-
-  private isSubmitTab(): boolean {
-    return this.currentTab === this.submitTabIndex();
-  }
-
-  private isEditingOther(): boolean {
-    return this.editingOther && !this.isSubmitTab();
-  }
-
-  private currentQuestionIndex(): number | undefined {
-    return this.isSubmitTab() ? undefined : this.currentTab;
-  }
-
-  private currentCursor(): number {
-    const questionIdx = this.currentQuestionIndex();
-    if (questionIdx === undefined) return 0;
-    return this.cursors[questionIdx] ?? 0;
-  }
-
-  private displayOptions(questionIdx: number): DisplayOption[] {
-    const question = this.request.data.questions[questionIdx];
-    if (question === undefined) return [];
-
-    return [
-      ...question.options.map((option) => ({
-        label: option.label,
-        description: option.description,
-        kind: "preset" as const,
-      })),
-      {
-        label: question.other_label?.length
-          ? question.other_label
-          : DEFAULT_OTHER_LABEL,
-        description: question.other_description?.length
-          ? question.other_description
-          : undefined,
-        kind: "other" as const,
-      },
-    ];
-  }
-
-  private otherOptionIndex(questionIdx: number): number {
-    return this.request.data.questions[questionIdx]?.options.length ?? 0;
-  }
-
-  private isOtherOption(questionIdx: number, optionIdx: number): boolean {
-    return optionIdx === this.otherOptionIndex(questionIdx);
-  }
-
-  private renderOptionLabel(
-    questionIdx: number,
-    option: DisplayOption,
-    isCursor: boolean,
-  ): string {
-    if (option.kind !== "other") return option.label;
-
-    const value = this.otherDraftValue(questionIdx);
-    if (this.isEditingOther() && isCursor) {
-      return `${option.label}: ${value ?? ""}█`;
-    }
-    if (value !== undefined && value.length > 0)
-      return `${option.label}: ${value}`;
-    return option.label;
-  }
-
-  private renderEditingOtherLine(
-    width: number,
-    questionIdx: number,
-    option: DisplayOption,
-    num: number,
-    isSelected: boolean,
-  ): string {
-    const question = this.request.data.questions[questionIdx];
-    if (question === undefined) return option.label;
-
-    let prefix: string;
-    if (question.multi_select) {
-      const checked = isSelected ? "✓" : " ";
-      const body = `  [${checked}] ${option.label}: `;
-      prefix = isSelected
-        ? currentTheme.boldFg("success", body)
-        : currentTheme.fg("primary", body);
-    } else {
-      const body = `  → [${String(num)}] ${option.label}: `;
-      prefix =
-        isSelected && this.isAnswered(questionIdx)
-          ? currentTheme.boldFg("success", body)
-          : currentTheme.fg("primary", body);
-    }
-
-    const inputWidth = Math.max(4, width - visibleWidth(prefix) + 2);
-    const inputLine = this.otherInput.render(inputWidth)[0] ?? "> ";
-    const inlineInput = inputLine.startsWith("> ")
-      ? inputLine.slice(2)
-      : inputLine;
-    return prefix + inlineInput;
-  }
-
-  private otherDraftValue(questionIdx: number): string {
+  otherDraftValue(questionIdx: number): string {
     return (
       this.otherDrafts[questionIdx] ??
       this.committedOtherValues[questionIdx] ??
@@ -863,16 +448,42 @@ export class QuestionDialogComponent extends Container implements Focusable {
     this.otherDrafts[questionIdx] = this.otherInput.getValue();
   }
 
-  private isAnswered(questionIdx: number): boolean {
+  isAnswered(questionIdx: number): boolean {
     const answer = this.answers[questionIdx];
     return answer !== undefined && answer.length > 0;
   }
 
-  private hasUnansweredQuestions(): boolean {
+  hasUnansweredQuestions(): boolean {
     for (let i = 0; i < this.request.data.questions.length; i++) {
       if (!this.isAnswered(i)) return true;
     }
     return false;
+  }
+
+  totalTabs(): number {
+    return this.request.data.questions.length + 1;
+  }
+
+  private submitTabIndex(): number {
+    return this.request.data.questions.length;
+  }
+
+  isSubmitTab(): boolean {
+    return this.currentTab === this.submitTabIndex();
+  }
+
+  isEditingOther(): boolean {
+    return this.editingOther && !this.isSubmitTab();
+  }
+
+  currentQuestionIndex(): number | undefined {
+    return this.isSubmitTab() ? undefined : this.currentTab;
+  }
+
+  currentCursor(): number {
+    const questionIdx = this.currentQuestionIndex();
+    if (questionIdx === undefined) return 0;
+    return this.cursors[questionIdx] ?? 0;
   }
 
   override invalidate(): void {
