@@ -748,6 +748,25 @@ describe("AgentSwarmProgressComponent", () => {
     expect(abortedOutput).not.toContain("Cancelled.");
   });
 
+  it("shows a validation error line instead of a compact progress row when no subagent starts", () => {
+    const component = createComponent({ description: "" });
+    component.updateArgs({
+      description: "Fill geometry and attribute gaps",
+      items: ["only-one"],
+    });
+    component.markInputComplete();
+    component.markSwarmFailed(
+      "AgentSwarm requires at least 2 items unless resume_agent_ids is provided.",
+    );
+    component.markToolCallEnded();
+
+    const output = renderText(component, 120);
+    expect(output).toContain(
+      "AgentSwarm requires at least 2 items unless resume_agent_ids is provided.",
+    );
+    expect(output).not.toMatch(/001 \[/);
+  });
+
   it("reserves one trailing cell for prompting streaming text", () => {
     const prompting = createComponent({
       description: "",

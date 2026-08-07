@@ -205,6 +205,7 @@ export class AgentSwarmProgressComponent implements Component {
   private itemsStarted = false;
   private toolCallActive = true;
   private promptTemplateText = "";
+  private swarmFailureText: string | undefined;
   private activitySpinnerText: (() => string) | undefined;
   private timer: ReturnType<typeof setInterval> | undefined;
   private projectionListener: (() => void) | undefined;
@@ -257,6 +258,7 @@ export class AgentSwarmProgressComponent implements Component {
       itemsStarted: this.itemsStarted,
       toolCallActive: this.toolCallActive,
       activitySpinnerText: this.activitySpinnerText?.() ?? "",
+      swarmFailureText: this.swarmFailureText,
       members,
     };
   }
@@ -271,6 +273,7 @@ export class AgentSwarmProgressComponent implements Component {
     this.aborted = state.aborted;
     this.itemsStarted = state.itemsStarted;
     this.toolCallActive = state.toolCallActive;
+    this.swarmFailureText = state.swarmFailureText;
     if (state.activitySpinnerText.length > 0) {
       const spinnerText = state.activitySpinnerText;
       this.activitySpinnerText = () => spinnerText;
@@ -517,11 +520,33 @@ export class AgentSwarmProgressComponent implements Component {
     this.failed = true;
     this.aborted = false;
     const nowMs = Date.now();
-    for (const member of this.members) {
-      if (isTerminalPhase(member.phase)) continue;
-      this.failMember(member, nowMs, failureText);
+    const normalizedFailureText = normalizeFailureText(failureText);
+    if (
+      normalizedFailureText !== undefined &&
+      !this.hasSubagentExecutionStarted()
+    ) {
+      this.swarmFailureText = normalizedFailureText;
+      for (const member of this.members) {
+        if (isTerminalPhase(member.phase)) continue;
+        this.failMember(member, nowMs, undefined);
+      }
+    } else {
+      this.swarmFailureText = undefined;
+      for (const member of this.members) {
+        if (isTerminalPhase(member.phase)) continue;
+        this.failMember(member, nowMs, failureText);
+      }
     }
     this.startAnimationIfNeeded();
+  }
+
+  private hasSubagentExecutionStarted(): boolean {
+    return this.members.some(
+      (member) =>
+        member.agentId !== undefined ||
+        member.phase === "running" ||
+        member.phase === "completed",
+    );
   }
 
   markCancelled(agentId: string): void {
@@ -590,22 +615,31 @@ export class AgentSwarmProgressComponent implements Component {
       }),
     );
     const summary = summarizeSnapshots(snapshots);
+    const gridLines =
+      this.swarmFailureText === undefined
+        ? this.renderGrid(
+            innerWidth,
+            this.availableGridHeight?.(),
+            snapshots,
+            nowMs,
+          )
+        : [this.renderSwarmFailureLine(innerWidth)];
     const lines = [
       "",
       this.renderHeader(innerWidth, summary),
       "",
-      ...this.renderGrid(
-        innerWidth,
-        this.availableGridHeight?.(),
-        snapshots,
-        nowMs,
-      ),
+      ...gridLines,
       "",
       this.renderStatusLine(innerWidth),
       "",
     ];
     this.startAnimationIfNeeded();
     return this.indentLines(lines, outerWidth);
+  }
+
+  private renderSwarmFailureLine(width: number): string {
+    const text = `${FAILURE_MARK}${this.swarmFailureText ?? ""}`;
+    return truncateWithColor(text, width, this.colors.error);
   }
 
   private indentLines(lines: readonly string[], width: number): string[] {
@@ -1933,6 +1967,12 @@ function truncateStartToWidth(text: string, width: number): string {
 
 function collapseWhitespace(text: string): string {
   return text.replaceAll(/\s+/g, " ").trim();
+}
+
+export function agentSwarmFailureTextFromOutput(
+  output: string,
+): string | undefined {
+  return normalizeFailureText(output);
 }
 
 function normalizeFailureText(text: string | undefined): string | undefined {

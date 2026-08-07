@@ -1,5 +1,8 @@
 import { FAILURE_MARK, SUCCESS_MARK } from "#/tui/constant/symbols";
-import { agentSwarmResultSummaryFromOutput } from "#/tui/components/messages/agent-swarm-progress";
+import {
+  agentSwarmFailureTextFromOutput,
+  agentSwarmResultSummaryFromOutput,
+} from "#/tui/components/messages/agent-swarm-progress";
 import { currentTheme } from "#/tui/theme";
 import type { ToolResultBlockData } from "#/tui/types";
 
@@ -40,6 +43,15 @@ export function projectAgentSwarmResultSummaryLines(
 
   if (segments.length > 0) {
     return [`${dim("Agent swarm: ")}${segments.join(dim(" · "))}`];
+  }
+
+  if (result.is_error === true && !summary.parsed) {
+    const errorText = agentSwarmFailureTextFromOutput(result.output);
+    if (errorText !== undefined) {
+      return [
+        `${dim("Agent swarm: ")}${currentTheme.fg("error", `${FAILURE_MARK}${errorText}`)}`,
+      ];
+    }
   }
 
   const isAborted =

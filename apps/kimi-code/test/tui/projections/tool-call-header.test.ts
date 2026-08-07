@@ -236,6 +236,18 @@ describe("projectAgentSwarmResultSummaryLines", () => {
     liveBodyContainsProjectedLines(live, projected);
     liveBodyContainsProjectedLines(live, body);
   });
+
+  it("projects validation failures from plain tool errors", () => {
+    currentTheme.setPalette(darkColors);
+    const output =
+      "AgentSwarm requires at least 2 items unless resume_agent_ids is provided.";
+    const projected = projectAgentSwarmResultSummaryLines({
+      tool_call_id: "call_swarm",
+      output,
+      is_error: true,
+    });
+    expect(projected.join("\n")).toContain(output);
+  });
 });
 
 describe("captureToolCallProjection", () => {

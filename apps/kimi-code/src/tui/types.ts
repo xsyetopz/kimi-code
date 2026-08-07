@@ -199,6 +199,7 @@ export interface AgentSwarmProgressViewState {
   readonly itemsStarted: boolean;
   readonly toolCallActive: boolean;
   readonly activitySpinnerText: string;
+  readonly swarmFailureText?: string;
   readonly members: readonly AgentSwarmMemberViewState[];
 }
 
