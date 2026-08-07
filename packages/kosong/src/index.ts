@@ -45,6 +45,20 @@ export type { ModelCapability } from "./capability";
 
 // Protocol compatibility profiles
 export {
+  AuthStyleSchema,
+  EndpointKindSchema,
+  ModelProtocolCapabilitySchema,
+  ModelProtocolProfileSchema,
+  ModelProtocolReasoningProfileSchema,
+  ModelProtocolRequestConstraintsSchema,
+  ModelProtocolToolsProfileSchema,
+  OpaqueProviderStateSchema,
+  ProtocolTransportFamilySchema,
+  ProviderTransportProfileSchema,
+  ReasoningModeSchema,
+  ServingEngineSchema,
+  ServingProfileSchema,
+  ToolProtocolKindSchema,
   capabilityToProtocolCapability,
   parseModelProtocolProfile,
   parseOpaqueProviderState,

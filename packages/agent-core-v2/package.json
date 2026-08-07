@@ -64,6 +64,7 @@
     "@iarna/toml": "^2.2.5",
     "@modelcontextprotocol/sdk": "^1.30.0",
     "@moonshot-ai/kimi-code-oauth": "workspace:^",
+    "@moonshot-ai/kosong": "workspace:^",
     "@moonshot-ai/protocol": "workspace:^",
     "@moonshot-ai/tree-sitter-bash": "workspace:^",
     "@mozilla/readability": "^0.6.0",
