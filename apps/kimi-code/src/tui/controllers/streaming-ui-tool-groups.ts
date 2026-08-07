@@ -8,7 +8,6 @@ import {
 import { nextTranscriptId } from "../utils/transcript-id";
 import type { ToolCallBlockData } from "../types";
 import type { StreamingUIHost } from "./streaming-ui";
-import type { ToolCallComponent } from "../components/messages/tool-call";
 
 type PendingAgentGroup = {
   readonly turnId: string | undefined;

@@ -3,8 +3,9 @@
  * `process.env.KIMI_SERVER_URL ?? http://127.0.0.1:58627`.
  *
  * Every test gates on a `daemonReachable()` check so CI / dev machines
- * without a running server stay green. Run a server (`pnpm dev:server` from
- * repo root) to exercise these locally.
+ * without a running server stay green. Run a kap-server instance locally
+ * (optional legacy package) and point `KIMI_SERVER_URL` at it to exercise
+ * these tests.
  *
  * Coverage:
  *   1. HTTP envelope unwrap throws on `code !== 0`.

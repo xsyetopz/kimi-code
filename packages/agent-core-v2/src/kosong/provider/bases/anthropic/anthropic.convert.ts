@@ -593,3 +593,20 @@ const ANTHROPIC_THINKING_VISION_TOOL_CAPABILITY = Object.freeze({
   max_context_tokens: 0,
 });
 
+export function getAnthropicModelCapability(modelName: string) {
+  const normalized = modelName.toLowerCase();
+  if (
+    CLAUDE_VISION_TOOL_PREFIXES.some((prefix) => normalized.startsWith(prefix))
+  ) {
+    return ANTHROPIC_VISION_TOOL_CAPABILITY;
+  }
+  if (
+    CLAUDE_THINKING_VISION_TOOL_PREFIXES.some((prefix) =>
+      normalized.startsWith(prefix),
+    )
+  ) {
+    return ANTHROPIC_THINKING_VISION_TOOL_CAPABILITY;
+  }
+  return undefined;
+}
+

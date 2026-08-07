@@ -13,7 +13,6 @@ import { CHROME_GUTTER } from "#/tui/constant/rendering";
 import { KimiTUI } from "#/tui/index";
 import { currentTheme, getColorPalette } from "#/tui/theme";
 import { startupTrace } from "#/utils/startup-trace";
-import { toTerminalHyperlink } from "#/utils/terminal-hyperlink";
 import { restoreTerminalModes } from "#/utils/terminal-restore";
 import { resolveAgentProfileSelection } from "./agent-selection.ts";
 import type { CLIOptions } from "./options.ts";
@@ -148,11 +147,6 @@ export async function runShell(
     const hints: string[] = [];
     if (sessionId !== "" && hasContent) {
       hints.push(`${gutter}To resume this session: kimi -r ${sessionId}`);
-    }
-    if (tui.exitOpenUrl !== undefined) {
-      hints.push(
-        `${gutter}open ${toTerminalHyperlink(tui.exitOpenUrl, tui.exitOpenUrl)}`,
-      );
     }
     if (hints.length > 0) {
       process.stderr.write(`\n${hints.join("\n")}\n`);

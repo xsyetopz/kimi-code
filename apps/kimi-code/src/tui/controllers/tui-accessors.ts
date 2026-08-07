@@ -46,8 +46,6 @@ export const TUI_ACCESSOR_METHODS = [
   "backgroundTasks",
   "getCurrentSessionId",
   "hasSessionContent",
-  "setExitOpenUrl",
-  "setExitForegroundTask",
   "getStartupMcpMs",
   "setAppState",
   "patchLivePane",
@@ -65,8 +63,6 @@ export interface TuiAccessorsHost {
   readonly session: Session | undefined;
   readonly sessionEventHandler: SessionEventHandler;
   startupNotice: string | undefined;
-  exitOpenUrl: string | undefined;
-  exitForegroundTask: ((exitCode: number) => Promise<void>) | undefined;
 
   updateInkRenderer(): void;
   updateEditorBorderHighlight(text?: string): void;
@@ -111,14 +107,6 @@ export class TuiAccessorsController {
 
   hasSessionContent(): boolean {
     return this.host.state.transcriptEntries.length > 0;
-  }
-
-  setExitOpenUrl(url: string): void {
-    this.host.exitOpenUrl = url;
-  }
-
-  setExitForegroundTask(task: (exitCode: number) => Promise<void>): void {
-    this.host.exitForegroundTask = task;
   }
 
   async getStartupMcpMs(): Promise<number> {

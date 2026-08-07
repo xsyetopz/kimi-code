@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
+# Legacy docker e2e for kap-server (out of harness product line).
+# Requires the optional kap-server package and a Docker-capable host.
+# Default CI/dev runs skip this script; use in-process klient tests instead.
 set -euo pipefail
+
+echo "kap-server docker e2e is legacy-only and requires the optional kap-server package." >&2
+echo "Use: bun --filter @moonshot-ai/klient test (in-process transports)" >&2
+exit 1
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 PACKAGE_DIR="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
