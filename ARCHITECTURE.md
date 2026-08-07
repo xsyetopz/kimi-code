@@ -115,7 +115,7 @@ flowchart TB
 
 Forbidden: `kimi-tui → agent-core-v2`, `agent-core-v2 → kimi-tui`, `apps/kimi-code → agent-core-v2` (must go through SDK/klient).
 
-**Not on the product dependency graph:** `packages/kap-server`, `packages/minidb`, `packages/server-e2e`, browser apps (`kimi-web`, `vis`, `kimi-inspect`). These may remain in the tree during migration but are deleted or quarantined from the harness product line.
+**Deleted from the tree:** `packages/kap-server`, `packages/minidb`, `packages/server-e2e` (legacy HTTP server stack; klient hosts the retired wire e2e suites). Browser apps (`kimi-web`, `vis`, `kimi-inspect`) remain migration targets for deletion or quarantine.
 
 ## 4. Quality-Attribute Scenarios
 
@@ -180,7 +180,7 @@ Violates `REQ-001`. **Rejected.**
 - Cloud telemetry transport, event catalogs used only for product analytics, privacy upload pipeline
 - TUI easter eggs (`dance`), rotating influencer tips
 - Browser UIs (`kimi-web`, `vis`, `kimi-inspect`), bundled `dist-web` assets, TUI `/web` slash command, `kimi vis`, `kimi web`
-- kap-server on the default product path; minidb-backed global search index at the HTTP edge
+- kap-server and minidb removed from the tree; global search is in-process (Bun SQLite + ripgrep fallback)
 - Marketplace/CDN novelty not required for harness operation (evaluate per-call-site; keep real plugin install)
 
 **Keep**

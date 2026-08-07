@@ -15,7 +15,7 @@ export const bunSqliteSearchFlag: FlagDefinitionInput = {
   id: BUN_SQLITE_SEARCH_FLAG_ID,
   title: "Bun SQLite global search",
   description:
-    "Use the agent-core-v2 SQLite-backed global search index instead of the kap-server minidb implementation.",
+    "Use the agent-core-v2 SQLite-backed global search index for session/global search.",
   env: BUN_SQLITE_SEARCH_FLAG_ENV,
   default: false,
   surface: "core",

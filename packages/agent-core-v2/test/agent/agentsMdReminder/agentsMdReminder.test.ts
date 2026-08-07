@@ -295,7 +295,7 @@ describe("agentsMdReminder path-carrying tools", () => {
   it("appends a reminder listing the uninjected AGENTS.md when Read touches its directory", async () => {
     const h = createHarness();
     const rootAgentsMd = await writeAgentsMd(workDir, "root instructions");
-    const subDir = join(workDir, "packages", "kap-server");
+    const subDir = join(workDir, "packages", "agent-core-v2");
     const subAgentsMd = await writeAgentsMd(subDir, "package instructions");
     h.reminder.seedInjected([rootAgentsMd], workDir);
 
@@ -313,7 +313,7 @@ describe("agentsMdReminder path-carrying tools", () => {
 
   it("reminds at most once per file", async () => {
     const h = createHarness();
-    const subDir = join(workDir, "packages", "kap-server");
+    const subDir = join(workDir, "packages", "agent-core-v2");
     const subAgentsMd = await writeAgentsMd(subDir);
 
     const first = await fire(h, didCtx("Read", { path: join(subDir, "a.ts") }));
@@ -328,7 +328,7 @@ describe("agentsMdReminder path-carrying tools", () => {
 
   it("marks an AGENTS.md known when read directly and never suggests it afterwards", async () => {
     const h = createHarness();
-    const subDir = join(workDir, "packages", "kap-server");
+    const subDir = join(workDir, "packages", "agent-core-v2");
     const subAgentsMd = await writeAgentsMd(subDir);
 
     const direct = await fire(h, didCtx("Read", { path: subAgentsMd }));
@@ -343,7 +343,7 @@ describe("agentsMdReminder path-carrying tools", () => {
 
   it("discovers the .kimi-code/AGENTS.md variant alongside the plain one", async () => {
     const h = createHarness();
-    const subDir = join(workDir, "packages", "kap-server");
+    const subDir = join(workDir, "packages", "agent-core-v2");
     const dotKimi = normalize(join(subDir, ".kimi-code", "AGENTS.md"));
     await writeAgentsMd(join(subDir, ".kimi-code"), "dot kimi instructions");
     const plain = await writeAgentsMd(subDir);
@@ -387,7 +387,7 @@ describe("agentsMdReminder path-carrying tools", () => {
 
   it("tracks the shown event through telemetry", async () => {
     const h = createHarness();
-    const subDir = join(workDir, "packages", "kap-server");
+    const subDir = join(workDir, "packages", "agent-core-v2");
     await writeAgentsMd(subDir);
 
     await fire(h, didCtx("Read", { path: join(subDir, "index.ts") }));
@@ -406,12 +406,12 @@ describe("agentsMdReminder Bash coverage", () => {
   it("reminds for the directory listed by a plain ls", async () => {
     const h = createHarness();
     const subAgentsMd = await writeAgentsMd(
-      join(workDir, "packages", "kap-server"),
+      join(workDir, "packages", "agent-core-v2"),
     );
 
     const result = await fire(
       h,
-      didCtx("Bash", { command: "ls packages/kap-server" }),
+      didCtx("Bash", { command: "ls packages/agent-core-v2" }),
     );
 
     expect(outputText(result)).toContain(subAgentsMd);
@@ -420,12 +420,12 @@ describe("agentsMdReminder Bash coverage", () => {
   it("rebases relative operands across a literal cd", async () => {
     const h = createHarness();
     const subAgentsMd = await writeAgentsMd(
-      join(workDir, "packages", "kap-server"),
+      join(workDir, "packages", "agent-core-v2"),
     );
 
     const result = await fire(
       h,
-      didCtx("Bash", { command: "cd packages && ls kap-server" }),
+      didCtx("Bash", { command: "cd packages && ls agent-core-v2" }),
     );
 
     expect(outputText(result)).toContain(subAgentsMd);
@@ -434,12 +434,12 @@ describe("agentsMdReminder Bash coverage", () => {
   it("extracts find roots and stops at the expression", async () => {
     const h = createHarness();
     const subAgentsMd = await writeAgentsMd(
-      join(workDir, "packages", "kap-server"),
+      join(workDir, "packages", "agent-core-v2"),
     );
 
     const result = await fire(
       h,
-      didCtx("Bash", { command: "find packages/kap-server -name '*.ts'" }),
+      didCtx("Bash", { command: "find packages/agent-core-v2 -name '*.ts'" }),
     );
 
     expect(outputText(result)).toContain(subAgentsMd);
@@ -448,12 +448,12 @@ describe("agentsMdReminder Bash coverage", () => {
   it("extracts quoted directory operands", async () => {
     const h = createHarness();
     const subAgentsMd = await writeAgentsMd(
-      join(workDir, "packages", "kap-server"),
+      join(workDir, "packages", "agent-core-v2"),
     );
 
     const result = await fire(
       h,
-      didCtx("Bash", { command: 'ls "packages/kap-server"' }),
+      didCtx("Bash", { command: 'ls "packages/agent-core-v2"' }),
     );
 
     expect(outputText(result)).toContain(subAgentsMd);
@@ -462,12 +462,12 @@ describe("agentsMdReminder Bash coverage", () => {
   it("probes an explicit cwd even when the command lists nothing", async () => {
     const h = createHarness();
     const subAgentsMd = await writeAgentsMd(
-      join(workDir, "packages", "kap-server"),
+      join(workDir, "packages", "agent-core-v2"),
     );
 
     const result = await fire(
       h,
-      didCtx("Bash", { command: "git status", cwd: "packages/kap-server" }),
+      didCtx("Bash", { command: "git status", cwd: "packages/agent-core-v2" }),
     );
 
     expect(outputText(result)).toContain(subAgentsMd);
@@ -475,13 +475,13 @@ describe("agentsMdReminder Bash coverage", () => {
 
   it("skips operands that are not statically resolvable", async () => {
     const h = createHarness();
-    await writeAgentsMd(join(workDir, "packages", "kap-server"));
+    await writeAgentsMd(join(workDir, "packages", "agent-core-v2"));
 
     for (const command of [
       "ls $DIR",
       "ls *.ts",
       "ls $(pwd)",
-      "echo packages/kap-server",
+      "echo packages/agent-core-v2",
     ]) {
       const result = await fire(h, didCtx("Bash", { command }));
       expect(outputText(result)).not.toContain("<system-reminder>");
@@ -493,14 +493,14 @@ describe("agentsMdReminder result shapes and edge cases", () => {
   it("prepends the reminder to the first text part of ContentPart[] outputs", async () => {
     const h = createHarness();
     const subAgentsMd = await writeAgentsMd(
-      join(workDir, "packages", "kap-server"),
+      join(workDir, "packages", "agent-core-v2"),
     );
 
     const result = await fire(
       h,
       didCtx(
         "Read",
-        { path: join(workDir, "packages", "kap-server", "index.ts") },
+        { path: join(workDir, "packages", "agent-core-v2", "index.ts") },
         { result: { output: [{ type: "text", text: "part one" }] } },
       ),
     );
@@ -513,7 +513,7 @@ describe("agentsMdReminder result shapes and edge cases", () => {
 
   it("does not mark an AGENTS.md known when the direct read failed", async () => {
     const h = createHarness();
-    const subDir = join(workDir, "packages", "kap-server");
+    const subDir = join(workDir, "packages", "agent-core-v2");
     const agentsMdPath = normalize(join(subDir, "AGENTS.md"));
 
     const failed = await fire(
@@ -540,9 +540,9 @@ describe("agentsMdReminder toolDedupe interplay", () => {
     const h = createHarness({ withDedupe: true });
     h.ix.get(IAgentToolDedupeService);
     const subAgentsMd = await writeAgentsMd(
-      join(workDir, "packages", "kap-server"),
+      join(workDir, "packages", "agent-core-v2"),
     );
-    const args = { path: join(workDir, "packages", "kap-server", "index.ts") };
+    const args = { path: join(workDir, "packages", "agent-core-v2", "index.ts") };
 
     await h.events.fireBeforeExecute(willCtx("call-1", "Read", args));
     const did1 = didCtx("Read", args, { id: "call-1" });
@@ -564,7 +564,7 @@ describe("agentsMdReminder toolDedupe interplay", () => {
     const h = createHarness({ withRealExecutor: true, withDedupe: true });
     h.ix.get(IAgentToolDedupeService);
     const subAgentsMd = await writeAgentsMd(
-      join(workDir, "packages", "kap-server"),
+      join(workDir, "packages", "agent-core-v2"),
     );
 
     class ReadTool implements ExecutableTool<Record<string, unknown>> {
@@ -583,7 +583,7 @@ describe("agentsMdReminder toolDedupe interplay", () => {
     }
     h.ix.get(IAgentToolRegistryService).register(new ReadTool());
 
-    const args = { path: join(workDir, "packages", "kap-server", "index.ts") };
+    const args = { path: join(workDir, "packages", "agent-core-v2", "index.ts") };
     const calls: ToolCall[] = [
       {
         type: "function",
@@ -623,13 +623,13 @@ describe("agentsMdReminder lazy seeding after a restore", () => {
     const h = createHarness();
     const rootAgentsMd = await writeAgentsMd(workDir, "root instructions");
     const subAgentsMd = await writeAgentsMd(
-      join(workDir, "packages", "kap-server"),
+      join(workDir, "packages", "agent-core-v2"),
     );
 
     const result = await fire(
       h,
       didCtx("Read", {
-        path: join(workDir, "packages", "kap-server", "index.ts"),
+        path: join(workDir, "packages", "agent-core-v2", "index.ts"),
       }),
     );
 
@@ -656,7 +656,7 @@ describe("agentsMdReminder lazy seeding after a restore", () => {
 describe("agentsMdReminder persisted restore provenance", () => {
   it("keeps a newly created instruction path eligible after restoring persisted paths", async () => {
     const rootAgentsMd = await writeAgentsMd(workDir, "root instructions");
-    const subDir = join(workDir, "packages", "kap-server");
+    const subDir = join(workDir, "packages", "agent-core-v2");
     const subAgentsMd = await writeAgentsMd(subDir, "package instructions");
     const h = createHarness({
       restoredProfile: {
@@ -700,12 +700,12 @@ describe("agentsMdReminder Bash operand hygiene", () => {
       "eighty instructions",
     );
     const subAgentsMd = await writeAgentsMd(
-      join(workDir, "packages", "kap-server"),
+      join(workDir, "packages", "agent-core-v2"),
     );
 
     const result = await fire(
       h,
-      didCtx("Bash", { command: "ls -w 80 packages/kap-server" }),
+      didCtx("Bash", { command: "ls -w 80 packages/agent-core-v2" }),
     );
 
     const text = outputText(result);
@@ -716,12 +716,12 @@ describe("agentsMdReminder Bash operand hygiene", () => {
   it("collects find roots past its global options", async () => {
     const h = createHarness();
     const subAgentsMd = await writeAgentsMd(
-      join(workDir, "packages", "kap-server"),
+      join(workDir, "packages", "agent-core-v2"),
     );
 
     const result = await fire(
       h,
-      didCtx("Bash", { command: "find -L packages/kap-server -name '*.ts'" }),
+      didCtx("Bash", { command: "find -L packages/agent-core-v2 -name '*.ts'" }),
     );
 
     expect(outputText(result)).toContain(subAgentsMd);
@@ -731,7 +731,7 @@ describe("agentsMdReminder Bash operand hygiene", () => {
 describe("agentsMdReminder probing boundaries", () => {
   it("ignores an empty AGENTS.md just like the init-time load", async () => {
     const h = createHarness();
-    const subDir = join(workDir, "packages", "kap-server");
+    const subDir = join(workDir, "packages", "agent-core-v2");
     await mkdir(subDir, { recursive: true });
     await writeFile(join(subDir, "AGENTS.md"), "", "utf-8");
 
@@ -745,7 +745,7 @@ describe("agentsMdReminder probing boundaries", () => {
 
   it("still reminds when the triggering call ended in an error result", async () => {
     const h = createHarness();
-    const subDir = join(workDir, "packages", "kap-server");
+    const subDir = join(workDir, "packages", "agent-core-v2");
     const subAgentsMd = await writeAgentsMd(subDir);
 
     const result = await fire(
@@ -764,7 +764,7 @@ describe("agentsMdReminder probing boundaries", () => {
 
   it("marks an AGENTS.md known when it is written directly", async () => {
     const h = createHarness();
-    const subDir = join(workDir, "packages", "kap-server");
+    const subDir = join(workDir, "packages", "agent-core-v2");
     await mkdir(subDir, { recursive: true });
     const agentsMdPath = normalize(join(subDir, "AGENTS.md"));
 
@@ -783,7 +783,7 @@ describe("agentsMdReminder probing boundaries", () => {
 
   it("reminds at most once for two parallel touches of the same directory", async () => {
     const h = createHarness();
-    const subDir = join(workDir, "packages", "kap-server");
+    const subDir = join(workDir, "packages", "agent-core-v2");
     await writeAgentsMd(subDir);
 
     const [first, second] = await Promise.all([
@@ -859,7 +859,7 @@ describe("agentsMdReminder probing boundaries", () => {
 describe("agentsMdReminder round-2 hardening", () => {
   it("skips preflight-rejected calls entirely (no probing behind the path policy)", async () => {
     const h = createHarness();
-    const subDir = join(workDir, "packages", "kap-server");
+    const subDir = join(workDir, "packages", "agent-core-v2");
     await writeAgentsMd(subDir);
 
     const result = await fire(
@@ -891,7 +891,7 @@ describe("agentsMdReminder round-2 hardening", () => {
 
   it("ignores a whitespace-only AGENTS.md just like the init-time load", async () => {
     const h = createHarness();
-    const subDir = join(workDir, "packages", "kap-server");
+    const subDir = join(workDir, "packages", "agent-core-v2");
     await mkdir(subDir, { recursive: true });
     await writeFile(join(subDir, "AGENTS.md"), "  \n\t \n", "utf-8");
 
@@ -904,7 +904,7 @@ describe("agentsMdReminder round-2 hardening", () => {
   });
 
   it("keeps known-sets isolated between agents", async () => {
-    const subDir = join(workDir, "packages", "kap-server");
+    const subDir = join(workDir, "packages", "agent-core-v2");
     const subAgentsMd = await writeAgentsMd(subDir);
     const first = createHarness();
     const second = createHarness();
@@ -931,7 +931,7 @@ describe("agentsMdReminder round-2 hardening", () => {
       },
     } satisfies ITelemetryService;
     const h = createHarness({ telemetry });
-    const subDir = join(workDir, "packages", "kap-server");
+    const subDir = join(workDir, "packages", "agent-core-v2");
     const subAgentsMd = await writeAgentsMd(subDir);
 
     const failed = await fire(
@@ -951,13 +951,13 @@ describe("agentsMdReminder round-2 hardening", () => {
   it("prepends the reminder so it survives head-only truncation", async () => {
     const h = createHarness();
     const subAgentsMd = await writeAgentsMd(
-      join(workDir, "packages", "kap-server"),
+      join(workDir, "packages", "agent-core-v2"),
     );
 
     const result = await fire(
       h,
       didCtx("Read", {
-        path: join(workDir, "packages", "kap-server", "index.ts"),
+        path: join(workDir, "packages", "agent-core-v2", "index.ts"),
       }),
     );
 
@@ -968,7 +968,7 @@ describe("agentsMdReminder round-2 hardening", () => {
   it("survives the real executor pipeline with oversized results", async () => {
     const h = createHarness({ withRealExecutor: true });
     const subAgentsMd = await writeAgentsMd(
-      join(workDir, "packages", "kap-server"),
+      join(workDir, "packages", "agent-core-v2"),
     );
 
     class BigTool implements ExecutableTool<Record<string, unknown>> {
@@ -992,7 +992,7 @@ describe("agentsMdReminder round-2 hardening", () => {
       id: "call-big-1",
       name: "Read",
       arguments: JSON.stringify({
-        path: join(workDir, "packages", "kap-server", "big.ts"),
+        path: join(workDir, "packages", "agent-core-v2", "big.ts"),
       }),
     };
     const results = [];
@@ -1060,7 +1060,7 @@ describe("agentsMdReminder round-2 hardening", () => {
 
   it("does not probe or remind when permission vetoes an access-bearing call", async () => {
     const h = createHarness({ withRealExecutor: true });
-    const subDir = join(workDir, "packages", "kap-server");
+    const subDir = join(workDir, "packages", "agent-core-v2");
     const subAgentsMd = await writeAgentsMd(subDir);
     const hostFs = h.ix.get(IHostFileSystem);
     const stat = vi.spyOn(hostFs, "stat");
@@ -1117,7 +1117,7 @@ describe("agentsMdReminder round-2 hardening", () => {
 describe("agentsMdReminder cancellation outcomes", () => {
   it("does not consume a reminder for a conflicting task cancelled before execution starts", async () => {
     const h = createHarness({ withRealExecutor: true });
-    const subDir = join(workDir, "packages", "kap-server");
+    const subDir = join(workDir, "packages", "agent-core-v2");
     const subAgentsMd = await writeAgentsMd(subDir);
     let resolveStarted!: () => void;
     const started = new Promise<void>((resolve) => {
@@ -1231,12 +1231,12 @@ describe("agentsMdReminder Bash parse degradation", () => {
   it("falls back to the structured cwd argument when the command cannot be parsed", async () => {
     const h = createHarness();
     const subAgentsMd = await writeAgentsMd(
-      join(workDir, "packages", "kap-server"),
+      join(workDir, "packages", "agent-core-v2"),
     );
 
     const result = await fire(
       h,
-      didCtx("Bash", { command: "ls '", cwd: "packages/kap-server" }),
+      didCtx("Bash", { command: "ls '", cwd: "packages/agent-core-v2" }),
     );
 
     expect(outputText(result)).toContain(subAgentsMd);
@@ -1244,7 +1244,7 @@ describe("agentsMdReminder Bash parse degradation", () => {
 
   it("skips entirely when an unparseable command has no explicit cwd", async () => {
     const h = createHarness();
-    await writeAgentsMd(join(workDir, "packages", "kap-server"));
+    await writeAgentsMd(join(workDir, "packages", "agent-core-v2"));
 
     const result = await fire(h, didCtx("Bash", { command: "ls '" }));
 
@@ -1315,8 +1315,8 @@ describe("extractBashTargetDirs", () => {
   });
 
   it("tracks cd chains, the bare-cd home fallback, and operand-less listings", () => {
-    expect(targets("cd packages && cd kap-server && ls")).toEqual([
-      normalize(join(workDir, "packages", "kap-server")),
+    expect(targets("cd packages && cd agent-core-v2 && ls")).toEqual([
+      normalize(join(workDir, "packages", "agent-core-v2")),
     ]);
     expect(targets("cd packages && ls ../docs")).toEqual([
       normalize(join(workDir, "docs")),

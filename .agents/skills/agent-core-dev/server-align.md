@@ -1,4 +1,6 @@
-# Subskill — Server align (expose `agent-core-v2` over `server-v2`)
+# Subskill — Server align (legacy; `packages/kap-server` deleted)
+
+> **Deprecated:** `packages/kap-server` was removed from the harness product line. This subskill is retained only as historical wire-alignment reference; do not wire new work into kap-server.
 
 Wire a v2 domain into `packages/kap-server`, and — when the endpoint is part of the established `/api/v1` wire contract — keep the wire shape **byte-for-byte compatible** with what released v1 clients expect. This is the server-side counterpart of [align.md](align.md): `align.md` ports v1 *business logic* into v2; this file exposes the v2 result over HTTP / WS, reusing the v1 wire contract where it already exists.
 
