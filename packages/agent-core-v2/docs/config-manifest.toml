@@ -395,6 +395,10 @@ timeout_ms = 7200000
 
 [swarm]
 max_concurrent_workers = 3
+orchestrator_profile = "orchestrator"
+plan_lane_reserved_slots = 1
+# orchestrator_profile: string
+# plan_lane_reserved_slots: integer
 
 # ##########################################################################
 # task

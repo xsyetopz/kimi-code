@@ -110,6 +110,7 @@ function mockSwarmHost({
     swarmService: {
       _serviceBrand: undefined,
       getSwarmItem,
+      getPoolStatus: () => undefined,
       run,
       cancel: vi.fn(),
     },
@@ -219,6 +220,7 @@ describe("AgentSwarmService", () => {
     ix.stub(IAgentLifecycleService, {});
     ix.stub(ISessionSwarmService, {
       getSwarmItem: async () => undefined,
+      getPoolStatus: () => undefined,
       run: async () => [],
       cancel: () => {},
     });
@@ -1277,5 +1279,99 @@ describe("AgentSwarmTool", () => {
       ].join("\n"),
     );
     expect(result.isError).toBeUndefined();
+  });
+});
+
+describe("orchestrator profile", () => {
+  it("allows plan subagent type for orchestrator callers", async () => {
+    const host = mockSwarmHost();
+    const orchestrator: AgentProfile = normalizeAgentProfile({
+      name: "orchestrator",
+      description: "Orchestrator",
+      subagents: ["coder", "explore", "plan"],
+      systemPrompt: () => "orchestrator",
+    });
+    const plan: AgentProfile = normalizeAgentProfile({
+      name: "plan",
+      description: "Planner",
+      systemPrompt: () => "plan",
+    });
+    const tool = new AgentSwarmTool(
+      host.swarmService,
+      makeAgentScopeContext({ agentId: host.callerAgentId, agentScope: "" }),
+      mockSwarmMode(),
+      stubConfig(),
+      stubFlag(true),
+      stubSwarmCatalog(orchestrator, [plan]),
+      stubCallerProfile({ profileName: "orchestrator" }),
+      stubModelCatalog(),
+    );
+
+    const result = await executeTool(
+      tool,
+      context({
+        description: "Plan modules",
+        prompt_template: "Plan {{item}}",
+        items: ["src/a.ts", "src/b.ts"],
+        subagent_type: "plan",
+      }),
+    );
+
+    expect(result.isError).toBeUndefined();
+    expect(host.swarmService.run).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tasks: [
+          expect.objectContaining({ profileName: "plan" }),
+          expect.objectContaining({ profileName: "plan" }),
+        ],
+      }),
+    );
+  });
+});
+
+describe("orchestrator profile", () => {
+  it("allows plan subagent type for orchestrator callers", async () => {
+    const host = mockSwarmHost();
+    const orchestrator: AgentProfile = normalizeAgentProfile({
+      name: "orchestrator",
+      description: "Orchestrator",
+      subagents: ["coder", "explore", "plan"],
+      systemPrompt: () => "orchestrator",
+    });
+    const plan: AgentProfile = normalizeAgentProfile({
+      name: "plan",
+      description: "Planner",
+      systemPrompt: () => "plan",
+    });
+    const tool = new AgentSwarmTool(
+      host.swarmService,
+      makeAgentScopeContext({ agentId: host.callerAgentId, agentScope: "" }),
+      mockSwarmMode(),
+      stubConfig(),
+      stubFlag(true),
+      stubSwarmCatalog(orchestrator, [plan]),
+      stubCallerProfile({ profileName: "orchestrator" }),
+      stubModelCatalog(),
+    );
+
+    const result = await executeTool(
+      tool,
+      context({
+        description: "Plan modules",
+        prompt_template: "Plan {{item}}",
+        items: ["src/a.ts", "src/b.ts"],
+        subagent_type: "plan",
+      }),
+    );
+
+    expect(result.isError).toBeUndefined();
+    expect(host.swarmService.run).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tasks: [
+          expect.objectContaining({ profileName: "plan" }),
+          expect.objectContaining({ profileName: "plan" }),
+        ],
+      }),
+    );
   });
 });

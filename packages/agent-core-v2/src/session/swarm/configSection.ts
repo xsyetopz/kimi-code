@@ -27,8 +27,13 @@ import {
 
 export const SWARM_SECTION = "swarm";
 
+export const DEFAULT_ORCHESTRATOR_PROFILE_NAME = "orchestrator";
+export const DEFAULT_PLAN_LANE_RESERVED_SLOTS = 1;
+
 export const SwarmConfigSchema = z.object({
   maxConcurrentWorkers: z.number().int().positive().optional(),
+  orchestratorProfile: z.string().min(1).optional(),
+  planLaneReservedSlots: z.number().int().nonnegative().optional(),
 });
 
 export type SwarmConfig = z.infer<typeof SwarmConfigSchema>;
@@ -51,7 +56,11 @@ export const swarmEnvBindings: EnvBindings<SwarmConfig> = envBindings(
 export const stripSwarmEnv = stripEnvBoundFields(swarmEnvBindings);
 
 registerConfigSection(SWARM_SECTION, SwarmConfigSchema, {
-  defaultValue: { maxConcurrentWorkers: DEFAULT_SWARM_MAX_CONCURRENCY },
+  defaultValue: {
+    maxConcurrentWorkers: DEFAULT_SWARM_MAX_CONCURRENCY,
+    orchestratorProfile: DEFAULT_ORCHESTRATOR_PROFILE_NAME,
+    planLaneReservedSlots: DEFAULT_PLAN_LANE_RESERVED_SLOTS,
+  },
   env: swarmEnvBindings,
   stripEnv: stripSwarmEnv,
 });

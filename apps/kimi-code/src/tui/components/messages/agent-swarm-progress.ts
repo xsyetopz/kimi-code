@@ -2,7 +2,7 @@ import type { Component } from "@moonshot-ai/kimi-tui";
 
 import { currentTheme } from "#/tui/theme";
 import type { ColorPalette } from "#/tui/theme/colors";
-import type { AgentSwarmProgressViewState } from "#/tui/types";
+import type { AgentSwarmPoolViewState } from "#/tui/types";
 
 import {
   agentSwarmDescriptionFromArgs,
@@ -113,6 +113,10 @@ export class AgentSwarmProgressComponent implements Component {
   setModelDisplay(modelDisplay: string): void {
     if (this.core.modelDisplay.length > 0 || modelDisplay.length === 0) return;
     this.core.modelDisplay = modelDisplay;
+  }
+
+  setPoolStatus(poolStatus: AgentSwarmPoolViewState | undefined): void {
+    this.core.poolStatus = poolStatus;
   }
 
   markToolCallEnded(): void {

@@ -5,6 +5,7 @@ import {
 import type { ColorPalette } from "#/tui/theme/colors";
 import type {
   AgentSwarmMemberViewState,
+  AgentSwarmPoolViewState,
   AgentSwarmProgressViewState,
 } from "#/tui/types";
 
@@ -196,6 +197,7 @@ export interface AgentSwarmProgressCoreState {
   toolCallActive: boolean;
   promptTemplateText: string;
   swarmFailureText: string | undefined;
+  poolStatus: AgentSwarmPoolViewState | undefined;
 }
 
 export function createAgentSwarmProgressCoreState(
@@ -213,6 +215,7 @@ export function createAgentSwarmProgressCoreState(
     toolCallActive: true,
     promptTemplateText: "",
     swarmFailureText: undefined,
+    poolStatus: undefined,
   };
 }
 
@@ -282,6 +285,7 @@ export function captureAgentSwarmProgressState(
     toolCallActive: state.toolCallActive,
     activitySpinnerText,
     swarmFailureText: state.swarmFailureText,
+    poolStatus: state.poolStatus,
     members,
   };
 }
@@ -300,6 +304,7 @@ export function applyAgentSwarmProgressViewState(
   state.itemsStarted = viewState.itemsStarted;
   state.toolCallActive = viewState.toolCallActive;
   state.swarmFailureText = viewState.swarmFailureText;
+  state.poolStatus = viewState.poolStatus;
   state.members = viewState.members.map((member) => ({
     id: member.id,
     agentId: member.agentId,

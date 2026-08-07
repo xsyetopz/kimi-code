@@ -54,17 +54,23 @@ import { resolveSubagentTimeoutMs } from '#/session/subagent/configSection';
 
 import {
   ISessionSwarmService,
+  type SessionSwarmPoolStatus,
   type SessionSwarmRunArgs,
   type SessionSwarmRunResult,
   type SessionSwarmTask,
 } from './sessionSwarm';
 import { resolveSwarmMaxConcurrency } from './configSection';
 import {
+  effectiveSwarmWorkerConcurrency,
+  resolveOrchestratorLaneReservation,
+} from './orchestrator';
+import {
   AgentRunBatch,
   type AgentRunAttemptOptions,
   type AgentSpawnAttemptOptions,
   type AgentRunBatchLauncher,
   type AgentRunAttemptHandle,
+  type AgentRunBatchPoolSnapshot,
 } from './agentRunBatch';
 
 export interface SubagentSuspendedEvent {
@@ -73,9 +79,20 @@ export interface SubagentSuspendedEvent {
   readonly reason: string;
 }
 
+export interface SubagentPoolUpdatedEvent {
+  readonly type: 'subagent.pool.updated';
+  readonly parentAgentId: string;
+  readonly parentToolCallId: string;
+  readonly active: number;
+  readonly queued: number;
+  readonly max: number;
+  readonly reserved: number;
+}
+
 declare module '#/app/event/eventBus' {
   interface DomainEventMap {
     'subagent.suspended': SubagentSuspendedEvent;
+    'subagent.pool.updated': SubagentPoolUpdatedEvent;
   }
 }
 
@@ -85,6 +102,7 @@ export class SessionSwarmService implements ISessionSwarmService {
   declare readonly _serviceBrand: undefined;
 
   private readonly inFlight = new Map<string, AbortController>();
+  private readonly poolByCaller = new Map<string, SessionSwarmPoolStatus>();
 
   constructor(
     @IAgentLifecycleService private readonly lifecycle: IAgentLifecycleService,
@@ -110,6 +128,12 @@ export class SessionSwarmService implements ISessionSwarmService {
     return subagentSwarmItem(meta);
   }
 
+  getPoolStatus(args: {
+    readonly callerAgentId: string;
+  }): SessionSwarmPoolStatus | undefined {
+    return this.poolByCaller.get(args.callerAgentId);
+  }
+
   run<T>(args: SessionSwarmRunArgs<T>): Promise<readonly SessionSwarmRunResult<T>[]> {
     const { callerAgentId, tasks } = args;
     const controller = new AbortController();
@@ -132,11 +156,46 @@ export class SessionSwarmService implements ISessionSwarmService {
         });
       },
     };
-    const maxConcurrency = resolveSwarmMaxConcurrency(this.config);
-    const promise = new AgentRunBatch(launcher, linkedTasks, { maxConcurrency }).run();
+    const maxWorkers = resolveSwarmMaxConcurrency(this.config);
+    const reservedLanesPromise = resolveOrchestratorLaneReservation(
+      this.lifecycle,
+      callerAgentId,
+      this.config,
+    );
+    const parentToolCallId = tasks[0]?.parentToolCallId ?? '';
+    const publishPool = (snapshot: AgentRunBatchPoolSnapshot, reserved: number) => {
+      const status: SessionSwarmPoolStatus = {
+        active: snapshot.active,
+        queued: snapshot.queued,
+        max: maxWorkers,
+        reserved,
+      };
+      this.poolByCaller.set(callerAgentId, status);
+      const caller = this.lifecycle.get(callerAgentId);
+      caller?.accessor.get(IEventBus)?.publish({
+        type: 'subagent.pool.updated',
+        parentAgentId: callerAgentId,
+        parentToolCallId,
+        ...status,
+      });
+    };
+    const promise = reservedLanesPromise.then((reservedLanes) => {
+      const maxConcurrency = effectiveSwarmWorkerConcurrency(
+        maxWorkers,
+        reservedLanes,
+      );
+      publishPool({ active: 0, queued: linkedTasks.length }, reservedLanes);
+      return new AgentRunBatch(launcher, linkedTasks, {
+        maxConcurrency,
+        onPoolChange: (snapshot) => publishPool(snapshot, reservedLanes),
+      }).run();
+    });
     void promise.finally(() => {
       for (const unlink of unlinks) unlink();
-      if (this.inFlight.get(callerAgentId) === controller) this.inFlight.delete(callerAgentId);
+      if (this.inFlight.get(callerAgentId) === controller) {
+        this.inFlight.delete(callerAgentId);
+        this.poolByCaller.delete(callerAgentId);
+      }
     });
     return promise;
   }

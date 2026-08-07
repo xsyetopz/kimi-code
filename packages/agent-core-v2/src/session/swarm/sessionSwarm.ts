@@ -57,6 +57,13 @@ export interface SessionSwarmRunResult<T = unknown> {
   readonly error?: string;
 }
 
+export interface SessionSwarmPoolStatus {
+  readonly active: number;
+  readonly queued: number;
+  readonly max: number;
+  readonly reserved: number;
+}
+
 export interface ISessionSwarmService {
   readonly _serviceBrand: undefined;
 
@@ -64,6 +71,9 @@ export interface ISessionSwarmService {
     readonly callerAgentId: string;
     readonly agentId: string;
   }): Promise<string | undefined>;
+  getPoolStatus(args: {
+    readonly callerAgentId: string;
+  }): SessionSwarmPoolStatus | undefined;
   run<T>(
     args: SessionSwarmRunArgs<T>,
   ): Promise<readonly SessionSwarmRunResult<T>[]>;

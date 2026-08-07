@@ -76,6 +76,16 @@ import {
   type SwarmConfig,
 } from "#/session/swarm/configSection";
 import { SessionSwarmService } from "#/session/swarm/sessionSwarmService";
+import {
+  effectiveSwarmWorkerConcurrency,
+  isOrchestratorProfileName,
+  resolveOrchestratorProfileName,
+  resolvePlanLaneReservedSlots,
+} from "#/session/swarm/orchestrator";
+import { IAgentPlanService } from "#/agent/plan/plan";
+import { IAgentGoalService } from "#/agent/goal/goal";
+import { IBuiltinAgentProfileLoader } from "#/app/agentProfileCatalog/builtinAgentProfileLoader";
+import "#/session/agentLifecycle/profile/orchestrator";
 
 import { stubLog } from "../../_base/log/stubs";
 
@@ -1555,6 +1565,248 @@ describe("SessionSwarmService metadata compatibility", () => {
 
     expect(leases.ownerForPath("/repo/src/a.ts")).toBeUndefined();
     expect(leases.isWriteAllowed("other", "/repo/src/a.ts")).toBe(true);
+  });
+});
+
+describe("orchestrator profile and plan lane", () => {
+  it("registers the orchestrator builtin profile", () => {
+    const loader = {
+      _serviceBrand: undefined,
+      get: (name: string) =>
+        name === "orchestrator"
+          ? normalizeAgentProfile({
+              name: "orchestrator",
+              tools: ["AgentSwarm"],
+              subagents: ["coder", "explore", "plan"],
+              systemPrompt: () => "orchestrator",
+            })
+          : undefined,
+      getDefault: () =>
+        normalizeAgentProfile({
+          name: "agent",
+          tools: [],
+          systemPrompt: () => "",
+        }),
+      list: () => [],
+    } as IBuiltinAgentProfileLoader;
+    expect(loader.get("orchestrator")?.subagents).toEqual([
+      "coder",
+      "explore",
+      "plan",
+    ]);
+  });
+
+  it("resolves orchestrator profile name from swarm config", () => {
+    const config = {
+      get: (section: string) =>
+        section === SWARM_SECTION
+          ? ({ orchestratorProfile: "lead" } satisfies SwarmConfig)
+          : undefined,
+    } as IConfigService;
+    expect(resolveOrchestratorProfileName(config)).toBe("lead");
+    expect(isOrchestratorProfileName("lead", config)).toBe(true);
+    expect(isOrchestratorProfileName("agent", config)).toBe(false);
+  });
+
+  it("reserves plan-lane worker slots without dropping below one worker", () => {
+    expect(effectiveSwarmWorkerConcurrency(3, 1)).toBe(2);
+    expect(effectiveSwarmWorkerConcurrency(1, 1)).toBe(1);
+    expect(effectiveSwarmWorkerConcurrency(5, 0)).toBe(5);
+  });
+
+  it("reads plan_lane_reserved_slots from swarm config", () => {
+    const config = {
+      get: (section: string) =>
+        section === SWARM_SECTION
+          ? ({ planLaneReservedSlots: 2 } satisfies SwarmConfig)
+          : undefined,
+    } as IConfigService;
+    expect(resolvePlanLaneReservedSlots(config)).toBe(2);
+  });
+});
+
+describe("SessionSwarmService orchestrator pool", () => {
+  let disposables: DisposableStore;
+  let ix: TestInstantiationService;
+  let agents: Record<string, AgentMeta>;
+  let handles: Map<string, IAgentScopeHandle>;
+  let lifecycle: IAgentLifecycleService;
+  let subagents: ISessionSubagentService;
+  let runAgent: ReturnType<typeof vi.fn>;
+  let eventBus: IEventBus;
+
+  beforeEach(() => {
+    disposables = new DisposableStore();
+    ix = disposables.add(new TestInstantiationService());
+    agents = {};
+    handles = new Map();
+    eventBus = eventBusStub();
+    lifecycle = lifecycleStub(handles, eventBus);
+    subagents = subagentStub();
+    runAgent = subagents.run as ReturnType<typeof vi.fn>;
+    handles.set(
+      "orchestrator",
+      agentHandle(
+        "orchestrator",
+        lifecycle,
+        eventBus,
+        { profileName: "orchestrator" },
+        new Map([
+          [
+            IAgentPlanService,
+            {
+              _serviceBrand: undefined,
+              status: async () => ({ id: "p1", content: "", path: "/plan.md" }),
+              enter: async () => {},
+              cancel: () => {},
+              clear: async () => {},
+              exit: () => {},
+              recordRevision: async () => {},
+            },
+          ],
+        ]),
+      ),
+    );
+
+    ix.stub(IAgentLifecycleService, lifecycle);
+    ix.stub(ISessionSubagentService, subagents);
+    ix.stub(ISessionAgentProfileCatalog, {
+      _serviceBrand: undefined,
+      ready: Promise.resolve(),
+      get: (name: string) =>
+        name === "coder"
+          ? normalizeAgentProfile({
+              name: "coder",
+              tools: [],
+              systemPrompt: () => "",
+            })
+          : undefined,
+      getDefault: () =>
+        normalizeAgentProfile({
+          name: "agent",
+          tools: [],
+          systemPrompt: () => "",
+        }),
+      list: () => [],
+    });
+    ix.stub(
+      ISessionContext,
+      makeSessionContext({
+        sessionId: "s1",
+        workspaceId: "w1",
+        sessionDir: "/tmp/kimi/s1",
+        sessionScope: "sessions/w1/s1",
+        cwd: "/repo",
+      }),
+    );
+    ix.stub(ISessionMetadata, {
+      _serviceBrand: undefined,
+      ready: Promise.resolve(),
+      onDidChangeMetadata: Event.None as Event<SessionMetadataChangedEvent>,
+      read: async () => ({
+        id: "s1",
+        createdAt: 0,
+        updatedAt: 0,
+        archived: false,
+        agents,
+      }),
+      update: async () => {},
+      setTitle: async () => {},
+      setArchived: async () => {},
+      registerAgent: async (agentId, meta) => {
+        agents[agentId] = meta;
+      },
+    });
+    ix.stub(ISessionProcessRunner, {
+      _serviceBrand: undefined,
+      exec: async () => {
+        throw new Error("unexpected process exec");
+      },
+    });
+    ix.stub(ILogService, stubLog());
+    ix.stub(IModelCatalog, {
+      _serviceBrand: undefined,
+      get: (alias: string) => ({ id: alias }) as Model,
+    } as IModelCatalog);
+    ix.stub(IConfigService, {
+      _serviceBrand: undefined,
+      get: (section: string) =>
+        section === SWARM_SECTION
+          ? ({
+              maxConcurrentWorkers: 3,
+              orchestratorProfile: "orchestrator",
+              planLaneReservedSlots: 1,
+            } satisfies SwarmConfig)
+          : undefined,
+      onDidChange: Event.None,
+    } as IConfigService);
+    ix.stub(ISessionWorkspaceContext, sessionWorkspaceContextStub("/repo"));
+    const workspaceCtx = {
+      _serviceBrand: undefined,
+      cwd: "/repo",
+      workspaceId: "w1",
+      osBackendId: "node-local",
+    } as IWorkspaceContext;
+    ix.stub(IWorkspaceContext, workspaceCtx);
+    ix.stub(IWorkspaceLeaseService, new WorkspaceLeaseService(workspaceCtx));
+    ix.set(ISessionSwarmService, new SyncDescriptor(SessionSwarmService));
+  });
+
+  afterEach(() => {
+    disposables.dispose();
+  });
+
+  it("publishes pool status and reserves a plan lane for orchestrator callers", async () => {
+    vi.useFakeTimers();
+    try {
+      const published: DomainEvent[] = [];
+      (eventBus.publish as ReturnType<typeof vi.fn>).mockImplementation(
+        (event: DomainEvent) => {
+          published.push(event);
+        },
+      );
+      const pending = createControlledPromise<{ summary: string }>();
+      runAgent.mockImplementation(async (agentId: string) => ({
+        agentId,
+        turn: {} as never,
+        completion: pending,
+      }));
+
+      const service = ix.get(ISessionSwarmService);
+      const runPromise = service.run({
+        callerAgentId: "orchestrator",
+        tasks: [
+          spawnSessionTask("src/a.ts"),
+          spawnSessionTask("src/b.ts"),
+          spawnSessionTask("src/c.ts"),
+          spawnSessionTask("src/d.ts"),
+        ],
+      });
+
+      await vi.waitFor(() => {
+        expect(
+          published.some((event) => event.type === "subagent.pool.updated"),
+        ).toBe(true);
+      });
+
+      const poolEvent = published.find(
+        (event) => event.type === "subagent.pool.updated",
+      );
+      expect(poolEvent).toMatchObject({
+        type: "subagent.pool.updated",
+        parentAgentId: "orchestrator",
+        max: 3,
+        reserved: 1,
+      });
+
+      const status = service.getPoolStatus({ callerAgentId: "orchestrator" });
+      expect(status).toMatchObject({ max: 3, reserved: 1 });
+
+      pending.resolve({ summary: "done" });
+      await runPromise;
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

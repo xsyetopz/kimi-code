@@ -10,6 +10,7 @@ import { modelDisplayName } from "../components/dialogs/model-selector";
 import { MAIN_AGENT_ID } from "../constant/kimi-tui";
 import type {
   BackgroundAgentMetadata,
+  AgentSwarmPoolViewState,
   ToolCallBlockData,
   ToolResultBlockData,
   TranscriptEntry,
@@ -167,6 +168,9 @@ export class SubAgentEventHandler {
       case "subagent.failed":
         this.handleSubagentFailed(event);
         return;
+      case "subagent.pool.updated":
+        this.handleSubagentPoolUpdated(event);
+        return;
     }
   }
 
@@ -290,6 +294,22 @@ export class SubAgentEventHandler {
     if (info === undefined) return;
     if (!info.runInBackground)
       this.handleForegroundSubagentStarted(event, info);
+  }
+
+  private handleSubagentPoolUpdated(
+    event: SubagentLifecycleEventOf<"subagent.pool.updated">,
+  ): void {
+    const progress = this.agentSwarmProgress.get(event.parentToolCallId);
+    if (progress === undefined) return;
+    const poolStatus: AgentSwarmPoolViewState = {
+      active: event.active,
+      queued: event.queued,
+      max: event.max,
+      reserved: event.reserved,
+    };
+    progress.setPoolStatus(poolStatus);
+    this.mirrorAgentSwarmToInk(event.parentToolCallId, progress);
+    this.requestRender();
   }
 
   private handleSubagentSuspended(

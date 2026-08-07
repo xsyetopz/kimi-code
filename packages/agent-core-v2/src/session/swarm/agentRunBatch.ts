@@ -107,6 +107,12 @@ type ActiveAttempt<T> = {
 
 export type AgentRunBatchOptions = {
   readonly maxConcurrency?: number;
+  readonly onPoolChange?: (snapshot: AgentRunBatchPoolSnapshot) => void;
+};
+
+export type AgentRunBatchPoolSnapshot = {
+  readonly active: number;
+  readonly queued: number;
 };
 
 export class AgentRunBatch<T> {
@@ -118,6 +124,7 @@ export class AgentRunBatch<T> {
   private readonly batchSignal: AbortSignal | undefined;
   private readonly batchAbortListener: () => void;
   private readonly maxConcurrency: number | undefined;
+  private readonly onPoolChange: ((snapshot: AgentRunBatchPoolSnapshot) => void) | undefined;
   private normalLaunchCount = 0;
   private normalLaunchTimer: ReturnType<typeof setTimeout> | undefined;
   private rateLimitLaunchTimer: ReturnType<typeof setTimeout> | undefined;
@@ -140,6 +147,7 @@ export class AgentRunBatch<T> {
     options: AgentRunBatchOptions = {},
   ) {
     this.maxConcurrency = options.maxConcurrency;
+    this.onPoolChange = options.onPoolChange;
     this.states = tasks.map((task, index) => ({
       index,
       task,
@@ -185,6 +193,7 @@ export class AgentRunBatch<T> {
       this.batchSignal?.addEventListener("abort", this.batchAbortListener, {
         once: true,
       });
+      this.notifyPoolChange();
       this.schedule();
     });
   }
@@ -239,6 +248,13 @@ export class AgentRunBatch<T> {
     );
   }
 
+  private notifyPoolChange(): void {
+    this.onPoolChange?.({
+      active: this.active.size,
+      queued: this.pending.length,
+    });
+  }
+
   private scheduleRateLimitLaunch(): void {
     this.clearRateLimitTimer();
     if (this.pending.length === 0) return;
@@ -286,6 +302,7 @@ export class AgentRunBatch<T> {
     };
     attempt.cleanup = this.linkAttemptSignals(attempt, state.task);
     this.active.add(attempt);
+    this.notifyPoolChange();
 
     this.runAttempt(attempt).then(
       (outcome) => {
@@ -448,6 +465,7 @@ export class AgentRunBatch<T> {
   private releaseAttempt(attempt: ActiveAttempt<T>): boolean {
     if (!this.active.delete(attempt)) return false;
     attempt.cleanup();
+    this.notifyPoolChange();
     return true;
   }
 
@@ -474,6 +492,7 @@ export class AgentRunBatch<T> {
     });
     state.retryReadyAt = now + retryDelay;
     this.pending.unshift(state);
+    this.notifyPoolChange();
     this.enterRateLimitMode(now);
 
     if (!attempt.ready) {

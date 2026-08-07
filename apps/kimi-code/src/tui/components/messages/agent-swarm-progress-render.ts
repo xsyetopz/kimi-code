@@ -175,9 +175,10 @@ function renderHeader(
       ? chalk.hex(colors.primary)(" ─ ") +
         chalk.hex(colors.textDim)(state.modelDisplay)
       : "";
+  const pool = renderPoolStatusSuffix(state.poolStatus, colors);
   const prefixText = "─ ";
   const labelWidth = Math.max(1, width - visibleWidth(prefixText) - 1);
-  const label = truncateToWidth(title + description + model, labelWidth);
+  const label = truncateToWidth(title + description + model + pool, labelWidth);
   const suffixWidth = Math.max(
     0,
     width - visibleWidth(prefixText) - visibleWidth(label),
@@ -188,6 +189,25 @@ function renderHeader(
     chalk.hex(colors.primary)(prefixText) +
     label +
     chalk.hex(colors.primary)(suffix)
+  );
+}
+
+function renderPoolStatusSuffix(
+  poolStatus: AgentSwarmProgressCoreState["poolStatus"],
+  colors: ColorPalette,
+): string {
+  if (poolStatus === undefined) return "";
+  const boundedMax = Math.max(1, poolStatus.max - poolStatus.reserved);
+  const label = `pool ${String(poolStatus.active)}/${String(boundedMax)}`;
+  const queued =
+    poolStatus.queued > 0 ? ` · ${String(poolStatus.queued)} queued` : "";
+  const reserved =
+    poolStatus.reserved > 0
+      ? ` · ${String(poolStatus.reserved)} plan lane`
+      : "";
+  return (
+    chalk.hex(colors.primary)(" ─ ") +
+    chalk.hex(colors.textDim)(`${label}${queued}${reserved}`)
   );
 }
 

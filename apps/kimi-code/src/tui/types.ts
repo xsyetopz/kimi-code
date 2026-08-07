@@ -188,6 +188,13 @@ export interface AgentSwarmMemberViewState {
   readonly suspendedReason?: string;
 }
 
+export interface AgentSwarmPoolViewState {
+  readonly active: number;
+  readonly queued: number;
+  readonly max: number;
+  readonly reserved: number;
+}
+
 /** Serializable AgentSwarm grid state for Ink and replay projection. */
 export interface AgentSwarmProgressViewState {
   readonly description: string;
@@ -200,6 +207,7 @@ export interface AgentSwarmProgressViewState {
   readonly toolCallActive: boolean;
   readonly activitySpinnerText: string;
   readonly swarmFailureText?: string;
+  readonly poolStatus?: AgentSwarmPoolViewState;
   readonly members: readonly AgentSwarmMemberViewState[];
 }
 

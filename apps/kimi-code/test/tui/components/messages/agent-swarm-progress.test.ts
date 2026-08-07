@@ -1157,3 +1157,23 @@ describe("AgentSwarmProgressEstimator", () => {
     expect(second.boosted).toBe(true);
   });
 });
+
+describe("swarm pool chrome", () => {
+  it("renders active worker pool counts in the header", () => {
+    const component = createComponent();
+    component.setPoolStatus({
+      active: 2,
+      queued: 4,
+      max: 3,
+      reserved: 1,
+    });
+    component.markInputComplete();
+    registerSubagents(component, 2);
+    startSubagents(component, 2);
+
+    const text = renderText(component, 120);
+    expect(text).toContain("pool 2/2");
+    expect(text).toContain("4 queued");
+    expect(text).toContain("1 plan lane");
+  });
+});
