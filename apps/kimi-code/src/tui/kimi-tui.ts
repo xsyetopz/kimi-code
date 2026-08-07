@@ -33,6 +33,7 @@ import {
 import { KimiTuiTerminalsController } from "./kimi-tui-terminals.ts";
 import type { InkTerminalRenderer } from "./renderer/ink/terminal-renderer.ts";
 import type { InkTerminalRendererOptions } from "./renderer/ink/terminal-renderer.ts";
+import type { TerminalOwnership } from "./renderer/terminal-owner.ts";
 import type { PromptEditorState } from "./renderer/prompt-editor-state.ts";
 import type { TerminalViewState } from "./renderer/terminal-view-state.ts";
 import { registerReverseRPCHandlers } from "./reverse-rpc/index.ts";
@@ -130,6 +131,11 @@ export class KimiTUI {
   /** Current terminal owner, exposed for lifecycle diagnostics and tests. */
   get terminalRendererOwner(): "none" | "ink" {
     return this.terminalsController.terminalRendererOwner;
+  }
+
+  /** Shared terminal ownership guard used by lifecycle and renderer code. */
+  get terminalOwnership(): TerminalOwnership {
+    return this.terminalsController.terminalOwnership;
   }
 
   constructor(harness: KimiHarness, startupInput: KimiTUIStartupInput) {

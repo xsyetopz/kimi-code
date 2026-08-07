@@ -33,7 +33,7 @@ export interface KimiTuiTerminalsHost {
 
 export class KimiTuiTerminalsController {
   private inkRenderer: InkTerminalRenderer | undefined;
-  private readonly terminalOwnership = new TerminalOwnership();
+  readonly terminalOwnership = new TerminalOwnership();
 
   constructor(private readonly host: KimiTuiTerminalsHost) {}
 

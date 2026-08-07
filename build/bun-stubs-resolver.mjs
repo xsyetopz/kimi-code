@@ -14,7 +14,7 @@ const BUN_SQLITE_STUB = pathToFileURL(
  * execution under Node (tsx dev, vitest). Production Bun builds use the real
  * modules.
  */
-export async function resolve(specifier, context, nextResolve) {
+export function resolve(specifier, context, nextResolve) {
   if (specifier === "bun:sqlite") {
     return {
       format: "module",
