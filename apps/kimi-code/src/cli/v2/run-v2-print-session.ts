@@ -15,7 +15,7 @@ import {
   type IAgentScopeHandle,
   type ISessionScopeHandle,
   type Scope,
-} from "@moonshot-ai/agent-core-v2";
+} from "@moonshot-ai/kimi-code-sdk";
 import { resolve } from "pathe";
 
 import { configuredModel, requireConfiguredModel } from "../run-prompt";

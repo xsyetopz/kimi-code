@@ -16,7 +16,7 @@ import {
   type ISessionScopeHandle,
   type LoopRunResult,
   type Scope,
-} from "@moonshot-ai/agent-core-v2";
+} from "@moonshot-ai/kimi-code-sdk";
 
 import {
   formatGoalSummaryText,

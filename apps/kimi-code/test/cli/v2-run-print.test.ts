@@ -15,16 +15,13 @@ import {
   IBootstrapService,
   IConfigService,
   IEventBus,
-  IFileSystemStorageService,
-  IOAuthToolkit,
   ISessionCronService,
   ISessionIndex,
   ISessionLifecycleService,
   IWorkspaceLifecycleService,
-  ITelemetryService,
   type BootstrapInput,
   type DomainEvent,
-} from "@moonshot-ai/agent-core-v2";
+} from "@moonshot-ai/kimi-code-sdk";
 
 import { runV2Print } from "../../src/cli/v2/run-v2-print";
 
@@ -38,13 +35,14 @@ const mocks = vi.hoisted(() => ({
   createKimiDeviceId: vi.fn(() => "device-1"),
 }));
 
-vi.mock("@moonshot-ai/agent-core-v2", async (importOriginal) => {
+vi.mock("@moonshot-ai/kimi-code-sdk", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("@moonshot-ai/agent-core-v2")>();
+    await importOriginal<typeof import("@moonshot-ai/kimi-code-sdk")>();
   return {
     ...actual,
     bootstrap: mocks.bootstrap,
     ensureMainAgent: mocks.ensureMainAgent,
+    resolveKimiHome: mocks.resolveKimiHome,
   };
 });
 
@@ -56,15 +54,6 @@ vi.mock("@moonshot-ai/kimi-code-oauth", async () => {
     ...actual,
     createKimiDefaultHeaders: mocks.createKimiDefaultHeaders,
     createKimiDeviceId: mocks.createKimiDeviceId,
-  };
-});
-
-vi.mock("@moonshot-ai/kimi-code-sdk", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("@moonshot-ai/kimi-code-sdk")>();
-  return {
-    ...actual,
-    resolveKimiHome: mocks.resolveKimiHome,
   };
 });
 
@@ -246,22 +235,6 @@ function makeFakeHarness() {
         osHomeDir: "/home/test",
         getEnv: () => undefined,
       },
-    ],
-    [IOAuthToolkit, { getCachedAccessToken: vi.fn(async () => undefined) }],
-    [IFileSystemStorageService, {}],
-    [
-      ITelemetryService,
-      (() => {
-        const svc = {
-          setAppender: vi.fn(),
-          setContext: vi.fn(),
-          track: vi.fn(),
-          track2: vi.fn(),
-          shutdown: vi.fn(async () => {}),
-          withContext: vi.fn(() => svc),
-        };
-        return svc;
-      })(),
     ],
   ]);
   const app = fakeScope("app", appServices);

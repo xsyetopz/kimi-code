@@ -1,7 +1,7 @@
 /**
  * Native v2 `kimi -p` (print mode) runner.
  *
- * This runner talks to agent-core-v2's native DI services directly. It:
+ * This runner talks to the engine through `@moonshot-ai/kimi-code-sdk`. It:
  *   - `bootstrap()`s the app scope,
  *   - creates / resumes a session and its main agent via native services,
  *   - subscribes to the main agent's per-agent `IEventBus` and renders the
@@ -21,7 +21,7 @@ import {
   logSeed,
   resolveKimiHome,
   resolveLoggingConfig,
-} from "@moonshot-ai/agent-core-v2";
+} from "@moonshot-ai/kimi-code-sdk";
 import { createKimiDefaultHeaders } from "@moonshot-ai/kimi-code-oauth";
 
 import { PROMPT_CLEANUP_TIMEOUT_MS } from "#/constant/app";

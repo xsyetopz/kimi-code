@@ -93,6 +93,43 @@ export {
 } from "#/compat";
 export { limitAgentReplayByTurns } from "#/compat";
 export { parseAgentFileText, resolveAgentPath } from "#/compat";
+
+// Headless print (`kimi -p`) — engine symbols the CLI print runner wires
+// directly. Hosts must not import `@moonshot-ai/agent-core-v2` for this path.
+export {
+  applyPrintModeConfigDefaults,
+  bootstrap,
+  ensureMainAgent,
+  IAgentGoalService,
+  IAgentLifecycleService,
+  IAgentPermissionModeService,
+  IAgentProfileService,
+  IAgentPromptService,
+  IAgentTaskService,
+  IAuthSummaryService,
+  IBootstrapService,
+  IConfigService,
+  IEventBus,
+  ISessionCronService,
+  ISessionIndex,
+  ISessionLifecycleService,
+  IWorkspaceLifecycleService,
+  logSeed,
+  PRINT_MAX_TURNS_DEFAULT,
+  PRINT_WAIT_CEILING_S_DEFAULT,
+  resumeSessionById,
+  resolveAgentTaskConfig,
+  resolvePrintBackgroundMode,
+} from "#/headless-print";
+export type {
+  BootstrapInput,
+  DomainEvent,
+  IAgentScopeHandle,
+  ISessionScopeHandle,
+  LoopRunResult,
+  PrintBackgroundMode,
+  Scope,
+} from "#/headless-print";
 // The synthesized `[models]` alias a `[secondary_model]` recipe with patch
 // fields materializes at runtime — hosts filter it out of model pickers.
 export { SECONDARY_DERIVED_MODEL_ALIAS } from "#/compat";

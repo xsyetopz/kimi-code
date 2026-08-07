@@ -1,7 +1,7 @@
 import {
   type DomainEvent,
   type PrintBackgroundMode,
-} from "@moonshot-ai/agent-core-v2";
+} from "@moonshot-ai/kimi-code-sdk";
 
 /** Re-check `goalActive` at least this often while waiting for goal turns. */
 const GOAL_WAIT_POLL_MS = 250;

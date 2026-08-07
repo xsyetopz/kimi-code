@@ -397,8 +397,10 @@ export function limitAgentReplayByTurns(
 }
 export function makeErrorPayload(code: unknown, msg: string, extra?: Record<string, unknown>) { return { code, message: msg, ...extra }; }
 export function installGlobalProxyDispatcher(): void {}
-export function parseAgentFileText(text: string): string[] { return text.split("\n"); }
-export function resolveAgentPath(_base: string, relative: string): string { return relative; }
+export {
+  parseAgentFileText,
+  resolveAgentPath,
+} from "@moonshot-ai/agent-core-v2";
 export const noopTelemetryClient = { track: () => {}, sendEvent: () => {}, flush: () => Promise.resolve(), close: () => Promise.resolve() } as const;
 
 /** Host-facing diagnostic logger; engine scopes own their file sinks. */
