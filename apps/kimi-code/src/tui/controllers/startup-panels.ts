@@ -38,7 +38,6 @@ export interface StartupPanelsHost {
   readonly sessionOrchestration: SessionOrchestrationController;
   readonly editorKeyboard: EditorKeyboardController;
 
-  inkOwnsTerminal(): boolean;
   updateInkRenderer(): void;
   patchLivePane(patch: Partial<LivePaneState>): void;
   getSlashCommands(): readonly KimiSlashCommand[];

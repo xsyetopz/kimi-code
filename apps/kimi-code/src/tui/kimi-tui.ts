@@ -183,9 +183,6 @@ export class KimiTUI {
   readonly promptInputController: PromptInputController;
   readonly tuiLifecycleController: TuiLifecycleController;
   private readonly terminalOwnership = new TerminalOwnership();
-  private inkOwnsTerminal(): boolean {
-    return true;
-  }
 
   private get inkOverlay() {
     return this.state.inkOverlay;

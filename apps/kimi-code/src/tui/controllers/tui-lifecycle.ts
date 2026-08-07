@@ -75,7 +75,6 @@ export interface TuiLifecycleHost {
   readonly transcriptCoordinator: TranscriptCoordinator;
   readonly onExit?: (exitCode?: number) => Promise<void>;
 
-  inkOwnsTerminal(): boolean;
   maybeRunWorkspaceTrustPrompt(): Promise<boolean>;
   setupAutocomplete(): void;
   loadPersistedInputHistory(): Promise<void>;

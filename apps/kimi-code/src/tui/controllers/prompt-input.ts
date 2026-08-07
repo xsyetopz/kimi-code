@@ -15,7 +15,6 @@ import {
   type PromptSemanticAction,
 } from "../renderer/prompt-editor-input";
 import {
-  createPromptEditorState,
   type PromptEditorAction,
   type PromptEditorState,
   reducePromptEditor,
@@ -43,7 +42,6 @@ export interface PromptInputHost extends SlashCommandHost {
   readonly editorKeyboard: EditorKeyboardController;
   readonly shellOutputStreams: Map<string, ShellOutputStreamEntry>;
 
-  inkOwnsTerminal(): boolean;
   updateInkRenderer(): void;
   updateEditorBorderHighlight(text?: string): void;
   getSlashCommands(): readonly KimiSlashCommand[];
@@ -118,9 +116,6 @@ export class PromptInputController {
 
   /** Refresh Ink after an asynchronous clipboard/image editor callback. */
   updatePromptEditorView(): void {
-    if (!this.host.inkOwnsTerminal()) {
-      this.syncPromptEditorFromLegacy();
-    }
     this.host.updateInkRenderer();
   }
 
@@ -138,9 +133,6 @@ export class PromptInputController {
       this.applyPromptEditorAction({ type: "history-down" });
       return;
     }
-    if (!this.host.inkOwnsTerminal()) {
-      this.syncPromptEditorFromLegacy();
-    }
     this.host.updateInkRenderer();
   }
 
@@ -149,47 +141,13 @@ export class PromptInputController {
     this.syncLegacyPromptEditor();
     this.refreshPromptCompletions();
     this.host.updateEditorBorderHighlight(this.promptEditorState.text);
-    if (!this.host.inkOwnsTerminal()) {
-      this.host.state.ui.requestRender();
-    }
     this.host.updateInkRenderer();
   }
 
   syncLegacyPromptEditor(): void {
-    if (this.host.inkOwnsTerminal()) {
-      if (this.host.state.appState.inputMode !== this.promptEditorState.inputMode) {
-        this.host.setAppState({ inputMode: this.promptEditorState.inputMode });
-      }
-      return;
-    }
-    const editor = this.host.state.editor;
-    if (editor.getText() !== this.promptEditorState.text) {
-      editor.setText(this.promptEditorState.text);
-    }
-    if (editor.inputMode !== this.promptEditorState.inputMode) {
-      editor.inputMode = this.promptEditorState.inputMode;
-    }
     if (this.host.state.appState.inputMode !== this.promptEditorState.inputMode) {
       this.host.setAppState({ inputMode: this.promptEditorState.inputMode });
     }
-  }
-
-  syncPromptEditorFromLegacy(): void {
-    if (this.host.inkOwnsTerminal()) return;
-    const editor = this.host.state.editor;
-    const cursor = editor.getCursor();
-    const text = editor.getText();
-    this.promptEditorState = createPromptEditorState({
-      text,
-      cursor:
-        text
-          .split("\n")
-          .slice(0, cursor.line)
-          .reduce((sum, line) => sum + line.length + 1, 0) + cursor.col,
-      inputMode: editor.inputMode,
-      history: this.promptEditorState.history,
-    });
-    this.refreshPromptCompletions();
   }
 
   refreshPromptCompletions(): void {
@@ -233,7 +191,7 @@ export class PromptInputController {
 
   /** {@link EditorKeyboardController} ink prompt bridge methods. */
   inkOwnsPromptEditor(): boolean {
-    return this.host.inkOwnsTerminal();
+    return true;
   }
 
   getPromptEditorText(): string {
@@ -332,7 +290,6 @@ export class PromptInputController {
       content: "",
     };
     const mirrorShellRunToInk = (): void => {
-      if (!this.host.inkOwnsTerminal()) return;
       this.host.syncShellRunTranscriptEntry(
         commandId,
         outputComponent.captureShellRunState(),
@@ -415,9 +372,6 @@ export class PromptInputController {
           type: "history-add",
           text: entry.content,
         });
-        if (!this.host.inkOwnsTerminal()) {
-          this.host.state.editor.addToHistory(entry.content);
-        }
       }
       this.lastHistoryContent = entries.at(-1)?.content;
     } catch {
@@ -433,9 +387,6 @@ export class PromptInputController {
       type: "history-add",
       text: trimmed,
     });
-    if (!this.host.inkOwnsTerminal()) {
-      this.host.state.editor.addToHistory(trimmed);
-    }
     try {
       const file = getInputHistoryFile(this.host.state.appState.workDir);
       const written = await appendInputHistory(
