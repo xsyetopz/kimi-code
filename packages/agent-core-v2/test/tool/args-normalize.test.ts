@@ -19,8 +19,13 @@ describe("normalizeToolArgsForValidation", () => {
     expect(
       normalizeToolArgsForValidation("TodoList", {
         todos: [
-          { title: "One", status: "completed", note: "ignored" },
-          { title: "Two", status: "wip", id: "x" },
+          {
+            title: "One",
+            status: "completed",
+            description: "ignored",
+            note: "ignored",
+          },
+          { title: "Two", status: "wip", id: "x", description: "also ignored" },
         ],
       }),
     ).toEqual({

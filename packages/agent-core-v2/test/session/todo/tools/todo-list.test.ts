@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import { AgentToolRegistryService } from "#/agent/toolRegistry/toolRegistryService";
+import { preflightToolCall } from "#/agent/toolExecutor/toolExecutorHelpers";
 import { type ISessionTodoService } from "#/session/todo/sessionTodo";
 import { TODO_LIST_TOOL_NAME, type TodoItem } from "#/session/todo/todoItem";
 import { TodoListInputSchema } from "#/agent/tools/todo-list/todo-list";
@@ -179,5 +181,40 @@ describe("TodoListTool", () => {
     expect(readExecution.description).toBe("Reading todo list");
     expect(clearExecution.description).toBe("Clearing todo list");
     expect(updateExecution.description).toBe("Updating todo list");
+  });
+
+  it("preflight accepts Claude-style per-item description fields", () => {
+    const registry = new AgentToolRegistryService();
+    const { tool } = makeTool();
+    registry.register(tool);
+
+    const result = preflightToolCall(
+      registry,
+      {
+        type: "function",
+        id: "call_todo",
+        name: TODO_LIST_TOOL_NAME,
+        arguments: JSON.stringify({
+          todos: [
+            { title: "One", status: "pending", description: "first" },
+            { title: "Two", status: "in_progress", description: "second" },
+            { title: "Three", status: "done", description: "third" },
+          ],
+        }),
+      },
+      undefined,
+      undefined,
+      undefined,
+    );
+
+    expect(result.kind).toBe("runnable");
+    if (result.kind !== "runnable") return;
+    expect(result.args).toEqual({
+      todos: [
+        { title: "One", status: "pending" },
+        { title: "Two", status: "in_progress" },
+        { title: "Three", status: "done" },
+      ],
+    });
   });
 });

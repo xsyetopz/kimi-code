@@ -1,6 +1,7 @@
 /**
  * Best-effort normalization for model-emitted tool args before AJV validation.
- * Some providers stringify numbers or use Claude-style TodoWrite field names.
+ * Some providers stringify numbers or use Claude-style TodoWrite field names
+ * (status aliases, per-item `description` / `id` / `note`, and so on).
  */
 
 function coerceIntegerField(value: unknown): unknown {
