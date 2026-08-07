@@ -1,0 +1,95 @@
+/* Component styles for @moonshot-ai/kimi-tui/react */
+
+.kui-text {
+  margin: 0;
+  font-family: var(--kui-font-ui);
+  color: var(--kui-fg-0);
+  line-height: 1.45;
+}
+
+.kui-text--body { font-size: var(--kui-text-base); }
+.kui-text--label { font-size: var(--kui-text-sm); font-weight: 500; color: var(--kui-fg-1); }
+.kui-text--caption { font-size: var(--kui-text-xs); color: var(--kui-fg-2); }
+.kui-text--mono { font-family: var(--kui-font-mono); font-size: var(--kui-text-sm); }
+.kui-text--muted { color: var(--kui-fg-2); }
+.kui-text--faint { color: var(--kui-fg-3); }
+
+.kui-panel {
+  background: var(--kui-surface-1);
+  border: 1px solid var(--kui-border);
+  border-radius: var(--kui-radius-md);
+}
+.kui-panel--pad-sm { padding: var(--kui-space-2) var(--kui-space-3); }
+.kui-panel--pad-md { padding: var(--kui-space-3) var(--kui-space-4); }
+
+.kui-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--kui-space-2);
+  border: 1px solid transparent;
+  border-radius: var(--kui-radius-sm);
+  font-family: var(--kui-font-mono);
+  font-weight: 500;
+  line-height: 1;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background var(--kui-duration) var(--kui-ease),
+    border-color var(--kui-duration) var(--kui-ease),
+    color var(--kui-duration) var(--kui-ease);
+}
+.kui-button:focus-visible { outline: 2px solid var(--kui-accent); outline-offset: 1px; }
+.kui-button:disabled { opacity: 0.5; cursor: not-allowed; }
+.kui-button--sm { height: 28px; padding: 0 var(--kui-space-2); font-size: var(--kui-text-sm); }
+.kui-button--md { height: 32px; padding: 0 var(--kui-space-3); font-size: var(--kui-text-sm); }
+.kui-button--primary { background: var(--kui-accent); color: var(--kui-on-accent); border-color: var(--kui-accent); }
+.kui-button--primary:not(:disabled):hover { background: var(--kui-accent-hover); border-color: var(--kui-accent-hover); }
+.kui-button--secondary { background: var(--kui-surface-0); color: var(--kui-fg-1); border-color: var(--kui-border); }
+.kui-button--secondary:not(:disabled):hover { color: var(--kui-fg-0); border-color: var(--kui-border-strong); }
+.kui-button--ghost { background: transparent; color: var(--kui-fg-2); border-color: transparent; }
+.kui-button--ghost:not(:disabled):hover { color: var(--kui-fg-0); background: var(--kui-accent-muted); }
+
+.kui-badge {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  padding: 1px 6px;
+  border-radius: var(--kui-radius-sm);
+  font-family: var(--kui-font-mono);
+  font-size: var(--kui-text-xs);
+  font-weight: 500;
+  line-height: 1.35;
+  letter-spacing: 0.02em;
+}
+.kui-badge--neutral { background: color-mix(in oklab, var(--kui-fg-2) 14%, transparent); color: var(--kui-fg-1); }
+.kui-badge--accent { background: var(--kui-accent-muted); color: var(--kui-accent-hover); }
+.kui-badge--success { background: color-mix(in oklab, var(--kui-status-success) 18%, transparent); color: var(--kui-status-success); }
+.kui-badge--warning { background: color-mix(in oklab, var(--kui-status-warning) 18%, transparent); color: var(--kui-status-warning); }
+.kui-badge--error { background: color-mix(in oklab, var(--kui-status-error) 18%, transparent); color: var(--kui-status-error); }
+.kui-badge--info { background: color-mix(in oklab, var(--kui-status-info) 18%, transparent); color: var(--kui-status-info); }
+
+.kui-spinner {
+  display: inline-block;
+  border: 1.5px solid color-mix(in oklab, var(--kui-fg-2) 35%, transparent);
+  border-top-color: var(--kui-accent);
+  border-radius: 50%;
+  animation: kui-spin 0.7s linear infinite;
+}
+.kui-spinner--sm { width: 12px; height: 12px; }
+.kui-spinner--md { width: 16px; height: 16px; }
+@keyframes kui-spin { to { transform: rotate(360deg); } }
+
+.kui-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--kui-space-2);
+  padding: var(--kui-space-5) var(--kui-space-4);
+  text-align: center;
+  color: var(--kui-fg-2);
+}
+.kui-empty__icon { color: var(--kui-fg-3); }
+.kui-empty__title { margin: 0; font-family: var(--kui-font-mono); font-size: var(--kui-text-sm); font-weight: 500; color: var(--kui-fg-1); }
+.kui-empty__hint { margin: 0; font-family: var(--kui-font-mono); font-size: var(--kui-text-xs); color: var(--kui-fg-3); max-width: 28rem; }
