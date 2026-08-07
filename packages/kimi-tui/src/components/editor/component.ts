@@ -1,9 +1,100 @@
 import type { AutocompleteProvider } from "../../autocomplete.ts";
 import { KillRing } from "../../kill-ring.ts";
 import { PasteBurst } from "../../paste-burst.ts";
-import { type Component, type Focusable, type TUI } from "../../tui.ts";
+import type { Component, Focusable, TUI } from "../../tui.ts";
 import { UndoStack } from "../../undo-stack.ts";
 import type { SelectList } from "../select-list.ts";
+import {
+  applyAutocompleteSuggestions,
+  cancelAutocomplete,
+  cancelAutocompleteRequest,
+  clearAutocompleteUi,
+  createAutocompleteList,
+  forceFileAutocomplete,
+  getAutocompleteDebounceMs,
+  getBestAutocompleteMatchIndex,
+  handleSlashCommandCompletion,
+  handleTabCompletion,
+  isAtStartOfMessage,
+  isAutocompleteRequestCurrent,
+  isInSlashCommandContext,
+  isSlashMenuAllowed,
+  requestAutocomplete,
+  runAutocompleteRequest,
+  setAutocompleteTriggerCharacters,
+  startAutocompleteRequest,
+  tryTriggerAutocomplete,
+  updateAutocomplete,
+} from "./autocomplete.ts";
+import {
+  computeVerticalMoveColumn,
+  deleteToEndOfLine,
+  deleteToStartOfLine,
+  deleteWordBackwards,
+  deleteWordForward,
+  handleBackspace,
+  handleForwardDelete,
+  moveToLineEnd,
+  moveToLineStart,
+  moveToVisualLine,
+  setCursorCol,
+} from "./cursor.ts";
+import {
+  addNewLine,
+  handlePaste,
+  insertCharacter,
+  insertTextAtCursorInternal,
+  isEditorEmpty,
+  isOnFirstVisualLine,
+  isOnLastVisualLine,
+  normalizeText,
+  pushUndoSnapshot,
+  shouldSubmitOnBackslashEnter,
+  submitValue,
+  undo,
+} from "./editing.ts";
+import {
+  exitHistoryBrowsing,
+  navigateHistory,
+  setTextInternal,
+} from "./history.ts";
+import { handleInput } from "./input.ts";
+import { layoutText } from "./layout.ts";
+import {
+  buildVisualLineMap,
+  deleteYankedText,
+  findCurrentVisualLine,
+  findVisualLineAt,
+  insertYankedText,
+  jumpToChar,
+  moveCursor,
+  moveWordBackwards,
+  moveWordForwards,
+  pageScroll,
+  yank,
+  yankPop,
+} from "./navigation.ts";
+import { render } from "./render.ts";
+import { segment, validPasteIds } from "./segment.ts";
+import {
+  addToHistory,
+  expandPasteMarkers,
+  getAutocompleteMaxVisible,
+  getCursor,
+  getExpandedText,
+  getLines,
+  getPaddingX,
+  getText,
+  insertTextAtCursor,
+  invalidate,
+  isShowingAutocomplete,
+  setAutocompleteMaxVisible,
+  setAutocompleteProvider,
+  setDisablePasteBurst,
+  setHistoryFilter,
+  setPaddingX,
+  setText,
+} from "./textApi.ts";
 import {
   buildDebouncePattern,
   buildTriggerPattern,
@@ -12,86 +103,6 @@ import {
   type EditorState,
   type EditorTheme,
 } from "./types.ts";
-import { validPasteIds } from "./segment.ts";
-import { segment } from "./segment.ts";
-import { getPaddingX } from "./textApi.ts";
-import { setPaddingX } from "./textApi.ts";
-import { getAutocompleteMaxVisible } from "./textApi.ts";
-import { setAutocompleteMaxVisible } from "./textApi.ts";
-import { setDisablePasteBurst } from "./textApi.ts";
-import { setAutocompleteProvider } from "./textApi.ts";
-import { setHistoryFilter } from "./textApi.ts";
-import { addToHistory } from "./textApi.ts";
-import { isEditorEmpty } from "./editing.ts";
-import { isOnFirstVisualLine } from "./editing.ts";
-import { isOnLastVisualLine } from "./editing.ts";
-import { navigateHistory } from "./history.ts";
-import { exitHistoryBrowsing } from "./history.ts";
-import { setTextInternal } from "./history.ts";
-import { invalidate } from "./textApi.ts";
-import { render } from "./render.ts";
-import { handleInput } from "./input.ts";
-import { layoutText } from "./layout.ts";
-import { getText } from "./textApi.ts";
-import { expandPasteMarkers } from "./textApi.ts";
-import { getExpandedText } from "./textApi.ts";
-import { getLines } from "./textApi.ts";
-import { getCursor } from "./textApi.ts";
-import { setText } from "./textApi.ts";
-import { insertTextAtCursor } from "./textApi.ts";
-import { normalizeText } from "./editing.ts";
-import { insertTextAtCursorInternal } from "./editing.ts";
-import { insertCharacter } from "./editing.ts";
-import { handlePaste } from "./editing.ts";
-import { addNewLine } from "./editing.ts";
-import { shouldSubmitOnBackslashEnter } from "./editing.ts";
-import { submitValue } from "./editing.ts";
-import { handleBackspace } from "./cursor.ts";
-import { setCursorCol } from "./cursor.ts";
-import { moveToVisualLine } from "./cursor.ts";
-import { computeVerticalMoveColumn } from "./cursor.ts";
-import { moveToLineStart } from "./cursor.ts";
-import { moveToLineEnd } from "./cursor.ts";
-import { deleteToStartOfLine } from "./cursor.ts";
-import { deleteToEndOfLine } from "./cursor.ts";
-import { deleteWordBackwards } from "./cursor.ts";
-import { deleteWordForward } from "./cursor.ts";
-import { handleForwardDelete } from "./cursor.ts";
-import { buildVisualLineMap } from "./navigation.ts";
-import { findVisualLineAt } from "./navigation.ts";
-import { findCurrentVisualLine } from "./navigation.ts";
-import { moveCursor } from "./navigation.ts";
-import { pageScroll } from "./navigation.ts";
-import { moveWordBackwards } from "./navigation.ts";
-import { yank } from "./navigation.ts";
-import { yankPop } from "./navigation.ts";
-import { insertYankedText } from "./navigation.ts";
-import { deleteYankedText } from "./navigation.ts";
-import { pushUndoSnapshot } from "./editing.ts";
-import { undo } from "./editing.ts";
-import { jumpToChar } from "./navigation.ts";
-import { moveWordForwards } from "./navigation.ts";
-import { isSlashMenuAllowed } from "./autocomplete.ts";
-import { isAtStartOfMessage } from "./autocomplete.ts";
-import { isInSlashCommandContext } from "./autocomplete.ts";
-import { getBestAutocompleteMatchIndex } from "./autocomplete.ts";
-import { createAutocompleteList } from "./autocomplete.ts";
-import { tryTriggerAutocomplete } from "./autocomplete.ts";
-import { handleTabCompletion } from "./autocomplete.ts";
-import { handleSlashCommandCompletion } from "./autocomplete.ts";
-import { forceFileAutocomplete } from "./autocomplete.ts";
-import { requestAutocomplete } from "./autocomplete.ts";
-import { startAutocompleteRequest } from "./autocomplete.ts";
-import { setAutocompleteTriggerCharacters } from "./autocomplete.ts";
-import { getAutocompleteDebounceMs } from "./autocomplete.ts";
-import { runAutocompleteRequest } from "./autocomplete.ts";
-import { isAutocompleteRequestCurrent } from "./autocomplete.ts";
-import { applyAutocompleteSuggestions } from "./autocomplete.ts";
-import { cancelAutocompleteRequest } from "./autocomplete.ts";
-import { clearAutocompleteUi } from "./autocomplete.ts";
-import { cancelAutocomplete } from "./autocomplete.ts";
-import { isShowingAutocomplete } from "./textApi.ts";
-import { updateAutocomplete } from "./autocomplete.ts";
 
 export class Editor implements Component, Focusable {
   protected state: EditorState = {
@@ -210,25 +221,6 @@ export class Editor implements Component, Focusable {
       : 5;
     this.disablePasteBurst = options.disablePasteBurst ?? false;
   }
-  public onSubmit?: (text: string) => void;
-  public onChange?: (text: string) => void;
-  /**
-   * Called when a history entry is recalled, before it is put into the buffer.
-   * Return the text to display, or `undefined` to use the entry as-is. Lets the
-   * host decorate entries (e.g. strip a marker) and react to recalls (e.g.
-   * switch input mode) without touching editor internals.
-   */
-  public onRecall?: (entry: string, direction: 1 | -1) => string | undefined;
-  /**
-   * Called when entering history browsing, to capture host state that should be
-   * saved alongside the editor draft. The returned value is passed to
-   * `onHistoryDraftRestore` when the user navigates back to the draft, so the
-   * host can restore state the editor does not own (e.g. an input mode).
-   */
-  public onHistoryDraftSave?: () => unknown;
-  /** Called with the value from `onHistoryDraftSave` when the draft is restored. */
-  public onHistoryDraftRestore?: (state: unknown) => void;
-  public disableSubmit: boolean = false;
 
   validPasteIds = validPasteIds;
   segment = segment;
