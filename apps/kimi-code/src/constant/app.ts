@@ -7,13 +7,6 @@ export const PROCESS_NAME = "kimi-code";
 // Used in HTTP User-Agent headers.
 export const CLI_USER_AGENT_PRODUCT = "kimi-code-cli";
 export const CLI_UI_MODE = "shell";
-// UI mode for the `kimi web` host. Same product as the CLI; the surface is
-// distinguished by this value in request metadata.
-export const WEB_UI_MODE = "web";
-// User-Agent suffix for the `kimi web` host: its requests go out as
-// `kimi-code-cli/<version> (web)` so upstream can tell web-UI traffic
-// apart from direct CLI runs without changing the product token or platform.
-export const WEB_USER_AGENT_SUFFIX = "web";
 
 // Upper bound on headless (`kimi -p`) shutdown. A wedged cleanup step (e.g. a
 // SessionEnd hook, an MCP shutdown, or a connection blackholed by a restrictive

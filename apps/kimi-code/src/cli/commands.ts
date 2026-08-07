@@ -7,8 +7,6 @@ import { registerDoctorCommand } from "./sub/doctor";
 import { registerExportCommand } from "./sub/export";
 import { registerLoginCommand } from "./sub/login";
 import { registerProviderCommand } from "./sub/provider";
-import { registerWebCommand } from "./sub/web";
-
 export type MainCommandHandler = (opts: CLIOptions) => void;
 export type PluginNodeRunnerHandler = (
   entry: string,
@@ -144,7 +142,6 @@ export function createProgram(
   registerExportCommand(program);
   registerProviderCommand(program);
   registerAcpV2Command(program);
-  registerWebCommand(program);
   registerLoginCommand(program);
   registerDoctorCommand(program);
   program

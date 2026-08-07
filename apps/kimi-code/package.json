@@ -35,8 +35,6 @@
   "imports": {
     "#/tui/theme": "./src/tui/theme/index.ts",
     "#/tui/commands": "./src/tui/commands/index.ts",
-    "#/cli/sub/web": "./src/cli/sub/web/index.ts",
-    "#/cli/sub/web/*": "./src/cli/sub/web/*.ts",
     "#/*": "./src/*.ts"
   },
   "publishConfig": {
@@ -56,10 +54,6 @@
     "test:native:smoke": "node scripts/native/smoke.mjs",
     "dev": "node scripts/dev.mjs",
     "dev:cli-only": "bun --import ../../build/register-raw-text-loader.mjs ./src/main.ts",
-    "dev:server": "KIMI_CODE_DEV_SERVER=1 bun --import ../../build/register-raw-text-loader.mjs ./src/main.ts web --no-open --debug-endpoints",
-    "dev:kap-server": "KIMI_CODE_DEV_SERVER=1 bun --import ../../build/register-raw-text-loader.mjs ./src/main.ts web --no-open --debug-endpoints",
-    "dev:kap-server:multi": "KIMI_CODE_DEV_SERVER=1 bun --import ../../build/register-raw-text-loader.mjs ./src/main.ts web --no-open --debug-endpoints",
-    "dev:server:restart": "node scripts/dev-server-restart.mjs",
     "dev:plugin-marketplace": "node scripts/dev-plugin-marketplace-server.mjs",
     "build:plugin-marketplace": "node scripts/build-plugin-marketplace-cdn.mjs",
     "dev:prod": "node dist/main.mjs",
@@ -86,6 +80,7 @@
   "dependencies": {
     "@clack/prompts": "^1.7.0",
     "@iarna/toml": "^2.2.5",
+    "@moonshot-ai/kimi-code-sdk": "workspace:^",
     "@moonshot-ai/kimi-tui": "workspace:^",
     "@shikijs/cli": "^4.4.2",
     "@types/react": "^19.2.18",

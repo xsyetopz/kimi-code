@@ -55,7 +55,7 @@ const child = spawn(
     tsxCli,
     // Use the dev tsconfig whose `include` covers packages/*/src, so tsx's
     // esbuild transform sees `experimentalDecorators: true` for DI parameter
-    // decorators in agent-core. Mirrors `dev:server` in package.json.
+    // decorators in agent-core.
     "--tsconfig",
     resolve(APP_ROOT, "tsconfig.dev.json"),
     "--import",
