@@ -53,6 +53,7 @@ function createPasteHarness(
   };
   const store = new ImageAttachmentStore();
   const track = vi.fn();
+  let promptText = "";
   const host = {
     state: {
       editor,
@@ -70,6 +71,17 @@ function createPasteHarness(
     showError: vi.fn(),
     openUndoSelector: vi.fn(),
     cancelRunningShellCommand: vi.fn(),
+    getPromptEditorText: () => promptText,
+    setPromptEditorText: (text: string) => {
+      promptText = text;
+    },
+    getPromptInputMode: () => "prompt" as const,
+    setPromptInputMode: vi.fn(),
+    insertPromptEditorText: (text: string) => {
+      promptText += text;
+    },
+    requestPromptEditorRender: vi.fn(),
+    updatePromptEditorView: vi.fn(),
   } as unknown as EditorKeyboardHost;
   if (options.imageLimits !== undefined) {
     (host as unknown as { harness: KimiHarness }).harness = {

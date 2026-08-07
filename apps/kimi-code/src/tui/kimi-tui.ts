@@ -468,10 +468,6 @@ export class KimiTUI {
   }
 
   /** {@link EditorKeyboardController} ink prompt bridge methods. */
-  inkOwnsPromptEditor(): boolean {
-    return this.promptInputController.inkOwnsPromptEditor();
-  }
-
   getPromptEditorText(): string {
     return this.promptInputController.getPromptEditorText();
   }

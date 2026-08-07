@@ -190,10 +190,6 @@ export class PromptInputController {
   }
 
   /** {@link EditorKeyboardController} ink prompt bridge methods. */
-  inkOwnsPromptEditor(): boolean {
-    return true;
-  }
-
   getPromptEditorText(): string {
     return this.promptEditorState.text;
   }

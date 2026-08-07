@@ -71,15 +71,13 @@ export interface EditorKeyboardHost {
   /** Optional renderer-aware terminal handoff for external editors. */
   suspendTerminal?: () => void;
   resumeTerminal?: () => void;
-  updatePromptEditorView?: () => void;
-  /** When true, prompt shortcuts read/write the renderer-neutral model. */
-  inkOwnsPromptEditor?: () => boolean;
-  getPromptEditorText?: () => string;
-  setPromptEditorText?: (text: string) => void;
-  getPromptInputMode?: () => "prompt" | "bash";
-  setPromptInputMode?: (mode: "prompt" | "bash") => void;
-  insertPromptEditorText?: (text: string) => void;
-  requestPromptEditorRender?: () => void;
+  updatePromptEditorView(): void;
+  getPromptEditorText(): string;
+  setPromptEditorText(text: string): void;
+  getPromptInputMode(): "prompt" | "bash";
+  setPromptInputMode(mode: "prompt" | "bash"): void;
+  insertPromptEditorText(text: string): void;
+  requestPromptEditorRender(): void;
 }
 
 export class EditorKeyboardController {
@@ -236,7 +234,7 @@ export class EditorKeyboardController {
           .then((handled) => {
             if (!handled) this.handleTextPaste();
           })
-          .finally(() => this.host.updatePromptEditorView?.());
+          .finally(() => this.host.updatePromptEditorView());
         return true;
       case "undo":
         this.handleUndo();
@@ -497,56 +495,28 @@ export class EditorKeyboardController {
     return this.host.btwPanelController.scroll("down");
   }
 
-  private usesInkPromptModel(): boolean {
-    return this.host.inkOwnsPromptEditor?.() === true;
-  }
-
   private readPromptText(): string {
-    if (this.usesInkPromptModel()) {
-      return this.host.getPromptEditorText?.() ?? "";
-    }
-    return this.host.state.editor.getText();
+    return this.host.getPromptEditorText();
   }
 
   private writePromptText(text: string): void {
-    if (this.usesInkPromptModel()) {
-      this.host.setPromptEditorText?.(text);
-      return;
-    }
-    this.host.state.editor.setText(text);
+    this.host.setPromptEditorText(text);
   }
 
   private readPromptInputMode(): "prompt" | "bash" {
-    if (this.usesInkPromptModel()) {
-      return this.host.getPromptInputMode?.() ?? "prompt";
-    }
-    return this.host.state.editor.inputMode;
+    return this.host.getPromptInputMode();
   }
 
   private writePromptInputMode(mode: "prompt" | "bash"): void {
-    if (this.usesInkPromptModel()) {
-      this.host.setPromptInputMode?.(mode);
-      return;
-    }
-    const editor = this.host.state.editor;
-    editor.inputMode = mode;
-    editor.onInputModeChange?.(mode);
+    this.host.setPromptInputMode(mode);
   }
 
   private insertPromptText(text: string): void {
-    if (this.usesInkPromptModel()) {
-      this.host.insertPromptEditorText?.(text);
-      return;
-    }
-    this.host.state.editor.insertTextAtCursor?.(text);
+    this.host.insertPromptEditorText(text);
   }
 
-  private requestPromptRender(force = false): void {
-    if (this.usesInkPromptModel()) {
-      this.host.requestPromptEditorRender?.();
-      return;
-    }
-    this.host.state.ui.requestRender(force);
+  private requestPromptRender(): void {
+    this.host.requestPromptEditorRender();
   }
 
   dispose(): void {
@@ -720,10 +690,7 @@ export class EditorKeyboardController {
       }
       if (this.host.resumeTerminal !== undefined) this.host.resumeTerminal();
       else state.ui.start();
-      if (!this.usesInkPromptModel()) {
-        state.ui.setFocus(state.editor);
-      }
-      this.requestPromptRender(true);
+      this.requestPromptRender();
       this.host.setExternalEditorRunning(false);
     }
   }

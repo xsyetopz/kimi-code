@@ -35,6 +35,9 @@ function createHarness(
   const btwCancelRunning = vi.fn(() => false);
   const btwCloseOrCancel = vi.fn(() => false);
   const session = { cancel: vi.fn(async () => {}), cancelCompaction };
+  let promptText = "";
+  const requestPromptEditorRender = vi.fn();
+  const updatePromptEditorView = vi.fn();
 
   const host = {
     state: {
@@ -54,6 +57,17 @@ function createHarness(
     },
     openUndoSelector,
     cancelRunningShellCommand,
+    getPromptEditorText: () => promptText,
+    setPromptEditorText: (text: string) => {
+      promptText = text;
+    },
+    getPromptInputMode: () => "prompt" as const,
+    setPromptInputMode: vi.fn(),
+    insertPromptEditorText: (text: string) => {
+      promptText += text;
+    },
+    requestPromptEditorRender,
+    updatePromptEditorView,
   } as unknown as EditorKeyboardHost;
 
   const controller = new EditorKeyboardController(
