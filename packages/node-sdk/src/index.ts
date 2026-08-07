@@ -132,8 +132,8 @@ export type {
   FlagId,
   FlagSurface,
   IHarnessInterceptorRegistry,
-  type HarnessInterceptorDefinition,
-  type HarnessInterceptorHooks,
+  HarnessInterceptorDefinition,
+  HarnessInterceptorHooks,
 } from "#/compat";
 
 export type {
