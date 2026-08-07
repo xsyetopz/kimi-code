@@ -1222,11 +1222,16 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
    */
   override async forkSession(input: ForkSessionInput): Promise<SessionSummary> {
     assertForkTurnIndex(input.turnIndex);
-    await this.assertSourceSessionNotBusy(input.id);
-    const sourceSessionDir = await this.resolveSessionDir(input.id);
-    if (sourceSessionDir === undefined) {
+    const forkHandler = await handlerForSession(this.engineAccessor, input.id);
+    if (forkHandler === undefined)
       throw SDKRpcClientV2.sessionNotFound(input.id);
-    }
+    this.assertSourceSessionNotBusy(input.id);
+    const sourceSessionDir = await this.resolveSessionDir(
+      input.id,
+      forkHandler,
+    );
+    if (sourceSessionDir === undefined)
+      throw SDKRpcClientV2.sessionNotFound(input.id);
     if (input.turnIndex !== undefined) {
       await assertHistoricalTurnAvailable(
         input.id,
@@ -1234,9 +1239,6 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
         input.turnIndex,
       );
     }
-    const forkHandler = await handlerForSession(this.engineAccessor, input.id);
-    if (forkHandler === undefined)
-      throw SDKRpcClientV2.sessionNotFound(input.id);
     const handle = await forkHandler.accessor
       .get(ISessionLifecycleService)
       .fork({
@@ -1245,9 +1247,9 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
         title: input.title,
         metadata: input.metadata,
       });
+    const forkId = handle.id;
     if (input.turnIndex !== undefined) {
       const forkSessionDir = handle.accessor.get(ISessionContext).sessionDir;
-      const forkId = handle.id;
       await closeSessionById(this.engineAccessor, forkId);
       this.unwireSession(forkId);
       const state = JSON.parse(
@@ -1260,7 +1262,12 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
         state,
       );
       await appendForkedMarkers(truncated);
-      const resumed = await this.reloadForkAgentsAfterTruncate(forkId);
+      const resumed = await this.reloadForkSessionAfterTruncate(forkId);
+      if (typeof truncated["lastPrompt"] === "string") {
+        await resumed.accessor
+          .get(ISessionMetadata)
+          .update({ lastPrompt: truncated["lastPrompt"] });
+      }
       this.wireSession(resumed);
       return this.resumedSessionSummary(resumed);
     }
@@ -2713,6 +2720,47 @@ export class SDKRpcClientV2 extends SDKRpcClientBase {
         { current: bound, requested },
       );
     }
+  }
+
+  private assertSourceSessionNotBusy(sessionId: string): void {
+    const source = getLiveSessionById(this.engineAccessor, sessionId);
+    if (source === undefined) return;
+    for (const agent of source.accessor.get(IAgentLifecycleService).list()) {
+      if (agent.accessor.get(IAgentLoopService).status().state === "running") {
+        throw new KimiError(
+          ErrorCodes.SESSION_FORK_ACTIVE_TURN,
+          "Cannot fork while the source session has an active turn",
+        );
+      }
+    }
+  }
+
+  private async resolveSessionDir(
+    sessionId: string,
+    forkHandler: Awaited<ReturnType<typeof handlerForSession>>,
+  ): Promise<string | undefined> {
+    const live = getLiveSessionById(this.engineAccessor, sessionId);
+    if (live !== undefined) {
+      return live.accessor.get(ISessionContext).sessionDir;
+    }
+    if (forkHandler === undefined) return undefined;
+    const indexed = await forkHandler.accessor
+      .get(ISessionIndex)
+      .get(sessionId);
+    if (indexed === undefined) return undefined;
+    return sessionDirOf(
+      this.homeDir,
+      workspacePersistenceScope(indexed.workDir),
+      sessionId,
+    );
+  }
+
+  private async reloadForkSessionAfterTruncate(
+    sessionId: string,
+  ): Promise<ISessionScopeHandle> {
+    const handle = await resumeSessionById(this.engineAccessor, sessionId, {});
+    if (handle === undefined) throw SDKRpcClientV2.sessionNotFound(sessionId);
+    return handle;
   }
 
   private asKimiError(error: unknown): unknown {
