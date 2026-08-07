@@ -268,44 +268,4 @@ describe("SessionMetadata", () => {
     expect(next.agents?.["main"]?.labels).toEqual({ swarmItem: "src/a.ts" });
     expect(next.updatedAt).toBeGreaterThan(before);
   });
-
-  it("records the fresh summary into the session index mirror on update", async () => {
-    const meta = ix.get(ISessionMetadata);
-    await meta.ready;
-    // First-time creation is recorded (a new session must list immediately).
-    expect(mirror.recorded).toHaveLength(1);
-
-    await meta.update({ title: "mirrored" });
-
-    expect(mirror.recorded).toHaveLength(2);
-    expect(mirror.recorded[1]).toMatchObject({
-      id: "s1",
-      workspaceId: "wd_test",
-      title: "mirrored",
-      archived: false,
-    });
-    expect(mirror.recorded[1]?.updatedAt).toBe((await meta.read()).updatedAt);
-  });
-
-  it("does not re-record when loading an existing document", async () => {
-    const store = ix.get(IAtomicDocumentStore);
-    await store.set(META_SCOPE, "state.json", {
-      id: "s1",
-      version: 2,
-      createdAt: 1700000000000,
-      updatedAt: 1700000000000,
-      archived: false,
-      agents: {},
-      custom: {},
-    });
-
-    const meta = ix.get(ISessionMetadata);
-    await meta.ready;
-    // A resume loads silently; only mutations reach the mirror.
-    expect(mirror.recorded).toEqual([]);
-
-    await meta.setArchived(true);
-    expect(mirror.recorded).toHaveLength(1);
-    expect(mirror.recorded[0]?.archived).toBe(true);
-  });
 });

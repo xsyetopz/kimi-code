@@ -506,7 +506,6 @@ describe("WorkspaceFsService.search", () => {
     const fs = makeSession(
       { "src/real.ts": "", "src/target/inside.ts": "" },
       emptyHandler,
-      [],
       defaultGitStub(),
       ["src/link"],
     );
@@ -901,9 +900,8 @@ describe("WorkspaceFsService symlink confinement", () => {
     return makeSession(
       { "src/a.ts": "" },
       emptyHandler,
-      [],
       defaultGitStub(),
-      [],
+      ["docs"],
       undefined,
       escapeTargets,
     );
@@ -967,9 +965,8 @@ describe("WorkspaceFsService symlink confinement", () => {
     const fs = makeSession(
       { "real/a.txt": "hi" },
       emptyHandler,
-      [],
       defaultGitStub(),
-      [],
+      ["link"],
       undefined,
       { link: "/repo/real" },
     );
