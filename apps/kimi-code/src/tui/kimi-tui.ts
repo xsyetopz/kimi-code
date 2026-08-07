@@ -727,5 +727,8 @@ export class KimiTUI {
   }
 }
 
-import "./kimi-tui-transcript-delegates.ts";
-import "./kimi-tui-dialog-delegates.ts";
+import { installKimiTUIDialogDelegates } from "./kimi-tui-dialog-delegates.ts";
+import { installKimiTUITranscriptDelegates } from "./kimi-tui-transcript-delegates.ts";
+
+installKimiTUITranscriptDelegates(KimiTUI);
+installKimiTUIDialogDelegates(KimiTUI);

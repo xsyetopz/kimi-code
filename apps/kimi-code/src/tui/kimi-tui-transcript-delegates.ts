@@ -14,7 +14,7 @@ import type {
   ToolCallBlockData,
   TranscriptEntry,
 } from "./types";
-import { KimiTUI } from "./kimi-tui";
+import type { KimiTUI } from "./kimi-tui";
 
 export interface KimiTUITranscriptDelegates {
   appendTranscriptEntry(entry: TranscriptEntry): void;
@@ -56,14 +56,17 @@ export interface KimiTUITranscriptDelegates {
   ): LoginProgressSpinnerHandle;
 }
 
-KimiTUI.prototype.appendTranscriptEntry = function (
+export function installKimiTUITranscriptDelegates(
+  ctor: { prototype: KimiTUITranscriptDelegates },
+): void {
+  ctor.prototype.appendTranscriptEntry = function (
   this: KimiTUI,
   entry: TranscriptEntry,
 ): void {
   this.transcriptCoordinator.appendTranscriptEntry(entry);
 };
 
-KimiTUI.prototype.syncToolCallTranscriptEntry = function (
+ctor.prototype.syncToolCallTranscriptEntry = function (
   this: KimiTUI,
   toolCallId: string,
   data: ToolCallBlockData,
@@ -71,7 +74,7 @@ KimiTUI.prototype.syncToolCallTranscriptEntry = function (
   this.transcriptCoordinator.syncToolCallTranscriptEntry(toolCallId, data);
 };
 
-KimiTUI.prototype.syncShellRunTranscriptEntry = function (
+ctor.prototype.syncShellRunTranscriptEntry = function (
   this: KimiTUI,
   entryId: string,
   data: ShellRunViewState,
@@ -79,7 +82,7 @@ KimiTUI.prototype.syncShellRunTranscriptEntry = function (
   this.transcriptCoordinator.syncShellRunTranscriptEntry(entryId, data);
 };
 
-KimiTUI.prototype.syncCompactionTranscriptEntry = function (
+ctor.prototype.syncCompactionTranscriptEntry = function (
   this: KimiTUI,
   entryId: string,
   data: CompactionTranscriptData,
@@ -87,7 +90,7 @@ KimiTUI.prototype.syncCompactionTranscriptEntry = function (
   this.transcriptCoordinator.syncCompactionTranscriptEntry(entryId, data);
 };
 
-KimiTUI.prototype.syncAgentGroupTranscriptEntry = function (
+ctor.prototype.syncAgentGroupTranscriptEntry = function (
   this: KimiTUI,
   entryId: string,
   data: AgentGroupViewState,
@@ -100,7 +103,7 @@ KimiTUI.prototype.syncAgentGroupTranscriptEntry = function (
   );
 };
 
-KimiTUI.prototype.syncReadGroupTranscriptEntry = function (
+ctor.prototype.syncReadGroupTranscriptEntry = function (
   this: KimiTUI,
   entryId: string,
   data: ReadGroupViewState,
@@ -113,14 +116,14 @@ KimiTUI.prototype.syncReadGroupTranscriptEntry = function (
   );
 };
 
-KimiTUI.prototype.removeToolCallTranscriptEntry = function (
+ctor.prototype.removeToolCallTranscriptEntry = function (
   this: KimiTUI,
   toolCallId: string,
 ): void {
   this.transcriptCoordinator.removeToolCallTranscriptEntry(toolCallId);
 };
 
-KimiTUI.prototype.appendApprovalTranscriptEntry = function (
+ctor.prototype.appendApprovalTranscriptEntry = function (
   this: KimiTUI,
   request: ApprovalRequest,
   response: ApprovalResponse,
@@ -128,25 +131,25 @@ KimiTUI.prototype.appendApprovalTranscriptEntry = function (
   this.transcriptCoordinator.appendApprovalTranscriptEntry(request, response);
 };
 
-KimiTUI.prototype.clearTranscriptAndRedraw = function (this: KimiTUI): void {
+ctor.prototype.clearTranscriptAndRedraw = function (this: KimiTUI): void {
   this.transcriptCoordinator.clearTranscriptAndRedraw();
 };
 
-KimiTUI.prototype.mergeCurrentTurnSteps = function (this: KimiTUI): boolean {
+ctor.prototype.mergeCurrentTurnSteps = function (this: KimiTUI): boolean {
   return this.transcriptCoordinator.mergeCurrentTurnSteps();
 };
 
-KimiTUI.prototype.mergeCompletedTurnAssistants = function (
+ctor.prototype.mergeCompletedTurnAssistants = function (
   this: KimiTUI,
 ): boolean {
   return this.transcriptCoordinator.mergeCompletedTurnAssistants();
 };
 
-KimiTUI.prototype.mergeAllTurnSteps = function (this: KimiTUI): void {
+ctor.prototype.mergeAllTurnSteps = function (this: KimiTUI): void {
   this.transcriptCoordinator.mergeAllTurnSteps();
 };
 
-KimiTUI.prototype.showStatus = function (
+ctor.prototype.showStatus = function (
   this: KimiTUI,
   message: string,
   color?: ColorToken,
@@ -154,7 +157,7 @@ KimiTUI.prototype.showStatus = function (
   this.transcriptCoordinator.showStatus(message, color);
 };
 
-KimiTUI.prototype.showNotice = function (
+ctor.prototype.showNotice = function (
   this: KimiTUI,
   title: string,
   detail?: string,
@@ -162,31 +165,32 @@ KimiTUI.prototype.showNotice = function (
   this.transcriptCoordinator.showNotice(title, detail);
 };
 
-KimiTUI.prototype.showError = function (this: KimiTUI, message: string): void {
+ctor.prototype.showError = function (this: KimiTUI, message: string): void {
   this.transcriptCoordinator.showError(message);
 };
 
-KimiTUI.prototype.showLoginProgressSpinner = function (
+ctor.prototype.showLoginProgressSpinner = function (
   this: KimiTUI,
   label: string,
 ): LoginProgressSpinnerHandle {
   return this.transcriptCoordinator.showLoginProgressSpinner(label);
 };
 
-KimiTUI.prototype.showProgressSpinner = function (
+ctor.prototype.showProgressSpinner = function (
   this: KimiTUI,
   label: string,
 ): LoginProgressSpinnerHandle {
   return this.transcriptCoordinator.showProgressSpinner(label);
 };
 
-KimiTUI.prototype.showLoginAuthorizationPrompt = function (
+ctor.prototype.showLoginAuthorizationPrompt = function (
   this: KimiTUI,
   auth: DeviceAuthorization,
   title?: string,
 ): LoginProgressSpinnerHandle {
   return this.transcriptCoordinator.showLoginAuthorizationPrompt(auth, title);
 };
+}
 
 declare module "./kimi-tui" {
   interface KimiTUI extends KimiTUITranscriptDelegates {}

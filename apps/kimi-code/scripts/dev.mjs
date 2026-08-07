@@ -46,11 +46,24 @@ if (externalUrl !== undefined && externalUrl.length > 0) {
   }
 }
 
+function resolveNodeExecutable() {
+  if (!process.versions.bun) {
+    return process.execPath;
+  }
+  return process.env.NODE ?? "node";
+}
+
 const tsxCli = require.resolve("tsx/cli");
+const rawTextLoader = pathToFileURL(
+  resolve(REPO_ROOT, "build/register-raw-text-loader.mjs"),
+).href;
+const bunStubsLoader = pathToFileURL(
+  resolve(REPO_ROOT, "build/register-bun-stubs.mjs"),
+).href;
 const cliArgs = process.argv.slice(2);
 if (cliArgs[0] === "--") cliArgs.shift();
 const child = spawn(
-  process.execPath,
+  resolveNodeExecutable(),
   [
     tsxCli,
     // Use the dev tsconfig whose `include` covers packages/*/src, so tsx's
@@ -59,8 +72,9 @@ const child = spawn(
     "--tsconfig",
     resolve(APP_ROOT, "tsconfig.dev.json"),
     "--import",
-    pathToFileURL(resolve(REPO_ROOT, "build/register-raw-text-loader.mjs"))
-      .href,
+    rawTextLoader,
+    "--import",
+    bunStubsLoader,
     resolve(APP_ROOT, "src/main.ts"),
     ...cliArgs,
   ],
