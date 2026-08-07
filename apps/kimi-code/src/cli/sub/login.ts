@@ -13,7 +13,9 @@ import { runLoginFlow } from "./login-flow";
 export function registerLoginCommand(parent: Command): void {
   parent
     .command("login")
-    .description("Authenticate with Kimi Code CLI via the device-code flow.")
+    .description(
+      "Authenticate with Kimi Code via the device-code flow. OpenCode, Copilot, and Codex use the TUI /login picker.",
+    )
     .action(async () => {
       await runLoginFlow();
     });

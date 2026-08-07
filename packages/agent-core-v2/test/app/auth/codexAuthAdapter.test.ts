@@ -247,6 +247,25 @@ describe("CodexAuthAdapter", () => {
     });
   });
 
+  it("clears stored credentials on logout", async () => {
+    const storage = new MemoryTokenStorage();
+    storage.token = {
+      accessToken: "codex-access-token",
+      refreshToken: "codex-refresh-token",
+      expiresAt: 9_999_999,
+      expiresIn: 3600,
+      scope: "openid profile email offline_access",
+      tokenType: "Bearer",
+    };
+    const adapter = new CodexAuthAdapter({ storage });
+
+    await expect(adapter.logout("openai")).resolves.toEqual({
+      logged_out: true,
+      provider: "openai",
+    });
+    expect(storage.token).toBeUndefined();
+  });
+
   it("cancels a pending device poll without persisting a token", async () => {
     const storage = new MemoryTokenStorage();
     const fetch = vi.fn().mockResolvedValue(

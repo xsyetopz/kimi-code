@@ -155,6 +155,25 @@ describe("CopilotAuthAdapter", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
+  it("clears stored credentials on logout", async () => {
+    const storage = new MemoryTokenStorage();
+    storage.token = {
+      accessToken: "github-access-token",
+      refreshToken: "github-access-token",
+      expiresAt: 0,
+      expiresIn: 0,
+      scope: "read:user",
+      tokenType: "Bearer",
+    };
+    const adapter = new CopilotAuthAdapter({ storage });
+
+    await expect(adapter.logout("github-copilot")).resolves.toEqual({
+      logged_out: true,
+      provider: "github-copilot",
+    });
+    expect(storage.token).toBeUndefined();
+  });
+
   it("cancels a pending device poll without persisting a token", async () => {
     const storage = new MemoryTokenStorage();
     const fetch = vi.fn().mockResolvedValue(

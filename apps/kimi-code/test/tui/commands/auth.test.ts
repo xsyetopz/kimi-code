@@ -201,6 +201,41 @@ describe("handleLoginCommand external oauth", () => {
       already_logged_in: false,
     });
   });
+
+  it("routes OpenAI Codex through engine auth", async () => {
+    setExperimentalFeatures([{ id: "codex-oauth", enabled: true }]);
+    const host = makeHost({
+      harness: {
+        engineAuth: {
+          status: vi.fn(async () => ({ loggedIn: false })),
+          summarize: vi.fn(async () => []),
+          startLogin: vi.fn(async () => ({
+            flow_id: "flow-codex",
+            provider: "openai",
+            status: "authenticated" as const,
+          })),
+          flow: vi.fn(async () => undefined),
+          cancelLogin: vi.fn(),
+          logout: vi.fn(async () => ({
+            logged_out: true as const,
+            provider: "openai",
+          })),
+        },
+      },
+    });
+    vi.mocked(promptPlatformSelection).mockResolvedValue("openai");
+
+    await handleLoginCommand(host);
+
+    expect(host.harness.engineAuth.startLogin).toHaveBeenCalledWith("openai");
+    expect(host.harness.auth.login).not.toHaveBeenCalled();
+    expect(host.authFlow.refreshConfigAfterLogin).toHaveBeenCalled();
+    expect(host.track).toHaveBeenCalledWith("login", {
+      provider: "openai",
+      method: "oauth",
+      already_logged_in: false,
+    });
+  });
 });
 
 describe("handleLogoutCommand external oauth", () => {
@@ -264,5 +299,34 @@ describe("handleLogoutCommand external oauth", () => {
     expect(host.track).toHaveBeenCalledWith("logout", {
       provider: "github-copilot",
     });
+  });
+
+  it("logs out OpenAI Codex through engine auth", async () => {
+    const host = makeHost({
+      harness: {
+        engineAuth: {
+          status: vi.fn(async (provider?: string) =>
+            provider === "openai"
+              ? { loggedIn: true, provider: "openai" }
+              : { loggedIn: false },
+          ),
+          summarize: vi.fn(async () => []),
+          startLogin: vi.fn(),
+          flow: vi.fn(),
+          cancelLogin: vi.fn(),
+          logout: vi.fn(async () => ({
+            logged_out: true as const,
+            provider: "openai",
+          })),
+        },
+      },
+    });
+    vi.mocked(promptLogoutProviderSelection).mockResolvedValue("openai");
+
+    await handleLogoutCommand(host);
+
+    expect(host.harness.engineAuth.logout).toHaveBeenCalledWith("openai");
+    expect(host.harness.auth.logout).not.toHaveBeenCalled();
+    expect(host.track).toHaveBeenCalledWith("logout", { provider: "openai" });
   });
 });
