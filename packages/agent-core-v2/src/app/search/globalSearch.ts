@@ -36,7 +36,6 @@ export interface IGlobalSearchService {
     generation: number;
     degraded?: string;
   }>;
-  setLiveTranscriptSource(_source: unknown): void;
 }
 
 export const IGlobalSearchService: ServiceIdentifier<IGlobalSearchService> =

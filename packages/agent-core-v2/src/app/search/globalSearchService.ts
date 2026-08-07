@@ -99,10 +99,6 @@ export class GlobalSearchService implements IGlobalSearchService {
     this.sessionsDir = bootstrap.sessionsDir;
   }
 
-  setLiveTranscriptSource(_source: unknown): void {
-    // Live route lands in a later slice.
-  }
-
   private requireEnabled(): void {
     if (!this.flags.enabled(BUN_SQLITE_SEARCH_FLAG_ID)) {
       throw new GlobalSearchError(
@@ -309,7 +305,7 @@ export class GlobalSearchService implements IGlobalSearchService {
           ...(rg.degraded !== undefined ? { degraded: rg.degraded } : {}),
         },
       ),
-      source: "live",
+      source: "ripgrep",
     };
   }
 

@@ -64,7 +64,7 @@ export interface GlobalSearchIndexState {
   readonly degraded?: string;
 }
 
-export type GlobalSearchSource = "live" | "index";
+export type GlobalSearchSource = "index" | "ripgrep";
 
 export type GlobalSearchIncomplete =
   | "candidate_cap"

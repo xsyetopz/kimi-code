@@ -53,7 +53,7 @@ export const globalSearchPageSchema = z.object({
     stale: z.boolean().optional(),
     degraded: z.string().optional(),
   }),
-  source: z.enum(["live", "index"]),
+  source: z.enum(["index", "ripgrep"]),
 });
 
 export const globalSearchContract = {
@@ -77,9 +77,5 @@ export const globalSearchContract = {
       generation: z.number(),
       degraded: z.string().optional(),
     }),
-  },
-  setLiveTranscriptSource: {
-    input: z.tuple([z.unknown()]),
-    output: z.void(),
   },
 } satisfies ServiceContract;
