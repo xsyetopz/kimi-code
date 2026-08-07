@@ -739,3 +739,11 @@ export class AgentToolExecutorService implements IAgentToolExecutorService {
     });
   }
 }
+
+registerScopedService(
+  LifecycleScope.Agent,
+  IAgentToolExecutorService,
+  AgentToolExecutorService,
+  ScopeActivation.OnScopeCreated,
+  "toolExecutor",
+);

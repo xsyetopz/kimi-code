@@ -628,6 +628,7 @@ import "#/agent/tools/todo-list/todoListTool";
 export * from "#/tool/toolContract";
 export * from "#/agent/toolExecutor/toolHooks";
 export * from "#/agent/toolExecutor/toolExecutor";
+import "#/agent/toolExecutor/toolExecutorService";
 export * from "#/agent/toolExecutor/toolExecutorService";
 export * from "#/agent/toolResultTruncation/toolResultTruncation";
 import "#/agent/toolResultTruncation/toolResultTruncationService";

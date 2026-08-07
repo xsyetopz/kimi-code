@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 import { spawn } from "node:child_process";
 import { createRequire } from "node:module";
 import { dirname, resolve } from "node:path";
@@ -66,9 +66,9 @@ const child = spawn(
   resolveNodeExecutable(),
   [
     tsxCli,
-    // Use the dev tsconfig whose `include` covers packages/*/src, so tsx's
-    // esbuild transform sees `experimentalDecorators: true` for DI parameter
-    // decorators in agent-core.
+    // tsx + Node resolve package.json imports and decorators via tsconfig.dev.json.
+    // bun:sqlite is stubbed for the Node child; Bun 1.3.14 cannot execute the
+    // monorepo source graph directly because it rejects `#/*` package imports.
     "--tsconfig",
     resolve(APP_ROOT, "tsconfig.dev.json"),
     "--import",
