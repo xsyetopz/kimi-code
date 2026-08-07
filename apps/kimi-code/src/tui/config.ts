@@ -37,7 +37,6 @@ export const STATUS_LINE_ITEMS = [
   "tasks",
   "cwd",
   "git",
-  "tips",
 ] as const;
 export type StatusLineItem = (typeof STATUS_LINE_ITEMS)[number];
 

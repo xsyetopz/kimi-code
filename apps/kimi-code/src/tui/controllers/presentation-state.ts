@@ -14,7 +14,6 @@ import {
   MoonLoader,
   type SpinnerStyle,
 } from "#/tui/components/chrome/moon-loader";
-import { pickRandomWorkingTip } from "#/tui/components/chrome/working-tips";
 import { ShellRunComponent } from "#/tui/components/messages/shell-run";
 import { NO_ACTIVE_SESSION_MESSAGE } from "#/tui/constant/kimi-tui";
 import {
@@ -35,15 +34,6 @@ import type { SessionEventHandler } from "./session-event-handler";
 const DETACH_HINT_DISPLAY_MS = 4_000;
 
 type EffectiveActivityPaneMode = ActivityPaneMode | "idle" | "session";
-type LoadingTipKind = "moon" | "composing";
-
-function loadingTipKind(
-  mode: EffectiveActivityPaneMode,
-): LoadingTipKind | undefined {
-  if (mode === "waiting" || mode === "tool") return "moon";
-  if (mode === "composing") return "composing";
-  return undefined;
-}
 
 export interface ShellOutputStreamEntry {
   readonly entry: TranscriptEntry;
@@ -66,9 +56,6 @@ export interface PresentationStateHost {
 
 export class PresentationStateController {
   private lastActivityMode: string | undefined;
-  private currentLoadingTip:
-    | { kind: LoadingTipKind; tip: string | undefined }
-    | undefined = undefined;
   private detachHintClearTimer: ReturnType<typeof setTimeout> | undefined;
   private terminalThemeTrackingDispose: (() => void) | undefined;
 
@@ -76,7 +63,7 @@ export class PresentationStateController {
 
   /** Loading tip text for the terminal view snapshot (Ink / kimi-tui). */
   getActivityTip(): string | undefined {
-    return this.currentLoadingTip?.tip;
+    return undefined;
   }
 
   /** Stop spinners, theme tracking, and pending footer hints during shutdown. */
@@ -91,28 +78,6 @@ export class PresentationStateController {
 
   updateActivityPane(): void {
     const effectiveMode = this.resolveActivityPaneMode();
-    const tipKind = loadingTipKind(effectiveMode);
-    // Pick a fresh loading tip when the loading kind changes. The same kind
-    // covers waiting/tool (both moon spinners) and any intermediate thinking
-    // phase, so a continuous burst of tool calls does not flip tips. Clear the
-    // cache only when there is no loading UI at all.
-    if (
-      effectiveMode === "idle" ||
-      effectiveMode === "session" ||
-      effectiveMode === "hidden"
-    ) {
-      this.currentLoadingTip = undefined;
-    } else if (
-      tipKind !== undefined &&
-      (this.currentLoadingTip === undefined ||
-        this.currentLoadingTip.kind !== tipKind)
-    ) {
-      const previousTip = this.currentLoadingTip?.tip;
-      this.currentLoadingTip = {
-        kind: tipKind,
-        tip: pickRandomWorkingTip(previousTip)?.text,
-      };
-    }
     this.syncTerminalProgress(this.shouldShowTerminalProgress(effectiveMode));
     const placeSpinnerInAgentSwarm =
       this.shouldPlaceActivitySpinnerInAgentSwarm(effectiveMode);
@@ -153,7 +118,7 @@ export class PresentationStateController {
           new ActivityPaneComponent({
             mode: "waiting",
             spinner,
-            tip: this.currentLoadingTip?.tip,
+            tip: undefined,
           }),
         );
         break;
@@ -174,7 +139,7 @@ export class PresentationStateController {
           new ActivityPaneComponent({
             mode: "composing",
             spinner,
-            tip: this.currentLoadingTip?.tip,
+            tip: undefined,
           }),
         );
         break;
@@ -189,7 +154,7 @@ export class PresentationStateController {
           new ActivityPaneComponent({
             mode: "tool",
             spinner,
-            tip: this.currentLoadingTip?.tip,
+            tip: undefined,
           }),
         );
         break;

@@ -100,7 +100,6 @@ export interface TuiLifecycleHost {
   syncRuntimeState(session?: Session): Promise<void>;
   closeSession(reason: string): Promise<void>;
   updateInkRenderer(): void;
-  uninstallRainbowDance(): void;
 }
 
 export class TuiLifecycleController {
@@ -204,7 +203,6 @@ export class TuiLifecycleController {
     } finally {
       this.host.unmountInkRenderer();
       this.host.sessionEventHandler.stopAllMcpServerStatusSpinners();
-      this.host.uninstallRainbowDance();
       try {
         await this.host.state.terminal.drainInput();
       } catch {

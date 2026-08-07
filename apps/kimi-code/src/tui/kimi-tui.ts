@@ -41,7 +41,6 @@ import { StreamingUIController } from "./controllers/streaming-ui.ts";
 import { TasksBrowserController } from "./controllers/tasks-browser.ts";
 import { TuiAccessorsController } from "./controllers/tui-accessors.ts";
 import { TuiLifecycleController } from "./controllers/tui-lifecycle.ts";
-import { installRainbowDance } from "./easter-eggs/dance.ts";
 import {
   type InkTerminalRenderer,
   type InkTerminalRendererOptions,
@@ -166,7 +165,6 @@ export class KimiTUI {
   cancelInFlight: (() => void) | undefined;
   deferUserMessages = false;
   aborted = false;
-  private uninstallRainbowDanceFn: () => void;
   /** Whether the harness runs on the agent-core-v2 engine (lazy session creation). */
   readonly engineV2: boolean;
   startupNotice: string | undefined;
@@ -266,9 +264,6 @@ export class KimiTUI {
     this.transcriptCoordinator = new TranscriptCoordinator(this);
     this.sessionOrchestration = new SessionOrchestrationController(this);
     this.presentationStateController = new PresentationStateController(this);
-    this.uninstallRainbowDanceFn = installRainbowDance(() => {
-      this.state.ui.requestRender();
-    });
 
     this.streamingUI = new StreamingUIController(this);
     this.authFlow = new AuthFlowController(this);
@@ -449,10 +444,6 @@ export class KimiTUI {
 
   supportsCurrentModelCapability(capability: string): boolean {
     return this.promptInputController.supportsCurrentModelCapability(capability);
-  }
-
-  uninstallRainbowDance(): void {
-    this.uninstallRainbowDanceFn();
   }
 
   // =========================================================================

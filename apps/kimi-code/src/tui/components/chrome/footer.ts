@@ -11,11 +11,6 @@ import { truncateToWidth, visibleWidth } from "@moonshot-ai/kimi-tui";
 import chalk from "chalk";
 import { effectiveModelAlias } from "@moonshot-ai/kimi-code-sdk";
 
-import { ALL_TIPS, type ToolbarTip } from "#/tui/constant/tips";
-import {
-  isRainbowDancing,
-  renderDanceFooterModel,
-} from "#/tui/easter-eggs/dance";
 import { currentTheme } from "#/tui/theme";
 import type { ColorPalette } from "#/tui/theme/colors";
 import type { AppState } from "#/tui/types";
@@ -47,72 +42,6 @@ const DEFAULT_STATUS_LINE_ITEMS = [
 
 const MAX_CWD_SEGMENTS = 3;
 const GOAL_TIMER_INTERVAL_MS = 1_000;
-
-// Toolbar tips — rotates every 10s. Most tips are short and pair up (two
-// joined by " | ") when space allows; tips flagged `solo` are long or
-// important enough to take the whole slot on their own. A `priority` weight
-// makes a tip recur more often in the rotation (default 1). Width is always
-// the final arbiter (a pair that doesn't fit falls back to its first tip).
-const TIP_ROTATE_INTERVAL_MS = 10_000;
-const TIP_SEPARATOR = " | ";
-
-/**
- * Expand tips into a rotation sequence using smooth weighted round-robin
- * (the nginx SWRR algorithm). Higher-`priority` tips appear more often while
- * staying evenly spread, so a tip generally does not land next to its own
- * duplicate. Deterministic and computed once at module load. Exported for
- * unit testing.
- */
-export function buildWeightedTips(
-  tips: readonly ToolbarTip[],
-): readonly ToolbarTip[] {
-  const items = tips.map((t) => ({
-    tip: t,
-    weight: Math.max(1, Math.trunc(t.priority ?? 1)),
-    current: 0,
-  }));
-  const total = items.reduce((sum, it) => sum + it.weight, 0);
-  const seq: ToolbarTip[] = [];
-  for (let n = 0; n < total; n++) {
-    let best = items[0]!;
-    for (const it of items) {
-      it.current += it.weight;
-      if (it.current > best.current) best = it;
-    }
-    best.current -= total;
-    seq.push(best.tip);
-  }
-  return seq;
-}
-
-const ROTATION: readonly ToolbarTip[] = buildWeightedTips(ALL_TIPS);
-
-function currentTipIndex(): number {
-  return Math.floor(Date.now() / TIP_ROTATE_INTERVAL_MS);
-}
-
-/**
- * Pick the tip(s) for a rotation index over the weighted ROTATION sequence.
- * `primary` is always shown when it fits; `pair` (primary + next tip joined
- * by the separator) is offered for wide terminals. Pairing is skipped when
- * the current/next tip is `solo` or when the neighbour is a duplicate of the
- * current tip (which can happen at the wrap boundary), keeping long/important
- * tips on their own and avoiding "X | X".
- */
-function tipsForIndex(index: number): { primary: string; pair: string | null } {
-  const n = ROTATION.length;
-  if (n === 0) return { primary: "", pair: null };
-  const offset = ((index % n) + n) % n;
-  const current = ROTATION[offset]!;
-  if (n === 1 || current.solo) return { primary: current.text, pair: null };
-  const next = ROTATION[(offset + 1) % n]!;
-  if (next.solo || next.text === current.text)
-    return { primary: current.text, pair: null };
-  return {
-    primary: current.text,
-    pair: current.text + TIP_SEPARATOR + next.text,
-  };
-}
 
 /**
  * Footer goal badge, e.g. `[goal ● active · 4m · 7 turns]`. Only shown for a
@@ -280,10 +209,9 @@ export class FooterComponent implements Component {
   }
 
   /**
-   * Short-lived hint that replaces the rotating toolbar tips on line 1.
-   * Used by the exit-confirmation double-tap flow to show "Press Ctrl+C
-   * again to exit" without requiring a toast/overlay subsystem.
-   * Pass `null` to clear.
+   * Short-lived hint shown on footer line 2 (bottom-left). Used by the
+   * exit-confirmation double-tap flow to show "Press Ctrl+C again to
+   * exit" without requiring a toast/overlay subsystem. Pass `null` to clear.
    */
   setTransientHint(hint: string | null): void {
     this.transientHint = hint;
@@ -331,33 +259,7 @@ export class FooterComponent implements Component {
       }
 
       const leftLine = left.join("  ");
-      const leftWidth = visibleWidth(leftLine);
-
-      // Rotating hint tips stay on the right unless they were given an
-      // inline slot in items (rendered above at their configured position)
-      // or the user dropped 'tips' from items.
-      let tipText = "";
-      const tipsInline = order.includes("tips");
-      const showTips =
-        !tipsInline && (configured === null || configured.includes("tips"));
-      if (showTips) {
-        const { primary, pair } = tipsForIndex(currentTipIndex());
-        const gap = 2;
-        const remaining = Math.max(0, width - leftWidth - gap);
-        if (pair && visibleWidth(pair) <= remaining) {
-          tipText = pair;
-        } else if (primary && visibleWidth(primary) <= remaining) {
-          tipText = primary;
-        }
-      }
-
-      if (tipText) {
-        const pad = width - leftWidth - visibleWidth(tipText);
-        line1 =
-          leftLine +
-          " ".repeat(Math.max(0, pad)) +
-          chalk.hex(colors.textMuted)(tipText);
-      } else if (leftWidth <= width) {
+      if (visibleWidth(leftLine) <= width) {
         line1 = leftLine;
       } else {
         line1 = truncateToWidth(leftLine, width, "…");
@@ -405,14 +307,7 @@ export class FooterComponent implements Component {
       tasks: [],
       cwd: [],
       git: [],
-      tips: [],
     };
-
-    {
-      const { primary, pair } = tipsForIndex(currentTipIndex());
-      const tip = pair ?? primary;
-      if (tip) slots["tips"] = [chalk.hex(colors.textMuted)(tip)];
-    }
 
     const modes: string[] = [];
     if (state.permissionMode === "auto")
@@ -448,11 +343,7 @@ export class FooterComponent implements Component {
             : " thinking"
           : "";
       const modelLabel = `${model}${thinkingLabel}`;
-      let renderedModelLabel = chalk.hex(colors.text)(modelLabel);
-      if (isRainbowDancing()) {
-        renderedModelLabel = renderDanceFooterModel(modelLabel);
-      }
-      slots["model"] = [renderedModelLabel];
+      slots["model"] = [chalk.hex(colors.text)(modelLabel)];
     }
 
     // Background-task badges. `bash-*` tasks (shell processes) and `agent-*`

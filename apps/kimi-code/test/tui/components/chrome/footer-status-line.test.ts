@@ -83,49 +83,6 @@ describe("FooterComponent status_line items", () => {
     expect(line1).toContain("/tmp/project");
   });
 
-  it("drops the rotating tips when tips is not in items", () => {
-    const withTips = plain(new FooterComponent(baseState).render(200)[0]!);
-    const state: AppState = {
-      ...baseState,
-      statusLine: { items: ["model", "cwd"], command: null },
-    };
-    const withoutTips = plain(new FooterComponent(state).render(200)[0]!);
-
-    expect(withoutTips.length).toBeLessThan(withTips.length);
-    expect(withoutTips.trimEnd()).toMatch(/kimi-k2 {2}\/tmp\/project$/);
-  });
-
-  it("honors the configured position of the tips slot", () => {
-    // The tip content itself rotates; locate it via a tips-only render.
-    const tipsOnly = plain(
-      new FooterComponent({
-        ...baseState,
-        statusLine: { items: ["tips"], command: null },
-      }).render(200)[0]!,
-    ).trim();
-
-    const tipsFirst = plain(
-      new FooterComponent({
-        ...baseState,
-        statusLine: { items: ["tips", "model"], command: null },
-      }).render(200)[0]!,
-    );
-    const tipsLast = plain(
-      new FooterComponent({
-        ...baseState,
-        statusLine: { items: ["model", "tips"], command: null },
-      }).render(200)[0]!,
-    );
-
-    expect(tipsOnly.length).toBeGreaterThan(0);
-    expect(tipsFirst.indexOf(tipsOnly)).toBeLessThan(
-      tipsFirst.indexOf("kimi-k2"),
-    );
-    expect(tipsLast.indexOf("kimi-k2")).toBeLessThan(
-      tipsLast.indexOf(tipsOnly),
-    );
-  });
-
   it("renders nothing on line 1 for an empty items list", () => {
     const state: AppState = {
       ...baseState,
