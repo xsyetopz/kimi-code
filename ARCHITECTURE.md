@@ -115,7 +115,7 @@ flowchart TB
 
 Forbidden: `kimi-tui → agent-core-v2`, `agent-core-v2 → kimi-tui`, `apps/kimi-code → agent-core-v2` (must go through SDK/klient).
 
-**Deleted from the tree:** `packages/kap-server`, `packages/minidb`, `packages/server-e2e` (legacy HTTP server stack; klient hosts the retired wire e2e suites). Browser apps (`kimi-web`, `vis`, `kimi-inspect`) remain migration targets for deletion or quarantine.
+**Deleted from the tree:** `packages/kap-server`, `packages/minidb`, `packages/server-e2e` (legacy HTTP server stack; klient hosts the retired wire e2e suites), and browser apps `apps/kimi-web`, `apps/vis`, `apps/kimi-inspect`.
 
 ## 4. Quality-Attribute Scenarios
 

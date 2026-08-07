@@ -4,7 +4,7 @@ This repository uses [changesets](https://github.com/changesets/changesets) to m
 
 ## Package Publishing Strategy
 
-This repository uses an **independent, manually-selected publishing** strategy. When generating a changeset, only select the publishable packages that this change actually affects. The repository's `.changeset/config.json` already filters out internal workspace packages via `ignore`, so only the publishable packages listed below should appear in the `pnpm changeset` prompt.
+This repository uses an **independent, manually-selected publishing** strategy. When generating a changeset, only select the publishable packages that this change actually affects. Only the publishable packages listed below should appear in the `bun changeset` prompt.
 
 Current publishable packages:
 
@@ -13,15 +13,18 @@ Current publishable packages:
 | `@moonshot-ai/kimi-code` | `apps/kimi-code` | CLI / TUI application — provides the `kimi` command after install |
 | `@moonshot-ai/kimi-code-sdk` | `packages/node-sdk` | Public TypeScript SDK |
 
-All other workspace packages are private internal packages, are not published to npm, and are excluded via `ignore` in `.changeset/config.json`:
+All other workspace packages are private internal packages and are not published to npm:
 
-- `@moonshot-ai/acp-adapter`
-- `@moonshot-ai/agent-core`
+- `@moonshot-ai/acp-server`
+- `@moonshot-ai/agent-core-v2`
 - `@moonshot-ai/kaos`
+- `@moonshot-ai/klient`
 - `@moonshot-ai/kimi-code-oauth`
-- `@moonshot-ai/kimi-telemetry`
+- `@moonshot-ai/kimi-tui`
 - `@moonshot-ai/kosong`
 - `@moonshot-ai/protocol`
+- `@moonshot-ai/transcript`
+- `@moonshot-ai/tree-sitter-bash`
 
 Version impact from internal dependencies must be judged manually. The published artifacts for CLI and SDK bundle internal workspace packages into the artifact itself; runtime `dependencies` of published packages must not include any `@moonshot-ai/*` internal workspace packages.
 
@@ -73,7 +76,7 @@ Complete code, tests, and documentation changes as usual. A changeset is require
 From the repository root:
 
 ```sh
-pnpm changeset
+bun changeset
 ```
 
 Follow the prompts to choose:
@@ -103,7 +106,7 @@ Once the changeset file is merged into `main`, `.github/workflows/release.yml` u
 
 The release PR runs:
 
-- `pnpm changeset version`: bumps publishable package versions and updates changelogs;
+- `bun changeset version`: bumps publishable package versions and updates changelogs;
 - Deletes the consumed `.changeset/*.md` files;
 - Uses the title `[CI]: Release packages`.
 
@@ -119,7 +122,7 @@ The packages are then published via npm Trusted Publishing, and a GitHub Release
 
 ## Manual Publishing (Not Recommended)
 
-Only publish manually when CI is unavailable. Before publishing manually, make sure you are logged into npm locally and using the Node.js and pnpm versions required by the repository.
+Only publish manually when CI is unavailable. Before publishing manually, make sure you are logged into npm locally and using the Node.js and bun versions required by the repository.
 
 ```sh
 bun run version
@@ -129,11 +132,9 @@ bun run publish
 The underlying changesets commands are:
 
 ```sh
-pnpm changeset version
+bun changeset version
 bun changeset publish
 ```
-
-The root-level `bun run publish` first runs typecheck, lint, sherif, test, build, and package lint, then runs `changeset publish`.
 
 ## Notes
 
@@ -142,7 +143,7 @@ The root-level `bun run publish` first runs typecheck, lint, sherif, test, build
 - Changeset files must be committed to the repository — release PRs are only triggered after they're merged.
 - Release PRs require human review and merge; they will not publish automatically.
 - Do not add release changesets for private internal packages; only select `@moonshot-ai/kimi-code` and `@moonshot-ai/kimi-code-sdk`.
-- If a change in an underlying internal package alters user-visible behavior or public API of a publishable package, add a changeset to the affected publishable package. For example, when a bug fixed in `@moonshot-ai/agent-core` resolves an issue CLI users encounter, add a changeset to `@moonshot-ai/kimi-code` describing the user-visible fix.
+- If a change in an underlying internal package alters user-visible behavior or public API of a publishable package, add a changeset to the affected publishable package. For example, when a bug fixed in `@moonshot-ai/agent-core-v2` resolves an issue CLI users encounter, add a changeset to `@moonshot-ai/kimi-code` describing the user-visible fix.
 - `@moonshot-ai/kimi-code` is the official CLI package name; after a global install it provides the `kimi` command.
 - Make sure each publishable package on npm has a Trusted Publisher configured.
 
