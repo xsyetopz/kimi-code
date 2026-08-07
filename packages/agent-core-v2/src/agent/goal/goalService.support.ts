@@ -13,13 +13,11 @@ import { isPlainRecord } from "#/_base/utils/canonical-args";
 import { LoopErrors } from "#/agent/loop/errors";
 import type { EnqueueReceipt } from "#/agent/loop/loop";
 import type { ContextMessage, PromptOrigin } from "#/agent/contextMemory/types";
-import type { PermissionMode } from "#/agent/permissionMode/permissionMode";
-import type { ExecutableToolResult } from "#/agent/toolExecutor/toolExecutor";
-import type {
-  GoalBudgetLimits,
-  GoalBudgetReport,
-  GoalState,
-} from "./types";
+import type { TurnEndedEvent } from "#/agent/loop/turnEvents";
+import type { PermissionMode } from "#/agent/permissionPolicy/types";
+import type { ExecutableToolResult } from "#/tool/toolContract";
+import type { GoalState } from "./goalOps";
+import type { GoalBudgetLimits, GoalBudgetReport } from "./types";
 
 const MAX_GOAL_OBJECTIVE_LENGTH = 4000;
 

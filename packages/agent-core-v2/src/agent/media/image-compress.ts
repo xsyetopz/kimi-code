@@ -58,7 +58,10 @@ import {
   MAX_IMAGE_DECODE_BYTES,
   RECODABLE_MIME,
 } from "./image-compress-encode";
-import { buildImageCompressionCaption } from "./image-compress-caption";
+import {
+  buildImageCompressionCaption,
+  formatByteSize,
+} from "./image-compress-caption";
 
 export type {
   ImageCompressionCaptionExtraction,
