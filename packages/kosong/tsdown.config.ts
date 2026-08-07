@@ -12,7 +12,7 @@ export default defineConfig({
     "./src/providers/openai-common.ts",
   ],
   format: ["esm"],
-  dts: false,
+  dts: true,
   outDir: "dist",
   clean: true,
 });
