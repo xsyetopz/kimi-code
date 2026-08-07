@@ -61,7 +61,18 @@ export class FileProjectLocalConfigService
   ): Promise<ProjectAdditionalDirsLoadResult> {
     const projectRoot = await this.findProjectRoot(workDir);
     const configPath = this.getProjectLocalConfigPath(projectRoot);
-    const file = await this.readProjectLocalToml(configPath);
+    let file: ProjectLocalTomlFile | undefined;
+    try {
+      file = await this.readProjectLocalToml(configPath);
+    } catch (error: unknown) {
+      if (
+        error instanceof StorageError &&
+        error.code === StorageErrors.codes.STORAGE_DECODE_FAILED
+      ) {
+        return { projectRoot, configPath, additionalDirs: [] };
+      }
+      throw error;
+    }
 
     const additionalDirs = file?.parsed.workspace?.additional_dir;
     if (additionalDirs === undefined) {
